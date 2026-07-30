@@ -106,7 +106,7 @@ test("insurance-aware mailer renders sourced line detail, addresses, provider id
   assert.doesNotMatch(html, /<input|fetch\(|payment processor/i);
 });
 
-test("mailer falls back to the patient name and address as one identity pair", () => {
+test("mailer never redirects an incomplete distinct recipient to the patient", () => {
   const row: StatementRow = {
     ...statement("new", "2026-07-12T15:00:00.000Z", 6_000),
     detail: {
@@ -125,8 +125,9 @@ test("mailer falls back to the patient name and address as one identity pair", (
     },
   };
   const html = renderBalanceForwardStatement(row);
-  assert.match(html, /Mail to[\s\S]*Alex Rivera[\s\S]*10 Main St[\s\S]*Raleigh, NC 27601/);
-  assert.doesNotMatch(html, /Mail to[\s\S]{0,120}Pat Rivera/);
+  assert.match(html, /Mail to[\s\S]*Pat Rivera/);
+  assert.doesNotMatch(html, /Mail to[\s\S]{0,120}Alex Rivera/);
+  assert.doesNotMatch(html, /10 Main St|Raleigh, NC 27601/);
 });
 
 test("detailed mailer prints an invoice-only row for a pre-seam Order", () => {

@@ -176,6 +176,8 @@ test("minor statements mail to the current Account guarantor", async () => {
     accounts: [account],
     relatedPeople: [guardian()],
   });
+  assert.equal(run.generatedCount, 1);
+  assert.equal(run.invalidRejects, 0);
   const statement = run.statements[0];
   assert.equal(statement.detail?.header.recipientName, "Pat Doe");
   assert.deepEqual(statement.detail?.header.recipientAddress, {
@@ -186,6 +188,21 @@ test("minor statements mail to the current Account guarantor", async () => {
     lines: ["1 Minor St"],
     cityStatePostal: "Greenville, SC 29601",
   });
+});
+
+test("minor statements reject an addressless Account guarantor instead of redirecting to the patient", async () => {
+  const run = await generateStatementRun({
+    patients: [minorPatient()],
+    invoices: [invoice("addressless-guardian-invoice", "minor", 10_000)],
+    payments: [],
+    accounts: [patientAccount("addressless-guardian-account", "minor", "RelatedPerson/addressless")],
+    relatedPeople: [guardian("addressless", { address: undefined })],
+  });
+  assert.equal(run.generatedCount, 0);
+  assert.equal(run.invalidRejects, 1);
+  assert.equal(run.statements.length, 0);
+  assert.match(run.rejects[0].reason, /RelatedPerson\/addressless has no usable mailing address/);
+  assert.doesNotMatch(run.rejects[0].reason, /Patient\/minor is a minor and cannot receive/);
 });
 
 test("minor statements reject the patient as their own Account guarantor", async () => {
@@ -243,6 +260,8 @@ test("self-responsible adult statements mail to the patient", async () => {
     payments: [],
     accounts: [patientAccount("adult-account", "p1", "Patient/p1")],
   }, "Patient/p1");
+  assert.equal(run.generatedCount, 1);
+  assert.equal(run.invalidRejects, 0);
   const statement = run.statements[0];
   assert.equal(statement.detail?.header.recipientName, "Alex Rivera");
   assert.deepEqual(statement.detail?.header.recipientAddress, {

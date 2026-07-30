@@ -921,6 +921,11 @@ function statementHeader(
       `${recipient.resourceType}/${recipient.id ?? "unknown"} has no usable name for statement delivery.`,
     );
   }
+  if (recipient.resourceType === "RelatedPerson" && !recipientAddress) {
+    throw new StatementValidationError(
+      `RelatedPerson/${recipient.id ?? "unknown"} has no usable mailing address for statement delivery.`,
+    );
+  }
   return {
     practiceName,
     ...(practiceAddress ? { practiceAddress } : {}),
