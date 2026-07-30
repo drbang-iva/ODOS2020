@@ -15,6 +15,7 @@
  * Zero Medplum SDK — plain fetch against the FHIR REST API.
  */
 import { registerReferralRoutes } from "./referral/referral-routes.js";
+import { WeasyPrintHttpRenderer } from "./correspondence/http-renderer.js";
 import { registerFaxRoutes } from "./fax/fax-routes.js";
 import {
   createWestFaxAdapter,
@@ -7329,6 +7330,7 @@ async function main(): Promise<void> {
         authenticateService: authenticateWithMedplum,
         authenticate: authenticateStaffRouteForAction("chart.write"),
         serviceFhir: fhir,
+        correspondenceRenderer: new WeasyPrintHttpRenderer(),
       });
       registerFaxRoutes(app, {
         authenticateService: authenticateWithMedplum,

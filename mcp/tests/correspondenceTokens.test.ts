@@ -39,7 +39,7 @@ test("fixed correspondence token registry resolves identity, clinical blocks, an
   assert.match(resolved, /data-correspondence-table="va"/);
   assert.match(resolved, /20\/20/);
   assert.match(resolved, /data-correspondence-table="iop"/);
-  assert.match(resolved, />18</);
+  assert.match(resolved, />18 mm\[Hg\]</);
   assert.match(resolved, /data-correspondence-table="refraction"/);
   assert.match(resolved, /-1\.25/);
   assert.match(resolved, /Visual-field summary unavailable: ODOS has no visual-field data model yet\./);
@@ -168,7 +168,7 @@ function component(code: string, value: Partial<NonNullable<Observation["compone
 function odosConcept(code: string, display: string) {
   return {
     coding: [{
-      system: "https://odos2020.com/fhir/CodeSystem/ophthalmology-observation",
+      system: "https://odos2020.com/fhir/CodeSystem/ophthalmology",
       code,
       display,
     }],

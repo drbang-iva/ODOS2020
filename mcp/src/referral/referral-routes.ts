@@ -1,6 +1,8 @@
 import type { Application, Request, Response } from "express";
 import {
   handleCreateReferralRequest,
+  handleApplyReferralTemplateRequest,
+  handleListCorrespondenceTemplatesRequest,
   handleReferralArtifactRequest,
   handleRecentReferralConsultantsRequest,
   handleRegenerateReferralLetterRequest,
@@ -27,6 +29,16 @@ export function registerReferralRoutes(
     res,
     () => handleRecentReferralConsultantsRequest(deps, {
       authHeader: req.header("authorization"),
+    }),
+  ));
+  app.get("/correspondence/templates", async (req, res) => route(
+    "/correspondence/templates",
+    deps,
+    req,
+    res,
+    () => handleListCorrespondenceTemplatesRequest(deps, {
+      authHeader: req.header("authorization"),
+      letterType: req.query.letterType,
     }),
   ));
   app.get("/referrals/consultants", async (req, res) => route(
@@ -81,6 +93,13 @@ export function registerReferralRoutes(
       authHeader: req.header("authorization"),
       patientId: routeParam(req.params.patientId),
       referralId: routeParam(req.params.referralId),
+    }));
+  post(app, "/referrals/patients/:patientId/:referralId/apply-template", deps, (req) =>
+    handleApplyReferralTemplateRequest(deps, {
+      authHeader: req.header("authorization"),
+      patientId: routeParam(req.params.patientId),
+      referralId: routeParam(req.params.referralId),
+      body: req.body,
     }));
   for (const action of ["preview", "send"] as const) {
     post(app, `/referrals/patients/:patientId/:referralId/${action}`, deps, (req) =>

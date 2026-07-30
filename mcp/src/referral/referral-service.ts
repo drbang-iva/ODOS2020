@@ -19,6 +19,7 @@ import type {
   ServiceRequest,
 } from "@medplum/fhirtypes";
 import type { FhirSearchParams } from "../fhir-client.js";
+import type { CorrespondenceTokenContext } from "../correspondence/tokens/types.js";
 
 export const REFERRAL_INCLUDE_LIST_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/referral-include-list";
@@ -172,13 +173,8 @@ export function readReferralIncludeListExtension(includeList: Extension): Referr
 }
 
 export function generateReferralLetterBody(input: GenerateReferralLetterInput): string {
-  const findings = input.findings
-    .filter((observation) => ["final", "amended", "corrected"].includes(observation.status))
-    .map(formatObservation)
-    .filter((line): line is string => Boolean(line));
-  const plans = input.plans
-    .filter((plan) => !["revoked", "entered-in-error", "unknown"].includes(plan.status))
-    .flatMap(formatCarePlan);
+  const findings = referralFindingLines(input.findings);
+  const plans = referralPlanLines(input.plans);
 
   return [
     `Dear ${input.targetDisplay},`,
@@ -470,6 +466,52 @@ export class ReferralService {
     });
   }
 
+  async loadCorrespondenceTokenContext(
+    serviceRequest: ServiceRequest,
+    practicePhone: string,
+  ): Promise<CorrespondenceTokenContext> {
+    const includeList = readReferralIncludeList(serviceRequest);
+    const patientId = assertReference(serviceRequest.subject.reference, "Patient");
+    const encounterId = serviceRequest.encounter?.reference
+      ? assertReference(serviceRequest.encounter.reference, "Encounter")
+      : undefined;
+    if (!encounterId) throw new Error("Referral ServiceRequest is missing its encounter reference.");
+    const senderReference = serviceRequest.requester?.reference;
+    if (!senderReference) throw new Error("Referral ServiceRequest is missing its requester reference.");
+    const [
+      patient,
+      encounter,
+      findings,
+      plans,
+      history,
+      clinicalSummary,
+      sender,
+    ] = await Promise.all([
+      this.fhir.read<Patient>("Patient", patientId),
+      this.fhir.read<Encounter>("Encounter", encounterId),
+      this.searchEncounterResources<Observation>("Observation", patientId, encounterId),
+      this.searchEncounterResources<CarePlan>("CarePlan", patientId, encounterId),
+      this.loadFinalizedHistory(patientId, encounterId, includeList.history_count),
+      this.loadClinicalSummary(patientId),
+      readCorrespondenceSender(this.fhir, senderReference),
+    ]);
+    if (encounter.subject?.reference !== serviceRequest.subject.reference) {
+      throw new Error("Referral encounter does not belong to the subject patient.");
+    }
+    return {
+      patient,
+      encounter,
+      recipientName: referralTargetSnapshot(serviceRequest),
+      senderName: serviceRequest.requester?.display?.trim() || sender.name,
+      senderCredentials: sender.credentials,
+      practicePhone,
+      findings,
+      plans,
+      history,
+      clinicalSummary,
+    };
+  }
+
   private async searchEncounterResources<T extends Observation | CarePlan>(
     resourceType: T["resourceType"],
     patientId: string,
@@ -582,7 +624,7 @@ export class ReferralService {
   }
 }
 
-interface ClinicalSummary {
+export interface ClinicalSummary {
   conditions: Condition[];
   medicationRequests: MedicationRequest[];
   medicationStatements: MedicationStatement[];
@@ -666,6 +708,50 @@ async function readReferralTarget(
     default:
       throw new Error("Referral target must be a Practitioner, PractitionerRole, or Organization reference by id.");
   }
+}
+
+async function readCorrespondenceSender(
+  fhir: ReferralFhirClient,
+  reference: string,
+): Promise<{ name: string; credentials: string }> {
+  const [resourceType, id, extra] = reference.split("/");
+  if (!id || extra || (resourceType !== "Practitioner" && resourceType !== "PractitionerRole")) {
+    throw new Error("Correspondence sender must be a Practitioner or PractitionerRole reference by id.");
+  }
+  if (resourceType === "Practitioner") {
+    const practitioner = await fhir.read<Practitioner>("Practitioner", id);
+    return {
+      name: referralTargetDisplay(practitioner),
+      credentials: practitionerCredentials(practitioner),
+    };
+  }
+  const role = await fhir.read<PractitionerRole>("PractitionerRole", id);
+  const practitionerId = role.practitioner?.reference?.match(
+    /^Practitioner\/([A-Za-z0-9.-]{1,64})$/,
+  )?.[1];
+  if (!practitionerId) {
+    return {
+      name: role.practitioner?.display?.trim() || referralTargetDisplay(role),
+      credentials: "",
+    };
+  }
+  const practitioner = await fhir.read<Practitioner>("Practitioner", practitionerId);
+  return {
+    name: role.practitioner?.display?.trim() || referralTargetDisplay(practitioner),
+    credentials: practitionerCredentials(practitioner),
+  };
+}
+
+function practitionerCredentials(practitioner: Practitioner): string {
+  const name = practitioner.name?.find((candidate) => candidate.use === "official")
+    ?? practitioner.name?.[0];
+  return unique([
+    ...(name?.suffix ?? []),
+    ...(practitioner.qualification ?? []).flatMap((qualification) => {
+      const display = conceptText(qualification.code);
+      return display ? [display] : [];
+    }),
+  ].map((value) => value.trim()).filter(Boolean)).join(", ");
 }
 
 function referralTargetDisplay(target: Practitioner | PractitionerRole | Organization): string {
@@ -779,6 +865,29 @@ function formatCarePlan(plan: CarePlan): string[] {
   return plan.title?.trim() ? [plan.title.trim()] : [];
 }
 
+export function referralFindingLines(findings: readonly Observation[]): string[] {
+  return findings
+    .filter((observation) => ["final", "amended", "corrected"].includes(observation.status))
+    .map(formatObservation)
+    .filter((line): line is string => Boolean(line));
+}
+
+export function referralPlanLines(plans: readonly CarePlan[]): string[] {
+  return plans
+    .filter((plan) => !["revoked", "entered-in-error", "unknown"].includes(plan.status))
+    .flatMap(formatCarePlan);
+}
+
+export function renderCorrespondenceFindingsBlock(findings: readonly Observation[]): string {
+  const lines = referralFindingLines(findings);
+  return `<section data-token-block="findings"><h2>Findings</h2>${renderListItems(lines, "No visit findings were recorded.")}</section>`;
+}
+
+export function renderCorrespondencePlanBlock(plans: readonly CarePlan[]): string {
+  const lines = referralPlanLines(plans);
+  return `<section data-token-block="plan"><h2>Plan</h2>${renderListItems(lines, "No visit plan was recorded.")}</section>`;
+}
+
 function conceptText(concept: { text?: string; coding?: Array<{ display?: string; code?: string }> } | undefined): string | undefined {
   return concept?.text?.trim()
     || concept?.coding?.find((coding) => coding.display?.trim())?.display?.trim()
@@ -800,7 +909,7 @@ function renderLetter(letterBody: string): string {
   return `<section data-section="letter" class="page-break"><h2>Referral letter</h2><div class="letter-body">${escapeHtml(letterBody).replaceAll("\n", "<br>")}</div></section>`;
 }
 
-function renderDemographics(patient: Patient): string {
+export function renderDemographics(patient: Patient): string {
   const telecom = (patient.telecom ?? []).flatMap((point) => point.value ? [`${point.system ?? "contact"}: ${point.value}`] : []);
   const addresses = (patient.address ?? []).map((address) => [
     ...(address.line ?? []),
@@ -809,7 +918,7 @@ function renderDemographics(patient: Patient): string {
   return `<section data-section="demographics" class="page-break"><h2>Patient demographics</h2><dl><dt>Name</dt><dd>${escapeHtml(patientName(patient))}</dd><dt>Date of birth</dt><dd>${text(patient.birthDate)}</dd><dt>Administrative sex</dt><dd>${text(patient.gender)}</dd><dt>Contact</dt><dd>${text(telecom.join("; "))}</dd><dt>Address</dt><dd>${text(addresses.join("; "))}</dd></dl></section>`;
 }
 
-function renderHistory(encounters: Encounter[]): string {
+export function renderHistory(encounters: Encounter[]): string {
   const rows = encounters.map((encounter) => {
     const date = encounterDate(encounter);
     const type = conceptText(encounter.type?.[0]) ?? "Finalized exam";
@@ -818,7 +927,7 @@ function renderHistory(encounters: Encounter[]): string {
   return `<section data-section="history" class="page-break"><h2>Prior finalized exam history</h2>${rows || "<p>No prior finalized exams found.</p>"}</section>`;
 }
 
-function renderClinicalSummary(summary: ClinicalSummary): string {
+export function renderClinicalSummary(summary: ClinicalSummary): string {
   const conditions = summary.conditions
     .filter((condition) => !condition.verificationStatus?.coding?.some(
       (coding) => coding.code === "entered-in-error" || coding.code === "refuted",
@@ -836,6 +945,31 @@ function renderClinicalSummary(summary: ClinicalSummary): string {
     ))
     .map((allergy) => conceptText(allergy.code) ?? "Allergy");
   return `<section data-section="clinical_summary" class="page-break"><h2>Clinical summary</h2>${renderList("Problems", conditions)}${renderList("Medications", unique([...medicationRequests, ...medicationStatements]))}${renderList("Allergies", allergies)}</section>`;
+}
+
+export function renderCorrespondenceMedications(summary: ClinicalSummary): string {
+  const requests = summary.medicationRequests
+    .filter((request) => request.status !== "entered-in-error" && request.status !== "cancelled")
+    .map((request) =>
+      conceptText(request.medicationCodeableConcept)
+      ?? request.medicationReference?.display
+      ?? "Medication");
+  const statements = summary.medicationStatements
+    .filter((statement) => statement.status !== "entered-in-error" && statement.status !== "not-taken")
+    .map((statement) =>
+      conceptText(statement.medicationCodeableConcept)
+      ?? statement.medicationReference?.display
+      ?? "Medication");
+  return `<section data-token-block="medications"><h2>Medications</h2>${renderListItems(unique([...requests, ...statements]), "None recorded")}</section>`;
+}
+
+export function renderCorrespondenceAllergies(summary: ClinicalSummary): string {
+  const allergies = summary.allergies
+    .filter((allergy) => !allergy.verificationStatus?.coding?.some(
+      (coding) => coding.code === "entered-in-error" || coding.code === "refuted",
+    ))
+    .map((allergy) => conceptText(allergy.code) ?? "Allergy");
+  return `<section data-token-block="allergies"><h2>Allergies</h2>${renderListItems(allergies, "None recorded")}</section>`;
 }
 
 function renderImages(images: ReferralImage[]): string {
@@ -900,6 +1034,11 @@ export function defaultReferralStorageBaseUrls(): string[] {
 function renderList(title: string, values: string[]): string {
   const items = values.length ? values.map((value) => `<li>${escapeHtml(value)}</li>`).join("") : "<li>None recorded</li>";
   return `<h3>${escapeHtml(title)}</h3><ul>${items}</ul>`;
+}
+
+function renderListItems(values: readonly string[], empty: string): string {
+  const items = values.length ? values : [empty];
+  return `<ul>${items.map((value) => `<li>${escapeHtml(value)}</li>`).join("")}</ul>`;
 }
 
 function renderDocument(input: {

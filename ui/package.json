@@ -16,15 +16,12 @@
     "@react-three/drei": "^9.114.0",
     "@react-three/fiber": "^8.17.0",
     "clsx": "^2.1.1",
-    "html-to-pdfmake": "^2.5.33",
-    "pdfmake": "^0.2.20",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "three": "^0.170.0",
     "zustand": "^4.5.5"
   },
   "devDependencies": {
-    "@types/pdfmake": "^0.3.3",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@types/react-test-renderer": "^18.3.1",

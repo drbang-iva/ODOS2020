@@ -54,6 +54,11 @@ jobs:
       - name: install mcp deps
         working-directory: mcp
         run: npm ci
+      - name: install pinned WeasyPrint for real PDF/A contract test
+        run: |
+          python3 -m venv /tmp/odos-weasyprint
+          /tmp/odos-weasyprint/bin/pip install --disable-pip-version-check WeasyPrint==69.0
+          echo "/tmp/odos-weasyprint/bin" >> "$GITHUB_PATH"
       # mcp/tests cross-import ui/src modules (mirror-parity + ui-logic idiom); as of
       # scheduler Phase 2 those ui modules have runtime deps (zustand), so the mcp job
       # needs ui/node_modules too.
@@ -68,6 +73,8 @@ jobs:
       - name: run mcp tests
         working-directory: mcp
         shell: bash
+        env:
+          ODOS_REAL_WEASYPRINT_TEST: "1"
         run: |
           shopt -s globstar
           node --import tsx --test --test-concurrency=1 \

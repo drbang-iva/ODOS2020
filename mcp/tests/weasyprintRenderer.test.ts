@@ -55,3 +55,19 @@ test("WeasyPrint renderer fails loudly on subprocess errors and non-PDF output",
   });
   await assert.rejects(invalid.render("<p>test</p>"), /valid PDF/);
 });
+
+test("installed WeasyPrint 69.0 emits a real PDF/A-3u document", {
+  skip: process.env.ODOS_REAL_WEASYPRINT_TEST !== "1",
+}, async () => {
+  const renderer = new ExecFileWeasyPrintRenderer(
+    undefined,
+    process.env.WEASYPRINT_BIN ?? "weasyprint",
+  );
+  const pdf = await renderer.render(
+    "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>Synthetic test</title></head><body><p>Synthetic correspondence</p></body></html>",
+  );
+  assert.equal(pdf.subarray(0, 5).toString(), "%PDF-");
+  assert.ok(pdf.byteLength > 1_000);
+  assert.match(pdf.toString("latin1"), /pdfaid:part>3</);
+  assert.match(pdf.toString("latin1"), /pdfaid:conformance>U</);
+});
