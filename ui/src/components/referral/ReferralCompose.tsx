@@ -135,8 +135,8 @@ export function ReferralCompose({
     return () => controller.abort();
   }, [api, encounterReference, loadContext]);
 
-  const searchConsultantOptions = useCallback(async (query: string) => {
-    const consultants = await api.searchConsultants(query, new AbortController().signal);
+  const searchConsultantOptions = useCallback(async (query: string, signal: AbortSignal) => {
+    const consultants = await api.searchConsultants(query, signal);
     return consultants.map((consultant) => ({
       value: consultant.reference,
       label: consultant.display,

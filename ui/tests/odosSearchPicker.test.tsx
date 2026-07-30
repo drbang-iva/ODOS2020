@@ -67,6 +67,7 @@ test("OdosSearchPicker suppresses exact-match creation and creates a non-match w
   const existing = {
     value: "payer-existing",
     label: "Existing Payer",
+    description: "Plan directory result",
     item: { id: "payer-existing" },
   };
   let createdName = "";
@@ -110,6 +111,9 @@ test("OdosSearchPicker suppresses exact-match creation and creates a non-match w
       () => hasOptionLabel(renderer!, "Existing Payer"),
       "existing payer result for settled exact-match query",
     );
+    const existingOption = renderer!.root.findAllByProps({ role: "option" })[0]!;
+    assert.equal(existingOption.props["aria-label"], undefined);
+    assert.match(existingOption.findAllByType("span").map((span) => span.children.join("")).join(" "), /Plan directory result/);
     assert.equal(
       renderer!.root.findAllByType("button")
         .some((button) => button.children.join("").startsWith("Create payer")),
@@ -211,6 +215,43 @@ test("OdosSearchPicker blocks Enter-to-create before debounce and while the curr
     if (renderer) act(() => renderer!.unmount());
     Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
   }
+});
+
+test("OdosSearchPicker keeps creation blocked when search fails", async () => {
+  let createCalls = 0;
+  let renderer: ReactTestRenderer | undefined;
+  await act(async () => {
+    renderer = create(
+      <OdosSearchPicker
+        label="Payer"
+        value=""
+        placeholder="Search payer"
+        search={async () => { throw new Error("Search unavailable"); }}
+        onSelect={() => undefined}
+        onClear={() => undefined}
+        onCreate={async (name) => {
+          createCalls += 1;
+          return { value: "payer-new", label: name, item: { id: "payer-new" } };
+        }}
+        createLabel="Create payer"
+        searchDelayMs={0}
+      />,
+    );
+  });
+  const input = renderer.root.find(
+    (node) => node.type === "input" && node.props.placeholder === "Search payer",
+  );
+  await act(async () => {
+    input.props.onChange({ target: { value: "Unknown Payer" } });
+  });
+  await waitForObservable(
+    () => renderer!.root.findAllByProps({ role: "alert" }).length === 1,
+    "failed-search alert",
+  );
+  assert.equal(findButton(renderer, "Create payer “Unknown Payer”"), undefined);
+  act(() => input.props.onKeyDown({ key: "Enter", preventDefault: () => undefined }));
+  assert.equal(createCalls, 0);
+  act(() => renderer!.unmount());
 });
 
 function findButton(renderer: ReactTestRenderer, text: string) {

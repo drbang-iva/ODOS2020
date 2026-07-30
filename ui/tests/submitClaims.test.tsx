@@ -454,8 +454,8 @@ test("inline picker does not update selection after payer creation resolves post
     await act(async () => {
       renderer!.root.find((node) => node.type === "input" && node.props.placeholder === "Search payer name")
         .props.onChange({ target: { value: "New Payer" } });
-      await new Promise<void>((resolve) => globalThis.setTimeout(resolve, 0));
     });
+    await waitForClaimsButton(renderer!, "Create payer “New Payer”");
     act(() => claimsButton(renderer!, "Create payer “New Payer”").props.onClick());
     await act(async () => {
       renderer!.unmount();
@@ -984,4 +984,14 @@ function claimsButton(renderer: ReactTestRenderer, label: string): any {
   );
   assert.ok(button, `Expected ${label} button`);
   return button;
+}
+
+async function waitForClaimsButton(renderer: ReactTestRenderer, label: string): Promise<void> {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    if (renderer.root.findAllByType("button").some((button) => button.children.join("") === label)) return;
+    await act(async () => {
+      await new Promise<void>((resolve) => setImmediate(resolve));
+    });
+  }
+  assert.fail(`Timed out waiting for ${label} button`);
 }

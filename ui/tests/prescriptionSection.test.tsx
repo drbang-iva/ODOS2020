@@ -280,7 +280,9 @@ test("selecting a Formulary result stores coded fields and later text edits clea
     await new Promise((resolve) => setTimeout(resolve, 10));
   });
   await act(async () => {
-    renderer!.root.findByProps({ "aria-label": `Choose ${result.psnDescription} from Formulary` }).props.onClick();
+    renderer!.root.findAllByProps({ role: "option" }).find((option) =>
+      option.findAllByType("span").some((span) => span.children.join("") === result.psnDescription)
+    )!.props.onClick();
   });
   assert.equal(latestDraft.drugDbCode, result.drugDbCode);
   assert.equal(latestDraft.route, result.route);
@@ -403,7 +405,7 @@ test("MedicationRequest readback restores WENO fields only as a complete group",
   );
 });
 
-test("a failed Formulary search keeps the query and exposes explicit free-text creation", async () => {
+test("a failed Formulary search keeps the query but blocks free-text creation on uncertainty", async () => {
   let latestDraft = EMPTY_PRESCRIPTION_DRAFT;
   let renderer: ReactTestRenderer;
   const searchApi = searchApiStub({ formulary: async () => { throw new Error("offline"); } });
@@ -421,9 +423,8 @@ test("a failed Formulary search keeps the query and exposes explicit free-text c
   assert.match(JSON.stringify(renderer!.toJSON()), /offline/);
   const createButton = renderer!.root.findAllByType("button")
     .find((button) => button.children.join("").includes("Use as written"));
-  assert.ok(createButton);
-  await act(async () => { await createButton.props.onClick(); });
-  assert.equal(latestDraft.drug, "Unlisted medication");
+  assert.equal(createButton, undefined);
+  assert.equal(latestDraft.drug, "");
   await act(async () => renderer!.unmount());
 });
 

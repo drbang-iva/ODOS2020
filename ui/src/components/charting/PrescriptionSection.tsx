@@ -160,20 +160,20 @@ export function PrescriptionEditor({
   const set = (next: Partial<PrescriptionDraft>) => onChange({ ...draft, ...next });
   const [directoryState, setDirectoryState] = useState("");
   const [directorySearchType, setDirectorySearchType] = useState<"local-retail" | "mail-order">("local-retail");
-  const searchFormularyOptions = useMemo(() => async (query: string) =>
-    (await searchApi.searchFormulary(query)).map((result) => ({
+  const searchFormularyOptions = useMemo(() => async (query: string, signal: AbortSignal) =>
+    (await searchApi.searchFormulary(query, signal)).map((result) => ({
       value: `${result.drugDbCode}:${result.drugDbCodeQualifier}`,
       label: result.psnDescription,
       description: formularyDetails(result),
       item: { kind: "coded", result } satisfies FormularySelection,
     })), [searchApi]);
-  const searchDirectoryOptions = useMemo(() => async (query: string) => {
+  const searchDirectoryOptions = useMemo(() => async (query: string, signal: AbortSignal) => {
     if (!directoryState.trim()) throw new Error("Enter the pharmacy state before searching.");
     return (await searchApi.searchDirectory({
       place: query,
       state: directoryState.trim(),
       searchType: directorySearchType,
-    })).map((result, index) => ({
+    }, signal)).map((result, index) => ({
       value: result.ncpdpId || `${result.businessName}:${index}`,
       label: result.businessName,
       description: directoryAddress(result),

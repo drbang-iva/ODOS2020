@@ -63,6 +63,14 @@ interface DiagnosisCodeOption {
   code: string;
   display: string;
 }
+interface DiagnosisCatalogCodeRow {
+  display: string;
+  stableKey: string;
+  active: boolean;
+  codingStatus: "verified" | "placeholder" | "provisional";
+  icd10?: { code?: string; pattern?: Record<string, string> };
+}
+let cachedDiagnosisCatalog: DiagnosisCatalogCodeRow[] | undefined;
 interface ProtocolOffer {
   id: string;
   title: string;
@@ -833,22 +841,32 @@ function DiagnosisCard({
   );
 }
 
-async function searchDiagnosisCodeOptions(query: string) {
-  const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/diagnosis-catalog`, { headers: authHeaders() });
+async function loadDiagnosisCatalog(signal: AbortSignal): Promise<DiagnosisCatalogCodeRow[]> {
+  if (cachedDiagnosisCatalog) return cachedDiagnosisCatalog;
+  const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/diagnosis-catalog`, {
+    headers: authHeaders(),
+    signal,
+  });
   const body = await response.json() as {
-    diagnoses?: Array<{
-      display: string;
-      stableKey: string;
-      active: boolean;
-      icd10?: { code?: string; pattern?: Record<string, string> };
-    }>;
+    diagnoses?: DiagnosisCatalogCodeRow[];
     error?: string;
   };
   if (!response.ok) throw new Error(body.error ?? `Diagnosis catalog request failed: ${response.status}`);
+  cachedDiagnosisCatalog = body.diagnoses ?? [];
+  return cachedDiagnosisCatalog;
+}
+
+async function searchDiagnosisCodeOptions(query: string, signal: AbortSignal) {
+  const diagnoses = await loadDiagnosisCatalog(signal);
   const normalized = query.trim().toLocaleLowerCase();
-  return (body.diagnoses ?? []).flatMap((row) => {
+  return diagnoses.flatMap((row) => {
     const code = row.icd10?.code ?? row.icd10?.pattern?.unspecifiedEye;
-    if (!row.active || !code || !`${row.display} ${row.stableKey} ${code}`.toLocaleLowerCase().includes(normalized)) return [];
+    if (
+      !row.active
+      || row.codingStatus !== "verified"
+      || !code
+      || !`${row.display} ${row.stableKey} ${code}`.toLocaleLowerCase().includes(normalized)
+    ) return [];
     const item = { code, display: row.display } satisfies DiagnosisCodeOption;
     return [{
       value: code,

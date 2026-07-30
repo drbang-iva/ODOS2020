@@ -17,10 +17,10 @@ interface CommonOdosSelectProps<T> {
   disabled?: boolean;
   loading?: boolean;
   isEqual?: (left: T, right: T) => boolean;
-  buttonRef?: Ref<HTMLButtonElement>;
 }
 
 interface OdosSelectButtonProps {
+  buttonRef?: Ref<HTMLButtonElement>;
   onInputChange?: undefined;
   parseInput?: undefined;
   serializeValue?: undefined;

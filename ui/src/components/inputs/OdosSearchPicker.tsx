@@ -12,7 +12,7 @@ export interface OdosSearchPickerProps<T> {
   value: string;
   selectedLabel?: string;
   placeholder: string;
-  search: (query: string) => Promise<OdosSearchPickerOption<T>[]>;
+  search: (query: string, signal: AbortSignal) => Promise<OdosSearchPickerOption<T>[]>;
   onSelect: (option: OdosSearchPickerOption<T>) => void;
   onClear: () => void;
   onCreate?: (name: string) => Promise<OdosSearchPickerOption<T>>;
@@ -82,10 +82,11 @@ export function OdosSearchPicker<T>({
       return;
     }
     let cancelled = false;
+    const controller = new AbortController();
     const runSearch = () => {
       setLoading(true);
       setError(undefined);
-      search(trimmed)
+      search(trimmed, controller.signal)
         .then((results) => {
           if (!cancelled) {
             setOptions(results);
@@ -97,7 +98,7 @@ export function OdosSearchPicker<T>({
           if (!cancelled) {
             setError(cause instanceof Error ? cause.message : String(cause));
             setOptions([]);
-            setSettledQuery(trimmed);
+            setSettledQuery("");
           }
         })
         .finally(() => {
@@ -109,6 +110,7 @@ export function OdosSearchPicker<T>({
       : window.setTimeout(runSearch, searchDelayMs);
     return () => {
       cancelled = true;
+      controller.abort();
       if (typeof window === "undefined") globalThis.clearTimeout(handle);
       else window.clearTimeout(handle);
     };
@@ -227,7 +229,6 @@ export function OdosSearchPicker<T>({
             type="button"
             role="option"
             aria-selected={index === activeIndex}
-            aria-label={`Choose ${option.label} from ${label}`}
             key={option.value}
             onPointerEnter={() => setActiveIndex(index)}
             onFocus={() => setActiveIndex(index)}

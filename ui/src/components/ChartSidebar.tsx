@@ -616,8 +616,8 @@ interface ClinicalCodeOption {
   display: string;
 }
 
-async function searchAllergyOptions(query: string) {
-  const results = await fhir.searchWenoFormulary(clinicalGraphApiBase(), query);
+async function searchAllergyOptions(query: string, signal: AbortSignal) {
+  const results = await fhir.searchWenoFormulary(clinicalGraphApiBase(), query, signal);
   return results.map((result) => ({
     value: result.drugDbCode,
     label: result.psnDescription,
@@ -626,16 +626,29 @@ async function searchAllergyOptions(query: string) {
   }));
 }
 
-async function searchProblemOptions(query: string) {
-  const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/diagnosis-catalog`, { headers: authHeaders() });
+async function searchProblemOptions(query: string, signal: AbortSignal) {
+  const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/diagnosis-catalog`, {
+    headers: authHeaders(),
+    signal,
+  });
   const body = await response.json() as {
-    diagnoses?: Array<{ display: string; stableKey: string; active: boolean; snomed?: ClinicalCodeOption }>;
+    diagnoses?: Array<{
+      display: string;
+      stableKey: string;
+      active: boolean;
+      codingStatus: "verified" | "placeholder" | "provisional";
+      snomed?: ClinicalCodeOption;
+    }>;
     error?: string;
   };
   if (!response.ok) throw new Error(body.error ?? `Diagnosis catalog request failed: ${response.status}`);
   const normalized = query.trim().toLocaleLowerCase();
   return (body.diagnoses ?? [])
-    .filter((row) => row.active && row.snomed && `${row.display} ${row.stableKey} ${row.snomed.code}`.toLocaleLowerCase().includes(normalized))
+    .filter((row) =>
+      row.active
+      && row.codingStatus === "verified"
+      && row.snomed
+      && `${row.display} ${row.stableKey} ${row.snomed.code}`.toLocaleLowerCase().includes(normalized))
     .slice(0, 20)
     .map((row) => ({
       value: row.snomed!.code,

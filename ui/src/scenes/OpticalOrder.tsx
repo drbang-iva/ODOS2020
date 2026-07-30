@@ -65,6 +65,7 @@ import {
 } from "../lib/patient-insurance";
 import { fhir } from "../lib/fhir";
 import { OdosSearchPicker } from "../components/inputs/OdosSearchPicker";
+import { authHeaders, clinicalGraphApiBase } from "../lib/clinical-graph-client";
 
 interface OrderHeaderState {
   staffLocation: string;
@@ -1185,9 +1186,7 @@ function ChargeTable({
                   value={line.procedure}
                   selectedLabel={line.procedure}
                   placeholder="Search procedure codes"
-                  search={(query) => searchChargeValues(lines.map((candidate) => candidate.procedure), query)}
-                  onCreate={(value) => Promise.resolve(chargeValueOption(value))}
-                  createLabel="Use code"
+                  search={(query) => searchVerifiedProcedureCodes(lines, query)}
                   onClear={() => onChange(updateLine(lines, line.id, { procedure: "" }))}
                   onSelect={(option) => onChange(updateLine(lines, line.id, { procedure: option.value }))}
                 />
@@ -1198,9 +1197,7 @@ function ChargeTable({
                   value={line.modifier}
                   selectedLabel={line.modifier}
                   placeholder="Search modifiers"
-                  search={(query) => searchChargeValues(lines.map((candidate) => candidate.modifier), query)}
-                  onCreate={(value) => Promise.resolve(chargeValueOption(value))}
-                  createLabel="Use modifier"
+                  search={(query) => searchVerifiedModifierCodes(lines, query)}
                   onClear={() => onChange(updateLine(lines, line.id, { modifier: "" }))}
                   onSelect={(option) => onChange(updateLine(lines, line.id, { modifier: option.value }))}
                 />
@@ -1211,9 +1208,7 @@ function ChargeTable({
                   value={line.diagnosis}
                   selectedLabel={line.diagnosis}
                   placeholder="Search diagnosis codes"
-                  search={(query) => searchChargeValues(lines.map((candidate) => candidate.diagnosis), query)}
-                  onCreate={(value) => Promise.resolve(chargeValueOption(value))}
-                  createLabel="Use diagnosis"
+                  search={searchVerifiedDiagnosisCodes}
                   onClear={() => onChange(updateLine(lines, line.id, { diagnosis: "" }))}
                   onSelect={(option) => onChange(updateLine(lines, line.id, { diagnosis: option.value }))}
                 />
@@ -1270,15 +1265,79 @@ function ChargeTable({
   );
 }
 
-function chargeValueOption(value: string) {
-  return { value, label: value, item: value };
+interface VerifiedChargeCode {
+  code: string;
+  display: string;
 }
 
-function searchChargeValues(values: string[], query: string) {
+function searchVerifiedProcedureCodes(lines: OpticalChargeLineDraft[], query: string) {
+  const codes = lines.flatMap((line) => [
+    ...(line.frame ? [{ code: "V2020", display: "Frames, purchases" }] : []),
+    ...(line.billingCodes ?? []).map((code) => ({ code: code.code, display: code.display })),
+  ]);
+  return Promise.resolve(searchVerifiedChargeCodes(codes, query));
+}
+
+function searchVerifiedModifierCodes(lines: OpticalChargeLineDraft[], query: string) {
+  const codes = lines.flatMap((line) => (line.billingCodes ?? []).map((code) => ({
+    code: code.lateralityModifier,
+    display: `${code.lateralityModifier} — ${code.eye} laterality`,
+  })));
+  return Promise.resolve(searchVerifiedChargeCodes(codes, query));
+}
+
+function searchVerifiedChargeCodes(codes: VerifiedChargeCode[], query: string) {
   const normalized = query.trim().toLocaleLowerCase();
-  return Promise.resolve([...new Set(values.filter(Boolean))]
-    .filter((value) => value.toLocaleLowerCase().includes(normalized))
-    .map(chargeValueOption));
+  const unique = [...new Map(codes.map((code) => [code.code, code])).values()];
+  return unique
+    .filter((code) => `${code.code} ${code.display}`.toLocaleLowerCase().includes(normalized))
+    .map((code) => ({
+      value: code.code,
+      label: code.code,
+      description: code.display,
+      item: code.code,
+    }));
+}
+
+interface OpticalDiagnosisCatalogRow {
+  display: string;
+  stableKey: string;
+  active: boolean;
+  codingStatus: "verified" | "placeholder" | "provisional";
+  icd10?: { code?: string; pattern?: Record<string, string> };
+}
+
+let cachedOpticalDiagnosisCatalog: OpticalDiagnosisCatalogRow[] | undefined;
+
+async function searchVerifiedDiagnosisCodes(query: string, signal: AbortSignal) {
+  if (!cachedOpticalDiagnosisCatalog) {
+    const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/diagnosis-catalog`, {
+      headers: authHeaders(),
+      signal,
+    });
+    const body = await response.json() as {
+      diagnoses?: OpticalDiagnosisCatalogRow[];
+      error?: string;
+    };
+    if (!response.ok) throw new Error(body.error ?? `Diagnosis catalog request failed: ${response.status}`);
+    cachedOpticalDiagnosisCatalog = body.diagnoses ?? [];
+  }
+  const normalized = query.trim().toLocaleLowerCase();
+  return cachedOpticalDiagnosisCatalog.flatMap((row) => {
+    const code = row.icd10?.code ?? row.icd10?.pattern?.unspecifiedEye;
+    if (
+      !row.active
+      || row.codingStatus !== "verified"
+      || !code
+      || !`${row.display} ${row.stableKey} ${code}`.toLocaleLowerCase().includes(normalized)
+    ) return [];
+    return [{
+      value: code,
+      label: code,
+      description: row.display,
+      item: code,
+    }];
+  }).slice(0, 20);
 }
 
 export function PaymentPanel({

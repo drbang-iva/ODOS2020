@@ -149,7 +149,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
     setOverrideDirty(false);
   }
 
-  async function saveComplaint(_addAnother: boolean) {
+  async function saveComplaint(addAnother: boolean) {
     if (!draft || (!draft.complaintKey && !draft.freeTextLabel?.trim())) return;
     setSaving(true);
     setError(null);
@@ -171,7 +171,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
         savedAt: new Date().toISOString(),
         operator: "ODOS UI Complaint Intake",
       });
-      setDraft(null);
+      setDraft(addAnother ? blankComplaintDraft() : null);
       setEditingId(null);
       setOverrideDirty(false);
     } catch (caught) {

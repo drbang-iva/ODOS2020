@@ -63,6 +63,9 @@ export function OpticalFrames({ route, api = defaultApi }: { route: OpticalFrame
     () => summarizeInventoryByVariant(units, variantSettings, catalogRows),
     [catalogRows, units, variantSettings],
   );
+  const visibleCatalogRows = route === "catalog" && selectedCatalogItem
+    ? [selectedCatalogItem]
+    : catalogRows;
 
   useEffect(() => {
     let cancelled = false;
@@ -131,12 +134,10 @@ export function OpticalFrames({ route, api = defaultApi }: { route: OpticalFrame
               onClear={() => {
                 setSelectedCatalogItem(undefined);
                 setQuery("");
-                void api.searchCatalog("").then(setCatalogRows).catch((err) => setError(err instanceof Error ? err.message : String(err)));
               }}
               onSelect={(option) => {
                 setSelectedCatalogItem(option.item);
                 setQuery(option.item.sku);
-                setCatalogRows([option.item]);
               }}
             placeholder="SKU, GTIN, brand, model"
             />
@@ -147,7 +148,7 @@ export function OpticalFrames({ route, api = defaultApi }: { route: OpticalFrame
         {skippedUnitCount > 0 ? <MalformedUnitWarning count={skippedUnitCount} /> : null}
         {route === "catalog" ? (
           <CatalogTable
-            rows={catalogRows}
+            rows={visibleCatalogRows}
             onReceive={api.receiveInventory}
             onReceived={inventoryReceived}
             onError={setError}

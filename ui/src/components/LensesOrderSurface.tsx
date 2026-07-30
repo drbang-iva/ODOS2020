@@ -322,8 +322,8 @@ export function LensesOrderSurface({
             placeholder="Try 167 xtractive alpha"
             search={async (query) => {
               const searchProducts = products.filter((product) => selectedLab === "all" || product.lab === selectedLab);
-              return fuzzySearchLensProducts(query, searchProducts, rxContext)
-                .filter(({ envelope }) => envelope.fits)
+              const fittingProducts = searchProducts.filter((product) => lensProductEnvelopeCheck(product, rxContext).fits);
+              return fuzzySearchLensProducts(query, fittingProducts, rxContext)
                 .map(({ product }) => ({
                   value: product.id,
                   label: `${product.design.productName} · ${product.material.name} ${product.material.index}`,
