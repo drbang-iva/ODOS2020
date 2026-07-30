@@ -69,6 +69,21 @@ import { registerStaffInviteRoute } from "./desk/staff-invite.js";
 import { registerClinicRoutes } from "./clinic/clinic-routes.js";
 import { registerOfficeRoutes } from "./office/office-routes.js";
 import { registerSchedulingResourceRoutes } from "./scheduling/scheduling-resource-routes.js";
+import {
+  commsAdapterRegistrationsFromEnv,
+  createCommsDispatch,
+} from "./comms/comms-config.js";
+import {
+  createFhirTrackedLinkStore,
+  registerTrackedLinkRoutes,
+} from "./comms/tracked-links.js";
+import {
+  DEFAULT_APPOINTMENT_REMINDER_CAMPAIGNS,
+  createReminderEngine,
+  reminderLookbackMinutes,
+  reminderWorkerIntervalMs,
+  startReminderWorker,
+} from "./reminders/reminder-engine.js";
 import { PostgresWenoDrugDatabaseStorage } from "./jobs/syncWenoDrugDatabase.js";
 import { PostgresWenoPharmacyDirectoryStorage } from "./jobs/syncWenoPharmacyDirectory.js";
 import { registerWenoSearchRoutes } from "./weno/weno-search-routes.js";
@@ -571,6 +586,9 @@ const findingDefinitionStore = new FhirFindingDefinitionStore(fhir);
 const procedureDefinitionStore = new FhirProcedureDefinitionStore(fhir);
 const protocolDefinitionStore = new ProtocolDefinitionStore(fhir);
 let authPromise: Promise<void> | undefined;
+const commsDispatch = createCommsDispatch(commsAdapterRegistrationsFromEnv(process.env), {
+  practiceTimeZone: process.env.ODOS_TIMEZONE ?? "UTC",
+});
 
 /* --------------------------------------------------------------------------
  * Tool definitions — start minimal; grow as ODOS needs more agent surfaces.
@@ -5617,6 +5635,28 @@ async function main(): Promise<void> {
   await logProtocolSeedBootFailure({
     seed: () => protocolDefinitionStore.ensureSeed(GLAUCOMA_SUSPECT_PROTOCOL).then(() => undefined),
   });
+  if (process.env.ODOS_REMINDER_ENGINE_ENABLED === "true") {
+    const provider = process.env.ODOS_REMINDER_PROVIDER ?? "google-workspace";
+    if (!commsDispatch.providers().includes(provider)) {
+      throw new Error(
+        `odos-mcp: reminder provider "${provider}" is not configured in ODOS_COMMS_PROVIDERS.`,
+      );
+    }
+    startReminderWorker({
+      authenticate: authenticateWithMedplum,
+      engine: createReminderEngine({
+        fhir,
+        dispatch: commsDispatch,
+        practiceTimeZone: process.env.ODOS_TIMEZONE ?? "UTC",
+        lookbackMinutes: reminderLookbackMinutes(process.env.ODOS_REMINDER_LOOKBACK_MINUTES),
+      }),
+      campaigns: DEFAULT_APPOINTMENT_REMINDER_CAMPAIGNS.map((campaign) => ({
+        ...campaign,
+        provider,
+      })),
+      intervalMs: reminderWorkerIntervalMs(process.env.ODOS_REMINDER_WORKER_MS),
+    });
+  }
 
   switch (transportMode) {
     case "stdio": {
@@ -7163,6 +7203,10 @@ async function main(): Promise<void> {
         authenticateService: authenticateWithMedplum,
         authenticate: authenticateStaffRoute,
         serviceFhir: fhir,
+      });
+      registerTrackedLinkRoutes(app, {
+        authenticateService: authenticateWithMedplum,
+        store: createFhirTrackedLinkStore(fhir),
       });
       registerLabOrderRoutes(app, {
         authenticateService: authenticateWithMedplum,

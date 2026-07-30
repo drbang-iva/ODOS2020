@@ -90,6 +90,13 @@ Create `.env` from `.env.example` or export these variables in the shell that ru
 | `ODOS_MCP_TRANSPORT` | yes for the browser UI | Set to `sse` so the UI can call the local HTTP routes. The default `stdio` mode is for launch-on-demand MCP clients. |
 | `ODOS_SMART_SIGNING_KEY_PATH` | yes for the local HTTP backend | Absolute path to the local mode-0600 SMART RS256 private key. |
 | `ODOS_BACKUP_DIR` | no | Destination used by backup scripts and backup-destination verification. |
+| `ODOS_COMMS_PROVIDERS` | no | Comma-separated native communications adapters. Empty keeps communications inert; Slice 1 supports `google-workspace`. |
+| `ODOS_TIMEZONE` | yes for reminders | IANA practice timezone used when no patient timezone is present. |
+| `ODOS_REMINDER_ENGINE_ENABLED` | no | Must be explicitly `true` after Google Workspace and BAA setup is confirmed. |
+| `ODOS_COMMS_PUBLIC_BASE_URL` | yes for tracked links | HTTPS practice-domain origin for campaign redirect links. |
+
+Google Workspace communications setup and the documented manual-send verification path are in
+[`docs/google-workspace-comms.md`](google-workspace-comms.md).
 
 ## Setup Wizard
 

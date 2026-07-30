@@ -1,0 +1,87 @@
+export interface CommsCapabilities {
+  sms: boolean;
+  calls: boolean;
+  email: boolean;
+  contacts: boolean;
+  conversations: boolean;
+  reviews: boolean;
+}
+
+export interface SuppressionContext {
+  frequencyCapDays?: number;
+}
+
+export interface SendEmailRequest {
+  patientReference: string;
+  toAddress?: string;
+  subject: string;
+  body: string;
+  templateId?: string;
+  campaignType: string;
+  campaignId?: string;
+  messageId?: string;
+  suppression: SuppressionContext;
+}
+
+export interface SendSmsRequest {
+  patientReference: string;
+  toNumber?: string;
+  body: string;
+  campaignType: string;
+  campaignId?: string;
+  messageId?: string;
+  suppression: SuppressionContext;
+}
+
+export type SendResult =
+  | {
+      outcome: "sent";
+      providerMessageId: string;
+      providerThreadId?: string;
+    }
+  | {
+      outcome: "suppressed";
+      reason: "patient-opt-out" | "frequency-cap";
+    }
+  | {
+      outcome: "rescheduled";
+      reason: "quiet-hours";
+      rescheduledAt: string;
+    };
+
+export interface ConversationSummary {
+  id: string;
+  patientReference?: string;
+  updatedAt: string;
+}
+
+export interface CallRequest {
+  patientReference: string;
+  toNumber?: string;
+}
+
+export interface ContactSearch {
+  query: string;
+}
+
+export interface ContactRecord {
+  id?: string;
+  patientReference?: string;
+  email?: string;
+  phone?: string;
+}
+
+/**
+ * Vendor-neutral communications seam. Methods outside the declared capability surface are
+ * optional so partial providers stay honest while future adapters share this stable contract.
+ */
+export interface CommsProvider {
+  readonly name: string;
+  readonly capabilities: Readonly<CommsCapabilities>;
+  sendEmail(request: SendEmailRequest): Promise<SendResult>;
+  sendSms?(request: SendSmsRequest): Promise<SendResult>;
+  listConversations?(): Promise<ConversationSummary[]>;
+  initiateCall?(request: CallRequest): Promise<{ callId: string }>;
+  searchContacts?(request: ContactSearch): Promise<ContactRecord[]>;
+  upsertContact?(contact: ContactRecord): Promise<ContactRecord>;
+}

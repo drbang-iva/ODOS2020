@@ -1,0 +1,271 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import type {
+  Appointment,
+  Bundle,
+  Communication,
+  Patient,
+  Resource,
+} from "@medplum/fhirtypes";
+import type { FhirSearchParams } from "../src/fhir-client.js";
+import type {
+  CommsDispatch,
+} from "../src/comms/comms-config.js";
+import type {
+  CommsProvider,
+  SendEmailRequest,
+} from "../src/comms/comms-provider.js";
+import { createSuppressedCommsProvider } from "../src/comms/suppression-gate.js";
+import {
+  DEFAULT_APPOINTMENT_REMINDER_CAMPAIGNS,
+  createReminderEngine,
+  scheduledAt,
+  type ReminderCampaignConfig,
+} from "../src/reminders/reminder-engine.js";
+
+const NOW = "2026-07-30T14:00:00.000Z";
+
+function appointment(id: string, start: string, end: string): Appointment {
+  return {
+    resourceType: "Appointment",
+    id,
+    status: "booked",
+    start,
+    end,
+    participant: [
+      { actor: { reference: "Patient/synthetic-1", display: "Synthetic Patient" }, status: "accepted" },
+      { actor: { reference: "Practitioner/example", display: "Dr. Example" }, status: "accepted" },
+      { actor: { reference: "Location/main", display: "Main Office" }, status: "accepted" },
+    ],
+  };
+}
+
+function fakeFhir(appointments: Appointment[]) {
+  const subject: Patient = {
+    resourceType: "Patient",
+    id: "synthetic-1",
+    telecom: [{ system: "email", value: "patient@example.test" }],
+  };
+  const communications: Communication[] = [];
+  let nextId = 1;
+
+  return {
+    communications,
+    read: async <T extends Resource>(resourceType: T["resourceType"]): Promise<T> => {
+      assert.equal(resourceType, "Patient");
+      return structuredClone(subject) as T;
+    },
+    search: async <T extends Resource>(
+      resourceType: T["resourceType"],
+      params?: FhirSearchParams,
+    ): Promise<Bundle<T>> => {
+      if (resourceType === "Appointment") {
+        return {
+          resourceType: "Bundle",
+          type: "searchset",
+          entry: appointments.map((resource) => ({ resource: structuredClone(resource) as T })),
+        };
+      }
+      assert.equal(resourceType, "Communication");
+      const query = new URLSearchParams(params as ConstructorParameters<typeof URLSearchParams>[0]);
+      const identifier = query.get("identifier");
+      const matches = identifier
+        ? communications.filter((resource) =>
+          resource.identifier?.some((candidate) => `${candidate.system}|${candidate.value}` === identifier))
+        : communications;
+      return {
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: matches.map((resource) => ({ resource: structuredClone(resource) as T })),
+      };
+    },
+    create: async <T extends Resource>(
+      resource: T,
+      headers?: Record<string, string>,
+    ): Promise<T> => {
+      if (resource.resourceType !== "Communication") return resource;
+      const communication = resource as Communication;
+      const conditional = headers?.["If-None-Exist"]?.replace(/^identifier=/, "");
+      const existing = conditional
+        ? communications.find((candidate) =>
+          candidate.identifier?.some((identifier) =>
+            `${identifier.system}|${identifier.value}` === conditional))
+        : undefined;
+      if (existing) return structuredClone(existing) as T;
+      const created = {
+        ...structuredClone(communication),
+        id: `communication-${nextId++}`,
+        meta: { versionId: "1" },
+      };
+      communications.push(created);
+      return structuredClone(created) as T;
+    },
+    update: async <T extends Resource>(
+      resourceType: T["resourceType"],
+      id: string,
+      resource: T,
+    ): Promise<T> => {
+      assert.equal(resourceType, "Communication");
+      const index = communications.findIndex((candidate) => candidate.id === id);
+      assert.notEqual(index, -1);
+      const updated = {
+        ...(resource as Communication),
+        id,
+        meta: { versionId: String(Number(communications[index].meta?.versionId ?? "0") + 1) },
+      };
+      communications[index] = updated;
+      return structuredClone(updated) as T;
+    },
+  };
+}
+
+function dispatchFor(
+  provider: CommsProvider,
+  fhir: ReturnType<typeof fakeFhir>,
+  now: () => Date = () => new Date(NOW),
+): CommsDispatch {
+  return {
+    providers: () => ["fake"],
+    getAdapter: () => createSuppressedCommsProvider(provider, {
+      fhir,
+      practiceTimeZone: "America/New_York",
+      now,
+    }),
+  };
+}
+
+function campaign(
+  id: string,
+  fieldPath: "start" | "end",
+  offsetMinutes: number,
+): ReminderCampaignConfig {
+  return {
+    id,
+    campaignType: "appointment-reminder",
+    provider: "fake",
+    channel: "email",
+    anchor: {
+      resourceType: "Appointment",
+      searchParameter: "date",
+      fieldPath,
+    },
+    offsetMinutes,
+    subjectTemplate: "Appointment reminder",
+    bodyTemplate: "Your appointment is {{appointmentDateTime}} with {{provider}} at {{location}}.",
+  };
+}
+
+test("signed offset math supports reminders before and campaigns after independently configured anchor fields", () => {
+  assert.equal(
+    scheduledAt("2026-07-31T14:00:00.000Z", -24 * 60),
+    "2026-07-30T14:00:00.000Z",
+  );
+  assert.equal(
+    scheduledAt("2026-07-30T12:00:00.000Z", 2 * 60),
+    "2026-07-30T14:00:00.000Z",
+  );
+  assert.deepEqual(
+    DEFAULT_APPOINTMENT_REMINDER_CAMPAIGNS.map((row) => row.offsetMinutes),
+    [-7 * 24 * 60, -24 * 60, -2 * 60],
+  );
+});
+
+test("engine reads Appointment anchors, dispatches both signed directions through the gate, persists Communication state, and is idempotent", async () => {
+  const fhir = fakeFhir([
+    appointment("before", "2026-07-31T14:00:00.000Z", "2026-07-31T14:30:00.000Z"),
+    appointment("after", "2026-07-30T11:30:00.000Z", "2026-07-30T12:00:00.000Z"),
+  ]);
+  const sent: SendEmailRequest[] = [];
+  const provider: CommsProvider = {
+    name: "fake",
+    capabilities: {
+      sms: false,
+      calls: false,
+      email: true,
+      contacts: false,
+      conversations: false,
+      reviews: false,
+    },
+    async sendEmail(request) {
+      sent.push(request);
+      return { outcome: "sent", providerMessageId: `provider-${sent.length}` };
+    },
+  };
+  const engine = createReminderEngine({
+    fhir,
+    dispatch: dispatchFor(provider, fhir),
+    now: () => new Date(NOW),
+    generateId: (() => {
+      let id = 0;
+      return () => `claim-${++id}`;
+    })(),
+    practiceTimeZone: "America/New_York",
+    lookbackMinutes: 5,
+  });
+
+  const first = await engine.run([
+    campaign("day-before", "start", -24 * 60),
+    campaign("two-hours-after", "end", 2 * 60),
+  ]);
+  assert.deepEqual(first.map((row) => row.outcome), ["sent", "sent"]);
+  assert.equal(sent.length, 2);
+  assert.equal(fhir.communications.length, 2);
+  assert.ok(fhir.communications.every((row) => row.status === "completed"));
+  assert.ok(fhir.communications.every((row) => row.subject?.reference === "Patient/synthetic-1"));
+  assert.ok(sent.every((row) => /Dr\. Example/.test(row.body) && /Main Office/.test(row.body)));
+
+  const second = await engine.run([
+    campaign("day-before", "start", -24 * 60),
+    campaign("two-hours-after", "end", 2 * 60),
+  ]);
+  assert.deepEqual(second.map((row) => row.outcome), ["already-processed", "already-processed"]);
+  assert.equal(sent.length, 2);
+  assert.equal(fhir.communications.length, 2);
+});
+
+test("an outside-hours Communication held by the gate is claimed and sent at the persisted next-window opening", async () => {
+  let current = new Date("2026-07-30T06:00:00.000Z");
+  const fhir = fakeFhir([
+    appointment("quiet-hours", "2026-07-31T06:00:00.000Z", "2026-07-31T06:30:00.000Z"),
+  ]);
+  const sent: SendEmailRequest[] = [];
+  const provider: CommsProvider = {
+    name: "fake",
+    capabilities: {
+      sms: false,
+      calls: false,
+      email: true,
+      contacts: false,
+      conversations: false,
+      reviews: false,
+    },
+    async sendEmail(request) {
+      sent.push(request);
+      return { outcome: "sent", providerMessageId: "provider-quiet-hours" };
+    },
+  };
+  const now = () => new Date(current);
+  const engine = createReminderEngine({
+    fhir,
+    dispatch: dispatchFor(provider, fhir, now),
+    now,
+    generateId: (() => {
+      let id = 0;
+      return () => `quiet-claim-${++id}`;
+    })(),
+    practiceTimeZone: "America/New_York",
+    lookbackMinutes: 5,
+  });
+  const config = campaign("day-before-quiet", "start", -24 * 60);
+
+  const held = await engine.run([config]);
+  assert.deepEqual(held.map((row) => row.outcome), ["rescheduled"]);
+  assert.equal(fhir.communications[0].status, "on-hold");
+  assert.equal(sent.length, 0);
+
+  current = new Date("2026-07-30T12:00:00.000Z");
+  const released = await engine.run([config]);
+  assert.deepEqual(released.map((row) => row.outcome), ["sent"]);
+  assert.equal(fhir.communications[0].status, "completed");
+  assert.equal(sent.length, 1);
+});
