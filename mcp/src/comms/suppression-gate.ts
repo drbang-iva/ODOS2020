@@ -1,4 +1,4 @@
-import type { Communication, Patient, Resource } from "@medplum/fhirtypes";
+import type { Bundle, Communication, Patient, Resource } from "@medplum/fhirtypes";
 import type { MedplumClient } from "../fhir-client.js";
 import type {
   CommsProvider,
@@ -13,7 +13,7 @@ export const ODOS_PATIENT_TIMEZONE_EXTENSION_URL =
 export const ODOS_COMMS_CAMPAIGN_TYPE_SYSTEM =
   "https://odos2020.com/fhir/CodeSystem/comms-campaign-type";
 
-export type SuppressionFhir = Pick<MedplumClient, "read" | "search">;
+export type SuppressionFhir = Pick<MedplumClient, "read" | "search" | "searchUrl">;
 
 export interface SuppressionGateDeps {
   fhir: SuppressionFhir;
@@ -95,18 +95,47 @@ async function isFrequencyCapped(
     throw new Error("Patient must have an id before communications suppression can be evaluated.");
   }
   const cutoff = new Date(now.getTime() - capDays * 86_400_000).toISOString();
-  const bundle = await fhir.search<Communication>("Communication", [
+  let bundle = await fhir.search<Communication>("Communication", [
     ["subject", `Patient/${patient.id}`],
     ["category", `${ODOS_COMMS_CAMPAIGN_TYPE_SYSTEM}|${campaignType}`],
     ["sent", `ge${cutoff}`],
     ["_count", "100"],
   ]);
+  let pages = 1;
+  let rows = bundle.entry?.length ?? 0;
+  while (true) {
+    if (bundleContainsCappedCommunication(bundle, patient.id, campaignType, cutoff)) {
+      return true;
+    }
+    const next = bundle.link?.find((link) => link.relation === "next")?.url;
+    if (!next) return false;
+    if (pages >= 100 || rows >= 10_000) {
+      throw new Error("Communications frequency-cap search exceeded its 100-page or 10000-row bound.");
+    }
+    if (!fhir.searchUrl) {
+      throw new Error("Communications frequency-cap pagination requires FHIR next-link support.");
+    }
+    bundle = await fhir.searchUrl<Communication>(next, "Communication");
+    pages += 1;
+    rows += bundle.entry?.length ?? 0;
+    if (rows > 10_000) {
+      throw new Error("Communications frequency-cap search exceeded its 10000-row bound.");
+    }
+  }
+}
+
+function bundleContainsCappedCommunication(
+  bundle: Bundle<Communication>,
+  patientId: string,
+  campaignType: string,
+  cutoff: string,
+): boolean {
   return (bundle.entry ?? []).some((entry) => {
     const communication = entry.resource;
     return communication?.status === "completed"
       && Boolean(communication.sent)
       && Date.parse(communication.sent!) >= Date.parse(cutoff)
-      && communication.subject?.reference === `Patient/${patient.id}`
+      && communication.subject?.reference === `Patient/${patientId}`
       && communication.category?.some((category) =>
         category.coding?.some((coding) =>
           coding.system === ODOS_COMMS_CAMPAIGN_TYPE_SYSTEM && coding.code === campaignType));

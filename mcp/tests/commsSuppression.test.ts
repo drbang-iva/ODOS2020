@@ -141,6 +141,53 @@ test("a configured campaign frequency cap suppresses a repeat inside the lookbac
   assert.equal(searchQuery?.get("patient"), null);
 });
 
+test("frequency-cap evaluation follows FHIR next links before allowing a send", async () => {
+  const sent: SendEmailRequest[] = [];
+  let nextReads = 0;
+  const prior: Communication = {
+    resourceType: "Communication",
+    status: "completed",
+    sent: "2026-07-01T14:00:00.000Z",
+    subject: { reference: "Patient/synthetic-1" },
+    category: [{
+      coding: [{
+        system: "https://odos2020.com/fhir/CodeSystem/comms-campaign-type",
+        code: "review-request",
+      }],
+    }],
+  };
+  const fhir = {
+    ...fhirFor(patient()),
+    search: async <T extends Resource>(): Promise<Bundle<T>> => ({
+      resourceType: "Bundle",
+      type: "searchset",
+      link: [{ relation: "next", url: "https://odos.local/fhir/R4/Communication?page=2" }],
+    }),
+    searchUrl: async <T extends Resource>(): Promise<Bundle<T>> => {
+      nextReads += 1;
+      return {
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [{ resource: structuredClone(prior) as T }],
+      };
+    },
+  };
+  const provider = createSuppressedCommsProvider(fakeProvider(sent), {
+    fhir,
+    practiceTimeZone: "America/New_York",
+    now: () => new Date("2026-07-30T14:00:00.000Z"),
+  });
+
+  const result = await provider.sendEmail(baseRequest({
+    campaignType: "review-request",
+    suppression: { frequencyCapDays: 90 },
+  }));
+
+  assert.deepEqual(result, { outcome: "suppressed", reason: "frequency-cap" });
+  assert.equal(nextReads, 1);
+  assert.equal(sent.length, 0);
+});
+
 test("an allowed send resolves Patient.telecom email and reaches the provider", async () => {
   const sent: SendEmailRequest[] = [];
   const provider = createSuppressedCommsProvider(fakeProvider(sent), {
