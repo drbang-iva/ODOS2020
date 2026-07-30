@@ -254,6 +254,9 @@ export function MyopiaManagementSection({ patientReference, encounterReference, 
                       defaultValue={DEFAULT_ATROPINE_FREQUENCY}
                       options={[...new Set([DEFAULT_ATROPINE_FREQUENCY, frequency])].map((value) => ({ value, label: value }))}
                       onChange={setFrequency}
+                      onInputChange={setFrequency}
+                      parseInput={(input) => input}
+                      serializeValue={(value) => value}
                     />
                   </div>
                 </div>
