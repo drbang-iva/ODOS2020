@@ -4,7 +4,17 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { stdin as input, stdout as output } from "node:process";
 import { createInterface } from "node:readline/promises";
 import { resolve } from "node:path";
-import type { AccessPolicy, Basic, Practitioner, Project, ProjectMembership, Schedule, User } from "@medplum/fhirtypes";
+import type {
+  AccessPolicy,
+  Basic,
+  Location,
+  Organization,
+  Practitioner,
+  Project,
+  ProjectMembership,
+  Schedule,
+  User,
+} from "@medplum/fhirtypes";
 import { createLiveOdosAuditRuntime } from "../mcp/src/authz/liveAudit.js";
 import { buildOdosAuditEventRow, type OdosAuditEventRecord } from "../mcp/src/authz/odosAudit.js";
 import {
@@ -30,10 +40,17 @@ export const SETUP_WIZARD_HEADER =
   "Run ODOS on your own hardware. Your patients, your machines, your data.";
 export const SETUP_WIZARD_ACTION_REASON = "v0.5d setup wizard first-run provisioning";
 export const SETUP_WIZARD_NOOP_REASON = "v0.5d setup wizard re-run, already provisioned";
+export const SETUP_PRACTICE_ORGANIZATION_IDENTIFIER_SYSTEM =
+  "https://odos2020.com/fhir/NamingSystem/setup-practice-organization";
+export const SETUP_PRACTICE_LOCATION_IDENTIFIER_SYSTEM =
+  "https://odos2020.com/fhir/NamingSystem/setup-practice-location";
 
 const DEFAULT_BASE_URL = "http://localhost:8103";
 const DEFAULT_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
 const DEFAULT_STATE_PATH = resolve(process.cwd(), ".odos-setup-state.json");
+const PRACTICE_ORGANIZATION_IDENTIFIER_VALUE = "primary";
+const DEFAULT_SCHEDULING_OFFICE_ID = "main";
+const DEFAULT_SCHEDULING_OFFICE_NAME = "Main Office";
 const FIRST_ADMIN_GRANT_ROLES = ["front-desk", "practice-admin", "clinician"] as const satisfies readonly PracticeRoleId[];
 type FirstAdminGrantRole = (typeof FIRST_ADMIN_GRANT_ROLES)[number];
 const FIRST_ADMIN_PRIMARY_ROLE: FirstAdminGrantRole = "front-desk";
@@ -57,6 +74,10 @@ export interface SetupPracticeState {
   projectId?: string;
   practitionerCreated?: boolean;
   practitionerId?: string;
+  organizationCreated?: boolean;
+  organizationId?: string;
+  locationCreated?: boolean;
+  locationId?: string;
   schedulingProvisioned?: boolean;
   scheduleId?: string;
   schedulingConfigId?: string;
@@ -77,6 +98,16 @@ export interface SetupPracticeAdapter {
   isPracticeProvisioned(config: SetupPracticeConfig, state: SetupPracticeState): Promise<boolean>;
   createOrLoginAdmin(config: SetupPracticeConfig): Promise<AdminSession>;
   createPractitioner(config: SetupPracticeConfig, session: AdminSession): Promise<Practitioner>;
+  createPracticeOrganization(config: SetupPracticeConfig): Promise<{
+    organization: Organization;
+    created: boolean;
+  }>;
+  createPracticeLocation(input: {
+    organization: Organization;
+  }): Promise<{
+    location: Location;
+    created: boolean;
+  }>;
   createSchedulingFoundation(input: {
     config: SetupPracticeConfig;
     session: AdminSession;
@@ -209,6 +240,59 @@ export async function runSetupPractice(options: SetupPracticeOptions = {}): Prom
     );
   }
 
+  let organization: Organization;
+  if (state.organizationCreated && state.organizationId) {
+    organization = { resourceType: "Organization", id: state.organizationId };
+  } else {
+    const resolved = await adapter.createPracticeOrganization(config);
+    if (!resolved.organization.id) {
+      throw new Error("Setup wizard Organization create returned no id.");
+    }
+    const auditRequired =
+      resolved.created || state.organizationId === resolved.organization.id;
+    state = persistSetupState(config.statePath, {
+      ...state,
+      organizationId: resolved.organization.id,
+    });
+    if (auditRequired) {
+      await emit(buildSetupAuditRow({
+        eventType: "create",
+        resourceType: "Organization",
+        resourceId: resolved.organization.id,
+        actionReason: SETUP_WIZARD_ACTION_REASON,
+      }));
+    }
+    state = persistSetupState(config.statePath, {
+      ...state,
+      organizationCreated: true,
+    });
+    organization = resolved.organization;
+  }
+
+  if (!state.locationCreated || !state.locationId) {
+    const resolved = await adapter.createPracticeLocation({ organization });
+    if (!resolved.location.id) {
+      throw new Error("Setup wizard Location create returned no id.");
+    }
+    const auditRequired = resolved.created || state.locationId === resolved.location.id;
+    state = persistSetupState(config.statePath, {
+      ...state,
+      locationId: resolved.location.id,
+    });
+    if (auditRequired) {
+      await emit(buildSetupAuditRow({
+        eventType: "create",
+        resourceType: "Location",
+        resourceId: resolved.location.id,
+        actionReason: SETUP_WIZARD_ACTION_REASON,
+      }));
+    }
+    state = persistSetupState(config.statePath, {
+      ...state,
+      locationCreated: true,
+    });
+  }
+
   if (!state.schedulingProvisioned) {
     const scheduling = await adapter.createSchedulingFoundation({ config, session, practitioner });
     if (!scheduling.schedule.id || !scheduling.practiceConfig.id) {
@@ -314,6 +398,8 @@ export async function runSetupPractice(options: SetupPracticeOptions = {}): Prom
 export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
   readonly admins: AdminSession[] = [];
   readonly practitioners: Practitioner[] = [];
+  readonly organizations: Organization[] = [];
+  readonly locations: Location[] = [];
   readonly schedules: Schedule[] = [];
   readonly schedulingConfigs: Basic[] = [];
   readonly policies: AccessPolicy[] = [];
@@ -332,7 +418,7 @@ export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
   practiceProvisioned = false;
 
   async isPracticeProvisioned(_config: SetupPracticeConfig, state: SetupPracticeState): Promise<boolean> {
-    return this.practiceProvisioned || Boolean(state.completed && state.schedulingProvisioned);
+    return this.practiceProvisioned || setupStateIsComplete(state);
   }
 
   async createOrLoginAdmin(config: SetupPracticeConfig): Promise<AdminSession> {
@@ -361,6 +447,58 @@ export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
     };
     this.practitioners.push(practitioner);
     return practitioner;
+  }
+
+  async createPracticeOrganization(config: SetupPracticeConfig): Promise<{
+    organization: Organization;
+    created: boolean;
+  }> {
+    const existing = this.organizations.filter((organization) =>
+      hasIdentifier(
+        organization.identifier,
+        SETUP_PRACTICE_ORGANIZATION_IDENTIFIER_SYSTEM,
+        PRACTICE_ORGANIZATION_IDENTIFIER_VALUE,
+      )
+    );
+    if (existing.length > 1) {
+      throw new Error(`Expected at most one practice Organization; found ${existing.length}.`);
+    }
+    if (existing[0]) {
+      return { organization: existing[0], created: false };
+    }
+    const organization = {
+      ...buildPracticeOrganization(config),
+      id: `organization-${this.organizations.length + 1}`,
+    };
+    this.organizations.push(organization);
+    return { organization, created: true };
+  }
+
+  async createPracticeLocation(input: {
+    organization: Organization;
+  }): Promise<{
+    location: Location;
+    created: boolean;
+  }> {
+    const existing = this.locations.filter((location) =>
+      hasIdentifier(
+        location.identifier,
+        SETUP_PRACTICE_LOCATION_IDENTIFIER_SYSTEM,
+        DEFAULT_SCHEDULING_OFFICE_ID,
+      )
+    );
+    if (existing.length > 1) {
+      throw new Error(`Expected at most one main-office Location; found ${existing.length}.`);
+    }
+    if (existing[0]) {
+      return { location: existing[0], created: false };
+    }
+    const location = {
+      ...buildPracticeLocation(input.organization),
+      id: `location-${this.locations.length + 1}`,
+    };
+    this.locations.push(location);
+    return { location, created: true };
   }
 
   async createSchedulingFoundation(input: {
@@ -486,7 +624,7 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
   private audit?: ReturnType<typeof createLiveOdosAuditRuntime>;
 
   async isPracticeProvisioned(_config: SetupPracticeConfig, state: SetupPracticeState): Promise<boolean> {
-    return Boolean(state.completed && state.schedulingProvisioned);
+    return setupStateIsComplete(state);
   }
 
   async createOrLoginAdmin(config: SetupPracticeConfig): Promise<AdminSession> {
@@ -545,6 +683,56 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
         },
       ],
     });
+  }
+
+  async createPracticeOrganization(config: SetupPracticeConfig): Promise<{
+    organization: Organization;
+    created: boolean;
+  }> {
+    const matches = (await searchAll<Organization>(this.client(), "Organization", {
+      identifier:
+        `${SETUP_PRACTICE_ORGANIZATION_IDENTIFIER_SYSTEM}|${PRACTICE_ORGANIZATION_IDENTIFIER_VALUE}`,
+      _count: "100",
+    })).filter((organization) =>
+      hasIdentifier(
+        organization.identifier,
+        SETUP_PRACTICE_ORGANIZATION_IDENTIFIER_SYSTEM,
+        PRACTICE_ORGANIZATION_IDENTIFIER_VALUE,
+      )
+    );
+    if (matches.length > 1) {
+      throw new Error(`Expected at most one practice Organization; found ${matches.length}.`);
+    }
+    const organization = matches[0] ?? await this.client().create<Organization>(
+      buildPracticeOrganization(config),
+    );
+    return { organization, created: matches.length === 0 };
+  }
+
+  async createPracticeLocation(input: {
+    organization: Organization;
+  }): Promise<{
+    location: Location;
+    created: boolean;
+  }> {
+    const matches = (await searchAll<Location>(this.client(), "Location", {
+      identifier:
+        `${SETUP_PRACTICE_LOCATION_IDENTIFIER_SYSTEM}|${DEFAULT_SCHEDULING_OFFICE_ID}`,
+      _count: "100",
+    })).filter((location) =>
+      hasIdentifier(
+        location.identifier,
+        SETUP_PRACTICE_LOCATION_IDENTIFIER_SYSTEM,
+        DEFAULT_SCHEDULING_OFFICE_ID,
+      )
+    );
+    if (matches.length > 1) {
+      throw new Error(`Expected at most one main-office Location; found ${matches.length}.`);
+    }
+    const location = matches[0] ?? await this.client().create<Location>(
+      buildPracticeLocation(input.organization),
+    );
+    return { location, created: matches.length === 0 };
   }
 
   async createSchedulingFoundation(input: {
@@ -779,10 +967,63 @@ function buildFirstSchedulingConfig(scheduleId: string, timezoneOffset?: string)
     },
     weeklyHoursBySchedule: {},
     blocks: [],
-    offices: [{ id: "main", name: "Main Office", slotMinutes: 30 }],
-    officeBySchedule: { [scheduleReference]: "main" },
+    offices: [{
+      id: DEFAULT_SCHEDULING_OFFICE_ID,
+      name: DEFAULT_SCHEDULING_OFFICE_NAME,
+      slotMinutes: 30,
+    }],
+    officeBySchedule: { [scheduleReference]: DEFAULT_SCHEDULING_OFFICE_ID },
     defaultSlotMinutes: 30,
   });
+}
+
+function buildPracticeOrganization(config: SetupPracticeConfig): Organization {
+  return {
+    resourceType: "Organization",
+    active: true,
+    name: config.practiceName,
+    identifier: [{
+      system: SETUP_PRACTICE_ORGANIZATION_IDENTIFIER_SYSTEM,
+      value: PRACTICE_ORGANIZATION_IDENTIFIER_VALUE,
+    }],
+  };
+}
+
+function buildPracticeLocation(organization: Organization): Location {
+  if (!organization.id) {
+    throw new Error("Setup wizard cannot create a Location for an Organization without an id.");
+  }
+  return {
+    resourceType: "Location",
+    status: "active",
+    name: DEFAULT_SCHEDULING_OFFICE_NAME,
+    managingOrganization: { reference: `Organization/${organization.id}` },
+    identifier: [{
+      system: SETUP_PRACTICE_LOCATION_IDENTIFIER_SYSTEM,
+      value: DEFAULT_SCHEDULING_OFFICE_ID,
+    }],
+  };
+}
+
+function hasIdentifier(
+  identifiers: readonly { system?: string; value?: string }[] | undefined,
+  system: string,
+  value: string,
+): boolean {
+  return identifiers?.some((identifier) =>
+    identifier.system === system && identifier.value === value
+  ) ?? false;
+}
+
+function setupStateIsComplete(state: SetupPracticeState): boolean {
+  return Boolean(
+    state.completed
+    && state.organizationCreated
+    && state.organizationId
+    && state.locationCreated
+    && state.locationId
+    && state.schedulingProvisioned,
+  );
 }
 
 function localTimezoneOffset(now = new Date()): string {
@@ -858,7 +1099,7 @@ function buildSetupAuditRow(input: {
   });
 }
 
-function readSetupState(path: string): SetupPracticeState {
+export function readSetupState(path: string): SetupPracticeState {
   if (!existsSync(path)) {
     return { version: "v0.5d" };
   }
