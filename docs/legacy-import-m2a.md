@@ -152,6 +152,114 @@ collision with multiple active rows is written to `ambiguity_queue`; no row numb
 other manufactured per-row key is used. Multi-appointment visit days are likewise queued and
 produce no Encounter until M2b-2 adjudication.
 
+## M2b-2 allocation, adjudication, and bulk continuation
+
+M2b-2 keeps the M2b-1 Encounter identity and merge contract. A multi-appointment day creates no
+Encounter until every capture on that day has an allocation. Once fully allocated, each
+appointment that received at least one capture gets one appointment-rooted Encounter; an
+appointment with no captures gets none. A partial allocation remains queued and produces no
+partial Encounter import.
+
+Run the one-patient command once to populate the decision queue and write its report:
+
+```sh
+npm run import-legacy-visits-m2b2 -- \
+  --run-id '<discovery run id>' \
+  --manifest /Users/iris/Migration/importer-state/m2b2-source.json \
+  --appointments '/Users/iris/Migration/extract-scoped/EPM data/00127314--AppointmentsExport-Thu-06-18-2026.csv' \
+  --exams /Users/iris/Migration/all-exams.tsv
+```
+
+The report lists unresolved visit days, capture ids, candidate appointment source keys, provider
+ambiguities, unmapped visit types, and any prior decisions. Decisions can then be entered
+interactively:
+
+```sh
+npm run adjudicate-legacy-import-m2b2 -- \
+  --run-id '<discovery run id>' \
+  --decided-by '<operator name>'
+```
+
+`--patient '<EHR ptSrNo>'` can be used instead of `--run-id`. The loop skips every allocation and
+adjudication already present in the SQLite ledger, so abandoning it and rerunning is safe.
+
+For a reviewable non-interactive replay, keep a JSON decisions file in the Iris migration
+workspace. Do not commit it:
+
+```json
+{
+  "decidedBy": "<operator name>",
+  "allocations": [
+    {
+      "visitDaySourceKey": "<report visit-day key>",
+      "exSrNo": "<capture id>",
+      "appointmentSourceKey": "<candidate appointment source key>",
+      "note": "<optional local note>"
+    }
+  ],
+  "adjudications": [
+    {
+      "sourceKind": "encounter",
+      "sourceKey": "<report encounter source key>",
+      "decision": "keep",
+      "note": "<optional local note>"
+    }
+  ]
+}
+```
+
+Allowed adjudication decisions are `keep`, `exclude`, and `mark-as-test`. The operator's chart
+(`ptSrNo 969`, EPM `6499570`) requires one of these decisions for every candidate Encounter;
+excluded Encounters remain visible as `EXCLUDED` in the report, and test sittings receive the
+migration test tag. The M2a patient-import refusal for this calibration chart remains in force.
+
+Apply the file and rerun the patient import with a new run id:
+
+```sh
+npm run adjudicate-legacy-import-m2b2 -- \
+  --run-id '<discovery run id>' \
+  --decisions /Users/iris/Migration/importer-state/m2b2-decisions.json
+
+npm run import-legacy-visits-m2b2 -- \
+  --run-id '<adjudicated run id>' \
+  --manifest /Users/iris/Migration/importer-state/m2b2-source.json \
+  --appointments '/Users/iris/Migration/extract-scoped/EPM data/00127314--AppointmentsExport-Thu-06-18-2026.csv' \
+  --exams /Users/iris/Migration/all-exams.tsv
+```
+
+The 12-chart bulk manifest has exactly 12 entries. Each source path is resolved relative to the
+bulk manifest:
+
+```json
+{
+  "charts": [
+    {
+      "chartKey": "<opaque chart key>",
+      "manifestPath": "charts/chart-01/manifest.json",
+      "appointmentsPath": "source/AppointmentsExport.csv",
+      "examsPath": "source/all-exams.tsv"
+    }
+  ]
+}
+```
+
+The example shows one entry for shape only; the real file must contain all 12 unique chart keys.
+Run the bulk command first as discovery, adjudicate its child reports, and then replay with the
+decisions file:
+
+```sh
+npm run import-legacy-bulk-m2b2 -- \
+  --bulk-manifest /Users/iris/Migration/importer-state/m2b2-bulk.json
+
+npm run import-legacy-bulk-m2b2 -- \
+  --bulk-manifest /Users/iris/Migration/importer-state/m2b2-bulk.json \
+  --decisions /Users/iris/Migration/importer-state/m2b2-decisions.json
+```
+
+Each chart has its own ledger run and mode-`0600` report. A failed or conflicted chart is recorded
+in the bulk roll-up and does not stop later charts. The report files and SQLite ledger remain under
+the Iris migration workspace; do not copy them out of that environment.
+
 ## Ordinary-role reachability gate
 
 The gate accepts only ordinary clinician and front-desk tokens. It rejects superadmin

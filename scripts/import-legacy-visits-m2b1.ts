@@ -17,7 +17,7 @@ import {
   EHR_PATIENT_IDENTIFIER_SYSTEM,
   EPM_PATIENT_IDENTIFIER_SYSTEM,
 } from "../mcp/src/legacy-import/patient-import.js";
-import { assertLocalMedplumBaseUrl } from "./reseed-practice-role-tags.js";
+import { assertLocalBaseUrl } from "./setup-legacy-importer.js";
 
 const DEFAULT_BASE_URL = "http://localhost:8103";
 
@@ -28,6 +28,7 @@ export async function runVisitImportCli(input: {
   readonly examsPath: string;
   readonly stateDirectory: string;
   readonly runId?: string;
+  readonly runPrefix?: string;
   readonly clientId: string;
   readonly clientSecret: string;
 }): Promise<{
@@ -35,7 +36,7 @@ export async function runVisitImportCli(input: {
   readonly reportPath: string;
   readonly result: Awaited<ReturnType<typeof importLegacyAppointmentsAndEncounters>>;
 }> {
-  assertLocalMedplumBaseUrl(input.baseUrl);
+  assertLocalBaseUrl(input.baseUrl);
   const manifest = appointmentEncounterImportManifestSchema.parse(
     JSON.parse(readFileSync(input.manifestPath, "utf8")),
   );
@@ -65,7 +66,7 @@ export async function runVisitImportCli(input: {
 
   const ledger = new ImportLedger({ stateDirectory: input.stateDirectory });
   try {
-    const runId = ledger.startRun(input.runId ?? `m2b1-${randomUUID()}`);
+    const runId = ledger.startRun(input.runId ?? `${input.runPrefix ?? "m2b1"}-${randomUUID()}`);
     try {
       const result = await importLegacyAppointmentsAndEncounters({
         fhir,
@@ -86,12 +87,12 @@ export async function runVisitImportCli(input: {
       try {
         ledger.finishRun(runId, "failed");
       } catch (bookkeepingError) {
-        console.error(`Failed to mark M2b-1 run as failed: ${String(bookkeepingError)}`);
+        console.error(`Failed to mark legacy visit run as failed: ${String(bookkeepingError)}`);
       }
       try {
         ledger.writeReport(runId);
       } catch (bookkeepingError) {
-        console.error(`Failed to write the M2b-1 failure report: ${String(bookkeepingError)}`);
+        console.error(`Failed to write the legacy visit failure report: ${String(bookkeepingError)}`);
       }
       throw error;
     }
@@ -134,17 +135,22 @@ function requireEnv(name: string): string {
   return value;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+export async function runVisitImportCommand(input: {
+  readonly args: readonly string[];
+  readonly label: string;
+  readonly runPrefix: string;
+}): Promise<void> {
   try {
     const result = await runVisitImportCli({
       baseUrl: (process.env.MEDPLUM_BASE_URL ?? DEFAULT_BASE_URL).replace(/\/$/, ""),
-      ...cliArguments(process.argv.slice(2)),
+      ...cliArguments(input.args),
+      runPrefix: input.runPrefix,
       clientId: requireEnv("ODOS_MIGRATION_IMPORTER_CLIENT_ID"),
       clientSecret: requireEnv("ODOS_MIGRATION_IMPORTER_CLIENT_SECRET"),
     });
     const analysis = result.result.analysis;
     console.log(
-      `M2B1 run=${result.runId} rows=${analysis.sourceRows} exact_duplicates=${analysis.exactDuplicates} `
+      `${input.label} run=${result.runId} rows=${analysis.sourceRows} exact_duplicates=${analysis.exactDuplicates} `
       + `post_dedupe=${analysis.rowsAfterExactDedupe} collision_groups=${analysis.collisionGroups} `
       + `collision_rows=${analysis.collisionRows} cancel_resolved=${analysis.resolvedCancelGroups} `
       + `all_cancelled_skipped=${analysis.allCancelledSkipped} `
@@ -164,4 +170,12 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.error(`${error instanceof Error ? error.message : String(error)}${suffix}`);
     process.exitCode = 1;
   }
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  await runVisitImportCommand({
+    args: process.argv.slice(2),
+    label: "M2B1",
+    runPrefix: "m2b1",
+  });
 }

@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 import type {
   Appointment,
   Bundle,
@@ -16,9 +17,17 @@ import {
   EYEFINITY_EXAM_IDENTIFIER_SYSTEM,
   EYEFINITY_TECHNICAL_VISIT_IDENTIFIER_SYSTEM,
   MIGRATED_IMAGING_VISIT_CODE,
+  MIGRATION_TEST_TAG_CODE,
   appointmentEncounterImportManifestSchema,
   importLegacyAppointmentsAndEncounters,
+  technicalVisitKey,
 } from "../src/legacy-import/appointment-encounter-import.js";
+import {
+  applyDecisionFile,
+  listPendingDecisions,
+  runInteractiveAdjudication,
+} from "../src/legacy-import/adjudication-loop.js";
+import { runLegacyVisitBulk } from "../src/legacy-import/bulk-visit-import.js";
 import {
   APPOINTMENT_EXPORT_COLUMNS,
   analyzeAppointmentExport,
@@ -29,10 +38,13 @@ import { ImportLedger } from "../src/legacy-import/import-ledger.js";
 import {
   EHR_PATIENT_IDENTIFIER_SYSTEM,
   EPM_PATIENT_IDENTIFIER_SYSTEM,
+  importLegacyPatient,
 } from "../src/legacy-import/patient-import.js";
 import { ODOS_VISIT_TYPE_SYSTEM } from "../src/fhir/schedulingVisitType.js";
 import { ODOS_DISCIPLINE_SYSTEM } from "../src/scheduling/clinic-mode.js";
 import { FhirClient } from "../../src/fhir-client.js";
+import { runAdjudicationCli } from "../../scripts/adjudicate-legacy-import-m2b2.js";
+import { runBulkImportCli } from "../../scripts/import-legacy-bulk-m2b2.js";
 import { runVisitImportCli } from "../../scripts/import-legacy-visits-m2b1.js";
 
 const PROJECT_ID = "project-1";
@@ -220,6 +232,29 @@ test("M2b-1 refuses a Patient with a mismatched EHR identifier before any write"
   try {
     await assert.rejects(
       runVisitImportCli({
+        baseUrl: "http://192.168.1.25:8103",
+        manifestPath,
+        appointmentsPath,
+        examsPath,
+        stateDirectory: state.path,
+        clientId: "synthetic-client",
+        clientSecret: "synthetic-secret",
+      }),
+      /restricted to a local self-hosted Medplum/,
+    );
+    await assert.rejects(
+      runBulkImportCli({
+        baseUrl: "http://192.168.1.25:8103",
+        bulkManifestPath: join(state.path, "missing-bulk-manifest.json"),
+        stateDirectory: state.path,
+        clientId: "synthetic-client",
+        clientSecret: "synthetic-secret",
+      }),
+      /restricted to a local self-hosted Medplum/,
+    );
+    assert.equal(requests.length, 0);
+    await assert.rejects(
+      runVisitImportCli({
         baseUrl: "http://localhost:8103",
         manifestPath,
         appointmentsPath,
@@ -263,8 +298,6 @@ test("M2b-1 imports appointments, linked and technical Encounters, queues multi-
   const ledger = new ImportLedger({ stateDirectory: state.path });
   const fhir = new MemoryVisitFhir();
   const allCancelledOne = appointmentRow({
-    PatientUID: "cancelled-patient",
-    PatientID: "cancelled-epm",
     appt_date: "01/08/2020 12:00:00 AM",
     appt_cancel_ind: "True",
     Notes: "cancelled",
@@ -445,6 +478,7 @@ test("M2b-1 imports appointments, linked and technical Encounters, queues multi-
     assert.match(report, /multi-appointment-day-queued/);
     assert.match(report, /all-cancelled-collision-group/);
     assert.match(report, /non-positive-appointment-duration/);
+    assert.doesNotMatch(report, /composite-collision-queued/);
     assert.match(report, /Status: completed/);
     assert.match(report, /Appointment/);
     assert.match(report, /Encounter/);
@@ -626,7 +660,7 @@ test("M2b-1 refuses an ambiguous New York fall-back wall time", async () => {
   }
 });
 
-test("M2b-1 refuses the calibration chart and requires explicit visit-type mappings", async () => {
+test("M2b-1 requires explicit visit-type mappings and the M2a calibration refusal stays intact", async () => {
   assert.throws(
     () => appointmentEncounterImportManifestSchema.parse({
       ...manifest(),
@@ -649,22 +683,703 @@ test("M2b-1 refuses the calibration chart and requires explicit visit-type mappi
     });
     assert.equal(result.appointments.conflict, 1);
     assert.match(ledger.renderReport(runId), /unmapped-legacy-visit-type/);
+    assert.equal(
+      listPendingDecisions(ledger, { runId }).some(
+        (decision) =>
+          decision.kind === "adjudication"
+          && decision.sourceKind === "appointment",
+      ),
+      true,
+    );
+
+    const providerRows = [
+      appointmentRow({
+        ProviderFirst: "First",
+        appt_date: "01/02/2020 12:00:00 AM",
+      }),
+      appointmentRow({
+        ProviderFirst: "Different",
+        appt_date: "01/03/2020 12:00:00 AM",
+      }),
+    ];
+    const providerResult = await importLegacyAppointmentsAndEncounters({
+      fhir: new MemoryVisitFhir(),
+      ledger,
+      runId,
+      projectId: PROJECT_ID,
+      manifest: manifest(),
+      appointmentsCsv: appointmentCsv(providerRows),
+      examsTsv: "ptSrNo\texSrNo\texDateTime\texDevType\texWhichEye\n",
+    });
+    assert.equal(providerResult.practitioners.conflict, 1);
+    const providerDecision = listPendingDecisions(ledger, { runId }).find(
+      (decision) =>
+        decision.kind === "adjudication"
+        && decision.sourceKind === "provider",
+    );
+    assert.deepEqual(providerDecision?.decisions, ["exclude"]);
+    assert.throws(
+      () => applyDecisionFile(ledger, {
+        decidedBy: "test-operator",
+        allocations: [],
+        adjudications: [{
+          sourceKind: "provider",
+          sourceKey: "provider-1",
+          decision: "keep",
+        }],
+      }),
+      /decision keep is not allowed/,
+    );
+    assert.deepEqual(
+      applyDecisionFile(ledger, {
+        decidedBy: "test-operator",
+        allocations: [],
+        adjudications: [{
+          sourceKind: "provider",
+          sourceKey: "provider-1",
+          decision: "exclude",
+        }],
+      }),
+      { recorded: 1, previouslyDecided: 0 },
+    );
+    const providerReplay = await importLegacyAppointmentsAndEncounters({
+      fhir: new MemoryVisitFhir(),
+      ledger,
+      runId,
+      projectId: PROJECT_ID,
+      manifest: manifest(),
+      appointmentsCsv: appointmentCsv(providerRows),
+      examsTsv: "ptSrNo\texSrNo\texDateTime\texDevType\texWhichEye\n",
+    });
+    assert.equal(providerReplay.appointments.conflict, 0);
+    assert.equal(providerReplay.appointments.created, 2);
+    assert.match(ledger.renderReport(runId), /provider-source-name-ambiguity/);
 
     await assert.rejects(
-      importLegacyAppointmentsAndEncounters({
+      importLegacyPatient({
         fhir: new MemoryVisitFhir(),
         ledger,
         runId,
         projectId: PROJECT_ID,
         manifest: {
-          ...manifest(),
-          epmPatientId: "6499570",
-          ehrPatientId: "969",
+          epm: {
+            sourceKey: "6499570",
+            firstName: "Synthetic",
+            lastName: "Operator",
+            birthDate: "1980-01-01",
+          },
+          ehr: {
+            sourceKey: "969",
+            firstName: "Synthetic",
+            lastName: "Operator",
+            birthDate: "1980-01-01",
+          },
+          junkRows: [{
+            sourceSystem: "ehr",
+            sourceKey: "junk-1",
+            firstName: "Junk",
+            lastName: "Row",
+            birthDate: "9999-12-31",
+          }],
         },
-        appointmentsCsv: appointmentCsv([appointmentRow()]),
-        examsTsv: "ptSrNo\texSrNo\texDateTime\texDevType\texWhichEye\n",
       }),
       /refuses the operator test-data chart/,
+    );
+  } finally {
+    ledger.close();
+    state.cleanup();
+  }
+});
+
+test("M2b-2 imports only fully allocated multi-appointment days and converges on appointment identity", async () => {
+  const state = tempState();
+  const ledger = new ImportLedger({ stateDirectory: state.path });
+  const fhir = new MemoryVisitFhir();
+  const morning = appointmentRow({
+    appt_date: "02/03/2020 12:00:00 AM",
+    appt_start_time: "09:00:00",
+    appt_end_time: "09:30:00",
+  });
+  const afternoon = appointmentRow({
+    appt_date: "02/03/2020 12:00:00 AM",
+    appt_start_time: "14:00:00",
+    appt_end_time: "14:30:00",
+  });
+  const emptySitting = appointmentRow({
+    appt_date: "02/03/2020 12:00:00 AM",
+    appt_start_time: "16:00:00",
+    appt_end_time: "16:30:00",
+  });
+  const morningKey = appointmentCompositeKey(morning);
+  const afternoonKey = appointmentCompositeKey(afternoon);
+  const dayKey = technicalVisitKey("ehr-typical-1", "2020-02-03");
+  const appointmentsCsv = appointmentCsv([morning, afternoon, emptySitting]);
+  const examsTsv = [
+    "ptSrNo\texSrNo\texDateTime\texDevType\texWhichEye",
+    "ehr-typical-1\texam-morning\t2020-02-03 00:00:00.000\t1\t1",
+    "ehr-typical-1\texam-afternoon\t2020-02-03 00:00:00.000\t4\t1",
+  ].join("\n");
+
+  try {
+    const absentRun = ledger.startRun("m2b2-allocation-absent");
+    const absent = await importLegacyAppointmentsAndEncounters({
+      fhir,
+      ledger,
+      runId: absentRun,
+      projectId: PROJECT_ID,
+      manifest: manifest(),
+      appointmentsCsv,
+      examsTsv,
+    });
+    ledger.finishRun(absentRun, "completed");
+    assert.equal(absent.encounters.skipped, 1);
+    assert.equal(fhir.resources.filter((resource) => resource.resourceType === "Encounter").length, 0);
+
+    ledger.recordCaptureAllocation({
+      visitDaySourceKey: dayKey,
+      exSrNo: "exam-morning",
+      appointmentSourceKey: morningKey,
+      decidedBy: "operator",
+    });
+    const partialRun = ledger.startRun("m2b2-allocation-partial");
+    const partial = await importLegacyAppointmentsAndEncounters({
+      fhir,
+      ledger,
+      runId: partialRun,
+      projectId: PROJECT_ID,
+      manifest: manifest(),
+      appointmentsCsv,
+      examsTsv,
+    });
+    ledger.finishRun(partialRun, "completed");
+    assert.equal(partial.encounters.skipped, 1);
+    assert.equal(fhir.resources.filter((resource) => resource.resourceType === "Encounter").length, 0);
+
+    assert.deepEqual(
+      applyDecisionFile(ledger, {
+        decidedBy: "operator",
+        allocations: [
+          {
+            visitDaySourceKey: dayKey,
+            exSrNo: "exam-morning",
+            appointmentSourceKey: morningKey,
+          },
+          {
+            visitDaySourceKey: dayKey,
+            exSrNo: "exam-afternoon",
+            appointmentSourceKey: afternoonKey,
+          },
+        ],
+        adjudications: [],
+      }),
+      { recorded: 1, previouslyDecided: 1 },
+    );
+
+    const fullRun = ledger.startRun("m2b2-allocation-full");
+    const full = await importLegacyAppointmentsAndEncounters({
+      fhir,
+      ledger,
+      runId: fullRun,
+      projectId: PROJECT_ID,
+      manifest: manifest(),
+      appointmentsCsv,
+      examsTsv,
+    });
+    ledger.finishRun(fullRun, "completed");
+    assert.deepEqual(full.encounters, {
+      created: 2,
+      updated: 0,
+      skipped: 0,
+      conflict: 0,
+    });
+
+    const appointments = fhir.resources.filter(
+      (resource): resource is Appointment => resource.resourceType === "Appointment",
+    );
+    const encounters = fhir.resources.filter(
+      (resource): resource is Encounter => resource.resourceType === "Encounter",
+    );
+    assert.equal(appointments.length, 3);
+    assert.equal(encounters.length, 2);
+    for (const encounter of encounters) {
+      const primary = encounter.identifier?.find(
+        (identifier) => identifier.system === EYEFINITY_APPOINTMENT_IDENTIFIER_SYSTEM,
+      );
+      const appointment = appointments.find((candidate) =>
+        candidate.identifier?.some(
+          (identifier) =>
+            identifier.system === EYEFINITY_APPOINTMENT_IDENTIFIER_SYSTEM
+            && identifier.value === primary?.value,
+        )
+      );
+      assert.ok(appointment?.id);
+      assert.equal(encounter.appointment?.[0]?.reference, `Appointment/${appointment.id}`);
+    }
+    const morningEncounter = encounters.find((encounter) =>
+      encounter.identifier?.some((identifier) => identifier.value === morningKey)
+    );
+    const afternoonEncounter = encounters.find((encounter) =>
+      encounter.identifier?.some((identifier) => identifier.value === afternoonKey)
+    );
+    assert.deepEqual(
+      morningEncounter?.identifier
+        ?.filter((identifier) => identifier.system === EYEFINITY_EXAM_IDENTIFIER_SYSTEM)
+        .map((identifier) => identifier.value),
+      ["exam-morning"],
+    );
+    assert.deepEqual(
+      afternoonEncounter?.identifier
+        ?.filter((identifier) => identifier.system === EYEFINITY_EXAM_IDENTIFIER_SYSTEM)
+        .map((identifier) => identifier.value),
+      ["exam-afternoon"],
+    );
+
+    const rerunId = ledger.startRun("m2b2-allocation-rerun");
+    const rerun = await importLegacyAppointmentsAndEncounters({
+      fhir,
+      ledger,
+      runId: rerunId,
+      projectId: PROJECT_ID,
+      manifest: manifest(),
+      appointmentsCsv,
+      examsTsv,
+    });
+    ledger.finishRun(rerunId, "completed");
+    assert.equal(rerun.encounters.skipped, 2);
+    assert.equal(
+      fhir.resources.filter((resource) => resource.resourceType === "Encounter").length,
+      2,
+    );
+    let promptCalls = 0;
+    assert.deepEqual(
+      await runInteractiveAdjudication({
+        ledger,
+        decidedBy: "operator",
+        runId: absentRun,
+        prompt: async () => {
+          promptCalls += 1;
+          return "";
+        },
+      }),
+      { asked: 0, recorded: 0 },
+    );
+    assert.equal(promptCalls, 0);
+
+    const reportPath = ledger.writeReport(fullRun);
+    assert.equal(statSync(reportPath).mode & 0o777, 0o600);
+    const report = ledger.renderReport(fullRun);
+    assert.match(report, /## Patient roll-up/);
+    assert.match(report, /## Appointments and Encounters/);
+    assert.match(report, /## Capture allocations/);
+    assert.match(report, /exam-morning/);
+    assert.match(report, /exam-afternoon/);
+  } finally {
+    ledger.close();
+    state.cleanup();
+  }
+});
+
+test("M2b-2 ignores cancelled sittings when deciding whether capture allocation is required", async () => {
+  const state = tempState();
+  const ledger = new ImportLedger({ stateDirectory: state.path });
+  const fhir = new MemoryVisitFhir();
+  const active = appointmentRow({
+    appt_date: "02/04/2020 12:00:00 AM",
+    appt_start_time: "09:00:00",
+    appt_end_time: "09:30:00",
+  });
+  const cancelled = appointmentRow({
+    appt_date: "02/04/2020 12:00:00 AM",
+    appt_start_time: "14:00:00",
+    appt_end_time: "14:30:00",
+    appt_cancel_ind: "True",
+  });
+  const activeKey = appointmentCompositeKey(active);
+
+  try {
+    const runId = ledger.startRun("m2b2-active-plus-cancelled");
+    const result = await importLegacyAppointmentsAndEncounters({
+      fhir,
+      ledger,
+      runId,
+      projectId: PROJECT_ID,
+      manifest: manifest(),
+      appointmentsCsv: appointmentCsv([active, cancelled]),
+      examsTsv: [
+        "ptSrNo\texSrNo\texDateTime\texDevType\texWhichEye",
+        "ehr-typical-1\texam-active\t2020-02-04 00:00:00.000\t1\t1",
+      ].join("\n"),
+    });
+
+    assert.deepEqual(result.encounters, {
+      created: 1,
+      updated: 0,
+      skipped: 0,
+      conflict: 0,
+    });
+    assert.equal(
+      listPendingDecisions(ledger, { runId }).some(
+        (decision) => decision.kind === "allocation",
+      ),
+      false,
+    );
+    const encounter = fhir.resources.find(
+      (resource): resource is Encounter => resource.resourceType === "Encounter",
+    );
+    assert.equal(
+      encounter?.identifier?.find(
+        (identifier) => identifier.system === EYEFINITY_APPOINTMENT_IDENTIFIER_SYSTEM,
+      )?.value,
+      activeKey,
+    );
+  } finally {
+    ledger.close();
+    state.cleanup();
+  }
+});
+
+test("M2b-2 decision replay adjudicates every operator-chart Encounter without re-asking", async () => {
+  const state = tempState();
+  const ledger = new ImportLedger({
+    stateDirectory: state.path,
+    now: () => "2026-07-30T14:00:00.000Z",
+  });
+  const fhir = new MemoryVisitFhir();
+  const row = appointmentRow({
+    PatientID: "6499570",
+    appt_date: "03/02/2020 12:00:00 AM",
+  });
+  const appointmentKey = appointmentCompositeKey(row);
+  const technicalKey = technicalVisitKey("969", "2020-03-03");
+  const operatorManifest = {
+    ...manifest(),
+    epmPatientId: "6499570",
+    ehrPatientId: "969",
+  };
+  const examsTsv = [
+    "ptSrNo\texSrNo\texDateTime\texDevType\texWhichEye",
+    "969\texam-care\t2020-03-02 00:00:00.000\t1\t1",
+    "969\texam-noise\t2020-03-03 00:00:00.000\t4\t1",
+  ].join("\n");
+  const decisionFile = {
+    decidedBy: "operator",
+    allocations: [],
+    adjudications: [
+      {
+        sourceKind: "encounter",
+        sourceKey: appointmentKey,
+        decision: "mark-as-test",
+        note: "synthetic test sitting",
+      },
+      {
+        sourceKind: "encounter",
+        sourceKey: technicalKey,
+        decision: "exclude",
+        note: "synthetic noise",
+      },
+    ],
+  };
+
+  try {
+    const pendingRun = ledger.startRun("m2b2-operator-pending");
+    const pending = await importLegacyAppointmentsAndEncounters({
+      fhir,
+      ledger,
+      runId: pendingRun,
+      projectId: PROJECT_ID,
+      manifest: operatorManifest,
+      appointmentsCsv: appointmentCsv([row]),
+      examsTsv,
+    });
+    ledger.finishRun(pendingRun, "completed");
+    assert.equal(pending.encounters.skipped, 2);
+    assert.equal(listPendingDecisions(ledger, { runId: pendingRun }).length, 2);
+    assert.deepEqual(
+      applyDecisionFile(ledger, decisionFile),
+      { recorded: 2, previouslyDecided: 0 },
+    );
+
+    const decidedRun = ledger.startRun("m2b2-operator-decided");
+    const decided = await importLegacyAppointmentsAndEncounters({
+      fhir,
+      ledger,
+      runId: decidedRun,
+      projectId: PROJECT_ID,
+      manifest: operatorManifest,
+      appointmentsCsv: appointmentCsv([row]),
+      examsTsv,
+    });
+    ledger.finishRun(decidedRun, "completed");
+    assert.deepEqual(decided.encounters, {
+      created: 1,
+      updated: 0,
+      skipped: 1,
+      conflict: 0,
+    });
+    const encounter = fhir.resources.find(
+      (resource): resource is Encounter => resource.resourceType === "Encounter",
+    );
+    assert.equal(
+      encounter?.meta?.tag?.some(
+        (tag) => tag.system === "https://odos2020.com/tags/migration"
+          && tag.code === MIGRATION_TEST_TAG_CODE,
+      ),
+      true,
+    );
+    assert.deepEqual(
+      applyDecisionFile(ledger, decisionFile),
+      { recorded: 0, previouslyDecided: 2 },
+    );
+    let promptCalls = 0;
+    assert.deepEqual(
+      await runInteractiveAdjudication({
+        ledger,
+        decidedBy: "operator",
+        runId: pendingRun,
+        prompt: async () => {
+          promptCalls += 1;
+          return "";
+        },
+      }),
+      { asked: 0, recorded: 0 },
+    );
+    assert.equal(promptCalls, 0);
+
+    const report = ledger.renderReport(decidedRun);
+    assert.match(report, /EXCLUDED/);
+    assert.match(report, /MARK-AS-TEST/);
+    assert.match(report, /operator/);
+    assert.match(report, /2026-07-30T14:00:00.000Z/);
+    const reportPath = ledger.writeReport(decidedRun);
+    assert.equal(statSync(reportPath).mode & 0o777, 0o600);
+  } finally {
+    ledger.close();
+    state.cleanup();
+  }
+});
+
+test("M2b-2 encounter decisions leave unrelated identifier conflicts open and bulk-counted", async () => {
+  const state = tempState();
+  const ledger = new ImportLedger({ stateDirectory: state.path });
+  const sourceKey = "shared-encounter-source";
+  try {
+    const decisionRunId = ledger.startRun("m2b2-scoped-decision");
+    ledger.recordResourceAction({
+      runId: decisionRunId,
+      sourceKey,
+      resourceType: "Encounter",
+      action: "conflict",
+      reason: "migration-identifier-multi-match",
+    });
+    ledger.recordAmbiguity({
+      sourceKind: "encounter",
+      sourceKey,
+      ambiguityType: "migration-identifier",
+      details: { matchCount: 2 },
+    });
+    ledger.recordAmbiguity({
+      sourceKind: "encounter",
+      sourceKey,
+      ambiguityType: "encounter-decision",
+      details: { decisions: ["keep", "exclude", "mark-as-test"] },
+    });
+
+    assert.deepEqual(
+      applyDecisionFile(ledger, {
+        decidedBy: "operator",
+        allocations: [],
+        adjudications: [{
+          sourceKind: "encounter",
+          sourceKey,
+          decision: "keep",
+        }],
+      }),
+      { recorded: 1, previouslyDecided: 0 },
+    );
+    assert.deepEqual(
+      ledger.listAmbiguities({
+        sourceKind: "encounter",
+        sourceKey,
+      }).map((ambiguity) => ({
+        ambiguityType: ambiguity.ambiguityType,
+        state: ambiguity.state,
+      })),
+      [
+        { ambiguityType: "migration-identifier", state: "open" },
+        { ambiguityType: "encounter-decision", state: "resolved" },
+      ],
+    );
+    assert.deepEqual(
+      listPendingDecisions(ledger, { runId: decisionRunId }),
+      [{
+        kind: "blocked",
+        sourceKind: "encounter",
+        sourceKey,
+        ambiguityType: "migration-identifier",
+      }],
+    );
+
+    const bulk = await runLegacyVisitBulk({
+      ledger,
+      runId: "m2b2-scoped-decision-bulk",
+      charts: [{ chartKey: "chart-with-identifier-conflict" }],
+      runChart: async (_chart, runId) => {
+        ledger.recordResourceAction({
+          runId,
+          sourceKey,
+          resourceType: "Encounter",
+          action: "conflict",
+          reason: "migration-identifier-multi-match",
+        });
+        return {
+          conflicts: listPendingDecisions(ledger, { runId }).length,
+        };
+      },
+    });
+    assert.equal(bulk.charts[0]?.status, "conflict");
+    assert.match(
+      ledger.renderReport(bulk.charts[0]!.runId),
+      /Open decisions: 1/,
+    );
+  } finally {
+    ledger.close();
+    state.cleanup();
+  }
+});
+
+test("M2b-2 non-interactive CLI applies a decisions file and replays it without mutation", async () => {
+  const repoPackageJsonPath = fileURLToPath(
+    new URL("../../package.json", import.meta.url),
+  );
+  const packageJson = JSON.parse(
+    readFileSync(repoPackageJsonPath, "utf8"),
+  ) as { scripts: Record<string, string> };
+  assert.match(
+    packageJson.scripts["import-legacy-visits-m2b2"] ?? "",
+    /scripts\/import-legacy-visits-m2b2\.ts$/,
+  );
+  const state = tempState();
+  const decisionsPath = join(state.path, "decisions.json");
+  const ledger = new ImportLedger({
+    stateDirectory: state.path,
+    now: () => "2026-07-30T15:00:00.000Z",
+  });
+  const runId = ledger.startRun("m2b2-decision-cli");
+  ledger.recordResourceAction({
+    runId,
+    sourceKey: "ehr-patient",
+    resourceType: "Patient",
+    resourceReference: "Patient/patient-1",
+    action: "skipped",
+    reason: "selected-patient-verified",
+  });
+  ledger.recordAmbiguity({
+    sourceKind: "encounter",
+    sourceKey: "encounter-source",
+    ambiguityType: "encounter-decision",
+    details: { decisions: ["keep", "exclude", "mark-as-test"] },
+  });
+  ledger.recordResourceAction({
+    runId,
+    sourceKey: "encounter-source",
+    resourceType: "Encounter",
+    action: "skipped",
+    reason: "encounter-adjudication-required",
+  });
+  ledger.finishRun(runId, "completed");
+  ledger.close();
+  writeFileSync(decisionsPath, JSON.stringify({
+    decidedBy: "operator",
+    adjudications: [{
+      sourceKind: "encounter",
+      sourceKey: "encounter-source",
+      decision: "keep",
+    }],
+  }));
+
+  try {
+    assert.deepEqual(
+      await runAdjudicationCli({
+        stateDirectory: state.path,
+        runId,
+        decisionsPath,
+      }),
+      { recorded: 1, previouslyDecided: 0, asked: 0, pending: 0 },
+    );
+    const firstRead = new ImportLedger({ stateDirectory: state.path });
+    const firstDecision = firstRead.readAdjudication("encounter", "encounter-source");
+    firstRead.close();
+    assert.equal(firstDecision?.decision, "keep");
+    assert.equal(firstDecision?.decidedBy, "operator");
+    assert.deepEqual(
+      await runAdjudicationCli({
+        stateDirectory: state.path,
+        runId,
+        decisionsPath,
+      }),
+      { recorded: 0, previouslyDecided: 1, asked: 0, pending: 0 },
+    );
+    const reopened = new ImportLedger({ stateDirectory: state.path });
+    try {
+      assert.deepEqual(
+        reopened.readAdjudication("encounter", "encounter-source"),
+        firstDecision,
+      );
+    } finally {
+      reopened.close();
+    }
+  } finally {
+    state.cleanup();
+  }
+});
+
+test("M2b-2 bulk runner isolates a failed chart and records the charts that follow it", async () => {
+  const state = tempState();
+  const ledger = new ImportLedger({ stateDirectory: state.path });
+  const attempted: string[] = [];
+  try {
+    const result = await runLegacyVisitBulk({
+      ledger,
+      runId: "m2b2-bulk-synthetic",
+      charts: [
+        { chartKey: "chart-1" },
+        { chartKey: "chart-2" },
+        { chartKey: "chart-3" },
+      ],
+      runChart: async (chart, runId) => {
+        attempted.push(chart.chartKey);
+        ledger.recordResourceAction({
+          runId,
+          sourceKey: chart.chartKey,
+          resourceType: "Patient",
+          action: "skipped",
+          reason: "selected-patient-verified",
+        });
+        if (chart.chartKey === "chart-2") throw new Error("synthetic chart failure");
+        ledger.recordResourceAction({
+          runId,
+          sourceKey: `${chart.chartKey}-encounter`,
+          resourceType: "Encounter",
+          resourceReference: `Encounter/${chart.chartKey}`,
+          action: "created",
+          reason: "synthetic-import",
+        });
+        return {};
+      },
+    });
+
+    assert.deepEqual(attempted, ["chart-1", "chart-2", "chart-3"]);
+    assert.deepEqual(
+      result.charts.map((chart) => chart.status),
+      ["completed", "failed", "completed"],
+    );
+    assert.match(result.charts[1]?.error ?? "", /synthetic chart failure/);
+    assert.match(ledger.renderReport(result.runId), /bulk-chart-failed/);
+    assert.match(ledger.renderReport(result.runId), /chart-3/);
+    assert.equal(statSync(result.reportPath).mode & 0o777, 0o600);
+    assert.equal(
+      statSync(result.charts[2]!.reportPath).mode & 0o777,
+      0o600,
     );
   } finally {
     ledger.close();

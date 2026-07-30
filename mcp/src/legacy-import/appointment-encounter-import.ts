@@ -37,6 +37,7 @@ export const EYEFINITY_EXAM_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/eyefinity-exam-id";
 export const MIGRATED_IMAGING_VISIT_CODE = "migrated-imaging-visit";
 export const MIGRATED_IMAGING_VISIT_DISPLAY = "Imaging visit — migrated";
+export const MIGRATION_TEST_TAG_CODE = "operator-marked-test";
 export const PRACTICE_TIME_ZONE = "America/New_York";
 
 const HL7_V3_ACT_ENCOUNTER_CLASS_SYSTEM =
@@ -106,16 +107,32 @@ export async function importLegacyAppointmentsAndEncounters(input: {
   readonly now?: Date;
 }): Promise<AppointmentEncounterImportResult> {
   const manifest = appointmentEncounterImportManifestSchema.parse(input.manifest);
-  assertTypicalChart(manifest);
   const analysis = analyzeAppointmentExport(
     input.appointmentsCsv,
     manifest.sourceOfficeNumber,
   );
+  const selectedRows = analysis.appointments.filter(
+    (entry) => normalized(entry.row.PatientUID) === normalized(manifest.patientUid),
+  );
+  const selectedAmbiguities = analysis.ambiguities.filter(
+    (entry) => normalized(entry.patientUid) === normalized(manifest.patientUid),
+  );
+  assertPatientId(selectedRows, manifest.epmPatientId);
   const appointmentCounts = actionCounts();
   const encounterCounts = actionCounts();
   const practitionerCounts = actionCounts();
+  input.ledger.recordResourceAction({
+    runId: input.runId,
+    sourceKey: manifest.ehrPatientId,
+    resourceType: "Patient",
+    resourceReference: manifest.patientReference,
+    action: "skipped",
+    reason: "selected-patient-verified",
+  });
 
-  for (const sourceKey of analysis.duplicateSourceKeys) {
+  for (const sourceKey of analysis.duplicateSourceKeys.filter(
+    (value) => appointmentSourceKeyPatientUid(value) === normalized(manifest.patientUid),
+  )) {
     input.ledger.recordJunkRejection({
       runId: input.runId,
       sourceSystem: "eyefinity-appointments",
@@ -123,7 +140,9 @@ export async function importLegacyAppointmentsAndEncounters(input: {
       reason: "byte-identical-export-duplicate",
     });
   }
-  for (const sourceKey of analysis.allCancelledSourceKeys) {
+  for (const sourceKey of analysis.allCancelledSourceKeys.filter(
+    (value) => appointmentSourceKeyPatientUid(value) === normalized(manifest.patientUid),
+  )) {
     input.ledger.recordJunkRejection({
       runId: input.runId,
       sourceSystem: "eyefinity-appointments",
@@ -131,7 +150,7 @@ export async function importLegacyAppointmentsAndEncounters(input: {
       reason: "all-cancelled-collision-group",
     });
   }
-  for (const ambiguity of analysis.ambiguities) {
+  for (const ambiguity of selectedAmbiguities) {
     recordAppointmentCollision(input.ledger, ambiguity);
     recordResourceAction(
       input.ledger,
@@ -143,37 +162,58 @@ export async function importLegacyAppointmentsAndEncounters(input: {
     );
   }
 
-  const selectedRows = analysis.appointments.filter(
-    (entry) => normalized(entry.row.PatientUID) === normalized(manifest.patientUid),
-  );
-  const selectedAmbiguities = analysis.ambiguities.filter(
-    (entry) => normalized(entry.patientUid) === normalized(manifest.patientUid),
-  );
-  assertPatientId(selectedRows, manifest.epmPatientId);
-
   const inconsistentProviders = inconsistentProviderIds(selectedRows);
   for (const providerId of inconsistentProviders) {
+    if (input.ledger.readAdjudication("provider", providerId)?.decision === "exclude") {
+      continue;
+    }
     input.ledger.recordAmbiguity({
       sourceKind: "provider",
       sourceKey: providerId,
       ambiguityType: "source-name",
-      details: { reason: "one-provider-id-has-multiple-source-names" },
+      details: {
+        reason: "one-provider-id-has-multiple-source-names",
+        decisions: ["exclude"],
+      },
     });
+    recordResourceAction(
+      input.ledger,
+      input.runId,
+      providerId,
+      "Practitioner",
+      "conflict",
+      "provider-source-name-ambiguity",
+    );
+    practitionerCounts.conflict += 1;
   }
 
   const practitionerCache = new Map<string, ResourceResult<Practitioner>>();
+  const excludedProviderIds = new Set<string>();
   const importedAppointments = new Map<string, Appointment>();
   for (const source of [...selectedRows].sort((left, right) =>
     left.sourceKey.localeCompare(right.sourceKey)
   )) {
     const visitType = manifest.visitTypeMap[normalized(source.row.appt_type)];
     if (!visitType) {
+      const adjudication = input.ledger.readAdjudication("appointment", source.sourceKey);
+      if (adjudication?.decision === "exclude") {
+        recordResourceAction(
+          input.ledger,
+          input.runId,
+          source.sourceKey,
+          "Appointment",
+          "skipped",
+          "excluded-by-adjudication",
+        );
+        appointmentCounts.skipped += 1;
+        continue;
+      }
       const reason = "unmapped-legacy-visit-type";
       input.ledger.recordAmbiguity({
         sourceKind: "appointment",
         sourceKey: source.sourceKey,
         ambiguityType: "visit-type",
-        details: { reason },
+        details: { reason, decisions: ["exclude"] },
       });
       recordResourceAction(input.ledger, input.runId, source.sourceKey, "Appointment", "conflict", reason);
       appointmentCounts.conflict += 1;
@@ -183,34 +223,48 @@ export async function importLegacyAppointmentsAndEncounters(input: {
     const providerId = normalized(source.row.ProviderID);
     let practitionerReference: string | undefined;
     if (providerId) {
-      if (inconsistentProviders.has(providerId)) {
+      const adjudication = input.ledger.readAdjudication("provider", providerId);
+      if (adjudication?.decision === "exclude") {
+        if (!excludedProviderIds.has(providerId)) {
+          recordResourceAction(
+            input.ledger,
+            input.runId,
+            providerId,
+            "Practitioner",
+            "skipped",
+            "excluded-by-adjudication",
+          );
+          practitionerCounts.skipped += 1;
+          excludedProviderIds.add(providerId);
+        }
+      } else if (inconsistentProviders.has(providerId)) {
         const reason = "provider-source-name-ambiguity";
         recordResourceAction(input.ledger, input.runId, source.sourceKey, "Appointment", "conflict", reason);
         appointmentCounts.conflict += 1;
         continue;
+      } else {
+        let practitioner = practitionerCache.get(providerId);
+        if (!practitioner) {
+          practitioner = await upsertPractitioner({
+            fhir: input.fhir,
+            ledger: input.ledger,
+            runId: input.runId,
+            projectId: input.projectId,
+            providerId,
+            firstName: normalized(source.row.ProviderFirst) || undefined,
+            lastName: normalized(source.row.ProviderLast),
+          });
+          practitionerCache.set(providerId, practitioner);
+          practitionerCounts[practitioner.action] += 1;
+        }
+        if (!practitioner.resource?.id) {
+          const reason = "provider-match-requires-adjudication";
+          recordResourceAction(input.ledger, input.runId, source.sourceKey, "Appointment", "conflict", reason);
+          appointmentCounts.conflict += 1;
+          continue;
+        }
+        practitionerReference = `Practitioner/${practitioner.resource.id}`;
       }
-
-      let practitioner = practitionerCache.get(providerId);
-      if (!practitioner) {
-        practitioner = await upsertPractitioner({
-          fhir: input.fhir,
-          ledger: input.ledger,
-          runId: input.runId,
-          projectId: input.projectId,
-          providerId,
-        firstName: normalized(source.row.ProviderFirst) || undefined,
-          lastName: normalized(source.row.ProviderLast),
-        });
-        practitionerCache.set(providerId, practitioner);
-        practitionerCounts[practitioner.action] += 1;
-      }
-      if (!practitioner.resource?.id) {
-        const reason = "provider-match-requires-adjudication";
-        recordResourceAction(input.ledger, input.runId, source.sourceKey, "Appointment", "conflict", reason);
-        appointmentCounts.conflict += 1;
-        continue;
-      }
-      practitionerReference = `Practitioner/${practitioner.resource.id}`;
     }
 
     const result = await upsertAppointment({
@@ -242,27 +296,161 @@ export async function importLegacyAppointmentsAndEncounters(input: {
     }
 
     const dayAppointments = rowsByDay.get(visitDay.date) ?? [];
-    if (dayAppointments.length > 1) {
+    const activeDayAppointments = dayAppointments.filter((row) => !row.cancelled);
+    if (activeDayAppointments.length > 1) {
+      const appointmentSourceKeys = activeDayAppointments
+        .map((row) => row.sourceKey)
+        .sort();
+      const allocations = visitDay.exSrNos.map((exSrNo) => ({
+        exSrNo,
+        allocation: input.ledger.readCaptureAllocation(daySourceKey, exSrNo),
+      }));
+      const invalidAllocations = allocations.filter(({ allocation }) =>
+        allocation
+        && !activeDayAppointments.some(
+          (row) => row.sourceKey === allocation.appointmentSourceKey,
+        )
+      );
+      const missingAllocations = allocations.filter(({ allocation }) => !allocation);
       input.ledger.recordAmbiguity({
         sourceKind: "visit-day",
         sourceKey: daySourceKey,
         ambiguityType: "multi-appointment-day",
-        details: { appointmentCount: dayAppointments.length, examCount: visitDay.exSrNos.length },
+        details: {
+          appointmentSourceKeys,
+          exSrNos: visitDay.exSrNos,
+          missingExSrNos: missingAllocations.map(({ exSrNo }) => exSrNo),
+          invalidExSrNos: invalidAllocations.map(({ exSrNo }) => exSrNo),
+        },
       });
-      recordResourceAction(
-        input.ledger,
-        input.runId,
-        daySourceKey,
-        "Encounter",
-        "skipped",
-        "multi-appointment-day-queued",
-      );
-      encounterCounts.skipped += 1;
+      if (missingAllocations.length > 0 || invalidAllocations.length > 0) {
+        recordResourceAction(
+          input.ledger,
+          input.runId,
+          daySourceKey,
+          "Encounter",
+          "skipped",
+          allocations.some(({ allocation }) => allocation)
+            ? "multi-appointment-day-partially-allocated"
+            : "multi-appointment-day-queued",
+        );
+        encounterCounts.skipped += 1;
+        continue;
+      }
+
+      const allocationsByAppointment = new Map<string, string[]>();
+      for (const { exSrNo, allocation } of allocations) {
+        const captures = allocationsByAppointment.get(allocation!.appointmentSourceKey) ?? [];
+        captures.push(exSrNo);
+        allocationsByAppointment.set(allocation!.appointmentSourceKey, captures);
+      }
+      const sittings = [...allocationsByAppointment]
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([sourceKey, exSrNos]) => ({
+          sourceKey,
+          exSrNos,
+          appointment: importedAppointments.get(sourceKey),
+        }));
+      if (sittings.some(({ appointment }) => !appointment?.id)) {
+        recordResourceAction(
+          input.ledger,
+          input.runId,
+          daySourceKey,
+          "Encounter",
+          "skipped",
+          "allocated-appointment-not-imported",
+        );
+        encounterCounts.skipped += 1;
+        continue;
+      }
+      const decisions = sittings.map((sitting) => ({
+        ...sitting,
+        adjudication: input.ledger.readAdjudication("encounter", sitting.sourceKey),
+      }));
+      if (
+        isOperatorChart(manifest)
+        && decisions.some(({ adjudication }) => !adjudication)
+      ) {
+        for (const { sourceKey, adjudication } of decisions) {
+          if (!adjudication) recordEncounterDecisionAmbiguity(input.ledger, sourceKey);
+        }
+        recordResourceAction(
+          input.ledger,
+          input.runId,
+          daySourceKey,
+          "Encounter",
+          "skipped",
+          "encounter-adjudication-incomplete",
+        );
+        encounterCounts.skipped += 1;
+        continue;
+      }
+
+      input.ledger.resolveAmbiguity("visit-day", daySourceKey, "multi-appointment-day");
+      for (const { sourceKey, exSrNos, appointment, adjudication } of decisions) {
+        if (adjudication?.decision === "exclude") {
+          recordResourceAction(
+            input.ledger,
+            input.runId,
+            sourceKey,
+            "Encounter",
+            "skipped",
+            "excluded-by-adjudication",
+          );
+          encounterCounts.skipped += 1;
+          continue;
+        }
+        const result = await upsertEncounter({
+          fhir: input.fhir,
+          ledger: input.ledger,
+          runId: input.runId,
+          projectId: input.projectId,
+          manifest,
+          sourceKey,
+          primaryIdentifier: {
+            system: EYEFINITY_APPOINTMENT_IDENTIFIER_SYSTEM,
+            value: sourceKey,
+          },
+          appointment: appointment!,
+          exSrNos,
+          markAsTest: adjudication?.decision === "mark-as-test",
+        });
+        encounterCounts[result.action] += 1;
+      }
       continue;
     }
 
-    if (dayAppointments.length === 1 && !dayAppointments[0]!.cancelled) {
-      const source = dayAppointments[0]!;
+    if (activeDayAppointments.length === 1) {
+      const source = activeDayAppointments[0]!;
+      const adjudication = input.ledger.readAdjudication("encounter", source.sourceKey);
+      if (!adjudication && isOperatorChart(manifest)) {
+        recordEncounterDecisionAmbiguity(input.ledger, source.sourceKey);
+        recordResourceAction(
+          input.ledger,
+          input.runId,
+          source.sourceKey,
+          "Encounter",
+          "skipped",
+          "encounter-adjudication-required",
+        );
+        encounterCounts.skipped += 1;
+        continue;
+      }
+      if (adjudication?.decision === "exclude") {
+        recordResourceAction(
+          input.ledger,
+          input.runId,
+          source.sourceKey,
+          "Encounter",
+          "skipped",
+          "excluded-by-adjudication",
+        );
+        encounterCounts.skipped += 1;
+        continue;
+      }
+      if (adjudication) {
+        input.ledger.resolveAmbiguity("encounter", source.sourceKey, "encounter-decision");
+      }
       const appointment = importedAppointments.get(source.sourceKey);
       if (!appointment?.id) {
         recordResourceAction(
@@ -289,9 +477,40 @@ export async function importLegacyAppointmentsAndEncounters(input: {
         },
         appointment,
         exSrNos: visitDay.exSrNos,
+        markAsTest: adjudication?.decision === "mark-as-test",
       });
       encounterCounts[result.action] += 1;
       continue;
+    }
+
+    const adjudication = input.ledger.readAdjudication("encounter", daySourceKey);
+    if (!adjudication && isOperatorChart(manifest)) {
+      recordEncounterDecisionAmbiguity(input.ledger, daySourceKey);
+      recordResourceAction(
+        input.ledger,
+        input.runId,
+        daySourceKey,
+        "Encounter",
+        "skipped",
+        "encounter-adjudication-required",
+      );
+      encounterCounts.skipped += 1;
+      continue;
+    }
+    if (adjudication?.decision === "exclude") {
+      recordResourceAction(
+        input.ledger,
+        input.runId,
+        daySourceKey,
+        "Encounter",
+        "skipped",
+        "excluded-by-adjudication",
+      );
+      encounterCounts.skipped += 1;
+      continue;
+    }
+    if (adjudication) {
+      input.ledger.resolveAmbiguity("encounter", daySourceKey, "encounter-decision");
     }
 
     const result = await upsertEncounter({
@@ -307,6 +526,7 @@ export async function importLegacyAppointmentsAndEncounters(input: {
       },
       visitDate: visitDay.date,
       exSrNos: visitDay.exSrNos,
+      markAsTest: adjudication?.decision === "mark-as-test",
     });
     encounterCounts[result.action] += 1;
   }
@@ -548,6 +768,7 @@ type UpsertEncounterInput = {
   readonly sourceKey: string;
   readonly primaryIdentifier: Identifier;
   readonly exSrNos: readonly string[];
+  readonly markAsTest?: boolean;
 } & (
   | { readonly appointment: Appointment; readonly visitDate?: never }
   | { readonly appointment?: never; readonly visitDate: string }
@@ -599,7 +820,7 @@ async function upsertEncounter(
   };
   const imported: Encounter = {
     resourceType: "Encounter",
-    meta: migrationMeta(input.projectId),
+    meta: migrationMeta(input.projectId, input.markAsTest),
     identifier: [
       input.primaryIdentifier,
       ...input.exSrNos.map((value) => ({
@@ -818,7 +1039,7 @@ function groupByVisitDate(
 function mergePractitioner(existing: Practitioner, imported: Practitioner): Practitioner {
   return {
     ...existing,
-    meta: mergeMigrationMeta(existing.meta),
+    meta: mergeMigrationMeta(existing.meta, imported.meta?.tag),
     identifier: mergeIdentifiers(
       existing.identifier,
       imported.identifier ?? [],
@@ -834,7 +1055,7 @@ function mergeAppointment(existing: Appointment, imported: Appointment): Appoint
     ...existing,
     ...imported,
     id: existing.id,
-    meta: mergeMigrationMeta(existing.meta),
+    meta: mergeMigrationMeta(existing.meta, imported.meta?.tag),
     identifier: mergeIdentifiers(
       existing.identifier,
       imported.identifier ?? [],
@@ -848,7 +1069,7 @@ function mergeEncounter(existing: Encounter, imported: Encounter): Encounter {
     ...existing,
     ...imported,
     id: existing.id,
-    meta: mergeMigrationMeta(existing.meta),
+    meta: mergeMigrationMeta(existing.meta, imported.meta?.tag),
     identifier: mergeIdentifiers(
       existing.identifier,
       imported.identifier ?? [],
@@ -861,21 +1082,37 @@ function mergeEncounter(existing: Encounter, imported: Encounter): Encounter {
   };
 }
 
-function migrationMeta(projectId: string): NonNullable<Resource["meta"]> {
+function migrationMeta(
+  projectId: string,
+  markAsTest = false,
+): NonNullable<Resource["meta"]> {
   return {
     project: projectId,
-    tag: [{ system: MIGRATION_TAG_SYSTEM, code: MIGRATION_TAG_CODE }],
+    tag: [
+      { system: MIGRATION_TAG_SYSTEM, code: MIGRATION_TAG_CODE },
+      ...(markAsTest
+        ? [{ system: MIGRATION_TAG_SYSTEM, code: MIGRATION_TEST_TAG_CODE }]
+        : []),
+    ],
   };
 }
 
-function mergeMigrationMeta(existing: Resource["meta"]): NonNullable<Resource["meta"]> {
+function mergeMigrationMeta(
+  existing: Resource["meta"],
+  importedTags: NonNullable<Resource["meta"]>["tag"],
+): NonNullable<Resource["meta"]> {
   return {
     ...existing,
     tag: [
       ...(existing?.tag ?? []).filter(
-        (tag) => tag.system !== MIGRATION_TAG_SYSTEM || tag.code !== MIGRATION_TAG_CODE,
+        (tag) =>
+          tag.system !== MIGRATION_TAG_SYSTEM
+          || (
+            tag.code !== MIGRATION_TAG_CODE
+            && tag.code !== MIGRATION_TEST_TAG_CODE
+          ),
       ),
-      { system: MIGRATION_TAG_SYSTEM, code: MIGRATION_TAG_CODE },
+      ...(importedTags ?? []),
     ],
   };
 }
@@ -1049,7 +1286,18 @@ function technicalVisitPeriod(date: string): Encounter["period"] {
   return { start: instant, end: instant };
 }
 
-function technicalVisitKey(patientSourceKey: string, date: string): string {
+function appointmentSourceKeyPatientUid(sourceKey: string): string | undefined {
+  try {
+    const value = JSON.parse(sourceKey) as unknown;
+    return Array.isArray(value) && typeof value[0] === "string"
+      ? normalized(value[0])
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function technicalVisitKey(patientSourceKey: string, date: string): string {
   return JSON.stringify([normalized(patientSourceKey), date]);
 }
 
@@ -1073,13 +1321,23 @@ function assertPatientId(
   }
 }
 
-function assertTypicalChart(manifest: AppointmentEncounterImportManifest): void {
-  if (
+function isOperatorChart(manifest: AppointmentEncounterImportManifest): boolean {
+  return (
     manifest.epmPatientId === FORBIDDEN_M2A_EPM_SOURCE_KEY
     || manifest.ehrPatientId === FORBIDDEN_M2A_EHR_SOURCE_KEY
-  ) {
-    throw new Error("M2b-1 refuses the operator test-data chart; select one typical chart.");
-  }
+  );
+}
+
+function recordEncounterDecisionAmbiguity(
+  ledger: ImportLedger,
+  sourceKey: string,
+): void {
+  ledger.recordAmbiguity({
+    sourceKind: "encounter",
+    sourceKey,
+    ambiguityType: "encounter-decision",
+    details: { decisions: ["keep", "exclude", "mark-as-test"] },
+  });
 }
 
 function assertVersioned(resource: Resource, resourceType: string): void {
