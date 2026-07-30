@@ -293,6 +293,16 @@ class LivePatientMrnBackfillAdapter implements PatientMrnBackfillAdapter {
     return searchAll<Account>(this.fhir, "Account", {});
   }
 
+  async patientIdentifierExists(mrn: string): Promise<boolean> {
+    const patients = await searchAll<Patient>(this.fhir, "Patient", {
+      identifier: `${ODOS_MRN_SYSTEM}|${mrn}`,
+      _count: "1",
+    });
+    return patients.some((patient) => patient.identifier?.some(
+      (identifier) => identifier.system === ODOS_MRN_SYSTEM && identifier.value === mrn,
+    ));
+  }
+
   createReservation(account: Account, ifNoneExist: string): Promise<Account> {
     return this.fhir.create(account, { "If-None-Exist": ifNoneExist });
   }

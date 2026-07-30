@@ -284,6 +284,12 @@ class FakePatientMrnBackfillAdapter implements PatientMrnBackfillAdapter {
     return [...this.accounts.values()].map((account) => structuredClone(account));
   }
 
+  async patientIdentifierExists(mrn: string): Promise<boolean> {
+    return [...this.patients.values()].some((candidate) => candidate.identifier?.some(
+      (identifier) => identifier.system === ODOS_MRN_SYSTEM && identifier.value === mrn,
+    ));
+  }
+
   async createReservation(account: Account): Promise<Account> {
     const mrn = account.identifier?.find((identifier) => identifier.system === ODOS_MRN_SYSTEM)?.value;
     assert.ok(mrn);

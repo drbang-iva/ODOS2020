@@ -124,6 +124,30 @@ test("concurrent native registrations reserve unique MRNs when their first candi
   assert.equal(api.accounts.size, 2);
 });
 
+test("native registration skips an MRN already present on a Patient whose Account is missing", async () => {
+  const existingMrn = formatOdosMrn(250_001);
+  const api = new FakeRegistrationApi([{
+    ...EXISTING,
+    id: "legacy-without-account",
+    identifier: [{ system: ODOS_MRN_SYSTEM, value: existingMrn }],
+  }]);
+  const bases = [250_001, 250_002];
+
+  const created = await createPatient(
+    { ...COMPLETE_DRAFT, firstName: "Taylor" },
+    api as never,
+    {
+      today: "2026-07-30",
+      nextMrnBase: () => bases.shift()!,
+      nextUuid: sequentialUuid("patient-collision"),
+    },
+  );
+
+  const createdMrn = created.identifier?.find((identifier) => identifier.system === ODOS_MRN_SYSTEM)?.value;
+  assert.equal(createdMrn, formatOdosMrn(250_002));
+  assert.equal(api.accounts.has(existingMrn), false);
+});
+
 test("minor registration refuses a missing consent authority before reserving an MRN", async () => {
   const api = new FakeRegistrationApi();
   const guardian = {

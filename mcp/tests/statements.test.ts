@@ -257,6 +257,27 @@ test("minor statements mail to the Account guarantor while a self-responsible ad
   assert.equal(missingGuardianRun.invalidRejects, 1);
   assert.match(missingGuardianRun.rejects[0].reason, /has no resolvable current Account guarantor/);
 
+  const wrongPatientGuardianFixture = fakeFhir({
+    patients: [minor],
+    invoices: [invoice("wrong-patient-guardian-invoice", "minor", 10_000)],
+    payments: [],
+    accounts: [patientAccount("wrong-patient-guardian-account", "minor", "RelatedPerson/guardian")],
+    relatedPeople: [{
+      ...guardian,
+      patient: { reference: "Patient/another-patient" },
+    }],
+  });
+  const wrongPatientGuardianResult = await handleGeneratePatientStatementRequest(
+    statementDeps(wrongPatientGuardianFixture.fhir),
+    {
+      authHeader: "Bearer good",
+      body: { patientReference: "Patient/minor" },
+    },
+  );
+  const wrongPatientGuardianRun = wrongPatientGuardianResult.body as StatementRunResult;
+  assert.equal(wrongPatientGuardianRun.invalidRejects, 1);
+  assert.match(wrongPatientGuardianRun.rejects[0].reason, /does not belong to Patient\/minor/);
+
   const adult = patientWithAddress();
   adult.birthDate = "1980-01-02";
   const adultFixture = fakeFhir({

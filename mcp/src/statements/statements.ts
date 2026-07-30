@@ -967,6 +967,11 @@ function resolveStatementRecipient(
       continue;
     }
     const person = reference ? relatedPeople.get(reference) : undefined;
+    if (person && person.patient.reference !== patientReference) {
+      throw new StatementValidationError(
+        `${reference} does not belong to ${patientReference}; statement delivery was blocked.`,
+      );
+    }
     if (person?.active !== false && person) resolved.push(person);
   }
   if (resolved.length === 0) {

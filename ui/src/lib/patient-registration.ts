@@ -6,6 +6,7 @@ import {
   buildPatientIdentityTransaction,
   ODOS_MRN_MAX,
   ODOS_MRN_MIN,
+  ODOS_MRN_SYSTEM,
   emptySelfResponsibleParty,
   reserveOdosMrn,
   validateResponsibleParties,
@@ -159,7 +160,7 @@ export async function registerPatient(
 
 export async function createPatient(
   draft: PatientDemographicsDraft,
-  api: Pick<typeof fhir, "create" | "read" | "executeTransaction"> = fhir,
+  api: Pick<typeof fhir, "search" | "create" | "read" | "executeTransaction"> = fhir,
   options: PatientRegistrationOptions = {},
 ): Promise<Patient> {
   const errors = validatePatientRegistration(draft, options);
@@ -167,6 +168,17 @@ export async function createPatient(
   const nextUuid = options.nextUuid ?? crypto.randomUUID.bind(crypto);
   const reservation = await reserveOdosMrn(
     {
+      patientIdentifierExists: async (mrn) => {
+        const matches = await api.search<Patient>("Patient", {
+          identifier: `${ODOS_MRN_SYSTEM}|${mrn}`,
+          _count: "1",
+        });
+        return (matches.entry ?? []).some((entry) =>
+          entry.resource?.identifier?.some(
+            (identifier) => identifier.system === ODOS_MRN_SYSTEM && identifier.value === mrn,
+          ),
+        );
+      },
       createReservation: (account, ifNoneExist) =>
         api.create(account, "patient-mrn-reservation", { "If-None-Exist": ifNoneExist }),
     },

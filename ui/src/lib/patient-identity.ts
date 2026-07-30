@@ -50,6 +50,7 @@ export interface ResponsiblePartyDraft {
 }
 
 export interface MrnReservationStore {
+  patientIdentifierExists(mrn: string): Promise<boolean>;
   createReservation(account: Account, ifNoneExist: string): Promise<Account>;
 }
 
@@ -211,6 +212,7 @@ export async function reserveOdosMrn(
 ): Promise<ReservedMrn> {
   for (let attempt = 0; attempt < ODOS_MRN_ALLOCATION_ATTEMPTS; attempt += 1) {
     const mrn = formatOdosMrn(nextBase());
+    if (await store.patientIdentifierExists(mrn)) continue;
     const allocationToken = nextToken();
     const account = await store.createReservation(
       buildMrnReservationAccount(mrn, allocationToken),
