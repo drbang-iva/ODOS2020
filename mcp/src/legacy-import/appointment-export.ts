@@ -54,8 +54,10 @@ export interface AppointmentExportAnalysis {
   readonly collisionGroups: number;
   readonly collisionRows: number;
   readonly resolvedCancelGroups: number;
+  readonly allCancelledSkipped: number;
   readonly ambiguousCollisionGroups: number;
   readonly duplicateSourceKeys: readonly string[];
+  readonly allCancelledSourceKeys: readonly string[];
   readonly appointments: readonly PreparedAppointmentRow[];
   readonly ambiguities: readonly AppointmentExportAmbiguity[];
 }
@@ -117,6 +119,7 @@ export function analyzeAppointmentExport(
 
   const appointments: PreparedAppointmentRow[] = [];
   const ambiguities: AppointmentExportAmbiguity[] = [];
+  const allCancelledSourceKeys: string[] = [];
   let collisionGroups = 0;
   let collisionRows = 0;
   let resolvedCancelGroups = 0;
@@ -134,6 +137,10 @@ export function analyzeAppointmentExport(
     if (activeRows.length === 1 && cancelledRows === rows.length - 1) {
       resolvedCancelGroups += 1;
       appointments.push(preparedRow(activeRows[0]!, sourceKey, true));
+      continue;
+    }
+    if (activeRows.length === 0) {
+      allCancelledSourceKeys.push(sourceKey);
       continue;
     }
 
@@ -154,8 +161,10 @@ export function analyzeAppointmentExport(
     collisionGroups,
     collisionRows,
     resolvedCancelGroups,
+    allCancelledSkipped: allCancelledSourceKeys.length,
     ambiguousCollisionGroups: ambiguities.length,
     duplicateSourceKeys,
+    allCancelledSourceKeys,
     appointments,
     ambiguities,
   };

@@ -145,9 +145,10 @@ npm run import-legacy-visits-m2b1 -- \
 ```
 
 The command prints the full-file source row, exact-duplicate, collision, cancel-resolution,
-and queued-collision counts before the selected-patient action totals and report path. Byte-identical
-duplicates are recorded through `junk_rejections`. Any composite collision not resolved by
-the one-active-row cancellation rule is written to `ambiguity_queue`; no row number, hash, or
+all-cancelled-skip, and queued-collision counts before the selected-patient action totals and
+report path. Byte-identical duplicates and collision groups containing only cancelled rows are
+recorded through `junk_rejections`; all-cancelled groups produce no Appointment. A composite
+collision with multiple active rows is written to `ambiguity_queue`; no row number, hash, or
 other manufactured per-row key is used. Multi-appointment visit days are likewise queued and
 produce no Encounter until M2b-2 adjudication.
 

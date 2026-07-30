@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { test } from "node:test";
 import type {
   Appointment,
@@ -20,6 +21,7 @@ import {
 import {
   APPOINTMENT_EXPORT_COLUMNS,
   analyzeAppointmentExport,
+  appointmentCompositeKey,
 } from "../src/legacy-import/appointment-export.js";
 import { ImportLedger } from "../src/legacy-import/import-ledger.js";
 import { ODOS_VISIT_TYPE_SYSTEM } from "../src/fhir/schedulingVisitType.js";
@@ -28,7 +30,7 @@ import { FhirClient } from "../../src/fhir-client.js";
 
 const PROJECT_ID = "project-1";
 
-test("AppointmentsExport analysis drops exact duplicates and applies only the approved cancel-pair rule", () => {
+test("AppointmentsExport analysis drops exact duplicates and applies only the approved cancellation rules", () => {
   const exact = appointmentRow({ PatientUID: "patient-a", PatientID: "epm-a" });
   const cancelActive = appointmentRow({
     PatientUID: "patient-b",
@@ -49,6 +51,51 @@ test("AppointmentsExport analysis drops exact duplicates and applies only the ap
     Notes: "first booking",
   });
   const ambiguousTwo = { ...ambiguousOne, Notes: "second booking" };
+  const allCancelledOne = appointmentRow({
+    PatientUID: "patient-d",
+    PatientID: "epm-d",
+    appt_date: "01/05/2020 12:00:00 AM",
+    appt_cancel_ind: "True",
+    Notes: "cancelled",
+  });
+  const allCancelledTwo = {
+    ...allCancelledOne,
+    appt_confirmed_ind: "True",
+  };
+  const additionalResolvedRows = Array.from({ length: 111 }, (_, index) => {
+    const active = appointmentRow({
+      PatientUID: `resolved-patient-${index}`,
+      PatientID: `resolved-epm-${index}`,
+      appt_date: "01/06/2020 12:00:00 AM",
+      appt_cancel_ind: "False",
+    });
+    return [
+      active,
+      { ...active, appt_cancel_ind: "True", Notes: "cancellation history" },
+    ];
+  }).flat();
+  const additionalAmbiguousOne = appointmentRow({
+    PatientUID: "ambiguous-patient-2",
+    PatientID: "ambiguous-epm-2",
+    appt_date: "01/07/2020 12:00:00 AM",
+    Notes: "first booking",
+  });
+  const additionalAmbiguousRows = [
+    additionalAmbiguousOne,
+    { ...additionalAmbiguousOne, Notes: "second booking" },
+  ];
+  const additionalAllCancelledRows = Array.from({ length: 10 }, (_, index) => {
+    const cancelled = appointmentRow({
+      PatientUID: `all-cancelled-patient-${index}`,
+      PatientID: `all-cancelled-epm-${index}`,
+      appt_date: "01/08/2020 12:00:00 AM",
+      appt_cancel_ind: "True",
+    });
+    return [
+      cancelled,
+      { ...cancelled, appt_confirmed_ind: "True" },
+    ];
+  }).flat();
   const analysis = analyzeAppointmentExport(
     appointmentCsv([
       exact,
@@ -57,6 +104,11 @@ test("AppointmentsExport analysis drops exact duplicates and applies only the ap
       cancelHistory,
       ambiguousOne,
       ambiguousTwo,
+      allCancelledOne,
+      allCancelledTwo,
+      ...additionalResolvedRows,
+      ...additionalAmbiguousRows,
+      ...additionalAllCancelledRows,
     ]),
     "00127314",
   );
@@ -68,23 +120,36 @@ test("AppointmentsExport analysis drops exact duplicates and applies only the ap
     collisionGroups: analysis.collisionGroups,
     collisionRows: analysis.collisionRows,
     resolvedCancelGroups: analysis.resolvedCancelGroups,
+    allCancelledSkipped: analysis.allCancelledSkipped,
     ambiguousCollisionGroups: analysis.ambiguousCollisionGroups,
     appointments: analysis.appointments.length,
   }, {
-    sourceRows: 6,
+    sourceRows: 252,
     exactDuplicates: 1,
-    rowsAfterExactDedupe: 5,
-    collisionGroups: 2,
-    collisionRows: 4,
-    resolvedCancelGroups: 1,
-    ambiguousCollisionGroups: 1,
-    appointments: 2,
+    rowsAfterExactDedupe: 251,
+    collisionGroups: 125,
+    collisionRows: 250,
+    resolvedCancelGroups: 112,
+    allCancelledSkipped: 11,
+    ambiguousCollisionGroups: 2,
+    appointments: 113,
   });
   assert.equal(
     analysis.appointments.find((entry) => entry.row.PatientUID === "patient-b")?.cancelled,
     true,
   );
-  assert.equal(analysis.ambiguities[0]?.activeRows, 2);
+  assert.equal(
+    analysis.ambiguities.find((entry) => entry.patientUid === "patient-c")?.activeRows,
+    2,
+  );
+  assert.equal(
+    analysis.appointments.some((entry) => entry.row.PatientUID === "patient-d"),
+    false,
+  );
+  assert.equal(
+    analysis.ambiguities.some((entry) => entry.patientUid === "patient-d"),
+    false,
+  );
   assert.throws(
     () => analyzeAppointmentExport(appointmentCsv([exact]), "other-office"),
     /verified only for office export 00127314/,
@@ -100,6 +165,18 @@ test("M2b-1 imports appointments, linked and technical Encounters, queues multi-
   const state = tempState();
   const ledger = new ImportLedger({ stateDirectory: state.path });
   const fhir = new MemoryVisitFhir();
+  const allCancelledOne = appointmentRow({
+    PatientUID: "cancelled-patient",
+    PatientID: "cancelled-epm",
+    appt_date: "01/08/2020 12:00:00 AM",
+    appt_cancel_ind: "True",
+    Notes: "cancelled",
+  });
+  const allCancelledTwo = {
+    ...allCancelledOne,
+    appt_confirmed_ind: "True",
+  };
+  const allCancelledSourceKey = appointmentCompositeKey(allCancelledOne);
   const appointmentsCsv = appointmentCsv([
     appointmentRow({
       appt_date: "01/02/2020 12:00:00 AM",
@@ -147,6 +224,8 @@ test("M2b-1 imports appointments, linked and technical Encounters, queues multi-
       ProviderFirst: "",
       ProviderLast: "",
     }),
+    allCancelledOne,
+    allCancelledTwo,
   ]);
   const examsTsv = [
     "ptSrNo\texSrNo\texDateTime\texDevType\texWhichEye",
@@ -172,6 +251,16 @@ test("M2b-1 imports appointments, linked and technical Encounters, queues multi-
     });
     ledger.finishRun(firstRun, "completed");
 
+    assert.deepEqual(first.analysis, {
+      sourceRows: 10,
+      exactDuplicates: 0,
+      rowsAfterExactDedupe: 10,
+      collisionGroups: 3,
+      collisionRows: 6,
+      resolvedCancelGroups: 1,
+      allCancelledSkipped: 1,
+      ambiguousCollisionGroups: 1,
+    });
     assert.deepEqual(first.appointments, {
       created: 5,
       updated: 0,
@@ -243,8 +332,26 @@ test("M2b-1 imports appointments, linked and technical Encounters, queues multi-
 
     const report = ledger.renderReport(firstRun);
     assert.match(report, /multi-appointment-day-queued/);
+    assert.match(report, /all-cancelled-collision-group/);
     assert.match(report, /Appointment/);
     assert.match(report, /Encounter/);
+    const auditDatabase = new DatabaseSync(ledger.databasePath);
+    try {
+      const ambiguity = auditDatabase.prepare(`
+        SELECT COUNT(*) AS count
+        FROM ambiguity_queue
+        WHERE source_kind = 'appointment' AND source_key = ?
+      `).get(allCancelledSourceKey) as { count: number };
+      const rejection = auditDatabase.prepare(`
+        SELECT COUNT(*) AS count
+        FROM junk_rejections
+        WHERE run_id = ? AND source_key = ? AND reason = 'all-cancelled-collision-group'
+      `).get(firstRun, allCancelledSourceKey) as { count: number };
+      assert.equal(ambiguity.count, 0);
+      assert.equal(rejection.count, 1);
+    } finally {
+      auditDatabase.close();
+    }
 
     const secondRun = ledger.startRun("m2b-second");
     const second = await importLegacyAppointmentsAndEncounters({

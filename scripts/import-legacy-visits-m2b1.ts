@@ -129,6 +129,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       `M2B1 run=${result.runId} rows=${analysis.sourceRows} exact_duplicates=${analysis.exactDuplicates} `
       + `post_dedupe=${analysis.rowsAfterExactDedupe} collision_groups=${analysis.collisionGroups} `
       + `collision_rows=${analysis.collisionRows} cancel_resolved=${analysis.resolvedCancelGroups} `
+      + `all_cancelled_skipped=${analysis.allCancelledSkipped} `
       + `queued_collisions=${analysis.ambiguousCollisionGroups}`,
     );
     console.log(

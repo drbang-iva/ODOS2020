@@ -71,6 +71,7 @@ export interface AppointmentEncounterImportResult {
     readonly collisionGroups: number;
     readonly collisionRows: number;
     readonly resolvedCancelGroups: number;
+    readonly allCancelledSkipped: number;
     readonly ambiguousCollisionGroups: number;
   };
   readonly appointments: Readonly<Record<ImportAction, number>>;
@@ -120,6 +121,14 @@ export async function importLegacyAppointmentsAndEncounters(input: {
       sourceSystem: "eyefinity-appointments",
       sourceKey,
       reason: "byte-identical-export-duplicate",
+    });
+  }
+  for (const sourceKey of analysis.allCancelledSourceKeys) {
+    input.ledger.recordJunkRejection({
+      runId: input.runId,
+      sourceSystem: "eyefinity-appointments",
+      sourceKey,
+      reason: "all-cancelled-collision-group",
     });
   }
   for (const ambiguity of analysis.ambiguities) {
@@ -310,6 +319,7 @@ export async function importLegacyAppointmentsAndEncounters(input: {
       collisionGroups: analysis.collisionGroups,
       collisionRows: analysis.collisionRows,
       resolvedCancelGroups: analysis.resolvedCancelGroups,
+      allCancelledSkipped: analysis.allCancelledSkipped,
       ambiguousCollisionGroups: analysis.ambiguousCollisionGroups,
     },
     appointments: appointmentCounts,
