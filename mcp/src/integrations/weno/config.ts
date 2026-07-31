@@ -11,7 +11,11 @@ export interface WenoSwitchConfig {
   routingId?: string;
   senderSoftwareDeveloper?: string;
   senderSoftwareVersion?: string;
+  endpoint?: string;
 }
+
+export const DEFAULT_WENO_SWITCH_ENDPOINT =
+  "https://cert.wenoexchange.com/wenox/restapi/WenoSwitch";
 
 export function wenoEzIntegrationConfigFromEnv(
   env: NodeJS.ProcessEnv = process.env,
@@ -42,6 +46,7 @@ export function wenoSwitchConfigFromEnv(
     routingId: env.WENO_SWITCH_ROUTING_ID,
     senderSoftwareDeveloper: env.WENO_SWITCH_SENDER_SOFTWARE_DEVELOPER,
     senderSoftwareVersion: env.WENO_SWITCH_SENDER_SOFTWARE_VERSION,
+    endpoint: env.WENO_SWITCH_ENDPOINT?.trim() || DEFAULT_WENO_SWITCH_ENDPOINT,
   };
 }
 
@@ -52,5 +57,6 @@ export function isWenoSwitchConfigured(config: WenoSwitchConfig): boolean {
     config.routingId,
     config.senderSoftwareDeveloper,
     config.senderSoftwareVersion,
+    config.endpoint,
   ].every((value) => typeof value === "string" && value.trim().length > 0);
 }

@@ -2,6 +2,14 @@ import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
 import express from "express";
+import type { MedicationRequest, Patient, Practitioner, Resource } from "@medplum/fhirtypes";
+import {
+  buildMedicationRequest,
+  ODOS_TRANSMISSION_METHOD_EXTENSION_URL,
+  WENO_MESSAGE_ID_IDENTIFIER_SYSTEM,
+  type MedicationOrderPharmacy,
+} from "../src/fhir/medicationOrder.js";
+import { resetWenoSwitchProcessStateForTests } from "../src/integrations/weno/wenoSwitchNewRx.js";
 import type { WenoDrugRow } from "../src/jobs/syncWenoDrugDatabase.js";
 import type { PharmacyDirectoryRow, PharmacySearchInput } from "../src/jobs/syncWenoPharmacyDirectory.js";
 import { registerWenoSearchRoutes, WENO_SEARCH_RESULT_LIMIT } from "../src/weno/weno-search-routes.js";
@@ -91,6 +99,289 @@ test("WENO search routes return capped, client-shaped results and preserve Direc
   }
 });
 
+test("WENO send rejects a hostile controlled-substance record server-side", async () => {
+  const fixture = sendFixture({
+    medicationRequest: medicationRequest({
+      isControlledSubstance: true,
+      transmissionMethod: "electronically-sent",
+    }),
+  });
+  let sendCalls = 0;
+  const server = await startSendServer(fixture, async () => {
+    sendCalls += 1;
+    return { kind: "status", code: "001", description: "Accepted" };
+  });
+  try {
+    const response = await fetch(`${server.baseUrl}/weno/medication-requests/rx-1/send`, {
+      ...auth(),
+      method: "POST",
+    });
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), {
+      error: "Controlled substances cannot be transmitted electronically through this WENO send path.",
+    });
+    assert.equal(sendCalls, 0);
+    assert.equal(transmissionMethod(fixture.medicationRequest), "electronically-sent");
+  } finally {
+    await server.close();
+  }
+});
+
+test("WENO send refuses free-text drug and pharmacy distinctly while preserving printable orders", async () => {
+  const freeTextDrug = sendFixture({
+    medicationRequest: medicationRequest({ codedDrug: false }),
+  });
+  const drugServer = await startSendServer(freeTextDrug, async () => {
+    throw new Error("send must not run");
+  });
+  try {
+    const response = await fetch(`${drugServer.baseUrl}/weno/medication-requests/rx-1/send`, {
+      ...auth(),
+      method: "POST",
+    });
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), {
+      error: "A free-text drug cannot be sent electronically. Select a coded WENO formulary drug, then save the prescription again.",
+    });
+    assert.equal(transmissionMethod(freeTextDrug.medicationRequest), "printed");
+  } finally {
+    await drugServer.close();
+  }
+
+  const freeTextPharmacy = sendFixture({
+    medicationRequest: medicationRequest({ structuredPharmacy: false }),
+  });
+  const pharmacyServer = await startSendServer(freeTextPharmacy, async () => {
+    throw new Error("send must not run");
+  });
+  try {
+    const response = await fetch(`${pharmacyServer.baseUrl}/weno/medication-requests/rx-1/send`, {
+      ...auth(),
+      method: "POST",
+    });
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), {
+      error: "A free-text pharmacy cannot be sent electronically. Select a coded WENO Directory pharmacy, then save the prescription again.",
+    });
+    assert.equal(transmissionMethod(freeTextPharmacy.medicationRequest), "printed");
+  } finally {
+    await pharmacyServer.close();
+  }
+});
+
+test("WENO error persistence leaves transmission unchanged and status alone marks sent", async () => {
+  const fixture = sendFixture();
+  const results = [
+    {
+      kind: "error" as const,
+      code: "900",
+      descriptionCode: "P001",
+      description: "Synthetic certification failure",
+    },
+    {
+      kind: "status" as const,
+      code: "001",
+      description: "Accepted",
+    },
+  ];
+  const server = await startSendServer(fixture, async () => results.shift()!);
+  try {
+    const errorResponse = await fetch(`${server.baseUrl}/weno/medication-requests/rx-1/send`, {
+      ...auth(),
+      method: "POST",
+    });
+    assert.equal(errorResponse.status, 200);
+    const errorBody = await errorResponse.json() as {
+      resendable: boolean;
+      medicationRequest: MedicationRequest;
+    };
+    assert.equal(errorBody.resendable, true);
+    assert.equal(transmissionMethod(errorBody.medicationRequest), "printed");
+    assert.equal(wenoMessageId(errorBody.medicationRequest), undefined);
+    assert.match(
+      errorBody.medicationRequest.note?.at(-1)?.text ?? "",
+      /WENO Switch error 900\/P001: Synthetic certification failure/,
+    );
+
+    const statusResponse = await fetch(`${server.baseUrl}/weno/medication-requests/rx-1/send`, {
+      ...auth(),
+      method: "POST",
+    });
+    assert.equal(statusResponse.status, 200);
+    const statusBody = await statusResponse.json() as {
+      resendable: boolean;
+      medicationRequest: MedicationRequest;
+    };
+    assert.equal(statusBody.resendable, false);
+    assert.equal(transmissionMethod(statusBody.medicationRequest), "electronically-sent");
+    assert.equal(wenoMessageId(statusBody.medicationRequest), "test-message-id");
+  } finally {
+    await server.close();
+  }
+});
+
+test("WENO durable identifier refuses a second send after simulated process restart", async () => {
+  const fixture = sendFixture();
+  let sendCalls = 0;
+  const server = await startSendServer(fixture, async () => {
+    sendCalls += 1;
+    return { kind: "status", code: "001", description: "Accepted" };
+  });
+  try {
+    const first = await fetch(`${server.baseUrl}/weno/medication-requests/rx-1/send`, {
+      ...auth(),
+      method: "POST",
+    });
+    assert.equal(first.status, 200);
+    resetWenoSwitchProcessStateForTests();
+    const second = await fetch(`${server.baseUrl}/weno/medication-requests/rx-1/send`, {
+      ...auth(),
+      method: "POST",
+    });
+    assert.equal(second.status, 409);
+    assert.deepEqual(await second.json(), {
+      error: "This prescription already has a WENO message id and will not be sent again.",
+    });
+    assert.equal(sendCalls, 1);
+  } finally {
+    await server.close();
+  }
+});
+
+test("a thrown WENO send stays reserved until an audited staff clear permits a retry", async () => {
+  const fixture = sendFixture();
+  const audits: Array<{
+    actionReason?: string;
+    actorId?: string;
+    eventTime: string;
+    eventType: string;
+  }> = [];
+  let sendCalls = 0;
+  const server = await startSendServer(
+    fixture,
+    async () => {
+      sendCalls += 1;
+      if (sendCalls === 1) throw new Error("Synthetic response timeout");
+      return { kind: "status", code: "001", description: "Accepted" };
+    },
+    {
+      recordAudit: async (row) => {
+        audits.push(row);
+      },
+    },
+  );
+  try {
+    const unknownResponse = await fetch(
+      `${server.baseUrl}/weno/medication-requests/rx-1/send`,
+      { ...auth(), method: "POST" },
+    );
+    assert.equal(unknownResponse.status, 200);
+    const unknownBody = await unknownResponse.json() as {
+      result: { kind: string; messageId: string; description: string };
+      medicationRequest: MedicationRequest;
+      resendable: boolean;
+    };
+    assert.deepEqual(unknownBody.result, {
+      kind: "unknown",
+      messageId: "test-message-id",
+      description: "Synthetic response timeout",
+    });
+    assert.equal(unknownBody.resendable, false);
+    assert.equal(wenoMessageId(unknownBody.medicationRequest), "test-message-id");
+    assert.equal(transmissionMethod(unknownBody.medicationRequest), "printed");
+    assert.match(
+      unknownBody.medicationRequest.note?.at(-1)?.text ?? "",
+      /WENO Switch outcome unknown test-message-id: Synthetic response timeout/,
+    );
+
+    const refusedRetry = await fetch(
+      `${server.baseUrl}/weno/medication-requests/rx-1/send`,
+      { ...auth(), method: "POST" },
+    );
+    assert.equal(refusedRetry.status, 409);
+    assert.deepEqual(await refusedRetry.json(), {
+      error: "This prescription already has a WENO message id and will not be sent again.",
+    });
+    assert.equal(sendCalls, 1);
+
+    const clearResponse = await fetch(
+      `${server.baseUrl}/weno/medication-requests/rx-1/clear-indeterminate-send`,
+      { ...auth(), method: "POST" },
+    );
+    assert.equal(clearResponse.status, 200);
+    const clearBody = await clearResponse.json() as {
+      medicationRequest: MedicationRequest;
+      clearedMessageId: string;
+    };
+    assert.equal(clearBody.clearedMessageId, "test-message-id");
+    assert.equal(wenoMessageId(clearBody.medicationRequest), undefined);
+    assert.match(
+      clearBody.medicationRequest.note?.at(-1)?.text ?? "",
+      /WENO Switch outcome-unknown reservation cleared test-message-id by Practitioner\/staff-1\./,
+    );
+    assert.ok(audits.some((row) =>
+      row.eventType === "update"
+      && row.actorId === "staff-1"
+      && row.eventTime === "2026-07-31T12:00:00.000Z"
+      && row.actionReason === "WENO_SWITCH_INDETERMINATE_RESERVATION_CLEARED test-message-id"
+    ));
+
+    const successfulRetry = await fetch(
+      `${server.baseUrl}/weno/medication-requests/rx-1/send`,
+      { ...auth(), method: "POST" },
+    );
+    assert.equal(successfulRetry.status, 200);
+    const successfulBody = await successfulRetry.json() as {
+      result: { kind: string };
+      medicationRequest: MedicationRequest;
+    };
+    assert.equal(successfulBody.result.kind, "status");
+    assert.equal(transmissionMethod(successfulBody.medicationRequest), "electronically-sent");
+    assert.equal(sendCalls, 2);
+  } finally {
+    await server.close();
+  }
+});
+
+test("a structured WENO error still clears its reservation and permits an immediate retry", async () => {
+  const fixture = sendFixture();
+  let sendCalls = 0;
+  const server = await startSendServer(fixture, async () => {
+    sendCalls += 1;
+    return sendCalls === 1
+      ? {
+          kind: "error",
+          code: "900",
+          descriptionCode: "P001",
+          description: "Synthetic certification failure",
+        }
+      : { kind: "status", code: "001", description: "Accepted" };
+  });
+  try {
+    const errorResponse = await fetch(
+      `${server.baseUrl}/weno/medication-requests/rx-1/send`,
+      { ...auth(), method: "POST" },
+    );
+    assert.equal(errorResponse.status, 200);
+    const errorBody = await errorResponse.json() as {
+      medicationRequest: MedicationRequest;
+      resendable: boolean;
+    };
+    assert.equal(errorBody.resendable, true);
+    assert.equal(wenoMessageId(errorBody.medicationRequest), undefined);
+    assert.equal(transmissionMethod(errorBody.medicationRequest), "printed");
+
+    const retryResponse = await fetch(
+      `${server.baseUrl}/weno/medication-requests/rx-1/send`,
+      { ...auth(), method: "POST" },
+    );
+    assert.equal(retryResponse.status, 200);
+    assert.equal(sendCalls, 2);
+  } finally {
+    await server.close();
+  }
+});
+
 function auth(): RequestInit {
   return { headers: { Authorization: "Bearer good" } };
 }
@@ -104,6 +395,8 @@ async function startServer(overrides: Partial<Parameters<typeof registerWenoSear
       : null,
     drugs: { search: async () => [] },
     pharmacies: { search: async () => [] },
+    switchConfig: {},
+    recordAudit: async () => undefined,
     ...overrides,
   });
   const listener = app.listen(0, "127.0.0.1");
@@ -117,6 +410,168 @@ async function startServer(overrides: Partial<Parameters<typeof registerWenoSear
     close: () => new Promise<void>((resolve, reject) => listener.close((error) => error ? reject(error) : resolve())),
   };
 }
+
+async function startSendServer(
+  fixture: ReturnType<typeof sendFixture>,
+  sendNewRx: NonNullable<Parameters<typeof registerWenoSearchRoutes>[1]["sendNewRx"]>,
+  overrides: Partial<Parameters<typeof registerWenoSearchRoutes>[1]> = {},
+) {
+  const resources = new Map<string, Resource>([
+    ["MedicationRequest/rx-1", fixture.medicationRequest],
+    ["Patient/patient-1", fixture.patient],
+    ["Practitioner/prescriber-1", fixture.prescriber],
+  ]);
+  const fhir = {
+    async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
+      const resource = resources.get(`${resourceType}/${id}`);
+      if (!resource) throw new Error(`${resourceType}/${id} not found`);
+      return structuredClone(resource) as T;
+    },
+    async update<T extends Resource>(
+      resourceType: T["resourceType"],
+      id: string,
+      resource: T,
+      headers?: Record<string, string>,
+    ): Promise<T> {
+      const current = resources.get(`${resourceType}/${id}`);
+      if (!current) throw new Error(`${resourceType}/${id} not found`);
+      const expected = current.meta?.versionId
+        ? `W/"${current.meta.versionId}"`
+        : undefined;
+      if (expected && headers?.["If-Match"] !== expected) {
+        const error = new Error("stale") as Error & { status: number };
+        error.status = 412;
+        throw error;
+      }
+      const next = {
+        ...structuredClone(resource),
+        meta: {
+          ...(resource.meta ?? {}),
+          versionId: String(Number(current.meta?.versionId ?? "0") + 1),
+        },
+      } as T;
+      resources.set(`${resourceType}/${id}`, next);
+      fixture.medicationRequest = next as MedicationRequest;
+      return structuredClone(next);
+    },
+  };
+  return startServer({
+    authenticate: async (header) => header === "Bearer good"
+      ? {
+          staffReference: "Practitioner/staff-1",
+          actorRole: "clinician",
+          fhir: fhir as never,
+        }
+      : null,
+    switchConfig: {
+      partnerId: "partner",
+      partnerPasswordMd5: "md5",
+      routingId: "route",
+      senderSoftwareDeveloper: "ODOS",
+      senderSoftwareVersion: "test",
+      endpoint: "https://cert.example.test",
+    },
+    createMessageId: () => "test-message-id",
+    now: () => "2026-07-31T12:00:00.000Z",
+    sendNewRx,
+    ...overrides,
+  });
+}
+
+function sendFixture(overrides: { medicationRequest?: MedicationRequest } = {}) {
+  const patient: Patient = {
+    resourceType: "Patient",
+    id: "patient-1",
+    name: [{ family: "Patient", given: ["Synthetic"] }],
+    gender: "female",
+    birthDate: "1990-01-01",
+    address: [{
+      line: ["1 Test Way"],
+      city: "Greenwood",
+      state: "SC",
+      postalCode: "29646",
+      country: "US",
+    }],
+    telecom: [{ system: "phone", value: "8645550100" }],
+  };
+  const prescriber: Practitioner = {
+    resourceType: "Practitioner",
+    id: "prescriber-1",
+    identifier: [{ system: "http://hl7.org/fhir/sid/us-npi", value: "1234567893" }],
+    name: [{ family: "Doctor", given: ["Synthetic"] }],
+    address: [{
+      line: ["2 Test Way"],
+      city: "Greenwood",
+      state: "SC",
+      postalCode: "29646",
+      country: "US",
+    }],
+    telecom: [{ system: "phone", value: "8645550101" }],
+  };
+  return {
+    patient,
+    prescriber,
+    medicationRequest: overrides.medicationRequest ?? medicationRequest(),
+  };
+}
+
+function medicationRequest(options: {
+  codedDrug?: boolean;
+  structuredPharmacy?: boolean;
+  isControlledSubstance?: boolean;
+  transmissionMethod?: "printed" | "electronically-sent";
+} = {}): MedicationRequest {
+  const structuredPharmacy = options.structuredPharmacy !== false;
+  return {
+    ...buildMedicationRequest({
+      patientReference: "Patient/patient-1",
+      practitionerReference: "Practitioner/prescriber-1",
+      medicationText: "Synthetic latanoprost",
+      ...(options.codedDrug === false
+        ? {}
+        : {
+            drugDbCode: "196502",
+            drugDbCodeQualifier: "SCD",
+            quantityUnitOfMeasureCode: "C48542",
+          }),
+      dosageText: "Instill one drop nightly.",
+      quantity: "2.5 mL",
+      refills: 1,
+      daysSupply: 30,
+      ...(structuredPharmacy
+        ? { pharmacy: TEST_PHARMACY }
+        : { pharmacyText: "Free Text Pharmacy" }),
+      isControlledSubstance: options.isControlledSubstance ?? false,
+      transmissionMethod: options.transmissionMethod ?? "printed",
+      authoredOn: "2026-07-31T11:00:00.000Z",
+    }),
+    id: "rx-1",
+    meta: { versionId: "1" },
+  };
+}
+
+function transmissionMethod(request: MedicationRequest): string | undefined {
+  return request.extension?.find(
+    (extension) => extension.url === ODOS_TRANSMISSION_METHOD_EXTENSION_URL,
+  )?.valueCode;
+}
+
+function wenoMessageId(request: MedicationRequest): string | undefined {
+  return request.identifier?.find(
+    (identifier) => identifier.system === WENO_MESSAGE_ID_IDENTIFIER_SYSTEM,
+  )?.value;
+}
+
+const TEST_PHARMACY: MedicationOrderPharmacy = {
+  ncpdpId: "4222222",
+  npi: "1234567893",
+  name: "Greenwood Pharmacy",
+  addressLine1: "123 Main Street",
+  city: "Greenwood",
+  state: "SC",
+  postalCode: "29646",
+  phone: "8645550102",
+};
 
 function drug(index: number): WenoDrugRow {
   return {

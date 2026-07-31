@@ -8,10 +8,13 @@ import type {
 } from "@medplum/fhirtypes";
 import { XMLParser, XMLValidator } from "fast-xml-parser";
 import { ODOS_CONTROLLED_SUBSTANCE_FLAG_EXTENSION_URL } from "../../fhir/medicationOrder.js";
-import { isWenoSwitchConfigured, type WenoSwitchConfig } from "./config.js";
+import {
+  DEFAULT_WENO_SWITCH_ENDPOINT,
+  isWenoSwitchConfigured,
+  type WenoSwitchConfig,
+} from "./config.js";
 
-export const WENO_SWITCH_CERT_ENDPOINT =
-  "https://cert.wenoexchange.com/wenox/restapi/WenoSwitch";
+export const WENO_SWITCH_CERT_ENDPOINT = DEFAULT_WENO_SWITCH_ENDPOINT;
 
 const SCRIPT_VERSION = "20170715";
 const NON_CONTROLLED_DEA_SCHEDULE_CODE = "C38046";
@@ -50,6 +53,7 @@ export type WenoSwitchNewRxResult =
 
 export interface SendWenoSwitchNewRxOptions {
   fetchImpl?: typeof fetch;
+  endpoint?: string;
 }
 
 export function createWenoSwitchMessageId(): string {
@@ -175,14 +179,17 @@ export async function sendWenoSwitchNewRx(
   }
   sentMessageIds.add(messageId);
 
-  const response = await (options.fetchImpl ?? fetch)(WENO_SWITCH_CERT_ENDPOINT, {
+  const response = await (options.fetchImpl ?? fetch)(
+    options.endpoint?.trim() || DEFAULT_WENO_SWITCH_ENDPOINT,
+    {
     method: "POST",
     headers: {
       Accept: "application/xml",
       "Content-Type": "application/xml; charset=utf-8",
     },
     body: newRxXml,
-  });
+    },
+  );
   const responseBody = await response.text();
   try {
     return parseWenoSwitchResponse(responseBody);
@@ -192,6 +199,10 @@ export async function sendWenoSwitchNewRx(
     }
     throw error;
   }
+}
+
+export function resetWenoSwitchProcessStateForTests(): void {
+  sentMessageIds.clear();
 }
 
 export function parseWenoSwitchResponse(responseXml: string): WenoSwitchNewRxResult {

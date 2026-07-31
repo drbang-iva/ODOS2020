@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { Coding, Condition, Encounter, MedicationRequest } from "@medplum/fhirtypes";
+import type { Coding, Condition, Encounter, MedicationRequest, Patient } from "@medplum/fhirtypes";
 import { clinicalStatus, displayCode, isEncounterDiagnosisCondition } from "../../lib/clinical-view-model";
 import {
   fhir,
@@ -13,6 +13,11 @@ import {
   ODOS_WENO_DRUG_DB_CODE_QUALIFIER_EXTENSION_URL,
   ODOS_WENO_QUANTITY_UNIT_OF_MEASURE_CODE_EXTENSION_URL,
   RXNORM_CODE_SYSTEM,
+  WENO_MESSAGE_ID_IDENTIFIER_SYSTEM,
+  pharmacyDisplay,
+  pharmacyFromResource,
+  withPreferredPharmacy,
+  type MedicationOrderPharmacy,
   type MedicationTransmissionMethod,
 } from "../../lib/fhir-medication-order";
 import { clinicalGraphApiBase } from "../../lib/clinical-graph-client";
@@ -42,6 +47,7 @@ export interface PrescriptionDraft {
   indicationText: string;
   pharmacy: string;
   pharmacyNcpdpId?: string;
+  pharmacyDetails?: MedicationOrderPharmacy;
   transmissionMethod: "printed" | "phoned-in";
 }
 
@@ -77,6 +83,7 @@ type DirectorySelection =
   | { kind: "free-text"; text: string };
 
 export const CONTROLLED_SUBSTANCE_DRUG_TERMS: readonly string[] = [];
+const WENO_OUTCOME_UNKNOWN_NOTE_PREFIX = "WENO Switch outcome unknown";
 const REFILL_OPTIONS = numericOptions(undefined, 0, 11, 1);
 const DAYS_SUPPLY_OPTIONS = numericOptions(undefined, 1, 365, 1);
 const ROUTE_OPTIONS = ["Ophthalmic", "Oral", "Topical", "Otic", "Nasal", "Other"];
@@ -138,10 +145,12 @@ export function withDirectoryResult(
   draft: PrescriptionDraft,
   result: DirectoryResult,
 ): PrescriptionDraft {
+  const pharmacyDetails = pharmacyFromDirectoryResult(result);
   return {
     ...draft,
-    pharmacy: directoryDisplay(result),
+    pharmacy: pharmacyDisplay(pharmacyDetails),
     pharmacyNcpdpId: result.ncpdpId || undefined,
+    pharmacyDetails,
   };
 }
 
@@ -159,8 +168,6 @@ export function PrescriptionEditor({
 }: EditorProps) {
   const controlled = isControlledSubstanceDrug(draft.drug, controlledSubstanceTerms);
   const set = (next: Partial<PrescriptionDraft>) => onChange({ ...draft, ...next });
-  const [directoryState, setDirectoryState] = useState("");
-  const [directorySearchType, setDirectorySearchType] = useState<"local-retail" | "mail-order">("local-retail");
   const searchFormularyOptions = useMemo(() => async (query: string, signal: AbortSignal) =>
     (await searchApi.searchFormulary(query, signal)).map((result) => ({
       value: `${result.drugDbCode}:${result.drugDbCodeQualifier}`,
@@ -168,19 +175,6 @@ export function PrescriptionEditor({
       description: formularyDetails(result),
       item: { kind: "coded", result } satisfies FormularySelection,
     })), [searchApi]);
-  const searchDirectoryOptions = useMemo(() => async (query: string, signal: AbortSignal) => {
-    if (!directoryState.trim()) throw new Error("Enter the pharmacy state before searching.");
-    return (await searchApi.searchDirectory({
-      place: query,
-      state: directoryState.trim(),
-      searchType: directorySearchType,
-    }, signal)).map((result, index) => ({
-      value: result.ncpdpId || `${result.businessName}:${index}`,
-      label: result.businessName,
-      description: directoryAddress(result),
-      item: { kind: "coded", result } satisfies DirectorySelection,
-    }));
-  }, [directorySearchType, directoryState, searchApi]);
 
   return (
     <div className="rounded border border-white/10 bg-bg-panel/70 p-4">
@@ -252,40 +246,12 @@ export function PrescriptionEditor({
         <Field label="Indication fallback">
           <input aria-label="Indication fallback" className="sidebar-input" value={draft.indicationText} onChange={(event) => set({ indicationText: event.target.value })} placeholder="Free text when no diagnosis is linked" />
         </Field>
-        <div>
-          <OdosSearchPicker<DirectorySelection>
-            label="Directory ZIP or city"
-            value={draft.pharmacy ? draft.pharmacyNcpdpId ?? `free:${draft.pharmacy}` : ""}
-            selectedLabel={draft.pharmacy}
-            placeholder="Search by ZIP or city"
-            search={searchDirectoryOptions}
-            createLabel="Use as written"
-            onCreate={async (text) => ({
-              value: `free:${text}`,
-              label: text,
-              item: { kind: "free-text", text } satisfies DirectorySelection,
-            })}
-            onClear={() => set({ pharmacy: "", pharmacyNcpdpId: undefined })}
-            onSelect={(option) => {
-              set(option.item.kind === "coded"
-                ? withDirectoryResult(draft, option.item.result)
-                : { pharmacy: option.item.text, pharmacyNcpdpId: undefined });
-            }}
-          />
-          {draft.pharmacyNcpdpId && (
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-medium normal-case tracking-normal text-sky-200/80">
-              <span className="rounded-full border border-sky-300/25 bg-sky-300/10 px-2 py-1">Coded — from the WENO Directory</span>
-              <span>NCPDP {draft.pharmacyNcpdpId}</span>
-            </div>
-          )}
-          <div className="mt-3 grid grid-cols-[5rem_1fr] gap-2">
-            <input aria-label="Directory state" className="sidebar-input uppercase" maxLength={2} value={directoryState} onChange={(event) => setDirectoryState(event.target.value.toUpperCase())} placeholder="State" />
-            <div className="flex rounded border border-white/10 bg-black/10 p-1 text-xs">
-              <button type="button" aria-pressed={directorySearchType === "local-retail"} className={directorySearchType === "local-retail" ? "rounded bg-white/10 px-3 py-1.5 text-white" : "px-3 py-1.5 text-white/50"} onClick={() => setDirectorySearchType("local-retail")}>Local</button>
-              <button type="button" aria-pressed={directorySearchType === "mail-order"} className={directorySearchType === "mail-order" ? "rounded bg-white/10 px-3 py-1.5 text-white" : "px-3 py-1.5 text-white/50"} onClick={() => setDirectorySearchType("mail-order")}>Mail order</button>
-            </div>
-          </div>
-        </div>
+        <PharmacyDirectoryPicker
+          pharmacy={draft.pharmacy}
+          pharmacyNcpdpId={draft.pharmacyNcpdpId}
+          searchApi={searchApi}
+          onChange={(selection) => set(selection)}
+        />
       </div>
 
       {controlled && (
@@ -331,23 +297,163 @@ export function PrescriptionEditor({
   );
 }
 
+interface PharmacyDirectoryPickerProps {
+  pharmacy: string;
+  pharmacyNcpdpId?: string;
+  label?: string;
+  stateLabel?: string;
+  allowFreeText?: boolean;
+  searchApi?: WenoSearchApi;
+  onChange: (selection: Pick<
+    PrescriptionDraft,
+    "pharmacy" | "pharmacyNcpdpId" | "pharmacyDetails"
+  >) => void;
+}
+
+export function PharmacyDirectoryPicker({
+  pharmacy,
+  pharmacyNcpdpId,
+  label = "Directory ZIP or city",
+  stateLabel = "Directory state",
+  allowFreeText = true,
+  searchApi = DEFAULT_WENO_SEARCH_API,
+  onChange,
+}: PharmacyDirectoryPickerProps) {
+  const [directoryState, setDirectoryState] = useState("");
+  const [directorySearchType, setDirectorySearchType] =
+    useState<"local-retail" | "mail-order">("local-retail");
+  const searchDirectoryOptions = useMemo(() => async (query: string, signal: AbortSignal) => {
+    if (!directoryState.trim()) throw new Error("Enter the pharmacy state before searching.");
+    return (await searchApi.searchDirectory({
+      place: query,
+      state: directoryState.trim(),
+      searchType: directorySearchType,
+    }, signal)).map((result, index) => ({
+      value: result.ncpdpId || `${result.businessName}:${index}`,
+      label: result.businessName,
+      description: directoryAddress(result),
+      item: { kind: "coded", result } satisfies DirectorySelection,
+    }));
+  }, [directorySearchType, directoryState, searchApi]);
+
+  return (
+    <div>
+      <OdosSearchPicker<DirectorySelection>
+        label={label}
+        value={pharmacy ? pharmacyNcpdpId ?? `free:${pharmacy}` : ""}
+        selectedLabel={pharmacy}
+        placeholder="Search by ZIP or city"
+        search={searchDirectoryOptions}
+        createLabel={allowFreeText ? "Use as written" : undefined}
+        onCreate={allowFreeText
+          ? async (text) => ({
+              value: `free:${text}`,
+              label: text,
+              item: { kind: "free-text", text } satisfies DirectorySelection,
+            })
+          : undefined}
+        onClear={() => onChange({
+          pharmacy: "",
+          pharmacyNcpdpId: undefined,
+          pharmacyDetails: undefined,
+        })}
+        onSelect={(option) => {
+          if (option.item.kind === "coded") {
+            const details = pharmacyFromDirectoryResult(option.item.result);
+            onChange({
+              pharmacy: pharmacyDisplay(details),
+              pharmacyNcpdpId: details.ncpdpId,
+              pharmacyDetails: details,
+            });
+          } else {
+            onChange({
+              pharmacy: option.item.text,
+              pharmacyNcpdpId: undefined,
+              pharmacyDetails: undefined,
+            });
+          }
+        }}
+      />
+      {pharmacyNcpdpId && (
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-medium normal-case tracking-normal text-sky-200/80">
+          <span className="rounded-full border border-sky-300/25 bg-sky-300/10 px-2 py-1">Coded — from the WENO Directory</span>
+          <span>NCPDP {pharmacyNcpdpId}</span>
+        </div>
+      )}
+      <div className="mt-3 grid grid-cols-[5rem_1fr] gap-2">
+        <input
+          aria-label={stateLabel}
+          className="sidebar-input uppercase"
+          maxLength={2}
+          value={directoryState}
+          onChange={(event) => setDirectoryState(event.target.value.toUpperCase())}
+          placeholder="State"
+        />
+        <div className="flex rounded border border-white/10 bg-black/10 p-1 text-xs">
+          <button
+            type="button"
+            aria-pressed={directorySearchType === "local-retail"}
+            className={directorySearchType === "local-retail"
+              ? "rounded bg-white/10 px-3 py-1.5 text-white"
+              : "px-3 py-1.5 text-white/50"}
+            onClick={() => setDirectorySearchType("local-retail")}
+          >
+            Local
+          </button>
+          <button
+            type="button"
+            aria-pressed={directorySearchType === "mail-order"}
+            className={directorySearchType === "mail-order"
+              ? "rounded bg-white/10 px-3 py-1.5 text-white"
+              : "px-3 py-1.5 text-white/50"}
+            onClick={() => setDirectorySearchType("mail-order")}
+          >
+            Mail order
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function PrescriptionSection({ patientReference, encounterReference, onSaved }: Props) {
   const [requests, setRequests] = useState<MedicationRequest[]>([]);
   const [conditions, setConditions] = useState<Condition[]>([]);
+  const [patient, setPatient] = useState<Patient>();
+  const [preferredPharmacy, setPreferredPharmacy] = useState<MedicationOrderPharmacy>();
+  const [preferredPharmacyDraft, setPreferredPharmacyDraft] = useState<MedicationOrderPharmacy>();
+  const [preferredPharmacyDirty, setPreferredPharmacyDirty] = useState(false);
   const [practitionerReference, setPractitionerReference] = useState("");
   const [draft, setDraft] = useState<PrescriptionDraft>(EMPTY_PRESCRIPTION_DRAFT);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingPreferredPharmacy, setSavingPreferredPharmacy] = useState(false);
+  const [sendingId, setSendingId] = useState<string>();
+  const [clearingId, setClearingId] = useState<string>();
+  const [sendFeedback, setSendFeedback] = useState<Record<string, {
+    kind: "status" | "error" | "unknown";
+    text: string;
+  }>>({});
+  const [switchConfiguration, setSwitchConfiguration] = useState({
+    configured: false,
+    reason: "Checking WENO Switch configuration…",
+  });
   const [error, setError] = useState<string | null>(null);
   const encounterId = encounterReference.replace(/^Encounter\//, "");
+  const patientId = patientReference.replace(/^Patient\//, "");
 
   async function load() {
     setError(null);
-    const [encounter, conditionBundle, requestBundle] = await Promise.all([
+    const [encounter, conditionBundle, requestBundle, loadedPatient, configuration] = await Promise.all([
       fhir.read<Encounter>("Encounter", encounterId),
       fhir.search<Condition>("Condition", { encounter: encounterReference, _count: "40" }),
       fhir.search<MedicationRequest>("MedicationRequest", { encounter: encounterReference, _count: "40" }),
+      fhir.read<Patient>("Patient", patientId),
+      fhir.readWenoSwitchConfiguration(clinicalGraphApiBase()).catch(() => ({
+        configured: false,
+        reason: "WENO Switch configuration could not be confirmed. Sending is disabled.",
+      })),
     ]);
     const practitioner = encounter.participant
       ?.flatMap((participant) => participant.individual?.reference ? [participant.individual.reference] : [])
@@ -358,6 +464,13 @@ export function PrescriptionSection({ patientReference, encounterReference, onSa
       .filter(isEncounterDiagnosisCondition)
       .filter((condition) => ["active", "recurrence", "relapse"].includes(clinicalStatus(condition))));
     setRequests((requestBundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []));
+    const loadedPreferredPharmacy = pharmacyFromResource(loadedPatient);
+    setPatient(loadedPatient);
+    setPreferredPharmacy(loadedPreferredPharmacy);
+    setPreferredPharmacyDraft(loadedPreferredPharmacy);
+    setPreferredPharmacyDirty(false);
+    setSwitchConfiguration(configuration);
+    setDraft((current) => draftWithPreferredPharmacy(current, loadedPreferredPharmacy));
   }
 
   useEffect(() => {
@@ -365,7 +478,7 @@ export function PrescriptionSection({ patientReference, encounterReference, onSa
     void load()
       .catch((caught) => setError(caught instanceof Error ? caught.message : String(caught)))
       .finally(() => setLoading(false));
-  }, [encounterId, encounterReference]);
+  }, [encounterId, encounterReference, patientId]);
 
   const displayedRequests = useMemo(
     () => requests
@@ -406,6 +519,7 @@ export function PrescriptionSection({ patientReference, encounterReference, onSa
         indicationText: draft.indicationReference ? undefined : optionalText(draft.indicationText),
         pharmacyText: optionalText(draft.pharmacy),
         pharmacyNcpdpId: draft.pharmacyNcpdpId,
+        pharmacy: draft.pharmacyDetails,
         isControlledSubstance: controlled,
         transmissionMethod,
       });
@@ -420,7 +534,7 @@ export function PrescriptionSection({ patientReference, encounterReference, onSa
         ? current.map((request) => request.id === existing.id ? saved : request)
         : [saved, ...current]);
       setEditingId(null);
-      setDraft(EMPTY_PRESCRIPTION_DRAFT);
+      setDraft(draftWithPreferredPharmacy(EMPTY_PRESCRIPTION_DRAFT, preferredPharmacy));
       onSaved({
         completed: true,
         summary: `${activeCount + (existing ? 0 : 1)} active Rx`,
@@ -439,6 +553,115 @@ export function PrescriptionSection({ patientReference, encounterReference, onSa
     setDraft(draftFromRequest(request));
   }
 
+  async function persistPreferredPharmacy(next: MedicationOrderPharmacy | undefined) {
+    if (!patient) {
+      setError("The Patient record is not loaded.");
+      return;
+    }
+    setSavingPreferredPharmacy(true);
+    setError(null);
+    try {
+      const saved = await fhir.update<Patient>(
+        withPreferredPharmacy(patient, next),
+        "update_preferred_pharmacy",
+        patient.meta?.versionId,
+      );
+      setPatient(saved);
+      setPreferredPharmacy(next);
+      setPreferredPharmacyDraft(next);
+      setPreferredPharmacyDirty(false);
+      if (editingId === null) {
+        setDraft((current) => replacePreferredPharmacyDefault(
+          current,
+          preferredPharmacy,
+          next,
+        ));
+      }
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setSavingPreferredPharmacy(false);
+    }
+  }
+
+  async function sendPrescription(request: MedicationRequest) {
+    if (!request.id) {
+      setError("This prescription must be saved before it can be sent.");
+      return;
+    }
+    setSendingId(request.id);
+    setSendFeedback((current) => {
+      const next = { ...current };
+      delete next[request.id!];
+      return next;
+    });
+    try {
+      const response = await fhir.sendWenoPrescription(clinicalGraphApiBase(), request.id);
+      setRequests((current) => current.map((candidate) =>
+        candidate.id === request.id ? response.medicationRequest : candidate));
+      setSendFeedback((current) => ({
+        ...current,
+        [request.id!]: response.result.kind === "status"
+          ? {
+              kind: "status",
+              text: `WENO Status ${response.result.code}: ${response.result.description}`,
+            }
+          : response.result.kind === "error"
+            ? {
+                kind: "error",
+                text: `WENO Error ${response.result.code}/${response.result.descriptionCode}: ${response.result.description}`,
+              }
+            : {
+                kind: "unknown",
+                text: "WENO did not return a determinate delivery outcome.",
+              },
+      }));
+    } catch (caught) {
+      setSendFeedback((current) => ({
+        ...current,
+        [request.id!]: {
+          kind: "error",
+          text: caught instanceof Error ? caught.message : String(caught),
+        },
+      }));
+    } finally {
+      setSendingId(undefined);
+    }
+  }
+
+  async function clearIndeterminateSend(request: MedicationRequest) {
+    if (!request.id) {
+      setError("This prescription must be saved before its WENO reservation can be cleared.");
+      return;
+    }
+    setClearingId(request.id);
+    try {
+      const response = await fhir.clearWenoIndeterminateSend(
+        clinicalGraphApiBase(),
+        request.id,
+      );
+      setRequests((current) => current.map((candidate) =>
+        candidate.id === request.id ? response.medicationRequest : candidate));
+      setSendFeedback((current) => ({
+        ...current,
+        [request.id!]: {
+          kind: "status",
+          text: "WENO send reservation cleared after staff verification. This prescription can be sent again.",
+        },
+      }));
+    } catch (caught) {
+      setSendFeedback((current) => ({
+        ...current,
+        [request.id!]: {
+          kind: "error",
+          text: caught instanceof Error ? caught.message : String(caught),
+        },
+      }));
+    } finally {
+      setClearingId(undefined);
+    }
+  }
+
   return (
     <section className="h-full overflow-y-auto p-6">
       <div className="max-w-5xl">
@@ -446,7 +669,7 @@ export function PrescriptionSection({ patientReference, encounterReference, onSa
           <div>
             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-white/35">Plan</div>
             <h2 className="mt-1 text-lg font-semibold text-white">Prescriptions</h2>
-            <p className="mt-1 text-sm text-white/45">Capture the medication order here; no live electronic transmission occurs.</p>
+            <p className="mt-1 text-sm text-white/45">Compose and save the medication order, then deliberately send eligible prescriptions through WENO Switch.</p>
           </div>
           <span className="rounded border border-white/10 px-3 py-2 text-xs text-white/55">
             {activeCount} active Rx
@@ -454,21 +677,126 @@ export function PrescriptionSection({ patientReference, encounterReference, onSa
         </div>
 
         {error && <div className="mt-4 rounded border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-100">{error}</div>}
+        {!switchConfiguration.configured && (
+          <div className="mt-4 rounded border border-amber-400/30 bg-amber-400/10 p-3 text-sm text-amber-100">
+            {switchConfiguration.reason}
+          </div>
+        )}
+
+        <div className="mt-5 rounded border border-white/10 bg-bg-panel/60 p-4">
+          <div className="mb-3">
+            <h3 className="text-sm font-semibold text-white">Preferred pharmacy</h3>
+            <p className="mt-1 text-xs text-white/45">Used as the default for new prescriptions. Each prescription can still use a different pharmacy.</p>
+          </div>
+          <PharmacyDirectoryPicker
+            label="Preferred pharmacy ZIP or city"
+            stateLabel="Preferred pharmacy state"
+            pharmacy={preferredPharmacyDraft ? pharmacyDisplay(preferredPharmacyDraft) : ""}
+            pharmacyNcpdpId={preferredPharmacyDraft?.ncpdpId}
+            allowFreeText={false}
+            onChange={(selection) => {
+              setPreferredPharmacyDraft(selection.pharmacyDetails);
+              setPreferredPharmacyDirty(true);
+            }}
+          />
+          <div className="mt-4 flex gap-3">
+            <button
+              type="button"
+              className="sidebar-button"
+              disabled={savingPreferredPharmacy || !preferredPharmacyDirty}
+              onClick={() => void persistPreferredPharmacy(preferredPharmacyDraft)}
+            >
+              {savingPreferredPharmacy ? "Saving…" : "Save preferred pharmacy"}
+            </button>
+            {preferredPharmacy && (
+              <button
+                type="button"
+                className="sidebar-button"
+                disabled={savingPreferredPharmacy}
+                onClick={() => void persistPreferredPharmacy(undefined)}
+              >
+                Clear preferred pharmacy
+              </button>
+            )}
+          </div>
+        </div>
 
         <div className="mt-5 space-y-3">
           {loading ? (
             <div className="rounded border border-white/10 bg-bg-panel/60 p-4 text-sm text-white/45">Loading prescriptions…</div>
           ) : displayedRequests.length === 0 ? (
             <div className="rounded border border-white/10 bg-bg-panel/60 p-4 text-sm text-white/45">No active or pending prescriptions.</div>
-          ) : displayedRequests.map((request) => (
-            <div key={request.id ?? request.authoredOn} className="grid gap-3 rounded border border-white/10 bg-bg-panel/60 p-4 md:grid-cols-[1.2fr_2fr_auto_auto_auto] md:items-center">
-              <div className="font-semibold text-white">{request.medicationCodeableConcept?.text ?? "Unnamed medication"}</div>
-              <div className="text-sm text-white/65">{request.dosageInstruction?.[0]?.text ?? "No sig recorded"}</div>
-              <div className="text-xs text-white/45">{formatDate(request.authoredOn)}</div>
-              <span className="rounded border border-white/10 px-2 py-1 text-center text-xs uppercase text-white/55">{request.status}</span>
-              <button type="button" className="sidebar-button" onClick={() => edit(request)}>Edit</button>
-            </div>
-          ))}
+          ) : displayedRequests.map((request) => {
+            const feedback = request.id ? sendFeedback[request.id] : undefined;
+            const sent = isElectronicallySent(request);
+            const reserved = hasWenoMessageId(request);
+            const outcomeUnknown = wenoOutcomeUnknown(request);
+            const sending = request.id !== undefined && sendingId === request.id;
+            const clearing = request.id !== undefined && clearingId === request.id;
+            const sendDisabled = !request.id || sending || sent || reserved || !switchConfiguration.configured;
+            return (
+              <div key={request.id ?? request.authoredOn} className="rounded border border-white/10 bg-bg-panel/60 p-4">
+                <div className="grid gap-3 md:grid-cols-[1.2fr_2fr_auto_auto_auto_auto] md:items-center">
+                  <div className="font-semibold text-white">{request.medicationCodeableConcept?.text ?? "Unnamed medication"}</div>
+                  <div className="text-sm text-white/65">{request.dosageInstruction?.[0]?.text ?? "No sig recorded"}</div>
+                  <div className="text-xs text-white/45">{formatDate(request.authoredOn)}</div>
+                  <span className="rounded border border-white/10 px-2 py-1 text-center text-xs uppercase text-white/55">{request.status}</span>
+                  <button
+                    type="button"
+                    className="sidebar-button"
+                    disabled={sent || reserved}
+                    title={sent || reserved ? "A prescription with a WENO message id cannot be edited." : undefined}
+                    onClick={() => edit(request)}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    className="sidebar-button"
+                    disabled={sendDisabled}
+                    title={!switchConfiguration.configured
+                      ? switchConfiguration.reason
+                      : reserved && !sent
+                        ? "This prescription already has a WENO message id and requires review before another send."
+                        : undefined}
+                    onClick={() => void sendPrescription(request)}
+                  >
+                    {sending ? "Sending…" : sent ? "Sent electronically" : "Send to pharmacy"}
+                  </button>
+                </div>
+                {feedback && (
+                  <div className={`mt-3 text-sm ${
+                    feedback.kind === "status"
+                      ? "text-emerald-200"
+                      : feedback.kind === "unknown"
+                        ? "text-amber-100"
+                        : "text-red-200"
+                  }`}>
+                    {feedback.text}
+                  </div>
+                )}
+                {outcomeUnknown && (
+                  <div className="mt-3 rounded border border-amber-400/40 bg-amber-400/10 p-3 text-sm text-amber-100">
+                    <div className="font-semibold">Delivery outcome unknown</div>
+                    <p className="mt-1">
+                      WENO did not confirm whether the pharmacy received this prescription. Verify with the pharmacy before resending.
+                    </p>
+                    <p className="mt-1 text-xs text-amber-100/70">{outcomeUnknown.reason}</p>
+                    <button
+                      type="button"
+                      className="sidebar-button mt-3"
+                      disabled={clearing}
+                      onClick={() => void clearIndeterminateSend(request)}
+                    >
+                      {clearing
+                        ? "Clearing…"
+                        : "Pharmacy verified not received — clear reservation"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         <div className="mt-5">
@@ -479,7 +807,10 @@ export function PrescriptionSection({ patientReference, encounterReference, onSa
             editing={editingId !== null}
             onChange={setDraft}
             onSave={save}
-            onCancel={() => { setEditingId(null); setDraft(EMPTY_PRESCRIPTION_DRAFT); }}
+            onCancel={() => {
+              setEditingId(null);
+              setDraft(draftWithPreferredPharmacy(EMPTY_PRESCRIPTION_DRAFT, preferredPharmacy));
+            }}
           />
         </div>
       </div>
@@ -529,8 +860,18 @@ function directoryAddress(result: DirectoryResult): string {
   ].filter(Boolean).join(" · ");
 }
 
-function directoryDisplay(result: DirectoryResult): string {
-  return [result.businessName, directoryAddress(result), result.phone].filter(Boolean).join(" · ");
+function pharmacyFromDirectoryResult(result: DirectoryResult): MedicationOrderPharmacy {
+  return {
+    ncpdpId: result.ncpdpId,
+    ...(result.npi ? { npi: result.npi } : {}),
+    name: result.businessName,
+    addressLine1: result.addressLine1,
+    ...(result.addressLine2 ? { addressLine2: result.addressLine2 } : {}),
+    city: result.city,
+    state: result.state,
+    postalCode: result.zip,
+    phone: result.phone,
+  };
 }
 
 function transmissionMethod(request: MedicationRequest): "printed" | "phoned-in" {
@@ -545,6 +886,7 @@ export function draftFromRequest(request: MedicationRequest): PrescriptionDraft 
     ?.filter((entry) => entry.system === RXNORM_CODE_SYSTEM)
     .map(completeWenoDrugCoding)
     .find((entry) => entry.drugDbCode) ?? {};
+  const pharmacyDetails = pharmacyFromResource(request);
   return {
     drug: request.medicationCodeableConcept?.text ?? "",
     ...codedDrug,
@@ -555,12 +897,85 @@ export function draftFromRequest(request: MedicationRequest): PrescriptionDraft 
     route: request.dosageInstruction?.[0]?.route?.text ?? "Ophthalmic",
     indicationReference: request.reasonReference?.[0]?.reference ?? "",
     indicationText: request.reasonCode?.[0]?.text ?? "",
-    pharmacy: request.dispenseRequest?.performer?.display ?? "",
+    pharmacy: request.dispenseRequest?.performer?.display
+      ?? (pharmacyDetails ? pharmacyDisplay(pharmacyDetails) : ""),
     pharmacyNcpdpId: request.dispenseRequest?.performer?.identifier?.system === NCPDP_PROVIDER_IDENTIFIER_SYSTEM
       ? request.dispenseRequest.performer.identifier.value
       : undefined,
+    pharmacyDetails,
     transmissionMethod: transmissionMethod(request),
   };
+}
+
+export function draftWithPreferredPharmacy(
+  draft: PrescriptionDraft,
+  preferredPharmacy: MedicationOrderPharmacy | undefined,
+): PrescriptionDraft {
+  if (!preferredPharmacy || draft.pharmacy) return draft;
+  return {
+    ...draft,
+    pharmacy: pharmacyDisplay(preferredPharmacy),
+    pharmacyNcpdpId: preferredPharmacy.ncpdpId,
+    pharmacyDetails: preferredPharmacy,
+  };
+}
+
+function replacePreferredPharmacyDefault(
+  draft: PrescriptionDraft,
+  priorPreferred: MedicationOrderPharmacy | undefined,
+  nextPreferred: MedicationOrderPharmacy | undefined,
+): PrescriptionDraft {
+  const usesPriorDefault = Boolean(
+    priorPreferred
+    && draft.pharmacyDetails?.ncpdpId === priorPreferred.ncpdpId,
+  );
+  if (draft.pharmacy && !usesPriorDefault) return draft;
+  const withoutPharmacy = {
+    ...draft,
+    pharmacy: "",
+    pharmacyNcpdpId: undefined,
+    pharmacyDetails: undefined,
+  };
+  return draftWithPreferredPharmacy(withoutPharmacy, nextPreferred);
+}
+
+function isElectronicallySent(request: MedicationRequest): boolean {
+  return request.extension?.some(
+    (extension) =>
+      extension.url === ODOS_TRANSMISSION_METHOD_EXTENSION_URL
+      && extension.valueCode === "electronically-sent",
+  ) ?? false;
+}
+
+function hasWenoMessageId(request: MedicationRequest): boolean {
+  return request.identifier?.some(
+    (identifier) =>
+      identifier.system === WENO_MESSAGE_ID_IDENTIFIER_SYSTEM
+      && Boolean(identifier.value?.trim()),
+  ) ?? false;
+}
+
+function wenoOutcomeUnknown(
+  request: MedicationRequest,
+): { messageId: string; reason: string } | undefined {
+  const messageId = request.identifier?.find(
+    (identifier) =>
+      identifier.system === WENO_MESSAGE_ID_IDENTIFIER_SYSTEM
+      && Boolean(identifier.value?.trim()),
+  )?.value?.trim();
+  if (!messageId) return undefined;
+  const prefix = `${WENO_OUTCOME_UNKNOWN_NOTE_PREFIX} ${messageId}:`;
+  const notes = request.note ?? [];
+  for (let index = notes.length - 1; index >= 0; index -= 1) {
+    const text = notes[index]?.text;
+    if (!text?.startsWith(prefix)) continue;
+    return {
+      messageId,
+      reason: text.slice(prefix.length).trim()
+        || "WENO Switch did not return a determinate response.",
+    };
+  }
+  return undefined;
 }
 
 function completeWenoDrugCoding(
