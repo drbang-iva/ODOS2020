@@ -535,6 +535,7 @@ export class ReferralService {
     patientId: string,
     encounterId: string,
   ): Promise<T[]> {
+    // search-contract: referral-service.encounter-resources
     const bundle = await this.fhir.search<T>(resourceType, {
       patient: patientId,
       encounter: encounterId,

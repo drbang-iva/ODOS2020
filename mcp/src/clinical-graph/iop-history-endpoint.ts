@@ -116,8 +116,11 @@ export async function handleIopHistoryRequest(
 
   const definitions = resolveIopDefinitions(deps.findingDefinitions?.());
   const [iopBundle, chBundle, goalBundle] = await Promise.all([
+    // search-contract: iop-history.iop-observations
     staff.fhir.search<Observation>("Observation", observationSearchParams(parsed.data.patient, definitions.intraocularPressure)),
+    // search-contract: iop-history.hysteresis-observations
     staff.fhir.search<Observation>("Observation", observationSearchParams(parsed.data.patient, definitions.cornealHysteresis)),
+    // search-contract: iop-history.target-goals
     staff.fhir.search<Goal>("Goal", targetSearchParams(parsed.data.patient)),
   ]);
   const readings = bundleResources(iopBundle)
@@ -160,6 +163,7 @@ export async function handleIopTargetRequest(
     return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid IOP target request." } };
   }
 
+  // search-contract: iop-history.existing-target-goals
   const goalBundle = await staff.fhir.search<Goal>("Goal", targetSearchParams(parsed.data.patientReference));
   const existing = latestTargetGoalForEye(bundleResources(goalBundle), parsed.data.eye);
   const goal = buildTargetGoal({

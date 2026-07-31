@@ -641,6 +641,7 @@ async function searchImagingMedia(
   const rows: Media[] = [];
   const seenNextUrls = new Set<string>();
   let pageCount = 1;
+  // search-contract: imaging-endpoint.search-media
   let bundle = await fhir.search<Media>("Media", params);
   while (true) {
     rows.push(...(bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []));

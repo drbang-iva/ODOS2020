@@ -248,6 +248,7 @@ async function searchClinicPages<T extends Resource>(
   resourceType: T["resourceType"],
   params: Record<string, string>,
 ): Promise<T[]> {
+  // search-contract: clinic-summary.search-resource
   const firstBundle = await fhir.search<T>(resourceType, params);
   return collectBoundedSearch(fhir, resourceType, firstBundle, CLINIC_SEARCH_LIMITS);
 }
