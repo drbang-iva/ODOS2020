@@ -769,6 +769,42 @@
       "namespace": "correspondence",
       "status": "active",
       "sliceConsumer": "correspondence-c2"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/inbound-fax-triage-status",
+      "namespace": "correspondence",
+      "status": "active",
+      "sliceConsumer": "correspondence-c3"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/inbound-fax-sender-number",
+      "namespace": "correspondence",
+      "status": "active",
+      "sliceConsumer": "correspondence-c3"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/inbound-fax-page-count",
+      "namespace": "correspondence",
+      "status": "active",
+      "sliceConsumer": "correspondence-c3"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/inbound-fax-product-id",
+      "namespace": "correspondence",
+      "status": "active",
+      "sliceConsumer": "correspondence-c3"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/inbound-fax-suggested-patient",
+      "namespace": "correspondence",
+      "status": "active",
+      "sliceConsumer": "correspondence-c3"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/inbound-fax-caller-reference",
+      "namespace": "correspondence",
+      "status": "active",
+      "sliceConsumer": "correspondence-c3"
     }
   ]
 }

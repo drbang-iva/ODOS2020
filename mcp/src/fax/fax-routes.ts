@@ -7,6 +7,10 @@ import {
   type FaxEndpointDeps,
   type FaxEndpointResult,
 } from "./fax-endpoint.js";
+import {
+  handleInboundFaxActionRequest,
+  handleInboundFaxDocumentRequest,
+} from "./inbound-fax-endpoint.js";
 
 export interface FaxRouteDeps extends FaxEndpointDeps {
   authenticateService(): Promise<void>;
@@ -44,6 +48,39 @@ export function registerFaxRoutes(
         callbackToken: queryParam(req.query.token),
         body: req.body,
       })));
+  for (const action of ["attach", "promote", "inbox"] as const) {
+    app.post(`/fax/inbound/:faxId/${action}`, async (req, res) =>
+      route(`/fax/inbound/:faxId/${action}`, deps, res, () =>
+        handleInboundFaxActionRequest(deps, {
+          authHeader: req.header("authorization"),
+          faxId: routeParam(req.params.faxId),
+          action,
+          body: req.body,
+        })));
+  }
+  app.get("/fax/inbound/:faxId/document", async (req, res) => {
+    try {
+      await deps.authenticateService();
+      const result = await handleInboundFaxDocumentRequest(deps, {
+        authHeader: req.header("authorization"),
+        faxId: routeParam(req.params.faxId),
+      });
+      if (result.status !== 200 || !result.dataBase64 || !result.contentType) {
+        res.status(result.status).json(result.body);
+        return;
+      }
+      res.status(200);
+      res.header("Content-Type", result.contentType);
+      res.header(
+        "Content-Disposition",
+        `inline; filename="${safeFilename(result.filename ?? "inbound-fax.pdf")}"`,
+      );
+      res.send(Buffer.from(result.dataBase64, "base64"));
+    } catch (error) {
+      console.error("odos-mcp: /fax/inbound/:faxId/document failed:", error);
+      if (!res.headersSent) res.status(500).json({ error: "inbound fax document route failed" });
+    }
+  });
 }
 
 async function route(
@@ -68,4 +105,8 @@ function routeParam(value: string | string[]): string {
 
 function queryParam(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
+}
+
+function safeFilename(value: string): string {
+  return value.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 180) || "inbound-fax.pdf";
 }

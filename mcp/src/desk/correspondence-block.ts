@@ -10,8 +10,15 @@ import {
 } from "../referral/reciprocal-referral.js";
 export { CORRESPONDENCE_DRAFT_EXTENSION_URL } from "../correspondence/correspondence-document.js";
 import { CORRESPONDENCE_DRAFT_EXTENSION_URL } from "../correspondence/correspondence-document.js";
+import {
+  inboundFaxPageCount,
+  inboundFaxSenderNumber,
+  inboundFaxSuggestedPatient,
+  inboundFaxTriageStatus,
+} from "../fax/inbound-fax.js";
 
 export interface CorrespondenceAttentionItem {
+  kind: "draft" | "reply-owed" | "send-failure" | "inbound-fax";
   title: string;
   patientReference: string;
   severity: "info" | "warning" | "urgent";
@@ -19,6 +26,16 @@ export interface CorrespondenceAttentionItem {
   action: string;
   owner: "provider" | "front-desk";
   status: "open" | "failed";
+  faxId?: string;
+  receivedAt?: string;
+  senderNumber?: string;
+  pageCount?: number;
+  documentUrl?: string;
+  triageStatus?: "received" | "inbox";
+  suggestedPatient?: {
+    reference: string;
+    display?: string;
+  };
 }
 
 export interface CorrespondenceDeskBlock {
@@ -33,6 +50,10 @@ export interface CorrespondenceDeskBlock {
   sendFailures: {
     value: number;
     tone: "ok" | "alert";
+  };
+  inboundFaxes: {
+    value: number;
+    tone: "ok" | "warn";
   };
   items: CorrespondenceAttentionItem[];
 }
@@ -72,8 +93,10 @@ export async function loadCorrespondenceDeskBlock(
   ]);
   const drafts = documents.filter(isAwaitingSignatureDraft);
   const sendFailures = documents.filter(isFaxFailure);
+  const inboundFaxes = documents.filter(isInboundFaxTriage);
   const items: CorrespondenceAttentionItem[] = [
     ...drafts.map((document): CorrespondenceAttentionItem => ({
+      kind: "draft",
       title: "Draft awaiting provider signature",
       patientReference: document.subject?.reference ?? "Patient/unknown",
       severity: "warning",
@@ -83,6 +106,7 @@ export async function loadCorrespondenceDeskBlock(
       status: "open",
     })),
     ...repliesOwed.map((row): CorrespondenceAttentionItem => ({
+      kind: "reply-owed",
       title: `Reply owed to ${row.referrerDisplay}`,
       patientReference: row.patientReference,
       severity: "warning",
@@ -92,6 +116,7 @@ export async function loadCorrespondenceDeskBlock(
       status: "open",
     })),
     ...sendFailures.map((document): CorrespondenceAttentionItem => ({
+      kind: "send-failure",
       title: faxFailureTitle(document),
       patientReference: document.subject?.reference ?? "Patient/unknown",
       severity: "urgent",
@@ -100,6 +125,31 @@ export async function loadCorrespondenceDeskBlock(
       owner: "front-desk",
       status: "failed",
     })),
+    ...inboundFaxes.flatMap((document): CorrespondenceAttentionItem[] => {
+      if (!document.id) return [];
+      const triageStatus = inboundFaxTriageStatus(document);
+      if (triageStatus !== "received" && triageStatus !== "inbox") return [];
+      const senderNumber = inboundFaxSenderNumber(document);
+      const pageCount = inboundFaxPageCount(document);
+      const suggestedPatient = inboundFaxSuggestedPatient(document);
+      return [{
+        kind: "inbound-fax",
+        title: senderNumber ? `Inbound fax from ${senderNumber}` : "Inbound fax received",
+        patientReference: document.subject?.reference ?? "Patient/unknown",
+        severity: "info",
+        ageMinutes: ageMinutes(document.date, now),
+        action: "Review and triage",
+        owner: "front-desk",
+        status: "open",
+        faxId: document.id,
+        receivedAt: document.date ?? "",
+        ...(senderNumber ? { senderNumber } : {}),
+        ...(pageCount !== undefined ? { pageCount } : {}),
+        documentUrl: `/fax/inbound/${encodeURIComponent(document.id)}/document`,
+        triageStatus,
+        ...(suggestedPatient ? { suggestedPatient } : {}),
+      }];
+    }),
   ];
   return {
     draftsAwaitingSignature: {
@@ -113,6 +163,10 @@ export async function loadCorrespondenceDeskBlock(
     sendFailures: {
       value: sendFailures.length,
       tone: sendFailures.length ? "alert" : "ok",
+    },
+    inboundFaxes: {
+      value: inboundFaxes.length,
+      tone: inboundFaxes.length ? "warn" : "ok",
     },
     items,
   };
@@ -137,6 +191,11 @@ function isFaxFailure(document: DocumentReference): boolean {
     (extension) => extension.url === FAX_STATUS_EXTENSION_URL,
   )?.valueString;
   return Boolean(status && FAX_FAILURE_STATUSES.has(status));
+}
+
+function isInboundFaxTriage(document: DocumentReference): boolean {
+  const status = inboundFaxTriageStatus(document);
+  return status === "received" || status === "inbox";
 }
 
 function faxFailureTitle(document: DocumentReference): string {

@@ -173,6 +173,37 @@ test("Needs attention renders the exact all-clear state when every target is met
   assert.match(html, /href="\/desk\/ledger"/);
 });
 
+test("Desk Correspondence renders inbound fax metadata, advisory matching, PDF view, and all three actions", () => {
+  const summary = emptyDeskSummary();
+  summary.cards.correspondence.inboundFaxes = { value: 1, tone: "warn" };
+  summary.cards.correspondence.items = [{
+    kind: "inbound-fax",
+    title: "Inbound fax from 8645550199",
+    patientReference: "Patient/unknown",
+    severity: "info",
+    ageMinutes: 5,
+    action: "Review and triage",
+    owner: "front-desk",
+    status: "open",
+    faxId: "fax-1",
+    receivedAt: "2026-07-31T14:30:00.000Z",
+    senderNumber: "8645550199",
+    pageCount: 2,
+    documentUrl: "/fax/inbound/fax-1/document",
+    triageStatus: "received",
+    suggestedPatient: { reference: "Patient/p1", display: "Suggested Patient" },
+  }];
+
+  const html = renderToStaticMarkup(<DeskHome initialSummary={summary} />);
+  assert.match(html, /8645550199/);
+  assert.match(html, /2 pages/);
+  assert.match(html, /suggestion only; no chart action happens until staff confirms/i);
+  assert.match(html, /View PDF/);
+  assert.match(html, /Attach to chart/);
+  assert.match(html, /Promote to referral/);
+  assert.match(html, /General inbox/);
+});
+
 test("Desk statement date-time formatting degrades malformed values to an em dash", () => {
   assert.equal(displayStat("not-a-date", "date-time"), "—");
 });
@@ -420,6 +451,7 @@ function emptyDeskSummary(): DeskSummary {
         draftsAwaitingSignature: n,
         repliesOwed: n,
         sendFailures: n,
+        inboundFaxes: n,
         items: [],
       },
       frontLine: { available: false, message: "Comms counts arrive with the GHL adapter — Phase 3b", needsReply: off, missedCalls: off, voicemails: off, urgent: off, messages: [] },

@@ -12,8 +12,15 @@ import {
   FAX_ERROR_EXTENSION_URL,
   FAX_STATUS_EXTENSION_URL,
 } from "../src/fax/fax-record.js";
+import {
+  INBOUND_FAX_IDENTIFIER_SYSTEM,
+  INBOUND_FAX_PAGE_COUNT_EXTENSION_URL,
+  INBOUND_FAX_SENDER_EXTENSION_URL,
+  INBOUND_FAX_SUGGESTED_PATIENT_EXTENSION_URL,
+  INBOUND_FAX_TRIAGE_STATUS_EXTENSION_URL,
+} from "../src/fax/inbound-fax.js";
 
-test("Desk Correspondence block exposes attention-shaped drafts, replies owed, and send failures", async () => {
+test("Desk Correspondence block exposes drafts, replies, failures, and actionable inbound fax triage", async () => {
   const fhir = new DeskCorrespondenceFhir();
   fhir.put({
     resourceType: "DocumentReference",
@@ -24,6 +31,31 @@ test("Desk Correspondence block exposes attention-shaped drafts, replies owed, a
     date: "2026-07-31T13:00:00.000Z",
     content: [{ attachment: { contentType: "text/html", data: "PHN5bnRoZXRpYz4=" } }],
     extension: [{ url: CORRESPONDENCE_DRAFT_EXTENSION_URL, valueBoolean: true }],
+  } satisfies DocumentReference);
+  fhir.put({
+    resourceType: "DocumentReference",
+    id: "fax-inbound",
+    identifier: [{ system: INBOUND_FAX_IDENTIFIER_SYSTEM, value: "westfax-1" }],
+    status: "current",
+    docStatus: "final",
+    type: { text: "Inbound fax" },
+    date: "2026-07-31T14:30:00.000Z",
+    content: [{
+      attachment: {
+        contentType: "application/pdf",
+        data: Buffer.from("%PDF-synthetic-inbound").toString("base64"),
+        title: "inbound.pdf",
+      },
+    }],
+    extension: [
+      { url: INBOUND_FAX_TRIAGE_STATUS_EXTENSION_URL, valueCode: "received" },
+      { url: INBOUND_FAX_SENDER_EXTENSION_URL, valueString: "8645550199" },
+      { url: INBOUND_FAX_PAGE_COUNT_EXTENSION_URL, valueInteger: 2 },
+      {
+        url: INBOUND_FAX_SUGGESTED_PATIENT_EXTENSION_URL,
+        valueReference: { reference: "Patient/suggested", display: "Suggested Patient" },
+      },
+    ],
   } satisfies DocumentReference);
   fhir.put({
     ...buildInboundReferralServiceRequest({
@@ -68,11 +100,34 @@ test("Desk Correspondence block exposes attention-shaped drafts, replies owed, a
   assert.equal(block.draftsAwaitingSignature.value, 1);
   assert.equal(block.repliesOwed.value, 1);
   assert.equal(block.sendFailures.value, 1);
+  assert.equal(block.inboundFaxes.value, 1);
   assert.deepEqual(block.items.map((item) => Object.keys(item)), [
-    ["title", "patientReference", "severity", "ageMinutes", "action", "owner", "status"],
-    ["title", "patientReference", "severity", "ageMinutes", "action", "owner", "status"],
-    ["title", "patientReference", "severity", "ageMinutes", "action", "owner", "status"],
+    ["kind", "title", "patientReference", "severity", "ageMinutes", "action", "owner", "status"],
+    ["kind", "title", "patientReference", "severity", "ageMinutes", "action", "owner", "status"],
+    ["kind", "title", "patientReference", "severity", "ageMinutes", "action", "owner", "status"],
+    [
+      "kind",
+      "title",
+      "patientReference",
+      "severity",
+      "ageMinutes",
+      "action",
+      "owner",
+      "status",
+      "faxId",
+      "receivedAt",
+      "senderNumber",
+      "pageCount",
+      "documentUrl",
+      "triageStatus",
+      "suggestedPatient",
+    ],
   ]);
+  const inbound = block.items[3];
+  assert.equal(inbound?.kind, "inbound-fax");
+  assert.equal(inbound?.patientReference, "Patient/unknown");
+  assert.equal(inbound?.suggestedPatient?.reference, "Patient/suggested");
+  assert.equal(inbound?.documentUrl, "/fax/inbound/fax-inbound/document");
 });
 
 class DeskCorrespondenceFhir {

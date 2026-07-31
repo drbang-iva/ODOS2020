@@ -65,7 +65,7 @@ export type InboundFaxFhir = {
 
 export interface InboundFaxRunResult {
   faxId: string;
-  outcome: "recorded" | "already-recorded" | "failed";
+  outcome: "recorded" | "failed";
   documentReference?: string;
   detail?: string;
 }
@@ -138,15 +138,10 @@ export function createInboundFaxPoller(deps: InboundFaxPollerDeps): InboundFaxPo
             );
             const reference = requiredReference(created, "DocumentReference");
             await deps.adapter.changeFaxFilterValue(product.id, [faxId], "Retrieved");
-            const wasExisting = created.identifier?.some(
-              (identifier) =>
-                identifier.system === INBOUND_FAX_IDENTIFIER_SYSTEM
-                && identifier.value === faxId.id,
-            ) && created.date !== now().toISOString();
             consecutiveFailures.delete(faxId.id);
             results.push({
               faxId: faxId.id,
-              outcome: wasExisting ? "already-recorded" : "recorded",
+              outcome: "recorded",
               documentReference: reference,
             });
           } catch (error) {
@@ -546,18 +541,6 @@ async function searchResources<T extends Resource>(
   // search-contract: inbound-fax.search-resource
   const bundle = await fhir.search<T>(resourceType, params);
   return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
-}
-
-function withTriageStatus(
-  extensions: DocumentReference["extension"],
-  status: InboundFaxTriageStatus,
-): NonNullable<DocumentReference["extension"]> {
-  return [
-    ...(extensions ?? []).filter(
-      (extension) => extension.url !== INBOUND_FAX_TRIAGE_STATUS_EXTENSION_URL,
-    ),
-    { url: INBOUND_FAX_TRIAGE_STATUS_EXTENSION_URL, valueCode: status },
-  ];
 }
 
 function inboundFaxId(document: DocumentReference): string {
