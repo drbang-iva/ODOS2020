@@ -12,7 +12,7 @@ import type {
   Substance,
   ValueSet,
 } from "@medplum/fhirtypes";
-import { createMedplumClient } from "../mcp/src/fhir-client.js";
+import { createOperatorScriptFhirClient } from "../mcp/src/fhir-client.js";
 import {
   ODOS_DEVICE_DEFINITION_IDENTIFIER_SYSTEM,
   ODOS_SUBSTANCE_IDENTIFIER_SYSTEM,
@@ -37,7 +37,11 @@ if (!ACCESS_TOKEN && (!EMAIL || !PASSWORD)) {
   throw new Error("MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required when MEDPLUM_ACCESS_TOKEN is not set.");
 }
 
-const fhir = createMedplumClient({ baseUrl: BASE_URL, accessToken: ACCESS_TOKEN });
+const fhir = createOperatorScriptFhirClient({
+  baseUrl: BASE_URL,
+  accessToken: ACCESS_TOKEN,
+  reason: "Operator profile installation runs outside request handling.",
+});
 
 if (!ACCESS_TOKEN) {
   await fhir.login(EMAIL!, PASSWORD!);

@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { exchangeClientCredentials } from "../data/medplum-adapters/migration-importer-adapter.js";
-import { createMedplumClient } from "../mcp/src/fhir-client.js";
+import { createOperatorScriptFhirClient } from "../mcp/src/fhir-client.js";
 import {
   DEFAULT_M2A_STATE_DIR,
   ImportLedger,
@@ -39,7 +39,11 @@ export async function runPatientImportCli(input: {
     clientId: input.clientId,
     clientSecret: input.clientSecret,
   });
-  const fhir = createMedplumClient({ baseUrl: input.baseUrl, accessToken });
+  const fhir = createOperatorScriptFhirClient({
+    baseUrl: input.baseUrl,
+    accessToken,
+    reason: "Operator legacy patient import runs outside request handling.",
+  });
   const projectId = await fhir.getActiveProjectId();
   const ledger = new ImportLedger({ stateDirectory: input.stateDirectory });
   try {

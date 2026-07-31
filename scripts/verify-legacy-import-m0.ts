@@ -9,7 +9,7 @@ import type {
 } from "@medplum/fhirtypes";
 import { exchangeClientCredentials } from "../data/medplum-adapters/migration-importer-adapter.js";
 import { patientAccessEntry } from "../mcp/src/clinical-graph/provider-assignment-endpoint.js";
-import { createMedplumClient } from "../mcp/src/fhir-client.js";
+import { createOperatorScriptFhirClient } from "../mcp/src/fhir-client.js";
 import { searchAll } from "../mcp/src/fhir-search.js";
 import { uploadBinary } from "../mcp/src/fhir/binary-upload.js";
 import { PgBinaryAttemptStore } from "../mcp/src/legacy-import/binary-attempt-store.js";
@@ -44,7 +44,11 @@ if (process.env.ODOS_ACCEPTANCE_ALLOW_DESTRUCTIVE !== "1") {
 }
 const operatorToken = requireEnv("ODOS_OPERATOR_ACCESS_TOKEN");
 const clinicianToken = requireEnv("ODOS_ACCEPTANCE_CLINICIAN_ACCESS_TOKEN");
-const serviceFhir = createMedplumClient({ baseUrl, accessToken: operatorToken });
+const serviceFhir = createOperatorScriptFhirClient({
+  baseUrl,
+  accessToken: operatorToken,
+  reason: "Operator legacy import verification runs outside request handling.",
+});
 const projectId = await resolvePracticeProjectId(baseUrl, operatorToken, serviceFhir, postgresUrl);
 const patientCounts = await readLegacyAcceptancePatientCounts(postgresUrl, projectId);
 if (patientCounts.nonSynthetic > 0) {
@@ -67,7 +71,10 @@ const importerToken = await exchangeClientCredentials({
   clientSecret: requireEnv("ODOS_MIGRATION_IMPORTER_CLIENT_SECRET"),
 });
 const importerAuth = { baseUrl, accessToken: importerToken };
-const importerFhir = createMedplumClient(importerAuth);
+const importerFhir = createOperatorScriptFhirClient({
+  ...importerAuth,
+  reason: "Operator legacy importer verification runs outside request handling.",
+});
 const attempts = new PgBinaryAttemptStore({ postgresUrl });
 const scanner = new PgBinaryReferenceScanner({ postgresUrl });
 try {
@@ -174,7 +181,11 @@ try {
   restartMedplum(composeProject);
   await waitForMedplum(baseUrl);
   await serviceFhir.read<Media>("Media", media.id);
-  const clinicianFhir = createMedplumClient({ baseUrl, accessToken: clinicianToken });
+  const clinicianFhir = createOperatorScriptFhirClient({
+    baseUrl,
+    accessToken: clinicianToken,
+    reason: "Operator legacy clinician-access verification runs outside request handling.",
+  });
   const clinicianMedia = await clinicianFhir.read<Media>("Media", media.id);
   console.log(`BISECT operator_media_read=200 clinician_media_read=200 media=${media.id}`);
   const rewrittenUrl = clinicianMedia.content.url;

@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { createMedplumClient } from "../src/fhir-client.js";
+import { TEST_FHIR_AUDIT_CONTEXT, TEST_FHIR_AUDIT_RECORDER } from "./fhirAuditTestStub.js";
 
 export function loadRepoEnv(): void {
   const envPath = resolve(process.cwd(), "../.env");
@@ -39,7 +40,12 @@ export async function createAuthenticatedFhirClient(input: {
 }): Promise<{ fhir: ReturnType<typeof createMedplumClient>; accessToken: string }> {
   const accessToken = await loginForAccessToken(input);
   return {
-    fhir: createMedplumClient({ baseUrl: input.baseUrl, accessToken }),
+    fhir: createMedplumClient({
+      baseUrl: input.baseUrl,
+      accessToken,
+      audit: TEST_FHIR_AUDIT_RECORDER,
+      auditContext: TEST_FHIR_AUDIT_CONTEXT,
+    }),
     accessToken,
   };
 }

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import {
+  DIRECT_MEDPLUM_FHIR_BYPASS_ALLOWLIST,
   runEnvVarPhiPass,
   runAppearanceStylingDebtPass,
   runLogScrubPass,
@@ -87,6 +88,48 @@ test("v0.5d preflight pass 4 source-tree canonical-shape lint passes live tree a
   });
   assert.equal(salted.status, "hard-block");
   assert.equal(salted.findings[0]?.code, "observation-attestation-property");
+});
+
+test("preflight fences direct FHIR HTTP and both named client escape hatches", () => {
+  assert.deepEqual(DIRECT_MEDPLUM_FHIR_BYPASS_ALLOWLIST, [
+    "mcp/src/smart/registration/dynamic-client-registration.ts",
+    "mcp/src/legacy-import/orphan-sweep.ts",
+    "mcp/src/legacy-import/binary-transport.ts",
+    "mcp/src/fhir/binary-upload.ts",
+  ]);
+
+  const directHttp = runVendorCanonicalShapePass({
+    files: [{ path: "mcp/src/bad-request.ts", text: 'await fetch(`${base}/fhir/R4/Patient`);\n' }],
+  });
+  assert.equal(directHttp.status, "hard-block");
+  assert.equal(directHttp.findings[0]?.code, "direct-medplum-http-request");
+
+  const bootFactory = ["createUnauditedMedplumClient", "_bootOnly"].join("");
+  const bootOnly = runVendorCanonicalShapePass({
+    files: [{ path: "mcp/src/request-handler.ts", text: `${bootFactory}({ baseUrl });\n` }],
+  });
+  assert.equal(bootOnly.status, "hard-block");
+  assert.equal(bootOnly.findings[0]?.code, `${bootFactory}-scope`);
+
+  const operatorFactory = ["createOperatorScript", "FhirClient"].join("");
+  const operator = runVendorCanonicalShapePass({
+    files: [{ path: "mcp/src/request-handler.ts", text: `${operatorFactory}({ baseUrl, reason: "bad" });\n` }],
+  });
+  assert.equal(operator.status, "hard-block");
+  assert.equal(operator.findings[0]?.code, `${operatorFactory}-scope`);
+});
+
+test("capability test base URLs do not trip the direct FHIR HTTP fence", () => {
+  const capability = runVendorCanonicalShapePass({
+    files: [{
+      path: "mcp/src/__tests__/capability/patient-read.test.ts",
+      text: 'const baseUrl = "https://practice.example/fhir/R4";\n',
+    }],
+  });
+  assert.equal(
+    capability.findings.some((finding) => finding.code === "direct-medplum-http-request"),
+    false,
+  );
 });
 
 test("preflight requires every live audit migration to declare a sentinel", () => {

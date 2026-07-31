@@ -19,6 +19,7 @@ import {
   type BinaryUploadAuth,
 } from "../src/fhir/binary-upload.js";
 import { createMedplumClient } from "../src/fhir-client.js";
+import { TEST_FHIR_AUDIT_CONTEXT, TEST_FHIR_AUDIT_RECORDER } from "./fhirAuditTestStub.js";
 import {
   buildMigrationImporterAccessPolicy,
   MIGRATION_IMPORTER_POLICY_TAG_CODE,
@@ -164,6 +165,8 @@ test("migration Binary tag bypasses the genuine fhir-client Mandate 8 update gua
   const fhir = createMedplumClient({
     baseUrl: "http://localhost:8103",
     accessToken: "token",
+    audit: TEST_FHIR_AUDIT_RECORDER,
+    auditContext: TEST_FHIR_AUDIT_CONTEXT,
   });
   const transport = Object.assign(fhir, {
     baseUrl: "http://localhost:8103",

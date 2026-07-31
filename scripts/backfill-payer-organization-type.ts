@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 import type { CodeableConcept, Coverage, Organization } from "@medplum/fhirtypes";
 import {
-  createMedplumClient,
+  createOperatorScriptFhirClient,
   type JsonPatchOperation,
   type MedplumClient,
 } from "../mcp/src/fhir-client.js";
@@ -162,7 +162,10 @@ async function runCli(): Promise<void> {
   const baseUrl = (process.env.MEDPLUM_BASE_URL ?? DEFAULT_BASE_URL).replace(/\/$/, "");
   assertLocalMedplumBaseUrl(baseUrl);
   const apply = parseApplyFlag(process.argv.slice(2));
-  const fhir = createMedplumClient({ baseUrl });
+  const fhir = createOperatorScriptFhirClient({
+    baseUrl,
+    reason: "Operator payer-organization backfill runs outside request handling.",
+  });
   await fhir.login(
     requireEnv("MEDPLUM_ADMIN_EMAIL"),
     requireEnv("MEDPLUM_ADMIN_PASSWORD"),

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Patient } from "@medplum/fhirtypes";
 import { createMedplumClient, type MedplumClient } from "../src/fhir-client.js";
+import { TEST_FHIR_AUDIT_CONTEXT, TEST_FHIR_AUDIT_RECORDER } from "./fhirAuditTestStub.js";
 
 test("FHIR client forces one re-login and replays a 401 once for every service operation", async () => {
   const originalFetch = globalThis.fetch;
@@ -26,6 +27,8 @@ test("FHIR client forces one re-login and replays a 401 once for every service o
     const client: MedplumClient = createMedplumClient({
       baseUrl: "http://medplum.test",
       now: () => Date.parse("2026-07-12T00:00:00Z"),
+      audit: TEST_FHIR_AUDIT_RECORDER,
+      auditContext: TEST_FHIR_AUDIT_CONTEXT,
     });
     await client.login("service@example.test", "test-password");
     const patient = await client.read<Patient>("Patient", "p1");
@@ -59,6 +62,8 @@ test("FHIR client proactively re-authenticates within five minutes of token expi
     const client: MedplumClient = createMedplumClient({
       baseUrl: "http://medplum.test",
       now: () => now,
+      audit: TEST_FHIR_AUDIT_RECORDER,
+      auditContext: TEST_FHIR_AUDIT_CONTEXT,
     });
     await client.login("service@example.test", "test-password");
     await client.read<Patient>("Patient", "p1");

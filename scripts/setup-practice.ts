@@ -27,7 +27,7 @@ import {
   PRACTICE_ROLE_IDS,
   type PracticeRoleId,
 } from "../mcp/src/authz/roles.js";
-import { createMedplumClient, type MedplumClient } from "../mcp/src/fhir-client.js";
+import { createOperatorScriptFhirClient, type MedplumClient } from "../mcp/src/fhir-client.js";
 import { searchAll } from "../mcp/src/fhir-search.js";
 import { buildSchedulingResource } from "../mcp/src/fhir/schedulingResource.js";
 import {
@@ -636,12 +636,20 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
       serviceIdentityEmail,
       serviceIdentityPassword,
     );
-    this.serviceFhir = createMedplumClient({ baseUrl: config.baseUrl, accessToken: serviceAccessToken });
+    this.serviceFhir = createOperatorScriptFhirClient({
+      baseUrl: config.baseUrl,
+      accessToken: serviceAccessToken,
+      reason: "Operator practice setup service bootstrap runs before request handling.",
+    });
 
     try {
       const accessToken = await loginForAccessToken(config);
       const projectId = await resolveProjectId({ baseUrl: config.baseUrl, accessToken });
-      this.fhir = createMedplumClient({ baseUrl: config.baseUrl, accessToken });
+      this.fhir = createOperatorScriptFhirClient({
+        baseUrl: config.baseUrl,
+        accessToken,
+        reason: "Operator practice setup admin bootstrap runs before request handling.",
+      });
       const membership = await this.resolveHumanMembership(config.adminEmail, projectId);
       return {
         accessToken,
@@ -653,7 +661,11 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
       await ensureAdminUserAndProject(config, serviceAccessToken, this.serviceClient());
       const accessToken = await loginForAccessToken(config);
       const projectId = await resolveProjectId({ baseUrl: config.baseUrl, accessToken });
-      this.fhir = createMedplumClient({ baseUrl: config.baseUrl, accessToken });
+      this.fhir = createOperatorScriptFhirClient({
+        baseUrl: config.baseUrl,
+        accessToken,
+        reason: "Operator practice setup admin bootstrap runs before request handling.",
+      });
       const membership = await this.resolveHumanMembership(config.adminEmail, projectId);
       if (!membership.id) {
         throw new Error("Medplum practice provisioning returned a ProjectMembership without an id.", { cause: loginError });

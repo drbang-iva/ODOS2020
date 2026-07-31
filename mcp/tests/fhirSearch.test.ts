@@ -4,6 +4,7 @@ import type { AddressInfo } from "node:net";
 import { test } from "node:test";
 import type { Bundle, Patient, Resource } from "@medplum/fhirtypes";
 import { createMedplumClient } from "../src/fhir-client.js";
+import { TEST_FHIR_AUDIT_CONTEXT, TEST_FHIR_AUDIT_RECORDER } from "./fhirAuditTestStub.js";
 import {
   FhirSearchLimitError,
   FhirSearchPageLimitError,
@@ -106,7 +107,11 @@ test("MCP Medplum client follows same-endpoint next links and rejects cross-orig
   });
   try {
     const { port } = server.address() as AddressInfo;
-    const client = createMedplumClient({ baseUrl: `http://127.0.0.1:${port}` });
+    const client = createMedplumClient({
+      baseUrl: `http://127.0.0.1:${port}`,
+      audit: TEST_FHIR_AUDIT_RECORDER,
+      auditContext: TEST_FHIR_AUDIT_CONTEXT,
+    });
     const resources = await searchAll<Patient>(client, "Patient");
     assert.deepEqual(resources.map((resource) => resource.id), ["patient-1", "patient-2"]);
     await assert.rejects(

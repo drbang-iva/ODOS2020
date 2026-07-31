@@ -7,6 +7,7 @@ import {
   createStaffRouteFhirClient,
   type FhirAuditRecorder,
 } from "../src/fhir-client.js";
+import { TEST_FHIR_AUDIT_CONTEXT, TEST_FHIR_AUDIT_RECORDER } from "./fhirAuditTestStub.js";
 
 test("authenticateStaffRoute client changes a previously unaudited operation into a real-staff audit row", async () => {
   const originalFetch = globalThis.fetch;
@@ -32,6 +33,8 @@ test("authenticateStaffRoute client changes a previously unaudited operation int
     const before = createMedplumClient({
       baseUrl: "http://synthetic-fhir.test",
       accessToken: "synthetic-token",
+      audit: TEST_FHIR_AUDIT_RECORDER,
+      auditContext: TEST_FHIR_AUDIT_CONTEXT,
     });
     await before.read<Patient>("Patient", "patient-1");
     assert.equal(rows.length, 0);

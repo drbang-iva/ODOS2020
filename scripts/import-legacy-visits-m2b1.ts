@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Patient } from "@medplum/fhirtypes";
 import { exchangeClientCredentials } from "../data/medplum-adapters/migration-importer-adapter.js";
-import { createMedplumClient } from "../mcp/src/fhir-client.js";
+import { createOperatorScriptFhirClient } from "../mcp/src/fhir-client.js";
 import {
   appointmentEncounterImportManifestSchema,
   importLegacyAppointmentsAndEncounters,
@@ -45,7 +45,11 @@ export async function runVisitImportCli(input: {
     clientId: input.clientId,
     clientSecret: input.clientSecret,
   });
-  const fhir = createMedplumClient({ baseUrl: input.baseUrl, accessToken });
+  const fhir = createOperatorScriptFhirClient({
+    baseUrl: input.baseUrl,
+    accessToken,
+    reason: "Operator legacy visit import runs outside request handling.",
+  });
   const projectId = await fhir.getActiveProjectId();
   const patientId = manifest.patientReference.slice("Patient/".length);
   const patient = await fhir.read<Patient>("Patient", patientId);
