@@ -37,6 +37,8 @@ import {
 
 export const WENO_SEARCH_RESULT_LIMIT = 25;
 const WENO_ERROR_NOTE_PREFIX = "WENO Switch error";
+const WENO_OUTCOME_UNKNOWN_NOTE_PREFIX = "WENO Switch outcome unknown";
+const WENO_RESERVATION_CLEARED_NOTE_PREFIX = "WENO Switch outcome-unknown reservation cleared";
 
 export interface WenoDrugSearchClient {
   search(query: string): Promise<WenoDrugRow[]>;
@@ -68,6 +70,8 @@ export function registerWenoSearchRoutes(
     handleSwitchConfiguration(req, res, deps));
   app.post("/weno/medication-requests/:medicationRequestId/send", async (req, res) =>
     handlePrescriptionSend(req, res, deps));
+  app.post("/weno/medication-requests/:medicationRequestId/clear-indeterminate-send", async (req, res) =>
+    handleClearIndeterminateSend(req, res, deps));
 }
 
 async function handleDrugSearch(req: Request, res: Response, deps: WenoSearchRouteDeps): Promise<void> {
@@ -170,9 +174,40 @@ async function handlePrescriptionSend(
       withMessageId(medicationRequest, context.messageId),
       versionHeaders(medicationRequest),
     );
-    const result = await (deps.sendNewRx ?? sendWenoSwitchNewRx)(context.xml, {
-      endpoint: deps.switchConfig.endpoint,
-    });
+    let result: WenoSwitchNewRxResult;
+    try {
+      result = await (deps.sendNewRx ?? sendWenoSwitchNewRx)(context.xml, {
+        endpoint: deps.switchConfig.endpoint,
+      });
+    } catch (error) {
+      const reason = sendFailureReason(error);
+      const updated = await staff.fhir.update<MedicationRequest>(
+        "MedicationRequest",
+        medicationRequestId,
+        withWenoOutcomeUnknown(reserved, context.messageId, reason, context.sentTime),
+        versionHeaders(reserved),
+      );
+      await deps.recordAudit(buildOdosAuditEventRow({
+        eventType: "external-api-call",
+        eventTime: context.sentTime,
+        actorReference: staff.staffReference,
+        actorRole: staff.actorRole,
+        patientReference: medicationRequest.subject.reference,
+        targetReference: `MedicationRequest/${medicationRequestId}`,
+        actionOutcome: "granted",
+        actionReason: `WENO_SWITCH_NEWRX_OUTCOME_UNKNOWN ${context.messageId}: ${reason}`,
+      }));
+      res.json({
+        result: {
+          kind: "unknown",
+          messageId: context.messageId,
+          description: reason,
+        },
+        medicationRequest: updated,
+        resendable: false,
+      });
+      return;
+    }
     const updated = result.kind === "status"
       ? await staff.fhir.update<MedicationRequest>(
           "MedicationRequest",
@@ -217,6 +252,81 @@ async function handlePrescriptionSend(
           : status === 409 || status === 412
             ? "The prescription changed before it could be reserved for sending. Reload and try again."
             : "WENO prescription send failed.",
+      });
+    }
+  }
+}
+
+async function handleClearIndeterminateSend(
+  req: Request,
+  res: Response,
+  deps: WenoSearchRouteDeps,
+): Promise<void> {
+  try {
+    await deps.authenticateService();
+    const staff = await deps.authenticate(req.header("authorization"));
+    if (!staff) {
+      res.status(401).json({
+        error: "Authentication required to clear an indeterminate WENO send.",
+      });
+      return;
+    }
+    const medicationRequestId = resourceId(req.params.medicationRequestId, "MedicationRequest");
+    const medicationRequest = await staff.fhir.read<MedicationRequest>(
+      "MedicationRequest",
+      medicationRequestId,
+    );
+    const messageId = wenoMessageId(medicationRequest);
+    if (
+      !messageId
+      || isElectronicallySent(medicationRequest)
+      || !hasWenoOutcomeUnknown(medicationRequest, messageId)
+    ) {
+      throw new WenoPrescriptionSendError(
+        409,
+        "Only an indeterminate WENO send reservation can be cleared.",
+      );
+    }
+    const clearedAt = deps.now?.() ?? new Date().toISOString();
+    const updated = await staff.fhir.update<MedicationRequest>(
+      "MedicationRequest",
+      medicationRequestId,
+      withClearedIndeterminateReservation(
+        medicationRequest,
+        messageId,
+        staff.staffReference,
+        clearedAt,
+      ),
+      versionHeaders(medicationRequest),
+    );
+    await deps.recordAudit(buildOdosAuditEventRow({
+      eventType: "update",
+      eventTime: clearedAt,
+      actorReference: staff.staffReference,
+      actorRole: staff.actorRole,
+      patientReference: medicationRequest.subject.reference,
+      targetReference: `MedicationRequest/${medicationRequestId}`,
+      actionOutcome: "granted",
+      actionReason: `WENO_SWITCH_INDETERMINATE_RESERVATION_CLEARED ${messageId}`,
+    }));
+    res.json({
+      medicationRequest: updated,
+      clearedMessageId: messageId,
+    });
+  } catch (error) {
+    if (!(error instanceof WenoPrescriptionSendError)) {
+      console.error("odos-mcp: WENO indeterminate send clear failed:", error);
+    }
+    if (!res.headersSent) {
+      const status = error instanceof WenoPrescriptionSendError
+        ? error.status
+        : fhirErrorStatus(error) ?? 500;
+      res.status(status).json({
+        error: error instanceof WenoPrescriptionSendError
+          ? error.message
+          : status === 409 || status === 412
+            ? "The prescription changed before its WENO reservation could be cleared. Reload and review it again."
+            : "The indeterminate WENO send reservation could not be cleared.",
       });
     }
   }
@@ -360,10 +470,75 @@ function withWenoError(
   };
 }
 
+function withWenoOutcomeUnknown(
+  medicationRequest: MedicationRequest,
+  messageId: string,
+  reason: string,
+  sentTime: string,
+): MedicationRequest {
+  return {
+    ...medicationRequest,
+    note: [
+      ...(medicationRequest.note ?? []),
+      {
+        time: sentTime,
+        text: `${WENO_OUTCOME_UNKNOWN_NOTE_PREFIX} ${messageId}: ${reason}`,
+      },
+    ],
+  };
+}
+
+function withClearedIndeterminateReservation(
+  medicationRequest: MedicationRequest,
+  messageId: string,
+  staffReference: string,
+  clearedAt: string,
+): MedicationRequest {
+  const identifiers = (medicationRequest.identifier ?? []).filter(
+    (identifier) =>
+      identifier.system !== WENO_MESSAGE_ID_IDENTIFIER_SYSTEM || identifier.value !== messageId,
+  );
+  return {
+    ...medicationRequest,
+    identifier: identifiers.length ? identifiers : undefined,
+    note: [
+      ...(medicationRequest.note ?? []),
+      {
+        time: clearedAt,
+        text: `${WENO_RESERVATION_CLEARED_NOTE_PREFIX} ${messageId} by ${staffReference}.`,
+      },
+    ],
+  };
+}
+
 function wenoMessageId(medicationRequest: MedicationRequest): string | undefined {
   return medicationRequest.identifier?.find(
     (identifier) => identifier.system === WENO_MESSAGE_ID_IDENTIFIER_SYSTEM,
   )?.value;
+}
+
+function hasWenoOutcomeUnknown(
+  medicationRequest: MedicationRequest,
+  messageId: string,
+): boolean {
+  return medicationRequest.note?.some(
+    (note) => note.text?.startsWith(`${WENO_OUTCOME_UNKNOWN_NOTE_PREFIX} ${messageId}:`),
+  ) ?? false;
+}
+
+function isElectronicallySent(medicationRequest: MedicationRequest): boolean {
+  return medicationRequest.extension?.some(
+    (extension) =>
+      extension.url === ODOS_TRANSMISSION_METHOD_EXTENSION_URL
+      && extension.valueCode === "electronically-sent",
+  ) ?? false;
+}
+
+function sendFailureReason(error: unknown): string {
+  const message = error instanceof Error ? error.message.trim() : "";
+  return (message || "WENO Switch did not return a determinate response.")
+    .replace(/\s+/g, " ")
+    .slice(0, 500);
 }
 
 function versionHeaders(resource: MedicationRequest): Record<string, string> | undefined {

@@ -248,6 +248,140 @@ test("WENO durable identifier refuses a second send after simulated process rest
   }
 });
 
+test("a thrown WENO send stays reserved until an audited staff clear permits a retry", async () => {
+  const fixture = sendFixture();
+  const audits: Array<{
+    actionReason?: string;
+    actorId?: string;
+    eventTime: string;
+    eventType: string;
+  }> = [];
+  let sendCalls = 0;
+  const server = await startSendServer(
+    fixture,
+    async () => {
+      sendCalls += 1;
+      if (sendCalls === 1) throw new Error("Synthetic response timeout");
+      return { kind: "status", code: "001", description: "Accepted" };
+    },
+    {
+      recordAudit: async (row) => {
+        audits.push(row);
+      },
+    },
+  );
+  try {
+    const unknownResponse = await fetch(
+      `${server.baseUrl}/weno/medication-requests/rx-1/send`,
+      { ...auth(), method: "POST" },
+    );
+    assert.equal(unknownResponse.status, 200);
+    const unknownBody = await unknownResponse.json() as {
+      result: { kind: string; messageId: string; description: string };
+      medicationRequest: MedicationRequest;
+      resendable: boolean;
+    };
+    assert.deepEqual(unknownBody.result, {
+      kind: "unknown",
+      messageId: "test-message-id",
+      description: "Synthetic response timeout",
+    });
+    assert.equal(unknownBody.resendable, false);
+    assert.equal(wenoMessageId(unknownBody.medicationRequest), "test-message-id");
+    assert.equal(transmissionMethod(unknownBody.medicationRequest), "printed");
+    assert.match(
+      unknownBody.medicationRequest.note?.at(-1)?.text ?? "",
+      /WENO Switch outcome unknown test-message-id: Synthetic response timeout/,
+    );
+
+    const refusedRetry = await fetch(
+      `${server.baseUrl}/weno/medication-requests/rx-1/send`,
+      { ...auth(), method: "POST" },
+    );
+    assert.equal(refusedRetry.status, 409);
+    assert.deepEqual(await refusedRetry.json(), {
+      error: "This prescription already has a WENO message id and will not be sent again.",
+    });
+    assert.equal(sendCalls, 1);
+
+    const clearResponse = await fetch(
+      `${server.baseUrl}/weno/medication-requests/rx-1/clear-indeterminate-send`,
+      { ...auth(), method: "POST" },
+    );
+    assert.equal(clearResponse.status, 200);
+    const clearBody = await clearResponse.json() as {
+      medicationRequest: MedicationRequest;
+      clearedMessageId: string;
+    };
+    assert.equal(clearBody.clearedMessageId, "test-message-id");
+    assert.equal(wenoMessageId(clearBody.medicationRequest), undefined);
+    assert.match(
+      clearBody.medicationRequest.note?.at(-1)?.text ?? "",
+      /WENO Switch outcome-unknown reservation cleared test-message-id by Practitioner\/staff-1\./,
+    );
+    assert.ok(audits.some((row) =>
+      row.eventType === "update"
+      && row.actorId === "staff-1"
+      && row.eventTime === "2026-07-31T12:00:00.000Z"
+      && row.actionReason === "WENO_SWITCH_INDETERMINATE_RESERVATION_CLEARED test-message-id"
+    ));
+
+    const successfulRetry = await fetch(
+      `${server.baseUrl}/weno/medication-requests/rx-1/send`,
+      { ...auth(), method: "POST" },
+    );
+    assert.equal(successfulRetry.status, 200);
+    const successfulBody = await successfulRetry.json() as {
+      result: { kind: string };
+      medicationRequest: MedicationRequest;
+    };
+    assert.equal(successfulBody.result.kind, "status");
+    assert.equal(transmissionMethod(successfulBody.medicationRequest), "electronically-sent");
+    assert.equal(sendCalls, 2);
+  } finally {
+    await server.close();
+  }
+});
+
+test("a structured WENO error still clears its reservation and permits an immediate retry", async () => {
+  const fixture = sendFixture();
+  let sendCalls = 0;
+  const server = await startSendServer(fixture, async () => {
+    sendCalls += 1;
+    return sendCalls === 1
+      ? {
+          kind: "error",
+          code: "900",
+          descriptionCode: "P001",
+          description: "Synthetic certification failure",
+        }
+      : { kind: "status", code: "001", description: "Accepted" };
+  });
+  try {
+    const errorResponse = await fetch(
+      `${server.baseUrl}/weno/medication-requests/rx-1/send`,
+      { ...auth(), method: "POST" },
+    );
+    assert.equal(errorResponse.status, 200);
+    const errorBody = await errorResponse.json() as {
+      medicationRequest: MedicationRequest;
+      resendable: boolean;
+    };
+    assert.equal(errorBody.resendable, true);
+    assert.equal(wenoMessageId(errorBody.medicationRequest), undefined);
+    assert.equal(transmissionMethod(errorBody.medicationRequest), "printed");
+
+    const retryResponse = await fetch(
+      `${server.baseUrl}/weno/medication-requests/rx-1/send`,
+      { ...auth(), method: "POST" },
+    );
+    assert.equal(retryResponse.status, 200);
+    assert.equal(sendCalls, 2);
+  } finally {
+    await server.close();
+  }
+});
+
 function auth(): RequestInit {
   return { headers: { Authorization: "Bearer good" } };
 }
@@ -280,6 +414,7 @@ async function startServer(overrides: Partial<Parameters<typeof registerWenoSear
 async function startSendServer(
   fixture: ReturnType<typeof sendFixture>,
   sendNewRx: NonNullable<Parameters<typeof registerWenoSearchRoutes>[1]["sendNewRx"]>,
+  overrides: Partial<Parameters<typeof registerWenoSearchRoutes>[1]> = {},
 ) {
   const resources = new Map<string, Resource>([
     ["MedicationRequest/rx-1", fixture.medicationRequest],
@@ -339,6 +474,7 @@ async function startSendServer(
     createMessageId: () => "test-message-id",
     now: () => "2026-07-31T12:00:00.000Z",
     sendNewRx,
+    ...overrides,
   });
 }
 

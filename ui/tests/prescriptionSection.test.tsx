@@ -24,6 +24,7 @@ import { CONCURRENT_EDIT_MESSAGE, toError } from "../src/lib/fhir";
 import {
   buildMedicationRequest,
   pharmacyFromResource,
+  WENO_MESSAGE_ID_IDENTIFIER_SYSTEM,
   withPreferredPharmacy,
   type MedicationOrderPharmacy,
 } from "../src/lib/fhir-medication-order";
@@ -273,6 +274,125 @@ test("an unconfigured WENO Switch disables the saved-row send action with its re
     assert.equal(send.props.disabled, true);
     assert.equal(send.props.title, reason);
     assert.match(JSON.stringify(renderer.toJSON()), new RegExp(reason.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  } finally {
+    if (renderer) act(() => renderer.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("an indeterminate WENO send stays blocked until staff clears it after pharmacy verification", async () => {
+  const originalFetch = globalThis.fetch;
+  const clearRequests: Array<{ url: string; method: string | undefined }> = [];
+  const request: MedicationRequest = {
+    resourceType: "MedicationRequest",
+    id: "rx-1",
+    meta: { versionId: "2" },
+    status: "active",
+    intent: "order",
+    subject: { reference: "Patient/patient-1" },
+    encounter: { reference: "Encounter/encounter-1" },
+    medicationCodeableConcept: { text: "Latanoprost" },
+    dosageInstruction: [{ text: "1 drop OU nightly" }],
+    requester: { reference: "Practitioner/doc-1" },
+    authoredOn: "2026-07-31",
+    identifier: [{
+      system: WENO_MESSAGE_ID_IDENTIFIER_SYSTEM,
+      value: "test-message-id",
+    }],
+    note: [{
+      time: "2026-07-31T12:00:00.000Z",
+      text: "WENO Switch outcome unknown test-message-id: Synthetic response timeout",
+    }],
+  };
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/weno/medication-requests/rx-1/clear-indeterminate-send")) {
+      clearRequests.push({ url, method: init?.method });
+      return jsonResponse({
+        medicationRequest: {
+          ...request,
+          meta: { versionId: "3" },
+          identifier: undefined,
+          note: [
+            ...(request.note ?? []),
+            {
+              time: "2026-07-31T12:05:00.000Z",
+              text: "WENO Switch outcome-unknown reservation cleared test-message-id by Practitioner/staff-1.",
+            },
+          ],
+        },
+        clearedMessageId: "test-message-id",
+      });
+    }
+    if (url.endsWith("/Encounter/encounter-1")) {
+      return jsonResponse({
+        resourceType: "Encounter",
+        id: "encounter-1",
+        status: "in-progress",
+        class: {},
+        subject: { reference: "Patient/patient-1" },
+        participant: [{ individual: { reference: "Practitioner/doc-1" } }],
+      });
+    }
+    if (url.endsWith("/Patient/patient-1")) {
+      return jsonResponse({ resourceType: "Patient", id: "patient-1" });
+    }
+    if (url.endsWith("/weno/switch/configuration")) {
+      return jsonResponse({ configured: true, reason: "WENO Switch is configured." });
+    }
+    if (url.includes("/Condition?")) {
+      return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [] });
+    }
+    if (url.includes("/MedicationRequest?")) {
+      return jsonResponse({
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [{ resource: request }],
+      });
+    }
+    throw new Error(`Unexpected request ${url}`);
+  };
+
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    await act(async () => {
+      renderer = create(
+        <PrescriptionSection
+          patientReference="Patient/patient-1"
+          encounterReference="Encounter/encounter-1"
+          onSaved={NOOP}
+        />,
+      );
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    assert.match(JSON.stringify(renderer.toJSON()), /Delivery outcome unknown/);
+    assert.match(JSON.stringify(renderer.toJSON()), /Verify with the pharmacy before resending/);
+    assert.match(JSON.stringify(renderer.toJSON()), /Synthetic response timeout/);
+    const blockedSend = renderer.root.findAllByType("button")
+      .find((button) => button.children.includes("Send to pharmacy"));
+    assert.ok(blockedSend);
+    assert.equal(blockedSend.props.disabled, true);
+
+    const clear = renderer.root.findAllByType("button")
+      .find((button) => button.children.includes("Pharmacy verified not received — clear reservation"));
+    assert.ok(clear);
+    await act(async () => {
+      clear.props.onClick();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    assert.equal(clearRequests.length, 1);
+    assert.match(
+      clearRequests[0]!.url,
+      /\/weno\/medication-requests\/rx-1\/clear-indeterminate-send$/,
+    );
+    assert.equal(clearRequests[0]!.method, "POST");
+    assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /Delivery outcome unknown/);
+    assert.match(JSON.stringify(renderer.toJSON()), /reservation cleared after staff verification/);
+    const resend = renderer.root.findAllByType("button")
+      .find((button) => button.children.includes("Send to pharmacy"));
+    assert.ok(resend);
+    assert.equal(resend.props.disabled, false);
   } finally {
     if (renderer) act(() => renderer.unmount());
     globalThis.fetch = originalFetch;

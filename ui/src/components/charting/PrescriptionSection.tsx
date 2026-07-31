@@ -83,6 +83,7 @@ type DirectorySelection =
   | { kind: "free-text"; text: string };
 
 export const CONTROLLED_SUBSTANCE_DRUG_TERMS: readonly string[] = [];
+const WENO_OUTCOME_UNKNOWN_NOTE_PREFIX = "WENO Switch outcome unknown";
 const REFILL_OPTIONS = numericOptions(undefined, 0, 11, 1);
 const DAYS_SUPPLY_OPTIONS = numericOptions(undefined, 1, 365, 1);
 const ROUTE_OPTIONS = ["Ophthalmic", "Oral", "Topical", "Otic", "Nasal", "Other"];
@@ -429,8 +430,9 @@ export function PrescriptionSection({ patientReference, encounterReference, onSa
   const [saving, setSaving] = useState(false);
   const [savingPreferredPharmacy, setSavingPreferredPharmacy] = useState(false);
   const [sendingId, setSendingId] = useState<string>();
+  const [clearingId, setClearingId] = useState<string>();
   const [sendFeedback, setSendFeedback] = useState<Record<string, {
-    kind: "status" | "error";
+    kind: "status" | "error" | "unknown";
     text: string;
   }>>({});
   const [switchConfiguration, setSwitchConfiguration] = useState({
@@ -604,10 +606,15 @@ export function PrescriptionSection({ patientReference, encounterReference, onSa
               kind: "status",
               text: `WENO Status ${response.result.code}: ${response.result.description}`,
             }
-          : {
-              kind: "error",
-              text: `WENO Error ${response.result.code}/${response.result.descriptionCode}: ${response.result.description}`,
-            },
+          : response.result.kind === "error"
+            ? {
+                kind: "error",
+                text: `WENO Error ${response.result.code}/${response.result.descriptionCode}: ${response.result.description}`,
+              }
+            : {
+                kind: "unknown",
+                text: "WENO did not return a determinate delivery outcome.",
+              },
       }));
     } catch (caught) {
       setSendFeedback((current) => ({
@@ -619,6 +626,39 @@ export function PrescriptionSection({ patientReference, encounterReference, onSa
       }));
     } finally {
       setSendingId(undefined);
+    }
+  }
+
+  async function clearIndeterminateSend(request: MedicationRequest) {
+    if (!request.id) {
+      setError("This prescription must be saved before its WENO reservation can be cleared.");
+      return;
+    }
+    setClearingId(request.id);
+    try {
+      const response = await fhir.clearWenoIndeterminateSend(
+        clinicalGraphApiBase(),
+        request.id,
+      );
+      setRequests((current) => current.map((candidate) =>
+        candidate.id === request.id ? response.medicationRequest : candidate));
+      setSendFeedback((current) => ({
+        ...current,
+        [request.id!]: {
+          kind: "status",
+          text: "WENO send reservation cleared after staff verification. This prescription can be sent again.",
+        },
+      }));
+    } catch (caught) {
+      setSendFeedback((current) => ({
+        ...current,
+        [request.id!]: {
+          kind: "error",
+          text: caught instanceof Error ? caught.message : String(caught),
+        },
+      }));
+    } finally {
+      setClearingId(undefined);
     }
   }
 
@@ -690,7 +730,9 @@ export function PrescriptionSection({ patientReference, encounterReference, onSa
             const feedback = request.id ? sendFeedback[request.id] : undefined;
             const sent = isElectronicallySent(request);
             const reserved = hasWenoMessageId(request);
+            const outcomeUnknown = wenoOutcomeUnknown(request);
             const sending = request.id !== undefined && sendingId === request.id;
+            const clearing = request.id !== undefined && clearingId === request.id;
             const sendDisabled = !request.id || sending || sent || reserved || !switchConfiguration.configured;
             return (
               <div key={request.id ?? request.authoredOn} className="rounded border border-white/10 bg-bg-panel/60 p-4">
@@ -723,8 +765,33 @@ export function PrescriptionSection({ patientReference, encounterReference, onSa
                   </button>
                 </div>
                 {feedback && (
-                  <div className={`mt-3 text-sm ${feedback.kind === "status" ? "text-emerald-200" : "text-red-200"}`}>
+                  <div className={`mt-3 text-sm ${
+                    feedback.kind === "status"
+                      ? "text-emerald-200"
+                      : feedback.kind === "unknown"
+                        ? "text-amber-100"
+                        : "text-red-200"
+                  }`}>
                     {feedback.text}
+                  </div>
+                )}
+                {outcomeUnknown && (
+                  <div className="mt-3 rounded border border-amber-400/40 bg-amber-400/10 p-3 text-sm text-amber-100">
+                    <div className="font-semibold">Delivery outcome unknown</div>
+                    <p className="mt-1">
+                      WENO did not confirm whether the pharmacy received this prescription. Verify with the pharmacy before resending.
+                    </p>
+                    <p className="mt-1 text-xs text-amber-100/70">{outcomeUnknown.reason}</p>
+                    <button
+                      type="button"
+                      className="sidebar-button mt-3"
+                      disabled={clearing}
+                      onClick={() => void clearIndeterminateSend(request)}
+                    >
+                      {clearing
+                        ? "Clearing…"
+                        : "Pharmacy verified not received — clear reservation"}
+                    </button>
                   </div>
                 )}
               </div>
@@ -886,6 +953,29 @@ function hasWenoMessageId(request: MedicationRequest): boolean {
       identifier.system === WENO_MESSAGE_ID_IDENTIFIER_SYSTEM
       && Boolean(identifier.value?.trim()),
   ) ?? false;
+}
+
+function wenoOutcomeUnknown(
+  request: MedicationRequest,
+): { messageId: string; reason: string } | undefined {
+  const messageId = request.identifier?.find(
+    (identifier) =>
+      identifier.system === WENO_MESSAGE_ID_IDENTIFIER_SYSTEM
+      && Boolean(identifier.value?.trim()),
+  )?.value?.trim();
+  if (!messageId) return undefined;
+  const prefix = `${WENO_OUTCOME_UNKNOWN_NOTE_PREFIX} ${messageId}:`;
+  const notes = request.note ?? [];
+  for (let index = notes.length - 1; index >= 0; index -= 1) {
+    const text = notes[index]?.text;
+    if (!text?.startsWith(prefix)) continue;
+    return {
+      messageId,
+      reason: text.slice(prefix.length).trim()
+        || "WENO Switch did not return a determinate response.",
+    };
+  }
+  return undefined;
 }
 
 function completeWenoDrugCoding(

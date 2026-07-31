@@ -65,12 +65,18 @@ export interface WenoSwitchConfiguration {
 
 export type WenoPrescriptionSendResult =
   | { kind: "status"; code: string; description: string }
-  | { kind: "error"; code: string; descriptionCode: string; description: string };
+  | { kind: "error"; code: string; descriptionCode: string; description: string }
+  | { kind: "unknown"; messageId: string; description: string };
 
 export interface WenoPrescriptionSendResponse {
   result: WenoPrescriptionSendResult;
   medicationRequest: MedicationRequest;
   resendable: boolean;
+}
+
+export interface WenoIndeterminateSendClearResponse {
+  medicationRequest: MedicationRequest;
+  clearedMessageId: string;
 }
 
 async function pkce(): Promise<{ verifier: string; challenge: string }> {
@@ -318,6 +324,31 @@ export const fhir = {
       throw new Error("WENO prescription send response is incomplete.");
     }
     return body as WenoPrescriptionSendResponse;
+  },
+
+  async clearWenoIndeterminateSend(
+    baseUrl: string,
+    medicationRequestId: string,
+  ): Promise<WenoIndeterminateSendClearResponse> {
+    const res = await fetch(
+      `${baseUrl}/weno/medication-requests/${encodeURIComponent(medicationRequestId)}/clear-indeterminate-send`,
+      {
+        method: "POST",
+        headers: token
+          ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
+          : { "Content-Type": "application/json" },
+      },
+    );
+    const body = await res.json() as Partial<WenoIndeterminateSendClearResponse> & {
+      error?: string;
+    };
+    if (!res.ok) {
+      throw new Error(body.error ?? `WENO indeterminate send clear failed: ${res.status}`);
+    }
+    if (!body.medicationRequest || typeof body.clearedMessageId !== "string") {
+      throw new Error("WENO indeterminate send clear response is incomplete.");
+    }
+    return body as WenoIndeterminateSendClearResponse;
   },
 
   async read<T extends Resource>(
