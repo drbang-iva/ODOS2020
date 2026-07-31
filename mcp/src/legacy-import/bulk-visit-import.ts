@@ -9,7 +9,7 @@ const legacyVisitBulkFileChartSchema = z.object({
 }).strict();
 
 export const legacyVisitBulkManifestSchema = z.object({
-  charts: z.array(legacyVisitBulkFileChartSchema).length(12),
+  charts: z.array(legacyVisitBulkFileChartSchema).min(1),
 }).strict().superRefine((value, context) => {
   const keys = new Set<string>();
   for (const [index, chart] of value.charts.entries()) {
