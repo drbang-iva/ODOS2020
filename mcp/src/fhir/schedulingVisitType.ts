@@ -236,6 +236,20 @@ const DEFAULT_VISIT_TYPES: VisitTypeInput[] = [
     color: SCHEDULER_PALETTE.establishedTeal,
   },
   {
+    code: "contact-lens-exam",
+    name: "Contact Lens Exam",
+    discipline: "eyecare",
+    durationMinutes: 30,
+    color: SCHEDULER_PALETTE.newExamBlueAlt,
+  },
+  {
+    code: "contact-lens-follow-up",
+    name: "Contact Lens Follow-Up",
+    discipline: "eyecare",
+    durationMinutes: 15,
+    color: SCHEDULER_PALETTE.officeVisitOrangeAlt,
+  },
+  {
     code: "medicaid-exam",
     name: "Medicaid Exam",
     discipline: "eyecare",

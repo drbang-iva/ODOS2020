@@ -225,7 +225,7 @@ test("UI scheduler mirror constants match the Phase-1 kernel", () => {
   assert.deepEqual(UI_NON_BLOCKING_APPOINTMENT_STATUSES, ["cancelled", "entered-in-error"]);
 });
 
-test("UI visit-type builder mirrors category mapping and the unchanged default catalog", () => {
+test("UI visit-type builder mirrors category mapping and the shipped default catalog", () => {
   const input = {
     code: "dry-eye-consult",
     name: "Dry Eye Consult",
