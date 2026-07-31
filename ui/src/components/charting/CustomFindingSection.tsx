@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import { OdosWheel } from "../inputs/OdosWheel";
 import { OdosChips } from "../inputs/OdosChips";
+import { formatStepValue } from "./power-options";
 import type { SectionSaveStatus } from "./types";
 
 type Eye = "OD" | "OS";
@@ -298,11 +299,6 @@ function CustomFieldControl({ field, value, onChange }: {
       {hint && <span className="mt-1 block text-xs text-white/30">{hint}</span>}
     </label>
   );
-}
-
-function formatStepValue(value: number, step: number): string {
-  const decimals = String(step).split(".")[1]?.length ?? 0;
-  return value.toFixed(decimals);
 }
 
 function HierarchicalChips({

@@ -106,6 +106,23 @@ test("CatalogFieldKit renders every S1 field type including extracted scheduler 
   assert.match(html, /Label must be unique within this catalog/);
 });
 
+test("CatalogFieldKit uses numeric mode for integer controls and decimal mode for currency", () => {
+  const renderer = create(
+    <CatalogFieldKit
+      fields={FIELDS}
+      values={VALUES}
+      onChange={() => undefined}
+    />,
+  );
+  const inputs = renderer.root.findAllByType("input");
+  const integerInputs = inputs.filter((input) => input.props.type === "number" && input.props.step === 1);
+  assert.equal(integerInputs.length, 2);
+  assert.ok(integerInputs.every((input) => input.props.inputMode === "numeric"));
+  const currency = inputs.find((input) => input.props.value === "425.00");
+  assert.equal(currency?.props.inputMode, "decimal");
+  act(() => renderer.unmount());
+});
+
 test("dynamic multi-select fields preserve values while toggling through OdosChips", () => {
   let nextValue: unknown;
   const field = FIELDS.find((candidate) => candidate.key === "tags");

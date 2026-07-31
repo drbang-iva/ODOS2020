@@ -271,7 +271,7 @@ function SearchField({
         type={type}
         min={type === "number" ? "0" : undefined}
         step={type === "number" ? step ?? "0.01" : undefined}
-        inputMode={type === "number" ? "decimal" : undefined}
+        inputMode={type === "number" ? step === "1" ? "numeric" : "decimal" : undefined}
         value={value}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}

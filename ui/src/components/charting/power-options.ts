@@ -29,3 +29,8 @@ export function formatSpherePower(value: number): string {
   if (value === 0) return "pl";
   return `${value > 0 ? "+" : "-"}${Math.abs(value).toFixed(2)}`;
 }
+
+export function formatStepValue(value: number, step: number): string {
+  const decimals = String(step).split(".")[1]?.length ?? 0;
+  return value.toFixed(decimals);
+}

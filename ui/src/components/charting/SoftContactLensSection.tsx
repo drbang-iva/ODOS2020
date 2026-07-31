@@ -640,7 +640,9 @@ function AxisField({ label, value, onChange, options, ariaLabel }: {
 }
 
 function catalogWheel(options: DefinitionOption[]): { min: number; max: number; step: number } | undefined {
-  if (!options.length || options.some((option) => !Number.isFinite(Number(option.code)))) return undefined;
+  if (!options.length || options.some((option) =>
+    !Number.isFinite(Number(option.code)) || !Number.isFinite(Number(option.display))
+  )) return undefined;
   const values = options.map((option) => Number(option.code));
   if (values.length === 1) return { min: values[0]!, max: values[0]!, step: 1 };
   const step = values[1]! - values[0]!;

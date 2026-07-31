@@ -318,7 +318,7 @@ export function CatalogTable({
                 min="1"
                 max={MAX_RECEIPT_QUANTITY}
                 step="1"
-                inputMode="decimal"
+                inputMode="numeric"
                 onChange={setQuantity}
               />
               <ReceiptField label="Sale price" value={salePrice} placeholder="179.00" inputMode="decimal" onChange={setSalePrice} />
@@ -360,7 +360,7 @@ function ReceiptField({
   max?: number;
   step?: string;
   placeholder?: string;
-  inputMode?: "decimal";
+  inputMode?: "decimal" | "numeric";
   onChange(value: string): void;
 }) {
   return (
