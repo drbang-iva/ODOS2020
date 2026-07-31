@@ -32,8 +32,19 @@ export interface ReferralDraftUpdate {
 
 export interface ReferralArtifactResponse {
   serviceRequestReference: string;
-  artifact: string;
+  pdfBase64: string;
+  bodyHtml: string;
+  documentReference: string;
   provenanceReference?: string;
+}
+
+export interface CorrespondenceTemplate {
+  id: string;
+  name: string;
+  letterType: string;
+  specialty: string;
+  register: "formal" | "warm";
+  curated: boolean;
 }
 
 export interface FaxStatus {
@@ -53,6 +64,7 @@ export interface ReferralFaxResponse {
 export class ReferralConflictError extends Error {}
 
 export interface ReferralApi {
+  listTemplates(signal?: AbortSignal): Promise<CorrespondenceTemplate[]>;
   loadDefaults(signal?: AbortSignal): Promise<ReferralIncludeList>;
   saveDefaults(includeList: ReferralIncludeList): Promise<ReferralIncludeList>;
   searchConsultants(query: string, signal?: AbortSignal): Promise<ReferralConsultant[]>;
@@ -67,8 +79,9 @@ export interface ReferralApi {
   }): Promise<ServiceRequest>;
   updateReferral(patientId: string, referralId: string, input: ReferralDraftUpdate): Promise<ServiceRequest>;
   regenerateReferral(patientId: string, referralId: string): Promise<ServiceRequest>;
-  previewReferral(patientId: string, referralId: string, editedLetterBody: string): Promise<ReferralArtifactResponse>;
-  sendReferral(patientId: string, referralId: string, editedLetterBody: string): Promise<ReferralArtifactResponse>;
+  applyTemplate(patientId: string, referralId: string, templateId: string): Promise<ServiceRequest>;
+  previewReferral(patientId: string, referralId: string, editedLetterBody: string, templateId?: string): Promise<ReferralArtifactResponse>;
+  sendReferral(patientId: string, referralId: string, editedLetterBody: string, templateId?: string): Promise<ReferralArtifactResponse>;
   faxReferral(input: {
     patientId: string;
     referralId: string;
@@ -82,6 +95,15 @@ export interface ReferralApi {
 
 export function createReferralApi(fetchImpl: typeof fetch = fetch): ReferralApi {
   return {
+    async listTemplates(signal) {
+      const response = await requestJson<{ templates: CorrespondenceTemplate[] }>(
+        fetchImpl,
+        "/correspondence/templates?letterType=referral",
+        { signal },
+      );
+      return response.templates;
+    },
+
     async loadDefaults(signal) {
       const response = await requestJson<{ includeList: ReferralIncludeList }>(
         fetchImpl,
@@ -155,19 +177,40 @@ export function createReferralApi(fetchImpl: typeof fetch = fetch): ReferralApi 
       return response.serviceRequest;
     },
 
-    previewReferral(patientId, referralId, editedLetterBody) {
+    async applyTemplate(patientId, referralId, templateId) {
+      const response = await requestJson<{ serviceRequest: ServiceRequest }>(
+        fetchImpl,
+        `${referralPath(patientId, referralId)}/apply-template`,
+        { method: "POST", body: { templateId } },
+      );
+      return response.serviceRequest;
+    },
+
+    previewReferral(patientId, referralId, editedLetterBody, templateId) {
       return requestJson<ReferralArtifactResponse>(
         fetchImpl,
         `${referralPath(patientId, referralId)}/preview`,
-        { method: "POST", body: { editedLetterBody } },
+        {
+          method: "POST",
+          body: {
+            editedLetterBody,
+            ...(templateId ? { templateId } : {}),
+          },
+        },
       );
     },
 
-    sendReferral(patientId, referralId, editedLetterBody) {
+    sendReferral(patientId, referralId, editedLetterBody, templateId) {
       return requestJson<ReferralArtifactResponse>(
         fetchImpl,
         `${referralPath(patientId, referralId)}/send`,
-        { method: "POST", body: { editedLetterBody } },
+        {
+          method: "POST",
+          body: {
+            editedLetterBody,
+            ...(templateId ? { templateId } : {}),
+          },
+        },
       );
     },
 

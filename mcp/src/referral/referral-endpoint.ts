@@ -4,7 +4,11 @@ import {
   assertBusinessActionAllowed,
   type PracticeRoleId,
 } from "../authz/roles.js";
-import type { MedplumClient } from "../fhir-client.js";
+import {
+  CorrespondenceService,
+  type CorrespondenceConfigFhirClient,
+} from "../correspondence/correspondence-service.js";
+import type { CorrespondenceRenderer } from "../correspondence/weasyprint-renderer.js";
 import { buildProvenance } from "../fhir/ophthalmology/provenance.js";
 import { hasPatientCompartmentGrant } from "../clinical-graph/provider-assignment-endpoint.js";
 import { ReferralDefaultsStore } from "./referral-defaults-store.js";
@@ -23,7 +27,8 @@ export interface ReferralEndpointDeps {
     actorRole: PracticeRoleId;
     fhir: ReferralFhirClient;
   } | null>;
-  serviceFhir: Pick<MedplumClient, "search" | "create" | "update">;
+  serviceFhir: CorrespondenceConfigFhirClient;
+  correspondenceRenderer: CorrespondenceRenderer;
   now?: () => string;
 }
 
@@ -62,7 +67,9 @@ const updateReferralSchema = z.object({
 const saveDefaultsSchema = z.object({ includeList: includeListSchema }).strict();
 const artifactSchema = z.object({
   editedLetterBody: z.string().optional(),
+  templateId: fhirIdSchema.optional(),
 }).strict();
+const applyTemplateSchema = z.object({ templateId: fhirIdSchema }).strict();
 
 export async function handleCreateReferralRequest(
   deps: ReferralEndpointDeps,
@@ -203,12 +210,28 @@ export async function handleReferralArtifactRequest(
   }
 
   const service = new ReferralService(context.staff.fhir, deps.now);
+  const correspondence = new CorrespondenceService(
+    context.staff.fhir,
+    deps.serviceFhir,
+    deps.correspondenceRenderer,
+    deps.now,
+  );
   const serviceRequestReference = `ServiceRequest/${referralId}`;
   if (input.action === "preview") {
-    const artifact = await service.assembleReferralArtifactFrom(serviceRequest, parsedBody.data);
+    const rendered = await correspondence.renderReferral({
+      serviceRequest,
+      authorReference: context.staff.staffReference,
+      templateId: parsedBody.data.templateId,
+      editedBodyHtml: parsedBody.data.editedLetterBody,
+    });
     return {
       status: 200,
-      body: { serviceRequestReference, artifact },
+      body: {
+        serviceRequestReference,
+        pdfBase64: rendered.pdf.toString("base64"),
+        bodyHtml: rendered.bodyHtml,
+        documentReference: documentReference(rendered.documentReference),
+      },
     };
   }
 
@@ -217,10 +240,18 @@ export async function handleReferralArtifactRequest(
       serviceRequest,
       parsedBody.data.editedLetterBody,
     );
-    const artifact = await service.assembleReferralArtifactFrom(preparedServiceRequest);
+    const rendered = await correspondence.renderReferral({
+      serviceRequest: preparedServiceRequest,
+      authorReference: context.staff.staffReference,
+      templateId: parsedBody.data.templateId,
+      editedBodyHtml: parsedBody.data.editedLetterBody,
+    });
     const recordedAt = deps.now?.() ?? new Date().toISOString();
     const provenance: Provenance = buildProvenance({
-      targetReferences: [serviceRequestReference],
+      targetReferences: [
+        serviceRequestReference,
+        documentReference(rendered.documentReference),
+      ],
       occurredDateTime: recordedAt,
       recorded: recordedAt,
       activityCode: "READ",
@@ -238,12 +269,68 @@ export async function handleReferralArtifactRequest(
       status: 200,
       body: {
         serviceRequestReference,
-        artifact,
+        pdfBase64: rendered.pdf.toString("base64"),
+        bodyHtml: rendered.bodyHtml,
+        documentReference: documentReference(rendered.documentReference),
         ...(committed.provenanceReference
           ? { provenanceReference: committed.provenanceReference }
           : {}),
       },
     };
+  } catch (error) {
+    if (error instanceof ReferralSendConflictError) {
+      return { status: 409, body: { error: error.message } };
+    }
+    throw error;
+  }
+}
+
+export async function handleListCorrespondenceTemplatesRequest(
+  deps: ReferralEndpointDeps,
+  input: { authHeader: string | undefined; letterType: unknown },
+): Promise<ReferralEndpointResult> {
+  const context = await authorizeReferralStaff(deps, input.authHeader);
+  if ("result" in context) return context.result;
+  const letterType = typeof input.letterType === "string" && input.letterType.trim()
+    ? input.letterType.trim()
+    : "referral";
+  const templates = await new CorrespondenceService(
+    context.staff.fhir,
+    deps.serviceFhir,
+    deps.correspondenceRenderer,
+    deps.now,
+  ).listTemplates(letterType);
+  return { status: 200, body: { templates } };
+}
+
+export async function handleApplyReferralTemplateRequest(
+  deps: ReferralEndpointDeps,
+  input: {
+    authHeader: string | undefined;
+    patientId: unknown;
+    referralId: unknown;
+    body: unknown;
+  },
+): Promise<ReferralEndpointResult> {
+  const context = await readPatientReferral(deps, input);
+  if ("result" in context) return context.result;
+  const parsed = applyTemplateSchema.safeParse(input.body);
+  if (!parsed.success) {
+    return {
+      status: 400,
+      body: { error: parsed.error.issues[0]?.message ?? "Invalid correspondence template." },
+    };
+  }
+  const bodyHtml = await new CorrespondenceService(
+    context.staff.fhir,
+    deps.serviceFhir,
+    deps.correspondenceRenderer,
+    deps.now,
+  ).resolveReferralTemplate(context.serviceRequest, parsed.data.templateId);
+  try {
+    const serviceRequest = await new ReferralService(context.staff.fhir, deps.now)
+      .updateReferralDraft(context.serviceRequest, { letterBody: bodyHtml });
+    return { status: 200, body: { serviceRequest, bodyHtml } };
   } catch (error) {
     if (error instanceof ReferralSendConflictError) {
       return { status: 409, body: { error: error.message } };
@@ -385,6 +472,11 @@ function staffMayWriteChart(role: PracticeRoleId): boolean {
 function referralReference(serviceRequest: ServiceRequest): string {
   if (!serviceRequest.id) throw new Error("Referral create response did not include an id.");
   return `ServiceRequest/${serviceRequest.id}`;
+}
+
+function documentReference(resource: { id?: string }): string {
+  if (!resource.id) throw new Error("Rendered DocumentReference create response did not include an id.");
+  return `DocumentReference/${resource.id}`;
 }
 
 function disclosedIncludeListEntities(includeList: ReferralIncludeList): Array<{

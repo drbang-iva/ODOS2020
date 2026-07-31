@@ -349,7 +349,7 @@ test("regeneration uses the current consultant and fresh encounter findings with
   assert.equal(referralLetterBody(await fhir.read<ServiceRequest>("ServiceRequest", "referral-1")), referralLetterBody(fresh));
 });
 
-test("preview is write-free while send records one clinician-attributed disclosure Provenance", async () => {
+test("each rendered preview is archived while send records one clinician-attributed disclosure Provenance", async () => {
   const fhir = seededFhir();
   const endpointDeps = deps(fhir);
   const previewLetter = "Preview-only edited body";
@@ -368,6 +368,7 @@ test("preview is write-free while send records one clinician-attributed disclosu
   assert.equal(secondPreview.status, 200);
   assert.equal(fhir.provenances.length, 0);
   assert.equal(fhir.readKeys.filter((key) => key === "ServiceRequest/referral-1").length, 2);
+  assert.equal(fhir.resources("DocumentReference").length, 2);
   const afterPreviews = await fhir.read<ServiceRequest>("ServiceRequest", "referral-1");
   assert.equal(afterPreviews.status, "draft");
   assert.equal(referralLetterBody(afterPreviews), "Please evaluate this patient.");
@@ -382,10 +383,15 @@ test("preview is write-free while send records one clinician-attributed disclosu
   const afterSend = await fhir.read<ServiceRequest>("ServiceRequest", "referral-1");
   assert.equal(afterSend.status, "active");
   assert.equal(referralLetterBody(afterSend), sentLetter);
-  assert.match((sent.body as { artifact: string }).artifact, /Clinician edited words actually sent/);
-  assert.doesNotMatch((sent.body as { artifact: string }).artifact, /Preview-only edited body/);
+  const sentPdf = Buffer.from(
+    (sent.body as { pdfBase64: string }).pdfBase64,
+    "base64",
+  ).toString();
+  assert.match(sentPdf, /Clinician edited words actually sent/);
+  assert.doesNotMatch(sentPdf, /Preview-only edited body/);
   const provenance = fhir.provenances[0];
   assert.equal(provenance.target[0]?.reference, "ServiceRequest/referral-1");
+  assert.match(provenance.target[1]?.reference ?? "", /^DocumentReference\//);
   assert.equal(provenance.agent[0]?.who.reference, "Practitioner/clinician-1");
   assert.equal(provenance.agent[0]?.type?.coding?.[0]?.code, "transmitter");
   assert.equal(provenance.activity?.coding?.[0]?.system, "http://terminology.hl7.org/CodeSystem/v3-DataOperation");
@@ -549,7 +555,7 @@ test("referral defaults complete a save when conditional create finds a concurre
   assert.equal(fhir.resources("Basic")[0]?.id, "concurrent-defaults");
 });
 
-test("registered HTTP routes expose directory, draft mutation, defaults, create, preview, and send actions", async () => {
+test("registered HTTP routes expose templates, draft mutation, apply, preview, and send actions", async () => {
   const fhir = seededFhir();
   let serviceAuthCalls = 0;
   const app = express();
@@ -567,6 +573,10 @@ test("registered HTTP routes expose directory, draft mutation, defaults, create,
   const headers = { Authorization: AUTH, "Content-Type": "application/json" };
 
   try {
+    const templates = await fetch(
+      `http://127.0.0.1:${port}/correspondence/templates?letterType=referral`,
+      { headers },
+    );
     const readDefaults = await fetch(`http://127.0.0.1:${port}/referrals/defaults`, { headers });
     const saveDefaults = await fetch(`http://127.0.0.1:${port}/referrals/defaults`, {
       method: "PUT",
@@ -590,6 +600,14 @@ test("registered HTTP routes expose directory, draft mutation, defaults, create,
       headers,
       body: "{}",
     });
+    const applied = await fetch(
+      `http://127.0.0.1:${port}/referrals/patients/p1/referral-1/apply-template`,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ templateId: "starter-referral-1" }),
+      },
+    );
     const previewed = await fetch(`http://127.0.0.1:${port}/referrals/patients/p1/referral-1/preview`, {
       method: "POST",
       headers,
@@ -601,6 +619,7 @@ test("registered HTTP routes expose directory, draft mutation, defaults, create,
       body: "{}",
     });
 
+    assert.equal(templates.status, 200);
     assert.equal(readDefaults.status, 200);
     assert.equal(saveDefaults.status, 200);
     assert.equal(created.status, 201);
@@ -608,9 +627,10 @@ test("registered HTTP routes expose directory, draft mutation, defaults, create,
     assert.equal(recent.status, 200);
     assert.equal(updated.status, 200);
     assert.equal(regenerated.status, 200);
+    assert.equal(applied.status, 200);
     assert.equal(previewed.status, 200);
     assert.equal(sent.status, 200);
-    assert.equal(serviceAuthCalls, 9);
+    assert.equal(serviceAuthCalls, 11);
     assert.equal(fhir.provenances.length, 1);
   } finally {
     await new Promise<void>((resolve, reject) =>
@@ -638,6 +658,8 @@ function deps(
       ? { staffReference, actorRole: role, fhir }
       : null,
     serviceFhir: {
+      read: <T extends Resource>(resourceType: T["resourceType"], id: string) =>
+        fhir.read<T>(resourceType, id),
       search: async <T extends Resource>(
         resourceType: T["resourceType"],
         params: FhirSearchParams = {},
@@ -654,6 +676,11 @@ function deps(
         };
         return { resourceType: "Bundle", type: "searchset", entry: [{ resource: membership as T }] };
       },
+      searchUrl: async <T extends Resource>(): Promise<Bundle<T>> => ({
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [],
+      }),
       create: <T extends Resource>(resource: T, headers?: Record<string, string>) =>
         fhir.create(resource, headers),
       update: <T extends Resource>(
@@ -662,6 +689,11 @@ function deps(
         resource: T,
         headers?: Record<string, string>,
       ) => fhir.update(resourceType, id, resource, headers),
+    },
+    correspondenceRenderer: {
+      name: "Synthetic WeasyPrint 69.0",
+      pdfVariant: "pdf/a-3u",
+      render: async (html: string) => Buffer.from(`%PDF-1.7\n${html}`),
     },
     now: () => NOW,
   };
@@ -859,6 +891,11 @@ function seededFhir(): MemoryReferralFhir {
     id: "p1",
     name: [{ text: "Alex Patient" }],
   } satisfies Patient);
+  fhir.put({
+    resourceType: "Practitioner",
+    id: "clinician-1",
+    name: [{ text: "Dr. Casey Clinician", suffix: ["OD"] }],
+  } satisfies Practitioner);
   fhir.put({
     resourceType: "Encounter",
     id: "current",

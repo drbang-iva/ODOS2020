@@ -12,6 +12,7 @@ import {
   ReferralConflictError,
   readReferralLetterBody,
   referralApi,
+  type CorrespondenceTemplate,
   type FaxStatus,
   type ReferralApi,
   type ReferralConsultant,
@@ -19,7 +20,6 @@ import {
   type ReferralIncludeList,
   type ReferralPriority,
 } from "./referral-api";
-import { buildReferralPdfBase64 } from "./referral-pdf";
 import { OdosChips } from "../inputs/OdosChips";
 import { OdosSearchPicker } from "../inputs/OdosSearchPicker";
 import { OdosWheel } from "../inputs/OdosWheel";
@@ -60,7 +60,6 @@ interface Props {
   onClose: () => void;
   api?: ReferralApi;
   loadContext?: (encounterReference: string) => Promise<ComposeContext>;
-  createPdf?: (artifactHtml: string) => Promise<string>;
 }
 
 export function ReferralCompose({
@@ -69,11 +68,12 @@ export function ReferralCompose({
   onClose,
   api = referralApi,
   loadContext = loadComposeContext,
-  createPdf = buildReferralPdfBase64,
 }: Props) {
   const patientId = patientReference.replace(/^Patient\//, "");
   const [includeList, setIncludeList] = useState<ReferralIncludeList>(SYSTEM_DEFAULTS);
   const [recent, setRecent] = useState<ReferralConsultant[]>([]);
+  const [templates, setTemplates] = useState<CorrespondenceTemplate[]>([]);
+  const [templateId, setTemplateId] = useState("");
   const [consultantPickerValue, setConsultantPickerValue] = useState("");
   const [selectedConsultant, setSelectedConsultant] = useState<ReferralConsultant>();
   const [priority, setPriority] = useState<ReferralPriority>("routine");
@@ -125,11 +125,14 @@ export function ReferralCompose({
   useEffect(() => {
     const controller = new AbortController();
     Promise.all([
+      api.listTemplates(controller.signal),
       api.loadDefaults(controller.signal),
       api.loadRecentConsultants(controller.signal),
       loadContext(encounterReference),
-    ]).then(([defaults, recentConsultants, loadedContext]) => {
+    ]).then(([loadedTemplates, defaults, recentConsultants, loadedContext]) => {
       if (controller.signal.aborted) return;
+      setTemplates(loadedTemplates);
+      setTemplateId(loadedTemplates[0]?.id ?? "");
       setIncludeList(defaults);
       setRecent(recentConsultants);
       setContext(loadedContext);
@@ -165,9 +168,9 @@ export function ReferralCompose({
     const timer = window.setTimeout(() => {
       setPreviewBusy(true);
       mutationQueue.current
-        .then(() => api.previewReferral(patientId, referral.id!, letterBody))
+        .then(() => api.previewReferral(patientId, referral.id!, letterBody, templateId))
         .then((response) => {
-          if (previewSequence.current === sequence) setArtifact(response.artifact);
+          if (previewSequence.current === sequence) setArtifact(response.pdfBase64);
         })
         .catch((caught) => {
           if (previewSequence.current === sequence) handleFailure(caught);
@@ -177,7 +180,7 @@ export function ReferralCompose({
         });
     }, 500);
     return () => window.clearTimeout(timer);
-  }, [api, includeList, isSending, letterBody, patientId, priority, reasonText, referral?.id, selectedConsultant?.reference, sent]);
+  }, [api, includeList, isSending, letterBody, patientId, priority, reasonText, referral?.id, selectedConsultant?.reference, sent, templateId]);
 
   function setCurrentReferral(next: ServiceRequest): ServiceRequest {
     referralRef.current = next;
@@ -215,7 +218,9 @@ export function ReferralCompose({
   }
 
   function regenerateDraft(): Promise<ServiceRequest> {
-    return enqueueMutation((current) => api.regenerateReferral(patientId, current.id!));
+    return enqueueMutation((current) => templateId
+      ? api.applyTemplate(patientId, current.id!, templateId)
+      : api.regenerateReferral(patientId, current.id!));
   }
 
   async function chooseConsultant(consultant: ReferralConsultant): Promise<void> {
@@ -233,7 +238,10 @@ export function ReferralCompose({
           priority,
           ...(reasonText.trim() ? { reasonText: reasonText.trim() } : {}),
         }));
-        const generated = readReferralLetterBody(created);
+        const templated = templateId
+          ? setCurrentReferral(await api.applyTemplate(patientId, created.id!, templateId))
+          : created;
+        const generated = readReferralLetterBody(templated);
         setCurrentLetterBody(generated);
         setLetterTouched(false);
       } else if (selectedConsultant?.reference !== consultant.reference) {
@@ -266,6 +274,26 @@ export function ReferralCompose({
       const regenerated = await regenerateDraft();
       const generated = readReferralLetterBody(regenerated);
       setCurrentLetterBody(generated);
+      setLetterTouched(false);
+      setConsultantWarning(false);
+    } catch (caught) {
+      handleFailure(caught);
+    } finally {
+      setBusy(undefined);
+    }
+  }
+
+  async function chooseTemplate(nextTemplateId: string): Promise<void> {
+    if (sent || sendingRef.current || nextTemplateId === templateId) return;
+    if (letterTouchedRef.current && !window.confirm("Change templates and discard your letter edits?")) return;
+    setTemplateId(nextTemplateId);
+    if (!referralRef.current) return;
+    setBusy("template");
+    setError(undefined);
+    try {
+      const templated = await enqueueMutation((current) =>
+        api.applyTemplate(patientId, current.id!, nextTemplateId));
+      setCurrentLetterBody(readReferralLetterBody(templated));
       setLetterTouched(false);
       setConsultantWarning(false);
     } catch (caught) {
@@ -328,14 +356,19 @@ export function ReferralCompose({
         if (readReferralLetterBody(finalReferral) !== finalLetterBody) {
           finalReferral = await patchDraft({ letterBody: finalLetterBody });
         }
-        const preview = await api.previewReferral(patientId, finalReferral.id!, finalLetterBody);
-        setArtifact(preview.artifact);
+        const preview = await api.previewReferral(
+          patientId,
+          finalReferral.id!,
+          finalLetterBody,
+          templateId,
+        );
+        setArtifact(preview.pdfBase64);
         const filename = `referral-${finalReferral.id}.pdf`;
         const response = await api.faxReferral({
           patientId,
           referralId: finalReferral.id!,
           destinationNumber,
-          documentBase64: await createPdf(preview.artifact),
+          documentBase64: preview.pdfBase64,
           filename,
           billingCode: finalReferral.id!,
         });
@@ -346,8 +379,13 @@ export function ReferralCompose({
           warning: response.warning,
         });
       } else {
-        const response = await api.sendReferral(patientId, finalReferral.id!, finalLetterBody);
-        setArtifact(response.artifact);
+        const response = await api.sendReferral(
+          patientId,
+          finalReferral.id!,
+          finalLetterBody,
+          templateId,
+        );
+        setArtifact(response.pdfBase64);
         setSent({
           provenanceReference: response.provenanceReference,
           sentAt: new Date().toLocaleString(),
@@ -372,10 +410,10 @@ export function ReferralCompose({
 
   function downloadPacket(): void {
     if (!artifact) return;
-    const url = URL.createObjectURL(new Blob([artifact], { type: "text/html;charset=utf-8" }));
+    const url = URL.createObjectURL(new Blob([base64PdfBytes(artifact)], { type: "application/pdf" }));
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `referral-${referral?.id ?? "packet"}.html`;
+    anchor.download = `referral-${referral?.id ?? "packet"}.pdf`;
     anchor.click();
     URL.revokeObjectURL(url);
   }
@@ -460,15 +498,32 @@ export function ReferralCompose({
             </Tile>
 
             <Tile title="Letter" index="03">
-              <textarea
+              <label className="mb-2 block text-xs font-semibold text-[color:var(--odos-muted)]" htmlFor="referral-template">Template</label>
+              <select
+                id="referral-template"
+                aria-label="Referral letter template"
+                className="sidebar-input mb-3 w-full"
+                value={templateId}
+                disabled={!templates.length || composerLocked || busy === "template"}
+                onChange={(event) => void chooseTemplate(event.target.value)}
+              >
+                {templates.map((template) => (
+                  <option key={template.id} value={template.id}>
+                    {template.name} · {template.register}
+                  </option>
+                ))}
+              </select>
+              <div
                 aria-label="Referral letter"
-                className="sidebar-input min-h-48 w-full resize-y font-serif leading-relaxed"
-                value={letterBody}
-                disabled={!referral || composerLocked}
-                placeholder="Choose a consultant to generate the letter."
-                onChange={(event) => {
+                role="textbox"
+                aria-multiline="true"
+                contentEditable={Boolean(referral) && !composerLocked}
+                suppressContentEditableWarning
+                className="sidebar-input min-h-48 w-full overflow-y-auto font-serif leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: letterBody }}
+                onInput={(event) => {
                   if (!sendingRef.current) {
-                    setCurrentLetterBody(event.target.value);
+                    setCurrentLetterBody(event.currentTarget.innerHTML);
                     setLetterTouched(true);
                   }
                 }}
@@ -565,8 +620,7 @@ export function ReferralCompose({
                 <iframe
                   ref={iframeRef}
                   title="Referral packet preview"
-                  sandbox="allow-modals"
-                  srcDoc={artifact}
+                  src={`data:application/pdf;base64,${artifact}`}
                   className="h-[72rem] w-full border-0 bg-white"
                 />
               ) : (
@@ -695,4 +749,13 @@ function bundleResources<T extends Observation | CarePlan>(bundle: Bundle<T>): T
 
 function errorMessage(caught: unknown): string {
   return caught instanceof Error ? caught.message : String(caught);
+}
+
+function base64PdfBytes(value: string): Uint8Array<ArrayBuffer> {
+  const binary = atob(value);
+  const bytes = new Uint8Array(new ArrayBuffer(binary.length));
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes;
 }

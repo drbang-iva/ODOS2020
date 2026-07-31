@@ -90,6 +90,28 @@ services:
     networks:
       - odos-internal
 
+  weasyprint:
+    image: odos-weasyprint:69.0
+    build:
+      context: .
+      dockerfile: docker/weasyprint.Dockerfile
+    profiles: ["agentops"]
+    restart: unless-stopped
+    working_dir: /workspace
+    command: ["node", "mcp/dist/mcp/src/correspondence/render-server.js"]
+    volumes:
+      - ./:/workspace:ro
+    ports:
+      - "127.0.0.1:8788:8788"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8788/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    networks:
+      - odos-internal
+
   odos-core:
     image: node:22-alpine
     profiles: ["agentops"]
@@ -99,12 +121,15 @@ services:
       MEDPLUM_BASE_URL: http://medplum-server:8103/
       ODOS_POSTGRES_URL: postgresql://medplum:medplum@postgres:5432/medplum
       ODOS_AGENTOPS_RUNTIME: supervisor
+      ODOS_WEASYPRINT_URL: http://weasyprint:8788
       NODE_OPTIONS: --experimental-network-imports=false
     volumes:
       - ./:/workspace:ro
     depends_on:
       medplum-server:
         condition: service_started
+      weasyprint:
+        condition: service_healthy
     networks:
       - odos-internal
       - odos-egress

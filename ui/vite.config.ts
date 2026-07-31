@@ -26,6 +26,7 @@ export default defineConfig(({ mode }) => {
         "/lab-orders": { target: mcpTarget, changeOrigin: true },
         "/insurance": { target: mcpTarget, changeOrigin: true },
         "/referrals": { target: mcpTarget, changeOrigin: true },
+        "/correspondence": { target: mcpTarget, changeOrigin: true },
         "/fax": { target: mcpTarget, changeOrigin: true },
         "/mcp": { target: mcpTarget, changeOrigin: true },
         "/audit": {

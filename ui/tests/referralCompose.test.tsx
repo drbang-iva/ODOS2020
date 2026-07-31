@@ -69,13 +69,14 @@ test("consultant changes regenerate untouched letters but protect clinician edit
   assert.equal(consultantChangeAction(true), "warn");
 });
 
-test("the packet preview is a sandboxed srcDoc iframe and never joins artifact HTML to the app DOM", () => {
+test("the packet preview embeds the server-rendered PDF and never uses artifact HTML as the iframe source", () => {
   const source = readFileSync(
     new URL("../src/components/referral/ReferralCompose.tsx", import.meta.url),
     "utf8",
   );
-  assert.match(source, /<iframe[\s\S]*sandbox="allow-modals"[\s\S]*srcDoc=\{artifact\}/);
-  assert.doesNotMatch(source, /dangerouslySetInnerHTML/);
+  assert.match(source, /<iframe[\s\S]*src=\{`data:application\/pdf;base64,\$\{artifact\}`\}/);
+  assert.doesNotMatch(source, /srcDoc=/);
+  assert.doesNotMatch(source, /referral-pdf/);
   assert.match(source, /Consultant changed — this letter may still address the previous consultant/);
   assert.match(source, /Regenerate this letter and discard your edits/);
 });
@@ -95,9 +96,10 @@ test("the assessment disposition exposes the referral compose screen from the li
   assert.match(encounter, /onRefer=\{\(\) => setReferralComposeOpen\(true\)\}/);
 });
 
-test("Vite proxies the server-owned fax boundary to MCP", () => {
+test("Vite proxies the server-owned fax and correspondence boundaries to MCP", () => {
   const viteConfig = readFileSync(new URL("../vite.config.ts", import.meta.url), "utf8");
   assert.ok(viteConfig.includes('"/fax": { target: mcpTarget, changeOrigin: true }'));
+  assert.ok(viteConfig.includes('"/correspondence": { target: mcpTarget, changeOrigin: true }'));
 });
 
 test("the referral API uses the directory, mutation, artifact, and fax contracts", async () => {
@@ -111,7 +113,9 @@ test("the referral API uses the directory, mutation, artifact, and fax contracts
       ...(typeof init?.body === "string" ? { body: JSON.parse(init.body) } : {}),
       ...(init?.headers ? { headers: init.headers } : {}),
     });
-    const body = url.endsWith("/status")
+    const body = url === "/correspondence/templates?letterType=referral"
+      ? { templates: [template()] }
+      : url.endsWith("/status")
       ? { fax: { reference: "DocumentReference/f1", status: "Sent" } }
       : url.startsWith("/fax/referrals/")
         ? { fax: { reference: "DocumentReference/f1", status: "Pending" } }
@@ -120,11 +124,12 @@ test("the referral API uses the directory, mutation, artifact, and fax contracts
       : url.includes("/consultants")
         ? { consultants: [{ reference: "Organization/o1", display: "Retina Group" }] }
         : url.endsWith("/preview") || url.endsWith("/send")
-          ? { serviceRequestReference: "ServiceRequest/r1", artifact: "<!doctype html><html></html>" }
+          ? artifactResponse("JVBERi1zZXJ2ZXItcmVuZGVyZWQ=")
           : { serviceRequest };
     return jsonResponse(body);
   });
 
+  await api.listTemplates();
   await api.loadDefaults();
   await api.saveDefaults(INCLUDE_LIST);
   await api.loadRecentConsultants();
@@ -140,8 +145,9 @@ test("the referral API uses the directory, mutation, artifact, and fax contracts
   await api.updateReferral("p1", "r1", { priority: "stat" });
   await api.updateReferral("p1", "r1", { reasonText: null });
   await api.regenerateReferral("p1", "r1");
-  await api.previewReferral("p1", "r1", "Edited preview");
-  await api.sendReferral("p1", "r1", "Edited send");
+  await api.applyTemplate("p1", "r1", "starter-referral-general");
+  await api.previewReferral("p1", "r1", "Edited preview", "starter-referral-general");
+  await api.sendReferral("p1", "r1", "Edited send", "starter-referral-general");
   await api.faxReferral({
     patientId: "p1",
     referralId: "r1",
@@ -153,6 +159,7 @@ test("the referral API uses the directory, mutation, artifact, and fax contracts
   await api.loadFaxStatus("p1", "r1");
 
   assert.deepEqual(calls.map((call) => [call.method, call.url]), [
+    ["GET", "/correspondence/templates?letterType=referral"],
     ["GET", "/referrals/defaults"],
     ["PUT", "/referrals/defaults"],
     ["GET", "/referrals/consultants/recent"],
@@ -161,25 +168,33 @@ test("the referral API uses the directory, mutation, artifact, and fax contracts
     ["PATCH", "/referrals/patients/p1/r1"],
     ["PATCH", "/referrals/patients/p1/r1"],
     ["POST", "/referrals/patients/p1/r1/regenerate"],
+    ["POST", "/referrals/patients/p1/r1/apply-template"],
     ["POST", "/referrals/patients/p1/r1/preview"],
     ["POST", "/referrals/patients/p1/r1/send"],
     ["POST", "/fax/referrals/p1/r1"],
     ["GET", "/fax/referrals/p1/r1/status"],
   ]);
-  assert.deepEqual(calls[4]?.body, {
+  assert.deepEqual(calls[5]?.body, {
     targetReference: "Organization/o1",
     encounterReference: "Encounter/e1",
     includeList: INCLUDE_LIST,
     priority: "urgent",
     reasonText: "macular change",
   });
-  assert.deepEqual(calls[5]?.body, { priority: "stat" });
-  assert.deepEqual(calls[6]?.body, { reasonText: null });
-  assert.deepEqual(calls[8]?.body, { editedLetterBody: "Edited preview" });
-  assert.deepEqual(calls[9]?.body, { editedLetterBody: "Edited send" });
-  assert.equal((calls[10]?.headers as Record<string, string>)["X-ODOS-Fax-Destination"], "8645550100");
-  assert.equal((calls[10]?.headers as Record<string, string>)["X-ODOS-Billing-Code"], "r1");
-  assert.equal((calls[10]?.headers as Record<string, string>)["Content-Type"], "application/pdf");
+  assert.deepEqual(calls[6]?.body, { priority: "stat" });
+  assert.deepEqual(calls[7]?.body, { reasonText: null });
+  assert.deepEqual(calls[9]?.body, { templateId: "starter-referral-general" });
+  assert.deepEqual(calls[10]?.body, {
+    editedLetterBody: "Edited preview",
+    templateId: "starter-referral-general",
+  });
+  assert.deepEqual(calls[11]?.body, {
+    editedLetterBody: "Edited send",
+    templateId: "starter-referral-general",
+  });
+  assert.equal((calls[12]?.headers as Record<string, string>)["X-ODOS-Fax-Destination"], "8645550100");
+  assert.equal((calls[12]?.headers as Record<string, string>)["X-ODOS-Billing-Code"], "r1");
+  assert.equal((calls[12]?.headers as Record<string, string>)["Content-Type"], "application/pdf");
 });
 
 test("the referral API turns documented 409 responses into a reopen-required conflict", async () => {
@@ -236,9 +251,9 @@ test("clearing the composed reason sends an explicit null draft update", async (
 
 test("sending freezes composition and ignores previews that finish after the sent artifact", async () => {
   const originalWindow = globalThis.window;
-  const preview = deferred<{ serviceRequestReference: string; artifact: string }>();
+  const preview = deferred<ReturnType<typeof artifactResponse>>();
   const update = deferred<ServiceRequest>();
-  const send = deferred<{ serviceRequestReference: string; artifact: string }>();
+  const send = deferred<ReturnType<typeof artifactResponse>>();
   const sentPayloads: Array<{ referralId: string; letter: string }> = [];
   let closeCalls = 0;
   let renderer!: ReactTestRenderer;
@@ -265,7 +280,9 @@ test("sending freezes composition and ignores previews that finish after the sen
     });
     await act(async () => {
       renderer.root.findByProps({ "aria-label": "Referral reason" }).props.onChange({ target: { value: "Retinal concern" } });
-      renderer.root.findByProps({ "aria-label": "Referral letter" }).props.onChange({ target: { value: "Final clinician letter" } });
+      renderer.root.findByProps({ "aria-label": "Referral letter" }).props.onInput({
+        currentTarget: { innerHTML: "Final clinician letter" },
+      });
     });
     const sendButton = buttonNamed(renderer.root, "Send packet");
     act(() => sendButton.props.onClick());
@@ -273,7 +290,7 @@ test("sending freezes composition and ignores previews that finish after the sen
     const closeButton = buttonNamed(renderer.root, "Return to chart");
     assert.equal(closeButton.props.disabled, true);
     assert.ok(renderer.root.findAllByType("input").every((input) => input.props.disabled));
-    assert.equal(renderer.root.findByProps({ "aria-label": "Referral letter" }).props.disabled, true);
+    assert.equal(renderer.root.findByProps({ "aria-label": "Referral letter" }).props.contentEditable, false);
     act(() => closeButton.props.onClick());
     assert.equal(closeCalls, 0);
 
@@ -284,14 +301,14 @@ test("sending freezes composition and ignores previews that finish after the sen
     assert.deepEqual(sentPayloads, [{ referralId: "r1", letter: "Final clinician letter" }]);
 
     await act(async () => {
-      send.resolve({ serviceRequestReference: "ServiceRequest/r1", artifact: "<html>sent artifact</html>" });
+      send.resolve(artifactResponse("JVBERi1zZW50"));
       await flushMicrotasks();
     });
     await act(async () => {
-      preview.resolve({ serviceRequestReference: "ServiceRequest/r1", artifact: "<html>late preview</html>" });
+      preview.resolve(artifactResponse("JVBERi1sYXRl"));
       await flushMicrotasks();
     });
-    assert.equal(renderer.root.findByType("iframe").props.srcDoc, "<html>sent artifact</html>");
+    assert.equal(renderer.root.findByType("iframe").props.src, "data:application/pdf;base64,JVBERi1zZW50");
   } finally {
     if (renderer) await act(async () => renderer.unmount());
     Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
@@ -313,10 +330,7 @@ test("Fax sends the combined PDF to the consultant number and renders callback c
       faxNumber: "8645550100",
     }],
     createReferral: async () => referral(),
-    previewReferral: async () => ({
-      serviceRequestReference: "ServiceRequest/r1",
-      artifact: "<html><body>combined packet</body></html>",
-    }),
+    previewReferral: async () => artifactResponse("JVBERi1zeW50aGV0aWM="),
     faxReferral: async (input) => {
       faxCalls.push(input);
       return { fax: { reference: "DocumentReference/f1", status: "Pending" } };
@@ -333,7 +347,6 @@ test("Fax sends the combined PDF to the consultant number and renders callback c
           encounterReference="Encounter/e1"
           onClose={() => undefined}
           api={api}
-          createPdf={async () => "JVBERi1zeW50aGV0aWM="}
           loadContext={async () => ({ doctorDisplay: "Dr. Rivera", findingCount: 3, hasPlan: true })}
         />,
       );
@@ -376,10 +389,7 @@ test("Fax failure surfaces an inline error instead of a false sent state", async
       faxNumber: "8645550100",
     }],
     createReferral: async () => referral(),
-    previewReferral: async () => ({
-      serviceRequestReference: "ServiceRequest/r1",
-      artifact: "<html><body>combined packet</body></html>",
-    }),
+    previewReferral: async () => artifactResponse("JVBERi1zeW50aGV0aWM="),
     faxReferral: async () => {
       throw new Error("WestFax rejected the destination number.");
     },
@@ -394,7 +404,6 @@ test("Fax failure surfaces an inline error instead of a false sent state", async
           encounterReference="Encounter/e1"
           onClose={() => undefined}
           api={api}
-          createPdf={async () => "JVBERi1zeW50aGV0aWM="}
           loadContext={async () => ({ doctorDisplay: "Dr. Rivera", findingCount: 3, hasPlan: true })}
         />,
       );
@@ -443,6 +452,7 @@ function referral(): ServiceRequest {
 
 function apiStub(): ReferralApi {
   return {
+    listTemplates: async () => [template()],
     loadDefaults: async () => INCLUDE_LIST,
     saveDefaults: async (includeList) => includeList,
     searchConsultants: async () => [],
@@ -450,10 +460,31 @@ function apiStub(): ReferralApi {
     createReferral: async () => referral(),
     updateReferral: async () => referral(),
     regenerateReferral: async () => referral(),
-    previewReferral: async () => ({ serviceRequestReference: "ServiceRequest/r1", artifact: "" }),
-    sendReferral: async () => ({ serviceRequestReference: "ServiceRequest/r1", artifact: "" }),
+    applyTemplate: async () => referral(),
+    previewReferral: async () => artifactResponse(""),
+    sendReferral: async () => artifactResponse(""),
     faxReferral: async () => ({ fax: { reference: "DocumentReference/f1", status: "Pending" } }),
     loadFaxStatus: async () => null,
+  };
+}
+
+function template() {
+  return {
+    id: "starter-referral-general",
+    name: "General Referral",
+    letterType: "referral",
+    specialty: "ophthalmology",
+    register: "formal" as const,
+    curated: true,
+  };
+}
+
+function artifactResponse(pdfBase64: string) {
+  return {
+    serviceRequestReference: "ServiceRequest/r1",
+    pdfBase64,
+    bodyHtml: "<p>Server-rendered correspondence</p>",
+    documentReference: "DocumentReference/d1",
   };
 }
 
