@@ -6,7 +6,7 @@ set -euo pipefail
 # gate. Merge remains a separate, deliberate command and is never automated.
 
 usage() {
-  echo "Usage: scripts/eval-post-verdict.sh <PR#> <PASS|FAIL> <model> [--dry-run] [--ack-comments <N>]" >&2
+  echo "Usage: scripts/eval-post-verdict.sh <PR#> <PASS|FAIL> <model> [--dry-run] [--ack-comments <N>] [--ack-pr-agent <N>]" >&2
 }
 
 die() {
@@ -25,6 +25,8 @@ model="$3"
 dry_run=false
 ack_comments=""
 ack_comments_set=false
+ack_pr_agent=""
+ack_pr_agent_set=false
 
 [[ "$pr_number" =~ ^[1-9][0-9]*$ ]] || die "PR number must be a positive integer"
 [[ "$verdict" == "PASS" || "$verdict" == "FAIL" ]] || die "verdict must be exactly PASS or FAIL"
@@ -46,6 +48,14 @@ while [[ $# -gt 0 ]]; do
       ack_comments_set=true
       shift 2
       ;;
+    --ack-pr-agent)
+      [[ "$ack_pr_agent_set" == false ]] || die "--ack-pr-agent may be specified only once"
+      [[ $# -ge 2 ]] || die "--ack-pr-agent requires a non-negative integer"
+      [[ "$2" =~ ^(0|[1-9][0-9]*)$ ]] || die "--ack-pr-agent must be a non-negative integer"
+      ack_pr_agent="$2"
+      ack_pr_agent_set=true
+      shift 2
+      ;;
     *)
       usage
       exit 2
@@ -60,6 +70,7 @@ fi
 
 command -v gh >/dev/null 2>&1 || die "required command not found: gh"
 command -v git >/dev/null 2>&1 || die "required command not found: git"
+command -v jq >/dev/null 2>&1 || die "required command not found: jq"
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(git -C "$script_dir" rev-parse --show-toplevel)"
@@ -103,6 +114,87 @@ else
   done
 fi
 
+if ! pr_agent_review="$(gh api --paginate --slurp "repos/$repo_name/issues/$pr_number/comments?per_page=100" | jq -c '
+  def clean_title:
+    gsub("<[^>]*>"; "")
+    | gsub("&nbsp;"; " ")
+    | gsub("&amp;"; "&")
+    | gsub("&lt;"; "<")
+    | gsub("&gt;"; ">")
+    | gsub("&#39;"; "\u0027")
+    | gsub("&quot;"; "\"")
+    | gsub("[[:space:]]+"; " ")
+    | sub("^ "; "")
+    | sub(" $"; "")
+    | explode
+    | map(select(. >= 32 and . != 127 and (. < 128 or . > 159)))
+    | implode;
+  [.[][] | select(
+    (.user.login // "") == "github-actions[bot]"
+    and ((.body // "") | startswith("## PR Reviewer Guide"))
+  )]
+  | sort_by(.updated_at, .id)
+  | last as $review
+  | if $review == null then
+      {present: false, review_sha: "", findings: []}
+    else
+      ($review.body // "") as $body
+      | {
+          present: true,
+          review_sha: (
+            try (
+              $body
+              | capture("Review updated until commit[^\\n]*/commit/(?<sha>[0-9a-fA-F]{40})")
+              | .sha
+              | ascii_downcase
+            ) catch ""
+          ),
+          findings: [
+            $body
+            | scan("<details><summary><a href=[\"\u0027](?<href>[^\"\u0027]*#diff[^\"\u0027]*)[\"\u0027][^>]*>(?<title>[\\s\\S]*?)</a>"; "g")
+            | {href: .[0], title: (.[1] | clean_title)}
+          ]
+        }
+    end
+')"; then
+  die "could not fetch or parse PR-Agent review for PR #$pr_number"
+fi
+
+pr_agent_present="$(printf '%s\n' "$pr_agent_review" | jq -r '.present')"
+pr_agent_review_sha="$(printf '%s\n' "$pr_agent_review" | jq -r '.review_sha')"
+pr_agent_findings=()
+while IFS= read -r pr_agent_finding; do
+  [[ -n "$pr_agent_finding" ]] || continue
+  pr_agent_findings+=("$pr_agent_finding")
+done < <(printf '%s\n' "$pr_agent_review" | jq -r '.findings[].title')
+pr_agent_count="${#pr_agent_findings[@]}"
+
+if [[ "$pr_agent_present" == "false" ]]; then
+  echo "PR-Agent review: NOT FOUND"
+  echo "  WARNING: PR-Agent did not review this head; --ack-pr-agent 0 is required to proceed."
+else
+  [[ "$pr_agent_review_sha" =~ ^[0-9a-f]{40}$ ]] \
+    || die "could not parse PR-Agent's reviewed head SHA; re-run PR-Agent before evaluating"
+  [[ "$pr_agent_review_sha" == "$head_sha" ]] \
+    || die "PR-Agent review is stale: reviewed $pr_agent_review_sha, current head is $head_sha; push or re-run PR-Agent before evaluating"
+  echo "PR-Agent review head: $pr_agent_review_sha (matches current head)"
+  echo "PR-Agent findings: $pr_agent_count"
+  if [[ "$pr_agent_count" -eq 0 ]]; then
+    echo "  (none)"
+  else
+    for pr_agent_finding in "${pr_agent_findings[@]}"; do
+      printf '  - %s\n' "$pr_agent_finding"
+    done
+  fi
+fi
+
+if [[ "$ack_pr_agent_set" == true && "$ack_pr_agent" -ne "$pr_agent_count" ]]; then
+  die "--ack-pr-agent must equal the PR-Agent finding count: expected $pr_agent_count, received $ack_pr_agent; review and adjudicate the findings listed above"
+fi
+if [[ "$pr_agent_present" == "false" && "$ack_pr_agent_set" == false ]]; then
+  die "--ack-pr-agent 0 is required because PR-Agent did not review this head"
+fi
+
 marker="Evaluated-by: $model — $verdict
 Head-SHA: $head_sha"
 
@@ -129,6 +221,9 @@ if [[ "$current_count" -gt 0 && "$ack_comments_set" == false ]]; then
 fi
 if [[ "$ack_comments_set" == true && "$ack_comments" -ne "$current_count" ]]; then
   die "--ack-comments must equal the current-head inline comment count: expected $current_count, received $ack_comments; review and adjudicate the comments listed above"
+fi
+if [[ "$pr_agent_count" -gt 0 && "$ack_pr_agent_set" == false ]]; then
+  die "--ack-pr-agent $pr_agent_count is required before posting; review and adjudicate the $pr_agent_count PR-Agent finding(s) listed above"
 fi
 
 existing_check_ids="$(gh api "repos/$repo_name/commits/$head_sha/check-runs?check_name=check-evaluation&per_page=100" \
