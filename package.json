@@ -22,6 +22,8 @@
     "generate-medplum-signing-keys": "tsx scripts/generate-medplum-signing-keys.ts",
     "setup-legacy-importer": "tsx scripts/setup-legacy-importer.ts",
     "gate:legacy-import-m2a": "tsx --env-file-if-exists=.env scripts/gate-legacy-import-m2a.ts",
+    "generate-legacy-patient-manifests": "tsx scripts/generate-legacy-patient-manifests.ts",
+    "generate-legacy-visit-manifests": "tsx scripts/generate-legacy-visit-manifests.ts",
     "import-legacy-patient-m2a": "tsx --env-file-if-exists=.odos/migration-importer.env scripts/import-legacy-patient-m2a.ts",
     "import-legacy-visits-m2b1": "tsx --env-file-if-exists=.odos/migration-importer.env scripts/import-legacy-visits-m2b1.ts",
     "import-legacy-visits-m2b2": "tsx --env-file-if-exists=.odos/migration-importer.env scripts/import-legacy-visits-m2b2.ts",
@@ -43,7 +45,8 @@
     "verify-backup-destination": "tsx scripts/verify-backup-destination.ts"
   },
   "dependencies": {
-    "@medplum/fhirtypes": "^4.0.0"
+    "@medplum/fhirtypes": "^4.0.0",
+    "csv-parse": "^7.0.1"
   },
   "devDependencies": {
     "tsx": "^4.19.0",

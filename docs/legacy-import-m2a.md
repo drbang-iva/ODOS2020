@@ -92,6 +92,28 @@ npm run import-legacy-patient-m2a -- \
 The flag acknowledges that chart 969's Encounters will be adjudicated individually downstream;
 it does not weaken junk-row rejection. Omit it for every other chart.
 
+## Generate the 12 patient manifests
+
+The phase-1 generator reads the full, unmodified `PatientExport` CSV and an EHR JSON array whose
+objects use the existing source-person fields: `sourceKey`, `firstName`, optional `middleName`,
+`lastName`, optional `suffix`, and ISO `birthDate`. The array must contain exactly 12 non-junk
+people; approved junk-shaped EHR rows may be present in the same array.
+
+Run on Iris with local source and output paths:
+
+```sh
+npm run generate-legacy-patient-manifests -- \
+  --patients '/Users/iris/Migration/extract-scoped/EPM data/00127314--PatientExport.csv' \
+  --ehr-people /Users/iris/Migration/ehr-source-people.json \
+  --output /Users/iris/Migration/importer-state/patient-manifests
+```
+
+The generator joins EPM and EHR people on normalized first name, last name, and DOB; zero or
+multiple matches stop the run. It classifies junk only through the importer's existing
+`junkRowReasons`, emits exactly 12 mode-`0600` schema-valid manifests, and prints the corresponding
+patient-import command for each. Only the exact EPM `6499570` / EHR `969` command includes
+`--allow-operator-test-data-chart`.
+
 Use the returned run id and Patient reference for the provisioning step:
 
 ```sh
@@ -256,6 +278,44 @@ bulk manifest:
 ```
 
 The example shows one entry for shape only; the real file must contain all 12 unique chart keys.
+Generate those inputs after all 12 patient imports have returned their FHIR references. The
+patient-reference file is a JSON object with a `charts` array of exactly 12 entries:
+
+```json
+{
+  "charts": [
+    {
+      "patientReference": "Patient/<id returned by phase 1>",
+      "patientUid": "<AppointmentsExport PatientUID>",
+      "epmPatientId": "<PatientExport ID>",
+      "ehrPatientId": "<EHR ptSrNo>"
+    }
+  ]
+}
+```
+
+The shape above shows one entry only. The visit-type file is a JSON object keyed by the raw,
+trimmed `appt_type` values found among those 12 charts. Each value must be an exact
+`{ "code", "display" }` pair from the shipped eyecare visit-type catalog. The generator reports
+all unmapped cohort values and stops; it never guesses a coding.
+
+```sh
+ODOS_SETUP_STATE_PATH=/Users/iris/ODOS2020/.odos-setup-state.json \
+npm run generate-legacy-visit-manifests -- \
+  --appointments '/Users/iris/Migration/extract-scoped/EPM data/00127314--AppointmentsExport.csv' \
+  --exams /Users/iris/Migration/exams-cohort-verified-20260730.tsv \
+  --patient-references /Users/iris/Migration/importer-state/patient-references.json \
+  --visit-type-map /Users/iris/Migration/importer-state/visit-type-map.json \
+  --output /Users/iris/Migration/importer-state/visit-bulk
+```
+
+`--setup-state <path>` can override the environment path. Otherwise the generator reads
+`ODOS_SETUP_STATE_PATH`, falling back to `.odos-setup-state.json` in the current directory, and
+uses its `organizationId` and `locationId`. It writes 12 mode-`0600` appointment manifests, 12
+appointment CSV slices, 12 exam TSV slices (header-only for a chart with no captures), and one
+mode-`0600` bulk manifest with relative paths. A sqlcmd separator-looking exam row is a hard
+error.
+
 Run the bulk command first as discovery, adjudicate its child reports, and then replay with the
 decisions file:
 
