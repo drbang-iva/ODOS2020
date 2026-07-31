@@ -5,6 +5,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, join, posix, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { parse } from "csv-parse/sync";
 import {
   appointmentEncounterImportManifestSchema,
@@ -151,6 +152,7 @@ export function generatePatientImportManifests(input: {
 
   const outputDirectory = resolve(input.outputDirectory);
   ensurePrivateDirectory(outputDirectory);
+  const claimedEpmSourceKeys = new Set<string>();
   const manifests = targetEhrPeople
     .sort((left, right) => sourceKeyOrder(left.sourceKey, right.sourceKey))
     .map((ehr, index) => {
@@ -162,6 +164,12 @@ export function generatePatientImportManifests(input: {
         );
       }
       const epm = matches[0]!;
+      if (claimedEpmSourceKeys.has(epm.sourceKey)) {
+        throw new Error(
+          `PatientExport source ${epm.sourceKey} matched more than one EHR cohort person.`,
+        );
+      }
+      claimedEpmSourceKeys.add(epm.sourceKey);
       assertOperatorPairComplete(epm.sourceKey, ehr.sourceKey);
       const bucket = classifiedJunk.filter((_, junkIndex) =>
         junkIndex % EXPECTED_CHART_COUNT === index
@@ -355,6 +363,10 @@ export function resolveSetupStatePath(
       ?? environment.ODOS_SETUP_STATE_PATH
       ?? join(workingDirectory, ".odos-setup-state.json"),
   );
+}
+
+export function isDirectExecution(importMetaUrl: string, argvPath: string): boolean {
+  return importMetaUrl === pathToFileURL(resolve(argvPath)).href;
 }
 
 function parsePatientExport(csv: string): PatientExportRow[] {

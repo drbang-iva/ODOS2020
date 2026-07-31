@@ -1,6 +1,9 @@
 #!/usr/bin/env tsx
 import { resolve } from "node:path";
-import { generatePatientImportManifests } from "./legacy-import-manifest-generator.js";
+import {
+  generatePatientImportManifests,
+  isDirectExecution,
+} from "./legacy-import-manifest-generator.js";
 
 export function parsePatientManifestGeneratorArguments(args: readonly string[]): {
   readonly patientExportPath: string;
@@ -21,7 +24,7 @@ function requiredArgument(args: readonly string[], name: string): string {
   return value;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isDirectExecution(import.meta.url, process.argv[1]!)) {
   try {
     const result = generatePatientImportManifests(
       parsePatientManifestGeneratorArguments(process.argv.slice(2)),

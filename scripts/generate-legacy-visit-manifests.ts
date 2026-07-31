@@ -2,6 +2,7 @@
 import { resolve } from "node:path";
 import {
   generateVisitImportManifests,
+  isDirectExecution,
   resolveSetupStatePath,
 } from "./legacy-import-manifest-generator.js";
 
@@ -41,7 +42,7 @@ function optionalArgument(args: readonly string[], name: string): string | undef
   return value && !value.startsWith("--") ? value : undefined;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isDirectExecution(import.meta.url, process.argv[1]!)) {
   try {
     const result = generateVisitImportManifests(
       parseVisitManifestGeneratorArguments(process.argv.slice(2)),

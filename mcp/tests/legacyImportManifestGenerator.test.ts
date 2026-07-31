@@ -7,12 +7,14 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { test } from "node:test";
+import { pathToFileURL } from "node:url";
 import {
   classifyApprovedJunkRows,
   generatePatientImportManifests,
   generateVisitImportManifests,
+  isDirectExecution,
   resolveSetupStatePath,
   type PatientReferenceInput,
 } from "../../scripts/legacy-import-manifest-generator.js";
@@ -312,6 +314,32 @@ test("both generator CLIs expose the documented required paths and setup-state p
   });
   assert.equal(visitArgs.setupStatePath, "/synthetic/setup-state.json");
   assert.equal(visitArgs.outputDirectory.endsWith("/visit-output"), true);
+  const spacedPath = resolve("/tmp/ODOS synthetic checkout/generator.ts");
+  assert.equal(isDirectExecution(pathToFileURL(spacedPath).href, spacedPath), true);
+});
+
+test("phase 1 refuses to assign one EPM source row to two EHR cohort people", () => {
+  const fixture = patientFixture();
+  try {
+    const people = JSON.parse(readFileSync(fixture.ehrPeoplePath, "utf8")) as SourcePerson[];
+    people[2] = {
+      ...people[2]!,
+      firstName: people[1]!.firstName,
+      lastName: people[1]!.lastName,
+      birthDate: people[1]!.birthDate,
+    };
+    writeFileSync(fixture.ehrPeoplePath, JSON.stringify(people));
+    assert.throws(
+      () => generatePatientImportManifests({
+        patientExportPath: fixture.patientExportPath,
+        ehrPeoplePath: fixture.ehrPeoplePath,
+        outputDirectory: fixture.outputDirectory,
+      }),
+      /matched more than one EHR cohort person/,
+    );
+  } finally {
+    fixture.cleanup();
+  }
 });
 
 function patientFixture(): {
