@@ -2,9 +2,18 @@ import {
   chmodSync,
   mkdirSync,
   readFileSync,
+  rmSync,
   writeFileSync,
 } from "node:fs";
-import { basename, join, posix, resolve } from "node:path";
+import {
+  basename,
+  isAbsolute,
+  join,
+  posix,
+  relative,
+  resolve,
+  sep,
+} from "node:path";
 import { pathToFileURL } from "node:url";
 import { parse } from "csv-parse/sync";
 import {
@@ -44,7 +53,7 @@ const EXAM_EXPORT_COLUMNS = [
   "exDevType",
   "exWhichEye",
 ] as const;
-const PATIENT_EXPORT_COLUMNS = [
+export const PATIENT_EXPORT_COLUMNS = [
   "ID",
   "FirstName",
   "LastName",
@@ -127,7 +136,10 @@ export function generatePatientImportManifests(input: {
   const classifiedJunk = [
     ...classifyApprovedJunkRows(epmPeople, "epm"),
     ...classifyApprovedJunkRows(ehrRows, "ehr"),
-  ];
+  ].sort((left, right) =>
+    left.sourceSystem.localeCompare(right.sourceSystem)
+    || sourceKeyOrder(left.sourceKey, right.sourceKey)
+  );
   if (classifiedJunk.length === 0) {
     throw new Error("No source row matched an approved junk rule; patient manifests require junk evidence.");
   }
@@ -155,7 +167,7 @@ export function generatePatientImportManifests(input: {
   const claimedEpmSourceKeys = new Set<string>();
   const manifests = targetEhrPeople
     .sort((left, right) => sourceKeyOrder(left.sourceKey, right.sourceKey))
-    .map((ehr, index) => {
+    .map((ehr) => {
       const matches = epmByIdentity.get(identityKey(ehr)) ?? [];
       if (matches.length !== 1) {
         throw new Error(
@@ -171,13 +183,11 @@ export function generatePatientImportManifests(input: {
       }
       claimedEpmSourceKeys.add(epm.sourceKey);
       assertOperatorPairComplete(epm.sourceKey, ehr.sourceKey);
-      const bucket = classifiedJunk.filter((_, junkIndex) =>
-        junkIndex % EXPECTED_CHART_COUNT === index
-      );
-      const junkRows = bucket.length > 0
-        ? bucket
-        : [classifiedJunk[index % classifiedJunk.length]!];
-      const manifest = patientImportManifestSchema.parse({ epm, ehr, junkRows });
+      const manifest = patientImportManifestSchema.parse({
+        epm,
+        ehr,
+        junkRows: classifiedJunk,
+      });
       const path = join(outputDirectory, `patient-${safeFilePart(ehr.sourceKey)}.json`);
       writePrivateFile(path, JSON.stringify(manifest, null, 2) + "\n");
       return {
@@ -250,6 +260,17 @@ export function generateVisitImportManifests(input: {
     if (!referenceByEhrId.has(normalized(row.ptSrNo))) {
       throw new Error(`Exam TSV contains out-of-cohort ptSrNo ${normalized(row.ptSrNo)}.`);
     }
+  }
+  const epmIdsWithAppointments = new Set(
+    targetAppointmentRows.map((row) => normalized(row.PatientID)),
+  );
+  const chartsWithoutAppointments = patientReferences
+    .filter((entry) => !epmIdsWithAppointments.has(entry.epmPatientId))
+    .map((entry) => entry.epmPatientId);
+  if (chartsWithoutAppointments.length > 0) {
+    throw new Error(
+      `AppointmentsExport has no rows for EPM patients: ${chartsWithoutAppointments.join(", ")}.`,
+    );
   }
 
   const rawVisitTypes = [
@@ -367,6 +388,43 @@ export function resolveSetupStatePath(
 
 export function isDirectExecution(importMetaUrl: string, argvPath: string): boolean {
   return importMetaUrl === pathToFileURL(resolve(argvPath)).href;
+}
+
+export function parseGeneratorCliArguments(
+  args: readonly string[],
+  input: {
+    readonly required: readonly string[];
+    readonly optional?: readonly string[];
+  },
+): Readonly<Record<string, string>> {
+  const known = new Set([...input.required, ...(input.optional ?? [])]);
+  const parsed: Record<string, string> = {};
+  for (let index = 0; index < args.length; index += 2) {
+    const name = args[index]!;
+    if (!name.startsWith("--")) {
+      throw new Error(`Unexpected argument value ${name}.`);
+    }
+    if (!known.has(name)) {
+      throw new Error(`Unknown argument ${name}.`);
+    }
+    if (parsed[name] !== undefined) {
+      throw new Error(`${name} was supplied more than once.`);
+    }
+    const value = args[index + 1]?.trim();
+    if (!value || value.startsWith("--")) {
+      throw new Error(`${name} requires a value.`);
+    }
+    parsed[name] = value;
+  }
+  for (const name of input.required) {
+    if (parsed[name] === undefined) throw new Error(`${name} requires a value.`);
+  }
+  return parsed;
+}
+
+export function shellArgument(value: string): string {
+  if (/^[A-Za-z0-9_@%+=:,./-]+$/.test(value)) return value;
+  return `'${value.replaceAll("'", "'\"'\"'")}'`;
 }
 
 function parsePatientExport(csv: string): PatientExportRow[] {
@@ -498,12 +556,6 @@ function parseAppointmentRows(csv: string): AppointmentExportRow[] {
 }
 
 function parseExamRows(tsv: string): ExamExportRow[] {
-  const lines = tsv.replace(/^\uFEFF/, "").split(/\r?\n/);
-  if (lines.some((line) =>
-    line.split("\t").some((cell) => /^-{3,}$/.test(cell.trim()))
-  )) {
-    throw new Error("Exam TSV contains a separator-artifact row.");
-  }
   const rows = parse(tsv, {
     bom: true,
     columns: (headers: string[]) => {
@@ -514,9 +566,17 @@ function parseExamRows(tsv: string): ExamExportRow[] {
     skip_empty_lines: true,
   }) as ExamExportRow[];
   for (const [index, row] of rows.entries()) {
+    if (EXAM_EXPORT_COLUMNS.every((column) => /^-{3,}$/.test(row[column].trim()))) {
+      throw new Error("Exam TSV contains a separator-artifact row.");
+    }
     for (const column of EXAM_EXPORT_COLUMNS) {
       if (!normalized(row[column])) {
         throw new Error(`Exam TSV row ${index + 2} has no ${column}.`);
+      }
+      if (/[\t\r\n]/.test(row[column])) {
+        throw new Error(
+          `Exam TSV row ${index + 2} ${column} contains a delimiter character.`,
+        );
       }
     }
     if (!/^\d{4}-\d{2}-\d{2} 00:00:00\.000$/.test(row.exDateTime.trim())) {
@@ -525,9 +585,10 @@ function parseExamRows(tsv: string): ExamExportRow[] {
       );
     }
     const date = row.exDateTime.trim().slice(0, 10);
-    if (new Date(`${date}T00:00:00.000Z`).toISOString().slice(0, 10) !== date) {
-      throw new Error(`Exam TSV row ${index + 2} exDateTime is not a calendar date.`);
-    }
+    assertCalendarDate(
+      date,
+      `Exam TSV row ${index + 2} exDateTime is not a calendar date.`,
+    );
   }
   return rows;
 }
@@ -641,11 +702,15 @@ function isoBirthDate(value: string): string {
     throw new Error(`Birth date must use YYYY-MM-DD; got "${value}".`);
   }
   if (value === "9999-12-31" || value === "1899-12-31") return value;
+  assertCalendarDate(value, `Birth date is not a calendar date: "${value}".`);
+  return value;
+}
+
+function assertCalendarDate(value: string, message: string): void {
   const date = new Date(`${value}T00:00:00.000Z`);
   if (Number.isNaN(date.valueOf()) || date.toISOString().slice(0, 10) !== value) {
-    throw new Error(`Birth date is not a calendar date: "${value}".`);
+    throw new Error(message);
   }
-  return value;
 }
 
 function patientGender(
@@ -760,15 +825,26 @@ function ensurePrivateDirectory(path: string): void {
 }
 
 function writePrivateFile(path: string, contents: string): void {
-  writeFileSync(path, contents, { encoding: "utf8", mode: 0o600 });
+  rmSync(path, { force: true });
+  writeFileSync(path, contents, {
+    encoding: "utf8",
+    flag: "wx",
+    mode: 0o600,
+  });
   chmodSync(path, 0o600);
 }
 
 function relativeOutputPath(outputDirectory: string, path: string): string {
   const parent = resolve(outputDirectory);
   const absolute = resolve(path);
-  if (!absolute.startsWith(`${parent}/`)) {
+  const nativeRelative = relative(parent, absolute);
+  if (
+    !nativeRelative
+    || nativeRelative === ".."
+    || nativeRelative.startsWith(`..${sep}`)
+    || isAbsolute(nativeRelative)
+  ) {
     throw new Error(`${basename(path)} was written outside the bulk output directory.`);
   }
-  return posix.relative(parent, absolute);
+  return nativeRelative.split(sep).join(posix.sep);
 }

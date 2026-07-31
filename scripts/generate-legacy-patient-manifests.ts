@@ -3,6 +3,8 @@ import { resolve } from "node:path";
 import {
   generatePatientImportManifests,
   isDirectExecution,
+  parseGeneratorCliArguments,
+  shellArgument,
 } from "./legacy-import-manifest-generator.js";
 
 export function parsePatientManifestGeneratorArguments(args: readonly string[]): {
@@ -10,18 +12,14 @@ export function parsePatientManifestGeneratorArguments(args: readonly string[]):
   readonly ehrPeoplePath: string;
   readonly outputDirectory: string;
 } {
+  const parsed = parseGeneratorCliArguments(args, {
+    required: ["--patients", "--ehr-people", "--output"],
+  });
   return {
-    patientExportPath: resolve(requiredArgument(args, "--patients")),
-    ehrPeoplePath: resolve(requiredArgument(args, "--ehr-people")),
-    outputDirectory: resolve(requiredArgument(args, "--output")),
+    patientExportPath: resolve(parsed["--patients"]!),
+    ehrPeoplePath: resolve(parsed["--ehr-people"]!),
+    outputDirectory: resolve(parsed["--output"]!),
   };
-}
-
-function requiredArgument(args: readonly string[], name: string): string {
-  const index = args.indexOf(name);
-  const value = index >= 0 ? args[index + 1]?.trim() : undefined;
-  if (!value || value.startsWith("--")) throw new Error(`${name} requires a value.`);
-  return value;
 }
 
 if (isDirectExecution(import.meta.url, process.argv[1]!)) {
@@ -35,7 +33,9 @@ if (isDirectExecution(import.meta.url, process.argv[1]!)) {
     );
     for (const entry of result.manifests) {
       console.log(
-        `npm run import-legacy-patient-m2a -- ${entry.importArguments.join(" ")}`,
+        `npm run import-legacy-patient-m2a -- ${
+          entry.importArguments.map(shellArgument).join(" ")
+        }`,
       );
     }
   } catch (error) {

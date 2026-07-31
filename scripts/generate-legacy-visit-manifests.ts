@@ -3,7 +3,9 @@ import { resolve } from "node:path";
 import {
   generateVisitImportManifests,
   isDirectExecution,
+  parseGeneratorCliArguments,
   resolveSetupStatePath,
+  shellArgument,
 } from "./legacy-import-manifest-generator.js";
 
 export function parseVisitManifestGeneratorArguments(
@@ -17,29 +19,27 @@ export function parseVisitManifestGeneratorArguments(
   readonly setupStatePath: string;
   readonly outputDirectory: string;
 } {
+  const parsed = parseGeneratorCliArguments(args, {
+    required: [
+      "--appointments",
+      "--exams",
+      "--patient-references",
+      "--visit-type-map",
+      "--output",
+    ],
+    optional: ["--setup-state"],
+  });
   return {
-    appointmentsExportPath: resolve(requiredArgument(args, "--appointments")),
-    examsTsvPath: resolve(requiredArgument(args, "--exams")),
-    patientReferencesPath: resolve(requiredArgument(args, "--patient-references")),
-    visitTypeMapPath: resolve(requiredArgument(args, "--visit-type-map")),
+    appointmentsExportPath: resolve(parsed["--appointments"]!),
+    examsTsvPath: resolve(parsed["--exams"]!),
+    patientReferencesPath: resolve(parsed["--patient-references"]!),
+    visitTypeMapPath: resolve(parsed["--visit-type-map"]!),
     setupStatePath: resolveSetupStatePath(
-      optionalArgument(args, "--setup-state"),
+      parsed["--setup-state"],
       environment,
     ),
-    outputDirectory: resolve(requiredArgument(args, "--output")),
+    outputDirectory: resolve(parsed["--output"]!),
   };
-}
-
-function requiredArgument(args: readonly string[], name: string): string {
-  const value = optionalArgument(args, name);
-  if (!value) throw new Error(`${name} requires a value.`);
-  return value;
-}
-
-function optionalArgument(args: readonly string[], name: string): string | undefined {
-  const index = args.indexOf(name);
-  const value = index >= 0 ? args[index + 1]?.trim() : undefined;
-  return value && !value.startsWith("--") ? value : undefined;
 }
 
 if (isDirectExecution(import.meta.url, process.argv[1]!)) {
@@ -54,7 +54,9 @@ if (isDirectExecution(import.meta.url, process.argv[1]!)) {
     );
     console.log(`Mapped target appt_type values: ${result.visitTypes.join(", ") || "(none)"}.`);
     console.log(
-      `npm run import-legacy-bulk-m2b2 -- --bulk-manifest ${result.bulkManifestPath}`,
+      `npm run import-legacy-bulk-m2b2 -- --bulk-manifest ${
+        shellArgument(result.bulkManifestPath)
+      }`,
     );
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));

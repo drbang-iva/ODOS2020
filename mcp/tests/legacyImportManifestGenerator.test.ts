@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  chmodSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -15,7 +16,9 @@ import {
   generatePatientImportManifests,
   generateVisitImportManifests,
   isDirectExecution,
+  PATIENT_EXPORT_COLUMNS,
   resolveSetupStatePath,
+  shellArgument,
   type PatientReferenceInput,
 } from "../../scripts/legacy-import-manifest-generator.js";
 import {
@@ -40,39 +43,6 @@ import {
   patientImportManifestSchema,
   type SourcePerson,
 } from "../src/legacy-import/patient-import.js";
-
-const PATIENT_EXPORT_COLUMNS = [
-  "ID",
-  "FirstName",
-  "LastName",
-  "LastExamDate",
-  "CreatedDate",
-  "BirthDate",
-  "Sex",
-  "email",
-  "SSN",
-  "OldPatientNo",
-  "address1",
-  "address2",
-  "city",
-  "state",
-  "zipcode",
-  "country",
-  "homephone",
-  "homephoneext",
-  "workphone",
-  "workphoneext",
-  "mobilephone",
-  "mobilephoneext",
-  "salutation",
-  "companyid",
-  "HomeOffice",
-  "ConversionOrigin",
-  "EMRPatientNum",
-  "PatientUID",
-  "ExamOffice",
-  "Active",
-] as const;
 
 test("phase 1 emits 12 schema-valid private manifests joined by name and DOB", () => {
   const fixture = patientFixture();
@@ -103,6 +73,7 @@ test("phase 1 emits 12 schema-valid private manifests joined by name and DOB", (
     );
     for (const entry of result.manifests) {
       assert.equal(statSync(entry.path).mode & 0o777, 0o600);
+      assert.equal(entry.manifest.junkRows.length, 4);
       for (const junkRow of entry.manifest.junkRows) {
         assert.ok(junkRowReasons(junkRow).length > 0);
       }
@@ -209,6 +180,9 @@ test("phase 2 emits 12 schema-valid private slices and a relative-path bulk mani
       readFileSync(chartWithoutExams!.examsPath, "utf8"),
       "ptSrNo\texSrNo\texDateTime\texDevType\texWhichEye\n",
     );
+    chmodSync(result.bulkManifestPath, 0o644);
+    generateVisitImportManifests(fixture.input);
+    assert.equal(statSync(result.bulkManifestPath).mode & 0o777, 0o600);
   } finally {
     fixture.cleanup();
   }
@@ -245,6 +219,19 @@ test("phase 2 hard-errors on a sqlcmd separator artifact", () => {
       () => generateVisitImportManifests(fixture.input),
       /separator-artifact row/,
     );
+  } finally {
+    fixture.cleanup();
+  }
+});
+
+test("phase 2 allows a quoted separator-shaped value when the row is not an artifact", () => {
+  const fixture = visitFixture();
+  try {
+    writeFileSync(
+      fixture.input.examsTsvPath,
+      readFileSync(fixture.input.examsTsvPath, "utf8").replace("\t4\tOU", "\t\"---\"\tOU"),
+    );
+    assert.equal(generateVisitImportManifests(fixture.input).targetExamRows, 11);
   } finally {
     fixture.cleanup();
   }
@@ -314,8 +301,44 @@ test("both generator CLIs expose the documented required paths and setup-state p
   });
   assert.equal(visitArgs.setupStatePath, "/synthetic/setup-state.json");
   assert.equal(visitArgs.outputDirectory.endsWith("/visit-output"), true);
+  assert.throws(
+    () => parsePatientManifestGeneratorArguments([
+      "--patients",
+      "one.csv",
+      "--patients",
+      "two.csv",
+      "--ehr-people",
+      "ehr.json",
+      "--output",
+      "output",
+    ]),
+    /--patients was supplied more than once/,
+  );
+  assert.throws(
+    () => parseVisitManifestGeneratorArguments([
+      "--appointments",
+      "appointments.csv",
+      "--exams",
+      "exams.tsv",
+      "--patient-references",
+      "references.json",
+      "--visit-type-map",
+      "visit-types.json",
+      "--out",
+      "output",
+    ]),
+    /Unknown argument --out/,
+  );
+});
+
+test("direct-execution and printed shell arguments tolerate spaces and metacharacters", () => {
   const spacedPath = resolve("/tmp/ODOS synthetic checkout/generator.ts");
   assert.equal(isDirectExecution(pathToFileURL(spacedPath).href, spacedPath), true);
+  assert.equal(shellArgument("/tmp/plain-path.json"), "/tmp/plain-path.json");
+  assert.equal(
+    shellArgument("/tmp/a path/$(unsafe)'file.json"),
+    "'/tmp/a path/$(unsafe)'\"'\"'file.json'",
+  );
 });
 
 test("phase 1 refuses to assign one EPM source row to two EHR cohort people", () => {
@@ -336,6 +359,121 @@ test("phase 1 refuses to assign one EPM source row to two EHR cohort people", ()
         outputDirectory: fixture.outputDirectory,
       }),
       /matched more than one EHR cohort person/,
+    );
+  } finally {
+    fixture.cleanup();
+  }
+});
+
+test("phase 1 refuses zero matches, a non-12 cohort, and a partial operator pair", () => {
+  const zeroMatch = patientFixture();
+  try {
+    const people = readEhrPeople(zeroMatch.ehrPeoplePath);
+    people[3] = { ...people[3]!, firstName: "NoMatchingEpm" };
+    writeFileSync(zeroMatch.ehrPeoplePath, JSON.stringify(people));
+    assert.throws(
+      () => generatePatientImportManifests({
+        patientExportPath: zeroMatch.patientExportPath,
+        ehrPeoplePath: zeroMatch.ehrPeoplePath,
+        outputDirectory: zeroMatch.outputDirectory,
+      }),
+      /matched 0 PatientExport rows/,
+    );
+  } finally {
+    zeroMatch.cleanup();
+  }
+
+  const wrongCount = patientFixture();
+  try {
+    writeFileSync(
+      wrongCount.ehrPeoplePath,
+      JSON.stringify(readEhrPeople(wrongCount.ehrPeoplePath).slice(0, 11)),
+    );
+    assert.throws(
+      () => generatePatientImportManifests({
+        patientExportPath: wrongCount.patientExportPath,
+        ehrPeoplePath: wrongCount.ehrPeoplePath,
+        outputDirectory: wrongCount.outputDirectory,
+      }),
+      /exactly 12 non-junk charts; got 11/,
+    );
+  } finally {
+    wrongCount.cleanup();
+  }
+
+  const partialOperator = patientFixture();
+  try {
+    const people = readEhrPeople(partialOperator.ehrPeoplePath);
+    people[0] = { ...people[0]!, sourceKey: "not-969" };
+    writeFileSync(partialOperator.ehrPeoplePath, JSON.stringify(people));
+    assert.throws(
+      () => generatePatientImportManifests({
+        patientExportPath: partialOperator.patientExportPath,
+        ehrPeoplePath: partialOperator.ehrPeoplePath,
+        outputDirectory: partialOperator.outputDirectory,
+      }),
+      /operator chart acknowledgement is valid only for the exact/,
+    );
+  } finally {
+    partialOperator.cleanup();
+  }
+});
+
+test("phase 2 refuses out-of-cohort exams, PatientUID mismatches, and missing appointment slices", () => {
+  const outOfCohort = visitFixture();
+  try {
+    writeFileSync(
+      outOfCohort.input.examsTsvPath,
+      readFileSync(outOfCohort.input.examsTsvPath, "utf8")
+      + "outside\texam-x\t2020-01-01 00:00:00.000\t4\tOU\n",
+    );
+    assert.throws(
+      () => generateVisitImportManifests(outOfCohort.input),
+      /out-of-cohort ptSrNo outside/,
+    );
+  } finally {
+    outOfCohort.cleanup();
+  }
+
+  const uidMismatch = visitFixture();
+  try {
+    const rows = appointmentRows();
+    rows[0] = { ...rows[0]!, PatientUID: "wrong-uid" };
+    writeFileSync(uidMismatch.input.appointmentsExportPath, appointmentCsv(rows));
+    assert.throws(
+      () => generateVisitImportManifests(uidMismatch.input),
+      /instead of supplied/,
+    );
+  } finally {
+    uidMismatch.cleanup();
+  }
+
+  const missingAppointments = visitFixture();
+  try {
+    writeFileSync(
+      missingAppointments.input.appointmentsExportPath,
+      appointmentCsv(appointmentRows().slice(1)),
+    );
+    assert.throws(
+      () => generateVisitImportManifests(missingAppointments.input),
+      /AppointmentsExport has no rows for EPM patients: 6499570/,
+    );
+  } finally {
+    missingAppointments.cleanup();
+  }
+});
+
+test("phase 2 refuses embedded TSV delimiter characters after parsing", () => {
+  const fixture = visitFixture();
+  try {
+    const tsv = readFileSync(fixture.input.examsTsvPath, "utf8");
+    writeFileSync(
+      fixture.input.examsTsvPath,
+      tsv.replace("exam-1", "\"exam-1\tshift\""),
+    );
+    assert.throws(
+      () => generateVisitImportManifests(fixture.input),
+      /exSrNo contains a delimiter character/,
     );
   } finally {
     fixture.cleanup();
@@ -451,7 +589,7 @@ function visitFixture(): {
 }
 
 function targetPeople(): SourcePerson[] {
-  return Array.from({ length: 12 }, (_, index) => {
+  const people = Array.from({ length: 12 }, (_, index) => {
     const sourceKey = String(969 + index);
     if (sourceKey === "970") {
       return {
@@ -476,6 +614,8 @@ function targetPeople(): SourcePerson[] {
       birthDate: `1980-01-${String(index + 1).padStart(2, "0")}`,
     };
   });
+  assert.equal(new Set(people.map((person) => person.birthDate)).size, people.length);
+  return people;
 }
 
 function approvedJunkPeople(): SourcePerson[] {
@@ -505,6 +645,10 @@ function approvedJunkPeople(): SourcePerson[] {
       birthDate: "1980-01-01",
     },
   ];
+}
+
+function readEhrPeople(path: string): SourcePerson[] {
+  return JSON.parse(readFileSync(path, "utf8")) as SourcePerson[];
 }
 
 function patientRow(overrides: Partial<Record<(typeof PATIENT_EXPORT_COLUMNS)[number], string>> = {}) {

@@ -109,7 +109,8 @@ npm run generate-legacy-patient-manifests -- \
 ```
 
 The generator joins EPM and EHR people on normalized first name, last name, and DOB; zero or
-multiple matches stop the run. It classifies junk only through the importer's existing
+multiple matches stop the run. One `PatientExport` row cannot serve two EHR cohort people; that
+also stops the run. It classifies junk only through the importer's existing
 `junkRowReasons`, emits exactly 12 mode-`0600` schema-valid manifests, and prints the corresponding
 patient-import command for each. Only the exact EPM `6499570` / EHR `969` command includes
 `--allow-operator-test-data-chart`.
@@ -313,18 +314,19 @@ npm run generate-legacy-visit-manifests -- \
 `ODOS_SETUP_STATE_PATH`, falling back to `.odos-setup-state.json` in the current directory, and
 uses its `organizationId` and `locationId`. It writes 12 mode-`0600` appointment manifests, 12
 appointment CSV slices, 12 exam TSV slices (header-only for a chart with no captures), and one
-mode-`0600` bulk manifest with relative paths. A sqlcmd separator-looking exam row is a hard
-error.
+mode-`0600` bulk manifest with relative paths. All generated files remain inside `--output`; the
+generator stops if any cohort chart has no appointment row. A sqlcmd separator-looking exam row
+is a hard error.
 
 Run the bulk command first as discovery, adjudicate its child reports, and then replay with the
-decisions file:
+decisions file. Use the absolute `bulk-manifest.json` path printed by the generator:
 
 ```sh
 npm run import-legacy-bulk-m2b2 -- \
-  --bulk-manifest /Users/iris/Migration/importer-state/m2b2-bulk.json
+  --bulk-manifest /Users/iris/Migration/importer-state/visit-bulk/bulk-manifest.json
 
 npm run import-legacy-bulk-m2b2 -- \
-  --bulk-manifest /Users/iris/Migration/importer-state/m2b2-bulk.json \
+  --bulk-manifest /Users/iris/Migration/importer-state/visit-bulk/bulk-manifest.json \
   --decisions /Users/iris/Migration/importer-state/m2b2-decisions.json
 ```
 
