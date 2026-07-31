@@ -39,6 +39,9 @@ import {
   verifyImporterProjectMembershipDenied,
   verifyLegacyImportM2aReachability,
 } from "../../scripts/verify-legacy-import-m2a.js";
+import {
+  parsePatientImportCliArguments,
+} from "../../scripts/import-legacy-patient-m2a.js";
 
 const PROJECT_ID = "project-1";
 
@@ -58,6 +61,22 @@ test("importer ProjectMembership probe accepts only a 403 response", async () =>
       request: async () => new Response(null, { status: 200 }),
     }),
     /returned 200; expected 403/,
+  );
+});
+
+test("patient import CLI requires the explicit operator-chart acknowledgement flag", () => {
+  assert.equal(
+    parsePatientImportCliArguments(["--manifest", "synthetic.json"])
+      .allowOperatorTestDataChart,
+    false,
+  );
+  assert.equal(
+    parsePatientImportCliArguments([
+      "--manifest",
+      "synthetic.json",
+      "--allow-operator-test-data-chart",
+    ]).allowOperatorTestDataChart,
+    true,
   );
 });
 

@@ -68,8 +68,9 @@ person row, and one or more source rows that the approved junk rules must reject
 ```
 
 The selected EPM and EHR rows must match on normalized
-`firstName + lastName + birthDate`. The script refuses EPM source `6499570` and EHR source
-`969`, the operator's test-data-heavy chart.
+`firstName + lastName + birthDate`. By default, the script refuses EPM source `6499570` and EHR
+source `969`, the operator's test-data-heavy chart. Import that exact pair only with the explicit
+acknowledgement below; partial matches remain refused.
 
 ## One-patient run
 
@@ -79,6 +80,17 @@ From the ODOS checkout on Iris:
 npm run import-legacy-patient-m2a -- \
   --manifest /Users/iris/Migration/importer-state/m2a-source.json
 ```
+
+For the exact operator chart only:
+
+```sh
+npm run import-legacy-patient-m2a -- \
+  --manifest /Users/iris/Migration/importer-state/m2a-source.json \
+  --allow-operator-test-data-chart
+```
+
+The flag acknowledges that chart 969's Encounters will be adjudicated individually downstream;
+it does not weaken junk-row rejection. Omit it for every other chart.
 
 Use the returned run id and Patient reference for the provisioning step:
 

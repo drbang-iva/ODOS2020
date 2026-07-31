@@ -22,6 +22,7 @@ export async function runPatientImportCli(input: {
   readonly runId?: string;
   readonly clientId: string;
   readonly clientSecret: string;
+  readonly allowOperatorTestDataChart?: boolean;
 }): Promise<{
   readonly runId: string;
   readonly action: string;
@@ -50,6 +51,7 @@ export async function runPatientImportCli(input: {
         runId,
         projectId,
         manifest,
+        allowOperatorTestDataChart: input.allowOperatorTestDataChart,
       });
       if (result.action === "conflict") {
         throw new Error(`Patient source ${result.sourceKey} requires adjudication; no write was made.`);
@@ -73,10 +75,11 @@ export async function runPatientImportCli(input: {
   }
 }
 
-function cliArguments(args: readonly string[]): {
+export function parsePatientImportCliArguments(args: readonly string[]): {
   manifestPath: string;
   stateDirectory: string;
   runId?: string;
+  allowOperatorTestDataChart: boolean;
 } {
   const manifestPath = requiredArgument(args, "--manifest");
   const stateDirectory = optionalArgument(args, "--state-dir") ?? DEFAULT_M2A_STATE_DIR;
@@ -84,6 +87,7 @@ function cliArguments(args: readonly string[]): {
     manifestPath: resolve(manifestPath),
     stateDirectory: resolve(stateDirectory),
     runId: optionalArgument(args, "--run-id"),
+    allowOperatorTestDataChart: args.includes("--allow-operator-test-data-chart"),
   };
 }
 
@@ -107,7 +111,7 @@ function requireEnv(name: string): string {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   try {
-    const args = cliArguments(process.argv.slice(2));
+    const args = parsePatientImportCliArguments(process.argv.slice(2));
     const result = await runPatientImportCli({
       baseUrl: (process.env.MEDPLUM_BASE_URL ?? DEFAULT_BASE_URL).replace(/\/$/, ""),
       ...args,
