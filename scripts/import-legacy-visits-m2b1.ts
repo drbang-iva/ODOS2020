@@ -155,6 +155,7 @@ export async function runVisitImportCommand(input: {
     const analysis = result.result.analysis;
     console.log(
       `${input.label} run=${result.runId} rows=${analysis.sourceRows} exact_duplicates=${analysis.exactDuplicates} `
+      + `office_rows=${JSON.stringify(analysis.officeRowCounts)} `
       + `post_dedupe=${analysis.rowsAfterExactDedupe} collision_groups=${analysis.collisionGroups} `
       + `collision_rows=${analysis.collisionRows} cancel_resolved=${analysis.resolvedCancelGroups} `
       + `all_cancelled_skipped=${analysis.allCancelledSkipped} `

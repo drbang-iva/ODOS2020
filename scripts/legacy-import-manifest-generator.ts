@@ -25,7 +25,7 @@ import {
   APPOINTMENT_EXPORT_COLUMNS,
   type AppointmentExportColumn,
   type AppointmentExportRow,
-  VERIFIED_APPOINTMENT_EXPORT_OFFICE,
+  type VerifiedAppointmentExportOffice,
 } from "../mcp/src/legacy-import/appointment-export.js";
 import {
   legacyVisitBulkManifestSchema,
@@ -119,6 +119,9 @@ export interface VisitManifestGenerationResult {
     readonly examsPath: string;
   }[];
   readonly sourceAppointmentRows: number;
+  readonly sourceAppointmentRowsByOffice: Readonly<
+    Record<VerifiedAppointmentExportOffice, number>
+  >;
   readonly targetAppointmentRows: number;
   readonly targetExamRows: number;
   readonly visitTypes: readonly string[];
@@ -215,10 +218,7 @@ export function generateVisitImportManifests(input: {
 }): VisitManifestGenerationResult {
   assertExpectedChartCount(input.expectedChartCount);
   const appointmentsCsv = readFileSync(input.appointmentsExportPath, "utf8");
-  const analysis = analyzeAppointmentExport(
-    appointmentsCsv,
-    VERIFIED_APPOINTMENT_EXPORT_OFFICE,
-  );
+  const analysis = analyzeAppointmentExport(appointmentsCsv);
   const appointmentRows = parseAppointmentRows(appointmentsCsv);
   const patientReferences = parsePatientReferences(
     readFileSync(input.patientReferencesPath, "utf8"),
@@ -308,8 +308,13 @@ export function generateVisitImportManifests(input: {
       const chartExamRows = examRows.filter((row) =>
         normalized(row.ptSrNo) === reference.ehrPatientId
       );
+      const sourceOfficeNumbers = [
+        ...new Set(chartAppointmentRows.map((row) => normalized(row.OfficeNum))),
+      ].sort() as VerifiedAppointmentExportOffice[];
       const manifest = appointmentEncounterImportManifestSchema.parse({
-        sourceOfficeNumber: VERIFIED_APPOINTMENT_EXPORT_OFFICE,
+        ...(sourceOfficeNumbers.length === 1
+          ? { sourceOfficeNumber: sourceOfficeNumbers[0] }
+          : { sourceOfficeNumbers }),
         patientReference: reference.patientReference,
         patientUid: reference.patientUid,
         epmPatientId: reference.epmPatientId,
@@ -349,6 +354,7 @@ export function generateVisitImportManifests(input: {
     bulkManifestPath,
     charts,
     sourceAppointmentRows: analysis.sourceRows,
+    sourceAppointmentRowsByOffice: analysis.officeRowCounts,
     targetAppointmentRows: targetAppointmentRows.length,
     targetExamRows: examRows.length,
     visitTypes: rawVisitTypes,

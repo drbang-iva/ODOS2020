@@ -171,7 +171,7 @@ test("AppointmentsExport analysis drops exact duplicates and applies only the ap
   );
   assert.throws(
     () => analyzeAppointmentExport(appointmentCsv([exact]), "other-office"),
-    /verified only for office export 00127314/,
+    /source office other-office is outside the verified office set 00127314, 0161582, 00127362/,
   );
   assert.throws(
     () =>
@@ -179,7 +179,7 @@ test("AppointmentsExport analysis drops exact duplicates and applies only the ap
         appointmentCsv([exact, appointmentRow({ OfficeNum: "00127362" })]),
         "00127314",
       ),
-    /row office 00127362 does not match verified source office 00127314/,
+    /row office 00127362 does not match declared source offices 00127314/,
   );
   const malformedVendorQuote = `${appointmentCsv([exact])}oct n"p`;
   assert.match(malformedVendorQuote, /,oct n"p$/);
@@ -187,6 +187,61 @@ test("AppointmentsExport analysis drops exact duplicates and applies only the ap
     analyzeAppointmentExport(malformedVendorQuote, "00127314").sourceRows,
     1,
   );
+});
+
+test("cross-office appointments remain distinct when every other composite-key field matches", () => {
+  const primaryOffice = appointmentRow();
+  const secondOffice = { ...primaryOffice, OfficeNum: "0161582" };
+  const analysis = analyzeAppointmentExport(
+    appointmentCsv([primaryOffice, secondOffice]),
+    ["00127314", "0161582"],
+  );
+
+  assert.notEqual(
+    appointmentCompositeKey(primaryOffice),
+    appointmentCompositeKey(secondOffice),
+  );
+  assert.equal(analysis.appointments.length, 2);
+  assert.equal(analysis.collisionGroups, 0);
+  assert.equal(analysis.ambiguousCollisionGroups, 0);
+});
+
+test("AppointmentsExport rejects a row outside the verified office set", () => {
+  assert.throws(
+    () => analyzeAppointmentExport(appointmentCsv([
+      appointmentRow({ OfficeNum: "99999999" }),
+    ])),
+    /row office 99999999 is outside the verified office set 00127314, 0161582, 00127362/,
+  );
+});
+
+test("multi-office analysis reports the source-row split for every verified office", () => {
+  const analysis = analyzeAppointmentExport(appointmentCsv([
+    appointmentRow({ PatientUID: "patient-a", PatientID: "epm-a" }),
+    appointmentRow({
+      OfficeNum: "0161582",
+      PatientUID: "patient-b",
+      PatientID: "epm-b",
+    }),
+    appointmentRow({
+      OfficeNum: "0161582",
+      PatientUID: "patient-c",
+      PatientID: "epm-c",
+    }),
+    appointmentRow({
+      OfficeNum: "00127362",
+      PatientUID: "patient-d",
+      PatientID: "epm-d",
+    }),
+  ]));
+
+  assert.deepEqual(analysis.officeRowCounts, {
+    "00127314": 1,
+    "0161582": 2,
+    "00127362": 1,
+  });
+  assert.equal(analysis.appointments.length, 4);
+  assert.equal(analysis.collisionGroups, 0);
 });
 
 test("M2b-1 refuses a Patient with a mismatched EHR identifier before any write", async () => {
@@ -389,6 +444,11 @@ test("M2b-1 imports appointments, linked and technical Encounters, queues multi-
 
     assert.deepEqual(first.analysis, {
       sourceRows: 11,
+      officeRowCounts: {
+        "00127314": 11,
+        "0161582": 0,
+        "00127362": 0,
+      },
       exactDuplicates: 0,
       rowsAfterExactDedupe: 11,
       collisionGroups: 3,
@@ -588,6 +648,11 @@ test("M2b-1 keeps patient-b linked and ledgers an adopted Practitioner by legacy
 
     assert.deepEqual(result.analysis, {
       sourceRows: 2,
+      officeRowCounts: {
+        "00127314": 2,
+        "0161582": 0,
+        "00127362": 0,
+      },
       exactDuplicates: 0,
       rowsAfterExactDedupe: 2,
       collisionGroups: 1,

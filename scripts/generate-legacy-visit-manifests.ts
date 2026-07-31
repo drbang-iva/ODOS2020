@@ -56,6 +56,13 @@ if (isDirectExecution(import.meta.url, process.argv[1]!)) {
       + `source appointments=${result.sourceAppointmentRows}, `
       + `target appointments=${result.targetAppointmentRows}, target exams=${result.targetExamRows}.`,
     );
+    console.log(
+      `Source appointment rows by office: ${
+        Object.entries(result.sourceAppointmentRowsByOffice)
+          .map(([officeNumber, count]) => `${officeNumber}=${count}`)
+          .join(", ")
+      }.`,
+    );
     console.log(`Mapped target appt_type values: ${result.visitTypes.join(", ") || "(none)"}.`);
     console.log(
       `npm run import-legacy-bulk-m2b2 -- --bulk-manifest ${

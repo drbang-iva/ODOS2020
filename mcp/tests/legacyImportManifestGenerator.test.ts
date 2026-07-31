@@ -34,7 +34,7 @@ import {
 import {
   APPOINTMENT_EXPORT_COLUMNS,
   type AppointmentExportRow,
-  VERIFIED_APPOINTMENT_EXPORT_OFFICE,
+  VERIFIED_APPOINTMENT_EXPORT_OFFICES,
 } from "../src/legacy-import/appointment-export.js";
 import {
   legacyVisitBulkManifestSchema,
@@ -46,6 +46,9 @@ import {
 } from "../src/legacy-import/patient-import.js";
 
 const REPOSITORY_ROOT = fileURLToPath(new URL("../..", import.meta.url));
+const PRIMARY_VERIFIED_APPOINTMENT_EXPORT_OFFICE = [
+  ...VERIFIED_APPOINTMENT_EXPORT_OFFICES,
+][0]!;
 
 test("phase 1 emits 12 schema-valid private manifests joined by name and DOB", () => {
   const fixture = patientFixture();
@@ -145,6 +148,11 @@ test("phase 2 emits 12 schema-valid private slices and a relative-path bulk mani
     const result = generateVisitImportManifests(fixture.input);
     assert.equal(result.charts.length, 12);
     assert.equal(result.sourceAppointmentRows, 12);
+    assert.deepEqual(result.sourceAppointmentRowsByOffice, {
+      "00127314": 12,
+      "0161582": 0,
+      "00127362": 0,
+    });
     assert.equal(result.targetAppointmentRows, 12);
     assert.equal(result.targetExamRows, 11);
     assert.deepEqual(result.visitTypes, ["Office Visit"]);
@@ -166,6 +174,8 @@ test("phase 2 emits 12 schema-valid private slices and a relative-path bulk mani
       );
       assert.equal(manifest.organizationReference, "Organization/practice-fixture");
       assert.equal(manifest.locationReference, "Location/location-fixture");
+      assert.equal(manifest.sourceOfficeNumber, PRIMARY_VERIFIED_APPOINTMENT_EXPORT_OFFICE);
+      assert.equal(manifest.sourceOfficeNumbers, undefined);
       assert.equal(manifest.visitTypeMap["Office Visit"]?.code, "office-visit");
       for (const path of [
         chart.manifestPath,
@@ -188,6 +198,73 @@ test("phase 2 emits 12 schema-valid private slices and a relative-path bulk mani
     chmodSync(result.bulkManifestPath, 0o644);
     generateVisitImportManifests(fixture.input);
     assert.equal(statSync(result.bulkManifestPath).mode & 0o777, 0o600);
+  } finally {
+    fixture.cleanup();
+  }
+});
+
+test("phase 2 keeps a multi-office chart in one manifest with office identity on each row", () => {
+  const fixture = visitFixture();
+  try {
+    const rows = appointmentRows();
+    const firstRow = rows[0]!;
+    writeFileSync(
+      fixture.input.appointmentsExportPath,
+      appointmentCsv([...rows, { ...firstRow, OfficeNum: "0161582" }]),
+    );
+
+    const result = generateVisitImportManifests(fixture.input);
+    const reference = patientReferences().find(
+      (entry) => entry.epmPatientId === firstRow.PatientID,
+    )!;
+    const chart = result.charts.find((entry) => entry.chartKey === reference.ehrPatientId)!;
+    const manifest = appointmentEncounterImportManifestSchema.parse(
+      JSON.parse(readFileSync(chart.manifestPath, "utf8")),
+    );
+    const chartCsv = readFileSync(chart.appointmentsPath, "utf8");
+
+    assert.equal(result.charts.length, 12);
+    assert.deepEqual(result.sourceAppointmentRowsByOffice, {
+      "00127314": 12,
+      "0161582": 1,
+      "00127362": 0,
+    });
+    assert.equal(manifest.sourceOfficeNumber, undefined);
+    assert.deepEqual(manifest.sourceOfficeNumbers, ["00127314", "0161582"]);
+    assert.deepEqual(
+      chartCsv.trimEnd().split("\n").slice(1).map((line) => line.split(",")[0]),
+      ["00127314", "0161582"],
+    );
+  } finally {
+    fixture.cleanup();
+  }
+});
+
+test("phase 2 single-office appointment slices remain byte-identical", () => {
+  const fixture = visitFixture();
+  try {
+    const sourceRows = appointmentRows();
+    const result = generateVisitImportManifests(fixture.input);
+    const reference = patientReferences()[0]!;
+    const chart = result.charts.find((entry) => entry.chartKey === reference.ehrPatientId)!;
+    const expectedRows = sourceRows.filter((row) => row.PatientID === reference.epmPatientId);
+
+    assert.equal(readFileSync(chart.appointmentsPath, "utf8"), appointmentCsv(expectedRows));
+    assert.equal(
+      readFileSync(chart.manifestPath, "utf8"),
+      JSON.stringify({
+        sourceOfficeNumber: PRIMARY_VERIFIED_APPOINTMENT_EXPORT_OFFICE,
+        patientReference: reference.patientReference,
+        patientUid: reference.patientUid,
+        epmPatientId: reference.epmPatientId,
+        ehrPatientId: reference.ehrPatientId,
+        organizationReference: "Organization/practice-fixture",
+        locationReference: "Location/location-fixture",
+        visitTypeMap: {
+          "Office Visit": { code: "office-visit", display: "Office Visit (Medical)" },
+        },
+      }, null, 2) + "\n",
+    );
   } finally {
     fixture.cleanup();
   }
@@ -854,11 +931,11 @@ function patientRow(overrides: Partial<Record<(typeof PATIENT_EXPORT_COLUMNS)[nu
     mobilephoneext: "",
     salutation: "",
     companyid: "",
-    HomeOffice: VERIFIED_APPOINTMENT_EXPORT_OFFICE,
+    HomeOffice: PRIMARY_VERIFIED_APPOINTMENT_EXPORT_OFFICE,
     ConversionOrigin: "",
     EMRPatientNum: "",
     PatientUID: "fixture-uid",
-    ExamOffice: VERIFIED_APPOINTMENT_EXPORT_OFFICE,
+    ExamOffice: PRIMARY_VERIFIED_APPOINTMENT_EXPORT_OFFICE,
     Active: "True",
     ...overrides,
   };
@@ -873,7 +950,7 @@ function patientCsv(rows: readonly ReturnType<typeof patientRow>[]): string {
 
 function appointmentRows(chartCount = 12): AppointmentExportRow[] {
   return patientReferences(chartCount).map((reference, index) => ({
-    OfficeNum: VERIFIED_APPOINTMENT_EXPORT_OFFICE,
+    OfficeNum: PRIMARY_VERIFIED_APPOINTMENT_EXPORT_OFFICE,
     PatientID: reference.epmPatientId,
     FirstName: `Patient${index + 1}`,
     lastname: "Fixture",
