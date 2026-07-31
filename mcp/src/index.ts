@@ -5691,6 +5691,10 @@ async function main(): Promise<void> {
         "/clinical-graph/dry-eye/meibography",
         express.json({ limit: "21mb" }),
       );
+      app.use(
+        "/correspondence/providers",
+        express.json({ limit: "25mb" }),
+      );
       app.use(express.urlencoded({ extended: false, limit: "64kb" }));
       app.use(express.json({ limit: "4mb" }));
       app.use((req, res, next) => {
@@ -7328,7 +7332,7 @@ async function main(): Promise<void> {
       });
       registerReferralRoutes(app, {
         authenticateService: authenticateWithMedplum,
-        authenticate: authenticateStaffRouteForAction("chart.write"),
+        authenticate: authenticateStaffRoute,
         serviceFhir: fhir,
         correspondenceRenderer: new WeasyPrintHttpRenderer(),
       });

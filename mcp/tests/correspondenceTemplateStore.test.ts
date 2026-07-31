@@ -2,12 +2,13 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Basic, Bundle } from "@medplum/fhirtypes";
 import {
+  CURATED_CONSULT_REPORT_TEMPLATES,
   CURATED_REFERRAL_TEMPLATES,
   CorrespondenceTemplateStore,
   parseCorrespondenceTemplate,
 } from "../src/correspondence/template-store.js";
 
-test("correspondence template store seeds only the curated referral starter set", async () => {
+test("correspondence template store seeds the curated referral and consult starter sets", async () => {
   const fhir = new BasicFhir();
   const store = new CorrespondenceTemplateStore(fhir, () => "template-custom");
 
@@ -21,8 +22,14 @@ test("correspondence template store seeds only the curated referral starter set"
       template.register,
     ]),
   );
-  assert.equal(fhir.resources.length, 3);
+  const consultTemplates = await store.list("consult-report");
+  assert.deepEqual(
+    consultTemplates.map((template) => [template.name, template.register]),
+    CURATED_CONSULT_REPORT_TEMPLATES.map((template) => [template.name, template.register]),
+  );
+  assert.equal(fhir.resources.length, 5);
   assert.ok(templates.every((template) => template.letterType === "referral"));
+  assert.ok(consultTemplates.every((template) => template.letterType === "consult-report"));
 });
 
 test("correspondence template store creates, reads, updates, and recoverably removes a template", async () => {

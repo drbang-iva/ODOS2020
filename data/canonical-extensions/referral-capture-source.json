@@ -1,0 +1,56 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "referral-capture-source",
+  "url": "https://odos2020.com/fhir/StructureDefinition/referral-capture-source",
+  "version": "c2",
+  "name": "ODOSReferralCaptureSource",
+  "title": "ODOS Referral Capture Source",
+  "status": "active",
+  "date": "2026-07-31",
+  "publisher": "ODOS",
+  "description": "Records whether an inbound referral was captured at the front desk, from fax intake, or while charting.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "ServiceRequest"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Inbound referral capture source",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/referral-capture-source"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "code"
+          }
+        ]
+      }
+    ]
+  }
+}

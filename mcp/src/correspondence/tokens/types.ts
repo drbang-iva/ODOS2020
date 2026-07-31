@@ -23,6 +23,7 @@ export interface CorrespondenceTokenContext {
   senderName: string;
   senderCredentials: string;
   practicePhone: string;
+  consultQuestion?: string;
   findings: Observation[];
   plans: CarePlan[];
   history: Encounter[];

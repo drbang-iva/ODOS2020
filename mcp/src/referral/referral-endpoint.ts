@@ -1,22 +1,39 @@
-import type { ProjectMembership, Provenance, ServiceRequest } from "@medplum/fhirtypes";
+import type {
+  AuditEvent,
+  Patient,
+  ProjectMembership,
+  Provenance,
+  ServiceRequest,
+} from "@medplum/fhirtypes";
 import { z } from "zod";
-import {
-  assertBusinessActionAllowed,
-  type PracticeRoleId,
-} from "../authz/roles.js";
+import type { PracticeRoleId } from "../authz/roles.js";
 import {
   CorrespondenceService,
   type CorrespondenceConfigFhirClient,
 } from "../correspondence/correspondence-service.js";
+import {
+  assertCorrespondenceActionAllowed,
+  buildCorrespondenceAuditEvent,
+  CorrespondencePolicyStore,
+} from "../correspondence/correspondence-workflow.js";
+import { ProviderSignatureImageStore } from "../correspondence/signature-image-store.js";
 import type { CorrespondenceRenderer } from "../correspondence/weasyprint-renderer.js";
 import { buildProvenance } from "../fhir/ophthalmology/provenance.js";
+import { searchAll } from "../fhir-search.js";
 import { hasPatientCompartmentGrant } from "../clinical-graph/provider-assignment-endpoint.js";
 import { ReferralDefaultsStore } from "./referral-defaults-store.js";
 import { ReferralDirectory } from "./referral-directory.js";
 import {
+  InboundReferralService,
+  type InboundReferralCaptureSource,
+} from "./reciprocal-referral.js";
+import {
   readReferralIncludeList,
   ReferralSendConflictError,
   ReferralService,
+  readCorrespondenceSender,
+  REFERRAL_DIRECTION_CODE_SYSTEM,
+  referralDirectionOf,
   type ReferralFhirClient,
   type ReferralIncludeList,
 } from "./referral-service.js";
@@ -25,6 +42,7 @@ export interface ReferralEndpointDeps {
   authenticate(authHeader: string | undefined): Promise<{
     staffReference: string;
     actorRole: PracticeRoleId;
+    roles?: readonly PracticeRoleId[];
     fhir: ReferralFhirClient;
   } | null>;
   serviceFhir: CorrespondenceConfigFhirClient;
@@ -39,6 +57,7 @@ export interface ReferralEndpointResult {
 
 const fhirIdSchema = z.string().regex(/^[A-Za-z0-9.-]{1,64}$/);
 const targetReferenceSchema = z.string().regex(/^(Practitioner|PractitionerRole|Organization)\/[A-Za-z0-9.-]{1,64}$/);
+const providerReferenceSchema = z.string().regex(/^(Practitioner|PractitionerRole)\/[A-Za-z0-9.-]{1,64}$/);
 const includeListSchema = z.object({
   letter: z.boolean(),
   demographics: z.boolean(),
@@ -70,6 +89,22 @@ const artifactSchema = z.object({
   templateId: fhirIdSchema.optional(),
 }).strict();
 const applyTemplateSchema = z.object({ templateId: fhirIdSchema }).strict();
+const inboundReferralSchema = z.object({
+  referrerReference: targetReferenceSchema.optional(),
+  referrerDisplay: z.string().trim().min(1).max(200),
+  performerReference: providerReferenceSchema,
+  captureSource: z.enum(["front-desk", "fax", "chart"]),
+  reasonText: z.string().trim().min(1).max(2_000),
+}).strict();
+const signatureUploadSchema = z.object({
+  contentType: z.enum(["image/png", "image/jpeg"]),
+  dataBase64: z.string().min(1),
+}).strict();
+const consultArtifactSchema = z.object({
+  editedBodyHtml: z.string().optional(),
+  templateId: fhirIdSchema.optional(),
+  encounterReference: z.string().regex(/^Encounter\/[A-Za-z0-9.-]{1,64}$/).optional(),
+}).strict();
 
 export async function handleCreateReferralRequest(
   deps: ReferralEndpointDeps,
@@ -100,6 +135,239 @@ export async function handleCreateReferralRequest(
   return {
     status: 201,
     body: { serviceRequest, serviceRequestReference },
+  };
+}
+
+export async function handleCreateInboundReferralRequest(
+  deps: ReferralEndpointDeps,
+  input: { authHeader: string | undefined; patientId: unknown; body: unknown },
+): Promise<ReferralEndpointResult> {
+  const context = await authorizeReferralPatient(deps, input.authHeader, input.patientId);
+  if ("result" in context) return context.result;
+  const parsed = inboundReferralSchema.safeParse(input.body);
+  if (!parsed.success) {
+    return {
+      status: 400,
+      body: { error: parsed.error.issues[0]?.message ?? "Invalid inbound referral." },
+    };
+  }
+  const [patient, performer] = await Promise.all([
+    context.staff.fhir.read<Patient>(
+      "Patient",
+      context.patientReference.slice("Patient/".length),
+    ),
+    readCorrespondenceSender(
+      context.staff.fhir,
+      parsed.data.performerReference,
+    ),
+  ]);
+  const serviceRequest = await new InboundReferralService(
+    context.staff.fhir,
+    deps.now,
+  ).create({
+    subjectReference: context.patientReference,
+    subjectDisplay: patientDisplay(patient),
+    referrerReference: parsed.data.referrerReference,
+    referrerDisplay: parsed.data.referrerDisplay,
+    performerReference: parsed.data.performerReference,
+    performerDisplay: performer.name,
+    captureSource: parsed.data.captureSource as InboundReferralCaptureSource,
+    reasonText: parsed.data.reasonText,
+  });
+  return {
+    status: 201,
+    body: {
+      serviceRequest,
+      serviceRequestReference: referralReference(serviceRequest),
+    },
+  };
+}
+
+export async function handleListInboundReferralsRequest(
+  deps: ReferralEndpointDeps,
+  input: { authHeader: string | undefined; patientId: unknown },
+): Promise<ReferralEndpointResult> {
+  const context = await authorizeReferralPatient(deps, input.authHeader, input.patientId);
+  if ("result" in context) return context.result;
+  const serviceRequests = await searchAll<ServiceRequest>(
+    context.staff.fhir,
+    "ServiceRequest",
+    {
+      subject: context.patientReference,
+      category: `${REFERRAL_DIRECTION_CODE_SYSTEM}|inbound`,
+      _sort: "-authored",
+      _count: "200",
+    },
+  );
+  return {
+    status: 200,
+    body: {
+      serviceRequests: serviceRequests.filter(
+        (serviceRequest) => referralDirectionOf(serviceRequest) === "inbound",
+      ),
+    },
+  };
+}
+
+export async function handleProviderSignatureRequest(
+  deps: ReferralEndpointDeps,
+  input: {
+    authHeader: string | undefined;
+    providerId: unknown;
+    action: "read" | "set" | "clear";
+    body?: unknown;
+  },
+): Promise<ReferralEndpointResult> {
+  const authorized = await authorizeReferralStaff(deps, input.authHeader);
+  if ("result" in authorized) return authorized.result;
+  const parsedProviderId = fhirIdSchema.safeParse(input.providerId);
+  if (!parsedProviderId.success) {
+    return { status: 400, body: { error: "A valid provider id is required." } };
+  }
+  const providerReference = `Practitioner/${parsedProviderId.data}`;
+  const roles = authorized.staff.roles ?? [authorized.staff.actorRole];
+  if (
+    input.action !== "read"
+    && authorized.staff.staffReference !== providerReference
+    && !roles.includes("practice-admin")
+  ) {
+    return {
+      status: 403,
+      body: { error: "Only the provider or a practice administrator may change this signature." },
+    };
+  }
+  const store = new ProviderSignatureImageStore(deps.serviceFhir);
+  if (input.action === "read") {
+    return { status: 200, body: { signature: await store.read(providerReference) ?? null } };
+  }
+  if (input.action === "clear") {
+    await store.clear(providerReference);
+    return { status: 200, body: { signature: null } };
+  }
+  const parsed = signatureUploadSchema.safeParse(input.body);
+  if (!parsed.success) {
+    return {
+      status: 400,
+      body: { error: parsed.error.issues[0]?.message ?? "Invalid provider signature image." },
+    };
+  }
+  const bytes = strictBase64(parsed.data.dataBase64);
+  if (!bytes) {
+    return { status: 400, body: { error: "Provider signature image must be valid base64." } };
+  }
+  const signature = await store.set(providerReference, {
+    contentType: parsed.data.contentType,
+    bytes,
+  });
+  return { status: 200, body: { signature } };
+}
+
+export async function handleConsultArtifactRequest(
+  deps: ReferralEndpointDeps,
+  input: {
+    authHeader: string | undefined;
+    patientId: unknown;
+    referralId: unknown;
+    action: "preview" | "sign" | "send";
+    body: unknown;
+  },
+): Promise<ReferralEndpointResult> {
+  const context = await authorizeReferralPatient(deps, input.authHeader, input.patientId);
+  if ("result" in context) return context.result;
+  const parsedReferralId = fhirIdSchema.safeParse(input.referralId);
+  const parsed = consultArtifactSchema.safeParse(input.body);
+  if (!parsedReferralId.success || !parsed.success) {
+    return { status: 400, body: { error: "Invalid consult-report request." } };
+  }
+  const serviceRequest = await context.staff.fhir.read<ServiceRequest>(
+    "ServiceRequest",
+    parsedReferralId.data,
+  );
+  if (
+    serviceRequest.subject.reference !== context.patientReference
+    || referralDirectionOf(serviceRequest) !== "inbound"
+  ) {
+    return { status: 409, body: { error: "Inbound referral does not match this patient." } };
+  }
+  const policy = await new CorrespondencePolicyStore(deps.serviceFhir).read();
+  try {
+    assertCorrespondenceActionAllowed(
+      context.staff.actorRole,
+      input.action === "preview" ? "draft" : input.action,
+      "consult-report",
+      policy.staffSendableLetterTypes,
+    );
+  } catch (error) {
+    return {
+      status: 403,
+      body: { error: error instanceof Error ? error.message : "Correspondence action denied." },
+    };
+  }
+  const correspondence = new CorrespondenceService(
+    context.staff.fhir,
+    deps.serviceFhir,
+    deps.correspondenceRenderer,
+    deps.now,
+  );
+  const rendered = await correspondence.renderConsultReport({
+    serviceRequest,
+    authorReference: context.staff.staffReference,
+    encounterReference: parsed.data.encounterReference,
+    templateId: parsed.data.templateId,
+    editedBodyHtml: parsed.data.editedBodyHtml,
+    ...(input.action === "preview"
+      ? {}
+      : { signedByReference: context.staff.staffReference }),
+  });
+  const documentReferenceValue = documentReference(rendered.documentReference);
+  if (input.action === "sign" || input.action === "send") {
+    await deps.serviceFhir.create<AuditEvent>(buildCorrespondenceAuditEvent({
+      action: "sign",
+      actorReference: context.staff.staffReference,
+      actorRole: context.staff.actorRole,
+      patientReference: context.patientReference,
+      documentReference: documentReferenceValue,
+      recordedAt: deps.now?.() ?? new Date().toISOString(),
+    }));
+  }
+  let provenanceReference: string | undefined;
+  if (input.action === "send") {
+    const recordedAt = deps.now?.() ?? new Date().toISOString();
+    const provenance = await context.staff.fhir.create<Provenance>(buildProvenance({
+      targetReferences: [
+        `ServiceRequest/${parsedReferralId.data}`,
+        documentReferenceValue,
+      ],
+      occurredDateTime: recordedAt,
+      recorded: recordedAt,
+      activityCode: "READ",
+      activityDisplay: "Disclose consult report",
+      agents: [{
+        typeCode: "transmitter",
+        typeDisplay: "Transmitter",
+        whoReference: context.staff.staffReference,
+      }],
+    }));
+    if (provenance.id) provenanceReference = `Provenance/${provenance.id}`;
+    await deps.serviceFhir.create<AuditEvent>(buildCorrespondenceAuditEvent({
+      action: "send",
+      actorReference: context.staff.staffReference,
+      actorRole: context.staff.actorRole,
+      patientReference: context.patientReference,
+      documentReference: documentReferenceValue,
+      recordedAt,
+    }));
+  }
+  return {
+    status: 200,
+    body: {
+      serviceRequestReference: `ServiceRequest/${parsedReferralId.data}`,
+      pdfBase64: rendered.pdf.toString("base64"),
+      bodyHtml: rendered.bodyHtml,
+      sourceEncounter: rendered.sourceEncounter,
+      documentReference: documentReferenceValue,
+      ...(provenanceReference ? { provenanceReference } : {}),
+    },
   };
 }
 
@@ -235,6 +503,21 @@ export async function handleReferralArtifactRequest(
     };
   }
 
+  const policy = await new CorrespondencePolicyStore(deps.serviceFhir).read();
+  try {
+    assertCorrespondenceActionAllowed(
+      context.staff.actorRole,
+      "send",
+      "referral",
+      policy.staffSendableLetterTypes,
+    );
+  } catch (error) {
+    return {
+      status: 403,
+      body: { error: error instanceof Error ? error.message : "Correspondence action denied." },
+    };
+  }
+
   try {
     const preparedServiceRequest = await service.prepareReferralSend(
       serviceRequest,
@@ -245,6 +528,7 @@ export async function handleReferralArtifactRequest(
       authorReference: context.staff.staffReference,
       templateId: parsedBody.data.templateId,
       editedBodyHtml: parsedBody.data.editedLetterBody,
+      signedByReference: context.staff.staffReference,
     });
     const recordedAt = deps.now?.() ?? new Date().toISOString();
     const provenance: Provenance = buildProvenance({
@@ -264,6 +548,25 @@ export async function handleReferralArtifactRequest(
       entityValues: disclosedIncludeListEntities(readReferralIncludeList(preparedServiceRequest)),
     });
     const committed = await service.commitReferralSend(preparedServiceRequest, provenance);
+    const correspondenceReference = documentReference(rendered.documentReference);
+    await Promise.all([
+      deps.serviceFhir.create<AuditEvent>(buildCorrespondenceAuditEvent({
+        action: "sign",
+        actorReference: context.staff.staffReference,
+        actorRole: context.staff.actorRole,
+        patientReference: context.patientReference,
+        documentReference: correspondenceReference,
+        recordedAt,
+      })),
+      deps.serviceFhir.create<AuditEvent>(buildCorrespondenceAuditEvent({
+        action: "send",
+        actorReference: context.staff.staffReference,
+        actorRole: context.staff.actorRole,
+        patientReference: context.patientReference,
+        documentReference: correspondenceReference,
+        recordedAt,
+      })),
+    ]);
 
     return {
       status: 200,
@@ -271,7 +574,7 @@ export async function handleReferralArtifactRequest(
         serviceRequestReference,
         pdfBase64: rendered.pdf.toString("base64"),
         bodyHtml: rendered.bodyHtml,
-        documentReference: documentReference(rendered.documentReference),
+        documentReference: correspondenceReference,
         ...(committed.provenanceReference
           ? { provenanceReference: committed.provenanceReference }
           : {}),
@@ -454,19 +757,15 @@ async function authorizeReferralStaff(
   if (!staff) {
     return { result: { status: 401, body: { error: "Authentication required to manage referrals." } } };
   }
-  if (!staffMayWriteChart(staff.actorRole)) {
-    return { result: { status: 403, body: { error: "chart.write role required" } } };
+  if (!["practice-admin", "clinician", "front-desk"].includes(staff.actorRole)) {
+    return {
+      result: {
+        status: 403,
+        body: { error: "Correspondence staff role required." },
+      },
+    };
   }
   return { staff };
-}
-
-function staffMayWriteChart(role: PracticeRoleId): boolean {
-  try {
-    assertBusinessActionAllowed(role, "chart.write");
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 function referralReference(serviceRequest: ServiceRequest): string {
@@ -477,6 +776,24 @@ function referralReference(serviceRequest: ServiceRequest): string {
 function documentReference(resource: { id?: string }): string {
   if (!resource.id) throw new Error("Rendered DocumentReference create response did not include an id.");
   return `DocumentReference/${resource.id}`;
+}
+
+function patientDisplay(patient: Patient): string {
+  const name = patient.name?.find((candidate) => candidate.use === "official")
+    ?? patient.name?.[0];
+  const display = name?.text?.trim()
+    || [name?.given?.join(" "), name?.family].filter(Boolean).join(" ").trim();
+  return display || `Patient/${patient.id ?? "unknown"}`;
+}
+
+function strictBase64(value: string): Buffer | undefined {
+  const normalized = value.replace(/\s+/g, "");
+  if (!normalized || !/^[A-Za-z0-9+/]*={0,2}$/.test(normalized)) return undefined;
+  const bytes = Buffer.from(normalized, "base64");
+  return bytes.length > 0 && bytes.toString("base64").replace(/=+$/, "")
+      === normalized.replace(/=+$/, "")
+    ? bytes
+    : undefined;
 }
 
 function disclosedIncludeListEntities(includeList: ReferralIncludeList): Array<{

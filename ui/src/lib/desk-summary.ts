@@ -7,6 +7,20 @@ export interface DeskSummary {
   cards: {
     schedule: { today: DeskStat<number>; confirmed: DeskStat<number>; checkedIn: DeskStat<number>; webRequests: DeskStat<number>; agenda: Array<{ time: string; patient: string; visitType: string }> };
     attention: { items: Array<{ tone: "alert" | "warn" | "info"; label: string; detail: string; href?: string }> };
+    correspondence: {
+      draftsAwaitingSignature: { value: number; tone: "ok" | "warn" };
+      repliesOwed: { value: number; tone: "ok" | "warn" };
+      sendFailures: { value: number; tone: "ok" | "alert" };
+      items: Array<{
+        title: string;
+        patientReference: string;
+        severity: "info" | "warning" | "urgent";
+        ageMinutes: number | null;
+        action: string;
+        owner: "provider" | "front-desk";
+        status: "open" | "failed";
+      }>;
+    };
     frontLine: { available: false; message: string; needsReply: DeskStat<null>; missedCalls: DeskStat<null>; voicemails: DeskStat<null>; urgent: DeskStat<null>; messages: [] };
     pendingRx: { spectacle: DeskStat<number | null>; contactLens: DeskStat<null>; labOrdersUnsent: DeskStat<null>; oldestWaiting: DeskStat<number | null> };
     productPickup: { openOrders: DeskStat<number | null>; atLab: DeskStat<number | null>; readyNotNotified: DeskStat<null>; awaitingPickup: DeskStat<number | null> };

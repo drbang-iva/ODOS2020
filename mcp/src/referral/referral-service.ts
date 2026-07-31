@@ -25,6 +25,8 @@ export const REFERRAL_INCLUDE_LIST_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/referral-include-list";
 export const REFERRAL_LETTER_BODY_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/referral-letter-body";
+export const REFERRAL_DIRECTION_CODE_SYSTEM =
+  "https://odos2020.com/fhir/CodeSystem/referral-direction";
 export const REFERRAL_MEDIA_MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 export const REFERRAL_MEDIA_MAX_TOTAL_BYTES = 25 * 1024 * 1024;
 
@@ -130,6 +132,14 @@ export function buildReferralServiceRequest(input: {
     status: "draft",
     intent: "order",
     code: { text: "Specialist referral" },
+    category: [{
+      coding: [{
+        system: REFERRAL_DIRECTION_CODE_SYSTEM,
+        code: "outbound",
+        display: "Outbound referral",
+      }],
+      text: "Outbound referral",
+    }],
     ...(input.priority ? { priority: input.priority } : {}),
     ...(input.reasonText ? { reasonCode: [{ text: input.reasonText }] } : {}),
     subject: { reference: input.subjectReference, display: input.subjectDisplay },
@@ -145,6 +155,14 @@ export function buildReferralServiceRequest(input: {
       { url: REFERRAL_LETTER_BODY_EXTENSION_URL, valueString: input.letterBody },
     ],
   };
+}
+
+export function referralDirectionOf(
+  serviceRequest: ServiceRequest,
+): "inbound" | "outbound" | undefined {
+  const code = serviceRequest.category?.flatMap((category) => category.coding ?? [])
+    .find((coding) => coding.system === REFERRAL_DIRECTION_CODE_SYSTEM)?.code;
+  return code === "inbound" || code === "outbound" ? code : undefined;
 }
 
 export function readReferralIncludeList(serviceRequest: ServiceRequest): ReferralIncludeList {
@@ -710,7 +728,7 @@ async function readReferralTarget(
   }
 }
 
-async function readCorrespondenceSender(
+export async function readCorrespondenceSender(
   fhir: ReferralFhirClient,
   reference: string,
 ): Promise<{ name: string; credentials: string }> {
@@ -773,8 +791,8 @@ function referralTargetDisplay(target: Practitioner | PractitionerRole | Organiz
 
 function referralTargetSnapshot(serviceRequest: ServiceRequest): string {
   const performer = serviceRequest.performer?.[0];
-  if (!performer?.reference) throw new Error("Referral ServiceRequest is missing its target reference.");
-  assertTargetReference(performer.reference);
+  if (!performer) throw new Error("Referral ServiceRequest is missing its target.");
+  if (performer.reference) assertTargetReference(performer.reference);
   if (!performer.display?.trim()) {
     throw new Error("Referral ServiceRequest is missing its snapshotted target display.");
   }

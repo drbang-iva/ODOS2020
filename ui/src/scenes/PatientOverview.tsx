@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
-import type { Patient } from "@medplum/fhirtypes";
+import type { Patient, ServiceRequest } from "@medplum/fhirtypes";
 import {
   fetchPatientOverview,
   fetchStickyNoteHistory,
@@ -22,6 +22,11 @@ import {
   findLatestActiveVisionPrescription,
   opticalOrderPath,
 } from "../lib/optical-order";
+import {
+  referralApi,
+  type ConsultReportArtifactResponse,
+  type ReferralApi,
+} from "../components/referral/referral-api";
 
 interface PatientOverviewApi {
   fetchOverview: typeof fetchPatientOverview;
@@ -63,6 +68,7 @@ export function PatientOverview({
   const [packageRevision, setPackageRevision] = useState(0);
   const [activeRxId, setActiveRxId] = useState<string | null>();
   const [rxError, setRxError] = useState<string>();
+  const [correspondenceOpen, setCorrespondenceOpen] = useState(false);
   const requestIdRef = useRef(0);
   const historyRequestIdRef = useRef(0);
 
@@ -196,6 +202,14 @@ export function PatientOverview({
             />
           )}
           <div className="odos-overview-actions">
+            <button
+              type="button"
+              className="odos-overview-button"
+              disabled={!patient.id}
+              onClick={() => setCorrespondenceOpen(true)}
+            >
+              Start correspondence
+            </button>
             <button type="button" className="odos-overview-button" onClick={() => setDepositingCreditBank(true)}>Deposit Credit Bank</button>
             <button type="button" className="odos-overview-button" onClick={() => setSellingPackage(true)}>Sell package</button>
             {patient.id && activeRxId ? (
@@ -242,6 +256,13 @@ export function PatientOverview({
               </article>
             ))}
           </section>
+        )}
+
+        {correspondenceOpen && patient.id && (
+          <ConsultReportDraftPanel
+            patientId={patient.id}
+            onClose={() => setCorrespondenceOpen(false)}
+          />
         )}
 
         {error && <p className="odos-overview-error" role="alert">{error}</p>}
@@ -353,6 +374,93 @@ export function PatientOverview({
         )}
       </section>
     </main>
+  );
+}
+
+export function ConsultReportDraftPanel({
+  patientId,
+  onClose,
+  api = referralApi,
+}: {
+  patientId: string;
+  onClose: () => void;
+  api?: Pick<ReferralApi, "listInboundReferrals" | "previewConsultReport">;
+}) {
+  const [referrals, setReferrals] = useState<ServiceRequest[]>();
+  const [selectedId, setSelectedId] = useState("");
+  const [artifact, setArtifact] = useState<ConsultReportArtifactResponse>();
+  const [error, setError] = useState<string>();
+  const [previewing, setPreviewing] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void api.listInboundReferrals(patientId, controller.signal)
+      .then((rows) => {
+        setReferrals(rows);
+        setSelectedId(rows[0]?.id ?? "");
+      })
+      .catch((reason) => {
+        if (!controller.signal.aborted) setError(messageOf(reason));
+      });
+    return () => controller.abort();
+  }, [api, patientId]);
+
+  async function createDraft() {
+    if (!selectedId) return;
+    setPreviewing(true);
+    setError(undefined);
+    try {
+      setArtifact(await api.previewConsultReport(patientId, selectedId));
+    } catch (reason) {
+      setError(messageOf(reason));
+    } finally {
+      setPreviewing(false);
+    }
+  }
+
+  return (
+    <section className="odos-sticky-history" aria-label="Start correspondence">
+      <div>
+        <h2>Consult report</h2>
+        <button type="button" onClick={onClose}>Close</button>
+      </div>
+      {!referrals && !error && <p>Loading inbound referrals…</p>}
+      {referrals?.length === 0 && <p>No inbound referral is available for a consult report.</p>}
+      {referrals && referrals.length > 0 && (
+        <React.Fragment>
+          <label>
+            Inbound referral
+            <select
+              aria-label="Inbound referral"
+              value={selectedId}
+              onChange={(event) => {
+                setSelectedId(event.target.value);
+                setArtifact(undefined);
+              }}
+            >
+              {referrals.map((referral) => (
+                <option key={referral.id} value={referral.id}>
+                  {referral.requester?.display ?? "Referrer not named"} · {referral.reasonCode?.[0]?.text ?? "Reason not recorded"}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="button" disabled={previewing} onClick={() => void createDraft()}>
+            {previewing ? "Creating draft…" : "Create consult-report draft"}
+          </button>
+        </React.Fragment>
+      )}
+      {artifact && (
+        <React.Fragment>
+          <p>{artifact.sourceEncounter.label}</p>
+          <iframe
+            title="Consult report preview"
+            src={`data:application/pdf;base64,${artifact.pdfBase64}`}
+          />
+        </React.Fragment>
+      )}
+      {error && <p className="odos-overview-error" role="alert">{error}</p>}
+    </section>
   );
 }
 

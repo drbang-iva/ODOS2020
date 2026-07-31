@@ -62,7 +62,7 @@ const CREATE_BODY = {
   reasonText: "New central distortion",
 };
 
-test("referral endpoint fails closed for unauthenticated, non-chart-write, and out-of-compartment callers", async () => {
+test("referral drafts allow front desk while authentication and patient-compartment fences remain closed", async () => {
   const fhir = seededFhir();
   const forbiddenAuth = "Bearer front-desk-denied";
   const outsideCompartmentAuth = "Bearer compartment-denied";
@@ -71,7 +71,7 @@ test("referral endpoint fails closed for unauthenticated, non-chart-write, and o
     patientId: "p1",
     body: CREATE_BODY,
   });
-  const forbidden = await handleCreateReferralRequest(deps(fhir, {
+  const frontDeskDraft = await handleCreateReferralRequest(deps(fhir, {
     role: "front-desk",
     authToken: forbiddenAuth,
     staffReference: "Practitioner/front-desk-denied",
@@ -91,12 +91,23 @@ test("referral endpoint fails closed for unauthenticated, non-chart-write, and o
     action: "preview",
     body: {},
   });
+  const frontDeskSend = await handleReferralArtifactRequest(deps(fhir, {
+    role: "front-desk",
+    authToken: forbiddenAuth,
+    staffReference: "Practitioner/front-desk-denied",
+  }), {
+    authHeader: forbiddenAuth,
+    patientId: "p1",
+    referralId: "referral-1",
+    action: "send",
+    body: {},
+  });
 
   assert.equal(unauthenticated.status, 401);
-  assert.equal(forbidden.status, 403);
+  assert.equal(frontDeskDraft.status, 201);
   assert.equal(outsideCompartment.status, 403);
-  assert.equal(fhir.created.length, 0);
-  assert.equal(fhir.readKeys.length, 0);
+  assert.equal(frontDeskSend.status, 403);
+  assert.equal(fhir.created.filter((resource) => resource.resourceType === "ServiceRequest").length, 1);
 });
 
 test("referral creation derives requester from the authenticated clinician", async () => {
@@ -513,14 +524,14 @@ test("referral defaults return system values for an unsaved provider and round-t
   assert.equal(basics[0]?.identifier?.[0]?.value, "Practitioner/clinician-1");
 });
 
-test("referral defaults require authentication and chart.write", async () => {
+test("referral defaults require authentication and remain available to drafting front-desk staff", async () => {
   const fhir = seededFhir();
   const unauthenticated = await handleReadReferralDefaultsRequest(
     deps(fhir, { authenticated: false }),
     { authHeader: undefined },
   );
   const forbiddenAuth = "Bearer front-desk-denied";
-  const forbidden = await handleSaveReferralDefaultsRequest(deps(fhir, {
+  const frontDesk = await handleSaveReferralDefaultsRequest(deps(fhir, {
     role: "front-desk",
     authToken: forbiddenAuth,
     staffReference: "Practitioner/front-desk-denied",
@@ -530,8 +541,8 @@ test("referral defaults require authentication and chart.write", async () => {
   });
 
   assert.equal(unauthenticated.status, 401);
-  assert.equal(forbidden.status, 403);
-  assert.equal(fhir.resources("Basic").length, 0);
+  assert.equal(frontDesk.status, 200);
+  assert.equal(fhir.resources("Basic").length, 1);
 });
 
 test("referral defaults complete a save when conditional create finds a concurrent resource", async () => {
@@ -555,7 +566,7 @@ test("referral defaults complete a save when conditional create finds a concurre
   assert.equal(fhir.resources("Basic")[0]?.id, "concurrent-defaults");
 });
 
-test("registered HTTP routes expose templates, draft mutation, apply, preview, and send actions", async () => {
+test("registered HTTP routes expose outbound and reciprocal correspondence operations", async () => {
   const fhir = seededFhir();
   let serviceAuthCalls = 0;
   const app = express();
@@ -618,6 +629,48 @@ test("registered HTTP routes expose templates, draft mutation, apply, preview, a
       headers,
       body: "{}",
     });
+    const inboundCreated = await fetch(
+      `http://127.0.0.1:${port}/correspondence/inbound-referrals/patients/p1`,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          referrerReference: "Organization/retina-1",
+          referrerDisplay: "Retina Group",
+          performerReference: "Practitioner/clinician-1",
+          captureSource: "front-desk",
+          reasonText: "Retinal concern",
+        }),
+      },
+    );
+    const inboundBody = await inboundCreated.json() as {
+      serviceRequestReference: string;
+    };
+    const inboundId = inboundBody.serviceRequestReference.split("/")[1]!;
+    const inboundListed = await fetch(
+      `http://127.0.0.1:${port}/correspondence/inbound-referrals/patients/p1`,
+      { headers },
+    );
+    fhir.put({
+      resourceType: "Encounter",
+      id: "signed-consult",
+      status: "finished",
+      class: { code: "AMB" },
+      subject: { reference: "Patient/p1" },
+      period: { end: "2026-07-30T16:00:00.000Z" },
+    } satisfies Encounter);
+    const consultPreview = await fetch(
+      `http://127.0.0.1:${port}/correspondence/inbound-referrals/patients/p1/${inboundId}/preview`,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ encounterReference: "Encounter/signed-consult" }),
+      },
+    );
+    const signatureRead = await fetch(
+      `http://127.0.0.1:${port}/correspondence/providers/clinician-1/signature`,
+      { headers },
+    );
 
     assert.equal(templates.status, 200);
     assert.equal(readDefaults.status, 200);
@@ -630,7 +683,11 @@ test("registered HTTP routes expose templates, draft mutation, apply, preview, a
     assert.equal(applied.status, 200);
     assert.equal(previewed.status, 200);
     assert.equal(sent.status, 200);
-    assert.equal(serviceAuthCalls, 11);
+    assert.equal(inboundCreated.status, 201);
+    assert.equal(inboundListed.status, 200);
+    assert.equal(consultPreview.status, 200);
+    assert.equal(signatureRead.status, 200);
+    assert.equal(serviceAuthCalls, 15);
     assert.equal(fhir.provenances.length, 1);
   } finally {
     await new Promise<void>((resolve, reject) =>

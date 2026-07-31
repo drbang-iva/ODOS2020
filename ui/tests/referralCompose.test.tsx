@@ -205,6 +205,39 @@ test("the referral API turns documented 409 responses into a reopen-required con
   );
 });
 
+test("the referral API posts front-desk inbound capture through the correspondence boundary", async () => {
+  let call: { url: string; method?: string; body?: unknown } | undefined;
+  const api = createReferralApi(async (input, init) => {
+    call = {
+      url: String(input),
+      method: init?.method,
+      body: typeof init?.body === "string" ? JSON.parse(init.body) : undefined,
+    };
+    return jsonResponse({ serviceRequest: referral() });
+  });
+
+  await api.createInboundReferral({
+    patientId: "p1",
+    referrerReference: "Practitioner/external-1",
+    referrerDisplay: "Dr. Outside",
+    performerReference: "Practitioner/doctor",
+    captureSource: "front-desk",
+    reasonText: "Retinal concern",
+  });
+
+  assert.deepEqual(call, {
+    url: "/correspondence/inbound-referrals/patients/p1",
+    method: "POST",
+    body: {
+      referrerReference: "Practitioner/external-1",
+      referrerDisplay: "Dr. Outside",
+      performerReference: "Practitioner/doctor",
+      captureSource: "front-desk",
+      reasonText: "Retinal concern",
+    },
+  });
+});
+
 test("clearing the composed reason sends an explicit null draft update", async () => {
   const originalWindow = globalThis.window;
   const updates: ReferralDraftUpdate[] = [];
@@ -458,6 +491,12 @@ function apiStub(): ReferralApi {
     searchConsultants: async () => [],
     loadRecentConsultants: async () => [],
     createReferral: async () => referral(),
+    createInboundReferral: async () => referral(),
+    listInboundReferrals: async () => [],
+    previewConsultReport: async () => ({
+      ...artifactResponse(""),
+      sourceEncounter: { reference: "Encounter/e1", date: "2026-07-31", label: "Signed encounter" },
+    }),
     updateReferral: async () => referral(),
     regenerateReferral: async () => referral(),
     applyTemplate: async () => referral(),
