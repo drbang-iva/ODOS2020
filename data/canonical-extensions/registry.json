@@ -1,6 +1,6 @@
 {
   "resourceType": "ODOSCanonicalExtensionRegistry",
-  "generatedAt": "2026-07-26",
+  "generatedAt": "2026-07-30",
   "extensions": [
     {
       "url": "https://odos2020.com/fhir/StructureDefinition/odos-fax-callback-token",
@@ -667,6 +667,84 @@
       "namespace": "patient-identity",
       "status": "active",
       "sliceConsumer": "patient-identity"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-comms-opt-out",
+      "namespace": "communications",
+      "status": "active",
+      "sliceConsumer": "native-comms-slice1"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-patient-timezone",
+      "namespace": "communications",
+      "status": "active",
+      "sliceConsumer": "native-comms-slice1"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/comms-campaign-id",
+      "namespace": "communications",
+      "status": "active",
+      "sliceConsumer": "native-comms-slice1"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/comms-send-claim-id",
+      "namespace": "communications",
+      "status": "active",
+      "sliceConsumer": "native-comms-slice1"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/comms-anchor",
+      "namespace": "communications",
+      "status": "active",
+      "sliceConsumer": "native-comms-slice1"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/comms-offset-minutes",
+      "namespace": "communications",
+      "status": "active",
+      "sliceConsumer": "native-comms-slice1"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/comms-rescheduled-at",
+      "namespace": "communications",
+      "status": "active",
+      "sliceConsumer": "native-comms-slice1"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/comms-provider-message-id",
+      "namespace": "communications",
+      "status": "active",
+      "sliceConsumer": "native-comms-slice1"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/tracked-link-target-url",
+      "namespace": "communications",
+      "status": "active",
+      "sliceConsumer": "native-comms-slice1"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/tracked-link-campaign-id",
+      "namespace": "communications",
+      "status": "active",
+      "sliceConsumer": "native-comms-slice1"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/tracked-link-message-id",
+      "namespace": "communications",
+      "status": "active",
+      "sliceConsumer": "native-comms-slice1"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/tracked-link-clicked-at",
+      "namespace": "communications",
+      "status": "active",
+      "sliceConsumer": "native-comms-slice1"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/tracked-link-reference",
+      "namespace": "communications",
+      "status": "active",
+      "sliceConsumer": "native-comms-slice1"
     }
   ]
 }
