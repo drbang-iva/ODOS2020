@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import {
   AxialGrowthChart,
@@ -43,6 +43,7 @@ export function EyeGrowthSection({ patientReference, encounterReference, onSaved
   const [status, setStatus] = useState<SectionSaveStatus | null>(null);
   const [eyes, setEyes] = useState<Record<"OD" | "OS", EyeInput>>(EMPTY_EYES);
   const [cornealRadiusErrors, setCornealRadiusErrors] = useState<Partial<Record<"OD" | "OS", string>>>({});
+  const pendingCornealRadiusClamp = useRef<Partial<Record<"OD" | "OS", string>>>({});
   const [biometryMethod, setBiometryMethod] = useState<"OPTICAL_BIOMETRY" | "ULTRASOUND_A_SCAN">("OPTICAL_BIOMETRY");
   const [instrument, setInstrument] = useState("");
   const [history, setHistory] = useState<EyeGrowthHistory | null>(null);
@@ -91,7 +92,7 @@ export function EyeGrowthSection({ patientReference, encounterReference, onSaved
         const cornealRadiusMm = rawCornealRadius && !cornealRadiusError
           ? Number(rawCornealRadius)
           : undefined;
-        if (rawCornealRadius) nextCornealRadiusErrors[eye] = cornealRadiusError;
+        if (rawCornealRadius && cornealRadiusError) nextCornealRadiusErrors[eye] = cornealRadiusError;
         return [[eye, {
           axialLengthMm,
           ...(cornealRadiusMm !== undefined ? { cornealRadiusMm } : {}),
@@ -212,8 +213,22 @@ export function EyeGrowthSection({ patientReference, encounterReference, onSaved
                           const rawValue = (event.target as { value?: unknown }).value;
                           if (typeof rawValue !== "string") return;
                           const warning = cornealRadiusWarning(rawValue, eye);
+                          const numericValue = Number(rawValue.trim());
+                          const wasClamped = Number.isFinite(numericValue) && (numericValue < 5 || numericValue > 12);
+                          if (wasClamped) {
+                            pendingCornealRadiusClamp.current[eye] = rawValue;
+                            queueMicrotask(() => {
+                              if (pendingCornealRadiusClamp.current[eye] === rawValue) {
+                                delete pendingCornealRadiusClamp.current[eye];
+                              }
+                            });
+                          } else {
+                            delete pendingCornealRadiusClamp.current[eye];
+                          }
                           if (warning) {
                             setCornealRadiusErrors((current) => ({ ...current, [eye]: warning }));
+                          } else {
+                            setCornealRadiusErrors((current) => ({ ...current, [eye]: undefined }));
                           }
                         }}
                       >
@@ -225,11 +240,15 @@ export function EyeGrowthSection({ patientReference, encounterReference, onSaved
                           step={0.01}
                           format={(value) => value.toFixed(2)}
                           onChange={(value) => {
+                            const preserveClampWarning = pendingCornealRadiusClamp.current[eye] !== undefined;
+                            delete pendingCornealRadiusClamp.current[eye];
                             setEyes((current) => ({
                               ...current,
                               [eye]: { ...current[eye], cornealRadius: value.toFixed(2) },
                             }));
-                            setCornealRadiusErrors((current) => ({ ...current, [eye]: undefined }));
+                            if (!preserveClampWarning) {
+                              setCornealRadiusErrors((current) => ({ ...current, [eye]: undefined }));
+                            }
                           }}
                           ariaLabel={`${eye} corneal radius in millimeters`}
                           ariaInvalid={cornealRadiusErrors[eye] ? true : undefined}
@@ -238,6 +257,7 @@ export function EyeGrowthSection({ patientReference, encounterReference, onSaved
                           states={[{ value: "", label: "Not recorded" }]}
                           selectedState={eyes[eye].cornealRadius === "" ? "" : undefined}
                           onStateChange={() => {
+                            delete pendingCornealRadiusClamp.current[eye];
                             setEyes((current) => ({
                               ...current,
                               [eye]: { ...current[eye], cornealRadius: "" },
@@ -338,7 +358,8 @@ function cornealRadiusWarning(rawValue: string, eye: "OD" | "OS"): string | unde
     return `Corneal radius for ${eye} was cleared because it is not a number.`;
   }
   if (value < 5 || value > 12) {
-    return `Corneal radius for ${eye} was cleared because it must be between 5 and 12 mm.`;
+    const adjustedValue = Math.min(12, Math.max(5, value));
+    return `Corneal radius for ${eye} was adjusted to ${adjustedValue.toFixed(2)} mm (valid range 5-12 mm).`;
   }
   return undefined;
 }

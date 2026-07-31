@@ -473,6 +473,26 @@ test("malformed typed corneal radii return to blank without discarding valid axi
   }
 });
 
+test("finite out-of-range corneal radii show their clamped values and warnings after blur", async () => {
+  const { posted, renderedAfterBlur, cornealRadiusValues } = await submitEyeGrowthFixture({
+    OD: { axialLength: "24.12", cornealRadius: "99" },
+    OS: { axialLength: "24.31", cornealRadius: "3" },
+  });
+
+  assert.equal(cornealRadiusValues.OD, "12.00");
+  assert.equal(cornealRadiusValues.OS, "5.00");
+  assert.match(
+    renderedAfterBlur,
+    /Corneal radius for OD was adjusted to 12\.00 mm \(valid range 5-12 mm\)/,
+  );
+  assert.match(
+    renderedAfterBlur,
+    /Corneal radius for OS was adjusted to 5\.00 mm \(valid range 5-12 mm\)/,
+  );
+  assert.equal(posted?.eyes.OD.cornealRadiusMm, 12);
+  assert.equal(posted?.eyes.OS.cornealRadiusMm, 5);
+});
+
 test("the generic axial-length prompt appears only when axial length is genuinely missing", async () => {
   const { posted, rendered } = await submitEyeGrowthFixture({
     OD: { axialLength: "", cornealRadius: "7.70" },
@@ -484,10 +504,16 @@ test("the generic axial-length prompt appears only when axial length is genuinel
 
 async function submitEyeGrowthFixture(
   input: Partial<Record<"OD" | "OS", { axialLength: string; cornealRadius: string }>>,
-): Promise<{ posted: { eyes: Record<string, Record<string, unknown>> } | null; rendered: string }> {
+): Promise<{
+  posted: { eyes: Record<string, Record<string, unknown>> } | null;
+  rendered: string;
+  renderedAfterBlur: string;
+  cornealRadiusValues: Partial<Record<"OD" | "OS", string>>;
+}> {
   const originalFetch = globalThis.fetch;
   let posted: { eyes: Record<string, Record<string, unknown>> } | null = null;
   let renderer!: ReactTestRenderer;
+  const cornealRadiusValues: Partial<Record<"OD" | "OS", string>> = {};
   globalThis.fetch = async (request, init) => {
     const url = String(request);
     if (url.includes("/clinical-graph/eye-growth/history")) {
@@ -535,12 +561,14 @@ async function submitEyeGrowthFixture(
       act(() => {
         renderer.root.findByProps({ "data-corneal-radius-eye": eye })
           .props.onBlurCapture({ target: { value: values.cornealRadius } });
-      });
-      act(() => {
         renderer.root.findByProps({ "aria-label": `${eye} corneal radius in millimeters` })
           .props.onBlur();
       });
+      cornealRadiusValues[eye] = renderer.root
+        .findByProps({ "aria-label": `${eye} corneal radius in millimeters` })
+        .props.value;
     }
+    const renderedAfterBlur = JSON.stringify(renderer.toJSON());
     const recordButton = renderer.root.findAllByType("button")
       .find((button) => button.children.includes("Record measurement"));
     assert.ok(recordButton);
@@ -549,7 +577,12 @@ async function submitEyeGrowthFixture(
       await Promise.resolve();
       await Promise.resolve();
     });
-    return { posted, rendered: JSON.stringify(renderer.toJSON()) };
+    return {
+      posted,
+      rendered: JSON.stringify(renderer.toJSON()),
+      renderedAfterBlur,
+      cornealRadiusValues,
+    };
   } finally {
     if (renderer) act(() => renderer.unmount());
     globalThis.fetch = originalFetch;
