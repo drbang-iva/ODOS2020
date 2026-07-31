@@ -210,6 +210,28 @@ test("logout and an authenticated intercepted 401 clear the persisted session", 
   }
 });
 
+test("an authenticated cross-origin 401 cannot clear the active session", async () => {
+  const storage = memoryStorage();
+  storage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+    accessToken: "session-token",
+    expiresAt: Date.now() + 60_000,
+  }));
+  assert.equal(fhir.rehydrateSession(storage), true);
+  const host = { fetch: async (..._args: Parameters<typeof fetch>) => new Response(null, { status: 401 }) as Promise<Response> };
+  const stopIntercepting = fhir.interceptUnauthorizedResponses(host);
+  try {
+    const response = await host.fetch("https://remote.example.test/commercial-engine", {
+      headers: { Authorization: "Bearer session-token" },
+    });
+    assert.equal(response.status, 401);
+    assert.notEqual(storage.getItem(SESSION_STORAGE_KEY), null);
+    assert.equal(fhir.authHeader(), "Bearer session-token");
+  } finally {
+    stopIntercepting();
+    fhir.logout(storage);
+  }
+});
+
 test("an unauthenticated 401 cannot clear a different active session", async () => {
   const storage = memoryStorage();
   storage.setItem(SESSION_STORAGE_KEY, JSON.stringify({

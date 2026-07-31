@@ -7,7 +7,7 @@ export interface DeskSummary {
   cards: {
     schedule: { today: DeskStat<number>; confirmed: DeskStat<number>; checkedIn: DeskStat<number>; webRequests: DeskStat<number>; agenda: Array<{ time: string; patient: string; visitType: string }> };
     attention: { items: Array<{ tone: "alert" | "warn" | "info"; label: string; detail: string; href?: string }> };
-    correspondence: {
+    correspondence?: {
       draftsAwaitingSignature: { value: number; tone: "ok" | "warn" };
       repliesOwed: { value: number; tone: "ok" | "warn" };
       sendFailures: { value: number; tone: "ok" | "alert" };
@@ -39,7 +39,7 @@ export async function fetchDeskSummary(fetchImpl: typeof fetch = fetch): Promise
       ...(fhir.authHeader() ? { Authorization: fhir.authHeader()! } : {}),
     },
   });
-  const body = await response.json() as DeskSummary & { error?: string };
-  if (!response.ok) throw new Error(body.error ?? `Desk summary failed with HTTP ${response.status}.`);
-  return body;
+  const body = await response.json().catch(() => undefined) as (DeskSummary & { error?: string }) | undefined;
+  if (!response.ok) throw new Error(body?.error ?? `Desk summary failed with HTTP ${response.status}.`);
+  return body as DeskSummary;
 }

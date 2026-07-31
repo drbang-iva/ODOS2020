@@ -36,9 +36,9 @@ export async function fetchWhoAmI(fetchImpl: typeof fetch = fetch): Promise<WhoA
       ...(authorization ? { Authorization: authorization } : {}),
     },
   });
-  const body = await response.json() as Partial<WhoAmIResponse> & { error?: string; detail?: string };
-  if (!response.ok) throw new Error(body.detail ?? body.error ?? `Practice role lookup failed with HTTP ${response.status}.`);
-  const roles = PRACTICE_ROLE_IDS.filter((role) => body.roles?.includes(role));
+  const body = await response.json().catch(() => undefined) as (Partial<WhoAmIResponse> & { error?: string; detail?: string }) | undefined;
+  if (!response.ok) throw new Error(body?.detail ?? body?.error ?? `Practice role lookup failed with HTTP ${response.status}.`);
+  const roles = PRACTICE_ROLE_IDS.filter((role) => body?.roles?.includes(role));
   if (roles.length === 0) throw new Error("No recognized practice role is assigned to this account.");
   return { roles };
 }

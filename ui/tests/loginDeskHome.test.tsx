@@ -7,10 +7,10 @@ import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { LoginScreen, PASSWORD_RESET_CONFIRMATION, requestPasswordReset, submitLogin } from "../src/scenes/LoginScreen";
 import { PasswordResetTransportError } from "../src/lib/auth-api";
 import { fetchWhoAmI } from "../src/lib/practice-roles";
+import { fetchDeskSummary, type DeskSummary } from "../src/lib/desk-summary";
 import { submitSetPassword } from "../src/scenes/SetPasswordScreen";
 import { CLINIC_PATH, COCKPIT_HOVER_CLOSE_DELAY_MS, DESK_CARD_STORAGE_KEY, DESK_HOME_PATH, DeskHome, displayStat, loadDeskCardIds, reorderDeskCards, sanitizeDeskCardIds } from "../src/scenes/DeskHome";
 import { clearCockpitPanelPosition, COCKPIT_PANEL_POSITION_STORAGE_KEY, loadCockpitPanelPosition, saveCockpitPanelPosition } from "../src/scenes/frontdesk/CockpitGuestPanel";
-import type { DeskSummary } from "../src/lib/desk-summary";
 
 test("login screen renders real email and password fields with no environment credential fallback", () => {
   const html = renderToStaticMarkup(<LoginScreen returnTo={DESK_HOME_PATH} onAuthenticated={() => undefined} />);
@@ -97,6 +97,17 @@ test("whoami no-role errors render the server detail instead of only the machine
   );
 });
 
+test("whoami and Desk summary empty error bodies surface their HTTP status", async () => {
+  await assert.rejects(
+    () => fetchWhoAmI(async () => new Response(null, { status: 502 })),
+    /Practice role lookup failed with HTTP 502\./,
+  );
+  await assert.rejects(
+    () => fetchDeskSummary(async () => new Response(null, { status: 503 })),
+    /Desk summary failed with HTTP 503\./,
+  );
+});
+
 test("Desk home keeps Customize on-page and leaves global navigation to AppShell", () => {
   const html = renderToStaticMarkup(<DeskHome />);
   assert.match(html, /The Desk/);
@@ -132,6 +143,16 @@ test("Front Line without a CommsProvider renders one wiring panel and no zero pl
   assert.match(frontLine, /Comms counts arrive with the GHL adapter — Phase 3b/);
   assert.doesNotMatch(frontLine, />0</);
   assert.doesNotMatch(frontLine, /Need reply/);
+});
+
+test("Desk home keeps the Correspondence card available when its summary block is absent", () => {
+  const summary = emptyDeskSummary();
+  const { correspondence: _correspondence, ...cards } = summary.cards;
+  const withoutCorrespondence: DeskSummary = { ...summary, cards };
+  const html = renderToStaticMarkup(<DeskHome initialSummary={withoutCorrespondence} />);
+  assert.match(html, /Correspondence/);
+  assert.match(html, /Correspondence <i>· unavailable<\/i>/);
+  assert.match(html, /Correspondence counts are unavailable from this ODOS server\./);
 });
 
 test("Needs attention renders the exact all-clear state when every target is met", () => {

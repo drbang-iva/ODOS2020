@@ -344,6 +344,14 @@ function cardModel(id: DeskCardId, summary?: DeskSummary): { tone: DeskTone; kic
     case "attention": { const items = summary.cards.attention.items; return { tone: items[0]?.tone ?? "ok", kicker: items.length ? `${items.length} item${items.length === 1 ? "" : "s"} need you` : "clear", target: "clear by EOD", content: items.length ? <div className="odos-attention-list">{items.map((item) => <div key={item.label} className={`odos-row-tone-${item.tone}`}><TonePip tone={item.tone} /><span><b>{item.label}</b><small>{item.detail}</small></span></div>)}</div> : <p className="odos-all-clear">All clear — nothing needs you.</p> }; }
     case "correspondence": {
       const value = summary.cards.correspondence;
+      if (!value) {
+        return {
+          tone: "off",
+          kicker: "unavailable",
+          target: "live correspondence counts",
+          content: <WiringPanel>Correspondence counts are unavailable from this ODOS server.</WiringPanel>,
+        };
+      }
       const tone: DeskTone = value.sendFailures.value > 0
         ? "alert"
         : value.draftsAwaitingSignature.value > 0 || value.repliesOwed.value > 0
