@@ -74,9 +74,14 @@ export async function importLegacyPatient(input: {
   readonly runId: string;
   readonly projectId: string;
   readonly manifest: PatientImportManifest;
+  readonly allowOperatorTestDataChart?: boolean;
 }): Promise<PatientImportResult> {
   const manifest = patientImportManifestSchema.parse(input.manifest);
-  assertTypicalChart(manifest);
+  assertSourcePairIsNotJunk(manifest);
+  assertOperatorChartAcknowledged(
+    manifest,
+    input.allowOperatorTestDataChart === true,
+  );
   assertIdentityJoin(manifest.epm, manifest.ehr);
 
   let junkRejections = 0;
@@ -255,13 +260,7 @@ export function junkRowReasons(row: SourcePerson): string[] {
   return reasons;
 }
 
-function assertTypicalChart(manifest: PatientImportManifest): void {
-  if (
-    manifest.epm.sourceKey === FORBIDDEN_M2A_EPM_SOURCE_KEY
-    || manifest.ehr.sourceKey === FORBIDDEN_M2A_EHR_SOURCE_KEY
-  ) {
-    throw new Error("M2a refuses the operator test-data chart; select one typical chart.");
-  }
+function assertSourcePairIsNotJunk(manifest: PatientImportManifest): void {
   const selectedReasons = [
     ...junkRowReasons(manifest.epm),
     ...junkRowReasons(manifest.ehr),
@@ -270,6 +269,24 @@ function assertTypicalChart(manifest: PatientImportManifest): void {
     throw new Error(
       `Selected source pair is a junk-row candidate (${[...new Set(selectedReasons)].join(",")}).`,
     );
+  }
+}
+
+function assertOperatorChartAcknowledged(
+  manifest: PatientImportManifest,
+  acknowledged: boolean,
+): void {
+  // Chart 969 must never calibrate junk rules, but that process rule is distinct
+  // from importing it for explicit per-Encounter adjudication downstream.
+  const hasOperatorEpmKey =
+    manifest.epm.sourceKey === FORBIDDEN_M2A_EPM_SOURCE_KEY;
+  const hasOperatorEhrKey =
+    manifest.ehr.sourceKey === FORBIDDEN_M2A_EHR_SOURCE_KEY;
+  if (
+    (hasOperatorEpmKey || hasOperatorEhrKey)
+    && !(acknowledged && hasOperatorEpmKey && hasOperatorEhrKey)
+  ) {
+    throw new Error("M2a refuses the operator test-data chart; select one typical chart.");
   }
 }
 
