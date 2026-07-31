@@ -95,6 +95,10 @@ test("phase 1 emits 12 schema-valid private manifests joined by name and DOB", (
       manifests.find((manifest) => manifest.ehr.sourceKey === "971")?.epm.sourceKey,
       "7000971",
     );
+    assert.equal(
+      manifests.some((manifest) => manifest.epm.sourceKey === "unrelated-normal"),
+      false,
+    );
     for (const entry of result.manifests) {
       assert.equal(statSync(entry.path).mode & 0o777, 0o600);
       for (const junkRow of entry.manifest.junkRows) {
@@ -353,6 +357,12 @@ function patientFixture(): {
       FirstName: "123e4567-e89b-12d3-a456-426614174000",
       LastName: "Name",
       BirthDate: "01/01/1980",
+    }),
+    patientRow({
+      ID: "unrelated-normal",
+      FirstName: "Outside",
+      LastName: "Cohort",
+      BirthDate: "01/01/1960",
     }),
   ];
   writeFileSync(patientExportPath, patientCsv(epmRows));

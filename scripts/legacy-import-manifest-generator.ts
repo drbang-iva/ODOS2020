@@ -140,6 +140,7 @@ export function generatePatientImportManifests(input: {
   }
   assertUniqueSourceKeys(targetEhrPeople, "EHR");
 
+  // PatientExport is full-practice input; the 12-person EHR cohort defines the target identities.
   const epmByIdentity = new Map<string, PatientImportManifest["epm"][]>();
   for (const person of epmPeople.filter((row) => junkRowReasons(row).length === 0)) {
     const key = identityKey(person);
