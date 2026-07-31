@@ -21,7 +21,8 @@ import {
   EYEFINITY_APPOINTMENT_IDENTIFIER_SYSTEM,
   type AppointmentExportAmbiguity,
   type PreparedAppointmentRow,
-  VERIFIED_APPOINTMENT_EXPORT_OFFICE,
+  type VerifiedAppointmentExportOffice,
+  VERIFIED_APPOINTMENT_EXPORT_OFFICES,
 } from "./appointment-export.js";
 import type { ImportAction, ImportLedger, ImportResourceType } from "./import-ledger.js";
 import {
@@ -49,8 +50,16 @@ const visitTypeMappingSchema = z.object({
   display: z.string().trim().min(1),
 });
 
+const verifiedAppointmentExportOfficeSchema = z.enum(
+  [...VERIFIED_APPOINTMENT_EXPORT_OFFICES] as [
+    VerifiedAppointmentExportOffice,
+    ...VerifiedAppointmentExportOffice[],
+  ],
+);
+
 export const appointmentEncounterImportManifestSchema = z.object({
-  sourceOfficeNumber: z.literal(VERIFIED_APPOINTMENT_EXPORT_OFFICE),
+  sourceOfficeNumber: verifiedAppointmentExportOfficeSchema.optional(),
+  sourceOfficeNumbers: z.array(verifiedAppointmentExportOfficeSchema).min(2).optional(),
   patientReference: z.string().regex(/^Patient\/[A-Za-z0-9.-]+$/),
   patientUid: z.string().trim().min(1),
   epmPatientId: z.string().trim().min(1),
@@ -58,6 +67,24 @@ export const appointmentEncounterImportManifestSchema = z.object({
   organizationReference: z.string().regex(/^Organization\/[A-Za-z0-9.-]+$/),
   locationReference: z.string().regex(/^Location\/[A-Za-z0-9.-]+$/),
   visitTypeMap: z.record(visitTypeMappingSchema),
+}).superRefine((manifest, context) => {
+  if (Boolean(manifest.sourceOfficeNumber) === Boolean(manifest.sourceOfficeNumbers)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["sourceOfficeNumber"],
+      message: "Manifest requires exactly one singular or plural source-office declaration.",
+    });
+  }
+  if (
+    manifest.sourceOfficeNumbers
+    && new Set(manifest.sourceOfficeNumbers).size !== manifest.sourceOfficeNumbers.length
+  ) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["sourceOfficeNumbers"],
+      message: "Manifest sourceOfficeNumbers must be unique.",
+    });
+  }
 });
 
 export type AppointmentEncounterImportManifest = z.infer<
@@ -67,6 +94,7 @@ export type AppointmentEncounterImportManifest = z.infer<
 export interface AppointmentEncounterImportResult {
   readonly analysis: {
     readonly sourceRows: number;
+    readonly officeRowCounts: Readonly<Record<VerifiedAppointmentExportOffice, number>>;
     readonly exactDuplicates: number;
     readonly rowsAfterExactDedupe: number;
     readonly collisionGroups: number;
@@ -109,7 +137,7 @@ export async function importLegacyAppointmentsAndEncounters(input: {
   const manifest = appointmentEncounterImportManifestSchema.parse(input.manifest);
   const analysis = analyzeAppointmentExport(
     input.appointmentsCsv,
-    manifest.sourceOfficeNumber,
+    manifest.sourceOfficeNumbers ?? manifest.sourceOfficeNumber!,
   );
   const selectedRows = analysis.appointments.filter(
     (entry) => normalized(entry.row.PatientUID) === normalized(manifest.patientUid),
@@ -534,6 +562,7 @@ export async function importLegacyAppointmentsAndEncounters(input: {
   return {
     analysis: {
       sourceRows: analysis.sourceRows,
+      officeRowCounts: analysis.officeRowCounts,
       exactDuplicates: analysis.exactDuplicates,
       rowsAfterExactDedupe: analysis.rowsAfterExactDedupe,
       collisionGroups: analysis.collisionGroups,
@@ -1289,8 +1318,8 @@ function technicalVisitPeriod(date: string): Encounter["period"] {
 function appointmentSourceKeyPatientUid(sourceKey: string): string | undefined {
   try {
     const value = JSON.parse(sourceKey) as unknown;
-    return Array.isArray(value) && typeof value[0] === "string"
-      ? normalized(value[0])
+    return Array.isArray(value) && typeof value[1] === "string"
+      ? normalized(value[1])
       : undefined;
   } catch {
     return undefined;

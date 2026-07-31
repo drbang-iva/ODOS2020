@@ -1,6 +1,17 @@
 import { parse } from "csv-parse/sync";
 
-export const VERIFIED_APPOINTMENT_EXPORT_OFFICE = "00127314";
+const VERIFIED_APPOINTMENT_EXPORT_OFFICE_VALUES = [
+  "00127314",
+  "0161582",
+  "00127362",
+] as const;
+
+export type VerifiedAppointmentExportOffice =
+  (typeof VERIFIED_APPOINTMENT_EXPORT_OFFICE_VALUES)[number];
+
+export const VERIFIED_APPOINTMENT_EXPORT_OFFICES: ReadonlySet<
+  VerifiedAppointmentExportOffice
+> = new Set(VERIFIED_APPOINTMENT_EXPORT_OFFICE_VALUES);
 export const EYEFINITY_APPOINTMENT_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/eyefinity-appointment-composite";
 
@@ -49,6 +60,7 @@ export interface AppointmentExportAmbiguity {
 
 export interface AppointmentExportAnalysis {
   readonly sourceRows: number;
+  readonly officeRowCounts: Readonly<Record<VerifiedAppointmentExportOffice, number>>;
   readonly exactDuplicates: number;
   readonly rowsAfterExactDedupe: number;
   readonly collisionGroups: number;
@@ -69,13 +81,11 @@ interface ParsedCsvRecord {
 
 export function analyzeAppointmentExport(
   csv: string,
-  sourceOfficeNumber: string,
+  sourceOfficeNumbers: string | readonly string[] = [
+    ...VERIFIED_APPOINTMENT_EXPORT_OFFICES,
+  ],
 ): AppointmentExportAnalysis {
-  if (sourceOfficeNumber !== VERIFIED_APPOINTMENT_EXPORT_OFFICE) {
-    throw new Error(
-      `Appointment collision rules are verified only for office export ${VERIFIED_APPOINTMENT_EXPORT_OFFICE}; got ${sourceOfficeNumber}.`,
-    );
-  }
+  const expectedOfficeNumbers = expectedOffices(sourceOfficeNumbers);
 
   const parsed = parse(csv, {
     bom: true,
@@ -91,8 +101,12 @@ export function analyzeAppointmentExport(
   const uniqueRows: AppointmentExportRow[] = [];
   const duplicateSourceKeys: string[] = [];
   const seenRawRows = new Set<string>();
+  const officeRowCounts = Object.fromEntries(
+    [...VERIFIED_APPOINTMENT_EXPORT_OFFICES].map((officeNumber) => [officeNumber, 0]),
+  ) as Record<VerifiedAppointmentExportOffice, number>;
   for (const entry of parsed) {
-    validateRow(entry.record, sourceOfficeNumber);
+    const officeNumber = validateRow(entry.record, expectedOfficeNumbers);
+    officeRowCounts[officeNumber] += 1;
     if (seenRawRows.has(entry.raw)) {
       duplicateSourceKeys.push(appointmentCompositeKey(entry.record));
       continue;
@@ -162,6 +176,7 @@ export function analyzeAppointmentExport(
 
   return {
     sourceRows: parsed.length,
+    officeRowCounts,
     exactDuplicates: duplicateSourceKeys.length,
     rowsAfterExactDedupe: uniqueRows.length,
     collisionGroups,
@@ -178,6 +193,7 @@ export function analyzeAppointmentExport(
 
 export function appointmentCompositeKey(row: AppointmentExportRow): string {
   return JSON.stringify([
+    normalized(row.OfficeNum),
     normalized(row.PatientUID),
     parseAppointmentDate(row.appt_date),
     parseTime(row.appt_start_time),
@@ -236,11 +252,21 @@ function assertHeaders(headers: readonly string[]): void {
   }
 }
 
-function validateRow(row: AppointmentExportRow, sourceOfficeNumber: string): void {
+function validateRow(
+  row: AppointmentExportRow,
+  expectedOfficeNumbers: ReadonlySet<VerifiedAppointmentExportOffice>,
+): VerifiedAppointmentExportOffice {
   const rowOfficeNumber = normalized(row.OfficeNum);
-  if (rowOfficeNumber !== sourceOfficeNumber) {
+  if (!isVerifiedOffice(rowOfficeNumber)) {
     throw new Error(
-      `AppointmentsExport row office ${rowOfficeNumber || "(blank)"} does not match verified source office ${sourceOfficeNumber}.`,
+      `AppointmentsExport row office ${rowOfficeNumber || "(blank)"} is outside the verified office set ${verifiedOfficeList()}.`,
+    );
+  }
+  if (!expectedOfficeNumbers.has(rowOfficeNumber)) {
+    throw new Error(
+      `AppointmentsExport row office ${rowOfficeNumber} does not match declared source offices ${[
+        ...expectedOfficeNumbers,
+      ].join(", ")}.`,
     );
   }
   for (const field of [
@@ -266,6 +292,37 @@ function validateRow(row: AppointmentExportRow, sourceOfficeNumber: string): voi
   parseAppointmentDate(row.appt_date);
   parseTime(row.appt_start_time);
   parseTime(row.appt_end_time);
+  return rowOfficeNumber;
+}
+
+function expectedOffices(
+  sourceOfficeNumbers: string | readonly string[],
+): ReadonlySet<VerifiedAppointmentExportOffice> {
+  const values = typeof sourceOfficeNumbers === "string"
+    ? [sourceOfficeNumbers]
+    : sourceOfficeNumbers;
+  if (values.length === 0) {
+    throw new Error("Appointment export requires at least one declared source office.");
+  }
+  const expected = new Set<VerifiedAppointmentExportOffice>();
+  for (const value of values) {
+    const officeNumber = normalized(value);
+    if (!isVerifiedOffice(officeNumber)) {
+      throw new Error(
+        `Appointment export source office ${officeNumber || "(blank)"} is outside the verified office set ${verifiedOfficeList()}.`,
+      );
+    }
+    expected.add(officeNumber);
+  }
+  return expected;
+}
+
+function isVerifiedOffice(value: string): value is VerifiedAppointmentExportOffice {
+  return VERIFIED_APPOINTMENT_EXPORT_OFFICES.has(value as VerifiedAppointmentExportOffice);
+}
+
+function verifiedOfficeList(): string {
+  return [...VERIFIED_APPOINTMENT_EXPORT_OFFICES].join(", ");
 }
 
 function parseBoolean(value: string): boolean {
