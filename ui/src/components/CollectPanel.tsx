@@ -287,7 +287,7 @@ export function CollectPanel({
             disabled={disabled || !selectedCharges.length}
             value={amountInput}
             onChange={(event) => setAmountInput(event.target.value)}
-            className="mt-1.5 h-10 w-full rounded border border-white/15 bg-black/30 px-3 text-sm text-white disabled:opacity-40"
+            className="mt-1.5 min-h-11 w-full rounded border border-white/15 bg-black/30 px-3 text-sm text-white disabled:opacity-40"
           />
         </label>
         {error && <div role="alert" className="rounded border border-red-400/40 bg-red-950/40 p-3 text-sm text-red-200">{error}</div>}

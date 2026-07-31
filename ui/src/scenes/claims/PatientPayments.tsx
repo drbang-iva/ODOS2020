@@ -365,7 +365,7 @@ function InvoiceSelect({ label, value, invoices, onChange }: { label: string; va
 }
 
 function Field({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (value: string) => void; type?: "text" | "number" | "date" }) {
-  return <label className="block text-xs font-bold text-white/55">{label}<input type={type} min={type === "number" ? "0.01" : undefined} step={type === "number" ? "0.01" : undefined} value={value} onChange={(event) => onChange(event.target.value)} className="mt-1.5 h-10 w-full rounded border border-white/15 bg-black/30 px-3 text-sm text-white" /></label>;
+  return <label className="block text-xs font-bold text-white/55">{label}<input type={type} min={type === "number" ? "0.01" : undefined} step={type === "number" ? "0.01" : undefined} inputMode={type === "number" ? "decimal" : undefined} value={value} onChange={(event) => onChange(event.target.value)} className={`mt-1.5 w-full rounded border border-white/15 bg-black/30 px-3 text-sm text-white ${type === "number" ? "min-h-11" : "h-10"}`} /></label>;
 }
 
 function Tab({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {

@@ -1217,16 +1217,18 @@ function ChargeTable({
               <DisabledCell value="" />
               <td className="border-r border-white/10 px-2 py-2">
                 <input
-                  className="sidebar-input h-8 w-full"
+                  className="sidebar-input min-h-11 w-full"
                   type="number"
                   min="1"
+                  inputMode="decimal"
                   value={line.units}
                   onChange={(event) => onChange(updateLine(lines, line.id, { units: Number(event.target.value) || 1 }))}
                 />
               </td>
               <td className="border-r border-white/10 px-2 py-2">
                 <input
-                  className="sidebar-input h-8 w-full"
+                  className="sidebar-input min-h-11 w-full"
+                  inputMode="decimal"
                   value={formatMoneyInput(line.feeCents)}
                   onChange={(event) => onChange(updateLine(lines, line.id, { feeCents: dollarsToCents(event.target.value) }))}
                 />
@@ -1234,7 +1236,8 @@ function ChargeTable({
               <DisabledCell value="$0.00" />
               <td className="border-r border-white/10 px-2 py-2">
                 <input
-                  className="sidebar-input h-8 w-full"
+                  className="sidebar-input min-h-11 w-full"
+                  inputMode="decimal"
                   value={formatMoneyInput(line.taxCents)}
                   onChange={(event) => onChange(updateLine(lines, line.id, { taxCents: dollarsToCents(event.target.value) }))}
                 />

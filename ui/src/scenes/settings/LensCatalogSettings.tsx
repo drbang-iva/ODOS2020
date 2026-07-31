@@ -360,7 +360,7 @@ export function BulkPasteGrid({
                         <option value="flat-adder">Flat adder</option>
                       </select>
                       {rule.strategy === "multiplier" ? (
-                        <input aria-label={`${category} retail multiplier`} className="scheduler-input text-xs" type="number" min="0" step="0.1" value={rule.value} onChange={(event) => updateRule(category, { value: Number(event.target.value) })} />
+                        <input aria-label={`${category} retail multiplier`} className="scheduler-input text-xs" type="number" min="0" step="0.1" inputMode="decimal" value={rule.value} onChange={(event) => updateRule(category, { value: Number(event.target.value) })} />
                       ) : (
                         <CurrencyInput ariaLabel={`${category} flat adder`} className="scheduler-input text-xs" value={rule.value} onChange={(value) => updateRule(category, { value: value ?? 0 })} />
                       )}
