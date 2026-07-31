@@ -38,6 +38,14 @@ export interface ReferralArtifactResponse {
   provenanceReference?: string;
 }
 
+export interface ConsultReportArtifactResponse extends ReferralArtifactResponse {
+  sourceEncounter: {
+    reference: string;
+    date: string;
+    label: string;
+  };
+}
+
 export interface CorrespondenceTemplate {
   id: string;
   name: string;
@@ -77,6 +85,20 @@ export interface ReferralApi {
     priority: ReferralPriority;
     reasonText?: string;
   }): Promise<ServiceRequest>;
+  createInboundReferral(input: {
+    patientId: string;
+    referrerReference?: string;
+    referrerDisplay: string;
+    performerReference: string;
+    captureSource: "front-desk" | "fax" | "chart";
+    reasonText: string;
+  }): Promise<ServiceRequest>;
+  listInboundReferrals(patientId: string, signal?: AbortSignal): Promise<ServiceRequest[]>;
+  previewConsultReport(
+    patientId: string,
+    referralId: string,
+    signal?: AbortSignal,
+  ): Promise<ConsultReportArtifactResponse>;
   updateReferral(patientId: string, referralId: string, input: ReferralDraftUpdate): Promise<ServiceRequest>;
   regenerateReferral(patientId: string, referralId: string): Promise<ServiceRequest>;
   applyTemplate(patientId: string, referralId: string, templateId: string): Promise<ServiceRequest>;
@@ -157,6 +179,41 @@ export function createReferralApi(fetchImpl: typeof fetch = fetch): ReferralApi 
         },
       );
       return response.serviceRequest;
+    },
+
+    async createInboundReferral(input) {
+      const response = await requestJson<{ serviceRequest: ServiceRequest }>(
+        fetchImpl,
+        `/correspondence/inbound-referrals/patients/${encodeURIComponent(input.patientId)}`,
+        {
+          method: "POST",
+          body: {
+            ...(input.referrerReference ? { referrerReference: input.referrerReference } : {}),
+            referrerDisplay: input.referrerDisplay,
+            performerReference: input.performerReference,
+            captureSource: input.captureSource,
+            reasonText: input.reasonText,
+          },
+        },
+      );
+      return response.serviceRequest;
+    },
+
+    async listInboundReferrals(patientId, signal) {
+      const response = await requestJson<{ serviceRequests: ServiceRequest[] }>(
+        fetchImpl,
+        `/correspondence/inbound-referrals/patients/${encodeURIComponent(patientId)}`,
+        { signal },
+      );
+      return response.serviceRequests;
+    },
+
+    previewConsultReport(patientId, referralId, signal) {
+      return requestJson<ConsultReportArtifactResponse>(
+        fetchImpl,
+        `${inboundReferralPath(patientId, referralId)}/preview`,
+        { method: "POST", body: {}, signal },
+      );
     },
 
     async updateReferral(patientId, referralId, input) {
@@ -250,6 +307,10 @@ export function readReferralLetterBody(serviceRequest: ServiceRequest): string {
 
 function referralPath(patientId: string, referralId: string): string {
   return `/referrals/patients/${encodeURIComponent(patientId)}/${encodeURIComponent(referralId)}`;
+}
+
+function inboundReferralPath(patientId: string, referralId: string): string {
+  return `/correspondence/inbound-referrals/patients/${encodeURIComponent(patientId)}/${encodeURIComponent(referralId)}`;
 }
 
 function faxPath(patientId: string, referralId: string): string {

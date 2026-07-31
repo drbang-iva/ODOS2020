@@ -112,9 +112,10 @@ test("Desk card configuration sanitizes and reorders only catalog cards", () => 
   assert.deepEqual(reorderDeskCards(["schedule", "attention", "claims"], "claims", "schedule"), ["claims", "schedule", "attention"]);
 });
 
-test("Desk customization persists reorder, remove, add-back, and Reset for all ten cards", () => {
+test("Desk customization persists reorder, remove, add-back, and Reset for all eleven cards", () => {
   const defaults = loadDeskCardIds(undefined);
-  assert.equal(defaults.length, 10);
+  assert.equal(defaults.length, 11);
+  assert.ok(defaults.includes("correspondence"));
   assert.ok(defaults.includes("front-line"));
   assert.ok(defaults.includes("office"));
   const reordered = reorderDeskCards(defaults, "statements", "schedule");
@@ -383,6 +384,12 @@ function emptyDeskSummary(): DeskSummary {
     cards: {
       schedule: { today: n, confirmed: n, checkedIn: { value: 0, tone: "info" }, webRequests: n, agenda: [] },
       attention: { items: [] },
+      correspondence: {
+        draftsAwaitingSignature: n,
+        repliesOwed: n,
+        sendFailures: n,
+        items: [],
+      },
       frontLine: { available: false, message: "Comms counts arrive with the GHL adapter — Phase 3b", needsReply: off, missedCalls: off, voicemails: off, urgent: off, messages: [] },
       pendingRx: { spectacle: { value: 0, tone: "info" }, contactLens: off, labOrdersUnsent: off, oldestWaiting: { value: null, tone: "off" } },
       productPickup: { openOrders: { value: 0, tone: "info" }, atLab: { value: 0, tone: "info" }, readyNotNotified: off, awaitingPickup: { value: 0, tone: "info" } },

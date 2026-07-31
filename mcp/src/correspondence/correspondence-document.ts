@@ -2,8 +2,12 @@ import type { DocumentReference } from "@medplum/fhirtypes";
 
 export const REFERRAL_NOTE_LOINC_CODE = "57133-1";
 export const REFERRAL_NOTE_LOINC_DISPLAY = "Referral note";
+export const CONSULT_NOTE_LOINC_CODE = "11488-4";
+export const CONSULT_NOTE_LOINC_DISPLAY = "Consult note";
 export const CORRESPONDENCE_PDF_A_FORMAT_SYSTEM =
   "https://odos2020.com/fhir/CodeSystem/correspondence-format";
+export const CORRESPONDENCE_DRAFT_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/correspondence-draft";
 
 export function buildRenderedLetterDocumentReference(input: {
   patientReference: string;
@@ -15,25 +19,36 @@ export function buildRenderedLetterDocumentReference(input: {
   filename: string;
   pdf: Buffer;
   sourceHtml: string;
+  letterType?: "referral" | "consult-report";
+  docStatus?: "preliminary" | "final";
+  authenticatorReference?: string;
 }): DocumentReference {
   assertReference(input.patientReference, "Patient");
   assertReference(input.serviceRequestReference, "ServiceRequest");
   assertAuthorReference(input.authorReference);
   if (input.encounterReference) assertReference(input.encounterReference, "Encounter");
+  if (input.authenticatorReference) assertAuthorReference(input.authenticatorReference);
   if (!input.pdf.subarray(0, 5).equals(Buffer.from("%PDF-"))) {
     throw new Error("Rendered correspondence must be a PDF.");
   }
+  const consultReport = input.letterType === "consult-report";
+  const docStatus = input.docStatus ?? "final";
+  const code = consultReport ? CONSULT_NOTE_LOINC_CODE : REFERRAL_NOTE_LOINC_CODE;
+  const display = consultReport ? CONSULT_NOTE_LOINC_DISPLAY : REFERRAL_NOTE_LOINC_DISPLAY;
   return {
     resourceType: "DocumentReference",
     status: "current",
-    docStatus: "final",
+    docStatus,
+    ...(docStatus === "preliminary"
+      ? { extension: [{ url: CORRESPONDENCE_DRAFT_EXTENSION_URL, valueBoolean: true }] }
+      : {}),
     type: {
       coding: [{
         system: "http://loinc.org",
-        code: REFERRAL_NOTE_LOINC_CODE,
-        display: REFERRAL_NOTE_LOINC_DISPLAY,
+        code,
+        display,
       }],
-      text: REFERRAL_NOTE_LOINC_DISPLAY,
+      text: display,
     },
     subject: {
       reference: input.patientReference,
@@ -41,7 +56,12 @@ export function buildRenderedLetterDocumentReference(input: {
     },
     date: input.renderedAt,
     author: [{ reference: input.authorReference }],
-    description: "Rendered referral correspondence",
+    ...(input.authenticatorReference
+      ? { authenticator: { reference: input.authenticatorReference } }
+      : {}),
+    description: consultReport
+      ? "Rendered consult report correspondence"
+      : "Rendered referral correspondence",
     content: [
       {
         attachment: {

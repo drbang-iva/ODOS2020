@@ -42,6 +42,28 @@ Its dependencies are separate from the root package; stale `mcp/node_modules` ca
 otherwise surface only at backend start as an `ERR_MODULE_NOT_FOUND` crash loop
 (for example, when `csv-parse` is first imported by a newly pulled job).
 
+### Alpine-native MCP dependencies
+
+The MCP package includes Sharp, a native image-processing dependency. Host-installed
+`mcp/node_modules` is not portable into the `node:22-alpine` ODOS Core runtime:
+macOS and glibc Linux installs do not contain the musl binary Alpine needs. Compose
+therefore runs `npm ci --omit=dev --include=optional --no-audit --no-fund` inside
+Alpine through `odos-core-deps` and stores the result in the
+`odos-mcp-node-modules` volume mounted read-only by `odos-core`.
+
+After cloning, pulling a changed `mcp/package-lock.json`, or moving an install to
+different hardware, run the installer explicitly before starting the AgentOps
+profile:
+
+```bash
+docker-compose --profile agentops run --rm odos-core-deps
+docker-compose --profile agentops up -d
+```
+
+The static Sharp import is evaluated during ODOS Core startup, so a missing or
+incompatible native binary stops the service immediately with Sharp's platform
+diagnostic rather than waiting for a provider signature upload.
+
 The signing-key generator writes independent main and DR-drill RSA keys to ignored,
 mode-0600 files under `.odos/`. Medplum 5.1.8 loads the tracked JSON first and then
 overlays `MEDPLUM_SIGNING_KEY`, `MEDPLUM_SIGNING_KEY_ID`, and

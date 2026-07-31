@@ -259,6 +259,19 @@ const FRONT_DESK_RESOURCES = [
   "Encounter",
 ] as const;
 
+const FRONT_DESK_CORRESPONDENCE_RESOURCE_RULES: OdosResourceRule[] = [
+  {
+    resourceType: "ServiceRequest",
+    interactions: UPDATE_INTERACTIONS,
+    scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
+  },
+  {
+    resourceType: "DocumentReference",
+    interactions: CREATE_READ_INTERACTIONS,
+    scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
+  },
+];
+
 /**
  * Scheduler resources granted to front-desk at practice scope (scheduler Phase 3a, parallel to
  * PRs #24-#26). Practice-scope not patient-compartment: the day grid reads ALL resources'
@@ -448,6 +461,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
         interactions: UPDATE_INTERACTIONS,
         scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
       })),
+      ...FRONT_DESK_CORRESPONDENCE_RESOURCE_RULES,
       ...SCHEDULING_RESOURCE_RULES,
       APPEARANCE_CONFIG_READ_RULE,
       ...DISPENSARY_RESOURCE_RULES,

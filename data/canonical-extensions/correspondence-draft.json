@@ -1,0 +1,56 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "correspondence-draft",
+  "url": "https://odos2020.com/fhir/StructureDefinition/correspondence-draft",
+  "version": "c2",
+  "name": "ODOSCorrespondenceDraft",
+  "title": "ODOS Correspondence Draft",
+  "status": "active",
+  "date": "2026-07-31",
+  "publisher": "ODOS",
+  "description": "Marks a rendered correspondence DocumentReference as awaiting provider signature.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "DocumentReference"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Awaiting provider signature",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/correspondence-draft"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "boolean"
+          }
+        ]
+      }
+    ]
+  }
+}

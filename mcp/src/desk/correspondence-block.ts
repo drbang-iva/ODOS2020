@@ -1,0 +1,154 @@
+import type { Bundle, DocumentReference, Resource } from "@medplum/fhirtypes";
+import type { FhirSearchParams } from "../fhir-client.js";
+import {
+  FAX_ERROR_EXTENSION_URL,
+  FAX_STATUS_EXTENSION_URL,
+} from "../fax/fax-record.js";
+import {
+  ReferralReplyWorklist,
+  type ReferralReplyWorklistRow,
+} from "../referral/reciprocal-referral.js";
+export { CORRESPONDENCE_DRAFT_EXTENSION_URL } from "../correspondence/correspondence-document.js";
+import { CORRESPONDENCE_DRAFT_EXTENSION_URL } from "../correspondence/correspondence-document.js";
+
+export interface CorrespondenceAttentionItem {
+  title: string;
+  patientReference: string;
+  severity: "info" | "warning" | "urgent";
+  ageMinutes: number | null;
+  action: string;
+  owner: "provider" | "front-desk";
+  status: "open" | "failed";
+}
+
+export interface CorrespondenceDeskBlock {
+  draftsAwaitingSignature: {
+    value: number;
+    tone: "ok" | "warn";
+  };
+  repliesOwed: {
+    value: number;
+    tone: "ok" | "warn";
+  };
+  sendFailures: {
+    value: number;
+    tone: "ok" | "alert";
+  };
+  items: CorrespondenceAttentionItem[];
+}
+
+interface CorrespondenceDeskFhir {
+  search<T extends Resource>(
+    resourceType: T["resourceType"],
+    params?: FhirSearchParams,
+  ): Promise<Bundle<T>>;
+}
+
+const FAX_FAILURE_STATUSES = new Set([
+  "BadNumber",
+  "Busy",
+  "NoAnswer",
+  "NoFaxDevice",
+  "Cancelled",
+  "Failed",
+  "InvalidNumber",
+]);
+
+export async function loadCorrespondenceDeskBlock(
+  fhir: CorrespondenceDeskFhir,
+  options: {
+    now?: string;
+    loadRepliesOwed?: () => Promise<ReferralReplyWorklistRow[]>;
+  } = {},
+): Promise<CorrespondenceDeskBlock> {
+  const now = options.now ?? new Date().toISOString();
+  const [documents, repliesOwed] = await Promise.all([
+    fhir.search<DocumentReference>("DocumentReference", {
+      status: "current",
+      _sort: "-date",
+      _count: "200",
+    }).then(resources),
+    options.loadRepliesOwed?.() ?? new ReferralReplyWorklist(fhir).list(),
+  ]);
+  const drafts = documents.filter(isAwaitingSignatureDraft);
+  const sendFailures = documents.filter(isFaxFailure);
+  const items: CorrespondenceAttentionItem[] = [
+    ...drafts.map((document): CorrespondenceAttentionItem => ({
+      title: "Draft awaiting provider signature",
+      patientReference: document.subject?.reference ?? "Patient/unknown",
+      severity: "warning",
+      ageMinutes: ageMinutes(document.date, now),
+      action: "Review and sign",
+      owner: "provider",
+      status: "open",
+    })),
+    ...repliesOwed.map((row): CorrespondenceAttentionItem => ({
+      title: `Reply owed to ${row.referrerDisplay}`,
+      patientReference: row.patientReference,
+      severity: "warning",
+      ageMinutes: ageMinutes(row.authoredOn, now),
+      action: "Draft consult report",
+      owner: "provider",
+      status: "open",
+    })),
+    ...sendFailures.map((document): CorrespondenceAttentionItem => ({
+      title: faxFailureTitle(document),
+      patientReference: document.subject?.reference ?? "Patient/unknown",
+      severity: "urgent",
+      ageMinutes: ageMinutes(document.date, now),
+      action: "Review send failure",
+      owner: "front-desk",
+      status: "failed",
+    })),
+  ];
+  return {
+    draftsAwaitingSignature: {
+      value: drafts.length,
+      tone: drafts.length ? "warn" : "ok",
+    },
+    repliesOwed: {
+      value: repliesOwed.length,
+      tone: repliesOwed.length ? "warn" : "ok",
+    },
+    sendFailures: {
+      value: sendFailures.length,
+      tone: sendFailures.length ? "alert" : "ok",
+    },
+    items,
+  };
+}
+
+function resources<T extends Resource>(bundle: Bundle<T>): T[] {
+  return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
+}
+
+function isAwaitingSignatureDraft(document: DocumentReference): boolean {
+  return document.status === "current"
+    && document.docStatus === "preliminary"
+    && Boolean(document.extension?.some(
+      (extension) =>
+        extension.url === CORRESPONDENCE_DRAFT_EXTENSION_URL
+        && extension.valueBoolean === true,
+    ));
+}
+
+function isFaxFailure(document: DocumentReference): boolean {
+  const status = document.extension?.find(
+    (extension) => extension.url === FAX_STATUS_EXTENSION_URL,
+  )?.valueString;
+  return Boolean(status && FAX_FAILURE_STATUSES.has(status));
+}
+
+function faxFailureTitle(document: DocumentReference): string {
+  const detail = document.extension?.find(
+    (extension) => extension.url === FAX_ERROR_EXTENSION_URL,
+  )?.valueString?.trim();
+  return detail ? `Send failed: ${detail}` : "Correspondence send failed";
+}
+
+function ageMinutes(value: string | undefined, now: string): number | null {
+  const thenMs = Date.parse(value ?? "");
+  const nowMs = Date.parse(now);
+  if (!Number.isFinite(thenMs) || !Number.isFinite(nowMs)) return null;
+  return Math.max(0, Math.floor((nowMs - thenMs) / 60_000));
+}

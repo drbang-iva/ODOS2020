@@ -13,7 +13,13 @@ export const CORRESPONDENCE_TEMPLATE_WRITE_HEADERS = {
   "X-ODOS-Source": "mcp/correspondence-template",
 } as const;
 
-export type CorrespondenceLetterType = "referral" | (string & {});
+export type CorrespondenceLetterType =
+  | "referral"
+  | "consult-report"
+  | "progress"
+  | "records-transfer"
+  | "general"
+  | (string & {});
 export type CorrespondenceRegister = "formal" | "warm";
 
 export interface CorrespondenceTemplateInput {
@@ -51,6 +57,23 @@ export const CURATED_REFERRAL_TEMPLATES: readonly CorrespondenceTemplateInput[] 
     specialty: "retina",
     register: "warm",
     bodyHtml: "<p>Dear {{recipient.name}},</p><p>Thank you for seeing {{patient.name}} for retinal evaluation.</p>{{va.table}}{{refraction.table}}{{findings.block}}{{plan.block}}<p>With appreciation,<br>{{sender.name}}, {{sender.credentials}}</p>",
+  },
+] as const;
+
+export const CURATED_CONSULT_REPORT_TEMPLATES: readonly CorrespondenceTemplateInput[] = [
+  {
+    name: "Formal consult report",
+    letterType: "consult-report",
+    specialty: "general",
+    register: "formal",
+    bodyHtml: "<p>Dear {{recipient.name}},</p><p>Thank you for asking me to evaluate {{patient.name}}.</p><h2>Question addressed</h2><p>{{consult.question}}</p>{{findings.block}}{{plan.block}}{{meds.list}}{{allergies.list}}",
+  },
+  {
+    name: "Warm thank-you with findings",
+    letterType: "consult-report",
+    specialty: "general",
+    register: "warm",
+    bodyHtml: "<p>Dear {{recipient.name}},</p><p>Thank you for referring {{patient.name}}. I appreciate the opportunity to participate in their care.</p><h2>Your question</h2><p>{{consult.question}}</p>{{findings.block}}{{plan.block}}<p>I will keep you informed of meaningful changes.</p>",
   },
 ] as const;
 
@@ -131,8 +154,17 @@ export class CorrespondenceTemplateStore {
   }
 
   private async seedCurated(): Promise<void> {
-    for (const [index, template] of CURATED_REFERRAL_TEMPLATES.entries()) {
-      const id = `starter-referral-${index + 1}`;
+    const templates = [
+      ...CURATED_REFERRAL_TEMPLATES.map((template, index) => ({
+        id: `starter-referral-${index + 1}`,
+        template,
+      })),
+      ...CURATED_CONSULT_REPORT_TEMPLATES.map((template, index) => ({
+        id: `starter-consult-report-${index + 1}`,
+        template,
+      })),
+    ];
+    for (const { id, template } of templates) {
       await this.fhir.create(
         buildCorrespondenceTemplateResource({
           id,
