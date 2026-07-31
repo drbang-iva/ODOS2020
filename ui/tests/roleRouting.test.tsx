@@ -47,6 +47,12 @@ function memoryStorage(): Storage {
   };
 }
 
+function responseAt(url: string, status = 401): Response {
+  const response = new Response(null, { status });
+  Object.defineProperty(response, "url", { value: url });
+  return response;
+}
+
 test("set-password email links route before the authenticated app", () => {
   const originalWindow = globalThis.window;
   const windowStub = { location: { pathname: "/setpassword/user%2Did/secret%2Ftoken" } } as Window & typeof globalThis;
@@ -171,6 +177,11 @@ test("App rehydrates an unexpired session on boot", async () => {
 });
 
 test("logout and an authenticated intercepted 401 clear the persisted session", async () => {
+  const originalWindow = globalThis.window;
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: { location: { href: "https://practice.example.test/desk", origin: "https://practice.example.test" } },
+  });
   const storage = memoryStorage();
   const seedSession = () => {
     storage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
@@ -195,7 +206,7 @@ test("logout and an authenticated intercepted 401 clear the persisted session", 
   seedSession();
   let cleared = 0;
   const stopListening = fhir.onSessionCleared(() => { cleared += 1; });
-  const host = { fetch: async (..._args: Parameters<typeof fetch>) => new Response(null, { status: 401 }) as Promise<Response> };
+  const host = { fetch: async (..._args: Parameters<typeof fetch>) => responseAt("https://practice.example.test/any-api") as Promise<Response> };
   const stopIntercepting = fhir.interceptUnauthorizedResponses(host);
   try {
     const response = await host.fetch("/any-api", { headers: { Authorization: "Bearer session-token" } });
@@ -207,6 +218,92 @@ test("logout and an authenticated intercepted 401 clear the persisted session", 
     stopIntercepting();
     stopListening();
     fhir.logout(storage);
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
+});
+
+test("an authenticated cross-origin 401 cannot clear the active session", async () => {
+  const storage = memoryStorage();
+  storage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+    accessToken: "session-token",
+    expiresAt: Date.now() + 60_000,
+  }));
+  assert.equal(fhir.rehydrateSession(storage), true);
+  const host = { fetch: async (..._args: Parameters<typeof fetch>) => new Response(null, { status: 401 }) as Promise<Response> };
+  const stopIntercepting = fhir.interceptUnauthorizedResponses(host);
+  try {
+    const response = await host.fetch("https://remote.example.test/commercial-engine", {
+      headers: { Authorization: "Bearer session-token" },
+    });
+    assert.equal(response.status, 401);
+    assert.notEqual(storage.getItem(SESSION_STORAGE_KEY), null);
+    assert.equal(fhir.authHeader(), "Bearer session-token");
+  } finally {
+    stopIntercepting();
+    fhir.logout(storage);
+  }
+});
+
+test("a same-origin request redirected to a cross-origin 401 cannot clear the active session", async () => {
+  const originalWindow = globalThis.window;
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: { location: { href: "https://practice.example.test/desk", origin: "https://practice.example.test" } },
+  });
+  const storage = memoryStorage();
+  storage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+    accessToken: "session-token",
+    expiresAt: Date.now() + 60_000,
+  }));
+  assert.equal(fhir.rehydrateSession(storage), true);
+  const host = { fetch: async (..._args: Parameters<typeof fetch>) => responseAt("https://remote.example.test/login") as Promise<Response> };
+  const stopIntercepting = fhir.interceptUnauthorizedResponses(host);
+  try {
+    const response = await host.fetch("/fhir/R4/Patient", {
+      headers: { Authorization: "Bearer session-token" },
+    });
+    assert.equal(response.status, 401);
+    assert.equal(response.url, "https://remote.example.test/login");
+    assert.notEqual(storage.getItem(SESSION_STORAGE_KEY), null);
+    assert.equal(fhir.authHeader(), "Bearer session-token");
+  } finally {
+    stopIntercepting();
+    fhir.logout(storage);
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
+});
+
+test("URL normalization and cross-realm shapes cannot misclassify cross-origin requests", async () => {
+  const originalWindow = globalThis.window;
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: { location: { href: "https://practice.example.test/desk", origin: "https://practice.example.test" } },
+  });
+  const storage = memoryStorage();
+  storage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+    accessToken: "session-token",
+    expiresAt: Date.now() + 60_000,
+  }));
+  assert.equal(fhir.rehydrateSession(storage), true);
+  const host = { fetch: async (..._args: Parameters<typeof fetch>) => responseAt("https://practice.example.test/api") as Promise<Response> };
+  const stopIntercepting = fhir.interceptUnauthorizedResponses(host);
+  const crossRealmUrl = Object.assign(Object.create(null) as object, { href: "https://remote.example.test/api" }) as URL;
+  const inputs: Array<RequestInfo | URL> = [
+    " https://remote.example.test/api",
+    "\\\\remote.example.test\\api",
+    crossRealmUrl,
+  ];
+  try {
+    for (const input of inputs) {
+      const response = await host.fetch(input, { headers: { Authorization: "Bearer session-token" } });
+      assert.equal(response.status, 401);
+      assert.notEqual(storage.getItem(SESSION_STORAGE_KEY), null);
+      assert.equal(fhir.authHeader(), "Bearer session-token");
+    }
+  } finally {
+    stopIntercepting();
+    fhir.logout(storage);
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
   }
 });
 

@@ -182,7 +182,12 @@ export const fhir = {
       const sessionAuthorization = token ? `Bearer ${token}` : undefined;
       const requestAuthorization = authorizationHeader(args[0], args[1]);
       const response = await originalFetch(...args);
-      if (response.status === 401 && sessionAuthorization && requestAuthorization === sessionAuthorization) {
+      if (response.status === 401
+        && isOwnOriginRequest(args[0])
+        && response.url !== ""
+        && isOwnOriginRequest(response.url)
+        && sessionAuthorization
+        && requestAuthorization === sessionAuthorization) {
         fhir.logout();
       }
       return response;
@@ -441,6 +446,24 @@ function authorizationHeader(input: RequestInfo | URL, init?: RequestInit): stri
   return typeof Request !== "undefined" && input instanceof Request
     ? input.headers.get("Authorization") ?? undefined
     : undefined;
+}
+
+function isOwnOriginRequest(input: RequestInfo | URL): boolean {
+  if (typeof window === "undefined") return false;
+  const candidate = input as { href?: unknown; url?: unknown };
+  const value = typeof input === "string"
+    ? input
+    : typeof candidate.href === "string"
+      ? candidate.href
+      : typeof candidate.url === "string"
+        ? candidate.url
+        : undefined;
+  if (!value) return false;
+  try {
+    return new URL(value, window.location.href).origin === window.location.origin;
+  } catch {
+    return false;
+  }
 }
 
 async function apiSearch<T>(url: string, label: string, signal?: AbortSignal): Promise<T[]> {

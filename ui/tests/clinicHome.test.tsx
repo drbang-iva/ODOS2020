@@ -143,7 +143,7 @@ test("container-query contracts stack tablet cards and fold phone detail cards",
 
 test("Vite serves Desk and Clinic navigations from the SPA while preserving their MCP proxies", () => {
   const config = readFileSync(new URL("../vite.config.ts", import.meta.url), "utf8");
-  assert.match(config, /const mcpTarget = env\.VITE_ODOS_MCP_BASE_URL \|\| "http:\/\/localhost:3333"/);
+  assert.match(config, /const mcpTarget = env\.ODOS_MCP_PROXY_TARGET \|\| "http:\/\/localhost:3333"/);
   for (const route of ["desk", "clinic"]) {
     const proxy = config.match(new RegExp(`"/${route}": \\{[\\s\\S]*?\\n      \\},`))?.[0] ?? "";
     assert.match(proxy, /target: mcpTarget/);

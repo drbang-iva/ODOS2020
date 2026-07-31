@@ -15,7 +15,11 @@ const UI_ROOT = join(process.cwd(), "src");
 
 test("Vite proxies relative clinical-graph requests to the MCP server", () => {
   const config = readFileSync(join(process.cwd(), "vite.config.ts"), "utf8");
-  assert.match(config, /const mcpTarget = env\.VITE_ODOS_MCP_BASE_URL \|\| "http:\/\/localhost:3333"/);
+  const envExample = readFileSync(join(process.cwd(), ".env.example"), "utf8");
+  assert.match(config, /const mcpTarget = env\.ODOS_MCP_PROXY_TARGET \|\| "http:\/\/localhost:3333"/);
+  assert.doesNotMatch(config, /const mcpTarget = env\.VITE_/);
+  assert.match(envExample, /^ODOS_MCP_PROXY_TARGET=http:\/\/localhost:3333$/m);
+  assert.match(envExample, /^VITE_ODOS_MCP_BASE_URL=http:\/\/localhost:3333$/m);
   assert.match(config, /"\/clinical-graph": \{ target: mcpTarget, changeOrigin: true \}/);
   assert.match(config, /"\/weno": \{ target: mcpTarget, changeOrigin: true \}/);
   for (const route of ["commercial-engine", "series-tracker", "referrals", "eligibility", "mcp"]) {
