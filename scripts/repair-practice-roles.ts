@@ -14,7 +14,7 @@ import {
   type PracticeRoleId,
 } from "../mcp/src/authz/roles.js";
 import {
-  createMedplumClient,
+  createOperatorScriptFhirClient,
   type JsonPatchOperation,
   type MedplumClient,
 } from "../mcp/src/fhir-client.js";
@@ -268,7 +268,11 @@ async function runCli(): Promise<void> {
   const email = requireEnv("MEDPLUM_ADMIN_EMAIL");
   const password = requireEnv("MEDPLUM_ADMIN_PASSWORD");
   const accessToken = await loginForLocalRepair({ baseUrl, email, password });
-  const fhir = createMedplumClient({ baseUrl, accessToken });
+  const fhir = createOperatorScriptFhirClient({
+    baseUrl,
+    accessToken,
+    reason: "Operator practice-role repair runs outside request handling.",
+  });
   const primaryRole = devPrimaryRole(process.env.ODOS_DEV_PRIMARY_ROLE);
   const result = await repairPracticeRoles(
     new LivePracticeRoleRepairAdapter(fhir),

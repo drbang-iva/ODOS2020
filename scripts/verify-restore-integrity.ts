@@ -12,7 +12,7 @@ import type {
 } from "@medplum/fhirtypes";
 import { verifyRestoreIntegrity } from "../mcp/src/authz/restoreIntegrity.js";
 import { buildMedplumAccessPolicy, getRoleDeclaration } from "../mcp/src/authz/roles.js";
-import { createMedplumClient } from "../mcp/src/fhir-client.js";
+import { createOperatorScriptFhirClient } from "../mcp/src/fhir-client.js";
 import type { OdosAuditEventRecord } from "../mcp/src/authz/odosAudit.js";
 
 const manifestPath = process.argv[2];
@@ -106,7 +106,11 @@ async function readMedplumRestoreState(): Promise<{
     };
   }
 
-  const fhir = createMedplumClient({ baseUrl, accessToken });
+  const fhir = createOperatorScriptFhirClient({
+    baseUrl,
+    accessToken,
+    reason: "Operator restore-integrity verification runs outside request handling.",
+  });
   if (!accessToken && email && password) {
     await fhir.login(email, password);
   }
@@ -142,7 +146,7 @@ function readRestoredBinaryRows(): Binary[] {
 }
 
 async function safeSearchResources<T extends Resource>(
-  fhir: ReturnType<typeof createMedplumClient>,
+  fhir: ReturnType<typeof createOperatorScriptFhirClient>,
   resourceType: T["resourceType"],
   params: Record<string, string>,
 ): Promise<T[]> {
@@ -153,7 +157,7 @@ async function safeSearchResources<T extends Resource>(
   }
 }
 
-async function runAccessPolicyRoundTrip(fhir: ReturnType<typeof createMedplumClient>): Promise<boolean> {
+async function runAccessPolicyRoundTrip(fhir: ReturnType<typeof createOperatorScriptFhirClient>): Promise<boolean> {
   try {
     const policy = buildMedplumAccessPolicy(getRoleDeclaration("auditor"));
     const created = await fhir.create<AccessPolicy>({

@@ -2,7 +2,7 @@
 import { setTimeout as wait } from "node:timers/promises";
 import type { Media } from "@medplum/fhirtypes";
 import { exchangeClientCredentials } from "../../data/medplum-adapters/migration-importer-adapter.js";
-import { createMedplumClient } from "../../mcp/src/fhir-client.js";
+import { createOperatorScriptFhirClient } from "../../mcp/src/fhir-client.js";
 import { PgBinaryAttemptStore } from "../../mcp/src/legacy-import/binary-attempt-store.js";
 import {
   buildPreparationMedia,
@@ -26,7 +26,10 @@ const accessToken = await exchangeClientCredentials({
   clientSecret: requireEnv("ODOS_MIGRATION_IMPORTER_CLIENT_SECRET"),
 });
 const auth = { baseUrl, accessToken };
-const fhir = createMedplumClient(auth);
+const fhir = createOperatorScriptFhirClient({
+  ...auth,
+  reason: "Legacy import crash fixture runs outside request handling.",
+});
 const attempts = new PgBinaryAttemptStore({ postgresUrl });
 const source: LegacyMediaSource = {
   fileNameNew,

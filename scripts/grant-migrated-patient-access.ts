@@ -16,7 +16,7 @@ import {
   type PracticeRoleId,
 } from "../mcp/src/authz/roles.js";
 import {
-  createMedplumClient,
+  createOperatorScriptFhirClient,
   type JsonPatchOperation,
   type MedplumClient,
 } from "../mcp/src/fhir-client.js";
@@ -464,9 +464,10 @@ export async function runGrantCli(input: {
 }): Promise<MigratedPatientAccessGrantResult & { readonly reportPath: string }> {
   assertLocalMedplumBaseUrl(input.baseUrl);
   const context = await operatorContext(input.baseUrl, input.accessToken);
-  const fhir = createMedplumClient({
+  const fhir = createOperatorScriptFhirClient({
     baseUrl: input.baseUrl,
     accessToken: input.accessToken,
+    reason: "Operator migrated-patient access grant runs outside request handling.",
   });
   const ledger = new ImportLedger({ stateDirectory: input.stateDirectory });
   try {

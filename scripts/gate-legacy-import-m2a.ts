@@ -30,7 +30,7 @@ import {
   ODOS_PRACTICE_ROLE_SYSTEM,
   type PracticeRoleId,
 } from "../mcp/src/authz/roles.js";
-import { createMedplumClient, type MedplumClient } from "../mcp/src/fhir-client.js";
+import { createOperatorScriptFhirClient, type MedplumClient } from "../mcp/src/fhir-client.js";
 import { searchAll } from "../mcp/src/fhir-search.js";
 import {
   assertCanonicalPolicyRules,
@@ -107,8 +107,16 @@ await setPassword(
   "Practice admin",
 );
 const operatorToken = await login(baseUrl, practiceAdminEmail, practiceAdminPassword);
-const serviceFhir = createMedplumClient({ baseUrl, accessToken: serviceToken });
-const adminFhir = createMedplumClient({ baseUrl, accessToken: operatorToken });
+const serviceFhir = createOperatorScriptFhirClient({
+  baseUrl,
+  accessToken: serviceToken,
+  reason: "Operator legacy import gate service check runs outside request handling.",
+});
+const adminFhir = createOperatorScriptFhirClient({
+  baseUrl,
+  accessToken: operatorToken,
+  reason: "Operator legacy import gate admin check runs outside request handling.",
+});
 const clinicianMembership = await inviteOrdinaryUser({
   baseUrl,
   serviceToken,
@@ -432,9 +440,10 @@ async function resolveOrdinaryMembership(input: {
   projectId: string;
   email: string;
 }): Promise<ProjectMembership> {
-  const serviceFhir = createMedplumClient({
+  const serviceFhir = createOperatorScriptFhirClient({
     baseUrl: input.baseUrl,
     accessToken: input.serviceToken,
+    reason: "Operator legacy import gate invitation runs outside request handling.",
   });
   const practitioners = (await searchAll<Practitioner>(
     serviceFhir,

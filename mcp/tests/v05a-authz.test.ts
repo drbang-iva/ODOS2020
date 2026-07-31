@@ -31,6 +31,7 @@ import {
   loadRepoEnv,
 } from "./integration-helpers.js";
 import { createMedplumClient } from "../src/fhir-client.js";
+import { TEST_FHIR_AUDIT_CONTEXT, TEST_FHIR_AUDIT_RECORDER } from "./fhirAuditTestStub.js";
 
 test("v0.5a role registry defines the five practice-scoped roles", () => {
   assert.deepEqual(PRACTICE_ROLE_IDS, [
@@ -296,7 +297,11 @@ test("Binary parser plugin accepts valid raw upload header and blocks securityCo
 });
 
 test("MCP FHIR client refuses direct Binary create without parser guard header", async () => {
-  const fhir = createMedplumClient({ baseUrl: "http://127.0.0.1:1" });
+  const fhir = createMedplumClient({
+    baseUrl: "http://127.0.0.1:1",
+    audit: TEST_FHIR_AUDIT_RECORDER,
+    auditContext: TEST_FHIR_AUDIT_CONTEXT,
+  });
   await assert.rejects(
     () =>
       fhir.create<Binary>({

@@ -17,7 +17,7 @@ import {
   type OdosAuditEventType,
 } from "../mcp/src/authz/odosAudit.js";
 import { buildMedplumAccessPolicy, getRoleDeclaration, PRACTICE_ROLE_IDS } from "../mcp/src/authz/roles.js";
-import { createMedplumClient } from "../mcp/src/fhir-client.js";
+import { createOperatorScriptFhirClient } from "../mcp/src/fhir-client.js";
 import { parserBinaryHeaders, prepareBinaryForParserCreate } from "../mcp/src/parsers/binarySecurityContext.js";
 
 const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:18103";
@@ -28,7 +28,11 @@ const postgresUrl =
 
 await waitForMedplum(baseUrl);
 const accessToken = await ensureAdminAccessToken({ baseUrl, email, password });
-const fhir = createMedplumClient({ baseUrl, accessToken });
+const fhir = createOperatorScriptFhirClient({
+  baseUrl,
+  accessToken,
+  reason: "Operator disaster-recovery seed runs outside request handling.",
+});
 const audit = createLiveOdosAuditRuntime({
   postgresUrl,
   medplumBaseUrl: baseUrl,

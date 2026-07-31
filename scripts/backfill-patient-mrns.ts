@@ -6,7 +6,7 @@ import type {
   BundleEntry,
   Patient,
 } from "@medplum/fhirtypes";
-import { createMedplumClient, type MedplumClient } from "../mcp/src/fhir-client.js";
+import { createOperatorScriptFhirClient, type MedplumClient } from "../mcp/src/fhir-client.js";
 import { searchAll } from "../mcp/src/fhir-search.js";
 import {
   ODOS_MRN_ALLOCATION_TOKEN_SYSTEM,
@@ -346,7 +346,11 @@ async function runCli(): Promise<void> {
   const baseUrl = process.env.MEDPLUM_BASE_URL ?? DEFAULT_BASE_URL;
   assertLocalOrPrivateBaseUrl(baseUrl);
   const accessToken = process.env.MEDPLUM_ACCESS_TOKEN?.trim();
-  const fhir = createMedplumClient({ baseUrl, accessToken });
+  const fhir = createOperatorScriptFhirClient({
+    baseUrl,
+    accessToken,
+    reason: "Operator MRN backfill runs outside request handling.",
+  });
   if (!accessToken) {
     const email = requireEnv("MEDPLUM_ADMIN_EMAIL");
     const password = requireEnv("MEDPLUM_ADMIN_PASSWORD");

@@ -3,7 +3,7 @@ import { basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Pool, type PoolClient } from "pg";
 import type { AuditEvent } from "@medplum/fhirtypes";
-import { createMedplumClient, type MedplumClient } from "../fhir-client.js";
+import { createUnauditedMedplumClient_bootOnly, type MedplumClient } from "../fhir-client.js";
 import {
   AuditEventProjectionQueue,
   buildAuditEventProjection,
@@ -462,7 +462,7 @@ export class LiveOdosAuditRuntime implements FhirAuditRecorder {
   private async getProjectionClient(): Promise<MedplumClient> {
     this.projectionClient ??= this.options.medplumAccessToken
       ? Promise.resolve(
-          createMedplumClient({
+          createUnauditedMedplumClient_bootOnly({
             baseUrl: this.options.medplumBaseUrl ?? "http://localhost:8103",
             accessToken: this.options.medplumAccessToken,
           }),
@@ -472,7 +472,7 @@ export class LiveOdosAuditRuntime implements FhirAuditRecorder {
   }
 
   private async createPasswordProjectionClient(): Promise<MedplumClient> {
-    const client = createMedplumClient({
+    const client = createUnauditedMedplumClient_bootOnly({
       baseUrl: this.options.medplumBaseUrl ?? "http://localhost:8103",
     });
     if (this.options.medplumEmail && this.options.medplumPassword) {

@@ -84,6 +84,18 @@ export interface MedplumPractitionerInvite {
   sendEmail: true;
 }
 
+interface UnauditedMedplumClientOptions {
+  baseUrl: string;
+  accessToken?: string;
+  refreshAuthentication?: () => Promise<void>;
+  now?: () => number;
+}
+
+export interface MedplumClientOptions extends UnauditedMedplumClientOptions {
+  audit: FhirAuditRecorder;
+  auditContext: FhirAuditContext;
+}
+
 export function createStaffRouteFhirClient(opts: {
   baseUrl: string;
   accessToken: string;
@@ -102,11 +114,27 @@ export function createStaffRouteFhirClient(opts: {
   });
 }
 
-export function createMedplumClient(opts: {
-  baseUrl: string;
-  accessToken?: string;
-  refreshAuthentication?: () => Promise<void>;
-  now?: () => number;
+export function createMedplumClient(opts: MedplumClientOptions): MedplumClient {
+  return createMedplumClientInternal(opts);
+}
+
+export function createUnauditedMedplumClient_bootOnly(
+  opts: UnauditedMedplumClientOptions,
+): MedplumClient {
+  return createMedplumClientInternal(opts);
+}
+
+export function createOperatorScriptFhirClient(
+  opts: UnauditedMedplumClientOptions & { reason: string },
+): MedplumClient {
+  if (!opts.reason.trim()) {
+    throw new Error("Operator script FHIR client requires a non-blank unaudited reason.");
+  }
+  const { reason: _reason, ...clientOptions } = opts;
+  return createMedplumClientInternal(clientOptions);
+}
+
+function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
   audit?: FhirAuditRecorder;
   auditContext?: FhirAuditContext;
 }): MedplumClient {

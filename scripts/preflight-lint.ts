@@ -251,6 +251,17 @@ const BULK_JOB_ID_PHI_CONSTRUCTOR_PATTERN =
 const BULK_META_SECURITY_STRIP_PATTERN =
   /delete\s+\w+\.meta\.security|\.meta\s*=\s*undefined|\.meta\.security\s*=\s*undefined|JSON\.stringify\([^,\n]+,\s*(?:replacer|[^)]*meta)/;
 const BULK_FORBIDDEN_EXPORT_ENDPOINT_PATTERN = /Patient\/(?::id|\{id\})\/\$export|\/Patient\/:id\/\$export/;
+
+export const DIRECT_MEDPLUM_FHIR_BYPASS_ALLOWLIST = [
+  "mcp/src/smart/registration/dynamic-client-registration.ts",
+  "mcp/src/legacy-import/orphan-sweep.ts",
+  "mcp/src/legacy-import/binary-transport.ts",
+  "mcp/src/fhir/binary-upload.ts",
+] as const;
+const DIRECT_MEDPLUM_FHIR_BYPASS_BASELINE = 4;
+const DIRECT_MEDPLUM_FHIR_LITERAL_PATTERN = /\/fhir\/R4/i;
+const BOOT_ONLY_CLIENT_FACTORY = ["createUnauditedMedplumClient", "_bootOnly"].join("");
+const OPERATOR_SCRIPT_CLIENT_FACTORY = "createOperatorScriptFhirClient";
 const IN_CONTAINER_PACKET_FILTER_PATTERN = new RegExp(
   `${["ipt", "ables"].join("")}.*--uid-owner|${["in-container", ["ipt", "ables"].join("")].join(" ")}`,
   "i",
@@ -472,6 +483,9 @@ export function runVendorCanonicalShapePass(
     findings.push(finding);
   }
   for (const finding of auditMigrationSentinelFindings(files)) {
+    findings.push(finding);
+  }
+  for (const finding of fhirClientBoundaryFindings(files)) {
     findings.push(finding);
   }
 
@@ -856,6 +870,81 @@ function isMedplumAdapterPath(path: string): boolean {
 
 function isMcpSourcePath(path: string): boolean {
   return displayPath(path).startsWith("mcp/src/");
+}
+
+function fhirClientBoundaryFindings(
+  files: readonly { path: string; text: string }[],
+): PreflightFinding[] {
+  const findings: PreflightFinding[] = [];
+  if (DIRECT_MEDPLUM_FHIR_BYPASS_ALLOWLIST.length > DIRECT_MEDPLUM_FHIR_BYPASS_BASELINE) {
+    findings.push({
+      pass: "vendor-canonical-shapes",
+      severity: "hard-block",
+      code: "fhir-bypass-allowlist-only-shrinks",
+      message: `Direct Medplum FHIR bypass allowlist grew beyond baseline ${DIRECT_MEDPLUM_FHIR_BYPASS_BASELINE}`,
+      source: "scripts/preflight-lint.ts",
+    });
+  }
+
+  for (const file of files) {
+    const path = displayPath(file.path);
+    const isFhirClientDefinition = path === "mcp/src/fhir-client.ts";
+    const lines = file.text.split(/\r?\n/);
+    const directFhirBypassAllowed = DIRECT_MEDPLUM_FHIR_BYPASS_ALLOWLIST.some(
+      (allowedPath) => allowedPath === path,
+    );
+
+    if (
+      isMcpSourcePath(path)
+      && !isFhirClientDefinition
+      && !path.startsWith("mcp/src/__tests__/")
+      && !directFhirBypassAllowed
+    ) {
+      for (const [index, line] of lines.entries()) {
+        if (DIRECT_MEDPLUM_FHIR_LITERAL_PATTERN.test(line)) {
+          findings.push({
+            pass: "vendor-canonical-shapes",
+            severity: "hard-block",
+            code: "direct-medplum-http-request",
+            message: "Direct /fhir/R4 request construction is forbidden outside fhir-client.ts and the committed bypass allowlist",
+            source: path,
+            line: index + 1,
+          });
+        }
+      }
+    }
+
+    if (!isFhirClientDefinition && path !== "mcp/src/authz/liveAudit.ts") {
+      for (const [index, line] of lines.entries()) {
+        if (line.includes(BOOT_ONLY_CLIENT_FACTORY)) {
+          findings.push({
+            pass: "vendor-canonical-shapes",
+            severity: "hard-block",
+            code: `${BOOT_ONLY_CLIENT_FACTORY}-scope`,
+            message: `${BOOT_ONLY_CLIENT_FACTORY} may only be used by liveAudit projection`,
+            source: path,
+            line: index + 1,
+          });
+        }
+      }
+    }
+
+    if (!isFhirClientDefinition && !path.startsWith("scripts/")) {
+      for (const [index, line] of lines.entries()) {
+        if (line.includes(OPERATOR_SCRIPT_CLIENT_FACTORY)) {
+          findings.push({
+            pass: "vendor-canonical-shapes",
+            severity: "hard-block",
+            code: `${OPERATOR_SCRIPT_CLIENT_FACTORY}-scope`,
+            message: `${OPERATOR_SCRIPT_CLIENT_FACTORY} may only be used under scripts/`,
+            source: path,
+            line: index + 1,
+          });
+        }
+      }
+    }
+  }
+  return findings;
 }
 
 function isCdsServicePath(path: string): boolean {

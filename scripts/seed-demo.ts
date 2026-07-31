@@ -21,7 +21,7 @@ import { buildPatientResponsibilityInvoice } from "../mcp/src/claims/patient-res
 import { buildSchedulingAppointment } from "../mcp/src/fhir/schedulingAppointment.js";
 import { buildSchedulingResource } from "../mcp/src/fhir/schedulingResource.js";
 import { buildVisitType } from "../mcp/src/fhir/schedulingVisitType.js";
-import { createMedplumClient, type MedplumClient } from "../mcp/src/fhir-client.js";
+import { createOperatorScriptFhirClient, type MedplumClient } from "../mcp/src/fhir-client.js";
 import { searchAll } from "../mcp/src/fhir-search.js";
 import { buildPaymentReconciliation } from "../mcp/src/payments/payment-reconciliation.js";
 import {
@@ -554,7 +554,11 @@ async function runCli(): Promise<void> {
   const password = requireEnv("ODOS_ADMIN_PASSWORD", "MEDPLUM_ADMIN_PASSWORD");
   const accessToken = await loginForLocalRepair({ baseUrl: medplumBaseUrl, email, password });
   const result = await seedDemo(new LiveDemoSeedAdapter(
-    createMedplumClient({ baseUrl: medplumBaseUrl, accessToken }),
+    createOperatorScriptFhirClient({
+      baseUrl: medplumBaseUrl,
+      accessToken,
+      reason: "Operator demo-data seed runs outside request handling.",
+    }),
     mcpBaseUrl,
     `Bearer ${accessToken}`,
   ));

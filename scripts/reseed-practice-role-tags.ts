@@ -6,7 +6,7 @@ import {
   PRACTICE_ROLE_IDS,
   type PracticeRoleId,
 } from "../mcp/src/authz/roles.js";
-import { createMedplumClient, type JsonPatchOperation, type MedplumClient } from "../mcp/src/fhir-client.js";
+import { createOperatorScriptFhirClient, type JsonPatchOperation, type MedplumClient } from "../mcp/src/fhir-client.js";
 import { searchAll } from "../mcp/src/fhir-search.js";
 
 const DEFAULT_BASE_URL = "http://localhost:8103";
@@ -172,9 +172,10 @@ function printSummary(result: PracticeRoleReseedResult): void {
 async function runCli(): Promise<void> {
   const baseUrl = process.env.MEDPLUM_BASE_URL ?? DEFAULT_BASE_URL;
   assertLocalMedplumBaseUrl(baseUrl);
-  const fhir = createMedplumClient({
+  const fhir = createOperatorScriptFhirClient({
     baseUrl,
     accessToken: requireEnv("MEDPLUM_ACCESS_TOKEN"),
+    reason: "Operator practice-role tag reseed runs outside request handling.",
   });
   const result = await reseedPracticeRoleTags(new LivePracticeRoleReseedAdapter(fhir));
   printSummary(result);

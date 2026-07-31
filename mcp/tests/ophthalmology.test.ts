@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { test } from "node:test";
 import type { Observation, ObservationComponent } from "@medplum/fhirtypes";
 import { createMedplumClient } from "../src/fhir-client.js";
+import { TEST_FHIR_AUDIT_CONTEXT, TEST_FHIR_AUDIT_RECORDER } from "./fhirAuditTestStub.js";
 import {
   OPHTHALMOLOGY_CODE_BINDING_VERSION,
   ODOS_OPHTHALMOLOGY_CODE_SYSTEM,
@@ -294,7 +295,11 @@ test("FHIR client create merges the X-ODOS-Source audit header", async () => {
   }) as typeof fetch;
 
   try {
-    const client = createMedplumClient({ baseUrl: "http://localhost:8103" });
+    const client = createMedplumClient({
+      baseUrl: "http://localhost:8103",
+      audit: TEST_FHIR_AUDIT_RECORDER,
+      auditContext: TEST_FHIR_AUDIT_CONTEXT,
+    });
     await client.create(
       { resourceType: "Patient" } as never,
       { "X-ODOS-Source": "mcp/create_observation" },

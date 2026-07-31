@@ -7,7 +7,7 @@ import {
   exchangeClientCredentials,
   type MigrationImporterClientResult,
 } from "../data/medplum-adapters/migration-importer-adapter.js";
-import { createMedplumClient } from "../mcp/src/fhir-client.js";
+import { createOperatorScriptFhirClient } from "../mcp/src/fhir-client.js";
 import { searchAll } from "../mcp/src/fhir-search.js";
 import {
   buildMigrationImporterAccessPolicy,
@@ -58,7 +58,11 @@ export async function setupLegacyImporter(input: {
 }> {
   assertLocalBaseUrl(input.baseUrl);
   const accessToken = input.accessToken;
-  const fhir = createMedplumClient({ baseUrl: input.baseUrl, accessToken });
+  const fhir = createOperatorScriptFhirClient({
+    baseUrl: input.baseUrl,
+    accessToken,
+    reason: "Operator legacy importer setup runs outside request handling.",
+  });
   const postgresUrl = input.postgresUrl
     ?? "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
   const projectId = await resolvePracticeProjectId(
@@ -159,7 +163,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 export async function resolvePracticeProjectId(
   baseUrl: string,
   accessToken: string,
-  fhir: ReturnType<typeof createMedplumClient>,
+  fhir: ReturnType<typeof createOperatorScriptFhirClient>,
   postgresUrl?: string,
   practiceProjectId?: string,
   database: PracticeProjectResolutionDatabase = LIVE_PRACTICE_PROJECT_DATABASE,

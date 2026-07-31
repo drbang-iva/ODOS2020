@@ -7,7 +7,7 @@ import {
   ODOS_PRACTICE_ROLE_SYSTEM,
   type PracticeRoleId,
 } from "../mcp/src/authz/roles.js";
-import { createMedplumClient, type JsonPatchOperation, type MedplumClient } from "../mcp/src/fhir-client.js";
+import { createOperatorScriptFhirClient, type JsonPatchOperation, type MedplumClient } from "../mcp/src/fhir-client.js";
 import { searchAll } from "../mcp/src/fhir-search.js";
 import { loginForLocalRepair } from "./repair-practice-roles.js";
 import { assertLocalMedplumBaseUrl } from "./reseed-practice-role-tags.js";
@@ -108,7 +108,11 @@ async function runCli(): Promise<void> {
   const email = requireEnv("MEDPLUM_ADMIN_EMAIL");
   const password = requireEnv("MEDPLUM_ADMIN_PASSWORD");
   const accessToken = await loginForLocalRepair({ baseUrl, email, password });
-  const results = await runCleanup(createMedplumClient({ baseUrl, accessToken }));
+  const results = await runCleanup(createOperatorScriptFhirClient({
+    baseUrl,
+    accessToken,
+    reason: "Operator practice-role membership cleanup runs outside request handling.",
+  }));
   console.log(`Memberships inspected: ${results.length}`);
   console.log(`Memberships changed: ${results.filter((result) => result.changed).length}`);
 }

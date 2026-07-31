@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import type { Patient } from "@medplum/fhirtypes";
 import { exchangeClientCredentials } from "../data/medplum-adapters/migration-importer-adapter.js";
-import { createMedplumClient } from "../mcp/src/fhir-client.js";
+import { createOperatorScriptFhirClient } from "../mcp/src/fhir-client.js";
 import { applyDecisionFile, listPendingDecisions } from "../mcp/src/legacy-import/adjudication-loop.js";
 import {
   appointmentEncounterImportManifestSchema,
@@ -57,7 +57,11 @@ export async function runBulkImportCli(input: {
     clientId: input.clientId,
     clientSecret: input.clientSecret,
   });
-  const fhir = createMedplumClient({ baseUrl: input.baseUrl, accessToken });
+  const fhir = createOperatorScriptFhirClient({
+    baseUrl: input.baseUrl,
+    accessToken,
+    reason: "Operator legacy bulk import runs outside request handling.",
+  });
   const projectId = await fhir.getActiveProjectId();
   const ledger = new ImportLedger({ stateDirectory: input.stateDirectory });
 
