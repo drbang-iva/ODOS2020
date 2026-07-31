@@ -18,6 +18,7 @@ import type {
 } from "@medplum/fhirtypes";
 import express from "express";
 import type { FhirSearchParams } from "../src/fhir-client.js";
+import type { OdosAuditEventRecord } from "../src/authz/odosAudit.js";
 import {
   handleCreateReferralRequest,
   handleReferralArtifactRequest,
@@ -362,7 +363,8 @@ test("regeneration uses the current consultant and fresh encounter findings with
 
 test("each rendered preview is archived while send records one clinician-attributed disclosure Provenance", async () => {
   const fhir = seededFhir();
-  const endpointDeps = deps(fhir);
+  const auditRows: OdosAuditEventRecord[] = [];
+  const endpointDeps = deps(fhir, { auditRows });
   const previewLetter = "Preview-only edited body";
   const sentLetter = "Clinician edited words actually sent";
   const previewInput = {
@@ -414,6 +416,14 @@ test("each rendered preview is archived while send records one clinician-attribu
     "Referral history_count: 2",
   ]);
   assert.equal((sent.body as { provenanceReference: string }).provenanceReference, `Provenance/${provenance.id}`);
+  assert.equal(auditRows.length, 3);
+  assert.ok(auditRows.every((row) => row.eventType === "document.generate.completed"));
+  assert.ok(auditRows.every((row) => row.actorId === "clinician-1"));
+  assert.ok(auditRows.every((row) => row.actorRole === "clinician"));
+  assert.ok(auditRows.every((row) => row.patientId === "p1"));
+  assert.ok(auditRows.every((row) => row.resourceType === "DocumentReference"));
+  assert.ok(auditRows.every((row) => row.actionReason?.includes("document-kind=letter")));
+  assert.ok(auditRows.every((row) => row.actionReason?.includes("service-request=ServiceRequest/referral-1")));
 
   const duplicateSend = await handleReferralArtifactRequest(endpointDeps, {
     ...previewInput,
@@ -428,8 +438,9 @@ test("each rendered preview is archived while send records one clinician-attribu
 test("failed artifact assembly leaves the edited referral draft and creates no Provenance", async () => {
   const fhir = seededFhir();
   fhir.failNextSearch("Encounter");
+  const auditRows: OdosAuditEventRecord[] = [];
 
-  await assert.rejects(handleReferralArtifactRequest(deps(fhir), {
+  await assert.rejects(handleReferralArtifactRequest(deps(fhir, { auditRows }), {
     authHeader: AUTH,
     patientId: "p1",
     referralId: "referral-1",
@@ -441,6 +452,33 @@ test("failed artifact assembly leaves the edited referral draft and creates no P
   assert.equal(persisted.status, "draft");
   assert.equal(referralLetterBody(persisted), "Edited draft before failed assembly");
   assert.equal(fhir.provenances.length, 0);
+  assert.equal(auditRows.length, 1);
+  assert.equal(auditRows[0]?.eventType, "document.generate.failed");
+  assert.equal(auditRows[0]?.actorId, "clinician-1");
+  assert.equal(auditRows[0]?.patientId, "p1");
+  assert.equal(auditRows[0]?.resourceType, "ServiceRequest");
+  assert.equal(auditRows[0]?.resourceId, "referral-1");
+});
+
+test("a completed render whose audit insert fails is not mislabeled as a generation failure", async () => {
+  const fhir = seededFhir();
+  const auditRows: OdosAuditEventRecord[] = [];
+  const endpointDeps = deps(fhir);
+  endpointDeps.recordAudit = async (row) => {
+    auditRows.push(row);
+    throw new Error("audit unavailable");
+  };
+
+  await assert.rejects(handleReferralArtifactRequest(endpointDeps, {
+    authHeader: AUTH,
+    patientId: "p1",
+    referralId: "referral-1",
+    action: "preview",
+    body: {},
+  }), /audit unavailable/);
+
+  assert.deepEqual(auditRows.map((row) => row.eventType), ["document.generate.completed"]);
+  assert.equal(fhir.resources("DocumentReference").length, 1);
 });
 
 test("stale final send transaction returns conflict without activation or Provenance", async () => {
@@ -703,6 +741,7 @@ function deps(
     authToken?: string;
     staffReference?: string;
     patientGrant?: string;
+    auditRows?: OdosAuditEventRecord[];
   } = {},
 ): ReferralEndpointDeps {
   const authenticated = options.authenticated ?? true;
@@ -751,6 +790,9 @@ function deps(
       name: "Synthetic WeasyPrint 69.0",
       pdfVariant: "pdf/a-3u",
       render: async (html: string) => Buffer.from(`%PDF-1.7\n${html}`),
+    },
+    recordAudit: async (row) => {
+      options.auditRows?.push(row);
     },
     now: () => NOW,
   };

@@ -8,6 +8,10 @@ import type {
 import { z } from "zod";
 import type { PracticeRoleId } from "../authz/roles.js";
 import {
+  buildOdosAuditEventRow,
+  type OdosAuditEventRecord,
+} from "../authz/odosAudit.js";
+import {
   CorrespondenceService,
   type CorrespondenceConfigFhirClient,
 } from "../correspondence/correspondence-service.js";
@@ -47,6 +51,7 @@ export interface ReferralEndpointDeps {
   } | null>;
   serviceFhir: CorrespondenceConfigFhirClient;
   correspondenceRenderer: CorrespondenceRenderer;
+  recordAudit(row: OdosAuditEventRecord): Promise<void>;
   now?: () => string;
 }
 
@@ -486,9 +491,12 @@ export async function handleReferralArtifactRequest(
   );
   const serviceRequestReference = `ServiceRequest/${referralId}`;
   if (input.action === "preview") {
-    const rendered = await correspondence.renderReferral({
+    const rendered = await renderReferralWithAudit(deps, correspondence, {
       serviceRequest,
-      authorReference: context.staff.staffReference,
+      staffReference: context.staff.staffReference,
+      actorRole: context.staff.actorRole,
+      patientReference: context.patientReference,
+      serviceRequestReference,
       templateId: parsedBody.data.templateId,
       editedBodyHtml: parsedBody.data.editedLetterBody,
     });
@@ -523,9 +531,12 @@ export async function handleReferralArtifactRequest(
       serviceRequest,
       parsedBody.data.editedLetterBody,
     );
-    const rendered = await correspondence.renderReferral({
+    const rendered = await renderReferralWithAudit(deps, correspondence, {
       serviceRequest: preparedServiceRequest,
-      authorReference: context.staff.staffReference,
+      staffReference: context.staff.staffReference,
+      actorRole: context.staff.actorRole,
+      patientReference: context.patientReference,
+      serviceRequestReference,
       templateId: parsedBody.data.templateId,
       editedBodyHtml: parsedBody.data.editedLetterBody,
       signedByReference: context.staff.staffReference,
@@ -586,6 +597,54 @@ export async function handleReferralArtifactRequest(
     }
     throw error;
   }
+}
+
+async function renderReferralWithAudit(
+  deps: ReferralEndpointDeps,
+  correspondence: CorrespondenceService,
+  input: {
+    serviceRequest: ServiceRequest;
+    staffReference: string;
+    actorRole: PracticeRoleId;
+    patientReference: string;
+    serviceRequestReference: string;
+    templateId?: string;
+    editedBodyHtml?: string;
+  },
+) {
+  let rendered;
+  try {
+    rendered = await correspondence.renderReferral({
+      serviceRequest: input.serviceRequest,
+      authorReference: input.staffReference,
+      templateId: input.templateId,
+      editedBodyHtml: input.editedBodyHtml,
+    });
+  } catch (error) {
+    await deps.recordAudit(buildOdosAuditEventRow({
+      eventType: "document.generate.failed",
+      eventTime: deps.now?.(),
+      actorReference: input.staffReference,
+      actorRole: input.actorRole,
+      patientReference: input.patientReference,
+      targetReference: input.serviceRequestReference,
+      outcome: "error",
+      actionReason: `document-kind=letter; service-request=${input.serviceRequestReference}`,
+    }));
+    throw error;
+  }
+  const renderedDocumentReference = documentReference(rendered.documentReference);
+  await deps.recordAudit(buildOdosAuditEventRow({
+    eventType: "document.generate.completed",
+    eventTime: deps.now?.(),
+    actorReference: input.staffReference,
+    actorRole: input.actorRole,
+    patientReference: input.patientReference,
+    targetReference: renderedDocumentReference,
+    actionOutcome: "granted",
+    actionReason: `document-kind=letter; service-request=${input.serviceRequestReference}; document-reference=${renderedDocumentReference}`,
+  }));
+  return rendered;
 }
 
 export async function handleListCorrespondenceTemplatesRequest(

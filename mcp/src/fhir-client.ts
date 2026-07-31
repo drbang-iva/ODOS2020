@@ -84,6 +84,24 @@ export interface MedplumPractitionerInvite {
   sendEmail: true;
 }
 
+export function createStaffRouteFhirClient(opts: {
+  baseUrl: string;
+  accessToken: string;
+  staffReference: string;
+  actorRole: OdosActorRole;
+  audit: FhirAuditRecorder;
+}): MedplumClient {
+  return createMedplumClient({
+    baseUrl: opts.baseUrl,
+    accessToken: opts.accessToken,
+    audit: opts.audit,
+    auditContext: {
+      actorId: opts.staffReference.replace(/^Practitioner\//, ""),
+      actorRole: opts.actorRole,
+    },
+  });
+}
+
 export function createMedplumClient(opts: {
   baseUrl: string;
   accessToken?: string;

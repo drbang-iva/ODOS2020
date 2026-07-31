@@ -211,9 +211,41 @@ test("a blocked or failed print routes its error into the Statements alert", asy
   });
   await act(async () => { renderer = create(<Statements services={services} PatientSearchComponent={PatientSearchStub} />); });
 
-  act(() => renderer.root.findAllByType("button").find((button) => button.children.includes("Print"))!.props.onClick());
+  await act(async () => {
+    renderer.root.findAllByType("button").find((button) => button.children.includes("Print"))!.props.onClick();
+    await Promise.resolve();
+  });
   assert.match(renderer.root.findByProps({ role: "alert" }).children.join(""), /printable statement window was blocked/);
   act(() => renderer.unmount());
+});
+
+test("statement print audits first and continues when audit recording fails", async () => {
+  const calls: string[] = [];
+  const originalConsoleError = console.error;
+  let renderer!: ReactTestRenderer;
+  console.error = () => undefined;
+  try {
+    await act(async () => {
+      renderer = create(<Statements services={statementServices({
+        list: async () => [statement("new", "2026-07-12T15:00:00.000Z", 6_000)],
+        recordPrintRequested: async () => {
+          calls.push("audit");
+          throw new Error("audit unavailable");
+        },
+        print: () => { calls.push("print"); },
+      })} />);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      renderer.root.findAllByType("button").find((button) => button.children.join("") === "Print")?.props.onClick();
+      await Promise.resolve();
+    });
+    assert.deepEqual(calls, ["audit", "print"]);
+    await act(async () => renderer.unmount());
+  } finally {
+    console.error = originalConsoleError;
+  }
 });
 
 test("patient generation is blocked while a batch run is in flight", async () => {
@@ -277,6 +309,7 @@ function statementServices(overrides: Partial<StatementsServices> = {}): Stateme
     list: async () => [],
     generate: async () => runResult(),
     run: async () => runResult(),
+    recordPrintRequested: async () => undefined,
     print: () => undefined,
     ...overrides,
   };

@@ -12,11 +12,13 @@ import {
   type StatementRunResult,
 } from "../../lib/statements";
 import { PatientSearch } from "../PatientPicker";
+import { recordDocumentPrintRequested } from "../../lib/audit-log";
 
 export interface StatementsServices {
   list(): Promise<StatementRow[]>;
   generate(patientReference: string): Promise<StatementRunResult>;
   run(): Promise<StatementRunResult>;
+  recordPrintRequested(statement: StatementRow): Promise<void>;
   print(statement: StatementRow): void;
 }
 
@@ -38,6 +40,11 @@ export function Statements({
     list: () => fetchStatements(api),
     generate: (patientReference: string) => generatePatientStatement(patientReference, api),
     run: () => runStatements(api),
+    recordPrintRequested: (statement: StatementRow) => recordDocumentPrintRequested({
+      documentKind: "statement",
+      documentReference: statement.statementReference,
+      patientReference: statement.patientReference,
+    }, api),
     print: printStatement,
   };
 
@@ -76,6 +83,9 @@ export function Statements({
 
   const printOne = (statement: StatementRow) => {
     setError(undefined);
+    void services.recordPrintRequested(statement).catch((cause) => {
+      console.error("ODOS statement print audit failed:", cause);
+    });
     try { services.print(statement); }
     catch (cause) { setError(messageOf(cause)); }
   };

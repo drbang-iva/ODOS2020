@@ -31,7 +31,7 @@ import {
 import express from "express";
 import { isIP } from "node:net";
 import { z } from "zod";
-import { createMedplumClient, type JsonPatchOperation } from "./fhir-client.js";
+import { createMedplumClient, createStaffRouteFhirClient, type JsonPatchOperation } from "./fhir-client.js";
 import { createLiveOdosAuditRuntime, type LiveAuditQueryFilters } from "./authz/liveAudit.js";
 import {
   logProtocolSeedBootFailure,
@@ -5536,6 +5536,10 @@ function isOdosAuditEventType(value: string): value is OdosAuditEventType {
     "policy-change",
     "projectmembership-lifecycle",
     "staff.invite",
+    "document.generate.completed",
+    "document.generate.failed",
+    "document.print.requested",
+    "document.print.completed",
     "backup-started",
     "backup-completed",
     "restore-started",
@@ -5608,9 +5612,12 @@ async function authenticateStaffRoute(header: string | undefined) {
     staffReference: resolved.staffReference,
     actorRole,
     roles: resolved.roles,
-    fhir: createMedplumClient({
+    fhir: createStaffRouteFhirClient({
       baseUrl: BASE_URL,
       accessToken: header.slice("Bearer ".length),
+      audit: auditRuntime,
+      staffReference: resolved.staffReference,
+      actorRole,
     }),
     binaryAuth: {
       baseUrl: BASE_URL,
@@ -5775,6 +5782,45 @@ async function main(): Promise<void> {
           }
           const status = error instanceof Error && /lacks business action/.test(error.message) ? 403 : 500;
           res.status(status).json({ error: status === 403 ? "audit.read role required" : "audit route failed" });
+        }
+      });
+
+      const documentPrintAuditSchema = z.object({
+        eventType: z.literal("document.print.requested"),
+        documentKind: z.enum(["letter", "statement"]),
+        documentReference: z.string().regex(/^(DocumentReference|Task)\/[A-Za-z0-9.-]{1,64}$/),
+        patientReference: z.string().regex(/^Patient\/[A-Za-z0-9.-]{1,64}$/),
+      }).strict();
+
+      app.post("/audit/events", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const staff = await authenticateStaffRoute(req.header("authorization"));
+          if (!staff) {
+            res.status(401).json({ error: "Authentication required to record document print." });
+            return;
+          }
+          const parsed = documentPrintAuditSchema.safeParse(req.body);
+          if (!parsed.success) {
+            res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid document print audit." });
+            return;
+          }
+          const row = buildOdosAuditEventRow({
+            eventType: parsed.data.eventType,
+            actorReference: staff.staffReference,
+            actorRole: staff.actorRole,
+            patientReference: parsed.data.patientReference,
+            targetReference: parsed.data.documentReference,
+            actionOutcome: "granted",
+            actionReason: `document-kind=${parsed.data.documentKind}; document-reference=${parsed.data.documentReference}`,
+            ipAddress: requestIp(req),
+            userAgent: req.header("user-agent"),
+          });
+          await auditRuntime.record(row, () => undefined);
+          res.status(201).json({ id: row.id });
+        } catch (error) {
+          console.error("odos-mcp: POST /audit/events failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "document print audit failed" });
         }
       });
 
@@ -7341,6 +7387,9 @@ async function main(): Promise<void> {
         authenticate: authenticateStaffRoute,
         serviceFhir: fhir,
         correspondenceRenderer: new WeasyPrintHttpRenderer(),
+        recordAudit: async (row) => {
+          await auditRuntime.record(row, () => undefined);
+        },
       });
       registerFaxRoutes(app, {
         authenticateService: authenticateWithMedplum,

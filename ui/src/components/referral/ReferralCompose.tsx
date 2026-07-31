@@ -83,6 +83,7 @@ export function ReferralCompose({
   const [letterTouched, setLetterTouchedState] = useState(false);
   const [consultantWarning, setConsultantWarning] = useState(false);
   const [artifact, setArtifact] = useState("");
+  const [artifactReference, setArtifactReference] = useState("");
   const [previewBusy, setPreviewBusy] = useState(false);
   const [busy, setBusy] = useState<string>();
   const [error, setError] = useState<string>();
@@ -170,7 +171,10 @@ export function ReferralCompose({
       mutationQueue.current
         .then(() => api.previewReferral(patientId, referral.id!, letterBody, templateId))
         .then((response) => {
-          if (previewSequence.current === sequence) setArtifact(response.pdfBase64);
+          if (previewSequence.current === sequence) {
+            setArtifact(response.pdfBase64);
+            setArtifactReference(response.documentReference);
+          }
         })
         .catch((caught) => {
           if (previewSequence.current === sequence) handleFailure(caught);
@@ -363,6 +367,7 @@ export function ReferralCompose({
           templateId,
         );
         setArtifact(preview.pdfBase64);
+        setArtifactReference(preview.documentReference);
         const filename = `referral-${finalReferral.id}.pdf`;
         const response = await api.faxReferral({
           patientId,
@@ -386,6 +391,7 @@ export function ReferralCompose({
           templateId,
         );
         setArtifact(response.pdfBase64);
+        setArtifactReference(response.documentReference);
         setSent({
           provenanceReference: response.provenanceReference,
           sentAt: new Date().toLocaleString(),
@@ -416,6 +422,17 @@ export function ReferralCompose({
     anchor.download = `referral-${referral?.id ?? "packet"}.pdf`;
     anchor.click();
     URL.revokeObjectURL(url);
+  }
+
+  function printPacket(): void {
+    setFaxSelected(false);
+    void api.recordPrintRequested({
+      documentReference: artifactReference,
+      patientReference,
+    }).catch((caught) => {
+      console.error("ODOS referral print audit failed:", caught);
+    });
+    iframeRef.current?.contentWindow?.print();
   }
 
   return (
@@ -588,7 +605,7 @@ export function ReferralCompose({
               ) : (
                 <>
                   <div className="grid grid-cols-3 overflow-hidden rounded border border-[color:var(--odos-line)]">
-                    <button type="button" disabled={!artifact || isSending} className="px-2 py-2 text-xs font-semibold disabled:opacity-35" onClick={() => { setFaxSelected(false); iframeRef.current?.contentWindow?.print(); }}>Print</button>
+                    <button type="button" disabled={!artifact || !artifactReference || isSending} className="px-2 py-2 text-xs font-semibold disabled:opacity-35" onClick={printPacket}>Print</button>
                     <button type="button" disabled={!artifact || isSending} className="border-x border-[color:var(--odos-line)] px-2 py-2 text-xs font-semibold disabled:opacity-35" onClick={() => { setFaxSelected(false); downloadPacket(); }}>Download</button>
                     <button
                       type="button"
