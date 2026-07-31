@@ -78,6 +78,76 @@ test("WestFax adapter surfaces ErrorString and InfoString on failure", async () 
   });
 });
 
+test("WestFax adapter performs each documented inbound call with the required multipart fields", async () => {
+  const calls: Array<{ url: string; form: FormData }> = [];
+  const responses: unknown[] = [
+    { Success: true, Result: [{ Id: "product-inbound", InboundNumber: "8645550100" }] },
+    { Success: true, Result: [{ Id: "fax-1", Direction: "Inbound", Date: "2026-07-31T14:00:00Z", Tag: "None" }] },
+    {
+      Success: true,
+      Result: [{
+        Id: "fax-1",
+        Direction: "Inbound",
+        Date: "2026-07-31T14:00:00Z",
+        PageCount: 2,
+        Reference: "synthetic caller metadata",
+        FaxCallInfoList: [{ OrigNumber: "8645550199" }],
+      }],
+    },
+    {
+      Success: true,
+      Result: [{
+        Id: "fax-1",
+        Direction: "Inbound",
+        Date: "2026-07-31T14:00:00Z",
+        PageCount: 2,
+        FaxFiles: [{
+          ContentType: "application/pdf",
+          FileContents: Buffer.from("%PDF-synthetic-inbound").toString("base64"),
+        }],
+      }],
+    },
+    { Success: true, Result: true },
+  ];
+  const adapter = createWestFaxAdapter(CONFIG, {
+    fetchImpl: (async (url, init) => {
+      calls.push({ url: String(url), form: init?.body as FormData });
+      return new Response(JSON.stringify(responses.shift()), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }) as typeof fetch,
+  });
+
+  const products = await adapter.getProductsWithInboundFaxes("None");
+  const ids = await adapter.getFaxIdentifiers(products[0]!.id, "Inbound");
+  const descriptions = await adapter.getFaxDescriptions(products[0]!.id, ids);
+  const documents = await adapter.getFaxDocuments(products[0]!.id, ids, "pdf");
+  await adapter.changeFaxFilterValue(products[0]!.id, ids, "Retrieved");
+
+  assert.deepEqual(calls.map((call) => call.url), [
+    `${WESTFAX_BASE_URL}/REST/Fax_GetProductsWithInboundFaxes/json`,
+    `${WESTFAX_BASE_URL}/REST/Fax_GetFaxIdentifiers/json`,
+    `${WESTFAX_BASE_URL}/REST/Fax_GetFaxDescriptionsUsingIds/json`,
+    `${WESTFAX_BASE_URL}/REST/Fax_GetFaxDocuments/json`,
+    `${WESTFAX_BASE_URL}/REST/Fax_ChangeFaxFilterValue/json`,
+  ]);
+  assert.equal(calls[0]!.form.get("Filter"), "None");
+  assert.equal(calls[0]!.form.get("ProductId"), null);
+  assert.equal(calls[1]!.form.get("ProductId"), "product-inbound");
+  assert.equal(calls[1]!.form.get("FaxDirection"), "Inbound");
+  const faxIdParameter = JSON.stringify({ Id: "fax-1", Direction: "Inbound" });
+  assert.equal(calls[2]!.form.get("FaxIds1"), faxIdParameter);
+  assert.equal(calls[3]!.form.get("FaxIds1"), faxIdParameter);
+  assert.equal(calls[3]!.form.get("Format"), "pdf");
+  assert.equal(calls[4]!.form.get("FaxIds1"), faxIdParameter);
+  assert.equal(calls[4]!.form.get("Filter"), "Retrieved");
+  assert.equal(products[0]?.inboundNumber, "8645550100");
+  assert.equal(descriptions[0]?.senderNumber, "8645550199");
+  assert.equal(documents[0]?.pageCount, 2);
+  assert.match(documents[0]?.fileContents ?? "", /^JVBER/);
+});
+
 test("WestFax adapter aborts a stalled request at 30 seconds with a clear error", async (t) => {
   t.mock.timers.enable({ apis: ["setTimeout"] });
   let requestSignal: AbortSignal | null | undefined;
