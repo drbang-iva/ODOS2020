@@ -278,12 +278,13 @@ function assertOperatorChartAcknowledged(
 ): void {
   // Chart 969 must never calibrate junk rules, but that process rule is distinct
   // from importing it for explicit per-Encounter adjudication downstream.
+  const hasOperatorEpmKey =
+    manifest.epm.sourceKey === FORBIDDEN_M2A_EPM_SOURCE_KEY;
+  const hasOperatorEhrKey =
+    manifest.ehr.sourceKey === FORBIDDEN_M2A_EHR_SOURCE_KEY;
   if (
-    !acknowledged
-    && (
-      manifest.epm.sourceKey === FORBIDDEN_M2A_EPM_SOURCE_KEY
-      || manifest.ehr.sourceKey === FORBIDDEN_M2A_EHR_SOURCE_KEY
-    )
+    (hasOperatorEpmKey || hasOperatorEhrKey)
+    && !(acknowledged && hasOperatorEpmKey && hasOperatorEhrKey)
   ) {
     throw new Error("M2a refuses the operator test-data chart; select one typical chart.");
   }

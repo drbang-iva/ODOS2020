@@ -185,17 +185,18 @@ test("Patient import creates an acknowledged operator chart with both migration 
   }
 });
 
-test("Patient import refuses a junk source pair with or without operator-chart acknowledgement", async () => {
+test("Patient import refuses acknowledged partial matches to the operator chart", async () => {
   const state = tempState();
   const ledger = new ImportLedger({ stateDirectory: state.path });
   const fhir = new PatientFhir();
-  const junkManifest = manifest();
-  junkManifest.epm.birthDate = "9999-12-31";
-  junkManifest.ehr.birthDate = "9999-12-31";
+  const epmOnly = manifest();
+  epmOnly.epm.sourceKey = FORBIDDEN_M2A_EPM_SOURCE_KEY;
+  const ehrOnly = manifest();
+  ehrOnly.ehr.sourceKey = FORBIDDEN_M2A_EHR_SOURCE_KEY;
   try {
-    for (const [runId, allowOperatorTestDataChart] of [
-      ["run-junk-default", false],
-      ["run-junk-acknowledged", true],
+    for (const [runId, selectedManifest] of [
+      ["run-operator-epm-only", epmOnly],
+      ["run-operator-ehr-only", ehrOnly],
     ] as const) {
       await assert.rejects(
         importLegacyPatient({
@@ -203,7 +204,41 @@ test("Patient import refuses a junk source pair with or without operator-chart a
           ledger,
           runId: ledger.startRun(runId),
           projectId: PROJECT_ID,
-          manifest: junkManifest,
+          manifest: selectedManifest,
+          allowOperatorTestDataChart: true,
+        }),
+        /M2a refuses the operator test-data chart; select one typical chart/,
+      );
+    }
+    assert.equal(fhir.creates, 0);
+  } finally {
+    ledger.close();
+    state.cleanup();
+  }
+});
+
+test("Patient import refuses a junk source pair with or without operator-chart acknowledgement", async () => {
+  const state = tempState();
+  const ledger = new ImportLedger({ stateDirectory: state.path });
+  const fhir = new PatientFhir();
+  const defaultJunkManifest = manifest();
+  defaultJunkManifest.epm.birthDate = "9999-12-31";
+  defaultJunkManifest.ehr.birthDate = "9999-12-31";
+  const acknowledgedOperatorJunkManifest = operatorManifest();
+  acknowledgedOperatorJunkManifest.epm.birthDate = "9999-12-31";
+  acknowledgedOperatorJunkManifest.ehr.birthDate = "9999-12-31";
+  try {
+    for (const [runId, selectedManifest, allowOperatorTestDataChart] of [
+      ["run-junk-default", defaultJunkManifest, false],
+      ["run-junk-acknowledged", acknowledgedOperatorJunkManifest, true],
+    ] as const) {
+      await assert.rejects(
+        importLegacyPatient({
+          fhir,
+          ledger,
+          runId: ledger.startRun(runId),
+          projectId: PROJECT_ID,
+          manifest: selectedManifest,
           allowOperatorTestDataChart,
         }),
         /Selected source pair is a junk-row candidate \(sentinel-birth-date\)/,
