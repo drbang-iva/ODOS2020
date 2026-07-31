@@ -56,8 +56,7 @@ export const CORRESPONDENCE_TOKEN_REGISTRY: Readonly<
   "va.table": (context) => renderVisualAcuityTable(context.findings),
   "iop.table": (context) => renderIopTable(context.findings),
   "refraction.table": (context) => renderRefractionTable(context.findings),
-  "vf.summary": () =>
-    '<p data-token-stub="vf.summary">Visual-field summary unavailable: ODOS has no visual-field data model yet.</p>',
+  "vf.summary": renderUnavailableDataToken,
 };
 
 export function resolveCorrespondenceTemplate(
@@ -209,6 +208,16 @@ function formatDate(value: string | undefined): string {
   if (!value) return "";
   const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
   return match ? `${match[2]}/${match[3]}/${match[1]}` : value;
+}
+
+/**
+ * No token resolver may render text describing ODOS's internal state, capabilities, or
+ * roadmap on a document that leaves the practice. Unavailable data renders empty. If a
+ * clinician needs to know a section is unavailable, that belongs in the compose UI, not
+ * in the rendered letter.
+ */
+function renderUnavailableDataToken(): string {
+  return "";
 }
 
 function escapeHtml(value: string): string {

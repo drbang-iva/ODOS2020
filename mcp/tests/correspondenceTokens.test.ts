@@ -9,6 +9,7 @@ import type {
   Observation,
   Patient,
 } from "@medplum/fhirtypes";
+import { CURATED_REFERRAL_TEMPLATES } from "../src/correspondence/template-store.js";
 import {
   CORRESPONDENCE_TOKEN_NAMES,
   resolveCorrespondenceTemplate,
@@ -42,7 +43,21 @@ test("fixed correspondence token registry resolves identity, clinical blocks, an
   assert.match(resolved, />18 mm\[Hg\]</);
   assert.match(resolved, /data-correspondence-table="refraction"/);
   assert.match(resolved, /-1\.25/);
-  assert.match(resolved, /Visual-field summary unavailable: ODOS has no visual-field data model yet\./);
+});
+
+test("vf.summary resolves to an empty string while visual-field data is unavailable", () => {
+  assert.equal(resolveCorrespondenceTemplate("{{vf.summary}}", context()), "");
+});
+
+test("curated correspondence templates never render ODOS capability language", () => {
+  for (const template of CURATED_REFERRAL_TEMPLATES) {
+    const resolved = resolveCorrespondenceTemplate(template.bodyHtml, context());
+    assert.doesNotMatch(
+      resolved,
+      /unavailable|ODOS|data model/i,
+      `${template.name} rendered internal capability language`,
+    );
+  }
 });
 
 test("token registry rejects unknown template reach instead of evaluating arbitrary paths", () => {
