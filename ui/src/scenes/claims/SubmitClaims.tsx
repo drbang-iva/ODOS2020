@@ -846,11 +846,11 @@ function StepLabel({ active, value }: { active: boolean; value: string }) {
   return <li className={active ? "rounded bg-blue-500/20 px-2 py-1 text-blue-200" : "px-2 py-1"}>{value}</li>;
 }
 
-function Field({ label, value, onChange, placeholder, type = "text", inputMode, error }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string; type?: string; inputMode?: "decimal"; error?: string }) {
+function Field({ label, value, onChange, placeholder, type = "text", inputMode, error }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string; type?: string; inputMode?: "decimal" | "numeric"; error?: string }) {
   return (
     <label className="block text-xs font-semibold text-white/60">
       {label}
-      <input type={type} inputMode={inputMode} value={value} placeholder={placeholder} aria-invalid={error ? true : undefined} onChange={(event) => onChange(event.target.value)} className={`mt-1 w-full rounded border border-white/15 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-blue-400 ${inputMode === "decimal" ? "min-h-11" : ""}`} />
+      <input type={type} inputMode={inputMode} value={value} placeholder={placeholder} aria-invalid={error ? true : undefined} onChange={(event) => onChange(event.target.value)} className={`mt-1 w-full rounded border border-white/15 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-blue-400 ${inputMode ? "min-h-11" : ""}`} />
       {error && <span className="mt-1 block font-normal text-red-300">{error}</span>}
     </label>
   );
@@ -962,7 +962,7 @@ function ChargeLines({ lines, onChange, errors }: { lines: ChargeLine[]; onChang
             <Field label="Code" value={line.code} error={claimError(errors, `Charge ${index + 1} code`)} onChange={(code) => update(index, { ...line, code })} />
             <Field label="Description" value={line.description} onChange={(description) => update(index, { ...line, description })} />
             <Field label="Fee (USD)" value={line.feeDollars} placeholder="125.50" inputMode="decimal" error={claimError(errors, `Charge ${index + 1} fee`)} onChange={(feeDollars) => update(index, { ...line, feeDollars })} />
-            <Field label="Quantity" type="number" inputMode="decimal" value={line.quantity} error={claimError(errors, `Charge ${index + 1} quantity`)} onChange={(quantity) => update(index, { ...line, quantity })} />
+            <Field label="Quantity" type="number" inputMode="numeric" value={line.quantity} error={claimError(errors, `Charge ${index + 1} quantity`)} onChange={(quantity) => update(index, { ...line, quantity })} />
             <button type="button" disabled={lines.length === 1} onClick={() => onChange(removeChargeLine(lines, index))} className="rounded border border-white/15 px-3 py-2 text-sm text-white/60 disabled:opacity-30">Remove</button>
           </div>
           {line.id && <div className="mt-1 text-xs text-[color:var(--odos-muted)]">ChargeItem/{line.id} · diagnoses {line.diagnosisSequence?.join(", ") || "none"}{line.laterality ? ` · ${line.laterality}` : ""}</div>}

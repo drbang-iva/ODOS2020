@@ -1220,7 +1220,7 @@ function ChargeTable({
                   className="sidebar-input min-h-11 w-full"
                   type="number"
                   min="1"
-                  inputMode="decimal"
+                  inputMode="numeric"
                   value={line.units}
                   onChange={(event) => onChange(updateLine(lines, line.id, { units: Number(event.target.value) || 1 }))}
                 />

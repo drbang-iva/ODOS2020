@@ -463,12 +463,12 @@ test("malformed typed corneal radii return to blank without discarding valid axi
     const { posted, rendered } = await submitEyeGrowthFixture(eyes);
     assert.equal(posted?.eyes.OD.axialLengthMm, 24.12);
     assert.equal("cornealRadiusMm" in posted!.eyes.OD, false);
-    assert.doesNotMatch(rendered, /Corneal radius for OD is not a number/);
+    assert.match(rendered, /Corneal radius for OD was cleared because it is not a number/);
     assert.doesNotMatch(rendered, /Enter axial length for OD, OS, or both eyes/);
     if ("OS" in eyes) {
       assert.equal(posted?.eyes.OS.axialLengthMm, 24.31);
       assert.equal("cornealRadiusMm" in posted!.eyes.OS, false);
-      assert.doesNotMatch(rendered, /Corneal radius for OS is not a number/);
+      assert.match(rendered, /Corneal radius for OS was cleared because it is not a number/);
     }
   }
 });
@@ -531,6 +531,10 @@ async function submitEyeGrowthFixture(
       act(() => {
         renderer.root.findByProps({ "aria-label": `${eye} corneal radius in millimeters` })
           .props.onChange({ target: { value: values.cornealRadius } });
+      });
+      act(() => {
+        renderer.root.findByProps({ "data-corneal-radius-eye": eye })
+          .props.onBlurCapture({ target: { value: values.cornealRadius } });
       });
       act(() => {
         renderer.root.findByProps({ "aria-label": `${eye} corneal radius in millimeters` })

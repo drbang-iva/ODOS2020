@@ -4,6 +4,7 @@ import { OdosWheel } from "../inputs/OdosWheel";
 import { OdosChips } from "../inputs/OdosChips";
 import { OdosSelect } from "../inputs/OdosSelect";
 import type { CustomFindingDefinition, CustomFindingField } from "./CustomFindingSection";
+import { formatStepValue } from "./power-options";
 import type { SectionSaveStatus } from "./types";
 
 export type Eye = "OD" | "OS";
@@ -415,11 +416,6 @@ function defaultGradeValue(field: CustomFindingField): string {
   return field.localCode === "CUSTOM_GRADE_A_V_RATIO"
     ? field.options?.find((option) => option.active)?.code ?? ""
     : "";
-}
-
-function formatStepValue(value: number, step: number): string {
-  const decimals = String(step).split(".")[1]?.length ?? 0;
-  return value.toFixed(decimals);
 }
 
 function emptyCaptures(definitions: CustomFindingDefinition[]) {

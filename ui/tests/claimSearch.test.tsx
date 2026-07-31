@@ -35,6 +35,25 @@ test("claim search renders the results grid, collapsed additional criteria, and 
   assert.match(html, /\$25\.00/);
 });
 
+test("claim search keeps decimal mode for money and uses numeric mode for whole-day filters", () => {
+  const html = renderToStaticMarkup(
+    <ClaimSearchContent
+      filters={{}}
+      items={[]}
+      failedCount={0}
+      loading={false}
+      onFiltersChange={() => undefined}
+      onSearch={() => undefined}
+      onOpenWorklist={() => undefined}
+    />,
+  );
+  const inputs = html.match(/<input[^>]*>/g) ?? [];
+  const minimumCharged = inputs.find((input) => input.includes('placeholder="0.00"'));
+  const minimumDays = inputs.find((input) => input.includes('placeholder="0"'));
+  assert.match(minimumCharged ?? "", /step="0\.01"[^>]*inputMode="decimal"/);
+  assert.match(minimumDays ?? "", /step="1"[^>]*inputMode="numeric"/);
+});
+
 test("failed-claims badge counts only open claim-rejected and era-denial worklist items", () => {
   assert.equal(failedClaimsCount([
     worklistItem("claim-rejected", "new"),
