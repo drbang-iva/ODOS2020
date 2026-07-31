@@ -610,6 +610,7 @@ async function renderReferralWithAudit(
     serviceRequestReference: string;
     templateId?: string;
     editedBodyHtml?: string;
+    signedByReference?: string;
   },
 ) {
   let rendered;
@@ -619,18 +620,23 @@ async function renderReferralWithAudit(
       authorReference: input.staffReference,
       templateId: input.templateId,
       editedBodyHtml: input.editedBodyHtml,
+      signedByReference: input.signedByReference,
     });
   } catch (error) {
-    await deps.recordAudit(buildOdosAuditEventRow({
-      eventType: "document.generate.failed",
-      eventTime: deps.now?.(),
-      actorReference: input.staffReference,
-      actorRole: input.actorRole,
-      patientReference: input.patientReference,
-      targetReference: input.serviceRequestReference,
-      outcome: "error",
-      actionReason: `document-kind=letter; service-request=${input.serviceRequestReference}`,
-    }));
+    try {
+      await deps.recordAudit(buildOdosAuditEventRow({
+        eventType: "document.generate.failed",
+        eventTime: deps.now?.(),
+        actorReference: input.staffReference,
+        actorRole: input.actorRole,
+        patientReference: input.patientReference,
+        targetReference: input.serviceRequestReference,
+        outcome: "error",
+        actionReason: `document-kind=letter; service-request=${input.serviceRequestReference}`,
+      }));
+    } catch (auditError) {
+      console.error("odos-mcp: failed to audit referral generation failure:", auditError);
+    }
     throw error;
   }
   const renderedDocumentReference = documentReference(rendered.documentReference);

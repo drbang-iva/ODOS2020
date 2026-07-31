@@ -5,6 +5,7 @@ import type {
   Basic,
   Bundle,
   CarePlan,
+  DocumentReference,
   Encounter,
   Observation,
   Organization,
@@ -402,6 +403,12 @@ test("each rendered preview is archived while send records one clinician-attribu
   ).toString();
   assert.match(sentPdf, /Clinician edited words actually sent/);
   assert.doesNotMatch(sentPdf, /Preview-only edited body/);
+  const sentDocumentReference = await fhir.read<DocumentReference>(
+    "DocumentReference",
+    (sent.body as { documentReference: string }).documentReference.replace(/^DocumentReference\//, ""),
+  );
+  assert.equal(sentDocumentReference.docStatus, "final");
+  assert.equal(sentDocumentReference.authenticator?.reference, "Practitioner/clinician-1");
   const provenance = fhir.provenances[0];
   assert.equal(provenance.target[0]?.reference, "ServiceRequest/referral-1");
   assert.match(provenance.target[1]?.reference ?? "", /^DocumentReference\//);
@@ -479,6 +486,28 @@ test("a completed render whose audit insert fails is not mislabeled as a generat
 
   assert.deepEqual(auditRows.map((row) => row.eventType), ["document.generate.completed"]);
   assert.equal(fhir.resources("DocumentReference").length, 1);
+});
+
+test("a failed render preserves its original error when failure auditing also fails", async () => {
+  const fhir = seededFhir();
+  fhir.failNextSearch("Encounter");
+  const endpointDeps = deps(fhir);
+  endpointDeps.recordAudit = async () => {
+    throw new Error("audit unavailable");
+  };
+  const originalConsoleError = console.error;
+  console.error = () => undefined;
+  try {
+    await assert.rejects(handleReferralArtifactRequest(endpointDeps, {
+      authHeader: AUTH,
+      patientId: "p1",
+      referralId: "referral-1",
+      action: "send",
+      body: {},
+    }), /Simulated Encounter search failure/);
+  } finally {
+    console.error = originalConsoleError;
+  }
 });
 
 test("stale final send transaction returns conflict without activation or Provenance", async () => {

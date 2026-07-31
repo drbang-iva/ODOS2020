@@ -33,6 +33,7 @@ import { isIP } from "node:net";
 import { z } from "zod";
 import { createMedplumClient, createStaffRouteFhirClient, type JsonPatchOperation } from "./fhir-client.js";
 import { createLiveOdosAuditRuntime, type LiveAuditQueryFilters } from "./authz/liveAudit.js";
+import { handleDocumentPrintAuditRequest } from "./authz/documentPrintAuditEndpoint.js";
 import {
   logProtocolSeedBootFailure,
   logPracticeRoleBootVerification,
@@ -5785,39 +5786,21 @@ async function main(): Promise<void> {
         }
       });
 
-      const documentPrintAuditSchema = z.object({
-        eventType: z.literal("document.print.requested"),
-        documentKind: z.enum(["letter", "statement"]),
-        documentReference: z.string().regex(/^(DocumentReference|Task)\/[A-Za-z0-9.-]{1,64}$/),
-        patientReference: z.string().regex(/^Patient\/[A-Za-z0-9.-]{1,64}$/),
-      }).strict();
-
       app.post("/audit/events", async (req, res) => {
         try {
           await authenticateWithMedplum();
-          const staff = await authenticateStaffRoute(req.header("authorization"));
-          if (!staff) {
-            res.status(401).json({ error: "Authentication required to record document print." });
-            return;
-          }
-          const parsed = documentPrintAuditSchema.safeParse(req.body);
-          if (!parsed.success) {
-            res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid document print audit." });
-            return;
-          }
-          const row = buildOdosAuditEventRow({
-            eventType: parsed.data.eventType,
-            actorReference: staff.staffReference,
-            actorRole: staff.actorRole,
-            patientReference: parsed.data.patientReference,
-            targetReference: parsed.data.documentReference,
-            actionOutcome: "granted",
-            actionReason: `document-kind=${parsed.data.documentKind}; document-reference=${parsed.data.documentReference}`,
+          const result = await handleDocumentPrintAuditRequest({
+            authenticate: authenticateStaffRoute,
+            recordAudit: async (row) => {
+              await auditRuntime.record(row, () => undefined);
+            },
+          }, {
+            authHeader: req.header("authorization"),
+            body: req.body,
             ipAddress: requestIp(req),
             userAgent: req.header("user-agent"),
           });
-          await auditRuntime.record(row, () => undefined);
-          res.status(201).json({ id: row.id });
+          res.status(result.status).json(result.body);
         } catch (error) {
           console.error("odos-mcp: POST /audit/events failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "document print audit failed" });
