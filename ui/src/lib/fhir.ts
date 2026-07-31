@@ -184,6 +184,8 @@ export const fhir = {
       const response = await originalFetch(...args);
       if (response.status === 401
         && isOwnOriginRequest(args[0])
+        && response.url !== ""
+        && isOwnOriginRequest(response.url)
         && sessionAuthorization
         && requestAuthorization === sessionAuthorization) {
         fhir.logout();
@@ -447,13 +449,16 @@ function authorizationHeader(input: RequestInfo | URL, init?: RequestInit): stri
 }
 
 function isOwnOriginRequest(input: RequestInfo | URL): boolean {
+  if (typeof window === "undefined") return false;
+  const candidate = input as { href?: unknown; url?: unknown };
   const value = typeof input === "string"
     ? input
-    : input instanceof URL
-      ? input.href
-      : input.url;
-  if (!/^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(value)) return true;
-  if (typeof window === "undefined") return false;
+    : typeof candidate.href === "string"
+      ? candidate.href
+      : typeof candidate.url === "string"
+        ? candidate.url
+        : undefined;
+  if (!value) return false;
   try {
     return new URL(value, window.location.href).origin === window.location.origin;
   } catch {

@@ -41,5 +41,6 @@ export async function fetchDeskSummary(fetchImpl: typeof fetch = fetch): Promise
   });
   const body = await response.json().catch(() => undefined) as (DeskSummary & { error?: string }) | undefined;
   if (!response.ok) throw new Error(body?.error ?? `Desk summary failed with HTTP ${response.status}.`);
-  return body as DeskSummary;
+  if (!body) throw new Error(`Desk summary failed with HTTP ${response.status}.`);
+  return body;
 }

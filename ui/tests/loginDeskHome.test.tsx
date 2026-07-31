@@ -108,6 +108,17 @@ test("whoami and Desk summary empty error bodies surface their HTTP status", asy
   );
 });
 
+test("whoami and Desk summary reject successful empty or non-JSON bodies", async () => {
+  await assert.rejects(
+    () => fetchWhoAmI(async () => new Response(null, { status: 200 })),
+    /Practice role lookup failed with HTTP 200\./,
+  );
+  await assert.rejects(
+    () => fetchDeskSummary(async () => new Response("not-json", { status: 200 })),
+    /Desk summary failed with HTTP 200\./,
+  );
+});
+
 test("Desk home keeps Customize on-page and leaves global navigation to AppShell", () => {
   const html = renderToStaticMarkup(<DeskHome />);
   assert.match(html, /The Desk/);
