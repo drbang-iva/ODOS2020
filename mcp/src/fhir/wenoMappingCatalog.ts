@@ -117,6 +117,7 @@ export class FhirWenoMappingCatalog {
   }
 
   private async searchAllBasic(params: Record<string, string>): Promise<Basic[]> {
+    // search-contract: weno-mapping.search-basic
     let bundle = await this.fhir.search<Basic>("Basic", params);
     const resources: Basic[] = [];
     const followedLinks = new Set<string>();

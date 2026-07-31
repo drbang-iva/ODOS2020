@@ -463,6 +463,7 @@ async function searchFirstPage<T extends Resource>(
   resourceType: T["resourceType"],
   params: Record<string, string>,
 ): Promise<{ resources: T[]; hasNext: boolean }> {
+  // search-contract: desk-summary.search-resource
   const bundle = await fhir.search<T>(resourceType, params);
   return {
     resources: (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []),

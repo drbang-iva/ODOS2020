@@ -410,6 +410,7 @@ async function searchAll<T extends Resource>(
   params: Record<string, string>,
 ): Promise<T[]> {
   const resources: T[] = [];
+  // search-contract: patient-overview.search-resource
   let bundle: Bundle<T> = await fhir.search<T>(resourceType, params);
   while (true) {
     resources.push(...(bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []));

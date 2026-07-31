@@ -275,8 +275,11 @@ export async function handleMyopiaHistoryRequest(
   const definitions = resolveMyopiaDefinitions(deps.findingDefinitions?.());
   const [patient, axialBundle, cornealBundle, refractionBundle, settings] = await Promise.all([
     staff.fhir.read<Patient>("Patient", patientId),
+    // search-contract: eye-growth.axial-length-observations
     staff.fhir.search<Observation>("Observation", observationSearchParams(parsed.data.patient, definitions.axialLength)),
+    // search-contract: eye-growth.corneal-radius-observations
     staff.fhir.search<Observation>("Observation", observationSearchParams(parsed.data.patient, definitions.cornealRadius)),
+    // search-contract: eye-growth.refraction-observations
     staff.fhir.search<Observation>("Observation", refractionSearchParams(parsed.data.patient)),
     deps.settingsStore.get(parsed.data.patient),
   ]);

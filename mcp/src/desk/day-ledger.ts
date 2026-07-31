@@ -231,6 +231,7 @@ export async function searchAvailablePage<T extends Resource>(
   resourceType: T["resourceType"],
   params: FhirSearchParams,
 ): Promise<{ resources: T[]; complete: boolean }> {
+  // search-contract: day-ledger.search-resource
   const bundle = await fhir.search<T>(resourceType, params);
   if (bundle.link?.some((link) => link.relation === "next")) {
     return { resources: [], complete: false };

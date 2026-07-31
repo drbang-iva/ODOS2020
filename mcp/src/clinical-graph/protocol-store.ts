@@ -157,6 +157,7 @@ export class ProtocolBasicStore<T extends { id: string }> {
   private async searchAll(params: Record<string, string>): Promise<Basic[]> {
     const resources: Basic[] = [];
     const visited = new Set<string>();
+    // search-contract: protocol-store.search-basic
     let bundle = await this.fhir.search<Basic>("Basic", params);
     while (true) {
       resources.push(...(bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []));
