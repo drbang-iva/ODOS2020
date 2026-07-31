@@ -166,6 +166,32 @@ test("the default catalog filters by clinic mode — modularity exercised at the
   assert.ok(aestheticsOnly.every((hs) => visitTypeDiscipline(hs) === "aesthetics"));
 });
 
+test("the eyecare catalog resolves the shipped contact-lens visit types", () => {
+  const catalogByCode = new Map(
+    defaultVisitTypeCatalog("eyecare").map((visitType) => [visitTypeCode(visitType), visitType]),
+  );
+  const eyecareBand = new Set<string>(DISCIPLINE_COLOR_BANDS.eyecare);
+  const expected = [
+    { code: "contact-lens-exam", display: "Contact Lens Exam", durationMinutes: 30 },
+    {
+      code: "contact-lens-follow-up",
+      display: "Contact Lens Follow-Up",
+      durationMinutes: 15,
+    },
+  ] as const;
+
+  for (const { code, display, durationMinutes } of expected) {
+    const visitType = catalogByCode.get(code);
+    assert.ok(visitType, `${code} missing from shipped eyecare catalog`);
+    assert.equal(visitType.type?.[0]?.coding?.[0]?.display, display);
+    assert.equal(visitTypeDurationMinutes(visitType), durationMinutes);
+    assert.ok(
+      eyecareBand.has(visitTypeColor(visitType)!),
+      `${code} color outside the eyecare band`,
+    );
+  }
+});
+
 test("combined-mode color rule: every default color sits in its own discipline's band, and the bands are disjoint", () => {
   const eyecareBand = new Set<string>(DISCIPLINE_COLOR_BANDS.eyecare);
   const aestheticsBand = new Set<string>(DISCIPLINE_COLOR_BANDS.aesthetics);
