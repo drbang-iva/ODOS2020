@@ -21,6 +21,8 @@ import {
 import {
   EHR_PATIENT_IDENTIFIER_SYSTEM,
   EPM_PATIENT_IDENTIFIER_SYSTEM,
+  FORBIDDEN_M2A_EHR_SOURCE_KEY,
+  FORBIDDEN_M2A_EPM_SOURCE_KEY,
   assertIdentityJoin,
   importLegacyPatient,
   junkRowReasons,
@@ -126,6 +128,88 @@ test("Patient import creates once, records junk, then converges and version-upda
     assert.match(report, /Resource actions: 1/);
     assert.match(report, /Junk rejections: 1/);
     assert.doesNotMatch(report, /Typical Patient|1980-02-03/);
+  } finally {
+    ledger.close();
+    state.cleanup();
+  }
+});
+
+test("Patient import refuses the operator chart unless the caller acknowledges it", async () => {
+  const state = tempState();
+  const ledger = new ImportLedger({ stateDirectory: state.path });
+  const fhir = new PatientFhir();
+  try {
+    await assert.rejects(
+      importLegacyPatient({
+        fhir,
+        ledger,
+        runId: ledger.startRun("run-operator-default"),
+        projectId: PROJECT_ID,
+        manifest: operatorManifest(),
+      }),
+      /M2a refuses the operator test-data chart; select one typical chart/,
+    );
+    assert.equal(fhir.creates, 0);
+  } finally {
+    ledger.close();
+    state.cleanup();
+  }
+});
+
+test("Patient import creates an acknowledged operator chart with both migration identifiers", async () => {
+  const state = tempState();
+  const ledger = new ImportLedger({ stateDirectory: state.path });
+  const fhir = new PatientFhir();
+  try {
+    const result = await importLegacyPatient({
+      fhir,
+      ledger,
+      runId: ledger.startRun("run-operator-acknowledged"),
+      projectId: PROJECT_ID,
+      manifest: operatorManifest(),
+      allowOperatorTestDataChart: true,
+    });
+    assert.equal(result.action, "created");
+    assert.deepEqual(
+      [...fhir.patients.values()][0]?.identifier?.map(
+        (identifier) => [identifier.system, identifier.value],
+      ),
+      [
+        [EPM_PATIENT_IDENTIFIER_SYSTEM, FORBIDDEN_M2A_EPM_SOURCE_KEY],
+        [EHR_PATIENT_IDENTIFIER_SYSTEM, FORBIDDEN_M2A_EHR_SOURCE_KEY],
+      ],
+    );
+  } finally {
+    ledger.close();
+    state.cleanup();
+  }
+});
+
+test("Patient import refuses a junk source pair with or without operator-chart acknowledgement", async () => {
+  const state = tempState();
+  const ledger = new ImportLedger({ stateDirectory: state.path });
+  const fhir = new PatientFhir();
+  const junkManifest = manifest();
+  junkManifest.epm.birthDate = "9999-12-31";
+  junkManifest.ehr.birthDate = "9999-12-31";
+  try {
+    for (const [runId, allowOperatorTestDataChart] of [
+      ["run-junk-default", false],
+      ["run-junk-acknowledged", true],
+    ] as const) {
+      await assert.rejects(
+        importLegacyPatient({
+          fhir,
+          ledger,
+          runId: ledger.startRun(runId),
+          projectId: PROJECT_ID,
+          manifest: junkManifest,
+          allowOperatorTestDataChart,
+        }),
+        /Selected source pair is a junk-row candidate \(sentinel-birth-date\)/,
+      );
+    }
+    assert.equal(fhir.creates, 0);
   } finally {
     ledger.close();
     state.cleanup();
@@ -719,6 +803,13 @@ function manifest(): PatientImportManifest {
       birthDate: "9999-12-31",
     }],
   };
+}
+
+function operatorManifest(): PatientImportManifest {
+  const value = manifest();
+  value.epm.sourceKey = FORBIDDEN_M2A_EPM_SOURCE_KEY;
+  value.ehr.sourceKey = FORBIDDEN_M2A_EHR_SOURCE_KEY;
+  return value;
 }
 
 function nativePatient(id: string): Patient {

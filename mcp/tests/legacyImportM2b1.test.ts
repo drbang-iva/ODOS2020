@@ -660,7 +660,7 @@ test("M2b-1 refuses an ambiguous New York fall-back wall time", async () => {
   }
 });
 
-test("M2b-1 requires explicit visit-type mappings and the M2a calibration refusal stays intact", async () => {
+test("M2b-1 requires explicit visit-type mappings and the default M2a operator-chart refusal stays intact", async () => {
   assert.throws(
     () => appointmentEncounterImportManifestSchema.parse({
       ...manifest(),
