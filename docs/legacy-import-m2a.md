@@ -35,6 +35,27 @@ ODOS_ACCEPTANCE_FRONT_DESK_ACCESS_TOKEN=<ordinary front-desk token>
 Both M2a commands load this file with `--env-file-if-exists`. Keep it at mode `0600`, rotate
 the short-lived tokens after the proof, and never commit or paste the file.
 
+## Source data — which files are authoritative
+
+Every command below reads source data from `/Users/iris/Migration/`. Two files are authoritative
+and are the only ones that should be passed to the importer or the generators:
+
+| File | Contents |
+|---|---|
+| `exams-cohort-verified-20260731.tsv` | 32 exam rows across the cohort, `EXAM_EXPORT_COLUMNS` header |
+| `ehr-source-people-20260731.json` | the cohort's EHR people plus their approved junk companions |
+
+Both are extracted from the restored EHR database, not from earlier working files, and both carry
+a `.PROVENANCE.md` sidecar recording how they were produced and any operator-directed correction
+they contain.
+
+⚠️ **Do not use `all-exams.tsv` or `exams-cohort-verified-20260730.tsv`.** Both are superseded
+working files that cover only part of the cohort. `all-exams.tsv` additionally contains a `sqlcmd`
+separator row (`------`) that the generators reject as a hard parse error. The `20260730` file is
+the more dangerous of the two: every patient number in it is *inside* the current cohort, so no
+guard trips — it simply produces empty exam slices for the charts it omits, silently under-migrating
+their images.
+
 ## Source manifest
 
 Keep the manifest on Iris. Never commit it. It contains one selected EPM row, the matching EHR
@@ -105,7 +126,7 @@ Run on Iris with local source and output paths:
 ```sh
 npm run generate-legacy-patient-manifests -- \
   --patients '/Users/iris/Migration/extract-scoped/EPM data/00127314--PatientExport.csv' \
-  --ehr-people /Users/iris/Migration/ehr-source-people.json \
+  --ehr-people /Users/iris/Migration/ehr-source-people-20260731.json \
   --expected-charts 13 \
   --output /Users/iris/Migration/importer-state/patient-manifests
 ```
@@ -179,7 +200,7 @@ M2b-1 starts its own ledger run; `--run-id` is optional when an operator-selecte
 npm run import-legacy-visits-m2b1 -- \
   --manifest /Users/iris/Migration/importer-state/m2b1-source.json \
   --appointments '/Users/iris/Migration/extract-scoped/EPM data/00127314--AppointmentsExport-Thu-06-18-2026.csv' \
-  --exams /Users/iris/Migration/all-exams.tsv
+  --exams /Users/iris/Migration/exams-cohort-verified-20260731.tsv
 ```
 
 The command prints the full-file source row, exact-duplicate, collision, cancel-resolution,
@@ -205,7 +226,7 @@ npm run import-legacy-visits-m2b2 -- \
   --run-id '<discovery run id>' \
   --manifest /Users/iris/Migration/importer-state/m2b2-source.json \
   --appointments '/Users/iris/Migration/extract-scoped/EPM data/00127314--AppointmentsExport-Thu-06-18-2026.csv' \
-  --exams /Users/iris/Migration/all-exams.tsv
+  --exams /Users/iris/Migration/exams-cohort-verified-20260731.tsv
 ```
 
 The report lists unresolved visit days, capture ids, candidate appointment source keys, provider
@@ -262,7 +283,7 @@ npm run import-legacy-visits-m2b2 -- \
   --run-id '<adjudicated run id>' \
   --manifest /Users/iris/Migration/importer-state/m2b2-source.json \
   --appointments '/Users/iris/Migration/extract-scoped/EPM data/00127314--AppointmentsExport-Thu-06-18-2026.csv' \
-  --exams /Users/iris/Migration/all-exams.tsv
+  --exams /Users/iris/Migration/exams-cohort-verified-20260731.tsv
 ```
 
 The bulk manifest must contain at least one entry with a unique chart key. Each source path is
@@ -275,7 +296,7 @@ resolved relative to the bulk manifest:
       "chartKey": "<opaque chart key>",
       "manifestPath": "charts/chart-01/manifest.json",
       "appointmentsPath": "source/AppointmentsExport.csv",
-      "examsPath": "source/all-exams.tsv"
+      "examsPath": "source/exams.tsv"
     }
   ]
 }
@@ -308,7 +329,7 @@ all unmapped cohort values and stops; it never guesses a coding.
 ODOS_SETUP_STATE_PATH=/Users/iris/ODOS2020/.odos-setup-state.json \
 npm run generate-legacy-visit-manifests -- \
   --appointments '/Users/iris/Migration/extract-scoped/EPM data/00127314--AppointmentsExport.csv' \
-  --exams /Users/iris/Migration/exams-cohort-verified-20260730.tsv \
+  --exams /Users/iris/Migration/exams-cohort-verified-20260731.tsv \
   --patient-references /Users/iris/Migration/importer-state/patient-references.json \
   --visit-type-map /Users/iris/Migration/importer-state/visit-type-map.json \
   --expected-charts 13 \
