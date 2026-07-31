@@ -26,14 +26,25 @@ Open `.odos/migration-importer.env` in a local editor and set the values needed 
 
 ```dotenv
 MEDPLUM_BASE_URL=http://localhost:8103
+ODOS_POSTGRES_URL=postgresql://<local practice database>
+ODOS_PRACTICE_PROJECT_ID=<practice project id>
 ODOS_M2A_STATE_DIR=/Users/iris/Migration/importer-state
 ODOS_OPERATOR_ACCESS_TOKEN=<short-lived practice operator token>
 ODOS_ACCEPTANCE_CLINICIAN_ACCESS_TOKEN=<ordinary clinician token>
 ODOS_ACCEPTANCE_FRONT_DESK_ACCESS_TOKEN=<ordinary front-desk token>
 ```
 
-Both M2a commands load this file with `--env-file-if-exists`. Keep it at mode `0600`, rotate
-the short-lived tokens after the proof, and never commit or paste the file.
+Set `ODOS_PRACTICE_PROJECT_ID` when the database contains more than one practice project, then
+provision the importer for that exact project:
+
+```sh
+npm run setup-legacy-importer
+```
+
+The setup command and both M2a commands load this file with `--env-file-if-exists`. Setup updates
+only the two `ODOS_MIGRATION_IMPORTER_CLIENT_*` entries and preserves the project id, database URL,
+tokens, and every other operator-managed entry. Keep the file at mode `0600`, rotate the short-lived
+tokens after the proof, and never commit or paste the file.
 
 ## Source data — which files are authoritative
 

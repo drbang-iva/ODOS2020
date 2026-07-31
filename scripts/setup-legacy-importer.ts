@@ -30,6 +30,19 @@ const DEFAULT_BASE_URL = "http://localhost:8103";
 const DEFAULT_STATE_PATH = resolve(".odos/migration-importer-state.json");
 const DEFAULT_CREDENTIALS_PATH = resolve(".odos/migration-importer.env");
 
+export interface PracticeProjectResolutionDatabase {
+  findPracticeProjectId(postgresUrl: string): Promise<string>;
+  verifyPracticeProjectClinicianPolicy(
+    postgresUrl: string,
+    projectId: string,
+  ): Promise<StoredPracticeClinicianPolicy>;
+}
+
+const LIVE_PRACTICE_PROJECT_DATABASE: PracticeProjectResolutionDatabase = {
+  findPracticeProjectId,
+  verifyPracticeProjectClinicianPolicy,
+};
+
 export async function setupLegacyImporter(input: {
   readonly baseUrl: string;
   readonly accessToken: string;
@@ -186,19 +199,6 @@ export async function resolvePracticeProjectId(
   return body.project.id;
 }
 
-export interface PracticeProjectResolutionDatabase {
-  findPracticeProjectId(postgresUrl: string): Promise<string>;
-  verifyPracticeProjectClinicianPolicy(
-    postgresUrl: string,
-    projectId: string,
-  ): Promise<StoredPracticeClinicianPolicy>;
-}
-
-const LIVE_PRACTICE_PROJECT_DATABASE: PracticeProjectResolutionDatabase = {
-  findPracticeProjectId,
-  verifyPracticeProjectClinicianPolicy,
-};
-
 export function assertCanonicalClinicianPolicy(stored: StoredPracticeClinicianPolicy): void {
   const roleTags = stored.policy.meta?.tag?.filter(
     (tag) => tag.system === ODOS_PRACTICE_ROLE_SYSTEM,
@@ -281,7 +281,7 @@ function readExistingCredentials(
     : undefined;
 }
 
-function persistCredentials(
+export function persistCredentials(
   credentials: MigrationImporterClientResult,
   statePath: string,
   credentialsPath: string,
@@ -290,9 +290,23 @@ function persistCredentials(
 ): void {
   mkdirSync(dirname(statePath), { recursive: true, mode: 0o700 });
   mkdirSync(dirname(credentialsPath), { recursive: true, mode: 0o700 });
+  const existingLines = existsSync(credentialsPath)
+    ? readFileSync(credentialsPath, "utf8").split(/\r?\n/)
+    : [];
+  const managedKeys = new Set([
+    "ODOS_MIGRATION_IMPORTER_CLIENT_ID",
+    "ODOS_MIGRATION_IMPORTER_CLIENT_SECRET",
+  ]);
+  const preservedLines = existingLines.filter((line) => {
+    const key = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=/)?.[1];
+    return !key || !managedKeys.has(key);
+  });
+  while (preservedLines.at(-1) === "") preservedLines.pop();
   writeFileSync(
     credentialsPath,
     [
+      ...preservedLines,
+      ...(preservedLines.length ? [""] : []),
       `ODOS_MIGRATION_IMPORTER_CLIENT_ID=${credentials.clientId}`,
       `ODOS_MIGRATION_IMPORTER_CLIENT_SECRET=${credentials.clientSecret}`,
       "",

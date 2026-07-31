@@ -20,7 +20,7 @@
     "install-profiles": "tsx scripts/install-profiles.ts",
     "setup-practice": "tsx scripts/setup-practice.ts",
     "generate-medplum-signing-keys": "tsx scripts/generate-medplum-signing-keys.ts",
-    "setup-legacy-importer": "tsx scripts/setup-legacy-importer.ts",
+    "setup-legacy-importer": "tsx --env-file-if-exists=.odos/migration-importer.env scripts/setup-legacy-importer.ts",
     "gate:legacy-import-m2a": "tsx --env-file-if-exists=.env scripts/gate-legacy-import-m2a.ts",
     "generate-legacy-patient-manifests": "tsx scripts/generate-legacy-patient-manifests.ts",
     "generate-legacy-visit-manifests": "tsx scripts/generate-legacy-visit-manifests.ts",
