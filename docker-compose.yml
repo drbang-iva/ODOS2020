@@ -112,6 +112,16 @@ services:
     networks:
       - odos-internal
 
+  odos-core-deps:
+    image: node:22-alpine
+    profiles: ["agentops"]
+    working_dir: /workspace/mcp
+    command: ["npm", "ci", "--omit=dev", "--include=optional", "--no-audit", "--no-fund"]
+    volumes:
+      - ./:/workspace:ro
+      - odos-mcp-node-modules:/workspace/mcp/node_modules
+    restart: "no"
+
   odos-core:
     image: node:22-alpine
     profiles: ["agentops"]
@@ -125,11 +135,14 @@ services:
       NODE_OPTIONS: --experimental-network-imports=false
     volumes:
       - ./:/workspace:ro
+      - odos-mcp-node-modules:/workspace/mcp/node_modules:ro
     depends_on:
       medplum-server:
         condition: service_started
       weasyprint:
         condition: service_healthy
+      odos-core-deps:
+        condition: service_completed_successfully
     networks:
       - odos-internal
       - odos-egress
@@ -153,6 +166,7 @@ services:
 volumes:
   postgres-data:
   medplum-binary:
+  odos-mcp-node-modules:
 
 networks:
   odos-internal:
