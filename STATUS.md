@@ -138,9 +138,9 @@ Post-#30 refinements, each its own slice + PR, each through the gate set (ui bui
 | Insurance eligibility check | Not built | v0.6b PVerify (next) |
 | Card payments | **Code-complete, not yet live-validated** — Clover adapter + charge endpoint + checkout UI shipped; live card-present gated on Clover sandbox Dev Kit / bank ISV answer; Stripe test-mode adapter pending operator account update | v0.6c close |
 | Patient financing (CareCredit / Cherry / Sunbit) | Not built (adapter slots exist) | v0.6c+ per practice demand |
-| Electronic claim submission | Not built | v0.6d Claim.MD |
+| Electronic claim submission | **Shipped, not yet live-validated** — Stedi 837P submission, 277CA retrieval, ERA queues, and eight claims screens are implemented; live use remains gated by practice enrollment and clearinghouse configuration | v0.6d close |
 | DICOM device integration | Not built | v0.6e DICOM Supp 247 |
-| E-prescribing | Not built | v0.6f WENO |
+| E-prescribing | **Code-complete, not yet live-validated** — deliberate saved-prescription WENO Switch NewRx send, durable send guard, and preferred-pharmacy snapshot are implemented; certification and the separate inbound ERROR/VERIFY receiver remain go-live gates | v0.6f close |
 | Payer FHIR connectors (270/271 alt) | Not built | v0.6g |
 | HIPAA-compliant email | Not built | v0.6h Paubox |
 | TEFCA / Direct Trust messaging | Not built | v0.65 (scope-reduced per HTI-5) |

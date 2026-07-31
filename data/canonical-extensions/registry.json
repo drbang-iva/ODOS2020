@@ -195,6 +195,12 @@
       "sliceConsumer": "weno-formulary-directory"
     },
     {
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-preferred-pharmacy",
+      "namespace": "medication-order",
+      "status": "active",
+      "sliceConsumer": "weno-send-seam"
+    },
+    {
       "url": "https://odos2020.com/fhir/StructureDefinition/project-membership-lifecycle-state",
       "namespace": "authz",
       "status": "active",

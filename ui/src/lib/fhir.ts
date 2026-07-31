@@ -3,7 +3,7 @@
  * Web Crypto API for PKCE. Zero Medplum SDK coupling — swappable backend.
  */
 
-import type { Bundle, OperationOutcome, Resource } from "@medplum/fhirtypes";
+import type { Bundle, MedicationRequest, OperationOutcome, Resource } from "@medplum/fhirtypes";
 
 const BASE = "/fhir/R4"; // Vite dev proxy -> http://localhost:8103
 const AUTH = "";
@@ -47,6 +47,7 @@ export interface WenoDrugSearchResult {
 
 export interface WenoPharmacySearchResult {
   ncpdpId: string;
+  npi?: string;
   businessName: string;
   addressLine1: string;
   addressLine2: string;
@@ -55,6 +56,21 @@ export interface WenoPharmacySearchResult {
   zip: string;
   phone: string;
   onWeno: boolean;
+}
+
+export interface WenoSwitchConfiguration {
+  configured: boolean;
+  reason: string;
+}
+
+export type WenoPrescriptionSendResult =
+  | { kind: "status"; code: string; description: string }
+  | { kind: "error"; code: string; descriptionCode: string; description: string };
+
+export interface WenoPrescriptionSendResponse {
+  result: WenoPrescriptionSendResult;
+  medicationRequest: MedicationRequest;
+  resendable: boolean;
 }
 
 async function pkce(): Promise<{ verifier: string; challenge: string }> {
@@ -269,6 +285,39 @@ export const fhir = {
       "Directory",
       signal,
     );
+  },
+
+  async readWenoSwitchConfiguration(baseUrl: string): Promise<WenoSwitchConfiguration> {
+    const res = await fetch(`${baseUrl}/weno/switch/configuration`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    const body = await res.json() as Partial<WenoSwitchConfiguration> & { error?: string };
+    if (!res.ok) throw new Error(body.error ?? `WENO Switch configuration check failed: ${res.status}`);
+    if (typeof body.configured !== "boolean" || typeof body.reason !== "string") {
+      throw new Error("WENO Switch configuration response is incomplete.");
+    }
+    return { configured: body.configured, reason: body.reason };
+  },
+
+  async sendWenoPrescription(
+    baseUrl: string,
+    medicationRequestId: string,
+  ): Promise<WenoPrescriptionSendResponse> {
+    const res = await fetch(
+      `${baseUrl}/weno/medication-requests/${encodeURIComponent(medicationRequestId)}/send`,
+      {
+        method: "POST",
+        headers: token
+          ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
+          : { "Content-Type": "application/json" },
+      },
+    );
+    const body = await res.json() as Partial<WenoPrescriptionSendResponse> & { error?: string };
+    if (!res.ok) throw new Error(body.error ?? `WENO prescription send failed: ${res.status}`);
+    if (!body.result || !body.medicationRequest || typeof body.resendable !== "boolean") {
+      throw new Error("WENO prescription send response is incomplete.");
+    }
+    return body as WenoPrescriptionSendResponse;
   },
 
   async read<T extends Resource>(

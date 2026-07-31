@@ -1,0 +1,271 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "odos-preferred-pharmacy",
+  "url": "https://odos2020.com/fhir/StructureDefinition/odos-preferred-pharmacy",
+  "version": "weno-send-seam",
+  "name": "ODOSPreferredPharmacy",
+  "title": "ODOS Preferred Pharmacy",
+  "status": "active",
+  "date": "2026-07-31",
+  "publisher": "ODOS",
+  "description": "Structured WENO Directory pharmacy stored as the Patient default or as the point-in-time MedicationRequest dispensing snapshot.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "Patient"
+    },
+    {
+      "type": "element",
+      "expression": "MedicationRequest"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Structured WENO Directory pharmacy",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "slicing": {
+          "discriminator": [
+            {
+              "type": "value",
+              "path": "url"
+            }
+          ],
+          "rules": "closed"
+        },
+        "min": 7,
+        "max": "9"
+      },
+      {
+        "id": "Extension.extension:ncpdpId",
+        "path": "Extension.extension",
+        "sliceName": "ncpdpId",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:ncpdpId.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "ncpdpId"
+      },
+      {
+        "id": "Extension.extension:ncpdpId.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:npi",
+        "path": "Extension.extension",
+        "sliceName": "npi",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:npi.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "npi"
+      },
+      {
+        "id": "Extension.extension:npi.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:name",
+        "path": "Extension.extension",
+        "sliceName": "name",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:name.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "name"
+      },
+      {
+        "id": "Extension.extension:name.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:addressLine1",
+        "path": "Extension.extension",
+        "sliceName": "addressLine1",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:addressLine1.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "addressLine1"
+      },
+      {
+        "id": "Extension.extension:addressLine1.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:addressLine2",
+        "path": "Extension.extension",
+        "sliceName": "addressLine2",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:addressLine2.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "addressLine2"
+      },
+      {
+        "id": "Extension.extension:addressLine2.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:city",
+        "path": "Extension.extension",
+        "sliceName": "city",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:city.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "city"
+      },
+      {
+        "id": "Extension.extension:city.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:state",
+        "path": "Extension.extension",
+        "sliceName": "state",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:state.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "state"
+      },
+      {
+        "id": "Extension.extension:state.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:postalCode",
+        "path": "Extension.extension",
+        "sliceName": "postalCode",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:postalCode.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "postalCode"
+      },
+      {
+        "id": "Extension.extension:postalCode.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:phone",
+        "path": "Extension.extension",
+        "sliceName": "phone",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:phone.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "phone"
+      },
+      {
+        "id": "Extension.extension:phone.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/odos-preferred-pharmacy"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "max": "0"
+      }
+    ]
+  }
+}

@@ -22,6 +22,7 @@ const CONFIG: Required<WenoSwitchConfig> = {
   routingId: "TEST_ROUTING_ID",
   senderSoftwareDeveloper: "Test Developer",
   senderSoftwareVersion: "0.0.1-test",
+  endpoint: "https://cert.example.test/weno-switch",
 };
 
 const PATIENT: Patient = {
@@ -92,6 +93,7 @@ test("WENO Switch config is all-or-nothing and reads only its own env keys", () 
     WENO_SWITCH_ROUTING_ID: CONFIG.routingId,
     WENO_SWITCH_SENDER_SOFTWARE_DEVELOPER: CONFIG.senderSoftwareDeveloper,
     WENO_SWITCH_SENDER_SOFTWARE_VERSION: CONFIG.senderSoftwareVersion,
+    WENO_SWITCH_ENDPOINT: CONFIG.endpoint,
   }), CONFIG);
 });
 
@@ -247,6 +249,23 @@ test("send validates before HTTP, posts only to cert, and preserves unknown Stat
     Accept: "application/xml",
     "Content-Type": "application/xml; charset=utf-8",
   });
+});
+
+test("send uses an operator-supplied WENO Switch endpoint without inventing a production default", async () => {
+  let calledUrl = "";
+  const configuredEndpoint = "https://verified-endpoint.example.test/weno-switch";
+  await sendWenoSwitchNewRx(
+    buildFixture("b123456789abcdef0123456789abcdef"),
+    {
+      endpoint: configuredEndpoint,
+      fetchImpl: (async (input) => {
+        calledUrl = String(input);
+        return new Response(statusResponse("001", "Accepted"), { status: 200 });
+      }) as typeof fetch,
+    },
+  );
+  assert.equal(calledUrl, configuredEndpoint);
+  assert.notEqual(calledUrl, WENO_SWITCH_CERT_ENDPOINT);
 });
 
 test("send requires a full date-time before accepting Z or a numeric UTC offset", async () => {

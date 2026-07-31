@@ -13,12 +13,20 @@ import {
   type PrescriptionDraft,
   type WenoSearchApi,
   draftFromRequest,
+  draftWithPreferredPharmacy,
   formatDate,
   isControlledSubstanceDrug,
   mergeMedicationRequestUpdate,
+  withDirectoryResult,
   withDrugText,
 } from "../src/components/charting/PrescriptionSection";
 import { CONCURRENT_EDIT_MESSAGE, toError } from "../src/lib/fhir";
+import {
+  buildMedicationRequest,
+  pharmacyFromResource,
+  withPreferredPharmacy,
+  type MedicationOrderPharmacy,
+} from "../src/lib/fhir-medication-order";
 
 const NOOP = () => undefined;
 
@@ -140,6 +148,19 @@ test("PrescriptionSection rejects a stale loaded version with the friendly concu
         participant: [{ individual: { reference: "Practitioner/doc-1" } }],
       });
     }
+    if (url.endsWith("/Patient/patient-1")) {
+      return jsonResponse({
+        resourceType: "Patient",
+        id: "patient-1",
+        meta: { versionId: "3" },
+      });
+    }
+    if (url.endsWith("/weno/switch/configuration")) {
+      return jsonResponse({
+        configured: false,
+        reason: "WENO Switch is not configured.",
+      });
+    }
     if (url.includes("/Condition?")) {
       return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [] });
     }
@@ -182,6 +203,76 @@ test("PrescriptionSection rejects a stale loaded version with the friendly concu
     assert.equal(updateHeaders[0]?.get("If-Match"), 'W/"7"');
     assert.equal(saved, 0);
     assert.match(JSON.stringify(renderer.toJSON()), new RegExp(CONCURRENT_EDIT_MESSAGE.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  } finally {
+    if (renderer) act(() => renderer.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("an unconfigured WENO Switch disables the saved-row send action with its reason", async () => {
+  const originalFetch = globalThis.fetch;
+  const reason = "WENO Switch is not configured. Complete the WENO_SWITCH settings before sending.";
+  const request: MedicationRequest = {
+    resourceType: "MedicationRequest",
+    id: "rx-1",
+    status: "active",
+    intent: "order",
+    subject: { reference: "Patient/patient-1" },
+    encounter: { reference: "Encounter/encounter-1" },
+    medicationCodeableConcept: { text: "Latanoprost" },
+    dosageInstruction: [{ text: "1 drop OU nightly" }],
+    requester: { reference: "Practitioner/doc-1" },
+    authoredOn: "2026-07-31",
+  };
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith("/Encounter/encounter-1")) {
+      return jsonResponse({
+        resourceType: "Encounter",
+        id: "encounter-1",
+        status: "in-progress",
+        class: {},
+        subject: { reference: "Patient/patient-1" },
+        participant: [{ individual: { reference: "Practitioner/doc-1" } }],
+      });
+    }
+    if (url.endsWith("/Patient/patient-1")) {
+      return jsonResponse({ resourceType: "Patient", id: "patient-1" });
+    }
+    if (url.endsWith("/weno/switch/configuration")) {
+      return jsonResponse({ configured: false, reason });
+    }
+    if (url.includes("/Condition?")) {
+      return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [] });
+    }
+    if (url.includes("/MedicationRequest?")) {
+      return jsonResponse({
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [{ resource: request }],
+      });
+    }
+    throw new Error(`Unexpected request ${url}`);
+  };
+
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    await act(async () => {
+      renderer = create(
+        <PrescriptionSection
+          patientReference="Patient/patient-1"
+          encounterReference="Encounter/encounter-1"
+          onSaved={NOOP}
+        />,
+      );
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    const send = renderer.root.findAllByType("button")
+      .find((button) => button.children.includes("Send to pharmacy"));
+    assert.ok(send);
+    assert.equal(send.props.disabled, true);
+    assert.equal(send.props.title, reason);
+    assert.match(JSON.stringify(renderer.toJSON()), new RegExp(reason.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   } finally {
     if (renderer) act(() => renderer.unmount());
     globalThis.fetch = originalFetch;
@@ -402,6 +493,59 @@ test("MedicationRequest readback restores WENO fields only as a complete group",
       drugDbCodeQualifier: "SCD",
       quantityUnitOfMeasureCode: "C48542",
     },
+  );
+});
+
+test("preferred pharmacy round trip defaults a new prescription without locking its snapshot", () => {
+  const preferred: MedicationOrderPharmacy = {
+    ncpdpId: "4222222",
+    npi: "1234567893",
+    name: "Preferred Pharmacy",
+    addressLine1: "123 Main Street",
+    city: "Greenwood",
+    state: "SC",
+    postalCode: "29646",
+    phone: "8645550100",
+  };
+  const patient = withPreferredPharmacy({
+    resourceType: "Patient",
+    id: "patient-1",
+  }, preferred);
+  const prefilled = draftWithPreferredPharmacy(
+    EMPTY_PRESCRIPTION_DRAFT,
+    pharmacyFromResource(patient),
+  );
+  assert.equal(prefilled.pharmacyNcpdpId, preferred.ncpdpId);
+
+  const overrideResult: DirectoryResult = {
+    ncpdpId: "4333333",
+    npi: "1098765432",
+    businessName: "Override Pharmacy",
+    addressLine1: "456 Oak Avenue",
+    addressLine2: "Suite 2",
+    city: "Abbeville",
+    state: "SC",
+    zip: "29620",
+    phone: "8645550200",
+    onWeno: true,
+  };
+  const overridden = withDirectoryResult(prefilled, overrideResult);
+  assert.equal(overridden.pharmacyNcpdpId, overrideResult.ncpdpId);
+  assert.equal(pharmacyFromResource(patient)?.ncpdpId, preferred.ncpdpId);
+
+  const request = buildMedicationRequest({
+    patientReference: "Patient/patient-1",
+    practitionerReference: "Practitioner/prescriber-1",
+    encounterReference: "Encounter/encounter-1",
+    medicationText: "Latanoprost",
+    dosageText: "One drop nightly",
+    pharmacy: overridden.pharmacyDetails,
+    transmissionMethod: "printed",
+  });
+  assert.deepEqual(pharmacyFromResource(request), overridden.pharmacyDetails);
+  assert.equal(
+    request.dispenseRequest?.performer?.identifier?.value,
+    overrideResult.ncpdpId,
   );
 });
 

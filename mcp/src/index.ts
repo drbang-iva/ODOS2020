@@ -87,6 +87,7 @@ import {
 } from "./reminders/reminder-engine.js";
 import { PostgresWenoDrugDatabaseStorage } from "./jobs/syncWenoDrugDatabase.js";
 import { PostgresWenoPharmacyDirectoryStorage } from "./jobs/syncWenoPharmacyDirectory.js";
+import { wenoSwitchConfigFromEnv } from "./integrations/weno/config.js";
 import { registerWenoSearchRoutes } from "./weno/weno-search-routes.js";
 import {
   createLabOrderDispatch,
@@ -7325,6 +7326,10 @@ async function main(): Promise<void> {
         authenticate: authenticateStaffRoute,
         drugs: new PostgresWenoDrugDatabaseStorage(),
         pharmacies: new PostgresWenoPharmacyDirectoryStorage(),
+        switchConfig: wenoSwitchConfigFromEnv(),
+        recordAudit: async (row) => {
+          await auditRuntime.record(row, () => undefined);
+        },
       });
       registerReferralRoutes(app, {
         authenticateService: authenticateWithMedplum,
