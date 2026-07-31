@@ -23,6 +23,10 @@ export const AUDIT_EVENT_TYPES = [
   "restore-started",
   "restore-completed",
   "external-api-call",
+  "document.generate.completed",
+  "document.generate.failed",
+  "document.print.requested",
+  "document.print.completed",
 ] as const;
 
 export type AuditEventType = (typeof AUDIT_EVENT_TYPES)[number];
@@ -161,6 +165,34 @@ export async function fetchAuditLogRows(
   }
   const body = (await response.json()) as { rows?: AuditLogRow[] };
   return (body.rows ?? []).map(normalizeAuditLogRow);
+}
+
+export async function recordDocumentPrintRequested(
+  input: {
+    documentKind: "letter" | "statement";
+    documentReference: string;
+    patientReference: string;
+  },
+  options: {
+    authorization?: string;
+    fetchImpl?: typeof fetch;
+  } = {},
+): Promise<void> {
+  const response = await (options.fetchImpl ?? fetch)(`${auditApiBase()}/audit/events`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...(options.authorization ? { Authorization: options.authorization } : {}),
+    },
+    body: JSON.stringify({
+      eventType: "document.print.requested",
+      ...input,
+    }),
+  });
+  if (!response.ok) {
+    throw new Error(`Document print audit request failed: ${response.status}`);
+  }
 }
 
 export function normalizeAuditLogRow(row: AuditLogRow): AuditLogRow {

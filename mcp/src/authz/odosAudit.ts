@@ -120,6 +120,10 @@ export const ODOS_AUDIT_EVENT_TYPES = [
   "coverage.write",
   "benefits.manual-entry",
   "staff.invite",
+  "document.generate.completed",
+  "document.generate.failed",
+  "document.print.requested",
+  "document.print.completed",
   ...AGENTOPS_AUDIT_EVENT_TYPES,
 ] as const;
 

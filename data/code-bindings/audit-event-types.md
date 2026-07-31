@@ -88,6 +88,10 @@ security log. FHIR `AuditEvent` resources are projections for interoperability.
 | `payment.settle.batch` | payment-event | Processor settlement batch gathered (settlement reconciliation UI deferred to v0.7). Ledger: payment-reconciliation-seam-ledger.md. |
 | `payment.financing.preauthorized` | payment-event | Patient financing application pre-authorized by the financing platform. Ledger: payment-reconciliation-seam-ledger.md. |
 | `payment.financing.declined` | payment-event | Patient financing application declined by the financing platform. Ledger: payment-reconciliation-seam-ledger.md. |
+| `document.generate.completed` | document-event | Server-side document generation completed with a durable DocumentReference. |
+| `document.generate.failed` | document-event | Server-side document generation failed before a durable artifact was returned. |
+| `document.print.requested` | document-event | An authenticated staff user requested browser printing of a generated document. |
+| `document.print.completed` | document-event | A server-side render-to-PDF print operation completed; browser print completion is not inferred. |
 
 ## Information Blocking Exceptions
 

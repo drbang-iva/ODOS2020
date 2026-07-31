@@ -1,5 +1,6 @@
 import type { ServiceRequest } from "@medplum/fhirtypes";
 import { fhir } from "../../lib/fhir";
+import { recordDocumentPrintRequested } from "../../lib/audit-log";
 
 export const REFERRAL_LETTER_BODY_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/referral-letter-body";
@@ -104,6 +105,10 @@ export interface ReferralApi {
   applyTemplate(patientId: string, referralId: string, templateId: string): Promise<ServiceRequest>;
   previewReferral(patientId: string, referralId: string, editedLetterBody: string, templateId?: string): Promise<ReferralArtifactResponse>;
   sendReferral(patientId: string, referralId: string, editedLetterBody: string, templateId?: string): Promise<ReferralArtifactResponse>;
+  recordPrintRequested(input: {
+    documentReference: string;
+    patientReference: string;
+  }): Promise<void>;
   faxReferral(input: {
     patientId: string;
     referralId: string;
@@ -268,6 +273,13 @@ export function createReferralApi(fetchImpl: typeof fetch = fetch): ReferralApi 
             ...(templateId ? { templateId } : {}),
           },
         },
+      );
+    },
+
+    recordPrintRequested(input) {
+      return recordDocumentPrintRequested(
+        { documentKind: "letter", ...input },
+        { authorization: fhir.authHeader(), fetchImpl },
       );
     },
 

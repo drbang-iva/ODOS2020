@@ -148,6 +148,10 @@ test("the referral API uses the directory, mutation, artifact, and fax contracts
   await api.applyTemplate("p1", "r1", "starter-referral-general");
   await api.previewReferral("p1", "r1", "Edited preview", "starter-referral-general");
   await api.sendReferral("p1", "r1", "Edited send", "starter-referral-general");
+  await api.recordPrintRequested({
+    documentReference: "DocumentReference/d1",
+    patientReference: "Patient/p1",
+  });
   await api.faxReferral({
     patientId: "p1",
     referralId: "r1",
@@ -171,6 +175,7 @@ test("the referral API uses the directory, mutation, artifact, and fax contracts
     ["POST", "/referrals/patients/p1/r1/apply-template"],
     ["POST", "/referrals/patients/p1/r1/preview"],
     ["POST", "/referrals/patients/p1/r1/send"],
+    ["POST", "/audit/events"],
     ["POST", "/fax/referrals/p1/r1"],
     ["GET", "/fax/referrals/p1/r1/status"],
   ]);
@@ -192,9 +197,15 @@ test("the referral API uses the directory, mutation, artifact, and fax contracts
     editedLetterBody: "Edited send",
     templateId: "starter-referral-general",
   });
-  assert.equal((calls[12]?.headers as Record<string, string>)["X-ODOS-Fax-Destination"], "8645550100");
-  assert.equal((calls[12]?.headers as Record<string, string>)["X-ODOS-Billing-Code"], "r1");
-  assert.equal((calls[12]?.headers as Record<string, string>)["Content-Type"], "application/pdf");
+  assert.deepEqual(calls[12]?.body, {
+    eventType: "document.print.requested",
+    documentKind: "letter",
+    documentReference: "DocumentReference/d1",
+    patientReference: "Patient/p1",
+  });
+  assert.equal((calls[13]?.headers as Record<string, string>)["X-ODOS-Fax-Destination"], "8645550100");
+  assert.equal((calls[13]?.headers as Record<string, string>)["X-ODOS-Billing-Code"], "r1");
+  assert.equal((calls[13]?.headers as Record<string, string>)["Content-Type"], "application/pdf");
 });
 
 test("the referral API turns documented 409 responses into a reopen-required conflict", async () => {
@@ -460,6 +471,54 @@ test("Fax failure surfaces an inline error instead of a false sent state", async
   }
 });
 
+test("Print starts the audit request first and still invokes browser print when audit fails", async () => {
+  const originalWindow = globalThis.window;
+  const originalConsoleError = console.error;
+  const calls: string[] = [];
+  const api: ReferralApi = {
+    ...apiStub(),
+    loadRecentConsultants: async () => [{ reference: "Organization/o1", display: "Retina Group" }],
+    createReferral: async () => referral(),
+    previewReferral: async () => artifactResponse("JVBERi1zeW50aGV0aWM="),
+    recordPrintRequested: async () => {
+      calls.push("audit");
+      throw new Error("audit unavailable");
+    },
+  };
+  let renderer!: ReactTestRenderer;
+  Object.defineProperty(globalThis, "window", { configurable: true, value: immediateTimerWindow() });
+  console.error = () => undefined;
+  try {
+    await act(async () => {
+      renderer = create(
+        <ReferralCompose
+          patientReference="Patient/p1"
+          encounterReference="Encounter/e1"
+          onClose={() => undefined}
+          api={api}
+          loadContext={async () => ({ doctorDisplay: "Dr. Rivera", findingCount: 3, hasPlan: true })}
+        />,
+        {
+          createNodeMock: (element) => element.type === "iframe"
+            ? { contentWindow: { print: () => calls.push("print") } }
+            : null,
+        },
+      );
+      await flushMicrotasks();
+      consultantButton(renderer.root).props.onClick();
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+    act(() => buttonNamed(renderer.root, "Print").props.onClick());
+    await flushMicrotasks();
+    assert.deepEqual(calls, ["audit", "print"]);
+  } finally {
+    if (renderer) await act(async () => renderer.unmount());
+    console.error = originalConsoleError;
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
+});
+
 test("the created ServiceRequest supplies the editable generated letter without another fetch", () => {
   assert.equal(readReferralLetterBody(referral()), "Dear Retina Group,\n\nPlease evaluate this patient.");
 });
@@ -502,6 +561,7 @@ function apiStub(): ReferralApi {
     applyTemplate: async () => referral(),
     previewReferral: async () => artifactResponse(""),
     sendReferral: async () => artifactResponse(""),
+    recordPrintRequested: async () => undefined,
     faxReferral: async () => ({ fax: { reference: "DocumentReference/f1", status: "Pending" } }),
     loadFaxStatus: async () => null,
   };

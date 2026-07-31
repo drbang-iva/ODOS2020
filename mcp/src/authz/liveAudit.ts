@@ -79,6 +79,15 @@ const AUDIT_DDL_FILES = [
     sentinel: { kind: "column", table: "odos_package_redemptions", column: "consumed_at" },
   },
   { path: migrationPath("2026-07-18-commercial-engine-credit-bank.sql"), sentinel: { kind: "table", table: "odos_credit_bank_spends" } },
+  { path: migrationPath("2026-07-31-document-print-events.sql"), sentinel: { kind: "event-type", eventType: "document.generate.completed" } },
+  {
+    path: migrationPath("2026-07-31-document-print-events.validate.sql"),
+    sentinel: {
+      kind: "constraint-validated",
+      table: "odos_audit_events",
+      constraint: "odos_audit_events_event_type_check",
+    },
+  },
 ] satisfies readonly AuditDdlFile[];
 
 export interface LiveAuditRuntimeOptions {

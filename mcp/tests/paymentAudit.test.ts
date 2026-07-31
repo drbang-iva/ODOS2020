@@ -31,8 +31,8 @@ test("the 10 payment.* audit event types are registered — count and enumeratio
 });
 
 test("the latest audit migration pair matches the TypeScript union and separates validation", () => {
-  const migrationFile = "2026-07-22-era-integrity-event.sql";
-  const validationFile = "2026-07-22-era-integrity-event.validate.sql";
+  const migrationFile = "2026-07-31-document-print-events.sql";
+  const validationFile = "2026-07-31-document-print-events.validate.sql";
   const sql = readFileSync(
     resolve(process.cwd(), "../data/migrations", migrationFile),
     "utf8",
