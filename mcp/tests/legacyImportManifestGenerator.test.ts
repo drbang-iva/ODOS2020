@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import {
   chmodSync,
   mkdtempSync,
@@ -10,7 +11,7 @@ import {
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { test } from "node:test";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   classifyApprovedJunkRows,
   generatePatientImportManifests,
@@ -44,6 +45,8 @@ import {
   type SourcePerson,
 } from "../src/legacy-import/patient-import.js";
 
+const REPOSITORY_ROOT = fileURLToPath(new URL("../..", import.meta.url));
+
 test("phase 1 emits 12 schema-valid private manifests joined by name and DOB", () => {
   const fixture = patientFixture();
   try {
@@ -51,6 +54,7 @@ test("phase 1 emits 12 schema-valid private manifests joined by name and DOB", (
       patientExportPath: fixture.patientExportPath,
       ehrPeoplePath: fixture.ehrPeoplePath,
       outputDirectory: fixture.outputDirectory,
+      expectedChartCount: 12,
     });
     assert.equal(result.manifests.length, 12);
     assert.equal(result.classifiedJunkRows, 4);
@@ -90,6 +94,7 @@ test("phase 1 acknowledges only the exact operator chart and never tunes junk cl
       patientExportPath: fixture.patientExportPath,
       ehrPeoplePath: fixture.ehrPeoplePath,
       outputDirectory: fixture.outputDirectory,
+      expectedChartCount: 12,
     });
     const acknowledged = result.manifests.filter((entry) =>
       entry.importArguments.includes("--allow-operator-test-data-chart")
@@ -279,11 +284,14 @@ test("both generator CLIs expose the documented required paths and setup-state p
     "patients.csv",
     "--ehr-people",
     "ehr.json",
+    "--expected-charts",
+    "13",
     "--output",
     "patient-output",
   ]);
   assert.equal(patientArgs.patientExportPath.endsWith("/patients.csv"), true);
   assert.equal(patientArgs.ehrPeoplePath.endsWith("/ehr.json"), true);
+  assert.equal(patientArgs.expectedChartCount, 13);
 
   const visitArgs = parseVisitManifestGeneratorArguments([
     "--appointments",
@@ -294,6 +302,8 @@ test("both generator CLIs expose the documented required paths and setup-state p
     "references.json",
     "--visit-type-map",
     "visit-types.json",
+    "--expected-charts",
+    "13",
     "--output",
     "visit-output",
   ], {
@@ -301,6 +311,7 @@ test("both generator CLIs expose the documented required paths and setup-state p
   });
   assert.equal(visitArgs.setupStatePath, "/synthetic/setup-state.json");
   assert.equal(visitArgs.outputDirectory.endsWith("/visit-output"), true);
+  assert.equal(visitArgs.expectedChartCount, 13);
   assert.throws(
     () => parsePatientManifestGeneratorArguments([
       "--patients",
@@ -309,6 +320,8 @@ test("both generator CLIs expose the documented required paths and setup-state p
       "two.csv",
       "--ehr-people",
       "ehr.json",
+      "--expected-charts",
+      "12",
       "--output",
       "output",
     ]),
@@ -324,11 +337,170 @@ test("both generator CLIs expose the documented required paths and setup-state p
       "references.json",
       "--visit-type-map",
       "visit-types.json",
+      "--expected-charts",
+      "12",
       "--out",
       "output",
     ]),
     /Unknown argument --out/,
   );
+});
+
+test("both generator CLIs exit non-zero when --expected-charts is omitted", () => {
+  const patient = runGeneratorCli("generate-legacy-patient-manifests.ts", [
+    "--patients",
+    "patients.csv",
+    "--ehr-people",
+    "ehr.json",
+    "--output",
+    "output",
+  ]);
+  assert.equal(patient.status, 1);
+  assert.match(patient.stderr, /--expected-charts requires a value\./);
+
+  const visit = runGeneratorCli("generate-legacy-visit-manifests.ts", [
+    "--appointments",
+    "appointments.csv",
+    "--exams",
+    "exams.tsv",
+    "--patient-references",
+    "references.json",
+    "--visit-type-map",
+    "visit-types.json",
+    "--output",
+    "output",
+  ]);
+  assert.equal(visit.status, 1);
+  assert.match(visit.stderr, /--expected-charts requires a value\./);
+});
+
+test("both generator CLIs reject non-positive and non-numeric expected chart counts", () => {
+  for (const value of ["0", "-1", "not-a-number"]) {
+    const patient = runGeneratorCli("generate-legacy-patient-manifests.ts", [
+      "--patients",
+      "patients.csv",
+      "--ehr-people",
+      "ehr.json",
+      "--expected-charts",
+      value,
+      "--output",
+      "output",
+    ]);
+    assert.equal(patient.status, 1);
+    assert.match(
+      patient.stderr,
+      new RegExp(`--expected-charts must be a positive integer; got "${value}"\\.`),
+    );
+
+    const visit = runGeneratorCli("generate-legacy-visit-manifests.ts", [
+      "--appointments",
+      "appointments.csv",
+      "--exams",
+      "exams.tsv",
+      "--patient-references",
+      "references.json",
+      "--visit-type-map",
+      "visit-types.json",
+      "--expected-charts",
+      value,
+      "--output",
+      "output",
+    ]);
+    assert.equal(visit.status, 1);
+    assert.match(
+      visit.stderr,
+      new RegExp(`--expected-charts must be a positive integer; got "${value}"\\.`),
+    );
+  }
+});
+
+test("both phases report independently supplied expected and actual chart counts", () => {
+  const patient = patientFixture();
+  try {
+    assert.throws(
+      () => generatePatientImportManifests({
+        patientExportPath: patient.patientExportPath,
+        ehrPeoplePath: patient.ehrPeoplePath,
+        outputDirectory: patient.outputDirectory,
+        expectedChartCount: 13,
+      }),
+      /exactly 13 non-junk charts; got 12/,
+    );
+  } finally {
+    patient.cleanup();
+  }
+
+  const visit = visitFixture();
+  try {
+    assert.throws(
+      () => generateVisitImportManifests({
+        ...visit.input,
+        expectedChartCount: 13,
+      }),
+      /exactly 13 chart objects; got 12/,
+    );
+  } finally {
+    visit.cleanup();
+  }
+});
+
+test("a synthetic 13-chart cohort passes both phases with independently supplied counts", () => {
+  const patient = patientFixture(13);
+  try {
+    const result = generatePatientImportManifests({
+      patientExportPath: patient.patientExportPath,
+      ehrPeoplePath: patient.ehrPeoplePath,
+      outputDirectory: patient.outputDirectory,
+      expectedChartCount: 13,
+    });
+    assert.equal(result.manifests.length, 13);
+  } finally {
+    patient.cleanup();
+  }
+
+  const visit = visitFixture(13);
+  try {
+    const result = generateVisitImportManifests(visit.input);
+    assert.equal(result.charts.length, 13);
+    assert.equal(result.targetAppointmentRows, 13);
+    assert.equal(result.targetExamRows, 12);
+  } finally {
+    visit.cleanup();
+  }
+});
+
+test("bulk visit manifest schema accepts non-empty unique cohorts of different sizes", () => {
+  for (const chartCount of [1, 12, 13]) {
+    assert.equal(
+      legacyVisitBulkManifestSchema.safeParse({
+        charts: bulkFileCharts(chartCount),
+      }).success,
+      true,
+    );
+  }
+
+  assert.equal(
+    legacyVisitBulkManifestSchema.safeParse({ charts: [] }).success,
+    false,
+  );
+
+  const duplicateKeys = bulkFileCharts(2);
+  duplicateKeys[1] = {
+    ...duplicateKeys[1]!,
+    chartKey: duplicateKeys[0]!.chartKey,
+  };
+  const duplicateResult = legacyVisitBulkManifestSchema.safeParse({
+    charts: duplicateKeys,
+  });
+  assert.equal(duplicateResult.success, false);
+  if (!duplicateResult.success) {
+    assert.equal(
+      duplicateResult.error.issues.some((issue) =>
+        issue.message === "Bulk chart keys must be unique."
+      ),
+      true,
+    );
+  }
 });
 
 test("direct-execution and printed shell arguments tolerate spaces and metacharacters", () => {
@@ -357,6 +529,7 @@ test("phase 1 refuses to assign one EPM source row to two EHR cohort people", ()
         patientExportPath: fixture.patientExportPath,
         ehrPeoplePath: fixture.ehrPeoplePath,
         outputDirectory: fixture.outputDirectory,
+        expectedChartCount: 12,
       }),
       /matched more than one EHR cohort person/,
     );
@@ -376,6 +549,7 @@ test("phase 1 refuses zero matches, a non-12 cohort, and a partial operator pair
         patientExportPath: zeroMatch.patientExportPath,
         ehrPeoplePath: zeroMatch.ehrPeoplePath,
         outputDirectory: zeroMatch.outputDirectory,
+        expectedChartCount: 12,
       }),
       /matched 0 PatientExport rows/,
     );
@@ -394,6 +568,7 @@ test("phase 1 refuses zero matches, a non-12 cohort, and a partial operator pair
         patientExportPath: wrongCount.patientExportPath,
         ehrPeoplePath: wrongCount.ehrPeoplePath,
         outputDirectory: wrongCount.outputDirectory,
+        expectedChartCount: 12,
       }),
       /exactly 12 non-junk charts; got 11/,
     );
@@ -411,6 +586,7 @@ test("phase 1 refuses zero matches, a non-12 cohort, and a partial operator pair
         patientExportPath: partialOperator.patientExportPath,
         ehrPeoplePath: partialOperator.ehrPeoplePath,
         outputDirectory: partialOperator.outputDirectory,
+        expectedChartCount: 12,
       }),
       /operator chart acknowledgement is valid only for the exact/,
     );
@@ -480,7 +656,7 @@ test("phase 2 refuses embedded TSV delimiter characters after parsing", () => {
   }
 });
 
-function patientFixture(): {
+function patientFixture(chartCount = 12): {
   patientExportPath: string;
   ehrPeoplePath: string;
   outputDirectory: string;
@@ -490,7 +666,7 @@ function patientFixture(): {
   const patientExportPath = join(root, "PatientExport.csv");
   const ehrPeoplePath = join(root, "ehr-people.json");
   const outputDirectory = join(root, "output");
-  const ehrPeople = targetPeople();
+  const ehrPeople = targetPeople(chartCount);
   const epmRows = [
     ...ehrPeople.map((person, index) => patientRow({
       ID: person.sourceKey === "969" ? "6499570" : `7000${person.sourceKey}`,
@@ -541,7 +717,7 @@ function patientFixture(): {
   };
 }
 
-function visitFixture(): {
+function visitFixture(chartCount = 12): {
   input: Parameters<typeof generateVisitImportManifests>[0];
   cleanup: () => void;
 } {
@@ -552,11 +728,11 @@ function visitFixture(): {
   const visitTypeMapPath = join(root, "visit-type-map.json");
   const setupStatePath = join(root, "setup-state.json");
   const outputDirectory = join(root, "output");
-  writeFileSync(appointmentsExportPath, appointmentCsv(appointmentRows()));
-  writeFileSync(examsTsvPath, examTsv());
+  writeFileSync(appointmentsExportPath, appointmentCsv(appointmentRows(chartCount)));
+  writeFileSync(examsTsvPath, examTsv(chartCount));
   writeFileSync(
     patientReferencesPath,
-    JSON.stringify({ charts: patientReferences() }, null, 2),
+    JSON.stringify({ charts: patientReferences(chartCount) }, null, 2),
   );
   writeFileSync(
     visitTypeMapPath,
@@ -583,13 +759,14 @@ function visitFixture(): {
       visitTypeMapPath,
       setupStatePath,
       outputDirectory,
+      expectedChartCount: chartCount,
     },
     cleanup: () => rmSync(root, { recursive: true, force: true }),
   };
 }
 
-function targetPeople(): SourcePerson[] {
-  const people = Array.from({ length: 12 }, (_, index) => {
+function targetPeople(chartCount = 12): SourcePerson[] {
+  const people = Array.from({ length: chartCount }, (_, index) => {
     const sourceKey = String(969 + index);
     if (sourceKey === "970") {
       return {
@@ -694,8 +871,8 @@ function patientCsv(rows: readonly ReturnType<typeof patientRow>[]): string {
   ].join("\n") + "\n";
 }
 
-function appointmentRows(): AppointmentExportRow[] {
-  return patientReferences().map((reference, index) => ({
+function appointmentRows(chartCount = 12): AppointmentExportRow[] {
+  return patientReferences(chartCount).map((reference, index) => ({
     OfficeNum: VERIFIED_APPOINTMENT_EXPORT_OFFICE,
     PatientID: reference.epmPatientId,
     FirstName: `Patient${index + 1}`,
@@ -726,8 +903,8 @@ function appointmentCsv(rows: readonly AppointmentExportRow[]): string {
   ].join("\n") + "\n";
 }
 
-function patientReferences(): PatientReferenceInput[] {
-  return targetPeople().map((person) => ({
+function patientReferences(chartCount = 12): PatientReferenceInput[] {
+  return targetPeople(chartCount).map((person) => ({
     patientReference: `Patient/patient-${person.sourceKey}`,
     patientUid: `uid-${person.sourceKey}`,
     epmPatientId: person.sourceKey === "969" ? "6499570" : `7000${person.sourceKey}`,
@@ -735,8 +912,8 @@ function patientReferences(): PatientReferenceInput[] {
   }));
 }
 
-function examTsv(): string {
-  const rows = patientReferences()
+function examTsv(chartCount = 12): string {
+  const rows = patientReferences(chartCount)
     .filter((reference) => reference.ehrPatientId !== "972")
     .map((reference, index) => [
       reference.ehrPatientId,
@@ -749,6 +926,26 @@ function examTsv(): string {
     "ptSrNo\texSrNo\texDateTime\texDevType\texWhichEye",
     ...rows,
   ].join("\n") + "\n";
+}
+
+function runGeneratorCli(script: string, args: readonly string[]) {
+  return spawnSync(
+    process.execPath,
+    ["--import", "tsx", join(REPOSITORY_ROOT, "scripts", script), ...args],
+    {
+      cwd: REPOSITORY_ROOT,
+      encoding: "utf8",
+    },
+  );
+}
+
+function bulkFileCharts(chartCount: number) {
+  return Array.from({ length: chartCount }, (_, index) => ({
+    chartKey: `chart-${index + 1}`,
+    manifestPath: `charts/chart-${index + 1}/manifest.json`,
+    appointmentsPath: `charts/chart-${index + 1}/appointments.csv`,
+    examsPath: `charts/chart-${index + 1}/exams.tsv`,
+  }));
 }
 
 function usDate(iso: string): string {
