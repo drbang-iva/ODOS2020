@@ -68,7 +68,7 @@ export function CloseDay({ roles, date, initialData }: {
       <section className="odos-close-step">
         <StepTitle number="01" eyebrow="Verify" title="Count what is here" />
         {data.ledger.payments.available ? <>
-          <div className="odos-close-count-grid">{TENDERS.map(({ code, label }) => <label key={code}><span>{label}<small>Recorded {money(data.ledger.payments.available ? data.ledger.payments.tenderTotalsCents[code] : 0)}</small></span><span className="odos-close-money-input">$<input aria-label={`${label} counted`} inputMode="decimal" placeholder="0.00" value={counted[code]} onChange={(event) => setCounted((current) => ({ ...current, [code]: event.target.value }))} /></span></label>)}</div>
+          <div className="odos-close-count-grid">{TENDERS.map(({ code, label }) => <label key={code}><span>{label}<small>Recorded {money(data.ledger.payments.available ? data.ledger.payments.tenderTotalsCents[code] : 0)}</small></span><span className="odos-close-money-input">$<input aria-label={`${label} counted`} inputMode="decimal" className="min-h-11" placeholder="0.00" value={counted[code]} onChange={(event) => setCounted((current) => ({ ...current, [code]: event.target.value }))} /></span></label>)}</div>
           <div className={`odos-close-variance ${variance === 0 ? "is-balanced" : ""}`}><span>Counted variance</span><strong>{variance === null ? "Enter all counts" : signedMoney(variance)}</strong><small>A nonzero variance stays visible here for review; it does not block sealing.</small></div>
         </> : <Unavailable reason={data.ledger.payments.reason} />}
       </section>

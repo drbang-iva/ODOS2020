@@ -101,7 +101,7 @@ function EditorInput({ label, value, onChange, inputMode }: {
   onChange(value: string): void;
   inputMode?: "decimal";
 }) {
-  return <label className="block"><span className="mb-1 block text-xs uppercase tracking-wide text-white/40">{label}</span><input value={value} inputMode={inputMode} onChange={(event) => onChange(event.target.value)} className="h-10 w-full rounded border border-white/15 bg-bg-deep px-3 text-white" /></label>;
+  return <label className="block"><span className="mb-1 block text-xs uppercase tracking-wide text-white/40">{label}</span><input value={value} inputMode={inputMode} onChange={(event) => onChange(event.target.value)} className={`${inputMode === "decimal" ? "min-h-11" : "h-10"} w-full rounded border border-white/15 bg-bg-deep px-3 text-white`} /></label>;
 }
 
 function parseOptions(

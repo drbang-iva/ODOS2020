@@ -271,10 +271,11 @@ function SearchField({
         type={type}
         min={type === "number" ? "0" : undefined}
         step={type === "number" ? step ?? "0.01" : undefined}
+        inputMode={type === "number" ? "decimal" : undefined}
         value={value}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-1.5 h-10 w-full rounded border border-white/15 bg-black/30 px-3 text-sm text-white placeholder:text-white/25"
+        className={`mt-1.5 w-full rounded border border-white/15 bg-black/30 px-3 text-sm text-white placeholder:text-white/25 ${type === "number" ? "min-h-11" : "h-10"}`}
       />
     </label>
   );

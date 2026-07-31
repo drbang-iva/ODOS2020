@@ -318,6 +318,7 @@ export function CatalogTable({
                 min="1"
                 max={MAX_RECEIPT_QUANTITY}
                 step="1"
+                inputMode="decimal"
                 onChange={setQuantity}
               />
               <ReceiptField label="Sale price" value={salePrice} placeholder="179.00" inputMode="decimal" onChange={setSalePrice} />
