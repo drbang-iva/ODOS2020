@@ -3,6 +3,7 @@ import type {
   Binary,
   Bundle,
   DocumentReference,
+  Encounter,
   Media,
   Organization,
   Resource,
@@ -11,9 +12,11 @@ import type {
 import { searchAll } from "../fhir-search.js";
 import {
   ReferralService,
+  readCorrespondenceSender,
   referralBinaryId,
   type ReferralFhirClient,
 } from "../referral/referral-service.js";
+import { referralDirectionOf } from "../referral/referral-service.js";
 import {
   buildRenderedLetterDocumentReference,
 } from "./correspondence-document.js";
@@ -26,6 +29,7 @@ import {
   type CorrespondenceTemplate,
 } from "./template-store.js";
 import { resolveCorrespondenceTemplate } from "./tokens/registry.js";
+import { ProviderSignatureImageStore } from "./signature-image-store.js";
 import type { CorrespondenceRenderer } from "./weasyprint-renderer.js";
 
 export const SETUP_PRACTICE_ORGANIZATION_IDENTIFIER_SYSTEM =
@@ -54,6 +58,7 @@ export interface CorrespondenceConfigFhirClient {
 export class CorrespondenceService {
   readonly templates: CorrespondenceTemplateStore;
   readonly letterhead: CorrespondenceLetterheadStore;
+  readonly providerSignatures: ProviderSignatureImageStore;
 
   constructor(
     private readonly clinicalFhir: ReferralFhirClient,
@@ -63,6 +68,7 @@ export class CorrespondenceService {
   ) {
     this.templates = new CorrespondenceTemplateStore(configFhir);
     this.letterhead = new CorrespondenceLetterheadStore(configFhir);
+    this.providerSignatures = new ProviderSignatureImageStore(configFhir);
   }
 
   async listTemplates(letterType = "referral"): Promise<CorrespondenceTemplate[]> {
@@ -90,6 +96,7 @@ export class CorrespondenceService {
     authorReference: string;
     templateId?: string;
     editedBodyHtml?: string;
+    signedByReference?: string;
   }): Promise<{
     pdf: Buffer;
     sourceHtml: string;
@@ -116,7 +123,10 @@ export class CorrespondenceService {
     const sourceHtml = await assembleLockedLetterHtml({
       letterhead,
       logoDataUri: await this.imageDataUri(letterhead.logoReference),
-      signatureDataUri: await this.imageDataUri(letterhead.signatureImageReference),
+      signatureDataUri: input.signedByReference
+        ? await this.providerSignatureDataUri(input.signedByReference)
+        : undefined,
+      ...await this.signatory(input.signedByReference, context.senderName, context.senderCredentials),
       patientName: patientName(context.patient),
       patientDob: context.patient.birthDate,
       recipientName: context.recipientName,
@@ -136,10 +146,127 @@ export class CorrespondenceService {
         filename: `referral-${input.serviceRequest.id}.pdf`,
         pdf,
         sourceHtml,
+        docStatus: input.signedByReference ? "final" : "preliminary",
+        ...(input.signedByReference
+          ? { authenticatorReference: input.signedByReference }
+          : {}),
       }),
       CORRESPONDENCE_RENDER_WRITE_HEADERS,
     );
     return { pdf, sourceHtml, bodyHtml, documentReference };
+  }
+
+  async renderConsultReport(input: {
+    serviceRequest: ServiceRequest;
+    authorReference: string;
+    encounterReference?: string;
+    templateId?: string;
+    editedBodyHtml?: string;
+    signedByReference?: string;
+  }): Promise<{
+    pdf: Buffer;
+    sourceHtml: string;
+    bodyHtml: string;
+    sourceEncounter: {
+      reference: string;
+      date: string;
+      label: string;
+    };
+    documentReference: DocumentReference;
+  }> {
+    if (referralDirectionOf(input.serviceRequest) !== "inbound") {
+      throw new Error("Consult reports require an inbound referral.");
+    }
+    const patientReference = input.serviceRequest.subject.reference;
+    const patientId = patientReference?.match(/^Patient\/([A-Za-z0-9.-]{1,64})$/)?.[1];
+    if (!patientId) throw new Error("Inbound referral requires a Patient subject.");
+    const encounter = await this.signedEncounter(patientId, input.encounterReference);
+    const encounterReference = `Encounter/${encounter.id}`;
+    const sender = input.signedByReference
+      ? { reference: input.signedByReference }
+      : input.serviceRequest.performer?.[0];
+    if (!sender?.reference) {
+      throw new Error("Inbound referral requires a receiving provider.");
+    }
+    const recipient = input.serviceRequest.requester;
+    if (!recipient?.display?.trim()) {
+      throw new Error("Inbound referral requires a snapshotted referrer display.");
+    }
+    const contextualRequest: ServiceRequest = {
+      ...input.serviceRequest,
+      requester: {
+        reference: sender.reference,
+        ...(sender.display ? { display: sender.display } : {}),
+      },
+      performer: [{
+        ...(recipient.reference ? { reference: recipient.reference } : {}),
+        display: recipient.display,
+      }],
+      encounter: { reference: encounterReference },
+    };
+    const letterhead = await this.loadLetterhead();
+    const context = await new ReferralService(this.clinicalFhir, this.now)
+      .loadCorrespondenceTokenContext(contextualRequest, letterhead.phone);
+    context.consultQuestion = input.serviceRequest.reasonCode?.[0]?.text?.trim() ?? "";
+    let bodyHtml: string;
+    if (input.editedBodyHtml?.trim()) {
+      bodyHtml = sanitizeCorrespondenceBodyHtml(input.editedBodyHtml);
+    } else {
+      const template = input.templateId
+        ? await this.templates.read(input.templateId)
+        : (await this.templates.list("consult-report"))[0];
+      if (!template || template.letterType !== "consult-report") {
+        throw new Error("A consult-report correspondence template is required.");
+      }
+      bodyHtml = sanitizeCorrespondenceBodyHtml(
+        resolveCorrespondenceTemplate(template.bodyHtml, context),
+      );
+    }
+    const sourceHtml = await assembleLockedLetterHtml({
+      letterhead,
+      logoDataUri: await this.imageDataUri(letterhead.logoReference),
+      signatureDataUri: input.signedByReference
+        ? await this.providerSignatureDataUri(input.signedByReference)
+        : undefined,
+      ...await this.signatory(input.signedByReference, context.senderName, context.senderCredentials),
+      patientName: patientName(context.patient),
+      patientDob: context.patient.birthDate,
+      recipientName: context.recipientName,
+      bodyHtml,
+    });
+    const pdf = await this.renderer.render(sourceHtml);
+    const renderedAt = this.now();
+    const documentReference = await this.clinicalFhir.create<DocumentReference>(
+      buildRenderedLetterDocumentReference({
+        patientReference,
+        patientDisplay: input.serviceRequest.subject.display,
+        encounterReference,
+        serviceRequestReference: serviceRequestReferenceOf(input.serviceRequest),
+        authorReference: input.authorReference,
+        renderedAt,
+        filename: `consult-report-${input.serviceRequest.id}.pdf`,
+        pdf,
+        sourceHtml,
+        letterType: "consult-report",
+        docStatus: input.signedByReference ? "final" : "preliminary",
+        ...(input.signedByReference
+          ? { authenticatorReference: input.signedByReference }
+          : {}),
+      }),
+      CORRESPONDENCE_RENDER_WRITE_HEADERS,
+    );
+    const date = encounterDate(encounter);
+    return {
+      pdf,
+      sourceHtml,
+      bodyHtml,
+      sourceEncounter: {
+        reference: encounterReference,
+        date,
+        label: `Clinical content from signed encounter ${date || encounterReference}`,
+      },
+      documentReference,
+    };
   }
 
   private async loadLetterhead(): Promise<CorrespondenceLetterhead> {
@@ -202,6 +329,68 @@ export class CorrespondenceService {
     const binary = await this.configFhir.readBinaryData(binaryId);
     return dataUri(binary.contentType, binary.bytes);
   }
+
+  private async providerSignatureDataUri(
+    providerReference: string,
+  ): Promise<string | undefined> {
+    const resolved = await this.providerSignatures.readMedia(providerReference);
+    if (!resolved) return undefined;
+    const contentType = resolved.media.content.contentType;
+    if (contentType !== "image/png" && contentType !== "image/jpeg") {
+      throw new Error("Provider signature Media must contain a PNG or JPEG image.");
+    }
+    if (resolved.media.content.data) {
+      return `data:${contentType};base64,${resolved.media.content.data}`;
+    }
+    return resolved.media.content.url
+      ? this.imageDataUri(resolved.media.content.url)
+      : undefined;
+  }
+
+  private async signatory(
+    signedByReference: string | undefined,
+    fallbackName: string,
+    fallbackCredentials: string,
+  ): Promise<{ signatoryName: string; signatoryCredentials: string }> {
+    if (!signedByReference) {
+      return {
+        signatoryName: fallbackName,
+        signatoryCredentials: fallbackCredentials,
+      };
+    }
+    const signer = await readCorrespondenceSender(this.clinicalFhir, signedByReference);
+    return {
+      signatoryName: signer.name,
+      signatoryCredentials: signer.credentials,
+    };
+  }
+
+  private async signedEncounter(
+    patientId: string,
+    encounterReference: string | undefined,
+  ): Promise<Encounter> {
+    if (encounterReference) {
+      const id = encounterReference.match(/^Encounter\/([A-Za-z0-9.-]{1,64})$/)?.[1];
+      if (!id) throw new Error("A valid Encounter reference is required.");
+      const encounter = await this.clinicalFhir.read<Encounter>("Encounter", id);
+      if (encounter.subject?.reference !== `Patient/${patientId}` || encounter.status !== "finished") {
+        throw new Error("Correspondence encounter must be a signed encounter for this patient.");
+      }
+      return encounter;
+    }
+    const bundle = await this.clinicalFhir.search<Encounter>("Encounter", {
+      patient: patientId,
+      status: "finished",
+      _sort: "-date",
+      _count: "1",
+    });
+    const encounter = (bundle.entry ?? []).flatMap((entry) =>
+      entry.resource ? [entry.resource] : [])[0];
+    if (!encounter?.id || encounter.status !== "finished") {
+      throw new Error("No signed encounter is available for this correspondence.");
+    }
+    return encounter;
+  }
 }
 
 export function sanitizeCorrespondenceBodyHtml(input: string): string {
@@ -227,6 +416,8 @@ export async function assembleLockedLetterHtml(input: {
   letterhead: CorrespondenceLetterhead;
   logoDataUri?: string;
   signatureDataUri?: string;
+  signatoryName?: string;
+  signatoryCredentials?: string;
   patientName: string;
   patientDob?: string;
   recipientName: string;
@@ -262,6 +453,8 @@ th, td { border: 0.5pt solid #9ba8b5; padding: 4pt 6pt; text-align: left; }
 th { background: #edf1f5; font-family: "Noto Sans", Arial, sans-serif; font-size: 8.5pt; }
 .signature { margin-top: 24pt; }
 .signature img { display: block; max-height: 0.55in; max-width: 2in; }
+.signature-line { border-bottom: 0.5pt solid #24364b; min-height: 0.55in; width: 2.2in; }
+.signature-identity { margin-top: 4pt; }
 </style>
 </head>
 <body>
@@ -272,7 +465,7 @@ th { background: #edf1f5; font-family: "Noto Sans", Arial, sans-serif; font-size
 </header>
 <div class="recipient"><strong>To:</strong> ${escapeHtml(input.recipientName)}<br><strong>Re:</strong> ${escapeHtml(input.patientName)} · DOB ${escapeHtml(input.patientDob ?? "not recorded")}</div>
 <main>${input.bodyHtml}</main>
-${input.signatureDataUri ? `<div class="signature"><img alt="Provider signature" src="${input.signatureDataUri}"></div>` : ""}
+${input.signatoryName ? `<div class="signature"><div class="signature-line">${input.signatureDataUri ? `<img alt="Provider signature" src="${input.signatureDataUri}">` : ""}</div><div class="signature-identity">${escapeHtml(input.signatoryName)}${input.signatoryCredentials ? `, ${escapeHtml(input.signatoryCredentials)}` : ""}</div></div>` : ""}
 </body>
 </html>`;
 }
@@ -305,4 +498,11 @@ function escapeHtml(value: string): string {
 
 function cssString(value: string): string {
   return value.replaceAll("\\", "\\\\").replaceAll('"', '\\"').replaceAll("\n", " ");
+}
+
+function encounterDate(encounter: Encounter): string {
+  return encounter.period?.end
+    ?? encounter.period?.start
+    ?? encounter.meta?.lastUpdated
+    ?? "";
 }

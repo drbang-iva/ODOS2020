@@ -30,6 +30,10 @@ import {
   STATEMENT_RUN_CODE,
   STATEMENT_TASK_CODE_SYSTEM,
 } from "../statements/statements.js";
+import {
+  loadCorrespondenceDeskBlock,
+  type CorrespondenceDeskBlock,
+} from "./correspondence-block.js";
 import { practiceDate, projectDayLedgerPayments } from "./day-ledger.js";
 
 const OPTICAL_TASKS_UNAVAILABLE = "Open optical Tasks exceed the Desk card read limit.";
@@ -75,6 +79,7 @@ export interface DeskSummary {
       agenda: DeskAgendaRow[];
     };
     attention: { items: DeskAttentionRow[] };
+    correspondence: CorrespondenceDeskBlock;
     frontLine: {
       available: false;
       message: string;
@@ -140,6 +145,7 @@ export interface DeskSummaryInput {
   now: string;
   timeZone?: string;
   terminalMode: string;
+  correspondence?: CorrespondenceDeskBlock;
   taskAvailability?: {
     optical?: boolean;
     claimRejected?: boolean;
@@ -284,6 +290,7 @@ export function projectDeskSummary(input: DeskSummaryInput): DeskSummary {
   const cards: DeskSummary["cards"] = {
     schedule,
     attention: { items: attention },
+    correspondence: input.correspondence ?? emptyCorrespondenceBlock(),
     frontLine: {
       available: false,
       message: "Comms counts arrive with the GHL adapter — Phase 3b",
@@ -317,8 +324,9 @@ export function projectDeskSummary(input: DeskSummaryInput): DeskSummary {
     day: { collectedCents: dayCollectedCents },
     cards,
     pulse: {
-      itemsNeedingYou: attention.length,
-      everythingElseAtTarget: attention.length === 0,
+      itemsNeedingYou: attention.length + (input.correspondence?.items.length ?? 0),
+      everythingElseAtTarget:
+        attention.length === 0 && (input.correspondence?.items.length ?? 0) === 0,
       lastClaimTransmission: claimsAvailable ? lastTransmission : null,
       lastClaimTransmissionTone: lastTransmissionTone,
     },
@@ -341,6 +349,7 @@ export async function loadDeskSummary(
     claimResponseRead,
     paymentReconciliationRead,
     invoiceRead,
+    correspondence,
   ] = await Promise.all([
     searchAvailablePage<Appointment>(fhir, "Appointment", { date, _count: "1000", _sort: "date" }),
     searchScopedTasks(fhir, {
@@ -370,6 +379,7 @@ export async function loadDeskSummary(
     searchAvailablePage<ClaimResponse>(fhir, "ClaimResponse", { _count: "1000", _sort: "-created" }),
     searchAvailablePage<PaymentReconciliation>(fhir, "PaymentReconciliation", { _count: "1000", _sort: "-_lastUpdated" }),
     searchAvailablePage<Invoice>(fhir, "Invoice", { _count: "1000", _sort: "-_lastUpdated" }),
+    loadCorrespondenceDeskBlock(fhir, { now }),
   ]);
   const appointments = appointmentRead.resources;
   const patientIds = unique(appointments.flatMap((appointment) => appointment.participant ?? [])
@@ -388,6 +398,7 @@ export async function loadDeskSummary(
     now,
     timeZone: options.timeZone,
     terminalMode: options.terminalMode,
+    correspondence,
     taskAvailability: {
       optical: opticalTaskRead.complete,
       claimRejected: claimRejectedTaskRead.complete,
@@ -401,6 +412,15 @@ export async function loadDeskSummary(
       invoices: invoiceRead.complete,
     },
   });
+}
+
+function emptyCorrespondenceBlock(): CorrespondenceDeskBlock {
+  return {
+    draftsAwaitingSignature: { value: 0, tone: "ok" },
+    repliesOwed: { value: 0, tone: "ok" },
+    sendFailures: { value: 0, tone: "ok" },
+    items: [],
+  };
 }
 
 async function searchScopedTasks(
@@ -443,6 +463,7 @@ async function searchFirstPage<T extends Resource>(
   resourceType: T["resourceType"],
   params: Record<string, string>,
 ): Promise<{ resources: T[]; hasNext: boolean }> {
+  // search-contract: desk-summary.search-resource
   const bundle = await fhir.search<T>(resourceType, params);
   return {
     resources: (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []),

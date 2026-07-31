@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import {
   generateVisitImportManifests,
   isDirectExecution,
+  parseExpectedChartCount,
   parseGeneratorCliArguments,
   resolveSetupStatePath,
   shellArgument,
@@ -18,6 +19,7 @@ export function parseVisitManifestGeneratorArguments(
   readonly visitTypeMapPath: string;
   readonly setupStatePath: string;
   readonly outputDirectory: string;
+  readonly expectedChartCount: number;
 } {
   const parsed = parseGeneratorCliArguments(args, {
     required: [
@@ -25,6 +27,7 @@ export function parseVisitManifestGeneratorArguments(
       "--exams",
       "--patient-references",
       "--visit-type-map",
+      "--expected-charts",
       "--output",
     ],
     optional: ["--setup-state"],
@@ -34,6 +37,7 @@ export function parseVisitManifestGeneratorArguments(
     examsTsvPath: resolve(parsed["--exams"]!),
     patientReferencesPath: resolve(parsed["--patient-references"]!),
     visitTypeMapPath: resolve(parsed["--visit-type-map"]!),
+    expectedChartCount: parseExpectedChartCount(parsed["--expected-charts"]!),
     setupStatePath: resolveSetupStatePath(
       parsed["--setup-state"],
       environment,

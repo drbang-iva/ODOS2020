@@ -33,9 +33,9 @@ test("GET /desk/summary authenticates once and composes the screen from server-s
     const response = await fetch(`http://127.0.0.1:${port}/desk/summary`, { headers: { Authorization: "Bearer good" } });
     assert.equal(response.status, 200);
     const body = await response.json() as { cards?: Record<string, unknown>; pulse?: unknown };
-    assert.deepEqual(Object.keys(body.cards ?? {}), ["schedule", "attention", "frontLine", "pendingRx", "productPickup", "claims", "payments", "remits", "statements"]);
+    assert.deepEqual(Object.keys(body.cards ?? {}), ["schedule", "attention", "correspondence", "frontLine", "pendingRx", "productPickup", "claims", "payments", "remits", "statements"]);
     assert.ok(body.pulse);
-    assert.deepEqual(searched, ["Appointment", "Task", "Task", "Task", "Task", "Claim", "ClaimResponse", "PaymentReconciliation", "Invoice"]);
+    assert.deepEqual(searched, ["Appointment", "Task", "Task", "Task", "Task", "Claim", "ClaimResponse", "PaymentReconciliation", "Invoice", "DocumentReference", "ServiceRequest"]);
     assert.equal(serviceAuthCalls, 2);
   } finally {
     await new Promise<void>((resolve, reject) => listener.close((error) => error ? reject(error) : resolve()));

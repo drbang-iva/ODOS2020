@@ -36,6 +36,11 @@ import type {
 } from "../../lib/scheduling-store";
 import { coveragePlanName, coverageType } from "../../lib/submit-claims";
 import { PatientSearch } from "../PatientPicker";
+import {
+  referralApi,
+  type ReferralApi,
+  type ReferralConsultant,
+} from "../../components/referral/referral-api";
 
 const DURATION_PRESETS = [10, 15, 30, 60] as const;
 
@@ -59,6 +64,7 @@ export function AppointmentDetailsModal({
   onUpdate,
   onSetStatus,
   loadPatientInsurance = defaultPatientInsuranceLoader,
+  correspondenceApi = referralApi,
 }: {
   appointment?: Appointment;
   initialDraft?: AppointmentModalDraft;
@@ -79,6 +85,7 @@ export function AppointmentDetailsModal({
     deps?: SchedulingWriteDeps,
   ) => Promise<void>;
   loadPatientInsurance?: PatientInsuranceLoader;
+  correspondenceApi?: Pick<ReferralApi, "searchConsultants" | "createInboundReferral">;
 }) {
   const fallbackDraft = useMemo(
     () => {
@@ -119,6 +126,10 @@ export function AppointmentDetailsModal({
   const [coverageError, setCoverageError] = useState<string | null>(null);
   const [visionOther, setVisionOther] = useState(false);
   const [medicalOther, setMedicalOther] = useState(false);
+  const [referrerQuery, setReferrerQuery] = useState("");
+  const [referralReason, setReferralReason] = useState("");
+  const [referrerMatches, setReferrerMatches] = useState<ReferralConsultant[]>([]);
+  const [appointmentSaved, setAppointmentSaved] = useState(false);
 
   useEffect(() => {
     const nextDraft = appointment ? appointmentModalDraftFromAppointment(appointment, resources) : fallbackDraft ?? emptyDraft(timezoneOffset);
@@ -161,6 +172,26 @@ export function AppointmentDetailsModal({
     };
   }, [draft.patient?.reference, loadPatientInsurance]);
 
+  useEffect(() => {
+    const query = referrerQuery.trim();
+    if (appointment || query.length < 2) {
+      setReferrerMatches([]);
+      return;
+    }
+    const controller = new AbortController();
+    const handle = setTimeout(() => {
+      void correspondenceApi.searchConsultants(query, controller.signal)
+        .then(setReferrerMatches)
+        .catch(() => {
+          if (!controller.signal.aborted) setReferrerMatches([]);
+        });
+    }, 250);
+    return () => {
+      clearTimeout(handle);
+      controller.abort();
+    };
+  }, [appointment, correspondenceApi, referrerQuery]);
+
   const visibleVisitTypes = useMemo(
     () => visibleSchedulingVisitTypes(visitTypes, clinicMode),
     [visitTypes, clinicMode],
@@ -184,13 +215,32 @@ export function AppointmentDetailsModal({
       setError(durationError);
       return;
     }
+    const inboundReferral = !appointment && referrerQuery.trim()
+      ? inboundReferralInput(
+          draft,
+          resources,
+          referrerQuery,
+          referralReason,
+          referrerMatches,
+        )
+      : undefined;
+    if (inboundReferral instanceof Error) {
+      setError(inboundReferral.message);
+      return;
+    }
     setSaving(true);
     setError(null);
+    let savedThisAttempt = appointmentSaved;
     try {
       if (appointment) {
         await onUpdate(appointment, draftToAppointmentChanges(draft, allowDoubleBook));
-      } else {
+      } else if (!savedThisAttempt) {
         await onCreate(draftToBookInput(draft, allowDoubleBook));
+        savedThisAttempt = true;
+        setAppointmentSaved(true);
+      }
+      if (inboundReferral) {
+        await correspondenceApi.createInboundReferral(inboundReferral);
       }
       onClose();
     } catch (err) {
@@ -198,7 +248,9 @@ export function AppointmentDetailsModal({
       if (!allowDoubleBook && (await confirmDoubleBookAndRetry(err, () => save(true)))) {
         return;
       }
-      setError(message);
+      setError(savedThisAttempt && inboundReferral
+        ? `Appointment saved, but the referred-by record was not saved: ${message}`
+        : message);
     } finally {
       setSaving(false);
     }
@@ -368,6 +420,39 @@ export function AppointmentDetailsModal({
                 />
               </label>
             </div>
+
+            {!appointment && !draft.nonPatient && (
+              <fieldset className="border border-white/10 p-3">
+                <legend className="px-1 text-xs uppercase text-white/45">Referral intake</legend>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <label className="scheduler-field">
+                    <span>Referred by</span>
+                    <input
+                      className="scheduler-input"
+                      aria-label="Referred by"
+                      list="appointment-referrer-options"
+                      placeholder="Search directory or enter a name"
+                      value={referrerQuery}
+                      onChange={(event) => setReferrerQuery(event.target.value)}
+                    />
+                    <datalist id="appointment-referrer-options">
+                      {referrerMatches.map((consultant) => (
+                        <option key={consultant.reference} value={consultant.display} />
+                      ))}
+                    </datalist>
+                  </label>
+                  <label className="scheduler-field">
+                    <span>Reason for referral</span>
+                    <input
+                      className="scheduler-input"
+                      aria-label="Reason for referral"
+                      value={referralReason}
+                      onChange={(event) => setReferralReason(event.target.value)}
+                    />
+                  </label>
+                </div>
+              </fieldset>
+            )}
 
             <div className="grid gap-3 md:grid-cols-2">
               <AppointmentCoverageField
@@ -707,6 +792,46 @@ function needsOtherCoverage(
   return Boolean(display) && !relevant.some((coverage) =>
     coverageReference(coverage) === reference || appointmentCoverageDisplay(coverage) === display,
   );
+}
+
+function inboundReferralInput(
+  draft: AppointmentModalDraft,
+  resources: Schedule[],
+  referrerQuery: string,
+  reasonText: string,
+  consultants: ReferralConsultant[],
+): Parameters<ReferralApi["createInboundReferral"]>[0] | Error {
+  const patientId = draft.patient?.reference?.match(/^Patient\/([A-Za-z0-9.-]{1,64})$/)?.[1];
+  if (!patientId) return new Error("Select a patient before capturing who referred them.");
+  const reason = reasonText.trim();
+  if (!reason) return new Error("Enter the reason for the inbound referral.");
+  const selectedSchedules = new Set(draft.resourceScheduleReferences);
+  const performerReference = resources
+    .filter((resource) => {
+      const reference = scheduleReference(resource);
+      return reference ? selectedSchedules.has(reference) : false;
+    })
+    .flatMap((resource) => resource.actor ?? [])
+    .map((actor) => actor.reference)
+    .find((reference): reference is string =>
+      Boolean(reference?.match(/^(Practitioner|PractitionerRole)\/[A-Za-z0-9.-]{1,64}$/)));
+  if (!performerReference) {
+    return new Error("Select a provider resource before capturing an inbound referral.");
+  }
+  const referrerDisplay = referrerQuery.trim();
+  const match = consultants.find(
+    (consultant) => consultant.display.localeCompare(referrerDisplay, undefined, {
+      sensitivity: "accent",
+    }) === 0,
+  );
+  return {
+    patientId,
+    ...(match ? { referrerReference: match.reference } : {}),
+    referrerDisplay,
+    performerReference,
+    captureSource: "front-desk",
+    reasonText: reason,
+  };
 }
 
 function emptyDraft(timezoneOffset: string): AppointmentModalDraft {

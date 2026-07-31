@@ -2659,6 +2659,7 @@ function createServer(): Server {
           const { name: nameQ, limit } = listPatientsSchema.parse(args);
           const p: Record<string, string> = { _count: String(limit ?? 20) };
           if (nameQ) p.name = nameQ;
+          // search-contract: tools.list-patients
           const bundle = await fhir.search("Patient", p);
           return { content: [{ type: "text", text: JSON.stringify(bundle, null, 2) }] };
         }
@@ -2700,6 +2701,7 @@ function createServer(): Server {
             _count: String(limit ?? 50),
           };
           if (category) p.category = category;
+          // search-contract: tools.get-observations
           const bundle = await fhir.search("Observation", p);
           return { content: [{ type: "text", text: JSON.stringify(bundle, null, 2) }] };
         }
@@ -2708,6 +2710,7 @@ function createServer(): Server {
           const p: Record<string, string> = { _count: String(limit ?? 50) };
           if (patient_id) p.subject = `Patient/${patient_id}`;
           if (encounter_id) p.context = `Encounter/${encounter_id}`;
+          // search-contract: tools.get-charge-items
           const bundle = await fhir.search("ChargeItem", p);
           return { content: [{ type: "text", text: JSON.stringify(bundle, null, 2) }] };
         }
@@ -2716,6 +2719,7 @@ function createServer(): Server {
           const p: Record<string, string> = {};
           for (const [k, v] of Object.entries(params ?? {})) p[k] = String(v);
           // Escape hatch — resource_type is user-supplied, must loosen the type.
+          // search-contract: tools.fhir-search
           const bundle = await fhir.search(resource_type as never, p);
           return { content: [{ type: "text", text: JSON.stringify(bundle, null, 2) }] };
         }
@@ -4337,6 +4341,7 @@ function createServer(): Server {
         }
         case "get_observation_history": {
           const input = getObservationHistorySchema.parse(args);
+          // search-contract: tools.get-observation-history
           const bundle = await fhir.search<Observation>(
             "Observation",
             buildObservationSearchParams({
@@ -4359,6 +4364,7 @@ function createServer(): Server {
         }
         case "get_progression_summary": {
           const input = getProgressionSummarySchema.parse(args);
+          // search-contract: tools.get-progression-summary
           const bundle = await fhir.search<Observation>(
             "Observation",
             buildObservationSearchParams({
@@ -5691,6 +5697,10 @@ async function main(): Promise<void> {
       app.use(
         "/clinical-graph/dry-eye/meibography",
         express.json({ limit: "21mb" }),
+      );
+      app.use(
+        "/correspondence/providers",
+        express.json({ limit: "25mb" }),
       );
       app.use(express.urlencoded({ extended: false, limit: "64kb" }));
       app.use(express.json({ limit: "4mb" }));
@@ -7333,7 +7343,7 @@ async function main(): Promise<void> {
       });
       registerReferralRoutes(app, {
         authenticateService: authenticateWithMedplum,
-        authenticate: authenticateStaffRouteForAction("chart.write"),
+        authenticate: authenticateStaffRoute,
         serviceFhir: fhir,
         correspondenceRenderer: new WeasyPrintHttpRenderer(),
       });

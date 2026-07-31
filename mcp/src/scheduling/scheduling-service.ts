@@ -109,6 +109,7 @@ export function createSchedulingService(deps: SchedulingServiceDeps): Scheduling
     resourceType: T["resourceType"],
     params?: Record<string, string>,
   ): Promise<T[]> {
+    // search-contract: scheduling-service.search-resource
     const bundle = await deps.fhir.search<T>(resourceType, params);
     return (bundle.entry ?? [])
       .map((entry) => entry.resource)

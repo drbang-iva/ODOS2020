@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import {
   generatePatientImportManifests,
   isDirectExecution,
+  parseExpectedChartCount,
   parseGeneratorCliArguments,
   shellArgument,
 } from "./legacy-import-manifest-generator.js";
@@ -11,13 +12,15 @@ export function parsePatientManifestGeneratorArguments(args: readonly string[]):
   readonly patientExportPath: string;
   readonly ehrPeoplePath: string;
   readonly outputDirectory: string;
+  readonly expectedChartCount: number;
 } {
   const parsed = parseGeneratorCliArguments(args, {
-    required: ["--patients", "--ehr-people", "--output"],
+    required: ["--patients", "--ehr-people", "--expected-charts", "--output"],
   });
   return {
     patientExportPath: resolve(parsed["--patients"]!),
     ehrPeoplePath: resolve(parsed["--ehr-people"]!),
+    expectedChartCount: parseExpectedChartCount(parsed["--expected-charts"]!),
     outputDirectory: resolve(parsed["--output"]!),
   };
 }

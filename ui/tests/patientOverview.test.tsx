@@ -10,7 +10,7 @@ import { fetchPatientOverview, type PatientOverviewPayload } from "../src/lib/pa
 import { openPatientOverview, patientOverviewView, useViewState } from "../src/lib/view-state";
 import { normalizeFhirReference, opticalOrderPath } from "../src/lib/optical-order";
 import { ClinicHome } from "../src/scenes/ClinicHome";
-import { PatientOverview } from "../src/scenes/PatientOverview";
+import { ConsultReportDraftPanel, PatientOverview } from "../src/scenes/PatientOverview";
 
 test("Clinic flow and unsigned-chart clicks both route through PatientOverview", () => {
   useViewState.setState({ view: { kind: "picker" } });
@@ -86,7 +86,57 @@ test("seeded overview renders real snapshot data, newest-first visits, and linke
   assert.ok(html.indexOf("Jun 30") < html.indexOf("Feb 02"));
   assert.match(html, /DX-NEW/);
   assert.match(html, /Deposit Credit Bank/);
+  assert.match(html, /Start correspondence/);
   assert.match(html, /Start today&#x27;s visit →/);
+});
+
+test("patient-record correspondence drafts from the latest signed encounter without an open visit", async () => {
+  const inbound = {
+    resourceType: "ServiceRequest" as const,
+    id: "inbound-1",
+    status: "active" as const,
+    intent: "order" as const,
+    subject: { reference: "Patient/patient-1" },
+    requester: { display: "Dr. Outside" },
+    reasonCode: [{ text: "Retinal concern" }],
+  };
+  const calls: string[] = [];
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(
+      <ConsultReportDraftPanel
+        patientId="patient-1"
+        onClose={() => undefined}
+        api={{
+          listInboundReferrals: async () => [inbound],
+          previewConsultReport: async (_patientId, referralId) => {
+            calls.push(referralId);
+            return {
+              serviceRequestReference: "ServiceRequest/inbound-1",
+              pdfBase64: "JVBERi1zeW50aGV0aWM=",
+              bodyHtml: "<p>Synthetic report</p>",
+              documentReference: "DocumentReference/draft-1",
+              sourceEncounter: {
+                reference: "Encounter/signed-1",
+                date: "2026-07-30",
+                label: "Clinical content from signed encounter 2026-07-30",
+              },
+            };
+          },
+        }}
+      />,
+    );
+    await Promise.resolve();
+  });
+  const createDraft = renderer.root.findAllByType("button")
+    .find((button) => button.children.join("") === "Create consult-report draft");
+  assert.ok(createDraft);
+  await act(async () => createDraft.props.onClick());
+
+  assert.deepEqual(calls, ["inbound-1"]);
+  assert.match(JSON.stringify(renderer.toJSON()), /Clinical content from signed encounter 2026-07-30/);
+  assert.equal(renderer.root.findByType("iframe").props.src, "data:application/pdf;base64,JVBERi1zeW50aGV0aWM=");
+  renderer.unmount();
 });
 
 test("a migrated ledger row is visibly tagged and opens its encounter without requiring a diagnosis chip", () => {

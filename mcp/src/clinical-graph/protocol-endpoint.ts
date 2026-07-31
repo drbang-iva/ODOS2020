@@ -650,6 +650,7 @@ async function searchAll<T extends Resource>(
 ): Promise<T[]> {
   const resources: T[] = [];
   const visited = new Set<string>();
+  // search-contract: protocol-endpoint.search-resources
   let bundle = await fhir.search<T>(resourceType, params);
   while (true) {
     resources.push(...(bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []));

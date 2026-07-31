@@ -523,6 +523,7 @@ async function searchComplete<T extends Resource>(
   resourceType: T["resourceType"],
   params: FhirSearchParams,
 ): Promise<T[]> {
+  // search-contract: margin-ledger.search-resource
   const bundle = await fhir.search<T>(resourceType, params);
   if (bundle.link?.some((link) => link.relation === "next")) {
     throw new Error(`${resourceType} results exceed the margin ledger read limit.`);

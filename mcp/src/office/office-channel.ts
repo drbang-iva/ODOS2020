@@ -187,6 +187,7 @@ async function searchOfficePages<T extends Resource>(
   resourceType: T["resourceType"],
   params: Record<string, string>,
 ): Promise<T[]> {
+  // search-contract: office-channel.search-resource
   const firstBundle = await fhir.search<T>(resourceType, params);
   return collectBoundedSearch(fhir, resourceType, firstBundle, OFFICE_SEARCH_LIMITS);
 }

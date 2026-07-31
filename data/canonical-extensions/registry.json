@@ -751,6 +751,18 @@
       "namespace": "communications",
       "status": "active",
       "sliceConsumer": "native-comms-slice1"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/correspondence-draft",
+      "namespace": "correspondence",
+      "status": "active",
+      "sliceConsumer": "correspondence-c2"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/referral-capture-source",
+      "namespace": "correspondence",
+      "status": "active",
+      "sliceConsumer": "correspondence-c2"
     }
   ]
 }

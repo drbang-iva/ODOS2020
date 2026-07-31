@@ -442,6 +442,7 @@ async function completePage<T extends Resource>(
   resourceType: T["resourceType"],
   params: Array<[string, string]>,
 ): Promise<{ complete: boolean; resources: T[] }> {
+  // search-contract: reporting.search-resource
   const bundle = await fhir.search<T>(resourceType, params);
   if (bundle.link?.some((link) => link.relation === "next")) return { complete: false, resources: [] };
   return { complete: true, resources: (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []) };

@@ -404,6 +404,7 @@ async function loadDueAnchors(
   const searchLower = new Date(
     anchorLower.getTime() - (campaign.anchor.searchPaddingMinutes ?? 0) * 60_000,
   );
+  // search-contract: reminder-engine.search-anchor
   const bundle = await fhir.search<Resource>(campaign.anchor.resourceType, [
     [campaign.anchor.searchParameter, `ge${searchLower.toISOString()}`],
     [campaign.anchor.searchParameter, `le${anchorUpper.toISOString()}`],

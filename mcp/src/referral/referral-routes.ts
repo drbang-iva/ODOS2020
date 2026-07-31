@@ -1,8 +1,12 @@
 import type { Application, Request, Response } from "express";
 import {
+  handleConsultArtifactRequest,
+  handleCreateInboundReferralRequest,
   handleCreateReferralRequest,
   handleApplyReferralTemplateRequest,
   handleListCorrespondenceTemplatesRequest,
+  handleListInboundReferralsRequest,
+  handleProviderSignatureRequest,
   handleReferralArtifactRequest,
   handleRecentReferralConsultantsRequest,
   handleRegenerateReferralLetterRequest,
@@ -76,6 +80,51 @@ export function registerReferralRoutes(
       patientId: routeParam(req.params.patientId),
       body: req.body,
     }));
+  post(app, "/correspondence/inbound-referrals/patients/:patientId", deps, (req) =>
+    handleCreateInboundReferralRequest(deps, {
+      authHeader: req.header("authorization"),
+      patientId: routeParam(req.params.patientId),
+      body: req.body,
+    }));
+  app.get("/correspondence/inbound-referrals/patients/:patientId", async (req, res) => route(
+    "/correspondence/inbound-referrals/patients/:patientId",
+    deps,
+    req,
+    res,
+    () => handleListInboundReferralsRequest(deps, {
+      authHeader: req.header("authorization"),
+      patientId: routeParam(req.params.patientId),
+    }),
+  ));
+  app.get("/correspondence/providers/:providerId/signature", async (req, res) => route(
+    "/correspondence/providers/:providerId/signature",
+    deps,
+    req,
+    res,
+    () => handleProviderSignatureRequest(deps, {
+      authHeader: req.header("authorization"),
+      providerId: routeParam(req.params.providerId),
+      action: "read",
+    }),
+  ));
+  app.put("/correspondence/providers/:providerId/signature", async (req, res) => route(
+    "/correspondence/providers/:providerId/signature",
+    deps,
+    req,
+    res,
+    () => handleProviderSignatureRequest(deps, {
+      authHeader: req.header("authorization"),
+      providerId: routeParam(req.params.providerId),
+      action: "set",
+      body: req.body,
+    }),
+  ));
+  post(app, "/correspondence/providers/:providerId/signature/clear", deps, (req) =>
+    handleProviderSignatureRequest(deps, {
+      authHeader: req.header("authorization"),
+      providerId: routeParam(req.params.providerId),
+      action: "clear",
+    }));
   app.patch("/referrals/patients/:patientId/:referralId", async (req, res) => route(
     "/referrals/patients/:patientId/:referralId",
     deps,
@@ -110,6 +159,20 @@ export function registerReferralRoutes(
         action,
         body: req.body,
       }));
+  }
+  for (const action of ["preview", "sign", "send"] as const) {
+    post(
+      app,
+      `/correspondence/inbound-referrals/patients/:patientId/:referralId/${action}`,
+      deps,
+      (req) => handleConsultArtifactRequest(deps, {
+        authHeader: req.header("authorization"),
+        patientId: routeParam(req.params.patientId),
+        referralId: routeParam(req.params.referralId),
+        action,
+        body: req.body,
+      }),
+    );
   }
 }
 

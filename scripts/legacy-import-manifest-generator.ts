@@ -45,7 +45,6 @@ import {
 } from "../mcp/src/fhir/schedulingVisitType.js";
 import { readSetupState } from "./setup-practice.js";
 
-const EXPECTED_CHART_COUNT = 12;
 const EXAM_EXPORT_COLUMNS = [
   "ptSrNo",
   "exSrNo",
@@ -129,7 +128,9 @@ export function generatePatientImportManifests(input: {
   readonly patientExportPath: string;
   readonly ehrPeoplePath: string;
   readonly outputDirectory: string;
+  readonly expectedChartCount: number;
 }): PatientManifestGenerationResult {
+  assertExpectedChartCount(input.expectedChartCount);
   const epmRows = parsePatientExport(readFileSync(input.patientExportPath, "utf8"));
   const ehrRows = parseEhrPeople(readFileSync(input.ehrPeoplePath, "utf8"));
   const epmPeople = epmRows.map(epmPatientFromExport);
@@ -145,15 +146,15 @@ export function generatePatientImportManifests(input: {
   }
 
   const targetEhrPeople = ehrRows.filter((row) => junkRowReasons(row).length === 0);
-  if (targetEhrPeople.length !== EXPECTED_CHART_COUNT) {
+  if (targetEhrPeople.length !== input.expectedChartCount) {
     throw new Error(
-      `EHR source-person input must contain exactly ${EXPECTED_CHART_COUNT} non-junk charts; `
+      `EHR source-person input must contain exactly ${input.expectedChartCount} non-junk charts; `
       + `got ${targetEhrPeople.length}.`,
     );
   }
   assertUniqueSourceKeys(targetEhrPeople, "EHR");
 
-  // PatientExport is full-practice input; the 12-person EHR cohort defines the target identities.
+  // PatientExport is full-practice input; the EHR cohort defines the target identities.
   const epmByIdentity = new Map<string, PatientImportManifest["epm"][]>();
   for (const person of epmPeople.filter((row) => junkRowReasons(row).length === 0)) {
     const key = identityKey(person);
@@ -210,7 +211,9 @@ export function generateVisitImportManifests(input: {
   readonly visitTypeMapPath: string;
   readonly setupStatePath: string;
   readonly outputDirectory: string;
+  readonly expectedChartCount: number;
 }): VisitManifestGenerationResult {
+  assertExpectedChartCount(input.expectedChartCount);
   const appointmentsCsv = readFileSync(input.appointmentsExportPath, "utf8");
   const analysis = analyzeAppointmentExport(
     appointmentsCsv,
@@ -219,6 +222,7 @@ export function generateVisitImportManifests(input: {
   const appointmentRows = parseAppointmentRows(appointmentsCsv);
   const patientReferences = parsePatientReferences(
     readFileSync(input.patientReferencesPath, "utf8"),
+    input.expectedChartCount,
   );
   const examRows = parseExamRows(readFileSync(input.examsTsvPath, "utf8"));
   const sourceVisitTypeMap = parseVisitTypeMap(
@@ -422,6 +426,14 @@ export function parseGeneratorCliArguments(
   return parsed;
 }
 
+export function parseExpectedChartCount(value: string): number {
+  const chartCount = Number(value);
+  if (!/^[1-9]\d*$/.test(value) || !Number.isSafeInteger(chartCount)) {
+    throw new Error(`--expected-charts must be a positive integer; got "${value}".`);
+  }
+  return chartCount;
+}
+
 export function shellArgument(value: string): string {
   if (/^[A-Za-z0-9_@%+=:,./-]+$/.test(value)) return value;
   return `'${value.replaceAll("'", "'\"'\"'")}'`;
@@ -505,16 +517,23 @@ function epmPatientFromExport(row: PatientExportRow): PatientImportManifest["epm
   };
 }
 
-function parsePatientReferences(json: string): PatientReferenceInput[] {
+function parsePatientReferences(
+  json: string,
+  expectedChartCount: number,
+): PatientReferenceInput[] {
   const parsed: unknown = JSON.parse(json);
   const rows = Array.isArray(parsed)
     ? parsed
     : isObject(parsed) && Array.isArray(parsed.charts)
       ? parsed.charts
       : undefined;
-  if (!rows || rows.length !== EXPECTED_CHART_COUNT) {
+  if (!rows) {
+    throw new Error("Patient-reference input must contain a chart-object array.");
+  }
+  if (rows.length !== expectedChartCount) {
     throw new Error(
-      `Patient-reference input must contain exactly ${EXPECTED_CHART_COUNT} chart objects.`,
+      `Patient-reference input must contain exactly ${expectedChartCount} chart objects; `
+      + `got ${rows.length}.`,
     );
   }
   return rows.map((value, index) => {
@@ -541,6 +560,12 @@ function parsePatientReferences(json: string): PatientReferenceInput[] {
       ),
     };
   });
+}
+
+function assertExpectedChartCount(value: number): void {
+  if (!Number.isSafeInteger(value) || value <= 0) {
+    throw new Error(`Expected chart count must be a positive integer; got ${String(value)}.`);
+  }
 }
 
 function parseAppointmentRows(csv: string): AppointmentExportRow[] {

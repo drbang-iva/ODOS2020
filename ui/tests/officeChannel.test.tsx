@@ -297,6 +297,12 @@ function emptyDeskSummary() {
     cards: {
       schedule: { today: n, confirmed: n, checkedIn: n, webRequests: n, agenda: [] },
       attention: { items: [] },
+      correspondence: {
+        draftsAwaitingSignature: n,
+        repliesOwed: n,
+        sendFailures: n,
+        items: [],
+      },
       frontLine: { available: false, message: "Not wired", needsReply: off, missedCalls: off, voicemails: off, urgent: off, messages: [] },
       pendingRx: { spectacle: n, contactLens: off, labOrdersUnsent: off, oldestWaiting: off },
       productPickup: { openOrders: n, atLab: n, readyNotNotified: off, awaitingPickup: n },

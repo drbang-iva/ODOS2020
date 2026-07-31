@@ -23,6 +23,7 @@ const defaultDeskOfficeApi: DeskOfficeApi = { list: fetchDeskOfficeMessages, sen
 export const DESK_CARDS = [
   { id: "schedule", title: "Today's schedule", href: "/frontdesk", span: "wide" },
   { id: "attention", title: "Needs attention", href: "/billing/claims/worklist", span: "standard" },
+  { id: "correspondence", title: "Correspondence", href: "/clinic/patients", span: "standard" },
   { id: "front-line", title: "Front Line", span: "standard" },
   { id: "office", title: "Office", span: "full" },
   { id: "rx", title: "Pending Rx", href: "/clinic/patients", span: "standard" },
@@ -341,6 +342,26 @@ function cardModel(id: DeskCardId, summary?: DeskSummary): { tone: DeskTone; kic
     case "office": throw new Error("Office card is rendered from live Office channel state.");
     case "schedule": { const value = summary.cards.schedule; return { tone: worstTone([value.today, value.confirmed, value.checkedIn, value.webRequests]), kicker: value.webRequests.value ? `${value.webRequests.value} web requests waiting` : "on track", target: "web requests 0 · confirmations match schedule", content: <><Stats stats={[["Today", value.today], ["Confirmed", value.confirmed], ["Checked in", value.checkedIn], ["Web requests", value.webRequests]]} /><div className="odos-agenda">{value.agenda.map((row, index) => <div key={`${row.time}-${index}`}><time>{row.time}</time><span>{row.patient}</span><em>{row.visitType}</em></div>)}</div></> }; }
     case "attention": { const items = summary.cards.attention.items; return { tone: items[0]?.tone ?? "ok", kicker: items.length ? `${items.length} item${items.length === 1 ? "" : "s"} need you` : "clear", target: "clear by EOD", content: items.length ? <div className="odos-attention-list">{items.map((item) => <div key={item.label} className={`odos-row-tone-${item.tone}`}><TonePip tone={item.tone} /><span><b>{item.label}</b><small>{item.detail}</small></span></div>)}</div> : <p className="odos-all-clear">All clear — nothing needs you.</p> }; }
+    case "correspondence": {
+      const value = summary.cards.correspondence;
+      const tone: DeskTone = value.sendFailures.value > 0
+        ? "alert"
+        : value.draftsAwaitingSignature.value > 0 || value.repliesOwed.value > 0
+          ? "warn"
+          : "ok";
+      return {
+        tone,
+        kicker: value.items.length
+          ? `${value.items.length} item${value.items.length === 1 ? "" : "s"} need action`
+          : "closed loop",
+        target: "drafts signed · replies sent · failures 0",
+        content: <Stats stats={[
+          ["Drafts awaiting signature", value.draftsAwaitingSignature],
+          ["Replies owed", value.repliesOwed],
+          ["Send failures", value.sendFailures],
+        ]} />,
+      };
+    }
     case "front-line": return { tone: "off", kicker: "wiring", target: "need reply 0 · urgent handled now", content: <WiringPanel>{summary.cards.frontLine.message}</WiringPanel> };
     case "rx": { const value = summary.cards.pendingRx; return { tone: worstTone([value.spectacle, value.contactLens, value.labOrdersUnsent, value.oldestWaiting]), kicker: value.oldestWaiting.value !== null && value.oldestWaiting.value > 1 ? `${value.oldestWaiting.value}d oldest wait` : "orders moving", target: "oldest waiting ≤ 1 day", content: <Stats stats={[["Spectacle", value.spectacle], ["CL", value.contactLens], ["Lab unsent", value.labOrdersUnsent], ["Oldest", value.oldestWaiting, "d"]]} /> }; }
     case "pickup": { const value = summary.cards.productPickup; return { tone: worstTone([value.openOrders, value.atLab, value.readyNotNotified, value.awaitingPickup]), kicker: value.readyNotNotified.value === null ? "partial contract" : value.readyNotNotified.value ? `${value.readyNotNotified.value} not notified` : "on track", target: "ready-not-notified 0", content: <Stats stats={[["Open orders", value.openOrders], ["At lab", value.atLab], ["Ready, not notified", value.readyNotNotified], ["Awaiting pickup", value.awaitingPickup]]} /> }; }

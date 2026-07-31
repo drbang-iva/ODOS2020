@@ -658,6 +658,45 @@ test("coverage fetch failure quietly degrades both insurance fields to free text
   renderer.unmount();
 });
 
+test("new appointment intake captures a free-text referrer against the selected provider", async () => {
+  const events: string[] = [];
+  const inbound: unknown[] = [];
+  const renderer = await renderModal({
+    initialDraft: draft({
+      patient: { reference: "Patient/patient-1", display: "Seed Patient" },
+    }),
+    loadPatientInsurance: async () => ({ coverages: [], relatedPeople: [] }),
+    correspondenceApi: {
+      searchConsultants: async () => [],
+      createInboundReferral: async (input) => {
+        events.push("referral");
+        inbound.push(input);
+        return { resourceType: "ServiceRequest", status: "active", intent: "order", subject: { reference: "Patient/patient-1" } };
+      },
+    },
+    onCreate: async () => {
+      events.push("appointment");
+    },
+  });
+  act(() => renderer.root.findByProps({ "aria-label": "Referred by" }).props.onChange({
+    target: { value: "Dr. Outside" },
+  }));
+  act(() => renderer.root.findByProps({ "aria-label": "Reason for referral" }).props.onChange({
+    target: { value: "Retinal concern" },
+  }));
+  await clickSave(renderer);
+
+  assert.deepEqual(events, ["appointment", "referral"]);
+  assert.deepEqual(inbound, [{
+    patientId: "patient-1",
+    referrerDisplay: "Dr. Outside",
+    performerReference: "Practitioner/doctor-1",
+    captureSource: "front-desk",
+    reasonText: "Retinal concern",
+  }]);
+  renderer.unmount();
+});
+
 async function renderModal(overrides: Partial<React.ComponentProps<typeof AppointmentDetailsModal>> = {}) {
   let renderer!: ReactTestRenderer;
   await act(async () => {

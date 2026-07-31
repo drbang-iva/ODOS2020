@@ -17,17 +17,16 @@ type SearchSpec = {
   parameterKeys: string[];
 };
 
-const EXPECTED_DIRECT_SEARCH_CALLS = 101;
 const DYNAMIC_FHIR_SEARCH = "dynamic-fhir-search";
 const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SEARCH> = {
-  "src/clinic/clinic-summary.ts:251": [
+  "clinic-summary.search-resource": [
     spec("Appointment", "date", "_count", "_sort"),
     spec("Encounter", "date", "_count", "_sort"),
     spec("Task", "code", "_count", "_sort"),
     spec("Provenance", "patient", "recorded", "_count", "_sort"),
     spec("Patient", "_id", "_count"),
   ],
-  "src/clinic/patient-overview.ts:413": [
+  "patient-overview.search-resource": [
     spec("Coverage", "beneficiary", "status", "_count"),
     spec("Condition", "patient", "category", "_count"),
     spec("Procedure", "patient", "_count", "_sort"),
@@ -39,28 +38,28 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
     spec("Provenance", "patient", "_count", "_sort"),
     spec("DocumentReference", "subject", "identifier", "_count"),
   ],
-  "src/clinical-graph/iop-history-endpoint.ts:119": [spec("Observation", "subject", "code", "_count")],
-  "src/clinical-graph/iop-history-endpoint.ts:120": [spec("Observation", "subject", "code", "_count")],
-  "src/clinical-graph/iop-history-endpoint.ts:121": [spec("Goal", "subject", "category", "_count")],
-  "src/clinical-graph/iop-history-endpoint.ts:163": [spec("Goal", "subject", "category", "_count")],
-  "src/clinical-graph/eye-growth-endpoint.ts:278": [spec("Observation", "subject", "code", "_count")],
-  "src/clinical-graph/eye-growth-endpoint.ts:279": [spec("Observation", "subject", "code", "_count")],
-  "src/clinical-graph/eye-growth-endpoint.ts:280": [spec("Observation", "subject", "code", "_count", "_sort")],
-  "src/clinical-graph/protocol-endpoint.ts:653": [
+  "iop-history.iop-observations": [spec("Observation", "subject", "code", "_count")],
+  "iop-history.hysteresis-observations": [spec("Observation", "subject", "code", "_count")],
+  "iop-history.target-goals": [spec("Goal", "subject", "category", "_count")],
+  "iop-history.existing-target-goals": [spec("Goal", "subject", "category", "_count")],
+  "eye-growth.axial-length-observations": [spec("Observation", "subject", "code", "_count")],
+  "eye-growth.corneal-radius-observations": [spec("Observation", "subject", "code", "_count")],
+  "eye-growth.refraction-observations": [spec("Observation", "subject", "code", "_count", "_sort")],
+  "protocol-endpoint.search-resources": [
     spec("Condition", "encounter", "_count"),
     spec("Observation", "encounter", "_count"),
   ],
-  "src/clinical-graph/imaging-endpoint.ts:644": [
+  "imaging-endpoint.search-media": [
     spec("Media", "patient", "encounter", "status", "_sort", "_count"),
     spec("Media", "_id", "_count"),
   ],
-  "src/clinical-graph/protocol-store.ts:160": [spec("Basic", "code", "identifier", "_count")],
-  "src/desk/day-ledger.ts:234": [
+  "protocol-store.search-basic": [spec("Basic", "code", "identifier", "_count")],
+  "day-ledger.search-resource": [
     spec("Invoice", "date", "_count", "_sort"),
     spec("PaymentReconciliation", "status", "created", "_count", "_sort"),
     spec("ChargeItem", "occurrence", "_count", "_sort"),
   ],
-  "src/desk/desk-summary.ts:446": [
+  "desk-summary.search-resource": [
     spec("Appointment", "date", "_count", "_sort"),
     spec("Task", "status", "code", "business-status", "_count", "_sort"),
     spec("Claim", "_count", "_sort"),
@@ -69,18 +68,18 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
     spec("Invoice", "_count", "_sort"),
     spec("Patient", "_id", "_count"),
   ],
-  "src/fhir/wenoMappingCatalog.ts:120": [spec("Basic", "code", "_count")],
-  "src/index.ts:2662": [spec("Patient", "name", "_count")],
-  "src/index.ts:2703": [spec("Observation", "subject", "category", "_count")],
-  "src/index.ts:2711": [spec("ChargeItem", "subject", "context", "_count")],
-  "src/index.ts:2719": DYNAMIC_FHIR_SEARCH,
-  "src/index.ts:4340": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
-  "src/index.ts:4362": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
-  "src/office/office-channel.ts:190": [
+  "weno-mapping.search-basic": [spec("Basic", "code", "_count")],
+  "tools.list-patients": [spec("Patient", "name", "_count")],
+  "tools.get-observations": [spec("Observation", "subject", "category", "_count")],
+  "tools.get-charge-items": [spec("ChargeItem", "subject", "context", "_count")],
+  "tools.fhir-search": DYNAMIC_FHIR_SEARCH,
+  "tools.get-observation-history": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
+  "tools.get-progression-summary": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
+  "office-channel.search-resource": [
     spec("Communication", "category", "_count", "_sort"),
     spec("Provenance", "_tag", "recorded", "_count", "_sort"),
   ],
-  "src/reporting/margin-ledger.ts:526": [
+  "margin-ledger.search-resource": [
     spec("Invoice", "date", "_count", "_sort"),
     spec("PaymentReconciliation", "status", "created", "_count", "_sort"),
     spec("Claim", "_count", "_sort"),
@@ -89,16 +88,16 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
     spec("ChargeItemDefinition", "_count"),
     spec("ChargeItem", "_id", "_count"),
   ],
-  "src/reporting/reporting.ts:445": [
+  "reporting.search-resource": [
     spec("Invoice", "date", "_count"),
     spec("PaymentReconciliation", "created", "status", "_count"),
   ],
-  "src/referral/referral-service.ts:520": [
+  "referral-service.encounter-resources": [
     spec("Observation", "patient", "encounter", "_count"),
     spec("CarePlan", "patient", "encounter", "_count"),
   ],
-  "src/reminders/reminder-engine.ts:407": [spec("Appointment", "date", "_count")],
-  "src/scheduling/scheduling-service.ts:112": [
+  "reminder-engine.search-anchor": [spec("Appointment", "date", "_count")],
+  "scheduling-service.search-resource": [
     spec("Appointment", "actor"),
     spec("HealthcareService"),
     spec("Schedule"),
@@ -125,9 +124,8 @@ test("historical ChargeItem status search is rejected while known-valid searches
   assert.doesNotThrow(() => assertSearchParameterKeys("AccessPolicy", ["name:exact"]));
 });
 
-test("all 101 direct fhir.search call sites are statically resolved or explicitly dynamic", () => {
+test("all direct fhir.search call sites are statically resolved or explicitly dynamic", () => {
   const calls = collectDirectFhirSearchCalls();
-  assert.equal(calls.length, EXPECTED_DIRECT_SEARCH_CALLS);
   const usedOverrides = new Set<string>();
   let dynamicEscapeHatches = 0;
 
@@ -137,9 +135,11 @@ test("all 101 direct fhir.search call sites are statically resolved or explicitl
       continue;
     }
 
-    const override = DYNAMIC_SEARCH_SPECS[call.location];
-    assert.ok(override, `${call.location} has unresolved search parameters and no contract override`);
-    usedOverrides.add(call.location);
+    assert.ok(call.contractKey, `${call.location} has unresolved search parameters and no search-contract marker`);
+    assert.ok(!usedOverrides.has(call.contractKey), `${call.location} duplicates search-contract key ${call.contractKey}`);
+    const override = DYNAMIC_SEARCH_SPECS[call.contractKey];
+    assert.ok(override, `${call.location} uses undeclared search-contract key ${call.contractKey}`);
+    usedOverrides.add(call.contractKey);
     if (override === DYNAMIC_FHIR_SEARCH) {
       dynamicEscapeHatches += 1;
     }
@@ -163,14 +163,13 @@ test("static audit finds zero invalid search parameters", () => {
 
 test("static audit rejects a mistyped dynamic override key", () => {
   const overrides = { ...DYNAMIC_SEARCH_SPECS };
-  delete overrides["src/referral/referral-service.ts:520"];
-  overrides["src/referral/referral-service.ts:506"] = [
+  overrides["referral-service.encounter-resource"] = [
     spec("Observation", "patient", "encounter", "_count"),
   ];
 
   assert.throws(
     () => collectSearchSpecs(overrides),
-    /src\/referral\/referral-service\.ts:520 has unresolved search parameters and no contract override/,
+    /Contract override referral-service\.encounter-resource has no matching call site/,
   );
 });
 
@@ -181,33 +180,52 @@ function spec(resourceType: ContractResourceType, ...parameterKeys: string[]): S
 function collectSearchSpecs(
   overrides: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SEARCH> = DYNAMIC_SEARCH_SPECS,
 ): Array<{ location: string; spec: SearchSpec }> {
-  return collectDirectFhirSearchCalls().flatMap((call) => {
+  const usedOverrides = new Set<string>();
+  const specs = collectDirectFhirSearchCalls().flatMap((call) => {
     if (call.resourceType && call.parameterKeys) {
       return [{
         location: call.location,
         spec: spec(call.resourceType as ContractResourceType, ...call.parameterKeys),
       }];
     }
-    const override = overrides[call.location];
-    if (override === undefined) {
-      throw new Error(`${call.location} has unresolved search parameters and no contract override`);
+    if (!call.contractKey) {
+      throw new Error(`${call.location} has unresolved search parameters and no search-contract marker`);
     }
+    if (usedOverrides.has(call.contractKey)) {
+      throw new Error(`${call.location} duplicates search-contract key ${call.contractKey}`);
+    }
+    const override = overrides[call.contractKey];
+    if (override === undefined) {
+      throw new Error(`${call.location} uses undeclared search-contract key ${call.contractKey}`);
+    }
+    usedOverrides.add(call.contractKey);
     return override === DYNAMIC_FHIR_SEARCH ? [] : override.map((current) => ({
       location: call.location,
       spec: current,
     }));
   });
+  const unusedOverrides = Object.keys(overrides).filter((key) => !usedOverrides.has(key));
+  if (unusedOverrides.length > 0) {
+    throw new Error(`Contract override ${unusedOverrides[0]} has no matching call site`);
+  }
+  return specs;
 }
 
 function collectDirectFhirSearchCalls(): Array<{
   location: string;
+  contractKey?: string;
   resourceType?: string;
   parameterKeys?: string[];
 }> {
   const sourceRoot = resolve(process.cwd(), "src");
   return sourceFiles(sourceRoot).flatMap((file) => {
     const source = ts.createSourceFile(file, readFileSync(file, "utf8"), ts.ScriptTarget.Latest, true);
-    const calls: Array<{ location: string; resourceType?: string; parameterKeys?: string[] }> = [];
+    const calls: Array<{
+      location: string;
+      contractKey?: string;
+      resourceType?: string;
+      parameterKeys?: string[];
+    }> = [];
 
     function visit(node: ts.Node): void {
       if (
@@ -217,10 +235,12 @@ function collectDirectFhirSearchCalls(): Array<{
         && /(^|\.)fhir$/.test(node.expression.expression.getText(source))
       ) {
         const position = source.getLineAndCharacterOfPosition(node.getStart(source));
+        const contractKey = searchContractKey(node, source);
         const resourceType = stringLiteral(node.arguments[0]);
         const parameterKeys = extractParameterKeys(node.arguments[1]);
         calls.push({
           location: `${relative(process.cwd(), file).replaceAll("\\", "/")}:${position.line + 1}`,
+          ...(contractKey ? { contractKey } : {}),
           ...(resourceType ? { resourceType } : {}),
           ...(parameterKeys ? { parameterKeys } : {}),
         });
@@ -231,6 +251,17 @@ function collectDirectFhirSearchCalls(): Array<{
     visit(source);
     return calls;
   });
+}
+
+function searchContractKey(node: ts.CallExpression, source: ts.SourceFile): string | undefined {
+  let current: ts.Node | undefined = node;
+  while (current && !ts.isSourceFile(current)) {
+    const leadingTrivia = source.text.slice(current.getFullStart(), current.getStart(source));
+    const match = leadingTrivia.match(/search-contract:\s*([a-z0-9]+(?:[.-][a-z0-9]+)*)/);
+    if (match) return match[1];
+    current = current.parent;
+  }
+  return undefined;
 }
 
 function sourceFiles(directory: string): string[] {
