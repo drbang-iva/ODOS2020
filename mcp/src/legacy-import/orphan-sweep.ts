@@ -180,6 +180,12 @@ export interface StoredPracticeClinicianPolicy {
   readonly policy: AccessPolicy;
 }
 
+export interface StoredClinicianPolicyCandidate {
+  readonly policyId: string;
+  readonly policy: string;
+  readonly membershipReferenceCount: number;
+}
+
 export async function findPracticeClinicianPolicy(
   postgresUrl: string,
 ): Promise<StoredPracticeClinicianPolicy> {
@@ -242,19 +248,47 @@ export async function verifyPracticeProjectClinicianPolicy(
       throw new Error(`Explicit practice project ${projectId} does not exist.`);
     }
     const project = projects.rows[0]!;
-    const policies = await pool.query<{ policy_id: string; policy: string }>(`
-      SELECT id::text AS policy_id, content AS policy
-      FROM "AccessPolicy"
-      WHERE deleted = false
-        AND "projectId"::text = $1
-        AND content::jsonb->>'name' = 'ODOS Clinician'
-      ORDER BY id
+    const policies = await pool.query<{
+      policy_id: string;
+      policy: string;
+      membership_reference_count: string;
+    }>(`
+      SELECT
+        policy.id::text AS policy_id,
+        policy.content AS policy,
+        count(membership.id)::text AS membership_reference_count
+      FROM "AccessPolicy" AS policy
+      LEFT JOIN "ProjectMembership" AS membership
+        ON membership.deleted = false
+        AND (
+          membership.content::jsonb #>> '{accessPolicy,reference}'
+            = 'AccessPolicy/' || policy.id::text
+          OR EXISTS (
+            SELECT 1
+            FROM jsonb_array_elements(
+              COALESCE(membership.content::jsonb->'access', '[]'::jsonb)
+            ) AS access
+            WHERE access #>> '{policy,reference}'
+              = 'AccessPolicy/' || policy.id::text
+          )
+        )
+      WHERE policy.deleted = false
+        AND policy."projectId"::text = $1
+        AND policy.content::jsonb->>'name' = 'ODOS Clinician'
+      GROUP BY policy.id, policy.content
+      ORDER BY policy.id
     `, [projectId]);
     if (policies.rows.length !== 1) {
+      const candidates = policies.rows.map((policy) => ({
+        policyId: policy.policy_id,
+        policy: policy.policy,
+        membershipReferenceCount: Number(policy.membership_reference_count),
+      }));
       throw new Error(
         `Explicit practice project ${projectId} `
         + `(${project.project_name?.trim() || "unnamed project"}) must carry exactly one `
-        + `ODOS Clinician policy; found ${policies.rows.length}.`,
+        + `ODOS Clinician policy; found ${policies.rows.length}. `
+        + describeStoredClinicianPolicyConflict(candidates),
       );
     }
     return {
@@ -264,6 +298,54 @@ export async function verifyPracticeProjectClinicianPolicy(
       policy: JSON.parse(policies.rows[0]!.policy) as AccessPolicy,
     };
   });
+}
+
+export function describeStoredClinicianPolicyConflict(
+  candidates: readonly StoredClinicianPolicyCandidate[],
+): string {
+  const definitionsIdentical = candidates.length < 2
+    ? "not applicable"
+    : candidates.every(
+      (candidate) =>
+        comparablePolicyDefinition(candidate.policy)
+        === comparablePolicyDefinition(candidates[0]!.policy),
+    )
+      ? "yes"
+      : "no";
+  const references = candidates.length
+    ? candidates
+      .map((candidate) => `${candidate.policyId}=${candidate.membershipReferenceCount}`)
+      .join(", ")
+    : "none";
+  const unreferenced = candidates
+    .filter((candidate) => candidate.membershipReferenceCount === 0)
+    .map((candidate) => candidate.policyId);
+  return `Policy definitions identical: ${definitionsIdentical}. `
+    + `ProjectMembership references by policy: ${references}. `
+    + `Policies with zero ProjectMembership references: ${unreferenced.join(", ") || "none"}.`;
+}
+
+function comparablePolicyDefinition(source: string): string {
+  const policy = JSON.parse(source) as Record<string, unknown>;
+  delete policy.id;
+  if (policy.meta && typeof policy.meta === "object" && !Array.isArray(policy.meta)) {
+    const meta = { ...(policy.meta as Record<string, unknown>) };
+    delete meta.versionId;
+    delete meta.lastUpdated;
+    policy.meta = meta;
+  }
+  return stableJson(policy);
+}
+
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    return `{${Object.entries(value)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, entry]) => `${JSON.stringify(key)}:${stableJson(entry)}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value);
 }
 
 async function withLegacyImportPool<T>(

@@ -1,6 +1,17 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 import type { AccessPolicy, Binary, Bundle, Media } from "@medplum/fhirtypes";
 import {
@@ -26,6 +37,7 @@ import {
   type LegacyMediaSource,
 } from "../src/legacy-import/binary-transport.js";
 import {
+  describeStoredClinicianPolicyConflict,
   PgBinaryReferenceScanner,
   sweepLegacyImportBinaries,
   type BinaryReferenceDatabase,
@@ -34,6 +46,7 @@ import {
 } from "../src/legacy-import/orphan-sweep.js";
 import {
   assertLocalBaseUrl,
+  persistCredentials,
   reconciledAccessPolicy,
   resolvePracticeProjectId,
   samePolicyDefinition,
@@ -333,6 +346,220 @@ test("single-practice callers without an explicit project keep database discover
   );
   assert.equal(discoveryCalls, 1);
   assert.equal(verificationCalls, 0);
+});
+
+test("setup CLI entry point initializes its live database dependency and honors the explicit project env", () => {
+  const root = new URL("../../", import.meta.url);
+  const result = spawnSync(
+    process.execPath,
+    ["--import", "tsx", "scripts/setup-legacy-importer.ts"],
+    {
+      cwd: new URL(root).pathname,
+      env: {
+        ...process.env,
+        MEDPLUM_BASE_URL: "http://127.0.0.1:8103",
+        ODOS_OPERATOR_ACCESS_TOKEN: "synthetic-operator-token",
+        ODOS_POSTGRES_URL: "postgresql://postgres:postgres@127.0.0.1:1/postgres",
+        ODOS_PRACTICE_PROJECT_ID: "explicit-cli-project",
+      },
+      encoding: "utf8",
+      timeout: 10_000,
+    },
+  );
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /ECONNREFUSED/);
+  assert.doesNotMatch(
+    result.stderr,
+    /Cannot access 'LIVE_PRACTICE_PROJECT_DATABASE' before initialization/,
+  );
+  assert.doesNotMatch(result.stderr, /fetch failed/);
+});
+
+test("setup npm entry loads the env file and passes its explicit project to the real CLI", () => {
+  const root = new URL("../../", import.meta.url);
+  const packageJson = JSON.parse(readFileSync(new URL("package.json", root), "utf8")) as {
+    scripts: Record<string, string>;
+  };
+  const command = packageJson.scripts["setup-legacy-importer"];
+  assert.equal(
+    command,
+    "tsx --env-file-if-exists=.odos/migration-importer.env scripts/setup-legacy-importer.ts",
+  );
+  const directory = mkdtempSync(join(tmpdir(), "odos-importer-npm-"));
+  try {
+    mkdirSync(join(directory, ".odos"));
+    mkdirSync(join(directory, "scripts"));
+    writeFileSync(
+      join(directory, "package.json"),
+      JSON.stringify({
+        name: "setup-legacy-importer-cli-test",
+        private: true,
+        type: "module",
+        scripts: { "setup-legacy-importer": command },
+      }),
+    );
+    writeFileSync(
+      join(directory, "scripts", "setup-legacy-importer.ts"),
+      readFileSync(new URL("scripts/setup-legacy-importer.ts", root), "utf8"),
+    );
+    symlinkSync(
+      new URL("scripts/grant-migrated-patient-access.ts", root),
+      join(directory, "scripts", "grant-migrated-patient-access.ts"),
+    );
+    symlinkSync(new URL("data", root), join(directory, "data"), "dir");
+    symlinkSync(new URL("mcp", root), join(directory, "mcp"), "dir");
+    symlinkSync(new URL("node_modules", root), join(directory, "node_modules"), "dir");
+    const environmentPath = join(directory, ".odos", "migration-importer.env");
+    writeFileSync(
+      environmentPath,
+      [
+        "MEDPLUM_BASE_URL=http://127.0.0.1:8103",
+        "ODOS_OPERATOR_ACCESS_TOKEN=synthetic-operator-token",
+        "ODOS_POSTGRES_URL=postgresql://postgres:postgres@127.0.0.1:1/postgres",
+        "ODOS_PRACTICE_PROJECT_ID=explicit-npm-project",
+        "",
+      ].join("\n"),
+    );
+    chmodSync(environmentPath, 0o600);
+    const {
+      MEDPLUM_BASE_URL: _baseUrl,
+      ODOS_OPERATOR_ACCESS_TOKEN: _operatorToken,
+      ODOS_POSTGRES_URL: _postgresUrl,
+      OSOD_POSTGRES_URL: _legacyPostgresUrl,
+      ODOS_PRACTICE_PROJECT_ID: _practiceProjectId,
+      ...cleanEnvironment
+    } = process.env;
+
+    const result = spawnSync("npm", ["run", "setup-legacy-importer"], {
+      cwd: directory,
+      env: cleanEnvironment,
+      encoding: "utf8",
+      timeout: 10_000,
+    });
+
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /ECONNREFUSED/);
+    assert.doesNotMatch(result.stderr, /ODOS_OPERATOR_ACCESS_TOKEN is required/);
+    assert.doesNotMatch(
+      result.stderr,
+      /Cannot access 'LIVE_PRACTICE_PROJECT_DATABASE' before initialization/,
+    );
+    assert.doesNotMatch(result.stderr, /fetch failed/);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("persistCredentials preserves operator-managed entries and enforces mode 0600", () => {
+  const directory = mkdtempSync(join(tmpdir(), "odos-importer-credentials-"));
+  const credentialsPath = join(directory, "migration-importer.env");
+  const statePath = join(directory, "migration-importer-state.json");
+  try {
+    writeFileSync(
+      credentialsPath,
+      [
+        "# operator-managed migration settings",
+        "MEDPLUM_BASE_URL=http://localhost:8103",
+        "ODOS_POSTGRES_URL=postgresql://local-practice",
+        "ODOS_PRACTICE_PROJECT_ID=practice-project",
+        "ODOS_OPERATOR_ACCESS_TOKEN=short-lived-token",
+        "ODOS_MIGRATION_IMPORTER_CLIENT_ID=old-client",
+        "ODOS_MIGRATION_IMPORTER_CLIENT_SECRET=old-secret",
+        "UNRELATED_KEY=preserved",
+        "",
+      ].join("\n"),
+    );
+    chmodSync(credentialsPath, 0o644);
+
+    persistCredentials(
+      { clientId: "new-client", clientSecret: "new-secret" },
+      statePath,
+      credentialsPath,
+      "importer-policy",
+      "practice-project",
+    );
+
+    const persisted = readFileSync(credentialsPath, "utf8");
+    assert.match(persisted, /^# operator-managed migration settings$/m);
+    assert.match(persisted, /^MEDPLUM_BASE_URL=http:\/\/localhost:8103$/m);
+    assert.match(persisted, /^ODOS_POSTGRES_URL=postgresql:\/\/local-practice$/m);
+    assert.match(persisted, /^ODOS_PRACTICE_PROJECT_ID=practice-project$/m);
+    assert.match(persisted, /^ODOS_OPERATOR_ACCESS_TOKEN=short-lived-token$/m);
+    assert.match(persisted, /^UNRELATED_KEY=preserved$/m);
+    assert.doesNotMatch(persisted, /old-client|old-secret/);
+    assert.equal(
+      persisted.match(/^ODOS_MIGRATION_IMPORTER_CLIENT_ID=/gm)?.length,
+      1,
+    );
+    assert.equal(
+      persisted.match(/^ODOS_MIGRATION_IMPORTER_CLIENT_SECRET=/gm)?.length,
+      1,
+    );
+    assert.equal(statSync(credentialsPath).mode & 0o777, 0o600);
+    assert.equal(statSync(statePath).mode & 0o777, 0o600);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("duplicate clinician-policy diagnostic identifies identical definitions and zero-reference copies", () => {
+  const policy = buildMedplumAccessPolicy(getRoleDeclaration("clinician"));
+  const first = {
+    ...policy,
+    id: "policy-referenced",
+    meta: { ...policy.meta, versionId: "1", lastUpdated: "2026-07-31T12:00:00Z" },
+  };
+  const second = {
+    ...policy,
+    id: "policy-unreferenced",
+    meta: { ...policy.meta, versionId: "2", lastUpdated: "2026-07-31T12:05:00Z" },
+  };
+
+  const description = describeStoredClinicianPolicyConflict([
+    {
+      policyId: "policy-referenced",
+      policy: JSON.stringify(first),
+      membershipReferenceCount: 2,
+    },
+    {
+      policyId: "policy-unreferenced",
+      policy: JSON.stringify(second),
+      membershipReferenceCount: 0,
+    },
+  ]);
+
+  assert.match(description, /Policy definitions identical: yes/);
+  assert.match(
+    description,
+    /ProjectMembership references by policy: policy-referenced=2, policy-unreferenced=0/,
+  );
+  assert.match(
+    description,
+    /Policies with zero ProjectMembership references: policy-unreferenced/,
+  );
+});
+
+test("duplicate clinician-policy diagnostic reports definition drift without choosing a copy", () => {
+  const canonical = buildMedplumAccessPolicy(getRoleDeclaration("clinician"));
+  const drifted = structuredClone(canonical);
+  drifted.resource![0]!.interaction = ["read"];
+
+  const description = describeStoredClinicianPolicyConflict([
+    {
+      policyId: "policy-a",
+      policy: JSON.stringify(canonical),
+      membershipReferenceCount: 1,
+    },
+    {
+      policyId: "policy-b",
+      policy: JSON.stringify(drifted),
+      membershipReferenceCount: 1,
+    },
+  ]);
+
+  assert.match(description, /Policy definitions identical: no/);
+  assert.match(description, /Policies with zero ProjectMembership references: none/);
 });
 
 test("all four Media recovery states converge or skip as designed", async (t) => {
