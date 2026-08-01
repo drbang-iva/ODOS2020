@@ -1,5 +1,8 @@
 import type {
   Bundle,
+  CarePlan,
+  ChargeItem,
+  Claim,
   Condition,
   Coverage,
   DocumentReference,
@@ -46,6 +49,30 @@ export interface PatientOverviewVisit {
   diagnoses: PatientOverviewDiagnosis[];
 }
 
+export interface PatientOverviewVisitDetailCard {
+  id: string;
+  kicker: string;
+  title: string;
+  detail?: string;
+  values?: Array<{ label: string; value: string }>;
+}
+
+export interface PatientOverviewVisitDetailGroup {
+  summary?: string;
+  cards: PatientOverviewVisitDetailCard[];
+  unavailable?: string;
+}
+
+export interface PatientOverviewVisitDetail {
+  encounterId: string;
+  reason?: string;
+  iop: PatientOverviewVisitDetailGroup;
+  findings: PatientOverviewVisitDetailGroup;
+  medications: PatientOverviewVisitDetailGroup;
+  plan: PatientOverviewVisitDetailGroup;
+  financial: PatientOverviewVisitDetailGroup;
+}
+
 export interface PatientOverviewMedication {
   id?: string;
   name: string;
@@ -79,6 +106,7 @@ export interface StickyNoteHistoryEntry {
 export type OverviewFhir = Pick<MedplumClient, "read" | "search" | "searchUrl" | "history" | "create" | "update">;
 
 export class StickyNoteValidationError extends Error {}
+export class PatientOverviewVisitNotFoundError extends Error {}
 
 const EYE_EXAM_VISIT_CODES = ["routine-exam-new", "routine-exam-established", "medicaid-exam"];
 
@@ -180,6 +208,38 @@ export async function loadPatientOverview(
     encounters,
     encounterDiagnoses,
     provenances,
+  });
+}
+
+export async function loadPatientOverviewVisitDetail(
+  fhir: OverviewFhir,
+  patientId: string,
+  encounterId: string,
+): Promise<PatientOverviewVisitDetail> {
+  const encounter = await fhir.read<Encounter>("Encounter", encounterId);
+  if (encounter.subject?.reference !== `Patient/${patientId}`) {
+    throw new PatientOverviewVisitNotFoundError("Visit was not found for this patient.");
+  }
+
+  const patientReference = `Patient/${patientId}`;
+  const encounterReference = `Encounter/${encounterId}`;
+  const [observations, medicationRequests, carePlans, claimResult, chargeItemResult] = await Promise.all([
+    searchAll<Observation>(fhir, "Observation", { patient: patientId, encounter: encounterId, _count: "200" }),
+    searchAll<MedicationRequest>(fhir, "MedicationRequest", { patient: patientId, encounter: encounterId, _count: "200" }),
+    searchAll<CarePlan>(fhir, "CarePlan", { patient: patientId, encounter: encounterId, _count: "200" }),
+    optionalSearchAll<Claim>(fhir, "Claim", { patient: patientReference, _count: "200" }),
+    optionalSearchAll<ChargeItem>(fhir, "ChargeItem", { subject: patientReference, context: encounterReference, _count: "200" }),
+  ]);
+
+  return projectVisitDetail({
+    encounter,
+    observations,
+    medicationRequests,
+    carePlans,
+    claims: claimResult.resources.filter((claim) => claimMatchesEncounter(claim, encounterReference)),
+    chargeItems: chargeItemResult.resources.filter((chargeItem) => chargeItem.context?.reference === encounterReference),
+    claimsAvailable: claimResult.available,
+    chargeItemsAvailable: chargeItemResult.available,
   });
 }
 
@@ -385,6 +445,223 @@ function projectOverview(input: {
       (row) => `${row.system}|${row.code}`,
     ),
   };
+}
+
+function projectVisitDetail(input: {
+  encounter: Encounter;
+  observations: Observation[];
+  medicationRequests: MedicationRequest[];
+  carePlans: CarePlan[];
+  claims: Claim[];
+  chargeItems: ChargeItem[];
+  claimsAvailable: boolean;
+  chargeItemsAvailable: boolean;
+}): PatientOverviewVisitDetail {
+  if (!input.encounter.id) throw new PatientOverviewVisitNotFoundError("Visit is missing its id.");
+  const observations = input.observations.filter((observation) =>
+    observation.status !== "cancelled" && observation.status !== "entered-in-error",
+  );
+  const iopObservations = observations.filter(isIopObservation);
+  const findingObservations = observations.filter((observation) => !isIopObservation(observation));
+  const iopCards = iopObservations.map((observation, index) => observationCard(observation, index, true));
+  const findingCards = findingObservations.map((observation, index) => observationCard(observation, index, false));
+  const medicationCards = input.medicationRequests
+    .filter((request) => request.status !== "cancelled" && request.status !== "entered-in-error")
+    .map((request, index): PatientOverviewVisitDetailCard => ({
+      id: request.id ?? `medication-${index}`,
+      kicker: "Medication",
+      title: conceptText(request.medicationCodeableConcept) || "Medication name not recorded",
+      ...(request.dosageInstruction?.[0]?.text?.trim()
+        ? { detail: request.dosageInstruction[0].text.trim() }
+        : request.status ? { detail: request.status } : {}),
+    }));
+  const planCards = input.carePlans
+    .filter((plan) => !["revoked", "entered-in-error", "unknown"].includes(plan.status))
+    .flatMap((plan, planIndex) => carePlanCards(plan, planIndex));
+  const claimCards = input.claims.map((claim, index): PatientOverviewVisitDetailCard => ({
+    id: claim.id ?? `claim-${index}`,
+    kicker: "Claim",
+    title: claim.insurer?.display ?? (conceptText(claim.type) || "Claim payer not recorded"),
+    detail: [claim.status, moneyText(claim.total)].filter(Boolean).join(" · ") || undefined,
+  }));
+  const chargeCards = input.chargeItems
+    .filter((chargeItem) => chargeItem.status !== "entered-in-error")
+    .map((chargeItem, index): PatientOverviewVisitDetailCard => ({
+      id: chargeItem.id ?? `charge-${index}`,
+      kicker: "Charge",
+      title: conceptText(chargeItem.code) || "Charge description not recorded",
+      detail: [chargeItem.status, moneyText(chargeItem.priceOverride)].filter(Boolean).join(" · ") || undefined,
+    }));
+  const financialCards = [...claimCards, ...chargeCards];
+  const reason = reasonText(input.encounter);
+  const financialUnavailable = [
+    ...(!input.claimsAvailable ? ["Claims unavailable from this session"] : []),
+    ...(!input.chargeItemsAvailable ? ["Charges unavailable from this session"] : []),
+  ].join(" · ") || undefined;
+
+  return {
+    encounterId: input.encounter.id,
+    ...(reason ? { reason } : {}),
+    iop: {
+      summary: iopCards.length
+        ? iopCards.map((card) => [card.kicker, card.title].filter(Boolean).join(" ")).join(" · ")
+        : undefined,
+      cards: iopCards,
+    },
+    findings: {
+      summary: findingCards.length ? unique(findingCards.map((card) => card.kicker)).join(" · ") : undefined,
+      cards: findingCards,
+    },
+    medications: {
+      summary: medicationCards.length ? medicationCards.map((card) => card.title).join(" · ") : undefined,
+      cards: medicationCards,
+    },
+    plan: {
+      summary: planCards.length ? planCards.map((card) => card.title).join(" · ") : undefined,
+      cards: planCards,
+    },
+    financial: {
+      summary: financialCards.length
+        ? [countLabel(claimCards.length, "claim"), countLabel(chargeCards.length, "charge")].filter(Boolean).join(" · ")
+        : undefined,
+      cards: financialCards,
+      ...(financialUnavailable ? { unavailable: financialUnavailable } : {}),
+    },
+  };
+}
+
+function observationCard(
+  observation: Observation,
+  index: number,
+  iop: boolean,
+): PatientOverviewVisitDetailCard {
+  const label = conceptText(observation.code) || "Finding label not recorded";
+  const value = observationValueText(observation);
+  const detail = [conceptText(observation.method), ...observation.interpretation?.map(conceptText) ?? []]
+    .filter(Boolean)
+    .join(" · ");
+  const numericValues = isStructuredOctOrVisualField(observation)
+    ? observationNumericValues(observation)
+    : [];
+  return {
+    id: observation.id ?? `observation-${index}`,
+    kicker: iop ? observationLaterality(observation) ?? label : label,
+    title: value || "not recorded",
+    ...(detail ? { detail } : {}),
+    ...(numericValues.length ? { values: numericValues } : {}),
+  };
+}
+
+function carePlanCards(plan: CarePlan, planIndex: number): PatientOverviewVisitDetailCard[] {
+  const activities = (plan.activity ?? []).flatMap((activity, activityIndex): PatientOverviewVisitDetailCard[] => {
+    const title = activity.detail?.description?.trim() || conceptText(activity.detail?.code);
+    if (!title) return [];
+    return [{
+      id: `${plan.id ?? `plan-${planIndex}`}-activity-${activityIndex}`,
+      kicker: plan.title?.trim() || "Plan",
+      title,
+      ...(activity.detail?.status ? { detail: activity.detail.status } : {}),
+    }];
+  });
+  if (activities.length) return activities;
+  const notes = (plan.note ?? []).flatMap((note, noteIndex): PatientOverviewVisitDetailCard[] =>
+    note.text?.trim() ? [{
+      id: `${plan.id ?? `plan-${planIndex}`}-note-${noteIndex}`,
+      kicker: plan.title?.trim() || "Plan",
+      title: note.text.trim(),
+    }] : [],
+  );
+  if (notes.length) return notes;
+  return plan.title?.trim() ? [{
+    id: plan.id ?? `plan-${planIndex}`,
+    kicker: "Plan",
+    title: plan.title.trim(),
+  }] : [];
+}
+
+function reasonText(encounter: Encounter): string | undefined {
+  const reasons = unique((encounter.reasonCode ?? []).flatMap((reason) => {
+    const text = conceptText(reason).trim();
+    return text ? [text] : [];
+  }));
+  return reasons.length ? reasons.join(" · ") : undefined;
+}
+
+function isIopObservation(observation: Observation): boolean {
+  return observation.code?.coding?.some((coding) => coding.code === "INTRAOCULAR_PRESSURE") === true
+    || /\b(?:intraocular pressure|iop)\b/i.test(conceptText(observation.code));
+}
+
+function isStructuredOctOrVisualField(observation: Observation): boolean {
+  const identity = [
+    conceptText(observation.code),
+    ...observation.code?.coding?.flatMap((coding) => [coding.code, coding.display]).filter((value): value is string => Boolean(value)) ?? [],
+  ].join(" ");
+  return /\b(?:oct|rnfl|optical coherence tomography|visual field|perimetry)\b/i.test(identity);
+}
+
+function observationNumericValues(observation: Observation): Array<{ label: string; value: string }> {
+  const rows: Array<{ label: string; value: string }> = [];
+  const topLevel = numericObservationValue(observation);
+  if (topLevel) rows.push({ label: conceptText(observation.code) || "Value", value: topLevel });
+  for (const component of observation.component ?? []) {
+    const value = numericObservationValue(component);
+    if (!value) continue;
+    rows.push({ label: conceptText(component.code) || "Value", value });
+  }
+  return rows;
+}
+
+function numericObservationValue(value: {
+  valueQuantity?: { value?: number; unit?: string; code?: string };
+  valueInteger?: number;
+}): string | undefined {
+  if (value.valueQuantity?.value !== undefined) {
+    const unit = value.valueQuantity.unit ?? value.valueQuantity.code;
+    return `${value.valueQuantity.value}${unit ? ` ${unit}` : ""}`;
+  }
+  return value.valueInteger !== undefined ? String(value.valueInteger) : undefined;
+}
+
+function observationValueText(observation: Observation): string | undefined {
+  if (observation.valueString?.trim()) return observation.valueString.trim();
+  if (observation.valueQuantity?.value !== undefined) return quantityText(observation.valueQuantity);
+  if (observation.valueCodeableConcept) return conceptText(observation.valueCodeableConcept) || undefined;
+  if (observation.valueBoolean !== undefined) return observation.valueBoolean ? "Yes" : "No";
+  if (observation.valueInteger !== undefined) return String(observation.valueInteger);
+  const components = (observation.component ?? []).flatMap((component) => {
+    const label = conceptText(component.code);
+    const value = component.valueString?.trim()
+      || (component.valueQuantity?.value !== undefined ? quantityText(component.valueQuantity) : undefined)
+      || (component.valueCodeableConcept ? conceptText(component.valueCodeableConcept) : undefined)
+      || (component.valueBoolean !== undefined ? (component.valueBoolean ? "Yes" : "No") : undefined)
+      || (component.valueInteger !== undefined ? String(component.valueInteger) : undefined);
+    return label && value ? [`${label}: ${value}`] : [];
+  });
+  return components.length ? components.join(" · ") : undefined;
+}
+
+function observationLaterality(observation: Observation): string | undefined {
+  const coding = observation.bodySite?.coding?.find((candidate) => candidate.code || candidate.display);
+  return coding?.code ?? coding?.display ?? (observation.bodySite?.text?.trim() || undefined);
+}
+
+function quantityText(quantity: { value?: number; unit?: string; code?: string }): string {
+  const unit = quantity.unit ?? quantity.code;
+  return `${quantity.value}${unit ? ` ${unit}` : ""}`;
+}
+
+function moneyText(money: { value?: number; currency?: string } | undefined): string | undefined {
+  if (money?.value === undefined) return undefined;
+  return `${money.value}${money.currency ? ` ${money.currency}` : ""}`;
+}
+
+function claimMatchesEncounter(claim: Claim, encounterReference: string): boolean {
+  return claim.item?.some((item) => item.encounter?.some((encounter) => encounter.reference === encounterReference)) === true;
+}
+
+function countLabel(count: number, noun: string): string | undefined {
+  return count ? `${count} ${noun}${count === 1 ? "" : "s"}` : undefined;
 }
 
 function stickyNoteSummary(resource: DocumentReference): NonNullable<PatientOverviewPayload["stickyNote"]> {

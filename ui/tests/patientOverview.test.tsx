@@ -6,7 +6,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import type { Patient } from "@medplum/fhirtypes";
 import type { ClinicSummary } from "../src/lib/clinic-summary";
-import { fetchPatientOverview, type PatientOverviewPayload } from "../src/lib/patient-overview";
+import {
+  fetchPatientOverview,
+  type PatientOverviewPayload,
+  type PatientOverviewVisitDetail,
+} from "../src/lib/patient-overview";
 import { openPatientOverview, patientOverviewView, useViewState } from "../src/lib/view-state";
 import { normalizeFhirReference, opticalOrderPath } from "../src/lib/optical-order";
 import { ClinicHome } from "../src/scenes/ClinicHome";
@@ -181,6 +185,83 @@ test("a migrated ledger row is visibly tagged and opens its encounter without re
       encounterId: "older",
     });
   }
+});
+
+test("visit rows lazy-load one accordion summary and drill horizontally with OCT-only numeric depth", async () => {
+  const calls: string[] = [];
+  const api = {
+    fetchOverview: async () => fixture(),
+    fetchVisitDetail: async (_patientId: string, encounterId: string) => {
+      calls.push(encounterId);
+      return detailFixture(encounterId);
+    },
+    saveNote: async () => fixture().stickyNote!,
+    fetchHistory: async () => [],
+  };
+  let renderer!: ReactTestRenderer;
+  act(() => {
+    renderer = create(<PatientOverview patient={patient} initialOverview={fixture()} api={api} />);
+  });
+  assert.equal(renderer.root.findAllByProps({ className: "odos-visit-explode" }).length, 0);
+  assert.equal(renderer.root.findAllByProps({ className: "odos-visit-row" }).length, 2);
+
+  const initialRows = renderer.root.findAll((node) => node.type === "article" && node.props.className === "odos-visit-row");
+  await act(async () => initialRows[0]!.props.onClick());
+  assert.deepEqual(calls, ["newer"]);
+  let rows = renderer.root.findAll((node) => node.type === "article" && String(node.props.className).includes("odos-visit-row"));
+  assert.match(rows[0]!.props.className, /is-open/);
+  assert.match(rows[1]!.props.className, /is-quiet/);
+
+  const findingsTrigger = renderer.root.findAllByProps({ className: "odos-visit-summary-trigger" })
+    .find((button) => button.findByProps({ className: "odos-visit-summary-label" }).children.join("") === "Findings");
+  assert.ok(findingsTrigger);
+  act(() => findingsTrigger.props.onClick());
+  const cards = renderer.root.findAllByProps({ className: "odos-visit-detail-card" });
+  const octCard = cards.find((card) => card.findByProps({ className: "odos-visit-card-kicker" }).children.join("") === "OCT RNFL");
+  const tearCard = cards.find((card) => card.findByProps({ className: "odos-visit-card-kicker" }).children.join("") === "Tear break-up time");
+  assert.ok(octCard);
+  assert.ok(tearCard);
+  assert.equal(octCard.type, "button");
+  assert.equal(tearCard.type, "article");
+  act(() => octCard.props.onClick());
+  assert.match(JSON.stringify(renderer.toJSON()), /OD average.*84 um/);
+
+  act(() => rows[1]!.props.onClick());
+  await act(async () => Promise.resolve());
+  assert.deepEqual(calls, ["newer", "older"]);
+  rows = renderer.root.findAll((node) => node.type === "article" && String(node.props.className).includes("odos-visit-row"));
+  assert.match(rows[0]!.props.className, /is-quiet/);
+  assert.match(rows[1]!.props.className, /is-open/);
+  assert.equal(renderer.root.findAllByProps({ className: "odos-visit-explode" }).length, 1);
+
+  act(() => rows[1]!.props.onClick());
+  rows = renderer.root.findAll((node) => node.type === "article" && String(node.props.className).includes("odos-visit-row"));
+  assert.deepEqual(rows.map((row) => row.props.className), ["odos-visit-row", "odos-visit-row"]);
+  act(() => rows[1]!.props.onClick());
+  assert.deepEqual(calls, ["newer", "older"]);
+});
+
+test("an expanded migrated row with no diagnoses keeps the existing empty state and reports only not recorded", async () => {
+  const migrated = fixture();
+  migrated.visits[1] = { ...migrated.visits[1]!, status: "Migrated", diagnoses: [] };
+  const api = {
+    fetchOverview: async () => migrated,
+    fetchVisitDetail: async (_patientId: string, encounterId: string) => emptyDetailFixture(encounterId),
+    saveNote: async () => migrated.stickyNote!,
+    fetchHistory: async () => [],
+  };
+  let renderer!: ReactTestRenderer;
+  act(() => {
+    renderer = create(<PatientOverview patient={patient} initialOverview={migrated} api={api} />);
+  });
+  const migratedRow = renderer.root.findAll((node) => node.type === "article" && node.props.className === "odos-visit-row")
+    .find((row) => row.findAllByProps({ "data-testid": "visit-status-older" }).length === 1);
+  assert.ok(migratedRow);
+  await act(async () => migratedRow.props.onClick());
+  const rendered = JSON.stringify(renderer.toJSON());
+  assert.match(rendered, /No confirmed diagnoses recorded for this visit/);
+  assert.equal((rendered.match(/not recorded/g) ?? []).length >= 6, true);
+  assert.doesNotMatch(rendered, /placeholder|sample|synthetic/i);
 });
 
 test("zero-data overview renders an honest empty state for every snapshot section", () => {
@@ -534,5 +615,58 @@ function fixture(): PatientOverviewPayload {
       },
     ],
     diagnosisChoices: [{ name: "Newer diagnosis", system: "https://example.test/diagnosis", code: "DX-NEW" }],
+  };
+}
+
+function detailFixture(encounterId: string): PatientOverviewVisitDetail {
+  return {
+    encounterId,
+    reason: "Recorded visit reason",
+    iop: {
+      summary: "OD 16 mmHg · OS 17 mmHg",
+      cards: [
+        { id: `${encounterId}-iop-od`, kicker: "OD", title: "16 mmHg" },
+        { id: `${encounterId}-iop-os`, kicker: "OS", title: "17 mmHg" },
+      ],
+    },
+    medications: {
+      summary: "Recorded ophthalmic medication",
+      cards: [{ id: `${encounterId}-med`, kicker: "Medication", title: "Recorded ophthalmic medication", detail: "One drop nightly" }],
+    },
+    findings: {
+      summary: "OCT RNFL · Tear break-up time",
+      cards: [
+        {
+          id: `${encounterId}-oct`,
+          kicker: "OCT RNFL",
+          title: "Recorded OCT finding",
+          values: [{ label: "OD average", value: "84 um" }],
+        },
+        {
+          id: `${encounterId}-tbut`,
+          kicker: "Tear break-up time",
+          title: "4 s",
+        },
+      ],
+    },
+    plan: {
+      summary: "Repeat testing",
+      cards: [{ id: `${encounterId}-plan`, kicker: "Plan", title: "Repeat testing" }],
+    },
+    financial: {
+      summary: "1 claim",
+      cards: [{ id: `${encounterId}-claim`, kicker: "Claim", title: "Recorded payer", detail: "active" }],
+    },
+  };
+}
+
+function emptyDetailFixture(encounterId: string): PatientOverviewVisitDetail {
+  return {
+    encounterId,
+    iop: { cards: [] },
+    findings: { cards: [] },
+    medications: { cards: [] },
+    plan: { cards: [] },
+    financial: { cards: [] },
   };
 }

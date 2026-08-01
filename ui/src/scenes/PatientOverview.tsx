@@ -2,10 +2,13 @@ import React, { useEffect, useMemo, useRef, useState, type MouseEvent } from "re
 import type { Patient, ServiceRequest } from "@medplum/fhirtypes";
 import {
   fetchPatientOverview,
+  fetchPatientOverviewVisitDetail,
   fetchStickyNoteHistory,
   saveStickyNote,
   type PatientOverviewMedication,
   type PatientOverviewPayload,
+  type PatientOverviewVisitDetail,
+  type PatientOverviewVisitDetailGroup,
   type StickyNoteHistoryEntry,
   type VisitLedgerFilter,
 } from "../lib/patient-overview";
@@ -30,6 +33,7 @@ import {
 
 interface PatientOverviewApi {
   fetchOverview: typeof fetchPatientOverview;
+  fetchVisitDetail?: typeof fetchPatientOverviewVisitDetail;
   fetchHistory: typeof fetchStickyNoteHistory;
   saveNote: typeof saveStickyNote;
   findActiveRx?: typeof findLatestActiveVisionPrescription;
@@ -37,6 +41,7 @@ interface PatientOverviewApi {
 
 const defaultPatientOverviewApi: PatientOverviewApi = {
   fetchOverview: fetchPatientOverview,
+  fetchVisitDetail: fetchPatientOverviewVisitDetail,
   fetchHistory: fetchStickyNoteHistory,
   saveNote: saveStickyNote,
   findActiveRx: findLatestActiveVisionPrescription,
@@ -69,6 +74,10 @@ export function PatientOverview({
   const [activeRxId, setActiveRxId] = useState<string | null>();
   const [rxError, setRxError] = useState<string>();
   const [correspondenceOpen, setCorrespondenceOpen] = useState(false);
+  const [openVisitId, setOpenVisitId] = useState<string>();
+  const [visitDetails, setVisitDetails] = useState<Record<string, PatientOverviewVisitDetail>>({});
+  const [visitDetailLoading, setVisitDetailLoading] = useState<Record<string, boolean>>({});
+  const [visitDetailErrors, setVisitDetailErrors] = useState<Record<string, string>>({});
   const requestIdRef = useRef(0);
   const historyRequestIdRef = useRef(0);
 
@@ -131,6 +140,7 @@ export function PatientOverview({
     setFilter(nextFilter);
     setLoadingLedger(true);
     setError(undefined);
+    setOpenVisitId(undefined);
     const requestId = ++requestIdRef.current;
     try {
       const value = await api.fetchOverview(patient.id, {
@@ -144,6 +154,33 @@ export function PatientOverview({
       if (requestId === requestIdRef.current) setError(messageOf(reason));
     } finally {
       if (requestId === requestIdRef.current) setLoadingLedger(false);
+    }
+  }
+
+  async function toggleVisitDetail(encounterId: string) {
+    if (openVisitId === encounterId) {
+      setOpenVisitId(undefined);
+      return;
+    }
+    setOpenVisitId(encounterId);
+    if (visitDetails[encounterId] || visitDetailLoading[encounterId]) return;
+    if (!patient.id || !api.fetchVisitDetail) {
+      setVisitDetailErrors((current) => ({ ...current, [encounterId]: "Visit detail is unavailable." }));
+      return;
+    }
+    setVisitDetailLoading((current) => ({ ...current, [encounterId]: true }));
+    setVisitDetailErrors((current) => {
+      const next = { ...current };
+      delete next[encounterId];
+      return next;
+    });
+    try {
+      const detail = await api.fetchVisitDetail(patient.id, encounterId);
+      setVisitDetails((current) => ({ ...current, [encounterId]: detail }));
+    } catch (reason) {
+      setVisitDetailErrors((current) => ({ ...current, [encounterId]: messageOf(reason) }));
+    } finally {
+      setVisitDetailLoading((current) => ({ ...current, [encounterId]: false }));
     }
   }
 
@@ -301,8 +338,13 @@ export function PatientOverview({
               {!loadingLedger && overview.visits.length === 0 && <p className="odos-overview-none">No matching visits recorded</p>}
               {!loadingLedger && overview.visits.map((visit) => (
                 <article
-                  className="odos-visit-row"
+                  className={[
+                    "odos-visit-row",
+                    openVisitId === visit.encounterId ? "is-open" : "",
+                    openVisitId && openVisitId !== visit.encounterId ? "is-quiet" : "",
+                  ].filter(Boolean).join(" ")}
                   key={visit.encounterId}
+                  onClick={() => void toggleVisitDetail(visit.encounterId)}
                 >
                   <time>{visit.date ? monthDay(visit.date) : "Date not recorded"}<small>{visit.date ? yearOf(visit.date) : ""}</small></time>
                   <div className="odos-visit-head">
@@ -351,6 +393,13 @@ export function PatientOverview({
                       </button>
                     ))}
                   </div>
+                  {openVisitId === visit.encounterId && (
+                    <VisitExplode
+                      detail={visitDetails[visit.encounterId]}
+                      loading={visitDetailLoading[visit.encounterId] === true}
+                      error={visitDetailErrors[visit.encounterId]}
+                    />
+                  )}
                 </article>
               ))}
             </section>
@@ -375,6 +424,171 @@ export function PatientOverview({
       </section>
     </main>
   );
+}
+
+function VisitExplode({
+  detail,
+  loading,
+  error,
+}: {
+  detail?: PatientOverviewVisitDetail;
+  loading: boolean;
+  error?: string;
+}) {
+  const [openGroup, setOpenGroup] = useState<string>();
+  const [openCard, setOpenCard] = useState<string>();
+
+  return (
+    <div className="odos-visit-explode" onClick={(event) => event.stopPropagation()}>
+      {loading && <p className="odos-overview-loading">Loading encounter details…</p>}
+      {error && <p className="odos-overview-error" role="alert">{error}</p>}
+      {detail && (
+        <React.Fragment>
+          <VisitSummaryLine label="Reason" value={detail.reason ?? "not recorded"} />
+          <VisitSummaryLine
+            label="IOP"
+            value={groupSummary(detail.iop)}
+            group={detail.iop}
+            open={openGroup === "iop"}
+            openCard={openCard}
+            onToggle={() => {
+              setOpenGroup((current) => current === "iop" ? undefined : "iop");
+              setOpenCard(undefined);
+            }}
+            onToggleCard={setOpenCard}
+          />
+          <VisitSummaryLine
+            label="Meds"
+            value={groupSummary(detail.medications)}
+            group={detail.medications}
+            open={openGroup === "medications"}
+            openCard={openCard}
+            onToggle={() => {
+              setOpenGroup((current) => current === "medications" ? undefined : "medications");
+              setOpenCard(undefined);
+            }}
+            onToggleCard={setOpenCard}
+          />
+          <VisitSummaryLine
+            label="Findings"
+            value={groupSummary(detail.findings)}
+            group={detail.findings}
+            open={openGroup === "findings"}
+            openCard={openCard}
+            onToggle={() => {
+              setOpenGroup((current) => current === "findings" ? undefined : "findings");
+              setOpenCard(undefined);
+            }}
+            onToggleCard={setOpenCard}
+          />
+          <VisitSummaryLine
+            label="Plan"
+            value={groupSummary(detail.plan)}
+            group={detail.plan}
+            open={openGroup === "plan"}
+            openCard={openCard}
+            onToggle={() => {
+              setOpenGroup((current) => current === "plan" ? undefined : "plan");
+              setOpenCard(undefined);
+            }}
+            onToggleCard={setOpenCard}
+          />
+          <VisitSummaryLine
+            label="Financial"
+            value={groupSummary(detail.financial)}
+            group={detail.financial}
+            open={openGroup === "financial"}
+            openCard={openCard}
+            onToggle={() => {
+              setOpenGroup((current) => current === "financial" ? undefined : "financial");
+              setOpenCard(undefined);
+            }}
+            onToggleCard={setOpenCard}
+          />
+        </React.Fragment>
+      )}
+    </div>
+  );
+}
+
+function VisitSummaryLine({
+  label,
+  value,
+  group,
+  open = false,
+  openCard,
+  onToggle,
+  onToggleCard,
+}: {
+  label: string;
+  value: string;
+  group?: PatientOverviewVisitDetailGroup;
+  open?: boolean;
+  openCard?: string;
+  onToggle?: () => void;
+  onToggleCard?: (cardId: string | undefined) => void;
+}) {
+  const hasDepth = Boolean(group?.cards.length);
+  const content = (
+    <React.Fragment>
+      <span className="odos-visit-summary-label">{label}</span>
+      <span className="odos-visit-summary-value">{value}</span>
+      {hasDepth && <span className="odos-visit-depth-count">{group!.cards.length}</span>}
+    </React.Fragment>
+  );
+
+  return (
+    <section className={`odos-visit-summary-line${open ? " is-active" : ""}`}>
+      {hasDepth ? (
+        <button type="button" className="odos-visit-summary-trigger" aria-expanded={open} onClick={onToggle}>
+          {content}
+        </button>
+      ) : (
+        <div className="odos-visit-summary-static">{content}</div>
+      )}
+      {open && group && (
+        <div className="odos-visit-detail-strip">
+          {group.cards.map((card) => {
+            const hasLevelThree = Boolean(card.values?.length);
+            const cardContent = (
+              <React.Fragment>
+                {hasLevelThree && <span className="odos-visit-card-chevron">›</span>}
+                <span className="odos-visit-card-kicker">{card.kicker}</span>
+                <strong>{card.title}</strong>
+                {card.detail && <span className="odos-visit-card-detail">{card.detail}</span>}
+                {openCard === card.id && card.values && (
+                  <span className="odos-visit-card-values">
+                    {card.values.map((row) => (
+                      <span key={`${card.id}-${row.label}`}>
+                        <small>{row.label}</small>{row.value}
+                      </span>
+                    ))}
+                  </span>
+                )}
+              </React.Fragment>
+            );
+            return hasLevelThree ? (
+              <button
+                type="button"
+                className={`odos-visit-detail-card${openCard === card.id ? " is-active" : ""}`}
+                key={card.id}
+                aria-expanded={openCard === card.id}
+                onClick={() => onToggleCard?.(openCard === card.id ? undefined : card.id)}
+              >
+                {cardContent}
+              </button>
+            ) : (
+              <article className="odos-visit-detail-card" key={card.id}>{cardContent}</article>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function groupSummary(group: PatientOverviewVisitDetailGroup): string {
+  return [group.summary, group.unavailable].filter(Boolean).join(" · ") || "not recorded";
 }
 
 export function ConsultReportDraftPanel({

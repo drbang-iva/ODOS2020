@@ -3,6 +3,9 @@ import type { AddressInfo } from "node:net";
 import { test } from "node:test";
 import type {
   Bundle,
+  CarePlan,
+  ChargeItem,
+  Claim,
   Condition,
   DocumentReference,
   Encounter,
@@ -18,6 +21,7 @@ import express from "express";
 import { registerClinicRoutes } from "../src/clinic/clinic-routes.js";
 import {
   loadPatientOverview,
+  loadPatientOverviewVisitDetail,
   loadPatientStickyNoteHistory,
   savePatientStickyNote,
 } from "../src/clinic/patient-overview.js";
@@ -164,6 +168,116 @@ test("legacy encounter ledger status comes from the migration tag and does not i
   );
 });
 
+test("visit detail lazily projects encounter-owned summaries, horizontal cards, and OCT numeric depth", async () => {
+  const fake = new FakeFhir();
+  const visit = encounter("detail-visit", "2026-06-30T14:00:00Z");
+  visit.reasonCode = [{ text: "Pressure check" }];
+  fake.add(visit);
+  fake.add({
+    resourceType: "Observation",
+    id: "iop-od",
+    status: "final",
+    subject: { reference: "Patient/p1" },
+    encounter: { reference: "Encounter/detail-visit" },
+    code: { coding: [{ code: "INTRAOCULAR_PRESSURE" }], text: "Intraocular pressure" },
+    bodySite: { coding: [{ code: "OD", display: "Right eye" }] },
+    valueQuantity: { value: 16, unit: "mmHg" },
+  } satisfies Observation);
+  fake.add({
+    resourceType: "Observation",
+    id: "oct-rnfl",
+    status: "final",
+    subject: { reference: "Patient/p1" },
+    encounter: { reference: "Encounter/detail-visit" },
+    code: { text: "OCT RNFL" },
+    component: [
+      { code: { text: "OD average" }, valueQuantity: { value: 84, unit: "um" } },
+      { code: { text: "OD inferior" }, valueQuantity: { value: 71, unit: "um" } },
+    ],
+  } satisfies Observation);
+  fake.add({
+    resourceType: "Observation",
+    id: "dry-eye-finding",
+    status: "final",
+    subject: { reference: "Patient/p1" },
+    encounter: { reference: "Encounter/detail-visit" },
+    code: { text: "Tear break-up time" },
+    valueQuantity: { value: 4, unit: "s" },
+  } satisfies Observation);
+  fake.add({
+    resourceType: "MedicationRequest",
+    id: "med-1",
+    status: "active",
+    intent: "order",
+    subject: { reference: "Patient/p1" },
+    encounter: { reference: "Encounter/detail-visit" },
+    medicationCodeableConcept: { text: "Recorded ophthalmic medication" },
+    dosageInstruction: [{ text: "One drop nightly" }],
+  } satisfies MedicationRequest);
+  fake.add({
+    resourceType: "CarePlan",
+    id: "plan-1",
+    status: "active",
+    intent: "plan",
+    subject: { reference: "Patient/p1" },
+    encounter: { reference: "Encounter/detail-visit" },
+    activity: [{ detail: { status: "scheduled", description: "Repeat testing" } }],
+  } satisfies CarePlan);
+  fake.add({
+    resourceType: "Claim",
+    id: "claim-1",
+    status: "active",
+    type: { text: "Professional claim" },
+    use: "claim",
+    patient: { reference: "Patient/p1" },
+    created: "2026-06-30",
+    provider: { reference: "Practitioner/staff-1" },
+    priority: { text: "Normal" },
+    insurer: { display: "Recorded payer" },
+    item: [{ sequence: 1, productOrService: { text: "Recorded service" }, encounter: [{ reference: "Encounter/detail-visit" }] }],
+    total: { value: 125, currency: "USD" },
+  } satisfies Claim);
+  fake.add({
+    resourceType: "ChargeItem",
+    id: "charge-1",
+    status: "billable",
+    code: { text: "Recorded charge" },
+    subject: { reference: "Patient/p1" },
+    context: { reference: "Encounter/detail-visit" },
+    occurrenceDateTime: "2026-06-30",
+    priceOverride: { value: 25, currency: "USD" },
+  } satisfies ChargeItem);
+
+  const detail = await loadPatientOverviewVisitDetail(fake as never, "p1", "detail-visit");
+
+  assert.equal(detail.reason, "Pressure check");
+  assert.equal(detail.iop.summary, "OD 16 mmHg");
+  assert.equal(detail.medications.summary, "Recorded ophthalmic medication");
+  assert.equal(detail.plan.summary, "Repeat testing");
+  assert.equal(detail.financial.summary, "1 claim · 1 charge");
+  assert.deepEqual(detail.findings.cards.find((card) => card.id === "oct-rnfl")?.values, [
+    { label: "OD average", value: "84 um" },
+    { label: "OD inferior", value: "71 um" },
+  ]);
+  assert.equal(detail.findings.cards.find((card) => card.id === "dry-eye-finding")?.values, undefined);
+});
+
+test("migrated visit detail with no structured content remains honestly empty", async () => {
+  const fake = new FakeFhir();
+  fake.add({
+    ...encounter("migrated-empty", "2019-04-03T14:00:00Z"),
+    meta: { tag: [{ system: "https://odos2020.com/tags/migration", code: "eyefinity-import" }] },
+  });
+
+  const detail = await loadPatientOverviewVisitDetail(fake as never, "p1", "migrated-empty");
+
+  assert.equal(detail.reason, undefined);
+  assert.deepEqual(
+    [detail.iop, detail.findings, detail.medications, detail.plan, detail.financial].map((group) => group.cards.length),
+    [0, 0, 0, 0, 0],
+  );
+});
+
 test("overview stays usable and reports honest wiring when role-scoped optional reads are unavailable", async () => {
   const fake = new FakeFhir();
   fake.add(patient());
@@ -303,6 +417,18 @@ class FakeFhir {
       rows = rows.filter((resource) => (resource as Provenance).target.some(
         (target) => target.reference === params.patient,
       ));
+    }
+    if (params.encounter) {
+      const encounterReference = params.encounter.startsWith("Encounter/") ? params.encounter : `Encounter/${params.encounter}`;
+      rows = rows.filter((resource) => {
+        if (resource.resourceType === "Claim") {
+          return resource.item?.some((item) => item.encounter?.some((reference) => reference.reference === encounterReference));
+        }
+        return "encounter" in resource && (resource as Observation | MedicationRequest | CarePlan).encounter?.reference === encounterReference;
+      });
+    }
+    if (resourceType === "ChargeItem" && params.context) {
+      rows = rows.filter((resource) => (resource as ChargeItem).context?.reference === params.context);
     }
     return bundle(rows);
   }

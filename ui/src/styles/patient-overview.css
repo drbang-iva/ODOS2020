@@ -84,6 +84,50 @@
 .odos-dx-chip small { padding: 1px 5px; border: 1px solid var(--overview-line); border-radius: 5px; color: var(--overview-faint); font-size: 9.5px; letter-spacing: 0.08em; }
 .odos-dx-chip code { color: #a98ef2; font-size: 10px; font-variant-numeric: tabular-nums; }
 
+.odos-visit-row.is-open { background: color-mix(in srgb, var(--odos-muted) 5%, transparent); }
+.odos-visit-row.is-quiet { opacity: 0.5; }
+.odos-visit-explode { grid-column: 2; display: flex; flex-direction: column; gap: 4px; margin-top: 11px; }
+.odos-visit-explode > .odos-overview-loading, .odos-visit-explode > .odos-overview-error { margin: 0; }
+.odos-visit-summary-line { position: relative; border: 1px solid var(--overview-line); border-radius: 10px; background: color-mix(in srgb, var(--overview-ground) 50%, transparent); animation: odos-visit-summary-drop 0.25s ease both; }
+.odos-visit-summary-line:nth-child(2) { animation-delay: 0.03s; }
+.odos-visit-summary-line:nth-child(3) { animation-delay: 0.06s; }
+.odos-visit-summary-line:nth-child(4) { animation-delay: 0.09s; }
+.odos-visit-summary-line:nth-child(5) { animation-delay: 0.12s; }
+.odos-visit-summary-line:nth-child(6) { animation-delay: 0.15s; }
+.odos-visit-summary-trigger, .odos-visit-summary-static { display: flex; width: 100%; gap: 10px; align-items: baseline; padding: 8px 12px; border: 0; background: transparent; color: inherit; text-align: left; }
+.odos-visit-summary-trigger { font: inherit; cursor: pointer; }
+.odos-visit-summary-trigger:hover { background: color-mix(in srgb, var(--odos-muted) 5%, transparent); }
+.odos-visit-summary-trigger:focus-visible { outline: 2px solid var(--overview-amethyst); outline-offset: 2px; border-radius: 10px; }
+.odos-visit-summary-label { flex: none; min-width: 84px; color: var(--overview-faint); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; }
+.odos-visit-summary-value { flex: 1; min-width: 200px; color: var(--overview-text); font-size: 12.5px; }
+.odos-visit-depth-count { display: inline-flex; gap: 4px; align-items: center; color: var(--overview-faint); font-size: 10px; }
+.odos-visit-depth-count::after { content: "›"; font-size: 13px; transition: transform 0.2s ease; }
+.odos-visit-summary-line.is-active .odos-visit-depth-count { color: var(--overview-gold); }
+.odos-visit-summary-line.is-active .odos-visit-depth-count::after { transform: rotate(90deg); }
+.odos-visit-detail-strip { display: flex; gap: 8px; align-items: flex-start; overflow-x: auto; margin: 0 12px 9px; padding-top: 9px; border-top: 1px dashed var(--overview-line); }
+.odos-visit-detail-card { position: relative; flex: none; width: 190px; padding: 10px 12px; border: 1px solid var(--overview-line); border-radius: 12px; background: linear-gradient(180deg, color-mix(in srgb, var(--overview-surface-2) 60%, transparent), color-mix(in srgb, var(--overview-surface) 70%, transparent)); color: var(--overview-text); font: inherit; text-align: left; animation: odos-visit-card-in 0.25s ease both; }
+button.odos-visit-detail-card { cursor: pointer; }
+button.odos-visit-detail-card:hover, button.odos-visit-detail-card.is-active { border-color: var(--overview-line-2); }
+button.odos-visit-detail-card:focus-visible { outline: 2px solid var(--overview-amethyst); outline-offset: 2px; }
+.odos-visit-card-kicker { display: block; margin-bottom: 4px; color: var(--overview-faint); font-size: 8.5px; letter-spacing: 0.1em; text-transform: uppercase; }
+.odos-visit-detail-card strong { display: block; font-size: 12px; font-weight: 500; }
+.odos-visit-card-detail { display: block; margin-top: 3px; color: var(--overview-muted); font-size: 10.5px; line-height: 1.45; }
+.odos-visit-card-chevron { float: right; color: var(--overview-faint); font-size: 12px; transition: transform 0.2s ease; }
+.odos-visit-detail-card.is-active .odos-visit-card-chevron { transform: rotate(90deg); color: var(--overview-gold); }
+.odos-visit-card-values { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--overview-line); }
+.odos-visit-card-values > span { font-size: 10px; line-height: 1.35; }
+.odos-visit-card-values small { display: block; color: var(--overview-faint); font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; }
+
+@keyframes odos-visit-summary-drop {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes odos-visit-card-in {
+  from { opacity: 0; transform: translateX(-7px); }
+  to { opacity: 1; transform: none; }
+}
+
 @media (max-width: 900px) {
   .odos-overview-grid { grid-template-columns: 1fr; }
   .odos-sticky-note { align-items: flex-start; flex-wrap: wrap; }
@@ -95,4 +139,5 @@
   .odos-overview-actions { width: 100%; margin-left: 0; }
   .odos-visit-row { grid-template-columns: 1fr; }
   .odos-dx-row { grid-column: 1; }
+  .odos-visit-explode { grid-column: 1; }
 }
