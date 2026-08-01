@@ -228,8 +228,9 @@ code. Fable codes → Codex evaluates. Codex codes → Fable/Opus evaluates. Cod
 eval, never the last word on correctness-critical code. Scope: this gate fires on a
 shippable coding slice (PR-worthy diff), not brainstorming or micro-decisions.
 At the final head, the author posts `@coderabbitai full review` and waits for that
-exact-head review before handing off for evaluation. Nothing is "done" until an
-independent evaluation actually ran.
+exact-head review before handing off for evaluation. If no review can be obtained,
+the evaluator must deliberately record the constrained `--ack-no-bot-review`
+exception. Nothing is "done" until an independent evaluation actually ran.
 
 **Every build→evaluate handoff returns a sealed bundle, not a transcript** — summary,
 files touched, checks run + the real command output (never a bare "tests pass"),
