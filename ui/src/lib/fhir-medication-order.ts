@@ -34,6 +34,8 @@ export interface MedicationOrderPharmacy {
   phone: string;
 }
 
+export type PreferredPharmacy = MedicationOrderPharmacy | { name: string };
+
 export interface MedicationOrderInput {
   patientReference: string;
   practitionerReference: string;
@@ -143,13 +145,15 @@ export function buildMedicationRequest(input: MedicationOrderInput): MedicationR
 
 export function pharmacyFromResource(
   resource: Pick<MedicationRequest | Patient, "extension">,
-): MedicationOrderPharmacy | undefined {
+): PreferredPharmacy | undefined {
   const extension = resource.extension?.find(
     (candidate) => candidate.url === ODOS_PREFERRED_PHARMACY_EXTENSION_URL,
   );
   if (!extension) return undefined;
   const value = (url: string): string | undefined =>
     extension.extension?.find((child) => child.url === url)?.valueString?.trim() || undefined;
+  const freeText = value("freeText");
+  if (freeText) return { name: freeText };
   const pharmacy = {
     ncpdpId: value("ncpdpId"),
     npi: value("npi"),
@@ -170,7 +174,7 @@ export function pharmacyFromResource(
 
 export function withPreferredPharmacy<T extends Patient | MedicationRequest>(
   resource: T,
-  pharmacy: MedicationOrderPharmacy | undefined,
+  pharmacy: PreferredPharmacy | undefined,
 ): T {
   const extension = (resource.extension ?? []).filter(
     (candidate) => candidate.url !== ODOS_PREFERRED_PHARMACY_EXTENSION_URL,
@@ -178,17 +182,31 @@ export function withPreferredPharmacy<T extends Patient | MedicationRequest>(
   return {
     ...resource,
     ...(extension.length || pharmacy
-      ? { extension: [...extension, ...(pharmacy ? [pharmacyExtension(normalizedPharmacy(pharmacy))] : [])] }
+      ? { extension: [...extension, ...(pharmacy ? [preferredPharmacyExtension(pharmacy)] : [])] }
       : { extension: undefined }),
   };
 }
 
-export function pharmacyDisplay(pharmacy: MedicationOrderPharmacy): string {
+export function pharmacyDisplay(pharmacy: PreferredPharmacy): string {
+  if (!isStructuredPharmacy(pharmacy)) return pharmacy.name;
   const address = [
     [pharmacy.addressLine1, pharmacy.addressLine2].filter(Boolean).join(" "),
     [pharmacy.city, pharmacy.state, pharmacy.postalCode].filter(Boolean).join(" "),
   ].filter(Boolean).join(" · ");
   return [pharmacy.name, address, pharmacy.phone].filter(Boolean).join(" · ");
+}
+
+export function isStructuredPharmacy(pharmacy: PreferredPharmacy): pharmacy is MedicationOrderPharmacy {
+  return "ncpdpId" in pharmacy;
+}
+
+function preferredPharmacyExtension(pharmacy: PreferredPharmacy): Extension {
+  return isStructuredPharmacy(pharmacy)
+    ? pharmacyExtension(normalizedPharmacy(pharmacy))
+    : {
+        url: ODOS_PREFERRED_PHARMACY_EXTENSION_URL,
+        extension: [{ url: "freeText", valueString: pharmacy.name.trim() }],
+      };
 }
 
 function pharmacyExtension(pharmacy: MedicationOrderPharmacy): Extension {

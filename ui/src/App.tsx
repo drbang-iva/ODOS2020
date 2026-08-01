@@ -26,6 +26,7 @@ import { Statements } from "./scenes/claims/Statements";
 import { ChartFieldsSettings } from "./scenes/ChartFieldsSettings";
 import { PatientInsurance } from "./scenes/insurance/PatientInsurance";
 import { VisionPlanBenefits } from "./scenes/insurance/VisionPlanBenefits";
+import { PatientPharmacy } from "./scenes/pharmacy/PatientPharmacy";
 import { AccountsReceivableDashboard } from "./scenes/claims/AccountsReceivableDashboard";
 import { SettingsIndex } from "./scenes/settings/SettingsIndex";
 import { FloorConfigSettings } from "./scenes/settings/FloorConfigSettings";
@@ -329,6 +330,8 @@ export function RouteSwitch({
       return <Statements />;
     case "/patient/insurance":
       return <PatientInsurance initialPatientId={new URLSearchParams(window.location.search).get("patientId") ?? undefined} />;
+    case "/patient/pharmacy":
+      return <PatientPharmacy initialPatientId={new URLSearchParams(search).get("patientId") ?? undefined} />;
     case "/patient/new":
       return <NewPatient />;
     case "/patient/vision-benefits":

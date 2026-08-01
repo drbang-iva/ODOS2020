@@ -45,6 +45,7 @@ const BREADCRUMBS: Record<string, BreadcrumbItem[]> = {
   "/billing/statements": [{ label: "Billing" }, { label: "Statements" }],
   "/financials/practice/margins": [{ label: "Financials" }, { label: "Practice" }, { label: "Margins" }],
   "/patient/insurance": [{ label: "Patients", href: "/clinic/patients" }, { label: "Insurance" }],
+  "/patient/pharmacy": [{ label: "Patients", href: "/clinic/patients" }, { label: "Pharmacy" }],
   "/patient/new": [{ label: "Patients", href: "/clinic/patients" }, { label: "New patient" }],
   "/patient/vision-benefits": [{ label: "Patients", href: "/clinic/patients" }, { label: "Vision benefits" }],
   "/settings": [{ label: "Settings" }],

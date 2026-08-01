@@ -59,6 +59,7 @@ export function PatientDirector({ patient }: { patient: Patient }) {
         <div className="absolute right-4 top-4 z-10 flex gap-2">
           <button type="button" onClick={() => setEditingDemographics(true)} className="rounded border border-blue-400/30 bg-bg-panel/90 px-3 py-2 text-xs font-semibold text-blue-200">Edit demographics</button>
           <button type="button" onClick={() => window.location.assign(`/patient/insurance?patientId=${currentPatient.id}`)} className="rounded border border-blue-400/30 bg-bg-panel/90 px-3 py-2 text-xs font-semibold text-blue-200">Insurance</button>
+          <button type="button" onClick={() => window.location.assign(`/patient/pharmacy?patientId=${currentPatient.id}`)} className="rounded border border-blue-400/30 bg-bg-panel/90 px-3 py-2 text-xs font-semibold text-blue-200">Pharmacy</button>
           <button type="button" onClick={() => window.location.assign(`/patient/vision-benefits?patientId=${currentPatient.id}`)} className="rounded border border-blue-400/30 bg-bg-panel/90 px-3 py-2 text-xs font-semibold text-blue-200">Vision benefits</button>
         </div>
 

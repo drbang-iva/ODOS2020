@@ -4,7 +4,6 @@ import { clinicalStatus, displayCode, isEncounterDiagnosisCondition } from "../.
 import {
   fhir,
   type WenoDrugSearchResult,
-  type WenoPharmacySearchResult,
 } from "../../lib/fhir";
 import {
   buildMedicationRequest,
@@ -14,11 +13,13 @@ import {
   ODOS_WENO_QUANTITY_UNIT_OF_MEASURE_CODE_EXTENSION_URL,
   RXNORM_CODE_SYSTEM,
   WENO_MESSAGE_ID_IDENTIFIER_SYSTEM,
+  isStructuredPharmacy,
   pharmacyDisplay,
   pharmacyFromResource,
   withPreferredPharmacy,
   type MedicationOrderPharmacy,
   type MedicationTransmissionMethod,
+  type PreferredPharmacy,
 } from "../../lib/fhir-medication-order";
 import { clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import { numericOptions } from "./power-options";
@@ -26,6 +27,12 @@ import { PowerDropdown } from "./PowerDropdown";
 import type { SectionSaveStatus } from "./types";
 import { OdosSearchPicker } from "../inputs/OdosSearchPicker";
 import { OdosSelect } from "../inputs/OdosSelect";
+import {
+  PharmacyDirectoryPicker,
+  pharmacyFromDirectoryResult,
+  type DirectoryResult,
+  type PharmacyDirectorySearchApi,
+} from "../pharmacy/PharmacyDirectoryPicker";
 
 interface Props {
   patientReference: string;
@@ -52,15 +59,10 @@ export interface PrescriptionDraft {
 }
 
 export type FormularyResult = WenoDrugSearchResult;
-export type DirectoryResult = WenoPharmacySearchResult;
+export type { DirectoryResult } from "../pharmacy/PharmacyDirectoryPicker";
 
-export interface WenoSearchApi {
+export interface WenoSearchApi extends PharmacyDirectorySearchApi {
   searchFormulary(query: string, signal?: AbortSignal): Promise<FormularyResult[]>;
-  searchDirectory(input: {
-    state: string;
-    place: string;
-    searchType: "local-retail" | "mail-order";
-  }, signal?: AbortSignal): Promise<DirectoryResult[]>;
 }
 
 interface EditorProps {
@@ -77,9 +79,6 @@ interface EditorProps {
 }
 type FormularySelection =
   | { kind: "coded"; result: FormularyResult }
-  | { kind: "free-text"; text: string };
-type DirectorySelection =
-  | { kind: "coded"; result: DirectoryResult }
   | { kind: "free-text"; text: string };
 
 export const CONTROLLED_SUBSTANCE_DRUG_TERMS: readonly string[] = [];
@@ -297,131 +296,12 @@ export function PrescriptionEditor({
   );
 }
 
-interface PharmacyDirectoryPickerProps {
-  pharmacy: string;
-  pharmacyNcpdpId?: string;
-  label?: string;
-  stateLabel?: string;
-  allowFreeText?: boolean;
-  searchApi?: WenoSearchApi;
-  onChange: (selection: Pick<
-    PrescriptionDraft,
-    "pharmacy" | "pharmacyNcpdpId" | "pharmacyDetails"
-  >) => void;
-}
-
-export function PharmacyDirectoryPicker({
-  pharmacy,
-  pharmacyNcpdpId,
-  label = "Directory ZIP or city",
-  stateLabel = "Directory state",
-  allowFreeText = true,
-  searchApi = DEFAULT_WENO_SEARCH_API,
-  onChange,
-}: PharmacyDirectoryPickerProps) {
-  const [directoryState, setDirectoryState] = useState("");
-  const [directorySearchType, setDirectorySearchType] =
-    useState<"local-retail" | "mail-order">("local-retail");
-  const searchDirectoryOptions = useMemo(() => async (query: string, signal: AbortSignal) => {
-    if (!directoryState.trim()) throw new Error("Enter the pharmacy state before searching.");
-    return (await searchApi.searchDirectory({
-      place: query,
-      state: directoryState.trim(),
-      searchType: directorySearchType,
-    }, signal)).map((result, index) => ({
-      value: result.ncpdpId || `${result.businessName}:${index}`,
-      label: result.businessName,
-      description: directoryAddress(result),
-      item: { kind: "coded", result } satisfies DirectorySelection,
-    }));
-  }, [directorySearchType, directoryState, searchApi]);
-
-  return (
-    <div>
-      <OdosSearchPicker<DirectorySelection>
-        label={label}
-        value={pharmacy ? pharmacyNcpdpId ?? `free:${pharmacy}` : ""}
-        selectedLabel={pharmacy}
-        placeholder="Search by ZIP or city"
-        search={searchDirectoryOptions}
-        createLabel={allowFreeText ? "Use as written" : undefined}
-        onCreate={allowFreeText
-          ? async (text) => ({
-              value: `free:${text}`,
-              label: text,
-              item: { kind: "free-text", text } satisfies DirectorySelection,
-            })
-          : undefined}
-        onClear={() => onChange({
-          pharmacy: "",
-          pharmacyNcpdpId: undefined,
-          pharmacyDetails: undefined,
-        })}
-        onSelect={(option) => {
-          if (option.item.kind === "coded") {
-            const details = pharmacyFromDirectoryResult(option.item.result);
-            onChange({
-              pharmacy: pharmacyDisplay(details),
-              pharmacyNcpdpId: details.ncpdpId,
-              pharmacyDetails: details,
-            });
-          } else {
-            onChange({
-              pharmacy: option.item.text,
-              pharmacyNcpdpId: undefined,
-              pharmacyDetails: undefined,
-            });
-          }
-        }}
-      />
-      {pharmacyNcpdpId && (
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-medium normal-case tracking-normal text-sky-200/80">
-          <span className="rounded-full border border-sky-300/25 bg-sky-300/10 px-2 py-1">Coded — from the WENO Directory</span>
-          <span>NCPDP {pharmacyNcpdpId}</span>
-        </div>
-      )}
-      <div className="mt-3 grid grid-cols-[5rem_1fr] gap-2">
-        <input
-          aria-label={stateLabel}
-          className="sidebar-input uppercase"
-          maxLength={2}
-          value={directoryState}
-          onChange={(event) => setDirectoryState(event.target.value.toUpperCase())}
-          placeholder="State"
-        />
-        <div className="flex rounded border border-white/10 bg-black/10 p-1 text-xs">
-          <button
-            type="button"
-            aria-pressed={directorySearchType === "local-retail"}
-            className={directorySearchType === "local-retail"
-              ? "rounded bg-white/10 px-3 py-1.5 text-white"
-              : "px-3 py-1.5 text-white/50"}
-            onClick={() => setDirectorySearchType("local-retail")}
-          >
-            Local
-          </button>
-          <button
-            type="button"
-            aria-pressed={directorySearchType === "mail-order"}
-            className={directorySearchType === "mail-order"
-              ? "rounded bg-white/10 px-3 py-1.5 text-white"
-              : "px-3 py-1.5 text-white/50"}
-            onClick={() => setDirectorySearchType("mail-order")}
-          >
-            Mail order
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function PrescriptionSection({ patientReference, encounterReference, onSaved }: Props) {
   const [requests, setRequests] = useState<MedicationRequest[]>([]);
   const [conditions, setConditions] = useState<Condition[]>([]);
   const [patient, setPatient] = useState<Patient>();
-  const [preferredPharmacy, setPreferredPharmacy] = useState<MedicationOrderPharmacy>();
-  const [preferredPharmacyDraft, setPreferredPharmacyDraft] = useState<MedicationOrderPharmacy>();
+  const [preferredPharmacy, setPreferredPharmacy] = useState<PreferredPharmacy>();
+  const [preferredPharmacyDraft, setPreferredPharmacyDraft] = useState<PreferredPharmacy>();
   const [preferredPharmacyDirty, setPreferredPharmacyDirty] = useState(false);
   const [practitionerReference, setPractitionerReference] = useState("");
   const [draft, setDraft] = useState<PrescriptionDraft>(EMPTY_PRESCRIPTION_DRAFT);
@@ -553,7 +433,7 @@ export function PrescriptionSection({ patientReference, encounterReference, onSa
     setDraft(draftFromRequest(request));
   }
 
-  async function persistPreferredPharmacy(next: MedicationOrderPharmacy | undefined) {
+  async function persistPreferredPharmacy(next: PreferredPharmacy | undefined) {
     if (!patient) {
       setError("The Patient record is not loaded.");
       return;
@@ -692,7 +572,9 @@ export function PrescriptionSection({ patientReference, encounterReference, onSa
             label="Preferred pharmacy ZIP or city"
             stateLabel="Preferred pharmacy state"
             pharmacy={preferredPharmacyDraft ? pharmacyDisplay(preferredPharmacyDraft) : ""}
-            pharmacyNcpdpId={preferredPharmacyDraft?.ncpdpId}
+            pharmacyNcpdpId={preferredPharmacyDraft && isStructuredPharmacy(preferredPharmacyDraft)
+              ? preferredPharmacyDraft.ncpdpId
+              : undefined}
             allowFreeText={false}
             onChange={(selection) => {
               setPreferredPharmacyDraft(selection.pharmacyDetails);
@@ -853,27 +735,6 @@ function formularyDetails(result: FormularyResult): string {
   return [result.route, result.strength].filter(Boolean).join(" · ") || "Route and strength not supplied";
 }
 
-function directoryAddress(result: DirectoryResult): string {
-  return [
-    [result.addressLine1, result.addressLine2].filter(Boolean).join(" "),
-    [result.city, result.state, result.zip].filter(Boolean).join(" "),
-  ].filter(Boolean).join(" · ");
-}
-
-function pharmacyFromDirectoryResult(result: DirectoryResult): MedicationOrderPharmacy {
-  return {
-    ncpdpId: result.ncpdpId,
-    ...(result.npi ? { npi: result.npi } : {}),
-    name: result.businessName,
-    addressLine1: result.addressLine1,
-    ...(result.addressLine2 ? { addressLine2: result.addressLine2 } : {}),
-    city: result.city,
-    state: result.state,
-    postalCode: result.zip,
-    phone: result.phone,
-  };
-}
-
 function transmissionMethod(request: MedicationRequest): "printed" | "phoned-in" {
   const value = request.extension
     ?.find((extension) => extension.url === ODOS_TRANSMISSION_METHOD_EXTENSION_URL)
@@ -886,7 +747,10 @@ export function draftFromRequest(request: MedicationRequest): PrescriptionDraft 
     ?.filter((entry) => entry.system === RXNORM_CODE_SYSTEM)
     .map(completeWenoDrugCoding)
     .find((entry) => entry.drugDbCode) ?? {};
-  const pharmacyDetails = pharmacyFromResource(request);
+  const storedPharmacy = pharmacyFromResource(request);
+  const pharmacyDetails = storedPharmacy && isStructuredPharmacy(storedPharmacy)
+    ? storedPharmacy
+    : undefined;
   return {
     drug: request.medicationCodeableConcept?.text ?? "",
     ...codedDrug,
@@ -909,25 +773,31 @@ export function draftFromRequest(request: MedicationRequest): PrescriptionDraft 
 
 export function draftWithPreferredPharmacy(
   draft: PrescriptionDraft,
-  preferredPharmacy: MedicationOrderPharmacy | undefined,
+  preferredPharmacy: PreferredPharmacy | undefined,
 ): PrescriptionDraft {
   if (!preferredPharmacy || draft.pharmacy) return draft;
   return {
     ...draft,
     pharmacy: pharmacyDisplay(preferredPharmacy),
-    pharmacyNcpdpId: preferredPharmacy.ncpdpId,
-    pharmacyDetails: preferredPharmacy,
+    pharmacyNcpdpId: isStructuredPharmacy(preferredPharmacy)
+      ? preferredPharmacy.ncpdpId
+      : undefined,
+    pharmacyDetails: isStructuredPharmacy(preferredPharmacy)
+      ? preferredPharmacy
+      : undefined,
   };
 }
 
 function replacePreferredPharmacyDefault(
   draft: PrescriptionDraft,
-  priorPreferred: MedicationOrderPharmacy | undefined,
-  nextPreferred: MedicationOrderPharmacy | undefined,
+  priorPreferred: PreferredPharmacy | undefined,
+  nextPreferred: PreferredPharmacy | undefined,
 ): PrescriptionDraft {
   const usesPriorDefault = Boolean(
     priorPreferred
-    && draft.pharmacyDetails?.ncpdpId === priorPreferred.ncpdpId,
+    && (isStructuredPharmacy(priorPreferred)
+      ? draft.pharmacyDetails?.ncpdpId === priorPreferred.ncpdpId
+      : draft.pharmacy === pharmacyDisplay(priorPreferred)),
   );
   if (draft.pharmacy && !usesPriorDefault) return draft;
   const withoutPharmacy = {
