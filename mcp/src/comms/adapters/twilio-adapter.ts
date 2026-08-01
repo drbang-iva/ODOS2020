@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import twilio from "twilio";
 import type {
   CommsProvider,
   SendResult,
@@ -8,27 +8,24 @@ import type {
 /**
  * Twilio Programmable Messaging send-only adapter.
  *
- * Verified 2026-08-01 against Twilio's current primary documentation:
- * - Create an outbound Message with form-encoded POST
- *   /2010-04-01/Accounts/{AccountSid}/Messages.json. To, a sender (From or
- *   MessagingServiceSid), and content are required:
+ * Verified 2026-08-01 against Twilio's official Node SDK and primary documentation:
+ * - The SDK Message resource sends with client.messages.create and accepts either a
+ *   MessagingServiceSid or From sender:
+ *   https://www.twilio.com/docs/libraries/reference/twilio-node/
  *   https://www.twilio.com/docs/messaging/api/message-resource
- * - Twilio uses HTTP Basic authentication and recommends API keys for production. Account
- *   SID + Auth Token remains supported, while the Auth Token is also required to validate
- *   webhook signatures:
- *   https://www.twilio.com/docs/messaging/api
- *   https://www.twilio.com/docs/usage/requests-to-twilio
+ * - The SDK supports API key credentials with accountSid and owns the HTTP timeout:
+ *   https://github.com/twilio/twilio-node/blob/6.0.2/src/base/BaseTwilio.ts
+ *   https://www.twilio.com/docs/libraries/reference/twilio-node/
  * - Twilio blocks future sends after STOP and reports an attempted send as error 21610;
  *   START removes the block:
  *   https://www.twilio.com/docs/messaging/tutorials/advanced-opt-out
  *   https://www.twilio.com/docs/api/errors/21610
- * - Inbound and status webhooks are form-encoded and must be validated from the exact URL
- *   plus every received parameter before any payload field is trusted:
- *   https://www.twilio.com/docs/usage/security
+ * - The SDK provides distinct validators for form and JSON webhooks. Validation must use
+ *   the exact externally configured URL before any payload field is trusted:
+ *   https://github.com/twilio/twilio-node/blob/6.0.2/src/webhooks/webhooks.ts
  *   https://www.twilio.com/docs/usage/webhooks/webhooks-security
  */
 
-export const TWILIO_API_BASE_URL = "https://api.twilio.com";
 export const TWILIO_OPT_OUT_LANGUAGE = "Reply STOP to unsubscribe.";
 export const TWILIO_REQUEST_TIMEOUT_MS = 30_000;
 
@@ -39,28 +36,40 @@ export interface TwilioAdapterConfig {
   apiKeySecret?: string;
   messagingServiceSid?: string;
   fromNumber?: string;
-  baseUrl?: string;
 }
 
+type TwilioClientOptions = NonNullable<Parameters<typeof twilio>[2]>;
+type TwilioMessageCreateInput = Parameters<ReturnType<typeof twilio>["messages"]["create"]>[0];
+
+export interface TwilioSdkClient {
+  messages: {
+    create(input: TwilioMessageCreateInput): Promise<{ sid: string }>;
+  };
+}
+
+export type TwilioClientFactory = (
+  username: string,
+  password: string,
+  options: Pick<TwilioClientOptions, "accountSid" | "timeout">,
+) => TwilioSdkClient;
+
 export interface TwilioAdapterDeps {
+  clientFactory?: TwilioClientFactory;
   fetchImpl?: typeof fetch;
 }
 
-interface TwilioMessageResponse {
-  sid?: unknown;
-  code?: unknown;
-  message?: unknown;
-}
-
 export interface TwilioWebhookRequest {
-  url: string;
-  params: Record<string, string>;
+  requestTarget: string;
+  contentType: string | undefined;
+  params?: Record<string, string>;
+  rawBody?: string;
   signature: string | undefined;
 }
 
 export interface TwilioWebhookAuth {
   accountSid: string;
   authToken: string;
+  externalBaseUrl: string;
 }
 
 export interface TwilioInboundWebhookEvent {
@@ -85,9 +94,14 @@ export function createTwilioAdapter(
   deps: TwilioAdapterDeps = {},
 ): CommsProvider {
   const normalized = validateTwilioConfig(config);
-  const fetchImpl = deps.fetchImpl ?? fetch;
-  const username = normalized.apiKeySid ?? normalized.accountSid;
-  const password = normalized.apiKeySecret ?? normalized.authToken;
+  const clientFactory = deps.clientFactory ?? ((username, password, options) => (
+    twilio(username, password, options)
+  ));
+  const client = clientFactory(
+    normalized.apiKeySid ?? normalized.accountSid,
+    normalized.apiKeySecret ?? normalized.authToken,
+    { accountSid: normalized.accountSid, timeout: TWILIO_REQUEST_TIMEOUT_MS },
+  );
 
   return {
     name: "twilio",
@@ -100,67 +114,66 @@ export function createTwilioAdapter(
       reviews: false,
     },
     async sendSms(request: SendSmsRequest): Promise<SendResult> {
-      const toNumber = e164(request.toNumber, "Twilio SMS recipient");
-      const body = smsBody(request.body);
-      const form = new URLSearchParams({
-        To: toNumber,
-        Body: body,
-        ...(normalized.messagingServiceSid
-          ? { MessagingServiceSid: normalized.messagingServiceSid }
-          : { From: normalized.fromNumber! }),
-      });
-      const controller = new AbortController();
-      let timedOut = false;
-      const timeout = setTimeout(() => {
-        timedOut = true;
-        controller.abort();
-      }, TWILIO_REQUEST_TIMEOUT_MS);
       try {
-        const response = await fetchImpl(
-          `${normalized.baseUrl}/2010-04-01/Accounts/${normalized.accountSid}/Messages.json`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`,
-              "Content-Type": "application/x-www-form-urlencoded",
-            },
-            body: form.toString(),
-            signal: controller.signal,
-          },
-        );
-        const parsed = await twilioJson(response);
-        if (twilioErrorCode(parsed.code) === 21610) {
+        const created = await client.messages.create({
+          to: e164(request.toNumber, "Twilio SMS recipient"),
+          body: smsBody(request.body),
+          ...(normalized.messagingServiceSid
+            ? { messagingServiceSid: normalized.messagingServiceSid }
+            : { from: normalized.fromNumber! }),
+        });
+        return { outcome: "sent", providerMessageId: created.sid };
+      } catch (error) {
+        if (error instanceof twilio.RestException && error.code === 21610) {
           return { outcome: "suppressed", reason: "patient-opt-out" };
         }
-        if (!response.ok || typeof parsed.sid !== "string") {
-          const detail = typeof parsed.message === "string"
-            ? parsed.message
-            : "provider response did not include a usable error";
-          throw new Error(`Twilio SMS send failed (HTTP ${response.status}): ${detail}`);
-        }
-        return { outcome: "sent", providerMessageId: parsed.sid };
-      } catch (error) {
-        if (timedOut && error instanceof Error && error.name === "AbortError") {
-          throw new Error("Twilio request timed out after 30 seconds.");
-        }
         throw error;
-      } finally {
-        clearTimeout(timeout);
       }
     },
   };
+}
+
+export function validateTwilioWebhook(
+  request: TwilioWebhookRequest,
+  auth: TwilioWebhookAuth,
+): Record<string, unknown> {
+  const signature = request.signature ?? "";
+  const url = `${externalBaseUrl(auth.externalBaseUrl)}${requestTarget(request.requestTarget)}`;
+  const contentType = request.contentType?.split(";", 1)[0]?.trim().toLowerCase();
+
+  if (contentType === "application/x-www-form-urlencoded") {
+    if (!request.params) {
+      throw new Error("Twilio form webhook parameters are required.");
+    }
+    if (!twilio.validateRequest(auth.authToken, signature, url, request.params)) {
+      throw new Error("Twilio webhook X-Twilio-Signature validation failed.");
+    }
+    return request.params;
+  }
+
+  if (contentType === "application/json") {
+    if (request.rawBody === undefined) {
+      throw new Error("Twilio JSON webhook raw body is required.");
+    }
+    if (!twilio.validateRequestWithBody(auth.authToken, signature, url, request.rawBody)) {
+      throw new Error("Twilio webhook X-Twilio-Signature validation failed.");
+    }
+    return jsonObject(request.rawBody);
+  }
+
+  throw new Error(`Twilio webhook has unsupported content type "${contentType ?? ""}".`);
 }
 
 export function handleTwilioInboundWebhook(
   request: TwilioWebhookRequest,
   auth: TwilioWebhookAuth,
 ): TwilioInboundWebhookEvent {
-  validateWebhook(request, auth);
-  const accountSid = requiredParam(request.params, "AccountSid");
+  const params = validateTwilioWebhook(request, auth);
+  const accountSid = requiredParam(params, "AccountSid");
   if (accountSid !== auth.accountSid) {
     throw new Error("Twilio webhook AccountSid does not match this practice configuration.");
   }
-  const candidateOptOutType = request.params.OptOutType;
+  const candidateOptOutType = optionalParam(params, "OptOutType");
   if (
     candidateOptOutType
     && candidateOptOutType !== "STOP"
@@ -172,10 +185,10 @@ export function handleTwilioInboundWebhook(
   const optOutType = candidateOptOutType as "STOP" | "START" | "HELP" | undefined;
   return {
     accountSid,
-    messageSid: requiredParam(request.params, "MessageSid"),
-    from: e164(requiredParam(request.params, "From"), "Twilio inbound sender"),
-    to: e164(requiredParam(request.params, "To"), "Twilio inbound recipient"),
-    body: requiredParam(request.params, "Body"),
+    messageSid: requiredParam(params, "MessageSid"),
+    from: e164(requiredParam(params, "From"), "Twilio inbound sender"),
+    to: e164(requiredParam(params, "To"), "Twilio inbound recipient"),
+    body: requiredParam(params, "Body"),
     ...(optOutType ? { optOutType } : {}),
   };
 }
@@ -184,16 +197,16 @@ export function handleTwilioStatusWebhook(
   request: TwilioWebhookRequest,
   auth: TwilioWebhookAuth,
 ): TwilioStatusWebhookEvent {
-  validateWebhook(request, auth);
-  const accountSid = requiredParam(request.params, "AccountSid");
+  const params = validateTwilioWebhook(request, auth);
+  const accountSid = requiredParam(params, "AccountSid");
   if (accountSid !== auth.accountSid) {
     throw new Error("Twilio webhook AccountSid does not match this practice configuration.");
   }
-  const errorCode = request.params.ErrorCode?.trim() || undefined;
+  const errorCode = optionalParam(params, "ErrorCode");
   return {
     accountSid,
-    messageSid: requiredParam(request.params, "MessageSid"),
-    messageStatus: requiredParam(request.params, "MessageStatus"),
+    messageSid: requiredParam(params, "MessageSid"),
+    messageStatus: requiredParam(params, "MessageStatus"),
     ...(errorCode ? { errorCode } : {}),
     recipientOptedOut: errorCode === "21610",
   };
@@ -225,7 +238,6 @@ function validateTwilioConfig(config: TwilioAdapterConfig) {
     apiKeySecret,
     messagingServiceSid,
     fromNumber,
-    baseUrl: secureBaseUrl(config.baseUrl ?? TWILIO_API_BASE_URL),
   };
 }
 
@@ -236,32 +248,61 @@ function smsBody(value: string): string {
     : `${body} ${TWILIO_OPT_OUT_LANGUAGE}`;
 }
 
-function validateWebhook(request: TwilioWebhookRequest, auth: TwilioWebhookAuth): void {
-  const expected = twilioSignature(request.url, request.params, auth.authToken);
-  const actual = request.signature ?? "";
-  const expectedBytes = Buffer.from(expected);
-  const actualBytes = Buffer.from(actual);
-  if (
-    expectedBytes.length !== actualBytes.length
-    || !timingSafeEqual(expectedBytes, actualBytes)
-  ) {
-    throw new Error("Twilio webhook X-Twilio-Signature validation failed.");
+function externalBaseUrl(value: string): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error("Twilio externalBaseUrl must be an HTTPS origin.");
   }
+  if (
+    parsed.protocol !== "https:"
+    || parsed.username
+    || parsed.password
+    || parsed.pathname !== "/"
+    || parsed.search
+    || parsed.hash
+  ) {
+    throw new Error("Twilio externalBaseUrl must be an HTTPS origin.");
+  }
+  return parsed.origin;
 }
 
-function twilioSignature(
-  url: string,
-  params: Record<string, string>,
-  authToken: string,
-): string {
-  const signed = Object.keys(params)
-    .sort()
-    .reduce((value, key) => `${value}${key}${params[key]}`, url);
-  return createHmac("sha1", authToken).update(signed).digest("base64");
+function requestTarget(value: string): string {
+  if (!value.startsWith("/") || value.startsWith("//") || value.includes("#")) {
+    throw new Error("Twilio requestTarget must be an absolute path and query string.");
+  }
+  return value;
 }
 
-function requiredParam(params: Record<string, string>, name: string): string {
-  return required(params[name], `Twilio webhook ${name}`);
+function jsonObject(rawBody: string): Record<string, unknown> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(rawBody);
+  } catch {
+    throw new Error("Twilio JSON webhook body must contain valid JSON.");
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("Twilio JSON webhook body must be an object.");
+  }
+  return parsed as Record<string, unknown>;
+}
+
+function requiredParam(params: Record<string, unknown>, name: string): string {
+  const value = params[name];
+  if (typeof value !== "string") {
+    throw new Error(`Twilio webhook ${name} is required.`);
+  }
+  return required(value, `Twilio webhook ${name}`);
+}
+
+function optionalParam(params: Record<string, unknown>, name: string): string | undefined {
+  const value = params[name];
+  if (value === undefined || value === null || value === "") return undefined;
+  if (typeof value !== "string") {
+    throw new Error(`Twilio webhook ${name} must be a string.`);
+  }
+  return value.trim() || undefined;
 }
 
 function required(value: string | undefined, label: string): string {
@@ -284,32 +325,4 @@ function e164(value: string | undefined, label: string): string {
     throw new Error(`${label} must be in E.164 format.`);
   }
   return normalized;
-}
-
-function secureBaseUrl(value: string): string {
-  let parsed: URL;
-  try {
-    parsed = new URL(value);
-  } catch {
-    throw new Error("Twilio baseUrl must be a valid HTTPS URL.");
-  }
-  if (parsed.protocol !== "https:") {
-    throw new Error("Twilio baseUrl must be a valid HTTPS URL.");
-  }
-  return value.replace(/\/$/, "");
-}
-
-async function twilioJson(response: Response): Promise<TwilioMessageResponse> {
-  const text = await response.text();
-  try {
-    return JSON.parse(text) as TwilioMessageResponse;
-  } catch {
-    throw new Error(`Twilio returned HTTP ${response.status} with a non-JSON response.`);
-  }
-}
-
-function twilioErrorCode(value: unknown): number | undefined {
-  if (typeof value === "number" && Number.isInteger(value)) return value;
-  if (typeof value === "string" && /^\d+$/.test(value)) return Number(value);
-  return undefined;
 }
