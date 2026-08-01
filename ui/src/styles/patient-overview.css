@@ -86,6 +86,7 @@
 
 .odos-visit-row.is-open { background: color-mix(in srgb, var(--odos-muted) 5%, transparent); }
 .odos-visit-row.is-quiet { opacity: 0.5; }
+.odos-visit-row:focus-visible { outline: 2px solid var(--overview-amethyst); outline-offset: 2px; border-radius: 10px; }
 .odos-visit-explode { grid-column: 2; display: flex; flex-direction: column; gap: 4px; margin-top: 11px; }
 .odos-visit-explode > .odos-overview-loading, .odos-visit-explode > .odos-overview-error { margin: 0; }
 .odos-visit-summary-line { position: relative; border: 1px solid var(--overview-line); border-radius: 10px; background: color-mix(in srgb, var(--overview-ground) 50%, transparent); animation: odos-visit-summary-drop 0.25s ease both; }

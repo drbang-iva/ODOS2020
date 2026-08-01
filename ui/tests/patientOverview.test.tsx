@@ -161,8 +161,9 @@ test("a migrated ledger row is visibly tagged and opens its encounter without re
   assert.ok(row);
   const status = row.findByProps({ "data-testid": "visit-status-older" });
   assert.deepEqual(status.children, ["Migrated"]);
-  assert.equal(row.props.role, undefined);
-  assert.equal(row.props.tabIndex, undefined);
+  assert.equal(row.props.role, "button");
+  assert.equal(row.props.tabIndex, 0);
+  assert.equal(row.props["aria-expanded"], false);
   const openVisit = row.findAllByType("button")
     .find((button) => button.children.join("") === "Open visit");
   assert.ok(openVisit);
@@ -239,6 +240,54 @@ test("visit rows lazy-load one accordion summary and drill horizontally with OCT
   assert.deepEqual(rows.map((row) => row.props.className), ["odos-visit-row", "odos-visit-row"]);
   act(() => rows[1]!.props.onClick());
   assert.deepEqual(calls, ["newer", "older"]);
+});
+
+test("focused visit rows toggle Level 1 with Enter and Space", async () => {
+  const calls: string[] = [];
+  const api = {
+    fetchOverview: async () => fixture(),
+    fetchVisitDetail: async (_patientId: string, encounterId: string) => {
+      calls.push(encounterId);
+      return detailFixture(encounterId);
+    },
+    saveNote: async () => fixture().stickyNote!,
+    fetchHistory: async () => [],
+  };
+  let renderer!: ReactTestRenderer;
+  act(() => {
+    renderer = create(<PatientOverview patient={patient} initialOverview={fixture()} api={api} />);
+  });
+  const row = renderer.root.findAll((node) => node.type === "article" && node.props.className === "odos-visit-row")[0]!;
+  assert.equal(row.props.role, "button");
+  assert.equal(row.props.tabIndex, 0);
+  assert.equal(row.props["aria-expanded"], false);
+
+  const focusedRow = {};
+  let prevented = false;
+  await act(async () => row.props.onKeyDown({
+    key: "Enter",
+    target: focusedRow,
+    currentTarget: focusedRow,
+    preventDefault: () => { prevented = true; },
+  }));
+  assert.equal(prevented, true);
+  assert.deepEqual(calls, ["newer"]);
+  assert.equal(renderer.root.findAllByProps({ className: "odos-visit-explode" }).length, 1);
+  let currentRow = renderer.root.findAll((node) => node.type === "article" && String(node.props.className).includes("odos-visit-row"))[0]!;
+  assert.equal(currentRow.props["aria-expanded"], true);
+
+  prevented = false;
+  await act(async () => currentRow.props.onKeyDown({
+    key: " ",
+    target: focusedRow,
+    currentTarget: focusedRow,
+    preventDefault: () => { prevented = true; },
+  }));
+  assert.equal(prevented, true);
+  assert.deepEqual(calls, ["newer"]);
+  assert.equal(renderer.root.findAllByProps({ className: "odos-visit-explode" }).length, 0);
+  currentRow = renderer.root.findAll((node) => node.type === "article" && String(node.props.className).includes("odos-visit-row"))[0]!;
+  assert.equal(currentRow.props["aria-expanded"], false);
 });
 
 test("an expanded migrated row with no diagnoses keeps the existing empty state and reports only not recorded", async () => {

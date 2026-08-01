@@ -344,7 +344,15 @@ export function PatientOverview({
                     openVisitId && openVisitId !== visit.encounterId ? "is-quiet" : "",
                   ].filter(Boolean).join(" ")}
                   key={visit.encounterId}
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={openVisitId === visit.encounterId}
                   onClick={() => void toggleVisitDetail(visit.encounterId)}
+                  onKeyDown={(event) => {
+                    if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return;
+                    event.preventDefault();
+                    void toggleVisitDetail(visit.encounterId);
+                  }}
                 >
                   <time>{visit.date ? monthDay(visit.date) : "Date not recorded"}<small>{visit.date ? yearOf(visit.date) : ""}</small></time>
                   <div className="odos-visit-head">
