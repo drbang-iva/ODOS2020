@@ -145,6 +145,11 @@ test("C-CDA import maps source facts, links exactly one Encounter, and converges
       code: "860975",
       display: "24 HR metformin hydrochloride 500 MG Extended Release Oral Tablet",
     },
+    {
+      system: "http://snomed.info/sct",
+      code: "SYNTHETIC-SNOMED-MED-LATER",
+      display: "Synthetic later-source medication translation",
+    },
   ]);
 
   for (const resource of [
@@ -210,6 +215,43 @@ test("C-CDA import maps source facts, links exactly one Encounter, and converges
     encounterLinked: 0,
     encounterUnlinked: 1,
   });
+});
+
+test("C-CDA encounter matching treats an offset-less legacy dateTime as Eyefinity local time", async () => {
+  const originalTimeZone = process.env.TZ;
+  process.env.TZ = "UTC";
+  try {
+    const documents = structuredClone([DOCUMENTS[0]]) as Array<{ file: string }>;
+    documents[0]!.file =
+      "EMA_20210201T090000_Synthetic_ClinicalSummary_CCD_Final.ccda.xml";
+    const fhir = new MemoryCcdaFhir([
+      patient("patient-1"),
+      {
+        resourceType: "Encounter",
+        id: "encounter-offsetless",
+        status: "finished",
+        class: { system: "http://terminology.hl7.org/CodeSystem/v3-ActCode", code: "AMB" },
+        subject: { reference: "Patient/patient-1" },
+        period: {
+          start: "2021-02-01T00:30:00",
+          end: "2021-02-01T01:00:00",
+        },
+      } satisfies Encounter,
+    ]);
+
+    const result = await importLegacyCcda({
+      fhir,
+      projectId: "project-1",
+      ehrPatientId: "synthetic-ehr-1",
+      documents,
+    });
+
+    assert.equal(result.resources.Condition.encounterLinked, 1);
+    assert.deepEqual(result.encounterNonMatches, []);
+  } finally {
+    if (originalTimeZone === undefined) delete process.env.TZ;
+    else process.env.TZ = originalTimeZone;
+  }
 });
 
 test("C-CDA schema normalizes an omitted entry date to null", () => {

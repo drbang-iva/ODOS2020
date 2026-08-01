@@ -403,21 +403,24 @@ function distinctMedications(sources: readonly SourceDocument[]): Array<{
       left.source.timestamp.localeCompare(right.source.timestamp)
     );
     const first = sorted[0]!;
+    const codesByIdentity = new Map<string, ParsedCode>();
+    for (const occurrence of sorted) {
+      for (const code of occurrence.entry.codes) {
+        const key = `${code.system}\u001f${code.code}`;
+        const existing = codesByIdentity.get(key);
+        if (!existing) {
+          codesByIdentity.set(key, { ...code });
+        } else if (!existing.display && code.display) {
+          codesByIdentity.set(key, { ...existing, display: code.display });
+        }
+      }
+    }
     const dates = occurrences
       .map((occurrence) => occurrence.entry.date)
       .filter((date): date is string => Boolean(date))
       .sort();
     return {
-      codes: first.entry.codes.map((code) => ({
-        ...code,
-        display: occurrences
-          .flatMap((occurrence) => occurrence.entry.codes)
-          .find((candidate) =>
-            candidate.system === code.system
-            && candidate.code === code.code
-            && candidate.display
-          )?.display ?? null,
-      })),
+      codes: [...codesByIdentity.values()],
       preferredCode: first.preferredCode,
       source: first.source,
       ...(dates[0] ? { earliestDate: compactDate(dates[0]) } : {}),
@@ -493,6 +496,10 @@ function periodIncludesDate(encounter: Encounter, date: string): boolean {
 function localCalendarDate(value: string | undefined): string | undefined {
   if (!value) return undefined;
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(value)) {
+    const date = value.slice(0, 10);
+    return isCompactCalendarDate(date.replaceAll("-", "")) ? date : undefined;
+  }
   const instant = new Date(value);
   if (Number.isNaN(instant.getTime())) return undefined;
   const parts = new Intl.DateTimeFormat("en-US", {

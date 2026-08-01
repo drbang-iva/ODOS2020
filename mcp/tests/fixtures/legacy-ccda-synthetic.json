@@ -47,6 +47,11 @@
               "system": "RxNorm",
               "code": "860975",
               "display": "24 HR metformin hydrochloride 500 MG Extended Release Oral Tablet"
+            },
+            {
+              "system": "SNOMED-CT",
+              "code": "SYNTHETIC-SNOMED-MED-LATER",
+              "display": "Synthetic later-source medication translation"
             }
           ]
         }
