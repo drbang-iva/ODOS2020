@@ -27,6 +27,7 @@
     "import-legacy-patient-m2a": "tsx --env-file-if-exists=.odos/migration-importer.env scripts/import-legacy-patient-m2a.ts",
     "import-legacy-visits-m2b1": "tsx --env-file-if-exists=.odos/migration-importer.env scripts/import-legacy-visits-m2b1.ts",
     "import-legacy-visits-m2b2": "tsx --env-file-if-exists=.odos/migration-importer.env scripts/import-legacy-visits-m2b2.ts",
+    "import-legacy-ccda": "tsx --env-file-if-exists=.odos/migration-importer.env scripts/import-legacy-ccda.ts",
     "adjudicate-legacy-import-m2b2": "tsx scripts/adjudicate-legacy-import-m2b2.ts",
     "import-legacy-bulk-m2b2": "tsx --env-file-if-exists=.odos/migration-importer.env scripts/import-legacy-bulk-m2b2.ts",
     "grant-migrated-patient-access": "tsx --env-file-if-exists=.odos/migration-importer.env scripts/grant-migrated-patient-access.ts",

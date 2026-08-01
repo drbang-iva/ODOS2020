@@ -211,6 +211,14 @@ test("migration importer AccessPolicy grants the exact resource interactions", (
   ]) {
     assert.deepEqual(rule(policy, resourceType).interaction, ["search", "read", "create", "update"]);
   }
+  for (const resourceType of [
+    "Condition",
+    "AllergyIntolerance",
+    "MedicationStatement",
+    "Procedure",
+  ]) {
+    assert.deepEqual(rule(policy, resourceType).interaction, ["search", "read", "create"]);
+  }
   assert.deepEqual(rule(policy, "Organization").interaction, ["search", "read", "create"]);
   assert.deepEqual(rule(policy, "Location").interaction, ["search", "read"]);
   const binaryRules = rules.filter((entry) => entry.resourceType === "Binary");
