@@ -339,12 +339,13 @@ async function writeResource(
     );
   }
   const type = resource.resourceType as LegacyCcdaResourceType;
-  const linked = Boolean(source.encounterReference);
   if (matches.length === 1) {
+    const existing = matches[0] as ImportableResource;
     counts[type].skipped += 1;
-    counts[type][linked ? "encounterLinked" : "encounterUnlinked"] += 1;
+    counts[type][hasEncounterLink(existing) ? "encounterLinked" : "encounterUnlinked"] += 1;
     return;
   }
+  const linked = Boolean(source.encounterReference);
 
   resource.meta = {
     ...resource.meta,
@@ -367,6 +368,13 @@ async function writeResource(
   counts[type].created += 1;
   counts[type][linked ? "encounterLinked" : "encounterUnlinked"] += 1;
   createdReferences.push(`${resource.resourceType}/${created.id}`);
+}
+
+function hasEncounterLink(resource: ImportableResource): boolean {
+  if (resource.resourceType === "MedicationStatement") {
+    return resource.context?.reference?.startsWith("Encounter/") ?? false;
+  }
+  return Boolean(resource.encounter?.reference);
 }
 
 function distinctMedications(sources: readonly SourceDocument[]): Array<{

@@ -207,8 +207,8 @@ test("C-CDA import maps source facts, links exactly one Encounter, and converges
   assert.deepEqual(subset.resources.MedicationStatement, {
     created: 0,
     skipped: 1,
-    encounterLinked: 1,
-    encounterUnlinked: 0,
+    encounterLinked: 0,
+    encounterUnlinked: 1,
   });
 });
 
