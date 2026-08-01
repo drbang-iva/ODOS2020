@@ -344,16 +344,19 @@ export function PatientOverview({
                     openVisitId && openVisitId !== visit.encounterId ? "is-quiet" : "",
                   ].filter(Boolean).join(" ")}
                   key={visit.encounterId}
-                  role="button"
-                  tabIndex={0}
-                  aria-expanded={openVisitId === visit.encounterId}
                   onClick={() => void toggleVisitDetail(visit.encounterId)}
-                  onKeyDown={(event) => {
-                    if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return;
-                    event.preventDefault();
-                    void toggleVisitDetail(visit.encounterId);
-                  }}
                 >
+                  <button
+                    type="button"
+                    className="odos-visit-expand-sr"
+                    aria-expanded={openVisitId === visit.encounterId}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void toggleVisitDetail(visit.encounterId);
+                    }}
+                  >
+                    Expand visit details for {visit.visitType} on {visit.date ? shortDate(visit.date) : "date not recorded"}
+                  </button>
                   <time>{visit.date ? monthDay(visit.date) : "Date not recorded"}<small>{visit.date ? yearOf(visit.date) : ""}</small></time>
                   <div className="odos-visit-head">
                     <span className="odos-visit-type">{visit.visitType}</span>
