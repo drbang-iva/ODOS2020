@@ -66,6 +66,41 @@ test("patient overview projects real snapshot resources and newest-first encount
   assert.equal(provenanceSearch?.params._sort, "recorded");
 });
 
+test("visit ledger includes an encounter-linked problem-list Condition", async () => {
+  const fake = new FakeFhir();
+  fake.add(patient());
+  fake.add(encounter("legacy-visit", "2021-01-31T14:00:00Z"));
+  fake.add(condition("legacy-problem", "Imported legacy problem", {
+    category: "problem-list-item",
+    encounterId: "legacy-visit",
+    code: "DX-LEGACY",
+  }));
+
+  const overview = await loadPatientOverview(fake as never, "p1");
+
+  assert.deepEqual(overview.visits[0]?.diagnoses.map((diagnosis) => diagnosis.code), ["DX-LEGACY"]);
+  const ledgerConditionSearch = fake.searches.find(
+    (row) => row.resourceType === "Condition" && row.params.encounter,
+  );
+  assert.equal(ledgerConditionSearch?.params.encounter, "Encounter/legacy-visit");
+  assert.equal(ledgerConditionSearch?.params.category, undefined);
+});
+
+test("visit ledger keeps native encounter-diagnosis Conditions", async () => {
+  const fake = new FakeFhir();
+  fake.add(patient());
+  fake.add(encounter("native-visit", "2026-06-01T14:00:00Z"));
+  fake.add(condition("native-diagnosis", "Native diagnosis", {
+    category: "encounter-diagnosis",
+    encounterId: "native-visit",
+    code: "DX-NATIVE",
+  }));
+
+  const overview = await loadPatientOverview(fake as never, "p1");
+
+  assert.deepEqual(overview.visits[0]?.diagnoses.map((diagnosis) => diagnosis.code), ["DX-NATIVE"]);
+});
+
 test("patient overview route stays available with more than 1000 other-patient Provenance rows", async () => {
   const fake = new FakeFhir();
   fake.add(patient());
@@ -364,7 +399,12 @@ test("diagnosis filtering searches Condition by code then searches only matching
     diagnosisCode: "DX-SELECTED",
   });
 
-  assert.equal(fake.searches.find((row) => row.resourceType === "Condition" && row.params.category === "encounter-diagnosis")?.params.code, "https://example.test/diagnosis|DX-SELECTED");
+  const ledgerConditionSearch = fake.searches.find(
+    (row) => row.resourceType === "Condition" && row.params.encounter,
+  );
+  assert.equal(ledgerConditionSearch?.params.code, "https://example.test/diagnosis|DX-SELECTED");
+  assert.equal(ledgerConditionSearch?.params.encounter, "Encounter/match");
+  assert.equal(ledgerConditionSearch?.params.category, undefined);
   assert.equal(fake.searches.find((row) => row.resourceType === "Encounter")?.params._id, "match");
   assert.equal(fake.searches.find((row) => row.resourceType === "Encounter")?.params.type, undefined);
 });
@@ -450,10 +490,12 @@ class FakeFhir {
     }
     if (resourceType === "Condition" && params.category === "encounter-diagnosis") {
       rows = rows.filter((resource) => (resource as Condition).category?.some((category) => category.coding?.some((coding) => coding.code === "encounter-diagnosis")));
-      if (params.code) rows = rows.filter((resource) => (resource as Condition).code?.coding?.some((coding) => `${coding.system}|${coding.code}` === params.code));
     }
     if (resourceType === "Condition" && params.category === "problem-list-item") {
       rows = rows.filter((resource) => (resource as Condition).category?.some((category) => category.coding?.some((coding) => coding.code === "problem-list-item")));
+    }
+    if (resourceType === "Condition" && params.code) {
+      rows = rows.filter((resource) => (resource as Condition).code?.coding?.some((coding) => `${coding.system}|${coding.code}` === params.code));
     }
     if (resourceType === "Encounter" && params._id) rows = rows.filter((resource) => params._id.split(",").includes(resource.id ?? ""));
     if (resourceType === "Encounter" && params.type) {
@@ -468,12 +510,18 @@ class FakeFhir {
       ));
     }
     if (params.encounter) {
-      const encounterReference = params.encounter.startsWith("Encounter/") ? params.encounter : `Encounter/${params.encounter}`;
+      const encounterReferences = params.encounter.split(",").map((reference) =>
+        reference.startsWith("Encounter/") ? reference : `Encounter/${reference}`
+      );
       rows = rows.filter((resource) => {
         if (resource.resourceType === "Claim") {
-          return resource.item?.some((item) => item.encounter?.some((reference) => reference.reference === encounterReference));
+          return resource.item?.some((item) => item.encounter?.some((reference) =>
+            encounterReferences.includes(reference.reference ?? "")
+          ));
         }
-        return "encounter" in resource && (resource as Observation | MedicationRequest | CarePlan).encounter?.reference === encounterReference;
+        return "encounter" in resource && encounterReferences.includes(
+          (resource as Observation | MedicationRequest | CarePlan).encounter?.reference ?? "",
+        );
       });
     }
     if (resourceType === "ChargeItem" && params.context) {

@@ -16,7 +16,12 @@ import type {
   Resource,
 } from "@medplum/fhirtypes";
 import type { MedplumClient } from "../fhir-client.js";
-import { conditionEncounterId, hasConditionCategory, isConfirmedEncounterDiagnosis, referenceId } from "../fhir/condition.js";
+import {
+  conditionEncounterId,
+  FHIR_CONDITION_VERIFICATION_STATUS_CODE_SYSTEM,
+  hasConditionCategory,
+  referenceId,
+} from "../fhir/condition.js";
 import { ODOS_VISIT_TYPE_SYSTEM } from "../fhir/schedulingVisitType.js";
 import { TOBACCO_SMOKING_STATUS_LOINC_CODE } from "../fhir/smokingStatus.js";
 import {
@@ -129,15 +134,9 @@ export async function loadPatientOverview(
     encounterParams.type = `${ODOS_VISIT_TYPE_SYSTEM}|office-visit`;
   }
 
-  const conditionParams: Record<string, string> = {
-    patient: patientId,
-    category: "encounter-diagnosis",
-    "verification-status": "confirmed",
-    _count: "100",
-  };
-  if (options.diagnosisSystem && options.diagnosisCode) {
-    conditionParams.code = `${options.diagnosisSystem}|${options.diagnosisCode}`;
-  }
+  const diagnosisCode = options.diagnosisSystem && options.diagnosisCode
+    ? `${options.diagnosisSystem}|${options.diagnosisCode}`
+    : undefined;
 
   const [
     patient,
@@ -148,7 +147,7 @@ export async function loadPatientOverview(
     medicationStatements,
     medicationRequestResult,
     smokingStatuses,
-    encounterDiagnoses,
+    diagnosisMatches,
   ] = await Promise.all([
     fhir.read<Patient>("Patient", patientId),
     optionalSearchAll<Coverage>(fhir, "Coverage", { beneficiary: patientReference, status: "active", _count: "100" }),
@@ -158,10 +157,17 @@ export async function loadPatientOverview(
     searchAll<MedicationStatement>(fhir, "MedicationStatement", { patient: patientId, status: "active", _count: "100" }),
     optionalSearchAll<MedicationRequest>(fhir, "MedicationRequest", { patient: patientId, status: "active", _count: "100" }),
     searchAll<Observation>(fhir, "Observation", { patient: patientId, code: TOBACCO_SMOKING_STATUS_LOINC_CODE, _count: "1", _sort: "-date" }),
-    searchAll<Condition>(fhir, "Condition", conditionParams),
+    diagnosisCode
+      ? searchAll<Condition>(fhir, "Condition", {
+          patient: patientId,
+          code: diagnosisCode,
+          "verification-status": "confirmed",
+          _count: "100",
+        })
+      : Promise.resolve(undefined),
   ]);
-  const diagnosisEncounterIds = options.diagnosisSystem && options.diagnosisCode
-    ? unique(encounterDiagnoses.flatMap((condition) => conditionEncounterId(condition) ?? []))
+  const diagnosisEncounterIds = diagnosisMatches
+    ? unique(diagnosisMatches.flatMap((condition) => conditionEncounterId(condition) ?? []))
     : undefined;
   if (diagnosisEncounterIds && diagnosisEncounterIds.length === 0) {
     return projectOverview({
@@ -175,7 +181,7 @@ export async function loadPatientOverview(
       medicationRequests: medicationRequestResult.resources,
       smokingStatuses,
       encounters: [],
-      encounterDiagnoses,
+      encounterDiagnoses: [],
     });
   }
   if (diagnosisEncounterIds) {
@@ -183,9 +189,19 @@ export async function loadPatientOverview(
     encounterParams._id = diagnosisEncounterIds.join(",");
   }
   const encounters = await searchAll<Encounter>(fhir, "Encounter", encounterParams);
-  const encounterReferences = new Set(encounters.flatMap((encounter) =>
+  const encounterReferenceList = encounters.flatMap((encounter) =>
     encounter.id ? [`Encounter/${encounter.id}`] : [],
-  ));
+  );
+  const encounterReferences = new Set(encounterReferenceList);
+  const encounterDiagnoses = encounterReferenceList.length
+    ? await searchAll<Condition>(fhir, "Condition", {
+        patient: patientId,
+        encounter: encounterReferenceList.join(","),
+        "verification-status": "confirmed",
+        ...(diagnosisCode ? { code: diagnosisCode } : {}),
+        _count: "100",
+      })
+    : [];
   const provenances = encounters.length
     ? (await searchAll<Provenance>(fhir, "Provenance", {
         patient: patientReference,
@@ -382,7 +398,7 @@ function projectOverview(input: {
       ophthalmic: isOphthalmicRoute(resource.dosageInstruction?.[0]?.route, resource.dosageInstruction?.[0]?.text),
     })),
   ].filter((medication) => medication.name);
-  const diagnoses = input.encounterDiagnoses.filter(isConfirmedEncounterDiagnosis);
+  const diagnoses = input.encounterDiagnoses.filter(isConfirmedEncounterCondition);
   const signedEncounterIds = signedEncounters(input.encounters, input.provenances ?? []);
   const byEncounter = new Map<string, PatientOverviewDiagnosis[]>();
   for (const condition of diagnoses) {
@@ -767,6 +783,16 @@ function conceptText(concept: { text?: string; coding?: Array<{ display?: string
 
 function hasStatus(concept: { coding?: Array<{ code?: string }> } | undefined, code: string): boolean {
   return concept?.coding?.some((coding) => coding.code === code) === true;
+}
+
+function isConfirmedEncounterCondition(condition: Condition): boolean {
+  return (
+    hasConditionCategory(condition, "encounter-diagnosis")
+    || hasConditionCategory(condition, "problem-list-item")
+  ) && condition.verificationStatus?.coding?.some(
+    (coding) => coding.system === FHIR_CONDITION_VERIFICATION_STATUS_CODE_SYSTEM
+      && coding.code === "confirmed",
+  ) === true && conditionEncounterId(condition) !== undefined;
 }
 
 function encounterTime(encounter: Encounter): number {
