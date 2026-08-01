@@ -172,6 +172,7 @@ function isStickyNote(body: unknown): body is NonNullable<PatientOverviewPayload
 function isPatientOverviewVisitDetail(body: unknown): body is PatientOverviewVisitDetail {
   return isRecord(body)
     && typeof body.encounterId === "string"
+    && (body.reason === undefined || typeof body.reason === "string")
     && isVisitDetailGroup(body.iop)
     && isVisitDetailGroup(body.findings)
     && isVisitDetailGroup(body.medications)
@@ -181,11 +182,14 @@ function isPatientOverviewVisitDetail(body: unknown): body is PatientOverviewVis
 
 function isVisitDetailGroup(value: unknown): value is PatientOverviewVisitDetailGroup {
   return isRecord(value)
+    && (value.summary === undefined || typeof value.summary === "string")
+    && (value.unavailable === undefined || typeof value.unavailable === "string")
     && Array.isArray(value.cards)
     && value.cards.every((card) => isRecord(card)
       && typeof card.id === "string"
       && typeof card.kicker === "string"
       && typeof card.title === "string"
+      && (card.detail === undefined || typeof card.detail === "string")
       && (card.values === undefined || (Array.isArray(card.values) && card.values.every((row) =>
         isRecord(row) && typeof row.label === "string" && typeof row.value === "string"
       ))));

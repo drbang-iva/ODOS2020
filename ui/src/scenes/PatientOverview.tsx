@@ -350,6 +350,7 @@ export function PatientOverview({
                     type="button"
                     className="odos-visit-expand-sr"
                     aria-expanded={openVisitId === visit.encounterId}
+                    aria-controls={`visit-explode-${visit.encounterId}`}
                     onClick={(event) => {
                       event.stopPropagation();
                       void toggleVisitDetail(visit.encounterId);
@@ -406,6 +407,7 @@ export function PatientOverview({
                   </div>
                   {openVisitId === visit.encounterId && (
                     <VisitExplode
+                      id={`visit-explode-${visit.encounterId}`}
                       detail={visitDetails[visit.encounterId]}
                       loading={visitDetailLoading[visit.encounterId] === true}
                       error={visitDetailErrors[visit.encounterId]}
@@ -438,10 +440,12 @@ export function PatientOverview({
 }
 
 function VisitExplode({
+  id,
   detail,
   loading,
   error,
 }: {
+  id: string;
   detail?: PatientOverviewVisitDetail;
   loading: boolean;
   error?: string;
@@ -450,7 +454,7 @@ function VisitExplode({
   const [openCard, setOpenCard] = useState<string>();
 
   return (
-    <div className="odos-visit-explode" onClick={(event) => event.stopPropagation()}>
+    <div id={id} className="odos-visit-explode" onClick={(event) => event.stopPropagation()}>
       {loading && <p className="odos-overview-loading">Loading encounter details…</p>}
       {error && <p className="odos-overview-error" role="alert">{error}</p>}
       {detail && (

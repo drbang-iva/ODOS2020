@@ -159,9 +159,10 @@ test("patient overview routes issue filtered FHIR searches and expose native sti
     assert.equal((await fetch(`http://127.0.0.1:${port}/clinic/patients/p1/overview?diagnosisSystem=&diagnosisCode=DX`, { headers })).status, 400);
     const visitDetail = await fetch(`http://127.0.0.1:${port}/clinic/patients/p1/overview/visits/e1`, { headers });
     assert.equal(visitDetail.status, 200);
-    assert.deepEqual(Object.keys(await visitDetail.json() as Record<string, unknown>), [
-      "encounterId", "iop", "findings", "medications", "plan", "financial",
-    ]);
+    const visitDetailBody = await visitDetail.json() as Record<string, unknown>;
+    for (const key of ["encounterId", "iop", "findings", "medications", "plan", "financial"]) {
+      assert.ok(key in visitDetailBody, `visit detail includes ${key}`);
+    }
     assert.equal((await fetch(`http://127.0.0.1:${port}/clinic/patients/p1/overview/visits/missing`, { headers })).status, 404);
     assert.equal((await fetch(`http://127.0.0.1:${port}/clinic/patients/p1/overview/visits/not!valid`, { headers })).status, 400);
 

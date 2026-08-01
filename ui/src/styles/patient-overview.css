@@ -88,6 +88,9 @@
 .odos-visit-row.is-quiet { opacity: 0.5; }
 .odos-visit-expand-sr { position: absolute; width: 1px; height: 1px; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .odos-visit-row:has(.odos-visit-expand-sr:focus-visible) { outline: 2px solid var(--overview-amethyst); outline-offset: 2px; border-radius: 10px; }
+@supports not selector(.odos-visit-row:has(.odos-visit-expand-sr:focus-visible)) {
+  .odos-visit-expand-sr:focus-visible { width: auto; height: auto; padding: 4px 7px; overflow: visible; clip-path: none; background: var(--overview-surface); color: var(--overview-text); outline: 2px solid var(--overview-amethyst); outline-offset: 2px; white-space: normal; }
+}
 .odos-visit-explode { grid-column: 2; display: flex; flex-direction: column; gap: 4px; margin-top: 11px; }
 .odos-visit-explode > .odos-overview-loading, .odos-visit-explode > .odos-overview-error { margin: 0; }
 .odos-visit-summary-line { position: relative; border: 1px solid var(--overview-line); border-radius: 10px; background: color-mix(in srgb, var(--overview-ground) 50%, transparent); animation: odos-visit-summary-drop 0.25s ease both; }
@@ -119,6 +122,10 @@ button.odos-visit-detail-card:focus-visible { outline: 2px solid var(--overview-
 .odos-visit-card-values { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--overview-line); }
 .odos-visit-card-values > span { font-size: 10px; line-height: 1.35; }
 .odos-visit-card-values small { display: block; color: var(--overview-faint); font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; }
+
+@media (prefers-reduced-motion: reduce) {
+  .odos-visit-summary-line, .odos-visit-detail-card { animation: none; }
+}
 
 @keyframes odos-visit-summary-drop {
   from { opacity: 0; transform: translateY(-6px); }

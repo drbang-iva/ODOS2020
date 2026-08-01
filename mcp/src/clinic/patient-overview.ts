@@ -27,6 +27,7 @@ import {
 export const PATIENT_STICKY_NOTE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/patient-sticky-note";
 export const PATIENT_STICKY_NOTE_CODE = "patient-sticky-note";
 export const PATIENT_STICKY_NOTE_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/identifier/patient-sticky-note";
+const ODOS_LATERALITY_SYSTEM = "https://odos2020.com/fhir/CodeSystem/laterality";
 
 export type VisitLedgerFilter = "all" | "eye-exams" | "office-visits";
 
@@ -235,7 +236,7 @@ export async function loadPatientOverviewVisitDetail(
     searchAll<Observation>(fhir, "Observation", { patient: patientId, encounter: encounterId, _count: "200" }),
     searchAll<MedicationRequest>(fhir, "MedicationRequest", { patient: patientId, encounter: encounterId, _count: "200" }),
     searchAll<CarePlan>(fhir, "CarePlan", { patient: patientId, encounter: encounterId, _count: "200" }),
-    optionalSearchAll<Claim>(fhir, "Claim", { patient: patientReference, _count: "200" }),
+    optionalSearchAll<Claim>(fhir, "Claim", { patient: patientReference, encounter: encounterReference, _count: "200" }),
     optionalSearchAll<ChargeItem>(fhir, "ChargeItem", { subject: patientReference, context: encounterReference, _count: "200" }),
   ]);
 
@@ -588,10 +589,16 @@ function carePlanCards(plan: CarePlan, planIndex: number): PatientOverviewVisitD
 }
 
 function reasonText(encounter: Encounter): string | undefined {
-  const reasons = unique((encounter.reasonCode ?? []).flatMap((reason) => {
-    const text = conceptText(reason).trim();
-    return text ? [text] : [];
-  }));
+  const reasons = unique([
+    ...(encounter.reasonCode ?? []).flatMap((reason) => {
+      const text = conceptText(reason).trim();
+      return text ? [text] : [];
+    }),
+    ...(encounter.reasonReference ?? []).flatMap((reason) => {
+      const display = reason.display?.trim();
+      return display ? [display] : [];
+    }),
+  ]);
   return reasons.length ? reasons.join(" · ") : undefined;
 }
 
@@ -650,8 +657,12 @@ function observationValueText(observation: Observation): string | undefined {
 }
 
 function observationLaterality(observation: Observation): string | undefined {
-  const coding = observation.bodySite?.coding?.find((candidate) => candidate.code || candidate.display);
-  return coding?.code ?? coding?.display ?? (observation.bodySite?.text?.trim() || undefined);
+  const odosCode = observation.bodySite?.coding?.find((coding) =>
+    coding.system === ODOS_LATERALITY_SYSTEM && coding.code?.trim()
+  )?.code?.trim();
+  if (odosCode) return odosCode;
+  const foreignDisplay = observation.bodySite?.coding?.find((coding) => coding.display?.trim())?.display?.trim();
+  return foreignDisplay ?? (observation.bodySite?.text?.trim() || undefined);
 }
 
 function quantityText(quantity: { value?: number; unit?: string; code?: string }): string {
@@ -661,7 +672,10 @@ function quantityText(quantity: { value?: number; unit?: string; code?: string }
 
 function moneyText(money: { value?: number; currency?: string } | undefined): string | undefined {
   if (money?.value === undefined) return undefined;
-  return `${money.value}${money.currency ? ` ${money.currency}` : ""}`;
+  const currency = money.currency?.trim();
+  return currency
+    ? new Intl.NumberFormat("en-US", { style: "currency", currency }).format(money.value)
+    : new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(money.value);
 }
 
 function claimMatchesEncounter(claim: Claim, encounterReference: string): boolean {

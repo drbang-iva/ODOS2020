@@ -8,6 +8,7 @@ import type { Patient } from "@medplum/fhirtypes";
 import type { ClinicSummary } from "../src/lib/clinic-summary";
 import {
   fetchPatientOverview,
+  fetchPatientOverviewVisitDetail,
   type PatientOverviewPayload,
   type PatientOverviewVisitDetail,
 } from "../src/lib/patient-overview";
@@ -46,6 +47,13 @@ test("every remaining patient-opening entry point uses the shared overview trans
     const source = readFileSync(new URL(relativePath, import.meta.url), "utf8");
     assert.match(source, /openPatientOverview\(/, `${relativePath} must enter the overview`);
   }
+});
+
+test("visit explode CSS preserves visible focus fallback and reduced-motion behavior", () => {
+  const css = readFileSync(new URL("../src/styles/patient-overview.css", import.meta.url), "utf8");
+  assert.match(css, /@supports not selector\(\.odos-visit-row:has\(\.odos-visit-expand-sr:focus-visible\)\)/);
+  assert.match(css, /\.odos-visit-expand-sr:focus-visible \{[^}]*clip-path: none;[^}]*outline:/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\.odos-visit-summary-line, \.odos-visit-detail-card \{ animation: none; \}/);
 });
 
 test("the shared patient transition keeps the selected patient in browser URL state", () => {
@@ -246,7 +254,7 @@ test("visit rows lazy-load one accordion summary and drill horizontally with OCT
   assert.deepEqual(calls, ["newer", "older"]);
 });
 
-test("the hidden disclosure button toggles Level 1 with native Enter and Space activation", async () => {
+test("the hidden disclosure button stops row propagation and toggles Level 1", async () => {
   const calls: string[] = [];
   const api = {
     fetchOverview: async () => fixture(),
@@ -269,20 +277,31 @@ test("the hidden disclosure button toggles Level 1 with native Enter and Space a
   assert.equal(row.children[0], disclosure);
   assert.equal(disclosure.type, "button");
   assert.equal(disclosure.props.type, "button");
+  // Native button keyboard activation is delegated to the platform.
   assert.equal(disclosure.props.onKeyDown, undefined);
   assert.equal(disclosure.props["aria-expanded"], false);
+  assert.equal(disclosure.props["aria-controls"], "visit-explode-newer");
 
-  for (const [key, expectedExpanded] of [["Enter", true], [" ", false]] as const) {
-    let stopped = false;
-    await act(async () => disclosure.props.onClick({ stopPropagation: () => { stopped = true; } }));
-    assert.equal(stopped, true, `${JSON.stringify(key)} activation stops the row click`);
-    assert.equal(renderer.root.findAllByProps({ className: "odos-visit-explode" }).length, expectedExpanded ? 1 : 0);
-    const currentRow = renderer.root.findAll((node) => node.type === "article" && String(node.props.className).includes("odos-visit-row"))[0]!;
-    assert.equal(currentRow.props.role, undefined);
-    assert.equal(currentRow.props.tabIndex, undefined);
-    disclosure = currentRow.findByProps({ className: "odos-visit-expand-sr" });
-    assert.equal(disclosure.props["aria-expanded"], expectedExpanded);
-  }
+  let stopped = false;
+  await act(async () => disclosure.props.onClick({ stopPropagation: () => { stopped = true; } }));
+  assert.equal(stopped, true);
+  const explode = renderer.root.findByProps({ className: "odos-visit-explode" });
+  assert.equal(explode.props.id, "visit-explode-newer");
+  let currentRow = renderer.root.findAll((node) => node.type === "article" && String(node.props.className).includes("odos-visit-row"))[0]!;
+  assert.equal(currentRow.props.role, undefined);
+  assert.equal(currentRow.props.tabIndex, undefined);
+  disclosure = currentRow.findByProps({ className: "odos-visit-expand-sr" });
+  assert.equal(disclosure.props["aria-expanded"], true);
+
+  stopped = false;
+  await act(async () => disclosure.props.onClick({ stopPropagation: () => { stopped = true; } }));
+  assert.equal(stopped, true);
+  assert.equal(renderer.root.findAllByProps({ className: "odos-visit-explode" }).length, 0);
+  currentRow = renderer.root.findAll((node) => node.type === "article" && String(node.props.className).includes("odos-visit-row"))[0]!;
+  assert.equal(currentRow.props.role, undefined);
+  assert.equal(currentRow.props.tabIndex, undefined);
+  disclosure = currentRow.findByProps({ className: "odos-visit-expand-sr" });
+  assert.equal(disclosure.props["aria-expanded"], false);
   assert.deepEqual(calls, ["newer"]);
 });
 
@@ -305,7 +324,9 @@ test("an expanded migrated row with no diagnoses keeps the existing empty state 
   await act(async () => migratedRow.props.onClick());
   const rendered = JSON.stringify(renderer.toJSON());
   assert.match(rendered, /No confirmed diagnoses recorded for this visit/);
-  assert.equal((rendered.match(/not recorded/g) ?? []).length >= 6, true);
+  const summaryValues = renderer.root.findAllByProps({ className: "odos-visit-summary-value" });
+  assert.equal(summaryValues.length, 6);
+  assert.deepEqual(summaryValues.map((value) => value.children.join("")), Array(6).fill("not recorded"));
   assert.doesNotMatch(rendered, /placeholder|sample|synthetic/i);
 });
 
@@ -409,6 +430,26 @@ test("successful overview responses must contain the expected payload shape", as
     fetchPatientOverview("patient-1", {}, malformedFetch as typeof fetch),
     /Patient overview request returned an invalid response/,
   );
+});
+
+test("visit detail responses reject malformed optional display fields", async () => {
+  const detail = detailFixture("newer");
+  const malformedDetails = [
+    { ...detail, reason: {} },
+    { ...detail, iop: { ...detail.iop, summary: {} } },
+    { ...detail, iop: { ...detail.iop, unavailable: {} } },
+    { ...detail, iop: { ...detail.iop, cards: [{ ...detail.iop.cards[0]!, detail: {} }] } },
+  ];
+  for (const malformed of malformedDetails) {
+    const fetchImpl = async () => new Response(JSON.stringify(malformed), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+    await assert.rejects(
+      fetchPatientOverviewVisitDetail("patient-1", "newer", fetchImpl as typeof fetch),
+      /Patient overview request returned an invalid response/,
+    );
+  }
 });
 
 test("initial overview loading skips patients without a FHIR id", () => {

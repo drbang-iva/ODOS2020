@@ -172,6 +172,7 @@ test("visit detail lazily projects encounter-owned summaries, horizontal cards, 
   const fake = new FakeFhir();
   const visit = encounter("detail-visit", "2026-06-30T14:00:00Z");
   visit.reasonCode = [{ text: "Pressure check" }];
+  visit.reasonReference = [{ display: "Pressure check" }, { display: "Referral concern" }];
   fake.add(visit);
   fake.add({
     resourceType: "Observation",
@@ -180,8 +181,18 @@ test("visit detail lazily projects encounter-owned summaries, horizontal cards, 
     subject: { reference: "Patient/p1" },
     encounter: { reference: "Encounter/detail-visit" },
     code: { coding: [{ code: "INTRAOCULAR_PRESSURE" }], text: "Intraocular pressure" },
-    bodySite: { coding: [{ code: "OD", display: "Right eye" }] },
+    bodySite: { coding: [{ system: "https://odos2020.com/fhir/CodeSystem/laterality", code: "OD", display: "Right eye" }] },
     valueQuantity: { value: 16, unit: "mmHg" },
+  } satisfies Observation);
+  fake.add({
+    resourceType: "Observation",
+    id: "iop-snomed",
+    status: "final",
+    subject: { reference: "Patient/p1" },
+    encounter: { reference: "Encounter/detail-visit" },
+    code: { coding: [{ code: "INTRAOCULAR_PRESSURE" }], text: "Intraocular pressure" },
+    bodySite: { coding: [{ system: "http://snomed.info/sct", code: "18944008", display: "Right eye" }] },
+    valueQuantity: { value: 17, unit: "mmHg" },
   } satisfies Observation);
   fake.add({
     resourceType: "Observation",
@@ -250,11 +261,19 @@ test("visit detail lazily projects encounter-owned summaries, horizontal cards, 
 
   const detail = await loadPatientOverviewVisitDetail(fake as never, "p1", "detail-visit");
 
-  assert.equal(detail.reason, "Pressure check");
-  assert.equal(detail.iop.summary, "OD 16 mmHg");
+  assert.equal(detail.reason, "Pressure check · Referral concern");
+  assert.equal(detail.iop.summary, "OD 16 mmHg · Right eye 17 mmHg");
+  assert.doesNotMatch(detail.iop.summary, /18944008/);
   assert.equal(detail.medications.summary, "Recorded ophthalmic medication");
   assert.equal(detail.plan.summary, "Repeat testing");
   assert.equal(detail.financial.summary, "1 claim · 1 charge");
+  assert.equal(detail.financial.cards.find((card) => card.id === "claim-1")?.detail, "active · $125.00");
+  assert.equal(detail.financial.cards.find((card) => card.id === "charge-1")?.detail, "billable · $25.00");
+  const claimSearch = fake.searches.find((search) => search.resourceType === "Claim");
+  assert.ok(claimSearch);
+  for (const key of ["patient", "encounter", "_count"]) assert.ok(key in claimSearch.params);
+  assert.equal(claimSearch.params.patient, "Patient/p1");
+  assert.equal(claimSearch.params.encounter, "Encounter/detail-visit");
   assert.deepEqual(detail.findings.cards.find((card) => card.id === "oct-rnfl")?.values, [
     { label: "OD average", value: "84 um" },
     { label: "OD inferior", value: "71 um" },
@@ -275,6 +294,32 @@ test("migrated visit detail with no structured content remains honestly empty", 
   assert.deepEqual(
     [detail.iop, detail.findings, detail.medications, detail.plan, detail.financial].map((group) => group.cards.length),
     [0, 0, 0, 0, 0],
+  );
+});
+
+test("visit detail reports role-scoped financial sources as unavailable", async () => {
+  const fake = new FakeFhir();
+  fake.add(encounter("financial-unavailable", "2026-06-30T14:00:00Z"));
+  fake.deniedTypes.add("Claim");
+  fake.deniedTypes.add("ChargeItem");
+
+  const detail = await loadPatientOverviewVisitDetail(fake as never, "p1", "financial-unavailable");
+
+  assert.deepEqual(detail.financial.cards, []);
+  assert.equal(
+    detail.financial.unavailable,
+    "Claims unavailable from this session · Charges unavailable from this session",
+  );
+});
+
+test("visit detail does not disguise unexpected financial-source failures as unavailable wiring", async () => {
+  const fake = new FakeFhir();
+  fake.add(encounter("financial-failure", "2026-06-30T14:00:00Z"));
+  fake.failedTypes.set("Claim", 500);
+
+  await assert.rejects(
+    loadPatientOverviewVisitDetail(fake as never, "p1", "financial-failure"),
+    /Claim unavailable/,
   );
 });
 
