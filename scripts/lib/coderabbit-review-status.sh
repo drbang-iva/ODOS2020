@@ -19,6 +19,11 @@ load_coderabbit_review_status() {
 
   while IFS=$'\t' read -r state commit_id submitted_at; do
     [[ -n "$state" ]] || continue
+    case "$state" in
+      APPROVED|CHANGES_REQUESTED|COMMENTED) ;;
+      DISMISSED) continue ;;
+      *) die "CodeRabbit review submission has unknown state '$state' for PR #$pr_number" ;;
+    esac
     normalized_commit="$(printf '%s' "$commit_id" | tr '[:upper:]' '[:lower:]')"
     [[ "$normalized_commit" =~ ^[0-9a-f]{40}$ ]] \
       || die "CodeRabbit review submission has no reliable commit SHA for PR #$pr_number"
