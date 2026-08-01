@@ -78,7 +78,7 @@ export interface ContactRecord {
 export interface CommsProvider {
   readonly name: string;
   readonly capabilities: Readonly<CommsCapabilities>;
-  sendEmail(request: SendEmailRequest): Promise<SendResult>;
+  sendEmail?(request: SendEmailRequest): Promise<SendResult>;
   sendSms?(request: SendSmsRequest): Promise<SendResult>;
   listConversations?(): Promise<ConversationSummary[]>;
   initiateCall?(request: CallRequest): Promise<{ callId: string }>;

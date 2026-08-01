@@ -4,6 +4,7 @@ import type {
   CommsProvider,
   SendEmailRequest,
   SendResult,
+  SendSmsRequest,
 } from "./comms-provider.js";
 
 export const ODOS_COMMS_OPT_OUT_EXTENSION_URL =
@@ -30,39 +31,58 @@ export function createSuppressedCommsProvider(
   return {
     name: provider.name,
     capabilities: provider.capabilities,
-    async sendEmail(request: SendEmailRequest): Promise<SendResult> {
-      const now = deps.now?.() ?? new Date();
-      const patient = await readPatient(deps.fhir, request.patientReference);
-      if (isOptedOut(patient, "email", request.campaignType)) {
-        return { outcome: "suppressed", reason: "patient-opt-out" };
-      }
-      if (
-        request.suppression.frequencyCapDays !== undefined
-        && await isFrequencyCapped(
-          deps.fhir,
-          patient,
-          request.campaignType,
-          request.suppression.frequencyCapDays,
-          now,
-          request.messageId,
-        )
-      ) {
-        return { outcome: "suppressed", reason: "frequency-cap" };
-      }
-      const timeZone = patientTimeZone(patient, deps.practiceTimeZone);
-      if (!insideQuietHoursWindow(now, timeZone)) {
-        return {
-          outcome: "rescheduled",
-          reason: "quiet-hours",
-          rescheduledAt: nextWindowOpen(now, timeZone),
-        };
-      }
-      return provider.sendEmail({
-        ...request,
-        toAddress: request.toAddress ?? patientEmail(patient, now),
-      });
-    },
+    ...(provider.sendEmail ? {
+      async sendEmail(request: SendEmailRequest): Promise<SendResult> {
+        return gatedSend(deps, request, "email", (patient, now) => provider.sendEmail!({
+          ...request,
+          toAddress: request.toAddress ?? patientEmail(patient, now),
+        }));
+      },
+    } : {}),
+    ...(provider.sendSms ? {
+      async sendSms(request: SendSmsRequest): Promise<SendResult> {
+        return gatedSend(deps, request, "sms", (patient, now) => provider.sendSms!({
+          ...request,
+          toNumber: request.toNumber ?? patientPhone(patient, now),
+        }));
+      },
+    } : {}),
   };
+}
+
+async function gatedSend(
+  deps: SuppressionGateDeps,
+  request: SendEmailRequest | SendSmsRequest,
+  channel: "email" | "sms",
+  send: (patient: Patient, now: Date) => Promise<SendResult>,
+): Promise<SendResult> {
+  const now = deps.now?.() ?? new Date();
+  const patient = await readPatient(deps.fhir, request.patientReference);
+  if (isOptedOut(patient, channel, request.campaignType)) {
+    return { outcome: "suppressed", reason: "patient-opt-out" };
+  }
+  if (
+    request.suppression.frequencyCapDays !== undefined
+    && await isFrequencyCapped(
+      deps.fhir,
+      patient,
+      request.campaignType,
+      request.suppression.frequencyCapDays,
+      now,
+      request.messageId,
+    )
+  ) {
+    return { outcome: "suppressed", reason: "frequency-cap" };
+  }
+  const timeZone = patientTimeZone(patient, deps.practiceTimeZone);
+  if (!insideQuietHoursWindow(now, timeZone)) {
+    return {
+      outcome: "rescheduled",
+      reason: "quiet-hours",
+      rescheduledAt: nextWindowOpen(now, timeZone),
+    };
+  }
+  return send(patient, now);
 }
 
 async function readPatient(fhir: SuppressionFhir, reference: string): Promise<Patient> {
@@ -199,6 +219,24 @@ function patientEmail(patient: Patient, now: Date): string {
     throw new Error(`Patient/${patient.id ?? "unknown"} has no active email in Patient.telecom.`);
   }
   return email;
+}
+
+function patientPhone(patient: Patient, now: Date): string {
+  const active = (patient.telecom ?? []).filter((point) =>
+    (point.system === "sms" || point.system === "phone")
+    && point.use !== "old"
+    && Boolean(point.value?.trim())
+    && (!point.period?.start || Date.parse(point.period.start) <= now.getTime())
+    && (!point.period?.end || Date.parse(point.period.end) > now.getTime()));
+  const phone = (
+    active.find((point) => point.system === "sms")
+    ?? active.find((point) => point.use === "mobile")
+    ?? active[0]
+  )?.value?.trim();
+  if (!phone) {
+    throw new Error(`Patient/${patient.id ?? "unknown"} has no active phone in Patient.telecom.`);
+  }
+  return phone;
 }
 
 function patientTimeZone(patient: Patient, practiceTimeZone: string): string {

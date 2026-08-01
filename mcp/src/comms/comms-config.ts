@@ -3,16 +3,25 @@ import {
   createGoogleWorkspaceAdapter,
   type GoogleWorkspaceAdapterConfig,
 } from "./adapters/google-workspace-adapter.js";
+import {
+  createTwilioAdapter,
+  type TwilioAdapterConfig,
+} from "./adapters/twilio-adapter.js";
 import type { CommsProvider } from "./comms-provider.js";
 import {
   createSuppressedCommsProvider,
   type SuppressionFhir,
 } from "./suppression-gate.js";
 
-export type CommsAdapterRegistration = {
-  provider: "google-workspace";
-  config: GoogleWorkspaceAdapterConfig;
-};
+export type CommsAdapterRegistration =
+  | {
+      provider: "google-workspace";
+      config: GoogleWorkspaceAdapterConfig;
+    }
+  | {
+      provider: "twilio";
+      config: TwilioAdapterConfig;
+    };
 
 export interface CommsDispatchDeps {
   fetchImpl?: typeof fetch;
@@ -62,6 +71,20 @@ export function createCommsDispatch(
             now: deps.now,
           });
         }
+        case "twilio": {
+          let adapter = adapters.get(registration.provider);
+          if (!adapter) {
+            adapter = createTwilioAdapter(registration.config, {
+              fetchImpl: deps.fetchImpl,
+            });
+            adapters.set(registration.provider, adapter);
+          }
+          return createSuppressedCommsProvider(adapter, {
+            fhir,
+            practiceTimeZone: deps.practiceTimeZone ?? "UTC",
+            now: deps.now,
+          });
+        }
         default: {
           throw new Error(`Unhandled communications registration: ${JSON.stringify(registration)}`);
         }
@@ -78,36 +101,70 @@ export function commsAdapterRegistrationsFromEnv(
     .map((value) => value.trim())
     .filter(Boolean);
   return providers.map((provider): CommsAdapterRegistration => {
-    if (provider !== "google-workspace") {
-      throw new Error(`Unsupported communications provider "${provider}".`);
+    switch (provider) {
+      case "google-workspace": {
+        const required = [
+          "GOOGLE_WORKSPACE_SERVICE_ACCOUNT_EMAIL",
+          "GOOGLE_WORKSPACE_PRIVATE_KEY",
+          "GOOGLE_WORKSPACE_DELEGATED_USER",
+          "GOOGLE_WORKSPACE_DOMAIN",
+          "GOOGLE_WORKSPACE_FROM_ADDRESS",
+        ] as const;
+        const missing = required.find((name) => !env[name]?.trim());
+        if (missing) {
+          throw new Error(
+            `Google Workspace communications adapter is partially configured — missing ${missing}.`,
+          );
+        }
+        const confirmed = env.GOOGLE_WORKSPACE_PLAN_CONFIRMED?.trim().toLowerCase();
+        if (confirmed && confirmed !== "true" && confirmed !== "false") {
+          throw new Error("GOOGLE_WORKSPACE_PLAN_CONFIRMED must be true or false when set.");
+        }
+        return {
+          provider,
+          config: {
+            serviceAccountEmail: env.GOOGLE_WORKSPACE_SERVICE_ACCOUNT_EMAIL!.trim(),
+            privateKey: env.GOOGLE_WORKSPACE_PRIVATE_KEY!,
+            delegatedUserEmail: env.GOOGLE_WORKSPACE_DELEGATED_USER!.trim(),
+            workspaceDomain: env.GOOGLE_WORKSPACE_DOMAIN!.trim(),
+            fromAddress: env.GOOGLE_WORKSPACE_FROM_ADDRESS!.trim(),
+            ...(confirmed ? { workspacePlanConfirmed: confirmed === "true" } : {}),
+          },
+        };
+      }
+      case "twilio": {
+        const required = ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN"] as const;
+        const missing = required.find((name) => !env[name]?.trim());
+        if (missing) {
+          throw new Error(`Twilio communications adapter is partially configured — missing ${missing}.`);
+        }
+        if (!env.TWILIO_MESSAGING_SERVICE_SID?.trim() && !env.TWILIO_FROM_NUMBER?.trim()) {
+          throw new Error(
+            "Twilio communications adapter requires TWILIO_MESSAGING_SERVICE_SID or TWILIO_FROM_NUMBER.",
+          );
+        }
+        return {
+          provider,
+          config: {
+            accountSid: env.TWILIO_ACCOUNT_SID!.trim(),
+            authToken: env.TWILIO_AUTH_TOKEN!.trim(),
+            ...(env.TWILIO_API_KEY_SID?.trim()
+              ? { apiKeySid: env.TWILIO_API_KEY_SID.trim() }
+              : {}),
+            ...(env.TWILIO_API_KEY_SECRET?.trim()
+              ? { apiKeySecret: env.TWILIO_API_KEY_SECRET.trim() }
+              : {}),
+            ...(env.TWILIO_MESSAGING_SERVICE_SID?.trim()
+              ? { messagingServiceSid: env.TWILIO_MESSAGING_SERVICE_SID.trim() }
+              : {}),
+            ...(env.TWILIO_FROM_NUMBER?.trim()
+              ? { fromNumber: env.TWILIO_FROM_NUMBER.trim() }
+              : {}),
+          },
+        };
+      }
+      default:
+        throw new Error(`Unsupported communications provider "${provider}".`);
     }
-    const required = [
-      "GOOGLE_WORKSPACE_SERVICE_ACCOUNT_EMAIL",
-      "GOOGLE_WORKSPACE_PRIVATE_KEY",
-      "GOOGLE_WORKSPACE_DELEGATED_USER",
-      "GOOGLE_WORKSPACE_DOMAIN",
-      "GOOGLE_WORKSPACE_FROM_ADDRESS",
-    ] as const;
-    const missing = required.find((name) => !env[name]?.trim());
-    if (missing) {
-      throw new Error(
-        `Google Workspace communications adapter is partially configured — missing ${missing}.`,
-      );
-    }
-    const confirmed = env.GOOGLE_WORKSPACE_PLAN_CONFIRMED?.trim().toLowerCase();
-    if (confirmed && confirmed !== "true" && confirmed !== "false") {
-      throw new Error("GOOGLE_WORKSPACE_PLAN_CONFIRMED must be true or false when set.");
-    }
-    return {
-      provider,
-      config: {
-        serviceAccountEmail: env.GOOGLE_WORKSPACE_SERVICE_ACCOUNT_EMAIL!.trim(),
-        privateKey: env.GOOGLE_WORKSPACE_PRIVATE_KEY!,
-        delegatedUserEmail: env.GOOGLE_WORKSPACE_DELEGATED_USER!.trim(),
-        workspaceDomain: env.GOOGLE_WORKSPACE_DOMAIN!.trim(),
-        fromAddress: env.GOOGLE_WORKSPACE_FROM_ADDRESS!.trim(),
-        ...(confirmed ? { workspacePlanConfirmed: confirmed === "true" } : {}),
-      },
-    };
   });
 }

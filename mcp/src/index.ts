@@ -80,7 +80,7 @@ import {
   registerTrackedLinkRoutes,
 } from "./comms/tracked-links.js";
 import {
-  DEFAULT_APPOINTMENT_REMINDER_CAMPAIGNS,
+  appointmentReminderCampaignsFromEnv,
   createReminderEngine,
   reminderLookbackMinutes,
   reminderWorkerIntervalMs,
@@ -5652,11 +5652,13 @@ async function main(): Promise<void> {
     seed: () => protocolDefinitionStore.ensureSeed(GLAUCOMA_SUSPECT_PROTOCOL).then(() => undefined),
   });
   if (process.env.ODOS_REMINDER_ENGINE_ENABLED === "true") {
-    const provider = process.env.ODOS_REMINDER_PROVIDER ?? "google-workspace";
-    if (!commsDispatch.providers().includes(provider)) {
-      throw new Error(
-        `odos-mcp: reminder provider "${provider}" is not configured in ODOS_COMMS_PROVIDERS.`,
-      );
+    const campaigns = appointmentReminderCampaignsFromEnv(process.env);
+    for (const provider of new Set(campaigns.map((campaign) => campaign.provider))) {
+      if (!commsDispatch.providers().includes(provider)) {
+        throw new Error(
+          `odos-mcp: reminder provider "${provider}" is not configured in ODOS_COMMS_PROVIDERS.`,
+        );
+      }
     }
     startReminderWorker({
       authenticate: authenticateWithMedplum,
@@ -5666,10 +5668,7 @@ async function main(): Promise<void> {
         practiceTimeZone: process.env.ODOS_TIMEZONE ?? "UTC",
         lookbackMinutes: reminderLookbackMinutes(process.env.ODOS_REMINDER_LOOKBACK_MINUTES),
       }),
-      campaigns: DEFAULT_APPOINTMENT_REMINDER_CAMPAIGNS.map((campaign) => ({
-        ...campaign,
-        provider,
-      })),
+      campaigns,
       intervalMs: reminderWorkerIntervalMs(process.env.ODOS_REMINDER_WORKER_MS),
     });
   }
