@@ -20,6 +20,30 @@ export interface PatientOverviewMedication {
   sig?: string;
 }
 
+export interface PatientOverviewVisitDetailCard {
+  id: string;
+  kicker: string;
+  title: string;
+  detail?: string;
+  values?: Array<{ label: string; value: string }>;
+}
+
+export interface PatientOverviewVisitDetailGroup {
+  summary?: string;
+  cards: PatientOverviewVisitDetailCard[];
+  unavailable?: string;
+}
+
+export interface PatientOverviewVisitDetail {
+  encounterId: string;
+  reason?: string;
+  iop: PatientOverviewVisitDetailGroup;
+  findings: PatientOverviewVisitDetailGroup;
+  medications: PatientOverviewVisitDetailGroup;
+  plan: PatientOverviewVisitDetailGroup;
+  financial: PatientOverviewVisitDetailGroup;
+}
+
 export interface PatientOverviewPayload {
   patient: Patient;
   insurance: string[];
@@ -67,6 +91,19 @@ export async function fetchPatientOverview(
     { method: "GET" },
     fetchImpl,
     isPatientOverviewPayload,
+  );
+}
+
+export async function fetchPatientOverviewVisitDetail(
+  patientId: string,
+  encounterId: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<PatientOverviewVisitDetail> {
+  return request(
+    `/clinic/patients/${encodeURIComponent(patientId)}/overview/visits/${encodeURIComponent(encounterId)}`,
+    { method: "GET" },
+    fetchImpl,
+    isPatientOverviewVisitDetail,
   );
 }
 
@@ -130,6 +167,32 @@ function isPatientOverviewPayload(body: unknown): body is PatientOverviewPayload
 
 function isStickyNote(body: unknown): body is NonNullable<PatientOverviewPayload["stickyNote"]> {
   return isRecord(body) && typeof body.id === "string" && typeof body.text === "string";
+}
+
+function isPatientOverviewVisitDetail(body: unknown): body is PatientOverviewVisitDetail {
+  return isRecord(body)
+    && typeof body.encounterId === "string"
+    && (body.reason === undefined || typeof body.reason === "string")
+    && isVisitDetailGroup(body.iop)
+    && isVisitDetailGroup(body.findings)
+    && isVisitDetailGroup(body.medications)
+    && isVisitDetailGroup(body.plan)
+    && isVisitDetailGroup(body.financial);
+}
+
+function isVisitDetailGroup(value: unknown): value is PatientOverviewVisitDetailGroup {
+  return isRecord(value)
+    && (value.summary === undefined || typeof value.summary === "string")
+    && (value.unavailable === undefined || typeof value.unavailable === "string")
+    && Array.isArray(value.cards)
+    && value.cards.every((card) => isRecord(card)
+      && typeof card.id === "string"
+      && typeof card.kicker === "string"
+      && typeof card.title === "string"
+      && (card.detail === undefined || typeof card.detail === "string")
+      && (card.values === undefined || (Array.isArray(card.values) && card.values.every((row) =>
+        isRecord(row) && typeof row.label === "string" && typeof row.value === "string"
+      ))));
 }
 
 function isStickyNoteHistory(body: unknown): body is StickyNoteHistoryEntry[] {

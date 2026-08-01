@@ -3,7 +3,9 @@ import type { AuthenticatedStaff } from "../payments/payment-charge-handler.js";
 import { loadClinicSummary } from "./clinic-summary.js";
 import {
   loadPatientOverview,
+  loadPatientOverviewVisitDetail,
   loadPatientStickyNoteHistory,
+  PatientOverviewVisitNotFoundError,
   savePatientStickyNote,
   StickyNoteValidationError,
   type OverviewFhir,
@@ -22,8 +24,36 @@ export interface ClinicRouteDeps {
 export function registerClinicRoutes(app: Pick<Application, "get" | "post">, deps: ClinicRouteDeps): void {
   app.get("/clinic/summary", async (req, res) => handleClinicSummary(req, res, deps));
   app.get("/clinic/patients/:patientId/overview", async (req, res) => handlePatientOverview(req, res, deps));
+  app.get("/clinic/patients/:patientId/overview/visits/:encounterId", async (req, res) => handlePatientOverviewVisit(req, res, deps));
   app.get("/clinic/patients/:patientId/sticky-note/history", async (req, res) => handleStickyNoteHistory(req, res, deps));
   app.post("/clinic/patients/:patientId/sticky-note", async (req, res) => handleStickyNoteSave(req, res, deps));
+}
+
+async function handlePatientOverviewVisit(req: Request, res: Response, deps: ClinicRouteDeps): Promise<void> {
+  try {
+    await deps.authenticateService();
+    const staff = await deps.authenticate(req.header("authorization"));
+    if (!staff) {
+      res.status(401).json({ error: "Authentication required to view visit details." });
+      return;
+    }
+    const patientId = routeParam(req.params.patientId);
+    const encounterId = routeParam(req.params.encounterId);
+    if (!isFhirId(patientId) || !isFhirId(encounterId)) {
+      res.status(400).json({ error: "Patient or encounter id is invalid." });
+      return;
+    }
+    res.json(await loadPatientOverviewVisitDetail(staff.fhir, patientId, encounterId));
+  } catch (error) {
+    console.error("odos-mcp: patient overview visit detail failed:", error);
+    if (!res.headersSent) {
+      res.status(error instanceof PatientOverviewVisitNotFoundError ? 404 : 500).json({
+        error: error instanceof PatientOverviewVisitNotFoundError
+          ? error.message
+          : "Patient overview visit detail failed.",
+      });
+    }
+  }
 }
 
 async function handleClinicSummary(req: Request, res: Response, deps: ClinicRouteDeps): Promise<void> {

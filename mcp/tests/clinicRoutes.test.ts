@@ -111,7 +111,16 @@ test("patient overview routes issue filtered FHIR searches and expose native sti
   let sticky: DocumentReference | undefined;
   const versions: DocumentReference[] = [];
   const fhir = {
-    read: async () => ({ resourceType: "Patient", id: "p1", name: [{ given: ["Route"], family: "Patient" }] } satisfies Patient),
+    read: async (resourceType: Resource["resourceType"], id: string) => {
+      if (resourceType === "Encounter" && id === "missing") {
+        const error = new Error("Encounter not found") as Error & { status: number };
+        error.status = 404;
+        throw error;
+      }
+      return resourceType === "Encounter"
+        ? ({ resourceType: "Encounter", id: "e1", status: "finished", class: { code: "AMB" }, subject: { reference: "Patient/p1" } } satisfies Encounter)
+        : ({ resourceType: "Patient", id: "p1", name: [{ given: ["Route"], family: "Patient" }] } satisfies Patient);
+    },
     search: async <T extends Resource>(resourceType: T["resourceType"], params: Record<string, string> = {}): Promise<Bundle<T>> => {
       searched.push({ resourceType, params });
       const rows = resourceType === "DocumentReference" && sticky && params.identifier === `${PATIENT_STICKY_NOTE_IDENTIFIER_SYSTEM}|p1` ? [sticky as T] : [];
@@ -148,6 +157,14 @@ test("patient overview routes issue filtered FHIR searches and expose native sti
     assert.match(searched.find((row) => row.resourceType === "Encounter")?.params.type ?? "", /office-visit/);
     assert.equal((await fetch(`http://127.0.0.1:${port}/clinic/patients/p1/overview?filter=all&filter=eye-exams`, { headers })).status, 400);
     assert.equal((await fetch(`http://127.0.0.1:${port}/clinic/patients/p1/overview?diagnosisSystem=&diagnosisCode=DX`, { headers })).status, 400);
+    const visitDetail = await fetch(`http://127.0.0.1:${port}/clinic/patients/p1/overview/visits/e1`, { headers });
+    assert.equal(visitDetail.status, 200);
+    const visitDetailBody = await visitDetail.json() as Record<string, unknown>;
+    for (const key of ["encounterId", "iop", "findings", "medications", "plan", "financial"]) {
+      assert.ok(key in visitDetailBody, `visit detail includes ${key}`);
+    }
+    assert.equal((await fetch(`http://127.0.0.1:${port}/clinic/patients/p1/overview/visits/missing`, { headers })).status, 404);
+    assert.equal((await fetch(`http://127.0.0.1:${port}/clinic/patients/p1/overview/visits/not!valid`, { headers })).status, 400);
 
     const firstSave = await fetch(`http://127.0.0.1:${port}/clinic/patients/p1/sticky-note`, { method: "POST", headers, body: JSON.stringify({ text: "First route note" }) });
     assert.equal(firstSave.status, 200);
