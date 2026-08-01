@@ -1,36 +1,41 @@
 import assert from "node:assert/strict";
-import { createHmac } from "node:crypto";
 import { test } from "node:test";
+import twilio from "twilio";
 import {
   TWILIO_REQUEST_TIMEOUT_MS,
   createTwilioAdapter,
   handleTwilioInboundWebhook,
   handleTwilioStatusWebhook,
+  validateTwilioWebhook,
 } from "../src/comms/adapters/twilio-adapter.js";
 
 const ACCOUNT_SID = `AC${"1".repeat(32)}`;
+const API_KEY_SID = `SK${"4".repeat(32)}`;
 const MESSAGING_SERVICE_SID = `MG${"2".repeat(32)}`;
 const MESSAGE_SID = `SM${"3".repeat(32)}`;
 const AUTH_TOKEN = "synthetic-auth-token";
+const API_KEY_SECRET = "synthetic-api-key-secret";
+const EXTERNAL_BASE_URL = "https://practice.example";
 
-function signature(url: string, params: Record<string, string>): string {
-  const signed = Object.keys(params)
-    .sort()
-    .reduce((value, key) => `${value}${key}${params[key]}`, url);
-  return createHmac("sha1", AUTH_TOKEN).update(signed).digest("base64");
-}
-
-test("Twilio adapter sends form-encoded SMS through a Messaging Service with mandatory opt-out language", async () => {
-  const calls: Array<{ input: string; init?: RequestInit }> = [];
+test("Twilio SDK sends through a Messaging Service and owns the 30-second timeout", async () => {
+  const factoryCalls: unknown[][] = [];
+  const createCalls: Array<Record<string, unknown>> = [];
   const adapter = createTwilioAdapter({
     accountSid: ACCOUNT_SID,
     authToken: AUTH_TOKEN,
     messagingServiceSid: MESSAGING_SERVICE_SID,
   }, {
-    fetchImpl: (async (input, init) => {
-      calls.push({ input: String(input), init });
-      return Response.json({ sid: MESSAGE_SID, status: "accepted" });
-    }) as typeof fetch,
+    clientFactory(username, password, options) {
+      factoryCalls.push([username, password, options]);
+      return {
+        messages: {
+          async create(input) {
+            createCalls.push(input);
+            return { sid: MESSAGE_SID };
+          },
+        },
+      };
+    },
   });
 
   const result = await adapter.sendSms!({
@@ -42,86 +47,241 @@ test("Twilio adapter sends form-encoded SMS through a Messaging Service with man
   });
 
   assert.deepEqual(result, { outcome: "sent", providerMessageId: MESSAGE_SID });
-  assert.equal(calls.length, 1);
-  assert.equal(
-    calls[0].input,
-    `https://api.twilio.com/2010-04-01/Accounts/${ACCOUNT_SID}/Messages.json`,
-  );
-  assert.equal(calls[0].init?.method, "POST");
-  assert.equal(
-    new Headers(calls[0].init?.headers).get("authorization"),
-    `Basic ${Buffer.from(`${ACCOUNT_SID}:${AUTH_TOKEN}`).toString("base64")}`,
-  );
-  const form = new URLSearchParams(String(calls[0].init?.body));
-  assert.equal(form.get("To"), "+18645550199");
-  assert.equal(form.get("MessagingServiceSid"), MESSAGING_SERVICE_SID);
-  assert.match(form.get("Body") ?? "", /Reply STOP to unsubscribe\.$/);
+  assert.deepEqual(factoryCalls, [[
+    ACCOUNT_SID,
+    AUTH_TOKEN,
+    { accountSid: ACCOUNT_SID, timeout: TWILIO_REQUEST_TIMEOUT_MS },
+  ]]);
+  assert.deepEqual(createCalls, [{
+    to: "+18645550199",
+    body: "Reminder: appointment with Dr. Example on Aug 3 at 2 PM. Reply STOP to unsubscribe.",
+    messagingServiceSid: MESSAGING_SERVICE_SID,
+  }]);
 });
 
-test("Twilio Error 21610 is a non-retryable recipient opt-out suppression", async () => {
-  let calls = 0;
+test("Twilio SDK preserves API-key authentication and explicit from-number mode", async () => {
+  const factoryCalls: unknown[][] = [];
+  const createCalls: Array<Record<string, unknown>> = [];
+  const adapter = createTwilioAdapter({
+    accountSid: ACCOUNT_SID,
+    authToken: AUTH_TOKEN,
+    apiKeySid: API_KEY_SID,
+    apiKeySecret: API_KEY_SECRET,
+    fromNumber: "+18645550100",
+  }, {
+    clientFactory(username, password, options) {
+      factoryCalls.push([username, password, options]);
+      return {
+        messages: {
+          async create(input) {
+            createCalls.push(input);
+            return { sid: MESSAGE_SID };
+          },
+        },
+      };
+    },
+  });
+
+  await adapter.sendSms!({
+    patientReference: "Patient/synthetic-1",
+    toNumber: "+18645550199",
+    body: "Reminder tomorrow. Reply STOP to unsubscribe.",
+    campaignType: "appointment-reminder",
+    suppression: {},
+  });
+
+  assert.deepEqual(factoryCalls, [[
+    API_KEY_SID,
+    API_KEY_SECRET,
+    { accountSid: ACCOUNT_SID, timeout: TWILIO_REQUEST_TIMEOUT_MS },
+  ]]);
+  assert.deepEqual(createCalls, [{
+    to: "+18645550199",
+    body: "Reminder tomorrow. Reply STOP to unsubscribe.",
+    from: "+18645550100",
+  }]);
+});
+
+test("Twilio RestException 21610 is a non-retryable recipient opt-out suppression", async () => {
+  const optedOut = new twilio.RestException({
+    statusCode: 400,
+    body: { code: 21610, message: "Attempt to send to unsubscribed recipient" },
+  });
   const adapter = createTwilioAdapter({
     accountSid: ACCOUNT_SID,
     authToken: AUTH_TOKEN,
     fromNumber: "+18645550100",
   }, {
-    fetchImpl: (async () => {
-      calls += 1;
-      return Response.json({ code: 21610, message: "Attempt to send to unsubscribed recipient" }, {
-        status: 400,
-      });
-    }) as typeof fetch,
+    clientFactory: () => ({
+      messages: { create: async () => Promise.reject(optedOut) },
+    }),
   });
 
   const result = await adapter.sendSms!({
     patientReference: "Patient/synthetic-1",
     toNumber: "+18645550199",
-    body: "Reminder: appointment tomorrow. Reply STOP to unsubscribe.",
+    body: "Reminder tomorrow. Reply STOP to unsubscribe.",
     campaignType: "appointment-reminder",
     suppression: {},
   });
 
   assert.deepEqual(result, { outcome: "suppressed", reason: "patient-opt-out" });
-  assert.equal(calls, 1);
 });
 
-test("Twilio adapter aborts a stalled request after the bounded timeout", async (t) => {
-  t.mock.timers.enable({ apis: ["setTimeout"] });
-  let requestSignal: AbortSignal | null | undefined;
+test("non-21610 Twilio RestException is rethrown with its diagnostic code intact", async () => {
+  const rejected = new twilio.RestException({
+    statusCode: 400,
+    body: { code: 21614, message: "Invalid mobile number" },
+  });
   const adapter = createTwilioAdapter({
     accountSid: ACCOUNT_SID,
     authToken: AUTH_TOKEN,
-    messagingServiceSid: MESSAGING_SERVICE_SID,
+    fromNumber: "+18645550100",
   }, {
-    fetchImpl: (async (_input, init) => {
-      requestSignal = init?.signal;
-      return new Promise<Response>((_resolve, reject) => {
-        requestSignal?.addEventListener(
-          "abort",
-          () => reject(new DOMException("This operation was aborted", "AbortError")),
-          { once: true },
-        );
-      });
-    }) as typeof fetch,
+    clientFactory: () => ({
+      messages: { create: async () => Promise.reject(rejected) },
+    }),
   });
 
-  const request = adapter.sendSms!({
-    patientReference: "Patient/synthetic-1",
-    toNumber: "+18645550199",
-    body: "Reminder: appointment tomorrow. Reply STOP to unsubscribe.",
-    campaignType: "appointment-reminder",
-    suppression: {},
-  });
-  assert.equal(requestSignal?.aborted, false);
-
-  t.mock.timers.tick(TWILIO_REQUEST_TIMEOUT_MS);
-
-  await assert.rejects(request, /Twilio request timed out after 30 seconds/);
-  assert.equal(requestSignal?.aborted, true);
+  await assert.rejects(
+    adapter.sendSms!({
+      patientReference: "Patient/synthetic-1",
+      toNumber: "+18645550199",
+      body: "Reminder tomorrow. Reply STOP to unsubscribe.",
+      campaignType: "appointment-reminder",
+      suppression: {},
+    }),
+    (error: unknown) => error === rejected && rejected.code === 21614,
+  );
 });
 
-test("Twilio inbound opt-out webhook is trusted only after X-Twilio-Signature validation", () => {
-  const url = "https://practice.example/comms/twilio/inbound";
+test("published Twilio form signature vector validates and rejects tampering or the wrong token", () => {
+  const params = {
+    CallSid: "CA1234567890ABCDE",
+    Caller: "+14158675309",
+    Digits: "1234",
+    From: "+14158675309",
+    To: "+18005551212",
+  };
+  const request = {
+    requestTarget: "/myapp.php?foo=1&bar=2",
+    contentType: "application/x-www-form-urlencoded; charset=UTF-8",
+    params,
+    signature: "RSOYDt4T1cUTdK1PDd93/VVr8B8=",
+  };
+  const auth = {
+    accountSid: ACCOUNT_SID,
+    authToken: "12345",
+    externalBaseUrl: "https://mycompany.com",
+  };
+
+  assert.deepEqual(validateTwilioWebhook(request, auth), params);
+  assert.throws(
+    () => validateTwilioWebhook({ ...request, params: { ...params, Digits: "9999" } }, auth),
+    /signature/i,
+  );
+  assert.throws(
+    () => validateTwilioWebhook(request, { ...auth, authToken: "wrong-token" }),
+    /signature/i,
+  );
+  assert.throws(
+    () => validateTwilioWebhook(request, {
+      ...auth,
+      externalBaseUrl: "https://internal-proxy.example",
+    }),
+    /signature/i,
+  );
+});
+
+test("published Twilio JSON bodySHA256 vector validates raw body and rejects tampering", () => {
+  const rawBody = '{"property": "value", "boolean": true}';
+  const request = {
+    requestTarget: "/myapp.php?foo=1&bar=2&bodySHA256="
+      + "0a1ff7634d9ab3b95db5c9a2dfe9416e41502b283a80c7cf19632632f96e6620",
+    contentType: "application/json",
+    rawBody,
+    signature: "a9nBmqA0ju/hNViExpshrM61xv4=",
+  };
+  const auth = {
+    accountSid: ACCOUNT_SID,
+    authToken: "12345",
+    externalBaseUrl: "https://mycompany.com",
+  };
+
+  assert.deepEqual(validateTwilioWebhook(request, auth), {
+    property: "value",
+    boolean: true,
+  });
+  assert.throws(
+    () => validateTwilioWebhook({ ...request, rawBody: `${rawBody} ` }, auth),
+    /signature/i,
+  );
+});
+
+test("Twilio webhook validation fails closed on an unrecognised content type", () => {
+  assert.throws(
+    () => validateTwilioWebhook({
+      requestTarget: "/myapp.php?foo=1&bar=2",
+      contentType: "text/plain",
+      rawBody: "synthetic",
+      signature: "synthetic-signature",
+    }, {
+      accountSid: ACCOUNT_SID,
+      authToken: AUTH_TOKEN,
+      externalBaseUrl: EXTERNAL_BASE_URL,
+    }),
+    /unsupported content type/i,
+  );
+});
+
+test("Twilio webhook validation rejects untrusted URL shapes and missing JSON raw bodies", () => {
+  const formRequest = {
+    requestTarget: "/comms/twilio/inbound",
+    contentType: "application/x-www-form-urlencoded",
+    params: {},
+    signature: "synthetic-signature",
+  };
+  const auth = {
+    accountSid: ACCOUNT_SID,
+    authToken: AUTH_TOKEN,
+    externalBaseUrl: EXTERNAL_BASE_URL,
+  };
+
+  assert.throws(
+    () => validateTwilioWebhook(formRequest, {
+      ...auth,
+      externalBaseUrl: "http://practice.example",
+    }),
+    /externalBaseUrl must be an HTTPS origin/i,
+  );
+  assert.throws(
+    () => validateTwilioWebhook(formRequest, {
+      ...auth,
+      externalBaseUrl: "https://practice.example/proxy",
+    }),
+    /externalBaseUrl must be an HTTPS origin/i,
+  );
+  assert.throws(
+    () => validateTwilioWebhook({ ...formRequest, requestTarget: "relative/path" }, auth),
+    /requestTarget must be an absolute path/i,
+  );
+  assert.throws(
+    () => validateTwilioWebhook({ ...formRequest, requestTarget: "//forged.example/path" }, auth),
+    /requestTarget must be an absolute path/i,
+  );
+  assert.throws(
+    () => validateTwilioWebhook({
+      requestTarget: "/comms/twilio/inbound?bodySHA256=synthetic",
+      contentType: "application/json",
+      signature: "synthetic-signature",
+    }, auth),
+    /raw body is required/i,
+  );
+});
+
+test("Twilio inbound opt-out webhook uses the configured external URL before reading fields", () => {
+  const requestTarget = "/comms/twilio/inbound";
+  const url = `${EXTERNAL_BASE_URL}${requestTarget}`;
   const params = {
     AccountSid: ACCOUNT_SID,
     MessageSid: MESSAGE_SID,
@@ -131,10 +291,11 @@ test("Twilio inbound opt-out webhook is trusted only after X-Twilio-Signature va
     OptOutType: "STOP",
   };
   const event = handleTwilioInboundWebhook({
-    url,
+    requestTarget,
+    contentType: "application/x-www-form-urlencoded",
     params,
-    signature: signature(url, params),
-  }, { accountSid: ACCOUNT_SID, authToken: AUTH_TOKEN });
+    signature: twilio.getExpectedTwilioSignature(AUTH_TOKEN, url, params),
+  }, { accountSid: ACCOUNT_SID, authToken: AUTH_TOKEN, externalBaseUrl: EXTERNAL_BASE_URL });
 
   assert.deepEqual(event, {
     accountSid: ACCOUNT_SID,
@@ -144,17 +305,11 @@ test("Twilio inbound opt-out webhook is trusted only after X-Twilio-Signature va
     body: "STOP",
     optOutType: "STOP",
   });
-  assert.throws(
-    () => handleTwilioInboundWebhook({ url, params, signature: "invalid" }, {
-      accountSid: ACCOUNT_SID,
-      authToken: AUTH_TOKEN,
-    }),
-    /signature/i,
-  );
 });
 
-test("Twilio status webhook validates X-Twilio-Signature and recognizes asynchronous 21610", () => {
-  const url = "https://practice.example/comms/twilio/status";
+test("Twilio status webhook recognizes asynchronous 21610 after SDK validation", () => {
+  const requestTarget = "/comms/twilio/status";
+  const url = `${EXTERNAL_BASE_URL}${requestTarget}`;
   const params = {
     AccountSid: ACCOUNT_SID,
     MessageSid: MESSAGE_SID,
@@ -162,17 +317,11 @@ test("Twilio status webhook validates X-Twilio-Signature and recognizes asynchro
     ErrorCode: "21610",
   };
   const event = handleTwilioStatusWebhook({
-    url,
+    requestTarget,
+    contentType: "application/x-www-form-urlencoded",
     params,
-    signature: signature(url, params),
-  }, { accountSid: ACCOUNT_SID, authToken: AUTH_TOKEN });
+    signature: twilio.getExpectedTwilioSignature(AUTH_TOKEN, url, params),
+  }, { accountSid: ACCOUNT_SID, authToken: AUTH_TOKEN, externalBaseUrl: EXTERNAL_BASE_URL });
 
   assert.equal(event.recipientOptedOut, true);
-  assert.throws(
-    () => handleTwilioStatusWebhook({ url, params, signature: "invalid" }, {
-      accountSid: ACCOUNT_SID,
-      authToken: AUTH_TOKEN,
-    }),
-    /signature/i,
-  );
 });
