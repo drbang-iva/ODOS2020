@@ -14,7 +14,7 @@ export interface OdosSearchPickerProps<T> {
   placeholder: string;
   search: (query: string, signal: AbortSignal) => Promise<OdosSearchPickerOption<T>[]>;
   onSelect: (option: OdosSearchPickerOption<T>) => void;
-  onClear: () => void;
+  onClear: (nextQuery: string) => void;
   onCreate?: (name: string) => Promise<OdosSearchPickerOption<T>>;
   createLabel?: string;
   searchDelayMs?: number;
@@ -65,9 +65,8 @@ export function OdosSearchPicker<T>({
   }, []);
 
   useEffect(() => {
-    if (!editing || value) {
+    if (!editing) {
       setQuery(selectedLabel ?? "");
-      setEditing(false);
     }
   }, [editing, selectedLabel, value]);
 
@@ -147,7 +146,7 @@ export function OdosSearchPicker<T>({
     onCreate
     && trimmedQuery.length >= 2
     && settledQuery === trimmedQuery
-    && !value
+    && (!value || trimmedQuery !== selectedLabel?.trim())
     && !hasExactMatch,
   );
   const showResults = !disabled && editing
@@ -179,12 +178,13 @@ export function OdosSearchPicker<T>({
         autoFocus={autoFocus}
         ref={inputRef}
         onChange={(event) => {
+          const nextQuery = event.target.value;
           setEditing(true);
-          setQuery(event.target.value);
+          setQuery(nextQuery);
           setOptions([]);
           setSettledQuery("");
           setActiveIndex(0);
-          if (value) onClear();
+          if (value) onClear(nextQuery);
         }}
         onKeyDown={(event) => {
           if (event.key === "ArrowDown" && options.length) {
