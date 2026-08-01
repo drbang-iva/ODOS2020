@@ -1,4 +1,9 @@
-import type { CodeableConcept, MedicationStatement, Reference } from "@medplum/fhirtypes";
+import type {
+  CodeableConcept,
+  Identifier,
+  MedicationStatement,
+  Reference,
+} from "@medplum/fhirtypes";
 
 export const MEDICATION_STATEMENT_STATUS_CODES = [
   "active",
@@ -23,6 +28,7 @@ export interface MedicationStatementCodeInput {
 
 export interface MedicationStatementInput {
   patientReference: string;
+  identifiers?: Identifier[];
   medication: MedicationStatementCodeInput | CodeableConcept;
   status?: MedicationStatementStatusCode;
   encounterReference?: string;
@@ -42,13 +48,14 @@ export function buildMedicationStatement(
     status: input.status ?? "unknown",
     medicationCodeableConcept: medicationConcept(input.medication),
     subject: reference(input.patientReference),
+    ...(input.identifiers?.length ? { identifier: input.identifiers } : {}),
     ...(input.encounterReference
       ? { context: reference(input.encounterReference) }
       : input.episodeOfCareReference
         ? { context: reference(input.episodeOfCareReference) }
         : {}),
     ...(input.effectiveDateTime ? { effectiveDateTime: input.effectiveDateTime } : {}),
-    ...(input.effectivePeriodStart || input.effectivePeriodEnd
+    ...(!input.effectiveDateTime && (input.effectivePeriodStart || input.effectivePeriodEnd)
       ? {
           effectivePeriod: {
             ...(input.effectivePeriodStart ? { start: input.effectivePeriodStart } : {}),

@@ -15,10 +15,7 @@ import { z } from "zod";
 import type { MedplumClient } from "../fhir-client.js";
 import { searchAll } from "../fhir-search.js";
 import { buildAllergyIntolerance } from "../fhir/allergyIntolerance.js";
-import {
-  buildEncounterDiagnosisCondition,
-  buildProblemListCondition,
-} from "../fhir/condition.js";
+import { buildProblemListCondition } from "../fhir/condition.js";
 import { buildMedicationStatement } from "../fhir/medicationStatement.js";
 import { buildProcedure } from "../fhir/procedure.js";
 import { EHR_PATIENT_IDENTIFIER_SYSTEM } from "./patient-import.js";
@@ -49,6 +46,8 @@ const FHIR_CODE_SYSTEMS: Record<(typeof SOURCE_CODE_SYSTEMS)[number], string> = 
   "CPT-4": "http://www.ama-assn.org/go/cpt",
 };
 
+const EYEFINITY_IMPORT_TIME_ZONE = "America/New_York";
+
 const parsedCodeSchema = z.object({
   system: z.enum(SOURCE_CODE_SYSTEMS),
   code: z.string().trim().min(1),
@@ -56,7 +55,11 @@ const parsedCodeSchema = z.object({
 });
 
 const entryBaseSchema = z.object({
-  date: z.string().regex(/^\d{8}$/).refine(isCompactCalendarDate, "Invalid calendar date.").nullable(),
+  date: z.string()
+    .regex(/^\d{8}$/)
+    .refine(isCompactCalendarDate, "Invalid calendar date.")
+    .nullish()
+    .transform((value) => value ?? null),
   codes: z.array(parsedCodeSchema).min(1),
 });
 
@@ -163,16 +166,14 @@ export async function importLegacyCcda(input: {
   const resources = resourceCounts();
   const encounterNonMatches: LegacyCcdaImportResult["encounterNonMatches"] = [];
   const sources: SourceDocument[] = [];
+  const encounters = (await searchAll<Encounter>(input.fhir, "Encounter", {
+    patient: patientReference,
+  })).filter((encounter) => encounter.subject?.reference === patientReference);
 
   for (const document of documents) {
     const timestamp = sourceTimestamp(document.file);
     const date = compactDate(timestamp.slice(0, 8));
-    const encounterMatches = (await searchAll<Encounter>(input.fhir, "Encounter", {
-      patient: patientReference,
-    })).filter((encounter) =>
-      encounter.subject?.reference === patientReference
-      && periodIncludesDate(encounter, date)
-    );
+    const encounterMatches = encounters.filter((encounter) => periodIncludesDate(encounter, date));
     let encounterReference: string | undefined;
     if (encounterMatches.length === 1) {
       const encounter = encounterMatches[0]!;
@@ -194,22 +195,14 @@ export async function importLegacyCcda(input: {
         "Problems",
         entry.codes[0]!,
       );
-      const condition = source.encounterReference
-        ? buildEncounterDiagnosisCondition({
-            patientReference,
-            encounterReference: source.encounterReference,
-            code: coding,
-            verificationStatus: "confirmed",
-            recordedDate: source.date,
-            identifiers: [identifier],
-          })
-        : buildProblemListCondition({
-            patientReference,
-            code: coding,
-            verificationStatus: "confirmed",
-            recordedDate: source.date,
-            identifiers: [identifier],
-          });
+      const condition = buildProblemListCondition({
+        patientReference,
+        encounterReference: source.encounterReference,
+        code: coding,
+        verificationStatus: "confirmed",
+        recordedDate: source.date,
+        identifiers: [identifier],
+      });
       await writeResource(input, condition, identifier, source, resources, createdReferences);
     }
 
@@ -251,20 +244,19 @@ export async function importLegacyCcda(input: {
   }
 
   for (const medication of distinctMedications(sources)) {
-    const identifier = itemIdentifier(
+    const identifier = medicationIdentifier(
       input.ehrPatientId,
-      medication.source.timestamp,
-      "Medications",
-      medication.code,
+      medication.preferredCode,
     );
     const statement = buildMedicationStatement({
       patientReference,
-      medication: codeableConcept([medication.code]),
+      identifiers: [identifier],
+      medication: codeableConcept(medication.codes),
       status: "unknown",
       encounterReference: medication.source.encounterReference,
-      dateAsserted: medication.earliestDate,
+      effectiveDateTime: medication.earliestDate,
+      dateAsserted: medication.source.date,
     });
-    statement.identifier = [identifier];
     await writeResource(
       input,
       statement,
@@ -378,23 +370,23 @@ async function writeResource(
 }
 
 function distinctMedications(sources: readonly SourceDocument[]): Array<{
-  code: ParsedCode;
+  codes: ParsedCode[];
+  preferredCode: ParsedCode;
   source: SourceDocument;
   earliestDate?: string;
 }> {
   const grouped = new Map<string, Array<{
-    code: ParsedCode;
     entry: ParsedEntry;
+    preferredCode: ParsedCode;
     source: SourceDocument;
   }>>();
   for (const source of sources) {
     for (const entry of source.document.sections.Medications ?? []) {
-      for (const code of entry.codes) {
-        const key = `${code.system}\u001f${code.code}`;
-        const occurrences = grouped.get(key) ?? [];
-        occurrences.push({ code, entry, source });
-        grouped.set(key, occurrences);
-      }
+      const preferredCode = medicationPreferredCode(entry.codes);
+      const key = `${preferredCode.system}\u001f${preferredCode.code}`;
+      const occurrences = grouped.get(key) ?? [];
+      occurrences.push({ entry, preferredCode, source });
+      grouped.set(key, occurrences);
     }
   }
 
@@ -403,17 +395,30 @@ function distinctMedications(sources: readonly SourceDocument[]): Array<{
       left.source.timestamp.localeCompare(right.source.timestamp)
     );
     const first = sorted[0]!;
-    const display = sorted.find((occurrence) => occurrence.code.display)?.code.display ?? null;
     const dates = occurrences
       .map((occurrence) => occurrence.entry.date)
       .filter((date): date is string => Boolean(date))
       .sort();
     return {
-      code: { ...first.code, display },
+      codes: first.entry.codes.map((code) => ({
+        ...code,
+        display: occurrences
+          .flatMap((occurrence) => occurrence.entry.codes)
+          .find((candidate) =>
+            candidate.system === code.system
+            && candidate.code === code.code
+            && candidate.display
+          )?.display ?? null,
+      })),
+      preferredCode: first.preferredCode,
       source: first.source,
       ...(dates[0] ? { earliestDate: compactDate(dates[0]) } : {}),
     };
   });
+}
+
+function medicationPreferredCode(codes: readonly ParsedCode[]): ParsedCode {
+  return codes.find((code) => code.system === "RxNorm") ?? codes[0]!;
 }
 
 function codeableConcept(codes: readonly ParsedCode[]): CodeableConcept {
@@ -443,6 +448,13 @@ function itemIdentifier(
   return { system: LEGACY_CCDA_ITEM_IDENTIFIER_SYSTEM, value };
 }
 
+function medicationIdentifier(ehrPatientId: string, code: ParsedCode): Identifier {
+  const value = createHash("sha256")
+    .update(`${ehrPatientId}|Medications|${code.system}|${code.code}`)
+    .digest("hex");
+  return { system: LEGACY_CCDA_ITEM_IDENTIFIER_SYSTEM, value };
+}
+
 function sourceTimestamp(file: string): string {
   const timestamp = /EMA_(\d{8}T\d+)/.exec(file)?.[1];
   if (!timestamp) throw new Error(`C-CDA filename has no EMA timestamp: ${file}.`);
@@ -465,9 +477,28 @@ function isCompactCalendarDate(value: string): boolean {
 }
 
 function periodIncludesDate(encounter: Encounter, date: string): boolean {
-  const start = encounter.period?.start?.slice(0, 10);
-  const end = encounter.period?.end?.slice(0, 10) ?? start;
+  const start = localCalendarDate(encounter.period?.start);
+  const end = localCalendarDate(encounter.period?.end) ?? start;
   return Boolean(start && end && start <= date && end >= date);
+}
+
+function localCalendarDate(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const instant = new Date(value);
+  if (Number.isNaN(instant.getTime())) return undefined;
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: EYEFINITY_IMPORT_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(instant);
+  const part = (type: Intl.DateTimeFormatPartTypes): string | undefined =>
+    parts.find((candidate) => candidate.type === type)?.value;
+  const year = part("year");
+  const month = part("month");
+  const day = part("day");
+  return year && month && day ? `${year}-${month}-${day}` : undefined;
 }
 
 function resourceCounts(): Record<LegacyCcdaResourceType, LegacyCcdaResourceCounts> {

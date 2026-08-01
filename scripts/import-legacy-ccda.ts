@@ -1,6 +1,7 @@
 #!/usr/bin/env tsx
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { exchangeClientCredentials } from "../data/medplum-adapters/migration-importer-adapter.js";
 import { createOperatorScriptFhirClient } from "../mcp/src/fhir-client.js";
 import {
@@ -33,8 +34,19 @@ export async function runLegacyCcdaImportCli(input: {
     fhir,
     projectId,
     ehrPatientId: input.ehrPatientId,
-    documents: JSON.parse(readFileSync(input.inputPath, "utf8")),
+    documents: readLegacyCcdaInput(input.inputPath),
   });
+}
+
+export function readLegacyCcdaInput(inputPath: string): unknown {
+  try {
+    return JSON.parse(readFileSync(inputPath, "utf8"));
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`Could not read or parse C-CDA input ${inputPath}: ${detail}`, {
+      cause: error,
+    });
+  }
 }
 
 export function formatLegacyCcdaReport(result: LegacyCcdaImportResult): string {
@@ -77,7 +89,7 @@ function positionalArguments(args: readonly string[]): {
   };
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     const result = await runLegacyCcdaImportCli({
       baseUrl: requireEnv("MEDPLUM_BASE_URL").replace(/\/$/, ""),

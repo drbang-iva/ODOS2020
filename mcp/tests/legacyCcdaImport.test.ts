@@ -21,17 +21,19 @@ import {
   LEGACY_CCDA_ITEM_IDENTIFIER_SYSTEM,
   LEGACY_CCDA_TAG_CODE,
   LEGACY_CCDA_TAG_SYSTEM,
+  legacyCcdaDocumentsSchema,
 } from "../src/legacy-import/ccda-import.js";
 import { EHR_PATIENT_IDENTIFIER_SYSTEM } from "../src/legacy-import/patient-import.js";
 import {
   formatLegacyCcdaReport,
+  readLegacyCcdaInput,
   runLegacyCcdaImportCli,
 } from "../../scripts/import-legacy-ccda.js";
 
 const FIXTURE_PATH = fileURLToPath(
   new URL("./fixtures/legacy-ccda-synthetic.json", import.meta.url),
 );
-const DOCUMENTS = JSON.parse(readFileSync(FIXTURE_PATH, "utf8")) as unknown;
+const DOCUMENTS = JSON.parse(readFileSync(FIXTURE_PATH, "utf8")) as unknown[];
 
 test("general MedicationStatement builder does not invent ophthalmic route or current assertion time", () => {
   const statement = buildMedicationStatement({
@@ -53,6 +55,19 @@ test("general MedicationStatement builder does not invent ophthalmic route or cu
   });
 });
 
+test("general MedicationStatement builder gives effectiveDateTime precedence over effectivePeriod", () => {
+  const statement = buildMedicationStatement({
+    patientReference: "Patient/patient-1",
+    medication: { system: "https://example.test/medication", code: "synthetic" },
+    effectiveDateTime: "2020-01-01",
+    effectivePeriodStart: "2019-01-01",
+    effectivePeriodEnd: "2019-12-31",
+  });
+
+  assert.equal(statement.effectiveDateTime, "2020-01-01");
+  assert.equal(statement.effectivePeriod, undefined);
+});
+
 test("C-CDA import maps source facts, links exactly one Encounter, and converges on rerun", async () => {
   const fhir = new MemoryCcdaFhir([
     patient("patient-1"),
@@ -63,8 +78,8 @@ test("C-CDA import maps source facts, links exactly one Encounter, and converges
       class: { system: "http://terminology.hl7.org/CodeSystem/v3-ActCode", code: "AMB" },
       subject: { reference: "Patient/patient-1" },
       period: {
-        start: "2021-01-31T09:00:00-05:00",
-        end: "2021-01-31T09:30:00-05:00",
+        start: "2021-02-01T00:30:00.000Z",
+        end: "2021-02-01T01:00:00.000Z",
       },
     } satisfies Encounter,
   ]);
@@ -92,6 +107,8 @@ test("C-CDA import maps source facts, links exactly one Encounter, and converges
   const conditions = fhir.ofType<Condition>("Condition");
   assert.equal(conditions.length, 2);
   const dualCoded = conditions.find((condition) => condition.encounter?.reference);
+  assert.equal(dualCoded?.category?.[0]?.coding?.[0]?.code, "problem-list-item");
+  assert.equal(dualCoded?.encounter?.reference, "Encounter/encounter-1");
   assert.deepEqual(dualCoded?.code?.coding, [
     { system: "http://snomed.info/sct", code: "SYNTHETIC-SNOMED-1" },
     {
@@ -113,13 +130,22 @@ test("C-CDA import maps source facts, links exactly one Encounter, and converges
 
   const medication = fhir.ofType<MedicationStatement>("MedicationStatement")[0]!;
   assert.equal(medication.status, "unknown");
-  assert.equal(medication.dateAsserted, "2019-12-15");
+  assert.equal(medication.effectiveDateTime, "2019-12-15");
+  assert.equal(medication.dateAsserted, "2020-01-31");
   assert.equal(medication.context, undefined);
   assert.equal(medication.dosage, undefined);
-  assert.equal(
-    medication.medicationCodeableConcept?.coding?.[0]?.display,
-    "24 HR metformin hydrochloride 500 MG Extended Release Oral Tablet",
-  );
+  assert.deepEqual(medication.medicationCodeableConcept?.coding, [
+    {
+      system: "http://snomed.info/sct",
+      code: "SYNTHETIC-SNOMED-MED-1",
+      display: "Synthetic translated medication",
+    },
+    {
+      system: "http://www.nlm.nih.gov/research/umls/rxnorm",
+      code: "860975",
+      display: "24 HR metformin hydrochloride 500 MG Extended Release Oral Tablet",
+    },
+  ]);
 
   for (const resource of [
     ...conditions,
@@ -144,6 +170,14 @@ test("C-CDA import maps source facts, links exactly one Encounter, and converges
     ],
   );
   assert.equal(first.provenanceReference, `Provenance/${provenance.id}`);
+  assert.equal(
+    fhir.searches.filter((search) => search.resourceType === "Encounter").length,
+    1,
+  );
+  assert.equal(fhir.createHeaders.length, 6);
+  assert.ok(fhir.createHeaders.every(
+    (headers) => headers?.["X-ODOS-Source"] === "scripts/import-legacy-ccda",
+  ));
 
   const second = await importLegacyCcda({
     fhir,
@@ -162,6 +196,31 @@ test("C-CDA import maps source facts, links exactly one Encounter, and converges
   assert.equal(fhir.ofType<Provenance>("Provenance").length, 1);
   assert.match(formatLegacyCcdaReport(second), /MedicationStatement created=0 already_existed=1/);
   assert.match(formatLegacyCcdaReport(second), /encounter_non_match .*matches=0/);
+
+  const subset = await importLegacyCcda({
+    fhir,
+    projectId: "project-1",
+    ehrPatientId: "synthetic-ehr-1",
+    documents: [DOCUMENTS[0]],
+    now: new Date("2026-08-01T12:02:00Z"),
+  });
+  assert.deepEqual(subset.resources.MedicationStatement, {
+    created: 0,
+    skipped: 1,
+    encounterLinked: 1,
+    encounterUnlinked: 0,
+  });
+});
+
+test("C-CDA schema normalizes an omitted entry date to null", () => {
+  const documents = structuredClone(DOCUMENTS) as Array<{
+    sections: { Problems: Array<{ date?: string | null }> };
+  }>;
+  delete documents[0]!.sections.Problems[0]!.date;
+
+  const parsed = legacyCcdaDocumentsSchema.parse(documents);
+
+  assert.equal(parsed[0]!.sections.Problems?.[0]?.date, null);
 });
 
 test("C-CDA import refuses zero or multiple Patient identifier matches before writing", async () => {
@@ -203,6 +262,17 @@ test("C-CDA CLI refuses a non-local target before authentication", async () => {
   );
 });
 
+test("C-CDA input errors name the source path", () => {
+  const missingPath = `${FIXTURE_PATH}.missing`;
+  assert.throws(
+    () => readLegacyCcdaInput(missingPath),
+    (error: unknown) =>
+      error instanceof Error
+      && error.message.includes(missingPath)
+      && error.message.includes("Could not read or parse C-CDA input"),
+  );
+});
+
 function patient(id: string): Patient {
   return {
     resourceType: "Patient",
@@ -217,6 +287,11 @@ function patient(id: string): Patient {
 class MemoryCcdaFhir {
   readonly resources: Resource[];
   readonly created: Resource[] = [];
+  readonly createHeaders: Array<Record<string, string> | undefined> = [];
+  readonly searches: Array<{
+    resourceType: Resource["resourceType"];
+    params?: FhirSearchParams;
+  }> = [];
 
   constructor(resources: Resource[]) {
     this.resources = [...resources];
@@ -226,6 +301,7 @@ class MemoryCcdaFhir {
     resourceType: T["resourceType"],
     params?: FhirSearchParams,
   ): Promise<Bundle<T>> {
+    this.searches.push({ resourceType, params });
     const query = params as Record<string, string> | undefined;
     let matches = this.resources.filter((resource) => resource.resourceType === resourceType);
     if (query?.identifier) {
@@ -249,7 +325,11 @@ class MemoryCcdaFhir {
     };
   }
 
-  async create<T extends Resource>(resource: T): Promise<T> {
+  async create<T extends Resource>(
+    resource: T,
+    extraHeaders?: Record<string, string>,
+  ): Promise<T> {
+    this.createHeaders.push(extraHeaders);
     const count = this.resources.filter(
       (candidate) => candidate.resourceType === resource.resourceType,
     ).length;

@@ -39,6 +39,11 @@
           "date": "20210131",
           "codes": [
             {
+              "system": "SNOMED-CT",
+              "code": "SYNTHETIC-SNOMED-MED-1",
+              "display": "Synthetic translated medication"
+            },
+            {
               "system": "RxNorm",
               "code": "860975",
               "display": "24 HR metformin hydrochloride 500 MG Extended Release Oral Tablet"
@@ -85,6 +90,11 @@
           "kind": "substanceAdministration",
           "date": "20191215",
           "codes": [
+            {
+              "system": "SNOMED-CT",
+              "code": "SYNTHETIC-SNOMED-MED-1",
+              "display": "Synthetic translated medication"
+            },
             {
               "system": "RxNorm",
               "code": "860975",
