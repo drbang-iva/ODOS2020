@@ -3,7 +3,8 @@ set -euo pipefail
 
 # Evaluation is deliberately split in two: eval-worktree.sh proves an exact PR
 # head; this script posts only the evaluator-supplied verdict and waits for the
-# gate. Merge remains a separate, deliberate command and is never automated.
+# issue_comment-triggered exact-head gate. Merge remains a separate, deliberate
+# command and is never automated.
 
 usage() {
   echo "Usage: scripts/eval-post-verdict.sh <PR#> <PASS|FAIL> <model> [--dry-run] [--ack-comments <N>] [--ack-no-bot-review]" >&2
@@ -80,12 +81,6 @@ if [[ "$verdict" == "FAIL" ]]; then
   expected_conclusion="failure"
 fi
 
-evaluation_workflow_run_id() {
-  gh api \
-    "repos/$repo_name/actions/workflows/evaluation-gate.yml/runs?event=pull_request_target&head_sha=$head_sha&per_page=100" \
-    --jq ".workflow_runs | map(select(any(.pull_requests[]?; .number == $pr_number))) | sort_by(.created_at) | last | .id // empty"
-}
-
 if ! inline_comment_rows="$(gh api --paginate "repos/$repo_name/pulls/$pr_number/comments" \
   --jq '.[] | [((.path // "?") | explode | map(select(. >= 32 and . != 127 and (. < 128 or . > 159))) | implode), ((.line // .original_line // "?") | tostring), (.user.login // "unknown"), (.commit_id // ""), ((((.body // "") | split("\n")[0]) // "") | explode | map(select(. >= 32 and . != 127 and (. < 128 or . > 159))) | implode)] | @tsv')"; then
   die "could not fetch inline review comments for PR #$pr_number"
@@ -129,14 +124,10 @@ Bot-review-at-head: NONE (acknowledged)"
 fi
 
 if [[ "$dry_run" == true ]]; then
-  workflow_run_id="$(evaluation_workflow_run_id)"
-  [[ "$workflow_run_id" =~ ^[1-9][0-9]*$ ]] \
-    || die "could not find an evaluation-gate pull_request_target run for $head_sha"
   echo "Dry run only; no comment will be posted."
   echo "PR: #$pr_number ($repo_name)"
   printf '%s\n' "$marker"
   echo "Would wait for check-evaluation conclusion=$expected_conclusion."
-  echo "Would then re-run evaluation-gate workflow run $workflow_run_id for $head_sha."
   if [[ "$verdict" == "PASS" ]]; then
     echo "Merge remains manual. Deliberate command:"
     echo "gh pr merge $pr_number --repo $repo_name --squash"
@@ -203,51 +194,10 @@ if [[ "$gate_confirmed" != true ]]; then
   die "timed out after ${timeout_seconds}s waiting for check-evaluation conclusion=$expected_conclusion ($latest_state)"
 fi
 
-workflow_run_id="$(evaluation_workflow_run_id)"
-[[ "$workflow_run_id" =~ ^[1-9][0-9]*$ ]] \
-  || die "could not find an evaluation-gate pull_request_target run for $head_sha"
-previous_attempt="$(gh api "repos/$repo_name/actions/runs/$workflow_run_id" --jq .run_attempt)"
-[[ "$previous_attempt" =~ ^[1-9][0-9]*$ ]] \
-  || die "could not resolve the current attempt for evaluation-gate workflow run $workflow_run_id"
-
 echo "check-evaluation reached conclusion=$expected_conclusion for $head_sha."
-echo "Re-running evaluation-gate workflow run $workflow_run_id for the PR head..."
-gh run rerun "$workflow_run_id" --repo "$repo_name" \
-  || die "failed to trigger rerun of evaluation-gate workflow run $workflow_run_id"
-
-deadline=$(( $(date +%s) + timeout_seconds ))
-latest_state="waiting for run attempt $(( previous_attempt + 1 ))"
-while [[ $(date +%s) -lt "$deadline" ]]; do
-  workflow_state="$(gh api "repos/$repo_name/actions/runs/$workflow_run_id" \
-    --jq '[.run_attempt, .status, (.conclusion // "")] | @tsv' 2>/dev/null || true)"
-  if [[ -n "$workflow_state" ]]; then
-    IFS=$'\t' read -r workflow_attempt workflow_status workflow_conclusion <<<"$workflow_state"
-    latest_state="attempt=${workflow_attempt:-unknown} status=${workflow_status:-unknown} conclusion=${workflow_conclusion:-pending}"
-    echo "evaluation-gate: $latest_state"
-    if [[ "$workflow_attempt" =~ ^[1-9][0-9]*$ ]] \
-      && [[ "$workflow_attempt" -gt "$previous_attempt" ]] \
-      && [[ "$workflow_status" == "completed" ]]; then
-      job_state="$(gh api "repos/$repo_name/actions/runs/$workflow_run_id/jobs?filter=latest" \
-        --jq '[.jobs[] | select(.name == "publish-evaluation-status")] | last | if . == null then empty else [.status, (.conclusion // "")] | @tsv end' \
-        2>/dev/null || true)"
-      if [[ -z "$job_state" ]]; then
-        sleep "$poll_seconds"
-        continue
-      fi
-      IFS=$'\t' read -r job_status job_conclusion <<<"$job_state"
-      [[ "$job_status" == "completed" && "$job_conclusion" == "$expected_conclusion" ]] \
-        || die "publish-evaluation-status finished unexpectedly (status=${job_status:-not found} conclusion=${job_conclusion:-unknown}; expected $expected_conclusion)"
-      if [[ "$verdict" == "PASS" ]]; then
-        echo "publish-evaluation-status is green for $head_sha."
-        echo "Merge remains manual. Deliberate command:"
-        echo "gh pr merge $pr_number --repo $repo_name --squash"
-      else
-        echo "FAIL verdict recorded; publish-evaluation-status confirms failure; merge blocked as intended."
-      fi
-      exit 0
-    fi
-  fi
-  sleep "$poll_seconds"
-done
-
-die "timed out after ${timeout_seconds}s waiting for evaluation-gate workflow run $workflow_run_id to finish ($latest_state)"
+if [[ "$verdict" == "PASS" ]]; then
+  echo "Merge remains manual. Deliberate command:"
+  echo "gh pr merge $pr_number --repo $repo_name --squash"
+else
+  echo "FAIL verdict recorded; merge blocked as intended."
+fi
