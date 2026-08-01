@@ -32,10 +32,14 @@ Evaluated-by: Opus 5 — PASS
 Head-SHA: 0123456789abcdef0123456789abcdef01234567
 ```
 
-Run `scripts/eval-worktree.sh <PR#> --keep` to verify the exact head and surface
-all paginated inline comments plus review submissions. Before posting a verdict,
-adjudicate every current-head inline comment, then acknowledge the displayed
-count:
+Once all other gates are green and the head is final, the PR author posts
+`@coderabbitai full review` and waits for CodeRabbit to submit a review at that
+exact head before requesting independent evaluation.
+
+The evaluator runs `scripts/eval-worktree.sh <PR#> --keep` to verify the exact
+head and surface all paginated inline comments plus review submissions. Before
+posting a verdict, adjudicate every current-head inline comment and acknowledge
+the displayed count:
 
 ```text
 scripts/eval-post-verdict.sh <PR#> PASS "Opus 5" --ack-comments <N>
@@ -43,7 +47,15 @@ scripts/eval-post-verdict.sh <PR#> PASS "Opus 5" --ack-comments <N>
 
 Stale comments remain visible but do not count toward `<N>`. When the
 current-head count is zero, omit `--ack-comments`. Use `--dry-run` to inspect
-the count and marker without requiring acknowledgment or posting anything.
+the count and marker without requiring inline-comment acknowledgment or posting
+anything.
+
+If no CodeRabbit review submission exists at the exact head,
+`eval-post-verdict.sh` blocks unless the evaluator passes
+`--ack-no-bot-review`. That flag records `Bot-review-at-head: NONE
+(acknowledged)` in the marker and is rejected when an exact-head CodeRabbit
+review does exist, so it cannot become boilerplate. `--dry-run` enforces and
+reports this bot-review acknowledgment without posting a marker.
 
 Only Fable or Opus can issue the final verdict. Any new commit requires a new
 marker for the new head. The `evaluated` label is an explicit operator override
