@@ -26,6 +26,7 @@ import {
   savePatientStickyNote,
 } from "../src/clinic/patient-overview.js";
 import { clinicalStatusConcept, conditionCategoryConcept, verificationStatusConcept } from "../src/fhir/condition.js";
+import { buildEyeBodyStructure } from "../src/fhir/ophthalmology/bodyStructure.js";
 import { ODOS_VISIT_TYPE_SYSTEM } from "../src/fhir/schedulingVisitType.js";
 
 test("patient overview projects real snapshot resources and newest-first encounter diagnoses", async () => {
@@ -173,6 +174,7 @@ test("visit detail lazily projects encounter-owned summaries, horizontal cards, 
   const visit = encounter("detail-visit", "2026-06-30T14:00:00Z");
   visit.reasonCode = [{ text: "Pressure check" }];
   visit.reasonReference = [{ display: "Pressure check" }, { display: "Referral concern" }];
+  const snomedRightEye = buildEyeBodyStructure("OD", "Patient/p1").location!;
   fake.add(visit);
   fake.add({
     resourceType: "Observation",
@@ -191,7 +193,7 @@ test("visit detail lazily projects encounter-owned summaries, horizontal cards, 
     subject: { reference: "Patient/p1" },
     encounter: { reference: "Encounter/detail-visit" },
     code: { coding: [{ code: "INTRAOCULAR_PRESSURE" }], text: "Intraocular pressure" },
-    bodySite: { coding: [{ system: "http://snomed.info/sct", code: "18944008", display: "Right eye" }] },
+    bodySite: snomedRightEye,
     valueQuantity: { value: 17, unit: "mmHg" },
   } satisfies Observation);
   fake.add({
@@ -263,7 +265,9 @@ test("visit detail lazily projects encounter-owned summaries, horizontal cards, 
 
   assert.equal(detail.reason, "Pressure check · Referral concern");
   assert.equal(detail.iop.summary, "OD 16 mmHg · Right eye 17 mmHg");
-  assert.doesNotMatch(detail.iop.summary, /18944008/);
+  const snomedRightEyeCode = snomedRightEye.coding?.[0]?.code;
+  assert.ok(snomedRightEyeCode);
+  assert.equal(detail.iop.summary.includes(snomedRightEyeCode), false);
   assert.equal(detail.medications.summary, "Recorded ophthalmic medication");
   assert.equal(detail.plan.summary, "Repeat testing");
   assert.equal(detail.financial.summary, "1 claim · 1 charge");
