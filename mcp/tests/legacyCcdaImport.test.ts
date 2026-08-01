@@ -217,6 +217,87 @@ test("C-CDA import maps source facts, links exactly one Encounter, and converges
   });
 });
 
+test("C-CDA allergy identity preserves distinct code sets and dated recurrences across reruns", async () => {
+  const documents = [{
+    file: "EMA_20210131T090000_Synthetic_ClinicalSummary_CCD_Final.ccda.xml",
+    sections: {
+      Allergies: [
+        {
+          kind: "observation",
+          date: "20210101",
+          codes: [
+            { system: "SNOMED-CT", code: "SYNTHETIC-ALLERGY-SHARED", display: null },
+            { system: "ICD-10-CM", code: "SYNTHETIC-ALLERGY-A", display: null },
+          ],
+        },
+        {
+          kind: "observation",
+          date: "20210101",
+          codes: [
+            { system: "SNOMED-CT", code: "SYNTHETIC-ALLERGY-SHARED", display: null },
+            { system: "ICD-10-CM", code: "SYNTHETIC-ALLERGY-B", display: null },
+          ],
+        },
+        {
+          kind: "observation",
+          date: "20210201",
+          codes: [
+            { system: "SNOMED-CT", code: "SYNTHETIC-ALLERGY-SHARED", display: null },
+            { system: "ICD-10-CM", code: "SYNTHETIC-ALLERGY-A", display: null },
+          ],
+        },
+      ],
+    },
+  }];
+  const fhir = new MemoryCcdaFhir([patient("patient-1")]);
+
+  const first = await importLegacyCcda({
+    fhir,
+    projectId: "project-1",
+    ehrPatientId: "synthetic-ehr-1",
+    documents,
+  });
+
+  assert.deepEqual(first.resources.AllergyIntolerance, {
+    created: 3,
+    skipped: 0,
+    encounterLinked: 0,
+    encounterUnlinked: 3,
+  });
+  assert.equal(fhir.ofType<AllergyIntolerance>("AllergyIntolerance").length, 3);
+
+  const second = await importLegacyCcda({
+    fhir,
+    projectId: "project-1",
+    ehrPatientId: "synthetic-ehr-1",
+    documents,
+  });
+
+  assert.deepEqual(second.resources.AllergyIntolerance, {
+    created: 0,
+    skipped: 3,
+    encounterLinked: 0,
+    encounterUnlinked: 3,
+  });
+
+  const reordered = structuredClone(documents);
+  for (const allergy of reordered[0]!.sections.Allergies) allergy.codes.reverse();
+  const third = await importLegacyCcda({
+    fhir,
+    projectId: "project-1",
+    ehrPatientId: "synthetic-ehr-1",
+    documents: reordered,
+  });
+
+  assert.deepEqual(third.resources.AllergyIntolerance, {
+    created: 0,
+    skipped: 3,
+    encounterLinked: 0,
+    encounterUnlinked: 3,
+  });
+  assert.equal(fhir.ofType<AllergyIntolerance>("AllergyIntolerance").length, 3);
+});
+
 test("C-CDA encounter matching treats an offset-less legacy dateTime as Eyefinity local time", async () => {
   const originalTimeZone = process.env.TZ;
   process.env.TZ = "UTC";

@@ -193,7 +193,7 @@ export async function importLegacyCcda(input: {
         input.ehrPatientId,
         source.timestamp,
         "Problems",
-        entry.codes[0]!,
+        entry,
       );
       const condition = buildProblemListCondition({
         patientReference,
@@ -211,7 +211,7 @@ export async function importLegacyCcda(input: {
         input.ehrPatientId,
         source.timestamp,
         "Allergies",
-        entry.codes[0]!,
+        entry,
       );
       const allergy = buildAllergyIntolerance({
         patientReference,
@@ -229,7 +229,7 @@ export async function importLegacyCcda(input: {
         input.ehrPatientId,
         source.timestamp,
         "Procedures",
-        entry.codes[0]!,
+        entry,
       );
       const procedure = buildProcedure({
         patientReference,
@@ -451,10 +451,28 @@ function itemIdentifier(
   ehrPatientId: string,
   documentTimestamp: string,
   section: string,
-  code: ParsedCode,
+  entry: ParsedEntry,
 ): Identifier {
+  const canonicalCodes = entry.codes
+    .map(({ system, code }) => [system, code] as const)
+    .sort(([leftSystem, leftCode], [rightSystem, rightCode]) => {
+      if (leftSystem !== rightSystem) return leftSystem < rightSystem ? -1 : 1;
+      if (leftCode !== rightCode) return leftCode < rightCode ? -1 : 1;
+      return 0;
+    })
+    .filter((code, index, codes) =>
+      index === 0
+      || code[0] !== codes[index - 1]![0]
+      || code[1] !== codes[index - 1]![1]
+    );
   const value = createHash("sha256")
-    .update(`${ehrPatientId}|${documentTimestamp}|${section}|${code.system}|${code.code}`)
+    .update(JSON.stringify([
+      ehrPatientId,
+      documentTimestamp,
+      section,
+      entry.date,
+      canonicalCodes,
+    ]))
     .digest("hex");
   return { system: LEGACY_CCDA_ITEM_IDENTIFIER_SYSTEM, value };
 }
