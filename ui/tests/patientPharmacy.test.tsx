@@ -42,7 +42,10 @@ const DIRECTORY_RESULT: DirectoryResult = {
 };
 
 test("the patient pharmacy route reaches the front-desk editor", () => {
-  const renderer = create(<RouteSwitch view={{ kind: "picker" }} path="/patient/pharmacy" />);
+  let renderer!: ReactTestRenderer;
+  act(() => {
+    renderer = create(<RouteSwitch view={{ kind: "picker" }} path="/patient/pharmacy" />);
+  });
   assert.match(JSON.stringify(renderer.toJSON()), /Pharmacy/);
   assert.match(JSON.stringify(renderer.toJSON()), /Select a patient/);
   act(() => renderer.unmount());
@@ -120,6 +123,80 @@ test("a chart-saved preferred pharmacy appears on the front-desk screen", async 
   } finally {
     if (chart) act(() => chart?.unmount());
     if (front) act(() => front?.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("typing into a populated front-desk pharmacy does not clear the saved free-text pharmacy", async () => {
+  const store = patientStore();
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = store.fetch;
+  let first: ReactTestRenderer | undefined;
+  let reopened: ReactTestRenderer | undefined;
+  try {
+    first = await renderFrontDesk();
+    await chooseFreeTextPharmacy(first, "Neighborhood Drug", "SC");
+    await click(first, "Save preferred pharmacy");
+    act(() => first?.unmount());
+    first = undefined;
+
+    reopened = await renderFrontDesk();
+    typeIntoPharmacyInput(reopened, "Preferred pharmacy ZIP or city", "Neighborhood Drugx");
+    await click(reopened, "Save preferred pharmacy");
+
+    assert.deepEqual(pharmacyFromResource(store.patient), { name: "Neighborhood Drug" });
+  } finally {
+    if (first) act(() => first?.unmount());
+    if (reopened) act(() => reopened?.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("typing into the populated chart picker does not clear the saved coded pharmacy", async () => {
+  const store = patientStore();
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = store.fetch;
+  let first: ReactTestRenderer | undefined;
+  let reopened: ReactTestRenderer | undefined;
+  try {
+    first = await renderChart();
+    act(() => chartPreferredPicker(first!).props.onChange(codedSelection(CODED_PHARMACY)));
+    await click(first, "Save preferred pharmacy");
+    const savedPharmacy = pharmacyFromResource(store.patient);
+    act(() => first?.unmount());
+    first = undefined;
+
+    reopened = await renderChart();
+    typeIntoPharmacyInput(reopened, "Preferred pharmacy ZIP or city", `${pharmacyDisplay(CODED_PHARMACY)}x`);
+    await click(reopened, "Save preferred pharmacy");
+
+    assert.deepEqual(pharmacyFromResource(store.patient), savedPharmacy);
+  } finally {
+    if (first) act(() => first?.unmount());
+    if (reopened) act(() => reopened?.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a free-text pharmacy can be saved without entering a directory state and round-trips", async () => {
+  const store = patientStore();
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = store.fetch;
+  let first: ReactTestRenderer | undefined;
+  let reopened: ReactTestRenderer | undefined;
+  try {
+    first = await renderFrontDesk();
+    await chooseFreeTextPharmacy(first, "No State Pharmacy", "");
+    await click(first, "Save preferred pharmacy");
+    assert.deepEqual(pharmacyFromResource(store.patient), { name: "No State Pharmacy" });
+    act(() => first?.unmount());
+    first = undefined;
+
+    reopened = await renderFrontDesk();
+    assert.equal(frontDeskPicker(reopened).props.pharmacy, "No State Pharmacy");
+  } finally {
+    if (first) act(() => first?.unmount());
+    if (reopened) act(() => reopened?.unmount());
     globalThis.fetch = originalFetch;
   }
 });
@@ -260,6 +337,15 @@ async function enterPharmacyQuery(
     pharmacyInput.props.onChange({ target: { value: query } });
     await new Promise<void>((resolve) => setTimeout(resolve, 300));
   });
+}
+
+function typeIntoPharmacyInput(
+  renderer: ReactTestRenderer,
+  label: string,
+  value: string,
+): void {
+  const pharmacyInput = renderer.root.findByProps({ "aria-label": label });
+  act(() => pharmacyInput.props.onChange({ target: { value } }));
 }
 
 function codedSelection(pharmacy: MedicationOrderPharmacy): PharmacySelection {

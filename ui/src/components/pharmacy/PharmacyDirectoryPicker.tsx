@@ -58,7 +58,10 @@ export function PharmacyDirectoryPicker({
   const [directorySearchType, setDirectorySearchType] =
     useState<"local-retail" | "mail-order">("local-retail");
   const searchDirectoryOptions = useMemo(() => async (query: string, signal: AbortSignal) => {
-    if (!directoryState.trim()) throw new Error("Enter the pharmacy state before searching.");
+    if (!directoryState.trim()) {
+      if (allowFreeText) return [];
+      throw new Error("Enter the pharmacy state before searching.");
+    }
     return (await searchApi.searchDirectory({
       place: query,
       state: directoryState.trim(),
@@ -69,7 +72,7 @@ export function PharmacyDirectoryPicker({
       description: directoryAddress(result),
       item: { kind: "coded", result } satisfies DirectorySelection,
     }));
-  }, [directorySearchType, directoryState, searchApi]);
+  }, [allowFreeText, directorySearchType, directoryState, searchApi]);
 
   return (
     <div>
@@ -88,7 +91,9 @@ export function PharmacyDirectoryPicker({
               item: { kind: "free-text", text } satisfies DirectorySelection,
             })
           : undefined}
-        onClear={() => onChange({ pharmacy: "" })}
+        onClear={(nextQuery) => {
+          if (!nextQuery.trim()) onChange({ pharmacy: "" });
+        }}
         onSelect={(option) => {
           if (option.item.kind === "coded") {
             const details = pharmacyFromDirectoryResult(option.item.result);
