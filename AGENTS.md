@@ -227,7 +227,9 @@ code. Fable codes → Codex evaluates. Codex codes → Fable/Opus evaluates. Cod
 (when present on the PR) is a cheap first pass, never a substitute for the model-level
 eval, never the last word on correctness-critical code. Scope: this gate fires on a
 shippable coding slice (PR-worthy diff), not brainstorming or micro-decisions.
-Nothing is "done" until an independent evaluation actually ran.
+At the final head, the author posts `@coderabbitai full review` and waits for that
+exact-head review before handing off for evaluation. Nothing is "done" until an
+independent evaluation actually ran.
 
 **Every build→evaluate handoff returns a sealed bundle, not a transcript** — summary,
 files touched, checks run + the real command output (never a bare "tests pass"),
