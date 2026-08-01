@@ -216,7 +216,15 @@ export async function loadPatientOverviewVisitDetail(
   patientId: string,
   encounterId: string,
 ): Promise<PatientOverviewVisitDetail> {
-  const encounter = await fhir.read<Encounter>("Encounter", encounterId);
+  let encounter: Encounter;
+  try {
+    encounter = await fhir.read<Encounter>("Encounter", encounterId);
+  } catch (error) {
+    if (Number((error as { status?: unknown }).status) === 404) {
+      throw new PatientOverviewVisitNotFoundError("Visit was not found for this patient.");
+    }
+    throw error;
+  }
   if (encounter.subject?.reference !== `Patient/${patientId}`) {
     throw new PatientOverviewVisitNotFoundError("Visit was not found for this patient.");
   }
