@@ -234,6 +234,51 @@ test("Twilio webhook validation fails closed on an unrecognised content type", (
   );
 });
 
+test("Twilio webhook validation rejects untrusted URL shapes and missing JSON raw bodies", () => {
+  const formRequest = {
+    requestTarget: "/comms/twilio/inbound",
+    contentType: "application/x-www-form-urlencoded",
+    params: {},
+    signature: "synthetic-signature",
+  };
+  const auth = {
+    accountSid: ACCOUNT_SID,
+    authToken: AUTH_TOKEN,
+    externalBaseUrl: EXTERNAL_BASE_URL,
+  };
+
+  assert.throws(
+    () => validateTwilioWebhook(formRequest, {
+      ...auth,
+      externalBaseUrl: "http://practice.example",
+    }),
+    /externalBaseUrl must be an HTTPS origin/i,
+  );
+  assert.throws(
+    () => validateTwilioWebhook(formRequest, {
+      ...auth,
+      externalBaseUrl: "https://practice.example/proxy",
+    }),
+    /externalBaseUrl must be an HTTPS origin/i,
+  );
+  assert.throws(
+    () => validateTwilioWebhook({ ...formRequest, requestTarget: "relative/path" }, auth),
+    /requestTarget must be an absolute path/i,
+  );
+  assert.throws(
+    () => validateTwilioWebhook({ ...formRequest, requestTarget: "//forged.example/path" }, auth),
+    /requestTarget must be an absolute path/i,
+  );
+  assert.throws(
+    () => validateTwilioWebhook({
+      requestTarget: "/comms/twilio/inbound?bodySHA256=synthetic",
+      contentType: "application/json",
+      signature: "synthetic-signature",
+    }, auth),
+    /raw body is required/i,
+  );
+});
+
 test("Twilio inbound opt-out webhook uses the configured external URL before reading fields", () => {
   const requestTarget = "/comms/twilio/inbound";
   const url = `${EXTERNAL_BASE_URL}${requestTarget}`;
