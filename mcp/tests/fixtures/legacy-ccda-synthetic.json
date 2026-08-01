@@ -1,0 +1,118 @@
+[
+  {
+    "file": "EMA_20210131T090000_Synthetic_ClinicalSummary_CCD_Final.ccda.xml",
+    "sections": {
+      "Problems": [
+        {
+          "kind": "observation",
+          "date": "20210131",
+          "codes": [
+            {
+              "system": "SNOMED-CT",
+              "code": "SYNTHETIC-SNOMED-1",
+              "display": null
+            },
+            {
+              "system": "ICD-10-CM",
+              "code": "SYNTHETIC-ICD10-1",
+              "display": "Synthetic dual-coded problem"
+            }
+          ]
+        }
+      ],
+      "Allergies": [
+        {
+          "kind": "observation",
+          "date": "20210131",
+          "codes": [
+            {
+              "system": "SNOMED-CT",
+              "code": "SYNTHETIC-SNOMED-ALLERGY-1",
+              "display": "Synthetic allergy"
+            }
+          ]
+        }
+      ],
+      "Medications": [
+        {
+          "kind": "substanceAdministration",
+          "date": "20210131",
+          "codes": [
+            {
+              "system": "SNOMED-CT",
+              "code": "SYNTHETIC-SNOMED-MED-1",
+              "display": "Synthetic translated medication"
+            },
+            {
+              "system": "RxNorm",
+              "code": "860975",
+              "display": "24 HR metformin hydrochloride 500 MG Extended Release Oral Tablet"
+            },
+            {
+              "system": "SNOMED-CT",
+              "code": "SYNTHETIC-SNOMED-MED-LATER",
+              "display": "Synthetic later-source medication translation"
+            }
+          ]
+        }
+      ],
+      "Procedures": [
+        {
+          "kind": "procedure",
+          "date": "20210131",
+          "codes": [
+            {
+              "system": "CPT-4",
+              "code": "SYNTHETIC-CPT-1",
+              "display": null
+            }
+          ]
+        }
+      ],
+      "Past Illness": [],
+      "Plan of Treatment": [],
+      "Encounters": []
+    }
+  },
+  {
+    "file": "EMA_20200131T100000_Synthetic_ClinicalSummary_CCD_Final.ccda.xml",
+    "sections": {
+      "Problems": [
+        {
+          "kind": "observation",
+          "date": null,
+          "codes": [
+            {
+              "system": "ICD-9-CM",
+              "code": "SYNTHETIC-ICD9-1",
+              "display": null
+            }
+          ]
+        }
+      ],
+      "Medications": [
+        {
+          "kind": "substanceAdministration",
+          "date": "20191215",
+          "codes": [
+            {
+              "system": "SNOMED-CT",
+              "code": "SYNTHETIC-SNOMED-MED-1",
+              "display": "Synthetic translated medication"
+            },
+            {
+              "system": "RxNorm",
+              "code": "860975",
+              "display": "24 HR metformin hydrochloride 500 MG Extended Release Oral Tablet"
+            }
+          ]
+        }
+      ],
+      "Procedures": [],
+      "Allergies": [],
+      "Past Illness": [],
+      "Plan of Treatment": [],
+      "Encounters": []
+    }
+  }
+]

@@ -53,6 +53,7 @@ export interface ConditionCodeInput {
 
 export interface ConditionBaseInput {
   patientReference: string;
+  encounterReference?: string;
   code: ConditionCodeInput | CodeableConcept;
   clinicalStatus?: ConditionClinicalStatusCode;
   verificationStatus?: ConditionVerificationStatusCode;
@@ -224,7 +225,7 @@ export function assertVerificationStatus(
 }
 
 function buildCondition(
-  input: ConditionBaseInput & { encounterReference?: string },
+  input: ConditionBaseInput,
   category: ConditionCategoryCode,
 ): Condition {
   const verificationStatus = input.verificationStatus ?? "confirmed";
@@ -242,7 +243,7 @@ function buildCondition(
     category: [conditionCategoryConcept(category)],
     code: conditionCodeConcept(input.code),
     subject: reference(input.patientReference),
-    ...(category === "encounter-diagnosis" && input.encounterReference
+    ...(input.encounterReference
       ? { encounter: reference(input.encounterReference) }
       : {}),
     ...(includeClinicalStatus

@@ -9,6 +9,7 @@ export const MIGRATION_TAG_SYSTEM = "https://odos2020.com/tags/migration";
 export const MIGRATION_TAG_CODE = "eyefinity-import";
 
 const SEARCH_READ_CREATE_UPDATE = ["search", "read", "create", "update"] as const;
+const SEARCH_READ_CREATE = ["search", "read", "create"] as const;
 
 export function buildMigrationImporterAccessPolicy(projectId?: string): AccessPolicy {
   return {
@@ -35,6 +36,15 @@ export function buildMigrationImporterAccessPolicy(projectId?: string): AccessPo
       ].map((resourceType) => ({
         resourceType,
         interaction: [...SEARCH_READ_CREATE_UPDATE],
+      })),
+      ...[
+        "Condition",
+        "AllergyIntolerance",
+        "MedicationStatement",
+        "Procedure",
+      ].map((resourceType) => ({
+        resourceType,
+        interaction: [...SEARCH_READ_CREATE],
       })),
       {
         resourceType: "Organization",

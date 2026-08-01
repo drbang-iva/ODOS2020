@@ -44,6 +44,7 @@ export interface AllergyIntoleranceInput {
   verificationStatus?: AllergyVerificationStatusCode;
   recordedDate?: string;
   recorderReference?: string;
+  encounterReference?: string;
   reaction?: AllergyReactionInput[];
 }
 
@@ -61,6 +62,7 @@ export function buildAllergyIntolerance(input: AllergyIntoleranceInput): Allergy
     verificationStatus: allergyVerificationStatusConcept(verificationStatus),
     code: input.noKnownAllergy ? noKnownAllergyConcept() : allergyCodeConcept(requiredCode(input)),
     patient: reference(input.patientReference),
+    ...(input.encounterReference ? { encounter: reference(input.encounterReference) } : {}),
     ...(input.recordedDate ? { recordedDate: input.recordedDate } : {}),
     ...(input.recorderReference ? { recorder: reference(input.recorderReference) } : {}),
     ...(input.reaction?.length
