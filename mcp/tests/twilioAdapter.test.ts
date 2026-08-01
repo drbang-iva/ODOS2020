@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { test } from "node:test";
 import {
+  TWILIO_REQUEST_TIMEOUT_MS,
   createTwilioAdapter,
   handleTwilioInboundWebhook,
   handleTwilioStatusWebhook,
@@ -82,6 +83,41 @@ test("Twilio Error 21610 is a non-retryable recipient opt-out suppression", asyn
 
   assert.deepEqual(result, { outcome: "suppressed", reason: "patient-opt-out" });
   assert.equal(calls, 1);
+});
+
+test("Twilio adapter aborts a stalled request after the bounded timeout", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  let requestSignal: AbortSignal | null | undefined;
+  const adapter = createTwilioAdapter({
+    accountSid: ACCOUNT_SID,
+    authToken: AUTH_TOKEN,
+    messagingServiceSid: MESSAGING_SERVICE_SID,
+  }, {
+    fetchImpl: (async (_input, init) => {
+      requestSignal = init?.signal;
+      return new Promise<Response>((_resolve, reject) => {
+        requestSignal?.addEventListener(
+          "abort",
+          () => reject(new DOMException("This operation was aborted", "AbortError")),
+          { once: true },
+        );
+      });
+    }) as typeof fetch,
+  });
+
+  const request = adapter.sendSms!({
+    patientReference: "Patient/synthetic-1",
+    toNumber: "+18645550199",
+    body: "Reminder: appointment tomorrow. Reply STOP to unsubscribe.",
+    campaignType: "appointment-reminder",
+    suppression: {},
+  });
+  assert.equal(requestSignal?.aborted, false);
+
+  t.mock.timers.tick(TWILIO_REQUEST_TIMEOUT_MS);
+
+  await assert.rejects(request, /Twilio request timed out after 30 seconds/);
+  assert.equal(requestSignal?.aborted, true);
 });
 
 test("Twilio inbound opt-out webhook is trusted only after X-Twilio-Signature validation", () => {

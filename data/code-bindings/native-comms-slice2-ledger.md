@@ -29,7 +29,7 @@ Element names are compiled against the installed `@medplum/fhirtypes` R4 declara
 | Artifact | Chosen value | Source 1 URL | Source 2 URL | Access date | Status |
 |---|---|---|---|---|---|
 | SMS reminder send-state | Reuse Slice 1 `Communication` records with `identifier`, `status`, `category`, `medium=sms`, `subject`, `recipient`, `about`, `payload.contentString`, `sent`, and provider-message-id extension | https://hl7.org/fhir/R4/communication.html | https://build.fhir.org/communication.html | 2026-08-01 | verified |
-| SMS destination resolution | Use an active, non-`old` `Patient.telecom` ContactPoint with `system=phone`, unless the caller supplies an explicit override; Twilio boundary then requires E.164 | https://hl7.org/fhir/R4/patient.html | https://build.fhir.org/patient.html | 2026-08-01 | verified |
+| SMS destination resolution | Unless the caller supplies an explicit override, rank active, non-`old` `Patient.telecom` ContactPoints as `system=sms`, then `use=mobile` phone, then another active phone; Twilio boundary then requires E.164 | https://hl7.org/fhir/R4/patient.html | https://build.fhir.org/patient.html | 2026-08-01 | verified |
 
 ## Local behavior and bounded omissions
 

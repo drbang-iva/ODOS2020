@@ -222,13 +222,17 @@ function patientEmail(patient: Patient, now: Date): string {
 }
 
 function patientPhone(patient: Patient, now: Date): string {
-  const phone = patient.telecom?.find((point) =>
-    point.system === "phone"
+  const active = (patient.telecom ?? []).filter((point) =>
+    (point.system === "sms" || point.system === "phone")
     && point.use !== "old"
     && Boolean(point.value?.trim())
     && (!point.period?.start || Date.parse(point.period.start) <= now.getTime())
-    && (!point.period?.end || Date.parse(point.period.end) > now.getTime()))
-    ?.value?.trim();
+    && (!point.period?.end || Date.parse(point.period.end) > now.getTime()));
+  const phone = (
+    active.find((point) => point.system === "sms")
+    ?? active.find((point) => point.use === "mobile")
+    ?? active[0]
+  )?.value?.trim();
   if (!phone) {
     throw new Error(`Patient/${patient.id ?? "unknown"} has no active phone in Patient.telecom.`);
   }

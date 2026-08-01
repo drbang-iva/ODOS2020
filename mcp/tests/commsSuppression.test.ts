@@ -50,6 +50,11 @@ function fakeProvider(sent: SendEmailRequest[]): CommsProvider {
   };
 }
 
+function sendEmail(provider: CommsProvider, request: SendEmailRequest) {
+  assert.ok(provider.sendEmail);
+  return provider.sendEmail(request);
+}
+
 function fhirFor(
   subject: Patient,
   communications: Communication[] = [],
@@ -85,7 +90,7 @@ test("PMS-side patient/channel opt-out suppresses before the provider call", asy
     now: () => new Date("2026-07-30T14:00:00.000Z"),
   });
 
-  const result = await provider.sendEmail(baseRequest());
+  const result = await sendEmail(provider, baseRequest());
   assert.deepEqual(result, { outcome: "suppressed", reason: "patient-opt-out" });
   assert.equal(sent.length, 0);
 });
@@ -138,6 +143,7 @@ test("allowed SMS resolves an active Patient.telecom phone before calling Twilio
   const subject = patient({
     telecom: [
       { system: "phone", use: "old", value: "+18645550111" },
+      { system: "phone", use: "work", value: "+18645550122" },
       { system: "phone", use: "mobile", value: "+18645550199" },
     ],
   });
@@ -175,6 +181,45 @@ test("allowed SMS resolves an active Patient.telecom phone before calling Twilio
   assert.equal(sent[0].toNumber, "+18645550199");
 });
 
+test("SMS-specific Patient.telecom takes precedence over mobile and other phones", async () => {
+  const sent: SendSmsRequest[] = [];
+  const subject = patient({
+    telecom: [
+      { system: "phone", use: "work", value: "+18645550122" },
+      { system: "phone", use: "mobile", value: "+18645550199" },
+      { system: "sms", value: "+18645550188" },
+    ],
+  });
+  const provider = createSuppressedCommsProvider({
+    name: "twilio",
+    capabilities: {
+      sms: true,
+      calls: false,
+      email: false,
+      contacts: false,
+      conversations: false,
+      reviews: false,
+    },
+    async sendSms(request) {
+      sent.push(request);
+      return { outcome: "sent", providerMessageId: "sms-1" };
+    },
+  }, {
+    fhir: fhirFor(subject),
+    practiceTimeZone: "America/New_York",
+    now: () => new Date("2026-07-30T14:00:00.000Z"),
+  });
+
+  await provider.sendSms!({
+    patientReference: "Patient/synthetic-1",
+    body: "Reminder: appointment tomorrow. Reply STOP to unsubscribe.",
+    campaignType: "appointment-reminder",
+    suppression: {},
+  });
+
+  assert.equal(sent[0].toNumber, "+18645550188");
+});
+
 test("outside quiet hours reschedules to the next patient-local 8 AM rather than sending or dropping", async () => {
   const sent: SendEmailRequest[] = [];
   const provider = createSuppressedCommsProvider(fakeProvider(sent), {
@@ -183,7 +228,7 @@ test("outside quiet hours reschedules to the next patient-local 8 AM rather than
     now: () => new Date("2026-07-30T06:00:00.000Z"),
   });
 
-  const result = await provider.sendEmail(baseRequest());
+  const result = await sendEmail(provider, baseRequest());
   assert.deepEqual(result, {
     outcome: "rescheduled",
     reason: "quiet-hours",
@@ -217,7 +262,7 @@ test("a configured campaign frequency cap suppresses a repeat inside the lookbac
     now: () => new Date("2026-07-30T14:00:00.000Z"),
   });
 
-  const result = await provider.sendEmail(baseRequest({
+  const result = await sendEmail(provider, baseRequest({
     campaignType: "review-request",
     messageId: "current-send",
     suppression: { frequencyCapDays: 90 },
@@ -265,7 +310,7 @@ test("frequency-cap evaluation follows FHIR next links before allowing a send", 
     now: () => new Date("2026-07-30T14:00:00.000Z"),
   });
 
-  const result = await provider.sendEmail(baseRequest({
+  const result = await sendEmail(provider, baseRequest({
     campaignType: "review-request",
     messageId: "current-send",
     suppression: { frequencyCapDays: 90 },
@@ -300,12 +345,12 @@ test("concurrent in-progress claims elect exactly one deterministic frequency-ca
     now: () => new Date("2026-07-30T14:00:00.000Z"),
   });
 
-  const winner = await provider.sendEmail(baseRequest({
+  const winner = await sendEmail(provider, baseRequest({
     campaignType: "review-request",
     messageId: "claim-a",
     suppression: { frequencyCapDays: 90 },
   }));
-  const loser = await provider.sendEmail(baseRequest({
+  const loser = await sendEmail(provider, baseRequest({
     campaignType: "review-request",
     messageId: "claim-b",
     suppression: { frequencyCapDays: 90 },
@@ -324,7 +369,7 @@ test("an allowed send resolves Patient.telecom email and reaches the provider", 
     now: () => new Date("2026-07-30T14:00:00.000Z"),
   });
 
-  const result = await provider.sendEmail(baseRequest());
+  const result = await sendEmail(provider, baseRequest());
   assert.equal(result.outcome, "sent");
   assert.equal(sent.length, 1);
   assert.equal(sent[0].toAddress, "patient@example.test");
@@ -347,7 +392,7 @@ test("email resolution skips a ContactPoint whose validity starts in the future"
     now: () => new Date("2026-07-30T14:00:00.000Z"),
   });
 
-  await provider.sendEmail(baseRequest());
+  await sendEmail(provider, baseRequest());
 
   assert.equal(sent[0].toAddress, "active@example.test");
 });

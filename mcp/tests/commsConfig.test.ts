@@ -103,6 +103,22 @@ test("communications env config fails closed when selected provider credentials 
   );
 });
 
+test("communications env config trims Twilio single-line secrets", () => {
+  const [registration] = commsAdapterRegistrationsFromEnv({
+    ODOS_COMMS_PROVIDERS: "twilio",
+    TWILIO_ACCOUNT_SID: `AC${"1".repeat(32)}`,
+    TWILIO_AUTH_TOKEN: " synthetic-auth-token\n",
+    TWILIO_API_KEY_SID: `SK${"2".repeat(32)}`,
+    TWILIO_API_KEY_SECRET: " synthetic-key-secret\n",
+    TWILIO_MESSAGING_SERVICE_SID: `MG${"3".repeat(32)}`,
+  });
+
+  assert.equal(registration.provider, "twilio");
+  if (registration.provider !== "twilio") throw new Error("Expected Twilio registration.");
+  assert.equal(registration.config.authToken, "synthetic-auth-token");
+  assert.equal(registration.config.apiKeySecret, "synthetic-key-secret");
+});
+
 test("communications dispatch reuses one Google adapter token cache across resolved sends", async () => {
   const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
   let tokenCalls = 0;
@@ -145,8 +161,10 @@ test("communications dispatch reuses one Google adapter token cache across resol
     suppression: {},
   };
 
-  await dispatch.getAdapter("google-workspace", fhir).sendEmail(request);
-  await dispatch.getAdapter("google-workspace", fhir).sendEmail(request);
+  const adapter = dispatch.getAdapter("google-workspace", fhir);
+  assert.ok(adapter.sendEmail);
+  await adapter.sendEmail(request);
+  await adapter.sendEmail(request);
 
   assert.equal(gmailCalls, 2);
   assert.equal(tokenCalls, 1);

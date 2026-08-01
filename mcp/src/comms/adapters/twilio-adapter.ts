@@ -30,6 +30,7 @@ import type {
 
 export const TWILIO_API_BASE_URL = "https://api.twilio.com";
 export const TWILIO_OPT_OUT_LANGUAGE = "Reply STOP to unsubscribe.";
+export const TWILIO_REQUEST_TIMEOUT_MS = 30_000;
 
 export interface TwilioAdapterConfig {
   accountSid: string;
@@ -108,28 +109,44 @@ export function createTwilioAdapter(
           ? { MessagingServiceSid: normalized.messagingServiceSid }
           : { From: normalized.fromNumber! }),
       });
-      const response = await fetchImpl(
-        `${normalized.baseUrl}/2010-04-01/Accounts/${normalized.accountSid}/Messages.json`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`,
-            "Content-Type": "application/x-www-form-urlencoded",
+      const controller = new AbortController();
+      let timedOut = false;
+      const timeout = setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+      }, TWILIO_REQUEST_TIMEOUT_MS);
+      try {
+        const response = await fetchImpl(
+          `${normalized.baseUrl}/2010-04-01/Accounts/${normalized.accountSid}/Messages.json`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`,
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: form.toString(),
+            signal: controller.signal,
           },
-          body: form.toString(),
-        },
-      );
-      const parsed = await twilioJson(response);
-      if (twilioErrorCode(parsed.code) === 21610) {
-        return { outcome: "suppressed", reason: "patient-opt-out" };
+        );
+        const parsed = await twilioJson(response);
+        if (twilioErrorCode(parsed.code) === 21610) {
+          return { outcome: "suppressed", reason: "patient-opt-out" };
+        }
+        if (!response.ok || typeof parsed.sid !== "string") {
+          const detail = typeof parsed.message === "string"
+            ? parsed.message
+            : "provider response did not include a usable error";
+          throw new Error(`Twilio SMS send failed (HTTP ${response.status}): ${detail}`);
+        }
+        return { outcome: "sent", providerMessageId: parsed.sid };
+      } catch (error) {
+        if (timedOut && error instanceof Error && error.name === "AbortError") {
+          throw new Error("Twilio request timed out after 30 seconds.");
+        }
+        throw error;
+      } finally {
+        clearTimeout(timeout);
       }
-      if (!response.ok || typeof parsed.sid !== "string") {
-        const detail = typeof parsed.message === "string"
-          ? parsed.message
-          : "provider response did not include a usable error";
-        throw new Error(`Twilio SMS send failed (HTTP ${response.status}): ${detail}`);
-      }
-      return { outcome: "sent", providerMessageId: parsed.sid };
     },
   };
 }

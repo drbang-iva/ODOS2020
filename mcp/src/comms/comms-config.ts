@@ -147,12 +147,12 @@ export function commsAdapterRegistrationsFromEnv(
           provider,
           config: {
             accountSid: env.TWILIO_ACCOUNT_SID!.trim(),
-            authToken: env.TWILIO_AUTH_TOKEN!,
+            authToken: env.TWILIO_AUTH_TOKEN!.trim(),
             ...(env.TWILIO_API_KEY_SID?.trim()
               ? { apiKeySid: env.TWILIO_API_KEY_SID.trim() }
               : {}),
             ...(env.TWILIO_API_KEY_SECRET?.trim()
-              ? { apiKeySecret: env.TWILIO_API_KEY_SECRET }
+              ? { apiKeySecret: env.TWILIO_API_KEY_SECRET.trim() }
               : {}),
             ...(env.TWILIO_MESSAGING_SERVICE_SID?.trim()
               ? { messagingServiceSid: env.TWILIO_MESSAGING_SERVICE_SID.trim() }
