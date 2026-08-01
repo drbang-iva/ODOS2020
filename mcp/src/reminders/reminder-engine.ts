@@ -45,7 +45,7 @@ export interface ReminderCampaignConfig {
   id: string;
   campaignType: string;
   provider: string;
-  channel: "email";
+  channel: "email" | "sms";
   anchor: ReminderAnchorConfig;
   offsetMinutes: number;
   subjectTemplate: string;
@@ -107,6 +107,40 @@ export const DEFAULT_APPOINTMENT_REMINDER_CAMPAIGNS: ReminderCampaignConfig[] = 
   { ...DEFAULT_TEMPLATE, id: "appointment-reminder-1d", offsetMinutes: -24 * 60 },
   { ...DEFAULT_TEMPLATE, id: "appointment-reminder-2h", offsetMinutes: -2 * 60 },
 ];
+
+export function appointmentReminderCampaignsFromEnv(
+  env: Record<string, string | undefined>,
+): ReminderCampaignConfig[] {
+  const values = (env.ODOS_REMINDER_CHANNELS ?? "email")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const configuredChannels = [...new Set(values)];
+  if (
+    configuredChannels.length === 0
+    || configuredChannels.some((channel) => channel !== "email" && channel !== "sms")
+  ) {
+    throw new Error("ODOS_REMINDER_CHANNELS must contain email, sms, or both.");
+  }
+  const channels = configuredChannels as Array<"email" | "sms">;
+  return channels.flatMap((channel) => {
+    const provider = (channel === "email"
+      ? env.ODOS_REMINDER_EMAIL_PROVIDER ?? env.ODOS_REMINDER_PROVIDER ?? "google-workspace"
+      : env.ODOS_REMINDER_SMS_PROVIDER ?? "twilio").trim();
+    if (!provider.trim()) {
+      throw new Error(`ODOS reminder ${channel} provider is required.`);
+    }
+    return DEFAULT_APPOINTMENT_REMINDER_CAMPAIGNS.map((campaign) => ({
+      ...campaign,
+      id: channel === "email" ? campaign.id : `${campaign.id}-sms`,
+      provider,
+      channel,
+      ...(channel === "sms"
+        ? { bodyTemplate: `${campaign.bodyTemplate} Reply STOP to unsubscribe.` }
+        : {}),
+    }));
+  });
+}
 
 export function scheduledAt(anchorDateTime: string, offsetMinutes: number): string {
   if (!Number.isInteger(offsetMinutes)) {
@@ -299,24 +333,13 @@ async function processHeldCommunication(
     }).filter((entry) => entry.url !== RESCHEDULED_AT_URL),
   });
   try {
-    const provider = deps.dispatch.getAdapter(campaign.provider, deps.fhir);
-    if (!provider.capabilities.email) {
-      throw new Error(`Communications provider "${provider.name}" does not support email.`);
-    }
-    const send = await provider.sendEmail({
+    const send = await dispatchReminder(deps, campaign, {
       patientReference,
       subject,
       body,
-      campaignType: campaign.campaignType,
-      campaignId: campaign.id,
       messageId: claimed.identifier?.find(
         (identifier) => identifier.system === ODOS_COMMS_SEND_IDENTIFIER_SYSTEM,
       )?.value,
-      suppression: {
-        ...(campaign.frequencyCapDays !== undefined
-          ? { frequencyCapDays: campaign.frequencyCapDays }
-          : {}),
-      },
     });
     return persistOutcome(
       deps.fhir,
@@ -533,22 +556,11 @@ async function processAnchor(
   }
 
   try {
-    const provider = deps.dispatch.getAdapter(campaign.provider, deps.fhir);
-    if (!provider.capabilities.email) {
-      throw new Error(`Communications provider "${provider.name}" does not support email.`);
-    }
-    const send = await provider.sendEmail({
+    const send = await dispatchReminder(deps, campaign, {
       patientReference,
       subject,
       body,
-      campaignType: campaign.campaignType,
-      campaignId: campaign.id,
       messageId: key,
-      suppression: {
-        ...(campaign.frequencyCapDays !== undefined
-          ? { frequencyCapDays: campaign.frequencyCapDays }
-          : {}),
-      },
     });
     return await persistOutcome(
       deps.fhir,
@@ -629,6 +641,41 @@ async function persistOutcome(
     ...(updated.id ? { communicationId: updated.id } : {}),
     detail: send.reason,
   };
+}
+
+async function dispatchReminder(
+  deps: ReminderEngineDeps,
+  campaign: ReminderCampaignConfig,
+  input: {
+    patientReference: string;
+    subject: string;
+    body: string;
+    messageId?: string;
+  },
+): Promise<SendResult> {
+  const provider = deps.dispatch.getAdapter(campaign.provider, deps.fhir);
+  const common = {
+    patientReference: input.patientReference,
+    body: input.body,
+    campaignType: campaign.campaignType,
+    campaignId: campaign.id,
+    messageId: input.messageId,
+    suppression: {
+      ...(campaign.frequencyCapDays !== undefined
+        ? { frequencyCapDays: campaign.frequencyCapDays }
+        : {}),
+    },
+  };
+  if (campaign.channel === "email") {
+    if (!provider.capabilities.email || !provider.sendEmail) {
+      throw new Error(`Communications provider "${provider.name}" does not support email.`);
+    }
+    return provider.sendEmail({ ...common, subject: input.subject });
+  }
+  if (!provider.capabilities.sms || !provider.sendSms) {
+    throw new Error(`Communications provider "${provider.name}" does not support SMS.`);
+  }
+  return provider.sendSms(common);
 }
 
 function communicationCandidate(input: {
@@ -807,8 +854,8 @@ function validateCampaign(campaign: ReminderCampaignConfig): void {
   if (!campaign.id.trim() || !campaign.campaignType.trim() || !campaign.provider.trim()) {
     throw new Error("Reminder campaign id, campaignType, and provider are required.");
   }
-  if (campaign.channel !== "email") {
-    throw new Error(`Reminder channel "${campaign.channel}" is not implemented in Slice 1.`);
+  if (campaign.channel !== "email" && campaign.channel !== "sms") {
+    throw new Error(`Reminder channel "${campaign.channel}" is not supported.`);
   }
   if (!Number.isInteger(campaign.offsetMinutes)) {
     throw new Error("Reminder offsetMinutes must be a signed integer.");

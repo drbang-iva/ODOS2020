@@ -4,6 +4,7 @@ import type { Bundle, Communication, Patient, Resource } from "@medplum/fhirtype
 import type {
   CommsProvider,
   SendEmailRequest,
+  SendSmsRequest,
 } from "../src/comms/comms-provider.js";
 import type { FhirSearchParams } from "../src/fhir-client.js";
 import {
@@ -87,6 +88,91 @@ test("PMS-side patient/channel opt-out suppresses before the provider call", asy
   const result = await provider.sendEmail(baseRequest());
   assert.deepEqual(result, { outcome: "suppressed", reason: "patient-opt-out" });
   assert.equal(sent.length, 0);
+});
+
+test("PMS-side SMS opt-out blocks a send before resolving or calling Twilio", async () => {
+  const sent: SendSmsRequest[] = [];
+  const optedOut = patient({
+    telecom: [{ system: "phone", value: "+18645550199" }],
+    extension: [{
+      url: ODOS_COMMS_OPT_OUT_EXTENSION_URL,
+      extension: [{ url: "channel", valueCode: "sms" }],
+    }],
+  });
+  const provider = createSuppressedCommsProvider({
+    name: "twilio",
+    capabilities: {
+      sms: true,
+      calls: false,
+      email: false,
+      contacts: false,
+      conversations: false,
+      reviews: false,
+    },
+    async sendEmail() {
+      throw new Error("Twilio does not support email.");
+    },
+    async sendSms(request) {
+      sent.push(request);
+      return { outcome: "sent", providerMessageId: "unexpected" };
+    },
+  }, {
+    fhir: fhirFor(optedOut),
+    practiceTimeZone: "America/New_York",
+    now: () => new Date("2026-07-30T14:00:00.000Z"),
+  });
+
+  const result = await provider.sendSms!({
+    patientReference: "Patient/synthetic-1",
+    body: "Reminder: appointment tomorrow. Reply STOP to unsubscribe.",
+    campaignType: "appointment-reminder",
+    suppression: {},
+  });
+
+  assert.deepEqual(result, { outcome: "suppressed", reason: "patient-opt-out" });
+  assert.equal(sent.length, 0);
+});
+
+test("allowed SMS resolves an active Patient.telecom phone before calling Twilio", async () => {
+  const sent: SendSmsRequest[] = [];
+  const subject = patient({
+    telecom: [
+      { system: "phone", use: "old", value: "+18645550111" },
+      { system: "phone", use: "mobile", value: "+18645550199" },
+    ],
+  });
+  const provider = createSuppressedCommsProvider({
+    name: "twilio",
+    capabilities: {
+      sms: true,
+      calls: false,
+      email: false,
+      contacts: false,
+      conversations: false,
+      reviews: false,
+    },
+    async sendEmail() {
+      throw new Error("Twilio does not support email.");
+    },
+    async sendSms(request) {
+      sent.push(request);
+      return { outcome: "sent", providerMessageId: "sms-1" };
+    },
+  }, {
+    fhir: fhirFor(subject),
+    practiceTimeZone: "America/New_York",
+    now: () => new Date("2026-07-30T14:00:00.000Z"),
+  });
+
+  const result = await provider.sendSms!({
+    patientReference: "Patient/synthetic-1",
+    body: "Reminder: appointment tomorrow. Reply STOP to unsubscribe.",
+    campaignType: "appointment-reminder",
+    suppression: {},
+  });
+
+  assert.equal(result.outcome, "sent");
+  assert.equal(sent[0].toNumber, "+18645550199");
 });
 
 test("outside quiet hours reschedules to the next patient-local 8 AM rather than sending or dropping", async () => {

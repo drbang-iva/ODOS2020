@@ -14,10 +14,12 @@ import type {
 import type {
   CommsProvider,
   SendEmailRequest,
+  SendSmsRequest,
 } from "../src/comms/comms-provider.js";
 import { createSuppressedCommsProvider } from "../src/comms/suppression-gate.js";
 import {
   DEFAULT_APPOINTMENT_REMINDER_CAMPAIGNS,
+  appointmentReminderCampaignsFromEnv,
   createReminderEngine,
   reminderLookbackMinutes,
   scheduledAt,
@@ -45,7 +47,10 @@ function fakeFhir(appointments: Appointment[]) {
   const subject: Patient = {
     resourceType: "Patient",
     id: "synthetic-1",
-    telecom: [{ system: "email", value: "patient@example.test" }],
+    telecom: [
+      { system: "email", value: "patient@example.test" },
+      { system: "phone", use: "mobile", value: "+18645550199" },
+    ],
   };
   const communications: Communication[] = [];
   let nextId = 1;
@@ -182,6 +187,28 @@ test("signed offset math supports reminders before and campaigns after independe
     [-7 * 24 * 60, -24 * 60, -2 * 60],
   );
   assert.equal(reminderLookbackMinutes(undefined), 24 * 60);
+});
+
+test("practice reminder configuration supports email, SMS, or both channels", () => {
+  const email = appointmentReminderCampaignsFromEnv({});
+  assert.equal(email.length, 3);
+  assert.ok(email.every((row) => row.channel === "email" && row.provider === "google-workspace"));
+
+  const sms = appointmentReminderCampaignsFromEnv({
+    ODOS_REMINDER_CHANNELS: "sms",
+    ODOS_REMINDER_SMS_PROVIDER: "twilio",
+  });
+  assert.equal(sms.length, 3);
+  assert.ok(sms.every((row) => row.channel === "sms" && row.provider === "twilio"));
+  assert.ok(sms.every((row) => /Reply STOP to unsubscribe\.$/.test(row.bodyTemplate)));
+
+  const both = appointmentReminderCampaignsFromEnv({
+    ODOS_REMINDER_CHANNELS: "email,sms",
+    ODOS_REMINDER_EMAIL_PROVIDER: "google-workspace",
+    ODOS_REMINDER_SMS_PROVIDER: "twilio",
+  });
+  assert.deepEqual(new Set(both.map((row) => row.channel)), new Set(["email", "sms"]));
+  assert.equal(new Set(both.map((row) => row.id)).size, 6);
 });
 
 test("Appointment end anchors reject the non-standard end search parameter", async () => {
@@ -364,6 +391,50 @@ test("engine reads Appointment anchors, dispatches both signed directions throug
   assert.deepEqual(second.map((row) => row.outcome), ["already-processed", "already-processed"]);
   assert.equal(sent.length, 2);
   assert.equal(fhir.communications.length, 2);
+});
+
+test("reminder engine dispatches an SMS campaign without duplicating its anchor and offset path", async () => {
+  const fhir = fakeFhir([
+    appointment("sms-before", "2026-07-31T14:00:00.000Z", "2026-07-31T14:30:00.000Z"),
+  ]);
+  const sent: SendSmsRequest[] = [];
+  const provider: CommsProvider = {
+    name: "twilio",
+    capabilities: {
+      sms: true,
+      calls: false,
+      email: false,
+      contacts: false,
+      conversations: false,
+      reviews: false,
+    },
+    async sendEmail() {
+      throw new Error("Twilio does not support email.");
+    },
+    async sendSms(request) {
+      sent.push(request);
+      return { outcome: "sent", providerMessageId: "sms-reminder-1" };
+    },
+  };
+  const engine = createReminderEngine({
+    fhir,
+    dispatch: dispatchFor(provider, fhir),
+    now: () => new Date(NOW),
+    practiceTimeZone: "America/New_York",
+  });
+
+  const smsCampaign: ReminderCampaignConfig = {
+    ...campaign("day-before-sms", "start", -24 * 60),
+    channel: "sms",
+    bodyTemplate:
+      "Reminder: appointment with {{provider}} at {{appointmentDateTime}}. Reply STOP to unsubscribe.",
+  };
+  const result = await engine.run([smsCampaign]);
+
+  assert.deepEqual(result.map((row) => row.outcome), ["sent"]);
+  assert.equal(sent.length, 1);
+  assert.match(sent[0].body, /Reply STOP to unsubscribe\.$/);
+  assert.equal(fhir.communications[0].medium?.[0].coding?.[0].code, "sms");
 });
 
 test("an outside-hours Communication held by the gate is claimed and sent at the persisted next-window opening", async () => {
