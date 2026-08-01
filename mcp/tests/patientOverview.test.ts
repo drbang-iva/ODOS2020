@@ -25,7 +25,13 @@ import {
   loadPatientStickyNoteHistory,
   savePatientStickyNote,
 } from "../src/clinic/patient-overview.js";
-import { clinicalStatusConcept, conditionCategoryConcept, verificationStatusConcept } from "../src/fhir/condition.js";
+import {
+  clinicalStatusConcept,
+  conditionCategoryConcept,
+  FHIR_CONDITION_CATEGORY_CODE_SYSTEM,
+  FHIR_CONDITION_VERIFICATION_STATUS_CODE_SYSTEM,
+  verificationStatusConcept,
+} from "../src/fhir/condition.js";
 import { buildEyeBodyStructure } from "../src/fhir/ophthalmology/bodyStructure.js";
 import { ODOS_VISIT_TYPE_SYSTEM } from "../src/fhir/schedulingVisitType.js";
 
@@ -83,7 +89,15 @@ test("visit ledger includes an encounter-linked problem-list Condition", async (
     (row) => row.resourceType === "Condition" && row.params.encounter,
   );
   assert.equal(ledgerConditionSearch?.params.encounter, "Encounter/legacy-visit");
-  assert.equal(ledgerConditionSearch?.params.category, undefined);
+  assert.equal(
+    ledgerConditionSearch?.params.category,
+    `${FHIR_CONDITION_CATEGORY_CODE_SYSTEM}|encounter-diagnosis,`
+      + `${FHIR_CONDITION_CATEGORY_CODE_SYSTEM}|problem-list-item`,
+  );
+  assert.equal(
+    ledgerConditionSearch?.params["verification-status"],
+    `${FHIR_CONDITION_VERIFICATION_STATUS_CODE_SYSTEM}|confirmed`,
+  );
 });
 
 test("visit ledger keeps native encounter-diagnosis Conditions", async () => {
@@ -404,9 +418,33 @@ test("diagnosis filtering searches Condition by code then searches only matching
   );
   assert.equal(ledgerConditionSearch?.params.code, "https://example.test/diagnosis|DX-SELECTED");
   assert.equal(ledgerConditionSearch?.params.encounter, "Encounter/match");
-  assert.equal(ledgerConditionSearch?.params.category, undefined);
+  assert.equal(
+    ledgerConditionSearch?.params.category,
+    `${FHIR_CONDITION_CATEGORY_CODE_SYSTEM}|encounter-diagnosis,`
+      + `${FHIR_CONDITION_CATEGORY_CODE_SYSTEM}|problem-list-item`,
+  );
   assert.equal(fake.searches.find((row) => row.resourceType === "Encounter")?.params._id, "match");
   assert.equal(fake.searches.find((row) => row.resourceType === "Encounter")?.params.type, undefined);
+});
+
+test("diagnosis filtering does not select a visit from an unconfirmed Condition", async () => {
+  const fake = new FakeFhir();
+  fake.add(patient());
+  fake.add(encounter("unconfirmed-visit", "2026-06-01T14:00:00Z"));
+  const unconfirmed = condition("unconfirmed-diagnosis", "Unconfirmed diagnosis", {
+    category: "encounter-diagnosis",
+    encounterId: "unconfirmed-visit",
+    code: "DX-SELECTED",
+  });
+  unconfirmed.verificationStatus = verificationStatusConcept("provisional");
+  fake.add(unconfirmed);
+
+  const overview = await loadPatientOverview(fake as never, "p1", {
+    diagnosisSystem: "https://example.test/diagnosis",
+    diagnosisCode: "DX-SELECTED",
+  });
+
+  assert.deepEqual(overview.visits, []);
 });
 
 test("sticky note create and second edit persist prior text in native DocumentReference history", async () => {
@@ -488,14 +526,22 @@ class FakeFhir {
     if (resourceType === "DocumentReference" && params.identifier) {
       rows = rows.filter((resource) => (resource as DocumentReference).identifier?.some((identifier) => `${identifier.system}|${identifier.value}` === params.identifier));
     }
-    if (resourceType === "Condition" && params.category === "encounter-diagnosis") {
-      rows = rows.filter((resource) => (resource as Condition).category?.some((category) => category.coding?.some((coding) => coding.code === "encounter-diagnosis")));
-    }
-    if (resourceType === "Condition" && params.category === "problem-list-item") {
-      rows = rows.filter((resource) => (resource as Condition).category?.some((category) => category.coding?.some((coding) => coding.code === "problem-list-item")));
+    if (resourceType === "Condition" && params.category) {
+      const requestedCategories = params.category.split(",");
+      rows = rows.filter((resource) => (resource as Condition).category?.some((category) =>
+        category.coding?.some((coding) => requestedCategories.includes(coding.code ?? "")
+          || requestedCategories.includes(`${coding.system}|${coding.code}`))
+      ));
     }
     if (resourceType === "Condition" && params.code) {
       rows = rows.filter((resource) => (resource as Condition).code?.coding?.some((coding) => `${coding.system}|${coding.code}` === params.code));
+    }
+    if (resourceType === "Condition" && params["verification-status"]) {
+      const requestedStatuses = params["verification-status"].split(",");
+      rows = rows.filter((resource) => (resource as Condition).verificationStatus?.coding?.some(
+        (coding) => requestedStatuses.includes(coding.code ?? "")
+          || requestedStatuses.includes(`${coding.system}|${coding.code}`),
+      ));
     }
     if (resourceType === "Encounter" && params._id) rows = rows.filter((resource) => params._id.split(",").includes(resource.id ?? ""));
     if (resourceType === "Encounter" && params.type) {

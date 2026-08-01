@@ -18,6 +18,7 @@ import type {
 import type { MedplumClient } from "../fhir-client.js";
 import {
   conditionEncounterId,
+  FHIR_CONDITION_CATEGORY_CODE_SYSTEM,
   FHIR_CONDITION_VERIFICATION_STATUS_CODE_SYSTEM,
   hasConditionCategory,
   referenceId,
@@ -115,6 +116,11 @@ export class StickyNoteValidationError extends Error {}
 export class PatientOverviewVisitNotFoundError extends Error {}
 
 const EYE_EXAM_VISIT_CODES = ["routine-exam-new", "routine-exam-established", "medicaid-exam"];
+const ENCOUNTER_LEDGER_CONDITION_CATEGORIES = ["encounter-diagnosis", "problem-list-item"]
+  .map((code) => `${FHIR_CONDITION_CATEGORY_CODE_SYSTEM}|${code}`)
+  .join(",");
+const CONFIRMED_CONDITION_VERIFICATION_STATUS =
+  `${FHIR_CONDITION_VERIFICATION_STATUS_CODE_SYSTEM}|confirmed`;
 
 export async function loadPatientOverview(
   fhir: OverviewFhir,
@@ -160,8 +166,9 @@ export async function loadPatientOverview(
     diagnosisCode
       ? searchAll<Condition>(fhir, "Condition", {
           patient: patientId,
+          category: ENCOUNTER_LEDGER_CONDITION_CATEGORIES,
           code: diagnosisCode,
-          "verification-status": "confirmed",
+          "verification-status": CONFIRMED_CONDITION_VERIFICATION_STATUS,
           _count: "100",
         })
       : Promise.resolve(undefined),
@@ -196,8 +203,9 @@ export async function loadPatientOverview(
   const encounterDiagnoses = encounterReferenceList.length
     ? await searchAll<Condition>(fhir, "Condition", {
         patient: patientId,
+        category: ENCOUNTER_LEDGER_CONDITION_CATEGORIES,
         encounter: encounterReferenceList.join(","),
-        "verification-status": "confirmed",
+        "verification-status": CONFIRMED_CONDITION_VERIFICATION_STATUS,
         ...(diagnosisCode ? { code: diagnosisCode } : {}),
         _count: "100",
       })
