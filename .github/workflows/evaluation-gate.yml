@@ -27,6 +27,12 @@ concurrency:
 # Fable and Opus are the only accepted evaluator models. New commits stale
 # prior markers automatically.
 #
+# Regression note (PR #291, 2026-08-01): the gate correctly rejected a PASS
+# bound to 611ffad after the live PR head had advanced to 955c6b1. Diagnose
+# against pulls.get().head.sha and that commit's check runs; evaluating the
+# parser with an older SHA can falsely make a stale marker look like a display
+# failure. Every later commit still requires a new exact-head verdict.
+#
 # This repo has enforce_admins OFF (solo repo), so a failing check here
 # does not physically block an admin merge — it makes a skipped
 # evaluation impossible to miss (a visible red check on the PR) rather
