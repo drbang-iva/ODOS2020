@@ -31,15 +31,38 @@ export async function runLegacyVisitDocumentImportCli(input: {
   });
   const projectId = await fhir.getActiveProjectId();
   const groups = await discoverLegacyVisitDocumentSources(input.archiveRoot);
-  const results: LegacyVisitDocumentPidResult[] = [];
-  for (const [pid, sources] of groups) {
-    results.push(await importLegacyVisitDocumentsForPid({
+  return importLegacyVisitDocumentGroups({
+    groups,
+    importPid: (pid, sources) => importLegacyVisitDocumentsForPid({
       fhir,
       projectId,
       pid,
       sources,
       auth: { baseUrl: input.baseUrl, accessToken },
-    }));
+    }),
+    onFailure: (pid, error) => {
+      console.error(
+        `pid=${pid} import failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    },
+  });
+}
+
+export async function importLegacyVisitDocumentGroups(input: {
+  readonly groups: ReadonlyMap<string, readonly LegacyVisitDocumentSource[]>;
+  readonly importPid: (
+    pid: string,
+    sources: readonly LegacyVisitDocumentSource[],
+  ) => Promise<LegacyVisitDocumentPidResult>;
+  readonly onFailure: (pid: string, error: unknown) => void;
+}): Promise<LegacyVisitDocumentPidResult[]> {
+  const results: LegacyVisitDocumentPidResult[] = [];
+  for (const [pid, sources] of input.groups) {
+    try {
+      results.push(await input.importPid(pid, sources));
+    } catch (error) {
+      input.onFailure(pid, error);
+    }
   }
   return results;
 }
@@ -110,13 +133,12 @@ export function formatLegacyVisitDocumentReport(
       continue;
     }
     const created = result.documents.filter((document) => document.action === "created").length;
-    const resumed = result.documents.filter((document) => document.action === "resumed").length;
     const existing = result.documents.filter(
       (document) => document.action === "already-imported"
     ).length;
     lines.push(
       `pid=${result.pid} patient=${result.patientReference} created=${created} `
-      + `resumed=${resumed} already_imported=${existing}`,
+      + `already_imported=${existing}`,
     );
     for (const nonMatch of result.encounterNonMatches) {
       lines.push(

@@ -42,7 +42,7 @@ export interface LegacyVisitDocumentSource {
 export interface LegacyVisitDocumentResult {
   readonly identifier: string;
   readonly fileName: string;
-  readonly action: "created" | "resumed" | "already-imported";
+  readonly action: "created" | "already-imported";
   readonly documentReference: string;
   readonly binaryReference?: string;
   readonly encounterReference?: string;
@@ -146,14 +146,13 @@ async function importDocument(input: {
 }): Promise<LegacyVisitDocumentResult> {
   const identifier = visitDocumentIdentifier(input.source);
   const matches = await searchAll<DocumentReference>(input.fhir, "DocumentReference", {
-    identifier: `${LEGACY_VISIT_DOCUMENT_IDENTIFIER_SYSTEM}|${identifier}`,
+    identifier: `${LEGACY_VISIT_DOCUMENT_IDENTIFIER_SYSTEM}|${identifier.replaceAll("|", "\\|")}`,
   });
   if (matches.length > 1) {
     throw new Error(`Legacy visit document identifier ${identifier} matched ${matches.length} resources.`);
   }
 
   let documentReference = matches[0];
-  let action: LegacyVisitDocumentResult["action"];
   if (documentReference) {
     if (documentReference.subject?.reference !== input.patientReference) {
       throw new Error(
@@ -172,12 +171,10 @@ async function importDocument(input: {
         ...(input.encounterReference ? { encounterReference: input.encounterReference } : {}),
       };
     }
-    if (documentReference.docStatus !== "preliminary" || attachmentUrl) {
-      throw new Error(
-        `DocumentReference/${documentReference.id ?? "(unknown)"} has an unsupported import state.`,
-      );
-    }
-    action = "resumed";
+    throw new Error(
+      `DocumentReference/${documentReference.id ?? "(unknown)"} has an incomplete or unsupported import state; `
+      + "operator cleanup is required before retry.",
+    );
   } else {
     documentReference = await input.fhir.create<DocumentReference>(buildPreliminaryDocument({
       projectId: input.projectId,
@@ -189,7 +186,6 @@ async function importDocument(input: {
     }), {
       "X-ODOS-Source": "scripts/import-legacy-visit-documents",
     });
-    action = "created";
   }
 
   if (!documentReference.id || !documentReference.meta?.versionId) {
@@ -228,7 +224,7 @@ async function importDocument(input: {
   return {
     identifier,
     fileName: input.source.fileName,
-    action,
+    action: "created",
     documentReference: documentReferenceValue,
     binaryReference: uploaded.url,
     ...(input.encounterReference ? { encounterReference: input.encounterReference } : {}),
@@ -291,7 +287,12 @@ function assertSource(pid: string, source: LegacyVisitDocumentSource): void {
   if (!source.fileName.endsWith(expectedSuffix)) {
     throw new Error(`${source.fileName} does not match document type ${source.documentType}.`);
   }
-  const compactSourceDate = sourceTimestamp(source.fileName).slice(0, 8);
+  let compactSourceDate: string;
+  try {
+    compactSourceDate = sourceTimestamp(source.fileName).slice(0, 8);
+  } catch {
+    throw new Error(`${source.fileName} has no EMA_<YYYYMMDDT...> timestamp.`);
+  }
   if (!isCompactCalendarDate(compactSourceDate)) {
     throw new Error(`${source.fileName} contains an invalid calendar date.`);
   }

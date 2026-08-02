@@ -2,14 +2,12 @@ import assert from "node:assert/strict";
 import {
   mkdirSync,
   mkdtempSync,
-  readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { fileURLToPath } from "node:url";
 import type {
   Binary,
   Bundle,
@@ -39,6 +37,7 @@ import {
 import {
   discoverLegacyVisitDocumentSources,
   formatLegacyVisitDocumentReport,
+  importLegacyVisitDocumentGroups,
 } from "../../scripts/import-legacy-visit-documents.js";
 import {
   TEST_FHIR_AUDIT_CONTEXT,
@@ -46,10 +45,6 @@ import {
 } from "./fhirAuditTestStub.js";
 
 const PDF_BYTES = new TextEncoder().encode("%PDF-1.7 synthetic visit document");
-const SOURCE_PATH = fileURLToPath(
-  new URL("../src/legacy-import/visit-document-import.ts", import.meta.url),
-);
-
 const KNOWN_GOOD_CROSSWALKS = [
   ["968", "14532559"],
   ["970", "15537266"],
@@ -119,6 +114,10 @@ test("per-visit PDFs follow preliminary, raw Binary upload/tag/hash, then final 
   assert.equal(final.content[0]?.attachment.url, "Binary/binary-1");
   assert.equal(final.content[0]?.attachment.size, PDF_BYTES.byteLength);
   assert.equal(fhir.updateHeaders[0]?.["If-Match"], 'W/"1"');
+  assert.equal(
+    fhir.searches.find((search) => search.resourceType === "DocumentReference")?.params?.identifier,
+    `${LEGACY_VISIT_DOCUMENT_IDENTIFIER_SYSTEM}|15537266\\|18581230\\|Encounter`,
+  );
   assert.equal(transport.uploadSecurityContexts[0], `DocumentReference/${final.id}`);
   assert.deepEqual(transport.taggedBinaries[0]?.meta?.tag, [{
     system: MIGRATION_TAG_SYSTEM,
@@ -146,13 +145,14 @@ test("hash mismatch leaves the anchor preliminary and never writes a Binary URL"
     patient("patient-1", "968", "14532559"),
   ], events);
   const transport = new BinaryTransport(events, true);
+  const source = visitSource("14532559", "100", "Visit");
 
   await assert.rejects(
     importLegacyVisitDocumentsForPid({
       fhir,
       projectId: "project-1",
       pid: "14532559",
-      sources: [visitSource("14532559", "100", "Visit")],
+      sources: [source],
       auth: transport.auth,
     }),
     /failed byte-size or SHA-256 verification/,
@@ -162,6 +162,19 @@ test("hash mismatch leaves the anchor preliminary and never writes a Binary URL"
   assert.equal(document.docStatus, "preliminary");
   assert.equal(document.content[0]?.attachment.url, undefined);
   assert.equal(events.includes("update:DocumentReference"), false);
+
+  const binaryCount = transport.binaryCount;
+  await assert.rejects(
+    importLegacyVisitDocumentsForPid({
+      fhir,
+      projectId: "project-1",
+      pid: "14532559",
+      sources: [source],
+      auth: transport.auth,
+    }),
+    /operator cleanup is required before retry/,
+  );
+  assert.equal(transport.binaryCount, binaryCount);
 });
 
 test("known crosswalk fixtures resolve only through the EHR identifier and retain both identifiers", async () => {
@@ -238,6 +251,10 @@ test("unmapped and ambiguous PIDs skip before Encounter search, file read, or re
     assert.equal(fhir.created.length, 0);
     assert.equal(fhir.searches.some((search) => search.resourceType === "Encounter"), false);
     assert.equal(transport.binaryCount, 0);
+    assert.deepEqual(fhir.patientSearches, [{
+      _count: "100",
+      identifier: `${EHR_PATIENT_IDENTIFIER_SYSTEM}|${scenario.pid}`,
+    }]);
     assert.match(formatLegacyVisitDocumentReport([result]), /skipped patient_matches=/);
   }
 });
@@ -258,22 +275,55 @@ test("all six known-junk source fixtures skip through a zero-result identifier s
     assert.equal(result.action, "skipped-patient", `sourceKey ${fixture.sourceKey}`);
     assert.equal(result.patientMatchCount, 0, `sourceKey ${fixture.sourceKey}`);
     assert.equal(fhir.created.length, 0, `sourceKey ${fixture.sourceKey}`);
-  }
-
-  const implementation = readFileSync(SOURCE_PATH, "utf8");
-  for (const { sourceKey } of junkFixtures) {
-    assert.equal(implementation.includes(`"${sourceKey}"`), false);
+    assert.deepEqual(fhir.patientSearches, [{
+      _count: "100",
+      identifier: `${EHR_PATIENT_IDENTIFIER_SYSTEM}|${fixture.pid}`,
+    }], `sourceKey ${fixture.sourceKey}`);
   }
 });
 
-test("patient matching has no name or DOB path", () => {
-  const implementation = readFileSync(SOURCE_PATH, "utf8");
-  assert.doesNotMatch(implementation, /\bbirthDate\b|\bbirthdate\b/);
-  assert.doesNotMatch(implementation, /searchAll<Patient>[\s\S]{0,180}\bname\s*:/);
-  assert.match(
-    implementation,
-    /identifier: `\$\{EHR_PATIENT_IDENTIFIER_SYSTEM\}\|\$\{input\.pid\}`/,
+test("missing timestamps report the PDF filename instead of a C-CDA error", async () => {
+  const source = {
+    ...visitSource("14532559", "100", "Visit"),
+    fileName: "Synthetic_Visit_Final.pdf",
+  };
+  await assert.rejects(
+    importLegacyVisitDocumentsForPid({
+      fhir: new MemoryVisitDocumentFhir([], []),
+      projectId: "project-1",
+      pid: "14532559",
+      sources: [source],
+      auth: new BinaryTransport([]).auth,
+    }),
+    /Synthetic_Visit_Final\.pdf has no EMA_<YYYYMMDDT\.\.\.> timestamp/,
   );
+});
+
+test("a failed PID is reported without suppressing later successful PID results", async () => {
+  const sources = [visitSource("14532559", "100", "Visit")];
+  const failures: Array<{ pid: string; error: unknown }> = [];
+  const results = await importLegacyVisitDocumentGroups({
+    groups: new Map([
+      ["14532559", sources],
+      ["15537266", sources],
+    ]),
+    importPid: async (pid) => {
+      if (pid === "14532559") throw new Error("synthetic hash failure");
+      return {
+        pid,
+        patientMatchCount: 0,
+        action: "skipped-patient",
+        documents: [],
+        encounterNonMatches: [],
+      };
+    },
+    onFailure: (pid, error) => failures.push({ pid, error }),
+  });
+
+  assert.equal(results.length, 1);
+  assert.equal(results[0]?.pid, "15537266");
+  assert.equal(failures[0]?.pid, "14532559");
+  assert.match(String(failures[0]?.error), /synthetic hash failure/);
 });
 
 test("archive discovery selects only Encounter Final and Visit Final PDFs", async () => {
@@ -392,7 +442,7 @@ class MemoryVisitDocumentFhir {
     if (query.identifier) {
       const separator = query.identifier.indexOf("|");
       const system = query.identifier.slice(0, separator);
-      const value = query.identifier.slice(separator + 1);
+      const value = query.identifier.slice(separator + 1).replaceAll("\\|", "|");
       matches = matches.filter((resource) =>
         ((resource as { identifier?: Identifier[] }).identifier ?? []).some(
           (identifier) => identifier.system === system && identifier.value === value,
