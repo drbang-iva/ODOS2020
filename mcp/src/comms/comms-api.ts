@@ -1,4 +1,5 @@
 import type { Communication } from "@medplum/fhirtypes";
+import { randomUUID } from "node:crypto";
 import type { Application, Request, Response } from "express";
 import { buildOdosAuditEventRow } from "../authz/odosAudit.js";
 import {
@@ -19,6 +20,7 @@ import {
   ODOS_TWILIO_CALL_IDENTIFIER_SYSTEM,
   ODOS_TWILIO_RECORDING_IDENTIFIER_SYSTEM,
   persistStaffSentSms,
+  reserveStaffSmsSend,
 } from "./comms-persistence.js";
 
 type CommsStaff = Omit<AuthenticatedStaff, "actorRole" | "roles"> & {
@@ -83,20 +85,40 @@ export function registerCommsApiRoutes(
       const body = record(req.body);
       const patientReference = requiredPatientReference(body.patientReference);
       const text = requiredText(body.body, "SMS body", 1_600);
+      const idempotencyKey = requiredIdempotencyKey(req, body);
       const provider = adapter(deps, providerFromBody(body), staff.fhir);
       if (!provider.sendSms) throw new CommsApiCapabilityError("SMS is not enabled for this communications provider.");
+      const reservation = await reserveStaffSmsSend(staff.fhir, {
+        idempotencyKey,
+        claimId: randomUUID(),
+        patientReference,
+        senderReference: staff.staffReference,
+        body: text,
+      });
+      if (reservation.state === "conflict") {
+        throw new CommsApiCapabilityError("SMS idempotency key was already used for a different request.");
+      }
+      if (reservation.state === "pending") {
+        throw new CommsApiCapabilityError("SMS outcome is pending reconciliation; do not resend with a new key.");
+      }
+      if (reservation.state === "sent") {
+        return {
+          status: 200,
+          body: { outcome: "sent", providerMessageId: reservation.providerMessageId },
+        };
+      }
       const result = await provider.sendSms({
         patientReference,
         body: text,
         campaignType: "staff-initiated",
+        messageId: idempotencyKey,
         suppression: {},
       });
       if (result.outcome === "sent") {
         await persistStaffSentSms(staff.fhir, {
+          communication: reservation.communication,
+          idempotencyKey,
           messageSid: result.providerMessageId,
-          patientReference,
-          senderReference: staff.staffReference,
-          body: text,
         }, { now: () => deps.now?.() ?? new Date().toISOString() });
       }
       return { status: 200, body: result };
@@ -327,6 +349,14 @@ function providerFromQuery(req: Request): string {
 
 function providerFromBody(body: Record<string, unknown>): string {
   return providerName(typeof body.provider === "string" ? body.provider : "twilio");
+}
+
+function requiredIdempotencyKey(req: Request, body: Record<string, unknown>): string {
+  const value = req.header("Idempotency-Key") ?? body.idempotencyKey;
+  if (typeof value !== "string" || !/^[A-Za-z0-9._:-]{8,128}$/.test(value)) {
+    throw new CommsApiValidationError("Idempotency-Key header or idempotencyKey body field is required.");
+  }
+  return value;
 }
 
 function providerName(value: string): string {

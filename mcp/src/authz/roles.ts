@@ -225,18 +225,14 @@ const OFFICE_CHANNEL_RESOURCE_RULES: OdosResourceRule[] = [
 
 const PATIENT_COMMUNICATION_COMPARTMENT_RULE: OdosResourceRule = {
   resourceType: "Communication",
-  interactions: READ_INTERACTIONS,
+  interactions: CREATE_READ_INTERACTIONS,
   scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
 };
 
 const FRONT_DESK_PATIENT_COMMUNICATION_RULE: OdosResourceRule = {
   resourceType: "Communication",
-  interactions: READ_INTERACTIONS,
-  scope: {
-    kind: "practice-search",
-    criteria:
-      "Communication?category=https://odos2020.com/fhir/CodeSystem/communication-category|patient-sms,https://odos2020.com/fhir/CodeSystem/communication-category|patient-call",
-  },
+  interactions: CREATE_READ_INTERACTIONS,
+  scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
   hiddenFields: ["payload", "note", "text"],
 };
 

@@ -27,6 +27,10 @@ export const ODOS_TWILIO_RECORDING_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/twilio-recording-sid";
 export const ODOS_TWILIO_TRANSCRIPTION_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/twilio-transcription-sid";
+export const ODOS_COMMS_STAFF_SEND_IDENTIFIER_SYSTEM =
+  "https://odos2020.com/fhir/NamingSystem/comms-staff-send";
+export const ODOS_COMMS_STAFF_SEND_CLAIM_IDENTIFIER_SYSTEM =
+  "https://odos2020.com/fhir/NamingSystem/comms-staff-send-claim";
 
 const TWILIO_CALL_METADATA_AUTHOR = "ODOS Twilio call metadata";
 const TWILIO_RECORDING_METADATA_AUTHOR = "ODOS Twilio recording metadata";
@@ -62,27 +66,91 @@ export async function persistTwilioWebhookEvent(
     persistTwilioWebhookEventLocked(fhir, kind, event, identity, now));
 }
 
+export type StaffSmsSendReservation =
+  | { state: "owner"; communication: Communication }
+  | { state: "sent"; communication: Communication; providerMessageId: string }
+  | { state: "pending"; communication: Communication }
+  | { state: "conflict"; communication: Communication };
+
+export async function reserveStaffSmsSend(
+  fhir: CommsPersistenceFhir,
+  input: {
+    idempotencyKey: string;
+    claimId: string;
+    patientReference: string;
+    senderReference: string;
+    body: string;
+  },
+): Promise<StaffSmsSendReservation> {
+  const existing = await findCommunication(fhir, ODOS_COMMS_STAFF_SEND_IDENTIFIER_SYSTEM, input.idempotencyKey);
+  if (existing) return classifyStaffSmsReservation(existing, input);
+  const candidate: Communication = {
+    resourceType: "Communication",
+    status: "preparation",
+    identifier: [
+      { system: ODOS_COMMS_STAFF_SEND_IDENTIFIER_SYSTEM, value: input.idempotencyKey },
+      { system: ODOS_COMMS_STAFF_SEND_CLAIM_IDENTIFIER_SYSTEM, value: input.claimId },
+    ],
+    category: [category(ODOS_PATIENT_SMS_CATEGORY), category(ODOS_PATIENT_SMS_OUTBOUND_CATEGORY)],
+    medium: [{ text: "SMS" }],
+    subject: { reference: input.patientReference },
+    sender: { reference: input.senderReference },
+    recipient: [{ reference: input.patientReference }],
+    payload: [{ contentString: input.body }],
+  };
+  const claimed = await fhir.create<Communication>(candidate, {
+    "If-None-Exist": `identifier=${ODOS_COMMS_STAFF_SEND_IDENTIFIER_SYSTEM}|${input.idempotencyKey}`,
+  });
+  return classifyStaffSmsReservation(claimed, input);
+}
+
 export async function persistStaffSentSms(
   fhir: CommsPersistenceFhir,
-  input: { messageSid: string; patientReference: string; senderReference: string; body: string },
+  input: { communication: Communication; idempotencyKey: string; messageSid: string },
   deps: { now?: () => string } = {},
 ): Promise<Communication> {
   const identity = {
-    system: ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM,
-    value: input.messageSid,
+    system: ODOS_COMMS_STAFF_SEND_IDENTIFIER_SYSTEM,
+    value: input.idempotencyKey,
     category: ODOS_PATIENT_SMS_CATEGORY,
   };
   const fragment: Partial<Communication> = {
     status: "in-progress",
-    subject: { reference: input.patientReference },
-    sender: { reference: input.senderReference },
-    recipient: [{ reference: input.patientReference }],
     sent: deps.now?.() ?? new Date().toISOString(),
-    payload: [{ contentString: input.body }],
+    identifier: [{ system: ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM, value: input.messageSid }],
     category: [category(ODOS_PATIENT_SMS_OUTBOUND_CATEGORY)],
   };
   return serializeCommunicationWrite(`${identity.system}|${identity.value}`, () =>
-    persistCommunicationFragment(fhir, identity, fragment));
+    updateCommunicationFragment(fhir, input.communication, fragment, identity));
+}
+
+function classifyStaffSmsReservation(
+  communication: Communication,
+  input: {
+    claimId: string;
+    patientReference: string;
+    senderReference: string;
+    body: string;
+  },
+): StaffSmsSendReservation {
+  if (
+    communication.subject?.reference !== input.patientReference
+    || communication.sender?.reference !== input.senderReference
+    || communication.recipient?.[0]?.reference !== input.patientReference
+    || communication.payload?.[0]?.contentString !== input.body
+  ) {
+    return { state: "conflict", communication };
+  }
+  const providerMessageId = communication.identifier?.find(
+    (identifier) => identifier.system === ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM,
+  )?.value;
+  if (providerMessageId) return { state: "sent", communication, providerMessageId };
+  const owned = communication.identifier?.some((identifier) =>
+    identifier.system === ODOS_COMMS_STAFF_SEND_CLAIM_IDENTIFIER_SYSTEM
+    && identifier.value === input.claimId) === true;
+  return owned
+    ? { state: "owner", communication }
+    : { state: "pending", communication };
 }
 
 async function persistTwilioWebhookEventLocked(

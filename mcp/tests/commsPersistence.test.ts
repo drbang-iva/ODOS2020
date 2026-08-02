@@ -10,6 +10,7 @@ import {
   ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM,
   persistStaffSentSms,
   persistTwilioWebhookEvent,
+  reserveStaffSmsSend,
 } from "../src/comms/comms-persistence.js";
 import { createTwilioAdapter, withTwilioConversationStore } from "../src/comms/adapters/twilio-adapter.js";
 import { registerTwilioWebhookRoutes } from "../src/comms/twilio-routes.js";
@@ -54,11 +55,18 @@ test("duplicate inbound SMS delivery creates one patient-linked Communication", 
 
 test("staff-sent SMS and its status callback converge into one patient-linked conversation entry", async () => {
   const fhir = new InMemoryCommsFhir();
-  await persistStaffSentSms(fhir, {
-    messageSid: MESSAGE_SID,
+  const reservation = await reserveStaffSmsSend(fhir, {
+    idempotencyKey: "synthetic-send-0001",
+    claimId: "synthetic-claim-0001",
     patientReference: "Patient/synthetic-1",
     senderReference: "Practitioner/synthetic-staff",
     body: "Synthetic staff message",
+  });
+  assert.equal(reservation.state, "owner");
+  await persistStaffSentSms(fhir, {
+    communication: reservation.communication,
+    idempotencyKey: "synthetic-send-0001",
+    messageSid: MESSAGE_SID,
   }, { now: () => NOW });
   await persistTwilioWebhookEvent(fhir, "sms-status", {
     accountSid: ACCOUNT_SID,

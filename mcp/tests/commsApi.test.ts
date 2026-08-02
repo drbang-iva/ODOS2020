@@ -17,10 +17,11 @@ const RECORDING_ID = `RE${"4".repeat(32)}`;
 test("communications RBAC hides message content from front desk at the FHIR policy layer", () => {
   const frontDesk = buildMedplumAccessPolicy(getRoleDeclaration("front-desk"));
   const frontDeskRule = frontDesk.resource?.find((rule) =>
-    rule.resourceType === "Communication" && rule.criteria?.includes("patient-sms"));
+    rule.resourceType === "Communication" && rule.hiddenFields?.includes("payload"));
   assert.ok(frontDeskRule);
   assert.deepEqual(frontDeskRule.hiddenFields, ["payload", "note", "text"]);
-  assert.match(frontDeskRule.criteria ?? "", /patient-call/);
+  assert.equal(frontDeskRule.criteria, "Communication?_compartment=%patient_compartment");
+  assert.equal(frontDeskRule.interaction?.includes("create"), true);
 
   for (const role of ["clinician", "aesthetics-provider"] as const) {
     const policy = buildMedplumAccessPolicy(getRoleDeclaration(role));
@@ -28,6 +29,7 @@ test("communications RBAC hides message content from front desk at the FHIR poli
       candidate.resourceType === "Communication" && candidate.criteria?.includes("%patient_compartment"));
     assert.ok(rule, role);
     assert.equal(rule.hiddenFields, undefined);
+    assert.equal(rule.interaction?.includes("create"), true);
   }
   const auditor = buildMedplumAccessPolicy(getRoleDeclaration("auditor"));
   assert.equal(auditor.resource?.some((rule) => rule.resourceType === "Communication"), false);
@@ -83,29 +85,18 @@ test("staff SMS, calls, and recording retrieval use provider capabilities and re
     const sent = await request(fixture.base, "/communications/messages", "POST", {
       patientReference: PATIENT_REFERENCE,
       body: "Synthetic staff message",
+      idempotencyKey: "synthetic-send-0001",
     }, "front-desk");
     assert.equal(sent.status, 200);
     assert.deepEqual(await sent.json(), { outcome: "sent", providerMessageId: "SM-synthetic" });
     assert.equal(fixture.persistedCommunications.length, 1);
-    assert.deepEqual(fixture.persistedCommunications[0], {
-      resourceType: "Communication",
-      id: "persisted-1",
-      status: "in-progress",
-      identifier: [{
-        system: "https://odos2020.com/fhir/NamingSystem/twilio-message-sid",
-        value: "SM-synthetic",
-      }],
-      category: [
-        { coding: [{ system: "https://odos2020.com/fhir/CodeSystem/communication-category", code: "patient-sms" }] },
-        { coding: [{ system: "https://odos2020.com/fhir/CodeSystem/communication-category", code: "patient-sms-outbound" }] },
-      ],
-      medium: [{ text: "SMS" }],
-      subject: { reference: PATIENT_REFERENCE },
-      sender: { reference: "Practitioner/front-desk" },
-      recipient: [{ reference: PATIENT_REFERENCE }],
-      sent: "2026-08-02T15:00:00.000Z",
-      payload: [{ contentString: "Synthetic staff message" }],
-    });
+    assert.equal(fixture.persistedCommunications[0].status, "in-progress");
+    assert.equal(fixture.persistedCommunications[0].subject?.reference, PATIENT_REFERENCE);
+    assert.equal(fixture.persistedCommunications[0].sender?.reference, "Practitioner/front-desk");
+    assert.equal(fixture.persistedCommunications[0].recipient?.[0].reference, PATIENT_REFERENCE);
+    assert.equal(fixture.persistedCommunications[0].sent, "2026-08-02T15:00:00.000Z");
+    assert.equal(fixture.persistedCommunications[0].payload?.[0].contentString, "Synthetic staff message");
+    assert.match(JSON.stringify(fixture.persistedCommunications[0].identifier), /SM-synthetic/);
 
     const calls = await request(fixture.base, "/communications/calls?limit=12", "GET", undefined, "front-desk");
     assert.equal(calls.status, 200);
@@ -129,6 +120,50 @@ test("staff SMS, calls, and recording retrieval use provider capabilities and re
     assert.equal(fixture.grants.length, 5);
     assert.equal(fixture.grants.every((row) => row.actionOutcome === "granted"), true);
     assert.deepEqual(fixture.providerCalls, ["sendSms", "listCalls", "getCall", "initiateCall", "fetchRecording"]);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("staff SMS requires a stable idempotency key and retries never dispatch twice", async () => {
+  const fixture = await startServer();
+  const body = {
+    patientReference: PATIENT_REFERENCE,
+    body: "Synthetic idempotent message",
+    idempotencyKey: "synthetic-send-0002",
+  };
+  try {
+    const missing = await request(fixture.base, "/communications/messages", "POST", {
+      patientReference: PATIENT_REFERENCE,
+      body: "Synthetic idempotent message",
+    }, "front-desk");
+    assert.equal(missing.status, 400);
+
+    const first = await request(fixture.base, "/communications/messages", "POST", body, "front-desk");
+    const retry = await request(fixture.base, "/communications/messages", "POST", body, "front-desk");
+    assert.equal(first.status, 200);
+    assert.equal(retry.status, 200);
+    assert.deepEqual(await retry.json(), { outcome: "sent", providerMessageId: "SM-synthetic" });
+    assert.deepEqual(fixture.providerCalls, ["sendSms"]);
+    assert.equal(fixture.persistedCommunications.length, 1);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("a post-send FHIR failure leaves a durable unknown outcome and blocks duplicate dispatch", async () => {
+  const fixture = await startServer({ failSmsCompletion: true });
+  const body = {
+    patientReference: PATIENT_REFERENCE,
+    body: "Synthetic uncertain message",
+    idempotencyKey: "synthetic-send-0003",
+  };
+  try {
+    const first = await request(fixture.base, "/communications/messages", "POST", body, "front-desk");
+    assert.equal(first.status, 502);
+    const retry = await request(fixture.base, "/communications/messages", "POST", body, "front-desk");
+    assert.equal(retry.status, 409);
+    assert.deepEqual(fixture.providerCalls, ["sendSms"]);
   } finally {
     await fixture.close();
   }
@@ -185,7 +220,7 @@ test("call history applies the requested limit after filtering the provider wind
   }
 });
 
-async function startServer(options: { recordingEnabled?: boolean; recordingVisible?: boolean; callVisible?: boolean } = {}) {
+async function startServer(options: { recordingEnabled?: boolean; recordingVisible?: boolean; callVisible?: boolean; failSmsCompletion?: boolean } = {}) {
   const providerCalls: string[] = [];
   const callListRequests: Array<{ limit?: number }> = [];
   const listRequests: Array<{ includeContent?: boolean }> = [];
@@ -285,6 +320,18 @@ async function startServer(options: { recordingEnabled?: boolean; recordingVisib
                   .map((resource) => ({ resource: structuredClone(resource) })),
               };
             }
+            if (params.identifier?.startsWith("https://odos2020.com/fhir/NamingSystem/comms-staff-send|")) {
+              const value = params.identifier.slice(params.identifier.lastIndexOf("|") + 1);
+              return {
+                resourceType: "Bundle",
+                type: "searchset",
+                entry: persistedCommunications
+                  .filter((communication) => communication.identifier?.some((identifier) =>
+                    identifier.system === "https://odos2020.com/fhir/NamingSystem/comms-staff-send"
+                    && identifier.value === value))
+                  .map((resource) => ({ resource: structuredClone(resource) })),
+              };
+            }
             if (params.identifier?.startsWith("https://odos2020.com/fhir/NamingSystem/twilio-call-sid|")) {
               return {
                 resourceType: "Bundle",
@@ -324,15 +371,32 @@ async function startServer(options: { recordingEnabled?: boolean; recordingVisib
             throw new Error("Unexpected FHIR pagination in communications API test.");
           },
           async create<T extends Resource>(resource: T): Promise<T> {
-            const persisted = { ...resource, id: `persisted-${persistedCommunications.length + 1}` } as T;
+            const persisted = {
+              ...resource,
+              id: `persisted-${persistedCommunications.length + 1}`,
+              meta: { ...resource.meta, versionId: "1" },
+            } as T;
             if (persisted.resourceType === "Communication") {
               persistedCommunications.push(structuredClone(persisted as Communication));
             }
             return structuredClone(persisted);
           },
           async update<T extends Resource>(_resourceType: T["resourceType"], id: string, resource: T): Promise<T> {
-            const persisted = { ...resource, id } as T;
             const index = persistedCommunications.findIndex((candidate) => candidate.id === id);
+            if (
+              options.failSmsCompletion
+              && resource.resourceType === "Communication"
+              && resource.identifier?.some((identifier) =>
+                identifier.system === "https://odos2020.com/fhir/NamingSystem/twilio-message-sid")
+            ) {
+              options.failSmsCompletion = false;
+              throw Object.assign(new Error("Synthetic FHIR outage"), { status: 503 });
+            }
+            const persisted = {
+              ...resource,
+              id,
+              meta: { ...resource.meta, versionId: String(Number(persistedCommunications[index]?.meta?.versionId ?? "0") + 1) },
+            } as T;
             if (persisted.resourceType === "Communication" && index >= 0) {
               persistedCommunications[index] = structuredClone(persisted as Communication);
             }
