@@ -98,9 +98,12 @@ test("start encounter bundle can attach a visit to a clinical Program", () => {
     ["Encounter/e1", "Patient/p1"],
   );
   const startExamSource = readUi("src/components/StartExam.tsx");
+  const assignIndex = startExamSource.indexOf("await assignProvider(patient.id)");
+  const resolveIndex = startExamSource.indexOf("const episodeReference = await resolveProgramReference()");
+  assert.ok(assignIndex >= 0, "StartExam must call assignProvider(patient.id).");
+  assert.ok(resolveIndex >= 0, "StartExam must resolve the program reference before the encounter write.");
   assert.ok(
-    startExamSource.indexOf("await assignProvider(patient.id)") <
-      startExamSource.indexOf("const episodeReference = await resolveProgramReference()"),
+    assignIndex < resolveIndex,
     "Provider assignment must precede every patient-compartment clinical write.",
   );
   assert.equal(

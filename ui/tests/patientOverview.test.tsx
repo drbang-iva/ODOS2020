@@ -272,6 +272,8 @@ test("retrying encounter creation reuses a newly created Program", async () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
   assert.equal(renderer.root.findByProps({ role: "alert" }).children.join(""), "Encounter create unavailable");
+  assert.equal(renderer.root.findAllByType("button").filter((button) => button.props["aria-pressed"] !== undefined).every((button) => button.props.disabled), true);
+  assert.equal(renderer.root.findByProps({ "aria-label": "New program type" }).props.disabled, true);
 
   await act(async () => {
     renderer.root.findAllByType("button").find((button) => button.children.join("") === "Start today's visit →")!.props.onClick();
@@ -282,6 +284,64 @@ test("retrying encounter creation reuses a newly created Program", async () => {
   assert.equal(programCreates, 1);
   assert.equal(transactionAttempts, 3);
   assert.deepEqual(encounterProgramReferences, ["EpisodeOfCare/program-new", "EpisodeOfCare/program-new"]);
+  renderer.unmount();
+});
+
+test("start options lock while provider assignment is pending", async () => {
+  let releaseProvider!: () => void;
+  const providerPending = new Promise<void>((resolve) => { releaseProvider = resolve; });
+  const api: StartExamApi = {
+    loadPrograms: async () => [],
+    assignProvider: async () => providerPending,
+    createProgram: async () => { throw new Error("not reached"); },
+    executeTransaction: async (bundle): Promise<Bundle> => bundle.entry?.[0]?.request?.method === "POST"
+      ? {
+          resourceType: "Bundle",
+          type: "transaction-response",
+          entry: [
+            { response: { status: "201 Created", location: "Encounter/encounter-pending/_history/1" } },
+            { response: { status: "201 Created" } },
+          ],
+        }
+      : {
+          resourceType: "Bundle",
+          type: "transaction-response",
+          entry: [
+            { response: { status: "200 OK" } },
+            { response: { status: "201 Created" } },
+          ],
+        },
+    now: () => new Date("2026-08-02T12:00:00.000Z"),
+  };
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<StartExam patient={patient} api={api} />);
+  });
+  act(() => renderer.root.findAllByType("button").find((button) => button.children.join("") === "Start today's visit →")!.props.onClick());
+  assert.equal(renderer.root.findAllByType("button").filter((button) => button.props["aria-pressed"] !== undefined).every((button) => button.props.disabled), true);
+
+  await act(async () => {
+    releaseProvider();
+    await providerPending;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+  renderer.unmount();
+});
+
+test("a patient without an id never renders as an encounter retry", async () => {
+  const api: StartExamApi = {
+    loadPrograms: async () => [],
+    assignProvider: async () => undefined,
+    createProgram: async () => { throw new Error("not reached"); },
+    executeTransaction: async () => { throw new Error("not reached"); },
+    now: () => new Date("2026-08-02T12:00:00.000Z"),
+  };
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<StartExam patient={{ resourceType: "Patient" }} api={api} />);
+  });
+  assert.ok(renderer.root.findAllByType("button").find((button) => button.children.join("") === "Start today's visit →"));
+  assert.equal(renderer.root.findAllByType("button").filter((button) => button.props["aria-pressed"] !== undefined).every((button) => !button.props.disabled), true);
   renderer.unmount();
 });
 
@@ -346,6 +406,26 @@ test("start-exam mode choices expose existing and new Program selectors", async 
     button.children.join("") === "Start a new program"
   )!.props.onClick());
   assert.ok(renderer.root.findByProps({ "aria-label": "New program type" }));
+  renderer.unmount();
+});
+
+test("existing-program mode cannot submit without an active Program", async () => {
+  const api: StartExamApi = {
+    loadPrograms: async () => [],
+    assignProvider: async () => undefined,
+    createProgram: async () => { throw new Error("not reached"); },
+    executeTransaction: async () => { throw new Error("not reached"); },
+    now: () => new Date("2026-08-02T12:00:00.000Z"),
+  };
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<StartExam patient={patient} api={api} />);
+  });
+  await act(async () => {
+    renderer.root.findAllByType("button").find((button) => button.children.join("") === "Part of an existing program")!.props.onClick();
+    await Promise.resolve();
+  });
+  assert.equal(renderer.root.findAllByType("button").find((button) => button.children.join("") === "Start today's visit →")!.props.disabled, true);
   renderer.unmount();
 });
 

@@ -31,11 +31,11 @@ const defaultStartExamApi: StartExamApi = {
   async loadPrograms(patientId) {
     const bundle = await fhir.search<EpisodeOfCare>("EpisodeOfCare", {
       patient: `Patient/${patientId}`,
+      status: "active",
       _count: "20",
     });
     return (bundle.entry ?? [])
-      .flatMap((entry) => (entry.resource ? [entry.resource] : []))
-      .filter((episode) => episode.status === "active");
+      .flatMap((entry) => (entry.resource ? [entry.resource] : []));
   },
   async assignProvider(patientId) {
     const controller = new AbortController();
@@ -89,7 +89,12 @@ export function StartExam({
     typeCode: EpisodeOfCareTypeCode;
     episodeReference: string;
   }>();
-  const retryingEncounter = pendingEncounter?.patientId === patient.id;
+  const reusableEncounter = pendingEncounter !== undefined && pendingEncounter.patientId === patient.id
+    ? pendingEncounter
+    : undefined;
+  const retryingEncounter = reusableEncounter !== undefined;
+  const retryingProgram = pendingNewProgram !== undefined && pendingNewProgram.patientId === patient.id;
+  const lockStartOptions = starting || retryingEncounter || retryingProgram;
 
   useEffect(() => {
     setPendingEncounter(undefined);
@@ -123,7 +128,7 @@ export function StartExam({
     setStartError(null);
     try {
       const now = api.now();
-      let encounterId = pendingEncounter?.patientId === patient.id ? pendingEncounter.encounterId : undefined;
+      let encounterId = reusableEncounter?.encounterId;
       if (!encounterId) {
         await assignProvider(patient.id);
         const episodeReference = await resolveProgramReference();
@@ -191,9 +196,9 @@ export function StartExam({
     <div data-testid="start-exam-prompt" className="odos-start-exam">
       <div className="odos-start-exam-title">Start comprehensive exam</div>
       <div className="odos-start-exam-modes">
-        <StartModeButton active={startMode === "standalone"} disabled={retryingEncounter} onClick={() => setStartMode("standalone")}>Stand-alone visit</StartModeButton>
-        <StartModeButton active={startMode === "existing"} disabled={retryingEncounter} onClick={() => setStartMode("existing")}>Part of an existing program</StartModeButton>
-        <StartModeButton active={startMode === "new"} disabled={retryingEncounter} onClick={() => setStartMode("new")}>Start a new program</StartModeButton>
+        <StartModeButton active={startMode === "standalone"} disabled={lockStartOptions} onClick={() => setStartMode("standalone")}>Stand-alone visit</StartModeButton>
+        <StartModeButton active={startMode === "existing"} disabled={lockStartOptions} onClick={() => setStartMode("existing")}>Part of an existing program</StartModeButton>
+        <StartModeButton active={startMode === "new"} disabled={lockStartOptions} onClick={() => setStartMode("new")}>Start a new program</StartModeButton>
       </div>
 
       {startMode === "existing" && (
@@ -208,7 +213,7 @@ export function StartExam({
                 }))}
             onChange={setSelectedProgramId}
             ariaLabel="Existing program"
-            disabled={retryingEncounter}
+            disabled={lockStartOptions}
           />
         </div>
       )}
@@ -220,7 +225,7 @@ export function StartExam({
             options={EPISODE_OF_CARE_TYPE_CODES.map((code) => ({ value: code, label: programTypeLabel(code) }))}
             onChange={setProgramType}
             ariaLabel="New program type"
-            disabled={retryingEncounter}
+            disabled={lockStartOptions}
           />
         </div>
       )}
@@ -228,7 +233,7 @@ export function StartExam({
       {startError && <p className="odos-overview-error" role="alert">{startError}</p>}
       <button
         type="button"
-        disabled={!patient.id || starting}
+        disabled={!patient.id || starting || (startMode === "existing" && !selectedProgramId)}
         onClick={() => void startExam()}
         className="odos-overview-button is-primary odos-start-exam-submit"
       >
