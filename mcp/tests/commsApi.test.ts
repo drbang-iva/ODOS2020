@@ -135,7 +135,23 @@ test("recording retrieval requires a persisted call visible to the caller's FHIR
   }
 });
 
-async function startServer(options: { recordingEnabled?: boolean; recordingVisible?: boolean } = {}) {
+test("call history and detail require persisted calls visible to the caller's FHIR policy", async () => {
+  const fixture = await startServer({ callVisible: false });
+  try {
+    const list = await request(fixture.base, "/communications/calls?limit=12", "GET", undefined, "clinician");
+    assert.equal(list.status, 200);
+    assert.deepEqual(await list.json(), { calls: [] });
+
+    const detail = await request(fixture.base, `/communications/calls/${CALL_ID}`, "GET", undefined, "clinician");
+    assert.equal(detail.status, 404);
+    assert.deepEqual(await detail.json(), { error: "Call not found." });
+    assert.deepEqual(fixture.providerCalls, []);
+  } finally {
+    await fixture.close();
+  }
+});
+
+async function startServer(options: { recordingEnabled?: boolean; recordingVisible?: boolean; callVisible?: boolean } = {}) {
   const providerCalls: string[] = [];
   const listRequests: Array<{ includeContent?: boolean }> = [];
   const grants: OdosAuditEventRecord[] = [];
@@ -198,7 +214,43 @@ async function startServer(options: { recordingEnabled?: boolean; recordingVisib
           async read() {
             throw new Error("Unexpected FHIR read in communications API test.");
           },
-          async search() {
+          async search(_resourceType: string, params: Record<string, string> = {}) {
+            if (params.category) {
+              return {
+                resourceType: "Bundle",
+                type: "searchset",
+                entry: options.callVisible === false ? [] : [{
+                  resource: {
+                    resourceType: "Communication",
+                    id: "call-communication-1",
+                    status: "completed",
+                    subject: { reference: PATIENT_REFERENCE },
+                    identifier: [{
+                      system: "https://odos2020.com/fhir/NamingSystem/twilio-call-sid",
+                      value: CALL_ID,
+                    }],
+                  },
+                }],
+              };
+            }
+            if (params.identifier?.startsWith("https://odos2020.com/fhir/NamingSystem/twilio-call-sid|")) {
+              return {
+                resourceType: "Bundle",
+                type: "searchset",
+                entry: options.callVisible === false ? [] : [{
+                  resource: {
+                    resourceType: "Communication",
+                    id: "call-communication-1",
+                    status: "completed",
+                    subject: { reference: PATIENT_REFERENCE },
+                    identifier: [{
+                      system: "https://odos2020.com/fhir/NamingSystem/twilio-call-sid",
+                      value: CALL_ID,
+                    }],
+                  },
+                }],
+              };
+            }
             return {
               resourceType: "Bundle",
               type: "searchset",

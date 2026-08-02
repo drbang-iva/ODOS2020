@@ -9,10 +9,16 @@ import {
   type PracticeRoleId,
 } from "../authz/roles.js";
 import type { FhirAuditRecorder } from "../fhir-client.js";
+import { searchBounded } from "../fhir-search.js";
 import type { AuthenticatedStaff } from "../payments/payment-charge-handler.js";
 import type { CommsDispatch, CommsDispatchFhir } from "./comms-config.js";
 import type { CommsProvider, ConversationSummary } from "./comms-provider.js";
-import { ODOS_TWILIO_RECORDING_IDENTIFIER_SYSTEM } from "./comms-persistence.js";
+import {
+  ODOS_COMMS_CATEGORY_SYSTEM,
+  ODOS_PATIENT_CALL_CATEGORY,
+  ODOS_TWILIO_CALL_IDENTIFIER_SYSTEM,
+  ODOS_TWILIO_RECORDING_IDENTIFIER_SYSTEM,
+} from "./comms-persistence.js";
 
 type CommsStaff = Omit<AuthenticatedStaff, "actorRole" | "roles"> & {
   actorRole: PracticeRoleId;
@@ -97,7 +103,10 @@ export function registerCommsApiRoutes(
       const provider = adapter(deps, providerFromQuery(req), staff.fhir);
       if (!provider.listCalls) throw new CommsApiCapabilityError("Call history is not enabled for this communications provider.");
       const limit = numberFromQuery(req, "limit", 1, 1_000);
-      return { status: 200, body: { calls: await provider.listCalls(limit ? { limit } : {}) } };
+      const visibleIds = await visibleCallIds(staff.fhir);
+      if (visibleIds.size === 0) return { status: 200, body: { calls: [] } };
+      const calls = await provider.listCalls(limit ? { limit } : {});
+      return { status: 200, body: { calls: calls.filter((call) => visibleIds.has(call.id)) } };
     },
   ));
 
@@ -112,7 +121,9 @@ export function registerCommsApiRoutes(
     async (staff) => {
       const provider = adapter(deps, providerFromQuery(req), staff.fhir);
       if (!provider.getCall) throw new CommsApiCapabilityError("Call detail is not enabled for this communications provider.");
-      return { status: 200, body: { call: await provider.getCall(resourceKey(req.params.callId, "call id")) } };
+      const callId = resourceKey(req.params.callId, "call id");
+      await requireVisibleTwilioIdentifier(staff.fhir, ODOS_TWILIO_CALL_IDENTIFIER_SYSTEM, callId, "Call");
+      return { status: 200, body: { call: await provider.getCall(callId) } };
     },
   ));
 
@@ -147,7 +158,12 @@ export function registerCommsApiRoutes(
         throw new CommsApiCapabilityError("Recording retrieval is not enabled for this communications provider.");
       }
       const recordingId = resourceKey(req.params.recordingId, "recording id");
-      await requireVisibleRecording(staff.fhir, recordingId);
+      await requireVisibleTwilioIdentifier(
+        staff.fhir,
+        ODOS_TWILIO_RECORDING_IDENTIFIER_SYSTEM,
+        recordingId,
+        "Recording",
+      );
       const recording = await provider.fetchRecording(recordingId);
       return {
         status: 200,
@@ -231,16 +247,31 @@ async function withStaff(
   }
 }
 
-async function requireVisibleRecording(fhir: CommsDispatchFhir, recordingId: string): Promise<void> {
+async function visibleCallIds(fhir: CommsDispatchFhir): Promise<Set<string>> {
+  const communications = await searchBounded<Communication>(fhir, "Communication", {
+    category: `${ODOS_COMMS_CATEGORY_SYSTEM}|${ODOS_PATIENT_CALL_CATEGORY}`,
+    _sort: "-_lastUpdated",
+    _count: "100",
+  }, { maxPages: 10, maxRows: 1_000 });
+  return new Set(communications.flatMap((communication) => communication.identifier ?? []).flatMap((identifier) =>
+    identifier.system === ODOS_TWILIO_CALL_IDENTIFIER_SYSTEM && identifier.value ? [identifier.value] : []));
+}
+
+async function requireVisibleTwilioIdentifier(
+  fhir: CommsDispatchFhir,
+  system: string,
+  value: string,
+  label: string,
+): Promise<void> {
   const bundle = await fhir.search<Communication>("Communication", {
-    identifier: `${ODOS_TWILIO_RECORDING_IDENTIFIER_SYSTEM}|${recordingId}`,
+    identifier: `${system}|${value}`,
     _count: "2",
   });
   const matches = (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []).filter((communication) =>
     communication.identifier?.some((identifier) =>
-      identifier.system === ODOS_TWILIO_RECORDING_IDENTIFIER_SYSTEM && identifier.value === recordingId));
-  if (matches.length === 0) throw new CommsApiNotFoundError("Recording not found.");
-  if (matches.length > 1) throw new Error(`Twilio recording identifier ${recordingId} is not unique.`);
+      identifier.system === system && identifier.value === value));
+  if (matches.length === 0) throw new CommsApiNotFoundError(`${label} not found.`);
+  if (matches.length > 1) throw new Error(`Twilio ${label.toLowerCase()} identifier ${value} is not unique.`);
 }
 
 function actingRole(req: Request, staff: CommsStaff, action: BusinessAction): PracticeRoleId | undefined {
