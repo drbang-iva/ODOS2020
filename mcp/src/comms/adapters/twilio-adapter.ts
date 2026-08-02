@@ -557,7 +557,9 @@ function validateTwilioConfig(config: TwilioAdapterConfig) {
     ? sid(config.messagingServiceSid, "MG", "Twilio Messaging Service SID")
     : undefined;
   const fromNumber = config.fromNumber?.trim()
-    ? e164(config.fromNumber, "Twilio from-number")
+    ? config.hipaaMode
+      ? usE164(e164(config.fromNumber, "Twilio from-number"), "Twilio from-number")
+      : e164(config.fromNumber, "Twilio from-number")
     : undefined;
   if (!messagingServiceSid && !fromNumber) {
     throw new Error("Twilio requires TWILIO_MESSAGING_SERVICE_SID or TWILIO_FROM_NUMBER.");

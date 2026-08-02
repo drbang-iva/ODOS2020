@@ -111,6 +111,12 @@ test("Twilio SDK preserves API-key authentication and explicit from-number mode"
 });
 
 test("Twilio HIPAA mode accepts US destinations and rejects non-US or malformed SMS and Voice destinations", async () => {
+  assert.throws(() => createTwilioAdapter({
+    accountSid: ACCOUNT_SID,
+    authToken: AUTH_TOKEN,
+    fromNumber: "+442079460000",
+    hipaaMode: true,
+  }), /Twilio from-number must be a US phone number.*HIPAA/i);
   const messageCreates: Array<Record<string, unknown>> = [];
   const callCreates: Array<Record<string, unknown>> = [];
   const adapter = createTwilioAdapter({
