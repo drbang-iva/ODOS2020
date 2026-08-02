@@ -46,6 +46,10 @@ export const BUSINESS_ACTIONS = [
   "finding-definitions.write",
   "protocols.author",
   "document.fax-send",
+  "communications.read",
+  "communications.content.read",
+  "communications.send",
+  "communications.call",
 ] as const;
 
 export type BusinessAction = (typeof BUSINESS_ACTIONS)[number];
@@ -219,6 +223,19 @@ const OFFICE_CHANNEL_RESOURCE_RULES: OdosResourceRule[] = [
   },
 ];
 
+const PATIENT_COMMUNICATION_COMPARTMENT_RULE: OdosResourceRule = {
+  resourceType: "Communication",
+  interactions: UPDATE_INTERACTIONS,
+  scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
+};
+
+const FRONT_DESK_PATIENT_COMMUNICATION_RULE: OdosResourceRule = {
+  resourceType: "Communication",
+  interactions: UPDATE_INTERACTIONS,
+  scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
+  hiddenFields: ["payload", "note", "text"],
+};
+
 const CLINICAL_WRITE_CONSTRAINTS: WriteConstraintDeclaration[] = [
   {
     description:
@@ -389,7 +406,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
     display: "Practice Admin",
     description:
       "Practice-internal administrator for membership, role review, AccessPolicy binding, and audit-log access.",
-    businessActions: ["identity.manage", "role.review", "audit.read", "break-glass.invoke", "payment.charge", "payment.seal-day", "margin.read", "claims.manage", "finding-definitions.write", "protocols.author", "document.fax-send"],
+    businessActions: ["identity.manage", "role.review", "audit.read", "break-glass.invoke", "payment.charge", "payment.seal-day", "margin.read", "claims.manage", "finding-definitions.write", "protocols.author", "document.fax-send", "communications.read", "communications.content.read", "communications.send", "communications.call"],
     resourceRules: [{ resourceType: "*", interactions: FULL_INTERACTIONS, scope: { kind: "practice" } }],
   },
   clinician: {
@@ -397,7 +414,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
     display: "Clinician",
     description:
       "Clinical user with patient-compartment-scoped chart access for assigned patients or explicit emergency access.",
-    businessActions: ["chart.read", "chart.write", "clinical.sign", "break-glass.invoke", "protocols.author", "document.fax-send"],
+    businessActions: ["chart.read", "chart.write", "clinical.sign", "break-glass.invoke", "protocols.author", "document.fax-send", "communications.read", "communications.content.read", "communications.send", "communications.call"],
     membershipParameters: [
       {
         name: "provider_profile",
@@ -438,6 +455,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
         scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
       },
       ...OFFICE_CHANNEL_RESOURCE_RULES,
+      PATIENT_COMMUNICATION_COMPARTMENT_RULE,
       ...PROTOCOL_MODULE_RESOURCE_RULES,
       APPEARANCE_CONFIG_READ_RULE,
     ],
@@ -447,7 +465,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
     display: "Front Desk",
     description:
       "Scheduling, demographic, and financial-context access inside a patient compartment; no clinical writes.",
-    businessActions: ["chart.read", "scheduling.manage", "demographics.update", "billing-context.read", "payment.charge", "payment.seal-day", "claims.manage", "document.fax-send"],
+    businessActions: ["chart.read", "scheduling.manage", "demographics.update", "billing-context.read", "payment.charge", "payment.seal-day", "claims.manage", "document.fax-send", "communications.read", "communications.send", "communications.call"],
     membershipParameters: [
       {
         name: "patient_compartment",
@@ -469,6 +487,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
       ...PAYER_DIRECTORY_RESOURCE_RULES,
       BILLING_IDENTITY_CONFIG_READ_RULE,
       ...OFFICE_CHANNEL_RESOURCE_RULES,
+      FRONT_DESK_PATIENT_COMMUNICATION_RULE,
     ],
   },
   auditor: {
@@ -488,7 +507,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
     display: "Aesthetics Provider",
     description:
       "Clinical write role constrained by patient compartment plus state-scoped procedure credentials.",
-    businessActions: ["chart.read", "chart.write", "aesthetics.procedure.write", "break-glass.invoke", "document.fax-send"],
+    businessActions: ["chart.read", "chart.write", "aesthetics.procedure.write", "break-glass.invoke", "document.fax-send", "communications.read", "communications.content.read", "communications.send", "communications.call"],
     membershipParameters: [
       {
         name: "patient_compartment",
@@ -547,6 +566,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
         interactions: ["create", ...READ_INTERACTIONS],
         scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
       },
+      PATIENT_COMMUNICATION_COMPARTMENT_RULE,
       APPEARANCE_CONFIG_READ_RULE,
     ],
   },

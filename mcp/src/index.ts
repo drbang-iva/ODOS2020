@@ -77,6 +77,8 @@ import {
   startMcpAfterCommsInitialization,
 } from "./comms/comms-config.js";
 import { registerTwilioWebhookRoutes } from "./comms/twilio-routes.js";
+import { persistTwilioWebhookEvent } from "./comms/comms-persistence.js";
+import { registerCommsApiRoutes } from "./comms/comms-api.js";
 import {
   createFhirTrackedLinkStore,
   registerTrackedLinkRoutes,
@@ -5717,7 +5719,7 @@ async function startMcpServer(): Promise<void> {
       app.use((req, res, next) => {
         const origin = process.env.ODOS_MCP_ALLOWED_ORIGIN ?? "*";
         res.header("Access-Control-Allow-Origin", origin);
-        res.header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-ODOS-Role, X-ODOS-Actor-Id, X-ODOS-Actor-Role");
+        res.header("Access-Control-Allow-Headers", "Authorization, Content-Type, Idempotency-Key, X-ODOS-Role, X-ODOS-Actor-Id, X-ODOS-Actor-Role");
         res.header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, OPTIONS");
         if (req.method === "OPTIONS") {
           res.sendStatus(204);
@@ -5740,6 +5742,10 @@ async function startMcpServer(): Promise<void> {
           realTimeTranscriptionEnabled:
             twilioRegistration.config.realTimeTranscriptionEnabled,
           recordingMediaEnabled: twilioRegistration.config.mediaUrlAuthAcknowledged,
+          onEvent: async (kind, event) => {
+            await authenticateWithMedplum();
+            await persistTwilioWebhookEvent(fhir, kind, event);
+          },
         });
       }
       app.use(
@@ -5750,6 +5756,13 @@ async function startMcpServer(): Promise<void> {
           state: smartState,
         }),
       );
+
+      registerCommsApiRoutes(app, {
+        authenticateService: authenticateWithMedplum,
+        authenticate: authenticateStaffRoute,
+        dispatch: commsDispatch,
+        audit: auditRuntime,
+      });
 
       app.get("/audit/events", async (req, res) => {
         const actorRole = auditRouteRole(req);

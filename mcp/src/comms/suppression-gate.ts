@@ -71,6 +71,9 @@ export function createSuppressedCommsProvider(
     ...(provider.fetchTranscription ? {
       fetchTranscription: (transcriptionId: string) => provider.fetchTranscription!(transcriptionId),
     } : {}),
+    ...(provider.listConversations ? {
+      listConversations: (request = {}) => provider.listConversations!(request),
+    } : {}),
   };
 }
 

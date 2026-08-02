@@ -1,14 +1,27 @@
 import twilio from "twilio";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
+import type { Communication, Reference } from "@medplum/fhirtypes";
+import { searchBounded, type FhirSearchClient } from "../../fhir-search.js";
 import type {
   CallDetail,
   CallListRequest,
   CallRecording,
   CallRequest,
   CommsProvider,
+  ConversationListRequest,
+  ConversationMessage,
+  ConversationSummary,
   SendResult,
   SendSmsRequest,
 } from "../comms-provider.js";
+import {
+  ODOS_COMMS_CATEGORY_SYSTEM,
+  ODOS_COMMS_PHONE_IDENTIFIER_SYSTEM,
+  ODOS_PATIENT_SMS_INBOUND_CATEGORY,
+  ODOS_PATIENT_SMS_OUTBOUND_CATEGORY,
+  ODOS_PATIENT_SMS_CATEGORY,
+  ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM,
+} from "../comms-persistence.js";
 
 /**
  * Twilio Programmable Messaging + Programmable Voice adapter.
@@ -282,6 +295,120 @@ export function createTwilioAdapter(
       ? voiceMethods(voiceClient!, normalized, normalized.voice, deps.fetchImpl ?? fetch)
       : {}),
   };
+}
+
+export function withTwilioConversationStore(
+  adapter: TwilioAdapter,
+  fhir: FhirSearchClient,
+): TwilioAdapter {
+  return {
+    ...adapter,
+    capabilities: { ...adapter.capabilities, conversations: true },
+    listConversations: (request: ConversationListRequest = {}) =>
+      listPersistedConversations(fhir, request),
+  };
+}
+
+async function listPersistedConversations(
+  fhir: FhirSearchClient,
+  request: ConversationListRequest,
+): Promise<ConversationSummary[]> {
+  const limit = request.limit ?? 50;
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+    throw new Error("Twilio conversation history limit must be an integer from 1 to 100.");
+  }
+  if (request.patientReference && !/^Patient\/[A-Za-z0-9.-]{1,64}$/.test(request.patientReference)) {
+    throw new Error("Twilio conversation patientReference must be Patient/….");
+  }
+  const communications = await searchBounded<Communication>(fhir, "Communication", {
+    category: `${ODOS_COMMS_CATEGORY_SYSTEM}|${ODOS_PATIENT_SMS_CATEGORY}`,
+    ...(request.patientReference ? { subject: request.patientReference } : {}),
+    _sort: "-_lastUpdated",
+    _count: "100",
+  }, { maxPages: 10, maxRows: 1_000 });
+  const groups = new Map<string, ConversationMessage[]>();
+  const patients = new Map<string, string | undefined>();
+  for (const communication of communications.filter(isPersistedTwilioSms)) {
+    const message = conversationMessage(communication, request.includeContent === true);
+    if (!message) continue;
+    const patientReference = communication.subject?.reference;
+    const key = patientReference ?? counterpartyPhone(communication) ?? twilioMessageSid(communication);
+    if (!key) continue;
+    const messages = groups.get(key) ?? [];
+    messages.push(message);
+    groups.set(key, messages);
+    patients.set(key, patientReference);
+  }
+  return [...groups.entries()]
+    .map(([id, messages]): ConversationSummary => {
+      messages.sort((left, right) => Date.parse(right.occurredAt) - Date.parse(left.occurredAt));
+      const patientReference = patients.get(id);
+      return {
+        id,
+        ...(patientReference ? { patientReference } : {}),
+        updatedAt: messages[0].occurredAt,
+        messageCount: messages.length,
+        messages,
+      };
+    })
+    .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt))
+    .slice(0, limit);
+}
+
+function twilioMessageSid(communication: Communication): string | undefined {
+  return communication.identifier?.find((identifier) =>
+    identifier.system === ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM && Boolean(identifier.value))?.value;
+}
+
+function isPersistedTwilioSms(communication: Communication): boolean {
+  return communication.identifier?.some((identifier) =>
+    identifier.system === ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM && Boolean(identifier.value)) === true
+    && communication.category?.some((category) => category.coding?.some((coding) =>
+      coding.system === ODOS_COMMS_CATEGORY_SYSTEM && coding.code === ODOS_PATIENT_SMS_CATEGORY)) === true;
+}
+
+function conversationMessage(
+  communication: Communication,
+  includeContent: boolean,
+): ConversationMessage | undefined {
+  if (!communication.id) return undefined;
+  const occurredAt = communication.received ?? communication.sent ?? communication.meta?.lastUpdated;
+  if (!occurredAt) return undefined;
+  const direction = communicationDirection(communication);
+  return {
+    id: communication.id,
+    direction: direction === "inbound" || direction === "outbound" ? direction : "unknown",
+    status: communication.status,
+    occurredAt,
+    ...(referencePhone(communication.sender) ? { from: referencePhone(communication.sender) } : {}),
+    ...(referencePhone(communication.recipient?.[0]) ? { to: referencePhone(communication.recipient?.[0]) } : {}),
+    ...(includeContent && communication.payload?.[0]?.contentString !== undefined
+      ? { body: communication.payload[0].contentString }
+      : {}),
+  };
+}
+
+function referencePhone(reference: Reference | undefined): string | undefined {
+  return reference?.identifier?.system === ODOS_COMMS_PHONE_IDENTIFIER_SYSTEM
+    ? reference.identifier.value
+    : undefined;
+}
+
+function counterpartyPhone(communication: Communication): string | undefined {
+  const direction = communicationDirection(communication);
+  return direction === "outbound"
+    ? referencePhone(communication.recipient?.[0])
+    : referencePhone(communication.sender);
+}
+
+function communicationDirection(communication: Communication): "inbound" | "outbound" | undefined {
+  const codes = communication.category?.flatMap((category) => category.coding ?? []).filter((coding) =>
+    coding.system === ODOS_COMMS_CATEGORY_SYSTEM).map((coding) => coding.code) ?? [];
+  if (codes.includes(ODOS_PATIENT_SMS_INBOUND_CATEGORY)) return "inbound";
+  if (codes.includes(ODOS_PATIENT_SMS_OUTBOUND_CATEGORY)) return "outbound";
+  if (communication.sender?.reference?.startsWith("Patient/")) return "inbound";
+  if (communication.recipient?.some((recipient) => recipient.reference?.startsWith("Patient/"))) return "outbound";
+  return undefined;
 }
 
 async function verifyHipaaMessagingServicePool(
