@@ -206,19 +206,31 @@ test("condition summary windows to the newest three encounters and dedupes by co
   fake.add(condition("ocular-second", "Repeated ocular", {
     category: "problem-list-item", encounterId: "second", bodySite: "Both eyes",
   }));
+  fake.add(condition("medical-second-unique", "Second encounter condition", {
+    category: "problem-list-item", encounterId: "second", code: "DX-SECOND",
+  }));
+  fake.add(condition("medical-third-unique", "Third encounter condition", {
+    category: "problem-list-item", encounterId: "third", code: "DX-THIRD",
+  }));
   fake.add(condition("older-only", "Older condition", {
     category: "problem-list-item", encounterId: "older", code: "DX-OLDER",
   }));
   fake.add(condition("unlinked", "Unlinked condition", {
     category: "problem-list-item", code: "DX-UNLINKED",
   }));
+  const enteredInError = condition("entered-in-error", "Invalid condition", {
+    category: "problem-list-item", encounterId: "newest", code: "DX-INVALID",
+  });
+  enteredInError.verificationStatus = verificationStatusConcept("entered-in-error");
+  fake.add(enteredInError);
 
   const overview = await loadPatientOverview(fake as never, "p1");
 
-  assert.deepEqual(overview.snapshot.medicalConditions, [{
-    id: "medical-newest",
-    name: "Repeated medical",
-  }]);
+  assert.deepEqual(overview.snapshot.medicalConditions, [
+    { id: "medical-newest", name: "Repeated medical" },
+    { id: "medical-second-unique", name: "Second encounter condition" },
+    { id: "medical-third-unique", name: "Third encounter condition" },
+  ]);
   assert.deepEqual(overview.snapshot.ocularHistory, [{
     id: "ocular-newest",
     name: "Repeated ocular",
