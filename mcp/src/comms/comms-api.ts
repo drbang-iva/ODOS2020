@@ -18,6 +18,7 @@ import {
   ODOS_PATIENT_CALL_CATEGORY,
   ODOS_TWILIO_CALL_IDENTIFIER_SYSTEM,
   ODOS_TWILIO_RECORDING_IDENTIFIER_SYSTEM,
+  persistStaffSentSms,
 } from "./comms-persistence.js";
 
 type CommsStaff = Omit<AuthenticatedStaff, "actorRole" | "roles"> & {
@@ -84,12 +85,21 @@ export function registerCommsApiRoutes(
       const text = requiredText(body.body, "SMS body", 1_600);
       const provider = adapter(deps, providerFromBody(body), staff.fhir);
       if (!provider.sendSms) throw new CommsApiCapabilityError("SMS is not enabled for this communications provider.");
-      return { status: 200, body: await provider.sendSms({
+      const result = await provider.sendSms({
         patientReference,
         body: text,
         campaignType: "staff-initiated",
         suppression: {},
-      }) };
+      });
+      if (result.outcome === "sent") {
+        await persistStaffSentSms(staff.fhir, {
+          messageSid: result.providerMessageId,
+          patientReference,
+          senderReference: staff.staffReference,
+          body: text,
+        }, { now: () => deps.now?.() ?? new Date().toISOString() });
+      }
+      return { status: 200, body: result };
     },
   ));
 

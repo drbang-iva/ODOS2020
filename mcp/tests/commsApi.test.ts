@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { once } from "node:events";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
+import type { Communication, Resource } from "@medplum/fhirtypes";
 import type { OdosAuditEventRecord } from "../src/authz/odosAudit.js";
 import { buildMedplumAccessPolicy, getRoleDeclaration } from "../src/authz/roles.js";
 import type { CommsProvider, ConversationSummary } from "../src/comms/comms-provider.js";
@@ -85,6 +86,26 @@ test("staff SMS, calls, and recording retrieval use provider capabilities and re
     }, "front-desk");
     assert.equal(sent.status, 200);
     assert.deepEqual(await sent.json(), { outcome: "sent", providerMessageId: "SM-synthetic" });
+    assert.equal(fixture.persistedCommunications.length, 1);
+    assert.deepEqual(fixture.persistedCommunications[0], {
+      resourceType: "Communication",
+      id: "persisted-1",
+      status: "in-progress",
+      identifier: [{
+        system: "https://odos2020.com/fhir/NamingSystem/twilio-message-sid",
+        value: "SM-synthetic",
+      }],
+      category: [
+        { coding: [{ system: "https://odos2020.com/fhir/CodeSystem/communication-category", code: "patient-sms" }] },
+        { coding: [{ system: "https://odos2020.com/fhir/CodeSystem/communication-category", code: "patient-sms-outbound" }] },
+      ],
+      medium: [{ text: "SMS" }],
+      subject: { reference: PATIENT_REFERENCE },
+      sender: { reference: "Practitioner/front-desk" },
+      recipient: [{ reference: PATIENT_REFERENCE }],
+      sent: "2026-08-02T15:00:00.000Z",
+      payload: [{ contentString: "Synthetic staff message" }],
+    });
 
     const calls = await request(fixture.base, "/communications/calls?limit=12", "GET", undefined, "front-desk");
     assert.equal(calls.status, 200);
@@ -170,6 +191,7 @@ async function startServer(options: { recordingEnabled?: boolean; recordingVisib
   const listRequests: Array<{ includeContent?: boolean }> = [];
   const grants: OdosAuditEventRecord[] = [];
   const denials: OdosAuditEventRecord[] = [];
+  const persistedCommunications: Communication[] = [];
   const conversation: ConversationSummary = {
     id: PATIENT_REFERENCE,
     patientReference: PATIENT_REFERENCE,
@@ -251,6 +273,18 @@ async function startServer(options: { recordingEnabled?: boolean; recordingVisib
                 }],
               };
             }
+            if (params.identifier?.startsWith("https://odos2020.com/fhir/NamingSystem/twilio-message-sid|")) {
+              const value = params.identifier.slice(params.identifier.lastIndexOf("|") + 1);
+              return {
+                resourceType: "Bundle",
+                type: "searchset",
+                entry: persistedCommunications
+                  .filter((communication) => communication.identifier?.some((identifier) =>
+                    identifier.system === "https://odos2020.com/fhir/NamingSystem/twilio-message-sid"
+                    && identifier.value === value))
+                  .map((resource) => ({ resource: structuredClone(resource) })),
+              };
+            }
             if (params.identifier?.startsWith("https://odos2020.com/fhir/NamingSystem/twilio-call-sid|")) {
               return {
                 resourceType: "Bundle",
@@ -289,6 +323,21 @@ async function startServer(options: { recordingEnabled?: boolean; recordingVisib
           async searchUrl() {
             throw new Error("Unexpected FHIR pagination in communications API test.");
           },
+          async create<T extends Resource>(resource: T): Promise<T> {
+            const persisted = { ...resource, id: `persisted-${persistedCommunications.length + 1}` } as T;
+            if (persisted.resourceType === "Communication") {
+              persistedCommunications.push(structuredClone(persisted as Communication));
+            }
+            return structuredClone(persisted);
+          },
+          async update<T extends Resource>(_resourceType: T["resourceType"], id: string, resource: T): Promise<T> {
+            const persisted = { ...resource, id } as T;
+            const index = persistedCommunications.findIndex((candidate) => candidate.id === id);
+            if (persisted.resourceType === "Communication" && index >= 0) {
+              persistedCommunications[index] = structuredClone(persisted as Communication);
+            }
+            return structuredClone(persisted);
+          },
         } as never,
       };
     },
@@ -321,6 +370,7 @@ async function startServer(options: { recordingEnabled?: boolean; recordingVisib
     listRequests,
     grants,
     denials,
+    persistedCommunications,
     close: async () => {
       server.close();
       await once(server, "close");

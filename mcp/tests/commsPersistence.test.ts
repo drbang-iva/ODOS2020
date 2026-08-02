@@ -8,6 +8,7 @@ import twilio from "twilio";
 import {
   ODOS_TWILIO_CALL_IDENTIFIER_SYSTEM,
   ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM,
+  persistStaffSentSms,
   persistTwilioWebhookEvent,
 } from "../src/comms/comms-persistence.js";
 import { createTwilioAdapter, withTwilioConversationStore } from "../src/comms/adapters/twilio-adapter.js";
@@ -49,6 +50,33 @@ test("duplicate inbound SMS delivery creates one patient-linked Communication", 
   assert.equal(communications[0].received, NOW);
   assert.equal(communications[0].payload?.[0].contentString, "Synthetic scheduling question");
   assert.equal(fhir.createAttempts, 1);
+});
+
+test("staff-sent SMS and its status callback converge into one patient-linked conversation entry", async () => {
+  const fhir = new InMemoryCommsFhir();
+  await persistStaffSentSms(fhir, {
+    messageSid: MESSAGE_SID,
+    patientReference: "Patient/synthetic-1",
+    senderReference: "Practitioner/synthetic-staff",
+    body: "Synthetic staff message",
+  }, { now: () => NOW });
+  await persistTwilioWebhookEvent(fhir, "sms-status", {
+    accountSid: ACCOUNT_SID,
+    messageSid: MESSAGE_SID,
+    messageStatus: "delivered",
+    recipientOptedOut: false,
+  }, { now: () => "2026-08-02T15:01:00.000Z" });
+
+  const communications = fhir.ofType<Communication>("Communication");
+  assert.equal(communications.length, 1);
+  assert.equal(communications[0].status, "completed");
+  assert.equal(communications[0].statusReason?.text, "Twilio message status: delivered");
+  assert.equal(communications[0].subject?.reference, "Patient/synthetic-1");
+  assert.equal(communications[0].sender?.reference, "Practitioner/synthetic-staff");
+  assert.equal(communications[0].recipient?.[0].reference, "Patient/synthetic-1");
+  assert.equal(communications[0].sent, NOW);
+  assert.equal(communications[0].payload?.[0].contentString, "Synthetic staff message");
+  assert.match(JSON.stringify(communications[0].category), /patient-sms-outbound/);
 });
 
 test("stale lifecycle callbacks cannot regress terminal message or call status", async () => {

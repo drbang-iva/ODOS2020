@@ -62,6 +62,29 @@ export async function persistTwilioWebhookEvent(
     persistTwilioWebhookEventLocked(fhir, kind, event, identity, now));
 }
 
+export async function persistStaffSentSms(
+  fhir: CommsPersistenceFhir,
+  input: { messageSid: string; patientReference: string; senderReference: string; body: string },
+  deps: { now?: () => string } = {},
+): Promise<Communication> {
+  const identity = {
+    system: ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM,
+    value: input.messageSid,
+    category: ODOS_PATIENT_SMS_CATEGORY,
+  };
+  const fragment: Partial<Communication> = {
+    status: "in-progress",
+    subject: { reference: input.patientReference },
+    sender: { reference: input.senderReference },
+    recipient: [{ reference: input.patientReference }],
+    sent: deps.now?.() ?? new Date().toISOString(),
+    payload: [{ contentString: input.body }],
+    category: [category(ODOS_PATIENT_SMS_OUTBOUND_CATEGORY)],
+  };
+  return serializeCommunicationWrite(`${identity.system}|${identity.value}`, () =>
+    persistCommunicationFragment(fhir, identity, fragment));
+}
+
 async function persistTwilioWebhookEventLocked(
   fhir: CommsPersistenceFhir,
   kind: TwilioWebhookKind,
@@ -69,8 +92,16 @@ async function persistTwilioWebhookEventLocked(
   identity: ReturnType<typeof eventIdentity>,
   now: string,
 ): Promise<Communication> {
-  const existing = await findCommunication(fhir, identity.system, identity.value);
   const fragment = await eventFragment(fhir, kind, event, now);
+  return persistCommunicationFragment(fhir, identity, fragment);
+}
+
+async function persistCommunicationFragment(
+  fhir: CommsPersistenceFhir,
+  identity: ReturnType<typeof eventIdentity>,
+  fragment: Partial<Communication>,
+): Promise<Communication> {
+  const existing = await findCommunication(fhir, identity.system, identity.value);
   if (!existing) {
     const baseCategory = category(identity.category);
     const created = await fhir.create<Communication>({
@@ -107,7 +138,7 @@ function mergeCommunication(
   const incomingNotes = acceptStatus
     ? fragment.note
     : fragment.note?.filter((note) => note.authorString !== TWILIO_CALL_METADATA_AUTHOR);
-  return {
+  return Object.fromEntries(Object.entries({
     ...existing,
     ...fragment,
     identifier: mergeIdentifiers(
@@ -128,7 +159,7 @@ function mergeCommunication(
     sent: existing.sent ?? fragment.sent,
     status: acceptStatus ? fragment.status ?? existing.status : existing.status,
     statusReason: acceptStatus ? fragment.statusReason ?? existing.statusReason : existing.statusReason,
-  };
+  }).filter(([, value]) => value !== undefined)) as unknown as Communication;
 }
 
 async function serializeCommunicationWrite<T>(key: string, operation: () => Promise<T>): Promise<T> {
