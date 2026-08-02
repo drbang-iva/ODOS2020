@@ -43,8 +43,9 @@ import { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } from "../src/clinical-graph/diagnosis
 test("patient overview projects real snapshot resources and newest-first encounter diagnoses", async () => {
   const fake = new FakeFhir();
   fake.add(patient());
-  fake.add(condition("problem-eye", "Ocular condition", { category: "problem-list-item", bodySite: "Both eyes" }));
-  fake.add(condition("problem-medical", "Medical condition", { category: "problem-list-item" }));
+  fake.add(condition("problem-eye", "Ocular condition", { category: "problem-list-item", bodySite: "Both eyes", encounterId: "newer" }));
+  fake.add(condition("problem-medical", "Medical condition", { category: "problem-list-item", encounterId: "newer" }));
+  fake.add({ resourceType: "Coverage", id: "coverage-1", status: "active", beneficiary: { reference: "Patient/p1" }, payor: [{ display: "Stable payer" }] } satisfies Coverage);
   fake.add({ resourceType: "Procedure", id: "procedure-1", status: "completed", subject: { reference: "Patient/p1" }, code: { text: "Ocular surgery" }, bodySite: [{ text: "Left eye" }] } satisfies Procedure);
   fake.add({ resourceType: "MedicationStatement", id: "ophthalmic-med", status: "active", medicationCodeableConcept: { text: "Ophthalmic medication" }, subject: { reference: "Patient/p1" }, dosage: [{ route: { text: "Ophthalmic" }, text: "One drop nightly" }] } satisfies MedicationStatement);
   fake.add({ resourceType: "MedicationRequest", id: "systemic-med", status: "active", intent: "order", medicationCodeableConcept: { text: "Systemic medication" }, subject: { reference: "Patient/p1" }, dosageInstruction: [{ text: "Daily" }] } satisfies MedicationRequest);
@@ -62,12 +63,23 @@ test("patient overview projects real snapshot resources and newest-first encount
 
   assert.deepEqual(overview.snapshot.ocularHistory.map((row) => row.name), ["Ocular condition"]);
   assert.deepEqual(overview.snapshot.medicalConditions.map((row) => row.name), ["Medical condition"]);
-  assert.deepEqual(overview.snapshot.ocularSurgicalHistory.map((row) => row.name), ["Ocular surgery"]);
-  assert.deepEqual(overview.snapshot.ophthalmicMedications.map((row) => [row.name, row.sig]), [["Ophthalmic medication", "One drop nightly"]]);
-  assert.deepEqual(overview.snapshot.systemicMedications.map((row) => [row.name, row.sig]), [["Systemic medication", "Daily"]]);
-  assert.deepEqual(overview.snapshot.socialHistory, ["Former smoker"]);
+  assert.deepEqual({
+    insurance: overview.insurance,
+    ocularSurgicalHistory: overview.snapshot.ocularSurgicalHistory,
+    socialHistory: overview.snapshot.socialHistory,
+    ophthalmicMedications: overview.snapshot.ophthalmicMedications,
+    systemicMedications: overview.snapshot.systemicMedications,
+  }, {
+    insurance: ["Stable payer"],
+    ocularSurgicalHistory: [{ id: "procedure-1", name: "Ocular surgery" }],
+    socialHistory: ["Former smoker"],
+    ophthalmicMedications: [{ id: "ophthalmic-med", name: "Ophthalmic medication", sig: "One drop nightly" }],
+    systemicMedications: [{ id: "systemic-med", name: "Systemic medication", sig: "Daily" }],
+  });
   assert.deepEqual(overview.visits.map((visit) => visit.encounterId), ["newer", "older"]);
-  assert.deepEqual(overview.visits.map((visit) => visit.diagnoses[0]?.code), ["DX-NEW", "DX-OLD"]);
+  assert.deepEqual(overview.visits.map((visit) =>
+    visit.diagnoses.find((diagnosis) => diagnosis.code)?.code
+  ), ["DX-NEW", "DX-OLD"]);
   assert.deepEqual(overview.visits[1]?.diagnoses.map((diagnosis) => diagnosis.code), ["DX-OLD", "DX-RESOLVED"]);
   assert.deepEqual(overview.visits.map((visit) => visit.status), ["Final", "Preliminary"]);
   const provenanceSearch = fake.searches.find((row) => row.resourceType === "Provenance");
@@ -167,6 +179,71 @@ test("billing weather reads stored eligibility and never promotes uncertain cove
     fake.searches.find((search) => search.resourceType === "CoverageEligibilityResponse")?.params,
     { patient: "Patient/p1", _count: "100", _sort: "-created" },
   );
+});
+
+test("condition summary windows to the newest three encounters and dedupes by code or text", async () => {
+  const fake = new FakeFhir();
+  fake.add(patient());
+  fake.add(encounter("third", "2026-04-01T14:00:00Z"));
+  fake.add(encounter("older", "2025-01-01T14:00:00Z"));
+  fake.add(encounter("newest", "2026-06-01T14:00:00Z"));
+  fake.add(encounter("second", "2026-05-01T14:00:00Z"));
+  fake.add(condition("medical-third", "Repeated medical", {
+    category: "problem-list-item", encounterId: "third", code: "DX-REPEAT",
+  }));
+  fake.add(condition("medical-newest", "Repeated medical", {
+    category: "problem-list-item", encounterId: "newest", code: "DX-REPEAT",
+  }));
+  fake.add(condition("medical-second", "Repeated medical", {
+    category: "problem-list-item", encounterId: "second", code: "DX-REPEAT",
+  }));
+  fake.add(condition("ocular-third", "Repeated ocular", {
+    category: "problem-list-item", encounterId: "third", bodySite: "Both eyes",
+  }));
+  fake.add(condition("ocular-newest", "Repeated ocular", {
+    category: "problem-list-item", encounterId: "newest", bodySite: "Both eyes",
+  }));
+  fake.add(condition("ocular-second", "Repeated ocular", {
+    category: "problem-list-item", encounterId: "second", bodySite: "Both eyes",
+  }));
+  fake.add(condition("older-only", "Older condition", {
+    category: "problem-list-item", encounterId: "older", code: "DX-OLDER",
+  }));
+  fake.add(condition("unlinked", "Unlinked condition", {
+    category: "problem-list-item", code: "DX-UNLINKED",
+  }));
+
+  const overview = await loadPatientOverview(fake as never, "p1");
+
+  assert.deepEqual(overview.snapshot.medicalConditions, [{
+    id: "medical-newest",
+    name: "Repeated medical",
+  }]);
+  assert.deepEqual(overview.snapshot.ocularHistory, [{
+    id: "ocular-newest",
+    name: "Repeated ocular",
+    laterality: "Both eyes",
+  }]);
+});
+
+test("condition summary uses every available encounter when the patient has fewer than three", async () => {
+  const fake = new FakeFhir();
+  fake.add(patient());
+  fake.add(encounter("older", "2026-05-01T14:00:00Z"));
+  fake.add(encounter("newer", "2026-06-01T14:00:00Z"));
+  fake.add(condition("condition-older", "Two-visit condition", {
+    category: "problem-list-item", encounterId: "older", code: "DX-TWO-VISITS",
+  }));
+  fake.add(condition("condition-newer", "Two-visit condition", {
+    category: "problem-list-item", encounterId: "newer", code: "DX-TWO-VISITS",
+  }));
+
+  const overview = await loadPatientOverview(fake as never, "p1");
+
+  assert.deepEqual(overview.snapshot.medicalConditions, [{
+    id: "condition-newer",
+    name: "Two-visit condition",
+  }]);
 });
 
 test("visit ledger includes an encounter-linked problem-list Condition", async () => {

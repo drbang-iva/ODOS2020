@@ -133,6 +133,7 @@ const ENCOUNTER_LEDGER_CONDITION_CATEGORIES = ["encounter-diagnosis", "problem-l
 const CONFIRMED_CONDITION_VERIFICATION_STATUS =
   `${FHIR_CONDITION_VERIFICATION_STATUS_CODE_SYSTEM}|confirmed`;
 const ENCOUNTER_LEDGER_CONDITION_BATCH_SIZE = 50;
+const CONDITION_SUMMARY_ENCOUNTER_LIMIT = 3;
 
 export async function loadPatientOverview(
   fhir: OverviewFhir,
@@ -418,9 +419,24 @@ function projectOverview(input: {
   asOfDate: string;
   timeZone?: string;
 }): PatientOverviewPayload {
-  const problemConditions = input.problemConditions.filter((condition) =>
-    hasConditionCategory(condition, "problem-list-item") && !hasStatus(condition.verificationStatus, "entered-in-error"),
+  const recentEncounterRanks = new Map(
+    [...input.encounters]
+      .sort((left, right) => encounterTime(right) - encounterTime(left))
+      .slice(0, CONDITION_SUMMARY_ENCOUNTER_LIMIT)
+      .flatMap((encounter, index) => encounter.id ? [[encounter.id, index] as const] : []),
   );
+  const problemConditions = uniqueConditions(input.problemConditions
+    .filter((condition) =>
+      hasConditionCategory(condition, "problem-list-item")
+        && !hasStatus(condition.verificationStatus, "entered-in-error"),
+    )
+    .flatMap((condition) => {
+      const encounterId = conditionEncounterId(condition);
+      const encounterRank = encounterId ? recentEncounterRanks.get(encounterId) : undefined;
+      return encounterRank === undefined ? [] : [{ condition, encounterRank }];
+    })
+    .sort((left, right) => left.encounterRank - right.encounterRank)
+    .map(({ condition }) => condition));
   const ocular = problemConditions.filter(isOcularCondition);
   const medical = problemConditions.filter((condition) => !isOcularCondition(condition));
   const allMedications = [
@@ -961,5 +977,19 @@ function uniqueBy<T>(values: T[], key: (value: T) => string): T[] {
     if (seen.has(identity)) return false;
     seen.add(identity);
     return true;
+  });
+}
+
+function uniqueConditions(conditions: Condition[]): Condition[] {
+  const seen = new Set<string>();
+  return conditions.filter((condition) => {
+    const codedIdentities = condition.code?.coding?.flatMap((coding) =>
+      coding.code ? [`code:${coding.system ?? ""}|${coding.code}`] : []
+    ) ?? [];
+    const text = condition.code?.text?.trim();
+    const identities = codedIdentities.length ? codedIdentities : text ? [`text:${text}`] : [];
+    const duplicate = identities.some((identity) => seen.has(identity));
+    for (const identity of identities) seen.add(identity);
+    return !duplicate;
   });
 }
