@@ -232,6 +232,14 @@ exact-head review before handing off for evaluation. If no review can be obtaine
 the evaluator must deliberately record the constrained `--ack-no-bot-review`
 exception. Nothing is "done" until an independent evaluation actually ran.
 
+**The author adjudicates every CodeRabbit finding before requesting evaluation, not
+after.** Reply to each thread — fix it, or say why not — before handing off. Added
+2026-08-02 after a Major/Stability finding CodeRabbit posted on PR #297 (the boot-blocking
+scoping defect, with the fix attached) went unanswered through a fixback push; the
+independent evaluator then spent a full round rediscovering it from scratch. A finding
+already sitting on the PR that goes unread is the single most avoidable failure in this
+pipeline — cheaper to close before the eval than to let the eval re-find it.
+
 **Every build→evaluate handoff returns a sealed bundle, not a transcript** — summary,
 files touched, checks run + the real command output (never a bare "tests pass"),
 risks/follow-ups, patch/diff/commands if needed, status (done/blocked/needs-review).
