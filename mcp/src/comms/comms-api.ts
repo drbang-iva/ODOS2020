@@ -41,6 +41,8 @@ type CommsApiResult =
   | { status: number; body: unknown }
   | { status: number; media: { contentType: string; bytes: Uint8Array } };
 
+const MAX_CALL_HISTORY_WINDOW = 1_000;
+
 export function registerCommsApiRoutes(
   app: Pick<Application, "get" | "post">,
   deps: CommsApiRouteDeps,
@@ -102,11 +104,11 @@ export function registerCommsApiRoutes(
     async (staff) => {
       const provider = adapter(deps, providerFromQuery(req), staff.fhir);
       if (!provider.listCalls) throw new CommsApiCapabilityError("Call history is not enabled for this communications provider.");
-      const limit = numberFromQuery(req, "limit", 1, 1_000);
+      const limit = numberFromQuery(req, "limit", 1, MAX_CALL_HISTORY_WINDOW) ?? 50;
       const visibleIds = await visibleCallIds(staff.fhir);
       if (visibleIds.size === 0) return { status: 200, body: { calls: [] } };
-      const calls = await provider.listCalls(limit ? { limit } : {});
-      return { status: 200, body: { calls: calls.filter((call) => visibleIds.has(call.id)) } };
+      const calls = await provider.listCalls({ limit: MAX_CALL_HISTORY_WINDOW });
+      return { status: 200, body: { calls: calls.filter((call) => visibleIds.has(call.id)).slice(0, limit) } };
     },
   ));
 

@@ -10,6 +10,7 @@ import express from "express";
 
 const PATIENT_REFERENCE = "Patient/synthetic-1";
 const CALL_ID = `CA${"3".repeat(32)}`;
+const OTHER_CALL_ID = `CA${"8".repeat(32)}`;
 const RECORDING_ID = `RE${"4".repeat(32)}`;
 
 test("communications RBAC hides message content from front desk at the FHIR policy layer", () => {
@@ -151,8 +152,21 @@ test("call history and detail require persisted calls visible to the caller's FH
   }
 });
 
+test("call history applies the requested limit after filtering the provider window by visible calls", async () => {
+  const fixture = await startServer();
+  try {
+    const response = await request(fixture.base, "/communications/calls?limit=1", "GET", undefined, "clinician");
+    assert.equal(response.status, 200);
+    assert.deepEqual((await response.json() as { calls: Array<{ id: string }> }).calls.map((call) => call.id), [CALL_ID]);
+    assert.deepEqual(fixture.callListRequests, [{ limit: 1_000 }]);
+  } finally {
+    await fixture.close();
+  }
+});
+
 async function startServer(options: { recordingEnabled?: boolean; recordingVisible?: boolean; callVisible?: boolean } = {}) {
   const providerCalls: string[] = [];
+  const callListRequests: Array<{ limit?: number }> = [];
   const listRequests: Array<{ includeContent?: boolean }> = [];
   const grants: OdosAuditEventRecord[] = [];
   const denials: OdosAuditEventRecord[] = [];
@@ -182,9 +196,13 @@ async function startServer(options: { recordingEnabled?: boolean; recordingVisib
       providerCalls.push("sendSms");
       return { outcome: "sent", providerMessageId: "SM-synthetic" };
     },
-    async listCalls() {
+    async listCalls(request = {}) {
       providerCalls.push("listCalls");
-      return [{ id: CALL_ID, from: "+18645550199", to: "+18645550100", status: "completed", direction: "inbound" }];
+      callListRequests.push(request);
+      return [
+        { id: OTHER_CALL_ID, from: "+18645550198", to: "+18645550100", status: "completed", direction: "inbound" as const },
+        { id: CALL_ID, from: "+18645550199", to: "+18645550100", status: "completed", direction: "inbound" as const },
+      ].slice(0, request.limit);
     },
     async getCall(id) {
       providerCalls.push("getCall");
@@ -299,6 +317,7 @@ async function startServer(options: { recordingEnabled?: boolean; recordingVisib
   return {
     base: `http://127.0.0.1:${address.port}`,
     providerCalls,
+    callListRequests,
     listRequests,
     grants,
     denials,
