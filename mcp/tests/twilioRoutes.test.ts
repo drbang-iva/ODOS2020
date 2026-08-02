@@ -121,13 +121,19 @@ test("live Twilio SMS and Voice routes validate signatures and return inbound Tw
       "voice-recording",
     ]);
 
+    const rejectedVoiceParams = {
+      ...voiceParams,
+      CallSid: `CA${"7".repeat(32)}`,
+      From: "+18645550198",
+      To: "+18645550102",
+    };
     const rejected = await fetch(`http://127.0.0.1:${address.port}${voicePath}`, {
       method: "POST",
       headers: {
         "content-type": "application/x-www-form-urlencoded",
         "x-twilio-signature": "tampered",
       },
-      body: new URLSearchParams(voiceParams),
+      body: new URLSearchParams(rejectedVoiceParams),
     });
     assert.equal(rejected.status, 403);
   } finally {
@@ -203,7 +209,10 @@ test("Twilio routes distinguish configuration, payload, and event-handler failur
   }
 
   try {
-    assert.equal((await post(failingHandlerAddress.port, voicePath, voiceParams)).status, 500);
+    const inbound = await post(failingHandlerAddress.port, voicePath, voiceParams);
+    assert.equal(inbound.status, 200);
+    assert.match(await inbound.text(), /<Dial[^>]+answerOnBridge="true"/);
+    assert.equal((await post(failingHandlerAddress.port, voiceStatusPath, voiceParams)).status, 500);
   } finally {
     failingHandlerServer.close();
     await once(failingHandlerServer, "close");

@@ -97,15 +97,20 @@ async function webhookRoute(
 ): Promise<void> {
   try {
     const result = handle();
+    if (result.response) {
+      res.type(result.response.contentType).status(result.response.status).send(result.response.body);
+      try {
+        await deps.onEvent?.(kind, result.event);
+      } catch {
+        console.error(`odos-mcp: Twilio ${kind} webhook handler failed.`);
+      }
+      return;
+    }
     try {
       await deps.onEvent?.(kind, result.event);
     } catch {
       console.error(`odos-mcp: Twilio ${kind} webhook handler failed.`);
       res.status(500).json({ error: "Twilio webhook handling failed." });
-      return;
-    }
-    if (result.response) {
-      res.type(result.response.contentType).status(result.response.status).send(result.response.body);
       return;
     }
     res.sendStatus(204);
