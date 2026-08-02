@@ -537,17 +537,17 @@ function normalizeText(value: string): string {
   return value.normalize("NFKC").replace(/\s+/g, " ").trim().toLowerCase();
 }
 
-function sourceTimestamp(file: string): string {
+export function sourceTimestamp(file: string): string {
   const timestamp = /EMA_(\d{8}T\d+)/.exec(file)?.[1];
   if (!timestamp) throw new Error(`C-CDA filename has no EMA timestamp: ${file}.`);
   return timestamp;
 }
 
-function compactDate(value: string): string {
+export function compactDate(value: string): string {
   return `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}`;
 }
 
-function isCompactCalendarDate(value: string): boolean {
+export function isCompactCalendarDate(value: string): boolean {
   if (!/^\d{8}$/.test(value)) return false;
   const year = Number(value.slice(0, 4));
   const month = Number(value.slice(4, 6));
@@ -558,7 +558,7 @@ function isCompactCalendarDate(value: string): boolean {
     && parsed.getUTCDate() === day;
 }
 
-function periodIncludesDate(encounter: Encounter, date: string): boolean {
+export function periodIncludesDate(encounter: Encounter, date: string): boolean {
   const start = localCalendarDate(encounter.period?.start);
   const end = localCalendarDate(encounter.period?.end) ?? start;
   return Boolean(start && end && start <= date && end >= date);
