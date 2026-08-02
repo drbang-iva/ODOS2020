@@ -18,6 +18,8 @@ test("live Twilio SMS and Voice routes validate signatures and return inbound Tw
     auth: { accountSid: ACCOUNT_SID, authToken: AUTH_TOKEN, externalBaseUrl: EXTERNAL_BASE_URL },
     voiceFromNumber: "+18645550100",
     voiceForwardToNumber: "+18645550101",
+    realTimeTranscriptionEnabled: true,
+    recordingMediaEnabled: true,
     onEvent: (kind) => { events.push(kind); },
   });
   const server = app.listen(0);
@@ -75,6 +77,7 @@ test("live Twilio SMS and Voice routes validate signatures and return inbound Tw
     assert.match(twiml, /<Dial[^>]+answerOnBridge="true"/);
     assert.match(twiml, /\+18645550101/);
     assert.doesNotMatch(twiml, /record=/);
+    assert.match(twiml, /<Transcription[^>]+statusCallbackUrl="https:\/\/practice\.example\/comms\/twilio\/voice\/transcription"/);
 
     const signedPost = async (path: string, params: Record<string, string>) => fetch(
       `http://127.0.0.1:${address.port}${path}`,
@@ -113,12 +116,41 @@ test("live Twilio SMS and Voice routes validate signatures and return inbound Tw
       RecordingDuration: "42",
       RecordingChannels: "2",
     })).status, 204);
+    const transcriptionParams = {
+      AccountSid: ACCOUNT_SID,
+      CallSid: CALL_SID,
+      TranscriptionSid: `GT${"7".repeat(32)}`,
+      Timestamp: "2026-08-01T22:15:00.000Z",
+      SequenceId: "2",
+      TranscriptionEvent: "transcription-content",
+      LanguageCode: "en-US",
+      Track: "inbound_track",
+      TranscriptionData: JSON.stringify({ transcript: "Synthetic transcript text.", confidence: 0.98 }),
+      Final: "true",
+    };
+    assert.equal((await signedPost(
+      "/comms/twilio/voice/transcription",
+      transcriptionParams,
+    )).status, 204);
+    const tamperedTranscription = await fetch(
+      `http://127.0.0.1:${address.port}/comms/twilio/voice/transcription`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/x-www-form-urlencoded",
+          "x-twilio-signature": "tampered",
+        },
+        body: new URLSearchParams(transcriptionParams),
+      },
+    );
+    assert.equal(tamperedTranscription.status, 403);
     assert.deepEqual(events, [
       "sms-inbound",
       "voice-inbound",
       "sms-status",
       "voice-status",
       "voice-recording",
+      "voice-transcription",
     ]);
 
     const rejectedVoiceParams = {
@@ -201,6 +233,12 @@ test("Twilio routes distinguish configuration, payload, and event-handler failur
       To: "+18645550104",
       CallStatus: "synthetic-invalid",
     })).status, 400);
+    assert.equal((await post(unconfiguredAddress.port, "/comms/twilio/voice/recording", {
+      AccountSid: ACCOUNT_SID,
+      CallSid: CALL_SID,
+      RecordingSid: `RE${"6".repeat(32)}`,
+      RecordingStatus: "completed",
+    })).status, 404);
   } finally {
     unconfiguredServer.close();
     await once(unconfiguredServer, "close");

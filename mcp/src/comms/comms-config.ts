@@ -133,6 +133,15 @@ export function commsAdapterRegistrationsFromEnv(
         };
       }
       case "twilio": {
+        const hipaaMode = optionalBoolean(env, "ODOS_HIPAA_MODE");
+        const realTimeTranscriptionEnabled = optionalBoolean(
+          env,
+          "TWILIO_REAL_TIME_TRANSCRIPTION_ENABLED",
+        );
+        const mediaUrlAuthAcknowledged = optionalBoolean(
+          env,
+          "TWILIO_MEDIA_URL_AUTH_ACKNOWLEDGED",
+        );
         const required = ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN"] as const;
         const missing = required.find((name) => !env[name]?.trim());
         if (missing) {
@@ -160,6 +169,9 @@ export function commsAdapterRegistrationsFromEnv(
           config: {
             accountSid: env.TWILIO_ACCOUNT_SID!.trim(),
             authToken: env.TWILIO_AUTH_TOKEN!.trim(),
+            hipaaMode,
+            realTimeTranscriptionEnabled,
+            mediaUrlAuthAcknowledged,
             ...(env.TWILIO_API_KEY_SID?.trim()
               ? { apiKeySid: env.TWILIO_API_KEY_SID.trim() }
               : {}),
@@ -194,4 +206,16 @@ export function commsAdapterRegistrationsFromEnv(
         throw new Error(`Unsupported communications provider "${provider}".`);
     }
   });
+}
+
+function optionalBoolean(
+  env: Record<string, string | undefined>,
+  name: string,
+): boolean {
+  const value = env[name]?.trim().toLowerCase();
+  if (!value) return false;
+  if (value !== "true" && value !== "false") {
+    throw new Error(`${name} must be true or false when set.`);
+  }
+  return value === "true";
 }

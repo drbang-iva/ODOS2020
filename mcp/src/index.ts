@@ -5736,6 +5736,9 @@ async function main(): Promise<void> {
           },
           voiceFromNumber: twilioRegistration.config.voiceFromNumber,
           voiceForwardToNumber: twilioRegistration.config.voiceForwardToNumber,
+          realTimeTranscriptionEnabled:
+            twilioRegistration.config.realTimeTranscriptionEnabled,
+          recordingMediaEnabled: twilioRegistration.config.mediaUrlAuthAcknowledged,
         });
       }
       app.use(

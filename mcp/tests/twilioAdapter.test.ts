@@ -7,6 +7,7 @@ import {
   handleTwilioInboundWebhook,
   handleTwilioRecordingWebhook,
   handleTwilioStatusWebhook,
+  handleTwilioTranscriptionWebhook,
   handleTwilioVoiceWebhook,
   validateTwilioWebhook,
 } from "../src/comms/adapters/twilio-adapter.js";
@@ -18,7 +19,7 @@ const MESSAGING_SERVICE_SID = `MG${"2".repeat(32)}`;
 const MESSAGE_SID = `SM${"3".repeat(32)}`;
 const CALL_SID = `CA${"5".repeat(32)}`;
 const RECORDING_SID = `RE${"6".repeat(32)}`;
-const TRANSCRIPTION_ID = `voice_transcription_${"7".repeat(26)}`;
+const TRANSCRIPTION_SID = `GT${"7".repeat(32)}`;
 const AUTH_TOKEN = "synthetic-auth-token";
 const API_KEY_SECRET = "synthetic-api-key-secret";
 const VOICE_API_KEY_SECRET = "synthetic-voice-api-key-secret";
@@ -107,6 +108,88 @@ test("Twilio SDK preserves API-key authentication and explicit from-number mode"
     body: "Reminder tomorrow. Reply STOP to unsubscribe.",
     from: "+18645550100",
   }]);
+});
+
+test("Twilio HIPAA mode accepts US destinations and rejects non-US or malformed SMS and Voice destinations", async () => {
+  const messageCreates: Array<Record<string, unknown>> = [];
+  const callCreates: Array<Record<string, unknown>> = [];
+  const adapter = createTwilioAdapter({
+    accountSid: ACCOUNT_SID,
+    authToken: AUTH_TOKEN,
+    messagingServiceSid: MESSAGING_SERVICE_SID,
+    hipaaMode: true,
+    voiceFromNumber: "+18645550100",
+    voiceForwardToNumber: "+18645550101",
+    webhookBaseUrl: EXTERNAL_BASE_URL,
+    voiceApiKeySid: VOICE_API_KEY_SID,
+    voiceApiKeySecret: VOICE_API_KEY_SECRET,
+  }, {
+    clientFactory: () => ({
+      messages: {
+        async create(input) {
+          messageCreates.push(input);
+          return { sid: MESSAGE_SID };
+        },
+      },
+      calls: {
+        async create(input) {
+          callCreates.push(input);
+          return { sid: CALL_SID };
+        },
+        list: async () => [],
+        get: () => ({ fetch: async () => { throw new Error("unused"); } }),
+      },
+      recordings: {
+        get: () => ({ fetch: async () => { throw new Error("unused"); } }),
+      },
+    }),
+  });
+  const smsRequest = {
+    patientReference: "Patient/synthetic-1",
+    body: "Reminder tomorrow.",
+    campaignType: "appointment-reminder",
+    suppression: {},
+  };
+
+  await adapter.sendSms!({ ...smsRequest, toNumber: "+18645550199" });
+  await assert.rejects(adapter.sendSms!({ ...smsRequest, toNumber: "+442079460000" }), /US phone number.*HIPAA/i);
+  await assert.rejects(adapter.sendSms!({ ...smsRequest, toNumber: "+14165550199" }), /US phone number.*HIPAA/i);
+  await assert.rejects(adapter.sendSms!({ ...smsRequest, toNumber: "8645550199" }), /E\.164/i);
+  await adapter.initiateCall!({ patientReference: "Patient/synthetic-1", toNumber: "+18645550199" });
+  await assert.rejects(
+    adapter.initiateCall!({ patientReference: "Patient/synthetic-1", toNumber: "+525555550199" }),
+    /US phone number.*HIPAA/i,
+  );
+
+  assert.equal(messageCreates.length, 1);
+  assert.equal(callCreates.length, 1);
+});
+
+test("Twilio keeps international destinations available outside HIPAA mode", async () => {
+  const destinations: string[] = [];
+  const adapter = createTwilioAdapter({
+    accountSid: ACCOUNT_SID,
+    authToken: AUTH_TOKEN,
+    messagingServiceSid: MESSAGING_SERVICE_SID,
+  }, {
+    clientFactory: () => ({
+      messages: {
+        async create(input) {
+          destinations.push(input.to);
+          return { sid: MESSAGE_SID };
+        },
+      },
+    }),
+  });
+
+  await adapter.sendSms!({
+    patientReference: "Patient/synthetic-1",
+    toNumber: "+442079460000",
+    body: "Synthetic international message.",
+    campaignType: "manual",
+    suppression: {},
+  });
+  assert.deepEqual(destinations, ["+442079460000"]);
 });
 
 test("Twilio RestException 21610 is a non-retryable recipient opt-out suppression", async () => {
@@ -347,6 +430,7 @@ test("Twilio Voice initiates click-to-call through the practice line with signed
     webhookBaseUrl: EXTERNAL_BASE_URL,
     voiceApiKeySid: VOICE_API_KEY_SID,
     voiceApiKeySecret: VOICE_API_KEY_SECRET,
+    realTimeTranscriptionEnabled: true,
   }, {
     clientFactory: (username, password, options) => {
       factoryCalls.push([username, password, options]);
@@ -388,6 +472,13 @@ test("Twilio Voice initiates click-to-call through the practice line with signed
   assert.equal(createCalls[0]?.statusCallback, `${EXTERNAL_BASE_URL}/comms/twilio/voice/status`);
   assert.deepEqual(createCalls[0]?.statusCallbackEvent, ["initiated", "ringing", "answered", "completed"]);
   assert.equal(createCalls[0]?.record, undefined);
+  assert.match(
+    String(createCalls[0]?.twiml),
+    new RegExp(`<Transcription[^>]+statusCallbackUrl="${EXTERNAL_BASE_URL}/comms/twilio/voice/transcription"`),
+  );
+  assert.match(String(createCalls[0]?.twiml), /<Transcription[^>]+partialResults="false"/);
+  assert.match(String(createCalls[0]?.twiml), /<Transcription[^>]+track="both_tracks"/);
+  assert.doesNotMatch(String(createCalls[0]?.twiml), /intelligenceService=/);
   assert.match(String(createCalls[0]?.twiml), /<Dial[^>]+callerId="\+18645550100"/);
   assert.match(String(createCalls[0]?.twiml), /\+18645550199/);
   assert.doesNotMatch(String(createCalls[0]?.twiml), /record=/);
@@ -449,7 +540,7 @@ test("Twilio Voice lists and fetches normalized call detail", async () => {
   assert.deepEqual(await adapter.listCalls!({ limit: 20 }), [expected]);
 });
 
-test("Twilio Voice fetches authenticated recording media and current Batch Transcription output", async () => {
+test("Twilio Voice fetches authenticated recording media only after operator acknowledgement", async () => {
   const fetches: Array<{ url: string; authorization: string | null; signal: AbortSignal | null }> = [];
   const adapter = createTwilioAdapter({
     accountSid: ACCOUNT_SID,
@@ -462,6 +553,7 @@ test("Twilio Voice fetches authenticated recording media and current Batch Trans
     webhookBaseUrl: EXTERNAL_BASE_URL,
     voiceApiKeySid: VOICE_API_KEY_SID,
     voiceApiKeySecret: VOICE_API_KEY_SECRET,
+    mediaUrlAuthAcknowledged: true,
   }, {
     clientFactory: () => ({
       messages: { create: async () => ({ sid: MESSAGE_SID }) },
@@ -494,18 +586,7 @@ test("Twilio Voice fetches authenticated recording media and current Batch Trans
           headers: { "content-type": "audio/mpeg" },
         });
       }
-      return Response.json({
-        operationId: TRANSCRIPTION_ID,
-        status: "COMPLETED",
-        transcription: {
-          id: TRANSCRIPTION_ID,
-          sourceId: RECORDING_SID,
-          sentences: [
-            { sentenceIndex: 2, audioChannelIndex: 2, text: "Synthetic staff text." },
-            { sentenceIndex: 1, audioChannelIndex: 1, text: "Synthetic caller text." },
-          ],
-        },
-      });
+      throw new Error(`Unexpected fetch: ${url}`);
     }) as typeof fetch,
   });
 
@@ -515,20 +596,42 @@ test("Twilio Voice fetches authenticated recording media and current Batch Trans
   assert.equal(recording.contentType, "audio/mpeg");
   assert.deepEqual([...recording.audio], [1, 2, 3]);
 
-  assert.deepEqual(await adapter.fetchTranscription!(TRANSCRIPTION_ID), {
-    id: TRANSCRIPTION_ID,
-    recordingId: RECORDING_SID,
-    status: "completed",
-    text: "Synthetic caller text.\nSynthetic staff text.",
-  });
+  assert.equal(adapter.fetchTranscription, undefined);
   assert.deepEqual(fetches.map(({ url }) => url), [
     `https://api.twilio.com/2010-04-01/Accounts/${ACCOUNT_SID}/Recordings/${RECORDING_SID}.mp3`,
-    `https://voice.twilio.com/v3/Transcriptions/${TRANSCRIPTION_ID}`,
   ]);
   assert.deepEqual(new Set(fetches.map(({ authorization }) => authorization)), new Set([
     `Basic ${Buffer.from(`${VOICE_API_KEY_SID}:${VOICE_API_KEY_SECRET}`).toString("base64")}`,
   ]));
   assert.equal(fetches.every(({ signal }) => signal instanceof AbortSignal), true);
+});
+
+test("Twilio refuses to expose recording retrieval before media-URL auth is acknowledged", () => {
+  const adapter = createTwilioAdapter({
+    accountSid: ACCOUNT_SID,
+    authToken: AUTH_TOKEN,
+    messagingServiceSid: MESSAGING_SERVICE_SID,
+    voiceFromNumber: "+18645550100",
+    voiceForwardToNumber: "+18645550101",
+    webhookBaseUrl: EXTERNAL_BASE_URL,
+    voiceApiKeySid: VOICE_API_KEY_SID,
+    voiceApiKeySecret: VOICE_API_KEY_SECRET,
+  }, {
+    clientFactory: () => ({
+      messages: { create: async () => ({ sid: MESSAGE_SID }) },
+      calls: {
+        create: async () => ({ sid: CALL_SID }),
+        list: async () => [],
+        get: () => ({ fetch: async () => { throw new Error("unused"); } }),
+      },
+      recordings: {
+        get: () => ({ fetch: async () => { throw new Error("unused"); } }),
+      },
+    }),
+  });
+
+  assert.equal(adapter.fetchRecording, undefined);
+  assert.equal(adapter.fetchTranscription, undefined);
 });
 
 test("signed Voice events expose caller ID and fail closed on tampering, missing signatures, or malformed fields", () => {
@@ -616,4 +719,49 @@ test("signed recording events normalize availability metadata", () => {
     durationSeconds: 42,
     channels: 2,
   });
+});
+
+test("signed Real-Time Transcription events expose final webhook content and fail closed on tampering", () => {
+  const requestTarget = "/comms/twilio/voice/transcription";
+  const url = `${EXTERNAL_BASE_URL}${requestTarget}`;
+  const params = {
+    AccountSid: ACCOUNT_SID,
+    CallSid: CALL_SID,
+    TranscriptionSid: TRANSCRIPTION_SID,
+    Timestamp: "2026-08-01T22:15:00.000Z",
+    SequenceId: "2",
+    TranscriptionEvent: "transcription-content",
+    LanguageCode: "en-US",
+    Track: "inbound_track",
+    TranscriptionData: JSON.stringify({ transcript: "Synthetic transcript text.", confidence: 0.98 }),
+    Final: "true",
+  };
+  const request = {
+    requestTarget,
+    contentType: "application/x-www-form-urlencoded",
+    params,
+    signature: twilio.getExpectedTwilioSignature(AUTH_TOKEN, url, params),
+  };
+  const auth = { accountSid: ACCOUNT_SID, authToken: AUTH_TOKEN, externalBaseUrl: EXTERNAL_BASE_URL };
+
+  assert.deepEqual(handleTwilioTranscriptionWebhook(request, auth), {
+    accountSid: ACCOUNT_SID,
+    callId: CALL_SID,
+    transcriptionId: TRANSCRIPTION_SID,
+    event: "transcription-content",
+    timestamp: "2026-08-01T22:15:00.000Z",
+    sequenceId: 2,
+    languageCode: "en-US",
+    track: "inbound_track",
+    text: "Synthetic transcript text.",
+    confidence: 0.98,
+    final: true,
+  });
+  assert.throws(
+    () => handleTwilioTranscriptionWebhook({
+      ...request,
+      params: { ...params, TranscriptionData: JSON.stringify({ transcript: "Tampered." }) },
+    }, auth),
+    /signature/i,
+  );
 });

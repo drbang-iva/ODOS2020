@@ -1,10 +1,10 @@
 import twilio from "twilio";
+import { parsePhoneNumberFromString } from "libphonenumber-js";
 import type {
   CallDetail,
   CallListRequest,
   CallRecording,
   CallRequest,
-  CallTranscription,
   CommsProvider,
   SendResult,
   SendSmsRequest,
@@ -33,11 +33,12 @@ import type {
  *   event set, and inbound calls receive TwiML:
  *   https://www.twilio.com/docs/voice/api/call-resource
  *   https://www.twilio.com/docs/voice/tutorials/how-to-respond-to-incoming-phone-calls
- * - Recording media uses the authenticated .mp3 Recording resource; current transcript fetches
- *   use the v3 Batch Transcription resource. Batch Transcription is Public Beta and explicitly
- *   not HIPAA eligible, so this adapter does not create transcription jobs automatically:
+ * - Recording media uses the authenticated .mp3 Recording resource. Real-Time Transcription
+ *   uses signed status webhooks; Batch Transcription v3 is not exposed because it is not HIPAA
+ *   eligible:
  *   https://www.twilio.com/docs/voice/api/recording
- *   https://www.twilio.com/docs/voice/api/batch-transcription-resource
+ *   https://www.twilio.com/docs/voice/twiml/transcription
+ *   https://www.twilio.com/content/dam/twilio-com/global/en/other/hipaa/pdf/HIPAA-Eligible-Services.pdf
  */
 
 export const TWILIO_OPT_OUT_LANGUAGE = "Reply STOP to unsubscribe.";
@@ -55,6 +56,9 @@ export interface TwilioAdapterConfig {
   voiceFromNumber?: string;
   voiceForwardToNumber?: string;
   webhookBaseUrl?: string;
+  hipaaMode?: boolean;
+  realTimeTranscriptionEnabled?: boolean;
+  mediaUrlAuthAcknowledged?: boolean;
 }
 
 type TwilioClientOptions = NonNullable<Parameters<typeof twilio>[2]>;
@@ -163,6 +167,20 @@ export interface TwilioRecordingWebhookEvent {
   channels?: number;
 }
 
+export interface TwilioTranscriptionWebhookEvent {
+  accountSid: string;
+  callId: string;
+  transcriptionId: string;
+  event: "transcription-started" | "transcription-content" | "transcription-stopped" | "transcription-error";
+  timestamp: string;
+  sequenceId: number;
+  languageCode?: string;
+  track?: "inbound_track" | "outbound_track";
+  text?: string;
+  confidence?: number;
+  final?: boolean;
+}
+
 export function createTwilioAdapter(
   config: TwilioAdapterConfig,
   deps: TwilioAdapterDeps = {},
@@ -195,8 +213,11 @@ export function createTwilioAdapter(
     },
     async sendSms(request: SendSmsRequest): Promise<SendResult> {
       try {
+        const recipient = e164(request.toNumber, "Twilio SMS recipient");
         const created = await messagingClient.messages.create({
-          to: e164(request.toNumber, "Twilio SMS recipient"),
+          to: normalized.hipaaMode
+            ? usE164(recipient, "Twilio SMS recipient")
+            : recipient,
           body: smsBody(request.body),
           ...(normalized.messagingServiceSid
             ? { messagingServiceSid: normalized.messagingServiceSid }
@@ -223,20 +244,29 @@ function voiceMethods(
   fetchImpl: typeof fetch,
 ): Pick<
   CommsProvider,
-  "initiateCall" | "getCall" | "listCalls" | "fetchRecording" | "fetchTranscription"
+  "initiateCall" | "getCall" | "listCalls" | "fetchRecording"
 > {
   const calls = client.calls;
   const recordings = client.recordings;
-  if (!calls || !recordings) {
-    throw new Error("Twilio SDK client does not expose the Voice Calls and Recordings resources.");
+  if (!calls) {
+    throw new Error("Twilio SDK client does not expose the Voice Calls resource.");
+  }
+  if (voice.mediaUrlAuthAcknowledged && !recordings) {
+    throw new Error("Twilio SDK client does not expose the Voice Recordings resource.");
   }
   const credentials = `${voice.apiKeySid}:${voice.apiKeySecret}`;
   const authorization = `Basic ${Buffer.from(credentials).toString("base64")}`;
   return {
     async initiateCall(request: CallRequest): Promise<{ callId: string }> {
-      const patientNumber = e164(request.toNumber, "Twilio Voice recipient");
+      const recipient = e164(request.toNumber, "Twilio Voice recipient");
+      const patientNumber = config.hipaaMode
+        ? usE164(recipient, "Twilio Voice recipient")
+        : recipient;
       const statusCallback = `${voice.webhookBaseUrl}/comms/twilio/voice/status`;
       const response = new twilio.twiml.VoiceResponse();
+      if (voice.realTimeTranscriptionEnabled) {
+        addTwilioRealTimeTranscription(response, voice.webhookBaseUrl);
+      }
       const dial = response.dial({
         answerOnBridge: true,
         callerId: voice.fromNumber,
@@ -266,44 +296,47 @@ function voiceMethods(
       }
       return (await calls.list({ limit })).map(normalizeCall);
     },
-    async fetchRecording(recordingId: string): Promise<CallRecording> {
-      const id = twilioSid(recordingId, "RE", "Twilio Recording SID");
-      const metadata = await recordings.get(id).fetch();
-      if (metadata.status !== "completed") {
-        throw new Error(`Twilio Recording ${id} is not available; status is "${metadata.status}".`);
-      }
-      const media = await fetchImpl(
-        `https://api.twilio.com/2010-04-01/Accounts/${config.accountSid}/Recordings/${id}.mp3`,
-        {
-          headers: { Authorization: authorization },
-          signal: AbortSignal.timeout(TWILIO_REQUEST_TIMEOUT_MS),
-        },
-      );
-      if (!media.ok) {
-        throw new Error(`Twilio Recording media fetch failed with HTTP ${media.status}.`);
-      }
-      const durationSeconds = optionalInteger(metadata.duration, "Twilio Recording duration");
-      return {
-        id: metadata.sid,
-        callId: metadata.callSid,
-        status: metadata.status,
-        ...(durationSeconds !== undefined ? { durationSeconds } : {}),
-        contentType: media.headers.get("content-type") ?? "application/octet-stream",
-        audio: new Uint8Array(await media.arrayBuffer()),
-      };
-    },
-    async fetchTranscription(transcriptionId: string): Promise<CallTranscription> {
-      const id = batchTranscriptionId(transcriptionId);
-      const response = await fetchImpl(`https://voice.twilio.com/v3/Transcriptions/${id}`, {
-        headers: { Authorization: authorization },
-        signal: AbortSignal.timeout(TWILIO_REQUEST_TIMEOUT_MS),
-      });
-      if (!response.ok) {
-        throw new Error(`Twilio Batch Transcription fetch failed with HTTP ${response.status}.`);
-      }
-      return batchTranscription(await response.json(), id);
-    },
+    ...(voice.mediaUrlAuthAcknowledged ? {
+      async fetchRecording(recordingId: string): Promise<CallRecording> {
+        const id = twilioSid(recordingId, "RE", "Twilio Recording SID");
+        const metadata = await recordings!.get(id).fetch();
+        if (metadata.status !== "completed") {
+          throw new Error(`Twilio Recording ${id} is not available; status is "${metadata.status}".`);
+        }
+        const media = await fetchImpl(
+          `https://api.twilio.com/2010-04-01/Accounts/${config.accountSid}/Recordings/${id}.mp3`,
+          {
+            headers: { Authorization: authorization },
+            signal: AbortSignal.timeout(TWILIO_REQUEST_TIMEOUT_MS),
+          },
+        );
+        if (!media.ok) {
+          throw new Error(`Twilio Recording media fetch failed with HTTP ${media.status}.`);
+        }
+        const durationSeconds = optionalInteger(metadata.duration, "Twilio Recording duration");
+        return {
+          id: metadata.sid,
+          callId: metadata.callSid,
+          status: metadata.status,
+          ...(durationSeconds !== undefined ? { durationSeconds } : {}),
+          contentType: media.headers.get("content-type") ?? "application/octet-stream",
+          audio: new Uint8Array(await media.arrayBuffer()),
+        };
+      },
+    } : {}),
   };
+}
+
+export function addTwilioRealTimeTranscription(
+  response: twilio.twiml.VoiceResponse,
+  webhookBaseUrl: string,
+): void {
+  response.start().transcription({
+    statusCallbackUrl: `${externalBaseUrl(webhookBaseUrl)}/comms/twilio/voice/transcription`,
+    statusCallbackMethod: "POST",
+    track: "both_tracks",
+    partialResults: false,
+  });
 }
 
 export function validateTwilioWebhook(
@@ -451,6 +484,65 @@ export function handleTwilioRecordingWebhook(
   };
 }
 
+export function handleTwilioTranscriptionWebhook(
+  request: TwilioWebhookRequest,
+  auth: TwilioWebhookAuth,
+): TwilioTranscriptionWebhookEvent {
+  const params = validateTwilioWebhook(request, auth);
+  const accountSid = matchingAccountSid(params, auth);
+  const event = requiredParam(params, "TranscriptionEvent");
+  if (!TRANSCRIPTION_EVENTS.has(event)) {
+    throw new Error("Twilio Real-Time Transcription webhook event is invalid.");
+  }
+  const timestamp = requiredParam(params, "Timestamp");
+  if (Number.isNaN(Date.parse(timestamp))) {
+    throw new Error("Twilio Real-Time Transcription Timestamp is invalid.");
+  }
+  const sequenceId = optionalInteger(
+    requiredParam(params, "SequenceId"),
+    "Twilio Real-Time Transcription SequenceId",
+  )!;
+  const base = {
+    accountSid,
+    callId: twilioSid(requiredParam(params, "CallSid"), "CA", "Twilio transcription CallSid"),
+    transcriptionId: twilioSid(
+      requiredParam(params, "TranscriptionSid"),
+      "GT",
+      "Twilio TranscriptionSid",
+    ),
+    event: event as TwilioTranscriptionWebhookEvent["event"],
+    timestamp,
+    sequenceId,
+  };
+  if (event !== "transcription-content") return base;
+
+  const track = requiredParam(params, "Track");
+  if (track !== "inbound_track" && track !== "outbound_track") {
+    throw new Error("Twilio Real-Time Transcription Track is invalid.");
+  }
+  const final = requiredParam(params, "Final");
+  if (final !== "true" && final !== "false") {
+    throw new Error("Twilio Real-Time Transcription Final is invalid.");
+  }
+  const data = jsonObject(requiredParam(params, "TranscriptionData"));
+  const text = requiredJsonText(data.transcript, "transcript");
+  const confidence = data.confidence;
+  if (
+    confidence !== undefined
+    && (typeof confidence !== "number" || !Number.isFinite(confidence) || confidence < 0 || confidence > 1)
+  ) {
+    throw new Error("Twilio Real-Time Transcription confidence is invalid.");
+  }
+  return {
+    ...base,
+    languageCode: requiredParam(params, "LanguageCode"),
+    track,
+    text,
+    ...(confidence !== undefined ? { confidence } : {}),
+    final: final === "true",
+  };
+}
+
 function validateTwilioConfig(config: TwilioAdapterConfig) {
   const accountSid = sid(config.accountSid, "AC", "Twilio Account SID");
   const authToken = required(config.authToken, "Twilio Auth Token");
@@ -490,11 +582,20 @@ function validateTwilioConfig(config: TwilioAdapterConfig) {
   }
   const voice = configuredVoiceValues === voiceValues.length && webhookBaseUrl
     ? {
-        fromNumber: e164(config.voiceFromNumber, "Twilio Voice from-number"),
-        forwardToNumber: e164(config.voiceForwardToNumber, "Twilio Voice forward-to number"),
+        fromNumber: config.hipaaMode
+          ? usE164(e164(config.voiceFromNumber, "Twilio Voice from-number"), "Twilio Voice from-number")
+          : e164(config.voiceFromNumber, "Twilio Voice from-number"),
+        forwardToNumber: config.hipaaMode
+          ? usE164(
+              e164(config.voiceForwardToNumber, "Twilio Voice forward-to number"),
+              "Twilio Voice forward-to number",
+            )
+          : e164(config.voiceForwardToNumber, "Twilio Voice forward-to number"),
         webhookBaseUrl,
         apiKeySid: sid(config.voiceApiKeySid, "SK", "Twilio Voice API Key SID"),
         apiKeySecret: required(config.voiceApiKeySecret, "Twilio Voice API Key secret"),
+        realTimeTranscriptionEnabled: config.realTimeTranscriptionEnabled === true,
+        mediaUrlAuthAcknowledged: config.mediaUrlAuthAcknowledged === true,
       }
     : undefined;
   return {
@@ -505,6 +606,7 @@ function validateTwilioConfig(config: TwilioAdapterConfig) {
     messagingServiceSid,
     fromNumber,
     webhookBaseUrl,
+    hipaaMode: config.hipaaMode === true,
     voice,
   };
 }
@@ -519,6 +621,13 @@ const CALL_STATUSES = new Set([
   "failed",
   "no-answer",
   "canceled",
+]);
+
+const TRANSCRIPTION_EVENTS = new Set([
+  "transcription-started",
+  "transcription-content",
+  "transcription-stopped",
+  "transcription-error",
 ]);
 
 function matchingAccountSid(
@@ -546,76 +655,14 @@ function normalizeCall(call: TwilioCallRecord): CallDetail {
   };
 }
 
-function batchTranscription(value: unknown, expectedId: string): CallTranscription {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("Twilio Batch Transcription response must be an object.");
-  }
-  const body = value as Record<string, unknown>;
-  const operationId = requiredJsonString(body.operationId, "operationId");
-  if (operationId !== expectedId) {
-    throw new Error("Twilio Batch Transcription operationId does not match the requested id.");
-  }
-  const status = requiredJsonString(body.status, "status").toLowerCase();
-  const transcription = body.transcription;
-  if (transcription === null || transcription === undefined) return { id: expectedId, status };
-  if (typeof transcription !== "object" || Array.isArray(transcription)) {
-    throw new Error("Twilio Batch Transcription transcription must be an object.");
-  }
-  const detail = transcription as Record<string, unknown>;
-  if (requiredJsonString(detail.id, "transcription.id") !== expectedId) {
-    throw new Error("Twilio Batch Transcription id does not match the requested id.");
-  }
-  const sourceId = detail.sourceId === null || detail.sourceId === undefined
-    ? undefined
-    : twilioSid(
-        requiredJsonString(detail.sourceId, "transcription.sourceId"),
-        "RE",
-        "Twilio Recording SID",
-      );
-  if (!Array.isArray(detail.sentences)) {
-    throw new Error("Twilio Batch Transcription sentences must be an array.");
-  }
-  const orderedSentences = detail.sentences.map((sentence, index) => {
-    if (!sentence || typeof sentence !== "object" || Array.isArray(sentence)) {
-      throw new Error(`Twilio Batch Transcription sentence ${index + 1} must be an object.`);
-    }
-    const record = sentence as Record<string, unknown>;
-    if (!Number.isInteger(record.sentenceIndex) || Number(record.sentenceIndex) < 1) {
-      throw new Error(`Twilio Batch Transcription sentence ${index + 1} sentenceIndex is invalid.`);
-    }
-    return {
-      sentenceIndex: Number(record.sentenceIndex),
-      text: requiredJsonString(record.text, `sentence ${index + 1} text`),
-    };
-  });
-  const text = orderedSentences
-    .sort((left, right) => left.sentenceIndex - right.sentenceIndex)
-    .map(({ text: sentenceText }) => sentenceText)
-    .join("\n");
-  return {
-    id: expectedId,
-    ...(sourceId ? { recordingId: sourceId } : {}),
-    status,
-    ...(text ? { text } : {}),
-  };
-}
-
-function requiredJsonString(value: unknown, label: string): string {
+function requiredJsonText(value: unknown, label: string): string {
   if (typeof value !== "string" || !value.trim()) {
-    throw new Error(`Twilio Batch Transcription ${label} is required.`);
+    throw new Error(`Twilio Real-Time Transcription ${label} is required.`);
   }
   return value.trim();
 }
 
-function batchTranscriptionId(value: string): string {
-  const normalized = required(value, "Twilio Batch Transcription id");
-  if (!/^voice_transcription_[a-z0-9]+$/.test(normalized)) {
-    throw new Error("Twilio Batch Transcription id is invalid.");
-  }
-  return normalized;
-}
-
-function twilioSid(value: string, prefix: "CA" | "RE", label: string): string {
+function twilioSid(value: string, prefix: "CA" | "GT" | "RE", label: string): string {
   const normalized = required(value, label);
   if (!new RegExp(`^${prefix}[0-9a-fA-F]{32}$`).test(normalized)) {
     throw new Error(`${label} must begin with ${prefix} followed by 32 hexadecimal characters.`);
@@ -719,4 +766,11 @@ function e164(value: string | undefined, label: string): string {
     throw new Error(`${label} must be in E.164 format.`);
   }
   return normalized;
+}
+
+function usE164(value: string, label: string): string {
+  if (parsePhoneNumberFromString(value)?.country !== "US") {
+    throw new Error(`${label} must be a US phone number when ODOS_HIPAA_MODE is true.`);
+  }
+  return value;
 }
