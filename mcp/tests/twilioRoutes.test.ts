@@ -140,7 +140,11 @@ test("live Twilio SMS and Voice routes validate signatures and return inbound Tw
           "content-type": "application/x-www-form-urlencoded",
           "x-twilio-signature": "tampered",
         },
-        body: new URLSearchParams(transcriptionParams),
+        body: new URLSearchParams({
+          ...transcriptionParams,
+          CallSid: `CA${"8".repeat(32)}`,
+          TranscriptionSid: `GT${"9".repeat(32)}`,
+        }),
       },
     );
     assert.equal(tamperedTranscription.status, 403);

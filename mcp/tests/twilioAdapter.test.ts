@@ -760,7 +760,12 @@ test("signed Real-Time Transcription events expose final webhook content and fai
   assert.throws(
     () => handleTwilioTranscriptionWebhook({
       ...request,
-      params: { ...params, TranscriptionData: JSON.stringify({ transcript: "Tampered." }) },
+      params: {
+        ...params,
+        CallSid: `CA${"8".repeat(32)}`,
+        TranscriptionSid: `GT${"8".repeat(32)}`,
+        TranscriptionData: JSON.stringify({ transcript: "Tampered." }),
+      },
     }, auth),
     /signature/i,
   );
