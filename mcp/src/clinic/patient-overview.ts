@@ -121,6 +121,7 @@ const ENCOUNTER_LEDGER_CONDITION_CATEGORIES = ["encounter-diagnosis", "problem-l
   .join(",");
 const CONFIRMED_CONDITION_VERIFICATION_STATUS =
   `${FHIR_CONDITION_VERIFICATION_STATUS_CODE_SYSTEM}|confirmed`;
+const ENCOUNTER_LEDGER_CONDITION_BATCH_SIZE = 50;
 
 export async function loadPatientOverview(
   fhir: OverviewFhir,
@@ -201,14 +202,22 @@ export async function loadPatientOverview(
   );
   const encounterReferences = new Set(encounterReferenceList);
   const encounterDiagnoses = encounterReferenceList.length
-    ? await searchAll<Condition>(fhir, "Condition", {
-        patient: patientId,
-        category: ENCOUNTER_LEDGER_CONDITION_CATEGORIES,
-        encounter: encounterReferenceList.join(","),
-        "verification-status": CONFIRMED_CONDITION_VERIFICATION_STATUS,
-        ...(diagnosisCode ? { code: diagnosisCode } : {}),
-        _count: "100",
-      })
+    ? uniqueBy((await Promise.all(Array.from(
+        { length: Math.ceil(encounterReferenceList.length / ENCOUNTER_LEDGER_CONDITION_BATCH_SIZE) },
+        (_, batchIndex) => searchAll<Condition>(fhir, "Condition", {
+          patient: patientId,
+          category: ENCOUNTER_LEDGER_CONDITION_CATEGORIES,
+          encounter: encounterReferenceList
+            .slice(
+              batchIndex * ENCOUNTER_LEDGER_CONDITION_BATCH_SIZE,
+              (batchIndex + 1) * ENCOUNTER_LEDGER_CONDITION_BATCH_SIZE,
+            )
+            .join(","),
+          "verification-status": CONFIRMED_CONDITION_VERIFICATION_STATUS,
+          ...(diagnosisCode ? { code: diagnosisCode } : {}),
+          _count: "100",
+        }),
+      ))).flat(), (condition) => condition.id ?? "")
     : [];
   const provenances = encounters.length
     ? (await searchAll<Provenance>(fhir, "Provenance", {

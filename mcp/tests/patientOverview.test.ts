@@ -115,6 +115,55 @@ test("visit ledger keeps native encounter-diagnosis Conditions", async () => {
   assert.deepEqual(overview.visits[0]?.diagnoses.map((diagnosis) => diagnosis.code), ["DX-NATIVE"]);
 });
 
+test("visit ledger batches encounter-linked Conditions without dropping or duplicating rows", async () => {
+  const fake = new FakeFhir();
+  const encounterCount = 120;
+  const expectedConditionIds: string[] = [];
+  fake.add(patient());
+  for (let index = 0; index < encounterCount; index += 1) {
+    const encounterId = `ledger-visit-${index}`;
+    const conditionId = `ledger-condition-${index}`;
+    fake.add(encounter(encounterId, new Date(Date.UTC(2020, 0, index + 1)).toISOString()));
+    fake.add(condition(conditionId, `Ledger diagnosis ${index}`, {
+      category: "encounter-diagnosis",
+      encounterId,
+      code: `DX-${index}`,
+    }));
+    expectedConditionIds.push(conditionId);
+  }
+  fake.add(condition("ledger-condition-49", "Duplicate search row", {
+    category: "encounter-diagnosis",
+    encounterId: "ledger-visit-49",
+    code: "DX-49",
+  }));
+
+  const overview = await loadPatientOverview(fake as never, "p1");
+
+  const projectedConditionIds = overview.visits.flatMap((visit) =>
+    visit.diagnoses.map((diagnosis) => diagnosis.conditionId)
+  );
+  assert.deepEqual(projectedConditionIds.toSorted(), expectedConditionIds.toSorted());
+  assert.equal(projectedConditionIds.length, new Set(projectedConditionIds).size);
+  const ledgerConditionSearches = fake.searches.filter(
+    (row) => row.resourceType === "Condition" && row.params.encounter,
+  );
+  assert.ok(ledgerConditionSearches.length > 1);
+  for (const search of ledgerConditionSearches) {
+    assert.ok(search.params.encounter.split(",").length <= 50);
+    assert.equal(search.params.patient, "p1");
+    assert.equal(
+      search.params.category,
+      `${FHIR_CONDITION_CATEGORY_CODE_SYSTEM}|encounter-diagnosis,`
+        + `${FHIR_CONDITION_CATEGORY_CODE_SYSTEM}|problem-list-item`,
+    );
+    assert.equal(
+      search.params["verification-status"],
+      `${FHIR_CONDITION_VERIFICATION_STATUS_CODE_SYSTEM}|confirmed`,
+    );
+    assert.equal(search.params._count, "100");
+  }
+});
+
 test("patient overview route stays available with more than 1000 other-patient Provenance rows", async () => {
   const fake = new FakeFhir();
   fake.add(patient());
