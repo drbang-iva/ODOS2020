@@ -74,6 +74,7 @@ import { registerSchedulingResourceRoutes } from "./scheduling/scheduling-resour
 import {
   commsAdapterRegistrationsFromEnv,
   createCommsDispatch,
+  startMcpAfterCommsInitialization,
 } from "./comms/comms-config.js";
 import { registerTwilioWebhookRoutes } from "./comms/twilio-routes.js";
 import {
@@ -5639,7 +5640,7 @@ function authenticateStaffRouteForAction(businessAction: BusinessAction) {
   };
 }
 
-async function main(): Promise<void> {
+async function startMcpServer(): Promise<void> {
   const transportMode = process.env.ODOS_MCP_TRANSPORT ?? "stdio";
   if (transportMode === "sse") {
     await logSsePracticeRoleBootVerification({
@@ -5736,6 +5737,9 @@ async function main(): Promise<void> {
           },
           voiceFromNumber: twilioRegistration.config.voiceFromNumber,
           voiceForwardToNumber: twilioRegistration.config.voiceForwardToNumber,
+          realTimeTranscriptionEnabled:
+            twilioRegistration.config.realTimeTranscriptionEnabled,
+          recordingMediaEnabled: twilioRegistration.config.mediaUrlAuthAcknowledged,
         });
       }
       app.use(
@@ -7874,6 +7878,10 @@ async function main(): Promise<void> {
         `odos-mcp: invalid ODOS_MCP_TRANSPORT "${transportMode}". Expected "stdio" or "sse".`,
       );
   }
+}
+
+async function main(): Promise<void> {
+  await startMcpAfterCommsInitialization(commsDispatch, startMcpServer);
 }
 
 main().catch((err: unknown) => {

@@ -5,6 +5,7 @@ import type { Bundle, Patient, Resource } from "@medplum/fhirtypes";
 import {
   commsAdapterRegistrationsFromEnv,
   createCommsDispatch,
+  startMcpAfterCommsInitialization,
 } from "../src/comms/comms-config.js";
 
 function fakeFhir() {
@@ -65,6 +66,9 @@ test("communications dispatch resolves configured Google Workspace and Twilio pr
     TWILIO_WEBHOOK_BASE_URL: "https://practice.example",
     TWILIO_VOICE_API_KEY_SID: `SK${"8".repeat(32)}`,
     TWILIO_VOICE_API_KEY_SECRET: "synthetic-voice-api-key-secret",
+    ODOS_HIPAA_MODE: "true",
+    TWILIO_REAL_TIME_TRANSCRIPTION_ENABLED: "true",
+    TWILIO_MEDIA_URL_AUTH_ACKNOWLEDGED: "true",
   });
   const dispatch = createCommsDispatch(registrations, {
     practiceTimeZone: "America/New_York",
@@ -79,6 +83,12 @@ test("communications dispatch resolves configured Google Workspace and Twilio pr
   assert.equal(adapter.capabilities.email, false);
   assert.equal(typeof adapter.sendSms, "function");
   assert.equal(typeof adapter.initiateCall, "function");
+  assert.equal(typeof adapter.fetchRecording, "function");
+  assert.equal(registrations[1]?.provider === "twilio" && registrations[1].config.hipaaMode, true);
+  assert.equal(
+    registrations[1]?.provider === "twilio" && registrations[1].config.realTimeTranscriptionEnabled,
+    true,
+  );
 });
 
 test("Twilio Voice env configuration is all-or-nothing and stays disabled for the existing SMS-only shape", () => {
@@ -129,6 +139,16 @@ test("communications env config fails closed when selected provider credentials 
     }),
     /TWILIO_MESSAGING_SERVICE_SID.*TWILIO_FROM_NUMBER/i,
   );
+  assert.throws(
+    () => commsAdapterRegistrationsFromEnv({
+      ODOS_COMMS_PROVIDERS: "twilio",
+      TWILIO_ACCOUNT_SID: `AC${"1".repeat(32)}`,
+      TWILIO_AUTH_TOKEN: "synthetic-auth-token",
+      TWILIO_MESSAGING_SERVICE_SID: `MG${"2".repeat(32)}`,
+      ODOS_HIPAA_MODE: "yes",
+    }),
+    /ODOS_HIPAA_MODE must be true or false/i,
+  );
 });
 
 test("communications env config trims Twilio single-line secrets", () => {
@@ -145,6 +165,126 @@ test("communications env config trims Twilio single-line secrets", () => {
   if (registration.provider !== "twilio") throw new Error("Expected Twilio registration.");
   assert.equal(registration.config.authToken, "synthetic-auth-token");
   assert.equal(registration.config.apiKeySecret, "synthetic-key-secret");
+});
+
+test("communications startup logs whether Twilio HIPAA mode is enabled or disabled", async () => {
+  const logs: string[] = [];
+  let poolLists = 0;
+  const clientFactory = () => ({
+    messages: { create: async () => ({ sid: `SM${"3".repeat(32)}` }) },
+    messaging: {
+      v1: {
+        services: () => ({
+          phoneNumbers: {
+            async list() {
+              poolLists += 1;
+              return [{ phoneNumber: "+18645550100", countryCode: "US" }];
+            },
+          },
+        }),
+      },
+    },
+  });
+  const enabled = createCommsDispatch([{
+    provider: "twilio",
+    config: {
+      accountSid: `AC${"1".repeat(32)}`,
+      authToken: "synthetic-auth-token",
+      messagingServiceSid: `MG${"2".repeat(32)}`,
+      hipaaMode: true,
+    },
+  }], { info: (message) => logs.push(message), twilioClientFactory: clientFactory });
+  const disabled = createCommsDispatch([{
+    provider: "twilio",
+    config: {
+      accountSid: `AC${"1".repeat(32)}`,
+      authToken: "synthetic-auth-token",
+      messagingServiceSid: `MG${"2".repeat(32)}`,
+    },
+  }], { info: (message) => logs.push(message), twilioClientFactory: clientFactory });
+
+  await enabled.initialize();
+  await disabled.initialize();
+
+  assert.equal(poolLists, 1);
+  assert.deepEqual(logs, [
+    "odos-mcp: Twilio HIPAA posture ENABLED; US-only destinations and senders are enforced.",
+    "odos-mcp: Twilio HIPAA posture DISABLED; international destinations and senders are permitted.",
+  ]);
+});
+
+test("MCP boot continues when Twilio pool verification fails while SMS stays fail-closed", async () => {
+  const errors: string[] = [];
+  let poolLists = 0;
+  let messageCreates = 0;
+  let serverBooted = false;
+  const dispatch = createCommsDispatch([
+    {
+      provider: "google-workspace",
+      config: {
+        serviceAccountEmail: "odos@synthetic.iam.gserviceaccount.com",
+        privateKey: "synthetic-private-key",
+        delegatedUserEmail: "info@synthetic-practice.example",
+        workspaceDomain: "synthetic-practice.example",
+        fromAddress: "info@synthetic-practice.example",
+        workspacePlanConfirmed: true,
+      },
+    },
+    {
+      provider: "twilio",
+      config: {
+        accountSid: `AC${"1".repeat(32)}`,
+        authToken: "synthetic-auth-token",
+        messagingServiceSid: `MG${"2".repeat(32)}`,
+        hipaaMode: true,
+      },
+    },
+  ], {
+    error: (message) => errors.push(message),
+    twilioClientFactory: () => ({
+      messages: {
+        async create() {
+          messageCreates += 1;
+          return { sid: `SM${"3".repeat(32)}` };
+        },
+      },
+      messaging: {
+        v1: {
+          services: () => ({
+            phoneNumbers: {
+              async list() {
+                poolLists += 1;
+                throw new Error("synthetic restricted key 403");
+              },
+            },
+          }),
+        },
+      },
+    }),
+  });
+
+  await startMcpAfterCommsInitialization(dispatch, async () => {
+    serverBooted = true;
+  });
+
+  assert.equal(dispatch.getAdapter("google-workspace", fakeFhir()).capabilities.email, true);
+  const adapter = dispatch.getAdapter("twilio", fakeFhir());
+  await assert.rejects(adapter.sendSms!({
+    patientReference: "Patient/synthetic-1",
+    toNumber: "+18645550199",
+    body: "Synthetic HIPAA-mode message.",
+    campaignType: "manual",
+    suppression: {},
+  }), /cannot verify.*Messaging Service.*HIPAA/i);
+
+  assert.equal(serverBooted, true);
+  assert.equal(poolLists, 1);
+  assert.equal(messageCreates, 0);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0]!, /communications provider "twilio".*degraded/i);
+  assert.match(errors[0]!, /synthetic restricted key 403/i);
+  assert.match(errors[0]!, /twilio\/messaging\/services\.phonenumbers\/list/i);
+  assert.match(errors[0]!, /continues starting/i);
 });
 
 test("communications dispatch reuses one Google adapter token cache across resolved sends", async () => {

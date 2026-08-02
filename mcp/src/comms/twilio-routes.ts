@@ -1,14 +1,17 @@
 import type { Application, Request, Response } from "express";
 import twilio from "twilio";
 import {
+  addTwilioRealTimeTranscription,
   handleTwilioInboundWebhook,
   handleTwilioRecordingWebhook,
   handleTwilioStatusWebhook,
+  handleTwilioTranscriptionWebhook,
   handleTwilioVoiceWebhook,
   TwilioSignatureError,
   type TwilioInboundWebhookEvent,
   type TwilioRecordingWebhookEvent,
   type TwilioStatusWebhookEvent,
+  type TwilioTranscriptionWebhookEvent,
   type TwilioVoiceWebhookEvent,
   type TwilioWebhookAuth,
 } from "./adapters/twilio-adapter.js";
@@ -18,13 +21,15 @@ type TwilioWebhookKind =
   | "sms-status"
   | "voice-inbound"
   | "voice-status"
-  | "voice-recording";
+  | "voice-recording"
+  | "voice-transcription";
 
 type TwilioWebhookEvent =
   | TwilioInboundWebhookEvent
   | TwilioStatusWebhookEvent
   | TwilioVoiceWebhookEvent
-  | TwilioRecordingWebhookEvent;
+  | TwilioRecordingWebhookEvent
+  | TwilioTranscriptionWebhookEvent;
 
 interface TwilioWebhookResult {
   event: TwilioWebhookEvent;
@@ -39,6 +44,8 @@ export interface TwilioWebhookRouteDeps {
   auth: TwilioWebhookAuth;
   voiceFromNumber?: string;
   voiceForwardToNumber?: string;
+  realTimeTranscriptionEnabled?: boolean;
+  recordingMediaEnabled?: boolean;
   onEvent?(kind: TwilioWebhookKind, event: TwilioWebhookEvent): void | Promise<void>;
 }
 
@@ -62,6 +69,9 @@ export function registerTwilioWebhookRoutes(
         throw new TwilioRouteConfigurationError();
       }
       const response = new twilio.twiml.VoiceResponse();
+      if (deps.realTimeTranscriptionEnabled) {
+        addTwilioRealTimeTranscription(response, deps.auth.externalBaseUrl);
+      }
       const dial = response.dial({ answerOnBridge: true });
       dial.number({
         statusCallback: `${deps.auth.externalBaseUrl}/comms/twilio/voice/status`,
@@ -82,10 +92,18 @@ export function registerTwilioWebhookRoutes(
     await webhookRoute(req, res, deps, "voice-status", () =>
       ({ event: handleTwilioVoiceWebhook(webhookRequest(req), deps.auth) }));
   });
-  app.post("/comms/twilio/voice/recording", async (req, res) => {
-    await webhookRoute(req, res, deps, "voice-recording", () =>
-      ({ event: handleTwilioRecordingWebhook(webhookRequest(req), deps.auth) }));
-  });
+  if (deps.recordingMediaEnabled) {
+    app.post("/comms/twilio/voice/recording", async (req, res) => {
+      await webhookRoute(req, res, deps, "voice-recording", () =>
+        ({ event: handleTwilioRecordingWebhook(webhookRequest(req), deps.auth) }));
+    });
+  }
+  if (deps.realTimeTranscriptionEnabled) {
+    app.post("/comms/twilio/voice/transcription", async (req, res) => {
+      await webhookRoute(req, res, deps, "voice-transcription", () =>
+        ({ event: handleTwilioTranscriptionWebhook(webhookRequest(req), deps.auth) }));
+    });
+  }
 }
 
 async function webhookRoute(

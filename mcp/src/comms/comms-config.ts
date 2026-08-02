@@ -6,6 +6,7 @@ import {
 import {
   createTwilioAdapter,
   type TwilioAdapterConfig,
+  type TwilioClientFactory,
 } from "./adapters/twilio-adapter.js";
 import type { CommsProvider } from "./comms-provider.js";
 import {
@@ -24,17 +25,29 @@ export type CommsAdapterRegistration =
     };
 
 export interface CommsDispatchDeps {
+  error?: (message: string) => void;
   fetchImpl?: typeof fetch;
+  info?: (message: string) => void;
   now?: () => Date;
   warn?: (message: string) => void;
   practiceTimeZone?: string;
+  twilioClientFactory?: TwilioClientFactory;
 }
 
 export type CommsDispatchFhir = Pick<MedplumClient, "read" | "search">;
 
 export interface CommsDispatch {
+  initialize(): Promise<void>;
   getAdapter(provider: string, fhir: CommsDispatchFhir): CommsProvider;
   providers(): string[];
+}
+
+export async function startMcpAfterCommsInitialization(
+  dispatch: Pick<CommsDispatch, "initialize">,
+  startServer: () => Promise<void>,
+): Promise<void> {
+  await dispatch.initialize();
+  await startServer();
 }
 
 export function createCommsDispatch(
@@ -45,7 +58,45 @@ export function createCommsDispatch(
     registrations.map((registration) => [registration.provider, registration]),
   );
   const adapters = new Map<string, CommsProvider>();
+  const getTwilioAdapter = (
+    registration: Extract<CommsAdapterRegistration, { provider: "twilio" }>,
+  ) => {
+    let adapter = adapters.get(registration.provider);
+    if (!adapter) {
+      adapter = createTwilioAdapter(registration.config, {
+        fetchImpl: deps.fetchImpl,
+        clientFactory: deps.twilioClientFactory,
+        now: deps.now,
+      });
+      adapters.set(registration.provider, adapter);
+    }
+    return adapter as ReturnType<typeof createTwilioAdapter>;
+  };
   return {
+    async initialize() {
+      for (const registration of byProvider.values()) {
+        if (registration.provider !== "twilio") continue;
+        const info = deps.info ?? console.error;
+        info(registration.config.hipaaMode
+          ? "odos-mcp: Twilio HIPAA posture ENABLED; US-only destinations and senders are enforced."
+          : "odos-mcp: Twilio HIPAA posture DISABLED; international destinations and senders are permitted.");
+        try {
+          await getTwilioAdapter(registration).initialize();
+        } catch (error) {
+          const reasons: string[] = [];
+          const seen = new Set<unknown>();
+          let current: unknown = error;
+          while (current instanceof Error && !seen.has(current)) {
+            seen.add(current);
+            reasons.push(current.message);
+            current = current.cause;
+          }
+          (deps.error ?? console.error)(
+            `odos-mcp: communications provider "twilio" DEGRADED; Twilio SMS remains disabled while ODOS continues starting. Reason: ${reasons.join(" Caused by: ") || "unknown initialization failure"} Remediation: verify Twilio API availability and grant the Restricted Messaging key permission twilio/messaging/services.phonenumbers/list, then restart ODOS.`,
+          );
+        }
+      }
+    },
     providers() {
       return [...byProvider.keys()];
     },
@@ -72,13 +123,7 @@ export function createCommsDispatch(
           });
         }
         case "twilio": {
-          let adapter = adapters.get(registration.provider);
-          if (!adapter) {
-            adapter = createTwilioAdapter(registration.config, {
-              fetchImpl: deps.fetchImpl,
-            });
-            adapters.set(registration.provider, adapter);
-          }
+          const adapter = getTwilioAdapter(registration);
           return createSuppressedCommsProvider(adapter, {
             fhir,
             practiceTimeZone: deps.practiceTimeZone ?? "UTC",
@@ -133,6 +178,15 @@ export function commsAdapterRegistrationsFromEnv(
         };
       }
       case "twilio": {
+        const hipaaMode = optionalBoolean(env, "ODOS_HIPAA_MODE");
+        const realTimeTranscriptionEnabled = optionalBoolean(
+          env,
+          "TWILIO_REAL_TIME_TRANSCRIPTION_ENABLED",
+        );
+        const mediaUrlAuthAcknowledged = optionalBoolean(
+          env,
+          "TWILIO_MEDIA_URL_AUTH_ACKNOWLEDGED",
+        );
         const required = ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN"] as const;
         const missing = required.find((name) => !env[name]?.trim());
         if (missing) {
@@ -160,6 +214,9 @@ export function commsAdapterRegistrationsFromEnv(
           config: {
             accountSid: env.TWILIO_ACCOUNT_SID!.trim(),
             authToken: env.TWILIO_AUTH_TOKEN!.trim(),
+            hipaaMode,
+            realTimeTranscriptionEnabled,
+            mediaUrlAuthAcknowledged,
             ...(env.TWILIO_API_KEY_SID?.trim()
               ? { apiKeySid: env.TWILIO_API_KEY_SID.trim() }
               : {}),
@@ -194,4 +251,16 @@ export function commsAdapterRegistrationsFromEnv(
         throw new Error(`Unsupported communications provider "${provider}".`);
     }
   });
+}
+
+function optionalBoolean(
+  env: Record<string, string | undefined>,
+  name: string,
+): boolean {
+  const value = env[name]?.trim().toLowerCase();
+  if (!value) return false;
+  if (value !== "true" && value !== "false") {
+    throw new Error(`${name} must be true or false when set.`);
+  }
+  return value === "true";
 }

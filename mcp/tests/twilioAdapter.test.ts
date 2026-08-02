@@ -2,11 +2,13 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import twilio from "twilio";
 import {
+  TWILIO_HIPAA_POOL_VERIFICATION_TTL_MS,
   TWILIO_REQUEST_TIMEOUT_MS,
   createTwilioAdapter,
   handleTwilioInboundWebhook,
   handleTwilioRecordingWebhook,
   handleTwilioStatusWebhook,
+  handleTwilioTranscriptionWebhook,
   handleTwilioVoiceWebhook,
   validateTwilioWebhook,
 } from "../src/comms/adapters/twilio-adapter.js";
@@ -18,7 +20,7 @@ const MESSAGING_SERVICE_SID = `MG${"2".repeat(32)}`;
 const MESSAGE_SID = `SM${"3".repeat(32)}`;
 const CALL_SID = `CA${"5".repeat(32)}`;
 const RECORDING_SID = `RE${"6".repeat(32)}`;
-const TRANSCRIPTION_ID = `voice_transcription_${"7".repeat(26)}`;
+const TRANSCRIPTION_SID = `GT${"7".repeat(32)}`;
 const AUTH_TOKEN = "synthetic-auth-token";
 const API_KEY_SECRET = "synthetic-api-key-secret";
 const VOICE_API_KEY_SECRET = "synthetic-voice-api-key-secret";
@@ -107,6 +109,389 @@ test("Twilio SDK preserves API-key authentication and explicit from-number mode"
     body: "Reminder tomorrow. Reply STOP to unsubscribe.",
     from: "+18645550100",
   }]);
+});
+
+test("Twilio HIPAA mode accepts US destinations and rejects non-US or malformed SMS and Voice destinations", async () => {
+  assert.throws(() => createTwilioAdapter({
+    accountSid: ACCOUNT_SID,
+    authToken: AUTH_TOKEN,
+    fromNumber: "+442079460000",
+    hipaaMode: true,
+  }), /Twilio from-number must be a .*US phone number.*HIPAA/i);
+  const messageCreates: Array<Record<string, unknown>> = [];
+  const callCreates: Array<Record<string, unknown>> = [];
+  const adapter = createTwilioAdapter({
+    accountSid: ACCOUNT_SID,
+    authToken: AUTH_TOKEN,
+    messagingServiceSid: MESSAGING_SERVICE_SID,
+    hipaaMode: true,
+    voiceFromNumber: "+18645550100",
+    voiceForwardToNumber: "+18645550101",
+    webhookBaseUrl: EXTERNAL_BASE_URL,
+    voiceApiKeySid: VOICE_API_KEY_SID,
+    voiceApiKeySecret: VOICE_API_KEY_SECRET,
+  }, {
+    clientFactory: () => ({
+      messages: {
+        async create(input) {
+          messageCreates.push(input);
+          return { sid: MESSAGE_SID };
+        },
+      },
+      messaging: {
+        v1: {
+          services: () => ({
+            phoneNumbers: {
+              list: async () => [{ phoneNumber: "+18645550100", countryCode: "US" }],
+            },
+          }),
+        },
+      },
+      calls: {
+        async create(input) {
+          callCreates.push(input);
+          return { sid: CALL_SID };
+        },
+        list: async () => [],
+        get: () => ({ fetch: async () => { throw new Error("unused"); } }),
+      },
+      recordings: {
+        get: () => ({ fetch: async () => { throw new Error("unused"); } }),
+      },
+    }),
+  });
+  const smsRequest = {
+    patientReference: "Patient/synthetic-1",
+    body: "Reminder tomorrow.",
+    campaignType: "appointment-reminder",
+    suppression: {},
+  };
+
+  await adapter.sendSms!({ ...smsRequest, toNumber: "+18645550199" });
+  await assert.rejects(adapter.sendSms!({ ...smsRequest, toNumber: "+442079460000" }), /US phone number.*HIPAA/i);
+  await assert.rejects(adapter.sendSms!({ ...smsRequest, toNumber: "+14165550199" }), /US phone number.*HIPAA/i);
+  await assert.rejects(adapter.sendSms!({ ...smsRequest, toNumber: "8645550199" }), /E\.164/i);
+  await adapter.initiateCall!({ patientReference: "Patient/synthetic-1", toNumber: "+18645550199" });
+  await assert.rejects(
+    adapter.initiateCall!({ patientReference: "Patient/synthetic-1", toNumber: "+525555550199" }),
+    /US phone number.*HIPAA/i,
+  );
+
+  assert.equal(messageCreates.length, 1);
+  assert.equal(callCreates.length, 1);
+});
+
+test("Twilio keeps international destinations available outside HIPAA mode", async () => {
+  const destinations: string[] = [];
+  const adapter = createTwilioAdapter({
+    accountSid: ACCOUNT_SID,
+    authToken: AUTH_TOKEN,
+    messagingServiceSid: MESSAGING_SERVICE_SID,
+  }, {
+    clientFactory: () => ({
+      messages: {
+        async create(input) {
+          destinations.push(input.to);
+          return { sid: MESSAGE_SID };
+        },
+      },
+    }),
+  });
+
+  await adapter.sendSms!({
+    patientReference: "Patient/synthetic-1",
+    toNumber: "+442079460000",
+    body: "Synthetic international message.",
+    campaignType: "manual",
+    suppression: {},
+  });
+  assert.deepEqual(destinations, ["+442079460000"]);
+});
+
+test("Twilio HIPAA startup rejects a non-US Messaging Service sender and surfaces its country", async () => {
+  let messageCreates = 0;
+  const adapter = createTwilioAdapter({
+    accountSid: ACCOUNT_SID,
+    authToken: AUTH_TOKEN,
+    messagingServiceSid: MESSAGING_SERVICE_SID,
+    hipaaMode: true,
+  }, {
+    clientFactory: () => ({
+      messages: {
+        async create() {
+          messageCreates += 1;
+          return { sid: MESSAGE_SID };
+        },
+      },
+      messaging: {
+        v1: {
+          services: () => ({
+            phoneNumbers: {
+              async list() {
+                return [
+                  { phoneNumber: "+18645550100", countryCode: "US" },
+                  { phoneNumber: "+14165550100", countryCode: "CA" },
+                ];
+              },
+            },
+          }),
+        },
+      },
+    }),
+  });
+
+  await assert.rejects(adapter.initialize(), /\+14165550100.*CA/i);
+  await assert.rejects(adapter.sendSms!({
+    patientReference: "Patient/synthetic-1",
+    toNumber: "+18645550199",
+    body: "Synthetic HIPAA-mode message.",
+    campaignType: "manual",
+    suppression: {},
+  }), /\+14165550100.*CA/i);
+  assert.equal(messageCreates, 0);
+});
+
+test("Twilio HIPAA startup and send both accept an all-US Messaging Service pool", async () => {
+  let poolLists = 0;
+  let messageCreates = 0;
+  const adapter = createTwilioAdapter({
+    accountSid: ACCOUNT_SID,
+    authToken: AUTH_TOKEN,
+    messagingServiceSid: MESSAGING_SERVICE_SID,
+    hipaaMode: true,
+  }, {
+    clientFactory: () => ({
+      messages: {
+        async create() {
+          messageCreates += 1;
+          return { sid: MESSAGE_SID };
+        },
+      },
+      messaging: {
+        v1: {
+          services: () => ({
+            phoneNumbers: {
+              async list() {
+                poolLists += 1;
+                return [
+                  { phoneNumber: "+18645550100", countryCode: "US" },
+                  { phoneNumber: "+12125550100", countryCode: "US" },
+                ];
+              },
+            },
+          }),
+        },
+      },
+    }),
+  });
+
+  await adapter.initialize();
+  await adapter.sendSms!({
+    patientReference: "Patient/synthetic-1",
+    toNumber: "+18645550199",
+    body: "Synthetic HIPAA-mode message.",
+    campaignType: "manual",
+    suppression: {},
+  });
+  await adapter.sendSms!({
+    patientReference: "Patient/synthetic-2",
+    toNumber: "+18645550200",
+    body: "Second synthetic HIPAA-mode message.",
+    campaignType: "manual",
+    suppression: {},
+  });
+  assert.equal(poolLists, 1);
+  assert.equal(messageCreates, 2);
+});
+
+test("Twilio HIPAA send rechecks and rejects a pool mutation after the verification TTL", async () => {
+  let now = new Date("2026-08-02T12:00:00.000Z");
+  let members = [{ phoneNumber: "+18645550100", countryCode: "US" }];
+  let poolLists = 0;
+  let messageCreates = 0;
+  const adapter = createTwilioAdapter({
+    accountSid: ACCOUNT_SID,
+    authToken: AUTH_TOKEN,
+    messagingServiceSid: MESSAGING_SERVICE_SID,
+    hipaaMode: true,
+  }, {
+    now: () => now,
+    clientFactory: () => ({
+      messages: {
+        async create() {
+          messageCreates += 1;
+          return { sid: MESSAGE_SID };
+        },
+      },
+      messaging: {
+        v1: {
+          services: () => ({
+            phoneNumbers: {
+              async list() {
+                poolLists += 1;
+                return members;
+              },
+            },
+          }),
+        },
+      },
+    }),
+  });
+
+  await adapter.initialize();
+  members = [
+    { phoneNumber: "+18645550100", countryCode: "US" },
+    { phoneNumber: "+14165550100", countryCode: "CA" },
+  ];
+  await adapter.sendSms!({
+    patientReference: "Patient/synthetic-1",
+    toNumber: "+18645550199",
+    body: "Synthetic HIPAA-mode message inside the verification TTL.",
+    campaignType: "manual",
+    suppression: {},
+  });
+  assert.equal(poolLists, 1);
+  assert.equal(messageCreates, 1);
+
+  now = new Date(now.getTime() + TWILIO_HIPAA_POOL_VERIFICATION_TTL_MS + 1);
+  await assert.rejects(adapter.sendSms!({
+    patientReference: "Patient/synthetic-1",
+    toNumber: "+18645550199",
+    body: "Synthetic HIPAA-mode message.",
+    campaignType: "manual",
+    suppression: {},
+  }), /\+14165550100.*CA/i);
+  assert.equal(poolLists, 2);
+  assert.equal(messageCreates, 1);
+});
+
+test("Twilio accepts the same non-US Messaging Service pool outside HIPAA mode", async () => {
+  let poolLists = 0;
+  let messageCreates = 0;
+  const adapter = createTwilioAdapter({
+    accountSid: ACCOUNT_SID,
+    authToken: AUTH_TOKEN,
+    messagingServiceSid: MESSAGING_SERVICE_SID,
+  }, {
+    clientFactory: () => ({
+      messages: {
+        async create() {
+          messageCreates += 1;
+          return { sid: MESSAGE_SID };
+        },
+      },
+      messaging: {
+        v1: {
+          services: () => ({
+            phoneNumbers: {
+              async list() {
+                poolLists += 1;
+                return [{ phoneNumber: "+14165550100", countryCode: "CA" }];
+              },
+            },
+          }),
+        },
+      },
+    }),
+  });
+
+  await adapter.initialize();
+  await adapter.sendSms!({
+    patientReference: "Patient/synthetic-1",
+    toNumber: "+442079460000",
+    body: "Synthetic international message.",
+    campaignType: "manual",
+    suppression: {},
+  });
+  assert.equal(poolLists, 0);
+  assert.equal(messageCreates, 1);
+});
+
+test("Twilio HIPAA startup fails closed when the Messaging Service pool cannot be verified", async () => {
+  const adapter = createTwilioAdapter({
+    accountSid: ACCOUNT_SID,
+    authToken: AUTH_TOKEN,
+    messagingServiceSid: MESSAGING_SERVICE_SID,
+    hipaaMode: true,
+  }, {
+    clientFactory: () => ({
+      messages: { create: async () => ({ sid: MESSAGE_SID }) },
+      messaging: {
+        v1: {
+          services: () => ({
+            phoneNumbers: {
+              async list() {
+                throw new Error("synthetic Twilio outage");
+              },
+            },
+          }),
+        },
+      },
+    }),
+  });
+
+  await assert.rejects(
+    adapter.initialize(),
+    /cannot verify.*Messaging Service.*HIPAA.*refus/i,
+  );
+});
+
+test("Twilio HIPAA startup rejects an empty or country-less Messaging Service pool", async () => {
+  const createAdapter = (members: Array<{ phoneNumber: string; countryCode: string }>) =>
+    createTwilioAdapter({
+      accountSid: ACCOUNT_SID,
+      authToken: AUTH_TOKEN,
+      messagingServiceSid: MESSAGING_SERVICE_SID,
+      hipaaMode: true,
+    }, {
+      clientFactory: () => ({
+        messages: { create: async () => ({ sid: MESSAGE_SID }) },
+        messaging: {
+          v1: {
+            services: () => ({ phoneNumbers: { list: async () => members } }),
+          },
+        },
+      }),
+    });
+
+  await assert.rejects(createAdapter([]).initialize(), /Messaging Service.*no phone-number senders/i);
+  await assert.rejects(createAdapter([{
+    phoneNumber: "+14165550100",
+    countryCode: undefined as unknown as string,
+  }]).initialize(), /\+14165550100.*country code missing/i);
+});
+
+test("Twilio HIPAA mode conservatively rejects US-territory destinations", async () => {
+  const adapter = createTwilioAdapter({
+    accountSid: ACCOUNT_SID,
+    authToken: AUTH_TOKEN,
+    fromNumber: "+18645550100",
+    hipaaMode: true,
+  }, {
+    clientFactory: () => ({
+      messages: {
+        create: async () => {
+          throw new Error("HIPAA territory test must not reach the Twilio SDK.");
+        },
+      },
+    }),
+  });
+  const request = {
+    patientReference: "Patient/synthetic-1",
+    body: "Synthetic HIPAA-mode message.",
+    campaignType: "manual",
+    suppression: {},
+  };
+
+  for (const toNumber of [
+    "+17875550199",
+    "+13405550199",
+    "+16715550199",
+    "+16845550199",
+    "+16705550199",
+  ]) {
+    await assert.rejects(adapter.sendSms!({ ...request, toNumber }), /US phone number.*HIPAA/i);
+  }
 });
 
 test("Twilio RestException 21610 is a non-retryable recipient opt-out suppression", async () => {
@@ -347,6 +732,7 @@ test("Twilio Voice initiates click-to-call through the practice line with signed
     webhookBaseUrl: EXTERNAL_BASE_URL,
     voiceApiKeySid: VOICE_API_KEY_SID,
     voiceApiKeySecret: VOICE_API_KEY_SECRET,
+    realTimeTranscriptionEnabled: true,
   }, {
     clientFactory: (username, password, options) => {
       factoryCalls.push([username, password, options]);
@@ -388,6 +774,13 @@ test("Twilio Voice initiates click-to-call through the practice line with signed
   assert.equal(createCalls[0]?.statusCallback, `${EXTERNAL_BASE_URL}/comms/twilio/voice/status`);
   assert.deepEqual(createCalls[0]?.statusCallbackEvent, ["initiated", "ringing", "answered", "completed"]);
   assert.equal(createCalls[0]?.record, undefined);
+  assert.match(
+    String(createCalls[0]?.twiml),
+    new RegExp(`<Transcription[^>]+statusCallbackUrl="${EXTERNAL_BASE_URL}/comms/twilio/voice/transcription"`),
+  );
+  assert.match(String(createCalls[0]?.twiml), /<Transcription[^>]+partialResults="false"/);
+  assert.match(String(createCalls[0]?.twiml), /<Transcription[^>]+track="both_tracks"/);
+  assert.doesNotMatch(String(createCalls[0]?.twiml), /intelligenceService=/);
   assert.match(String(createCalls[0]?.twiml), /<Dial[^>]+callerId="\+18645550100"/);
   assert.match(String(createCalls[0]?.twiml), /\+18645550199/);
   assert.doesNotMatch(String(createCalls[0]?.twiml), /record=/);
@@ -449,7 +842,7 @@ test("Twilio Voice lists and fetches normalized call detail", async () => {
   assert.deepEqual(await adapter.listCalls!({ limit: 20 }), [expected]);
 });
 
-test("Twilio Voice fetches authenticated recording media and current Batch Transcription output", async () => {
+test("Twilio Voice fetches authenticated recording media only after operator acknowledgement", async () => {
   const fetches: Array<{ url: string; authorization: string | null; signal: AbortSignal | null }> = [];
   const adapter = createTwilioAdapter({
     accountSid: ACCOUNT_SID,
@@ -462,6 +855,7 @@ test("Twilio Voice fetches authenticated recording media and current Batch Trans
     webhookBaseUrl: EXTERNAL_BASE_URL,
     voiceApiKeySid: VOICE_API_KEY_SID,
     voiceApiKeySecret: VOICE_API_KEY_SECRET,
+    mediaUrlAuthAcknowledged: true,
   }, {
     clientFactory: () => ({
       messages: { create: async () => ({ sid: MESSAGE_SID }) },
@@ -494,18 +888,7 @@ test("Twilio Voice fetches authenticated recording media and current Batch Trans
           headers: { "content-type": "audio/mpeg" },
         });
       }
-      return Response.json({
-        operationId: TRANSCRIPTION_ID,
-        status: "COMPLETED",
-        transcription: {
-          id: TRANSCRIPTION_ID,
-          sourceId: RECORDING_SID,
-          sentences: [
-            { sentenceIndex: 2, audioChannelIndex: 2, text: "Synthetic staff text." },
-            { sentenceIndex: 1, audioChannelIndex: 1, text: "Synthetic caller text." },
-          ],
-        },
-      });
+      throw new Error(`Unexpected fetch: ${url}`);
     }) as typeof fetch,
   });
 
@@ -515,20 +898,42 @@ test("Twilio Voice fetches authenticated recording media and current Batch Trans
   assert.equal(recording.contentType, "audio/mpeg");
   assert.deepEqual([...recording.audio], [1, 2, 3]);
 
-  assert.deepEqual(await adapter.fetchTranscription!(TRANSCRIPTION_ID), {
-    id: TRANSCRIPTION_ID,
-    recordingId: RECORDING_SID,
-    status: "completed",
-    text: "Synthetic caller text.\nSynthetic staff text.",
-  });
+  assert.equal(adapter.fetchTranscription, undefined);
   assert.deepEqual(fetches.map(({ url }) => url), [
     `https://api.twilio.com/2010-04-01/Accounts/${ACCOUNT_SID}/Recordings/${RECORDING_SID}.mp3`,
-    `https://voice.twilio.com/v3/Transcriptions/${TRANSCRIPTION_ID}`,
   ]);
   assert.deepEqual(new Set(fetches.map(({ authorization }) => authorization)), new Set([
     `Basic ${Buffer.from(`${VOICE_API_KEY_SID}:${VOICE_API_KEY_SECRET}`).toString("base64")}`,
   ]));
   assert.equal(fetches.every(({ signal }) => signal instanceof AbortSignal), true);
+});
+
+test("Twilio refuses to expose recording retrieval before media-URL auth is acknowledged", () => {
+  const adapter = createTwilioAdapter({
+    accountSid: ACCOUNT_SID,
+    authToken: AUTH_TOKEN,
+    messagingServiceSid: MESSAGING_SERVICE_SID,
+    voiceFromNumber: "+18645550100",
+    voiceForwardToNumber: "+18645550101",
+    webhookBaseUrl: EXTERNAL_BASE_URL,
+    voiceApiKeySid: VOICE_API_KEY_SID,
+    voiceApiKeySecret: VOICE_API_KEY_SECRET,
+  }, {
+    clientFactory: () => ({
+      messages: { create: async () => ({ sid: MESSAGE_SID }) },
+      calls: {
+        create: async () => ({ sid: CALL_SID }),
+        list: async () => [],
+        get: () => ({ fetch: async () => { throw new Error("unused"); } }),
+      },
+      recordings: {
+        get: () => ({ fetch: async () => { throw new Error("unused"); } }),
+      },
+    }),
+  });
+
+  assert.equal(adapter.fetchRecording, undefined);
+  assert.equal(adapter.fetchTranscription, undefined);
 });
 
 test("signed Voice events expose caller ID and fail closed on tampering, missing signatures, or malformed fields", () => {
@@ -616,4 +1021,54 @@ test("signed recording events normalize availability metadata", () => {
     durationSeconds: 42,
     channels: 2,
   });
+});
+
+test("signed Real-Time Transcription events expose final webhook content and fail closed on tampering", () => {
+  const requestTarget = "/comms/twilio/voice/transcription";
+  const url = `${EXTERNAL_BASE_URL}${requestTarget}`;
+  const params = {
+    AccountSid: ACCOUNT_SID,
+    CallSid: CALL_SID,
+    TranscriptionSid: TRANSCRIPTION_SID,
+    Timestamp: "2026-08-01T22:15:00.000Z",
+    SequenceId: "2",
+    TranscriptionEvent: "transcription-content",
+    LanguageCode: "en-US",
+    Track: "inbound_track",
+    TranscriptionData: JSON.stringify({ transcript: "Synthetic transcript text.", confidence: 0.98 }),
+    Final: "true",
+  };
+  const request = {
+    requestTarget,
+    contentType: "application/x-www-form-urlencoded",
+    params,
+    signature: twilio.getExpectedTwilioSignature(AUTH_TOKEN, url, params),
+  };
+  const auth = { accountSid: ACCOUNT_SID, authToken: AUTH_TOKEN, externalBaseUrl: EXTERNAL_BASE_URL };
+
+  assert.deepEqual(handleTwilioTranscriptionWebhook(request, auth), {
+    accountSid: ACCOUNT_SID,
+    callId: CALL_SID,
+    transcriptionId: TRANSCRIPTION_SID,
+    event: "transcription-content",
+    timestamp: "2026-08-01T22:15:00.000Z",
+    sequenceId: 2,
+    languageCode: "en-US",
+    track: "inbound_track",
+    text: "Synthetic transcript text.",
+    confidence: 0.98,
+    final: true,
+  });
+  assert.throws(
+    () => handleTwilioTranscriptionWebhook({
+      ...request,
+      params: {
+        ...params,
+        CallSid: `CA${"8".repeat(32)}`,
+        TranscriptionSid: `GT${"8".repeat(32)}`,
+        TranscriptionData: JSON.stringify({ transcript: "Tampered." }),
+      },
+    }, auth),
+    /signature/i,
+  );
 });
