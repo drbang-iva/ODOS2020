@@ -161,7 +161,7 @@ async function reconcileStaffSmsDuplicates(
   identity: ReturnType<typeof eventIdentity>,
   messageSid: string,
 ): Promise<Communication> {
-  let canonical = initial;
+  let canonical = await findCommunication(fhir, identity.system, identity.value) ?? initial;
   for (let pass = 0; pass < 3; pass += 1) {
     const matches = await findCommunications(
       fhir,
@@ -237,7 +237,35 @@ async function persistTwilioWebhookEventLocked(
   now: string,
 ): Promise<Communication> {
   const fragment = await eventFragment(fhir, kind, event, now);
-  return persistCommunicationFragment(fhir, identity, fragment);
+  const persisted = await persistCommunicationFragment(fhir, identity, fragment);
+  if (kind !== "sms-status") return persisted;
+  return reconcileStatusCallbackWithStaffSms(fhir, persisted, identity.value);
+}
+
+async function reconcileStatusCallbackWithStaffSms(
+  fhir: CommsPersistenceFhir,
+  persisted: Communication,
+  messageSid: string,
+): Promise<Communication> {
+  const matches = await findCommunications(fhir, ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM, messageSid, "100");
+  const staffCandidates = matches.filter((communication) => communication.identifier?.some((identifier) =>
+    identifier.system === ODOS_COMMS_STAFF_SEND_IDENTIFIER_SYSTEM && Boolean(identifier.value)));
+  if (staffCandidates.length === 0) return persisted;
+  if (staffCandidates.length > 1) {
+    throw new Error("Twilio message SID is attached to multiple staff send intents; refusing ambiguous reconciliation.");
+  }
+  const canonical = staffCandidates[0];
+  const idempotencyKey = canonical.identifier?.find(
+    (identifier) => identifier.system === ODOS_COMMS_STAFF_SEND_IDENTIFIER_SYSTEM,
+  )?.value;
+  if (!idempotencyKey) return persisted;
+  const staffIdentity = {
+    system: ODOS_COMMS_STAFF_SEND_IDENTIFIER_SYSTEM,
+    value: idempotencyKey,
+    category: ODOS_PATIENT_SMS_CATEGORY,
+  };
+  return serializeCommunicationWrite(`${staffIdentity.system}|${staffIdentity.value}`, () =>
+    reconcileStaffSmsDuplicates(fhir, canonical, staffIdentity, messageSid));
 }
 
 async function persistCommunicationFragment(

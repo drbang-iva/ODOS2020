@@ -121,6 +121,44 @@ test("a status callback racing send completion is reconciled into one canonical 
     (JSON.stringify(communication.category) ?? "").includes("patient-sms")).length, 1);
 });
 
+test("a callback that conditionally creates after send reconciliation is folded into the staff intent", async () => {
+  const fhir = new InMemoryCommsFhir();
+  const reservation = await reserveStaffSmsSend(fhir, {
+    idempotencyKey: "synthetic-send-late-race",
+    claimId: "synthetic-claim-late-race",
+    patientReference: "Patient/synthetic-1",
+    senderReference: "Practitioner/synthetic-staff",
+    body: "Synthetic late-raced message",
+  });
+  assert.equal(reservation.state, "owner");
+  const createRace = fhir.pauseNextMessageConditionalCreate();
+  const callback = persistTwilioWebhookEvent(fhir, "sms-status", {
+    accountSid: ACCOUNT_SID,
+    messageSid: MESSAGE_SID,
+    messageStatus: "delivered",
+    recipientOptedOut: false,
+  }, { now: () => NOW });
+  await createRace.lookupComplete;
+  await persistStaffSentSms(fhir, {
+    communication: reservation.communication,
+    idempotencyKey: "synthetic-send-late-race",
+    messageSid: MESSAGE_SID,
+  }, { now: () => NOW });
+  createRace.release();
+  await callback;
+
+  const communications = fhir.ofType<Communication>("Communication");
+  const canonical = communications.filter((communication) =>
+    communication.identifier?.some((identifier) =>
+      identifier.system === ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM && identifier.value === MESSAGE_SID));
+  assert.equal(canonical.length, 1);
+  assert.equal(canonical[0].status, "completed");
+  assert.equal(canonical[0].subject?.reference, "Patient/synthetic-1");
+  assert.equal(canonical[0].payload?.[0].contentString, "Synthetic late-raced message");
+  assert.equal(communications.filter((communication) =>
+    (JSON.stringify(communication.category) ?? "").includes("patient-sms")).length, 1);
+});
+
 test("stale lifecycle callbacks cannot regress terminal message or call status", async () => {
   const fhir = new InMemoryCommsFhir();
   await persistTwilioWebhookEvent(fhir, "sms-inbound", {
@@ -469,6 +507,7 @@ function communication(id: string, received: string, body: string): Communicatio
 class InMemoryCommsFhir {
   private resources: Resource[] = [];
   private conditionalCreateRace?: Communication;
+  private messageConditionalCreatePause?: { lookupComplete: () => void; release: Promise<void> };
   private updateRace?: Communication;
   private nextId = 1;
   createAttempts = 0;
@@ -485,6 +524,19 @@ class InMemoryCommsFhir {
 
   raceUpdateWith(communication: Communication): void {
     this.updateRace = structuredClone(communication);
+  }
+
+  pauseNextMessageConditionalCreate(): { lookupComplete: Promise<void>; release: () => void } {
+    let signalLookupComplete!: () => void;
+    let release!: () => void;
+    const lookupComplete = new Promise<void>((resolve) => {
+      signalLookupComplete = resolve;
+    });
+    const waitForRelease = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    this.messageConditionalCreatePause = { lookupComplete: signalLookupComplete, release: waitForRelease };
+    return { lookupComplete, release };
   }
 
   ofType<T extends Resource>(resourceType: T["resourceType"]): T[] {
@@ -529,6 +581,12 @@ class InMemoryCommsFhir {
       const existing = this.ofType<Communication>("Communication").find((communication) =>
         communication.identifier?.some((identifier) => identifier.system === system && identifier.value === value));
       if (existing) return structuredClone(existing) as T;
+      if (system === ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM && this.messageConditionalCreatePause) {
+        const pause = this.messageConditionalCreatePause;
+        this.messageConditionalCreatePause = undefined;
+        pause.lookupComplete();
+        await pause.release;
+      }
     }
     const created = {
       ...structuredClone(resource),
