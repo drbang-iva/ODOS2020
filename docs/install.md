@@ -159,12 +159,20 @@ Complete this sequence before any real patient Voice, SMS, or MMS traffic:
    Voice and on non-US senders configured through `TWILIO_FROM_NUMBER` or
    `TWILIO_VOICE_FROM_NUMBER`. If `TWILIO_MESSAGING_SERVICE_SID` is used, startup enumerates the
    complete PhoneNumbers collection and rejects every sender whose ISO country code is not `US`.
-   A non-US member or any API/auth/network failure prevents communications initialization, and
-   the same cached check gates `sendSms`. A Restricted Messaging API key therefore also needs
+   It repeats the complete enumeration before every HIPAA-mode SMS send so a post-startup pool
+   change cannot bypass the guard. An empty pool, non-US member, missing country code, or any
+   API/auth/network failure prevents communications initialization or sending. A Restricted
+   Messaging API key therefore also needs
    `twilio/messaging/services.phonenumbers/list`. ([Messaging Service PhoneNumbers API](https://www.twilio.com/docs/messaging/api/phonenumber-resource),
    accessed 2026-08-02; [twilio-node 6.0.2 PhoneNumber resource](https://github.com/twilio/twilio-node/blob/6.0.2/src/rest/messaging/v1/service/phoneNumber.ts),
    accessed 2026-08-02; [Restricted Messaging API-key permissions](https://assets.cdn.prod.twilio.com/documents/Twilio_Restricted_API_Keys_Permissions_-_Messaging_Permissions.pdf),
    accessed 2026-08-02.)
+
+   Twilio currently labels the Services PhoneNumbers API Public Beta and provides no SLA for it.
+   Treat the fatal startup message or a blocked send as an operational alert. Check Twilio API
+   availability, the API-key permission, network access, and every pool member; after correcting
+   a boot-time failure, restart ODOS so startup verification can complete. Send-time checks retry
+   on the next send but remain fail-closed until a fresh enumeration succeeds.
 
    ODOS intentionally interprets Twilio's current "US area codes" requirement as ISO country
    code `US`. It conservatively rejects Puerto Rico, the US Virgin Islands, Guam, American Samoa,

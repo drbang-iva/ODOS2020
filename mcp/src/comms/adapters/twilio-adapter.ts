@@ -241,7 +241,7 @@ export function createTwilioAdapter(
     },
     async sendSms(request: SendSmsRequest): Promise<SendResult> {
       try {
-        await initialize();
+        await verifyHipaaMessagingServicePool(messagingClient, normalized);
         const recipient = e164(request.toNumber, "Twilio SMS recipient");
         const created = await messagingClient.messages.create({
           to: normalized.hipaaMode
@@ -286,6 +286,11 @@ async function verifyHipaaMessagingServicePool(
     throw new Error(
       `Twilio cannot verify Messaging Service ${config.messagingServiceSid} sender geography in HIPAA mode; refusing to initialize.`,
       { cause: error },
+    );
+  }
+  if (members.length === 0) {
+    throw new Error(
+      `Twilio Messaging Service ${config.messagingServiceSid} has no phone-number senders to verify while ODOS_HIPAA_MODE is true.`,
     );
   }
   const nonUsMembers = members.filter(({ countryCode }) => countryCode !== "US");
@@ -834,7 +839,9 @@ function e164(value: string | undefined, label: string): string {
 
 function usE164(value: string, label: string): string {
   if (parsePhoneNumberFromString(value)?.country !== "US") {
-    throw new Error(`${label} must be a US phone number when ODOS_HIPAA_MODE is true.`);
+    throw new Error(
+      `${label} must be a 50-state/DC US phone number when ODOS_HIPAA_MODE is true; US territories are excluded.`,
+    );
   }
   return value;
 }
