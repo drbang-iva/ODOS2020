@@ -14,6 +14,7 @@ import type {
 import type { FhirSearchParams } from "../fhir-client.js";
 import {
   importLegacyCcda,
+  LEGACY_CCDA_FDB_ALLERGEN_SYSTEM,
   legacyCcdaDocumentsSchema,
 } from "../legacy-import/ccda-import.js";
 import { EHR_PATIENT_IDENTIFIER_SYSTEM } from "../legacy-import/patient-import.js";
@@ -53,6 +54,43 @@ test("C-CDA v2 schema accepts narrative-only entries and rejects entries with no
   }
 });
 
+test("C-CDA v2 schema applies the code-or-text invariant only to imported sections", () => {
+  const parsed = legacyCcdaDocumentsSchema.parse([{
+    file: "EMA_20200101T090000_Synthetic_ClinicalSummary_CCD_Final.ccda.xml",
+    sections: {
+      "Past Illness": [{ kind: "observation", date: null, codes: [] }],
+      Unsupported: [{}],
+    },
+  }]);
+
+  assert.equal(parsed.length, 1);
+});
+
+test("C-CDA v2 omits coding instead of emitting an empty array", async () => {
+  const fhir = new MemoryCcdaFhir([syntheticPatient()]);
+  await importLegacyCcda({
+    fhir,
+    projectId: "project-1",
+    ehrPatientId: "synthetic-ehr-1",
+    documents: [{
+      file: "EMA_20200101T090000_Synthetic_ClinicalSummary_CCD_Final.ccda.xml",
+      sections: {
+        Problems: [{
+          kind: "observation",
+          date: "20200101",
+          codes: [],
+          text: "Narrative only",
+        }],
+      },
+    }],
+  });
+
+  const concept = fhir.ofType<Condition>("Condition")[0]!.code!;
+  assert.deepEqual(concept, { text: "Narrative only" });
+  assert.equal("coding" in concept, false);
+  assert.equal(JSON.stringify(fhir.resources).includes('"coding":[]'), false);
+});
+
 test("C-CDA v2 import preserves narrative, FDB coding, medication grouping, and text identity", async () => {
   const documents = [
     {
@@ -61,18 +99,35 @@ test("C-CDA v2 import preserves narrative, FDB coding, medication grouping, and 
         Problems: [
           { kind: "observation", date: "20200101", codes: [], text: "First problem" },
           { kind: "observation", date: "20200101", codes: [], text: "Second problem" },
+          {
+            kind: "observation",
+            date: "20200101",
+            codes: [{ system: "SNOMED-CT", code: "SYNTHETIC-PROBLEM", display: null }],
+          },
         ],
-        Allergies: [{
-          kind: "observation",
-          date: "20200101",
-          codes: [{ system: "FDB", code: "SYNTHETIC-FDB-1", display: "Synthetic allergen" }],
-          text: "Recovered allergen",
-        }],
+        Allergies: [
+          {
+            kind: "observation",
+            date: "20200101",
+            codes: [],
+            text: "Recovered allergy",
+          },
+          {
+            kind: "observation",
+            date: "20200101",
+            codes: [{ system: "FDB", code: "SYNTHETIC-FDB-1", display: "Synthetic allergen" }],
+            text: "Recovered allergen",
+          },
+        ],
         Procedures: [{
           kind: "procedure",
           date: "20200101",
           codes: [],
           text: "Recovered procedure",
+        }, {
+          kind: "procedure",
+          date: "20200101",
+          codes: [{ system: "CPT-4", code: "SYNTHETIC-PROCEDURE", display: null }],
         }],
         Medications: [
           {
@@ -112,26 +167,34 @@ test("C-CDA v2 import preserves narrative, FDB coding, medication grouping, and 
     now: new Date("2026-08-02T12:00:00Z"),
   });
 
-  assert.equal(result.resources.Condition.created, 2);
+  assert.equal(result.resources.Condition.created, 3);
   const conditions = fhir.ofType<Condition>("Condition");
   assert.deepEqual(
-    conditions.map((condition) => condition.code),
+    conditions.slice(0, 2).map((condition) => condition.code),
     [
-      { coding: [], text: "First problem" },
-      { coding: [], text: "Second problem" },
+      { text: "First problem" },
+      { text: "Second problem" },
     ],
+  );
+  assert.deepEqual(
+    conditions.map((condition) => condition.verificationStatus?.coding?.[0]?.code),
+    ["unconfirmed", "unconfirmed", "confirmed"],
   );
   assert.notEqual(conditions[0]!.identifier?.[0]?.value, conditions[1]!.identifier?.[0]?.value);
 
-  const allergy = fhir.ofType<AllergyIntolerance>("AllergyIntolerance")[0]!;
+  const allergies = fhir.ofType<AllergyIntolerance>("AllergyIntolerance");
+  assert.deepEqual(allergies[0]!.code, { text: "Recovered allergy" });
+  assert.equal(allergies[0]!.verificationStatus?.coding?.[0]?.code, "unconfirmed");
+  const allergy = allergies[1]!;
   assert.deepEqual(allergy.code, {
     coding: [{
-      system: "urn:oid:2.16.840.1.113883.3.3710.200.401",
+      system: LEGACY_CCDA_FDB_ALLERGEN_SYSTEM,
       code: "SYNTHETIC-FDB-1",
       display: "Synthetic allergen",
     }],
     text: "Recovered allergen",
   });
+  assert.equal(allergy.verificationStatus?.coding?.[0]?.code, "confirmed");
   assert.equal(
     allergy.identifier?.[0]?.value,
     createHash("sha256")
@@ -145,22 +208,92 @@ test("C-CDA v2 import preserves narrative, FDB coding, medication grouping, and 
       .digest("hex"),
   );
 
-  const procedure = fhir.ofType<Procedure>("Procedure")[0]!;
-  assert.deepEqual(procedure.code, { coding: [], text: "Recovered procedure" });
+  const procedures = fhir.ofType<Procedure>("Procedure");
+  assert.deepEqual(procedures[0]!.code, { text: "Recovered procedure" });
+  assert.deepEqual(procedures.map((procedure) => procedure.status), ["unknown", "completed"]);
 
   assert.equal(result.resources.MedicationStatement.created, 2);
   const medications = fhir.ofType<MedicationStatement>("MedicationStatement");
   assert.deepEqual(
     medications.map((medication) => medication.medicationCodeableConcept),
     [
-      { coding: [], text: "Recovered Drug" },
-      { coding: [], text: "Other Drug" },
+      { text: "Recovered Drug" },
+      { text: "Other Drug" },
     ],
   );
   assert.notEqual(
     medications[0]!.identifier?.[0]?.value,
     medications[1]!.identifier?.[0]?.value,
   );
+  assert.equal(
+    medications[0]!.identifier?.[0]?.value,
+    createHash("sha256")
+      .update("synthetic-ehr-1|Medications|text|recovered drug")
+      .digest("hex"),
+  );
+  assert.equal(JSON.stringify(fhir.resources).includes('"coding":[]'), false);
+
+  const rerun = await importLegacyCcda({
+    fhir,
+    projectId: "project-1",
+    ehrPatientId: "synthetic-ehr-1",
+    documents,
+    now: new Date("2026-08-02T12:01:00Z"),
+  });
+  assert.deepEqual(rerun.resources, {
+    Condition: { created: 0, skipped: 3, encounterLinked: 0, encounterUnlinked: 3 },
+    AllergyIntolerance: { created: 0, skipped: 2, encounterLinked: 0, encounterUnlinked: 2 },
+    MedicationStatement: { created: 0, skipped: 2, encounterLinked: 0, encounterUnlinked: 2 },
+    Procedure: { created: 0, skipped: 2, encounterLinked: 0, encounterUnlinked: 2 },
+  });
+});
+
+test("C-CDA v2 normalizes whitespace and Unicode in narrative identity", async () => {
+  const documents = [
+    {
+      file: "EMA_20200101T090000_Synthetic_ClinicalSummary_CCD_Final.ccda.xml",
+      sections: {
+        Problems: [
+          { kind: "observation", date: "20200101", codes: [], text: "Alpha  Drug" },
+          { kind: "observation", date: "20200101", codes: [], text: "alpha\u00a0drug" },
+        ],
+        Medications: [{
+          kind: "substanceAdministration",
+          date: "20200101",
+          codes: [],
+          text: "Cafe\u0301 Drug",
+        }],
+      },
+    },
+    {
+      file: "EMA_20200201T090000_Synthetic_ClinicalSummary_CCD_Final.ccda.xml",
+      sections: {
+        Medications: [{
+          kind: "substanceAdministration",
+          date: "20200201",
+          codes: [],
+          text: "CAFÉ\u00a0DRUG",
+        }],
+      },
+    },
+  ];
+  const fhir = new MemoryCcdaFhir([syntheticPatient()]);
+
+  const result = await importLegacyCcda({
+    fhir,
+    projectId: "project-1",
+    ehrPatientId: "synthetic-ehr-1",
+    documents,
+  });
+
+  assert.deepEqual(result.resources.Condition, {
+    created: 1,
+    skipped: 1,
+    encounterLinked: 0,
+    encounterUnlinked: 2,
+  });
+  assert.equal(result.resources.MedicationStatement.created, 1);
+  assert.equal(fhir.ofType<MedicationStatement>("MedicationStatement").length, 1);
 });
 
 test("C-CDA v2 schema accepts a synthetic 60-document batch with 202 narrative-only entries", () => {

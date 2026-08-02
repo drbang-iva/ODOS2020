@@ -27,6 +27,8 @@ export const LEGACY_CCDA_TAG_SYSTEM =
 export const LEGACY_CCDA_TAG_CODE = "legacy-ccda-import";
 export const LEGACY_CCDA_ACTIVITY_SYSTEM =
   "https://odos2020.com/fhir/CodeSystem/legacy-import-activity";
+export const LEGACY_CCDA_FDB_ALLERGEN_SYSTEM =
+  "https://odos2020.com/fhir/CodeSystem/fdb-allergen";
 
 const SOURCE_CODE_SYSTEMS = [
   "SNOMED-CT",
@@ -45,10 +47,13 @@ const FHIR_CODE_SYSTEMS: Record<(typeof SOURCE_CODE_SYSTEMS)[number], string> = 
   LOINC: "http://loinc.org",
   RxNorm: "http://www.nlm.nih.gov/research/umls/rxnorm",
   "CPT-4": "http://www.ama-assn.org/go/cpt",
-  FDB: "urn:oid:2.16.840.1.113883.3.3710.200.401",
+  // Source C-CDA labels these vendor allergen codes with OID 2.16.840.1.113883.3.3710.200.401;
+  // ODOS owns this URI because that value set has no registered canonical CodeSystem URI.
+  FDB: LEGACY_CCDA_FDB_ALLERGEN_SYSTEM,
 };
 
 const EYEFINITY_IMPORT_TIME_ZONE = "America/New_York";
+const IMPORTED_SECTION_KEYS = ["Problems", "Allergies", "Procedures", "Medications"] as const;
 
 const parsedCodeSchema = z.object({
   system: z.enum(SOURCE_CODE_SYSTEMS),
@@ -105,13 +110,10 @@ export const legacyCcdaDocumentsSchema = z.array(z.object({
         message: "C-CDA filename contains an invalid calendar date.",
       });
     }
-    for (const [sectionKey, entries] of Object.entries(document.sections)) {
-      if (!Array.isArray(entries)) continue;
+    for (const sectionKey of IMPORTED_SECTION_KEYS) {
+      const entries = document.sections[sectionKey] ?? [];
       for (const [entryIndex, entry] of entries.entries()) {
-        const candidate = entry && typeof entry === "object"
-          ? entry as { codes?: unknown[]; text?: string }
-          : {};
-        if ((candidate.codes?.length ?? 0) === 0 && !candidate.text) {
+        if (entry.codes.length === 0 && !entry.text) {
           context.addIssue({
             code: z.ZodIssueCode.custom,
             path: [index, "sections", sectionKey, entryIndex],
@@ -217,7 +219,7 @@ export async function importLegacyCcda(input: {
         patientReference,
         encounterReference: source.encounterReference,
         code: coding,
-        verificationStatus: "confirmed",
+        verificationStatus: entry.codes.length > 0 ? "confirmed" : "unconfirmed",
         recordedDate: source.date,
         identifiers: [identifier],
       });
@@ -234,7 +236,7 @@ export async function importLegacyCcda(input: {
       const allergy = buildAllergyIntolerance({
         patientReference,
         code: codeableConcept(entry.codes, entry.text),
-        verificationStatus: "confirmed",
+        verificationStatus: entry.codes.length > 0 ? "confirmed" : "unconfirmed",
         recordedDate: source.date,
         encounterReference: source.encounterReference,
       });
@@ -251,7 +253,7 @@ export async function importLegacyCcda(input: {
       );
       const procedure = buildProcedure({
         patientReference,
-        status: "completed",
+        status: entry.codes.length > 0 ? "completed" : "unknown",
         code: codeableConcept(entry.codes, entry.text),
         encounterReference: source.encounterReference,
         performedDateTime: entry.date ? compactDate(entry.date) : source.date,
@@ -411,9 +413,13 @@ function distinctMedications(sources: readonly SourceDocument[]): Array<{
   for (const source of sources) {
     for (const entry of source.document.sections.Medications ?? []) {
       const preferredCode = medicationPreferredCode(entry.codes);
-      const key = preferredCode
-        ? `${preferredCode.system}\u001f${preferredCode.code}`
-        : `text\u001f${normalizeText(entry.text!)}`;
+      let key: string;
+      if (preferredCode) {
+        key = `${preferredCode.system}\u001f${preferredCode.code}`;
+      } else {
+        if (!entry.text) throw new Error("Text-only medication entry has no narrative text.");
+        key = `text\u001f${normalizeText(entry.text)}`;
+      }
       const occurrences = grouped.get(key) ?? [];
       occurrences.push({ entry, preferredCode, source });
       grouped.set(key, occurrences);
@@ -469,7 +475,7 @@ function codeableConcept(codes: readonly ParsedCode[], text?: string): CodeableC
     }];
   });
   return {
-    coding,
+    ...(coding.length > 0 ? { coding } : {}),
     ...(text ? { text } : {}),
   };
 }
@@ -499,7 +505,10 @@ function itemIdentifier(
     entry.date,
     canonicalCodes,
   ];
-  if (entry.codes.length === 0) identityParts.push(entry.text ?? null);
+  if (entry.codes.length === 0) {
+    if (!entry.text) throw new Error("Text-only C-CDA entry has no narrative text.");
+    identityParts.push(normalizeText(entry.text));
+  }
   const value = createHash("sha256")
     .update(JSON.stringify(identityParts))
     .digest("hex");
@@ -511,9 +520,13 @@ function medicationIdentifier(
   code: ParsedCode | undefined,
   text: string | undefined,
 ): Identifier {
-  const identity = code
-    ? `${code.system}|${code.code}`
-    : `text|${normalizeText(text!)}`;
+  let identity: string;
+  if (code) {
+    identity = `${code.system}|${code.code}`;
+  } else {
+    if (!text) throw new Error("Text-only medication group has no narrative text.");
+    identity = `text|${normalizeText(text)}`;
+  }
   const value = createHash("sha256")
     .update(`${ehrPatientId}|Medications|${identity}`)
     .digest("hex");
@@ -521,7 +534,7 @@ function medicationIdentifier(
 }
 
 function normalizeText(value: string): string {
-  return value.trim().toLowerCase();
+  return value.normalize("NFKC").replace(/\s+/g, " ").trim().toLowerCase();
 }
 
 function sourceTimestamp(file: string): string {

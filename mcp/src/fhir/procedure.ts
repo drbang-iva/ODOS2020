@@ -97,7 +97,7 @@ export function procedureCodeConcept(input: ProcedureCodeInput | CodeableConcept
 }
 
 function isCodeableConcept(input: ProcedureCodeInput | CodeableConcept): input is CodeableConcept {
-  return "coding" in input;
+  return !("system" in input);
 }
 
 function reference(value: string): Reference<never> {

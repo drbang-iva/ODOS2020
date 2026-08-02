@@ -18,6 +18,7 @@ import type { FhirSearchParams } from "../src/fhir-client.js";
 import { buildMedicationStatement } from "../src/fhir/medicationStatement.js";
 import {
   importLegacyCcda,
+  LEGACY_CCDA_FDB_ALLERGEN_SYSTEM,
   LEGACY_CCDA_ITEM_IDENTIFIER_SYSTEM,
   LEGACY_CCDA_TAG_CODE,
   LEGACY_CCDA_TAG_SYSTEM,
@@ -93,8 +94,8 @@ test("C-CDA import maps source facts, links exactly one Encounter, and converges
   });
 
   assert.deepEqual(first.resources, {
-    Condition: { created: 2, skipped: 0, encounterLinked: 1, encounterUnlinked: 1 },
-    AllergyIntolerance: { created: 1, skipped: 0, encounterLinked: 1, encounterUnlinked: 0 },
+    Condition: { created: 3, skipped: 0, encounterLinked: 2, encounterUnlinked: 1 },
+    AllergyIntolerance: { created: 2, skipped: 0, encounterLinked: 2, encounterUnlinked: 0 },
     MedicationStatement: { created: 1, skipped: 0, encounterLinked: 0, encounterUnlinked: 1 },
     Procedure: { created: 1, skipped: 0, encounterLinked: 1, encounterUnlinked: 0 },
   });
@@ -105,7 +106,7 @@ test("C-CDA import maps source facts, links exactly one Encounter, and converges
   }]);
 
   const conditions = fhir.ofType<Condition>("Condition");
-  assert.equal(conditions.length, 2);
+  assert.equal(conditions.length, 3);
   const dualCoded = conditions.find((condition) => condition.encounter?.reference);
   assert.equal(dualCoded?.category?.[0]?.coding?.[0]?.code, "problem-list-item");
   assert.equal(dualCoded?.encounter?.reference, "Encounter/encounter-1");
@@ -121,9 +122,22 @@ test("C-CDA import maps source facts, links exactly one Encounter, and converges
     conditions.find((condition) => !condition.encounter)?.code?.coding?.[0]?.system,
     "http://terminology.hl7.org/CodeSystem/icd9cm",
   );
+  const narrativeCondition = conditions.find((condition) => condition.code?.text);
+  assert.deepEqual(narrativeCondition?.code, { text: "Synthetic narrative-only problem" });
+  assert.equal(narrativeCondition?.verificationStatus?.coding?.[0]?.code, "unconfirmed");
+  assert.ok(conditions.filter((condition) => condition.code?.coding?.length)
+    .every((condition) => condition.verificationStatus?.coding?.[0]?.code === "confirmed"));
 
-  const allergy = fhir.ofType<AllergyIntolerance>("AllergyIntolerance")[0]!;
+  const allergies = fhir.ofType<AllergyIntolerance>("AllergyIntolerance");
+  const allergy = allergies[0]!;
   assert.equal(allergy.encounter?.reference, "Encounter/encounter-1");
+  const fdbAllergy = allergies.find((candidate) =>
+    candidate.code?.coding?.some((coding) => coding.system === LEGACY_CCDA_FDB_ALLERGEN_SYSTEM)
+  );
+  assert.equal(fdbAllergy?.code?.coding?.[0]?.code, "SYNTHETIC-FDB-ALLERGEN-1");
+  assert.ok(allergies.every((candidate) =>
+    candidate.verificationStatus?.coding?.[0]?.code === "confirmed"
+  ));
   const procedure = fhir.ofType<Procedure>("Procedure")[0]!;
   assert.equal(procedure.encounter?.reference, "Encounter/encounter-1");
   assert.equal(procedure.code?.coding?.[0]?.display, undefined);
@@ -154,7 +168,7 @@ test("C-CDA import maps source facts, links exactly one Encounter, and converges
 
   for (const resource of [
     ...conditions,
-    allergy,
+    ...allergies,
     medication,
     procedure,
   ]) {
@@ -166,7 +180,7 @@ test("C-CDA import maps source facts, links exactly one Encounter, and converges
   }
 
   const provenance = fhir.ofType<Provenance>("Provenance")[0]!;
-  assert.equal(provenance.target.length, 5);
+  assert.equal(provenance.target.length, 7);
   assert.deepEqual(
     provenance.entity?.map((entity) => entity.what.display),
     [
@@ -179,10 +193,11 @@ test("C-CDA import maps source facts, links exactly one Encounter, and converges
     fhir.searches.filter((search) => search.resourceType === "Encounter").length,
     1,
   );
-  assert.equal(fhir.createHeaders.length, 6);
+  assert.equal(fhir.createHeaders.length, 8);
   assert.ok(fhir.createHeaders.every(
     (headers) => headers?.["X-ODOS-Source"] === "scripts/import-legacy-ccda",
   ));
+  assert.equal(JSON.stringify(fhir.created).includes('"coding":[]'), false);
 
   const second = await importLegacyCcda({
     fhir,
@@ -192,8 +207,8 @@ test("C-CDA import maps source facts, links exactly one Encounter, and converges
     now: new Date("2026-08-01T12:01:00Z"),
   });
   assert.deepEqual(second.resources, {
-    Condition: { created: 0, skipped: 2, encounterLinked: 1, encounterUnlinked: 1 },
-    AllergyIntolerance: { created: 0, skipped: 1, encounterLinked: 1, encounterUnlinked: 0 },
+    Condition: { created: 0, skipped: 3, encounterLinked: 2, encounterUnlinked: 1 },
+    AllergyIntolerance: { created: 0, skipped: 2, encounterLinked: 2, encounterUnlinked: 0 },
     MedicationStatement: { created: 0, skipped: 1, encounterLinked: 0, encounterUnlinked: 1 },
     Procedure: { created: 0, skipped: 1, encounterLinked: 1, encounterUnlinked: 0 },
   });
@@ -327,7 +342,7 @@ test("C-CDA encounter matching treats an offset-less legacy dateTime as Eyefinit
       documents,
     });
 
-    assert.equal(result.resources.Condition.encounterLinked, 1);
+    assert.equal(result.resources.Condition.encounterLinked, 2);
     assert.deepEqual(result.encounterNonMatches, []);
   } finally {
     if (originalTimeZone === undefined) delete process.env.TZ;

@@ -137,7 +137,7 @@ export function allergyCodeConcept(input: AllergyCodeInput | CodeableConcept): C
 }
 
 function isCodeableConcept(input: AllergyCodeInput | CodeableConcept): input is CodeableConcept {
-  return "coding" in input;
+  return !("system" in input);
 }
 
 export function assertAllergyClinicalStatus(

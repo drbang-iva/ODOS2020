@@ -192,6 +192,17 @@ test("AllergyIntolerance builder is code-first", () => {
   assert.equal(allergy.reaction, undefined);
 });
 
+test("AllergyIntolerance builder preserves a text-only CodeableConcept", () => {
+  const allergy = buildAllergyIntolerance({
+    patientReference: "Patient/p1",
+    code: { text: "Narrative-only allergen" },
+  });
+
+  assert.deepEqual(allergy.code, { text: "Narrative-only allergen" });
+  assert.equal("coding" in allergy.code!, false);
+  assert.equal(JSON.stringify(allergy).includes("undefined"), false);
+});
+
 test("No known allergy uses SNOMED 716186003 in AllergyIntolerance.code", () => {
   const allergy = buildAllergyIntolerance({
     patientReference: "Patient/p1",
@@ -309,6 +320,18 @@ test("Procedure builder uses procedure-targetBodyStructure extension", () => {
   assert.equal(SCODI_OPTIC_NERVE.cptBinding.status, "deferred-to-licensed-adapter");
   assert.equal(procedure.extension?.[0]?.url, PROCEDURE_TARGET_BODY_STRUCTURE_EXTENSION_URL);
   assert.equal(procedure.extension?.[0]?.valueReference?.reference, "BodyStructure/b1");
+});
+
+test("Procedure builder preserves a text-only CodeableConcept", () => {
+  const procedure = buildProcedure({
+    patientReference: "Patient/p1",
+    status: "unknown",
+    code: { text: "Narrative-only procedure" },
+  });
+
+  assert.deepEqual(procedure.code, { text: "Narrative-only procedure" });
+  assert.equal("coding" in procedure.code!, false);
+  assert.equal(JSON.stringify(procedure).includes("undefined"), false);
 });
 
 test("Procedure body-structure helper replaces existing target extension", () => {
