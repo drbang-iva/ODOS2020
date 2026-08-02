@@ -21,8 +21,8 @@ account mutation, or Twilio Console change was used.
 
 ## Local boundaries
 
-| Boundary | Evidence 1 | Evidence 2 | Status |
-|---|---|---|---|
+| Boundary | Local behavior | Evidence 1 | Evidence 2 | Status |
+|---|---|---|---|---|
 | No automatic recording or transcription | Call creation and inbound TwiML omit recording flags; the adapter exposes fetch-only methods and no transcription-create method | `mcp/src/comms/adapters/twilio-adapter.ts` | `mcp/tests/twilioAdapter.test.ts` | verified |
 | SMS routes are no longer parser-only | `/comms/twilio/inbound` and `/comms/twilio/status` are mounted beside signed Voice inbound/status/recording routes when the exact webhook origin is configured | `mcp/src/comms/twilio-routes.ts` | `mcp/tests/twilioRoutes.test.ts` | verified |
 | UI and Call Pop remain deferred | No file under `ui/` changed; no patient search by phone or patient chart lookup was added | `git diff --name-only origin/main...HEAD` | accepted Slice A scope | verified |

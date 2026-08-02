@@ -135,3 +135,77 @@ test("live Twilio SMS and Voice routes validate signatures and return inbound Tw
     await once(server, "close");
   }
 });
+
+test("Twilio routes distinguish configuration, payload, and event-handler failures", async () => {
+  const voicePath = "/comms/twilio/voice/inbound";
+  const voiceStatusPath = "/comms/twilio/voice/status";
+  const voiceParams = {
+    AccountSid: ACCOUNT_SID,
+    CallSid: CALL_SID,
+    From: "+18645550199",
+    To: "+18645550100",
+    Direction: "inbound",
+    CallStatus: "ringing",
+  };
+  const post = async (
+    port: number,
+    path: string,
+    params: Record<string, string>,
+  ) => fetch(`http://127.0.0.1:${port}${path}`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/x-www-form-urlencoded",
+      "x-twilio-signature": twilio.getExpectedTwilioSignature(
+        AUTH_TOKEN,
+        `${EXTERNAL_BASE_URL}${path}`,
+        params,
+      ),
+    },
+    body: new URLSearchParams(params),
+  });
+
+  const unconfigured = express();
+  unconfigured.use(express.urlencoded({ extended: false }));
+  registerTwilioWebhookRoutes(unconfigured, {
+    auth: { accountSid: ACCOUNT_SID, authToken: AUTH_TOKEN, externalBaseUrl: EXTERNAL_BASE_URL },
+  });
+  const unconfiguredServer = unconfigured.listen(0);
+  await once(unconfiguredServer, "listening");
+  const unconfiguredAddress = unconfiguredServer.address();
+  if (!unconfiguredAddress || typeof unconfiguredAddress === "string") {
+    throw new Error("Expected TCP test server.");
+  }
+
+  try {
+    assert.equal((await post(unconfiguredAddress.port, voicePath, voiceParams)).status, 503);
+    assert.equal((await post(unconfiguredAddress.port, voiceStatusPath, {
+      ...voiceParams,
+      CallStatus: "synthetic-invalid",
+    })).status, 400);
+  } finally {
+    unconfiguredServer.close();
+    await once(unconfiguredServer, "close");
+  }
+
+  const failingHandler = express();
+  failingHandler.use(express.urlencoded({ extended: false }));
+  registerTwilioWebhookRoutes(failingHandler, {
+    auth: { accountSid: ACCOUNT_SID, authToken: AUTH_TOKEN, externalBaseUrl: EXTERNAL_BASE_URL },
+    voiceFromNumber: "+18645550100",
+    voiceForwardToNumber: "+18645550101",
+    onEvent: () => { throw new Error("synthetic event failure"); },
+  });
+  const failingHandlerServer = failingHandler.listen(0);
+  await once(failingHandlerServer, "listening");
+  const failingHandlerAddress = failingHandlerServer.address();
+  if (!failingHandlerAddress || typeof failingHandlerAddress === "string") {
+    throw new Error("Expected TCP test server.");
+  }
+
+  try {
+    assert.equal((await post(failingHandlerAddress.port, voicePath, voiceParams)).status, 500);
+  } finally {
+    failingHandlerServer.close();
+    await once(failingHandlerServer, "close");
+  }
+});

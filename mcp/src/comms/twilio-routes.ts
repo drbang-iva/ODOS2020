@@ -5,6 +5,7 @@ import {
   handleTwilioRecordingWebhook,
   handleTwilioStatusWebhook,
   handleTwilioVoiceWebhook,
+  TwilioSignatureError,
   type TwilioInboundWebhookEvent,
   type TwilioRecordingWebhookEvent,
   type TwilioStatusWebhookEvent,
@@ -25,6 +26,15 @@ type TwilioWebhookEvent =
   | TwilioVoiceWebhookEvent
   | TwilioRecordingWebhookEvent;
 
+interface TwilioWebhookResult {
+  event: TwilioWebhookEvent;
+  response?: {
+    contentType: string;
+    status: number;
+    body: string;
+  };
+}
+
 export interface TwilioWebhookRouteDeps {
   auth: TwilioWebhookAuth;
   voiceFromNumber?: string;
@@ -38,11 +48,11 @@ export function registerTwilioWebhookRoutes(
 ): void {
   app.post("/comms/twilio/inbound", async (req, res) => {
     await webhookRoute(req, res, deps, "sms-inbound", () =>
-      handleTwilioInboundWebhook(webhookRequest(req), deps.auth));
+      ({ event: handleTwilioInboundWebhook(webhookRequest(req), deps.auth) }));
   });
   app.post("/comms/twilio/status", async (req, res) => {
     await webhookRoute(req, res, deps, "sms-status", () =>
-      handleTwilioStatusWebhook(webhookRequest(req), deps.auth));
+      ({ event: handleTwilioStatusWebhook(webhookRequest(req), deps.auth) }));
   });
   app.post("/comms/twilio/voice/inbound", async (req, res) => {
     await webhookRoute(req, res, deps, "voice-inbound", () => {
@@ -58,17 +68,23 @@ export function registerTwilioWebhookRoutes(
         statusCallbackMethod: "POST",
         statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
       }, forwardTo);
-      res.type("text/xml").status(200).send(response.toString());
-      return event;
+      return {
+        event,
+        response: {
+          contentType: "text/xml",
+          status: 200,
+          body: response.toString(),
+        },
+      };
     });
   });
   app.post("/comms/twilio/voice/status", async (req, res) => {
     await webhookRoute(req, res, deps, "voice-status", () =>
-      handleTwilioVoiceWebhook(webhookRequest(req), deps.auth));
+      ({ event: handleTwilioVoiceWebhook(webhookRequest(req), deps.auth) }));
   });
   app.post("/comms/twilio/voice/recording", async (req, res) => {
     await webhookRoute(req, res, deps, "voice-recording", () =>
-      handleTwilioRecordingWebhook(webhookRequest(req), deps.auth));
+      ({ event: handleTwilioRecordingWebhook(webhookRequest(req), deps.auth) }));
   });
 }
 
@@ -77,20 +93,29 @@ async function webhookRoute(
   res: Response,
   deps: TwilioWebhookRouteDeps,
   kind: TwilioWebhookKind,
-  handle: () => TwilioWebhookEvent,
+  handle: () => TwilioWebhookResult,
 ): Promise<void> {
   try {
-    const event = handle();
-    await deps.onEvent?.(kind, event);
-    if (!res.headersSent) res.sendStatus(204);
+    const result = handle();
+    try {
+      await deps.onEvent?.(kind, result.event);
+    } catch {
+      console.error(`odos-mcp: Twilio ${kind} webhook handler failed.`);
+      res.status(500).json({ error: "Twilio webhook handling failed." });
+      return;
+    }
+    if (result.response) {
+      res.type(result.response.contentType).status(result.response.status).send(result.response.body);
+      return;
+    }
+    res.sendStatus(204);
   } catch (error) {
-    if (res.headersSent) return;
+    console.error(`odos-mcp: Twilio ${kind} webhook rejected.`);
     if (error instanceof TwilioRouteConfigurationError) {
       res.status(503).json({ error: "Twilio Voice routing is not configured." });
       return;
     }
-    const message = error instanceof Error ? error.message : "";
-    if (message.includes("X-Twilio-Signature")) {
+    if (error instanceof TwilioSignatureError) {
       res.status(403).json({ error: "Twilio webhook signature validation failed." });
       return;
     }

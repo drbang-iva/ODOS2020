@@ -118,6 +118,12 @@ export interface TwilioWebhookAuth {
   externalBaseUrl: string;
 }
 
+export class TwilioSignatureError extends Error {
+  constructor() {
+    super("Twilio webhook X-Twilio-Signature validation failed.");
+  }
+}
+
 export interface TwilioInboundWebhookEvent {
   accountSid: string;
   messageSid: string;
@@ -268,7 +274,10 @@ function voiceMethods(
       }
       const media = await fetchImpl(
         `https://api.twilio.com/2010-04-01/Accounts/${config.accountSid}/Recordings/${id}.mp3`,
-        { headers: { Authorization: authorization } },
+        {
+          headers: { Authorization: authorization },
+          signal: AbortSignal.timeout(TWILIO_REQUEST_TIMEOUT_MS),
+        },
       );
       if (!media.ok) {
         throw new Error(`Twilio Recording media fetch failed with HTTP ${media.status}.`);
@@ -287,6 +296,7 @@ function voiceMethods(
       const id = batchTranscriptionId(transcriptionId);
       const response = await fetchImpl(`https://voice.twilio.com/v3/Transcriptions/${id}`, {
         headers: { Authorization: authorization },
+        signal: AbortSignal.timeout(TWILIO_REQUEST_TIMEOUT_MS),
       });
       if (!response.ok) {
         throw new Error(`Twilio Batch Transcription fetch failed with HTTP ${response.status}.`);
@@ -309,7 +319,7 @@ export function validateTwilioWebhook(
       throw new Error("Twilio form webhook parameters are required.");
     }
     if (!twilio.validateRequest(auth.authToken, signature, url, request.params)) {
-      throw new Error("Twilio webhook X-Twilio-Signature validation failed.");
+      throw new TwilioSignatureError();
     }
     return request.params;
   }
@@ -319,7 +329,7 @@ export function validateTwilioWebhook(
       throw new Error("Twilio JSON webhook raw body is required.");
     }
     if (!twilio.validateRequestWithBody(auth.authToken, signature, url, request.rawBody)) {
-      throw new Error("Twilio webhook X-Twilio-Signature validation failed.");
+      throw new TwilioSignatureError();
     }
     return jsonObject(request.rawBody);
   }
@@ -565,15 +575,23 @@ function batchTranscription(value: unknown, expectedId: string): CallTranscripti
   if (!Array.isArray(detail.sentences)) {
     throw new Error("Twilio Batch Transcription sentences must be an array.");
   }
-  const text = detail.sentences.map((sentence, index) => {
+  const orderedSentences = detail.sentences.map((sentence, index) => {
     if (!sentence || typeof sentence !== "object" || Array.isArray(sentence)) {
       throw new Error(`Twilio Batch Transcription sentence ${index + 1} must be an object.`);
     }
-    return requiredJsonString(
-      (sentence as Record<string, unknown>).text,
-      `sentence ${index + 1} text`,
-    );
-  }).join("\n");
+    const record = sentence as Record<string, unknown>;
+    if (!Number.isInteger(record.sentenceIndex) || Number(record.sentenceIndex) < 1) {
+      throw new Error(`Twilio Batch Transcription sentence ${index + 1} sentenceIndex is invalid.`);
+    }
+    return {
+      sentenceIndex: Number(record.sentenceIndex),
+      text: requiredJsonString(record.text, `sentence ${index + 1} text`),
+    };
+  });
+  const text = orderedSentences
+    .sort((left, right) => left.sentenceIndex - right.sentenceIndex)
+    .map(({ text: sentenceText }) => sentenceText)
+    .join("\n");
   return {
     id: expectedId,
     ...(sourceId ? { recordingId: sourceId } : {}),

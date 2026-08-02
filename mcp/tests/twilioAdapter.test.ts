@@ -450,7 +450,7 @@ test("Twilio Voice lists and fetches normalized call detail", async () => {
 });
 
 test("Twilio Voice fetches authenticated recording media and current Batch Transcription output", async () => {
-  const fetches: Array<{ url: string; authorization: string | null }> = [];
+  const fetches: Array<{ url: string; authorization: string | null; signal: AbortSignal | null }> = [];
   const adapter = createTwilioAdapter({
     accountSid: ACCOUNT_SID,
     authToken: AUTH_TOKEN,
@@ -484,7 +484,11 @@ test("Twilio Voice fetches authenticated recording media and current Batch Trans
     fetchImpl: (async (input, init) => {
       const url = String(input);
       const headers = new Headers(init?.headers);
-      fetches.push({ url, authorization: headers.get("authorization") });
+      fetches.push({
+        url,
+        authorization: headers.get("authorization"),
+        signal: init?.signal instanceof AbortSignal ? init.signal : null,
+      });
       if (url.endsWith(".mp3")) {
         return new Response(Uint8Array.from([1, 2, 3]), {
           headers: { "content-type": "audio/mpeg" },
@@ -497,8 +501,8 @@ test("Twilio Voice fetches authenticated recording media and current Batch Trans
           id: TRANSCRIPTION_ID,
           sourceId: RECORDING_SID,
           sentences: [
-            { sentenceIndex: 1, audioChannelIndex: 1, text: "Synthetic caller text." },
             { sentenceIndex: 2, audioChannelIndex: 2, text: "Synthetic staff text." },
+            { sentenceIndex: 1, audioChannelIndex: 1, text: "Synthetic caller text." },
           ],
         },
       });
@@ -524,6 +528,7 @@ test("Twilio Voice fetches authenticated recording media and current Batch Trans
   assert.deepEqual(new Set(fetches.map(({ authorization }) => authorization)), new Set([
     `Basic ${Buffer.from(`${VOICE_API_KEY_SID}:${VOICE_API_KEY_SECRET}`).toString("base64")}`,
   ]));
+  assert.equal(fetches.every(({ signal }) => signal instanceof AbortSignal), true);
 });
 
 test("signed Voice events expose caller ID and fail closed on tampering, missing signatures, or malformed fields", () => {
