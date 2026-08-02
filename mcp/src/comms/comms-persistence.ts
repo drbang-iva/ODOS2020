@@ -87,6 +87,10 @@ async function persistTwilioWebhookEventLocked(
     });
   }
   if (!existing.id) throw new Error("Persisted Twilio Communication is missing its FHIR id.");
+  const acceptStatus = acceptsIncomingStatus(existing.status, existing.statusReason, fragment.status);
+  const incomingNotes = acceptStatus
+    ? fragment.note
+    : fragment.note?.filter((note) => note.authorString !== TWILIO_CALL_METADATA_AUTHOR);
   return fhir.update<Communication>("Communication", existing.id, {
     ...existing,
     ...fragment,
@@ -99,14 +103,15 @@ async function persistTwilioWebhookEventLocked(
       fragment.category,
     ),
     medium: existing.medium ?? [{ text: identity.category === ODOS_PATIENT_SMS_CATEGORY ? "SMS" : "Voice call" }],
-    note: mergeNotes(existing.note, fragment.note),
+    note: mergeNotes(existing.note, incomingNotes),
     payload: fragment.payload ?? existing.payload,
     subject: fragment.subject ?? existing.subject,
     sender: fragment.sender ?? existing.sender,
     recipient: fragment.recipient ?? existing.recipient,
-    received: fragment.received ?? existing.received,
-    sent: fragment.sent ?? existing.sent,
-    status: fragment.status ?? existing.status,
+    received: existing.received ?? fragment.received,
+    sent: existing.sent ?? fragment.sent,
+    status: acceptStatus ? fragment.status ?? existing.status : existing.status,
+    statusReason: acceptStatus ? fragment.statusReason ?? existing.statusReason : existing.statusReason,
   });
 }
 
@@ -269,6 +274,16 @@ function communicationStatusForCall(status: TwilioVoiceWebhookEvent["status"]): 
   if (status === "completed") return "completed";
   if (["busy", "failed", "no-answer", "canceled"].includes(status)) return "not-done";
   return "in-progress";
+}
+
+function acceptsIncomingStatus(
+  existing: Communication["status"],
+  existingReason: Communication["statusReason"],
+  incoming: Communication["status"] | undefined,
+): boolean {
+  if (!incoming) return false;
+  if (existing !== "completed" && existing !== "not-done") return true;
+  return incoming === existing && existingReason === undefined;
 }
 
 function category(code: string): CodeableConcept {

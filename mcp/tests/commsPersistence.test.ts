@@ -38,7 +38,7 @@ test("duplicate inbound SMS delivery creates one patient-linked Communication", 
   };
 
   await persistTwilioWebhookEvent(fhir, "sms-inbound", event, { now: () => NOW });
-  await persistTwilioWebhookEvent(fhir, "sms-inbound", event, { now: () => NOW });
+  await persistTwilioWebhookEvent(fhir, "sms-inbound", event, { now: () => "2026-08-02T16:00:00.000Z" });
 
   const communications = fhir.ofType<Communication>("Communication");
   assert.equal(communications.length, 1);
@@ -49,6 +49,55 @@ test("duplicate inbound SMS delivery creates one patient-linked Communication", 
   assert.equal(communications[0].received, NOW);
   assert.equal(communications[0].payload?.[0].contentString, "Synthetic scheduling question");
   assert.equal(fhir.createAttempts, 1);
+});
+
+test("stale lifecycle callbacks cannot regress terminal message or call status", async () => {
+  const fhir = new InMemoryCommsFhir();
+  await persistTwilioWebhookEvent(fhir, "sms-inbound", {
+    accountSid: ACCOUNT_SID,
+    messageSid: MESSAGE_SID,
+    from: PATIENT_NUMBER,
+    to: PRACTICE_NUMBER,
+    body: "Synthetic terminal message",
+  }, { now: () => NOW });
+  await persistTwilioWebhookEvent(fhir, "sms-status", {
+    accountSid: ACCOUNT_SID,
+    messageSid: MESSAGE_SID,
+    messageStatus: "delivered",
+    recipientOptedOut: false,
+  }, { now: () => NOW });
+  await persistTwilioWebhookEvent(fhir, "sms-status", {
+    accountSid: ACCOUNT_SID,
+    messageSid: MESSAGE_SID,
+    messageStatus: "queued",
+    recipientOptedOut: false,
+  }, { now: () => NOW });
+
+  await persistTwilioWebhookEvent(fhir, "voice-status", {
+    accountSid: ACCOUNT_SID,
+    callId: CALL_SID,
+    from: PATIENT_NUMBER,
+    to: PRACTICE_NUMBER,
+    direction: "inbound",
+    status: "completed",
+    durationSeconds: 42,
+  }, { now: () => NOW });
+  await persistTwilioWebhookEvent(fhir, "voice-status", {
+    accountSid: ACCOUNT_SID,
+    callId: CALL_SID,
+    from: PATIENT_NUMBER,
+    to: PRACTICE_NUMBER,
+    direction: "inbound",
+    status: "ringing",
+  }, { now: () => NOW });
+
+  const [message, call] = fhir.ofType<Communication>("Communication");
+  assert.equal(message.status, "completed");
+  assert.equal(message.statusReason?.text, "Twilio message status: delivered");
+  assert.equal(call.status, "completed");
+  assert.equal(call.statusReason?.text, "Twilio call status: completed");
+  assert.match(JSON.stringify(call.note), /status=completed/);
+  assert.doesNotMatch(JSON.stringify(call.note), /status=ringing/);
 });
 
 test("two signed deliveries of the same Twilio webhook remain one Communication", async () => {
