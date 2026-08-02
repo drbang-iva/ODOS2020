@@ -30,6 +30,7 @@ export const ODOS_TWILIO_TRANSCRIPTION_IDENTIFIER_SYSTEM =
 const TWILIO_CALL_METADATA_AUTHOR = "ODOS Twilio call metadata";
 const TWILIO_RECORDING_METADATA_AUTHOR = "ODOS Twilio recording metadata";
 const TWILIO_TRANSCRIPTION_METADATA_AUTHOR = "ODOS Twilio transcription metadata";
+const communicationWrites = new Map<string, Promise<void>>();
 
 export type TwilioWebhookKind =
   | "sms-inbound"
@@ -56,6 +57,17 @@ export async function persistTwilioWebhookEvent(
 ): Promise<Communication> {
   const now = deps.now?.() ?? new Date().toISOString();
   const identity = eventIdentity(kind, event);
+  return serializeCommunicationWrite(`${identity.system}|${identity.value}`, () =>
+    persistTwilioWebhookEventLocked(fhir, kind, event, identity, now));
+}
+
+async function persistTwilioWebhookEventLocked(
+  fhir: CommsPersistenceFhir,
+  kind: TwilioWebhookKind,
+  event: TwilioWebhookEvent,
+  identity: ReturnType<typeof eventIdentity>,
+  now: string,
+): Promise<Communication> {
   const existing = await findCommunication(fhir, identity.system, identity.value);
   const fragment = await eventFragment(fhir, kind, event, now);
   if (!existing) {
@@ -96,6 +108,23 @@ export async function persistTwilioWebhookEvent(
     sent: fragment.sent ?? existing.sent,
     status: fragment.status ?? existing.status,
   });
+}
+
+async function serializeCommunicationWrite<T>(key: string, operation: () => Promise<T>): Promise<T> {
+  const previous = communicationWrites.get(key) ?? Promise.resolve();
+  let release!: () => void;
+  const current = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const tail = previous.catch(() => undefined).then(() => current);
+  communicationWrites.set(key, tail);
+  await previous.catch(() => undefined);
+  try {
+    return await operation();
+  } finally {
+    release();
+    if (communicationWrites.get(key) === tail) communicationWrites.delete(key);
+  }
 }
 
 function eventIdentity(kind: TwilioWebhookKind, event: TwilioWebhookEvent) {

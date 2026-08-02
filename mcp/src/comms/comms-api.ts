@@ -1,3 +1,4 @@
+import type { Communication } from "@medplum/fhirtypes";
 import type { Application, Request, Response } from "express";
 import { buildOdosAuditEventRow } from "../authz/odosAudit.js";
 import {
@@ -11,6 +12,7 @@ import type { FhirAuditRecorder } from "../fhir-client.js";
 import type { AuthenticatedStaff } from "../payments/payment-charge-handler.js";
 import type { CommsDispatch, CommsDispatchFhir } from "./comms-config.js";
 import type { CommsProvider, ConversationSummary } from "./comms-provider.js";
+import { ODOS_TWILIO_RECORDING_IDENTIFIER_SYSTEM } from "./comms-persistence.js";
 
 type CommsStaff = Omit<AuthenticatedStaff, "actorRole" | "roles"> & {
   actorRole: PracticeRoleId;
@@ -27,6 +29,7 @@ export interface CommsApiRouteDeps {
 
 class CommsApiValidationError extends Error {}
 class CommsApiCapabilityError extends Error {}
+class CommsApiNotFoundError extends Error {}
 
 type CommsApiResult =
   | { status: number; body: unknown }
@@ -143,7 +146,9 @@ export function registerCommsApiRoutes(
       if (!provider.fetchRecording) {
         throw new CommsApiCapabilityError("Recording retrieval is not enabled for this communications provider.");
       }
-      const recording = await provider.fetchRecording(resourceKey(req.params.recordingId, "recording id"));
+      const recordingId = resourceKey(req.params.recordingId, "recording id");
+      await requireVisibleRecording(staff.fhir, recordingId);
+      const recording = await provider.fetchRecording(recordingId);
       return {
         status: 200,
         media: { contentType: recording.contentType, bytes: recording.audio },
@@ -217,9 +222,25 @@ async function withStaff(
       res.status(409).json({ error: error.message });
       return;
     }
+    if (error instanceof CommsApiNotFoundError) {
+      res.status(404).json({ error: error.message });
+      return;
+    }
     console.error("odos-mcp: patient communications route failed.");
     res.status(502).json({ error: "Patient communications service failed." });
   }
+}
+
+async function requireVisibleRecording(fhir: CommsDispatchFhir, recordingId: string): Promise<void> {
+  const bundle = await fhir.search<Communication>("Communication", {
+    identifier: `${ODOS_TWILIO_RECORDING_IDENTIFIER_SYSTEM}|${recordingId}`,
+    _count: "2",
+  });
+  const matches = (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []).filter((communication) =>
+    communication.identifier?.some((identifier) =>
+      identifier.system === ODOS_TWILIO_RECORDING_IDENTIFIER_SYSTEM && identifier.value === recordingId));
+  if (matches.length === 0) throw new CommsApiNotFoundError("Recording not found.");
+  if (matches.length > 1) throw new Error(`Twilio recording identifier ${recordingId} is not unique.`);
 }
 
 function actingRole(req: Request, staff: CommsStaff, action: BusinessAction): PracticeRoleId | undefined {

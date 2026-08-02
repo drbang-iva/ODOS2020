@@ -123,7 +123,19 @@ test("recording retrieval degrades cleanly when media authentication is not ackn
   }
 });
 
-async function startServer(options: { recordingEnabled?: boolean } = {}) {
+test("recording retrieval requires a persisted call visible to the caller's FHIR policy", async () => {
+  const fixture = await startServer({ recordingVisible: false });
+  try {
+    const response = await request(fixture.base, `/communications/recordings/${RECORDING_ID}`, "GET", undefined, "clinician");
+    assert.equal(response.status, 404);
+    assert.deepEqual(await response.json(), { error: "Recording not found." });
+    assert.deepEqual(fixture.providerCalls, []);
+  } finally {
+    await fixture.close();
+  }
+});
+
+async function startServer(options: { recordingEnabled?: boolean; recordingVisible?: boolean } = {}) {
   const providerCalls: string[] = [];
   const listRequests: Array<{ includeContent?: boolean }> = [];
   const grants: OdosAuditEventRecord[] = [];
@@ -182,7 +194,32 @@ async function startServer(options: { recordingEnabled?: boolean } = {}) {
         staffReference: `Practitioner/${role}`,
         actorRole: role as never,
         roles: [role as never],
-        fhir: {} as never,
+        fhir: {
+          async read() {
+            throw new Error("Unexpected FHIR read in communications API test.");
+          },
+          async search() {
+            return {
+              resourceType: "Bundle",
+              type: "searchset",
+              entry: options.recordingVisible === false ? [] : [{
+                resource: {
+                  resourceType: "Communication",
+                  id: "call-communication-1",
+                  status: "completed",
+                  subject: { reference: PATIENT_REFERENCE },
+                  identifier: [{
+                    system: "https://odos2020.com/fhir/NamingSystem/twilio-recording-sid",
+                    value: RECORDING_ID,
+                  }],
+                },
+              }],
+            };
+          },
+          async searchUrl() {
+            throw new Error("Unexpected FHIR pagination in communications API test.");
+          },
+        } as never,
       };
     },
     dispatch: {

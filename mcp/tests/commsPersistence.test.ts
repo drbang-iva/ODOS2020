@@ -180,6 +180,34 @@ test("all six Twilio event kinds update deterministic Communications without ret
   assert.equal(fhir.createAttempts, 2);
 });
 
+test("concurrent call status and recording callbacks converge without losing either event", async () => {
+  const fhir = new InMemoryCommsFhir();
+  await Promise.all([
+    persistTwilioWebhookEvent(fhir, "voice-status", {
+      accountSid: ACCOUNT_SID,
+      callId: CALL_SID,
+      from: PATIENT_NUMBER,
+      to: PRACTICE_NUMBER,
+      direction: "inbound",
+      status: "completed",
+      durationSeconds: 42,
+    }, { now: () => NOW }),
+    persistTwilioWebhookEvent(fhir, "voice-recording", {
+      accountSid: ACCOUNT_SID,
+      callId: CALL_SID,
+      recordingId: RECORDING_SID,
+      status: "completed",
+      durationSeconds: 42,
+      channels: 2,
+    }, { now: () => NOW }),
+  ]);
+
+  const communications = fhir.ofType<Communication>("Communication");
+  assert.equal(communications.length, 1);
+  assert.equal(communications[0].status, "completed");
+  assert.match(JSON.stringify(communications[0]), new RegExp(RECORDING_SID));
+});
+
 test("Twilio listConversations reads persisted Communication history, groups locally, and never requires a live message-list API", async () => {
   const fhir = new InMemoryCommsFhir();
   fhir.seed(
@@ -273,8 +301,17 @@ class InMemoryCommsFhir {
     return { resourceType: "Bundle", type: "searchset", entry: matches.map((resource) => ({ resource: structuredClone(resource) })) };
   }
 
-  async create<T extends Resource>(resource: T): Promise<T> {
+  async create<T extends Resource>(resource: T, headers: Record<string, string> = {}): Promise<T> {
     this.createAttempts += 1;
+    const conditionalIdentifier = headers["If-None-Exist"]?.replace(/^identifier=/, "");
+    if (resource.resourceType === "Communication" && conditionalIdentifier) {
+      const splitAt = conditionalIdentifier.lastIndexOf("|");
+      const system = conditionalIdentifier.slice(0, splitAt);
+      const value = conditionalIdentifier.slice(splitAt + 1);
+      const existing = this.ofType<Communication>("Communication").find((communication) =>
+        communication.identifier?.some((identifier) => identifier.system === system && identifier.value === value));
+      if (existing) return structuredClone(existing) as T;
+    }
     const created = { ...structuredClone(resource), id: `created-${this.nextId++}` } as T;
     this.resources.push(created);
     return structuredClone(created);
