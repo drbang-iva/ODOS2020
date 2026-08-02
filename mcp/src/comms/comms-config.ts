@@ -1,4 +1,3 @@
-import type { MedplumClient } from "../fhir-client.js";
 import {
   createGoogleWorkspaceAdapter,
   type GoogleWorkspaceAdapterConfig,
@@ -7,6 +6,7 @@ import {
   createTwilioAdapter,
   type TwilioAdapterConfig,
   type TwilioClientFactory,
+  withTwilioConversationStore,
 } from "./adapters/twilio-adapter.js";
 import type { CommsProvider } from "./comms-provider.js";
 import {
@@ -34,7 +34,7 @@ export interface CommsDispatchDeps {
   twilioClientFactory?: TwilioClientFactory;
 }
 
-export type CommsDispatchFhir = Pick<MedplumClient, "read" | "search">;
+export type CommsDispatchFhir = SuppressionFhir;
 
 export interface CommsDispatch {
   initialize(): Promise<void>;
@@ -123,7 +123,7 @@ export function createCommsDispatch(
           });
         }
         case "twilio": {
-          const adapter = getTwilioAdapter(registration);
+          const adapter = withTwilioConversationStore(getTwilioAdapter(registration), fhir);
           return createSuppressedCommsProvider(adapter, {
             fhir,
             practiceTimeZone: deps.practiceTimeZone ?? "UTC",

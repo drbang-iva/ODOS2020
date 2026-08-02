@@ -53,6 +53,24 @@ export interface ConversationSummary {
   id: string;
   patientReference?: string;
   updatedAt: string;
+  messageCount: number;
+  messages: ConversationMessage[];
+}
+
+export interface ConversationMessage {
+  id: string;
+  direction: "inbound" | "outbound" | "unknown";
+  status: string;
+  occurredAt: string;
+  from?: string;
+  to?: string;
+  body?: string;
+}
+
+export interface ConversationListRequest {
+  patientReference?: string;
+  limit?: number;
+  includeContent?: boolean;
 }
 
 export interface CallRequest {
@@ -111,7 +129,7 @@ export interface CommsProvider {
   readonly capabilities: Readonly<CommsCapabilities>;
   sendEmail?(request: SendEmailRequest): Promise<SendResult>;
   sendSms?(request: SendSmsRequest): Promise<SendResult>;
-  listConversations?(): Promise<ConversationSummary[]>;
+  listConversations?(request?: ConversationListRequest): Promise<ConversationSummary[]>;
   initiateCall?(request: CallRequest): Promise<{ callId: string }>;
   getCall?(callId: string): Promise<CallDetail>;
   listCalls?(request?: CallListRequest): Promise<CallDetail[]>;

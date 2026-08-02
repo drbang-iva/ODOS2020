@@ -1,0 +1,337 @@
+import type { Application, Request, Response } from "express";
+import { buildOdosAuditEventRow } from "../authz/odosAudit.js";
+import {
+  PRACTICE_ROLE_IDS,
+  assertBusinessActionAllowed,
+  resolveBusinessActionRole,
+  type BusinessAction,
+  type PracticeRoleId,
+} from "../authz/roles.js";
+import type { FhirAuditRecorder } from "../fhir-client.js";
+import type { AuthenticatedStaff } from "../payments/payment-charge-handler.js";
+import type { CommsDispatch, CommsDispatchFhir } from "./comms-config.js";
+import type { CommsProvider, ConversationSummary } from "./comms-provider.js";
+
+type CommsStaff = Omit<AuthenticatedStaff, "actorRole" | "roles"> & {
+  actorRole: PracticeRoleId;
+  roles: readonly PracticeRoleId[];
+};
+
+export interface CommsApiRouteDeps {
+  authenticateService(): Promise<void>;
+  authenticate(authHeader: string | undefined): Promise<CommsStaff | null>;
+  dispatch: CommsDispatch;
+  audit: FhirAuditRecorder;
+  now?: () => string;
+}
+
+class CommsApiValidationError extends Error {}
+class CommsApiCapabilityError extends Error {}
+
+type CommsApiResult =
+  | { status: number; body: unknown }
+  | { status: number; media: { contentType: string; bytes: Uint8Array } };
+
+export function registerCommsApiRoutes(
+  app: Pick<Application, "get" | "post">,
+  deps: CommsApiRouteDeps,
+): void {
+  app.get("/communications/conversations", async (req, res) => withStaff(
+    req,
+    res,
+    deps,
+    "communications.read",
+    "Communication",
+    "communications-conversation-list",
+    patientReferenceForAudit(req),
+    async (staff) => {
+      const patientReference = patientReferenceFromQuery(req);
+      const limit = numberFromQuery(req, "limit", 1, 100);
+      const provider = adapter(deps, providerFromQuery(req), staff.fhir);
+      if (!provider.listConversations) throw new CommsApiCapabilityError("Conversation history is not enabled for this communications provider.");
+      const includeContent = hasBusinessAction(staff.actorRole, "communications.content.read");
+      const conversations = await provider.listConversations({
+        ...(patientReference ? { patientReference } : {}),
+        ...(limit ? { limit } : {}),
+        includeContent,
+      });
+      return { status: 200, body: { conversations: includeContent ? conversations : redactConversationBodies(conversations) } };
+    },
+  ));
+
+  app.post("/communications/messages", async (req, res) => withStaff(
+    req,
+    res,
+    deps,
+    "communications.send",
+    "Communication",
+    "communications-sms-send",
+    patientReferenceFromBody(req.body),
+    async (staff) => {
+      const body = record(req.body);
+      const patientReference = requiredPatientReference(body.patientReference);
+      const text = requiredText(body.body, "SMS body", 1_600);
+      const provider = adapter(deps, providerFromBody(body), staff.fhir);
+      if (!provider.sendSms) throw new CommsApiCapabilityError("SMS is not enabled for this communications provider.");
+      return { status: 200, body: await provider.sendSms({
+        patientReference,
+        body: text,
+        campaignType: "staff-initiated",
+        suppression: {},
+      }) };
+    },
+  ));
+
+  app.get("/communications/calls", async (req, res) => withStaff(
+    req,
+    res,
+    deps,
+    "communications.read",
+    "Communication",
+    "communications-call-list",
+    undefined,
+    async (staff) => {
+      const provider = adapter(deps, providerFromQuery(req), staff.fhir);
+      if (!provider.listCalls) throw new CommsApiCapabilityError("Call history is not enabled for this communications provider.");
+      const limit = numberFromQuery(req, "limit", 1, 1_000);
+      return { status: 200, body: { calls: await provider.listCalls(limit ? { limit } : {}) } };
+    },
+  ));
+
+  app.get("/communications/calls/:callId", async (req, res) => withStaff(
+    req,
+    res,
+    deps,
+    "communications.read",
+    "Communication",
+    "communications-call-read",
+    undefined,
+    async (staff) => {
+      const provider = adapter(deps, providerFromQuery(req), staff.fhir);
+      if (!provider.getCall) throw new CommsApiCapabilityError("Call detail is not enabled for this communications provider.");
+      return { status: 200, body: { call: await provider.getCall(resourceKey(req.params.callId, "call id")) } };
+    },
+  ));
+
+  app.post("/communications/calls", async (req, res) => withStaff(
+    req,
+    res,
+    deps,
+    "communications.call",
+    "Communication",
+    "communications-call-initiate",
+    patientReferenceFromBody(req.body),
+    async (staff) => {
+      const body = record(req.body);
+      const patientReference = requiredPatientReference(body.patientReference);
+      const provider = adapter(deps, providerFromBody(body), staff.fhir);
+      if (!provider.initiateCall) throw new CommsApiCapabilityError("Calling is not enabled for this communications provider.");
+      return { status: 201, body: await provider.initiateCall({ patientReference }) };
+    },
+  ));
+
+  app.get("/communications/recordings/:recordingId", async (req, res) => withStaff(
+    req,
+    res,
+    deps,
+    "communications.content.read",
+    "Binary",
+    "communications-recording-read",
+    undefined,
+    async (staff) => {
+      const provider = adapter(deps, providerFromQuery(req), staff.fhir);
+      if (!provider.fetchRecording) {
+        throw new CommsApiCapabilityError("Recording retrieval is not enabled for this communications provider.");
+      }
+      const recording = await provider.fetchRecording(resourceKey(req.params.recordingId, "recording id"));
+      return {
+        status: 200,
+        media: { contentType: recording.contentType, bytes: recording.audio },
+      };
+    },
+  ));
+}
+
+async function withStaff(
+  req: Request,
+  res: Response,
+  deps: CommsApiRouteDeps,
+  action: BusinessAction,
+  resourceType: string,
+  actionReason: string,
+  patientReference: string | undefined,
+  operation: (staff: CommsStaff) => Promise<CommsApiResult>,
+): Promise<void> {
+  try {
+    await deps.authenticateService();
+    const staff = await deps.authenticate(req.header("authorization"));
+    if (!staff) {
+      res.status(401).json({ error: "Authentication required for patient communications." });
+      return;
+    }
+    const actorId = staff.staffReference.replace(/^Practitioner\//, "");
+    const actorRole = actingRole(req, staff, action);
+    const claimedActorId = req.header("X-ODOS-Actor-Id")?.trim();
+    if (!actorRole || (claimedActorId && claimedActorId !== actorId && claimedActorId !== staff.staffReference)) {
+      await deps.audit.recordDenied(buildOdosAuditEventRow({
+        eventType: "denied",
+        eventTime: deps.now?.(),
+        actorId,
+        actorRole: staff.actorRole,
+        patientReference,
+        resourceType,
+        actionOutcome: "denied",
+        actionReason: `${action} role required`,
+        policyUrl: `AccessPolicy/odos-${staff.actorRole}`,
+        ipAddress: req.ip?.replace(/^::ffff:/, ""),
+        userAgent: req.header("user-agent"),
+      }));
+      res.status(403).json({ error: `${action} role required` });
+      return;
+    }
+    const result = await deps.audit.record(buildOdosAuditEventRow({
+      eventType: req.method === "GET" ? "read" : "external-api-call",
+      eventTime: deps.now?.(),
+      actorId,
+      actorRole,
+      patientReference,
+      resourceType,
+      actionOutcome: "granted",
+      actionReason,
+      policyUrl: `AccessPolicy/odos-${actorRole}`,
+      ipAddress: req.ip?.replace(/^::ffff:/, ""),
+      userAgent: req.header("user-agent"),
+    }), () => operation({ ...staff, actorRole }));
+    if ("media" in result) {
+      res.status(result.status).type(result.media.contentType).send(Buffer.from(result.media.bytes));
+    } else {
+      res.status(result.status).json(result.body);
+    }
+  } catch (error) {
+    if (res.headersSent) return;
+    if (error instanceof CommsApiValidationError) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+    if (error instanceof CommsApiCapabilityError) {
+      res.status(409).json({ error: error.message });
+      return;
+    }
+    console.error("odos-mcp: patient communications route failed.");
+    res.status(502).json({ error: "Patient communications service failed." });
+  }
+}
+
+function actingRole(req: Request, staff: CommsStaff, action: BusinessAction): PracticeRoleId | undefined {
+  const claimed = req.header("X-ODOS-Actor-Role")?.trim();
+  if (claimed) {
+    if (!PRACTICE_ROLE_IDS.includes(claimed as PracticeRoleId)) return undefined;
+    const role = claimed as PracticeRoleId;
+    return staff.roles.includes(role) && hasBusinessAction(role, action) ? role : undefined;
+  }
+  return resolveBusinessActionRole(staff.roles, action);
+}
+
+function hasBusinessAction(role: PracticeRoleId, action: BusinessAction): boolean {
+  try {
+    assertBusinessActionAllowed(role, action);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function adapter(
+  deps: CommsApiRouteDeps,
+  provider: string,
+  fhir: CommsDispatchFhir,
+): CommsProvider {
+  return deps.dispatch.getAdapter(provider, fhir);
+}
+
+function redactConversationBodies(conversations: ConversationSummary[]): ConversationSummary[] {
+  return conversations.map((conversation) => ({
+    ...conversation,
+    messages: conversation.messages.map(({ body: _body, ...message }) => message),
+  }));
+}
+
+function providerFromQuery(req: Request): string {
+  const value = queryString(req, "provider") ?? "twilio";
+  return providerName(value);
+}
+
+function providerFromBody(body: Record<string, unknown>): string {
+  return providerName(typeof body.provider === "string" ? body.provider : "twilio");
+}
+
+function providerName(value: string): string {
+  const provider = value.trim();
+  if (!/^[a-z0-9-]{1,64}$/.test(provider)) throw new CommsApiValidationError("Communications provider is invalid.");
+  return provider;
+}
+
+function patientReferenceFromQuery(req: Request): string | undefined {
+  const value = queryString(req, "patientReference", "patient_id", "patientId");
+  if (!value) return undefined;
+  return requiredPatientReference(value.startsWith("Patient/") ? value : `Patient/${value}`);
+}
+
+function patientReferenceForAudit(req: Request): string | undefined {
+  const value = queryString(req, "patientReference", "patient_id", "patientId");
+  if (!value) return undefined;
+  const reference = value.startsWith("Patient/") ? value : `Patient/${value}`;
+  return /^Patient\/[A-Za-z0-9.-]{1,64}$/.test(reference) ? reference : undefined;
+}
+
+function patientReferenceFromBody(value: unknown): string | undefined {
+  const body = record(value);
+  return typeof body.patientReference === "string" && /^Patient\/[A-Za-z0-9.-]{1,64}$/.test(body.patientReference)
+    ? body.patientReference
+    : undefined;
+}
+
+function requiredPatientReference(value: unknown): string {
+  if (typeof value !== "string" || !/^Patient\/[A-Za-z0-9.-]{1,64}$/.test(value)) {
+    throw new CommsApiValidationError("patientReference must be Patient/<id>.");
+  }
+  return value;
+}
+
+function requiredText(value: unknown, label: string, max: number): string {
+  if (typeof value !== "string" || !value.trim() || value.trim().length > max) {
+    throw new CommsApiValidationError(`${label} must contain 1-${max} characters.`);
+  }
+  return value.trim();
+}
+
+function numberFromQuery(req: Request, name: string, min: number, max: number): number | undefined {
+  const value = queryString(req, name);
+  if (value === undefined) return undefined;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < min || parsed > max) {
+    throw new CommsApiValidationError(`${name} must be an integer from ${min} to ${max}.`);
+  }
+  return parsed;
+}
+
+function queryString(req: Request, ...names: string[]): string | undefined {
+  for (const name of names) {
+    const value = req.query[name];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return undefined;
+}
+
+function resourceKey(value: string | string[] | undefined, label: string): string {
+  if (typeof value !== "string" || !/^[A-Za-z0-9.-]{1,128}$/.test(value)) {
+    throw new CommsApiValidationError(`${label} is invalid.`);
+  }
+  return value;
+}
+
+function record(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}

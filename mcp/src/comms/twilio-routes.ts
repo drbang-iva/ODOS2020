@@ -8,28 +8,9 @@ import {
   handleTwilioTranscriptionWebhook,
   handleTwilioVoiceWebhook,
   TwilioSignatureError,
-  type TwilioInboundWebhookEvent,
-  type TwilioRecordingWebhookEvent,
-  type TwilioStatusWebhookEvent,
-  type TwilioTranscriptionWebhookEvent,
-  type TwilioVoiceWebhookEvent,
   type TwilioWebhookAuth,
 } from "./adapters/twilio-adapter.js";
-
-type TwilioWebhookKind =
-  | "sms-inbound"
-  | "sms-status"
-  | "voice-inbound"
-  | "voice-status"
-  | "voice-recording"
-  | "voice-transcription";
-
-type TwilioWebhookEvent =
-  | TwilioInboundWebhookEvent
-  | TwilioStatusWebhookEvent
-  | TwilioVoiceWebhookEvent
-  | TwilioRecordingWebhookEvent
-  | TwilioTranscriptionWebhookEvent;
+import type { TwilioWebhookEvent, TwilioWebhookKind } from "./comms-persistence.js";
 
 interface TwilioWebhookResult {
   event: TwilioWebhookEvent;
