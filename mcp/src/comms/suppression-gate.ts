@@ -49,6 +49,8 @@ export function createSuppressedCommsProvider(
       },
     } : {}),
     ...(provider.initiateCall ? {
+      // Live staff click-to-call is not automated outreach, so messaging opt-out,
+      // frequency-cap, and quiet-hours suppression do not apply.
       async initiateCall(request: CallRequest): Promise<{ callId: string }> {
         const patient = await readPatient(deps.fhir, request.patientReference);
         return provider.initiateCall!({

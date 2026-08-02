@@ -183,9 +183,22 @@ test("Twilio routes distinguish configuration, payload, and event-handler failur
   }
 
   try {
-    assert.equal((await post(unconfiguredAddress.port, voicePath, voiceParams)).status, 503);
-    assert.equal((await post(unconfiguredAddress.port, voiceStatusPath, {
+    const unconfiguredVoiceParams = {
       ...voiceParams,
+      CallSid: `CA${"8".repeat(32)}`,
+      From: "+18645550197",
+      To: "+18645550103",
+    };
+    assert.equal((await post(
+      unconfiguredAddress.port,
+      voicePath,
+      unconfiguredVoiceParams,
+    )).status, 503);
+    assert.equal((await post(unconfiguredAddress.port, voiceStatusPath, {
+      ...unconfiguredVoiceParams,
+      CallSid: `CA${"9".repeat(32)}`,
+      From: "+18645550196",
+      To: "+18645550104",
       CallStatus: "synthetic-invalid",
     })).status, 400);
   } finally {
@@ -212,7 +225,12 @@ test("Twilio routes distinguish configuration, payload, and event-handler failur
     const inbound = await post(failingHandlerAddress.port, voicePath, voiceParams);
     assert.equal(inbound.status, 200);
     assert.match(await inbound.text(), /<Dial[^>]+answerOnBridge="true"/);
-    assert.equal((await post(failingHandlerAddress.port, voiceStatusPath, voiceParams)).status, 500);
+    assert.equal((await post(failingHandlerAddress.port, voiceStatusPath, {
+      ...voiceParams,
+      CallSid: `CA${"0".repeat(32)}`,
+      From: "+18645550195",
+      To: "+18645550105",
+    })).status, 500);
   } finally {
     failingHandlerServer.close();
     await once(failingHandlerServer, "close");
