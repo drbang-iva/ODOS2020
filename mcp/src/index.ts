@@ -75,6 +75,7 @@ import {
   commsAdapterRegistrationsFromEnv,
   createCommsDispatch,
 } from "./comms/comms-config.js";
+import { registerTwilioWebhookRoutes } from "./comms/twilio-routes.js";
 import {
   createFhirTrackedLinkStore,
   registerTrackedLinkRoutes,
@@ -589,7 +590,8 @@ const findingDefinitionStore = new FhirFindingDefinitionStore(fhir);
 const procedureDefinitionStore = new FhirProcedureDefinitionStore(fhir);
 const protocolDefinitionStore = new ProtocolDefinitionStore(fhir);
 let authPromise: Promise<void> | undefined;
-const commsDispatch = createCommsDispatch(commsAdapterRegistrationsFromEnv(process.env), {
+const commsRegistrations = commsAdapterRegistrationsFromEnv(process.env);
+const commsDispatch = createCommsDispatch(commsRegistrations, {
   practiceTimeZone: process.env.ODOS_TIMEZONE ?? "UTC",
 });
 
@@ -5722,6 +5724,20 @@ async function main(): Promise<void> {
         }
         next();
       });
+      const twilioRegistration = commsRegistrations.find(
+        (registration) => registration.provider === "twilio",
+      );
+      if (twilioRegistration?.provider === "twilio" && twilioRegistration.config.webhookBaseUrl) {
+        registerTwilioWebhookRoutes(app, {
+          auth: {
+            accountSid: twilioRegistration.config.accountSid,
+            authToken: twilioRegistration.config.authToken,
+            externalBaseUrl: twilioRegistration.config.webhookBaseUrl,
+          },
+          voiceFromNumber: twilioRegistration.config.voiceFromNumber,
+          voiceForwardToNumber: twilioRegistration.config.voiceForwardToNumber,
+        });
+      }
       app.use(
         createSmartAuthorizationRouter({
           issuer: origin,

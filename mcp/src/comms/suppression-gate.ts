@@ -1,6 +1,7 @@
 import type { Bundle, Communication, Patient, Resource } from "@medplum/fhirtypes";
 import type { MedplumClient } from "../fhir-client.js";
 import type {
+  CallRequest,
   CommsProvider,
   SendEmailRequest,
   SendResult,
@@ -46,6 +47,29 @@ export function createSuppressedCommsProvider(
           toNumber: request.toNumber ?? patientPhone(patient, now),
         }));
       },
+    } : {}),
+    ...(provider.initiateCall ? {
+      // Live staff click-to-call is not automated outreach, so messaging opt-out,
+      // frequency-cap, and quiet-hours suppression do not apply.
+      async initiateCall(request: CallRequest): Promise<{ callId: string }> {
+        const patient = await readPatient(deps.fhir, request.patientReference);
+        return provider.initiateCall!({
+          ...request,
+          toNumber: request.toNumber ?? patientPhone(patient, deps.now?.() ?? new Date()),
+        });
+      },
+    } : {}),
+    ...(provider.getCall ? {
+      getCall: (callId: string) => provider.getCall!(callId),
+    } : {}),
+    ...(provider.listCalls ? {
+      listCalls: (request = {}) => provider.listCalls!(request),
+    } : {}),
+    ...(provider.fetchRecording ? {
+      fetchRecording: (recordingId: string) => provider.fetchRecording!(recordingId),
+    } : {}),
+    ...(provider.fetchTranscription ? {
+      fetchTranscription: (transcriptionId: string) => provider.fetchTranscription!(transcriptionId),
     } : {}),
   };
 }
