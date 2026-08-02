@@ -56,6 +56,19 @@ import {
   deferredProcedureCode,
 } from "./fixtures/deferred-procedure-constants.js";
 
+function assertNoUndefinedValues(value: unknown, path = "$."): void {
+  assert.notEqual(value, undefined, `Unexpected undefined value at ${path}`);
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => assertNoUndefinedValues(entry, `${path}[${index}]`));
+    return;
+  }
+  if (value && typeof value === "object") {
+    for (const [key, entry] of Object.entries(value)) {
+      assertNoUndefinedValues(entry, `${path}${key}.`);
+    }
+  }
+}
+
 test("EpisodeOfCare.type uses the ODOS CodeSystem", () => {
   const concept = episodeOfCareTypeConcept("glaucoma");
   assert.equal(concept.coding?.[0]?.system, ODOS_EPISODE_OF_CARE_TYPE_CODE_SYSTEM);
@@ -200,7 +213,7 @@ test("AllergyIntolerance builder preserves a text-only CodeableConcept", () => {
 
   assert.deepEqual(allergy.code, { text: "Narrative-only allergen" });
   assert.equal("coding" in allergy.code!, false);
-  assert.equal(JSON.stringify(allergy).includes("undefined"), false);
+  assertNoUndefinedValues(allergy.code);
 });
 
 test("No known allergy uses SNOMED 716186003 in AllergyIntolerance.code", () => {
@@ -331,7 +344,7 @@ test("Procedure builder preserves a text-only CodeableConcept", () => {
 
   assert.deepEqual(procedure.code, { text: "Narrative-only procedure" });
   assert.equal("coding" in procedure.code!, false);
-  assert.equal(JSON.stringify(procedure).includes("undefined"), false);
+  assertNoUndefinedValues(procedure.code);
 });
 
 test("Procedure body-structure helper replaces existing target extension", () => {
