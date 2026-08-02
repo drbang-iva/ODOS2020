@@ -254,7 +254,7 @@ function codeableConcept(input: ConditionCodeInput): CodeableConcept {
 }
 
 function isCodeableConcept(input: ConditionCodeInput | CodeableConcept): input is CodeableConcept {
-  return "coding" in input;
+  return !("system" in input);
 }
 
 function categoryDisplay(category: ConditionCategoryCode): string {

@@ -66,6 +66,51 @@ test("C-CDA v2 schema applies the code-or-text invariant only to imported sectio
   assert.equal(parsed.length, 1);
 });
 
+test("C-CDA v2 schema normalizes null and empty coded-entry text to absent", async () => {
+  const documents = [{
+    file: "EMA_20200101T090000_Synthetic_ClinicalSummary_CCD_Final.ccda.xml",
+    sections: {
+      Problems: [
+        {
+          kind: "observation",
+          date: "20200101",
+          codes: [{ system: "ICD-10-CM", code: "SYNTHETIC-NULL", display: null }],
+          text: null,
+        },
+        {
+          kind: "observation",
+          date: "20200101",
+          codes: [{ system: "ICD-10-CM", code: "SYNTHETIC-EMPTY", display: null }],
+          text: "",
+        },
+        {
+          kind: "observation",
+          date: "20200101",
+          codes: [{ system: "ICD-10-CM", code: "SYNTHETIC-WHITESPACE", display: null }],
+          text: "   ",
+        },
+      ],
+    },
+  }];
+
+  const parsed = legacyCcdaDocumentsSchema.parse(documents);
+  assert.deepEqual(
+    parsed[0]!.sections.Problems?.map((entry) => entry.text),
+    [undefined, undefined, undefined],
+  );
+
+  const fhir = new MemoryCcdaFhir([syntheticPatient()]);
+  await importLegacyCcda({
+    fhir,
+    projectId: "project-1",
+    ehrPatientId: "synthetic-ehr-1",
+    documents,
+  });
+  for (const condition of fhir.ofType<Condition>("Condition")) {
+    assert.equal("text" in condition.code!, false);
+  }
+});
+
 test("C-CDA v2 omits coding instead of emitting an empty array", async () => {
   const fhir = new MemoryCcdaFhir([syntheticPatient()]);
   await importLegacyCcda({
@@ -210,7 +255,7 @@ test("C-CDA v2 import preserves narrative, FDB coding, medication grouping, and 
 
   const procedures = fhir.ofType<Procedure>("Procedure");
   assert.deepEqual(procedures[0]!.code, { text: "Recovered procedure" });
-  assert.deepEqual(procedures.map((procedure) => procedure.status), ["unknown", "completed"]);
+  assert.deepEqual(procedures.map((procedure) => procedure.status), ["completed", "completed"]);
 
   assert.equal(result.resources.MedicationStatement.created, 2);
   const medications = fhir.ofType<MedicationStatement>("MedicationStatement");
@@ -262,6 +307,11 @@ test("C-CDA v2 normalizes whitespace and Unicode in narrative identity", async (
           date: "20200101",
           codes: [],
           text: "Cafe\u0301 Drug",
+        }, {
+          kind: "substanceAdministration",
+          date: "20200101",
+          codes: [],
+          text: "5 µg Drug",
         }],
       },
     },
@@ -273,6 +323,11 @@ test("C-CDA v2 normalizes whitespace and Unicode in narrative identity", async (
           date: "20200201",
           codes: [],
           text: "CAFÉ\u00a0DRUG",
+        }, {
+          kind: "substanceAdministration",
+          date: "20200201",
+          codes: [],
+          text: "5 μg Drug",
         }],
       },
     },
@@ -292,8 +347,8 @@ test("C-CDA v2 normalizes whitespace and Unicode in narrative identity", async (
     encounterLinked: 0,
     encounterUnlinked: 2,
   });
-  assert.equal(result.resources.MedicationStatement.created, 1);
-  assert.equal(fhir.ofType<MedicationStatement>("MedicationStatement").length, 1);
+  assert.equal(result.resources.MedicationStatement.created, 2);
+  assert.equal(fhir.ofType<MedicationStatement>("MedicationStatement").length, 2);
 });
 
 test("C-CDA v2 schema accepts a synthetic 60-document batch with 202 narrative-only entries", () => {

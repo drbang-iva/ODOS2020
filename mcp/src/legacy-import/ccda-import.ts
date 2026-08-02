@@ -68,7 +68,7 @@ const entryBaseSchema = z.object({
     .nullish()
     .transform((value) => value ?? null),
   codes: z.array(parsedCodeSchema),
-  text: z.string().trim().min(1).optional(),
+  text: z.string().trim().nullish().transform((value) => value || undefined),
 });
 
 const sectionsSchema = z.object({
@@ -253,7 +253,7 @@ export async function importLegacyCcda(input: {
       );
       const procedure = buildProcedure({
         patientReference,
-        status: entry.codes.length > 0 ? "completed" : "unknown",
+        status: "completed",
         code: codeableConcept(entry.codes, entry.text),
         encounterReference: source.encounterReference,
         performedDateTime: entry.date ? compactDate(entry.date) : source.date,
