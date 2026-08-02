@@ -346,8 +346,10 @@ test("all six Twilio event kinds update deterministic Communications without ret
 
   const communications = fhir.ofType<Communication>("Communication");
   assert.equal(communications.length, 2);
-  const message = communications.find((resource) => resource.identifier?.[0]?.system === ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM)!;
-  const call = communications.find((resource) => resource.identifier?.[0]?.system === ODOS_TWILIO_CALL_IDENTIFIER_SYSTEM)!;
+  const hasIdentifierSystem = (resource: Communication, system: string): boolean =>
+    resource.identifier?.some((identifier) => identifier.system === system) === true;
+  const message = communications.find((resource) => hasIdentifierSystem(resource, ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM))!;
+  const call = communications.find((resource) => hasIdentifierSystem(resource, ODOS_TWILIO_CALL_IDENTIFIER_SYSTEM))!;
   assert.equal(message.status, "completed");
   assert.equal(call.status, "completed");
   assert.equal(call.payload, undefined);
