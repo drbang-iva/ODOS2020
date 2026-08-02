@@ -255,6 +255,46 @@ test("UI clinical mirror matches MCP problem-list Condition builder output", () 
   assertJsonEqual(buildMcpProblemListCondition(input), buildUiProblemListCondition(input));
 });
 
+test("UI clinical mirrors preserve text-only CodeableConcept inputs", () => {
+  const mcpCondition = buildMcpProblemListCondition({
+    patientReference: "Patient/p1",
+    code: { text: "Narrative condition" },
+  });
+  const uiCondition = buildUiProblemListCondition({
+    patientReference: "Patient/p1",
+    code: { text: "Narrative condition" },
+  });
+  assert.deepEqual(mcpCondition, uiCondition);
+  assert.equal("coding" in mcpCondition.code!, false);
+  assert.equal("coding" in uiCondition.code!, false);
+
+  const mcpAllergy = buildMcpAllergyIntolerance({
+    patientReference: "Patient/p1",
+    code: { text: "Narrative allergy" },
+  });
+  const uiAllergy = buildUiAllergyIntolerance({
+    patientReference: "Patient/p1",
+    code: { text: "Narrative allergy" },
+  });
+  assert.deepEqual(mcpAllergy, uiAllergy);
+  assert.equal("coding" in mcpAllergy.code!, false);
+  assert.equal("coding" in uiAllergy.code!, false);
+
+  const mcpProcedure = buildMcpProcedure({
+    patientReference: "Patient/p1",
+    status: "completed",
+    code: { text: "Narrative procedure" },
+  });
+  const uiProcedure = buildUiProcedure({
+    patientReference: "Patient/p1",
+    status: "completed",
+    code: { text: "Narrative procedure" },
+  });
+  assert.deepEqual(mcpProcedure, uiProcedure);
+  assert.equal("coding" in mcpProcedure.code!, false);
+  assert.equal("coding" in uiProcedure.code!, false);
+});
+
 test("UI clinical mirror matches MCP Encounter.diagnosis component output", () => {
   assertJsonEqual(
     buildMcpEncounterDiagnosisComponent("Condition/c1", 1),

@@ -18,6 +18,12 @@
               "display": "Synthetic dual-coded problem"
             }
           ]
+        },
+        {
+          "kind": "observation",
+          "date": "20210131",
+          "codes": [],
+          "text": "Synthetic narrative-only problem"
         }
       ],
       "Allergies": [
@@ -29,6 +35,17 @@
               "system": "SNOMED-CT",
               "code": "SYNTHETIC-SNOMED-ALLERGY-1",
               "display": "Synthetic allergy"
+            }
+          ]
+        },
+        {
+          "kind": "observation",
+          "date": "20210131",
+          "codes": [
+            {
+              "system": "FDB",
+              "code": "SYNTHETIC-FDB-ALLERGEN-1",
+              "display": "Synthetic FDB allergen"
             }
           ]
         }

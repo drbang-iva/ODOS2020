@@ -56,6 +56,19 @@ import {
   deferredProcedureCode,
 } from "./fixtures/deferred-procedure-constants.js";
 
+function assertNoUndefinedValues(value: unknown, path = "$."): void {
+  assert.notEqual(value, undefined, `Unexpected undefined value at ${path}`);
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => assertNoUndefinedValues(entry, `${path}[${index}]`));
+    return;
+  }
+  if (value && typeof value === "object") {
+    for (const [key, entry] of Object.entries(value)) {
+      assertNoUndefinedValues(entry, `${path}${key}.`);
+    }
+  }
+}
+
 test("EpisodeOfCare.type uses the ODOS CodeSystem", () => {
   const concept = episodeOfCareTypeConcept("glaucoma");
   assert.equal(concept.coding?.[0]?.system, ODOS_EPISODE_OF_CARE_TYPE_CODE_SYSTEM);
@@ -192,6 +205,17 @@ test("AllergyIntolerance builder is code-first", () => {
   assert.equal(allergy.reaction, undefined);
 });
 
+test("AllergyIntolerance builder preserves a text-only CodeableConcept", () => {
+  const allergy = buildAllergyIntolerance({
+    patientReference: "Patient/p1",
+    code: { text: "Narrative-only allergen" },
+  });
+
+  assert.deepEqual(allergy.code, { text: "Narrative-only allergen" });
+  assert.equal("coding" in allergy.code!, false);
+  assertNoUndefinedValues(allergy.code);
+});
+
 test("No known allergy uses SNOMED 716186003 in AllergyIntolerance.code", () => {
   const allergy = buildAllergyIntolerance({
     patientReference: "Patient/p1",
@@ -309,6 +333,18 @@ test("Procedure builder uses procedure-targetBodyStructure extension", () => {
   assert.equal(SCODI_OPTIC_NERVE.cptBinding.status, "deferred-to-licensed-adapter");
   assert.equal(procedure.extension?.[0]?.url, PROCEDURE_TARGET_BODY_STRUCTURE_EXTENSION_URL);
   assert.equal(procedure.extension?.[0]?.valueReference?.reference, "BodyStructure/b1");
+});
+
+test("Procedure builder preserves a text-only CodeableConcept", () => {
+  const procedure = buildProcedure({
+    patientReference: "Patient/p1",
+    status: "unknown",
+    code: { text: "Narrative-only procedure" },
+  });
+
+  assert.deepEqual(procedure.code, { text: "Narrative-only procedure" });
+  assert.equal("coding" in procedure.code!, false);
+  assertNoUndefinedValues(procedure.code);
 });
 
 test("Procedure body-structure helper replaces existing target extension", () => {
