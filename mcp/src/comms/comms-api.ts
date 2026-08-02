@@ -244,19 +244,35 @@ async function withStaff(
       res.status(403).json({ error: `${action} role required` });
       return;
     }
-    const result = await deps.audit.record(buildOdosAuditEventRow({
-      eventType: req.method === "GET" ? "read" : "external-api-call",
+    const eventType = req.method === "GET" ? "read" : "external-api-call";
+    const auditContext = {
+      eventType,
       eventTime: deps.now?.(),
       actorId,
       actorRole,
       patientReference,
       resourceType,
-      actionOutcome: "granted",
-      actionReason,
       policyUrl: `AccessPolicy/odos-${actorRole}`,
       ipAddress: req.ip?.replace(/^::ffff:/, ""),
       userAgent: req.header("user-agent"),
-    }), () => operation({ ...staff, actorRole }));
+    } as const;
+    let result: CommsApiResult;
+    try {
+      result = await deps.audit.record(buildOdosAuditEventRow({
+        ...auditContext,
+        actionOutcome: "granted",
+        actionReason,
+      }), () => operation({ ...staff, actorRole }));
+    } catch (error) {
+      if (!isAuditSubstrateUnavailable(error)) {
+        await deps.audit.recordDenied(buildOdosAuditEventRow({
+          ...auditContext,
+          actionOutcome: "denied",
+          actionReason: `${actionReason}-failed`,
+        }));
+      }
+      throw error;
+    }
     if ("media" in result) {
       res.status(result.status).type(result.media.contentType).send(Buffer.from(result.media.bytes));
     } else {
@@ -325,6 +341,17 @@ function hasBusinessAction(role: PracticeRoleId, action: BusinessAction): boolea
   } catch {
     return false;
   }
+}
+
+function isAuditSubstrateUnavailable(error: unknown): boolean {
+  const seen = new Set<unknown>();
+  let current: unknown = error;
+  while (current instanceof Error && !seen.has(current)) {
+    if (current.message.includes("audit substrate unavailable")) return true;
+    seen.add(current);
+    current = current.cause;
+  }
+  return false;
 }
 
 function adapter(

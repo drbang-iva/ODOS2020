@@ -187,6 +187,10 @@ test("recording retrieval requires a persisted call visible to the caller's FHIR
     assert.equal(response.status, 404);
     assert.deepEqual(await response.json(), { error: "Recording not found." });
     assert.deepEqual(fixture.providerCalls, []);
+    assert.equal(fixture.grants.length, 0);
+    assert.equal(fixture.denials.length, 1);
+    assert.equal(fixture.denials[0].actionOutcome, "denied");
+    assert.equal(fixture.denials[0].eventType, "read");
   } finally {
     await fixture.close();
   }
@@ -412,8 +416,9 @@ async function startServer(options: { recordingEnabled?: boolean; recordingVisib
     },
     audit: {
       async record(row, operation) {
+        const result = await operation();
         grants.push(row);
-        return operation();
+        return result;
       },
       async recordDenied(row) {
         denials.push(row);
