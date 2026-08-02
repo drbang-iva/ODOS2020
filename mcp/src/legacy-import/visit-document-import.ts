@@ -146,7 +146,7 @@ async function importDocument(input: {
 }): Promise<LegacyVisitDocumentResult> {
   const identifier = visitDocumentIdentifier(input.source);
   const matches = await searchAll<DocumentReference>(input.fhir, "DocumentReference", {
-    identifier: `${LEGACY_VISIT_DOCUMENT_IDENTIFIER_SYSTEM}|${identifier.replaceAll("|", "\\|")}`,
+    identifier: `${LEGACY_VISIT_DOCUMENT_IDENTIFIER_SYSTEM}|${identifier}`,
   });
   if (matches.length > 1) {
     throw new Error(`Legacy visit document identifier ${identifier} matched ${matches.length} resources.`);
@@ -269,7 +269,7 @@ function buildPreliminaryDocument(input: {
 }
 
 function visitDocumentIdentifier(source: LegacyVisitDocumentSource): string {
-  return `${source.pid}|${source.encounterId}|${source.documentType}`;
+  return `${source.pid}:${source.encounterId}:${source.documentType}`;
 }
 
 function assertPid(pid: string): void {

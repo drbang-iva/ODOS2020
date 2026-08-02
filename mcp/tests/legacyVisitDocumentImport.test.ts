@@ -59,7 +59,7 @@ const KNOWN_GOOD_CROSSWALKS = [
   ["27328", "41917096"],
 ] as const;
 
-test("per-visit PDFs follow preliminary, raw Binary upload/tag/hash, then final sequence", async () => {
+test("per-visit PDFs use a byte-identical identifier search and rerun idempotently", async () => {
   const events: string[] = [];
   const fhir = new MemoryVisitDocumentFhir([
     patient("patient-1", "970", "15537266"),
@@ -82,7 +82,7 @@ test("per-visit PDFs follow preliminary, raw Binary upload/tag/hash, then final 
 
   assert.equal(first.action, "imported");
   assert.equal(first.patientReference, "Patient/patient-1");
-  assert.equal(first.documents[0]?.identifier, "15537266|18581230|Encounter");
+  assert.equal(first.documents[0]?.identifier, "15537266:18581230:Encounter");
   assert.equal(first.documents[0]?.action, "created");
   assert.equal(first.documents[0]?.encounterReference, "Encounter/encounter-1");
   assert.equal(reads, 1);
@@ -107,7 +107,7 @@ test("per-visit PDFs follow preliminary, raw Binary upload/tag/hash, then final 
   }]);
   assert.deepEqual(created.identifier, [{
     system: LEGACY_VISIT_DOCUMENT_IDENTIFIER_SYSTEM,
-    value: "15537266|18581230|Encounter",
+    value: "15537266:18581230:Encounter",
   }]);
 
   const final = fhir.ofType<DocumentReference>("DocumentReference")[0]!;
@@ -117,7 +117,7 @@ test("per-visit PDFs follow preliminary, raw Binary upload/tag/hash, then final 
   assert.equal(fhir.updateHeaders[0]?.["If-Match"], 'W/"1"');
   assert.equal(
     fhir.searches.find((search) => search.resourceType === "DocumentReference")?.params?.identifier,
-    `${LEGACY_VISIT_DOCUMENT_IDENTIFIER_SYSTEM}|15537266\\|18581230\\|Encounter`,
+    `${LEGACY_VISIT_DOCUMENT_IDENTIFIER_SYSTEM}|15537266:18581230:Encounter`,
   );
   assert.equal(transport.uploadSecurityContexts[0], `DocumentReference/${final.id}`);
   assert.deepEqual(transport.taggedBinaries[0]?.meta?.tag, [{
@@ -138,6 +138,66 @@ test("per-visit PDFs follow preliminary, raw Binary upload/tag/hash, then final 
   assert.equal(transport.binaryCount, 1);
   assert.equal(reads, 1);
   assert.equal(events.slice(beforeRerunEvents).some((event) => event.startsWith("binary:")), false);
+});
+
+test("a matching document identifier for another patient fails before any write", async () => {
+  const events: string[] = [];
+  const fhir = new MemoryVisitDocumentFhir([
+    patient("patient-1", "970", "15537266"),
+    visitDocument("document-1", "15537266:18581230:Encounter", "patient-2"),
+  ], events);
+  const transport = new BinaryTransport(events);
+  let reads = 0;
+
+  await assert.rejects(
+    importLegacyVisitDocumentsForPid({
+      fhir,
+      projectId: "project-1",
+      pid: "15537266",
+      sources: [visitSource("15537266", "18581230", "Encounter", async () => {
+        reads += 1;
+        return PDF_BYTES;
+      })],
+      auth: transport.auth,
+    }),
+    /belongs to Patient\/patient-2/,
+  );
+
+  assert.equal(reads, 0);
+  assert.equal(transport.binaryCount, 0);
+  assert.equal(fhir.created.length, 0);
+  assert.deepEqual(events, []);
+});
+
+test("multiple matching document identifiers fail before any write", async () => {
+  const events: string[] = [];
+  const identifier = "15537266:18581230:Encounter";
+  const fhir = new MemoryVisitDocumentFhir([
+    patient("patient-1", "970", "15537266"),
+    visitDocument("document-1", identifier, "patient-1"),
+    visitDocument("document-2", identifier, "patient-1"),
+  ], events);
+  const transport = new BinaryTransport(events);
+  let reads = 0;
+
+  await assert.rejects(
+    importLegacyVisitDocumentsForPid({
+      fhir,
+      projectId: "project-1",
+      pid: "15537266",
+      sources: [visitSource("15537266", "18581230", "Encounter", async () => {
+        reads += 1;
+        return PDF_BYTES;
+      })],
+      auth: transport.auth,
+    }),
+    /matched 2 resources/,
+  );
+
+  assert.equal(reads, 0);
+  assert.equal(transport.binaryCount, 0);
+  assert.equal(fhir.created.length, 0);
+  assert.deepEqual(events, []);
 });
 
 test("hash mismatch leaves the anchor preliminary and never writes a Binary URL", async () => {
@@ -352,6 +412,32 @@ test("archive discovery selects only Encounter Final and Visit Final PDFs", asyn
   }
 });
 
+test("archive discovery aborts before import when a document key is duplicated", async () => {
+  const root = mkdtempSync(join(tmpdir(), "odos-visit-documents-"));
+  let importRuns = 0;
+  try {
+    const encounterPath = join(root, "g1", "14532559", "notes", "18581230");
+    mkdirSync(encounterPath, { recursive: true });
+    writeFileSync(join(encounterPath, "EMA_20210131T090000_Synthetic_Encounter_Final.pdf"), PDF_BYTES);
+    writeFileSync(join(encounterPath, "EMA_20210131T100000_Synthetic_Encounter_Final.pdf"), PDF_BYTES);
+
+    await assert.rejects(async () => {
+      const groups = await discoverLegacyVisitDocumentSources(root);
+      await importLegacyVisitDocumentGroups({
+        groups,
+        importPid: async () => {
+          importRuns += 1;
+          throw new Error("import should not run");
+        },
+        onFailure: () => undefined,
+      });
+    }, /Duplicate legacy visit document key 14532559\|18581230\|Encounter/);
+    assert.equal(importRuns, 0);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("genuine fhir-client rejects Binary update so migration tagging cannot regress to client.update", async () => {
   let fetched = false;
   const originalFetch = globalThis.fetch;
@@ -422,6 +508,21 @@ function encounter(id: string, patientId: string, date: string): Encounter {
   };
 }
 
+function visitDocument(id: string, identifier: string, patientId: string): DocumentReference {
+  return {
+    resourceType: "DocumentReference",
+    id,
+    status: "current",
+    docStatus: "final",
+    identifier: [{
+      system: LEGACY_VISIT_DOCUMENT_IDENTIFIER_SYSTEM,
+      value: identifier,
+    }],
+    subject: { reference: `Patient/${patientId}` },
+    content: [{ attachment: { url: `Binary/${id}` } }],
+  };
+}
+
 class MemoryVisitDocumentFhir {
   readonly resources: Resource[];
   readonly created: Resource[] = [];
@@ -447,7 +548,7 @@ class MemoryVisitDocumentFhir {
     if (query.identifier) {
       const separator = query.identifier.indexOf("|");
       const system = query.identifier.slice(0, separator);
-      const value = query.identifier.slice(separator + 1).replaceAll("\\|", "|");
+      const value = query.identifier.slice(separator + 1);
       matches = matches.filter((resource) =>
         ((resource as { identifier?: Identifier[] }).identifier ?? []).some(
           (identifier) => identifier.system === system && identifier.value === value,
