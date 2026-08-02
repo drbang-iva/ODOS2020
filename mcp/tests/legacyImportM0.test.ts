@@ -203,6 +203,7 @@ test("migration importer AccessPolicy grants the exact resource interactions", (
     "Appointment",
     "Encounter",
     "Media",
+    "DocumentReference",
     "Observation",
     "VisionPrescription",
     "Coverage",

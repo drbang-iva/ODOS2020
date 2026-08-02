@@ -28,6 +28,7 @@ export function buildMigrationImporterAccessPolicy(projectId?: string): AccessPo
         "Appointment",
         "Encounter",
         "Media",
+        "DocumentReference",
         "Observation",
         "VisionPrescription",
         "Coverage",
