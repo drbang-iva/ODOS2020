@@ -16,7 +16,13 @@ import type {
   Resource,
 } from "@medplum/fhirtypes";
 import type { MedplumClient } from "../fhir-client.js";
-import { conditionEncounterId, hasConditionCategory, isConfirmedEncounterDiagnosis, referenceId } from "../fhir/condition.js";
+import {
+  conditionEncounterId,
+  FHIR_CONDITION_CATEGORY_CODE_SYSTEM,
+  FHIR_CONDITION_VERIFICATION_STATUS_CODE_SYSTEM,
+  hasConditionCategory,
+  referenceId,
+} from "../fhir/condition.js";
 import { ODOS_VISIT_TYPE_SYSTEM } from "../fhir/schedulingVisitType.js";
 import { TOBACCO_SMOKING_STATUS_LOINC_CODE } from "../fhir/smokingStatus.js";
 import {
@@ -110,6 +116,12 @@ export class StickyNoteValidationError extends Error {}
 export class PatientOverviewVisitNotFoundError extends Error {}
 
 const EYE_EXAM_VISIT_CODES = ["routine-exam-new", "routine-exam-established", "medicaid-exam"];
+const ENCOUNTER_LEDGER_CONDITION_CATEGORIES = ["encounter-diagnosis", "problem-list-item"]
+  .map((code) => `${FHIR_CONDITION_CATEGORY_CODE_SYSTEM}|${code}`)
+  .join(",");
+const CONFIRMED_CONDITION_VERIFICATION_STATUS =
+  `${FHIR_CONDITION_VERIFICATION_STATUS_CODE_SYSTEM}|confirmed`;
+const ENCOUNTER_LEDGER_CONDITION_BATCH_SIZE = 50;
 
 export async function loadPatientOverview(
   fhir: OverviewFhir,
@@ -129,15 +141,9 @@ export async function loadPatientOverview(
     encounterParams.type = `${ODOS_VISIT_TYPE_SYSTEM}|office-visit`;
   }
 
-  const conditionParams: Record<string, string> = {
-    patient: patientId,
-    category: "encounter-diagnosis",
-    "verification-status": "confirmed",
-    _count: "100",
-  };
-  if (options.diagnosisSystem && options.diagnosisCode) {
-    conditionParams.code = `${options.diagnosisSystem}|${options.diagnosisCode}`;
-  }
+  const diagnosisCode = options.diagnosisSystem && options.diagnosisCode
+    ? `${options.diagnosisSystem}|${options.diagnosisCode}`
+    : undefined;
 
   const [
     patient,
@@ -148,7 +154,7 @@ export async function loadPatientOverview(
     medicationStatements,
     medicationRequestResult,
     smokingStatuses,
-    encounterDiagnoses,
+    diagnosisMatches,
   ] = await Promise.all([
     fhir.read<Patient>("Patient", patientId),
     optionalSearchAll<Coverage>(fhir, "Coverage", { beneficiary: patientReference, status: "active", _count: "100" }),
@@ -158,10 +164,18 @@ export async function loadPatientOverview(
     searchAll<MedicationStatement>(fhir, "MedicationStatement", { patient: patientId, status: "active", _count: "100" }),
     optionalSearchAll<MedicationRequest>(fhir, "MedicationRequest", { patient: patientId, status: "active", _count: "100" }),
     searchAll<Observation>(fhir, "Observation", { patient: patientId, code: TOBACCO_SMOKING_STATUS_LOINC_CODE, _count: "1", _sort: "-date" }),
-    searchAll<Condition>(fhir, "Condition", conditionParams),
+    diagnosisCode
+      ? searchAll<Condition>(fhir, "Condition", {
+          patient: patientId,
+          category: ENCOUNTER_LEDGER_CONDITION_CATEGORIES,
+          code: diagnosisCode,
+          "verification-status": CONFIRMED_CONDITION_VERIFICATION_STATUS,
+          _count: "100",
+        })
+      : Promise.resolve(undefined),
   ]);
-  const diagnosisEncounterIds = options.diagnosisSystem && options.diagnosisCode
-    ? unique(encounterDiagnoses.flatMap((condition) => conditionEncounterId(condition) ?? []))
+  const diagnosisEncounterIds = diagnosisMatches
+    ? unique(diagnosisMatches.flatMap((condition) => conditionEncounterId(condition) ?? []))
     : undefined;
   if (diagnosisEncounterIds && diagnosisEncounterIds.length === 0) {
     return projectOverview({
@@ -175,7 +189,7 @@ export async function loadPatientOverview(
       medicationRequests: medicationRequestResult.resources,
       smokingStatuses,
       encounters: [],
-      encounterDiagnoses,
+      encounterDiagnoses: [],
     });
   }
   if (diagnosisEncounterIds) {
@@ -183,9 +197,28 @@ export async function loadPatientOverview(
     encounterParams._id = diagnosisEncounterIds.join(",");
   }
   const encounters = await searchAll<Encounter>(fhir, "Encounter", encounterParams);
-  const encounterReferences = new Set(encounters.flatMap((encounter) =>
+  const encounterReferenceList = encounters.flatMap((encounter) =>
     encounter.id ? [`Encounter/${encounter.id}`] : [],
-  ));
+  );
+  const encounterReferences = new Set(encounterReferenceList);
+  const encounterDiagnoses = encounterReferenceList.length
+    ? uniqueBy((await Promise.all(Array.from(
+        { length: Math.ceil(encounterReferenceList.length / ENCOUNTER_LEDGER_CONDITION_BATCH_SIZE) },
+        (_, batchIndex) => searchAll<Condition>(fhir, "Condition", {
+          patient: patientId,
+          category: ENCOUNTER_LEDGER_CONDITION_CATEGORIES,
+          encounter: encounterReferenceList
+            .slice(
+              batchIndex * ENCOUNTER_LEDGER_CONDITION_BATCH_SIZE,
+              (batchIndex + 1) * ENCOUNTER_LEDGER_CONDITION_BATCH_SIZE,
+            )
+            .join(","),
+          "verification-status": CONFIRMED_CONDITION_VERIFICATION_STATUS,
+          ...(diagnosisCode ? { code: diagnosisCode } : {}),
+          _count: "100",
+        }),
+      ))).flat(), (condition) => condition.id ?? "")
+    : [];
   const provenances = encounters.length
     ? (await searchAll<Provenance>(fhir, "Provenance", {
         patient: patientReference,
@@ -382,7 +415,7 @@ function projectOverview(input: {
       ophthalmic: isOphthalmicRoute(resource.dosageInstruction?.[0]?.route, resource.dosageInstruction?.[0]?.text),
     })),
   ].filter((medication) => medication.name);
-  const diagnoses = input.encounterDiagnoses.filter(isConfirmedEncounterDiagnosis);
+  const diagnoses = input.encounterDiagnoses.filter(isConfirmedEncounterCondition);
   const signedEncounterIds = signedEncounters(input.encounters, input.provenances ?? []);
   const byEncounter = new Map<string, PatientOverviewDiagnosis[]>();
   for (const condition of diagnoses) {
@@ -767,6 +800,16 @@ function conceptText(concept: { text?: string; coding?: Array<{ display?: string
 
 function hasStatus(concept: { coding?: Array<{ code?: string }> } | undefined, code: string): boolean {
   return concept?.coding?.some((coding) => coding.code === code) === true;
+}
+
+function isConfirmedEncounterCondition(condition: Condition): boolean {
+  return (
+    hasConditionCategory(condition, "encounter-diagnosis")
+    || hasConditionCategory(condition, "problem-list-item")
+  ) && condition.verificationStatus?.coding?.some(
+    (coding) => coding.system === FHIR_CONDITION_VERIFICATION_STATUS_CODE_SYSTEM
+      && coding.code === "confirmed",
+  ) === true && conditionEncounterId(condition) !== undefined;
 }
 
 function encounterTime(encounter: Encounter): number {
