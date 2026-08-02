@@ -60,6 +60,37 @@ export interface CallRequest {
   toNumber?: string;
 }
 
+export interface CallListRequest {
+  limit?: number;
+}
+
+export interface CallDetail {
+  id: string;
+  from: string;
+  to: string;
+  status: string;
+  direction: string;
+  startedAt?: string;
+  endedAt?: string;
+  durationSeconds?: number;
+}
+
+export interface CallRecording {
+  id: string;
+  callId: string;
+  status: string;
+  durationSeconds?: number;
+  contentType: string;
+  audio: Uint8Array;
+}
+
+export interface CallTranscription {
+  id: string;
+  recordingId?: string;
+  status: string;
+  text?: string;
+}
+
 export interface ContactSearch {
   query: string;
 }
@@ -82,6 +113,10 @@ export interface CommsProvider {
   sendSms?(request: SendSmsRequest): Promise<SendResult>;
   listConversations?(): Promise<ConversationSummary[]>;
   initiateCall?(request: CallRequest): Promise<{ callId: string }>;
+  getCall?(callId: string): Promise<CallDetail>;
+  listCalls?(request?: CallListRequest): Promise<CallDetail[]>;
+  fetchRecording?(recordingId: string): Promise<CallRecording>;
+  fetchTranscription?(transcriptionId: string): Promise<CallTranscription>;
   searchContacts?(request: ContactSearch): Promise<ContactRecord[]>;
   upsertContact?(contact: ContactRecord): Promise<ContactRecord>;
 }

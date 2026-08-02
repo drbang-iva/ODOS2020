@@ -112,14 +112,23 @@ Create `.env` from `.env.example` or export these variables in the shell that ru
 | `ODOS_MCP_TRANSPORT` | yes for the browser UI | Set to `sse` so the UI can call the local HTTP routes. The default `stdio` mode is for launch-on-demand MCP clients. |
 | `ODOS_SMART_SIGNING_KEY_PATH` | yes for the local HTTP backend | Absolute path to the local mode-0600 SMART RS256 private key. |
 | `ODOS_BACKUP_DIR` | no | Destination used by backup scripts and backup-destination verification. |
-| `ODOS_COMMS_PROVIDERS` | no | Comma-separated native communications adapters. Empty keeps communications inert; Slice 1 supports `google-workspace`. |
+| `ODOS_COMMS_PROVIDERS` | no | Comma-separated native communications adapters. Empty keeps communications inert; supported values are `google-workspace` and `twilio`. |
 | `ODOS_TIMEZONE` | yes for reminders | IANA practice timezone used when no patient timezone is present. |
+| `TWILIO_VOICE_FROM_NUMBER` | yes for Twilio Voice | Practice-owned or verified Twilio caller ID in E.164 format. A Messaging Service SID cannot substitute for this Voice sender. |
+| `TWILIO_VOICE_FORWARD_TO_NUMBER` | yes for Twilio Voice | Staff endpoint in E.164 format. Inbound calls route here; click-to-call rings this endpoint before dialing the patient. |
+| `TWILIO_WEBHOOK_BASE_URL` | yes for Twilio webhooks | Exact public HTTPS origin configured in Twilio. Required for signature validation and for mounting the SMS/Voice webhook routes. |
+| `TWILIO_VOICE_API_KEY_SID` / `TWILIO_VOICE_API_KEY_SECRET` | yes for Twilio Voice | Dedicated Restricted API key with the Voice permissions named in the Voice Slice A ledger. Do not widen or reuse a Messaging-only key. |
 | `ODOS_REMINDER_ENGINE_ENABLED` | no | Must be explicitly `true` after Google Workspace and BAA setup is confirmed. |
 | `ODOS_REMINDER_LOOKBACK_MINUTES` | no | Bounded positive-offset recovery window; defaults to 1,440 minutes. Negative appointment reminders recover while the appointment is still upcoming. |
 | `ODOS_COMMS_PUBLIC_BASE_URL` | yes for tracked links | HTTPS practice-domain origin for campaign redirect links. |
 
 Google Workspace communications setup and the documented manual-send verification path are in
 [`docs/google-workspace-comms.md`](google-workspace-comms.md).
+
+Twilio Voice is all-or-nothing: the five Voice variables above must be present together. The
+adapter does not automatically record calls or create cloud transcription jobs. Recording media
+and current Batch Transcription results can be fetched only when they already exist, and Twilio
+currently labels Batch Transcription Public Beta and not HIPAA eligible.
 
 ## Setup Wizard
 

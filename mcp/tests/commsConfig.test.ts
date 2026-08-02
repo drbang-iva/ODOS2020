@@ -60,6 +60,11 @@ test("communications dispatch resolves configured Google Workspace and Twilio pr
     TWILIO_ACCOUNT_SID: `AC${"1".repeat(32)}`,
     TWILIO_AUTH_TOKEN: "synthetic-auth-token",
     TWILIO_MESSAGING_SERVICE_SID: `MG${"2".repeat(32)}`,
+    TWILIO_VOICE_FROM_NUMBER: "+18645550100",
+    TWILIO_VOICE_FORWARD_TO_NUMBER: "+18645550101",
+    TWILIO_WEBHOOK_BASE_URL: "https://practice.example",
+    TWILIO_VOICE_API_KEY_SID: `SK${"8".repeat(32)}`,
+    TWILIO_VOICE_API_KEY_SECRET: "synthetic-voice-api-key-secret",
   });
   const dispatch = createCommsDispatch(registrations, {
     practiceTimeZone: "America/New_York",
@@ -70,8 +75,31 @@ test("communications dispatch resolves configured Google Workspace and Twilio pr
   const adapter = dispatch.getAdapter("twilio", fakeFhir());
   assert.equal(adapter.name, "twilio");
   assert.equal(adapter.capabilities.sms, true);
+  assert.equal(adapter.capabilities.calls, true);
   assert.equal(adapter.capabilities.email, false);
   assert.equal(typeof adapter.sendSms, "function");
+  assert.equal(typeof adapter.initiateCall, "function");
+});
+
+test("Twilio Voice env configuration is all-or-nothing and stays disabled for the existing SMS-only shape", () => {
+  const [smsOnly] = commsAdapterRegistrationsFromEnv({
+    ODOS_COMMS_PROVIDERS: "twilio",
+    TWILIO_ACCOUNT_SID: `AC${"1".repeat(32)}`,
+    TWILIO_AUTH_TOKEN: "synthetic-auth-token",
+    TWILIO_MESSAGING_SERVICE_SID: `MG${"2".repeat(32)}`,
+    TWILIO_WEBHOOK_BASE_URL: "https://practice.example",
+  });
+  if (smsOnly.provider !== "twilio") throw new Error("Expected Twilio registration.");
+  assert.equal(smsOnly.config.voiceFromNumber, undefined);
+  assert.equal(smsOnly.config.webhookBaseUrl, "https://practice.example");
+
+  assert.throws(() => commsAdapterRegistrationsFromEnv({
+    ODOS_COMMS_PROVIDERS: "twilio",
+    TWILIO_ACCOUNT_SID: `AC${"1".repeat(32)}`,
+    TWILIO_AUTH_TOKEN: "synthetic-auth-token",
+    TWILIO_MESSAGING_SERVICE_SID: `MG${"2".repeat(32)}`,
+    TWILIO_VOICE_FROM_NUMBER: "+18645550100",
+  }), /Voice configuration is partial.*TWILIO_VOICE_FORWARD_TO_NUMBER/i);
 });
 
 test("communications env config fails closed when selected provider credentials are partial", () => {

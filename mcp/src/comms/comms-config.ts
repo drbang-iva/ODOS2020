@@ -143,6 +143,18 @@ export function commsAdapterRegistrationsFromEnv(
             "Twilio communications adapter requires TWILIO_MESSAGING_SERVICE_SID or TWILIO_FROM_NUMBER.",
           );
         }
+        const voiceRequired = [
+          "TWILIO_VOICE_FROM_NUMBER",
+          "TWILIO_VOICE_FORWARD_TO_NUMBER",
+          "TWILIO_VOICE_API_KEY_SID",
+          "TWILIO_VOICE_API_KEY_SECRET",
+        ] as const;
+        const voiceConfigured = voiceRequired.filter((name) => env[name]?.trim());
+        const voiceMissing = [...voiceRequired, "TWILIO_WEBHOOK_BASE_URL" as const]
+          .find((name) => !env[name]?.trim());
+        if (voiceConfigured.length > 0 && voiceMissing) {
+          throw new Error(`Twilio Voice configuration is partial — missing ${voiceMissing}.`);
+        }
         return {
           provider,
           config: {
@@ -159,6 +171,21 @@ export function commsAdapterRegistrationsFromEnv(
               : {}),
             ...(env.TWILIO_FROM_NUMBER?.trim()
               ? { fromNumber: env.TWILIO_FROM_NUMBER.trim() }
+              : {}),
+            ...(env.TWILIO_VOICE_FROM_NUMBER?.trim()
+              ? { voiceFromNumber: env.TWILIO_VOICE_FROM_NUMBER.trim() }
+              : {}),
+            ...(env.TWILIO_VOICE_FORWARD_TO_NUMBER?.trim()
+              ? { voiceForwardToNumber: env.TWILIO_VOICE_FORWARD_TO_NUMBER.trim() }
+              : {}),
+            ...(env.TWILIO_WEBHOOK_BASE_URL?.trim()
+              ? { webhookBaseUrl: env.TWILIO_WEBHOOK_BASE_URL.trim() }
+              : {}),
+            ...(env.TWILIO_VOICE_API_KEY_SID?.trim()
+              ? { voiceApiKeySid: env.TWILIO_VOICE_API_KEY_SID.trim() }
+              : {}),
+            ...(env.TWILIO_VOICE_API_KEY_SECRET?.trim()
+              ? { voiceApiKeySecret: env.TWILIO_VOICE_API_KEY_SECRET.trim() }
               : {}),
           },
         };
