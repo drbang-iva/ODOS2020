@@ -35,6 +35,7 @@ const SOURCE_CODE_SYSTEMS = [
   "LOINC",
   "RxNorm",
   "CPT-4",
+  "FDB",
 ] as const;
 
 const FHIR_CODE_SYSTEMS: Record<(typeof SOURCE_CODE_SYSTEMS)[number], string> = {
@@ -44,6 +45,7 @@ const FHIR_CODE_SYSTEMS: Record<(typeof SOURCE_CODE_SYSTEMS)[number], string> = 
   LOINC: "http://loinc.org",
   RxNorm: "http://www.nlm.nih.gov/research/umls/rxnorm",
   "CPT-4": "http://www.ama-assn.org/go/cpt",
+  FDB: "urn:oid:2.16.840.1.113883.3.3710.200.401",
 };
 
 const EYEFINITY_IMPORT_TIME_ZONE = "America/New_York";
@@ -60,7 +62,8 @@ const entryBaseSchema = z.object({
     .refine(isCompactCalendarDate, "Invalid calendar date.")
     .nullish()
     .transform((value) => value ?? null),
-  codes: z.array(parsedCodeSchema).min(1),
+  codes: z.array(parsedCodeSchema),
+  text: z.string().trim().min(1).optional(),
 });
 
 const sectionsSchema = z.object({
@@ -101,6 +104,21 @@ export const legacyCcdaDocumentsSchema = z.array(z.object({
         path: [index, "file"],
         message: "C-CDA filename contains an invalid calendar date.",
       });
+    }
+    for (const [sectionKey, entries] of Object.entries(document.sections)) {
+      if (!Array.isArray(entries)) continue;
+      for (const [entryIndex, entry] of entries.entries()) {
+        const candidate = entry && typeof entry === "object"
+          ? entry as { codes?: unknown[]; text?: string }
+          : {};
+        if ((candidate.codes?.length ?? 0) === 0 && !candidate.text) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [index, "sections", sectionKey, entryIndex],
+            message: "C-CDA entry must include at least one code or narrative text.",
+          });
+        }
+      }
     }
   }
 });
@@ -188,7 +206,7 @@ export async function importLegacyCcda(input: {
   const createdReferences: string[] = [];
   for (const source of sources) {
     for (const entry of source.document.sections.Problems ?? []) {
-      const coding = codeableConcept(entry.codes);
+      const coding = codeableConcept(entry.codes, entry.text);
       const identifier = itemIdentifier(
         input.ehrPatientId,
         source.timestamp,
@@ -215,7 +233,7 @@ export async function importLegacyCcda(input: {
       );
       const allergy = buildAllergyIntolerance({
         patientReference,
-        code: codeableConcept(entry.codes),
+        code: codeableConcept(entry.codes, entry.text),
         verificationStatus: "confirmed",
         recordedDate: source.date,
         encounterReference: source.encounterReference,
@@ -234,7 +252,7 @@ export async function importLegacyCcda(input: {
       const procedure = buildProcedure({
         patientReference,
         status: "completed",
-        code: codeableConcept(entry.codes),
+        code: codeableConcept(entry.codes, entry.text),
         encounterReference: source.encounterReference,
         performedDateTime: entry.date ? compactDate(entry.date) : source.date,
       });
@@ -247,11 +265,12 @@ export async function importLegacyCcda(input: {
     const identifier = medicationIdentifier(
       input.ehrPatientId,
       medication.preferredCode,
+      medication.text,
     );
     const statement = buildMedicationStatement({
       patientReference,
       identifiers: [identifier],
-      medication: codeableConcept(medication.codes),
+      medication: codeableConcept(medication.codes, medication.text),
       status: "unknown",
       encounterReference: medication.source.encounterReference,
       effectiveDateTime: medication.earliestDate,
@@ -379,19 +398,22 @@ function hasEncounterLink(resource: ImportableResource): boolean {
 
 function distinctMedications(sources: readonly SourceDocument[]): Array<{
   codes: ParsedCode[];
-  preferredCode: ParsedCode;
+  preferredCode?: ParsedCode;
+  text?: string;
   source: SourceDocument;
   earliestDate?: string;
 }> {
   const grouped = new Map<string, Array<{
     entry: ParsedEntry;
-    preferredCode: ParsedCode;
+    preferredCode?: ParsedCode;
     source: SourceDocument;
   }>>();
   for (const source of sources) {
     for (const entry of source.document.sections.Medications ?? []) {
       const preferredCode = medicationPreferredCode(entry.codes);
-      const key = `${preferredCode.system}\u001f${preferredCode.code}`;
+      const key = preferredCode
+        ? `${preferredCode.system}\u001f${preferredCode.code}`
+        : `text\u001f${normalizeText(entry.text!)}`;
       const occurrences = grouped.get(key) ?? [];
       occurrences.push({ entry, preferredCode, source });
       grouped.set(key, occurrences);
@@ -419,20 +441,22 @@ function distinctMedications(sources: readonly SourceDocument[]): Array<{
       .map((occurrence) => occurrence.entry.date)
       .filter((date): date is string => Boolean(date))
       .sort();
+    const text = sorted.find((occurrence) => occurrence.entry.text)?.entry.text;
     return {
       codes: [...codesByIdentity.values()],
       preferredCode: first.preferredCode,
+      ...(text ? { text } : {}),
       source: first.source,
       ...(dates[0] ? { earliestDate: compactDate(dates[0]) } : {}),
     };
   });
 }
 
-function medicationPreferredCode(codes: readonly ParsedCode[]): ParsedCode {
-  return codes.find((code) => code.system === "RxNorm") ?? codes[0]!;
+function medicationPreferredCode(codes: readonly ParsedCode[]): ParsedCode | undefined {
+  return codes.find((code) => code.system === "RxNorm") ?? codes[0];
 }
 
-function codeableConcept(codes: readonly ParsedCode[]): CodeableConcept {
+function codeableConcept(codes: readonly ParsedCode[], text?: string): CodeableConcept {
   const seen = new Set<string>();
   const coding = codes.flatMap((source) => {
     const key = `${source.system}\u001f${source.code}`;
@@ -444,7 +468,10 @@ function codeableConcept(codes: readonly ParsedCode[]): CodeableConcept {
       ...(source.display ? { display: source.display } : {}),
     }];
   });
-  return { coding };
+  return {
+    coding,
+    ...(text ? { text } : {}),
+  };
 }
 
 function itemIdentifier(
@@ -465,23 +492,36 @@ function itemIdentifier(
       || code[0] !== codes[index - 1]![0]
       || code[1] !== codes[index - 1]![1]
     );
+  const identityParts: unknown[] = [
+    ehrPatientId,
+    documentTimestamp,
+    section,
+    entry.date,
+    canonicalCodes,
+  ];
+  if (entry.codes.length === 0) identityParts.push(entry.text ?? null);
   const value = createHash("sha256")
-    .update(JSON.stringify([
-      ehrPatientId,
-      documentTimestamp,
-      section,
-      entry.date,
-      canonicalCodes,
-    ]))
+    .update(JSON.stringify(identityParts))
     .digest("hex");
   return { system: LEGACY_CCDA_ITEM_IDENTIFIER_SYSTEM, value };
 }
 
-function medicationIdentifier(ehrPatientId: string, code: ParsedCode): Identifier {
+function medicationIdentifier(
+  ehrPatientId: string,
+  code: ParsedCode | undefined,
+  text: string | undefined,
+): Identifier {
+  const identity = code
+    ? `${code.system}|${code.code}`
+    : `text|${normalizeText(text!)}`;
   const value = createHash("sha256")
-    .update(`${ehrPatientId}|Medications|${code.system}|${code.code}`)
+    .update(`${ehrPatientId}|Medications|${identity}`)
     .digest("hex");
   return { system: LEGACY_CCDA_ITEM_IDENTIFIER_SYSTEM, value };
+}
+
+function normalizeText(value: string): string {
+  return value.trim().toLowerCase();
 }
 
 function sourceTimestamp(file: string): string {
