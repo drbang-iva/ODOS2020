@@ -170,6 +170,27 @@ test("stale lifecycle callbacks cannot regress terminal message or call status",
   assert.doesNotMatch(JSON.stringify(call.note), /status=ringing/);
 });
 
+test("a sent SMS remains in progress so a later delivery failure is retained", async () => {
+  const fhir = new InMemoryCommsFhir();
+  const messageSid = `SM${"6".repeat(32)}`;
+  await persistTwilioWebhookEvent(fhir, "sms-status", {
+    accountSid: ACCOUNT_SID,
+    messageSid,
+    messageStatus: "sent",
+    recipientOptedOut: false,
+  }, { now: () => NOW });
+  await persistTwilioWebhookEvent(fhir, "sms-status", {
+    accountSid: ACCOUNT_SID,
+    messageSid,
+    messageStatus: "undelivered",
+    recipientOptedOut: false,
+  }, { now: () => NOW });
+
+  const communication = fhir.ofType<Communication>("Communication")[0];
+  assert.equal(communication.status, "not-done");
+  assert.equal(communication.statusReason?.text, "Twilio message status: undelivered");
+});
+
 test("two signed deliveries of the same Twilio webhook remain one Communication", async () => {
   const fhir = new InMemoryCommsFhir();
   const externalBaseUrl = "https://practice.example";

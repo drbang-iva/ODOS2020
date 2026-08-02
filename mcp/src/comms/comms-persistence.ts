@@ -491,9 +491,9 @@ function phoneReference(phone: string) {
 }
 
 function communicationStatusForMessage(status: string): Communication["status"] {
-  if (["sent", "delivered", "read"].includes(status)) return "completed";
+  if (["delivered", "read"].includes(status)) return "completed";
   if (["failed", "undelivered"].includes(status)) return "not-done";
-  if (["accepted", "queued", "sending", "scheduled"].includes(status)) return "in-progress";
+  if (["accepted", "queued", "sending", "sent", "scheduled"].includes(status)) return "in-progress";
   return "unknown";
 }
 
