@@ -17,6 +17,8 @@ import {
 import { useViewState } from "../lib/view-state";
 import { OdosSelect } from "./inputs/OdosSelect";
 
+const PROVIDER_ASSIGNMENT_TIMEOUT_MS = 15_000;
+
 export interface StartExamApi {
   loadPrograms: (patientId: string) => Promise<EpisodeOfCare[]>;
   assignProvider: (patientId: string) => Promise<void>;
@@ -36,19 +38,26 @@ const defaultStartExamApi: StartExamApi = {
       .filter((episode) => episode.status === "active");
   },
   async assignProvider(patientId) {
-    const response = await fetch(
-      `${clinicalGraphApiBase()}/clinical-graph/patients/${encodeURIComponent(patientId)}/assign-provider`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: fhir.authHeader() ?? "",
-          "Content-Type": "application/json",
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), PROVIDER_ASSIGNMENT_TIMEOUT_MS);
+    try {
+      const response = await fetch(
+        `${clinicalGraphApiBase()}/clinical-graph/patients/${encodeURIComponent(patientId)}/assign-provider`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: fhir.authHeader() ?? "",
+            "Content-Type": "application/json",
+          },
+          signal: controller.signal,
         },
-      },
-    );
-    if (!response.ok) {
-      const body = await response.json().catch(() => ({})) as { error?: string };
-      throw new Error(body.error ?? `Provider assignment failed (${response.status}).`);
+      );
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({})) as { error?: string };
+        throw new Error(body.error ?? `Provider assignment failed (${response.status}).`);
+      }
+    } finally {
+      clearTimeout(timeout);
     }
   },
   createProgram,
@@ -70,6 +79,22 @@ export function StartExam({
   const [programs, setPrograms] = useState<EpisodeOfCare[]>([]);
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
+  const [pendingEncounter, setPendingEncounter] = useState<{
+    patientId: string;
+    encounterId: string;
+    episodeReference?: string;
+  }>();
+  const [pendingNewProgram, setPendingNewProgram] = useState<{
+    patientId: string;
+    typeCode: EpisodeOfCareTypeCode;
+    episodeReference: string;
+  }>();
+  const retryingEncounter = pendingEncounter?.patientId === patient.id;
+
+  useEffect(() => {
+    setPendingEncounter(undefined);
+    setPendingNewProgram(undefined);
+  }, [patient.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -98,19 +123,23 @@ export function StartExam({
     setStartError(null);
     try {
       const now = api.now();
-      await assignProvider(patient.id);
-      const episodeReference = await resolveProgramReference();
-      const createResponse = await api.executeTransaction(
-        buildStartEncounterCreateBundle({
-          patientId: patient.id,
-          now: now.toISOString(),
-          episodeReference,
-        }),
-        "start_encounter",
-      );
-      assertTransactionSuccess(createResponse);
+      let encounterId = pendingEncounter?.patientId === patient.id ? pendingEncounter.encounterId : undefined;
+      if (!encounterId) {
+        await assignProvider(patient.id);
+        const episodeReference = await resolveProgramReference();
+        const createResponse = await api.executeTransaction(
+          buildStartEncounterCreateBundle({
+            patientId: patient.id,
+            now: now.toISOString(),
+            episodeReference,
+          }),
+          "start_encounter",
+        );
+        assertTransactionSuccess(createResponse);
 
-      const encounterId = createdIdFromEntry(createResponse, 0, "Encounter");
+        encounterId = createdIdFromEntry(createResponse, 0, "Encounter");
+        setPendingEncounter({ patientId: patient.id, encounterId, episodeReference });
+      }
       const inProgressResponse = await api.executeTransaction(
         buildEncounterStatusPatchBundle({
           encounterId,
@@ -123,6 +152,8 @@ export function StartExam({
       );
       assertTransactionSuccess(inProgressResponse);
 
+      setPendingEncounter(undefined);
+      setPendingNewProgram(undefined);
       setView({ kind: "encounter", patientId: patient.id, encounterId });
     } catch (err) {
       setStartError(err instanceof Error ? err.message : String(err));
@@ -144,20 +175,25 @@ export function StartExam({
       return `EpisodeOfCare/${selectedProgramId}`;
     }
 
+    if (pendingNewProgram?.patientId === patient.id && pendingNewProgram.typeCode === programType) {
+      return pendingNewProgram.episodeReference;
+    }
     const created = await api.createProgram({
       patientReference: `Patient/${patient.id}`,
       typeCode: programType,
     });
-    return `EpisodeOfCare/${created.id}`;
+    const episodeReference = `EpisodeOfCare/${created.id}`;
+    setPendingNewProgram({ patientId: patient.id, typeCode: programType, episodeReference });
+    return episodeReference;
   }
 
   return (
     <div data-testid="start-exam-prompt" className="odos-start-exam">
       <div className="odos-start-exam-title">Start comprehensive exam</div>
       <div className="odos-start-exam-modes">
-        <StartModeButton active={startMode === "standalone"} onClick={() => setStartMode("standalone")}>Stand-alone visit</StartModeButton>
-        <StartModeButton active={startMode === "existing"} onClick={() => setStartMode("existing")}>Part of an existing program</StartModeButton>
-        <StartModeButton active={startMode === "new"} onClick={() => setStartMode("new")}>Start a new program</StartModeButton>
+        <StartModeButton active={startMode === "standalone"} disabled={retryingEncounter} onClick={() => setStartMode("standalone")}>Stand-alone visit</StartModeButton>
+        <StartModeButton active={startMode === "existing"} disabled={retryingEncounter} onClick={() => setStartMode("existing")}>Part of an existing program</StartModeButton>
+        <StartModeButton active={startMode === "new"} disabled={retryingEncounter} onClick={() => setStartMode("new")}>Start a new program</StartModeButton>
       </div>
 
       {startMode === "existing" && (
@@ -172,6 +208,7 @@ export function StartExam({
                 }))}
             onChange={setSelectedProgramId}
             ariaLabel="Existing program"
+            disabled={retryingEncounter}
           />
         </div>
       )}
@@ -183,6 +220,7 @@ export function StartExam({
             options={EPISODE_OF_CARE_TYPE_CODES.map((code) => ({ value: code, label: programTypeLabel(code) }))}
             onChange={setProgramType}
             ariaLabel="New program type"
+            disabled={retryingEncounter}
           />
         </div>
       )}
@@ -194,7 +232,7 @@ export function StartExam({
         onClick={() => void startExam()}
         className="odos-overview-button is-primary odos-start-exam-submit"
       >
-        {starting ? "Starting visit…" : "Start today's visit →"}
+        {starting ? "Starting visit…" : retryingEncounter ? "Retry starting today's visit →" : "Start today's visit →"}
       </button>
     </div>
   );
@@ -202,10 +240,12 @@ export function StartExam({
 
 function StartModeButton({
   active,
+  disabled,
   onClick,
   children,
 }: {
   active: boolean;
+  disabled: boolean;
   onClick: () => void;
   children: string;
 }) {
@@ -213,6 +253,7 @@ function StartModeButton({
     <button
       type="button"
       aria-pressed={active}
+      disabled={disabled}
       onClick={onClick}
       className={`odos-start-exam-mode${active ? " is-active" : ""}`}
     >

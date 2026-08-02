@@ -4,7 +4,7 @@ import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
-import type { Bundle, Patient } from "@medplum/fhirtypes";
+import type { Bundle, Encounter, Patient } from "@medplum/fhirtypes";
 import type { ClinicSummary } from "../src/lib/clinic-summary";
 import {
   fetchPatientOverview,
@@ -155,6 +155,133 @@ test("Start today's visit assigns the provider, starts the encounter, and opens 
     patientId: "patient-1",
     encounterId: "encounter-new",
   });
+  renderer.unmount();
+});
+
+test("retrying a failed status transition reuses the created encounter", async () => {
+  let providerAssignments = 0;
+  let encounterCreates = 0;
+  let statusAttempts = 0;
+  const api: StartExamApi = {
+    loadPrograms: async () => [],
+    assignProvider: async () => { providerAssignments += 1; },
+    createProgram: async () => { throw new Error("not reached"); },
+    executeTransaction: async (bundle): Promise<Bundle> => {
+      if (bundle.entry?.[0]?.request?.method === "POST") {
+        encounterCreates += 1;
+        return {
+          resourceType: "Bundle",
+          type: "transaction-response",
+          entry: [
+            { response: { status: "201 Created", location: "Encounter/encounter-retry/_history/1" } },
+            { response: { status: "201 Created" } },
+          ],
+        };
+      }
+      statusAttempts += 1;
+      return {
+        resourceType: "Bundle",
+        type: "transaction-response",
+        entry: [
+          { response: { status: statusAttempts === 1 ? "500 Failed" : "200 OK" } },
+          { response: { status: "201 Created" } },
+        ],
+      };
+    },
+    now: () => new Date("2026-08-02T12:00:00.000Z"),
+  };
+  useViewState.setState({ view: { kind: "overview", patientId: "patient-1" } });
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<StartExam patient={patient} api={api} />);
+  });
+
+  await act(async () => {
+    renderer.root.findAllByType("button").find((button) => button.children.join("") === "Start today's visit →")!.props.onClick();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+  assert.match(renderer.root.findByProps({ role: "alert" }).children.join(""), /500 Failed/);
+  assert.equal(renderer.root.findAllByType("button").filter((button) => button.props["aria-pressed"] !== undefined).every((button) => button.props.disabled), true);
+
+  await act(async () => {
+    renderer.root.findAllByType("button").find((button) => button.children.join("") === "Retry starting today's visit →")!.props.onClick();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+
+  assert.equal(providerAssignments, 1);
+  assert.equal(encounterCreates, 1);
+  assert.equal(statusAttempts, 2);
+  assert.deepEqual(useViewState.getState().view, {
+    kind: "encounter",
+    patientId: "patient-1",
+    encounterId: "encounter-retry",
+  });
+  renderer.unmount();
+});
+
+test("retrying encounter creation reuses a newly created Program", async () => {
+  let providerAssignments = 0;
+  let programCreates = 0;
+  let transactionAttempts = 0;
+  const encounterProgramReferences: Array<string | undefined> = [];
+  const api: StartExamApi = {
+    loadPrograms: async () => [],
+    assignProvider: async () => { providerAssignments += 1; },
+    createProgram: async () => {
+      programCreates += 1;
+      return {
+        resourceType: "EpisodeOfCare",
+        id: "program-new",
+        status: "active",
+        patient: { reference: "Patient/patient-1" },
+      };
+    },
+    executeTransaction: async (bundle): Promise<Bundle> => {
+      transactionAttempts += 1;
+      if (bundle.entry?.[0]?.request?.method === "POST") {
+        encounterProgramReferences.push((bundle.entry[0].resource as Encounter).episodeOfCare?.[0]?.reference);
+        if (transactionAttempts === 1) throw new Error("Encounter create unavailable");
+        return {
+          resourceType: "Bundle",
+          type: "transaction-response",
+          entry: [
+            { response: { status: "201 Created", location: "Encounter/encounter-program/_history/1" } },
+            { response: { status: "201 Created" } },
+          ],
+        };
+      }
+      return {
+        resourceType: "Bundle",
+        type: "transaction-response",
+        entry: [
+          { response: { status: "200 OK" } },
+          { response: { status: "201 Created" } },
+        ],
+      };
+    },
+    now: () => new Date("2026-08-02T12:00:00.000Z"),
+  };
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<StartExam patient={patient} api={api} />);
+  });
+  act(() => renderer.root.findAllByType("button").find((button) => button.children.join("") === "Start a new program")!.props.onClick());
+
+  await act(async () => {
+    renderer.root.findAllByType("button").find((button) => button.children.join("") === "Start today's visit →")!.props.onClick();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+  assert.equal(renderer.root.findByProps({ role: "alert" }).children.join(""), "Encounter create unavailable");
+
+  await act(async () => {
+    renderer.root.findAllByType("button").find((button) => button.children.join("") === "Start today's visit →")!.props.onClick();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+
+  assert.equal(providerAssignments, 2);
+  assert.equal(programCreates, 1);
+  assert.equal(transactionAttempts, 3);
+  assert.deepEqual(encounterProgramReferences, ["EpisodeOfCare/program-new", "EpisodeOfCare/program-new"]);
   renderer.unmount();
 });
 

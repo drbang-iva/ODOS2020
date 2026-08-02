@@ -32,6 +32,7 @@
 .odos-start-exam-modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
 .odos-start-exam-mode { min-height: 56px; padding: 8px 12px; border: 1px solid var(--overview-line); border-radius: 8px; background: var(--overview-ground); color: var(--overview-muted); font: inherit; font-size: 12px; font-weight: 600; text-align: left; cursor: pointer; transition: border-color 0.15s ease, background 0.15s ease; }
 .odos-start-exam-mode:hover { border-color: var(--overview-line-2); }
+.odos-start-exam-mode:disabled { opacity: 0.55; cursor: default; }
 .odos-start-exam-mode.is-active { border-color: var(--overview-emerald); background: color-mix(in srgb, var(--overview-emerald) 14%, transparent); color: var(--overview-text); }
 .odos-start-exam-select, .odos-start-exam-submit { margin-top: 12px; }
 .odos-start-exam .odos-overview-error { margin: 10px 0 0; }
