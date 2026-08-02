@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import twilio from "twilio";
 import {
+  TWILIO_HIPAA_POOL_VERIFICATION_TTL_MS,
   TWILIO_REQUEST_TIMEOUT_MS,
   createTwilioAdapter,
   handleTwilioInboundWebhook,
@@ -292,12 +293,21 @@ test("Twilio HIPAA startup and send both accept an all-US Messaging Service pool
     campaignType: "manual",
     suppression: {},
   });
-  assert.equal(poolLists, 2);
-  assert.equal(messageCreates, 1);
+  await adapter.sendSms!({
+    patientReference: "Patient/synthetic-2",
+    toNumber: "+18645550200",
+    body: "Second synthetic HIPAA-mode message.",
+    campaignType: "manual",
+    suppression: {},
+  });
+  assert.equal(poolLists, 1);
+  assert.equal(messageCreates, 2);
 });
 
-test("Twilio HIPAA send rejects a Messaging Service pool that changes after startup", async () => {
+test("Twilio HIPAA send rechecks and rejects a pool mutation after the verification TTL", async () => {
+  let now = new Date("2026-08-02T12:00:00.000Z");
   let members = [{ phoneNumber: "+18645550100", countryCode: "US" }];
+  let poolLists = 0;
   let messageCreates = 0;
   const adapter = createTwilioAdapter({
     accountSid: ACCOUNT_SID,
@@ -305,6 +315,7 @@ test("Twilio HIPAA send rejects a Messaging Service pool that changes after star
     messagingServiceSid: MESSAGING_SERVICE_SID,
     hipaaMode: true,
   }, {
+    now: () => now,
     clientFactory: () => ({
       messages: {
         async create() {
@@ -315,7 +326,12 @@ test("Twilio HIPAA send rejects a Messaging Service pool that changes after star
       messaging: {
         v1: {
           services: () => ({
-            phoneNumbers: { list: async () => members },
+            phoneNumbers: {
+              async list() {
+                poolLists += 1;
+                return members;
+              },
+            },
           }),
         },
       },
@@ -327,6 +343,17 @@ test("Twilio HIPAA send rejects a Messaging Service pool that changes after star
     { phoneNumber: "+18645550100", countryCode: "US" },
     { phoneNumber: "+14165550100", countryCode: "CA" },
   ];
+  await adapter.sendSms!({
+    patientReference: "Patient/synthetic-1",
+    toNumber: "+18645550199",
+    body: "Synthetic HIPAA-mode message inside the verification TTL.",
+    campaignType: "manual",
+    suppression: {},
+  });
+  assert.equal(poolLists, 1);
+  assert.equal(messageCreates, 1);
+
+  now = new Date(now.getTime() + TWILIO_HIPAA_POOL_VERIFICATION_TTL_MS + 1);
   await assert.rejects(adapter.sendSms!({
     patientReference: "Patient/synthetic-1",
     toNumber: "+18645550199",
@@ -334,7 +361,8 @@ test("Twilio HIPAA send rejects a Messaging Service pool that changes after star
     campaignType: "manual",
     suppression: {},
   }), /\+14165550100.*CA/i);
-  assert.equal(messageCreates, 0);
+  assert.equal(poolLists, 2);
+  assert.equal(messageCreates, 1);
 });
 
 test("Twilio accepts the same non-US Messaging Service pool outside HIPAA mode", async () => {

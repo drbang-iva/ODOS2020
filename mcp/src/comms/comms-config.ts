@@ -25,6 +25,7 @@ export type CommsAdapterRegistration =
     };
 
 export interface CommsDispatchDeps {
+  error?: (message: string) => void;
   fetchImpl?: typeof fetch;
   info?: (message: string) => void;
   now?: () => Date;
@@ -39,6 +40,14 @@ export interface CommsDispatch {
   initialize(): Promise<void>;
   getAdapter(provider: string, fhir: CommsDispatchFhir): CommsProvider;
   providers(): string[];
+}
+
+export async function startMcpAfterCommsInitialization(
+  dispatch: Pick<CommsDispatch, "initialize">,
+  startServer: () => Promise<void>,
+): Promise<void> {
+  await dispatch.initialize();
+  await startServer();
 }
 
 export function createCommsDispatch(
@@ -57,6 +66,7 @@ export function createCommsDispatch(
       adapter = createTwilioAdapter(registration.config, {
         fetchImpl: deps.fetchImpl,
         clientFactory: deps.twilioClientFactory,
+        now: deps.now,
       });
       adapters.set(registration.provider, adapter);
     }
@@ -70,7 +80,21 @@ export function createCommsDispatch(
         info(registration.config.hipaaMode
           ? "odos-mcp: Twilio HIPAA posture ENABLED; US-only destinations and senders are enforced."
           : "odos-mcp: Twilio HIPAA posture DISABLED; international destinations and senders are permitted.");
-        await getTwilioAdapter(registration).initialize();
+        try {
+          await getTwilioAdapter(registration).initialize();
+        } catch (error) {
+          const reasons: string[] = [];
+          const seen = new Set<unknown>();
+          let current: unknown = error;
+          while (current instanceof Error && !seen.has(current)) {
+            seen.add(current);
+            reasons.push(current.message);
+            current = current.cause;
+          }
+          (deps.error ?? console.error)(
+            `odos-mcp: communications provider "twilio" DEGRADED; Twilio SMS remains disabled while ODOS continues starting. Reason: ${reasons.join(" Caused by: ") || "unknown initialization failure"} Remediation: verify Twilio API availability and grant the Restricted Messaging key permission twilio/messaging/services.phonenumbers/list, then restart ODOS.`,
+          );
+        }
       }
     },
     providers() {

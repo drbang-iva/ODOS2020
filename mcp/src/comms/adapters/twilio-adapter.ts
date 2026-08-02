@@ -47,6 +47,7 @@ import type {
 
 export const TWILIO_OPT_OUT_LANGUAGE = "Reply STOP to unsubscribe.";
 export const TWILIO_REQUEST_TIMEOUT_MS = 30_000;
+export const TWILIO_HIPAA_POOL_VERIFICATION_TTL_MS = 5 * 60 * 1_000;
 
 export interface TwilioAdapterConfig {
   accountSid: string;
@@ -124,6 +125,7 @@ export type TwilioClientFactory = (
 export interface TwilioAdapterDeps {
   clientFactory?: TwilioClientFactory;
   fetchImpl?: typeof fetch;
+  now?: () => Date;
 }
 
 export interface TwilioAdapter extends CommsProvider {
@@ -222,9 +224,24 @@ export function createTwilioAdapter(
         timeout: TWILIO_REQUEST_TIMEOUT_MS,
       })
     : undefined;
+  const now = deps.now ?? (() => new Date());
+  let poolVerification: { checkedAt: number; promise: Promise<void> } | undefined;
+  const verifyPool = (): Promise<void> => {
+    const checkedAt = now().getTime();
+    if (
+      !poolVerification
+      || checkedAt - poolVerification.checkedAt >= TWILIO_HIPAA_POOL_VERIFICATION_TTL_MS
+    ) {
+      poolVerification = {
+        checkedAt,
+        promise: verifyHipaaMessagingServicePool(messagingClient, normalized),
+      };
+    }
+    return poolVerification.promise;
+  };
   let initialization: Promise<void> | undefined;
   const initialize = (): Promise<void> => {
-    initialization ??= verifyHipaaMessagingServicePool(messagingClient, normalized);
+    initialization ??= verifyPool();
     return initialization;
   };
 
@@ -241,7 +258,8 @@ export function createTwilioAdapter(
     },
     async sendSms(request: SendSmsRequest): Promise<SendResult> {
       try {
-        await verifyHipaaMessagingServicePool(messagingClient, normalized);
+        await initialize();
+        await verifyPool();
         const recipient = e164(request.toNumber, "Twilio SMS recipient");
         const created = await messagingClient.messages.create({
           to: normalized.hipaaMode
@@ -284,7 +302,7 @@ async function verifyHipaaMessagingServicePool(
     members = await phoneNumbers.list();
   } catch (error) {
     throw new Error(
-      `Twilio cannot verify Messaging Service ${config.messagingServiceSid} sender geography in HIPAA mode; refusing to initialize.`,
+      `Twilio cannot verify Messaging Service ${config.messagingServiceSid} sender geography in HIPAA mode; refusing to initialize Twilio SMS.`,
       { cause: error },
     );
   }

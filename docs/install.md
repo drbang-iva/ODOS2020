@@ -159,20 +159,25 @@ Complete this sequence before any real patient Voice, SMS, or MMS traffic:
    Voice and on non-US senders configured through `TWILIO_FROM_NUMBER` or
    `TWILIO_VOICE_FROM_NUMBER`. If `TWILIO_MESSAGING_SERVICE_SID` is used, startup enumerates the
    complete PhoneNumbers collection and rejects every sender whose ISO country code is not `US`.
-   It repeats the complete enumeration before every HIPAA-mode SMS send so a post-startup pool
-   change cannot bypass the guard. An empty pool, non-US member, missing country code, or any
-   API/auth/network failure prevents communications initialization or sending. A Restricted
-   Messaging API key therefore also needs
+   Startup and sends share each pool-verification result for five minutes, then a send repeats the
+   complete enumeration so a post-startup pool change cannot remain undetected. An empty pool,
+   non-US member, missing country code, or API/auth/network failure keeps Twilio SMS disabled. It
+   does not prevent the MCP server or unrelated clinical and administrative routes from starting.
+   Five minutes bounds a deliberate Console mutation to a short window while collapsing a
+   sequential reminder batch to one request against the no-SLA beta endpoint.
+   A Restricted Messaging API key therefore also needs
    `twilio/messaging/services.phonenumbers/list`. ([Messaging Service PhoneNumbers API](https://www.twilio.com/docs/messaging/api/phonenumber-resource),
    accessed 2026-08-02; [twilio-node 6.0.2 PhoneNumber resource](https://github.com/twilio/twilio-node/blob/6.0.2/src/rest/messaging/v1/service/phoneNumber.ts),
    accessed 2026-08-02; [Restricted Messaging API-key permissions](https://assets.cdn.prod.twilio.com/documents/Twilio_Restricted_API_Keys_Permissions_-_Messaging_Permissions.pdf),
    accessed 2026-08-02.)
 
    Twilio currently labels the Services PhoneNumbers API Public Beta and provides no SLA for it.
-   Treat the fatal startup message or a blocked send as an operational alert. Check Twilio API
-   availability, the API-key permission, network access, and every pool member; after correcting
-   a boot-time failure, restart ODOS so startup verification can complete. Send-time checks retry
-   on the next send but remain fail-closed until a fresh enumeration succeeds.
+   Treat the `communications provider "twilio" DEGRADED` startup error or a blocked send as an
+   operational alert. The startup error names the underlying failure and the required restricted-key
+   permission while the rest of ODOS continues booting. Check Twilio API availability, the API-key
+   permission, network access, and every pool member; after correcting a startup failure, restart
+   ODOS because the rejected initialization is retained to keep SMS fail-closed. A send-time failure
+   remains cached until the five-minute window expires, when the next send attempts a fresh check.
 
    ODOS intentionally interprets Twilio's current "US area codes" requirement as ISO country
    code `US`. It conservatively rejects Puerto Rico, the US Virgin Islands, Guam, American Samoa,
@@ -184,10 +189,12 @@ Complete this sequence before any real patient Voice, SMS, or MMS traffic:
    accessed 2026-08-02; [45 CFR 160.103, 2025 annual edition](https://www.govinfo.gov/content/pkg/CFR-2025-title45-vol2/pdf/CFR-2025-title45-vol2-sec160-103.pdf),
    accessed 2026-08-02.)
 5. If transcription is needed, set `TWILIO_REAL_TIME_TRANSCRIPTION_ENABLED=true`. This selects
-   webhook-only Real-Time Transcription; do not use Batch Transcription v3 for a PHI-bearing
-   workflow. ([Real-Time Transcription TwiML](https://www.twilio.com/docs/voice/twiml/transcription),
-   accessed 2026-08-01; [Twilio HIPAA eligibility changelog](https://www.twilio.com/en-us/changelog/twilio-real-time-transcriptions-now-supports-deepgram--nova-3--a),
-   accessed 2026-08-01.)
+   webhook-only Real-Time Transcription with Twilio's documented defaults: Google as the engine
+   and `telephony` as the speech model. Twilio lists Google with any supported model delivered by
+   webhook as HIPAA eligible. ODOS exposes no engine/model override; do not use Batch Transcription
+   v3 for a PHI-bearing workflow. ([Real-Time Transcription TwiML](https://www.twilio.com/docs/voice/twiml/transcription),
+   accessed 2026-08-02; [Real-Time Transcription HIPAA eligibility table](https://www.twilio.com/docs/voice/api/realtime-transcription-resource#hipaa-eligibility-and-pci-compliance),
+   accessed 2026-08-02.)
 
 ## Setup Wizard
 
