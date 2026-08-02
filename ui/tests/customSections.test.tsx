@@ -1706,13 +1706,11 @@ test("GonioscopySection clears encounter state before fetch and hydrates pigment
   }
 });
 
-test("EncounterCharting renders the shared ChartSidebar without removing it from PatientDirector", () => {
+test("EncounterCharting retains the shared ChartSidebar after the chart-open prototype is removed", () => {
   const encounterCharting = readFileSync(new URL("../src/scenes/EncounterCharting.tsx", import.meta.url), "utf8");
-  const patientDirector = readFileSync(new URL("../src/scenes/PatientDirector.tsx", import.meta.url), "utf8");
 
   assert.match(encounterCharting, /import \{ ChartSidebar \} from "\.\.\/components\/ChartSidebar";/);
   assert.match(encounterCharting, /<ChartSidebar patient=\{patient\} \/>/);
-  assert.match(patientDirector, /<ChartSidebar patient=\{currentPatient\} \/>/);
 });
 
 test("EncounterCharting collapses its chart sidebar at the existing tablet container breakpoint and persists expansion", async () => {

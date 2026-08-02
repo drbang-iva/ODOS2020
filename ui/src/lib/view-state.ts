@@ -3,7 +3,6 @@ import { create } from "zustand";
 export type ViewState =
   | { kind: "picker" }
   | { kind: "overview"; patientId: string }
-  | { kind: "director"; patientId: string }
   | { kind: "encounter"; patientId: string; encounterId: string };
 
 export function patientOverviewView(patientId: string): ViewState {

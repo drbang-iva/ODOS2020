@@ -97,14 +97,14 @@ test("start encounter bundle can attach a visit to a clinical Program", () => {
     statusProvenance.target.map((target) => target.reference),
     ["Encounter/e1", "Patient/p1"],
   );
-  const hudSource = readUi("src/components/Hud.tsx");
+  const startExamSource = readUi("src/components/StartExam.tsx");
   assert.ok(
-    hudSource.indexOf("await assignProvider(patient.id)") <
-      hudSource.indexOf("const episodeReference = await resolveProgramReference()"),
+    startExamSource.indexOf("await assignProvider(patient.id)") <
+      startExamSource.indexOf("const episodeReference = await resolveProgramReference()"),
     "Provider assignment must precede every patient-compartment clinical write.",
   );
   assert.equal(
-    hudSource.includes(">EpisodeOfCare<"),
+    startExamSource.includes(">EpisodeOfCare<"),
     false,
     "The visible label should be Program, not the FHIR resource name.",
   );

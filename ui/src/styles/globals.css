@@ -23,15 +23,6 @@ body {
     var(--odos-page-ground);
 }
 
-/* Orbital pulse animation — used on problem regions in Director */
-@keyframes orbital-pulse {
-  0%, 100% { opacity: 0.85; transform: scale(1); }
-  50%      { opacity: 1.0;  transform: scale(1.08); }
-}
-.orbital-pulse {
-  animation: orbital-pulse 2s ease-in-out infinite;
-}
-
 @layer components {
   .sidebar-input {
     @apply h-11 rounded border border-white/15 bg-bg-deep px-3 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-brand;

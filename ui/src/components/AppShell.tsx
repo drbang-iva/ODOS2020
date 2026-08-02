@@ -154,7 +154,7 @@ export function breadcrumbItems(path: string, viewKind?: ViewState["kind"]): Bre
   }));
   if (path === CLINIC_PATH && viewKind && viewKind !== "picker") {
     items[0] = { label: "Clinic", href: CLINIC_PATH };
-    items.push({ label: viewKind === "overview" ? "Patient overview" : viewKind === "director" ? "Patient director" : "Encounter" });
+    items.push({ label: viewKind === "overview" ? "Patient overview" : "Encounter" });
   }
   return items.length ? items : [{ label: "Home" }];
 }

@@ -4,7 +4,7 @@ import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
-import type { Patient } from "@medplum/fhirtypes";
+import type { Bundle, Patient } from "@medplum/fhirtypes";
 import type { ClinicSummary } from "../src/lib/clinic-summary";
 import {
   fetchPatientOverview,
@@ -16,6 +16,7 @@ import { openPatientOverview, patientOverviewView, useViewState } from "../src/l
 import { normalizeFhirReference, opticalOrderPath } from "../src/lib/optical-order";
 import { ClinicHome } from "../src/scenes/ClinicHome";
 import { ConsultReportDraftPanel, PatientOverview } from "../src/scenes/PatientOverview";
+import { StartExam, type StartExamApi } from "../src/components/StartExam";
 
 test("Clinic flow and unsigned-chart clicks both route through PatientOverview", () => {
   useViewState.setState({ view: { kind: "picker" } });
@@ -100,6 +101,125 @@ test("seeded overview renders real snapshot data, newest-first visits, and linke
   assert.match(html, /Deposit Credit Bank/);
   assert.match(html, /Start correspondence/);
   assert.match(html, /Start today&#x27;s visit →/);
+});
+
+test("Start today's visit assigns the provider, starts the encounter, and opens it directly", async () => {
+  const calls: string[] = [];
+  let transactionCount = 0;
+  const api: StartExamApi = {
+    loadPrograms: async () => [],
+    assignProvider: async () => { calls.push("assign-provider"); },
+    createProgram: async () => { throw new Error("Stand-alone visits do not create programs."); },
+    executeTransaction: async (): Promise<Bundle> => {
+      transactionCount += 1;
+      calls.push(transactionCount === 1 ? "create-encounter" : "start-encounter");
+      return transactionCount === 1
+        ? {
+            resourceType: "Bundle",
+            type: "transaction-response",
+            entry: [
+              { response: { status: "201 Created", location: "Encounter/encounter-new/_history/1" } },
+              { response: { status: "201 Created" } },
+            ],
+          }
+        : {
+            resourceType: "Bundle",
+            type: "transaction-response",
+            entry: [
+              { response: { status: "200 OK" } },
+              { response: { status: "201 Created" } },
+            ],
+          };
+    },
+    now: () => new Date("2026-08-02T12:00:00.000Z"),
+  };
+  useViewState.setState({ view: { kind: "overview", patientId: "patient-1" } });
+
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<StartExam patient={patient} api={api} />);
+  });
+  const startButton = renderer.root.findAllByType("button").find((button) =>
+    button.children.join("") === "Start today's visit →"
+  );
+  assert.ok(startButton);
+
+  await act(async () => {
+    startButton.props.onClick();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+
+  assert.deepEqual(calls, ["assign-provider", "create-encounter", "start-encounter"]);
+  assert.deepEqual(useViewState.getState().view, {
+    kind: "encounter",
+    patientId: "patient-1",
+    encounterId: "encounter-new",
+  });
+  renderer.unmount();
+});
+
+test("start-exam failures remain visible on the patient overview", async () => {
+  const api: StartExamApi = {
+    loadPrograms: async () => [],
+    assignProvider: async () => { throw new Error("Provider assignment unavailable"); },
+    createProgram: async () => { throw new Error("not reached"); },
+    executeTransaction: async () => { throw new Error("not reached"); },
+    now: () => new Date("2026-08-02T12:00:00.000Z"),
+  };
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<StartExam patient={patient} api={api} />);
+  });
+
+  await act(async () => {
+    renderer.root.findAllByType("button").find((button) =>
+      button.children.join("") === "Start today's visit →"
+    )!.props.onClick();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+
+  assert.equal(renderer.root.findByProps({ role: "alert" }).children.join(""), "Provider assignment unavailable");
+  renderer.unmount();
+});
+
+test("start-exam mode choices expose existing and new Program selectors", async () => {
+  let programLoads = 0;
+  const api: StartExamApi = {
+    loadPrograms: async () => {
+      programLoads += 1;
+      return [{
+        resourceType: "EpisodeOfCare",
+        id: "program-1",
+        status: "active",
+        patient: { reference: "Patient/patient-1" },
+        type: [{ text: "Glaucoma" }],
+      }];
+    },
+    assignProvider: async () => undefined,
+    createProgram: async () => { throw new Error("not reached"); },
+    executeTransaction: async () => { throw new Error("not reached"); },
+    now: () => new Date("2026-08-02T12:00:00.000Z"),
+  };
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<StartExam patient={patient} api={api} />);
+  });
+  assert.equal(programLoads, 0);
+
+  await act(async () => {
+    renderer.root.findAllByType("button").find((button) =>
+      button.children.join("") === "Part of an existing program"
+    )!.props.onClick();
+    await Promise.resolve();
+  });
+  assert.equal(programLoads, 1);
+  assert.equal(renderer.root.findByProps({ "aria-label": "Existing program" }).children.join(""), "Glaucoma · active");
+
+  act(() => renderer.root.findAllByType("button").find((button) =>
+    button.children.join("") === "Start a new program"
+  )!.props.onClick());
+  assert.ok(renderer.root.findByProps({ "aria-label": "New program type" }));
+  renderer.unmount();
 });
 
 test("patient-record correspondence drafts from the latest signed encounter without an open visit", async () => {
