@@ -166,6 +166,52 @@ test("communications env config trims Twilio single-line secrets", () => {
   assert.equal(registration.config.apiKeySecret, "synthetic-key-secret");
 });
 
+test("communications startup logs whether Twilio HIPAA mode is enabled or disabled", async () => {
+  const logs: string[] = [];
+  let poolLists = 0;
+  const clientFactory = () => ({
+    messages: { create: async () => ({ sid: `SM${"3".repeat(32)}` }) },
+    messaging: {
+      v1: {
+        services: () => ({
+          phoneNumbers: {
+            async list() {
+              poolLists += 1;
+              return [{ phoneNumber: "+18645550100", countryCode: "US" }];
+            },
+          },
+        }),
+      },
+    },
+  });
+  const enabled = createCommsDispatch([{
+    provider: "twilio",
+    config: {
+      accountSid: `AC${"1".repeat(32)}`,
+      authToken: "synthetic-auth-token",
+      messagingServiceSid: `MG${"2".repeat(32)}`,
+      hipaaMode: true,
+    },
+  }], { info: (message) => logs.push(message), twilioClientFactory: clientFactory });
+  const disabled = createCommsDispatch([{
+    provider: "twilio",
+    config: {
+      accountSid: `AC${"1".repeat(32)}`,
+      authToken: "synthetic-auth-token",
+      messagingServiceSid: `MG${"2".repeat(32)}`,
+    },
+  }], { info: (message) => logs.push(message), twilioClientFactory: clientFactory });
+
+  await enabled.initialize();
+  await disabled.initialize();
+
+  assert.equal(poolLists, 1);
+  assert.deepEqual(logs, [
+    "odos-mcp: Twilio HIPAA posture ENABLED; US-only destinations and senders are enforced.",
+    "odos-mcp: Twilio HIPAA posture DISABLED; international destinations and senders are permitted.",
+  ]);
+});
+
 test("communications dispatch reuses one Google adapter token cache across resolved sends", async () => {
   const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
   let tokenCalls = 0;

@@ -5640,6 +5640,7 @@ function authenticateStaffRouteForAction(businessAction: BusinessAction) {
 }
 
 async function main(): Promise<void> {
+  await commsDispatch.initialize();
   const transportMode = process.env.ODOS_MCP_TRANSPORT ?? "stdio";
   if (transportMode === "sse") {
     await logSsePracticeRoleBootVerification({

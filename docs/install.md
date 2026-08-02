@@ -118,7 +118,7 @@ Create `.env` from `.env.example` or export these variables in the shell that ru
 | `TWILIO_VOICE_FORWARD_TO_NUMBER` | yes for Twilio Voice | Staff endpoint in E.164 format. Inbound calls route here; click-to-call rings this endpoint before dialing the patient. |
 | `TWILIO_WEBHOOK_BASE_URL` | yes for Twilio webhooks | Exact public HTTPS origin configured in Twilio. Required for signature validation and for mounting the SMS/Voice webhook routes. |
 | `TWILIO_VOICE_API_KEY_SID` / `TWILIO_VOICE_API_KEY_SECRET` | yes for Twilio Voice | Dedicated Restricted API key with the Voice permissions named in the Voice Slice A ledger. Do not widen or reuse a Messaging-only key. |
-| `ODOS_HIPAA_MODE` | yes for a HIPAA-scoped Twilio deployment | Set to `true` to reject non-US SMS and Voice destinations and explicitly configured Twilio senders. It defaults to `false` so non-US ODOS deployments remain supported. |
+| `ODOS_HIPAA_MODE` | yes for a HIPAA-scoped Twilio deployment | Set to `true` to reject non-US SMS and Voice destinations and senders, including every enumerated Messaging Service phone number. It defaults to `false` so non-US ODOS deployments remain supported. The selected posture is logged at boot. |
 | `TWILIO_REAL_TIME_TRANSCRIPTION_ENABLED` | no | Set to `true` to start webhook-only `<Transcription>` on Voice calls. ODOS does not configure Twilio transcript persistence and does not expose Batch Transcription v3. |
 | `TWILIO_MEDIA_URL_AUTH_ACKNOWLEDGED` | yes for recording retrieval | Set to `true` only after the operator verifies **Enforce HTTP Auth on Media URLs** is enabled in Twilio Voice Settings. Recording retrieval and its webhook route remain disabled otherwise. |
 | `ODOS_REMINDER_ENGINE_ENABLED` | no | Must be explicitly `true` after Google Workspace and BAA setup is confirmed. |
@@ -157,12 +157,24 @@ Complete this sequence before any real patient Voice, SMS, or MMS traffic:
    accessed 2026-08-01.)
 4. Set `ODOS_HIPAA_MODE=true`. ODOS then fails closed on non-US destinations for both SMS and
    Voice and on non-US senders configured through `TWILIO_FROM_NUMBER` or
-   `TWILIO_VOICE_FROM_NUMBER`. If `TWILIO_MESSAGING_SERVICE_SID` is used, verify that every sender
-   in its Twilio-managed pool is a US number; Twilio selects that sender outside the ODOS adapter
-   request boundary. Twilio currently scopes HIPAA eligibility for those products to traffic to
-   or from US area codes. ([Architecting for HIPAA](https://www.twilio.com/content/dam/twilio-com/global/en/other/hipaa/pdf/Architecting-for-HIPAA.pdf),
-   accessed 2026-08-01; [HIPAA Eligible Services](https://www.twilio.com/content/dam/twilio-com/global/en/other/hipaa/pdf/HIPAA-Eligible-Services.pdf),
-   accessed 2026-08-01.)
+   `TWILIO_VOICE_FROM_NUMBER`. If `TWILIO_MESSAGING_SERVICE_SID` is used, startup enumerates the
+   complete PhoneNumbers collection and rejects every sender whose ISO country code is not `US`.
+   A non-US member or any API/auth/network failure prevents communications initialization, and
+   the same cached check gates `sendSms`. A Restricted Messaging API key therefore also needs
+   `twilio/messaging/services.phonenumbers/list`. ([Messaging Service PhoneNumbers API](https://www.twilio.com/docs/messaging/api/phonenumber-resource),
+   accessed 2026-08-02; [twilio-node 6.0.2 PhoneNumber resource](https://github.com/twilio/twilio-node/blob/6.0.2/src/rest/messaging/v1/service/phoneNumber.ts),
+   accessed 2026-08-02; [Restricted Messaging API-key permissions](https://assets.cdn.prod.twilio.com/documents/Twilio_Restricted_API_Keys_Permissions_-_Messaging_Permissions.pdf),
+   accessed 2026-08-02.)
+
+   ODOS intentionally interprets Twilio's current "US area codes" requirement as ISO country
+   code `US`. It conservatively rejects Puerto Rico, the US Virgin Islands, Guam, American Samoa,
+   and the Northern Mariana Islands even though 45 CFR 160.103 includes them in HIPAA's definition
+   of “State.” Twilio's primary HIPAA material does not expressly resolve territory coverage, so
+   those destinations remain blocked until Twilio publishes an unambiguous eligible boundary.
+   ([Architecting for HIPAA](https://www.twilio.com/content/dam/twilio-com/global/en/other/hipaa/pdf/Architecting-for-HIPAA.pdf),
+   accessed 2026-08-02; [45 CFR 160.103, eCFR](https://www.ecfr.gov/current/title-45/subtitle-A/subchapter-C/part-160/subpart-A/section-160.103),
+   accessed 2026-08-02; [45 CFR 160.103, 2025 annual edition](https://www.govinfo.gov/content/pkg/CFR-2025-title45-vol2/pdf/CFR-2025-title45-vol2-sec160-103.pdf),
+   accessed 2026-08-02.)
 5. If transcription is needed, set `TWILIO_REAL_TIME_TRANSCRIPTION_ENABLED=true`. This selects
    webhook-only Real-Time Transcription; do not use Batch Transcription v3 for a PHI-bearing
    workflow. ([Real-Time Transcription TwiML](https://www.twilio.com/docs/voice/twiml/transcription),

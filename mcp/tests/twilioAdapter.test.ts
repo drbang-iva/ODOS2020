@@ -137,6 +137,15 @@ test("Twilio HIPAA mode accepts US destinations and rejects non-US or malformed 
           return { sid: MESSAGE_SID };
         },
       },
+      messaging: {
+        v1: {
+          services: () => ({
+            phoneNumbers: {
+              list: async () => [{ phoneNumber: "+18645550100", countryCode: "US" }],
+            },
+          }),
+        },
+      },
       calls: {
         async create(input) {
           callCreates.push(input);
@@ -196,6 +205,191 @@ test("Twilio keeps international destinations available outside HIPAA mode", asy
     suppression: {},
   });
   assert.deepEqual(destinations, ["+442079460000"]);
+});
+
+test("Twilio HIPAA startup rejects a non-US Messaging Service sender and surfaces its country", async () => {
+  let messageCreates = 0;
+  const adapter = createTwilioAdapter({
+    accountSid: ACCOUNT_SID,
+    authToken: AUTH_TOKEN,
+    messagingServiceSid: MESSAGING_SERVICE_SID,
+    hipaaMode: true,
+  }, {
+    clientFactory: () => ({
+      messages: {
+        async create() {
+          messageCreates += 1;
+          return { sid: MESSAGE_SID };
+        },
+      },
+      messaging: {
+        v1: {
+          services: () => ({
+            phoneNumbers: {
+              async list() {
+                return [
+                  { phoneNumber: "+18645550100", countryCode: "US" },
+                  { phoneNumber: "+14165550100", countryCode: "CA" },
+                ];
+              },
+            },
+          }),
+        },
+      },
+    }),
+  });
+
+  await assert.rejects(adapter.initialize(), /\+14165550100.*CA/i);
+  await assert.rejects(adapter.sendSms!({
+    patientReference: "Patient/synthetic-1",
+    toNumber: "+18645550199",
+    body: "Synthetic HIPAA-mode message.",
+    campaignType: "manual",
+    suppression: {},
+  }), /\+14165550100.*CA/i);
+  assert.equal(messageCreates, 0);
+});
+
+test("Twilio HIPAA startup accepts an all-US Messaging Service pool and enumerates it once", async () => {
+  let poolLists = 0;
+  let messageCreates = 0;
+  const adapter = createTwilioAdapter({
+    accountSid: ACCOUNT_SID,
+    authToken: AUTH_TOKEN,
+    messagingServiceSid: MESSAGING_SERVICE_SID,
+    hipaaMode: true,
+  }, {
+    clientFactory: () => ({
+      messages: {
+        async create() {
+          messageCreates += 1;
+          return { sid: MESSAGE_SID };
+        },
+      },
+      messaging: {
+        v1: {
+          services: () => ({
+            phoneNumbers: {
+              async list() {
+                poolLists += 1;
+                return [
+                  { phoneNumber: "+18645550100", countryCode: "US" },
+                  { phoneNumber: "+12125550100", countryCode: "US" },
+                ];
+              },
+            },
+          }),
+        },
+      },
+    }),
+  });
+
+  await adapter.initialize();
+  await adapter.sendSms!({
+    patientReference: "Patient/synthetic-1",
+    toNumber: "+18645550199",
+    body: "Synthetic HIPAA-mode message.",
+    campaignType: "manual",
+    suppression: {},
+  });
+  assert.equal(poolLists, 1);
+  assert.equal(messageCreates, 1);
+});
+
+test("Twilio accepts the same non-US Messaging Service pool outside HIPAA mode", async () => {
+  let poolLists = 0;
+  let messageCreates = 0;
+  const adapter = createTwilioAdapter({
+    accountSid: ACCOUNT_SID,
+    authToken: AUTH_TOKEN,
+    messagingServiceSid: MESSAGING_SERVICE_SID,
+  }, {
+    clientFactory: () => ({
+      messages: {
+        async create() {
+          messageCreates += 1;
+          return { sid: MESSAGE_SID };
+        },
+      },
+      messaging: {
+        v1: {
+          services: () => ({
+            phoneNumbers: {
+              async list() {
+                poolLists += 1;
+                return [{ phoneNumber: "+14165550100", countryCode: "CA" }];
+              },
+            },
+          }),
+        },
+      },
+    }),
+  });
+
+  await adapter.initialize();
+  await adapter.sendSms!({
+    patientReference: "Patient/synthetic-1",
+    toNumber: "+442079460000",
+    body: "Synthetic international message.",
+    campaignType: "manual",
+    suppression: {},
+  });
+  assert.equal(poolLists, 0);
+  assert.equal(messageCreates, 1);
+});
+
+test("Twilio HIPAA startup fails closed when the Messaging Service pool cannot be verified", async () => {
+  const adapter = createTwilioAdapter({
+    accountSid: ACCOUNT_SID,
+    authToken: AUTH_TOKEN,
+    messagingServiceSid: MESSAGING_SERVICE_SID,
+    hipaaMode: true,
+  }, {
+    clientFactory: () => ({
+      messages: { create: async () => ({ sid: MESSAGE_SID }) },
+      messaging: {
+        v1: {
+          services: () => ({
+            phoneNumbers: {
+              async list() {
+                throw new Error("synthetic Twilio outage");
+              },
+            },
+          }),
+        },
+      },
+    }),
+  });
+
+  await assert.rejects(
+    adapter.initialize(),
+    /cannot verify.*Messaging Service.*HIPAA.*refus/i,
+  );
+});
+
+test("Twilio HIPAA mode conservatively rejects US-territory destinations", async () => {
+  const adapter = createTwilioAdapter({
+    accountSid: ACCOUNT_SID,
+    authToken: AUTH_TOKEN,
+    fromNumber: "+18645550100",
+    hipaaMode: true,
+  });
+  const request = {
+    patientReference: "Patient/synthetic-1",
+    body: "Synthetic HIPAA-mode message.",
+    campaignType: "manual",
+    suppression: {},
+  };
+
+  for (const toNumber of [
+    "+17875550199",
+    "+13405550199",
+    "+16715550199",
+    "+16845550199",
+    "+16705550199",
+  ]) {
+    await assert.rejects(adapter.sendSms!({ ...request, toNumber }), /US phone number.*HIPAA/i);
+  }
 });
 
 test("Twilio RestException 21610 is a non-retryable recipient opt-out suppression", async () => {

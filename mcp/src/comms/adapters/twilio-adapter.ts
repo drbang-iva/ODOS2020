@@ -29,6 +29,10 @@ import type {
  *   the exact externally configured URL before any payload field is trusted:
  *   https://github.com/twilio/twilio-node/blob/6.0.2/src/webhooks/webhooks.ts
  *   https://www.twilio.com/docs/usage/webhooks/webhooks-security
+ * - A Messaging Service's PhoneNumbers subresource exposes each sender's ISO country code;
+ *   the pinned SDK list() follows all pages when no limit is supplied:
+ *   https://www.twilio.com/docs/messaging/api/phonenumber-resource
+ *   https://github.com/twilio/twilio-node/blob/6.0.2/src/rest/messaging/v1/service/phoneNumber.ts
  * - Calls are created/read through the Calls resource; progress callbacks use the documented
  *   event set, and inbound calls receive TwiML:
  *   https://www.twilio.com/docs/voice/api/call-resource
@@ -83,6 +87,11 @@ interface TwilioRecordingRecord {
   duration?: string | null;
 }
 
+interface TwilioMessagingServicePhoneNumber {
+  phoneNumber: string;
+  countryCode: string;
+}
+
 export interface TwilioSdkClient {
   messages: {
     create(input: TwilioMessageCreateInput): Promise<{ sid: string }>;
@@ -95,6 +104,15 @@ export interface TwilioSdkClient {
   recordings?: {
     get(sid: string): { fetch(): Promise<TwilioRecordingRecord> };
   };
+  messaging?: {
+    v1: {
+      services(sid: string): {
+        phoneNumbers: {
+          list(): Promise<TwilioMessagingServicePhoneNumber[]>;
+        };
+      };
+    };
+  };
 }
 
 export type TwilioClientFactory = (
@@ -106,6 +124,10 @@ export type TwilioClientFactory = (
 export interface TwilioAdapterDeps {
   clientFactory?: TwilioClientFactory;
   fetchImpl?: typeof fetch;
+}
+
+export interface TwilioAdapter extends CommsProvider {
+  initialize(): Promise<void>;
 }
 
 export interface TwilioWebhookRequest {
@@ -184,7 +206,7 @@ export interface TwilioTranscriptionWebhookEvent {
 export function createTwilioAdapter(
   config: TwilioAdapterConfig,
   deps: TwilioAdapterDeps = {},
-): CommsProvider {
+): TwilioAdapter {
   const normalized = validateTwilioConfig(config);
   const clientFactory = deps.clientFactory ?? ((username, password, options) => (
     twilio(username, password, options)
@@ -200,9 +222,15 @@ export function createTwilioAdapter(
         timeout: TWILIO_REQUEST_TIMEOUT_MS,
       })
     : undefined;
+  let initialization: Promise<void> | undefined;
+  const initialize = (): Promise<void> => {
+    initialization ??= verifyHipaaMessagingServicePool(messagingClient, normalized);
+    return initialization;
+  };
 
   return {
     name: "twilio",
+    initialize,
     capabilities: {
       sms: true,
       calls: normalized.voice !== undefined,
@@ -213,6 +241,7 @@ export function createTwilioAdapter(
     },
     async sendSms(request: SendSmsRequest): Promise<SendResult> {
       try {
+        await initialize();
         const recipient = e164(request.toNumber, "Twilio SMS recipient");
         const created = await messagingClient.messages.create({
           to: normalized.hipaaMode
@@ -235,6 +264,39 @@ export function createTwilioAdapter(
       ? voiceMethods(voiceClient!, normalized, normalized.voice, deps.fetchImpl ?? fetch)
       : {}),
   };
+}
+
+async function verifyHipaaMessagingServicePool(
+  client: TwilioSdkClient,
+  config: ReturnType<typeof validateTwilioConfig>,
+): Promise<void> {
+  if (!config.hipaaMode || !config.messagingServiceSid) {
+    return;
+  }
+  const phoneNumbers = client.messaging?.v1.services(config.messagingServiceSid).phoneNumbers;
+  if (!phoneNumbers) {
+    throw new Error(
+      "Twilio cannot verify the Messaging Service sender pool in HIPAA mode because the SDK resource is unavailable; refusing to initialize.",
+    );
+  }
+  let members: TwilioMessagingServicePhoneNumber[];
+  try {
+    members = await phoneNumbers.list();
+  } catch (error) {
+    throw new Error(
+      `Twilio cannot verify Messaging Service ${config.messagingServiceSid} sender geography in HIPAA mode; refusing to initialize.`,
+      { cause: error },
+    );
+  }
+  const nonUsMembers = members.filter(({ countryCode }) => countryCode !== "US");
+  if (nonUsMembers.length > 0) {
+    const offenders = nonUsMembers
+      .map(({ phoneNumber, countryCode }) => `${phoneNumber} (${countryCode || "country code missing"})`)
+      .join(", ");
+    throw new Error(
+      `Twilio Messaging Service ${config.messagingServiceSid} contains non-US sender(s) while ODOS_HIPAA_MODE is true: ${offenders}.`,
+    );
+  }
 }
 
 function voiceMethods(
