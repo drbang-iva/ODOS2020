@@ -120,8 +120,10 @@ export async function persistStaffSentSms(
     identifier: [{ system: ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM, value: input.messageSid }],
     category: [category(ODOS_PATIENT_SMS_OUTBOUND_CATEGORY)],
   };
-  return serializeCommunicationWrite(`${identity.system}|${identity.value}`, () =>
-    updateCommunicationFragment(fhir, input.communication, fragment, identity));
+  return serializeCommunicationWrite(`${identity.system}|${identity.value}`, async () => {
+    const canonical = await updateCommunicationFragment(fhir, input.communication, fragment, identity);
+    return reconcileStaffSmsDuplicates(fhir, canonical, identity, input.messageSid);
+  });
 }
 
 function classifyStaffSmsReservation(
@@ -151,6 +153,80 @@ function classifyStaffSmsReservation(
   return owned
     ? { state: "owner", communication }
     : { state: "pending", communication };
+}
+
+async function reconcileStaffSmsDuplicates(
+  fhir: CommsPersistenceFhir,
+  initial: Communication,
+  identity: ReturnType<typeof eventIdentity>,
+  messageSid: string,
+): Promise<Communication> {
+  let canonical = initial;
+  for (let pass = 0; pass < 3; pass += 1) {
+    const matches = await findCommunications(
+      fhir,
+      ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM,
+      messageSid,
+      "100",
+    );
+    const duplicates = matches.filter((communication) => communication.id !== canonical.id);
+    if (duplicates.length === 0) return canonical;
+    for (const duplicate of duplicates) {
+      canonical = await updateCommunicationFragment(fhir, canonical, {
+        status: duplicate.status,
+        statusReason: duplicate.statusReason,
+        identifier: duplicate.identifier,
+        category: duplicate.category,
+        note: duplicate.note,
+      }, identity);
+      await retireDuplicateCommunication(fhir, duplicate, messageSid);
+    }
+  }
+  throw new Error("Staff SMS duplicate reconciliation retry limit reached.");
+}
+
+async function retireDuplicateCommunication(
+  fhir: CommsPersistenceFhir,
+  initial: Communication,
+  messageSid: string,
+): Promise<void> {
+  let current: Communication | undefined = initial;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (!current.id || !current.meta?.versionId) {
+      throw new Error("Duplicate Twilio Communication is missing id or version; refusing an unsafe update.");
+    }
+    const identifiers = current.identifier?.filter((identifier) =>
+      !(identifier.system === ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM && identifier.value === messageSid));
+    const categories = current.category?.flatMap((concept) => {
+      const coding = concept.coding?.filter((entry) =>
+        entry.system !== ODOS_COMMS_CATEGORY_SYSTEM
+        || ![ODOS_PATIENT_SMS_CATEGORY, ODOS_PATIENT_SMS_INBOUND_CATEGORY, ODOS_PATIENT_SMS_OUTBOUND_CATEGORY]
+          .includes(entry.code ?? ""));
+      return coding?.length ? [{ ...concept, coding }] : [];
+    });
+    const retired = Object.fromEntries(Object.entries({
+      ...current,
+      status: "entered-in-error",
+      statusReason: { text: "Duplicate Twilio callback Communication reconciled into the staff send intent." },
+      identifier: identifiers?.length ? identifiers : undefined,
+      category: categories?.length ? categories : undefined,
+    }).filter(([, value]) => value !== undefined)) as unknown as Communication;
+    try {
+      await fhir.update<Communication>("Communication", current.id, retired, {
+        "If-Match": `W/"${current.meta.versionId}"`,
+      });
+      return;
+    } catch (error) {
+      if (!isFhirConflict(error) || attempt === 2) throw error;
+      current = (await findCommunications(
+        fhir,
+        ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM,
+        messageSid,
+        "100",
+      )).find((communication) => communication.id === current?.id);
+      if (!current) return;
+    }
+  }
 }
 
 async function persistTwilioWebhookEventLocked(
@@ -379,13 +455,22 @@ async function findCommunication(
   system: string,
   value: string,
 ): Promise<Communication | undefined> {
-  const bundle = await fhir.search<Communication>("Communication", {
-    identifier: `${system}|${value}`,
-    _count: "2",
-  });
-  const matches = (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
+  const matches = await findCommunications(fhir, system, value, "2");
   if (matches.length > 1) throw new Error(`Twilio Communication identifier ${value} is not unique.`);
   return matches[0];
+}
+
+async function findCommunications(
+  fhir: CommsPersistenceFhir,
+  system: string,
+  value: string,
+  count: string,
+): Promise<Communication[]> {
+  const bundle = await fhir.search<Communication>("Communication", {
+    identifier: `${system}|${value}`,
+    _count: count,
+  });
+  return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
 }
 
 async function patientForPhone(

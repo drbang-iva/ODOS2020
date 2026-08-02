@@ -87,6 +87,40 @@ test("staff-sent SMS and its status callback converge into one patient-linked co
   assert.match(JSON.stringify(communications[0].category), /patient-sms-outbound/);
 });
 
+test("a status callback racing send completion is reconciled into one canonical history entry", async () => {
+  const fhir = new InMemoryCommsFhir();
+  const reservation = await reserveStaffSmsSend(fhir, {
+    idempotencyKey: "synthetic-send-race",
+    claimId: "synthetic-claim-race",
+    patientReference: "Patient/synthetic-1",
+    senderReference: "Practitioner/synthetic-staff",
+    body: "Synthetic raced message",
+  });
+  assert.equal(reservation.state, "owner");
+  await persistTwilioWebhookEvent(fhir, "sms-status", {
+    accountSid: ACCOUNT_SID,
+    messageSid: MESSAGE_SID,
+    messageStatus: "delivered",
+    recipientOptedOut: false,
+  }, { now: () => NOW });
+  await persistStaffSentSms(fhir, {
+    communication: reservation.communication,
+    idempotencyKey: "synthetic-send-race",
+    messageSid: MESSAGE_SID,
+  }, { now: () => NOW });
+
+  const communications = fhir.ofType<Communication>("Communication");
+  const canonical = communications.filter((communication) =>
+    communication.identifier?.some((identifier) =>
+      identifier.system === ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM && identifier.value === MESSAGE_SID));
+  assert.equal(canonical.length, 1);
+  assert.equal(canonical[0].status, "completed");
+  assert.equal(canonical[0].subject?.reference, "Patient/synthetic-1");
+  assert.equal(canonical[0].payload?.[0].contentString, "Synthetic raced message");
+  assert.equal(communications.filter((communication) =>
+    (JSON.stringify(communication.category) ?? "").includes("patient-sms")).length, 1);
+});
+
 test("stale lifecycle callbacks cannot regress terminal message or call status", async () => {
   const fhir = new InMemoryCommsFhir();
   await persistTwilioWebhookEvent(fhir, "sms-inbound", {
