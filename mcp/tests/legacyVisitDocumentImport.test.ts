@@ -38,6 +38,7 @@ import {
   discoverLegacyVisitDocumentSources,
   formatLegacyVisitDocumentReport,
   importLegacyVisitDocumentGroups,
+  legacyVisitDocumentExitCode,
 } from "../../scripts/import-legacy-visit-documents.js";
 import {
   TEST_FHIR_AUDIT_CONTEXT,
@@ -302,7 +303,7 @@ test("missing timestamps report the PDF filename instead of a C-CDA error", asyn
 test("a failed PID is reported without suppressing later successful PID results", async () => {
   const sources = [visitSource("14532559", "100", "Visit")];
   const failures: Array<{ pid: string; error: unknown }> = [];
-  const results = await importLegacyVisitDocumentGroups({
+  const run = await importLegacyVisitDocumentGroups({
     groups: new Map([
       ["14532559", sources],
       ["15537266", sources],
@@ -320,8 +321,12 @@ test("a failed PID is reported without suppressing later successful PID results"
     onFailure: (pid, error) => failures.push({ pid, error }),
   });
 
-  assert.equal(results.length, 1);
-  assert.equal(results[0]?.pid, "15537266");
+  assert.equal(run.results.length, 1);
+  assert.equal(run.results[0]?.pid, "15537266");
+  assert.equal(run.failures.length, 1);
+  assert.equal(run.failures[0]?.pid, "14532559");
+  assert.equal(legacyVisitDocumentExitCode(run), 1);
+  assert.equal(legacyVisitDocumentExitCode({ results: run.results, failures: [] }), 0);
   assert.equal(failures[0]?.pid, "14532559");
   assert.match(String(failures[0]?.error), /synthetic hash failure/);
 });

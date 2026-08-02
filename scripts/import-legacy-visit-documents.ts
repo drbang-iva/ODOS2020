@@ -17,7 +17,7 @@ export async function runLegacyVisitDocumentImportCli(input: {
   readonly archiveRoot: string;
   readonly clientId: string;
   readonly clientSecret: string;
-}): Promise<LegacyVisitDocumentPidResult[]> {
+}): Promise<LegacyVisitDocumentGroupRun> {
   assertLocalBaseUrl(input.baseUrl);
   const accessToken = await exchangeClientCredentials({
     baseUrl: input.baseUrl,
@@ -55,16 +55,32 @@ export async function importLegacyVisitDocumentGroups(input: {
     sources: readonly LegacyVisitDocumentSource[],
   ) => Promise<LegacyVisitDocumentPidResult>;
   readonly onFailure: (pid: string, error: unknown) => void;
-}): Promise<LegacyVisitDocumentPidResult[]> {
+}): Promise<LegacyVisitDocumentGroupRun> {
   const results: LegacyVisitDocumentPidResult[] = [];
+  const failures: LegacyVisitDocumentGroupFailure[] = [];
   for (const [pid, sources] of input.groups) {
     try {
       results.push(await input.importPid(pid, sources));
     } catch (error) {
+      failures.push({ pid, error });
       input.onFailure(pid, error);
     }
   }
-  return results;
+  return { results, failures };
+}
+
+export interface LegacyVisitDocumentGroupFailure {
+  readonly pid: string;
+  readonly error: unknown;
+}
+
+export interface LegacyVisitDocumentGroupRun {
+  readonly results: LegacyVisitDocumentPidResult[];
+  readonly failures: LegacyVisitDocumentGroupFailure[];
+}
+
+export function legacyVisitDocumentExitCode(run: LegacyVisitDocumentGroupRun): 0 | 1 {
+  return run.failures.length === 0 ? 0 : 1;
 }
 
 export async function discoverLegacyVisitDocumentSources(
@@ -173,13 +189,14 @@ function positionalArchiveRoot(args: readonly string[]): string {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
-    const results = await runLegacyVisitDocumentImportCli({
+    const run = await runLegacyVisitDocumentImportCli({
       baseUrl: requireEnv("MEDPLUM_BASE_URL").replace(/\/$/, ""),
       archiveRoot: positionalArchiveRoot(process.argv.slice(2)),
       clientId: requireEnv("ODOS_MIGRATION_IMPORTER_CLIENT_ID"),
       clientSecret: requireEnv("ODOS_MIGRATION_IMPORTER_CLIENT_SECRET"),
     });
-    console.log(formatLegacyVisitDocumentReport(results));
+    console.log(formatLegacyVisitDocumentReport(run.results));
+    process.exitCode = legacyVisitDocumentExitCode(run);
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
