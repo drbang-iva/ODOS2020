@@ -1,4 +1,5 @@
 import type { Annotation, CodeableConcept, Communication, Identifier, Patient } from "@medplum/fhirtypes";
+import { isDeepStrictEqual } from "node:util";
 import type { MedplumClient } from "../fhir-client.js";
 import type {
   TwilioInboundWebhookEvent,
@@ -72,7 +73,7 @@ async function persistTwilioWebhookEventLocked(
   const fragment = await eventFragment(fhir, kind, event, now);
   if (!existing) {
     const baseCategory = category(identity.category);
-    return fhir.create<Communication>({
+    const created = await fhir.create<Communication>({
       resourceType: "Communication",
       status: fragment.status ?? "unknown",
       medium: [{ text: identity.category === ODOS_PATIENT_SMS_CATEGORY ? "SMS" : "Voice call" }],
@@ -85,13 +86,28 @@ async function persistTwilioWebhookEventLocked(
     }, {
       "If-None-Exist": `identifier=${identity.system}|${identity.value}`,
     });
+    const merged = mergeCommunication(created, fragment, identity);
+    if (isDeepStrictEqual(created, merged)) return created;
+    const winner = await findCommunication(fhir, identity.system, identity.value);
+    if (!winner?.id) throw new Error("Persisted Twilio Communication is missing its FHIR id.");
+    const mergedWinner = mergeCommunication(winner, fragment, identity);
+    if (isDeepStrictEqual(winner, mergedWinner)) return winner;
+    return fhir.update<Communication>("Communication", winner.id, mergedWinner);
   }
   if (!existing.id) throw new Error("Persisted Twilio Communication is missing its FHIR id.");
+  return fhir.update<Communication>("Communication", existing.id, mergeCommunication(existing, fragment, identity));
+}
+
+function mergeCommunication(
+  existing: Communication,
+  fragment: Partial<Communication>,
+  identity: ReturnType<typeof eventIdentity>,
+): Communication {
   const acceptStatus = acceptsIncomingStatus(existing.status, existing.statusReason, fragment.status);
   const incomingNotes = acceptStatus
     ? fragment.note
     : fragment.note?.filter((note) => note.authorString !== TWILIO_CALL_METADATA_AUTHOR);
-  return fhir.update<Communication>("Communication", existing.id, {
+  return {
     ...existing,
     ...fragment,
     identifier: mergeIdentifiers(
@@ -112,7 +128,7 @@ async function persistTwilioWebhookEventLocked(
     sent: existing.sent ?? fragment.sent,
     status: acceptStatus ? fragment.status ?? existing.status : existing.status,
     statusReason: acceptStatus ? fragment.statusReason ?? existing.statusReason : existing.statusReason,
-  });
+  };
 }
 
 async function serializeCommunicationWrite<T>(key: string, operation: () => Promise<T>): Promise<T> {

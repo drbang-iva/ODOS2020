@@ -257,6 +257,32 @@ test("concurrent call status and recording callbacks converge without losing eit
   assert.match(JSON.stringify(communications[0]), new RegExp(RECORDING_SID));
 });
 
+test("a conditional-create loser re-reads and merges its event into the winning Communication", async () => {
+  const fhir = new InMemoryCommsFhir();
+  fhir.raceConditionalCreateWith({
+    resourceType: "Communication",
+    id: "competing-call",
+    status: "completed",
+    identifier: [{ system: ODOS_TWILIO_CALL_IDENTIFIER_SYSTEM, value: CALL_SID }],
+    category: [{ coding: [{ system: "https://odos2020.com/fhir/CodeSystem/communication-category", code: "patient-call" }] }],
+    statusReason: { text: "Twilio call status: completed" },
+  });
+
+  await persistTwilioWebhookEvent(fhir, "voice-recording", {
+    accountSid: ACCOUNT_SID,
+    callId: CALL_SID,
+    recordingId: RECORDING_SID,
+    status: "completed",
+    durationSeconds: 42,
+    channels: 2,
+  }, { now: () => NOW });
+
+  const communications = fhir.ofType<Communication>("Communication");
+  assert.equal(communications.length, 1);
+  assert.equal(communications[0].status, "completed");
+  assert.match(JSON.stringify(communications[0]), new RegExp(RECORDING_SID));
+});
+
 test("Twilio listConversations reads persisted Communication history, groups locally, and never requires a live message-list API", async () => {
   const fhir = new InMemoryCommsFhir();
   fhir.seed(
@@ -316,12 +342,17 @@ function communication(id: string, received: string, body: string): Communicatio
 
 class InMemoryCommsFhir {
   private resources: Resource[] = [];
+  private conditionalCreateRace?: Communication;
   private nextId = 1;
   createAttempts = 0;
   lastCommunicationSearch?: URLSearchParams;
 
   seed(...resources: Resource[]): void {
     this.resources.push(...structuredClone(resources));
+  }
+
+  raceConditionalCreateWith(communication: Communication): void {
+    this.conditionalCreateRace = structuredClone(communication);
   }
 
   ofType<T extends Resource>(resourceType: T["resourceType"]): T[] {
@@ -354,6 +385,12 @@ class InMemoryCommsFhir {
     this.createAttempts += 1;
     const conditionalIdentifier = headers["If-None-Exist"]?.replace(/^identifier=/, "");
     if (resource.resourceType === "Communication" && conditionalIdentifier) {
+      if (this.conditionalCreateRace) {
+        const winner = this.conditionalCreateRace;
+        this.conditionalCreateRace = undefined;
+        this.resources.push(structuredClone(winner));
+        return structuredClone(winner) as T;
+      }
       const splitAt = conditionalIdentifier.lastIndexOf("|");
       const system = conditionalIdentifier.slice(0, splitAt);
       const value = conditionalIdentifier.slice(splitAt + 1);
