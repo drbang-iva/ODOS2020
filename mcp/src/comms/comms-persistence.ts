@@ -135,11 +135,13 @@ function classifyStaffSmsReservation(
     body: string;
   },
 ): StaffSmsSendReservation {
+  const visiblePayloadConflicts = communication.payload !== undefined
+    && communication.payload[0]?.contentString !== input.body;
   if (
     communication.subject?.reference !== input.patientReference
     || communication.sender?.reference !== input.senderReference
     || communication.recipient?.[0]?.reference !== input.patientReference
-    || communication.payload?.[0]?.contentString !== input.body
+    || visiblePayloadConflicts
   ) {
     return { state: "conflict", communication };
   }
@@ -551,10 +553,19 @@ function category(code: string): CodeableConcept {
   return { coding: [{ system: ODOS_COMMS_CATEGORY_SYSTEM, code }] };
 }
 
+const MULTI_VALUE_IDENTIFIER_SYSTEMS = new Set([ODOS_TWILIO_RECORDING_IDENTIFIER_SYSTEM]);
+
 function mergeIdentifiers(existing: Identifier[] | undefined, incoming: Identifier[] | undefined): Identifier[] | undefined {
   if (!incoming?.length) return existing;
-  const systems = new Set(incoming.map((identifier) => identifier.system));
-  return [...incoming, ...(existing ?? []).filter((identifier) => !systems.has(identifier.system))];
+  const replacedSystems = new Set(incoming.flatMap((identifier) =>
+    identifier.system && !MULTI_VALUE_IDENTIFIER_SYSTEMS.has(identifier.system) ? [identifier.system] : []));
+  const incomingKeys = new Set(incoming.map((identifier) => `${identifier.system}|${identifier.value}`));
+  return [
+    ...incoming,
+    ...(existing ?? []).filter((identifier) =>
+      !replacedSystems.has(identifier.system ?? "")
+      && !incomingKeys.has(`${identifier.system}|${identifier.value}`)),
+  ];
 }
 
 function mergeCategories(existing: CodeableConcept[] | undefined, incoming: CodeableConcept[] | undefined): CodeableConcept[] | undefined {

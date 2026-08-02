@@ -5719,7 +5719,7 @@ async function startMcpServer(): Promise<void> {
       app.use((req, res, next) => {
         const origin = process.env.ODOS_MCP_ALLOWED_ORIGIN ?? "*";
         res.header("Access-Control-Allow-Origin", origin);
-        res.header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-ODOS-Role, X-ODOS-Actor-Id, X-ODOS-Actor-Role");
+        res.header("Access-Control-Allow-Headers", "Authorization, Content-Type, Idempotency-Key, X-ODOS-Role, X-ODOS-Actor-Id, X-ODOS-Actor-Role");
         res.header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, OPTIONS");
         if (req.method === "OPTIONS") {
           res.sendStatus(204);

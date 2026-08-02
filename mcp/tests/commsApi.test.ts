@@ -22,6 +22,11 @@ test("communications RBAC hides message content from front desk at the FHIR poli
   assert.deepEqual(frontDeskRule.hiddenFields, ["payload", "note", "text"]);
   assert.equal(frontDeskRule.criteria, "Communication?_compartment=%patient_compartment");
   assert.equal(frontDeskRule.interaction?.includes("create"), true);
+  assert.equal(frontDeskRule.interaction?.includes("update"), true);
+  const internalOfficeRule = frontDesk.resource?.find((rule) =>
+    rule.resourceType === "Communication" && rule.criteria?.includes("internal-office"));
+  assert.ok(internalOfficeRule);
+  assert.equal(internalOfficeRule.interaction?.includes("update"), false);
 
   for (const role of ["clinician", "aesthetics-provider"] as const) {
     const policy = buildMedplumAccessPolicy(getRoleDeclaration(role));
@@ -30,6 +35,7 @@ test("communications RBAC hides message content from front desk at the FHIR poli
     assert.ok(rule, role);
     assert.equal(rule.hiddenFields, undefined);
     assert.equal(rule.interaction?.includes("create"), true);
+    assert.equal(rule.interaction?.includes("update"), true);
   }
   const auditor = buildMedplumAccessPolicy(getRoleDeclaration("auditor"));
   assert.equal(auditor.resource?.some((rule) => rule.resourceType === "Communication"), false);
@@ -83,16 +89,18 @@ test("conversation reads use caller-bound FHIR and expose bodies only to clinica
   }
 });
 
-test("staff SMS, calls, and recording retrieval use provider capabilities and return audited results", async () => {
+test("front-desk SMS succeeds through masked FHIR responses and reaches a durable sent reservation", async () => {
   const fixture = await startServer();
   try {
-    const sent = await request(fixture.base, "/communications/messages", "POST", {
+    const messageRequest = {
       patientReference: PATIENT_REFERENCE,
       body: "Synthetic staff message",
       idempotencyKey: "synthetic-send-0001",
-    }, "front-desk");
+    };
+    const sent = await request(fixture.base, "/communications/messages", "POST", messageRequest, "front-desk");
     assert.equal(sent.status, 200);
     assert.deepEqual(await sent.json(), { outcome: "sent", providerMessageId: "SM-synthetic" });
+    assert.deepEqual(fixture.providerCalls, ["sendSms"]);
     assert.equal(fixture.persistedCommunications.length, 1);
     assert.equal(fixture.persistedCommunications[0].status, "in-progress");
     assert.equal(fixture.persistedCommunications[0].subject?.reference, PATIENT_REFERENCE);
@@ -101,6 +109,10 @@ test("staff SMS, calls, and recording retrieval use provider capabilities and re
     assert.equal(fixture.persistedCommunications[0].sent, "2026-08-02T15:00:00.000Z");
     assert.equal(fixture.persistedCommunications[0].payload?.[0].contentString, "Synthetic staff message");
     assert.match(JSON.stringify(fixture.persistedCommunications[0].identifier), /SM-synthetic/);
+    const retry = await request(fixture.base, "/communications/messages", "POST", messageRequest, "front-desk");
+    assert.equal(retry.status, 200);
+    assert.deepEqual(await retry.json(), { outcome: "sent", providerMessageId: "SM-synthetic" });
+    assert.deepEqual(fixture.providerCalls, ["sendSms"]);
 
     const calls = await request(fixture.base, "/communications/calls?limit=12", "GET", undefined, "front-desk");
     assert.equal(calls.status, 200);
@@ -121,7 +133,7 @@ test("staff SMS, calls, and recording retrieval use provider capabilities and re
     assert.equal(recording.headers.get("content-type"), "audio/mpeg");
     assert.deepEqual([...new Uint8Array(await recording.arrayBuffer())], [1, 2, 3]);
 
-    assert.equal(fixture.grants.length, 5);
+    assert.equal(fixture.grants.length, 6);
     assert.equal(fixture.grants.every((row) => row.actionOutcome === "granted"), true);
     assert.deepEqual(fixture.providerCalls, ["sendSms", "listCalls", "getCall", "initiateCall", "fetchRecording"]);
   } finally {
@@ -291,6 +303,21 @@ async function startServer(options: { recordingEnabled?: boolean; recordingVisib
     authenticate: async (header) => {
       const role = header?.replace("Bearer ", "");
       if (!role || !["practice-admin", "clinician", "front-desk", "auditor", "aesthetics-provider"].includes(role)) return null;
+      const accessPolicy = buildMedplumAccessPolicy(getRoleDeclaration(role as never));
+      const communicationRule = accessPolicy.resource?.find((rule) =>
+        rule.resourceType === "Communication" && rule.criteria?.includes("_compartment"));
+      const communicationUpdateAllowed = accessPolicy.resource?.some((rule) =>
+        (rule.resourceType === "Communication" || rule.resourceType === "*")
+        && (rule.interaction?.includes("update") || rule.interaction?.includes("*"))) === true;
+      const hiddenFields = communicationRule?.hiddenFields ?? [];
+      const callerView = <T extends Resource>(resource: T): T => {
+        const view = structuredClone(resource);
+        if (view.resourceType === "Communication") {
+          const fields = view as unknown as Record<string, unknown>;
+          for (const field of hiddenFields) delete fields[field];
+        }
+        return view;
+      };
       const callerFhir = {
         async read() {
           throw new Error("Unexpected FHIR read in communications API test.");
@@ -323,7 +350,7 @@ async function startServer(options: { recordingEnabled?: boolean; recordingVisib
                 .filter((communication) => communication.identifier?.some((identifier) =>
                   identifier.system === "https://odos2020.com/fhir/NamingSystem/twilio-message-sid"
                   && identifier.value === value))
-                .map((resource) => ({ resource: structuredClone(resource) })),
+                .map((resource) => ({ resource: callerView(resource) })),
             };
           }
           if (params.identifier?.startsWith("https://odos2020.com/fhir/NamingSystem/comms-staff-send|")) {
@@ -335,7 +362,7 @@ async function startServer(options: { recordingEnabled?: boolean; recordingVisib
                 .filter((communication) => communication.identifier?.some((identifier) =>
                   identifier.system === "https://odos2020.com/fhir/NamingSystem/comms-staff-send"
                   && identifier.value === value))
-                .map((resource) => ({ resource: structuredClone(resource) })),
+                .map((resource) => ({ resource: callerView(resource) })),
             };
           }
           if (params.identifier?.startsWith("https://odos2020.com/fhir/NamingSystem/twilio-call-sid|")) {
@@ -385,10 +412,16 @@ async function startServer(options: { recordingEnabled?: boolean; recordingVisib
           if (persisted.resourceType === "Communication") {
             persistedCommunications.push(structuredClone(persisted as Communication));
           }
-          return structuredClone(persisted);
+          return callerView(persisted);
         },
         async update<T extends Resource>(_resourceType: T["resourceType"], id: string, resource: T): Promise<T> {
           const index = persistedCommunications.findIndex((candidate) => candidate.id === id);
+          if (
+            resource.resourceType === "Communication"
+            && !communicationUpdateAllowed
+          ) {
+            throw Object.assign(new Error("Synthetic AccessPolicy denied Communication update"), { status: 403 });
+          }
           if (
             options.failSmsCompletion
             && resource.resourceType === "Communication"
@@ -398,15 +431,25 @@ async function startServer(options: { recordingEnabled?: boolean; recordingVisib
             options.failSmsCompletion = false;
             throw Object.assign(new Error("Synthetic FHIR outage"), { status: 503 });
           }
+          const restored = structuredClone(resource);
+          if (restored.resourceType === "Communication" && index >= 0) {
+            const fields = restored as unknown as Record<string, unknown>;
+            const storedFields = persistedCommunications[index] as unknown as Record<string, unknown>;
+            for (const field of hiddenFields) {
+              if (fields[field] === undefined && storedFields[field] !== undefined) {
+                fields[field] = structuredClone(storedFields[field]);
+              }
+            }
+          }
           const persisted = {
-            ...resource,
+            ...restored,
             id,
             meta: { ...resource.meta, versionId: String(Number(persistedCommunications[index]?.meta?.versionId ?? "0") + 1) },
           } as T;
           if (persisted.resourceType === "Communication" && index >= 0) {
             persistedCommunications[index] = structuredClone(persisted as Communication);
           }
-          return structuredClone(persisted);
+          return callerView(persisted);
         },
       } as never;
       authenticatedFhirs.push(callerFhir);

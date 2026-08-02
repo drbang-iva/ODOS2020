@@ -332,7 +332,8 @@ async function listPersistedConversations(
     const message = conversationMessage(communication, request.includeContent === true);
     if (!message) continue;
     const patientReference = communication.subject?.reference;
-    const key = patientReference ?? counterpartyPhone(communication) ?? communication.identifier![0].value!;
+    const key = patientReference ?? counterpartyPhone(communication) ?? twilioMessageSid(communication);
+    if (!key) continue;
     const messages = groups.get(key) ?? [];
     messages.push(message);
     groups.set(key, messages);
@@ -352,6 +353,11 @@ async function listPersistedConversations(
     })
     .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt))
     .slice(0, limit);
+}
+
+function twilioMessageSid(communication: Communication): string | undefined {
+  return communication.identifier?.find((identifier) =>
+    identifier.system === ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM && Boolean(identifier.value))?.value;
 }
 
 function isPersistedTwilioSms(communication: Communication): boolean {

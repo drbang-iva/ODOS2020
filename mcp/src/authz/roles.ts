@@ -225,13 +225,13 @@ const OFFICE_CHANNEL_RESOURCE_RULES: OdosResourceRule[] = [
 
 const PATIENT_COMMUNICATION_COMPARTMENT_RULE: OdosResourceRule = {
   resourceType: "Communication",
-  interactions: CREATE_READ_INTERACTIONS,
+  interactions: UPDATE_INTERACTIONS,
   scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
 };
 
 const FRONT_DESK_PATIENT_COMMUNICATION_RULE: OdosResourceRule = {
   resourceType: "Communication",
-  interactions: CREATE_READ_INTERACTIONS,
+  interactions: UPDATE_INTERACTIONS,
   scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
   hiddenFields: ["payload", "note", "text"],
 };

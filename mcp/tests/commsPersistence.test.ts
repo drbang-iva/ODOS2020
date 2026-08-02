@@ -6,6 +6,7 @@ import type { Bundle, Communication, Patient, Resource } from "@medplum/fhirtype
 import express from "express";
 import twilio from "twilio";
 import {
+  ODOS_COMMS_STAFF_SEND_IDENTIFIER_SYSTEM,
   ODOS_TWILIO_CALL_IDENTIFIER_SYSTEM,
   ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM,
   persistStaffSentSms,
@@ -358,6 +359,27 @@ test("all six Twilio event kinds update deterministic Communications without ret
   assert.equal(fhir.createAttempts, 2);
 });
 
+test("multiple recordings on one call retain every recording identifier", async () => {
+  const fhir = new InMemoryCommsFhir();
+  const secondRecordingSid = `RE${"7".repeat(32)}`;
+  for (const recordingId of [RECORDING_SID, secondRecordingSid]) {
+    await persistTwilioWebhookEvent(fhir, "voice-recording", {
+      accountSid: ACCOUNT_SID,
+      callId: CALL_SID,
+      recordingId,
+      status: "completed",
+      durationSeconds: 42,
+      channels: 2,
+    }, { now: () => NOW });
+  }
+
+  const recordingIds = fhir.ofType<Communication>("Communication")[0].identifier
+    ?.filter((identifier) => identifier.system === "https://odos2020.com/fhir/NamingSystem/twilio-recording-sid")
+    .map((identifier) => identifier.value)
+    .sort();
+  assert.deepEqual(recordingIds, [RECORDING_SID, secondRecordingSid].sort());
+});
+
 test("concurrent call status and recording callbacks converge without losing either event", async () => {
   const fhir = new InMemoryCommsFhir();
   await Promise.all([
@@ -486,6 +508,38 @@ test("Twilio listConversations reads persisted Communication history, groups loc
     "First synthetic message",
   ]);
   assert.equal(fhir.lastCommunicationSearch?.get("subject"), "Patient/synthetic-1");
+});
+
+test("Twilio conversation fallback selects the message SID instead of identifier position zero", async () => {
+  const fhir = new InMemoryCommsFhir();
+  fhir.seed({
+    resourceType: "Communication",
+    id: "unlinked-staff-sms",
+    status: "in-progress",
+    identifier: [
+      { system: ODOS_COMMS_STAFF_SEND_IDENTIFIER_SYSTEM, value: "synthetic-send-fallback" },
+      { system: ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM, value: MESSAGE_SID },
+    ],
+    category: [
+      { coding: [{ system: "https://odos2020.com/fhir/CodeSystem/communication-category", code: "patient-sms" }] },
+      { coding: [{ system: "https://odos2020.com/fhir/CodeSystem/communication-category", code: "patient-sms-outbound" }] },
+    ],
+    medium: [{ text: "SMS" }],
+    sender: { reference: "Practitioner/synthetic-staff" },
+    recipient: [{ reference: "RelatedPerson/synthetic-unlinked" }],
+    sent: NOW,
+  } satisfies Communication);
+  const adapter = withTwilioConversationStore(createTwilioAdapter({
+    accountSid: ACCOUNT_SID,
+    authToken: "synthetic-auth-token",
+    fromNumber: PRACTICE_NUMBER,
+  }, {
+    clientFactory: () => ({ messages: { create: async () => ({ sid: MESSAGE_SID }) } }),
+  }), fhir);
+
+  const conversations = await adapter.listConversations!({ limit: 20, includeContent: false });
+  assert.equal(conversations.length, 1);
+  assert.equal(conversations[0].id, MESSAGE_SID);
 });
 
 function communication(id: string, received: string, body: string): Communication {
