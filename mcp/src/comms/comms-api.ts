@@ -357,9 +357,9 @@ function isAuditSubstrateUnavailable(error: unknown): boolean {
 function adapter(
   deps: CommsApiRouteDeps,
   provider: string,
-  fhir: CommsDispatchFhir,
+  callerFhir: CommsDispatchFhir,
 ): CommsProvider {
-  return deps.dispatch.getAdapter(provider, fhir);
+  return deps.dispatch.getAdapter(provider, callerFhir);
 }
 
 function redactConversationBodies(conversations: ConversationSummary[]): ConversationSummary[] {

@@ -38,7 +38,7 @@ export type CommsDispatchFhir = SuppressionFhir;
 
 export interface CommsDispatch {
   initialize(): Promise<void>;
-  getAdapter(provider: string, fhir: CommsDispatchFhir): CommsProvider;
+  getAdapter(provider: string, callerFhir: CommsDispatchFhir): CommsProvider;
   providers(): string[];
 }
 
@@ -100,7 +100,7 @@ export function createCommsDispatch(
     providers() {
       return [...byProvider.keys()];
     },
-    getAdapter(provider: string, fhir: SuppressionFhir): CommsProvider {
+    getAdapter(provider: string, callerFhir: SuppressionFhir): CommsProvider {
       const registration = byProvider.get(provider);
       if (!registration) {
         throw new Error(`Communications provider "${provider}" is not configured for this practice.`);
@@ -117,15 +117,15 @@ export function createCommsDispatch(
             adapters.set(registration.provider, adapter);
           }
           return createSuppressedCommsProvider(adapter, {
-            fhir,
+            fhir: callerFhir,
             practiceTimeZone: deps.practiceTimeZone ?? "UTC",
             now: deps.now,
           });
         }
         case "twilio": {
-          const adapter = withTwilioConversationStore(getTwilioAdapter(registration), fhir);
+          const adapter = withTwilioConversationStore(getTwilioAdapter(registration), callerFhir);
           return createSuppressedCommsProvider(adapter, {
-            fhir,
+            fhir: callerFhir,
             practiceTimeZone: deps.practiceTimeZone ?? "UTC",
             now: deps.now,
           });

@@ -60,7 +60,7 @@ test("every communications endpoint rejects missing authentication and audits ev
   }
 });
 
-test("conversation reads expose metadata to front desk but bodies only to clinical/content roles", async () => {
+test("conversation reads use caller-bound FHIR and expose bodies only to clinical/content roles", async () => {
   const fixture = await startServer();
   try {
     const desk = await request(fixture.base, "/communications/conversations?patient_id=synthetic-1&limit=10", "GET", undefined, "front-desk");
@@ -74,6 +74,10 @@ test("conversation reads expose metadata to front desk but bodies only to clinic
     const clinicianBody = await clinician.json() as { conversations: ConversationSummary[] };
     assert.equal(clinicianBody.conversations[0].messages[0].body, "Synthetic scheduling content");
     assert.deepEqual(fixture.listRequests.map((entry) => entry.includeContent), [false, true]);
+    assert.equal(fixture.adapterFhirs.length, 2);
+    assert.equal(fixture.authenticatedFhirs.length, 2);
+    assert.notEqual(fixture.authenticatedFhirs[0], fixture.authenticatedFhirs[1]);
+    assert.equal(fixture.adapterFhirs.every((fhir, index) => fhir === fixture.authenticatedFhirs[index]), true);
   } finally {
     await fixture.close();
   }
@@ -231,6 +235,8 @@ async function startServer(options: { recordingEnabled?: boolean; recordingVisib
   const grants: OdosAuditEventRecord[] = [];
   const denials: OdosAuditEventRecord[] = [];
   const persistedCommunications: Communication[] = [];
+  const authenticatedFhirs: unknown[] = [];
+  const adapterFhirs: unknown[] = [];
   const conversation: ConversationSummary = {
     id: PATIENT_REFERENCE,
     patientReference: PATIENT_REFERENCE,
@@ -285,133 +291,138 @@ async function startServer(options: { recordingEnabled?: boolean; recordingVisib
     authenticate: async (header) => {
       const role = header?.replace("Bearer ", "");
       if (!role || !["practice-admin", "clinician", "front-desk", "auditor", "aesthetics-provider"].includes(role)) return null;
-      return {
-        staffReference: `Practitioner/${role}`,
-        actorRole: role as never,
-        roles: [role as never],
-        fhir: {
-          async read() {
-            throw new Error("Unexpected FHIR read in communications API test.");
-          },
-          async search(_resourceType: string, params: Record<string, string> = {}) {
-            if (params.category) {
-              return {
-                resourceType: "Bundle",
-                type: "searchset",
-                entry: options.callVisible === false ? [] : [{
-                  resource: {
-                    resourceType: "Communication",
-                    id: "call-communication-1",
-                    status: "completed",
-                    subject: { reference: PATIENT_REFERENCE },
-                    identifier: [{
-                      system: "https://odos2020.com/fhir/NamingSystem/twilio-call-sid",
-                      value: CALL_ID,
-                    }],
-                  },
-                }],
-              };
-            }
-            if (params.identifier?.startsWith("https://odos2020.com/fhir/NamingSystem/twilio-message-sid|")) {
-              const value = params.identifier.slice(params.identifier.lastIndexOf("|") + 1);
-              return {
-                resourceType: "Bundle",
-                type: "searchset",
-                entry: persistedCommunications
-                  .filter((communication) => communication.identifier?.some((identifier) =>
-                    identifier.system === "https://odos2020.com/fhir/NamingSystem/twilio-message-sid"
-                    && identifier.value === value))
-                  .map((resource) => ({ resource: structuredClone(resource) })),
-              };
-            }
-            if (params.identifier?.startsWith("https://odos2020.com/fhir/NamingSystem/comms-staff-send|")) {
-              const value = params.identifier.slice(params.identifier.lastIndexOf("|") + 1);
-              return {
-                resourceType: "Bundle",
-                type: "searchset",
-                entry: persistedCommunications
-                  .filter((communication) => communication.identifier?.some((identifier) =>
-                    identifier.system === "https://odos2020.com/fhir/NamingSystem/comms-staff-send"
-                    && identifier.value === value))
-                  .map((resource) => ({ resource: structuredClone(resource) })),
-              };
-            }
-            if (params.identifier?.startsWith("https://odos2020.com/fhir/NamingSystem/twilio-call-sid|")) {
-              return {
-                resourceType: "Bundle",
-                type: "searchset",
-                entry: options.callVisible === false ? [] : [{
-                  resource: {
-                    resourceType: "Communication",
-                    id: "call-communication-1",
-                    status: "completed",
-                    subject: { reference: PATIENT_REFERENCE },
-                    identifier: [{
-                      system: "https://odos2020.com/fhir/NamingSystem/twilio-call-sid",
-                      value: CALL_ID,
-                    }],
-                  },
-                }],
-              };
-            }
+      const callerFhir = {
+        async read() {
+          throw new Error("Unexpected FHIR read in communications API test.");
+        },
+        async search(_resourceType: string, params: Record<string, string> = {}) {
+          if (params.category) {
             return {
               resourceType: "Bundle",
               type: "searchset",
-              entry: options.recordingVisible === false ? [] : [{
+              entry: options.callVisible === false ? [] : [{
                 resource: {
                   resourceType: "Communication",
                   id: "call-communication-1",
                   status: "completed",
                   subject: { reference: PATIENT_REFERENCE },
                   identifier: [{
-                    system: "https://odos2020.com/fhir/NamingSystem/twilio-recording-sid",
-                    value: RECORDING_ID,
+                    system: "https://odos2020.com/fhir/NamingSystem/twilio-call-sid",
+                    value: CALL_ID,
                   }],
                 },
               }],
             };
-          },
-          async searchUrl() {
-            throw new Error("Unexpected FHIR pagination in communications API test.");
-          },
-          async create<T extends Resource>(resource: T): Promise<T> {
-            const persisted = {
-              ...resource,
-              id: `persisted-${persistedCommunications.length + 1}`,
-              meta: { ...resource.meta, versionId: "1" },
-            } as T;
-            if (persisted.resourceType === "Communication") {
-              persistedCommunications.push(structuredClone(persisted as Communication));
-            }
-            return structuredClone(persisted);
-          },
-          async update<T extends Resource>(_resourceType: T["resourceType"], id: string, resource: T): Promise<T> {
-            const index = persistedCommunications.findIndex((candidate) => candidate.id === id);
-            if (
-              options.failSmsCompletion
-              && resource.resourceType === "Communication"
-              && resource.identifier?.some((identifier) =>
-                identifier.system === "https://odos2020.com/fhir/NamingSystem/twilio-message-sid")
-            ) {
-              options.failSmsCompletion = false;
-              throw Object.assign(new Error("Synthetic FHIR outage"), { status: 503 });
-            }
-            const persisted = {
-              ...resource,
-              id,
-              meta: { ...resource.meta, versionId: String(Number(persistedCommunications[index]?.meta?.versionId ?? "0") + 1) },
-            } as T;
-            if (persisted.resourceType === "Communication" && index >= 0) {
-              persistedCommunications[index] = structuredClone(persisted as Communication);
-            }
-            return structuredClone(persisted);
-          },
-        } as never,
+          }
+          if (params.identifier?.startsWith("https://odos2020.com/fhir/NamingSystem/twilio-message-sid|")) {
+            const value = params.identifier.slice(params.identifier.lastIndexOf("|") + 1);
+            return {
+              resourceType: "Bundle",
+              type: "searchset",
+              entry: persistedCommunications
+                .filter((communication) => communication.identifier?.some((identifier) =>
+                  identifier.system === "https://odos2020.com/fhir/NamingSystem/twilio-message-sid"
+                  && identifier.value === value))
+                .map((resource) => ({ resource: structuredClone(resource) })),
+            };
+          }
+          if (params.identifier?.startsWith("https://odos2020.com/fhir/NamingSystem/comms-staff-send|")) {
+            const value = params.identifier.slice(params.identifier.lastIndexOf("|") + 1);
+            return {
+              resourceType: "Bundle",
+              type: "searchset",
+              entry: persistedCommunications
+                .filter((communication) => communication.identifier?.some((identifier) =>
+                  identifier.system === "https://odos2020.com/fhir/NamingSystem/comms-staff-send"
+                  && identifier.value === value))
+                .map((resource) => ({ resource: structuredClone(resource) })),
+            };
+          }
+          if (params.identifier?.startsWith("https://odos2020.com/fhir/NamingSystem/twilio-call-sid|")) {
+            return {
+              resourceType: "Bundle",
+              type: "searchset",
+              entry: options.callVisible === false ? [] : [{
+                resource: {
+                  resourceType: "Communication",
+                  id: "call-communication-1",
+                  status: "completed",
+                  subject: { reference: PATIENT_REFERENCE },
+                  identifier: [{
+                    system: "https://odos2020.com/fhir/NamingSystem/twilio-call-sid",
+                    value: CALL_ID,
+                  }],
+                },
+              }],
+            };
+          }
+          return {
+            resourceType: "Bundle",
+            type: "searchset",
+            entry: options.recordingVisible === false ? [] : [{
+              resource: {
+                resourceType: "Communication",
+                id: "call-communication-1",
+                status: "completed",
+                subject: { reference: PATIENT_REFERENCE },
+                identifier: [{
+                  system: "https://odos2020.com/fhir/NamingSystem/twilio-recording-sid",
+                  value: RECORDING_ID,
+                }],
+              },
+            }],
+          };
+        },
+        async searchUrl() {
+          throw new Error("Unexpected FHIR pagination in communications API test.");
+        },
+        async create<T extends Resource>(resource: T): Promise<T> {
+          const persisted = {
+            ...resource,
+            id: `persisted-${persistedCommunications.length + 1}`,
+            meta: { ...resource.meta, versionId: "1" },
+          } as T;
+          if (persisted.resourceType === "Communication") {
+            persistedCommunications.push(structuredClone(persisted as Communication));
+          }
+          return structuredClone(persisted);
+        },
+        async update<T extends Resource>(_resourceType: T["resourceType"], id: string, resource: T): Promise<T> {
+          const index = persistedCommunications.findIndex((candidate) => candidate.id === id);
+          if (
+            options.failSmsCompletion
+            && resource.resourceType === "Communication"
+            && resource.identifier?.some((identifier) =>
+              identifier.system === "https://odos2020.com/fhir/NamingSystem/twilio-message-sid")
+          ) {
+            options.failSmsCompletion = false;
+            throw Object.assign(new Error("Synthetic FHIR outage"), { status: 503 });
+          }
+          const persisted = {
+            ...resource,
+            id,
+            meta: { ...resource.meta, versionId: String(Number(persistedCommunications[index]?.meta?.versionId ?? "0") + 1) },
+          } as T;
+          if (persisted.resourceType === "Communication" && index >= 0) {
+            persistedCommunications[index] = structuredClone(persisted as Communication);
+          }
+          return structuredClone(persisted);
+        },
+      } as never;
+      authenticatedFhirs.push(callerFhir);
+      return {
+        staffReference: `Practitioner/${role}`,
+        actorRole: role as never,
+        roles: [role as never],
+        fhir: callerFhir,
       };
     },
     dispatch: {
       providers: () => ["twilio"],
-      getAdapter: () => provider,
+      getAdapter: (_provider, callerFhir) => {
+        adapterFhirs.push(callerFhir);
+        return provider;
+      },
       initialize: async () => undefined,
     },
     audit: {
@@ -440,6 +451,8 @@ async function startServer(options: { recordingEnabled?: boolean; recordingVisib
     grants,
     denials,
     persistedCommunications,
+    authenticatedFhirs,
+    adapterFhirs,
     close: async () => {
       server.close();
       await once(server, "close");
