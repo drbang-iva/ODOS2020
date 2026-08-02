@@ -311,6 +311,41 @@ test("a conditional-create loser re-reads and merges its event into the winning 
   assert.match(JSON.stringify(communications[0]), new RegExp(RECORDING_SID));
 });
 
+test("a version conflict re-reads and merges both cross-process call fragments", async () => {
+  const fhir = new InMemoryCommsFhir();
+  const base: Communication = {
+    resourceType: "Communication",
+    id: "concurrent-call",
+    meta: { versionId: "1" },
+    status: "in-progress",
+    identifier: [{ system: ODOS_TWILIO_CALL_IDENTIFIER_SYSTEM, value: CALL_SID }],
+  };
+  fhir.seed(base);
+  fhir.raceUpdateWith({
+    ...base,
+    meta: { versionId: "2" },
+    identifier: [
+      { system: ODOS_TWILIO_CALL_IDENTIFIER_SYSTEM, value: CALL_SID },
+      { system: "https://odos2020.com/fhir/NamingSystem/twilio-recording-sid", value: RECORDING_SID },
+    ],
+  });
+
+  await persistTwilioWebhookEvent(fhir, "voice-status", {
+    accountSid: ACCOUNT_SID,
+    callId: CALL_SID,
+    from: PATIENT_NUMBER,
+    to: PRACTICE_NUMBER,
+    direction: "inbound",
+    status: "completed",
+    durationSeconds: 42,
+  }, { now: () => NOW });
+
+  const communication = fhir.ofType<Communication>("Communication")[0];
+  assert.equal(communication.status, "completed");
+  assert.match(JSON.stringify(communication.identifier), new RegExp(RECORDING_SID));
+  assert.deepEqual(fhir.updateIfMatchHeaders, ['W/"1"', 'W/"2"']);
+});
+
 test("Twilio listConversations reads persisted Communication history, groups locally, and never requires a live message-list API", async () => {
   const fhir = new InMemoryCommsFhir();
   fhir.seed(
@@ -371,16 +406,22 @@ function communication(id: string, received: string, body: string): Communicatio
 class InMemoryCommsFhir {
   private resources: Resource[] = [];
   private conditionalCreateRace?: Communication;
+  private updateRace?: Communication;
   private nextId = 1;
   createAttempts = 0;
   lastCommunicationSearch?: URLSearchParams;
+  updateIfMatchHeaders: Array<string | undefined> = [];
 
   seed(...resources: Resource[]): void {
     this.resources.push(...structuredClone(resources));
   }
 
   raceConditionalCreateWith(communication: Communication): void {
-    this.conditionalCreateRace = structuredClone(communication);
+    this.conditionalCreateRace = withVersion(communication, 1);
+  }
+
+  raceUpdateWith(communication: Communication): void {
+    this.updateRace = structuredClone(communication);
   }
 
   ofType<T extends Resource>(resourceType: T["resourceType"]): T[] {
@@ -426,15 +467,31 @@ class InMemoryCommsFhir {
         communication.identifier?.some((identifier) => identifier.system === system && identifier.value === value));
       if (existing) return structuredClone(existing) as T;
     }
-    const created = { ...structuredClone(resource), id: `created-${this.nextId++}` } as T;
+    const created = {
+      ...structuredClone(resource),
+      id: `created-${this.nextId++}`,
+      ...(resource.resourceType === "Communication" ? { meta: { ...resource.meta, versionId: "1" } } : {}),
+    } as T;
     this.resources.push(created);
     return structuredClone(created);
   }
 
-  async update<T extends Resource>(_resourceType: T["resourceType"], id: string, resource: T): Promise<T> {
+  async update<T extends Resource>(_resourceType: T["resourceType"], id: string, resource: T, headers: Record<string, string> = {}): Promise<T> {
     const index = this.resources.findIndex((candidate) => candidate.resourceType === resource.resourceType && candidate.id === id);
     if (index < 0) throw new Error(`Missing ${resource.resourceType}/${id}`);
-    this.resources[index] = structuredClone(resource);
-    return structuredClone(resource);
+    this.updateIfMatchHeaders.push(headers["If-Match"]);
+    if (resource.resourceType === "Communication" && this.updateRace) {
+      this.resources[index] = structuredClone(this.updateRace);
+      this.updateRace = undefined;
+      throw Object.assign(new Error("FHIR 412 version conflict"), { status: 412 });
+    }
+    const versionId = String(Number(this.resources[index].meta?.versionId ?? "0") + 1);
+    const updated = { ...structuredClone(resource), meta: { ...resource.meta, versionId } } as T;
+    this.resources[index] = updated;
+    return structuredClone(updated);
   }
+}
+
+function withVersion(communication: Communication, version: number): Communication {
+  return { ...structuredClone(communication), meta: { ...communication.meta, versionId: String(version) } };
 }

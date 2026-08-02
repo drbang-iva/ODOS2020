@@ -123,10 +123,37 @@ async function persistCommunicationFragment(
     if (!winner?.id) throw new Error("Persisted Twilio Communication is missing its FHIR id.");
     const mergedWinner = mergeCommunication(winner, fragment, identity);
     if (isDeepStrictEqual(winner, mergedWinner)) return winner;
-    return fhir.update<Communication>("Communication", winner.id, mergedWinner);
+    return updateCommunicationFragment(fhir, winner, fragment, identity);
   }
-  if (!existing.id) throw new Error("Persisted Twilio Communication is missing its FHIR id.");
-  return fhir.update<Communication>("Communication", existing.id, mergeCommunication(existing, fragment, identity));
+  return updateCommunicationFragment(fhir, existing, fragment, identity);
+}
+
+async function updateCommunicationFragment(
+  fhir: CommsPersistenceFhir,
+  initial: Communication,
+  fragment: Partial<Communication>,
+  identity: ReturnType<typeof eventIdentity>,
+): Promise<Communication> {
+  let current = initial;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (!current.id) throw new Error("Persisted Twilio Communication is missing its FHIR id.");
+    if (!current.meta?.versionId) {
+      throw new Error("Persisted Twilio Communication is missing its FHIR version; refusing an unsafe update.");
+    }
+    const merged = mergeCommunication(current, fragment, identity);
+    if (isDeepStrictEqual(current, merged)) return current;
+    try {
+      return await fhir.update<Communication>("Communication", current.id, merged, {
+        "If-Match": `W/"${current.meta.versionId}"`,
+      });
+    } catch (error) {
+      if (!isFhirConflict(error) || attempt === 2) throw error;
+      const latest = await findCommunication(fhir, identity.system, identity.value);
+      if (!latest) throw new Error("Persisted Twilio Communication disappeared during conflict recovery.");
+      current = latest;
+    }
+  }
+  throw new Error("Twilio Communication update retry limit reached.");
 }
 
 function mergeCommunication(
@@ -331,6 +358,12 @@ function acceptsIncomingStatus(
   if (!incoming) return false;
   if (existing !== "completed" && existing !== "not-done") return true;
   return incoming === existing && existingReason === undefined;
+}
+
+function isFhirConflict(error: unknown): boolean {
+  const status = (error as { status?: unknown })?.status;
+  const message = error instanceof Error ? error.message : String(error);
+  return status === 409 || status === 412 || /FHIR (409|412)\b/.test(message);
 }
 
 function category(code: string): CodeableConcept {
