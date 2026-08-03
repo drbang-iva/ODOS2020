@@ -1722,22 +1722,64 @@ test("GonioscopySection clears encounter state before fetch and hydrates pigment
     );
     assert.ok(odQuadrantToggle);
     act(() => odQuadrantToggle.props.onClick());
-    assert.equal(select("OD temporal").props.value, "ptm");
-    assert.equal(select("OD nasal").props.value, "");
+    assert.equal(select("OD nasal").props.value, "ptm");
+    assert.equal(select("OD temporal").props.value, "");
 
     await act(async () => renderer.root.findAllByType("button").find((button) =>
       button.children.join("") === "Save Gonioscopy"
     )!.props.onClick());
     assert.deepEqual(postedBodies[1]?.records, [{
       eye: "OD",
-      quadrant: "temporal",
+      quadrant: "nasal",
       value: "ptm",
       entryMode: "quadrant-specific",
     }]);
-    act(() => select("OD nasal").props.onChange("ss"));
-    assert.equal(renderer.root.findAllByType("button").find((button) =>
+    act(() => select("OD temporal").props.onChange("ss"));
+    const copyToOd = renderer.root.findAllByType("button").find((button) =>
       button.children.join("") === "← Copy to OD"
-    )?.props.disabled, true);
+    );
+    assert.equal(copyToOd?.props.disabled, true);
+    assert.equal(copyToOd?.props.title, "Document matching source values before replacing this eye.");
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("GonioscopySection eye copy preserves anatomical quadrant names", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () => jsonResponse({
+    records: [{
+      eye: "OD",
+      quadrant: "nasal",
+      value: "ptm",
+      entryMode: "quadrant-specific",
+      source: "clinician-entered",
+    }],
+  })) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<GonioscopySection
+        patientReference="Patient/patient-1"
+        encounterReference="Encounter/encounter-1"
+        onSaved={() => undefined}
+      />);
+      await flushEffects();
+    });
+    const select = (label: string) => renderer.root.find((node) =>
+      node.type === OdosSelect && node.props.ariaLabel === label
+    );
+    act(() => renderer.root.findAllByType("button").find((button) =>
+      button.children.join("") === "Copy to OS →"
+    )!.props.onClick());
+    const quadrantToggles = renderer.root.findAllByType("button").filter((button) =>
+      button.props["aria-expanded"] === false && button.children.join("").includes("Show quadrants")
+    );
+    assert.equal(quadrantToggles.length, 2);
+    act(() => quadrantToggles[1]!.props.onClick());
+    assert.equal(select("OS nasal").props.value, "ptm");
+    assert.equal(select("OS temporal").props.value, "");
   } finally {
     renderer?.unmount();
     globalThis.fetch = originalFetch;

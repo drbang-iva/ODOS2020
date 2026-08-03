@@ -25,12 +25,6 @@ const EYES: Eye[] = ["OD", "OS"];
 const QUADRANTS: Quadrant[] = ["superior", "nasal", "inferior", "temporal"];
 const OPTIONS: Structure[] = ["closed", "sl", "atm", "ptm", "ss", "cb"];
 const PIGMENT = ["0", "1+", "2+", "3+", "4+"];
-const MIRRORED_QUADRANTS: Record<Quadrant, Quadrant> = {
-  superior: "superior",
-  nasal: "temporal",
-  inferior: "inferior",
-  temporal: "nasal",
-};
 
 export function GonioscopySection({ patientReference, encounterReference, onSaved }: Props) {
   const [records, setRecords] = useState<RecordRow[]>([]);
@@ -90,7 +84,7 @@ export function GonioscopySection({ patientReference, encounterReference, onSave
     const to: Eye = from === "OD" ? "OS" : "OD";
     const copied: RecordRow[] = records.filter((row) => row.eye === from).map((row) => ({
       eye: to,
-      quadrant: MIRRORED_QUADRANTS[row.quadrant],
+      quadrant: row.quadrant,
       value: row.value,
       entryMode: row.entryMode,
     }));
@@ -111,7 +105,7 @@ export function GonioscopySection({ patientReference, encounterReference, onSave
     const to = from === "OD" ? "OS" : "OD";
     const sourceQuadrants = new Set(records
       .filter((row) => row.eye === from)
-      .map((row) => MIRRORED_QUADRANTS[row.quadrant]));
+      .map((row) => row.quadrant));
     const hasSourceData = sourceQuadrants.size > 0 || pigmentation[from] !== undefined;
     const hasUnreplaceableTargetData = records.some((row) =>
       row.eye === to && !sourceQuadrants.has(row.quadrant))
