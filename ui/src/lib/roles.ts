@@ -6,7 +6,6 @@ export interface RoleConfig {
   label: string;
   defaultView: "encounter-charting" | "chart-sidebar" | "admin-cards";
   encounterDensity: CardDensity;
-  directorOrbitalFilters: string[];
 }
 
 // Presentation only: this role config is never authorization, MCP tool gating,
@@ -18,35 +17,24 @@ export const ROLE_CONFIG: Record<RoleId, RoleConfig> = {
     label: "Doctor",
     defaultView: "encounter-charting",
     encounterDensity: "full",
-    directorOrbitalFilters: [
-      "anterior-segment",
-      "refractive",
-      "systemic",
-      "posterior-segment",
-      "retina",
-      "lids-adnexa",
-    ],
   },
   tech: {
     id: "tech",
     label: "Tech",
     defaultView: "chart-sidebar",
     encounterDensity: "full",
-    directorOrbitalFilters: ["refractive", "anterior-segment", "posterior-segment", "systemic"],
   },
   "front-desk": {
     id: "front-desk",
     label: "Front desk",
     defaultView: "admin-cards",
     encounterDensity: "compact",
-    directorOrbitalFilters: ["systemic", "refractive"],
   },
   "practice-admin": {
     id: "practice-admin",
     label: "Practice admin",
     defaultView: "admin-cards",
     encounterDensity: "compact",
-    directorOrbitalFilters: ["systemic", "refractive"],
   },
 };
 

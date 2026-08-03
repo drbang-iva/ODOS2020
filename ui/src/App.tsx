@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, type ComponentType } from "react";
 import { EncounterCharting } from "./scenes/EncounterCharting";
 import { ProcedureDefinitionsSettings } from "./scenes/settings/ProcedureDefinitionsSettings";
 import { AuditLog } from "./scenes/AuditLog";
-import { PatientDirector } from "./scenes/PatientDirector";
 import { PatientOverview } from "./scenes/PatientOverview";
 import { PatientPicker } from "./scenes/PatientPicker";
 import { NewPatient } from "./scenes/NewPatient";
@@ -388,8 +387,6 @@ function ViewRouter({ view }: { view: ViewState }) {
       return <PatientPicker />;
     case "overview":
       return <PatientRoute patientId={view.patientId} mode="overview" />;
-    case "director":
-      return <PatientRoute patientId={view.patientId} mode="director" />;
     case "encounter":
       return (
         <PatientRoute
@@ -407,7 +404,7 @@ export function PatientRoute({
   encounterId,
 }: {
   patientId: string;
-  mode: "overview" | "director" | "encounter";
+  mode: "overview" | "encounter";
   encounterId?: string;
 }) {
   const [patient, setPatient] = useState<Patient | null>(null);
@@ -456,9 +453,5 @@ export function PatientRoute({
     return <EncounterCharting key={encounterId} patient={patient} encounterId={encounterId ?? ""} />;
   }
 
-  if (mode === "overview") {
-    return <PatientOverview patient={patient} />;
-  }
-
-  return <PatientDirector patient={patient} />;
+  return <PatientOverview patient={patient} />;
 }

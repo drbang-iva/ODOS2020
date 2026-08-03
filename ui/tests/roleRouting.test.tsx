@@ -377,8 +377,8 @@ test("leaving the Clinic route resets its patient view while in-Clinic view chan
   assert.equal(shouldResetClinicView(DESK_HOME_PATH, CLINIC_PATH), false);
 });
 
-test("selecting at Clinic patient search then navigating home renders ClinicHome, not the stale Director", () => {
-  const selected: ViewState = { kind: "director", patientId: "patient-1" };
+test("selecting at Clinic patient search then navigating home renders ClinicHome, not a stale chart", () => {
+  const selected: ViewState = { kind: "overview", patientId: "patient-1" };
   const reset = clinicViewAfterNavigation("/clinic/patients", CLINIC_PATH, selected);
   const clinic = renderToStaticMarkup(<RouteSwitch view={reset} path={CLINIC_PATH} roles={["clinician"]} />);
   assert.deepEqual(reset, { kind: "picker" });
@@ -409,8 +409,8 @@ test("Clinic initial URLs select a patient or encounter while an empty query kee
   assert.match(emptyRoute, /Today&#x27;s flow/);
 
   assert.deepEqual(
-    clinicRouteView("?patientId=patient-1", { kind: "director", patientId: "patient-2" }),
-    { kind: "director", patientId: "patient-2" },
+    clinicRouteView("?patientId=patient-1", { kind: "overview", patientId: "patient-2" }),
+    { kind: "overview", patientId: "patient-2" },
   );
 });
 

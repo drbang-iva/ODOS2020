@@ -21,6 +21,7 @@ import { SaleSheet } from "../components/commercial/SaleSheet";
 import { SeriesTrackerPanel } from "../components/series-tracker/SeriesTrackerPanel";
 import { PatientProgramPanels } from "../components/series-tracker/PatientProgramPanels";
 import { OdosSelect } from "../components/inputs/OdosSelect";
+import { StartExam } from "../components/StartExam";
 import {
   findLatestActiveVisionPrescription,
   opticalOrderPath,
@@ -254,7 +255,7 @@ export function PatientOverview({
             ) : (
               <button type="button" className="odos-overview-button" disabled title={rxError ?? (activeRxId === undefined ? "Checking for an active prescription" : "An active vision prescription is required")}>Start optical order</button>
             )}
-            <button type="button" className="odos-overview-button is-primary" onClick={() => patient.id && setView({ kind: "director", patientId: patient.id })}>Start today&apos;s visit →</button>
+            <StartExam patient={patient} />
           </div>
           <PinnedOfficeNote patientId={patient.id} />
         </div>
