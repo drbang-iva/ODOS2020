@@ -15,9 +15,14 @@ import {
   type EpisodeOfCareTypeCode,
 } from "../lib/fhir-clinical/episodeOfCare";
 import { useViewState } from "../lib/view-state";
+import { ODOS_VISIT_TYPE_SYSTEM } from "../lib/scheduling";
+import { DEFAULT_VISIT_TYPE_CATEGORIES } from "../lib/visit-type-config";
 import { OdosSelect } from "./inputs/OdosSelect";
 
 const PROVIDER_ASSIGNMENT_TIMEOUT_MS = 15_000;
+const VISIT_TYPE_CATEGORIES = DEFAULT_VISIT_TYPE_CATEGORIES
+  .filter((category) => category.active !== false)
+  .sort((left, right) => left.order - right.order);
 
 export interface StartExamApi {
   loadPrograms: (patientId: string) => Promise<EpisodeOfCare[]>;
@@ -73,6 +78,7 @@ export function StartExam({
   api?: StartExamApi;
 }) {
   const setView = useViewState((state) => state.setView);
+  const [visitTypeId, setVisitTypeId] = useState(VISIT_TYPE_CATEGORIES[0]?.id ?? "");
   const [startMode, setStartMode] = useState<"standalone" | "existing" | "new">("standalone");
   const [programType, setProgramType] = useState<EpisodeOfCareTypeCode>("glaucoma");
   const [selectedProgramId, setSelectedProgramId] = useState("");
@@ -132,11 +138,24 @@ export function StartExam({
       if (!encounterId) {
         await assignProvider(patient.id);
         const episodeReference = await resolveProgramReference();
+        const visitType = VISIT_TYPE_CATEGORIES.find((category) => category.id === visitTypeId);
         const createResponse = await api.executeTransaction(
           buildStartEncounterCreateBundle({
             patientId: patient.id,
             now: now.toISOString(),
             episodeReference,
+            ...(visitType
+              ? {
+                  visitType: {
+                    coding: [{
+                      system: ODOS_VISIT_TYPE_SYSTEM,
+                      code: visitType.id,
+                      display: visitType.label,
+                    }],
+                    text: visitType.label,
+                  },
+                }
+              : {}),
           }),
           "start_encounter",
         );
@@ -194,7 +213,24 @@ export function StartExam({
 
   return (
     <div data-testid="start-exam-prompt" className="odos-start-exam">
-      <div className="odos-start-exam-title">Start comprehensive exam</div>
+      <div className="odos-start-exam-title">Start today's visit</div>
+      <div className="odos-start-exam-select">
+        <div className="odos-start-exam-field-label">Visit type</div>
+        <OdosSelect
+          value={visitTypeId}
+          options={[
+            { value: "", label: "Not recorded" },
+            ...VISIT_TYPE_CATEGORIES.map((category) => ({
+              value: category.id,
+              label: category.label,
+            })),
+          ]}
+          onChange={setVisitTypeId}
+          ariaLabel="Visit type"
+          disabled={lockStartOptions}
+        />
+      </div>
+      <div className="odos-start-exam-field-label">Program enrollment</div>
       <div className="odos-start-exam-modes">
         <StartModeButton active={startMode === "standalone"} disabled={lockStartOptions} onClick={() => setStartMode("standalone")}>Stand-alone visit</StartModeButton>
         <StartModeButton active={startMode === "existing"} disabled={lockStartOptions} onClick={() => setStartMode("existing")}>Part of an existing program</StartModeButton>

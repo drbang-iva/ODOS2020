@@ -49,12 +49,14 @@
 .odos-overview-button.is-primary { border-color: rgba(47, 191, 143, 0.5); background: rgba(47, 191, 143, 0.1); color: var(--overview-emerald); }
 .odos-start-exam { width: min(560px, 60vw); margin-left: auto; padding: 12px; border: 1px solid var(--overview-line); border-radius: 10px; background: var(--overview-ground); }
 .odos-start-exam-title { color: var(--overview-text); font-size: 14px; font-weight: 600; }
-.odos-start-exam-modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+.odos-start-exam-field-label { margin-top: 12px; color: var(--overview-muted); font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.odos-start-exam-modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 6px; }
 .odos-start-exam-mode { min-height: 56px; padding: 8px 12px; border: 1px solid var(--overview-line); border-radius: 8px; background: var(--overview-ground); color: var(--overview-muted); font: inherit; font-size: 12px; font-weight: 600; text-align: left; cursor: pointer; transition: border-color 0.15s ease, background 0.15s ease; }
 .odos-start-exam-mode:hover { border-color: var(--overview-line-2); }
 .odos-start-exam-mode:disabled { opacity: 0.55; cursor: default; }
 .odos-start-exam-mode.is-active { border-color: var(--overview-emerald); background: color-mix(in srgb, var(--overview-emerald) 14%, transparent); color: var(--overview-text); }
 .odos-start-exam-select, .odos-start-exam-submit { margin-top: 12px; }
+.odos-start-exam-select > .odos-start-exam-field-label { margin-top: 0; margin-bottom: 6px; }
 .odos-start-exam .odos-overview-error { margin: 10px 0 0; }
 .odos-office-pin-context.is-band { min-width: 0; flex: 1; color: var(--overview-gold); }
 .odos-office-pin-context.is-band summary { display: flex; min-width: 0; gap: 8px; align-items: center; font-size: 12.5px; }

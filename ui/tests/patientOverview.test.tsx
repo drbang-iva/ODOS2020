@@ -16,12 +16,15 @@ import { openPatientOverview, patientOverviewView, useViewState } from "../src/l
 import { normalizeFhirReference, opticalOrderPath } from "../src/lib/optical-order";
 import { OVERVIEW_PANEL_REGISTRY } from "../src/lib/card-registry";
 import { RoleProvider } from "../src/lib/role-context";
+import { ODOS_VISIT_TYPE_SYSTEM } from "../src/lib/scheduling";
+import { DEFAULT_VISIT_TYPE_CATEGORIES } from "../src/lib/visit-type-config";
 import { BalanceChips } from "../src/components/commercial/BalanceChips";
 import { CreditBankDepositSheet } from "../src/components/commercial/CreditBankDepositSheet";
 import { SaleSheet } from "../src/components/commercial/SaleSheet";
 import { ClinicHome } from "../src/scenes/ClinicHome";
 import { BillingWeatherReport, ConsultReportDraftPanel, PatientOverview } from "../src/scenes/PatientOverview";
 import { StartExam, type StartExamApi } from "../src/components/StartExam";
+import { OdosSelect } from "../src/components/inputs/OdosSelect";
 import { SeriesTrackerPanel } from "../src/components/series-tracker/SeriesTrackerPanel";
 
 const seriesTrackerApiStub = {
@@ -295,14 +298,16 @@ test("tier 2 medication and optical-order panels render when content exists", as
 
 test("Start today's visit assigns the provider, starts the encounter, and opens it directly", async () => {
   const calls: string[] = [];
+  let createdEncounter: Encounter | undefined;
   let transactionCount = 0;
   const api: StartExamApi = {
     loadPrograms: async () => [],
     assignProvider: async () => { calls.push("assign-provider"); },
     createProgram: async () => { throw new Error("Stand-alone visits do not create programs."); },
-    executeTransaction: async (): Promise<Bundle> => {
+    executeTransaction: async (bundle): Promise<Bundle> => {
       transactionCount += 1;
       calls.push(transactionCount === 1 ? "create-encounter" : "start-encounter");
+      if (transactionCount === 1) createdEncounter = bundle.entry?.[0]?.resource as Encounter;
       return transactionCount === 1
         ? {
             resourceType: "Bundle",
@@ -329,6 +334,9 @@ test("Start today's visit assigns the provider, starts the encounter, and opens 
   await act(async () => {
     renderer = create(<StartExam patient={patient} api={api} />);
   });
+  act(() => renderer.root.findAllByType(OdosSelect).find((select) =>
+    select.props.ariaLabel === "Visit type"
+  )!.props.onChange("dry-eye"));
   const startButton = renderer.root.findAllByType("button").find((button) =>
     button.children.join("") === "Start today's visit →"
   );
@@ -340,10 +348,72 @@ test("Start today's visit assigns the provider, starts the encounter, and opens 
   });
 
   assert.deepEqual(calls, ["assign-provider", "create-encounter", "start-encounter"]);
+  assert.deepEqual(createdEncounter?.type, [{
+    coding: [{
+      system: ODOS_VISIT_TYPE_SYSTEM,
+      code: "dry-eye",
+      display: "Dry Eye",
+    }],
+    text: "Dry Eye",
+  }]);
   assert.deepEqual(useViewState.getState().view, {
     kind: "encounter",
     patientId: "patient-1",
     encounterId: "encounter-new",
+  });
+  renderer.unmount();
+});
+
+test("Start today's visit still succeeds with no visit type", async () => {
+  let createdEncounter: Encounter | undefined;
+  let transactionCount = 0;
+  const api: StartExamApi = {
+    loadPrograms: async () => [],
+    assignProvider: async () => undefined,
+    createProgram: async () => { throw new Error("not reached"); },
+    executeTransaction: async (bundle): Promise<Bundle> => {
+      transactionCount += 1;
+      if (transactionCount === 1) createdEncounter = bundle.entry?.[0]?.resource as Encounter;
+      return transactionCount === 1
+        ? {
+            resourceType: "Bundle",
+            type: "transaction-response",
+            entry: [
+              { response: { status: "201 Created", location: "Encounter/encounter-untyped/_history/1" } },
+              { response: { status: "201 Created" } },
+            ],
+          }
+        : {
+            resourceType: "Bundle",
+            type: "transaction-response",
+            entry: [
+              { response: { status: "200 OK" } },
+              { response: { status: "201 Created" } },
+            ],
+          };
+    },
+    now: () => new Date("2026-08-03T14:00:00.000Z"),
+  };
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<StartExam patient={patient} api={api} />);
+  });
+  act(() => renderer.root.findAllByType(OdosSelect).find((select) =>
+    select.props.ariaLabel === "Visit type"
+  )!.props.onChange(""));
+
+  await act(async () => {
+    renderer.root.findAllByType("button").find((button) =>
+      button.children.join("") === "Start today's visit →"
+    )!.props.onClick();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+
+  assert.equal(createdEncounter?.type, undefined);
+  assert.deepEqual(useViewState.getState().view, {
+    kind: "encounter",
+    patientId: "patient-1",
+    encounterId: "encounter-untyped",
   });
   renderer.unmount();
 });
@@ -581,6 +651,21 @@ test("start-exam mode choices expose existing and new Program selectors", async 
   await act(async () => {
     renderer = create(<StartExam patient={patient} api={api} />);
   });
+  const visitTypeSelect = renderer.root.findAllByType(OdosSelect).find((select) =>
+    select.props.ariaLabel === "Visit type"
+  );
+  assert.deepEqual(visitTypeSelect?.props.options, [
+    { value: "", label: "Not recorded" },
+    ...DEFAULT_VISIT_TYPE_CATEGORIES
+      .filter((category) => category.active !== false)
+      .sort((left, right) => left.order - right.order)
+      .map((category) => ({ value: category.id, label: category.label })),
+  ]);
+  assert.deepEqual(
+    renderer.root.findAllByProps({ className: "odos-start-exam-field-label" })
+      .map((label) => label.children.join("")),
+    ["Visit type", "Program enrollment"],
+  );
   assert.equal(programLoads, 0);
 
   await act(async () => {
