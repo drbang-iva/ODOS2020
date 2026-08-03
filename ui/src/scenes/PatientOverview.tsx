@@ -331,7 +331,7 @@ export function PatientOverview({
               {isVisible("medications") && hasMedications && (
                 <MedicationPanel snapshot={overview.snapshot} />
               )}
-              {isVisible("medications") && !hasMedications && overview.unavailable?.medicationOrders && (
+              {isVisible("medications") && overview.unavailable?.medicationOrders && (
                 <p className="odos-overview-error" role="alert">{overview.unavailable.medicationOrders}</p>
               )}
               {isVisible("consult-drafts") && correspondenceOpen && patient.id && (

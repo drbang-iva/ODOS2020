@@ -207,16 +207,21 @@ test("doctor overview omits all commercial panels while front desk retains them"
 });
 
 test("active-program empty language stays accurate when package status is visible", () => {
+  const seriesTracker = {
+    fetchSeries: async () => [],
+    fetchProtocols: async () => [],
+    prescribe: async () => { throw new Error("The empty-language test does not prescribe programs."); },
+  };
   let doctor!: ReactTestRenderer;
   act(() => {
-    doctor = create(<RoleProvider initialRole="doctor"><PatientOverview patient={patient} initialOverview={fixture()} /></RoleProvider>);
+    doctor = create(<RoleProvider initialRole="doctor"><PatientOverview patient={patient} initialOverview={fixture()} api={{ seriesTracker }} /></RoleProvider>);
   });
   assert.equal(doctor.root.findByType(SeriesTrackerPanel).props.emptyMessage, "No active programs");
   act(() => doctor.unmount());
 
   let frontDesk!: ReactTestRenderer;
   act(() => {
-    frontDesk = create(<RoleProvider initialRole="front-desk"><PatientOverview patient={patient} initialOverview={fixture()} /></RoleProvider>);
+    frontDesk = create(<RoleProvider initialRole="front-desk"><PatientOverview patient={patient} initialOverview={fixture()} api={{ seriesTracker }} /></RoleProvider>);
   });
   assert.equal(frontDesk.root.findByType(SeriesTrackerPanel).props.emptyMessage, "No active treatment series");
   act(() => frontDesk.unmount());
@@ -250,6 +255,16 @@ test("a medication retrieval failure stays distinct from empty without rendering
   assert.doesNotMatch(html, /data-testid="overview-medications"/);
   assert.match(html, /Medication orders are temporarily unavailable/);
   assert.doesNotMatch(html, /No active problems|No visits yet/);
+});
+
+test("a medication retrieval warning remains visible beside partial medication data", () => {
+  const partial = fixture();
+  partial.snapshot.systemicMedications = [];
+  partial.unavailable = { medicationOrders: "Medication orders are temporarily unavailable." };
+  const html = renderToStaticMarkup(<PatientOverview patient={patient} initialOverview={partial} />);
+  assert.match(html, /data-testid="overview-medications"/);
+  assert.match(html, /One drop nightly/);
+  assert.match(html, /Medication orders are temporarily unavailable/);
 });
 
 test("tier 2 medication and optical-order panels render when content exists", async () => {
