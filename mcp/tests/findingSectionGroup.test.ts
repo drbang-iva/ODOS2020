@@ -30,18 +30,21 @@ import {
   type FindingSectionGroupFhirClient,
 } from "../src/clinical-graph/finding-section-group-store.js";
 import { buildSchedulingAppointment } from "../src/fhir/schedulingAppointment.js";
-import { buildVisitType } from "../src/fhir/schedulingVisitType.js";
+import { buildVisitType, ODOS_VISIT_TYPE_SYSTEM } from "../src/fhir/schedulingVisitType.js";
 
 const AUTH = "Bearer good";
 
 class MemoryFhir implements FindingSectionGroupFhirClient {
   readonly resources: Resource[] = [];
+  readonly reads: string[] = [];
+  readonly searches: Array<{ resourceType: string; params: Record<string, string> }> = [];
   writes: Array<"create" | "update"> = [];
   updateHeaders: Array<Record<string, string> | undefined> = [];
   concurrentVersionBumpOnNextUpdate = false;
   failNextSearch: Error | undefined;
 
   async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
+    this.reads.push(`${resourceType}/${id}`);
     const resource = this.resources.find(
       (candidate) => candidate.resourceType === resourceType && candidate.id === id,
     );
@@ -57,6 +60,7 @@ class MemoryFhir implements FindingSectionGroupFhirClient {
     resourceType: T["resourceType"],
     params: Record<string, string> = {},
   ): Promise<Bundle<T>> {
+    this.searches.push({ resourceType, params });
     if (this.failNextSearch) {
       const error = this.failNextSearch;
       this.failNextSearch = undefined;
@@ -154,13 +158,59 @@ test("visit-type category resolver follows Encounter appointment to the Healthca
   });
   service.id = "service-dry-eye";
   const appointment = appointmentFixture("appointment-1", "dry-eye-workup");
-  const encounter = encounterFixture("encounter-1", "appointment-1");
+  const encounter: Encounter = {
+    ...encounterFixture("encounter-1", "appointment-1"),
+    type: [{
+      coding: [{
+        system: ODOS_VISIT_TYPE_SYSTEM,
+        code: "diagnostic-only",
+      }],
+    }],
+  };
   fhir.resources.push(service, appointment, encounter);
 
   assert.equal(
     await resolveVisitTypeCategoryForEncounter(encounter, undefined, fhir),
     "dry-eye",
   );
+  assert.deepEqual(fhir.reads, ["Appointment/appointment-1"]);
+  assert.deepEqual(fhir.searches, [{
+    resourceType: "HealthcareService",
+    params: {
+      "service-type": `${ODOS_VISIT_TYPE_SYSTEM}|dry-eye-workup`,
+      _count: "10",
+    },
+  }]);
+});
+
+test("visit-type category resolver falls back to ODOS Encounter.type without an Appointment", async () => {
+  let fhirCalls = 0;
+  const fhir = {
+    read: async () => {
+      fhirCalls += 1;
+      throw new Error("not reached");
+    },
+    search: async () => {
+      fhirCalls += 1;
+      throw new Error("not reached");
+    },
+  } as unknown as MemoryFhir;
+  const encounter: Encounter = {
+    resourceType: "Encounter",
+    status: "in-progress",
+    class: { code: "AMB" },
+    type: [{
+      coding: [{
+        system: ODOS_VISIT_TYPE_SYSTEM,
+        code: "dry-eye",
+        display: "Dry Eye",
+      }],
+      text: "Dry Eye",
+    }],
+  };
+
+  const category = await resolveVisitTypeCategoryForEncounter(encounter, undefined, fhir);
+  assert.deepEqual({ category: category ?? null, fhirCalls }, { category: "dry-eye", fhirCalls: 0 });
 });
 
 test("visit-type category resolver returns undefined for every unresolved link without throwing", async () => {
@@ -196,6 +246,20 @@ test("visit-type category resolver returns undefined for every unresolved link w
   assert.equal(
     await resolveVisitTypeCategoryForEncounter(
       { resourceType: "Encounter", status: "in-progress", class: { code: "AMB" } },
+      undefined,
+      fhir,
+    ),
+    undefined,
+  );
+  assert.equal(
+    await resolveVisitTypeCategoryForEncounter(
+      {
+        resourceType: "Encounter",
+        status: "in-progress",
+        class: { code: "AMB" },
+        appointment: [{ reference: "Patient/not-an-appointment" }],
+        type: [{ coding: [{ system: ODOS_VISIT_TYPE_SYSTEM, code: "dry-eye" }] }],
+      },
       undefined,
       fhir,
     ),

@@ -13,6 +13,7 @@ import {
   ODOS_VISIT_TYPE_SYSTEM,
   ODOS_VISION_COVERAGE_EXTENSION_URL,
 } from "../../ui/src/lib/scheduling.js";
+import { DEFAULT_VISIT_TYPE_CATEGORIES } from "../../ui/src/lib/visit-type-config.js";
 import {
   buildMedplumAccessPolicy,
   getRoleDeclaration,
@@ -68,6 +69,27 @@ test("omitting appointment context preserves the existing encounter shape and un
   assert.equal(encounter.type, undefined);
   assert.equal(encounter.extension, undefined);
   assert.deepEqual(bundle.entry?.[0]?.request, { method: "POST", url: "Encounter" });
+});
+
+test("stand-alone visit type matches the complete CodeableConcept copied by the importer", () => {
+  const category = DEFAULT_VISIT_TYPE_CATEGORIES.find((candidate) => candidate.id === "dry-eye");
+  assert.ok(category);
+  const migratedEncounterTypeFixture = {
+    coding: [{
+      system: ODOS_VISIT_TYPE_SYSTEM,
+      code: category.id,
+      display: category.label,
+    }],
+    text: category.label,
+  };
+  const bundle = buildStartEncounterCreateBundle({
+    patientId: "patient-1",
+    now: "2026-08-03T14:00:00.000Z",
+    visitType: migratedEncounterTypeFixture,
+  });
+  const encounter = bundle.entry?.[0]?.resource as Encounter;
+
+  assert.deepEqual(encounter.type, [migratedEncounterTypeFixture]);
 });
 
 test("open-encounter lookup sends the standard appointment search with both excluded statuses", async () => {

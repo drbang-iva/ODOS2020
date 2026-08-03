@@ -1,6 +1,7 @@
 import type {
   Appointment,
   Bundle,
+  CodeableConcept,
   Encounter,
   OperationOutcome,
   Provenance,
@@ -30,6 +31,7 @@ export function buildStartEncounterCreateBundle(input: {
   now: string;
   practitionerReference?: string;
   episodeReference?: string;
+  visitType?: CodeableConcept;
   appointmentContext?: {
     appointmentId: string;
     visitTypeCoding?: { system: string; code: string; display?: string };
@@ -55,7 +57,9 @@ export function buildStartEncounterCreateBundle(input: {
     subject: { reference: patientReference },
     ...(input.episodeReference ? { episodeOfCare: [{ reference: input.episodeReference }] } : {}),
     ...(appointmentReference ? { appointment: [{ reference: appointmentReference }] } : {}),
-    ...(input.appointmentContext?.visitTypeCoding
+    ...(input.visitType
+      ? { type: [input.visitType] }
+      : input.appointmentContext?.visitTypeCoding
       ? { type: [{ coding: [{ ...input.appointmentContext.visitTypeCoding }] }] }
       : {}),
     ...(intendedCoverageReferences.length > 0
