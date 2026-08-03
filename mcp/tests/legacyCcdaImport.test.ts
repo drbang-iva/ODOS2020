@@ -122,9 +122,10 @@ test("C-CDA import maps source facts, links exactly one Encounter, and converges
     conditions.find((condition) => !condition.encounter)?.code?.coding?.[0]?.system,
     "http://terminology.hl7.org/CodeSystem/icd9cm",
   );
-  const narrativeCondition = conditions.find((condition) => condition.code?.text);
+  const narrativeCondition = conditions.find((condition) => !condition.code?.coding);
   assert.deepEqual(narrativeCondition?.code, { text: "Synthetic narrative-only problem" });
   assert.equal(narrativeCondition?.verificationStatus?.coding?.[0]?.code, "unconfirmed");
+  assert.ok(conditions.every((condition) => Boolean(condition.code?.text)));
   assert.ok(conditions.filter((condition) => condition.code?.coding?.length)
     .every((condition) => condition.verificationStatus?.coding?.[0]?.code === "confirmed"));
 
@@ -230,6 +231,133 @@ test("C-CDA import maps source facts, links exactly one Encounter, and converges
     encounterLinked: 0,
     encounterUnlinked: 1,
   });
+});
+
+test("C-CDA cumulative problem snapshots collapse 31 entries to 11 distinct Conditions", async () => {
+  const documents = cumulativeProblemDocuments();
+  const entryCounts = documents.map((document) => document.sections.Problems.length);
+  assert.deepEqual(entryCounts, [1, 3, 7, 9, 11]);
+  assert.equal(entryCounts.reduce((total, count) => total + count, 0), 31);
+  const fhir = new MemoryCcdaFhir([
+    patient("patient-1"),
+    {
+      resourceType: "Encounter",
+      id: "encounter-newest-snapshot",
+      status: "finished",
+      class: { system: "http://terminology.hl7.org/CodeSystem/v3-ActCode", code: "AMB" },
+      subject: { reference: "Patient/patient-1" },
+      period: { start: "2024-01-01T14:00:00-05:00", end: "2024-01-01T14:30:00-05:00" },
+    } satisfies Encounter,
+  ]);
+
+  const first = await importLegacyCcda({
+    fhir,
+    projectId: "project-1",
+    ehrPatientId: "synthetic-ehr-1",
+    documents,
+    now: new Date("2026-08-03T12:00:00Z"),
+  });
+
+  assert.deepEqual(first.resources.Condition, {
+    created: 11,
+    skipped: 0,
+    encounterLinked: 11,
+    encounterUnlinked: 0,
+  });
+  const conditions = fhir.ofType<Condition>("Condition");
+  assert.equal(conditions.length, 11);
+  assert.ok(conditions.every((condition) => Boolean(condition.code?.text)));
+  assert.ok(conditions.every((condition) =>
+    condition.encounter?.reference === "Encounter/encounter-newest-snapshot"
+  ));
+
+  const enriched = conditions.filter((condition) =>
+    condition.code?.coding?.some((coding) => coding.code === "SYNTHETIC-ICD10-DRY")
+  );
+  assert.equal(enriched.length, 1);
+  assert.equal(enriched[0]?.code?.text, "Synthetic dry eye problem");
+  assert.equal(enriched[0]?.recordedDate, "2020-01-01");
+  assert.deepEqual(enriched[0]?.code?.coding, [
+    {
+      system: "http://snomed.info/sct",
+      code: "SYNTHETIC-SNOMED-DRY",
+      display: "Synthetic dry eye problem",
+    },
+    {
+      system: "http://hl7.org/fhir/sid/icd-10-cm",
+      code: "SYNTHETIC-ICD10-DRY",
+      display: "Synthetic dry eye problem",
+    },
+    {
+      system: "http://terminology.hl7.org/CodeSystem/icd9cm",
+      code: "SYNTHETIC-ICD9-DRY",
+      display: "Synthetic dry eye problem",
+    },
+  ]);
+
+  assert.equal(conditions.filter((condition) =>
+    condition.code?.coding?.some((coding) => coding.code === "SYNTHETIC-SAME-DATE-A")
+  ).length, 1);
+  assert.equal(conditions.filter((condition) =>
+    condition.code?.coding?.some((coding) => coding.code === "SYNTHETIC-SAME-DATE-B")
+  ).length, 1);
+  assert.equal(conditions.filter((condition) =>
+    condition.code?.coding?.some((coding) => coding.code === "SYNTHETIC-RECURRENCE")
+  ).length, 2);
+
+  const second = await importLegacyCcda({
+    fhir,
+    projectId: "project-1",
+    ehrPatientId: "synthetic-ehr-1",
+    documents,
+    now: new Date("2026-08-03T12:01:00Z"),
+  });
+
+  assert.deepEqual(second.resources.Condition, {
+    created: 0,
+    skipped: 11,
+    encounterLinked: 11,
+    encounterUnlinked: 0,
+  });
+  assert.equal(fhir.ofType<Condition>("Condition").length, 11);
+});
+
+test("C-CDA problem dedup does not bridge distinct same-date coding sets", async () => {
+  const code = (value: string) => ({
+    system: "ICD-10-CM" as const,
+    code: `SYNTHETIC-BRIDGE-${value}`,
+    display: `Synthetic bridge problem ${value}`,
+  });
+  const entry = (codes: ReturnType<typeof code>[]) => ({
+    kind: "observation" as const,
+    date: "20240101",
+    codes,
+  });
+  const documents = [
+    {
+      file: "EMA_20240101T090000_Synthetic_ClinicalSummary_CCD_Final.ccda.xml",
+      sections: { Problems: [entry([code("A")])] },
+    },
+    {
+      file: "EMA_20240201T090000_Synthetic_ClinicalSummary_CCD_Final.ccda.xml",
+      sections: { Problems: [entry([code("A"), code("B")])] },
+    },
+    {
+      file: "EMA_20240301T090000_Synthetic_ClinicalSummary_CCD_Final.ccda.xml",
+      sections: { Problems: [entry([code("B")])] },
+    },
+  ];
+  const fhir = new MemoryCcdaFhir([patient("patient-1")]);
+
+  const result = await importLegacyCcda({
+    fhir,
+    projectId: "project-1",
+    ehrPatientId: "synthetic-ehr-1",
+    documents,
+  });
+
+  assert.equal(result.resources.Condition.created, 2);
+  assert.equal(fhir.ofType<Condition>("Condition").length, 2);
 });
 
 test("C-CDA allergy identity preserves distinct code sets and dated recurrences across reruns", async () => {
@@ -420,6 +548,79 @@ function patient(id: string): Patient {
       value: "synthetic-ehr-1",
     }],
   };
+}
+
+function cumulativeProblemDocuments(): Array<{
+  file: string;
+  sections: { Problems: SyntheticProblemEntry[] };
+}> {
+  const dryEye = (codes: SyntheticProblemCode[]): SyntheticProblemEntry => ({
+    kind: "observation",
+    date: "20170420",
+    codes,
+  });
+  const dryEyeIcd10: SyntheticProblemCode = {
+    system: "ICD-10-CM",
+    code: "SYNTHETIC-ICD10-DRY",
+    display: "Synthetic dry eye problem",
+  };
+  const dryEyeRich = [
+    {
+      system: "SNOMED-CT",
+      code: "SYNTHETIC-SNOMED-DRY",
+      display: "Synthetic dry eye problem",
+    },
+    dryEyeIcd10,
+    {
+      system: "ICD-9-CM",
+      code: "SYNTHETIC-ICD9-DRY",
+      display: "Synthetic dry eye problem",
+    },
+  ] satisfies SyntheticProblemCode[];
+  const problem = (
+    date: string,
+    code: string,
+    display: string,
+    system: SyntheticProblemCode["system"] = "ICD-10-CM",
+  ): SyntheticProblemEntry => ({
+    kind: "observation",
+    date,
+    codes: [{ system, code, display }],
+  });
+  const sameDateA = problem("20190820", "SYNTHETIC-SAME-DATE-A", "Synthetic same-date problem A");
+  const sameDateB = problem("20190820", "SYNTHETIC-SAME-DATE-B", "Synthetic same-date problem B");
+  const problem4 = problem("20210213", "SYNTHETIC-PROBLEM-4", "Synthetic problem 4");
+  const problem5 = problem("20210213", "SYNTHETIC-PROBLEM-5", "Synthetic problem 5", "SNOMED-CT");
+  const problem6 = problem("20220222", "SYNTHETIC-PROBLEM-6", "Synthetic problem 6", "SNOMED-CT");
+  const problem7 = problem("20220222", "SYNTHETIC-PROBLEM-7", "Synthetic problem 7");
+  const problem8 = problem("20230115", "SYNTHETIC-PROBLEM-8", "Synthetic problem 8");
+  const problem9 = problem("20230115", "SYNTHETIC-PROBLEM-9", "Synthetic problem 9");
+  const recurrence1 = problem("20240120", "SYNTHETIC-RECURRENCE", "Synthetic recurring problem", "SNOMED-CT");
+  const recurrence2 = problem("20240220", "SYNTHETIC-RECURRENCE", "Synthetic recurring problem", "SNOMED-CT");
+  const problemSets = [
+    [dryEye([dryEyeIcd10])],
+    [dryEye([dryEyeIcd10]), sameDateA, sameDateB],
+    [dryEye(dryEyeRich.slice(0, 2)), sameDateA, sameDateB, problem4, problem5, problem6, problem7],
+    [dryEye(dryEyeRich), sameDateA, sameDateB, problem4, problem5, problem6, problem7, problem8, problem9],
+    [dryEye(dryEyeRich), sameDateA, sameDateB, problem4, problem5, problem6, problem7, problem8, problem9, recurrence1, recurrence2],
+  ];
+
+  return problemSets.map((Problems, index) => ({
+    file: `EMA_${20200101 + index * 10000}T090000_Synthetic_ClinicalSummary_CCD_Final.ccda.xml`,
+    sections: { Problems: structuredClone(Problems) },
+  }));
+}
+
+interface SyntheticProblemCode {
+  system: "SNOMED-CT" | "ICD-10-CM" | "ICD-9-CM";
+  code: string;
+  display: string;
+}
+
+interface SyntheticProblemEntry {
+  kind: "observation";
+  date: string;
+  codes: SyntheticProblemCode[];
 }
 
 class MemoryCcdaFhir {
