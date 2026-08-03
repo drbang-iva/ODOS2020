@@ -167,6 +167,12 @@ interface SourceDocument {
   encounterReference?: string;
 }
 
+interface DistinctProblem {
+  entry: ParsedEntry;
+  identityEntry: ParsedEntry;
+  source: SourceDocument;
+}
+
 type ImportableResource =
   | Condition
   | AllergyIntolerance
@@ -206,26 +212,28 @@ export async function importLegacyCcda(input: {
   }
 
   const createdReferences: string[] = [];
-  for (const source of sources) {
-    for (const entry of source.document.sections.Problems ?? []) {
-      const coding = codeableConcept(entry.codes, entry.text);
-      const identifier = itemIdentifier(
-        input.ehrPatientId,
-        source.timestamp,
-        "Problems",
-        entry,
-      );
-      const condition = buildProblemListCondition({
-        patientReference,
-        encounterReference: source.encounterReference,
-        code: coding,
-        verificationStatus: entry.codes.length > 0 ? "confirmed" : "unconfirmed",
-        recordedDate: source.date,
-        identifiers: [identifier],
-      });
-      await writeResource(input, condition, identifier, source, resources, createdReferences);
-    }
+  for (const problem of distinctProblems(sources)) {
+    const coding = codeableConcept(problem.entry.codes, problem.entry.text);
+    const identifier = problemIdentifier(input.ehrPatientId, problem);
+    const condition = buildProblemListCondition({
+      patientReference,
+      encounterReference: problem.source.encounterReference,
+      code: coding,
+      verificationStatus: problem.entry.codes.length > 0 ? "confirmed" : "unconfirmed",
+      recordedDate: problem.source.date,
+      identifiers: [identifier],
+    });
+    await writeResource(
+      input,
+      condition,
+      identifier,
+      problem.source,
+      resources,
+      createdReferences,
+    );
+  }
 
+  for (const source of sources) {
     for (const entry of source.document.sections.Allergies ?? []) {
       const identifier = itemIdentifier(
         input.ehrPatientId,
@@ -398,6 +406,124 @@ function hasEncounterLink(resource: ImportableResource): boolean {
   return Boolean(resource.encounter?.reference);
 }
 
+function distinctProblems(sources: readonly SourceDocument[]): DistinctProblem[] {
+  const groups: Array<Array<{ entry: ParsedEntry; source: SourceDocument }>> = [];
+  const occurrences = sources
+    .flatMap((source) =>
+      (source.document.sections.Problems ?? []).map((entry) => ({ entry, source }))
+    )
+    .sort((left, right) => left.source.timestamp.localeCompare(right.source.timestamp));
+
+  for (const occurrence of occurrences) {
+    const matchingIndexes = groups.flatMap((group, index) =>
+      group.some((member) => sameProblem(member.entry, occurrence.entry)) ? [index] : []
+    );
+    if (matchingIndexes.length === 0) {
+      groups.push([occurrence]);
+      continue;
+    }
+
+    const firstIndex = matchingIndexes[0]!;
+    groups[firstIndex]!.push(occurrence);
+    for (const index of matchingIndexes.slice(1).reverse()) {
+      groups[firstIndex]!.push(...groups[index]!);
+      groups.splice(index, 1);
+    }
+  }
+
+  return groups.map((group) => {
+    const byRichness = [...group].sort(compareProblemRichness);
+    const representative = byRichness[0]!;
+    const codesByIdentity = new Map<string, ParsedCode>();
+    for (const occurrence of byRichness) {
+      for (const code of occurrence.entry.codes) {
+        const key = codeIdentity(code);
+        const existing = codesByIdentity.get(key);
+        if (!existing) {
+          codesByIdentity.set(key, { ...code });
+        } else if (!existing.display && code.display) {
+          codesByIdentity.set(key, { ...existing, display: code.display });
+        }
+      }
+    }
+    const codes = [...codesByIdentity.values()];
+    const text = representative.entry.text
+      ?? representative.entry.codes.find((code) => code.display)?.display
+      ?? codes.find((code) => code.display)?.display
+      ?? byRichness.find((occurrence) => occurrence.entry.text)?.entry.text
+      ?? codes[0]?.code;
+    const identityOccurrence = [...group].sort(compareProblemIdentity)[0]!;
+    const newestOccurrence = [...group].sort((left, right) =>
+      right.source.timestamp.localeCompare(left.source.timestamp)
+    )[0]!;
+
+    return {
+      entry: {
+        date: representative.entry.date,
+        codes,
+        ...(text ? { text } : {}),
+      },
+      identityEntry: identityOccurrence.entry,
+      source: newestOccurrence.source,
+    };
+  });
+}
+
+function sameProblem(left: ParsedEntry, right: ParsedEntry): boolean {
+  if (!left.date || left.date !== right.date) return false;
+  const leftCodes = new Set(left.codes.map(codeIdentity));
+  const rightCodes = new Set(right.codes.map(codeIdentity));
+  if (leftCodes.size === 0 || rightCodes.size === 0) {
+    return leftCodes.size === 0
+      && rightCodes.size === 0
+      && Boolean(left.text)
+      && Boolean(right.text)
+      && normalizeText(left.text!) === normalizeText(right.text!);
+  }
+  return isSubset(leftCodes, rightCodes) || isSubset(rightCodes, leftCodes);
+}
+
+function isSubset(left: ReadonlySet<string>, right: ReadonlySet<string>): boolean {
+  return [...left].every((value) => right.has(value));
+}
+
+function compareProblemRichness(
+  left: { entry: ParsedEntry; source: SourceDocument },
+  right: { entry: ParsedEntry; source: SourceDocument },
+): number {
+  const codeCount = uniqueCodeCount(right.entry) - uniqueCodeCount(left.entry);
+  if (codeCount !== 0) return codeCount;
+  const displayCount = right.entry.codes.filter((code) => code.display).length
+    - left.entry.codes.filter((code) => code.display).length;
+  if (displayCount !== 0) return displayCount;
+  if (Boolean(left.entry.text) !== Boolean(right.entry.text)) return left.entry.text ? -1 : 1;
+  return right.source.timestamp.localeCompare(left.source.timestamp);
+}
+
+function compareProblemIdentity(
+  left: { entry: ParsedEntry; source: SourceDocument },
+  right: { entry: ParsedEntry; source: SourceDocument },
+): number {
+  const codeCount = uniqueCodeCount(left.entry) - uniqueCodeCount(right.entry);
+  if (codeCount !== 0) return codeCount;
+  const codes = canonicalCodePairs(left.entry.codes)
+    .localeCompare(canonicalCodePairs(right.entry.codes));
+  if (codes !== 0) return codes;
+  return left.source.timestamp.localeCompare(right.source.timestamp);
+}
+
+function uniqueCodeCount(entry: ParsedEntry): number {
+  return new Set(entry.codes.map(codeIdentity)).size;
+}
+
+function codeIdentity(code: ParsedCode): string {
+  return `${code.system}\u001f${code.code}`;
+}
+
+function canonicalCodePairs(codes: readonly ParsedCode[]): string {
+  return [...new Set(codes.map(codeIdentity))].sort().join("\u001e");
+}
+
 function distinctMedications(sources: readonly SourceDocument[]): Array<{
   codes: ParsedCode[];
   preferredCode?: ParsedCode;
@@ -509,6 +635,29 @@ function itemIdentifier(
     if (!entry.text) throw new Error("Text-only C-CDA entry has no narrative text.");
     identityParts.push(normalizeText(entry.text));
   }
+  const value = createHash("sha256")
+    .update(JSON.stringify(identityParts))
+    .digest("hex");
+  return { system: LEGACY_CCDA_ITEM_IDENTIFIER_SYSTEM, value };
+}
+
+function problemIdentifier(
+  ehrPatientId: string,
+  problem: DistinctProblem,
+): Identifier {
+  const identityParts: unknown[] = [
+    ehrPatientId,
+    "Problems",
+    problem.identityEntry.date,
+    canonicalCodePairs(problem.identityEntry.codes),
+  ];
+  if (problem.identityEntry.codes.length === 0) {
+    if (!problem.identityEntry.text) {
+      throw new Error("Text-only problem entry has no narrative text.");
+    }
+    identityParts.push(normalizeText(problem.identityEntry.text));
+  }
+  if (!problem.identityEntry.date) identityParts.push(problem.source.timestamp);
   const value = createHash("sha256")
     .update(JSON.stringify(identityParts))
     .digest("hex");

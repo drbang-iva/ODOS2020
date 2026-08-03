@@ -106,9 +106,10 @@ test("C-CDA v2 schema normalizes null and empty coded-entry text to absent", asy
     ehrPatientId: "synthetic-ehr-1",
     documents,
   });
-  for (const condition of fhir.ofType<Condition>("Condition")) {
-    assert.equal("text" in condition.code!, false);
-  }
+  assert.deepEqual(
+    fhir.ofType<Condition>("Condition").map((condition) => condition.code?.text),
+    ["SYNTHETIC-NULL", "SYNTHETIC-EMPTY", "SYNTHETIC-WHITESPACE"],
+  );
 });
 
 test("C-CDA v2 omits coding instead of emitting an empty array", async () => {
@@ -343,9 +344,9 @@ test("C-CDA v2 normalizes whitespace and Unicode in narrative identity", async (
 
   assert.deepEqual(result.resources.Condition, {
     created: 1,
-    skipped: 1,
+    skipped: 0,
     encounterLinked: 0,
-    encounterUnlinked: 2,
+    encounterUnlinked: 1,
   });
   assert.equal(result.resources.MedicationStatement.created, 2);
   assert.equal(fhir.ofType<MedicationStatement>("MedicationStatement").length, 2);
