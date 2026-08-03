@@ -30,6 +30,7 @@ import {
   MIGRATION_TAG_CODE,
   MIGRATION_TAG_SYSTEM,
 } from "../legacy-import/access-policy.js";
+import { practiceDate } from "./clinic-summary.js";
 
 export const PATIENT_STICKY_NOTE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/patient-sticky-note";
 export const PATIENT_STICKY_NOTE_CODE = "patient-sticky-note";
@@ -136,7 +137,7 @@ const ENCOUNTER_LEDGER_CONDITION_BATCH_SIZE = 50;
 export async function loadPatientOverview(
   fhir: OverviewFhir,
   patientId: string,
-  options: { filter?: VisitLedgerFilter; diagnosisSystem?: string; diagnosisCode?: string } = {},
+  options: { filter?: VisitLedgerFilter; diagnosisSystem?: string; diagnosisCode?: string; now?: string; timeZone?: string } = {},
 ): Promise<PatientOverviewPayload> {
   const patientReference = `Patient/${patientId}`;
   const filter = options.filter ?? "all";
@@ -203,6 +204,8 @@ export async function loadPatientOverview(
       smokingStatuses,
       encounters: [],
       encounterDiagnoses: [],
+      asOfDate: practiceDate(options.now ?? new Date().toISOString(), options.timeZone ?? "UTC"),
+      timeZone: options.timeZone,
     });
   }
   if (diagnosisEncounterIds) {
@@ -256,6 +259,8 @@ export async function loadPatientOverview(
     encounters,
     encounterDiagnoses,
     provenances,
+    asOfDate: practiceDate(options.now ?? new Date().toISOString(), options.timeZone ?? "UTC"),
+    timeZone: options.timeZone,
   });
 }
 
@@ -410,6 +415,8 @@ function projectOverview(input: {
   encounters: Encounter[];
   encounterDiagnoses: Condition[];
   provenances?: Provenance[];
+  asOfDate: string;
+  timeZone?: string;
 }): PatientOverviewPayload {
   const problemConditions = input.problemConditions.filter((condition) =>
     hasConditionCategory(condition, "problem-list-item") && !hasStatus(condition.verificationStatus, "entered-in-error"),
@@ -453,7 +460,7 @@ function projectOverview(input: {
     insurance: [...input.coverages]
       .sort((left, right) => (left.order ?? Number.MAX_SAFE_INTEGER) - (right.order ?? Number.MAX_SAFE_INTEGER))
       .map((coverage) => coverage.payor?.[0]?.display ?? coverage.class?.find((row) => row.name)?.name ?? "Coverage recorded"),
-    billingWeather: deriveBillingWeather(input.coverages, input.eligibilityResponses, new Date().toISOString().slice(0, 10)),
+    billingWeather: deriveBillingWeather(input.coverages, input.eligibilityResponses, input.asOfDate, input.timeZone),
     ...(input.unavailable && Object.keys(input.unavailable).length ? { unavailable: input.unavailable } : {}),
     ...(input.stickyNote ? { stickyNote: stickyNoteSummary(input.stickyNote) } : {}),
     snapshot: {
@@ -509,6 +516,7 @@ export function deriveBillingWeather(
   coverages: readonly Coverage[],
   responses: readonly CoverageEligibilityResponse[],
   asOfDate: string,
+  timeZone?: string,
 ): PatientOverviewBillingWeather {
   const coverage = [...coverages]
     .filter((candidate) => candidate.status === "active" && candidate.id)
@@ -526,7 +534,7 @@ export function deriveBillingWeather(
   if (!response || !Number.isFinite(Date.parse(response.created ?? ""))) {
     return { state: "unknown", ...(planName ? { planName } : {}) };
   }
-  const createdDate = new Date(response.created).toISOString().slice(0, 10);
+  const createdDate = practiceDate(response.created, timeZone ?? "UTC");
   const insurance = response.insurance?.filter((candidate) =>
     normalizedCoverageReference(candidate.coverage.reference) === coverageReference
   );

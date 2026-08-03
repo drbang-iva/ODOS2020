@@ -142,6 +142,14 @@ test("billing weather reads stored eligibility and never promotes uncertain cove
     deriveBillingWeather([activeCoverage], [response({ inforce: true, deductible: 250, itemName: "Medical", benefitTypeCode: "deductible" })], "2026-08-03").state,
     "high-deductible",
   );
+  assert.equal(
+    deriveBillingWeather([activeCoverage], [response({ created: "2026-08-04T00:30:00Z", inforce: true, deductible: 0 })], "2026-08-03", "America/New_York").state,
+    "covered",
+  );
+  assert.equal(
+    deriveBillingWeather([activeCoverage], [response({ created: "2026-08-04T00:30:00Z", inforce: true, deductible: 0 })], "2026-08-03").state,
+    "unknown",
+  );
   assert.deepEqual(
     deriveBillingWeather([activeCoverage], [response({ inforce: false })], "2026-08-03"),
     { state: "self-pay", planName: "Synthetic Health Plan" },
@@ -150,8 +158,8 @@ test("billing weather reads stored eligibility and never promotes uncertain cove
   const fake = new FakeFhir();
   fake.add(patient());
   fake.add(activeCoverage);
-  fake.add(response({ created: new Date().toISOString(), inforce: true, deductible: 0 }));
-  const overview = await loadPatientOverview(fake as never, "p1");
+  fake.add(response({ created: "2026-08-04T00:30:00Z", inforce: true, deductible: 0 }));
+  const overview = await loadPatientOverview(fake as never, "p1", { now: "2026-08-04T00:30:00Z", timeZone: "America/New_York" });
   assert.equal(overview.billingWeather.state, "covered");
   assert.deepEqual(
     fake.searches.find((search) => search.resourceType === "CoverageEligibilityResponse")?.params,
