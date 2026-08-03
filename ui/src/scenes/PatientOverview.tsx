@@ -324,7 +324,7 @@ export function PatientOverview({
                   <PatientProgramPanels
                     compact
                     packageStatus={isVisible("balance-chips") ? <BalanceChips patientReference={`Patient/${patient.id}`} revision={packageRevision} /> : undefined}
-                    seriesStatus={<SeriesTrackerPanel patientReference={`Patient/${patient.id}`} api={api.seriesTracker} compact emptyMessage="No active programs" />}
+                    seriesStatus={<SeriesTrackerPanel patientReference={`Patient/${patient.id}`} api={api.seriesTracker} compact emptyMessage={isVisible("balance-chips") ? "No active treatment series" : "No active programs"} />}
                   />
                 </section>
               )}

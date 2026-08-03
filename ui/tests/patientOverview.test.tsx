@@ -22,6 +22,7 @@ import { SaleSheet } from "../src/components/commercial/SaleSheet";
 import { ClinicHome } from "../src/scenes/ClinicHome";
 import { BillingWeatherReport, ConsultReportDraftPanel, PatientOverview } from "../src/scenes/PatientOverview";
 import { StartExam, type StartExamApi } from "../src/components/StartExam";
+import { SeriesTrackerPanel } from "../src/components/series-tracker/SeriesTrackerPanel";
 
 test("Clinic flow and unsigned-chart clicks both route through PatientOverview", () => {
   useViewState.setState({ view: { kind: "picker" } });
@@ -202,6 +203,22 @@ test("doctor overview omits all commercial panels while front desk retains them"
   act(() => deposit.props.onClick());
   assert.equal(frontDesk.root.findAllByType(SaleSheet).length, 1);
   assert.equal(frontDesk.root.findAllByType(CreditBankDepositSheet).length, 1);
+  act(() => frontDesk.unmount());
+});
+
+test("active-program empty language stays accurate when package status is visible", () => {
+  let doctor!: ReactTestRenderer;
+  act(() => {
+    doctor = create(<RoleProvider initialRole="doctor"><PatientOverview patient={patient} initialOverview={fixture()} /></RoleProvider>);
+  });
+  assert.equal(doctor.root.findByType(SeriesTrackerPanel).props.emptyMessage, "No active programs");
+  act(() => doctor.unmount());
+
+  let frontDesk!: ReactTestRenderer;
+  act(() => {
+    frontDesk = create(<RoleProvider initialRole="front-desk"><PatientOverview patient={patient} initialOverview={fixture()} /></RoleProvider>);
+  });
+  assert.equal(frontDesk.root.findByType(SeriesTrackerPanel).props.emptyMessage, "No active treatment series");
   act(() => frontDesk.unmount());
 });
 
