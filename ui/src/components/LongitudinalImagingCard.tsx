@@ -212,7 +212,11 @@ export function LongitudinalImagingCard({
     }
   }
 
-  if (hideWhenEmpty && images.length === 0) return null;
+  if (hideWhenEmpty && images.length === 0) {
+    return error
+      ? <div role="alert" data-testid="longitudinal-imaging-error" className="rounded border border-red-400/40 bg-red-400/10 p-2 text-xs text-red-100">{error}</div>
+      : null;
+  }
 
   return (
     <section data-testid="longitudinal-imaging-card" className="rounded border border-white/10 bg-bg-mid/60 p-3">

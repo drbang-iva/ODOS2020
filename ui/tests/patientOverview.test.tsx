@@ -175,6 +175,16 @@ test("tier 1 overview panels stay present while empty tier 2 panels stay absent"
   act(() => renderer.unmount());
 });
 
+test("a medication retrieval failure stays visible without rendering an empty Tier 2 panel", () => {
+  const unavailable = fixture();
+  unavailable.snapshot.ophthalmicMedications = [];
+  unavailable.snapshot.systemicMedications = [];
+  unavailable.unavailable = { medicationOrders: "Medication orders are temporarily unavailable." };
+  const html = renderToStaticMarkup(<PatientOverview patient={patient} initialOverview={unavailable} />);
+  assert.doesNotMatch(html, /data-testid="overview-medications"/);
+  assert.match(html, /Medication orders are temporarily unavailable/);
+});
+
 test("tier 2 medication and optical-order panels render when content exists", async () => {
   const activeRx: VisionPrescription = {
     resourceType: "VisionPrescription",
@@ -1052,7 +1062,11 @@ test("a history failure invalidated by sticky save does not surface a stale erro
     rejectHistory(new Error("stale history failure"));
     await historyRequest;
   });
-  assert.equal(renderer.root.findAllByProps({ role: "alert" }).length, 0);
+  assert.equal(
+    renderer.root.findAllByProps({ role: "alert" })
+      .some((alert) => alert.children.join("").includes("stale history failure")),
+    false,
+  );
 });
 
 test("an active history failure replaces the loading placeholder", async () => {
