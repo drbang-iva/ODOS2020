@@ -31,7 +31,13 @@ interface ImagingPayload {
 
 const MAX_FILE_BYTES = 15 * 1024 * 1024;
 
-export function LongitudinalImagingCard({ patientReference }: { patientReference: string }) {
+export function LongitudinalImagingCard({
+  patientReference,
+  hideWhenEmpty = false,
+}: {
+  patientReference: string;
+  hideWhenEmpty?: boolean;
+}) {
   const retriedImages = useRef(new Set<string>());
   const activePatient = useRef(patientReference);
   activePatient.current = patientReference;
@@ -205,6 +211,8 @@ export function LongitudinalImagingCard({ patientReference }: { patientReference
       ));
     }
   }
+
+  if (hideWhenEmpty && images.length === 0) return null;
 
   return (
     <section data-testid="longitudinal-imaging-card" className="rounded border border-white/10 bg-bg-mid/60 p-3">

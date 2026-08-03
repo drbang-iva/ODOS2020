@@ -4,7 +4,7 @@ import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
-import type { Bundle, Encounter, Patient } from "@medplum/fhirtypes";
+import type { Bundle, Encounter, Patient, VisionPrescription } from "@medplum/fhirtypes";
 import type { ClinicSummary } from "../src/lib/clinic-summary";
 import {
   fetchPatientOverview,
@@ -14,6 +14,11 @@ import {
 } from "../src/lib/patient-overview";
 import { openPatientOverview, patientOverviewView, useViewState } from "../src/lib/view-state";
 import { normalizeFhirReference, opticalOrderPath } from "../src/lib/optical-order";
+import { OVERVIEW_PANEL_REGISTRY } from "../src/lib/card-registry";
+import { RoleProvider } from "../src/lib/role-context";
+import { BalanceChips } from "../src/components/commercial/BalanceChips";
+import { CreditBankDepositSheet } from "../src/components/commercial/CreditBankDepositSheet";
+import { SaleSheet } from "../src/components/commercial/SaleSheet";
 import { ClinicHome } from "../src/scenes/ClinicHome";
 import { ConsultReportDraftPanel, PatientOverview } from "../src/scenes/PatientOverview";
 import { StartExam, type StartExamApi } from "../src/components/StartExam";
@@ -98,9 +103,101 @@ test("seeded overview renders real snapshot data, newest-first visits, and linke
   assert.match(html, /Former smoker/);
   assert.ok(html.indexOf("Jun 30") < html.indexOf("Feb 02"));
   assert.match(html, /DX-NEW/);
-  assert.match(html, /Deposit Credit Bank/);
+  assert.doesNotMatch(html, /Deposit Credit Bank|Sell package/);
   assert.match(html, /Start correspondence/);
   assert.match(html, /Start today&#x27;s visit →/);
+});
+
+test("overview registry assigns the doctor panel tiers and hides commercial panels", () => {
+  const panels = new Map(OVERVIEW_PANEL_REGISTRY.map((panel) => [panel.id, panel]));
+  for (const id of ["patient-snapshot", "problem-list", "active-programs", "visit-ledger"] as const) {
+    assert.equal(panels.get(id)?.tier, 1);
+    assert.equal(panels.get(id)?.densityByRole.doctor, "full");
+  }
+  for (const id of ["medications", "consult-drafts", "longitudinal-imaging", "optical-order"] as const) {
+    assert.equal(panels.get(id)?.tier, 2);
+    assert.equal(panels.get(id)?.densityByRole.doctor, "full");
+  }
+  for (const id of ["product-timeline", "demographic-detail", "document-history"] as const) {
+    assert.equal(panels.get(id)?.tier, 3);
+    assert.equal(panels.get(id)?.densityByRole.doctor, "compact");
+  }
+  for (const id of ["sale-sheet", "credit-bank-deposit-sheet", "balance-chips"] as const) {
+    assert.equal(panels.get(id)?.densityByRole.doctor, "hidden");
+    assert.equal(panels.get(id)?.densityByRole["front-desk"], "full");
+  }
+});
+
+test("doctor overview omits all commercial panels while front desk retains them", () => {
+  let doctor!: ReactTestRenderer;
+  act(() => {
+    doctor = create(<RoleProvider initialRole="doctor"><PatientOverview patient={patient} initialOverview={fixture()} /></RoleProvider>);
+  });
+  assert.equal(doctor.root.findAllByType(BalanceChips).length, 0);
+  assert.equal(doctor.root.findAllByType(SaleSheet).length, 0);
+  assert.equal(doctor.root.findAllByType(CreditBankDepositSheet).length, 0);
+  assert.equal(doctor.root.findAllByType("button").some((button) => button.children.join("") === "Sell package"), false);
+  assert.equal(doctor.root.findAllByType("button").some((button) => button.children.join("") === "Deposit Credit Bank"), false);
+  act(() => doctor.unmount());
+
+  let frontDesk!: ReactTestRenderer;
+  act(() => {
+    frontDesk = create(<RoleProvider initialRole="front-desk"><PatientOverview patient={patient} initialOverview={fixture()} /></RoleProvider>);
+  });
+  assert.equal(frontDesk.root.findAllByType(BalanceChips).length, 1);
+  const sell = frontDesk.root.findAllByType("button").find((button) => button.children.join("") === "Sell package");
+  const deposit = frontDesk.root.findAllByType("button").find((button) => button.children.join("") === "Deposit Credit Bank");
+  assert.ok(sell);
+  assert.ok(deposit);
+  act(() => sell.props.onClick());
+  act(() => deposit.props.onClick());
+  assert.equal(frontDesk.root.findAllByType(SaleSheet).length, 1);
+  assert.equal(frontDesk.root.findAllByType(CreditBankDepositSheet).length, 1);
+  act(() => frontDesk.unmount());
+});
+
+test("tier 1 overview panels stay present while empty tier 2 panels stay absent", () => {
+  const empty = fixture();
+  empty.snapshot = {
+    ocularHistory: [], ocularSurgicalHistory: [], medicalConditions: [], socialHistory: [], ophthalmicMedications: [], systemicMedications: [],
+  };
+  empty.visits = [];
+  let renderer!: ReactTestRenderer;
+  act(() => {
+    renderer = create(<RoleProvider initialRole="doctor"><PatientOverview patient={patient} initialOverview={empty} /></RoleProvider>);
+  });
+  for (const testId of ["overview-patient-snapshot", "overview-problem-list", "overview-active-programs", "overview-visit-ledger"]) {
+    assert.equal(renderer.root.findAllByProps({ "data-testid": testId }).length, 1);
+  }
+  assert.equal(renderer.root.findAllByProps({ "data-testid": "overview-medications" }).length, 0);
+  assert.equal(renderer.root.findAllByProps({ "data-testid": "longitudinal-imaging-card" }).length, 0);
+  assert.equal(renderer.root.findAllByType("a").some((link) => link.children.join("") === "Start optical order"), false);
+  act(() => renderer.unmount());
+});
+
+test("tier 2 medication and optical-order panels render when content exists", async () => {
+  const activeRx: VisionPrescription = {
+    resourceType: "VisionPrescription",
+    id: "rx-1",
+    status: "active",
+    created: "2026-07-01",
+    patient: { reference: "Patient/patient-1" },
+  };
+  const api = {
+    fetchOverview: async () => fixture(),
+    saveNote: async () => fixture().stickyNote!,
+    fetchHistory: async () => [],
+    findActiveRx: async () => activeRx,
+  };
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<RoleProvider initialRole="doctor"><PatientOverview patient={patient} initialOverview={fixture()} api={api} /></RoleProvider>);
+    await Promise.resolve();
+  });
+  assert.equal(renderer.root.findAllByProps({ "data-testid": "overview-medications" }).length, 1);
+  const opticalOrder = renderer.root.findAllByType("a").find((link) => link.children.join("") === "Start optical order");
+  assert.equal(opticalOrder?.props.href, "/dispensary/orders?patient=Patient%2Fpatient-1&rx=VisionPrescription%2Frx-1");
+  act(() => renderer.unmount());
 });
 
 test("Start today's visit assigns the provider, starts the encounter, and opens it directly", async () => {
@@ -478,6 +575,26 @@ test("patient-record correspondence drafts from the latest signed encounter with
   renderer.unmount();
 });
 
+test("an overview consult panel stays absent when there is no referral content", async () => {
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(
+      <ConsultReportDraftPanel
+        patientId="patient-1"
+        onClose={() => undefined}
+        hideWhenEmpty
+        api={{
+          listInboundReferrals: async () => [],
+          previewConsultReport: async () => { throw new Error("No referral should be previewed."); },
+        }}
+      />,
+    );
+    await Promise.resolve();
+  });
+  assert.equal(renderer.toJSON(), null);
+  renderer.unmount();
+});
+
 test("a migrated ledger row is visibly tagged and opens its encounter without requiring a diagnosis chip", () => {
   const migrated = fixture();
   migrated.visits[1] = {
@@ -666,7 +783,8 @@ test("zero-data overview renders an honest empty state for every snapshot sectio
   };
   empty.visits = [];
   const html = renderToStaticMarkup(<PatientOverview patient={patient} initialOverview={empty} />);
-  assert.equal((html.match(/None recorded/g) ?? []).length, 6);
+  assert.equal((html.match(/None recorded/g) ?? []).length, 4);
+  assert.doesNotMatch(html, /overview-medications/);
   assert.match(html, /No sticky note recorded/);
   assert.match(html, /Insurance not recorded/);
   assert.match(html, /No matching visits recorded/);
@@ -808,15 +926,13 @@ test("skipping active-Rx lookup clears a prior lookup error", async () => {
     renderer = create(<PatientOverview patient={patient} initialOverview={fixture()} api={api} />);
     await Promise.resolve();
   });
-  let orderButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Start optical order");
-  assert.equal(orderButton?.props.title, "synthetic Rx lookup failure");
+  assert.equal(renderer.root.findAllByType("a").some((link) => link.children.join("") === "Start optical order"), false);
 
   await act(async () => {
     renderer.update(<PatientOverview patient={{ ...patient, id: undefined }} initialOverview={fixture()} api={api} />);
     await Promise.resolve();
   });
-  orderButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Start optical order");
-  assert.equal(orderButton?.props.title, "An active vision prescription is required");
+  assert.equal(renderer.root.findAllByType("a").some((link) => link.children.join("") === "Start optical order"), false);
   act(() => renderer.unmount());
 });
 

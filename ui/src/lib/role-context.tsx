@@ -9,8 +9,8 @@ interface RoleContextValue {
 
 const RoleContext = createContext<RoleContextValue | undefined>(undefined);
 
-export function RoleProvider({ children }: { children: ReactNode }) {
-  const [role, setRole] = useState<RoleId>(DEFAULT_ROLE);
+export function RoleProvider({ children, initialRole = DEFAULT_ROLE }: { children: ReactNode; initialRole?: RoleId }) {
+  const [role, setRole] = useState<RoleId>(initialRole);
   const value = useMemo(
     () => ({
       role,
@@ -29,4 +29,8 @@ export function useRole(): RoleContextValue {
     throw new Error("useRole must be used inside RoleProvider.");
   }
   return context;
+}
+
+export function useOptionalRole(): RoleContextValue | undefined {
+  return useContext(RoleContext);
 }
