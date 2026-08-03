@@ -277,6 +277,24 @@ test("a failed provider degrades to non-PHI status while successful conversation
     ]);
     assert.deepEqual(body.providerErrors, [{ provider: "ghl", code: "conversation-list-unavailable" }]);
     assert.deepEqual(fixture.listProviderCalls, ["twilio", "ghl"]);
+
+    const unresolved = await request(
+      fixture.base,
+      "/communications/conversations?conversation_id=ghl-unavailable-thread",
+      "GET",
+      undefined,
+      "front-desk",
+    );
+    assert.equal(unresolved.status, 200);
+    const unresolvedBody = await unresolved.json() as {
+      conversations: ConversationSummary[];
+      providerErrors: Array<{ provider: string; code: string }>;
+    };
+    assert.deepEqual(unresolvedBody.conversations.map(({ id, provider }) => ({ id, provider })), [
+      { id: "twilio-survivor", provider: "twilio" },
+    ]);
+    assert.deepEqual(unresolvedBody.providerErrors, [{ provider: "ghl", code: "conversation-list-unavailable" }]);
+    assert.deepEqual(fixture.threadReadRequests, []);
   } finally {
     await fixture.close();
   }

@@ -144,24 +144,25 @@ export function registerCommsApiRoutes(
       if (conversationId) {
         const matches = conversations.filter((conversation) => conversation.id === conversationId);
         if (matches.length === 0) {
-          if (providerErrors.length > 0) throw new Error("Conversation resolution is unavailable.");
-          throw new CommsApiNotFoundError("Conversation not found.");
+          if (providerErrors.length === 0) throw new CommsApiNotFoundError("Conversation not found.");
         }
         if (matches.length > 1) {
           throw new CommsApiValidationError("Conversation id is ambiguous; specify its provider.");
         }
-        selectedConversation = matches[0];
-        const selectedProvider = listedProviders.find(({ provider }) =>
-          provider === selectedConversation!.provider)!.adapter;
-        if (includeContent && selectedProvider.getConversationMessages) {
-          selectedConversation = {
-            ...selectedConversation,
-            messages: await selectedProvider.getConversationMessages(conversationId, { includeContent: true }),
-          };
-          conversations = conversations.map((conversation) =>
-            sameConversation(conversation, selectedConversation!) ? selectedConversation! : conversation);
-        } else if (includeContent && selectedConversation.messages.length === 0) {
-          throw new CommsApiCapabilityError("Conversation thread history is not enabled for this communications provider.");
+        if (matches.length === 1) {
+          selectedConversation = matches[0];
+          const selectedProvider = listedProviders.find(({ provider }) =>
+            provider === selectedConversation!.provider)!.adapter;
+          if (includeContent && selectedProvider.getConversationMessages) {
+            selectedConversation = {
+              ...selectedConversation,
+              messages: await selectedProvider.getConversationMessages(conversationId, { includeContent: true }),
+            };
+            conversations = conversations.map((conversation) =>
+              sameConversation(conversation, selectedConversation!) ? selectedConversation! : conversation);
+          } else if (includeContent && selectedConversation.messages.length === 0) {
+            throw new CommsApiCapabilityError("Conversation thread history is not enabled for this communications provider.");
+          }
         }
       }
       conversations = limitConversations(conversations, limit, selectedConversation);
