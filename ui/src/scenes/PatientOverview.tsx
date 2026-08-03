@@ -377,7 +377,9 @@ export function PatientOverview({
                 <span className="odos-ledger-query-note">Live FHIR query</span>
               </div>
               {loadingLedger && <p className="odos-overview-loading">Refreshing visit ledger…</p>}
-              {!loadingLedger && overview.visits.length === 0 && <p className="odos-overview-none">No visits yet</p>}
+              {!loadingLedger && overview.visits.length === 0 && (
+                <p className="odos-overview-none">{filter === "all" && !diagnosisFilter ? "No visits yet" : "No matching visits recorded"}</p>
+              )}
               {!loadingLedger && overview.visits.map((visit) => {
                 const metadata = visitMetadata(visit);
                 return <article

@@ -921,6 +921,27 @@ test("a sparse visit preserves the metadata that is present", () => {
   assert.doesNotMatch(html, /Visit type not recorded|Provider not recorded|Facility not recorded/);
 });
 
+test("an empty filtered ledger does not claim the patient has no visits yet", async () => {
+  const filtered = fixture();
+  filtered.visits = [];
+  const api = {
+    fetchOverview: async () => filtered,
+    fetchHistory: async () => [],
+    saveNote: async () => filtered.stickyNote!,
+  };
+  let renderer!: ReactTestRenderer;
+  act(() => {
+    renderer = create(<PatientOverview patient={patient} initialOverview={fixture()} api={api} />);
+  });
+  const eyeExams = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Eye exams");
+  assert.ok(eyeExams);
+  await act(async () => eyeExams.props.onClick());
+  const rendered = JSON.stringify(renderer.toJSON());
+  assert.match(rendered, /No matching visits recorded/);
+  assert.doesNotMatch(rendered, /No visits yet/);
+  renderer.unmount();
+});
+
 test("the Conditions list caps pathological data at eight rows and expands to the real count", () => {
   const crowded = fixture();
   crowded.snapshot.medicalConditions = Array.from({ length: 31 }, (_, index) => ({
