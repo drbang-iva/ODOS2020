@@ -150,6 +150,9 @@ test("billing weather is doctor-only and defaults uncertain or malformed coverag
   assert.match(high, /Billing weather: High deductible/);
   assert.match(high, /Synthetic Plan · \$250 deductible remaining/);
 
+  const fractional = renderToStaticMarkup(<BillingWeatherReport weather={{ state: "high-deductible", deductibleRemainingCents: 25_050 }} />);
+  assert.match(fractional, /\$250\.50 deductible remaining/);
+
   const vip = renderToStaticMarkup(<BillingWeatherReport weather={{ state: "vip-cash", planName: "Synthetic cash relationship" }} />);
   assert.match(vip, /Billing weather: VIP cash/);
 

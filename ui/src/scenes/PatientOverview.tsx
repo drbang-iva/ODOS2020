@@ -866,7 +866,13 @@ function localDate(value: string): string {
 }
 
 function money(cents: number): string {
-  return new Intl.NumberFormat(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(cents / 100);
+  const fractionDigits = cents % 100 === 0 ? 0 : 2;
+  return new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  }).format(cents / 100);
 }
 
 function shortDate(value: string): string {
