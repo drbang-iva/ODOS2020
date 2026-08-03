@@ -227,18 +227,34 @@ code. Fable codes → Codex evaluates. Codex codes → Fable/Opus evaluates. Cod
 (when present on the PR) is a cheap first pass, never a substitute for the model-level
 eval, never the last word on correctness-critical code. Scope: this gate fires on a
 shippable coding slice (PR-worthy diff), not brainstorming or micro-decisions.
-At the final head, the author posts `@coderabbitai full review` and waits for that
-exact-head review before handing off for evaluation. If no review can be obtained,
-the evaluator must deliberately record the constrained `--ack-no-bot-review`
-exception. Nothing is "done" until an independent evaluation actually ran.
+**Requesting a CodeRabbit review is the EVALUATOR's call, never the author's.** At the
+final head, the author hands off for evaluation and does **not** post `@coderabbitai`.
+The evaluator decides whether the slice warrants an allowance (always for
+claims/billing, PHI/auth/RBAC/audit, clinical data, legacy import/migration, outbound
+patient comms; never for docs-only, test-only, or CI/config), posts the single trigger,
+and adjudicates whatever comes back.
 
-**The author adjudicates every CodeRabbit finding before requesting evaluation, not
-after.** Reply to each thread — fix it, or say why not — before handing off. Added
-2026-08-02 after a Major/Stability finding CodeRabbit posted on PR #297 (the boot-blocking
-scoping defect, with the fix attached) went unanswered through a fixback push; the
-independent evaluator then spent a full round rediscovering it from scratch. A finding
-already sitting on the PR that goes unread is the single most avoidable failure in this
-pipeline — cheaper to close before the eval than to let the eval re-find it.
+**If a CodeRabbit trigger returns a rate-limit or fair-usage notice instead of a review,
+STOP. Do not retry. Do not re-trigger on the next push.** Report
+`CodeRabbit unavailable — <the notice text>` in the sealed bundle and hand off anyway;
+the evaluator records the constrained `--ack-no-bot-review` exception. Retrying a
+throttled trigger consumes a slot from a rolling window and returns nothing — it makes
+the next PR's review *less* likely, not more. Added 2026-08-03 after PR #313, where the
+prior wording ("post `@coderabbitai full review` and wait for that exact-head review")
+produced **eight triggers in sixteen minutes, zero reviews**, on an account already
+under adaptive fair-usage limits. The instruction, not the agent, was the defect.
+
+Nothing is "done" until an independent evaluation actually ran.
+
+**The author adjudicates every CodeRabbit finding ALREADY PRESENT on the PR before
+requesting evaluation, not after.** Reply to each existing thread — fix it, or say why
+not — before handing off. (Findings from a review the *evaluator* triggers after handoff
+are the evaluator's to adjudicate.) Added 2026-08-02 after a Major/Stability finding
+CodeRabbit posted on PR #297 (the boot-blocking scoping defect, with the fix attached)
+went unanswered through a fixback push; the independent evaluator then spent a full round
+rediscovering it from scratch. A finding already sitting on the PR that goes unread is
+the single most avoidable failure in this pipeline — cheaper to close before the eval
+than to let the eval re-find it.
 
 **Every build→evaluate handoff returns a sealed bundle, not a transcript** — summary,
 files touched, checks run + the real command output (never a bare "tests pass"),
