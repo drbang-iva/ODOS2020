@@ -1254,6 +1254,8 @@ test("ocular-health worksheet keeps four described findings in selection order a
     assert.deepEqual(rowCodes(), selections);
     const before = zoneAOptions();
     const mgdControls = renderer.root.findByProps({ "data-finding-controls": "synthetic-mgd" });
+    assert.ok(renderer.root.findByProps({ role: "group", "aria-label": "What is present" }));
+    assert.ok(renderer.root.findByProps({ role: "group", "aria-label": "Describe each" }));
     assert.equal(renderer.root.findAllByProps({ "data-finding-row": "synthetic-mgd" }).length, 1);
     assert.ok(mgdControls.findAllByType(OdosChips).some((chips) => chips.props.ariaLabel === "MGD grade"));
     assert.ok(mgdControls.findAllByType(OdosChips).some((chips) => chips.props.ariaLabel === "MGD type"));
@@ -1343,13 +1345,21 @@ test("all four finding qualifier controls write the server-validated value shape
       .find((control) => control.props.ariaLabel === ariaLabel)!;
     act(() => chips("MGD grade").findAllByType("button").find((button) => button.children.join("") === "Marked")!.props.onClick());
     act(() => chips("MGD type").findAllByType("button").find((button) => button.children.join("") === "Seborrheic")!.props.onClick());
-    act(() => renderer.root.findByProps({ "aria-label": "MGD score" }).props.onChange({ target: { value: "3" } }));
+    const numeric = () => renderer.root.findByProps({ "aria-label": "MGD score" });
+    act(() => numeric().props.onChange({ target: { value: "9" } }));
+    assert.equal(numeric().props.value, 4);
+    act(() => numeric().props.onChange({ target: { value: "2.6" } }));
+    assert.equal(numeric().props.value, 3);
     act(() => renderer.root.findAllByType(OdosSelect)
       .find((select) => select.props.ariaLabel === "MGD clock-hour arc from clock hour")!.props.onChange("2"));
     act(() => renderer.root.findAllByType(OdosSelect)
       .find((select) => select.props.ariaLabel === "MGD clock-hour arc to clock hour")!.props.onChange("5"));
     act(() => chips("MGD clock-hour arc direction").findAllByType("button")
       .find((button) => button.children.join("") === "Counterclockwise")!.props.onClick());
+    assert.deepEqual(chips("MGD clock-hour arc direction").props.selected, [false]);
+    act(() => chips("MGD clock-hour arc direction").findAllByType("button")
+      .find((button) => button.children.join("") === "Counterclockwise")!.props.onClick());
+    assert.deepEqual(chips("MGD clock-hour arc direction").props.selected, [false]);
     const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Ocular Health")!;
     await act(async () => saveButton.props.onClick());
     assert.deepEqual(postedBody?.eyes.OD.findingDetails, {

@@ -363,13 +363,13 @@ function EyePanel({ eye, capture, field, gradeFields, normalTemplate, allowDefer
       </label>)}
       {capture.state === "abnormal" && field && (
         <div className="mt-4 space-y-4">
-          <div aria-label="What is present" className="space-y-3">
+          <div role="group" aria-label="What is present" className="space-y-3">
             <div className="text-xs font-semibold uppercase tracking-wide text-[color:var(--odos-muted)]">What is present</div>
             <OptionList ariaLabel="Priority ocular health findings" options={priority} allOptions={options} selected={capture.selections} onChange={onSelections} />
             {additional.length > 0 && <details><summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-[color:var(--odos-muted)]">More findings ({additional.length})</summary><div className="mt-3"><OptionList ariaLabel="Additional ocular health findings" options={additional} allOptions={options} selected={capture.selections} onChange={onSelections} /></div></details>}
           </div>
           {worksheetOptions.length > 0 && (
-            <div aria-label="Describe each" className="space-y-3">
+            <div role="group" aria-label="Describe each" className="space-y-3">
               <div className="text-xs font-semibold uppercase tracking-wide text-[color:var(--odos-muted)]">Describe each</div>
               {worksheetOptions.map((option) => (
                 <FindingWorksheetRow
@@ -513,7 +513,14 @@ function FindingQualifierControl({ qualifier, value, onChange }: {
             min={qualifier.min}
             max={qualifier.max}
             step={qualifier.step}
-            onChange={(event) => onChange(event.target.value === "" ? undefined : Number(event.target.value))}
+            onChange={(event) => {
+              if (event.target.value === "") {
+                onChange(undefined);
+                return;
+              }
+              const parsed = Number(event.target.value);
+              if (Number.isFinite(parsed)) onChange(normalizeQualifierNumber(parsed, qualifier.min, qualifier.max, qualifier.step));
+            }}
             className="min-h-11 min-w-0 flex-1 bg-transparent px-3 text-sm text-[color:var(--odos-text)] outline-none"
           />
           {qualifier.unit && <span className="flex min-h-11 items-center border-l border-[color:var(--odos-line)] px-3 text-sm text-[color:var(--odos-muted)]">{qualifier.unit}</span>}
@@ -544,7 +551,7 @@ function FindingQualifierControl({ qualifier, value, onChange }: {
       {extent && <div className="mt-2"><OdosChips
         options={[{ value: true, label: "Clockwise" }, { value: false, label: "Counterclockwise" }]}
         selected={[extent.clockwise]}
-        onChange={(next) => onChange(next.length ? { ...extent, clockwise: next[0]! } : undefined)}
+        onChange={(next) => { if (next.length) onChange({ ...extent, clockwise: next[0]! }); }}
         ariaLabel={`${qualifier.display} direction`}
         exclusive
       /></div>}
@@ -554,6 +561,12 @@ function FindingQualifierControl({ qualifier, value, onChange }: {
 
 function findingChipLabel(display: string): string {
   return display.replace(/(^|[\s(/-])\p{L}/gu, (wordStart) => wordStart.toUpperCase());
+}
+
+function normalizeQualifierNumber(value: number, min: number, max: number, step: number): number {
+  const clamped = Math.min(max, Math.max(min, value));
+  const snapped = min + Math.round((clamped - min) / step) * step;
+  return Number(formatStepValue(Math.min(max, Math.max(min, snapped)), step));
 }
 
 function replaceSelectionGroup(selected: string[], group: string[], nextGroup: string[]): string[] {
