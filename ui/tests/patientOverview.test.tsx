@@ -22,6 +22,13 @@ import { SaleSheet } from "../src/components/commercial/SaleSheet";
 import { ClinicHome } from "../src/scenes/ClinicHome";
 import { BillingWeatherReport, ConsultReportDraftPanel, PatientOverview } from "../src/scenes/PatientOverview";
 import { StartExam, type StartExamApi } from "../src/components/StartExam";
+import { SeriesTrackerPanel } from "../src/components/series-tracker/SeriesTrackerPanel";
+
+const seriesTrackerApiStub = {
+  fetchSeries: async () => [],
+  fetchProtocols: async () => [],
+  prescribe: async () => { throw new Error("The overview test does not prescribe programs."); },
+};
 
 test("Clinic flow and unsigned-chart clicks both route through PatientOverview", () => {
   useViewState.setState({ view: { kind: "picker" } });
@@ -205,6 +212,22 @@ test("doctor overview omits all commercial panels while front desk retains them"
   act(() => frontDesk.unmount());
 });
 
+test("active-program empty language stays accurate when package status is visible", () => {
+  let doctor!: ReactTestRenderer;
+  act(() => {
+    doctor = create(<RoleProvider initialRole="doctor"><PatientOverview patient={patient} initialOverview={fixture()} api={{ seriesTracker: seriesTrackerApiStub }} /></RoleProvider>);
+  });
+  assert.equal(doctor.root.findByType(SeriesTrackerPanel).props.emptyMessage, "No active programs");
+  act(() => doctor.unmount());
+
+  let frontDesk!: ReactTestRenderer;
+  act(() => {
+    frontDesk = create(<RoleProvider initialRole="front-desk"><PatientOverview patient={patient} initialOverview={fixture()} api={{ seriesTracker: seriesTrackerApiStub }} /></RoleProvider>);
+  });
+  assert.equal(frontDesk.root.findByType(SeriesTrackerPanel).props.emptyMessage, "No active treatment series");
+  act(() => frontDesk.unmount());
+});
+
 test("tier 1 overview panels stay present while empty tier 2 panels stay absent", () => {
   const empty = fixture();
   empty.snapshot = {
@@ -224,13 +247,24 @@ test("tier 1 overview panels stay present while empty tier 2 panels stay absent"
   act(() => renderer.unmount());
 });
 
-test("a medication retrieval failure stays visible without rendering an empty Tier 2 panel", () => {
+test("a medication retrieval failure stays distinct from empty without rendering an empty Tier 2 panel", () => {
   const unavailable = fixture();
   unavailable.snapshot.ophthalmicMedications = [];
   unavailable.snapshot.systemicMedications = [];
   unavailable.unavailable = { medicationOrders: "Medication orders are temporarily unavailable." };
   const html = renderToStaticMarkup(<PatientOverview patient={patient} initialOverview={unavailable} />);
   assert.doesNotMatch(html, /data-testid="overview-medications"/);
+  assert.match(html, /Medication orders are temporarily unavailable/);
+  assert.doesNotMatch(html, /No active problems|No visits yet/);
+});
+
+test("a medication retrieval warning remains visible beside partial medication data", () => {
+  const partial = fixture();
+  partial.snapshot.systemicMedications = [];
+  partial.unavailable = { medicationOrders: "Medication orders are temporarily unavailable." };
+  const html = renderToStaticMarkup(<PatientOverview patient={patient} initialOverview={partial} />);
+  assert.match(html, /data-testid="overview-medications"/);
+  assert.match(html, /One drop nightly/);
   assert.match(html, /Medication orders are temporarily unavailable/);
 });
 
@@ -833,7 +867,7 @@ test("an expanded migrated row with no diagnoses keeps the existing empty state 
   assert.doesNotMatch(rendered, /placeholder|sample|synthetic/i);
 });
 
-test("zero-data overview renders an honest empty state for every snapshot section", () => {
+test("zero-data doctor overview renders quiet Tier 1 states and no empty Tier 2 panels", async () => {
   const empty = fixture();
   empty.insurance = [];
   empty.stickyNote = undefined;
@@ -841,12 +875,121 @@ test("zero-data overview renders an honest empty state for every snapshot sectio
     ocularHistory: [], ocularSurgicalHistory: [], medicalConditions: [], socialHistory: [], ophthalmicMedications: [], systemicMedications: [],
   };
   empty.visits = [];
-  const html = renderToStaticMarkup(<PatientOverview patient={patient} initialOverview={empty} />);
-  assert.equal((html.match(/None recorded/g) ?? []).length, 4);
-  assert.doesNotMatch(html, /overview-medications/);
-  assert.match(html, /No sticky note recorded/);
-  assert.match(html, /Insurance not recorded/);
-  assert.match(html, /No matching visits recorded/);
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(JSON.stringify({ definitions: [], images: [] }), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <RoleProvider initialRole="doctor">
+          <PatientOverview
+            patient={patient}
+            initialOverview={empty}
+            api={{
+              fetchOverview: async () => empty,
+              fetchHistory: async () => [],
+              saveNote: async () => { throw new Error("The empty-state test does not save notes."); },
+              seriesTracker: seriesTrackerApiStub,
+            }}
+          />
+        </RoleProvider>,
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    const html = JSON.stringify(renderer.toJSON());
+    assert.doesNotMatch(html, /None recorded/);
+    assert.match(html, /No active problems/);
+    assert.match(html, /No active programs/);
+    assert.match(html, /No visits yet/);
+    assert.doesNotMatch(html, /overview-medications|longitudinal-imaging-card|Start optical order/);
+    assert.match(html, /No sticky note recorded/);
+    assert.match(html, /Insurance not recorded/);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a sparse visit collapses absent metadata to one marker", () => {
+  const sparse = fixture();
+  sparse.visits = [{
+    encounterId: "sparse",
+    date: "2026-08-01T12:00:00Z",
+    visitType: "Visit type not recorded",
+    status: "Preliminary",
+    diagnoses: [],
+  }];
+  let renderer!: ReactTestRenderer;
+  act(() => {
+    renderer = create(<PatientOverview patient={patient} initialOverview={sparse} api={{ seriesTracker: seriesTrackerApiStub }} />);
+  });
+  const head = renderer.root.findByProps({ className: "odos-visit-head" });
+  assert.deepEqual(head.children[0].children, ["—"]);
+  assert.equal(head.findAllByProps({ className: "odos-visit-type" }).length, 0);
+  const rendered = JSON.stringify(renderer.toJSON());
+  assert.doesNotMatch(rendered, /Visit type not recorded|Provider not recorded|Facility not recorded/);
+  renderer.unmount();
+});
+
+test("a sparse visit preserves the metadata that is present", () => {
+  const sparse = fixture();
+  sparse.visits = [{
+    encounterId: "partial",
+    date: "2026-08-01T12:00:00Z",
+    provider: "Dr. Present",
+    visitType: "Visit type not recorded",
+    status: "Final",
+    diagnoses: [],
+  }];
+  const html = renderToStaticMarkup(<PatientOverview patient={patient} initialOverview={sparse} />);
+  assert.match(html, /Dr\. Present/);
+  assert.doesNotMatch(html, /Visit type not recorded|Provider not recorded|Facility not recorded/);
+});
+
+test("an empty filtered ledger does not claim the patient has no visits yet", async () => {
+  const filtered = fixture();
+  filtered.visits = [];
+  const api = {
+    fetchOverview: async () => filtered,
+    fetchHistory: async () => [],
+    saveNote: async () => filtered.stickyNote!,
+    seriesTracker: seriesTrackerApiStub,
+  };
+  let renderer!: ReactTestRenderer;
+  act(() => {
+    renderer = create(<PatientOverview patient={patient} initialOverview={fixture()} api={api} />);
+  });
+  const eyeExams = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Eye exams");
+  assert.ok(eyeExams);
+  await act(async () => eyeExams.props.onClick());
+  const rendered = JSON.stringify(renderer.toJSON());
+  assert.match(rendered, /No matching visits recorded/);
+  assert.doesNotMatch(rendered, /No visits yet/);
+  renderer.unmount();
+});
+
+test("the Conditions list caps pathological data at eight rows and expands to the real count", () => {
+  const crowded = fixture();
+  crowded.snapshot.medicalConditions = Array.from({ length: 31 }, (_, index) => ({
+    id: `condition-${index + 1}`,
+    name: `Condition ${index + 1}`,
+  }));
+  let renderer!: ReactTestRenderer;
+  act(() => {
+    renderer = create(<PatientOverview patient={patient} initialOverview={crowded} api={{ seriesTracker: seriesTrackerApiStub }} />);
+  });
+  const panel = renderer.root.findByProps({ "data-testid": "overview-problem-list" });
+  assert.equal(panel.findAllByType("li").length, 8);
+  const showAll = panel.findByProps({ className: "odos-overview-list-toggle" });
+  assert.equal(showAll.children.join(""), "Show all 31");
+  act(() => showAll.props.onClick());
+  assert.equal(panel.findAllByType("li").length, 31);
+  assert.equal(panel.findByProps({ className: "odos-overview-list-toggle" }).children.join(""), "Show first 8");
+  renderer.unmount();
 });
 
 test("visit and diagnosis filters produce a new server request instead of filtering a prefetched page", async () => {
