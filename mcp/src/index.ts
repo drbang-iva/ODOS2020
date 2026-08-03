@@ -77,6 +77,7 @@ import {
   startMcpAfterCommsInitialization,
 } from "./comms/comms-config.js";
 import { registerTwilioWebhookRoutes } from "./comms/twilio-routes.js";
+import { registerGhlWebhookRoutes } from "./comms/ghl-routes.js";
 import { persistTwilioWebhookEvent } from "./comms/comms-persistence.js";
 import { registerCommsApiRoutes } from "./comms/comms-api.js";
 import {
@@ -5697,6 +5698,15 @@ async function startMcpServer(): Promise<void> {
       const app = express();
       const transports = new Map<string, SSEServerTransport>();
       const smartState = new SmartAuthorizationState();
+      const ghlRegistration = commsRegistrations.find(
+        (registration) => registration.provider === "ghl",
+      );
+      if (ghlRegistration?.provider === "ghl") {
+        // GHL remains the conversation source of truth; the cockpit reads inbound history live.
+        registerGhlWebhookRoutes(app, {
+          auth: { locationId: ghlRegistration.config.locationId },
+        });
+      }
 
       app.use(
         "/clinical-graph/imaging",

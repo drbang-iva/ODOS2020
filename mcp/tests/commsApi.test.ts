@@ -167,6 +167,26 @@ test("staff SMS requires a stable idempotency key and retries never dispatch twi
   }
 });
 
+test("staff SMS persists the selected provider message identifier", async () => {
+  const fixture = await startServer({ providerName: "ghl" });
+  try {
+    const sent = await request(fixture.base, "/communications/messages", "POST", {
+      provider: "ghl",
+      patientReference: PATIENT_REFERENCE,
+      body: "Synthetic GHL staff message",
+      idempotencyKey: "synthetic-ghl-send-0001",
+    }, "front-desk");
+    assert.equal(sent.status, 200);
+    assert.equal(fixture.persistedCommunications[0].identifier?.some((identifier) =>
+      identifier.system === "https://odos2020.com/fhir/NamingSystem/ghl-message-id"
+      && identifier.value === "SM-synthetic"), true);
+    assert.equal(fixture.persistedCommunications[0].identifier?.some((identifier) =>
+      identifier.system === "https://odos2020.com/fhir/NamingSystem/twilio-message-sid"), false);
+  } finally {
+    await fixture.close();
+  }
+});
+
 test("a post-send FHIR failure leaves a durable unknown outcome and blocks duplicate dispatch", async () => {
   const fixture = await startServer({ failSmsCompletion: true });
   const body = {
@@ -240,7 +260,7 @@ test("call history applies the requested limit after filtering the provider wind
   }
 });
 
-async function startServer(options: { recordingEnabled?: boolean; recordingVisible?: boolean; callVisible?: boolean; failSmsCompletion?: boolean } = {}) {
+async function startServer(options: { recordingEnabled?: boolean; recordingVisible?: boolean; callVisible?: boolean; failSmsCompletion?: boolean; providerName?: "twilio" | "ghl" } = {}) {
   const providerCalls: string[] = [];
   const callListRequests: Array<{ limit?: number }> = [];
   const listRequests: Array<{ includeContent?: boolean }> = [];
@@ -265,7 +285,10 @@ async function startServer(options: { recordingEnabled?: boolean; recordingVisib
     }],
   };
   const provider: CommsProvider = {
-    name: "twilio",
+    name: options.providerName ?? "twilio",
+    messageIdentifierSystem: options.providerName === "ghl"
+      ? "https://odos2020.com/fhir/NamingSystem/ghl-message-id"
+      : "https://odos2020.com/fhir/NamingSystem/twilio-message-sid",
     capabilities: { sms: true, calls: true, email: false, contacts: false, conversations: true, reviews: false },
     async listConversations(request) {
       listRequests.push(request ?? {});
@@ -341,14 +364,18 @@ async function startServer(options: { recordingEnabled?: boolean; recordingVisib
               }],
             };
           }
-          if (params.identifier?.startsWith("https://odos2020.com/fhir/NamingSystem/twilio-message-sid|")) {
+          if (
+            params.identifier?.startsWith("https://odos2020.com/fhir/NamingSystem/twilio-message-sid|")
+            || params.identifier?.startsWith("https://odos2020.com/fhir/NamingSystem/ghl-message-id|")
+          ) {
+            const system = params.identifier.slice(0, params.identifier.lastIndexOf("|"));
             const value = params.identifier.slice(params.identifier.lastIndexOf("|") + 1);
             return {
               resourceType: "Bundle",
               type: "searchset",
               entry: persistedCommunications
                 .filter((communication) => communication.identifier?.some((identifier) =>
-                  identifier.system === "https://odos2020.com/fhir/NamingSystem/twilio-message-sid"
+                  identifier.system === system
                   && identifier.value === value))
                 .map((resource) => ({ resource: callerView(resource) })),
             };
@@ -461,7 +488,7 @@ async function startServer(options: { recordingEnabled?: boolean; recordingVisib
       };
     },
     dispatch: {
-      providers: () => ["twilio"],
+      providers: () => [options.providerName ?? "twilio"],
       getAdapter: (_provider, callerFhir) => {
         adapterFhirs.push(callerFhir);
         return provider;

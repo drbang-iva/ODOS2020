@@ -31,6 +31,9 @@ export function createSuppressedCommsProvider(
 ): CommsProvider {
   return {
     name: provider.name,
+    ...(provider.messageIdentifierSystem
+      ? { messageIdentifierSystem: provider.messageIdentifierSystem }
+      : {}),
     capabilities: provider.capabilities,
     ...(provider.sendEmail ? {
       async sendEmail(request: SendEmailRequest): Promise<SendResult> {
@@ -73,6 +76,12 @@ export function createSuppressedCommsProvider(
     } : {}),
     ...(provider.listConversations ? {
       listConversations: (request = {}) => provider.listConversations!(request),
+    } : {}),
+    ...(provider.searchContacts ? {
+      searchContacts: (request) => provider.searchContacts!(request),
+    } : {}),
+    ...(provider.upsertContact ? {
+      upsertContact: (contact) => provider.upsertContact!(contact),
     } : {}),
   };
 }

@@ -91,6 +91,30 @@ test("communications dispatch resolves configured Google Workspace and Twilio pr
   );
 });
 
+test("communications dispatch resolves a configured GHL provider behind ODOS suppression", () => {
+  const registrations = commsAdapterRegistrationsFromEnv({
+    ODOS_COMMS_PROVIDERS: "ghl",
+    GHL_LOCATION_ID: "location-synthetic-1",
+    GHL_ACCESS_TOKEN: " synthetic-location-token\n",
+  });
+  const dispatch = createCommsDispatch(registrations, {
+    practiceTimeZone: "America/New_York",
+  });
+
+  assert.deepEqual(dispatch.providers(), ["ghl"]);
+  assert.equal(registrations[0]?.provider, "ghl");
+  if (registrations[0]?.provider !== "ghl") throw new Error("Expected GHL registration.");
+  assert.equal(registrations[0].config.accessToken, "synthetic-location-token");
+  const adapter = dispatch.getAdapter("ghl", fakeFhir());
+  assert.equal(adapter.name, "ghl");
+  assert.equal(adapter.capabilities.sms, true);
+  assert.equal(adapter.capabilities.conversations, true);
+  assert.equal(adapter.capabilities.calls, false);
+  assert.equal(adapter.messageIdentifierSystem, "https://odos2020.com/fhir/NamingSystem/ghl-message-id");
+  assert.equal(typeof adapter.searchContacts, "function");
+  assert.equal(typeof adapter.upsertContact, "function");
+});
+
 test("Twilio Voice env configuration is all-or-nothing and stays disabled for the existing SMS-only shape", () => {
   const [smsOnly] = commsAdapterRegistrationsFromEnv({
     ODOS_COMMS_PROVIDERS: "twilio",
@@ -123,6 +147,13 @@ test("communications env config fails closed when selected provider credentials 
   assert.throws(
     () => commsAdapterRegistrationsFromEnv({ ODOS_COMMS_PROVIDERS: "unknown" }),
     /unsupported communications provider/i,
+  );
+  assert.throws(
+    () => commsAdapterRegistrationsFromEnv({
+      ODOS_COMMS_PROVIDERS: "ghl",
+      GHL_LOCATION_ID: "location-synthetic-1",
+    }),
+    /missing GHL_ACCESS_TOKEN/i,
   );
   assert.throws(
     () => commsAdapterRegistrationsFromEnv({

@@ -67,7 +67,7 @@ test("staff-sent SMS and its status callback converge into one patient-linked co
   await persistStaffSentSms(fhir, {
     communication: reservation.communication,
     idempotencyKey: "synthetic-send-0001",
-    messageSid: MESSAGE_SID,
+    providerMessageId: MESSAGE_SID,
   }, { now: () => NOW });
   await persistTwilioWebhookEvent(fhir, "sms-status", {
     accountSid: ACCOUNT_SID,
@@ -86,6 +86,58 @@ test("staff-sent SMS and its status callback converge into one patient-linked co
   assert.equal(communications[0].sent, NOW);
   assert.equal(communications[0].payload?.[0].contentString, "Synthetic staff message");
   assert.match(JSON.stringify(communications[0].category), /patient-sms-outbound/);
+});
+
+test("an idempotency key cannot be replayed through a different communications provider", async () => {
+  const fhir = new InMemoryCommsFhir();
+  const input = {
+    idempotencyKey: "synthetic-provider-bound-send",
+    patientReference: "Patient/synthetic-1",
+    senderReference: "Practitioner/synthetic-staff",
+    body: "Synthetic provider-bound message",
+  };
+  const twilio = await reserveStaffSmsSend(fhir, {
+    ...input,
+    claimId: "synthetic-provider-claim-1",
+    provider: "twilio",
+    providerMessageIdentifierSystem: ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM,
+  });
+  assert.equal(twilio.state, "owner");
+  const ghl = await reserveStaffSmsSend(fhir, {
+    ...input,
+    claimId: "synthetic-provider-claim-2",
+    provider: "ghl",
+    providerMessageIdentifierSystem: "https://odos2020.com/fhir/NamingSystem/ghl-message-id",
+  });
+  assert.equal(ghl.state, "conflict");
+});
+
+test("a legacy reservation without a provider identifier remains bound to Twilio", async () => {
+  const fhir = new InMemoryCommsFhir();
+  fhir.seed({
+    resourceType: "Communication",
+    id: "legacy-provider-reservation",
+    status: "preparation",
+    identifier: [
+      { system: ODOS_COMMS_STAFF_SEND_IDENTIFIER_SYSTEM, value: "synthetic-legacy-provider-send" },
+    ],
+    subject: { reference: "Patient/synthetic-1" },
+    sender: { reference: "Practitioner/synthetic-staff" },
+    recipient: [{ reference: "Patient/synthetic-1" }],
+    payload: [{ contentString: "Synthetic legacy provider message" }],
+  } satisfies Communication);
+
+  const reservation = await reserveStaffSmsSend(fhir, {
+    idempotencyKey: "synthetic-legacy-provider-send",
+    claimId: "synthetic-legacy-provider-claim",
+    patientReference: "Patient/synthetic-1",
+    senderReference: "Practitioner/synthetic-staff",
+    body: "Synthetic legacy provider message",
+    provider: "ghl",
+    providerMessageIdentifierSystem: "https://odos2020.com/fhir/NamingSystem/ghl-message-id",
+  });
+
+  assert.equal(reservation.state, "conflict");
 });
 
 test("a status callback racing send completion is reconciled into one canonical history entry", async () => {
@@ -107,7 +159,7 @@ test("a status callback racing send completion is reconciled into one canonical 
   await persistStaffSentSms(fhir, {
     communication: reservation.communication,
     idempotencyKey: "synthetic-send-race",
-    messageSid: MESSAGE_SID,
+    providerMessageId: MESSAGE_SID,
   }, { now: () => NOW });
 
   const communications = fhir.ofType<Communication>("Communication");
@@ -143,7 +195,7 @@ test("a callback that conditionally creates after send reconciliation is folded 
   await persistStaffSentSms(fhir, {
     communication: reservation.communication,
     idempotencyKey: "synthetic-send-late-race",
-    messageSid: MESSAGE_SID,
+    providerMessageId: MESSAGE_SID,
   }, { now: () => NOW });
   createRace.release();
   await callback;
