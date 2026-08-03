@@ -55,6 +55,26 @@ test("dry-eye QuestionnaireResponse builder uses canonical instrument and derive
   assert.ok(scoreSourceReferences.every((reference) => !reference.startsWith("Device/")));
 });
 
+test("dry-eye questionnaire builders reject negative and non-finite scores", () => {
+  assert.throws(
+    () => buildDryEyeQuestionnaireResponse({
+      instrument: "OSDI",
+      patientReference: "Patient/p1",
+      totalScore: Number.POSITIVE_INFINITY,
+    }),
+    /finite number of zero or more/,
+  );
+  assert.throws(
+    () => buildDryEyeQuestionnaireScoreObservation({
+      instrument: "OSDI",
+      patientReference: "Patient/p1",
+      questionnaireResponseReference: "QuestionnaireResponse/qr1",
+      score: -1,
+    }),
+    /finite number of zero or more/,
+  );
+});
+
 test("dry-eye canonical installer resources include all four questionnaire definitions and extensions", () => {
   const canonical = buildDryEyeCanonicalResources();
   const urls = canonical.map((resource) => resource.url);

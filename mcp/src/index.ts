@@ -2375,7 +2375,7 @@ const createDryEyeQuestionnaireResponseSchema = z.object({
   authored: isoTimestampSchema.optional(),
   author_reference: z.string().optional(),
   source_reference: z.string().optional(),
-  score: z.number().nonnegative(),
+  score: z.number().finite().nonnegative(),
   ...v04ProvenanceAgentSchema,
 });
 const createMeibographyObservationSchema = z.object({

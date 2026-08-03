@@ -35,6 +35,7 @@ export function buildDryEyeQuestionnaireResponse(
   input: DryEyeQuestionnaireResponseInput,
 ): QuestionnaireResponse {
   assertDryEyeQuestionnaireInstrument(input.instrument);
+  assertDryEyeQuestionnaireScore(input.totalScore);
 
   const authored = input.authored ?? new Date().toISOString();
   return {
@@ -58,6 +59,7 @@ export function buildDryEyeQuestionnaireScoreObservation(
   input: DryEyeQuestionnaireScoreObservationInput,
 ): Observation {
   assertDryEyeQuestionnaireInstrument(input.instrument);
+  assertDryEyeQuestionnaireScore(input.score);
   const effectiveDateTime = input.effectiveDateTime ?? new Date().toISOString();
 
   return {
@@ -98,5 +100,11 @@ function assertDryEyeQuestionnaireInstrument(
     throw new Error(
       `Unsupported dry-eye questionnaire "${value}". Expected one of: ${DRY_EYE_QUESTIONNAIRE_INSTRUMENTS.join(", ")}.`,
     );
+  }
+}
+
+function assertDryEyeQuestionnaireScore(value: number): void {
+  if (!Number.isFinite(value) || value < 0) {
+    throw new Error("Dry-eye questionnaire score must be a finite number of zero or more.");
   }
 }
