@@ -50,8 +50,8 @@ const WRITE_HEADERS = { "X-ODOS-Source": "mcp/save_section_observations" } as co
 const EYES: Eye[] = ["OD", "OS"];
 
 const clockHourExtentSchema = z.object({
-  from: z.number().finite(),
-  to: z.number().finite(),
+  from: z.number().finite().min(1).max(12),
+  to: z.number().finite().min(1).max(12),
   clockwise: z.boolean(),
 }).strict();
 
@@ -481,8 +481,12 @@ function isClockHourExtent(value: unknown): value is ClockHourExtentValue {
   return typeof value === "object" && value !== null && !Array.isArray(value) &&
     typeof (value as Record<string, unknown>).from === "number" &&
     Number.isFinite((value as Record<string, unknown>).from) &&
+    (value as Record<string, number>).from >= 1 &&
+    (value as Record<string, number>).from <= 12 &&
     typeof (value as Record<string, unknown>).to === "number" &&
     Number.isFinite((value as Record<string, unknown>).to) &&
+    (value as Record<string, number>).to >= 1 &&
+    (value as Record<string, number>).to <= 12 &&
     typeof (value as Record<string, unknown>).clockwise === "boolean";
 }
 

@@ -496,6 +496,46 @@ test("finding qualifiers round-trip all four kinds independently by finding and 
     ["OD", ["finding-a", "finding-b"], odDetails],
     ["OS", ["finding-a"], osDetails],
   ]);
+
+  const invalidFhir = new MemoryFhir();
+  const invalid = await handleCustomSectionCaptureRequest(
+    clinicalDeps("clinician", invalidFhir, [definition]),
+    {
+      authHeader: AUTH,
+      params: { stableKey: definition.stableKey },
+      body: {
+        patientReference: "Patient/p-invalid-extent",
+        encounterReference: "Encounter/e-invalid-extent",
+        eyes: {
+          OD: {
+            state: "abnormal",
+            customFields: [{ code: field.localCode, value: ["finding-a"] }],
+            findingDetails: {
+              "finding-a": { span: { from: 0, to: 13, clockwise: true } },
+            },
+          },
+        },
+      },
+    },
+  );
+  assert.equal(invalid.status, 400);
+  assert.equal(invalidFhir.observations.length, 0);
+
+  const storedExtent = component(fhir.observations[0], code("OD", "finding-a", "span"));
+  assert.ok(storedExtent);
+  storedExtent.valueString = '{"from":0,"to":13,"clockwise":true}';
+  const readInvalid = await handleCustomSectionHistoryRequest(
+    clinicalDeps("clinician", fhir, [definition]),
+    {
+      authHeader: AUTH,
+      params: { stableKey: definition.stableKey },
+      query: { patient: "Patient/p-qualified", encounter: "Encounter/e-qualified" },
+    },
+  );
+  const invalidRows = (readInvalid.body as {
+    rows: Array<{ eye: string; findingDetails?: Record<string, Record<string, unknown>> }>;
+  }).rows;
+  assert.equal(invalidRows[0]?.findingDetails?.["finding-a"]?.span, undefined);
 });
 
 test("OH-1 seeds nine editable structures and persists explicit normal, abnormal, nested, other, and deferred states", async () => {
