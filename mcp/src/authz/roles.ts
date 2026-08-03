@@ -233,7 +233,6 @@ const FRONT_DESK_PATIENT_COMMUNICATION_RULE: OdosResourceRule = {
   resourceType: "Communication",
   interactions: UPDATE_INTERACTIONS,
   scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
-  hiddenFields: ["payload", "note", "text"],
 };
 
 const CLINICAL_WRITE_CONSTRAINTS: WriteConstraintDeclaration[] = [
@@ -465,7 +464,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
     display: "Front Desk",
     description:
       "Scheduling, demographic, and financial-context access inside a patient compartment; no clinical writes.",
-    businessActions: ["chart.read", "scheduling.manage", "demographics.update", "billing-context.read", "payment.charge", "payment.seal-day", "claims.manage", "document.fax-send", "communications.read", "communications.send", "communications.call"],
+    businessActions: ["chart.read", "scheduling.manage", "demographics.update", "billing-context.read", "payment.charge", "payment.seal-day", "claims.manage", "document.fax-send", "communications.read", "communications.content.read", "communications.send", "communications.call"],
     membershipParameters: [
       {
         name: "patient_compartment",

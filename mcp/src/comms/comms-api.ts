@@ -12,7 +12,11 @@ import {
 import type { FhirAuditRecorder } from "../fhir-client.js";
 import { searchBounded } from "../fhir-search.js";
 import type { AuthenticatedStaff } from "../payments/payment-charge-handler.js";
-import type { CommsDispatch, CommsDispatchFhir } from "./comms-config.js";
+import {
+  COMMS_CHANNEL_ROLES,
+  type CommsDispatch,
+  type CommsDispatchFhir,
+} from "./comms-config.js";
 import type { CommsProvider, ConversationSummary } from "./comms-provider.js";
 import {
   ODOS_COMMS_CATEGORY_SYSTEM,
@@ -40,12 +44,26 @@ export interface CommsApiRouteDeps {
 class CommsApiValidationError extends Error {}
 class CommsApiCapabilityError extends Error {}
 class CommsApiNotFoundError extends Error {}
+class CommsProviderTimeoutError extends Error {}
 
 type CommsApiResult =
   | { status: number; body: unknown }
   | { status: number; media: { contentType: string; bytes: Uint8Array } };
 
 const MAX_CALL_HISTORY_WINDOW = 1_000;
+const MAX_CONVERSATIONS_PER_PROVIDER = 100;
+const CONVERSATION_PROVIDER_TIMEOUT_MS = 10_000;
+
+interface ConversationProviderError {
+  provider: string;
+  code: "conversation-list-timeout" | "conversation-list-unavailable";
+}
+
+interface ListedProviderConversations {
+  provider: string;
+  adapter: CommsProvider;
+  conversations: ConversationSummary[];
+}
 
 export function registerCommsApiRoutes(
   app: Pick<Application, "get" | "post">,
@@ -62,24 +80,98 @@ export function registerCommsApiRoutes(
     async (staff) => {
       const patientReference = patientReferenceFromQuery(req);
       const conversationId = conversationIdFromQuery(req);
-      const limit = numberFromQuery(req, "limit", 1, 100);
-      const provider = adapter(deps, providerFromQuery(req, deps.dispatch, "transactional-sms"), staff.fhir);
-      if (!provider.listConversations) throw new CommsApiCapabilityError("Conversation history is not enabled for this communications provider.");
+      const limit = numberFromQuery(req, "limit", 1, 100) ?? 50;
+      const explicitProvider = explicitProviderFromQuery(req);
+      const providerNames = explicitProvider
+        ? [explicitProvider]
+        : routedProviderNames(deps.dispatch);
+      if (providerNames.length === 0) {
+        throw new CommsApiCapabilityError("Conversation history is not configured for this practice.");
+      }
       const includeContent = hasBusinessAction(staff.actorRole, "communications.content.read");
-      let conversations = await provider.listConversations({
+      const listRequest = {
         ...(patientReference ? { patientReference } : {}),
-        ...(limit ? { limit } : {}),
+        limit: MAX_CONVERSATIONS_PER_PROVIDER,
         includeContent,
-      });
-      if (includeContent && conversationId && provider.getConversationMessages) {
-        const selected = conversations.find((conversation) => conversation.id === conversationId);
-        if (selected) {
-          const messages = await provider.getConversationMessages(conversationId, { includeContent: true });
+      };
+      let listedProviders: ListedProviderConversations[];
+      let providerErrors: ConversationProviderError[] = [];
+      if (explicitProvider) {
+        const provider = adapter(deps, explicitProvider, staff.fhir);
+        if (!provider.listConversations) {
+          throw new CommsApiCapabilityError("Conversation history is not enabled for this communications provider.");
+        }
+        listedProviders = [{
+          provider: explicitProvider,
+          adapter: provider,
+          conversations: await withConversationProviderTimeout(() => provider.listConversations!(listRequest)),
+        }];
+      } else {
+        const results = await Promise.all(providerNames.map(async (providerName) => {
+          try {
+            const provider = adapter(deps, providerName, staff.fhir);
+            if (!provider.listConversations) return { kind: "skipped" as const };
+            return {
+              kind: "listed" as const,
+              value: {
+                provider: providerName,
+                adapter: provider,
+                conversations: await withConversationProviderTimeout(() => provider.listConversations!(listRequest)),
+              },
+            };
+          } catch (error) {
+            return {
+              kind: "error" as const,
+              error: {
+                provider: providerName,
+                code: error instanceof CommsProviderTimeoutError
+                  ? "conversation-list-timeout" as const
+                  : "conversation-list-unavailable" as const,
+              },
+            };
+          }
+        }));
+        listedProviders = results.flatMap((result) => result.kind === "listed" ? [result.value] : []);
+        providerErrors = results.flatMap((result) => result.kind === "error" ? [result.error] : []);
+      }
+      let conversations: ConversationSummary[] = listedProviders
+        .flatMap(({ provider, conversations: rows }) => rows.map((conversation) => ({
+          ...conversation,
+          provider,
+        })))
+        .sort(compareConversationActivity);
+      let selectedConversation: ConversationSummary | undefined;
+      if (conversationId) {
+        const matches = conversations.filter((conversation) => conversation.id === conversationId);
+        if (matches.length === 0) {
+          if (providerErrors.length > 0) throw new Error("Conversation resolution is unavailable.");
+          throw new CommsApiNotFoundError("Conversation not found.");
+        }
+        if (matches.length > 1) {
+          throw new CommsApiValidationError("Conversation id is ambiguous; specify its provider.");
+        }
+        selectedConversation = matches[0];
+        const selectedProvider = listedProviders.find(({ provider }) =>
+          provider === selectedConversation!.provider)!.adapter;
+        if (includeContent && selectedProvider.getConversationMessages) {
+          selectedConversation = {
+            ...selectedConversation,
+            messages: await selectedProvider.getConversationMessages(conversationId, { includeContent: true }),
+          };
           conversations = conversations.map((conversation) =>
-            conversation.id === conversationId ? { ...conversation, messages } : conversation);
+            sameConversation(conversation, selectedConversation!) ? selectedConversation! : conversation);
+        } else if (includeContent && selectedConversation.messages.length === 0) {
+          throw new CommsApiCapabilityError("Conversation thread history is not enabled for this communications provider.");
         }
       }
-      return { status: 200, body: { conversations: includeContent ? conversations : redactConversationBodies(conversations) } };
+      conversations = limitConversations(conversations, limit, selectedConversation);
+      return {
+        status: 200,
+        body: {
+          conversations: includeContent ? conversations : redactConversationBodies(conversations),
+          providerErrors,
+        },
+      };
     },
   ));
 
@@ -382,6 +474,65 @@ function redactConversationBodies(conversations: ConversationSummary[]): Convers
     ...conversation,
     messages: conversation.messages.map(({ body: _body, ...message }) => message),
   }));
+}
+
+async function withConversationProviderTimeout<T>(operation: () => Promise<T>): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      operation(),
+      new Promise<never>((_resolve, reject) => {
+        timeout = setTimeout(
+          () => reject(new CommsProviderTimeoutError("Conversation provider timed out.")),
+          CONVERSATION_PROVIDER_TIMEOUT_MS,
+        );
+        timeout.unref();
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
+
+function routedProviderNames(dispatch: CommsDispatch): string[] {
+  return [...new Set(COMMS_CHANNEL_ROLES.flatMap((role) => {
+    const provider = dispatch.providerFor(role);
+    return provider ? [provider] : [];
+  }))];
+}
+
+function explicitProviderFromQuery(req: Request): string | undefined {
+  const explicit = queryString(req, "provider");
+  return explicit ? providerName(explicit) : undefined;
+}
+
+function compareConversationActivity(left: ConversationSummary, right: ConversationSummary): number {
+  const leftTime = conversationActivityTime(left.updatedAt);
+  const rightTime = conversationActivityTime(right.updatedAt);
+  if (leftTime === rightTime) return 0;
+  return rightTime > leftTime ? 1 : -1;
+}
+
+function conversationActivityTime(updatedAt: string | undefined): number {
+  if (!updatedAt) return Number.NEGATIVE_INFINITY;
+  const value = Date.parse(updatedAt);
+  return Number.isFinite(value) ? value : Number.NEGATIVE_INFINITY;
+}
+
+function sameConversation(left: ConversationSummary, right: ConversationSummary): boolean {
+  return left.id === right.id && left.provider === right.provider;
+}
+
+function limitConversations(
+  conversations: ConversationSummary[],
+  limit: number,
+  selected: ConversationSummary | undefined,
+): ConversationSummary[] {
+  const limited = conversations.slice(0, limit);
+  if (!selected || limited.some((conversation) => sameConversation(conversation, selected))) {
+    return limited;
+  }
+  return [...limited.slice(0, limit - 1), selected].sort(compareConversationActivity);
 }
 
 function providerFromQuery(

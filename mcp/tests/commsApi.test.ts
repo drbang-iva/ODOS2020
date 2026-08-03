@@ -14,15 +14,18 @@ const CALL_ID = `CA${"3".repeat(32)}`;
 const OTHER_CALL_ID = `CA${"8".repeat(32)}`;
 const RECORDING_ID = `RE${"4".repeat(32)}`;
 
-test("communications RBAC hides message content from front desk at the FHIR policy layer", () => {
-  const frontDesk = buildMedplumAccessPolicy(getRoleDeclaration("front-desk"));
+test("communications RBAC gives front desk patient content without widening its FHIR scope", () => {
+  const frontDeskDeclaration = getRoleDeclaration("front-desk");
+  const frontDesk = buildMedplumAccessPolicy(frontDeskDeclaration);
   const frontDeskRule = frontDesk.resource?.find((rule) =>
-    rule.resourceType === "Communication" && rule.hiddenFields?.includes("payload"));
+    rule.resourceType === "Communication"
+    && rule.criteria === "Communication?_compartment=%patient_compartment");
   assert.ok(frontDeskRule);
-  assert.deepEqual(frontDeskRule.hiddenFields, ["payload", "note", "text"]);
+  assert.equal(frontDeskRule.hiddenFields, undefined);
   assert.equal(frontDeskRule.criteria, "Communication?_compartment=%patient_compartment");
   assert.equal(frontDeskRule.interaction?.includes("create"), true);
   assert.equal(frontDeskRule.interaction?.includes("update"), true);
+  assert.equal(frontDeskDeclaration.businessActions.includes("communications.content.read"), true);
   const internalOfficeRule = frontDesk.resource?.find((rule) =>
     rule.resourceType === "Communication" && rule.criteria?.includes("internal-office"));
   assert.ok(internalOfficeRule);
@@ -39,6 +42,22 @@ test("communications RBAC hides message content from front desk at the FHIR poli
   }
   const auditor = buildMedplumAccessPolicy(getRoleDeclaration("auditor"));
   assert.equal(auditor.resource?.some((rule) => rule.resourceType === "Communication"), false);
+});
+
+test("FHIR policy construction preserves a declared hidden-field mask", () => {
+  const policy = buildMedplumAccessPolicy({
+    id: "front-desk",
+    display: "Synthetic Masked Role",
+    description: "Exercises the retained field-mask mechanism.",
+    businessActions: [],
+    resourceRules: [{
+      resourceType: "Communication",
+      interactions: ["read"],
+      scope: { kind: "practice" },
+      hiddenFields: ["payload", "note", "text"],
+    }],
+  });
+  assert.deepEqual(policy.resource?.[0].hiddenFields, ["payload", "note", "text"]);
 });
 
 test("every communications endpoint rejects missing authentication and audits every authenticated wrong-role denial", async () => {
@@ -66,20 +85,20 @@ test("every communications endpoint rejects missing authentication and audits ev
   }
 });
 
-test("conversation reads use caller-bound FHIR and expose bodies only to clinical/content roles", async () => {
+test("conversation reads use caller-bound FHIR and expose bodies to front desk and clinical content roles", async () => {
   const fixture = await startServer();
   try {
     const desk = await request(fixture.base, "/communications/conversations?patient_id=synthetic-1&limit=10", "GET", undefined, "front-desk");
     assert.equal(desk.status, 200);
     const deskBody = await desk.json() as { conversations: ConversationSummary[] };
     assert.equal(deskBody.conversations[0].messageCount, 1);
-    assert.equal(deskBody.conversations[0].messages[0].body, undefined);
+    assert.equal(deskBody.conversations[0].messages[0].body, "Synthetic scheduling content");
 
     const clinician = await request(fixture.base, "/communications/conversations?patient_id=synthetic-1&limit=10", "GET", undefined, "clinician");
     assert.equal(clinician.status, 200);
     const clinicianBody = await clinician.json() as { conversations: ConversationSummary[] };
     assert.equal(clinicianBody.conversations[0].messages[0].body, "Synthetic scheduling content");
-    assert.deepEqual(fixture.listRequests.map((entry) => entry.includeContent), [false, true]);
+    assert.deepEqual(fixture.listRequests.map((entry) => entry.includeContent), [true, true]);
     assert.equal(fixture.adapterFhirs.length, 2);
     assert.equal(fixture.authenticatedFhirs.length, 2);
     assert.notEqual(fixture.authenticatedFhirs[0], fixture.authenticatedFhirs[1]);
@@ -89,10 +108,10 @@ test("conversation reads use caller-bound FHIR and expose bodies only to clinica
   }
 });
 
-test("a content-authorized GHL thread read is on-demand and never runs for the conversation list", async () => {
+test("a front-desk GHL thread read is on-demand and never runs for the conversation list", async () => {
   const fixture = await startServer({ providerName: "ghl" });
   try {
-    const list = await request(fixture.base, "/communications/conversations?patient_id=synthetic-1", "GET", undefined, "clinician");
+    const list = await request(fixture.base, "/communications/conversations?patient_id=synthetic-1", "GET", undefined, "front-desk");
     assert.equal(list.status, 200);
     assert.deepEqual(fixture.threadReadRequests, []);
 
@@ -104,17 +123,7 @@ test("a content-authorized GHL thread read is on-demand and never runs for the c
       "front-desk",
     );
     assert.equal(desk.status, 200);
-    assert.deepEqual(fixture.threadReadRequests, []);
-
-    const clinician = await request(
-      fixture.base,
-      "/communications/conversations?patient_id=synthetic-1&conversation_id=conversation-synthetic-1",
-      "GET",
-      undefined,
-      "clinician",
-    );
-    assert.equal(clinician.status, 200);
-    const body = await clinician.json() as { conversations: ConversationSummary[] };
+    const body = await desk.json() as { conversations: ConversationSummary[] };
     assert.deepEqual(body.conversations[0].messages, [{
       id: "ghl-thread-message-1",
       direction: "inbound",
@@ -131,7 +140,243 @@ test("a content-authorized GHL thread read is on-demand and never runs for the c
   }
 });
 
-test("front-desk SMS succeeds through masked FHIR responses and reaches a durable sent reservation", async () => {
+test("the API content gate strips previews and bodies and skips thread hydration without content.read", async () => {
+  const frontDesk = getRoleDeclaration("front-desk");
+  const contentActionIndex = frontDesk.businessActions.indexOf("communications.content.read");
+  assert.notEqual(contentActionIndex, -1);
+  frontDesk.businessActions.splice(contentActionIndex, 1);
+  try {
+    const fixture = await startServer({
+      providers: ["twilio", "ghl"],
+      channelRoutes: { voice: "twilio", "transactional-sms": "ghl" },
+      conversationRows: {
+        twilio: [{
+          id: "conversation-synthetic-1",
+          preview: "Synthetic Twilio preview",
+          messages: [{ id: "twilio-message-1", direction: "inbound", status: "completed", body: "Synthetic Twilio body" }],
+        }],
+        ghl: [{
+          id: "conversation-synthetic-2",
+          preview: "Synthetic GHL preview",
+          messages: [{ id: "ghl-message-1", direction: "inbound", status: "delivered", body: "Synthetic GHL body" }],
+        }],
+      },
+    });
+    try {
+      const response = await request(
+        fixture.base,
+        "/communications/conversations?conversation_id=conversation-synthetic-1",
+        "GET",
+        undefined,
+        "front-desk",
+      );
+      assert.equal(response.status, 200);
+      const body = await response.json() as { conversations: ConversationSummary[] };
+      assert.equal(body.conversations.length, 2);
+      assert.equal(body.conversations.every((conversation) => conversation.preview === undefined), true);
+      assert.equal(body.conversations.every((conversation) =>
+        conversation.messages.every((message) => message.body === undefined)), true);
+      assert.deepEqual(fixture.listRequests.map((entry) => entry.includeContent), [false, false]);
+      assert.deepEqual(fixture.listProviderCalls, ["twilio", "ghl"]);
+      assert.deepEqual(fixture.threadReadRequests, []);
+    } finally {
+      await fixture.close();
+    }
+  } finally {
+    frontDesk.businessActions.splice(contentActionIndex, 0, "communications.content.read");
+  }
+});
+
+test("conversation listing merges distinct routed providers, sorts globally, tags rows, and limits after merge", async () => {
+  const fixture = await startServer({
+    providers: ["twilio", "ghl"],
+    channelRoutes: {
+      voice: "twilio",
+      "transactional-sms": "ghl",
+      "marketing-sms": "ghl",
+      email: "twilio",
+    },
+    conversationRows: {
+      twilio: [{
+        id: "twilio-newest",
+        patientReference: PATIENT_REFERENCE,
+        updatedAt: "2026-08-03T15:00:00.000Z",
+        unreadCount: 1,
+        messages: [{ id: "twilio-message", direction: "inbound", status: "completed" }],
+      }, {
+        id: "twilio-without-date",
+        patientReference: PATIENT_REFERENCE,
+        messages: [],
+      }],
+      ghl: [{
+        id: "ghl-middle",
+        patientReference: PATIENT_REFERENCE,
+        updatedAt: "2026-08-03T14:00:00.000Z",
+        unreadCount: 2,
+        messages: [{ id: "ghl-message", direction: "outbound", status: "delivered" }],
+      }, {
+        id: "ghl-oldest-dated",
+        patientReference: PATIENT_REFERENCE,
+        updatedAt: "2026-08-03T13:00:00.000Z",
+        messages: [],
+      }],
+    },
+  });
+  try {
+    const response = await request(fixture.base, "/communications/conversations?limit=4", "GET", undefined, "front-desk");
+    assert.equal(response.status, 200);
+    const body = await response.json() as {
+      conversations: ConversationSummary[];
+      providerErrors: unknown[];
+    };
+    assert.deepEqual(body.conversations.map(({ id, provider }) => ({ id, provider })), [
+      { id: "twilio-newest", provider: "twilio" },
+      { id: "ghl-middle", provider: "ghl" },
+      { id: "ghl-oldest-dated", provider: "ghl" },
+      { id: "twilio-without-date", provider: "twilio" },
+    ]);
+    assert.equal(body.conversations.every((conversation) =>
+      conversation.patientReference === PATIENT_REFERENCE), true);
+    assert.deepEqual(body.providerErrors, []);
+    assert.deepEqual(fixture.listProviderCalls, ["twilio", "ghl"]);
+    assert.deepEqual(fixture.listRequests.map(({ limit }) => limit), [100, 100]);
+
+    const limited = await request(fixture.base, "/communications/conversations?limit=2", "GET", undefined, "front-desk");
+    assert.equal(limited.status, 200);
+    assert.deepEqual((await limited.json() as { conversations: ConversationSummary[] }).conversations
+      .map(({ id, provider }) => ({ id, provider })), [
+      { id: "twilio-newest", provider: "twilio" },
+      { id: "ghl-middle", provider: "ghl" },
+    ]);
+    assert.deepEqual(fixture.listProviderCalls, ["twilio", "ghl", "twilio", "ghl"]);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("a failed provider degrades to non-PHI status while successful conversations remain", async () => {
+  const fixture = await startServer({
+    providers: ["twilio", "ghl"],
+    channelRoutes: { voice: "twilio", "transactional-sms": "ghl" },
+    conversationFailures: ["ghl"],
+    conversationRows: {
+      twilio: [{ id: "twilio-survivor", updatedAt: "2026-08-03T15:00:00.000Z", messages: [] }],
+    },
+  });
+  try {
+    const response = await request(fixture.base, "/communications/conversations", "GET", undefined, "front-desk");
+    assert.equal(response.status, 200);
+    const responseText = await response.text();
+    assert.equal(responseText.includes("+18645550199"), false);
+    const body = JSON.parse(responseText) as {
+      conversations: ConversationSummary[];
+      providerErrors: Array<{ provider: string; code: string }>;
+    };
+    assert.deepEqual(body.conversations.map(({ id, provider }) => ({ id, provider })), [
+      { id: "twilio-survivor", provider: "twilio" },
+    ]);
+    assert.deepEqual(body.providerErrors, [{ provider: "ghl", code: "conversation-list-unavailable" }]);
+    assert.deepEqual(fixture.listProviderCalls, ["twilio", "ghl"]);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("a routed provider without conversation-list capability is skipped without an error", async () => {
+  const fixture = await startServer({
+    providers: ["twilio", "email-only"],
+    channelRoutes: { "transactional-sms": "twilio", email: "email-only" },
+    conversationUnsupported: ["email-only"],
+    conversationRows: {
+      twilio: [{ id: "twilio-only", messages: [] }],
+    },
+  });
+  try {
+    const response = await request(fixture.base, "/communications/conversations", "GET", undefined, "front-desk");
+    assert.equal(response.status, 200);
+    const body = await response.json() as {
+      conversations: ConversationSummary[];
+      providerErrors: unknown[];
+    };
+    assert.deepEqual(body.conversations.map(({ id, provider }) => ({ id, provider })), [
+      { id: "twilio-only", provider: "twilio" },
+    ]);
+    assert.deepEqual(body.providerErrors, []);
+    assert.deepEqual(fixture.listProviderCalls, ["twilio"]);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("thread hydration resolves the owning provider before limiting and unresolvable ids return 404", async () => {
+  const fixture = await startServer({
+    providers: ["twilio", "ghl"],
+    channelRoutes: { voice: "twilio", "transactional-sms": "ghl" },
+    conversationRows: {
+      twilio: [{ id: "newer-thread", updatedAt: "2026-08-03T15:00:00.000Z", messages: [] }],
+      ghl: [{ id: "requested-older-thread", updatedAt: "2026-08-03T13:00:00.000Z", messages: [] }],
+    },
+  });
+  try {
+    const hydrated = await request(
+      fixture.base,
+      "/communications/conversations?limit=1&conversation_id=requested-older-thread",
+      "GET",
+      undefined,
+      "front-desk",
+    );
+    assert.equal(hydrated.status, 200);
+    const hydratedBody = await hydrated.json() as { conversations: ConversationSummary[] };
+    assert.equal(hydratedBody.conversations.length, 1);
+    assert.equal(hydratedBody.conversations[0].id, "requested-older-thread");
+    assert.equal(hydratedBody.conversations[0].provider, "ghl");
+    assert.equal(hydratedBody.conversations[0].messages[0].body, "Synthetic GHL thread content");
+    assert.deepEqual(fixture.threadAdapterProviders, ["ghl"]);
+
+    const missing = await request(
+      fixture.base,
+      "/communications/conversations?limit=1&conversation_id=missing-thread",
+      "GET",
+      undefined,
+      "front-desk",
+    );
+    assert.equal(missing.status, 404);
+    assert.deepEqual(await missing.json(), { error: "Conversation not found." });
+    assert.deepEqual(fixture.threadAdapterProviders, ["ghl"]);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("an explicit provider query keeps conversation listing on that one provider", async () => {
+  const fixture = await startServer({
+    providers: ["twilio", "ghl"],
+    channelRoutes: { voice: "twilio", "transactional-sms": "ghl" },
+    conversationRows: {
+      twilio: [{ id: "twilio-thread", messages: [] }],
+      ghl: [{ id: "ghl-thread", messages: [] }],
+    },
+  });
+  try {
+    const response = await request(
+      fixture.base,
+      "/communications/conversations?provider=ghl",
+      "GET",
+      undefined,
+      "front-desk",
+    );
+    assert.equal(response.status, 200);
+    const body = await response.json() as { conversations: ConversationSummary[] };
+    assert.deepEqual(body.conversations.map(({ id, provider }) => ({ id, provider })), [
+      { id: "ghl-thread", provider: "ghl" },
+    ]);
+    assert.deepEqual(fixture.listProviderCalls, ["ghl"]);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("front-desk SMS succeeds and reaches a durable sent reservation", async () => {
   const fixture = await startServer();
   try {
     const messageRequest = {
@@ -356,14 +601,19 @@ async function startServer(options: {
   callVisible?: boolean;
   failSmsCompletion?: boolean;
   providerName?: "twilio" | "ghl";
-  providers?: Array<"twilio" | "ghl">;
+  providers?: string[];
   channelRoutes?: Partial<Record<"voice" | "transactional-sms" | "marketing-sms" | "email", string>>;
+  conversationRows?: Record<string, ConversationSummary[]>;
+  conversationFailures?: string[];
+  conversationUnsupported?: string[];
 } = {}) {
   const providerCalls: string[] = [];
   const adapterProviders: string[] = [];
   const callListRequests: Array<{ limit?: number }> = [];
-  const listRequests: Array<{ includeContent?: boolean }> = [];
+  const listRequests: Array<{ provider: string; limit?: number; includeContent?: boolean }> = [];
+  const listProviderCalls: string[] = [];
   const threadReadRequests: Array<{ conversationId: string; includeContent?: boolean }> = [];
+  const threadAdapterProviders: string[] = [];
   const grants: OdosAuditEventRecord[] = [];
   const denials: OdosAuditEventRecord[] = [];
   const persistedCommunications: Communication[] = [];
@@ -374,6 +624,7 @@ async function startServer(options: {
     patientReference: PATIENT_REFERENCE,
     updatedAt: "2026-08-02T15:00:00.000Z",
     messageCount: 1,
+    preview: "Synthetic scheduling preview",
     messages: [{
       id: "comm-1",
       direction: "inbound",
@@ -390,20 +641,6 @@ async function startServer(options: {
       ? "https://odos2020.com/fhir/NamingSystem/ghl-message-id"
       : "https://odos2020.com/fhir/NamingSystem/twilio-message-sid",
     capabilities: { sms: true, calls: true, email: false, contacts: false, conversations: true, reviews: false },
-    async listConversations(request) {
-      listRequests.push(request ?? {});
-      return [structuredClone(conversation)];
-    },
-    async getConversationMessages(conversationId, request) {
-      threadReadRequests.push({ conversationId, ...request });
-      return [{
-        id: "ghl-thread-message-1",
-        direction: "inbound",
-        status: "delivered",
-        occurredAt: "2026-08-03T13:00:00.000Z",
-        ...(request?.includeContent ? { body: "Synthetic GHL thread content" } : {}),
-      }];
-    },
     async sendSms() {
       providerCalls.push("sendSms");
       return { outcome: "sent", providerMessageId: "SM-synthetic" };
@@ -605,12 +842,38 @@ async function startServer(options: {
       getAdapter: (providerName, callerFhir) => {
         adapterProviders.push(providerName);
         adapterFhirs.push(callerFhir);
+        const conversationListUnsupported = options.conversationUnsupported?.includes(providerName) === true;
         return {
           ...provider,
           name: providerName,
+          capabilities: {
+            ...provider.capabilities,
+            conversations: !conversationListUnsupported,
+          },
           messageIdentifierSystem: providerName === "ghl"
             ? "https://odos2020.com/fhir/NamingSystem/ghl-message-id"
             : "https://odos2020.com/fhir/NamingSystem/twilio-message-sid",
+          listConversations: conversationListUnsupported
+            ? undefined
+            : async (request = {}) => {
+              listProviderCalls.push(providerName);
+              listRequests.push({ provider: providerName, ...request });
+              if (options.conversationFailures?.includes(providerName)) {
+                throw new Error("Synthetic vendor failure for +18645550199");
+              }
+              return structuredClone(options.conversationRows?.[providerName] ?? [conversation]);
+            },
+          async getConversationMessages(conversationId, request) {
+            threadAdapterProviders.push(providerName);
+            threadReadRequests.push({ conversationId, ...request });
+            return [{
+              id: `${providerName}-thread-message-1`,
+              direction: "inbound",
+              status: "delivered",
+              occurredAt: "2026-08-03T13:00:00.000Z",
+              ...(request?.includeContent ? { body: "Synthetic GHL thread content" } : {}),
+            }];
+          },
         };
       },
       initialize: async () => undefined,
@@ -639,7 +902,9 @@ async function startServer(options: {
     adapterProviders,
     callListRequests,
     listRequests,
+    listProviderCalls,
     threadReadRequests,
+    threadAdapterProviders,
     grants,
     denials,
     persistedCommunications,
