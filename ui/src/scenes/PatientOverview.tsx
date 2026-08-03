@@ -13,6 +13,9 @@ import {
   type VisitLedgerFilter,
 } from "../lib/patient-overview";
 import { useViewState } from "../lib/view-state";
+import { overviewPanelDensity, type OverviewPanelId } from "../lib/card-registry";
+import { useOptionalRole } from "../lib/role-context";
+import { DEFAULT_ROLE } from "../lib/roles";
 import { CLINIC_PATH } from "./DeskHome";
 import { PinnedOfficeNote } from "../components/OfficeChannel";
 import { BalanceChips } from "../components/commercial/BalanceChips";
@@ -20,6 +23,7 @@ import { CreditBankDepositSheet } from "../components/commercial/CreditBankDepos
 import { SaleSheet } from "../components/commercial/SaleSheet";
 import { SeriesTrackerPanel } from "../components/series-tracker/SeriesTrackerPanel";
 import { PatientProgramPanels } from "../components/series-tracker/PatientProgramPanels";
+import { LongitudinalImagingCard } from "../components/LongitudinalImagingCard";
 import { OdosSelect } from "../components/inputs/OdosSelect";
 import { StartExam } from "../components/StartExam";
 import {
@@ -58,6 +62,9 @@ export function PatientOverview({
   api?: PatientOverviewApi;
 }) {
   const setView = useViewState((state) => state.setView);
+  const role = useOptionalRole()?.role ?? DEFAULT_ROLE;
+  const density = (panelId: OverviewPanelId) => overviewPanelDensity(panelId, role);
+  const isVisible = (panelId: OverviewPanelId) => density(panelId) !== "hidden";
   const [overview, setOverview] = useState(initialOverview);
   const [filter, setFilter] = useState<VisitLedgerFilter>("all");
   const [diagnosisFilter, setDiagnosisFilter] = useState("");
@@ -134,6 +141,7 @@ export function PatientOverview({
   const chartNumber = patient.identifier?.find((identifier) => identifier.value)?.value;
   const demographics = [age !== undefined ? String(age) : undefined, sexLabel(patient.gender)].filter(Boolean).join(" · ");
   const selectedDiagnosis = useMemo(() => overview?.diagnosisChoices.find((choice) => `${choice.system}|${choice.code}` === diagnosisFilter), [overview, diagnosisFilter]);
+  const hasMedications = Boolean(overview?.snapshot.ophthalmicMedications.length || overview?.snapshot.systemicMedications.length);
 
   async function applyFilter(nextFilter: VisitLedgerFilter, diagnosis?: typeof selectedDiagnosis | null) {
     if (!patient.id) return;
@@ -227,34 +235,25 @@ export function PatientOverview({
         </nav>
         <div className="odos-overview-head">
           <h1>{name}</h1>
-          <div className="odos-overview-meta">
-            <span>{demographics || "Age/sex not recorded"}</span>
-            <span>DOB <b>{patient.birthDate ? localDate(patient.birthDate) : "not recorded"}</b></span>
-            <span>Chart <b>{chartNumber ? `#${chartNumber}` : "not recorded"}</b></span>
-            <span>{overview?.insurance.length ? overview.insurance.join(" · ") : overview?.unavailable?.insurance ?? "Insurance not recorded"}</span>
-          </div>
-          {patient.id && (
-            <PatientProgramPanels
-              packageStatus={<BalanceChips patientReference={`Patient/${patient.id}`} revision={packageRevision} />}
-              seriesStatus={<SeriesTrackerPanel patientReference={`Patient/${patient.id}`} />}
-            />
-          )}
+          {isVisible("demographic-detail") && density("demographic-detail") === "compact" ? (
+            <details className="odos-overview-demographics">
+              <summary>Demographic detail</summary>
+              <DemographicDetail demographics={demographics} patient={patient} chartNumber={chartNumber} overview={overview} />
+            </details>
+          ) : isVisible("demographic-detail") ? (
+            <DemographicDetail demographics={demographics} patient={patient} chartNumber={chartNumber} overview={overview} />
+          ) : null}
           <div className="odos-overview-actions">
-            <button
+            {isVisible("consult-drafts") && <button
               type="button"
               className="odos-overview-button"
               disabled={!patient.id}
               onClick={() => setCorrespondenceOpen(true)}
             >
               Start correspondence
-            </button>
-            <button type="button" className="odos-overview-button" onClick={() => setDepositingCreditBank(true)}>Deposit Credit Bank</button>
-            <button type="button" className="odos-overview-button" onClick={() => setSellingPackage(true)}>Sell package</button>
-            {patient.id && activeRxId ? (
-              <a className="odos-overview-button" href={opticalOrderPath(patient.id, activeRxId)} onClick={navigateWithinApp}>Start optical order</a>
-            ) : (
-              <button type="button" className="odos-overview-button" disabled title={rxError ?? (activeRxId === undefined ? "Checking for an active prescription" : "An active vision prescription is required")}>Start optical order</button>
-            )}
+            </button>}
+            {isVisible("credit-bank-deposit-sheet") && <button type="button" className="odos-overview-button" onClick={() => setDepositingCreditBank(true)}>Deposit Credit Bank</button>}
+            {isVisible("sale-sheet") && <button type="button" className="odos-overview-button" onClick={() => setSellingPackage(true)}>Sell package</button>}
             <StartExam patient={patient} />
           </div>
           <PinnedOfficeNote patientId={patient.id} />
@@ -276,7 +275,7 @@ export function PatientOverview({
           ) : (
             <React.Fragment>
               <button type="button" onClick={() => setEditing(true)}>Edit</button>
-              <button type="button" aria-expanded={historyOpen} aria-controls="patient-sticky-history" onClick={showHistory}>History</button>
+              {isVisible("document-history") && <button type="button" aria-expanded={historyOpen} aria-controls="patient-sticky-history" onClick={showHistory}>History</button>}
             </React.Fragment>
           )}
         </section>
@@ -296,19 +295,46 @@ export function PatientOverview({
           </section>
         )}
 
-        {correspondenceOpen && patient.id && (
-          <ConsultReportDraftPanel
-            patientId={patient.id}
-            onClose={() => setCorrespondenceOpen(false)}
-          />
-        )}
-
         {error && <p className="odos-overview-error" role="alert">{error}</p>}
         {!overview && !error && <p className="odos-overview-loading">Loading patient overview…</p>}
         {overview && (
           <div className="odos-overview-grid">
-            <PatientSnapshot snapshot={overview.snapshot} medicationOrdersUnavailable={overview.unavailable?.medicationOrders} />
-            <section className="odos-overview-card odos-ledger-card">
+            <div className="odos-overview-stack">
+              {isVisible("patient-snapshot") && <PatientSnapshot snapshot={overview.snapshot} />}
+              {isVisible("problem-list") && <ProblemListPanel rows={overview.snapshot.medicalConditions} />}
+              {isVisible("active-programs") && patient.id && (
+                <section className="odos-overview-card odos-programs-card" data-testid="overview-active-programs">
+                  <span className="odos-overview-edge" />
+                  <div className="odos-overview-kicker">Active programs</div>
+                  <PatientProgramPanels
+                    compact
+                    packageStatus={isVisible("balance-chips") ? <BalanceChips patientReference={`Patient/${patient.id}`} revision={packageRevision} /> : undefined}
+                    seriesStatus={<SeriesTrackerPanel patientReference={`Patient/${patient.id}`} compact />}
+                  />
+                </section>
+              )}
+              {isVisible("medications") && hasMedications && (
+                <MedicationPanel snapshot={overview.snapshot} />
+              )}
+              {isVisible("medications") && !hasMedications && overview.unavailable?.medicationOrders && (
+                <p className="odos-overview-error" role="alert">{overview.unavailable.medicationOrders}</p>
+              )}
+              {isVisible("consult-drafts") && correspondenceOpen && patient.id && (
+                <ConsultReportDraftPanel
+                  patientId={patient.id}
+                  onClose={() => setCorrespondenceOpen(false)}
+                  hideWhenEmpty
+                />
+              )}
+              {isVisible("longitudinal-imaging") && patient.id && (
+                <LongitudinalImagingCard patientReference={`Patient/${patient.id}`} hideWhenEmpty />
+              )}
+              {isVisible("optical-order") && patient.id && activeRxId && (
+                <a className="odos-overview-tier-link" href={opticalOrderPath(patient.id, activeRxId)} title={rxError} onClick={navigateWithinApp}>Start optical order</a>
+              )}
+            </div>
+            <div className="odos-overview-right">
+              <section className="odos-overview-card odos-ledger-card" data-testid="overview-visit-ledger">
               <span className="odos-overview-edge" />
               <div className="odos-overview-kicker">Visit ledger <span>every visit · its diagnoses · at a glance</span></div>
               <div className="odos-ledger-filters">
@@ -416,10 +442,14 @@ export function PatientOverview({
                   )}
                 </article>
               ))}
-            </section>
+              </section>
+              {isVisible("product-timeline") && patient.id && overview.visits[0] && (
+                <button type="button" className="odos-overview-tier-link" onClick={() => setView({ kind: "encounter", patientId: patient.id!, encounterId: overview.visits[0]!.encounterId })}>Product timeline</button>
+              )}
+            </div>
           </div>
         )}
-        {sellingPackage && patient.id && (
+        {isVisible("sale-sheet") && sellingPackage && patient.id && (
           <SaleSheet
             patientReference={`Patient/${patient.id}`}
             patientName={name}
@@ -427,7 +457,7 @@ export function PatientOverview({
             onSold={() => setPackageRevision((current) => current + 1)}
           />
         )}
-        {depositingCreditBank && patient.id && (
+        {isVisible("credit-bank-deposit-sheet") && depositingCreditBank && patient.id && (
           <CreditBankDepositSheet
             patientReference={`Patient/${patient.id}`}
             patientName={name}
@@ -611,10 +641,12 @@ export function ConsultReportDraftPanel({
   patientId,
   onClose,
   api = referralApi,
+  hideWhenEmpty = false,
 }: {
   patientId: string;
   onClose: () => void;
   api?: Pick<ReferralApi, "listInboundReferrals" | "previewConsultReport">;
+  hideWhenEmpty?: boolean;
 }) {
   const [referrals, setReferrals] = useState<ServiceRequest[]>();
   const [selectedId, setSelectedId] = useState("");
@@ -647,6 +679,8 @@ export function ConsultReportDraftPanel({
       setPreviewing(false);
     }
   }
+
+  if (hideWhenEmpty && !error && (!referrals || referrals.length === 0)) return null;
 
   return (
     <section className="odos-sticky-history" aria-label="Start correspondence">
@@ -694,17 +728,56 @@ export function ConsultReportDraftPanel({
   );
 }
 
-function PatientSnapshot({ snapshot, medicationOrdersUnavailable }: { snapshot: PatientOverviewPayload["snapshot"]; medicationOrdersUnavailable?: string }) {
+function DemographicDetail({
+  demographics,
+  patient,
+  chartNumber,
+  overview,
+}: {
+  demographics: string;
+  patient: Patient;
+  chartNumber?: string;
+  overview?: PatientOverviewPayload;
+}) {
   return (
-    <section className="odos-overview-card odos-snapshot-card">
+    <div className="odos-overview-meta">
+      <span>{demographics || "Age/sex not recorded"}</span>
+      <span>DOB <b>{patient.birthDate ? localDate(patient.birthDate) : "not recorded"}</b></span>
+      <span>Chart <b>{chartNumber ? `#${chartNumber}` : "not recorded"}</b></span>
+      <span>{overview?.insurance.length ? overview.insurance.join(" · ") : overview?.unavailable?.insurance ?? "Insurance not recorded"}</span>
+    </div>
+  );
+}
+
+function PatientSnapshot({ snapshot }: { snapshot: PatientOverviewPayload["snapshot"] }) {
+  return (
+    <section className="odos-overview-card odos-snapshot-card" data-testid="overview-patient-snapshot">
       <span className="odos-overview-edge" />
       <div className="odos-overview-kicker">Patient snapshot</div>
       <SnapshotList title="Ocular history" rows={snapshot.ocularHistory.map((row) => ({ label: row.name, detail: row.laterality }))} />
       <SnapshotList title="Ocular surgical history" rows={snapshot.ocularSurgicalHistory.map((row) => ({ label: row.name, detail: row.date ? shortDate(row.date) : undefined }))} />
-      <SnapshotList title="Medical conditions" rows={snapshot.medicalConditions.map((row) => ({ label: row.name }))} />
-      <MedicationList title="Ophthalmic medications" rows={snapshot.ophthalmicMedications} unavailable={medicationOrdersUnavailable} />
-      <MedicationList title="Systemic medications" rows={snapshot.systemicMedications} unavailable={medicationOrdersUnavailable} />
       <SnapshotList title="Social / smoking history" rows={snapshot.socialHistory.map((label) => ({ label }))} />
+    </section>
+  );
+}
+
+function ProblemListPanel({ rows }: { rows: PatientOverviewPayload["snapshot"]["medicalConditions"] }) {
+  return (
+    <section className="odos-overview-card odos-snapshot-card" data-testid="overview-problem-list">
+      <span className="odos-overview-edge" />
+      <div className="odos-overview-kicker">Problem list / conditions</div>
+      <SnapshotList title="Medical conditions" rows={rows.map((row) => ({ label: row.name }))} />
+    </section>
+  );
+}
+
+function MedicationPanel({ snapshot }: { snapshot: PatientOverviewPayload["snapshot"] }) {
+  return (
+    <section className="odos-overview-card odos-snapshot-card" data-testid="overview-medications">
+      <span className="odos-overview-edge" />
+      <div className="odos-overview-kicker">Medications</div>
+      <MedicationList title="Ophthalmic medications" rows={snapshot.ophthalmicMedications} />
+      <MedicationList title="Systemic medications" rows={snapshot.systemicMedications} />
     </section>
   );
 }

@@ -26,11 +26,13 @@ export function SeriesTrackerPanel({
   api = defaultApi,
   initialSeries,
   initialProtocols,
+  compact = false,
 }: {
   patientReference: string;
   api?: SeriesTrackerPanelApi;
   initialSeries?: SeriesTrackerView[];
   initialProtocols?: SeriesProtocolDefinition[];
+  compact?: boolean;
 }) {
   const [series, setSeries] = useState(initialSeries ?? []);
   const [protocols, setProtocols] = useState(initialProtocols ?? []);
@@ -73,7 +75,7 @@ export function SeriesTrackerPanel({
   }
 
   return (
-    <section className="w-full rounded border border-violet-300/20 bg-violet-950/15 p-4" aria-label="Treatment series tracker">
+    <section className={`w-full rounded border border-violet-300/20 bg-violet-950/15 ${compact ? "p-3" : "p-4"}`} aria-label="Treatment series tracker">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-200/55">Series tracker</div>
@@ -102,10 +104,10 @@ export function SeriesTrackerPanel({
         )}
       </div>
 
-      {loading && <p className="mt-3 text-xs text-white/45">Loading treatment series…</p>}
-      {error && <p className="mt-3 text-xs text-red-200">Series tracker unavailable: {error}</p>}
-      {!loading && series.length === 0 && <p className="mt-3 text-xs text-white/45">No treatment series prescribed.</p>}
-      <div className="mt-3 grid gap-3">
+      {loading && <p className={`${compact ? "mt-2" : "mt-3"} text-xs text-white/45`}>Loading treatment series…</p>}
+      {error && <p className={`${compact ? "mt-2" : "mt-3"} text-xs text-red-200`}>Series tracker unavailable: {error}</p>}
+      {!loading && series.length === 0 && <p className={`${compact ? "mt-2" : "mt-3"} text-xs text-white/45`}>No treatment series prescribed.</p>}
+      <div className={`${compact ? "mt-2 gap-2" : "mt-3 gap-3"} grid`}>
         {series.map((item) => <SeriesTimeline key={item.carePlanReference} series={item} />)}
       </div>
     </section>

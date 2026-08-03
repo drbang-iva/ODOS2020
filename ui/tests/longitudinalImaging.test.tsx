@@ -28,6 +28,49 @@ test("chart-level longitudinal imaging renders timeline, compare, capture, and c
   assert.match(html, /Documented cosmetic consent is checked before capture/);
 });
 
+test("overview imaging stays absent without images and appears when patient content exists", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    if (String(input).includes("procedure-definitions")) return definitionsResponse();
+    return String(input).includes("Patient%2Fwith-images")
+      ? photosResponse([image("overview", "CarePlan/series-1", "Lid margin")])
+      : photosResponse([]);
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<LongitudinalImagingCard patientReference="Patient/empty" hideWhenEmpty />);
+      await Promise.resolve();
+    });
+    assert.equal(renderer.toJSON(), null);
+    await act(async () => {
+      renderer.update(<LongitudinalImagingCard patientReference="Patient/with-images" hideWhenEmpty />);
+      await Promise.resolve();
+    });
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "longitudinal-imaging-card" }).length, 1);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("overview imaging reports a load failure without rendering the empty panel", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => { throw new Error("Synthetic imaging outage"); };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<LongitudinalImagingCard patientReference="Patient/error" hideWhenEmpty />);
+      await Promise.resolve();
+    });
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "longitudinal-imaging-card" }).length, 0);
+    assert.match(renderer.root.findByProps({ "data-testid": "longitudinal-imaging-error" }).children.join(""), /Synthetic imaging outage/);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("longitudinal structure combobox accepts arbitrary typed labels and suggests prior patient structures", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (input) => {
