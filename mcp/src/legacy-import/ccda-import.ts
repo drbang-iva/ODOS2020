@@ -171,6 +171,7 @@ interface DistinctProblem {
   entry: ParsedEntry;
   identityEntry: ParsedEntry;
   source: SourceDocument;
+  firstRecordedDate: string;
 }
 
 type ImportableResource =
@@ -220,7 +221,7 @@ export async function importLegacyCcda(input: {
       encounterReference: problem.source.encounterReference,
       code: coding,
       verificationStatus: problem.entry.codes.length > 0 ? "confirmed" : "unconfirmed",
-      recordedDate: problem.source.date,
+      recordedDate: problem.firstRecordedDate,
       identifiers: [identifier],
     });
     await writeResource(
@@ -416,19 +417,13 @@ function distinctProblems(sources: readonly SourceDocument[]): DistinctProblem[]
 
   for (const occurrence of occurrences) {
     const matchingIndexes = groups.flatMap((group, index) =>
-      group.some((member) => sameProblem(member.entry, occurrence.entry)) ? [index] : []
+      group.every((member) => sameProblem(member.entry, occurrence.entry)) ? [index] : []
     );
-    if (matchingIndexes.length === 0) {
+    if (matchingIndexes.length !== 1) {
       groups.push([occurrence]);
       continue;
     }
-
-    const firstIndex = matchingIndexes[0]!;
-    groups[firstIndex]!.push(occurrence);
-    for (const index of matchingIndexes.slice(1).reverse()) {
-      groups[firstIndex]!.push(...groups[index]!);
-      groups.splice(index, 1);
-    }
+    groups[matchingIndexes[0]!]!.push(occurrence);
   }
 
   return groups.map((group) => {
@@ -465,6 +460,7 @@ function distinctProblems(sources: readonly SourceDocument[]): DistinctProblem[]
       },
       identityEntry: identityOccurrence.entry,
       source: newestOccurrence.source,
+      firstRecordedDate: group[0]!.source.date,
     };
   });
 }

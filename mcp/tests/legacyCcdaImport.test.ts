@@ -276,6 +276,7 @@ test("C-CDA cumulative problem snapshots collapse 31 entries to 11 distinct Cond
   );
   assert.equal(enriched.length, 1);
   assert.equal(enriched[0]?.code?.text, "Synthetic dry eye problem");
+  assert.equal(enriched[0]?.recordedDate, "2020-01-01");
   assert.deepEqual(enriched[0]?.code?.coding, [
     {
       system: "http://snomed.info/sct",
@@ -319,6 +320,44 @@ test("C-CDA cumulative problem snapshots collapse 31 entries to 11 distinct Cond
     encounterUnlinked: 0,
   });
   assert.equal(fhir.ofType<Condition>("Condition").length, 11);
+});
+
+test("C-CDA problem dedup does not bridge distinct same-date coding sets", async () => {
+  const code = (value: string) => ({
+    system: "ICD-10-CM" as const,
+    code: `SYNTHETIC-BRIDGE-${value}`,
+    display: `Synthetic bridge problem ${value}`,
+  });
+  const entry = (codes: ReturnType<typeof code>[]) => ({
+    kind: "observation" as const,
+    date: "20240101",
+    codes,
+  });
+  const documents = [
+    {
+      file: "EMA_20240101T090000_Synthetic_ClinicalSummary_CCD_Final.ccda.xml",
+      sections: { Problems: [entry([code("A")])] },
+    },
+    {
+      file: "EMA_20240201T090000_Synthetic_ClinicalSummary_CCD_Final.ccda.xml",
+      sections: { Problems: [entry([code("A"), code("B")])] },
+    },
+    {
+      file: "EMA_20240301T090000_Synthetic_ClinicalSummary_CCD_Final.ccda.xml",
+      sections: { Problems: [entry([code("B")])] },
+    },
+  ];
+  const fhir = new MemoryCcdaFhir([patient("patient-1")]);
+
+  const result = await importLegacyCcda({
+    fhir,
+    projectId: "project-1",
+    ehrPatientId: "synthetic-ehr-1",
+    documents,
+  });
+
+  assert.equal(result.resources.Condition.created, 2);
+  assert.equal(fhir.ofType<Condition>("Condition").length, 2);
 });
 
 test("C-CDA allergy identity preserves distinct code sets and dated recurrences across reruns", async () => {
