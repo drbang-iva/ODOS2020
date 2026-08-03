@@ -84,17 +84,16 @@ test("v0.4b dry-eye MCP write tools create resources with mandatory Provenance",
         arguments: {
           patient_id: patient.id,
           instrument: "SPEED",
-          answers: [
-            { link_id: "speed-1", value_integer: 1 },
-            { link_id: "speed-2", value_integer: 2 },
-            { link_id: "speed-3", value_integer: 3 },
-            { link_id: "speed-4", value_integer: 4 },
-          ],
+          score: 10,
         },
       }),
     );
 
     assert.equal(output.questionnaireResponse.resourceType, "QuestionnaireResponse");
+    assert.equal(output.questionnaireResponse.item?.length, 1);
+    assert.equal(output.questionnaireResponse.item?.[0]?.linkId, "total-score");
+    assert.equal(output.questionnaireResponse.item?.[0]?.answer?.[0]?.valueDecimal, 10);
+    assert.equal(output.scoreObservation.valueQuantity?.value, 10);
     assert.equal(output.scoreObservation.derivedFrom?.[0]?.reference, `QuestionnaireResponse/${output.questionnaireResponse.id}`);
     assertProvenance(output.provenance, `QuestionnaireResponse/${output.questionnaireResponse.id}`);
     assertProvenance(output.provenance, `Observation/${output.scoreObservation.id}`);

@@ -33,16 +33,6 @@ import { buildCareTeam as buildMcpCareTeam } from "../src/fhir/careTeam.js";
 import { buildCareTeam as buildUiCareTeam } from "../../ui/src/lib/fhir-clinical/careTeam.js";
 import { buildProcedure as buildMcpProcedure } from "../src/fhir/procedure.js";
 import { buildProcedure as buildUiProcedure } from "../../ui/src/lib/fhir-clinical/procedure.js";
-import {
-  buildDryEyeQuestionnaireResponse as buildMcpDryEyeQuestionnaireResponse,
-  buildDryEyeQuestionnaireScoreObservation as buildMcpDryEyeQuestionnaireScoreObservation,
-  defaultDryEyeQuestionnaireAnswers as defaultMcpDryEyeQuestionnaireAnswers,
-} from "../src/fhir/dryEyeQuestionnaireResponse.js";
-import {
-  buildDryEyeQuestionnaireResponse as buildUiDryEyeQuestionnaireResponse,
-  buildDryEyeQuestionnaireScoreObservation as buildUiDryEyeQuestionnaireScoreObservation,
-  defaultDryEyeQuestionnaireAnswers as defaultUiDryEyeQuestionnaireAnswers,
-} from "../../ui/src/lib/fhir-dry-eye/questionnaireResponse.js";
 import { buildMeibographyObservation as buildMcpMeibographyObservation } from "../src/fhir/meibography.js";
 import { buildMeibographyObservation as buildUiMeibographyObservation } from "../../ui/src/lib/fhir-dry-eye/meibography.js";
 import { buildDryEyeTreatmentProcedure as buildMcpDryEyeTreatmentProcedure } from "../src/fhir/dryEyeProcedure.js";
@@ -349,34 +339,6 @@ test("UI clinical mirror matches MCP Procedure builder output", () => {
 
   assert.equal(SCODI_OPTIC_NERVE.cptBinding.status, "deferred-to-licensed-adapter");
   assertJsonEqual(buildMcpProcedure(input), buildUiProcedure(input));
-});
-
-test("UI dry-eye mirror matches MCP QuestionnaireResponse and score builders", () => {
-  const answers = defaultMcpDryEyeQuestionnaireAnswers("DEQ-5", 1);
-  assertJsonEqual(answers, defaultUiDryEyeQuestionnaireAnswers("DEQ-5", 1));
-  const responseInput = {
-    instrument: "DEQ-5" as const,
-    patientReference: "Patient/p1",
-    encounterReference: "Encounter/e1",
-    authored: "2026-04-28T12:00:00.000Z",
-    answers,
-  };
-  assertJsonEqual(
-    buildMcpDryEyeQuestionnaireResponse(responseInput),
-    buildUiDryEyeQuestionnaireResponse(responseInput),
-  );
-  const scoreInput = {
-    instrument: "DEQ-5" as const,
-    patientReference: "Patient/p1",
-    encounterReference: "Encounter/e1",
-    questionnaireResponseReference: "QuestionnaireResponse/qr1",
-    effectiveDateTime: "2026-04-28T12:00:00.000Z",
-    answers,
-  };
-  assertJsonEqual(
-    buildMcpDryEyeQuestionnaireScoreObservation(scoreInput),
-    buildUiDryEyeQuestionnaireScoreObservation(scoreInput),
-  );
 });
 
 test("UI dry-eye mirror matches MCP meibography builder", () => {

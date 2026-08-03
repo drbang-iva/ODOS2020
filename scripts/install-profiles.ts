@@ -155,6 +155,9 @@ async function installCanonicalResource(resource: CanonicalResource, file: strin
 
   const existingBundle = await fhir.search<CanonicalResource>(installResource.resourceType, {
     url: canonicalUrl,
+    ...(installResource.resourceType === "Questionnaire" && installResource.version
+      ? { version: installResource.version }
+      : {}),
     _count: "1",
   });
   const existing = existingBundle.entry?.[0]?.resource;

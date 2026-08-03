@@ -362,7 +362,6 @@ import {
 import {
   buildDryEyeQuestionnaireResponse,
   buildDryEyeQuestionnaireScoreObservation,
-  type DryEyeQuestionnaireAnswerInput,
 } from "./fhir/dryEyeQuestionnaireResponse.js";
 import {
   MEIBOGRAPHY_LIDS,
@@ -1467,10 +1466,10 @@ const tools = [
   {
     name: "create_dry_eye_questionnaire_response",
     description:
-      "Create a dry-eye QuestionnaireResponse and auto-derived summary Observation. Provenance is mandatory and writes use X-ODOS-Source=mcp/create_dry_eye_questionnaire_response.",
+      "Create a total-score-only dry-eye QuestionnaireResponse and auto-derived summary Observation. Provenance is mandatory and writes use X-ODOS-Source=mcp/create_dry_eye_questionnaire_response.",
     inputSchema: {
       type: "object",
-      required: ["patient_id", "instrument", "answers"],
+      required: ["patient_id", "instrument", "score"],
       properties: {
         patient_id: { type: "string" },
         encounter_id: { type: "string" },
@@ -1478,8 +1477,7 @@ const tools = [
         authored: { type: "string" },
         author_reference: { type: "string" },
         source_reference: { type: "string" },
-        answers: { type: "array", items: dryEyeQuestionnaireAnswerSchemaJson() },
-        score: { type: "number" },
+        score: { type: "number", minimum: 0 },
         provenance_agent_reference: { type: "string" },
         provenance_agent_display: { type: "string" },
       },
@@ -2372,14 +2370,6 @@ const createSubstanceSchema = z.object({
   description: z.string().optional(),
   ...v04ProvenanceAgentSchema,
 });
-const dryEyeQuestionnaireAnswerSchema = z.object({
-  link_id: z.string().min(1),
-  text: z.string().optional(),
-  value_integer: z.number().int().optional(),
-  value_decimal: z.number().optional(),
-  value_string: z.string().optional(),
-  value_boolean: z.boolean().optional(),
-});
 const createDryEyeQuestionnaireResponseSchema = z.object({
   patient_id: z.string().min(1),
   encounter_id: z.string().optional(),
@@ -2387,8 +2377,7 @@ const createDryEyeQuestionnaireResponseSchema = z.object({
   authored: isoTimestampSchema.optional(),
   author_reference: z.string().optional(),
   source_reference: z.string().optional(),
-  answers: z.array(dryEyeQuestionnaireAnswerSchema).min(1),
-  score: z.number().optional(),
+  score: z.number().finite().nonnegative(),
   ...v04ProvenanceAgentSchema,
 });
 const createMeibographyObservationSchema = z.object({
@@ -3711,7 +3700,7 @@ function createServer(): Server {
             authored: input.authored,
             authorReference: input.author_reference,
             sourceReference: input.source_reference,
-            answers: toDryEyeQuestionnaireAnswers(input.answers),
+            totalScore: input.score,
           });
           const createdQuestionnaireResponse = await fhir.create<QuestionnaireResponse>(
             questionnaireResponse,
@@ -3724,7 +3713,6 @@ function createServer(): Server {
             encounterReference: input.encounter_id ? encounterReference(input.encounter_id) : undefined,
             effectiveDateTime: input.authored,
             score: input.score,
-            answers: toDryEyeQuestionnaireAnswers(input.answers),
           });
           const createdScoreObservation = await fhir.create<Observation>(
             scoreObservation,
@@ -4489,8 +4477,6 @@ type UpdateEpisodeOfCareInput = z.infer<typeof updateEpisodeOfCareSchema>;
 type CreateAllergyIntoleranceInput = z.infer<typeof createAllergyIntoleranceSchema>;
 type CreateProcedureInput = z.infer<typeof createProcedureSchema>;
 type LensPropertyToolInput = z.infer<typeof lensPropertyInputSchema>;
-type DryEyeQuestionnaireAnswerToolInput =
-  z.infer<typeof dryEyeQuestionnaireAnswerSchema>;
 type MyopiaPlanActivityToolInput = z.infer<typeof myopiaPlanActivitySchema>;
 type V04ProvenanceAgentInput = {
   provenance_agent_reference?: string;
@@ -4540,21 +4526,6 @@ function lensPropertyInputSchemaJson(): Record<string, unknown> {
       value_system: { type: "string" },
       value_display: { type: "string" },
       value_text: { type: "string" },
-    },
-  };
-}
-
-function dryEyeQuestionnaireAnswerSchemaJson(): Record<string, unknown> {
-  return {
-    type: "object",
-    required: ["link_id"],
-    properties: {
-      link_id: { type: "string" },
-      text: { type: "string" },
-      value_integer: { type: "number" },
-      value_decimal: { type: "number" },
-      value_string: { type: "string" },
-      value_boolean: { type: "boolean" },
     },
   };
 }
@@ -4702,19 +4673,6 @@ function toLensPropertyInputs(
     valueSystem: property.value_system,
     valueDisplay: property.value_display,
     valueText: property.value_text,
-  }));
-}
-
-function toDryEyeQuestionnaireAnswers(
-  answers: DryEyeQuestionnaireAnswerToolInput[],
-): DryEyeQuestionnaireAnswerInput[] {
-  return answers.map((answer) => ({
-    linkId: answer.link_id,
-    text: answer.text,
-    valueInteger: answer.value_integer,
-    valueDecimal: answer.value_decimal,
-    valueString: answer.value_string,
-    valueBoolean: answer.value_boolean,
   }));
 }
 

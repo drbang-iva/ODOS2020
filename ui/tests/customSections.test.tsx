@@ -10,6 +10,7 @@ import { AestheticsConsentSection } from "../src/components/charting/AestheticsC
 import { CustomFindingSection } from "../src/components/charting/CustomFindingSection";
 import { CustomSectionEditor } from "../src/components/charting/CustomSectionEditor";
 import { CupDiscSection } from "../src/components/charting/CupDiscSection";
+import { DryEyeSection } from "../src/components/charting/DryEyeSection";
 import { DryEyeGlandStructureSection } from "../src/components/charting/DryEyeGlandStructureSection";
 import { EyeCopyButton } from "../src/components/charting/EyeCopyButton";
 import { PowerDropdown } from "../src/components/charting/PowerDropdown";
@@ -166,6 +167,114 @@ test("ongoing Dry Eye, Eye Growth, and Myopia Management summaries stay incomple
     const source = readFileSync(new URL(`../src/components/charting/${file}`, import.meta.url), "utf8");
     const markSaved = source.slice(source.indexOf("function markSaved"));
     assert.match(markSaved, /completed: false/);
+  }
+});
+
+test("Dry Eye questionnaire persists total-score-only records and keeps unsaved scores bound to their instrument", async () => {
+  const originalFetch = globalThis.fetch;
+  const rows: Array<{ values: Array<{ code: string; value: number | string }> }> = [];
+  const writes: Array<{ customFields: Array<{ code: string; value: number | string }> }> = [];
+  globalThis.fetch = (async (input, init) => {
+    const url = String(input);
+    if (url.includes("/clinical-graph/custom/dry-eye%3Asymptoms/history")) {
+      return jsonResponse({ rows });
+    }
+    if (url.includes("/clinical-graph/custom/dry-eye%3Asymptoms") && init?.method === "POST") {
+      const body = JSON.parse(String(init.body)) as {
+        customFields: Array<{ code: string; value: number | string }>;
+      };
+      writes.push(body);
+      rows.unshift({ values: body.customFields });
+      return jsonResponse({ observationReference: "Observation/dry-eye-score-1" });
+    }
+    throw new Error(`Unexpected Dry Eye request: ${url}`);
+  }) as typeof fetch;
+
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    await act(async () => {
+      renderer = create(
+        <DryEyeSection
+          patientReference="Patient/p1"
+          encounterReference="Encounter/e1"
+          onSaved={() => undefined}
+        />,
+      );
+      await flushEffects();
+    });
+
+    const instrument = () => renderer!.root.findByProps({ ariaLabel: "Questionnaire instrument" });
+    const totalScore = () => renderer!.root.findByProps({ "aria-label": "Total score" });
+    const dateAdministered = () => renderer!.root.findByProps({ "aria-label": "Date administered" });
+    const unableToTest = () => renderer!.root.findByProps({ "aria-label": "Unable to test" });
+
+    act(() => totalScore().props.onChange({ target: { value: "1e999" } }));
+    const saveButton = () => renderer!.root.findAllByType("button").find((button) =>
+      button.children.includes("Save questionnaire")
+    );
+    assert.ok(saveButton());
+    await act(async () => {
+      await saveButton()!.props.onClick();
+    });
+    assert.equal(writes.length, 0);
+    assert.match(JSON.stringify(renderer.toJSON()), /Total score must be a number of zero or more/);
+
+    act(() => totalScore().props.onChange({ target: { value: "30" } }));
+    act(() => instrument().props.onChange("SPEED"));
+    assert.equal(totalScore().props.value, "", "an OSDI score must not be reattributed to SPEED");
+    assert.match(JSON.stringify(renderer.toJSON()), /OSDI entry retained separately; its score was not applied to SPEED/);
+    act(() => instrument().props.onChange("OSDI"));
+    assert.equal(totalScore().props.value, "30", "the unsaved OSDI score must survive instrument switching");
+    act(() => dateAdministered().props.onChange({ target: { value: "2026-08-03" } }));
+    act(() => unableToTest().props.onChange({ target: { checked: true } }));
+    act(() => instrument().props.onChange("SPEED"));
+    act(() => totalScore().props.onChange({ target: { value: "12" } }));
+    act(() => instrument().props.onChange("OSDI"));
+    assert.match(JSON.stringify(renderer.toJSON()), /SPEED entry retained separately; its score was not applied to OSDI/);
+
+    const save = saveButton();
+    assert.ok(save);
+    await act(async () => {
+      await save.props.onClick();
+    });
+    assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /entry retained separately/);
+
+    assert.equal(writes.length, 1);
+    assert.deepEqual(writes[0]?.customFields, [
+      { code: "CUSTOM_INSTRUMENT", value: "OSDI" },
+      { code: "CUSTOM_TOTAL_SCORE", value: 30 },
+      { code: "CUSTOM_DATE_ADMINISTERED", value: "2026-08-03" },
+      { code: "CUSTOM_UNABLE_TO_TEST", value: "unable" },
+    ]);
+    rows.push({ values: [
+      { code: "CUSTOM_INSTRUMENT", value: "SPEED" },
+      { code: "CUSTOM_TOTAL_SCORE", value: 12 },
+      { code: "CUSTOM_DATE_ADMINISTERED", value: "2026-07-01" },
+    ] });
+
+    act(() => renderer!.unmount());
+    await act(async () => {
+      renderer = create(
+        <DryEyeSection
+          patientReference="Patient/p1"
+          encounterReference="Encounter/e1"
+          onSaved={() => undefined}
+        />,
+      );
+      await flushEffects();
+    });
+
+    assert.equal(instrument().props.value, "OSDI");
+    assert.equal(totalScore().props.value, "30");
+    assert.equal(dateAdministered().props.value, "2026-08-03");
+    assert.equal(unableToTest().props.checked, true);
+    act(() => instrument().props.onChange("SPEED"));
+    assert.equal(totalScore().props.value, "12");
+    assert.equal(dateAdministered().props.value, "2026-07-01");
+    assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /(?:OSDI|SPEED|DEQ-5) item \d+/);
+  } finally {
+    if (renderer) act(() => renderer!.unmount());
+    globalThis.fetch = originalFetch;
   }
 });
 
