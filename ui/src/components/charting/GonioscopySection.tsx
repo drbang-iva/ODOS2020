@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import { OdosSelect } from "../inputs/OdosSelect";
+import { EyeCopyButton } from "./EyeCopyButton";
 import type { SectionSaveStatus } from "./types";
 
 type Eye = "OD" | "OS";
@@ -78,6 +79,42 @@ export function GonioscopySection({ patientReference, encounterReference, onSave
     setDirtyRecords((current) => new Set(current).add(`${eye}:${quadrant}`));
   }
 
+  function copyEye(from: Eye) {
+    if (!canCopyEye(from)) return;
+    const to: Eye = from === "OD" ? "OS" : "OD";
+    const sourcePigmentation = pigmentation[from];
+    const copied: RecordRow[] = records.filter((row) => row.eye === from).map((row) => ({
+      eye: to,
+      quadrant: row.quadrant,
+      value: row.value,
+      entryMode: row.entryMode,
+    }));
+    setRecords((current) => [
+      ...current.filter((row) => row.eye !== to),
+      ...copied,
+    ]);
+    setDirtyRecords((current) => new Set([
+      ...current,
+      ...copied.map((row) => `${to}:${row.quadrant}`),
+    ]));
+    if (sourcePigmentation) {
+      setPigmentation((current) => ({ ...current, [to]: sourcePigmentation }));
+    }
+  }
+
+  function canCopyEye(from: Eye) {
+    const to = from === "OD" ? "OS" : "OD";
+    const sourceQuadrants = new Set(records
+      .filter((row) => row.eye === from)
+      .map((row) => row.quadrant));
+    const sourceHasPigmentation = Boolean(pigmentation[from]);
+    const hasSourceData = sourceQuadrants.size > 0 || sourceHasPigmentation;
+    const hasUnreplaceableTargetData = records.some((row) =>
+      row.eye === to && !sourceQuadrants.has(row.quadrant))
+      || (Boolean(pigmentation[to]) && !sourceHasPigmentation);
+    return hasSourceData && !hasUnreplaceableTargetData;
+  }
+
   async function save() {
     if (!records.length && !Object.keys(pigmentation).length && !note.trim()) {
       setError("Document at least one gonioscopy value before saving.");
@@ -123,7 +160,15 @@ export function GonioscopySection({ patientReference, encounterReference, onSave
               ? eyeRecords[0]?.value : "";
             return (
               <div key={eye} className="rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface)] p-4">
-                <div className="text-sm font-semibold text-[color:var(--odos-text)]">{eye}</div>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-semibold text-[color:var(--odos-text)]">{eye}</div>
+                  <EyeCopyButton
+                    eye={eye}
+                    onCopy={() => copyEye(eye)}
+                    disabled={!canCopyEye(eye)}
+                    title={canCopyEye(eye) ? undefined : "Document matching source values before replacing this eye."}
+                  />
+                </div>
                 <label className="mt-4 block text-xs uppercase tracking-widest text-[color:var(--odos-faint)]">
                   All quadrants
                   <select aria-label={`${eye} all quadrants`} value={uniform}

@@ -11,6 +11,7 @@ import { CustomFindingSection } from "../src/components/charting/CustomFindingSe
 import { CustomSectionEditor } from "../src/components/charting/CustomSectionEditor";
 import { CupDiscSection } from "../src/components/charting/CupDiscSection";
 import { DryEyeGlandStructureSection } from "../src/components/charting/DryEyeGlandStructureSection";
+import { EyeCopyButton } from "../src/components/charting/EyeCopyButton";
 import { PowerDropdown } from "../src/components/charting/PowerDropdown";
 import { GonioscopySection } from "../src/components/charting/GonioscopySection";
 import { MyopiaManagementSection } from "../src/components/charting/MyopiaManagementSection";
@@ -26,6 +27,7 @@ import { SpineNav } from "../src/components/charting/SpineNav";
 import { sectionStatus } from "../src/components/charting/types";
 import { VaSection } from "../src/components/charting/VaSection";
 import { OdosSelect } from "../src/components/inputs/OdosSelect";
+import { OdosChips } from "../src/components/inputs/OdosChips";
 import { OdosWheel } from "../src/components/inputs/OdosWheel";
 import { PatientRoute } from "../src/App";
 import { fhir } from "../src/lib/fhir";
@@ -815,7 +817,9 @@ test("the ocular-health renderer exposes segment headers, accelerators, bilatera
       valueType: "multi-select" as const,
       options: [
         { code: "demodex", display: "Demodex", active: true, priority: true },
-        { code: "demodex::collarettes", display: "Collarettes", active: true, parentCode: "demodex", priority: true },
+        { code: "demodex::collarettes", display: "collarettes", active: true, parentCode: "demodex", priority: true },
+        { code: "anterior-blepharitis", display: "Anterior Blepharitis", active: true, priority: true },
+        { code: "chalazion", display: "chalazion", active: true, priority: true },
         { code: "ptosis", display: "Ptosis", active: true },
       ],
       order: 0,
@@ -858,12 +862,19 @@ test("the ocular-health renderer exposes segment headers, accelerators, bilatera
     const rendered = JSON.stringify(renderer.toJSON());
     assert.match(rendered, /Demodex/);
     assert.match(rendered, /Collarettes/);
+    assert.match(rendered, /Anterior Blepharitis/);
+    assert.match(rendered, /Chalazion/);
+    assert.doesNotMatch(rendered, /\"children\":\[\"chalazion\"\]/);
     assert.equal(renderer.root.findByType("summary").children.join(""), "More findings (1)");
     assert.ok(rendered.indexOf("Demodex") < rendered.indexOf('"type":"summary"'));
     const demodex = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Demodex");
     const collarettes = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Collarettes");
     assert.ok(demodex);
     assert.ok(collarettes);
+    assert.equal(renderer.root.findAllByType(EyeCopyButton).length, 2);
+    const chipOptions = renderer.root.findAllByType(OdosChips).flatMap((chips) => chips.props.options);
+    assert.ok(chipOptions.some((option: { value: string; label: string }) => option.value === "chalazion" && option.label === "Chalazion"));
+    assert.ok(chipOptions.some((option: { value: string; label: string }) => option.value === "demodex::collarettes" && option.label === "Collarettes"));
     assert.equal(demodex.props["aria-pressed"], true);
     assert.equal(collarettes.props["aria-pressed"], false);
     act(() => collarettes.props.onClick());
@@ -999,7 +1010,7 @@ test("posterior seeded history renders honestly and zero-data eyes remain untouc
     for (const definition of definitions) assert.match(rendered, new RegExp(definition.display));
     assert.match(rendered, /Posterior Segment/);
     assert.match(rendered, /Fundus All Normal/);
-    assert.match(rendered, /Dot\/blot hemorrhage/);
+    assert.match(rendered, /Dot\/Blot Hemorrhage/);
     assert.equal(renderer.root.findAllByProps({ "aria-pressed": true }).length, 1);
     assert.equal(renderer.root.findAllByProps({ value: "" }).length, 10);
   } finally {
@@ -1626,11 +1637,11 @@ test("CupDiscSection preserves descriptor codes and selected order through OdosC
 test("GonioscopySection clears encounter state before fetch and hydrates pigmentation and note without dirty records", async () => {
   const originalFetch = globalThis.fetch;
   const encounterB = deferred<Response>();
-  let postedBody: Record<string, unknown> | undefined;
+  const postedBodies: Array<Record<string, unknown>> = [];
   globalThis.fetch = (async (input, init) => {
     const url = String(input);
     if (init?.method === "POST") {
-      postedBody = JSON.parse(String(init.body));
+      postedBodies.push(JSON.parse(String(init.body)) as Record<string, unknown>);
       return jsonResponse({});
     }
     if (url.includes("Encounter%2Fencounter-a")) {
@@ -1699,7 +1710,115 @@ test("GonioscopySection clears encounter state before fetch and hydrates pigment
     await act(async () => renderer.root.findAllByType("button").find((button) =>
       button.children.join("") === "Save Gonioscopy"
     )!.props.onClick());
-    assert.deepEqual(postedBody?.records, []);
+    assert.deepEqual(postedBodies[0]?.records, []);
+
+    assert.equal(renderer.root.findAllByType(EyeCopyButton).length, 2);
+    act(() => renderer.root.findAllByType("button").find((button) =>
+      button.children.join("") === "← Copy to OD"
+    )!.props.onClick());
+    assert.equal(select("OD TM pigmentation").props.value, "2+");
+    const odQuadrantToggle = renderer.root.findAllByType("button").find((button) =>
+      button.props["aria-expanded"] === false && button.children.join("").includes("Show quadrants")
+    );
+    assert.ok(odQuadrantToggle);
+    act(() => odQuadrantToggle.props.onClick());
+    assert.equal(select("OD nasal").props.value, "ptm");
+    assert.equal(select("OD temporal").props.value, "");
+
+    await act(async () => renderer.root.findAllByType("button").find((button) =>
+      button.children.join("") === "Save Gonioscopy"
+    )!.props.onClick());
+    assert.deepEqual(postedBodies[1]?.records, [{
+      eye: "OD",
+      quadrant: "nasal",
+      value: "ptm",
+      entryMode: "quadrant-specific",
+    }]);
+    act(() => select("OD temporal").props.onChange("ss"));
+    const copyToOd = renderer.root.findAllByType("button").find((button) =>
+      button.children.join("") === "← Copy to OD"
+    );
+    assert.equal(copyToOd?.props.disabled, true);
+    assert.equal(copyToOd?.props.title, "Document matching source values before replacing this eye.");
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("GonioscopySection eye copy preserves anatomical quadrant names", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () => jsonResponse({
+    records: [{
+      eye: "OD",
+      quadrant: "nasal",
+      value: "ptm",
+      entryMode: "quadrant-specific",
+      source: "clinician-entered",
+    }],
+  })) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<GonioscopySection
+        patientReference="Patient/patient-1"
+        encounterReference="Encounter/encounter-1"
+        onSaved={() => undefined}
+      />);
+      await flushEffects();
+    });
+    const select = (label: string) => renderer.root.find((node) =>
+      node.type === OdosSelect && node.props.ariaLabel === label
+    );
+    act(() => renderer.root.findAllByType("button").find((button) =>
+      button.children.join("") === "Copy to OS →"
+    )!.props.onClick());
+    const quadrantToggles = renderer.root.findAllByType("button").filter((button) =>
+      button.props["aria-expanded"] === false && button.children.join("").includes("Show quadrants")
+    );
+    assert.equal(quadrantToggles.length, 2);
+    act(() => quadrantToggles[1]!.props.onClick());
+    assert.equal(select("OS nasal").props.value, "ptm");
+    assert.equal(select("OS temporal").props.value, "");
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("GonioscopySection preserves documented target pigmentation when the source is blank", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () => jsonResponse({
+    records: [{
+      eye: "OD",
+      quadrant: "nasal",
+      value: "ptm",
+      entryMode: "quadrant-specific",
+      source: "clinician-entered",
+    }],
+    pigmentation: { OD: "", OS: "3+" },
+  })) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<GonioscopySection
+        patientReference="Patient/patient-1"
+        encounterReference="Encounter/encounter-1"
+        onSaved={() => undefined}
+      />);
+      await flushEffects();
+    });
+    const copyToOs = renderer.root.findAllByType("button").find((button) =>
+      button.children.join("") === "Copy to OS →"
+    );
+    assert.ok(copyToOs);
+    assert.equal(copyToOs.props.disabled, true);
+    assert.equal(copyToOs.props.title, "Document matching source values before replacing this eye.");
+    act(() => copyToOs.props.onClick());
+    const osPigmentation = renderer.root.find((node) =>
+      node.type === "select" && node.props["aria-label"] === "OS TM pigmentation"
+    );
+    assert.equal(osPigmentation.props.value, "3+");
   } finally {
     renderer?.unmount();
     globalThis.fetch = originalFetch;

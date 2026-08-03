@@ -415,8 +415,6 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const overrideGroupKeys = sectionGroupCatalog.overrideGroupKeys ?? [];
   const groupLabel = (groupKey: string) =>
     sectionGroupCatalog.groups.find((group) => group.groupKey === groupKey)?.label ?? groupKey;
-  const defaultGroupLabels = (sectionGroupCatalog.defaultGroupKeys ?? []).map(groupLabel);
-  const overrideGroupLabels = overrideGroupKeys.map(groupLabel);
 
   return (
     <div className={["odos-charting-workspace flex h-screen w-screen flex-col bg-bg-deep text-white", config.encounterDensity === "compact" ? "text-[0.95rem]" : ""].join(" ")}>
@@ -432,19 +430,8 @@ export function EncounterCharting({ patient, encounterId }: Props) {
           onAddSection={catalog.canWrite ? () => setCreatingSection(true) : undefined}
         />
         <main className="relative min-w-0 flex-1 bg-bg-deep" {...(sidebarExpanded ? { inert: "" } : {})}>
-          {(sectionGroupCatalog.groups.length > 0 || sectionGroupError) && (
+          {(sectionGroupCatalog.canPullIn || sectionGroupError) && (
             <div className="absolute right-4 top-3 z-20 flex max-w-xl flex-col items-end gap-2">
-              {!sectionGroupError && (
-                <div
-                  data-testid="section-visibility-context"
-                  className="rounded border border-[color:var(--odos-line)] bg-bg-panel/95 px-3 py-2 text-right text-xs text-[color:var(--odos-muted)] shadow-lg"
-                >
-                  Encounter {encounterId.slice(0, 8)} · Discipline {discipline ?? "unresolved"} ·
-                  Category {sectionGroupCatalog.visitTypeCategory ?? "none"} ·
-                  Default {defaultGroupLabels.join(", ") || "none"} ·
-                  Pulled in {overrideGroupLabels.join(", ") || "none"}
-                </div>
-              )}
               {sectionGroupError && (
                 <span role="alert" className="rounded border border-red-400/25 bg-bg-panel px-2 py-1 text-xs text-red-200">
                   {sectionGroupError}
