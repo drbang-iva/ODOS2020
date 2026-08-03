@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { COVER_MAGNITUDES, CoverTestSection } from "../src/components/charting/CoverTestSection";
 import { CvfSection } from "../src/components/charting/CvfSection";
 import { DilationSection } from "../src/components/charting/DilationSection";
@@ -139,6 +140,69 @@ test("pupil state sections retain explicit per-eye states and centered spinner c
   assert.match(html, /History/);
 });
 
+test("marking OS pupils normal fills the operator-defined PERRLA values without inventing a near size", async () => {
+  const originalFetch = globalThis.fetch;
+  const requests: Array<{ method?: string; body?: string }> = [];
+  globalThis.fetch = async (_input, init) => {
+    requests.push({ method: init?.method, body: typeof init?.body === "string" ? init.body : undefined });
+    return new Response(JSON.stringify(init?.method === "POST" ? {} : { rows: [] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<EntranceStateSection
+        definition={pupilDefinition()}
+        patientReference="Patient/p1"
+        encounterReference="Encounter/e1"
+        onSaved={() => undefined}
+      />);
+      await Promise.resolve();
+    });
+
+    const normalButtons = renderer.root.findAllByType("button").filter((button) => button.children.join("") === "normal");
+    assert.equal(normalButtons.length, 2);
+    act(() => normalButtons[1]!.props.onClick());
+
+    assert.equal(renderer.root.findByProps({ "aria-label": "Size — bright" }).props.value, "4");
+    assert.equal(renderer.root.findByProps({ "aria-label": "Size — dim" }).props.value, "6");
+    assert.equal(renderer.root.findByProps({ "aria-label": "Size — near" }).props.value, "");
+    assert.equal(renderer.root.findByProps({ "aria-label": "Shape" }).children.join(""), "round");
+    assert.equal(renderer.root.findByProps({ "aria-label": "Reactivity" }).children.join(""), "brisk");
+    assert.equal(renderer.root.findByProps({ "aria-label": "APD" }).children.join(""), "none");
+    assert.equal(renderer.root.findByProps({ "aria-label": "RAPD" }).children.join(""), "none");
+
+    await act(async () => {
+      renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Pupils")!.props.onClick();
+      await Promise.resolve();
+    });
+    const saved = requests.find((request) => request.method === "POST");
+    assert.ok(saved?.body);
+    assert.deepEqual(JSON.parse(saved.body), {
+      patientReference: "Patient/p1",
+      encounterReference: "Encounter/e1",
+      eyes: {
+        OS: {
+          state: "normal",
+          customFields: [
+            { code: "CUSTOM_PUPIL_SIZE_BRIGHT", value: 4 },
+            { code: "CUSTOM_PUPIL_SIZE_DIM", value: 6 },
+            { code: "CUSTOM_PUPIL_SHAPE", value: "round" },
+            { code: "CUSTOM_PUPIL_REACTIVITY", value: "brisk" },
+            { code: "CUSTOM_PUPIL_APD", value: "none" },
+            { code: "CUSTOM_PUPIL_RAPD", value: "none" },
+          ],
+        },
+      },
+    });
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("manual keratometry uses a shrinkable five-column grid that fits the content pane", () => {
   const html = renderToStaticMarkup(<EntranceMeasurementSection definition={measurementDefinition()} patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} />);
   assert.match(html, /Manual keratometry/);
@@ -185,6 +249,27 @@ function measurementDefinition(): CustomFindingDefinition {
       { localCode: "CUSTOM_STEEP_K", display: "Steep K", valueType: "number", min: 30, max: 60, step: 0.01, unit: "[diop]", order: 2, active: true },
       { localCode: "CUSTOM_STEEP_AXIS", display: "Steep axis", valueType: "number", min: 0, max: 180, step: 1, order: 3, active: true },
       { localCode: "CUSTOM_MIRES_QUALITY", display: "Mires quality", valueType: "select", options: [{ code: "clear", display: "clear", active: true }], order: 4, active: true },
+    ],
+  };
+}
+
+function pupilDefinition(): CustomFindingDefinition {
+  return {
+    stableKey: "entrance:pupils",
+    sectionKey: "entrance:pupils",
+    display: "Pupils",
+    active: true,
+    perEye: true,
+    normalTemplate: "PERRLA; no APD or RAPD OU",
+    allowDeferred: true,
+    customFields: [
+      { localCode: "CUSTOM_PUPIL_SIZE_BRIGHT", display: "Size — bright", valueType: "number", min: 1, max: 9, step: 0.5, unit: "mm", order: 0, active: true },
+      { localCode: "CUSTOM_PUPIL_SIZE_DIM", display: "Size — dim", valueType: "number", min: 1, max: 9, step: 0.5, unit: "mm", order: 1, active: true },
+      { localCode: "CUSTOM_PUPIL_SIZE_NEAR", display: "Size — near", valueType: "number", min: 1, max: 9, step: 0.5, unit: "mm", order: 2, active: true },
+      { localCode: "CUSTOM_PUPIL_SHAPE", display: "Shape", valueType: "select", options: ["round", "irregular"].map((code) => ({ code, display: code, active: true })), order: 3, active: true },
+      { localCode: "CUSTOM_PUPIL_REACTIVITY", display: "Reactivity", valueType: "select", options: ["brisk", "moderate", "sluggish", "nonreactive"].map((code) => ({ code, display: code, active: true })), order: 4, active: true },
+      { localCode: "CUSTOM_PUPIL_APD", display: "APD", valueType: "select", options: ["none", "trace", "1+", "2+", "3+", "4+", "reverse"].map((code) => ({ code, display: code, active: true })), order: 5, active: true },
+      { localCode: "CUSTOM_PUPIL_RAPD", display: "RAPD", valueType: "select", options: ["none", "trace", "1+", "2+", "3+", "4+", "reverse"].map((code) => ({ code, display: code, active: true })), order: 6, active: true },
     ],
   };
 }

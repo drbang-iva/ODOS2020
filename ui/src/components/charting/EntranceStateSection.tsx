@@ -25,6 +25,14 @@ interface HistoryRow {
 }
 
 const EYES: Eye[] = ["OD", "OS"];
+const PUPIL_NORMAL_VALUES: Record<string, string> = {
+  CUSTOM_PUPIL_SIZE_BRIGHT: "4",
+  CUSTOM_PUPIL_SIZE_DIM: "6",
+  CUSTOM_PUPIL_SHAPE: "round",
+  CUSTOM_PUPIL_REACTIVITY: "brisk",
+  CUSTOM_PUPIL_APD: "none",
+  CUSTOM_PUPIL_RAPD: "none",
+};
 
 export function EntranceStateSection({ definition, patientReference, encounterReference, onSaved }: {
   definition: CustomFindingDefinition;
@@ -72,9 +80,10 @@ export function EntranceStateSection({ definition, patientReference, encounterRe
 
   function setNormal() {
     if (definition.perEye) {
+      const update = normalStateUpdate(definition);
       setEyes((current) => ({
-        OD: { ...current.OD, state: "normal" },
-        OS: { ...current.OS, state: "normal" },
+        OD: { ...current.OD, ...update },
+        OS: { ...current.OS, ...update },
       }));
     } else {
       setShared((current) => ({ ...current, state: "normal" }));
@@ -160,7 +169,7 @@ export function EntranceStateSection({ definition, patientReference, encounterRe
               <div className="text-sm font-semibold text-[color:var(--odos-text)]">{label}</div>
               <div className="mt-3 flex flex-wrap gap-2">
                 {(["normal", "abnormal", "deferred"] as ExamState[]).map((state) => (
-                  <button key={state} type="button" onClick={() => update({ state })} className={capture.state === state ? "rounded border border-brand/70 bg-brand/20 px-3 py-1.5 text-xs font-semibold capitalize text-[color:var(--odos-text)]" : "rounded border border-[color:var(--odos-line-2)] px-3 py-1.5 text-xs capitalize text-[color:var(--odos-muted)] hover:border-brand/60"}>{state}</button>
+                  <button key={state} type="button" onClick={() => update(state === "normal" ? normalStateUpdate(definition) : { state })} className={capture.state === state ? "rounded border border-brand/70 bg-brand/20 px-3 py-1.5 text-xs font-semibold capitalize text-[color:var(--odos-text)]" : "rounded border border-[color:var(--odos-line-2)] px-3 py-1.5 text-xs capitalize text-[color:var(--odos-muted)] hover:border-brand/60"}>{state}</button>
                 ))}
               </div>
               {capture.state && capture.state !== "deferred" && (
@@ -300,4 +309,10 @@ function isDerivedColorTotal(definition: CustomFindingDefinition, field: CustomF
 
 function emptyCapture(): Capture {
   return { values: {}, other: "" };
+}
+
+function normalStateUpdate(definition: CustomFindingDefinition): Partial<Capture> {
+  return definition.stableKey === "entrance:pupils"
+    ? { state: "normal", values: { ...PUPIL_NORMAL_VALUES } }
+    : { state: "normal" };
 }
