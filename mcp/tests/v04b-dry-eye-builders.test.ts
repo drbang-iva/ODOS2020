@@ -6,6 +6,7 @@ import {
   DRY_EYE_PROCEDURE_WAVELENGTH_EXTENSION_URL,
   DRY_EYE_QUESTIONNAIRE_INSTRUMENTS,
   DRY_EYE_QUESTIONNAIRE_URLS,
+  DRY_EYE_QUESTIONNAIRE_VERSION,
   OPHTHALMIC_MEDICATION_SUPPLY_TYPE_EXTENSION_URL,
   buildDryEyeCanonicalResources,
 } from "../src/fhir/dryEyeTerminology.js";
@@ -40,7 +41,7 @@ test("dry-eye QuestionnaireResponse builder uses canonical instrument and derive
     score: 30,
   });
 
-  assert.equal(response.questionnaire, DRY_EYE_QUESTIONNAIRE_URLS.OSDI);
+  assert.equal(response.questionnaire, `${DRY_EYE_QUESTIONNAIRE_URLS.OSDI}|${DRY_EYE_QUESTIONNAIRE_VERSION}`);
   assert.equal(response.status, "completed");
   assert.equal(response.subject?.reference, "Patient/p1");
   assert.equal(response.item?.length, 1);
@@ -59,6 +60,10 @@ test("dry-eye canonical installer resources include all four questionnaire defin
   const urls = canonical.map((resource) => resource.url);
   for (const instrument of DRY_EYE_QUESTIONNAIRE_INSTRUMENTS) {
     assert.ok(urls.includes(DRY_EYE_QUESTIONNAIRE_URLS[instrument]));
+    assert.equal(
+      canonical.find((resource) => resource.url === DRY_EYE_QUESTIONNAIRE_URLS[instrument])?.version,
+      DRY_EYE_QUESTIONNAIRE_VERSION,
+    );
   }
   assert.ok(urls.includes(DRY_EYE_PROCEDURE_ENERGY_EXTENSION_URL));
   assert.ok(urls.includes(DRY_EYE_PROCEDURE_WAVELENGTH_EXTENSION_URL));

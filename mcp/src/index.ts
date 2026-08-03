@@ -1475,7 +1475,7 @@ const tools = [
         authored: { type: "string" },
         author_reference: { type: "string" },
         source_reference: { type: "string" },
-        score: { type: "number" },
+        score: { type: "number", minimum: 0 },
         provenance_agent_reference: { type: "string" },
         provenance_agent_display: { type: "string" },
       },

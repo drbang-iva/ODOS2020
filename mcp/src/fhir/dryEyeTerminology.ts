@@ -46,11 +46,18 @@ export const DRY_EYE_QUESTIONNAIRE_URLS: Record<
   "DEQ-5": `${ODOS_FHIR_BASE}/Questionnaire/dry-eye-deq-5`,
   McMonnies: `${ODOS_FHIR_BASE}/Questionnaire/dry-eye-mcmonnies`,
 };
+export const DRY_EYE_QUESTIONNAIRE_VERSION = "0.4.1";
 
 export function questionnaireUrlForInstrument(
   instrument: DryEyeQuestionnaireInstrument,
 ): string {
   return DRY_EYE_QUESTIONNAIRE_URLS[instrument];
+}
+
+export function questionnaireReferenceForInstrument(
+  instrument: DryEyeQuestionnaireInstrument,
+): string {
+  return `${questionnaireUrlForInstrument(instrument)}|${DRY_EYE_QUESTIONNAIRE_VERSION}`;
 }
 
 export function dryEyeTreatmentTypeConcept(code: DryEyeTreatmentTypeCode) {
@@ -116,7 +123,7 @@ function buildDryEyeQuestionnaire(
   return {
     resourceType: "Questionnaire",
     url: questionnaireUrlForInstrument(instrument),
-    version: "0.4.0",
+    version: DRY_EYE_QUESTIONNAIRE_VERSION,
     name: `ODOSDryEye${instrument.replace(/[^A-Za-z0-9]/g, "")}`,
     title: displayForInstrument(instrument),
     status: "active",

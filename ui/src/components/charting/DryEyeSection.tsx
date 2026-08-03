@@ -77,6 +77,9 @@ export function DryEyeSection({ patientReference, encounterReference, onSaved }:
   useEffect(() => {
     const controller = new AbortController();
     const query = new URLSearchParams({ patient: patientReference, encounter: encounterReference });
+    setInstrument("OSDI");
+    setQuestionnaireDrafts(emptyQuestionnaireDrafts());
+    setInstrumentSwitchNotice(null);
     setQuestionnaireLoading(true);
     fetch(
       `${clinicalGraphApiBase()}/clinical-graph/custom/${encodeURIComponent("dry-eye:symptoms")}/history?${query}`,
@@ -88,13 +91,17 @@ export function DryEyeSection({ patientReference, encounterReference, onSaved }:
         return body.rows ?? [];
       })
       .then((rows) => {
-        const saved = rows.map(questionnaireDraftFromHistory).find((row) => row !== undefined);
-        if (!saved) return;
-        setInstrument(saved.instrument);
-        setQuestionnaireDrafts((current) => ({
-          ...current,
-          [saved.instrument]: saved.draft,
-        }));
+        const savedRows = rows
+          .map(questionnaireDraftFromHistory)
+          .filter((row): row is { instrument: SymptomInstrument; draft: QuestionnaireDraft } => row !== undefined);
+        const newest = savedRows[0];
+        if (!newest) return;
+        setInstrument(newest.instrument);
+        setQuestionnaireDrafts((current) => {
+          const next = { ...current };
+          for (const saved of [...savedRows].reverse()) next[saved.instrument] = saved.draft;
+          return next;
+        });
       })
       .catch((caught) => {
         if ((caught as Error).name !== "AbortError") {
@@ -132,7 +139,11 @@ export function DryEyeSection({ patientReference, encounterReference, onSaved }:
         { code: "CUSTOM_INSTRUMENT", value: instrument },
       ];
       if (questionnaireDraft.totalScore.trim()) {
-        customFields.push({ code: "CUSTOM_TOTAL_SCORE", value: Number(questionnaireDraft.totalScore) });
+        const totalScore = Number(questionnaireDraft.totalScore);
+        if (!Number.isFinite(totalScore) || totalScore < 0) {
+          throw new Error("Total score must be a number of zero or more.");
+        }
+        customFields.push({ code: "CUSTOM_TOTAL_SCORE", value: totalScore });
       }
       if (questionnaireDraft.dateAdministered) {
         customFields.push({ code: "CUSTOM_DATE_ADMINISTERED", value: questionnaireDraft.dateAdministered });
@@ -150,6 +161,7 @@ export function DryEyeSection({ patientReference, encounterReference, onSaved }:
       );
       const result = await response.json() as { error?: string };
       if (!response.ok) throw new Error(result.error ?? `Dry-eye questionnaire save failed: ${response.status}`);
+      setInstrumentSwitchNotice(null);
       markSaved(
         questionnaireDraft.totalScore
           ? `${instrument} ${questionnaireDraft.totalScore}`
@@ -346,7 +358,7 @@ export function DryEyeSection({ patientReference, encounterReference, onSaved }:
                 disabled={
                   busy !== null ||
                   questionnaireLoading ||
-                  (!questionnaireDraft.totalScore && !questionnaireDraft.unableToTest)
+                  (!questionnaireDraft.totalScore.trim() && !questionnaireDraft.unableToTest)
                 }
                 className="rounded border border-brand/60 bg-brand/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand/25 disabled:cursor-not-allowed disabled:opacity-50"
               >

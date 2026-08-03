@@ -8,7 +8,7 @@ import {
   DRY_EYE_QUESTIONNAIRE_INSTRUMENTS,
   dryEyeQuestionnaireInstrumentConcept,
   dryEyeQuestionnaireSummaryConcept,
-  questionnaireUrlForInstrument,
+  questionnaireReferenceForInstrument,
 } from "./dryEyeTerminology.js";
 import { reference } from "./ophthalmology/extensions.js";
 
@@ -39,7 +39,7 @@ export function buildDryEyeQuestionnaireResponse(
   const authored = input.authored ?? new Date().toISOString();
   return {
     resourceType: "QuestionnaireResponse",
-    questionnaire: questionnaireUrlForInstrument(input.instrument),
+    questionnaire: questionnaireReferenceForInstrument(input.instrument),
     status: "completed",
     subject: reference(input.patientReference),
     ...(input.encounterReference ? { encounter: reference(input.encounterReference) } : {}),

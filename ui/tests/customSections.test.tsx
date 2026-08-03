@@ -208,6 +208,17 @@ test("Dry Eye questionnaire persists total-score-only records and keeps unsaved 
     const dateAdministered = () => renderer!.root.findByProps({ "aria-label": "Date administered" });
     const unableToTest = () => renderer!.root.findByProps({ "aria-label": "Unable to test" });
 
+    act(() => totalScore().props.onChange({ target: { value: "1e999" } }));
+    const saveButton = () => renderer!.root.findAllByType("button").find((button) =>
+      button.children.includes("Save questionnaire")
+    );
+    assert.ok(saveButton());
+    await act(async () => {
+      await saveButton()!.props.onClick();
+    });
+    assert.equal(writes.length, 0);
+    assert.match(JSON.stringify(renderer.toJSON()), /Total score must be a number of zero or more/);
+
     act(() => totalScore().props.onChange({ target: { value: "30" } }));
     act(() => instrument().props.onChange("SPEED"));
     assert.equal(totalScore().props.value, "", "an OSDI score must not be reattributed to SPEED");
@@ -216,14 +227,17 @@ test("Dry Eye questionnaire persists total-score-only records and keeps unsaved 
     assert.equal(totalScore().props.value, "30", "the unsaved OSDI score must survive instrument switching");
     act(() => dateAdministered().props.onChange({ target: { value: "2026-08-03" } }));
     act(() => unableToTest().props.onChange({ target: { checked: true } }));
+    act(() => instrument().props.onChange("SPEED"));
+    act(() => totalScore().props.onChange({ target: { value: "12" } }));
+    act(() => instrument().props.onChange("OSDI"));
+    assert.match(JSON.stringify(renderer.toJSON()), /SPEED entry retained separately; its score was not applied to OSDI/);
 
-    const save = renderer.root.findAllByType("button").find((button) =>
-      button.children.includes("Save questionnaire")
-    );
+    const save = saveButton();
     assert.ok(save);
     await act(async () => {
       await save.props.onClick();
     });
+    assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /entry retained separately/);
 
     assert.equal(writes.length, 1);
     assert.deepEqual(writes[0]?.customFields, [
@@ -232,6 +246,11 @@ test("Dry Eye questionnaire persists total-score-only records and keeps unsaved 
       { code: "CUSTOM_DATE_ADMINISTERED", value: "2026-08-03" },
       { code: "CUSTOM_UNABLE_TO_TEST", value: "unable" },
     ]);
+    rows.push({ values: [
+      { code: "CUSTOM_INSTRUMENT", value: "SPEED" },
+      { code: "CUSTOM_TOTAL_SCORE", value: 12 },
+      { code: "CUSTOM_DATE_ADMINISTERED", value: "2026-07-01" },
+    ] });
 
     act(() => renderer!.unmount());
     await act(async () => {
@@ -249,6 +268,9 @@ test("Dry Eye questionnaire persists total-score-only records and keeps unsaved 
     assert.equal(totalScore().props.value, "30");
     assert.equal(dateAdministered().props.value, "2026-08-03");
     assert.equal(unableToTest().props.checked, true);
+    act(() => instrument().props.onChange("SPEED"));
+    assert.equal(totalScore().props.value, "12");
+    assert.equal(dateAdministered().props.value, "2026-07-01");
     assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /(?:OSDI|SPEED|DEQ-5) item \d+/);
   } finally {
     if (renderer) act(() => renderer!.unmount());
