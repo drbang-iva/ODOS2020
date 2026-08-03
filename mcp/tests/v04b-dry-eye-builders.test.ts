@@ -12,7 +12,6 @@ import {
 import {
   buildDryEyeQuestionnaireResponse,
   buildDryEyeQuestionnaireScoreObservation,
-  defaultDryEyeQuestionnaireAnswers,
 } from "../src/fhir/dryEyeQuestionnaireResponse.js";
 import {
   buildDryEyeTreatmentProcedure,
@@ -25,13 +24,12 @@ import { buildOphthalmicMedicationStatement } from "../src/fhir/ophthalmicMedica
 import { buildDryEyeAdverseEvent } from "../src/fhir/dryEyeAdverseEvent.js";
 
 test("dry-eye QuestionnaireResponse builder uses canonical instrument and derived summary Observation", () => {
-  const answers = defaultDryEyeQuestionnaireAnswers("OSDI", 2);
   const response = buildDryEyeQuestionnaireResponse({
     instrument: "OSDI",
     patientReference: "Patient/p1",
     encounterReference: "Encounter/e1",
     authored: "2026-04-28T12:00:00.000Z",
-    answers,
+    totalScore: 30,
   });
   const score = buildDryEyeQuestionnaireScoreObservation({
     instrument: "OSDI",
@@ -39,16 +37,19 @@ test("dry-eye QuestionnaireResponse builder uses canonical instrument and derive
     encounterReference: "Encounter/e1",
     questionnaireResponseReference: "QuestionnaireResponse/qr1",
     effectiveDateTime: response.authored,
-    answers,
+    score: 30,
   });
 
   assert.equal(response.questionnaire, DRY_EYE_QUESTIONNAIRE_URLS.OSDI);
   assert.equal(response.status, "completed");
   assert.equal(response.subject?.reference, "Patient/p1");
+  assert.equal(response.item?.length, 1);
+  assert.equal(response.item?.[0]?.linkId, "total-score");
+  assert.equal(response.item?.[0]?.answer?.[0]?.valueDecimal, 30);
   assert.equal(score.status, "preliminary");
   assert.equal(score.derivedFrom?.[0]?.reference, "QuestionnaireResponse/qr1");
   assert.equal(score.subject.reference, "Patient/p1");
-  assert.equal(score.valueQuantity?.value, 50);
+  assert.equal(score.valueQuantity?.value, 30);
   const scoreSourceReferences = score.derivedFrom?.map((source) => source.reference ?? "") ?? [];
   assert.ok(scoreSourceReferences.every((reference) => !reference.startsWith("Device/")));
 });

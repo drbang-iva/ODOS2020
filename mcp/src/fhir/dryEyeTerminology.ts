@@ -47,16 +47,6 @@ export const DRY_EYE_QUESTIONNAIRE_URLS: Record<
   McMonnies: `${ODOS_FHIR_BASE}/Questionnaire/dry-eye-mcmonnies`,
 };
 
-export const DRY_EYE_QUESTIONNAIRE_ITEM_COUNTS: Record<
-  DryEyeQuestionnaireInstrument,
-  number
-> = {
-  OSDI: 12,
-  SPEED: 4,
-  "DEQ-5": 5,
-  McMonnies: 14,
-};
-
 export function questionnaireUrlForInstrument(
   instrument: DryEyeQuestionnaireInstrument,
 ): string {
@@ -123,7 +113,6 @@ export function buildDryEyeCanonicalResources(): Array<
 function buildDryEyeQuestionnaire(
   instrument: DryEyeQuestionnaireInstrument,
 ): Questionnaire {
-  const itemCount = DRY_EYE_QUESTIONNAIRE_ITEM_COUNTS[instrument];
   return {
     resourceType: "Questionnaire",
     url: questionnaireUrlForInstrument(instrument),
@@ -142,12 +131,12 @@ function buildDryEyeQuestionnaire(
         display: displayForInstrument(instrument),
       },
     ],
-    item: Array.from({ length: itemCount }, (_, index) => ({
-      linkId: `${instrument.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${index + 1}`,
-      text: `${instrument} item ${index + 1}`,
-      type: "integer",
-      required: false,
-    })),
+    item: [{
+      linkId: "total-score",
+      text: "Total score",
+      type: "decimal",
+      required: true,
+    }],
   };
 }
 

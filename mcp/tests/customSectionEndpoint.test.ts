@@ -884,6 +884,23 @@ test("E1 Pachymetry and Manual K use measurement capture without exam state", as
   assert.equal(component(fhir.observations.at(-1), "entrance.manual-keratometry"), undefined);
 });
 
+test("dry-eye total score cannot persist without its instrument", async () => {
+  const fhir = new MemoryFhir();
+  const definitions = await catalog(fhir);
+  const result = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: "dry-eye:symptoms" },
+    body: {
+      patientReference: "Patient/dry-eye-score",
+      encounterReference: "Encounter/dry-eye-score",
+      customFields: [{ code: "CUSTOM_TOTAL_SCORE", value: 30 }],
+    },
+  });
+  assert.equal(result.status, 400);
+  assert.match(String((result.body as { error: string }).error), /requires its questionnaire instrument/);
+  assert.equal(fhir.observations.length, 0);
+});
+
 test("DE-1 dry-eye sections round-trip detail fields and per-eye anatomy through shared history", async () => {
   const fhir = new MemoryFhir();
   const definitions = await catalog(fhir);

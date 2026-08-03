@@ -112,6 +112,12 @@ export async function handleCustomSectionCaptureRequest(
         state: parsed.data.state,
         other: parsed.data.other,
       }];
+  if (definition.stableKey === "dry-eye:symptoms" && rows.some((row) => {
+    const supplied = new Set(row.values.map((value) => value.code));
+    return supplied.has("CUSTOM_TOTAL_SCORE") && !supplied.has("CUSTOM_INSTRUMENT");
+  })) {
+    return { status: 400, body: { error: "Dry-eye total score requires its questionnaire instrument." } };
+  }
   if (stateSection && rows.some((row) => row.other && !row.state)) {
     return { status: 400, body: { error: "Ocular-health Other text requires choosing Normal, Abnormal, or Deferred for that eye, or clearing the text." } };
   }

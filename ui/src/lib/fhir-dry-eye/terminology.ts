@@ -5,8 +5,6 @@ export const DRY_EYE_TREATMENT_TYPE_CODE_SYSTEM =
   `${ODOS_FHIR_BASE}/CodeSystem/dry-eye-treatment-type`;
 export const MEIBOGRAPHY_SCORE_CODE_SYSTEM =
   `${ODOS_FHIR_BASE}/CodeSystem/meibography-score`;
-export const DRY_EYE_QUESTIONNAIRE_INSTRUMENT_CODE_SYSTEM =
-  `${ODOS_FHIR_BASE}/CodeSystem/dry-eye-questionnaire-instrument`;
 export const OBSERVATION_MEIBOMIAN_GLAND_SCORE_PROFILE_URL =
   `${ODOS_FHIR_BASE}/StructureDefinition/Observation-MeibomianGlandScore`;
 export const DRY_EYE_PROCEDURE_ENERGY_EXTENSION_URL =
@@ -33,41 +31,6 @@ export const DRY_EYE_TREATMENT_TYPE_CODES = [
 ] as const;
 export type DryEyeTreatmentTypeCode = (typeof DRY_EYE_TREATMENT_TYPE_CODES)[number];
 
-export const DRY_EYE_QUESTIONNAIRE_INSTRUMENTS = [
-  "OSDI",
-  "SPEED",
-  "DEQ-5",
-  "McMonnies",
-] as const;
-export type DryEyeQuestionnaireInstrument =
-  (typeof DRY_EYE_QUESTIONNAIRE_INSTRUMENTS)[number];
-
-export const DRY_EYE_QUESTIONNAIRE_ITEM_COUNTS: Record<
-  DryEyeQuestionnaireInstrument,
-  number
-> = {
-  OSDI: 12,
-  SPEED: 4,
-  "DEQ-5": 5,
-  McMonnies: 14,
-};
-
-export const DRY_EYE_QUESTIONNAIRE_URLS: Record<
-  DryEyeQuestionnaireInstrument,
-  string
-> = {
-  OSDI: `${ODOS_FHIR_BASE}/Questionnaire/dry-eye-osdi`,
-  SPEED: `${ODOS_FHIR_BASE}/Questionnaire/dry-eye-speed`,
-  "DEQ-5": `${ODOS_FHIR_BASE}/Questionnaire/dry-eye-deq-5`,
-  McMonnies: `${ODOS_FHIR_BASE}/Questionnaire/dry-eye-mcmonnies`,
-};
-
-export function questionnaireUrlForInstrument(
-  instrument: DryEyeQuestionnaireInstrument,
-): string {
-  return DRY_EYE_QUESTIONNAIRE_URLS[instrument];
-}
-
 export function dryEyeTreatmentTypeConcept(code: DryEyeTreatmentTypeCode): CodeableConcept {
   return {
     coding: [
@@ -79,49 +42,6 @@ export function dryEyeTreatmentTypeConcept(code: DryEyeTreatmentTypeCode): Codea
     ],
     text: displayForTreatmentType(code),
   };
-}
-
-export function dryEyeQuestionnaireInstrumentConcept(
-  instrument: DryEyeQuestionnaireInstrument,
-): CodeableConcept {
-  return {
-    coding: [
-      {
-        system: DRY_EYE_QUESTIONNAIRE_INSTRUMENT_CODE_SYSTEM,
-        code: instrument,
-        display: displayForInstrument(instrument),
-      },
-    ],
-    text: displayForInstrument(instrument),
-  };
-}
-
-export function dryEyeQuestionnaireSummaryConcept(
-  instrument: DryEyeQuestionnaireInstrument,
-): CodeableConcept {
-  return {
-    coding: [
-      {
-        system: DRY_EYE_QUESTIONNAIRE_INSTRUMENT_CODE_SYSTEM,
-        code: `${instrument}-summary-score`,
-        display: `${displayForInstrument(instrument)} summary score`,
-      },
-    ],
-    text: `${displayForInstrument(instrument)} summary score`,
-  };
-}
-
-export function displayForInstrument(instrument: DryEyeQuestionnaireInstrument): string {
-  switch (instrument) {
-    case "OSDI":
-      return "Ocular Surface Disease Index";
-    case "SPEED":
-      return "Standard Patient Evaluation of Eye Dryness";
-    case "DEQ-5":
-      return "Dry Eye Questionnaire 5";
-    case "McMonnies":
-      return "McMonnies Dry Eye Questionnaire";
-  }
 }
 
 export function displayForTreatmentType(code: DryEyeTreatmentTypeCode): string {

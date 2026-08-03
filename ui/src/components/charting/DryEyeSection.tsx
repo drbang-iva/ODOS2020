@@ -1,13 +1,12 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type {
   AdverseEvent,
   MedicationStatement,
-  Observation,
   Procedure,
   Provenance,
-  QuestionnaireResponse,
 } from "@medplum/fhirtypes";
 import { fhir } from "../../lib/fhir";
+import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import {
   buildDryEyeAdverseEvent,
 } from "../../lib/fhir-dry-eye/adverseEvent";
@@ -19,17 +18,6 @@ import {
   buildDryEyeTreatmentProcedure,
   buildDryEyeTreatmentSeriesProcedure,
 } from "../../lib/fhir-dry-eye/procedure";
-import {
-  buildDryEyeQuestionnaireResponse,
-  buildDryEyeQuestionnaireScoreObservation,
-  computeDryEyeQuestionnaireScore,
-  defaultDryEyeQuestionnaireAnswers,
-  type DryEyeQuestionnaireAnswerInput,
-} from "../../lib/fhir-dry-eye/questionnaireResponse";
-import {
-  DRY_EYE_QUESTIONNAIRE_INSTRUMENTS,
-  type DryEyeQuestionnaireInstrument,
-} from "../../lib/fhir-dry-eye/terminology";
 import { OdosSelect } from "../inputs/OdosSelect";
 import type { SectionSaveStatus } from "./types";
 
@@ -48,71 +36,125 @@ const PRODUCT_OPTIONS = [
   { text: "Omega-3", supplyType: "supplement" },
 ] as const;
 
+const SYMPTOM_INSTRUMENTS = ["OSDI", "SPEED", "DEQ-5"] as const;
+type SymptomInstrument = (typeof SYMPTOM_INSTRUMENTS)[number];
+
+interface QuestionnaireDraft {
+  totalScore: string;
+  dateAdministered: string;
+  unableToTest: boolean;
+}
+
+interface QuestionnaireHistoryRow {
+  values: Array<{ code: string; value: number | string }>;
+}
+
+const EMPTY_DRAFT: QuestionnaireDraft = {
+  totalScore: "",
+  dateAdministered: "",
+  unableToTest: false,
+};
+
+function emptyQuestionnaireDrafts(): Record<SymptomInstrument, QuestionnaireDraft> {
+  return Object.fromEntries(
+    SYMPTOM_INSTRUMENTS.map((value) => [value, { ...EMPTY_DRAFT }]),
+  ) as Record<SymptomInstrument, QuestionnaireDraft>;
+}
+
 export function DryEyeSection({ patientReference, encounterReference, onSaved }: Props) {
-  const [instrument, setInstrument] = useState<DryEyeQuestionnaireInstrument>("OSDI");
-  const [answers, setAnswers] = useState<DryEyeQuestionnaireAnswerInput[]>(
-    defaultDryEyeQuestionnaireAnswers("OSDI"),
-  );
+  const [instrument, setInstrument] = useState<SymptomInstrument>("OSDI");
+  const [questionnaireDrafts, setQuestionnaireDrafts] = useState(emptyQuestionnaireDrafts);
+  const [questionnaireLoading, setQuestionnaireLoading] = useState(true);
+  const [instrumentSwitchNotice, setInstrumentSwitchNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<SectionSaveStatus | null>(null);
   const [series, setSeries] = useState<{ parent?: Procedure; session?: Procedure }>({});
   const [productText, setProductText] = useState<string>(PRODUCT_OPTIONS[0].text);
   const [adverseEventText, setAdverseEventText] = useState("");
+  const questionnaireDraft = questionnaireDrafts[instrument];
 
-  const score = useMemo(
-    () => computeDryEyeQuestionnaireScore(instrument, answers),
-    [answers, instrument],
-  );
+  useEffect(() => {
+    const controller = new AbortController();
+    const query = new URLSearchParams({ patient: patientReference, encounter: encounterReference });
+    setQuestionnaireLoading(true);
+    fetch(
+      `${clinicalGraphApiBase()}/clinical-graph/custom/${encodeURIComponent("dry-eye:symptoms")}/history?${query}`,
+      { headers: authHeaders(), signal: controller.signal },
+    )
+      .then(async (response) => {
+        const body = await response.json() as { rows?: QuestionnaireHistoryRow[]; error?: string };
+        if (!response.ok) throw new Error(body.error ?? `Dry-eye questionnaire history failed: ${response.status}`);
+        return body.rows ?? [];
+      })
+      .then((rows) => {
+        const saved = rows.map(questionnaireDraftFromHistory).find((row) => row !== undefined);
+        if (!saved) return;
+        setInstrument(saved.instrument);
+        setQuestionnaireDrafts((current) => ({
+          ...current,
+          [saved.instrument]: saved.draft,
+        }));
+      })
+      .catch((caught) => {
+        if ((caught as Error).name !== "AbortError") {
+          setError(caught instanceof Error ? caught.message : String(caught));
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setQuestionnaireLoading(false);
+      });
+    return () => controller.abort();
+  }, [encounterReference, patientReference]);
 
-  function changeInstrument(next: DryEyeQuestionnaireInstrument) {
-    setInstrument(next);
-    setAnswers(defaultDryEyeQuestionnaireAnswers(next));
+  function updateQuestionnaireDraft(update: Partial<QuestionnaireDraft>) {
+    setQuestionnaireDrafts((current) => ({
+      ...current,
+      [instrument]: { ...current[instrument], ...update },
+    }));
   }
 
-  function updateAnswer(index: number, value: string) {
-    const numeric = Number(value);
-    setAnswers((current) =>
-      current.map((answer, answerIndex) =>
-        answerIndex === index
-          ? { ...answer, valueInteger: Number.isFinite(numeric) ? numeric : 0 }
-          : answer,
-      ),
+  function changeInstrument(next: SymptomInstrument) {
+    if (next === instrument) return;
+    setInstrumentSwitchNotice(
+      questionnaireDraft.totalScore || questionnaireDraft.dateAdministered || questionnaireDraft.unableToTest
+        ? `${instrument} entry retained separately; its score was not applied to ${next}.`
+        : null,
     );
+    setInstrument(next);
   }
 
   async function saveQuestionnaire() {
     setBusy("questionnaire");
     setError(null);
     try {
-      const authored = new Date().toISOString();
-      const questionnaireResponse = await fhir.create<QuestionnaireResponse>(
-        buildDryEyeQuestionnaireResponse({
-          instrument,
-          patientReference,
-          encounterReference,
-          authored,
-          answers,
-        }),
-        "create_dry_eye_questionnaire_response",
+      const customFields: Array<{ code: string; value: number | string }> = [
+        { code: "CUSTOM_INSTRUMENT", value: instrument },
+      ];
+      if (questionnaireDraft.totalScore.trim()) {
+        customFields.push({ code: "CUSTOM_TOTAL_SCORE", value: Number(questionnaireDraft.totalScore) });
+      }
+      if (questionnaireDraft.dateAdministered) {
+        customFields.push({ code: "CUSTOM_DATE_ADMINISTERED", value: questionnaireDraft.dateAdministered });
+      }
+      if (questionnaireDraft.unableToTest) {
+        customFields.push({ code: "CUSTOM_UNABLE_TO_TEST", value: "unable" });
+      }
+      const response = await fetch(
+        `${clinicalGraphApiBase()}/clinical-graph/custom/${encodeURIComponent("dry-eye:symptoms")}`,
+        {
+          method: "POST",
+          headers: { ...authHeaders(), "Content-Type": "application/json" },
+          body: JSON.stringify({ patientReference, encounterReference, customFields }),
+        },
       );
-      const scoreObservation = await fhir.create<Observation>(
-        buildDryEyeQuestionnaireScoreObservation({
-          instrument,
-          patientReference,
-          encounterReference,
-          questionnaireResponseReference: `QuestionnaireResponse/${questionnaireResponse.id}`,
-          effectiveDateTime: authored,
-          score,
-          answers,
-        }),
-        "create_dry_eye_questionnaire_response",
+      const result = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(result.error ?? `Dry-eye questionnaire save failed: ${response.status}`);
+      markSaved(
+        questionnaireDraft.totalScore
+          ? `${instrument} ${questionnaireDraft.totalScore}`
+          : `${instrument} unable to test`,
       );
-      await createUiProvenance("create_dry_eye_questionnaire_response", [
-        `QuestionnaireResponse/${questionnaireResponse.id}`,
-        `Observation/${scoreObservation.id}`,
-      ]);
-      markSaved(`${instrument} ${score}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -239,37 +281,73 @@ export function DryEyeSection({ patientReference, encounterReference, onSaved }:
 
         <div className="mt-5 grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
           <div className="rounded border border-white/10 bg-bg-panel/70 p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-end justify-between gap-3">
               <h3 className="text-sm font-semibold text-white">Questionnaire</h3>
-              <OdosSelect
-                value={instrument}
-                options={DRY_EYE_QUESTIONNAIRE_INSTRUMENTS.map((value) => ({ value, label: value }))}
-                onChange={(value) => changeInstrument(value as DryEyeQuestionnaireInstrument)}
-                ariaLabel="Questionnaire instrument"
-              />
-            </div>
-
-            <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {answers.map((answer, index) => (
-                <label key={answer.linkId} className="grid grid-cols-[1fr_72px] items-center gap-2 rounded border border-white/10 bg-bg-mid/60 px-3 py-2 text-sm">
-                  <span className="text-white/70">{answer.text ?? answer.linkId}</span>
-                  <input
-                    value={answer.valueInteger ?? 0}
-                    onChange={(event) => updateAnswer(index, event.target.value)}
-                    inputMode="numeric"
-                    className="h-9 rounded border border-white/15 bg-bg-deep px-2 text-white outline-none focus:border-brand"
-                  />
-                </label>
-              ))}
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <div className="text-sm text-white/70">
-                Score <span className="font-semibold text-white">{score}</span>
+              <div>
+                <div className="mb-1 text-xs uppercase tracking-widest text-white/35">Instrument</div>
+                <OdosSelect
+                  value={instrument}
+                  options={SYMPTOM_INSTRUMENTS.map((value) => ({ value, label: value }))}
+                  onChange={changeInstrument}
+                  ariaLabel="Questionnaire instrument"
+                  disabled={questionnaireLoading}
+                />
               </div>
+            </div>
+
+            <div className="mt-4 grid gap-4 sm:grid-cols-3">
+              <label className="block">
+                <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">Total score</span>
+                <input
+                  aria-label="Total score"
+                  type="number"
+                  min={0}
+                  step="any"
+                  value={questionnaireDraft.totalScore}
+                  onChange={(event) => updateQuestionnaireDraft({ totalScore: event.target.value })}
+                  inputMode="decimal"
+                  className="h-11 w-full rounded border border-white/15 bg-bg-deep px-3 text-white outline-none focus:border-brand"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">Date administered</span>
+                <input
+                  aria-label="Date administered"
+                  type="date"
+                  value={questionnaireDraft.dateAdministered}
+                  onChange={(event) => updateQuestionnaireDraft({ dateAdministered: event.target.value })}
+                  className="h-11 w-full rounded border border-white/15 bg-bg-deep px-3 text-white outline-none focus:border-brand"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">Unable to test</span>
+                <span className="flex h-11 items-center gap-3 rounded border border-white/15 bg-bg-deep px-3 text-sm text-white/70">
+                  <input
+                    aria-label="Unable to test"
+                    type="checkbox"
+                    checked={questionnaireDraft.unableToTest}
+                    onChange={(event) => updateQuestionnaireDraft({ unableToTest: event.target.checked })}
+                    className="accent-brand"
+                  />
+                  {questionnaireDraft.unableToTest ? "Yes" : "No"}
+                </span>
+              </label>
+            </div>
+
+            {instrumentSwitchNotice && (
+              <div role="status" className="mt-3 text-sm text-amber-100">
+                {instrumentSwitchNotice}
+              </div>
+            )}
+
+            <div className="mt-4 flex flex-wrap items-center justify-end gap-3">
               <button
                 onClick={saveQuestionnaire}
-                disabled={busy !== null}
+                disabled={
+                  busy !== null ||
+                  questionnaireLoading ||
+                  (!questionnaireDraft.totalScore && !questionnaireDraft.unableToTest)
+                }
                 className="rounded border border-brand/60 bg-brand/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand/25 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {busy === "questionnaire" ? "Saving..." : "Save questionnaire"}
@@ -346,6 +424,27 @@ export function DryEyeSection({ patientReference, encounterReference, onSaved }:
       </div>
     </section>
   );
+}
+
+function questionnaireDraftFromHistory(row: QuestionnaireHistoryRow): {
+  instrument: SymptomInstrument;
+  draft: QuestionnaireDraft;
+} | undefined {
+  const valueByCode = new Map(row.values.map((value) => [value.code, value.value]));
+  const instrument = valueByCode.get("CUSTOM_INSTRUMENT");
+  if (typeof instrument !== "string" || !SYMPTOM_INSTRUMENTS.includes(instrument as SymptomInstrument)) {
+    return undefined;
+  }
+  const totalScore = valueByCode.get("CUSTOM_TOTAL_SCORE");
+  const dateAdministered = valueByCode.get("CUSTOM_DATE_ADMINISTERED");
+  return {
+    instrument: instrument as SymptomInstrument,
+    draft: {
+      totalScore: typeof totalScore === "number" || typeof totalScore === "string" ? String(totalScore) : "",
+      dateAdministered: typeof dateAdministered === "string" ? dateAdministered : "",
+      unableToTest: valueByCode.get("CUSTOM_UNABLE_TO_TEST") === "unable",
+    },
+  };
 }
 
 async function createUiProvenance(sourceTag: string, targetReferences: string[]): Promise<Provenance> {

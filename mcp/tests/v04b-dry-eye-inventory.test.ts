@@ -7,7 +7,6 @@ import {
 import {
   buildDryEyeQuestionnaireResponse,
   buildDryEyeQuestionnaireScoreObservation,
-  defaultDryEyeQuestionnaireAnswers,
 } from "../src/fhir/dryEyeQuestionnaireResponse.js";
 import {
   DRY_EYE_PROCEDURE_STATUS_CODES,
@@ -24,22 +23,23 @@ test("v0.4b dry-eye questionnaire inventory emits stable QuestionnaireResponse a
   for (const instrument of DRY_EYE_QUESTIONNAIRE_INSTRUMENTS) {
     for (let value = 0; value < 10; value += 1) {
       await t.test(`${instrument} value ${value}`, () => {
-        const answers = defaultDryEyeQuestionnaireAnswers(instrument, value);
         const response = buildDryEyeQuestionnaireResponse({
           instrument,
           patientReference: "Patient/p1",
           authored: "2026-04-28T12:00:00.000Z",
-          answers,
+          totalScore: value,
         });
         const score = buildDryEyeQuestionnaireScoreObservation({
           instrument,
           patientReference: "Patient/p1",
           questionnaireResponseReference: "QuestionnaireResponse/qr1",
           effectiveDateTime: "2026-04-28T12:00:00.000Z",
-          answers,
+          score: value,
         });
         assert.equal(response.resourceType, "QuestionnaireResponse");
-        assert.equal(response.item?.length, answers.length);
+        assert.equal(response.item?.length, 1);
+        assert.equal(response.item?.[0]?.linkId, "total-score");
+        assert.equal(response.item?.[0]?.answer?.[0]?.valueDecimal, value);
         assert.equal(score.derivedFrom?.[0]?.reference, "QuestionnaireResponse/qr1");
       });
     }
