@@ -24,6 +24,12 @@ import { BillingWeatherReport, ConsultReportDraftPanel, PatientOverview } from "
 import { StartExam, type StartExamApi } from "../src/components/StartExam";
 import { SeriesTrackerPanel } from "../src/components/series-tracker/SeriesTrackerPanel";
 
+const seriesTrackerApiStub = {
+  fetchSeries: async () => [],
+  fetchProtocols: async () => [],
+  prescribe: async () => { throw new Error("The overview test does not prescribe programs."); },
+};
+
 test("Clinic flow and unsigned-chart clicks both route through PatientOverview", () => {
   useViewState.setState({ view: { kind: "picker" } });
   let renderer!: ReactTestRenderer;
@@ -207,21 +213,16 @@ test("doctor overview omits all commercial panels while front desk retains them"
 });
 
 test("active-program empty language stays accurate when package status is visible", () => {
-  const seriesTracker = {
-    fetchSeries: async () => [],
-    fetchProtocols: async () => [],
-    prescribe: async () => { throw new Error("The empty-language test does not prescribe programs."); },
-  };
   let doctor!: ReactTestRenderer;
   act(() => {
-    doctor = create(<RoleProvider initialRole="doctor"><PatientOverview patient={patient} initialOverview={fixture()} api={{ seriesTracker }} /></RoleProvider>);
+    doctor = create(<RoleProvider initialRole="doctor"><PatientOverview patient={patient} initialOverview={fixture()} api={{ seriesTracker: seriesTrackerApiStub }} /></RoleProvider>);
   });
   assert.equal(doctor.root.findByType(SeriesTrackerPanel).props.emptyMessage, "No active programs");
   act(() => doctor.unmount());
 
   let frontDesk!: ReactTestRenderer;
   act(() => {
-    frontDesk = create(<RoleProvider initialRole="front-desk"><PatientOverview patient={patient} initialOverview={fixture()} api={{ seriesTracker }} /></RoleProvider>);
+    frontDesk = create(<RoleProvider initialRole="front-desk"><PatientOverview patient={patient} initialOverview={fixture()} api={{ seriesTracker: seriesTrackerApiStub }} /></RoleProvider>);
   });
   assert.equal(frontDesk.root.findByType(SeriesTrackerPanel).props.emptyMessage, "No active treatment series");
   act(() => frontDesk.unmount());
@@ -891,11 +892,7 @@ test("zero-data doctor overview renders quiet Tier 1 states and no empty Tier 2 
               fetchOverview: async () => empty,
               fetchHistory: async () => [],
               saveNote: async () => { throw new Error("The empty-state test does not save notes."); },
-              seriesTracker: {
-                fetchSeries: async () => [],
-                fetchProtocols: async () => [],
-                prescribe: async () => { throw new Error("The empty-state test does not prescribe programs."); },
-              },
+              seriesTracker: seriesTrackerApiStub,
             }}
           />
         </RoleProvider>,
@@ -928,7 +925,7 @@ test("a sparse visit collapses absent metadata to one marker", () => {
   }];
   let renderer!: ReactTestRenderer;
   act(() => {
-    renderer = create(<PatientOverview patient={patient} initialOverview={sparse} />);
+    renderer = create(<PatientOverview patient={patient} initialOverview={sparse} api={{ seriesTracker: seriesTrackerApiStub }} />);
   });
   const head = renderer.root.findByProps({ className: "odos-visit-head" });
   assert.deepEqual(head.children[0].children, ["—"]);
@@ -960,6 +957,7 @@ test("an empty filtered ledger does not claim the patient has no visits yet", as
     fetchOverview: async () => filtered,
     fetchHistory: async () => [],
     saveNote: async () => filtered.stickyNote!,
+    seriesTracker: seriesTrackerApiStub,
   };
   let renderer!: ReactTestRenderer;
   act(() => {
@@ -982,7 +980,7 @@ test("the Conditions list caps pathological data at eight rows and expands to th
   }));
   let renderer!: ReactTestRenderer;
   act(() => {
-    renderer = create(<PatientOverview patient={patient} initialOverview={crowded} />);
+    renderer = create(<PatientOverview patient={patient} initialOverview={crowded} api={{ seriesTracker: seriesTrackerApiStub }} />);
   });
   const panel = renderer.root.findByProps({ "data-testid": "overview-problem-list" });
   assert.equal(panel.findAllByType("li").length, 8);
