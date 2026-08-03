@@ -67,10 +67,14 @@ export interface ConversationMessage {
   id: string;
   direction: "inbound" | "outbound" | "unknown";
   status: string;
-  occurredAt: string;
+  occurredAt?: string;
   from?: string;
   to?: string;
   body?: string;
+}
+
+export interface ConversationMessageReadRequest {
+  includeContent?: boolean;
 }
 
 export interface ConversationListRequest {
@@ -137,6 +141,10 @@ export interface CommsProvider {
   sendEmail?(request: SendEmailRequest): Promise<SendResult>;
   sendSms?(request: SendSmsRequest): Promise<SendResult>;
   listConversations?(request?: ConversationListRequest): Promise<ConversationSummary[]>;
+  getConversationMessages?(
+    conversationId: string,
+    request?: ConversationMessageReadRequest,
+  ): Promise<ConversationMessage[]>;
   initiateCall?(request: CallRequest): Promise<{ callId: string }>;
   getCall?(callId: string): Promise<CallDetail>;
   listCalls?(request?: CallListRequest): Promise<CallDetail[]>;

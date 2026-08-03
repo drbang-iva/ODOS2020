@@ -5,6 +5,8 @@ import type {
   ContactRecord,
   ContactSearch,
   ConversationListRequest,
+  ConversationMessage,
+  ConversationMessageReadRequest,
   ConversationSummary,
   SendResult,
   SendSmsRequest,
@@ -31,6 +33,8 @@ const GHL_API_VERSION = "v3";
 const GHL_REQUEST_TIMEOUT_MS = 30_000;
 const GHL_CONTACT_PAGE_LIMIT = 100;
 const GHL_CONTACT_PAGE_CAP = 100;
+const GHL_MESSAGE_PAGE_LIMIT = 100;
+const GHL_MESSAGE_PAGE_CAP = 100;
 const GHL_WEBHOOK_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
 MCowBQYDK2VwAyEAi2HR1srL4o18O8BRa7gVJY7G7bupbN3H9AwJrHCDiOg=
 -----END PUBLIC KEY-----`;
@@ -61,15 +65,25 @@ interface GhlContact {
 interface GhlConversation {
   id: string;
   contactId: string;
-  locationId: string;
-  lastMessageBody: string;
-  lastMessageType: string;
-  type: string;
+  locationId?: string;
+  lastMessageBody?: string;
+  lastMessageType?: string;
+  type?: string;
   unreadCount: number;
-  fullName: string;
-  contactName: string;
-  email: string;
-  phone: string;
+  fullName?: string;
+  contactName?: string;
+  email?: string;
+  phone?: string;
+}
+
+interface GhlMessage {
+  id: string;
+  dateAdded?: string;
+  direction?: string;
+  status?: string;
+  body?: string;
+  from?: string;
+  to?: string | string[];
 }
 
 export interface GhlInboundWebhookEvent {
@@ -138,6 +152,36 @@ export function createGhlAdapter(
       throw new Error("Multiple GHL contacts exactly match the patient phone; refusing an ambiguous patient send.");
     }
     return matches[0];
+  };
+  const messagesForConversation = async (
+    conversationId: string,
+    includeContent: boolean,
+  ): Promise<ConversationMessage[]> => {
+    const messages: ConversationMessage[] = [];
+    const seenCursors = new Set<string>();
+    let lastMessageId: string | undefined;
+    for (let page = 0; page < GHL_MESSAGE_PAGE_CAP; page += 1) {
+      const query = new URLSearchParams({
+        limit: String(GHL_MESSAGE_PAGE_LIMIT),
+        type: "TYPE_SMS",
+      });
+      if (lastMessageId) query.set("lastMessageId", lastMessageId);
+      const response = await request<{
+        lastMessageId?: unknown;
+        nextPage?: unknown;
+        messages?: unknown;
+      }>(`/conversations/${encodeURIComponent(conversationId)}/messages?${query}`);
+      messages.push(...messageArray(response.messages).map((message) =>
+        conversationMessage(message, includeContent)));
+      if (response.nextPage !== true) return messages;
+      const cursor = requiredResponseString(response.lastMessageId, "GHL message page cursor");
+      if (seenCursors.has(cursor)) {
+        throw new Error("GHL conversation messages pagination repeated a cursor.");
+      }
+      seenCursors.add(cursor);
+      lastMessageId = cursor;
+    }
+    throw new Error("GHL conversation messages pagination exceeded 100 pages.");
   };
   return {
     name: "ghl",
@@ -208,13 +252,24 @@ export function createGhlAdapter(
         ...(input.includeContent === true && conversation.lastMessageBody
           ? { preview: conversation.lastMessageBody }
           : {}),
-        channel: conversation.lastMessageType,
+        ...(conversation.lastMessageType ? { channel: conversation.lastMessageType } : {}),
         unreadCount: conversation.unreadCount,
-        displayName: conversation.fullName || conversation.contactName,
+        ...(conversation.fullName || conversation.contactName
+          ? { displayName: conversation.fullName || conversation.contactName }
+          : {}),
         ...(conversation.phone ? { phone: conversation.phone } : {}),
         ...(conversation.email ? { email: conversation.email } : {}),
         messages: [],
       }));
+    },
+    async getConversationMessages(
+      conversationId: string,
+      input: ConversationMessageReadRequest = {},
+    ): Promise<ConversationMessage[]> {
+      return messagesForConversation(
+        requiredResponseString(conversationId, "GHL conversation id"),
+        input.includeContent === true,
+      );
     },
     async searchContacts(input: ContactSearch): Promise<ContactRecord[]> {
       const query = requiredText(input.query, "GHL contact search query");
@@ -344,27 +399,68 @@ function conversationArray(value: unknown): GhlConversation[] {
     return {
       id: requiredResponseString(conversation.id, "GHL conversation id"),
       contactId: requiredResponseString(conversation.contactId, "GHL conversation contact id"),
-      locationId: responseString(conversation.locationId, "GHL conversation location id"),
-      lastMessageBody: responseString(conversation.lastMessageBody, "GHL conversation last message body"),
-      lastMessageType: responseString(conversation.lastMessageType, "GHL conversation last message type"),
-      type: responseString(conversation.type, "GHL conversation type"),
-      unreadCount: nonNegativeInteger(conversation.unreadCount, "GHL conversation unread count"),
-      fullName: responseString(conversation.fullName, "GHL conversation full name"),
-      contactName: responseString(conversation.contactName, "GHL conversation contact name"),
-      email: responseString(conversation.email, "GHL conversation email"),
-      phone: responseString(conversation.phone, "GHL conversation phone"),
+      ...(optionalResponseString(conversation.locationId) ? { locationId: optionalResponseString(conversation.locationId) } : {}),
+      ...(optionalResponseString(conversation.lastMessageBody) ? { lastMessageBody: optionalResponseString(conversation.lastMessageBody) } : {}),
+      ...(optionalResponseString(conversation.lastMessageType) ? { lastMessageType: optionalResponseString(conversation.lastMessageType) } : {}),
+      ...(optionalResponseString(conversation.type) ? { type: optionalResponseString(conversation.type) } : {}),
+      unreadCount: nonNegativeIntegerOrZero(conversation.unreadCount),
+      ...(optionalResponseString(conversation.fullName) ? { fullName: optionalResponseString(conversation.fullName) } : {}),
+      ...(optionalResponseString(conversation.contactName) ? { contactName: optionalResponseString(conversation.contactName) } : {}),
+      ...(optionalResponseString(conversation.email) ? { email: optionalResponseString(conversation.email) } : {}),
+      ...(optionalResponseString(conversation.phone) ? { phone: optionalResponseString(conversation.phone) } : {}),
     };
   });
 }
 
-function responseString(value: unknown, label: string): string {
-  if (typeof value !== "string") throw new Error(`${label} is missing or invalid.`);
-  return value.trim();
+function messageArray(value: unknown): GhlMessage[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((entry) => {
+    const message = record(entry);
+    const to = typeof message.to === "string"
+      ? message.to
+      : Array.isArray(message.to)
+        ? message.to.filter((candidate): candidate is string => typeof candidate === "string")
+        : undefined;
+    return {
+      id: requiredResponseString(message.id, "GHL message id"),
+      ...(optionalResponseDate(message.dateAdded) ? { dateAdded: optionalResponseDate(message.dateAdded) } : {}),
+      ...(optionalResponseString(message.direction) ? { direction: optionalResponseString(message.direction) } : {}),
+      ...(optionalResponseString(message.status) ? { status: optionalResponseString(message.status) } : {}),
+      ...(optionalResponseString(message.body) ? { body: optionalResponseString(message.body) } : {}),
+      ...(optionalResponseString(message.from) ? { from: optionalResponseString(message.from) } : {}),
+      ...(to && (typeof to === "string" || to.length > 0) ? { to } : {}),
+    };
+  });
 }
 
-function nonNegativeInteger(value: unknown, label: string): number {
+function conversationMessage(message: GhlMessage, includeContent: boolean): ConversationMessage {
+  const direction = message.direction === "inbound" || message.direction === "outbound"
+    ? message.direction
+    : "unknown";
+  return {
+    id: message.id,
+    direction,
+    status: message.status ?? "unknown",
+    ...(message.dateAdded ? { occurredAt: message.dateAdded } : {}),
+    ...(message.from ? { from: message.from } : {}),
+    ...(message.to ? { to: Array.isArray(message.to) ? message.to[0] : message.to } : {}),
+    ...(includeContent && message.body !== undefined ? { body: message.body } : {}),
+  };
+}
+
+function optionalResponseString(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  return value.trim() || undefined;
+}
+
+function optionalResponseDate(value: unknown): string | undefined {
+  const date = optionalResponseString(value);
+  return date && Number.isFinite(Date.parse(date)) ? date : undefined;
+}
+
+function nonNegativeIntegerOrZero(value: unknown): number {
   if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
-    throw new Error(`${label} is missing or invalid.`);
+    return 0;
   }
   return value;
 }

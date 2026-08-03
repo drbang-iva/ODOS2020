@@ -61,15 +61,24 @@ export function registerCommsApiRoutes(
     patientReferenceForAudit(req),
     async (staff) => {
       const patientReference = patientReferenceFromQuery(req);
+      const conversationId = conversationIdFromQuery(req);
       const limit = numberFromQuery(req, "limit", 1, 100);
       const provider = adapter(deps, providerFromQuery(req, deps.dispatch, "transactional-sms"), staff.fhir);
       if (!provider.listConversations) throw new CommsApiCapabilityError("Conversation history is not enabled for this communications provider.");
       const includeContent = hasBusinessAction(staff.actorRole, "communications.content.read");
-      const conversations = await provider.listConversations({
+      let conversations = await provider.listConversations({
         ...(patientReference ? { patientReference } : {}),
         ...(limit ? { limit } : {}),
         includeContent,
       });
+      if (includeContent && conversationId && provider.getConversationMessages) {
+        const selected = conversations.find((conversation) => conversation.id === conversationId);
+        if (selected) {
+          const messages = await provider.getConversationMessages(conversationId, { includeContent: true });
+          conversations = conversations.map((conversation) =>
+            conversation.id === conversationId ? { ...conversation, messages } : conversation);
+        }
+      }
       return { status: 200, body: { conversations: includeContent ? conversations : redactConversationBodies(conversations) } };
     },
   ));
@@ -420,6 +429,11 @@ function patientReferenceFromQuery(req: Request): string | undefined {
   const value = queryString(req, "patientReference", "patient_id", "patientId");
   if (!value) return undefined;
   return requiredPatientReference(value.startsWith("Patient/") ? value : `Patient/${value}`);
+}
+
+function conversationIdFromQuery(req: Request): string | undefined {
+  const value = queryString(req, "conversationId", "conversation_id");
+  return value ? resourceKey(value, "conversation id") : undefined;
 }
 
 function patientReferenceForAudit(req: Request): string | undefined {

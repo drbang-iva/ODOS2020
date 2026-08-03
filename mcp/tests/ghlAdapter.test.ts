@@ -215,6 +215,110 @@ test("GHL maps a patient-filtered conversation row from the documented search re
   assert.match(urls[1], /sort=desc/);
 });
 
+test("GHL returns every conversation when optional search fields are null or missing", async () => {
+  const adapter = createGhlAdapter({ locationId: LOCATION_ID, accessToken: ACCESS_TOKEN }, {
+    fetchImpl: (async (input) => {
+      const url = String(input);
+      if (!url.includes("/conversations/search?")) throw new Error(`Unexpected GHL request: ${url}`);
+      return Response.json({
+        conversations: [
+          {
+            id: "conversation-complete",
+            contactId: "contact-complete",
+            locationId: LOCATION_ID,
+            lastMessageBody: "Complete preview",
+            lastMessageType: "TYPE_SMS",
+            type: "TYPE_PHONE",
+            unreadCount: 2,
+            fullName: "Complete Contact",
+            contactName: "Complete",
+            email: "complete@example.test",
+            phone: "+18645550191",
+          },
+          {
+            id: "conversation-null-email",
+            contactId: "contact-null-email",
+            locationId: LOCATION_ID,
+            lastMessageBody: "No email preview",
+            lastMessageType: "TYPE_SMS",
+            type: "TYPE_PHONE",
+            unreadCount: 1,
+            fullName: "No Email",
+            contactName: "Email Missing",
+            email: null,
+            phone: "+18645550192",
+          },
+          {
+            id: "conversation-no-phone",
+            contactId: "contact-no-phone",
+            locationId: LOCATION_ID,
+            lastMessageBody: "No phone preview",
+            lastMessageType: "TYPE_SMS",
+            type: "TYPE_PHONE",
+            unreadCount: 0,
+            fullName: "No Phone",
+            contactName: "Phone Missing",
+            email: "no-phone@example.test",
+          },
+          {
+            id: "conversation-no-preview",
+            contactId: "contact-no-preview",
+            locationId: null,
+            lastMessageType: null,
+            type: null,
+            unreadCount: "unknown",
+            fullName: null,
+            contactName: "Preview Missing",
+            email: "no-preview@example.test",
+            phone: "+18645550194",
+          },
+        ],
+      });
+    }) as typeof fetch,
+  });
+
+  const result = await adapter.listConversations!({ includeContent: true });
+
+  assert.deepEqual(result, [
+    {
+      id: "conversation-complete",
+      preview: "Complete preview",
+      channel: "TYPE_SMS",
+      unreadCount: 2,
+      displayName: "Complete Contact",
+      phone: "+18645550191",
+      email: "complete@example.test",
+      messages: [],
+    },
+    {
+      id: "conversation-null-email",
+      preview: "No email preview",
+      channel: "TYPE_SMS",
+      unreadCount: 1,
+      displayName: "No Email",
+      phone: "+18645550192",
+      messages: [],
+    },
+    {
+      id: "conversation-no-phone",
+      preview: "No phone preview",
+      channel: "TYPE_SMS",
+      unreadCount: 0,
+      displayName: "No Phone",
+      email: "no-phone@example.test",
+      messages: [],
+    },
+    {
+      id: "conversation-no-preview",
+      unreadCount: 0,
+      displayName: "Preview Missing",
+      phone: "+18645550194",
+      email: "no-preview@example.test",
+      messages: [],
+    },
+  ]);
+});
+
 test("GHL conversation listing makes one request regardless of conversation message volume", async () => {
   const urls: string[] = [];
   const conversations = Array.from({ length: 6 }, (_, index) => ({
@@ -249,6 +353,84 @@ test("GHL conversation listing makes one request regardless of conversation mess
   assert.match(urls[0], /sort=desc/);
   assert.equal(result.every((conversation) => conversation.preview === undefined), true);
   assert.equal(result.every((conversation) => conversation.messages.length === 0), true);
+});
+
+test("GHL reads one conversation thread through bounded cursor pagination", async () => {
+  const urls: string[] = [];
+  const adapter = createGhlAdapter({ locationId: LOCATION_ID, accessToken: ACCESS_TOKEN }, {
+    fetchImpl: (async (input) => {
+      const url = String(input);
+      urls.push(url);
+      const cursor = new URL(url).searchParams.get("lastMessageId");
+      if (cursor === null) {
+        return Response.json({
+          lastMessageId: "message-thread-1",
+          nextPage: true,
+          messages: [{
+            id: "message-thread-1",
+            dateAdded: "2026-08-03T13:00:00.000Z",
+            direction: "inbound",
+            status: "delivered",
+            body: "Synthetic thread message",
+            from: "+18645550199",
+            to: ["+18645550100"],
+          }],
+        });
+      }
+      assert.equal(cursor, "message-thread-1");
+      return Response.json({
+        lastMessageId: "message-thread-2",
+        nextPage: false,
+        messages: [{
+          id: "message-thread-2",
+          dateAdded: null,
+          direction: null,
+          status: null,
+          body: null,
+        }],
+      });
+    }) as typeof fetch,
+  });
+
+  const result = await adapter.getConversationMessages!(CONVERSATION_ID, { includeContent: true });
+
+  assert.deepEqual(result, [
+    {
+      id: "message-thread-1",
+      direction: "inbound",
+      status: "delivered",
+      occurredAt: "2026-08-03T13:00:00.000Z",
+      from: "+18645550199",
+      to: "+18645550100",
+      body: "Synthetic thread message",
+    },
+    {
+      id: "message-thread-2",
+      direction: "unknown",
+      status: "unknown",
+    },
+  ]);
+  assert.equal(urls.length, 2);
+  assert.match(urls[0], new RegExp(`/conversations/${CONVERSATION_ID}/messages\\?`));
+  assert.match(urls[0], /limit=100/);
+  assert.match(urls[0], /type=TYPE_SMS/);
+  assert.equal(new URL(urls[1]).searchParams.get("lastMessageId"), "message-thread-1");
+});
+
+test("GHL stops thread pagination when the vendor repeats a cursor", async () => {
+  let requests = 0;
+  const adapter = createGhlAdapter({ locationId: LOCATION_ID, accessToken: ACCESS_TOKEN }, {
+    fetchImpl: (async () => {
+      requests += 1;
+      return Response.json({ lastMessageId: "repeated-message", nextPage: true, messages: [] });
+    }) as typeof fetch,
+  });
+
+  await assert.rejects(
+    () => adapter.getConversationMessages!(CONVERSATION_ID, { includeContent: true }),
+    /repeated a cursor/i,
+  );
+  assert.equal(requests, 2);
 });
 
 test("GHL contact search and upsert map only the vendor contact fields", async () => {

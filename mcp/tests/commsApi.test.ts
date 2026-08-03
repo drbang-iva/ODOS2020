@@ -89,6 +89,48 @@ test("conversation reads use caller-bound FHIR and expose bodies only to clinica
   }
 });
 
+test("a content-authorized GHL thread read is on-demand and never runs for the conversation list", async () => {
+  const fixture = await startServer({ providerName: "ghl" });
+  try {
+    const list = await request(fixture.base, "/communications/conversations?patient_id=synthetic-1", "GET", undefined, "clinician");
+    assert.equal(list.status, 200);
+    assert.deepEqual(fixture.threadReadRequests, []);
+
+    const desk = await request(
+      fixture.base,
+      "/communications/conversations?patient_id=synthetic-1&conversation_id=conversation-synthetic-1",
+      "GET",
+      undefined,
+      "front-desk",
+    );
+    assert.equal(desk.status, 200);
+    assert.deepEqual(fixture.threadReadRequests, []);
+
+    const clinician = await request(
+      fixture.base,
+      "/communications/conversations?patient_id=synthetic-1&conversation_id=conversation-synthetic-1",
+      "GET",
+      undefined,
+      "clinician",
+    );
+    assert.equal(clinician.status, 200);
+    const body = await clinician.json() as { conversations: ConversationSummary[] };
+    assert.deepEqual(body.conversations[0].messages, [{
+      id: "ghl-thread-message-1",
+      direction: "inbound",
+      status: "delivered",
+      occurredAt: "2026-08-03T13:00:00.000Z",
+      body: "Synthetic GHL thread content",
+    }]);
+    assert.deepEqual(fixture.threadReadRequests, [{
+      conversationId: "conversation-synthetic-1",
+      includeContent: true,
+    }]);
+  } finally {
+    await fixture.close();
+  }
+});
+
 test("front-desk SMS succeeds through masked FHIR responses and reaches a durable sent reservation", async () => {
   const fixture = await startServer();
   try {
@@ -321,13 +363,14 @@ async function startServer(options: {
   const adapterProviders: string[] = [];
   const callListRequests: Array<{ limit?: number }> = [];
   const listRequests: Array<{ includeContent?: boolean }> = [];
+  const threadReadRequests: Array<{ conversationId: string; includeContent?: boolean }> = [];
   const grants: OdosAuditEventRecord[] = [];
   const denials: OdosAuditEventRecord[] = [];
   const persistedCommunications: Communication[] = [];
   const authenticatedFhirs: unknown[] = [];
   const adapterFhirs: unknown[] = [];
   const conversation: ConversationSummary = {
-    id: PATIENT_REFERENCE,
+    id: "conversation-synthetic-1",
     patientReference: PATIENT_REFERENCE,
     updatedAt: "2026-08-02T15:00:00.000Z",
     messageCount: 1,
@@ -350,6 +393,16 @@ async function startServer(options: {
     async listConversations(request) {
       listRequests.push(request ?? {});
       return [structuredClone(conversation)];
+    },
+    async getConversationMessages(conversationId, request) {
+      threadReadRequests.push({ conversationId, ...request });
+      return [{
+        id: "ghl-thread-message-1",
+        direction: "inbound",
+        status: "delivered",
+        occurredAt: "2026-08-03T13:00:00.000Z",
+        ...(request?.includeContent ? { body: "Synthetic GHL thread content" } : {}),
+      }];
     },
     async sendSms() {
       providerCalls.push("sendSms");
@@ -586,6 +639,7 @@ async function startServer(options: {
     adapterProviders,
     callListRequests,
     listRequests,
+    threadReadRequests,
     grants,
     denials,
     persistedCommunications,
