@@ -1,3 +1,8 @@
+import type { Patient } from "@medplum/fhirtypes";
+import {
+  createGhlAdapter,
+  type GhlAdapterConfig,
+} from "./adapters/ghl-adapter.js";
 import {
   createGoogleWorkspaceAdapter,
   type GoogleWorkspaceAdapterConfig,
@@ -22,6 +27,10 @@ export type CommsAdapterRegistration =
   | {
       provider: "twilio";
       config: TwilioAdapterConfig;
+    }
+  | {
+      provider: "ghl";
+      config: GhlAdapterConfig;
     };
 
 export interface CommsDispatchDeps {
@@ -124,6 +133,18 @@ export function createCommsDispatch(
         }
         case "twilio": {
           const adapter = withTwilioConversationStore(getTwilioAdapter(registration), callerFhir);
+          return createSuppressedCommsProvider(adapter, {
+            fhir: callerFhir,
+            practiceTimeZone: deps.practiceTimeZone ?? "UTC",
+            now: deps.now,
+          });
+        }
+        case "ghl": {
+          const adapter = createGhlAdapter(registration.config, {
+            fetchImpl: deps.fetchImpl,
+            resolvePatientPhone: (patientReference) =>
+              patientPhone(callerFhir, patientReference, deps.now?.() ?? new Date()),
+          });
           return createSuppressedCommsProvider(adapter, {
             fhir: callerFhir,
             practiceTimeZone: deps.practiceTimeZone ?? "UTC",
@@ -247,10 +268,47 @@ export function commsAdapterRegistrationsFromEnv(
           },
         };
       }
+      case "ghl": {
+        const required = ["GHL_LOCATION_ID", "GHL_ACCESS_TOKEN"] as const;
+        const missing = required.find((name) => !env[name]?.trim());
+        if (missing) {
+          throw new Error(`GHL communications adapter is partially configured — missing ${missing}.`);
+        }
+        return {
+          provider,
+          config: {
+            locationId: env.GHL_LOCATION_ID!.trim(),
+            accessToken: env.GHL_ACCESS_TOKEN!.trim(),
+          },
+        };
+      }
       default:
         throw new Error(`Unsupported communications provider "${provider}".`);
     }
   });
+}
+
+async function patientPhone(
+  fhir: SuppressionFhir,
+  patientReference: string,
+  now: Date,
+): Promise<string> {
+  const match = /^Patient\/([A-Za-z0-9.-]{1,64})$/.exec(patientReference);
+  if (!match) throw new Error("GHL conversation patientReference must be Patient/….");
+  const patient = await fhir.read<Patient>("Patient", match[1]);
+  const active = patient.telecom?.filter((point) =>
+    (point.system === "sms" || point.system === "phone")
+    && point.use !== "old"
+    && Boolean(point.value?.trim())
+    && (!point.period?.start || Date.parse(point.period.start) <= now.getTime())
+    && (!point.period?.end || Date.parse(point.period.end) > now.getTime()));
+  const phone = (
+    active?.find((point) => point.system === "sms")
+    ?? active?.find((point) => point.use === "mobile")
+    ?? active?.[0]
+  )?.value?.trim();
+  if (!phone) throw new Error(`Patient/${patient.id ?? match[1]} has no active phone in Patient.telecom.`);
+  return phone;
 }
 
 function optionalBoolean(

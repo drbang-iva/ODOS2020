@@ -17,6 +17,7 @@ import type { CommsProvider, ConversationSummary } from "./comms-provider.js";
 import {
   ODOS_COMMS_CATEGORY_SYSTEM,
   ODOS_PATIENT_CALL_CATEGORY,
+  ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM,
   ODOS_TWILIO_CALL_IDENTIFIER_SYSTEM,
   ODOS_TWILIO_RECORDING_IDENTIFIER_SYSTEM,
   persistStaffSentSms,
@@ -94,6 +95,9 @@ export function registerCommsApiRoutes(
         patientReference,
         senderReference: staff.staffReference,
         body: text,
+        provider: provider.name,
+        providerMessageIdentifierSystem:
+          provider.messageIdentifierSystem ?? ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM,
       });
       if (reservation.state === "conflict") {
         throw new CommsApiCapabilityError("SMS idempotency key was already used for a different request.");
@@ -118,7 +122,9 @@ export function registerCommsApiRoutes(
         await persistStaffSentSms(staff.fhir, {
           communication: reservation.communication,
           idempotencyKey,
-          messageSid: result.providerMessageId,
+          providerMessageId: result.providerMessageId,
+          providerMessageIdentifierSystem:
+            provider.messageIdentifierSystem ?? ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM,
         }, { now: () => deps.now?.() ?? new Date().toISOString() });
       }
       return { status: 200, body: result };

@@ -126,6 +126,7 @@ export interface ContactRecord {
  */
 export interface CommsProvider {
   readonly name: string;
+  readonly messageIdentifierSystem?: string;
   readonly capabilities: Readonly<CommsCapabilities>;
   sendEmail?(request: SendEmailRequest): Promise<SendResult>;
   sendSms?(request: SendSmsRequest): Promise<SendResult>;

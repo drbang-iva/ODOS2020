@@ -112,8 +112,9 @@ Create `.env` from `.env.example` or export these variables in the shell that ru
 | `ODOS_MCP_TRANSPORT` | yes for the browser UI | Set to `sse` so the UI can call the local HTTP routes. The default `stdio` mode is for launch-on-demand MCP clients. |
 | `ODOS_SMART_SIGNING_KEY_PATH` | yes for the local HTTP backend | Absolute path to the local mode-0600 SMART RS256 private key. |
 | `ODOS_BACKUP_DIR` | no | Destination used by backup scripts and backup-destination verification. |
-| `ODOS_COMMS_PROVIDERS` | no | Comma-separated native communications adapters. Empty keeps communications inert; supported values are `google-workspace` and `twilio`. |
+| `ODOS_COMMS_PROVIDERS` | no | Comma-separated native communications adapters. Empty keeps communications inert; supported values are `google-workspace`, `twilio`, and `ghl`. |
 | `ODOS_TIMEZONE` | yes for reminders | IANA practice timezone used when no patient timezone is present. |
+| `GHL_LOCATION_ID` / `GHL_ACCESS_TOKEN` | yes for GHL | Practice-owned HighLevel sub-account ID plus a location-scoped OAuth access token or Private Integration Token. Required scopes: `contacts.readonly`, `contacts.write`, `conversations.readonly`, `conversations/message.readonly`, and `conversations/message.write`. Configure HighLevel's signed `InboundMessage` webhook to `/comms/ghl/inbound`. |
 | `TWILIO_VOICE_FROM_NUMBER` | yes for Twilio Voice | Practice-owned or verified Twilio caller ID in E.164 format. A Messaging Service SID cannot substitute for this Voice sender. |
 | `TWILIO_VOICE_FORWARD_TO_NUMBER` | yes for Twilio Voice | Staff endpoint in E.164 format. Inbound calls route here; click-to-call rings this endpoint before dialing the patient. |
 | `TWILIO_WEBHOOK_BASE_URL` | yes for Twilio webhooks | Exact public HTTPS origin configured in Twilio. Required for signature validation and for mounting the SMS/Voice webhook routes. |

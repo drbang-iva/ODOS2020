@@ -11,6 +11,8 @@ import type {
 
 export const ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/twilio-message-sid";
+export const ODOS_GHL_MESSAGE_IDENTIFIER_SYSTEM =
+  "https://odos2020.com/fhir/NamingSystem/ghl-message-id";
 export const ODOS_TWILIO_CALL_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/twilio-call-sid";
 export const ODOS_COMMS_PHONE_IDENTIFIER_SYSTEM =
@@ -31,6 +33,8 @@ export const ODOS_COMMS_STAFF_SEND_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/comms-staff-send";
 export const ODOS_COMMS_STAFF_SEND_CLAIM_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/comms-staff-send-claim";
+export const ODOS_COMMS_STAFF_SEND_PROVIDER_IDENTIFIER_SYSTEM =
+  "https://odos2020.com/fhir/NamingSystem/comms-staff-send-provider";
 
 const TWILIO_CALL_METADATA_AUTHOR = "ODOS Twilio call metadata";
 const TWILIO_RECORDING_METADATA_AUTHOR = "ODOS Twilio recording metadata";
@@ -80,6 +84,8 @@ export async function reserveStaffSmsSend(
     patientReference: string;
     senderReference: string;
     body: string;
+    provider?: string;
+    providerMessageIdentifierSystem?: string;
   },
 ): Promise<StaffSmsSendReservation> {
   const existing = await findCommunication(fhir, ODOS_COMMS_STAFF_SEND_IDENTIFIER_SYSTEM, input.idempotencyKey);
@@ -90,6 +96,7 @@ export async function reserveStaffSmsSend(
     identifier: [
       { system: ODOS_COMMS_STAFF_SEND_IDENTIFIER_SYSTEM, value: input.idempotencyKey },
       { system: ODOS_COMMS_STAFF_SEND_CLAIM_IDENTIFIER_SYSTEM, value: input.claimId },
+      { system: ODOS_COMMS_STAFF_SEND_PROVIDER_IDENTIFIER_SYSTEM, value: input.provider ?? "twilio" },
     ],
     category: [category(ODOS_PATIENT_SMS_CATEGORY), category(ODOS_PATIENT_SMS_OUTBOUND_CATEGORY)],
     medium: [{ text: "SMS" }],
@@ -106,7 +113,12 @@ export async function reserveStaffSmsSend(
 
 export async function persistStaffSentSms(
   fhir: CommsPersistenceFhir,
-  input: { communication: Communication; idempotencyKey: string; messageSid: string },
+  input: {
+    communication: Communication;
+    idempotencyKey: string;
+    providerMessageId: string;
+    providerMessageIdentifierSystem?: string;
+  },
   deps: { now?: () => string } = {},
 ): Promise<Communication> {
   const identity = {
@@ -117,12 +129,21 @@ export async function persistStaffSentSms(
   const fragment: Partial<Communication> = {
     status: "in-progress",
     sent: deps.now?.() ?? new Date().toISOString(),
-    identifier: [{ system: ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM, value: input.messageSid }],
+    identifier: [{
+      system: input.providerMessageIdentifierSystem ?? ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM,
+      value: input.providerMessageId,
+    }],
     category: [category(ODOS_PATIENT_SMS_OUTBOUND_CATEGORY)],
   };
   return serializeCommunicationWrite(`${identity.system}|${identity.value}`, async () => {
     const canonical = await updateCommunicationFragment(fhir, input.communication, fragment, identity);
-    return reconcileStaffSmsDuplicates(fhir, canonical, identity, input.messageSid);
+    return reconcileStaffSmsDuplicates(
+      fhir,
+      canonical,
+      identity,
+      input.providerMessageId,
+      input.providerMessageIdentifierSystem ?? ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM,
+    );
   });
 }
 
@@ -133,20 +154,27 @@ function classifyStaffSmsReservation(
     patientReference: string;
     senderReference: string;
     body: string;
+    provider?: string;
+    providerMessageIdentifierSystem?: string;
   },
 ): StaffSmsSendReservation {
   const visiblePayloadConflicts = communication.payload !== undefined
     && communication.payload[0]?.contentString !== input.body;
+  const reservedProvider = communication.identifier?.find((identifier) =>
+    identifier.system === ODOS_COMMS_STAFF_SEND_PROVIDER_IDENTIFIER_SYSTEM)?.value ?? "twilio";
   if (
     communication.subject?.reference !== input.patientReference
     || communication.sender?.reference !== input.senderReference
     || communication.recipient?.[0]?.reference !== input.patientReference
     || visiblePayloadConflicts
+    || reservedProvider !== (input.provider ?? "twilio")
   ) {
     return { state: "conflict", communication };
   }
   const providerMessageId = communication.identifier?.find(
-    (identifier) => identifier.system === ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM,
+    (identifier) => identifier.system === (
+      input.providerMessageIdentifierSystem ?? ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM
+    ),
   )?.value;
   if (providerMessageId) return { state: "sent", communication, providerMessageId };
   const owned = communication.identifier?.some((identifier) =>
@@ -161,14 +189,15 @@ async function reconcileStaffSmsDuplicates(
   fhir: CommsPersistenceFhir,
   initial: Communication,
   identity: ReturnType<typeof eventIdentity>,
-  messageSid: string,
+  providerMessageId: string,
+  providerMessageIdentifierSystem: string,
 ): Promise<Communication> {
   let canonical = await findCommunication(fhir, identity.system, identity.value) ?? initial;
   for (let pass = 0; pass < 3; pass += 1) {
     const matches = await findCommunications(
       fhir,
-      ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM,
-      messageSid,
+      providerMessageIdentifierSystem,
+      providerMessageId,
       "100",
     );
     const duplicates = matches.filter((communication) => communication.id !== canonical.id);
@@ -181,7 +210,12 @@ async function reconcileStaffSmsDuplicates(
         category: duplicate.category,
         note: duplicate.note,
       }, identity);
-      await retireDuplicateCommunication(fhir, duplicate, messageSid);
+      await retireDuplicateCommunication(
+        fhir,
+        duplicate,
+        providerMessageId,
+        providerMessageIdentifierSystem,
+      );
     }
   }
   throw new Error("Staff SMS duplicate reconciliation retry limit reached.");
@@ -190,15 +224,16 @@ async function reconcileStaffSmsDuplicates(
 async function retireDuplicateCommunication(
   fhir: CommsPersistenceFhir,
   initial: Communication,
-  messageSid: string,
+  providerMessageId: string,
+  providerMessageIdentifierSystem: string,
 ): Promise<void> {
   let current: Communication | undefined = initial;
   for (let attempt = 0; attempt < 3; attempt += 1) {
     if (!current.id || !current.meta?.versionId) {
-      throw new Error("Duplicate Twilio Communication is missing id or version; refusing an unsafe update.");
+      throw new Error("Duplicate provider Communication is missing id or version; refusing an unsafe update.");
     }
     const identifiers = current.identifier?.filter((identifier) =>
-      !(identifier.system === ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM && identifier.value === messageSid));
+      !(identifier.system === providerMessageIdentifierSystem && identifier.value === providerMessageId));
     const categories = current.category?.flatMap((concept) => {
       const coding = concept.coding?.filter((entry) =>
         entry.system !== ODOS_COMMS_CATEGORY_SYSTEM
@@ -209,7 +244,7 @@ async function retireDuplicateCommunication(
     const retired = Object.fromEntries(Object.entries({
       ...current,
       status: "entered-in-error",
-      statusReason: { text: "Duplicate Twilio callback Communication reconciled into the staff send intent." },
+      statusReason: { text: "Duplicate provider Communication reconciled into the staff send intent." },
       identifier: identifiers?.length ? identifiers : undefined,
       category: categories?.length ? categories : undefined,
     }).filter(([, value]) => value !== undefined)) as unknown as Communication;
@@ -222,8 +257,8 @@ async function retireDuplicateCommunication(
       if (!isFhirConflict(error) || attempt === 2) throw error;
       current = (await findCommunications(
         fhir,
-        ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM,
-        messageSid,
+        providerMessageIdentifierSystem,
+        providerMessageId,
         "100",
       )).find((communication) => communication.id === current?.id);
       if (!current) return;
@@ -267,7 +302,13 @@ async function reconcileStatusCallbackWithStaffSms(
     category: ODOS_PATIENT_SMS_CATEGORY,
   };
   return serializeCommunicationWrite(`${staffIdentity.system}|${staffIdentity.value}`, () =>
-    reconcileStaffSmsDuplicates(fhir, canonical, staffIdentity, messageSid));
+    reconcileStaffSmsDuplicates(
+      fhir,
+      canonical,
+      staffIdentity,
+      messageSid,
+      ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM,
+    ));
 }
 
 async function persistCommunicationFragment(
