@@ -20,17 +20,34 @@
 .odos-overview-body { position: relative; max-width: 1500px; margin: 0 auto; padding: 28px 30px 48px; }
 .odos-overview-crumb { display: flex; gap: 8px; margin-bottom: 12px; color: var(--overview-faint); font-size: 12px; letter-spacing: 0.04em; }
 .odos-overview-crumb a { color: var(--overview-muted); text-decoration: none; }
-.odos-overview-head { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; margin-bottom: 12px; }
-.odos-overview-head h1 { margin: 0; font-family: Didot, Georgia, serif; font-size: 30px; font-weight: 400; }
+.odos-overview-band { margin-bottom: 10px; border: 1px solid var(--overview-line); border-radius: 16px; background: var(--overview-surface); box-shadow: var(--odos-shadow-card); }
+.odos-overview-band-row { display: flex; gap: 18px; align-items: center; padding: 12px 16px; }
+.odos-overview-band-row + .odos-overview-band-row { border-top: 1px solid var(--overview-line); }
+.odos-overview-band-row.is-visit { align-items: flex-start; }
+.odos-overview-identity { display: flex; min-width: 0; gap: 14px; align-items: baseline; flex: 1; color: var(--overview-faint); font-size: 12.5px; }
+.odos-overview-identity h1 { margin: 0; color: var(--overview-text); font-family: Didot, Georgia, serif; font-size: 30px; font-weight: 400; }
+.odos-overview-identity b { color: var(--overview-muted); font-weight: 500; }
+.odos-billing-weather { position: relative; flex: none; }
+.odos-billing-weather summary { display: flex; gap: 7px; align-items: center; cursor: pointer; list-style: none; color: var(--overview-muted); font-size: 12.5px; white-space: nowrap; }
+.odos-billing-weather summary::-webkit-details-marker { display: none; }
+.odos-billing-weather summary span { font-size: 11px; }
+.odos-billing-weather.is-covered summary span { color: var(--overview-emerald); }
+.odos-billing-weather.is-high-deductible summary span { color: var(--odos-amber); }
+.odos-billing-weather.is-self-pay summary span { color: var(--odos-alert); }
+.odos-billing-weather.is-vip-cash summary span { color: var(--overview-gold); }
+.odos-billing-weather.is-unknown summary span { color: var(--overview-faint); }
+.odos-billing-weather > div { display: none; position: absolute; z-index: 25; top: calc(100% + 7px); right: 0; width: min(280px, 80vw); padding: 10px 12px; border: 1px solid var(--overview-line-2); border-radius: 10px; background: var(--odos-context-surface); color: var(--overview-muted); box-shadow: var(--odos-shadow-pop); font-size: 11.5px; }
+.odos-billing-weather[open] > div, .odos-billing-weather:hover > div, .odos-billing-weather:focus-within > div { display: block; }
+.odos-overview-context { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
 .odos-overview-meta { display: flex; gap: 14px; flex-wrap: wrap; color: var(--overview-faint); font-size: 12.5px; }
 .odos-overview-meta b { color: var(--overview-muted); font-weight: 500; }
 .odos-overview-demographics summary { color: var(--overview-muted); font-size: 12px; cursor: pointer; }
 .odos-overview-demographics[open] { flex-basis: 100%; }
 .odos-overview-demographics[open] .odos-overview-meta { margin-top: 8px; }
-.odos-overview-actions { margin-left: auto; }
+.odos-overview-actions { display: flex; gap: 8px; margin-left: auto; }
 .odos-overview-button { padding: 8px 16px; border: 1px solid var(--overview-line-2); border-radius: 10px; background: none; color: var(--overview-muted); font: inherit; font-size: 12.5px; cursor: pointer; }
 .odos-overview-button.is-primary { border-color: rgba(47, 191, 143, 0.5); background: rgba(47, 191, 143, 0.1); color: var(--overview-emerald); }
-.odos-start-exam { width: min(560px, 80vw); margin-top: 12px; padding: 12px; border: 1px solid var(--overview-line); border-radius: 10px; background: var(--overview-surface); box-shadow: 0 14px 32px color-mix(in srgb, var(--overview-ground) 65%, transparent); }
+.odos-start-exam { width: min(560px, 60vw); margin-left: auto; padding: 12px; border: 1px solid var(--overview-line); border-radius: 10px; background: var(--overview-ground); }
 .odos-start-exam-title { color: var(--overview-text); font-size: 14px; font-weight: 600; }
 .odos-start-exam-modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
 .odos-start-exam-mode { min-height: 56px; padding: 8px 12px; border: 1px solid var(--overview-line); border-radius: 8px; background: var(--overview-ground); color: var(--overview-muted); font: inherit; font-size: 12px; font-weight: 600; text-align: left; cursor: pointer; transition: border-color 0.15s ease, background 0.15s ease; }
@@ -39,6 +56,23 @@
 .odos-start-exam-mode.is-active { border-color: var(--overview-emerald); background: color-mix(in srgb, var(--overview-emerald) 14%, transparent); color: var(--overview-text); }
 .odos-start-exam-select, .odos-start-exam-submit { margin-top: 12px; }
 .odos-start-exam .odos-overview-error { margin: 10px 0 0; }
+.odos-office-pin-context.is-band { min-width: 0; flex: 1; color: var(--overview-gold); }
+.odos-office-pin-context.is-band summary { display: flex; min-width: 0; gap: 8px; align-items: center; font-size: 12.5px; }
+.odos-office-pin-line { overflow: hidden; color: var(--overview-muted); text-overflow: ellipsis; white-space: nowrap; }
+.odos-office-pin-context.is-band > div { position: static; width: auto; margin-top: 8px; box-shadow: none; }
+
+@media (max-width: 900px) {
+  .odos-overview-band-row { flex-wrap: wrap; }
+  .odos-overview-band-row.is-visit > .odos-start-exam { width: 100%; margin-left: 0; }
+  .odos-office-pin-context.is-band { flex-basis: 100%; }
+}
+
+@media (max-width: 620px) {
+  .odos-overview-identity { flex-wrap: wrap; gap: 5px 12px; }
+  .odos-overview-identity h1 { flex-basis: 100%; }
+  .odos-billing-weather { margin-left: 0; }
+  .odos-start-exam-modes { grid-template-columns: 1fr; }
+}
 
 .odos-sticky-note { display: flex; gap: 12px; align-items: center; margin-bottom: 18px; padding: 11px 16px; border: 1px solid color-mix(in srgb, var(--odos-accent) 35%, transparent); border-radius: 14px; background: linear-gradient(180deg, color-mix(in srgb, var(--odos-accent) 9%, transparent), color-mix(in srgb, var(--odos-accent) 5%, transparent)); }
 .odos-sticky-tag { flex: none; color: var(--overview-gold); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; }

@@ -5,6 +5,7 @@ import {
   fetchPatientOverviewVisitDetail,
   fetchStickyNoteHistory,
   saveStickyNote,
+  type PatientOverviewBillingWeather,
   type PatientOverviewMedication,
   type PatientOverviewPayload,
   type PatientOverviewVisitDetail,
@@ -233,8 +234,21 @@ export function PatientOverview({
         <nav className="odos-overview-crumb" aria-label="Breadcrumb">
           <a href={CLINIC_PATH} onClick={navigateWithinApp}>Clinic</a><span>›</span><span>{name}</span>
         </nav>
-        <div className="odos-overview-head">
-          <h1>{name}</h1>
+        <header className="odos-overview-band">
+          <div className="odos-overview-band-row is-identity">
+            <div className="odos-overview-identity">
+              <h1>{name}</h1>
+              <span>DOB <b>{patient.birthDate ? localDate(patient.birthDate) : "not recorded"}</b></span>
+              <span>Age <b>{age ?? "not recorded"}</b></span>
+            </div>
+            {isVisible("billing-weather") && <BillingWeatherReport weather={overview?.billingWeather} />}
+          </div>
+          <div className="odos-overview-band-row is-visit">
+            <PinnedOfficeNote patientId={patient.id} band />
+            <StartExam patient={patient} />
+          </div>
+        </header>
+        <div className="odos-overview-context">
           {isVisible("demographic-detail") && density("demographic-detail") === "compact" ? (
             <details className="odos-overview-demographics">
               <summary>Demographic detail</summary>
@@ -254,9 +268,7 @@ export function PatientOverview({
             </button>}
             {isVisible("credit-bank-deposit-sheet") && <button type="button" className="odos-overview-button" onClick={() => setDepositingCreditBank(true)}>Deposit Credit Bank</button>}
             {isVisible("sale-sheet") && <button type="button" className="odos-overview-button" onClick={() => setSellingPackage(true)}>Sell package</button>}
-            <StartExam patient={patient} />
           </div>
-          <PinnedOfficeNote patientId={patient.id} />
         </div>
 
         <section className="odos-sticky-note" aria-label="Patient sticky note">
@@ -749,6 +761,38 @@ function DemographicDetail({
   );
 }
 
+export function BillingWeatherReport({ weather }: { weather?: PatientOverviewBillingWeather }) {
+  const deductible = weather?.deductibleRemainingCents;
+  const state = weather?.state === "covered" && deductible === 0
+    ? "covered"
+    : weather?.state === "high-deductible" && typeof deductible === "number" && Number.isFinite(deductible) && deductible > 0
+      ? "high-deductible"
+      : weather?.state === "self-pay" || weather?.state === "vip-cash"
+        ? weather.state
+        : "unknown";
+  const presentation = {
+    covered: { glyph: "●", label: "Covered" },
+    "high-deductible": { glyph: "●", label: "High deductible" },
+    "self-pay": { glyph: "●", label: "Self-pay" },
+    "vip-cash": { glyph: "★", label: "VIP cash" },
+    unknown: { glyph: "●", label: "Coverage unknown" },
+  }[state];
+  const detail = [
+    weather?.planName,
+    typeof deductible === "number" && Number.isFinite(deductible) && deductible >= 0
+      ? `${money(deductible)} deductible remaining`
+      : undefined,
+  ].filter(Boolean).join(" · ") || "No current eligibility detail";
+  return (
+    <details className={`odos-billing-weather is-${state}`} data-testid="billing-weather">
+      <summary aria-label={`Billing weather: ${presentation.label}`}>
+        <span aria-hidden="true">{presentation.glyph}</span>{presentation.label}
+      </summary>
+      <div>{detail}</div>
+    </details>
+  );
+}
+
 function PatientSnapshot({ snapshot }: { snapshot: PatientOverviewPayload["snapshot"] }) {
   return (
     <section className="odos-overview-card odos-snapshot-card" data-testid="overview-patient-snapshot">
@@ -819,6 +863,10 @@ function sexLabel(gender: Patient["gender"]): string | undefined {
 
 function localDate(value: string): string {
   return new Intl.DateTimeFormat(undefined, { year: "numeric", month: "numeric", day: "numeric" }).format(new Date(`${value}T00:00:00`));
+}
+
+function money(cents: number): string {
+  return new Intl.NumberFormat(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(cents / 100);
 }
 
 function shortDate(value: string): string {

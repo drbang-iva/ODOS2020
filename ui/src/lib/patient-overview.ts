@@ -20,6 +20,14 @@ export interface PatientOverviewMedication {
   sig?: string;
 }
 
+export type BillingWeatherState = "covered" | "high-deductible" | "self-pay" | "vip-cash" | "unknown";
+
+export interface PatientOverviewBillingWeather {
+  state: BillingWeatherState;
+  planName?: string;
+  deductibleRemainingCents?: number;
+}
+
 export interface PatientOverviewVisitDetailCard {
   id: string;
   kicker: string;
@@ -47,6 +55,7 @@ export interface PatientOverviewVisitDetail {
 export interface PatientOverviewPayload {
   patient: Patient;
   insurance: string[];
+  billingWeather?: PatientOverviewBillingWeather;
   unavailable?: { insurance?: string; medicationOrders?: string };
   stickyNote?: { id: string; text: string; editedAt?: string; editedBy?: string };
   snapshot: {

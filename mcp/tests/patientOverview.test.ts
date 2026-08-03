@@ -7,6 +7,8 @@ import type {
   ChargeItem,
   Claim,
   Condition,
+  Coverage,
+  CoverageEligibilityResponse,
   DocumentReference,
   Encounter,
   MedicationRequest,
@@ -24,6 +26,7 @@ import {
   loadPatientOverviewVisitDetail,
   loadPatientStickyNoteHistory,
   savePatientStickyNote,
+  deriveBillingWeather,
 } from "../src/clinic/patient-overview.js";
 import {
   clinicalStatusConcept,
@@ -70,6 +73,70 @@ test("patient overview projects real snapshot resources and newest-first encount
   assert.equal(provenanceSearch?.params.patient, "Patient/p1");
   assert.equal(provenanceSearch?.params.recorded, undefined);
   assert.equal(provenanceSearch?.params._sort, "recorded");
+});
+
+test("billing weather reads stored eligibility and never promotes uncertain coverage to green", async () => {
+  const activeCoverage: Coverage = {
+    resourceType: "Coverage",
+    id: "coverage-1",
+    status: "active",
+    beneficiary: { reference: "Patient/p1" },
+    payor: [{ reference: "Organization/payer-1", display: "Synthetic Health Plan" }],
+    order: 1,
+  };
+  const response = (input: {
+    created?: string;
+    inforce?: boolean;
+    deductible?: number | string;
+    benefitEnd?: string;
+  }): CoverageEligibilityResponse => ({
+    resourceType: "CoverageEligibilityResponse",
+    status: "active",
+    purpose: ["benefits"],
+    patient: { reference: "Patient/p1" },
+    created: input.created ?? "2026-08-03T12:00:00Z",
+    request: { reference: "CoverageEligibilityRequest/request-1" },
+    outcome: "complete",
+    insurer: { reference: "Organization/payer-1" },
+    insurance: [{
+      coverage: { reference: "Coverage/coverage-1" },
+      inforce: input.inforce,
+      ...(input.benefitEnd ? { benefitPeriod: { end: input.benefitEnd } } : {}),
+      item: input.deductible === undefined ? [] : [{
+        name: "Deductible",
+        benefit: [{ type: { text: "remaining" }, allowedMoney: { value: input.deductible as number, currency: "USD" } }],
+      }],
+    }],
+  });
+
+  assert.deepEqual(deriveBillingWeather([], [], "2026-08-03"), { state: "unknown" });
+  assert.equal(deriveBillingWeather([activeCoverage], [response({ created: "not-a-fhir-instant", inforce: true, deductible: 0 })], "2026-08-03").state, "unknown");
+  assert.equal(deriveBillingWeather([activeCoverage], [response({ created: "2026-08-02T23:59:59Z", inforce: true, deductible: 0 })], "2026-08-03").state, "unknown");
+  assert.equal(deriveBillingWeather([activeCoverage], [response({ inforce: true, deductible: "unparseable" })], "2026-08-03").state, "unknown");
+  assert.equal(deriveBillingWeather([activeCoverage], [response({ inforce: true, deductible: 0, benefitEnd: "2026-08-02" })], "2026-08-03").state, "unknown");
+  assert.deepEqual(
+    deriveBillingWeather([activeCoverage], [response({ inforce: true, deductible: 0 })], "2026-08-03"),
+    { state: "covered", planName: "Synthetic Health Plan", deductibleRemainingCents: 0 },
+  );
+  assert.deepEqual(
+    deriveBillingWeather([activeCoverage], [response({ inforce: true, deductible: 250 })], "2026-08-03"),
+    { state: "high-deductible", planName: "Synthetic Health Plan", deductibleRemainingCents: 25_000 },
+  );
+  assert.deepEqual(
+    deriveBillingWeather([activeCoverage], [response({ inforce: false })], "2026-08-03"),
+    { state: "self-pay", planName: "Synthetic Health Plan" },
+  );
+
+  const fake = new FakeFhir();
+  fake.add(patient());
+  fake.add(activeCoverage);
+  fake.add(response({ created: new Date().toISOString(), inforce: true, deductible: 0 }));
+  const overview = await loadPatientOverview(fake as never, "p1");
+  assert.equal(overview.billingWeather.state, "covered");
+  assert.deepEqual(
+    fake.searches.find((search) => search.resourceType === "CoverageEligibilityResponse")?.params,
+    { patient: "Patient/p1", _count: "100", _sort: "-created" },
+  );
 });
 
 test("visit ledger includes an encounter-linked problem-list Condition", async () => {

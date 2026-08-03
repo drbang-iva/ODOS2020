@@ -227,13 +227,16 @@ export function UrgentOfficeBanner({ messages, acknowledging, canAcknowledge = t
   );
 }
 
-export function PinnedOfficeNote({ patientId, compact = false }: { patientId?: string; compact?: boolean }) {
+export function PinnedOfficeNote({ patientId, compact = false, band = false }: { patientId?: string; compact?: boolean; band?: boolean }) {
   const office = useOfficeChannel();
   const message = office.messages.find((candidate) => candidate.tier === "patient-pinned" && candidate.patient?.id === patientId);
   if (!message) return null;
   return (
-    <details className={`odos-office-pin-context${message.acknowledgement ? " is-seen" : ""}${compact ? " is-compact" : ""}`}>
-      <summary aria-label={`Pinned Office note from ${message.sender.display}`}>📌{message.acknowledgement ? " ✓" : ""}</summary>
+    <details className={`odos-office-pin-context${message.acknowledgement ? " is-seen" : ""}${compact ? " is-compact" : ""}${band ? " is-band" : ""}`}>
+      <summary aria-label={`Pinned Office note from ${message.sender.display}`}>
+        <span aria-hidden="true">📌{message.acknowledgement ? " ✓" : ""}</span>
+        {band && <span className="odos-office-pin-line">{message.text}</span>}
+      </summary>
       <div><strong>{message.sender.display}</strong><p>{message.text}</p><time>{ageLabel(message.sentAt)}</time>
         {message.acknowledgement
           ? <small>Seen ✓ by {message.acknowledgement.display} · {dateTimeLabel(message.acknowledgement.at)}</small>
