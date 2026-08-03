@@ -159,24 +159,26 @@ test("marking OS pupils normal fills the operator-defined PERRLA values without 
         encounterReference="Encounter/e1"
         onSaved={() => undefined}
       />);
-      await Promise.resolve();
+      await flushPromises();
     });
 
     const normalButtons = renderer.root.findAllByType("button").filter((button) => button.children.join("") === "normal");
     assert.equal(normalButtons.length, 2);
     act(() => normalButtons[1]!.props.onClick());
+    const osCard = normalButtons[1]!.parent?.parent;
+    assert.ok(osCard);
 
-    assert.equal(renderer.root.findByProps({ "aria-label": "Size — bright" }).props.value, "4");
-    assert.equal(renderer.root.findByProps({ "aria-label": "Size — dim" }).props.value, "6");
-    assert.equal(renderer.root.findByProps({ "aria-label": "Size — near" }).props.value, "");
-    assert.equal(renderer.root.findByProps({ "aria-label": "Shape" }).children.join(""), "round");
-    assert.equal(renderer.root.findByProps({ "aria-label": "Reactivity" }).children.join(""), "brisk");
-    assert.equal(renderer.root.findByProps({ "aria-label": "APD" }).children.join(""), "none");
-    assert.equal(renderer.root.findByProps({ "aria-label": "RAPD" }).children.join(""), "none");
+    assert.equal(osCard.findByProps({ "aria-label": "Size — bright" }).props.value, "4");
+    assert.equal(osCard.findByProps({ "aria-label": "Size — dim" }).props.value, "6");
+    assert.equal(osCard.findByProps({ "aria-label": "Size — near" }).props.value, "");
+    assert.equal(osCard.findByProps({ "aria-label": "Shape" }).children.join(""), "round");
+    assert.equal(osCard.findByProps({ "aria-label": "Reactivity" }).children.join(""), "brisk");
+    assert.equal(osCard.findByProps({ "aria-label": "APD" }).children.join(""), "none");
+    assert.equal(osCard.findByProps({ "aria-label": "RAPD" }).children.join(""), "none");
 
     await act(async () => {
       renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Pupils")!.props.onClick();
-      await Promise.resolve();
+      await flushPromises();
     });
     const saved = requests.find((request) => request.method === "POST");
     assert.ok(saved?.body);
@@ -272,4 +274,8 @@ function pupilDefinition(): CustomFindingDefinition {
       { localCode: "CUSTOM_PUPIL_RAPD", display: "RAPD", valueType: "select", options: ["none", "trace", "1+", "2+", "3+", "4+", "reverse"].map((code) => ({ code, display: code, active: true })), order: 6, active: true },
     ],
   };
+}
+
+async function flushPromises(times = 3) {
+  for (let index = 0; index < times; index += 1) await Promise.resolve();
 }

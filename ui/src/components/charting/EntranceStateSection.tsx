@@ -86,7 +86,7 @@ export function EntranceStateSection({ definition, patientReference, encounterRe
         OS: { ...current.OS, ...update },
       }));
     } else {
-      setShared((current) => ({ ...current, state: "normal" }));
+      setShared((current) => ({ ...current, ...normalStateUpdate(definition) }));
     }
     setMessage(definition.normalTemplate ?? "Normal selected");
     setError(null);
