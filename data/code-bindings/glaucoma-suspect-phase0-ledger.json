@@ -245,7 +245,12 @@
                 { "code": "splinter-heme", "display": "Splinter heme", "active": true, "highRiskDriver": true },
                 { "code": "ppa", "display": "Peripapillary atrophy (PPA)", "active": true },
                 { "code": "deep", "display": "Deep", "active": true },
-                { "code": "pallor", "display": "Pallor", "active": true, "highRiskDriver": true }
+                { "code": "pallor", "display": "Pallor", "active": true, "highRiskDriver": true },
+                { "code": "tilted-disc", "display": "Tilted disc", "active": true },
+                { "code": "myopic-crescent", "display": "Myopic crescent", "active": true },
+                { "code": "choroidal-crescent", "display": "Choroidal crescent", "active": true },
+                { "code": "disc-drusen", "display": "Disc drusen", "active": true },
+                { "code": "nerve-fiber-layer-defect", "display": "Nerve fiber layer defect", "active": true }
               ]
             },
             "methodSource": {
