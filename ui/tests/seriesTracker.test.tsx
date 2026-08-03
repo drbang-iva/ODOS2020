@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { PatientProgramPanels } from "../src/components/series-tracker/PatientProgramPanels";
-import { SeriesTimeline } from "../src/components/series-tracker/SeriesTrackerPanel";
+import { SeriesTimeline, SeriesTrackerPanel } from "../src/components/series-tracker/SeriesTrackerPanel";
 import { SeriesSignOffNotice } from "../src/components/charting/EncounterHeader";
 import {
   formatSeriesDueWindow,
@@ -46,6 +47,31 @@ test("package status and series status are independent sibling modules", () => {
   assert.doesNotMatch(carePlanOnly, /sessions remaining/);
   assert.match(packageOnly, /3 sessions remaining/);
   assert.doesNotMatch(packageOnly, /Series tracker|Dry-Eye IPL/);
+});
+
+test("an unavailable series tracker does not also claim there are no active programs", async () => {
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(
+      <SeriesTrackerPanel
+        patientReference="Patient/patient-1"
+        initialProtocols={[]}
+        emptyMessage="No active programs"
+        api={{
+          fetchSeries: async () => { throw new Error("Program fetch failed"); },
+          fetchProtocols: async () => [],
+          prescribe: async () => { throw new Error("The unavailable-state test does not prescribe programs."); },
+        }}
+      />,
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+  const rendered = JSON.stringify(renderer.toJSON());
+  const error = renderer.root.findAllByType("p").find((paragraph) => paragraph.children.join("").startsWith("Series tracker unavailable:"));
+  assert.equal(error?.children.join(""), "Series tracker unavailable: Program fetch failed");
+  assert.doesNotMatch(rendered, /No active programs/);
+  renderer.unmount();
 });
 
 test("encounter sign-off uses the single series tracker hook and shows an unprefilled scheduler handoff", async () => {

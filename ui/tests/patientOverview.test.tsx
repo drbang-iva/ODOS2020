@@ -224,7 +224,7 @@ test("tier 1 overview panels stay present while empty tier 2 panels stay absent"
   act(() => renderer.unmount());
 });
 
-test("a medication retrieval failure stays visible without rendering an empty Tier 2 panel", () => {
+test("a medication retrieval failure stays distinct from empty without rendering an empty Tier 2 panel", () => {
   const unavailable = fixture();
   unavailable.snapshot.ophthalmicMedications = [];
   unavailable.snapshot.systemicMedications = [];
@@ -232,6 +232,7 @@ test("a medication retrieval failure stays visible without rendering an empty Ti
   const html = renderToStaticMarkup(<PatientOverview patient={patient} initialOverview={unavailable} />);
   assert.doesNotMatch(html, /data-testid="overview-medications"/);
   assert.match(html, /Medication orders are temporarily unavailable/);
+  assert.doesNotMatch(html, /No active problems|No visits yet/);
 });
 
 test("tier 2 medication and optical-order panels render when content exists", async () => {
@@ -833,7 +834,7 @@ test("an expanded migrated row with no diagnoses keeps the existing empty state 
   assert.doesNotMatch(rendered, /placeholder|sample|synthetic/i);
 });
 
-test("zero-data overview renders an honest empty state for every snapshot section", () => {
+test("zero-data doctor overview renders quiet Tier 1 states and no empty Tier 2 panels", async () => {
   const empty = fixture();
   empty.insurance = [];
   empty.stickyNote = undefined;
@@ -841,12 +842,103 @@ test("zero-data overview renders an honest empty state for every snapshot sectio
     ocularHistory: [], ocularSurgicalHistory: [], medicalConditions: [], socialHistory: [], ophthalmicMedications: [], systemicMedications: [],
   };
   empty.visits = [];
-  const html = renderToStaticMarkup(<PatientOverview patient={patient} initialOverview={empty} />);
-  assert.equal((html.match(/None recorded/g) ?? []).length, 4);
-  assert.doesNotMatch(html, /overview-medications/);
-  assert.match(html, /No sticky note recorded/);
-  assert.match(html, /Insurance not recorded/);
-  assert.match(html, /No matching visits recorded/);
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(JSON.stringify({ definitions: [], images: [] }), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <RoleProvider initialRole="doctor">
+          <PatientOverview
+            patient={patient}
+            initialOverview={empty}
+            api={{
+              fetchOverview: async () => empty,
+              fetchHistory: async () => [],
+              saveNote: async () => { throw new Error("The empty-state test does not save notes."); },
+              seriesTracker: {
+                fetchSeries: async () => [],
+                fetchProtocols: async () => [],
+                prescribe: async () => { throw new Error("The empty-state test does not prescribe programs."); },
+              },
+            }}
+          />
+        </RoleProvider>,
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    const html = JSON.stringify(renderer.toJSON());
+    assert.doesNotMatch(html, /None recorded/);
+    assert.match(html, /No active problems/);
+    assert.match(html, /No active programs/);
+    assert.match(html, /No visits yet/);
+    assert.doesNotMatch(html, /overview-medications|longitudinal-imaging-card|Start optical order/);
+    assert.match(html, /No sticky note recorded/);
+    assert.match(html, /Insurance not recorded/);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a sparse visit collapses absent metadata to one marker", () => {
+  const sparse = fixture();
+  sparse.visits = [{
+    encounterId: "sparse",
+    date: "2026-08-01T12:00:00Z",
+    visitType: "Visit type not recorded",
+    status: "Preliminary",
+    diagnoses: [],
+  }];
+  let renderer!: ReactTestRenderer;
+  act(() => {
+    renderer = create(<PatientOverview patient={patient} initialOverview={sparse} />);
+  });
+  const head = renderer.root.findByProps({ className: "odos-visit-head" });
+  assert.deepEqual(head.children[0].children, ["—"]);
+  assert.equal(head.findAllByProps({ className: "odos-visit-type" }).length, 0);
+  const rendered = JSON.stringify(renderer.toJSON());
+  assert.doesNotMatch(rendered, /Visit type not recorded|Provider not recorded|Facility not recorded/);
+  renderer.unmount();
+});
+
+test("a sparse visit preserves the metadata that is present", () => {
+  const sparse = fixture();
+  sparse.visits = [{
+    encounterId: "partial",
+    date: "2026-08-01T12:00:00Z",
+    provider: "Dr. Present",
+    visitType: "Visit type not recorded",
+    status: "Final",
+    diagnoses: [],
+  }];
+  const html = renderToStaticMarkup(<PatientOverview patient={patient} initialOverview={sparse} />);
+  assert.match(html, /Dr\. Present/);
+  assert.doesNotMatch(html, /Visit type not recorded|Provider not recorded|Facility not recorded/);
+});
+
+test("the Conditions list caps pathological data at eight rows and expands to the real count", () => {
+  const crowded = fixture();
+  crowded.snapshot.medicalConditions = Array.from({ length: 31 }, (_, index) => ({
+    id: `condition-${index + 1}`,
+    name: `Condition ${index + 1}`,
+  }));
+  let renderer!: ReactTestRenderer;
+  act(() => {
+    renderer = create(<PatientOverview patient={patient} initialOverview={crowded} />);
+  });
+  const panel = renderer.root.findByProps({ "data-testid": "overview-problem-list" });
+  assert.equal(panel.findAllByType("li").length, 8);
+  const showAll = panel.findByProps({ className: "odos-overview-list-toggle" });
+  assert.equal(showAll.children.join(""), "Show all 31");
+  act(() => showAll.props.onClick());
+  assert.equal(panel.findAllByType("li").length, 31);
+  assert.equal(panel.findByProps({ className: "odos-overview-list-toggle" }).children.join(""), "Show first 8");
+  renderer.unmount();
 });
 
 test("visit and diagnosis filters produce a new server request instead of filtering a prefetched page", async () => {

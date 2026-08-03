@@ -27,12 +27,14 @@ export function SeriesTrackerPanel({
   initialSeries,
   initialProtocols,
   compact = false,
+  emptyMessage = "No treatment series prescribed.",
 }: {
   patientReference: string;
   api?: SeriesTrackerPanelApi;
   initialSeries?: SeriesTrackerView[];
   initialProtocols?: SeriesProtocolDefinition[];
   compact?: boolean;
+  emptyMessage?: string;
 }) {
   const [series, setSeries] = useState(initialSeries ?? []);
   const [protocols, setProtocols] = useState(initialProtocols ?? []);
@@ -106,7 +108,7 @@ export function SeriesTrackerPanel({
 
       {loading && <p className={`${compact ? "mt-2" : "mt-3"} text-xs text-white/45`}>Loading treatment series…</p>}
       {error && <p className={`${compact ? "mt-2" : "mt-3"} text-xs text-red-200`}>Series tracker unavailable: {error}</p>}
-      {!loading && series.length === 0 && <p className={`${compact ? "mt-2" : "mt-3"} text-xs text-white/45`}>No treatment series prescribed.</p>}
+      {!loading && !error && series.length === 0 && <p className={`${compact ? "mt-2" : "mt-3"} text-xs text-white/45`}>{emptyMessage}</p>}
       <div className={`${compact ? "mt-2 gap-2" : "mt-3 gap-3"} grid`}>
         {series.map((item) => <SeriesTimeline key={item.carePlanReference} series={item} />)}
       </div>

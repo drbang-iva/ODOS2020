@@ -22,7 +22,7 @@ import { PinnedOfficeNote } from "../components/OfficeChannel";
 import { BalanceChips } from "../components/commercial/BalanceChips";
 import { CreditBankDepositSheet } from "../components/commercial/CreditBankDepositSheet";
 import { SaleSheet } from "../components/commercial/SaleSheet";
-import { SeriesTrackerPanel } from "../components/series-tracker/SeriesTrackerPanel";
+import { SeriesTrackerPanel, type SeriesTrackerPanelApi } from "../components/series-tracker/SeriesTrackerPanel";
 import { PatientProgramPanels } from "../components/series-tracker/PatientProgramPanels";
 import { LongitudinalImagingCard } from "../components/LongitudinalImagingCard";
 import { OdosSelect } from "../components/inputs/OdosSelect";
@@ -43,7 +43,10 @@ interface PatientOverviewApi {
   fetchHistory: typeof fetchStickyNoteHistory;
   saveNote: typeof saveStickyNote;
   findActiveRx?: typeof findLatestActiveVisionPrescription;
+  seriesTracker?: SeriesTrackerPanelApi;
 }
+
+const OVERVIEW_LIST_LIMIT = 8;
 
 const defaultPatientOverviewApi: PatientOverviewApi = {
   fetchOverview: fetchPatientOverview,
@@ -321,7 +324,7 @@ export function PatientOverview({
                   <PatientProgramPanels
                     compact
                     packageStatus={isVisible("balance-chips") ? <BalanceChips patientReference={`Patient/${patient.id}`} revision={packageRevision} /> : undefined}
-                    seriesStatus={<SeriesTrackerPanel patientReference={`Patient/${patient.id}`} compact />}
+                    seriesStatus={<SeriesTrackerPanel patientReference={`Patient/${patient.id}`} api={api.seriesTracker} compact emptyMessage="No active programs" />}
                   />
                 </section>
               )}
@@ -374,9 +377,10 @@ export function PatientOverview({
                 <span className="odos-ledger-query-note">Live FHIR query</span>
               </div>
               {loadingLedger && <p className="odos-overview-loading">Refreshing visit ledger…</p>}
-              {!loadingLedger && overview.visits.length === 0 && <p className="odos-overview-none">No matching visits recorded</p>}
-              {!loadingLedger && overview.visits.map((visit) => (
-                <article
+              {!loadingLedger && overview.visits.length === 0 && <p className="odos-overview-none">No visits yet</p>}
+              {!loadingLedger && overview.visits.map((visit) => {
+                const metadata = visitMetadata(visit);
+                return <article
                   className={[
                     "odos-visit-row",
                     openVisitId === visit.encounterId ? "is-open" : "",
@@ -395,12 +399,13 @@ export function PatientOverview({
                       void toggleVisitDetail(visit.encounterId);
                     }}
                   >
-                    Expand visit details for {visit.visitType} on {visit.date ? shortDate(visit.date) : "date not recorded"}
+                    Expand visit details for {metadata.visitType ?? "visit"} on {visit.date ? shortDate(visit.date) : "date not recorded"}
                   </button>
                   <time>{visit.date ? monthDay(visit.date) : "Date not recorded"}<small>{visit.date ? yearOf(visit.date) : ""}</small></time>
                   <div className="odos-visit-head">
-                    <span className="odos-visit-type">{visit.visitType}</span>
-                    <span>{visit.provider ?? "Provider not recorded"} · {visit.facility ?? "Facility not recorded"}</span>
+                    {metadata.visitType && <span className="odos-visit-type">{metadata.visitType}</span>}
+                    {metadata.context && <span>{metadata.context}</span>}
+                    {!metadata.visitType && !metadata.context && <span>—</span>}
                     <span data-testid={`visit-status-${visit.encounterId}`} className={
                       visit.status === "Final"
                         ? "is-final"
@@ -411,7 +416,7 @@ export function PatientOverview({
                     <button
                       type="button"
                       className="odos-visit-open"
-                      aria-label={`Open ${visit.visitType} from ${visit.date ? shortDate(visit.date) : "date not recorded"}`}
+                      aria-label={`Open ${metadata.visitType ?? "visit"} from ${visit.date ? shortDate(visit.date) : "date not recorded"}`}
                       onClick={(event) => {
                         event.stopPropagation();
                         setView({ kind: "encounter", patientId: patient.id ?? "", encounterId: visit.encounterId });
@@ -452,8 +457,8 @@ export function PatientOverview({
                       error={visitDetailErrors[visit.encounterId]}
                     />
                   )}
-                </article>
-              ))}
+                </article>;
+              })}
               </section>
               {isVisible("product-timeline") && patient.id && overview.visits[0] && (
                 <button type="button" className="odos-overview-tier-link" onClick={() => setView({ kind: "encounter", patientId: patient.id!, encounterId: overview.visits[0]!.encounterId })}>Product timeline</button>
@@ -794,13 +799,15 @@ export function BillingWeatherReport({ weather }: { weather?: PatientOverviewBil
 }
 
 function PatientSnapshot({ snapshot }: { snapshot: PatientOverviewPayload["snapshot"] }) {
+  const hasHistory = Boolean(snapshot.ocularHistory.length || snapshot.ocularSurgicalHistory.length || snapshot.socialHistory.length);
   return (
     <section className="odos-overview-card odos-snapshot-card" data-testid="overview-patient-snapshot">
       <span className="odos-overview-edge" />
       <div className="odos-overview-kicker">Patient snapshot</div>
-      <SnapshotList title="Ocular history" rows={snapshot.ocularHistory.map((row) => ({ label: row.name, detail: row.laterality }))} />
-      <SnapshotList title="Ocular surgical history" rows={snapshot.ocularSurgicalHistory.map((row) => ({ label: row.name, detail: row.date ? shortDate(row.date) : undefined }))} />
-      <SnapshotList title="Social / smoking history" rows={snapshot.socialHistory.map((label) => ({ label }))} />
+      {!hasHistory && <p className="odos-overview-none">No recorded history</p>}
+      <SnapshotList title="Ocular history" rows={snapshot.ocularHistory.map((row) => ({ label: row.name, detail: row.laterality }))} hideWhenEmpty />
+      <SnapshotList title="Ocular surgical history" rows={snapshot.ocularSurgicalHistory.map((row) => ({ label: row.name, detail: row.date ? shortDate(row.date) : undefined }))} hideWhenEmpty />
+      <SnapshotList title="Social / smoking history" rows={snapshot.socialHistory.map((label) => ({ label }))} hideWhenEmpty />
     </section>
   );
 }
@@ -810,7 +817,7 @@ function ProblemListPanel({ rows }: { rows: PatientOverviewPayload["snapshot"]["
     <section className="odos-overview-card odos-snapshot-card" data-testid="overview-problem-list">
       <span className="odos-overview-edge" />
       <div className="odos-overview-kicker">Problem list / conditions</div>
-      <SnapshotList title="Medical conditions" rows={rows.map((row) => ({ label: row.name }))} />
+      <SnapshotList title="Medical conditions" rows={rows.map((row) => ({ label: row.name }))} emptyMessage="No active problems" />
     </section>
   );
 }
@@ -820,18 +827,68 @@ function MedicationPanel({ snapshot }: { snapshot: PatientOverviewPayload["snaps
     <section className="odos-overview-card odos-snapshot-card" data-testid="overview-medications">
       <span className="odos-overview-edge" />
       <div className="odos-overview-kicker">Medications</div>
-      <MedicationList title="Ophthalmic medications" rows={snapshot.ophthalmicMedications} />
-      <MedicationList title="Systemic medications" rows={snapshot.systemicMedications} />
+      <MedicationList title="Ophthalmic medications" rows={snapshot.ophthalmicMedications} hideWhenEmpty />
+      <MedicationList title="Systemic medications" rows={snapshot.systemicMedications} hideWhenEmpty />
     </section>
   );
 }
 
-function SnapshotList({ title, rows }: { title: string; rows: Array<{ label: string; detail?: string }> }) {
-  return <section><h2>{title}</h2>{rows.length ? <ul>{rows.map((row, index) => <li key={`${row.label}-${index}`}>{row.label}{row.detail && <small>{row.detail}</small>}</li>)}</ul> : <p className="odos-overview-none">None recorded</p>}</section>;
+function SnapshotList({
+  title,
+  rows,
+  emptyMessage,
+  hideWhenEmpty = false,
+}: {
+  title: string;
+  rows: Array<{ label: string; detail?: string }>;
+  emptyMessage?: string;
+  hideWhenEmpty?: boolean;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  if (hideWhenEmpty && rows.length === 0) return null;
+  const visibleRows = expanded ? rows : rows.slice(0, OVERVIEW_LIST_LIMIT);
+  return (
+    <section>
+      <h2>{title}</h2>
+      {rows.length > 0
+        ? <ul>{visibleRows.map((row, index) => <li key={`${row.label}-${index}`}>{row.label}{row.detail && <small>{row.detail}</small>}</li>)}</ul>
+        : emptyMessage && <p className="odos-overview-none">{emptyMessage}</p>}
+      {rows.length > OVERVIEW_LIST_LIMIT && (
+        <button type="button" className="odos-overview-list-toggle" aria-expanded={expanded} onClick={() => setExpanded((current) => !current)}>
+          {expanded ? `Show first ${OVERVIEW_LIST_LIMIT}` : `Show all ${rows.length}`}
+        </button>
+      )}
+    </section>
+  );
 }
 
-function MedicationList({ title, rows, unavailable }: { title: string; rows: PatientOverviewMedication[]; unavailable?: string }) {
-  return <section><h2>{title}</h2>{rows.length ? <ul>{rows.map((row, index) => <li key={row.id ?? `${row.name}-${index}`}>{row.name}{row.sig && <small>{row.sig}</small>}</li>)}</ul> : !unavailable ? <p className="odos-overview-none">None recorded</p> : null}{unavailable && <p className="odos-overview-none">{unavailable}</p>}</section>;
+function MedicationList({
+  title,
+  rows,
+  unavailable,
+  hideWhenEmpty = false,
+}: {
+  title: string;
+  rows: PatientOverviewMedication[];
+  unavailable?: string;
+  hideWhenEmpty?: boolean;
+}) {
+  if (hideWhenEmpty && rows.length === 0 && !unavailable) return null;
+  return <section><h2>{title}</h2>{rows.length > 0 && <ul>{rows.map((row, index) => <li key={row.id ?? `${row.name}-${index}`}>{row.name}{row.sig && <small>{row.sig}</small>}</li>)}</ul>}{unavailable && <p className="odos-overview-error" role="alert">{unavailable}</p>}</section>;
+}
+
+function visitMetadata(visit: PatientOverviewPayload["visits"][number]): { visitType?: string; context?: string } {
+  const visitType = recordedMetadata(visit.visitType, "Visit type not recorded");
+  const context = [
+    recordedMetadata(visit.provider, "Provider not recorded"),
+    recordedMetadata(visit.facility, "Facility not recorded"),
+  ].filter((value): value is string => Boolean(value)).join(" · ");
+  return { ...(visitType ? { visitType } : {}), ...(context ? { context } : {}) };
+}
+
+function recordedMetadata(value: string | undefined, absentLabel: string): string | undefined {
+  const normalized = value?.trim();
+  return normalized && normalized.toLocaleLowerCase() !== absentLabel.toLocaleLowerCase() ? normalized : undefined;
 }
 
 function FilterButton({ active, onClick, children }: { active: boolean; onClick(): void; children: string }) {
