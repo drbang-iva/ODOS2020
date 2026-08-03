@@ -1,14 +1,18 @@
-import type { Bundle, Observation, Provenance } from "@medplum/fhirtypes";
+import type { Bundle, Observation, ObservationComponent, Provenance } from "@medplum/fhirtypes";
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
 import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../fhir/ophthalmology/codeBindings.js";
-import { ODOS_EXTENSION_URLS } from "../fhir/ophthalmology/extensions.js";
+import { ODOS_EXTENSION_URLS, odosConcept } from "../fhir/ophthalmology/extensions.js";
 import {
   appendCustomFieldComponentsToObservation,
   customFieldEntries,
   customFieldValueSchema,
   observationCustomValue,
   validateCustomFieldValues,
+  type ClockHourExtentValue,
+  type FindingDetails,
+  type FindingQualifierValue,
+  type QualifierSeed,
 } from "./custom-fields.js";
 import {
   captureGlaucomaFinding,
@@ -45,10 +49,32 @@ export interface CustomSectionEndpointDeps {
 const WRITE_HEADERS = { "X-ODOS-Source": "mcp/save_section_observations" } as const;
 const EYES: Eye[] = ["OD", "OS"];
 
+const clockHourExtentSchema = z.object({
+  from: z.number().finite().min(1).max(12),
+  to: z.number().finite().min(1).max(12),
+  clockwise: z.boolean(),
+}).strict();
+
+const findingQualifierValueSchema = z.union([
+  z.number().finite(),
+  z.string().trim().min(1).max(200),
+  clockHourExtentSchema,
+]);
+
+const findingDetailsSchema = z.record(
+  z.string().trim().min(1).max(100),
+  z.record(z.string().trim().min(1).max(100), findingQualifierValueSchema),
+).refine((value) => Object.keys(value).length <= 100, {
+  message: "findingDetails supports at most 100 findings.",
+}).refine((value) => Object.values(value).every((details) => Object.keys(details).length <= 100), {
+  message: "Each finding supports at most 100 qualifier values.",
+});
+
 const eyePayloadSchema = z.object({
   customFields: z.array(customFieldValueSchema).max(64),
   state: z.enum(["normal", "abnormal", "deferred"]).optional(),
   other: z.string().trim().max(2000).optional(),
+  findingDetails: findingDetailsSchema.optional(),
 }).strict();
 
 const captureSchema = z.object({
@@ -99,6 +125,7 @@ export async function handleCustomSectionCaptureRequest(
         values: parsed.data.eyes[eye]!.customFields,
         state: parsed.data.eyes[eye]!.state,
         other: parsed.data.eyes[eye]!.other,
+        findingDetails: parsed.data.eyes[eye]!.findingDetails,
       }]
     : []);
   if (perEye && eyeRows.length === 0) {
@@ -111,6 +138,7 @@ export async function handleCustomSectionCaptureRequest(
         values: parsed.data.customFields ?? [],
         state: parsed.data.state,
         other: parsed.data.other,
+        findingDetails: undefined,
       }];
   if (definition.stableKey === "dry-eye:symptoms" && rows.some((row) => {
     const supplied = new Set(row.values.map((value) => value.code));
@@ -133,15 +161,28 @@ export async function handleCustomSectionCaptureRequest(
   ))) {
     return { status: 400, body: { error: "Only an abnormal ocular-health state may carry abnormal findings." } };
   }
+  if (stateSection && rows.some((row) => row.state !== "abnormal" && hasFindingDetails(row.findingDetails))) {
+    return { status: 400, body: { error: "Only an abnormal ocular-health state may carry finding details." } };
+  }
+  if (!ocularHealth && rows.some((row) => hasFindingDetails(row.findingDetails))) {
+    return { status: 400, body: { error: "Finding details are only supported for ocular-health structures." } };
+  }
   if (!stateSection && rows.some((row) => row.state !== undefined || row.other !== undefined)) {
     return { status: 400, body: { error: "Exam state and other text are only supported for ocular-health structures." } };
   }
-  if (rows.every((row) => row.values.length === 0 && !row.state && !row.other) && !parsed.data.remarks) {
+  if (rows.every((row) => row.values.length === 0 && !row.state && !row.other && !hasFindingDetails(row.findingDetails)) && !parsed.data.remarks) {
     return { status: 400, body: { error: "Enter at least one custom field or note before saving." } };
   }
   for (const row of rows) {
     const validationError = validateCustomFieldValues(row.values, definition, row.eye);
     if (validationError) return { status: 400, body: { error: validationError } };
+    const findingDetailsError = validateFindingDetails(
+      row.findingDetails,
+      row.values,
+      definition,
+      row.eye,
+    );
+    if (findingDetailsError) return { status: 400, body: { error: findingDetailsError } };
     if (definition.stableKey === "manual_keratometry") {
       const required = ["CUSTOM_FLAT_K", "CUSTOM_FLAT_AXIS", "CUSTOM_STEEP_K", "CUSTOM_STEEP_AXIS"];
       const supplied = new Set(row.values.map((value) => value.code));
@@ -202,6 +243,12 @@ export async function handleCustomSectionCaptureRequest(
         row.state ?? "normal",
       ),
     };
+    coded.observation = appendFindingDetailComponentsToObservation(
+      coded.observation,
+      row.findingDetails,
+      definition,
+      perEye ? `${row.eye}_` : "",
+    );
     results.push(await persistCapture(
       staff.fhir,
       coded,
@@ -249,10 +296,12 @@ export async function handleCustomSectionHistoryRequest(
         ...(field.unit ? { unit: field.unit } : {}),
       }];
     });
+    const findingDetails = observationFindingDetails(observation, definition, prefix);
     return [{
       recordedAt: observation.effectiveDateTime ?? observation.issued ?? observation.meta?.lastUpdated ?? "",
       ...(perEye && (eye === "OD" || eye === "OS") ? { eye } : {}),
       values,
+      ...(findingDetails ? { findingDetails } : {}),
       ...(componentString(observation, "EXAM_STATE") ? { state: componentString(observation, "EXAM_STATE") } : {}),
       ...(componentString(observation, "NORMAL_TEMPLATE") ? { normalTemplate: componentString(observation, "NORMAL_TEMPLATE") } : {}),
       ...(componentString(observation, "OTHER") ? { other: componentString(observation, "OTHER") } : {}),
@@ -260,6 +309,185 @@ export async function handleCustomSectionHistoryRequest(
     }];
   });
   return { status: 200, body: { rows } };
+}
+
+function validateFindingDetails(
+  findingDetails: FindingDetails | undefined,
+  values: Array<{ code: string; value: number | string | string[] }>,
+  definition: ClinicalFindingDefinition,
+  label: string,
+): string | undefined {
+  if (!hasFindingDetails(findingDetails)) return undefined;
+  const field = customFieldEntries(definition).find((candidate) => candidate.valueType === "multi-select");
+  if (!field) return `${label} finding details require an ocular-health findings field.`;
+  const selectedValue = values.find((value) => value.code === field.localCode)?.value;
+  const selected = Array.isArray(selectedValue) ? new Set(selectedValue) : new Set<string>();
+  for (const [optionCode, details] of Object.entries(findingDetails)) {
+    const option = field.options?.find((candidate) => candidate.code === optionCode && candidate.active);
+    if (!option) return `${label} finding details contain an unknown or inactive finding: ${optionCode}.`;
+    if (!selected.has(optionCode)) return `${label} finding details require the finding selection: ${optionCode}.`;
+    for (const [qualifierKey, value] of Object.entries(details)) {
+      const qualifier = option.qualifiers?.find((candidate) => candidate.key === qualifierKey);
+      if (!qualifier) return `${label} finding ${optionCode} contains an unknown qualifier: ${qualifierKey}.`;
+      const error = validateFindingQualifierValue(value, qualifier);
+      if (error) return `${label} finding ${optionCode} qualifier ${qualifierKey} ${error}`;
+    }
+  }
+  return undefined;
+}
+
+function validateFindingQualifierValue(
+  value: FindingQualifierValue,
+  qualifier: QualifierSeed,
+): string | undefined {
+  if (qualifier.kind === "graded") {
+    return typeof value === "string" && qualifier.options.includes(value)
+      ? undefined
+      : "requires a configured grade option.";
+  }
+  if (qualifier.kind === "enum") {
+    return typeof value === "string" && qualifier.options.some((option) => option.code === value)
+      ? undefined
+      : "requires a configured enum option code.";
+  }
+  if (qualifier.kind === "numeric") {
+    if (typeof value !== "number" || !Number.isFinite(value)) return "requires a number.";
+    if (value < qualifier.min) return `must be at least ${qualifier.min}.`;
+    if (value > qualifier.max) return `must be at most ${qualifier.max}.`;
+    const steps = (value - qualifier.min) / qualifier.step;
+    return Math.abs(steps - Math.round(steps)) > 1e-9
+      ? `must use ${qualifier.step} increments.`
+      : undefined;
+  }
+  return isClockHourExtent(value) ? undefined : "requires a clock-hour range.";
+}
+
+function appendFindingDetailComponentsToObservation(
+  observation: Observation,
+  findingDetails: FindingDetails | undefined,
+  definition: ClinicalFindingDefinition,
+  codePrefix: string,
+): Observation {
+  if (!hasFindingDetails(findingDetails)) return observation;
+  const field = customFieldEntries(definition, true).find((candidate) => candidate.valueType === "multi-select");
+  if (!field) return observation;
+  const additions: ObservationComponent[] = [];
+  for (const [optionCode, details] of Object.entries(findingDetails)) {
+    const option = field.options?.find((candidate) => candidate.code === optionCode);
+    if (!option) continue;
+    for (const [qualifierKey, value] of Object.entries(details)) {
+      const qualifier = option.qualifiers?.find((candidate) => candidate.key === qualifierKey);
+      if (!qualifier) continue;
+      additions.push({
+        code: odosConcept(
+          findingDetailComponentCode(codePrefix, field.localCode, optionCode, qualifierKey),
+          `${option.display} — ${qualifier.display}`,
+        ),
+        ...findingQualifierObservationValue(value, qualifier),
+      });
+    }
+  }
+  return additions.length === 0
+    ? observation
+    : { ...observation, component: [...(observation.component ?? []), ...additions] };
+}
+
+function findingQualifierObservationValue(
+  value: FindingQualifierValue,
+  qualifier: QualifierSeed,
+): Pick<ObservationComponent, "valueCodeableConcept" | "valueQuantity" | "valueString"> {
+  if (qualifier.kind === "numeric" && typeof value === "number") {
+    return {
+      valueQuantity: {
+        value,
+        ...(qualifier.unit ? { unit: qualifier.unit } : {}),
+      },
+    };
+  }
+  if (qualifier.kind === "extent" && isClockHourExtent(value)) {
+    return { valueString: JSON.stringify(value) };
+  }
+  const code = String(value);
+  const display = qualifier.kind === "enum"
+    ? qualifier.options.find((option) => option.code === code)?.display ?? code
+    : code;
+  return { valueCodeableConcept: odosConcept(code, display) };
+}
+
+function observationFindingDetails(
+  observation: Observation,
+  definition: ClinicalFindingDefinition,
+  codePrefix: string,
+): FindingDetails | undefined {
+  const field = customFieldEntries(definition, true).find((candidate) => candidate.valueType === "multi-select");
+  if (!field) return undefined;
+  const findingDetails: FindingDetails = {};
+  for (const option of field.options ?? []) {
+    const details: Record<string, FindingQualifierValue> = {};
+    for (const qualifier of option.qualifiers ?? []) {
+      const component = findComponent(
+        observation,
+        findingDetailComponentCode(codePrefix, field.localCode, option.code, qualifier.key),
+      );
+      const value = component ? observationFindingQualifierValue(component, qualifier) : undefined;
+      if (value !== undefined) details[qualifier.key] = value;
+    }
+    if (Object.keys(details).length > 0) findingDetails[option.code] = details;
+  }
+  return hasFindingDetails(findingDetails) ? findingDetails : undefined;
+}
+
+function observationFindingQualifierValue(
+  component: ObservationComponent,
+  qualifier: QualifierSeed,
+): FindingQualifierValue | undefined {
+  if (qualifier.kind === "numeric") {
+    const value = component.valueQuantity?.value;
+    return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+  }
+  if (qualifier.kind === "extent") {
+    if (!component.valueString) return undefined;
+    try {
+      const parsed: unknown = JSON.parse(component.valueString);
+      return isClockHourExtent(parsed) ? parsed : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+  return component.valueCodeableConcept?.coding?.find((coding) => coding.code)?.code ??
+    (component.valueString?.trim() || undefined);
+}
+
+function findingDetailComponentCode(
+  codePrefix: string,
+  fieldCode: string,
+  optionCode: string,
+  qualifierKey: string,
+): string {
+  return `${codePrefix}${fieldCode}::${optionCode}::${qualifierKey}`;
+}
+
+function findComponent(observation: Observation, code: string): ObservationComponent | undefined {
+  return observation.component?.find((component) =>
+    component.code.coding?.some((coding) => coding.code === code)
+  );
+}
+
+function hasFindingDetails(value: FindingDetails | undefined): value is FindingDetails {
+  return value !== undefined && Object.values(value).some((details) => Object.keys(details).length > 0);
+}
+
+function isClockHourExtent(value: unknown): value is ClockHourExtentValue {
+  return typeof value === "object" && value !== null && !Array.isArray(value) &&
+    typeof (value as Record<string, unknown>).from === "number" &&
+    Number.isFinite((value as Record<string, unknown>).from) &&
+    (value as Record<string, number>).from >= 1 &&
+    (value as Record<string, number>).from <= 12 &&
+    typeof (value as Record<string, unknown>).to === "number" &&
+    Number.isFinite((value as Record<string, unknown>).to) &&
+    (value as Record<string, number>).to >= 1 &&
+    (value as Record<string, number>).to <= 12 &&
+    typeof (value as Record<string, unknown>).clockwise === "boolean";
 }
 
 function resolveCustomDefinition(

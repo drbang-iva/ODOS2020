@@ -996,6 +996,96 @@ test("the ocular-health renderer exposes segment headers, accelerators, bilatera
   }
 });
 
+test("qualified finding definitions still render legacy history as presence-only", async () => {
+  const definition = syntheticQualifiedOcularDefinition();
+  const fetchImpl = (async () => jsonResponse({
+    rows: [{
+      eye: "OD",
+      state: "abnormal",
+      values: [{ code: "CUSTOM_ABNORMAL_FINDINGS_01", value: ["synthetic-finding"] }],
+    }],
+  })) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={[definition]}
+        patientReference="Patient/p-legacy-qualified"
+        encounterReference="Encounter/e-legacy-qualified"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    const rendered = JSON.stringify(renderer.toJSON());
+    assert.match(rendered, /Synthetic Finding/);
+    assert.doesNotMatch(rendered, /Synthetic qualifier control/);
+    const finding = renderer.root.findAllByType("button")
+      .find((button) => button.children.join("") === "Synthetic Finding");
+    assert.equal(finding?.props["aria-pressed"], true);
+  } finally {
+    renderer?.unmount();
+  }
+});
+
+test("ocular-health read-forward preserves stored finding details through an unrelated save", async () => {
+  const definition = syntheticQualifiedOcularDefinition();
+  const storedFindingDetails = {
+    "synthetic-finding": { grade: "trace" },
+  };
+  let postedBody: unknown;
+  const fetchImpl = (async (_input, init) => {
+    if (init?.method === "POST") {
+      postedBody = JSON.parse(String(init.body));
+      return jsonResponse({});
+    }
+    return jsonResponse({
+      rows: [{
+        eye: "OD",
+        state: "abnormal",
+        values: [{ code: "CUSTOM_ABNORMAL_FINDINGS_01", value: ["synthetic-finding"] }],
+        findingDetails: storedFindingDetails,
+      }],
+    });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={[definition]}
+        patientReference="Patient/p-qualified-forward"
+        encounterReference="Encounter/e-qualified-forward"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    const [odOther] = renderer.root.findAllByType("textarea");
+    assert.ok(odOther);
+    act(() => odOther.props.onChange({ target: { value: "Unrelated note." } }));
+    const saveButton = renderer.root.findAllByType("button")
+      .find((button) => button.children.join("") === "Save Ocular Health");
+    assert.ok(saveButton);
+    await act(async () => saveButton.props.onClick());
+    assert.deepEqual(postedBody, {
+      patientReference: "Patient/p-qualified-forward",
+      encounterReference: "Encounter/e-qualified-forward",
+      eyes: {
+        OD: {
+          state: "abnormal",
+          customFields: [{ code: "CUSTOM_ABNORMAL_FINDINGS_01", value: ["synthetic-finding"] }],
+          findingDetails: storedFindingDetails,
+          other: "Unrelated note.",
+        },
+      },
+    });
+  } finally {
+    renderer?.unmount();
+  }
+});
+
 test("reopened history hydrates structures but posts only the one modified structure", async () => {
   const posts: string[] = [];
   const fetchImpl = (async (input, init) => {
@@ -1036,6 +1126,36 @@ test("reopened history hydrates structures but posts only the one modified struc
     renderer?.unmount();
   }
 });
+
+function syntheticQualifiedOcularDefinition() {
+  return {
+    stableKey: "ocular-health:anterior:synthetic-qualified",
+    sectionKey: "ocular-health:anterior:synthetic-qualified",
+    display: "Synthetic Qualified",
+    active: true,
+    perEye: true,
+    normalTemplate: "Synthetic normal.",
+    customFields: [{
+      localCode: "CUSTOM_ABNORMAL_FINDINGS_01",
+      display: "Abnormal findings",
+      valueType: "multi-select" as const,
+      options: [{
+        code: "synthetic-finding",
+        display: "Synthetic Finding",
+        active: true,
+        priority: true,
+        qualifiers: [{
+          kind: "graded" as const,
+          key: "grade",
+          display: "Synthetic qualifier control",
+          options: ["trace", "marked"],
+        }],
+      }],
+      order: 0,
+      active: true,
+    }],
+  };
+}
 
 test("a saved normal keeps its captured template snapshot after the live template changes", async () => {
   const fetchImpl = (async () => jsonResponse({

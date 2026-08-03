@@ -15,11 +15,23 @@ import {
   FhirFindingDefinitionStore,
   buildFindingDefinitionSeeds,
 } from "../src/clinical-graph/finding-definition-store.js";
-import { observationCustomValue } from "../src/clinical-graph/custom-fields.js";
+import {
+  customFieldOptionInputSchema,
+  observationCustomValue,
+} from "../src/clinical-graph/custom-fields.js";
 import type { ClinicalFindingDefinition } from "../src/clinical-graph/glaucoma-suspect.js";
+import {
+  buildOcularHealthDefinitions,
+  type StructureSeed,
+} from "../src/clinical-graph/ocular-health-definition.js";
 
 const AUTH = "Bearer good";
 const NOW = "2026-07-10T18:00:00.000Z";
+const SYNTHETIC_PROVENANCE = {
+  source: "manual" as const,
+  recordedAt: NOW,
+  actorReference: "Practitioner/synthetic",
+};
 
 test("Skin Carotenoid Score creates, captures, reads, renames, and deactivates without changing its stable key", async () => {
   const fhir = new MemoryFhir();
@@ -298,6 +310,232 @@ test("per-eye multi-select fields namespace shared option codes, preserve legacy
   });
   assert.equal(rejectedOther.status, 400);
   assert.equal(fhir.observations.length, 2);
+});
+
+test("bare-string ocular-health seeds keep the current definition and presence-only history shape", async () => {
+  const [definition] = buildOcularHealthDefinitions([{
+    key: "synthetic-bare",
+    display: "Synthetic Bare",
+    normalTemplate: "Synthetic normal.",
+    priority: ["bare finding"],
+    additional: ["other finding"],
+  }], "ocular-health:synthetic:", SYNTHETIC_PROVENANCE);
+  assert.ok(definition);
+  assert.deepEqual(definition.valueSchema, {
+    type: "ocular-health-structure",
+    perEye: true,
+    fields: {
+      CUSTOM_ABNORMAL_FINDINGS_01: {
+        localCode: "CUSTOM_ABNORMAL_FINDINGS_01",
+        display: "Abnormal findings",
+        origin: "practice",
+        valueType: "multi-select",
+        options: [
+          { code: "bare-finding", display: "bare finding", active: true, priority: true },
+          { code: "other-finding", display: "other finding", active: true, priority: false },
+        ],
+        order: 0,
+        active: true,
+      },
+    },
+  });
+
+  const fhir = new MemoryFhir();
+  const capture = await handleCustomSectionCaptureRequest(
+    clinicalDeps("clinician", fhir, [definition]),
+    {
+      authHeader: AUTH,
+      params: { stableKey: definition.stableKey },
+      body: {
+        patientReference: "Patient/p-bare",
+        encounterReference: "Encounter/e-bare",
+        eyes: {
+          OD: {
+            state: "abnormal",
+            customFields: [{ code: "CUSTOM_ABNORMAL_FINDINGS_01", value: ["bare-finding"] }],
+          },
+        },
+      },
+    },
+  );
+  assert.equal(capture.status, 200, JSON.stringify(capture.body));
+  const history = await handleCustomSectionHistoryRequest(
+    clinicalDeps("clinician", fhir, [definition]),
+    {
+      authHeader: AUTH,
+      params: { stableKey: definition.stableKey },
+      query: { patient: "Patient/p-bare", encounter: "Encounter/e-bare" },
+    },
+  );
+  assert.deepEqual((history.body as { rows: unknown[] }).rows, [{
+    recordedAt: NOW,
+    eye: "OD",
+    values: [{
+      code: "CUSTOM_ABNORMAL_FINDINGS_01",
+      label: "Abnormal findings",
+      value: ["bare-finding"],
+    }],
+    state: "abnormal",
+  }]);
+});
+
+test("finding qualifiers round-trip all four kinds independently by finding and eye", async () => {
+  const structures: StructureSeed[] = [{
+    key: "synthetic-qualified",
+    display: "Synthetic Qualified",
+    normalTemplate: "Synthetic normal.",
+    priority: [
+      {
+        key: "finding-a",
+        display: "Finding A",
+        qualifiers: [
+          { kind: "graded", key: "grade", display: "Grade", options: ["trace", "marked"], scheme: "synthetic-scheme" },
+          {
+            kind: "enum",
+            key: "stability",
+            display: "Stability",
+            options: [
+              { code: "stable", display: "Stable" },
+              { code: "progressive", display: "Progressive" },
+            ],
+          },
+          { kind: "numeric", key: "size", display: "Size", min: 0, max: 10, step: 0.5, unit: "mm" },
+          { kind: "extent", key: "span", display: "Clock-hour span" },
+        ],
+      },
+      {
+        key: "finding-b",
+        display: "Finding B",
+        qualifiers: [{ kind: "graded", key: "grade", display: "Grade", options: ["low", "high"] }],
+      },
+    ],
+    additional: [],
+  }];
+  const [definition] = buildOcularHealthDefinitions(
+    structures,
+    "ocular-health:synthetic:",
+    SYNTHETIC_PROVENANCE,
+  );
+  assert.ok(definition);
+  const field = Object.values(definition.valueSchema.fields as Record<string, {
+    localCode: string;
+    valueType: string;
+    options?: Array<{ code: string; qualifiers?: unknown[] }>;
+  }>).find((candidate) => candidate.valueType === "multi-select");
+  assert.ok(field?.options);
+  assert.deepEqual(field.options.find((option) => option.code === "finding-a")?.qualifiers, structures[0]!.priority[0] &&
+    typeof structures[0]!.priority[0] !== "string" ? structures[0]!.priority[0].qualifiers : undefined);
+  assert.equal(customFieldOptionInputSchema.safeParse(field.options[0]).success, true);
+
+  const odDetails = {
+    "finding-a": {
+      grade: "trace",
+      stability: "stable",
+      size: 2.5,
+      span: { from: 2, to: 5, clockwise: true },
+    },
+    "finding-b": { grade: "high" },
+  };
+  const osDetails = {
+    "finding-a": {
+      grade: "marked",
+      stability: "progressive",
+      size: 4,
+      span: { from: 10, to: 1, clockwise: false },
+    },
+  };
+  const fhir = new MemoryFhir();
+  const capture = await handleCustomSectionCaptureRequest(
+    clinicalDeps("clinician", fhir, [definition]),
+    {
+      authHeader: AUTH,
+      params: { stableKey: definition.stableKey },
+      body: {
+        patientReference: "Patient/p-qualified",
+        encounterReference: "Encounter/e-qualified",
+        eyes: {
+          OD: {
+            state: "abnormal",
+            customFields: [{ code: field.localCode, value: ["finding-a", "finding-b"] }],
+            findingDetails: odDetails,
+          },
+          OS: {
+            state: "abnormal",
+            customFields: [{ code: field.localCode, value: ["finding-a"] }],
+            findingDetails: osDetails,
+          },
+        },
+      },
+    },
+  );
+  assert.equal(capture.status, 200, JSON.stringify(capture.body));
+  const code = (eye: "OD" | "OS", finding: string, qualifier: string) =>
+    `${eye}_${field.localCode}::${finding}::${qualifier}`;
+  assert.equal(component(fhir.observations[0], code("OD", "finding-a", "grade"))?.valueCodeableConcept?.coding?.[0]?.code, "trace");
+  assert.equal(component(fhir.observations[0], code("OD", "finding-a", "stability"))?.valueCodeableConcept?.coding?.[0]?.code, "stable");
+  assert.equal(component(fhir.observations[0], code("OD", "finding-a", "size"))?.valueQuantity?.value, 2.5);
+  assert.equal(component(fhir.observations[0], code("OD", "finding-a", "size"))?.valueQuantity?.unit, "mm");
+  assert.equal(component(fhir.observations[0], code("OD", "finding-a", "span"))?.valueString, '{"from":2,"to":5,"clockwise":true}');
+  assert.equal(component(fhir.observations[0], code("OD", "finding-b", "grade"))?.valueCodeableConcept?.coding?.[0]?.code, "high");
+  assert.equal(component(fhir.observations[1], code("OS", "finding-a", "grade"))?.valueCodeableConcept?.coding?.[0]?.code, "marked");
+  assert.equal(component(fhir.observations[0], `OD_${field.localCode}::finding-a`)?.valueBoolean, true);
+  assert.equal(component(fhir.observations[0], `OD_${field.localCode}::finding-b`)?.valueBoolean, true);
+
+  const history = await handleCustomSectionHistoryRequest(
+    clinicalDeps("clinician", fhir, [definition]),
+    {
+      authHeader: AUTH,
+      params: { stableKey: definition.stableKey },
+      query: { patient: "Patient/p-qualified", encounter: "Encounter/e-qualified" },
+    },
+  );
+  const rows = (history.body as {
+    rows: Array<{ eye: string; values: Array<{ value: string[] }>; findingDetails?: unknown }>;
+  }).rows;
+  assert.deepEqual(rows.map((row) => [row.eye, row.values[0]?.value, row.findingDetails]), [
+    ["OD", ["finding-a", "finding-b"], odDetails],
+    ["OS", ["finding-a"], osDetails],
+  ]);
+
+  const invalidFhir = new MemoryFhir();
+  const invalid = await handleCustomSectionCaptureRequest(
+    clinicalDeps("clinician", invalidFhir, [definition]),
+    {
+      authHeader: AUTH,
+      params: { stableKey: definition.stableKey },
+      body: {
+        patientReference: "Patient/p-invalid-extent",
+        encounterReference: "Encounter/e-invalid-extent",
+        eyes: {
+          OD: {
+            state: "abnormal",
+            customFields: [{ code: field.localCode, value: ["finding-a"] }],
+            findingDetails: {
+              "finding-a": { span: { from: 0, to: 13, clockwise: true } },
+            },
+          },
+        },
+      },
+    },
+  );
+  assert.equal(invalid.status, 400);
+  assert.equal(invalidFhir.observations.length, 0);
+
+  const storedExtent = component(fhir.observations[0], code("OD", "finding-a", "span"));
+  assert.ok(storedExtent);
+  storedExtent.valueString = '{"from":0,"to":13,"clockwise":true}';
+  const readInvalid = await handleCustomSectionHistoryRequest(
+    clinicalDeps("clinician", fhir, [definition]),
+    {
+      authHeader: AUTH,
+      params: { stableKey: definition.stableKey },
+      query: { patient: "Patient/p-qualified", encounter: "Encounter/e-qualified" },
+    },
+  );
+  const invalidRows = (readInvalid.body as {
+    rows: Array<{ eye: string; findingDetails?: Record<string, Record<string, unknown>> }>;
+  }).rows;
+  assert.equal(invalidRows[0]?.findingDetails?.["finding-a"]?.span, undefined);
 });
 
 test("OH-1 seeds nine editable structures and persists explicit normal, abnormal, nested, other, and deferred states", async () => {
