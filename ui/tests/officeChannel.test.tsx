@@ -169,13 +169,15 @@ test("patient pin appears on the matching flow row and chart header, is ackable,
 
   let overviewRenderer!: ReactTestRenderer;
   await act(async () => { overviewRenderer = create(<ClinicOfficeShell location="Patient overview" initialMessages={[pinned]}><PatientOverview patient={patient} initialOverview={overviewFixture()} /></ClinicOfficeShell>); });
-  assert.equal(overviewRenderer.root.findAllByProps({ "aria-label": "Pinned Office note from Hannah Desk" }).length, 1);
+  assert.equal(overviewRenderer.root.findAllByProps({ "aria-label": "Pinned Office note from Hannah Desk: Insurance question" }).length, 1);
   await act(async () => { overviewRenderer.update(<ClinicOfficeShell location="Patient overview" initialMessages={[pinned]}><PatientOverview patient={{ ...patient, id: "patient-2" }} initialOverview={overviewFixture()} /></ClinicOfficeShell>); });
-  assert.equal(overviewRenderer.root.findAllByProps({ "aria-label": "Pinned Office note from Hannah Desk" }).length, 0);
+  assert.equal(overviewRenderer.root.findAllByProps({ "aria-label": "Pinned Office note from Hannah Desk: Insurance question" }).length, 0);
   await act(async () => { overviewRenderer.update(<ClinicOfficeShell key="seen" location="Patient overview" initialMessages={[seenPinned]}><PatientOverview patient={patient} initialOverview={overviewFixture()} /></ClinicOfficeShell>); });
   assert.equal(overviewRenderer.root.findAllByProps({ className: "odos-office-pin-context is-seen is-band" }).length, 1);
   assert.match(JSON.stringify(overviewRenderer.toJSON()), /📌/);
-  assert.match(JSON.stringify(overviewRenderer.toJSON()), /Insurance question/);
+  const bandPin = overviewRenderer.root.findByProps({ className: "odos-office-pin-context is-seen is-band" });
+  const bandLine = bandPin.findByType("summary").findByProps({ className: "odos-office-pin-line" });
+  assert.equal(bandLine.children.join(""), "Insurance question");
 
   let renderer!: ReactTestRenderer;
   await act(async () => {

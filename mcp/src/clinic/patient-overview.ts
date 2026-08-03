@@ -548,8 +548,10 @@ export function deriveBillingWeather(
   if (benefit.inforce !== true) return { state: "unknown", ...(planName ? { planName } : {}) };
 
   const deductibleValues = (benefit.item ?? [])
-    .filter((item) => /deductible/i.test(`${item.name ?? ""} ${item.description ?? ""}`))
-    .flatMap((item) => item.benefit ?? [])
+    .flatMap((item) => (item.benefit ?? []).filter((entry) =>
+      /deductible/i.test(`${item.name ?? ""} ${item.description ?? ""} ${entry.type?.text ?? ""}`)
+      || entry.type?.coding?.some((coding) => coding.code?.toLowerCase() === "deductible")
+    ))
     .flatMap((entry) => typeof entry.allowedMoney?.value === "number" ? [entry.allowedMoney.value] : []);
   if (deductibleValues.length !== 1 || !Number.isFinite(deductibleValues[0]) || deductibleValues[0] < 0) {
     return { state: "unknown", ...(planName ? { planName } : {}) };

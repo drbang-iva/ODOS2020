@@ -89,7 +89,12 @@ test("billing weather reads stored eligibility and never promotes uncertain cove
     inforce?: boolean;
     deductible?: number | string;
     benefitEnd?: string;
-  }): CoverageEligibilityResponse => ({
+    itemName?: string;
+    benefitTypeText?: string;
+    benefitTypeCode?: string;
+  }): CoverageEligibilityResponse => {
+    const benefitTypeText = input.benefitTypeText ?? (input.benefitTypeCode ? undefined : "remaining");
+    return ({
     resourceType: "CoverageEligibilityResponse",
     status: "active",
     purpose: ["benefits"],
@@ -103,11 +108,18 @@ test("billing weather reads stored eligibility and never promotes uncertain cove
       inforce: input.inforce,
       ...(input.benefitEnd ? { benefitPeriod: { end: input.benefitEnd } } : {}),
       item: input.deductible === undefined ? [] : [{
-        name: "Deductible",
-        benefit: [{ type: { text: "remaining" }, allowedMoney: { value: input.deductible as number, currency: "USD" } }],
+        name: input.itemName ?? "Deductible",
+        benefit: [{
+          type: {
+            ...(benefitTypeText ? { text: benefitTypeText } : {}),
+            ...(input.benefitTypeCode ? { coding: [{ code: input.benefitTypeCode }] } : {}),
+          },
+          allowedMoney: { value: input.deductible as number, currency: "USD" },
+        }],
       }],
     }],
-  });
+    });
+  };
 
   assert.deepEqual(deriveBillingWeather([], [], "2026-08-03"), { state: "unknown" });
   assert.equal(deriveBillingWeather([activeCoverage], [response({ created: "not-a-fhir-instant", inforce: true, deductible: 0 })], "2026-08-03").state, "unknown");
@@ -121,6 +133,14 @@ test("billing weather reads stored eligibility and never promotes uncertain cove
   assert.deepEqual(
     deriveBillingWeather([activeCoverage], [response({ inforce: true, deductible: 250 })], "2026-08-03"),
     { state: "high-deductible", planName: "Synthetic Health Plan", deductibleRemainingCents: 25_000 },
+  );
+  assert.equal(
+    deriveBillingWeather([activeCoverage], [response({ inforce: true, deductible: 250, itemName: "Medical", benefitTypeText: "Deductible" })], "2026-08-03").state,
+    "high-deductible",
+  );
+  assert.equal(
+    deriveBillingWeather([activeCoverage], [response({ inforce: true, deductible: 250, itemName: "Medical", benefitTypeCode: "deductible" })], "2026-08-03").state,
+    "high-deductible",
   );
   assert.deepEqual(
     deriveBillingWeather([activeCoverage], [response({ inforce: false })], "2026-08-03"),

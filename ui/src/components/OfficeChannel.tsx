@@ -233,7 +233,7 @@ export function PinnedOfficeNote({ patientId, compact = false, band = false }: {
   if (!message) return null;
   return (
     <details className={`odos-office-pin-context${message.acknowledgement ? " is-seen" : ""}${compact ? " is-compact" : ""}${band ? " is-band" : ""}`}>
-      <summary aria-label={`Pinned Office note from ${message.sender.display}`}>
+      <summary aria-label={`Pinned Office note from ${message.sender.display}${band ? `: ${message.text}` : ""}`}>
         <span aria-hidden="true">📌{message.acknowledgement ? " ✓" : ""}</span>
         {band && <span className="odos-office-pin-line">{message.text}</span>}
       </summary>
