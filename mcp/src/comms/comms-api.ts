@@ -16,6 +16,7 @@ import type { CommsDispatch, CommsDispatchFhir } from "./comms-config.js";
 import type { CommsProvider, ConversationSummary } from "./comms-provider.js";
 import {
   ODOS_COMMS_CATEGORY_SYSTEM,
+  ODOS_COMMS_DEFAULT_PROVIDER,
   ODOS_PATIENT_CALL_CATEGORY,
   ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM,
   ODOS_TWILIO_CALL_IDENTIFIER_SYSTEM,
@@ -89,6 +90,8 @@ export function registerCommsApiRoutes(
       const idempotencyKey = requiredIdempotencyKey(req, body);
       const provider = adapter(deps, providerFromBody(body), staff.fhir);
       if (!provider.sendSms) throw new CommsApiCapabilityError("SMS is not enabled for this communications provider.");
+      const providerMessageIdentifierSystem =
+        provider.messageIdentifierSystem ?? ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM;
       const reservation = await reserveStaffSmsSend(staff.fhir, {
         idempotencyKey,
         claimId: randomUUID(),
@@ -96,8 +99,7 @@ export function registerCommsApiRoutes(
         senderReference: staff.staffReference,
         body: text,
         provider: provider.name,
-        providerMessageIdentifierSystem:
-          provider.messageIdentifierSystem ?? ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM,
+        providerMessageIdentifierSystem,
       });
       if (reservation.state === "conflict") {
         throw new CommsApiCapabilityError("SMS idempotency key was already used for a different request.");
@@ -123,8 +125,7 @@ export function registerCommsApiRoutes(
           communication: reservation.communication,
           idempotencyKey,
           providerMessageId: result.providerMessageId,
-          providerMessageIdentifierSystem:
-            provider.messageIdentifierSystem ?? ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM,
+          providerMessageIdentifierSystem,
         }, { now: () => deps.now?.() ?? new Date().toISOString() });
       }
       return { status: 200, body: result };
@@ -376,12 +377,12 @@ function redactConversationBodies(conversations: ConversationSummary[]): Convers
 }
 
 function providerFromQuery(req: Request): string {
-  const value = queryString(req, "provider") ?? "twilio";
+  const value = queryString(req, "provider") ?? ODOS_COMMS_DEFAULT_PROVIDER;
   return providerName(value);
 }
 
 function providerFromBody(body: Record<string, unknown>): string {
-  return providerName(typeof body.provider === "string" ? body.provider : "twilio");
+  return providerName(typeof body.provider === "string" ? body.provider : ODOS_COMMS_DEFAULT_PROVIDER);
 }
 
 function requiredIdempotencyKey(req: Request, body: Record<string, unknown>): string {

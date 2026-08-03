@@ -35,6 +35,7 @@ export const ODOS_COMMS_STAFF_SEND_CLAIM_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/comms-staff-send-claim";
 export const ODOS_COMMS_STAFF_SEND_PROVIDER_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/comms-staff-send-provider";
+export const ODOS_COMMS_DEFAULT_PROVIDER = "twilio";
 
 const TWILIO_CALL_METADATA_AUTHOR = "ODOS Twilio call metadata";
 const TWILIO_RECORDING_METADATA_AUTHOR = "ODOS Twilio recording metadata";
@@ -96,7 +97,7 @@ export async function reserveStaffSmsSend(
     identifier: [
       { system: ODOS_COMMS_STAFF_SEND_IDENTIFIER_SYSTEM, value: input.idempotencyKey },
       { system: ODOS_COMMS_STAFF_SEND_CLAIM_IDENTIFIER_SYSTEM, value: input.claimId },
-      { system: ODOS_COMMS_STAFF_SEND_PROVIDER_IDENTIFIER_SYSTEM, value: input.provider ?? "twilio" },
+      { system: ODOS_COMMS_STAFF_SEND_PROVIDER_IDENTIFIER_SYSTEM, value: input.provider ?? ODOS_COMMS_DEFAULT_PROVIDER },
     ],
     category: [category(ODOS_PATIENT_SMS_CATEGORY), category(ODOS_PATIENT_SMS_OUTBOUND_CATEGORY)],
     medium: [{ text: "SMS" }],
@@ -127,6 +128,7 @@ export async function persistStaffSentSms(
     category: ODOS_PATIENT_SMS_CATEGORY,
   };
   const fragment: Partial<Communication> = {
+    // Carrier callbacks may advance this; platform-backed sends keep live delivery state with their provider.
     status: "in-progress",
     sent: deps.now?.() ?? new Date().toISOString(),
     identifier: [{
@@ -161,13 +163,13 @@ function classifyStaffSmsReservation(
   const visiblePayloadConflicts = communication.payload !== undefined
     && communication.payload[0]?.contentString !== input.body;
   const reservedProvider = communication.identifier?.find((identifier) =>
-    identifier.system === ODOS_COMMS_STAFF_SEND_PROVIDER_IDENTIFIER_SYSTEM)?.value ?? "twilio";
+    identifier.system === ODOS_COMMS_STAFF_SEND_PROVIDER_IDENTIFIER_SYSTEM)?.value ?? ODOS_COMMS_DEFAULT_PROVIDER;
   if (
     communication.subject?.reference !== input.patientReference
     || communication.sender?.reference !== input.senderReference
     || communication.recipient?.[0]?.reference !== input.patientReference
     || visiblePayloadConflicts
-    || reservedProvider !== (input.provider ?? "twilio")
+    || reservedProvider !== (input.provider ?? ODOS_COMMS_DEFAULT_PROVIDER)
   ) {
     return { state: "conflict", communication };
   }

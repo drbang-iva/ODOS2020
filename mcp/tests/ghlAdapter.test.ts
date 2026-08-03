@@ -274,6 +274,7 @@ test("GHL bounds concurrent per-conversation history requests", async () => {
   const result = await adapter.listConversations!({ limit: conversations.length });
 
   assert.equal(result.length, conversations.length);
+  assert.ok(maximumActive > 1, `expected concurrent message reads, saw ${maximumActive}`);
   assert.ok(maximumActive <= 5, `expected at most 5 concurrent message reads, saw ${maximumActive}`);
 });
 
@@ -420,7 +421,6 @@ test("GHL inbound route verifies Ed25519 over raw bytes and accepts only the con
     auth: { locationId: LOCATION_ID, publicKey },
     onEvent: (event) => events.push(event),
   });
-  app.use(express.json());
   const server = app.listen(0);
   await once(server, "listening");
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;

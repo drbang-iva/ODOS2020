@@ -112,6 +112,34 @@ test("an idempotency key cannot be replayed through a different communications p
   assert.equal(ghl.state, "conflict");
 });
 
+test("a legacy reservation without a provider identifier remains bound to Twilio", async () => {
+  const fhir = new InMemoryCommsFhir();
+  fhir.seed({
+    resourceType: "Communication",
+    id: "legacy-provider-reservation",
+    status: "preparation",
+    identifier: [
+      { system: ODOS_COMMS_STAFF_SEND_IDENTIFIER_SYSTEM, value: "synthetic-legacy-provider-send" },
+    ],
+    subject: { reference: "Patient/synthetic-1" },
+    sender: { reference: "Practitioner/synthetic-staff" },
+    recipient: [{ reference: "Patient/synthetic-1" }],
+    payload: [{ contentString: "Synthetic legacy provider message" }],
+  } satisfies Communication);
+
+  const reservation = await reserveStaffSmsSend(fhir, {
+    idempotencyKey: "synthetic-legacy-provider-send",
+    claimId: "synthetic-legacy-provider-claim",
+    patientReference: "Patient/synthetic-1",
+    senderReference: "Practitioner/synthetic-staff",
+    body: "Synthetic legacy provider message",
+    provider: "ghl",
+    providerMessageIdentifierSystem: "https://odos2020.com/fhir/NamingSystem/ghl-message-id",
+  });
+
+  assert.equal(reservation.state, "conflict");
+});
+
 test("a status callback racing send completion is reconciled into one canonical history entry", async () => {
   const fhir = new InMemoryCommsFhir();
   const reservation = await reserveStaffSmsSend(fhir, {
