@@ -168,20 +168,28 @@ test("GHL maps a patient-filtered conversation row from the documented search re
       }
       if (url.includes("/conversations/search?")) {
         return Response.json({
-          conversations: [{
-            id: CONVERSATION_ID,
-            contactId: CONTACT_ID,
-            locationId: LOCATION_ID,
-            lastMessageBody: "Synthetic reply",
-            lastMessageType: "SMS",
-            unreadCount: 1,
-            fullName: "Alex Synthetic",
-            contactName: "Synthetic Contact",
-            email: "alex@example.test",
-            phone: "+18645550199",
-            type: "TYPE_PHONE",
-          }],
-          total: 1,
+          conversations: [
+            {
+              id: "conversation-for-another-contact",
+              contactId: "contact-for-another-patient",
+              lastMessageBody: "Must not attach to the selected patient",
+              unreadCount: 1,
+            },
+            {
+              id: CONVERSATION_ID,
+              contactId: CONTACT_ID,
+              locationId: LOCATION_ID,
+              lastMessageBody: "Synthetic reply",
+              lastMessageType: "SMS",
+              unreadCount: 1,
+              fullName: "Alex Synthetic",
+              contactName: "Synthetic Contact",
+              email: "alex@example.test",
+              phone: "+18645550199",
+              type: "TYPE_PHONE",
+            },
+          ],
+          total: 2,
         });
       }
       throw new Error(`Unexpected GHL request: ${url}`);

@@ -249,7 +249,10 @@ export function createGhlAdapter(
       if (contactId) query.set("contactId", contactId);
       const response = await request<{ conversations?: unknown }>(`/conversations/search?${query}`);
       const conversations = conversationArray(response.conversations);
-      return conversations.map((conversation): ConversationSummary => ({
+      const visibleConversations = input.patientReference
+        ? conversations.filter((conversation) => conversation.contactId === contactId)
+        : conversations;
+      return visibleConversations.map((conversation): ConversationSummary => ({
         id: conversation.id,
         ...(input.patientReference ? { patientReference: input.patientReference } : {}),
         ...(input.includeContent === true && conversation.lastMessageBody
