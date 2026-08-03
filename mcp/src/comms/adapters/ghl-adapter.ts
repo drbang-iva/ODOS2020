@@ -30,6 +30,9 @@ import { ODOS_GHL_MESSAGE_IDENTIFIER_SYSTEM } from "../comms-persistence.js";
 const GHL_API_BASE_URL = "https://services.leadconnectorhq.com";
 const GHL_API_VERSION = "v3";
 const GHL_REQUEST_TIMEOUT_MS = 30_000;
+const GHL_MESSAGE_PAGE_LIMIT = 100;
+const GHL_MESSAGE_PAGE_CAP = 100;
+const GHL_CONVERSATION_READ_CONCURRENCY = 5;
 const GHL_WEBHOOK_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
 MCowBQYDK2VwAyEAi2HR1srL4o18O8BRa7gVJY7G7bupbN3H9AwJrHCDiOg=
 -----END PUBLIC KEY-----`;
@@ -124,6 +127,39 @@ export function createGhlAdapter(
     }
     return matches[0];
   };
+  const messagesForConversation = async (
+    conversationId: string,
+    includeContent: boolean,
+  ): Promise<ConversationMessage[]> => {
+    const messages: ConversationMessage[] = [];
+    const seenCursors = new Set<string>();
+    let lastMessageId: string | undefined;
+    for (let page = 0; page < GHL_MESSAGE_PAGE_CAP; page += 1) {
+      const query = new URLSearchParams({
+        limit: String(GHL_MESSAGE_PAGE_LIMIT),
+        type: "TYPE_SMS",
+      });
+      if (lastMessageId) query.set("lastMessageId", lastMessageId);
+      const response = await request<{
+        lastMessageId?: unknown;
+        nextPage?: unknown;
+        messages?: unknown;
+      }>(`/conversations/${encodeURIComponent(conversationId)}/messages?${query}`);
+      messages.push(...messageArray(response.messages).map((message) =>
+        conversationMessage(message, includeContent)));
+      if (response.nextPage === false) return messages;
+      if (response.nextPage !== true) {
+        throw new Error("GHL conversation messages response has an invalid nextPage value.");
+      }
+      const cursor = requiredResponseString(response.lastMessageId, "GHL message page cursor");
+      if (seenCursors.has(cursor)) {
+        throw new Error("GHL conversation messages pagination repeated a cursor.");
+      }
+      seenCursors.add(cursor);
+      lastMessageId = cursor;
+    }
+    throw new Error("GHL conversation messages pagination exceeded 100 pages.");
+  };
 
   return {
     name: "ghl",
@@ -182,23 +218,28 @@ export function createGhlAdapter(
       if (contactId) query.set("contactId", contactId);
       const response = await request<{ conversations?: unknown }>(`/conversations/search?${query}`);
       const conversations = conversationArray(response.conversations);
-      const summaries = await Promise.all(conversations.map(async (conversation): Promise<ConversationSummary | undefined> => {
-        const messageQuery = new URLSearchParams({ limit: "100", type: "SMS" });
-        const messageResponse = await request<{ messages?: unknown }>(
-          `/conversations/${encodeURIComponent(conversation.id)}/messages?${messageQuery}`,
-        );
-        const messages = messageArray(messageResponse.messages).map((message) =>
-          conversationMessage(message, input.includeContent === true));
-        if (messages.length === 0) return undefined;
-        messages.sort((left, right) => Date.parse(right.occurredAt) - Date.parse(left.occurredAt));
-        return {
-          id: conversation.id,
-          ...(input.patientReference ? { patientReference: input.patientReference } : {}),
-          updatedAt: messages[0]?.occurredAt ?? requiredDate(conversation.lastMessageDate, "GHL conversation update time"),
-          messageCount: messages.length,
-          messages,
-        };
-      }));
+      const summaries: Array<ConversationSummary | undefined> = [];
+      for (let offset = 0; offset < conversations.length; offset += GHL_CONVERSATION_READ_CONCURRENCY) {
+        summaries.push(...await Promise.all(
+          conversations
+            .slice(offset, offset + GHL_CONVERSATION_READ_CONCURRENCY)
+            .map(async (conversation): Promise<ConversationSummary | undefined> => {
+              const messages = await messagesForConversation(
+                conversation.id,
+                input.includeContent === true,
+              );
+              if (messages.length === 0) return undefined;
+              messages.sort((left, right) => Date.parse(right.occurredAt) - Date.parse(left.occurredAt));
+              return {
+                id: conversation.id,
+                ...(input.patientReference ? { patientReference: input.patientReference } : {}),
+                updatedAt: messages[0].occurredAt,
+                messageCount: messages.length,
+                messages,
+              };
+            }),
+        ));
+      }
       return summaries
         .filter((summary): summary is ConversationSummary => summary !== undefined)
         .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt));

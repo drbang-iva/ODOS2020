@@ -171,7 +171,82 @@ test("GHL lists live conversation messages and maps patient-filtered history", a
   assert.match(urls[1], /locationId=location-synthetic-1/);
   assert.match(urls[1], /contactId=contact-synthetic-1/);
   assert.match(urls[1], /limit=20/);
-  assert.match(urls[2], /\/conversations\/conversation-synthetic-1\/messages\?limit=100&type=SMS/);
+  assert.match(urls[2], /\/conversations\/conversation-synthetic-1\/messages\?limit=100&type=TYPE_SMS/);
+});
+
+test("GHL follows the documented lastMessageId cursor until conversation history is complete", async () => {
+  const messageUrls: string[] = [];
+  const adapter = createGhlAdapter({ locationId: LOCATION_ID, accessToken: ACCESS_TOKEN }, {
+    fetchImpl: (async (input) => {
+      const url = String(input);
+      if (url.includes("/conversations/search?")) {
+        return Response.json({
+          conversations: [{ id: CONVERSATION_ID, contactId: CONTACT_ID }],
+          total: 1,
+        });
+      }
+      messageUrls.push(url);
+      const cursor = new URL(url).searchParams.get("lastMessageId");
+      const id = cursor ? "message-synthetic-2" : MESSAGE_ID;
+      return Response.json({
+        lastMessageId: id,
+        nextPage: cursor === null,
+        messages: [{
+          id,
+          dateAdded: cursor ? "2026-08-03T12:00:00.000Z" : "2026-08-03T13:00:00.000Z",
+          direction: cursor ? "outbound" : "inbound",
+          status: "delivered",
+        }],
+      });
+    }) as typeof fetch,
+  });
+
+  const result = await adapter.listConversations!({ limit: 1 });
+
+  assert.equal(result[0].messageCount, 2);
+  assert.deepEqual(result[0].messages.map((message) => message.id), [
+    MESSAGE_ID,
+    "message-synthetic-2",
+  ]);
+  assert.equal(messageUrls.length, 2);
+  assert.equal(new URL(messageUrls[1]).searchParams.get("lastMessageId"), MESSAGE_ID);
+});
+
+test("GHL bounds concurrent per-conversation history requests", async () => {
+  let active = 0;
+  let maximumActive = 0;
+  const conversations = Array.from({ length: 6 }, (_, index) => ({
+    id: `conversation-synthetic-${index + 1}`,
+    contactId: `contact-synthetic-${index + 1}`,
+  }));
+  const adapter = createGhlAdapter({ locationId: LOCATION_ID, accessToken: ACCESS_TOKEN }, {
+    fetchImpl: (async (input) => {
+      const url = String(input);
+      if (url.includes("/conversations/search?")) {
+        return Response.json({ conversations, total: conversations.length });
+      }
+      active += 1;
+      maximumActive = Math.max(maximumActive, active);
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      active -= 1;
+      const conversationId = /\/conversations\/([^/]+)\/messages/.exec(url)?.[1];
+      return Response.json({
+        lastMessageId: `message-${conversationId}`,
+        nextPage: false,
+        messages: [{
+          id: `message-${conversationId}`,
+          dateAdded: "2026-08-03T13:00:00.000Z",
+          direction: "inbound",
+          status: "delivered",
+        }],
+      });
+    }) as typeof fetch,
+  });
+
+  const result = await adapter.listConversations!({ limit: conversations.length });
+
+  assert.equal(result.length, conversations.length);
+  assert.ok(maximumActive <= 5, `expected at most 5 concurrent message reads, saw ${maximumActive}`);
 });
 
 test("GHL contact search and upsert map only the vendor contact fields", async () => {
