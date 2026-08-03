@@ -51,6 +51,7 @@ export type SendResult =
 
 export interface ConversationSummary {
   id: string;
+  provider?: string;
   patientReference?: string;
   updatedAt?: string;
   messageCount?: number;
