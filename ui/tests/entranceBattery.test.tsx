@@ -176,6 +176,11 @@ test("marking OS pupils normal fills the operator-defined PERRLA values without 
     assert.equal(osCard.findByProps({ "aria-label": "APD" }).children.join(""), "none");
     assert.equal(osCard.findByProps({ "aria-label": "RAPD" }).children.join(""), "none");
 
+    act(() => osCard.findByProps({ "aria-label": "Size — near" }).props.onChange({ target: { value: "5" } }));
+    assert.equal(osCard.findByProps({ "aria-label": "Size — near" }).props.value, "5");
+    act(() => normalButtons[1]!.props.onClick());
+    assert.equal(osCard.findByProps({ "aria-label": "Size — near" }).props.value, "");
+
     await act(async () => {
       renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Pupils")!.props.onClick();
       await flushPromises();
