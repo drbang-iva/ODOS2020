@@ -86,6 +86,7 @@ export function GonioscopySection({ patientReference, encounterReference, onSave
   }
 
   function copyEye(from: Eye) {
+    if (!canCopyEye(from)) return;
     const to: Eye = from === "OD" ? "OS" : "OD";
     const copied: RecordRow[] = records.filter((row) => row.eye === from).map((row) => ({
       eye: to,
@@ -93,9 +94,8 @@ export function GonioscopySection({ patientReference, encounterReference, onSave
       value: row.value,
       entryMode: row.entryMode,
     }));
-    const copiedQuadrants = new Set(copied.map((row) => row.quadrant));
     setRecords((current) => [
-      ...current.filter((row) => row.eye !== to || !copiedQuadrants.has(row.quadrant)),
+      ...current.filter((row) => row.eye !== to),
       ...copied,
     ]);
     setDirtyRecords((current) => new Set([
@@ -105,6 +105,18 @@ export function GonioscopySection({ patientReference, encounterReference, onSave
     if (pigmentation[from] !== undefined) {
       setPigmentation((current) => ({ ...current, [to]: current[from] }));
     }
+  }
+
+  function canCopyEye(from: Eye) {
+    const to = from === "OD" ? "OS" : "OD";
+    const sourceQuadrants = new Set(records
+      .filter((row) => row.eye === from)
+      .map((row) => MIRRORED_QUADRANTS[row.quadrant]));
+    const hasSourceData = sourceQuadrants.size > 0 || pigmentation[from] !== undefined;
+    const hasUnreplaceableTargetData = records.some((row) =>
+      row.eye === to && !sourceQuadrants.has(row.quadrant))
+      || (pigmentation[to] !== undefined && pigmentation[from] === undefined);
+    return hasSourceData && !hasUnreplaceableTargetData;
   }
 
   async function save() {
@@ -154,7 +166,12 @@ export function GonioscopySection({ patientReference, encounterReference, onSave
               <div key={eye} className="rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface)] p-4">
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-semibold text-[color:var(--odos-text)]">{eye}</div>
-                  <EyeCopyButton eye={eye} onCopy={() => copyEye(eye)} />
+                  <EyeCopyButton
+                    eye={eye}
+                    onCopy={() => copyEye(eye)}
+                    disabled={!canCopyEye(eye)}
+                    title={canCopyEye(eye) ? undefined : "Document matching source values before replacing this eye."}
+                  />
                 </div>
                 <label className="mt-4 block text-xs uppercase tracking-widest text-[color:var(--odos-faint)]">
                   All quadrants

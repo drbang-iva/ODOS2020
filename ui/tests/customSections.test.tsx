@@ -1734,6 +1734,10 @@ test("GonioscopySection clears encounter state before fetch and hydrates pigment
       value: "ptm",
       entryMode: "quadrant-specific",
     }]);
+    act(() => select("OD nasal").props.onChange("ss"));
+    assert.equal(renderer.root.findAllByType("button").find((button) =>
+      button.children.join("") === "← Copy to OD"
+    )?.props.disabled, true);
   } finally {
     renderer?.unmount();
     globalThis.fetch = originalFetch;
