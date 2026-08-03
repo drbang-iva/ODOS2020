@@ -141,7 +141,7 @@ export function createGhlAdapter(
     const matches = (await contactsForQuery(normalized)).filter((contact) =>
       contact.phone !== undefined && comparablePhone(contact.phone) === normalized);
     if (matches.length > 1) {
-      throw new Error(`Multiple GHL contacts exactly match ${normalized}; refusing an ambiguous patient send.`);
+      throw new Error("Multiple GHL contacts exactly match the patient phone; refusing an ambiguous patient send.");
     }
     return matches[0];
   };
@@ -195,7 +195,7 @@ export function createGhlAdapter(
       const toNumber = e164(resolvedPhone, "GHL SMS recipient");
       const contact = await exactContactForPhone(toNumber);
       if (!contact) {
-        throw new Error(`No GHL contact exactly matches ${toNumber}; upsert the patient contact before sending.`);
+        throw new Error("No GHL contact exactly matches the patient phone; upsert the patient contact before sending.");
       }
       const smsDnd = contact.dndSettings?.SMS?.status?.toLowerCase();
       if (contact.dnd === true || (smsDnd !== undefined && smsDnd !== "inactive")) {
@@ -366,20 +366,18 @@ function contactArray(value: unknown): GhlContact[] {
 
 function contactObject(value: unknown): GhlContact {
   const contact = record(value);
+  const smsSettings = record(contact.dndSettings).SMS;
+  const sms = record(smsSettings);
   return {
     id: requiredResponseString(contact.id, "GHL contact id"),
     ...(typeof contact.email === "string" ? { email: contact.email } : {}),
     ...(typeof contact.phone === "string" ? { phone: contact.phone } : {}),
     ...(typeof contact.dnd === "boolean" ? { dnd: contact.dnd } : {}),
-    ...(record(contact.dndSettings).SMS ? {
+    ...(smsSettings ? {
       dndSettings: {
         SMS: {
-          ...(typeof record(record(contact.dndSettings).SMS).status === "string"
-            ? { status: String(record(record(contact.dndSettings).SMS).status) }
-            : {}),
-          ...(typeof record(record(contact.dndSettings).SMS).code === "string"
-            ? { code: String(record(record(contact.dndSettings).SMS).code) }
-            : {}),
+          ...(typeof sms.status === "string" ? { status: sms.status } : {}),
+          ...(typeof sms.code === "string" ? { code: sms.code } : {}),
         },
       },
     } : {}),

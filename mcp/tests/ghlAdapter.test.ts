@@ -126,6 +126,33 @@ test("GHL honors the platform SMS DND state without calling the send endpoint", 
   assert.deepEqual(urls, ["https://services.leadconnectorhq.com/contacts/search"]);
 });
 
+test("GHL contact-resolution errors never disclose the patient phone number", async () => {
+  for (const contacts of [
+    [],
+    [
+      { id: "contact-synthetic-1", phone: "+18645550199" },
+      { id: "contact-synthetic-2", phone: "+18645550199" },
+    ],
+  ]) {
+    const adapter = createGhlAdapter({ locationId: LOCATION_ID, accessToken: ACCESS_TOKEN }, {
+      fetchImpl: (async () => Response.json({ contacts, total: contacts.length })) as typeof fetch,
+    });
+    await assert.rejects(
+      () => adapter.sendSms!({
+        patientReference: "Patient/synthetic-1",
+        toNumber: "+18645550199",
+        body: "Synthetic appointment reminder.",
+        campaignType: "staff-initiated",
+        suppression: {},
+      }),
+      (error: Error) => {
+        assert.doesNotMatch(error.message, /18645550199/);
+        return true;
+      },
+    );
+  }
+});
+
 test("GHL lists live conversation messages and maps patient-filtered history", async () => {
   const urls: string[] = [];
   const adapter = createGhlAdapter({ locationId: LOCATION_ID, accessToken: ACCESS_TOKEN }, {
