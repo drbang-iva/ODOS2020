@@ -98,26 +98,55 @@ export function createCommsDispatch(
     }
     return adapter as ReturnType<typeof createTwilioAdapter>;
   };
-  const capabilitiesFor = (registration: CommsAdapterRegistration) => {
-    switch (registration.provider) {
-      case "google-workspace":
-        return createGoogleWorkspaceAdapter(registration.config, {
-          fetchImpl: deps.fetchImpl,
-          now: deps.now,
-          warn: deps.warn,
-        }).capabilities;
-      case "twilio":
-        return getTwilioAdapter(registration).capabilities;
-      case "ghl":
-        return createGhlAdapter(registration.config, { fetchImpl: deps.fetchImpl }).capabilities;
+  const capabilityCache = new Map<string, CommsProvider["capabilities"] | undefined>();
+  const capabilityFailures = new Map<string, string>();
+  const capabilitiesFor = (
+    registration: CommsAdapterRegistration,
+  ): CommsProvider["capabilities"] | undefined => {
+    if (capabilityCache.has(registration.provider)) {
+      return capabilityCache.get(registration.provider);
+    }
+    try {
+      let capabilities: CommsProvider["capabilities"];
+      switch (registration.provider) {
+        case "google-workspace":
+          capabilities = createGoogleWorkspaceAdapter(registration.config, {
+            fetchImpl: deps.fetchImpl,
+            now: deps.now,
+            warn: deps.warn,
+          }).capabilities;
+          break;
+        case "twilio":
+          capabilities = getTwilioAdapter(registration).capabilities;
+          break;
+        case "ghl":
+          capabilities = createGhlAdapter(registration.config, { fetchImpl: deps.fetchImpl }).capabilities;
+          break;
+      }
+      capabilityCache.set(registration.provider, capabilities);
+      return capabilities;
+    } catch (error) {
+      capabilityCache.set(registration.provider, undefined);
+      capabilityFailures.set(
+        registration.provider,
+        error instanceof Error ? error.message : "unknown provider validation failure",
+      );
+      return undefined;
     }
   };
   const routing = deps.channelRouting ?? commsChannelRoutingFromEnv({});
+  const routingErrors = [...routing.issues];
   const requestedAssignments = routing.explicit
     ? routing.assignments
     : implicitChannelAssignments(byProvider, capabilitiesFor);
+  if (!routing.explicit) {
+    for (const [provider, reason] of capabilityFailures) {
+      routingErrors.push(
+        `provider "${provider}" could not be validated for implicit channel routing: ${reason}`,
+      );
+    }
+  }
   const resolvedAssignments: Partial<Record<CommsChannelRole, string>> = {};
-  const routingErrors = [...routing.issues];
   for (const role of COMMS_CHANNEL_ROLES) {
     const provider = requestedAssignments[role];
     if (!provider) continue;
@@ -129,7 +158,14 @@ export function createCommsDispatch(
       continue;
     }
     const capability = capabilityForRole(role);
-    if (!capabilitiesFor(registration)[capability]) {
+    const capabilities = capabilitiesFor(registration);
+    if (!capabilities) {
+      routingErrors.push(
+        `channel role "${role}" names provider "${provider}", whose capability validation failed: ${capabilityFailures.get(provider) ?? "unknown provider validation failure"}`,
+      );
+      continue;
+    }
+    if (!capabilities[capability]) {
       routingErrors.push(
         `channel role "${role}" names provider "${provider}", which does not report the required ${capability} capability`,
       );
@@ -253,12 +289,15 @@ export function commsChannelRoutingFromEnv(
 
 function implicitChannelAssignments(
   registrations: Map<string, CommsAdapterRegistration>,
-  capabilitiesFor: (registration: CommsAdapterRegistration) => CommsProvider["capabilities"],
+  capabilitiesFor: (
+    registration: CommsAdapterRegistration,
+  ) => CommsProvider["capabilities"] | undefined,
 ): Partial<Record<CommsChannelRole, string>> {
   const registration = registrations.get("twilio")
     ?? (registrations.size === 1 ? registrations.values().next().value : undefined);
   if (!registration) return {};
   const capabilities = capabilitiesFor(registration);
+  if (!capabilities) return {};
   return Object.fromEntries(COMMS_CHANNEL_ROLES.flatMap((role) =>
     capabilities[capabilityForRole(role)] ? [[role, registration.provider]] : []));
 }

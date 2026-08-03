@@ -98,6 +98,55 @@ test("communications channel routing reports invalid assignments while MCP boot 
   }
 });
 
+test("communications channel routing isolates synchronous provider validation failures from MCP boot", async () => {
+  const registrations = commsAdapterRegistrationsFromEnv({
+    ODOS_COMMS_PROVIDERS: "google-workspace",
+    GOOGLE_WORKSPACE_SERVICE_ACCOUNT_EMAIL: "odos@synthetic.iam.gserviceaccount.com",
+    GOOGLE_WORKSPACE_PRIVATE_KEY: "synthetic-private-key",
+    GOOGLE_WORKSPACE_DELEGATED_USER: "info@other-synthetic.example",
+    GOOGLE_WORKSPACE_DOMAIN: "synthetic-practice.example",
+    GOOGLE_WORKSPACE_FROM_ADDRESS: "info@synthetic-practice.example",
+    GOOGLE_WORKSPACE_PLAN_CONFIRMED: "true",
+  });
+  const errors: string[] = [];
+  let serverBooted = false;
+
+  const dispatch = createCommsDispatch(registrations, {
+    channelRouting: commsChannelRoutingFromEnv({ ODOS_COMMS_CHANNEL_ROUTES: "email=google-workspace" }),
+    error: (message) => errors.push(message),
+  });
+  await startMcpAfterCommsInitialization(dispatch, async () => {
+    serverBooted = true;
+  });
+
+  assert.equal(serverBooted, true);
+  assert.equal(dispatch.providerFor("email"), undefined);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0]!, /email.*google-workspace.*delegated user.*configured Workspace domain/i);
+  assert.match(errors[0]!, /continues starting/i);
+});
+
+test("communications channel routing caches provider capability probes", () => {
+  const registrations = commsAdapterRegistrationsFromEnv({
+    ODOS_COMMS_PROVIDERS: "google-workspace",
+    GOOGLE_WORKSPACE_SERVICE_ACCOUNT_EMAIL: "odos@synthetic.iam.gserviceaccount.com",
+    GOOGLE_WORKSPACE_PRIVATE_KEY: "synthetic-private-key",
+    GOOGLE_WORKSPACE_DELEGATED_USER: "info@synthetic-practice.example",
+    GOOGLE_WORKSPACE_DOMAIN: "synthetic-practice.example",
+    GOOGLE_WORKSPACE_FROM_ADDRESS: "info@synthetic-practice.example",
+    GOOGLE_WORKSPACE_PLAN_CONFIRMED: "false",
+  });
+  const warnings: string[] = [];
+
+  const dispatch = createCommsDispatch(registrations, {
+    channelRouting: commsChannelRoutingFromEnv({}),
+    warn: (message) => warnings.push(message),
+  });
+
+  assert.equal(dispatch.providerFor("email"), "google-workspace");
+  assert.equal(warnings.length, 1);
+});
+
 test("a lone Twilio registration keeps the legacy implicit routing when no table is configured", () => {
   const registrations = commsAdapterRegistrationsFromEnv({
     ODOS_COMMS_PROVIDERS: "twilio",
