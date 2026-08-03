@@ -433,6 +433,20 @@ test("GHL stops thread pagination when the vendor repeats a cursor", async () =>
   assert.equal(requests, 2);
 });
 
+test("GHL rejects a thread page without the required pagination flag", async () => {
+  const adapter = createGhlAdapter({ locationId: LOCATION_ID, accessToken: ACCESS_TOKEN }, {
+    fetchImpl: (async () => Response.json({
+      lastMessageId: "message-thread-1",
+      messages: [],
+    })) as typeof fetch,
+  });
+
+  await assert.rejects(
+    () => adapter.getConversationMessages!(CONVERSATION_ID, { includeContent: true }),
+    /invalid nextPage value/i,
+  );
+});
+
 test("GHL contact search and upsert map only the vendor contact fields", async () => {
   const requests: Array<{ url: string; init: RequestInit }> = [];
   const adapter = createGhlAdapter({ locationId: LOCATION_ID, accessToken: ACCESS_TOKEN }, {

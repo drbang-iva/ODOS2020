@@ -173,7 +173,10 @@ export function createGhlAdapter(
       }>(`/conversations/${encodeURIComponent(conversationId)}/messages?${query}`);
       messages.push(...messageArray(response.messages).map((message) =>
         conversationMessage(message, includeContent)));
-      if (response.nextPage !== true) return messages;
+      if (response.nextPage === false) return messages;
+      if (response.nextPage !== true) {
+        throw new Error("GHL conversation messages response has an invalid nextPage value.");
+      }
       const cursor = requiredResponseString(response.lastMessageId, "GHL message page cursor");
       if (seenCursors.has(cursor)) {
         throw new Error("GHL conversation messages pagination repeated a cursor.");
@@ -396,18 +399,26 @@ function conversationArray(value: unknown): GhlConversation[] {
   if (!Array.isArray(value)) throw new Error("GHL conversation search response is invalid.");
   return value.map((entry) => {
     const conversation = record(entry);
+    const locationId = optionalResponseString(conversation.locationId);
+    const lastMessageBody = optionalResponseString(conversation.lastMessageBody);
+    const lastMessageType = optionalResponseString(conversation.lastMessageType);
+    const type = optionalResponseString(conversation.type);
+    const fullName = optionalResponseString(conversation.fullName);
+    const contactName = optionalResponseString(conversation.contactName);
+    const email = optionalResponseString(conversation.email);
+    const phone = optionalResponseString(conversation.phone);
     return {
       id: requiredResponseString(conversation.id, "GHL conversation id"),
       contactId: requiredResponseString(conversation.contactId, "GHL conversation contact id"),
-      ...(optionalResponseString(conversation.locationId) ? { locationId: optionalResponseString(conversation.locationId) } : {}),
-      ...(optionalResponseString(conversation.lastMessageBody) ? { lastMessageBody: optionalResponseString(conversation.lastMessageBody) } : {}),
-      ...(optionalResponseString(conversation.lastMessageType) ? { lastMessageType: optionalResponseString(conversation.lastMessageType) } : {}),
-      ...(optionalResponseString(conversation.type) ? { type: optionalResponseString(conversation.type) } : {}),
+      ...(locationId ? { locationId } : {}),
+      ...(lastMessageBody ? { lastMessageBody } : {}),
+      ...(lastMessageType ? { lastMessageType } : {}),
+      ...(type ? { type } : {}),
       unreadCount: nonNegativeIntegerOrZero(conversation.unreadCount),
-      ...(optionalResponseString(conversation.fullName) ? { fullName: optionalResponseString(conversation.fullName) } : {}),
-      ...(optionalResponseString(conversation.contactName) ? { contactName: optionalResponseString(conversation.contactName) } : {}),
-      ...(optionalResponseString(conversation.email) ? { email: optionalResponseString(conversation.email) } : {}),
-      ...(optionalResponseString(conversation.phone) ? { phone: optionalResponseString(conversation.phone) } : {}),
+      ...(fullName ? { fullName } : {}),
+      ...(contactName ? { contactName } : {}),
+      ...(email ? { email } : {}),
+      ...(phone ? { phone } : {}),
     };
   });
 }
@@ -421,13 +432,18 @@ function messageArray(value: unknown): GhlMessage[] {
       : Array.isArray(message.to)
         ? message.to.filter((candidate): candidate is string => typeof candidate === "string")
         : undefined;
+    const dateAdded = optionalResponseDate(message.dateAdded);
+    const direction = optionalResponseString(message.direction);
+    const status = optionalResponseString(message.status);
+    const body = optionalResponseString(message.body);
+    const from = optionalResponseString(message.from);
     return {
       id: requiredResponseString(message.id, "GHL message id"),
-      ...(optionalResponseDate(message.dateAdded) ? { dateAdded: optionalResponseDate(message.dateAdded) } : {}),
-      ...(optionalResponseString(message.direction) ? { direction: optionalResponseString(message.direction) } : {}),
-      ...(optionalResponseString(message.status) ? { status: optionalResponseString(message.status) } : {}),
-      ...(optionalResponseString(message.body) ? { body: optionalResponseString(message.body) } : {}),
-      ...(optionalResponseString(message.from) ? { from: optionalResponseString(message.from) } : {}),
+      ...(dateAdded ? { dateAdded } : {}),
+      ...(direction ? { direction } : {}),
+      ...(status ? { status } : {}),
+      ...(body ? { body } : {}),
+      ...(from ? { from } : {}),
       ...(to && (typeof to === "string" || to.length > 0) ? { to } : {}),
     };
   });
