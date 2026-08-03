@@ -82,6 +82,7 @@ export function GonioscopySection({ patientReference, encounterReference, onSave
   function copyEye(from: Eye) {
     if (!canCopyEye(from)) return;
     const to: Eye = from === "OD" ? "OS" : "OD";
+    const sourcePigmentation = pigmentation[from];
     const copied: RecordRow[] = records.filter((row) => row.eye === from).map((row) => ({
       eye: to,
       quadrant: row.quadrant,
@@ -96,8 +97,8 @@ export function GonioscopySection({ patientReference, encounterReference, onSave
       ...current,
       ...copied.map((row) => `${to}:${row.quadrant}`),
     ]));
-    if (pigmentation[from] !== undefined) {
-      setPigmentation((current) => ({ ...current, [to]: current[from] }));
+    if (sourcePigmentation) {
+      setPigmentation((current) => ({ ...current, [to]: sourcePigmentation }));
     }
   }
 
@@ -106,10 +107,11 @@ export function GonioscopySection({ patientReference, encounterReference, onSave
     const sourceQuadrants = new Set(records
       .filter((row) => row.eye === from)
       .map((row) => row.quadrant));
-    const hasSourceData = sourceQuadrants.size > 0 || pigmentation[from] !== undefined;
+    const sourceHasPigmentation = Boolean(pigmentation[from]);
+    const hasSourceData = sourceQuadrants.size > 0 || sourceHasPigmentation;
     const hasUnreplaceableTargetData = records.some((row) =>
       row.eye === to && !sourceQuadrants.has(row.quadrant))
-      || (pigmentation[to] !== undefined && pigmentation[from] === undefined);
+      || (Boolean(pigmentation[to]) && !sourceHasPigmentation);
     return hasSourceData && !hasUnreplaceableTargetData;
   }
 

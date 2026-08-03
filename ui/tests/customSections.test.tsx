@@ -1786,6 +1786,45 @@ test("GonioscopySection eye copy preserves anatomical quadrant names", async () 
   }
 });
 
+test("GonioscopySection preserves documented target pigmentation when the source is blank", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () => jsonResponse({
+    records: [{
+      eye: "OD",
+      quadrant: "nasal",
+      value: "ptm",
+      entryMode: "quadrant-specific",
+      source: "clinician-entered",
+    }],
+    pigmentation: { OD: "", OS: "3+" },
+  })) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<GonioscopySection
+        patientReference="Patient/patient-1"
+        encounterReference="Encounter/encounter-1"
+        onSaved={() => undefined}
+      />);
+      await flushEffects();
+    });
+    const copyToOs = renderer.root.findAllByType("button").find((button) =>
+      button.children.join("") === "Copy to OS →"
+    );
+    assert.ok(copyToOs);
+    assert.equal(copyToOs.props.disabled, true);
+    assert.equal(copyToOs.props.title, "Document matching source values before replacing this eye.");
+    act(() => copyToOs.props.onClick());
+    const osPigmentation = renderer.root.find((node) =>
+      node.type === "select" && node.props["aria-label"] === "OS TM pigmentation"
+    );
+    assert.equal(osPigmentation.props.value, "3+");
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("EncounterCharting renders the shared ChartSidebar without removing it from PatientDirector", () => {
   const encounterCharting = readFileSync(new URL("../src/scenes/EncounterCharting.tsx", import.meta.url), "utf8");
   const patientDirector = readFileSync(new URL("../src/scenes/PatientDirector.tsx", import.meta.url), "utf8");
