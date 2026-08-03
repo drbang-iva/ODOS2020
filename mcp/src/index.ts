@@ -73,6 +73,7 @@ import { registerOfficeRoutes } from "./office/office-routes.js";
 import { registerSchedulingResourceRoutes } from "./scheduling/scheduling-resource-routes.js";
 import {
   commsAdapterRegistrationsFromEnv,
+  commsChannelRoutingFromEnv,
   createCommsDispatch,
   startMcpAfterCommsInitialization,
 } from "./comms/comms-config.js";
@@ -596,6 +597,7 @@ const protocolDefinitionStore = new ProtocolDefinitionStore(fhir);
 let authPromise: Promise<void> | undefined;
 const commsRegistrations = commsAdapterRegistrationsFromEnv(process.env);
 const commsDispatch = createCommsDispatch(commsRegistrations, {
+  channelRouting: commsChannelRoutingFromEnv(process.env),
   practiceTimeZone: process.env.ODOS_TIMEZONE ?? "UTC",
 });
 

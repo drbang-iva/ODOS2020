@@ -52,8 +52,14 @@ export type SendResult =
 export interface ConversationSummary {
   id: string;
   patientReference?: string;
-  updatedAt: string;
-  messageCount: number;
+  updatedAt?: string;
+  messageCount?: number;
+  preview?: string;
+  channel?: string;
+  unreadCount?: number;
+  displayName?: string;
+  phone?: string;
+  email?: string;
   messages: ConversationMessage[];
 }
 

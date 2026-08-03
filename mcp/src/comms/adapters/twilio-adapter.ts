@@ -351,7 +351,7 @@ async function listPersistedConversations(
         messages,
       };
     })
-    .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt))
+    .sort((left, right) => Date.parse(right.updatedAt!) - Date.parse(left.updatedAt!))
     .slice(0, limit);
 }
 

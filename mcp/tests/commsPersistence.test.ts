@@ -6,6 +6,7 @@ import type { Bundle, Communication, Patient, Resource } from "@medplum/fhirtype
 import express from "express";
 import twilio from "twilio";
 import {
+  ODOS_GHL_MESSAGE_IDENTIFIER_SYSTEM,
   ODOS_COMMS_STAFF_SEND_IDENTIFIER_SYSTEM,
   ODOS_TWILIO_CALL_IDENTIFIER_SYSTEM,
   ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM,
@@ -86,6 +87,31 @@ test("staff-sent SMS and its status callback converge into one patient-linked co
   assert.equal(communications[0].sent, NOW);
   assert.equal(communications[0].payload?.[0].contentString, "Synthetic staff message");
   assert.match(JSON.stringify(communications[0].category), /patient-sms-outbound/);
+});
+
+test("a GHL staff send is completed when ODOS hands delivery state to the provider", async () => {
+  const fhir = new InMemoryCommsFhir();
+  const reservation = await reserveStaffSmsSend(fhir, {
+    idempotencyKey: "synthetic-ghl-send-0001",
+    claimId: "synthetic-ghl-claim-0001",
+    patientReference: "Patient/synthetic-1",
+    senderReference: "Practitioner/synthetic-staff",
+    body: "Synthetic GHL staff message",
+    provider: "ghl",
+    providerMessageIdentifierSystem: ODOS_GHL_MESSAGE_IDENTIFIER_SYSTEM,
+  });
+  assert.equal(reservation.state, "owner");
+
+  await persistStaffSentSms(fhir, {
+    communication: reservation.communication,
+    idempotencyKey: "synthetic-ghl-send-0001",
+    providerMessageId: "message-synthetic-ghl-1",
+    providerMessageIdentifierSystem: ODOS_GHL_MESSAGE_IDENTIFIER_SYSTEM,
+  }, { now: () => NOW });
+
+  const communication = fhir.ofType<Communication>("Communication")[0];
+  assert.equal(communication.status, "completed");
+  assert.equal(communication.sent, NOW);
 });
 
 test("an idempotency key cannot be replayed through a different communications provider", async () => {

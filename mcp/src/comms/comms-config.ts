@@ -19,6 +19,21 @@ import {
   type SuppressionFhir,
 } from "./suppression-gate.js";
 
+export const COMMS_CHANNEL_ROLES = [
+  "voice",
+  "transactional-sms",
+  "marketing-sms",
+  "email",
+] as const;
+
+export type CommsChannelRole = typeof COMMS_CHANNEL_ROLES[number];
+
+export interface CommsChannelRoutingConfig {
+  explicit: boolean;
+  assignments: Partial<Record<CommsChannelRole, string>>;
+  issues: string[];
+}
+
 export type CommsAdapterRegistration =
   | {
       provider: "google-workspace";
@@ -34,6 +49,7 @@ export type CommsAdapterRegistration =
     };
 
 export interface CommsDispatchDeps {
+  channelRouting?: CommsChannelRoutingConfig;
   error?: (message: string) => void;
   fetchImpl?: typeof fetch;
   info?: (message: string) => void;
@@ -48,6 +64,7 @@ export type CommsDispatchFhir = SuppressionFhir;
 export interface CommsDispatch {
   initialize(): Promise<void>;
   getAdapter(provider: string, callerFhir: CommsDispatchFhir): CommsProvider;
+  providerFor(role: CommsChannelRole): string | undefined;
   providers(): string[];
 }
 
@@ -81,8 +98,52 @@ export function createCommsDispatch(
     }
     return adapter as ReturnType<typeof createTwilioAdapter>;
   };
+  const capabilitiesFor = (registration: CommsAdapterRegistration) => {
+    switch (registration.provider) {
+      case "google-workspace":
+        return createGoogleWorkspaceAdapter(registration.config, {
+          fetchImpl: deps.fetchImpl,
+          now: deps.now,
+          warn: deps.warn,
+        }).capabilities;
+      case "twilio":
+        return getTwilioAdapter(registration).capabilities;
+      case "ghl":
+        return createGhlAdapter(registration.config, { fetchImpl: deps.fetchImpl }).capabilities;
+    }
+  };
+  const routing = deps.channelRouting ?? commsChannelRoutingFromEnv({});
+  const requestedAssignments = routing.explicit
+    ? routing.assignments
+    : implicitChannelAssignments(byProvider, capabilitiesFor);
+  const resolvedAssignments: Partial<Record<CommsChannelRole, string>> = {};
+  const routingErrors = [...routing.issues];
+  for (const role of COMMS_CHANNEL_ROLES) {
+    const provider = requestedAssignments[role];
+    if (!provider) continue;
+    const registration = byProvider.get(provider);
+    if (!registration) {
+      routingErrors.push(
+        `channel role "${role}" names provider "${provider}", which is not registered in ODOS_COMMS_PROVIDERS`,
+      );
+      continue;
+    }
+    const capability = capabilityForRole(role);
+    if (!capabilitiesFor(registration)[capability]) {
+      routingErrors.push(
+        `channel role "${role}" names provider "${provider}", which does not report the required ${capability} capability`,
+      );
+      continue;
+    }
+    resolvedAssignments[role] = provider;
+  }
   return {
     async initialize() {
+      for (const reason of routingErrors) {
+        (deps.error ?? console.error)(
+          `odos-mcp: communications routing DEGRADED; ${reason}. The affected role is unavailable while ODOS continues starting.`,
+        );
+      }
       for (const registration of byProvider.values()) {
         if (registration.provider !== "twilio") continue;
         const info = deps.info ?? console.error;
@@ -108,6 +169,9 @@ export function createCommsDispatch(
     },
     providers() {
       return [...byProvider.keys()];
+    },
+    providerFor(role) {
+      return resolvedAssignments[role];
     },
     getAdapter(provider: string, callerFhir: SuppressionFhir): CommsProvider {
       const registration = byProvider.get(provider);
@@ -157,6 +221,55 @@ export function createCommsDispatch(
       }
     },
   };
+}
+
+export function commsChannelRoutingFromEnv(
+  env: Record<string, string | undefined>,
+): CommsChannelRoutingConfig {
+  const raw = env.ODOS_COMMS_CHANNEL_ROUTES?.trim();
+  if (!raw) return { explicit: false, assignments: {}, issues: [] };
+  const assignments: Partial<Record<CommsChannelRole, string>> = {};
+  const issues: string[] = [];
+  for (const entry of raw.split(",").map((value) => value.trim()).filter(Boolean)) {
+    const separator = entry.indexOf("=");
+    const role = entry.slice(0, separator).trim();
+    const provider = entry.slice(separator + 1).trim();
+    if (separator < 1 || !COMMS_CHANNEL_ROLES.includes(role as CommsChannelRole)) {
+      issues.push(`routing entry "${entry}" has an unsupported or missing channel role`);
+      continue;
+    }
+    if (!/^[a-z0-9-]{1,64}$/.test(provider)) {
+      issues.push(`channel role "${role}" has an invalid provider "${provider || "(empty)"}"`);
+      continue;
+    }
+    if (assignments[role as CommsChannelRole] !== undefined) {
+      issues.push(`channel role "${role}" is assigned more than once`);
+      continue;
+    }
+    assignments[role as CommsChannelRole] = provider;
+  }
+  return { explicit: true, assignments, issues };
+}
+
+function implicitChannelAssignments(
+  registrations: Map<string, CommsAdapterRegistration>,
+  capabilitiesFor: (registration: CommsAdapterRegistration) => CommsProvider["capabilities"],
+): Partial<Record<CommsChannelRole, string>> {
+  const registration = registrations.get("twilio")
+    ?? (registrations.size === 1 ? registrations.values().next().value : undefined);
+  if (!registration) return {};
+  const capabilities = capabilitiesFor(registration);
+  return Object.fromEntries(COMMS_CHANNEL_ROLES.flatMap((role) =>
+    capabilities[capabilityForRole(role)] ? [[role, registration.provider]] : []));
+}
+
+function capabilityForRole(role: CommsChannelRole): "calls" | "sms" | "email" {
+  switch (role) {
+    case "voice": return "calls";
+    case "transactional-sms":
+    case "marketing-sms": return "sms";
+    case "email": return "email";
+  }
 }
 
 export function commsAdapterRegistrationsFromEnv(
