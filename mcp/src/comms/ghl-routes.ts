@@ -27,15 +27,14 @@ async function webhookRoute(
   res: Response,
   deps: GhlWebhookRouteDeps,
 ): Promise<void> {
+  let event: GhlInboundWebhookEvent;
   try {
     if (!Buffer.isBuffer(req.body)) throw new Error("GHL webhook body must be raw JSON bytes.");
-    const event = handleGhlInboundWebhook(
+    event = handleGhlInboundWebhook(
       req.body.toString("utf8"),
       req.header("x-ghl-signature"),
       deps.auth,
     );
-    await deps.onEvent?.(event);
-    res.sendStatus(204);
   } catch (error) {
     if (error instanceof GhlSignatureError) {
       console.error("odos-mcp: GHL inbound webhook signature rejected.");
@@ -44,5 +43,14 @@ async function webhookRoute(
     }
     console.error("odos-mcp: GHL inbound webhook rejected.");
     res.status(400).json({ error: "GHL webhook payload is invalid." });
+    return;
   }
+  try {
+    await deps.onEvent?.(event);
+  } catch {
+    console.error("odos-mcp: GHL inbound webhook handler failed.");
+    res.status(500).json({ error: "GHL webhook handling failed." });
+    return;
+  }
+  res.sendStatus(204);
 }

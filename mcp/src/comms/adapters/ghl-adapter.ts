@@ -30,6 +30,8 @@ import { ODOS_GHL_MESSAGE_IDENTIFIER_SYSTEM } from "../comms-persistence.js";
 const GHL_API_BASE_URL = "https://services.leadconnectorhq.com";
 const GHL_API_VERSION = "v3";
 const GHL_REQUEST_TIMEOUT_MS = 30_000;
+const GHL_CONTACT_PAGE_LIMIT = 100;
+const GHL_CONTACT_PAGE_CAP = 100;
 const GHL_MESSAGE_PAGE_LIMIT = 100;
 const GHL_MESSAGE_PAGE_CAP = 100;
 const GHL_CONVERSATION_READ_CONCURRENCY = 5;
@@ -112,11 +114,27 @@ export function createGhlAdapter(
   const request = <T>(path: string, init: RequestInit = {}) =>
     ghlRequest<T>(fetchImpl, accessToken, path, init);
   const contactsForQuery = async (query: string): Promise<GhlContact[]> => {
-    const response = await request<{ contacts?: unknown }>("/contacts/search", {
-      method: "POST",
-      body: JSON.stringify({ locationId, page: 1, pageLimit: 100, query }),
-    });
-    return contactArray(response.contacts);
+    const contacts: GhlContact[] = [];
+    for (let page = 1; page <= GHL_CONTACT_PAGE_CAP; page += 1) {
+      const response = await request<{ contacts?: unknown; total?: unknown }>("/contacts/search", {
+        method: "POST",
+        body: JSON.stringify({ locationId, page, pageLimit: GHL_CONTACT_PAGE_LIMIT, query }),
+      });
+      const pageContacts = contactArray(response.contacts);
+      contacts.push(...pageContacts);
+      if (response.total !== undefined) {
+        if (typeof response.total !== "number" || !Number.isInteger(response.total) || response.total < 0) {
+          throw new Error("GHL contact search response has an invalid total.");
+        }
+        if (contacts.length >= response.total) return contacts;
+      } else if (pageContacts.length < GHL_CONTACT_PAGE_LIMIT) {
+        return contacts;
+      }
+      if (pageContacts.length === 0) {
+        throw new Error("GHL contact search pagination ended before its reported total.");
+      }
+    }
+    throw new Error("GHL contact search pagination exceeded 100 pages.");
   };
   const exactContactForPhone = async (phone: string): Promise<GhlContact | undefined> => {
     const normalized = e164(phone, "GHL contact phone");
@@ -173,7 +191,8 @@ export function createGhlAdapter(
       reviews: false,
     },
     async sendSms(input: SendSmsRequest): Promise<SendResult> {
-      const toNumber = e164(input.toNumber, "GHL SMS recipient");
+      const resolvedPhone = input.toNumber ?? await deps.resolvePatientPhone?.(input.patientReference);
+      const toNumber = e164(resolvedPhone, "GHL SMS recipient");
       const contact = await exactContactForPhone(toNumber);
       if (!contact) {
         throw new Error(`No GHL contact exactly matches ${toNumber}; upsert the patient contact before sending.`);

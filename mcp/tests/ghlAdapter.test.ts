@@ -70,6 +70,34 @@ test("GHL sends SMS through a location contact with current bearer and version h
   });
 });
 
+test("GHL resolves the SMS recipient from the patient reference when the staff API omits toNumber", async () => {
+  const requests: Array<{ url: string; init: RequestInit }> = [];
+  const adapter = createGhlAdapter({ locationId: LOCATION_ID, accessToken: ACCESS_TOKEN }, {
+    resolvePatientPhone: async (reference) => {
+      assert.equal(reference, "Patient/synthetic-1");
+      return "+18645550199";
+    },
+    fetchImpl: (async (input, init = {}) => {
+      const url = String(input);
+      requests.push({ url, init });
+      if (url.endsWith("/contacts/search")) {
+        return Response.json({ contacts: [{ id: CONTACT_ID, phone: "+18645550199" }], total: 1 });
+      }
+      return Response.json({ conversationId: CONVERSATION_ID, messageId: MESSAGE_ID });
+    }) as typeof fetch,
+  });
+
+  const result = await adapter.sendSms!({
+    patientReference: "Patient/synthetic-1",
+    body: "Synthetic appointment reminder.",
+    campaignType: "staff-initiated",
+    suppression: {},
+  });
+
+  assert.equal(result.outcome, "sent");
+  assert.equal(JSON.parse(String(requests[1].init.body)).toNumber, "+18645550199");
+});
+
 test("GHL honors the platform SMS DND state without calling the send endpoint", async () => {
   const urls: string[] = [];
   const adapter = createGhlAdapter({ locationId: LOCATION_ID, accessToken: ACCESS_TOKEN }, {
@@ -289,6 +317,41 @@ test("GHL contact search and upsert map only the vendor contact fields", async (
   });
 });
 
+test("GHL contact resolution reads every advanced-search page before deciding an exact match", async () => {
+  const pages: number[] = [];
+  const adapter = createGhlAdapter({ locationId: LOCATION_ID, accessToken: ACCESS_TOKEN }, {
+    fetchImpl: (async (input, init = {}) => {
+      const url = String(input);
+      if (url.endsWith("/contacts/search")) {
+        const body = JSON.parse(String(init.body));
+        pages.push(body.page);
+        return Response.json(body.page === 1 ? {
+          contacts: Array.from({ length: 100 }, (_, index) => ({
+            id: `contact-page-1-${index}`,
+            phone: `+1864554${String(index).padStart(4, "0")}`,
+          })),
+          total: 101,
+        } : {
+          contacts: [{ id: CONTACT_ID, phone: "+18645550199" }],
+          total: 101,
+        });
+      }
+      return Response.json({ conversationId: CONVERSATION_ID, messageId: MESSAGE_ID });
+    }) as typeof fetch,
+  });
+
+  const result = await adapter.sendSms!({
+    patientReference: "Patient/synthetic-1",
+    toNumber: "+18645550199",
+    body: "Synthetic appointment reminder.",
+    campaignType: "staff-initiated",
+    suppression: {},
+  });
+
+  assert.equal(result.outcome, "sent");
+  assert.deepEqual(pages, [1, 2]);
+});
+
 test("GHL configuration fails closed and advertises no call capability", () => {
   assert.throws(() => createGhlAdapter({ locationId: "", accessToken: ACCESS_TOKEN }), /location id/i);
   assert.throws(() => createGhlAdapter({ locationId: LOCATION_ID, accessToken: "" }), /access token/i);
@@ -403,6 +466,47 @@ test("GHL inbound route verifies Ed25519 over raw bytes and accepts only the con
     });
     assert.equal(wrongLocation.status, 400);
     assert.equal(events.length, 1);
+  } finally {
+    server.close();
+    await once(server, "close");
+  }
+});
+
+test("GHL inbound route returns 500 when an authenticated event handler fails", async () => {
+  const { publicKey, privateKey } = generateKeyPairSync("ed25519");
+  const rawBody = JSON.stringify({
+    type: "InboundMessage",
+    locationId: LOCATION_ID,
+    direction: "inbound",
+    messageType: "SMS",
+    body: "Synthetic inbound message",
+    contactId: CONTACT_ID,
+    conversationId: CONVERSATION_ID,
+    dateAdded: "2026-08-03T13:00:00.000Z",
+    status: "delivered",
+    from: "+18645550199",
+    to: "+18645550100",
+  });
+  const app = express();
+  registerGhlWebhookRoutes(app, {
+    auth: { locationId: LOCATION_ID, publicKey },
+    onEvent: () => {
+      throw new Error("synthetic transient handler failure");
+    },
+  });
+  const server = app.listen(0);
+  await once(server, "listening");
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  try {
+    const response = await fetch(`${base}/comms/ghl/inbound`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-ghl-signature": sign(null, Buffer.from(rawBody), privateKey).toString("base64"),
+      },
+      body: rawBody,
+    });
+    assert.equal(response.status, 500);
   } finally {
     server.close();
     await once(server, "close");

@@ -5702,6 +5702,7 @@ async function startMcpServer(): Promise<void> {
         (registration) => registration.provider === "ghl",
       );
       if (ghlRegistration?.provider === "ghl") {
+        // GHL remains the conversation source of truth; the cockpit reads inbound history live.
         registerGhlWebhookRoutes(app, {
           auth: { locationId: ghlRegistration.config.locationId },
         });
