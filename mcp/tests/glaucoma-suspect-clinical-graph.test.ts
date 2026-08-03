@@ -545,8 +545,8 @@ test("new disc appearance descriptors preserve cup/disc and IOP risk tiers", () 
     recordedAt: "2026-08-03T13:00:00.000Z",
     provenance,
   });
-  const riskTiers = (discAppearanceDescriptors: string[]) => ({
-    cupDisc: buildGlaucomaCupDiscSuggestion({
+  const cupDiscRiskTier = (discAppearanceDescriptors: string[]) =>
+    buildGlaucomaCupDiscSuggestion({
       cupDiscRatio: 0.5,
       discAppearanceDescriptors,
       laterality: "OD",
@@ -557,11 +557,10 @@ test("new disc appearance descriptors preserve cup/disc and IOP risk tiers", () 
       recordedAt: "2026-08-03T13:00:00.000Z",
       provenance,
       findingDefinition: cupDisc,
-    }).suggestionEdge?.predicateExpression.riskTier,
-    iop: evaluateIopFindingRisk(iopFinding.finding, iop).riskTier,
-  });
+    }).suggestionEdge?.predicateExpression.riskTier;
 
-  assert.deepEqual(riskTiers(descriptorCodes), riskTiers([]));
+  assert.equal(cupDiscRiskTier(descriptorCodes), cupDiscRiskTier([]));
+  assert.equal(evaluateIopFindingRisk(iopFinding.finding, iop).riskTier, "normal");
   assert.deepEqual(
     getGlaucomaCupDiscDescriptorOptions(cupDisc)
       .filter((option) => descriptorCodes.includes(option.code))
