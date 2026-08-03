@@ -22,6 +22,7 @@ import {
   applyPosteriorAllNormal,
   changedDefinitions,
   copyEyeCapture,
+  mirrorClockHourExtent,
   pendingStateEyes,
 } from "../src/components/charting/OcularHealthSection";
 import { SpineNav } from "../src/components/charting/SpineNav";
@@ -996,7 +997,7 @@ test("the ocular-health renderer exposes segment headers, accelerators, bilatera
   }
 });
 
-test("qualified finding definitions still render legacy history as presence-only", async () => {
+test("qualified finding definitions render qualifier controls for legacy presence-only history", async () => {
   const definition = syntheticQualifiedOcularDefinition();
   const fetchImpl = (async () => jsonResponse({
     rows: [{
@@ -1020,7 +1021,7 @@ test("qualified finding definitions still render legacy history as presence-only
     });
     const rendered = JSON.stringify(renderer.toJSON());
     assert.match(rendered, /Synthetic Finding/);
-    assert.doesNotMatch(rendered, /Synthetic qualifier control/);
+    assert.match(rendered, /Synthetic qualifier control/);
     const finding = renderer.root.findAllByType("button")
       .find((button) => button.children.join("") === "Synthetic Finding");
     assert.equal(finding?.props["aria-pressed"], true);
@@ -1156,6 +1157,494 @@ function syntheticQualifiedOcularDefinition() {
     }],
   };
 }
+
+function syntheticWorksheetOcularDefinition() {
+  return {
+    stableKey: "ocular-health:anterior:synthetic-worksheet",
+    sectionKey: "ocular-health:anterior:synthetic-worksheet",
+    display: "Synthetic Worksheet",
+    active: true,
+    perEye: true,
+    normalTemplate: "Synthetic normal.",
+    customFields: [{
+      localCode: "CUSTOM_ABNORMAL_FINDINGS_WORKSHEET",
+      display: "Abnormal findings",
+      valueType: "multi-select" as const,
+      options: [
+        {
+          code: "synthetic-mgd",
+          display: "Synthetic MGD",
+          active: true,
+          priority: true,
+          qualifiers: [
+            { kind: "graded" as const, key: "grade", display: "MGD grade", options: ["trace", "marked"] },
+            {
+              kind: "enum" as const,
+              key: "type",
+              display: "MGD type",
+              options: [{ code: "seborrheic", display: "Seborrheic" }, { code: "ulcerative", display: "Ulcerative" }],
+            },
+            { kind: "numeric" as const, key: "score", display: "MGD score", min: 0, max: 4, step: 1, unit: "grade" },
+            { kind: "extent" as const, key: "arc", display: "MGD clock-hour arc" },
+          ],
+        },
+        {
+          code: "synthetic-anterior-blepharitis",
+          display: "Synthetic Anterior Blepharitis",
+          active: true,
+          priority: true,
+          qualifiers: [{ kind: "graded" as const, key: "grade", display: "Anterior grade", options: ["mild", "severe"] }],
+        },
+        {
+          code: "synthetic-posterior-blepharitis",
+          display: "Synthetic Posterior Blepharitis",
+          active: true,
+          priority: true,
+          qualifiers: [{
+            kind: "enum" as const,
+            key: "type",
+            display: "Posterior type",
+            options: [{ code: "focal", display: "Focal" }, { code: "diffuse", display: "Diffuse" }],
+          }],
+        },
+        { code: "synthetic-demodex", display: "Synthetic Demodex", active: true, priority: true },
+        {
+          code: "synthetic-demodex::collarettes",
+          display: "Synthetic Collarettes",
+          active: true,
+          parentCode: "synthetic-demodex",
+        },
+        { code: "synthetic-presence", display: "Synthetic Presence Only", active: true, priority: true },
+      ],
+      order: 0,
+      active: true,
+    }],
+  };
+}
+
+test("ocular-health worksheet keeps four described findings in selection order and leaves Zone A stable", async () => {
+  const definition = syntheticWorksheetOcularDefinition();
+  const selections = [
+    "synthetic-demodex",
+    "synthetic-mgd",
+    "synthetic-posterior-blepharitis",
+    "synthetic-anterior-blepharitis",
+  ];
+  const fetchImpl = (async () => jsonResponse({
+    rows: [{ eye: "OD", state: "abnormal", values: [{ code: "CUSTOM_ABNORMAL_FINDINGS_WORKSHEET", value: selections }] }],
+  })) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={[definition]}
+        patientReference="Patient/p-worksheet-order"
+        encounterReference="Encounter/e-worksheet-order"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    const rowCodes = () => renderer.root.findAll((node) => node.props["data-finding-row"])
+      .map((node) => node.props["data-finding-row"]);
+    const zoneAOptions = () => renderer.root.findAllByType(OdosChips)
+      .find((chips) => chips.props.ariaLabel === "Priority ocular health findings")!
+      .props.options.map((option: { value: string }) => option.value);
+    assert.deepEqual(rowCodes(), selections);
+    const before = zoneAOptions();
+    const mgdControls = renderer.root.findByProps({ "data-finding-controls": "synthetic-mgd" });
+    assert.equal(renderer.root.findAllByProps({ "data-finding-row": "synthetic-mgd" }).length, 1);
+    assert.ok(mgdControls.findAllByType(OdosChips).some((chips) => chips.props.ariaLabel === "MGD grade"));
+    assert.ok(mgdControls.findAllByType(OdosChips).some((chips) => chips.props.ariaLabel === "MGD type"));
+    assert.equal(mgdControls.findAllByType(OdosSelect).length, 2);
+    assert.equal(mgdControls.findAllByProps({ "aria-label": "MGD score" }).length, 1);
+    act(() => mgdControls.findByProps({ "aria-label": "MGD score" }).props.onChange({ target: { value: "2" } }));
+    assert.deepEqual(rowCodes(), selections);
+    assert.deepEqual(zoneAOptions(), before);
+  } finally {
+    renderer?.unmount();
+  }
+});
+
+test("segmented finding grades replace the value and re-tapping clears the findingDetails entry", async () => {
+  const definition = syntheticWorksheetOcularDefinition();
+  const posts: Array<Record<string, any>> = [];
+  const fetchImpl = (async (_input, init) => {
+    if (init?.method === "POST") {
+      posts.push(JSON.parse(String(init.body)));
+      return jsonResponse({});
+    }
+    return jsonResponse({ rows: [{
+      eye: "OD",
+      state: "abnormal",
+      values: [{ code: "CUSTOM_ABNORMAL_FINDINGS_WORKSHEET", value: ["synthetic-mgd"] }],
+      findingDetails: { "synthetic-mgd": { grade: "trace" } },
+    }] });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={[definition]}
+        patientReference="Patient/p-grade-segments"
+        encounterReference="Encounter/e-grade-segments"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    const gradeControl = () => renderer.root.findAllByType(OdosChips)
+      .find((chips) => chips.props.ariaLabel === "MGD grade")!;
+    assert.deepEqual(gradeControl().props.selected, ["trace"]);
+    act(() => gradeControl().findAllByType("button").find((button) => button.children.join("") === "Marked")!.props.onClick());
+    assert.deepEqual(gradeControl().props.selected, ["marked"]);
+    const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Ocular Health")!;
+    await act(async () => saveButton.props.onClick());
+    assert.deepEqual(posts[0]!.eyes.OD.findingDetails, { "synthetic-mgd": { grade: "marked" } });
+    act(() => gradeControl().findAllByType("button").find((button) => button.children.join("") === "Marked")!.props.onClick());
+    assert.deepEqual(gradeControl().props.selected, []);
+    await act(async () => saveButton.props.onClick());
+    assert.equal("findingDetails" in posts[1]!.eyes.OD, false);
+  } finally {
+    renderer?.unmount();
+  }
+});
+
+test("all four finding qualifier controls write the server-validated value shapes", async () => {
+  const definition = syntheticWorksheetOcularDefinition();
+  let postedBody: Record<string, any> | undefined;
+  const fetchImpl = (async (_input, init) => {
+    if (init?.method === "POST") {
+      postedBody = JSON.parse(String(init.body));
+      return jsonResponse({});
+    }
+    return jsonResponse({ rows: [{
+      eye: "OD",
+      state: "abnormal",
+      values: [{ code: "CUSTOM_ABNORMAL_FINDINGS_WORKSHEET", value: ["synthetic-mgd"] }],
+    }] });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={[definition]}
+        patientReference="Patient/p-all-qualifiers"
+        encounterReference="Encounter/e-all-qualifiers"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    const chips = (ariaLabel: string) => renderer.root.findAllByType(OdosChips)
+      .find((control) => control.props.ariaLabel === ariaLabel)!;
+    act(() => chips("MGD grade").findAllByType("button").find((button) => button.children.join("") === "Marked")!.props.onClick());
+    act(() => chips("MGD type").findAllByType("button").find((button) => button.children.join("") === "Seborrheic")!.props.onClick());
+    act(() => renderer.root.findByProps({ "aria-label": "MGD score" }).props.onChange({ target: { value: "3" } }));
+    act(() => renderer.root.findAllByType(OdosSelect)
+      .find((select) => select.props.ariaLabel === "MGD clock-hour arc from clock hour")!.props.onChange("2"));
+    act(() => renderer.root.findAllByType(OdosSelect)
+      .find((select) => select.props.ariaLabel === "MGD clock-hour arc to clock hour")!.props.onChange("5"));
+    act(() => chips("MGD clock-hour arc direction").findAllByType("button")
+      .find((button) => button.children.join("") === "Counterclockwise")!.props.onClick());
+    const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Ocular Health")!;
+    await act(async () => saveButton.props.onClick());
+    assert.deepEqual(postedBody?.eyes.OD.findingDetails, {
+      "synthetic-mgd": {
+        grade: "marked",
+        type: "seborrheic",
+        score: 3,
+        arc: { from: 2, to: 5, clockwise: false },
+      },
+    });
+  } finally {
+    renderer?.unmount();
+  }
+});
+
+test("presence-only ocular findings never create worksheet rows", async () => {
+  const definition = syntheticWorksheetOcularDefinition();
+  const fetchImpl = (async () => jsonResponse({ rows: [{
+    eye: "OD",
+    state: "abnormal",
+    values: [{ code: "CUSTOM_ABNORMAL_FINDINGS_WORKSHEET", value: ["synthetic-presence"] }],
+  }] })) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={[definition]}
+        patientReference="Patient/p-presence-only"
+        encounterReference="Encounter/e-presence-only"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    assert.equal(renderer.root.findAllByProps({ "data-finding-row": "synthetic-presence" }).length, 0);
+    assert.equal(renderer.root.findAllByProps({ "aria-label": "Describe each" }).length, 0);
+  } finally {
+    renderer?.unmount();
+  }
+});
+
+test("described finding destruction is guarded from Zone A and the row remove path prunes the next POST", async () => {
+  const definition = syntheticQualifiedOcularDefinition();
+  const originalWindow = globalThis.window;
+  const prompts: string[] = [];
+  const decisions = [false, true];
+  const posts: Array<Record<string, any>> = [];
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: { confirm: (message: string) => { prompts.push(message); return decisions.shift() ?? false; } },
+  });
+  const fetchImpl = (async (_input, init) => {
+    if (init?.method === "POST") {
+      posts.push(JSON.parse(String(init.body)));
+      return jsonResponse({});
+    }
+    return jsonResponse({ rows: [{
+      eye: "OD",
+      state: "abnormal",
+      values: [{ code: "CUSTOM_ABNORMAL_FINDINGS_01", value: ["synthetic-finding"] }],
+      findingDetails: { "synthetic-finding": { grade: "trace" } },
+    }] });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={[definition]}
+        patientReference="Patient/p-confirm-destroy"
+        encounterReference="Encounter/e-confirm-destroy"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    const zoneButton = () => renderer.root.findAllByType("button")
+      .find((button) => button.children.join("") === "Synthetic Finding")!;
+    act(() => zoneButton().props.onClick());
+    assert.equal(zoneButton().props["aria-pressed"], true);
+    assert.equal(renderer.root.findAllByProps({ "data-finding-row": "synthetic-finding" }).length, 1);
+    act(() => renderer.root.findByProps({ "aria-label": "Remove Synthetic Finding" }).props.onClick());
+    assert.equal(zoneButton().props["aria-pressed"], false);
+    assert.equal(renderer.root.findAllByProps({ "data-finding-row": "synthetic-finding" }).length, 0);
+    assert.equal(prompts.length, 2);
+    assert.ok(prompts.every((prompt) => prompt.includes("Synthetic Finding")));
+    const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Ocular Health")!;
+    await act(async () => saveButton.props.onClick());
+    assert.deepEqual(posts[0], {
+      patientReference: "Patient/p-confirm-destroy",
+      encounterReference: "Encounter/e-confirm-destroy",
+      eyes: { OD: { state: "abnormal", customFields: [] } },
+    });
+  } finally {
+    renderer?.unmount();
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
+});
+
+test("undescribed finding deselection is instant without a confirmation dialog", async () => {
+  const definition = syntheticWorksheetOcularDefinition();
+  const originalWindow = globalThis.window;
+  let confirmCalls = 0;
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: { confirm: () => { confirmCalls += 1; return false; } },
+  });
+  const fetchImpl = (async () => jsonResponse({ rows: [{
+    eye: "OD",
+    state: "abnormal",
+    values: [{ code: "CUSTOM_ABNORMAL_FINDINGS_WORKSHEET", value: ["synthetic-presence"] }],
+  }] })) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={[definition]}
+        patientReference="Patient/p-no-confirm"
+        encounterReference="Encounter/e-no-confirm"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    const presence = renderer.root.findAllByType("button")
+      .find((button) => button.children.join("") === "Synthetic Presence Only")!;
+    act(() => presence.props.onClick());
+    assert.equal(confirmCalls, 0);
+    assert.equal(presence.props["aria-pressed"], false);
+  } finally {
+    renderer?.unmount();
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
+});
+
+test("removing a parent with selected child codes confirms before destroying the nested details", async () => {
+  const definition = syntheticWorksheetOcularDefinition();
+  const originalWindow = globalThis.window;
+  const prompts: string[] = [];
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: { confirm: (message: string) => { prompts.push(message); return false; } },
+  });
+  const fetchImpl = (async () => jsonResponse({ rows: [{
+    eye: "OD",
+    state: "abnormal",
+    values: [{
+      code: "CUSTOM_ABNORMAL_FINDINGS_WORKSHEET",
+      value: ["synthetic-demodex", "synthetic-demodex::collarettes"],
+    }],
+  }] })) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={[definition]}
+        patientReference="Patient/p-child-confirm"
+        encounterReference="Encounter/e-child-confirm"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    const parent = renderer.root.findAllByType("button")
+      .find((button) => button.children.join("") === "Synthetic Demodex")!;
+    act(() => parent.props.onClick());
+    assert.equal(prompts.length, 1);
+    assert.match(prompts[0]!, /Synthetic Demodex/);
+    assert.equal(parent.props["aria-pressed"], true);
+    assert.equal(renderer.root.findAllByType("button")
+      .find((button) => button.children.join("") === "Synthetic Collarettes")!.props["aria-pressed"], true);
+  } finally {
+    renderer?.unmount();
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
+});
+
+test("changing away from abnormal confirms before destroying recorded finding details", async () => {
+  const definition = syntheticQualifiedOcularDefinition();
+  const originalWindow = globalThis.window;
+  const prompts: string[] = [];
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: { confirm: (message: string) => { prompts.push(message); return false; } },
+  });
+  const fetchImpl = (async () => jsonResponse({ rows: [{
+    eye: "OD",
+    state: "abnormal",
+    values: [{ code: "CUSTOM_ABNORMAL_FINDINGS_01", value: ["synthetic-finding"] }],
+    findingDetails: { "synthetic-finding": { grade: "trace" } },
+  }] })) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={[definition]}
+        patientReference="Patient/p-state-confirm"
+        encounterReference="Encounter/e-state-confirm"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    const normal = renderer.root.findAllByType("button").filter((button) => button.children.join("") === "Normal")[0]!;
+    act(() => normal.props.onClick());
+    assert.equal(prompts.length, 1);
+    assert.match(prompts[0]!, /Synthetic Finding/);
+    const abnormal = renderer.root.findAllByType("button").filter((button) => button.children.join("") === "Abnormal")[0]!;
+    assert.match(abnormal.props.className, /bg-brand/);
+  } finally {
+    renderer?.unmount();
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
+});
+
+test("child details fold into the worksheet row and remain selection codes in the POST body", async () => {
+  const definition = syntheticWorksheetOcularDefinition();
+  let postedBody: Record<string, any> | undefined;
+  const fetchImpl = (async (_input, init) => {
+    if (init?.method === "POST") {
+      postedBody = JSON.parse(String(init.body));
+      return jsonResponse({});
+    }
+    return jsonResponse({ rows: [{
+      eye: "OD",
+      state: "abnormal",
+      values: [{ code: "CUSTOM_ABNORMAL_FINDINGS_WORKSHEET", value: ["synthetic-demodex"] }],
+    }] });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={[definition]}
+        patientReference="Patient/p-child-fold"
+        encounterReference="Encounter/e-child-fold"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    const row = renderer.root.findByProps({ "data-finding-row": "synthetic-demodex" });
+    const child = row.findAllByType("button").find((button) => button.children.join("") === "Synthetic Collarettes")!;
+    act(() => child.props.onClick());
+    const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Ocular Health")!;
+    await act(async () => saveButton.props.onClick());
+    assert.deepEqual(postedBody?.eyes.OD.customFields, [{
+      code: "CUSTOM_ABNORMAL_FINDINGS_WORKSHEET",
+      value: ["synthetic-demodex", "synthetic-demodex::collarettes"],
+    }]);
+    assert.equal("findingDetails" in postedBody!.eyes.OD, false);
+  } finally {
+    renderer?.unmount();
+  }
+});
+
+test("copying mixed qualifiers mirrors only extents and clock-hour mirroring round-trips", () => {
+  const definition = syntheticWorksheetOcularDefinition();
+  const source = {
+    state: "abnormal" as const,
+    selections: ["synthetic-mgd"],
+    other: "",
+    findingDetails: {
+      "synthetic-mgd": {
+        grade: "marked",
+        type: "seborrheic",
+        score: 3,
+        arc: { from: 2, to: 5, clockwise: true },
+      },
+    },
+  };
+  const copied = copyEyeCapture(source, definition);
+  assert.deepEqual(copied.findingDetails, {
+    "synthetic-mgd": {
+      grade: "marked",
+      type: "seborrheic",
+      score: 3,
+      arc: { from: 10, to: 7, clockwise: false },
+    },
+  });
+  assert.deepEqual(source.findingDetails["synthetic-mgd"].arc, { from: 2, to: 5, clockwise: true });
+  for (let from = 1; from <= 12; from += 1) {
+    for (let to = 1; to <= 12; to += 1) {
+      for (const clockwise of [false, true]) {
+        const extent = { from, to, clockwise };
+        assert.deepEqual(mirrorClockHourExtent(mirrorClockHourExtent(extent)), extent);
+      }
+    }
+  }
+});
 
 test("a saved normal keeps its captured template snapshot after the live template changes", async () => {
   const fetchImpl = (async () => jsonResponse({
@@ -1434,7 +1923,7 @@ test("all-normal skips touched structures and copy-to-eye produces an independen
   assert.equal(result.captures["dry-eye:conjunctival-staining"]?.OS.state, "normal");
 
   const source = { state: "abnormal" as const, selections: ["demodex", "demodex::collarettes"], other: "trace" };
-  const copied = copyEyeCapture(source);
+  const copied = copyEyeCapture(source, { customFields: [] });
   copied.selections.push("ptosis");
   assert.deepEqual(source.selections, ["demodex", "demodex::collarettes"]);
   assert.equal(copied.state, "abnormal");

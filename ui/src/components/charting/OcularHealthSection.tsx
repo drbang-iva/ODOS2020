@@ -4,9 +4,12 @@ import { OdosWheel } from "../inputs/OdosWheel";
 import { OdosChips } from "../inputs/OdosChips";
 import { OdosSelect } from "../inputs/OdosSelect";
 import type {
+  ClockHourExtentValue,
   CustomFindingDefinition,
   CustomFindingField,
   FindingDetails,
+  FindingQualifierDefinition,
+  FindingQualifierValue,
 } from "./CustomFindingSection";
 import { EyeCopyButton } from "./EyeCopyButton";
 import { formatStepValue } from "./power-options";
@@ -110,6 +113,11 @@ export function OcularHealthSection({
   }
 
   function setExamState(definition: CustomFindingDefinition, eye: Eye, state: ExamState) {
+    const current = captures[definition.stableKey]?.[eye] ?? emptyEye();
+    if (current.state === "abnormal" && state !== "abnormal") {
+      const described = describedFindingNames(abnormalField(definition), current);
+      if (described.length > 0 && !confirmDestroy(described, "Changing the exam state")) return;
+    }
     updateEye(definition.stableKey, eye, (current) => ({
       ...current,
       state,
@@ -121,8 +129,32 @@ export function OcularHealthSection({
   function copyEye(definition: CustomFindingDefinition, from: Eye, to: Eye) {
     updateEye(definition.stableKey, to, () => {
       const source = captures[definition.stableKey]?.[from] ?? emptyEye();
-      return copyEyeCapture(source);
+      return copyEyeCapture(source, definition);
     });
+  }
+
+  function setSelections(definition: CustomFindingDefinition, eye: Eye, selections: string[]) {
+    const current = captures[definition.stableKey]?.[eye] ?? emptyEye();
+    const destroyed = destroyedFindingNames(abnormalField(definition), current, selections);
+    if (destroyed.length > 0 && !confirmDestroy(destroyed, "Removing the finding")) return;
+    updateEye(definition.stableKey, eye, (capture) => ({
+      ...capture,
+      selections,
+      findingDetails: selectedFindingDetails(capture.findingDetails, selections),
+    }));
+  }
+
+  function setFindingDetail(
+    definition: CustomFindingDefinition,
+    eye: Eye,
+    optionCode: string,
+    qualifierKey: string,
+    value: FindingQualifierValue | undefined,
+  ) {
+    updateEye(definition.stableKey, eye, (current) => ({
+      ...current,
+      findingDetails: updatedFindingDetails(current.findingDetails, optionCode, qualifierKey, value),
+    }));
   }
 
   function allNormal(prefix: string, label: string) {
@@ -243,11 +275,8 @@ export function OcularHealthSection({
                   normalTemplate={definition.normalTemplate}
                   allowDeferred={definition.allowDeferred === true}
                   onState={(state) => setExamState(definition, eye, state)}
-                  onSelections={(selections) => updateEye(definition.stableKey, eye, (current) => ({
-                    ...current,
-                    selections,
-                    findingDetails: selectedFindingDetails(current.findingDetails, selections),
-                  }))}
+                  onSelections={(selections) => setSelections(definition, eye, selections)}
+                  onFindingDetail={(optionCode, qualifierKey, value) => setFindingDetail(definition, eye, optionCode, qualifierKey, value)}
                   onGrade={(localCode, value) => updateEye(definition.stableKey, eye, (current) => ({ ...current, grades: { ...current.grades, [localCode]: value } }))}
                   onOther={(other) => updateEye(definition.stableKey, eye, (current) => ({ ...current, other }))}
                   onCopy={() => copyEye(definition, eye, eye === "OD" ? "OS" : "OD")}
@@ -266,7 +295,7 @@ export function OcularHealthSection({
   );
 }
 
-function EyePanel({ eye, capture, field, gradeFields, normalTemplate, allowDeferred, onState, onSelections, onGrade, onOther, onCopy }: {
+function EyePanel({ eye, capture, field, gradeFields, normalTemplate, allowDeferred, onState, onSelections, onFindingDetail, onGrade, onOther, onCopy }: {
   eye: Eye;
   capture: EyeCapture;
   field?: CustomFindingField;
@@ -275,6 +304,7 @@ function EyePanel({ eye, capture, field, gradeFields, normalTemplate, allowDefer
   allowDeferred: boolean;
   onState(state: ExamState): void;
   onSelections(selections: string[]): void;
+  onFindingDetail(optionCode: string, qualifierKey: string, value: FindingQualifierValue | undefined): void;
   onGrade(localCode: string, value: string): void;
   onOther(other: string): void;
   onCopy(): void;
@@ -283,6 +313,12 @@ function EyePanel({ eye, capture, field, gradeFields, normalTemplate, allowDefer
   const parents = options.filter((option) => !option.parentCode);
   const priority = parents.filter((option) => option.priority);
   const additional = parents.filter((option) => !option.priority);
+  const worksheetOptions = capture.selections.flatMap((code) => {
+    const option = options.find((candidate) => candidate.code === code);
+    if (!option) return [];
+    const hasChildren = options.some((candidate) => candidate.parentCode === option.code);
+    return option.qualifiers?.length || hasChildren ? [option] : [];
+  });
   const displayedNormalTemplate = capture.state === "normal" && capture.normalTemplate ? capture.normalTemplate : normalTemplate;
   return (
     <div className="rounded border border-white/10 bg-bg-deep/60 p-4">
@@ -326,9 +362,27 @@ function EyePanel({ eye, capture, field, gradeFields, normalTemplate, allowDefer
         />}
       </label>)}
       {capture.state === "abnormal" && field && (
-        <div className="mt-4 space-y-3">
-          <OptionList ariaLabel="Priority ocular health findings" options={priority} allOptions={options} selected={capture.selections} onChange={onSelections} />
-          {additional.length > 0 && <details><summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-white/40">More findings ({additional.length})</summary><div className="mt-3"><OptionList ariaLabel="Additional ocular health findings" options={additional} allOptions={options} selected={capture.selections} onChange={onSelections} /></div></details>}
+        <div className="mt-4 space-y-4">
+          <div aria-label="What is present" className="space-y-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-[color:var(--odos-muted)]">What is present</div>
+            <OptionList ariaLabel="Priority ocular health findings" options={priority} allOptions={options} selected={capture.selections} onChange={onSelections} />
+            {additional.length > 0 && <details><summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-[color:var(--odos-muted)]">More findings ({additional.length})</summary><div className="mt-3"><OptionList ariaLabel="Additional ocular health findings" options={additional} allOptions={options} selected={capture.selections} onChange={onSelections} /></div></details>}
+          </div>
+          {worksheetOptions.length > 0 && (
+            <div aria-label="Describe each" className="space-y-3">
+              <div className="text-xs font-semibold uppercase tracking-wide text-[color:var(--odos-muted)]">Describe each</div>
+              {worksheetOptions.map((option) => (
+                <FindingWorksheetRow
+                  key={option.code}
+                  option={option}
+                  allOptions={options}
+                  capture={capture}
+                  onSelections={onSelections}
+                  onFindingDetail={onFindingDetail}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
       <label className="mt-4 block"><span className="mb-1 block text-xs uppercase tracking-wide text-white/35">Other</span><textarea value={capture.other} disabled={!capture.state} onChange={(event) => onOther(event.target.value)} rows={2} className="w-full rounded border border-white/15 bg-bg-deep p-2 text-sm text-white outline-none focus:border-brand disabled:cursor-not-allowed disabled:opacity-45" />{!capture.state && <span className="mt-1 block text-xs text-amber-200/75">Choose an exam state before entering Other.</span>}</label>
@@ -345,7 +399,7 @@ function OptionList({ ariaLabel, options, allOptions, selected, onChange }: {
 }) {
   const optionCodes = options.map((option) => option.code);
   return (
-    <div className="space-y-3">
+    <div>
       <OdosChips
         options={options.map((option) => ({ value: option.code, label: findingChipLabel(option.display) }))}
         selected={selected.filter((code) => optionCodes.includes(code))}
@@ -359,22 +413,141 @@ function OptionList({ ariaLabel, options, allOptions, selected, onChange }: {
         }}
         ariaLabel={ariaLabel}
       />
-      {options.filter((option) => selected.includes(option.code)).map((option) => {
-        const children = allOptions.filter((candidate) => candidate.parentCode === option.code);
-        if (children.length === 0) return null;
-        const childCodes = children.map((child) => child.code);
-        return (
-          <div key={option.code} className="ml-3 border-l border-white/10 pl-3">
-            <div className="mb-2 text-xs text-white/45">{option.display} details</div>
-            <OdosChips
-              options={children.map((child) => ({ value: child.code, label: findingChipLabel(child.display) }))}
-              selected={selected.filter((code) => childCodes.includes(code))}
-              onChange={(nextChildren) => onChange(replaceSelectionGroup(selected, childCodes, nextChildren))}
-              ariaLabel={`${option.display} details`}
-            />
-          </div>
-        );
-      })}
+    </div>
+  );
+}
+
+type FindingOption = NonNullable<CustomFindingField["options"]>[number];
+
+function FindingWorksheetRow({ option, allOptions, capture, onSelections, onFindingDetail }: {
+  option: FindingOption;
+  allOptions: FindingOption[];
+  capture: EyeCapture;
+  onSelections(selections: string[]): void;
+  onFindingDetail(optionCode: string, qualifierKey: string, value: FindingQualifierValue | undefined): void;
+}) {
+  const children = allOptions.filter((candidate) => candidate.parentCode === option.code);
+  const childCodes = children.map((child) => child.code);
+  const controls = [
+    ...(option.qualifiers ?? []).map((qualifier) => (
+      <FindingQualifierControl
+        key={qualifier.key}
+        qualifier={qualifier}
+        value={capture.findingDetails?.[option.code]?.[qualifier.key]}
+        onChange={(value) => onFindingDetail(option.code, qualifier.key, value)}
+      />
+    )),
+    ...(children.length > 0 ? [(
+      <div key="children" className="min-w-0">
+        <div className="mb-1 text-xs font-semibold text-[color:var(--odos-muted)]">Details</div>
+        <OdosChips
+          options={children.map((child) => ({ value: child.code, label: findingChipLabel(child.display) }))}
+          selected={capture.selections.filter((code) => childCodes.includes(code))}
+          onChange={(nextChildren) => onSelections(replaceSelectionGroup(capture.selections, childCodes, nextChildren))}
+          ariaLabel={`${option.display} details`}
+        />
+      </div>
+    )] : []),
+  ];
+  const removeCodes = new Set([option.code, ...childCodes]);
+  return (
+    <div data-finding-row={option.code} className="grid gap-3 rounded border border-[color:var(--odos-line)] bg-[var(--odos-surface-2)] p-3 md:grid-cols-[minmax(8rem,0.7fr)_minmax(0,2fr)_auto]">
+      <div className="flex min-h-11 items-center text-sm font-semibold text-[color:var(--odos-text)]">{findingChipLabel(option.display)}</div>
+      {controls.length > 0 && <div data-finding-controls={option.code} className="grid gap-3 sm:grid-cols-2">{controls}</div>}
+      <button
+        type="button"
+        aria-label={`Remove ${option.display}`}
+        onClick={() => onSelections(capture.selections.filter((code) => !removeCodes.has(code)))}
+        className="min-h-11 min-w-11 justify-self-end rounded border border-[color:var(--odos-line-2)] text-[color:var(--odos-muted)] outline-none hover:bg-[var(--odos-surface-3)] hover:text-[color:var(--odos-text)] focus-visible:border-brand"
+      >
+        ×
+      </button>
+    </div>
+  );
+}
+
+function FindingQualifierControl({ qualifier, value, onChange }: {
+  qualifier: FindingQualifierDefinition;
+  value: FindingQualifierValue | undefined;
+  onChange(value: FindingQualifierValue | undefined): void;
+}) {
+  if (qualifier.kind === "graded") {
+    const selected = typeof value === "string" ? [value] : [];
+    return (
+      <div className="min-w-0">
+        <div className="mb-1 text-xs font-semibold text-[color:var(--odos-muted)]">{qualifier.display}</div>
+        <OdosChips
+          options={qualifier.options.map((option) => ({ value: option, label: findingChipLabel(option) }))}
+          selected={selected}
+          onChange={(next) => onChange(next[0])}
+          ariaLabel={qualifier.display}
+          exclusive
+        />
+      </div>
+    );
+  }
+  if (qualifier.kind === "enum") {
+    const selected = typeof value === "string" ? [value] : [];
+    return (
+      <div className="min-w-0">
+        <div className="mb-1 text-xs font-semibold text-[color:var(--odos-muted)]">{qualifier.display}</div>
+        <OdosChips
+          options={qualifier.options.map((option) => ({ value: option.code, label: option.display }))}
+          selected={selected}
+          onChange={(next) => onChange(next[0])}
+          ariaLabel={qualifier.display}
+          exclusive
+        />
+      </div>
+    );
+  }
+  if (qualifier.kind === "numeric") {
+    return (
+      <label className="min-w-0">
+        <span className="mb-1 block text-xs font-semibold text-[color:var(--odos-muted)]">{qualifier.display}</span>
+        <div className="flex min-h-11 overflow-hidden rounded border border-[color:var(--odos-line-2)] bg-bg-deep focus-within:border-brand">
+          <input
+            type="number"
+            aria-label={qualifier.display}
+            value={typeof value === "number" ? value : ""}
+            min={qualifier.min}
+            max={qualifier.max}
+            step={qualifier.step}
+            onChange={(event) => onChange(event.target.value === "" ? undefined : Number(event.target.value))}
+            className="min-h-11 min-w-0 flex-1 bg-transparent px-3 text-sm text-[color:var(--odos-text)] outline-none"
+          />
+          {qualifier.unit && <span className="flex min-h-11 items-center border-l border-[color:var(--odos-line)] px-3 text-sm text-[color:var(--odos-muted)]">{qualifier.unit}</span>}
+        </div>
+      </label>
+    );
+  }
+  const extent = isClockHourExtentValue(value) ? value : undefined;
+  const hours = [
+    { value: "", label: "Not recorded" },
+    ...Array.from({ length: 12 }, (_, index) => ({ value: String(index + 1), label: String(index + 1) })),
+  ];
+  const updateHour = (key: "from" | "to", next: string) => {
+    if (next === "") {
+      onChange(undefined);
+      return;
+    }
+    const hour = Number(next);
+    onChange(extent ? { ...extent, [key]: hour } : { from: hour, to: hour, clockwise: true });
+  };
+  return (
+    <div className="min-w-0">
+      <div className="mb-1 text-xs font-semibold text-[color:var(--odos-muted)]">{qualifier.display}</div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <OdosSelect value={extent ? String(extent.from) : ""} options={hours} onChange={(next) => updateHour("from", next)} ariaLabel={`${qualifier.display} from clock hour`} />
+        <OdosSelect value={extent ? String(extent.to) : ""} options={hours} onChange={(next) => updateHour("to", next)} ariaLabel={`${qualifier.display} to clock hour`} />
+      </div>
+      {extent && <div className="mt-2"><OdosChips
+        options={[{ value: true, label: "Clockwise" }, { value: false, label: "Counterclockwise" }]}
+        selected={[extent.clockwise]}
+        onChange={(next) => onChange(next.length ? { ...extent, clockwise: next[0]! } : undefined)}
+        ariaLabel={`${qualifier.display} direction`}
+        exclusive
+      /></div>}
     </div>
   );
 }
@@ -390,6 +563,42 @@ function replaceSelectionGroup(selected: string[], group: string[], nextGroup: s
     ...selected.filter((value) => !groupSet.has(value) || nextSet.has(value)),
     ...nextGroup.filter((value) => !selected.includes(value)),
   ];
+}
+
+function describedFindingNames(field: CustomFindingField | undefined, capture: EyeCapture): string[] {
+  const selected = new Set(capture.selections);
+  return (field?.options ?? []).flatMap((option) =>
+    selected.has(option.code) && hasRecordedDetails(capture.findingDetails?.[option.code])
+      ? [findingChipLabel(option.display)]
+      : []
+  );
+}
+
+function destroyedFindingNames(
+  field: CustomFindingField | undefined,
+  capture: EyeCapture,
+  nextSelections: string[],
+): string[] {
+  const options = field?.options ?? [];
+  const next = new Set(nextSelections);
+  return options.flatMap((option) => {
+    if (!capture.selections.includes(option.code) || next.has(option.code)) return [];
+    const hasSelectedChildren = options.some((candidate) =>
+      candidate.parentCode === option.code && capture.selections.includes(candidate.code)
+    );
+    return hasRecordedDetails(capture.findingDetails?.[option.code]) || hasSelectedChildren
+      ? [findingChipLabel(option.display)]
+      : [];
+  });
+}
+
+function hasRecordedDetails(details: Record<string, FindingQualifierValue> | undefined): boolean {
+  return details !== undefined && Object.keys(details).length > 0;
+}
+
+function confirmDestroy(findings: string[], action: string): boolean {
+  const names = [...new Set(findings)].join(", ");
+  return window.confirm(`${action} will discard recorded details for ${names}. Continue?`);
 }
 
 function StateButton({ label, selected, onClick }: { label: string; selected: boolean; onClick(): void }) {
@@ -496,7 +705,15 @@ export function pendingStateEyes(
   });
 }
 
-export function copyEyeCapture(source: EyeCapture): EyeCapture {
+export function copyEyeCapture(
+  source: EyeCapture,
+  definition: Pick<CustomFindingDefinition, "customFields">,
+): EyeCapture {
+  const qualifierKinds = new Map(definition.customFields.flatMap((field) =>
+    (field.options ?? []).flatMap((option) =>
+      (option.qualifiers ?? []).map((qualifier) => [`${option.code}\u0000${qualifier.key}`, qualifier.kind] as const)
+    )
+  ));
   return {
     ...source,
     selections: [...source.selections],
@@ -507,12 +724,33 @@ export function copyEyeCapture(source: EyeCapture): EyeCapture {
             optionCode,
             Object.fromEntries(Object.entries(details).map(([qualifierKey, value]) => [
               qualifierKey,
-              typeof value === "object" ? { ...value } : value,
+              qualifierKinds.get(`${optionCode}\u0000${qualifierKey}`) === "extent" && isClockHourExtentValue(value)
+                ? mirrorClockHourExtent(value)
+                : typeof value === "object" ? { ...value } : value,
             ])),
           ])),
         }
       : {}),
   };
+}
+
+export function mirrorClockHourExtent(value: ClockHourExtentValue): ClockHourExtentValue {
+  return {
+    from: mirrorClockHour(value.from),
+    to: mirrorClockHour(value.to),
+    clockwise: !value.clockwise,
+  };
+}
+
+function mirrorClockHour(hour: number): number {
+  return (12 - hour) || 12;
+}
+
+function isClockHourExtentValue(value: FindingQualifierValue | undefined): value is ClockHourExtentValue {
+  return typeof value === "object" && value !== null &&
+    Number.isInteger(value.from) && value.from >= 1 && value.from <= 12 &&
+    Number.isInteger(value.to) && value.to >= 1 && value.to <= 12 &&
+    typeof value.clockwise === "boolean";
 }
 
 function sameFindingDetails(left: FindingDetails | undefined, right: FindingDetails | undefined): boolean {
@@ -532,6 +770,21 @@ function selectedFindingDetails(
   const next = Object.fromEntries(
     Object.entries(findingDetails).filter(([optionCode]) => selected.has(optionCode)),
   );
+  return hasFindingDetails(next) ? next : undefined;
+}
+
+function updatedFindingDetails(
+  findingDetails: FindingDetails | undefined,
+  optionCode: string,
+  qualifierKey: string,
+  value: FindingQualifierValue | undefined,
+): FindingDetails | undefined {
+  const nextOption = { ...(findingDetails?.[optionCode] ?? {}) };
+  if (value === undefined) delete nextOption[qualifierKey];
+  else nextOption[qualifierKey] = value;
+  const next = { ...(findingDetails ?? {}) };
+  if (Object.keys(nextOption).length === 0) delete next[optionCode];
+  else next[optionCode] = nextOption;
   return hasFindingDetails(next) ? next : undefined;
 }
 
