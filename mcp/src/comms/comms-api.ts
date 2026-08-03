@@ -16,7 +16,6 @@ import type { CommsDispatch, CommsDispatchFhir } from "./comms-config.js";
 import type { CommsProvider, ConversationSummary } from "./comms-provider.js";
 import {
   ODOS_COMMS_CATEGORY_SYSTEM,
-  ODOS_COMMS_DEFAULT_PROVIDER,
   ODOS_PATIENT_CALL_CATEGORY,
   ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM,
   ODOS_TWILIO_CALL_IDENTIFIER_SYSTEM,
@@ -62,15 +61,24 @@ export function registerCommsApiRoutes(
     patientReferenceForAudit(req),
     async (staff) => {
       const patientReference = patientReferenceFromQuery(req);
+      const conversationId = conversationIdFromQuery(req);
       const limit = numberFromQuery(req, "limit", 1, 100);
-      const provider = adapter(deps, providerFromQuery(req), staff.fhir);
+      const provider = adapter(deps, providerFromQuery(req, deps.dispatch, "transactional-sms"), staff.fhir);
       if (!provider.listConversations) throw new CommsApiCapabilityError("Conversation history is not enabled for this communications provider.");
       const includeContent = hasBusinessAction(staff.actorRole, "communications.content.read");
-      const conversations = await provider.listConversations({
+      let conversations = await provider.listConversations({
         ...(patientReference ? { patientReference } : {}),
         ...(limit ? { limit } : {}),
         includeContent,
       });
+      if (includeContent && conversationId && provider.getConversationMessages) {
+        const selected = conversations.find((conversation) => conversation.id === conversationId);
+        if (selected) {
+          const messages = await provider.getConversationMessages(conversationId, { includeContent: true });
+          conversations = conversations.map((conversation) =>
+            conversation.id === conversationId ? { ...conversation, messages } : conversation);
+        }
+      }
       return { status: 200, body: { conversations: includeContent ? conversations : redactConversationBodies(conversations) } };
     },
   ));
@@ -88,7 +96,7 @@ export function registerCommsApiRoutes(
       const patientReference = requiredPatientReference(body.patientReference);
       const text = requiredText(body.body, "SMS body", 1_600);
       const idempotencyKey = requiredIdempotencyKey(req, body);
-      const provider = adapter(deps, providerFromBody(body), staff.fhir);
+      const provider = adapter(deps, providerFromBody(body, deps.dispatch, "transactional-sms"), staff.fhir);
       if (!provider.sendSms) throw new CommsApiCapabilityError("SMS is not enabled for this communications provider.");
       const providerMessageIdentifierSystem =
         provider.messageIdentifierSystem ?? ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM;
@@ -141,7 +149,7 @@ export function registerCommsApiRoutes(
     "communications-call-list",
     undefined,
     async (staff) => {
-      const provider = adapter(deps, providerFromQuery(req), staff.fhir);
+      const provider = adapter(deps, providerFromQuery(req, deps.dispatch, "voice"), staff.fhir);
       if (!provider.listCalls) throw new CommsApiCapabilityError("Call history is not enabled for this communications provider.");
       const limit = numberFromQuery(req, "limit", 1, MAX_CALL_HISTORY_WINDOW) ?? 50;
       const visibleIds = await visibleCallIds(staff.fhir);
@@ -160,7 +168,7 @@ export function registerCommsApiRoutes(
     "communications-call-read",
     undefined,
     async (staff) => {
-      const provider = adapter(deps, providerFromQuery(req), staff.fhir);
+      const provider = adapter(deps, providerFromQuery(req, deps.dispatch, "voice"), staff.fhir);
       if (!provider.getCall) throw new CommsApiCapabilityError("Call detail is not enabled for this communications provider.");
       const callId = resourceKey(req.params.callId, "call id");
       await requireVisibleTwilioIdentifier(staff.fhir, ODOS_TWILIO_CALL_IDENTIFIER_SYSTEM, callId, "Call");
@@ -179,7 +187,7 @@ export function registerCommsApiRoutes(
     async (staff) => {
       const body = record(req.body);
       const patientReference = requiredPatientReference(body.patientReference);
-      const provider = adapter(deps, providerFromBody(body), staff.fhir);
+      const provider = adapter(deps, providerFromBody(body, deps.dispatch, "voice"), staff.fhir);
       if (!provider.initiateCall) throw new CommsApiCapabilityError("Calling is not enabled for this communications provider.");
       return { status: 201, body: await provider.initiateCall({ patientReference }) };
     },
@@ -194,7 +202,7 @@ export function registerCommsApiRoutes(
     "communications-recording-read",
     undefined,
     async (staff) => {
-      const provider = adapter(deps, providerFromQuery(req), staff.fhir);
+      const provider = adapter(deps, providerFromQuery(req, deps.dispatch, "voice"), staff.fhir);
       if (!provider.fetchRecording) {
         throw new CommsApiCapabilityError("Recording retrieval is not enabled for this communications provider.");
       }
@@ -370,19 +378,37 @@ function adapter(
 }
 
 function redactConversationBodies(conversations: ConversationSummary[]): ConversationSummary[] {
-  return conversations.map((conversation) => ({
+  return conversations.map(({ preview: _preview, ...conversation }) => ({
     ...conversation,
     messages: conversation.messages.map(({ body: _body, ...message }) => message),
   }));
 }
 
-function providerFromQuery(req: Request): string {
-  const value = queryString(req, "provider") ?? ODOS_COMMS_DEFAULT_PROVIDER;
-  return providerName(value);
+function providerFromQuery(
+  req: Request,
+  dispatch: CommsDispatch,
+  role: "voice" | "transactional-sms",
+): string {
+  const explicit = queryString(req, "provider");
+  return explicit ? providerName(explicit) : providerForRole(dispatch, role);
 }
 
-function providerFromBody(body: Record<string, unknown>): string {
-  return providerName(typeof body.provider === "string" ? body.provider : ODOS_COMMS_DEFAULT_PROVIDER);
+function providerFromBody(
+  body: Record<string, unknown>,
+  dispatch: CommsDispatch,
+  role: "voice" | "transactional-sms",
+): string {
+  return typeof body.provider === "string"
+    ? providerName(body.provider)
+    : providerForRole(dispatch, role);
+}
+
+function providerForRole(dispatch: CommsDispatch, role: "voice" | "transactional-sms"): string {
+  const provider = dispatch.providerFor(role);
+  if (!provider) {
+    throw new CommsApiCapabilityError(`Communications role "${role}" is not configured for this practice.`);
+  }
+  return provider;
 }
 
 function requiredIdempotencyKey(req: Request, body: Record<string, unknown>): string {
@@ -403,6 +429,11 @@ function patientReferenceFromQuery(req: Request): string | undefined {
   const value = queryString(req, "patientReference", "patient_id", "patientId");
   if (!value) return undefined;
   return requiredPatientReference(value.startsWith("Patient/") ? value : `Patient/${value}`);
+}
+
+function conversationIdFromQuery(req: Request): string | undefined {
+  const value = queryString(req, "conversationId", "conversation_id");
+  return value ? resourceKey(value, "conversation id") : undefined;
 }
 
 function patientReferenceForAudit(req: Request): string | undefined {

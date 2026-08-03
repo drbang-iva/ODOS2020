@@ -341,7 +341,7 @@ async function listPersistedConversations(
   }
   return [...groups.entries()]
     .map(([id, messages]): ConversationSummary => {
-      messages.sort((left, right) => Date.parse(right.occurredAt) - Date.parse(left.occurredAt));
+      messages.sort((left, right) => Date.parse(right.occurredAt!) - Date.parse(left.occurredAt!));
       const patientReference = patients.get(id);
       return {
         id,
@@ -351,7 +351,7 @@ async function listPersistedConversations(
         messages,
       };
     })
-    .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt))
+    .sort((left, right) => Date.parse(right.updatedAt!) - Date.parse(left.updatedAt!))
     .slice(0, limit);
 }
 

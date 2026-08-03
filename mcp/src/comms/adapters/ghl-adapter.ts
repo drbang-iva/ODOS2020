@@ -6,6 +6,7 @@ import type {
   ContactSearch,
   ConversationListRequest,
   ConversationMessage,
+  ConversationMessageReadRequest,
   ConversationSummary,
   SendResult,
   SendSmsRequest,
@@ -16,9 +17,9 @@ import { ODOS_GHL_MESSAGE_IDENTIFIER_SYSTEM } from "../comms-persistence.js";
  * Verified 2026-08-03 against HighLevel's current primary API documentation:
  * - Sub-account OAuth/PIT bearer auth, `Version: v3`, and SMS sends:
  *   https://marketplace.gohighlevel.com/docs/ghl/conversations/send-a-new-message/
- * - Live conversation search and per-conversation message reads:
+ * - Conversation search schema and documented recency ordering:
+ *   https://raw.githubusercontent.com/GoHighLevel/highlevel-api-docs/main/apps/v3/conversations-v3.json
  *   https://marketplace.gohighlevel.com/docs/ghl/conversations/search-conversation/
- *   https://marketplace.gohighlevel.com/docs/ghl/conversations/get-messages/
  * - Advanced contact search and location-scoped upsert:
  *   https://marketplace.gohighlevel.com/docs/ghl/contacts/search-contacts-advanced/
  *   https://marketplace.gohighlevel.com/docs/ghl/contacts/upsert-contact/
@@ -34,7 +35,6 @@ const GHL_CONTACT_PAGE_LIMIT = 100;
 const GHL_CONTACT_PAGE_CAP = 100;
 const GHL_MESSAGE_PAGE_LIMIT = 100;
 const GHL_MESSAGE_PAGE_CAP = 100;
-const GHL_CONVERSATION_READ_CONCURRENCY = 5;
 const GHL_WEBHOOK_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
 MCowBQYDK2VwAyEAi2HR1srL4o18O8BRa7gVJY7G7bupbN3H9AwJrHCDiOg=
 -----END PUBLIC KEY-----`;
@@ -65,13 +65,21 @@ interface GhlContact {
 interface GhlConversation {
   id: string;
   contactId: string;
-  lastMessageDate?: string;
+  locationId?: string;
+  lastMessageBody?: string;
+  lastMessageType?: string;
+  type?: string;
+  unreadCount: number;
+  fullName?: string;
+  contactName?: string;
+  email?: string;
+  phone?: string;
 }
 
 interface GhlMessage {
   id: string;
-  dateAdded: string;
-  direction: string;
+  dateAdded?: string;
+  direction?: string;
   status?: string;
   body?: string;
   from?: string;
@@ -178,7 +186,6 @@ export function createGhlAdapter(
     }
     throw new Error("GHL conversation messages pagination exceeded 100 pages.");
   };
-
   return {
     name: "ghl",
     messageIdentifierSystem: ODOS_GHL_MESSAGE_IDENTIFIER_SYSTEM,
@@ -233,35 +240,39 @@ export function createGhlAdapter(
         if (!contact) return [];
         contactId = contact.id;
       }
-      const query = new URLSearchParams({ locationId, limit: String(limit) });
+      const query = new URLSearchParams({
+        locationId,
+        limit: String(limit),
+        sortBy: "last_message_date",
+        sort: "desc",
+      });
       if (contactId) query.set("contactId", contactId);
       const response = await request<{ conversations?: unknown }>(`/conversations/search?${query}`);
       const conversations = conversationArray(response.conversations);
-      const summaries: Array<ConversationSummary | undefined> = [];
-      for (let offset = 0; offset < conversations.length; offset += GHL_CONVERSATION_READ_CONCURRENCY) {
-        summaries.push(...await Promise.all(
-          conversations
-            .slice(offset, offset + GHL_CONVERSATION_READ_CONCURRENCY)
-            .map(async (conversation): Promise<ConversationSummary | undefined> => {
-              const messages = await messagesForConversation(
-                conversation.id,
-                input.includeContent === true,
-              );
-              if (messages.length === 0) return undefined;
-              messages.sort((left, right) => Date.parse(right.occurredAt) - Date.parse(left.occurredAt));
-              return {
-                id: conversation.id,
-                ...(input.patientReference ? { patientReference: input.patientReference } : {}),
-                updatedAt: messages[0].occurredAt,
-                messageCount: messages.length,
-                messages,
-              };
-            }),
-        ));
-      }
-      return summaries
-        .filter((summary): summary is ConversationSummary => summary !== undefined)
-        .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt));
+      return conversations.map((conversation): ConversationSummary => ({
+        id: conversation.id,
+        ...(input.patientReference ? { patientReference: input.patientReference } : {}),
+        ...(input.includeContent === true && conversation.lastMessageBody
+          ? { preview: conversation.lastMessageBody }
+          : {}),
+        ...(conversation.lastMessageType ? { channel: conversation.lastMessageType } : {}),
+        unreadCount: conversation.unreadCount,
+        ...(conversation.fullName || conversation.contactName
+          ? { displayName: conversation.fullName || conversation.contactName }
+          : {}),
+        ...(conversation.phone ? { phone: conversation.phone } : {}),
+        ...(conversation.email ? { email: conversation.email } : {}),
+        messages: [],
+      }));
+    },
+    async getConversationMessages(
+      conversationId: string,
+      input: ConversationMessageReadRequest = {},
+    ): Promise<ConversationMessage[]> {
+      return messagesForConversation(
+        requiredResponseString(conversationId, "GHL conversation id"),
+        input.includeContent === true,
+      );
     },
     async searchContacts(input: ContactSearch): Promise<ContactRecord[]> {
       const query = requiredText(input.query, "GHL contact search query");
@@ -388,45 +399,86 @@ function conversationArray(value: unknown): GhlConversation[] {
   if (!Array.isArray(value)) throw new Error("GHL conversation search response is invalid.");
   return value.map((entry) => {
     const conversation = record(entry);
+    const locationId = optionalResponseString(conversation.locationId);
+    const lastMessageBody = optionalResponseString(conversation.lastMessageBody);
+    const lastMessageType = optionalResponseString(conversation.lastMessageType);
+    const type = optionalResponseString(conversation.type);
+    const fullName = optionalResponseString(conversation.fullName);
+    const contactName = optionalResponseString(conversation.contactName);
+    const email = optionalResponseString(conversation.email);
+    const phone = optionalResponseString(conversation.phone);
     return {
       id: requiredResponseString(conversation.id, "GHL conversation id"),
       contactId: requiredResponseString(conversation.contactId, "GHL conversation contact id"),
-      ...(typeof conversation.lastMessageDate === "string"
-        ? { lastMessageDate: conversation.lastMessageDate }
-        : {}),
+      ...(locationId ? { locationId } : {}),
+      ...(lastMessageBody ? { lastMessageBody } : {}),
+      ...(lastMessageType ? { lastMessageType } : {}),
+      ...(type ? { type } : {}),
+      unreadCount: nonNegativeIntegerOrZero(conversation.unreadCount),
+      ...(fullName ? { fullName } : {}),
+      ...(contactName ? { contactName } : {}),
+      ...(email ? { email } : {}),
+      ...(phone ? { phone } : {}),
     };
   });
 }
 
 function messageArray(value: unknown): GhlMessage[] {
-  if (!Array.isArray(value)) throw new Error("GHL conversation messages response is invalid.");
+  if (!Array.isArray(value)) return [];
   return value.map((entry) => {
     const message = record(entry);
+    const to = typeof message.to === "string"
+      ? message.to
+      : Array.isArray(message.to)
+        ? message.to.filter((candidate): candidate is string => typeof candidate === "string")
+        : undefined;
+    const dateAdded = optionalResponseDate(message.dateAdded);
+    const direction = optionalResponseString(message.direction);
+    const status = optionalResponseString(message.status);
+    const body = optionalResponseString(message.body);
+    const from = optionalResponseString(message.from);
     return {
       id: requiredResponseString(message.id, "GHL message id"),
-      dateAdded: requiredDate(message.dateAdded, "GHL message date"),
-      direction: requiredResponseString(message.direction, "GHL message direction"),
-      ...(typeof message.status === "string" ? { status: message.status } : {}),
-      ...(typeof message.body === "string" ? { body: message.body } : {}),
-      ...(typeof message.from === "string" ? { from: message.from } : {}),
-      ...(typeof message.to === "string" || Array.isArray(message.to) ? { to: message.to as string | string[] } : {}),
+      ...(dateAdded ? { dateAdded } : {}),
+      ...(direction ? { direction } : {}),
+      ...(status ? { status } : {}),
+      ...(body ? { body } : {}),
+      ...(from ? { from } : {}),
+      ...(to && (typeof to === "string" || to.length > 0) ? { to } : {}),
     };
   });
 }
 
 function conversationMessage(message: GhlMessage, includeContent: boolean): ConversationMessage {
-  const direction = ["inbound", "outbound"].includes(message.direction)
-    ? message.direction as "inbound" | "outbound"
+  const direction = message.direction === "inbound" || message.direction === "outbound"
+    ? message.direction
     : "unknown";
   return {
     id: message.id,
     direction,
     status: message.status ?? "unknown",
-    occurredAt: message.dateAdded,
+    ...(message.dateAdded ? { occurredAt: message.dateAdded } : {}),
     ...(message.from ? { from: message.from } : {}),
     ...(message.to ? { to: Array.isArray(message.to) ? message.to[0] : message.to } : {}),
     ...(includeContent && message.body !== undefined ? { body: message.body } : {}),
   };
+}
+
+function optionalResponseString(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  return value.trim() || undefined;
+}
+
+function optionalResponseDate(value: unknown): string | undefined {
+  const date = optionalResponseString(value);
+  return date && Number.isFinite(Date.parse(date)) ? date : undefined;
+}
+
+function nonNegativeIntegerOrZero(value: unknown): number {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+    return 0;
+  }
+  return value;
 }
 
 function contactRecord(contact: GhlContact): ContactRecord {

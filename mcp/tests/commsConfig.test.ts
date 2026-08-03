@@ -3,6 +3,7 @@ import { generateKeyPairSync } from "node:crypto";
 import { test } from "node:test";
 import type { Bundle, Patient, Resource } from "@medplum/fhirtypes";
 import {
+  commsChannelRoutingFromEnv,
   commsAdapterRegistrationsFromEnv,
   createCommsDispatch,
   startMcpAfterCommsInitialization,
@@ -26,6 +27,146 @@ test("communications dispatch is inert without practice config and reports a cle
     /not configured for this practice/i,
   );
   assert.deepEqual(commsAdapterRegistrationsFromEnv({}), []);
+});
+
+test("communications channel routing assigns every role independently and leaves omitted roles unassigned", () => {
+  const registrations = commsAdapterRegistrationsFromEnv({
+    ODOS_COMMS_PROVIDERS: "google-workspace,twilio,ghl",
+    GOOGLE_WORKSPACE_SERVICE_ACCOUNT_EMAIL: "odos@synthetic.iam.gserviceaccount.com",
+    GOOGLE_WORKSPACE_PRIVATE_KEY: "synthetic-private-key",
+    GOOGLE_WORKSPACE_DELEGATED_USER: "info@synthetic-practice.example",
+    GOOGLE_WORKSPACE_DOMAIN: "synthetic-practice.example",
+    GOOGLE_WORKSPACE_FROM_ADDRESS: "info@synthetic-practice.example",
+    GOOGLE_WORKSPACE_PLAN_CONFIRMED: "true",
+    TWILIO_ACCOUNT_SID: `AC${"1".repeat(32)}`,
+    TWILIO_AUTH_TOKEN: "synthetic-auth-token",
+    TWILIO_MESSAGING_SERVICE_SID: `MG${"2".repeat(32)}`,
+    TWILIO_VOICE_FROM_NUMBER: "+18645550100",
+    TWILIO_VOICE_FORWARD_TO_NUMBER: "+18645550101",
+    TWILIO_WEBHOOK_BASE_URL: "https://practice.example",
+    TWILIO_VOICE_API_KEY_SID: `SK${"8".repeat(32)}`,
+    TWILIO_VOICE_API_KEY_SECRET: "synthetic-voice-api-key-secret",
+    GHL_LOCATION_ID: "location-synthetic-1",
+    GHL_ACCESS_TOKEN: "synthetic-location-token",
+  });
+  const channelRouting = commsChannelRoutingFromEnv({
+    ODOS_COMMS_CHANNEL_ROUTES:
+      "voice=twilio, transactional-sms=twilio, marketing-sms=ghl, email=google-workspace",
+  });
+  const dispatch = createCommsDispatch(registrations, { channelRouting });
+
+  assert.equal(dispatch.providerFor("voice"), "twilio");
+  assert.equal(dispatch.providerFor("transactional-sms"), "twilio");
+  assert.equal(dispatch.providerFor("marketing-sms"), "ghl");
+  assert.equal(dispatch.providerFor("email"), "google-workspace");
+
+  const partial = createCommsDispatch(registrations, {
+    channelRouting: commsChannelRoutingFromEnv({
+      ODOS_COMMS_CHANNEL_ROUTES: "transactional-sms=twilio",
+    }),
+  });
+  assert.equal(partial.providerFor("transactional-sms"), "twilio");
+  assert.equal(partial.providerFor("voice"), undefined);
+  assert.equal(partial.providerFor("marketing-sms"), undefined);
+  assert.equal(partial.providerFor("email"), undefined);
+});
+
+test("communications channel routing reports invalid assignments while MCP boot continues", async () => {
+  const registrations = commsAdapterRegistrationsFromEnv({
+    ODOS_COMMS_PROVIDERS: "ghl",
+    GHL_LOCATION_ID: "location-synthetic-1",
+    GHL_ACCESS_TOKEN: "synthetic-location-token",
+  });
+  for (const route of ["voice=ghl", "transactional-sms=aws"]) {
+    const errors: string[] = [];
+    let serverBooted = false;
+    const dispatch = createCommsDispatch(registrations, {
+      channelRouting: commsChannelRoutingFromEnv({ ODOS_COMMS_CHANNEL_ROUTES: route }),
+      error: (message) => errors.push(message),
+    });
+
+    await startMcpAfterCommsInitialization(dispatch, async () => {
+      serverBooted = true;
+    });
+
+    assert.equal(serverBooted, true);
+    assert.equal(errors.length, 1);
+    assert.match(errors[0]!, new RegExp(route.replace("=", ".*"), "i"));
+    assert.match(errors[0]!, route.startsWith("voice") ? /calls capability/i : /not registered/i);
+    assert.match(errors[0]!, /continues starting/i);
+    assert.equal(dispatch.providerFor(route.startsWith("voice") ? "voice" : "transactional-sms"), undefined);
+  }
+});
+
+test("communications channel routing isolates synchronous provider validation failures from MCP boot", async () => {
+  const registrations = commsAdapterRegistrationsFromEnv({
+    ODOS_COMMS_PROVIDERS: "google-workspace",
+    GOOGLE_WORKSPACE_SERVICE_ACCOUNT_EMAIL: "odos@synthetic.iam.gserviceaccount.com",
+    GOOGLE_WORKSPACE_PRIVATE_KEY: "synthetic-private-key",
+    GOOGLE_WORKSPACE_DELEGATED_USER: "info@other-synthetic.example",
+    GOOGLE_WORKSPACE_DOMAIN: "synthetic-practice.example",
+    GOOGLE_WORKSPACE_FROM_ADDRESS: "info@synthetic-practice.example",
+    GOOGLE_WORKSPACE_PLAN_CONFIRMED: "true",
+  });
+  const errors: string[] = [];
+  let serverBooted = false;
+
+  const dispatch = createCommsDispatch(registrations, {
+    channelRouting: commsChannelRoutingFromEnv({ ODOS_COMMS_CHANNEL_ROUTES: "email=google-workspace" }),
+    error: (message) => errors.push(message),
+  });
+  await startMcpAfterCommsInitialization(dispatch, async () => {
+    serverBooted = true;
+  });
+
+  assert.equal(serverBooted, true);
+  assert.equal(dispatch.providerFor("email"), undefined);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0]!, /email.*google-workspace.*delegated user.*configured Workspace domain/i);
+  assert.match(errors[0]!, /continues starting/i);
+});
+
+test("communications channel routing caches provider capability probes", () => {
+  const registrations = commsAdapterRegistrationsFromEnv({
+    ODOS_COMMS_PROVIDERS: "google-workspace",
+    GOOGLE_WORKSPACE_SERVICE_ACCOUNT_EMAIL: "odos@synthetic.iam.gserviceaccount.com",
+    GOOGLE_WORKSPACE_PRIVATE_KEY: "synthetic-private-key",
+    GOOGLE_WORKSPACE_DELEGATED_USER: "info@synthetic-practice.example",
+    GOOGLE_WORKSPACE_DOMAIN: "synthetic-practice.example",
+    GOOGLE_WORKSPACE_FROM_ADDRESS: "info@synthetic-practice.example",
+    GOOGLE_WORKSPACE_PLAN_CONFIRMED: "false",
+  });
+  const warnings: string[] = [];
+
+  const dispatch = createCommsDispatch(registrations, {
+    channelRouting: commsChannelRoutingFromEnv({}),
+    warn: (message) => warnings.push(message),
+  });
+
+  assert.equal(dispatch.providerFor("email"), "google-workspace");
+  assert.equal(warnings.length, 1);
+});
+
+test("a lone Twilio registration keeps the legacy implicit routing when no table is configured", () => {
+  const registrations = commsAdapterRegistrationsFromEnv({
+    ODOS_COMMS_PROVIDERS: "twilio",
+    TWILIO_ACCOUNT_SID: `AC${"1".repeat(32)}`,
+    TWILIO_AUTH_TOKEN: "synthetic-auth-token",
+    TWILIO_MESSAGING_SERVICE_SID: `MG${"2".repeat(32)}`,
+    TWILIO_VOICE_FROM_NUMBER: "+18645550100",
+    TWILIO_VOICE_FORWARD_TO_NUMBER: "+18645550101",
+    TWILIO_WEBHOOK_BASE_URL: "https://practice.example",
+    TWILIO_VOICE_API_KEY_SID: `SK${"8".repeat(32)}`,
+    TWILIO_VOICE_API_KEY_SECRET: "synthetic-voice-api-key-secret",
+  });
+  const dispatch = createCommsDispatch(registrations, {
+    channelRouting: commsChannelRoutingFromEnv({}),
+  });
+
+  assert.equal(dispatch.providerFor("voice"), "twilio");
+  assert.equal(dispatch.providerFor("transactional-sms"), "twilio");
+  assert.equal(dispatch.providerFor("marketing-sms"), "twilio");
+  assert.equal(dispatch.providerFor("email"), undefined);
 });
 
 test("communications dispatch resolves the configured Google Workspace provider behind the suppression gate", () => {

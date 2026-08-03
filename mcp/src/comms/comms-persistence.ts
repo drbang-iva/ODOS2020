@@ -128,8 +128,10 @@ export async function persistStaffSentSms(
     category: ODOS_PATIENT_SMS_CATEGORY,
   };
   const fragment: Partial<Communication> = {
-    // Carrier callbacks may advance this; platform-backed sends keep live delivery state with their provider.
-    status: "in-progress",
+    // Carrier callbacks may advance callback-capable sends; GHL owns its downstream delivery state.
+    status: input.providerMessageIdentifierSystem === ODOS_GHL_MESSAGE_IDENTIFIER_SYSTEM
+      ? "completed"
+      : "in-progress",
     sent: deps.now?.() ?? new Date().toISOString(),
     identifier: [{
       system: input.providerMessageIdentifierSystem ?? ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM,

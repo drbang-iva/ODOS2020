@@ -89,6 +89,48 @@ test("conversation reads use caller-bound FHIR and expose bodies only to clinica
   }
 });
 
+test("a content-authorized GHL thread read is on-demand and never runs for the conversation list", async () => {
+  const fixture = await startServer({ providerName: "ghl" });
+  try {
+    const list = await request(fixture.base, "/communications/conversations?patient_id=synthetic-1", "GET", undefined, "clinician");
+    assert.equal(list.status, 200);
+    assert.deepEqual(fixture.threadReadRequests, []);
+
+    const desk = await request(
+      fixture.base,
+      "/communications/conversations?patient_id=synthetic-1&conversation_id=conversation-synthetic-1",
+      "GET",
+      undefined,
+      "front-desk",
+    );
+    assert.equal(desk.status, 200);
+    assert.deepEqual(fixture.threadReadRequests, []);
+
+    const clinician = await request(
+      fixture.base,
+      "/communications/conversations?patient_id=synthetic-1&conversation_id=conversation-synthetic-1",
+      "GET",
+      undefined,
+      "clinician",
+    );
+    assert.equal(clinician.status, 200);
+    const body = await clinician.json() as { conversations: ConversationSummary[] };
+    assert.deepEqual(body.conversations[0].messages, [{
+      id: "ghl-thread-message-1",
+      direction: "inbound",
+      status: "delivered",
+      occurredAt: "2026-08-03T13:00:00.000Z",
+      body: "Synthetic GHL thread content",
+    }]);
+    assert.deepEqual(fixture.threadReadRequests, [{
+      conversationId: "conversation-synthetic-1",
+      includeContent: true,
+    }]);
+  } finally {
+    await fixture.close();
+  }
+});
+
 test("front-desk SMS succeeds through masked FHIR responses and reaches a durable sent reservation", async () => {
   const fixture = await startServer();
   try {
@@ -182,6 +224,54 @@ test("staff SMS persists the selected provider message identifier", async () => 
       && identifier.value === "SM-synthetic"), true);
     assert.equal(fixture.persistedCommunications[0].identifier?.some((identifier) =>
       identifier.system === "https://odos2020.com/fhir/NamingSystem/twilio-message-sid"), false);
+    assert.equal(fixture.persistedCommunications[0].status, "completed");
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("new SMS uses transactional routing while a reply preserves its explicit thread provider", async () => {
+  const fixture = await startServer({
+    providers: ["twilio", "ghl"],
+    channelRoutes: { voice: "twilio", "transactional-sms": "ghl" },
+  });
+  try {
+    const first = await request(fixture.base, "/communications/messages", "POST", {
+      patientReference: PATIENT_REFERENCE,
+      body: "Synthetic new conversation",
+      idempotencyKey: "synthetic-route-new-0001",
+    }, "front-desk");
+    assert.equal(first.status, 200);
+
+    const reply = await request(fixture.base, "/communications/messages", "POST", {
+      provider: "twilio",
+      patientReference: PATIENT_REFERENCE,
+      body: "Synthetic thread reply",
+      idempotencyKey: "synthetic-route-reply-0001",
+    }, "front-desk");
+    assert.equal(reply.status, 200);
+
+    const calls = await request(fixture.base, "/communications/calls?limit=1", "GET", undefined, "front-desk");
+    assert.equal(calls.status, 200);
+    assert.deepEqual(fixture.adapterProviders, ["ghl", "twilio", "twilio"]);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("an unassigned channel role is reported as unavailable without resolving an adapter", async () => {
+  const fixture = await startServer({ providers: ["twilio"], channelRoutes: {} });
+  try {
+    const response = await request(fixture.base, "/communications/messages", "POST", {
+      patientReference: PATIENT_REFERENCE,
+      body: "Synthetic unavailable route",
+      idempotencyKey: "synthetic-route-none-0001",
+    }, "front-desk");
+    assert.equal(response.status, 409);
+    assert.deepEqual(await response.json(), {
+      error: 'Communications role "transactional-sms" is not configured for this practice.',
+    });
+    assert.deepEqual(fixture.adapterProviders, []);
   } finally {
     await fixture.close();
   }
@@ -260,17 +350,27 @@ test("call history applies the requested limit after filtering the provider wind
   }
 });
 
-async function startServer(options: { recordingEnabled?: boolean; recordingVisible?: boolean; callVisible?: boolean; failSmsCompletion?: boolean; providerName?: "twilio" | "ghl" } = {}) {
+async function startServer(options: {
+  recordingEnabled?: boolean;
+  recordingVisible?: boolean;
+  callVisible?: boolean;
+  failSmsCompletion?: boolean;
+  providerName?: "twilio" | "ghl";
+  providers?: Array<"twilio" | "ghl">;
+  channelRoutes?: Partial<Record<"voice" | "transactional-sms" | "marketing-sms" | "email", string>>;
+} = {}) {
   const providerCalls: string[] = [];
+  const adapterProviders: string[] = [];
   const callListRequests: Array<{ limit?: number }> = [];
   const listRequests: Array<{ includeContent?: boolean }> = [];
+  const threadReadRequests: Array<{ conversationId: string; includeContent?: boolean }> = [];
   const grants: OdosAuditEventRecord[] = [];
   const denials: OdosAuditEventRecord[] = [];
   const persistedCommunications: Communication[] = [];
   const authenticatedFhirs: unknown[] = [];
   const adapterFhirs: unknown[] = [];
   const conversation: ConversationSummary = {
-    id: PATIENT_REFERENCE,
+    id: "conversation-synthetic-1",
     patientReference: PATIENT_REFERENCE,
     updatedAt: "2026-08-02T15:00:00.000Z",
     messageCount: 1,
@@ -293,6 +393,16 @@ async function startServer(options: { recordingEnabled?: boolean; recordingVisib
     async listConversations(request) {
       listRequests.push(request ?? {});
       return [structuredClone(conversation)];
+    },
+    async getConversationMessages(conversationId, request) {
+      threadReadRequests.push({ conversationId, ...request });
+      return [{
+        id: "ghl-thread-message-1",
+        direction: "inbound",
+        status: "delivered",
+        occurredAt: "2026-08-03T13:00:00.000Z",
+        ...(request?.includeContent ? { body: "Synthetic GHL thread content" } : {}),
+      }];
     },
     async sendSms() {
       providerCalls.push("sendSms");
@@ -488,10 +598,20 @@ async function startServer(options: { recordingEnabled?: boolean; recordingVisib
       };
     },
     dispatch: {
-      providers: () => [options.providerName ?? "twilio"],
-      getAdapter: (_provider, callerFhir) => {
+      providers: () => options.providers ?? [options.providerName ?? "twilio"],
+      providerFor: (role) => options.channelRoutes === undefined
+        ? options.providerName ?? "twilio"
+        : options.channelRoutes[role],
+      getAdapter: (providerName, callerFhir) => {
+        adapterProviders.push(providerName);
         adapterFhirs.push(callerFhir);
-        return provider;
+        return {
+          ...provider,
+          name: providerName,
+          messageIdentifierSystem: providerName === "ghl"
+            ? "https://odos2020.com/fhir/NamingSystem/ghl-message-id"
+            : "https://odos2020.com/fhir/NamingSystem/twilio-message-sid",
+        };
       },
       initialize: async () => undefined,
     },
@@ -516,8 +636,10 @@ async function startServer(options: { recordingEnabled?: boolean; recordingVisib
   return {
     base: `http://127.0.0.1:${address.port}`,
     providerCalls,
+    adapterProviders,
     callListRequests,
     listRequests,
+    threadReadRequests,
     grants,
     denials,
     persistedCommunications,
