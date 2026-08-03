@@ -128,7 +128,19 @@ test("cup/disc definition endpoint serves practice-editable field options from t
   );
   assert.deepEqual(
     body.definition.fields.discAppearanceDescriptors.options?.map((option) => option.code),
-    ["notching", "inferior-thinning", "splinter-heme", "ppa", "deep", "pallor"],
+    [
+      "notching",
+      "inferior-thinning",
+      "splinter-heme",
+      "ppa",
+      "deep",
+      "pallor",
+      "tilted-disc",
+      "myopic-crescent",
+      "choroidal-crescent",
+      "disc-drusen",
+      "nerve-fiber-layer-defect",
+    ],
   );
 });
 

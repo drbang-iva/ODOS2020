@@ -175,7 +175,19 @@ test("glaucoma finding definitions seed cup/disc, IOP, and CH data while later f
   assert.deepEqual(fields.methodSource.options?.map((option) => option.code), ["78d", "90d", "20d", "direct"]);
   assert.deepEqual(
     fields.discAppearanceDescriptors.options?.map((option) => option.code),
-    ["notching", "inferior-thinning", "splinter-heme", "ppa", "deep", "pallor"],
+    [
+      "notching",
+      "inferior-thinning",
+      "splinter-heme",
+      "ppa",
+      "deep",
+      "pallor",
+      "tilted-disc",
+      "myopic-crescent",
+      "choroidal-crescent",
+      "disc-drusen",
+      "nerve-fiber-layer-defect",
+    ],
   );
   assert.deepEqual(
     fields.discAppearanceDescriptors.options
@@ -511,6 +523,51 @@ test("pure low-risk cup/disc path maps to H40.01x when no high-risk signal fires
     asymmetryHigh: 0.3,
   });
   assert.match(suggestion.suggestionEdge.explanation, /Low-risk glaucoma-suspect suggestion/);
+});
+
+test("new disc appearance descriptors preserve cup/disc and IOP risk tiers", () => {
+  const cupDisc = cupDiscDefinition();
+  const iop = iopDefinition();
+  const descriptorCodes = [
+    "tilted-disc",
+    "myopic-crescent",
+    "choroidal-crescent",
+    "disc-drusen",
+    "nerve-fiber-layer-defect",
+  ];
+  const iopFinding = captureGlaucomaFinding({
+    definition: iop,
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    findingInstanceId: "finding-iop-neutral-descriptors",
+    laterality: "OD",
+    value: { type: "quantity", value: 18, unit: "mmHg", system: "http://unitsofmeasure.org", code: "mm[Hg]" },
+    recordedAt: "2026-08-03T13:00:00.000Z",
+    provenance,
+  });
+  const riskTiers = (discAppearanceDescriptors: string[]) => ({
+    cupDisc: buildGlaucomaCupDiscSuggestion({
+      cupDiscRatio: 0.5,
+      discAppearanceDescriptors,
+      laterality: "OD",
+      patientReference: "Patient/p1",
+      encounterReference: "Encounter/e1",
+      findingDefinitionId: cupDisc.id,
+      findingInstanceId: `finding-cup-disc-${discAppearanceDescriptors.length ? "descriptors" : "baseline"}`,
+      recordedAt: "2026-08-03T13:00:00.000Z",
+      provenance,
+      findingDefinition: cupDisc,
+    }).suggestionEdge?.predicateExpression.riskTier,
+    iop: evaluateIopFindingRisk(iopFinding.finding, iop).riskTier,
+  });
+
+  assert.deepEqual(riskTiers(descriptorCodes), riskTiers([]));
+  assert.deepEqual(
+    getGlaucomaCupDiscDescriptorOptions(cupDisc)
+      .filter((option) => descriptorCodes.includes(option.code))
+      .map((option) => ({ code: option.code, highRiskDriver: option.highRiskDriver })),
+    descriptorCodes.map((code) => ({ code, highRiskDriver: undefined })),
+  );
 });
 
 test("cup/disc asymmetry is auto-computed across OD and OS findings at the 0.2 boundary", () => {
