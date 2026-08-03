@@ -5,6 +5,7 @@ import type {
   Claim,
   Condition,
   Coverage,
+  CoverageEligibilityResponse,
   DocumentReference,
   Encounter,
   MedicationRequest,
@@ -29,6 +30,7 @@ import {
   MIGRATION_TAG_CODE,
   MIGRATION_TAG_SYSTEM,
 } from "../legacy-import/access-policy.js";
+import { practiceDate } from "./clinic-summary.js";
 
 export const PATIENT_STICKY_NOTE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/patient-sticky-note";
 export const PATIENT_STICKY_NOTE_CODE = "patient-sticky-note";
@@ -86,9 +88,18 @@ export interface PatientOverviewMedication {
   sig?: string;
 }
 
+export type BillingWeatherState = "covered" | "high-deductible" | "self-pay" | "vip-cash" | "unknown";
+
+export interface PatientOverviewBillingWeather {
+  state: BillingWeatherState;
+  planName?: string;
+  deductibleRemainingCents?: number;
+}
+
 export interface PatientOverviewPayload {
   patient: Patient;
   insurance: string[];
+  billingWeather: PatientOverviewBillingWeather;
   unavailable?: { insurance?: string; medicationOrders?: string };
   stickyNote?: { id: string; text: string; editedAt?: string; editedBy?: string };
   snapshot: {
@@ -126,7 +137,7 @@ const ENCOUNTER_LEDGER_CONDITION_BATCH_SIZE = 50;
 export async function loadPatientOverview(
   fhir: OverviewFhir,
   patientId: string,
-  options: { filter?: VisitLedgerFilter; diagnosisSystem?: string; diagnosisCode?: string } = {},
+  options: { filter?: VisitLedgerFilter; diagnosisSystem?: string; diagnosisCode?: string; now?: string; timeZone?: string } = {},
 ): Promise<PatientOverviewPayload> {
   const patientReference = `Patient/${patientId}`;
   const filter = options.filter ?? "all";
@@ -148,6 +159,7 @@ export async function loadPatientOverview(
   const [
     patient,
     coverageResult,
+    eligibilityResult,
     stickyNote,
     problemConditions,
     procedures,
@@ -158,6 +170,7 @@ export async function loadPatientOverview(
   ] = await Promise.all([
     fhir.read<Patient>("Patient", patientId),
     optionalSearchAll<Coverage>(fhir, "Coverage", { beneficiary: patientReference, status: "active", _count: "100" }),
+    optionalSearchAll<CoverageEligibilityResponse>(fhir, "CoverageEligibilityResponse", { patient: patientReference, _count: "100", _sort: "-created" }),
     findPatientStickyNote(fhir, patientId, true),
     searchAll<Condition>(fhir, "Condition", { patient: patientId, category: "problem-list-item", _count: "100" }),
     searchAll<Procedure>(fhir, "Procedure", { patient: patientId, _count: "100", _sort: "-date" }),
@@ -181,6 +194,7 @@ export async function loadPatientOverview(
     return projectOverview({
       patient,
       coverages: coverageResult.resources,
+      eligibilityResponses: eligibilityResult.resources,
       unavailable: unavailableSources(coverageResult.available, medicationRequestResult.available),
       stickyNote,
       problemConditions,
@@ -190,6 +204,8 @@ export async function loadPatientOverview(
       smokingStatuses,
       encounters: [],
       encounterDiagnoses: [],
+      asOfDate: practiceDate(options.now ?? new Date().toISOString(), options.timeZone ?? "UTC"),
+      timeZone: options.timeZone,
     });
   }
   if (diagnosisEncounterIds) {
@@ -232,6 +248,7 @@ export async function loadPatientOverview(
   return projectOverview({
     patient,
     coverages: coverageResult.resources,
+    eligibilityResponses: eligibilityResult.resources,
     unavailable: unavailableSources(coverageResult.available, medicationRequestResult.available),
     stickyNote,
     problemConditions,
@@ -242,6 +259,8 @@ export async function loadPatientOverview(
     encounters,
     encounterDiagnoses,
     provenances,
+    asOfDate: practiceDate(options.now ?? new Date().toISOString(), options.timeZone ?? "UTC"),
+    timeZone: options.timeZone,
   });
 }
 
@@ -385,6 +404,7 @@ export function buildStickyNote(input: {
 function projectOverview(input: {
   patient: Patient;
   coverages: Coverage[];
+  eligibilityResponses: CoverageEligibilityResponse[];
   unavailable?: PatientOverviewPayload["unavailable"];
   stickyNote?: DocumentReference;
   problemConditions: Condition[];
@@ -395,6 +415,8 @@ function projectOverview(input: {
   encounters: Encounter[];
   encounterDiagnoses: Condition[];
   provenances?: Provenance[];
+  asOfDate: string;
+  timeZone?: string;
 }): PatientOverviewPayload {
   const problemConditions = input.problemConditions.filter((condition) =>
     hasConditionCategory(condition, "problem-list-item") && !hasStatus(condition.verificationStatus, "entered-in-error"),
@@ -438,6 +460,7 @@ function projectOverview(input: {
     insurance: [...input.coverages]
       .sort((left, right) => (left.order ?? Number.MAX_SAFE_INTEGER) - (right.order ?? Number.MAX_SAFE_INTEGER))
       .map((coverage) => coverage.payor?.[0]?.display ?? coverage.class?.find((row) => row.name)?.name ?? "Coverage recorded"),
+    billingWeather: deriveBillingWeather(input.coverages, input.eligibilityResponses, input.asOfDate, input.timeZone),
     ...(input.unavailable && Object.keys(input.unavailable).length ? { unavailable: input.unavailable } : {}),
     ...(input.stickyNote ? { stickyNote: stickyNoteSummary(input.stickyNote) } : {}),
     snapshot: {
@@ -487,6 +510,71 @@ function projectOverview(input: {
       (row) => `${row.system}|${row.code}`,
     ),
   };
+}
+
+export function deriveBillingWeather(
+  coverages: readonly Coverage[],
+  responses: readonly CoverageEligibilityResponse[],
+  asOfDate: string,
+  timeZone?: string,
+): PatientOverviewBillingWeather {
+  const coverage = [...coverages]
+    .filter((candidate) => candidate.status === "active" && candidate.id)
+    .sort((left, right) => (left.order ?? Number.MAX_SAFE_INTEGER) - (right.order ?? Number.MAX_SAFE_INTEGER))[0];
+  const planName = coverage
+    ? coverage.payor?.[0]?.display ?? coverage.class?.find((row) => row.name)?.name
+    : undefined;
+  if (!coverage?.id) return { state: "unknown" };
+
+  const coverageReference = `Coverage/${coverage.id}`;
+  const matching = responses.filter((response) => response.insurance?.some((insurance) =>
+    normalizedCoverageReference(insurance.coverage.reference) === coverageReference
+  ));
+  const response = matching[0];
+  if (!response || !Number.isFinite(Date.parse(response.created ?? ""))) {
+    return { state: "unknown", ...(planName ? { planName } : {}) };
+  }
+  const createdDate = practiceDate(response.created, timeZone ?? "UTC");
+  const insurance = response.insurance?.filter((candidate) =>
+    normalizedCoverageReference(candidate.coverage.reference) === coverageReference
+  );
+  if (
+    createdDate !== asOfDate
+    || response.status !== "active"
+    || response.outcome !== "complete"
+    || insurance?.length !== 1
+  ) {
+    return { state: "unknown", ...(planName ? { planName } : {}) };
+  }
+  const benefit = insurance[0];
+  const benefitStart = benefit.benefitPeriod?.start?.slice(0, 10);
+  const benefitEnd = benefit.benefitPeriod?.end?.slice(0, 10);
+  if ((benefitStart && benefitStart > asOfDate) || (benefitEnd && benefitEnd < asOfDate)) {
+    return { state: "unknown", ...(planName ? { planName } : {}) };
+  }
+  if (benefit.inforce === false) return { state: "self-pay", ...(planName ? { planName } : {}) };
+  if (benefit.inforce !== true) return { state: "unknown", ...(planName ? { planName } : {}) };
+
+  const deductibleValues = (benefit.item ?? [])
+    .flatMap((item) => (item.benefit ?? []).filter((entry) =>
+      /deductible/i.test(`${item.name ?? ""} ${item.description ?? ""} ${entry.type?.text ?? ""}`)
+      || entry.type?.coding?.some((coding) => coding.code?.toLowerCase() === "deductible")
+    ))
+    .flatMap((entry) => typeof entry.allowedMoney?.value === "number" ? [entry.allowedMoney.value] : []);
+  if (deductibleValues.length !== 1 || !Number.isFinite(deductibleValues[0]) || deductibleValues[0] < 0) {
+    return { state: "unknown", ...(planName ? { planName } : {}) };
+  }
+  const deductibleRemainingCents = Math.round(deductibleValues[0] * 100);
+  return {
+    state: deductibleRemainingCents === 0 ? "covered" : "high-deductible",
+    ...(planName ? { planName } : {}),
+    deductibleRemainingCents,
+  };
+}
+
+function normalizedCoverageReference(reference: string | undefined): string | undefined {
+  const match = reference?.match(/(?:^|\/)Coverage\/([^/?#]+)/);
+  return match?.[1] ? `Coverage/${match[1]}` : undefined;
 }
 
 function projectVisitDetail(input: {

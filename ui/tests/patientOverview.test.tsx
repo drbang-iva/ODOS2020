@@ -20,7 +20,7 @@ import { BalanceChips } from "../src/components/commercial/BalanceChips";
 import { CreditBankDepositSheet } from "../src/components/commercial/CreditBankDepositSheet";
 import { SaleSheet } from "../src/components/commercial/SaleSheet";
 import { ClinicHome } from "../src/scenes/ClinicHome";
-import { ConsultReportDraftPanel, PatientOverview } from "../src/scenes/PatientOverview";
+import { BillingWeatherReport, ConsultReportDraftPanel, PatientOverview } from "../src/scenes/PatientOverview";
 import { StartExam, type StartExamApi } from "../src/components/StartExam";
 
 test("Clinic flow and unsigned-chart clicks both route through PatientOverview", () => {
@@ -110,6 +110,9 @@ test("seeded overview renders real snapshot data, newest-first visits, and linke
 
 test("overview registry assigns the doctor panel tiers and hides commercial panels", () => {
   const panels = new Map(OVERVIEW_PANEL_REGISTRY.map((panel) => [panel.id, panel]));
+  assert.equal(panels.get("billing-weather")?.tier, 1);
+  assert.equal(panels.get("billing-weather")?.densityByRole.doctor, "full");
+  assert.equal(panels.get("billing-weather")?.densityByRole["front-desk"], "hidden");
   for (const id of ["patient-snapshot", "problem-list", "active-programs", "visit-ledger"] as const) {
     assert.equal(panels.get(id)?.tier, 1);
     assert.equal(panels.get(id)?.densityByRole.doctor, "full");
@@ -126,6 +129,52 @@ test("overview registry assigns the doctor panel tiers and hides commercial pane
     assert.equal(panels.get(id)?.densityByRole.doctor, "hidden");
     assert.equal(panels.get(id)?.densityByRole["front-desk"], "full");
   }
+});
+
+test("billing weather is doctor-only and defaults uncertain or malformed coverage to gray", () => {
+  const uncertain = fixture();
+  delete uncertain.billingWeather;
+  let doctor!: ReactTestRenderer;
+  act(() => {
+    doctor = create(<RoleProvider initialRole="doctor"><PatientOverview patient={patient} initialOverview={uncertain} /></RoleProvider>);
+  });
+  assert.equal(doctor.root.findByProps({ "data-testid": "billing-weather" }).props.className, "odos-billing-weather is-unknown");
+  assert.equal(doctor.root.findAllByProps({ "aria-label": "Billing weather: Coverage unknown" }).length, 1);
+  act(() => doctor.unmount());
+
+  const malformed = renderToStaticMarkup(<BillingWeatherReport weather={{ state: "covered" }} />);
+  assert.match(malformed, /Billing weather: Coverage unknown/);
+  assert.doesNotMatch(malformed, /Billing weather: Covered/);
+
+  const high = renderToStaticMarkup(<BillingWeatherReport weather={{ state: "high-deductible", planName: "Synthetic Plan", deductibleRemainingCents: 25_000 }} />);
+  assert.match(high, /Billing weather: High deductible/);
+  assert.match(high, /Synthetic Plan · \$250 deductible remaining/);
+
+  const fractional = renderToStaticMarkup(<BillingWeatherReport weather={{ state: "high-deductible", deductibleRemainingCents: 25_050 }} />);
+  assert.match(fractional, /\$250\.50 deductible remaining/);
+
+  const vip = renderToStaticMarkup(<BillingWeatherReport weather={{ state: "vip-cash", planName: "Synthetic cash relationship" }} />);
+  assert.match(vip, /Billing weather: VIP cash/);
+
+  let frontDesk!: ReactTestRenderer;
+  act(() => {
+    frontDesk = create(<RoleProvider initialRole="front-desk"><PatientOverview patient={patient} initialOverview={{ ...fixture(), billingWeather: { state: "covered", deductibleRemainingCents: 0 } }} /></RoleProvider>);
+  });
+  assert.equal(frontDesk.root.findAllByProps({ "data-testid": "billing-weather" }).length, 0);
+  act(() => frontDesk.unmount());
+});
+
+test("the header band contains one StartExam and keeps DOB and age in its identity row", () => {
+  let renderer!: ReactTestRenderer;
+  act(() => {
+    renderer = create(<RoleProvider initialRole="doctor"><PatientOverview patient={patient} initialOverview={fixture()} /></RoleProvider>);
+  });
+  const band = renderer.root.findByProps({ className: "odos-overview-band" });
+  assert.equal(band.findAllByType(StartExam).length, 1);
+  const html = renderToStaticMarkup(<RoleProvider initialRole="doctor"><PatientOverview patient={patient} initialOverview={fixture()} /></RoleProvider>);
+  assert.match(html, /odos-overview-band[\s\S]*Howard Enwright[\s\S]*DOB[\s\S]*4\/9\/1950[\s\S]*Age[\s\S]*\d+/);
+  assert.equal(renderer.root.findAllByType(StartExam).length, 1);
+  act(() => renderer.unmount());
 });
 
 test("doctor overview omits all commercial panels while front desk retains them", () => {

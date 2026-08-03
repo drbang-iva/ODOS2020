@@ -108,6 +108,8 @@ async function handlePatientOverview(req: Request, res: Response, deps: ClinicRo
       filter,
       ...(diagnosisSystem ? { diagnosisSystem } : {}),
       ...(diagnosisCode ? { diagnosisCode } : {}),
+      now: deps.now?.(),
+      timeZone: deps.timeZone,
     }));
   } catch (error) {
     console.error("odos-mcp: patient overview failed:", error);

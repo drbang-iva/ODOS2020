@@ -169,19 +169,22 @@ test("patient pin appears on the matching flow row and chart header, is ackable,
 
   let overviewRenderer!: ReactTestRenderer;
   await act(async () => { overviewRenderer = create(<ClinicOfficeShell location="Patient overview" initialMessages={[pinned]}><PatientOverview patient={patient} initialOverview={overviewFixture()} /></ClinicOfficeShell>); });
-  assert.equal(overviewRenderer.root.findAllByProps({ "aria-label": "Pinned Office note from Hannah Desk" }).length, 1);
+  assert.equal(overviewRenderer.root.findAllByProps({ "aria-label": "Pinned Office note from Hannah Desk: Insurance question" }).length, 1);
   await act(async () => { overviewRenderer.update(<ClinicOfficeShell location="Patient overview" initialMessages={[pinned]}><PatientOverview patient={{ ...patient, id: "patient-2" }} initialOverview={overviewFixture()} /></ClinicOfficeShell>); });
-  assert.equal(overviewRenderer.root.findAllByProps({ "aria-label": "Pinned Office note from Hannah Desk" }).length, 0);
+  assert.equal(overviewRenderer.root.findAllByProps({ "aria-label": "Pinned Office note from Hannah Desk: Insurance question" }).length, 0);
   await act(async () => { overviewRenderer.update(<ClinicOfficeShell key="seen" location="Patient overview" initialMessages={[seenPinned]}><PatientOverview patient={patient} initialOverview={overviewFixture()} /></ClinicOfficeShell>); });
-  assert.equal(overviewRenderer.root.findAllByProps({ className: "odos-office-pin-context is-seen" }).length, 1);
-  assert.equal(overviewRenderer.root.findByProps({ className: "odos-office-pin-context is-seen" }).findByType("summary").children.join(""), "📌 ✓");
+  assert.equal(overviewRenderer.root.findAllByProps({ className: "odos-office-pin-context is-seen is-band" }).length, 1);
+  assert.match(JSON.stringify(overviewRenderer.toJSON()), /📌/);
+  const bandPin = overviewRenderer.root.findByProps({ className: "odos-office-pin-context is-seen is-band" });
+  const bandLine = bandPin.findByType("summary").findByProps({ className: "odos-office-pin-line" });
+  assert.equal(bandLine.children.join(""), "Insurance question");
 
   let renderer!: ReactTestRenderer;
   await act(async () => {
     renderer = create(<ClinicOfficeShell location="Patient overview" initialMessages={[pinned]} officeApi={{ list: async () => [pinned], acknowledge: async () => seenPinned }}><PatientOverview patient={patient} initialOverview={overviewFixture()} /></ClinicOfficeShell>);
   });
-  await act(async () => renderer.root.findByProps({ className: "odos-office-pin-context" }).findByType("button").props.onClick());
-  assert.equal(renderer.root.findByProps({ className: "odos-office-pin-context is-seen" }).findByType("summary").children.join(""), "📌 ✓");
+  await act(async () => renderer.root.findByProps({ className: "odos-office-pin-context is-band" }).findByType("button").props.onClick());
+  assert.equal(renderer.root.findAllByProps({ className: "odos-office-pin-context is-seen is-band" }).length, 1);
 });
 
 test("Desk Office surface is a real DESK_CARDS card with three tiers and seen identity", () => {

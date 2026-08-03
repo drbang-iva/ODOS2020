@@ -58,6 +58,7 @@ export function cardDensity(cardId: ChartCardId, role: RoleId): CardDensity {
 }
 
 export type OverviewPanelId =
+  | "billing-weather"
   | "patient-snapshot"
   | "problem-list"
   | "active-programs"
@@ -80,6 +81,7 @@ export interface OverviewPanelRegistration {
 }
 
 export const OVERVIEW_PANEL_REGISTRY: OverviewPanelRegistration[] = [
+  { id: "billing-weather", tier: 1, densityByRole: { doctor: "full", tech: "hidden", "front-desk": "hidden", "practice-admin": "hidden" } },
   { id: "patient-snapshot", tier: 1, densityByRole: { doctor: "full", tech: "full", "front-desk": "full", "practice-admin": "full" } },
   { id: "problem-list", tier: 1, densityByRole: { doctor: "full", tech: "full", "front-desk": "full", "practice-admin": "full" } },
   { id: "active-programs", tier: 1, densityByRole: { doctor: "full", tech: "full", "front-desk": "full", "practice-admin": "full" } },
