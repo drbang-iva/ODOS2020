@@ -318,9 +318,26 @@ test("OH-1 seeds nine editable structures and persists explicit normal, abnormal
 
   const lids = anterior.find((definition) => definition.stableKey.endsWith(":lids-lashes"));
   assert.ok(lids);
-  const field = Object.values(lids.valueSchema.fields as Record<string, { valueType?: string; localCode?: string }>)
+  const field = Object.values(lids.valueSchema.fields as Record<string, {
+    valueType?: string;
+    localCode?: string;
+    options?: Array<{ code: string; display: string; priority?: boolean }>;
+  }>)
     .find((candidate) => candidate.valueType === "multi-select");
-  assert.ok(field?.localCode);
+  assert.ok(field?.localCode && field.options);
+  assert.equal(field.options.some((option) => option.code === "blepharitis"), false);
+  assert.equal(field.options.find((option) => option.code === "trichiasis")?.priority, true);
+  assert.equal(lids.diagnosisCandidates?.some((candidate) => candidate.trigger.kind === "option"
+    && candidate.trigger.anyOf.includes("blepharitis")), false);
+
+  const conjunctiva = anterior.find((definition) => definition.stableKey.endsWith(":conjunctiva"));
+  assert.ok(conjunctiva);
+  const conjunctivaField = Object.values(conjunctiva.valueSchema.fields as Record<string, {
+    valueType?: string;
+    options?: Array<{ code: string; priority?: boolean }>;
+  }>).find((candidate) => candidate.valueType === "multi-select");
+  assert.equal(conjunctivaField?.options?.find((option) => option.code === "papillae")?.priority, true);
+  assert.equal(conjunctivaField?.options?.find((option) => option.code === "follicles")?.priority, true);
   const captured = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, anterior), {
     authHeader: AUTH,
     params: { stableKey: lids.stableKey },

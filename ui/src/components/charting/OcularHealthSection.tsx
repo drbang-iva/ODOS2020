@@ -4,6 +4,7 @@ import { OdosWheel } from "../inputs/OdosWheel";
 import { OdosChips } from "../inputs/OdosChips";
 import { OdosSelect } from "../inputs/OdosSelect";
 import type { CustomFindingDefinition, CustomFindingField } from "./CustomFindingSection";
+import { EyeCopyButton } from "./EyeCopyButton";
 import { formatStepValue } from "./power-options";
 import type { SectionSaveStatus } from "./types";
 
@@ -272,7 +273,7 @@ function EyePanel({ eye, capture, field, gradeFields, normalTemplate, allowDefer
   const displayedNormalTemplate = capture.state === "normal" && capture.normalTemplate ? capture.normalTemplate : normalTemplate;
   return (
     <div className="rounded border border-white/10 bg-bg-deep/60 p-4">
-      <div className="flex items-center justify-between"><span className="text-sm font-semibold text-white">{eye}</span><button type="button" onClick={onCopy} className="rounded border border-white/15 px-2 py-1 text-xs text-white/55 hover:text-white">{eye === "OD" ? "Copy to OS →" : "← Copy to OD"}</button></div>
+      <div className="flex items-center justify-between"><span className="text-sm font-semibold text-white">{eye}</span><EyeCopyButton eye={eye} onCopy={onCopy} /></div>
       <div className="mt-3 flex flex-wrap gap-2">
         <StateButton label="Normal" selected={capture.state === "normal"} onClick={() => onState("normal")} />
         <StateButton label="Abnormal" selected={capture.state === "abnormal"} onClick={() => onState("abnormal")} />
@@ -333,7 +334,7 @@ function OptionList({ ariaLabel, options, allOptions, selected, onChange }: {
   return (
     <div className="space-y-3">
       <OdosChips
-        options={options.map((option) => ({ value: option.code, label: option.display }))}
+        options={options.map((option) => ({ value: option.code, label: findingChipLabel(option.display) }))}
         selected={selected.filter((code) => optionCodes.includes(code))}
         onChange={(nextOptions) => {
           const removedParents = optionCodes.filter((code) => selected.includes(code) && !nextOptions.includes(code));
@@ -353,7 +354,7 @@ function OptionList({ ariaLabel, options, allOptions, selected, onChange }: {
           <div key={option.code} className="ml-3 border-l border-white/10 pl-3">
             <div className="mb-2 text-xs text-white/45">{option.display} details</div>
             <OdosChips
-              options={children.map((child) => ({ value: child.code, label: child.display }))}
+              options={children.map((child) => ({ value: child.code, label: findingChipLabel(child.display) }))}
               selected={selected.filter((code) => childCodes.includes(code))}
               onChange={(nextChildren) => onChange(replaceSelectionGroup(selected, childCodes, nextChildren))}
               ariaLabel={`${option.display} details`}
@@ -363,6 +364,10 @@ function OptionList({ ariaLabel, options, allOptions, selected, onChange }: {
       })}
     </div>
   );
+}
+
+function findingChipLabel(display: string): string {
+  return display.replace(/(^|[\s(/-])\p{L}/gu, (wordStart) => wordStart.toUpperCase());
 }
 
 function replaceSelectionGroup(selected: string[], group: string[], nextGroup: string[]): string[] {

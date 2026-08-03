@@ -35,8 +35,8 @@ const ANTERIOR_STRUCTURES: StructureSeed[] = [
     key: "lids-lashes",
     display: "Lids & Lashes",
     normalTemplate: "Normal lid position and lashes; no MGD, blepharitis, or lesions.",
-    priority: ["blepharitis", "meibomian gland dysfunction", "chalazion"],
-    additional: ["hordeolum", "ptosis", "ectropion", "entropion", "trichiasis", "madarosis", "lagophthalmos", "lid lesion", "dermatochalasis", "floppy eyelid", "telangiectasia", "lid margin keratinization", "poliosis"],
+    priority: ["meibomian gland dysfunction", "chalazion", "trichiasis"],
+    additional: ["hordeolum", "ptosis", "ectropion", "entropion", "madarosis", "lagophthalmos", "lid lesion", "dermatochalasis", "floppy eyelid", "telangiectasia", "lid margin keratinization", "poliosis"],
     nested: [
       { parent: "Demodex", children: ["Flaking", "Collarettes"] },
       { parent: "Anterior Blepharitis", children: ["Seborrheic", "Ulcerative"] },
@@ -55,8 +55,8 @@ const ANTERIOR_STRUCTURES: StructureSeed[] = [
     key: "conjunctiva",
     display: "Conjunctiva",
     normalTemplate: "White and quiet; no injection or discharge.",
-    priority: ["injection", "pinguecula", "pterygium", "chemosis"],
-    additional: ["subconjunctival hemorrhage", "follicles", "nevus", "pigmentation", "concretion", "conjunctivochalasis", "episcleritis", "scleritis", "phlyctenule", "lymphangiectasia", "scleral injection", "scleral thinning", "nodule"],
+    priority: ["injection", "pinguecula", "pterygium", "chemosis", "papillae", "follicles"],
+    additional: ["subconjunctival hemorrhage", "nevus", "pigmentation", "concretion", "conjunctivochalasis", "episcleritis", "scleritis", "phlyctenule", "lymphangiectasia", "scleral injection", "scleral thinning", "nodule"],
   },
   {
     key: "tear-film",

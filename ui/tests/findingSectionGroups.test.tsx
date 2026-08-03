@@ -169,6 +169,7 @@ test("dry-eye category renders the eight-section battery in order while comprehe
         "dry-eye:staging",
       ],
     );
+    assert.equal(dryEyeRenderer.root.findAllByProps({ "data-testid": "section-visibility-context" }).length, 0);
     await act(async () => {
       comprehensiveRenderer = create(
         <RoleProvider>

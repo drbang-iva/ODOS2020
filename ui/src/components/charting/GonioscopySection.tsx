@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import { OdosSelect } from "../inputs/OdosSelect";
+import { EyeCopyButton } from "./EyeCopyButton";
 import type { SectionSaveStatus } from "./types";
 
 type Eye = "OD" | "OS";
@@ -24,6 +25,12 @@ const EYES: Eye[] = ["OD", "OS"];
 const QUADRANTS: Quadrant[] = ["superior", "nasal", "inferior", "temporal"];
 const OPTIONS: Structure[] = ["closed", "sl", "atm", "ptm", "ss", "cb"];
 const PIGMENT = ["0", "1+", "2+", "3+", "4+"];
+const MIRRORED_QUADRANTS: Record<Quadrant, Quadrant> = {
+  superior: "superior",
+  nasal: "temporal",
+  inferior: "inferior",
+  temporal: "nasal",
+};
 
 export function GonioscopySection({ patientReference, encounterReference, onSaved }: Props) {
   const [records, setRecords] = useState<RecordRow[]>([]);
@@ -78,6 +85,28 @@ export function GonioscopySection({ patientReference, encounterReference, onSave
     setDirtyRecords((current) => new Set(current).add(`${eye}:${quadrant}`));
   }
 
+  function copyEye(from: Eye) {
+    const to: Eye = from === "OD" ? "OS" : "OD";
+    const copied: RecordRow[] = records.filter((row) => row.eye === from).map((row) => ({
+      eye: to,
+      quadrant: MIRRORED_QUADRANTS[row.quadrant],
+      value: row.value,
+      entryMode: row.entryMode,
+    }));
+    const copiedQuadrants = new Set(copied.map((row) => row.quadrant));
+    setRecords((current) => [
+      ...current.filter((row) => row.eye !== to || !copiedQuadrants.has(row.quadrant)),
+      ...copied,
+    ]);
+    setDirtyRecords((current) => new Set([
+      ...current,
+      ...copied.map((row) => `${to}:${row.quadrant}`),
+    ]));
+    if (pigmentation[from] !== undefined) {
+      setPigmentation((current) => ({ ...current, [to]: current[from] }));
+    }
+  }
+
   async function save() {
     if (!records.length && !Object.keys(pigmentation).length && !note.trim()) {
       setError("Document at least one gonioscopy value before saving.");
@@ -123,7 +152,10 @@ export function GonioscopySection({ patientReference, encounterReference, onSave
               ? eyeRecords[0]?.value : "";
             return (
               <div key={eye} className="rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface)] p-4">
-                <div className="text-sm font-semibold text-[color:var(--odos-text)]">{eye}</div>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-semibold text-[color:var(--odos-text)]">{eye}</div>
+                  <EyeCopyButton eye={eye} onCopy={() => copyEye(eye)} />
+                </div>
                 <label className="mt-4 block text-xs uppercase tracking-widest text-[color:var(--odos-faint)]">
                   All quadrants
                   <select aria-label={`${eye} all quadrants`} value={uniform}
