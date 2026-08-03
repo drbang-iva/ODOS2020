@@ -32,9 +32,12 @@ Evaluated-by: Opus 5 — PASS
 Head-SHA: 0123456789abcdef0123456789abcdef01234567
 ```
 
-Once all other gates are green and the head is final, the PR author posts
-`@coderabbitai full review` and waits for CodeRabbit to submit a review at that
-exact head before requesting independent evaluation.
+Once all other gates are green and the head is final, the PR author hands off for
+independent evaluation. **The author does not post `@coderabbitai`** — requesting a
+CodeRabbit review is the evaluator's call, made once, at the final head, and only
+when the slice warrants an allowance. If a trigger returns a rate-limit or fair-usage
+notice instead of a review, stop and report it; never retry. See AGENTS.md
+"Author ≠ evaluator" for the full rule and the PR #313 incident that prompted it.
 
 The evaluator runs `scripts/eval-worktree.sh <PR#> --keep` to verify the exact
 head and surface all paginated inline comments plus review submissions. Before
