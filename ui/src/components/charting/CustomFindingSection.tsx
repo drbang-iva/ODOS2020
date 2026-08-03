@@ -7,6 +7,21 @@ import type { SectionSaveStatus } from "./types";
 
 type Eye = "OD" | "OS";
 
+export type FindingQualifierDefinition =
+  | { kind: "graded"; key: string; display: string; options: string[]; scheme?: string }
+  | { kind: "enum"; key: string; display: string; options: Array<{ code: string; display: string }> }
+  | { kind: "numeric"; key: string; display: string; min: number; max: number; step: number; unit?: string }
+  | { kind: "extent"; key: string; display: string };
+
+export interface ClockHourExtentValue {
+  from: number;
+  to: number;
+  clockwise: boolean;
+}
+
+export type FindingQualifierValue = number | string | ClockHourExtentValue;
+export type FindingDetails = Record<string, Record<string, FindingQualifierValue>>;
+
 export interface CustomFindingField {
   localCode: string;
   display: string;
@@ -17,7 +32,14 @@ export interface CustomFindingField {
   step?: number;
   inputControl?: "date" | "toggle";
   defaultValue?: number | string;
-  options?: Array<{ code: string; display: string; active: boolean; parentCode?: string; priority?: boolean }>;
+  options?: Array<{
+    code: string;
+    display: string;
+    active: boolean;
+    parentCode?: string;
+    priority?: boolean;
+    qualifiers?: FindingQualifierDefinition[];
+  }>;
   order: number;
   active: boolean;
 }

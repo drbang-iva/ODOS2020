@@ -3,7 +3,11 @@ import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-clie
 import { OdosWheel } from "../inputs/OdosWheel";
 import { OdosChips } from "../inputs/OdosChips";
 import { OdosSelect } from "../inputs/OdosSelect";
-import type { CustomFindingDefinition, CustomFindingField } from "./CustomFindingSection";
+import type {
+  CustomFindingDefinition,
+  CustomFindingField,
+  FindingDetails,
+} from "./CustomFindingSection";
 import { EyeCopyButton } from "./EyeCopyButton";
 import { formatStepValue } from "./power-options";
 import type { SectionSaveStatus } from "./types";
@@ -15,6 +19,7 @@ export interface EyeCapture {
   state?: ExamState;
   selections: string[];
   grades?: Record<string, number | string>;
+  findingDetails?: FindingDetails;
   other: string;
   normalTemplate?: string;
 }
@@ -23,6 +28,7 @@ interface HistoryRow {
   eye?: Eye;
   state?: ExamState;
   values: Array<{ code: string; value: number | string | string[] }>;
+  findingDetails?: FindingDetails;
   other?: string;
   normalTemplate?: string;
 }
@@ -108,7 +114,7 @@ export function OcularHealthSection({
       ...current,
       state,
       normalTemplate: undefined,
-      ...(state === "abnormal" ? {} : { selections: [] }),
+      ...(state === "abnormal" ? {} : { selections: [], findingDetails: undefined }),
     }));
   }
 
@@ -160,6 +166,9 @@ export function OcularHealthSection({
                 }];
               })),
             ],
+            ...(hasFindingDetails(capture.findingDetails)
+              ? { findingDetails: capture.findingDetails }
+              : {}),
             ...(capture.other.trim() ? { other: capture.other.trim() } : {}),
           }]];
         }));
@@ -234,7 +243,11 @@ export function OcularHealthSection({
                   normalTemplate={definition.normalTemplate}
                   allowDeferred={definition.allowDeferred === true}
                   onState={(state) => setExamState(definition, eye, state)}
-                  onSelections={(selections) => updateEye(definition.stableKey, eye, (current) => ({ ...current, selections }))}
+                  onSelections={(selections) => updateEye(definition.stableKey, eye, (current) => ({
+                    ...current,
+                    selections,
+                    findingDetails: selectedFindingDetails(current.findingDetails, selections),
+                  }))}
                   onGrade={(localCode, value) => updateEye(definition.stableKey, eye, (current) => ({ ...current, grades: { ...current.grades, [localCode]: value } }))}
                   onOther={(other) => updateEye(definition.stableKey, eye, (current) => ({ ...current, other }))}
                   onCopy={() => copyEye(definition, eye, eye === "OD" ? "OS" : "OD")}
@@ -392,6 +405,7 @@ function captureFromRows(definition: CustomFindingDefinition, rows: HistoryRow[]
     return [eye, {
       ...(row?.state ? { state: row.state } : {}),
       selections: Array.isArray(value) ? value : [],
+      ...(hasFindingDetails(row?.findingDetails) ? { findingDetails: row.findingDetails } : {}),
       grades: Object.fromEntries(grades.reduce<Array<[string, number | string]>>((values, grade) => {
         const gradeValue = row?.values.find((candidate) => candidate.code === grade.localCode)?.value;
         if (grade.valueType === "number") {
@@ -436,7 +450,10 @@ function emptyEye(): EyeCapture {
 }
 
 function touched(capture: EyeCapture): boolean {
-  return Boolean(capture.state || capture.other.trim() || capture.selections.length || Object.keys(capture.grades ?? {}).length);
+  return Boolean(
+    capture.state || capture.other.trim() || capture.selections.length ||
+    Object.keys(capture.grades ?? {}).length || hasFindingDetails(capture.findingDetails)
+  );
 }
 
 export function changedDefinitions<T extends Pick<CustomFindingDefinition, "stableKey">>(
@@ -456,6 +473,7 @@ function sameCapture(left: EyeCapture, right: EyeCapture): boolean {
     left.other === right.other &&
     left.normalTemplate === right.normalTemplate &&
     sameGrades(left.grades, right.grades) &&
+    sameFindingDetails(left.findingDetails, right.findingDetails) &&
     left.selections.length === right.selections.length &&
     left.selections.every((selection, index) => selection === right.selections[index]);
 }
@@ -479,7 +497,42 @@ export function pendingStateEyes(
 }
 
 export function copyEyeCapture(source: EyeCapture): EyeCapture {
-  return { ...source, selections: [...source.selections], grades: { ...source.grades } };
+  return {
+    ...source,
+    selections: [...source.selections],
+    grades: { ...source.grades },
+    ...(source.findingDetails
+      ? {
+          findingDetails: Object.fromEntries(Object.entries(source.findingDetails).map(([optionCode, details]) => [
+            optionCode,
+            Object.fromEntries(Object.entries(details).map(([qualifierKey, value]) => [
+              qualifierKey,
+              typeof value === "object" ? { ...value } : value,
+            ])),
+          ])),
+        }
+      : {}),
+  };
+}
+
+function sameFindingDetails(left: FindingDetails | undefined, right: FindingDetails | undefined): boolean {
+  return JSON.stringify(left ?? {}) === JSON.stringify(right ?? {});
+}
+
+function hasFindingDetails(value: FindingDetails | undefined): value is FindingDetails {
+  return value !== undefined && Object.values(value).some((details) => Object.keys(details).length > 0);
+}
+
+function selectedFindingDetails(
+  findingDetails: FindingDetails | undefined,
+  selections: string[],
+): FindingDetails | undefined {
+  if (!findingDetails) return undefined;
+  const selected = new Set(selections);
+  const next = Object.fromEntries(
+    Object.entries(findingDetails).filter(([optionCode]) => selected.has(optionCode)),
+  );
+  return hasFindingDetails(next) ? next : undefined;
 }
 
 export function applyAnteriorAllNormal(

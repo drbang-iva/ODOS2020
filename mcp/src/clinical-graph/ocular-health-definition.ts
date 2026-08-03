@@ -1,4 +1,4 @@
-import type { CustomFieldEntry } from "./custom-fields.js";
+import type { CustomFieldEntry, QualifierSeed } from "./custom-fields.js";
 import {
   buildClinicalFindingDefinition,
   type ClinicalFindingDefinition,
@@ -9,12 +9,18 @@ import {
 export const ANTERIOR_OCULAR_HEALTH_PREFIX = "ocular-health:anterior:";
 export const POSTERIOR_OCULAR_HEALTH_PREFIX = "ocular-health:posterior:";
 
-interface StructureSeed {
+export interface FindingSeed {
+  key: string;
+  display: string;
+  qualifiers?: QualifierSeed[];
+}
+
+export interface StructureSeed {
   key: string;
   display: string;
   normalTemplate: string;
-  priority: string[];
-  additional: string[];
+  priority: Array<string | FindingSeed>;
+  additional: Array<string | FindingSeed>;
   allowDeferred?: boolean;
   nested?: Array<{ parent: string; children: string[] }>;
   gradeFields?: Array<
@@ -294,7 +300,7 @@ export function buildPosteriorOcularHealthDefinitions(
   return buildOcularHealthDefinitions(POSTERIOR_STRUCTURES, POSTERIOR_OCULAR_HEALTH_PREFIX, provenance);
 }
 
-function buildOcularHealthDefinitions(
+export function buildOcularHealthDefinitions(
   structures: StructureSeed[],
   prefix: string,
   provenance: ClinicalGraphProvenance,
@@ -396,12 +402,15 @@ function abnormalField(structure: StructureSeed, structureIndex: number): Custom
   const nested = structure.nested ?? [];
   const parentLabels = new Set(nested.map((entry) => entry.parent.toLowerCase()));
   const base = [...structure.priority, ...structure.additional]
-    .filter((display) => !parentLabels.has(display.toLowerCase()))
-    .map((display, index) => ({
-      code: optionCode(display),
-      display,
+    .filter((finding) => !parentLabels.has(findingDisplay(finding).toLowerCase()))
+    .map((finding, index) => ({
+      code: findingCode(finding),
+      display: findingDisplay(finding),
       active: true,
       priority: index < structure.priority.length,
+      ...(typeof finding === "string" || !finding.qualifiers
+        ? {}
+        : { qualifiers: finding.qualifiers }),
     }));
   const nestedOptions = nested.flatMap(({ parent, children }) => {
     const parentCode = optionCode(parent);
@@ -425,6 +434,18 @@ function abnormalField(structure: StructureSeed, structureIndex: number): Custom
     order: 0,
     active: true,
   };
+}
+
+function findingDisplay(finding: string | FindingSeed): string {
+  return typeof finding === "string" ? finding : finding.display;
+}
+
+function findingCode(finding: string | FindingSeed): string {
+  if (typeof finding === "string") return optionCode(finding);
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(finding.key)) {
+    throw new Error(`Ocular-health finding key must be a slug: ${finding.key}.`);
+  }
+  return finding.key;
 }
 
 function optionCode(display: string): string {

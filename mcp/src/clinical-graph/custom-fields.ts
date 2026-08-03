@@ -16,6 +16,78 @@ import type {
 export const CUSTOM_FIELD_VALUE_TYPES = ["number", "select", "multi-select", "string"] as const;
 export type CustomFieldValueType = typeof CUSTOM_FIELD_VALUE_TYPES[number];
 
+export type QualifierSeed =
+  | {
+      kind: "graded";
+      key: string;
+      display: string;
+      options: string[];
+      scheme?: string;
+    }
+  | {
+      kind: "enum";
+      key: string;
+      display: string;
+      options: Array<{ code: string; display: string }>;
+    }
+  | {
+      kind: "numeric";
+      key: string;
+      display: string;
+      min: number;
+      max: number;
+      step: number;
+      unit?: string;
+    }
+  | { kind: "extent"; key: string; display: string };
+
+export interface ClockHourExtentValue {
+  from: number;
+  to: number;
+  clockwise: boolean;
+}
+
+export type FindingQualifierValue = number | string | ClockHourExtentValue;
+export type FindingDetails = Record<string, Record<string, FindingQualifierValue>>;
+
+const qualifierSeedSchema: z.ZodType<QualifierSeed> = z.union([
+  z.object({
+    kind: z.literal("graded"),
+    key: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+    display: z.string().trim().min(1).max(120),
+    options: z.array(z.string().trim().min(1).max(100)).min(1).max(100)
+      .refine((options) => new Set(options).size === options.length, "Graded qualifier options must be unique."),
+    scheme: z.string().trim().min(1).max(120).optional(),
+  }).strict(),
+  z.object({
+    kind: z.literal("enum"),
+    key: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+    display: z.string().trim().min(1).max(120),
+    options: z.array(z.object({
+      code: z.string().trim().min(1).max(100),
+      display: z.string().trim().min(1).max(120),
+    }).strict()).min(1).max(100)
+      .refine((options) => new Set(options.map((option) => option.code)).size === options.length, "Enum qualifier option codes must be unique."),
+  }).strict(),
+  z.object({
+    kind: z.literal("numeric"),
+    key: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+    display: z.string().trim().min(1).max(120),
+    min: z.number().finite(),
+    max: z.number().finite(),
+    step: z.number().positive().finite(),
+    unit: z.string().trim().min(1).max(40).optional(),
+  }).strict().refine((qualifier) => qualifier.min <= qualifier.max, "Qualifier minimum cannot exceed maximum."),
+  z.object({
+    kind: z.literal("extent"),
+    key: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+    display: z.string().trim().min(1).max(120),
+  }).strict(),
+]);
+
+const qualifierSeedsSchema = z.array(qualifierSeedSchema).min(1).max(100)
+  .refine((qualifiers) => new Set(qualifiers.map((qualifier) => qualifier.key)).size === qualifiers.length, "Qualifier keys must be unique per finding.");
+
 export interface CustomFieldEntry {
   localCode: string;
   display: string;
@@ -33,6 +105,7 @@ export interface CustomFieldEntry {
     active: boolean;
     parentCode?: string;
     priority?: boolean;
+    qualifiers?: QualifierSeed[];
   }>;
   order: number;
   active: boolean;
@@ -58,6 +131,7 @@ export const customFieldOptionInputSchema = z.object({
   active: z.boolean().default(true),
   parentCode: z.string().trim().min(1).max(100).optional(),
   priority: z.boolean().optional(),
+  qualifiers: qualifierSeedsSchema.optional(),
 }).strict();
 
 export const createCustomFieldInputSchema = z.object({
@@ -533,17 +607,85 @@ function readCustomOptions(value: unknown): CustomFieldEntry["options"] | undefi
   if (value.length === 0) return [];
   const options = value.flatMap((raw) => {
     const row = asRecord(raw);
+    const qualifiers = row.qualifiers === undefined ? undefined : readQualifierSeeds(row.qualifiers);
     return typeof row.code === "string" && typeof row.display === "string" && typeof row.active === "boolean"
+      && (row.qualifiers === undefined || qualifiers !== undefined)
       ? [{
           code: row.code,
           display: row.display,
           active: row.active,
           ...(typeof row.parentCode === "string" ? { parentCode: row.parentCode } : {}),
           ...(typeof row.priority === "boolean" ? { priority: row.priority } : {}),
+          ...(qualifiers ? { qualifiers } : {}),
         }]
       : [];
   });
   return options.length === value.length ? options : undefined;
+}
+
+function readQualifierSeeds(value: unknown): QualifierSeed[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const qualifiers = value.flatMap((raw): QualifierSeed[] => {
+    const row = asRecord(raw);
+    if (
+      typeof row.key !== "string" || typeof row.display !== "string" ||
+      !isSlug(row.key)
+    ) return [];
+    if (row.kind === "graded") {
+      if (
+        !isStringArray(row.options) || row.options.length === 0 ||
+        row.options.some((option) => option.length === 0) ||
+        new Set(row.options).size !== row.options.length
+      ) return [];
+      if (row.scheme !== undefined && typeof row.scheme !== "string") return [];
+      return [{
+        kind: "graded",
+        key: row.key,
+        display: row.display,
+        options: row.options,
+        ...(typeof row.scheme === "string" ? { scheme: row.scheme } : {}),
+      }];
+    }
+    if (row.kind === "enum") {
+      if (!Array.isArray(row.options) || row.options.length === 0) return [];
+      const options = row.options.flatMap((rawOption) => {
+        const option = asRecord(rawOption);
+        return typeof option.code === "string" && typeof option.display === "string"
+          ? [{ code: option.code, display: option.display }]
+          : [];
+      });
+      return options.length === row.options.length &&
+          new Set(options.map((option) => option.code)).size === options.length
+        ? [{ kind: "enum", key: row.key, display: row.display, options }]
+        : [];
+    }
+    if (row.kind === "numeric") {
+      const min = readFiniteNumber(row.min);
+      const max = readFiniteNumber(row.max);
+      const step = readFiniteNumber(row.step);
+      if (
+        min === undefined || max === undefined || step === undefined ||
+        min > max || step <= 0 ||
+        (row.unit !== undefined && typeof row.unit !== "string")
+      ) return [];
+      return [{
+        kind: "numeric",
+        key: row.key,
+        display: row.display,
+        min,
+        max,
+        step,
+        ...(typeof row.unit === "string" ? { unit: row.unit } : {}),
+      }];
+    }
+    return row.kind === "extent"
+      ? [{ kind: "extent", key: row.key, display: row.display }]
+      : [];
+  });
+  return qualifiers.length === value.length &&
+      new Set(qualifiers.map((qualifier) => qualifier.key)).size === qualifiers.length
+    ? qualifiers
+    : undefined;
 }
 
 function findComponent(observation: Observation, code: string): ObservationComponent | undefined {
@@ -557,6 +699,14 @@ function slugify(display: string): string {
 
 function readFiniteNumber(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function isSlug(value: string): boolean {
+  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value);
 }
 
 function readStringArray(value: unknown): string[] {
