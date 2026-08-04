@@ -10,6 +10,7 @@ export interface OdosChipsProps<T> {
   onChange: (selected: T[]) => void;
   ariaLabel: string;
   disabled?: boolean;
+  exclusive?: boolean;
   isEqual?: (left: T, right: T) => boolean;
 }
 
@@ -19,13 +20,14 @@ export function OdosChips<T>({
   onChange,
   ariaLabel,
   disabled = false,
+  exclusive = false,
   isEqual = Object.is,
 }: OdosChipsProps<T>) {
   function toggle(value: T) {
     const isSelected = selected.some((item) => isEqual(item, value));
     onChange(isSelected
       ? selected.filter((item) => !isEqual(item, value))
-      : [...selected, value]);
+      : exclusive ? [value] : [...selected, value]);
   }
 
   return (
