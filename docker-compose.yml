@@ -126,13 +126,12 @@ services:
     image: node:22-alpine
     profiles: ["agentops"]
     working_dir: /workspace
-    command: ["npm", "--prefix", "mcp", "run", "start"]
+    command: ["node", "mcp/dist/mcp/src/index.js"]
     environment:
       MEDPLUM_BASE_URL: http://medplum-server:8103/
       ODOS_POSTGRES_URL: postgresql://medplum:medplum@postgres:5432/medplum
       ODOS_AGENTOPS_RUNTIME: supervisor
       ODOS_WEASYPRINT_URL: http://weasyprint:8788
-      NODE_OPTIONS: --experimental-network-imports=false
     volumes:
       - ./:/workspace:ro
       - odos-mcp-node-modules:/workspace/mcp/node_modules:ro

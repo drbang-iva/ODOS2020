@@ -467,6 +467,9 @@ export function runVendorCanonicalShapePass(
   for (const finding of agentOpsRuntimeNetworkShapeFindings(files)) {
     findings.push(finding);
   }
+  for (const finding of composeNodeOptionsFindings(files)) {
+    findings.push(finding);
+  }
   for (const finding of bulkDataJobIdFindings(files)) {
     findings.push(finding);
   }
@@ -1232,6 +1235,36 @@ function agentOpsRuntimeNetworkShapeFindings(files: readonly { path: string; tex
           line: index + 1,
           ledgerRow: 45,
           lesson: "v0.55d Q6 lock amendment",
+        });
+      }
+    }
+  }
+  return findings;
+}
+
+function composeNodeOptionsFindings(files: readonly { path: string; text: string }[]): PreflightFinding[] {
+  const findings: PreflightFinding[] = [];
+  for (const file of files) {
+    if (displayPath(file.path) !== "docker-compose.yml") {
+      continue;
+    }
+    for (const [index, line] of file.text.split(/\r?\n/).entries()) {
+      const value = /^\s*(?:-\s*)?NODE_OPTIONS\s*(?::|=)\s*(.*?)\s*$/.exec(line)?.[1];
+      if (!value) {
+        continue;
+      }
+      const flags = value.match(/--[^\s"'=]+(?:=(?:"[^"]*"|'[^']*'|[^\s]+))?/g) ?? [];
+      for (const flag of flags) {
+        if (process.allowedNodeEnvironmentFlags.has(flag)) {
+          continue;
+        }
+        findings.push({
+          pass: "vendor-canonical-shapes",
+          severity: "hard-block",
+          code: "compose-node-options-runtime-unsupported",
+          message: `Docker Compose NODE_OPTIONS includes ${flag}, which Node ${process.versions.node} rejects before application startup.`,
+          source: displayPath(file.path),
+          line: index + 1,
         });
       }
     }

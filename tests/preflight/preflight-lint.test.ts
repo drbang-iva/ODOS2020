@@ -284,6 +284,25 @@ test("v0.55d preflight pass 4 hard-blocks AgentOps response and AIAST fixtures",
   assert.equal(network.findings[0]?.code, "agentops-dual-container-network-namespace-required");
 });
 
+test("preflight rejects Docker NODE_OPTIONS that would block Node before application startup", () => {
+  const invalid = runVendorCanonicalShapePass({
+    files: [{
+      path: "docker-compose.yml",
+      text: "    environment:\n      NODE_OPTIONS: --experimental-network-imports=false\n",
+    }],
+  });
+  assert.equal(invalid.status, "hard-block");
+  assert.equal(invalid.findings[0]?.code, "compose-node-options-runtime-unsupported");
+
+  const valid = runVendorCanonicalShapePass({
+    files: [{
+      path: "docker-compose.yml",
+      text: "    environment:\n      NODE_OPTIONS: --no-warnings --max-old-space-size=4096\n",
+    }],
+  });
+  assert.equal(valid.status, "pass");
+});
+
 test("v0.55e preflight pass 4 hard-blocks Bulk Data job ID, endpoint, and meta-security fixtures", () => {
   const predictableJobId = runVendorCanonicalShapePass({
     files: [
