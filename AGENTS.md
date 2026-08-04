@@ -223,41 +223,38 @@ default home base); independent verification/evaluation → Codex (high). Advice
 is Sonnet. Default down, escalate up; flag mid-session drift plainly.
 
 **Author ≠ evaluator, always** — the model/tool that wrote code never grades its own
-code. Fable codes → Codex evaluates. Codex codes → Fable/Opus evaluates. Scope: this
-gate fires on a shippable coding slice (PR-worthy diff), not brainstorming or
-micro-decisions.
+code. Fable codes → Codex evaluates. Codex codes → Fable/Opus evaluates. CodeRabbit
+(when present on the PR) is a cheap first pass, never a substitute for the model-level
+eval, never the last word on correctness-critical code. Scope: this gate fires on a
+shippable coding slice (PR-worthy diff), not brainstorming or micro-decisions.
+**Requesting a CodeRabbit review is the EVALUATOR's call, never the author's.** At the
+final head, the author hands off for evaluation and does **not** post `@coderabbitai`.
+The evaluator decides whether the slice warrants an allowance (always for
+claims/billing, PHI/auth/RBAC/audit, clinical data, legacy import/migration, outbound
+patient comms; never for docs-only, test-only, or CI/config), posts the single trigger,
+and adjudicates whatever comes back.
 
-**Review bots: GREPTILE + PR-AGENT. CodeRabbit is RETIRED** — suspended account-wide
-2026-08-04 for cost. Do not trigger it, wait for it, retry it, or note its absence.
-There is no trigger to post, no allowance to budget, and no `--ack-no-bot-review`
-exception to record; both bots auto-run on every PR. (The prior selective-triggering
-policy, and the PR #313 incident where its wording produced eight triggers in sixteen
-minutes and zero reviews, are historical — the tool it governed is gone.)
-
-The bots are a cheap first pass, never a substitute for the model-level eval and never
-the last word on correctness-critical code.
-
-**Re-poll at the FINAL head before declaring ready.** Greptile takes 7–13 minutes;
-PR-Agent ~1 minute. A bundle written before Greptile finishes will report "zero threads"
-and a green check while a substantive review is still in flight — this happened on three
-separate PRs on 2026-08-04. **Zero threads on an `in_progress` check means *pending*, not
-*clean*.** Check `gh pr checks <N>` plus an unresolved-thread count, not the check
-summary alone.
-
-**Adjudicate every finding ALREADY PRESENT on the PR before requesting evaluation, not
-after.** Reply to each existing thread — fix it, or say why not — before handing off.
-Added 2026-08-02 after a Major/Stability finding on PR #297 (a boot-blocking scoping
-defect, with the fix attached) went unanswered through a fixback push; the independent
-evaluator then spent a full round rediscovering it. A finding already sitting on the PR
-that goes unread is the single most avoidable failure in this pipeline.
-
-**A green suite is not evidence.** Three independent evals on 2026-08-04 returned FAIL
-behind fully green suites. The recurring shape: a test that stubs the very function under
-question, or a live proof that exercises only the failure branch. Prove your slice's
-headline capability by real invocation, and state plainly which branch your evidence
-actually took.
+**If a CodeRabbit trigger returns a rate-limit or fair-usage notice instead of a review,
+STOP. Do not retry. Do not re-trigger on the next push.** Report
+`CodeRabbit unavailable — <the notice text>` in the sealed bundle and hand off anyway;
+the evaluator records the constrained `--ack-no-bot-review` exception. Retrying a
+throttled trigger consumes a slot from a rolling window and returns nothing — it makes
+the next PR's review *less* likely, not more. Added 2026-08-03 after PR #313, where the
+prior wording ("post `@coderabbitai full review` and wait for that exact-head review")
+produced **eight triggers in sixteen minutes, zero reviews**, on an account already
+under adaptive fair-usage limits. The instruction, not the agent, was the defect.
 
 Nothing is "done" until an independent evaluation actually ran.
+
+**The author adjudicates every CodeRabbit finding ALREADY PRESENT on the PR before
+requesting evaluation, not after.** Reply to each existing thread — fix it, or say why
+not — before handing off. (Findings from a review the *evaluator* triggers after handoff
+are the evaluator's to adjudicate.) Added 2026-08-02 after a Major/Stability finding
+CodeRabbit posted on PR #297 (the boot-blocking scoping defect, with the fix attached)
+went unanswered through a fixback push; the independent evaluator then spent a full round
+rediscovering it from scratch. A finding already sitting on the PR that goes unread is
+the single most avoidable failure in this pipeline — cheaper to close before the eval
+than to let the eval re-find it.
 
 **Every build→evaluate handoff returns a sealed bundle, not a transcript** — summary,
 files touched, checks run + the real command output (never a bare "tests pass"),
