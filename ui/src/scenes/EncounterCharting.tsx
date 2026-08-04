@@ -76,6 +76,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   });
   const [procedureCatalog, setProcedureCatalog] = useState<ProcedureCatalogResponse>({ definitions: [] });
   const [discipline, setDiscipline] = useState<SchedulingDiscipline>();
+  const [encounterRecordedAt, setEncounterRecordedAt] = useState<string>();
   const [creatingSection, setCreatingSection] = useState(false);
   const [savingSection, setSavingSection] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(sidebarExpandedForSession);
@@ -173,12 +174,14 @@ export function EncounterCharting({ patient, encounterId }: Props) {
 
   useEffect(() => {
     let cancelled = false;
+    setEncounterRecordedAt(undefined);
     fhir.read<Encounter>("Encounter", encounterId)
       .then((encounter) => {
         const code = encounter.serviceType?.coding?.find((coding) =>
           coding.system === ODOS_DISCIPLINE_SYSTEM
         )?.code;
         if (cancelled) return;
+        setEncounterRecordedAt(encounter.period?.start ?? encounter.period?.end ?? encounter.meta?.lastUpdated);
         if (code === "eyecare" || code === "aesthetics") {
           setDiscipline(code);
           if (code === "aesthetics") {
@@ -641,6 +644,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
               focusedStableKey={activeSection}
               patientReference={patientReference}
               encounterReference={encounterReference}
+              encounterRecordedAt={encounterRecordedAt}
               onSaved={(status, stableKeys) => stableKeys.forEach((stableKey) => markSaved(stableKey as ChartSectionId, status))}
             />
           )}
@@ -650,6 +654,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
               focusedStableKey={tearFilmDefinition.stableKey}
               patientReference={patientReference}
               encounterReference={encounterReference}
+              encounterRecordedAt={encounterRecordedAt}
               onSaved={(status, stableKeys) => {
                 stableKeys.forEach((stableKey) => markSaved(stableKey as ChartSectionId, status));
                 markSaved("dry-eye:tear-stability", status);
@@ -665,6 +670,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
               focusedStableKey={dryEyeDefinition.stableKey}
               patientReference={patientReference}
               encounterReference={encounterReference}
+              encounterRecordedAt={encounterRecordedAt}
               onSaved={(status, stableKeys) => stableKeys.forEach((stableKey) =>
                 markSaved(stableKey as ChartSectionId, status)
               )}
