@@ -43,6 +43,11 @@ interface PriorReading {
   value: FindingQualifierValue | "present";
 }
 
+interface CurrentHistory {
+  identity: string;
+  rowsByStableKey: Record<string, HistoryRow[]>;
+}
+
 type PriorFindingReadings = Record<string, {
   presence?: PriorReading;
   qualifiers: Record<string, PriorReading>;
@@ -78,46 +83,40 @@ export function OcularHealthSection({
 }: Props) {
   const [captures, setCaptures] = useState<Record<string, Record<Eye, EyeCapture>>>(() => emptyCaptures(definitions));
   const [pristine, setPristine] = useState<Record<string, Record<Eye, EyeCapture>>>(() => emptyCaptures(definitions));
+  const [currentHistory, setCurrentHistory] = useState<CurrentHistory | null>(null);
   const [priors, setPriors] = useState<Record<string, PriorReadings>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const definitionKey = useMemo(() => definitions.map((definition) => definition.stableKey).join("|"), [definitions]);
+  const historyIdentity = `${patientReference}\u0000${encounterReference}\u0000${definitionKey}`;
 
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
     setError(null);
+    setCurrentHistory(null);
+    setPriors({});
     const base = apiBase ?? clinicalGraphApiBase();
     Promise.all(definitions.map(async (definition) => {
       const endpoint = `${base}/clinical-graph/custom/${encodeURIComponent(definition.stableKey)}/history`;
       const currentQuery = new URLSearchParams({ patient: patientReference, encounter: encounterReference });
-      const patientQuery = new URLSearchParams({ patient: patientReference });
-      const [currentResponse, patientResponse] = await Promise.all([
-        fetchImpl(`${endpoint}?${currentQuery}`, { headers: authHeaders(), signal: controller.signal }),
-        fetchImpl(`${endpoint}?${patientQuery}`, { headers: authHeaders(), signal: controller.signal }),
-      ]);
+      const currentResponse = await fetchImpl(`${endpoint}?${currentQuery}`, { headers: authHeaders(), signal: controller.signal });
       const currentBody = await currentResponse.json() as { rows?: HistoryRow[]; error?: string };
-      const patientBody = await patientResponse.json() as { rows?: HistoryRow[]; error?: string };
       if (!currentResponse.ok) throw new Error(currentBody.error ?? `${definition.display} history failed: ${currentResponse.status}`);
-      if (!patientResponse.ok) throw new Error(patientBody.error ?? `${definition.display} prior history failed: ${patientResponse.status}`);
       const currentRows = currentBody.rows ?? [];
-      const priorRows = rowsBeforeEncounter(
-        excludeCurrentEncounterRows(patientBody.rows ?? [], currentRows),
-        encounterRecordedAt ?? earliestRecordedAt(currentRows),
-      );
-      return [
-        definition.stableKey,
-        captureFromRows(definition, currentRows),
-        priorReadingsFromRows(definition, priorRows),
-      ] as const;
+      return [definition.stableKey, currentRows, captureFromRows(definition, currentRows)] as const;
     }))
       .then((rows) => {
-        const hydrated = Object.fromEntries(rows.map(([stableKey, capture]) => [stableKey, capture]));
+        if (controller.signal.aborted) return;
+        const hydrated = Object.fromEntries(rows.map(([stableKey, , capture]) => [stableKey, capture]));
         setCaptures(hydrated);
         setPristine(hydrated);
-        setPriors(Object.fromEntries(rows.map(([stableKey, , prior]) => [stableKey, prior])));
+        setCurrentHistory({
+          identity: historyIdentity,
+          rowsByStableKey: Object.fromEntries(rows.map(([stableKey, currentRows]) => [stableKey, currentRows])),
+        });
       })
       .catch((caught) => {
         if ((caught as Error).name !== "AbortError") setError(caught instanceof Error ? caught.message : String(caught));
@@ -126,7 +125,42 @@ export function OcularHealthSection({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [definitionKey, patientReference, encounterReference, encounterRecordedAt, apiBase, fetchImpl]);
+  }, [historyIdentity, apiBase, fetchImpl]);
+
+  useEffect(() => {
+    const encounterTimestamp = encounterRecordedAt ? Date.parse(encounterRecordedAt) : Number.NaN;
+    if (currentHistory?.identity !== historyIdentity || !Number.isFinite(encounterTimestamp)) {
+      setPriors({});
+      return;
+    }
+    const controller = new AbortController();
+    const base = apiBase ?? clinicalGraphApiBase();
+    Promise.all(definitions.map(async (definition) => {
+      try {
+        const endpoint = `${base}/clinical-graph/custom/${encodeURIComponent(definition.stableKey)}/history`;
+        const patientQuery = new URLSearchParams({ patient: patientReference });
+        const response = await fetchImpl(`${endpoint}?${patientQuery}`, { headers: authHeaders(), signal: controller.signal });
+        const body = await response.json() as { rows?: HistoryRow[]; error?: string };
+        if (!response.ok) throw new Error(body.error ?? `${definition.display} prior history failed: ${response.status}`);
+        if (body.rows !== undefined && !Array.isArray(body.rows)) throw new Error(`${definition.display} prior history was malformed.`);
+        const priorRows = rowsBeforeEncounter(
+          excludeCurrentEncounterRows(body.rows ?? [], currentHistory.rowsByStableKey[definition.stableKey] ?? []),
+          encounterRecordedAt,
+        );
+        return [definition.stableKey, priorReadingsFromRows(definition, priorRows)] as const;
+      } catch (caught) {
+        if ((caught as Error).name === "AbortError") throw caught;
+        return [definition.stableKey, emptyPriorReadings()] as const;
+      }
+    }))
+      .then((rows) => {
+        if (!controller.signal.aborted) setPriors(Object.fromEntries(rows));
+      })
+      .catch((caught) => {
+        if ((caught as Error).name !== "AbortError") setPriors({});
+      });
+    return () => controller.abort();
+  }, [historyIdentity, currentHistory, encounterRecordedAt, apiBase, fetchImpl]);
 
   useEffect(() => {
     if (!focusedStableKey) return;
@@ -664,7 +698,7 @@ function NumericFindingQualifier({ qualifier, value, prior, onChange }: {
 
 function PriorValue({ reading, value }: { reading: PriorReading; value: string }) {
   return (
-    <div aria-hidden="true" data-prior-reading="" className="mt-1 text-xs font-normal text-[color:var(--odos-faint)]">
+    <div data-prior-reading="" className="mt-1 text-xs font-normal text-[color:var(--odos-faint)]">
       Prior: {value} · {formatDate(reading.recordedAt)}
     </div>
   );
@@ -783,14 +817,6 @@ function excludeCurrentEncounterRows(patientRows: HistoryRow[], currentRows: His
 
 function historyRowSignature(row: HistoryRow): string {
   return JSON.stringify(row);
-}
-
-function earliestRecordedAt(rows: HistoryRow[]): string | undefined {
-  return rows.reduce<string | undefined>((earliest, row) => {
-    const timestamp = Date.parse(row.recordedAt);
-    if (!Number.isFinite(timestamp)) return earliest;
-    return earliest === undefined || timestamp < Date.parse(earliest) ? row.recordedAt : earliest;
-  }, undefined);
 }
 
 function rowsBeforeEncounter(rows: HistoryRow[], encounterRecordedAt: string | undefined): HistoryRow[] {
