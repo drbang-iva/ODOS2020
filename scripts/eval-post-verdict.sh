@@ -69,8 +69,8 @@ command -v gh >/dev/null 2>&1 || die "required command not found: gh"
 command -v git >/dev/null 2>&1 || die "required command not found: git"
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=scripts/lib/coderabbit-review-status.sh
-source "$script_dir/lib/coderabbit-review-status.sh"
+# shellcheck source=scripts/lib/bot-review-status.sh
+source "$script_dir/lib/bot-review-status.sh"
 repo_root="$(git -C "$script_dir" rev-parse --show-toplevel)"
 repo_name="${GH_REPO:-$(cd "$repo_root" && gh repo view --json nameWithOwner --jq .nameWithOwner)}"
 head_sha="$(gh pr view "$pr_number" --repo "$repo_name" --json headRefOid --jq .headRefOid)"
@@ -106,14 +106,14 @@ else
   done
 fi
 
-load_coderabbit_review_status
-print_coderabbit_review_status
-# shellcheck disable=SC2154 # Assigned by load_coderabbit_review_status.
-if [[ "$coderabbit_review_at_head" == true && "$ack_no_bot_review" == true ]]; then
-  die "--ack-no-bot-review is invalid because CodeRabbit submitted $coderabbit_head_state at $head_sha; omit the flag"
+load_bot_review_status
+print_bot_review_status
+# shellcheck disable=SC2154 # Assigned by load_bot_review_status.
+if [[ "$bot_review_at_head" == true && "$ack_no_bot_review" == true ]]; then
+  die "--ack-no-bot-review is invalid because $bot_review_head_source provided a $bot_review_head_evidence at $head_sha; omit the flag"
 fi
-if [[ "$coderabbit_review_at_head" == false && "$ack_no_bot_review" == false ]]; then
-  die "no CodeRabbit review exists at $head_sha; the green CodeRabbit check is not evidence of a review. Re-trigger with '@coderabbitai full review' and wait for it, or pass --ack-no-bot-review to record a deliberate decision to proceed without one."
+if [[ "$bot_review_at_head" == false && "$ack_no_bot_review" == false ]]; then
+  die "no bot review exists at $head_sha -- neither a review submission nor a completed bot check run. Greptile takes 7-13 minutes; if it is still in_progress, wait and re-run. Otherwise pass --ack-no-bot-review to record a deliberate decision to proceed without one."
 fi
 
 marker="Evaluated-by: $model — $verdict
