@@ -60,15 +60,12 @@ blocks unless the evaluator passes `--ack-no-bot-review`. That flag records
 exact-head bot review does exist, so it cannot become boilerplate. `--dry-run`
 enforces and reports this bot-review acknowledgment without posting a marker.
 
-> **⚠️ Known gap, 2026-08-04 — needs a code change, not a doc change.**
-> `eval-post-verdict.sh` detects the bot review by looking for **CodeRabbit**
-> specifically. CodeRabbit is retired, so that check now finds nothing on every
-> PR and forces `--ack-no-bot-review` every time — turning a deliberate gate into
-> the boilerplate it was explicitly designed not to become, while a real Greptile
-> review sits on the PR unrecognised. The script must be taught to accept a
-> Greptile (or PR-Agent) review at the exact head. Until then, treat an
-> `--ack-no-bot-review` marker on this repo as **unverified**, not as evidence
-> that no bot reviewed the code.
+The check recognises any configured review bot — currently Greptile and PR-Agent
+— by either a review submission at the exact head or a completed bot check run at
+that head. A bot with nothing to say posts no review submission, so the check-run
+signal is what distinguishes "ran clean" from "never ran". Adding a bot is two
+lines in `scripts/lib/bot-review-status.sh`.
+
 
 Only Fable or Opus can issue the final verdict. Any new commit requires a new
 marker for the new head. The `evaluated` label is an explicit operator override
