@@ -121,9 +121,15 @@ export function evaluateMappingTrigger(trigger: unknown, finding: FindingInstanc
   }
   if (parsed.data.kind === "qualifier") {
     if (finding.value.type !== "components") return false;
+    const components = finding.value.components;
+    const optionCode = `${parsed.data.field}::${parsed.data.option}`;
+    if (!components.some((component) =>
+      component.value === true &&
+      (component.code === optionCode || component.code.endsWith(`_${optionCode}`))
+    )) return false;
     const prefix = `${parsed.data.field}::${parsed.data.option}::`;
     return Object.entries(parsed.data.qualifiers).every(([qualifier, expected]) =>
-      finding.value.type === "components" && finding.value.components.some((component) =>
+      components.some((component) =>
         (component.code === `${prefix}${qualifier}` || component.code.endsWith(`_${prefix}${qualifier}`)) &&
         component.value === expected
       )
@@ -149,12 +155,38 @@ export function evaluateMappingTrigger(trigger: unknown, finding: FindingInstanc
 }
 
 export function matchingQualifierGroups(trigger: MappingTrigger, finding: FindingInstance): string[] {
-  if (!evaluateMappingTrigger(trigger, finding)) return [];
-  if (trigger.kind === "qualifier") return [qualifierGroup(trigger.field, trigger.option)];
-  if (trigger.kind === "allOf") {
-    return trigger.triggers.flatMap((nested) => matchingQualifierGroups(nested, finding));
+  return matchingMappingGroups(trigger, finding).qualifierGroups;
+}
+
+export function matchingMappingGroups(
+  trigger: MappingTrigger,
+  finding: FindingInstance,
+): { optionGroups: string[]; qualifierGroups: string[] } {
+  if (!evaluateMappingTrigger(trigger, finding)) return { optionGroups: [], qualifierGroups: [] };
+  switch (trigger.kind) {
+    case "option":
+      return {
+        optionGroups: trigger.anyOf
+          .filter((option) => evaluateMappingTrigger({ ...trigger, anyOf: [option] }, finding))
+          .map((option) => qualifierGroup(trigger.field, option)),
+        qualifierGroups: [],
+      };
+    case "qualifier":
+      return { optionGroups: [], qualifierGroups: [qualifierGroup(trigger.field, trigger.option)] };
+    case "allOf": {
+      const nestedGroups = trigger.triggers.map((nested) => matchingMappingGroups(nested, finding));
+      return {
+        optionGroups: nestedGroups.flatMap((groups) => groups.optionGroups),
+        qualifierGroups: nestedGroups.flatMap((groups) => groups.qualifierGroups),
+      };
+    }
+    case "always":
+    case "abnormal":
+    case "numeric":
+      return { optionGroups: [], qualifierGroups: [] };
+    default:
+      return assertUnreachable(trigger);
   }
-  return [];
 }
 
 export function qualifierGroup(field: string, option: string): string {
@@ -218,4 +250,8 @@ function slugify(value: string): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function assertUnreachable(value: never): never {
+  throw new Error(`Unsupported diagnosis mapping trigger: ${JSON.stringify(value)}`);
 }

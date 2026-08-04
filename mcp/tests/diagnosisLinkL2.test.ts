@@ -22,6 +22,7 @@ import { FhirFindingDefinitionStore } from "../src/clinical-graph/finding-defini
 import {
   createDiagnosisCandidateSchema,
   evaluateMappingTrigger,
+  matchingQualifierGroups,
   updateDiagnosisCandidateSchema,
 } from "../src/clinical-graph/diagnosis-mapping.js";
 import type { FindingInstance } from "../src/clinical-graph/glaucoma-suspect.js";
@@ -476,6 +477,139 @@ test("I4 ocular records without findingDetails keep the pre-qualifier candidate 
   assert.deepEqual(await ocularCandidateKeys("ocular-health:anterior:cornea", {
     OD: { selections: ["keratoconus"] },
   }), [["keratoconus_stable", "keratoconus_unstable", "keratoconus_unspecified_stability"]]);
+});
+
+test("I5 qualifier components cannot diagnose or suppress without an active parent option", async () => {
+  const trigger = {
+    kind: "qualifier" as const,
+    field: "CUSTOM_FINDINGS",
+    option: "pterygium",
+    qualifiers: { location: "central" },
+  };
+  const finding = (parent: "absent" | "false"): FindingInstance => ({
+    id: `qualified-${parent}`,
+    state: "committed",
+    findingDefinitionId: "qualified-definition",
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    laterality: "OD",
+    value: { type: "components", components: [
+      ...(parent === "false"
+        ? [{ code: "OD_CUSTOM_FINDINGS::pterygium", display: "Pterygium", value: false }]
+        : []),
+      { code: "OD_CUSTOM_FINDINGS::pterygium::location", display: "Pterygium location", value: "central" },
+    ] },
+    sourceType: "manual",
+    recordedAt: "2026-08-04T12:00:00.000Z",
+    provenance: { source: "manual", recordedAt: "2026-08-04T12:00:00.000Z" },
+  });
+  for (const parent of ["absent", "false"] as const) {
+    assert.equal(evaluateMappingTrigger(trigger, finding(parent)), false, `${parent} parent must block qualifier matching`);
+    assert.deepEqual(matchingQualifierGroups(trigger, finding(parent)), [], `${parent} parent must not register a suppression group`);
+  }
+
+  for (const parent of ["absent", "false"] as const) {
+    const fhir = new MemoryFhir();
+    const definitions = await new FhirFindingDefinitionStore(fhir).list();
+    const definition = definitions.find((candidate) => candidate.stableKey === "ocular-health:anterior:conjunctiva");
+    assert.ok(definition);
+    const field = Object.values(definition.valueSchema.fields as Record<string, { localCode?: string; valueType?: string }>)
+      .find((candidate) => candidate.valueType === "multi-select");
+    assert.ok(field?.localCode);
+    const optionCode = `OD_${field.localCode}::pterygium`;
+    fhir.resources.push({
+      resourceType: "Observation",
+      id: `qualifier-with-${parent}-parent`,
+      status: "preliminary",
+      code: {
+        coding: [{ system: "https://odos2020.com/fhir/CodeSystem/odos", code: definition.stableKey }],
+        text: definition.display,
+      },
+      subject: { reference: "Patient/p-qualified" },
+      encounter: { reference: "Encounter/e-qualified" },
+      effectiveDateTime: "2026-08-04T12:00:00.000Z",
+      interpretation: [{ coding: [{ code: "A" }] }],
+      extension: [{
+        url: "https://odos2020.com/fhir/StructureDefinition/eye-laterality",
+        valueCodeableConcept: { coding: [{ code: "OD" }] },
+      }],
+      component: [
+        ...(parent === "false"
+          ? [{ code: { coding: [{ code: optionCode }], text: "Pterygium" }, valueBoolean: false }]
+          : []),
+        {
+          code: { coding: [{ code: `${optionCode}::location` }], text: "Pterygium — Location" },
+          valueCodeableConcept: { coding: [{ code: "central" }] },
+        },
+      ],
+    } as Observation);
+    const authenticate = async () => ({
+      staffReference: "Practitioner/doctor-1",
+      actorRole: "clinician" as PracticeRoleId,
+      fhir,
+    });
+    const result = await handleDiagnosisCandidatesRequest({ authenticate }, {
+      authHeader: "Bearer doctor-1",
+      params: { encounterId: "e-qualified" },
+    });
+    assert.equal(result.status, 200, JSON.stringify(result.body));
+    const rows = (result.body as CandidateResponse).findings;
+    assert.equal(rows.length, 1);
+    assert.deepEqual(rows[0]?.candidates, [], `${parent} parent must produce no diagnosis candidate`);
+  }
+});
+
+test("I6 allOf-wrapped option fallbacks are suppressed like bare option fallbacks", async () => {
+  const fhir = new MemoryFhir();
+  const store = new FhirFindingDefinitionStore(fhir);
+  const definition = (await store.list()).find((candidate) => candidate.stableKey === "ocular-health:anterior:conjunctiva");
+  assert.ok(definition);
+  await store.save({
+    ...definition,
+    diagnosisCandidates: definition.diagnosisCandidates?.map((candidate) =>
+      candidate.trigger.kind === "option" && candidate.trigger.anyOf.includes("pterygium")
+        ? { ...candidate, trigger: { kind: "allOf" as const, triggers: [candidate.trigger] } }
+        : candidate
+    ),
+  });
+  const definitions = await store.list();
+  const field = Object.values(definition.valueSchema.fields as Record<string, { localCode?: string; valueType?: string }>)
+    .find((candidate) => candidate.valueType === "multi-select");
+  assert.ok(field?.localCode);
+  const authenticate = async () => ({
+    staffReference: "Practitioner/doctor-1",
+    actorRole: "clinician" as PracticeRoleId,
+    fhir,
+  });
+  const capture = await handleCustomSectionCaptureRequest({
+    authenticate,
+    findingDefinitions: () => definitions,
+    now: () => "2026-08-04T12:00:00.000Z",
+  }, {
+    authHeader: "Bearer doctor-1",
+    params: { stableKey: definition.stableKey },
+    body: {
+      patientReference: "Patient/p-qualified",
+      encounterReference: "Encounter/e-qualified",
+      eyes: { OD: {
+        state: "abnormal",
+        customFields: [{ code: field.localCode, value: ["pterygium"] }],
+        findingDetails: { pterygium: { location: "central" } },
+      } },
+    },
+  });
+  assert.equal(capture.status, 200, JSON.stringify(capture.body));
+  const result = await handleDiagnosisCandidatesRequest({ authenticate }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e-qualified" },
+  });
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  assert.deepEqual(
+    (result.body as CandidateResponse).findings.map((finding) =>
+      finding.candidates.map((candidate) => candidate.diagnosisKey)
+    ),
+    [["pterygium_central"]],
+  );
 });
 
 test("direct laterality-required picks ask once, then write no fabricated evidence, and evaluators contain no pick call site", async () => {
