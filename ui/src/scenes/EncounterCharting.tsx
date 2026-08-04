@@ -181,7 +181,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
           coding.system === ODOS_DISCIPLINE_SYSTEM
         )?.code;
         if (cancelled) return;
-        setEncounterRecordedAt(encounter.period?.start ?? encounter.period?.end ?? encounter.meta?.lastUpdated);
+        setEncounterRecordedAt(encounter.period?.start ?? encounter.period?.end);
         if (code === "eyecare" || code === "aesthetics") {
           setDiscipline(code);
           if (code === "aesthetics") {

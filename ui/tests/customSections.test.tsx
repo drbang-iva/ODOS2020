@@ -2410,6 +2410,8 @@ test("EncounterCharting keeps the shipped eyecare branches, adds three dry-eye r
   assert.match(source, /key=\{customDefinition\.stableKey\}[\s\S]*definition=\{customDefinition\}/);
   assert.match(source, /key=\{procedureDefinition\.stableKey\}[\s\S]*definition=\{procedureDefinition\}/);
   assert.match(source, /markSaved\("dry-eye:tear-stability", status\)/);
+  assert.match(source, /setEncounterRecordedAt\(encounter\.period\?\.start \?\? encounter\.period\?\.end\)/);
+  assert.doesNotMatch(source, /encounter\.meta\?\.lastUpdated/);
 });
 
 test("an aesthetics-tagged Encounter loads the procedure catalog into the shared clinical spine", async () => {
