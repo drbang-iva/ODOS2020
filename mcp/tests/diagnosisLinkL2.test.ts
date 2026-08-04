@@ -19,7 +19,11 @@ import {
   FhirDiagnosisPickTallyStore,
 } from "../src/clinical-graph/diagnosis-pick-tally-store.js";
 import { FhirFindingDefinitionStore } from "../src/clinical-graph/finding-definition-store.js";
-import { evaluateMappingTrigger } from "../src/clinical-graph/diagnosis-mapping.js";
+import {
+  createDiagnosisCandidateSchema,
+  evaluateMappingTrigger,
+  updateDiagnosisCandidateSchema,
+} from "../src/clinical-graph/diagnosis-mapping.js";
 import type { FindingInstance } from "../src/clinical-graph/glaucoma-suspect.js";
 import { handleEomCaptureRequest } from "../src/clinical-graph/eom-endpoint.js";
 
@@ -341,6 +345,139 @@ test("OH-3 multi-select findings propose verified per-eye diagnoses and explicit
   assert.deepEqual(blepharitisCodes, ["H01.013", "H01.016"]);
 });
 
+test("I1 complete ocular qualifiers resolve each selected finding to one diagnosis", async () => {
+  const pterygiumCases = [
+    [{ location: "central" }, "pterygium_central"],
+    [{ location: "peripheral", progression: "stationary" }, "pterygium_peripheral_stationary"],
+    [{ location: "peripheral", progression: "progressive" }, "pterygium_peripheral_progressive"],
+    [{ location: "peripheral", progression: "recurrent" }, "pterygium_recurrent"],
+  ] as const;
+  for (const [stableKey, option] of [
+    ["ocular-health:anterior:conjunctiva", "pterygium"],
+    ["ocular-health:anterior:cornea", "pterygium-encroaching"],
+  ] as const) {
+    for (const [qualifiers, diagnosisKey] of pterygiumCases) {
+      assert.deepEqual(await ocularCandidateKeys(stableKey, {
+        OD: { selections: [option], findingDetails: { [option]: qualifiers } },
+      }), [[diagnosisKey]]);
+    }
+  }
+
+  for (const [stability, diagnosisKey] of [
+    ["stable", "keratoconus_stable"],
+    ["unstable", "keratoconus_unstable"],
+  ] as const) {
+    assert.deepEqual(await ocularCandidateKeys("ocular-health:anterior:cornea", {
+      OD: { selections: ["keratoconus"], findingDetails: { keratoconus: { stability } } },
+    }), [[diagnosisKey]]);
+  }
+
+  for (const [severity, macularEdema, diagnosisKey] of [
+    ["mild", "present", "t2_dr_mild_npdr_with_dme"],
+    ["mild", "absent", "t2_dr_mild_npdr_without_dme"],
+    ["moderate", "present", "t2_dr_moderate_npdr_with_dme"],
+    ["moderate", "absent", "t2_dr_moderate_npdr_without_dme"],
+    ["severe", "present", "t2_dr_severe_npdr_with_dme"],
+    ["severe", "absent", "t2_dr_severe_npdr_without_dme"],
+  ] as const) {
+    assert.deepEqual(await ocularCandidateKeys("ocular-health:posterior:fundus", {
+      OD: {
+        selections: ["diabetic-retinopathy-background-npdr"],
+        findingDetails: { "diabetic-retinopathy-background-npdr": { severity, "macular-edema": macularEdema } },
+      },
+    }), [[diagnosisKey]]);
+  }
+
+  for (const [severity, diagnosisKey] of [
+    ["with-macular-edema", "t2_dr_pdr_with_dme"],
+    ["traction-rd-involving-macula", "t2_dr_pdr_trd_involving_macula"],
+    ["traction-rd-not-involving-macula", "t2_dr_pdr_trd_not_involving_macula"],
+    ["combined-traction-rhegmatogenous-rd", "t2_dr_pdr_combined_trd_rrd"],
+    ["stable", "t2_dr_stable_pdr"],
+    ["without-macular-edema", "t2_dr_pdr_without_dme"],
+  ] as const) {
+    assert.deepEqual(await ocularCandidateKeys("ocular-health:posterior:fundus", {
+      OD: {
+        selections: ["proliferative-diabetic-retinopathy-pdr"],
+        findingDetails: { "proliferative-diabetic-retinopathy-pdr": { severity } },
+      },
+    }), [[diagnosisKey]]);
+  }
+});
+
+test("I2 absent or partial ocular qualifiers retain the specified safe fallbacks", async () => {
+  assert.deepEqual(await ocularCandidateKeys("ocular-health:anterior:conjunctiva", {
+    OD: { selections: ["pterygium"], findingDetails: { pterygium: { location: "peripheral" } } },
+  }), [[
+    "pterygium_central",
+    "pterygium_peripheral_stationary",
+    "pterygium_peripheral_progressive",
+    "pterygium_recurrent",
+  ]]);
+
+  assert.deepEqual(await ocularCandidateKeys("ocular-health:posterior:fundus", {
+    OD: {
+      selections: ["diabetic-retinopathy-background-npdr"],
+      findingDetails: { "diabetic-retinopathy-background-npdr": { severity: "mild" } },
+    },
+    OS: { selections: ["proliferative-diabetic-retinopathy-pdr"] },
+  }), [
+    ["t2_dr_unspecified_with_dme", "t2_dr_unspecified_without_dme"],
+    [
+      "t2_dr_pdr_with_dme",
+      "t2_dr_pdr_trd_involving_macula",
+      "t2_dr_pdr_trd_not_involving_macula",
+      "t2_dr_pdr_combined_trd_rrd",
+      "t2_dr_stable_pdr",
+      "t2_dr_pdr_without_dme",
+    ],
+  ]);
+});
+
+test("I3 qualifier triggers are scoped to the option that recorded the shared key", () => {
+  const optionATrigger = {
+    kind: "qualifier" as const,
+    field: "CUSTOM_FINDINGS",
+    option: "option-a",
+    qualifiers: { location: "peripheral" },
+  };
+  const finding: FindingInstance = {
+    id: "qualified-finding",
+    state: "committed",
+    findingDefinitionId: "qualified-definition",
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    laterality: "OD",
+    value: { type: "components", components: [
+      { code: "OD_CUSTOM_FINDINGS::option-a", display: "Option A", value: true },
+      { code: "OD_CUSTOM_FINDINGS::option-b", display: "Option B", value: true },
+      { code: "OD_CUSTOM_FINDINGS::option-a::location", display: "Option A location", value: "central" },
+      { code: "OD_CUSTOM_FINDINGS::option-b::location", display: "Option B location", value: "peripheral" },
+    ] },
+    sourceType: "manual",
+    recordedAt: "2026-08-04T12:00:00.000Z",
+    provenance: { source: "manual", recordedAt: "2026-08-04T12:00:00.000Z" },
+  };
+  assert.equal(createDiagnosisCandidateSchema.safeParse({ diagnosisKey: "candidate-a", trigger: optionATrigger }).success, true);
+  assert.equal(updateDiagnosisCandidateSchema.safeParse({ trigger: optionATrigger }).success, true);
+  assert.equal(evaluateMappingTrigger(optionATrigger, finding), false);
+  assert.equal(evaluateMappingTrigger({ ...optionATrigger, option: "option-b" }, finding), true);
+});
+
+test("I4 ocular records without findingDetails keep the pre-qualifier candidate lists", async () => {
+  assert.deepEqual(await ocularCandidateKeys("ocular-health:anterior:conjunctiva", {
+    OD: { selections: ["pterygium"] },
+  }), [[
+    "pterygium_central",
+    "pterygium_peripheral_stationary",
+    "pterygium_peripheral_progressive",
+    "pterygium_recurrent",
+  ]]);
+  assert.deepEqual(await ocularCandidateKeys("ocular-health:anterior:cornea", {
+    OD: { selections: ["keratoconus"] },
+  }), [["keratoconus_stable", "keratoconus_unstable", "keratoconus_unspecified_stability"]]);
+});
+
 test("direct laterality-required picks ask once, then write no fabricated evidence, and evaluators contain no pick call site", async () => {
   const fhir = new MemoryFhir();
   fhir.resources.push({
@@ -556,6 +693,53 @@ test("dedup keeps rule evidence and the higher-priority mapping when no rule exi
 type CandidateResponse = {
   findings: Array<{ observationReference?: string; candidates: Array<{ diagnosisKey: string; source: string }> }>;
 };
+
+async function ocularCandidateKeys(
+  stableKey: string,
+  eyes: Partial<Record<"OD" | "OS", {
+    selections: string[];
+    findingDetails?: Record<string, Record<string, string>>;
+  }>>,
+): Promise<string[][]> {
+  const fhir = new MemoryFhir();
+  const definitions = await new FhirFindingDefinitionStore(fhir).list();
+  const definition = definitions.find((candidate) => candidate.stableKey === stableKey);
+  assert.ok(definition);
+  const field = Object.values(definition.valueSchema.fields as Record<string, { localCode?: string; valueType?: string }>)
+    .find((candidate) => candidate.valueType === "multi-select");
+  assert.ok(field?.localCode);
+  const authenticate = async () => ({
+    staffReference: "Practitioner/doctor-1",
+    actorRole: "clinician" as PracticeRoleId,
+    fhir,
+  });
+  const capture = await handleCustomSectionCaptureRequest({
+    authenticate,
+    findingDefinitions: () => definitions,
+    now: () => "2026-08-04T12:00:00.000Z",
+  }, {
+    authHeader: "Bearer doctor-1",
+    params: { stableKey },
+    body: {
+      patientReference: "Patient/p-qualified",
+      encounterReference: "Encounter/e-qualified",
+      eyes: Object.fromEntries(Object.entries(eyes).map(([eye, row]) => [eye, {
+        state: "abnormal",
+        customFields: [{ code: field.localCode, value: row.selections }],
+        ...(row.findingDetails ? { findingDetails: row.findingDetails } : {}),
+      }])),
+    },
+  });
+  assert.equal(capture.status, 200, JSON.stringify(capture.body));
+  const result = await handleDiagnosisCandidatesRequest({ authenticate }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e-qualified" },
+  });
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  return (result.body as CandidateResponse).findings.map((finding) =>
+    finding.candidates.map((candidate) => candidate.diagnosisKey)
+  );
+}
 
 function diagnosisPickFhir(): MemoryFhir {
   const fhir = new MemoryFhir();

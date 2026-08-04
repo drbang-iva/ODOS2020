@@ -3,7 +3,11 @@ import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles
 import { ODOS_EXTENSION_URLS } from "../fhir/ophthalmology/extensions.js";
 import { FhirDiagnosisCatalogStore } from "./diagnosis-catalog-store.js";
 import { FhirDiagnosisPickTallyStore } from "./diagnosis-pick-tally-store.js";
-import { evaluateMappingTrigger } from "./diagnosis-mapping.js";
+import {
+  evaluateMappingTrigger,
+  matchingQualifierGroups,
+  qualifierGroup,
+} from "./diagnosis-mapping.js";
 import { FhirFindingDefinitionStore } from "./finding-definition-store.js";
 import { observationMatchesFindingDefinition } from "./finding-observation-match.js";
 import {
@@ -116,8 +120,18 @@ export async function handleDiagnosisCandidatesRequest(
             order,
           }];
         });
-        const mappingCandidates = (definition?.allowDiagnosisMapping === false ? [] : definition?.diagnosisCandidates ?? []).flatMap((mapping, order) => {
+        const mappings = definition?.allowDiagnosisMapping === false ? [] : definition?.diagnosisCandidates ?? [];
+        const matchedQualifierGroups = new Set(mappings.flatMap((mapping) =>
+          mapping.active && activeCatalog.has(mapping.diagnosisKey)
+            ? matchingQualifierGroups(mapping.trigger, finding)
+            : []
+        ));
+        const mappingCandidates = mappings.flatMap((mapping, order) => {
           if (!mapping.active || !evaluateMappingTrigger(mapping.trigger, finding)) return [];
+          if (mapping.trigger.kind === "option") {
+            const { field, anyOf } = mapping.trigger;
+            if (anyOf.some((option) => matchedQualifierGroups.has(qualifierGroup(field, option)))) return [];
+          }
           const row = activeCatalog.get(mapping.diagnosisKey);
           if (!row) return [];
           const icd10 = resolvedIcd10(row, finding.laterality);
