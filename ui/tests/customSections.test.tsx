@@ -1222,6 +1222,47 @@ function syntheticWorksheetOcularDefinition() {
   };
 }
 
+function syntheticNumericOcularDefinition() {
+  return {
+    stableKey: "ocular-health:anterior:synthetic-numeric",
+    sectionKey: "ocular-health:anterior:synthetic-numeric",
+    display: "Synthetic Numeric",
+    active: true,
+    perEye: true,
+    normalTemplate: "Synthetic normal.",
+    customFields: [{
+      localCode: "CUSTOM_ABNORMAL_FINDINGS_NUMERIC",
+      display: "Abnormal findings",
+      valueType: "multi-select" as const,
+      options: [
+        {
+          code: "synthetic-decimal",
+          display: "Synthetic Decimal",
+          active: true,
+          priority: true,
+          qualifiers: [{ kind: "numeric" as const, key: "score", display: "Decimal score", min: 0, max: 10, step: 0.5 }],
+        },
+        {
+          code: "synthetic-integer",
+          display: "Synthetic Integer",
+          active: true,
+          priority: true,
+          qualifiers: [{ kind: "numeric" as const, key: "score", display: "Integer score", min: 5, max: 30, step: 1 }],
+        },
+        {
+          code: "synthetic-invalid",
+          display: "Synthetic Invalid",
+          active: true,
+          priority: true,
+          qualifiers: [{ kind: "numeric" as const, key: "score", display: "Bounded score", min: 0, max: 4, step: 1 }],
+        },
+      ],
+      order: 0,
+      active: true,
+    }],
+  };
+}
+
 test("ocular-health worksheet keeps four described findings in selection order and leaves Zone A stable", async () => {
   const definition = syntheticWorksheetOcularDefinition();
   const selections = [
@@ -1346,10 +1387,10 @@ test("all four finding qualifier controls write the server-validated value shape
     act(() => chips("MGD grade").findAllByType("button").find((button) => button.children.join("") === "Marked")!.props.onClick());
     act(() => chips("MGD type").findAllByType("button").find((button) => button.children.join("") === "Seborrheic")!.props.onClick());
     const numeric = () => renderer.root.findByProps({ "aria-label": "MGD score" });
-    act(() => numeric().props.onChange({ target: { value: "9" } }));
-    assert.equal(numeric().props.value, 4);
-    act(() => numeric().props.onChange({ target: { value: "2.6" } }));
-    assert.equal(numeric().props.value, 3);
+    act(() => numeric().props.onChange({ target: { value: "3" } }));
+    assert.equal(numeric().props.value, "3");
+    act(() => numeric().props.onBlur());
+    assert.equal(numeric().props.value, "3");
     act(() => renderer.root.findAllByType(OdosSelect)
       .find((select) => select.props.ariaLabel === "MGD clock-hour arc from clock hour")!.props.onChange("2"));
     act(() => renderer.root.findAllByType(OdosSelect)
@@ -1369,6 +1410,72 @@ test("all four finding qualifier controls write the server-validated value shape
         score: 3,
         arc: { from: 2, to: 5, clockwise: false },
       },
+    });
+  } finally {
+    renderer?.unmount();
+  }
+});
+
+test("numeric finding qualifiers preserve controlled keystrokes and visibly reject invalid values", async () => {
+  const definition = syntheticNumericOcularDefinition();
+  let postedBody: Record<string, any> | undefined;
+  const fetchImpl = (async (_input, init) => {
+    if (init?.method === "POST") {
+      postedBody = JSON.parse(String(init.body));
+      return jsonResponse({});
+    }
+    return jsonResponse({ rows: [{
+      eye: "OD",
+      state: "abnormal",
+      values: [{
+        code: "CUSTOM_ABNORMAL_FINDINGS_NUMERIC",
+        value: ["synthetic-decimal", "synthetic-integer", "synthetic-invalid"],
+      }],
+    }] });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={[definition]}
+        patientReference="Patient/p-numeric-keystrokes"
+        encounterReference="Encounter/e-numeric-keystrokes"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    const findInput = (label: string) => renderer.root.findByProps({ "aria-label": label });
+    const type = (label: string, keys: string[]) => {
+      for (const key of keys) {
+        const shown = findInput(label).props.value;
+        const next = `${shown === "" ? "" : shown}${key}`;
+        act(() => findInput(label).props.onChange({ target: { value: next } }));
+      }
+    };
+
+    type("Decimal score", ["1", ".", "5"]);
+    assert.equal(findInput("Decimal score").props.value, "1.5");
+    act(() => findInput("Decimal score").props.onBlur());
+    assert.equal(findInput("Decimal score").props.value, "1.5");
+
+    type("Integer score", ["1", "5"]);
+    assert.equal(findInput("Integer score").props.value, "15");
+    act(() => findInput("Integer score").props.onBlur());
+    assert.equal(findInput("Integer score").props.value, "15");
+
+    type("Bounded score", ["9"]);
+    assert.equal(findInput("Bounded score").props.value, "9");
+    act(() => findInput("Bounded score").props.onBlur());
+    assert.equal(findInput("Bounded score").props.value, "");
+    assert.match(renderer.root.findByProps({ role: "alert" }).children.join(""), /Bounded score must be between 0 and 4 in increments of 1/);
+
+    const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Ocular Health")!;
+    await act(async () => saveButton.props.onClick());
+    assert.deepEqual(postedBody?.eyes.OD.findingDetails, {
+      "synthetic-decimal": { score: 1.5 },
+      "synthetic-integer": { score: 15 },
     });
   } finally {
     renderer?.unmount();
@@ -1579,6 +1686,106 @@ test("changing away from abnormal confirms before destroying recorded finding de
   }
 });
 
+test("copying an eye confirms before replacing destination finding details", async () => {
+  const definition = syntheticQualifiedOcularDefinition();
+  const originalWindow = globalThis.window;
+  const prompts: string[] = [];
+  const decisions = [false, true];
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: { confirm: (message: string) => { prompts.push(message); return decisions.shift() ?? false; } },
+  });
+  const fetchImpl = (async () => jsonResponse({ rows: [
+    {
+      eye: "OD",
+      state: "abnormal",
+      values: [{ code: "CUSTOM_ABNORMAL_FINDINGS_01", value: ["synthetic-finding"] }],
+      findingDetails: { "synthetic-finding": { grade: "marked" } },
+    },
+    {
+      eye: "OS",
+      state: "abnormal",
+      values: [{ code: "CUSTOM_ABNORMAL_FINDINGS_01", value: ["synthetic-finding"] }],
+      findingDetails: { "synthetic-finding": { grade: "trace" } },
+    },
+  ] })) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={[definition]}
+        patientReference="Patient/p-copy-guard"
+        encounterReference="Encounter/e-copy-guard"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    const grades = () => renderer.root.findAllByType(OdosChips)
+      .filter((chips) => chips.props.ariaLabel === "Synthetic qualifier control");
+    const copyToOs = renderer.root.findAllByType("button")
+      .find((button) => button.children.join("") === "Copy to OS →")!;
+    assert.deepEqual(grades().map((grade) => grade.props.selected), [["marked"], ["trace"]]);
+    act(() => copyToOs.props.onClick());
+    assert.deepEqual(grades().map((grade) => grade.props.selected), [["marked"], ["trace"]]);
+    act(() => copyToOs.props.onClick());
+    assert.deepEqual(grades().map((grade) => grade.props.selected), [["marked"], ["marked"]]);
+    assert.equal(prompts.length, 2);
+    assert.ok(prompts.every((prompt) => prompt.includes("Synthetic Finding")));
+  } finally {
+    renderer?.unmount();
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
+});
+
+test("copying into an undescribed destination does not ask for confirmation", async () => {
+  const definition = syntheticQualifiedOcularDefinition();
+  const originalWindow = globalThis.window;
+  let confirmCalls = 0;
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: { confirm: () => { confirmCalls += 1; return false; } },
+  });
+  const fetchImpl = (async () => jsonResponse({ rows: [
+    {
+      eye: "OD",
+      state: "abnormal",
+      values: [{ code: "CUSTOM_ABNORMAL_FINDINGS_01", value: ["synthetic-finding"] }],
+      findingDetails: { "synthetic-finding": { grade: "marked" } },
+    },
+    {
+      eye: "OS",
+      state: "abnormal",
+      values: [{ code: "CUSTOM_ABNORMAL_FINDINGS_01", value: ["synthetic-finding"] }],
+    },
+  ] })) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={[definition]}
+        patientReference="Patient/p-copy-no-guard"
+        encounterReference="Encounter/e-copy-no-guard"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    const copyToOs = renderer.root.findAllByType("button")
+      .find((button) => button.children.join("") === "Copy to OS →")!;
+    act(() => copyToOs.props.onClick());
+    const grades = renderer.root.findAllByType(OdosChips)
+      .filter((chips) => chips.props.ariaLabel === "Synthetic qualifier control");
+    assert.deepEqual(grades.map((grade) => grade.props.selected), [["marked"], ["marked"]]);
+    assert.equal(confirmCalls, 0);
+  } finally {
+    renderer?.unmount();
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
+});
+
 test("child details fold into the worksheet row and remain selection codes in the POST body", async () => {
   const definition = syntheticWorksheetOcularDefinition();
   let postedBody: Record<string, any> | undefined;
@@ -1646,6 +1853,11 @@ test("copying mixed qualifiers mirrors only extents and clock-hour mirroring rou
     },
   });
   assert.deepEqual(source.findingDetails["synthetic-mgd"].arc, { from: 2, to: 5, clockwise: true });
+  assert.deepEqual(copyEyeCapture(source, { customFields: [] }).findingDetails?.["synthetic-mgd"]?.arc, {
+    from: 10,
+    to: 7,
+    clockwise: false,
+  });
   for (let from = 1; from <= 12; from += 1) {
     for (let to = 1; to <= 12; to += 1) {
       for (const clockwise of [false, true]) {

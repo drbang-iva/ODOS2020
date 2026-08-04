@@ -127,8 +127,11 @@ export function OcularHealthSection({
   }
 
   function copyEye(definition: CustomFindingDefinition, from: Eye, to: Eye) {
+    const destination = captures[definition.stableKey]?.[to] ?? emptyEye();
+    const described = describedFindingNames(abnormalField(definition), destination);
+    if (described.length > 0 && !confirmDestroy(described, "Copying the other eye")) return;
+    const source = captures[definition.stableKey]?.[from] ?? emptyEye();
     updateEye(definition.stableKey, to, () => {
-      const source = captures[definition.stableKey]?.[from] ?? emptyEye();
       return copyEyeCapture(source, definition);
     });
   }
@@ -502,31 +505,7 @@ function FindingQualifierControl({ qualifier, value, onChange }: {
     );
   }
   if (qualifier.kind === "numeric") {
-    return (
-      <label className="min-w-0">
-        <span className="mb-1 block text-xs font-semibold text-[color:var(--odos-muted)]">{qualifier.display}</span>
-        <div className="flex min-h-11 overflow-hidden rounded border border-[color:var(--odos-line-2)] bg-bg-deep focus-within:border-brand">
-          <input
-            type="number"
-            aria-label={qualifier.display}
-            value={typeof value === "number" ? value : ""}
-            min={qualifier.min}
-            max={qualifier.max}
-            step={qualifier.step}
-            onChange={(event) => {
-              if (event.target.value === "") {
-                onChange(undefined);
-                return;
-              }
-              const parsed = Number(event.target.value);
-              if (Number.isFinite(parsed)) onChange(normalizeQualifierNumber(parsed, qualifier.min, qualifier.max, qualifier.step));
-            }}
-            className="min-h-11 min-w-0 flex-1 bg-transparent px-3 text-sm text-[color:var(--odos-text)] outline-none"
-          />
-          {qualifier.unit && <span className="flex min-h-11 items-center border-l border-[color:var(--odos-line)] px-3 text-sm text-[color:var(--odos-muted)]">{qualifier.unit}</span>}
-        </div>
-      </label>
-    );
+    return <NumericFindingQualifier qualifier={qualifier} value={typeof value === "number" ? value : undefined} onChange={onChange} />;
   }
   const extent = isClockHourExtentValue(value) ? value : undefined;
   const hours = [
@@ -559,14 +538,68 @@ function FindingQualifierControl({ qualifier, value, onChange }: {
   );
 }
 
-function findingChipLabel(display: string): string {
-  return display.replace(/(^|[\s(/-])\p{L}/gu, (wordStart) => wordStart.toUpperCase());
+function NumericFindingQualifier({ qualifier, value, onChange }: {
+  qualifier: Extract<FindingQualifierDefinition, { kind: "numeric" }>;
+  value: number | undefined;
+  onChange(value: number | undefined): void;
+}) {
+  const storedText = value === undefined ? "" : String(value);
+  const [draft, setDraft] = useState(storedText);
+  const [validationError, setValidationError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setDraft(storedText);
+    setValidationError(null);
+  }, [storedText]);
+
+  const commit = () => {
+    if (draft === "") {
+      onChange(undefined);
+      setValidationError(null);
+      return;
+    }
+    const parsed = Number(draft);
+    const stepPosition = (parsed - qualifier.min) / qualifier.step;
+    if (!Number.isFinite(parsed) || parsed < qualifier.min || parsed > qualifier.max ||
+      Math.abs(stepPosition - Math.round(stepPosition)) > 1e-9) {
+      setDraft(storedText);
+      setValidationError(`${qualifier.display} must be between ${qualifier.min} and ${qualifier.max} in increments of ${qualifier.step}.`);
+      return;
+    }
+    onChange(parsed);
+    setDraft(String(parsed));
+    setValidationError(null);
+  };
+
+  return (
+    <label className="min-w-0">
+      <span className="mb-1 block text-xs font-semibold text-[color:var(--odos-muted)]">{qualifier.display}</span>
+      <div className={`flex min-h-11 overflow-hidden rounded border bg-bg-deep focus-within:border-brand ${validationError ? "border-[color:var(--odos-alert)]" : "border-[color:var(--odos-line-2)]"}`}>
+        <input
+          type="text"
+          inputMode="decimal"
+          aria-label={qualifier.display}
+          aria-invalid={validationError ? true : undefined}
+          value={draft}
+          min={qualifier.min}
+          max={qualifier.max}
+          step={qualifier.step}
+          onChange={(event) => {
+            setDraft(event.target.value);
+            setValidationError(null);
+          }}
+          onBlur={commit}
+          className="min-h-11 min-w-0 flex-1 bg-transparent px-3 text-sm text-[color:var(--odos-text)] outline-none"
+        />
+        {qualifier.unit && <span className="flex min-h-11 items-center border-l border-[color:var(--odos-line)] px-3 text-sm text-[color:var(--odos-muted)]">{qualifier.unit}</span>}
+      </div>
+      {validationError && <span role="alert" className="mt-1 block text-xs text-[color:var(--odos-alert)]">{validationError}</span>}
+    </label>
+  );
 }
 
-function normalizeQualifierNumber(value: number, min: number, max: number, step: number): number {
-  const clamped = Math.min(max, Math.max(min, value));
-  const snapped = min + Math.round((clamped - min) / step) * step;
-  return Number(formatStepValue(Math.min(max, Math.max(min, snapped)), step));
+function findingChipLabel(display: string): string {
+  return display.replace(/(^|[\s(/-])\p{L}/gu, (wordStart) => wordStart.toUpperCase());
 }
 
 function replaceSelectionGroup(selected: string[], group: string[], nextGroup: string[]): string[] {
@@ -720,13 +753,8 @@ export function pendingStateEyes(
 
 export function copyEyeCapture(
   source: EyeCapture,
-  definition: Pick<CustomFindingDefinition, "customFields">,
+  _definition: Pick<CustomFindingDefinition, "customFields">,
 ): EyeCapture {
-  const qualifierKinds = new Map(definition.customFields.flatMap((field) =>
-    (field.options ?? []).flatMap((option) =>
-      (option.qualifiers ?? []).map((qualifier) => [`${option.code}\u0000${qualifier.key}`, qualifier.kind] as const)
-    )
-  ));
   return {
     ...source,
     selections: [...source.selections],
@@ -737,9 +765,9 @@ export function copyEyeCapture(
             optionCode,
             Object.fromEntries(Object.entries(details).map(([qualifierKey, value]) => [
               qualifierKey,
-              qualifierKinds.get(`${optionCode}\u0000${qualifierKey}`) === "extent" && isClockHourExtentValue(value)
+              isClockHourExtentValue(value)
                 ? mirrorClockHourExtent(value)
-                : typeof value === "object" ? { ...value } : value,
+                : value,
             ])),
           ])),
         }
