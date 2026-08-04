@@ -553,12 +553,14 @@ function NumericFindingQualifier({ qualifier, value, onChange }: {
   }, [storedText]);
 
   const commit = () => {
-    if (draft === "") {
+    const text = draft.trim();
+    if (text === "") {
       onChange(undefined);
+      setDraft("");
       setValidationError(null);
       return;
     }
-    const parsed = Number(draft);
+    const parsed = Number(text);
     const stepPosition = (parsed - qualifier.min) / qualifier.step;
     if (!Number.isFinite(parsed) || parsed < qualifier.min || parsed > qualifier.max ||
       Math.abs(stepPosition - Math.round(stepPosition)) > 1e-9) {

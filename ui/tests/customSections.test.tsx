@@ -1470,6 +1470,10 @@ test("numeric finding qualifiers preserve controlled keystrokes and visibly reje
     act(() => findInput("Bounded score").props.onBlur());
     assert.equal(findInput("Bounded score").props.value, "");
     assert.match(renderer.root.findByProps({ role: "alert" }).children.join(""), /Bounded score must be between 0 and 4 in increments of 1/);
+    act(() => findInput("Bounded score").props.onChange({ target: { value: "  " } }));
+    assert.equal(findInput("Bounded score").props.value, "  ");
+    act(() => findInput("Bounded score").props.onBlur());
+    assert.equal(findInput("Bounded score").props.value, "");
 
     const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Ocular Health")!;
     await act(async () => saveButton.props.onClick());
