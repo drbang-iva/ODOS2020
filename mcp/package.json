@@ -16,9 +16,9 @@
   },
   "dependencies": {
     "@medplum/fhirtypes": "^4.0.0",
-    "@modelcontextprotocol/sdk": "^1.0.4",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "csv-parse": "^7.0.1",
-    "express": "^4.21.1",
+    "express": "^5.2.1",
     "fast-xml-parser": "^5.3.8",
     "fflate": "^0.8.3",
     "libphonenumber-js": "^1.13.10",
