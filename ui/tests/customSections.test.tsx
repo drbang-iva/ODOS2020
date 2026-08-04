@@ -1030,6 +1030,411 @@ test("qualified finding definitions render qualifier controls for legacy presenc
   }
 });
 
+test("prior history never seeds current controls or changes the base POST body", async () => {
+  const definition = syntheticQualifiedOcularDefinition();
+  const posts: string[] = [];
+  const fetchImpl = (async (input, init) => {
+    if (init?.method === "POST") {
+      posts.push(String(init.body));
+      return jsonResponse({});
+    }
+    const url = new URL(String(input));
+    return jsonResponse({ rows: url.searchParams.has("encounter") ? [] : [{
+      recordedAt: "2026-08-01T12:00:00Z",
+      eye: "OD",
+      state: "abnormal",
+      values: [{ code: "CUSTOM_ABNORMAL_FINDINGS_01", value: ["synthetic-finding"] }],
+      findingDetails: { "synthetic-finding": { grade: "trace" } },
+    }] });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={[definition]}
+        patientReference="Patient/p-prior-no-carry"
+        encounterReference="Encounter/e-prior-no-carry"
+        encounterRecordedAt="2026-08-04T12:00:00Z"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    const saveButton = renderer.root.findAllByType("button")
+      .find((button) => button.children.join("") === "Save Ocular Health")!;
+    await act(async () => saveButton.props.onClick());
+    assert.equal(JSON.stringify(posts), "[]", "an untouched empty encounter must emit the same zero POST bodies as the base head");
+
+    const abnormal = renderer.root.findByProps({ "data-eye-panel": "OS" }).findAllByType("button")
+      .find((button) => button.children.join("") === "Abnormal")!;
+    act(() => abnormal.props.onClick());
+    const finding = renderer.root.findAllByType("button")
+      .find((button) => button.children.join("") === "Synthetic Finding")!;
+    act(() => finding.props.onClick());
+    const grade = renderer.root.findAllByType(OdosChips)
+      .find((chips) => chips.props.ariaLabel === "Synthetic qualifier control")!;
+    assert.deepEqual(grade.props.selected, []);
+    await act(async () => saveButton.props.onClick());
+    const baseBody = JSON.stringify({
+      patientReference: "Patient/p-prior-no-carry",
+      encounterReference: "Encounter/e-prior-no-carry",
+      eyes: {
+        OS: {
+          state: "abnormal",
+          customFields: [{ code: "CUSTOM_ABNORMAL_FINDINGS_01", value: ["synthetic-finding"] }],
+        },
+      },
+    });
+    assert.equal(posts[0], baseBody, "an untouched OD prior must not add a byte to an unrelated OS save");
+  } finally {
+    renderer?.unmount();
+  }
+});
+
+test("unsaved ocular edits survive an asynchronously arriving encounter cutoff and prior history", async () => {
+  const definition = syntheticQualifiedOcularDefinition();
+  const priorResponse = deferred<Response>();
+  let fetchesIssued = 0;
+  const fetchImpl = (async (input) => {
+    fetchesIssued += 1;
+    const url = new URL(String(input));
+    if (url.searchParams.has("encounter")) return jsonResponse({ rows: [] });
+    return priorResponse.promise;
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  const section = (encounterRecordedAt?: string) => <OcularHealthSection
+    definitions={[definition]}
+    patientReference="Patient/p-cutoff-arrival"
+    encounterReference="Encounter/e-cutoff-arrival"
+    encounterRecordedAt={encounterRecordedAt}
+    onSaved={() => undefined}
+    apiBase="http://test"
+    fetchImpl={fetchImpl}
+  />;
+  try {
+    await act(async () => {
+      renderer = create(section());
+      await flushEffects();
+    });
+    const odPanel = renderer.root.findByProps({ "data-eye-panel": "OD" });
+    act(() => odPanel.findAllByType("button")
+      .find((button) => button.children.join("") === "Abnormal")!.props.onClick());
+    assert.match(odPanel.findAllByType("button")
+      .find((button) => button.children.join("") === "Abnormal")!.props.className, /bg-brand\/20/);
+
+    await act(async () => {
+      renderer.update(section("2026-08-04T12:00:00Z"));
+      await flushEffects();
+    });
+    await act(async () => {
+      priorResponse.resolve(jsonResponse({ rows: [{
+        recordedAt: "2026-08-01T12:00:00Z",
+        eye: "OD",
+        state: "abnormal",
+        values: [{ code: "CUSTOM_ABNORMAL_FINDINGS_01", value: ["synthetic-finding"] }],
+      }] }));
+      await flushEffects();
+    });
+
+    assert.match(renderer.root.findByProps({ "data-eye-panel": "OD" }).findAllByType("button")
+      .find((button) => button.children.join("") === "Abnormal")!.props.className, /bg-brand\/20/,
+    "the clinician's unsaved edit must survive cutoff and prior-history resolution");
+    assert.equal(fetchesIssued, 2, "cutoff arrival must add only the patient-wide prior read");
+  } finally {
+    renderer?.unmount();
+  }
+});
+
+test("a failed optional prior read leaves current-encounter ocular hydration intact", async () => {
+  const definition = syntheticQualifiedOcularDefinition();
+  let fetchesIssued = 0;
+  const fetchImpl = (async (input) => {
+    fetchesIssued += 1;
+    const url = new URL(String(input));
+    if (url.searchParams.has("encounter")) {
+      return jsonResponse({ rows: [{
+        recordedAt: "2026-08-04T12:00:00Z",
+        eye: "OD",
+        state: "abnormal",
+        values: [{ code: "CUSTOM_ABNORMAL_FINDINGS_01", value: ["synthetic-finding"] }],
+      }] });
+    }
+    return new Response(JSON.stringify({ error: "prior history failed: 500" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={[definition]}
+        patientReference="Patient/p-prior-failure"
+        encounterReference="Encounter/e-prior-failure"
+        encounterRecordedAt="2026-08-04T13:00:00Z"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+      await flushEffects();
+    });
+    const finding = renderer.root.findByProps({ "data-eye-panel": "OD" }).findAllByType("button")
+      .find((button) => button.children.join("") === "Synthetic Finding");
+    assert.equal(finding?.props["aria-pressed"], true,
+      "a failed prior read must not blank the finding charted in the current encounter");
+    assert.equal(fetchesIssued, 2);
+    assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /prior history failed|current chart failed/i);
+  } finally {
+    renderer?.unmount();
+  }
+});
+
+test("prior ocular readings stay in the accessibility tree without renaming or focusing controls", async () => {
+  const definition = syntheticQualifiedOcularDefinition();
+  const current = {
+    recordedAt: "2026-08-04T12:00:00Z",
+    eye: "OD",
+    state: "abnormal",
+    values: [{ code: "CUSTOM_ABNORMAL_FINDINGS_01", value: ["synthetic-finding"] }],
+  };
+  const prior = {
+    recordedAt: "2026-08-01T12:00:00Z",
+    eye: "OD",
+    state: "abnormal",
+    values: [{ code: "CUSTOM_ABNORMAL_FINDINGS_01", value: ["synthetic-finding"] }],
+    findingDetails: { "synthetic-finding": { grade: "trace" } },
+  };
+  const fetchImpl = (async (input) => {
+    const url = new URL(String(input));
+    return jsonResponse({ rows: url.searchParams.has("encounter") ? [current] : [current, prior] });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={[definition]}
+        patientReference="Patient/p-accessible-prior"
+        encounterReference="Encounter/e-accessible-prior"
+        encounterRecordedAt="2026-08-04T12:00:00Z"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+      await flushEffects();
+    });
+    const priorNodes = renderer.root.findByProps({ "data-eye-panel": "OD" })
+      .findAllByProps({ "data-prior-reading": "" });
+    assert.ok(priorNodes.some((node) => node.children.join("").includes("Trace · Aug 1, 2026")));
+    for (const node of priorNodes) {
+      assert.equal(node.props["aria-hidden"], undefined, "prior text must remain in the accessibility tree");
+      assert.equal(node.props.tabIndex, undefined);
+      assert.equal(node.props.onClick, undefined);
+    }
+    const qualifier = renderer.root.findAllByType(OdosChips)
+      .find((chips) => chips.props.ariaLabel === "Synthetic qualifier control")!;
+    assert.equal(qualifier.props.ariaLabel, "Synthetic qualifier control",
+      "adjacent prior text must not alter the control's accessible name");
+  } finally {
+    renderer?.unmount();
+  }
+});
+
+test("ocular priors remain absent without a stable encounter period date", async () => {
+  const definition = syntheticQualifiedOcularDefinition();
+  const current = {
+    recordedAt: "2026-08-03T12:00:00Z",
+    eye: "OD",
+    state: "abnormal",
+    values: [{ code: "CUSTOM_ABNORMAL_FINDINGS_01", value: ["synthetic-finding"] }],
+    findingDetails: { "synthetic-finding": { grade: "marked" } },
+  };
+  const older = {
+    recordedAt: "2026-07-01T12:00:00Z",
+    eye: "OD",
+    state: "abnormal",
+    values: [{ code: "CUSTOM_ABNORMAL_FINDINGS_01", value: ["synthetic-finding"] }],
+    findingDetails: { "synthetic-finding": { grade: "trace" } },
+  };
+  const requests: string[] = [];
+  const fetchImpl = (async (input) => {
+    requests.push(String(input));
+    const url = new URL(String(input));
+    return jsonResponse({ rows: url.searchParams.has("encounter") ? [current] : [current, older] });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={[definition]}
+        patientReference="Patient/p-no-period"
+        encounterReference="Encounter/e-no-period"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+      await flushEffects();
+    });
+    const grade = renderer.root.findAllByType(OdosChips)
+      .find((chips) => chips.props.ariaLabel === "Synthetic qualifier control")!;
+    assert.deepEqual(grade.props.selected, ["marked"]);
+    assert.equal(renderer.root.findAllByProps({ "data-prior-reading": "" }).length, 0,
+      "saved current rows must never become a fallback cutoff for priors");
+    assert.equal(requests.length, 1, "no patient-wide prior read should run without a stable cutoff");
+    assert.ok(new URL(requests[0]!).searchParams.has("encounter"));
+  } finally {
+    renderer?.unmount();
+  }
+});
+
+test("every rendered qualifier and ungraded prior carries its own date and stays eye-specific", async () => {
+  const definition = syntheticWorksheetOcularDefinition();
+  const currentRows = ["OD", "OS"].map((eye) => ({
+    recordedAt: "2026-08-04T12:00:00Z",
+    eye,
+    state: "abnormal",
+    values: [{ code: "CUSTOM_ABNORMAL_FINDINGS_WORKSHEET", value: ["synthetic-mgd"] }],
+    findingDetails: { "synthetic-mgd": { grade: "marked" } },
+  }));
+  const priorRows = [{
+    recordedAt: "2026-08-01T12:00:00Z",
+    eye: "OD",
+    state: "abnormal",
+    values: [{ code: "CUSTOM_ABNORMAL_FINDINGS_WORKSHEET", value: ["synthetic-mgd", "synthetic-presence"] }],
+    findingDetails: {
+      "synthetic-mgd": {
+        grade: "trace",
+        type: "seborrheic",
+        score: 3,
+        arc: { from: 2, to: 5, clockwise: true },
+      },
+    },
+  }, {
+    recordedAt: "2026-08-02T12:00:00Z",
+    eye: "OS",
+    state: "abnormal",
+    values: [{ code: "CUSTOM_ABNORMAL_FINDINGS_WORKSHEET", value: ["synthetic-mgd"] }],
+    findingDetails: { "synthetic-mgd": { grade: "marked" } },
+  }];
+  const fetchImpl = (async (input) => {
+    const url = new URL(String(input));
+    return jsonResponse({ rows: url.searchParams.has("encounter") ? currentRows : [...currentRows, ...priorRows] });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={[definition]}
+        patientReference="Patient/p-dated-prior"
+        encounterReference="Encounter/e-dated-prior"
+        encounterRecordedAt="2026-08-04T12:00:00Z"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    const odPrior = renderer.root.findByProps({ "data-eye-panel": "OD" })
+      .findAllByProps({ "data-prior-reading": "" })
+      .map((node) => node.children.join(""));
+    const osPrior = renderer.root.findByProps({ "data-eye-panel": "OS" })
+      .findAllByProps({ "data-prior-reading": "" })
+      .map((node) => node.children.join(""));
+    assert.ok(odPrior.some((text) => text.includes("Synthetic Presence Only present · Aug 1, 2026")));
+    assert.ok(odPrior.some((text) => text.includes("Trace · Aug 1, 2026")));
+    assert.ok(odPrior.some((text) => text.includes("Seborrheic · Aug 1, 2026")));
+    assert.ok(odPrior.some((text) => text.includes("3 grade · Aug 1, 2026")));
+    assert.ok(odPrior.some((text) => text.includes("2–5 clockwise · Aug 1, 2026")));
+    assert.ok(osPrior.some((text) => text.includes("Marked · Aug 2, 2026")));
+    assert.ok(osPrior.every((text) => !text.includes("Trace")), "an OD prior must never annotate OS");
+    assert.ok([...odPrior, ...osPrior].every((text) => / · Aug [12], 2026$/.test(text)), "a prior value must never render without its date");
+    for (const node of renderer.root.findAllByProps({ "data-prior-reading": "" })) {
+      assert.equal(node.props["aria-hidden"], undefined);
+      assert.equal(node.props.tabIndex, undefined);
+    }
+  } finally {
+    renderer?.unmount();
+  }
+});
+
+test("missing prior data renders no annotation or reserved prior slot", async () => {
+  const definition = syntheticQualifiedOcularDefinition();
+  const currentRows = [{
+    recordedAt: "2026-08-04T12:00:00Z",
+    eye: "OD",
+    state: "abnormal",
+    values: [{ code: "CUSTOM_ABNORMAL_FINDINGS_01", value: ["synthetic-finding"] }],
+  }];
+  const fetchImpl = (async () => jsonResponse({ rows: currentRows })) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={[definition]}
+        patientReference="Patient/p-no-prior"
+        encounterReference="Encounter/e-no-prior"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    assert.equal(renderer.root.findAllByProps({ "data-prior-reading": "" }).length, 0);
+    assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /Prior:|No prior|—/);
+  } finally {
+    renderer?.unmount();
+  }
+});
+
+test("the current encounter is removed before choosing the most recent prior reading", async () => {
+  const definition = syntheticQualifiedOcularDefinition();
+  const current = {
+    recordedAt: "2026-08-03T12:00:00Z",
+    eye: "OD",
+    state: "abnormal",
+    values: [{ code: "CUSTOM_ABNORMAL_FINDINGS_01", value: ["synthetic-finding"] }],
+    findingDetails: { "synthetic-finding": { grade: "marked" } },
+  };
+  const older = {
+    recordedAt: "2026-07-01T12:00:00Z",
+    eye: "OD",
+    state: "abnormal",
+    values: [{ code: "CUSTOM_ABNORMAL_FINDINGS_01", value: ["synthetic-finding"] }],
+    findingDetails: { "synthetic-finding": { grade: "trace" } },
+  };
+  const fetchImpl = (async (input) => {
+    const url = new URL(String(input));
+    return jsonResponse({ rows: url.searchParams.has("encounter") ? [current] : [current, older] });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={[definition]}
+        patientReference="Patient/p-current-excluded"
+        encounterReference="Encounter/e-current-excluded"
+        encounterRecordedAt="2026-08-04T12:00:00Z"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    const grade = renderer.root.findAllByType(OdosChips)
+      .find((chips) => chips.props.ariaLabel === "Synthetic qualifier control")!;
+    assert.deepEqual(grade.props.selected, ["marked"]);
+    const priorText = renderer.root.findAllByProps({ "data-prior-reading": "" })
+      .map((node) => node.children.join(""));
+    assert.ok(priorText.some((text) => text.includes("Trace · Jul 1, 2026")));
+    assert.ok(priorText.every((text) => !text.includes("Aug 3, 2026")), "the saved current row must never appear as its own prior");
+  } finally {
+    renderer?.unmount();
+  }
+});
+
 test("ocular-health read-forward preserves stored finding details through an unrelated save", async () => {
   const definition = syntheticQualifiedOcularDefinition();
   const storedFindingDetails = {
@@ -2204,6 +2609,8 @@ test("EncounterCharting keeps the shipped eyecare branches, adds three dry-eye r
   assert.match(source, /key=\{customDefinition\.stableKey\}[\s\S]*definition=\{customDefinition\}/);
   assert.match(source, /key=\{procedureDefinition\.stableKey\}[\s\S]*definition=\{procedureDefinition\}/);
   assert.match(source, /markSaved\("dry-eye:tear-stability", status\)/);
+  assert.match(source, /setEncounterRecordedAt\(encounter\.period\?\.start \?\? encounter\.period\?\.end\)/);
+  assert.doesNotMatch(source, /encounter\.meta\?\.lastUpdated/);
 });
 
 test("an aesthetics-tagged Encounter loads the procedure catalog into the shared clinical spine", async () => {

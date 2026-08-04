@@ -13,6 +13,7 @@ import type {
 } from "./CustomFindingSection";
 import { EyeCopyButton } from "./EyeCopyButton";
 import { formatStepValue } from "./power-options";
+import { formatDate } from "./PrescriptionSection";
 import type { SectionSaveStatus } from "./types";
 
 export type Eye = "OD" | "OS";
@@ -28,6 +29,7 @@ export interface EyeCapture {
 }
 
 interface HistoryRow {
+  recordedAt: string;
   eye?: Eye;
   state?: ExamState;
   values: Array<{ code: string; value: number | string | string[] }>;
@@ -36,11 +38,29 @@ interface HistoryRow {
   normalTemplate?: string;
 }
 
+interface PriorReading {
+  recordedAt: string;
+  value: FindingQualifierValue | "present";
+}
+
+interface CurrentHistory {
+  identity: string;
+  rowsByStableKey: Record<string, HistoryRow[]>;
+}
+
+type PriorFindingReadings = Record<string, {
+  presence?: PriorReading;
+  qualifiers: Record<string, PriorReading>;
+}>;
+
+type PriorReadings = Record<Eye, PriorFindingReadings>;
+
 interface Props {
   definitions: CustomFindingDefinition[];
   focusedStableKey?: string;
   patientReference: string;
   encounterReference: string;
+  encounterRecordedAt?: string;
   onSaved(status: SectionSaveStatus, stableKeys: string[]): void;
   apiBase?: string;
   fetchImpl?: typeof fetch;
@@ -56,37 +76,47 @@ export function OcularHealthSection({
   focusedStableKey,
   patientReference,
   encounterReference,
+  encounterRecordedAt,
   onSaved,
   apiBase,
   fetchImpl = fetch,
 }: Props) {
   const [captures, setCaptures] = useState<Record<string, Record<Eye, EyeCapture>>>(() => emptyCaptures(definitions));
   const [pristine, setPristine] = useState<Record<string, Record<Eye, EyeCapture>>>(() => emptyCaptures(definitions));
+  const [currentHistory, setCurrentHistory] = useState<CurrentHistory | null>(null);
+  const [priors, setPriors] = useState<Record<string, PriorReadings>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const definitionKey = useMemo(() => definitions.map((definition) => definition.stableKey).join("|"), [definitions]);
+  const historyIdentity = `${patientReference}\u0000${encounterReference}\u0000${definitionKey}`;
 
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
     setError(null);
+    setCurrentHistory(null);
+    setPriors({});
     const base = apiBase ?? clinicalGraphApiBase();
     Promise.all(definitions.map(async (definition) => {
-      const query = new URLSearchParams({ patient: patientReference, encounter: encounterReference });
-      const response = await fetchImpl(
-        `${base}/clinical-graph/custom/${encodeURIComponent(definition.stableKey)}/history?${query}`,
-        { headers: authHeaders(), signal: controller.signal },
-      );
-      const body = await response.json() as { rows?: HistoryRow[]; error?: string };
-      if (!response.ok) throw new Error(body.error ?? `${definition.display} history failed: ${response.status}`);
-      return [definition.stableKey, captureFromRows(definition, body.rows ?? [])] as const;
+      const endpoint = `${base}/clinical-graph/custom/${encodeURIComponent(definition.stableKey)}/history`;
+      const currentQuery = new URLSearchParams({ patient: patientReference, encounter: encounterReference });
+      const currentResponse = await fetchImpl(`${endpoint}?${currentQuery}`, { headers: authHeaders(), signal: controller.signal });
+      const currentBody = await currentResponse.json() as { rows?: HistoryRow[]; error?: string };
+      if (!currentResponse.ok) throw new Error(currentBody.error ?? `${definition.display} history failed: ${currentResponse.status}`);
+      const currentRows = currentBody.rows ?? [];
+      return [definition.stableKey, currentRows, captureFromRows(definition, currentRows)] as const;
     }))
       .then((rows) => {
-        const hydrated = Object.fromEntries(rows);
+        if (controller.signal.aborted) return;
+        const hydrated = Object.fromEntries(rows.map(([stableKey, , capture]) => [stableKey, capture]));
         setCaptures(hydrated);
         setPristine(hydrated);
+        setCurrentHistory({
+          identity: historyIdentity,
+          rowsByStableKey: Object.fromEntries(rows.map(([stableKey, currentRows]) => [stableKey, currentRows])),
+        });
       })
       .catch((caught) => {
         if ((caught as Error).name !== "AbortError") setError(caught instanceof Error ? caught.message : String(caught));
@@ -95,7 +125,42 @@ export function OcularHealthSection({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [definitionKey, patientReference, encounterReference, apiBase, fetchImpl]);
+  }, [historyIdentity, apiBase, fetchImpl]);
+
+  useEffect(() => {
+    const encounterTimestamp = encounterRecordedAt ? Date.parse(encounterRecordedAt) : Number.NaN;
+    if (currentHistory?.identity !== historyIdentity || !Number.isFinite(encounterTimestamp)) {
+      setPriors({});
+      return;
+    }
+    const controller = new AbortController();
+    const base = apiBase ?? clinicalGraphApiBase();
+    Promise.all(definitions.map(async (definition) => {
+      try {
+        const endpoint = `${base}/clinical-graph/custom/${encodeURIComponent(definition.stableKey)}/history`;
+        const patientQuery = new URLSearchParams({ patient: patientReference });
+        const response = await fetchImpl(`${endpoint}?${patientQuery}`, { headers: authHeaders(), signal: controller.signal });
+        const body = await response.json() as { rows?: HistoryRow[]; error?: string };
+        if (!response.ok) throw new Error(body.error ?? `${definition.display} prior history failed: ${response.status}`);
+        if (body.rows !== undefined && !Array.isArray(body.rows)) throw new Error(`${definition.display} prior history was malformed.`);
+        const priorRows = rowsBeforeEncounter(
+          excludeCurrentEncounterRows(body.rows ?? [], currentHistory.rowsByStableKey[definition.stableKey] ?? []),
+          encounterRecordedAt,
+        );
+        return [definition.stableKey, priorReadingsFromRows(definition, priorRows)] as const;
+      } catch (caught) {
+        if ((caught as Error).name === "AbortError") throw caught;
+        return [definition.stableKey, emptyPriorReadings()] as const;
+      }
+    }))
+      .then((rows) => {
+        if (!controller.signal.aborted) setPriors(Object.fromEntries(rows));
+      })
+      .catch((caught) => {
+        if ((caught as Error).name !== "AbortError") setPriors({});
+      });
+    return () => controller.abort();
+  }, [historyIdentity, currentHistory, encounterRecordedAt, apiBase, fetchImpl]);
 
   useEffect(() => {
     if (!focusedStableKey) return;
@@ -265,6 +330,7 @@ export function OcularHealthSection({
           const field = abnormalField(definition);
           const grades = gradeFields(definition);
           const row = captures[definition.stableKey] ?? emptyRow();
+          const prior = priors[definition.stableKey] ?? emptyPriorReadings();
           return (
             <article id={domId(definition.stableKey)} key={definition.stableKey} className="scroll-mt-24 rounded border border-white/10 bg-bg-panel/65 p-4">
               <div className="mb-4"><h3 className="font-semibold text-white">{definition.display}</h3></div>
@@ -273,6 +339,7 @@ export function OcularHealthSection({
                   key={eye}
                   eye={eye}
                   capture={row[eye]}
+                  prior={prior[eye]}
                   field={field}
                   gradeFields={grades}
                   normalTemplate={definition.normalTemplate}
@@ -298,9 +365,10 @@ export function OcularHealthSection({
   );
 }
 
-function EyePanel({ eye, capture, field, gradeFields, normalTemplate, allowDeferred, onState, onSelections, onFindingDetail, onGrade, onOther, onCopy }: {
+function EyePanel({ eye, capture, prior, field, gradeFields, normalTemplate, allowDeferred, onState, onSelections, onFindingDetail, onGrade, onOther, onCopy }: {
   eye: Eye;
   capture: EyeCapture;
+  prior: PriorFindingReadings;
   field?: CustomFindingField;
   gradeFields: CustomFindingField[];
   normalTemplate?: string;
@@ -324,7 +392,7 @@ function EyePanel({ eye, capture, field, gradeFields, normalTemplate, allowDefer
   });
   const displayedNormalTemplate = capture.state === "normal" && capture.normalTemplate ? capture.normalTemplate : normalTemplate;
   return (
-    <div className="rounded border border-white/10 bg-bg-deep/60 p-4">
+    <div data-eye-panel={eye} className="rounded border border-white/10 bg-bg-deep/60 p-4">
       <div className="flex items-center justify-between"><span className="text-sm font-semibold text-white">{eye}</span><EyeCopyButton eye={eye} onCopy={onCopy} /></div>
       <div className="mt-3 flex flex-wrap gap-2">
         <StateButton label="Normal" selected={capture.state === "normal"} onClick={() => onState("normal")} />
@@ -368,8 +436,8 @@ function EyePanel({ eye, capture, field, gradeFields, normalTemplate, allowDefer
         <div className="mt-4 space-y-4">
           <div role="group" aria-label="What is present" className="space-y-3">
             <div className="text-xs font-semibold uppercase tracking-wide text-[color:var(--odos-muted)]">What is present</div>
-            <OptionList ariaLabel="Priority ocular health findings" options={priority} allOptions={options} selected={capture.selections} onChange={onSelections} />
-            {additional.length > 0 && <details><summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-[color:var(--odos-muted)]">More findings ({additional.length})</summary><div className="mt-3"><OptionList ariaLabel="Additional ocular health findings" options={additional} allOptions={options} selected={capture.selections} onChange={onSelections} /></div></details>}
+            <OptionList ariaLabel="Priority ocular health findings" options={priority} allOptions={options} selected={capture.selections} prior={prior} onChange={onSelections} />
+            {additional.length > 0 && <details><summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-[color:var(--odos-muted)]">More findings ({additional.length})</summary><div className="mt-3"><OptionList ariaLabel="Additional ocular health findings" options={additional} allOptions={options} selected={capture.selections} prior={prior} onChange={onSelections} /></div></details>}
           </div>
           {worksheetOptions.length > 0 && (
             <div role="group" aria-label="Describe each" className="space-y-3">
@@ -380,6 +448,7 @@ function EyePanel({ eye, capture, field, gradeFields, normalTemplate, allowDefer
                   option={option}
                   allOptions={options}
                   capture={capture}
+                  prior={prior}
                   onSelections={onSelections}
                   onFindingDetail={onFindingDetail}
                 />
@@ -393,14 +462,20 @@ function EyePanel({ eye, capture, field, gradeFields, normalTemplate, allowDefer
   );
 }
 
-function OptionList({ ariaLabel, options, allOptions, selected, onChange }: {
+function OptionList({ ariaLabel, options, allOptions, selected, prior, onChange }: {
   ariaLabel: string;
   options: NonNullable<CustomFindingField["options"]>;
   allOptions: NonNullable<CustomFindingField["options"]>;
   selected: string[];
+  prior: PriorFindingReadings;
   onChange(selected: string[]): void;
 }) {
   const optionCodes = options.map((option) => option.code);
+  const presenceOnlyPriors = options.flatMap((option) => {
+    const hasChildren = allOptions.some((candidate) => candidate.parentCode === option.code);
+    const reading = !option.qualifiers?.length && !hasChildren ? prior[option.code]?.presence : undefined;
+    return reading ? [{ option, reading }] : [];
+  });
   return (
     <div>
       <OdosChips
@@ -416,16 +491,20 @@ function OptionList({ ariaLabel, options, allOptions, selected, onChange }: {
         }}
         ariaLabel={ariaLabel}
       />
+      {presenceOnlyPriors.map(({ option, reading }) => (
+        <PriorValue key={option.code} reading={reading} value={`${findingChipLabel(option.display)} present`} />
+      ))}
     </div>
   );
 }
 
 type FindingOption = NonNullable<CustomFindingField["options"]>[number];
 
-function FindingWorksheetRow({ option, allOptions, capture, onSelections, onFindingDetail }: {
+function FindingWorksheetRow({ option, allOptions, capture, prior, onSelections, onFindingDetail }: {
   option: FindingOption;
   allOptions: FindingOption[];
   capture: EyeCapture;
+  prior: PriorFindingReadings;
   onSelections(selections: string[]): void;
   onFindingDetail(optionCode: string, qualifierKey: string, value: FindingQualifierValue | undefined): void;
 }) {
@@ -437,6 +516,7 @@ function FindingWorksheetRow({ option, allOptions, capture, onSelections, onFind
         key={qualifier.key}
         qualifier={qualifier}
         value={capture.findingDetails?.[option.code]?.[qualifier.key]}
+        prior={prior[option.code]?.qualifiers[qualifier.key]}
         onChange={(value) => onFindingDetail(option.code, qualifier.key, value)}
       />
     )),
@@ -449,13 +529,21 @@ function FindingWorksheetRow({ option, allOptions, capture, onSelections, onFind
           onChange={(nextChildren) => onSelections(replaceSelectionGroup(capture.selections, childCodes, nextChildren))}
           ariaLabel={`${option.display} details`}
         />
+        {children.flatMap((child) => {
+          const reading = prior[child.code]?.presence;
+          return reading ? [<PriorValue key={child.code} reading={reading} value={`${findingChipLabel(child.display)} present`} />] : [];
+        })}
       </div>
     )] : []),
   ];
   const removeCodes = new Set([option.code, ...childCodes]);
+  const optionPrior = prior[option.code]?.presence;
   return (
     <div data-finding-row={option.code} className="grid gap-3 rounded border border-[color:var(--odos-line)] bg-[var(--odos-surface-2)] p-3 md:grid-cols-[minmax(8rem,0.7fr)_minmax(0,2fr)_auto]">
-      <div className="flex min-h-11 items-center text-sm font-semibold text-[color:var(--odos-text)]">{findingChipLabel(option.display)}</div>
+      <div className="flex min-h-11 flex-col items-start justify-center text-sm font-semibold text-[color:var(--odos-text)]">
+        <span>{findingChipLabel(option.display)}</span>
+        {optionPrior && <PriorValue reading={optionPrior} value="Present" />}
+      </div>
       {controls.length > 0 && <div data-finding-controls={option.code} className="grid gap-3 sm:grid-cols-2">{controls}</div>}
       <button
         type="button"
@@ -469,9 +557,10 @@ function FindingWorksheetRow({ option, allOptions, capture, onSelections, onFind
   );
 }
 
-function FindingQualifierControl({ qualifier, value, onChange }: {
+function FindingQualifierControl({ qualifier, value, prior, onChange }: {
   qualifier: FindingQualifierDefinition;
   value: FindingQualifierValue | undefined;
+  prior?: PriorReading;
   onChange(value: FindingQualifierValue | undefined): void;
 }) {
   if (qualifier.kind === "graded") {
@@ -486,6 +575,7 @@ function FindingQualifierControl({ qualifier, value, onChange }: {
           ariaLabel={qualifier.display}
           exclusive
         />
+        {prior && <PriorValue reading={prior} value={formatPriorQualifierValue(qualifier, prior.value)} />}
       </div>
     );
   }
@@ -501,11 +591,12 @@ function FindingQualifierControl({ qualifier, value, onChange }: {
           ariaLabel={qualifier.display}
           exclusive
         />
+        {prior && <PriorValue reading={prior} value={formatPriorQualifierValue(qualifier, prior.value)} />}
       </div>
     );
   }
   if (qualifier.kind === "numeric") {
-    return <NumericFindingQualifier qualifier={qualifier} value={typeof value === "number" ? value : undefined} onChange={onChange} />;
+    return <NumericFindingQualifier qualifier={qualifier} value={typeof value === "number" ? value : undefined} prior={prior} onChange={onChange} />;
   }
   const extent = isClockHourExtentValue(value) ? value : undefined;
   const hours = [
@@ -534,13 +625,15 @@ function FindingQualifierControl({ qualifier, value, onChange }: {
         ariaLabel={`${qualifier.display} direction`}
         exclusive
       /></div>}
+      {prior && <PriorValue reading={prior} value={formatPriorQualifierValue(qualifier, prior.value)} />}
     </div>
   );
 }
 
-function NumericFindingQualifier({ qualifier, value, onChange }: {
+function NumericFindingQualifier({ qualifier, value, prior, onChange }: {
   qualifier: Extract<FindingQualifierDefinition, { kind: "numeric" }>;
   value: number | undefined;
+  prior?: PriorReading;
   onChange(value: number | undefined): void;
 }) {
   const storedText = value === undefined ? "" : String(value);
@@ -574,30 +667,57 @@ function NumericFindingQualifier({ qualifier, value, onChange }: {
   };
 
   return (
-    <label className="min-w-0">
-      <span className="mb-1 block text-xs font-semibold text-[color:var(--odos-muted)]">{qualifier.display}</span>
-      <div className={`flex min-h-11 overflow-hidden rounded border bg-bg-deep focus-within:border-brand ${validationError ? "border-[color:var(--odos-alert)]" : "border-[color:var(--odos-line-2)]"}`}>
-        <input
-          type="text"
-          inputMode="decimal"
-          aria-label={qualifier.display}
-          aria-invalid={validationError ? true : undefined}
-          value={draft}
-          min={qualifier.min}
-          max={qualifier.max}
-          step={qualifier.step}
-          onChange={(event) => {
-            setDraft(event.target.value);
-            setValidationError(null);
-          }}
-          onBlur={commit}
-          className="min-h-11 min-w-0 flex-1 bg-transparent px-3 text-sm text-[color:var(--odos-text)] outline-none"
-        />
-        {qualifier.unit && <span className="flex min-h-11 items-center border-l border-[color:var(--odos-line)] px-3 text-sm text-[color:var(--odos-muted)]">{qualifier.unit}</span>}
-      </div>
+    <div className="min-w-0">
+      <label>
+        <span className="mb-1 block text-xs font-semibold text-[color:var(--odos-muted)]">{qualifier.display}</span>
+        <div className={`flex min-h-11 overflow-hidden rounded border bg-bg-deep focus-within:border-brand ${validationError ? "border-[color:var(--odos-alert)]" : "border-[color:var(--odos-line-2)]"}`}>
+          <input
+            type="text"
+            inputMode="decimal"
+            aria-label={qualifier.display}
+            aria-invalid={validationError ? true : undefined}
+            value={draft}
+            min={qualifier.min}
+            max={qualifier.max}
+            step={qualifier.step}
+            onChange={(event) => {
+              setDraft(event.target.value);
+              setValidationError(null);
+            }}
+            onBlur={commit}
+            className="min-h-11 min-w-0 flex-1 bg-transparent px-3 text-sm text-[color:var(--odos-text)] outline-none"
+          />
+          {qualifier.unit && <span className="flex min-h-11 items-center border-l border-[color:var(--odos-line)] px-3 text-sm text-[color:var(--odos-muted)]">{qualifier.unit}</span>}
+        </div>
+      </label>
+      {prior && <PriorValue reading={prior} value={formatPriorQualifierValue(qualifier, prior.value)} />}
       {validationError && <span role="alert" className="mt-1 block text-xs text-[color:var(--odos-alert)]">{validationError}</span>}
-    </label>
+    </div>
   );
+}
+
+function PriorValue({ reading, value }: { reading: PriorReading; value: string }) {
+  return (
+    <div data-prior-reading="" className="mt-1 text-xs font-normal text-[color:var(--odos-faint)]">
+      Prior: {value} · {formatDate(reading.recordedAt)}
+    </div>
+  );
+}
+
+function formatPriorQualifierValue(
+  qualifier: FindingQualifierDefinition,
+  value: FindingQualifierValue | "present",
+): string {
+  if (qualifier.kind === "enum" && typeof value === "string") {
+    return qualifier.options.find((option) => option.code === value)?.display ?? findingChipLabel(value);
+  }
+  if (qualifier.kind === "numeric" && typeof value === "number") {
+    return `${formatStepValue(value, qualifier.step)}${qualifier.unit ? ` ${qualifier.unit}` : ""}`;
+  }
+  if (qualifier.kind === "extent" && isClockHourExtentValue(value)) {
+    return `${value.from}–${value.to} ${value.clockwise ? "clockwise" : "counterclockwise"}`;
+  }
+  return typeof value === "string" ? findingChipLabel(value) : String(value);
 }
 
 function findingChipLabel(display: string): string {
@@ -678,6 +798,75 @@ function captureFromRows(definition: CustomFindingDefinition, rows: HistoryRow[]
       ...(row?.normalTemplate ? { normalTemplate: row.normalTemplate } : {}),
     }];
   })) as Record<Eye, EyeCapture>;
+}
+
+function excludeCurrentEncounterRows(patientRows: HistoryRow[], currentRows: HistoryRow[]): HistoryRow[] {
+  const currentCounts = new Map<string, number>();
+  for (const row of currentRows) {
+    const signature = historyRowSignature(row);
+    currentCounts.set(signature, (currentCounts.get(signature) ?? 0) + 1);
+  }
+  return patientRows.filter((row) => {
+    const signature = historyRowSignature(row);
+    const remaining = currentCounts.get(signature) ?? 0;
+    if (remaining === 0) return true;
+    currentCounts.set(signature, remaining - 1);
+    return false;
+  });
+}
+
+function historyRowSignature(row: HistoryRow): string {
+  return JSON.stringify(row);
+}
+
+function rowsBeforeEncounter(rows: HistoryRow[], encounterRecordedAt: string | undefined): HistoryRow[] {
+  if (!encounterRecordedAt) return [];
+  const encounterTimestamp = Date.parse(encounterRecordedAt);
+  if (!Number.isFinite(encounterTimestamp)) return [];
+  return rows.filter((row) => {
+    const rowTimestamp = Date.parse(row.recordedAt);
+    return Number.isFinite(rowTimestamp) && rowTimestamp < encounterTimestamp;
+  });
+}
+
+function priorReadingsFromRows(
+  definition: CustomFindingDefinition,
+  rows: HistoryRow[],
+): PriorReadings {
+  const field = abnormalField(definition);
+  if (!field) return emptyPriorReadings();
+  const readings = emptyPriorReadings();
+  const sortedRows = rows
+    .map((row, index) => ({ row, index, timestamp: new Date(row.recordedAt).getTime() }))
+    .sort((left, right) => {
+      const leftTimestamp = Number.isNaN(left.timestamp) ? Number.NEGATIVE_INFINITY : left.timestamp;
+      const rightTimestamp = Number.isNaN(right.timestamp) ? Number.NEGATIVE_INFINITY : right.timestamp;
+      return rightTimestamp - leftTimestamp || left.index - right.index;
+    })
+    .map(({ row }) => row);
+  for (const row of sortedRows) {
+    if ((row.eye !== "OD" && row.eye !== "OS") || !row.recordedAt) continue;
+    const selections = row.values.find((value) => value.code === field.localCode)?.value;
+    if (!Array.isArray(selections)) continue;
+    for (const optionCode of selections) {
+      const option = field.options?.find((candidate) => candidate.code === optionCode);
+      if (!option) continue;
+      const finding = readings[row.eye][optionCode] ?? { qualifiers: {} };
+      finding.presence ??= { recordedAt: row.recordedAt, value: "present" };
+      for (const qualifier of option.qualifiers ?? []) {
+        const value = row.findingDetails?.[optionCode]?.[qualifier.key];
+        if (value !== undefined && finding.qualifiers[qualifier.key] === undefined) {
+          finding.qualifiers[qualifier.key] = { recordedAt: row.recordedAt, value };
+        }
+      }
+      readings[row.eye][optionCode] = finding;
+    }
+  }
+  return readings;
+}
+
+function emptyPriorReadings(): PriorReadings {
+  return { OD: {}, OS: {} };
 }
 
 function abnormalField(definition: CustomFindingDefinition): CustomFindingField | undefined {
