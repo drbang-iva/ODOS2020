@@ -2,6 +2,9 @@ node_modules/
 dist/
 .env
 .env*.local
+# Env backups written by maintenance scripts (.env.bak-dupfix-*, etc).
+# No leading slash, so this applies at any depth. .env.example stays tracked.
+.env.bak*
 *.log
 .DS_Store
 
