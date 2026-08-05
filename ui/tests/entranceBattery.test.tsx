@@ -3,8 +3,10 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { COVER_MAGNITUDES, CoverTestSection } from "../src/components/charting/CoverTestSection";
 import { CvfSection } from "../src/components/charting/CvfSection";
+import { DiagnosisPicker } from "../src/components/charting/DiagnosisPicker";
 import { DilationSection } from "../src/components/charting/DilationSection";
 import { diplopiaSelectionsComplete, EomSection } from "../src/components/charting/EomSection";
 import { EntranceMeasurementSection } from "../src/components/charting/EntranceMeasurementSection";
@@ -12,7 +14,7 @@ import { colorPlateTotal, EntranceStateSection } from "../src/components/chartin
 import { SpineNav } from "../src/components/charting/SpineNav";
 import type { CustomFindingDefinition } from "../src/components/charting/CustomFindingSection";
 
-test("screenshot refinement preserves PRETEST order with a rail-safe CVF label", () => {
+test("screenshot refinement preserves PRETEST order with a rail-safe Visual Field label", () => {
   const html = renderToStaticMarkup(<SpineNav active="pupils" statuses={{}} onSelect={() => undefined} />);
   const labels = [
     "Auto-Refraction / Auto-K",
@@ -23,7 +25,7 @@ test("screenshot refinement preserves PRETEST order with a rail-safe CVF label",
     "Stereopsis",
     "Color Vision",
     "EOM / Diplopia",
-    "Confrontation Fields",
+    "Visual Field",
     "Cover Test",
     "IOP",
     "Dilation",
@@ -78,18 +80,157 @@ test("color vision derives only the operator-confirmed Ishihara total", () => {
 });
 
 test("CVF exposes an accessible five-zone click surface over flat coded fields", () => {
-  const html = renderToStaticMarkup(<CvfSection
-    definition={{ stableKey: "entrance:cvf", sectionKey: "entrance:cvf", display: "Confrontation visual fields", active: true, perEye: true, normalTemplate: "Full to finger counting OU", customFields: [] }}
-    patientReference="Patient/p1"
-    encounterReference="Encounter/e1"
-    onSaved={() => undefined}
-  />);
+  const props = {
+    definition: { stableKey: "entrance:cvf", sectionKey: "entrance:cvf", display: "Confrontation visual fields", active: true, perEye: true, normalTemplate: "Full to finger counting OU", customFields: [] },
+    fieldDefectDefinition: visualFieldDefinition(),
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    onSaved: () => undefined,
+  };
+  const html = renderToStaticMarkup(<CvfSection {...props} />);
+  assert.match(html, />Visual Field</);
+  assert.match(html, />Field Defect</);
   assert.match(html, /Mark defects directly on the five-zone field/);
   const source = readFileSync(new URL("../src/components/charting/CvfSection.tsx", import.meta.url), "utf8");
   for (const code of ["CUSTOM_CVF_UPPER_LEFT", "CUSTOM_CVF_UPPER_RIGHT", "CUSTOM_CVF_CENTER", "CUSTOM_CVF_LOWER_LEFT", "CUSTOM_CVF_LOWER_RIGHT"]) assert.match(source, new RegExp(code));
   assert.match(source, /aria-label=\{`\$\{eye\} \$\{zone\} field/);
   assert.match(source, /aria-pressed=\{marked\}/);
   assert.match(source, /marked \? "Defect" : "Clear"/);
+});
+
+test("Visual Field renders exactly the approved lesion-site descriptor vocabulary", () => {
+  const props = {
+    definition: { stableKey: "entrance:cvf", sectionKey: "entrance:cvf", display: "Confrontation visual fields", active: true, perEye: true, normalTemplate: "Full to finger counting OU", customFields: [] },
+    fieldDefectDefinition: visualFieldDefinition(),
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    onSaved: () => undefined,
+  };
+  const html = renderToStaticMarkup(<CvfSection {...props} />);
+  for (const label of [
+    "No defect",
+    "Field loss OD",
+    "Field loss OS",
+    "Bitemporal hemianopsia",
+    "Right homonymous hemianopsia",
+    "Left homonymous hemianopsia",
+    "Superior right homonymous quadrantanopia",
+    "Inferior right homonymous quadrantanopia",
+    "Superior left homonymous quadrantanopia",
+    "Inferior left homonymous quadrantanopia",
+  ]) assert.match(html, new RegExp(label));
+  for (const lesionSite of ["Pre-chiasmal", "Chiasmal", "Post-chiasmal"]) {
+    assert.match(html, new RegExp(lesionSite));
+  }
+  assert.doesNotMatch(html, /binasal|nasal step|arcuate|altitudinal|paracentral|temporal wedge/i);
+});
+
+test("changing a reloaded Field Defect hides the stale diagnosis until the descriptor is saved", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.includes("visual-field-defect") && url.includes("history")) {
+      return Response.json({ rows: [{
+        observationReference: "Observation/vf-observation",
+        values: [{ code: "CUSTOM_FIELD_DEFECT", value: "Field loss OD" }],
+      }] });
+    }
+    if (url.includes("entrance%3Acvf") && url.includes("history")) return Response.json({ rows: [] });
+    if (url.includes("diagnosis-candidates")) {
+      return Response.json({ findings: [{
+        findingInstanceId: "vf-observation",
+        findingDefinitionKey: "entrance:visual-field-defect",
+        observationReference: "Observation/vf-observation",
+        candidates: [{
+          diagnosisKey: "vf_other_localized",
+          display: "Other localized visual field defect",
+          icd10: { code: "H53.451" },
+          codingStatus: "verified",
+          priority: true,
+          source: "mapping",
+        }],
+      }] });
+    }
+    if (url.includes("diagnosis-catalog")) return Response.json({ diagnoses: [] });
+    throw new Error(`Unexpected request: ${url}`);
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<CvfSection
+        definition={{ stableKey: "entrance:cvf", sectionKey: "entrance:cvf", display: "Confrontation visual fields", active: true, perEye: true, normalTemplate: "Full to finger counting OU", customFields: [] }}
+        fieldDefectDefinition={visualFieldDefinition()}
+        patientReference="Patient/p1"
+        encounterReference="Encounter/e1"
+        onSaved={() => undefined}
+      />);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    assert.ok(renderer.root.findAllByType("button").some((button) => button.children.join("") === "dx ▾ 1"));
+    const fieldLossOs = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Field loss OS");
+    assert.ok(fieldLossOs);
+    act(() => fieldLossOs.props.onClick());
+    assert.equal(renderer.root.findAllByType("button").some((button) => button.children.join("") === "dx ▾ 1"), false);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("suppressed visual-field diagnosis stays visible and the override reveals clinician actions", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.includes("diagnosis-candidates")) {
+      return Response.json({
+        findings: [{
+          findingInstanceId: "vf-observation",
+          findingDefinitionKey: "entrance:visual-field-defect",
+          observationReference: "Observation/vf-observation",
+          candidates: [],
+          suppressedCandidates: [{
+            diagnosisKey: "vf_other_localized",
+            display: "Other localized visual field defect",
+            icd10: { code: "H53.451" },
+            codingStatus: "verified",
+            priority: true,
+            source: "mapping",
+          }],
+          suppression: {
+            message: "H53.4x not proposed — the glaucoma stage already carries the field defect.",
+            overridable: true,
+          },
+        }],
+      });
+    }
+    if (url.includes("diagnosis-catalog")) return Response.json({ diagnoses: [] });
+    throw new Error(`Unexpected request: ${url}`);
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<DiagnosisPicker
+        encounterReference="Encounter/e1"
+        observationReferences={["Observation/vf-observation"]}
+        findingDefinitionKey="entrance:visual-field-defect"
+      />);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    const serialized = () => JSON.stringify(renderer.toJSON());
+    assert.match(serialized(), /H53\.4x not proposed/);
+    assert.doesNotMatch(serialized(), /Confirm/);
+    const override = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Override");
+    assert.ok(override);
+    act(() => override.props.onClick());
+    assert.match(serialized(), /Other localized visual field defect/);
+    assert.match(serialized(), /Possible/);
+    assert.match(serialized(), /Confirm/);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("cover magnitude uses the shared spinner and is bounded from 0 through 60 delta", () => {
@@ -151,7 +292,7 @@ test("manual keratometry uses a shrinkable five-column grid that fits the conten
 test("missing entrance definitions render an explicit practice-setup state", () => {
   const source = readFileSync(new URL("../src/scenes/EncounterCharting.tsx", import.meta.url), "utf8");
   assert.match(source, /MissingDefinitionState section="Pupils"/);
-  assert.match(source, /MissingDefinitionState section="Confrontation visual fields"/);
+  assert.match(source, /MissingDefinitionState section="Visual Field"/);
   assert.match(source, /Its finding definition is missing or inactive/);
 });
 
@@ -186,5 +327,34 @@ function measurementDefinition(): CustomFindingDefinition {
       { localCode: "CUSTOM_STEEP_AXIS", display: "Steep axis", valueType: "number", min: 0, max: 180, step: 1, order: 3, active: true },
       { localCode: "CUSTOM_MIRES_QUALITY", display: "Mires quality", valueType: "select", options: [{ code: "clear", display: "clear", active: true }], order: 4, active: true },
     ],
+  };
+}
+
+function visualFieldDefinition(): CustomFindingDefinition {
+  return {
+    stableKey: "entrance:visual-field-defect",
+    sectionKey: "entrance:visual-field-defect",
+    display: "Visual Field",
+    active: true,
+    perEye: false,
+    customFields: [{
+      localCode: "CUSTOM_FIELD_DEFECT",
+      display: "Field Defect",
+      valueType: "select",
+      options: [
+        ["no-defect", "No defect"],
+        ["field-loss-od", "Field loss OD"],
+        ["field-loss-os", "Field loss OS"],
+        ["bitemporal-hemianopsia", "Bitemporal hemianopsia"],
+        ["right-homonymous-hemianopsia", "Right homonymous hemianopsia"],
+        ["left-homonymous-hemianopsia", "Left homonymous hemianopsia"],
+        ["superior-right-homonymous-quadrantanopia", "Superior right homonymous quadrantanopia"],
+        ["inferior-right-homonymous-quadrantanopia", "Inferior right homonymous quadrantanopia"],
+        ["superior-left-homonymous-quadrantanopia", "Superior left homonymous quadrantanopia"],
+        ["inferior-left-homonymous-quadrantanopia", "Inferior left homonymous quadrantanopia"],
+      ].map(([code, display]) => ({ code, display, active: true })),
+      order: 0,
+      active: true,
+    }],
   };
 }

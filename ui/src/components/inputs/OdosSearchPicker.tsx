@@ -210,7 +210,7 @@ export function OdosSearchPicker<T>({
             setEditing(false);
           }
         }}
-        className="mt-2 min-h-11 w-full rounded border border-[color:var(--odos-line-2)] bg-bg-deep px-3 text-sm text-[color:var(--odos-text)] outline-none placeholder:text-[color:var(--odos-faint)] focus:border-brand disabled:opacity-45"
+        className="mt-2 min-h-11 w-full rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-surface-2)] px-3 text-sm text-[color:var(--odos-text)] outline-none placeholder:text-[color:var(--odos-faint)] focus:border-brand disabled:opacity-45"
       />
       {value && <p className="mt-2 text-xs text-emerald-300">Selected: {selectedLabel}</p>}
       {validationMessage && <p className="mt-2 text-xs font-normal text-red-300">{validationMessage}</p>}
@@ -219,7 +219,7 @@ export function OdosSearchPicker<T>({
         role="listbox"
         aria-label={`${label} results`}
         hidden={!showResults}
-        className="absolute z-50 mt-2 max-h-[min(20rem,calc(100dvh-8rem))] w-full space-y-2 overflow-y-auto rounded border border-[color:var(--odos-line-2)] bg-bg-deep p-2 shadow-xl"
+        className="absolute z-50 mt-2 max-h-[min(20rem,calc(100dvh-8rem))] w-full space-y-2 overflow-y-auto rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-popover)] p-2 shadow-xl"
       >
         {loading && <p className="min-h-11 px-3 py-3 text-sm text-[color:var(--odos-muted)]">Searching…</p>}
         {error && <p role="alert" className="min-h-11 px-3 py-3 text-sm text-red-300">{error}</p>}

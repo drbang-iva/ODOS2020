@@ -90,7 +90,7 @@ test("finding definitions persist as one coded Basic carrying the interface JSON
   assert.deepEqual(parseFindingDefinitionResource(resource), local);
 });
 
-test("E2 seeds nine entrance definitions with canonical Pachymetry and declarative documentation elements", () => {
+test("E2 seeds ten entrance definitions with canonical Pachymetry and declarative documentation elements", () => {
   const seeds = buildFindingDefinitionSeeds();
   const entrance = seeds.filter((definition) => definition.sectionKey?.startsWith("entrance:"));
   assert.deepEqual(entrance.map((definition) => definition.stableKey), [
@@ -99,6 +99,7 @@ test("E2 seeds nine entrance definitions with canonical Pachymetry and declarati
     "entrance:color",
     "entrance:eom",
     "entrance:cvf",
+    "entrance:visual-field-defect",
     "entrance:cover",
     "pachymetry_um",
     "manual_keratometry",
@@ -112,6 +113,7 @@ test("E2 seeds nine entrance definitions with canonical Pachymetry and declarati
     ["entrance.color"],
     ["entrance.eom"],
     ["entrance.cvf"],
+    ["entrance.visual-field-defect"],
     ["entrance.cover"],
     ["entrance.pachymetry"],
     [],

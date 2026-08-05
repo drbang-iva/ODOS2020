@@ -343,6 +343,9 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const colorDefinition = entranceDefinitions.find((definition) => definition.stableKey === "entrance:color");
   const eomDefinition = entranceDefinitions.find((definition) => definition.stableKey === "entrance:eom");
   const cvfDefinition = entranceDefinitions.find((definition) => definition.stableKey === "entrance:cvf");
+  const visualFieldDefectDefinition = entranceDefinitions.find(
+    (definition) => definition.stableKey === "entrance:visual-field-defect",
+  );
   const pachymetryDefinition = entranceDefinitions.find((definition) => definition.stableKey === "pachymetry_um");
   const manualKDefinition = entranceDefinitions.find((definition) => definition.stableKey === "manual_keratometry");
   const dilationDefinition = entranceDefinitions.find((definition) => definition.stableKey === "entrance:dilation");
@@ -520,9 +523,15 @@ export function EncounterCharting({ patient, encounterId }: Props) {
           {activeSection === "eom" && (eomDefinition ? (
             <EomSection definition={eomDefinition} patientReference={patientReference} encounterReference={encounterReference} onSaved={(status) => markSaved("eom", status)} />
           ) : <MissingDefinitionState section="EOM / diplopia" />)}
-          {activeSection === "cvf" && (cvfDefinition ? (
-            <CvfSection definition={cvfDefinition} patientReference={patientReference} encounterReference={encounterReference} onSaved={(status) => markSaved("cvf", status)} />
-          ) : <MissingDefinitionState section="Confrontation visual fields" />)}
+          {activeSection === "cvf" && (cvfDefinition && visualFieldDefectDefinition ? (
+            <CvfSection
+              definition={cvfDefinition}
+              fieldDefectDefinition={visualFieldDefectDefinition}
+              patientReference={patientReference}
+              encounterReference={encounterReference}
+              onSaved={(status) => markSaved("cvf", status)}
+            />
+          ) : <MissingDefinitionState section="Visual Field" />)}
           {activeSection === "cover-test" && (
             <CoverTestSection
               patientReference={patientReference}

@@ -1,8 +1,10 @@
+import type { Observation } from "@medplum/fhirtypes";
 import type { CustomFieldEntry } from "./custom-fields.js";
 import {
   buildClinicalFindingDefinition,
   type ClinicalFindingDefinition,
   type ClinicalGraphProvenance,
+  type FindingValue,
 } from "./glaucoma-suspect.js";
 
 const PUPILS_KEY = "entrance:pupils";
@@ -10,6 +12,8 @@ const STEREO_KEY = "entrance:stereo";
 const COLOR_KEY = "entrance:color";
 export const EOM_KEY = "entrance:eom";
 export const CVF_KEY = "entrance:cvf";
+export const VISUAL_FIELD_DEFECT_KEY = "entrance:visual-field-defect";
+export const VISUAL_FIELD_DESCRIPTOR_FIELD = "CUSTOM_FIELD_DEFECT";
 export const COVER_TEST_KEY = "entrance:cover";
 export const PACHYMETRY_KEY = "pachymetry_um";
 export const MANUAL_K_KEY = "manual_keratometry";
@@ -91,6 +95,7 @@ export function buildEntranceFindingDefinitions(
       selectField("CUSTOM_CVF_UNABLE", "Unable", ["no", "yes"], 5),
       selectField("CUSTOM_CVF_METHOD", "Method", ["finger count", "hand motion"], 6),
     ], "entrance.cvf", provenance),
+    visualFieldDefectDefinition(provenance),
     buildClinicalFindingDefinition({
       id: "finding-def-entrance-cover",
       stableKey: COVER_TEST_KEY,
@@ -178,6 +183,115 @@ export function buildEntranceFindingDefinitions(
       provenance,
     }),
   ];
+}
+
+type VisualFieldCodeSelection =
+  | { kind: "eye"; slot: "right" | "left" }
+  | { kind: "field"; slot: "right" | "left" }
+  | { kind: "fixed" };
+
+export interface VisualFieldDescriptorResolution {
+  descriptor: string;
+  diagnosisKey?: "vf_other_localized" | "vf_heteronymous_bilateral" | "vf_homonymous_bilateral";
+  codeSelection?: VisualFieldCodeSelection;
+}
+
+const VISUAL_FIELD_DESCRIPTORS: Array<{
+  code: string;
+  display: string;
+  lesionSite?: "pre-chiasmal" | "chiasmal" | "post-chiasmal";
+  diagnosisKey?: VisualFieldDescriptorResolution["diagnosisKey"];
+  codeSelection?: VisualFieldCodeSelection;
+}> = [
+  { code: "no-defect", display: "No defect" },
+  { code: "field-loss-od", display: "Field loss OD", lesionSite: "pre-chiasmal", diagnosisKey: "vf_other_localized", codeSelection: { kind: "eye", slot: "right" } },
+  { code: "field-loss-os", display: "Field loss OS", lesionSite: "pre-chiasmal", diagnosisKey: "vf_other_localized", codeSelection: { kind: "eye", slot: "left" } },
+  { code: "bitemporal-hemianopsia", display: "Bitemporal hemianopsia", lesionSite: "chiasmal", diagnosisKey: "vf_heteronymous_bilateral", codeSelection: { kind: "fixed" } },
+  { code: "right-homonymous-hemianopsia", display: "Right homonymous hemianopsia", lesionSite: "post-chiasmal", diagnosisKey: "vf_homonymous_bilateral", codeSelection: { kind: "field", slot: "right" } },
+  { code: "left-homonymous-hemianopsia", display: "Left homonymous hemianopsia", lesionSite: "post-chiasmal", diagnosisKey: "vf_homonymous_bilateral", codeSelection: { kind: "field", slot: "left" } },
+  { code: "superior-right-homonymous-quadrantanopia", display: "Superior right homonymous quadrantanopia", lesionSite: "post-chiasmal", diagnosisKey: "vf_homonymous_bilateral", codeSelection: { kind: "field", slot: "right" } },
+  { code: "inferior-right-homonymous-quadrantanopia", display: "Inferior right homonymous quadrantanopia", lesionSite: "post-chiasmal", diagnosisKey: "vf_homonymous_bilateral", codeSelection: { kind: "field", slot: "right" } },
+  { code: "superior-left-homonymous-quadrantanopia", display: "Superior left homonymous quadrantanopia", lesionSite: "post-chiasmal", diagnosisKey: "vf_homonymous_bilateral", codeSelection: { kind: "field", slot: "left" } },
+  { code: "inferior-left-homonymous-quadrantanopia", display: "Inferior left homonymous quadrantanopia", lesionSite: "post-chiasmal", diagnosisKey: "vf_homonymous_bilateral", codeSelection: { kind: "field", slot: "left" } },
+];
+
+export function visualFieldDescriptorResolution(
+  definitionStableKey: string | undefined,
+  value: FindingValue | undefined,
+): VisualFieldDescriptorResolution | undefined {
+  if (definitionStableKey !== VISUAL_FIELD_DEFECT_KEY || value?.type !== "components") return undefined;
+  const descriptor = value.components.find((component) =>
+    component.code === VISUAL_FIELD_DESCRIPTOR_FIELD
+  )?.value;
+  if (typeof descriptor !== "string") return undefined;
+  const row = VISUAL_FIELD_DESCRIPTORS.find((candidate) => candidate.code === descriptor);
+  return row ? {
+    descriptor: row.code,
+    ...(row.diagnosisKey ? { diagnosisKey: row.diagnosisKey } : {}),
+    ...(row.codeSelection ? { codeSelection: row.codeSelection } : {}),
+  } : undefined;
+}
+
+export function visualFieldDescriptorResolutionFromObservation(
+  definitionStableKey: string | undefined,
+  observation: Observation | undefined,
+): VisualFieldDescriptorResolution | undefined {
+  if (definitionStableKey !== VISUAL_FIELD_DEFECT_KEY || !observation) return undefined;
+  const descriptor = observation.component?.find((component) =>
+    component.code.coding?.some((coding) => coding.code === VISUAL_FIELD_DESCRIPTOR_FIELD)
+  )?.valueCodeableConcept?.coding?.find((coding) => coding.code)?.code;
+  if (!descriptor) return undefined;
+  const row = VISUAL_FIELD_DESCRIPTORS.find((candidate) => candidate.code === descriptor);
+  return row ? {
+    descriptor: row.code,
+    ...(row.diagnosisKey ? { diagnosisKey: row.diagnosisKey } : {}),
+    ...(row.codeSelection ? { codeSelection: row.codeSelection } : {}),
+  } : undefined;
+}
+
+function visualFieldDefectDefinition(
+  provenance: ClinicalGraphProvenance,
+): ClinicalFindingDefinition {
+  const field: CustomFieldEntry = {
+    localCode: VISUAL_FIELD_DESCRIPTOR_FIELD,
+    display: "Field Defect",
+    origin: "practice",
+    valueType: "select",
+    options: VISUAL_FIELD_DESCRIPTORS.map((row) => ({
+      code: row.code,
+      display: row.display,
+      active: true,
+      ...(row.lesionSite ? { parentCode: row.lesionSite } : {}),
+    })),
+    order: 0,
+    active: true,
+  };
+  return buildClinicalFindingDefinition({
+    id: "finding-def-entrance-visual-field-defect",
+    stableKey: VISUAL_FIELD_DEFECT_KEY,
+    display: "Visual Field",
+    sectionKey: VISUAL_FIELD_DEFECT_KEY,
+    anatomyTarget: "other",
+    valueSchema: {
+      type: "visual-field-defect",
+      perEye: false,
+      fields: { [field.localCode]: field },
+    },
+    sourceStatus: "verified-seed",
+    allowDiagnosisMapping: true,
+    diagnosisCandidates: VISUAL_FIELD_DESCRIPTORS.flatMap((row, index) => row.diagnosisKey ? [{
+      id: `SEED_VISUAL_FIELD_DESCRIPTOR_${index + 1}`,
+      diagnosisKey: row.diagnosisKey,
+      trigger: { kind: "option" as const, field: VISUAL_FIELD_DESCRIPTOR_FIELD, anyOf: [row.code] },
+      priority: true,
+      origin: "seed" as const,
+      active: true,
+    }] : []),
+    documentationElements: [{ code: "entrance.visual-field-defect", origin: "seed", active: true }],
+    notBillReady: true,
+    active: true,
+    provenance,
+  });
 }
 
 function eomPositionFields(): CustomFieldEntry[] {

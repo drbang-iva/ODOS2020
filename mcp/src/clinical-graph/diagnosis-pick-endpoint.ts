@@ -15,6 +15,10 @@ import { FhirFindingDefinitionStore } from "./finding-definition-store.js";
 import { findingDefinitionForObservation } from "./finding-observation-match.js";
 import type { DiagnosisCatalogRow } from "./glaucoma-suspect.js";
 import {
+  visualFieldDescriptorResolutionFromObservation,
+  type VisualFieldDescriptorResolution,
+} from "./entrance-definition.js";
+import {
   DIAGNOSIS_VISIT_STATUSES,
   type DiagnosisVisitStatusStore,
 } from "./diagnosis-visit-status-store.js";
@@ -87,11 +91,16 @@ export async function handleDiagnosisPickRequest(
   }
 
   const laterality = normalizeLaterality(observationLaterality(observation) ?? parsed.data.laterality);
-  const code = resolveConditionCode(diagnosis, laterality);
-  if (diagnosis.lateralityRequired && (!laterality || !code)) {
+  const visualFieldDescriptor = visualFieldDescriptorResolutionFromObservation(
+    findingDefinitionStableKey,
+    observation,
+  );
+  const code = resolveConditionCode(diagnosis, laterality, visualFieldDescriptor);
+  const descriptorEyeLaterality = visualFieldDescriptor?.codeSelection?.kind === "eye";
+  if (diagnosis.lateralityRequired && (!code || !laterality && !descriptorEyeLaterality)) {
     return { status: 422, body: { error: "This diagnosis requires laterality. Supply laterality explicitly." } };
   }
-  const lateralityBucket = diagnosisLateralityBucket(diagnosis, laterality);
+  const lateralityBucket = diagnosisLateralityBucket(diagnosis, laterality, visualFieldDescriptor);
   const legacyIdentifierValue = `${diagnosis.stableKey}::${lateralityBucket}`;
   const compositeIdentifierValue = `${encounterId}::${legacyIdentifierValue}`;
   const existing = await findEncounterDiagnosis(
@@ -257,9 +266,26 @@ async function updateCondition(
   });
 }
 
-function resolveConditionCode(row: DiagnosisCatalogRow, laterality: "right" | "left" | "bilateral" | undefined): string | undefined {
+function resolveConditionCode(
+  row: DiagnosisCatalogRow,
+  laterality: "right" | "left" | "bilateral" | undefined,
+  visualFieldDescriptor?: VisualFieldDescriptorResolution,
+): string | undefined {
   if (!row.icd10) return undefined;
   if ("code" in row.icd10) return row.icd10.code;
+  if (
+    visualFieldDescriptor?.codeSelection?.kind === "field" &&
+    row.stableKey === "vf_homonymous_bilateral"
+  ) {
+    return row.icd10.pattern[visualFieldDescriptor.codeSelection.slot];
+  }
+  if (
+    visualFieldDescriptor?.codeSelection?.kind === "eye" &&
+    row.clinicalFamily === "visual-field-defect" &&
+    row.lateralityRequired
+  ) {
+    return row.icd10.pattern[visualFieldDescriptor.codeSelection.slot];
+  }
   if (!row.lateralityRequired) return row.icd10.pattern.unspecifiedEye;
   if (laterality) return row.icd10.pattern[laterality];
   return row.icd10.pattern.unspecifiedEye;
@@ -268,8 +294,18 @@ function resolveConditionCode(row: DiagnosisCatalogRow, laterality: "right" | "l
 function diagnosisLateralityBucket(
   row: DiagnosisCatalogRow,
   laterality: "right" | "left" | "bilateral" | undefined,
-): LateralityBucket {
+  visualFieldDescriptor?: VisualFieldDescriptorResolution,
+): LateralityBucket | "field-right" | "field-left" {
   if (!row.icd10 || "code" in row.icd10) return "none";
+  if (
+    visualFieldDescriptor?.codeSelection?.kind === "field" &&
+    row.stableKey === "vf_homonymous_bilateral"
+  ) return `field-${visualFieldDescriptor.codeSelection.slot}`;
+  if (
+    visualFieldDescriptor?.codeSelection?.kind === "eye" &&
+    row.clinicalFamily === "visual-field-defect" &&
+    row.lateralityRequired
+  ) return visualFieldDescriptor.codeSelection.slot;
   if (!row.lateralityRequired) return "none";
   return laterality ?? "unspecified";
 }
