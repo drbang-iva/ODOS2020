@@ -82,17 +82,26 @@ if [[ "$verdict" == "FAIL" ]]; then
 fi
 
 if ! inline_comment_rows="$(gh api --paginate "repos/$repo_name/pulls/$pr_number/comments" \
-  --jq '.[] | [((.path // "?") | explode | map(select(. >= 32 and . != 127 and (. < 128 or . > 159))) | implode), ((.line // .original_line // "?") | tostring), (.user.login // "unknown"), (.commit_id // ""), ((((.body // "") | split("\n")[0]) // "") | explode | map(select(. >= 32 and . != 127 and (. < 128 or . > 159))) | implode)] | @tsv')"; then
+  --jq '.[] | [((.path // "?") | explode | map(select(. >= 32 and . != 127 and (. < 128 or . > 159))) | implode), ((.line // .original_line // "?") | tostring), (.user.login // "unknown"), (.original_commit_id // "?"), (.commit_id // "?"), ((((.body // "") | split("\n")[0]) // "") | explode | map(select(. >= 32 and . != 127 and (. < 128 or . > 159))) | implode)] | @tsv')"; then
   die "could not fetch inline review comments for PR #$pr_number"
 fi
 
 current_comments=()
 if [[ -n "$inline_comment_rows" ]]; then
-  while IFS=$'\t' read -r comment_path comment_line comment_author comment_commit_id comment_first_line; do
+  while IFS=$'\t' read -r comment_path comment_line comment_author comment_original_commit_id comment_commit_id comment_first_line; do
     [[ -n "$comment_path" ]] || continue
+    normalized_comment_original_commit="$(printf '%s' "$comment_original_commit_id" | tr '[:upper:]' '[:lower:]')"
     normalized_comment_commit="$(printf '%s' "$comment_commit_id" | tr '[:upper:]' '[:lower:]')"
-    [[ "$normalized_comment_commit" == "$head_sha" ]] || continue
-    current_comments+=("$comment_path:$comment_line — $comment_author — ${comment_first_line:-(no comment body)}")
+    if [[ "$normalized_comment_original_commit" =~ ^[0-9a-f]{40}$ ]]; then
+      [[ "$normalized_comment_original_commit" == "$head_sha" ]] || continue
+      comment_provenance="written ${normalized_comment_original_commit:0:7}"
+    else
+      comment_provenance="write-time provenance unavailable; treated current (fail-closed)"
+      if [[ "$normalized_comment_commit" =~ ^[0-9a-f]{40}$ ]]; then
+        comment_provenance="$comment_provenance; GitHub commit ${normalized_comment_commit:0:7}"
+      fi
+    fi
+    current_comments+=("$comment_path:$comment_line — $comment_author — $comment_provenance — ${comment_first_line:-(no comment body)}")
   done <<<"$inline_comment_rows"
 fi
 current_count="${#current_comments[@]}"

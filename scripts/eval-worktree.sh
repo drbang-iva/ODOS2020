@@ -88,10 +88,12 @@ run_step() {
 }
 
 print_review_feedback() {
-  local inline_rows review_rows sorted_inline_rows
-  local path line author commit_id first_line normalized_commit marker location previous_location
-  local state
+  local inline_rows review_rows sorted_inline_rows thread_rows
+  local thread_root_id path line author original_commit_id commit_id first_line
+  local normalized_original_commit normalized_commit classification reanchor_note
+  local thread_state marker location previous_location state
   local current_count=0
+  local indeterminate_count=0
   local stale_count=0
   local total_count=0
 
@@ -100,34 +102,74 @@ print_review_feedback() {
   echo "----------------------"
 
   if inline_rows="$(gh api --paginate "repos/$repo_name/pulls/$pr_number/comments" \
-    --jq '.[] | [((.path // "?") | explode | map(select(. >= 32 and . != 127 and (. < 128 or . > 159))) | implode), ((.line // .original_line // "?") | tostring), (.user.login // "unknown"), (.commit_id // ""), ((((.body // "") | split("\n")[0]) // "") | explode | map(select(. >= 32 and . != 127 and (. < 128 or . > 159))) | implode)] | @tsv')"; then
+    --jq '.[] | [((.in_reply_to_id // .id) | tostring), ((.path // "?") | explode | map(select(. >= 32 and . != 127 and (. < 128 or . > 159))) | implode), ((.line // .original_line // "?") | tostring), (.user.login // "unknown"), (.original_commit_id // "?"), (.commit_id // "?"), ((((.body // "") | split("\n")[0]) // "") | explode | map(select(. >= 32 and . != 127 and (. < 128 or . > 159))) | implode)] | @tsv')"; then
     if [[ -n "$inline_rows" ]]; then
-      sorted_inline_rows="$(printf '%s\n' "$inline_rows" | LC_ALL=C sort -t $'\t' -k1,1 -k2,2n)"
+      # GraphQL and jq variables are intentionally passed literally to gh.
+      # shellcheck disable=SC2016
+      if ! thread_rows="$(gh api graphql --paginate \
+        -f owner="${repo_name%%/*}" \
+        -f name="${repo_name#*/}" \
+        -F number="$pr_number" \
+        -f query='query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
+          repository(owner: $owner, name: $name) {
+            pullRequest(number: $number) {
+              reviewThreads(first: 100, after: $endCursor) {
+                nodes {
+                  isResolved
+                  comments(first: 1) { nodes { databaseId } }
+                }
+                pageInfo { hasNextPage endCursor }
+              }
+            }
+          }
+        }' \
+        --jq '.data.repository.pullRequest.reviewThreads.nodes[] as $thread | $thread.comments.nodes[] | [(.databaseId | tostring), ($thread.isResolved | tostring)] | @tsv')"; then
+        thread_rows=""
+        echo "Thread resolution unavailable; gh api GraphQL request failed."
+      fi
+
+      sorted_inline_rows="$(printf '%s\n' "$inline_rows" | LC_ALL=C sort -t $'\t' -k2,2 -k3,3n)"
       previous_location=""
-      while IFS=$'\t' read -r path line author commit_id first_line; do
+      while IFS=$'\t' read -r thread_root_id path line author original_commit_id commit_id first_line; do
         [[ -n "$path" ]] || continue
+        normalized_original_commit="$(printf '%s' "$original_commit_id" | tr '[:upper:]' '[:lower:]')"
         normalized_commit="$(printf '%s' "$commit_id" | tr '[:upper:]' '[:lower:]')"
-        marker=""
-        if [[ "$normalized_commit" == "$head_sha" ]]; then
-          current_count=$((current_count + 1))
+        if [[ "$normalized_original_commit" =~ ^[0-9a-f]{40}$ ]]; then
+          marker="${normalized_original_commit:0:7}"
+          if [[ "$normalized_original_commit" == "$head_sha" ]]; then
+            classification="CURRENT"
+            current_count=$((current_count + 1))
+          else
+            classification="STALE"
+            stale_count=$((stale_count + 1))
+          fi
         else
-          stale_count=$((stale_count + 1))
-          marker=" STALE"
+          marker="unknown"
+          classification="CURRENT (fail-closed: write-time provenance unavailable)"
+          current_count=$((current_count + 1))
+          indeterminate_count=$((indeterminate_count + 1))
         fi
+        reanchor_note=""
+        if [[ "$normalized_commit" =~ ^[0-9a-f]{40}$ && "$normalized_commit" != "$normalized_original_commit" ]]; then
+          reanchor_note="; GitHub commit ${normalized_commit:0:7}"
+        fi
+        thread_state="$(awk -F $'\t' -v id="$thread_root_id" '$1 == id { print $2; exit }' <<<"$thread_rows")"
+        [[ "$thread_state" == "true" || "$thread_state" == "false" ]] || thread_state="unknown"
         total_count=$((total_count + 1))
         location="$path:$line"
         if [[ "$location" != "$previous_location" ]]; then
           printf '%s\n' "$location"
           previous_location="$location"
         fi
-        printf '  - %s — %s%s — %s\n' "$author" "${normalized_commit:0:7}" "$marker" "${first_line:-(no comment body)}"
+        printf '  - %s — written %s %s%s — thread isResolved=%s — %s\n' \
+          "$author" "$marker" "$classification" "$reanchor_note" "$thread_state" "${first_line:-(no comment body)}"
       done <<<"$sorted_inline_rows"
     fi
 
     if [[ "$total_count" -eq 0 ]]; then
       echo "Inline review comments: 0 at this head."
     else
-      echo "Inline review comments at this head: $current_count current, $stale_count stale ($total_count total)."
+      echo "Inline review comments by write-time provenance: $current_count current ($indeterminate_count provenance unavailable), $stale_count stale ($total_count total)."
     fi
   else
     echo "Inline review comments unavailable; gh api request failed."
@@ -200,7 +242,7 @@ worktree_path="$(mktemp -d "$worktree_parent/odos-eval-pr${pr_number}-${head_sha
 rmdir "$worktree_path"
 worktree_created=false
 
-# shellcheck disable=SC2329 # Invoked by the EXIT, INT, and TERM traps below.
+# shellcheck disable=SC2317,SC2329 # Invoked by the EXIT, INT, and TERM traps below.
 cleanup() {
   local status=$?
   trap - EXIT INT TERM
