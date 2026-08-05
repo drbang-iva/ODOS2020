@@ -197,6 +197,7 @@ function FieldDefectPanel({ definition, patientReference, encounterReference, on
   const field = definition.customFields.find((candidate) => candidate.localCode === "CUSTOM_FIELD_DEFECT");
   const options = field?.options?.filter((option) => option.active) ?? [];
   const [descriptor, setDescriptor] = useState("");
+  const [savedDescriptor, setSavedDescriptor] = useState("");
   const [observationReference, setObservationReference] = useState<string>();
   const [historyVersion, setHistoryVersion] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -230,6 +231,7 @@ function FieldDefectPanel({ definition, patientReference, encounterReference, on
           ? options.find((option) => option.display === display)?.code
           : undefined;
         setDescriptor(restored ?? "");
+        setSavedDescriptor(restored ?? "");
         setObservationReference(latest?.observationReference);
       })
       .catch((caught) => {
@@ -267,6 +269,7 @@ function FieldDefectPanel({ definition, patientReference, encounterReference, on
         savedAt: new Date().toISOString(),
         operator: "ODOS UI Visual Field",
       };
+      setSavedDescriptor(descriptor);
       setObservationReference(body.observationReference);
       setMessage(status.summary);
       setHistoryVersion((current) => current + 1);
@@ -316,7 +319,7 @@ function FieldDefectPanel({ definition, patientReference, encounterReference, on
       <div className="mt-3 min-h-5 text-sm">
         {error ? <span className="text-[color:var(--odos-alert)]">{error}</span> : <span className="text-[color:var(--odos-muted)]">{message}</span>}
       </div>
-      {observationReference && (
+      {observationReference && descriptor === savedDescriptor && (
         <DiagnosisPicker
           encounterReference={encounterReference}
           observationReferences={[observationReference]}

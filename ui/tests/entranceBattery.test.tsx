@@ -125,6 +125,59 @@ test("Visual Field renders exactly the approved lesion-site descriptor vocabular
   assert.doesNotMatch(html, /binasal|nasal step|arcuate|altitudinal|paracentral|temporal wedge/i);
 });
 
+test("changing a reloaded Field Defect hides the stale diagnosis until the descriptor is saved", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.includes("visual-field-defect") && url.includes("history")) {
+      return Response.json({ rows: [{
+        observationReference: "Observation/vf-observation",
+        values: [{ code: "CUSTOM_FIELD_DEFECT", value: "Field loss OD" }],
+      }] });
+    }
+    if (url.includes("entrance%3Acvf") && url.includes("history")) return Response.json({ rows: [] });
+    if (url.includes("diagnosis-candidates")) {
+      return Response.json({ findings: [{
+        findingInstanceId: "vf-observation",
+        findingDefinitionKey: "entrance:visual-field-defect",
+        observationReference: "Observation/vf-observation",
+        candidates: [{
+          diagnosisKey: "vf_other_localized",
+          display: "Other localized visual field defect",
+          icd10: { code: "H53.451" },
+          codingStatus: "verified",
+          priority: true,
+          source: "mapping",
+        }],
+      }] });
+    }
+    if (url.includes("diagnosis-catalog")) return Response.json({ diagnoses: [] });
+    throw new Error(`Unexpected request: ${url}`);
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<CvfSection
+        definition={{ stableKey: "entrance:cvf", sectionKey: "entrance:cvf", display: "Confrontation visual fields", active: true, perEye: true, normalTemplate: "Full to finger counting OU", customFields: [] }}
+        fieldDefectDefinition={visualFieldDefinition()}
+        patientReference="Patient/p1"
+        encounterReference="Encounter/e1"
+        onSaved={() => undefined}
+      />);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    assert.ok(renderer.root.findAllByType("button").some((button) => button.children.join("") === "dx ▾ 1"));
+    const fieldLossOs = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Field loss OS");
+    assert.ok(fieldLossOs);
+    act(() => fieldLossOs.props.onClick());
+    assert.equal(renderer.root.findAllByType("button").some((button) => button.children.join("") === "dx ▾ 1"), false);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("suppressed visual-field diagnosis stays visible and the override reveals clinician actions", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (input) => {
