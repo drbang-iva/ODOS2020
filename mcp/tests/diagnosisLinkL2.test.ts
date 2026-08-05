@@ -270,7 +270,6 @@ test("OH-3 multi-select findings propose verified per-eye diagnoses and explicit
   assert.deepEqual(corneaRow?.candidates.map((candidate) => candidate.diagnosisKey), [
     "keratoconus_stable",
     "keratoconus_unstable",
-    "keratoconus_unspecified_stability",
   ]);
   assert.equal(corneaRow?.candidates[0]?.icd10?.code, "H18.611");
 
@@ -423,7 +422,14 @@ test("I2 absent or partial ocular qualifiers retain the specified safe fallbacks
     },
     OS: { selections: ["proliferative-diabetic-retinopathy-pdr"] },
   }), [
-    ["t2_dr_unspecified_with_dme", "t2_dr_unspecified_without_dme"],
+    [
+      "t2_dr_mild_npdr_with_dme",
+      "t2_dr_mild_npdr_without_dme",
+      "t2_dr_moderate_npdr_with_dme",
+      "t2_dr_moderate_npdr_without_dme",
+      "t2_dr_severe_npdr_with_dme",
+      "t2_dr_severe_npdr_without_dme",
+    ],
     [
       "t2_dr_pdr_with_dme",
       "t2_dr_pdr_trd_involving_macula",
@@ -465,7 +471,7 @@ test("I3 qualifier triggers are scoped to the option that recorded the shared ke
   assert.equal(evaluateMappingTrigger({ ...optionATrigger, option: "option-b" }, finding), true);
 });
 
-test("I4 ocular records without findingDetails keep the pre-qualifier candidate lists", async () => {
+test("I4 ocular records without findingDetails retain specific candidate lists", async () => {
   assert.deepEqual(await ocularCandidateKeys("ocular-health:anterior:conjunctiva", {
     OD: { selections: ["pterygium"] },
   }), [[
@@ -476,7 +482,55 @@ test("I4 ocular records without findingDetails keep the pre-qualifier candidate 
   ]]);
   assert.deepEqual(await ocularCandidateKeys("ocular-health:anterior:cornea", {
     OD: { selections: ["keratoconus"] },
-  }), [["keratoconus_stable", "keratoconus_unstable", "keratoconus_unspecified_stability"]]);
+  }), [["keratoconus_stable", "keratoconus_unstable"]]);
+  assert.deepEqual(await ocularCandidateKeys("ocular-health:posterior:fundus", {
+    OD: { selections: ["diabetic-retinopathy-background-npdr"] },
+  }), [[
+    "t2_dr_mild_npdr_with_dme",
+    "t2_dr_mild_npdr_without_dme",
+    "t2_dr_moderate_npdr_with_dme",
+    "t2_dr_moderate_npdr_without_dme",
+    "t2_dr_severe_npdr_with_dme",
+    "t2_dr_severe_npdr_without_dme",
+  ]]);
+});
+
+test("unspecified ocular diagnosis keys never surface with qualifiers unset or set", async () => {
+  const forbidden = new Set([
+    "keratoconus_unspecified_stability",
+    "t2_dr_unspecified_with_dme",
+    "t2_dr_unspecified_without_dme",
+  ]);
+  const cases = [
+    ["ocular-health:anterior:cornea", {
+      OD: { selections: ["keratoconus"] },
+    }],
+    ...(["stable", "unstable"] as const).map((stability) => [
+      "ocular-health:anterior:cornea",
+      { OD: { selections: ["keratoconus"], findingDetails: { keratoconus: { stability } } } },
+    ]),
+    ["ocular-health:posterior:fundus", {
+      OD: { selections: ["diabetic-retinopathy-background-npdr"] },
+    }],
+    ...(["mild", "moderate", "severe"] as const).flatMap((severity) =>
+      (["present", "absent"] as const).map((macularEdema) => [
+        "ocular-health:posterior:fundus",
+        { OD: {
+          selections: ["diabetic-retinopathy-background-npdr"],
+          findingDetails: { "diabetic-retinopathy-background-npdr": { severity, "macular-edema": macularEdema } },
+        } },
+      ])
+    ),
+  ] as const;
+
+  for (const [stableKey, eyes] of cases) {
+    const proposed = (await ocularCandidateKeys(stableKey, eyes)).flat();
+    assert.equal(
+      proposed.some((diagnosisKey) => forbidden.has(diagnosisKey)),
+      false,
+      `${stableKey} proposed an unspecified diagnosis: ${proposed.join(", ")}`,
+    );
+  }
 });
 
 test("I5 qualifier components cannot diagnose or suppress without an active parent option", async () => {

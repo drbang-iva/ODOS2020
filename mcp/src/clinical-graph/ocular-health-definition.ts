@@ -214,7 +214,6 @@ const DIAGNOSIS_CANDIDATE_SEEDS: Record<string, readonly DiagnosisCandidateSeed[
   "ocular-health:anterior:cornea": [
     { option: "keratoconus", diagnosisKey: "keratoconus_stable" },
     { option: "keratoconus", diagnosisKey: "keratoconus_unstable" },
-    { option: "keratoconus", diagnosisKey: "keratoconus_unspecified_stability" },
     { option: "keratoconus", qualifiers: { stability: "stable" }, diagnosisKey: "keratoconus_stable" },
     { option: "keratoconus", qualifiers: { stability: "unstable" }, diagnosisKey: "keratoconus_unstable" },
     { option: "superficial-punctate-keratitis-spk", diagnosisKey: "kcs_not_sjogren" },
@@ -230,8 +229,12 @@ const DIAGNOSIS_CANDIDATE_SEEDS: Record<string, readonly DiagnosisCandidateSeed[
   ],
   "ocular-health:posterior:fundus": [
     { option: "hypertensive-retinopathy", diagnosisKey: "hypertensive_retinopathy" },
-    { option: "diabetic-retinopathy-background-npdr", diagnosisKey: "t2_dr_unspecified_with_dme" },
-    { option: "diabetic-retinopathy-background-npdr", diagnosisKey: "t2_dr_unspecified_without_dme" },
+    { option: "diabetic-retinopathy-background-npdr", diagnosisKey: "t2_dr_mild_npdr_with_dme" },
+    { option: "diabetic-retinopathy-background-npdr", diagnosisKey: "t2_dr_mild_npdr_without_dme" },
+    { option: "diabetic-retinopathy-background-npdr", diagnosisKey: "t2_dr_moderate_npdr_with_dme" },
+    { option: "diabetic-retinopathy-background-npdr", diagnosisKey: "t2_dr_moderate_npdr_without_dme" },
+    { option: "diabetic-retinopathy-background-npdr", diagnosisKey: "t2_dr_severe_npdr_with_dme" },
+    { option: "diabetic-retinopathy-background-npdr", diagnosisKey: "t2_dr_severe_npdr_without_dme" },
     { option: "diabetic-retinopathy-background-npdr", qualifiers: { severity: "mild", "macular-edema": "present" }, diagnosisKey: "t2_dr_mild_npdr_with_dme" },
     { option: "diabetic-retinopathy-background-npdr", qualifiers: { severity: "mild", "macular-edema": "absent" }, diagnosisKey: "t2_dr_mild_npdr_without_dme" },
     { option: "diabetic-retinopathy-background-npdr", qualifiers: { severity: "moderate", "macular-edema": "present" }, diagnosisKey: "t2_dr_moderate_npdr_with_dme" },
