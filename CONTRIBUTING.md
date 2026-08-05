@@ -33,6 +33,10 @@ Evaluated-by: Opus 5 — PASS
 Head-SHA: 0123456789abcdef0123456789abcdef01234567
 ```
 
+`eval-post-verdict.sh` adds one provenance trailer to that marker. When a bot
+signal exists at the exact head, it records
+`Bot-review-at-head: <source> via <evidence>`.
+
 Once all other gates are green and the head is final, the PR author hands off for
 independent evaluation. **There is no bot trigger to post** — Greptile and PR-Agent
 auto-run on every PR. Greptile takes 7–13 minutes and PR-Agent about a minute, so
@@ -54,10 +58,10 @@ current-head count is zero, omit `--ack-comments`. Use `--dry-run` to inspect
 the count and marker without requiring inline-comment acknowledgment or posting
 anything.
 
-If no bot review submission exists at the exact head, `eval-post-verdict.sh`
-blocks unless the evaluator passes `--ack-no-bot-review`. That flag records
+If neither recognised bot signal exists at the exact head, `eval-post-verdict.sh`
+blocks unless the evaluator passes `--ack-no-bot-review`. That flag instead records
 `Bot-review-at-head: NONE (acknowledged)` in the marker and is rejected when an
-exact-head bot review does exist, so it cannot become boilerplate. `--dry-run`
+exact-head bot signal does exist, so it cannot become boilerplate. `--dry-run`
 enforces and reports this bot-review acknowledgment without posting a marker.
 
 The check recognises any configured review bot — currently Greptile and PR-Agent
