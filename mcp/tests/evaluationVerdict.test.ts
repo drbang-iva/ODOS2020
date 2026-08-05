@@ -71,6 +71,23 @@ test("a trusted Fable PASS bound to the current head passes", () => {
   assert.equal(decision.verdict, "PASS");
 });
 
+test("bot-review evidence lines do not change marker parsing", () => {
+  for (const evidence of [
+    "greptile-apps[bot] via review submission",
+    "github-actions (run pr-agent) via completed check run",
+    "NONE (acknowledged)",
+  ]) {
+    const decision = evaluate({
+      comments: [
+        comment(`${marker("Opus 5", "PASS")}\nBot-review-at-head: ${evidence}`),
+      ],
+    });
+
+    assert.equal(decision.passed, true, evidence);
+    assert.equal(decision.reason, "passing-verdict", evidence);
+  }
+});
+
 test("an explicit FAIL bound to the current head fails", () => {
   const decision = evaluate({
     comments: [comment(marker("Opus 4.8", "FAIL"))],

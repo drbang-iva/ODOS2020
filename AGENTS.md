@@ -229,8 +229,9 @@ micro-decisions.
 
 **Review bots: GREPTILE + PR-AGENT. CodeRabbit is RETIRED** — suspended account-wide
 2026-08-04 for cost. Do not trigger it, wait for it, retry it, or note its absence.
-There is no trigger to post, no allowance to budget, and no `--ack-no-bot-review`
-exception to record; both bots auto-run on every PR. (The prior selective-triggering
+There is no trigger to post and no allowance to budget; both bots auto-run on every PR.
+When neither bot has a signal at the exact head, `--ack-no-bot-review` records the
+deliberate exception documented in CONTRIBUTING.md. (The prior selective-triggering
 policy, and the PR #313 incident where its wording produced eight triggers in sixteen
 minutes and zero reviews, are historical — the tool it governed is gone.)
 

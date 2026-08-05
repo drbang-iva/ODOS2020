@@ -121,6 +121,9 @@ Head-SHA: $head_sha"
 if [[ "$ack_no_bot_review" == true ]]; then
   marker="$marker
 Bot-review-at-head: NONE (acknowledged)"
+else
+  marker="$marker
+Bot-review-at-head: $bot_review_head_source via $bot_review_head_evidence"
 fi
 
 if [[ "$dry_run" == true ]]; then
