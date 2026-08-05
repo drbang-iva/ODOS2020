@@ -5,13 +5,14 @@
   "license": "AGPL-3.0-only",
   "private": true,
   "type": "module",
+  "main": "./dist/mcp/src/index.js",
   "bin": {
-    "odos-mcp": "./dist/index.js"
+    "odos-mcp": "./launcher.mjs"
   },
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/index.ts",
-    "start": "node dist/index.js",
+    "start": "node .",
     "test": "node --import tsx --test --test-concurrency=1 \"src/__tests__/**/*.test.ts\" \"tests/**/*.test.ts\" \"../tests/boundaries/**/*.test.ts\" \"../tests/observation-status-machine/**/*.test.ts\" \"../tests/setup-wizard/**/*.test.ts\" \"../tests/preflight/**/*.test.ts\" \"../tests/smart/**/*.test.ts\" \"../tests/cds/**/*.test.ts\" \"../tests/agentops/**/*.test.ts\" \"../tests/bulk-data/**/*.test.ts\" \"../tests/mandate-8/**/*.test.ts\""
   },
   "dependencies": {
