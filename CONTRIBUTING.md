@@ -18,9 +18,8 @@ ODOS is built by a practicing optometrist and refined at his own practice. The r
 
 ## Independent evaluation gate
 
-Every PR into `main` needs an independent Fable or Opus evaluation. The review
-bots (Greptile + PR-Agent) are a first-pass review, not the final evaluator.
-CodeRabbit is retired — suspended account-wide 2026-08-04 for cost. A well-formed final marker from
+Every PR into `main` needs an independent Fable or Opus evaluation. CodeRabbit
+is a first-pass review, not the final evaluator. A well-formed final marker from
 Fable or Opus passes from any GitHub account. Author != evaluator remains a
 procedural expectation stated in coding kickoffs, not a mechanically enforced
 login rule.
@@ -34,11 +33,11 @@ Head-SHA: 0123456789abcdef0123456789abcdef01234567
 ```
 
 Once all other gates are green and the head is final, the PR author hands off for
-independent evaluation. **There is no bot trigger to post** — Greptile and PR-Agent
-auto-run on every PR. Greptile takes 7–13 minutes and PR-Agent about a minute, so
-**re-poll at the final head before handing off**: zero threads on a check still
-`in_progress` means pending, not clean. Reply to or resolve every existing thread
-first. See AGENTS.md "Author ≠ evaluator" for the full rule.
+independent evaluation. **The author does not post `@coderabbitai`** — requesting a
+CodeRabbit review is the evaluator's call, made once, at the final head, and only
+when the slice warrants an allowance. If a trigger returns a rate-limit or fair-usage
+notice instead of a review, stop and report it; never retry. See AGENTS.md
+"Author ≠ evaluator" for the full rule and the PR #313 incident that prompted it.
 
 The evaluator runs `scripts/eval-worktree.sh <PR#> --keep` to verify the exact
 head and surface all paginated inline comments plus review submissions. Before
@@ -54,21 +53,12 @@ current-head count is zero, omit `--ack-comments`. Use `--dry-run` to inspect
 the count and marker without requiring inline-comment acknowledgment or posting
 anything.
 
-If no bot review submission exists at the exact head, `eval-post-verdict.sh`
-blocks unless the evaluator passes `--ack-no-bot-review`. That flag records
-`Bot-review-at-head: NONE (acknowledged)` in the marker and is rejected when an
-exact-head bot review does exist, so it cannot become boilerplate. `--dry-run`
-enforces and reports this bot-review acknowledgment without posting a marker.
-
-> **⚠️ Known gap, 2026-08-04 — needs a code change, not a doc change.**
-> `eval-post-verdict.sh` detects the bot review by looking for **CodeRabbit**
-> specifically. CodeRabbit is retired, so that check now finds nothing on every
-> PR and forces `--ack-no-bot-review` every time — turning a deliberate gate into
-> the boilerplate it was explicitly designed not to become, while a real Greptile
-> review sits on the PR unrecognised. The script must be taught to accept a
-> Greptile (or PR-Agent) review at the exact head. Until then, treat an
-> `--ack-no-bot-review` marker on this repo as **unverified**, not as evidence
-> that no bot reviewed the code.
+If no CodeRabbit review submission exists at the exact head,
+`eval-post-verdict.sh` blocks unless the evaluator passes
+`--ack-no-bot-review`. That flag records `Bot-review-at-head: NONE
+(acknowledged)` in the marker and is rejected when an exact-head CodeRabbit
+review does exist, so it cannot become boilerplate. `--dry-run` enforces and
+reports this bot-review acknowledgment without posting a marker.
 
 Only Fable or Opus can issue the final verdict. Any new commit requires a new
 marker for the new head. The `evaluated` label is an explicit operator override
