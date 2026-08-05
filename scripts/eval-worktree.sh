@@ -133,8 +133,8 @@ print_review_feedback() {
     echo "Inline review comments unavailable; gh api request failed."
   fi
 
-  load_coderabbit_review_status
-  print_coderabbit_review_status
+  load_bot_review_status
+  print_bot_review_status
 
   echo
   echo "Review submissions"
@@ -177,8 +177,8 @@ require_command npm
 require_command mktemp
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=scripts/lib/coderabbit-review-status.sh
-source "$script_dir/lib/coderabbit-review-status.sh"
+# shellcheck source=scripts/lib/bot-review-status.sh
+source "$script_dir/lib/bot-review-status.sh"
 repo_root="$(git -C "$script_dir" rev-parse --show-toplevel)"
 repo_name="${GH_REPO:-$(cd "$repo_root" && gh repo view --json nameWithOwner --jq .nameWithOwner)}"
 pr_metadata="$(gh pr view "$pr_number" --repo "$repo_name" --json headRefOid,isCrossRepository --jq '[.headRefOid, .isCrossRepository] | @tsv')"
