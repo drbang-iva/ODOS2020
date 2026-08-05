@@ -102,6 +102,10 @@ test("diagnosis catalog seeds are ledger-backed durable families and survive a s
     "glaucoma_suspect_open_angle_low",
     "glaucoma_suspect_open_angle_high",
     "ocular_hypertension",
+    "preglaucoma_unspecified",
+    "anatomical_narrow_angle",
+    "steroid_responder",
+    "primary_angle_closure_without_damage",
     "hyperopia",
     "myopia",
     "astigmatism",
@@ -195,6 +199,49 @@ test("diagnosis catalog seeds are ledger-backed durable families and survive a s
   const restarted = new FhirDiagnosisCatalogStore(fhir);
   assert.equal((await restarted.list()).find((row) => row.stableKey === "custom:kcs")?.codingStatus, "provisional");
   assert.deepEqual(fhir.writes[0]?.headers, DIAGNOSIS_CATALOG_WRITE_HEADERS);
+});
+
+test("glaucoma laterality-only families seed all verified ledger codes", () => {
+  const seeds = buildDiagnosisCatalogSeeds();
+  const expected = {
+    preglaucoma_unspecified: {
+      unspecifiedEye: "H40.009",
+      right: "H40.001",
+      left: "H40.002",
+      bilateral: "H40.003",
+    },
+    anatomical_narrow_angle: {
+      unspecifiedEye: "H40.039",
+      right: "H40.031",
+      left: "H40.032",
+      bilateral: "H40.033",
+    },
+    steroid_responder: {
+      unspecifiedEye: "H40.049",
+      right: "H40.041",
+      left: "H40.042",
+      bilateral: "H40.043",
+    },
+    primary_angle_closure_without_damage: {
+      unspecifiedEye: "H40.069",
+      right: "H40.061",
+      left: "H40.062",
+      bilateral: "H40.063",
+    },
+  };
+
+  for (const [stableKey, pattern] of Object.entries(expected)) {
+    const seed = seeds.find((row) => row.stableKey === stableKey);
+    assert.ok(seed, `Missing diagnosis catalog seed ${stableKey}`);
+    assert.deepEqual(seed.icd10, { pattern });
+    assert.equal(seed.codingStatus, "verified");
+    assert.equal(seed.lateralityRequired, true);
+    assert.deepEqual(seed.provenance.ledgerRefs, [
+      "cdcIcd10Cm2026CodeDescriptions",
+      "nlmClinicalTablesIcd10Cm",
+    ]);
+    assert.deepEqual(seed.applicableFindingDefinitionIds, []);
+  }
 });
 
 test("diabetic retinopathy Phase 0 ledger is dual-source and keeps coverage descriptor-only", () => {
