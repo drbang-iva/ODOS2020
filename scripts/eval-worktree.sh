@@ -89,7 +89,7 @@ run_step() {
 
 print_review_feedback() {
   local inline_rows review_rows sorted_inline_rows thread_rows
-  local comment_id path line author original_commit_id commit_id first_line
+  local thread_root_id path line author original_commit_id commit_id first_line
   local normalized_original_commit normalized_commit classification reanchor_note
   local thread_state marker location previous_location state
   local current_count=0
@@ -102,7 +102,7 @@ print_review_feedback() {
   echo "----------------------"
 
   if inline_rows="$(gh api --paginate "repos/$repo_name/pulls/$pr_number/comments" \
-    --jq '.[] | [(.id | tostring), ((.path // "?") | explode | map(select(. >= 32 and . != 127 and (. < 128 or . > 159))) | implode), ((.line // .original_line // "?") | tostring), (.user.login // "unknown"), (.original_commit_id // "?"), (.commit_id // "?"), ((((.body // "") | split("\n")[0]) // "") | explode | map(select(. >= 32 and . != 127 and (. < 128 or . > 159))) | implode)] | @tsv')"; then
+    --jq '.[] | [((.in_reply_to_id // .id) | tostring), ((.path // "?") | explode | map(select(. >= 32 and . != 127 and (. < 128 or . > 159))) | implode), ((.line // .original_line // "?") | tostring), (.user.login // "unknown"), (.original_commit_id // "?"), (.commit_id // "?"), ((((.body // "") | split("\n")[0]) // "") | explode | map(select(. >= 32 and . != 127 and (. < 128 or . > 159))) | implode)] | @tsv')"; then
     if [[ -n "$inline_rows" ]]; then
       # GraphQL and jq variables are intentionally passed literally to gh.
       # shellcheck disable=SC2016
@@ -116,7 +116,7 @@ print_review_feedback() {
               reviewThreads(first: 100, after: $endCursor) {
                 nodes {
                   isResolved
-                  comments(first: 100) { nodes { databaseId } }
+                  comments(first: 1) { nodes { databaseId } }
                 }
                 pageInfo { hasNextPage endCursor }
               }
@@ -130,7 +130,7 @@ print_review_feedback() {
 
       sorted_inline_rows="$(printf '%s\n' "$inline_rows" | LC_ALL=C sort -t $'\t' -k2,2 -k3,3n)"
       previous_location=""
-      while IFS=$'\t' read -r comment_id path line author original_commit_id commit_id first_line; do
+      while IFS=$'\t' read -r thread_root_id path line author original_commit_id commit_id first_line; do
         [[ -n "$path" ]] || continue
         normalized_original_commit="$(printf '%s' "$original_commit_id" | tr '[:upper:]' '[:lower:]')"
         normalized_commit="$(printf '%s' "$commit_id" | tr '[:upper:]' '[:lower:]')"
@@ -153,7 +153,7 @@ print_review_feedback() {
         if [[ "$normalized_commit" =~ ^[0-9a-f]{40}$ && "$normalized_commit" != "$normalized_original_commit" ]]; then
           reanchor_note="; GitHub commit ${normalized_commit:0:7}"
         fi
-        thread_state="$(awk -F $'\t' -v id="$comment_id" '$1 == id { print $2; exit }' <<<"$thread_rows")"
+        thread_state="$(awk -F $'\t' -v id="$thread_root_id" '$1 == id { print $2; exit }' <<<"$thread_rows")"
         [[ "$thread_state" == "true" || "$thread_state" == "false" ]] || thread_state="unknown"
         total_count=$((total_count + 1))
         location="$path:$line"
