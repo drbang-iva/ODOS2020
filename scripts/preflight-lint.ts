@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
+import { basename, dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Resource } from "@medplum/fhirtypes";
 import { buildOdosAuditEventRow, type OdosAuditEventRecord } from "../mcp/src/authz/odosAudit.js";
@@ -63,6 +63,7 @@ export interface EnvVarPhiPassOptions {
 export interface VendorCanonicalShapePassOptions {
   readonly roots?: readonly string[];
   readonly files?: readonly { path: string; text: string }[];
+  readonly nodeEnvironmentFlagsForImage?: (image: string, major: number) => ReadonlySet<string> | undefined;
 }
 
 export interface AppearanceStylingDebtPassOptions {
@@ -467,7 +468,7 @@ export function runVendorCanonicalShapePass(
   for (const finding of agentOpsRuntimeNetworkShapeFindings(files)) {
     findings.push(finding);
   }
-  for (const finding of composeNodeOptionsFindings(files)) {
+  for (const finding of composeNodeOptionsFindings(files, options.nodeEnvironmentFlagsForImage ?? readNodeEnvironmentFlagsFromImage)) {
     findings.push(finding);
   }
   for (const finding of bulkDataJobIdFindings(files)) {
@@ -778,7 +779,33 @@ function hasCommand(command: string): boolean {
 }
 
 function defaultSourceRoots(): string[] {
-  return ["mcp/src", "ui/src", "policy", "data", "scripts", "tests", "docker-compose.yml"].map((path) => resolve(REPO_ROOT, path));
+  return [
+    ...["mcp/src", "ui/src", "policy", "data", "scripts", "tests"].map((path) => resolve(REPO_ROOT, path)),
+    ...findComposeFiles(REPO_ROOT),
+  ];
+}
+
+function findComposeFiles(root: string): string[] {
+  const files: string[] = [];
+  let entries;
+  try {
+    entries = readdirSync(root, { withFileTypes: true });
+  } catch {
+    return files;
+  }
+  for (const entry of entries) {
+    const child = join(root, entry.name);
+    if (entry.isDirectory()) {
+      if (![".git", ".odos", "dist", "node_modules"].includes(entry.name)) {
+        files.push(...findComposeFiles(child));
+      }
+      continue;
+    }
+    if (entry.isFile() && isComposeFilePath(child)) {
+      files.push(child);
+    }
+  }
+  return files;
 }
 
 function readSourceFiles(roots: readonly string[]): { path: string; text: string }[] {
@@ -1242,30 +1269,107 @@ function agentOpsRuntimeNetworkShapeFindings(files: readonly { path: string; tex
   return findings;
 }
 
-function composeNodeOptionsFindings(files: readonly { path: string; text: string }[]): PreflightFinding[] {
+function isComposeFilePath(path: string): boolean {
+  return /(?:^|[._-])compose(?:[._-][^/]*)?\.ya?ml$/i.test(basename(path));
+}
+
+function readNodeEnvironmentFlagsFromImage(image: string): ReadonlySet<string> | undefined {
+  try {
+    const output = execFileSync(
+      "docker",
+      [
+        "run",
+        "--rm",
+        "--network",
+        "none",
+        "--read-only",
+        "--cap-drop",
+        "ALL",
+        "--security-opt",
+        "no-new-privileges",
+        "--entrypoint",
+        "node",
+        image,
+        "--eval",
+        "process.stdout.write(JSON.stringify([...process.allowedNodeEnvironmentFlags]))",
+      ],
+      { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+    );
+    const flags = JSON.parse(output) as unknown;
+    if (!Array.isArray(flags) || flags.some((flag) => typeof flag !== "string")) {
+      return undefined;
+    }
+    return new Set(flags as string[]);
+  } catch {
+    return undefined;
+  }
+}
+
+function composeNodeOptionsFindings(
+  files: readonly { path: string; text: string }[],
+  nodeEnvironmentFlagsForImage: (image: string, major: number) => ReadonlySet<string> | undefined,
+): PreflightFinding[] {
   const findings: PreflightFinding[] = [];
   for (const file of files) {
-    if (displayPath(file.path) !== "docker-compose.yml") {
+    if (!isComposeFilePath(file.path)) {
       continue;
     }
-    for (const [index, line] of file.text.split(/\r?\n/).entries()) {
-      const value = /^\s*(?:-\s*)?NODE_OPTIONS\s*(?::|=)\s*(.*?)\s*$/.exec(line)?.[1];
-      if (!value) {
-        continue;
-      }
-      const flags = value.match(/--[^\s"'=]+(?:=(?:"[^"]*"|'[^']*'|[^\s]+))?/g) ?? [];
-      for (const flag of flags) {
-        if (process.allowedNodeEnvironmentFlags.has(flag)) {
+    const lines = file.text.split(/\r?\n/);
+    const serviceStarts = lines.flatMap((line, index) => {
+      const match = /^  ([A-Za-z0-9._-]+):\s*(?:#.*)?$/.exec(line);
+      return match ? [{ index, name: match[1]! }] : [];
+    });
+    for (const [serviceIndex, service] of serviceStarts.entries()) {
+      const end = serviceStarts[serviceIndex + 1]?.index ?? lines.length;
+      const serviceLines = lines.slice(service.index + 1, end);
+      const image = serviceLines
+        .map((line) => /^\s{4}image:\s*["']?([^\s"']+)["']?\s*(?:#.*)?$/.exec(line)?.[1])
+        .find((value): value is string => value !== undefined);
+      for (const [relativeIndex, line] of serviceLines.entries()) {
+        const value = /^\s*(?:-\s*)?NODE_OPTIONS\s*(?::|=)\s*(.*?)\s*$/.exec(line)?.[1];
+        if (!value) {
           continue;
         }
-        findings.push({
-          pass: "vendor-canonical-shapes",
-          severity: "hard-block",
-          code: "compose-node-options-runtime-unsupported",
-          message: `Docker Compose NODE_OPTIONS includes ${flag}, which Node ${process.versions.node} rejects before application startup.`,
-          source: displayPath(file.path),
-          line: index + 1,
-        });
+        const lineNumber = service.index + relativeIndex + 2;
+        const majorMatch = image === undefined ? undefined : /^node:(\d+)(?:[.-]|$)/.exec(image);
+        const major = majorMatch ? Number.parseInt(majorMatch[1]!, 10) : undefined;
+        if (major === undefined) {
+          findings.push({
+            pass: "vendor-canonical-shapes",
+            severity: "hard-block",
+            code: "compose-node-options-runtime-undetermined",
+            message: `Docker Compose service ${service.name} sets NODE_OPTIONS, but its pinned Node major cannot be derived from image ${image ?? "<missing>"}.`,
+            source: displayPath(file.path),
+            line: lineNumber,
+          });
+          continue;
+        }
+        const allowedFlags = nodeEnvironmentFlagsForImage(image!, major);
+        if (!allowedFlags) {
+          findings.push({
+            pass: "vendor-canonical-shapes",
+            severity: "hard-block",
+            code: "compose-node-options-runtime-unavailable",
+            message: `Docker Compose service ${service.name} pins ${image}, but preflight could not probe that image's Node ${major} environment-flag set.`,
+            source: displayPath(file.path),
+            line: lineNumber,
+          });
+          continue;
+        }
+        const flags = value.match(/--[^\s"'=]+(?:=(?:"[^"]*"|'[^']*'|[^\s]+))?/g) ?? [];
+        for (const flag of flags) {
+          if (allowedFlags.has(flag)) {
+            continue;
+          }
+          findings.push({
+            pass: "vendor-canonical-shapes",
+            severity: "hard-block",
+            code: "compose-node-options-runtime-unsupported",
+            message: `Docker Compose service ${service.name} NODE_OPTIONS includes ${flag}, which its pinned Node ${major} runtime rejects before application startup.`,
+            source: displayPath(file.path),
+            line: lineNumber,
+          });
+        }
       }
     }
   }

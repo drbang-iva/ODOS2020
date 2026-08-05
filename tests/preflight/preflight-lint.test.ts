@@ -285,22 +285,59 @@ test("v0.55d preflight pass 4 hard-blocks AgentOps response and AIAST fixtures",
 });
 
 test("preflight rejects Docker NODE_OPTIONS that would block Node before application startup", () => {
-  const invalid = runVendorCanonicalShapePass({
+  const linterMajor = Number.parseInt(process.versions.node, 10);
+  const fixtureMajor = linterMajor === 20 ? 22 : 20;
+  const fixtureImage = `node:${fixtureMajor}-alpine`;
+  const fixtureFlags = (image: string, major: number): ReadonlySet<string> | undefined =>
+    image === fixtureImage && major === fixtureMajor ? new Set(["--fixture-runtime-flag"]) : undefined;
+  const removedNetworkImports = runVendorCanonicalShapePass({
     files: [{
       path: "docker-compose.yml",
-      text: "    environment:\n      NODE_OPTIONS: --experimental-network-imports=false\n",
+      text: `services:\n  worker:\n    image: node:${linterMajor}-alpine\n    environment:\n      NODE_OPTIONS: --experimental-network-imports=false\n`,
     }],
+    nodeEnvironmentFlagsForImage: () => process.allowedNodeEnvironmentFlags,
+  });
+  assert.equal(removedNetworkImports.status, "hard-block");
+  assert.equal(removedNetworkImports.findings[0]?.code, "compose-node-options-runtime-unsupported");
+
+  const invalid = runVendorCanonicalShapePass({
+    files: [{
+      path: "deploy/docker-compose.agentops.yml",
+      text: `services:\n  worker:\n    image: ${fixtureImage}\n    environment:\n      NODE_OPTIONS: --no-warnings\n`,
+    }],
+    nodeEnvironmentFlagsForImage: fixtureFlags,
   });
   assert.equal(invalid.status, "hard-block");
   assert.equal(invalid.findings[0]?.code, "compose-node-options-runtime-unsupported");
+  assert.equal(invalid.findings[0]?.source, "deploy/docker-compose.agentops.yml");
 
   const valid = runVendorCanonicalShapePass({
     files: [{
-      path: "docker-compose.yml",
-      text: "    environment:\n      NODE_OPTIONS: --no-warnings --max-old-space-size=4096\n",
+      path: "compose.worker.yaml",
+      text: `services:\n  worker:\n    image: ${fixtureImage}\n    environment:\n      - NODE_OPTIONS=--fixture-runtime-flag\n`,
     }],
+    nodeEnvironmentFlagsForImage: fixtureFlags,
   });
   assert.equal(valid.status, "pass");
+
+  const floatingImage = runVendorCanonicalShapePass({
+    files: [{
+      path: "docker-compose.future.yml",
+      text: "services:\n  worker:\n    image: node:alpine\n    environment:\n      NODE_OPTIONS: --no-warnings\n",
+    }],
+  });
+  assert.equal(floatingImage.status, "hard-block");
+  assert.equal(floatingImage.findings[0]?.code, "compose-node-options-runtime-undetermined");
+
+  const unavailableRuntime = runVendorCanonicalShapePass({
+    files: [{
+      path: "docker-compose.future.yml",
+      text: `services:\n  worker:\n    image: node:${fixtureMajor}-alpine\n    environment:\n      NODE_OPTIONS: --fixture-runtime-flag\n`,
+    }],
+    nodeEnvironmentFlagsForImage: () => undefined,
+  });
+  assert.equal(unavailableRuntime.status, "hard-block");
+  assert.equal(unavailableRuntime.findings[0]?.code, "compose-node-options-runtime-unavailable");
 });
 
 test("v0.55e preflight pass 4 hard-blocks Bulk Data job ID, endpoint, and meta-security fixtures", () => {

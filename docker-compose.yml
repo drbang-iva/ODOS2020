@@ -126,7 +126,7 @@ services:
     image: node:22-alpine
     profiles: ["agentops"]
     working_dir: /workspace
-    command: ["node", "mcp/dist/mcp/src/index.js"]
+    command: ["npm", "--prefix", "mcp", "run", "start"]
     environment:
       MEDPLUM_BASE_URL: http://medplum-server:8103/
       ODOS_POSTGRES_URL: postgresql://medplum:medplum@postgres:5432/medplum

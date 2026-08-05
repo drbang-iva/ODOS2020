@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { test } from "node:test";
 
 test("practice deployment pins a local WeasyPrint sidecar with a loud health dependency", () => {
@@ -42,4 +45,44 @@ test("practice deployment installs MCP native dependencies inside Alpine", () =>
     /odos-mcp-node-modules:\/workspace\/mcp\/node_modules:ro/,
   );
   assert.match(compose, /\n  odos-mcp-node-modules:\n/);
+});
+
+test("MCP package, CLI, and Compose derive one mutable entrypoint", () => {
+  const compose = readFileSync(new URL("../../docker-compose.yml", import.meta.url), "utf8");
+  const packageJson = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as {
+    bin: { "odos-mcp": string };
+    main: string;
+    scripts: { start: string };
+  };
+  const launcherUrl = new URL("../launcher.mjs", import.meta.url);
+  const launcher = readFileSync(launcherUrl, "utf8");
+
+  assert.match(packageJson.main, /^\.\/dist\/.+\/index\.js$/);
+  assert.equal(packageJson.scripts.start, "node .");
+  assert.equal(packageJson.bin["odos-mcp"], "./launcher.mjs");
+  assert.match(compose, /command: \["npm", "--prefix", "mcp", "run", "start"\]/);
+  assert.doesNotMatch(compose, /mcp\/dist\/mcp\/src\/index\.js/);
+  assert.doesNotMatch(launcher, /dist\/mcp\/src\/index\.js/);
+
+  const fixture = mkdtempSync(join(tmpdir(), "odos-mcp-entrypoint-"));
+  try {
+    copyFileSync(launcherUrl, join(fixture, "launcher.mjs"));
+    mkdirSync(join(fixture, "dist", "layout-a"), { recursive: true });
+    mkdirSync(join(fixture, "dist", "layout-b"), { recursive: true });
+    writeFileSync(join(fixture, "dist", "layout-a", "index.js"), 'console.log("layout-a");\n');
+    writeFileSync(join(fixture, "dist", "layout-b", "index.js"), 'console.log("layout-b");\n');
+
+    const runBoth = (main: string): readonly string[] => {
+      writeFileSync(join(fixture, "package.json"), JSON.stringify({ type: "module", main }));
+      return [
+        execFileSync(process.execPath, [fixture], { encoding: "utf8" }).trim(),
+        execFileSync(process.execPath, [join(fixture, "launcher.mjs")], { encoding: "utf8" }).trim(),
+      ];
+    };
+
+    assert.deepEqual(runBoth("./dist/layout-a/index.js"), ["layout-a", "layout-a"]);
+    assert.deepEqual(runBoth("./dist/layout-b/index.js"), ["layout-b", "layout-b"]);
+  } finally {
+    rmSync(fixture, { recursive: true, force: true });
+  }
 });

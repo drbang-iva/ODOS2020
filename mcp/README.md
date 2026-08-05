@@ -46,23 +46,23 @@ export MEDPLUM_ADMIN_EMAIL=drbang@ivaeyecare.com
 export MEDPLUM_ADMIN_PASSWORD='<your password from odos/.env>'
 
 # Stdio transport (default) — MCP clients launch this on demand
-node dist/index.js
+npm run start
 
 # Equivalent explicit stdio launch
-ODOS_MCP_TRANSPORT=stdio node dist/index.js
+ODOS_MCP_TRANSPORT=stdio npm run start
 
 # HTTP + SSE transport on loopback only
 ODOS_MCP_TRANSPORT=sse \
 ODOS_MCP_HTTP_HOST=127.0.0.1 \
 ODOS_MCP_HTTP_PORT=3333 \
-node dist/index.js
+npm run start
 
 # External bind requires the TLS gate acknowledgement
 ODOS_MCP_TRANSPORT=sse \
 ODOS_MCP_HTTP_HOST=0.0.0.0 \
 ODOS_MCP_HTTP_PORT=3333 \
 ODOS_MCP_TLS=required \
-node dist/index.js
+npm run start
 ```
 
 ## Configure in Claude Desktop / Claude Code
@@ -73,8 +73,8 @@ Add to your MCP config (`~/.claude/mcp.json` or Claude Desktop's `claude_desktop
 {
   "mcpServers": {
     "odos": {
-      "command": "node",
-      "args": ["/Users/ericr.bang/Documents/GitHub/ODOS2020/mcp/dist/index.js"],
+      "command": "npm",
+      "args": ["--prefix", "/path/to/ODOS2020/mcp", "run", "start"],
       "env": {
         "MEDPLUM_BASE_URL": "http://localhost:8103",
         "MEDPLUM_ADMIN_EMAIL": "drbang@ivaeyecare.com",
@@ -85,7 +85,7 @@ Add to your MCP config (`~/.claude/mcp.json` or Claude Desktop's `claude_desktop
 }
 ```
 
-Existing Claude Desktop / Claude Code stdio configs continue to work unchanged because `stdio` is still the default transport.
+The package launcher retains `stdio` as the default transport for Claude Desktop and Claude Code.
 
 ## SSE endpoints
 
