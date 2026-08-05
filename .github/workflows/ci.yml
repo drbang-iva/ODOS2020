@@ -9,7 +9,7 @@ on:
 # CI scope: the everyday verification path Devon flagged in odos issue #2.
 # DR drill lives in dr-drill.yml (deeper, slower, separate trigger).
 # This workflow proves: deps install, types compile, tests pass, UI builds,
-# preflight lint clean. Nothing more.
+# preflight lint clean, and the evaluation gate scripts pass ShellCheck. Nothing more.
 #
 # Shell: each test/preflight step uses bash with `shopt -s globstar` because
 # the mcp/package.json test script relies on `**` glob expansion. The default
@@ -128,6 +128,19 @@ jobs:
       - name: build ui
         working-directory: ui
         run: npm run build
+
+  shellcheck:
+    name: shellcheck — evaluation gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: lint evaluation gate scripts
+        run: >-
+          shellcheck
+          scripts/eval-worktree.sh
+          scripts/eval-post-verdict.sh
+          scripts/lib/bot-review-status.sh
 
   preflight:
     name: preflight — Pass 4 custom lint rules
