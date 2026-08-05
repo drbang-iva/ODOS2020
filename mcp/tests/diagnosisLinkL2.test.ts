@@ -709,6 +709,29 @@ test("direct laterality-required picks ask once, then write no fabricated eviden
   }
 });
 
+test("homonymous field-side picks never derive field side from eye laterality", async () => {
+  const fhir = diagnosisPickFhir();
+  const pick = (laterality: "OD" | "OS" | "OU") => handleDiagnosisPickRequest({
+    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician", fhir }),
+    now: () => "2026-08-05T12:00:00.000Z",
+  }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+    body: { diagnosisKey: "vf_homonymous_bilateral", action: "confirm", laterality },
+  });
+
+  const od = await pick("OD");
+  const os = await pick("OS");
+  const ou = await pick("OU");
+  assert.equal(od.status, 201);
+  assert.equal(os.status, 200);
+  assert.equal(ou.status, 200);
+  assert.equal((od.body as { condition: Condition }).condition.code?.coding?.[0]?.code, "H53.469");
+  assert.equal((os.body as { condition: Condition }).condition.code?.coding?.[0]?.code, "H53.469");
+  assert.equal((ou.body as { condition: Condition }).condition.code?.coding?.[0]?.code, "H53.469");
+  assert.equal(fhir.resources.filter((resource) => resource.resourceType === "Condition").length, 1);
+});
+
 test("a concurrent Condition update returns 409 without silently retrying the clinician decision", async () => {
   class ConcurrentUpdateFhir extends MemoryFhir {
     conflictOnConditionUpdate = false;

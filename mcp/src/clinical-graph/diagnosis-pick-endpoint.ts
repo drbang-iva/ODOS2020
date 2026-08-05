@@ -260,6 +260,7 @@ async function updateCondition(
 function resolveConditionCode(row: DiagnosisCatalogRow, laterality: "right" | "left" | "bilateral" | undefined): string | undefined {
   if (!row.icd10) return undefined;
   if ("code" in row.icd10) return row.icd10.code;
+  if (!row.lateralityRequired) return row.icd10.pattern.unspecifiedEye;
   if (laterality) return row.icd10.pattern[laterality];
   return row.icd10.pattern.unspecifiedEye;
 }
@@ -269,6 +270,7 @@ function diagnosisLateralityBucket(
   laterality: "right" | "left" | "bilateral" | undefined,
 ): LateralityBucket {
   if (!row.icd10 || "code" in row.icd10) return "none";
+  if (!row.lateralityRequired) return "none";
   return laterality ?? "unspecified";
 }
 

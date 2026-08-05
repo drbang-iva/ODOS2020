@@ -304,6 +304,10 @@ function observationInterpretation(observation: Observation): FindingInterpretat
 function resolvedIcd10(row: DiagnosisCatalogRow, laterality: FindingInstance["laterality"]): DiagnosisCandidateRow["icd10"] | undefined {
   if (!row.icd10) return undefined;
   if ("code" in row.icd10) return row.icd10;
+  if (!row.lateralityRequired) {
+    const code = row.icd10.pattern.unspecifiedEye;
+    return code ? { code } : { pattern: row.icd10.pattern };
+  }
   const code = laterality === "OD" ? row.icd10.pattern.right
     : laterality === "OS" ? row.icd10.pattern.left
     : laterality === "OU" ? row.icd10.pattern.bilateral

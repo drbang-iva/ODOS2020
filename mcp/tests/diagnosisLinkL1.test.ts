@@ -342,7 +342,8 @@ test("visual-field Phase 0 ledger and catalog seeds preserve verified code shape
     assert.deepEqual(seed.applicableFindingDefinitionIds, []);
   }
   assert.equal(seeds.find((row) => row.stableKey === "vf_homonymous_bilateral")?.provenance.note,
-    "For this family, right, left, and unspecified pattern slots encode visual-field side, not eye laterality.");
+    "For this family, right, left, and unspecified pattern slots encode visual-field side, not eye laterality; generic eye-laterality resolution uses the unspecified-side code until field-side capture exists.");
+  assert.equal(seeds.find((row) => row.stableKey === "vf_homonymous_bilateral")?.lateralityRequired, false);
   assert.doesNotMatch(JSON.stringify(seeds), /H53\.40/);
 });
 

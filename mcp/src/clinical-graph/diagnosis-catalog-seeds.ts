@@ -198,12 +198,12 @@ function fieldSideFamilySeed(
     icd10Family: family,
     icd10Code: unspecified.code,
     icd10Display: unspecified.display,
-    lateralityRequired: true,
+    lateralityRequired: false,
     icd10,
     provenance: {
       ...provenance,
       ledgerRefs: [...new Set(matches.flatMap((row) => row.sourceRefs))],
-      note: "For this family, right, left, and unspecified pattern slots encode visual-field side, not eye laterality.",
+      note: "For this family, right, left, and unspecified pattern slots encode visual-field side, not eye laterality; generic eye-laterality resolution uses the unspecified-side code until field-side capture exists.",
     },
   });
 }
