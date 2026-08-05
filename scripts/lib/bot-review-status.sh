@@ -42,7 +42,7 @@ BOT_REVIEW_CHECKS=(
 
 load_bot_review_status() {
   local rows state commit_id submitted_at normalized_commit login
-  local jq_login_filter check_rows app name conclusion status frag slug
+  local jq_login_filter check_rows app name conclusion status entry frag slug
 
   bot_review_at_head=false
   bot_review_head_source=""
@@ -94,8 +94,9 @@ load_bot_review_status() {
 
   # ---- Signal 2: completed check run at the head ------------------------------------
   if ! check_rows="$(gh api --paginate "repos/$repo_name/commits/$head_sha/check-runs" \
-    --jq '.check_runs[] | [((.app.slug // "") | ascii_downcase), ((.name // "") | ascii_downcase), (.status // ""), (.conclusion // "")] | @tsv' 2>/dev/null)"; then
+    --jq '.check_runs[] | [((.app.slug // "") | ascii_downcase), ((.name // "") | ascii_downcase), ((.status // "") | ascii_downcase), ((.conclusion // "") | ascii_downcase)] | @tsv' 2>/dev/null)"; then
     # A check-runs lookup failure is not fatal — signal 1 already ran. Leave the gate closed.
+    echo "warning: could not fetch check runs for PR #$pr_number at $head_sha; leaving bot-review gate closed" >&2
     return 0
   fi
 
