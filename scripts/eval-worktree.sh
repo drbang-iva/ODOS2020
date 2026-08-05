@@ -242,7 +242,7 @@ worktree_path="$(mktemp -d "$worktree_parent/odos-eval-pr${pr_number}-${head_sha
 rmdir "$worktree_path"
 worktree_created=false
 
-# shellcheck disable=SC2329 # Invoked by the EXIT, INT, and TERM traps below.
+# shellcheck disable=SC2317,SC2329 # Invoked by the EXIT, INT, and TERM traps below.
 cleanup() {
   local status=$?
   trap - EXIT INT TERM
