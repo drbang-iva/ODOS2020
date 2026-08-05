@@ -61,7 +61,7 @@ const ANTERIOR_STRUCTURES: StructureSeed[] = [
     key: "conjunctiva",
     display: "Conjunctiva",
     normalTemplate: "White and quiet; no injection or discharge.",
-    priority: ["injection", "pinguecula", "pterygium", "chemosis", "papillae", "follicles"],
+    priority: ["injection", "pinguecula", pterygiumFinding("pterygium", "pterygium"), "chemosis", "papillae", "follicles"],
     additional: ["subconjunctival hemorrhage", "nevus", "pigmentation", "concretion", "conjunctivochalasis", "episcleritis", "scleritis", "phlyctenule", "lymphangiectasia", "scleral injection", "scleral thinning", "nodule"],
   },
   {
@@ -84,7 +84,7 @@ const ANTERIOR_STRUCTURES: StructureSeed[] = [
     key: "cornea",
     display: "Cornea",
     normalTemplate: "Clear, no staining; normal thickness and clarity.",
-    priority: ["superficial punctate keratitis (SPK)", "corneal staining", "dry eye keratopathy", "arcus", "scar", "keratoconus", "guttata", "pterygium (encroaching)", "neovascularization", "infiltrate"],
+    priority: ["superficial punctate keratitis (SPK)", "corneal staining", "dry eye keratopathy", "arcus", "scar", keratoconusFinding(), "guttata", pterygiumFinding("pterygium-encroaching", "pterygium (encroaching)"), "neovascularization", "infiltrate"],
     additional: ["abrasion", "dendrite", "edema", "foreign body", "filaments", "erosion", "RCES (recurrent erosion)", "EBMD (map-dot-fingerprint)", "Fuchs' endothelial dystrophy", "band keratopathy", "Salzmann's nodule", "keratic precipitates", "ulcer", "haze", "opacification", "pannus", "nodules", "phlyctenule", "Descemet folds", "Krukenberg spindle", "iron line (Hudson-Stahli/Stocker's/Fleischer's)", "Vogt striae", "vortex keratopathy (verticillata)", "Thygeson's SPK", "lipid keratopathy", "Mooren's ulcer", "Terrien's marginal degeneration", "peripheral thinning", "central thinning", "hydrops", "pigment on endothelium"],
     gradeFields: [
       {
@@ -155,8 +155,8 @@ const POSTERIOR_STRUCTURES: StructureSeed[] = [
     key: "fundus",
     display: "Fundus",
     normalTemplate: "Normal retinal appearance; healthy background, no lesions.",
-    priority: ["diabetic retinopathy (background/NPDR)", "hypertensive retinopathy", "dot/blot hemorrhage", "hard exudate", "cotton-wool spot", "choroidal nevus", "chorioretinal scar"],
-    additional: ["microaneurysm", "proliferative diabetic retinopathy (PDR)", "neovascularization elsewhere (NVE)", "preretinal hemorrhage", "choroidal lesion", "RPE atrophy", "Roth spot", "myelinated nerve fiber", "drusen", "occasional drusen"],
+    priority: [npdrFinding(), "hypertensive retinopathy", "dot/blot hemorrhage", "hard exudate", "cotton-wool spot", "choroidal nevus", "chorioretinal scar"],
+    additional: ["microaneurysm", pdrFinding(), "neovascularization elsewhere (NVE)", "preretinal hemorrhage", "choroidal lesion", "RPE atrophy", "Roth spot", "myelinated nerve fiber", "drusen", "occasional drusen"],
   },
   {
     key: "macula",
@@ -186,6 +186,7 @@ interface DiagnosisCandidateSeed {
   option: string;
   diagnosisKey: string;
   fieldDisplay?: string;
+  qualifiers?: Record<string, string>;
 }
 
 const DIAGNOSIS_CANDIDATE_SEEDS: Record<string, readonly DiagnosisCandidateSeed[]> = {
@@ -201,6 +202,10 @@ const DIAGNOSIS_CANDIDATE_SEEDS: Record<string, readonly DiagnosisCandidateSeed[
     { option: "pterygium", diagnosisKey: "pterygium_peripheral_stationary" },
     { option: "pterygium", diagnosisKey: "pterygium_peripheral_progressive" },
     { option: "pterygium", diagnosisKey: "pterygium_recurrent" },
+    { option: "pterygium", qualifiers: { location: "central" }, diagnosisKey: "pterygium_central" },
+    { option: "pterygium", qualifiers: { location: "peripheral", progression: "stationary" }, diagnosisKey: "pterygium_peripheral_stationary" },
+    { option: "pterygium", qualifiers: { location: "peripheral", progression: "progressive" }, diagnosisKey: "pterygium_peripheral_progressive" },
+    { option: "pterygium", qualifiers: { location: "peripheral", progression: "recurrent" }, diagnosisKey: "pterygium_recurrent" },
   ],
   "ocular-health:anterior:tear-film": [
     { option: "reduced-tear-meniscus", diagnosisKey: "kcs_not_sjogren" },
@@ -210,15 +215,41 @@ const DIAGNOSIS_CANDIDATE_SEEDS: Record<string, readonly DiagnosisCandidateSeed[
     { option: "keratoconus", diagnosisKey: "keratoconus_stable" },
     { option: "keratoconus", diagnosisKey: "keratoconus_unstable" },
     { option: "keratoconus", diagnosisKey: "keratoconus_unspecified_stability" },
+    { option: "keratoconus", qualifiers: { stability: "stable" }, diagnosisKey: "keratoconus_stable" },
+    { option: "keratoconus", qualifiers: { stability: "unstable" }, diagnosisKey: "keratoconus_unstable" },
     { option: "superficial-punctate-keratitis-spk", diagnosisKey: "kcs_not_sjogren" },
     { option: "dry-eye-keratopathy", diagnosisKey: "kcs_not_sjogren" },
     { option: "pterygium-encroaching", diagnosisKey: "pterygium_central" },
     { option: "pterygium-encroaching", diagnosisKey: "pterygium_peripheral_stationary" },
     { option: "pterygium-encroaching", diagnosisKey: "pterygium_peripheral_progressive" },
     { option: "pterygium-encroaching", diagnosisKey: "pterygium_recurrent" },
+    { option: "pterygium-encroaching", qualifiers: { location: "central" }, diagnosisKey: "pterygium_central" },
+    { option: "pterygium-encroaching", qualifiers: { location: "peripheral", progression: "stationary" }, diagnosisKey: "pterygium_peripheral_stationary" },
+    { option: "pterygium-encroaching", qualifiers: { location: "peripheral", progression: "progressive" }, diagnosisKey: "pterygium_peripheral_progressive" },
+    { option: "pterygium-encroaching", qualifiers: { location: "peripheral", progression: "recurrent" }, diagnosisKey: "pterygium_recurrent" },
   ],
   "ocular-health:posterior:fundus": [
     { option: "hypertensive-retinopathy", diagnosisKey: "hypertensive_retinopathy" },
+    { option: "diabetic-retinopathy-background-npdr", diagnosisKey: "t2_dr_unspecified_with_dme" },
+    { option: "diabetic-retinopathy-background-npdr", diagnosisKey: "t2_dr_unspecified_without_dme" },
+    { option: "diabetic-retinopathy-background-npdr", qualifiers: { severity: "mild", "macular-edema": "present" }, diagnosisKey: "t2_dr_mild_npdr_with_dme" },
+    { option: "diabetic-retinopathy-background-npdr", qualifiers: { severity: "mild", "macular-edema": "absent" }, diagnosisKey: "t2_dr_mild_npdr_without_dme" },
+    { option: "diabetic-retinopathy-background-npdr", qualifiers: { severity: "moderate", "macular-edema": "present" }, diagnosisKey: "t2_dr_moderate_npdr_with_dme" },
+    { option: "diabetic-retinopathy-background-npdr", qualifiers: { severity: "moderate", "macular-edema": "absent" }, diagnosisKey: "t2_dr_moderate_npdr_without_dme" },
+    { option: "diabetic-retinopathy-background-npdr", qualifiers: { severity: "severe", "macular-edema": "present" }, diagnosisKey: "t2_dr_severe_npdr_with_dme" },
+    { option: "diabetic-retinopathy-background-npdr", qualifiers: { severity: "severe", "macular-edema": "absent" }, diagnosisKey: "t2_dr_severe_npdr_without_dme" },
+    { option: "proliferative-diabetic-retinopathy-pdr", diagnosisKey: "t2_dr_pdr_with_dme" },
+    { option: "proliferative-diabetic-retinopathy-pdr", diagnosisKey: "t2_dr_pdr_trd_involving_macula" },
+    { option: "proliferative-diabetic-retinopathy-pdr", diagnosisKey: "t2_dr_pdr_trd_not_involving_macula" },
+    { option: "proliferative-diabetic-retinopathy-pdr", diagnosisKey: "t2_dr_pdr_combined_trd_rrd" },
+    { option: "proliferative-diabetic-retinopathy-pdr", diagnosisKey: "t2_dr_stable_pdr" },
+    { option: "proliferative-diabetic-retinopathy-pdr", diagnosisKey: "t2_dr_pdr_without_dme" },
+    { option: "proliferative-diabetic-retinopathy-pdr", qualifiers: { severity: "with-macular-edema" }, diagnosisKey: "t2_dr_pdr_with_dme" },
+    { option: "proliferative-diabetic-retinopathy-pdr", qualifiers: { severity: "traction-rd-involving-macula" }, diagnosisKey: "t2_dr_pdr_trd_involving_macula" },
+    { option: "proliferative-diabetic-retinopathy-pdr", qualifiers: { severity: "traction-rd-not-involving-macula" }, diagnosisKey: "t2_dr_pdr_trd_not_involving_macula" },
+    { option: "proliferative-diabetic-retinopathy-pdr", qualifiers: { severity: "combined-traction-rhegmatogenous-rd" }, diagnosisKey: "t2_dr_pdr_combined_trd_rrd" },
+    { option: "proliferative-diabetic-retinopathy-pdr", qualifiers: { severity: "stable" }, diagnosisKey: "t2_dr_stable_pdr" },
+    { option: "proliferative-diabetic-retinopathy-pdr", qualifiers: { severity: "without-macular-edema" }, diagnosisKey: "t2_dr_pdr_without_dme" },
   ],
   "ocular-health:posterior:periphery": [
     { option: "horseshoe-tear", diagnosisKey: "retinal_horseshoe_tear" },
@@ -354,7 +385,9 @@ export function applyOcularHealthDiagnosisCandidates(
     return {
     id: `SEED_${seed.diagnosisKey.toUpperCase()}_${index + 1}`,
     diagnosisKey: seed.diagnosisKey,
-    trigger: { kind: "option", field: field.localCode, anyOf: [seed.option] },
+    trigger: seed.qualifiers
+      ? { kind: "qualifier", field: field.localCode, option: seed.option, qualifiers: seed.qualifiers }
+      : { kind: "option", field: field.localCode, anyOf: [seed.option] },
     priority: true,
     origin: "seed",
     active: true,
@@ -364,6 +397,56 @@ export function applyOcularHealthDiagnosisCandidates(
     ...definition,
     allowDiagnosisMapping: true,
     diagnosisCandidates,
+  };
+}
+
+function pterygiumFinding(key: string, display: string): FindingSeed {
+  return {
+    key,
+    display,
+    qualifiers: [
+      { kind: "enum", key: "location", display: "Location", options: [{ code: "central", display: "Central" }, { code: "peripheral", display: "Peripheral" }] },
+      { kind: "enum", key: "progression", display: "Progression", options: [{ code: "stationary", display: "Stationary" }, { code: "progressive", display: "Progressive" }, { code: "recurrent", display: "Recurrent" }] },
+    ],
+  };
+}
+
+function keratoconusFinding(): FindingSeed {
+  return {
+    key: "keratoconus",
+    display: "keratoconus",
+    qualifiers: [{ kind: "enum", key: "stability", display: "Stability", options: [{ code: "stable", display: "Stable" }, { code: "unstable", display: "Unstable" }] }],
+  };
+}
+
+function npdrFinding(): FindingSeed {
+  return {
+    key: "diabetic-retinopathy-background-npdr",
+    display: "diabetic retinopathy (background/NPDR)",
+    qualifiers: [
+      { kind: "enum", key: "severity", display: "Severity", options: [{ code: "mild", display: "Mild" }, { code: "moderate", display: "Moderate" }, { code: "severe", display: "Severe" }] },
+      { kind: "enum", key: "macular-edema", display: "Macular edema", options: [{ code: "present", display: "Present" }, { code: "absent", display: "Absent" }] },
+    ],
+  };
+}
+
+function pdrFinding(): FindingSeed {
+  return {
+    key: "proliferative-diabetic-retinopathy-pdr",
+    display: "proliferative diabetic retinopathy (PDR)",
+    qualifiers: [{
+      kind: "enum",
+      key: "severity",
+      display: "Severity",
+      options: [
+        { code: "with-macular-edema", display: "With macular edema" },
+        { code: "traction-rd-involving-macula", display: "Traction RD involving the macula" },
+        { code: "traction-rd-not-involving-macula", display: "Traction RD not involving the macula" },
+        { code: "combined-traction-rhegmatogenous-rd", display: "Combined traction + rhegmatogenous RD" },
+        { code: "stable", display: "Stable" },
+        { code: "without-macular-edema", display: "Without macular edema" },
+      ],
+    }],
   };
 }
 

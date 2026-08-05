@@ -186,6 +186,7 @@ export type MappingTrigger =
   | { kind: "abnormal" }
   | { kind: "numeric"; field: string; op: ">=" | "<=" | ">" | "<" | "=="; value: number }
   | { kind: "option"; field: string; anyOf: string[] }
+  | { kind: "qualifier"; field: string; option: string; qualifiers: Record<string, string> }
   | { kind: "allOf"; triggers: MappingTrigger[] };
 
 export interface DiagnosisCandidateEntry {

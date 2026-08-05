@@ -10,6 +10,7 @@ import type {
 } from "./glaucoma-suspect.js";
 
 const fieldSchema = z.string().trim().min(1).max(100).regex(/^[A-Za-z0-9][A-Za-z0-9_.-]*$/);
+const optionSchema = z.string().trim().min(1).max(200);
 export const mappingTriggerSchema: z.ZodType<MappingTrigger> = z.lazy(() =>
   z.discriminatedUnion("kind", [
     z.object({ kind: z.literal("always") }).strict(),
@@ -23,7 +24,16 @@ export const mappingTriggerSchema: z.ZodType<MappingTrigger> = z.lazy(() =>
     z.object({
       kind: z.literal("option"),
       field: fieldSchema,
-      anyOf: z.array(z.string().trim().min(1).max(200)).min(1).max(100),
+      anyOf: z.array(optionSchema).min(1).max(100),
+    }).strict(),
+    z.object({
+      kind: z.literal("qualifier"),
+      field: fieldSchema,
+      option: optionSchema,
+      qualifiers: z.record(fieldSchema, optionSchema).refine(
+        (qualifiers) => Object.keys(qualifiers).length >= 1 && Object.keys(qualifiers).length <= 20,
+        "Qualifier triggers require 1 to 20 qualifier values.",
+      ),
     }).strict(),
     z.object({
       kind: z.literal("allOf"),
@@ -109,6 +119,22 @@ export function evaluateMappingTrigger(trigger: unknown, finding: FindingInstanc
   if (parsed.data.kind === "abnormal") {
     return finding.interpretation === "abnormal" || finding.interpretation === "borderline";
   }
+  if (parsed.data.kind === "qualifier") {
+    if (finding.value.type !== "components") return false;
+    const components = finding.value.components;
+    const optionCode = `${parsed.data.field}::${parsed.data.option}`;
+    if (!components.some((component) =>
+      component.value === true &&
+      (component.code === optionCode || component.code.endsWith(`_${optionCode}`))
+    )) return false;
+    const prefix = `${parsed.data.field}::${parsed.data.option}::`;
+    return Object.entries(parsed.data.qualifiers).every(([qualifier, expected]) =>
+      components.some((component) =>
+        (component.code === `${prefix}${qualifier}` || component.code.endsWith(`_${prefix}${qualifier}`)) &&
+        component.value === expected
+      )
+    );
+  }
   const value = findingFieldValue(finding, parsed.data.field);
   if (parsed.data.kind === "option") {
     if (typeof value === "string" && parsed.data.anyOf.includes(value)) return true;
@@ -126,6 +152,45 @@ export function evaluateMappingTrigger(trigger: unknown, finding: FindingInstanc
   if (parsed.data.op === ">") return value > parsed.data.value;
   if (parsed.data.op === "<") return value < parsed.data.value;
   return value === parsed.data.value;
+}
+
+export function matchingQualifierGroups(trigger: MappingTrigger, finding: FindingInstance): string[] {
+  return matchingMappingGroups(trigger, finding).qualifierGroups;
+}
+
+export function matchingMappingGroups(
+  trigger: MappingTrigger,
+  finding: FindingInstance,
+): { optionGroups: string[]; qualifierGroups: string[] } {
+  if (!evaluateMappingTrigger(trigger, finding)) return { optionGroups: [], qualifierGroups: [] };
+  switch (trigger.kind) {
+    case "option":
+      return {
+        optionGroups: trigger.anyOf
+          .filter((option) => evaluateMappingTrigger({ ...trigger, anyOf: [option] }, finding))
+          .map((option) => qualifierGroup(trigger.field, option)),
+        qualifierGroups: [],
+      };
+    case "qualifier":
+      return { optionGroups: [], qualifierGroups: [qualifierGroup(trigger.field, trigger.option)] };
+    case "allOf": {
+      const nestedGroups = trigger.triggers.map((nested) => matchingMappingGroups(nested, finding));
+      return {
+        optionGroups: nestedGroups.flatMap((groups) => groups.optionGroups),
+        qualifierGroups: nestedGroups.flatMap((groups) => groups.qualifierGroups),
+      };
+    }
+    case "always":
+    case "abnormal":
+    case "numeric":
+      return { optionGroups: [], qualifierGroups: [] };
+    default:
+      return assertUnreachable(trigger);
+  }
+}
+
+export function qualifierGroup(field: string, option: string): string {
+  return `${field}\u0000${option}`;
 }
 
 function findingFieldValue(finding: FindingInstance, field: string): number | string | boolean | undefined {
@@ -185,4 +250,8 @@ function slugify(value: string): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function assertUnreachable(value: never): never {
+  throw new Error(`Unsupported diagnosis mapping trigger: ${JSON.stringify(value)}`);
 }
