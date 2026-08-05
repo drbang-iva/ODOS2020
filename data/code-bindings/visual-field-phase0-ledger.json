@@ -1,0 +1,92 @@
+{
+  "ledger": "visual-field-phase0",
+  "status": "phase0-seeded",
+  "mandate": "Mandate 14",
+  "accessDate": "2026-08-04",
+  "scope": "Visual-field-defect diagnosis catalog seeds for the ODOS clinical graph.",
+  "sources": {
+    "cdcIcd10Cm2026CodeDescriptions": {
+      "type": "primary",
+      "name": "CDC/NCHS ICD-10-CM FY2026 Code Descriptions in Tabular Order",
+      "url": "https://stacks.cdc.gov/view/cdc/250974/cdc_250974_DS4.zip",
+      "supportingPage": "https://stacks.cdc.gov/view/cdc/250974",
+      "accessDate": "2026-08-04"
+    },
+    "nlmClinicalTablesIcd10Cm": {
+      "type": "primary-official-nih",
+      "name": "NLM Clinical Tables ICD-10-CM API",
+      "url": "https://clinicaltables.nlm.nih.gov/apidoc/icd10cm/v3/doc.html",
+      "exampleQuery": "https://clinicaltables.nlm.nih.gov/api/icd10cm/v3/search?terms=H53.411&sf=code&df=code,name",
+      "accessDate": "2026-08-04"
+    }
+  },
+  "diagnosisFamilies": [
+    {
+      "family": "H53.41-",
+      "description": "Scotoma involving central area",
+      "lateralityDigits": { "1": "OD", "2": "OS", "3": "bilateral", "9": "unspecified" },
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
+    },
+    {
+      "family": "H53.42-",
+      "description": "Scotoma of blind spot area",
+      "lateralityDigits": { "1": "OD", "2": "OS", "3": "bilateral", "9": "unspecified" },
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
+    },
+    {
+      "family": "H53.43-",
+      "description": "Sector or arcuate defects",
+      "lateralityDigits": { "1": "OD", "2": "OS", "3": "bilateral", "9": "unspecified" },
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
+    },
+    {
+      "family": "H53.45-",
+      "description": "Other localized visual field defect",
+      "lateralityDigits": { "1": "OD", "2": "OS", "3": "bilateral", "9": "unspecified" },
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
+    },
+    {
+      "family": "H53.46-",
+      "description": "Homonymous bilateral field defects",
+      "fieldSideDigits": { "1": "right", "2": "left", "9": "unspecified" },
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
+    },
+    {
+      "family": "H53.47",
+      "description": "Heteronymous bilateral field defects",
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
+    },
+    {
+      "family": "H53.48-",
+      "description": "Generalized contraction of visual field",
+      "lateralityDigits": { "1": "OD", "2": "OS", "3": "bilateral", "9": "unspecified" },
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
+    }
+  ],
+  "diagnosisCodes": [
+    { "code": "H53.411", "display": "Scotoma involving central area, right eye", "family": "H53.41-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H53.412", "display": "Scotoma involving central area, left eye", "family": "H53.41-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H53.413", "display": "Scotoma involving central area, bilateral", "family": "H53.41-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H53.419", "display": "Scotoma involving central area, unspecified eye", "family": "H53.41-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H53.421", "display": "Scotoma of blind spot area, right eye", "family": "H53.42-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H53.422", "display": "Scotoma of blind spot area, left eye", "family": "H53.42-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H53.423", "display": "Scotoma of blind spot area, bilateral", "family": "H53.42-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H53.429", "display": "Scotoma of blind spot area, unspecified eye", "family": "H53.42-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H53.431", "display": "Sector or arcuate defects, right eye", "family": "H53.43-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H53.432", "display": "Sector or arcuate defects, left eye", "family": "H53.43-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H53.433", "display": "Sector or arcuate defects, bilateral", "family": "H53.43-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H53.439", "display": "Sector or arcuate defects, unspecified eye", "family": "H53.43-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H53.451", "display": "Other localized visual field defect, right eye", "family": "H53.45-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H53.452", "display": "Other localized visual field defect, left eye", "family": "H53.45-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H53.453", "display": "Other localized visual field defect, bilateral", "family": "H53.45-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H53.459", "display": "Other localized visual field defect, unspecified eye", "family": "H53.45-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H53.461", "display": "Homonymous bilateral field defects, right side", "family": "H53.46-", "laterality": "FIELD_RIGHT", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H53.462", "display": "Homonymous bilateral field defects, left side", "family": "H53.46-", "laterality": "FIELD_LEFT", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H53.469", "display": "Homonymous bilateral field defects, unspecified side", "family": "H53.46-", "laterality": "FIELD_UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H53.47", "display": "Heteronymous bilateral field defects", "family": "H53.47", "laterality": "NONE", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H53.481", "display": "Generalized contraction of visual field, right eye", "family": "H53.48-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H53.482", "display": "Generalized contraction of visual field, left eye", "family": "H53.48-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H53.483", "display": "Generalized contraction of visual field, bilateral", "family": "H53.48-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H53.489", "display": "Generalized contraction of visual field, unspecified eye", "family": "H53.48-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] }
+  ]
+}

@@ -13,6 +13,7 @@ const REFRACTIVE_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/refractive
 const OCULAR_HEALTH_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/ocular-health-phase0-ledger.json");
 const DIABETIC_RETINOPATHY_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/diabetic-retinopathy-phase0-ledger.json");
 const DIPLOPIA_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/diplopia-phase0-ledger.json");
+const VISUAL_FIELD_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/visual-field-phase0-ledger.json");
 
 interface LedgerRow {
   code: string;
@@ -40,6 +41,7 @@ function buildSeeds(): DiagnosisCatalogRow[] {
   const ocularHealth = loadLedger(OCULAR_HEALTH_LEDGER_PATH);
   const diabeticRetinopathy = loadLedger(DIABETIC_RETINOPATHY_LEDGER_PATH);
   const diplopia = loadLedger(DIPLOPIA_LEDGER_PATH);
+  const visualField = loadLedger(VISUAL_FIELD_LEDGER_PATH);
   return [
     familySeed("glaucoma_suspect_open_angle_low", "Open angle with borderline findings, low risk", "glaucoma-suspect", "H40.01-", glaucoma, provenance),
     familySeed("glaucoma_suspect_open_angle_high", "Open angle with borderline findings, high risk", "glaucoma-suspect", "H40.02-", glaucoma, provenance),
@@ -48,6 +50,13 @@ function buildSeeds(): DiagnosisCatalogRow[] {
     familySeed("anatomical_narrow_angle", "Anatomical narrow angle", "anatomical-narrow-angle", "H40.03-", glaucoma, provenance),
     familySeed("steroid_responder", "Steroid responder", "steroid-responder", "H40.04-", glaucoma, provenance),
     familySeed("primary_angle_closure_without_damage", "Primary angle closure without glaucoma damage", "primary-angle-closure", "H40.06-", glaucoma, provenance),
+    familySeed("vf_scotoma_central", "Scotoma involving central area", "visual-field-defect", "H53.41-", visualField, provenance),
+    familySeed("vf_scotoma_blind_spot", "Scotoma of blind spot area", "visual-field-defect", "H53.42-", visualField, provenance),
+    familySeed("vf_sector_or_arcuate", "Sector or arcuate defects", "visual-field-defect", "H53.43-", visualField, provenance),
+    familySeed("vf_other_localized", "Other localized visual field defect", "visual-field-defect", "H53.45-", visualField, provenance),
+    fieldSideFamilySeed("vf_homonymous_bilateral", "Homonymous bilateral field defects", "visual-field-defect", "H53.46-", visualField, provenance),
+    fixedSeed("vf_heteronymous_bilateral", "Heteronymous bilateral field defects", "visual-field-defect", "H53.47", visualField, provenance),
+    familySeed("vf_generalized_contraction", "Generalized contraction of visual field", "visual-field-defect", "H53.48-", visualField, provenance),
     familySeed("hyperopia", "Hypermetropia", "hyperopia", "H52.0-", refractive, provenance),
     familySeed("myopia", "Myopia", "myopia", "H52.1-", refractive, provenance),
     familySeed("astigmatism", "Unspecified astigmatism", "astigmatism", "H52.20-", refractive, provenance),
@@ -159,6 +168,43 @@ function perEyeFamilySeed(
     lateralityRequired: true,
     icd10,
     provenance: { ...provenance, ledgerRefs: [...new Set(matches.flatMap((row) => row.sourceRefs))] },
+  });
+}
+
+function fieldSideFamilySeed(
+  stableKey: string,
+  display: string,
+  clinicalFamily: string,
+  family: string,
+  rows: readonly LedgerRow[],
+  provenance: ClinicalGraphProvenance,
+): DiagnosisCatalogRow {
+  const matches = rows.filter((row) => row.family === family);
+  const icd10: DiagnosisIcd10 = {
+    pattern: {
+      unspecifiedEye: matches.find((row) => row.laterality === "FIELD_UNKNOWN")?.code,
+      right: matches.find((row) => row.laterality === "FIELD_RIGHT")?.code,
+      left: matches.find((row) => row.laterality === "FIELD_LEFT")?.code,
+    },
+  };
+  const unspecified = matches.find((row) => row.laterality === "FIELD_UNKNOWN") ?? matches[0];
+  if (!unspecified || Object.values(icd10.pattern).some((code) => !code)) {
+    throw new Error(`Verified diagnosis field-side family ${family} is incomplete in its Phase 0 ledger.`);
+  }
+  return baseSeed({
+    stableKey,
+    display,
+    clinicalFamily,
+    icd10Family: family,
+    icd10Code: unspecified.code,
+    icd10Display: unspecified.display,
+    lateralityRequired: true,
+    icd10,
+    provenance: {
+      ...provenance,
+      ledgerRefs: [...new Set(matches.flatMap((row) => row.sourceRefs))],
+      note: "For this family, right, left, and unspecified pattern slots encode visual-field side, not eye laterality.",
+    },
   });
 }
 
