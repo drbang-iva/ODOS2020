@@ -37,6 +37,8 @@ import {
 } from "../src/fhir/condition.js";
 import { buildEyeBodyStructure } from "../src/fhir/ophthalmology/bodyStructure.js";
 import { ODOS_VISIT_TYPE_SYSTEM } from "../src/fhir/schedulingVisitType.js";
+import { buildDiagnosisCatalogSeeds } from "../src/clinical-graph/diagnosis-catalog-store.js";
+import { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } from "../src/clinical-graph/diagnosis-pick-endpoint.js";
 
 test("patient overview projects real snapshot resources and newest-first encounter diagnoses", async () => {
   const fake = new FakeFhir();
@@ -208,6 +210,48 @@ test("visit ledger keeps native encounter-diagnosis Conditions", async () => {
   const overview = await loadPatientOverview(fake as never, "p1");
 
   assert.deepEqual(overview.visits[0]?.diagnoses.map((diagnosis) => diagnosis.code), ["DX-NATIVE"]);
+});
+
+test("legacy unspecified diagnosis keys remain catalog-resolvable and render in the visit ledger", async () => {
+  const stableKeys = [
+    "keratoconus_unspecified_stability",
+    "t2_dr_unspecified_with_dme",
+    "t2_dr_unspecified_without_dme",
+  ];
+  const catalog = buildDiagnosisCatalogSeeds();
+  const rows = stableKeys.map((stableKey) => {
+    const row = catalog.find((candidate) => candidate.stableKey === stableKey);
+    assert.ok(row?.icd10, `Missing retained diagnosis catalog row ${stableKey}`);
+    const code = "code" in row.icd10 ? row.icd10.code : row.icd10.pattern.right;
+    assert.ok(code, `Missing retained ICD-10 resolution for ${stableKey}`);
+    return { row, code };
+  });
+  const fake = new FakeFhir();
+  fake.add(patient());
+  fake.add(encounter("legacy-unspecified", "2021-01-31T14:00:00Z"));
+  rows.forEach(({ row, code }, index) => {
+    const existing = condition(`legacy-unspecified-${index + 1}`, row.display, {
+      category: "encounter-diagnosis",
+      encounterId: "legacy-unspecified",
+      code,
+    });
+    existing.identifier = [{
+      system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM,
+      value: `${row.stableKey}::${"code" in row.icd10! ? "none" : "right"}`,
+    }];
+    existing.code = {
+      text: row.display,
+      coding: [{ system: "http://hl7.org/fhir/sid/icd-10-cm", code, display: row.display }],
+    };
+    fake.add(existing);
+  });
+
+  const overview = await loadPatientOverview(fake as never, "p1");
+
+  assert.deepEqual(
+    overview.visits[0]?.diagnoses.map(({ name, code }) => ({ name, code })),
+    rows.map(({ row, code }) => ({ name: row.display, code })),
+  );
 });
 
 test("visit ledger batches encounter-linked Conditions without dropping or duplicating rows", async () => {
