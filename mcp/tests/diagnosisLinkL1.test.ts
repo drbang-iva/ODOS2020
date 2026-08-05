@@ -106,6 +106,13 @@ test("diagnosis catalog seeds are ledger-backed durable families and survive a s
     "anatomical_narrow_angle",
     "steroid_responder",
     "primary_angle_closure_without_damage",
+    "vf_scotoma_central",
+    "vf_scotoma_blind_spot",
+    "vf_sector_or_arcuate",
+    "vf_other_localized",
+    "vf_homonymous_bilateral",
+    "vf_heteronymous_bilateral",
+    "vf_generalized_contraction",
     "hyperopia",
     "myopia",
     "astigmatism",
@@ -242,6 +249,102 @@ test("glaucoma laterality-only families seed all verified ledger codes", () => {
     ]);
     assert.deepEqual(seed.applicableFindingDefinitionIds, []);
   }
+});
+
+test("visual-field Phase 0 ledger and catalog seeds preserve verified code shapes", () => {
+  const raw = readFileSync(
+    resolve(process.cwd(), "../data/code-bindings/visual-field-phase0-ledger.json"),
+    "utf8",
+  );
+  const ledger = JSON.parse(raw) as {
+    ledger: string;
+    status: string;
+    mandate: string;
+    accessDate: string;
+    sources: Record<string, { accessDate: string }>;
+    diagnosisFamilies: Array<{ family: string; fieldSideDigits?: Record<string, string>; sourceRefs: string[] }>;
+    diagnosisCodes: Array<{ code: string; display: string; family: string; laterality: string; sourceRefs: string[] }>;
+  };
+
+  assert.equal(ledger.ledger, "visual-field-phase0");
+  assert.equal(ledger.status, "phase0-seeded");
+  assert.equal(ledger.mandate, "Mandate 14");
+  assert.equal(ledger.accessDate, "2026-08-04");
+  assert.deepEqual(Object.keys(ledger.sources), [
+    "cdcIcd10Cm2026CodeDescriptions",
+    "nlmClinicalTablesIcd10Cm",
+  ]);
+  assert.equal(Object.values(ledger.sources).every((source) => source.accessDate === "2026-08-04"), true);
+  assert.deepEqual(ledger.diagnosisFamilies.map((row) => row.family), [
+    "H53.41-",
+    "H53.42-",
+    "H53.43-",
+    "H53.45-",
+    "H53.46-",
+    "H53.47",
+    "H53.48-",
+  ]);
+  assert.deepEqual(
+    ledger.diagnosisFamilies.find((row) => row.family === "H53.46-")?.fieldSideDigits,
+    { "1": "right", "2": "left", "9": "unspecified" },
+  );
+  assert.equal(ledger.diagnosisFamilies.every((row) => row.sourceRefs.length === 2), true);
+  assert.equal(ledger.diagnosisCodes.length, 24);
+  assert.equal(ledger.diagnosisCodes.every((row) => row.sourceRefs.length === 2), true);
+  assert.equal(ledger.diagnosisCodes.some((row) => row.code === "H53.40"), false);
+  assert.deepEqual(
+    ledger.diagnosisCodes.map(({ code, display }) => [code, display]),
+    [
+      ["H53.411", "Scotoma involving central area, right eye"],
+      ["H53.412", "Scotoma involving central area, left eye"],
+      ["H53.413", "Scotoma involving central area, bilateral"],
+      ["H53.419", "Scotoma involving central area, unspecified eye"],
+      ["H53.421", "Scotoma of blind spot area, right eye"],
+      ["H53.422", "Scotoma of blind spot area, left eye"],
+      ["H53.423", "Scotoma of blind spot area, bilateral"],
+      ["H53.429", "Scotoma of blind spot area, unspecified eye"],
+      ["H53.431", "Sector or arcuate defects, right eye"],
+      ["H53.432", "Sector or arcuate defects, left eye"],
+      ["H53.433", "Sector or arcuate defects, bilateral"],
+      ["H53.439", "Sector or arcuate defects, unspecified eye"],
+      ["H53.451", "Other localized visual field defect, right eye"],
+      ["H53.452", "Other localized visual field defect, left eye"],
+      ["H53.453", "Other localized visual field defect, bilateral"],
+      ["H53.459", "Other localized visual field defect, unspecified eye"],
+      ["H53.461", "Homonymous bilateral field defects, right side"],
+      ["H53.462", "Homonymous bilateral field defects, left side"],
+      ["H53.469", "Homonymous bilateral field defects, unspecified side"],
+      ["H53.47", "Heteronymous bilateral field defects"],
+      ["H53.481", "Generalized contraction of visual field, right eye"],
+      ["H53.482", "Generalized contraction of visual field, left eye"],
+      ["H53.483", "Generalized contraction of visual field, bilateral"],
+      ["H53.489", "Generalized contraction of visual field, unspecified eye"],
+    ],
+  );
+
+  const seeds = buildDiagnosisCatalogSeeds().filter((row) => row.clinicalFamily === "visual-field-defect");
+  const expected = {
+    vf_scotoma_central: { pattern: { unspecifiedEye: "H53.419", right: "H53.411", left: "H53.412", bilateral: "H53.413" } },
+    vf_scotoma_blind_spot: { pattern: { unspecifiedEye: "H53.429", right: "H53.421", left: "H53.422", bilateral: "H53.423" } },
+    vf_sector_or_arcuate: { pattern: { unspecifiedEye: "H53.439", right: "H53.431", left: "H53.432", bilateral: "H53.433" } },
+    vf_other_localized: { pattern: { unspecifiedEye: "H53.459", right: "H53.451", left: "H53.452", bilateral: "H53.453" } },
+    vf_homonymous_bilateral: { pattern: { unspecifiedEye: "H53.469", right: "H53.461", left: "H53.462" } },
+    vf_heteronymous_bilateral: { code: "H53.47", display: "Heteronymous bilateral field defects" },
+    vf_generalized_contraction: { pattern: { unspecifiedEye: "H53.489", right: "H53.481", left: "H53.482", bilateral: "H53.483" } },
+  };
+
+  assert.equal(seeds.length, 7);
+  for (const [stableKey, icd10] of Object.entries(expected)) {
+    const seed = seeds.find((row) => row.stableKey === stableKey);
+    assert.ok(seed, `Missing visual-field diagnosis catalog seed ${stableKey}`);
+    assert.deepEqual(seed.icd10, icd10);
+    assert.equal(seed.codingStatus, "verified");
+    assert.deepEqual(seed.applicableFindingDefinitionIds, []);
+  }
+  assert.equal(seeds.find((row) => row.stableKey === "vf_homonymous_bilateral")?.provenance.note,
+    "For this family, right, left, and unspecified pattern slots encode visual-field side, not eye laterality; generic eye-laterality resolution uses the unspecified-side code until field-side capture exists.");
+  assert.equal(seeds.find((row) => row.stableKey === "vf_homonymous_bilateral")?.lateralityRequired, false);
+  assert.doesNotMatch(JSON.stringify(seeds), /H53\.40/);
 });
 
 test("diabetic retinopathy Phase 0 ledger is dual-source and keeps coverage descriptor-only", () => {
