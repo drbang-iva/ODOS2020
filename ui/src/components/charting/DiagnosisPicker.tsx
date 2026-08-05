@@ -16,6 +16,8 @@ interface CandidateFinding {
   findingDefinitionKey?: string;
   observationReference?: string;
   candidates: Candidate[];
+  suppressedCandidates?: Candidate[];
+  suppression?: { message: string; overridable: boolean };
 }
 
 interface CatalogRow {
@@ -41,6 +43,7 @@ export function DiagnosisPicker({
   const [catalog, setCatalog] = useState<CatalogRow[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
   const [catalogSelection, setCatalogSelection] = useState<CatalogRow>();
+  const [overridden, setOverridden] = useState<Set<string>>(() => new Set());
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const loadVersion = useRef(0);
@@ -61,7 +64,7 @@ export function DiagnosisPicker({
       if (signal?.aborted || requestVersion !== loadVersion.current) return;
       const allowedObservations = new Set(observationReferences ?? []);
       setFindings((candidateBody.findings ?? []).filter((finding) =>
-        finding.candidates.length > 0 &&
+        (finding.candidates.length > 0 || Boolean(finding.suppression && finding.suppressedCandidates?.length)) &&
         (!findingDefinitionKey || finding.findingDefinitionKey === findingDefinitionKey) &&
         (allowedObservations.size === 0 || Boolean(finding.observationReference && allowedObservations.has(finding.observationReference)))
       ));
@@ -123,12 +126,42 @@ export function DiagnosisPicker({
     }
   }
 
-  if (findings.length === 0) return error ? <div className="mt-3 text-xs text-red-200">{error}</div> : null;
+  if (findings.length === 0) return error ? <div className="mt-3 text-xs text-[color:var(--odos-alert)]">{error}</div> : null;
 
   return (
     <div className="mt-3 space-y-2">
       {findings.map((finding) => (
         <div key={finding.findingInstanceId} className="relative inline-block align-top">
+          {finding.suppression && !overridden.has(finding.findingInstanceId) ? (
+            <div className="rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-surface-2)] px-3 py-2 text-xs text-[color:var(--odos-text)]">
+              <span>{finding.suppression.message}</span>
+              {finding.suppression.overridable && (
+                <button
+                  type="button"
+                  onClick={() => setOverridden((current) => new Set(current).add(finding.findingInstanceId))}
+                  className="ml-2 font-semibold text-brand-light underline underline-offset-2"
+                >
+                  Override
+                </button>
+              )}
+            </div>
+          ) : finding.suppression ? (
+            <div className="space-y-2 rounded border border-brand/40 bg-brand/10 p-3">
+              <div className="text-xs text-[color:var(--odos-muted)]">Override active — clinician review required.</div>
+              {(finding.suppressedCandidates ?? []).map((candidate) => (
+                <DiagnosisChoice
+                  key={candidate.diagnosisKey}
+                  display={candidate.display}
+                  code={catalogCode(candidate)}
+                  codingStatus={candidate.codingStatus}
+                  busy={busy !== null}
+                  onPossible={() => pick(finding, candidate.diagnosisKey, "possible", candidate.source)}
+                  onConfirm={() => pick(finding, candidate.diagnosisKey, "confirm", candidate.source)}
+                />
+              ))}
+            </div>
+          ) : (
+          <>
           <button
             type="button"
             onClick={() => {
@@ -141,7 +174,7 @@ export function DiagnosisPicker({
             dx ▾ {finding.candidates.length}
           </button>
           {openId === finding.findingInstanceId && (
-            <div className="absolute left-0 z-30 mt-2 w-[min(520px,calc(100vw-3rem))] rounded border border-white/15 bg-bg-deep p-3 shadow-2xl">
+            <div className="absolute left-0 z-30 mt-2 w-[min(520px,calc(100vw-3rem))] rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-popover)] p-3 shadow-2xl">
               <div className="space-y-2">
                 {finding.candidates.map((candidate) => (
                   <DiagnosisChoice
@@ -155,7 +188,7 @@ export function DiagnosisPicker({
                   />
                 ))}
               </div>
-              <div className="mt-3 border-t border-white/10 pt-3">
+              <div className="mt-3 border-t border-[color:var(--odos-line)] pt-3">
                 <OdosSearchPicker
                   label="Full diagnosis catalog"
                   value={catalogSelection?.stableKey ?? ""}
@@ -180,9 +213,11 @@ export function DiagnosisPicker({
               </div>
             </div>
           )}
+          </>
+          )}
         </div>
       ))}
-      {error && <div className="text-xs text-red-200">{error}</div>}
+      {error && <div className="text-xs text-[color:var(--odos-alert)]">{error}</div>}
     </div>
   );
 }
@@ -203,17 +238,17 @@ function DiagnosisChoice({
   onConfirm: () => void;
 }) {
   return (
-    <div className="rounded border border-white/10 bg-white/[0.03] p-2.5">
+    <div className="rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface-2)] p-2.5">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <div className="text-sm font-medium text-white">{display}</div>
-          <div className="mt-0.5 text-xs text-white/45">{code ?? "no code yet"}</div>
+          <div className="text-sm font-medium text-[color:var(--odos-text)]">{display}</div>
+          <div className="mt-0.5 text-xs text-[color:var(--odos-muted)]">{code ?? "no code yet"}</div>
         </div>
-        {codingStatus === "provisional" && <span className="rounded border border-amber-300/30 px-1.5 py-0.5 text-[10px] uppercase text-amber-100">provisional</span>}
+        {codingStatus === "provisional" && <span className="rounded border border-[color:var(--odos-amber)] px-1.5 py-0.5 text-[10px] uppercase text-[color:var(--odos-text)]">provisional</span>}
       </div>
       <div className="mt-2 grid grid-cols-2 gap-2">
-        <button type="button" disabled={busy} onClick={onPossible} className="rounded border border-amber-300/35 bg-amber-400/10 px-2 py-1.5 text-xs font-semibold text-amber-100 disabled:opacity-45">Possible</button>
-        <button type="button" disabled={busy} onClick={onConfirm} className="rounded border border-emerald-300/35 bg-emerald-400/10 px-2 py-1.5 text-xs font-semibold text-emerald-100 disabled:opacity-45">Confirm</button>
+        <button type="button" disabled={busy} onClick={onPossible} className="rounded border border-[color:var(--odos-amber)] bg-[color:var(--odos-surface)] px-2 py-1.5 text-xs font-semibold text-[color:var(--odos-text)] disabled:opacity-45">Possible</button>
+        <button type="button" disabled={busy} onClick={onConfirm} className="rounded border border-[color:var(--odos-emerald)] bg-[color:var(--odos-surface)] px-2 py-1.5 text-xs font-semibold text-[color:var(--odos-text)] disabled:opacity-45">Confirm</button>
       </div>
     </div>
   );

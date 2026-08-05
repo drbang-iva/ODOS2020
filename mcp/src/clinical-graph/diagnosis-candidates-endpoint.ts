@@ -1,4 +1,4 @@
-import type { Basic, Bundle, Observation } from "@medplum/fhirtypes";
+import type { Basic, Bundle, Condition, Observation } from "@medplum/fhirtypes";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
 import { ODOS_EXTENSION_URLS } from "../fhir/ophthalmology/extensions.js";
 import { FhirDiagnosisCatalogStore } from "./diagnosis-catalog-store.js";
@@ -12,6 +12,7 @@ import { observationMatchesFindingDefinition } from "./finding-observation-match
 import {
   evaluateGlaucomaDiagnosisSuggestions,
   evaluateIopDiagnosisSuggestions,
+  ICD10_CM_CODE_SYSTEM,
   type ClinicalFindingDefinition,
   type ClinicalGraphProvenance,
   type DiagnosisCatalogRow,
@@ -21,9 +22,10 @@ import {
   type FindingValue,
 } from "./glaucoma-suspect.js";
 import { evaluateRefractiveErrorSuggestions } from "./refraction-suspect.js";
+import { visualFieldDescriptorResolution } from "./entrance-definition.js";
 
 export interface DiagnosisCandidatesFhirClient {
-  search<T extends Basic | Observation>(
+  search<T extends Basic | Condition | Observation>(
     resourceType: T["resourceType"],
     params?: Record<string, string>,
   ): Promise<Bundle<T>>;
@@ -52,6 +54,9 @@ export interface DiagnosisCandidateRow {
   source: "rule" | "mapping";
 }
 
+export const VISUAL_FIELD_GLAUCOMA_SUPPRESSION_MESSAGE =
+  "H53.4x not proposed — the glaucoma stage already carries the field defect.";
+
 export interface OrderedCandidate extends DiagnosisCandidateRow {
   order: number;
 }
@@ -75,10 +80,11 @@ export async function handleDiagnosisCandidatesRequest(
   const encounterId = readEncounterId(input.params);
   if (!encounterId) return { status: 400, body: { error: "A valid encounter id is required." } };
   const encounterReference = `Encounter/${encounterId}`;
-  const [definitions, catalog, observations, tally] = await Promise.all([
+  const [definitions, catalog, observations, conditions, tally] = await Promise.all([
     new FhirFindingDefinitionStore(staff.fhir).list(),
     new FhirDiagnosisCatalogStore(staff.fhir).list(),
     staff.fhir.search<Observation>("Observation", { encounter: encounterReference, _count: "500" }),
+    staff.fhir.search<Condition>("Condition", { encounter: encounterReference, _count: "200" }),
     new FhirDiagnosisPickTallyStore(staff.fhir).read(staff.staffReference),
   ]);
   const findings = (observations.entry ?? []).flatMap((entry) =>
@@ -97,6 +103,9 @@ export async function handleDiagnosisCandidatesRequest(
   ];
   const rulesByFinding = groupRulesByFinding(rules);
   const activeCatalog = new Map(catalog.filter((row) => row.active).map((row) => [row.stableKey, row]));
+  const stagedGlaucomaPresent = (conditions.entry ?? []).some((entry) =>
+    entry.resource ? isConfirmedStagedGlaucoma(entry.resource) : false
+  );
 
   return {
     status: 200,
@@ -108,7 +117,7 @@ export async function handleDiagnosisCandidatesRequest(
           const diagnosisKey = catalogKeyForRule(evaluation.diagnosisDefinition.stableKey);
           const row = activeCatalog.get(diagnosisKey);
           if (!row) return [];
-          const icd10 = resolvedIcd10(row, finding.laterality);
+          const icd10 = resolvedIcd10(row, finding, definition?.stableKey);
           return [{
             diagnosisKey,
             display: row.display,
@@ -134,7 +143,7 @@ export async function handleDiagnosisCandidatesRequest(
           ) return [];
           const row = activeCatalog.get(mapping.diagnosisKey);
           if (!row) return [];
-          const icd10 = resolvedIcd10(row, finding.laterality);
+          const icd10 = resolvedIcd10(row, finding, definition?.stableKey);
           return [{
             diagnosisKey: row.stableKey,
             display: row.display,
@@ -145,14 +154,24 @@ export async function handleDiagnosisCandidatesRequest(
             order,
           }];
         });
+        const candidates = orderDiagnosisCandidates(
+          deduplicateDiagnosisCandidates([...ruleCandidates, ...mappingCandidates]),
+          definition?.stableKey ? tally?.counts[definition.stableKey] : undefined,
+        );
+        const suppress = definition?.stableKey === "entrance:visual-field-defect" &&
+          stagedGlaucomaPresent && candidates.length > 0;
         return {
           findingInstanceId: finding.id,
           findingDefinitionKey: definition?.stableKey,
           observationReference: finding.observationReference,
-          candidates: orderDiagnosisCandidates(
-            deduplicateDiagnosisCandidates([...ruleCandidates, ...mappingCandidates]),
-            definition?.stableKey ? tally?.counts[definition.stableKey] : undefined,
-          ),
+          candidates: suppress ? [] : candidates,
+          ...(suppress ? {
+            suppressedCandidates: candidates,
+            suppression: {
+              message: VISUAL_FIELD_GLAUCOMA_SUPPRESSION_MESSAGE,
+              overridable: true,
+            },
+          } : {}),
         };
       }),
     },
@@ -301,18 +320,47 @@ function observationInterpretation(observation: Observation): FindingInterpretat
   return code ? "unknown" : undefined;
 }
 
-function resolvedIcd10(row: DiagnosisCatalogRow, laterality: FindingInstance["laterality"]): DiagnosisCandidateRow["icd10"] | undefined {
+function resolvedIcd10(
+  row: DiagnosisCatalogRow,
+  finding: FindingInstance,
+  definitionStableKey: string | undefined,
+): DiagnosisCandidateRow["icd10"] | undefined {
   if (!row.icd10) return undefined;
   if ("code" in row.icd10) return row.icd10;
+  const descriptor = visualFieldDescriptorResolution(definitionStableKey, finding.value);
+  if (
+    descriptor?.codeSelection?.kind === "field" &&
+    row.stableKey === "vf_homonymous_bilateral"
+  ) {
+    const code = row.icd10.pattern[descriptor.codeSelection.slot];
+    return code ? { code } : { pattern: row.icd10.pattern };
+  }
+  if (
+    descriptor?.codeSelection?.kind === "eye" &&
+    row.clinicalFamily === "visual-field-defect" &&
+    row.lateralityRequired
+  ) {
+    const code = row.icd10.pattern[descriptor.codeSelection.slot];
+    return code ? { code } : { pattern: row.icd10.pattern };
+  }
   if (!row.lateralityRequired) {
     const code = row.icd10.pattern.unspecifiedEye;
     return code ? { code } : { pattern: row.icd10.pattern };
   }
-  const code = laterality === "OD" ? row.icd10.pattern.right
-    : laterality === "OS" ? row.icd10.pattern.left
-    : laterality === "OU" ? row.icd10.pattern.bilateral
+  const code = finding.laterality === "OD" ? row.icd10.pattern.right
+    : finding.laterality === "OS" ? row.icd10.pattern.left
+    : finding.laterality === "OU" ? row.icd10.pattern.bilateral
     : row.icd10.pattern.unspecifiedEye;
   return code ? { code } : { pattern: row.icd10.pattern };
+}
+
+function isConfirmedStagedGlaucoma(condition: Condition): boolean {
+  const verified = condition.verificationStatus?.coding?.some((coding) => coding.code === "confirmed") === true;
+  if (!verified) return false;
+  return condition.code?.coding?.some((coding) =>
+    coding.system === ICD10_CM_CODE_SYSTEM &&
+    typeof coding.code === "string" && /^H40\.[A-Z0-9]{3}[123]$/i.test(coding.code)
+  ) === true;
 }
 
 function groupRulesByFinding(rows: readonly DiagnosisSuggestionEvaluation[]) {

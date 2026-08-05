@@ -6,7 +6,10 @@ import type { Basic, Bundle, Condition, Encounter, Observation, Provenance, Reso
 import express from "express";
 import type { PracticeRoleId } from "../src/authz/roles.js";
 import { handleCupDiscCaptureRequest } from "../src/clinical-graph/cup-disc-endpoint.js";
-import { handleCustomSectionCaptureRequest } from "../src/clinical-graph/custom-section-endpoint.js";
+import {
+  handleCustomSectionCaptureRequest,
+  handleCustomSectionHistoryRequest,
+} from "../src/clinical-graph/custom-section-endpoint.js";
 import {
   deduplicateDiagnosisCandidates,
   handleDiagnosisCandidatesRequest,
@@ -709,6 +712,201 @@ test("direct laterality-required picks ask once, then write no fabricated eviden
   }
 });
 
+test("visual-field descriptors derive every approved code while preserving the descriptor through reload", async () => {
+  const cases = [
+    ["no-defect", "No defect", undefined, undefined],
+    ["field-loss-od", "Field loss OD", "vf_other_localized", "H53.451"],
+    ["field-loss-os", "Field loss OS", "vf_other_localized", "H53.452"],
+    ["bitemporal-hemianopsia", "Bitemporal hemianopsia", "vf_heteronymous_bilateral", "H53.47"],
+    ["right-homonymous-hemianopsia", "Right homonymous hemianopsia", "vf_homonymous_bilateral", "H53.461"],
+    ["left-homonymous-hemianopsia", "Left homonymous hemianopsia", "vf_homonymous_bilateral", "H53.462"],
+    ["superior-right-homonymous-quadrantanopia", "Superior right homonymous quadrantanopia", "vf_homonymous_bilateral", "H53.461"],
+    ["inferior-right-homonymous-quadrantanopia", "Inferior right homonymous quadrantanopia", "vf_homonymous_bilateral", "H53.461"],
+    ["superior-left-homonymous-quadrantanopia", "Superior left homonymous quadrantanopia", "vf_homonymous_bilateral", "H53.462"],
+    ["inferior-left-homonymous-quadrantanopia", "Inferior left homonymous quadrantanopia", "vf_homonymous_bilateral", "H53.462"],
+  ] as const;
+
+  for (const [descriptor, display, diagnosisKey, code] of cases) {
+    const fhir = new MemoryFhir();
+    const definitions = await new FhirFindingDefinitionStore(fhir).list();
+    const definition = definitions.find((candidate) => candidate.stableKey === "entrance:visual-field-defect");
+    assert.ok(definition, `Missing visual-field definition for ${descriptor}`);
+    const authenticate = async () => ({
+      staffReference: "Practitioner/doctor-1",
+      actorRole: "clinician" as PracticeRoleId,
+      fhir,
+    });
+    const capture = await handleCustomSectionCaptureRequest({
+      authenticate,
+      findingDefinitions: () => definitions,
+      now: () => "2026-08-05T14:00:00.000Z",
+    }, {
+      authHeader: "Bearer doctor-1",
+      params: { stableKey: definition.stableKey },
+      body: {
+        patientReference: "Patient/vf",
+        encounterReference: "Encounter/vf",
+        customFields: [{ code: "CUSTOM_FIELD_DEFECT", value: descriptor }],
+      },
+    });
+    assert.equal(capture.status, 200, JSON.stringify(capture.body));
+    const observationReference = (capture.body as { observationReference: string }).observationReference;
+    const observation = fhir.resources.find((resource): resource is Observation =>
+      resource.resourceType === "Observation" && `Observation/${resource.id}` === observationReference
+    );
+    assert.ok(observation);
+    const storedDescriptor = observation.component?.find((component) =>
+      component.code.coding?.some((coding) => coding.code === "CUSTOM_FIELD_DEFECT")
+    )?.valueCodeableConcept?.coding?.[0];
+    assert.deepEqual([storedDescriptor?.code, storedDescriptor?.display], [descriptor, display]);
+
+    const history = await handleCustomSectionHistoryRequest({
+      authenticate,
+      findingDefinitions: () => definitions,
+    }, {
+      authHeader: "Bearer doctor-1",
+      params: { stableKey: definition.stableKey },
+      query: { patient: "Patient/vf", encounter: "Encounter/vf" },
+    });
+    assert.equal(history.status, 200, JSON.stringify(history.body));
+    assert.deepEqual(
+      (history.body as { rows: Array<{ observationReference?: string; values: Array<{ value: unknown }> }> }).rows
+        .map((row) => [row.observationReference, row.values[0]?.value]),
+      [[observationReference, display]],
+    );
+
+    const candidates = await handleDiagnosisCandidatesRequest({ authenticate }, {
+      authHeader: "Bearer doctor-1",
+      params: { encounterId: "vf" },
+    });
+    assert.equal(candidates.status, 200, JSON.stringify(candidates.body));
+    const finding = (candidates.body as CandidateResponse).findings.find((row) =>
+      row.observationReference === observationReference
+    );
+    assert.ok(finding);
+    if (!diagnosisKey || !code) {
+      assert.deepEqual(finding.candidates, []);
+      continue;
+    }
+    assert.deepEqual(
+      finding.candidates.map((candidate) => [candidate.diagnosisKey, candidate.icd10?.code]),
+      [[diagnosisKey, code]],
+    );
+    const pick = await handleDiagnosisPickRequest({ authenticate }, {
+      authHeader: "Bearer doctor-1",
+      params: { encounterId: "vf" },
+      body: { findingInstanceId: observationReference, diagnosisKey, action: "confirm", source: "mapping" },
+    });
+    assert.equal(pick.status, 201, JSON.stringify(pick.body));
+    assert.equal((pick.body as { condition: Condition }).condition.code?.coding?.[0]?.code, code);
+    assert.equal(storedDescriptor?.display, display);
+  }
+});
+
+test("staged glaucoma visibly suppresses only the visual-field proposal and override never changes glaucoma stage", async () => {
+  const fhir = new MemoryFhir();
+  const definitions = await new FhirFindingDefinitionStore(fhir).list();
+  const definition = definitions.find((candidate) => candidate.stableKey === "entrance:visual-field-defect");
+  assert.ok(definition);
+  const authenticate = async () => ({
+    staffReference: "Practitioner/doctor-1",
+    actorRole: "clinician" as PracticeRoleId,
+    fhir,
+  });
+  const capture = await handleCustomSectionCaptureRequest({
+    authenticate,
+    findingDefinitions: () => definitions,
+    now: () => "2026-08-05T14:00:00.000Z",
+  }, {
+    authHeader: "Bearer doctor-1",
+    params: { stableKey: definition.stableKey },
+    body: {
+      patientReference: "Patient/vf",
+      encounterReference: "Encounter/vf",
+      customFields: [{ code: "CUSTOM_FIELD_DEFECT", value: "field-loss-od" }],
+    },
+  });
+  assert.equal(capture.status, 200, JSON.stringify(capture.body));
+  const observationReference = (capture.body as { observationReference: string }).observationReference;
+
+  const stagedGlaucoma = {
+    resourceType: "Condition",
+    id: "staged-glaucoma",
+    subject: { reference: "Patient/vf" },
+    encounter: { reference: "Encounter/vf" },
+    code: { coding: [{ system: "http://hl7.org/fhir/sid/icd-10-cm", code: "H40.ZZZ2" }] },
+    verificationStatus: { coding: [{ code: "confirmed" }] },
+    stage: [{ summary: { text: "Operator-entered stage" } }],
+  } as Condition;
+  fhir.resources.push({
+    resourceType: "Condition",
+    id: "unstaged-glaucoma",
+    subject: { reference: "Patient/vf" },
+    encounter: { reference: "Encounter/vf" },
+    code: { coding: [{ system: "http://hl7.org/fhir/sid/icd-10-cm", code: "H40.021" }] },
+    verificationStatus: { coding: [{ code: "confirmed" }] },
+  } as Condition, {
+    resourceType: "Condition",
+    id: "unconfirmed-staged-glaucoma",
+    subject: { reference: "Patient/vf" },
+    encounter: { reference: "Encounter/vf" },
+    code: { coding: [{ system: "http://hl7.org/fhir/sid/icd-10-cm", code: "H40.ZZZ1" }] },
+    verificationStatus: { coding: [{ code: "provisional" }] },
+  } as Condition, {
+    resourceType: "Condition",
+    id: "other-encounter-stage",
+    subject: { reference: "Patient/vf" },
+    encounter: { reference: "Encounter/other" },
+    code: { coding: [{ system: "http://hl7.org/fhir/sid/icd-10-cm", code: "H40.ZZZ3" }] },
+    verificationStatus: { coding: [{ code: "confirmed" }] },
+  } as Condition);
+  const unsuppressed = await handleDiagnosisCandidatesRequest({ authenticate }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "vf" },
+  });
+  const unsuppressedFinding = (unsuppressed.body as CandidateResponse).findings.find((row) =>
+    row.observationReference === observationReference
+  );
+  assert.deepEqual(unsuppressedFinding?.candidates.map((candidate) => candidate.icd10?.code), ["H53.451"]);
+  assert.equal(unsuppressedFinding?.suppression, undefined);
+
+  fhir.resources.push(stagedGlaucoma);
+  const stagedBefore = structuredClone(fhir.resources.find((resource) => resource.id === "staged-glaucoma"));
+  const writesBefore = fhir.writes.length;
+
+  const candidates = await handleDiagnosisCandidatesRequest({ authenticate }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "vf" },
+  });
+  assert.equal(candidates.status, 200, JSON.stringify(candidates.body));
+  const finding = (candidates.body as CandidateResponse).findings.find((row) =>
+    row.observationReference === observationReference
+  );
+  assert.ok(finding);
+  assert.deepEqual(finding.candidates, []);
+  assert.deepEqual(finding.suppressedCandidates?.map((candidate) => candidate.icd10?.code), ["H53.451"]);
+  assert.deepEqual(finding.suppression, {
+    message: "H53.4x not proposed — the glaucoma stage already carries the field defect.",
+    overridable: true,
+  });
+  assert.deepEqual(fhir.resources.find((resource) => resource.id === "staged-glaucoma"), stagedBefore);
+  assert.equal(fhir.writes.length, writesBefore);
+
+  const override = await handleDiagnosisPickRequest({ authenticate }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "vf" },
+    body: {
+      findingInstanceId: observationReference,
+      diagnosisKey: "vf_other_localized",
+      action: "confirm",
+      source: "mapping",
+    },
+  });
+  assert.equal(override.status, 201, JSON.stringify(override.body));
+  assert.equal((override.body as { condition: Condition }).condition.code?.coding?.[0]?.code, "H53.451");
+  assert.deepEqual(fhir.resources.find((resource) => resource.id === "staged-glaucoma"), stagedBefore);
+});
+
 test("homonymous field-side picks never derive field side from eye laterality", async () => {
   const fhir = diagnosisPickFhir();
   const pick = (laterality: "OD" | "OS" | "OU") => handleDiagnosisPickRequest({
@@ -902,7 +1100,12 @@ test("dedup keeps rule evidence and the higher-priority mapping when no rule exi
 });
 
 type CandidateResponse = {
-  findings: Array<{ observationReference?: string; candidates: Array<{ diagnosisKey: string; source: string }> }>;
+  findings: Array<{
+    observationReference?: string;
+    candidates: Array<{ diagnosisKey: string; source: string; icd10?: { code?: string } }>;
+    suppressedCandidates?: Array<{ diagnosisKey: string; source: string; icd10?: { code?: string } }>;
+    suppression?: { message: string; overridable: boolean };
+  }>;
 };
 
 async function ocularCandidateKeys(

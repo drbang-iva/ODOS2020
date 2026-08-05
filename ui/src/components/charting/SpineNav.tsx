@@ -21,7 +21,7 @@ const SECTIONS: SpineSection[] = [
   { id: "stereopsis", label: "Stereopsis", group: "PRETEST" },
   { id: "color-vision", label: "Color Vision", group: "PRETEST" },
   { id: "eom", label: "EOM / Diplopia", group: "PRETEST" },
-  { id: "cvf", label: "Confrontation Fields", group: "PRETEST" },
+  { id: "cvf", label: "Visual Field", group: "PRETEST" },
   { id: "cover-test", label: "Cover Test", group: "PRETEST" },
   { id: "iop", label: "IOP", group: "PRETEST" },
   { id: "dilation", label: "Dilation", group: "PRETEST" },
