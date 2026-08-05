@@ -854,6 +854,13 @@ test("staged glaucoma visibly suppresses only the visual-field proposal and over
     verificationStatus: { coding: [{ code: "provisional" }] },
   } as Condition, {
     resourceType: "Condition",
+    id: "indeterminate-stage-glaucoma",
+    subject: { reference: "Patient/vf" },
+    encounter: { reference: "Encounter/vf" },
+    code: { coding: [{ system: "http://hl7.org/fhir/sid/icd-10-cm", code: "H40.ZZZ4" }] },
+    verificationStatus: { coding: [{ code: "confirmed" }] },
+  } as Condition, {
+    resourceType: "Condition",
     id: "other-encounter-stage",
     subject: { reference: "Patient/vf" },
     encounter: { reference: "Encounter/other" },
