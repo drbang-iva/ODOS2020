@@ -357,6 +357,10 @@ function resolvedIcd10(
 function isConfirmedStagedGlaucoma(condition: Condition): boolean {
   const verified = condition.verificationStatus?.coding?.some((coding) => coding.code === "confirmed") === true;
   if (!verified) return false;
+  const inactive = condition.clinicalStatus?.coding?.some((coding) =>
+    coding.code === "inactive" || coding.code === "remission" || coding.code === "resolved"
+  ) === true;
+  if (inactive) return false;
   return condition.code?.coding?.some((coding) =>
     coding.system === ICD10_CM_CODE_SYSTEM &&
     typeof coding.code === "string" && /^H40\.[A-Z0-9]{3}[123]$/i.test(coding.code)
