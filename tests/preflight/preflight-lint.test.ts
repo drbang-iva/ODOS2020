@@ -289,7 +289,9 @@ test("preflight rejects Docker NODE_OPTIONS that would block Node before applica
   const fixtureMajor = linterMajor === 20 ? 22 : 20;
   const fixtureImage = `node:${fixtureMajor}-alpine`;
   const fixtureFlags = (image: string, major: number): ReadonlySet<string> | undefined =>
-    image === fixtureImage && major === fixtureMajor ? new Set(["--fixture-runtime-flag"]) : undefined;
+    image === fixtureImage && major === fixtureMajor
+      ? new Set(["--fixture-runtime-flag", "--max-old-space-size"])
+      : undefined;
   const removedNetworkImports = runVendorCanonicalShapePass({
     files: [{
       path: "docker-compose.yml",
@@ -314,7 +316,7 @@ test("preflight rejects Docker NODE_OPTIONS that would block Node before applica
   const valid = runVendorCanonicalShapePass({
     files: [{
       path: "compose.worker.yaml",
-      text: `services:\n  worker:\n    image: ${fixtureImage}\n    environment:\n      - NODE_OPTIONS=--fixture-runtime-flag\n`,
+      text: `services:\n  worker:\n    image: ${fixtureImage}\n    environment:\n      - NODE_OPTIONS=--fixture-runtime-flag --max-old-space-size=4096\n`,
     }],
     nodeEnvironmentFlagsForImage: fixtureFlags,
   });

@@ -1358,7 +1358,8 @@ function composeNodeOptionsFindings(
         }
         const flags = value.match(/--[^\s"'=]+(?:=(?:"[^"]*"|'[^']*'|[^\s]+))?/g) ?? [];
         for (const flag of flags) {
-          if (allowedFlags.has(flag)) {
+          const canonicalFlag = flag.split("=", 1)[0]!;
+          if (allowedFlags.has(canonicalFlag)) {
             continue;
           }
           findings.push({
