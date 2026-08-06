@@ -113,6 +113,18 @@ test("diagnosis catalog seeds are ledger-backed durable families and survive a s
     "vf_homonymous_bilateral",
     "vf_heteronymous_bilateral",
     "vf_generalized_contraction",
+    "cataract_nuclear_sclerosis",
+    "cataract_cortical",
+    "cataract_anterior_subcapsular",
+    "cataract_posterior_subcapsular",
+    "cataract_combined_forms",
+    "cataract_posterior_capsular_opacification",
+    "pseudoexfoliation_lens",
+    "pseudophakia",
+    "aphakia",
+    "lens_subluxation",
+    "lens_dislocation_anterior",
+    "lens_dislocation_posterior",
     "hyperopia",
     "myopia",
     "astigmatism",
@@ -345,6 +357,146 @@ test("visual-field Phase 0 ledger and catalog seeds preserve verified code shape
     "For this family, right, left, and unspecified pattern slots encode visual-field side, not eye laterality; generic eye-laterality resolution uses the unspecified-side code until field-side capture exists.");
   assert.equal(seeds.find((row) => row.stableKey === "vf_homonymous_bilateral")?.lateralityRequired, false);
   assert.doesNotMatch(JSON.stringify(seeds), /H53\.40/);
+});
+
+test("lens Phase 0 ledger and catalog seeds preserve verified codes and laterality asymmetry", () => {
+  const raw = readFileSync(
+    resolve(process.cwd(), "../data/code-bindings/lens-phase0-ledger.json"),
+    "utf8",
+  );
+  const ledger = JSON.parse(raw) as {
+    ledger: string;
+    status: string;
+    mandate: string;
+    accessDate: string;
+    sources: Record<string, { accessDate: string }>;
+    diagnosisFamilies: Array<{ family: string; lateralityDigits?: Record<string, string>; sourceRefs: string[] }>;
+    diagnosisCodes: Array<{ code: string; display: string; family: string; laterality: string; sourceRefs: string[] }>;
+  };
+
+  assert.equal(ledger.ledger, "lens-phase0");
+  assert.equal(ledger.status, "phase0-seeded");
+  assert.equal(ledger.mandate, "Mandate 14");
+  assert.equal(ledger.accessDate, "2026-08-06");
+  assert.deepEqual(Object.keys(ledger.sources), [
+    "cdcIcd10Cm2026CodeDescriptions",
+    "nlmClinicalTablesIcd10Cm",
+    "aaoPseudoexfoliationGuidance",
+  ]);
+  assert.deepEqual(ledger.diagnosisFamilies.map((row) => row.family), [
+    "H25.1-",
+    "H25.01-",
+    "H25.03-",
+    "H25.04-",
+    "H25.81-",
+    "H26.49-",
+    "H27.0-",
+    "H27.11-",
+    "H27.12-",
+    "H27.13-",
+    "H25.89",
+    "Z96.1",
+  ]);
+  assert.deepEqual(
+    ledger.diagnosisFamilies.find((row) => row.family === "H25.1-")?.lateralityDigits,
+    { "0": "unspecified", "1": "OD", "2": "OS", "3": "bilateral" },
+  );
+  assert.deepEqual(
+    ledger.diagnosisFamilies.find((row) => row.family === "H27.0-")?.lateralityDigits,
+    { "0": "unspecified", "1": "OD", "2": "OS", "3": "bilateral" },
+  );
+  assert.equal(ledger.diagnosisCodes.length, 42);
+  assert.deepEqual(
+    ledger.diagnosisCodes.map(({ code, display, family, laterality }) => [code, display, family, laterality]),
+    [
+      ["H25.11", "Age-related nuclear cataract, right eye", "H25.1-", "OD"],
+      ["H25.12", "Age-related nuclear cataract, left eye", "H25.1-", "OS"],
+      ["H25.13", "Age-related nuclear cataract, bilateral", "H25.1-", "OU"],
+      ["H25.10", "Age-related nuclear cataract, unspecified eye", "H25.1-", "UNKNOWN"],
+      ["H25.011", "Cortical age-related cataract, right eye", "H25.01-", "OD"],
+      ["H25.012", "Cortical age-related cataract, left eye", "H25.01-", "OS"],
+      ["H25.013", "Cortical age-related cataract, bilateral", "H25.01-", "OU"],
+      ["H25.019", "Cortical age-related cataract, unspecified eye", "H25.01-", "UNKNOWN"],
+      ["H25.031", "Anterior subcapsular polar age-related cataract, right eye", "H25.03-", "OD"],
+      ["H25.032", "Anterior subcapsular polar age-related cataract, left eye", "H25.03-", "OS"],
+      ["H25.033", "Anterior subcapsular polar age-related cataract, bilateral", "H25.03-", "OU"],
+      ["H25.039", "Anterior subcapsular polar age-related cataract, unspecified eye", "H25.03-", "UNKNOWN"],
+      ["H25.041", "Posterior subcapsular polar age-related cataract, right eye", "H25.04-", "OD"],
+      ["H25.042", "Posterior subcapsular polar age-related cataract, left eye", "H25.04-", "OS"],
+      ["H25.043", "Posterior subcapsular polar age-related cataract, bilateral", "H25.04-", "OU"],
+      ["H25.049", "Posterior subcapsular polar age-related cataract, unspecified eye", "H25.04-", "UNKNOWN"],
+      ["H25.811", "Combined forms of age-related cataract, right eye", "H25.81-", "OD"],
+      ["H25.812", "Combined forms of age-related cataract, left eye", "H25.81-", "OS"],
+      ["H25.813", "Combined forms of age-related cataract, bilateral", "H25.81-", "OU"],
+      ["H25.819", "Combined forms of age-related cataract, unspecified eye", "H25.81-", "UNKNOWN"],
+      ["H26.491", "Other secondary cataract, right eye", "H26.49-", "OD"],
+      ["H26.492", "Other secondary cataract, left eye", "H26.49-", "OS"],
+      ["H26.493", "Other secondary cataract, bilateral", "H26.49-", "OU"],
+      ["H26.499", "Other secondary cataract, unspecified eye", "H26.49-", "UNKNOWN"],
+      ["H27.01", "Aphakia, right eye", "H27.0-", "OD"],
+      ["H27.02", "Aphakia, left eye", "H27.0-", "OS"],
+      ["H27.03", "Aphakia, bilateral", "H27.0-", "OU"],
+      ["H27.00", "Aphakia, unspecified eye", "H27.0-", "UNKNOWN"],
+      ["H27.111", "Subluxation of lens, right eye", "H27.11-", "OD"],
+      ["H27.112", "Subluxation of lens, left eye", "H27.11-", "OS"],
+      ["H27.113", "Subluxation of lens, bilateral", "H27.11-", "OU"],
+      ["H27.119", "Subluxation of lens, unspecified eye", "H27.11-", "UNKNOWN"],
+      ["H27.121", "Anterior dislocation of lens, right eye", "H27.12-", "OD"],
+      ["H27.122", "Anterior dislocation of lens, left eye", "H27.12-", "OS"],
+      ["H27.123", "Anterior dislocation of lens, bilateral", "H27.12-", "OU"],
+      ["H27.129", "Anterior dislocation of lens, unspecified eye", "H27.12-", "UNKNOWN"],
+      ["H27.131", "Posterior dislocation of lens, right eye", "H27.13-", "OD"],
+      ["H27.132", "Posterior dislocation of lens, left eye", "H27.13-", "OS"],
+      ["H27.133", "Posterior dislocation of lens, bilateral", "H27.13-", "OU"],
+      ["H27.139", "Posterior dislocation of lens, unspecified eye", "H27.13-", "UNKNOWN"],
+      ["H25.89", "Other age-related cataract", "H25.89", "NONE"],
+      ["Z96.1", "Presence of intraocular lens", "Z96.1", "NONE"],
+    ],
+  );
+
+  const allSeeds = buildDiagnosisCatalogSeeds();
+  const seeds = allSeeds.filter((row) => row.clinicalFamily === "cataract" || row.clinicalFamily === "lens");
+  const expected = {
+    cataract_nuclear_sclerosis: { pattern: { unspecifiedEye: "H25.10", right: "H25.11", left: "H25.12", bilateral: "H25.13" } },
+    cataract_cortical: { pattern: { unspecifiedEye: "H25.019", right: "H25.011", left: "H25.012", bilateral: "H25.013" } },
+    cataract_anterior_subcapsular: { pattern: { unspecifiedEye: "H25.039", right: "H25.031", left: "H25.032", bilateral: "H25.033" } },
+    cataract_posterior_subcapsular: { pattern: { unspecifiedEye: "H25.049", right: "H25.041", left: "H25.042", bilateral: "H25.043" } },
+    cataract_combined_forms: { pattern: { unspecifiedEye: "H25.819", right: "H25.811", left: "H25.812", bilateral: "H25.813" } },
+    cataract_posterior_capsular_opacification: { pattern: { unspecifiedEye: "H26.499", right: "H26.491", left: "H26.492", bilateral: "H26.493" } },
+    pseudoexfoliation_lens: { code: "H25.89", display: "Other age-related cataract" },
+    pseudophakia: { code: "Z96.1", display: "Presence of intraocular lens" },
+    aphakia: { pattern: { unspecifiedEye: "H27.00", right: "H27.01", left: "H27.02", bilateral: "H27.03" } },
+    lens_subluxation: { pattern: { unspecifiedEye: "H27.119", right: "H27.111", left: "H27.112", bilateral: "H27.113" } },
+    lens_dislocation_anterior: { pattern: { unspecifiedEye: "H27.129", right: "H27.121", left: "H27.122", bilateral: "H27.123" } },
+    lens_dislocation_posterior: { pattern: { unspecifiedEye: "H27.139", right: "H27.131", left: "H27.132", bilateral: "H27.133" } },
+  };
+
+  assert.equal(allSeeds.length, 64);
+  assert.equal(seeds.length, 12);
+  for (const [stableKey, icd10] of Object.entries(expected)) {
+    const seed = seeds.find((row) => row.stableKey === stableKey);
+    assert.ok(seed, `Missing lens diagnosis catalog seed ${stableKey}`);
+    assert.deepEqual(seed.icd10, icd10);
+    assert.equal(seed.codingStatus, "verified");
+    assert.deepEqual(seed.applicableFindingDefinitionIds, []);
+    assert.equal(seed.provenance.ledgerRefs.length >= 2, true);
+  }
+  const pseudoexfoliation = seeds.find((row) => row.stableKey === "pseudoexfoliation_lens");
+  assert.equal(pseudoexfoliation?.display, "Pseudoexfoliation of lens capsule");
+  assert.deepEqual(pseudoexfoliation?.provenance.ledgerRefs, [
+    "cdcIcd10Cm2026CodeDescriptions",
+    "nlmClinicalTablesIcd10Cm",
+    "aaoPseudoexfoliationGuidance",
+  ]);
+  const pseudophakia = seeds.find((row) => row.stableKey === "pseudophakia");
+  assert.equal(pseudophakia?.lateralityRequired, false);
+  assert.equal("pattern" in (pseudophakia?.icd10 ?? {}), false);
+  assert.equal(pseudoexfoliation?.lateralityRequired, false);
+  assert.equal("pattern" in (pseudoexfoliation?.icd10 ?? {}), false);
+  const aphakia = seeds.find((row) => row.stableKey === "aphakia");
+  assert.equal(aphakia?.lateralityRequired, true);
+  assert.deepEqual(aphakia?.icd10, expected.aphakia);
+  assert.doesNotMatch(JSON.stringify({ ledger, seeds }), /H25\.2|H26\.0|H26\.22|H26\.23|H26\.41/);
 });
 
 test("diabetic retinopathy Phase 0 ledger is dual-source and keeps coverage descriptor-only", () => {
