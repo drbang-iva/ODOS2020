@@ -65,7 +65,7 @@ function buildSeeds(): DiagnosisCatalogRow[] {
     familySeed("cataract_posterior_subcapsular", "Posterior subcapsular polar age-related cataract", "cataract", "H25.04-", lens, provenance),
     familySeed("cataract_combined_forms", "Combined forms of age-related cataract", "cataract", "H25.81-", lens, provenance),
     familySeed("cataract_posterior_capsular_opacification", "Other secondary cataract", "cataract", "H26.49-", lens, provenance),
-    fixedSeed("pseudoexfoliation_lens", "Pseudoexfoliation of lens capsule", "lens", "H25.89", lens, provenance),
+    fixedSeed("pseudoexfoliation_lens", "Pseudoexfoliation of lens capsule", "lens", "H26.8", lens, provenance),
     fixedSeed("pseudophakia", "Presence of intraocular lens", "lens", "Z96.1", lens, provenance),
     familySeed("aphakia", "Aphakia", "lens", "H27.0-", lens, provenance),
     familySeed("lens_subluxation", "Subluxation of lens", "lens", "H27.11-", lens, provenance),

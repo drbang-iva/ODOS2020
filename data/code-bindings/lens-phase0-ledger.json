@@ -19,10 +19,10 @@
       "exampleQuery": "https://clinicaltables.nlm.nih.gov/api/icd10cm/v3/search?terms=Z96.1&sf=code&df=code,name",
       "accessDate": "2026-08-06"
     },
-    "aaoPseudoexfoliationGuidance": {
-      "type": "professional-coding-guidance",
-      "name": "American Academy of Ophthalmology ICD-10 Code for Pseudoexfoliation of Lens Capsule",
-      "url": "https://www.aao.org/practice-management/news-detail/icd-10-code-pseudoexfoliation-of-lens-capsule",
+    "cdcIcd10Cm2026AlphabeticIndex": {
+      "type": "primary",
+      "name": "CDC/NCHS ICD-10-CM April 1, 2026 Alphabetic Index and Tabular List",
+      "url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/ICD10CM/2026-update/icd10cm-table-and-index-April-1-2026.zip",
       "accessDate": "2026-08-06"
     }
   },
@@ -88,9 +88,9 @@
       "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
     },
     {
-      "family": "H25.89",
-      "description": "Other age-related cataract",
-      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm", "aaoPseudoexfoliationGuidance"]
+      "family": "H26.8",
+      "description": "Other specified cataract",
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm", "cdcIcd10Cm2026AlphabeticIndex"]
     },
     {
       "family": "Z96.1",
@@ -139,7 +139,7 @@
     { "code": "H27.132", "display": "Posterior dislocation of lens, left eye", "family": "H27.13-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
     { "code": "H27.133", "display": "Posterior dislocation of lens, bilateral", "family": "H27.13-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
     { "code": "H27.139", "display": "Posterior dislocation of lens, unspecified eye", "family": "H27.13-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
-    { "code": "H25.89", "display": "Other age-related cataract", "family": "H25.89", "laterality": "NONE", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm", "aaoPseudoexfoliationGuidance"] },
+    { "code": "H26.8", "display": "Other specified cataract", "family": "H26.8", "laterality": "NONE", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm", "cdcIcd10Cm2026AlphabeticIndex"] },
     { "code": "Z96.1", "display": "Presence of intraocular lens", "family": "Z96.1", "laterality": "NONE", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] }
   ]
 }

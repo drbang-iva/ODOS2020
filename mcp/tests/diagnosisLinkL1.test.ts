@@ -381,7 +381,7 @@ test("lens Phase 0 ledger and catalog seeds preserve verified codes and laterali
   assert.deepEqual(Object.keys(ledger.sources), [
     "cdcIcd10Cm2026CodeDescriptions",
     "nlmClinicalTablesIcd10Cm",
-    "aaoPseudoexfoliationGuidance",
+    "cdcIcd10Cm2026AlphabeticIndex",
   ]);
   assert.deepEqual(ledger.diagnosisFamilies.map((row) => row.family), [
     "H25.1-",
@@ -394,7 +394,7 @@ test("lens Phase 0 ledger and catalog seeds preserve verified codes and laterali
     "H27.11-",
     "H27.12-",
     "H27.13-",
-    "H25.89",
+    "H26.8",
     "Z96.1",
   ]);
   assert.deepEqual(
@@ -449,7 +449,7 @@ test("lens Phase 0 ledger and catalog seeds preserve verified codes and laterali
       ["H27.132", "Posterior dislocation of lens, left eye", "H27.13-", "OS"],
       ["H27.133", "Posterior dislocation of lens, bilateral", "H27.13-", "OU"],
       ["H27.139", "Posterior dislocation of lens, unspecified eye", "H27.13-", "UNKNOWN"],
-      ["H25.89", "Other age-related cataract", "H25.89", "NONE"],
+      ["H26.8", "Other specified cataract", "H26.8", "NONE"],
       ["Z96.1", "Presence of intraocular lens", "Z96.1", "NONE"],
     ],
   );
@@ -463,7 +463,7 @@ test("lens Phase 0 ledger and catalog seeds preserve verified codes and laterali
     cataract_posterior_subcapsular: { pattern: { unspecifiedEye: "H25.049", right: "H25.041", left: "H25.042", bilateral: "H25.043" } },
     cataract_combined_forms: { pattern: { unspecifiedEye: "H25.819", right: "H25.811", left: "H25.812", bilateral: "H25.813" } },
     cataract_posterior_capsular_opacification: { pattern: { unspecifiedEye: "H26.499", right: "H26.491", left: "H26.492", bilateral: "H26.493" } },
-    pseudoexfoliation_lens: { code: "H25.89", display: "Other age-related cataract" },
+    pseudoexfoliation_lens: { code: "H26.8", display: "Other specified cataract" },
     pseudophakia: { code: "Z96.1", display: "Presence of intraocular lens" },
     aphakia: { pattern: { unspecifiedEye: "H27.00", right: "H27.01", left: "H27.02", bilateral: "H27.03" } },
     lens_subluxation: { pattern: { unspecifiedEye: "H27.119", right: "H27.111", left: "H27.112", bilateral: "H27.113" } },
@@ -486,7 +486,7 @@ test("lens Phase 0 ledger and catalog seeds preserve verified codes and laterali
   assert.deepEqual(pseudoexfoliation?.provenance.ledgerRefs, [
     "cdcIcd10Cm2026CodeDescriptions",
     "nlmClinicalTablesIcd10Cm",
-    "aaoPseudoexfoliationGuidance",
+    "cdcIcd10Cm2026AlphabeticIndex",
   ]);
   const pseudophakia = seeds.find((row) => row.stableKey === "pseudophakia");
   assert.equal(pseudophakia?.lateralityRequired, false);
