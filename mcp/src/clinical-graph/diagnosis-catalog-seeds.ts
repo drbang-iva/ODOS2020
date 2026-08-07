@@ -14,6 +14,7 @@ const OCULAR_HEALTH_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/ocular-
 const DIABETIC_RETINOPATHY_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/diabetic-retinopathy-phase0-ledger.json");
 const DIPLOPIA_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/diplopia-phase0-ledger.json");
 const VISUAL_FIELD_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/visual-field-phase0-ledger.json");
+const LENS_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/lens-phase0-ledger.json");
 
 interface LedgerRow {
   code: string;
@@ -42,6 +43,7 @@ function buildSeeds(): DiagnosisCatalogRow[] {
   const diabeticRetinopathy = loadLedger(DIABETIC_RETINOPATHY_LEDGER_PATH);
   const diplopia = loadLedger(DIPLOPIA_LEDGER_PATH);
   const visualField = loadLedger(VISUAL_FIELD_LEDGER_PATH);
+  const lens = loadLedger(LENS_LEDGER_PATH);
   return [
     familySeed("glaucoma_suspect_open_angle_low", "Open angle with borderline findings, low risk", "glaucoma-suspect", "H40.01-", glaucoma, provenance),
     familySeed("glaucoma_suspect_open_angle_high", "Open angle with borderline findings, high risk", "glaucoma-suspect", "H40.02-", glaucoma, provenance),
@@ -57,6 +59,18 @@ function buildSeeds(): DiagnosisCatalogRow[] {
     fieldSideFamilySeed("vf_homonymous_bilateral", "Homonymous bilateral field defects", "visual-field-defect", "H53.46-", visualField, provenance),
     fixedSeed("vf_heteronymous_bilateral", "Heteronymous bilateral field defects", "visual-field-defect", "H53.47", visualField, provenance),
     familySeed("vf_generalized_contraction", "Generalized contraction of visual field", "visual-field-defect", "H53.48-", visualField, provenance),
+    familySeed("cataract_nuclear_sclerosis", "Age-related nuclear cataract", "cataract", "H25.1-", lens, provenance),
+    familySeed("cataract_cortical", "Cortical age-related cataract", "cataract", "H25.01-", lens, provenance),
+    familySeed("cataract_anterior_subcapsular", "Anterior subcapsular polar age-related cataract", "cataract", "H25.03-", lens, provenance),
+    familySeed("cataract_posterior_subcapsular", "Posterior subcapsular polar age-related cataract", "cataract", "H25.04-", lens, provenance),
+    familySeed("cataract_combined_forms", "Combined forms of age-related cataract", "cataract", "H25.81-", lens, provenance),
+    familySeed("cataract_posterior_capsular_opacification", "Other secondary cataract", "cataract", "H26.49-", lens, provenance),
+    fixedSeed("pseudoexfoliation_lens", "Pseudoexfoliation of lens capsule", "lens", "H26.8", lens, provenance),
+    fixedSeed("pseudophakia", "Presence of intraocular lens", "lens", "Z96.1", lens, provenance),
+    familySeed("aphakia", "Aphakia", "lens", "H27.0-", lens, provenance),
+    familySeed("lens_subluxation", "Subluxation of lens", "lens", "H27.11-", lens, provenance),
+    familySeed("lens_dislocation_anterior", "Anterior dislocation of lens", "lens", "H27.12-", lens, provenance),
+    familySeed("lens_dislocation_posterior", "Posterior dislocation of lens", "lens", "H27.13-", lens, provenance),
     familySeed("hyperopia", "Hypermetropia", "hyperopia", "H52.0-", refractive, provenance),
     familySeed("myopia", "Myopia", "myopia", "H52.1-", refractive, provenance),
     familySeed("astigmatism", "Unspecified astigmatism", "astigmatism", "H52.20-", refractive, provenance),

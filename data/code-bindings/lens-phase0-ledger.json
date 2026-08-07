@@ -1,0 +1,145 @@
+{
+  "ledger": "lens-phase0",
+  "status": "phase0-seeded",
+  "mandate": "Mandate 14",
+  "accessDate": "2026-08-06",
+  "scope": "Cataract and lens diagnosis catalog seeds for the ODOS clinical graph.",
+  "sources": {
+    "cdcIcd10Cm2026CodeDescriptions": {
+      "type": "primary",
+      "name": "CDC/NCHS ICD-10-CM FY2026 Code Descriptions in Tabular Order",
+      "url": "https://stacks.cdc.gov/view/cdc/250974/cdc_250974_DS4.zip",
+      "supportingPage": "https://stacks.cdc.gov/view/cdc/250974",
+      "accessDate": "2026-08-06"
+    },
+    "nlmClinicalTablesIcd10Cm": {
+      "type": "primary-official-nih",
+      "name": "NLM Clinical Tables ICD-10-CM API",
+      "url": "https://clinicaltables.nlm.nih.gov/apidoc/icd10cm/v3/doc.html",
+      "exampleQuery": "https://clinicaltables.nlm.nih.gov/api/icd10cm/v3/search?terms=Z96.1&sf=code&df=code,name",
+      "accessDate": "2026-08-06"
+    },
+    "cdcIcd10Cm2026AlphabeticIndex": {
+      "type": "primary",
+      "name": "CDC/NCHS ICD-10-CM April 1, 2026 Alphabetic Index and Tabular List",
+      "url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/ICD10CM/2026-update/icd10cm-table-and-index-April-1-2026.zip",
+      "accessDate": "2026-08-06"
+    }
+  },
+  "diagnosisFamilies": [
+    {
+      "family": "H25.1-",
+      "description": "Age-related nuclear cataract",
+      "lateralityDigits": { "0": "unspecified", "1": "OD", "2": "OS", "3": "bilateral" },
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
+    },
+    {
+      "family": "H25.01-",
+      "description": "Cortical age-related cataract",
+      "lateralityDigits": { "1": "OD", "2": "OS", "3": "bilateral", "9": "unspecified" },
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
+    },
+    {
+      "family": "H25.03-",
+      "description": "Anterior subcapsular polar age-related cataract",
+      "lateralityDigits": { "1": "OD", "2": "OS", "3": "bilateral", "9": "unspecified" },
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
+    },
+    {
+      "family": "H25.04-",
+      "description": "Posterior subcapsular polar age-related cataract",
+      "lateralityDigits": { "1": "OD", "2": "OS", "3": "bilateral", "9": "unspecified" },
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
+    },
+    {
+      "family": "H25.81-",
+      "description": "Combined forms of age-related cataract",
+      "lateralityDigits": { "1": "OD", "2": "OS", "3": "bilateral", "9": "unspecified" },
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
+    },
+    {
+      "family": "H26.49-",
+      "description": "Other secondary cataract",
+      "lateralityDigits": { "1": "OD", "2": "OS", "3": "bilateral", "9": "unspecified" },
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
+    },
+    {
+      "family": "H27.0-",
+      "description": "Aphakia",
+      "lateralityDigits": { "0": "unspecified", "1": "OD", "2": "OS", "3": "bilateral" },
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
+    },
+    {
+      "family": "H27.11-",
+      "description": "Subluxation of lens",
+      "lateralityDigits": { "1": "OD", "2": "OS", "3": "bilateral", "9": "unspecified" },
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
+    },
+    {
+      "family": "H27.12-",
+      "description": "Anterior dislocation of lens",
+      "lateralityDigits": { "1": "OD", "2": "OS", "3": "bilateral", "9": "unspecified" },
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
+    },
+    {
+      "family": "H27.13-",
+      "description": "Posterior dislocation of lens",
+      "lateralityDigits": { "1": "OD", "2": "OS", "3": "bilateral", "9": "unspecified" },
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
+    },
+    {
+      "family": "H26.8",
+      "description": "Other specified cataract",
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm", "cdcIcd10Cm2026AlphabeticIndex"]
+    },
+    {
+      "family": "Z96.1",
+      "description": "Presence of intraocular lens",
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
+    }
+  ],
+  "diagnosisCodes": [
+    { "code": "H25.11", "display": "Age-related nuclear cataract, right eye", "family": "H25.1-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H25.12", "display": "Age-related nuclear cataract, left eye", "family": "H25.1-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H25.13", "display": "Age-related nuclear cataract, bilateral", "family": "H25.1-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H25.10", "display": "Age-related nuclear cataract, unspecified eye", "family": "H25.1-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H25.011", "display": "Cortical age-related cataract, right eye", "family": "H25.01-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H25.012", "display": "Cortical age-related cataract, left eye", "family": "H25.01-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H25.013", "display": "Cortical age-related cataract, bilateral", "family": "H25.01-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H25.019", "display": "Cortical age-related cataract, unspecified eye", "family": "H25.01-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H25.031", "display": "Anterior subcapsular polar age-related cataract, right eye", "family": "H25.03-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H25.032", "display": "Anterior subcapsular polar age-related cataract, left eye", "family": "H25.03-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H25.033", "display": "Anterior subcapsular polar age-related cataract, bilateral", "family": "H25.03-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H25.039", "display": "Anterior subcapsular polar age-related cataract, unspecified eye", "family": "H25.03-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H25.041", "display": "Posterior subcapsular polar age-related cataract, right eye", "family": "H25.04-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H25.042", "display": "Posterior subcapsular polar age-related cataract, left eye", "family": "H25.04-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H25.043", "display": "Posterior subcapsular polar age-related cataract, bilateral", "family": "H25.04-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H25.049", "display": "Posterior subcapsular polar age-related cataract, unspecified eye", "family": "H25.04-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H25.811", "display": "Combined forms of age-related cataract, right eye", "family": "H25.81-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H25.812", "display": "Combined forms of age-related cataract, left eye", "family": "H25.81-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H25.813", "display": "Combined forms of age-related cataract, bilateral", "family": "H25.81-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H25.819", "display": "Combined forms of age-related cataract, unspecified eye", "family": "H25.81-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H26.491", "display": "Other secondary cataract, right eye", "family": "H26.49-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H26.492", "display": "Other secondary cataract, left eye", "family": "H26.49-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H26.493", "display": "Other secondary cataract, bilateral", "family": "H26.49-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H26.499", "display": "Other secondary cataract, unspecified eye", "family": "H26.49-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H27.01", "display": "Aphakia, right eye", "family": "H27.0-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H27.02", "display": "Aphakia, left eye", "family": "H27.0-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H27.03", "display": "Aphakia, bilateral", "family": "H27.0-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H27.00", "display": "Aphakia, unspecified eye", "family": "H27.0-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H27.111", "display": "Subluxation of lens, right eye", "family": "H27.11-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H27.112", "display": "Subluxation of lens, left eye", "family": "H27.11-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H27.113", "display": "Subluxation of lens, bilateral", "family": "H27.11-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H27.119", "display": "Subluxation of lens, unspecified eye", "family": "H27.11-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H27.121", "display": "Anterior dislocation of lens, right eye", "family": "H27.12-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H27.122", "display": "Anterior dislocation of lens, left eye", "family": "H27.12-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H27.123", "display": "Anterior dislocation of lens, bilateral", "family": "H27.12-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H27.129", "display": "Anterior dislocation of lens, unspecified eye", "family": "H27.12-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H27.131", "display": "Posterior dislocation of lens, right eye", "family": "H27.13-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H27.132", "display": "Posterior dislocation of lens, left eye", "family": "H27.13-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H27.133", "display": "Posterior dislocation of lens, bilateral", "family": "H27.13-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H27.139", "display": "Posterior dislocation of lens, unspecified eye", "family": "H27.13-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H26.8", "display": "Other specified cataract", "family": "H26.8", "laterality": "NONE", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm", "cdcIcd10Cm2026AlphabeticIndex"] },
+    { "code": "Z96.1", "display": "Presence of intraocular lens", "family": "Z96.1", "laterality": "NONE", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] }
+  ]
+}
