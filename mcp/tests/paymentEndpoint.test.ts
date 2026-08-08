@@ -8,9 +8,7 @@ import {
 } from "../src/authz/roles.js";
 import {
   paymentAdapterRegistrationsFromEnv,
-  resolveStaffRole,
   resolveStaffRoles,
-  StaffRoleServiceUnavailableError,
   verifyMedplumStaffToken,
 } from "../src/payments/payment-endpoint.js";
 
@@ -169,18 +167,9 @@ test("a token whose profile is not a Practitioner/PractitionerRole resolves null
   );
 });
 
-// --- resolveStaffRole: identity-derived role from the bound AccessPolicy (decision 2026-07-05 §3) ---
+// --- resolveStaffRoles: identity-derived roles from every bound AccessPolicy ---
 
-function frontDeskPolicy(): AccessPolicy {
-  return {
-    resourceType: "AccessPolicy",
-    id: "ap-front-desk",
-    name: "ODOS Front Desk",
-    meta: { tag: [{ system: ODOS_PRACTICE_ROLE_SYSTEM, code: "front-desk" }] },
-  };
-}
-
-function serviceClient(opts: { membership?: ProjectMembership | null; policy?: AccessPolicy | null }) {
+function serviceClient(opts: { membership?: ProjectMembership | null }) {
   const calls = { search: [] as unknown[], read: [] as unknown[] };
   return {
     calls,
@@ -191,8 +180,7 @@ function serviceClient(opts: { membership?: ProjectMembership | null; policy?: A
     },
     read: async <T,>(rt: string, id: string): Promise<T> => {
       calls.read.push({ rt, id });
-      if (!opts.policy) throw new Error(`AccessPolicy/${id} not found`);
-      return opts.policy as unknown as T;
+      throw new Error(`AccessPolicy/${id} not found`);
     },
   };
 }
@@ -204,115 +192,6 @@ const MEMBERSHIP_FRONT_DESK: ProjectMembership = {
   project: { reference: "Project/p1" },
   access: [{ policy: { reference: "AccessPolicy/ap-front-desk" } }],
 };
-
-test("resolveStaffRole derives the role from the caller's bound AccessPolicy identifier (service-client lookup)", async () => {
-  const { fetchImpl } = meTransport(200, { profile: { resourceType: "Practitioner", id: "staff1" } });
-  const svc = serviceClient({ membership: MEMBERSHIP_FRONT_DESK, policy: frontDeskPolicy() });
-  const staff = await resolveStaffRole({
-    baseUrl: "http://localhost:8103",
-    authHeader: "Bearer good",
-    serviceClient: svc,
-    fetchImpl,
-  });
-  assert.deepEqual(staff, { staffReference: "Practitioner/staff1", role: "front-desk" });
-  assert.deepEqual(svc.calls.search[0], {
-    rt: "ProjectMembership",
-    params: { profile: "Practitioner/staff1" },
-  });
-  assert.deepEqual(svc.calls.read[0], { rt: "AccessPolicy", id: "ap-front-desk" });
-});
-
-test("resolveStaffRole refreshes an expired service client once and retries the shared role lookup", async () => {
-  const { fetchImpl } = meTransport(200, { profile: { resourceType: "Practitioner", id: "staff1" } });
-  let expired = true;
-  let refreshes = 0;
-  const serviceClient = {
-    search: async <T,>(): Promise<Bundle<T>> => {
-      if (expired) throw Object.assign(new Error("FHIR 401 Unauthorized: Unauthorized"), { status: 401 });
-      return { resourceType: "Bundle", type: "searchset", entry: [{ resource: MEMBERSHIP_FRONT_DESK as unknown as T }] };
-    },
-    read: async <T,>(): Promise<T> => frontDeskPolicy() as unknown as T,
-  };
-
-  const staff = await resolveStaffRole({
-    baseUrl: "http://x",
-    authHeader: "Bearer good",
-    serviceClient,
-    fetchImpl,
-    refreshServiceClient: async () => {
-      refreshes += 1;
-      expired = false;
-    },
-  });
-
-  assert.deepEqual(staff, { staffReference: "Practitioner/staff1", role: "front-desk" });
-  assert.equal(refreshes, 1);
-});
-
-test("resolveStaffRole reports a service outage when refresh cannot recover an expired token", async () => {
-  const { fetchImpl } = meTransport(200, { profile: { resourceType: "Practitioner", id: "staff1" } });
-  const unauthorized = Object.assign(new Error("FHIR 401 Unauthorized: Unauthorized"), { status: 401 });
-  const serviceClient = {
-    search: async <T,>(): Promise<Bundle<T>> => { throw unauthorized; },
-    read: async <T,>(): Promise<T> => { throw unauthorized; },
-  };
-
-  await assert.rejects(
-    resolveStaffRole({
-      baseUrl: "http://x",
-      authHeader: "Bearer good",
-      serviceClient,
-      fetchImpl,
-      refreshServiceClient: async () => undefined,
-    }),
-    StaffRoleServiceUnavailableError,
-  );
-});
-
-test("resolveStaffRole returns null for an invalid token and never reaches the service client", async () => {
-  const { fetchImpl } = meTransport(401, {});
-  const svc = serviceClient({ membership: MEMBERSHIP_FRONT_DESK, policy: frontDeskPolicy() });
-  assert.equal(
-    await resolveStaffRole({ baseUrl: "http://x", authHeader: "Bearer bad", serviceClient: svc, fetchImpl }),
-    null,
-  );
-  assert.equal(svc.calls.search.length, 0);
-});
-
-test("resolveStaffRole returns null when the caller has no ProjectMembership", async () => {
-  const { fetchImpl } = meTransport(200, { profile: { resourceType: "Practitioner", id: "staff1" } });
-  const svc = serviceClient({ membership: null });
-  assert.equal(
-    await resolveStaffRole({ baseUrl: "http://x", authHeader: "Bearer good", serviceClient: svc, fetchImpl }),
-    null,
-  );
-});
-
-test("resolveStaffRole returns null when the AccessPolicy carries no practice-role identifier (cannot determine role -> deny)", async () => {
-  const { fetchImpl } = meTransport(200, { profile: { resourceType: "Practitioner", id: "staff1" } });
-  const svc = serviceClient({
-    membership: MEMBERSHIP_FRONT_DESK,
-    policy: { resourceType: "AccessPolicy", id: "ap-front-desk", name: "ODOS Front Desk" },
-  });
-  assert.equal(
-    await resolveStaffRole({ baseUrl: "http://x", authHeader: "Bearer good", serviceClient: svc, fetchImpl }),
-    null,
-  );
-});
-
-test("resolveStaffRole also reads the legacy single accessPolicy binding", async () => {
-  const { fetchImpl } = meTransport(200, { profile: { resourceType: "Practitioner", id: "staff1" } });
-  const legacyMembership: ProjectMembership = {
-    resourceType: "ProjectMembership",
-    user: { reference: "User/u1" },
-    profile: { reference: "Practitioner/staff1" },
-    project: { reference: "Project/p1" },
-    accessPolicy: { reference: "AccessPolicy/ap-front-desk" },
-  };
-  const svc = serviceClient({ membership: legacyMembership, policy: frontDeskPolicy() });
-  const staff = await resolveStaffRole({ baseUrl: "http://x", authHeader: "Bearer good", serviceClient: svc, fetchImpl });
-  assert.equal(staff?.role, "front-desk");
-});
 
 test("resolveStaffRoles returns every recognized practice-role tag across the caller's policy bindings", async () => {
   const { fetchImpl } = meTransport(200, {

@@ -68,7 +68,7 @@ class FakeRepairAdapter implements PracticeRoleRepairAdapter {
   }
 }
 
-test("missing role policies are created and all dev roles are granted front-desk first", async () => {
+test("missing role policies are created before the preserved legacy grant", async () => {
   const adapter = new FakeRepairAdapter({
     membership: membership({ accessPolicy: { reference: "AccessPolicy/keep-legacy" } }),
   });
@@ -92,6 +92,7 @@ test("missing role policies are created and all dev roles are granted front-desk
     "AccessPolicy/policy-3",
     "AccessPolicy/policy-1",
     "AccessPolicy/policy-2",
+    "AccessPolicy/keep-legacy",
   ]);
   assert.equal(adapter.membership.accessPolicy, undefined);
   assert.equal(adapter.auditWrites, 1);
@@ -113,7 +114,7 @@ test("a second repair is a zero-write idempotent no-op", async () => {
   assert.equal(adapter.membershipWrites, membershipWrites);
 });
 
-test("clinician primary override reorders grants without duplicates and remains idempotent", async () => {
+test("clinician primary override reorders role grants, preserves unrelated access, and remains idempotent", async () => {
   const adapter = new FakeRepairAdapter({
     membership: membership({
       access: [
@@ -135,6 +136,7 @@ test("clinician primary override reorders grants without duplicates and remains 
     "AccessPolicy/policy-2",
     "AccessPolicy/policy-3",
     "AccessPolicy/policy-1",
+    "AccessPolicy/unrelated",
   ]);
   assert.equal(adapter.membershipWrites, writes);
   assert.equal(second.membershipChanged, false);

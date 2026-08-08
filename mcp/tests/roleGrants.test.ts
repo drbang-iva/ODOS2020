@@ -3,6 +3,7 @@ import { test } from "node:test";
 import type { AccessPolicy, ProjectMembership } from "@medplum/fhirtypes";
 import {
   grantPracticeRoles,
+  reconcileMembershipAccess,
   type PracticeRoleGrantDependencies,
 } from "../src/authz/role-grants.js";
 import type { PracticeRoleId } from "../src/authz/roles.js";
@@ -40,7 +41,7 @@ function fixture(input: {
   return { deps, membership, counts: () => ({ auditCount, patchCount }) };
 }
 
-test("grantPracticeRoles reconciles exact deduped access with the primary role first and clears legacy accessPolicy", async () => {
+test("grantPracticeRoles orders bare roles, preserves unique access, and clears legacy accessPolicy", async () => {
   const { deps, membership, counts } = fixture({
     membership: baseMembership({
       accessPolicy: { reference: "AccessPolicy/clinical" },
@@ -62,10 +63,65 @@ test("grantPracticeRoles reconciles exact deduped access with the primary role f
   assert.deepEqual(membership.access?.map((access) => access.policy.reference), [
     "AccessPolicy/clinical",
     "AccessPolicy/desk",
+    "AccessPolicy/clinical",
+    "AccessPolicy/unrelated",
   ]);
-  assert.equal(membership.access?.[0]?.parameter?.[0]?.name, "provider_profile");
+  assert.equal(membership.access?.[0]?.parameter, undefined);
+  assert.deepEqual(membership.access?.[2]?.parameter, [
+    { name: "provider_profile", valueReference: { reference: "Practitioner/p1" } },
+  ]);
   assert.equal(membership.accessPolicy, undefined);
   assert.deepEqual(counts(), { auditCount: 1, patchCount: 1 });
+});
+
+test("reconcileMembershipAccess preserves distinct parameterized patient grants after ordered bare roles", () => {
+  const membership = baseMembership({
+    access: [
+      { policy: { reference: "AccessPolicy/desk" } },
+      { policy: { reference: "AccessPolicy/admin" } },
+      { policy: { reference: "AccessPolicy/clinical" } },
+      {
+        policy: { reference: "AccessPolicy/clinical" },
+        parameter: [
+          { name: "provider_profile", valueReference: { reference: "Practitioner/p1" } },
+          { name: "patient_compartment", valueString: "Patient/patient-1" },
+        ],
+      },
+      {
+        policy: { reference: "AccessPolicy/clinical" },
+        parameter: [
+          { name: "provider_profile", valueReference: { reference: "Practitioner/p1" } },
+          { name: "patient_compartment", valueString: "Patient/patient-2" },
+        ],
+      },
+    ],
+  });
+
+  applyPatch(membership, reconcileMembershipAccess(membership, [
+    "AccessPolicy/admin",
+    "AccessPolicy/clinical",
+    "AccessPolicy/desk",
+  ]));
+
+  assert.deepEqual(membership.access, [
+    { policy: { reference: "AccessPolicy/admin" } },
+    { policy: { reference: "AccessPolicy/clinical" } },
+    { policy: { reference: "AccessPolicy/desk" } },
+    {
+      policy: { reference: "AccessPolicy/clinical" },
+      parameter: [
+        { name: "provider_profile", valueReference: { reference: "Practitioner/p1" } },
+        { name: "patient_compartment", valueString: "Patient/patient-1" },
+      ],
+    },
+    {
+      policy: { reference: "AccessPolicy/clinical" },
+      parameter: [
+        { name: "provider_profile", valueReference: { reference: "Practitioner/p1" } },
+        { name: "patient_compartment", valueString: "Patient/patient-2" },
+      ],
+    },
+  ]);
 });
 
 test("grantPracticeRoles is a zero-write no-op when membership access is already exact", async () => {

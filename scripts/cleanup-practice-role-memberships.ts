@@ -28,15 +28,46 @@ export function cleanupMembershipOperations(input: {
   policyRoles: ReadonlyMap<string, PracticeRoleId>;
   stripRoles?: ReadonlySet<PracticeRoleId>;
 }): JsonPatchOperation[] {
+  const membership = input.stripRoles
+    ? {
+        ...input.membership,
+        access: input.membership.access?.filter((access) =>
+          !input.stripRoles!.has(input.policyRoles.get(access.policy.reference ?? "") as PracticeRoleId),
+        ),
+        accessPolicy: input.stripRoles.has(
+          input.policyRoles.get(input.membership.accessPolicy?.reference ?? "") as PracticeRoleId,
+        )
+          ? undefined
+          : input.membership.accessPolicy,
+      }
+    : input.membership;
   const references = [
-    ...(input.membership.access ?? []).map((access) => access.policy.reference),
-    input.membership.accessPolicy?.reference,
+    ...(membership.access ?? []).map((access) => access.policy.reference),
+    membership.accessPolicy?.reference,
   ].filter((reference): reference is string => Boolean(reference));
   const desired = references.filter((reference, index) =>
-    references.indexOf(reference) === index &&
-    !input.stripRoles?.has(input.policyRoles.get(reference) as PracticeRoleId),
+    references.indexOf(reference) === index,
   );
-  return reconcileMembershipAccess(input.membership, desired);
+  const reconciled = reconcileMembershipAccess(membership, desired);
+  if (!input.stripRoles) return reconciled;
+
+  const accessOperation = reconciled.find((operation) => operation.path === "/access");
+  const reconciledAccess = accessOperation && "value" in accessOperation
+    ? accessOperation.value as ProjectMembership["access"]
+    : undefined;
+  const desiredAccess = reconciledAccess ?? membership.access ?? [];
+  const operations: JsonPatchOperation[] = [];
+  if (JSON.stringify(input.membership.access ?? []) !== JSON.stringify(desiredAccess)) {
+    operations.push({
+      op: input.membership.access ? "replace" : "add",
+      path: "/access",
+      value: desiredAccess,
+    });
+  }
+  if (input.membership.accessPolicy) {
+    operations.push({ op: "remove", path: "/accessPolicy" });
+  }
+  return operations;
 }
 
 async function runCleanup(fhir: MedplumClient): Promise<CleanupMembershipResult[]> {

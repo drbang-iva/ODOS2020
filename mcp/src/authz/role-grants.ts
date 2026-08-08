@@ -95,16 +95,33 @@ export function reconcileMembershipAccess(
       ? [{ policy: { reference: membership.accessPolicy.reference } }]
       : []),
   ];
-  const existingByReference = new Map<string, ProjectMembershipAccess>();
+  const existingByGrant = new Map<string, ProjectMembershipAccess>();
   for (const access of existing) {
-    const reference = access.policy.reference;
-    if (reference && !existingByReference.has(reference)) {
-      existingByReference.set(reference, access);
+    const key = accessGrantKey(access);
+    if (!existingByGrant.has(key)) {
+      existingByGrant.set(key, access);
     }
   }
-  const desiredAccess = orderedPolicyReferences.map(
-    (reference) => existingByReference.get(reference) ?? { policy: { reference } },
-  );
+  const uniqueExisting = [...existingByGrant.values()];
+  const desiredAccess: ProjectMembershipAccess[] = [];
+  const included = new Set<string>();
+  for (const reference of orderedPolicyReferences) {
+    const access = uniqueExisting.find(
+      (candidate) => candidate.policy.reference === reference && !candidate.parameter?.length,
+    ) ?? { policy: { reference } };
+    const key = accessGrantKey(access);
+    if (!included.has(key)) {
+      desiredAccess.push(access);
+      included.add(key);
+    }
+  }
+  for (const access of uniqueExisting) {
+    const key = accessGrantKey(access);
+    if (!included.has(key)) {
+      desiredAccess.push(access);
+      included.add(key);
+    }
+  }
   const operations: JsonPatchOperation[] = [];
   if (JSON.stringify(membership.access ?? []) !== JSON.stringify(desiredAccess)) {
     operations.push({
@@ -117,6 +134,10 @@ export function reconcileMembershipAccess(
     operations.push({ op: "remove", path: "/accessPolicy" });
   }
   return operations;
+}
+
+function accessGrantKey(access: ProjectMembershipAccess): string {
+  return JSON.stringify([access.policy.reference ?? null, access.parameter ?? []]);
 }
 
 function normalizeRoles(

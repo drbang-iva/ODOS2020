@@ -265,9 +265,9 @@ If the setup state says the practice is complete but one or more canonical ODOS 
 npm run repair-practice-roles -- --email "$HUMAN_EMAIL"
 ```
 
-The repair authenticates with the configured Medplum service credentials but grants only to the explicit `--email` target. It does not create or change credentials. It is restricted to local or private Medplum URLs. It creates any missing canonical policy from the shipped five-role registry, adds a missing role tag to one unambiguous canonical policy, and reconciles the target membership to exactly `front-desk`, `practice-admin`, and `clinician`. `front-desk` remains first by default, so Desk mutations keep their existing actor role. Run `ODOS_DEV_PRIMARY_ROLE=clinician npm run repair-practice-roles -- --email "$HUMAN_EMAIL"` before a charting session to place `clinician` first for `chart.write`; rerun without the override to restore `front-desk` first. The command refuses a target matching `MEDPLUM_ADMIN_EMAIL`.
+The repair authenticates with the configured Medplum service credentials but grants only to the explicit `--email` target. It does not create or change credentials. It is restricted to local or private Medplum URLs. It creates any missing canonical policy from the shipped five-role registry, adds a missing role tag to one unambiguous canonical policy, and ensures the target membership has `front-desk`, `practice-admin`, and `clinician` role entries first while preserving every distinct existing access grant. Production role resolution aggregates every bound role in registry order, so role-entry order does not require per-session changes. The command refuses a target matching `MEDPLUM_ADMIN_EMAIL`.
 
-The repair removes duplicate and unrelated policy bindings, migrates the legacy `accessPolicy` field into ordered `access[]`, clears the legacy field, and is idempotent. It stops without writing the membership when it finds duplicate canonical policy names, a conflicting ODOS role tag, an ambiguous membership, or a stale resource version.
+The repair collapses only exact duplicate policy bindings with the same reference and parameters, migrates the legacy `accessPolicy` field into ordered `access[]`, clears the legacy field, and is idempotent. It stops without writing the membership when it finds duplicate canonical policy names, a conflicting ODOS role tag, an ambiguous membership, or a stale resource version.
 
 This is the normal recovery path for partial local provisioning. A volume wipe is not required.
 
@@ -285,7 +285,7 @@ test -e ui/.env || cp ui/.env.example ui/.env
 When either template gains new variables, diff its `.env.example` against the existing `.env`
 and copy the additions deliberately.
 
-Then repair the local practice roles:
+If this developer account did not receive its one-time role grant during setup, repair the partial provisioning once:
 
 ```bash
 npm run repair-practice-roles -- --email "$HUMAN_EMAIL"
