@@ -5,6 +5,11 @@ import { formatSpherePower, numericOptions } from "./power-options";
 import { VaValueSelect } from "./VaValueSelect";
 import { OdosSelect } from "../inputs/OdosSelect";
 import { OdosWheel } from "../inputs/OdosWheel";
+import {
+  copySoftContactLensValues,
+  softContactLensCopySources,
+  type PrescriptionHistoryResponse,
+} from "./prescription-copy";
 
 interface Props {
   patientReference: string;
@@ -122,6 +127,8 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<SectionSaveStatus | null>(null);
+  const [history, setHistory] = useState<PrescriptionHistoryResponse | null>(null);
+  const [historyError, setHistoryError] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -147,6 +154,27 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
     return () => controller.abort();
   }, [definitionRefresh]);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    setHistoryError(null);
+    fetch(`${clinicalGraphApiBase()}/clinical-graph/refraction/history?${new URLSearchParams({ patient: patientReference })}`, {
+      headers: authHeaders(),
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const body = await response.json() as PrescriptionHistoryResponse & { error?: string };
+        if (!response.ok) throw new Error(body.error ?? `Prescription history request failed: ${response.status}`);
+        return body;
+      })
+      .then(setHistory)
+      .catch((caught) => {
+        if ((caught as Error).name !== "AbortError") {
+          setHistoryError(caught instanceof Error ? caught.message : String(caught));
+        }
+      });
+    return () => controller.abort();
+  }, [patientReference]);
+
   const fields = definition?.definition.fields ?? {};
   const manufacturerOptions = useMemo(() => activeOptions(fields.manufacturer), [fields.manufacturer]);
   const products = useMemo(() => activeProductOptions(fields.product), [fields.product]);
@@ -156,6 +184,10 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
   const overSphereOptions = useMemo(() => numericOptions(fields.overRefractionSphere, -20, 20, 0.25), [fields.overRefractionSphere]);
   const overCylinderOptions = useMemo(() => numericOptions(fields.overRefractionCylinder, -8, 0, 0.25), [fields.overRefractionCylinder]);
   const overAxisOptions = useMemo(() => numericOptions(fields.overRefractionAxis, 0, 180, 1), [fields.overRefractionAxis]);
+  const copySources = useMemo(
+    () => softContactLensCopySources(history, encounterReference),
+    [encounterReference, history],
+  );
 
   function updateEye(eye: Eye, next: Partial<EyeState>) {
     setEyes((current) => ({ ...current, [eye]: { ...current[eye], ...next } }));
@@ -177,6 +209,16 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
 
   function selectProduct(eye: Eye, product: string) {
     updateEye(eye, { product, baseCurve: "", diameter: "", colorMfPower: "" });
+  }
+
+  function pullFromSource(sourceId: string) {
+    if (!sourceId) return;
+    const source = copySources.find((candidate) => candidate.id === sourceId);
+    if (!source) return;
+    setEyes((current) => {
+      const copied = copySoftContactLensValues(current, source);
+      return { OD: copied.OD, OS: copied.OS };
+    });
   }
 
   async function save() {
@@ -255,12 +297,25 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
 
         {definitionLoading && <div className="mt-5 rounded border border-white/10 bg-bg-panel p-4 text-sm text-white/55">Loading practice contact lens catalog…</div>}
         {definitionError && <div className="mt-5 rounded border border-red-400/30 bg-red-400/10 p-4 text-sm text-red-200">{definitionError}</div>}
+        {historyError && <div className="mt-5 rounded border border-amber-400/35 bg-amber-400/10 p-4 text-sm text-amber-100">Copy sources unavailable: {historyError}</div>}
 
         {!definitionLoading && definition && activeTab === "details" && (
           <div className="mt-5 space-y-5">
-            <div className="grid gap-4 rounded border border-white/10 bg-bg-panel/80 p-4 md:grid-cols-2">
+            <div className="grid gap-4 rounded border border-white/10 bg-bg-panel/80 p-4 md:grid-cols-3">
               <SelectField label="Usage" value={usage} onChange={setUsage} options={activeOptions(fields.usage)} />
               <SelectField label="Status" value={status} onChange={setStatus} options={activeOptions(fields.status)} />
+              <label className="block">
+                <span className={FIELD_LABEL_CLASS}>Pull values from</span>
+                <OdosSelect
+                  value=""
+                  options={copySources.length > 0
+                    ? [{ value: "", label: "Pull from…" }, ...copySources.map((source) => ({ value: source.id, label: source.label }))]
+                    : [{ value: "", label: "No populated contact lens sources" }]}
+                  onChange={pullFromSource}
+                  ariaLabel="Pull contact lens values from"
+                  disabled={copySources.length === 0}
+                />
+              </label>
             </div>
 
             {EYES.map((eye) => {

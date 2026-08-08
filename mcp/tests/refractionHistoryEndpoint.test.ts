@@ -11,7 +11,10 @@ import {
   type RefractionHistoryResponse,
 } from "../src/clinical-graph/refraction-history-endpoint.js";
 import { handleRefractionCaptureRequest } from "../src/clinical-graph/refraction-endpoint.js";
-import { handleWearingCaptureRequest } from "../src/clinical-graph/pretest-endpoint.js";
+import {
+  handleAutoRefractionCaptureRequest,
+  handleWearingCaptureRequest,
+} from "../src/clinical-graph/pretest-endpoint.js";
 import { CONTACT_LENS_PARAMETER_CODE_SYSTEM } from "../src/fhir/contactLens.js";
 
 const AUTH = "Bearer good";
@@ -34,7 +37,7 @@ test("refraction history enforces chart.read and returns empty tab groups", asyn
   assert.equal(forbidden.status, 403);
   assert.equal(empty.status, 200);
   assert.deepEqual(empty.body, { glasses: [], softCl: [], specialtyCl: [] });
-  assert.equal(fixture.searches.length, 4);
+  assert.equal(fixture.searches.length, 5);
   for (const search of fixture.searches) {
     assert.equal(search.params.subject, PATIENT);
     assert.equal(search.params._sort, "-date");
@@ -65,11 +68,16 @@ test("refraction capture round-trips structured powers, VA, type, eye, and purpo
     },
   });
   const history = await fixture.readBody();
+  const groupId = history.glasses[0]?.groupId;
 
   assert.equal(captured.status, 200);
+  assert.match(String(groupId), /^refraction-block-/);
   assert.deepEqual(history.glasses, [{
     type: "Final/Rx",
+    typeCode: "FINAL_RX",
+    groupId,
     date: "2026-07-10T13:00:00.000Z",
+    encounterReference: ENCOUNTER,
     eye: "OD",
     sphere: -1.25,
     cylinder: -0.5,
@@ -115,11 +123,16 @@ test("wearing capture round-trips its paired component encoding and sorts ahead 
     },
   });
   const history = await fixture.readBody();
+  const groupId = history.glasses[0]?.groupId;
 
   assert.equal(captured.status, 200);
+  assert.match(String(groupId), /^wearing-pair-/);
   assert.deepEqual(history.glasses[0], {
     type: "Wearing",
+    typeCode: "WEARING_RX",
+    groupId,
     date: "2026-07-10T14:00:00.000Z",
+    encounterReference: ENCOUNTER,
     eye: "OD",
     sphere: 1.25,
     cylinder: -0.75,
@@ -130,6 +143,48 @@ test("wearing capture round-trips its paired component encoding and sorts ahead 
   });
   assert.equal(history.glasses[1]?.type, "Manifest");
   assert.equal("nearVA" in (history.glasses[1] ?? {}), false);
+});
+
+test("auto-refraction history exposes both eyes with stable source and encounter identity", async () => {
+  const fixture = historyFixture();
+  fixture.recordedAt = "2026-07-10T14:30:00.000Z";
+  const captured = await handleAutoRefractionCaptureRequest(fixture.captureDeps(), {
+    authHeader: AUTH,
+    body: {
+      patientReference: PATIENT,
+      encounterReference: ENCOUNTER,
+      sourceType: "device",
+      eyes: {
+        OD: { sphere: -1.25, cylinder: -0.5, axis: 90 },
+        OS: { sphere: -1, cylinder: -0.75, axis: 85 },
+      },
+    },
+  });
+  const history = await fixture.readBody();
+
+  assert.equal(captured.status, 200);
+  assert.deepEqual(history.glasses, [
+    {
+      type: "Auto-refraction",
+      typeCode: "AUTO_REFRACTION",
+      date: "2026-07-10T14:30:00.000Z",
+      encounterReference: ENCOUNTER,
+      eye: "OD",
+      sphere: -1.25,
+      cylinder: -0.5,
+      axis: 90,
+    },
+    {
+      type: "Auto-refraction",
+      typeCode: "AUTO_REFRACTION",
+      date: "2026-07-10T14:30:00.000Z",
+      encounterReference: ENCOUNTER,
+      eye: "OS",
+      sphere: -1,
+      cylinder: -0.75,
+      axis: 85,
+    },
+  ]);
 });
 
 test("soft contact lens capture round-trips canonical CL parameters and tab-specific fields", async () => {
@@ -166,6 +221,7 @@ test("soft contact lens capture round-trips canonical CL parameters and tab-spec
   assert.equal(canonicalParameterCodes(observation).has("base-curve-mm"), true);
   assert.deepEqual(history.softCl, [{
     date: "2026-07-10T15:00:00.000Z",
+    encounterReference: ENCOUNTER,
     eye: "OS",
     manufacturer: "alcon",
     product: "air_optix_aqua_multifocal",
@@ -219,6 +275,7 @@ test("specialty contact lens capture round-trips canonical CL parameters, type, 
   assert.equal(canonicalParameterCodes(observation).has("add-power"), true);
   assert.deepEqual(history.specialtyCl, [{
     date: "2026-07-10T16:00:00.000Z",
+    encounterReference: ENCOUNTER,
     eye: "OD",
     product: "onefit_med",
     lensType: "scleral-prolate",
