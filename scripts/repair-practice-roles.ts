@@ -19,6 +19,7 @@ import {
   type MedplumClient,
 } from "../mcp/src/fhir-client.js";
 import { searchAll } from "../mcp/src/fhir-search.js";
+import { readMembershipUserEmail } from "./reconcile-membership-display.js";
 import { assertLocalMedplumBaseUrl, decidePracticeRoleTag } from "./reseed-practice-role-tags.js";
 
 const DEFAULT_BASE_URL = "http://localhost:8103";
@@ -217,7 +218,8 @@ export async function resolvePracticeRoleTarget(
     throw new Error(`Expected one Practitioner-backed ProjectMembership for ${target}; found ${candidates.length}.`);
   }
   const { practitioner, membership } = candidates[0]!;
-  const email = practitionerEmail(practitioner) ?? membership.user.display;
+  // Medplum $update-email does not sync ProjectMembership.user.display; manual renames must patch it too.
+  const email = await readMembershipUserEmail(fhir, membership) ?? practitionerEmail(practitioner);
   if (!email) {
     throw new Error(`Could not resolve the target email from ${membership.profile.reference ?? target}.`);
   }

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Practitioner, ProjectMembership, Resource } from "@medplum/fhirtypes";
+import type { Practitioner, ProjectMembership, Resource, User } from "@medplum/fhirtypes";
 import { cleanupMembershipOperations, resolveMembershipTargetEmail } from "../../scripts/cleanup-practice-role-memberships.ts";
 
 test("cleanup strips the service identity clinical trio while preserving one non-clinical policy", () => {
@@ -63,16 +63,45 @@ test("cleanup preserves a parameterized-only grant without creating an unrestric
   assert.deepEqual(cleanupMembershipOperations({ membership, policyRoles: new Map() }), []);
 });
 
-test("cleanup identifies the service identity from its Practitioner profile without User search", async () => {
-  const practitioner: Practitioner = { resourceType: "Practitioner", id: "service-profile", telecom: [{ system: "email", value: "admin@odos.local" }] };
+test("cleanup prefers canonical User.email over Practitioner telecom and stale display", async () => {
+  const user: User = { resourceType: "User", id: "u1", email: "current@example.test" };
   const email = await resolveMembershipTargetEmail({
     read: async <T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> => {
+      assert.equal(resourceType, "User");
+      assert.equal(id, "u1");
+      return user as T;
+    },
+  }, fixture({ user: { reference: "User/u1", display: "old@example.test" } }));
+  assert.equal(email, "current@example.test");
+});
+
+test("cleanup uses Practitioner telecom when canonical User.email is absent", async () => {
+  const user: User = { resourceType: "User", id: "u1" };
+  const practitioner: Practitioner = {
+    resourceType: "Practitioner",
+    id: "service-profile",
+    telecom: [{ system: "email", value: "practitioner@example.test" }],
+  };
+  const email = await resolveMembershipTargetEmail({
+    read: async <T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> => {
+      if (resourceType === "User") return user as T;
       assert.equal(resourceType, "Practitioner");
       assert.equal(id, "service-profile");
       return practitioner as T;
     },
-  }, fixture({ profile: { reference: "Practitioner/service-profile" } }));
-  assert.equal(email, "admin@odos.local");
+  }, fixture({ profile: { reference: "Practitioner/service-profile" }, user: { reference: "User/u1", display: "old@example.test" } }));
+  assert.equal(email, "practitioner@example.test");
+});
+
+test("cleanup uses membership display only when no Practitioner lookup is available", async () => {
+  const user: User = { resourceType: "User", id: "u1" };
+  const email = await resolveMembershipTargetEmail({
+    read: async <T extends Resource>(resourceType: T["resourceType"]): Promise<T> => {
+      assert.equal(resourceType, "User");
+      return user as T;
+    },
+  }, fixture({ profile: {}, user: { reference: "User/u1", display: "fallback@example.test" } }));
+  assert.equal(email, "fallback@example.test");
 });
 
 function fixture(overrides: Partial<ProjectMembership>): ProjectMembership {
