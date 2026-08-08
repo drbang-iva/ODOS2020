@@ -100,7 +100,18 @@ test("color vision derives only the operator-confirmed Ishihara total", () => {
   assert.match(source, /Needs practice setup/);
 });
 
-test("CVF exposes an accessible five-zone click surface over flat coded fields", () => {
+test("CVF renders four accessible quadrant wedges and preserves per-eye controls", async () => {
+  const originalFetch = globalThis.fetch;
+  let savedPayload: unknown;
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.includes("history")) return Response.json({ rows: [] });
+    if (init?.method === "POST") {
+      savedPayload = JSON.parse(String(init.body));
+      return Response.json({});
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  };
   const props = {
     definition: { stableKey: "entrance:cvf", sectionKey: "entrance:cvf", display: "Confrontation visual fields", active: true, perEye: true, normalTemplate: "Full to finger counting OU", customFields: [] },
     fieldDefectDefinition: visualFieldDefinition(),
@@ -108,15 +119,86 @@ test("CVF exposes an accessible five-zone click surface over flat coded fields",
     encounterReference: "Encounter/e1",
     onSaved: () => undefined,
   };
-  const html = renderToStaticMarkup(<CvfSection {...props} />);
-  assert.match(html, />Visual Field</);
-  assert.match(html, />Field Defect</);
-  assert.match(html, /Mark defects directly on the five-zone field/);
-  const source = readFileSync(new URL("../src/components/charting/CvfSection.tsx", import.meta.url), "utf8");
-  for (const code of ["CUSTOM_CVF_UPPER_LEFT", "CUSTOM_CVF_UPPER_RIGHT", "CUSTOM_CVF_CENTER", "CUSTOM_CVF_LOWER_LEFT", "CUSTOM_CVF_LOWER_RIGHT"]) assert.match(source, new RegExp(code));
-  assert.match(source, /aria-label=\{`\$\{eye\} \$\{zone\} field/);
-  assert.match(source, /aria-pressed=\{marked\}/);
-  assert.match(source, /marked \? "Defect" : "Clear"/);
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<CvfSection {...props} />);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    const odAbnormal = renderer.root.findAllByType("button")
+      .filter((button) => button.children.join("") === "abnormal")[0];
+    assert.ok(odAbnormal);
+    act(() => odAbnormal.props.onClick());
+
+    const odQuadrants = () => renderer.root.findAllByType("button").filter((button) =>
+      typeof button.props["aria-label"] === "string" && button.props["aria-label"].startsWith("OD ") && button.props["aria-label"].includes(" field,"),
+    );
+    assert.deepEqual(odQuadrants().map((button) => button.props["aria-label"]), [
+      "OD upper-left field, clear",
+      "OD upper-right field, clear",
+      "OD lower-left field, clear",
+      "OD lower-right field, clear",
+    ]);
+    assert.deepEqual(odQuadrants().map((button) => button.props.style), [
+      { left: "0", top: "0" },
+      { right: "0", top: "0" },
+      { bottom: "0", left: "0" },
+      { bottom: "0", right: "0" },
+    ]);
+    assert.equal(odQuadrants().every((button) => button.props.type === "button" && button.props["aria-pressed"] === false), true);
+
+    act(() => odQuadrants()[0]?.props.onClick());
+    assert.equal(odQuadrants()[0]?.props["aria-pressed"], true);
+    act(() => odQuadrants()[0]?.props.onClick());
+    assert.equal(odQuadrants()[0]?.props["aria-pressed"], false);
+    let preventedKeyboardDefaults = 0;
+    act(() => odQuadrants()[0]?.props.onKeyDown({ key: "Enter", preventDefault: () => { preventedKeyboardDefaults += 1; } }));
+    act(() => odQuadrants()[3]?.props.onKeyDown({ key: " ", preventDefault: () => { preventedKeyboardDefaults += 1; } }));
+    assert.equal(preventedKeyboardDefaults, 2);
+    assert.deepEqual(odQuadrants().map((button) => [button.props["aria-label"], button.props["aria-pressed"]]), [
+      ["OD upper-left field, defect", true],
+      ["OD upper-right field, clear", false],
+      ["OD lower-left field, clear", false],
+      ["OD lower-right field, defect", true],
+    ]);
+
+    const odNote = renderer.root.findAllByType("textarea")[0];
+    assert.equal(odNote?.props.disabled, false);
+    act(() => odNote?.props.onChange({ target: { value: "Peripheral field note" } }));
+    assert.equal(renderer.root.findAllByType("textarea")[0]?.props.value, "Peripheral field note");
+    const unable = renderer.root.findAllByType("input").find((input) => input.props.type === "checkbox");
+    assert.ok(unable);
+    act(() => unable.props.onChange({ target: { checked: true } }));
+    assert.equal(odQuadrants().every((button) => button.props.disabled === true), true);
+    const save = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save CVF");
+    assert.ok(save);
+    await act(async () => {
+      save.props.onClick();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    assert.deepEqual(savedPayload, {
+      patientReference: "Patient/p1",
+      encounterReference: "Encounter/e1",
+      eyes: {
+        OD: {
+          state: "abnormal",
+          customFields: [
+            { code: "CUSTOM_CVF_UPPER_LEFT", value: "restricted" },
+            { code: "CUSTOM_CVF_UPPER_RIGHT", value: "full" },
+            { code: "CUSTOM_CVF_LOWER_LEFT", value: "full" },
+            { code: "CUSTOM_CVF_LOWER_RIGHT", value: "restricted" },
+            { code: "CUSTOM_CVF_UNABLE", value: "yes" },
+          ],
+          other: "Peripheral field note",
+        },
+      },
+    });
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("Visual Field renders exactly the approved lesion-site descriptor vocabulary", () => {

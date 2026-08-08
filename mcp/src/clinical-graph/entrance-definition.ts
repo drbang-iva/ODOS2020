@@ -89,11 +89,10 @@ export function buildEntranceFindingDefinitions(
     stateDefinition(CVF_KEY, "Confrontation visual fields", "Full to finger counting OU", [
       selectField("CUSTOM_CVF_UPPER_LEFT", "Upper left", ["restricted", "full"], 0),
       selectField("CUSTOM_CVF_UPPER_RIGHT", "Upper right", ["restricted", "full"], 1),
-      selectField("CUSTOM_CVF_CENTER", "Center", ["restricted", "full"], 2),
-      selectField("CUSTOM_CVF_LOWER_LEFT", "Lower left", ["restricted", "full"], 3),
-      selectField("CUSTOM_CVF_LOWER_RIGHT", "Lower right", ["restricted", "full"], 4),
-      selectField("CUSTOM_CVF_UNABLE", "Unable", ["no", "yes"], 5),
-      selectField("CUSTOM_CVF_METHOD", "Method", ["finger count", "hand motion"], 6),
+      selectField("CUSTOM_CVF_LOWER_LEFT", "Lower left", ["restricted", "full"], 2),
+      selectField("CUSTOM_CVF_LOWER_RIGHT", "Lower right", ["restricted", "full"], 3),
+      selectField("CUSTOM_CVF_UNABLE", "Unable", ["no", "yes"], 4),
+      selectField("CUSTOM_CVF_METHOD", "Method", ["finger count", "hand motion"], 5),
     ], "entrance.cvf", provenance),
     visualFieldDefectDefinition(provenance),
     buildClinicalFindingDefinition({

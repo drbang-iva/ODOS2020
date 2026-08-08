@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import { MethodField } from "../inputs/MethodField";
 import type { CustomFindingDefinition } from "./CustomFindingSection";
@@ -7,11 +7,11 @@ import type { SectionSaveStatus } from "./types";
 
 type Eye = "OD" | "OS";
 type ExamState = "normal" | "abnormal" | "deferred";
-type Zone = "upper-left" | "upper-right" | "center" | "lower-left" | "lower-right";
+type Quadrant = "upper-left" | "upper-right" | "lower-left" | "lower-right";
 
 interface EyeCapture {
   state?: ExamState;
-  defects: Record<Zone, boolean>;
+  defects: Record<Quadrant, boolean>;
   method: string;
   unable: boolean;
   note: string;
@@ -27,12 +27,11 @@ interface HistoryRow {
 }
 
 const EYES: Eye[] = ["OD", "OS"];
-const ZONES: Array<{ zone: Zone; label: string; code: string; position: string }> = [
-  { zone: "upper-left", label: "Upper-left", code: "CUSTOM_CVF_UPPER_LEFT", position: "col-start-1 row-start-1" },
-  { zone: "upper-right", label: "Upper-right", code: "CUSTOM_CVF_UPPER_RIGHT", position: "col-start-3 row-start-1" },
-  { zone: "center", label: "Center", code: "CUSTOM_CVF_CENTER", position: "col-start-2 row-start-2" },
-  { zone: "lower-left", label: "Lower-left", code: "CUSTOM_CVF_LOWER_LEFT", position: "col-start-1 row-start-3" },
-  { zone: "lower-right", label: "Lower-right", code: "CUSTOM_CVF_LOWER_RIGHT", position: "col-start-3 row-start-3" },
+const QUADRANTS: Array<{ quadrant: Quadrant; label: string; code: string; position: CSSProperties }> = [
+  { quadrant: "upper-left", label: "Upper-left", code: "CUSTOM_CVF_UPPER_LEFT", position: { left: "0", top: "0" } },
+  { quadrant: "upper-right", label: "Upper-right", code: "CUSTOM_CVF_UPPER_RIGHT", position: { right: "0", top: "0" } },
+  { quadrant: "lower-left", label: "Lower-left", code: "CUSTOM_CVF_LOWER_LEFT", position: { bottom: "0", left: "0" } },
+  { quadrant: "lower-right", label: "Lower-right", code: "CUSTOM_CVF_LOWER_RIGHT", position: { bottom: "0", right: "0" } },
 ];
 
 export function CvfSection({ definition, fieldDefectDefinition, patientReference, encounterReference, onSaved }: {
@@ -132,7 +131,7 @@ export function CvfSection({ definition, fieldDefectDefinition, patientReference
         />
         <div className="mt-7 border-t border-[color:var(--odos-line)] pt-5">
           <h3 className="font-semibold">Confrontation Fields</h3>
-          <p className="mt-1 text-sm text-[color:var(--odos-muted)]">Mark defects directly on the five-zone field for each eye.</p>
+          <p className="mt-1 text-sm text-[color:var(--odos-muted)]">Mark defects directly on the four-quadrant field for each eye.</p>
         </div>
         <div className="mt-5 grid gap-5 xl:grid-cols-2">
           {EYES.map((eye) => {
@@ -152,7 +151,7 @@ export function CvfSection({ definition, fieldDefectDefinition, patientReference
                     <MethodField
                       label="Method"
                       renderValueControl={() => (
-                        <ZoneGrid eye={eye} capture={capture} update={(update) => updateEye(eye, update)} />
+                        <QuadrantGrid eye={eye} capture={capture} update={(update) => updateEye(eye, update)} />
                       )}
                       methodValue={capture.method}
                       methodOptions={[
@@ -350,33 +349,41 @@ function DescriptorButton({ option, selected, onSelect }: {
   );
 }
 
-function ZoneGrid({ eye, capture, update }: { eye: Eye; capture: EyeCapture; update(update: Partial<EyeCapture>): void }) {
+function QuadrantGrid({ eye, capture, update }: { eye: Eye; capture: EyeCapture; update(update: Partial<EyeCapture>): void }) {
   return (
     <div className="mx-auto max-w-md">
-      <div className="relative aspect-square overflow-hidden rounded-full border border-[color:var(--odos-overlay-line-2)] bg-[color:var(--odos-surface-2)] p-5">
-        <div aria-hidden="true" className="absolute inset-x-5 top-1/2 h-px bg-[color:var(--odos-overlay-line)]" />
-        <div aria-hidden="true" className="absolute inset-y-5 left-1/2 w-px bg-[color:var(--odos-overlay-line)]" />
-        <div className="relative z-10 grid h-full grid-cols-3 grid-rows-3 gap-3">
-          {ZONES.map(({ zone, label, position }) => {
-            const marked = capture.defects[zone];
-            return (
-              <button
-                key={zone}
-                type="button"
-                aria-label={`${eye} ${zone} field, ${marked ? "marked defect" : "unmarked"}`}
-                aria-pressed={marked}
-                disabled={capture.unable}
-                onClick={() => update({ defects: { ...capture.defects, [zone]: !marked } })}
-                className={`${position} min-h-16 rounded-xl border px-2 py-2 text-xs font-semibold transition disabled:opacity-35 ${marked ? "border-[color:var(--odos-alert)] bg-[color:var(--odos-surface)] text-[color:var(--odos-text)]" : "border-[color:var(--odos-line-2)] bg-[color:var(--odos-surface)] text-[color:var(--odos-muted)] hover:text-[color:var(--odos-text)]"}`}
-              >
+      <div className="relative aspect-square overflow-hidden rounded-full border border-[color:var(--odos-overlay-line-2)] bg-slate-50">
+        {QUADRANTS.map(({ quadrant, label, position }) => {
+          const marked = capture.defects[quadrant];
+          const toggle = () => update({ defects: { ...capture.defects, [quadrant]: !marked } });
+          return (
+            <button
+              key={quadrant}
+              type="button"
+              aria-label={`${eye} ${quadrant} field, ${marked ? "defect" : "clear"}`}
+              aria-pressed={marked}
+              disabled={capture.unable}
+              onClick={toggle}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  toggle();
+                }
+              }}
+              style={position}
+              className={`absolute flex h-1/2 w-1/2 items-center justify-center transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-[color:var(--odos-accent)] disabled:opacity-35 ${marked ? "bg-slate-900 text-slate-50" : "bg-slate-50 text-slate-900 hover:bg-slate-100"}`}
+            >
+              <span className="pointer-events-none w-[84%] text-center text-[10px] font-semibold sm:text-xs">
                 <span className="block">{label}</span>
-                <span className="mt-1 block text-[10px] uppercase tracking-wide">{marked ? "Defect" : "Clear"}</span>
-              </button>
-            );
-          })}
-        </div>
+                <span className="mt-1 block uppercase tracking-wide">{marked ? "Defect" : "Clear"}</span>
+              </span>
+            </button>
+          );
+        })}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-1/2 z-20 h-px bg-[color:var(--odos-overlay-line-2)]" />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-1/2 z-20 w-px bg-[color:var(--odos-overlay-line-2)]" />
       </div>
-      <p className="mt-2 text-center text-xs text-[color:var(--odos-muted)]">Select a zone to toggle clear / defect.</p>
+      <p className="mt-2 text-center text-xs text-[color:var(--odos-muted)]">Select a quadrant to toggle clear / defect.</p>
     </div>
   );
 }
@@ -398,7 +405,7 @@ function History({ rows, loading }: { rows: HistoryRow[]; loading: boolean }) {
 
 function eyePayload(capture: EyeCapture) {
   const customFields = capture.state === "abnormal" ? [
-    ...ZONES.map(({ zone, code }) => ({ code, value: capture.defects[zone] ? "restricted" : "full" })),
+    ...QUADRANTS.map(({ quadrant, code }) => ({ code, value: capture.defects[quadrant] ? "restricted" : "full" })),
     ...(capture.method ? [{ code: "CUSTOM_CVF_METHOD", value: capture.method }] : []),
     ...(capture.unable ? [{ code: "CUSTOM_CVF_UNABLE", value: "yes" }] : []),
   ] : [];
@@ -411,7 +418,7 @@ function eyePayload(capture: EyeCapture) {
 
 function emptyEye(): EyeCapture {
   return {
-    defects: { "upper-left": false, "upper-right": false, center: false, "lower-left": false, "lower-right": false },
+    defects: { "upper-left": false, "upper-right": false, "lower-left": false, "lower-right": false },
     method: "",
     unable: false,
     note: "",
