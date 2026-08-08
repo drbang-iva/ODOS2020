@@ -19,7 +19,7 @@ assertLocalBaseUrl(baseUrl);
 const postgresUrl =
   process.env.ODOS_POSTGRES_URL
   ?? process.env.OSOD_POSTGRES_URL
-  ?? "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
+  ?? "postgresql://medplum:medplum@127.0.0.1:5433/medplum";
 const accessToken = await exchangeClientCredentials({
   baseUrl,
   clientId: requireEnv("ODOS_MIGRATION_IMPORTER_CLIENT_ID"),

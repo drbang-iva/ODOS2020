@@ -91,7 +91,7 @@ Expected local endpoints:
 |---|---|
 | FHIR API | `http://localhost:8103/fhir/R4` |
 | Medplum admin UI | `http://localhost:8100` |
-| Postgres | `127.0.0.1:5432` |
+| Postgres | `127.0.0.1:5433` |
 | Redis | `127.0.0.1:6379` |
 
 ## Environment Variables
@@ -428,7 +428,7 @@ This helper charts one synthetic test visit with a Patient, comprehensive Encoun
 To re-check the count from the `sessionId` printed by `npm run audit-verify`:
 
 ```bash
-export ODOS_POSTGRES_URL="${ODOS_POSTGRES_URL:-postgresql://medplum:medplum@127.0.0.1:5432/medplum}"
+export ODOS_POSTGRES_URL="${ODOS_POSTGRES_URL:-postgresql://medplum:medplum@127.0.0.1:5433/medplum}"
 export SESSION_ID="tier1-visit-<from audit-verify output>"
 
 psql "$ODOS_POSTGRES_URL" -v session_id="$SESSION_ID" <<'SQL'
@@ -471,29 +471,20 @@ If startup fails, check common ports:
 ```bash
 lsof -nP -iTCP:8103 -sTCP:LISTEN
 lsof -nP -iTCP:8100 -sTCP:LISTEN
-lsof -nP -iTCP:5432 -sTCP:LISTEN
+lsof -nP -iTCP:5433 -sTCP:LISTEN
 lsof -nP -iTCP:6379 -sTCP:LISTEN
 ```
 
 Stop the conflicting local service or edit the root `docker-compose.yml` port mappings before first live use. Keep the compose file as the canonical local stack; do not introduce alternate deploy templates.
 
-For the recurring case where another practice system already owns host Postgres port `127.0.0.1:5432`, leave that service running and remap only ODOS's **host** port.
-
-In root `docker-compose.yml`, change the Postgres published port from:
-
-```yaml
-ports:
-  - "127.0.0.1:5432:5432"
-```
-
-to:
+For the recurring case where another practice system owns the standard Postgres host port `5432`, leave that service running. ODOS publishes its own Postgres on host port `5433`:
 
 ```yaml
 ports:
   - "127.0.0.1:5433:5432"
 ```
 
-Only the left-side host port changes. Keep the container-network URL unchanged:
+Only the left-side host port is remapped. Keep the container-network URL unchanged:
 
 ```yaml
 ODOS_POSTGRES_URL: postgresql://medplum:medplum@postgres:5432/medplum
@@ -537,7 +528,7 @@ If audit rows fail:
 
 ```bash
 docker-compose ps postgres
-psql "${ODOS_POSTGRES_URL:-postgresql://medplum:medplum@127.0.0.1:5432/medplum}" -c "select count(*) from odos_audit_events;"
+psql "${ODOS_POSTGRES_URL:-postgresql://medplum:medplum@127.0.0.1:5433/medplum}" -c "select count(*) from odos_audit_events;"
 ```
 
 If preflight hard-blocks on env-var PHI, remove the PHI-shaped value from the environment, restart the local stack, and rerun `npm run preflight`.

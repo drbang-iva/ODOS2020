@@ -32,7 +32,7 @@ loadRepoEnv();
 
 const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
 const postgresUrl =
-  process.env.ODOS_POSTGRES_URL ?? "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
+  process.env.ODOS_POSTGRES_URL ?? "postgresql://medplum:medplum@127.0.0.1:5433/medplum";
 const email = requireEnv("MEDPLUM_ADMIN_EMAIL", process.env.MEDPLUM_ADMIN_EMAIL ?? process.env.ODOS_ADMIN_EMAIL);
 const password = requireEnv(
   "MEDPLUM_ADMIN_PASSWORD",

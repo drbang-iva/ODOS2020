@@ -7,7 +7,7 @@ if [[ -z "$manifest_path" ]]; then
   exit 2
 fi
 
-postgres_url="${ODOS_POSTGRES_URL:-postgresql://medplum:medplum@127.0.0.1:5432/medplum}"
+postgres_url="${ODOS_POSTGRES_URL:-postgresql://medplum:medplum@127.0.0.1:5433/medplum}"
 redis_host="${ODOS_REDIS_HOST:-127.0.0.1}"
 redis_port="${ODOS_REDIS_PORT:-6379}"
 redis_password="${ODOS_REDIS_PASSWORD:-medplum}"

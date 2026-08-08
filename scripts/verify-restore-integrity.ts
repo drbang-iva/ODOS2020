@@ -22,7 +22,7 @@ if (!manifestPath) {
 
 loadRepoEnv();
 
-const postgresUrl = process.env.ODOS_POSTGRES_URL ?? "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
+const postgresUrl = process.env.ODOS_POSTGRES_URL ?? "postgresql://medplum:medplum@127.0.0.1:5433/medplum";
 const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
 const email = process.env.MEDPLUM_ADMIN_EMAIL;
 const password = process.env.MEDPLUM_ADMIN_PASSWORD;

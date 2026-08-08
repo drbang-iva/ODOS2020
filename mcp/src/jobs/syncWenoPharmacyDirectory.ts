@@ -10,7 +10,7 @@ import {
   type PharmacyDirectoryRequest,
 } from "../integrations/weno/wenoEzIntegrationClient.js";
 
-const DEFAULT_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
+const DEFAULT_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5433/medplum";
 const SCHEMA_MIGRATIONS_DDL_FILE = fileURLToPath(
   new URL("../../../data/migrations/2026-07-17-odos-schema-migrations.sql", import.meta.url),
 );

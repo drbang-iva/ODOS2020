@@ -64,7 +64,7 @@ export async function setupLegacyImporter(input: {
     reason: "Operator legacy importer setup runs outside request handling.",
   });
   const postgresUrl = input.postgresUrl
-    ?? "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
+    ?? "postgresql://medplum:medplum@127.0.0.1:5433/medplum";
   const projectId = await resolvePracticeProjectId(
     input.baseUrl,
     accessToken,
@@ -151,7 +151,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     postgresUrl:
       process.env.ODOS_POSTGRES_URL
       ?? process.env.OSOD_POSTGRES_URL
-      ?? "postgresql://medplum:medplum@127.0.0.1:5432/medplum",
+      ?? "postgresql://medplum:medplum@127.0.0.1:5433/medplum",
     practiceProjectId: process.env.ODOS_PRACTICE_PROJECT_ID?.trim() || undefined,
   });
   console.log(

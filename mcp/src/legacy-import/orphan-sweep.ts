@@ -7,7 +7,7 @@ import type {
 } from "./binary-attempt-store.js";
 import { binaryIdFromReferenceUrl } from "./binary-reference.js";
 
-const DEFAULT_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
+const DEFAULT_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5433/medplum";
 
 export interface BinaryDatabaseReference {
   readonly table: string;
