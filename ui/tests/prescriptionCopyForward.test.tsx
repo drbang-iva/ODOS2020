@@ -350,14 +350,24 @@ test("SoftContactLensSection routes obsolete copied catalog values through manua
     if (url.includes("/clinical-graph/refraction/history?")) {
       return Response.json({
         glasses: [],
-        softCl: [softClRow(
-          "OD",
-          "2026-08-01T12:00:00.000Z",
-          "Encounter/prior",
-          "dispensed_successful",
-          { manufacturer: "retired-maker", product: "retired-lens", baseCurve: 8.5, diameter: 14.1, sphere: -2 },
-          "prior-retired-cl",
-        )],
+        softCl: [
+          softClRow(
+            "OD",
+            "2026-08-01T12:00:00.000Z",
+            "Encounter/prior",
+            "dispensed_successful",
+            { manufacturer: "retired-maker", product: "retired-lens", baseCurve: 8.5, diameter: 14.1, sphere: -2 },
+            "prior-retired-cl",
+          ),
+          softClRow(
+            "OS",
+            "2026-08-01T12:00:00.000Z",
+            "Encounter/prior",
+            "dispensed_successful",
+            { manufacturer: "alcon", product: "precision7", baseCurve: 8.6, diameter: 14.1, sphere: -1.75, colorMfPower: "retired" },
+            "prior-retired-cl",
+          ),
+        ],
         specialtyCl: [],
       });
     }
@@ -375,9 +385,9 @@ test("SoftContactLensSection routes obsolete copied catalog values through manua
     assert.ok(pull);
     act(() => pull.props.onChange("prior-soft-cl"));
 
-    const manualEntry = renderer.root.findAllByType("input").find((input) => input.props.type === "checkbox");
-    assert.ok(manualEntry);
-    assert.equal(manualEntry.props.checked, true);
+    const manualEntries = renderer.root.findAllByType("input").filter((input) => input.props.type === "checkbox");
+    assert.equal(manualEntries[0]?.props.checked, true);
+    assert.equal(manualEntries[1]?.props.checked, true);
   } finally {
     renderer?.unmount();
     globalThis.fetch = originalFetch;

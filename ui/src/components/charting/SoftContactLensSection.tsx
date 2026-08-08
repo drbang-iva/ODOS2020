@@ -232,11 +232,23 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
     eye: EyeState,
     source: SoftContactLensCopySource["eyes"][Eye],
   ): EyeState {
-    if (!source || (source.manufacturer === undefined && source.product === undefined)) return eye;
+    if (!source || ["manufacturer", "product", "baseCurve", "diameter", "colorMfPower"].every(
+      (field) => source[field as keyof typeof source] === undefined,
+    )) return eye;
     const knownManufacturer = manufacturerOptions.some((option) => option.code === eye.manufacturer);
-    const knownProduct = !eye.product || products.some((product) =>
-      product.code === eye.product && product.manufacturerCode === eye.manufacturer);
-    return knownManufacturer && knownProduct ? eye : { ...eye, manualEntry: true };
+    const product = products.find((candidate) =>
+      candidate.code === eye.product && candidate.manufacturerCode === eye.manufacturer);
+    const knownProduct = !eye.product || product !== undefined;
+    const knownBaseCurve = source.baseCurve === undefined
+      || activeNestedOptions(product?.baseCurveOptions).some((option) => option.code === eye.baseCurve);
+    const knownDiameter = source.diameter === undefined
+      || activeNestedOptions(product?.diameterOptions).some((option) => option.code === eye.diameter);
+    const knownCascade = source.colorMfPower === undefined
+      || activeNestedOptions([...(product?.colorOptions ?? []), ...(product?.mfPowerOptions ?? [])])
+        .some((option) => option.code === eye.colorMfPower);
+    return knownManufacturer && knownProduct && knownBaseCurve && knownDiameter && knownCascade
+      ? eye
+      : { ...eye, manualEntry: true };
   }
 
   async function save() {
