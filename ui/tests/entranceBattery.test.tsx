@@ -68,6 +68,27 @@ test("stereopsis renders once as binocular and flags its unseeded arcsec setup",
   assert.match(html, /Needs practice setup/);
 });
 
+test("practice-setup warnings keep their clinical refusal and link to chart-field settings", () => {
+  const html = renderToStaticMarkup(<EntranceStateSection
+    definition={{
+      stableKey: "entrance:pupils",
+      sectionKey: "entrance:pupils",
+      display: "Pupils",
+      active: true,
+      perEye: true,
+      sourceStatus: "unseeded-needs-operator-input",
+      setupMessage: "The additional pupil descriptor fields need practice setup before they can be added.",
+      customFields: [],
+    }}
+    patientReference="Patient/p1"
+    encounterReference="Encounter/e1"
+    onSaved={() => undefined}
+  />);
+  assert.match(html, /The additional pupil descriptor fields need practice setup before they can be added\./);
+  assert.match(html, /href="\/admin\/practice\/settings\/chart-fields"/);
+  assert.match(html, />Open chart field settings</);
+});
+
 test("color vision derives only the operator-confirmed Ishihara total", () => {
   assert.equal(colorPlateTotal("ishihara"), "7");
   assert.equal(colorPlateTotal("hrr"), undefined);
@@ -261,7 +282,7 @@ test("pupil state sections retain explicit per-eye states and centered spinner c
       display: "Pupils",
       active: true,
       perEye: true,
-      normalTemplate: "PERRLA; no APD or RAPD OU",
+      normalTemplate: "PERRLA; no RAPD OU",
       allowDeferred: true,
       customFields: [
         { localCode: "CUSTOM_PUPIL_SIZE_BRIGHT", display: "Size — bright", valueType: "number", min: 1, max: 9, step: 0.5, unit: "mm", order: 0, active: true },
@@ -273,7 +294,7 @@ test("pupil state sections retain explicit per-eye states and centered spinner c
     onSaved={() => undefined}
   />);
   assert.match(html, /Normal OU/);
-  assert.match(html, /PERRLA; no APD or RAPD OU/);
+  assert.match(html, /PERRLA; no RAPD OU/);
   assert.equal((html.match(/>normal</g) ?? []).length, 2);
   assert.equal((html.match(/>abnormal</g) ?? []).length, 2);
   assert.equal((html.match(/>deferred</g) ?? []).length, 2);

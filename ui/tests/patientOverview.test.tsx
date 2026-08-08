@@ -773,6 +773,45 @@ test("an overview consult panel stays absent when there is no referral content",
   renderer.unmount();
 });
 
+test("explicit Start correspondence shows the true empty state beside its trigger", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.includes("procedure-definitions")) return Response.json({ definitions: [] });
+    if (url.includes("longitudinal-imaging")) return Response.json({ images: [] });
+    throw new Error(`Unexpected request: ${url}`);
+  };
+  const api = {
+    fetchOverview: async () => fixture(),
+    saveNote: async () => fixture().stickyNote!,
+    fetchHistory: async () => [],
+    seriesTracker: seriesTrackerApiStub,
+    correspondence: {
+      listInboundReferrals: async () => [],
+      previewConsultReport: async () => { throw new Error("No referral should be previewed."); },
+    },
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<PatientOverview patient={patient} initialOverview={fixture()} api={api} />);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    const start = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Start correspondence");
+    assert.ok(start);
+    await act(async () => {
+      start.props.onClick();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    assert.match(JSON.stringify(renderer.toJSON()), /No inbound referral is available for a consult report\./);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("a migrated ledger row is visibly tagged and opens its encounter without requiring a diagnosis chip", () => {
   const migrated = fixture();
   migrated.visits[1] = {

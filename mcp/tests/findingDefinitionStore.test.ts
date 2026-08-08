@@ -140,7 +140,20 @@ test("E2 seeds ten entrance definitions with canonical Pachymetry and declarativ
     ["CUSTOM_PUPIL_SIZE_BRIGHT", "CUSTOM_PUPIL_SIZE_DIM", "CUSTOM_PUPIL_SIZE_NEAR"].map((code) => [pupilFields[code]?.min, pupilFields[code]?.max, pupilFields[code]?.step]),
     [[1, 9, 0.5], [1, 9, 0.5], [1, 9, 0.5]],
   );
-  assert.ok(pupilFields.CUSTOM_PUPIL_APD && pupilFields.CUSTOM_PUPIL_RAPD);
+  const retiredApdCode = ["CUSTOM", "PUPIL", "APD"].join("_");
+  assert.equal(retiredApdCode in pupilFields, false);
+  assert.equal(pupilFields.CUSTOM_PUPIL_RAPD?.localCode, "CUSTOM_PUPIL_RAPD");
+  assert.equal(pupilFields.CUSTOM_PUPIL_RAPD?.display, "RAPD");
+  assert.deepEqual(
+    ((pupilFields.CUSTOM_PUPIL_RAPD?.options ?? []) as Array<{ display: string }>).map((option) => option.display),
+    ["none", "trace", "1+", "2+", "3+", "4+", "reverse"],
+  );
+  assert.equal(pupilFields.CUSTOM_PUPIL_NEUTRAL_DENSITY?.localCode, "CUSTOM_PUPIL_NEUTRAL_DENSITY");
+  assert.equal(pupilFields.CUSTOM_PUPIL_NEUTRAL_DENSITY?.display, "Neutral density (log units)");
+  assert.deepEqual(
+    ((pupilFields.CUSTOM_PUPIL_NEUTRAL_DENSITY?.options ?? []) as Array<{ display: string }>).map((option) => option.display),
+    ["none", "0.3", "0.6", "0.9", "1.2"],
+  );
   assert.equal(pupils.sourceStatus, "unseeded-needs-operator-input");
   assert.equal(stereo.valueSchema.perEye, false);
   assert.equal(stereo.sourceStatus, "unseeded-needs-operator-input");

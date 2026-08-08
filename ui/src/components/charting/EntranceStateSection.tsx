@@ -150,8 +150,9 @@ export function EntranceStateSection({ definition, patientReference, encounterRe
         </div>
         {definition.normalTemplate && <div className="mt-4 rounded border border-emerald-300/20 bg-emerald-300/[0.06] px-4 py-3 text-sm text-emerald-50/80">{definition.normalTemplate}</div>}
         {definition.sourceStatus === "unseeded-needs-operator-input" && definition.setupMessage && (
-          <div className="mt-4 rounded border border-amber-300/30 bg-amber-300/[0.08] px-4 py-3 text-sm text-amber-100">
-            <span className="font-semibold">Needs practice setup:</span> {definition.setupMessage}
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded border border-amber-300/30 bg-amber-300/[0.08] px-4 py-3 text-sm text-amber-100">
+            <span><span className="font-semibold">Needs practice setup:</span> {definition.setupMessage}</span>
+            <a href="/admin/practice/settings/chart-fields" className="font-semibold underline underline-offset-4 hover:text-[color:var(--odos-text)]">Open chart field settings</a>
           </div>
         )}
         <div className={`mt-5 grid gap-4 ${definition.perEye ? "xl:grid-cols-2" : "max-w-2xl"}`}>

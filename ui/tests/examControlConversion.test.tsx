@@ -10,7 +10,7 @@ import { IopSection } from "../src/components/charting/IopSection";
 import { OrthoKSection } from "../src/components/charting/OrthoKSection";
 import { PowerDropdown } from "../src/components/charting/PowerDropdown";
 import { RefractionSection } from "../src/components/charting/RefractionSection";
-import { softLensProductParameterOptions } from "../src/components/charting/SoftContactLensSection";
+import { SoftContactLensSection, softLensProductParameterOptions } from "../src/components/charting/SoftContactLensSection";
 import { VaSection } from "../src/components/charting/VaSection";
 import { VaValueSelect } from "../src/components/charting/VaValueSelect";
 
@@ -96,12 +96,53 @@ test("soft-lens BC and DIA options change with the selected catalog product", ()
   assert.deepEqual(softLensProductParameterOptions(oasys, "diameterOptions").map((option) => option.code), ["14.0"]);
 
   const soft = source("SoftContactLensSection.tsx");
-  assert.match(soft, /PowerDropdown value=\{binocularPdDistance\}[\s\S]*defaultValue="63\.00"/);
+  assert.doesNotMatch(soft, /binocularPd|Binocular PD/);
   assert.match(soft, /<SphereWheelField[\s\S]*value=\{state\.sphere\}[\s\S]*field=\{fields\.sphere\}/);
   assert.match(soft, /centerOn=\{0\}[\s\S]*states=\{\[\{ value: "", label: "Not recorded" \}\]\}/);
   assert.match(soft, /CatalogWheelField label="Base Curve \(mm\)"[\s\S]*options=\{baseCurveOptions\}/);
   assert.match(soft, /CatalogWheelField label="Diameter \(mm\)"[\s\S]*options=\{diameterOptions\}/);
   assert.match(soft, /product: "", baseCurve: "", diameter: ""/);
+});
+
+test("soft contact lens details neither render nor save spectacle PD", async () => {
+  const originalFetch = globalThis.fetch;
+  let savedBody: Record<string, unknown> | undefined;
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/clinical-graph/contact-lens/soft/definition")) {
+      return Response.json({ definition: { fields: {} } });
+    }
+    if (url.endsWith("/clinical-graph/contact-lens/soft") && init?.method === "POST") {
+      savedBody = JSON.parse(String(init.body)) as Record<string, unknown>;
+      return Response.json({ eyes: { OD: {} } });
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<SoftContactLensSection {...PROPS} />);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /Binocular PD/);
+
+    const manualEntry = renderer.root.findAllByType("input").find((input) => input.props.type === "checkbox");
+    assert.ok(manualEntry);
+    act(() => manualEntry.props.onChange({ target: { checked: true } }));
+    const save = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Soft Contact Lenses");
+    assert.ok(save);
+    await act(async () => {
+      await save.props.onClick();
+      await Promise.resolve();
+    });
+    assert.ok(savedBody);
+    assert.equal("binocularPdDistance" in savedBody, false);
+    assert.equal("binocularPdNear" in savedBody, false);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("specialty-lens numeric geometry uses centered spinner fields", () => {
