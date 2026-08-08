@@ -7,7 +7,7 @@ import {
   type ReferencePopulation,
 } from "./myopia-reference-dataset.js";
 
-const DEFAULT_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
+const DEFAULT_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5433/medplum";
 const SCHEMA_LEDGER_FILE = fileURLToPath(
   new URL("../../../data/migrations/2026-07-17-odos-schema-migrations.sql", import.meta.url),
 );

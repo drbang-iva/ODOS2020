@@ -46,7 +46,7 @@ export const SETUP_PRACTICE_LOCATION_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/setup-practice-location";
 
 const DEFAULT_BASE_URL = "http://localhost:8103";
-const DEFAULT_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
+const DEFAULT_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5433/medplum";
 const DEFAULT_STATE_PATH = resolve(process.cwd(), ".odos-setup-state.json");
 const PRACTICE_ORGANIZATION_IDENTIFIER_VALUE = "primary";
 const DEFAULT_SCHEDULING_OFFICE_ID = "main";

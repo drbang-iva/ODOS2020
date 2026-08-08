@@ -10,7 +10,7 @@ const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
 const postgresUrl =
   process.env.ODOS_POSTGRES_URL
   ?? process.env.OSOD_POSTGRES_URL
-  ?? "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
+  ?? "postgresql://medplum:medplum@127.0.0.1:5433/medplum";
 assertLocalBaseUrl(baseUrl);
 const execute = process.argv.includes("--execute");
 if (execute && process.env.ODOS_SWEEP_ALLOW_DESTRUCTIVE !== "1") {

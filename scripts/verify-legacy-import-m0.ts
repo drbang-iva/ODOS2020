@@ -31,7 +31,7 @@ const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
 const postgresUrl =
   process.env.ODOS_POSTGRES_URL
   ?? process.env.OSOD_POSTGRES_URL
-  ?? "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
+  ?? "postgresql://medplum:medplum@127.0.0.1:5433/medplum";
 const composeProject = process.env.ODOS_COMPOSE_PROJECT ?? "odos2020";
 let composeCommand: { executable: string; prefix: string[] } | undefined;
 assertLocalBaseUrl(baseUrl);

@@ -718,7 +718,7 @@ function readComposeEnvironment(): Record<string, string> {
 }
 
 function readResourceNameInventory(): ResourceNameLintResource[] {
-  const postgresUrl = process.env.ODOS_POSTGRES_URL ?? "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
+  const postgresUrl = process.env.ODOS_POSTGRES_URL ?? "postgresql://medplum:medplum@127.0.0.1:5433/medplum";
   const resourceTypes = [
     "Patient",
     "Practitioner",
