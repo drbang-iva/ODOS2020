@@ -9,6 +9,7 @@ import {
 } from "../mcp/src/authz/roles.js";
 import { createOperatorScriptFhirClient, type JsonPatchOperation, type MedplumClient } from "../mcp/src/fhir-client.js";
 import { searchAll } from "../mcp/src/fhir-search.js";
+import { readMembershipUserEmail } from "./reconcile-membership-display.js";
 import { loginForLocalRepair } from "./repair-practice-roles.js";
 import { assertLocalMedplumBaseUrl } from "./reseed-practice-role-tags.js";
 
@@ -128,11 +129,13 @@ export async function resolveMembershipTargetEmail(
   fhir: Pick<MedplumClient, "read">,
   membership: ProjectMembership,
 ): Promise<string | undefined> {
+  // Medplum $update-email does not sync ProjectMembership.user.display; manual renames must patch it too.
+  const userEmail = await readMembershipUserEmail(fhir, membership);
+  if (userEmail) return userEmail;
   const practitionerId = membership.profile.reference?.match(/^Practitioner\/([^/]+)$/)?.[1];
   if (!practitionerId) return membership.user.display;
   const practitioner = await fhir.read<Practitioner>("Practitioner", practitionerId);
-  return practitioner.telecom?.find((telecom) => telecom.system === "email" && telecom.value)?.value
-    ?? membership.user.display;
+  return practitioner.telecom?.find((telecom) => telecom.system === "email" && telecom.value)?.value;
 }
 
 async function runCli(): Promise<void> {
