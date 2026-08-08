@@ -49,6 +49,20 @@ test("cleanup dedupes access and migrates the legacy field idempotently", () => 
   ]);
 });
 
+test("cleanup preserves a parameterized-only grant without creating an unrestricted binding", () => {
+  const membership = fixture({
+    access: [{
+      policy: { reference: "AccessPolicy/clinical" },
+      parameter: [
+        { name: "provider_profile", valueReference: { reference: "Practitioner/p1" } },
+        { name: "patient_compartment", valueString: "Patient/patient-1" },
+      ],
+    }],
+  });
+
+  assert.deepEqual(cleanupMembershipOperations({ membership, policyRoles: new Map() }), []);
+});
+
 test("cleanup identifies the service identity from its Practitioner profile without User search", async () => {
   const practitioner: Practitioner = { resourceType: "Practitioner", id: "service-profile", telecom: [{ system: "email", value: "admin@odos.local" }] };
   const email = await resolveMembershipTargetEmail({
