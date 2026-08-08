@@ -42,7 +42,9 @@ export function cleanupMembershipOperations(input: {
       }
     : input.membership;
   const references = [
-    ...(membership.access ?? []).map((access) => access.policy.reference),
+    ...(membership.access ?? [])
+      .filter((access) => !access.parameter?.length)
+      .map((access) => access.policy.reference),
     membership.accessPolicy?.reference,
   ].filter((reference): reference is string => Boolean(reference));
   const desired = references.filter((reference, index) =>
