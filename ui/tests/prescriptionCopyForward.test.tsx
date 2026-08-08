@@ -342,6 +342,48 @@ test("SoftContactLensSection pulls a current trial into a separately selected fi
   }
 });
 
+test("SoftContactLensSection routes obsolete copied catalog values through manual entry", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith("/clinical-graph/contact-lens/soft/definition")) return Response.json(softClDefinition());
+    if (url.includes("/clinical-graph/refraction/history?")) {
+      return Response.json({
+        glasses: [],
+        softCl: [softClRow(
+          "OD",
+          "2026-08-01T12:00:00.000Z",
+          "Encounter/prior",
+          "dispensed_successful",
+          { manufacturer: "retired-maker", product: "retired-lens", baseCurve: 8.5, diameter: 14.1, sphere: -2 },
+          "prior-retired-cl",
+        )],
+        specialtyCl: [],
+      });
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  };
+
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    await act(async () => {
+      renderer = create(<SoftContactLensSection patientReference="Patient/synthetic" encounterReference={CURRENT_ENCOUNTER} onSaved={() => undefined} />);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    const pull = renderer.root.findAllByType(OdosSelect).find((item) => item.props.ariaLabel === "Pull contact lens values from");
+    assert.ok(pull);
+    act(() => pull.props.onChange("prior-soft-cl"));
+
+    const manualEntry = renderer.root.findAllByType("input").find((input) => input.props.type === "checkbox");
+    assert.ok(manualEntry);
+    assert.equal(manualEntry.props.checked, true);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("patient navigation clears prior prescription sources before replacement history loads", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (input) => {

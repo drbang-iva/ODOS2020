@@ -9,6 +9,7 @@ import {
   copySoftContactLensValues,
   softContactLensCopySources,
   type PrescriptionHistoryResponse,
+  type SoftContactLensCopySource,
 } from "./prescription-copy";
 
 interface Props {
@@ -220,8 +221,22 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
     if (!source) return;
     setEyes((current) => {
       const copied = copySoftContactLensValues(current, source);
-      return { OD: copied.OD, OS: copied.OS };
+      return {
+        OD: copiedCatalogEntry(copied.OD, source.eyes.OD),
+        OS: copiedCatalogEntry(copied.OS, source.eyes.OS),
+      };
     });
+  }
+
+  function copiedCatalogEntry(
+    eye: EyeState,
+    source: SoftContactLensCopySource["eyes"][Eye],
+  ): EyeState {
+    if (!source || (source.manufacturer === undefined && source.product === undefined)) return eye;
+    const knownManufacturer = manufacturerOptions.some((option) => option.code === eye.manufacturer);
+    const knownProduct = !eye.product || products.some((product) =>
+      product.code === eye.product && product.manufacturerCode === eye.manufacturer);
+    return knownManufacturer && knownProduct ? eye : { ...eye, manualEntry: true };
   }
 
   async function save() {
