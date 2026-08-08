@@ -23,14 +23,14 @@ export function buildEntranceFindingDefinitions(
   provenance: ClinicalGraphProvenance,
 ): ClinicalFindingDefinition[] {
   return [
-    stateDefinition(PUPILS_KEY, "Pupils", "PERRLA; no APD or RAPD OU", [
+    stateDefinition(PUPILS_KEY, "Pupils", "PERRLA; no RAPD OU", [
       numberField("CUSTOM_PUPIL_SIZE_BRIGHT", "Size — bright", 1, 9, 0.5, "mm", 0),
       numberField("CUSTOM_PUPIL_SIZE_DIM", "Size — dim", 1, 9, 0.5, "mm", 1),
       numberField("CUSTOM_PUPIL_SIZE_NEAR", "Size — near", 1, 9, 0.5, "mm", 2),
       selectField("CUSTOM_PUPIL_SHAPE", "Shape", ["round", "irregular"], 3),
       selectField("CUSTOM_PUPIL_REACTIVITY", "Reactivity", ["brisk", "moderate", "sluggish", "nonreactive"], 4),
-      selectField("CUSTOM_PUPIL_APD", "APD", ["none", "trace", "1+", "2+", "3+", "4+", "reverse"], 5),
-      selectField("CUSTOM_PUPIL_RAPD", "RAPD", ["none", "trace", "1+", "2+", "3+", "4+", "reverse"], 6),
+      selectField("CUSTOM_PUPIL_RAPD", "RAPD", ["none", "trace", "1+", "2+", "3+", "4+", "reverse"], 5),
+      selectField("CUSTOM_PUPIL_NEUTRAL_DENSITY", "Neutral density (log units)", ["none", "0.3", "0.6", "0.9", "1.2"], 6),
     ], "entrance.pupils", provenance, {
       sourceStatus: "unseeded-needs-operator-input",
       setupMessage: "The additional pupil descriptor fields need practice setup before they can be added.",

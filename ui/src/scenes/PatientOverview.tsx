@@ -44,6 +44,7 @@ interface PatientOverviewApi {
   saveNote: typeof saveStickyNote;
   findActiveRx?: typeof findLatestActiveVisionPrescription;
   seriesTracker?: SeriesTrackerPanelApi;
+  correspondence?: Pick<ReferralApi, "listInboundReferrals" | "previewConsultReport">;
 }
 
 const OVERVIEW_LIST_LIMIT = 8;
@@ -265,6 +266,8 @@ export function PatientOverview({
               type="button"
               className="odos-overview-button"
               disabled={!patient.id}
+              aria-expanded={correspondenceOpen}
+              aria-controls="patient-consult-report"
               onClick={() => setCorrespondenceOpen(true)}
             >
               Start correspondence
@@ -273,6 +276,13 @@ export function PatientOverview({
             {isVisible("sale-sheet") && <button type="button" className="odos-overview-button" onClick={() => setSellingPackage(true)}>Sell package</button>}
           </div>
         </div>
+        {isVisible("consult-drafts") && correspondenceOpen && patient.id && (
+          <ConsultReportDraftPanel
+            patientId={patient.id}
+            onClose={() => setCorrespondenceOpen(false)}
+            api={api.correspondence ?? referralApi}
+          />
+        )}
 
         <section className="odos-sticky-note" aria-label="Patient sticky note">
           <span className="odos-sticky-tag">Sticky note</span>
@@ -333,13 +343,6 @@ export function PatientOverview({
               )}
               {isVisible("medications") && overview.unavailable?.medicationOrders && (
                 <p className="odos-overview-error" role="alert">{overview.unavailable.medicationOrders}</p>
-              )}
-              {isVisible("consult-drafts") && correspondenceOpen && patient.id && (
-                <ConsultReportDraftPanel
-                  patientId={patient.id}
-                  onClose={() => setCorrespondenceOpen(false)}
-                  hideWhenEmpty
-                />
               )}
               {isVisible("longitudinal-imaging") && patient.id && (
                 <LongitudinalImagingCard patientReference={`Patient/${patient.id}`} hideWhenEmpty />
@@ -702,7 +705,7 @@ export function ConsultReportDraftPanel({
   if (hideWhenEmpty && !error && (!referrals || referrals.length === 0)) return null;
 
   return (
-    <section className="odos-sticky-history" aria-label="Start correspondence">
+    <section id="patient-consult-report" className="odos-sticky-history" aria-label="Start correspondence">
       <div>
         <h2>Consult report</h2>
         <button type="button" onClick={onClose}>Close</button>

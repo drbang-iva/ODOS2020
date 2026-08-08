@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import type { SectionSaveStatus } from "./types";
 import { formatSpherePower, numericOptions } from "./power-options";
-import { PowerDropdown } from "./PowerDropdown";
 import { VaValueSelect } from "./VaValueSelect";
 import { OdosSelect } from "../inputs/OdosSelect";
 import { OdosWheel } from "../inputs/OdosWheel";
@@ -114,8 +113,6 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
   const [activeTab, setActiveTab] = useState<Tab>("details");
   const [usage, setUsage] = useState("");
   const [status, setStatus] = useState("");
-  const [binocularPdDistance, setBinocularPdDistance] = useState("");
-  const [binocularPdNear, setBinocularPdNear] = useState("");
   const [ouDistanceVisualAcuity, setOuDistanceVisualAcuity] = useState("");
   const [ouNearVisualAcuity, setOuNearVisualAcuity] = useState("");
   const [remarks, setRemarks] = useState("");
@@ -159,7 +156,6 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
   const overSphereOptions = useMemo(() => numericOptions(fields.overRefractionSphere, -20, 20, 0.25), [fields.overRefractionSphere]);
   const overCylinderOptions = useMemo(() => numericOptions(fields.overRefractionCylinder, -8, 0, 0.25), [fields.overRefractionCylinder]);
   const overAxisOptions = useMemo(() => numericOptions(fields.overRefractionAxis, 0, 180, 1), [fields.overRefractionAxis]);
-  const binocularPdOptions = useMemo(() => numericOptions(undefined, 50, 75, 0.5), []);
 
   function updateEye(eye: Eye, next: Partial<EyeState>) {
     setEyes((current) => ({ ...current, [eye]: { ...current[eye], ...next } }));
@@ -210,8 +206,6 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
           encounterReference,
           usage,
           status,
-          binocularPdDistance: optionalNumber(binocularPdDistance, "Binocular PD Dist"),
-          binocularPdNear: optionalNumber(binocularPdNear, "Binocular PD Near"),
           ouDistanceVisualAcuity,
           ouNearVisualAcuity,
           remarks,
@@ -264,17 +258,9 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
 
         {!definitionLoading && definition && activeTab === "details" && (
           <div className="mt-5 space-y-5">
-            <div className="grid gap-4 rounded border border-white/10 bg-bg-panel/80 p-4 md:grid-cols-4">
+            <div className="grid gap-4 rounded border border-white/10 bg-bg-panel/80 p-4 md:grid-cols-2">
               <SelectField label="Usage" value={usage} onChange={setUsage} options={activeOptions(fields.usage)} />
               <SelectField label="Status" value={status} onChange={setStatus} options={activeOptions(fields.status)} />
-              <label className="block">
-                <span className="mb-1 block text-xs uppercase tracking-widest text-[color:var(--odos-faint)]">Binocular PD Dist (mm)</span>
-                <PowerDropdown value={binocularPdDistance} options={binocularPdOptions} defaultValue="63.00" onChange={setBinocularPdDistance} ariaLabel="Binocular PD Dist (mm)" />
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-xs uppercase tracking-widest text-[color:var(--odos-faint)]">Binocular PD Near (mm)</span>
-                <PowerDropdown value={binocularPdNear} options={binocularPdOptions} defaultValue="63.00" onChange={setBinocularPdNear} ariaLabel="Binocular PD Near (mm)" />
-              </label>
             </div>
 
             {EYES.map((eye) => {

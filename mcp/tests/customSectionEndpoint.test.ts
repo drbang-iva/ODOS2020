@@ -977,7 +977,10 @@ test("E1 entrance state sections emit coded attributes and round-trip normal and
   });
   assert.equal(normal.status, 200, JSON.stringify(normal.body));
   assert.equal(component(fhir.observations[0], "entrance.pupils")?.valueCodeableConcept?.coding?.[0]?.code, "normal");
-  assert.equal(component(fhir.observations[0], "NORMAL_TEMPLATE")?.valueString, "PERRLA; no APD or RAPD OU");
+  assert.equal(component(fhir.observations[0], "NORMAL_TEMPLATE")?.valueString, "PERRLA; no RAPD OU");
+  assert.equal(["CUSTOM", "PUPIL", "APD"].join("_") in fields, false);
+  assert.equal(fields.CUSTOM_PUPIL_RAPD?.localCode, "CUSTOM_PUPIL_RAPD");
+  assert.equal(fields.CUSTOM_PUPIL_NEUTRAL_DENSITY?.localCode, "CUSTOM_PUPIL_NEUTRAL_DENSITY");
 
   const abnormal = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
     authHeader: AUTH,
@@ -991,6 +994,8 @@ test("E1 entrance state sections emit coded attributes and round-trip normal and
           customFields: [
             { code: fields.CUSTOM_PUPIL_SIZE_BRIGHT!.localCode, value: 4 },
             { code: fields.CUSTOM_PUPIL_SHAPE!.localCode, value: "irregular" },
+            { code: fields.CUSTOM_PUPIL_RAPD!.localCode, value: "trace" },
+            { code: fields.CUSTOM_PUPIL_NEUTRAL_DENSITY!.localCode, value: "0-6" },
           ],
           other: "Trace anisocoria.",
         },
@@ -1002,6 +1007,8 @@ test("E1 entrance state sections emit coded attributes and round-trip normal and
   assert.equal(component(last, "entrance.pupils")?.valueCodeableConcept?.coding?.[0]?.code, "abnormal");
   assert.equal(component(last, `OD_${fields.CUSTOM_PUPIL_SIZE_BRIGHT!.localCode}`)?.valueQuantity?.value, 4);
   assert.equal(component(last, `OD_${fields.CUSTOM_PUPIL_SHAPE!.localCode}`)?.valueCodeableConcept?.coding?.[0]?.code, "irregular");
+  assert.equal(component(last, `OD_${fields.CUSTOM_PUPIL_RAPD!.localCode}`)?.valueCodeableConcept?.coding?.[0]?.code, "trace");
+  assert.equal(component(last, `OD_${fields.CUSTOM_PUPIL_NEUTRAL_DENSITY!.localCode}`)?.valueCodeableConcept?.coding?.[0]?.code, "0-6");
 
   const history = await handleCustomSectionHistoryRequest(clinicalDeps("clinician", fhir, definitions), {
     authHeader: AUTH,
@@ -1009,7 +1016,10 @@ test("E1 entrance state sections emit coded attributes and round-trip normal and
     query: { patient: "Patient/entrance-pupils", encounter: "Encounter/entrance-pupils" },
   });
   const rows = (history.body as { rows: Array<{ state: string; other?: string; values: Array<{ code: string; value: unknown }> }> }).rows;
-  assert.equal(rows.some((row) => row.state === "abnormal" && row.other === "Trace anisocoria." && row.values.some((value) => value.code === "CUSTOM_PUPIL_SIZE_BRIGHT" && value.value === 4)), true);
+  assert.equal(rows.some((row) => row.state === "abnormal" && row.other === "Trace anisocoria."
+    && row.values.some((value) => value.code === "CUSTOM_PUPIL_SIZE_BRIGHT" && value.value === 4)
+    && row.values.some((value) => value.code === "CUSTOM_PUPIL_RAPD" && value.value === "trace")
+    && row.values.some((value) => value.code === "CUSTOM_PUPIL_NEUTRAL_DENSITY" && value.value === "0.6")), true);
 });
 
 test("screenshot refinement stores binocular stereopsis once with top-level state", async () => {
