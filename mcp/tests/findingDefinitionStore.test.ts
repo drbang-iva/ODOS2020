@@ -167,9 +167,12 @@ test("E2 seeds ten entrance definitions with canonical Pachymetry and declarativ
     ((color.valueSchema.fields as Record<string, { options?: Array<{ code: string }> }>).CUSTOM_COLOR_PLATES_CORRECT?.options ?? []).map((option) => option.code),
     ["1", "2", "3", "4", "5", "6", "7"],
   );
+  const cvfFields = cvf.valueSchema.fields as Record<string, unknown>;
+  const retiredCenterCode = ["CUSTOM", "CVF", "CENTER"].join("_");
+  assert.equal(retiredCenterCode in cvfFields, false);
   assert.deepEqual(
-    Object.keys(cvf.valueSchema.fields as Record<string, unknown>).filter((code) => code.startsWith("CUSTOM_CVF_") && !code.endsWith("METHOD") && !code.endsWith("UNABLE")),
-    ["CUSTOM_CVF_UPPER_LEFT", "CUSTOM_CVF_UPPER_RIGHT", "CUSTOM_CVF_CENTER", "CUSTOM_CVF_LOWER_LEFT", "CUSTOM_CVF_LOWER_RIGHT"],
+    Object.keys(cvfFields).filter((code) => code.startsWith("CUSTOM_CVF_") && !code.endsWith("METHOD") && !code.endsWith("UNABLE")),
+    ["CUSTOM_CVF_UPPER_LEFT", "CUSTOM_CVF_UPPER_RIGHT", "CUSTOM_CVF_LOWER_LEFT", "CUSTOM_CVF_LOWER_RIGHT"],
   );
 });
 

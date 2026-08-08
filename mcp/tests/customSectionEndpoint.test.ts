@@ -1054,7 +1054,7 @@ test("screenshot refinement stores binocular stereopsis once with top-level stat
   assert.deepEqual((history.body as { rows: Array<{ eye?: string; state?: string }> }).rows.map((row) => [row.eye, row.state]), [[undefined, "abnormal"]]);
 });
 
-test("CVF persists five-zone schematic values through the generic entrance endpoint", async () => {
+test("CVF persists four-quadrant schematic values through the generic entrance endpoint", async () => {
   const fhir = new MemoryFhir();
   const definitions = await catalog(fhir);
   const cvf = definitions.find((definition) => definition.stableKey === "entrance:cvf");
@@ -1070,7 +1070,7 @@ test("CVF persists five-zone schematic values through the generic entrance endpo
   const abnormal = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
     authHeader: AUTH,
     params: { stableKey: cvf.stableKey },
-    body: { patientReference: "Patient/cvf", encounterReference: "Encounter/cvf", eyes: { OD: { state: "abnormal", customFields: [{ code: "CUSTOM_CVF_UPPER_LEFT", value: "restricted" }, { code: "CUSTOM_CVF_CENTER", value: "full" }, { code: "CUSTOM_CVF_METHOD", value: "finger-count" }] } } },
+    body: { patientReference: "Patient/cvf", encounterReference: "Encounter/cvf", eyes: { OD: { state: "abnormal", customFields: [{ code: "CUSTOM_CVF_UPPER_LEFT", value: "restricted" }, { code: "CUSTOM_CVF_LOWER_RIGHT", value: "full" }, { code: "CUSTOM_CVF_METHOD", value: "finger-count" }] } } },
   });
   assert.equal(abnormal.status, 200, JSON.stringify(abnormal.body));
   const history = await handleCustomSectionHistoryRequest(clinicalDeps("clinician", fhir, definitions), { authHeader: AUTH, params: { stableKey: cvf.stableKey }, query: { patient: "Patient/cvf", encounter: "Encounter/cvf" } });
