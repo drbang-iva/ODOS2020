@@ -216,6 +216,7 @@ function latestGroup<T extends { date: string; encounterReference?: string; grou
   const sorted = [...rows].sort((left, right) => right.date.localeCompare(left.date));
   const first = sorted[0];
   if (!first) return [];
+  if (!first.groupId) return [first];
   return sorted.filter((row) => row.date === first.date
     && row.encounterReference === first.encounterReference
     && row.groupId === first.groupId

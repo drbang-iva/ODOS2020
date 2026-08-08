@@ -156,6 +156,7 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
 
   useEffect(() => {
     const controller = new AbortController();
+    setHistory(null);
     setHistoryError(null);
     fetch(`${clinicalGraphApiBase()}/clinical-graph/refraction/history?${new URLSearchParams({ patient: patientReference })}`, {
       headers: authHeaders(),
@@ -166,7 +167,9 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
         if (!response.ok) throw new Error(body.error ?? `Prescription history request failed: ${response.status}`);
         return body;
       })
-      .then(setHistory)
+      .then((body) => {
+        if (!controller.signal.aborted) setHistory(body);
+      })
       .catch((caught) => {
         if ((caught as Error).name !== "AbortError") {
           setHistoryError(caught instanceof Error ? caught.message : String(caught));

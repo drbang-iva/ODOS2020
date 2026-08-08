@@ -31,10 +31,10 @@ test("copy-forward offers only populated spectacle sources and pairs both eyes",
       glassesRow("FINAL_RX", "OD", "2026-08-07T12:00:00.000Z", "Encounter/prior", { sphere: -2, cylinder: -0.5, axis: 90, add: 2.25 }, "prior-distance"),
       glassesRow("FINAL_RX", "OS", "2026-08-07T12:00:00.000Z", "Encounter/prior", { sphere: -1.75, cylinder: -0.75, axis: 85, add: 2.25 }, "prior-distance"),
       glassesRow("FINAL_RX", "OS", "2026-08-07T12:00:00.000Z", "Encounter/prior", { sphere: -9 }, "prior-reading"),
-      glassesRow("WEARING_RX", "OD", "2026-08-08T11:00:00.000Z", CURRENT_ENCOUNTER, { sphere: -1.5, cylinder: -0.5, axis: 95, add: 2 }),
-      glassesRow("WEARING_RX", "OS", "2026-08-08T11:00:00.000Z", CURRENT_ENCOUNTER, { sphere: -1.25, cylinder: -0.75, axis: 80, add: 2 }),
-      glassesRow("AUTO_REFRACTION", "OD", "2026-08-08T12:00:00.000Z", CURRENT_ENCOUNTER, { sphere: -1.75, cylinder: -0.5, axis: 92 }),
-      glassesRow("AUTO_REFRACTION", "OS", "2026-08-08T12:00:00.000Z", CURRENT_ENCOUNTER, { sphere: -1.5, cylinder: -0.75, axis: 88 }),
+      glassesRow("WEARING_RX", "OD", "2026-08-08T11:00:00.000Z", CURRENT_ENCOUNTER, { sphere: -1.5, cylinder: -0.5, axis: 95, add: 2 }, "wearing-current"),
+      glassesRow("WEARING_RX", "OS", "2026-08-08T11:00:00.000Z", CURRENT_ENCOUNTER, { sphere: -1.25, cylinder: -0.75, axis: 80, add: 2 }, "wearing-current"),
+      glassesRow("AUTO_REFRACTION", "OD", "2026-08-08T12:00:00.000Z", CURRENT_ENCOUNTER, { sphere: -1.75, cylinder: -0.5, axis: 92 }, "auto-current"),
+      glassesRow("AUTO_REFRACTION", "OS", "2026-08-08T12:00:00.000Z", CURRENT_ENCOUNTER, { sphere: -1.5, cylinder: -0.75, axis: 88 }, "auto-current"),
       glassesRow("FINAL_RX", "OD", "2026-08-08T12:30:00.000Z", CURRENT_ENCOUNTER, { sphere: -9 }),
       glassesRow("FINAL_RX", "OD", "2026-08-07T13:00:00.000Z", "Encounter/prior-empty", {}),
     ],
@@ -104,10 +104,10 @@ test("copy-forward offers a prior soft CL prescription and current trial but no 
   const history: PrescriptionHistoryResponse = {
     glasses: [],
     softCl: [
-      softClRow("OD", "2026-08-01T12:00:00.000Z", "Encounter/prior", "dispensed_successful", { product: "precision1", sphere: -2 }),
-      softClRow("OS", "2026-08-01T12:00:00.000Z", "Encounter/prior", "dispensed_successful", { product: "precision1", sphere: -1.75 }),
-      softClRow("OD", "2026-08-08T12:00:00.000Z", CURRENT_ENCOUNTER, "order_trial_doctor_fit", { product: "precision7", sphere: -2.25 }),
-      softClRow("OS", "2026-08-08T12:00:00.000Z", CURRENT_ENCOUNTER, "order_trial_doctor_fit", { product: "precision7", sphere: -2 }),
+      softClRow("OD", "2026-08-01T12:00:00.000Z", "Encounter/prior", "dispensed_successful", { product: "precision1", sphere: -2 }, "prior-prescription"),
+      softClRow("OS", "2026-08-01T12:00:00.000Z", "Encounter/prior", "dispensed_successful", { product: "precision1", sphere: -1.75 }, "prior-prescription"),
+      softClRow("OD", "2026-08-08T12:00:00.000Z", CURRENT_ENCOUNTER, "order_trial_doctor_fit", { product: "precision7", sphere: -2.25 }, "current-trial"),
+      softClRow("OS", "2026-08-08T12:00:00.000Z", CURRENT_ENCOUNTER, "order_trial_doctor_fit", { product: "precision7", sphere: -2 }, "current-trial"),
       softClRow("OD", "2026-08-08T13:00:00.000Z", CURRENT_ENCOUNTER, "dispensed_successful", { product: "precision1", sphere: -8 }),
       softClRow("OD", "2026-08-02T12:00:00.000Z", "Encounter/empty", "dispensed", {}),
     ],
@@ -124,6 +124,32 @@ test("copy-forward offers a prior soft CL prescription and current trial but no 
     OD: { product: "precision7", sphere: "-2.25" },
     OS: { product: "precision7", sphere: "-2.00" },
   });
+});
+
+test("legacy rows without group identity never synthesize a two-eye prescription", () => {
+  const history: PrescriptionHistoryResponse = {
+    glasses: [
+      glassesRow("AUTO_REFRACTION", "OD", "2026-08-08T12:00:00.000Z", CURRENT_ENCOUNTER, { sphere: -1.75 }),
+      glassesRow("AUTO_REFRACTION", "OS", "2026-08-08T12:00:00.000Z", CURRENT_ENCOUNTER, { sphere: -1.5 }),
+    ],
+    softCl: [
+      softClRow("OD", "2026-08-01T12:00:00.000Z", "Encounter/prior", "dispensed_successful", { product: "precision1", sphere: -2 }),
+      softClRow("OS", "2026-08-01T12:00:00.000Z", "Encounter/prior", "dispensed_successful", { product: "precision1", sphere: -1.75 }),
+    ],
+    specialtyCl: [],
+  };
+
+  const refraction = refractionCopySources(
+    [refractionBlock("final", "FINAL_RX")],
+    "final",
+    history,
+    CURRENT_ENCOUNTER,
+    { FINAL_RX: "Final/Rx" },
+  );
+  const softCl = softContactLensCopySources(history, CURRENT_ENCOUNTER);
+
+  assert.equal(Object.keys(refraction[0]!.eyes).length, 1);
+  assert.equal(Object.keys(softCl[0]!.eyes).length, 1);
 });
 
 test("soft CL copy leaves status, expiry, release, and authorship with the draft target", () => {
@@ -260,10 +286,10 @@ test("SoftContactLensSection pulls a current trial into a separately selected fi
         softCl: [
           softClRow("OD", "2026-08-08T12:00:00.000Z", CURRENT_ENCOUNTER, "order_trial", {
             manufacturer: "alcon", product: "precision7", baseCurve: 8.4, diameter: 14.2, sphere: -2.25,
-          }),
+          }, "current-trial"),
           softClRow("OS", "2026-08-08T12:00:00.000Z", CURRENT_ENCOUNTER, "order_trial", {
             manufacturer: "alcon", product: "precision7", baseCurve: 8.4, diameter: 14.2, sphere: -2,
-          }),
+          }, "current-trial"),
         ],
         specialtyCl: [],
       });
@@ -312,6 +338,62 @@ test("SoftContactLensSection pulls a current trial into a separately selected fi
     }
   } finally {
     renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("patient navigation clears prior prescription sources before replacement history loads", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith("/clinical-graph/refraction/definition")) return Response.json(refractionDefinition());
+    if (url.endsWith("/clinical-graph/contact-lens/soft/definition")) return Response.json(softClDefinition());
+    if (url.includes("patient=Patient%2Ftwo")) return await new Promise<Response>(() => undefined);
+    if (url.includes("/clinical-graph/refraction/history?")) {
+      return Response.json({
+        glasses: [glassesRow("FINAL_RX", "OD", "2026-08-07T12:00:00.000Z", "Encounter/prior", { sphere: -2 }, "prior-final")],
+        softCl: [softClRow("OD", "2026-08-07T12:00:00.000Z", "Encounter/prior", "dispensed_successful", { product: "precision1", sphere: -2 }, "prior-cl")],
+        specialtyCl: [],
+      });
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  };
+
+  let refractionRenderer: ReactTestRenderer | undefined;
+  let softClRenderer: ReactTestRenderer | undefined;
+  try {
+    await act(async () => {
+      refractionRenderer = create(<RefractionSection patientReference="Patient/one" encounterReference={CURRENT_ENCOUNTER} onSaved={() => undefined} />);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    let pull = refractionRenderer.root.findAllByType(OdosSelect).find((item) => item.props.ariaLabel === "Pull values into refraction 1");
+    assert.ok(pull?.props.options.some((option: { label: string }) => option.label.startsWith("Prior visit Final/Rx")));
+    await act(async () => {
+      refractionRenderer!.update(<RefractionSection patientReference="Patient/two" encounterReference={CURRENT_ENCOUNTER} onSaved={() => undefined} />);
+      await Promise.resolve();
+    });
+    pull = refractionRenderer.root.findAllByType(OdosSelect).find((item) => item.props.ariaLabel === "Pull values into refraction 1");
+    assert.equal(pull?.props.options.some((option: { label: string }) => option.label.startsWith("Prior visit Final/Rx")), false);
+    refractionRenderer.unmount();
+    refractionRenderer = undefined;
+
+    await act(async () => {
+      softClRenderer = create(<SoftContactLensSection patientReference="Patient/one" encounterReference={CURRENT_ENCOUNTER} onSaved={() => undefined} />);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    let clPull = softClRenderer.root.findAllByType(OdosSelect).find((item) => item.props.ariaLabel === "Pull contact lens values from");
+    assert.ok(clPull?.props.options.some((option: { label: string }) => option.label.startsWith("Prior contact lens Rx")));
+    await act(async () => {
+      softClRenderer!.update(<SoftContactLensSection patientReference="Patient/two" encounterReference={CURRENT_ENCOUNTER} onSaved={() => undefined} />);
+      await Promise.resolve();
+    });
+    clPull = softClRenderer.root.findAllByType(OdosSelect).find((item) => item.props.ariaLabel === "Pull contact lens values from");
+    assert.equal(clPull?.props.options.some((option: { label: string }) => option.label.startsWith("Prior contact lens Rx")), false);
+  } finally {
+    refractionRenderer?.unmount();
+    softClRenderer?.unmount();
     globalThis.fetch = originalFetch;
   }
 });
@@ -374,8 +456,9 @@ function softClRow(
   encounterReference: string,
   status: string,
   values: Record<string, string | number>,
+  groupId?: string,
 ) {
-  return { eye, date, encounterReference, status, ...values };
+  return { eye, date, encounterReference, status, ...(groupId ? { groupId } : {}), ...values };
 }
 
 function softClEye(overrides: Record<string, string> = {}) {
