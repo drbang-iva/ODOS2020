@@ -388,6 +388,10 @@ test("SoftContactLensSection routes obsolete copied catalog values through manua
     const manualEntries = renderer.root.findAllByType("input").filter((input) => input.props.type === "checkbox");
     assert.equal(manualEntries[0]?.props.checked, true);
     assert.equal(manualEntries[1]?.props.checked, true);
+    const retiredCascade = renderer.root.findAllByType("input").find((input) => input.props.value === "retired");
+    assert.ok(retiredCascade);
+    act(() => retiredCascade.props.onChange({ target: { value: "verified-retired" } }));
+    assert.ok(renderer.root.findAllByType("input").some((input) => input.props.value === "verified-retired"));
   } finally {
     renderer?.unmount();
     globalThis.fetch = originalFetch;

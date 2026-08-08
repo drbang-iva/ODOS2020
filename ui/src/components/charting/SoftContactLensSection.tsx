@@ -408,7 +408,9 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
                     <PowerField label="Cylinder" value={state.cylinder} onChange={(value) => updateEye(eye, { cylinder: value })} options={cylinderOptions} ariaLabel={`${eye} cylinder`} />
                     <AxisField label="Axis" value={state.axis} onChange={(value) => updateEye(eye, { axis: value })} options={axisOptions} ariaLabel={`${eye} axis`} />
                     <PowerField label="Add" value={state.add} onChange={(value) => updateEye(eye, { add: value })} options={addOptions} ariaLabel={`${eye} add`} format={formatSignedPower} />
-                    {!state.manualEntry && cascadeOptions.length > 0 && (
+                    {state.manualEntry ? (
+                      <TextField label="Color/MF-PWR" value={state.colorMfPower} onChange={(value) => updateEye(eye, { colorMfPower: value })} />
+                    ) : cascadeOptions.length > 0 && (
                       <SelectField label="Color/MF-PWR" value={state.colorMfPower} onChange={(value) => updateEye(eye, { colorMfPower: value })} options={cascadeOptions} />
                     )}
                     <VaField label="Dist VA" value={state.distanceVisualAcuity} onChange={(value) => updateEye(eye, { distanceVisualAcuity: value })} />
