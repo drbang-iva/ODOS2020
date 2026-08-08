@@ -161,12 +161,16 @@ test("auto-refraction history exposes both eyes with stable source and encounter
     },
   });
   const history = await fixture.readBody();
+  const groupId = history.glasses[0]?.groupId;
 
   assert.equal(captured.status, 200);
+  assert.match(String(groupId), /^auto-refraction-capture-/);
+  assert.equal(history.glasses[1]?.groupId, groupId);
   assert.deepEqual(history.glasses, [
     {
       type: "Auto-refraction",
       typeCode: "AUTO_REFRACTION",
+      groupId,
       date: "2026-07-10T14:30:00.000Z",
       encounterReference: ENCOUNTER,
       eye: "OD",
@@ -177,6 +181,7 @@ test("auto-refraction history exposes both eyes with stable source and encounter
     {
       type: "Auto-refraction",
       typeCode: "AUTO_REFRACTION",
+      groupId,
       date: "2026-07-10T14:30:00.000Z",
       encounterReference: ENCOUNTER,
       eye: "OS",
@@ -185,6 +190,35 @@ test("auto-refraction history exposes both eyes with stable source and encounter
       axis: 85,
     },
   ]);
+});
+
+test("same-time auto-refraction captures retain separate two-eye group identity", async () => {
+  const fixture = historyFixture();
+  fixture.recordedAt = "2026-07-10T14:30:00.000Z";
+  for (const sphere of [-1, -2]) {
+    await handleAutoRefractionCaptureRequest(fixture.captureDeps(), {
+      authHeader: AUTH,
+      body: {
+        patientReference: PATIENT,
+        encounterReference: ENCOUNTER,
+        sourceType: "device",
+        eyes: {
+          OD: { sphere },
+          OS: { sphere: sphere + 0.25 },
+        },
+      },
+    });
+  }
+
+  const history = await fixture.readBody();
+  const rows = history.glasses.filter((row) => row.typeCode === "AUTO_REFRACTION");
+  const groupIds = new Set(rows.map((row) => row.groupId));
+
+  assert.equal(groupIds.size, 2);
+  for (const groupId of groupIds) {
+    assert.match(String(groupId), /^auto-refraction-capture-/);
+    assert.deepEqual(rows.filter((row) => row.groupId === groupId).map((row) => row.eye).sort(), ["OD", "OS"]);
+  }
 });
 
 test("soft contact lens capture round-trips canonical CL parameters and tab-specific fields", async () => {
@@ -215,12 +249,15 @@ test("soft contact lens capture round-trips canonical CL parameters and tab-spec
   });
   const observation = fixture.observations[0];
   const history = await fixture.readBody();
+  const groupId = history.softCl[0]?.groupId;
 
   assert.equal(captured.status, 200);
+  assert.match(String(groupId), /^soft-contact-lens-prescription-/);
   assert.equal(canonicalParameterCodes(observation).has("sphere-power"), true);
   assert.equal(canonicalParameterCodes(observation).has("base-curve-mm"), true);
   assert.deepEqual(history.softCl, [{
     date: "2026-07-10T15:00:00.000Z",
+    groupId,
     encounterReference: ENCOUNTER,
     eye: "OS",
     manufacturer: "alcon",
@@ -238,6 +275,37 @@ test("soft contact lens capture round-trips canonical CL parameters and tab-spec
   }]);
   assert.deepEqual(history.glasses, []);
   assert.deepEqual(history.specialtyCl, []);
+});
+
+test("same-time soft contact lens captures retain separate two-eye prescription identity", async () => {
+  const fixture = historyFixture();
+  fixture.recordedAt = "2026-07-10T15:00:00.000Z";
+  for (const lens of [
+    { product: "precision1", baseCurve: 8.3, sphere: -2 },
+    { product: "precision7", baseCurve: 8.4, sphere: -3 },
+  ]) {
+    await handleSoftContactLensCaptureRequest(fixture.captureDeps(), {
+      authHeader: AUTH,
+      body: {
+        patientReference: PATIENT,
+        encounterReference: ENCOUNTER,
+        status: "dispensed_successful",
+        eyes: {
+          OD: { manufacturer: "alcon", product: lens.product, baseCurve: lens.baseCurve, diameter: 14.2, sphere: lens.sphere },
+          OS: { manufacturer: "alcon", product: lens.product, baseCurve: lens.baseCurve, diameter: 14.2, sphere: lens.sphere + 0.25 },
+        },
+      },
+    });
+  }
+
+  const history = await fixture.readBody();
+  const groupIds = new Set(history.softCl.map((row) => row.groupId));
+
+  assert.equal(groupIds.size, 2);
+  for (const groupId of groupIds) {
+    assert.match(String(groupId), /^soft-contact-lens-prescription-/);
+    assert.deepEqual(history.softCl.filter((row) => row.groupId === groupId).map((row) => row.eye).sort(), ["OD", "OS"]);
+  }
 });
 
 test("specialty contact lens capture round-trips canonical CL parameters, type, and material", async () => {

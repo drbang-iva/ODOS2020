@@ -247,6 +247,7 @@ export async function handleSoftContactLensCaptureRequest(
 
   const recordedAt = deps.now?.() ?? new Date().toISOString();
   const provenance = contactLensProvenance(staff.staffReference, recordedAt);
+  const prescriptionId = `soft-contact-lens-prescription-${randomUUID()}`;
   const eyes: Partial<Record<Eye, Record<string, string | undefined>>> = {};
 
   for (const eye of EYES) {
@@ -259,6 +260,7 @@ export async function handleSoftContactLensCaptureRequest(
       payload,
       eye,
       lensEntryId,
+      prescriptionId,
       provenance,
     });
     const persisted = await persistCapture(staff.fhir, capture, parsed.data.patientReference);
@@ -409,6 +411,7 @@ function captureSoftContactLensFinding(input: {
   payload: SoftContactLensEyePayload;
   eye: Eye;
   lensEntryId: string;
+  prescriptionId: string;
   provenance: ClinicalGraphProvenance;
 }): CapturedGlaucomaFinding {
   const findingId = `finding-soft-contact-lens-${randomUUID()}`;
@@ -420,7 +423,7 @@ function captureSoftContactLensFinding(input: {
     value: {
       type: "components",
       components: [
-        ...softContactLensComponents(input.request, input.payload, input.lensEntryId),
+        ...softContactLensComponents(input.request, input.payload, input.lensEntryId, input.prescriptionId),
         ...customFieldComponents(input.payload.customFields, input.definition),
       ],
     },
@@ -497,9 +500,11 @@ function softContactLensComponents(
   request: SoftContactLensRequest,
   eye: SoftContactLensEyePayload,
   lensEntryId: string,
+  prescriptionId: string,
 ): Extract<FindingValue, { type: "components" }>["components"] {
   const components: Extract<FindingValue, { type: "components" }>["components"] = [
     { code: "LENS_ENTRY_ID", display: "Soft contact lens entry ID", value: lensEntryId },
+    { code: "SOFT_CONTACT_LENS_PRESCRIPTION_ID", display: "Soft contact lens prescription ID", value: prescriptionId },
     { code: "MANUAL_ENTRY", display: "Manual entry", value: eye.manualEntry },
   ];
   pushString(components, "USAGE", "Usage", request.usage);

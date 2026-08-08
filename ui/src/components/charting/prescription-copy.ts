@@ -15,6 +15,7 @@ export interface GlassesHistoryRow {
 
 export interface SoftContactLensHistoryRow {
   date: string;
+  groupId?: string;
   encounterReference?: string;
   eye: PrescriptionEye;
   manufacturer?: string;

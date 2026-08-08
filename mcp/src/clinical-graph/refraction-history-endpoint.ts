@@ -54,6 +54,7 @@ export interface GlassesHistoryRow {
 
 export interface SoftContactLensHistoryRow {
   date: string;
+  groupId?: string;
   encounterReference?: string;
   eye: Eye;
   manufacturer?: string;
@@ -230,6 +231,7 @@ function autoRefractionRows(observation: Observation): GlassesHistoryRow[] {
   const row = definedRow({
     type: "Auto-refraction",
     typeCode: "AUTO_REFRACTION",
+    groupId: componentString(observation, "AUTO_REFRACTION_CAPTURE_ID"),
     date,
     encounterReference: observation.encounter?.reference,
     eye,
@@ -249,6 +251,7 @@ function softContactLensRows(
   if (!eye || !date) return [];
   return [definedRow({
     date,
+    groupId: componentString(observation, "SOFT_CONTACT_LENS_PRESCRIPTION_ID"),
     encounterReference: observation.encounter?.reference,
     eye,
     manufacturer: componentString(observation, "MANUFACTURER"),
