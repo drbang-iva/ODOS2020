@@ -7,6 +7,11 @@ import { VaValueSelect } from "./VaValueSelect";
 import { DiagnosisPicker } from "./DiagnosisPicker";
 import { OdosSelect } from "../inputs/OdosSelect";
 import { OdosWheel } from "../inputs/OdosWheel";
+import {
+  copyRefractionValues,
+  refractionCopySources,
+  type PrescriptionHistoryResponse,
+} from "./prescription-copy";
 
 interface Props {
   patientReference: string;
@@ -97,6 +102,8 @@ export function RefractionSection({ patientReference, encounterReference, onSave
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<SectionSaveStatus | null>(null);
   const [sourceType, setSourceType] = useState("manual");
+  const [history, setHistory] = useState<PrescriptionHistoryResponse | null>(null);
+  const [historyError, setHistoryError] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -132,6 +139,30 @@ export function RefractionSection({ patientReference, encounterReference, onSave
     return () => controller.abort();
   }, [definitionRefresh]);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    setHistory(null);
+    setHistoryError(null);
+    fetch(`${clinicalGraphApiBase()}/clinical-graph/refraction/history?${new URLSearchParams({ patient: patientReference })}`, {
+      headers: authHeaders(),
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const body = await response.json() as PrescriptionHistoryResponse & { error?: string };
+        if (!response.ok) throw new Error(body.error ?? `Prescription history request failed: ${response.status}`);
+        return body;
+      })
+      .then((body) => {
+        if (!controller.signal.aborted) setHistory(body);
+      })
+      .catch((caught) => {
+        if ((caught as Error).name !== "AbortError") {
+          setHistoryError(caught instanceof Error ? caught.message : String(caught));
+        }
+      });
+    return () => controller.abort();
+  }, [patientReference]);
+
   const fields = definition?.definition.fields ?? {};
   const typeOptions = useMemo(() => activeOptions(fields.type), [fields.type]);
   const sourceTypes = useMemo(() => activeOptions(fields.sourceType), [fields.sourceType]);
@@ -139,6 +170,10 @@ export function RefractionSection({ patientReference, encounterReference, onSave
   const axisMinimum = fields.axis?.minimum ?? 0;
   const axisMaximum = fields.axis?.maximum ?? 180;
   const axisStep = fields.axis?.step ?? 1;
+  const typeLabels = useMemo(
+    () => Object.fromEntries(typeOptions.map((option) => [option.code, option.display])),
+    [typeOptions],
+  );
 
   function updateBlock(blockId: string, next: Partial<BlockState>) {
     setBlocks((current) => current.map((block) => block.id === blockId ? { ...block, ...next } : block));
@@ -161,6 +196,17 @@ export function RefractionSection({ patientReference, encounterReference, onSave
   function copyOdToOs(blockId: string) {
     setBlocks((current) => current.map((block) =>
       block.id === blockId ? { ...block, OS: { ...block.OD } } : block));
+    clearSavedObservationReferences(blockId);
+  }
+
+  function pullFromSource(blockId: string, sourceId: string) {
+    if (!sourceId) return;
+    setBlocks((current) => {
+      const source = refractionCopySources(current, blockId, history, encounterReference, typeLabels)
+        .find((candidate) => candidate.id === sourceId);
+      if (!source) return current;
+      return current.map((block) => block.id === blockId ? copyRefractionValues(block, source) : block);
+    });
     clearSavedObservationReferences(blockId);
   }
 
@@ -264,10 +310,17 @@ export function RefractionSection({ patientReference, encounterReference, onSave
             {definitionError}
           </div>
         )}
+        {historyError && (
+          <div className="mt-5 rounded border border-amber-400/35 bg-amber-400/10 px-3 py-2 text-sm text-amber-100">
+            Copy sources unavailable: {historyError}
+          </div>
+        )}
 
         <div className="mt-5 space-y-5">
-          {blocks.map((block, blockIndex) => (
-            <div key={block.id} className="overflow-hidden rounded border border-white/10 bg-white/[0.02]">
+          {blocks.map((block, blockIndex) => {
+            const copySources = refractionCopySources(blocks, block.id, history, encounterReference, typeLabels);
+            return (
+              <div key={block.id} className="overflow-hidden rounded border border-white/10 bg-white/[0.02]">
               <div className="flex flex-wrap items-end gap-3 border-b border-white/10 bg-white/[0.03] p-4">
                 <label className="block min-w-[220px]">
                   <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">Refraction Type</span>
@@ -280,6 +333,18 @@ export function RefractionSection({ patientReference, encounterReference, onSave
                     ]}
                     onChange={(type) => updateBlock(block.id, { type })}
                     ariaLabel="Refraction type"
+                  />
+                </label>
+                <label className="block min-w-[260px] flex-1">
+                  <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">Pull values from</span>
+                  <OdosSelect
+                    value=""
+                    options={copySources.length > 0
+                      ? [{ value: "", label: "Pull from…" }, ...copySources.map((source) => ({ value: source.id, label: source.label }))]
+                      : [{ value: "", label: "No populated prescription sources" }]}
+                    onChange={(sourceId) => pullFromSource(block.id, sourceId)}
+                    ariaLabel={`Pull values into refraction ${blockIndex + 1}`}
+                    disabled={copySources.length === 0}
                   />
                 </label>
                 <label className="block min-w-[260px] flex-1">
@@ -397,8 +462,9 @@ export function RefractionSection({ patientReference, encounterReference, onSave
                   findingDefinitionKey="refraction"
                 />
               </div>
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
 
         <SectionFooter error={error} saved={saved} saving={saving || definitionLoading} onSave={save} />

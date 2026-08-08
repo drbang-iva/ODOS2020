@@ -256,6 +256,7 @@ export async function handleAutoRefractionCaptureRequest(
 
   const recordedAt = deps.now?.() ?? new Date().toISOString();
   const provenance = pretestProvenance(staff.staffReference, recordedAt, parsed.data.sourceType);
+  const captureId = `auto-refraction-capture-${randomUUID()}`;
   const eyes: Partial<Record<Eye, Record<string, string | undefined>>> = {};
   for (const eye of EYES) {
     const payload = parsed.data.eyes[eye];
@@ -269,7 +270,7 @@ export async function handleAutoRefractionCaptureRequest(
         laterality: eye,
         value: {
           type: "components",
-          components: autoRefractionComponents(payload, parsed.data.remarks).concat(
+          components: autoRefractionComponents(captureId, payload, parsed.data.remarks).concat(
             customFieldComponents(customValuesForDefinition(payload, definitions.autoRefraction), definitions.autoRefraction),
           ),
         },
@@ -646,10 +647,13 @@ function wearingComponents(
 }
 
 function autoRefractionComponents(
+  captureId: string,
   payload: AutoEyePayload,
   remarks: string | undefined,
 ): Extract<FindingValue, { type: "components" }>["components"] {
-  const components: Extract<FindingValue, { type: "components" }>["components"] = [];
+  const components: Extract<FindingValue, { type: "components" }>["components"] = [
+    { code: "AUTO_REFRACTION_CAPTURE_ID", display: "Auto-refraction capture ID", value: captureId },
+  ];
   pushNumber(components, "SPHERE", "Sphere", payload.sphere, "D");
   pushNumber(components, "CYLINDER", "Cylinder", payload.cylinder, "D");
   pushNumber(components, "AXIS", "Axis", payload.axis, "degrees");

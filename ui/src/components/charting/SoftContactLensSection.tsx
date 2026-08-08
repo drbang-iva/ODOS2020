@@ -5,6 +5,12 @@ import { formatSpherePower, numericOptions } from "./power-options";
 import { VaValueSelect } from "./VaValueSelect";
 import { OdosSelect } from "../inputs/OdosSelect";
 import { OdosWheel } from "../inputs/OdosWheel";
+import {
+  copySoftContactLensValues,
+  softContactLensCopySources,
+  type PrescriptionHistoryResponse,
+  type SoftContactLensCopySource,
+} from "./prescription-copy";
 
 interface Props {
   patientReference: string;
@@ -122,6 +128,8 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<SectionSaveStatus | null>(null);
+  const [history, setHistory] = useState<PrescriptionHistoryResponse | null>(null);
+  const [historyError, setHistoryError] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -147,6 +155,30 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
     return () => controller.abort();
   }, [definitionRefresh]);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    setHistory(null);
+    setHistoryError(null);
+    fetch(`${clinicalGraphApiBase()}/clinical-graph/refraction/history?${new URLSearchParams({ patient: patientReference })}`, {
+      headers: authHeaders(),
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const body = await response.json() as PrescriptionHistoryResponse & { error?: string };
+        if (!response.ok) throw new Error(body.error ?? `Prescription history request failed: ${response.status}`);
+        return body;
+      })
+      .then((body) => {
+        if (!controller.signal.aborted) setHistory(body);
+      })
+      .catch((caught) => {
+        if ((caught as Error).name !== "AbortError") {
+          setHistoryError(caught instanceof Error ? caught.message : String(caught));
+        }
+      });
+    return () => controller.abort();
+  }, [patientReference]);
+
   const fields = definition?.definition.fields ?? {};
   const manufacturerOptions = useMemo(() => activeOptions(fields.manufacturer), [fields.manufacturer]);
   const products = useMemo(() => activeProductOptions(fields.product), [fields.product]);
@@ -156,6 +188,10 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
   const overSphereOptions = useMemo(() => numericOptions(fields.overRefractionSphere, -20, 20, 0.25), [fields.overRefractionSphere]);
   const overCylinderOptions = useMemo(() => numericOptions(fields.overRefractionCylinder, -8, 0, 0.25), [fields.overRefractionCylinder]);
   const overAxisOptions = useMemo(() => numericOptions(fields.overRefractionAxis, 0, 180, 1), [fields.overRefractionAxis]);
+  const copySources = useMemo(
+    () => softContactLensCopySources(history, encounterReference),
+    [encounterReference, history],
+  );
 
   function updateEye(eye: Eye, next: Partial<EyeState>) {
     setEyes((current) => ({ ...current, [eye]: { ...current[eye], ...next } }));
@@ -177,6 +213,42 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
 
   function selectProduct(eye: Eye, product: string) {
     updateEye(eye, { product, baseCurve: "", diameter: "", colorMfPower: "" });
+  }
+
+  function pullFromSource(sourceId: string) {
+    if (!sourceId) return;
+    const source = copySources.find((candidate) => candidate.id === sourceId);
+    if (!source) return;
+    setEyes((current) => {
+      const copied = copySoftContactLensValues(current, source);
+      return {
+        OD: copiedCatalogEntry(copied.OD, source.eyes.OD),
+        OS: copiedCatalogEntry(copied.OS, source.eyes.OS),
+      };
+    });
+  }
+
+  function copiedCatalogEntry(
+    eye: EyeState,
+    source: SoftContactLensCopySource["eyes"][Eye],
+  ): EyeState {
+    if (!source || ["manufacturer", "product", "baseCurve", "diameter", "colorMfPower"].every(
+      (field) => source[field as keyof typeof source] === undefined,
+    )) return eye;
+    const knownManufacturer = manufacturerOptions.some((option) => option.code === eye.manufacturer);
+    const product = products.find((candidate) =>
+      candidate.code === eye.product && candidate.manufacturerCode === eye.manufacturer);
+    const knownProduct = !eye.product || product !== undefined;
+    const knownBaseCurve = source.baseCurve === undefined
+      || activeNestedOptions(product?.baseCurveOptions).some((option) => option.code === eye.baseCurve);
+    const knownDiameter = source.diameter === undefined
+      || activeNestedOptions(product?.diameterOptions).some((option) => option.code === eye.diameter);
+    const knownCascade = source.colorMfPower === undefined
+      || activeNestedOptions([...(product?.colorOptions ?? []), ...(product?.mfPowerOptions ?? [])])
+        .some((option) => option.code === eye.colorMfPower);
+    return knownManufacturer && knownProduct && knownBaseCurve && knownDiameter && knownCascade
+      ? eye
+      : { ...eye, manualEntry: true };
   }
 
   async function save() {
@@ -255,12 +327,25 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
 
         {definitionLoading && <div className="mt-5 rounded border border-white/10 bg-bg-panel p-4 text-sm text-white/55">Loading practice contact lens catalog…</div>}
         {definitionError && <div className="mt-5 rounded border border-red-400/30 bg-red-400/10 p-4 text-sm text-red-200">{definitionError}</div>}
+        {historyError && <div className="mt-5 rounded border border-amber-400/35 bg-amber-400/10 p-4 text-sm text-amber-100">Copy sources unavailable: {historyError}</div>}
 
         {!definitionLoading && definition && activeTab === "details" && (
           <div className="mt-5 space-y-5">
-            <div className="grid gap-4 rounded border border-white/10 bg-bg-panel/80 p-4 md:grid-cols-2">
+            <div className="grid gap-4 rounded border border-white/10 bg-bg-panel/80 p-4 md:grid-cols-3">
               <SelectField label="Usage" value={usage} onChange={setUsage} options={activeOptions(fields.usage)} />
               <SelectField label="Status" value={status} onChange={setStatus} options={activeOptions(fields.status)} />
+              <label className="block">
+                <span className={FIELD_LABEL_CLASS}>Pull values from</span>
+                <OdosSelect
+                  value=""
+                  options={copySources.length > 0
+                    ? [{ value: "", label: "Pull from…" }, ...copySources.map((source) => ({ value: source.id, label: source.label }))]
+                    : [{ value: "", label: "No populated contact lens sources" }]}
+                  onChange={pullFromSource}
+                  ariaLabel="Pull contact lens values from"
+                  disabled={copySources.length === 0}
+                />
+              </label>
             </div>
 
             {EYES.map((eye) => {
@@ -323,7 +408,9 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
                     <PowerField label="Cylinder" value={state.cylinder} onChange={(value) => updateEye(eye, { cylinder: value })} options={cylinderOptions} ariaLabel={`${eye} cylinder`} />
                     <AxisField label="Axis" value={state.axis} onChange={(value) => updateEye(eye, { axis: value })} options={axisOptions} ariaLabel={`${eye} axis`} />
                     <PowerField label="Add" value={state.add} onChange={(value) => updateEye(eye, { add: value })} options={addOptions} ariaLabel={`${eye} add`} format={formatSignedPower} />
-                    {!state.manualEntry && cascadeOptions.length > 0 && (
+                    {state.manualEntry ? (
+                      <TextField label="Color/MF-PWR" value={state.colorMfPower} onChange={(value) => updateEye(eye, { colorMfPower: value })} />
+                    ) : cascadeOptions.length > 0 && (
                       <SelectField label="Color/MF-PWR" value={state.colorMfPower} onChange={(value) => updateEye(eye, { colorMfPower: value })} options={cascadeOptions} />
                     )}
                     <VaField label="Dist VA" value={state.distanceVisualAcuity} onChange={(value) => updateEye(eye, { distanceVisualAcuity: value })} />

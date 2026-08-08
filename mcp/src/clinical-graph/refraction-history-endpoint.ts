@@ -37,7 +37,10 @@ export interface RefractionHistoryExtra {
 
 export interface GlassesHistoryRow {
   type: string;
+  typeCode?: string;
+  groupId?: string;
   date: string;
+  encounterReference?: string;
   eye: Eye;
   sphere?: number;
   cylinder?: number;
@@ -51,6 +54,8 @@ export interface GlassesHistoryRow {
 
 export interface SoftContactLensHistoryRow {
   date: string;
+  groupId?: string;
+  encounterReference?: string;
   eye: Eye;
   manufacturer?: string;
   product?: string;
@@ -69,6 +74,7 @@ export interface SoftContactLensHistoryRow {
 
 export interface SpecialtyContactLensHistoryRow {
   date: string;
+  encounterReference?: string;
   eye: Eye;
   product?: string;
   lensType?: string;
@@ -97,6 +103,7 @@ const historyQuerySchema = z.object({
 const SEARCH_CODES = {
   refraction: `${ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|REFRACTION`,
   wearing: `${ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|wearing_rx`,
+  autoRefraction: `${ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|auto_refraction`,
   softCl: `${ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|soft_contact_lens`,
   specialtyCl: `${ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|specialty_contact_lens`,
 } as const;
@@ -118,9 +125,10 @@ export async function handleRefractionHistoryRequest(
     return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid refraction history request." } };
   }
 
-  const [refractionBundle, wearingBundle, softClBundle, specialtyClBundle] = await Promise.all([
+  const [refractionBundle, wearingBundle, autoRefractionBundle, softClBundle, specialtyClBundle] = await Promise.all([
     searchHistory(staff.fhir, parsed.data.patient, SEARCH_CODES.refraction),
     searchHistory(staff.fhir, parsed.data.patient, SEARCH_CODES.wearing),
+    searchHistory(staff.fhir, parsed.data.patient, SEARCH_CODES.autoRefraction),
     searchHistory(staff.fhir, parsed.data.patient, SEARCH_CODES.softCl),
     searchHistory(staff.fhir, parsed.data.patient, SEARCH_CODES.specialtyCl),
   ]);
@@ -134,6 +142,7 @@ export async function handleRefractionHistoryRequest(
     glasses: [
       ...bundleResources(refractionBundle).flatMap((observation) => refractionRows(observation, refractionDefinition)),
       ...bundleResources(wearingBundle).flatMap((observation) => wearingRows(observation, wearingDefinition)),
+      ...bundleResources(autoRefractionBundle).flatMap(autoRefractionRows),
     ].sort(compareRowsNewestFirst),
     softCl: bundleResources(softClBundle)
       .flatMap((observation) => softContactLensRows(observation, softClDefinition))
@@ -166,13 +175,17 @@ function refractionRows(
   const eye = observationEye(observation);
   const date = observation.effectiveDateTime;
   const typeComponent = component(observation, "REFRACTION_TYPE");
+  const typeCode = typeComponent?.valueCodeableConcept?.coding?.find((coding) => coding.code)?.code;
   const type = typeComponent?.valueCodeableConcept?.coding?.find((coding) => coding.display)?.display
     ?? typeComponent?.valueCodeableConcept?.text
     ?? typeComponent?.valueCodeableConcept?.coding?.find((coding) => coding.code)?.code;
   if (!eye || !date || !type) return [];
   return [definedRow({
     type,
+    typeCode,
+    groupId: componentString(observation, "REFRACTION_BLOCK_ID"),
     date,
+    encounterReference: observation.encounter?.reference,
     eye,
     sphere: componentNumber(observation, "SPHERE"),
     cylinder: componentNumber(observation, "CYLINDER"),
@@ -194,7 +207,10 @@ function wearingRows(
   return (["OD", "OS"] as const).flatMap((eye) => {
     const row = definedRow({
       type: "Wearing",
+      typeCode: "WEARING_RX",
+      groupId: componentString(observation, "PAIR_ID"),
       date,
+      encounterReference: observation.encounter?.reference,
       eye,
       sphere: componentNumber(observation, `${eye}_SPHERE`),
       cylinder: componentNumber(observation, `${eye}_CYLINDER`),
@@ -208,6 +224,24 @@ function wearingRows(
   });
 }
 
+function autoRefractionRows(observation: Observation): GlassesHistoryRow[] {
+  const eye = observationEye(observation);
+  const date = observation.effectiveDateTime;
+  if (!eye || !date) return [];
+  const row = definedRow({
+    type: "Auto-refraction",
+    typeCode: "AUTO_REFRACTION",
+    groupId: componentString(observation, "AUTO_REFRACTION_CAPTURE_ID"),
+    date,
+    encounterReference: observation.encounter?.reference,
+    eye,
+    sphere: componentNumber(observation, "SPHERE"),
+    cylinder: componentNumber(observation, "CYLINDER"),
+    axis: componentNumber(observation, "AXIS"),
+  });
+  return hasMeasuredValue(row) ? [row] : [];
+}
+
 function softContactLensRows(
   observation: Observation,
   definition: ClinicalFindingDefinition | undefined,
@@ -217,6 +251,8 @@ function softContactLensRows(
   if (!eye || !date) return [];
   return [definedRow({
     date,
+    groupId: componentString(observation, "SOFT_CONTACT_LENS_PRESCRIPTION_ID"),
+    encounterReference: observation.encounter?.reference,
     eye,
     manufacturer: componentString(observation, "MANUFACTURER"),
     product: componentString(observation, "PRODUCT"),
@@ -243,6 +279,7 @@ function specialtyContactLensRows(
   if (!eye || !date) return [];
   return [definedRow({
     date,
+    encounterReference: observation.encounter?.reference,
     eye,
     product: componentString(observation, "PRODUCT"),
     lensType: componentConceptCode(observation, "LENS_TYPE"),
