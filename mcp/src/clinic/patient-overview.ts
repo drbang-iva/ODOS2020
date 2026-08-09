@@ -192,6 +192,11 @@ export async function loadPatientOverview(
     ? unique(diagnosisMatches.flatMap((condition) => conditionEncounterId(condition) ?? []))
     : undefined;
   if (diagnosisEncounterIds && diagnosisEncounterIds.length === 0) {
+    const summaryEncounters = await searchAll<Encounter>(fhir, "Encounter", {
+      patient: patientId,
+      _count: "100",
+      _sort: "-date",
+    });
     return projectOverview({
       patient,
       coverages: coverageResult.resources,
@@ -203,6 +208,7 @@ export async function loadPatientOverview(
       medicationStatements,
       medicationRequests: medicationRequestResult.resources,
       smokingStatuses,
+      summaryEncounters,
       encounters: [],
       encounterDiagnoses: [],
       asOfDate: practiceDate(options.now ?? new Date().toISOString(), options.timeZone ?? "UTC"),
@@ -214,6 +220,9 @@ export async function loadPatientOverview(
     encounterParams._id = diagnosisEncounterIds.join(",");
   }
   const encounters = await searchAll<Encounter>(fhir, "Encounter", encounterParams);
+  const summaryEncounters = filter === "all" && !diagnosisEncounterIds
+    ? encounters
+    : await searchAll<Encounter>(fhir, "Encounter", { patient: patientId, _count: "100", _sort: "-date" });
   const encounterReferenceList = encounters.flatMap((encounter) =>
     encounter.id ? [`Encounter/${encounter.id}`] : [],
   );
@@ -257,6 +266,7 @@ export async function loadPatientOverview(
     medicationStatements,
     medicationRequests: medicationRequestResult.resources,
     smokingStatuses,
+    summaryEncounters,
     encounters,
     encounterDiagnoses,
     provenances,
@@ -413,6 +423,7 @@ function projectOverview(input: {
   medicationStatements: MedicationStatement[];
   medicationRequests: MedicationRequest[];
   smokingStatuses: Observation[];
+  summaryEncounters: Encounter[];
   encounters: Encounter[];
   encounterDiagnoses: Condition[];
   provenances?: Provenance[];
@@ -420,7 +431,7 @@ function projectOverview(input: {
   timeZone?: string;
 }): PatientOverviewPayload {
   const recentEncounterRanks = new Map(
-    [...input.encounters]
+    [...input.summaryEncounters]
       .sort((left, right) => encounterTime(right) - encounterTime(left))
       .slice(0, CONDITION_SUMMARY_ENCOUNTER_LIMIT)
       .flatMap((encounter, index) => encounter.id ? [[encounter.id, index] as const] : []),
@@ -983,13 +994,15 @@ function uniqueBy<T>(values: T[], key: (value: T) => string): T[] {
 function uniqueConditions(conditions: Condition[]): Condition[] {
   const seen = new Set<string>();
   return conditions.filter((condition) => {
-    const codedIdentities = condition.code?.coding?.flatMap((coding) =>
-      coding.code ? [`code:${coding.system ?? ""}|${coding.code}`] : []
-    ) ?? [];
+    const codingSet = unique(condition.code?.coding?.flatMap((coding) =>
+      coding.code ? [`${coding.system ?? ""}|${coding.code}`] : []
+    ) ?? []).sort();
     const text = condition.code?.text?.trim();
-    const identities = codedIdentities.length ? codedIdentities : text ? [`text:${text}`] : [];
-    const duplicate = identities.some((identity) => seen.has(identity));
-    for (const identity of identities) seen.add(identity);
-    return !duplicate;
+    const identity = codingSet.length ? `code-set:${JSON.stringify(codingSet)}` : text ? `text:${text}` : undefined;
+    if (!identity || !seen.has(identity)) {
+      if (identity) seen.add(identity);
+      return true;
+    }
+    return false;
   });
 }
