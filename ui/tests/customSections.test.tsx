@@ -2472,7 +2472,7 @@ test("Vessels defaults A/V ratio to 2:3, saves a per-eye grade, and does not POS
   }
 });
 
-test("anterior optional selects and numbers render blank, persist typed values, and hydrate per eye", async () => {
+test("remaining anterior structure grades render blank, persist typed values, and hydrate per eye", async () => {
   const definitions = anteriorGradeDefinitions();
   const posts: Array<{ url: string; body: { eyes: Record<string, { customFields: Array<{ code: string; value: number | string }> }> } }> = [];
   const fetchImpl = (async (input, init) => {
@@ -2500,26 +2500,151 @@ test("anterior optional selects and numbers render blank, persist typed values, 
       await flushEffects();
     });
     const numbers = renderer.root.findAllByType(OdosWheel);
-    assert.equal(numbers.length, 10);
+    assert.equal(numbers.length, 2);
     assert.deepEqual(numbers.slice(0, 2).map((input) => input.props.value), [6, 0]);
-    assert.deepEqual([numbers[2]!.props.min, numbers[2]!.props.max, numbers[2]!.props.step], [0.1, 6.9, 0.1]);
     const selects = renderer.root.findAllByType(OdosSelect);
     assert.equal(selects.length, 2);
     assert.deepEqual(selects.map((select) => select.props.value), ["", ""]);
 
     act(() => numbers[0]!.props.onChange(6));
     act(() => selects[1]!.props.onChange("grade-2"));
-    act(() => numbers[2]!.props.onChange(6.9));
     const normalButtons = renderer.root.findAllByType("button").filter((button) => button.children.join("") === "Normal");
     act(() => normalButtons[3]!.props.onClick());
-    act(() => normalButtons[4]!.props.onClick());
     const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Ocular Health");
     assert.ok(saveButton);
     await act(async () => saveButton.props.onClick());
-    assert.equal(posts.length, 3);
+    assert.equal(posts.length, 2);
     assert.deepEqual(posts[0]!.body.eyes.OD?.customFields, [{ code: "CUSTOM_GRADE_TBUT", value: 6 }]);
     assert.deepEqual(posts[1]!.body.eyes.OS?.customFields, [{ code: "CUSTOM_GRADE_VAN_HERICK", value: "grade-2" }]);
-    assert.deepEqual(posts[2]!.body.eyes.OD?.customFields, [{ code: "CUSTOM_GRADE_LOCS_III_NO_NUCLEAR_OPALESCENCE", value: 6.9 }]);
+  } finally {
+    renderer?.unmount();
+  }
+});
+
+test("ocular-health cleanup qualifiers render only for their selected finding", async () => {
+  const fetchImpl = (async () => jsonResponse({ rows: [] })) as typeof fetch;
+  const graded = (code: string, display: string) => ({
+    code,
+    display,
+    active: true,
+    priority: true,
+    qualifiers: [{ kind: "graded" as const, key: "grade", display: "Grade", options: ["1+", "2+", "3+", "4+"] }],
+  });
+  const base = (stableKey: string, display: string, options: Array<Record<string, unknown>>) => ({
+    stableKey,
+    sectionKey: stableKey,
+    display,
+    active: true,
+    perEye: true,
+    customFields: [{
+      localCode: "CUSTOM_ABNORMAL_FINDINGS",
+      display: "Abnormal findings",
+      valueType: "multi-select" as const,
+      options,
+      order: 0,
+      active: true,
+    }],
+  });
+  const cornea = base("ocular-health:anterior:cornea", "Cornea", [
+    {
+      code: "superficial-punctate-keratitis-spk",
+      display: "superficial punctate keratitis (SPK)",
+      active: true,
+      priority: true,
+      qualifiers: [
+        {
+          kind: "graded" as const,
+          key: "grade",
+          display: "Corneal staining grade (grading scheme provisional)",
+          options: ["Grade 0", "Grade 1", "Grade 2", "Grade 3", "Grade 4"],
+          scheme: "grading scheme provisional",
+        },
+        {
+          kind: "enum" as const,
+          key: "zone",
+          display: "Corneal staining zone (grading scheme provisional)",
+          options: ["Central", "Nasal", "Temporal", "Superior", "Inferior", "Diffuse"]
+            .map((display) => ({ code: display.toLowerCase(), display })),
+        },
+      ],
+    },
+    { code: "guttata", display: "guttata", active: true, priority: true },
+  ]);
+  const lens = base("ocular-health:anterior:lens", "Lens", [
+    graded("nuclear-sclerosis", "nuclear sclerosis"),
+    graded("cortical-cataract", "cortical cataract"),
+    graded("posterior-subcapsular-psc", "posterior subcapsular (PSC)"),
+    graded("posterior-capsular-opacification-pco", "posterior capsular opacification (PCO) (after cataract)"),
+    graded("mixed", "Mixed"),
+  ]);
+  const periphery = base("ocular-health:posterior:periphery", "Periphery", [{
+    code: "retinal-detachment",
+    display: "retinal detachment",
+    active: true,
+    priority: true,
+    qualifiers: [{
+      kind: "enum" as const,
+      key: "macula-status",
+      display: "Macula",
+      options: [
+        { code: "macula-on", display: "Macula on" },
+        { code: "macula-off", display: "Macula off" },
+      ],
+    }],
+  }]);
+
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={[cornea, lens, periphery]}
+        patientReference="Patient/p-cleanup-ui"
+        encounterReference="Encounter/e-cleanup-ui"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    const abnormalButtons = renderer.root.findAllByType("button")
+      .filter((button) => button.children.join("") === "Abnormal");
+    act(() => abnormalButtons[0]!.props.onClick());
+    const priorityChips = () => renderer.root.findAllByType(OdosChips)
+      .filter((chips) => chips.props.ariaLabel === "Priority ocular health findings");
+    act(() => priorityChips()[0]!.findAllByType("button")
+      .find((button) => button.children.join("") === "Guttata")!.props.onClick());
+    assert.equal(renderer.root.findAllByProps({ "aria-label": "Corneal staining grade (grading scheme provisional)" }).length, 0);
+    assert.equal(renderer.root.findAllByProps({ "aria-label": "Corneal staining zone (grading scheme provisional)" }).length, 0);
+    act(() => priorityChips()[0]!.findAllByType("button")
+      .find((button) => button.children.join("") === "Superficial Punctate Keratitis (SPK)")!.props.onClick());
+    assert.equal(renderer.root.findAllByProps({ "aria-label": "Corneal staining grade (grading scheme provisional)" }).length, 1);
+    assert.equal(renderer.root.findAllByProps({ "aria-label": "Corneal staining zone (grading scheme provisional)" }).length, 1);
+
+    act(() => abnormalButtons[2]!.props.onClick());
+    const lensCodes = [
+      "nuclear-sclerosis",
+      "cortical-cataract",
+      "posterior-subcapsular-psc",
+      "posterior-capsular-opacification-pco",
+      "mixed",
+    ];
+    act(() => priorityChips()[1]!.props.onChange(lensCodes));
+    assert.deepEqual(
+      renderer.root.findAll((row) => lensCodes.includes(row.props["data-finding-row"]))
+        .map((row) => row.props["data-finding-row"]),
+      lensCodes,
+    );
+    assert.equal(renderer.root.findAllByProps({ "aria-label": "Grade" }).length, 5);
+
+    act(() => abnormalButtons[4]!.props.onClick());
+    act(() => priorityChips()[2]!.findAllByType("button")
+      .find((button) => button.children.join("") === "Retinal Detachment")!.props.onClick());
+    const macula = renderer.root.findAllByType(OdosChips)
+      .find((chips) => chips.props.ariaLabel === "Macula")!;
+    assert.deepEqual(macula.props.options, [
+      { value: "macula-on", label: "Macula on" },
+      { value: "macula-off", label: "Macula off" },
+    ]);
   } finally {
     renderer?.unmount();
   }
@@ -3335,27 +3460,6 @@ function anteriorGradeDefinitions() {
       order: 1,
       active: true,
     }],
-  }, {
-    stableKey: "ocular-health:anterior:lens",
-    sectionKey: "ocular-health:anterior:lens",
-    display: "Lens",
-    active: true,
-    perEye: true,
-    customFields: [abnormal("lens"), ...[
-      ["CUSTOM_GRADE_LOCS_III_NO_NUCLEAR_OPALESCENCE", "LOCS III — NO (nuclear opalescence)"],
-      ["CUSTOM_GRADE_LOCS_III_NC_NUCLEAR_COLOR", "LOCS III — NC (nuclear color)"],
-      ["CUSTOM_GRADE_LOCS_III_C_CORTICAL", "LOCS III — C (cortical)"],
-      ["CUSTOM_GRADE_LOCS_III_P_POSTERIOR_SUBCAPSULAR", "LOCS III — P (posterior subcapsular)"],
-    ].map(([localCode, display], index) => ({
-      localCode: localCode!,
-      display: display!,
-      valueType: "number" as const,
-      min: 0.1,
-      max: 6.9,
-      step: 0.1,
-      order: index + 1,
-      active: true,
-    }))],
   }];
 }
 

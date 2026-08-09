@@ -215,10 +215,28 @@ test("DE-1 seeds seven new definitions and references the one existing TBUT stab
     Object.values(cornea.valueSchema.fields as Record<string, { display?: string }>)
       .map((field) => field.display)
       .filter((display) => display?.includes("staining") || display === "Vital dye"),
+    ["Vital dye"],
+  );
+  const abnormalFindings = Object.values(
+    cornea.valueSchema.fields as Record<
+      string,
+      {
+        display?: string;
+        options?: Array<{
+          code: string;
+          qualifiers?: Array<{ display: string }>;
+        }>;
+      }
+    >,
+  ).find((field) => field.display === "Abnormal findings");
+  const spk = abnormalFindings?.options?.find(
+    (finding) => finding.code === "superficial-punctate-keratitis-spk",
+  );
+  assert.deepEqual(
+    spk?.qualifiers?.map((qualifier) => qualifier.display),
     [
       "Corneal staining grade (grading scheme provisional)",
       "Corneal staining zone (grading scheme provisional)",
-      "Vital dye",
     ],
   );
   for (const stableKey of [

@@ -61,15 +61,15 @@ const ANTERIOR_STRUCTURES: StructureSeed[] = [
     key: "conjunctiva",
     display: "Conjunctiva",
     normalTemplate: "White and quiet; no injection or discharge.",
-    priority: ["injection", "pinguecula", pterygiumFinding("pterygium", "pterygium"), "chemosis", "papillae", "follicles"],
-    additional: ["subconjunctival hemorrhage", "nevus", "pigmentation", "concretion", "conjunctivochalasis", "episcleritis", "scleritis", "phlyctenule", "lymphangiectasia", "scleral injection", "scleral thinning", "nodule"],
+    priority: ["injection", "pinguecula", pterygiumFinding("pterygium", "pterygium"), "chemosis"],
+    additional: ["subconjunctival hemorrhage", "nevus", "pigmentation", "concretion", "conjunctivochalasis", "episcleritis", "scleritis", "phlyctenule", "lymphangiectasia", "scleral thinning", "nodule"],
   },
   {
     key: "tear-film",
     display: "Tear Film",
     normalTemplate: "Adequate tear film; normal meniscus and break-up.",
     priority: ["reduced tear meniscus", "rapid TBUT", "debris in tear film"],
-    additional: ["mucus strands", "foam", "increased/decreased lake", "frothing"],
+    additional: ["mucus strands", { key: "foam", display: "foam/frothing" }],
     gradeFields: [
       { display: "TBUT", kind: "number", min: 0, max: 60, step: 1, unit: "s" },
       {
@@ -84,25 +84,13 @@ const ANTERIOR_STRUCTURES: StructureSeed[] = [
     key: "cornea",
     display: "Cornea",
     normalTemplate: "Clear, no staining; normal thickness and clarity.",
-    priority: ["superficial punctate keratitis (SPK)", "corneal staining", "dry eye keratopathy", "arcus", "scar", keratoconusFinding(), "guttata", pterygiumFinding("pterygium-encroaching", "pterygium (encroaching)"), "neovascularization", "infiltrate"],
+    priority: [cornealStainingFinding(), "dry eye keratopathy", "arcus", "scar", keratoconusFinding(), "guttata", pterygiumFinding("pterygium-encroaching", "pterygium (encroaching)"), "neovascularization", "infiltrate"],
     additional: ["abrasion", "dendrite", "edema", "foreign body", "filaments", "erosion", "RCES (recurrent erosion)", "EBMD (map-dot-fingerprint)", "Fuchs' endothelial dystrophy", "band keratopathy", "Salzmann's nodule", "keratic precipitates", "ulcer", "haze", "opacification", "pannus", "nodules", "phlyctenule", "Descemet folds", "Krukenberg spindle", "iron line (Hudson-Stahli/Stocker's/Fleischer's)", "Vogt striae", "vortex keratopathy (verticillata)", "Thygeson's SPK", "lipid keratopathy", "Mooren's ulcer", "Terrien's marginal degeneration", "peripheral thinning", "central thinning", "hydrops", "pigment on endothelium"],
     gradeFields: [
       {
-        display: "Corneal staining grade (grading scheme provisional)",
-        kind: "select",
-        options: ["Grade 0", "Grade 1", "Grade 2", "Grade 3", "Grade 4"],
-        slugOptionCodes: true,
-      },
-      {
-        display: "Corneal staining zone (grading scheme provisional)",
-        kind: "select",
-        options: ["Central", "Nasal", "Temporal", "Superior", "Inferior", "Diffuse"],
-        slugOptionCodes: true,
-      },
-      {
         display: "Vital dye",
         kind: "select",
-        options: ["Fluorescein", "Lissamine green"],
+        options: ["Fluorescein"],
         slugOptionCodes: true,
       },
     ],
@@ -131,14 +119,15 @@ const ANTERIOR_STRUCTURES: StructureSeed[] = [
     key: "lens",
     display: "Lens",
     normalTemplate: "Clear; no cataract.",
-    priority: ["nuclear sclerosis", "cortical cataract", "posterior subcapsular (PSC)", "pseudophakia (PCIOL)", "posterior capsular opacification (PCO)"],
-    additional: ["anterior polar", "posterior polar", "anterior subcapsular", "brunescent", "mature cataract", "pseudophakia (ACIOL)", "aphakia", "phacodonesis", "pseudoexfoliation", "dislocated lens/IOL", "IOL deposits", "polychromatic (Christmas-tree)"],
-    gradeFields: [
-      { display: "LOCS III — NO (nuclear opalescence)", kind: "number", min: 0.1, max: 6.9, step: 0.1 },
-      { display: "LOCS III — NC (nuclear color)", kind: "number", min: 0.1, max: 6.9, step: 0.1 },
-      { display: "LOCS III — C (cortical)", kind: "number", min: 0.1, max: 6.9, step: 0.1 },
-      { display: "LOCS III — P (posterior subcapsular)", kind: "number", min: 0.1, max: 6.9, step: 0.1 },
+    priority: [
+      gradedLensFinding("nuclear-sclerosis", "nuclear sclerosis"),
+      gradedLensFinding("cortical-cataract", "cortical cataract"),
+      gradedLensFinding("posterior-subcapsular-psc", "posterior subcapsular (PSC)"),
+      "pseudophakia (PCIOL)",
+      gradedLensFinding("posterior-capsular-opacification-pco", "posterior capsular opacification (PCO) (after cataract)"),
+      gradedLensFinding("mixed", "Mixed"),
     ],
+    additional: ["anterior polar", "posterior polar", "anterior subcapsular", "brunescent", "mature cataract", "pseudophakia (ACIOL)", "aphakia", "phacodonesis", "pseudoexfoliation", "dislocated lens/IOL", "IOL deposits", "polychromatic (Christmas-tree)"],
   },
 ];
 
@@ -178,7 +167,7 @@ const POSTERIOR_STRUCTURES: StructureSeed[] = [
     display: "Periphery",
     normalTemplate: "Normal peripheral retina without tears, breaks, holes, or detachment.",
     priority: ["lattice degeneration", "cobblestone/paving-stone degeneration", "retinal hole", "white-without-pressure", "chorioretinal scar"],
-    additional: ["retinal tear", "retinal detachment", "retinoschisis", "retinal tuft", "pigmentary changes", "cystoid degeneration", "operculated hole", "horseshoe tear", "drusen", "occasional drusen"],
+    additional: ["retinal tear", retinalDetachmentFinding(), "retinoschisis", "retinal tuft", "pigmentary changes", "cystoid degeneration", "operculated hole", "horseshoe tear", "drusen", "occasional drusen"],
   },
 ];
 
@@ -226,6 +215,17 @@ const DIAGNOSIS_CANDIDATE_SEEDS: Record<string, readonly DiagnosisCandidateSeed[
     { option: "pterygium-encroaching", qualifiers: { location: "peripheral", progression: "stationary" }, diagnosisKey: "pterygium_peripheral_stationary" },
     { option: "pterygium-encroaching", qualifiers: { location: "peripheral", progression: "progressive" }, diagnosisKey: "pterygium_peripheral_progressive" },
     { option: "pterygium-encroaching", qualifiers: { location: "peripheral", progression: "recurrent" }, diagnosisKey: "pterygium_recurrent" },
+  ],
+  "ocular-health:anterior:lens": [
+    { option: "nuclear-sclerosis", diagnosisKey: "cataract_nuclear_sclerosis" },
+    { option: "cortical-cataract", diagnosisKey: "cataract_cortical" },
+    { option: "anterior-subcapsular", diagnosisKey: "cataract_anterior_subcapsular" },
+    { option: "posterior-subcapsular-psc", diagnosisKey: "cataract_posterior_subcapsular" },
+    { option: "mixed", diagnosisKey: "cataract_combined_forms" },
+    { option: "posterior-capsular-opacification-pco", diagnosisKey: "cataract_posterior_capsular_opacification" },
+    { option: "pseudophakia-pciol", diagnosisKey: "pseudophakia" },
+    { option: "aphakia", diagnosisKey: "aphakia" },
+    { option: "pseudoexfoliation", diagnosisKey: "pseudoexfoliation_lens" },
   ],
   "ocular-health:posterior:fundus": [
     { option: "hypertensive-retinopathy", diagnosisKey: "hypertensive_retinopathy" },
@@ -419,6 +419,55 @@ function keratoconusFinding(): FindingSeed {
     key: "keratoconus",
     display: "keratoconus",
     qualifiers: [{ kind: "enum", key: "stability", display: "Stability", options: [{ code: "stable", display: "Stable" }, { code: "unstable", display: "Unstable" }] }],
+  };
+}
+
+function cornealStainingFinding(): FindingSeed {
+  return {
+    key: "superficial-punctate-keratitis-spk",
+    display: "superficial punctate keratitis (SPK)",
+    qualifiers: [
+      {
+        kind: "graded",
+        key: "grade",
+        display: "Corneal staining grade (grading scheme provisional)",
+        options: ["Grade 0", "Grade 1", "Grade 2", "Grade 3", "Grade 4"],
+        scheme: "grading scheme provisional",
+      },
+      {
+        kind: "enum",
+        key: "zone",
+        display: "Corneal staining zone (grading scheme provisional)",
+        options: ["Central", "Nasal", "Temporal", "Superior", "Inferior", "Diffuse"].map((display) => ({
+          code: optionCode(display),
+          display,
+        })),
+      },
+    ],
+  };
+}
+
+function gradedLensFinding(key: string, display: string): FindingSeed {
+  return {
+    key,
+    display,
+    qualifiers: [{ kind: "graded", key: "grade", display: "Grade", options: ["1+", "2+", "3+", "4+"] }],
+  };
+}
+
+function retinalDetachmentFinding(): FindingSeed {
+  return {
+    key: "retinal-detachment",
+    display: "retinal detachment",
+    qualifiers: [{
+      kind: "enum",
+      key: "macula-status",
+      display: "Macula",
+      options: [
+        { code: "macula-on", display: "Macula on" },
+        { code: "macula-off", display: "Macula off" },
+      ],
+    }],
   };
 }
 
