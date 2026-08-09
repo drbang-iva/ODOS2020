@@ -227,6 +227,7 @@ test("condition summary windows to the newest three encounters and dedupes by co
   const overview = await loadPatientOverview(fake as never, "p1");
 
   assert.deepEqual(overview.snapshot.medicalConditions, [
+    { id: "unlinked", name: "Unlinked condition" },
     { id: "medical-newest", name: "Repeated medical" },
     { id: "medical-second-unique", name: "Second encounter condition" },
     { id: "medical-third-unique", name: "Third encounter condition" },
@@ -258,6 +259,27 @@ test("condition summary uses every available encounter when the patient has fewe
   }]);
 });
 
+test("condition summary keeps longitudinal problem-list conditions without an encounter reference", async () => {
+  const fake = new FakeFhir();
+  fake.add(patient());
+  fake.add(encounter("newest", "2026-06-01T14:00:00Z"));
+  fake.add(encounter("second", "2026-05-01T14:00:00Z"));
+  fake.add(encounter("third", "2026-04-01T14:00:00Z"));
+  fake.add(condition("diabetes", "Type 2 diabetes mellitus", {
+    category: "problem-list-item", code: "DX-DIABETES",
+  }));
+  fake.add(condition("hypertension", "Hypertension", {
+    category: "problem-list-item", encounterId: "newest", code: "DX-HYPERTENSION",
+  }));
+
+  const overview = await loadPatientOverview(fake as never, "p1");
+
+  assert.deepEqual(overview.snapshot.medicalConditions, [
+    { id: "diabetes", name: "Type 2 diabetes mellitus" },
+    { id: "hypertension", name: "Hypertension" },
+  ]);
+});
+
 test("condition summary is unchanged when the visit ledger is filtered to eye exams", async () => {
   const fake = new FakeFhir();
   fake.add(patient());
@@ -273,10 +295,17 @@ test("condition summary is unchanged when the visit ledger is filtered to eye ex
   fake.add(condition("ocular-hypertension", "Ocular hypertension", {
     category: "problem-list-item", encounterId: "office-second", bodySite: "Both eyes", code: "DX-OCULAR",
   }));
+  fake.add(condition("longitudinal-asthma", "Longitudinal asthma", {
+    category: "problem-list-item", code: "DX-LONGITUDINAL",
+  }));
 
   const unfiltered = await loadPatientOverview(fake as never, "p1");
   const eyeExams = await loadPatientOverview(fake as never, "p1", { filter: "eye-exams" });
 
+  assert.deepEqual(eyeExams.snapshot.medicalConditions, [
+    { id: "longitudinal-asthma", name: "Longitudinal asthma" },
+    { id: "diabetes", name: "Type 2 diabetes mellitus" },
+  ]);
   assert.deepEqual(eyeExams.snapshot.medicalConditions, unfiltered.snapshot.medicalConditions);
   assert.deepEqual(eyeExams.snapshot.ocularHistory, unfiltered.snapshot.ocularHistory);
   assert.deepEqual(eyeExams.visits.map((visit) => visit.encounterId), ["eye-newest", "eye-second", "eye-third"]);

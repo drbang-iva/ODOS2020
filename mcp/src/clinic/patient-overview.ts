@@ -442,6 +442,7 @@ function projectOverview(input: {
         && !hasStatus(condition.verificationStatus, "entered-in-error"),
     )
     .flatMap((condition) => {
+      if (!condition.encounter?.reference) return [{ condition, encounterRank: -1 }];
       const encounterId = conditionEncounterId(condition);
       const encounterRank = encounterId ? recentEncounterRanks.get(encounterId) : undefined;
       return encounterRank === undefined ? [] : [{ condition, encounterRank }];
