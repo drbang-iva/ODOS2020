@@ -233,11 +233,18 @@ export function createCommsDispatch(
         }
         case "twilio": {
           const adapter = withTwilioConversationStore(getTwilioAdapter(registration), callerFhir);
-          return createSuppressedCommsProvider(adapter, {
+          const suppressed = createSuppressedCommsProvider(adapter, {
             fhir: callerFhir,
             practiceTimeZone: deps.practiceTimeZone ?? "UTC",
             now: deps.now,
           });
+          return {
+            ...suppressed,
+            async sendSms(request) {
+              await adapter.initialize();
+              return suppressed.sendSms!(request);
+            },
+          };
         }
         case "ghl": {
           const adapter = createGhlAdapter(registration.config, {
