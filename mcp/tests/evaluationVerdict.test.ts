@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { test } from "node:test";
 
@@ -56,6 +57,16 @@ function evaluate(input: EvaluationInput = {}): EvaluationDecision {
     currentHeadSha: CURRENT_HEAD,
     ...input,
   });
+}
+
+const repoRoot = new URL("../../", import.meta.url);
+
+function workflowSource(path: string): string {
+  return readFileSync(new URL(path, repoRoot), "utf8");
+}
+
+function triggerBlock(source: string): string {
+  return source.match(/^on:\n([\s\S]*?)(?=^[a-z][a-z-]*:)/m)?.[1] ?? "";
 }
 
 test("a trusted Fable PASS bound to the current head passes", () => {
@@ -265,4 +276,55 @@ test("an invalid head SHA fails closed", () => {
   });
 
   assert.equal(invalidHead.reason, "invalid-gate-input");
+});
+
+test("evaluation-gate keeps every trigger and filters current or previous marker bodies", () => {
+  const workflow = workflowSource(".github/workflows/evaluation-gate.yml");
+  const triggers = triggerBlock(workflow);
+  const parser = workflowSource(".github/scripts/evaluation-verdict.cjs");
+
+  assert.match(
+    triggers,
+    /pull_request_target:\n\s+types: \[opened, synchronize, reopened, labeled, unlabeled\]\n\s+branches: \[main\]/,
+  );
+  assert.match(
+    triggers,
+    /issue_comment:\n\s+types: \[created, edited, deleted\]/,
+  );
+  assert.match(workflow, /github\.event_name == 'pull_request_target'/);
+  assert.match(workflow, /contains\(github\.event\.comment\.body, 'Evaluated-by:'\)/);
+  assert.match(
+    workflow,
+    /contains\(github\.event\.changes\.body\.from, 'Evaluated-by:'\)/,
+  );
+
+  const parserPrefix = parser.match(/const MARKER_PATTERN = \/\^([^/]+)\/im;/)?.[1];
+  const workflowPrefixes = [
+    ...workflow.matchAll(
+      /contains\(github\.event\.(?:comment\.body|changes\.body\.from), '([^']+)'\)/g,
+    ),
+  ].map((match) => match[1]);
+  assert.equal(parserPrefix, "Evaluated-by:");
+  assert.deepEqual(workflowPrefixes, [parserPrefix, parserPrefix]);
+});
+
+test("PR-Agent runs only for the four automatic pull-request actions", () => {
+  const workflow = workflowSource(".github/workflows/pr-agent.yml");
+  const triggers = triggerBlock(workflow);
+
+  assert.match(
+    triggers,
+    /pull_request:\n\s+branches: \[main\]\n\s+types: \[opened, reopened, ready_for_review, synchronize\]/,
+  );
+  assert.doesNotMatch(triggers, /issue_comment:/);
+  assert.match(workflow, /if: github\.event\.sender\.type != 'Bot'/);
+});
+
+test("CI cancels superseded pull requests but never pushes to main", () => {
+  const workflow = workflowSource(".github/workflows/ci.yml");
+
+  assert.match(
+    workflow,
+    /^concurrency:\n\s+group: ci-\$\{\{ github\.workflow \}\}-\$\{\{ github\.ref \}\}\n\s+cancel-in-progress: \$\{\{ github\.event_name == 'pull_request' \}\}$/m,
+  );
 });
