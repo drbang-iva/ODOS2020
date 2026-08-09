@@ -5,14 +5,19 @@ import type { Condition, Encounter, Provenance } from "@medplum/fhirtypes";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
+  DiagnosisProblemStatusField,
   DiagnosisRankActions,
   diagnosisRankMoveNeighbors,
 } from "../src/components/charting/AssessmentSection";
+import { MdmProblemsAxis } from "../src/components/charting/EncounterHeader";
 import {
   diagnosisRankForTier,
+  encounterDiagnosisProblemStatusPatchOperations,
   makeConditionPrincipal,
   swapConditionRanks,
 } from "../src/lib/clinical-actions";
+import { encounterDiagnosisProblemStatus } from "../src/lib/fhir-clinical/condition";
+import { computeMdmHint } from "../src/lib/clinical-view-model";
 import { buildProfessionalClaimInput, initialClaimDraft } from "../src/lib/submit-claims";
 
 const CONDITIONS = ["principal", "secondary-a", "secondary-b"].map((id) => ({
@@ -115,6 +120,61 @@ test("rank actions render only for confirmed secondary diagnoses", () => {
     renderToStaticMarkup(<DiagnosisRankActions {...props} possible={false} principal={true} />),
     /Make Principal|Move up|Move down/,
   );
+});
+
+test("problem status patch targets one diagnosis entry and preserves unrelated extensions", async () => {
+  const encounter = rankedEncounter([1, 2]);
+  encounter.diagnosis![1]!.extension = [{
+    url: "https://example.test/fhir/StructureDefinition/unrelated",
+    valueString: "keep me",
+  }];
+  const operations = encounterDiagnosisProblemStatusPatchOperations(
+    encounter,
+    CONDITIONS[1]!,
+    "stable-chronic",
+  );
+
+  assert.deepEqual(operations, [{
+    op: "add",
+    path: "/diagnosis/1/extension/-",
+    value: {
+      url: "https://odos2020.com/fhir/StructureDefinition/odos-encounter-diagnosis-problem-status",
+      valueCodeableConcept: {
+        coding: [{
+          system: "https://odos2020.com/fhir/CodeSystem/mdm-problem-status",
+          code: "stable-chronic",
+          display: "Stable chronic illness",
+        }],
+        text: "Stable chronic illness",
+      },
+    },
+  }]);
+
+  encounter.diagnosis![1]!.extension!.push(operations[0]!.value as NonNullable<Encounter["diagnosis"]>[number]["extension"][number]);
+  assert.equal(encounter.diagnosis![1]!.extension![0]!.valueString, "keep me");
+  assert.equal(encounterDiagnosisProblemStatus(encounter.diagnosis![1]!), "stable-chronic");
+});
+
+test("problem status control renders a conspicuous required-empty state without unspecified", () => {
+  const markup = renderToStaticMarkup(React.createElement(DiagnosisProblemStatusField, {
+    disabled: false,
+    onChange: () => undefined,
+  }));
+
+  assert.match(markup, /Problem status/);
+  assert.match(markup, /Required — select status/);
+  assert.match(markup, /data-required="true"/);
+  assert.doesNotMatch(markup, /unspecified/i);
+});
+
+test("blocked MDM axis renders the missing problem-status reason where a tier would appear", () => {
+  const mdmHint = computeMdmHint({ encounter: rankedEncounter([1, 2]) });
+
+  const markup = renderToStaticMarkup(React.createElement(MdmProblemsAxis, { mdmHint }));
+
+  assert.match(markup, /Blocked/);
+  assert.match(markup, /problem status unset on 2 diagnoses/);
+  assert.doesNotMatch(markup, /Moderate MDM threshold/);
 });
 
 test("the free-form diagnosis rank input and state wiring are removed", () => {

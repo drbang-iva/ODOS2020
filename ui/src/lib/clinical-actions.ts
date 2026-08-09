@@ -24,8 +24,11 @@ import {
   clinicalStatusConcept,
   conditionBodySite,
   conditionCodeConcept,
+  MDM_PROBLEM_STATUS_EXTENSION_URL,
+  mdmProblemStatusExtension,
   verificationStatusConcept,
   type ConditionClinicalStatusCode,
+  type MdmProblemStatus,
 } from "./fhir-clinical/condition";
 import {
   buildEpisodeOfCare,
@@ -233,6 +236,62 @@ export function addEncounterDiagnosisPatchOperations(
     return [{ op: "add", path: "/diagnosis/-", value: diagnosisEntry }];
   }
   return [{ op: "add", path: "/diagnosis", value: [diagnosisEntry] }];
+}
+
+export function encounterDiagnosisProblemStatusPatchOperations(
+  encounter: Encounter,
+  condition: Condition,
+  problemStatus: MdmProblemStatus,
+): JsonPatchOperation[] {
+  const diagnosisIndex = encounterDiagnosisIndex(encounter.diagnosis ?? [], condition);
+  const diagnosis = encounter.diagnosis![diagnosisIndex]!;
+  const extension = mdmProblemStatusExtension(problemStatus);
+  const extensionIndex = diagnosis.extension?.findIndex(
+    (candidate) => candidate.url === MDM_PROBLEM_STATUS_EXTENSION_URL,
+  ) ?? -1;
+  if (extensionIndex >= 0) {
+    return [{
+      op: "replace",
+      path: `/diagnosis/${diagnosisIndex}/extension/${extensionIndex}`,
+      value: extension,
+    }];
+  }
+  if (diagnosis.extension?.length) {
+    return [{
+      op: "add",
+      path: `/diagnosis/${diagnosisIndex}/extension/-`,
+      value: extension,
+    }];
+  }
+  return [{
+    op: "add",
+    path: `/diagnosis/${diagnosisIndex}/extension`,
+    value: [extension],
+  }];
+}
+
+export async function updateEncounterDiagnosisProblemStatus(input: {
+  encounter: Encounter;
+  condition: Condition;
+  problemStatus: MdmProblemStatus;
+}): Promise<Encounter> {
+  const updated = await fhir.patch<Encounter>(
+    "Encounter",
+    requiredId(input.encounter),
+    encounterDiagnosisProblemStatusPatchOperations(
+      input.encounter,
+      input.condition,
+      input.problemStatus,
+    ),
+    "update_encounter_diagnosis_problem_status",
+    requiredVersion(input.encounter),
+  );
+  await createUiProvenance(
+    "update_encounter_diagnosis_problem_status",
+    `Encounter/${updated.id}`,
+    "UPDATE",
+  );
+  return updated;
 }
 
 export async function updateConditionBodySite(input: {

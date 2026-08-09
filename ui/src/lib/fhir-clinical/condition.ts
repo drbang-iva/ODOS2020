@@ -17,6 +17,10 @@ export const FHIR_DIAGNOSIS_ROLE_CODE_SYSTEM =
   "http://terminology.hl7.org/CodeSystem/diagnosis-role";
 export const CONDITION_BODY_SITE_EXTENSION_URL =
   "http://hl7.org/fhir/StructureDefinition/bodySite";
+export const MDM_PROBLEM_STATUS_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-encounter-diagnosis-problem-status";
+export const MDM_PROBLEM_STATUS_CODE_SYSTEM =
+  "https://odos2020.com/fhir/CodeSystem/mdm-problem-status";
 
 export const CONDITION_CATEGORY_CODES = [
   "encounter-diagnosis",
@@ -39,11 +43,21 @@ export const CONDITION_VERIFICATION_STATUS_CODES = [
   "refuted",
   "entered-in-error",
 ] as const;
+export const MDM_PROBLEM_STATUSES = [
+  { code: "minimal-self-limited", display: "Minimal / self-limited" },
+  { code: "stable-chronic", display: "Stable chronic illness" },
+  { code: "chronic-exacerbation-progression", display: "Chronic illness with exacerbation / progression" },
+  { code: "chronic-severe-exacerbation", display: "Chronic illness with severe exacerbation" },
+  { code: "acute-uncomplicated", display: "Acute uncomplicated" },
+  { code: "acute-complicated-or-systemic-symptoms", display: "Acute complicated / acute with systemic symptoms" },
+  { code: "threat-to-life-or-bodily-function", display: "Acute or chronic threat to life or bodily function" },
+] as const;
 
 export type ConditionCategoryCode = (typeof CONDITION_CATEGORY_CODES)[number];
 export type ConditionClinicalStatusCode = (typeof CONDITION_CLINICAL_STATUS_CODES)[number];
 export type ConditionVerificationStatusCode =
   (typeof CONDITION_VERIFICATION_STATUS_CODES)[number];
+export type MdmProblemStatus = (typeof MDM_PROBLEM_STATUSES)[number]["code"];
 
 export interface ConditionCodeInput {
   system: string;
@@ -95,6 +109,37 @@ export function buildEncounterDiagnosisComponent(
     use: diagnosisRoleConcept("billing", "Billing"),
     rank,
   };
+}
+
+export function mdmProblemStatusExtension(problemStatus: MdmProblemStatus): Extension {
+  const definition = MDM_PROBLEM_STATUSES.find((candidate) => candidate.code === problemStatus);
+  if (!definition) {
+    throw new Error(`Unsupported MDM problem status "${problemStatus}".`);
+  }
+  return {
+    url: MDM_PROBLEM_STATUS_EXTENSION_URL,
+    valueCodeableConcept: {
+      coding: [{
+        system: MDM_PROBLEM_STATUS_CODE_SYSTEM,
+        code: definition.code,
+        display: definition.display,
+      }],
+      text: definition.display,
+    },
+  };
+}
+
+export function encounterDiagnosisProblemStatus(
+  diagnosis: NonNullable<Encounter["diagnosis"]>[number],
+): MdmProblemStatus | undefined {
+  const code = diagnosis.extension
+    ?.find((extension) => extension.url === MDM_PROBLEM_STATUS_EXTENSION_URL)
+    ?.valueCodeableConcept?.coding
+    ?.find((coding) => coding.system === MDM_PROBLEM_STATUS_CODE_SYSTEM)
+    ?.code;
+  return MDM_PROBLEM_STATUSES.some((candidate) => candidate.code === code)
+    ? code as MdmProblemStatus
+    : undefined;
 }
 
 export function conditionCategoryConcept(category: ConditionCategoryCode): CodeableConcept {
