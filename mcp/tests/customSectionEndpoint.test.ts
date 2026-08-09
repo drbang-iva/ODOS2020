@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
+import type { AddressInfo } from "node:net";
 import { test } from "node:test";
 import type { Basic, Bundle, Observation, Provenance } from "@medplum/fhirtypes";
+import express from "express";
 import type { PracticeRoleId } from "../src/authz/roles.js";
 import {
   handleCustomSectionCaptureRequest,
@@ -549,6 +551,7 @@ test("OH-1 seeds nine editable structures and persists explicit normal, abnormal
     "ocular-health:anterior:conjunctiva",
     "ocular-health:anterior:tear-film",
     "ocular-health:anterior:cornea",
+    "ocular-health:anterior:lens",
   ]);
   assert.equal(anterior.filter((definition) => !definition.allowDiagnosisMapping)
     .every((definition) => definition.diagnosisCandidates === undefined), true);
@@ -574,8 +577,8 @@ test("OH-1 seeds nine editable structures and persists explicit normal, abnormal
     valueType?: string;
     options?: Array<{ code: string; priority?: boolean }>;
   }>).find((candidate) => candidate.valueType === "multi-select");
-  assert.equal(conjunctivaField?.options?.find((option) => option.code === "papillae")?.priority, true);
-  assert.equal(conjunctivaField?.options?.find((option) => option.code === "follicles")?.priority, true);
+  assert.equal(conjunctivaField?.options?.some((option) => option.code === "papillae"), false);
+  assert.equal(conjunctivaField?.options?.some((option) => option.code === "follicles"), false);
   const captured = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, anterior), {
     authHeader: AUTH,
     params: { stableKey: lids.stableKey },
@@ -717,6 +720,259 @@ test("OH-1 finding options and normal templates are editable through finding-def
   assert.equal(editedCornea?.diagnosisCandidates?.find((candidate) => candidate.id === seededCandidate.id)?.active, false);
 });
 
+test("ocular-health cleanup keeps only clinically scoped chips and qualifiers", async () => {
+  const definitions = await catalog(new MemoryFhir());
+  const definition = (stableKey: string) => {
+    const found = definitions.find((candidate) => candidate.stableKey === stableKey);
+    assert.ok(found, stableKey);
+    return found;
+  };
+  const fields = (stableKey: string) => Object.values(definition(stableKey).valueSchema.fields as Record<string, {
+    display: string;
+    valueType: string;
+    options?: Array<{
+      code: string;
+      display: string;
+      priority?: boolean;
+      qualifiers?: Array<Record<string, unknown>>;
+    }>;
+  }>);
+  const findings = (stableKey: string) => fields(stableKey)
+    .find((field) => field.valueType === "multi-select")?.options ?? [];
+
+  const conjunctiva = findings("ocular-health:anterior:conjunctiva");
+  assert.deepEqual(
+    conjunctiva.filter((option) => ["papillae", "follicles", "scleral-injection"].includes(option.code)),
+    [],
+  );
+  assert.deepEqual(
+    ["injection", "episcleritis", "scleritis"].map((code) => conjunctiva.some((option) => option.code === code)),
+    [true, true, true],
+  );
+
+  const tearFilm = findings("ocular-health:anterior:tear-film");
+  assert.equal(tearFilm.some((option) => option.code === "increased-decreased-lake"), false);
+  assert.equal(tearFilm.some((option) => option.code === "frothing"), false);
+  assert.deepEqual(tearFilm.find((option) => option.code === "foam"), {
+    code: "foam",
+    display: "foam/frothing",
+    active: true,
+    priority: false,
+  });
+  assert.equal(tearFilm.some((option) => option.code === "reduced-tear-meniscus"), true);
+
+  const cornea = findings("ocular-health:anterior:cornea");
+  assert.equal(cornea.some((option) => option.code === "corneal-staining"), false);
+  const spk = cornea.find((option) => option.code === "superficial-punctate-keratitis-spk");
+  assert.deepEqual(spk?.qualifiers, [
+    {
+      kind: "graded",
+      key: "grade",
+      display: "Corneal staining grade (grading scheme provisional)",
+      options: ["Grade 0", "Grade 1", "Grade 2", "Grade 3", "Grade 4"],
+      scheme: "grading scheme provisional",
+    },
+    {
+      kind: "enum",
+      key: "zone",
+      display: "Corneal staining zone (grading scheme provisional)",
+      options: [
+        { code: "central", display: "Central" },
+        { code: "nasal", display: "Nasal" },
+        { code: "temporal", display: "Temporal" },
+        { code: "superior", display: "Superior" },
+        { code: "inferior", display: "Inferior" },
+        { code: "diffuse", display: "Diffuse" },
+      ],
+    },
+  ]);
+  assert.deepEqual(
+    fields("ocular-health:anterior:cornea")
+      .filter((field) => field.display.startsWith("Corneal staining")),
+    [],
+  );
+  assert.deepEqual(
+    fields("ocular-health:anterior:cornea")
+      .find((field) => field.display === "Vital dye")?.options?.map((option) => option.display),
+    ["Fluorescein"],
+  );
+
+  const lens = findings("ocular-health:anterior:lens");
+  const lensGrades = [
+    "nuclear-sclerosis",
+    "cortical-cataract",
+    "posterior-subcapsular-psc",
+    "posterior-capsular-opacification-pco",
+    "mixed",
+  ];
+  for (const code of lensGrades) {
+    assert.deepEqual(lens.find((option) => option.code === code)?.qualifiers, [{
+      kind: "graded",
+      key: "grade",
+      display: "Grade",
+      options: ["1+", "2+", "3+", "4+"],
+    }], code);
+  }
+  assert.equal(
+    lens.find((option) => option.code === "posterior-capsular-opacification-pco")?.display,
+    "posterior capsular opacification (PCO) (after cataract)",
+  );
+  assert.equal(lens.find((option) => option.code === "mixed")?.priority, true);
+  assert.equal(fields("ocular-health:anterior:lens").some((field) => field.display.startsWith("LOCS III")), false);
+
+  const retinalDetachment = findings("ocular-health:posterior:periphery")
+    .find((option) => option.code === "retinal-detachment");
+  assert.deepEqual(retinalDetachment?.qualifiers, [{
+    kind: "enum",
+    key: "macula-status",
+    display: "Macula",
+    options: [
+      { code: "macula-on", display: "Macula on" },
+      { code: "macula-off", display: "Macula off" },
+    ],
+  }]);
+});
+
+test("GET diagnosis candidates returns nuclear cataract after ocular-health capture regardless of grade", async (t) => {
+  const fhir = new MemoryFhir();
+  const definitions = await catalog(fhir);
+  const lens = definitions.find((definition) => definition.stableKey === "ocular-health:anterior:lens");
+  assert.ok(lens);
+  const field = Object.values(lens.valueSchema.fields as Record<string, {
+    localCode: string;
+    valueType: string;
+  }>).find((candidate) => candidate.valueType === "multi-select");
+  assert.ok(field);
+  assert.deepEqual(
+    lens.diagnosisCandidates?.map((candidate) => [
+      candidate.trigger.kind === "option" ? candidate.trigger.anyOf[0] : candidate.trigger.option,
+      candidate.diagnosisKey,
+    ]),
+    [
+      ["nuclear-sclerosis", "cataract_nuclear_sclerosis"],
+      ["cortical-cataract", "cataract_cortical"],
+      ["anterior-subcapsular", "cataract_anterior_subcapsular"],
+      ["posterior-subcapsular-psc", "cataract_posterior_subcapsular"],
+      ["mixed", "cataract_combined_forms"],
+      ["posterior-capsular-opacification-pco", "cataract_posterior_capsular_opacification"],
+      ["pseudophakia-pciol", "pseudophakia"],
+      ["aphakia", "aphakia"],
+      ["pseudoexfoliation", "pseudoexfoliation_lens"],
+    ],
+  );
+  assert.equal(
+    lens.diagnosisCandidates?.some((candidate) =>
+      candidate.trigger.kind === "option" && candidate.trigger.anyOf.includes("dislocated-lens-iol")
+    ),
+    false,
+  );
+
+  const capture = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, [lens]), {
+    authHeader: AUTH,
+    params: { stableKey: lens.stableKey },
+    body: {
+      patientReference: "Patient/lens-mapping",
+      encounterReference: "Encounter/lens-mapping",
+      eyes: {
+        OD: {
+          state: "abnormal",
+          customFields: [{ code: field.localCode, value: ["nuclear-sclerosis"] }],
+          findingDetails: { "nuclear-sclerosis": { grade: "1+" } },
+        },
+        OS: {
+          state: "abnormal",
+          customFields: [{ code: field.localCode, value: ["nuclear-sclerosis"] }],
+          findingDetails: { "nuclear-sclerosis": { grade: "4+" } },
+        },
+      },
+    },
+  });
+  assert.equal(capture.status, 200, JSON.stringify(capture.body));
+  const app = express();
+  app.get("/clinical-graph/encounters/:encounterId/diagnosis-candidates", async (req, res) => {
+    const result = await handleDiagnosisCandidatesRequest({
+      authenticate: async () => ({
+        staffReference: "Practitioner/doc-1",
+        actorRole: "clinician",
+        fhir,
+      }),
+      now: () => NOW,
+    }, {
+      authHeader: req.header("authorization"),
+      params: req.params,
+    });
+    res.status(result.status).json(result.body);
+  });
+  const listener = app.listen(0, "127.0.0.1");
+  await new Promise<void>((resolve) => listener.once("listening", resolve));
+  t.after(() => listener.close());
+  const base = `http://127.0.0.1:${(listener.address() as AddressInfo).port}`;
+  const response = await fetch(`${base}/clinical-graph/encounters/lens-mapping/diagnosis-candidates`, {
+    headers: { Authorization: AUTH },
+  });
+  const candidates = await response.json() as {
+    findings: Array<{ candidates: Array<{ diagnosisKey: string }> }>;
+  };
+  assert.equal(response.status, 200, JSON.stringify(candidates));
+  const findings = candidates.findings;
+  assert.deepEqual(findings.map((finding) => finding.candidates.map((candidate) => candidate.diagnosisKey)), [
+    ["cataract_nuclear_sclerosis"],
+    ["cataract_nuclear_sclerosis"],
+  ]);
+});
+
+test("retinal-detachment macula status remains documentation-only for diagnosis proposals", async () => {
+  const fhir = new MemoryFhir();
+  const definitions = await catalog(fhir);
+  const periphery = definitions.find((definition) => definition.stableKey === "ocular-health:posterior:periphery");
+  assert.ok(periphery);
+  const field = Object.values(periphery.valueSchema.fields as Record<string, {
+    localCode: string;
+    valueType: string;
+  }>).find((candidate) => candidate.valueType === "multi-select");
+  assert.ok(field);
+  const capture = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, [periphery]), {
+    authHeader: AUTH,
+    params: { stableKey: periphery.stableKey },
+    body: {
+      patientReference: "Patient/retinal-detachment-mapping",
+      encounterReference: "Encounter/retinal-detachment-mapping",
+      eyes: {
+        OD: {
+          state: "abnormal",
+          customFields: [{ code: field.localCode, value: ["retinal-detachment"] }],
+          findingDetails: { "retinal-detachment": { "macula-status": "macula-on" } },
+        },
+        OS: {
+          state: "abnormal",
+          customFields: [{ code: field.localCode, value: ["retinal-detachment"] }],
+          findingDetails: { "retinal-detachment": { "macula-status": "macula-off" } },
+        },
+      },
+    },
+  });
+  assert.equal(capture.status, 200, JSON.stringify(capture.body));
+  const candidates = await handleDiagnosisCandidatesRequest({
+    authenticate: async () => ({
+      staffReference: "Practitioner/doc-1",
+      actorRole: "clinician",
+      fhir,
+    }),
+    now: () => NOW,
+  }, {
+    authHeader: AUTH,
+    params: { encounterId: "retinal-detachment-mapping" },
+  });
+  assert.equal(candidates.status, 200, JSON.stringify(candidates.body));
+  const findings = (candidates.body as {
+    findings: Array<{ candidates: Array<{ diagnosisKey: string }> }>;
+  }).findings;
+  assert.deepEqual(findings.map((finding) => finding.candidates.map((candidate) => candidate.diagnosisKey)), [
+    ["retinal_detachment_single_break"],
+    ["retinal_detachment_single_break"],
+  ]);
+});
+
 test("OH-2 seeds five posterior structures and round-trips their worksheet findings per eye without diagnosis codes", async () => {
   const fhir = new MemoryFhir();
   const definitions = await catalog(fhir);
@@ -837,7 +1093,7 @@ test("OH-2b Vessels seeds and round-trips the per-eye A/V ratio grade on normal 
   ]);
 });
 
-test("anterior optional grades seed, validate, remain editable, and round-trip per eye", async () => {
+test("anterior structure grades exclude retired LOCS III fields and round-trip the remaining fields per eye", async () => {
   const fhir = new MemoryFhir();
   const definitions = await catalog(fhir);
   const tearFilm = definitions.find((definition) => definition.stableKey === "ocular-health:anterior:tear-film");
@@ -877,28 +1133,10 @@ test("anterior optional grades seed, validate, remain editable, and round-trip p
     "Grade 1 (narrow)",
     "Grade 0 (closed)",
   ]);
-  assert.deepEqual(locs.map((field) => [field.display, field.valueType, field.min, field.max, field.step]), [
-    ["LOCS III — NO (nuclear opalescence)", "number", 0.1, 6.9, 0.1],
-    ["LOCS III — NC (nuclear color)", "number", 0.1, 6.9, 0.1],
-    ["LOCS III — C (cortical)", "number", 0.1, 6.9, 0.1],
-    ["LOCS III — P (posterior subcapsular)", "number", 0.1, 6.9, 0.1],
-  ]);
+  assert.deepEqual(locs, []);
   assert.equal(anteriorChamber.allowDiagnosisMapping, false);
-  assert.equal(lens.allowDiagnosisMapping, false);
+  assert.equal(lens.allowDiagnosisMapping, true);
   assert.equal(anteriorChamber.notBillReady && tearFilm.notBillReady && lens.notBillReady, true);
-
-  const invalidLocs = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, [lens]), {
-    authHeader: AUTH,
-    params: { stableKey: lens.stableKey },
-    body: {
-      patientReference: "Patient/p-anterior-grades",
-      encounterReference: "Encounter/e-anterior-grades",
-      eyes: { OD: { state: "normal", customFields: [{ code: locs[0]!.localCode!, value: 0.15 }] } },
-    },
-  });
-  assert.equal(invalidLocs.status, 400);
-  assert.match(String((invalidLocs.body as { error: string }).error), /increments/);
-  assert.equal(fhir.observations.length, 0);
 
   const vanHerickGrade2 = vanHerick.options!.find((option) => option.display === "Grade 2");
   assert.ok(vanHerickGrade2);
@@ -906,7 +1144,6 @@ test("anterior optional grades seed, validate, remain editable, and round-trip p
   for (const [definition, eye, field, captureValue, historyValue] of [
     [tearFilm, "OD", tbut, 6, 6],
     [anteriorChamber, "OS", vanHerick, vanHerickGrade2.code, "Grade 2"],
-    [lens, "OD", locs[0], 6.9, 6.9],
   ] as const) {
     assert.ok(field?.localCode);
     const captured = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, [definition]), {
