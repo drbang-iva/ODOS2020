@@ -412,6 +412,7 @@ test("MCP boot continues when Twilio pool verification fails while SMS stays fai
       },
     },
   ], {
+    now: () => new Date("2026-08-09T00:00:00.000Z"),
     error: (message) => errors.push(message),
     twilioClientFactory: () => ({
       messages: {
