@@ -4,8 +4,9 @@ on:
   pull_request:
     branches: [main]
     types: [opened, reopened, ready_for_review, synchronize]
-  issue_comment:
-    types: [created]
+
+# Deliberately pull_request-only: this repo uses automatic review actions and
+# has no issue-comment slash-command workflow to justify starting another job.
 
 permissions:
   contents: read
@@ -14,9 +15,7 @@ permissions:
 
 jobs:
   pr-agent:
-    if: >-
-      github.event.sender.type != 'Bot' &&
-      (github.event_name == 'pull_request' || github.event.issue.pull_request)
+    if: github.event.sender.type != 'Bot'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     name: Run PR-Agent

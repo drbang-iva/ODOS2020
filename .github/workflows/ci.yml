@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 # CI scope: the everyday verification path Devon flagged in odos issue #2.
 # DR drill lives in dr-drill.yml (deeper, slower, separate trigger).
 # This workflow proves: deps install, types compile, tests pass, UI builds,
