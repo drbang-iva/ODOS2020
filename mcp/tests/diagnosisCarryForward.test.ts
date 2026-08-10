@@ -21,6 +21,7 @@ import {
   type DiagnosisCarryForwardFhirClient,
   type PreviousExamsPage,
 } from "../src/clinical-graph/diagnosis-carry-forward-endpoint.js";
+import { readDiagnosisCarryState } from "../src/clinical-graph/diagnosis-carry-provenance.js";
 import {
   buildEncounterDiagnosisComponent,
   buildEncounterDiagnosisCondition,
@@ -80,6 +81,219 @@ test("POST previous exams returns 403 without chart.write", async (t) => {
   });
 
   assert.equal(response.status, 403);
+});
+
+test("carry provenance walks the actual unedited Condition chain without a depth cap", async () => {
+  const fhir = carryChainFhir(260);
+  const newest = fhir.resource<Condition>("Condition", "carry-condition-260");
+  const state = await readDiagnosisCarryState(fhir, newest, []);
+
+  assert.equal(state.pulledFromDate, "2025-12-16T09:00:00.000Z");
+  assert.equal(state.unchangedSinceDate, "2025-04-01T09:00:00.000Z");
+  assert.equal(state.edited, false);
+  assert.equal(state.integrityWarning, undefined);
+});
+
+test("a later Provenance on a middle Condition stops unchanged aging at that source encounter", async () => {
+  const fhir = carryChainFhir(3);
+  fhir.resources.push(targetProvenance(
+    "middle-condition-edit",
+    "2025-04-03T13:00:00.000Z",
+    ["Condition/carry-condition-2"],
+    "UPDATE",
+    "Update",
+  ));
+
+  const state = await readDiagnosisCarryState(
+    fhir,
+    fhir.resource<Condition>("Condition", "carry-condition-3"),
+    [],
+  );
+
+  assert.equal(state.pulledFromDate, "2025-04-03T09:00:00.000Z");
+  assert.equal(state.unchangedSinceDate, "2025-04-03T09:00:00.000Z");
+  assert.equal(state.edited, false);
+});
+
+test("a later Provenance on a middle carried Observation also stops unchanged aging there", async () => {
+  const fhir = carryChainFhir(3);
+  fhir.resource<Provenance>("Provenance", "carry-provenance-2").target.push({
+    reference: "Observation/middle-carried-finding",
+  });
+  fhir.resources.push(targetProvenance(
+    "middle-finding-edit",
+    "2025-04-03T13:00:00.000Z",
+    ["Observation/middle-carried-finding"],
+    "UPDATE",
+    "Update",
+  ));
+
+  const state = await readDiagnosisCarryState(
+    fhir,
+    fhir.resource<Condition>("Condition", "carry-condition-3"),
+    [],
+  );
+
+  assert.equal(state.unchangedSinceDate, "2025-04-03T09:00:00.000Z");
+  assert.equal(state.edited, false);
+});
+
+test("a later finding Provenance edits the diagnosis and removes carried from only that finding", async () => {
+  const fhir = carryChainFhir(1);
+  const first = carryObservation("carried-first", "carry-encounter-1");
+  const second = carryObservation("carried-second", "carry-encounter-1");
+  fhir.resources.push(first, second);
+  const carry = fhir.resource<Provenance>("Provenance", "carry-provenance-1");
+  carry.target.push({ reference: "Observation/carried-first" }, { reference: "Observation/carried-second" });
+  fhir.resources.push(targetProvenance(
+    "finding-edit",
+    "2025-04-02T13:00:00.000Z",
+    ["Observation/carried-first"],
+    "UPDATE",
+    "Update",
+  ));
+
+  const state = await readDiagnosisCarryState(
+    fhir,
+    fhir.resource<Condition>("Condition", "carry-condition-1"),
+    [first, second],
+  );
+
+  assert.equal(state.edited, true);
+  assert.equal(state.unchangedSinceDate, undefined);
+  assert.deepEqual(state.observationCarried, {
+    "Observation/carried-first": false,
+    "Observation/carried-second": true,
+  });
+});
+
+test("a later Provenance on a carried Observation still edits the diagnosis after that row leaves the active bundle", async () => {
+  const fhir = carryChainFhir(1);
+  fhir.resource<Provenance>("Provenance", "carry-provenance-1").target.push({
+    reference: "Observation/cleared-carried-finding",
+  });
+  fhir.resources.push(targetProvenance(
+    "cleared-finding-edit",
+    "2025-04-02T13:00:00.000Z",
+    ["Observation/cleared-carried-finding"],
+    "UPDATE",
+    "Update",
+  ));
+
+  const state = await readDiagnosisCarryState(
+    fhir,
+    fhir.resource<Condition>("Condition", "carry-condition-1"),
+    [],
+  );
+
+  assert.equal(state.edited, true);
+  assert.equal(state.unchangedSinceDate, undefined);
+});
+
+test("carry provenance compares recorded instants and fails closed on tied or invalid target timestamps", async () => {
+  const offsetFhir = carryChainFhir(1);
+  offsetFhir.resource<Provenance>("Provenance", "carry-provenance-1").recorded = "2025-04-02T12:30:00.000Z";
+  offsetFhir.resources.push(targetProvenance(
+    "offset-edit",
+    "2025-04-02T09:00:00.000-04:00",
+    ["Condition/carry-condition-1"],
+    "UPDATE",
+    "Update",
+  ));
+  const offsetState = await readDiagnosisCarryState(
+    offsetFhir,
+    offsetFhir.resource<Condition>("Condition", "carry-condition-1"),
+    [],
+  );
+  assert.equal(offsetState.edited, true);
+
+  for (const recorded of [
+    "2025-04-02T12:30:00.000Z",
+    "2025-02-30T12:30:00.000Z",
+    "not-an-instant",
+  ]) {
+    const fhir = carryChainFhir(1);
+    fhir.resource<Provenance>("Provenance", "carry-provenance-1").recorded = "2025-04-02T12:30:00.000Z";
+    fhir.resources.push(targetProvenance(
+      recorded === "2025-04-02T12:30:00.000Z" ? "ambiguous-tie" : `ambiguous-invalid-${recorded.length}`,
+      recorded,
+      ["Condition/carry-condition-1"],
+      "UPDATE",
+      "Update",
+    ));
+
+    const state = await readDiagnosisCarryState(
+      fhir,
+      fhir.resource<Condition>("Condition", "carry-condition-1"),
+      [],
+    );
+    assert.equal(state.edited, true, recorded);
+    assert.equal(state.unchangedSinceDate, undefined, recorded);
+    assert.match(state.integrityWarning ?? "", /timestamp/i, recorded);
+  }
+});
+
+test("carry provenance follows every target-search Bundle page before deciding which record is latest", async () => {
+  const fhir = carryChainFhir(1);
+  const targetReference = "Condition/carry-condition-1";
+  fhir.provenancePageTarget = targetReference;
+  fhir.provenancePages = [
+    [fhir.resource<Provenance>("Provenance", "carry-provenance-1")],
+    [targetProvenance(
+      "paged-condition-edit",
+      "2025-04-02T13:00:00.000Z",
+      [targetReference],
+      "UPDATE",
+      "Update",
+    )],
+  ];
+
+  const state = await readDiagnosisCarryState(
+    fhir,
+    fhir.resource<Condition>("Condition", "carry-condition-1"),
+    [],
+  );
+
+  assert.equal(state.edited, true);
+  assert.deepEqual(fhir.followedUrls, ["/fhir/R4/Provenance?_page=2"]);
+});
+
+test("carry provenance requires exact CREATE activity text and a direct source Condition entity", async () => {
+  for (const mutation of ["wrong-code", "wrong-text", "missing-condition"] as const) {
+    const fhir = carryChainFhir(1);
+    const carry = fhir.resource<Provenance>("Provenance", "carry-provenance-1");
+    if (mutation === "wrong-code") carry.activity!.coding![0]!.code = "UPDATE";
+    if (mutation === "wrong-text") carry.activity!.text = "Diagnosis copied";
+    if (mutation === "missing-condition") {
+      carry.entity = [{ role: "source", what: { reference: "Observation/source-only" } }];
+    }
+
+    const state = await readDiagnosisCarryState(
+      fhir,
+      fhir.resource<Condition>("Condition", "carry-condition-1"),
+      [],
+    );
+    assert.equal(state.pulledFromDate, undefined, mutation);
+    assert.equal(state.unchangedSinceDate, undefined, mutation);
+    assert.equal(state.edited, mutation === "missing-condition", mutation);
+    if (mutation === "missing-condition") assert.match(state.integrityWarning ?? "", /source Condition/i);
+  }
+});
+
+test("carry provenance cycles terminate with a visible integrity warning", async () => {
+  const fhir = carryChainFhir(2);
+  const firstCarry = fhir.resource<Provenance>("Provenance", "carry-provenance-1");
+  firstCarry.entity = [{ role: "source", what: { reference: "Condition/carry-condition-2" } }];
+
+  const state = await readDiagnosisCarryState(
+    fhir,
+    fhir.resource<Condition>("Condition", "carry-condition-2"),
+    [],
+  );
+
+  assert.equal(state.edited, true);
+  assert.equal(state.unchangedSinceDate, undefined);
+  assert.match(state.integrityWarning ?? "", /cycle/i);
 });
 
 test("pull posts one present finding atomically while preserving absent source provenance and rank gaps", async (t) => {
@@ -1580,6 +1794,76 @@ function finding(
   };
 }
 
+function carryChainFhir(depth: number): MemoryFhir {
+  const fhir = new MemoryFhir();
+  for (let index = 0; index <= depth; index += 1) {
+    const date = new Date(Date.UTC(2025, 3, 1 + index, 9)).toISOString();
+    fhir.resources.push(encounter(
+      `carry-encounter-${index}`,
+      date,
+      "Synthetic carry exam",
+      [`carry-condition-${index}`],
+    ));
+    fhir.resources.push(diagnosis(
+      `carry-condition-${index}`,
+      `carry-encounter-${index}`,
+      "dry_eye",
+      "right",
+      "confirmed",
+      [],
+    ));
+    if (index === 0) continue;
+    fhir.resources.push(targetProvenance(
+      `carry-provenance-${index}`,
+      new Date(Date.UTC(2025, 3, 1 + index, 12)).toISOString(),
+      [`Condition/carry-condition-${index}`],
+      "CREATE",
+      "Diagnosis pull-forward",
+      [`Condition/carry-condition-${index - 1}`],
+    ));
+  }
+  return fhir;
+}
+
+function targetProvenance(
+  id: string,
+  recorded: string,
+  targets: string[],
+  activityCode: "CREATE" | "UPDATE",
+  activityText: string,
+  entities: string[] = [],
+): Provenance {
+  return {
+    resourceType: "Provenance",
+    id,
+    target: targets.map((reference) => ({ reference })),
+    recorded,
+    activity: {
+      coding: [{
+        system: "http://terminology.hl7.org/CodeSystem/v3-DataOperation",
+        code: activityCode,
+      }],
+      text: activityText,
+    },
+    agent: [{ who: { display: "Synthetic test actor" } }],
+    ...(entities.length ? {
+      entity: entities.map((reference) => ({ role: "source" as const, what: { reference } })),
+    } : {}),
+  };
+}
+
+function carryObservation(id: string, encounterId: string): Observation {
+  return finding(
+    id,
+    encounterId,
+    "ocular-surface::STAINING::punctate",
+    "Punctate staining",
+    true,
+    "OD",
+    "2+",
+  );
+}
+
 const unreachableFhir = new Proxy({}, {
   get() {
     throw new Error("FHIR must not be reached before route authorization succeeds.");
@@ -1598,6 +1882,8 @@ class MemoryFhir {
   transactionResponseMutator: ((response: Bundle) => Bundle) | undefined;
   beforeCurrentEncounterRead: ((readNumber: number) => void) | undefined;
   beforeTransaction: (() => void) | undefined;
+  provenancePageTarget: string | undefined;
+  provenancePages: Provenance[][] | undefined;
   private currentEncounterReads = 0;
 
   async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
@@ -1667,12 +1953,46 @@ class MemoryFhir {
     resourceType: T["resourceType"],
     params: Record<string, string> = {},
   ): Promise<Bundle<T>> {
+    if (resourceType === "Provenance") {
+      if (params.target === this.provenancePageTarget && this.provenancePages) {
+        return {
+          resourceType: "Bundle",
+          type: "searchset",
+          entry: this.provenancePages[0]!.map((resource) => ({ resource: structuredClone(resource as T) })),
+          ...(this.provenancePages.length > 1
+            ? { link: [{ relation: "next", url: "/fhir/R4/Provenance?_page=2" }] }
+            : {}),
+        };
+      }
+      const rows = this.resources.filter((resource): resource is Provenance =>
+        resource.resourceType === "Provenance" &&
+        (!params.target || resource.target.some((target) => target.reference === params.target))
+      );
+      return {
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: rows.map((resource) => ({ resource: structuredClone(resource as T) })),
+      };
+    }
     if (resourceType !== "Encounter") throw new Error(`Unexpected search for ${resourceType}`);
     this.initialEncounterSearch = structuredClone(params);
     return this.encounterPage(["prior-1", "prior-2", "prior-3", "prior-4"], this.nextUrl);
   }
 
   async searchUrl<T extends Resource>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>> {
+    if (resourceType === "Provenance" && this.provenancePages) {
+      this.followedUrls.push(url);
+      const page = Number(new URL(url, "https://fhir.local").searchParams.get("_page"));
+      const resources = this.provenancePages[page - 1] ?? [];
+      return {
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: resources.map((resource) => ({ resource: structuredClone(resource as T) })),
+        ...(page < this.provenancePages.length
+          ? { link: [{ relation: "next", url: `/fhir/R4/Provenance?_page=${page + 1}` }] }
+          : {}),
+      };
+    }
     if (resourceType !== "Encounter") throw new Error(`Unexpected paged search for ${resourceType}`);
     this.followedUrls.push(url);
     if (url !== "/fhir/R4/Encounter?_page=2&_count=4") throw new Error(`Unexpected next URL ${url}`);

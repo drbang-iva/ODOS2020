@@ -16,6 +16,7 @@ import {
   makeConditionPrincipal,
   markConditionEnteredInError,
   swapConditionRanks,
+  updateEncounterDiagnosisProblemStatus,
 } from "../src/lib/clinical-actions";
 import { encounterDiagnosisProblemStatus } from "../src/lib/fhir-clinical/condition";
 import { computeMdmHint } from "../src/lib/clinical-view-model";
@@ -154,6 +155,39 @@ test("problem status patch targets one diagnosis entry and preserves unrelated e
   encounter.diagnosis![1]!.extension!.push(operations[0]!.value as NonNullable<Encounter["diagnosis"]>[number]["extension"][number]);
   assert.equal(encounter.diagnosis![1]!.extension![0]!.valueString, "keep me");
   assert.equal(encounterDiagnosisProblemStatus(encounter.diagnosis![1]!), "stable-chronic");
+});
+
+test("problem status Provenance targets both the Encounter and affected Condition", async () => {
+  const encounter = rankedEncounter([1, 2]);
+  const condition = encounterCondition("secondary-a");
+  const originalFetch = globalThis.fetch;
+  let provenance: Provenance | undefined;
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith(`/Encounter/${encounter.id}`) && init?.method === "PATCH") {
+      return jsonResponse({ ...encounter, meta: { versionId: "8" } });
+    }
+    if (url.endsWith("/Provenance") && init?.method === "POST") {
+      provenance = JSON.parse(String(init.body)) as Provenance;
+      return jsonResponse({ ...provenance, id: "problem-status-provenance" });
+    }
+    throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${url}`);
+  };
+  try {
+    await updateEncounterDiagnosisProblemStatus({
+      encounter,
+      condition,
+      problemStatus: "stable-chronic",
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.deepEqual(provenance?.target.map((target) => target.reference), [
+    "Encounter/encounter-1",
+    "Condition/secondary-a",
+  ]);
+  assert.equal(provenance?.activity?.coding?.[0]?.code, "UPDATE");
 });
 
 test("problem status control renders a conspicuous required-empty state without unspecified", () => {

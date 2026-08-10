@@ -289,7 +289,7 @@ export async function updateEncounterDiagnosisProblemStatus(input: {
   );
   await createUiProvenance(
     "update_encounter_diagnosis_problem_status",
-    `Encounter/${updated.id}`,
+    [`Encounter/${updated.id}`, `Condition/${requiredId(input.condition)}`],
     "UPDATE",
   );
   return updated;
@@ -558,13 +558,13 @@ export function conceptFromCode(input: CodeInput): CodeableConcept {
 
 async function createUiProvenance(
   sourceTag: string,
-  targetReference: string,
+  targetReference: string | readonly string[],
   activityCode: "CREATE" | "UPDATE",
   entityDisplay?: string,
 ): Promise<Provenance> {
   return fhir.create<Provenance>(buildUiProvenance(
     sourceTag,
-    [targetReference],
+    typeof targetReference === "string" ? [targetReference] : [...targetReference],
     activityCode,
     new Date().toISOString(),
     entityDisplay,

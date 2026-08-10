@@ -197,6 +197,115 @@ test("GET expands offered rows and normalizes only the latest section snapshot",
   );
 });
 
+test("GET projects carried present findings and merges prior absence into the exact offered eye only", async () => {
+  const fhir = carryFindingsFhir();
+  const response = await handleDiagnosisFindingsReadRequest(clinicalDeps(fhir), {
+    authHeader: "Bearer clinician",
+    params: { encounterId: "e1" },
+    query: { condition: "Condition/unique" },
+  });
+
+  assert.equal(response.status, 200, JSON.stringify(response.body));
+  const body = response.body as {
+    carryProvenance?: {
+      pulledFromDate?: string;
+      unchangedSinceDate?: string;
+      edited: boolean;
+    };
+    findings: Array<{
+      atomicFindingId: string;
+      source: string;
+      presence?: string;
+      carried?: boolean;
+      priorPresence?: string;
+      priorGrade?: string;
+      priorLaterality?: string;
+      observationReference?: string;
+    }>;
+    bySection: Record<string, Array<{ atomicFindingId: string }>>;
+  };
+  assert.deepEqual(body.carryProvenance, {
+    pulledFromDate: "2026-07-10T09:00:00.000Z",
+    unchangedSinceDate: "2026-07-10T09:00:00.000Z",
+    edited: false,
+  });
+  assert.deepEqual(body.findings.filter((row) =>
+    row.atomicFindingId === atomicId("unique-section") ||
+    row.atomicFindingId === atomicId("offered-only")
+  ).map((row) => ({
+    id: row.atomicFindingId,
+    source: row.source,
+    presence: row.presence,
+    carried: row.carried,
+    priorPresence: row.priorPresence,
+    priorGrade: row.priorGrade,
+    priorLaterality: row.priorLaterality,
+    observationReference: row.observationReference,
+  })), [
+    {
+      id: atomicId("unique-section"),
+      source: "atomic",
+      presence: "present",
+      carried: true,
+      priorPresence: undefined,
+      priorGrade: undefined,
+      priorLaterality: undefined,
+      observationReference: "Observation/current-unique-present",
+    },
+    {
+      id: atomicId("offered-only"),
+      source: "offered",
+      presence: undefined,
+      carried: undefined,
+      priorPresence: "absent",
+      priorGrade: "historical-grade",
+      priorLaterality: "OD",
+      observationReference: undefined,
+    },
+  ]);
+  assert.deepEqual(body.bySection[LENS_DEFINITION.sectionKey!]?.map((row) => row.atomicFindingId), [
+    atomicId("unique-section"),
+  ]);
+});
+
+test("reasserting a prior absent offer creates a fresh current row without a carried tag", async () => {
+  const fhir = carryFindingsFhir();
+  const asserted = await mutate(fhir, {
+    action: "assert",
+    patientReference: "Patient/p1",
+    conditionReference: "Condition/unique",
+    atomicFindingId: atomicId("offered-only"),
+    presence: "absent",
+  });
+  assert.equal(asserted.status, 200, JSON.stringify(asserted.body));
+
+  const response = await handleDiagnosisFindingsReadRequest(clinicalDeps(fhir), {
+    authHeader: "Bearer clinician",
+    params: { encounterId: "e1" },
+    query: { condition: "Condition/unique" },
+  });
+  assert.equal(response.status, 200, JSON.stringify(response.body));
+  const rows = (response.body as {
+    carryProvenance?: { pulledFromDate?: string };
+    findings: Array<{
+      atomicFindingId: string;
+      source: string;
+      presence?: string;
+      carried?: boolean;
+      priorPresence?: string;
+      observationReference?: string;
+    }>;
+  });
+  assert.equal(rows.carryProvenance?.pulledFromDate, "2026-07-10T09:00:00.000Z");
+  const reassertedRows = rows.findings.filter((row) => row.atomicFindingId === atomicId("offered-only"));
+  assert.equal(reassertedRows.length, 1);
+  assert.equal(reassertedRows[0]?.source, "atomic");
+  assert.equal(reassertedRows[0]?.presence, "absent");
+  assert.equal(reassertedRows[0]?.carried, undefined);
+  assert.equal(reassertedRows[0]?.priorPresence, undefined);
+  assert.match(reassertedRows[0]?.observationReference ?? "", /^Observation\//);
+});
+
 test("asserting absence round-trips and repeated assertions update one logical Observation", async () => {
   const fhir = mutationFhir();
   const input = {
@@ -655,6 +764,120 @@ function mutationFhir(): MemoryFhir {
   fhir.resources.push(condition("unique", "dx_unique", "right"));
   fhir.resources.push(condition("second", "dx_second", "right", "provisional"));
   return fhir;
+}
+
+function carryFindingsFhir(): MemoryFhir {
+  const fhir = mutationFhir();
+  const currentCondition = fhir.resources.find((resource): resource is Condition =>
+    resource.resourceType === "Condition" && resource.id === "unique"
+  )!;
+  currentCondition.evidence = [{ detail: [{ reference: "Observation/current-unique-present" }] }];
+  fhir.resources.push({
+    resourceType: "Encounter",
+    id: "prior-e1",
+    status: "finished",
+    class: {},
+    subject: { reference: "Patient/p1" },
+    period: { start: "2026-07-10T09:00:00.000Z" },
+  });
+  const priorCondition = condition("prior-unique", "dx_unique", "right");
+  priorCondition.encounter = { reference: "Encounter/prior-e1" };
+  priorCondition.evidence = [{
+    detail: [
+      { reference: "Observation/prior-offered-absent-od" },
+      { reference: "Observation/prior-offered-absent-os" },
+    ],
+  }];
+  fhir.resources.push(
+    priorCondition,
+    atomicObservation(
+      "current-unique-present",
+      "e1",
+      "unique-section",
+      true,
+      "OD",
+      "1+",
+    ),
+    atomicObservation(
+      "prior-offered-absent-od",
+      "prior-e1",
+      "offered-only",
+      false,
+      "OD",
+      "historical-grade",
+    ),
+    atomicObservation(
+      "prior-offered-absent-os",
+      "prior-e1",
+      "offered-only",
+      false,
+      "OS",
+      "wrong-eye-grade",
+    ),
+    carryProvenance(),
+  );
+  return fhir;
+}
+
+function atomicObservation(
+  id: string,
+  encounterId: string,
+  optionCode: string,
+  present: boolean,
+  laterality: "OD" | "OS" | "OU",
+  grade?: string,
+): Observation {
+  return {
+    resourceType: "Observation",
+    id,
+    status: "preliminary",
+    code: {
+      coding: [{
+        system: ODOS_OPHTHALMOLOGY_CODE_SYSTEM,
+        code: atomicId(optionCode),
+        display: optionCode,
+      }],
+    },
+    subject: { reference: "Patient/p1" },
+    encounter: { reference: `Encounter/${encounterId}` },
+    valueBoolean: present,
+    extension: [{
+      url: ODOS_EXTENSION_URLS.eyeLaterality,
+      valueCodeableConcept: lateralityConcept(laterality),
+    }],
+    ...(grade ? {
+      component: [{
+        code: { coding: [{ system: ODOS_OPHTHALMOLOGY_CODE_SYSTEM, code: "GRADE" }] },
+        valueString: grade,
+      }],
+    } : {}),
+  };
+}
+
+function carryProvenance(): Provenance {
+  return {
+    resourceType: "Provenance",
+    id: "carry-provenance",
+    target: [
+      { reference: "Condition/unique" },
+      { reference: "Encounter/e1" },
+      { reference: "Observation/current-unique-present" },
+    ],
+    recorded: "2026-08-10T11:00:00.000Z",
+    activity: {
+      coding: [{
+        system: "http://terminology.hl7.org/CodeSystem/v3-DataOperation",
+        code: "CREATE",
+      }],
+      text: "Diagnosis pull-forward",
+    },
+    agent: [{ who: { display: "Synthetic test actor" } }],
+    entity: [
+      { role: "source", what: { reference: "Condition/prior-unique" } },
+      { role: "source", what: { reference: "Observation/prior-offered-absent-od" } },
+      { role: "source", what: { reference: "Observation/prior-offered-absent-os" } },
+    ],
+  };
 }
 
 function atomicObservations(fhir: MemoryFhir): Observation[] {

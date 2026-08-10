@@ -19,6 +19,11 @@ import {
 } from "../fhir/ophthalmology/extensions.js";
 import { buildProvenance } from "../fhir/ophthalmology/provenance.js";
 import { customFieldEntries } from "./custom-fields.js";
+import {
+  readDiagnosisCarryState,
+  type DiagnosisCarryState,
+  type SourceAbsentFindingSnapshot,
+} from "./diagnosis-carry-provenance.js";
 import { FhirDiagnosisCatalogStore } from "./diagnosis-catalog-store.js";
 import { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } from "./diagnosis-pick-endpoint.js";
 import { FhirFindingDefinitionStore } from "./finding-definition-store.js";
@@ -56,11 +61,21 @@ export interface EncounterFindingRow extends AtomicFindingCatalogRow {
   grade?: string;
   observationReference?: string;
   conditionReference?: string;
+  carried?: boolean;
+  priorPresence?: "present" | "absent";
+  priorGrade?: string;
+  priorLaterality?: FindingLaterality;
 }
 
 export interface DiagnosisFindingsPayload {
   canWrite: boolean;
   diagnosis?: DiagnosisCatalogRow;
+  carryProvenance?: {
+    pulledFromDate?: string;
+    unchangedSinceDate?: string;
+    edited: boolean;
+    integrityWarning?: string;
+  };
   findings: EncounterFindingRow[];
   catalog: AtomicFindingCatalogRow[];
   unassigned: EncounterFindingRow[];
@@ -79,6 +94,7 @@ export interface DiagnosisFindingsFhirClient {
     resourceType: T["resourceType"],
     params?: Record<string, string>,
   ): Promise<Bundle<T>>;
+  searchUrl?<T extends Resource>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>>;
   create<T extends Resource>(resource: T, extraHeaders?: Record<string, string>): Promise<T>;
   update<T extends Resource>(
     resourceType: T["resourceType"],
@@ -209,8 +225,11 @@ export async function handleDiagnosisFindingsReadRequest(
   const observations = resources(observationBundle).filter((observation) =>
     observation.subject?.reference === patientReference && observation.status !== "entered-in-error"
   );
+  const carryState = selectedCondition
+    ? await readDiagnosisCarryState(staff.fhir, selectedCondition, observations)
+    : undefined;
   const charted = [
-    ...atomicFindingRows(observations, catalog, bindingIndex),
+    ...atomicFindingRows(observations, catalog, bindingIndex, carryState?.observationCarried),
     ...sectionFindingRows(observations, definitions, catalog, visits, bindingIndex),
   ];
   const selectedVisit = selectedCondition
@@ -220,7 +239,13 @@ export async function handleDiagnosisFindingsReadRequest(
     ? diagnosisRows.find((diagnosis) => diagnosis.stableKey === selectedVisit.diagnosisKey)
     : undefined;
   const findings = selectedVisit
-    ? selectedFindings(selectedVisit, selectedDiagnosis, charted, catalog)
+    ? selectedFindings(
+        selectedVisit,
+        selectedDiagnosis,
+        charted,
+        catalog,
+        carryState?.sourceAbsentSnapshots ?? [],
+      )
     : [];
   const unassigned = charted
     .filter((row) => !row.conditionReference)
@@ -235,6 +260,9 @@ export async function handleDiagnosisFindingsReadRequest(
   const body: DiagnosisFindingsPayload = {
     canWrite: staffMay(staff.actorRole, "chart.write"),
     ...(selectedDiagnosis ? { diagnosis: selectedDiagnosis } : {}),
+    ...(carryState && (carryState.pulledFromDate || carryState.integrityWarning)
+      ? { carryProvenance: carrySummary(carryState) }
+      : {}),
     findings,
     catalog,
     unassigned,
@@ -471,19 +499,29 @@ function selectedFindings(
   diagnosis: DiagnosisCatalogRow | undefined,
   charted: readonly EncounterFindingRow[],
   catalog: readonly AtomicFindingCatalogRow[],
+  sourceAbsentSnapshots: readonly SourceAbsentFindingSnapshot[],
 ): EncounterFindingRow[] {
   const selectedCharted = charted.filter((row) => row.conditionReference === visit.conditionReference);
   const chartedIdentities = new Set(charted.map((row) => `${row.atomicFindingId}|${row.laterality}`));
+  const priorAbsent = uniqueAbsentSnapshots(sourceAbsentSnapshots);
   const offered = diagnosis
     ? catalog
         .filter((row) => row.diagnosisKeys.includes(diagnosis.stableKey))
         .filter((row) => !chartedIdentities.has(`${row.atomicFindingId}|${visit.laterality}`))
-        .map((row): EncounterFindingRow => ({
-          ...row,
-          laterality: visit.laterality,
-          lateralitySource: "inherited",
-          source: "offered",
-        }))
+        .map((row): EncounterFindingRow => {
+          const prior = priorAbsent.get(`${row.atomicFindingId}|${visit.laterality}`);
+          return {
+            ...row,
+            laterality: visit.laterality,
+            lateralitySource: "inherited",
+            source: "offered",
+            ...(prior ? {
+              priorPresence: prior.presence,
+              ...(prior.grade ? { priorGrade: prior.grade } : {}),
+              priorLaterality: prior.laterality,
+            } : {}),
+          };
+        })
     : [];
   return [...selectedCharted, ...offered].sort(findingRowOrder);
 }
@@ -492,6 +530,7 @@ function atomicFindingRows(
   observations: readonly Observation[],
   catalog: readonly AtomicFindingCatalogRow[],
   bindingIndex: ReadonlyMap<string, string[]>,
+  observationCarried: Readonly<Record<string, boolean>> = {},
 ): EncounterFindingRow[] {
   const catalogByCode = new Map(catalog.map((row) => [row.atomicFindingId, row]));
   return observations.flatMap((observation) => {
@@ -510,9 +549,36 @@ function atomicFindingRows(
       presence: observation.valueBoolean === false ? "absent" as const : "present" as const,
       ...(observationGrade(observation) ? { grade: observationGrade(observation) } : {}),
       observationReference: reference,
+      ...(Object.hasOwn(observationCarried, reference) ? { carried: observationCarried[reference] } : {}),
       ...(bindings.length === 1 ? { conditionReference: bindings[0] } : {}),
     }];
   });
+}
+
+function uniqueAbsentSnapshots(
+  snapshots: readonly SourceAbsentFindingSnapshot[],
+): Map<string, SourceAbsentFindingSnapshot> {
+  const unique = new Map<string, SourceAbsentFindingSnapshot>();
+  const ambiguous = new Set<string>();
+  for (const snapshot of snapshots) {
+    const key = `${snapshot.atomicFindingId}|${snapshot.laterality}`;
+    if (unique.has(key)) {
+      unique.delete(key);
+      ambiguous.add(key);
+    } else if (!ambiguous.has(key)) {
+      unique.set(key, snapshot);
+    }
+  }
+  return unique;
+}
+
+function carrySummary(state: DiagnosisCarryState): NonNullable<DiagnosisFindingsPayload["carryProvenance"]> {
+  return {
+    ...(state.pulledFromDate ? { pulledFromDate: state.pulledFromDate } : {}),
+    ...(state.unchangedSinceDate ? { unchangedSinceDate: state.unchangedSinceDate } : {}),
+    edited: state.edited,
+    ...(state.integrityWarning ? { integrityWarning: state.integrityWarning } : {}),
+  };
 }
 
 function sectionFindingRows(
