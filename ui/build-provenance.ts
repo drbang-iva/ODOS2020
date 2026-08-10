@@ -29,7 +29,7 @@ export function readBuildVersion(root: string, now = new Date()): BuildVersion {
   }
 
   if (sha !== "unknown" && branch === "unknown") {
-    branch = process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME || "unknown";
+    branch = process.env.ODOS_BUILD_BRANCH || process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME || "unknown";
   }
 
   return {

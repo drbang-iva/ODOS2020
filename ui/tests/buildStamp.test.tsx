@@ -24,7 +24,7 @@ test("production build emits public provenance and a static stamp outside the Re
       cwd: UI_ROOT,
       encoding: "utf8",
     }).trim();
-    const expectedBranch = gitBranch || process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME || "unknown";
+    const expectedBranch = gitBranch || process.env.ODOS_BUILD_BRANCH || process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME || "unknown";
     const version = JSON.parse(await readFile(path.join(outDir, "version.json"), "utf8"));
     assert.equal(version.sha, expectedSha);
     assert.equal(version.shortSha, expectedSha.slice(0, 7));
@@ -70,6 +70,23 @@ test("detached CI checkout keeps its source branch provenance", async () => {
   } finally {
     if (previousHeadRef === undefined) delete process.env.GITHUB_HEAD_REF;
     else process.env.GITHUB_HEAD_REF = previousHeadRef;
+    await rm(detachedRepo, { recursive: true, force: true });
+  }
+});
+
+test("detached evaluator checkout keeps its explicitly supplied source branch provenance", async () => {
+  const detachedRepo = await mkdtemp(path.join(tmpdir(), "odos-detached-eval-git-"));
+  const previousBuildBranch = process.env.ODOS_BUILD_BRANCH;
+  try {
+    execFileSync("git", ["init", "--quiet"], { cwd: detachedRepo });
+    execFileSync("git", ["-c", "user.name=ODOS Test", "-c", "user.email=test@odos.invalid", "commit", "--quiet", "--allow-empty", "-m", "fixture"], { cwd: detachedRepo });
+    execFileSync("git", ["checkout", "--quiet", "--detach"], { cwd: detachedRepo });
+    process.env.ODOS_BUILD_BRANCH = "drbang-iva/build-stamp";
+
+    assert.equal(readBuildVersion(detachedRepo).branch, "drbang-iva/build-stamp");
+  } finally {
+    if (previousBuildBranch === undefined) delete process.env.ODOS_BUILD_BRANCH;
+    else process.env.ODOS_BUILD_BRANCH = previousBuildBranch;
     await rm(detachedRepo, { recursive: true, force: true });
   }
 });
