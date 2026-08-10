@@ -1,4 +1,5 @@
 import type { Bundle, Resource } from "@medplum/fhirtypes";
+import { fhirSearchNextPath } from "./fhir-client.js";
 
 export const DEFAULT_FHIR_SEARCH_MAX_ROWS = 1_000;
 
@@ -135,18 +136,11 @@ export function validateLocalFhirSearchNextPath(
   fhirBaseUrl: string,
   resourceType: Resource["resourceType"],
 ): string {
-  const fhirRoot = new URL(`${fhirBaseUrl.replace(/\/$/, "")}/fhir/R4/`);
-  const parsed = new URL(url, new URL(resourceType, fhirRoot));
-  if (
-    parsed.username || parsed.password || parsed.hash ||
-    (parsed.protocol !== "http:" && parsed.protocol !== "https:") ||
-    parsed.origin !== fhirRoot.origin ||
-    parsed.pathname !== `${fhirRoot.pathname}${resourceType}` ||
-    !parsed.search
-  ) {
+  const path = fhirSearchNextPath(url, fhirBaseUrl, resourceType);
+  if (!path) {
     throw new Error(`FHIR ${resourceType} next link is invalid.`);
   }
-  return `${parsed.pathname}${parsed.search}`;
+  return path;
 }
 
 function paramsWithCount(params: Record<string, string>): Record<string, string> {

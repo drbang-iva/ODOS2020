@@ -11,7 +11,7 @@ import type { Application } from "express";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
-import type { FhirTransactionExecutionOptions } from "../fhir-client.js";
+import { fhirSearchNextPath, type FhirTransactionExecutionOptions } from "../fhir-client.js";
 import {
   buildEncounterDiagnosisComponent,
   buildEncounterDiagnosisCondition,
@@ -938,16 +938,9 @@ function decodeCursor(cursor: string, fhirBaseUrl: string): string | undefined {
 }
 
 function validatedNextPath(url: string, fhirBaseUrl: string): string {
-  const fhirOrigin = new URL(fhirBaseUrl).origin;
-  const parsed = new URL(url, `${fhirOrigin}/fhir/R4/Encounter`);
-  if (
-    parsed.username || parsed.password || parsed.hash ||
-    (parsed.protocol !== "http:" && parsed.protocol !== "https:") ||
-    parsed.origin !== fhirOrigin ||
-    !parsed.pathname.endsWith("/Encounter") ||
-    !parsed.search
-  ) throw new InvalidCursorError();
-  return `${parsed.pathname}${parsed.search}`;
+  const path = fhirSearchNextPath(url, fhirBaseUrl, "Encounter");
+  if (!path) throw new InvalidCursorError();
+  return path;
 }
 
 function bundleResources<T extends Resource>(bundle: Bundle<T>): T[] {

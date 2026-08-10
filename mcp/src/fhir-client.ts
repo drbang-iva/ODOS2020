@@ -84,6 +84,27 @@ export interface FhirTransactionExecutionOptions {
 
 export type FhirSearchParams = Record<string, string> | URLSearchParams | Array<[string, string]>;
 
+export function fhirSearchNextPath(
+  url: string,
+  baseUrl: string,
+  resourceType: Resource["resourceType"],
+): string | undefined {
+  try {
+    const fhirRoot = new URL(`${baseUrl.replace(/\/$/, "")}/fhir/R4/`);
+    const parsed = new URL(url, new URL(resourceType, fhirRoot));
+    if (
+      parsed.username || parsed.password || parsed.hash ||
+      (parsed.protocol !== "http:" && parsed.protocol !== "https:") ||
+      parsed.origin !== fhirRoot.origin ||
+      parsed.pathname !== `${fhirRoot.pathname}${resourceType}` ||
+      !parsed.search
+    ) return undefined;
+    return `${parsed.pathname}${parsed.search}`;
+  } catch {
+    return undefined;
+  }
+}
+
 export interface MedplumPractitionerInvite {
   resourceType: "Practitioner";
   email: string;
