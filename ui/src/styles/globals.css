@@ -23,6 +23,42 @@ body {
     var(--odos-page-ground);
 }
 
+.odos-build-stamp {
+  position: fixed;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  z-index: 100;
+  display: flex;
+  max-width: calc(100vw - 1.5rem);
+  flex-wrap: wrap;
+  gap: 0.25rem 0.55rem;
+  border: 1px solid var(--odos-line-2, rgba(255, 255, 255, 0.2));
+  border-radius: 0.375rem;
+  background: var(--odos-surface-2, #111827);
+  padding: 0.35rem 0.55rem;
+  color: var(--odos-faint, #cbd5e1);
+  font: 600 0.6875rem/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  box-shadow: var(--odos-shadow-card, 0 10px 30px rgba(0, 0, 0, 0.25));
+}
+
+.odos-build-stamp code {
+  color: var(--odos-text, #ffffff);
+}
+
+.odos-build-stamp.is-current [data-build-status] {
+  color: var(--odos-emerald, #6ee7b7);
+}
+
+.odos-build-stamp.is-stale,
+.odos-build-stamp.is-unknown {
+  border-color: var(--odos-amber, #fbbf24);
+}
+
+.odos-build-stamp.is-stale [data-build-status],
+.odos-build-stamp.is-unknown [data-build-status] {
+  color: var(--odos-amber, #fbbf24);
+}
+
 @layer components {
   .sidebar-input {
     @apply h-11 rounded border border-white/15 bg-bg-deep px-3 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-brand;

@@ -31,6 +31,24 @@ npm run dev
 
 Open http://localhost:5173. Vite proxies `/fhir`, `/auth`, and `/oauth2` to Medplum at localhost:8103.
 
+## Build provenance
+
+Production builds expose an unauthenticated static `/version.json` asset with the built checkout's full SHA, short SHA, branch, and ISO 8601 `builtAt` timestamp. The fixed corner stamp is injected outside React's root so the absolute build identity remains visible when application JavaScript fails; JavaScript adds relative age and status styling when it runs.
+
+Iris ops may write this optional same-origin asset beside the bundle:
+
+```json
+{
+  "sha": "0123456789abcdef0123456789abcdef01234567",
+  "shortSha": "0123456",
+  "checkedAt": "2026-08-10T18:00:00.000Z"
+}
+```
+
+`/deployed.json` identifies the deployed checkout's current `HEAD`; the build never writes it. A valid matching SHA is current regardless of age, and a valid mismatch is stale regardless of age. Missing, unfetchable, or malformed content falls back silently to the 12-hour build-age backstop. An unknown built SHA always displays an unknown-provenance warning.
+
+The production build also fails if any final emitted JavaScript, CSS, JSON, or other text asset contains an absolute HTTP(S) loopback URL. Vite development is excluded because its local proxy targets are intentional.
+
 ## Golden Path
 
 1. Pick a patient from Patient Picker.
