@@ -221,20 +221,25 @@ export async function handleDiagnosisPullRequest(
     return { status: 400, body: { error: "A current Encounter and source Encounter diagnosis are required." } };
   }
 
+  try {
   const currentEncounterId = parsedParams.data.encounterId;
   const sourceEncounterId = parsedBody.data.sourceEncounterReference.slice("Encounter/".length);
   const sourceConditionId = parsedBody.data.sourceConditionReference.slice("Condition/".length);
   const [initialCurrentEncounter, sourceEncounter, sourceCondition] = await Promise.all([
-    staff.fhir.read<Encounter>("Encounter", currentEncounterId),
-    staff.fhir.read<Encounter>("Encounter", sourceEncounterId),
-    staff.fhir.read<Condition>("Condition", sourceConditionId),
+    diagnosisPullRead(() => staff.fhir.read<Encounter>("Encounter", currentEncounterId)),
+    diagnosisPullRead(() => staff.fhir.read<Encounter>("Encounter", sourceEncounterId)),
+    diagnosisPullRead(() => staff.fhir.read<Condition>("Condition", sourceConditionId)),
   ]);
   const patientReference = initialCurrentEncounter.subject?.reference;
   if (!patientReference?.match(patientReferencePattern)) {
     return { status: 409, body: { error: "The current encounter requires a Patient." } };
   }
-  await staff.fhir.read<Patient>("Patient", patientReference.slice("Patient/".length));
+  await diagnosisPullRead(() =>
+    staff.fhir.read<Patient>("Patient", patientReference.slice("Patient/".length))
+  );
   if (
+    initialCurrentEncounter.status === "entered-in-error" ||
+    sourceEncounter.status === "entered-in-error" ||
     sourceEncounter.subject?.reference !== patientReference ||
     sourceCondition.subject?.reference !== patientReference ||
     sourceCondition.encounter?.reference !== parsedBody.data.sourceEncounterReference ||
@@ -256,8 +261,13 @@ export async function handleDiagnosisPullRequest(
     return { status: 409, body: { error: "The source diagnosis evidence does not belong to its patient and encounter." } };
   }
 
-  const currentEncounter = await staff.fhir.read<Encounter>("Encounter", currentEncounterId);
-  if (currentEncounter.subject?.reference !== patientReference) {
+  const currentEncounter = await diagnosisPullRead(() =>
+    staff.fhir.read<Encounter>("Encounter", currentEncounterId)
+  );
+  if (
+    currentEncounter.status === "entered-in-error" ||
+    currentEncounter.subject?.reference !== patientReference
+  ) {
     return { status: 409, body: { error: "The current encounter patient changed; reload and retry." } };
   }
   const versionId = currentEncounter.meta?.versionId;
@@ -350,12 +360,12 @@ export async function handleDiagnosisPullRequest(
     }
     throw error;
   }
-  const failedStatus = failedTransactionStatus(transaction);
-  if (failedStatus) {
-    if (failedStatus === 409 || failedStatus === 412) {
+  const transactionValidation = validateTransactionResponse(transactionBundle, transaction);
+  if (transactionValidation.kind !== "ok") {
+    if (transactionValidation.kind === "conflict") {
       return diagnosisConflict(staff.fhir, currentEncounterId, patientReference, sourceIdentity);
     }
-    return { status: 502, body: { error: `FHIR diagnosis pull transaction failed with status ${failedStatus}.` } };
+    return { status: 502, body: { error: "FHIR diagnosis pull transaction response was invalid." } };
   }
   const conditionReference = transactionConditionReference(transaction, 0);
   if (!conditionReference) {
@@ -365,6 +375,18 @@ export async function handleDiagnosisPullRequest(
     status: 200,
     body: { conditionReference, alreadyPresent: false, transaction },
   };
+  } catch (error) {
+    if (error instanceof DiagnosisPullReadError) {
+      if (error.status === 404) {
+        return { status: 404, body: { error: "Diagnosis pull resources were not found." } };
+      }
+      return {
+        status: 403,
+        body: { error: "Diagnosis pull resources are outside the caller's patient compartment." },
+      };
+    }
+    throw error;
+  }
 }
 
 async function currentDiagnosisIdentities(
@@ -376,7 +398,7 @@ async function currentDiagnosisIdentities(
   for (const diagnosis of encounter.diagnosis ?? []) {
     const match = diagnosis.condition.reference?.match(conditionReferencePattern);
     if (!match) continue;
-    const condition = await fhir.read<Condition>("Condition", match[1]!);
+    const condition = await diagnosisPullRead(() => fhir.read<Condition>("Condition", match[1]!));
     if (
       condition.subject?.reference !== patientReference ||
       condition.encounter?.reference !== `Encounter/${encounter.id}` ||
@@ -550,7 +572,7 @@ async function sourceEvidenceObservations(
   for (const detail of condition.evidence?.flatMap((evidence) => evidence.detail ?? []) ?? []) {
     const match = detail.reference?.match(observationReferencePattern);
     if (!match) continue;
-    const observation = await fhir.read<Observation>("Observation", match[1]!);
+    const observation = await diagnosisPullRead(() => fhir.read<Observation>("Observation", match[1]!));
     if (
       observation.subject?.reference !== patientReference ||
       observation.encounter?.reference !== encounterReference
@@ -654,24 +676,48 @@ async function diagnosisConflict(
   patientReference: string,
   sourceIdentity: PreviousExamDiagnosisIdentity,
 ): Promise<{ status: number; body: unknown }> {
-  const encounter = await fhir.read<Encounter>("Encounter", encounterId);
-  if (encounter.subject?.reference === patientReference) {
-    const identities = await currentDiagnosisIdentities(fhir, encounter, patientReference);
-    const conditionReference = identities.get(identityKey(sourceIdentity));
-    if (conditionReference) {
-      return { status: 200, body: { conditionReference, alreadyPresent: true } };
+  try {
+    const encounter = await fhir.read<Encounter>("Encounter", encounterId);
+    if (encounter.subject?.reference === patientReference) {
+      const identities = await currentDiagnosisIdentities(fhir, encounter, patientReference);
+      const conditionReference = identities.get(identityKey(sourceIdentity));
+      if (conditionReference) {
+        return { status: 200, body: { conditionReference, alreadyPresent: true } };
+      }
     }
+  } catch {
+    return { status: 409, body: { error: "The encounter diagnoses changed concurrently; reload and retry." } };
   }
   return { status: 409, body: { error: "The encounter diagnoses changed concurrently; reload and retry." } };
 }
 
-function failedTransactionStatus(bundle: Bundle): number | undefined {
-  return bundle.entry?.flatMap((entry) => {
-    const status = entry.response?.status;
-    if (!status) return [];
-    const code = Number.parseInt(status, 10);
-    return Number.isInteger(code) && code >= 400 ? [code] : [];
-  })[0];
+function validateTransactionResponse(
+  request: Bundle,
+  response: Bundle,
+): { kind: "ok" } | { kind: "conflict" } | { kind: "invalid" } {
+  if (response.type !== "transaction-response") return { kind: "invalid" };
+  const requestEntries = request.entry;
+  const responseEntries = response.entry;
+  if (!requestEntries || !responseEntries || responseEntries.length !== requestEntries.length) {
+    return { kind: "invalid" };
+  }
+  let conflict = false;
+  for (let index = 0; index < requestEntries.length; index += 1) {
+    const requestResourceType = requestEntries[index]?.resource?.resourceType;
+    const responseResourceType = responseEntries[index]?.resource?.resourceType;
+    const status = responseEntries[index]?.response?.status;
+    const statusMatch = status?.match(/^(\d{3})(?:\s|$)/);
+    if (!requestResourceType || !statusMatch) {
+      return { kind: "invalid" };
+    }
+    const statusCode = Number(statusMatch[1]);
+    if (statusCode === 409 || statusCode === 412) {
+      conflict = true;
+    } else if (statusCode < 200 || statusCode >= 300 || responseResourceType !== requestResourceType) {
+      return { kind: "invalid" };
+    }
+  }
+  return conflict ? { kind: "conflict" } : { kind: "ok" };
 }
 
 function transactionConditionReference(bundle: Bundle, entryIndex: number): string | undefined {
@@ -688,6 +734,20 @@ function isFhirConflict(error: unknown): boolean {
     : undefined;
   const message = error instanceof Error ? error.message : String(error);
   return status === 409 || status === 412 || /FHIR (409|412)\b/.test(message);
+}
+
+async function diagnosisPullRead<T>(operation: () => Promise<T>): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    const status = typeof error === "object" && error !== null && "status" in error
+      ? (error as { status?: unknown }).status
+      : undefined;
+    if (status === 401 || status === 403 || status === 404) {
+      throw new DiagnosisPullReadError(status);
+    }
+    throw error;
+  }
 }
 
 function uuidFullUrl(): string {
@@ -748,3 +808,8 @@ function staffMayWrite(role: PracticeRoleId): boolean {
 }
 
 class InvalidCursorError extends Error {}
+class DiagnosisPullReadError extends Error {
+  constructor(readonly status: 401 | 403 | 404) {
+    super("Diagnosis pull FHIR read failed");
+  }
+}
