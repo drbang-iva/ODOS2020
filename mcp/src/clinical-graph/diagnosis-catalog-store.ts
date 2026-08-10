@@ -41,7 +41,7 @@ export class FhirDiagnosisCatalogStore {
     const storedByKey = new Map(stored.map((row) => [row.definition.stableKey, row.definition]));
     const seedKeys = new Set(this.seeds.map((row) => row.stableKey));
     return [
-      ...this.seeds.map((seed) => storedByKey.get(seed.stableKey) ?? seed),
+      ...this.seeds.map((seed) => seedCodeProjection(seed, storedByKey.get(seed.stableKey))),
       ...stored.map((row) => row.definition)
         .filter((row) => !seedKeys.has(row.stableKey))
         .sort((left, right) => left.stableKey.localeCompare(right.stableKey)),
@@ -85,6 +85,28 @@ export class FhirDiagnosisCatalogStore {
     });
     return resolveStoredDuplicates(rows);
   }
+}
+
+function seedCodeProjection(
+  seed: DiagnosisCatalogRow,
+  stored: DiagnosisCatalogRow | undefined,
+): DiagnosisCatalogRow {
+  if (!stored) return seed;
+  if (seed.bilateralResolution !== "emit-both-eyes") return stored;
+  return {
+    ...stored,
+    icd10Family: seed.icd10Family,
+    icd10Code: seed.icd10Code,
+    icd10Display: seed.icd10Display,
+    icd10: seed.icd10,
+    bilateralResolution: seed.bilateralResolution,
+    codingStatus: seed.codingStatus,
+    lateralityRequired: seed.lateralityRequired,
+    provenance: {
+      ...stored.provenance,
+      ledgerRefs: seed.provenance.ledgerRefs,
+    },
+  };
 }
 
 export function buildDiagnosisCatalogResource(definition: DiagnosisCatalogRow, existing?: Basic): Basic {

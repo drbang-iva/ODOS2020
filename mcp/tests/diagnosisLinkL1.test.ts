@@ -249,6 +249,37 @@ test("eyelid families expose only verified both-lids per-eye slots and declare b
   }
 });
 
+test("persisted eyelid definitions cannot override the verified seed code projection", async () => {
+  const fhir = new MemoryFhir();
+  const current = buildDiagnosisCatalogSeeds().find((row) => row.stableKey === "meibomian_gland_dysfunction")!;
+  await new FhirDiagnosisCatalogStore(fhir).save({
+    ...current,
+    display: "Practice MGD label",
+    icd10: {
+      pattern: {
+        unspecifiedEye: "H02.889",
+        right: "H02.883",
+        left: "H02.886",
+      },
+    },
+    icd10Code: "H02.889",
+    icd10Display: "Meibomian gland dysfunction of unspecified eye, unspecified eyelid",
+    bilateralResolution: undefined,
+    provenance: { ...current.provenance, note: "Practice-authored note remains intact." },
+  });
+
+  const resolved = (await new FhirDiagnosisCatalogStore(fhir).list()).find((row) =>
+    row.stableKey === "meibomian_gland_dysfunction"
+  );
+
+  assert.equal(resolved?.display, "Practice MGD label");
+  assert.deepEqual(resolved?.icd10, { pattern: { right: "H02.88A", left: "H02.88B" } });
+  assert.equal(resolved?.icd10Code, "H02.88A");
+  assert.equal(resolved?.bilateralResolution, "emit-both-eyes");
+  assert.equal(resolved?.provenance.note, "Practice-authored note remains intact.");
+  assert.deepEqual(resolved?.provenance.ledgerRefs, current.provenance.ledgerRefs);
+});
+
 test("glaucoma laterality-only families seed all verified ledger codes", () => {
   const seeds = buildDiagnosisCatalogSeeds();
   const expected = {
