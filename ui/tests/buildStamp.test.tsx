@@ -20,10 +20,11 @@ test("production build emits public provenance and a static stamp outside the Re
       cwd: UI_ROOT,
       encoding: "utf8",
     }).trim();
-    const expectedBranch = execFileSync("git", ["branch", "--show-current"], {
+    const gitBranch = execFileSync("git", ["branch", "--show-current"], {
       cwd: UI_ROOT,
       encoding: "utf8",
-    }).trim() || "unknown";
+    }).trim();
+    const expectedBranch = gitBranch || process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME || "unknown";
     const version = JSON.parse(await readFile(path.join(outDir, "version.json"), "utf8"));
     assert.equal(version.sha, expectedSha);
     assert.equal(version.shortSha, expectedSha.slice(0, 7));
