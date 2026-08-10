@@ -36,6 +36,359 @@
   overscroll-behavior: contain;
 }
 
+.odos-chart-view-toggle {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--odos-line);
+  background: var(--odos-surface);
+}
+
+.odos-chart-view-toggle button,
+.odos-diagnosis-laterality button,
+.odos-diagnosis-scope-prompt button {
+  padding: 6px 10px;
+  border: 1px solid var(--odos-line-2);
+  border-radius: 7px;
+  background: var(--odos-surface-2);
+  color: var(--odos-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.odos-chart-view-toggle button[aria-pressed="true"],
+.odos-diagnosis-laterality button[aria-pressed="true"] {
+  border-color: var(--odos-accent);
+  background: color-mix(in srgb, var(--odos-accent) 18%, var(--odos-surface-2));
+  color: var(--odos-text);
+}
+
+.odos-diagnosis-workspace {
+  position: relative;
+  display: grid;
+  grid-template-columns: 214px minmax(360px, 1fr) minmax(270px, 340px);
+  overflow: hidden;
+  background: var(--odos-ground);
+  color: var(--odos-text);
+}
+
+.odos-diagnosis-workspace:has(.odos-diagnosis-imaging:not(.is-open)) {
+  grid-template-columns: 214px minmax(360px, 1fr) 48px;
+}
+
+.odos-diagnosis-imaging:not(.is-open) {
+  overflow: hidden;
+}
+
+.odos-diagnosis-imaging:not(.is-open) .odos-diagnosis-imaging-toggle {
+  height: 100%;
+  padding: 12px;
+  writing-mode: vertical-rl;
+}
+
+.odos-diagnosis-rail,
+.odos-diagnosis-center,
+.odos-diagnosis-imaging {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.odos-diagnosis-rail {
+  padding: 12px 10px 18px;
+  border-right: 1px solid var(--odos-line);
+  background: var(--odos-surface);
+}
+
+.odos-diagnosis-rail-heading {
+  margin: 18px 0 7px;
+  color: var(--odos-faint);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.odos-diagnosis-rail-title {
+  margin: 0;
+  color: var(--odos-text);
+  font-size: 18px;
+  font-weight: 750;
+}
+
+.odos-diagnosis-rail-heading:first-child {
+  margin-top: 0;
+}
+
+.odos-diagnosis-visit-list,
+.odos-diagnosis-common-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.odos-diagnosis-common-list {
+  max-height: 270px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.odos-diagnosis-visit-row,
+.odos-diagnosis-common-row {
+  width: 100%;
+  border: 1px solid var(--odos-line);
+  border-radius: 8px;
+  background: var(--odos-surface-2);
+}
+
+.odos-diagnosis-visit-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px;
+  color: var(--odos-text);
+  text-align: left;
+}
+
+.odos-diagnosis-visit-row[aria-pressed="true"] {
+  border-color: var(--odos-accent);
+  box-shadow: inset 3px 0 0 var(--odos-accent);
+}
+
+.odos-diagnosis-visit-row small,
+.odos-diagnosis-common-row small,
+.odos-diagnosis-imaging-card small {
+  display: block;
+  margin-top: 2px;
+  color: var(--odos-faint);
+  font-size: 10px;
+}
+
+.odos-diagnosis-common-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  overflow: hidden;
+}
+
+.odos-diagnosis-common-row > button {
+  min-width: 0;
+  padding: 7px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--odos-text);
+  text-align: left;
+}
+
+.odos-diagnosis-common-row > button span {
+  display: block;
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.odos-diagnosis-pin-actions {
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--odos-line);
+}
+
+.odos-diagnosis-pin-actions button {
+  width: 27px;
+  min-height: 24px;
+  border: 0;
+  background: transparent;
+  color: var(--odos-muted);
+}
+
+.odos-diagnosis-primary-action {
+  width: 100%;
+  margin-top: 7px;
+  padding: 8px 10px;
+  border: 1px solid var(--odos-accent);
+  border-radius: 7px;
+  background: var(--odos-accent);
+  color: var(--odos-accent-ink);
+  font-weight: 800;
+}
+
+.odos-diagnosis-scope-prompt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid var(--odos-amber);
+  border-radius: 8px;
+  background: var(--odos-amber-wash);
+  font-size: 11px;
+}
+
+.odos-diagnosis-center {
+  padding: clamp(18px, 3vw, 36px);
+  background: var(--odos-ground);
+}
+
+.odos-diagnosis-empty {
+  display: grid;
+  height: 100%;
+  place-content: center;
+  text-align: center;
+}
+
+.odos-diagnosis-empty h2,
+.odos-diagnosis-selected h2 {
+  margin: 0;
+  font-size: clamp(21px, 2vw, 30px);
+}
+
+.odos-diagnosis-empty p,
+.odos-diagnosis-selected-header p {
+  margin: 6px 0 0;
+  color: var(--odos-muted);
+}
+
+.odos-diagnosis-selected {
+  display: flex;
+  max-width: 840px;
+  flex-direction: column;
+  gap: 22px;
+  margin: 0 auto;
+}
+
+.odos-diagnosis-selected-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.odos-diagnosis-eyebrow {
+  margin-bottom: 5px;
+  color: var(--odos-accent);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+}
+
+.odos-diagnosis-laterality {
+  display: flex;
+  gap: 4px;
+}
+
+.odos-diagnosis-later-slice {
+  display: grid;
+  min-height: 220px;
+  place-content: center;
+  border: 1px dashed var(--odos-line-2);
+  border-radius: 12px;
+  color: var(--odos-muted);
+  text-align: center;
+}
+
+.odos-diagnosis-imaging {
+  border-left: 1px solid var(--odos-line);
+  background: var(--odos-surface);
+}
+
+.odos-diagnosis-imaging-toggle {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--odos-line);
+  background: var(--odos-surface);
+  color: var(--odos-text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.odos-diagnosis-imaging-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+
+.odos-diagnosis-imaging-card {
+  overflow: hidden;
+  border: 1px solid var(--odos-line);
+  border-radius: 9px;
+  background: var(--odos-surface-2);
+}
+
+.odos-diagnosis-imaging-card img,
+.odos-diagnosis-imaging-missing {
+  display: grid;
+  width: 100%;
+  min-height: 120px;
+  max-height: 190px;
+  place-content: center;
+  object-fit: cover;
+  background: var(--odos-ground);
+  color: var(--odos-faint);
+  font-size: 11px;
+}
+
+.odos-diagnosis-imaging-card > div:last-child,
+.odos-diagnosis-imaging-card > a {
+  display: block;
+  padding: 9px;
+}
+
+.odos-diagnosis-muted {
+  color: var(--odos-muted);
+  font-size: 12px;
+}
+
+.odos-diagnosis-error {
+  padding: 9px 11px;
+  border: 1px solid var(--odos-alert);
+  border-radius: 8px;
+  color: var(--odos-alert);
+  font-size: 12px;
+}
+
+@container (max-width: 980px) {
+  .odos-diagnosis-workspace {
+    grid-template-columns: 196px minmax(320px, 1fr) 48px;
+  }
+
+  .odos-diagnosis-imaging:not(.is-open) {
+    overflow: hidden;
+  }
+
+  .odos-diagnosis-imaging.is-open {
+    position: absolute;
+    z-index: 25;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(340px, 75cqw);
+    box-shadow: -15px 0 35px rgb(0 0 0 / .4);
+  }
+
+  .odos-diagnosis-imaging:not(.is-open) .odos-diagnosis-imaging-toggle {
+    height: 100%;
+    padding: 12px;
+    writing-mode: vertical-rl;
+  }
+}
+
 .odos-spine-nav {
   overscroll-behavior: contain;
   scrollbar-gutter: stable;

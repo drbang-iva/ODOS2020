@@ -2,6 +2,7 @@ import type { Basic, Bundle, Condition, Encounter, Observation, Provenance } fro
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
 import {
+  buildEncounterDiagnosisComponent,
   buildEncounterDiagnosisCondition,
   verificationStatusConcept,
   type ConditionVerificationStatusCode,
@@ -165,8 +166,22 @@ export async function handleDiagnosisPickRequest(
   }
 
   const conditionReference = `Condition/${condition.id}`;
+  let linkedEncounter: Encounter | undefined;
+  let encounterChanged = false;
+  if (parsed.data.action === "confirm") {
+    try {
+      const linked = await ensureEncounterDiagnosisLinked(staff.fhir, encounterId, conditionReference, encounter);
+      linkedEncounter = linked.encounter;
+      encounterChanged = linked.changed;
+    } catch (error) {
+      if (isConflict(error)) {
+        return { status: 409, body: { error: "The encounter diagnoses changed concurrently — reload and retry." } };
+      }
+      throw error;
+    }
+  }
   const provenance = await staff.fhir.create<Provenance>(buildProvenance({
-    targetReferences: [conditionReference],
+    targetReferences: [conditionReference, ...(encounterChanged ? [encounterReference] : [])],
     occurredDateTime: recordedAt,
     recorded: recordedAt,
     activityCode: existing ? "UPDATE" : "CREATE",
@@ -208,11 +223,47 @@ export async function handleDiagnosisPickRequest(
     status: existing ? 200 : 201,
     body: {
       condition,
+      ...(linkedEncounter ? { encounter: linkedEncounter } : {}),
       provenanceReference: provenance.id ? `Provenance/${provenance.id}` : undefined,
       action: parsed.data.action,
       ...(diagnosisVisitStatus ? { diagnosisVisitStatus } : {}),
     },
   };
+}
+
+async function ensureEncounterDiagnosisLinked(
+  fhir: DiagnosisPickFhirClient,
+  encounterId: string,
+  conditionReference: string,
+  initialEncounter: Encounter | undefined,
+): Promise<{ encounter: Encounter; changed: boolean }> {
+  let encounter = initialEncounter;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    encounter ??= await fhir.read<Encounter>("Encounter", encounterId);
+    if (encounter.diagnosis?.some((diagnosis) => diagnosis.condition.reference === conditionReference)) {
+      return { encounter, changed: false };
+    }
+    const nextRank = Math.max(0, ...(encounter.diagnosis ?? []).map((diagnosis) =>
+      Number.isInteger(diagnosis.rank) && (diagnosis.rank ?? 0) > 0 ? diagnosis.rank! : 0
+    )) + 1;
+    try {
+      const updated = await fhir.update<Encounter>("Encounter", encounterId, {
+        ...encounter,
+        diagnosis: [
+          ...(encounter.diagnosis ?? []),
+          buildEncounterDiagnosisComponent(conditionReference, nextRank),
+        ],
+      }, {
+        ...DIAGNOSIS_PICK_WRITE_HEADERS,
+        ...(encounter.meta?.versionId ? { "If-Match": `W/\"${encounter.meta.versionId}\"` } : {}),
+      });
+      return { encounter: updated, changed: true };
+    } catch (error) {
+      if (!isConflict(error) || attempt === 1) throw error;
+      encounter = await fhir.read<Encounter>("Encounter", encounterId);
+    }
+  }
+  throw new Error("Encounter diagnosis linking exhausted its retry budget.");
 }
 
 async function findEncounterDiagnosis(
