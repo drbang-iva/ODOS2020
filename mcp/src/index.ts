@@ -228,6 +228,10 @@ import {
 } from "./clinical-graph/diagnosis-catalog-endpoint.js";
 import { handleDiagnosisCandidatesRequest } from "./clinical-graph/diagnosis-candidates-endpoint.js";
 import {
+  handleDiagnosisFindingsMutationRequest,
+  handleDiagnosisFindingsReadRequest,
+} from "./clinical-graph/diagnosis-findings-endpoint.js";
+import {
   handleDiagnosisQuickListMutationRequest,
   handleDiagnosisQuickListRequest,
 } from "./clinical-graph/diagnosis-quick-list-endpoint.js";
@@ -6355,6 +6359,42 @@ async function startMcpServer(): Promise<void> {
         } catch (error) {
           console.error("odos-mcp: encounter diagnosis candidates route failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "diagnosis candidates route failed" });
+        }
+      });
+
+      app.get("/clinical-graph/encounters/:encounterId/findings", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleDiagnosisFindingsReadRequest(
+            { authenticate: authenticateStaffRouteForAction("chart.read") },
+            {
+              authHeader: req.header("authorization"),
+              params: req.params,
+              query: req.query,
+            },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: encounter findings read failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "encounter findings read failed" });
+        }
+      });
+
+      app.put("/clinical-graph/encounters/:encounterId/findings", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleDiagnosisFindingsMutationRequest(
+            { authenticate: authenticateStaffRouteForAction("chart.write") },
+            {
+              authHeader: req.header("authorization"),
+              params: req.params,
+              body: req.body,
+            },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: encounter findings mutation failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "encounter findings mutation failed" });
         }
       });
 
