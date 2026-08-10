@@ -6,6 +6,7 @@ import type {
   Patient,
   Resource,
 } from "@medplum/fhirtypes";
+import type { Application } from "express";
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
 import { FHIR_CONDITION_VERIFICATION_STATUS_CODE_SYSTEM } from "../fhir/condition.js";
@@ -64,11 +65,16 @@ export interface DiagnosisCarryForwardFhirClient {
 }
 
 export interface DiagnosisCarryForwardEndpointDeps {
+  fhirBaseUrl: string;
   authenticate(authHeader: string | undefined): Promise<{
     staffReference: string;
     actorRole: PracticeRoleId;
     fhir: DiagnosisCarryForwardFhirClient;
   } | null>;
+}
+
+export interface DiagnosisCarryForwardRouteDeps extends DiagnosisCarryForwardEndpointDeps {
+  authenticateService(): Promise<void>;
 }
 
 const PAGE_SIZE = 4 as const;
@@ -77,6 +83,26 @@ const querySchema = z.object({ cursor: z.string().trim().min(1).max(4096).option
 const patientReferencePattern = /^Patient\/([^/]+)$/;
 const conditionReferencePattern = /^Condition\/([^/]+)$/;
 const observationReferencePattern = /^Observation\/([^/]+)$/;
+
+export function registerDiagnosisCarryForwardRoutes(
+  app: Pick<Application, "get">,
+  deps: DiagnosisCarryForwardRouteDeps,
+): void {
+  app.get("/clinical-graph/encounters/:encounterId/previous-exams", async (req, res) => {
+    try {
+      await deps.authenticateService();
+      const result = await handlePreviousExamsReadRequest(deps, {
+        authHeader: req.header("authorization"),
+        params: req.params,
+        query: req.query,
+      });
+      res.status(result.status).json(result.body);
+    } catch (error) {
+      console.error("odos-mcp: previous exams read failed:", error);
+      if (!res.headersSent) res.status(500).json({ error: "previous exams read failed" });
+    }
+  });
+}
 
 export async function handlePreviousExamsReadRequest(
   deps: DiagnosisCarryForwardEndpointDeps,
@@ -111,7 +137,7 @@ export async function handlePreviousExamsReadRequest(
     currentEncounter,
     patientReference,
   );
-  const cursorPath = parsedQuery.data.cursor ? decodeCursor(parsedQuery.data.cursor) : undefined;
+  const cursorPath = parsedQuery.data.cursor ? decodeCursor(parsedQuery.data.cursor, deps.fhirBaseUrl) : undefined;
   if (parsedQuery.data.cursor && !cursorPath) {
     return { status: 400, body: { error: "A valid previous-exams cursor is required." } };
   }
@@ -132,13 +158,20 @@ export async function handlePreviousExamsReadRequest(
   const groups = await Promise.all(encounters.map((encounter) =>
     previousExamGroup(staff.fhir, encounter, patientReference, currentIdentities)
   ));
-  groups.sort((left, right) => right.date.localeCompare(left.date));
-
   const next = bundle.link?.find((link) => link.relation === "next")?.url;
+  let nextCursor: string | undefined;
+  try {
+    nextCursor = next ? encodeCursor(validatedNextPath(next, deps.fhirBaseUrl)) : undefined;
+  } catch (error) {
+    if (error instanceof InvalidCursorError) {
+      return { status: 502, body: { error: "FHIR previous-exams next link is invalid." } };
+    }
+    throw error;
+  }
   const page: PreviousExamsPage = {
     pageSize: PAGE_SIZE,
     encounters: groups,
-    ...(next ? { nextCursor: encodeCursor(validatedNextPath(next)) } : {}),
+    ...(nextCursor ? { nextCursor } : {}),
   };
   return { status: 200, body: page };
 }
@@ -318,7 +351,7 @@ function encodeCursor(path: string): string {
   return Buffer.from(JSON.stringify({ v: 1, path }), "utf8").toString("base64url");
 }
 
-function decodeCursor(cursor: string): string | undefined {
+function decodeCursor(cursor: string, fhirBaseUrl: string): string | undefined {
   try {
     const decoded = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8")) as unknown;
     if (
@@ -326,18 +359,20 @@ function decodeCursor(cursor: string): string | undefined {
       (decoded as { v?: unknown }).v !== 1 ||
       typeof (decoded as { path?: unknown }).path !== "string"
     ) return undefined;
-    return validatedNextPath((decoded as { path: string }).path);
+    return validatedNextPath((decoded as { path: string }).path, fhirBaseUrl);
   } catch {
     return undefined;
   }
 }
 
-function validatedNextPath(url: string): string {
+function validatedNextPath(url: string, fhirBaseUrl: string): string {
   const isAbsolute = /^[a-z][a-z0-9+.-]*:/i.test(url);
-  const parsed = new URL(url, "https://odos-cursor.invalid/fhir/R4/Encounter");
+  const fhirOrigin = new URL(fhirBaseUrl).origin;
+  const parsed = new URL(url, `${fhirOrigin}/fhir/R4/Encounter`);
   if (
     parsed.username || parsed.password || parsed.hash ||
     (isAbsolute && parsed.protocol !== "http:" && parsed.protocol !== "https:") ||
+    (isAbsolute && parsed.origin !== fhirOrigin) ||
     !parsed.pathname.endsWith("/Encounter") ||
     !parsed.search
   ) throw new InvalidCursorError();

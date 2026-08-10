@@ -12,6 +12,7 @@ import express from "express";
 import type { PracticeRoleId } from "../src/authz/roles.js";
 import {
   handlePreviousExamsReadRequest,
+  registerDiagnosisCarryForwardRoutes,
   type PreviousExamsPage,
 } from "../src/clinical-graph/diagnosis-carry-forward-endpoint.js";
 import {
@@ -44,7 +45,7 @@ test("GET previous exams returns 403 without chart.read", async (t) => {
   assert.equal(response.status, 403);
 });
 
-test("previous exams page returns four encounters newest-first with exact identities and explicit findings", async () => {
+test("previous exams preserves FHIR newest-first order across offsets and returns unbounded exact records", async () => {
   const fhir = previousExamFhir();
 
   const response = await handlePreviousExamsReadRequest(deps(fhir), {
@@ -62,8 +63,8 @@ test("previous exams page returns four encounters newest-first with exact identi
     date: group.date,
     visitType: group.visitType,
   })), [
-    { encounterReference: "Encounter/prior-1", date: "2026-07-10T09:00:00.000Z", visitType: "Routine eye exam" },
-    { encounterReference: "Encounter/prior-2", date: "2026-06-10T09:00:00.000Z", visitType: "Comprehensive eye exam" },
+    { encounterReference: "Encounter/prior-1", date: "2026-07-10T08:30:00-04:00", visitType: "Routine eye exam" },
+    { encounterReference: "Encounter/prior-2", date: "2026-07-10T12:00:00+00:00", visitType: "Comprehensive eye exam" },
     { encounterReference: "Encounter/prior-3", date: "2026-05-10T09:00:00.000Z", visitType: "Problem visit" },
     { encounterReference: "Encounter/prior-4", date: "2026-04-10T09:00:00.000Z", visitType: "Visit type not recorded" },
   ]);
@@ -73,23 +74,29 @@ test("previous exams page returns four encounters newest-first with exact identi
   assert.equal(page.nextCursor.includes("_page"), false);
 
   const first = page.encounters[0]!;
-  assert.deepEqual(first.diagnoses.map((diagnosis) => diagnosis.conditionReference), [
+  assert.deepEqual(first.diagnoses.slice(0, 3).map((diagnosis) => diagnosis.conditionReference), [
     "Condition/prior-1-dry-eye-od",
     "Condition/prior-1-dry-eye-os",
     "Condition/prior-1-uncataloged",
   ]);
-  assert.deepEqual(first.diagnoses[0], {
+  assert.equal(first.diagnoses.length, 15);
+  assert.equal(first.diagnoses.at(-1)?.conditionReference, "Condition/prior-1-extra-12");
+  const { findings, ...firstDiagnosis } = first.diagnoses[0]!;
+  assert.deepEqual(firstDiagnosis, {
     conditionReference: "Condition/prior-1-dry-eye-od",
     display: "Keratoconjunctivitis sicca, right eye",
     identity: {
       diagnosisKey: "dry_eye",
-      coding: [
-        { system: "http://hl7.org/fhir/sid/icd-10-cm", code: "H16.221", display: "Keratoconjunctivitis sicca, right eye" },
-      ],
+      coding: [],
       text: "Keratoconjunctivitis sicca, right eye",
       laterality: "OD",
     },
-    findings: [
+    checked: true,
+    currentConditionReference: "Condition/current-dry-eye-od",
+  });
+  assert.equal(findings.length, 14);
+  assert.equal(findings.at(-1)?.observationReference, "Observation/prior-1-bulk-finding-12");
+  assert.deepEqual(findings.slice(0, 2), [
       {
         observationReference: "Observation/prior-1-staining-present",
         code: "ocular-surface::STAINING::punctate",
@@ -105,10 +112,7 @@ test("previous exams page returns four encounters newest-first with exact identi
         presence: "absent",
         laterality: "OD",
       },
-    ],
-    checked: true,
-    currentConditionReference: "Condition/current-dry-eye-od",
-  });
+    ]);
   assert.equal(first.diagnoses[1]!.identity.laterality, "OS");
   assert.equal(first.diagnoses[1]!.checked, false);
   assert.deepEqual(first.diagnoses[2]!.identity, {
@@ -170,25 +174,34 @@ test("previous exams cursor loads the next four-encounter page without accepting
   assert.equal(fhir.followedUrls.length, 1);
 });
 
+test("previous exams rejects a cross-origin Bundle next link", async () => {
+  const fhir = previousExamFhir();
+  fhir.nextUrl = "https://evil.example/fhir/R4/Encounter?_page=2&_count=4";
+
+  const response = await handlePreviousExamsReadRequest(deps(fhir), {
+    authHeader: AUTH_CLINICIAN,
+    params: { encounterId: "current" },
+    query: {},
+  });
+
+  assert.equal(response.status, 502);
+  assert.deepEqual(response.body, { error: "FHIR previous-exams next link is invalid." });
+});
+
 async function startPreviousExamRoutes(
   t: TestContext,
   fhir: MemoryFhir,
   forbiddenRole: PracticeRoleId,
 ): Promise<string> {
   const app = express();
-  app.get("/clinical-graph/encounters/:encounterId/previous-exams", async (req, res) => {
-    const result = await handlePreviousExamsReadRequest({
-      authenticate: async (header: string | undefined) => header === AUTH_FORBIDDEN
-        ? { staffReference: "Practitioner/forbidden", actorRole: forbiddenRole, fhir: unreachableFhir }
-        : header === AUTH_CLINICIAN
-          ? { staffReference: "Practitioner/doc", actorRole: "clinician", fhir }
-          : null,
-    }, {
-      authHeader: req.header("authorization"),
-      params: req.params,
-      query: req.query,
-    });
-    res.status(result.status).json(result.body);
+  registerDiagnosisCarryForwardRoutes(app, {
+    authenticateService: async () => undefined,
+    fhirBaseUrl: "https://fhir.local",
+    authenticate: async (header: string | undefined) => header === AUTH_FORBIDDEN
+      ? { staffReference: "Practitioner/forbidden", actorRole: forbiddenRole, fhir: unreachableFhir }
+      : header === AUTH_CLINICIAN
+        ? { staffReference: "Practitioner/doc", actorRole: "clinician", fhir }
+        : null,
   });
   const listener = app.listen(0, "127.0.0.1");
   await new Promise<void>((resolve) => listener.once("listening", resolve));
@@ -198,6 +211,7 @@ async function startPreviousExamRoutes(
 
 function deps(fhir: MemoryFhir) {
   return {
+    fhirBaseUrl: "https://fhir.local",
     authenticate: async (header: string | undefined) => header === AUTH_CLINICIAN
       ? { staffReference: "Practitioner/doc", actorRole: "clinician" as const, fhir }
       : null,
@@ -208,14 +222,15 @@ function previousExamFhir(): MemoryFhir {
   const fhir = new MemoryFhir();
   fhir.resources.push({ resourceType: "Patient", id: "patient-1", active: true });
   fhir.resources.push(encounter("current", "2026-08-10T09:00:00.000Z", "Current exam", ["current-dry-eye-od"]));
-  fhir.resources.push(encounter("prior-1", "2026-07-10T09:00:00.000Z", "Routine eye exam", [
+  fhir.resources.push(encounter("prior-1", "2026-07-10T08:30:00-04:00", "Routine eye exam", [
     "prior-1-dry-eye-od",
     "prior-1-dry-eye-os",
     "prior-1-uncataloged",
     "prior-1-refuted",
     "prior-1-entered-error",
+    ...Array.from({ length: 12 }, (_, index) => `prior-1-extra-${String(index + 1).padStart(2, "0")}`),
   ]));
-  fhir.resources.push(encounter("prior-2", "2026-06-10T09:00:00.000Z", "Comprehensive eye exam", ["prior-2-dry-eye-od"]));
+  fhir.resources.push(encounter("prior-2", "2026-07-10T12:00:00+00:00", "Comprehensive eye exam", ["prior-2-dry-eye-od"]));
   fhir.resources.push(encounter("prior-3", "2026-05-10T09:00:00.000Z", "Problem visit", ["prior-3-other"]));
   fhir.resources.push(encounter("prior-4", "2026-04-10T09:00:00.000Z", undefined, ["prior-4-other"]));
   fhir.resources.push(encounter("prior-5", "2026-03-10T09:00:00.000Z", "Annual eye exam", []));
@@ -226,6 +241,7 @@ function previousExamFhir(): MemoryFhir {
     "prior-1-filaments-absent",
     "prior-1-no-boolean",
     "prior-1-entered-error-observation",
+    ...Array.from({ length: 12 }, (_, index) => `prior-1-bulk-finding-${String(index + 1).padStart(2, "0")}`),
   ]));
   fhir.resources.push(diagnosis("prior-1-dry-eye-os", "prior-1", "dry_eye", "left", "confirmed", []));
   fhir.resources.push({
@@ -243,6 +259,10 @@ function previousExamFhir(): MemoryFhir {
   fhir.resources.push(diagnosis("prior-2-dry-eye-od", "prior-2", "dry_eye", "right", "confirmed", []));
   fhir.resources.push(diagnosis("prior-3-other", "prior-3", "other", "bilateral", "differential", []));
   fhir.resources.push(diagnosis("prior-4-other", "prior-4", "other", "unspecified", "unconfirmed", []));
+  for (let index = 1; index <= 12; index += 1) {
+    const suffix = String(index).padStart(2, "0");
+    fhir.resources.push(diagnosis(`prior-1-extra-${suffix}`, "prior-1", `extra_${suffix}`, "unspecified", "confirmed", []));
+  }
 
   fhir.resources.push(finding(
     "prior-1-staining-present",
@@ -283,6 +303,17 @@ function previousExamFhir(): MemoryFhir {
     ),
     status: "entered-in-error",
   });
+  for (let index = 1; index <= 12; index += 1) {
+    const suffix = String(index).padStart(2, "0");
+    fhir.resources.push(finding(
+      `prior-1-bulk-finding-${suffix}`,
+      "prior-1",
+      `synthetic-finding-${suffix}`,
+      `Synthetic finding ${suffix}`,
+      index % 2 === 0,
+      "OD",
+    ));
+  }
   return fhir;
 }
 
@@ -315,14 +346,7 @@ function diagnosis(
   evidenceIds: string[],
 ): Condition {
   const code = diagnosisKey === "dry_eye"
-    ? {
-        coding: [{
-          system: "http://hl7.org/fhir/sid/icd-10-cm",
-          code: laterality === "left" ? "H16.222" : "H16.221",
-          display: `Keratoconjunctivitis sicca, ${laterality === "left" ? "left" : "right"} eye`,
-        }],
-        text: `Keratoconjunctivitis sicca, ${laterality === "left" ? "left" : "right"} eye`,
-      }
+    ? { text: `Keratoconjunctivitis sicca, ${laterality === "left" ? "left" : "right"} eye` }
     : { text: diagnosisKey ?? "Literal uncataloged diagnosis" };
   return {
     ...buildEncounterDiagnosisCondition({
@@ -383,6 +407,7 @@ class MemoryFhir {
   readonly resources: Resource[] = [];
   readonly followedUrls: string[] = [];
   initialEncounterSearch: Record<string, string> | undefined;
+  nextUrl = "/fhir/R4/Encounter?_page=2&_count=4";
 
   async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
     const resource = this.resources.find((candidate) =>
@@ -398,7 +423,7 @@ class MemoryFhir {
   ): Promise<Bundle<T>> {
     if (resourceType !== "Encounter") throw new Error(`Unexpected search for ${resourceType}`);
     this.initialEncounterSearch = structuredClone(params);
-    return this.encounterPage(["prior-1", "prior-2", "prior-3", "prior-4"], "/fhir/R4/Encounter?_page=2&_count=4");
+    return this.encounterPage(["prior-1", "prior-2", "prior-3", "prior-4"], this.nextUrl);
   }
 
   async searchUrl<T extends Resource>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>> {
