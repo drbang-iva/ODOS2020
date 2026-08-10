@@ -39,12 +39,16 @@ test("production build rejects loopback URLs from every emitted asset type", asy
       "broken-localhost.css": '.status { mask: url("http://localhost:5173/icon.svg"); }',
       "broken.css": '.status { background: url("https://127.0.0.1:3333/status"); }',
       "broken.json": JSON.stringify({ api: "http://[::1]:8103/fhir/R4" }),
+      "expanded-ipv6.json": JSON.stringify({ api: "http://[0:0:0:0:0:0:0:1]:8103/fhir/R4" }),
+      "mapped-ipv6.json": JSON.stringify({ api: "https://[::ffff:127.0.0.1]:3333/status" }),
     }),
     (error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);
       assert.match(message, /broken-localhost\.css.*http:\/\/localhost:5173\/icon\.svg/s);
       assert.match(message, /broken\.css.*https:\/\/127\.0\.0\.1:3333\/status/s);
       assert.match(message, /broken\.json.*http:\/\/\[::1\]:8103\/fhir\/R4/s);
+      assert.match(message, /expanded-ipv6\.json.*http:\/\/\[0:0:0:0:0:0:0:1\]:8103\/fhir\/R4/s);
+      assert.match(message, /mapped-ipv6\.json.*https:\/\/\[::ffff:127\.0\.0\.1\]:3333\/status/s);
       return true;
     },
   );
