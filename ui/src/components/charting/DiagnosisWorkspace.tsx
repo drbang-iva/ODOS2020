@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Condition, Encounter } from "@medplum/fhirtypes";
 import {
   makeConditionPrincipal,
@@ -76,14 +76,23 @@ export function DiagnosisWorkspace({
   const [catalog, setCatalog] = useState<DiagnosisQuickListRow[]>([]);
   const [pinnedDiagnosisKeys, setPinnedDiagnosisKeys] = useState<string[]>([]);
   const [canWrite, setCanWrite] = useState(false);
-  const [findings, setFindings] = useState<DiagnosisFindingsPayload>();
+  const [loadedFindings, setLoadedFindings] = useState<{
+    key: string;
+    payload: DiagnosisFindingsPayload;
+  }>();
   const [pendingDiagnosis, setPendingDiagnosis] = useState<DiagnosisQuickListRow>();
   const [searchSelection, setSearchSelection] = useState<OdosSearchPickerOption<DiagnosisQuickListRow>>();
   const [busy, setBusy] = useState<string>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
+  const loadGeneration = useRef(0);
+  const findingsKey = `${encounterId}::${selectedReference ?? ""}`;
+  const findings = loadedFindings?.key === findingsKey ? loadedFindings.payload : undefined;
 
   const load = useCallback(async () => {
+    const requestGeneration = loadGeneration.current + 1;
+    loadGeneration.current = requestGeneration;
+    const requestFindingsKey = `${encounterId}::${selectedReference ?? ""}`;
     setLoading(true);
     setError(undefined);
     try {
@@ -100,22 +109,27 @@ export function DiagnosisWorkspace({
       const nextConditions = await Promise.all(references.map((reference) =>
         fhir.read<Condition>("Condition", reference.replace(/^Condition\//, ""))
       ));
+      if (loadGeneration.current !== requestGeneration) return;
       setEncounter(nextEncounter);
       setConditions(nextConditions);
       setQuickList(quickBody.diagnoses ?? []);
       setCatalog(quickBody.catalog ?? []);
       setPinnedDiagnosisKeys(quickBody.pinnedDiagnosisKeys ?? []);
       setCanWrite(quickBody.canWrite === true);
-      setFindings(nextFindings);
+      setLoadedFindings({ key: requestFindingsKey, payload: nextFindings });
     } catch (caught) {
+      if (loadGeneration.current !== requestGeneration) return;
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
-      setLoading(false);
+      if (loadGeneration.current === requestGeneration) setLoading(false);
     }
   }, [encounterId, encounterReference, selectedReference]);
 
   useEffect(() => {
     void load();
+    return () => {
+      loadGeneration.current += 1;
+    };
   }, [load]);
 
   useEffect(() => {

@@ -28,19 +28,30 @@ export function PreviousExams({
   const [pullError, setPullError] = useState<string>();
   const [pendingRows, setPendingRows] = useState<string[]>([]);
   const generation = useRef(0);
-  const inFlightCursor = useRef<string>();
-  const pendingPulls = useRef(new Set<string>());
+  const nextCursorRef = useRef<string>();
+  const consumedCursors = useRef(new Set<string>());
+  const inFlightPage = useRef<{ key: string; token: symbol }>();
+  const pendingPulls = useRef(new Map<string, { generation: number; token: symbol }>());
   const sentinel = useRef<HTMLButtonElement | null>(null);
 
   const loadPage = useCallback(async (cursor: string | undefined, requestGeneration: number) => {
     const key = cursor ?? "initial";
-    if (inFlightCursor.current === key) return;
-    inFlightCursor.current = key;
+    if (generation.current !== requestGeneration) return;
+    if (cursor && (nextCursorRef.current !== cursor || consumedCursors.current.has(cursor))) return;
+    if (inFlightPage.current?.key === key) return;
+    const token = Symbol(key);
+    inFlightPage.current = { key, token };
     setPageBusy(true);
     setPageError(undefined);
     try {
       const page = await loadPreviousExamsPage(encounterReference, cursor, fetchImpl);
-      if (generation.current !== requestGeneration) return;
+      if (
+        generation.current !== requestGeneration ||
+        inFlightPage.current?.token !== token ||
+        (cursor !== undefined && nextCursorRef.current !== cursor)
+      ) return;
+      if (cursor) consumedCursors.current.add(cursor);
+      nextCursorRef.current = page.nextCursor;
       setEncounters((current) => appendPreviousExamsPage(current, page));
       setNextCursor(page.nextCursor);
       setLoaded(true);
@@ -49,8 +60,8 @@ export function PreviousExams({
       setPageError(caught instanceof Error ? caught.message : "Previous exams could not be loaded. Try again.");
       setLoaded(true);
     } finally {
-      if (generation.current === requestGeneration) {
-        if (inFlightCursor.current === key) inFlightCursor.current = undefined;
+      if (generation.current === requestGeneration && inFlightPage.current?.token === token) {
+        inFlightPage.current = undefined;
         setPageBusy(false);
       }
     }
@@ -59,7 +70,9 @@ export function PreviousExams({
   useEffect(() => {
     const requestGeneration = generation.current + 1;
     generation.current = requestGeneration;
-    inFlightCursor.current = undefined;
+    nextCursorRef.current = undefined;
+    consumedCursors.current.clear();
+    inFlightPage.current = undefined;
     pendingPulls.current.clear();
     setEncounters([]);
     setNextCursor(undefined);
@@ -90,10 +103,11 @@ export function PreviousExams({
     }
     const rowKey = `${encounter.encounterReference}|${diagnosis.conditionReference}`;
     if (pendingPulls.current.has(rowKey)) return;
-    pendingPulls.current.add(rowKey);
+    const requestGeneration = generation.current;
+    const requestToken = Symbol(rowKey);
+    pendingPulls.current.set(rowKey, { generation: requestGeneration, token: requestToken });
     setPendingRows((current) => [...current, rowKey]);
     setPullError(undefined);
-    const requestGeneration = generation.current;
     try {
       const result = await pullPreviousDiagnosis(
         encounterReference,
@@ -115,8 +129,9 @@ export function PreviousExams({
       if (generation.current !== requestGeneration) return;
       setPullError(caught instanceof Error ? caught.message : "Diagnosis could not be pulled. Try again.");
     } finally {
-      pendingPulls.current.delete(rowKey);
-      if (generation.current === requestGeneration) {
+      const owner = pendingPulls.current.get(rowKey);
+      if (owner?.generation === requestGeneration && owner.token === requestToken) {
+        pendingPulls.current.delete(rowKey);
         setPendingRows((current) => current.filter((key) => key !== rowKey));
       }
     }

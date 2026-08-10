@@ -52,6 +52,38 @@ test("previous-exam client rejects malformed successful rows and does not surfac
   );
 });
 
+test("previous-exam client enforces four-row pages, FHIR dates, and trimmed clinical labels", async () => {
+  const validDiagnosis = priorDiagnosis("Condition/source", "Dry eye syndrome", "OU", false, [
+    { observationReference: "Observation/source", code: "spk", display: "SPK", presence: "present", laterality: "OU" },
+  ]);
+  const invalidPages = [
+    page(Array.from({ length: 5 }, (_, index) => exam(`Encounter/e${index}`, "2026-08-01", "Medical", []))),
+    page([exam("Encounter/prior", "not-a-date", "Medical", [])]),
+    page([exam("Encounter/prior", "2026-02-30", "Medical", [])]),
+    page([exam("Encounter/prior", "2026-08-01T12:00:00+15:00", "Medical", [])]),
+    page([exam("Encounter/prior", "2026-08-01", "   ", [])]),
+    page([exam("Encounter/prior", "2026-08-01", "Medical", [{ ...validDiagnosis, display: " \t " }])]),
+    page([exam("Encounter/prior", "2026-08-01", "Medical", [{
+      ...validDiagnosis,
+      findings: [{ ...validDiagnosis.findings[0]!, display: " " }],
+    }])]),
+  ];
+
+  for (const invalid of invalidPages) {
+    await assert.rejects(
+      loadPreviousExamsPage("Encounter/current", undefined, async () => jsonResponse(invalid)),
+      /Previous exams could not be loaded\. Try again\./,
+    );
+  }
+
+  assert.deepEqual(
+    await loadPreviousExamsPage("Encounter/current", undefined, async () => jsonResponse(page([
+      exam("Encounter/prior", "2026-08-01T12:30:45-04:00", "Medical", [validDiagnosis]),
+    ]))),
+    page([exam("Encounter/prior", "2026-08-01T12:30:45-04:00", "Medical", [validDiagnosis])]),
+  );
+});
+
 test("previous exams loads four encounters automatically, keeps them through paging failure, and retries the same cursor", async () => {
   const calls: string[] = [];
   let olderAttempt = 0;
@@ -170,6 +202,76 @@ test("visible paging sentinel starts one request per cursor and ignores repeated
   }
 });
 
+test("consumed observer cursors cannot replay or restore paging after a terminal next page", async () => {
+  const previousObserver = globalThis.IntersectionObserver;
+  const callbacks: IntersectionObserverCallback[] = [];
+  const staleCursorOne = deferred<Response>();
+  const cursorTwo = deferred<Response>();
+  let cursorOneCalls = 0;
+  let cursorTwoCalls = 0;
+  class ObserverStub {
+    constructor(callback: IntersectionObserverCallback) { callbacks.push(callback); }
+    observe() {}
+    disconnect() {}
+    unobserve() {}
+    takeRecords() { return []; }
+    readonly root = null;
+    readonly rootMargin = "0px";
+    readonly thresholds = [0];
+  }
+  Object.defineProperty(globalThis, "IntersectionObserver", { configurable: true, value: ObserverStub });
+  const fetchImpl = (async (input: string | URL | Request) => {
+    const url = String(input);
+    if (!url.includes("cursor=")) {
+      return jsonResponse(page([exam("Encounter/e2", "2026-08-02", "Annual", [])], "cursor-one"));
+    }
+    if (url.includes("cursor=cursor-one")) {
+      cursorOneCalls += 1;
+      return cursorOneCalls === 1
+        ? jsonResponse(page([exam("Encounter/e1", "2026-08-01", "Medical", [])], "cursor-two"))
+        : staleCursorOne.promise;
+    }
+    cursorTwoCalls += 1;
+    return cursorTwo.promise;
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <PreviousExams encounterReference="Encounter/current" onSelectDiagnosis={() => undefined} fetchImpl={fetchImpl} />,
+        { createNodeMock: (element) => element.type === "button" ? { nodeType: 1 } : null },
+      );
+      await flush();
+    });
+    const visible = [{ isIntersecting: true } as IntersectionObserverEntry];
+    await act(async () => {
+      callbacks[0]!(visible, {} as IntersectionObserver);
+      await flush();
+    });
+    assert.equal(callbacks.length, 2);
+
+    await act(async () => {
+      callbacks[0]!(visible, {} as IntersectionObserver);
+      callbacks[1]!(visible, {} as IntersectionObserver);
+      await flush();
+    });
+    await act(async () => {
+      cursorTwo.resolve(jsonResponse(page([exam("Encounter/e0", "2026-07-01", "Follow-up", [])])));
+      await flush();
+      staleCursorOne.resolve(jsonResponse(page([exam("Encounter/replayed", "2026-06-01", "Medical", [])], "cursor-two")));
+      await flush();
+    });
+
+    assert.equal(cursorOneCalls, 1);
+    assert.equal(cursorTwoCalls, 1);
+    assert.deepEqual(encounterReferences(renderer), ["Encounter/e2", "Encounter/e1", "Encounter/e0"]);
+    assert.equal(renderer.root.findAllByProps({ "aria-label": "Load older encounters" }).length, 0);
+  } finally {
+    act(() => renderer?.unmount());
+    Object.defineProperty(globalThis, "IntersectionObserver", { configurable: true, value: previousObserver });
+  }
+});
+
 test("encounter changes ignore stale previous-exam responses", async () => {
   let resolveFirst!: (response: Response) => void;
   const fetchImpl = ((input: string | URL | Request) => {
@@ -258,6 +360,59 @@ test("checked prior diagnoses select without POST while unchecked pulls are idem
   act(() => renderer.unmount());
 });
 
+test("a stale pull cannot release the same row lock owned by the next encounter generation", async () => {
+  const pulls: Array<ReturnType<typeof deferred<Response>>> = [];
+  const selections: string[] = [];
+  const fetchImpl = (async (_input: string | URL | Request, init?: RequestInit) => {
+    if (!init?.method) {
+      return jsonResponse(page([exam("Encounter/source-exam", "2026-08-01", "Medical", [
+        priorDiagnosis("Condition/source", "Dry eye syndrome", "OU", false),
+      ])]));
+    }
+    const pending = deferred<Response>();
+    pulls.push(pending);
+    return pending.promise;
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<PreviousExams encounterReference="Encounter/current-one" onSelectDiagnosis={(reference) => selections.push(reference)} fetchImpl={fetchImpl} />);
+      await flush();
+    });
+    const row = () => renderer.root.findByProps({ "data-source-condition-reference": "Condition/source" });
+    await act(async () => {
+      row().props.onClick();
+      await flush();
+    });
+    assert.equal(pulls.length, 1);
+
+    await act(async () => {
+      renderer.update(<PreviousExams encounterReference="Encounter/current-two" onSelectDiagnosis={(reference) => selections.push(reference)} fetchImpl={fetchImpl} />);
+      await flush();
+      row().props.onClick();
+      await flush();
+    });
+    assert.equal(pulls.length, 2);
+
+    await act(async () => {
+      pulls[0]!.resolve(jsonResponse({ conditionReference: "Condition/stale-current", alreadyPresent: false }));
+      await flush();
+      row().props.onClick();
+      await flush();
+    });
+    assert.equal(pulls.length, 2);
+    assert.deepEqual(selections, []);
+
+    await act(async () => {
+      pulls[1]!.resolve(jsonResponse({ conditionReference: "Condition/new-current", alreadyPresent: false }));
+      await flush();
+    });
+    assert.deepEqual(selections, ["Condition/new-current"]);
+  } finally {
+    act(() => renderer?.unmount());
+  }
+});
+
 test("finding rows distinguish unchanged carried presence, prior absence, and fresh assertions", () => {
   const payload = carryFindingsPayload();
   const renderer = create(
@@ -309,6 +464,12 @@ function page(encounters: PreviousExamGroup[], nextCursor?: string): PreviousExa
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((next) => { resolve = next; });
+  return { promise, resolve };
 }
 
 async function flush(): Promise<void> {

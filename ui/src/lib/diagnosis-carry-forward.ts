@@ -152,8 +152,9 @@ function safeServerError(body: unknown, fallback: string): string {
 function isPreviousExamsPage(body: unknown): body is PreviousExamsPage {
   if (!body || typeof body !== "object") return false;
   const page = body as Partial<PreviousExamsPage>;
-  return page.pageSize === 4 && Array.isArray(page.encounters) && page.encounters.every(isPreviousExamGroup) &&
-    (page.nextCursor === undefined || nonemptyString(page.nextCursor));
+  return page.pageSize === 4 && Array.isArray(page.encounters) && page.encounters.length <= page.pageSize &&
+    page.encounters.every(isPreviousExamGroup) &&
+    (page.nextCursor === undefined || trimmedNonblank(page.nextCursor));
 }
 
 function isDiagnosisPullResult(body: unknown): body is DiagnosisPullResult {
@@ -166,8 +167,8 @@ function isDiagnosisPullResult(body: unknown): body is DiagnosisPullResult {
 function isPreviousExamGroup(value: unknown): value is PreviousExamGroup {
   if (!value || typeof value !== "object") return false;
   const group = value as Partial<PreviousExamGroup>;
-  return reference(group.encounterReference, "Encounter") && nonemptyString(group.date) &&
-    nonemptyString(group.visitType) && Array.isArray(group.diagnoses) &&
+  return reference(group.encounterReference, "Encounter") && validFhirDateOrDateTime(group.date) &&
+    trimmedNonblank(group.visitType) && Array.isArray(group.diagnoses) &&
     group.diagnoses.every(isPreviousExamDiagnosis);
 }
 
@@ -177,7 +178,7 @@ function isPreviousExamDiagnosis(value: unknown): value is PreviousExamDiagnosis
   const checkedReferenceIsConsistent = diagnosis.checked
     ? reference(diagnosis.currentConditionReference, "Condition")
     : diagnosis.currentConditionReference === undefined;
-  return reference(diagnosis.conditionReference, "Condition") && nonemptyString(diagnosis.display) &&
+  return reference(diagnosis.conditionReference, "Condition") && trimmedNonblank(diagnosis.display) &&
     isPreviousExamIdentity(diagnosis.identity) && Array.isArray(diagnosis.findings) &&
     diagnosis.findings.every(isPreviousExamFinding) && typeof diagnosis.checked === "boolean" &&
     checkedReferenceIsConsistent;
@@ -188,30 +189,59 @@ function isPreviousExamIdentity(value: unknown): value is PreviousExamDiagnosisI
   const identity = value as Partial<PreviousExamDiagnosisIdentity>;
   return laterality(identity.laterality) && Array.isArray(identity.coding) && identity.coding.every((coding) =>
     Boolean(coding) && typeof coding === "object" &&
-    optionalString(coding.system) && optionalString(coding.code) && optionalString(coding.display)
-  ) && optionalString(identity.diagnosisKey) && optionalString(identity.text);
+    optionalTrimmedNonblank(coding.system) && optionalTrimmedNonblank(coding.code) &&
+    optionalTrimmedNonblank(coding.display)
+  ) && optionalTrimmedNonblank(identity.diagnosisKey) && optionalTrimmedNonblank(identity.text);
 }
 
 function isPreviousExamFinding(value: unknown): value is PreviousExamFinding {
   if (!value || typeof value !== "object") return false;
   const finding = value as Partial<PreviousExamFinding>;
-  return reference(finding.observationReference, "Observation") && nonemptyString(finding.code) &&
-    nonemptyString(finding.display) && (finding.presence === "present" || finding.presence === "absent") &&
-    optionalString(finding.grade) && laterality(finding.laterality);
+  return reference(finding.observationReference, "Observation") && trimmedNonblank(finding.code) &&
+    trimmedNonblank(finding.display) && (finding.presence === "present" || finding.presence === "absent") &&
+    optionalTrimmedNonblank(finding.grade) && laterality(finding.laterality);
 }
 
 function reference(value: unknown, resourceType: "Encounter" | "Condition" | "Observation"): value is string {
   return typeof value === "string" && new RegExp(`^${resourceType}/[^/]+$`).test(value);
 }
 
-function nonemptyString(value: unknown): value is string {
-  return typeof value === "string" && value.length > 0;
+function trimmedNonblank(value: unknown): value is string {
+  return typeof value === "string" && value.length > 0 && value === value.trim();
 }
 
-function optionalString(value: unknown): value is string | undefined {
-  return value === undefined || typeof value === "string";
+function optionalTrimmedNonblank(value: unknown): value is string | undefined {
+  return value === undefined || trimmedNonblank(value);
 }
 
 function laterality(value: unknown): value is PreviousExamLaterality {
   return value === "OD" || value === "OS" || value === "OU" || value === "UNKNOWN";
+}
+
+function validFhirDateOrDateTime(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  const date = value.match(/^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/);
+  if (date) return validCalendarDate(date[1]!, date[2], date[3]);
+  const dateTime = value.match(
+    /^(\d{4})-(\d{2})-(\d{2})T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|[+-](?:0\d|1[0-3]):[0-5]\d|[+-]14:00)$/,
+  );
+  return Boolean(
+    dateTime &&
+    validCalendarDate(dateTime[1]!, dateTime[2], dateTime[3]) &&
+    Number.isFinite(Date.parse(value)),
+  );
+}
+
+function validCalendarDate(yearValue: string, monthValue?: string, dayValue?: string): boolean {
+  const year = Number(yearValue);
+  if (!Number.isInteger(year) || year < 1 || year > 9999) return false;
+  if (monthValue === undefined) return dayValue === undefined;
+  const month = Number(monthValue);
+  if (!Number.isInteger(month) || month < 1 || month > 12) return false;
+  if (dayValue === undefined) return true;
+  const day = Number(dayValue);
+  if (!Number.isInteger(day) || day < 1) return false;
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return day <= days[month - 1]!;
 }
