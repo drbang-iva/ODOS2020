@@ -152,6 +152,9 @@ test("Find dx searches the eligible catalog beyond bounded Common diagnoses", as
     if (url.includes("/clinical-graph/encounters/e1/findings")) {
       return jsonResponse({ canWrite: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
     }
+    if (url.includes("/clinical-graph/encounters/e1/previous-exams")) {
+      return jsonResponse({ pageSize: 4, encounters: [] });
+    }
     if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
     throw new Error(`Unexpected request: ${url}`);
   }) as typeof fetch;
@@ -173,6 +176,99 @@ test("Find dx searches the eligible catalog beyond bounded Common diagnoses", as
       new AbortController().signal,
     );
     assert.deepEqual(results.map((row: { value: string }) => row.value), ["pseudophakia"]);
+  } finally {
+    act(() => renderer?.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("selected diagnosis fails closed to edited when carry integrity is uncertain", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url = String(input);
+    if (url.includes("/fhir/R4/Encounter/e1")) {
+      return jsonResponse({
+        resourceType: "Encounter",
+        id: "e1",
+        status: "in-progress",
+        class: { code: "AMB" },
+        diagnosis: [{ condition: { reference: "Condition/selected" }, rank: 1 }],
+      });
+    }
+    if (url.includes("/fhir/R4/Condition/selected")) return jsonResponse(condition("selected", "Dry eye syndrome"));
+    if (url.includes("/clinical-graph/diagnosis-quick-list")) {
+      return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
+    }
+    if (url.includes("/clinical-graph/encounters/e1/findings")) {
+      return jsonResponse({
+        canWrite: true,
+        carryProvenance: {
+          pulledFromDate: "2026-08-01",
+          unchangedSinceDate: "2026-06-15",
+          edited: false,
+          integrityWarning: "Diagnosis carry provenance cycle detected.",
+        },
+        findings: [],
+        catalog: [],
+        unassigned: [],
+        bySection: {},
+        visitDiagnoses: [{ conditionReference: "Condition/selected", diagnosisKey: "dry-eye", display: "Dry eye syndrome", laterality: "OU" }],
+      });
+    }
+    if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
+    if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
+    throw new Error(`Unexpected request: ${url}`);
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <DiagnosisWorkspace
+          patientReference="Patient/p1"
+          encounterReference="Encounter/e1"
+          selectedReference="Condition/selected"
+          onSelectDiagnosis={() => undefined}
+        />,
+      );
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    const carry = renderer.root.findByProps({ className: "odos-diagnosis-carry-state is-edited" });
+    const carryLines = carry.findAllByType("p").map((node) => node.children.join(""));
+    assert.deepEqual(carryLines, [
+      "pulled from Aug 1, 2026 · edited",
+      "Diagnosis carry provenance cycle detected.",
+    ]);
+    assert.ok(renderer.root.findAllByProps({ role: "alert" }).some((node) => node.children.join("").includes("cycle detected")));
+  } finally {
+    act(() => renderer?.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("edited diagnosis carry is named distinctly without unchanged aging", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url = String(input);
+    if (url.includes("/fhir/R4/Encounter/e1")) {
+      return jsonResponse({ resourceType: "Encounter", id: "e1", status: "in-progress", class: { code: "AMB" }, diagnosis: [{ condition: { reference: "Condition/selected" }, rank: 1 }] });
+    }
+    if (url.includes("/fhir/R4/Condition/selected")) return jsonResponse(condition("selected", "Dry eye syndrome"));
+    if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
+    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, carryProvenance: { pulledFromDate: "2026-08-01", unchangedSinceDate: "2026-06-15", edited: true }, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
+    if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
+    if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
+    throw new Error(`Unexpected request: ${url}`);
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" selectedReference="Condition/selected" onSelectDiagnosis={() => undefined} />);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    const carry = renderer.root.findByProps({ className: "odos-diagnosis-carry-state is-edited" });
+    assert.deepEqual(carry.findAllByType("p").map((node) => node.children.join("")), [
+      "pulled from Aug 1, 2026 · edited",
+    ]);
   } finally {
     act(() => renderer?.unmount());
     globalThis.fetch = originalFetch;

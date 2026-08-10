@@ -32,6 +32,8 @@ import {
   type DiagnosisFindingMutation,
   type DiagnosisFindingsPayload,
 } from "../../lib/diagnosis-findings";
+import { formatDiagnosisHistoryDate } from "../../lib/diagnosis-carry-forward";
+import { PreviousExams } from "./PreviousExams";
 
 const DIAGNOSIS_KEY_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key";
 
@@ -224,6 +226,9 @@ export function DiagnosisWorkspace({
   const selectedEntry = encounter?.diagnosis?.find((entry) =>
     entry.condition.reference === selectedReference
   );
+  const carryEditedForDisplay = Boolean(
+    findings?.carryProvenance?.edited || findings?.carryProvenance?.integrityWarning,
+  );
 
   return (
     <div className="odos-diagnosis-workspace min-h-0 flex-1" data-testid="diagnosis-workspace">
@@ -268,6 +273,12 @@ export function DiagnosisWorkspace({
             })}
           />
         )}
+
+        <RailHeading>Previous exams</RailHeading>
+        <PreviousExams
+          encounterReference={encounterReference}
+          onSelectDiagnosis={onSelectDiagnosis}
+        />
 
         <RailHeading>Common</RailHeading>
         <div className="odos-diagnosis-common-list">
@@ -352,6 +363,25 @@ export function DiagnosisWorkspace({
                 <div className="odos-diagnosis-eyebrow">Selected diagnosis</div>
                 <h2>{displayCode(selectedCondition.code)}</h2>
                 <p>{selectedCondition.code?.coding?.[0]?.code ?? "Uncoded"}</p>
+                {findings?.carryProvenance && (
+                  <div className={`odos-diagnosis-carry-state ${carryEditedForDisplay ? "is-edited" : "is-unedited"}`}>
+                    {findings.carryProvenance.pulledFromDate && (
+                      <p>
+                        pulled from {formatDiagnosisHistoryDate(findings.carryProvenance.pulledFromDate)} · {carryEditedForDisplay ? "edited" : "unedited"}
+                      </p>
+                    )}
+                    {!carryEditedForDisplay &&
+                      findings.carryProvenance.unchangedSinceDate &&
+                      findings.carryProvenance.unchangedSinceDate !== findings.carryProvenance.pulledFromDate && (
+                        <p>unchanged since {formatDiagnosisHistoryDate(findings.carryProvenance.unchangedSinceDate)}</p>
+                      )}
+                    {findings.carryProvenance.integrityWarning && (
+                      <p className="odos-diagnosis-carry-warning" role="alert">
+                        {findings.carryProvenance.integrityWarning}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="odos-diagnosis-laterality" role="group" aria-label="Diagnosis scope">
                 {(["OD", "OS", "OU"] as const).map((eye) => (
