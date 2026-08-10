@@ -651,7 +651,7 @@ test("live Medplum handler persists the diagnosis graph and atomically rolls bac
     return resource;
   };
 
-  try {
+  await runProofWithCleanup(async () => {
     const practitioner = track(await fhir.create<Practitioner>({
       resourceType: "Practitioner",
       identifier: [{ system, value: `practitioner-${runId}` }],
@@ -819,7 +819,7 @@ test("live Medplum handler persists the diagnosis graph and atomically rolls bac
     const rolledBackEncounter = await fhir.read<Encounter>("Encounter", conflictCurrentEncounter.id!);
     assert.deepEqual(rolledBackEncounter.diagnosis, undefined);
     await assertNoTransactionLeaks(fhir, conflictCurrentEncounter.id!);
-  } finally {
+  }, async () => {
     await cleanupSyntheticPullProof(
       fhir,
       baseUrl,
@@ -827,7 +827,7 @@ test("live Medplum handler persists the diagnosis graph and atomically rolls bac
       sweepEncounterIds,
       cleanupReferences,
     );
-  }
+  });
 });
 
 test("synthetic cleanup attempts every exact reference and aggregates all failures", async () => {
@@ -868,6 +868,49 @@ test("synthetic cleanup captures transaction resource ids and versioned location
   }, references);
 
   assert.deepEqual([...references], ["Observation/represented", "Provenance/location-only"]);
+});
+
+test("proof cleanup arbitration preserves the original primary error when cleanup succeeds", async () => {
+  const primary = new Error("primary proof failure");
+
+  await assert.rejects(
+    runProofWithCleanup(
+      async () => { throw primary; },
+      async () => undefined,
+    ),
+    (error: unknown) => error === primary,
+  );
+});
+
+test("proof cleanup arbitration returns the cleanup error alone when the proof succeeds", async () => {
+  const cleanup = new Error("cleanup failure");
+
+  await assert.rejects(
+    runProofWithCleanup(
+      async () => undefined,
+      async () => { throw cleanup; },
+    ),
+    (error: unknown) => error === cleanup,
+  );
+});
+
+test("proof cleanup arbitration preserves primary then every cleanup failure with primary cause", async () => {
+  const primary = new Error("primary proof failure");
+  const cleanupOne = new Error("first cleanup failure");
+  const cleanupTwo = new Error("second cleanup failure");
+
+  await assert.rejects(
+    runProofWithCleanup(
+      async () => { throw primary; },
+      async () => { throw new AggregateError([cleanupOne, cleanupTwo], "cleanup failures"); },
+    ),
+    (error: unknown) => {
+      assert.ok(error instanceof AggregateError);
+      assert.deepEqual(error.errors, [primary, cleanupOne, cleanupTwo]);
+      assert.equal(error.cause, primary);
+      return true;
+    },
+  );
 });
 
 test("previous exams preserves FHIR newest-first order across offsets and returns unbounded exact records", async () => {
@@ -1098,6 +1141,44 @@ function referenceFromTransactionLocation(location: string | undefined): string 
   if (!location) return undefined;
   const match = location.match(/(?:^|\/)([A-Z][A-Za-z]+)\/([^/?]+)(?:\/_history\/[^/?]+)?(?:\?.*)?$/);
   return match ? `${match[1]}/${match[2]}` : undefined;
+}
+
+async function runProofWithCleanup<T>(
+  proof: () => Promise<T>,
+  cleanup: () => Promise<void>,
+): Promise<T> {
+  let proofResult: T | undefined;
+  let proofError: unknown;
+  let proofFailed = false;
+  try {
+    proofResult = await proof();
+  } catch (error) {
+    proofFailed = true;
+    proofError = error;
+  }
+
+  let cleanupError: unknown;
+  let cleanupFailed = false;
+  try {
+    await cleanup();
+  } catch (error) {
+    cleanupFailed = true;
+    cleanupError = error;
+  }
+
+  if (proofFailed) {
+    if (cleanupFailed) {
+      const cleanupErrors = cleanupError instanceof AggregateError ? cleanupError.errors : [cleanupError];
+      throw new AggregateError(
+        [proofError, ...cleanupErrors],
+        `Diagnosis pull proof and cleanup failed with ${cleanupErrors.length} cleanup failure(s).`,
+        { cause: proofError },
+      );
+    }
+    throw proofError;
+  }
+  if (cleanupFailed) throw cleanupError;
+  return proofResult as T;
 }
 
 async function cleanupSyntheticPullProof(
