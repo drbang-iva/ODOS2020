@@ -174,6 +174,9 @@ test("MDM tiers come only from coded per-diagnosis problem status", () => {
   const oneAcuteComplicated = computeMdm(encounterWithDiagnosis([
     encounterDiagnosis("Condition/dx1", "acute-complicated-or-systemic-symptoms"),
   ]));
+  const oneUncertainPrognosis = computeMdm(encounterWithDiagnosis([
+    encounterDiagnosis("Condition/dx1", "undiagnosed-new-problem-uncertain-prognosis"),
+  ]));
 
   assert.equal(oneStable.status, "ready");
   assert.equal(oneStable.tier, "Low");
@@ -181,12 +184,23 @@ test("MDM tiers come only from coded per-diagnosis problem status", () => {
   assert.equal(twoStable.tier, "Moderate");
   assert.equal(oneAcuteComplicated.status, "ready");
   assert.equal(oneAcuteComplicated.tier, "Moderate");
+  assert.equal(oneUncertainPrognosis.status, "ready");
+  assert.equal(oneUncertainPrognosis.tier, "Moderate");
 
   const headerSource = readUi("src/components/charting/EncounterHeader.tsx");
   assert.doesNotMatch(headerSource, /9921[345]/);
 });
 
-test("MDM problem status canonical artifacts bind exactly the seven clinician choices", () => {
+test("minimal problem set uses the billing-facing Straightforward level", () => {
+  const result = computeMdm(encounterWithDiagnosis([
+    encounterDiagnosis("Condition/dx1", "minimal-self-limited"),
+  ]));
+
+  assert.equal(result.status, "ready");
+  assert.equal(result.tier, "Straightforward");
+});
+
+test("MDM problem status canonical artifacts bind exactly the eight clinician choices", () => {
   const repoRoot = resolve(process.cwd(), "..");
   const artifactPaths = [
     resolve(repoRoot, "data/canonical-extensions/odos-encounter-diagnosis-problem-status.json"),
@@ -218,6 +232,11 @@ test("MDM problem status canonical artifacts bind exactly the seven clinician ch
   const codeSystem = JSON.parse(readFileSync(artifactPaths[1]!, "utf8")) as {
     concept?: Array<{ code?: string; display?: string }>;
   };
+  assert.equal(UI_MDM_PROBLEM_STATUSES.length, 8);
+  assert.deepEqual(UI_MDM_PROBLEM_STATUSES[6], {
+    code: "undiagnosed-new-problem-uncertain-prognosis",
+    display: "Undiagnosed new problem with uncertain prognosis",
+  });
   assert.deepEqual(codeSystem.concept, [...UI_MDM_PROBLEM_STATUSES]);
   assert.deepEqual(UI_MDM_PROBLEM_STATUSES, MCP_MDM_PROBLEM_STATUSES);
 
@@ -227,6 +246,8 @@ test("MDM problem status canonical artifacts bind exactly the seven clinician ch
   assert.match(ledger, /odos-encounter-diagnosis-problem-status/);
   assert.match(ledger, /https:\/\/hl7\.org\/fhir\/R4\/encounter-definitions\.html/);
   assert.match(ledger, /https:\/\/hl7\.org\/fhir\/R4\/extensibility\.html/);
+  assert.match(ledger, /https:\/\/www\.aafp\.org\/pubs\/fpm\/issues\/2022\/0100\/p26\.html/);
+  assert.match(ledger, /https:\/\/www\.aafp\.org\/pubs\/fpm\/issues\/2020\/1100\/p6\.html/);
   assert.match(ledger, /accessed 2026-08-09/);
 });
 

@@ -23,7 +23,7 @@ import {
   US_CORE_SMOKING_STATUS_PROFILE,
 } from "./fhir-clinical/smokingStatus";
 
-export type MdmTier = "None" | "Minimal" | "Low" | "Moderate" | "High";
+export type MdmTier = "None" | "Straightforward" | "Low" | "Moderate" | "High";
 
 export interface MdmCounts {
   minimalSelfLimited: number;
@@ -32,6 +32,7 @@ export interface MdmCounts {
   chronicSevereExacerbation: number;
   acuteUncomplicated: number;
   acuteComplicatedOrSystemic: number;
+  undiagnosedNewProblemUncertainPrognosis: number;
   threatToLifeOrBodilyFunction: number;
 }
 
@@ -170,6 +171,7 @@ export function computeMdmHint(input: { encounter: Encounter }): MdmHint {
     chronicSevereExacerbation: 0,
     acuteUncomplicated: 0,
     acuteComplicatedOrSystemic: 0,
+    undiagnosedNewProblemUncertainPrognosis: 0,
     threatToLifeOrBodilyFunction: 0,
   };
   let missingProblemStatusCount = 0;
@@ -206,12 +208,13 @@ export function mdmTier(counts: MdmCounts): MdmTier {
   if (
     counts.stableChronic >= 2 ||
     counts.chronicExacerbationProgression >= 1 ||
-    counts.acuteComplicatedOrSystemic >= 1
+    counts.acuteComplicatedOrSystemic >= 1 ||
+    counts.undiagnosedNewProblemUncertainPrognosis >= 1
   ) {
     return "Moderate";
   }
   if (counts.stableChronic >= 1 || counts.minimalSelfLimited >= 2 || counts.acuteUncomplicated >= 1) return "Low";
-  if (counts.minimalSelfLimited >= 1) return "Minimal";
+  if (counts.minimalSelfLimited >= 1) return "Straightforward";
   return "None";
 }
 
@@ -222,6 +225,7 @@ function incrementMdmCount(counts: MdmCounts, status: MdmProblemStatus): void {
   else if (status === "chronic-severe-exacerbation") counts.chronicSevereExacerbation += 1;
   else if (status === "acute-uncomplicated") counts.acuteUncomplicated += 1;
   else if (status === "acute-complicated-or-systemic-symptoms") counts.acuteComplicatedOrSystemic += 1;
+  else if (status === "undiagnosed-new-problem-uncertain-prognosis") counts.undiagnosedNewProblemUncertainPrognosis += 1;
   else counts.threatToLifeOrBodilyFunction += 1;
 }
 

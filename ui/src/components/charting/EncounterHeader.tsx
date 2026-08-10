@@ -303,13 +303,14 @@ export function MdmProblemsAxis({ mdmHint }: { mdmHint: MdmHint }) {
         )}
       </div>
       {mdmHint.status === "ready" && (
-        <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-white/50 sm:grid-cols-4 xl:grid-cols-7">
+        <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-white/50 sm:grid-cols-4 xl:grid-cols-8">
           <span>{mdmHint.counts.minimalSelfLimited} minimal</span>
           <span>{mdmHint.counts.stableChronic} stable chronic</span>
           <span>{mdmHint.counts.chronicExacerbationProgression} exacerbated</span>
           <span>{mdmHint.counts.chronicSevereExacerbation} severe exacerbation</span>
           <span>{mdmHint.counts.acuteUncomplicated} acute uncomplicated</span>
           <span>{mdmHint.counts.acuteComplicatedOrSystemic} acute complicated/systemic</span>
+          <span>{mdmHint.counts.undiagnosedNewProblemUncertainPrognosis} uncertain prognosis</span>
           <span>{mdmHint.counts.threatToLifeOrBodilyFunction} threat to life/function</span>
         </div>
       )}

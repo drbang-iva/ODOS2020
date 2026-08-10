@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import type { Condition, Encounter, Provenance } from "@medplum/fhirtypes";
+import type { Bundle, Condition, Encounter, Provenance, Resource } from "@medplum/fhirtypes";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
@@ -14,6 +14,7 @@ import {
   diagnosisRankForTier,
   encounterDiagnosisProblemStatusPatchOperations,
   makeConditionPrincipal,
+  markConditionEnteredInError,
   swapConditionRanks,
 } from "../src/lib/clinical-actions";
 import { encounterDiagnosisProblemStatus } from "../src/lib/fhir-clinical/condition";
@@ -177,6 +178,55 @@ test("blocked MDM axis renders the missing problem-status reason where a tier wo
   assert.doesNotMatch(markup, /Moderate MDM threshold/);
 });
 
+test("retracting a classified diagnosis atomically removes its High MDM contribution", async () => {
+  const target = encounterCondition("principal");
+  const encounter = rankedEncounter([1, 3]);
+  encounter.diagnosis![0]!.extension = [mdmStatusExtension("threat-to-life-or-bodily-function")];
+  encounter.diagnosis![1]!.extension = [mdmStatusExtension("stable-chronic")];
+
+  const result = await retractInMemory(target, encounter);
+
+  assert.deepEqual(computeMdmHint({ encounter: result.encounter }), {
+    status: "ready",
+    tier: "Low",
+    counts: {
+      minimalSelfLimited: 0,
+      stableChronic: 1,
+      chronicExacerbationProgression: 0,
+      chronicSevereExacerbation: 0,
+      acuteUncomplicated: 0,
+      acuteComplicatedOrSystemic: 0,
+      undiagnosedNewProblemUncertainPrognosis: 0,
+      threatToLifeOrBodilyFunction: 0,
+    },
+    sourceDiagnosisCount: 1,
+  });
+  assert.deepEqual(result.encounter.diagnosis?.map((diagnosis) => ({
+    reference: diagnosis.condition.reference,
+    rank: diagnosis.rank,
+  })), [{ reference: "Condition/secondary-a", rank: 1 }]);
+  assert.equal(result.condition.verificationStatus?.coding?.[0]?.code, "entered-in-error");
+  assert.equal(result.condition.clinicalStatus, undefined);
+  assert.equal(result.transactionRequests, 1);
+});
+
+test("retracting an unclassified diagnosis removes the permanent blocked MDM state", async () => {
+  const target = encounterCondition("secondary-a");
+  const encounter = rankedEncounter([1, 4]);
+  encounter.diagnosis![0]!.extension = [mdmStatusExtension("stable-chronic")];
+
+  const result = await retractInMemory(target, encounter);
+
+  const mdm = computeMdmHint({ encounter: result.encounter });
+  assert.equal(mdm.status, "ready");
+  assert.equal(mdm.tier, "Low");
+  assert.deepEqual(result.encounter.diagnosis?.map((diagnosis) => diagnosis.condition.reference), [
+    "Condition/principal",
+  ]);
+  assert.equal(result.condition.verificationStatus?.coding?.[0]?.code, "entered-in-error");
+  assert.equal(result.transactionRequests, 1);
+});
+
 test("the free-form diagnosis rank input and state wiring are removed", () => {
   const source = readFileSync(
     new URL("../src/components/charting/AssessmentSection.tsx", import.meta.url),
@@ -295,6 +345,101 @@ function rankedEncounter(ranks: number[]): Encounter {
   };
 }
 
+function encounterCondition(id: string): Condition {
+  return {
+    resourceType: "Condition",
+    id,
+    meta: { versionId: "4" },
+    clinicalStatus: {
+      coding: [{
+        system: "http://terminology.hl7.org/CodeSystem/condition-clinical",
+        code: "active",
+      }],
+    },
+    verificationStatus: {
+      coding: [{
+        system: "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+        code: "confirmed",
+      }],
+    },
+    category: [],
+    code: { text: id },
+    subject: { reference: "Patient/patient-1" },
+    encounter: { reference: "Encounter/encounter-1" },
+  };
+}
+
+function mdmStatusExtension(code: "stable-chronic" | "threat-to-life-or-bodily-function") {
+  return {
+    url: "https://odos2020.com/fhir/StructureDefinition/odos-encounter-diagnosis-problem-status",
+    valueCodeableConcept: {
+      coding: [{
+        system: "https://odos2020.com/fhir/CodeSystem/mdm-problem-status",
+        code,
+      }],
+    },
+  };
+}
+
+async function retractInMemory(
+  target: Condition,
+  initialEncounter: Encounter,
+): Promise<{
+  condition: Condition;
+  encounter: Encounter;
+  transactionRequests: number;
+}> {
+  const originalFetch = globalThis.fetch;
+  let condition = structuredClone(target);
+  let encounter = structuredClone(initialEncounter);
+  let transactionRequests = 0;
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith(`/Encounter/${encounter.id}`) && (!init?.method || init.method === "GET")) {
+      return jsonResponse(encounter);
+    }
+    if (url.endsWith(`/Condition/${target.id}`) && init?.method === "PATCH") {
+      condition = {
+        ...condition,
+        verificationStatus: {
+          coding: [{
+            system: "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+            code: "entered-in-error",
+          }],
+        },
+      };
+      delete condition.clinicalStatus;
+      return jsonResponse(condition);
+    }
+    if (url.endsWith("/fhir/R4") && init?.method === "POST") {
+      transactionRequests += 1;
+      const bundle = JSON.parse(String(init.body)) as Bundle;
+      for (const entry of bundle.entry ?? []) {
+        if (entry.resource?.resourceType === "Condition") condition = structuredClone(entry.resource);
+        if (entry.resource?.resourceType === "Encounter") encounter = structuredClone(entry.resource);
+      }
+      return jsonResponse({
+        resourceType: "Bundle",
+        type: "transaction-response",
+        entry: (bundle.entry ?? []).map((entry) => ({
+          resource: entry.resource,
+          response: { status: "200 OK" },
+        })),
+      });
+    }
+    if (url.endsWith("/Provenance") && init?.method === "POST") {
+      return jsonResponse({ resourceType: "Provenance", id: "provenance-1" });
+    }
+    throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${url}`);
+  };
+  try {
+    await markConditionEnteredInError(condition);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  return { condition, encounter, transactionRequests };
+}
+
 async function captureEncounterPatch(
   encounter: Encounter,
   action: () => Promise<void>,
@@ -352,7 +497,7 @@ function applyRanks(encounter: Encounter, operations: Array<Record<string, unkno
   return ranks.filter((rank): rank is number => rank !== undefined);
 }
 
-function jsonResponse(resource: Encounter | Provenance): Response {
+function jsonResponse(resource: Resource | Bundle): Response {
   return new Response(JSON.stringify(resource), {
     status: 200,
     headers: { "Content-Type": "application/fhir+json" },

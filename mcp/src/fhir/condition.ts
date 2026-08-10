@@ -49,6 +49,7 @@ export const MDM_PROBLEM_STATUSES = [
   { code: "chronic-severe-exacerbation", display: "Chronic illness with severe exacerbation" },
   { code: "acute-uncomplicated", display: "Acute uncomplicated" },
   { code: "acute-complicated-or-systemic-symptoms", display: "Acute complicated / acute with systemic symptoms" },
+  { code: "undiagnosed-new-problem-uncertain-prognosis", display: "Undiagnosed new problem with uncertain prognosis" },
   { code: "threat-to-life-or-bodily-function", display: "Acute or chronic threat to life or bodily function" },
 ] as const;
 

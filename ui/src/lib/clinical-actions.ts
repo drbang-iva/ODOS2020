@@ -39,6 +39,7 @@ import {
   buildSmokingStatusObservation,
   type SmokingStatusCode,
 } from "./fhir-clinical/smokingStatus";
+import { assertTransactionSuccess } from "./encounter-bundles";
 
 const V3_DATA_OPERATION_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-DataOperation";
 const PROVENANCE_PARTICIPANT_TYPE_SYSTEM =
@@ -464,26 +465,73 @@ function encounterDiagnosisIndex(
   return index;
 }
 
-export async function markConditionEnteredInError(condition: Condition): Promise<Condition> {
-  const operations: JsonPatchOperation[] = [
-    {
-      op: condition.verificationStatus ? "replace" : "add",
-      path: "/verificationStatus",
-      value: verificationStatusConcept("entered-in-error"),
-    },
-  ];
-  if (condition.clinicalStatus) {
-    operations.push({ op: "remove", path: "/clinicalStatus" });
+export async function markConditionEnteredInError(condition: Condition): Promise<void> {
+  const encounterId = condition.encounter?.reference?.match(/^Encounter\/([^/]+)$/)?.[1];
+  if (!encounterId) {
+    throw new Error("Encounter diagnosis Condition does not reference an Encounter.");
   }
-  const updated = await fhir.patch<Condition>(
-    "Condition",
-    requiredId(condition),
-    operations,
-    "mark_condition_entered_in_error",
-    requiredVersion(condition),
-  );
-  await createUiProvenance("mark_condition_entered_in_error", `Condition/${updated.id}`, "UPDATE");
-  return updated;
+  const encounter = await fhir.read<Encounter>("Encounter", encounterId);
+  const conditionId = requiredId(condition);
+  const { clinicalStatus: _clinicalStatus, ...conditionWithoutClinicalStatus } = condition;
+  const updatedCondition: Condition = {
+    ...conditionWithoutClinicalStatus,
+    verificationStatus: verificationStatusConcept("entered-in-error"),
+  };
+  const updatedEncounter = encounterAfterDiagnosisRetraction(encounter, condition);
+  const sourceTag = "mark_condition_entered_in_error";
+  const recorded = new Date().toISOString();
+  const response = await fhir.executeTransaction({
+    resourceType: "Bundle",
+    type: "transaction",
+    entry: [
+      {
+        resource: updatedCondition,
+        request: {
+          method: "PUT",
+          url: `Condition/${conditionId}`,
+          ifMatch: `W/\"${requiredVersion(condition)}\"`,
+        },
+      },
+      {
+        resource: updatedEncounter,
+        request: {
+          method: "PUT",
+          url: `Encounter/${encounterId}`,
+          ifMatch: `W/\"${requiredVersion(encounter)}\"`,
+        },
+      },
+      {
+        resource: buildUiProvenance(
+          sourceTag,
+          [`Condition/${conditionId}`, `Encounter/${encounterId}`],
+          "UPDATE",
+          recorded,
+        ),
+        request: { method: "POST", url: "Provenance" },
+      },
+    ],
+  }, sourceTag);
+  assertTransactionSuccess(response);
+}
+
+function encounterAfterDiagnosisRetraction(
+  encounter: Encounter,
+  condition: Condition,
+): Encounter {
+  const targetIndex = encounterDiagnosisIndex(encounter.diagnosis ?? [], condition);
+  const remaining = (encounter.diagnosis ?? [])
+    .flatMap((diagnosis, index) => index === targetIndex ? [] : [{ diagnosis, index }])
+    .sort((left, right) =>
+      (left.diagnosis.rank ?? Number.MAX_SAFE_INTEGER) -
+        (right.diagnosis.rank ?? Number.MAX_SAFE_INTEGER) ||
+      left.index - right.index
+    )
+    .map(({ diagnosis }, index) => ({ ...diagnosis, rank: index + 1 }));
+  if (remaining.length > 0) {
+    return { ...encounter, diagnosis: remaining };
+  }
+  const { diagnosis: _diagnosis, ...encounterWithoutDiagnosis } = encounter;
+  return encounterWithoutDiagnosis;
 }
 
 export async function ensureEyeBodyStructure(
@@ -514,40 +562,53 @@ async function createUiProvenance(
   activityCode: "CREATE" | "UPDATE",
   entityDisplay?: string,
 ): Promise<Provenance> {
-  return fhir.create<Provenance>(
-    {
-      resourceType: "Provenance",
-      target: [{ reference: targetReference }],
-      recorded: new Date().toISOString(),
-      activity: {
-        coding: [
-          {
-            system: V3_DATA_OPERATION_SYSTEM,
-            code: activityCode,
-            display: activityCode === "CREATE" ? "Create" : "Update",
-          },
-        ],
-      },
-      agent: [
+  return fhir.create<Provenance>(buildUiProvenance(
+    sourceTag,
+    [targetReference],
+    activityCode,
+    new Date().toISOString(),
+    entityDisplay,
+  ), sourceTag);
+}
+
+function buildUiProvenance(
+  sourceTag: string,
+  targetReferences: string[],
+  activityCode: "CREATE" | "UPDATE",
+  recorded: string,
+  entityDisplay?: string,
+): Provenance {
+  return {
+    resourceType: "Provenance",
+    target: targetReferences.map((reference) => ({ reference })),
+    recorded,
+    activity: {
+      coding: [
         {
-          type: {
-            coding: [
-              {
-                system: PROVENANCE_PARTICIPANT_TYPE_SYSTEM,
-                code: "author",
-                display: "Author",
-              },
-            ],
-          },
-          who: { display: `ODOS UI ${sourceTag}` },
+          system: V3_DATA_OPERATION_SYSTEM,
+          code: activityCode,
+          display: activityCode === "CREATE" ? "Create" : "Update",
         },
       ],
-      ...(entityDisplay
-        ? { entity: [{ role: "revision", what: { display: entityDisplay } }] }
-        : {}),
     },
-    sourceTag,
-  );
+    agent: [
+      {
+        type: {
+          coding: [
+            {
+              system: PROVENANCE_PARTICIPANT_TYPE_SYSTEM,
+              code: "author",
+              display: "Author",
+            },
+          ],
+        },
+        who: { display: `ODOS UI ${sourceTag}` },
+      },
+    ],
+    ...(entityDisplay
+      ? { entity: [{ role: "revision", what: { display: entityDisplay } }] }
+      : {}),
+  };
 }
 
 function requiredId(resource: Resource): string {

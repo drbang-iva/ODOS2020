@@ -240,10 +240,14 @@ test("v0.35 MCP write tools create version-aware FHIR resources with Provenance"
     );
 
     const reloaded = await fhir.read<Condition>("Condition", encounterDiagnosis.id!);
+    const reloadedEncounter = await fhir.read<Encounter>("Encounter", encounter.id!);
     assert.equal(output.condition.id, encounterDiagnosis.id);
     assert.equal(reloaded.verificationStatus?.coding?.[0]?.code, "entered-in-error");
     assert.equal(reloaded.clinicalStatus, undefined);
+    assert.equal(output.encounter?.diagnosis, undefined);
+    assert.equal(reloadedEncounter.diagnosis, undefined);
     assertProvenance(output.provenance, `Condition/${output.condition.id}`);
+    assertProvenance(output.provenance, `Encounter/${encounter.id}`);
   });
 
   await t.test("create_problem_list_condition creates longitudinal Condition", async () => {
