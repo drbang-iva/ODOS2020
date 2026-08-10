@@ -55,3 +55,20 @@ test("git failure leaves literal unknown provenance without losing the build tim
     await rm(outsideGit, { recursive: true, force: true });
   }
 });
+
+test("detached CI checkout keeps its source branch provenance", async () => {
+  const detachedRepo = await mkdtemp(path.join(tmpdir(), "odos-detached-git-"));
+  const previousHeadRef = process.env.GITHUB_HEAD_REF;
+  try {
+    execFileSync("git", ["init", "--quiet"], { cwd: detachedRepo });
+    execFileSync("git", ["-c", "user.name=ODOS Test", "-c", "user.email=test@odos.invalid", "commit", "--quiet", "--allow-empty", "-m", "fixture"], { cwd: detachedRepo });
+    execFileSync("git", ["checkout", "--quiet", "--detach"], { cwd: detachedRepo });
+    process.env.GITHUB_HEAD_REF = "drbang-iva/build-stamp";
+
+    assert.equal(readBuildVersion(detachedRepo).branch, "drbang-iva/build-stamp");
+  } finally {
+    if (previousHeadRef === undefined) delete process.env.GITHUB_HEAD_REF;
+    else process.env.GITHUB_HEAD_REF = previousHeadRef;
+    await rm(detachedRepo, { recursive: true, force: true });
+  }
+});

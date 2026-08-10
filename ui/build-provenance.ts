@@ -28,6 +28,10 @@ export function readBuildVersion(root: string, now = new Date()): BuildVersion {
     branch = "unknown";
   }
 
+  if (sha !== "unknown" && branch === "unknown") {
+    branch = process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME || "unknown";
+  }
+
   return {
     sha,
     shortSha: sha === "unknown" ? "unknown" : sha.slice(0, 7),
