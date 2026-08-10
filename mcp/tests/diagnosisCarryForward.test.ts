@@ -520,6 +520,50 @@ test("mixed stale transaction uses only the service rollback for exact generated
   assert.deepEqual([...rollback.remaining], []);
 });
 
+test("mixed 409 transaction also authorizes only the exact generated create rollback", async (t) => {
+  const fhir = pullFhir();
+  fhir.transactionResponseMutator = (response) => {
+    const changed = mixedConflictTransactionResponse(response);
+    changed.entry![0]!.response!.status = "409 Conflict";
+    return changed;
+  };
+  const rollback = new MemoryRollbackFhir([
+    "Condition/pulled-condition",
+    "Observation/pulled-observation",
+    "Provenance/pulled-provenance",
+  ]);
+  const base = await startPreviousExamRoutes(t, fhir, "auditor", rollback);
+
+  const response = await postPull(base, "source-dry-eye-od");
+
+  assert.equal(response.status, 409, await response.clone().text());
+  assert.equal(rollback.transactions.length, 1);
+  assert.deepEqual([...rollback.remaining], []);
+});
+
+test("guarded Encounter conflict compensates only validated creates around a later POST failure", async (t) => {
+  const fhir = pullFhir();
+  fhir.transactionResponseMutator = (response) => {
+    const changed = mixedConflictTransactionResponse(response);
+    changed.entry![2]!.response!.status = "500 Internal Server Error";
+    return changed;
+  };
+  const rollback = new MemoryRollbackFhir([
+    "Condition/pulled-condition",
+    "Provenance/pulled-provenance",
+  ]);
+  const base = await startPreviousExamRoutes(t, fhir, "auditor", rollback);
+
+  const response = await postPull(base, "source-dry-eye-od");
+
+  assert.equal(response.status, 502, await response.clone().text());
+  assert.deepEqual(rollback.transactions[0]?.entry?.map((entry) => entry.request), [
+    { method: "DELETE", url: "Provenance/pulled-provenance" },
+    { method: "DELETE", url: "Condition/pulled-condition" },
+  ]);
+  assert.deepEqual([...rollback.remaining], []);
+});
+
 for (const mutation of [
   "same-type-wrong-id",
   "non-mixed-invalid",
@@ -528,6 +572,14 @@ for (const mutation of [
   "wrong-location-id",
   "invalid-fhir-id",
   "invalid-http-status",
+  "encounter-200-before-later-500",
+  "encounter-201-before-later-500",
+  "encounter-1xx-before-later-500",
+  "encounter-500",
+  "later-1xx",
+  "later-3xx",
+  "later-missing-status",
+  "later-malformed-status",
 ] as const) {
   test(`mixed transaction makes zero service rollback calls for ${mutation}`, async (t) => {
     const fhir = pullFhir();
@@ -552,6 +604,25 @@ for (const mutation of [
         changed.entry![1]!.response!.location = "Condition/invalid$id/_history/1";
       } else if (mutation === "invalid-http-status") {
         changed.entry![0]!.response!.status = "999 Not HTTP";
+      } else if (mutation === "encounter-200-before-later-500") {
+        changed.entry![0]!.response!.status = "200 OK";
+        changed.entry![2]!.response!.status = "500 Internal Server Error";
+      } else if (mutation === "encounter-201-before-later-500") {
+        changed.entry![0]!.response!.status = "201 Created";
+        changed.entry![2]!.response!.status = "500 Internal Server Error";
+      } else if (mutation === "encounter-1xx-before-later-500") {
+        changed.entry![0]!.response!.status = "102 Processing";
+        changed.entry![2]!.response!.status = "500 Internal Server Error";
+      } else if (mutation === "encounter-500") {
+        changed.entry![0]!.response!.status = "500 Internal Server Error";
+      } else if (mutation === "later-1xx") {
+        changed.entry![2]!.response!.status = "102 Processing";
+      } else if (mutation === "later-3xx") {
+        changed.entry![2]!.response!.status = "302 Found";
+      } else if (mutation === "later-missing-status") {
+        delete changed.entry![2]!.response!.status;
+      } else if (mutation === "later-malformed-status") {
+        changed.entry![2]!.response!.status = "not-an-http-status";
       }
       return changed;
     };

@@ -801,7 +801,6 @@ function authorizedMixedRollbackReferences(request: Bundle, response: Bundle): s
   const references: string[] = [];
   const requestFullUrls = new Set<string>();
   const createdReferences = new Set<string>();
-  let hasFailure = false;
   for (let index = 0; index < requestEntries.length; index += 1) {
     const requestEntry = requestEntries[index]!;
     const responseEntry = responseEntries[index]!;
@@ -816,7 +815,6 @@ function authorizedMixedRollbackReferences(request: Bundle, response: Bundle): s
       return undefined;
     }
     requestFullUrls.add(requestFullUrl);
-    if (statusCode >= 400) hasFailure = true;
 
     const expectedResourceType = index === 0
       ? "Encounter"
@@ -832,13 +830,8 @@ function authorizedMixedRollbackReferences(request: Bundle, response: Bundle): s
       if (
         requestEntry.request?.method !== "PUT" ||
         !requestResource.id || !fhirIdPattern.test(requestResource.id) ||
-        requestEntry.request.url !== `Encounter/${requestResource.id}`
-      ) {
-        return undefined;
-      }
-      if (
-        statusCode >= 200 && statusCode < 300 &&
-        responseEntry.resource?.id !== requestResource.id
+        requestEntry.request.url !== `Encounter/${requestResource.id}` ||
+        (statusCode !== 409 && statusCode !== 412)
       ) {
         return undefined;
       }
@@ -852,6 +845,7 @@ function authorizedMixedRollbackReferences(request: Bundle, response: Bundle): s
     ) {
       return undefined;
     }
+    if (statusCode < 200) return undefined;
     if (statusCode >= 200 && statusCode < 300 && statusCode !== 201) return undefined;
     if (statusCode !== 201) continue;
 
@@ -869,7 +863,7 @@ function authorizedMixedRollbackReferences(request: Bundle, response: Bundle): s
     createdReferences.add(reference);
     references.push(reference);
   }
-  return hasFailure && references.length ? references : undefined;
+  return references.length ? references : undefined;
 }
 
 function transactionStatusCode(status: string | undefined): number | undefined {
