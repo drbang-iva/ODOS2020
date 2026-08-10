@@ -366,13 +366,12 @@ function decodeCursor(cursor: string, fhirBaseUrl: string): string | undefined {
 }
 
 function validatedNextPath(url: string, fhirBaseUrl: string): string {
-  const isAbsolute = /^[a-z][a-z0-9+.-]*:/i.test(url);
   const fhirOrigin = new URL(fhirBaseUrl).origin;
   const parsed = new URL(url, `${fhirOrigin}/fhir/R4/Encounter`);
   if (
     parsed.username || parsed.password || parsed.hash ||
-    (isAbsolute && parsed.protocol !== "http:" && parsed.protocol !== "https:") ||
-    (isAbsolute && parsed.origin !== fhirOrigin) ||
+    (parsed.protocol !== "http:" && parsed.protocol !== "https:") ||
+    parsed.origin !== fhirOrigin ||
     !parsed.pathname.endsWith("/Encounter") ||
     !parsed.search
   ) throw new InvalidCursorError();

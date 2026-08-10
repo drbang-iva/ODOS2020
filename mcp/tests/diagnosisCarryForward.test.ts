@@ -188,6 +188,42 @@ test("previous exams rejects a cross-origin Bundle next link", async () => {
   assert.deepEqual(response.body, { error: "FHIR previous-exams next link is invalid." });
 });
 
+test("previous exams rejects a scheme-relative cross-origin Bundle next link", async () => {
+  const fhir = previousExamFhir();
+  fhir.nextUrl = "//evil.example/fhir/R4/Encounter?_page=2&_count=4";
+
+  const response = await handlePreviousExamsReadRequest(deps(fhir), {
+    authHeader: AUTH_CLINICIAN,
+    params: { encounterId: "current" },
+    query: {},
+  });
+
+  assert.equal(response.status, 502);
+  assert.deepEqual(response.body, { error: "FHIR previous-exams next link is invalid." });
+});
+
+test("previous exams accepts a same-origin absolute Bundle next link", async () => {
+  const fhir = previousExamFhir();
+  fhir.nextUrl = "https://fhir.local/fhir/R4/Encounter?_page=2&_count=4";
+
+  const first = await handlePreviousExamsReadRequest(deps(fhir), {
+    authHeader: AUTH_CLINICIAN,
+    params: { encounterId: "current" },
+    query: {},
+  });
+  const firstPage = first.body as PreviousExamsPage;
+  assert.equal(first.status, 200, JSON.stringify(first.body));
+  assert.ok(firstPage.nextCursor);
+
+  const second = await handlePreviousExamsReadRequest(deps(fhir), {
+    authHeader: AUTH_CLINICIAN,
+    params: { encounterId: "current" },
+    query: { cursor: firstPage.nextCursor },
+  });
+  assert.equal(second.status, 200, JSON.stringify(second.body));
+  assert.deepEqual(fhir.followedUrls, ["/fhir/R4/Encounter?_page=2&_count=4"]);
+});
+
 async function startPreviousExamRoutes(
   t: TestContext,
   fhir: MemoryFhir,
