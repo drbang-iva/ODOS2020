@@ -348,7 +348,7 @@ function updatedDiagnosisIdentifierValue(
   const parts = value.split("::");
   const suffix = parts.at(-1);
   if (
-    parts.length < 3 ||
+    parts.length < 2 ||
     (suffix !== "right" && suffix !== "left" && suffix !== "bilateral" && suffix !== "unspecified" && suffix !== "none")
   ) return undefined;
   return { value: [...parts.slice(0, -1), laterality === "OD" ? "right" : laterality === "OS" ? "left" : "bilateral"].join("::") };

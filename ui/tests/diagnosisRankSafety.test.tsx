@@ -301,6 +301,70 @@ test("diagnosis laterality PATCH atomically reconciles the existing catalog iden
   ]);
 });
 
+test("diagnosis laterality PATCH atomically reconciles a legacy two-part catalog identifier suffix", async () => {
+  const originalFetch = globalThis.fetch;
+  let operations: Array<{ op: string; path: string; value?: unknown }> | undefined;
+  const condition: Condition = {
+    ...encounterCondition("secondary-a"),
+    meta: { versionId: "4" },
+    bodySite: [{ text: "OD" }],
+    identifier: [
+      {
+        system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM,
+        value: "dry_eye::right",
+      },
+      { system: "urn:example:preserved", value: "retain-me" },
+    ],
+  };
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.includes("/BodyStructure?") && (!init?.method || init.method === "GET")) {
+      return jsonResponse({
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [{
+          resource: {
+            resourceType: "BodyStructure",
+            id: "left-eye",
+            patient: { reference: "Patient/patient-1" },
+          },
+        }],
+      });
+    }
+    if (url.endsWith("/Condition/secondary-a") && init?.method === "PATCH") {
+      operations = JSON.parse(String(init.body));
+      return jsonResponse({ ...condition, meta: { versionId: "5" } });
+    }
+    if (url.endsWith("/Provenance") && init?.method === "POST") {
+      const provenance = JSON.parse(String(init.body)) as Provenance;
+      return jsonResponse({ ...provenance, id: "laterality-provenance" });
+    }
+    throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${url}`);
+  };
+  try {
+    await updateConditionBodySite({
+      condition,
+      patientReference: "Patient/patient-1",
+      laterality: "OS",
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.deepEqual(operations?.map(({ op, path }) => ({ op, path })), [
+    { op: "replace", path: "/bodySite" },
+    { op: "replace", path: "/identifier" },
+  ]);
+  assert.equal((operations?.[0]?.value as Array<{ text?: string }>)?.[0]?.text, "OS");
+  assert.deepEqual(operations?.[1]?.value, [
+    {
+      system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM,
+      value: "dry_eye::left",
+    },
+    { system: "urn:example:preserved", value: "retain-me" },
+  ]);
+});
+
 test("problem status control renders a conspicuous required-empty state without unspecified", () => {
   const markup = renderToStaticMarkup(React.createElement(DiagnosisProblemStatusField, {
     disabled: false,
