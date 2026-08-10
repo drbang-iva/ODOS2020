@@ -1,6 +1,7 @@
 import type { Bundle, Condition, Encounter, Observation, Provenance, Resource } from "@medplum/fhirtypes";
 import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../fhir/ophthalmology/codeBindings.js";
 import { ODOS_EXTENSION_URLS } from "../fhir/ophthalmology/extensions.js";
+import { V3_DATA_OPERATION_CODE_SYSTEM } from "../fhir/ophthalmology/provenance.js";
 
 export interface DiagnosisCarryProvenanceFhirClient {
   read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T>;
@@ -29,6 +30,22 @@ export interface DiagnosisCarryState {
 }
 
 export async function readDiagnosisCarryState(
+  fhir: DiagnosisCarryProvenanceFhirClient,
+  condition: Condition,
+  observations: readonly Observation[],
+): Promise<DiagnosisCarryState> {
+  try {
+    return await readDiagnosisCarryStateFromAvailableLineage(fhir, condition, observations);
+  } catch (error) {
+    const status = errorStatus(error);
+    if (status === 404 || status === 410) {
+      return integrityFailure("Diagnosis carry lineage resource is missing or gone.");
+    }
+    throw error;
+  }
+}
+
+async function readDiagnosisCarryStateFromAvailableLineage(
   fhir: DiagnosisCarryProvenanceFhirClient,
   condition: Condition,
   observations: readonly Observation[],
@@ -98,6 +115,7 @@ export async function readDiagnosisCarryState(
 
   let unchangedSinceDate = pulledFromDate;
   let ancestor = sourceCondition;
+  let descendantCarryRecorded = currentCarry.recorded;
   const visited = new Set([currentReference]);
   while (true) {
     const ancestorReference = resourceReference(ancestor);
@@ -119,6 +137,15 @@ export async function readDiagnosisCarryState(
         pulledFromDate,
         edited: true,
         integrityWarning: ancestorCarry.warning,
+        sourceAbsentSnapshots,
+        observationCarried,
+      };
+    }
+    if (ancestorCarry.recorded >= descendantCarryRecorded) {
+      return {
+        pulledFromDate,
+        edited: true,
+        integrityWarning: "Diagnosis carry provenance lineage chronology is invalid.",
         sourceAbsentSnapshots,
         observationCarried,
       };
@@ -195,6 +222,7 @@ export async function readDiagnosisCarryState(
       };
     }
     unchangedSinceDate = nextDate;
+    descendantCarryRecorded = ancestorCarry.recorded;
   }
 
   return {
@@ -300,11 +328,14 @@ async function allTargetProvenances(
 
 function isCarryProvenance(provenance: Provenance): boolean {
   return provenance.activity?.text === "Diagnosis pull-forward" &&
-    provenance.activity.coding?.some((coding) => coding.code === "CREATE") === true;
+    provenance.activity.coding?.some((coding) =>
+      coding.system === V3_DATA_OPERATION_CODE_SYSTEM && coding.code === "CREATE"
+    ) === true;
 }
 
 function directSourceConditionReference(provenance: Provenance): string | undefined {
   const references = [...new Set(provenance.entity?.flatMap((entity) => {
+    if (entity.role !== "source") return [];
     const reference = entity.what.reference;
     return reference?.match(conditionReferencePattern) ? [reference] : [];
   }) ?? [])];
@@ -316,6 +347,7 @@ async function absentSourceSnapshots(
   provenance: Provenance,
 ): Promise<SourceAbsentFindingSnapshot[]> {
   const references = [...new Set(provenance.entity?.flatMap((entity) => {
+    if (entity.role !== "source") return [];
     const reference = entity.what.reference;
     return reference?.match(observationReferencePattern) ? [reference] : [];
   }) ?? [])];
@@ -427,4 +459,10 @@ function integrityFailure(integrityWarning: string): DiagnosisCarryState {
     sourceAbsentSnapshots: [],
     observationCarried: {},
   };
+}
+
+function errorStatus(error: unknown): unknown {
+  return typeof error === "object" && error !== null && "status" in error
+    ? (error as { status?: unknown }).status
+    : undefined;
 }

@@ -291,6 +291,8 @@ export async function updateEncounterDiagnosisProblemStatus(input: {
     "update_encounter_diagnosis_problem_status",
     [`Encounter/${updated.id}`, `Condition/${requiredId(input.condition)}`],
     "UPDATE",
+    undefined,
+    input.condition.subject.reference,
   );
   return updated;
 }
@@ -314,7 +316,13 @@ export async function updateConditionBodySite(input: {
     "update_condition_body_site",
     requiredVersion(input.condition),
   );
-  await createUiProvenance("update_condition_body_site", `Condition/${updated.id}`, "UPDATE");
+  await createUiProvenance(
+    "update_condition_body_site",
+    `Condition/${updated.id}`,
+    "UPDATE",
+    undefined,
+    input.patientReference,
+  );
   return updated;
 }
 
@@ -561,10 +569,14 @@ async function createUiProvenance(
   targetReference: string | readonly string[],
   activityCode: "CREATE" | "UPDATE",
   entityDisplay?: string,
+  patientReference?: string,
 ): Promise<Provenance> {
   return fhir.create<Provenance>(buildUiProvenance(
     sourceTag,
-    typeof targetReference === "string" ? [targetReference] : [...targetReference],
+    [
+      ...(typeof targetReference === "string" ? [targetReference] : [...targetReference]),
+      ...(patientReference ? [patientReference] : []),
+    ].filter((reference, index, all) => all.indexOf(reference) === index),
     activityCode,
     new Date().toISOString(),
     entityDisplay,

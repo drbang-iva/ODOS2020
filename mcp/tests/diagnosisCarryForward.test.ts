@@ -3,17 +3,24 @@ import { randomUUID } from "node:crypto";
 import type { AddressInfo } from "node:net";
 import { test, type TestContext } from "node:test";
 import type {
+  AccessPolicy,
   Bundle,
   Condition,
   Encounter,
   Observation,
   Patient,
   Practitioner,
+  ProjectMembership,
   Provenance,
   Resource,
 } from "@medplum/fhirtypes";
 import express from "express";
-import type { PracticeRoleId } from "../src/authz/roles.js";
+import {
+  buildMedplumAccessPolicy,
+  buildProjectMembershipAccess,
+  getRoleDeclaration,
+  type PracticeRoleId,
+} from "../src/authz/roles.js";
 import {
   handleDiagnosisPullRequest,
   handlePreviousExamsReadRequest,
@@ -31,6 +38,9 @@ import { lateralityConcept, ODOS_EXTENSION_URLS } from "../src/fhir/ophthalmolog
 import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../src/fhir/ophthalmology/codeBindings.js";
 import { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } from "../src/clinical-graph/diagnosis-pick-endpoint.js";
 import { createAuthenticatedFhirClient, loadRepoEnv } from "./integration-helpers.js";
+import { createMedplumClient } from "../src/fhir-client.js";
+import { searchAll } from "../src/fhir-search.js";
+import { TEST_FHIR_AUDIT_CONTEXT, TEST_FHIR_AUDIT_RECORDER } from "./fhirAuditTestStub.js";
 
 const AUTH_CLINICIAN = "Bearer clinician";
 const AUTH_FORBIDDEN = "Bearer forbidden";
@@ -258,12 +268,14 @@ test("carry provenance follows every target-search Bundle page before deciding w
   assert.deepEqual(fhir.followedUrls, ["/fhir/R4/Provenance?_page=2"]);
 });
 
-test("carry provenance requires exact CREATE activity text and a direct source Condition entity", async () => {
-  for (const mutation of ["wrong-code", "wrong-text", "missing-condition"] as const) {
+for (const mutation of ["wrong-code", "wrong-system", "wrong-text", "wrong-role", "missing-condition"] as const) {
+  test(`carry provenance rejects ${mutation} instead of relaxing its exact tuple and source-role contract`, async () => {
     const fhir = carryChainFhir(1);
     const carry = fhir.resource<Provenance>("Provenance", "carry-provenance-1");
     if (mutation === "wrong-code") carry.activity!.coding![0]!.code = "UPDATE";
+    if (mutation === "wrong-system") carry.activity!.coding![0]!.system = "urn:wrong:data-operation";
     if (mutation === "wrong-text") carry.activity!.text = "Diagnosis copied";
+    if (mutation === "wrong-role") carry.entity![0]!.role = "revision";
     if (mutation === "missing-condition") {
       carry.entity = [{ role: "source", what: { reference: "Observation/source-only" } }];
     }
@@ -275,9 +287,89 @@ test("carry provenance requires exact CREATE activity text and a direct source C
     );
     assert.equal(state.pulledFromDate, undefined, mutation);
     assert.equal(state.unchangedSinceDate, undefined, mutation);
-    assert.equal(state.edited, mutation === "missing-condition", mutation);
-    if (mutation === "missing-condition") assert.match(state.integrityWarning ?? "", /source Condition/i);
+    assert.equal(state.edited, mutation === "missing-condition" || mutation === "wrong-role", mutation);
+    if (mutation === "missing-condition" || mutation === "wrong-role") {
+      assert.match(state.integrityWarning ?? "", /source Condition/i);
+    }
+  });
+}
+
+test("only source-role Observation entities can become prior absent offers", async () => {
+  const fhir = carryChainFhir(1);
+  const absent = carryObservation("prior-absent", "carry-encounter-0");
+  absent.valueBoolean = false;
+  fhir.resources.push(absent);
+  fhir.resource<Provenance>("Provenance", "carry-provenance-1").entity!.push({
+    role: "revision",
+    what: { reference: "Observation/prior-absent" },
+  });
+
+  const state = await readDiagnosisCarryState(
+    fhir,
+    fhir.resource<Condition>("Condition", "carry-condition-1"),
+    [],
+  );
+
+  assert.deepEqual(state.sourceAbsentSnapshots, []);
+});
+
+for (const [scenario, recorded] of [
+  ["tied", "2025-04-03T12:00:00.000Z"],
+  ["reversed", "2025-04-04T12:00:00.000Z"],
+] as const) {
+  test(`${scenario} ancestor carry instant fails the strict lineage chronology`, async () => {
+    const fhir = carryChainFhir(2);
+    fhir.resource<Provenance>("Provenance", "carry-provenance-1").recorded = recorded;
+
+    const state = await readDiagnosisCarryState(
+      fhir,
+      fhir.resource<Condition>("Condition", "carry-condition-2"),
+      [],
+    );
+
+    assert.equal(state.edited, true, recorded);
+    assert.equal(state.unchangedSinceDate, undefined, recorded);
+    assert.match(state.integrityWarning ?? "", /chronolog/i, recorded);
+  });
+}
+
+for (const status of [404, 410]) {
+  for (const reference of [
+    "Condition/carry-condition-0",
+    "Encounter/carry-encounter-0",
+    "Observation/prior-absent",
+  ]) {
+    test(`${status} ${reference} returns a visible edited integrity state`, async () => {
+      const fhir = carryChainFhir(1);
+      if (reference.startsWith("Observation/")) {
+        fhir.resource<Provenance>("Provenance", "carry-provenance-1").entity!.push({
+          role: "source",
+          what: { reference },
+        });
+      }
+      fhir.readFailures.set(reference, status);
+
+      const state = await readDiagnosisCarryState(
+        fhir,
+        fhir.resource<Condition>("Condition", "carry-condition-1"),
+        [],
+      );
+
+      assert.equal(state.edited, true, `${status} ${reference}`);
+      assert.equal(state.unchangedSinceDate, undefined, `${status} ${reference}`);
+      assert.match(state.integrityWarning ?? "", /missing|gone|unavailable/i, `${status} ${reference}`);
+    });
   }
+}
+
+test("clinician AccessPolicy makes Provenance reachable through the Patient compartment target", () => {
+  const policy = buildMedplumAccessPolicy(getRoleDeclaration("clinician"));
+  const provenanceRule = policy.resource?.find((rule) => rule.resourceType === "Provenance" &&
+    rule.criteria === "Provenance?_compartment=%patient_compartment");
+
+  assert.ok(provenanceRule);
+  assert.equal(provenanceRule.interaction?.includes("create"), true);
+  assert.equal(provenanceRule.interaction?.includes("read"), true);
 });
 
 test("carry provenance cycles terminate with a visible integrity warning", async () => {
@@ -317,15 +409,15 @@ test("pull posts one present finding atomically while preserving absent source p
   assert.equal(bundle.type, "transaction");
   assert.equal(headers.Prefer, "return=representation");
   assert.deepEqual(bundle.entry?.map((entry) => [entry.resource?.resourceType, entry.request?.method, entry.request?.url]), [
-    ["Condition", "POST", "Condition"],
     ["Encounter", "PUT", "Encounter/current-pull"],
+    ["Condition", "POST", "Condition"],
     ["Observation", "POST", "Observation"],
     ["Provenance", "POST", "Provenance"],
   ]);
   assert.equal(bundle.entry?.every((entry) => entry.fullUrl?.startsWith("urn:uuid:")), true);
 
-  const conditionEntry = bundle.entry![0]!;
-  const encounterEntry = bundle.entry![1]!;
+  const encounterEntry = bundle.entry![0]!;
+  const conditionEntry = bundle.entry![1]!;
   const observationEntry = bundle.entry![2]!;
   const provenanceEntry = bundle.entry![3]!;
   const pulledCondition = conditionEntry.resource as Condition;
@@ -366,6 +458,7 @@ test("pull posts one present finding atomically while preserving absent source p
     conditionEntry.fullUrl,
     encounterEntry.fullUrl,
     observationEntry.fullUrl,
+    "Patient/patient-1",
   ]);
   assert.deepEqual(provenance.entity?.map((entity) => entity.what.reference), [
     "Condition/source-dry-eye-od",
@@ -380,6 +473,86 @@ test("pull posts one present finding atomically while preserving absent source p
   assert.equal(body.alreadyPresent, false);
   assert.equal((body.transaction as Bundle).type, "transaction-response");
 });
+
+test("pull puts the optimistic Encounter version guard before every transaction create", async (t) => {
+  const fhir = pullFhir();
+  const base = await startPreviousExamRoutes(t, fhir, "auditor");
+
+  const response = await postPull(base, "source-dry-eye-od");
+
+  assert.equal(response.status, 200, await response.clone().text());
+  const entries = fhir.transactions[0]?.bundle.entry ?? [];
+  assert.deepEqual(
+    entries.map((entry) => [entry.resource?.resourceType, entry.request?.method]),
+    [
+      ["Encounter", "PUT"],
+      ["Condition", "POST"],
+      ["Observation", "POST"],
+      ["Provenance", "POST"],
+    ],
+  );
+  assert.equal(entries[0]?.request?.ifMatch, 'W/"7"');
+  assert.equal(entries.slice(1).every((entry) => entry.request?.method === "POST"), true);
+});
+
+test("mixed stale transaction uses only the service rollback for exact generated create locations", async (t) => {
+  const fhir = pullFhir();
+  fhir.transactionResponseMutator = mixedConflictTransactionResponse;
+  const rollback = new MemoryRollbackFhir([
+    "Condition/pulled-condition",
+    "Observation/pulled-observation",
+    "Provenance/pulled-provenance",
+  ]);
+  const base = await startPreviousExamRoutes(t, fhir, "auditor", rollback);
+
+  const response = await postPull(base, "source-dry-eye-od");
+
+  assert.equal(response.status, 409, await response.clone().text());
+  assert.equal(rollback.transactions.length, 1);
+  assert.deepEqual(rollback.transactions[0]?.entry?.map((entry) => entry.request), [
+    { method: "DELETE", url: "Provenance/pulled-provenance" },
+    { method: "DELETE", url: "Observation/pulled-observation" },
+    { method: "DELETE", url: "Condition/pulled-condition" },
+  ]);
+  assert.equal(rollback.readReferences.has("Encounter/current-pull"), false);
+  assert.deepEqual([...rollback.remaining], []);
+});
+
+test("mixed stale transaction fails closed when privileged rollback is absent", async (t) => {
+  const fhir = pullFhir();
+  fhir.transactionResponseMutator = mixedConflictTransactionResponse;
+  const base = await startPreviousExamRoutes(t, fhir, "auditor");
+
+  const response = await postPull(base, "source-dry-eye-od");
+
+  assert.equal(response.status, 502, await response.clone().text());
+});
+
+for (const mutation of ["wrong-location-type", "delete-failure", "still-readable"] as const) {
+  test(`mixed stale transaction fails closed for ${mutation} rollback evidence`, async (t) => {
+    const fhir = pullFhir();
+    fhir.transactionResponseMutator = (response) => {
+      const changed = mixedConflictTransactionResponse(response);
+      if (mutation === "wrong-location-type") {
+        changed.entry![1]!.response!.location = "Patient/not-a-generated-condition/_history/1";
+      }
+      return changed;
+    };
+    const rollback = new MemoryRollbackFhir([
+      "Condition/pulled-condition",
+      "Observation/pulled-observation",
+      "Provenance/pulled-provenance",
+    ]);
+    rollback.failDelete = mutation === "delete-failure";
+    rollback.keepReadable = mutation === "still-readable";
+    const base = await startPreviousExamRoutes(t, fhir, "auditor", rollback);
+
+    const response = await postPull(base, "source-dry-eye-od");
+
+    assert.equal(response.status, 502, `${mutation}: ${await response.clone().text()}`);
+    if (mutation === "wrong-location-type") assert.equal(rollback.transactions.length, 0);
+  });
+}
 
 test("pull re-read catches a raced exact OD diagnosis and returns its current reference without a transaction", async (t) => {
   const fhir = pullFhir();
@@ -711,11 +884,11 @@ test("pull excludes an entered-in-error source Observation", async (t) => {
   assert.equal(response.status, 200, await response.clone().text());
   const transaction = fhir.transactions[0]!.bundle;
   assert.deepEqual(transaction.entry?.map((entry) => entry.resource?.resourceType), [
-    "Condition",
     "Encounter",
+    "Condition",
     "Provenance",
   ]);
-  assert.deepEqual((transaction.entry?.[0]?.resource as Condition).evidence, undefined);
+  assert.deepEqual((transaction.entry?.[1]?.resource as Condition).evidence, undefined);
   assert.equal(JSON.stringify(transaction.entry?.at(-1)?.resource).includes("source-staining-present"), false);
 });
 
@@ -844,7 +1017,7 @@ test("a conflict reread never returns an exact diagnosis from an entered-in-erro
   assert.equal(fhir.transactions.length, 1);
 });
 
-test("live Medplum handler persists the diagnosis graph and atomically rolls back an If-Match conflict", { timeout: 90_000 }, async (t) => {
+test("live ordinary-clinician policy persists and reads diagnosis carry while preserving atomic conflict rollback", { timeout: 90_000 }, async (t) => {
   loadRepoEnv();
   const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
   const email = process.env.MEDPLUM_ADMIN_EMAIL;
@@ -854,7 +1027,7 @@ test("live Medplum handler persists the diagnosis graph and atomically rolls bac
     return;
   }
 
-  const { fhir, accessToken } = await createAuthenticatedFhirClient({ baseUrl, email, password });
+  const { fhir: adminFhir, accessToken: adminAccessToken } = await createAuthenticatedFhirClient({ baseUrl, email, password });
   const runId = randomUUID();
   const system = "urn:odos:test:diagnosis-carry-forward";
   const cleanupReferences = new Set<string>();
@@ -866,27 +1039,28 @@ test("live Medplum handler persists the diagnosis graph and atomically rolls bac
   };
 
   await runProofWithCleanup(async () => {
-    const practitioner = track(await fhir.create<Practitioner>({
+    const practitioner = track(await adminFhir.create<Practitioner>({
       resourceType: "Practitioner",
       identifier: [{ system, value: `practitioner-${runId}` }],
       name: [{ family: `DiagnosisPull${runId}`, given: ["Synthetic"] }],
     }));
-    const patient = track(await fhir.create<Patient>({
+    const patient = track(await adminFhir.create<Patient>({
       resourceType: "Patient",
       identifier: [{ system, value: `patient-${runId}` }],
       name: [{ family: `DiagnosisPull${runId}`, given: ["Synthetic"] }],
+      generalPractitioner: [{ reference: `Practitioner/${practitioner.id}` }],
     }));
     const patientReference = `Patient/${patient.id}`;
-    const sourceEncounter = track(await fhir.create<Encounter>(syntheticEncounter(patientReference, system, `source-${runId}`)));
-    const currentEncounter = track(await fhir.create<Encounter>(syntheticEncounter(patientReference, system, `current-${runId}`)));
+    const sourceEncounter = track(await adminFhir.create<Encounter>(syntheticEncounter(patientReference, system, `source-${runId}`)));
+    const currentEncounter = track(await adminFhir.create<Encounter>(syntheticEncounter(patientReference, system, `current-${runId}`)));
     sweepEncounterIds.add(currentEncounter.id!);
-    const present = track(await fhir.create<Observation>(
+    const present = track(await adminFhir.create<Observation>(
       syntheticEvidence(patientReference, `Encounter/${sourceEncounter.id}`, system, `present-${runId}`, true),
     ));
-    const absent = track(await fhir.create<Observation>(
+    const absent = track(await adminFhir.create<Observation>(
       syntheticEvidence(patientReference, `Encounter/${sourceEncounter.id}`, system, `absent-${runId}`, false),
     ));
-    const sourceCondition = track(await fhir.create<Condition>({
+    const sourceCondition = track(await adminFhir.create<Condition>({
       ...buildEncounterDiagnosisCondition({
         patientReference,
         encounterReference: `Encounter/${sourceEncounter.id}`,
@@ -900,15 +1074,60 @@ test("live Medplum handler persists the diagnosis graph and atomically rolls bac
       }),
       extension: [{ url: ODOS_EXTENSION_URLS.eyeLaterality, valueCodeableConcept: lateralityConcept("OD") }],
     }));
-    await fhir.update<Encounter>("Encounter", sourceEncounter.id!, {
+    await adminFhir.update<Encounter>("Encounter", sourceEncounter.id!, {
       ...sourceEncounter,
       diagnosis: [buildEncounterDiagnosisComponent(`Condition/${sourceCondition.id}`, 1)],
     });
 
+    const clinicianPolicy = buildMedplumAccessPolicy(getRoleDeclaration("clinician"));
+    clinicianPolicy.name = `ODOS diagnosis carry clinician proof ${runId}`;
+    const createdPolicy = track(await adminFhir.create<AccessPolicy>(clinicianPolicy));
+    const projectId = await activeProjectId(baseUrl, adminAccessToken);
+    const clientApplication = await createDisposableClientApplication(
+      baseUrl,
+      adminAccessToken,
+      projectId,
+      `AccessPolicy/${createdPolicy.id}`,
+      runId,
+    );
+    cleanupReferences.add(`ClientApplication/${clientApplication.id}`);
+    const memberships = (await searchAll<ProjectMembership>(adminFhir, "ProjectMembership", {
+      profile: `ClientApplication/${clientApplication.id}`,
+    })).filter((membership) => membership.project.reference === `Project/${projectId}`);
+    assert.equal(memberships.length, 1, "Disposable client must have one membership in the existing local project.");
+    const membership = memberships[0]!;
+    assert.ok(membership.id && membership.meta?.versionId);
+    cleanupReferences.add(`ProjectMembership/${membership.id}`);
+    await adminFhir.patch<ProjectMembership>("ProjectMembership", membership.id, [{
+      op: membership.access?.length ? "replace" : "add",
+      path: "/access",
+      value: buildProjectMembershipAccess({
+        policyReference: `AccessPolicy/${createdPolicy.id}`,
+        parameters: {
+          providerProfileReference: `Practitioner/${practitioner.id}`,
+          patientCompartmentReference: patientReference,
+        },
+      }),
+    }], { "If-Match": `W/\"${membership.meta.versionId}\"` });
+    const clinicianToken = await clientCredentialsToken(
+      baseUrl,
+      clientApplication.id,
+      clientApplication.secret,
+    );
+    const policyProbe = await fetch(`${baseUrl.replace(/\/$/, "")}/fhir/R4/AccessPolicy?_count=1`, {
+      headers: { Authorization: `Bearer ${clinicianToken}` },
+    });
+    assert.equal(policyProbe.status, 403, "Ordinary clinician proof token must not have admin AccessPolicy reach.");
+    const clinicianFhir = createMedplumClient({
+      baseUrl,
+      accessToken: clinicianToken,
+      audit: TEST_FHIR_AUDIT_RECORDER,
+      auditContext: TEST_FHIR_AUDIT_CONTEXT,
+    });
     const authenticate = async () => ({
       staffReference: `Practitioner/${practitioner.id}`,
       actorRole: "clinician" as const,
-      fhir,
+      fhir: clinicianFhir,
     });
     const result = await handleDiagnosisPullRequest({ fhirBaseUrl: baseUrl, authenticate }, {
       authHeader: "Bearer synthetic-live-proof",
@@ -925,8 +1144,8 @@ test("live Medplum handler persists the diagnosis graph and atomically rolls bac
     assert.equal(successfulBody.transaction.entry?.length, 4);
     assert.ok(successfulBody.transaction.entry?.every((entry) => entry.response?.status?.match(/^2\d\d(?:\s|$)/)));
     const pulledConditionId = successfulBody.conditionReference.split("/")[1]!;
-    const persistedCondition = await fhir.read<Condition>("Condition", pulledConditionId);
-    const persistedEncounter = await fhir.read<Encounter>("Encounter", currentEncounter.id!);
+    const persistedCondition = await clinicianFhir.read<Condition>("Condition", pulledConditionId);
+    const persistedEncounter = await clinicianFhir.read<Encounter>("Encounter", currentEncounter.id!);
     const persistedObservation = successfulBody.transaction.entry?.find((entry) =>
       entry.resource?.resourceType === "Observation"
     )?.resource as Observation | undefined;
@@ -935,8 +1154,8 @@ test("live Medplum handler persists the diagnosis graph and atomically rolls bac
     )?.resource as Provenance | undefined;
     assert.ok(persistedObservation?.id);
     assert.ok(persistedProvenance?.id);
-    const reloadedObservation = await fhir.read<Observation>("Observation", persistedObservation.id);
-    const reloadedProvenance = await fhir.read<Provenance>("Provenance", persistedProvenance.id);
+    const reloadedObservation = await clinicianFhir.read<Observation>("Observation", persistedObservation.id);
+    const reloadedProvenance = await clinicianFhir.read<Provenance>("Provenance", persistedProvenance.id);
     assert.equal(persistedCondition.encounter?.reference, `Encounter/${currentEncounter.id}`);
     assert.equal(persistedCondition.verificationStatus?.coding?.[0]?.code, "confirmed");
     assert.deepEqual(persistedCondition.evidence?.[0]?.detail?.map((detail) => detail.reference), [
@@ -952,22 +1171,26 @@ test("live Medplum handler persists the diagnosis graph and atomically rolls bac
       `Observation/${present.id}`,
       `Observation/${absent.id}`,
     ]);
+    assert.equal(reloadedProvenance.target.some((target) => target.reference === patientReference), true);
+    const carryState = await readDiagnosisCarryState(clinicianFhir, persistedCondition, [reloadedObservation]);
+    assert.equal(carryState.edited, false, carryState.integrityWarning);
+    assert.equal(carryState.pulledFromDate, sourceEncounter.period?.start);
 
-    const conflictSourceEncounter = track(await fhir.create<Encounter>(
+    const conflictSourceEncounter = track(await adminFhir.create<Encounter>(
       syntheticEncounter(patientReference, system, `conflict-source-${runId}`),
     ));
-    const conflictCurrentEncounter = track(await fhir.create<Encounter>(
+    const conflictCurrentEncounter = track(await adminFhir.create<Encounter>(
       syntheticEncounter(patientReference, system, `conflict-current-${runId}`),
     ));
     sweepEncounterIds.add(conflictCurrentEncounter.id!);
-    const conflictEvidence = track(await fhir.create<Observation>(syntheticEvidence(
+    const conflictEvidence = track(await adminFhir.create<Observation>(syntheticEvidence(
       patientReference,
       `Encounter/${conflictSourceEncounter.id}`,
       system,
       `conflict-present-${runId}`,
       true,
     )));
-    const conflictCondition = track(await fhir.create<Condition>(buildEncounterDiagnosisCondition({
+    const conflictCondition = track(await adminFhir.create<Condition>(buildEncounterDiagnosisCondition({
       patientReference,
       encounterReference: `Encounter/${conflictSourceEncounter.id}`,
       code: { coding: [{ system, code: `conflict-diagnosis-${runId}` }], text: `Conflict diagnosis ${runId}` },
@@ -978,7 +1201,7 @@ test("live Medplum handler persists the diagnosis graph and atomically rolls bac
       }],
       evidenceObservationReferences: [`Observation/${conflictEvidence.id}`],
     })));
-    await fhir.update<Encounter>("Encounter", conflictSourceEncounter.id!, {
+    await adminFhir.update<Encounter>("Encounter", conflictSourceEncounter.id!, {
       ...conflictSourceEncounter,
       diagnosis: [buildEncounterDiagnosisComponent(`Condition/${conflictCondition.id}`, 1)],
     });
@@ -986,25 +1209,26 @@ test("live Medplum handler persists the diagnosis graph and atomically rolls bac
     let injectedConflict = false;
     let conflictResponseSummary: unknown;
     const conflictFhir: DiagnosisCarryForwardFhirClient = {
-      read: (resourceType, id) => fhir.read(resourceType, id),
-      search: (resourceType, params) => fhir.search(resourceType, params),
-      searchUrl: (url, resourceType) => fhir.searchUrl!(url, resourceType),
+      read: (resourceType, id) => clinicianFhir.read(resourceType, id),
+      search: (resourceType, params) => clinicianFhir.search(resourceType, params),
+      searchUrl: (url, resourceType) => clinicianFhir.searchUrl!(url, resourceType),
       executeTransaction: async (bundle, headers) => {
         if (!injectedConflict) {
           injectedConflict = true;
-          const fresh = await fhir.read<Encounter>("Encounter", conflictCurrentEncounter.id!);
-          await fhir.update<Encounter>("Encounter", conflictCurrentEncounter.id!, {
+          const fresh = await adminFhir.read<Encounter>("Encounter", conflictCurrentEncounter.id!);
+          await adminFhir.update<Encounter>("Encounter", conflictCurrentEncounter.id!, {
             ...fresh,
             extension: [...(fresh.extension ?? []), { url: system, valueString: `race-${runId}` }],
           });
         }
-        const response = await fhir.executeTransaction(bundle, headers);
+        const response = await clinicianFhir.executeTransaction(bundle, headers);
         captureTransactionResponseReferences(response, cleanupReferences);
         conflictResponseSummary = {
           type: response.type,
           entries: response.entry?.map((entry) => ({
             status: entry.response?.status,
             resourceType: entry.resource?.resourceType,
+            location: entry.response?.location,
           })),
         };
         return response;
@@ -1012,6 +1236,7 @@ test("live Medplum handler persists the diagnosis graph and atomically rolls bac
     };
     const conflictResult = await handleDiagnosisPullRequest({
       fhirBaseUrl: baseUrl,
+      rollbackFhir: adminFhir,
       authenticate: async () => ({
         staffReference: `Practitioner/${practitioner.id}`,
         actorRole: "clinician",
@@ -1030,14 +1255,14 @@ test("live Medplum handler persists the diagnosis graph and atomically rolls bac
       409,
       JSON.stringify({ body: conflictResult.body, transaction: conflictResponseSummary }),
     );
-    const rolledBackEncounter = await fhir.read<Encounter>("Encounter", conflictCurrentEncounter.id!);
+    const rolledBackEncounter = await clinicianFhir.read<Encounter>("Encounter", conflictCurrentEncounter.id!);
     assert.deepEqual(rolledBackEncounter.diagnosis, undefined);
-    await assertNoTransactionLeaks(fhir, conflictCurrentEncounter.id!);
+    await assertNoTransactionLeaks(adminFhir, conflictCurrentEncounter.id!, conflictResponseSummary);
   }, async () => {
     await cleanupSyntheticPullProof(
-      fhir,
+      adminFhir,
       baseUrl,
-      accessToken,
+      adminAccessToken,
       sweepEncounterIds,
       cleanupReferences,
     );
@@ -1306,6 +1531,61 @@ test("previous exams accepts a same-origin absolute Bundle next link", async () 
   assert.deepEqual(fhir.followedUrls, ["/fhir/R4/Encounter?_page=2&_count=4"]);
 });
 
+async function activeProjectId(baseUrl: string, accessToken: string): Promise<string> {
+  const response = await fetch(`${baseUrl.replace(/\/$/, "")}/auth/me`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  assert.equal(response.status, 200, "Existing local project lookup failed.");
+  const body = await response.json() as { project?: { id?: string } };
+  assert.ok(body.project?.id, "Admin identity has no active local project.");
+  return body.project.id;
+}
+
+async function createDisposableClientApplication(
+  baseUrl: string,
+  accessToken: string,
+  projectId: string,
+  accessPolicyReference: string,
+  runId: string,
+): Promise<{ id: string; secret: string }> {
+  const response = await fetch(`${baseUrl.replace(/\/$/, "")}/admin/projects/${projectId}/client`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      name: `diagnosis-carry-clinician-${runId}`,
+      description: "Disposable synthetic clinician policy proof",
+      accessPolicy: { reference: accessPolicyReference },
+    }),
+  });
+  assert.equal(response.status, 201, "Disposable clinician client creation failed.");
+  const body = await response.json() as { id?: string; secret?: string };
+  assert.ok(body.id && body.secret, "Disposable clinician client response was incomplete.");
+  return { id: body.id, secret: body.secret };
+}
+
+async function clientCredentialsToken(
+  baseUrl: string,
+  clientId: string,
+  clientSecret: string,
+): Promise<string> {
+  const response = await fetch(`${baseUrl.replace(/\/$/, "")}/oauth2/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "client_credentials",
+      client_id: clientId,
+      client_secret: clientSecret,
+    }),
+  });
+  assert.equal(response.status, 200, "Disposable clinician token grant failed.");
+  const body = await response.json() as { access_token?: string };
+  assert.ok(body.access_token, "Disposable clinician token response was incomplete.");
+  return body.access_token;
+}
+
 function syntheticEncounter(patientReference: string, system: string, identifier: string): Encounter {
   return {
     resourceType: "Encounter",
@@ -1338,9 +1618,14 @@ function syntheticEvidence(
 async function assertNoTransactionLeaks(
   fhir: Awaited<ReturnType<typeof createAuthenticatedFhirClient>>["fhir"],
   encounterId: string,
+  detail?: unknown,
 ): Promise<void> {
   const leaks = await transactionResourcesForEncounter(fhir, encounterId);
-  assert.deepEqual(leaks.map((resource) => `${resource.resourceType}/${resource.id}`), []);
+  assert.deepEqual(
+    leaks.map((resource) => `${resource.resourceType}/${resource.id}`),
+    [],
+    JSON.stringify(detail),
+  );
 }
 
 function captureTransactionResponseReferences(bundle: Bundle | undefined, references: Set<string>): void {
@@ -1500,10 +1785,11 @@ async function startPreviousExamRoutes(
   t: TestContext,
   fhir: MemoryFhir,
   forbiddenRole: PracticeRoleId,
+  rollbackFhir?: Pick<DiagnosisCarryForwardFhirClient, "read" | "executeTransaction">,
 ): Promise<string> {
   const app = express();
   app.use(express.json());
-  registerDiagnosisCarryForwardRoutes(app, {
+  const routeDeps = {
     authenticateService: async () => undefined,
     fhirBaseUrl: "https://fhir.local",
     authenticate: async (header: string | undefined) => header === AUTH_FORBIDDEN
@@ -1516,11 +1802,66 @@ async function startPreviousExamRoutes(
       : header === AUTH_CLINICIAN
         ? { staffReference: "Practitioner/doc", actorRole: "clinician", fhir }
         : null,
-  });
+    ...(rollbackFhir ? { rollbackFhir } : {}),
+  };
+  registerDiagnosisCarryForwardRoutes(app, routeDeps);
   const listener = app.listen(0, "127.0.0.1");
   await new Promise<void>((resolve) => listener.once("listening", resolve));
   t.after(() => listener.close());
   return `http://127.0.0.1:${(listener.address() as AddressInfo).port}`;
+}
+
+function mixedConflictTransactionResponse(response: Bundle): Bundle {
+  const changed = structuredClone(response);
+  changed.entry?.forEach((entry, index) => {
+    if (index === 0) {
+      entry.response = { status: "412 Precondition Failed" };
+      return;
+    }
+    assert.ok(entry.resource?.id);
+    entry.response = {
+      status: "201 Created",
+      location: `${entry.resource.resourceType}/${entry.resource.id}/_history/1`,
+    };
+  });
+  return changed;
+}
+
+class MemoryRollbackFhir {
+  readonly transactions: Bundle[] = [];
+  readonly readReferences = new Set<string>();
+  readonly remaining: Set<string>;
+  failDelete = false;
+  keepReadable = false;
+
+  constructor(references: string[]) {
+    this.remaining = new Set(references);
+  }
+
+  async executeTransaction(bundle: Bundle): Promise<Bundle> {
+    this.transactions.push(structuredClone(bundle));
+    if (!this.failDelete) {
+      for (const entry of bundle.entry ?? []) {
+        if (entry.request?.url) this.remaining.delete(entry.request.url);
+      }
+    }
+    return {
+      resourceType: "Bundle",
+      type: "transaction-response",
+      entry: (bundle.entry ?? []).map(() => ({
+        response: { status: this.failDelete ? "500 Internal Server Error" : "204 No Content" },
+      })),
+    };
+  }
+
+  async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
+    const reference = `${resourceType}/${id}`;
+    this.readReferences.add(reference);
+    if (this.keepReadable || this.remaining.has(reference)) {
+      return { resourceType, id } as T;
+    }
+    throw Object.assign(new Error(`Missing ${reference}`), { status: 404 });
+  }
 }
 
 async function postPull(base: string, sourceConditionId: string): Promise<Response> {
@@ -1926,9 +2267,9 @@ class MemoryFhir {
       return {
         resourceType: "Bundle",
         type: "transaction-response",
-        entry: bundle.entry?.map((entry, index) => ({
+        entry: bundle.entry?.map((entry) => ({
           resource: entry.resource,
-          response: { status: index === 1 ? this.transactionFailureStatus! : "201 Created" },
+          response: { status: this.transactionFailureStatus! },
         })),
       };
     }

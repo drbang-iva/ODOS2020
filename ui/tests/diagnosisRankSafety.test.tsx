@@ -16,6 +16,7 @@ import {
   makeConditionPrincipal,
   markConditionEnteredInError,
   swapConditionRanks,
+  updateConditionBodySite,
   updateEncounterDiagnosisProblemStatus,
 } from "../src/lib/clinical-actions";
 import { encounterDiagnosisProblemStatus } from "../src/lib/fhir-clinical/condition";
@@ -157,7 +158,7 @@ test("problem status patch targets one diagnosis entry and preserves unrelated e
   assert.equal(encounterDiagnosisProblemStatus(encounter.diagnosis![1]!), "stable-chronic");
 });
 
-test("problem status Provenance targets both the Encounter and affected Condition", async () => {
+test("problem status Provenance directly targets the Patient, Encounter, and affected Condition", async () => {
   const encounter = rankedEncounter([1, 2]);
   const condition = encounterCondition("secondary-a");
   const originalFetch = globalThis.fetch;
@@ -186,6 +187,51 @@ test("problem status Provenance targets both the Encounter and affected Conditio
   assert.deepEqual(provenance?.target.map((target) => target.reference), [
     "Encounter/encounter-1",
     "Condition/secondary-a",
+    "Patient/patient-1",
+  ]);
+  assert.equal(provenance?.activity?.coding?.[0]?.code, "UPDATE");
+});
+
+test("diagnosis laterality Provenance directly targets the Patient and affected Condition", async () => {
+  const originalFetch = globalThis.fetch;
+  let provenance: Provenance | undefined;
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.includes("/BodyStructure?") && (!init?.method || init.method === "GET")) {
+      return jsonResponse({
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [{
+          resource: {
+            resourceType: "BodyStructure",
+            id: "right-eye",
+            patient: { reference: "Patient/patient-1" },
+          },
+        }],
+      });
+    }
+    if (url.endsWith("/Condition/secondary-a") && init?.method === "PATCH") {
+      return jsonResponse({ ...encounterCondition("secondary-a"), meta: { versionId: "5" } });
+    }
+    if (url.endsWith("/Provenance") && init?.method === "POST") {
+      provenance = JSON.parse(String(init.body)) as Provenance;
+      return jsonResponse({ ...provenance, id: "laterality-provenance" });
+    }
+    throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${url}`);
+  };
+  try {
+    await updateConditionBodySite({
+      condition: encounterCondition("secondary-a"),
+      patientReference: "Patient/patient-1",
+      laterality: "OD",
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.deepEqual(provenance?.target.map((target) => target.reference), [
+    "Condition/secondary-a",
+    "Patient/patient-1",
   ]);
   assert.equal(provenance?.activity?.coding?.[0]?.code, "UPDATE");
 });

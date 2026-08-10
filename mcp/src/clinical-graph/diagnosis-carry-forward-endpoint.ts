@@ -74,6 +74,7 @@ export interface DiagnosisCarryForwardFhirClient {
 
 export interface DiagnosisCarryForwardEndpointDeps {
   fhirBaseUrl: string;
+  rollbackFhir?: Pick<DiagnosisCarryForwardFhirClient, "read" | "executeTransaction">;
   authenticate(authHeader: string | undefined): Promise<{
     staffReference: string;
     actorRole: PracticeRoleId;
@@ -120,6 +121,7 @@ export function registerDiagnosisCarryForwardRoutes(
       await deps.authenticateService();
       const result = await handleDiagnosisPullRequest({
         fhirBaseUrl: deps.fhirBaseUrl,
+        rollbackFhir: deps.rollbackFhir,
         authenticate: deps.authenticateWrite,
       }, {
         authHeader: req.header("authorization"),
@@ -307,7 +309,7 @@ export async function handleDiagnosisPullRequest(
     pulledFindingObservation(observation, patientReference, `Encounter/${currentEncounterId}`)
   );
   const provenance = buildProvenance({
-    targetReferences: [conditionFullUrl, encounterFullUrl, ...observationFullUrls],
+    targetReferences: [conditionFullUrl, encounterFullUrl, ...observationFullUrls, patientReference],
     recorded: new Date().toISOString(),
     activityCode: "CREATE",
     activityDisplay: "Diagnosis pull-forward",
@@ -322,11 +324,6 @@ export async function handleDiagnosisPullRequest(
     type: "transaction",
     entry: [
       {
-        fullUrl: conditionFullUrl,
-        resource: pulledCondition,
-        request: { method: "POST", url: "Condition" },
-      },
-      {
         fullUrl: encounterFullUrl,
         resource: pulledEncounter,
         request: {
@@ -334,6 +331,11 @@ export async function handleDiagnosisPullRequest(
           url: `Encounter/${currentEncounterId}`,
           ifMatch: `W/"${versionId}"`,
         },
+      },
+      {
+        fullUrl: conditionFullUrl,
+        resource: pulledCondition,
+        request: { method: "POST", url: "Condition" },
       },
       ...pulledObservations.map((observation, index) => ({
         fullUrl: observationFullUrls[index],
@@ -362,12 +364,20 @@ export async function handleDiagnosisPullRequest(
   }
   const transactionValidation = validateTransactionResponse(transactionBundle, transaction);
   if (transactionValidation.kind !== "ok") {
+    const rollback = await rollbackMixedTransactionCreates(
+      deps.rollbackFhir,
+      transactionBundle,
+      transaction,
+    );
+    if (rollback === "failed") {
+      return { status: 502, body: { error: "FHIR diagnosis pull transaction rollback was not verified." } };
+    }
     if (transactionValidation.kind === "conflict") {
       return diagnosisConflict(staff.fhir, currentEncounterId, patientReference, sourceIdentity);
     }
     return { status: 502, body: { error: "FHIR diagnosis pull transaction response was invalid." } };
   }
-  const conditionReference = transactionConditionReference(transaction, 0);
+  const conditionReference = transactionConditionReference(transaction, 1);
   if (!conditionReference) {
     return { status: 502, body: { error: "FHIR diagnosis pull transaction did not return the created Condition." } };
   }
@@ -725,6 +735,74 @@ function validateTransactionResponse(
   return conflict ? { kind: "conflict" } : { kind: "ok" };
 }
 
+async function rollbackMixedTransactionCreates(
+  rollbackFhir: DiagnosisCarryForwardEndpointDeps["rollbackFhir"],
+  request: Bundle,
+  response: Bundle,
+): Promise<"not-required" | "complete" | "failed"> {
+  const responseEntries = response.entry ?? [];
+  if (!responseEntries.some((entry) => entry.response?.status?.match(/^201(?:\s|$)/))) {
+    return "not-required";
+  }
+  const requestEntries = request.entry ?? [];
+  if (!rollbackFhir || responseEntries.length !== requestEntries.length) return "failed";
+
+  const references: string[] = [];
+  const seen = new Set<string>();
+  for (let index = 0; index < responseEntries.length; index += 1) {
+    const responseEntry = responseEntries[index]!;
+    if (!responseEntry.response?.status?.match(/^201(?:\s|$)/)) continue;
+    const requestEntry = requestEntries[index];
+    const resourceType = requestEntry?.resource?.resourceType;
+    if (
+      requestEntry?.request?.method !== "POST" ||
+      !requestEntry.fullUrl?.startsWith("urn:uuid:") ||
+      (resourceType !== "Condition" && resourceType !== "Observation" && resourceType !== "Provenance") ||
+      responseEntry.resource?.resourceType !== resourceType
+    ) {
+      return "failed";
+    }
+    const location = responseEntry.response.location;
+    const locationMatch = location?.match(new RegExp(`^${resourceType}/([^/?#]+)(?:/_history/[^/?#]+)?$`));
+    if (!locationMatch) return "failed";
+    const reference = `${resourceType}/${locationMatch[1]}`;
+    if (seen.has(reference)) return "failed";
+    seen.add(reference);
+    references.push(reference);
+  }
+  if (!references.length) return "failed";
+
+  try {
+    const rollbackResponse = await rollbackFhir.executeTransaction({
+      resourceType: "Bundle",
+      type: "transaction",
+      entry: [...references].reverse().map((reference) => ({
+        request: { method: "DELETE", url: reference },
+      })),
+    }, { "X-ODOS-Source": "diagnosis-carry-forward-rollback" });
+    if (
+      rollbackResponse.resourceType !== "Bundle" ||
+      rollbackResponse.type !== "transaction-response" ||
+      rollbackResponse.entry?.length !== references.length ||
+      !rollbackResponse.entry.every((entry) => entry.response?.status?.match(/^2\d\d(?:\s|$)/))
+    ) {
+      return "failed";
+    }
+    for (const reference of references) {
+      const [resourceType, id] = reference.split("/") as ["Condition" | "Observation" | "Provenance", string];
+      try {
+        await rollbackFhir.read(resourceType, id);
+        return "failed";
+      } catch (error) {
+        if (!isMissingFhirResource(error)) return "failed";
+      }
+    }
+    return "complete";
+  } catch {
+    return "failed";
+  }
+}
+
 function transactionConditionReference(bundle: Bundle, entryIndex: number): string | undefined {
   const resource = bundle.entry?.[entryIndex]?.resource;
   if (resource?.resourceType === "Condition" && resource.id) return `Condition/${resource.id}`;
@@ -739,6 +817,14 @@ function isFhirConflict(error: unknown): boolean {
     : undefined;
   const message = error instanceof Error ? error.message : String(error);
   return status === 409 || status === 412 || /FHIR (409|412)\b/.test(message);
+}
+
+function isMissingFhirResource(error: unknown): boolean {
+  const status = typeof error === "object" && error !== null && "status" in error
+    ? (error as { status?: unknown }).status
+    : undefined;
+  const message = error instanceof Error ? error.message : String(error);
+  return status === 404 || status === 410 || /FHIR (404|410)\b/.test(message);
 }
 
 async function diagnosisPullRead<T>(operation: () => Promise<T>): Promise<T> {

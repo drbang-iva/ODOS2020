@@ -108,6 +108,47 @@ export async function searchAll<T extends Resource>(
   }
 }
 
+export async function collectAllFhirSearchPages<T extends Resource>(
+  client: FhirSearchClient,
+  resourceType: T["resourceType"],
+  firstBundle: Bundle<T>,
+  fhirBaseUrl: string,
+): Promise<T[]> {
+  let bundle = firstBundle;
+  const resources: T[] = [];
+  const followed = new Set<string>();
+  for (;;) {
+    resources.push(...(bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []));
+    const next = bundle.link?.find((link) => link.relation === "next")?.url;
+    if (!next) return resources;
+    const path = validateLocalFhirSearchNextPath(next, fhirBaseUrl, resourceType);
+    if (!client.searchUrl || followed.has(path)) {
+      throw new Error(`FHIR ${resourceType} pagination is unavailable or cyclic.`);
+    }
+    followed.add(path);
+    bundle = await client.searchUrl<T>(path, resourceType);
+  }
+}
+
+export function validateLocalFhirSearchNextPath(
+  url: string,
+  fhirBaseUrl: string,
+  resourceType: Resource["resourceType"],
+): string {
+  const fhirRoot = new URL(`${fhirBaseUrl.replace(/\/$/, "")}/fhir/R4/`);
+  const parsed = new URL(url, new URL(resourceType, fhirRoot));
+  if (
+    parsed.username || parsed.password || parsed.hash ||
+    (parsed.protocol !== "http:" && parsed.protocol !== "https:") ||
+    parsed.origin !== fhirRoot.origin ||
+    parsed.pathname !== `${fhirRoot.pathname}${resourceType}` ||
+    !parsed.search
+  ) {
+    throw new Error(`FHIR ${resourceType} next link is invalid.`);
+  }
+  return `${parsed.pathname}${parsed.search}`;
+}
+
 function paramsWithCount(params: Record<string, string>): Record<string, string> {
   return { _count: "100", ...params };
 }

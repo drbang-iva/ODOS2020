@@ -18,6 +18,7 @@ import {
   odosConcept,
 } from "../fhir/ophthalmology/extensions.js";
 import { buildProvenance } from "../fhir/ophthalmology/provenance.js";
+import { collectAllFhirSearchPages } from "../fhir-search.js";
 import { customFieldEntries } from "./custom-fields.js";
 import {
   readDiagnosisCarryState,
@@ -105,6 +106,7 @@ export interface DiagnosisFindingsFhirClient {
 }
 
 export interface DiagnosisFindingsEndpointDeps {
+  fhirBaseUrl: string;
   authenticate(authHeader: string | undefined): Promise<{
     staffReference: string;
     actorRole: PracticeRoleId;
@@ -186,19 +188,20 @@ export async function handleDiagnosisFindingsReadRequest(
   if (!parsedParams.success || !parsedQuery.success) {
     return { status: 400, body: { error: "Invalid encounter findings request." } };
   }
+  try {
   const encounter = await staff.fhir.read<Encounter>("Encounter", parsedParams.data.encounterId);
   const patientReference = encounter.subject?.reference;
   if (!patientReference?.startsWith("Patient/")) {
     return { status: 400, body: { error: "Encounter findings require an encounter patient." } };
   }
   const encounterReference = `Encounter/${parsedParams.data.encounterId}`;
-  const [definitions, diagnoses, conditionBundle, observationBundle] = await Promise.all([
+  const [definitions, diagnoses, conditionRows, observationRows] = await Promise.all([
     findingDefinitions(deps, staff.fhir),
     diagnosisCatalog(deps, staff.fhir),
-    staff.fhir.search<Condition>("Condition", { encounter: encounterReference, _count: "200" }),
-    staff.fhir.search<Observation>("Observation", { encounter: encounterReference, _count: "500" }),
+    allEncounterResources<Condition>(staff.fhir, "Condition", encounterReference, "200", deps.fhirBaseUrl),
+    allEncounterResources<Observation>(staff.fhir, "Observation", encounterReference, "500", deps.fhirBaseUrl),
   ]);
-  const conditions = resources(conditionBundle).filter((condition) =>
+  const conditions = conditionRows.filter((condition) =>
     condition.subject.reference === patientReference && isCurrentVisitDiagnosis(condition)
   );
   const selectedCondition = parsedQuery.data.condition
@@ -222,7 +225,7 @@ export async function handleDiagnosisFindingsReadRequest(
     }];
   });
   const bindingIndex = conditionBindings(visits);
-  const observations = resources(observationBundle).filter((observation) =>
+  const observations = observationRows.filter((observation) =>
     observation.subject?.reference === patientReference && observation.status !== "entered-in-error"
   );
   const carryState = selectedCondition
@@ -275,6 +278,9 @@ export async function handleDiagnosisFindingsReadRequest(
     })),
   };
   return { status: 200, body };
+  } catch (error) {
+    return diagnosisFindingsDependencyResponse(error);
+  }
 }
 
 export async function handleDiagnosisFindingsMutationRequest(
@@ -300,17 +306,20 @@ export async function handleDiagnosisFindingsMutationRequest(
       body: { error: parsedBody.success ? "Invalid encounter findings mutation." : parsedBody.error.issues[0]?.message },
     };
   }
+  try {
   const encounterId = parsedParams.data.encounterId;
   const encounterReference = `Encounter/${encounterId}`;
   const encounter = await staff.fhir.read<Encounter>("Encounter", encounterId);
   if (encounter.subject?.reference !== parsedBody.data.patientReference) {
     return { status: 400, body: { error: "Finding patient must match the encounter patient." } };
   }
-  const conditionBundle = await staff.fhir.search<Condition>("Condition", {
-    encounter: encounterReference,
-    _count: "200",
-  });
-  const conditions = resources(conditionBundle).filter((condition) =>
+  const conditions = (await allEncounterResources<Condition>(
+    staff.fhir,
+    "Condition",
+    encounterReference,
+    "200",
+    deps.fhirBaseUrl,
+  )).filter((condition) =>
     condition.subject.reference === parsedBody.data.patientReference && isCurrentVisitDiagnosis(condition)
   );
   const definitions = await findingDefinitions(deps, staff.fhir);
@@ -329,11 +338,13 @@ export async function handleDiagnosisFindingsMutationRequest(
     if (laterality === "UNKNOWN") {
       return { status: 400, body: { error: "Finding laterality must be explicit when the diagnosis has no laterality." } };
     }
-    const observationBundle = await staff.fhir.search<Observation>("Observation", {
-      encounter: encounterReference,
-      _count: "500",
-    });
-    const observations = resources(observationBundle);
+    const observations = await allEncounterResources<Observation>(
+      staff.fhir,
+      "Observation",
+      encounterReference,
+      "500",
+      deps.fhirBaseUrl,
+    );
     const existing = observations.find((observation) =>
       observation.status !== "entered-in-error" &&
       observation.subject?.reference === assertion.patientReference &&
@@ -452,6 +463,9 @@ export async function handleDiagnosisFindingsMutationRequest(
     "UPDATE",
   );
   return { status: 200, body: { observationReference: observationReference(updated) } };
+  } catch (error) {
+    return diagnosisFindingsDependencyResponse(error);
+  }
 }
 
 function staffMay(role: PracticeRoleId, action: "chart.read" | "chart.write"): boolean {
@@ -754,8 +768,34 @@ function findingRowOrder(left: EncounterFindingRow, right: EncounterFindingRow):
     left.laterality.localeCompare(right.laterality);
 }
 
-function resources<T extends Resource>(bundle: Bundle<T>): T[] {
-  return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
+async function allEncounterResources<T extends Condition | Observation>(
+  fhir: DiagnosisFindingsFhirClient,
+  resourceType: T["resourceType"],
+  encounterReference: string,
+  count: string,
+  fhirBaseUrl: string,
+): Promise<T[]> {
+  const first = await fhir.search<T>(resourceType, {
+    encounter: encounterReference,
+    _count: count,
+  });
+  return collectAllFhirSearchPages<T>(fhir, resourceType, first, fhirBaseUrl);
+}
+
+function diagnosisFindingsDependencyResponse(error: unknown): { status: number; body: { error: string } } {
+  const status = typeof error === "object" && error !== null && "status" in error
+    ? (error as { status?: unknown }).status
+    : undefined;
+  if (status === 401 || status === 403) {
+    return {
+      status,
+      body: { error: "FHIR authorization denied while reading diagnosis findings." },
+    };
+  }
+  return {
+    status: 502,
+    body: { error: "FHIR diagnosis findings dependency failed." },
+  };
 }
 
 async function findingDefinitions(
