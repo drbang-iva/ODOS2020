@@ -10,6 +10,7 @@ import {
   FhirDiagnosisPickTallyStore,
 } from "../src/clinical-graph/diagnosis-pick-tally-store.js";
 import { buildDiagnosisCatalogSeeds } from "../src/clinical-graph/diagnosis-catalog-store.js";
+import type { DiagnosisCatalogRow } from "../src/clinical-graph/glaucoma-suspect.js";
 
 test("quick-list pins round-trip without changing per-finding usage counts", async () => {
   const fhir = new MemoryFhir();
@@ -56,6 +57,57 @@ test("quick-list ordering puts manual pins before aggregate usage without clinic
   ]);
 });
 
+test("quick-list excludes an unused unpinned catalog even when it exceeds the Common cap", () => {
+  const ordered = orderDiagnosisQuickList(diagnosisRows(20), {
+    counts: {},
+    pinnedDiagnosisKeys: [],
+    updatedAt: "2026-08-10T12:00:00.000Z",
+  });
+
+  assert.deepEqual(ordered, []);
+});
+
+test("quick-list preserves every pin in doctor-selected order beyond the Common cap", () => {
+  const diagnoses = diagnosisRows(20);
+  const pinnedDiagnosisKeys = diagnoses.slice(0, 17).map((row) => row.stableKey).reverse();
+  const ordered = orderDiagnosisQuickList(diagnoses, {
+    counts: {},
+    pinnedDiagnosisKeys,
+    updatedAt: "2026-08-10T12:00:00.000Z",
+  });
+
+  assert.deepEqual(ordered.map((row) => row.stableKey), pinnedDiagnosisKeys);
+});
+
+test("quick-list fills positive usage in descending order only to 15 total rows", () => {
+  const diagnoses = diagnosisRows(20);
+  const ordered = orderDiagnosisQuickList(diagnoses, {
+    counts: {
+      "finding-a": Object.fromEntries(diagnoses.map((row, index) => [row.stableKey, 20 - index])),
+    },
+    pinnedDiagnosisKeys: ["diagnosis-19", "diagnosis-18"],
+    updatedAt: "2026-08-10T12:00:00.000Z",
+  });
+
+  assert.deepEqual(ordered.map((row) => row.stableKey), [
+    "diagnosis-19",
+    "diagnosis-18",
+    "diagnosis-00",
+    "diagnosis-01",
+    "diagnosis-02",
+    "diagnosis-03",
+    "diagnosis-04",
+    "diagnosis-05",
+    "diagnosis-06",
+    "diagnosis-07",
+    "diagnosis-08",
+    "diagnosis-09",
+    "diagnosis-10",
+    "diagnosis-11",
+    "diagnosis-12",
+  ]);
+});
+
 test("quick-list routes isolate practitioner pins and reject unknown diagnoses", async () => {
   const fhir = new MemoryFhir();
   const diagnoses = buildDiagnosisCatalogSeeds();
@@ -90,9 +142,21 @@ test("quick-list routes isolate practitioner pins and reject unknown diagnoses",
 
   const other = await handleDiagnosisQuickListRequest(deps, { authHeader: "Bearer two" });
   assert.equal(other.status, 200);
+  const otherBody = other.body as {
+    pinnedDiagnosisKeys: string[];
+    diagnoses: Array<{ stableKey: string }>;
+    catalog: Array<{ stableKey: string }>;
+  };
   assert.deepEqual(
-    (other.body as { pinnedDiagnosisKeys: string[] }).pinnedDiagnosisKeys,
+    otherBody.pinnedDiagnosisKeys,
     [],
+  );
+  assert.deepEqual(otherBody.diagnoses, []);
+  assert.deepEqual(
+    otherBody.catalog.map((row) => row.stableKey),
+    diagnoses
+      .filter((row) => row.active && row.codingStatus === "verified")
+      .map((row) => row.stableKey),
   );
 
   const rejected = await handleDiagnosisQuickListMutationRequest(deps, {
@@ -156,4 +220,14 @@ class MemoryFhir {
     this.resources[index] = persisted;
     return structuredClone(persisted);
   }
+}
+
+function diagnosisRows(count: number): DiagnosisCatalogRow[] {
+  const template = buildDiagnosisCatalogSeeds()[0]!;
+  return Array.from({ length: count }, (_, index) => ({
+    ...template,
+    id: `diagnosis-${index}`,
+    stableKey: `diagnosis-${String(index).padStart(2, "0")}`,
+    display: `Diagnosis ${String(index).padStart(2, "0")}`,
+  }));
 }

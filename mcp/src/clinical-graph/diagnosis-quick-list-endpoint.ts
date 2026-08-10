@@ -32,6 +32,8 @@ interface DiagnosisQuickListDeps {
   now?: () => string;
 }
 
+const COMMON_DIAGNOSIS_TARGET_COUNT = 15;
+
 const mutationSchema = z.object({
   pinnedDiagnosisKeys: z.array(z.string().trim().min(1).max(160)).max(100)
     .refine((keys) => new Set(keys).size === keys.length, "Diagnosis quick-list pins must be unique."),
@@ -90,7 +92,25 @@ export function orderDiagnosisQuickList(
   diagnoses: readonly DiagnosisCatalogRow[],
   tally: DiagnosisPickTallyRow,
 ): DiagnosisQuickListRow[] {
+  const eligibleRows = diagnosisCatalogRows(diagnoses, tally);
   const pinOrder = new Map(tally.pinnedDiagnosisKeys.map((key, index) => [key, index]));
+  const pinnedRows = eligibleRows
+    .filter((row) => row.pinned)
+    .sort((left, right) => pinOrder.get(left.stableKey)! - pinOrder.get(right.stableKey)!);
+  const usageRows = eligibleRows
+    .filter((row) => !row.pinned && row.tallyCount > 0)
+    .sort((left, right) => right.tallyCount - left.tallyCount || left.display.localeCompare(right.display));
+  return [
+    ...pinnedRows,
+    ...usageRows.slice(0, Math.max(0, COMMON_DIAGNOSIS_TARGET_COUNT - pinnedRows.length)),
+  ];
+}
+
+function diagnosisCatalogRows(
+  diagnoses: readonly DiagnosisCatalogRow[],
+  tally: DiagnosisPickTallyRow,
+): DiagnosisQuickListRow[] {
+  const pinnedKeys = new Set(tally.pinnedDiagnosisKeys);
   const totals = new Map<string, number>();
   for (const counts of Object.values(tally.counts)) {
     for (const [diagnosisKey, count] of Object.entries(counts)) {
@@ -104,19 +124,9 @@ export function orderDiagnosisQuickList(
       display: row.display,
       lateralityRequired: row.lateralityRequired,
       ...(row.icd10 ? { icd10: row.icd10 } : {}),
-      pinned: pinOrder.has(row.stableKey),
+      pinned: pinnedKeys.has(row.stableKey),
       tallyCount: totals.get(row.stableKey) ?? 0,
-    }))
-    .sort((left, right) => {
-      const leftPin = pinOrder.get(left.stableKey);
-      const rightPin = pinOrder.get(right.stableKey);
-      if (leftPin !== undefined || rightPin !== undefined) {
-        if (leftPin === undefined) return 1;
-        if (rightPin === undefined) return -1;
-        return leftPin - rightPin;
-      }
-      return right.tallyCount - left.tallyCount || left.display.localeCompare(right.display);
-    });
+    }));
 }
 
 async function diagnosisCatalog(deps: DiagnosisQuickListDeps): Promise<DiagnosisCatalogRow[]> {
@@ -134,6 +144,7 @@ function quickListResponse(
       canWrite,
       pinnedDiagnosisKeys: tally.pinnedDiagnosisKeys,
       diagnoses: orderDiagnosisQuickList(diagnoses, tally),
+      catalog: diagnosisCatalogRows(diagnoses, tally),
     },
   };
 }

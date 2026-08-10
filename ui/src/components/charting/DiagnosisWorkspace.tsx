@@ -50,6 +50,7 @@ interface QuickListPayload {
   canWrite: boolean;
   pinnedDiagnosisKeys: string[];
   diagnoses: DiagnosisQuickListRow[];
+  catalog: DiagnosisQuickListRow[];
   error?: string;
 }
 
@@ -70,6 +71,7 @@ export function DiagnosisWorkspace({
   const [encounter, setEncounter] = useState<Encounter>();
   const [conditions, setConditions] = useState<Condition[]>([]);
   const [quickList, setQuickList] = useState<DiagnosisQuickListRow[]>([]);
+  const [catalog, setCatalog] = useState<DiagnosisQuickListRow[]>([]);
   const [pinnedDiagnosisKeys, setPinnedDiagnosisKeys] = useState<string[]>([]);
   const [canWrite, setCanWrite] = useState(false);
   const [findings, setFindings] = useState<DiagnosisFindingsPayload>();
@@ -99,6 +101,7 @@ export function DiagnosisWorkspace({
       setEncounter(nextEncounter);
       setConditions(nextConditions);
       setQuickList(quickBody.diagnoses ?? []);
+      setCatalog(quickBody.catalog ?? []);
       setPinnedDiagnosisKeys(quickBody.pinnedDiagnosisKeys ?? []);
       setCanWrite(quickBody.canWrite === true);
       setFindings(nextFindings);
@@ -201,13 +204,14 @@ export function DiagnosisWorkspace({
       const body = await response.json() as QuickListPayload;
       if (!response.ok) throw new Error(body.error ?? `Common diagnoses update failed: ${response.status}`);
       setQuickList(body.diagnoses ?? []);
+      setCatalog(body.catalog ?? []);
       setPinnedDiagnosisKeys(body.pinnedDiagnosisKeys ?? []);
     });
   }
 
   function searchDiagnoses(query: string): Promise<OdosSearchPickerOption<DiagnosisQuickListRow>[]> {
     const normalized = query.trim().toLocaleLowerCase();
-    return Promise.resolve(quickList.flatMap((row) => {
+    return Promise.resolve(catalog.flatMap((row) => {
       const code = diagnosisQuickListCode(row);
       if (!`${row.display} ${row.stableKey} ${code ?? ""}`.toLocaleLowerCase().includes(normalized)) return [];
       return [{ value: row.stableKey, label: row.display, description: code, item: row }];
