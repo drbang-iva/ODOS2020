@@ -222,7 +222,7 @@ export function DiagnosisWorkspace({
           <DiagnosisRankActions
             possible={false}
             principal={diagnosisRank(encounter, selectedCondition) === 1}
-            busy={busy !== undefined}
+            busy={diagnosisRankActionsDisabled(canWrite, busy)}
             canMoveUp={Boolean(neighbors.up)}
             canMoveDown={Boolean(neighbors.down)}
             onMakePrincipal={() => void run("rank", async () => {
@@ -363,6 +363,10 @@ export function orderedEncounterConditions(encounter: Encounter, conditions: rea
 
 export function diagnosisWorkspaceInstanceKey(patientReference: string, encounterReference: string): string {
   return `${patientReference}::${encounterReference}`;
+}
+
+export function diagnosisRankActionsDisabled(canWrite: boolean, busy: string | undefined): boolean {
+  return !canWrite || busy !== undefined;
 }
 
 export function diagnosisCatalogKey(condition: Condition): string | undefined {

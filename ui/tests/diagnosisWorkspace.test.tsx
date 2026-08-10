@@ -12,6 +12,7 @@ import type { Condition, Encounter } from "@medplum/fhirtypes";
 import {
   conditionMatchesDiagnosisPick,
   diagnosisCatalogKey,
+  diagnosisRankActionsDisabled,
   diagnosisWorkspaceInstanceKey,
   movePinnedDiagnosis,
   orderedEncounterConditions,
@@ -94,6 +95,13 @@ test("diagnosis workspace remount identity changes at either patient or encounte
     diagnosisWorkspaceInstanceKey("Patient/one", "Encounter/one"),
     diagnosisWorkspaceInstanceKey("Patient/one", "Encounter/two"),
   );
+});
+
+test("diagnosis rank actions are disabled for read-only users and while a write is busy", () => {
+  assert.equal(diagnosisRankActionsDisabled(false, undefined), true);
+  assert.equal(diagnosisRankActionsDisabled(false, "rank"), true);
+  assert.equal(diagnosisRankActionsDisabled(true, "rank"), true);
+  assert.equal(diagnosisRankActionsDisabled(true, undefined), false);
 });
 
 test("imaging hides the prior patient's rows as soon as the patient reference changes", async () => {
