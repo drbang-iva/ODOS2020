@@ -712,6 +712,16 @@ function observationLaterality(observation: Observation): FindingLaterality {
 }
 
 function conditionLaterality(condition: Condition, encounterId: string): FindingLaterality {
+  const recorded = condition.extension?.find((extension) => extension.url === ODOS_EXTENSION_URLS.eyeLaterality)
+    ?.valueCodeableConcept?.coding?.find((coding) => coding.code)?.code ??
+    condition.bodySite?.flatMap((bodySite) => [
+      ...(bodySite.coding ?? []).flatMap((coding) => coding.code ? [coding.code] : []),
+      ...(bodySite.text ? [bodySite.text] : []),
+    ]).find((value) => value === "OD" || value === "OS" || value === "OU" ||
+      value === "right" || value === "left" || value === "bilateral");
+  if (recorded === "OD" || recorded === "right") return "OD";
+  if (recorded === "OS" || recorded === "left") return "OS";
+  if (recorded === "OU" || recorded === "bilateral") return "OU";
   const value = condition.identifier?.find((identifier) =>
     identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM && identifier.value?.startsWith(`${encounterId}::`)
   )?.value?.split("::").at(-1);
@@ -789,8 +799,14 @@ function diagnosisFindingsDependencyResponse(error: unknown): { status: number; 
     : undefined;
   if (status === 401 || status === 403) {
     return {
-      status,
-      body: { error: "FHIR authorization denied while reading diagnosis findings." },
+      status: 403,
+      body: { error: "Diagnosis findings are outside the caller's patient compartment." },
+    };
+  }
+  if (status === 404 || status === 410) {
+    return {
+      status: 404,
+      body: { error: "Diagnosis findings resources were not found." },
     };
   }
   return {

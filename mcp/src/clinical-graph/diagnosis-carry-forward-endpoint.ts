@@ -8,7 +8,7 @@ import type {
   Resource,
 } from "@medplum/fhirtypes";
 import type { Application } from "express";
-import { randomUUID } from "node:crypto";
+import { createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
 import { fhirSearchNextPath, type FhirTransactionExecutionOptions } from "../fhir-client.js";
@@ -102,6 +102,8 @@ const pullBodySchema = z.object({
 const patientReferencePattern = /^Patient\/([^/]+)$/;
 const conditionReferencePattern = /^Condition\/([^/]+)$/;
 const observationReferencePattern = /^Observation\/([^/]+)$/;
+const cursorSigningKey = randomBytes(32);
+const fullInstantPattern = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,9})?(Z|[+-]\d{2}:\d{2})$/;
 
 export function registerDiagnosisCarryForwardRoutes(
   app: Pick<Application, "get" | "post">,
@@ -160,57 +162,69 @@ export async function handlePreviousExamsReadRequest(
     return { status: 400, body: { error: "A valid previous-exams cursor is required." } };
   }
 
-  const currentEncounter = await staff.fhir.read<Encounter>("Encounter", parsedParams.data.encounterId);
-  const patientMatch = currentEncounter.subject?.reference?.match(patientReferencePattern);
-  const currentDate = currentEncounter.period?.start;
-  if (!patientMatch || !currentDate) {
-    return { status: 422, body: { error: "The current encounter requires a Patient and recorded start date." } };
-  }
-  const patientReference = `Patient/${patientMatch[1]}`;
-  await staff.fhir.read<Patient>("Patient", patientMatch[1]!);
-
-  const currentIdentities = await currentDiagnosisIdentities(
-    staff.fhir,
-    currentEncounter,
-    patientReference,
-  );
-  const cursorPath = parsedQuery.data.cursor ? decodeCursor(parsedQuery.data.cursor, deps.fhirBaseUrl) : undefined;
-  if (parsedQuery.data.cursor && !cursorPath) {
-    return { status: 400, body: { error: "A valid previous-exams cursor is required." } };
-  }
-  if (cursorPath && !staff.fhir.searchUrl) {
-    return { status: 500, body: { error: "FHIR pagination is unavailable." } };
-  }
-  const bundle = cursorPath
-    ? await staff.fhir.searchUrl!<Encounter>(cursorPath, "Encounter")
-    : await staff.fhir.search<Encounter>("Encounter", {
-        subject: patientReference,
-        date: `lt${currentDate}`,
-        _sort: "-date",
-        _count: String(PAGE_SIZE),
-      });
-  const encounters = bundleResources(bundle)
-    .filter((encounter) => encounter.id && encounter.subject?.reference === patientReference)
-    .slice(0, PAGE_SIZE);
-  const groups = await Promise.all(encounters.map((encounter) =>
-    previousExamGroup(staff.fhir, encounter, patientReference, currentIdentities)
-  ));
-  const next = bundle.link?.find((link) => link.relation === "next")?.url;
-  let nextCursor: string | undefined;
   try {
-    nextCursor = next ? encodeCursor(validatedNextPath(next, deps.fhirBaseUrl)) : undefined;
+    const currentEncounter = await staff.fhir.read<Encounter>("Encounter", parsedParams.data.encounterId);
+    const patientMatch = currentEncounter.subject?.reference?.match(patientReferencePattern);
+    const currentDate = fullInstant(currentEncounter.period?.start);
+    if (!patientMatch || !currentDate) {
+      return { status: 422, body: { error: "The current encounter requires a Patient and recorded full start instant." } };
+    }
+    const patientReference = `Patient/${patientMatch[1]}`;
+    await staff.fhir.read<Patient>("Patient", patientMatch[1]!);
+
+    const currentIdentities = await currentDiagnosisIdentities(
+      staff.fhir,
+      currentEncounter,
+      patientReference,
+    );
+    const cursorPath = parsedQuery.data.cursor
+      ? decodeCursor(parsedQuery.data.cursor, deps.fhirBaseUrl, {
+          encounterId: parsedParams.data.encounterId,
+          patientReference,
+          currentDate,
+        })
+      : undefined;
+    if (parsedQuery.data.cursor && !cursorPath) {
+      return { status: 400, body: { error: "A valid previous-exams cursor is required." } };
+    }
+    if (cursorPath && !staff.fhir.searchUrl) {
+      return { status: 500, body: { error: "FHIR pagination is unavailable." } };
+    }
+    const bundle = cursorPath
+      ? await staff.fhir.searchUrl!<Encounter>(cursorPath, "Encounter")
+      : await staff.fhir.search<Encounter>("Encounter", {
+          subject: patientReference,
+          date: `lt${currentDate}`,
+          _sort: "-date",
+          _count: String(PAGE_SIZE),
+        });
+    const encounters = bundleResources(bundle)
+      .filter((encounter) => encounter.id && encounter.subject?.reference === patientReference)
+      .slice(0, PAGE_SIZE);
+    const groups = await Promise.all(encounters.map((encounter) =>
+      previousExamGroup(staff.fhir, encounter, patientReference, currentIdentities)
+    ));
+    const next = bundle.link?.find((link) => link.relation === "next")?.url;
+    const nextCursor = next
+      ? encodeCursor({
+          path: validatedNextPath(next, deps.fhirBaseUrl),
+          encounterId: parsedParams.data.encounterId,
+          patientReference,
+          currentDate,
+        })
+      : undefined;
+    const page: PreviousExamsPage = {
+      pageSize: PAGE_SIZE,
+      encounters: groups,
+      ...(nextCursor ? { nextCursor } : {}),
+    };
+    return { status: 200, body: page };
   } catch (error) {
     if (error instanceof InvalidCursorError) {
       return { status: 502, body: { error: "FHIR previous-exams next link is invalid." } };
     }
-    throw error;
+    return previousExamsDependencyResponse(error);
   }
-  const page: PreviousExamsPage = {
-    pageSize: PAGE_SIZE,
-    encounters: groups,
-    ...(nextCursor ? { nextCursor } : {}),
-  };
-  return { status: 200, body: page };
 }
 
 export async function handleDiagnosisPullRequest(
@@ -258,6 +272,11 @@ export async function handleDiagnosisPullRequest(
   if (!sourceCondition.code) {
     return { status: 409, body: { error: "The source diagnosis has no recorded code or text." } };
   }
+  const sourceStart = fullInstant(sourceEncounter.period?.start);
+  const initialCurrentStart = fullInstant(initialCurrentEncounter.period?.start);
+  if (!sourceStart || !initialCurrentStart || sourceStart >= initialCurrentStart) {
+    return { status: 409, body: { error: "Diagnosis pull requires a strictly prior source and valid full encounter start instants." } };
+  }
   const sourceObservations = await sourceEvidenceObservations(
     staff.fhir,
     sourceCondition,
@@ -276,6 +295,10 @@ export async function handleDiagnosisPullRequest(
     currentEncounter.subject?.reference !== patientReference
   ) {
     return { status: 409, body: { error: "The current encounter patient changed; reload and retry." } };
+  }
+  const currentStart = fullInstant(currentEncounter.period?.start);
+  if (!currentStart || sourceStart >= currentStart) {
+    return { status: 409, body: { error: "Diagnosis pull requires a strictly prior source and valid full encounter start instants." } };
   }
   const versionId = currentEncounter.meta?.versionId;
   if (!versionId) {
@@ -516,7 +539,9 @@ function diagnosisIdentity(condition: Condition, encounterId: string): PreviousE
     ...(parsedIdentifier.diagnosisKey ? { diagnosisKey: parsedIdentifier.diagnosisKey } : {}),
     coding,
     ...(condition.code?.text ? { text: condition.code.text } : {}),
-    laterality: parsedIdentifier.laterality ?? recordedLaterality(condition),
+    laterality: recordedLaterality(condition) !== "UNKNOWN"
+      ? recordedLaterality(condition)
+      : parsedIdentifier.laterality ?? "UNKNOWN",
   };
 }
 
@@ -550,9 +575,23 @@ function recordedLaterality(resource: Condition | Observation): PreviousExamLate
   const bodySites = resource.resourceType === "Condition"
     ? resource.bodySite ?? []
     : resource.bodySite ? [resource.bodySite] : [];
-  const bodySiteCode = bodySites.flatMap((bodySite) => bodySite.coding ?? [])
-    .find((coding) => coding.code)?.code;
-  const value = extensionCode ?? bodySiteCode;
+  const bodySiteLaterality = bodySites.map(lateralityFromBodySite)
+    .find((laterality) => laterality !== "UNKNOWN");
+  return lateralityFromValue(extensionCode) !== "UNKNOWN"
+    ? lateralityFromValue(extensionCode)
+    : bodySiteLaterality ?? "UNKNOWN";
+}
+
+function lateralityFromBodySite(
+  bodySite: NonNullable<Condition["bodySite"]>[number],
+): PreviousExamLaterality {
+  return [
+    ...(bodySite.coding ?? []).flatMap((coding) => coding.code ? [coding.code] : []),
+    ...(bodySite.text ? [bodySite.text] : []),
+  ].map(lateralityFromValue).find((laterality) => laterality !== "UNKNOWN") ?? "UNKNOWN";
+}
+
+function lateralityFromValue(value: string | undefined): PreviousExamLaterality {
   if (value === "OD" || value === "right") return "OD";
   if (value === "OS" || value === "left") return "OS";
   if (value === "OU" || value === "bilateral") return "OU";
@@ -624,7 +663,7 @@ function pulledDiagnosisCondition(
     evidenceObservationReferences: evidenceReferences,
   });
   const extensions = source.extension?.filter((extension) => extension.url === ODOS_EXTENSION_URLS.eyeLaterality);
-  const bodySite = source.bodySite?.filter((site) => site.coding?.some((coding) => isLateralityCode(coding.code)));
+  const bodySite = source.bodySite?.filter((site) => lateralityFromBodySite(site) !== "UNKNOWN");
   return {
     ...condition,
     ...(extensions?.length ? { extension: structuredClone(extensions) } : {}),
@@ -638,7 +677,7 @@ function pulledFindingObservation(
   encounterReference: string,
 ): Observation {
   const extension = source.extension?.filter((candidate) => candidate.url === ODOS_EXTENSION_URLS.eyeLaterality);
-  const bodySite = source.bodySite?.coding?.some((coding) => isLateralityCode(coding.code))
+  const bodySite = recordedLaterality(source) !== "UNKNOWN"
     ? source.bodySite
     : undefined;
   const component = source.component?.filter((candidate) =>
@@ -658,6 +697,10 @@ function pulledFindingObservation(
 }
 
 function diagnosisIdentifierSuffix(condition: Condition): "right" | "left" | "bilateral" | "unspecified" | "none" {
+  const laterality = recordedLaterality(condition);
+  if (laterality === "OD") return "right";
+  if (laterality === "OS") return "left";
+  if (laterality === "OU") return "bilateral";
   const sourceValue = condition.identifier?.find((candidate) =>
     candidate.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM
   )?.value?.split("::").at(-1);
@@ -667,21 +710,12 @@ function diagnosisIdentifierSuffix(condition: Condition): "right" | "left" | "bi
   ) {
     return sourceValue;
   }
-  const laterality = recordedLaterality(condition);
-  if (laterality === "OD") return "right";
-  if (laterality === "OS") return "left";
-  if (laterality === "OU") return "bilateral";
   return "unspecified";
-}
-
-function isLateralityCode(code: string | undefined): boolean {
-  return code === "OD" || code === "OS" || code === "OU" || code === "right" ||
-    code === "left" || code === "bilateral";
 }
 
 function identityKey(identity: PreviousExamDiagnosisIdentity): string {
   return identity.diagnosisKey
-    ? JSON.stringify(["catalog", identity.diagnosisKey, identity.coding, identity.text, identity.laterality])
+    ? JSON.stringify(["catalog", identity.diagnosisKey, identity.laterality])
     : JSON.stringify(["literal", identity.coding, identity.text, identity.laterality]);
 }
 
@@ -901,6 +935,31 @@ function isMissingFhirResource(error: unknown): boolean {
   return status === 404 || status === 410;
 }
 
+function previousExamsDependencyResponse(error: unknown): { status: number; body: { error: string } } {
+  const status = fhirErrorStatus(error);
+  if (status === 401 || status === 403) {
+    return {
+      status: 403,
+      body: { error: "Previous exams are outside the caller's patient compartment." },
+    };
+  }
+  if (status === 404 || status === 410) {
+    return {
+      status: 404,
+      body: { error: "Previous exams resources were not found." },
+    };
+  }
+  return { status: 502, body: { error: "FHIR previous-exams dependency failed." } };
+}
+
+function fhirErrorStatus(error: unknown): number | undefined {
+  if (error instanceof DiagnosisPullReadError) return error.status;
+  const status = typeof error === "object" && error !== null && "status" in error
+    ? (error as { status?: unknown }).status
+    : undefined;
+  return typeof status === "number" ? status : undefined;
+}
+
 async function diagnosisPullRead<T>(operation: () => Promise<T>): Promise<T> {
   try {
     return await operation();
@@ -919,17 +978,42 @@ function uuidFullUrl(): string {
   return `urn:uuid:${randomUUID()}`;
 }
 
-function encodeCursor(path: string): string {
-  return Buffer.from(JSON.stringify({ v: 1, path }), "utf8").toString("base64url");
+interface PreviousExamsCursorContext {
+  path: string;
+  encounterId: string;
+  patientReference: string;
+  currentDate: string;
 }
 
-function decodeCursor(cursor: string, fhirBaseUrl: string): string | undefined {
+function encodeCursor(context: PreviousExamsCursorContext): string {
+  const payload = Buffer.from(JSON.stringify({ v: 2, ...context }), "utf8").toString("base64url");
+  const signature = createHmac("sha256", cursorSigningKey).update(payload).digest("base64url");
+  return `${payload}.${signature}`;
+}
+
+function decodeCursor(
+  cursor: string,
+  fhirBaseUrl: string,
+  expected: Omit<PreviousExamsCursorContext, "path">,
+): string | undefined {
   try {
-    const decoded = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8")) as unknown;
+    const [payload, signature, extra] = cursor.split(".");
+    if (!payload || !signature || extra !== undefined) return undefined;
+    const expectedSignature = createHmac("sha256", cursorSigningKey).update(payload).digest();
+    const receivedSignature = Buffer.from(signature, "base64url");
+    if (
+      !receivedSignature.length ||
+      receivedSignature.length !== expectedSignature.length ||
+      !timingSafeEqual(receivedSignature, expectedSignature)
+    ) return undefined;
+    const decoded = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as unknown;
     if (
       typeof decoded !== "object" || decoded === null ||
-      (decoded as { v?: unknown }).v !== 1 ||
-      typeof (decoded as { path?: unknown }).path !== "string"
+      (decoded as { v?: unknown }).v !== 2 ||
+      typeof (decoded as { path?: unknown }).path !== "string" ||
+      (decoded as { encounterId?: unknown }).encounterId !== expected.encounterId ||
+      (decoded as { patientReference?: unknown }).patientReference !== expected.patientReference ||
+      (decoded as { currentDate?: unknown }).currentDate !== expected.currentDate
     ) return undefined;
     return validatedNextPath((decoded as { path: string }).path, fhirBaseUrl);
   } catch {
@@ -941,6 +1025,26 @@ function validatedNextPath(url: string, fhirBaseUrl: string): string {
   const path = fhirSearchNextPath(url, fhirBaseUrl, "Encounter");
   if (!path) throw new InvalidCursorError();
   return path;
+}
+
+function fullInstant(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  const match = value.match(fullInstantPattern);
+  if (!match) return undefined;
+  const [, year, month, day, hour, minute, second] = match;
+  const numeric = [year, month, day, hour, minute, second].map(Number);
+  if (
+    numeric[1]! < 1 || numeric[1]! > 12 || numeric[2]! < 1 || numeric[2]! > 31 ||
+    numeric[3]! > 23 || numeric[4]! > 59 || numeric[5]! > 59
+  ) return undefined;
+  const calendar = new Date(Date.UTC(numeric[0]!, numeric[1]! - 1, numeric[2]!));
+  if (
+    calendar.getUTCFullYear() !== numeric[0] ||
+    calendar.getUTCMonth() !== numeric[1]! - 1 ||
+    calendar.getUTCDate() !== numeric[2]
+  ) return undefined;
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : undefined;
 }
 
 function bundleResources<T extends Resource>(bundle: Bundle<T>): T[] {

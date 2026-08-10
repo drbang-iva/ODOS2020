@@ -445,11 +445,11 @@ for (const status of [401, 403, 500]) {
       query: {},
     });
 
-    assert.equal(response.status, status === 500 ? 502 : status, String(status));
+    assert.equal(response.status, status === 500 ? 502 : 403, String(status));
     assert.deepEqual(response.body, {
       error: status === 500
         ? "FHIR diagnosis findings dependency failed."
-        : "FHIR authorization denied while reading diagnosis findings.",
+        : "Diagnosis findings are outside the caller's patient compartment.",
     }, String(status));
   });
 }
@@ -464,14 +464,60 @@ for (const status of [401, 403, 500]) {
       headers: { Authorization: "Bearer clinician" },
     });
 
-    assert.equal(response.status, status === 500 ? 502 : status);
+    assert.equal(response.status, status === 500 ? 502 : 403);
     assert.deepEqual(await response.json(), {
       error: status === 500
         ? "FHIR diagnosis findings dependency failed."
-        : "FHIR authorization denied while reading diagnosis findings.",
+        : "Diagnosis findings are outside the caller's patient compartment.",
     });
   });
 }
+
+for (const [dependency, status] of [
+  ["Encounter", 404],
+  ["Encounter", 410],
+  ["Condition", 404],
+  ["Condition", 410],
+  ["Observation", 404],
+  ["Observation", 410],
+] as const) {
+  test(`findings maps ${dependency} FHIR ${status} to a non-leaking 404`, async () => {
+    const fhir = readModelFhir();
+    if (dependency === "Encounter") {
+      fhir.readFailures.set("Encounter/e1", status);
+    } else {
+      fhir.searchFailures.set(dependency, status);
+    }
+
+    const response = await handleDiagnosisFindingsReadRequest(clinicalDeps(fhir), {
+      authHeader: "Bearer clinician",
+      params: { encounterId: "e1" },
+      query: {},
+    });
+
+    assert.equal(response.status, 404, `${dependency} ${status}: ${JSON.stringify(response.body)}`);
+    assert.deepEqual(response.body, { error: "Diagnosis findings resources were not found." });
+  });
+}
+
+test("findings gives Condition bodySite laterality precedence over a stale catalog identifier", async () => {
+  const fhir = readModelFhir();
+  const unique = fhir.resources.find((resource): resource is Condition =>
+    resource.resourceType === "Condition" && resource.id === "unique"
+  )!;
+  unique.bodySite = [{ text: "OS" }];
+
+  const response = await handleDiagnosisFindingsReadRequest(clinicalDeps(fhir), {
+    authHeader: "Bearer clinician",
+    params: { encounterId: "e1" },
+    query: {},
+  });
+
+  assert.equal(response.status, 200, JSON.stringify(response.body));
+  const visit = (response.body as { visitDiagnoses: Array<{ conditionReference: string; laterality: string }> })
+    .visitDiagnoses.find((row) => row.conditionReference === "Condition/unique");
+  assert.equal(visit?.laterality, "OS");
+});
 
 test("GET findings route returns missing lineage as visible state and a cyclic next link as 502", async (t) => {
   const missingLineage = carryFindingsFhir();
@@ -1091,6 +1137,7 @@ function observationLateralityCode(observation: Observation): string | undefined
 class MemoryFhir {
   readonly resources: Resource[] = [];
   readonly readFailures = new Map<string, number>();
+  readonly searchFailures = new Map<string, number>();
   readonly pages = new Map<string, Resource[][]>();
   readonly pageLinks = new Map<string, string>();
   readonly searchUrlFailures = new Map<string, number>();
@@ -1112,6 +1159,10 @@ class MemoryFhir {
     resourceType: T["resourceType"],
     params: Record<string, string> = {},
   ): Promise<Bundle<T>> {
+    const failureStatus = this.searchFailures.get(resourceType);
+    if (failureStatus) {
+      throw Object.assign(new Error(`Synthetic FHIR ${failureStatus}`), { status: failureStatus });
+    }
     const resources = this.resources.filter((resource) => {
       if (resource.resourceType !== resourceType) return false;
       if (params.encounter) {

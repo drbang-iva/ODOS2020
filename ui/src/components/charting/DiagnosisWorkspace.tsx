@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Condition, Encounter } from "@medplum/fhirtypes";
 import {
+  DIAGNOSIS_KEY_IDENTIFIER_SYSTEM,
   makeConditionPrincipal,
   swapConditionRanks,
   updateConditionBodySite,
@@ -34,8 +35,6 @@ import {
 } from "../../lib/diagnosis-findings";
 import { formatDiagnosisHistoryDate } from "../../lib/diagnosis-carry-forward";
 import { PreviousExams } from "./PreviousExams";
-
-const DIAGNOSIS_KEY_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key";
 
 export interface DiagnosisQuickListRow {
   stableKey: string;

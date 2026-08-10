@@ -3,6 +3,7 @@ import type { Condition, Encounter, Observation } from "@medplum/fhirtypes";
 import { fhir } from "../../lib/fhir";
 import { useRole } from "../../lib/role-context";
 import {
+  DIAGNOSIS_KEY_IDENTIFIER_SYSTEM,
   createEncounterDiagnosis,
   hasValidDiagnosisRanks,
   makeConditionPrincipal,
@@ -50,7 +51,6 @@ import { ProtocolStagingList } from "./ProtocolStagingList";
 import { OdosSearchPicker } from "../inputs/OdosSearchPicker";
 import { OdosSelect } from "../inputs/OdosSelect";
 
-const DIAGNOSIS_KEY_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key";
 const VERIFICATION_STATUS_SYSTEM = "http://terminology.hl7.org/CodeSystem/condition-ver-status";
 
 interface Props {

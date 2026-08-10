@@ -778,7 +778,7 @@ test("pull ignores a matching Condition that does not belong to the current Enco
   assert.equal(fhir.transactions.length, 1);
 });
 
-test("pull requires literal coding and text to match even when catalog key and laterality match", async (t) => {
+test("pull treats a catalog stable key and recorded laterality as identity despite changed literal coding and text", async (t) => {
   const fhir = pullFhir();
   const differentLiteral = diagnosis(
     "current-dry-eye-different-literal",
@@ -802,8 +802,11 @@ test("pull requires literal coding and text to match even when catalog key and l
   const response = await postPull(base, "source-dry-eye-od");
 
   assert.equal(response.status, 200, await response.clone().text());
-  assert.equal((await response.json() as { alreadyPresent: boolean }).alreadyPresent, false);
-  assert.equal(fhir.transactions.length, 1);
+  assert.deepEqual(await response.json(), {
+    conditionReference: "Condition/current-dry-eye-different-literal",
+    alreadyPresent: true,
+  });
+  assert.equal(fhir.transactions.length, 0);
 });
 
 test("pull matches uncataloged literal coding text and laterality without a terminology mapping", async (t) => {
@@ -832,6 +835,91 @@ test("pull matches uncataloged literal coding text and laterality without a term
     alreadyPresent: true,
   });
   assert.equal(fhir.transactions.length, 0);
+});
+
+test("pull keeps uncataloged diagnoses distinct when their literal text differs", async (t) => {
+  const fhir = pullFhir("source-uncataloged");
+  const source = fhir.resource<Condition>("Condition", "source-uncataloged");
+  const current: Condition = {
+    ...structuredClone(source),
+    id: "current-uncataloged-different-text",
+    encounter: { reference: "Encounter/current-pull" },
+    code: { ...structuredClone(source.code!), text: "A different uncataloged literal" },
+  };
+  fhir.resources.push(current);
+  fhir.resource<Encounter>("Encounter", "current-pull").diagnosis!.push(
+    buildEncounterDiagnosisComponent("Condition/current-uncataloged-different-text", 5),
+  );
+
+  const response = await postPull(await startPreviousExamRoutes(t, fhir, "auditor"), "source-uncataloged");
+
+  assert.equal(response.status, 200, await response.clone().text());
+  assert.equal((await response.json() as { alreadyPresent: boolean }).alreadyPresent, false);
+  assert.equal(fhir.transactions.length, 1);
+});
+
+test("pull uses the recorded Condition bodySite instead of a stale catalog identifier laterality", async (t) => {
+  const fhir = pullFhir("source-dry-eye-os");
+  const current = diagnosis("current-stale-catalog-laterality", "current-pull", "dry_eye", "right", "confirmed", []);
+  current.bodySite = [{ text: "OS" }];
+  fhir.resources.push(current);
+  fhir.resource<Encounter>("Encounter", "current-pull").diagnosis!.push(
+    buildEncounterDiagnosisComponent("Condition/current-stale-catalog-laterality", 5),
+  );
+
+  const response = await postPull(await startPreviousExamRoutes(t, fhir, "auditor"), "source-dry-eye-os");
+
+  assert.equal(response.status, 200, await response.clone().text());
+  assert.deepEqual(await response.json(), {
+    conditionReference: "Condition/current-stale-catalog-laterality",
+    alreadyPresent: true,
+  });
+  assert.equal(fhir.transactions.length, 0);
+});
+
+test("pull rejects source Encounters that are not strictly prior full instants", async (t) => {
+  for (const [name, start] of [
+    ["future", "2026-09-10T09:00:00.000Z"],
+    ["equal", "2026-08-10T09:00:00.000Z"],
+    ["missing", undefined],
+    ["invalid", "2026-08-10"],
+  ] as const) {
+    const fhir = pullFhir();
+    const source = fhir.resource<Encounter>("Encounter", "source-pull");
+    source.period = start === undefined ? undefined : { start };
+
+    const response = await postPull(await startPreviousExamRoutes(t, fhir, "auditor"), "source-dry-eye-od");
+
+    assert.equal(response.status, 409, `${name}: ${await response.text()}`);
+    assert.equal(fhir.transactions.length, 0, name);
+  }
+});
+
+test("pull rejects a current Encounter without a valid full start instant before a transaction", async (t) => {
+  for (const [name, start] of [["missing", undefined], ["invalid", "2026-08-10"]] as const) {
+    const fhir = pullFhir();
+    const current = fhir.resource<Encounter>("Encounter", "current-pull");
+    current.period = start === undefined ? undefined : { start };
+
+    const response = await postPull(await startPreviousExamRoutes(t, fhir, "auditor"), "source-dry-eye-od");
+
+    assert.equal(response.status, 409, `${name}: ${await response.text()}`);
+    assert.equal(fhir.transactions.length, 0, name);
+  }
+});
+
+test("pull rechecks the current Encounter start instant immediately before idempotency and the transaction", async (t) => {
+  for (const [name, start] of [["equal", "2026-07-10T09:00:00.000Z"], ["invalid", "not-an-instant"]] as const) {
+    const fhir = pullFhir();
+    fhir.beforeCurrentEncounterRead = (readNumber) => {
+      if (readNumber === 2) fhir.resource<Encounter>("Encounter", "current-pull").period = { start };
+    };
+
+    const response = await postPull(await startPreviousExamRoutes(t, fhir, "auditor"), "source-dry-eye-od");
+
+    assert.equal(response.status, 409, `${name}: ${await response.text()}`);
+    assert.equal(fhir.transactions.length, 0, name);
+  }
 });
 
 test("pull rejects source patient, diagnosis membership, and retracted-condition boundary failures", async (t) => {
@@ -1807,6 +1895,135 @@ test("previous exams cursor loads the next four-encounter page without accepting
   assert.equal(fhir.followedUrls.length, 1);
 });
 
+test("previous exams rejects forged legacy and tampered cursor payloads before FHIR pagination", async () => {
+  const fhir = previousExamFhir();
+  const cursorPath = "/fhir/R4/Encounter?_page=2&_count=4";
+  const forged = (payload: Record<string, unknown>) => Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
+  const issued = await handlePreviousExamsReadRequest(deps(fhir), {
+    authHeader: AUTH_CLINICIAN,
+    params: { encounterId: "current" },
+    query: {},
+  });
+  const cursor = (issued.body as PreviousExamsPage).nextCursor;
+  assert.ok(cursor);
+  const [payload, signature] = cursor.split(".");
+  assert.ok(payload);
+  assert.ok(signature);
+  const signedPayload = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as Record<string, unknown>;
+  const tampered = (changes: Record<string, unknown>): string =>
+    `${forged({ ...signedPayload, ...changes })}.${signature}`;
+  const cursors = {
+    "legacy v1 same-origin path": forged({ v: 1, path: cursorPath }),
+    "tampered path": tampered({ path: `${cursorPath}&tampered=true` }),
+    "tampered context": tampered({ encounterId: "other-current-encounter" }),
+    "tampered signature": `${payload}.${signature.slice(0, -1)}${signature.endsWith("A") ? "B" : "A"}`,
+  };
+
+  fhir.followedUrls.length = 0;
+
+  for (const [name, cursor] of Object.entries(cursors)) {
+    const response = await handlePreviousExamsReadRequest(deps(fhir), {
+      authHeader: AUTH_CLINICIAN,
+      params: { encounterId: "current" },
+      query: { cursor },
+    });
+
+    assert.equal(response.status, 400, name);
+    assert.equal(fhir.followedUrls.length, 0, name);
+  }
+});
+
+test("previous exams binds an issued cursor to the current Encounter, patient, and start instant", async () => {
+  const fhir = previousExamFhir();
+  const first = await handlePreviousExamsReadRequest(deps(fhir), {
+    authHeader: AUTH_CLINICIAN,
+    params: { encounterId: "current" },
+    query: {},
+  });
+  const cursor = (first.body as PreviousExamsPage).nextCursor;
+  assert.ok(cursor);
+  fhir.resources.push(
+    { resourceType: "Patient", id: "patient-2", active: true },
+    { ...encounter("other-encounter", "2026-08-10T09:00:00.000Z", "Other exam", []), subject: { reference: "Patient/patient-1" } },
+    { ...encounter("other-patient", "2026-08-10T09:00:00.000Z", "Other patient exam", []), subject: { reference: "Patient/patient-2" } },
+    { ...encounter("other-date", "2026-08-09T09:00:00.000Z", "Other date exam", []), subject: { reference: "Patient/patient-1" } },
+  );
+
+  for (const encounterId of ["other-encounter", "other-patient", "other-date"]) {
+    const response = await handlePreviousExamsReadRequest(deps(fhir), {
+      authHeader: AUTH_CLINICIAN,
+      params: { encounterId },
+      query: { cursor },
+    });
+
+    assert.equal(response.status, 400, encounterId);
+    assert.equal(fhir.followedUrls.length, 0, encounterId);
+  }
+});
+
+test("previous exams maps initial Encounter and Patient FHIR access failures at the direct boundary", async () => {
+  for (const [reference, status, expected] of [
+    ["Encounter/current", 401, 403],
+    ["Encounter/current", 403, 403],
+    ["Encounter/current", 404, 404],
+    ["Patient/patient-1", 401, 403],
+    ["Patient/patient-1", 403, 403],
+    ["Patient/patient-1", 410, 404],
+  ] as const) {
+    const fhir = previousExamFhir();
+    fhir.readFailures.set(reference, status);
+    const response = await handlePreviousExamsReadRequest(deps(fhir), {
+      authHeader: AUTH_CLINICIAN,
+      params: { encounterId: "current" },
+      query: {},
+    });
+
+    assert.equal(response.status, expected, `${reference} ${status}: ${JSON.stringify(response.body)}`);
+  }
+});
+
+test("previous exams maps page Condition and Observation FHIR access failures at the direct boundary", async () => {
+  for (const [reference, status, expected] of [
+    ["Condition/prior-1-dry-eye-od", 401, 403],
+    ["Condition/prior-1-dry-eye-od", 404, 404],
+    ["Observation/prior-1-staining-present", 403, 403],
+    ["Observation/prior-1-staining-present", 410, 404],
+  ] as const) {
+    const fhir = previousExamFhir();
+    fhir.readFailures.set(reference, status);
+    const response = await handlePreviousExamsReadRequest(deps(fhir), {
+      authHeader: AUTH_CLINICIAN,
+      params: { encounterId: "current" },
+      query: {},
+    });
+
+    assert.equal(response.status, expected, `${reference} ${status}: ${JSON.stringify(response.body)}`);
+  }
+});
+
+test("previous exams registered route maps cursor-page FHIR denials and missing history without a generic 500", async (t) => {
+  for (const [status, expected] of [[403, 403], [404, 404]] as const) {
+    const fhir = previousExamFhir();
+    const first = await handlePreviousExamsReadRequest(deps(fhir), {
+      authHeader: AUTH_CLINICIAN,
+      params: { encounterId: "current" },
+      query: {},
+    });
+    const cursor = (first.body as PreviousExamsPage).nextCursor;
+    assert.ok(cursor);
+    fhir.searchUrlFailures.set("/fhir/R4/Encounter?_page=2&_count=4", status);
+    const base = await startPreviousExamRoutes(t, fhir, "auditor");
+
+    const response = await fetch(
+      `${base}/clinical-graph/encounters/current/previous-exams?cursor=${encodeURIComponent(cursor)}`,
+      { headers: { Authorization: AUTH_CLINICIAN } },
+    );
+
+    assert.equal(response.status, expected, `${status}: ${await response.clone().text()}`);
+    assert.doesNotMatch(await response.text(), /previous exams read failed/i);
+  }
+});
+
 test("previous exams rejects a cross-origin Bundle next link", async () => {
   const fhir = previousExamFhir();
   fhir.nextUrl = "https://evil.example/fhir/R4/Encounter?_page=2&_count=4";
@@ -2688,6 +2905,7 @@ class MemoryFhir {
     options?: { autoRollbackCreatedEntries?: boolean };
   }> = [];
   readonly readFailures = new Map<string, number>();
+  readonly searchUrlFailures = new Map<string, number>();
   initialEncounterSearch: Record<string, string> | undefined;
   nextUrl = "/fhir/R4/Encounter?_page=2&_count=4";
   transactionFailureStatus: string | undefined;
@@ -2818,6 +3036,10 @@ class MemoryFhir {
     }
     if (resourceType !== "Encounter") throw new Error(`Unexpected paged search for ${resourceType}`);
     this.followedUrls.push(url);
+    const failureStatus = this.searchUrlFailures.get(url);
+    if (failureStatus) {
+      throw Object.assign(new Error(`Synthetic FHIR ${failureStatus}`), { status: failureStatus });
+    }
     if (url !== "/fhir/R4/Encounter?_page=2&_count=4") throw new Error(`Unexpected next URL ${url}`);
     return this.encounterPage(["prior-5"]);
   }
