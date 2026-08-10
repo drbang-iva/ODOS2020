@@ -259,8 +259,8 @@ export function DiagnosisWorkspace({
                   >{row.pinned ? "●" : "○"}</button>
                   {row.pinned && (
                     <>
-                      <button type="button" aria-label={`Move ${row.display} up`} disabled={pinIndex <= 0 || busy !== undefined} onClick={() => void persistPins(movePinnedDiagnosis(pinnedDiagnosisKeys, row.stableKey, -1))}>↑</button>
-                      <button type="button" aria-label={`Move ${row.display} down`} disabled={pinIndex < 0 || pinIndex >= pinnedDiagnosisKeys.length - 1 || busy !== undefined} onClick={() => void persistPins(movePinnedDiagnosis(pinnedDiagnosisKeys, row.stableKey, 1))}>↓</button>
+                      <button type="button" aria-label={`Move ${row.display} up`} disabled={diagnosisPinMoveDisabled(canWrite, busy, pinIndex, pinnedDiagnosisKeys.length, -1)} onClick={() => void persistPins(movePinnedDiagnosis(pinnedDiagnosisKeys, row.stableKey, -1))}>↑</button>
+                      <button type="button" aria-label={`Move ${row.display} down`} disabled={diagnosisPinMoveDisabled(canWrite, busy, pinIndex, pinnedDiagnosisKeys.length, 1)} onClick={() => void persistPins(movePinnedDiagnosis(pinnedDiagnosisKeys, row.stableKey, 1))}>↓</button>
                     </>
                   )}
                 </div>
@@ -367,6 +367,17 @@ export function diagnosisWorkspaceInstanceKey(patientReference: string, encounte
 
 export function diagnosisRankActionsDisabled(canWrite: boolean, busy: string | undefined): boolean {
   return !canWrite || busy !== undefined;
+}
+
+export function diagnosisPinMoveDisabled(
+  canWrite: boolean,
+  busy: string | undefined,
+  index: number,
+  count: number,
+  direction: -1 | 1,
+): boolean {
+  if (!canWrite || busy !== undefined) return true;
+  return direction === -1 ? index <= 0 : index < 0 || index >= count - 1;
 }
 
 export function diagnosisCatalogKey(condition: Condition): string | undefined {

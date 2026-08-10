@@ -12,6 +12,7 @@ import type { Condition, Encounter } from "@medplum/fhirtypes";
 import {
   conditionMatchesDiagnosisPick,
   diagnosisCatalogKey,
+  diagnosisPinMoveDisabled,
   diagnosisRankActionsDisabled,
   diagnosisWorkspaceInstanceKey,
   movePinnedDiagnosis,
@@ -102,6 +103,15 @@ test("diagnosis rank actions are disabled for read-only users and while a write 
   assert.equal(diagnosisRankActionsDisabled(false, "rank"), true);
   assert.equal(diagnosisRankActionsDisabled(true, "rank"), true);
   assert.equal(diagnosisRankActionsDisabled(true, undefined), false);
+});
+
+test("diagnosis pin moves require write access and respect the ordered-list edges", () => {
+  assert.equal(diagnosisPinMoveDisabled(false, undefined, 1, 3, -1), true);
+  assert.equal(diagnosisPinMoveDisabled(false, undefined, 1, 3, 1), true);
+  assert.equal(diagnosisPinMoveDisabled(true, undefined, 1, 3, -1), false);
+  assert.equal(diagnosisPinMoveDisabled(true, undefined, 1, 3, 1), false);
+  assert.equal(diagnosisPinMoveDisabled(true, undefined, 0, 3, -1), true);
+  assert.equal(diagnosisPinMoveDisabled(true, undefined, 2, 3, 1), true);
 });
 
 test("imaging hides the prior patient's rows as soon as the patient reference changes", async () => {
