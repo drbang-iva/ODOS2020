@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import React from "react";
+import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import {
   loadDiagnosisImagingOpen,
   loadEncounterChartView,
@@ -10,9 +12,11 @@ import type { Condition, Encounter } from "@medplum/fhirtypes";
 import {
   conditionMatchesDiagnosisPick,
   diagnosisCatalogKey,
+  diagnosisWorkspaceInstanceKey,
   movePinnedDiagnosis,
   orderedEncounterConditions,
 } from "../src/components/charting/DiagnosisWorkspace";
+import { DiagnosisImagingRegion } from "../src/components/charting/DiagnosisImagingRegion";
 
 test("diagnosis workspace preferences default safely and round-trip valid selections", () => {
   const storage = memoryStorage();
@@ -79,6 +83,51 @@ test("laterality-required diagnosis identity keeps OD, OS, and OU picks distinct
   assert.equal(conditionMatchesDiagnosisPick(existingOs, row, "OD"), false);
   assert.equal(conditionMatchesDiagnosisPick(existingOs, row, "OU"), false);
   assert.equal(conditionMatchesDiagnosisPick(existingOs, row), false);
+});
+
+test("diagnosis workspace remount identity changes at either patient or encounter boundary", () => {
+  assert.notEqual(
+    diagnosisWorkspaceInstanceKey("Patient/one", "Encounter/one"),
+    diagnosisWorkspaceInstanceKey("Patient/two", "Encounter/one"),
+  );
+  assert.notEqual(
+    diagnosisWorkspaceInstanceKey("Patient/one", "Encounter/one"),
+    diagnosisWorkspaceInstanceKey("Patient/one", "Encounter/two"),
+  );
+});
+
+test("imaging hides the prior patient's rows as soon as the patient reference changes", async () => {
+  const originalFetch = globalThis.fetch;
+  let resolveFirst!: (response: Response) => void;
+  globalThis.fetch = ((input: string | URL | Request) => {
+    const url = String(input);
+    if (url.includes("Patient%2Fone")) {
+      return new Promise<Response>((resolve) => { resolveFirst = resolve; });
+    }
+    return new Promise<Response>(() => undefined);
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<DiagnosisImagingRegion patientReference="Patient/one" />);
+    });
+    await act(async () => {
+      resolveFirst(new Response(JSON.stringify({ images: [{
+        id: "old-image",
+        title: "Prior patient OCT",
+        date: "2026-08-09",
+        contentState: "missing",
+      }] }), { status: 200, headers: { "Content-Type": "application/json" } }));
+      await Promise.resolve();
+    });
+    assert.match(JSON.stringify(renderer.toJSON()), /Prior patient OCT/);
+
+    act(() => renderer.update(<DiagnosisImagingRegion patientReference="Patient/two" />));
+    assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /Prior patient OCT/);
+  } finally {
+    act(() => renderer?.unmount());
+    globalThis.fetch = originalFetch;
+  }
 });
 
 function memoryStorage(): Storage {

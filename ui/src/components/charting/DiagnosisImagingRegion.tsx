@@ -17,12 +17,16 @@ interface ImagingPayload {
 
 export function DiagnosisImagingRegion({ patientReference }: Props) {
   const [open, setOpen] = useState(loadDiagnosisImagingOpen);
-  const [images, setImages] = useState<ImagingSummary[]>([]);
+  const [loaded, setLoaded] = useState<{ patientReference: string; images: ImagingSummary[] }>({
+    patientReference,
+    images: [],
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
 
   useEffect(() => {
     const controller = new AbortController();
+    let active = true;
     const query = new URLSearchParams({ patient: patientReference });
     setLoading(true);
     setError(undefined);
@@ -33,13 +37,24 @@ export function DiagnosisImagingRegion({ patientReference }: Props) {
       const body = await response.json() as ImagingPayload;
       if (!response.ok) throw new Error(body.error ?? `Imaging history failed: ${response.status}`);
       return body.images ?? [];
-    }).then(setImages).catch((caught) => {
-      if ((caught as Error).name !== "AbortError") {
+    }).then((images) => {
+      if (active) setLoaded({ patientReference, images });
+    }).catch((caught) => {
+      if (active && (caught as Error).name !== "AbortError") {
         setError(caught instanceof Error ? caught.message : String(caught));
       }
-    }).finally(() => setLoading(false));
-    return () => controller.abort();
+    }).finally(() => {
+      if (active) setLoading(false);
+    });
+    return () => {
+      active = false;
+      controller.abort();
+    };
   }, [patientReference]);
+
+  const current = loaded.patientReference === patientReference;
+  const images = current ? loaded.images : [];
+  const showingLoading = loading || !current;
 
   function toggle() {
     const next = !open;
@@ -60,9 +75,9 @@ export function DiagnosisImagingRegion({ patientReference }: Props) {
       </button>
       {open && (
         <div className="odos-diagnosis-imaging-content">
-          {loading && <p className="odos-diagnosis-muted">Loading imaging…</p>}
+          {showingLoading && <p className="odos-diagnosis-muted">Loading imaging…</p>}
           {error && <p role="alert" className="odos-diagnosis-error">{error}</p>}
-          {!loading && !error && images.length === 0 && (
+          {!showingLoading && !error && images.length === 0 && (
             <p className="odos-diagnosis-muted">No imaging on file.</p>
           )}
           {images.map((image) => (

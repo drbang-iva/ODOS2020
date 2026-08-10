@@ -361,6 +361,10 @@ export function orderedEncounterConditions(encounter: Encounter, conditions: rea
   }).map(({ condition }) => condition);
 }
 
+export function diagnosisWorkspaceInstanceKey(patientReference: string, encounterReference: string): string {
+  return `${patientReference}::${encounterReference}`;
+}
+
 export function diagnosisCatalogKey(condition: Condition): string | undefined {
   const value = diagnosisCatalogIdentifier(condition);
   if (!value) return undefined;

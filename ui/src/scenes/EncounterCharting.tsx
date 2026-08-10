@@ -21,7 +21,7 @@ import { EncounterHeader } from "../components/charting/EncounterHeader";
 import { EyeGrowthSection } from "../components/charting/EyeGrowthSection";
 import { IopSection } from "../components/charting/IopSection";
 import { ImagingSection } from "../components/charting/ImagingSection";
-import { DiagnosisWorkspace } from "../components/charting/DiagnosisWorkspace";
+import { DiagnosisWorkspace, diagnosisWorkspaceInstanceKey } from "../components/charting/DiagnosisWorkspace";
 import { OdosSelect } from "../components/inputs/OdosSelect";
 import { HpiSection } from "../components/charting/HpiSection";
 import { MyopiaManagementSection } from "../components/charting/MyopiaManagementSection";
@@ -91,7 +91,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const [addingSectionGroup, setAddingSectionGroup] = useState(false);
   const [sectionGroupError, setSectionGroupError] = useState<string | null>(null);
   const [chartView, setChartView] = useState<EncounterChartView>(loadEncounterChartView);
-  const [selectedDiagnosisReference, setSelectedDiagnosisReference] = useState<string>();
+  const [selectedDiagnosis, setSelectedDiagnosis] = useState<{ workspaceKey: string; reference: string }>();
 
   function setSidebarOpen(expanded: boolean) {
     sidebarExpandedForSession = expanded;
@@ -340,6 +340,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
 
   const patientReference = `Patient/${patient.id}`;
   const encounterReference = `Encounter/${encounterId}`;
+  const diagnosisWorkspaceKey = diagnosisWorkspaceInstanceKey(patientReference, encounterReference);
   const visibleDefinitions = filterDefinitionsForSectionGroups(
     catalog.definitions,
     sectionGroupCatalog.groups,
@@ -444,10 +445,11 @@ export function EncounterCharting({ patient, encounterId }: Props) {
       </div>
       {chartView === "diagnosis" ? (
         <DiagnosisWorkspace
+          key={diagnosisWorkspaceKey}
           patientReference={patientReference}
           encounterReference={encounterReference}
-          selectedReference={selectedDiagnosisReference}
-          onSelectDiagnosis={setSelectedDiagnosisReference}
+          selectedReference={selectedDiagnosis?.workspaceKey === diagnosisWorkspaceKey ? selectedDiagnosis.reference : undefined}
+          onSelectDiagnosis={(reference) => setSelectedDiagnosis(reference ? { workspaceKey: diagnosisWorkspaceKey, reference } : undefined)}
         />
       ) : (
         <div className="odos-charting-body flex min-h-0 flex-1 flex-col md:flex-row">
