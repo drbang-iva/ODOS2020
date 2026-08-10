@@ -19,6 +19,7 @@ import { DryEyeSection } from "../components/charting/DryEyeSection";
 import { DryEyeGlandStructureSection } from "../components/charting/DryEyeGlandStructureSection";
 import { EncounterHeader } from "../components/charting/EncounterHeader";
 import { EyeGrowthSection } from "../components/charting/EyeGrowthSection";
+import { EncounterFindingOverlay } from "../components/charting/EncounterFindingOverlay";
 import { IopSection } from "../components/charting/IopSection";
 import { ImagingSection } from "../components/charting/ImagingSection";
 import { DiagnosisWorkspace, diagnosisWorkspaceInstanceKey } from "../components/charting/DiagnosisWorkspace";
@@ -435,6 +436,9 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const overrideGroupKeys = sectionGroupCatalog.overrideGroupKeys ?? [];
   const groupLabel = (groupKey: string) =>
     sectionGroupCatalog.groups.find((group) => group.groupKey === groupKey)?.label ?? groupKey;
+  const activeFindingSectionKey = visibleDefinitions.find((definition) =>
+    definition.stableKey === activeSection
+  )?.sectionKey ?? activeSection;
 
   return (
     <div className={["odos-charting-workspace flex h-screen w-screen flex-col bg-bg-deep text-white", config.encounterDensity === "compact" ? "text-[0.95rem]" : ""].join(" ")}>
@@ -463,6 +467,10 @@ export function EncounterCharting({ patient, encounterId }: Props) {
           onAddSection={catalog.canWrite ? () => setCreatingSection(true) : undefined}
         />
         <main className="relative min-w-0 flex-1 bg-bg-deep" {...(sidebarExpanded ? { inert: "" } : {})}>
+          <EncounterFindingOverlay
+            encounterReference={encounterReference}
+            sectionKey={activeFindingSectionKey}
+          />
           {(sectionGroupCatalog.canPullIn || sectionGroupError) && (
             <div className="absolute right-4 top-3 z-20 flex max-w-xl flex-col items-end gap-2">
               {sectionGroupError && (

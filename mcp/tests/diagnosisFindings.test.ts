@@ -235,9 +235,23 @@ test("asserting absence round-trips and repeated assertions update one logical O
     query: { condition: "Condition/unique" },
   });
   assert.equal(reloaded.status, 200, JSON.stringify(reloaded.body));
-  const finding = (reloaded.body as { findings: Array<{ atomicFindingId: string; presence?: string }> }).findings
+  const reloadedBody = reloaded.body as {
+    findings: Array<{ atomicFindingId: string; presence?: string }>;
+    bySection: Record<string, Array<{ atomicFindingId: string; presence?: string; source: string }>>;
+  };
+  const finding = reloadedBody.findings
     .find((row) => row.atomicFindingId === atomicId("offered-only"));
   assert.equal(finding?.presence, "absent");
+  assert.deepEqual(
+    reloadedBody.bySection[LENS_DEFINITION.sectionKey!]?.filter((row) =>
+      row.atomicFindingId === atomicId("offered-only")
+    ).map((row) => ({
+      atomicFindingId: row.atomicFindingId,
+      presence: row.presence,
+      source: row.source,
+    })),
+    [{ atomicFindingId: atomicId("offered-only"), presence: "absent", source: "atomic" }],
+  );
 });
 
 test("grade and laterality mutations enforce the configured scale and restore inherited laterality", async () => {

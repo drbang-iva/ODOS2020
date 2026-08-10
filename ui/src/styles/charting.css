@@ -464,6 +464,52 @@
   margin-top: 4px;
 }
 
+.odos-encounter-finding-overlay {
+  margin: 14px 18px 0;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--odos-accent) 38%, var(--odos-line));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--odos-accent) 8%, var(--odos-surface));
+}
+
+.odos-encounter-finding-overlay h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.odos-encounter-finding-overlay ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.odos-encounter-finding-overlay li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 9px;
+  border: 1px solid var(--odos-line);
+  border-radius: 7px;
+  background: var(--odos-surface-2);
+  font-size: 11px;
+}
+
+.odos-encounter-finding-overlay li strong,
+.odos-encounter-finding-overlay li span {
+  display: block;
+}
+
+.odos-encounter-finding-overlay li span,
+.odos-encounter-finding-overlay li small {
+  margin-top: 2px;
+  color: var(--odos-faint);
+  font-size: 9px;
+}
+
 .odos-diagnosis-imaging {
   border-left: 1px solid var(--odos-line);
   background: var(--odos-surface);
