@@ -292,6 +292,77 @@ test("bilateral eyelid diagnoses render both resolved codes while legacy unspeci
   }
 });
 
+test("eyelid laterality edit fails closed before FHIR writes when its declared catalog row is unavailable", async () => {
+  const originalFetch = globalThis.fetch;
+  let bodyStructureReads = 0;
+  const condition: Condition = {
+    resourceType: "Condition",
+    id: "mgd-od",
+    meta: { versionId: "1" },
+    subject: { reference: "Patient/p1" },
+    encounter: { reference: "Encounter/e1" },
+    identifier: [{
+      system: "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key",
+      value: "e1::meibomian_gland_dysfunction::right",
+    }],
+    code: {
+      coding: [{ system: "http://hl7.org/fhir/sid/icd-10-cm", code: "H02.88A", display: "Meibomian gland dysfunction" }],
+      text: "Meibomian gland dysfunction",
+    },
+    bodySite: [{ text: "OD" }],
+  };
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url = String(input);
+    if (url.includes("/fhir/R4/Encounter/e1")) {
+      return jsonResponse({
+        resourceType: "Encounter",
+        id: "e1",
+        status: "in-progress",
+        class: { code: "AMB" },
+        diagnosis: [{ condition: { reference: "Condition/mgd-od" }, rank: 1 }],
+      });
+    }
+    if (url.includes("/fhir/R4/Condition/mgd-od")) return jsonResponse(condition);
+    if (url.includes("/clinical-graph/diagnosis-quick-list")) {
+      return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
+    }
+    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
+    if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
+    if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
+    if (url.includes("/fhir/R4/BodyStructure?")) {
+      bodyStructureReads += 1;
+      throw new Error("FHIR write path was reached");
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  }) as typeof fetch;
+
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <DiagnosisWorkspace
+          patientReference="Patient/p1"
+          encounterReference="Encounter/e1"
+          selectedReference="Condition/mgd-od"
+          onSelectDiagnosis={() => undefined}
+        />,
+      );
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    const ouButton = renderer.root.findAllByType("button").find((button) => button.children.includes("OU"));
+    assert.ok(ouButton);
+    await act(async () => {
+      ouButton.props.onClick();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    assert.equal(bodyStructureReads, 0);
+    assert.match(JSON.stringify(renderer.toJSON()), /catalog row is unavailable/);
+  } finally {
+    act(() => renderer?.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("selected diagnosis fails closed to edited when carry integrity is uncertain", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = (async (input: string | URL | Request) => {

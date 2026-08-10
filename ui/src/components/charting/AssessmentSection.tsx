@@ -52,6 +52,7 @@ import { OdosSearchPicker } from "../inputs/OdosSearchPicker";
 import { OdosSelect } from "../inputs/OdosSelect";
 import {
   conditionCatalogStableKey,
+  conditionRequiresDeclaredBilateralResolution,
   conditionResolvedCodeLabel,
   ICD10_CM_CODE_SYSTEM,
 } from "../../lib/diagnosis-code-resolution";
@@ -231,9 +232,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
   async function saveLaterality(condition: Condition, laterality: EyeChoice) {
     await runEdit("laterality", async () => {
       const stableKey = conditionCatalogStableKey(condition);
-      const requiresResolution = stableKey === "ulcerative_blepharitis" ||
-        stableKey === "squamous_blepharitis" ||
-        stableKey === "meibomian_gland_dysfunction";
+      const requiresResolution = conditionRequiresDeclaredBilateralResolution(condition);
       const diagnosis = requiresResolution
         ? (diagnosisCatalog.find((row) => row.stableKey === stableKey) ??
           (await loadDiagnosisCatalog(new AbortController().signal)).find((row) => row.stableKey === stableKey))

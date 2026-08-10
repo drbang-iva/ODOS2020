@@ -37,6 +37,7 @@ import { formatDiagnosisHistoryDate } from "../../lib/diagnosis-carry-forward";
 import { PreviousExams } from "./PreviousExams";
 import {
   conditionCatalogStableKey,
+  conditionRequiresDeclaredBilateralResolution,
   conditionResolvedCodeLabel,
 } from "../../lib/diagnosis-code-resolution";
 
@@ -411,6 +412,9 @@ export function DiagnosisWorkspace({
                     disabled={!canWrite || busy !== undefined}
                     onClick={() => void run("laterality", async () => {
                       const diagnosis = catalog.find((row) => row.stableKey === conditionCatalogStableKey(selectedCondition));
+                      if (conditionRequiresDeclaredBilateralResolution(selectedCondition) && !diagnosis) {
+                        throw new Error("The eyelid diagnosis catalog row is unavailable; laterality was not changed.");
+                      }
                       await updateConditionBodySite({ condition: selectedCondition, patientReference, laterality: eye, ...(diagnosis ? { diagnosis } : {}) });
                     })}
                   >{eye}</button>

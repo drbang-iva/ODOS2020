@@ -3,6 +3,11 @@ import type { CodeableConcept, Condition } from "@medplum/fhirtypes";
 export const ICD10_CM_CODE_SYSTEM = "http://hl7.org/fhir/sid/icd-10-cm";
 export const DIAGNOSIS_CATALOG_CODE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/diagnosis-catalog";
 export const DIAGNOSIS_CATALOG_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key";
+const DECLARED_BILATERAL_RESOLUTION_KEYS = new Set([
+  "ulcerative_blepharitis",
+  "squamous_blepharitis",
+  "meibomian_gland_dysfunction",
+]);
 
 export interface DiagnosisCodeResolutionRow {
   stableKey: string;
@@ -74,6 +79,11 @@ export function conditionCatalogStableKey(condition: Condition): string | undefi
     if (parts.length >= 2) return parts.at(-2);
   }
   return condition.code?.coding?.find((coding) => coding.system === DIAGNOSIS_CATALOG_CODE_SYSTEM)?.code;
+}
+
+export function conditionRequiresDeclaredBilateralResolution(condition: Condition): boolean {
+  const stableKey = conditionCatalogStableKey(condition);
+  return stableKey !== undefined && DECLARED_BILATERAL_RESOLUTION_KEYS.has(stableKey);
 }
 
 function conditionLaterality(condition: Condition): "right" | "left" | "bilateral" | undefined {
