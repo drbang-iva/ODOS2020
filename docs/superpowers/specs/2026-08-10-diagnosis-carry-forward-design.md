@@ -64,4 +64,3 @@ GET previous exams requires `chart.read`; POST pull requires `chart.write`. Both
 Tests are written and observed red before implementation. Server coverage includes page ordering/cursors, all-diagnoses-per-encounter behavior, retraction filtering, laterality-safe identity, atomic transaction content and `If-Match`, present versus absent handling, rank-gap preservation, idempotency, rollback response handling, provenance aging, and 401/403 cases. UI coverage includes automatic history load, checked selection, unchecked pull, multi-page append, empty state, carried/offered distinctions, edit aging, and the three-encounter unchanged chain.
 
 Mutation proof removes the current Encounter transaction entry, the absent-as-offered projection, and the laterality portion of the identity in turn; the named tests must fail, then pass after restoration.
-

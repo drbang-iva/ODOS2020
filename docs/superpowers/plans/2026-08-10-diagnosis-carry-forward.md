@@ -233,4 +233,3 @@ Run `scripts/eval-worktree.sh <PR#>` at the final pushed SHA and paste its real 
 - [ ] **Step 8: Return the sealed bundle**
 
 Report summary, changed files, carry/no-carry rationale, transaction shape, real commands/counts, mutation failures, screenshots, commit/branch/PR, risks/follow-ups, decision/ledger status, and `needs-review`. State that Codex authored the slice and independent Fable/Opus evaluation remains required before merge.
-
