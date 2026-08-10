@@ -231,6 +231,7 @@ import {
   handleDiagnosisFindingsMutationRequest,
   handleDiagnosisFindingsReadRequest,
 } from "./clinical-graph/diagnosis-findings-endpoint.js";
+import { handlePreviousExamsReadRequest } from "./clinical-graph/diagnosis-carry-forward-endpoint.js";
 import {
   handleDiagnosisQuickListMutationRequest,
   handleDiagnosisQuickListRequest,
@@ -6377,6 +6378,24 @@ async function startMcpServer(): Promise<void> {
         } catch (error) {
           console.error("odos-mcp: encounter findings read failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "encounter findings read failed" });
+        }
+      });
+
+      app.get("/clinical-graph/encounters/:encounterId/previous-exams", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handlePreviousExamsReadRequest(
+            { authenticate: authenticateStaffRouteForAction("chart.read") },
+            {
+              authHeader: req.header("authorization"),
+              params: req.params,
+              query: req.query,
+            },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: previous exams read failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "previous exams read failed" });
         }
       });
 
