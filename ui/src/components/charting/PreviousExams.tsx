@@ -83,6 +83,7 @@ export function PreviousExams({
     void loadPage(undefined, requestGeneration);
     return () => {
       generation.current += 1;
+      pendingPulls.current.clear();
     };
   }, [loadPage]);
 
@@ -130,7 +131,11 @@ export function PreviousExams({
       setPullError(caught instanceof Error ? caught.message : "Diagnosis could not be pulled. Try again.");
     } finally {
       const owner = pendingPulls.current.get(rowKey);
-      if (owner?.generation === requestGeneration && owner.token === requestToken) {
+      if (
+        generation.current === requestGeneration &&
+        owner?.generation === requestGeneration &&
+        owner.token === requestToken
+      ) {
         pendingPulls.current.delete(rowKey);
         setPendingRows((current) => current.filter((key) => key !== rowKey));
       }

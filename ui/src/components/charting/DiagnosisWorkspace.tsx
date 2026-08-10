@@ -93,6 +93,7 @@ export function DiagnosisWorkspace({
     const requestGeneration = loadGeneration.current + 1;
     loadGeneration.current = requestGeneration;
     const requestFindingsKey = `${encounterId}::${selectedReference ?? ""}`;
+    setLoadedFindings((current) => current?.key === requestFindingsKey ? undefined : current);
     setLoading(true);
     setError(undefined);
     try {

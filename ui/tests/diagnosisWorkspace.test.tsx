@@ -308,6 +308,59 @@ test("ordinary unedited carry renders the immediate source and oldest unchanged 
   }
 });
 
+test("a failed same-diagnosis verification refresh cannot retain stale carry assertions", async () => {
+  const originalFetch = globalThis.fetch;
+  const initial = raceFindingsPayload("Condition/selected", "Carried finding", "2026-08-01");
+  initial.findings[0]!.carried = true;
+  initial.bySection.lens![0]!.carried = true;
+  let findingsReads = 0;
+  let findingWrites = 0;
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input);
+    if (url.includes("/fhir/R4/Encounter/e1")) {
+      return jsonResponse({ resourceType: "Encounter", id: "e1", status: "in-progress", class: { code: "AMB" }, diagnosis: [{ condition: { reference: "Condition/selected" }, rank: 1 }] });
+    }
+    if (url.includes("/fhir/R4/Condition/selected")) return jsonResponse(condition("selected", "Dry eye syndrome"));
+    if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
+    if (url.includes("/clinical-graph/encounters/e1/findings")) {
+      if (init?.method === "PUT") {
+        findingWrites += 1;
+        return jsonResponse({});
+      }
+      findingsReads += 1;
+      return findingsReads === 1
+        ? jsonResponse(initial)
+        : new Response(JSON.stringify({ error: "Finding verification failed." }), { status: 500, headers: { "Content-Type": "application/json" } });
+    }
+    if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
+    if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
+    throw new Error(`Unexpected request: ${url}`);
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" selectedReference="Condition/selected" onSelectDiagnosis={() => undefined} />);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    const loaded = JSON.stringify(renderer.toJSON());
+    assert.match(loaded, /Carried finding/);
+    assert.match(loaded, /is-unedited/);
+    assert.match(loaded, /odos-finding-carried/);
+
+    await act(async () => {
+      renderer.root.findByProps({ "aria-label": "Clear present Carried finding" }).props.onClick();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    const failedRefresh = JSON.stringify(renderer.toJSON());
+    assert.equal(findingWrites, 1);
+    assert.ok(renderer.root.findAllByProps({ role: "alert" }).some((node) => node.children.join("") === "Finding verification failed."));
+    assert.doesNotMatch(failedRefresh, /Carried finding|is-unedited|carried/);
+  } finally {
+    act(() => renderer?.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("switching diagnoses hides the prior findings payload while the new request is pending", async () => {
   const originalFetch = globalThis.fetch;
   const pendingB = deferred<Response>();

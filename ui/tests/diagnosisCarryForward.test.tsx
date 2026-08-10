@@ -6,6 +6,7 @@ import { PreviousExams } from "../src/components/charting/PreviousExams";
 import { DiagnosisFindingsTable } from "../src/components/charting/DiagnosisFindingsTable";
 import {
   appendPreviousExamsPage,
+  formatDiagnosisHistoryDate,
   loadPreviousExamsPage,
   previousDiagnosisRowLabel,
   type PreviousExamDiagnosis,
@@ -82,6 +83,47 @@ test("previous-exam client enforces four-row pages, FHIR dates, and trimmed clin
     ]))),
     page([exam("Encounter/prior", "2026-08-01T12:30:45-04:00", "Medical", [validDiagnosis])]),
   );
+});
+
+test("FHIR history dates preserve partial precision and validate leap seconds and boundary offsets", async () => {
+  const validDates = [
+    "2026",
+    "2026-08",
+    "2026-08-01",
+    "2016-12-31T23:59:60Z",
+    "2026-08-01T00:00:00+14:00",
+    "2026-08-01T00:00:00-14:00",
+  ];
+  for (const date of validDates) {
+    const result = await loadPreviousExamsPage(
+      "Encounter/current",
+      undefined,
+      async () => jsonResponse(page([exam("Encounter/prior", date, "Medical", [])])),
+    );
+    assert.equal(result.encounters[0]?.date, date);
+  }
+
+  for (const date of [
+    "2026-02-29",
+    "2026-08-01T00:00:00+14:01",
+    "2026-08-01T00:00:00-14:01",
+    "2026-08-01T00:00:00+13:60",
+  ]) {
+    await assert.rejects(
+      loadPreviousExamsPage(
+        "Encounter/current",
+        undefined,
+        async () => jsonResponse(page([exam("Encounter/prior", date, "Medical", [])])),
+      ),
+      /Previous exams could not be loaded\. Try again\./,
+    );
+  }
+
+  assert.equal(formatDiagnosisHistoryDate("2026"), "2026");
+  assert.equal(formatDiagnosisHistoryDate("2026-08"), "Aug 2026");
+  assert.equal(formatDiagnosisHistoryDate("2026-08-01"), "Aug 1, 2026");
+  assert.equal(formatDiagnosisHistoryDate("2016-12-31T23:59:60Z"), "Dec 31, 2016");
+  assert.equal(formatDiagnosisHistoryDate("2026-08-02T01:00:00+02:00"), "Aug 1, 2026");
 });
 
 test("previous exams loads four encounters automatically, keeps them through paging failure, and retries the same cursor", async () => {
@@ -410,6 +452,38 @@ test("a stale pull cannot release the same row lock owned by the next encounter 
     assert.deepEqual(selections, ["Condition/new-current"]);
   } finally {
     act(() => renderer?.unmount());
+  }
+});
+
+test("a deferred pull settling after true unmount schedules no state update warning", async () => {
+  const pull = deferred<Response>();
+  const messages: string[] = [];
+  const originalError = console.error;
+  const originalWarn = console.warn;
+  console.error = (...args: unknown[]) => { messages.push(args.map(String).join(" ")); };
+  console.warn = (...args: unknown[]) => { messages.push(args.map(String).join(" ")); };
+  const fetchImpl = (async (_input: string | URL | Request, init?: RequestInit) => init?.method
+    ? pull.promise
+    : jsonResponse(page([exam("Encounter/source-exam", "2026-08-01", "Medical", [
+        priorDiagnosis("Condition/source", "Dry eye syndrome", "OU", false),
+      ])]))) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<PreviousExams encounterReference="Encounter/current" onSelectDiagnosis={() => undefined} fetchImpl={fetchImpl} />);
+      await flush();
+    });
+    await act(async () => {
+      renderer.root.findByProps({ "data-source-condition-reference": "Condition/source" }).props.onClick();
+      await flush();
+    });
+    act(() => renderer.unmount());
+    pull.resolve(jsonResponse({ conditionReference: "Condition/current", alreadyPresent: false }));
+    await flush();
+    assert.deepEqual(messages, []);
+  } finally {
+    console.error = originalError;
+    console.warn = originalWarn;
   }
 });
 

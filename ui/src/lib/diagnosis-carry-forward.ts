@@ -70,7 +70,15 @@ export function previousDiagnosisRowLabel(diagnosis: PreviousExamDiagnosis): str
 }
 
 export function formatDiagnosisHistoryDate(value: string): string {
-  const date = new Date(value.length === 10 ? `${value}T12:00:00` : value);
+  if (!validFhirDateOrDateTime(value)) return value;
+  if (/^\d{4}$/.test(value)) return value;
+  const yearMonth = value.match(/^(\d{4})-(\d{2})$/);
+  if (yearMonth) {
+    const date = new Date(Date.UTC(Number(yearMonth[1]), Number(yearMonth[2]) - 1, 1));
+    return new Intl.DateTimeFormat(undefined, { month: "short", year: "numeric", timeZone: "UTC" }).format(date);
+  }
+  const normalized = value.replace(/:60(?=(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$)/, ":59");
+  const date = new Date(value.length === 10 ? `${value}T12:00:00` : normalized);
   return Number.isNaN(date.valueOf())
     ? value
     : new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(date);
@@ -223,13 +231,13 @@ function validFhirDateOrDateTime(value: unknown): value is string {
   const date = value.match(/^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/);
   if (date) return validCalendarDate(date[1]!, date[2], date[3]);
   const dateTime = value.match(
-    /^(\d{4})-(\d{2})-(\d{2})T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|[+-](?:0\d|1[0-3]):[0-5]\d|[+-]14:00)$/,
+    /^(\d{4})-(\d{2})-(\d{2})T(?:[01]\d|2[0-3]):[0-5]\d:(?:[0-5]\d|60)(?:\.\d+)?(Z|([+-])(\d{2}):(\d{2}))$/,
   );
-  return Boolean(
-    dateTime &&
-    validCalendarDate(dateTime[1]!, dateTime[2], dateTime[3]) &&
-    Number.isFinite(Date.parse(value)),
-  );
+  if (!dateTime || !validCalendarDate(dateTime[1]!, dateTime[2], dateTime[3])) return false;
+  if (dateTime[4] === "Z") return true;
+  const offsetHour = Number(dateTime[6]);
+  const offsetMinute = Number(dateTime[7]);
+  return offsetMinute <= 59 && (offsetHour < 14 || (offsetHour === 14 && offsetMinute === 0));
 }
 
 function validCalendarDate(yearValue: string, monthValue?: string, dayValue?: string): boolean {
