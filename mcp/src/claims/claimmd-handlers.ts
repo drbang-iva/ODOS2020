@@ -80,6 +80,7 @@ import {
   type ProfessionalClaimInput,
 } from "./claimmd-fhir.js";
 import { buildClaimDraft, ClaimDraftAssemblyError } from "./claim-draft.js";
+import { FhirDiagnosisCatalogStore } from "../clinical-graph/diagnosis-catalog-store.js";
 import { StediRequestError, type StediAdapter } from "./stedi-adapter.js";
 import {
   analyzeStediEraClaim,
@@ -431,7 +432,8 @@ export async function handleClaimDraftRequest(
   const auth = await authenticateClaimsManager(deps, input.authHeader);
   if ("status" in auth) return auth;
   try {
-    const draft = await buildClaimDraft(auth.fhir, input.encounterId ?? "");
+    const diagnosisCatalog = await new FhirDiagnosisCatalogStore(auth.fhir).list();
+    const draft = await buildClaimDraft(auth.fhir, input.encounterId ?? "", diagnosisCatalog);
     await deps.recordAudit(buildOdosAuditEventRow({
       eventType: "read",
       actorReference: auth.staffReference,

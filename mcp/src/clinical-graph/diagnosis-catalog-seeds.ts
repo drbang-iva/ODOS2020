@@ -163,13 +163,12 @@ function perEyeFamilySeed(
   const matches = rows.filter((row) => row.family === family);
   const icd10: DiagnosisIcd10 = {
     pattern: {
-      unspecifiedEye: matches.find((row) => row.laterality === "UNKNOWN")?.code,
-      right: matches.find((row) => row.laterality === "OD")?.code,
-      left: matches.find((row) => row.laterality === "OS")?.code,
+      right: matches.find((row) => row.laterality === "OD_BOTH_LIDS")?.code,
+      left: matches.find((row) => row.laterality === "OS_BOTH_LIDS")?.code,
     },
   };
-  const unspecified = matches.find((row) => row.laterality === "UNKNOWN") ?? matches[0];
-  if (!unspecified || Object.values(icd10.pattern).some((code) => !code)) {
+  const right = matches.find((row) => row.laterality === "OD_BOTH_LIDS");
+  if (!right || !icd10.pattern.right || !icd10.pattern.left) {
     throw new Error(`Verified diagnosis family ${family} is incomplete in its Phase 0 ledger.`);
   }
   return baseSeed({
@@ -177,10 +176,11 @@ function perEyeFamilySeed(
     display,
     clinicalFamily,
     icd10Family: family,
-    icd10Code: unspecified.code,
-    icd10Display: unspecified.display,
+    icd10Code: right.code,
+    icd10Display: right.display,
     lateralityRequired: true,
     icd10,
+    bilateralResolution: "emit-both-eyes",
     provenance: { ...provenance, ledgerRefs: [...new Set(matches.flatMap((row) => row.sourceRefs))] },
   });
 }
@@ -254,6 +254,7 @@ function baseSeed(input: {
   icd10Display: string;
   lateralityRequired: boolean;
   icd10: DiagnosisIcd10;
+  bilateralResolution?: DiagnosisCatalogRow["bilateralResolution"];
   provenance: ClinicalGraphProvenance;
 }): DiagnosisCatalogRow {
   return {
@@ -265,6 +266,7 @@ function baseSeed(input: {
     icd10Code: input.icd10Code,
     icd10Display: input.icd10Display,
     icd10: input.icd10,
+    ...(input.bilateralResolution ? { bilateralResolution: input.bilateralResolution } : {}),
     codingStatus: "verified",
     lateralityRequired: input.lateralityRequired,
     applicableFindingDefinitionIds: [],

@@ -1,4 +1,4 @@
-import type { Basic, Bundle, Condition, Encounter, Observation, Provenance } from "@medplum/fhirtypes";
+import type { Basic, Bundle, CodeableConcept, Condition, Encounter, Observation, Provenance } from "@medplum/fhirtypes";
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
 import {
@@ -15,6 +15,9 @@ import { FhirDiagnosisPickTallyStore } from "./diagnosis-pick-tally-store.js";
 import { FhirFindingDefinitionStore } from "./finding-definition-store.js";
 import { findingDefinitionForObservation } from "./finding-observation-match.js";
 import type { DiagnosisCatalogRow } from "./glaucoma-suspect.js";
+import { ICD10_CM_CODE_SYSTEM } from "./glaucoma-suspect.js";
+import { resolveConditionCodes } from "./diagnosis-code-resolution.js";
+export { resolveConditionCodes } from "./diagnosis-code-resolution.js";
 import {
   visualFieldDescriptorResolutionFromObservation,
   type VisualFieldDescriptorResolution,
@@ -25,6 +28,7 @@ import {
 } from "./diagnosis-visit-status-store.js";
 
 export const DIAGNOSIS_KEY_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key";
+export const DIAGNOSIS_CATALOG_CODE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/diagnosis-catalog";
 export const DIAGNOSIS_PICK_WRITE_HEADERS = { "X-ODOS-Source": "diagnosis-pick" } as const;
 
 type PickResource = Basic | Condition | Encounter | Observation | Provenance;
@@ -96,9 +100,9 @@ export async function handleDiagnosisPickRequest(
     findingDefinitionStableKey,
     observation,
   );
-  const code = resolveConditionCode(diagnosis, laterality, visualFieldDescriptor);
+  const codes = resolveConditionCodes(diagnosis, laterality, visualFieldDescriptor);
   const descriptorEyeLaterality = visualFieldDescriptor?.codeSelection?.kind === "eye";
-  if (diagnosis.lateralityRequired && (!code || !laterality && !descriptorEyeLaterality)) {
+  if (diagnosis.lateralityRequired && (codes.length === 0 || !laterality && !descriptorEyeLaterality)) {
     return { status: 422, body: { error: "This diagnosis requires laterality. Supply laterality explicitly." } };
   }
   const lateralityBucket = diagnosisLateralityBucket(diagnosis, laterality, visualFieldDescriptor);
@@ -138,7 +142,7 @@ export async function handleDiagnosisPickRequest(
   let condition: Condition;
   if (existing) {
     try {
-      condition = await updateCondition(staff.fhir, existing, diagnosis, compositeIdentifierValue, code, verificationStatus, evidenceReference);
+      condition = await updateCondition(staff.fhir, existing, diagnosis, compositeIdentifierValue, codes, verificationStatus, evidenceReference);
     } catch (error) {
       if (isConflict(error)) {
         return { status: 409, body: { error: "This diagnosis was modified concurrently — reload and retry." } };
@@ -150,9 +154,7 @@ export async function handleDiagnosisPickRequest(
       buildEncounterDiagnosisCondition({
         patientReference,
         encounterReference,
-        code: code
-          ? { system: "http://hl7.org/fhir/sid/icd-10-cm", code, display: diagnosis.icd10 && "code" in diagnosis.icd10 ? diagnosis.icd10.display ?? diagnosis.display : diagnosis.display }
-          : { text: diagnosis.display },
+        code: conditionCodeForResolution(diagnosis, codes),
         verificationStatus,
         recordedDate: recordedAt,
         identifiers: [{ system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM, value: compositeIdentifierValue }],
@@ -284,7 +286,7 @@ async function updateCondition(
   existing: Condition,
   diagnosis: DiagnosisCatalogRow,
   compositeIdentifierValue: string,
-  code: string | undefined,
+  codes: readonly string[],
   verificationStatus: ConditionVerificationStatusCode,
   evidenceReference: string | undefined,
 ): Promise<Condition> {
@@ -302,12 +304,7 @@ async function updateCondition(
     identifier: identifiers,
     verificationStatus: verificationStatusConcept(verificationStatus),
     ...(verificationStatus === "refuted" ? {} : {
-      code: code
-        ? {
-            coding: [{ system: "http://hl7.org/fhir/sid/icd-10-cm", code, display: diagnosis.icd10 && "code" in diagnosis.icd10 ? diagnosis.icd10.display ?? diagnosis.display : diagnosis.display }],
-            text: diagnosis.display,
-          }
-        : { text: diagnosis.display },
+      code: conditionCodeForResolution(diagnosis, codes),
     }),
     ...(evidence.length ? { evidence } : {}),
   };
@@ -317,29 +314,20 @@ async function updateCondition(
   });
 }
 
-function resolveConditionCode(
-  row: DiagnosisCatalogRow,
-  laterality: "right" | "left" | "bilateral" | undefined,
-  visualFieldDescriptor?: VisualFieldDescriptorResolution,
-): string | undefined {
-  if (!row.icd10) return undefined;
-  if ("code" in row.icd10) return row.icd10.code;
-  if (
-    visualFieldDescriptor?.codeSelection?.kind === "field" &&
-    row.stableKey === "vf_homonymous_bilateral"
-  ) {
-    return row.icd10.pattern[visualFieldDescriptor.codeSelection.slot];
+function conditionCodeForResolution(row: DiagnosisCatalogRow, codes: readonly string[]): CodeableConcept {
+  if (codes.length === 1) {
+    return {
+      coding: [{ system: ICD10_CM_CODE_SYSTEM, code: codes[0], display: row.display }],
+      text: row.display,
+    };
   }
-  if (
-    visualFieldDescriptor?.codeSelection?.kind === "eye" &&
-    row.clinicalFamily === "visual-field-defect" &&
-    row.lateralityRequired
-  ) {
-    return row.icd10.pattern[visualFieldDescriptor.codeSelection.slot];
+  if (codes.length > 1) {
+    return {
+      coding: [{ system: DIAGNOSIS_CATALOG_CODE_SYSTEM, code: row.stableKey, display: row.display }],
+      text: row.display,
+    };
   }
-  if (!row.lateralityRequired) return row.icd10.pattern.unspecifiedEye;
-  if (laterality) return row.icd10.pattern[laterality];
-  return row.icd10.pattern.unspecifiedEye;
+  return { text: row.display };
 }
 
 function diagnosisLateralityBucket(

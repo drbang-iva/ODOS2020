@@ -17,6 +17,7 @@ export interface DiagnosisQuickListRow {
   stableKey: string;
   display: string;
   lateralityRequired: boolean;
+  bilateralResolution?: DiagnosisCatalogRow["bilateralResolution"];
   icd10?: DiagnosisCatalogRow["icd10"];
   pinned: boolean;
   tallyCount: number;
@@ -123,6 +124,7 @@ function diagnosisCatalogRows(
       stableKey: row.stableKey,
       display: row.display,
       lateralityRequired: row.lateralityRequired,
+      ...(row.bilateralResolution ? { bilateralResolution: row.bilateralResolution } : {}),
       ...(row.icd10 ? { icd10: row.icd10 } : {}),
       pinned: pinnedKeys.has(row.stableKey),
       tallyCount: totals.get(row.stableKey) ?? 0,

@@ -145,6 +145,15 @@ function assertDiagnosisCatalogRow(value: unknown): DiagnosisCatalogRow {
   if (value.separatesSeverityStagePayerRisk !== true) throw new Error("Diagnosis definition must separate severity, stage, and payer risk.");
   if (!isRecord(value.provenance)) throw new Error("Diagnosis definition provenance must be an object.");
   if (value.icd10 !== undefined) assertIcd10(value.icd10);
+  if (value.bilateralResolution !== undefined) {
+    if (value.bilateralResolution !== "emit-both-eyes") {
+      throw new Error("Diagnosis definition bilateralResolution is invalid.");
+    }
+    if (!isRecord(value.icd10) || !isRecord(value.icd10.pattern) ||
+      !stringValue(value.icd10.pattern.right) || !stringValue(value.icd10.pattern.left)) {
+      throw new Error("emit-both-eyes requires verified right and left ICD-10-CM pattern slots.");
+    }
+  }
   if (value.snomed !== undefined && (!isRecord(value.snomed) || !stringValue(value.snomed.code) || !stringValue(value.snomed.display))) {
     throw new Error("Diagnosis definition SNOMED coding is invalid.");
   }

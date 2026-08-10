@@ -451,6 +451,55 @@ test("visit ledger keeps native encounter-diagnosis Conditions", async () => {
   assert.deepEqual(overview.visits[0]?.diagnoses.map((diagnosis) => diagnosis.code), ["DX-NATIVE"]);
 });
 
+test("visit ledger renders both resolved ICD-10-CM codes for one bilateral eyelid Condition", async () => {
+  const fake = new FakeFhir();
+  fake.add(patient());
+  fake.add(encounter("eyelid-visit", "2026-08-10T14:00:00Z"));
+  const bilateral = condition("eyelid-bilateral", "Meibomian gland dysfunction", {
+    category: "encounter-diagnosis",
+    encounterId: "eyelid-visit",
+  });
+  bilateral.identifier = [{
+    system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM,
+    value: "eyelid-visit::meibomian_gland_dysfunction::bilateral",
+  }];
+  bilateral.bodySite = [{ text: "OU" }];
+  bilateral.code = {
+    coding: [{
+      system: "https://odos2020.com/fhir/CodeSystem/diagnosis-catalog",
+      code: "meibomian_gland_dysfunction",
+      display: "Meibomian gland dysfunction",
+    }],
+    text: "Meibomian gland dysfunction",
+  };
+  fake.add(bilateral);
+  const legacy = condition("eyelid-legacy", "Ulcerative blepharitis right eye, unspecified eyelid", {
+    category: "encounter-diagnosis",
+    encounterId: "eyelid-visit",
+  });
+  legacy.identifier = [{
+    system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM,
+    value: "eyelid-visit::ulcerative_blepharitis::right",
+  }];
+  legacy.bodySite = [{ text: "OD" }];
+  legacy.code = {
+    coding: [{
+      system: "http://hl7.org/fhir/sid/icd-10-cm",
+      code: "H01.013",
+      display: "Ulcerative blepharitis right eye, unspecified eyelid",
+    }],
+    text: "Ulcerative blepharitis right eye, unspecified eyelid",
+  };
+  fake.add(legacy);
+
+  const overview = await loadPatientOverview(fake as never, "p1");
+
+  assert.deepEqual(overview.visits[0]?.diagnoses.map((diagnosis) => diagnosis.code), [
+    "H02.88A + H02.88B",
+    "H01.013",
+  ]);
+});
+
 test("legacy unspecified diagnosis keys remain catalog-resolvable and render in the visit ledger", async () => {
   const stableKeys = [
     "keratoconus_unspecified_stability",

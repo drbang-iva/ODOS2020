@@ -15,7 +15,7 @@ import {
   handleDiagnosisCandidatesRequest,
 } from "../src/clinical-graph/diagnosis-candidates-endpoint.js";
 import { buildDiagnosisCatalogSeeds } from "../src/clinical-graph/diagnosis-catalog-store.js";
-import { handleDiagnosisPickRequest } from "../src/clinical-graph/diagnosis-pick-endpoint.js";
+import * as diagnosisPickEndpoint from "../src/clinical-graph/diagnosis-pick-endpoint.js";
 import {
   DX_PICK_TALLY_CODE,
   DX_PICK_TALLY_CODE_SYSTEM,
@@ -30,6 +30,77 @@ import {
 } from "../src/clinical-graph/diagnosis-mapping.js";
 import type { FindingInstance } from "../src/clinical-graph/glaucoma-suspect.js";
 import { handleEomCaptureRequest } from "../src/clinical-graph/eom-endpoint.js";
+
+const { handleDiagnosisPickRequest } = diagnosisPickEndpoint;
+
+test("condition code resolution returns zero, one, or two codes only when the catalog declaration permits it", () => {
+  const resolve = (diagnosisPickEndpoint as typeof diagnosisPickEndpoint & {
+    resolveConditionCodes?: (
+      row: ReturnType<typeof buildDiagnosisCatalogSeeds>[number],
+      laterality: "right" | "left" | "bilateral" | undefined,
+    ) => string[];
+  }).resolveConditionCodes;
+  assert.equal(typeof resolve, "function");
+  const rows = buildDiagnosisCatalogSeeds();
+  const mgd = rows.find((row) => row.stableKey === "meibomian_gland_dysfunction")!;
+  const myopia = rows.find((row) => row.stableKey === "myopia")!;
+  const uncoded = { ...myopia, icd10: undefined, icd10Code: undefined, codingStatus: "provisional" as const };
+
+  assert.deepEqual(resolve!(uncoded, "bilateral"), []);
+  assert.deepEqual(resolve!(myopia, "bilateral"), ["H52.13"]);
+  assert.deepEqual(resolve!(mgd, "bilateral"), ["H02.88A", "H02.88B"]);
+  assert.deepEqual(resolve!({ ...mgd, bilateralResolution: undefined }, "bilateral"), []);
+});
+
+test("all three eyelid families write both-lids OD and OS codes and resolve OU without the false 422", async () => {
+  const cases = [
+    ["ulcerative_blepharitis", "H01.01A", "H01.01B"],
+    ["squamous_blepharitis", "H01.02A", "H01.02B"],
+    ["meibomian_gland_dysfunction", "H02.88A", "H02.88B"],
+  ] as const;
+
+  for (const [diagnosisKey, right, left] of cases) {
+    for (const [laterality, expected] of [["OD", right], ["OS", left]] as const) {
+      const fhir = diagnosisPickFhir();
+      const result = await handleDiagnosisPickRequest({
+        authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician", fhir }),
+      }, {
+        authHeader: "Bearer doctor-1",
+        params: { encounterId: "e1" },
+        body: { diagnosisKey, action: "confirm", laterality },
+      });
+      assert.equal(result.status, 201, `${diagnosisKey} ${laterality}: ${JSON.stringify(result.body)}`);
+      const condition = (result.body as { condition: Condition }).condition;
+      assert.deepEqual(condition.code, {
+        coding: [{ system: "http://hl7.org/fhir/sid/icd-10-cm", code: expected, display: condition.code?.text }],
+        text: condition.code?.text,
+      });
+    }
+
+    const fhir = diagnosisPickFhir();
+    const bilateral = await handleDiagnosisPickRequest({
+      authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician", fhir }),
+    }, {
+      authHeader: "Bearer doctor-1",
+      params: { encounterId: "e1" },
+      body: { diagnosisKey, action: "confirm", laterality: "OU" },
+    });
+    assert.equal(bilateral.status, 201, `${diagnosisKey} OU: ${JSON.stringify(bilateral.body)}`);
+    const condition = (bilateral.body as { condition: Condition }).condition;
+    assert.deepEqual(condition.code, {
+      coding: [{
+        system: "https://odos2020.com/fhir/CodeSystem/diagnosis-catalog",
+        code: diagnosisKey,
+        display: condition.code?.text,
+      }],
+      text: condition.code?.text,
+    });
+    assert.equal(condition.identifier?.find((identifier) =>
+      identifier.system === "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key"
+    )?.value, `e1::${diagnosisKey}::bilateral`);
+    assert.equal(fhir.resources.filter((resource) => resource.resourceType === "Condition").length, 1);
+  }
+});
 
 test("allOf mapping triggers require every nested option trigger", () => {
   const trigger = { kind: "allOf" as const, triggers: [
@@ -345,7 +416,7 @@ test("OH-3 multi-select findings propose verified per-eye diagnoses and explicit
     resource.code?.text === "Ulcerative blepharitis")
     .map((condition) => condition.code?.coding?.[0]?.code)
     .sort();
-  assert.deepEqual(blepharitisCodes, ["H01.013", "H01.016"]);
+  assert.deepEqual(blepharitisCodes, ["H01.01A", "H01.01B"]);
 });
 
 test("I1 complete ocular qualifiers resolve each selected finding to one diagnosis", async () => {
