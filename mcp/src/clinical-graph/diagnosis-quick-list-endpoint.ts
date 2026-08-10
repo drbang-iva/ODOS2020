@@ -92,23 +92,8 @@ export function orderDiagnosisQuickList(
   diagnoses: readonly DiagnosisCatalogRow[],
   tally: DiagnosisPickTallyRow,
 ): DiagnosisQuickListRow[] {
+  const eligibleRows = diagnosisCatalogRows(diagnoses, tally);
   const pinOrder = new Map(tally.pinnedDiagnosisKeys.map((key, index) => [key, index]));
-  const totals = new Map<string, number>();
-  for (const counts of Object.values(tally.counts)) {
-    for (const [diagnosisKey, count] of Object.entries(counts)) {
-      totals.set(diagnosisKey, (totals.get(diagnosisKey) ?? 0) + count);
-    }
-  }
-  const eligibleRows = diagnoses
-    .filter((row) => row.active && row.codingStatus === "verified")
-    .map((row): DiagnosisQuickListRow => ({
-      stableKey: row.stableKey,
-      display: row.display,
-      lateralityRequired: row.lateralityRequired,
-      ...(row.icd10 ? { icd10: row.icd10 } : {}),
-      pinned: pinOrder.has(row.stableKey),
-      tallyCount: totals.get(row.stableKey) ?? 0,
-    }));
   const pinnedRows = eligibleRows
     .filter((row) => row.pinned)
     .sort((left, right) => pinOrder.get(left.stableKey)! - pinOrder.get(right.stableKey)!);
@@ -119,6 +104,29 @@ export function orderDiagnosisQuickList(
     ...pinnedRows,
     ...usageRows.slice(0, Math.max(0, COMMON_DIAGNOSIS_TARGET_COUNT - pinnedRows.length)),
   ];
+}
+
+function diagnosisCatalogRows(
+  diagnoses: readonly DiagnosisCatalogRow[],
+  tally: DiagnosisPickTallyRow,
+): DiagnosisQuickListRow[] {
+  const pinnedKeys = new Set(tally.pinnedDiagnosisKeys);
+  const totals = new Map<string, number>();
+  for (const counts of Object.values(tally.counts)) {
+    for (const [diagnosisKey, count] of Object.entries(counts)) {
+      totals.set(diagnosisKey, (totals.get(diagnosisKey) ?? 0) + count);
+    }
+  }
+  return diagnoses
+    .filter((row) => row.active && row.codingStatus === "verified")
+    .map((row): DiagnosisQuickListRow => ({
+      stableKey: row.stableKey,
+      display: row.display,
+      lateralityRequired: row.lateralityRequired,
+      ...(row.icd10 ? { icd10: row.icd10 } : {}),
+      pinned: pinnedKeys.has(row.stableKey),
+      tallyCount: totals.get(row.stableKey) ?? 0,
+    }));
 }
 
 async function diagnosisCatalog(deps: DiagnosisQuickListDeps): Promise<DiagnosisCatalogRow[]> {
@@ -136,6 +144,7 @@ function quickListResponse(
       canWrite,
       pinnedDiagnosisKeys: tally.pinnedDiagnosisKeys,
       diagnoses: orderDiagnosisQuickList(diagnoses, tally),
+      catalog: diagnosisCatalogRows(diagnoses, tally),
     },
   };
 }

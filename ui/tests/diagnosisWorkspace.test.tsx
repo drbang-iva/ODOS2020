@@ -11,6 +11,7 @@ import {
 import type { Condition, Encounter } from "@medplum/fhirtypes";
 import {
   conditionMatchesDiagnosisPick,
+  DiagnosisWorkspace,
   diagnosisCatalogKey,
   diagnosisPinMoveDisabled,
   diagnosisRankActionsDisabled,
@@ -18,6 +19,7 @@ import {
   movePinnedDiagnosis,
   orderedEncounterConditions,
 } from "../src/components/charting/DiagnosisWorkspace";
+import { OdosSearchPicker } from "../src/components/inputs/OdosSearchPicker";
 import { DiagnosisImagingRegion } from "../src/components/charting/DiagnosisImagingRegion";
 import {
   DiagnosisFindingsTable,
@@ -122,6 +124,59 @@ test("diagnosis pin moves require write access and respect the ordered-list edge
   assert.equal(diagnosisPinMoveDisabled(true, undefined, 1, 3, 1), false);
   assert.equal(diagnosisPinMoveDisabled(true, undefined, 0, 3, -1), true);
   assert.equal(diagnosisPinMoveDisabled(true, undefined, 2, 3, 1), true);
+});
+
+test("Find dx searches the eligible catalog beyond bounded Common diagnoses", async () => {
+  const originalFetch = globalThis.fetch;
+  const common = diagnosisRow("myopia", "Myopia");
+  const catalogOnly = diagnosisRow("pseudophakia", "Pseudophakia");
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url = String(input);
+    if (url.includes("/fhir/R4/Encounter/e1")) {
+      return jsonResponse({
+        resourceType: "Encounter",
+        id: "e1",
+        status: "in-progress",
+        class: { code: "AMB" },
+        diagnosis: [],
+      });
+    }
+    if (url.includes("/clinical-graph/diagnosis-quick-list")) {
+      return jsonResponse({
+        canWrite: true,
+        pinnedDiagnosisKeys: [],
+        diagnoses: [common],
+        catalog: [common, catalogOnly],
+      });
+    }
+    if (url.includes("/clinical-graph/encounters/e1/findings")) {
+      return jsonResponse({ canWrite: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
+    }
+    if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
+    throw new Error(`Unexpected request: ${url}`);
+  }) as typeof fetch;
+
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <DiagnosisWorkspace
+          patientReference="Patient/p1"
+          encounterReference="Encounter/e1"
+          onSelectDiagnosis={() => undefined}
+        />,
+      );
+      await Promise.resolve();
+    });
+    const results = await renderer.root.findByType(OdosSearchPicker).props.search(
+      "pseudo",
+      new AbortController().signal,
+    );
+    assert.deepEqual(results.map((row: { value: string }) => row.value), ["pseudophakia"]);
+  } finally {
+    act(() => renderer?.unmount());
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("finding rows sort charted before offered and search prioritizes selected-diagnosis candidates", () => {
@@ -310,6 +365,23 @@ function condition(id: string, display: string): Condition {
     subject: { reference: "Patient/p1" },
     code: { text: display },
   };
+}
+
+function diagnosisRow(stableKey: string, display: string) {
+  return {
+    stableKey,
+    display,
+    lateralityRequired: false,
+    pinned: false,
+    tallyCount: 0,
+  };
+}
+
+function jsonResponse(body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
 function findingsPayload(): DiagnosisFindingsPayload {

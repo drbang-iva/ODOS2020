@@ -142,9 +142,21 @@ test("quick-list routes isolate practitioner pins and reject unknown diagnoses",
 
   const other = await handleDiagnosisQuickListRequest(deps, { authHeader: "Bearer two" });
   assert.equal(other.status, 200);
+  const otherBody = other.body as {
+    pinnedDiagnosisKeys: string[];
+    diagnoses: Array<{ stableKey: string }>;
+    catalog: Array<{ stableKey: string }>;
+  };
   assert.deepEqual(
-    (other.body as { pinnedDiagnosisKeys: string[] }).pinnedDiagnosisKeys,
+    otherBody.pinnedDiagnosisKeys,
     [],
+  );
+  assert.deepEqual(otherBody.diagnoses, []);
+  assert.deepEqual(
+    otherBody.catalog.map((row) => row.stableKey),
+    diagnoses
+      .filter((row) => row.active && row.codingStatus === "verified")
+      .map((row) => row.stableKey),
   );
 
   const rejected = await handleDiagnosisQuickListMutationRequest(deps, {
