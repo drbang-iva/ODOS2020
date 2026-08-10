@@ -6385,6 +6385,7 @@ async function startMcpServer(): Promise<void> {
         authenticateService: authenticateWithMedplum,
         fhirBaseUrl: BASE_URL,
         authenticate: authenticateStaffRouteForAction("chart.read"),
+        authenticateWrite: authenticateStaffRouteForAction("chart.write"),
       });
 
       app.put("/clinical-graph/encounters/:encounterId/findings", async (req, res) => {

@@ -6,6 +6,7 @@ import type {
   Condition,
   Encounter,
   Observation,
+  Provenance,
   Resource,
 } from "@medplum/fhirtypes";
 import express from "express";
@@ -43,6 +44,279 @@ test("GET previous exams returns 403 without chart.read", async (t) => {
   });
 
   assert.equal(response.status, 403);
+});
+
+test("POST previous exams returns 401 when unauthenticated", async (t) => {
+  const base = await startPreviousExamRoutes(t, new MemoryFhir(), "auditor");
+
+  const response = await fetch(`${base}/clinical-graph/encounters/current/previous-exams`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      sourceEncounterReference: "Encounter/prior",
+      sourceConditionReference: "Condition/prior-diagnosis",
+    }),
+  });
+
+  assert.equal(response.status, 401);
+});
+
+test("POST previous exams returns 403 without chart.write", async (t) => {
+  const base = await startPreviousExamRoutes(t, new MemoryFhir(), "auditor");
+
+  const response = await fetch(`${base}/clinical-graph/encounters/current/previous-exams`, {
+    method: "POST",
+    headers: { Authorization: AUTH_FORBIDDEN, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      sourceEncounterReference: "Encounter/prior",
+      sourceConditionReference: "Condition/prior-diagnosis",
+    }),
+  });
+
+  assert.equal(response.status, 403);
+});
+
+test("pull posts one present finding atomically while preserving absent source provenance and rank gaps", async (t) => {
+  const fhir = pullFhir();
+  const sourceCondition = await fhir.read<Condition>("Condition", "source-dry-eye-od");
+  const sourcePresent = await fhir.read<Observation>("Observation", "source-staining-present");
+  const base = await startPreviousExamRoutes(t, fhir, "auditor");
+
+  const response = await fetch(`${base}/clinical-graph/encounters/current-pull/previous-exams`, {
+    method: "POST",
+    headers: { Authorization: AUTH_CLINICIAN, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      sourceEncounterReference: "Encounter/source-pull",
+      sourceConditionReference: "Condition/source-dry-eye-od",
+    }),
+  });
+
+  assert.equal(response.status, 200, await response.clone().text());
+  assert.equal(fhir.transactions.length, 1);
+  const { bundle, headers } = fhir.transactions[0]!;
+  assert.equal(bundle.type, "transaction");
+  assert.equal(headers.Prefer, "return=representation");
+  assert.deepEqual(bundle.entry?.map((entry) => [entry.resource?.resourceType, entry.request?.method, entry.request?.url]), [
+    ["Condition", "POST", "Condition"],
+    ["Encounter", "PUT", "Encounter/current-pull"],
+    ["Observation", "POST", "Observation"],
+    ["Provenance", "POST", "Provenance"],
+  ]);
+  assert.equal(bundle.entry?.every((entry) => entry.fullUrl?.startsWith("urn:uuid:")), true);
+
+  const conditionEntry = bundle.entry![0]!;
+  const encounterEntry = bundle.entry![1]!;
+  const observationEntry = bundle.entry![2]!;
+  const provenanceEntry = bundle.entry![3]!;
+  const pulledCondition = conditionEntry.resource as Condition;
+  const pulledEncounter = encounterEntry.resource as Encounter;
+  const pulledObservation = observationEntry.resource as Observation;
+  const provenance = provenanceEntry.resource as Provenance;
+
+  assert.deepEqual(pulledCondition.code, sourceCondition.code);
+  assert.deepEqual(pulledCondition.extension, sourceCondition.extension);
+  assert.equal(pulledCondition.subject.reference, "Patient/patient-1");
+  assert.equal(pulledCondition.encounter?.reference, "Encounter/current-pull");
+  assert.equal(pulledCondition.verificationStatus?.coding?.[0]?.code, "confirmed");
+  assert.deepEqual(pulledCondition.identifier, [{
+    system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM,
+    value: "current-pull::dry_eye::right",
+  }]);
+  assert.deepEqual(pulledCondition.evidence?.flatMap((evidence) => evidence.detail ?? []), [
+    { reference: observationEntry.fullUrl },
+  ]);
+
+  assert.equal(encounterEntry.request?.ifMatch, 'W/"7"');
+  assert.deepEqual(pulledEncounter.diagnosis?.map((diagnosisRow) => diagnosisRow.rank), [1, 4, 5]);
+  assert.equal(pulledEncounter.diagnosis?.at(-1)?.condition.reference, conditionEntry.fullUrl);
+
+  assert.deepEqual(pulledObservation.code, sourcePresent.code);
+  assert.equal(pulledObservation.subject?.reference, "Patient/patient-1");
+  assert.equal(pulledObservation.encounter?.reference, "Encounter/current-pull");
+  assert.equal(pulledObservation.status, "preliminary");
+  assert.equal(pulledObservation.valueBoolean, true);
+  assert.deepEqual(pulledObservation.extension, sourcePresent.extension);
+  assert.deepEqual(pulledObservation.component, sourcePresent.component);
+  assert.equal(pulledObservation.focus, undefined);
+  assert.equal(JSON.stringify(pulledObservation).includes("source-staining-present"), false);
+
+  assert.equal(provenance.activity?.coding?.[0]?.code, "CREATE");
+  assert.equal(provenance.activity?.text, "Diagnosis pull-forward");
+  assert.deepEqual(provenance.target.map((target) => target.reference), [
+    conditionEntry.fullUrl,
+    encounterEntry.fullUrl,
+    observationEntry.fullUrl,
+  ]);
+  assert.deepEqual(provenance.entity?.map((entity) => entity.what.reference), [
+    "Condition/source-dry-eye-od",
+    "Observation/source-staining-present",
+    "Observation/source-filaments-absent",
+    "Observation/source-legacy-no-boolean",
+  ]);
+  assert.deepEqual(provenance.agent.map((agent) => agent.who.reference), ["Practitioner/doc"]);
+
+  const body = await response.json() as Record<string, unknown>;
+  assert.equal(body.conditionReference, "Condition/pulled-condition");
+  assert.equal(body.alreadyPresent, false);
+  assert.equal((body.transaction as Bundle).type, "transaction-response");
+});
+
+test("pull re-read catches a raced exact OD diagnosis and returns its current reference without a transaction", async (t) => {
+  const fhir = pullFhir();
+  fhir.beforeCurrentEncounterRead = (readNumber) => {
+    if (readNumber !== 2) return;
+    const concurrent = diagnosis("concurrent-dry-eye-od", "current-pull", "dry_eye", "right", "confirmed", []);
+    concurrent.code = { text: "Keratoconjunctivitis sicca, right eye" };
+    concurrent.extension = [{
+      url: ODOS_EXTENSION_URLS.eyeLaterality,
+      valueCodeableConcept: lateralityConcept("OD"),
+    }];
+    fhir.resources.push(concurrent);
+    const encounterResource = fhir.resource<Encounter>("Encounter", "current-pull");
+    encounterResource.diagnosis = [
+      ...(encounterResource.diagnosis ?? []),
+      buildEncounterDiagnosisComponent("Condition/concurrent-dry-eye-od", 5),
+    ];
+    encounterResource.meta = { versionId: "8" };
+  };
+  const base = await startPreviousExamRoutes(t, fhir, "auditor");
+
+  const response = await postPull(base, "source-dry-eye-od");
+
+  assert.equal(response.status, 200, await response.clone().text());
+  assert.deepEqual(await response.json(), {
+    conditionReference: "Condition/concurrent-dry-eye-od",
+    alreadyPresent: true,
+  });
+  assert.equal(fhir.transactions.length, 0);
+});
+
+test("pull does not treat an existing OD diagnosis as the requested OS identity", async (t) => {
+  const fhir = pullFhir("source-dry-eye-os");
+  const currentOd = diagnosis("current-dry-eye-od", "current-pull", "dry_eye", "right", "confirmed", []);
+  currentOd.code = structuredClone(fhir.resource<Condition>("Condition", "source-dry-eye-os").code);
+  fhir.resources.push(currentOd);
+  fhir.resource<Encounter>("Encounter", "current-pull").diagnosis!.push(
+    buildEncounterDiagnosisComponent("Condition/current-dry-eye-od", 5),
+  );
+  const base = await startPreviousExamRoutes(t, fhir, "auditor");
+
+  const response = await postPull(base, "source-dry-eye-os");
+
+  assert.equal(response.status, 200, await response.clone().text());
+  assert.equal((await response.json() as { alreadyPresent: boolean }).alreadyPresent, false);
+  assert.equal(fhir.transactions.length, 1);
+});
+
+test("pull ignores a matching Condition that does not belong to the current Encounter", async (t) => {
+  const fhir = pullFhir();
+  const foreign = diagnosis("foreign-dry-eye-od", "current-pull", "dry_eye", "right", "confirmed", []);
+  foreign.encounter = { reference: "Encounter/other" };
+  foreign.extension = [{
+    url: ODOS_EXTENSION_URLS.eyeLaterality,
+    valueCodeableConcept: lateralityConcept("OD"),
+  }];
+  fhir.resources.push(foreign);
+  fhir.resource<Encounter>("Encounter", "current-pull").diagnosis!.push(
+    buildEncounterDiagnosisComponent("Condition/foreign-dry-eye-od", 5),
+  );
+  const base = await startPreviousExamRoutes(t, fhir, "auditor");
+
+  const response = await postPull(base, "source-dry-eye-od");
+
+  assert.equal(response.status, 200, await response.clone().text());
+  assert.equal((await response.json() as { alreadyPresent: boolean }).alreadyPresent, false);
+  assert.equal(fhir.transactions.length, 1);
+});
+
+test("pull requires literal coding and text to match even when catalog key and laterality match", async (t) => {
+  const fhir = pullFhir();
+  const differentLiteral = diagnosis(
+    "current-dry-eye-different-literal",
+    "current-pull",
+    "dry_eye",
+    "right",
+    "confirmed",
+    [],
+  );
+  differentLiteral.code = { text: "Different literal recorded diagnosis" };
+  differentLiteral.extension = [{
+    url: ODOS_EXTENSION_URLS.eyeLaterality,
+    valueCodeableConcept: lateralityConcept("OD"),
+  }];
+  fhir.resources.push(differentLiteral);
+  fhir.resource<Encounter>("Encounter", "current-pull").diagnosis!.push(
+    buildEncounterDiagnosisComponent("Condition/current-dry-eye-different-literal", 5),
+  );
+  const base = await startPreviousExamRoutes(t, fhir, "auditor");
+
+  const response = await postPull(base, "source-dry-eye-od");
+
+  assert.equal(response.status, 200, await response.clone().text());
+  assert.equal((await response.json() as { alreadyPresent: boolean }).alreadyPresent, false);
+  assert.equal(fhir.transactions.length, 1);
+});
+
+test("pull matches uncataloged literal coding text and laterality without a terminology mapping", async (t) => {
+  const fhir = pullFhir("source-uncataloged");
+  const source = fhir.resource<Condition>("Condition", "source-uncataloged");
+  const current: Condition = {
+    ...structuredClone(source),
+    id: "current-uncataloged",
+    encounter: { reference: "Encounter/current-pull" },
+    code: {
+      coding: [...(source.code?.coding ?? [])].reverse(),
+      text: source.code?.text,
+    },
+  };
+  fhir.resources.push(current);
+  fhir.resource<Encounter>("Encounter", "current-pull").diagnosis!.push(
+    buildEncounterDiagnosisComponent("Condition/current-uncataloged", 5),
+  );
+  const base = await startPreviousExamRoutes(t, fhir, "auditor");
+
+  const response = await postPull(base, "source-uncataloged");
+
+  assert.equal(response.status, 200, await response.clone().text());
+  assert.deepEqual(await response.json(), {
+    conditionReference: "Condition/current-uncataloged",
+    alreadyPresent: true,
+  });
+  assert.equal(fhir.transactions.length, 0);
+});
+
+test("pull rejects source patient, diagnosis membership, and retracted-condition boundary failures", async (t) => {
+  for (const boundary of ["patient", "membership", "retracted"] as const) {
+    const fhir = pullFhir();
+    if (boundary === "patient") {
+      fhir.resource<Condition>("Condition", "source-dry-eye-od").subject.reference = "Patient/other";
+    } else if (boundary === "membership") {
+      fhir.resource<Encounter>("Encounter", "source-pull").diagnosis = [];
+    } else {
+      fhir.resource<Condition>("Condition", "source-dry-eye-od").verificationStatus = {
+        coding: [{ system: "http://terminology.hl7.org/CodeSystem/condition-ver-status", code: "refuted" }],
+      };
+    }
+    const base = await startPreviousExamRoutes(t, fhir, "auditor");
+
+    const response = await postPull(base, "source-dry-eye-od");
+
+    assert.equal(response.status, 409, `${boundary}: ${await response.text()}`);
+    assert.equal(fhir.transactions.length, 0);
+  }
+});
+
+test("pull rejects failed transaction entries and maps precondition failures to 409", async (t) => {
+  for (const failureStatus of ["412 Precondition Failed", "500 Internal Server Error"] as const) {
+    const fhir = pullFhir();
+    fhir.transactionFailureStatus = failureStatus;
+    const base = await startPreviousExamRoutes(t, fhir, "auditor");
+
+    const response = await postPull(base, "source-dry-eye-od");
+
+    assert.equal(response.status, failureStatus.startsWith("412") ? 409 : 502, await response.text());
+    assert.equal(fhir.transactions.length, 1);
+  }
 });
 
 test("previous exams preserves FHIR newest-first order across offsets and returns unbounded exact records", async () => {
@@ -230,10 +504,16 @@ async function startPreviousExamRoutes(
   forbiddenRole: PracticeRoleId,
 ): Promise<string> {
   const app = express();
+  app.use(express.json());
   registerDiagnosisCarryForwardRoutes(app, {
     authenticateService: async () => undefined,
     fhirBaseUrl: "https://fhir.local",
     authenticate: async (header: string | undefined) => header === AUTH_FORBIDDEN
+      ? { staffReference: "Practitioner/forbidden", actorRole: forbiddenRole, fhir: unreachableFhir }
+      : header === AUTH_CLINICIAN
+        ? { staffReference: "Practitioner/doc", actorRole: "clinician", fhir }
+        : null,
+    authenticateWrite: async (header: string | undefined) => header === AUTH_FORBIDDEN
       ? { staffReference: "Practitioner/forbidden", actorRole: forbiddenRole, fhir: unreachableFhir }
       : header === AUTH_CLINICIAN
         ? { staffReference: "Practitioner/doc", actorRole: "clinician", fhir }
@@ -243,6 +523,17 @@ async function startPreviousExamRoutes(
   await new Promise<void>((resolve) => listener.once("listening", resolve));
   t.after(() => listener.close());
   return `http://127.0.0.1:${(listener.address() as AddressInfo).port}`;
+}
+
+async function postPull(base: string, sourceConditionId: string): Promise<Response> {
+  return fetch(`${base}/clinical-graph/encounters/current-pull/previous-exams`, {
+    method: "POST",
+    headers: { Authorization: AUTH_CLINICIAN, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      sourceEncounterReference: "Encounter/source-pull",
+      sourceConditionReference: `Condition/${sourceConditionId}`,
+    }),
+  });
 }
 
 function deps(fhir: MemoryFhir) {
@@ -353,6 +644,78 @@ function previousExamFhir(): MemoryFhir {
   return fhir;
 }
 
+function pullFhir(sourceConditionId = "source-dry-eye-od"): MemoryFhir {
+  const fhir = new MemoryFhir();
+  fhir.resources.push({ resourceType: "Patient", id: "patient-1", active: true });
+  const current = encounter("current-pull", "2026-08-10T09:00:00.000Z", "Current exam", [
+    "current-other-1",
+    "current-other-2",
+  ]);
+  current.meta = { versionId: "7" };
+  current.diagnosis![0]!.rank = 1;
+  current.diagnosis![1]!.rank = 4;
+  fhir.resources.push(current);
+  fhir.resources.push(encounter("source-pull", "2026-07-10T09:00:00.000Z", "Prior exam", [sourceConditionId]));
+  fhir.resources.push(diagnosis("current-other-1", "current-pull", "other_1", "unspecified", "confirmed", []));
+  fhir.resources.push(diagnosis("current-other-2", "current-pull", "other_2", "bilateral", "confirmed", []));
+
+  const sourceOd = diagnosis("source-dry-eye-od", "source-pull", "dry_eye", "right", "confirmed", [
+    "source-staining-present",
+    "source-filaments-absent",
+    "source-legacy-no-boolean",
+  ]);
+  sourceOd.extension = [{
+    url: ODOS_EXTENSION_URLS.eyeLaterality,
+    valueCodeableConcept: lateralityConcept("OD"),
+  }];
+  fhir.resources.push(sourceOd);
+  const sourceOs = diagnosis("source-dry-eye-os", "source-pull", "dry_eye", "left", "confirmed", []);
+  sourceOs.extension = [{
+    url: ODOS_EXTENSION_URLS.eyeLaterality,
+    valueCodeableConcept: lateralityConcept("OS"),
+  }];
+  fhir.resources.push(sourceOs);
+  fhir.resources.push({
+    ...diagnosis("source-uncataloged", "source-pull", undefined, "unspecified", "confirmed", []),
+    code: {
+      coding: [
+        { system: "urn:literal:z", code: "z", display: "Literal Z" },
+        { system: "urn:literal:a", code: "a", display: "Literal A" },
+      ],
+      text: "Literal uncataloged diagnosis",
+    },
+  });
+  fhir.resources.push(finding(
+    "source-staining-present",
+    "source-pull",
+    "ocular-surface::STAINING::punctate",
+    "Punctate staining",
+    true,
+    "OD",
+    "2+",
+  ));
+  fhir.resources.push(finding(
+    "source-filaments-absent",
+    "source-pull",
+    "ocular-surface::FILAMENTS::present",
+    "Corneal filaments",
+    false,
+    "OD",
+  ));
+  const sourceLegacy = finding(
+    "source-legacy-no-boolean",
+    "source-pull",
+    "ocular-surface::LEGACY::finding",
+    "Legacy source finding",
+    true,
+    "OD",
+  );
+  delete sourceLegacy.valueBoolean;
+  sourceLegacy.valueString = "Legacy recorded value";
+  fhir.resources.push(sourceLegacy);
+  return fhir;
+}
+
 function encounter(
   id: string,
   date: string,
@@ -442,15 +805,59 @@ const unreachableFhir = new Proxy({}, {
 class MemoryFhir {
   readonly resources: Resource[] = [];
   readonly followedUrls: string[] = [];
+  readonly transactions: Array<{ bundle: Bundle; headers: Record<string, string> }> = [];
   initialEncounterSearch: Record<string, string> | undefined;
   nextUrl = "/fhir/R4/Encounter?_page=2&_count=4";
+  transactionFailureStatus: string | undefined;
+  beforeCurrentEncounterRead: ((readNumber: number) => void) | undefined;
+  private currentEncounterReads = 0;
 
   async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
+    if (resourceType === "Encounter" && id === "current-pull") {
+      this.currentEncounterReads += 1;
+      this.beforeCurrentEncounterRead?.(this.currentEncounterReads);
+    }
     const resource = this.resources.find((candidate) =>
       candidate.resourceType === resourceType && candidate.id === id
     );
     if (!resource) throw new Error(`Missing ${resourceType}/${id}`);
     return structuredClone(resource as T);
+  }
+
+  resource<T extends Resource>(resourceType: T["resourceType"], id: string): T {
+    const resource = this.resources.find((candidate) =>
+      candidate.resourceType === resourceType && candidate.id === id
+    );
+    if (!resource) throw new Error(`Missing ${resourceType}/${id}`);
+    return resource as T;
+  }
+
+  async executeTransaction(bundle: Bundle, headers: Record<string, string> = {}): Promise<Bundle> {
+    this.transactions.push({ bundle: structuredClone(bundle), headers: structuredClone(headers) });
+    if (this.transactionFailureStatus) {
+      return {
+        resourceType: "Bundle",
+        type: "transaction-response",
+        entry: bundle.entry?.map((entry, index) => ({
+          resource: entry.resource,
+          response: { status: index === 1 ? this.transactionFailureStatus! : "201 Created" },
+        })),
+      };
+    }
+    return {
+      resourceType: "Bundle",
+      type: "transaction-response",
+      entry: bundle.entry?.map((entry) => {
+        const resource = structuredClone(entry.resource!);
+        if (resource.resourceType === "Condition") resource.id = "pulled-condition";
+        if (resource.resourceType === "Observation") resource.id = "pulled-observation";
+        if (resource.resourceType === "Provenance") resource.id = "pulled-provenance";
+        return {
+          resource,
+          response: { status: entry.request?.method === "PUT" ? "200 OK" : "201 Created" },
+        };
+      }),
+    };
   }
 
   async search<T extends Resource>(

@@ -4,13 +4,20 @@ import type {
   Encounter,
   Observation,
   Patient,
+  Provenance,
   Resource,
 } from "@medplum/fhirtypes";
 import type { Application } from "express";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
-import { FHIR_CONDITION_VERIFICATION_STATUS_CODE_SYSTEM } from "../fhir/condition.js";
+import {
+  buildEncounterDiagnosisComponent,
+  buildEncounterDiagnosisCondition,
+  FHIR_CONDITION_VERIFICATION_STATUS_CODE_SYSTEM,
+} from "../fhir/condition.js";
 import { ODOS_EXTENSION_URLS } from "../fhir/ophthalmology/extensions.js";
+import { buildProvenance } from "../fhir/ophthalmology/provenance.js";
 import { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } from "./diagnosis-pick-endpoint.js";
 
 export type PreviousExamLaterality = "OD" | "OS" | "OU" | "UNKNOWN";
@@ -53,7 +60,7 @@ export interface PreviousExamsPage {
   nextCursor?: string;
 }
 
-type PreviousExamResource = Condition | Encounter | Observation | Patient;
+type PreviousExamResource = Condition | Encounter | Observation | Patient | Provenance;
 
 export interface DiagnosisCarryForwardFhirClient {
   read<T extends PreviousExamResource>(resourceType: T["resourceType"], id: string): Promise<T>;
@@ -62,6 +69,7 @@ export interface DiagnosisCarryForwardFhirClient {
     params?: Record<string, string>,
   ): Promise<Bundle<T>>;
   searchUrl?<T extends PreviousExamResource>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>>;
+  executeTransaction(bundle: Bundle, extraHeaders?: Record<string, string>): Promise<Bundle>;
 }
 
 export interface DiagnosisCarryForwardEndpointDeps {
@@ -75,17 +83,22 @@ export interface DiagnosisCarryForwardEndpointDeps {
 
 export interface DiagnosisCarryForwardRouteDeps extends DiagnosisCarryForwardEndpointDeps {
   authenticateService(): Promise<void>;
+  authenticateWrite: DiagnosisCarryForwardEndpointDeps["authenticate"];
 }
 
 const PAGE_SIZE = 4 as const;
 const paramsSchema = z.object({ encounterId: z.string().trim().min(1).max(128) }).strict();
 const querySchema = z.object({ cursor: z.string().trim().min(1).max(4096).optional() }).strict();
+const pullBodySchema = z.object({
+  sourceEncounterReference: z.string().regex(/^Encounter\/[^/]+$/),
+  sourceConditionReference: z.string().regex(/^Condition\/[^/]+$/),
+}).strict();
 const patientReferencePattern = /^Patient\/([^/]+)$/;
 const conditionReferencePattern = /^Condition\/([^/]+)$/;
 const observationReferencePattern = /^Observation\/([^/]+)$/;
 
 export function registerDiagnosisCarryForwardRoutes(
-  app: Pick<Application, "get">,
+  app: Pick<Application, "get" | "post">,
   deps: DiagnosisCarryForwardRouteDeps,
 ): void {
   app.get("/clinical-graph/encounters/:encounterId/previous-exams", async (req, res) => {
@@ -100,6 +113,23 @@ export function registerDiagnosisCarryForwardRoutes(
     } catch (error) {
       console.error("odos-mcp: previous exams read failed:", error);
       if (!res.headersSent) res.status(500).json({ error: "previous exams read failed" });
+    }
+  });
+  app.post("/clinical-graph/encounters/:encounterId/previous-exams", async (req, res) => {
+    try {
+      await deps.authenticateService();
+      const result = await handleDiagnosisPullRequest({
+        fhirBaseUrl: deps.fhirBaseUrl,
+        authenticate: deps.authenticateWrite,
+      }, {
+        authHeader: req.header("authorization"),
+        params: req.params,
+        body: req.body,
+      });
+      res.status(result.status).json(result.body);
+    } catch (error) {
+      console.error("odos-mcp: diagnosis pull-forward failed:", error);
+      if (!res.headersSent) res.status(500).json({ error: "diagnosis pull-forward failed" });
     }
   });
 }
@@ -176,6 +206,167 @@ export async function handlePreviousExamsReadRequest(
   return { status: 200, body: page };
 }
 
+export async function handleDiagnosisPullRequest(
+  deps: DiagnosisCarryForwardEndpointDeps,
+  input: { authHeader: string | undefined; params: unknown; body: unknown },
+): Promise<{ status: number; body: unknown }> {
+  const staff = await deps.authenticate(input.authHeader);
+  if (!staff) return { status: 401, body: { error: "Authentication required to pull a diagnosis." } };
+  if (!staffMayWrite(staff.actorRole)) {
+    return { status: 403, body: { error: "chart.write role required" } };
+  }
+  const parsedParams = paramsSchema.safeParse(input.params);
+  const parsedBody = pullBodySchema.safeParse(input.body);
+  if (!parsedParams.success || !parsedBody.success) {
+    return { status: 400, body: { error: "A current Encounter and source Encounter diagnosis are required." } };
+  }
+
+  const currentEncounterId = parsedParams.data.encounterId;
+  const sourceEncounterId = parsedBody.data.sourceEncounterReference.slice("Encounter/".length);
+  const sourceConditionId = parsedBody.data.sourceConditionReference.slice("Condition/".length);
+  const [initialCurrentEncounter, sourceEncounter, sourceCondition] = await Promise.all([
+    staff.fhir.read<Encounter>("Encounter", currentEncounterId),
+    staff.fhir.read<Encounter>("Encounter", sourceEncounterId),
+    staff.fhir.read<Condition>("Condition", sourceConditionId),
+  ]);
+  const patientReference = initialCurrentEncounter.subject?.reference;
+  if (!patientReference?.match(patientReferencePattern)) {
+    return { status: 409, body: { error: "The current encounter requires a Patient." } };
+  }
+  await staff.fhir.read<Patient>("Patient", patientReference.slice("Patient/".length));
+  if (
+    sourceEncounter.subject?.reference !== patientReference ||
+    sourceCondition.subject?.reference !== patientReference ||
+    sourceCondition.encounter?.reference !== parsedBody.data.sourceEncounterReference ||
+    !encounterHasDiagnosis(sourceEncounter, parsedBody.data.sourceConditionReference) ||
+    excludedCondition(sourceCondition)
+  ) {
+    return { status: 409, body: { error: "The source diagnosis is not an active diagnosis for this patient and encounter." } };
+  }
+  if (!sourceCondition.code) {
+    return { status: 409, body: { error: "The source diagnosis has no recorded code or text." } };
+  }
+  const sourceObservations = await sourceEvidenceObservations(
+    staff.fhir,
+    sourceCondition,
+    patientReference,
+    parsedBody.data.sourceEncounterReference,
+  );
+  if (!sourceObservations) {
+    return { status: 409, body: { error: "The source diagnosis evidence does not belong to its patient and encounter." } };
+  }
+
+  const currentEncounter = await staff.fhir.read<Encounter>("Encounter", currentEncounterId);
+  if (currentEncounter.subject?.reference !== patientReference) {
+    return { status: 409, body: { error: "The current encounter patient changed; reload and retry." } };
+  }
+  const versionId = currentEncounter.meta?.versionId;
+  if (!versionId) {
+    return { status: 409, body: { error: "The current encounter has no version for an atomic pull." } };
+  }
+  const currentIdentities = await currentDiagnosisIdentities(staff.fhir, currentEncounter, patientReference);
+  const sourceIdentity = diagnosisIdentity(sourceCondition, sourceEncounterId);
+  const alreadyPresent = currentIdentities.get(identityKey(sourceIdentity));
+  if (alreadyPresent) {
+    return { status: 200, body: { conditionReference: alreadyPresent, alreadyPresent: true } };
+  }
+
+  const conditionFullUrl = uuidFullUrl();
+  const encounterFullUrl = uuidFullUrl();
+  const observationRows = sourceObservations.filter((observation) => observation.valueBoolean === true);
+  const observationFullUrls = observationRows.map(() => uuidFullUrl());
+  const provenanceFullUrl = uuidFullUrl();
+  const pulledCondition = pulledDiagnosisCondition(
+    sourceCondition,
+    sourceEncounterId,
+    currentEncounterId,
+    patientReference,
+    observationFullUrls,
+  );
+  const nextRank = Math.max(0, ...(currentEncounter.diagnosis ?? []).flatMap((diagnosis) =>
+    Number.isInteger(diagnosis.rank) && diagnosis.rank! > 0 ? [diagnosis.rank!] : []
+  )) + 1;
+  const pulledEncounter: Encounter = {
+    ...currentEncounter,
+    diagnosis: [
+      ...(currentEncounter.diagnosis ?? []),
+      buildEncounterDiagnosisComponent(conditionFullUrl, nextRank),
+    ],
+  };
+  const pulledObservations = observationRows.map((observation) =>
+    pulledFindingObservation(observation, patientReference, `Encounter/${currentEncounterId}`)
+  );
+  const provenance = buildProvenance({
+    targetReferences: [conditionFullUrl, encounterFullUrl, ...observationFullUrls],
+    recorded: new Date().toISOString(),
+    activityCode: "CREATE",
+    activityDisplay: "Diagnosis pull-forward",
+    agents: [{ typeCode: "author", whoReference: staff.staffReference }],
+    entityReferences: [
+      parsedBody.data.sourceConditionReference,
+      ...sourceObservations.map((observation) => `Observation/${observation.id}`),
+    ],
+  }) as Provenance;
+  const transactionBundle: Bundle = {
+    resourceType: "Bundle",
+    type: "transaction",
+    entry: [
+      {
+        fullUrl: conditionFullUrl,
+        resource: pulledCondition,
+        request: { method: "POST", url: "Condition" },
+      },
+      {
+        fullUrl: encounterFullUrl,
+        resource: pulledEncounter,
+        request: {
+          method: "PUT",
+          url: `Encounter/${currentEncounterId}`,
+          ifMatch: `W/"${versionId}"`,
+        },
+      },
+      ...pulledObservations.map((observation, index) => ({
+        fullUrl: observationFullUrls[index],
+        resource: observation,
+        request: { method: "POST" as const, url: "Observation" },
+      })),
+      {
+        fullUrl: provenanceFullUrl,
+        resource: provenance,
+        request: { method: "POST", url: "Provenance" },
+      },
+    ],
+  };
+
+  let transaction: Bundle;
+  try {
+    transaction = await staff.fhir.executeTransaction(transactionBundle, {
+      "X-ODOS-Source": "diagnosis-carry-forward",
+      Prefer: "return=representation",
+    });
+  } catch (error) {
+    if (isFhirConflict(error)) {
+      return diagnosisConflict(staff.fhir, currentEncounterId, patientReference, sourceIdentity);
+    }
+    throw error;
+  }
+  const failedStatus = failedTransactionStatus(transaction);
+  if (failedStatus) {
+    if (failedStatus === 409 || failedStatus === 412) {
+      return diagnosisConflict(staff.fhir, currentEncounterId, patientReference, sourceIdentity);
+    }
+    return { status: 502, body: { error: `FHIR diagnosis pull transaction failed with status ${failedStatus}.` } };
+  }
+  const conditionReference = transactionConditionReference(transaction, 0);
+  if (!conditionReference) {
+    return { status: 502, body: { error: "FHIR diagnosis pull transaction did not return the created Condition." } };
+  }
+  return {
+    status: 200,
+    body: { conditionReference, alreadyPresent: false, transaction },
+  };
+}
+
 async function currentDiagnosisIdentities(
   fhir: DiagnosisCarryForwardFhirClient,
   encounter: Encounter,
@@ -186,7 +377,11 @@ async function currentDiagnosisIdentities(
     const match = diagnosis.condition.reference?.match(conditionReferencePattern);
     if (!match) continue;
     const condition = await fhir.read<Condition>("Condition", match[1]!);
-    if (condition.subject?.reference !== patientReference || excludedCondition(condition)) continue;
+    if (
+      condition.subject?.reference !== patientReference ||
+      condition.encounter?.reference !== `Encounter/${encounter.id}` ||
+      excludedCondition(condition)
+    ) continue;
     const reference = `Condition/${match[1]}`;
     identities.set(identityKey(diagnosisIdentity(condition, encounter.id ?? "")), reference);
   }
@@ -341,10 +536,162 @@ function excludedCondition(condition: Condition): boolean {
   return status === "refuted" || status === "entered-in-error";
 }
 
+function encounterHasDiagnosis(encounter: Encounter, conditionReference: string): boolean {
+  return (encounter.diagnosis ?? []).some((diagnosis) => diagnosis.condition.reference === conditionReference);
+}
+
+async function sourceEvidenceObservations(
+  fhir: DiagnosisCarryForwardFhirClient,
+  condition: Condition,
+  patientReference: string,
+  encounterReference: string,
+): Promise<Observation[] | undefined> {
+  const observations: Observation[] = [];
+  for (const detail of condition.evidence?.flatMap((evidence) => evidence.detail ?? []) ?? []) {
+    const match = detail.reference?.match(observationReferencePattern);
+    if (!match) continue;
+    const observation = await fhir.read<Observation>("Observation", match[1]!);
+    if (
+      observation.subject?.reference !== patientReference ||
+      observation.encounter?.reference !== encounterReference
+    ) return undefined;
+    if (
+      observation.status === "entered-in-error" ||
+      observation.status === "cancelled"
+    ) continue;
+    observations.push(observation);
+  }
+  return observations;
+}
+
+function pulledDiagnosisCondition(
+  source: Condition,
+  sourceEncounterId: string,
+  currentEncounterId: string,
+  patientReference: string,
+  evidenceReferences: string[],
+): Condition {
+  const sourceIdentity = diagnosisIdentity(source, sourceEncounterId);
+  const identifier = sourceIdentity.diagnosisKey
+    ? [{
+        system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM,
+        value: `${currentEncounterId}::${sourceIdentity.diagnosisKey}::${diagnosisIdentifierSuffix(source)}`,
+      }]
+    : undefined;
+  const condition = buildEncounterDiagnosisCondition({
+    patientReference,
+    encounterReference: `Encounter/${currentEncounterId}`,
+    code: structuredClone(source.code!),
+    verificationStatus: "confirmed",
+    ...(identifier ? { identifiers: identifier } : {}),
+    evidenceObservationReferences: evidenceReferences,
+  });
+  const extensions = source.extension?.filter((extension) => extension.url === ODOS_EXTENSION_URLS.eyeLaterality);
+  const bodySite = source.bodySite?.filter((site) => site.coding?.some((coding) => isLateralityCode(coding.code)));
+  return {
+    ...condition,
+    ...(extensions?.length ? { extension: structuredClone(extensions) } : {}),
+    ...(bodySite?.length ? { bodySite: structuredClone(bodySite) } : {}),
+  };
+}
+
+function pulledFindingObservation(
+  source: Observation,
+  patientReference: string,
+  encounterReference: string,
+): Observation {
+  const extension = source.extension?.filter((candidate) => candidate.url === ODOS_EXTENSION_URLS.eyeLaterality);
+  const bodySite = source.bodySite?.coding?.some((coding) => isLateralityCode(coding.code))
+    ? source.bodySite
+    : undefined;
+  const component = source.component?.filter((candidate) =>
+    candidate.code.coding?.some((coding) => coding.code === "GRADE")
+  );
+  return {
+    resourceType: "Observation",
+    status: "preliminary",
+    code: structuredClone(source.code),
+    subject: { reference: patientReference },
+    encounter: { reference: encounterReference },
+    valueBoolean: true,
+    ...(extension?.length ? { extension: structuredClone(extension) } : {}),
+    ...(bodySite ? { bodySite: structuredClone(bodySite) } : {}),
+    ...(component?.length ? { component: structuredClone(component) } : {}),
+  };
+}
+
+function diagnosisIdentifierSuffix(condition: Condition): "right" | "left" | "bilateral" | "unspecified" | "none" {
+  const sourceValue = condition.identifier?.find((candidate) =>
+    candidate.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM
+  )?.value?.split("::").at(-1);
+  if (
+    sourceValue === "right" || sourceValue === "left" || sourceValue === "bilateral" ||
+    sourceValue === "unspecified" || sourceValue === "none"
+  ) {
+    return sourceValue;
+  }
+  const laterality = recordedLaterality(condition);
+  if (laterality === "OD") return "right";
+  if (laterality === "OS") return "left";
+  if (laterality === "OU") return "bilateral";
+  return "unspecified";
+}
+
+function isLateralityCode(code: string | undefined): boolean {
+  return code === "OD" || code === "OS" || code === "OU" || code === "right" ||
+    code === "left" || code === "bilateral";
+}
+
 function identityKey(identity: PreviousExamDiagnosisIdentity): string {
   return identity.diagnosisKey
-    ? JSON.stringify(["catalog", identity.diagnosisKey, identity.laterality])
+    ? JSON.stringify(["catalog", identity.diagnosisKey, identity.coding, identity.text, identity.laterality])
     : JSON.stringify(["literal", identity.coding, identity.text, identity.laterality]);
+}
+
+async function diagnosisConflict(
+  fhir: DiagnosisCarryForwardFhirClient,
+  encounterId: string,
+  patientReference: string,
+  sourceIdentity: PreviousExamDiagnosisIdentity,
+): Promise<{ status: number; body: unknown }> {
+  const encounter = await fhir.read<Encounter>("Encounter", encounterId);
+  if (encounter.subject?.reference === patientReference) {
+    const identities = await currentDiagnosisIdentities(fhir, encounter, patientReference);
+    const conditionReference = identities.get(identityKey(sourceIdentity));
+    if (conditionReference) {
+      return { status: 200, body: { conditionReference, alreadyPresent: true } };
+    }
+  }
+  return { status: 409, body: { error: "The encounter diagnoses changed concurrently; reload and retry." } };
+}
+
+function failedTransactionStatus(bundle: Bundle): number | undefined {
+  return bundle.entry?.flatMap((entry) => {
+    const status = entry.response?.status;
+    if (!status) return [];
+    const code = Number.parseInt(status, 10);
+    return Number.isInteger(code) && code >= 400 ? [code] : [];
+  })[0];
+}
+
+function transactionConditionReference(bundle: Bundle, entryIndex: number): string | undefined {
+  const resource = bundle.entry?.[entryIndex]?.resource;
+  if (resource?.resourceType === "Condition" && resource.id) return `Condition/${resource.id}`;
+  const location = bundle.entry?.[entryIndex]?.response?.location;
+  const match = location?.match(/^Condition\/([^/]+)(?:\/_history\/[^/]+)?$/);
+  return match ? `Condition/${match[1]}` : undefined;
+}
+
+function isFhirConflict(error: unknown): boolean {
+  const status = typeof error === "object" && error !== null && "status" in error
+    ? (error as { status?: unknown }).status
+    : undefined;
+  const message = error instanceof Error ? error.message : String(error);
+  return status === 409 || status === 412 || /FHIR (409|412)\b/.test(message);
+}
+
+function uuidFullUrl(): string {
+  return `urn:uuid:${randomUUID()}`;
 }
 
 function encodeCursor(path: string): string {
@@ -385,6 +732,15 @@ function bundleResources<T extends Resource>(bundle: Bundle<T>): T[] {
 function staffMayRead(role: PracticeRoleId): boolean {
   try {
     assertBusinessActionAllowed(role, "chart.read");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function staffMayWrite(role: PracticeRoleId): boolean {
+  try {
+    assertBusinessActionAllowed(role, "chart.write");
     return true;
   } catch {
     return false;
