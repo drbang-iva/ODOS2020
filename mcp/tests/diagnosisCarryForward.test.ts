@@ -1858,6 +1858,91 @@ test("previous exams preserves FHIR newest-first order across offsets and return
   });
 });
 
+test("previous exams omits an entered-in-error Encounter from the GET page", async () => {
+  const fhir = previousExamFhir();
+  fhir.resource<Encounter>("Encounter", "prior-2").status = "entered-in-error";
+
+  const response = await handlePreviousExamsReadRequest(deps(fhir), {
+    authHeader: AUTH_CLINICIAN,
+    params: { encounterId: "current" },
+    query: {},
+  });
+
+  assert.equal(response.status, 200, JSON.stringify(response.body));
+  const page = response.body as PreviousExamsPage;
+  assert.equal(page.encounters.some((group) => group.encounterReference === "Encounter/prior-2"), false);
+});
+
+test("previous exams omits a diagnosis whose Condition belongs to another Encounter", async () => {
+  const fhir = previousExamFhir();
+  fhir.resource<Condition>("Condition", "prior-1-dry-eye-os").encounter = { reference: "Encounter/prior-2" };
+
+  const response = await handlePreviousExamsReadRequest(deps(fhir), {
+    authHeader: AUTH_CLINICIAN,
+    params: { encounterId: "current" },
+    query: {},
+  });
+
+  assert.equal(response.status, 200, JSON.stringify(response.body));
+  const priorOne = (response.body as PreviousExamsPage).encounters.find((group) =>
+    group.encounterReference === "Encounter/prior-1"
+  );
+  assert.ok(priorOne);
+  assert.equal(priorOne.diagnoses.some((diagnosis) =>
+    diagnosis.conditionReference === "Condition/prior-1-dry-eye-os"
+  ), false);
+});
+
+test("previous exams omits evidence whose Observation belongs to another Encounter", async () => {
+  const fhir = previousExamFhir();
+  fhir.resource<Observation>("Observation", "prior-1-filaments-absent").encounter = { reference: "Encounter/prior-2" };
+
+  const response = await handlePreviousExamsReadRequest(deps(fhir), {
+    authHeader: AUTH_CLINICIAN,
+    params: { encounterId: "current" },
+    query: {},
+  });
+
+  assert.equal(response.status, 200, JSON.stringify(response.body));
+  const priorOne = (response.body as PreviousExamsPage).encounters.find((group) =>
+    group.encounterReference === "Encounter/prior-1"
+  );
+  const diagnosis = priorOne?.diagnoses.find((candidate) =>
+    candidate.conditionReference === "Condition/prior-1-dry-eye-od"
+  );
+  assert.equal(diagnosis?.findings.some((finding) =>
+    finding.observationReference === "Observation/prior-1-filaments-absent"
+  ), false);
+});
+
+test("previous exams enforces active visit and same-Encounter membership for diagnoses and evidence together", async () => {
+  const fhir = previousExamFhir();
+  fhir.resource<Encounter>("Encounter", "prior-2").status = "entered-in-error";
+  fhir.resource<Condition>("Condition", "prior-1-dry-eye-os").encounter = { reference: "Encounter/prior-2" };
+  fhir.resource<Observation>("Observation", "prior-1-filaments-absent").encounter = { reference: "Encounter/prior-2" };
+
+  const response = await handlePreviousExamsReadRequest(deps(fhir), {
+    authHeader: AUTH_CLINICIAN,
+    params: { encounterId: "current" },
+    query: {},
+  });
+
+  assert.equal(response.status, 200, JSON.stringify(response.body));
+  const page = response.body as PreviousExamsPage;
+  assert.equal(page.encounters.some((group) => group.encounterReference === "Encounter/prior-2"), false);
+  const priorOne = page.encounters.find((group) => group.encounterReference === "Encounter/prior-1");
+  assert.ok(priorOne);
+  assert.equal(priorOne.diagnoses.some((diagnosis) =>
+    diagnosis.conditionReference === "Condition/prior-1-dry-eye-os"
+  ), false);
+  const diagnosis = priorOne.diagnoses.find((candidate) =>
+    candidate.conditionReference === "Condition/prior-1-dry-eye-od"
+  );
+  assert.equal(diagnosis?.findings.some((finding) =>
+    finding.observationReference === "Observation/prior-1-filaments-absent"
+  ), false);
+});
+
 test("previous exams cursor loads the next four-encounter page without accepting a URL", async () => {
   const fhir = previousExamFhir();
   const first = await handlePreviousExamsReadRequest(deps(fhir), {

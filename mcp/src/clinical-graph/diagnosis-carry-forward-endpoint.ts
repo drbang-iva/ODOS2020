@@ -199,7 +199,11 @@ export async function handlePreviousExamsReadRequest(
           _count: String(PAGE_SIZE),
         });
     const encounters = bundleResources(bundle)
-      .filter((encounter) => encounter.id && encounter.subject?.reference === patientReference)
+      .filter((encounter) =>
+        encounter.id &&
+        encounter.status !== "entered-in-error" &&
+        encounter.subject?.reference === patientReference
+      )
       .slice(0, PAGE_SIZE);
     const groups = await Promise.all(encounters.map((encounter) =>
       previousExamGroup(staff.fhir, encounter, patientReference, currentIdentities)
@@ -460,14 +464,18 @@ async function previousExamGroup(
     const match = diagnosis.condition.reference?.match(conditionReferencePattern);
     if (!match) continue;
     const condition = await fhir.read<Condition>("Condition", match[1]!);
-    if (condition.subject?.reference !== patientReference || excludedCondition(condition)) continue;
+    if (
+      condition.subject?.reference !== patientReference ||
+      condition.encounter?.reference !== `Encounter/${encounterId}` ||
+      excludedCondition(condition)
+    ) continue;
     const identity = diagnosisIdentity(condition, encounterId);
     const currentConditionReference = currentIdentities.get(identityKey(identity));
     diagnoses.push({
       conditionReference: `Condition/${match[1]}`,
       display: conditionDisplay(condition),
       identity,
-      findings: await evidenceFindings(fhir, condition, patientReference),
+      findings: await evidenceFindings(fhir, condition, patientReference, `Encounter/${encounterId}`),
       checked: currentConditionReference !== undefined,
       ...(currentConditionReference ? { currentConditionReference } : {}),
     });
@@ -487,6 +495,7 @@ async function evidenceFindings(
   fhir: DiagnosisCarryForwardFhirClient,
   condition: Condition,
   patientReference: string,
+  encounterReference: string,
 ): Promise<PreviousExamFinding[]> {
   const findings: PreviousExamFinding[] = [];
   for (const detail of condition.evidence?.flatMap((evidence) => evidence.detail ?? []) ?? []) {
@@ -495,6 +504,7 @@ async function evidenceFindings(
     const observation = await fhir.read<Observation>("Observation", match[1]!);
     if (
       observation.subject?.reference !== patientReference ||
+      observation.encounter?.reference !== encounterReference ||
       observation.status === "entered-in-error" ||
       observation.status === "cancelled" ||
       typeof observation.valueBoolean !== "boolean"
