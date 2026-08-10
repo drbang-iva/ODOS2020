@@ -496,6 +496,131 @@ test("pull puts the optimistic Encounter version guard before every transaction 
   assert.equal(entries.slice(1).every((entry) => entry.request?.method === "POST"), true);
 });
 
+test("all-success pull accepts representation-free create locations and an update without a location", async (t) => {
+  const fhir = pullFhir();
+  fhir.transactionResponseMutator = (response) => {
+    const changed = structuredClone(response);
+    changed.entry?.forEach((entry, index) => {
+      if (index === 0) {
+        delete entry.resource;
+        entry.response = { status: "200 OK" };
+        return;
+      }
+      assert.ok(entry.resource?.id);
+      entry.response = {
+        status: "201 Created",
+        location: `${entry.resource.resourceType}/${entry.resource.id}/_history/1`,
+      };
+      delete entry.resource;
+    });
+    return changed;
+  };
+  const rollback = new MemoryRollbackFhir([
+    "Condition/pulled-condition",
+    "Observation/pulled-observation",
+    "Provenance/pulled-provenance",
+  ]);
+  const base = await startPreviousExamRoutes(t, fhir, "auditor", rollback);
+
+  const response = await postPull(base, "source-dry-eye-od");
+
+  assert.equal(response.status, 200, await response.clone().text());
+  assert.equal((await response.json() as { conditionReference?: string }).conditionReference, "Condition/pulled-condition");
+  assert.equal(rollback.transactions.length, 0);
+});
+
+test("mixed conflict rolls back representation-free creates by their exact locations", async (t) => {
+  const fhir = pullFhir();
+  fhir.transactionResponseMutator = (response) => {
+    const changed = mixedConflictTransactionResponse(response);
+    changed.entry?.forEach((entry) => delete entry.resource);
+    return changed;
+  };
+  const rollback = new MemoryRollbackFhir([
+    "Condition/pulled-condition",
+    "Observation/pulled-observation",
+    "Provenance/pulled-provenance",
+  ]);
+  const base = await startPreviousExamRoutes(t, fhir, "auditor", rollback);
+
+  const response = await postPull(base, "source-dry-eye-od");
+
+  assert.equal(response.status, 409, await response.clone().text());
+  assert.equal(rollback.transactions.length, 1);
+  assert.deepEqual(rollback.transactions[0]?.entry?.map((entry) => entry.request), [
+    { method: "DELETE", url: "Provenance/pulled-provenance" },
+    { method: "DELETE", url: "Observation/pulled-observation" },
+    { method: "DELETE", url: "Condition/pulled-condition" },
+  ]);
+  assert.deepEqual([...rollback.readReferences].sort(), [
+    "Condition/pulled-condition",
+    "Observation/pulled-observation",
+    "Provenance/pulled-provenance",
+  ]);
+});
+
+test("representation-free 201 without a parseable location fails without privileged rollback", async (t) => {
+  const fhir = pullFhir();
+  fhir.transactionResponseMutator = (response) => {
+    const changed = mixedConflictTransactionResponse(response);
+    changed.entry?.forEach((entry) => delete entry.resource);
+    delete changed.entry?.[1]?.response?.location;
+    return changed;
+  };
+  const rollback = new MemoryRollbackFhir([
+    "Condition/pulled-condition",
+    "Observation/pulled-observation",
+    "Provenance/pulled-provenance",
+  ]);
+  const base = await startPreviousExamRoutes(t, fhir, "auditor", rollback);
+
+  const response = await postPull(base, "source-dry-eye-od");
+
+  assert.equal(response.status, 502, await response.clone().text());
+  assert.equal(rollback.transactions.length, 0);
+});
+
+test("representation-free 201 with the wrong positional location type fails without privileged rollback", async (t) => {
+  const fhir = pullFhir();
+  fhir.transactionResponseMutator = (response) => {
+    const changed = mixedConflictTransactionResponse(response);
+    changed.entry?.forEach((entry) => delete entry.resource);
+    changed.entry![1]!.response!.location = "Observation/pulled-condition/_history/1";
+    return changed;
+  };
+  const rollback = new MemoryRollbackFhir([
+    "Condition/pulled-condition",
+    "Observation/pulled-observation",
+    "Provenance/pulled-provenance",
+  ]);
+  const base = await startPreviousExamRoutes(t, fhir, "auditor", rollback);
+
+  const response = await postPull(base, "source-dry-eye-od");
+
+  assert.equal(response.status, 502, await response.clone().text());
+  assert.equal(rollback.transactions.length, 0);
+});
+
+test("represented 201 with a mismatched location id still refuses privileged rollback", async (t) => {
+  const fhir = pullFhir();
+  fhir.transactionResponseMutator = (response) => {
+    const changed = mixedConflictTransactionResponse(response);
+    changed.entry![1]!.resource!.id = "different-condition-id";
+    return changed;
+  };
+  const rollback = new MemoryRollbackFhir([
+    "Condition/pulled-condition",
+    "Observation/pulled-observation",
+    "Provenance/pulled-provenance",
+  ]);
+  const base = await startPreviousExamRoutes(t, fhir, "auditor", rollback);
+
+  const response = await postPull(base, "source-dry-eye-od");
+
+  assert.equal(response.status, 502, await response.clone().text());
+  assert.equal(rollback.transactions.length, 0);
+});
+
 test("mixed stale transaction uses only the service rollback for exact generated create locations", async (t) => {
   const fhir = pullFhir();
   fhir.transactionResponseMutator = mixedConflictTransactionResponse;

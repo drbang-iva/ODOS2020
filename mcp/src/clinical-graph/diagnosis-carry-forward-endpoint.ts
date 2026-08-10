@@ -753,6 +753,8 @@ async function diagnosisConflict(
   return { status: 409, body: { error: "The encounter diagnoses changed concurrently; reload and retry." } };
 }
 
+const transactionLocationPattern = /^([A-Z][A-Za-z]+)\/([A-Za-z0-9.-]{1,64})(?:\/_history\/([A-Za-z0-9.-]{1,64}))?$/;
+
 function validateTransactionResponse(
   request: Bundle,
   response: Bundle,
@@ -768,8 +770,9 @@ function validateTransactionResponse(
   let conflict = false;
   for (let index = 0; index < requestEntries.length; index += 1) {
     const requestResourceType = requestEntries[index]?.resource?.resourceType;
-    const responseResourceType = responseEntries[index]?.resource?.resourceType;
-    const status = responseEntries[index]?.response?.status;
+    const responseEntry = responseEntries[index];
+    const responseResourceType = responseEntry?.resource?.resourceType;
+    const status = responseEntry?.response?.status;
     const statusMatch = status?.match(/^(\d{3})(?:\s|$)/);
     if (!requestResourceType || !statusMatch) {
       return { kind: "invalid" };
@@ -777,7 +780,17 @@ function validateTransactionResponse(
     const statusCode = Number(statusMatch[1]);
     if (statusCode === 409 || statusCode === 412) {
       conflict = true;
-    } else if (statusCode < 200 || statusCode >= 300 || responseResourceType !== requestResourceType) {
+    } else if (statusCode < 200 || statusCode >= 300) {
+      return { kind: "invalid" };
+    } else if (responseResourceType) {
+      if (responseResourceType !== requestResourceType) return { kind: "invalid" };
+    } else if (statusCode === 201) {
+      const locationType = responseEntry?.response?.location?.match(transactionLocationPattern)?.[1];
+      if (locationType !== requestResourceType) return { kind: "invalid" };
+    } else if (
+      statusCode !== 200 || index !== 0 || requestResourceType !== "Encounter" ||
+      requestEntries[index]?.request?.method !== "PUT"
+    ) {
       return { kind: "invalid" };
     }
   }
@@ -893,12 +906,13 @@ function authorizedMixedRollbackReferences(request: Bundle, response: Bundle): s
     if (statusCode >= 200 && statusCode < 300 && statusCode !== 201) return undefined;
     if (statusCode !== 201) continue;
 
-    const responseId = responseEntry.resource?.id;
     const location = responseEntry.response?.location;
-    const locationMatch = location?.match(/^([A-Z][A-Za-z]+)\/([A-Za-z0-9.-]{1,64})(?:\/_history\/([A-Za-z0-9.-]{1,64}))?$/);
+    const locationMatch = location?.match(transactionLocationPattern);
+    const responseId = responseEntry.resource ? responseEntry.resource.id : locationMatch?.[2];
     if (
       !responseId || !fhirIdPattern.test(responseId) || !locationMatch ||
-      locationMatch[1] !== expectedResourceType || locationMatch[2] !== responseId
+      locationMatch[1] !== expectedResourceType ||
+      (responseEntry.resource && locationMatch[2] !== responseId)
     ) {
       return undefined;
     }
