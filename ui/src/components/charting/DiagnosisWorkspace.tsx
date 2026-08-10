@@ -136,14 +136,14 @@ export function DiagnosisWorkspace({
   }
 
   async function addDiagnosis(row: DiagnosisQuickListRow, laterality?: EyeChoice) {
-    const existing = visitConditions.find((condition) => diagnosisCatalogKey(condition) === row.stableKey);
+    if (row.lateralityRequired && !laterality) {
+      setPendingDiagnosis(row);
+      return;
+    }
+    const existing = visitConditions.find((condition) => conditionMatchesDiagnosisPick(condition, row, laterality));
     if (existing) {
       onSelectDiagnosis(`Condition/${existing.id}`);
       setPendingDiagnosis(undefined);
-      return;
-    }
-    if (row.lateralityRequired && !laterality) {
-      setPendingDiagnosis(row);
       return;
     }
     await run(`add:${row.stableKey}`, async () => {
@@ -362,12 +362,27 @@ export function orderedEncounterConditions(encounter: Encounter, conditions: rea
 }
 
 export function diagnosisCatalogKey(condition: Condition): string | undefined {
-  const value = condition.identifier?.find((identifier) =>
-    identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM
-  )?.value;
+  const value = diagnosisCatalogIdentifier(condition);
   if (!value) return undefined;
   const parts = value.split("::");
   return parts.length >= 2 ? parts.at(-2) : undefined;
+}
+
+export function conditionMatchesDiagnosisPick(
+  condition: Condition,
+  row: Pick<DiagnosisQuickListRow, "stableKey" | "lateralityRequired">,
+  laterality?: EyeChoice,
+): boolean {
+  if (diagnosisCatalogKey(condition) !== row.stableKey) return false;
+  if (!row.lateralityRequired) return true;
+  const bucket = diagnosisCatalogIdentifier(condition)?.split("::").at(-1);
+  return bucket === (laterality === "OD" ? "right" : laterality === "OS" ? "left" : laterality === "OU" ? "bilateral" : undefined);
+}
+
+function diagnosisCatalogIdentifier(condition: Condition): string | undefined {
+  return condition.identifier?.find((identifier) =>
+    identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM
+  )?.value;
 }
 
 export function movePinnedDiagnosis(keys: readonly string[], key: string, direction: -1 | 1): string[] {

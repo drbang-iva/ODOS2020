@@ -8,6 +8,7 @@ import {
 } from "../src/lib/diagnosis-workspace-preferences";
 import type { Condition, Encounter } from "@medplum/fhirtypes";
 import {
+  conditionMatchesDiagnosisPick,
   diagnosisCatalogKey,
   movePinnedDiagnosis,
   orderedEncounterConditions,
@@ -58,6 +59,26 @@ test("catalog identity and pin reorder are explicit and stable", () => {
     "presbyopia", "myopia", "hyperopia",
   ]);
   assert.deepEqual(movePinnedDiagnosis(["myopia"], "myopia", -1), ["myopia"]);
+});
+
+test("laterality-required diagnosis identity keeps OD, OS, and OU picks distinct", () => {
+  const existingOs = condition("c1", "Myopia");
+  existingOs.identifier = [{
+    system: "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key",
+    value: "encounter-1::myopia::left",
+  }];
+  const row = {
+    stableKey: "myopia",
+    display: "Myopia",
+    lateralityRequired: true,
+    pinned: false,
+    tallyCount: 0,
+  };
+
+  assert.equal(conditionMatchesDiagnosisPick(existingOs, row, "OS"), true);
+  assert.equal(conditionMatchesDiagnosisPick(existingOs, row, "OD"), false);
+  assert.equal(conditionMatchesDiagnosisPick(existingOs, row, "OU"), false);
+  assert.equal(conditionMatchesDiagnosisPick(existingOs, row), false);
 });
 
 function memoryStorage(): Storage {
