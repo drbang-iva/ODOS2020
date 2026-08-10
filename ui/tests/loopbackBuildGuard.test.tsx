@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -19,17 +19,21 @@ function emittedAssets(files: Record<string, string>): Plugin {
   };
 }
 
-async function buildWith(files: Record<string, string>): Promise<void> {
+async function buildWith(files: Record<string, string>, publicFiles: Record<string, string> = {}): Promise<void> {
   const outDir = await mkdtemp(path.join(tmpdir(), "odos-loopback-guard-"));
+  const publicDir = await mkdtemp(path.join(tmpdir(), "odos-loopback-public-"));
   try {
+    await Promise.all(Object.entries(publicFiles).map(([fileName, source]) => writeFile(path.join(publicDir, fileName), source)));
     await build({
       root: UI_ROOT,
       logLevel: "silent",
+      publicDir,
       plugins: [emittedAssets(files)],
       build: { outDir, emptyOutDir: true },
     });
   } finally {
     await rm(outDir, { recursive: true, force: true });
+    await rm(publicDir, { recursive: true, force: true });
   }
 }
 
@@ -59,6 +63,13 @@ test("production build allows non-loopback absolute URLs", async () => {
     "external.css": '.status { background: url("https://cdn.example.com/status.svg"); }',
     "external.json": JSON.stringify({ api: "https://api.example.com/fhir/R4" }),
   });
+});
+
+test("production build rejects loopback URLs copied directly from the public directory", async () => {
+  await assert.rejects(
+    buildWith({}, { "config.json": JSON.stringify({ api: "http://localhost:8103/fhir/R4" }) }),
+    /config\.json.*http:\/\/localhost:8103\/fhir\/R4/s,
+  );
 });
 
 test("loopback guard is excluded from Vite dev and included in production builds", async () => {

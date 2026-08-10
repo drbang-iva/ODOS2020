@@ -1,4 +1,5 @@
-import type { OutputAsset, OutputChunk } from "rollup";
+import { readdir, readFile } from "node:fs/promises";
+import path from "node:path";
 import type { Plugin } from "vite";
 
 const ABSOLUTE_HTTP_URL = /https?:\/\/[^\s"'`<>\\)]+/gi;
@@ -20,21 +21,28 @@ function isLoopbackUrl(candidate: string): boolean {
   return Math.floor(address / 0x1000000) === 127;
 }
 
-function emittedText(output: OutputAsset | OutputChunk): string {
-  if (output.type === "chunk") return output.code;
-  return typeof output.source === "string" ? output.source : Buffer.from(output.source).toString("utf8");
+async function outputFiles(directory: string): Promise<string[]> {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const files = await Promise.all(entries.map(async (entry) => {
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) return outputFiles(entryPath);
+    return entry.isFile() ? [entryPath] : [];
+  }));
+  return files.flat();
 }
 
 export function loopbackBuildGuardPlugin(): Plugin {
   return {
     name: "odos-loopback-build-guard",
     apply: "build",
-    writeBundle(_options, bundle) {
+    async writeBundle(options) {
+      if (!options.dir) throw new Error("Loopback build guard requires an output directory");
       const findings: string[] = [];
 
-      for (const output of Object.values(bundle)) {
-        const urls = [...new Set((emittedText(output).match(ABSOLUTE_HTTP_URL) || []).filter(isLoopbackUrl))];
-        for (const url of urls) findings.push(`${output.fileName}: ${url}`);
+      for (const file of await outputFiles(options.dir)) {
+        const contents = (await readFile(file)).toString("utf8");
+        const urls = [...new Set((contents.match(ABSOLUTE_HTTP_URL) || []).filter(isLoopbackUrl))];
+        for (const url of urls) findings.push(`${path.relative(options.dir, file)}: ${url}`);
       }
 
       if (findings.length > 0) {
