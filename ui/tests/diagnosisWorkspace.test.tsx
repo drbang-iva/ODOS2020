@@ -157,10 +157,12 @@ test("findings table keeps presence explicit, grade unanswered, laterality sourc
   assert.match(json, /is-explicit/);
   const offeredPresent = renderer.root.findByProps({ "aria-label": "Record Offered finding present" });
   const offeredAbsent = renderer.root.findByProps({ "aria-label": "Record Offered finding absent" });
+  const flipAbsentToPresent = renderer.root.findByProps({ "aria-label": "Record Absent finding present" });
   const clearPresent = renderer.root.findByProps({ "aria-label": "Clear present Charted finding" });
   const clearAbsent = renderer.root.findByProps({ "aria-label": "Clear absent Absent finding" });
   act(() => offeredPresent.props.onClick());
   act(() => offeredAbsent.props.onClick());
+  act(() => flipAbsentToPresent.props.onClick());
   act(() => clearPresent.props.onClick());
   act(() => clearAbsent.props.onClick());
   act(() => renderer.root.findByProps({ "aria-label": "Laterality Charted finding" }).props.onChange({
@@ -181,6 +183,14 @@ test("findings table keeps presence explicit, grade unanswered, laterality sourc
       conditionReference: "Condition/selected",
       atomicFindingId: "section::field::offered",
       presence: "absent",
+    },
+    {
+      action: "assert",
+      patientReference: "Patient/p1",
+      conditionReference: "Condition/selected",
+      atomicFindingId: "section::field::absent",
+      presence: "present",
+      laterality: "OS",
     },
     {
       action: "clear",

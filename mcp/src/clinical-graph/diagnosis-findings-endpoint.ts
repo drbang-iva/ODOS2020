@@ -306,16 +306,11 @@ export async function handleDiagnosisFindingsMutationRequest(
       _count: "500",
     });
     const observations = resources(observationBundle);
-    const evidenceReferences = new Set(
-      condition.evidence?.flatMap((evidence) => evidence.detail ?? [])
-        .flatMap((reference) => reference.reference ? [reference.reference] : []) ?? [],
-    );
     const existing = observations.find((observation) =>
       observation.status !== "entered-in-error" &&
       observation.subject?.reference === assertion.patientReference &&
       observation.code.coding?.some((coding) => coding.code === catalogRow.atomicFindingId) &&
-      (evidenceReferences.has(observationReference(observation) ?? "") ||
-        observationLaterality(observation) === laterality)
+      observationLaterality(observation) === laterality
     );
     const recordedAt = deps.now?.() ?? new Date().toISOString();
     const observation = existing?.id

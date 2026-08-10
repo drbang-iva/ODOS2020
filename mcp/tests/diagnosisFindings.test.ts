@@ -254,6 +254,32 @@ test("asserting absence round-trips and repeated assertions update one logical O
   );
 });
 
+test("asserting the same finding for another eye preserves the existing eye assertion", async () => {
+  const fhir = mutationFhir();
+  const base = {
+    action: "assert" as const,
+    patientReference: "Patient/p1",
+    conditionReference: "Condition/unique",
+    atomicFindingId: atomicId("offered-only"),
+  };
+
+  assert.equal((await mutate(fhir, { ...base, presence: "present" })).status, 200);
+  assert.equal((await mutate(fhir, { ...base, presence: "absent", laterality: "OS" })).status, 200);
+
+  const observations = atomicObservations(fhir).sort((left, right) =>
+    (observationLateralityCode(left) ?? "").localeCompare(observationLateralityCode(right) ?? "")
+  );
+  assert.deepEqual(observations.map((observation) => ({
+    laterality: observationLateralityCode(observation),
+    presence: observation.valueBoolean,
+  })), [
+    { laterality: "OD", presence: true },
+    { laterality: "OS", presence: false },
+  ]);
+  assert.deepEqual(conditionEvidence(fhir, "unique").sort(), observations
+    .map((observation) => `Observation/${observation.id}`).sort());
+});
+
 test("grade and laterality mutations enforce the configured scale and restore inherited laterality", async () => {
   const fhir = mutationFhir();
   const asserted = await mutate(fhir, {

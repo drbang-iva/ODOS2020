@@ -249,12 +249,22 @@ export function UnassignedFindingsTray({
 }
 
 function assertMutation(
-  row: Pick<AtomicFindingCatalogRow, "atomicFindingId">,
+  row: Pick<AtomicFindingCatalogRow, "atomicFindingId"> &
+    Partial<Pick<EncounterFindingRow, "laterality" | "observationReference">>,
   patientReference: string,
   conditionReference: string,
   presence: "present" | "absent",
 ): DiagnosisFindingMutation {
-  return { action: "assert", patientReference, conditionReference, atomicFindingId: row.atomicFindingId, presence };
+  return {
+    action: "assert",
+    patientReference,
+    conditionReference,
+    atomicFindingId: row.atomicFindingId,
+    presence,
+    ...(row.observationReference && row.laterality && row.laterality !== "UNKNOWN"
+      ? { laterality: row.laterality }
+      : {}),
+  };
 }
 
 function clearMutation(observationReference: string, patientReference: string): DiagnosisFindingMutation {
