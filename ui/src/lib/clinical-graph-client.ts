@@ -1,3 +1,4 @@
+import type { Condition, Encounter } from "@medplum/fhirtypes";
 import { CONCURRENT_EDIT_MESSAGE, fhir } from "./fhir";
 
 export interface ClinicalGraphErrorBody {
@@ -65,7 +66,7 @@ export async function submitDiagnosisPick(input: {
   laterality?: "OD" | "OS" | "OU";
   source?: "rule" | "mapping" | "catalog-search";
   status?: DiagnosisVisitStatus;
-}): Promise<void> {
+}): Promise<{ condition: Condition; encounter?: Encounter }> {
   const encounterId = input.encounterReference.replace(/^Encounter\//, "");
   const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/diagnosis-picks`, {
     method: "POST",
@@ -79,9 +80,11 @@ export async function submitDiagnosisPick(input: {
       ...(input.status ? { status: input.status } : {}),
     }),
   });
-  const body = await response.json() as { error?: string };
+  const body = await response.json() as { condition?: Condition; encounter?: Encounter; error?: string };
   if (!response.ok) throw clinicalGraphResponseError(response, body, `Diagnosis pick failed: ${response.status}`);
+  if (!body.condition) throw new Error("Diagnosis pick response did not include the Condition.");
   window.dispatchEvent(new CustomEvent("odos:diagnosis-picked", { detail: { encounterReference: input.encounterReference } }));
+  return { condition: body.condition, ...(body.encounter ? { encounter: body.encounter } : {}) };
 }
 
 export const DIAGNOSIS_VISIT_STATUSES = [

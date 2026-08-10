@@ -227,6 +227,10 @@ import {
   handleDiagnosisCatalogMutationRequest,
 } from "./clinical-graph/diagnosis-catalog-endpoint.js";
 import { handleDiagnosisCandidatesRequest } from "./clinical-graph/diagnosis-candidates-endpoint.js";
+import {
+  handleDiagnosisQuickListMutationRequest,
+  handleDiagnosisQuickListRequest,
+} from "./clinical-graph/diagnosis-quick-list-endpoint.js";
 import { handleDiagnosisCompletenessRequest } from "./clinical-graph/diagnosis-completeness-endpoint.js";
 import { handleDiagnosisPickRequest } from "./clinical-graph/diagnosis-pick-endpoint.js";
 import {
@@ -6303,6 +6307,40 @@ async function startMcpServer(): Promise<void> {
         } catch (error) {
           console.error("odos-mcp: /clinical-graph/diagnosis-catalog/:stableKey failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "diagnosis catalog mutation route failed" });
+        }
+      });
+
+      app.get("/clinical-graph/diagnosis-quick-list", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleDiagnosisQuickListRequest(
+            {
+              authenticate: authenticateStaffRouteForAction("chart.read"),
+              tallyFhir: fhir,
+            },
+            { authHeader: req.header("authorization") },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: diagnosis quick-list read failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "diagnosis quick-list read failed" });
+        }
+      });
+
+      app.put("/clinical-graph/diagnosis-quick-list", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleDiagnosisQuickListMutationRequest(
+            {
+              authenticate: authenticateStaffRouteForAction("chart.write"),
+              tallyFhir: fhir,
+            },
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: diagnosis quick-list update failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "diagnosis quick-list update failed" });
         }
       });
 

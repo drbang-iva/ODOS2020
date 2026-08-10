@@ -728,6 +728,11 @@ test("visual-field descriptors derive every approved code while preserving the d
 
   for (const [descriptor, display, diagnosisKey, code] of cases) {
     const fhir = new MemoryFhir();
+    fhir.resources.push({
+      resourceType: "Encounter", id: "vf", status: "in-progress",
+      class: { system: "http://terminology.hl7.org/CodeSystem/v3-ActCode", code: "AMB" },
+      subject: { reference: "Patient/vf" },
+    } as Encounter);
     const definitions = await new FhirFindingDefinitionStore(fhir).list();
     const definition = definitions.find((candidate) => candidate.stableKey === "entrance:visual-field-defect");
     assert.ok(definition, `Missing visual-field definition for ${descriptor}`);
@@ -805,6 +810,11 @@ test("visual-field descriptors derive every approved code while preserving the d
 
 test("staged glaucoma visibly suppresses only the visual-field proposal and override never changes glaucoma stage", async () => {
   const fhir = new MemoryFhir();
+  fhir.resources.push({
+    resourceType: "Encounter", id: "vf", status: "in-progress",
+    class: { system: "http://terminology.hl7.org/CodeSystem/v3-ActCode", code: "AMB" },
+    subject: { reference: "Patient/vf" },
+  } as Encounter);
   const definitions = await new FhirFindingDefinitionStore(fhir).list();
   const definition = definitions.find((candidate) => candidate.stableKey === "entrance:visual-field-defect");
   assert.ok(definition);
@@ -1060,6 +1070,42 @@ test("conditional create makes identical same-eye Possible double-submit idempot
   assert.equal(fhir.writes.filter((write) => write.resourceType === "Condition" && write.operation === "create").length, 1);
   assert.equal(fhir.writes.find((write) => write.resourceType === "Condition")?.headers?.["If-None-Exist"],
     "identifier=https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key|e1::glaucoma_suspect_open_angle_low::right");
+});
+
+test("confirmed catalog picks join Encounter.diagnosis once and preserve rank gaps", async () => {
+  const fhir = diagnosisPickFhir();
+  const encounter = fhir.resources.find((resource): resource is Encounter =>
+    resource.resourceType === "Encounter" && resource.id === "e1"
+  )!;
+  encounter.meta = { versionId: "4" };
+  encounter.diagnosis = [{ condition: { reference: "Condition/existing" }, rank: 4 }];
+  const request = () => handleDiagnosisPickRequest({
+    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician", fhir }),
+    now: () => "2026-07-11T16:00:00.000Z",
+  }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+    body: { diagnosisKey: "presbyopia", action: "confirm", source: "catalog-search" },
+  });
+
+  const first = await request();
+  assert.equal(first.status, 201);
+  assert.deepEqual(
+    (first.body as { encounter: Encounter }).encounter.diagnosis?.map((diagnosis) => ({
+      reference: diagnosis.condition.reference,
+      rank: diagnosis.rank,
+    })),
+    [
+      { reference: "Condition/existing", rank: 4 },
+      { reference: (first.body as { condition: Condition }).condition.id &&
+          `Condition/${(first.body as { condition: Condition }).condition.id}`, rank: 5 },
+    ],
+  );
+
+  const second = await request();
+  assert.equal(second.status, 200);
+  assert.equal((second.body as { encounter: Encounter }).encounter.diagnosis?.length, 2);
+  assert.equal(fhir.writes.filter((write) => write.resourceType === "Encounter" && write.operation === "update").length, 1);
 });
 
 test("a failed tally side effect never fails a successful explicit diagnosis pick", async () => {

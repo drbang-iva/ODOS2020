@@ -21,6 +21,7 @@ import { EncounterHeader } from "../components/charting/EncounterHeader";
 import { EyeGrowthSection } from "../components/charting/EyeGrowthSection";
 import { IopSection } from "../components/charting/IopSection";
 import { ImagingSection } from "../components/charting/ImagingSection";
+import { DiagnosisWorkspace } from "../components/charting/DiagnosisWorkspace";
 import { OdosSelect } from "../components/inputs/OdosSelect";
 import { HpiSection } from "../components/charting/HpiSection";
 import { MyopiaManagementSection } from "../components/charting/MyopiaManagementSection";
@@ -36,6 +37,11 @@ import { VaSection } from "../components/charting/VaSection";
 import { WearingSection } from "../components/charting/WearingSection";
 import { authHeaders, clinicalGraphApiBase } from "../lib/clinical-graph-client";
 import { fhir } from "../lib/fhir";
+import {
+  loadEncounterChartView,
+  saveEncounterChartView,
+  type EncounterChartView,
+} from "../lib/diagnosis-workspace-preferences";
 import {
   filterDefinitionsForSectionGroups,
   type FindingSectionGroupCatalog,
@@ -84,10 +90,17 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const [eyeGrowthDefaultVisible, setEyeGrowthDefaultVisible] = useState(false);
   const [addingSectionGroup, setAddingSectionGroup] = useState(false);
   const [sectionGroupError, setSectionGroupError] = useState<string | null>(null);
+  const [chartView, setChartView] = useState<EncounterChartView>(loadEncounterChartView);
+  const [selectedDiagnosisReference, setSelectedDiagnosisReference] = useState<string>();
 
   function setSidebarOpen(expanded: boolean) {
     sidebarExpandedForSession = expanded;
     setSidebarExpanded(expanded);
+  }
+
+  function selectChartView(view: EncounterChartView) {
+    setChartView(view);
+    saveEncounterChartView(view);
   }
 
   async function loadCatalog() {
@@ -425,7 +438,19 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   return (
     <div className={["odos-charting-workspace flex h-screen w-screen flex-col bg-bg-deep text-white", config.encounterDensity === "compact" ? "text-[0.95rem]" : ""].join(" ")}>
       <EncounterHeader patient={patient} encounterId={encounterId} />
-      <div className="odos-charting-body flex min-h-0 flex-1 flex-col md:flex-row">
+      <div className="odos-chart-view-toggle" role="group" aria-label="Chart workspace view">
+        <button type="button" aria-pressed={chartView === "diagnosis"} onClick={() => selectChartView("diagnosis")}>By diagnosis</button>
+        <button type="button" aria-pressed={chartView === "structure"} onClick={() => selectChartView("structure")}>By structure</button>
+      </div>
+      {chartView === "diagnosis" ? (
+        <DiagnosisWorkspace
+          patientReference={patientReference}
+          encounterReference={encounterReference}
+          selectedReference={selectedDiagnosisReference}
+          onSelectDiagnosis={setSelectedDiagnosisReference}
+        />
+      ) : (
+        <div className="odos-charting-body flex min-h-0 flex-1 flex-col md:flex-row">
         <SpineNav
           active={activeSection}
           statuses={statuses}
@@ -749,7 +774,8 @@ export function EncounterCharting({ patient, encounterId }: Props) {
             <ChartSidebar patient={patient} />
           </div>
         </div>
-      </div>
+        </div>
+      )}
       {creatingSection && (
         <CustomSectionEditor
           saving={savingSection}
