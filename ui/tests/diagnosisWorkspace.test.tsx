@@ -152,6 +152,9 @@ test("Find dx searches the eligible catalog beyond bounded Common diagnoses", as
     if (url.includes("/clinical-graph/encounters/e1/findings")) {
       return jsonResponse({ canWrite: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
     }
+    if (url.includes("/clinical-graph/encounters/e1/previous-exams")) {
+      return jsonResponse({ pageSize: 4, encounters: [] });
+    }
     if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
     throw new Error(`Unexpected request: ${url}`);
   }) as typeof fetch;
@@ -173,6 +176,258 @@ test("Find dx searches the eligible catalog beyond bounded Common diagnoses", as
       new AbortController().signal,
     );
     assert.deepEqual(results.map((row: { value: string }) => row.value), ["pseudophakia"]);
+  } finally {
+    act(() => renderer?.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("selected diagnosis fails closed to edited when carry integrity is uncertain", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url = String(input);
+    if (url.includes("/fhir/R4/Encounter/e1")) {
+      return jsonResponse({
+        resourceType: "Encounter",
+        id: "e1",
+        status: "in-progress",
+        class: { code: "AMB" },
+        diagnosis: [{ condition: { reference: "Condition/selected" }, rank: 1 }],
+      });
+    }
+    if (url.includes("/fhir/R4/Condition/selected")) return jsonResponse(condition("selected", "Dry eye syndrome"));
+    if (url.includes("/clinical-graph/diagnosis-quick-list")) {
+      return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
+    }
+    if (url.includes("/clinical-graph/encounters/e1/findings")) {
+      return jsonResponse({
+        canWrite: true,
+        carryProvenance: {
+          pulledFromDate: "2026-08-01",
+          unchangedSinceDate: "2026-06-15",
+          edited: false,
+          integrityWarning: "Diagnosis carry provenance cycle detected.",
+        },
+        findings: [],
+        catalog: [],
+        unassigned: [],
+        bySection: {},
+        visitDiagnoses: [{ conditionReference: "Condition/selected", diagnosisKey: "dry-eye", display: "Dry eye syndrome", laterality: "OU" }],
+      });
+    }
+    if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
+    if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
+    throw new Error(`Unexpected request: ${url}`);
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <DiagnosisWorkspace
+          patientReference="Patient/p1"
+          encounterReference="Encounter/e1"
+          selectedReference="Condition/selected"
+          onSelectDiagnosis={() => undefined}
+        />,
+      );
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    const carry = renderer.root.findByProps({ className: "odos-diagnosis-carry-state is-edited" });
+    const carryLines = carry.findAllByType("p").map((node) => node.children.join(""));
+    assert.deepEqual(carryLines, [
+      "pulled from Aug 1, 2026 · edited",
+      "Diagnosis carry provenance cycle detected.",
+    ]);
+    assert.ok(renderer.root.findAllByProps({ role: "alert" }).some((node) => node.children.join("").includes("cycle detected")));
+  } finally {
+    act(() => renderer?.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("edited diagnosis carry is named distinctly without unchanged aging", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url = String(input);
+    if (url.includes("/fhir/R4/Encounter/e1")) {
+      return jsonResponse({ resourceType: "Encounter", id: "e1", status: "in-progress", class: { code: "AMB" }, diagnosis: [{ condition: { reference: "Condition/selected" }, rank: 1 }] });
+    }
+    if (url.includes("/fhir/R4/Condition/selected")) return jsonResponse(condition("selected", "Dry eye syndrome"));
+    if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
+    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, carryProvenance: { pulledFromDate: "2026-08-01", unchangedSinceDate: "2026-06-15", edited: true }, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
+    if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
+    if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
+    throw new Error(`Unexpected request: ${url}`);
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" selectedReference="Condition/selected" onSelectDiagnosis={() => undefined} />);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    const carry = renderer.root.findByProps({ className: "odos-diagnosis-carry-state is-edited" });
+    assert.deepEqual(carry.findAllByType("p").map((node) => node.children.join("")), [
+      "pulled from Aug 1, 2026 · edited",
+    ]);
+  } finally {
+    act(() => renderer?.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("ordinary unedited carry renders the immediate source and oldest unchanged exam", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = workspaceRaceFetch({
+    findings: async (conditionReference) => jsonResponse(conditionReference === "Condition/a"
+      ? raceFindingsPayload("Condition/a", "A finding", "2026-08-01", "2026-05-01")
+      : raceFindingsPayload("Condition/b", "B finding", "2026-07-01")),
+    previousExams: {
+      pageSize: 4,
+      encounters: [
+        { encounterReference: "Encounter/prior-1", date: "2026-08-01", visitType: "Medical", diagnoses: [] },
+        { encounterReference: "Encounter/prior-2", date: "2026-07-01", visitType: "Follow-up", diagnoses: [] },
+        { encounterReference: "Encounter/prior-3", date: "2026-05-01", visitType: "Annual", diagnoses: [] },
+      ],
+    },
+  });
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" selectedReference="Condition/a" onSelectDiagnosis={() => undefined} />);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    const carry = renderer.root.findByProps({ className: "odos-diagnosis-carry-state is-unedited" });
+    assert.deepEqual(carry.findAllByType("p").map((node) => node.children.join("")), [
+      "pulled from Aug 1, 2026 · unedited",
+      "unchanged since May 1, 2026",
+    ]);
+    assert.equal(renderer.root.findAll((node) => typeof node.props["data-encounter-reference"] === "string").length, 3);
+  } finally {
+    act(() => renderer?.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a failed same-diagnosis verification refresh cannot retain stale carry assertions", async () => {
+  const originalFetch = globalThis.fetch;
+  const initial = raceFindingsPayload("Condition/selected", "Carried finding", "2026-08-01");
+  initial.findings[0]!.carried = true;
+  initial.bySection.lens![0]!.carried = true;
+  let findingsReads = 0;
+  let findingWrites = 0;
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input);
+    if (url.includes("/fhir/R4/Encounter/e1")) {
+      return jsonResponse({ resourceType: "Encounter", id: "e1", status: "in-progress", class: { code: "AMB" }, diagnosis: [{ condition: { reference: "Condition/selected" }, rank: 1 }] });
+    }
+    if (url.includes("/fhir/R4/Condition/selected")) return jsonResponse(condition("selected", "Dry eye syndrome"));
+    if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
+    if (url.includes("/clinical-graph/encounters/e1/findings")) {
+      if (init?.method === "PUT") {
+        findingWrites += 1;
+        return jsonResponse({});
+      }
+      findingsReads += 1;
+      return findingsReads === 1
+        ? jsonResponse(initial)
+        : new Response(JSON.stringify({ error: "Finding verification failed." }), { status: 500, headers: { "Content-Type": "application/json" } });
+    }
+    if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
+    if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
+    throw new Error(`Unexpected request: ${url}`);
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" selectedReference="Condition/selected" onSelectDiagnosis={() => undefined} />);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    const loaded = JSON.stringify(renderer.toJSON());
+    assert.match(loaded, /Carried finding/);
+    assert.match(loaded, /is-unedited/);
+    assert.match(loaded, /odos-finding-carried/);
+
+    await act(async () => {
+      renderer.root.findByProps({ "aria-label": "Clear present Carried finding" }).props.onClick();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    const failedRefresh = JSON.stringify(renderer.toJSON());
+    assert.equal(findingWrites, 1);
+    assert.ok(renderer.root.findAllByProps({ role: "alert" }).some((node) => node.children.join("") === "Finding verification failed."));
+    assert.doesNotMatch(failedRefresh, /Carried finding|is-unedited|carried/);
+  } finally {
+    act(() => renderer?.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("switching diagnoses hides the prior findings payload while the new request is pending", async () => {
+  const originalFetch = globalThis.fetch;
+  const pendingB = deferred<Response>();
+  globalThis.fetch = workspaceRaceFetch({
+    findings: async (conditionReference) => conditionReference === "Condition/a"
+      ? jsonResponse(raceFindingsPayload("Condition/a", "A finding", "2026-08-01"))
+      : pendingB.promise,
+  });
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" selectedReference="Condition/a" onSelectDiagnosis={() => undefined} />);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    assert.match(JSON.stringify(renderer.toJSON()), /A finding/);
+
+    await act(async () => {
+      renderer.update(<DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" selectedReference="Condition/b" onSelectDiagnosis={() => undefined} />);
+      await Promise.resolve();
+    });
+    const pending = JSON.stringify(renderer.toJSON());
+    assert.doesNotMatch(pending, /A finding|pulled from Aug 1, 2026/);
+    assert.match(pending, /Loading findings/);
+
+    await act(async () => {
+      pendingB.resolve(jsonResponse(raceFindingsPayload("Condition/b", "B finding", "2026-07-01")));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+  } finally {
+    act(() => renderer?.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("an older findings response cannot overwrite the newer selected diagnosis", async () => {
+  const originalFetch = globalThis.fetch;
+  const pendingA = deferred<Response>();
+  const pendingB = deferred<Response>();
+  globalThis.fetch = workspaceRaceFetch({
+    findings: async (conditionReference) => conditionReference === "Condition/a" ? pendingA.promise : pendingB.promise,
+  });
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" selectedReference="Condition/a" onSelectDiagnosis={() => undefined} />);
+      await Promise.resolve();
+      renderer.update(<DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" selectedReference="Condition/b" onSelectDiagnosis={() => undefined} />);
+      await Promise.resolve();
+    });
+    await act(async () => {
+      pendingB.resolve(jsonResponse(raceFindingsPayload("Condition/b", "B finding", "2026-07-01")));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    assert.match(JSON.stringify(renderer.toJSON()), /B finding/);
+
+    await act(async () => {
+      pendingA.resolve(jsonResponse(raceFindingsPayload("Condition/a", "A finding", "2026-08-01")));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    const final = JSON.stringify(renderer.toJSON());
+    assert.match(final, /B finding/);
+    assert.doesNotMatch(final, /A finding/);
+    assert.doesNotMatch(final, /pulled from Aug 1, 2026/);
+    const carry = renderer.root.findByProps({ className: "odos-diagnosis-carry-state is-unedited" });
+    assert.deepEqual(carry.findAllByType("p").map((node) => node.children.join("")), [
+      "pulled from Jul 1, 2026 · unedited",
+    ]);
   } finally {
     act(() => renderer?.unmount());
     globalThis.fetch = originalFetch;
@@ -382,6 +637,81 @@ function jsonResponse(body: unknown): Response {
     status: 200,
     headers: { "Content-Type": "application/json" },
   });
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((next) => { resolve = next; });
+  return { promise, resolve };
+}
+
+function workspaceRaceFetch({
+  findings,
+  previousExams = { pageSize: 4, encounters: [] },
+}: {
+  findings: (conditionReference: string) => Promise<Response>;
+  previousExams?: unknown;
+}): typeof fetch {
+  return (async (input: string | URL | Request) => {
+    const url = String(input);
+    if (url.includes("/fhir/R4/Encounter/e1")) {
+      return jsonResponse({
+        resourceType: "Encounter",
+        id: "e1",
+        status: "in-progress",
+        class: { code: "AMB" },
+        diagnosis: [
+          { condition: { reference: "Condition/a" }, rank: 1 },
+          { condition: { reference: "Condition/b" }, rank: 2 },
+        ],
+      });
+    }
+    if (url.includes("/fhir/R4/Condition/a")) return jsonResponse(condition("a", "Diagnosis A"));
+    if (url.includes("/fhir/R4/Condition/b")) return jsonResponse(condition("b", "Diagnosis B"));
+    if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
+    if (url.includes("/clinical-graph/encounters/e1/findings")) {
+      const conditionReference = new URL(url, "http://localhost").searchParams.get("condition") ?? "";
+      return findings(conditionReference);
+    }
+    if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse(previousExams);
+    if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
+    throw new Error(`Unexpected request: ${url}`);
+  }) as typeof fetch;
+}
+
+function raceFindingsPayload(
+  conditionReference: string,
+  findingDisplay: string,
+  pulledFromDate: string,
+  unchangedSinceDate?: string,
+): DiagnosisFindingsPayload {
+  const row = {
+    findingDefinitionId: "definition",
+    findingDefinitionKey: "section",
+    fieldCode: "field",
+    sectionKey: "lens",
+    gradeScale: [] as string[],
+    diagnosisKeys: [conditionReference],
+    origin: "shipped" as const,
+    atomicFindingId: `section::field::${conditionReference}`,
+    optionCode: conditionReference,
+    display: findingDisplay,
+    laterality: "OU" as const,
+    lateralitySource: "inherited" as const,
+    source: "atomic" as const,
+    presence: "present" as const,
+    observationReference: `Observation/${conditionReference.replace("Condition/", "")}`,
+    conditionReference,
+  };
+  return {
+    canWrite: true,
+    carryProvenance: { pulledFromDate, ...(unchangedSinceDate ? { unchangedSinceDate } : {}), edited: false },
+    findings: [row],
+    catalog: [],
+    unassigned: [],
+    bySection: { lens: [row] },
+    visitDiagnoses: [],
+  };
 }
 
 function findingsPayload(): DiagnosisFindingsPayload {

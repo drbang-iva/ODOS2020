@@ -18,7 +18,13 @@ import {
   odosConcept,
 } from "../fhir/ophthalmology/extensions.js";
 import { buildProvenance } from "../fhir/ophthalmology/provenance.js";
+import { collectAllFhirSearchPages } from "../fhir-search.js";
 import { customFieldEntries } from "./custom-fields.js";
+import {
+  readDiagnosisCarryState,
+  type DiagnosisCarryState,
+  type SourceAbsentFindingSnapshot,
+} from "./diagnosis-carry-provenance.js";
 import { FhirDiagnosisCatalogStore } from "./diagnosis-catalog-store.js";
 import { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } from "./diagnosis-pick-endpoint.js";
 import { FhirFindingDefinitionStore } from "./finding-definition-store.js";
@@ -56,11 +62,21 @@ export interface EncounterFindingRow extends AtomicFindingCatalogRow {
   grade?: string;
   observationReference?: string;
   conditionReference?: string;
+  carried?: boolean;
+  priorPresence?: "present" | "absent";
+  priorGrade?: string;
+  priorLaterality?: FindingLaterality;
 }
 
 export interface DiagnosisFindingsPayload {
   canWrite: boolean;
   diagnosis?: DiagnosisCatalogRow;
+  carryProvenance?: {
+    pulledFromDate?: string;
+    unchangedSinceDate?: string;
+    edited: boolean;
+    integrityWarning?: string;
+  };
   findings: EncounterFindingRow[];
   catalog: AtomicFindingCatalogRow[];
   unassigned: EncounterFindingRow[];
@@ -79,6 +95,7 @@ export interface DiagnosisFindingsFhirClient {
     resourceType: T["resourceType"],
     params?: Record<string, string>,
   ): Promise<Bundle<T>>;
+  searchUrl?<T extends Resource>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>>;
   create<T extends Resource>(resource: T, extraHeaders?: Record<string, string>): Promise<T>;
   update<T extends Resource>(
     resourceType: T["resourceType"],
@@ -89,6 +106,7 @@ export interface DiagnosisFindingsFhirClient {
 }
 
 export interface DiagnosisFindingsEndpointDeps {
+  fhirBaseUrl: string;
   authenticate(authHeader: string | undefined): Promise<{
     staffReference: string;
     actorRole: PracticeRoleId;
@@ -170,19 +188,20 @@ export async function handleDiagnosisFindingsReadRequest(
   if (!parsedParams.success || !parsedQuery.success) {
     return { status: 400, body: { error: "Invalid encounter findings request." } };
   }
+  try {
   const encounter = await staff.fhir.read<Encounter>("Encounter", parsedParams.data.encounterId);
   const patientReference = encounter.subject?.reference;
   if (!patientReference?.startsWith("Patient/")) {
     return { status: 400, body: { error: "Encounter findings require an encounter patient." } };
   }
   const encounterReference = `Encounter/${parsedParams.data.encounterId}`;
-  const [definitions, diagnoses, conditionBundle, observationBundle] = await Promise.all([
+  const [definitions, diagnoses, conditionRows, observationRows] = await Promise.all([
     findingDefinitions(deps, staff.fhir),
     diagnosisCatalog(deps, staff.fhir),
-    staff.fhir.search<Condition>("Condition", { encounter: encounterReference, _count: "200" }),
-    staff.fhir.search<Observation>("Observation", { encounter: encounterReference, _count: "500" }),
+    allEncounterResources<Condition>(staff.fhir, "Condition", encounterReference, "200", deps.fhirBaseUrl),
+    allEncounterResources<Observation>(staff.fhir, "Observation", encounterReference, "500", deps.fhirBaseUrl),
   ]);
-  const conditions = resources(conditionBundle).filter((condition) =>
+  const conditions = conditionRows.filter((condition) =>
     condition.subject.reference === patientReference && isCurrentVisitDiagnosis(condition)
   );
   const selectedCondition = parsedQuery.data.condition
@@ -206,11 +225,14 @@ export async function handleDiagnosisFindingsReadRequest(
     }];
   });
   const bindingIndex = conditionBindings(visits);
-  const observations = resources(observationBundle).filter((observation) =>
+  const observations = observationRows.filter((observation) =>
     observation.subject?.reference === patientReference && observation.status !== "entered-in-error"
   );
+  const carryState = selectedCondition
+    ? await readDiagnosisCarryState(staff.fhir, selectedCondition, observations)
+    : undefined;
   const charted = [
-    ...atomicFindingRows(observations, catalog, bindingIndex),
+    ...atomicFindingRows(observations, catalog, bindingIndex, carryState?.observationCarried),
     ...sectionFindingRows(observations, definitions, catalog, visits, bindingIndex),
   ];
   const selectedVisit = selectedCondition
@@ -220,7 +242,13 @@ export async function handleDiagnosisFindingsReadRequest(
     ? diagnosisRows.find((diagnosis) => diagnosis.stableKey === selectedVisit.diagnosisKey)
     : undefined;
   const findings = selectedVisit
-    ? selectedFindings(selectedVisit, selectedDiagnosis, charted, catalog)
+    ? selectedFindings(
+        selectedVisit,
+        selectedDiagnosis,
+        charted,
+        catalog,
+        carryState?.sourceAbsentSnapshots ?? [],
+      )
     : [];
   const unassigned = charted
     .filter((row) => !row.conditionReference)
@@ -235,6 +263,9 @@ export async function handleDiagnosisFindingsReadRequest(
   const body: DiagnosisFindingsPayload = {
     canWrite: staffMay(staff.actorRole, "chart.write"),
     ...(selectedDiagnosis ? { diagnosis: selectedDiagnosis } : {}),
+    ...(carryState && (carryState.pulledFromDate || carryState.integrityWarning)
+      ? { carryProvenance: carrySummary(carryState) }
+      : {}),
     findings,
     catalog,
     unassigned,
@@ -247,6 +278,9 @@ export async function handleDiagnosisFindingsReadRequest(
     })),
   };
   return { status: 200, body };
+  } catch (error) {
+    return diagnosisFindingsDependencyResponse(error);
+  }
 }
 
 export async function handleDiagnosisFindingsMutationRequest(
@@ -272,17 +306,20 @@ export async function handleDiagnosisFindingsMutationRequest(
       body: { error: parsedBody.success ? "Invalid encounter findings mutation." : parsedBody.error.issues[0]?.message },
     };
   }
+  try {
   const encounterId = parsedParams.data.encounterId;
   const encounterReference = `Encounter/${encounterId}`;
   const encounter = await staff.fhir.read<Encounter>("Encounter", encounterId);
   if (encounter.subject?.reference !== parsedBody.data.patientReference) {
     return { status: 400, body: { error: "Finding patient must match the encounter patient." } };
   }
-  const conditionBundle = await staff.fhir.search<Condition>("Condition", {
-    encounter: encounterReference,
-    _count: "200",
-  });
-  const conditions = resources(conditionBundle).filter((condition) =>
+  const conditions = (await allEncounterResources<Condition>(
+    staff.fhir,
+    "Condition",
+    encounterReference,
+    "200",
+    deps.fhirBaseUrl,
+  )).filter((condition) =>
     condition.subject.reference === parsedBody.data.patientReference && isCurrentVisitDiagnosis(condition)
   );
   const definitions = await findingDefinitions(deps, staff.fhir);
@@ -301,11 +338,13 @@ export async function handleDiagnosisFindingsMutationRequest(
     if (laterality === "UNKNOWN") {
       return { status: 400, body: { error: "Finding laterality must be explicit when the diagnosis has no laterality." } };
     }
-    const observationBundle = await staff.fhir.search<Observation>("Observation", {
-      encounter: encounterReference,
-      _count: "500",
-    });
-    const observations = resources(observationBundle);
+    const observations = await allEncounterResources<Observation>(
+      staff.fhir,
+      "Observation",
+      encounterReference,
+      "500",
+      deps.fhirBaseUrl,
+    );
     const existing = observations.find((observation) =>
       observation.status !== "entered-in-error" &&
       observation.subject?.reference === assertion.patientReference &&
@@ -424,6 +463,9 @@ export async function handleDiagnosisFindingsMutationRequest(
     "UPDATE",
   );
   return { status: 200, body: { observationReference: observationReference(updated) } };
+  } catch (error) {
+    return diagnosisFindingsDependencyResponse(error);
+  }
 }
 
 function staffMay(role: PracticeRoleId, action: "chart.read" | "chart.write"): boolean {
@@ -471,19 +513,31 @@ function selectedFindings(
   diagnosis: DiagnosisCatalogRow | undefined,
   charted: readonly EncounterFindingRow[],
   catalog: readonly AtomicFindingCatalogRow[],
+  sourceAbsentSnapshots: readonly SourceAbsentFindingSnapshot[],
 ): EncounterFindingRow[] {
   const selectedCharted = charted.filter((row) => row.conditionReference === visit.conditionReference);
-  const chartedIdentities = new Set(charted.map((row) => `${row.atomicFindingId}|${row.laterality}`));
+  const chartedIdentities = new Set(charted
+    .filter((row) => !row.conditionReference || row.conditionReference === visit.conditionReference)
+    .map((row) => `${row.atomicFindingId}|${row.laterality}`));
+  const priorAbsent = uniqueAbsentSnapshots(sourceAbsentSnapshots);
   const offered = diagnosis
     ? catalog
         .filter((row) => row.diagnosisKeys.includes(diagnosis.stableKey))
         .filter((row) => !chartedIdentities.has(`${row.atomicFindingId}|${visit.laterality}`))
-        .map((row): EncounterFindingRow => ({
-          ...row,
-          laterality: visit.laterality,
-          lateralitySource: "inherited",
-          source: "offered",
-        }))
+        .map((row): EncounterFindingRow => {
+          const prior = priorAbsent.get(`${row.atomicFindingId}|${visit.laterality}`);
+          return {
+            ...row,
+            laterality: visit.laterality,
+            lateralitySource: "inherited",
+            source: "offered",
+            ...(prior ? {
+              priorPresence: prior.presence,
+              ...(prior.grade ? { priorGrade: prior.grade } : {}),
+              priorLaterality: prior.laterality,
+            } : {}),
+          };
+        })
     : [];
   return [...selectedCharted, ...offered].sort(findingRowOrder);
 }
@@ -492,6 +546,7 @@ function atomicFindingRows(
   observations: readonly Observation[],
   catalog: readonly AtomicFindingCatalogRow[],
   bindingIndex: ReadonlyMap<string, string[]>,
+  observationCarried: Readonly<Record<string, boolean>> = {},
 ): EncounterFindingRow[] {
   const catalogByCode = new Map(catalog.map((row) => [row.atomicFindingId, row]));
   return observations.flatMap((observation) => {
@@ -510,9 +565,36 @@ function atomicFindingRows(
       presence: observation.valueBoolean === false ? "absent" as const : "present" as const,
       ...(observationGrade(observation) ? { grade: observationGrade(observation) } : {}),
       observationReference: reference,
+      ...(Object.hasOwn(observationCarried, reference) ? { carried: observationCarried[reference] } : {}),
       ...(bindings.length === 1 ? { conditionReference: bindings[0] } : {}),
     }];
   });
+}
+
+function uniqueAbsentSnapshots(
+  snapshots: readonly SourceAbsentFindingSnapshot[],
+): Map<string, SourceAbsentFindingSnapshot> {
+  const unique = new Map<string, SourceAbsentFindingSnapshot>();
+  const ambiguous = new Set<string>();
+  for (const snapshot of snapshots) {
+    const key = `${snapshot.atomicFindingId}|${snapshot.laterality}`;
+    if (unique.has(key)) {
+      unique.delete(key);
+      ambiguous.add(key);
+    } else if (!ambiguous.has(key)) {
+      unique.set(key, snapshot);
+    }
+  }
+  return unique;
+}
+
+function carrySummary(state: DiagnosisCarryState): NonNullable<DiagnosisFindingsPayload["carryProvenance"]> {
+  return {
+    ...(state.pulledFromDate ? { pulledFromDate: state.pulledFromDate } : {}),
+    ...(state.unchangedSinceDate ? { unchangedSinceDate: state.unchangedSinceDate } : {}),
+    edited: state.edited,
+    ...(state.integrityWarning ? { integrityWarning: state.integrityWarning } : {}),
+  };
 }
 
 function sectionFindingRows(
@@ -632,6 +714,16 @@ function observationLaterality(observation: Observation): FindingLaterality {
 }
 
 function conditionLaterality(condition: Condition, encounterId: string): FindingLaterality {
+  const recorded = condition.extension?.find((extension) => extension.url === ODOS_EXTENSION_URLS.eyeLaterality)
+    ?.valueCodeableConcept?.coding?.find((coding) => coding.code)?.code ??
+    condition.bodySite?.flatMap((bodySite) => [
+      ...(bodySite.coding ?? []).flatMap((coding) => coding.code ? [coding.code] : []),
+      ...(bodySite.text ? [bodySite.text] : []),
+    ]).find((value) => value === "OD" || value === "OS" || value === "OU" ||
+      value === "right" || value === "left" || value === "bilateral");
+  if (recorded === "OD" || recorded === "right") return "OD";
+  if (recorded === "OS" || recorded === "left") return "OS";
+  if (recorded === "OU" || recorded === "bilateral") return "OU";
   const value = condition.identifier?.find((identifier) =>
     identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM && identifier.value?.startsWith(`${encounterId}::`)
   )?.value?.split("::").at(-1);
@@ -688,8 +780,41 @@ function findingRowOrder(left: EncounterFindingRow, right: EncounterFindingRow):
     left.laterality.localeCompare(right.laterality);
 }
 
-function resources<T extends Resource>(bundle: Bundle<T>): T[] {
-  return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
+async function allEncounterResources<T extends Condition | Observation>(
+  fhir: DiagnosisFindingsFhirClient,
+  resourceType: T["resourceType"],
+  encounterReference: string,
+  count: string,
+  fhirBaseUrl: string,
+): Promise<T[]> {
+  // search-contract: diagnosis-findings.encounter-resources
+  const first = await fhir.search<T>(resourceType, {
+    encounter: encounterReference,
+    _count: count,
+  });
+  return collectAllFhirSearchPages<T>(fhir, resourceType, first, fhirBaseUrl);
+}
+
+function diagnosisFindingsDependencyResponse(error: unknown): { status: number; body: { error: string } } {
+  const status = typeof error === "object" && error !== null && "status" in error
+    ? (error as { status?: unknown }).status
+    : undefined;
+  if (status === 401 || status === 403) {
+    return {
+      status: 403,
+      body: { error: "Diagnosis findings are outside the caller's patient compartment." },
+    };
+  }
+  if (status === 404 || status === 410) {
+    return {
+      status: 404,
+      body: { error: "Diagnosis findings resources were not found." },
+    };
+  }
+  return {
+    status: 502,
+    body: { error: "FHIR diagnosis findings dependency failed." },
+  };
 }
 
 async function findingDefinitions(

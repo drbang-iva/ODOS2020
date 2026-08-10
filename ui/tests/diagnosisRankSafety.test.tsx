@@ -11,11 +11,14 @@ import {
 } from "../src/components/charting/AssessmentSection";
 import { MdmProblemsAxis } from "../src/components/charting/EncounterHeader";
 import {
+  DIAGNOSIS_KEY_IDENTIFIER_SYSTEM,
   diagnosisRankForTier,
   encounterDiagnosisProblemStatusPatchOperations,
   makeConditionPrincipal,
   markConditionEnteredInError,
   swapConditionRanks,
+  updateConditionBodySite,
+  updateEncounterDiagnosisProblemStatus,
 } from "../src/lib/clinical-actions";
 import { encounterDiagnosisProblemStatus } from "../src/lib/fhir-clinical/condition";
 import { computeMdmHint } from "../src/lib/clinical-view-model";
@@ -154,6 +157,212 @@ test("problem status patch targets one diagnosis entry and preserves unrelated e
   encounter.diagnosis![1]!.extension!.push(operations[0]!.value as NonNullable<Encounter["diagnosis"]>[number]["extension"][number]);
   assert.equal(encounter.diagnosis![1]!.extension![0]!.valueString, "keep me");
   assert.equal(encounterDiagnosisProblemStatus(encounter.diagnosis![1]!), "stable-chronic");
+});
+
+test("problem status Provenance directly targets the Patient, Encounter, and affected Condition", async () => {
+  const encounter = rankedEncounter([1, 2]);
+  const condition = encounterCondition("secondary-a");
+  const originalFetch = globalThis.fetch;
+  let provenance: Provenance | undefined;
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith(`/Encounter/${encounter.id}`) && init?.method === "PATCH") {
+      return jsonResponse({ ...encounter, meta: { versionId: "8" } });
+    }
+    if (url.endsWith("/Provenance") && init?.method === "POST") {
+      provenance = JSON.parse(String(init.body)) as Provenance;
+      return jsonResponse({ ...provenance, id: "problem-status-provenance" });
+    }
+    throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${url}`);
+  };
+  try {
+    await updateEncounterDiagnosisProblemStatus({
+      encounter,
+      condition,
+      problemStatus: "stable-chronic",
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.deepEqual(provenance?.target.map((target) => target.reference), [
+    "Encounter/encounter-1",
+    "Condition/secondary-a",
+    "Patient/patient-1",
+  ]);
+  assert.equal(provenance?.activity?.coding?.[0]?.code, "UPDATE");
+});
+
+test("diagnosis laterality Provenance directly targets the Patient and affected Condition", async () => {
+  const originalFetch = globalThis.fetch;
+  let provenance: Provenance | undefined;
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.includes("/BodyStructure?") && (!init?.method || init.method === "GET")) {
+      return jsonResponse({
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [{
+          resource: {
+            resourceType: "BodyStructure",
+            id: "right-eye",
+            patient: { reference: "Patient/patient-1" },
+          },
+        }],
+      });
+    }
+    if (url.endsWith("/Condition/secondary-a") && init?.method === "PATCH") {
+      return jsonResponse({ ...encounterCondition("secondary-a"), meta: { versionId: "5" } });
+    }
+    if (url.endsWith("/Provenance") && init?.method === "POST") {
+      provenance = JSON.parse(String(init.body)) as Provenance;
+      return jsonResponse({ ...provenance, id: "laterality-provenance" });
+    }
+    throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${url}`);
+  };
+  try {
+    await updateConditionBodySite({
+      condition: encounterCondition("secondary-a"),
+      patientReference: "Patient/patient-1",
+      laterality: "OD",
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.deepEqual(provenance?.target.map((target) => target.reference), [
+    "Condition/secondary-a",
+    "Patient/patient-1",
+  ]);
+  assert.equal(provenance?.activity?.coding?.[0]?.code, "UPDATE");
+});
+
+test("diagnosis laterality PATCH atomically reconciles the existing catalog identifier suffix", async () => {
+  const originalFetch = globalThis.fetch;
+  let operations: Array<{ op: string; path: string; value?: unknown }> | undefined;
+  const condition: Condition = {
+    ...encounterCondition("secondary-a"),
+    meta: { versionId: "4" },
+    bodySite: [{ text: "OD" }],
+    identifier: [
+      {
+        system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM,
+        value: "encounter-1::dry_eye::right",
+      },
+      { system: "urn:example:preserved", value: "retain-me" },
+    ],
+  };
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.includes("/BodyStructure?") && (!init?.method || init.method === "GET")) {
+      return jsonResponse({
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [{
+          resource: {
+            resourceType: "BodyStructure",
+            id: "left-eye",
+            patient: { reference: "Patient/patient-1" },
+          },
+        }],
+      });
+    }
+    if (url.endsWith("/Condition/secondary-a") && init?.method === "PATCH") {
+      operations = JSON.parse(String(init.body));
+      return jsonResponse({ ...condition, meta: { versionId: "5" } });
+    }
+    if (url.endsWith("/Provenance") && init?.method === "POST") {
+      const provenance = JSON.parse(String(init.body)) as Provenance;
+      return jsonResponse({ ...provenance, id: "laterality-provenance" });
+    }
+    throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${url}`);
+  };
+  try {
+    await updateConditionBodySite({
+      condition,
+      patientReference: "Patient/patient-1",
+      laterality: "OS",
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.deepEqual(operations?.map(({ op, path }) => ({ op, path })), [
+    { op: "replace", path: "/bodySite" },
+    { op: "replace", path: "/identifier" },
+  ]);
+  assert.equal((operations?.[0]?.value as Array<{ text?: string }>)?.[0]?.text, "OS");
+  assert.deepEqual(operations?.[1]?.value, [
+    {
+      system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM,
+      value: "encounter-1::dry_eye::left",
+    },
+    { system: "urn:example:preserved", value: "retain-me" },
+  ]);
+});
+
+test("diagnosis laterality PATCH atomically reconciles a legacy two-part catalog identifier suffix", async () => {
+  const originalFetch = globalThis.fetch;
+  let operations: Array<{ op: string; path: string; value?: unknown }> | undefined;
+  const condition: Condition = {
+    ...encounterCondition("secondary-a"),
+    meta: { versionId: "4" },
+    bodySite: [{ text: "OD" }],
+    identifier: [
+      {
+        system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM,
+        value: "dry_eye::right",
+      },
+      { system: "urn:example:preserved", value: "retain-me" },
+    ],
+  };
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.includes("/BodyStructure?") && (!init?.method || init.method === "GET")) {
+      return jsonResponse({
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [{
+          resource: {
+            resourceType: "BodyStructure",
+            id: "left-eye",
+            patient: { reference: "Patient/patient-1" },
+          },
+        }],
+      });
+    }
+    if (url.endsWith("/Condition/secondary-a") && init?.method === "PATCH") {
+      operations = JSON.parse(String(init.body));
+      return jsonResponse({ ...condition, meta: { versionId: "5" } });
+    }
+    if (url.endsWith("/Provenance") && init?.method === "POST") {
+      const provenance = JSON.parse(String(init.body)) as Provenance;
+      return jsonResponse({ ...provenance, id: "laterality-provenance" });
+    }
+    throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${url}`);
+  };
+  try {
+    await updateConditionBodySite({
+      condition,
+      patientReference: "Patient/patient-1",
+      laterality: "OS",
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.deepEqual(operations?.map(({ op, path }) => ({ op, path })), [
+    { op: "replace", path: "/bodySite" },
+    { op: "replace", path: "/identifier" },
+  ]);
+  assert.equal((operations?.[0]?.value as Array<{ text?: string }>)?.[0]?.text, "OS");
+  assert.deepEqual(operations?.[1]?.value, [
+    {
+      system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM,
+      value: "dry_eye::left",
+    },
+    { system: "urn:example:preserved", value: "retain-me" },
+  ]);
 });
 
 test("problem status control renders a conspicuous required-empty state without unspecified", () => {

@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Condition, Encounter } from "@medplum/fhirtypes";
 import {
+  DIAGNOSIS_KEY_IDENTIFIER_SYSTEM,
   makeConditionPrincipal,
   swapConditionRanks,
   updateConditionBodySite,
@@ -32,8 +33,8 @@ import {
   type DiagnosisFindingMutation,
   type DiagnosisFindingsPayload,
 } from "../../lib/diagnosis-findings";
-
-const DIAGNOSIS_KEY_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key";
+import { formatDiagnosisHistoryDate } from "../../lib/diagnosis-carry-forward";
+import { PreviousExams } from "./PreviousExams";
 
 export interface DiagnosisQuickListRow {
   stableKey: string;
@@ -74,14 +75,24 @@ export function DiagnosisWorkspace({
   const [catalog, setCatalog] = useState<DiagnosisQuickListRow[]>([]);
   const [pinnedDiagnosisKeys, setPinnedDiagnosisKeys] = useState<string[]>([]);
   const [canWrite, setCanWrite] = useState(false);
-  const [findings, setFindings] = useState<DiagnosisFindingsPayload>();
+  const [loadedFindings, setLoadedFindings] = useState<{
+    key: string;
+    payload: DiagnosisFindingsPayload;
+  }>();
   const [pendingDiagnosis, setPendingDiagnosis] = useState<DiagnosisQuickListRow>();
   const [searchSelection, setSearchSelection] = useState<OdosSearchPickerOption<DiagnosisQuickListRow>>();
   const [busy, setBusy] = useState<string>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
+  const loadGeneration = useRef(0);
+  const findingsKey = `${encounterId}::${selectedReference ?? ""}`;
+  const findings = loadedFindings?.key === findingsKey ? loadedFindings.payload : undefined;
 
   const load = useCallback(async () => {
+    const requestGeneration = loadGeneration.current + 1;
+    loadGeneration.current = requestGeneration;
+    const requestFindingsKey = `${encounterId}::${selectedReference ?? ""}`;
+    setLoadedFindings((current) => current?.key === requestFindingsKey ? undefined : current);
     setLoading(true);
     setError(undefined);
     try {
@@ -98,22 +109,27 @@ export function DiagnosisWorkspace({
       const nextConditions = await Promise.all(references.map((reference) =>
         fhir.read<Condition>("Condition", reference.replace(/^Condition\//, ""))
       ));
+      if (loadGeneration.current !== requestGeneration) return;
       setEncounter(nextEncounter);
       setConditions(nextConditions);
       setQuickList(quickBody.diagnoses ?? []);
       setCatalog(quickBody.catalog ?? []);
       setPinnedDiagnosisKeys(quickBody.pinnedDiagnosisKeys ?? []);
       setCanWrite(quickBody.canWrite === true);
-      setFindings(nextFindings);
+      setLoadedFindings({ key: requestFindingsKey, payload: nextFindings });
     } catch (caught) {
+      if (loadGeneration.current !== requestGeneration) return;
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
-      setLoading(false);
+      if (loadGeneration.current === requestGeneration) setLoading(false);
     }
   }, [encounterId, encounterReference, selectedReference]);
 
   useEffect(() => {
     void load();
+    return () => {
+      loadGeneration.current += 1;
+    };
   }, [load]);
 
   useEffect(() => {
@@ -224,6 +240,9 @@ export function DiagnosisWorkspace({
   const selectedEntry = encounter?.diagnosis?.find((entry) =>
     entry.condition.reference === selectedReference
   );
+  const carryEditedForDisplay = Boolean(
+    findings?.carryProvenance?.edited || findings?.carryProvenance?.integrityWarning,
+  );
 
   return (
     <div className="odos-diagnosis-workspace min-h-0 flex-1" data-testid="diagnosis-workspace">
@@ -268,6 +287,12 @@ export function DiagnosisWorkspace({
             })}
           />
         )}
+
+        <RailHeading>Previous exams</RailHeading>
+        <PreviousExams
+          encounterReference={encounterReference}
+          onSelectDiagnosis={onSelectDiagnosis}
+        />
 
         <RailHeading>Common</RailHeading>
         <div className="odos-diagnosis-common-list">
@@ -352,6 +377,25 @@ export function DiagnosisWorkspace({
                 <div className="odos-diagnosis-eyebrow">Selected diagnosis</div>
                 <h2>{displayCode(selectedCondition.code)}</h2>
                 <p>{selectedCondition.code?.coding?.[0]?.code ?? "Uncoded"}</p>
+                {findings?.carryProvenance && (
+                  <div className={`odos-diagnosis-carry-state ${carryEditedForDisplay ? "is-edited" : "is-unedited"}`}>
+                    {findings.carryProvenance.pulledFromDate && (
+                      <p>
+                        pulled from {formatDiagnosisHistoryDate(findings.carryProvenance.pulledFromDate)} · {carryEditedForDisplay ? "edited" : "unedited"}
+                      </p>
+                    )}
+                    {!carryEditedForDisplay &&
+                      findings.carryProvenance.unchangedSinceDate &&
+                      findings.carryProvenance.unchangedSinceDate !== findings.carryProvenance.pulledFromDate && (
+                        <p>unchanged since {formatDiagnosisHistoryDate(findings.carryProvenance.unchangedSinceDate)}</p>
+                      )}
+                    {findings.carryProvenance.integrityWarning && (
+                      <p className="odos-diagnosis-carry-warning" role="alert">
+                        {findings.carryProvenance.integrityWarning}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="odos-diagnosis-laterality" role="group" aria-label="Diagnosis scope">
                 {(["OD", "OS", "OU"] as const).map((eye) => (

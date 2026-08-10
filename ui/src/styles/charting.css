@@ -130,6 +130,88 @@
   gap: 5px;
 }
 
+.odos-previous-exams,
+.odos-previous-exam-diagnoses {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.odos-previous-exam + .odos-previous-exam {
+  margin-top: 9px;
+}
+
+.odos-previous-exam h3 {
+  margin: 0 0 5px;
+  color: var(--odos-faint);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.odos-previous-diagnosis-row {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 6px;
+  padding: 7px;
+  border: 1px solid var(--odos-line);
+  border-radius: 8px;
+  background: var(--odos-surface-2);
+  color: var(--odos-text);
+  font: inherit;
+  text-align: left;
+}
+
+.odos-previous-diagnosis-row[aria-pressed="true"] {
+  border-color: var(--odos-accent);
+}
+
+.odos-previous-diagnosis-check {
+  display: grid;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--odos-line-2);
+  border-radius: 4px;
+  place-content: center;
+  color: var(--odos-accent);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.odos-previous-diagnosis-row strong,
+.odos-previous-diagnosis-row small {
+  display: block;
+}
+
+.odos-previous-diagnosis-row strong {
+  font-size: 11px;
+}
+
+.odos-previous-diagnosis-row small {
+  margin-top: 2px;
+  color: var(--odos-faint);
+  font-size: 9px;
+}
+
+.odos-previous-exams-more {
+  width: 100%;
+  margin-top: 4px;
+  padding: 7px;
+  border: 1px solid var(--odos-line-2);
+  border-radius: 7px;
+  background: var(--odos-surface-2);
+  color: var(--odos-muted);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.odos-previous-exams-error {
+  margin: 4px 0 0;
+  color: var(--odos-alert);
+  font-size: 10px;
+}
+
 .odos-diagnosis-common-list {
   max-height: 270px;
   overflow-y: auto;
@@ -268,6 +350,25 @@
   gap: 18px;
 }
 
+.odos-diagnosis-carry-state {
+  margin-top: 7px;
+}
+
+.odos-diagnosis-carry-state p {
+  margin: 2px 0 0;
+  color: var(--odos-muted);
+  font-size: 11px;
+}
+
+.odos-diagnosis-carry-state.is-unedited p:first-child {
+  color: var(--odos-accent);
+}
+
+.odos-diagnosis-carry-state .odos-diagnosis-carry-warning {
+  color: var(--odos-alert);
+  font-weight: 750;
+}
+
 .odos-diagnosis-eyebrow {
   margin-bottom: 5px;
   color: var(--odos-accent);
@@ -344,6 +445,23 @@
   margin-top: 2px;
   color: var(--odos-faint);
   font-size: 9px;
+}
+
+.odos-finding-carried {
+  display: inline-block;
+  margin-left: 5px;
+  padding: 1px 4px;
+  border: 1px solid var(--odos-accent);
+  border-radius: 999px;
+  color: var(--odos-accent);
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.odos-diagnosis-findings-table td:first-child .odos-finding-prior-absent {
+  margin-top: 4px;
+  color: var(--odos-amber);
 }
 
 .odos-finding-presence {

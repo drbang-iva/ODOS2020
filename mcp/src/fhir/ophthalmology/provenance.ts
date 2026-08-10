@@ -2,7 +2,7 @@ import type { ProvenanceInput } from "./types.js";
 import type { CodeableConcept } from "@medplum/fhirtypes";
 import { reference } from "./extensions.js";
 
-const V3_DATA_OPERATION_CODE_SYSTEM =
+export const V3_DATA_OPERATION_CODE_SYSTEM =
   "http://terminology.hl7.org/CodeSystem/v3-DataOperation";
 const PROVENANCE_PARTICIPANT_TYPE_CODE_SYSTEM =
   "http://terminology.hl7.org/CodeSystem/provenance-participant-type";

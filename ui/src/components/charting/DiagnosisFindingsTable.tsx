@@ -113,7 +113,17 @@ function FindingRow({
     <tr className={charted ? "is-charted" : "is-offered"}>
       <td>
         <strong>{row.display}</strong>
-        <small>{charted ? "Charted" : "Offered"}</small>
+        <small>
+          {charted ? "Charted" : "Offered"}
+          {row.carried && row.presence === "present" && row.observationReference && (
+            <span className="odos-finding-carried">carried</span>
+          )}
+        </small>
+        {!charted && row.priorPresence === "absent" && (
+          <small className="odos-finding-prior-absent">
+            Prior: absent{row.priorGrade ? ` · Grade ${row.priorGrade}` : ""}{row.priorLaterality ? ` · ${row.priorLaterality}` : ""}
+          </small>
+        )}
       </td>
       <td>{row.sectionKey}</td>
       <td>

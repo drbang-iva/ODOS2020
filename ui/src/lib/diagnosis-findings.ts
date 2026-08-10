@@ -23,6 +23,10 @@ export interface EncounterFindingRow extends AtomicFindingCatalogRow {
   grade?: string;
   observationReference?: string;
   conditionReference?: string;
+  carried?: boolean;
+  priorPresence?: "present" | "absent";
+  priorGrade?: string;
+  priorLaterality?: FindingLaterality;
 }
 
 export interface DiagnosisFindingsPayload {
@@ -32,6 +36,12 @@ export interface DiagnosisFindingsPayload {
     stableKey: string;
     display: string;
     applicableFindingDefinitionIds: string[];
+  };
+  carryProvenance?: {
+    pulledFromDate?: string;
+    unchangedSinceDate?: string;
+    edited: boolean;
+    integrityWarning?: string;
   };
   findings: EncounterFindingRow[];
   catalog: AtomicFindingCatalogRow[];

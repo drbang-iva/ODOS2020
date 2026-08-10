@@ -44,6 +44,7 @@ import { assertTransactionSuccess } from "./encounter-bundles";
 const V3_DATA_OPERATION_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-DataOperation";
 const PROVENANCE_PARTICIPANT_TYPE_SYSTEM =
   "http://terminology.hl7.org/CodeSystem/provenance-participant-type";
+export const DIAGNOSIS_KEY_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key";
 
 export type EyeChoice = "OD" | "OS" | "OU";
 export type DiagnosisTierChoice = "principal" | "secondary";
@@ -289,8 +290,10 @@ export async function updateEncounterDiagnosisProblemStatus(input: {
   );
   await createUiProvenance(
     "update_encounter_diagnosis_problem_status",
-    `Encounter/${updated.id}`,
+    [`Encounter/${updated.id}`, `Condition/${requiredId(input.condition)}`],
     "UPDATE",
+    undefined,
+    input.condition.subject.reference,
   );
   return updated;
 }
@@ -301,6 +304,14 @@ export async function updateConditionBodySite(input: {
   laterality: EyeChoice;
 }): Promise<Condition> {
   const bodyStructure = await ensureEyeBodyStructure(input.patientReference, input.laterality);
+  const identifiers = input.condition.identifier?.map((identifier) =>
+    identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM
+      ? { ...identifier, ...(updatedDiagnosisIdentifierValue(identifier.value, input.laterality)) }
+      : identifier
+  );
+  const identifierChanged = identifiers?.some((identifier, index) =>
+    identifier.value !== input.condition.identifier?.[index]?.value
+  );
   const updated = await fhir.patch<Condition>(
     "Condition",
     requiredId(input.condition),
@@ -310,12 +321,37 @@ export async function updateConditionBodySite(input: {
         path: "/bodySite",
         value: conditionBodySite(`BodyStructure/${bodyStructure.id}`, input.laterality),
       },
+      ...(identifierChanged ? [{
+        op: "replace" as const,
+        path: "/identifier",
+        value: identifiers,
+      }] : []),
     ],
     "update_condition_body_site",
     requiredVersion(input.condition),
   );
-  await createUiProvenance("update_condition_body_site", `Condition/${updated.id}`, "UPDATE");
+  await createUiProvenance(
+    "update_condition_body_site",
+    `Condition/${updated.id}`,
+    "UPDATE",
+    undefined,
+    input.patientReference,
+  );
   return updated;
+}
+
+function updatedDiagnosisIdentifierValue(
+  value: string | undefined,
+  laterality: EyeChoice,
+): { value: string } | undefined {
+  if (!value) return undefined;
+  const parts = value.split("::");
+  const suffix = parts.at(-1);
+  if (
+    parts.length < 2 ||
+    (suffix !== "right" && suffix !== "left" && suffix !== "bilateral" && suffix !== "unspecified" && suffix !== "none")
+  ) return undefined;
+  return { value: [...parts.slice(0, -1), laterality === "OD" ? "right" : laterality === "OS" ? "left" : "bilateral"].join("::") };
 }
 
 export async function updateConditionCode(input: {
@@ -558,13 +594,17 @@ export function conceptFromCode(input: CodeInput): CodeableConcept {
 
 async function createUiProvenance(
   sourceTag: string,
-  targetReference: string,
+  targetReference: string | readonly string[],
   activityCode: "CREATE" | "UPDATE",
   entityDisplay?: string,
+  patientReference?: string,
 ): Promise<Provenance> {
   return fhir.create<Provenance>(buildUiProvenance(
     sourceTag,
-    [targetReference],
+    [
+      ...(typeof targetReference === "string" ? [targetReference] : [...targetReference]),
+      ...(patientReference ? [patientReference] : []),
+    ].filter((reference, index, all) => all.indexOf(reference) === index),
     activityCode,
     new Date().toISOString(),
     entityDisplay,

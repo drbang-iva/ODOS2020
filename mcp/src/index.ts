@@ -231,6 +231,7 @@ import {
   handleDiagnosisFindingsMutationRequest,
   handleDiagnosisFindingsReadRequest,
 } from "./clinical-graph/diagnosis-findings-endpoint.js";
+import { registerDiagnosisCarryForwardRoutes } from "./clinical-graph/diagnosis-carry-forward-endpoint.js";
 import {
   handleDiagnosisQuickListMutationRequest,
   handleDiagnosisQuickListRequest,
@@ -6366,7 +6367,7 @@ async function startMcpServer(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleDiagnosisFindingsReadRequest(
-            { authenticate: authenticateStaffRouteForAction("chart.read") },
+            { fhirBaseUrl: BASE_URL, authenticate: authenticateStaffRouteForAction("chart.read") },
             {
               authHeader: req.header("authorization"),
               params: req.params,
@@ -6380,11 +6381,19 @@ async function startMcpServer(): Promise<void> {
         }
       });
 
+      registerDiagnosisCarryForwardRoutes(app, {
+        authenticateService: authenticateWithMedplum,
+        fhirBaseUrl: BASE_URL,
+        rollbackFhir: fhir,
+        authenticate: authenticateStaffRouteForAction("chart.read"),
+        authenticateWrite: authenticateStaffRouteForAction("chart.write"),
+      });
+
       app.put("/clinical-graph/encounters/:encounterId/findings", async (req, res) => {
         try {
           await authenticateWithMedplum();
           const result = await handleDiagnosisFindingsMutationRequest(
-            { authenticate: authenticateStaffRouteForAction("chart.write") },
+            { fhirBaseUrl: BASE_URL, authenticate: authenticateStaffRouteForAction("chart.write") },
             {
               authHeader: req.header("authorization"),
               params: req.params,

@@ -1,4 +1,5 @@
 import type { Bundle, Resource } from "@medplum/fhirtypes";
+import { fhirSearchNextPath } from "./fhir-client.js";
 
 export const DEFAULT_FHIR_SEARCH_MAX_ROWS = 1_000;
 
@@ -106,6 +107,40 @@ export async function searchAll<T extends Resource>(
     }
     bundle = await client.searchUrl<T>(nextLink.url, resourceType);
   }
+}
+
+export async function collectAllFhirSearchPages<T extends Resource>(
+  client: FhirSearchClient,
+  resourceType: T["resourceType"],
+  firstBundle: Bundle<T>,
+  fhirBaseUrl: string,
+): Promise<T[]> {
+  let bundle = firstBundle;
+  const resources: T[] = [];
+  const followed = new Set<string>();
+  for (;;) {
+    resources.push(...(bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []));
+    const next = bundle.link?.find((link) => link.relation === "next")?.url;
+    if (!next) return resources;
+    const path = validateLocalFhirSearchNextPath(next, fhirBaseUrl, resourceType);
+    if (!client.searchUrl || followed.has(path)) {
+      throw new Error(`FHIR ${resourceType} pagination is unavailable or cyclic.`);
+    }
+    followed.add(path);
+    bundle = await client.searchUrl<T>(path, resourceType);
+  }
+}
+
+export function validateLocalFhirSearchNextPath(
+  url: string,
+  fhirBaseUrl: string,
+  resourceType: Resource["resourceType"],
+): string {
+  const path = fhirSearchNextPath(url, fhirBaseUrl, resourceType);
+  if (!path) {
+    throw new Error(`FHIR ${resourceType} next link is invalid.`);
+  }
+  return path;
 }
 
 function paramsWithCount(params: Record<string, string>): Record<string, string> {
