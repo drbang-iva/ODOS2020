@@ -516,7 +516,9 @@ function selectedFindings(
   sourceAbsentSnapshots: readonly SourceAbsentFindingSnapshot[],
 ): EncounterFindingRow[] {
   const selectedCharted = charted.filter((row) => row.conditionReference === visit.conditionReference);
-  const chartedIdentities = new Set(charted.map((row) => `${row.atomicFindingId}|${row.laterality}`));
+  const chartedIdentities = new Set(charted
+    .filter((row) => !row.conditionReference || row.conditionReference === visit.conditionReference)
+    .map((row) => `${row.atomicFindingId}|${row.laterality}`));
   const priorAbsent = uniqueAbsentSnapshots(sourceAbsentSnapshots);
   const offered = diagnosis
     ? catalog

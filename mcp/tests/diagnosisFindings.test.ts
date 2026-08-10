@@ -288,6 +288,54 @@ test("GET projects carried present findings and merges prior absence into the ex
   ]);
 });
 
+test("GET keeps a selected carry prior absence offered when the matching current atomic finding belongs only to another diagnosis", async () => {
+  const fhir = carryFindingsFhir();
+  const second = fhir.resources.find((resource): resource is Condition =>
+    resource.resourceType === "Condition" && resource.id === "second"
+  )!;
+  second.evidence = [{ detail: [{ reference: "Observation/current-second-offered-only" }] }];
+  fhir.resources.push(atomicObservation(
+    "current-second-offered-only",
+    "e1",
+    "offered-only",
+    true,
+    "OD",
+  ));
+
+  const response = await handleDiagnosisFindingsReadRequest(clinicalDeps(fhir), {
+    authHeader: "Bearer clinician",
+    params: { encounterId: "e1" },
+    query: { condition: "Condition/unique" },
+  });
+
+  assert.equal(response.status, 200, JSON.stringify(response.body));
+  const rows = (response.body as {
+    findings: Array<{
+      atomicFindingId: string;
+      source: string;
+      presence?: string;
+      priorPresence?: string;
+      conditionReference?: string;
+      observationReference?: string;
+    }>;
+  }).findings.filter((row) => row.atomicFindingId === atomicId("offered-only"));
+  assert.deepEqual(rows.map((row) => ({
+    atomicFindingId: atomicId("offered-only"),
+    source: row.source,
+    presence: row.presence,
+    priorPresence: row.priorPresence,
+    conditionReference: row.conditionReference,
+    observationReference: row.observationReference,
+  })), [{
+    atomicFindingId: atomicId("offered-only"),
+    source: "offered",
+    presence: undefined,
+    priorPresence: "absent",
+    conditionReference: undefined,
+    observationReference: undefined,
+  }]);
+});
+
 test("reasserting a prior absent offer creates a fresh current row without a carried tag", async () => {
   const fhir = carryFindingsFhir();
   const asserted = await mutate(fhir, {
