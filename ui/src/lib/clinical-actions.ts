@@ -24,8 +24,11 @@ import {
   clinicalStatusConcept,
   conditionBodySite,
   conditionCodeConcept,
+  MDM_PROBLEM_STATUS_EXTENSION_URL,
+  mdmProblemStatusExtension,
   verificationStatusConcept,
   type ConditionClinicalStatusCode,
+  type MdmProblemStatus,
 } from "./fhir-clinical/condition";
 import {
   buildEpisodeOfCare,
@@ -36,6 +39,7 @@ import {
   buildSmokingStatusObservation,
   type SmokingStatusCode,
 } from "./fhir-clinical/smokingStatus";
+import { assertTransactionSuccess } from "./encounter-bundles";
 
 const V3_DATA_OPERATION_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-DataOperation";
 const PROVENANCE_PARTICIPANT_TYPE_SYSTEM =
@@ -235,6 +239,62 @@ export function addEncounterDiagnosisPatchOperations(
   return [{ op: "add", path: "/diagnosis", value: [diagnosisEntry] }];
 }
 
+export function encounterDiagnosisProblemStatusPatchOperations(
+  encounter: Encounter,
+  condition: Condition,
+  problemStatus: MdmProblemStatus,
+): JsonPatchOperation[] {
+  const diagnosisIndex = encounterDiagnosisIndex(encounter.diagnosis ?? [], condition);
+  const diagnosis = encounter.diagnosis![diagnosisIndex]!;
+  const extension = mdmProblemStatusExtension(problemStatus);
+  const extensionIndex = diagnosis.extension?.findIndex(
+    (candidate) => candidate.url === MDM_PROBLEM_STATUS_EXTENSION_URL,
+  ) ?? -1;
+  if (extensionIndex >= 0) {
+    return [{
+      op: "replace",
+      path: `/diagnosis/${diagnosisIndex}/extension/${extensionIndex}`,
+      value: extension,
+    }];
+  }
+  if (diagnosis.extension?.length) {
+    return [{
+      op: "add",
+      path: `/diagnosis/${diagnosisIndex}/extension/-`,
+      value: extension,
+    }];
+  }
+  return [{
+    op: "add",
+    path: `/diagnosis/${diagnosisIndex}/extension`,
+    value: [extension],
+  }];
+}
+
+export async function updateEncounterDiagnosisProblemStatus(input: {
+  encounter: Encounter;
+  condition: Condition;
+  problemStatus: MdmProblemStatus;
+}): Promise<Encounter> {
+  const updated = await fhir.patch<Encounter>(
+    "Encounter",
+    requiredId(input.encounter),
+    encounterDiagnosisProblemStatusPatchOperations(
+      input.encounter,
+      input.condition,
+      input.problemStatus,
+    ),
+    "update_encounter_diagnosis_problem_status",
+    requiredVersion(input.encounter),
+  );
+  await createUiProvenance(
+    "update_encounter_diagnosis_problem_status",
+    `Encounter/${updated.id}`,
+    "UPDATE",
+  );
+  return updated;
+}
+
 export async function updateConditionBodySite(input: {
   condition: Condition;
   patientReference: string;
@@ -405,26 +465,73 @@ function encounterDiagnosisIndex(
   return index;
 }
 
-export async function markConditionEnteredInError(condition: Condition): Promise<Condition> {
-  const operations: JsonPatchOperation[] = [
-    {
-      op: condition.verificationStatus ? "replace" : "add",
-      path: "/verificationStatus",
-      value: verificationStatusConcept("entered-in-error"),
-    },
-  ];
-  if (condition.clinicalStatus) {
-    operations.push({ op: "remove", path: "/clinicalStatus" });
+export async function markConditionEnteredInError(condition: Condition): Promise<void> {
+  const encounterId = condition.encounter?.reference?.match(/^Encounter\/([^/]+)$/)?.[1];
+  if (!encounterId) {
+    throw new Error("Encounter diagnosis Condition does not reference an Encounter.");
   }
-  const updated = await fhir.patch<Condition>(
-    "Condition",
-    requiredId(condition),
-    operations,
-    "mark_condition_entered_in_error",
-    requiredVersion(condition),
-  );
-  await createUiProvenance("mark_condition_entered_in_error", `Condition/${updated.id}`, "UPDATE");
-  return updated;
+  const encounter = await fhir.read<Encounter>("Encounter", encounterId);
+  const conditionId = requiredId(condition);
+  const { clinicalStatus: _clinicalStatus, ...conditionWithoutClinicalStatus } = condition;
+  const updatedCondition: Condition = {
+    ...conditionWithoutClinicalStatus,
+    verificationStatus: verificationStatusConcept("entered-in-error"),
+  };
+  const updatedEncounter = encounterAfterDiagnosisRetraction(encounter, condition);
+  const sourceTag = "mark_condition_entered_in_error";
+  const recorded = new Date().toISOString();
+  const response = await fhir.executeTransaction({
+    resourceType: "Bundle",
+    type: "transaction",
+    entry: [
+      {
+        resource: updatedCondition,
+        request: {
+          method: "PUT",
+          url: `Condition/${conditionId}`,
+          ifMatch: `W/\"${requiredVersion(condition)}\"`,
+        },
+      },
+      {
+        resource: updatedEncounter,
+        request: {
+          method: "PUT",
+          url: `Encounter/${encounterId}`,
+          ifMatch: `W/\"${requiredVersion(encounter)}\"`,
+        },
+      },
+      {
+        resource: buildUiProvenance(
+          sourceTag,
+          [`Condition/${conditionId}`, `Encounter/${encounterId}`],
+          "UPDATE",
+          recorded,
+        ),
+        request: { method: "POST", url: "Provenance" },
+      },
+    ],
+  }, sourceTag);
+  assertTransactionSuccess(response);
+}
+
+function encounterAfterDiagnosisRetraction(
+  encounter: Encounter,
+  condition: Condition,
+): Encounter {
+  const targetIndex = encounterDiagnosisIndex(encounter.diagnosis ?? [], condition);
+  const remaining = (encounter.diagnosis ?? [])
+    .flatMap((diagnosis, index) => index === targetIndex ? [] : [{ diagnosis, index }])
+    .sort((left, right) =>
+      (left.diagnosis.rank ?? Number.MAX_SAFE_INTEGER) -
+        (right.diagnosis.rank ?? Number.MAX_SAFE_INTEGER) ||
+      left.index - right.index
+    )
+    .map(({ diagnosis }, index) => ({ ...diagnosis, rank: index + 1 }));
+  if (remaining.length > 0) {
+    return { ...encounter, diagnosis: remaining };
+  }
+  const { diagnosis: _diagnosis, ...encounterWithoutDiagnosis } = encounter;
+  return encounterWithoutDiagnosis;
 }
 
 export async function ensureEyeBodyStructure(
@@ -455,40 +562,53 @@ async function createUiProvenance(
   activityCode: "CREATE" | "UPDATE",
   entityDisplay?: string,
 ): Promise<Provenance> {
-  return fhir.create<Provenance>(
-    {
-      resourceType: "Provenance",
-      target: [{ reference: targetReference }],
-      recorded: new Date().toISOString(),
-      activity: {
-        coding: [
-          {
-            system: V3_DATA_OPERATION_SYSTEM,
-            code: activityCode,
-            display: activityCode === "CREATE" ? "Create" : "Update",
-          },
-        ],
-      },
-      agent: [
+  return fhir.create<Provenance>(buildUiProvenance(
+    sourceTag,
+    [targetReference],
+    activityCode,
+    new Date().toISOString(),
+    entityDisplay,
+  ), sourceTag);
+}
+
+function buildUiProvenance(
+  sourceTag: string,
+  targetReferences: string[],
+  activityCode: "CREATE" | "UPDATE",
+  recorded: string,
+  entityDisplay?: string,
+): Provenance {
+  return {
+    resourceType: "Provenance",
+    target: targetReferences.map((reference) => ({ reference })),
+    recorded,
+    activity: {
+      coding: [
         {
-          type: {
-            coding: [
-              {
-                system: PROVENANCE_PARTICIPANT_TYPE_SYSTEM,
-                code: "author",
-                display: "Author",
-              },
-            ],
-          },
-          who: { display: `ODOS UI ${sourceTag}` },
+          system: V3_DATA_OPERATION_SYSTEM,
+          code: activityCode,
+          display: activityCode === "CREATE" ? "Create" : "Update",
         },
       ],
-      ...(entityDisplay
-        ? { entity: [{ role: "revision", what: { display: entityDisplay } }] }
-        : {}),
     },
-    sourceTag,
-  );
+    agent: [
+      {
+        type: {
+          coding: [
+            {
+              system: PROVENANCE_PARTICIPANT_TYPE_SYSTEM,
+              code: "author",
+              display: "Author",
+            },
+          ],
+        },
+        who: { display: `ODOS UI ${sourceTag}` },
+      },
+    ],
+    ...(entityDisplay
+      ? { entity: [{ role: "revision", what: { display: entityDisplay } }] }
+      : {}),
+  };
 }
 
 function requiredId(resource: Resource): string {

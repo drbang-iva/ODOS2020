@@ -1,6 +1,6 @@
 {
   "resourceType": "ODOSCanonicalExtensionRegistry",
-  "generatedAt": "2026-07-30",
+  "generatedAt": "2026-08-09",
   "extensions": [
     {
       "url": "https://odos2020.com/fhir/StructureDefinition/odos-fax-callback-token",
@@ -217,6 +217,12 @@
       "namespace": "clinical",
       "status": "active",
       "sliceConsumer": "v0.3"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-encounter-diagnosis-problem-status",
+      "namespace": "clinical",
+      "status": "active",
+      "sliceConsumer": "mdm-problem-status"
     },
     {
       "url": "https://odos2020.com/fhir/StructureDefinition/Observation-VA",

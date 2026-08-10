@@ -297,6 +297,7 @@ import {
   conditionBodySite,
   conditionCategoryConcept,
   conditionCodeConcept,
+  conditionEncounterId,
   hasConditionCategory,
   verificationStatusConcept,
   type ConditionClinicalStatusCode,
@@ -437,6 +438,7 @@ import type {
   AllergyIntolerance,
   Binary,
   BodyStructure,
+  Bundle,
   CareTeam,
   CodeableConcept,
   ConceptMap,
@@ -1217,7 +1219,7 @@ const tools = [
   {
     name: "mark_condition_entered_in_error",
     description:
-      "Version-aware PATCH of Condition.verificationStatus to entered-in-error. Does not delete the Condition.",
+      "Version-aware retraction of a Condition. Encounter diagnoses are atomically removed from Encounter.diagnosis; the Condition is retained as entered-in-error.",
     inputSchema: {
       type: "object",
       required: ["condition_id"],
@@ -3393,6 +3395,71 @@ function createServer(): Server {
           const input = markConditionEnteredInErrorSchema.parse(args);
           const id = stripReference(input.condition_id, "Condition");
           const existing = await fhir.read<Condition>("Condition", id);
+          const encounterId = conditionEncounterId(existing);
+          if (hasConditionCategory(existing, "encounter-diagnosis") && encounterId) {
+            const encounter = await fhir.read<Encounter>("Encounter", encounterId);
+            const diagnosisIndex = findEncounterDiagnosisIndex(encounter, `Condition/${id}`);
+            if (diagnosisIndex >= 0) {
+              const updated = conditionEnteredInError(existing);
+              const updatedEncounter = encounterAfterDiagnosisRetraction(encounter, diagnosisIndex);
+              const provenance = buildV035ProvenanceResource(
+                "mark_condition_entered_in_error",
+                input,
+                [`Condition/${id}`, `Encounter/${encounterId}`],
+                "UPDATE",
+              );
+              const responseBundle = await fhir.executeTransaction(
+                {
+                  resourceType: "Bundle",
+                  type: "transaction",
+                  entry: [
+                    {
+                      resource: updated,
+                      request: {
+                        method: "PUT",
+                        url: `Condition/${id}`,
+                        ifMatch: `W/\"${requiredVersionId(existing)}\"`,
+                      },
+                    },
+                    {
+                      resource: updatedEncounter,
+                      request: {
+                        method: "PUT",
+                        url: `Encounter/${encounterId}`,
+                        ifMatch: `W/\"${requiredVersionId(encounter)}\"`,
+                      },
+                    },
+                    ...(provenance
+                      ? [{
+                          resource: provenance,
+                          request: { method: "POST" as const, url: "Provenance" },
+                        }]
+                      : []),
+                  ],
+                },
+                {
+                  ...auditHeaders("mark_condition_entered_in_error"),
+                  Prefer: "return=representation",
+                },
+              );
+              assertSuccessfulTransaction(responseBundle);
+              const committedCondition = responseBundle.entry
+                ?.find((entry) => entry.resource?.resourceType === "Condition")
+                ?.resource as Condition | undefined;
+              const committedEncounter = responseBundle.entry
+                ?.find((entry) => entry.resource?.resourceType === "Encounter")
+                ?.resource as Encounter | undefined;
+              const committedProvenance = responseBundle.entry
+                ?.find((entry) => entry.resource?.resourceType === "Provenance")
+                ?.resource as Provenance | undefined;
+
+              return toolJson({
+                condition: committedCondition ?? updated,
+                encounter: committedEncounter ?? updatedEncounter,
+                provenance: committedProvenance ?? provenance,
+              });
+            }
+          }
           const operations: JsonPatchOperation[] = [
             {
               op: existing.verificationStatus ? "replace" : "add",
@@ -4583,17 +4650,20 @@ function versionedHeaders(
   resource: Resource,
   extraHeaders: Record<string, string>,
 ): Record<string, string> {
+  return {
+    ...extraHeaders,
+    "If-Match": `W/"${requiredVersionId(resource)}"`,
+  };
+}
+
+function requiredVersionId(resource: Resource): string {
   const versionId = resource.meta?.versionId;
   if (!versionId) {
     throw new Error(
-      `${resource.resourceType}/${resource.id ?? "(unknown)"} is missing meta.versionId; refusing version-aware PATCH.`,
+      `${resource.resourceType}/${resource.id ?? "(unknown)"} is missing meta.versionId; refusing version-aware write.`,
     );
   }
-
-  return {
-    ...extraHeaders,
-    "If-Match": `W/"${versionId}"`,
-  };
+  return versionId;
 }
 
 async function createV035Provenance(
@@ -4607,28 +4677,44 @@ async function createV035Provenance(
     display: string;
   }>,
 ): Promise<Provenance | undefined> {
-  if (input.create_provenance === false) {
-    return undefined;
-  }
-
-  return fhir.create<Provenance>(
-    buildProvenance({
-      targetReferences,
-      occurredDateTime,
-      activityCode,
-      activityDisplay: activityCode === "CREATE" ? "Create" : "Update",
-      agents: [
-        {
-          typeCode: "author",
-          typeDisplay: "Author",
-          whoReference: input.provenance_agent_reference,
-          whoDisplay: input.provenance_agent_display ?? `ODOS MCP ${toolName}`,
-        },
-      ],
-      entityValues,
-    }),
-    auditHeaders(toolName),
+  const provenance = buildV035ProvenanceResource(
+    toolName,
+    input,
+    targetReferences,
+    activityCode,
+    occurredDateTime,
+    entityValues,
   );
+  return provenance ? fhir.create<Provenance>(provenance, auditHeaders(toolName)) : undefined;
+}
+
+function buildV035ProvenanceResource(
+  toolName: V035WriteToolName,
+  input: V035ProvenanceControlInput,
+  targetReferences: string[],
+  activityCode: "CREATE" | "UPDATE",
+  occurredDateTime?: string,
+  entityValues?: Array<{
+    role?: "source" | "revision" | "quotation" | "removal";
+    display: string;
+  }>,
+): Provenance | undefined {
+  if (input.create_provenance === false) return undefined;
+  return buildProvenance({
+    targetReferences,
+    occurredDateTime,
+    activityCode,
+    activityDisplay: activityCode === "CREATE" ? "Create" : "Update",
+    agents: [
+      {
+        typeCode: "author",
+        typeDisplay: "Author",
+        whoReference: input.provenance_agent_reference,
+        whoDisplay: input.provenance_agent_display ?? `ODOS MCP ${toolName}`,
+      },
+    ],
+    entityValues,
+  });
 }
 
 async function createV04Provenance(
@@ -4956,6 +5042,35 @@ function findEncounterDiagnosisIndex(encounter: Encounter, conditionReference: s
         stripReference(referenceValue, "Condition") === conditionId)
     );
   });
+}
+
+function conditionEnteredInError(condition: Condition): Condition {
+  const { clinicalStatus: _clinicalStatus, ...conditionWithoutClinicalStatus } = condition;
+  return {
+    ...conditionWithoutClinicalStatus,
+    verificationStatus: verificationStatusConcept("entered-in-error"),
+  };
+}
+
+function encounterAfterDiagnosisRetraction(encounter: Encounter, targetIndex: number): Encounter {
+  const remaining = (encounter.diagnosis ?? [])
+    .flatMap((diagnosis, index) => index === targetIndex ? [] : [{ diagnosis, index }])
+    .sort((left, right) =>
+      (left.diagnosis.rank ?? Number.MAX_SAFE_INTEGER) -
+        (right.diagnosis.rank ?? Number.MAX_SAFE_INTEGER) ||
+      left.index - right.index
+    )
+    .map(({ diagnosis }, index) => ({ ...diagnosis, rank: index + 1 }));
+  if (remaining.length > 0) return { ...encounter, diagnosis: remaining };
+  const { diagnosis: _diagnosis, ...encounterWithoutDiagnosis } = encounter;
+  return encounterWithoutDiagnosis;
+}
+
+function assertSuccessfulTransaction(bundle: Bundle): void {
+  const failedStatus = bundle.entry
+    ?.map((entry) => entry.response?.status)
+    .find((status) => status !== undefined && Number.parseInt(status, 10) >= 400);
+  if (failedStatus) throw new Error(`FHIR transaction failed with status ${failedStatus}.`);
 }
 
 function buildUpdatePatientPatchOperations(input: UpdatePatientInput): JsonPatchOperation[] {

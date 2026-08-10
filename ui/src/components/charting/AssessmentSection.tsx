@@ -11,6 +11,7 @@ import {
   updateConditionBodySite,
   updateConditionCode,
   updateConditionStatus,
+  updateEncounterDiagnosisProblemStatus,
   type DiagnosisTierChoice,
   type EyeChoice,
 } from "../../lib/clinical-actions";
@@ -31,6 +32,11 @@ import {
   type DiagnosisVisitStatus,
 } from "../../lib/clinical-graph-client";
 import { ODOS_EXTENSION_URLS } from "../../lib/fhir-ophthalmology/extensions";
+import {
+  encounterDiagnosisProblemStatus,
+  MDM_PROBLEM_STATUSES,
+  type MdmProblemStatus,
+} from "../../lib/fhir-clinical/condition";
 import {
   activeProtocolIds,
   applyEncounterProtocol,
@@ -192,6 +198,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
         tier: form.tier,
       });
       await load();
+      notifyEncounterDiagnosisUpdated(encounterReference);
       const status = {
         completed: true,
         summary: `${form.tier === "principal" ? "Principal" : "Secondary"} ${form.code}`,
@@ -246,6 +253,13 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
     });
   }
 
+  async function saveProblemStatus(condition: Condition, problemStatus: MdmProblemStatus) {
+    if (!encounter) return;
+    await runEdit("problem-status", async () => {
+      await updateEncounterDiagnosisProblemStatus({ encounter, condition, problemStatus });
+    });
+  }
+
   async function saveVisitStatus(condition: Condition, status: DiagnosisVisitStatus) {
     if (!condition.id) return;
     await runEdit("visit-status", async () => {
@@ -283,7 +297,10 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
     setError(null);
     try {
       await action();
-      if (refreshAfter) await load();
+      if (refreshAfter) {
+        await load();
+        notifyEncounterDiagnosisUpdated(encounterReference);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -648,6 +665,8 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
                   canMoveDown={rankMoves.down !== undefined}
                   visitStatus={condition.id ? diagnosisVisitStatuses[`Condition/${condition.id}`] : undefined}
                   visitStatusDisabled={!canShowEditing || encounter?.status === "finished"}
+                  problemStatus={encounterProblemStatus(encounter, condition)}
+                  problemStatusDisabled={!canShowEditing || encounter?.status === "finished"}
                   onToggle={() => setEditingId((current) => (current === condition.id ? null : condition.id ?? null))}
                   onLaterality={(laterality) => saveLaterality(condition, laterality)}
                   onCode={(code, display) => saveCode(condition, code, display)}
@@ -656,6 +675,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
                   onMoveDown={() => saveRankSwap(condition, rankMoves.down!)}
                   onStatus={(status) => saveStatus(condition, status)}
                   onVisitStatus={(status) => saveVisitStatus(condition, status)}
+                  onProblemStatus={(status) => saveProblemStatus(condition, status)}
                   onEnteredInError={() => markEnteredInError(condition)}
                   onConfirm={() => decidePossible(condition, "confirm")}
                   onDiscard={() => decidePossible(condition, "discard")}
@@ -712,6 +732,8 @@ function DiagnosisCard({
   canMoveDown,
   visitStatus,
   visitStatusDisabled,
+  problemStatus,
+  problemStatusDisabled,
   onToggle,
   onLaterality,
   onCode,
@@ -720,6 +742,7 @@ function DiagnosisCard({
   onMoveDown,
   onStatus,
   onVisitStatus,
+  onProblemStatus,
   onEnteredInError,
   onConfirm,
   onDiscard,
@@ -735,6 +758,8 @@ function DiagnosisCard({
   canMoveDown: boolean;
   visitStatus?: DiagnosisVisitStatus;
   visitStatusDisabled: boolean;
+  problemStatus?: MdmProblemStatus;
+  problemStatusDisabled: boolean;
   onToggle: () => void;
   onLaterality: (laterality: EyeChoice) => void;
   onCode: (code: string, display: string) => void;
@@ -743,6 +768,7 @@ function DiagnosisCard({
   onMoveDown: () => void;
   onStatus: (status: "active" | "recurrence" | "resolved") => void;
   onVisitStatus: (status: DiagnosisVisitStatus) => void;
+  onProblemStatus: (status: MdmProblemStatus) => void;
   onEnteredInError: () => void;
   onConfirm: () => void;
   onDiscard: () => void;
@@ -771,7 +797,12 @@ function DiagnosisCard({
           </div>
         </button>
         {!possible && (
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-[18rem] flex-col gap-2">
+            <DiagnosisProblemStatusField
+              value={problemStatus}
+              disabled={problemStatusDisabled || busy !== null}
+              onChange={onProblemStatus}
+            />
             <OdosSelect
               value={visitStatus ?? ""}
               disabled={visitStatusDisabled || busy !== null}
@@ -846,7 +877,7 @@ function DiagnosisCard({
                 { value: "resolved", label: "resolved" },
               ]}
               onChange={(value) => setStatus(value as "active" | "recurrence" | "resolved")}
-              ariaLabel="Problem status"
+              ariaLabel="Diagnosis clinical status"
             />
             <div className="self-center text-sm text-[color:var(--odos-muted)]">Clinical status</div>
             <button disabled={busy !== null} onClick={() => onStatus(status)} className={BUTTON_CLASS}>Save status</button>
@@ -858,6 +889,59 @@ function DiagnosisCard({
       )}
     </div>
   );
+}
+
+export function DiagnosisProblemStatusField({
+  value,
+  disabled,
+  onChange,
+}: {
+  value?: MdmProblemStatus;
+  disabled: boolean;
+  onChange: (value: MdmProblemStatus) => void;
+}) {
+  return (
+    <div
+      data-testid="diagnosis-problem-status"
+      data-required={value ? undefined : "true"}
+      className={[
+        "rounded border p-2",
+        value
+          ? "border-[color:var(--odos-line-2)] bg-[color:var(--odos-surface-2)]"
+          : "border-[color:var(--odos-amber)] bg-[color:var(--odos-amber-wash)]",
+      ].join(" ")}
+    >
+      <div className="mb-1 flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wide text-[color:var(--odos-muted)]">
+        <span>Problem status</span>
+        {!value && <span className="text-[color:var(--odos-amber)]">Required</span>}
+      </div>
+      <OdosSelect<MdmProblemStatus | "">
+        value={value ?? ""}
+        disabled={disabled}
+        options={[
+          { value: "", label: "Required — select status", disabled: true },
+          ...MDM_PROBLEM_STATUSES.map((status) => ({ value: status.code, label: status.display })),
+        ]}
+        onChange={(next) => {
+          if (next) onChange(next);
+        }}
+        ariaLabel="Problem status"
+      />
+    </div>
+  );
+}
+
+function encounterProblemStatus(encounter: Encounter | null, condition: Condition): MdmProblemStatus | undefined {
+  const diagnosis = encounter?.diagnosis?.find(
+    (entry) => entry.condition.reference === `Condition/${condition.id}`,
+  );
+  return diagnosis ? encounterDiagnosisProblemStatus(diagnosis) : undefined;
+}
+
+function notifyEncounterDiagnosisUpdated(encounterReference: string): void {
+  window.dispatchEvent(new CustomEvent("odos:encounter-diagnosis-updated", {
+    detail: { encounterReference },
+  }));
 }
 
 async function loadDiagnosisCatalog(signal: AbortSignal): Promise<DiagnosisCatalogCodeRow[]> {

@@ -1,0 +1,60 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "odos-encounter-diagnosis-problem-status",
+  "url": "https://odos2020.com/fhir/StructureDefinition/odos-encounter-diagnosis-problem-status",
+  "version": "0.6.0",
+  "name": "ODOSEncounterDiagnosisProblemStatus",
+  "title": "ODOS Encounter Diagnosis Problem Status",
+  "status": "active",
+  "date": "2026-08-09",
+  "publisher": "ODOS",
+  "description": "Clinician-selected 2021 E/M problem category for one Encounter.diagnosis entry.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "Encounter.diagnosis"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Clinician-selected MDM problem status",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/odos-encounter-diagnosis-problem-status"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "CodeableConcept"
+          }
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "https://odos2020.com/fhir/ValueSet/mdm-problem-status"
+        }
+      }
+    ]
+  }
+}

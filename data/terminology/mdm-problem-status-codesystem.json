@@ -1,0 +1,48 @@
+{
+  "resourceType": "CodeSystem",
+  "url": "https://odos2020.com/fhir/CodeSystem/mdm-problem-status",
+  "version": "0.6.0",
+  "name": "ODOSMdmProblemStatus",
+  "title": "ODOS MDM Problem Status",
+  "status": "active",
+  "experimental": false,
+  "date": "2026-08-09",
+  "publisher": "ODOS",
+  "description": "ODOS local codes for clinician-selected 2021 E/M problem categories.",
+  "caseSensitive": true,
+  "content": "complete",
+  "concept": [
+    {
+      "code": "minimal-self-limited",
+      "display": "Minimal / self-limited"
+    },
+    {
+      "code": "stable-chronic",
+      "display": "Stable chronic illness"
+    },
+    {
+      "code": "chronic-exacerbation-progression",
+      "display": "Chronic illness with exacerbation / progression"
+    },
+    {
+      "code": "chronic-severe-exacerbation",
+      "display": "Chronic illness with severe exacerbation"
+    },
+    {
+      "code": "acute-uncomplicated",
+      "display": "Acute uncomplicated"
+    },
+    {
+      "code": "acute-complicated-or-systemic-symptoms",
+      "display": "Acute complicated / acute with systemic symptoms"
+    },
+    {
+      "code": "undiagnosed-new-problem-uncertain-prognosis",
+      "display": "Undiagnosed new problem with uncertain prognosis"
+    },
+    {
+      "code": "threat-to-life-or-bodily-function",
+      "display": "Acute or chronic threat to life or bodily function"
+    }
+  ]
+}

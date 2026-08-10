@@ -11,6 +11,8 @@ import type {
 import {
   FHIR_CONDITION_CATEGORY_CODE_SYSTEM,
   FHIR_CONDITION_CLINICAL_STATUS_CODE_SYSTEM,
+  encounterDiagnosisProblemStatus,
+  type MdmProblemStatus,
 } from "./fhir-clinical/condition";
 import {
   ODOS_EPISODE_OF_CARE_TYPE_CODE_SYSTEM,
@@ -21,21 +23,35 @@ import {
   US_CORE_SMOKING_STATUS_PROFILE,
 } from "./fhir-clinical/smokingStatus";
 
-export type MdmTier = "None" | "Low" | "Moderate" | "High";
+export type MdmTier = "None" | "Straightforward" | "Low" | "Moderate" | "High";
 
 export interface MdmCounts {
+  minimalSelfLimited: number;
   stableChronic: number;
-  minorSelfLimited: number;
-  chronicExacerbation: number;
+  chronicExacerbationProgression: number;
+  chronicSevereExacerbation: number;
   acuteUncomplicated: number;
-  severeExacerbationOrSystemic: number;
+  acuteComplicatedOrSystemic: number;
+  undiagnosedNewProblemUncertainPrognosis: number;
+  threatToLifeOrBodilyFunction: number;
 }
 
-export interface MdmHint {
+export interface ReadyMdmHint {
+  status: "ready";
   tier: MdmTier;
   counts: MdmCounts;
-  sourceConditionCount: number;
+  sourceDiagnosisCount: number;
 }
+
+export interface BlockedMdmHint {
+  status: "blocked";
+  reason: string;
+  missingProblemStatusCount: number;
+  counts: MdmCounts;
+  sourceDiagnosisCount: number;
+}
+
+export type MdmHint = ReadyMdmHint | BlockedMdmHint;
 
 export function displayCode(concept: CodeableConcept | undefined): string {
   return (
@@ -147,52 +163,70 @@ export function diagnosisRank(encounter: Encounter, condition: Condition): numbe
   return encounter.diagnosis?.find((diagnosis) => diagnosis.condition.reference === conditionReference)?.rank;
 }
 
-export function computeMdmHint(input: {
-  encounter: Encounter;
-  encounterConditions: Condition[];
-  problemListConditions: Condition[];
-}): MdmHint {
-  const activeProblems = input.problemListConditions.filter(isActiveCondition);
-  const activeEncounterDiagnoses = input.encounterConditions.filter(isActiveCondition);
+export function computeMdmHint(input: { encounter: Encounter }): MdmHint {
   const counts: MdmCounts = {
-    stableChronic: activeProblems.length,
-    minorSelfLimited: 0,
-    chronicExacerbation: 0,
+    minimalSelfLimited: 0,
+    stableChronic: 0,
+    chronicExacerbationProgression: 0,
+    chronicSevereExacerbation: 0,
     acuteUncomplicated: 0,
-    severeExacerbationOrSystemic: 0,
+    acuteComplicatedOrSystemic: 0,
+    undiagnosedNewProblemUncertainPrognosis: 0,
+    threatToLifeOrBodilyFunction: 0,
   };
+  let missingProblemStatusCount = 0;
 
-  for (const condition of activeEncounterDiagnoses) {
-    const label = displayCode(condition.code).toLowerCase();
-    if (label.includes("severe exacerbation") || label.includes("systemic symptoms")) {
-      counts.severeExacerbationOrSystemic += 1;
-    } else if (label.includes("exacerbation") || label.includes("side effect")) {
-      counts.chronicExacerbation += 1;
-    } else if (label.includes("minor") || label.includes("self-limited") || label.includes("self limited")) {
-      counts.minorSelfLimited += 1;
-    } else {
-      counts.acuteUncomplicated += 1;
+  for (const diagnosis of input.encounter.diagnosis ?? []) {
+    const status = encounterDiagnosisProblemStatus(diagnosis);
+    if (!status) {
+      missingProblemStatusCount += 1;
+      continue;
     }
+    incrementMdmCount(counts, status);
+  }
+
+  if (missingProblemStatusCount > 0) {
+    return {
+      status: "blocked",
+      reason: `problem status unset on ${missingProblemStatusCount} ${missingProblemStatusCount === 1 ? "diagnosis" : "diagnoses"}`,
+      missingProblemStatusCount,
+      counts,
+      sourceDiagnosisCount: input.encounter.diagnosis?.length ?? 0,
+    };
   }
 
   return {
+    status: "ready",
     tier: mdmTier(counts),
     counts,
-    sourceConditionCount: activeProblems.length + activeEncounterDiagnoses.length,
+    sourceDiagnosisCount: input.encounter.diagnosis?.length ?? 0,
   };
 }
 
 export function mdmTier(counts: MdmCounts): MdmTier {
-  if (counts.severeExacerbationOrSystemic >= 1) return "High";
+  if (counts.chronicSevereExacerbation >= 1 || counts.threatToLifeOrBodilyFunction >= 1) return "High";
   if (
     counts.stableChronic >= 2 ||
-    counts.chronicExacerbation >= 1 ||
-    counts.acuteUncomplicated >= 1
+    counts.chronicExacerbationProgression >= 1 ||
+    counts.acuteComplicatedOrSystemic >= 1 ||
+    counts.undiagnosedNewProblemUncertainPrognosis >= 1
   ) {
     return "Moderate";
   }
-  if (counts.stableChronic >= 1 || counts.minorSelfLimited >= 2) return "Low";
+  if (counts.stableChronic >= 1 || counts.minimalSelfLimited >= 2 || counts.acuteUncomplicated >= 1) return "Low";
+  if (counts.minimalSelfLimited >= 1) return "Straightforward";
   return "None";
+}
+
+function incrementMdmCount(counts: MdmCounts, status: MdmProblemStatus): void {
+  if (status === "minimal-self-limited") counts.minimalSelfLimited += 1;
+  else if (status === "stable-chronic") counts.stableChronic += 1;
+  else if (status === "chronic-exacerbation-progression") counts.chronicExacerbationProgression += 1;
+  else if (status === "chronic-severe-exacerbation") counts.chronicSevereExacerbation += 1;
+  else if (status === "acute-uncomplicated") counts.acuteUncomplicated += 1;
+  else if (status === "acute-complicated-or-systemic-symptoms") counts.acuteComplicatedOrSystemic += 1;
+  else if (status === "undiagnosed-new-problem-uncertain-prognosis") counts.undiagnosedNewProblemUncertainPrognosis += 1;
+  else counts.threatToLifeOrBodilyFunction += 1;
 }
 
 export function referenceId(reference: Reference | undefined, resourceType: string): string | undefined {
