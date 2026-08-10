@@ -11,6 +11,7 @@ import type { Application } from "express";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
+import type { FhirTransactionExecutionOptions } from "../fhir-client.js";
 import {
   buildEncounterDiagnosisComponent,
   buildEncounterDiagnosisCondition,
@@ -69,7 +70,11 @@ export interface DiagnosisCarryForwardFhirClient {
     params?: Record<string, string>,
   ): Promise<Bundle<T>>;
   searchUrl?<T extends PreviousExamResource>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>>;
-  executeTransaction(bundle: Bundle, extraHeaders?: Record<string, string>): Promise<Bundle>;
+  executeTransaction(
+    bundle: Bundle,
+    extraHeaders?: Record<string, string>,
+    options?: FhirTransactionExecutionOptions,
+  ): Promise<Bundle>;
 }
 
 export interface DiagnosisCarryForwardEndpointDeps {
@@ -355,7 +360,7 @@ export async function handleDiagnosisPullRequest(
     transaction = await staff.fhir.executeTransaction(transactionBundle, {
       "X-ODOS-Source": "diagnosis-carry-forward",
       Prefer: "return=representation",
-    });
+    }, { autoRollbackCreatedEntries: false });
   } catch (error) {
     if (isFhirConflict(error)) {
       return diagnosisConflict(staff.fhir, currentEncounterId, patientReference, sourceIdentity);
@@ -744,33 +749,8 @@ async function rollbackMixedTransactionCreates(
   if (!responseEntries.some((entry) => entry.response?.status?.match(/^201(?:\s|$)/))) {
     return "not-required";
   }
-  const requestEntries = request.entry ?? [];
-  if (!rollbackFhir || responseEntries.length !== requestEntries.length) return "failed";
-
-  const references: string[] = [];
-  const seen = new Set<string>();
-  for (let index = 0; index < responseEntries.length; index += 1) {
-    const responseEntry = responseEntries[index]!;
-    if (!responseEntry.response?.status?.match(/^201(?:\s|$)/)) continue;
-    const requestEntry = requestEntries[index];
-    const resourceType = requestEntry?.resource?.resourceType;
-    if (
-      requestEntry?.request?.method !== "POST" ||
-      !requestEntry.fullUrl?.startsWith("urn:uuid:") ||
-      (resourceType !== "Condition" && resourceType !== "Observation" && resourceType !== "Provenance") ||
-      responseEntry.resource?.resourceType !== resourceType
-    ) {
-      return "failed";
-    }
-    const location = responseEntry.response.location;
-    const locationMatch = location?.match(new RegExp(`^${resourceType}/([^/?#]+)(?:/_history/[^/?#]+)?$`));
-    if (!locationMatch) return "failed";
-    const reference = `${resourceType}/${locationMatch[1]}`;
-    if (seen.has(reference)) return "failed";
-    seen.add(reference);
-    references.push(reference);
-  }
-  if (!references.length) return "failed";
+  const references = authorizedMixedRollbackReferences(request, response);
+  if (!rollbackFhir || !references) return "failed";
 
   try {
     const rollbackResponse = await rollbackFhir.executeTransaction({
@@ -784,7 +764,7 @@ async function rollbackMixedTransactionCreates(
       rollbackResponse.resourceType !== "Bundle" ||
       rollbackResponse.type !== "transaction-response" ||
       rollbackResponse.entry?.length !== references.length ||
-      !rollbackResponse.entry.every((entry) => entry.response?.status?.match(/^2\d\d(?:\s|$)/))
+      !rollbackResponse.entry.every((entry) => synchronousDeleteStatus(entry.response?.status))
     ) {
       return "failed";
     }
@@ -801,6 +781,107 @@ async function rollbackMixedTransactionCreates(
   } catch {
     return "failed";
   }
+}
+
+const fhirIdPattern = /^[A-Za-z0-9.-]{1,64}$/;
+const generatedFullUrlPattern = /^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function authorizedMixedRollbackReferences(request: Bundle, response: Bundle): string[] | undefined {
+  const requestEntries = request.entry;
+  const responseEntries = response.entry;
+  if (
+    request.resourceType !== "Bundle" || request.type !== "transaction" ||
+    response.resourceType !== "Bundle" || response.type !== "transaction-response" ||
+    !requestEntries || !responseEntries || requestEntries.length < 3 ||
+    responseEntries.length !== requestEntries.length
+  ) {
+    return undefined;
+  }
+
+  const references: string[] = [];
+  const requestFullUrls = new Set<string>();
+  const createdReferences = new Set<string>();
+  let hasFailure = false;
+  for (let index = 0; index < requestEntries.length; index += 1) {
+    const requestEntry = requestEntries[index]!;
+    const responseEntry = responseEntries[index]!;
+    const requestResource = requestEntry.resource;
+    const requestFullUrl = requestEntry.fullUrl;
+    const statusCode = transactionStatusCode(responseEntry.response?.status);
+    if (
+      !requestResource || !requestFullUrl || !generatedFullUrlPattern.test(requestFullUrl) ||
+      requestFullUrls.has(requestFullUrl) || statusCode === undefined ||
+      (statusCode >= 300 && statusCode < 400)
+    ) {
+      return undefined;
+    }
+    requestFullUrls.add(requestFullUrl);
+    if (statusCode >= 400) hasFailure = true;
+
+    const expectedResourceType = index === 0
+      ? "Encounter"
+      : index === 1
+        ? "Condition"
+        : index === requestEntries.length - 1
+          ? "Provenance"
+          : "Observation";
+    if (requestResource.resourceType !== expectedResourceType) return undefined;
+    if (responseEntry.resource && responseEntry.resource.resourceType !== expectedResourceType) return undefined;
+
+    if (index === 0) {
+      if (
+        requestEntry.request?.method !== "PUT" ||
+        !requestResource.id || !fhirIdPattern.test(requestResource.id) ||
+        requestEntry.request.url !== `Encounter/${requestResource.id}`
+      ) {
+        return undefined;
+      }
+      if (
+        statusCode >= 200 && statusCode < 300 &&
+        responseEntry.resource?.id !== requestResource.id
+      ) {
+        return undefined;
+      }
+      continue;
+    }
+
+    if (
+      requestEntry.request?.method !== "POST" || requestEntry.request.url !== expectedResourceType ||
+      requestResource.id ||
+      (expectedResourceType !== "Condition" && expectedResourceType !== "Observation" && expectedResourceType !== "Provenance")
+    ) {
+      return undefined;
+    }
+    if (statusCode >= 200 && statusCode < 300 && statusCode !== 201) return undefined;
+    if (statusCode !== 201) continue;
+
+    const responseId = responseEntry.resource?.id;
+    const location = responseEntry.response?.location;
+    const locationMatch = location?.match(/^([A-Z][A-Za-z]+)\/([A-Za-z0-9.-]{1,64})(?:\/_history\/([A-Za-z0-9.-]{1,64}))?$/);
+    if (
+      !responseId || !fhirIdPattern.test(responseId) || !locationMatch ||
+      locationMatch[1] !== expectedResourceType || locationMatch[2] !== responseId
+    ) {
+      return undefined;
+    }
+    const reference = `${expectedResourceType}/${responseId}`;
+    if (createdReferences.has(reference)) return undefined;
+    createdReferences.add(reference);
+    references.push(reference);
+  }
+  return hasFailure && references.length ? references : undefined;
+}
+
+function transactionStatusCode(status: string | undefined): number | undefined {
+  const match = status?.match(/^(\d{3})(?:\s|$)/);
+  if (!match) return undefined;
+  const statusCode = Number(match[1]);
+  return statusCode >= 100 && statusCode <= 599 ? statusCode : undefined;
+}
+
+function synchronousDeleteStatus(status: string | undefined): boolean {
+  const statusCode = transactionStatusCode(status);
+  return statusCode === 200 || statusCode === 204;
 }
 
 function transactionConditionReference(bundle: Bundle, entryIndex: number): string | undefined {
@@ -823,8 +904,7 @@ function isMissingFhirResource(error: unknown): boolean {
   const status = typeof error === "object" && error !== null && "status" in error
     ? (error as { status?: unknown }).status
     : undefined;
-  const message = error instanceof Error ? error.message : String(error);
-  return status === 404 || status === 410 || /FHIR (404|410)\b/.test(message);
+  return status === 404 || status === 410;
 }
 
 async function diagnosisPullRead<T>(operation: () => Promise<T>): Promise<T> {

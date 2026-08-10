@@ -5,6 +5,7 @@ import { test, type TestContext } from "node:test";
 import type {
   AccessPolicy,
   Bundle,
+  ClientApplication,
   Condition,
   Encounter,
   Observation,
@@ -508,6 +509,7 @@ test("mixed stale transaction uses only the service rollback for exact generated
   const response = await postPull(base, "source-dry-eye-od");
 
   assert.equal(response.status, 409, await response.clone().text());
+  assert.deepEqual(fhir.transactions[0]?.options, { autoRollbackCreatedEntries: false });
   assert.equal(rollback.transactions.length, 1);
   assert.deepEqual(rollback.transactions[0]?.entry?.map((entry) => entry.request), [
     { method: "DELETE", url: "Provenance/pulled-provenance" },
@@ -517,6 +519,55 @@ test("mixed stale transaction uses only the service rollback for exact generated
   assert.equal(rollback.readReferences.has("Encounter/current-pull"), false);
   assert.deepEqual([...rollback.remaining], []);
 });
+
+for (const mutation of [
+  "same-type-wrong-id",
+  "non-mixed-invalid",
+  "wrong-full-url",
+  "wrong-response-order",
+  "wrong-location-id",
+  "invalid-fhir-id",
+  "invalid-http-status",
+] as const) {
+  test(`mixed transaction makes zero service rollback calls for ${mutation}`, async (t) => {
+    const fhir = pullFhir();
+    if (mutation === "wrong-full-url") {
+      fhir.transactionRequestMutator = (request) => {
+        request.entry![1]!.fullUrl = "urn:uuid:not-a-generated-uuid";
+      };
+    }
+    fhir.transactionResponseMutator = (response) => {
+      const changed = mixedConflictTransactionResponse(response);
+      if (mutation === "same-type-wrong-id") {
+        changed.entry![1]!.resource!.id = "different-condition-id";
+      } else if (mutation === "non-mixed-invalid") {
+        changed.type = "batch-response";
+        changed.entry![0]!.response!.status = "200 OK";
+      } else if (mutation === "wrong-response-order") {
+        [changed.entry![1], changed.entry![2]] = [changed.entry![2]!, changed.entry![1]!];
+      } else if (mutation === "wrong-location-id") {
+        changed.entry![1]!.response!.location = "Condition/different-condition-id/_history/1";
+      } else if (mutation === "invalid-fhir-id") {
+        changed.entry![1]!.resource!.id = "invalid$id";
+        changed.entry![1]!.response!.location = "Condition/invalid$id/_history/1";
+      } else if (mutation === "invalid-http-status") {
+        changed.entry![0]!.response!.status = "999 Not HTTP";
+      }
+      return changed;
+    };
+    const rollback = new MemoryRollbackFhir([
+      "Condition/pulled-condition",
+      "Observation/pulled-observation",
+      "Provenance/pulled-provenance",
+    ]);
+    const base = await startPreviousExamRoutes(t, fhir, "auditor", rollback);
+
+    const response = await postPull(base, "source-dry-eye-od");
+
+    assert.equal(response.status, 502, `${mutation}: ${await response.clone().text()}`);
+    assert.equal(rollback.transactions.length, 0, mutation);
+  });
+}
 
 test("mixed stale transaction fails closed when privileged rollback is absent", async (t) => {
   const fhir = pullFhir();
@@ -553,6 +604,40 @@ for (const mutation of ["wrong-location-type", "delete-failure", "still-readable
     if (mutation === "wrong-location-type") assert.equal(rollback.transactions.length, 0);
   });
 }
+
+for (const status of ["201 Created", "202 Accepted", "206 Partial Content", "226 IM Used"] as const) {
+  test(`mixed stale transaction rejects rollback DELETE status ${status}`, async (t) => {
+    const fhir = pullFhir();
+    fhir.transactionResponseMutator = mixedConflictTransactionResponse;
+    const rollback = new MemoryRollbackFhir([
+      "Condition/pulled-condition",
+      "Observation/pulled-observation",
+      "Provenance/pulled-provenance",
+    ]);
+    rollback.deleteStatus = status;
+    const base = await startPreviousExamRoutes(t, fhir, "auditor", rollback);
+
+    const response = await postPull(base, "source-dry-eye-od");
+
+    assert.equal(response.status, 502, `${status}: ${await response.clone().text()}`);
+  });
+}
+
+test("mixed stale transaction rejects message-only 404 rollback verification", async (t) => {
+  const fhir = pullFhir();
+  fhir.transactionResponseMutator = mixedConflictTransactionResponse;
+  const rollback = new MemoryRollbackFhir([
+    "Condition/pulled-condition",
+    "Observation/pulled-observation",
+    "Provenance/pulled-provenance",
+  ]);
+  rollback.readError = new Error("FHIR 404 synthetic message without numeric status");
+  const base = await startPreviousExamRoutes(t, fhir, "auditor", rollback);
+
+  const response = await postPull(base, "source-dry-eye-od");
+
+  assert.equal(response.status, 502, await response.clone().text());
+});
 
 test("pull re-read catches a raced exact OD diagnosis and returns its current reference without a transaction", async (t) => {
   const fhir = pullFhir();
@@ -1030,8 +1115,13 @@ test("live ordinary-clinician policy persists and reads diagnosis carry while pr
   const { fhir: adminFhir, accessToken: adminAccessToken } = await createAuthenticatedFhirClient({ baseUrl, email, password });
   const runId = randomUUID();
   const system = "urn:odos:test:diagnosis-carry-forward";
+  const clientName = `diagnosis-carry-clinician-${runId}`;
+  const accessPolicyName = `ODOS diagnosis carry clinician proof ${runId}`;
   const cleanupReferences = new Set<string>();
   const sweepEncounterIds = new Set<string>();
+  let projectId: string | undefined;
+  let clientApplicationId: string | undefined;
+  let accessPolicyId: string | undefined;
   const track = <T extends Resource>(resource: T): T => {
     assert.ok(resource.id, `Expected created ${resource.resourceType} to have an id.`);
     cleanupReferences.add(`${resource.resourceType}/${resource.id}`);
@@ -1080,17 +1170,21 @@ test("live ordinary-clinician policy persists and reads diagnosis carry while pr
     });
 
     const clinicianPolicy = buildMedplumAccessPolicy(getRoleDeclaration("clinician"));
-    clinicianPolicy.name = `ODOS diagnosis carry clinician proof ${runId}`;
+    clinicianPolicy.name = accessPolicyName;
     const createdPolicy = track(await adminFhir.create<AccessPolicy>(clinicianPolicy));
-    const projectId = await activeProjectId(baseUrl, adminAccessToken);
+    accessPolicyId = createdPolicy.id;
+    projectId = await activeProjectId(baseUrl, adminAccessToken);
     const clientApplication = await createDisposableClientApplication(
       baseUrl,
       adminAccessToken,
       projectId,
       `AccessPolicy/${createdPolicy.id}`,
-      runId,
+      clientName,
+      (id) => {
+        clientApplicationId = id;
+        cleanupReferences.add(`ClientApplication/${id}`);
+      },
     );
-    cleanupReferences.add(`ClientApplication/${clientApplication.id}`);
     const memberships = (await searchAll<ProjectMembership>(adminFhir, "ProjectMembership", {
       profile: `ClientApplication/${clientApplication.id}`,
     })).filter((membership) => membership.project.reference === `Project/${projectId}`);
@@ -1212,7 +1306,7 @@ test("live ordinary-clinician policy persists and reads diagnosis carry while pr
       read: (resourceType, id) => clinicianFhir.read(resourceType, id),
       search: (resourceType, params) => clinicianFhir.search(resourceType, params),
       searchUrl: (url, resourceType) => clinicianFhir.searchUrl!(url, resourceType),
-      executeTransaction: async (bundle, headers) => {
+      executeTransaction: async (bundle, headers, options) => {
         if (!injectedConflict) {
           injectedConflict = true;
           const fresh = await adminFhir.read<Encounter>("Encounter", conflictCurrentEncounter.id!);
@@ -1221,7 +1315,7 @@ test("live ordinary-clinician policy persists and reads diagnosis carry while pr
             extension: [...(fresh.extension ?? []), { url: system, valueString: `race-${runId}` }],
           });
         }
-        const response = await clinicianFhir.executeTransaction(bundle, headers);
+        const response = await clinicianFhir.executeTransaction(bundle, headers, options);
         captureTransactionResponseReferences(response, cleanupReferences);
         conflictResponseSummary = {
           type: response.type,
@@ -1234,22 +1328,39 @@ test("live ordinary-clinician policy persists and reads diagnosis carry while pr
         return response;
       },
     };
-    const conflictResult = await handleDiagnosisPullRequest({
-      fhirBaseUrl: baseUrl,
-      rollbackFhir: adminFhir,
-      authenticate: async () => ({
-        staffReference: `Practitioner/${practitioner.id}`,
-        actorRole: "clinician",
-        fhir: conflictFhir,
-      }),
-    }, {
-      authHeader: "Bearer synthetic-live-proof",
-      params: { encounterId: conflictCurrentEncounter.id },
-      body: {
-        sourceEncounterReference: `Encounter/${conflictSourceEncounter.id}`,
-        sourceConditionReference: `Condition/${conflictCondition.id}`,
-      },
-    });
+    const originalFetch = globalThis.fetch;
+    let clinicianDeleteRequests = 0;
+    globalThis.fetch = async (input, init) => {
+      if (
+        init?.method === "DELETE" &&
+        new Headers(init.headers).get("authorization") === `Bearer ${clinicianToken}`
+      ) {
+        clinicianDeleteRequests += 1;
+      }
+      return originalFetch(input, init);
+    };
+    let conflictResult: Awaited<ReturnType<typeof handleDiagnosisPullRequest>>;
+    try {
+      conflictResult = await handleDiagnosisPullRequest({
+        fhirBaseUrl: baseUrl,
+        rollbackFhir: adminFhir,
+        authenticate: async () => ({
+          staffReference: `Practitioner/${practitioner.id}`,
+          actorRole: "clinician",
+          fhir: conflictFhir,
+        }),
+      }, {
+        authHeader: "Bearer synthetic-live-proof",
+        params: { encounterId: conflictCurrentEncounter.id },
+        body: {
+          sourceEncounterReference: `Encounter/${conflictSourceEncounter.id}`,
+          sourceConditionReference: `Condition/${conflictCondition.id}`,
+        },
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+    assert.equal(clinicianDeleteRequests, 0, "Ordinary clinician token must never send compensating DELETE.");
     assert.equal(
       conflictResult.status,
       409,
@@ -1265,18 +1376,28 @@ test("live ordinary-clinician policy persists and reads diagnosis carry while pr
       adminAccessToken,
       sweepEncounterIds,
       cleanupReferences,
+      {
+        projectId,
+        clientName,
+        accessPolicyName,
+        knownClientApplicationId: clientApplicationId,
+        knownAccessPolicyId: accessPolicyId,
+      },
     );
   });
 });
 
 test("synthetic cleanup attempts every exact reference and aggregates all failures", async () => {
   const references = new Set(["Condition/one", "Observation/two", "Provenance/three"]);
-  const attempted: string[] = [];
-  const fakeFetch = async (input: string | URL | Request): Promise<Response> => {
+  const attempted: Array<{ method: string; reference: string }> = [];
+  const fakeFetch = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
     const reference = String(input).split("/fhir/R4/")[1]!;
-    attempted.push(reference);
-    if (reference === "Observation/two") throw new Error("synthetic network failure");
-    return new Response(null, { status: reference === "Condition/one" ? 500 : 204 });
+    const method = init?.method ?? "GET";
+    attempted.push({ method, reference });
+    if (method === "DELETE" && reference === "Observation/two") throw new Error("synthetic network failure");
+    return new Response(null, {
+      status: method === "DELETE" && reference === "Condition/one" ? 500 : method === "DELETE" ? 204 : 404,
+    });
   };
 
   await assert.rejects(
@@ -1287,7 +1408,141 @@ test("synthetic cleanup attempts every exact reference and aggregates all failur
       return true;
     },
   );
-  assert.deepEqual(attempted, ["Provenance/three", "Observation/two", "Condition/one"]);
+  assert.deepEqual(attempted, [
+    { method: "DELETE", reference: "Provenance/three" },
+    { method: "DELETE", reference: "Observation/two" },
+    { method: "DELETE", reference: "Condition/one" },
+    { method: "GET", reference: "Provenance/three" },
+    { method: "GET", reference: "Observation/two" },
+    { method: "GET", reference: "Condition/one" },
+  ]);
+});
+
+test("disposable client creation exposes its id before a later response assertion fails", async () => {
+  const originalFetch = globalThis.fetch;
+  let persistedClientId: string | undefined;
+  globalThis.fetch = async () => Response.json({ id: "client-created-before-failure" }, { status: 201 });
+  try {
+    await assert.rejects(createDisposableClientApplication(
+      "https://fhir.local",
+      "synthetic-admin-token",
+      "existing-project",
+      "AccessPolicy/unique-policy",
+      "unique-run",
+      (id) => {
+        persistedClientId = id;
+      },
+    ), /response was incomplete/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assert.equal(persistedClientId, "client-created-before-failure");
+});
+
+test("early-failure cleanup rediscovers all unique auth artifacts and verifies every exact deletion", async () => {
+  const clientName = "diagnosis-carry-clinician-unique-run";
+  const policyName = "ODOS diagnosis carry clinician proof unique-run";
+  const fhir = new CleanupDiscoveryFhir(clientName, policyName);
+  const references = new Set<string>();
+  const calls: Array<{ method: string; reference: string }> = [];
+  const fakeFetch = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+    const reference = String(input).split("/fhir/R4/")[1]!;
+    const method = init?.method ?? "GET";
+    calls.push({ method, reference });
+    return new Response(null, { status: method === "DELETE" ? 204 : 404 });
+  };
+
+  await cleanupSyntheticPullProof(
+    fhir as never,
+    "https://fhir.local",
+    "synthetic-admin-token",
+    new Set(),
+    references,
+    {
+      projectId: "existing-project",
+      clientName,
+      accessPolicyName: policyName,
+      fetchImpl: fakeFetch,
+    },
+  );
+
+  const expected = [
+    "ProjectMembership/membership-one",
+    "ProjectMembership/membership-two",
+    "ProjectMembership/membership-other-project",
+    "AccessPolicy/unique-policy",
+    "ClientApplication/unique-client",
+  ].sort();
+  assert.deepEqual(calls.filter((call) => call.method === "DELETE").map((call) => call.reference).sort(), expected);
+  assert.deepEqual(calls.filter((call) => call.method === "GET").map((call) => call.reference).sort(), expected);
+  assert.equal(calls.some((call) => call.reference === "Project/existing-project"), false);
+});
+
+test("authorization cleanup still rediscovers memberships when another discovery search fails", async () => {
+  const clientName = "diagnosis-carry-clinician-unique-run";
+  const policyName = "ODOS diagnosis carry clinician proof unique-run";
+  const fhir = new CleanupDiscoveryFhir(clientName, policyName);
+  fhir.failPolicySearch = true;
+  const calls: Array<{ method: string; reference: string }> = [];
+  const fakeFetch = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+    const reference = String(input).split("/fhir/R4/")[1]!;
+    const method = init?.method ?? "GET";
+    calls.push({ method, reference });
+    return new Response(null, { status: method === "DELETE" ? 204 : 404 });
+  };
+
+  await assert.rejects(cleanupSyntheticPullProof(
+    fhir as never,
+    "https://fhir.local",
+    "synthetic-admin-token",
+    new Set(),
+    new Set(),
+    {
+      projectId: "existing-project",
+      clientName,
+      accessPolicyName: policyName,
+      knownClientApplicationId: "unique-client",
+      knownAccessPolicyId: "unique-policy",
+      fetchImpl: fakeFetch,
+    },
+  ), /cleanup had 1 failure/);
+
+  assert.deepEqual(calls.filter((call) => call.method === "DELETE").map((call) => call.reference).sort(), [
+    "AccessPolicy/unique-policy",
+    "ClientApplication/unique-client",
+    "ProjectMembership/membership-one",
+    "ProjectMembership/membership-other-project",
+    "ProjectMembership/membership-two",
+  ]);
+});
+
+test("synthetic cleanup verification attempts every read and rejects a resource that remains", async () => {
+  const calls: Array<{ method: string; reference: string }> = [];
+  const fakeFetch = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+    const reference = String(input).split("/fhir/R4/")[1]!;
+    const method = init?.method ?? "GET";
+    calls.push({ method, reference });
+    if (method === "DELETE") return new Response(null, { status: 204 });
+    return new Response(null, { status: reference === "Observation/still-present" ? 200 : 404 });
+  };
+
+  await assert.rejects(
+    deleteSyntheticReferences(
+      "https://fhir.local",
+      "synthetic-admin-token",
+      new Set(["Condition/gone", "Observation/still-present"]),
+      fakeFetch,
+    ),
+    (error: unknown) => {
+      assert.ok(error instanceof AggregateError);
+      assert.equal(error.errors.length, 1);
+      return true;
+    },
+  );
+  assert.deepEqual(calls.filter((call) => call.method === "GET").map((call) => call.reference).sort(), [
+    "Condition/gone",
+    "Observation/still-present",
+  ]);
 });
 
 test("synthetic cleanup captures transaction resource ids and versioned locations", () => {
@@ -1546,7 +1801,8 @@ async function createDisposableClientApplication(
   accessToken: string,
   projectId: string,
   accessPolicyReference: string,
-  runId: string,
+  clientName: string,
+  onCreatedId?: (id: string) => void,
 ): Promise<{ id: string; secret: string }> {
   const response = await fetch(`${baseUrl.replace(/\/$/, "")}/admin/projects/${projectId}/client`, {
     method: "POST",
@@ -1555,13 +1811,14 @@ async function createDisposableClientApplication(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      name: `diagnosis-carry-clinician-${runId}`,
+      name: clientName,
       description: "Disposable synthetic clinician policy proof",
       accessPolicy: { reference: accessPolicyReference },
     }),
   });
   assert.equal(response.status, 201, "Disposable clinician client creation failed.");
   const body = await response.json() as { id?: string; secret?: string };
+  if (body.id) onCreatedId?.(body.id);
   assert.ok(body.id && body.secret, "Disposable clinician client response was incomplete.");
   return { id: body.id, secret: body.secret };
 }
@@ -1686,8 +1943,23 @@ async function cleanupSyntheticPullProof(
   accessToken: string,
   encounterIds: Set<string>,
   references: Set<string>,
+  identity?: {
+    projectId?: string;
+    clientName: string;
+    accessPolicyName: string;
+    knownClientApplicationId?: string;
+    knownAccessPolicyId?: string;
+    fetchImpl?: (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
+  },
 ): Promise<void> {
   const failures: unknown[] = [];
+  if (identity) {
+    try {
+      await discoverDisposableAuthorizationReferences(fhir, identity, references);
+    } catch (error) {
+      failures.push(new Error("Synthetic authorization cleanup discovery failed.", { cause: error }));
+    }
+  }
   for (const encounterId of encounterIds) {
     const encounterReference = `Encounter/${encounterId}`;
     const searches = [
@@ -1714,13 +1986,75 @@ async function cleanupSyntheticPullProof(
     }
   }
   try {
-    await deleteSyntheticReferences(baseUrl, accessToken, references);
+    await deleteSyntheticReferences(baseUrl, accessToken, references, identity?.fetchImpl);
   } catch (error) {
     if (error instanceof AggregateError) failures.push(...error.errors);
     else failures.push(error);
   }
   if (failures.length) {
     throw new AggregateError(failures, `Synthetic diagnosis pull cleanup had ${failures.length} failure(s).`);
+  }
+}
+
+async function discoverDisposableAuthorizationReferences(
+  fhir: Awaited<ReturnType<typeof createAuthenticatedFhirClient>>["fhir"],
+  identity: {
+    projectId?: string;
+    clientName: string;
+    accessPolicyName: string;
+    knownClientApplicationId?: string;
+    knownAccessPolicyId?: string;
+  },
+  references: Set<string>,
+): Promise<void> {
+  const failures: unknown[] = [];
+  const clientIds = new Set<string>();
+  if (identity.knownClientApplicationId) {
+    clientIds.add(identity.knownClientApplicationId);
+    references.add(`ClientApplication/${identity.knownClientApplicationId}`);
+  }
+  if (identity.knownAccessPolicyId) references.add(`AccessPolicy/${identity.knownAccessPolicyId}`);
+
+  let clients: ClientApplication[] = [];
+  try {
+    clients = await allSearchResources<ClientApplication>(fhir, "ClientApplication", { name: identity.clientName });
+  } catch (error) {
+    failures.push(error);
+  }
+  for (const client of clients) {
+    if (client.id && client.name === identity.clientName) clientIds.add(client.id);
+  }
+  let policies: AccessPolicy[] = [];
+  try {
+    policies = await allSearchResources<AccessPolicy>(fhir, "AccessPolicy", { name: identity.accessPolicyName });
+  } catch (error) {
+    failures.push(error);
+  }
+  for (const policy of policies) {
+    if (policy.id && policy.name === identity.accessPolicyName) references.add(`AccessPolicy/${policy.id}`);
+  }
+  for (const clientId of clientIds) {
+    references.add(`ClientApplication/${clientId}`);
+    if (!identity.projectId) continue;
+    let memberships: ProjectMembership[] = [];
+    try {
+      memberships = await allSearchResources<ProjectMembership>(fhir, "ProjectMembership", {
+        profile: `ClientApplication/${clientId}`,
+      });
+    } catch (error) {
+      failures.push(error);
+    }
+    for (const membership of memberships) {
+      if (
+        membership.id &&
+        membership.profile.reference === `ClientApplication/${clientId}`
+      ) {
+        references.add(`ProjectMembership/${membership.id}`);
+      }
+    }
+  }
+  if (failures.length) {
+    throw new AggregateError(failures, `Synthetic authorization discovery had ${failures.length} failure(s).`);
   }
 }
 
@@ -1737,7 +2071,7 @@ async function transactionResourcesForEncounter(
   return [...conditions, ...observations, ...provenances];
 }
 
-async function allSearchResources<T extends Condition | Observation | Provenance>(
+async function allSearchResources<T extends Resource>(
   fhir: Awaited<ReturnType<typeof createAuthenticatedFhirClient>>["fhir"],
   resourceType: T["resourceType"],
   params: Record<string, string>,
@@ -1760,7 +2094,8 @@ async function deleteSyntheticReferences(
   fetchImpl: (input: string | URL | Request, init?: RequestInit) => Promise<Response> = fetch,
 ): Promise<void> {
   const failures: unknown[] = [];
-  for (const reference of [...references].reverse()) {
+  const orderedReferences = [...references].reverse();
+  for (const reference of orderedReferences) {
     try {
       const response = await fetchImpl(`${baseUrl.replace(/\/$/, "")}/fhir/R4/${reference}`, {
         method: "DELETE",
@@ -1774,6 +2109,18 @@ async function deleteSyntheticReferences(
       }
     } catch (error) {
       failures.push(new Error(`Synthetic cleanup request failed for ${reference}.`, { cause: error }));
+    }
+  }
+  for (const reference of orderedReferences) {
+    try {
+      const response = await fetchImpl(`${baseUrl.replace(/\/$/, "")}/fhir/R4/${reference}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (response.status !== 404 && response.status !== 410) {
+        failures.push(new Error(`Synthetic cleanup verification failed for ${reference} with HTTP ${response.status}.`));
+      }
+    } catch (error) {
+      failures.push(new Error(`Synthetic cleanup verification failed for ${reference}.`, { cause: error }));
     }
   }
   if (failures.length) {
@@ -1827,12 +2174,61 @@ function mixedConflictTransactionResponse(response: Bundle): Bundle {
   return changed;
 }
 
+class CleanupDiscoveryFhir {
+  failPolicySearch = false;
+
+  constructor(
+    private readonly clientName: string,
+    private readonly policyName: string,
+  ) {}
+
+  async search<T extends Resource>(
+    resourceType: T["resourceType"],
+    params: Record<string, string> = {},
+  ): Promise<Bundle<T>> {
+    if (resourceType === "AccessPolicy" && this.failPolicySearch) {
+      throw new Error("Synthetic AccessPolicy discovery failure");
+    }
+    let resources: Resource[] = [];
+    if (resourceType === "ClientApplication" && params.name === this.clientName) {
+      resources = [{
+        resourceType: "ClientApplication",
+        id: "unique-client",
+        name: this.clientName,
+      } as ClientApplication];
+    } else if (resourceType === "AccessPolicy" && params.name === this.policyName) {
+      resources = [{
+        resourceType: "AccessPolicy",
+        id: "unique-policy",
+        name: this.policyName,
+      } as AccessPolicy];
+    } else if (
+      resourceType === "ProjectMembership" &&
+      params.profile === "ClientApplication/unique-client"
+    ) {
+      resources = ["membership-one", "membership-two", "membership-other-project"].map((id): ProjectMembership => ({
+        resourceType: "ProjectMembership",
+        id,
+        project: { reference: id === "membership-other-project" ? "Project/unexpected-project" : "Project/existing-project" },
+        profile: { reference: "ClientApplication/unique-client" },
+      }));
+    }
+    return {
+      resourceType: "Bundle",
+      type: "searchset",
+      entry: resources.map((resource) => ({ resource: resource as T })),
+    };
+  }
+}
+
 class MemoryRollbackFhir {
   readonly transactions: Bundle[] = [];
   readonly readReferences = new Set<string>();
   readonly remaining: Set<string>;
   failDelete = false;
   keepReadable = false;
+  deleteStatus = "204 No Content";
+  readError: Error | undefined;
 
   constructor(references: string[]) {
     this.remaining = new Set(references);
@@ -1849,7 +2245,7 @@ class MemoryRollbackFhir {
       resourceType: "Bundle",
       type: "transaction-response",
       entry: (bundle.entry ?? []).map(() => ({
-        response: { status: this.failDelete ? "500 Internal Server Error" : "204 No Content" },
+        response: { status: this.failDelete ? "500 Internal Server Error" : this.deleteStatus },
       })),
     };
   }
@@ -1857,6 +2253,7 @@ class MemoryRollbackFhir {
   async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
     const reference = `${resourceType}/${id}`;
     this.readReferences.add(reference);
+    if (this.readError) throw this.readError;
     if (this.keepReadable || this.remaining.has(reference)) {
       return { resourceType, id } as T;
     }
@@ -2214,7 +2611,11 @@ const unreachableFhir = new Proxy({}, {
 class MemoryFhir {
   readonly resources: Resource[] = [];
   readonly followedUrls: string[] = [];
-  readonly transactions: Array<{ bundle: Bundle; headers: Record<string, string> }> = [];
+  readonly transactions: Array<{
+    bundle: Bundle;
+    headers: Record<string, string>;
+    options?: { autoRollbackCreatedEntries?: boolean };
+  }> = [];
   readonly readFailures = new Map<string, number>();
   initialEncounterSearch: Record<string, string> | undefined;
   nextUrl = "/fhir/R4/Encounter?_page=2&_count=4";
@@ -2223,6 +2624,7 @@ class MemoryFhir {
   transactionResponseMutator: ((response: Bundle) => Bundle) | undefined;
   beforeCurrentEncounterRead: ((readNumber: number) => void) | undefined;
   beforeTransaction: (() => void) | undefined;
+  transactionRequestMutator: ((bundle: Bundle) => void) | undefined;
   provenancePageTarget: string | undefined;
   provenancePages: Provenance[][] | undefined;
   private currentEncounterReads = 0;
@@ -2257,8 +2659,17 @@ class MemoryFhir {
     if (index >= 0) this.resources.splice(index, 1);
   }
 
-  async executeTransaction(bundle: Bundle, headers: Record<string, string> = {}): Promise<Bundle> {
-    this.transactions.push({ bundle: structuredClone(bundle), headers: structuredClone(headers) });
+  async executeTransaction(
+    bundle: Bundle,
+    headers: Record<string, string> = {},
+    options?: { autoRollbackCreatedEntries?: boolean },
+  ): Promise<Bundle> {
+    this.transactionRequestMutator?.(bundle);
+    this.transactions.push({
+      bundle: structuredClone(bundle),
+      headers: structuredClone(headers),
+      ...(options ? { options: structuredClone(options) } : {}),
+    });
     this.beforeTransaction?.();
     if (this.transactionErrorStatus) {
       throw Object.assign(new Error(`FHIR ${this.transactionErrorStatus}`), { status: this.transactionErrorStatus });

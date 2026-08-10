@@ -64,7 +64,11 @@ export interface MedplumClient {
     operations: JsonPatchOperation[],
     extraHeaders?: Record<string, string>,
   ): Promise<T>;
-  executeTransaction(bundle: Bundle, extraHeaders?: Record<string, string>): Promise<Bundle>;
+  executeTransaction(
+    bundle: Bundle,
+    extraHeaders?: Record<string, string>,
+    options?: FhirTransactionExecutionOptions,
+  ): Promise<Bundle>;
   getActiveProjectId(): Promise<string>;
   invitePractitioner(
     projectId: string,
@@ -72,6 +76,10 @@ export interface MedplumClient {
   ): Promise<ProjectMembership>;
   deleteAttempt(rt: string, id: string, reason?: string): Promise<never>;
   nullifyAttempt(rt: string, id: string, reason?: string): Promise<never>;
+}
+
+export interface FhirTransactionExecutionOptions {
+  autoRollbackCreatedEntries?: boolean;
 }
 
 export type FhirSearchParams = Record<string, string> | URLSearchParams | Array<[string, string]>;
@@ -533,6 +541,7 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
     async executeTransaction(
       bundle: Bundle,
       extraHeaders: Record<string, string> = {},
+      options: FhirTransactionExecutionOptions = {},
     ): Promise<Bundle> {
       const transactionBundle: Bundle = { ...bundle, type: "transaction" };
       assertTransactionBinaryWritesUseParser(transactionBundle, extraHeaders);
@@ -552,7 +561,7 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
           }));
           if (!res.ok) throw await toError(res);
           const responseBundle = (await res.json()) as Bundle;
-          if (hasEntryFailure(responseBundle)) {
+          if (options.autoRollbackCreatedEntries !== false && hasEntryFailure(responseBundle)) {
             await rollbackCreatedEntries(base, headers(), responseBundle, extraHeaders);
           }
           return responseBundle;
