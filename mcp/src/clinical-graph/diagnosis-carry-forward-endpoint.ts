@@ -377,7 +377,7 @@ export async function handleDiagnosisPullRequest(
   };
   } catch (error) {
     if (error instanceof DiagnosisPullReadError) {
-      if (error.status === 404) {
+      if (error.status === 404 || error.status === 410) {
         return { status: 404, body: { error: "Diagnosis pull resources were not found." } };
       }
       return {
@@ -678,7 +678,10 @@ async function diagnosisConflict(
 ): Promise<{ status: number; body: unknown }> {
   try {
     const encounter = await fhir.read<Encounter>("Encounter", encounterId);
-    if (encounter.subject?.reference === patientReference) {
+    if (
+      encounter.status !== "entered-in-error" &&
+      encounter.subject?.reference === patientReference
+    ) {
       const identities = await currentDiagnosisIdentities(fhir, encounter, patientReference);
       const conditionReference = identities.get(identityKey(sourceIdentity));
       if (conditionReference) {
@@ -695,7 +698,9 @@ function validateTransactionResponse(
   request: Bundle,
   response: Bundle,
 ): { kind: "ok" } | { kind: "conflict" } | { kind: "invalid" } {
-  if (response.type !== "transaction-response") return { kind: "invalid" };
+  if (response.resourceType !== "Bundle" || response.type !== "transaction-response") {
+    return { kind: "invalid" };
+  }
   const requestEntries = request.entry;
   const responseEntries = response.entry;
   if (!requestEntries || !responseEntries || responseEntries.length !== requestEntries.length) {
@@ -743,7 +748,7 @@ async function diagnosisPullRead<T>(operation: () => Promise<T>): Promise<T> {
     const status = typeof error === "object" && error !== null && "status" in error
       ? (error as { status?: unknown }).status
       : undefined;
-    if (status === 401 || status === 403 || status === 404) {
+    if (status === 401 || status === 403 || status === 404 || status === 410) {
       throw new DiagnosisPullReadError(status);
     }
     throw error;
@@ -809,7 +814,7 @@ function staffMayWrite(role: PracticeRoleId): boolean {
 
 class InvalidCursorError extends Error {}
 class DiagnosisPullReadError extends Error {
-  constructor(readonly status: 401 | 403 | 404) {
+  constructor(readonly status: 401 | 403 | 404 | 410) {
     super("Diagnosis pull FHIR read failed");
   }
 }

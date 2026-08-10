@@ -327,6 +327,13 @@ test("pull rejects failed transaction entries and maps precondition failures to 
 
 for (const malformed of [
   {
+    name: "a non-Bundle resource discriminator",
+    mutate: (response: Bundle) => ({
+      ...response,
+      resourceType: "OperationOutcome",
+    }) as unknown as Bundle,
+  },
+  {
     name: "a non-transaction-response Bundle",
     mutate: (response: Bundle) => ({ ...response, type: "batch-response" as Bundle["type"] }),
   },
@@ -406,6 +413,18 @@ test("pull maps a patient-compartment source read denial to a non-leaking 403", 
 test("pull maps a missing source evidence Observation to a non-leaking 404", async (t) => {
   const fhir = pullFhir();
   fhir.readFailures.set("Observation/source-staining-present", 404);
+  const base = await startPreviousExamRoutes(t, fhir, "auditor");
+
+  const response = await postPull(base, "source-dry-eye-od");
+
+  assert.equal(response.status, 404);
+  assert.deepEqual(await response.json(), { error: "Diagnosis pull resources were not found." });
+  assert.equal(fhir.transactions.length, 0);
+});
+
+test("pull maps a gone source Condition to the same non-leaking 404", async (t) => {
+  const fhir = pullFhir();
+  fhir.readFailures.set("Condition/source-dry-eye-od", 410);
   const base = await startPreviousExamRoutes(t, fhir, "auditor");
 
   const response = await postPull(base, "source-dry-eye-od");
@@ -502,6 +521,18 @@ test("pull rejects an entered-in-error current Encounter", async (t) => {
   assert.equal(fhir.transactions.length, 0);
 });
 
+test("pull rejects a current Encounter entering error on the mutation-time re-read", async (t) => {
+  const fhir = pullFhir();
+  fhir.beforeCurrentEncounterRead = (readNumber) => {
+    if (readNumber === 2) {
+      fhir.resource<Encounter>("Encounter", "current-pull").status = "entered-in-error";
+    }
+  };
+  const response = await postPull(await startPreviousExamRoutes(t, fhir, "auditor"), "source-dry-eye-od");
+  assert.equal(response.status, 409, await response.text());
+  assert.equal(fhir.transactions.length, 0);
+});
+
 test("pull rejects a current patient change on the mutation-time re-read", async (t) => {
   const fhir = pullFhir();
   fhir.beforeCurrentEncounterRead = (readNumber) => {
@@ -576,6 +607,29 @@ test("a transaction conflict whose current Encounter disappeared returns 409", a
   assert.equal(fhir.transactions.length, 1);
 });
 
+test("a conflict reread never returns an exact diagnosis from an entered-in-error current Encounter", async (t) => {
+  const fhir = pullFhir();
+  fhir.transactionErrorStatus = 412;
+  fhir.beforeTransaction = () => {
+    const current = diagnosis("current-conflict-entered-error", "current-pull", "dry_eye", "right", "confirmed", []);
+    current.extension = structuredClone(fhir.resource<Condition>("Condition", "source-dry-eye-od").extension);
+    fhir.resources.push(current);
+    fhir.resource<Encounter>("Encounter", "current-pull").diagnosis!.push(
+      buildEncounterDiagnosisComponent("Condition/current-conflict-entered-error", 5),
+    );
+  };
+  fhir.beforeCurrentEncounterRead = (readNumber) => {
+    if (readNumber === 3) {
+      fhir.resource<Encounter>("Encounter", "current-pull").status = "entered-in-error";
+    }
+  };
+
+  const response = await postPull(await startPreviousExamRoutes(t, fhir, "auditor"), "source-dry-eye-od");
+
+  assert.equal(response.status, 409, await response.text());
+  assert.equal(fhir.transactions.length, 1);
+});
+
 test("live Medplum handler persists the diagnosis graph and atomically rolls back an If-Match conflict", { timeout: 90_000 }, async (t) => {
   loadRepoEnv();
   const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
@@ -590,6 +644,7 @@ test("live Medplum handler persists the diagnosis graph and atomically rolls bac
   const runId = randomUUID();
   const system = "urn:odos:test:diagnosis-carry-forward";
   const cleanupReferences = new Set<string>();
+  const sweepEncounterIds = new Set<string>();
   const track = <T extends Resource>(resource: T): T => {
     assert.ok(resource.id, `Expected created ${resource.resourceType} to have an id.`);
     cleanupReferences.add(`${resource.resourceType}/${resource.id}`);
@@ -610,6 +665,7 @@ test("live Medplum handler persists the diagnosis graph and atomically rolls bac
     const patientReference = `Patient/${patient.id}`;
     const sourceEncounter = track(await fhir.create<Encounter>(syntheticEncounter(patientReference, system, `source-${runId}`)));
     const currentEncounter = track(await fhir.create<Encounter>(syntheticEncounter(patientReference, system, `current-${runId}`)));
+    sweepEncounterIds.add(currentEncounter.id!);
     const present = track(await fhir.create<Observation>(
       syntheticEvidence(patientReference, `Encounter/${sourceEncounter.id}`, system, `present-${runId}`, true),
     ));
@@ -648,15 +704,12 @@ test("live Medplum handler persists the diagnosis graph and atomically rolls bac
         sourceConditionReference: `Condition/${sourceCondition.id}`,
       },
     });
-    assert.equal(result.status, 200, JSON.stringify(result.body));
     const successfulBody = result.body as { conditionReference: string; transaction: Bundle };
+    captureTransactionResponseReferences(successfulBody.transaction, cleanupReferences);
+    assert.equal(result.status, 200, JSON.stringify(result.body));
     assert.equal(successfulBody.transaction.type, "transaction-response");
     assert.equal(successfulBody.transaction.entry?.length, 4);
     assert.ok(successfulBody.transaction.entry?.every((entry) => entry.response?.status?.match(/^2\d\d(?:\s|$)/)));
-    for (const entry of successfulBody.transaction.entry ?? []) {
-      if (entry.resource?.id) cleanupReferences.add(`${entry.resource.resourceType}/${entry.resource.id}`);
-    }
-
     const pulledConditionId = successfulBody.conditionReference.split("/")[1]!;
     const persistedCondition = await fhir.read<Condition>("Condition", pulledConditionId);
     const persistedEncounter = await fhir.read<Encounter>("Encounter", currentEncounter.id!);
@@ -692,6 +745,7 @@ test("live Medplum handler persists the diagnosis graph and atomically rolls bac
     const conflictCurrentEncounter = track(await fhir.create<Encounter>(
       syntheticEncounter(patientReference, system, `conflict-current-${runId}`),
     ));
+    sweepEncounterIds.add(conflictCurrentEncounter.id!);
     const conflictEvidence = track(await fhir.create<Observation>(syntheticEvidence(
       patientReference,
       `Encounter/${conflictSourceEncounter.id}`,
@@ -731,6 +785,7 @@ test("live Medplum handler persists the diagnosis graph and atomically rolls bac
           });
         }
         const response = await fhir.executeTransaction(bundle, headers);
+        captureTransactionResponseReferences(response, cleanupReferences);
         conflictResponseSummary = {
           type: response.type,
           entries: response.entry?.map((entry) => ({
@@ -763,10 +818,56 @@ test("live Medplum handler persists the diagnosis graph and atomically rolls bac
     );
     const rolledBackEncounter = await fhir.read<Encounter>("Encounter", conflictCurrentEncounter.id!);
     assert.deepEqual(rolledBackEncounter.diagnosis, undefined);
-    await assertNoTransactionLeaks(fhir, conflictCurrentEncounter.id!, cleanupReferences);
+    await assertNoTransactionLeaks(fhir, conflictCurrentEncounter.id!);
   } finally {
-    await deleteSyntheticReferences(baseUrl, accessToken, cleanupReferences);
+    await cleanupSyntheticPullProof(
+      fhir,
+      baseUrl,
+      accessToken,
+      sweepEncounterIds,
+      cleanupReferences,
+    );
   }
+});
+
+test("synthetic cleanup attempts every exact reference and aggregates all failures", async () => {
+  const references = new Set(["Condition/one", "Observation/two", "Provenance/three"]);
+  const attempted: string[] = [];
+  const fakeFetch = async (input: string | URL | Request): Promise<Response> => {
+    const reference = String(input).split("/fhir/R4/")[1]!;
+    attempted.push(reference);
+    if (reference === "Observation/two") throw new Error("synthetic network failure");
+    return new Response(null, { status: reference === "Condition/one" ? 500 : 204 });
+  };
+
+  await assert.rejects(
+    deleteSyntheticReferences("https://fhir.local", "synthetic-token", references, fakeFetch),
+    (error: unknown) => {
+      assert.ok(error instanceof AggregateError);
+      assert.equal(error.errors.length, 2);
+      return true;
+    },
+  );
+  assert.deepEqual(attempted, ["Provenance/three", "Observation/two", "Condition/one"]);
+});
+
+test("synthetic cleanup captures transaction resource ids and versioned locations", () => {
+  const references = new Set<string>();
+  captureTransactionResponseReferences({
+    resourceType: "Bundle",
+    type: "transaction-response",
+    entry: [
+      {
+        resource: { resourceType: "Observation", id: "represented" } as Observation,
+        response: { status: "201", location: "Observation/represented/_history/1" },
+      },
+      {
+        response: { status: "201", location: "Provenance/location-only/_history/2" },
+      },
+    ],
+  }, references);
+
+  assert.deepEqual([...references], ["Observation/represented", "Provenance/location-only"]);
 });
 
 test("previous exams preserves FHIR newest-first order across offsets and returns unbounded exact records", async () => {
@@ -980,36 +1081,123 @@ function syntheticEvidence(
 async function assertNoTransactionLeaks(
   fhir: Awaited<ReturnType<typeof createAuthenticatedFhirClient>>["fhir"],
   encounterId: string,
-  cleanupReferences: Set<string>,
 ): Promise<void> {
-  const searches = await Promise.all([
-    fhir.search<Condition>("Condition", { encounter: `Encounter/${encounterId}`, _count: "100" }),
-    fhir.search<Observation>("Observation", { encounter: `Encounter/${encounterId}`, _count: "100" }),
-    fhir.search<Provenance>("Provenance", { target: `Encounter/${encounterId}`, _count: "100" }),
-  ]);
-  const leaks = searches.flatMap((bundle) =>
-    bundle.entry?.flatMap((entry) => entry.resource ? [entry.resource] : []) ?? []
-  );
-  for (const leak of leaks) {
-    if (leak.id) cleanupReferences.add(`${leak.resourceType}/${leak.id}`);
-  }
+  const leaks = await transactionResourcesForEncounter(fhir, encounterId);
   assert.deepEqual(leaks.map((resource) => `${resource.resourceType}/${resource.id}`), []);
+}
+
+function captureTransactionResponseReferences(bundle: Bundle | undefined, references: Set<string>): void {
+  for (const entry of bundle?.entry ?? []) {
+    if (entry.resource?.id) references.add(`${entry.resource.resourceType}/${entry.resource.id}`);
+    const locationReference = referenceFromTransactionLocation(entry.response?.location);
+    if (locationReference) references.add(locationReference);
+  }
+}
+
+function referenceFromTransactionLocation(location: string | undefined): string | undefined {
+  if (!location) return undefined;
+  const match = location.match(/(?:^|\/)([A-Z][A-Za-z]+)\/([^/?]+)(?:\/_history\/[^/?]+)?(?:\?.*)?$/);
+  return match ? `${match[1]}/${match[2]}` : undefined;
+}
+
+async function cleanupSyntheticPullProof(
+  fhir: Awaited<ReturnType<typeof createAuthenticatedFhirClient>>["fhir"],
+  baseUrl: string,
+  accessToken: string,
+  encounterIds: Set<string>,
+  references: Set<string>,
+): Promise<void> {
+  const failures: unknown[] = [];
+  for (const encounterId of encounterIds) {
+    const encounterReference = `Encounter/${encounterId}`;
+    const searches = [
+      ["Condition", { encounter: encounterReference }],
+      ["Observation", { encounter: encounterReference }],
+      ["Provenance", { target: encounterReference }],
+    ] as const;
+    for (const [resourceType, params] of searches) {
+      try {
+        const resources = resourceType === "Condition"
+          ? await allSearchResources<Condition>(fhir, resourceType, params)
+          : resourceType === "Observation"
+            ? await allSearchResources<Observation>(fhir, resourceType, params)
+            : await allSearchResources<Provenance>(fhir, resourceType, params);
+        for (const resource of resources) {
+          if (resource.id) references.add(`${resource.resourceType}/${resource.id}`);
+        }
+      } catch (error) {
+        failures.push(new Error(
+          `Synthetic cleanup sweep failed for ${resourceType} on Encounter/${encounterId}.`,
+          { cause: error },
+        ));
+      }
+    }
+  }
+  try {
+    await deleteSyntheticReferences(baseUrl, accessToken, references);
+  } catch (error) {
+    if (error instanceof AggregateError) failures.push(...error.errors);
+    else failures.push(error);
+  }
+  if (failures.length) {
+    throw new AggregateError(failures, `Synthetic diagnosis pull cleanup had ${failures.length} failure(s).`);
+  }
+}
+
+async function transactionResourcesForEncounter(
+  fhir: Awaited<ReturnType<typeof createAuthenticatedFhirClient>>["fhir"],
+  encounterId: string,
+): Promise<Array<Condition | Observation | Provenance>> {
+  const encounterReference = `Encounter/${encounterId}`;
+  const [conditions, observations, provenances] = await Promise.all([
+    allSearchResources(fhir, "Condition", { encounter: encounterReference }),
+    allSearchResources(fhir, "Observation", { encounter: encounterReference }),
+    allSearchResources(fhir, "Provenance", { target: encounterReference }),
+  ]);
+  return [...conditions, ...observations, ...provenances];
+}
+
+async function allSearchResources<T extends Condition | Observation | Provenance>(
+  fhir: Awaited<ReturnType<typeof createAuthenticatedFhirClient>>["fhir"],
+  resourceType: T["resourceType"],
+  params: Record<string, string>,
+): Promise<T[]> {
+  const resources: T[] = [];
+  let bundle = await fhir.search<T>(resourceType, params);
+  while (true) {
+    resources.push(...(bundle.entry?.flatMap((entry) => entry.resource ? [entry.resource] : []) ?? []));
+    const next = bundle.link?.find((link) => link.relation === "next")?.url;
+    if (!next) return resources;
+    assert.ok(fhir.searchUrl, "FHIR cleanup pagination is unavailable.");
+    bundle = await fhir.searchUrl<T>(next, resourceType);
+  }
 }
 
 async function deleteSyntheticReferences(
   baseUrl: string,
   accessToken: string,
   references: Set<string>,
+  fetchImpl: (input: string | URL | Request, init?: RequestInit) => Promise<Response> = fetch,
 ): Promise<void> {
+  const failures: unknown[] = [];
   for (const reference of [...references].reverse()) {
-    const response = await fetch(`${baseUrl.replace(/\/$/, "")}/fhir/R4/${reference}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    assert.ok(
-      response.status === 200 || response.status === 204 || response.status === 404 || response.status === 410,
-      `Synthetic cleanup failed for ${reference} with HTTP ${response.status}.`,
-    );
+    try {
+      const response = await fetchImpl(`${baseUrl.replace(/\/$/, "")}/fhir/R4/${reference}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (
+        response.status !== 200 && response.status !== 204 &&
+        response.status !== 404 && response.status !== 410
+      ) {
+        failures.push(new Error(`Synthetic cleanup failed for ${reference} with HTTP ${response.status}.`));
+      }
+    } catch (error) {
+      failures.push(new Error(`Synthetic cleanup request failed for ${reference}.`, { cause: error }));
+    }
+  }
+  if (failures.length) {
+    throw new AggregateError(failures, `Synthetic reference deletion had ${failures.length} failure(s).`);
   }
 }
 
