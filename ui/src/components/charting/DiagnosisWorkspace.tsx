@@ -22,6 +22,16 @@ import {
   diagnosisRankMoveNeighbors,
 } from "./AssessmentSection";
 import { DiagnosisImagingRegion } from "./DiagnosisImagingRegion";
+import {
+  DiagnosisFindingsTable,
+  UnassignedFindingsTray,
+} from "./DiagnosisFindingsTable";
+import {
+  loadDiagnosisFindings,
+  mutateDiagnosisFinding,
+  type DiagnosisFindingMutation,
+  type DiagnosisFindingsPayload,
+} from "../../lib/diagnosis-findings";
 
 const DIAGNOSIS_KEY_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key";
 
@@ -62,6 +72,7 @@ export function DiagnosisWorkspace({
   const [quickList, setQuickList] = useState<DiagnosisQuickListRow[]>([]);
   const [pinnedDiagnosisKeys, setPinnedDiagnosisKeys] = useState<string[]>([]);
   const [canWrite, setCanWrite] = useState(false);
+  const [findings, setFindings] = useState<DiagnosisFindingsPayload>();
   const [pendingDiagnosis, setPendingDiagnosis] = useState<DiagnosisQuickListRow>();
   const [searchSelection, setSearchSelection] = useState<OdosSearchPickerOption<DiagnosisQuickListRow>>();
   const [busy, setBusy] = useState<string>();
@@ -72,9 +83,10 @@ export function DiagnosisWorkspace({
     setLoading(true);
     setError(undefined);
     try {
-      const [nextEncounter, quickResponse] = await Promise.all([
+      const [nextEncounter, quickResponse, nextFindings] = await Promise.all([
         fhir.read<Encounter>("Encounter", encounterId),
         fetch(`${clinicalGraphApiBase()}/clinical-graph/diagnosis-quick-list`, { headers: authHeaders() }),
+        loadDiagnosisFindings(encounterReference, selectedReference),
       ]);
       const quickBody = await quickResponse.json() as QuickListPayload;
       if (!quickResponse.ok) throw new Error(quickBody.error ?? `Common diagnoses failed: ${quickResponse.status}`);
@@ -89,12 +101,13 @@ export function DiagnosisWorkspace({
       setQuickList(quickBody.diagnoses ?? []);
       setPinnedDiagnosisKeys(quickBody.pinnedDiagnosisKeys ?? []);
       setCanWrite(quickBody.canWrite === true);
+      setFindings(nextFindings);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
       setLoading(false);
     }
-  }, [encounterId]);
+  }, [encounterId, encounterReference, selectedReference]);
 
   useEffect(() => {
     void load();
@@ -108,9 +121,11 @@ export function DiagnosisWorkspace({
     };
     window.addEventListener("odos:diagnosis-picked", refresh);
     window.addEventListener("odos:encounter-diagnosis-updated", refresh);
+    window.addEventListener("odos:encounter-findings-changed", refresh);
     return () => {
       window.removeEventListener("odos:diagnosis-picked", refresh);
       window.removeEventListener("odos:encounter-diagnosis-updated", refresh);
+      window.removeEventListener("odos:encounter-findings-changed", refresh);
     };
   }, [encounterReference, load]);
 
@@ -122,16 +137,29 @@ export function DiagnosisWorkspace({
     `Condition/${condition.id}` === selectedReference
   );
 
-  async function run(label: string, action: () => Promise<void>) {
+  async function run(label: string, action: () => Promise<void>): Promise<boolean> {
     setBusy(label);
     setError(undefined);
     try {
       await action();
       await load();
+      return true;
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
+      return false;
     } finally {
       setBusy(undefined);
+    }
+  }
+
+  async function updateFinding(mutation: DiagnosisFindingMutation) {
+    const changed = await run(`finding:${mutation.action}`, async () => {
+      await mutateDiagnosisFinding(encounterReference, mutation);
+    });
+    if (changed && typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("odos:encounter-findings-changed", {
+        detail: { encounterReference },
+      }));
     }
   }
 
@@ -295,6 +323,15 @@ export function DiagnosisWorkspace({
             <button type="button" onClick={() => setPendingDiagnosis(undefined)}>Cancel</button>
           </div>
         )}
+        {findings && (
+          <UnassignedFindingsTray
+            rows={findings.unassigned}
+            visitDiagnoses={findings.visitDiagnoses}
+            patientReference={patientReference}
+            disabled={!findings.canWrite || busy !== undefined}
+            onMutate={(mutation) => void updateFinding(mutation)}
+          />
+        )}
       </aside>
 
       <main className="odos-diagnosis-center" aria-label="Selected diagnosis workspace">
@@ -333,9 +370,17 @@ export function DiagnosisWorkspace({
                 await updateEncounterDiagnosisProblemStatus({ encounter, condition: selectedCondition, problemStatus });
               })}
             />
-            <div className="odos-diagnosis-later-slice">
-              Findings and specificity arrive in a later slice
-            </div>
+            {findings ? (
+              <DiagnosisFindingsTable
+                payload={findings}
+                patientReference={patientReference}
+                conditionReference={selectedReference!}
+                disabled={busy !== undefined}
+                onMutate={(mutation) => void updateFinding(mutation)}
+              />
+            ) : (
+              <p className="odos-diagnosis-muted">Loading findings…</p>
+            )}
           </div>
         )}
       </main>

@@ -535,6 +535,8 @@ test("diabetic retinopathy Phase 0 ledger is dual-source and keeps coverage desc
 test("mapping evaluator fails closed for malformed and unknown fields", () => {
   const finding: FindingInstance = {
     id: "finding-1",
+    state: "committed",
+    presence: "present",
     findingDefinitionId: "finding-def-1",
     patientReference: "Patient/p1",
     encounterReference: "Encounter/e1",

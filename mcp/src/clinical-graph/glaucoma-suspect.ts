@@ -102,6 +102,9 @@ export type ClinicalGraphSource =
 /** Neutral interpretation of a finding before any diagnosis is confirmed. */
 export type FindingInterpretation = "normal" | "abnormal" | "borderline" | "unknown";
 
+/** Explicit assertion that a finding was examined and was present or absent. */
+export type FindingPresence = "present" | "absent";
+
 /** UI/reconciliation lifecycle for non-committal diagnosis suggestion edges. */
 export type SuggestionVisitState =
   | "unreviewed"
@@ -230,6 +233,7 @@ export interface FindingInstance {
   id: string;
   /** Proposed findings are epistemically inert and may not project to Observation or diagnosis evidence. */
   state: "proposed" | "committed";
+  presence: FindingPresence;
   findingDefinitionId: string;
   patientReference: string;
   encounterReference: string;
@@ -248,6 +252,7 @@ export interface FindingInstance {
 
 /** Value payload supported by the Phase 1 finding-to-Observation projector. */
 export type FindingValue =
+  | { type: "presence" }
   | { type: "quantity"; value: number; unit: string; system?: string; code?: string }
   | {
       type: "components";
@@ -556,7 +561,7 @@ export function projectFindingInstanceToObservation(
       : undefined,
     status: "preliminary",
     code: definition.fhirObservationCode ?? odosConcept(definition.stableKey, definition.display),
-    ...(findingValueToObservationValue(finding.value)),
+    ...(findingValueToObservationValue(finding.value, finding.presence)),
   };
 
   return applyCommonObservationFields(base, {
@@ -916,6 +921,7 @@ export function captureGlaucomaFinding(input: CaptureGlaucomaFindingInput): Capt
   const finding = buildFindingInstance({
     id: findingId,
     state: "committed",
+    presence: "present",
     findingDefinitionId: input.definition.id,
     patientReference: input.patientReference,
     encounterReference: input.encounterReference,
@@ -976,6 +982,7 @@ export function buildGlaucomaCupDiscSuggestion(input: GlaucomaPredicateInput): {
   const finding = buildFindingInstance({
     id: input.findingInstanceId,
     state: "committed",
+    presence: "present",
     findingDefinitionId: input.findingDefinitionId,
     patientReference: input.patientReference,
     encounterReference: input.encounterReference,
@@ -1910,7 +1917,13 @@ function lateralityDisplay(laterality: EyeLaterality): string {
 
 function findingValueToObservationValue(
   value: FindingValue,
+  presence: FindingPresence,
 ): Pick<Observation, "component" | "valueBoolean" | "valueQuantity" | "valueString"> {
+  // Top-level valueBoolean is reserved for presence. Boolean clinical values belong in a
+  // component so false can never mean both "absent" and a negative clinical result.
+  if (value.type === "presence") {
+    return { valueBoolean: presence === "present" };
+  }
   if (value.type === "quantity") {
     return {
       valueQuantity: quantity(
@@ -1922,7 +1935,13 @@ function findingValueToObservationValue(
     };
   }
   if (value.type === "boolean") {
-    return { valueBoolean: value.value };
+    return {
+      valueBoolean: presence === "present",
+      component: [{
+        code: odosConcept("CLINICAL_VALUE", "Clinical value"),
+        valueBoolean: value.value,
+      }],
+    };
   }
   if (value.type === "components") {
     return {

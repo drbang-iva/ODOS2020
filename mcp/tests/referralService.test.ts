@@ -130,6 +130,22 @@ test("referral letters include only finalized findings", () => {
   assert.doesNotMatch(letter, /Registered finding/);
 });
 
+test("referral letters render an absent atomic finding as No", () => {
+  const letter = generateReferralLetterBody({
+    patientDisplay: "Avery Patient",
+    targetDisplay: "Retina Group",
+    findings: [{
+      resourceType: "Observation",
+      status: "final",
+      code: { text: "Nuclear sclerosis" },
+      valueBoolean: false,
+    }],
+    plans: [],
+  });
+
+  assert.match(letter, /Nuclear sclerosis: No/);
+});
+
 test("referral creation rejects an encounter that belongs to a different patient", async () => {
   const fhir = seededFhir();
   await fhir.create<Patient>({ resourceType: "Patient", id: "p2", name: [{ text: "Other Patient" }] });

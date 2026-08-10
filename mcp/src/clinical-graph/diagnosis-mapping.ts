@@ -194,6 +194,9 @@ export function qualifierGroup(field: string, option: string): string {
 }
 
 function findingFieldValue(finding: FindingInstance, field: string): number | string | boolean | undefined {
+  if (finding.value.type === "presence") {
+    return field === "presence" ? finding.presence : undefined;
+  }
   if (finding.value.type === "quantity") {
     return field === "value" ? finding.value.value : undefined;
   }

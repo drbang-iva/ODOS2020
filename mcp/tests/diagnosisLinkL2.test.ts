@@ -37,7 +37,7 @@ test("allOf mapping triggers require every nested option trigger", () => {
     { kind: "option" as const, field: "incomitant", anyOf: ["yes"] },
   ] };
   const finding = (components: Array<{ code: string; display: string; value: number | string | boolean }>): FindingInstance => ({
-    id: "eom-finding", state: "committed", findingDefinitionId: "finding-def-entrance-eom",
+    id: "eom-finding", state: "committed", presence: "present", findingDefinitionId: "finding-def-entrance-eom",
     patientReference: "Patient/p1", encounterReference: "Encounter/e1", laterality: "OU",
     value: { type: "components", components }, sourceType: "manual", recordedAt: "2026-07-22T12:00:00.000Z",
     provenance: { source: "manual", recordedAt: "2026-07-22T12:00:00.000Z" },
@@ -454,6 +454,7 @@ test("I3 qualifier triggers are scoped to the option that recorded the shared ke
   const finding: FindingInstance = {
     id: "qualified-finding",
     state: "committed",
+    presence: "present",
     findingDefinitionId: "qualified-definition",
     patientReference: "Patient/p1",
     encounterReference: "Encounter/e1",
@@ -546,6 +547,7 @@ test("I5 qualifier components cannot diagnose or suppress without an active pare
   const finding = (parent: "absent" | "false"): FindingInstance => ({
     id: `qualified-${parent}`,
     state: "committed",
+    presence: "present",
     findingDefinitionId: "qualified-definition",
     patientReference: "Patient/p1",
     encounterReference: "Encounter/e1",
