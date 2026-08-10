@@ -88,7 +88,7 @@ export async function handleDiagnosisCandidatesRequest(
     new FhirDiagnosisPickTallyStore(staff.fhir).read(staff.staffReference),
   ]);
   const findings = (observations.entry ?? []).flatMap((entry) =>
-    entry.resource ? observationToFinding(entry.resource, definitions) : []
+    entry.resource ? findingInstancesFromObservation(entry.resource, definitions) : []
   );
   const provenance: ClinicalGraphProvenance = {
     source: "rule",
@@ -209,7 +209,7 @@ export function orderDiagnosisCandidates(
     .map(({ order: _order, ...candidate }) => candidate);
 }
 
-function observationToFinding(
+export function findingInstancesFromObservation(
   observation: Observation,
   definitions: readonly ClinicalFindingDefinition[],
 ): FindingInstance[] {
@@ -224,6 +224,7 @@ function observationToFinding(
   return [{
     id,
     state: "committed",
+    presence: observation.valueBoolean === false ? "absent" : "present",
     findingDefinitionId: definition.id,
     patientReference,
     encounterReference,
@@ -254,7 +255,6 @@ function findingValueFromObservation(
       ...(observation.valueQuantity.code ? { code: observation.valueQuantity.code } : {}),
     };
   }
-  if (observation.valueBoolean !== undefined) return { type: "boolean", value: observation.valueBoolean };
   if (observation.valueString !== undefined) {
     try {
       const parsed = JSON.parse(observation.valueString) as unknown;
@@ -265,6 +265,11 @@ function findingValueFromObservation(
     return { type: "string", value: observation.valueString };
   }
   if (observation.component?.length) {
+    const clinicalBoolean = observation.component.find((component) =>
+      component.code.coding?.some((coding) => coding.code === "CLINICAL_VALUE") &&
+      component.valueBoolean !== undefined
+    )?.valueBoolean;
+    if (clinicalBoolean !== undefined) return { type: "boolean", value: clinicalBoolean };
     return {
       type: "components",
       components: observation.component.flatMap((component) => {
@@ -276,6 +281,7 @@ function findingValueFromObservation(
       }),
     };
   }
+  if (observation.valueBoolean !== undefined) return { type: "presence" };
   return undefined;
 }
 

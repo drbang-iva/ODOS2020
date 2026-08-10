@@ -9,6 +9,7 @@ import {
   buildClinicalFindingDefinition,
   buildDiagnosisDefinition,
   buildEncounterDiagnosis,
+  buildFindingInstance,
   buildGlaucomaFindingDefinitionStubs,
   buildGlaucomaCupDiscSuggestion,
   buildGlaucomaOpenAngleDiagnosisDefinition,
@@ -23,6 +24,7 @@ import {
   rejectDiagnosisSuggestionEdge,
 } from "../src/clinical-graph/glaucoma-suspect.js";
 import { odosConcept } from "../src/fhir/ophthalmology/extensions.js";
+import { findingInstancesFromObservation } from "../src/clinical-graph/diagnosis-candidates-endpoint.js";
 
 const REPO_ROOT = resolve(process.cwd(), "..");
 const provenance = {
@@ -315,6 +317,102 @@ test("FindingInstance can exist and project to Observation with zero confirmed d
   assert.equal(observation.subject?.reference, "Patient/p1");
   assert.equal(observation.valueQuantity?.value, 0.55);
   assert.equal(confirmedDiagnoses.length, 0);
+});
+
+test("finding presence projects explicitly without implying interpretation", () => {
+  const definition = buildClinicalFindingDefinition({
+    id: "finding-def-nuclear-sclerosis",
+    stableKey: "ocular-health:anterior:lens::nuclear-sclerosis",
+    display: "Nuclear sclerosis",
+    sectionKey: "ocular-health:anterior:lens",
+    valueSchema: { type: "presence" },
+    sourceStatus: "verified-seed",
+    provenance,
+  });
+  const makeFinding = (presence: "present" | "absent") => buildFindingInstance({
+    id: `finding-nuclear-sclerosis-${presence}`,
+    state: "committed",
+    presence,
+    findingDefinitionId: definition.id,
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    laterality: "OU",
+    value: { type: "presence" },
+    interpretation: "normal",
+    recordedAt: "2026-08-10T12:00:00.000Z",
+    provenance,
+  });
+
+  const present = makeFinding("present");
+  const absent = makeFinding("absent");
+
+  assert.equal(present.interpretation, "normal");
+  assert.equal(present.presence, "present");
+  assert.equal(projectFindingInstanceToObservation(present, definition).valueBoolean, true);
+  assert.equal(absent.interpretation, "normal");
+  assert.equal(absent.presence, "absent");
+  assert.equal(projectFindingInstanceToObservation(absent, definition).valueBoolean, false);
+});
+
+test("boolean clinical values use a component and cannot collide with presence", () => {
+  const definition = buildClinicalFindingDefinition({
+    id: "finding-def-boolean-value",
+    stableKey: "boolean_clinical_value",
+    display: "Boolean clinical value",
+    valueSchema: { type: "boolean" },
+    sourceStatus: "verified-seed",
+    provenance,
+  });
+  const finding = buildFindingInstance({
+    id: "finding-boolean-value",
+    state: "committed",
+    presence: "present",
+    findingDefinitionId: definition.id,
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    laterality: "UNKNOWN",
+    value: { type: "boolean", value: false },
+    recordedAt: "2026-08-10T12:00:00.000Z",
+    provenance,
+  });
+
+  const observation = projectFindingInstanceToObservation(finding, definition);
+
+  assert.equal(observation.valueBoolean, true);
+  assert.equal(observation.component?.[0]?.code.coding?.[0]?.code, "CLINICAL_VALUE");
+  assert.equal(observation.component?.[0]?.valueBoolean, false);
+});
+
+test("boolean clinical value and finding presence round-trip independently", () => {
+  const definition = buildClinicalFindingDefinition({
+    id: "finding-def-boolean-round-trip",
+    stableKey: "boolean_round_trip",
+    display: "Boolean round trip",
+    valueSchema: { type: "boolean" },
+    sourceStatus: "verified-seed",
+    provenance,
+  });
+  const finding = buildFindingInstance({
+    id: "finding-boolean-round-trip",
+    state: "committed",
+    presence: "absent",
+    findingDefinitionId: definition.id,
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    laterality: "OD",
+    value: { type: "boolean", value: true },
+    recordedAt: "2026-08-10T12:00:00.000Z",
+    provenance,
+  });
+  const projected = projectFindingInstanceToObservation(finding, definition);
+  const [roundTripped] = findingInstancesFromObservation(
+    { ...projected, id: "finding-boolean-round-trip" },
+    [definition],
+  );
+
+  assert.ok(roundTripped);
+  assert.equal(roundTripped.presence, "absent");
+  assert.deepEqual(roundTripped.value, { type: "boolean", value: true });
 });
 
 test("glaucoma cup/disc suggestion edge never creates a Condition", () => {

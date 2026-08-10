@@ -234,6 +234,8 @@ test("refractive evaluator throws when a triggered verified code is absent from 
   const definition = buildRefractionFindingDefinitionStub(provenance);
   const finding: FindingInstance = {
     id: "finding-1",
+    state: "committed",
+    presence: "present",
     findingDefinitionId: definition.id,
     patientReference: BODY.patientReference,
     encounterReference: BODY.encounterReference,
@@ -264,6 +266,8 @@ test("refractive evaluator honors a practice-configured threshold", () => {
   const definition = buildRefractionFindingDefinitionStub(provenance);
   const finding: FindingInstance = {
     id: "finding-threshold",
+    state: "committed",
+    presence: "present",
     findingDefinitionId: definition.id,
     patientReference: BODY.patientReference,
     encounterReference: BODY.encounterReference,
