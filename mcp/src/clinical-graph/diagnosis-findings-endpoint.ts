@@ -775,6 +775,7 @@ async function allEncounterResources<T extends Condition | Observation>(
   count: string,
   fhirBaseUrl: string,
 ): Promise<T[]> {
+  // search-contract: diagnosis-findings.encounter-resources
   const first = await fhir.search<T>(resourceType, {
     encounter: encounterReference,
     _count: count,

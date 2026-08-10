@@ -45,6 +45,10 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
   "eye-growth.axial-length-observations": [spec("Observation", "subject", "code", "_count")],
   "eye-growth.corneal-radius-observations": [spec("Observation", "subject", "code", "_count")],
   "eye-growth.refraction-observations": [spec("Observation", "subject", "code", "_count", "_sort")],
+  "diagnosis-findings.encounter-resources": [
+    spec("Condition", "encounter", "_count"),
+    spec("Observation", "encounter", "_count"),
+  ],
   "protocol-endpoint.search-resources": [
     spec("Condition", "encounter", "_count"),
     spec("Observation", "encounter", "_count"),
