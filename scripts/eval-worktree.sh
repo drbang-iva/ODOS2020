@@ -223,8 +223,9 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$script_dir/lib/bot-review-status.sh"
 repo_root="$(git -C "$script_dir" rev-parse --show-toplevel)"
 repo_name="${GH_REPO:-$(cd "$repo_root" && gh repo view --json nameWithOwner --jq .nameWithOwner)}"
-pr_metadata="$(gh pr view "$pr_number" --repo "$repo_name" --json headRefOid,isCrossRepository --jq '[.headRefOid, .isCrossRepository] | @tsv')"
-IFS=$'\t' read -r head_sha is_cross_repository <<<"$pr_metadata"
+pr_metadata="$(gh pr view "$pr_number" --repo "$repo_name" --json headRefName,headRefOid,isCrossRepository --jq '[.headRefName, .headRefOid, .isCrossRepository] | @tsv')"
+IFS=$'\t' read -r head_branch head_sha is_cross_repository <<<"$pr_metadata"
+[[ -n "$head_branch" ]] || die "could not resolve a source branch for PR #$pr_number"
 [[ "$head_sha" =~ ^[0-9a-fA-F]{40}$ ]] || die "could not resolve a full head SHA for PR #$pr_number"
 [[ "$is_cross_repository" == "false" ]] || die "fork PRs are not executed on the host; use a credential-free isolated runner"
 head_sha="$(printf '%s' "$head_sha" | tr '[:upper:]' '[:lower:]')"
@@ -285,7 +286,7 @@ run_step "MCP dependency install" install "$worktree_path/mcp" npm ci --no-audit
 run_step "UI dependency install" install "$worktree_path/ui" npm ci --no-audit --no-fund
 run_step "MCP build" mcp-build "$worktree_path/mcp" npm run build
 run_step "MCP full test" mcp-test "$worktree_path/mcp" npm test
-run_step "UI build" ui-build "$worktree_path/ui" npm run build
+run_step "UI build" ui-build "$worktree_path/ui" env ODOS_BUILD_BRANCH="$head_branch" npm run build
 run_step "UI full test" ui-test "$worktree_path/ui" npm test
 run_step "Root preflight" preflight "$worktree_path" npm run preflight
 
