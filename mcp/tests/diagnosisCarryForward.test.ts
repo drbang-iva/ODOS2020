@@ -601,6 +601,72 @@ test("representation-free 201 with the wrong positional location type fails with
   assert.equal(rollback.transactions.length, 0);
 });
 
+test("representation-free Observation 201 with the wrong location type fails without privileged rollback", async (t) => {
+  const fhir = pullFhir();
+  fhir.transactionResponseMutator = (response) => {
+    const changed = structuredClone(response);
+    changed.entry?.forEach((entry, index) => {
+      if (index === 0) {
+        delete entry.resource;
+        entry.response = { status: "200 OK" };
+        return;
+      }
+      assert.ok(entry.resource?.id);
+      entry.response = {
+        status: "201 Created",
+        location: `${entry.resource.resourceType}/${entry.resource.id}/_history/1`,
+      };
+      delete entry.resource;
+    });
+    changed.entry![2]!.response!.location = "Provenance/pulled-observation/_history/1";
+    return changed;
+  };
+  const rollback = new MemoryRollbackFhir([
+    "Condition/pulled-condition",
+    "Observation/pulled-observation",
+    "Provenance/pulled-provenance",
+  ]);
+  const base = await startPreviousExamRoutes(t, fhir, "auditor", rollback);
+
+  const response = await postPull(base, "source-dry-eye-od");
+
+  assert.equal(response.status, 502, await response.clone().text());
+  assert.equal(rollback.transactions.length, 0);
+});
+
+test("representation-free Observation create returning 200 fails without privileged rollback", async (t) => {
+  const fhir = pullFhir();
+  fhir.transactionResponseMutator = (response) => {
+    const changed = structuredClone(response);
+    changed.entry?.forEach((entry, index) => {
+      if (index === 0) {
+        delete entry.resource;
+        entry.response = { status: "200 OK" };
+        return;
+      }
+      assert.ok(entry.resource?.id);
+      entry.response = {
+        status: "201 Created",
+        location: `${entry.resource.resourceType}/${entry.resource.id}/_history/1`,
+      };
+      delete entry.resource;
+    });
+    changed.entry![2]!.response!.status = "200 OK";
+    return changed;
+  };
+  const rollback = new MemoryRollbackFhir([
+    "Condition/pulled-condition",
+    "Observation/pulled-observation",
+    "Provenance/pulled-provenance",
+  ]);
+  const base = await startPreviousExamRoutes(t, fhir, "auditor", rollback);
+
+  const response = await postPull(base, "source-dry-eye-od");
+
+  assert.equal(response.status, 502, await response.clone().text());
+  assert.equal(rollback.transactions.length, 0);
+});
+
 test("represented 201 with a mismatched location id still refuses privileged rollback", async (t) => {
   const fhir = pullFhir();
   fhir.transactionResponseMutator = (response) => {
@@ -2119,6 +2185,8 @@ test("previous exams rejects forged legacy and tampered cursor payloads before F
   const [payload, signature] = cursor.split(".");
   assert.ok(payload);
   assert.ok(signature);
+  const rawSignature = Buffer.from(signature, "base64url");
+  rawSignature[0] ^= 0x01;
   const signedPayload = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as Record<string, unknown>;
   const tampered = (changes: Record<string, unknown>): string =>
     `${forged({ ...signedPayload, ...changes })}.${signature}`;
@@ -2126,7 +2194,7 @@ test("previous exams rejects forged legacy and tampered cursor payloads before F
     "legacy v1 same-origin path": forged({ v: 1, path: cursorPath }),
     "tampered path": tampered({ path: `${cursorPath}&tampered=true` }),
     "tampered context": tampered({ encounterId: "other-current-encounter" }),
-    "tampered signature": `${payload}.${signature.slice(0, -1)}${signature.endsWith("A") ? "B" : "A"}`,
+    "tampered signature": `${payload}.${rawSignature.toString("base64url")}`,
   };
 
   fhir.followedUrls.length = 0;
