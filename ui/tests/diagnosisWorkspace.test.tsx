@@ -19,6 +19,16 @@ import {
   orderedEncounterConditions,
 } from "../src/components/charting/DiagnosisWorkspace";
 import { DiagnosisImagingRegion } from "../src/components/charting/DiagnosisImagingRegion";
+import {
+  DiagnosisFindingsTable,
+  UnassignedFindingsTray,
+} from "../src/components/charting/DiagnosisFindingsTable";
+import {
+  orderedFindingRows,
+  orderedFindingSearchRows,
+  type DiagnosisFindingMutation,
+  type DiagnosisFindingsPayload,
+} from "../src/lib/diagnosis-findings";
 
 test("diagnosis workspace preferences default safely and round-trip valid selections", () => {
   const storage = memoryStorage();
@@ -114,6 +124,129 @@ test("diagnosis pin moves require write access and respect the ordered-list edge
   assert.equal(diagnosisPinMoveDisabled(true, undefined, 2, 3, 1), true);
 });
 
+test("finding rows sort charted before offered and search prioritizes selected-diagnosis candidates", () => {
+  const payload = findingsPayload();
+
+  assert.deepEqual(
+    orderedFindingRows(payload.findings).map((row) => row.display),
+    ["Absent finding", "Charted finding", "Offered finding"],
+  );
+  assert.deepEqual(
+    orderedFindingSearchRows(payload.catalog, "dx-selected").map((row) => row.display),
+    ["Offered finding", "Charted finding", "Absent finding", "General catalog finding"],
+  );
+});
+
+test("findings table keeps presence explicit, grade unanswered, laterality source visible, and re-click clears", () => {
+  const mutations: DiagnosisFindingMutation[] = [];
+  const renderer = create(
+    <DiagnosisFindingsTable
+      payload={findingsPayload()}
+      patientReference="Patient/p1"
+      conditionReference="Condition/selected"
+      disabled={false}
+      onMutate={(mutation) => { mutations.push(mutation); }}
+    />,
+  );
+  const json = JSON.stringify(renderer.toJSON());
+
+  assert.match(json, /Present/);
+  assert.match(json, /Absent/);
+  assert.match(json, /Not graded/);
+  assert.match(json, /is-inherited/);
+  assert.match(json, /is-explicit/);
+  const offeredPresent = renderer.root.findByProps({ "aria-label": "Record Offered finding present" });
+  const offeredAbsent = renderer.root.findByProps({ "aria-label": "Record Offered finding absent" });
+  const clearPresent = renderer.root.findByProps({ "aria-label": "Clear present Charted finding" });
+  const clearAbsent = renderer.root.findByProps({ "aria-label": "Clear absent Absent finding" });
+  act(() => offeredPresent.props.onClick());
+  act(() => offeredAbsent.props.onClick());
+  act(() => clearPresent.props.onClick());
+  act(() => clearAbsent.props.onClick());
+  act(() => renderer.root.findByProps({ "aria-label": "Laterality Charted finding" }).props.onChange({
+    target: { value: "OS" },
+  }));
+
+  assert.deepEqual(mutations, [
+    {
+      action: "assert",
+      patientReference: "Patient/p1",
+      conditionReference: "Condition/selected",
+      atomicFindingId: "section::field::offered",
+      presence: "present",
+    },
+    {
+      action: "assert",
+      patientReference: "Patient/p1",
+      conditionReference: "Condition/selected",
+      atomicFindingId: "section::field::offered",
+      presence: "absent",
+    },
+    {
+      action: "clear",
+      patientReference: "Patient/p1",
+      observationReference: "Observation/charted",
+    },
+    {
+      action: "clear",
+      patientReference: "Patient/p1",
+      observationReference: "Observation/absent",
+    },
+    {
+      action: "laterality",
+      patientReference: "Patient/p1",
+      observationReference: "Observation/charted",
+      laterality: "OS",
+    },
+  ]);
+});
+
+test("unassigned tray offers current visit assignment and standalone without diagnosis creation", () => {
+  const mutations: DiagnosisFindingMutation[] = [];
+  const payload = findingsPayload();
+  const renderer = create(
+    <UnassignedFindingsTray
+      rows={[payload.unassigned[0]!]}
+      visitDiagnoses={payload.visitDiagnoses}
+      patientReference="Patient/p1"
+      disabled={false}
+      onMutate={(mutation) => { mutations.push(mutation); }}
+    />,
+  );
+  const json = JSON.stringify(renderer.toJSON());
+
+  assert.match(json, /Unassigned findings/);
+  assert.match(json, /Assign to Selected diagnosis/);
+  assert.match(json, /Record standalone/);
+  assert.doesNotMatch(json, /Create diagnosis/);
+  act(() => renderer.root.findByProps({ "aria-label": "Assign Unassigned finding to Selected diagnosis" }).props.onClick());
+  act(() => renderer.root.findByProps({ "aria-label": "Record Unassigned finding standalone" }).props.onClick());
+  assert.deepEqual(mutations, [
+    {
+      action: "assign",
+      patientReference: "Patient/p1",
+      observationReference: "Observation/unassigned",
+      conditionReference: "Condition/selected",
+    },
+    {
+      action: "standalone",
+      patientReference: "Patient/p1",
+      observationReference: "Observation/unassigned",
+    },
+  ]);
+
+  const empty = create(
+    <UnassignedFindingsTray
+      rows={[]}
+      visitDiagnoses={payload.visitDiagnoses}
+      patientReference="Patient/p1"
+      disabled={false}
+      onMutate={() => undefined}
+    />,
+  );
+  assert.equal(empty.toJSON(), null);
+});
+
 test("imaging hides the prior patient's rows as soon as the patient reference changes", async () => {
   const originalFetch = globalThis.fetch;
   let resolveFirst!: (response: Response) => void;
@@ -166,5 +299,95 @@ function condition(id: string, display: string): Condition {
     id,
     subject: { reference: "Patient/p1" },
     code: { text: display },
+  };
+}
+
+function findingsPayload(): DiagnosisFindingsPayload {
+  const base = {
+    findingDefinitionId: "definition",
+    findingDefinitionKey: "section",
+    fieldCode: "field",
+    sectionKey: "lens",
+    gradeScale: [] as string[],
+    origin: "shipped" as const,
+  };
+  const offered = {
+    ...base,
+    atomicFindingId: "section::field::offered",
+    optionCode: "offered",
+    display: "Offered finding",
+    diagnosisKeys: ["dx-selected"],
+    laterality: "OD" as const,
+    lateralitySource: "inherited" as const,
+    source: "offered" as const,
+  };
+  const charted = {
+    ...base,
+    atomicFindingId: "section::field::charted",
+    optionCode: "charted",
+    display: "Charted finding",
+    gradeScale: ["1+", "2+"],
+    diagnosisKeys: ["dx-selected"],
+    laterality: "OD" as const,
+    lateralitySource: "inherited" as const,
+    source: "atomic" as const,
+    presence: "present" as const,
+    observationReference: "Observation/charted",
+    conditionReference: "Condition/selected",
+  };
+  const absent = {
+    ...base,
+    atomicFindingId: "section::field::absent",
+    optionCode: "absent",
+    display: "Absent finding",
+    diagnosisKeys: [],
+    laterality: "OS" as const,
+    lateralitySource: "explicit" as const,
+    source: "atomic" as const,
+    presence: "absent" as const,
+    observationReference: "Observation/absent",
+    conditionReference: "Condition/selected",
+  };
+  const unassigned = {
+    ...base,
+    atomicFindingId: "section::field::unassigned",
+    optionCode: "unassigned",
+    display: "Unassigned finding",
+    diagnosisKeys: [],
+    laterality: "OU" as const,
+    lateralitySource: "explicit" as const,
+    source: "section" as const,
+    presence: "present" as const,
+    observationReference: "Observation/unassigned",
+  };
+  return {
+    canWrite: true,
+    diagnosis: {
+      id: "diagnosis-dx-selected",
+      stableKey: "dx-selected",
+      display: "Selected diagnosis",
+      applicableFindingDefinitionIds: ["definition"],
+    },
+    findings: [offered, charted, absent],
+    catalog: [
+      { ...offered, source: undefined, laterality: undefined, lateralitySource: undefined },
+      { ...charted, source: undefined, laterality: undefined, lateralitySource: undefined, presence: undefined, observationReference: undefined, conditionReference: undefined },
+      { ...absent, source: undefined, laterality: undefined, lateralitySource: undefined, presence: undefined, observationReference: undefined, conditionReference: undefined },
+      {
+        ...base,
+        atomicFindingId: "section::field::general",
+        optionCode: "general",
+        display: "General catalog finding",
+        diagnosisKeys: [],
+      },
+    ],
+    unassigned: [unassigned],
+    bySection: { lens: [charted, absent, unassigned] },
+    visitDiagnoses: [{
+      conditionReference: "Condition/selected",
+      diagnosisKey: "dx-selected",
+      display: "Selected diagnosis",
+      laterality: "OD",
+    }],
   };
 }

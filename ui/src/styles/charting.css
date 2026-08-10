@@ -282,14 +282,186 @@
   gap: 4px;
 }
 
-.odos-diagnosis-later-slice {
-  display: grid;
-  min-height: 220px;
-  place-content: center;
-  border: 1px dashed var(--odos-line-2);
+.odos-diagnosis-findings {
+  overflow: hidden;
+  border: 1px solid var(--odos-line);
   border-radius: 12px;
+  background: var(--odos-surface);
+}
+
+.odos-diagnosis-findings-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--odos-line);
+}
+
+.odos-diagnosis-findings-heading h3 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.odos-diagnosis-findings-table-wrap {
+  overflow-x: auto;
+}
+
+.odos-diagnosis-findings-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.odos-diagnosis-findings-table th,
+.odos-diagnosis-findings-table td {
+  padding: 10px;
+  border-bottom: 1px solid var(--odos-line);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.odos-diagnosis-findings-table th {
+  color: var(--odos-faint);
+  font-size: 9px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.odos-diagnosis-findings-table tr.is-offered {
   color: var(--odos-muted);
-  text-align: center;
+  background: color-mix(in srgb, var(--odos-surface-2) 50%, transparent);
+}
+
+.odos-diagnosis-findings-table td:first-child strong,
+.odos-diagnosis-findings-table td:first-child small {
+  display: block;
+}
+
+.odos-diagnosis-findings-table td:first-child small,
+.odos-finding-laterality small,
+.odos-unassigned-finding small {
+  margin-top: 2px;
+  color: var(--odos-faint);
+  font-size: 9px;
+}
+
+.odos-finding-presence {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.odos-finding-presence button,
+.odos-finding-laterality button,
+.odos-unassigned-finding-actions button,
+.odos-diagnosis-finding-search-results button {
+  padding: 5px 7px;
+  border: 1px solid var(--odos-line-2);
+  border-radius: 6px;
+  background: var(--odos-surface-2);
+  color: var(--odos-muted);
+  font: inherit;
+  font-size: 10px;
+}
+
+.odos-finding-presence button.is-present {
+  border-color: var(--odos-accent);
+  color: var(--odos-text);
+}
+
+.odos-finding-presence button.is-absent {
+  border-color: var(--odos-amber);
+  background: var(--odos-amber-wash);
+  color: var(--odos-text);
+}
+
+.odos-diagnosis-findings-table select,
+.odos-diagnosis-finding-search input {
+  min-height: 30px;
+  border: 1px solid var(--odos-line-2);
+  border-radius: 6px;
+  background: var(--odos-ground);
+  color: var(--odos-text);
+  font: inherit;
+  font-size: 11px;
+}
+
+.odos-finding-laterality {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.odos-finding-laterality.is-inherited > span {
+  color: var(--odos-muted);
+}
+
+.odos-finding-laterality.is-explicit > span {
+  color: var(--odos-text);
+  font-weight: 800;
+}
+
+.odos-diagnosis-finding-search {
+  padding: 12px 16px 16px;
+}
+
+.odos-diagnosis-finding-search label,
+.odos-diagnosis-finding-search label > span {
+  display: block;
+}
+
+.odos-diagnosis-finding-search label > span {
+  margin-bottom: 5px;
+  color: var(--odos-faint);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.odos-diagnosis-finding-search input {
+  width: 100%;
+  padding: 6px 8px;
+}
+
+.odos-diagnosis-finding-search-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 5px;
+  margin-top: 7px;
+}
+
+.odos-diagnosis-finding-search-results button {
+  text-align: left;
+}
+
+.odos-diagnosis-finding-search-results span,
+.odos-diagnosis-finding-search-results small {
+  display: block;
+}
+
+.odos-unassigned-findings {
+  margin-top: 14px;
+  padding-top: 1px;
+  border-top: 1px solid var(--odos-line);
+}
+
+.odos-unassigned-finding {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 6px;
+  padding: 8px;
+  border: 1px solid var(--odos-amber);
+  border-radius: 8px;
+  background: var(--odos-amber-wash);
+  font-size: 11px;
+}
+
+.odos-unassigned-finding-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
 }
 
 .odos-diagnosis-imaging {
