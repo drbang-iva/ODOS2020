@@ -12,6 +12,7 @@ const GLAUCOMA_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/glaucoma-sus
 const REFRACTIVE_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/refractive-error-phase0-ledger.json");
 const OCULAR_HEALTH_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/ocular-health-phase0-ledger.json");
 const DIABETIC_RETINOPATHY_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/diabetic-retinopathy-phase0-ledger.json");
+const TYPE_1_DIABETIC_RETINOPATHY_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/type-1-diabetic-retinopathy-phase0-ledger.json");
 const DIPLOPIA_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/diplopia-phase0-ledger.json");
 const VISUAL_FIELD_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/visual-field-phase0-ledger.json");
 const LENS_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/lens-phase0-ledger.json");
@@ -82,6 +83,7 @@ export const FAMILY_RESOLUTION_MODES: FamilyResolutionModes = {
     ],
   },
   "diabetic-retinopathy": { mode: "qualifier-resolved" },
+  "type-1-diabetic-retinopathy": { mode: "qualifier-resolved" },
   keratoconus: { mode: "qualifier-resolved" },
   pterygium: { mode: "qualifier-resolved" },
   "glaucoma-suspect": { mode: "distinct" },
@@ -151,6 +153,7 @@ function buildSeeds(): DiagnosisCatalogRow[] {
   const refractive = loadLedger(REFRACTIVE_LEDGER_PATH);
   const ocularHealth = loadLedger(OCULAR_HEALTH_LEDGER_PATH);
   const diabeticRetinopathy = loadLedger(DIABETIC_RETINOPATHY_LEDGER_PATH);
+  const type1DiabeticRetinopathy = loadLedger(TYPE_1_DIABETIC_RETINOPATHY_LEDGER_PATH);
   const diplopia = loadLedger(DIPLOPIA_LEDGER_PATH);
   const visualField = loadLedger(VISUAL_FIELD_LEDGER_PATH);
   const lens = loadLedger(LENS_LEDGER_PATH);
@@ -217,6 +220,20 @@ function buildSeeds(): DiagnosisCatalogRow[] {
     familySeed("t2_dr_pdr_combined_trd_rrd", "Type 2 diabetes with proliferative diabetic retinopathy with combined traction and rhegmatogenous retinal detachment", "diabetic-retinopathy", "E11.354-", diabeticRetinopathy, provenance),
     familySeed("t2_dr_stable_pdr", "Type 2 diabetes with stable proliferative diabetic retinopathy", "diabetic-retinopathy", "E11.355-", diabeticRetinopathy, provenance),
     familySeed("t2_dr_pdr_without_dme", "Type 2 diabetes with proliferative diabetic retinopathy without macular edema", "diabetic-retinopathy", "E11.359-", diabeticRetinopathy, provenance),
+    fixedSeed("t1_dr_unspecified_with_dme", "Type 1 diabetes with unspecified diabetic retinopathy with macular edema", "type-1-diabetic-retinopathy", "E10.311", type1DiabeticRetinopathy, provenance),
+    fixedSeed("t1_dr_unspecified_without_dme", "Type 1 diabetes with unspecified diabetic retinopathy without macular edema", "type-1-diabetic-retinopathy", "E10.319", type1DiabeticRetinopathy, provenance),
+    familySeed("t1_dr_mild_npdr_with_dme", "Type 1 diabetes with mild nonproliferative diabetic retinopathy with macular edema", "type-1-diabetic-retinopathy", "E10.321-", type1DiabeticRetinopathy, provenance),
+    familySeed("t1_dr_mild_npdr_without_dme", "Type 1 diabetes with mild nonproliferative diabetic retinopathy without macular edema", "type-1-diabetic-retinopathy", "E10.329-", type1DiabeticRetinopathy, provenance),
+    familySeed("t1_dr_moderate_npdr_with_dme", "Type 1 diabetes with moderate nonproliferative diabetic retinopathy with macular edema", "type-1-diabetic-retinopathy", "E10.331-", type1DiabeticRetinopathy, provenance),
+    familySeed("t1_dr_moderate_npdr_without_dme", "Type 1 diabetes with moderate nonproliferative diabetic retinopathy without macular edema", "type-1-diabetic-retinopathy", "E10.339-", type1DiabeticRetinopathy, provenance),
+    familySeed("t1_dr_severe_npdr_with_dme", "Type 1 diabetes with severe nonproliferative diabetic retinopathy with macular edema", "type-1-diabetic-retinopathy", "E10.341-", type1DiabeticRetinopathy, provenance),
+    familySeed("t1_dr_severe_npdr_without_dme", "Type 1 diabetes with severe nonproliferative diabetic retinopathy without macular edema", "type-1-diabetic-retinopathy", "E10.349-", type1DiabeticRetinopathy, provenance),
+    familySeed("t1_dr_pdr_with_dme", "Type 1 diabetes with proliferative diabetic retinopathy with macular edema", "type-1-diabetic-retinopathy", "E10.351-", type1DiabeticRetinopathy, provenance),
+    familySeed("t1_dr_pdr_trd_involving_macula", "Type 1 diabetes with proliferative diabetic retinopathy with traction retinal detachment involving the macula", "type-1-diabetic-retinopathy", "E10.352-", type1DiabeticRetinopathy, provenance),
+    familySeed("t1_dr_pdr_trd_not_involving_macula", "Type 1 diabetes with proliferative diabetic retinopathy with traction retinal detachment not involving the macula", "type-1-diabetic-retinopathy", "E10.353-", type1DiabeticRetinopathy, provenance),
+    familySeed("t1_dr_pdr_combined_trd_rrd", "Type 1 diabetes with proliferative diabetic retinopathy with combined traction and rhegmatogenous retinal detachment", "type-1-diabetic-retinopathy", "E10.354-", type1DiabeticRetinopathy, provenance),
+    familySeed("t1_dr_stable_pdr", "Type 1 diabetes with stable proliferative diabetic retinopathy", "type-1-diabetic-retinopathy", "E10.355-", type1DiabeticRetinopathy, provenance),
+    familySeed("t1_dr_pdr_without_dme", "Type 1 diabetes with proliferative diabetic retinopathy without macular edema", "type-1-diabetic-retinopathy", "E10.359-", type1DiabeticRetinopathy, provenance),
     fixedSeed("diplopia", "Diplopia", "diplopia", "H53.2", diplopia, provenance),
     fixedSeed("paralytic_strabismus", "Unspecified paralytic strabismus", "paralytic-strabismus", "H49.9", diplopia, provenance),
     familySeed("macular_drusen", "Drusen (degenerative) of macula", "macular-drusen", "H35.36-", ocularHealth, provenance),
@@ -267,6 +284,7 @@ function buildSeeds(): DiagnosisCatalogRow[] {
     familySeed("pathological_myopia_foveoschisis", "Pathological myopia with foveoschisis", "pathological-myopia-foveoschisis", "H44.2D-", ocularHealth, provenance),
     familySeed("pathological_myopia_other_maculopathy", "Pathological myopia with other maculopathy (myopic macular degeneration)", "pathological-myopia-other-maculopathy", "H44.2E-", ocularHealth, provenance),
     familySeed("t2_dr_dme_resolved", "Type 2 diabetes with diabetic macular edema, resolved following treatment", "diabetic-retinopathy", "E11.37X-", ocularHealth, provenance),
+    familySeed("t1_dr_dme_resolved", "Type 1 diabetes with diabetic macular edema, resolved following treatment", "type-1-diabetic-retinopathy", "E10.37X-", ocularHealth, provenance),
     familySeed("chronic_follicular_conjunctivitis", "Chronic follicular conjunctivitis", "chronic-follicular-conjunctivitis", "H10.43-", ocularHealth, provenance),
     fixedSeed("demodex_infestation", "Infestation by Demodex mites", "demodex-infestation", "B88.01", ocularHealth, provenance),
   ];

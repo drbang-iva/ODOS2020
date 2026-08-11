@@ -61,6 +61,7 @@ test("every active multi-row diagnosis family declares its clinical resolution m
     "primary-open-angle-glaucoma",
     "pterygium",
     "retinal-break",
+    "type-1-diabetic-retinopathy",
     "visual-field-defect",
   ]);
 });
@@ -242,6 +243,20 @@ test("diagnosis catalog seeds are ledger-backed durable families and survive a s
     "t2_dr_pdr_combined_trd_rrd",
     "t2_dr_stable_pdr",
     "t2_dr_pdr_without_dme",
+    "t1_dr_unspecified_with_dme",
+    "t1_dr_unspecified_without_dme",
+    "t1_dr_mild_npdr_with_dme",
+    "t1_dr_mild_npdr_without_dme",
+    "t1_dr_moderate_npdr_with_dme",
+    "t1_dr_moderate_npdr_without_dme",
+    "t1_dr_severe_npdr_with_dme",
+    "t1_dr_severe_npdr_without_dme",
+    "t1_dr_pdr_with_dme",
+    "t1_dr_pdr_trd_involving_macula",
+    "t1_dr_pdr_trd_not_involving_macula",
+    "t1_dr_pdr_combined_trd_rrd",
+    "t1_dr_stable_pdr",
+    "t1_dr_pdr_without_dme",
     "diplopia",
     "paralytic_strabismus",
     "macular_drusen",
@@ -292,6 +307,7 @@ test("diagnosis catalog seeds are ledger-backed durable families and survive a s
     "pathological_myopia_foveoschisis",
     "pathological_myopia_other_maculopathy",
     "t2_dr_dme_resolved",
+    "t1_dr_dme_resolved",
     "chronic_follicular_conjunctivitis",
     "demodex_infestation",
   ]);
@@ -440,6 +456,100 @@ test("Wave B diagnosis families resolve every verified laterality code", () => {
       "nlmClinicalTablesIcd10Cm",
     ]);
   }
+});
+
+test("every declared Type 1 retinopathy family resolves only to codes in its ledger", () => {
+  const ledger = JSON.parse(readFileSync(
+    resolve(process.cwd(), "../data/code-bindings/type-1-diabetic-retinopathy-phase0-ledger.json"),
+    "utf8",
+  )) as {
+    diagnosisFamilies: Array<{ family: string }>;
+    diagnosisCodes: Array<{ code: string; family: string }>;
+  };
+  const expectedFamilies = {
+    t1_dr_unspecified_with_dme: "E10.311",
+    t1_dr_unspecified_without_dme: "E10.319",
+    t1_dr_mild_npdr_with_dme: "E10.321-",
+    t1_dr_mild_npdr_without_dme: "E10.329-",
+    t1_dr_moderate_npdr_with_dme: "E10.331-",
+    t1_dr_moderate_npdr_without_dme: "E10.339-",
+    t1_dr_severe_npdr_with_dme: "E10.341-",
+    t1_dr_severe_npdr_without_dme: "E10.349-",
+    t1_dr_pdr_with_dme: "E10.351-",
+    t1_dr_pdr_trd_involving_macula: "E10.352-",
+    t1_dr_pdr_trd_not_involving_macula: "E10.353-",
+    t1_dr_pdr_combined_trd_rrd: "E10.354-",
+    t1_dr_stable_pdr: "E10.355-",
+    t1_dr_pdr_without_dme: "E10.359-",
+  } as const;
+
+  assert.deepEqual(ledger.diagnosisFamilies.map((row) => row.family), Object.values(expectedFamilies));
+  assert.equal(ledger.diagnosisCodes.length, 50);
+  const seeds = buildDiagnosisCatalogSeeds();
+  for (const [stableKey, family] of Object.entries(expectedFamilies)) {
+    const seed = seeds.find((row) => row.stableKey === stableKey);
+    assert.ok(seed?.icd10, `Missing Type 1 diagnosis catalog seed ${stableKey}`);
+    const resolvedCodes = "code" in seed.icd10
+      ? [seed.icd10.code]
+      : Object.values(seed.icd10.pattern).filter((code): code is string => code !== undefined).sort();
+    const ledgerCodes = ledger.diagnosisCodes
+      .filter((row) => row.family === family)
+      .map((row) => row.code)
+      .sort();
+    assert.deepEqual(resolvedCodes, ledgerCodes, `Type 1 seed ${stableKey} must resolve only to ${family} ledger codes`);
+  }
+});
+
+test("Type 1 resolved DME preserves the literal X family from the ocular ledger", () => {
+  const ledger = JSON.parse(readFileSync(
+    resolve(process.cwd(), "../data/code-bindings/ocular-health-phase0-ledger.json"),
+    "utf8",
+  )) as { diagnosisCodes: Array<{ code: string; family: string }> };
+  const expectedCodes = ["E10.37X1", "E10.37X2", "E10.37X3", "E10.37X9"];
+  const ledgerCodes = ledger.diagnosisCodes
+    .filter((row) => row.family === "E10.37X-")
+    .map((row) => row.code);
+  assert.deepEqual(ledgerCodes, expectedCodes);
+
+  const seed = buildDiagnosisCatalogSeeds().find((row) => row.stableKey === "t1_dr_dme_resolved");
+  assert.ok(seed?.icd10 && "pattern" in seed.icd10, "Missing Type 1 resolved DME catalog seed");
+  assert.deepEqual(seed.icd10.pattern, {
+    unspecifiedEye: "E10.37X9",
+    right: "E10.37X1",
+    left: "E10.37X2",
+    bilateral: "E10.37X3",
+  });
+});
+
+test("Type 1 retinopathy ledger carries diagnosis provenance without coverage claims", () => {
+  const ledger = JSON.parse(readFileSync(
+    resolve(process.cwd(), "../data/code-bindings/type-1-diabetic-retinopathy-phase0-ledger.json"),
+    "utf8",
+  )) as {
+    mandate: string;
+    sources: Record<string, { type: string; url: string; accessDate: string }>;
+    diagnosisCodes: Array<{ code: string; laterality: string; sourceRefs: string[] }>;
+    provisionalCoverageRules?: unknown;
+  };
+
+  assert.equal(ledger.mandate, "Mandate 14");
+  assert.equal(Object.keys(ledger.sources).length, 2);
+  assert.equal(Object.values(ledger.sources).every((source) => source.url.startsWith("https://") && source.accessDate.length === 10), true);
+  assert.equal(ledger.diagnosisCodes.every((row) => row.sourceRefs.length === 2), true);
+  assert.equal(ledger.diagnosisCodes.filter((row) => row.code === "E10.311" || row.code === "E10.319").every((row) => row.laterality === "UNKNOWN"), true);
+  assert.equal(ledger.provisionalCoverageRules, undefined);
+});
+
+test("Type 1 retinopathy catalog excludes deferred and stage-unspecified diagnoses", () => {
+  const catalogCodes = new Set(buildDiagnosisCatalogSeeds().flatMap((row) =>
+    row.icd10 && "code" in row.icd10
+      ? [row.icd10.code]
+      : Object.values(row.icd10?.pattern ?? {}).filter((code): code is string => code !== undefined)
+  ));
+
+  assert.equal(catalogCodes.has("E10.36"), false);
+  assert.equal(catalogCodes.has("E10.39"), false);
+  assert.equal([...catalogCodes].filter((code) => code.startsWith("E10.3")).length, 54);
 });
 
 test("Wave B catalog excludes stage-unspecified glaucoma and AMD codes", () => {
@@ -775,7 +885,7 @@ test("lens Phase 0 ledger and catalog seeds preserve verified codes and laterali
     lens_dislocation_posterior: { pattern: { unspecifiedEye: "H27.139", right: "H27.131", left: "H27.132", bilateral: "H27.133" } },
   };
 
-  assert.equal(allSeeds.length, 114);
+  assert.equal(allSeeds.length, 129);
   assert.equal(seeds.length, 12);
   for (const [stableKey, icd10] of Object.entries(expected)) {
     const seed = seeds.find((row) => row.stableKey === stableKey);
