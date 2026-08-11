@@ -10,7 +10,9 @@ import type { ChargeProposal, ProtocolApplication } from "./protocol-types.js";
 
 const BASE = "https://odos2020.com/fhir";
 const PRACTICE_ID = "odos-practice";
-const PROCEDURE_CONCEPT_SYSTEM = `${BASE}/CodeSystem/procedure-concept`;
+export const PROCEDURE_CONCEPT_SYSTEM = `${BASE}/CodeSystem/procedure-concept`;
+export const HCPCS_CODE_SYSTEM = "https://bluebutton.cms.gov/resources/codesystem/hcpcs";
+const CPT_CODE_SYSTEM = "urn:ama:cpt";
 const FEE_DEFINITION_IDENTIFIER_SYSTEM = `${BASE}/NamingSystem/procedure-fee-definition`;
 const CHARGE_PROPOSAL_IDENTIFIER_SYSTEM = `${BASE}/NamingSystem/charge-proposal-charge-item`;
 const ACT_CODE_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-ActCode";
@@ -18,13 +20,40 @@ const ACT_CODE_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-ActCode";
 export const ODOS_UNPRICED_CHARGE_EXTENSION_URL =
   `${BASE}/StructureDefinition/odos-unpriced-charge`;
 
-export const PROCEDURE_FEE_SEEDS = [
+interface ProcedureFeeSeed {
+  procedureConceptKey: string;
+  display: string;
+  billingCode?: string;
+}
+
+export const PROCEDURE_FEE_SEEDS: readonly ProcedureFeeSeed[] = [
   { procedureConceptKey: "gonioscopy", display: "Gonioscopy" },
   { procedureConceptKey: "corneal-pachymetry", display: "Corneal pachymetry" },
   { procedureConceptKey: "scodi-optic-nerve", display: "SCODI optic nerve" },
   { procedureConceptKey: "visual-field-threshold", display: "Threshold visual field" },
   { procedureConceptKey: "fundus-photography", display: "Fundus photography" },
-] as const;
+  { procedureConceptKey: "comprehensive-exam-new", display: "Comprehensive eye exam — new patient" },
+  { procedureConceptKey: "comprehensive-exam-established", display: "Comprehensive eye exam — established patient" },
+  { procedureConceptKey: "intermediate-exam-new", display: "Intermediate eye exam — new patient" },
+  { procedureConceptKey: "intermediate-exam-established", display: "Intermediate eye exam — established patient" },
+  { procedureConceptKey: "office-visit-new-straightforward", display: "Office visit — new, straightforward" },
+  { procedureConceptKey: "office-visit-new-low", display: "Office visit — new, low complexity" },
+  { procedureConceptKey: "office-visit-new-moderate", display: "Office visit — new, moderate complexity" },
+  { procedureConceptKey: "office-visit-established-straightforward", display: "Office visit — established, straightforward" },
+  { procedureConceptKey: "office-visit-established-low", display: "Office visit — established, low complexity" },
+  { procedureConceptKey: "office-visit-established-moderate", display: "Office visit — established, moderate complexity" },
+  { procedureConceptKey: "routine-vision-exam-new", display: "Routine vision exam — new patient", billingCode: "S0620" },
+  { procedureConceptKey: "routine-vision-exam-established", display: "Routine vision exam — established", billingCode: "S0621" },
+  { procedureConceptKey: "refraction", display: "Refraction" },
+];
+
+const INITIAL_DEFINITION_KEYS = new Set([
+  "gonioscopy",
+  "corneal-pachymetry",
+  "scodi-optic-nerve",
+  "visual-field-threshold",
+  "fundus-photography",
+]);
 
 export interface ProcedureFeeScheduleFhir {
   read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T>;
@@ -49,6 +78,7 @@ export interface ProcedureFeeScheduleItem {
   procedureConceptKey: string;
   display: string;
   active: boolean;
+  billingCode?: string;
   priceCents?: number;
   version: string;
 }
@@ -70,16 +100,26 @@ export async function ensureProcedureFeeSchedule(
     if (byKey.has(key)) throw new Error(`Duplicate procedure fee definitions found for ${key}.`);
     byKey.set(key, definition);
   }
-  const concepts = new Map<string, string>(
-    PROCEDURE_FEE_SEEDS.map((seed) => [seed.procedureConceptKey, seed.display]),
-  );
+  const seedByKey = new Map(PROCEDURE_FEE_SEEDS.map((seed) => [seed.procedureConceptKey, seed]));
+  const concepts = new Map<string, ProcedureFeeSeed>(PROCEDURE_FEE_SEEDS
+    .filter((seed) => INITIAL_DEFINITION_KEYS.has(seed.procedureConceptKey))
+    .map((seed) => [seed.procedureConceptKey, seed]));
   for (const key of additionalConceptKeys) {
-    if (key.trim() && !concepts.has(key)) concepts.set(key, displayFromKey(key));
+    if (key.trim() && !concepts.has(key)) {
+      concepts.set(key, seedByKey.get(key) ?? {
+        procedureConceptKey: key,
+        display: displayFromKey(key),
+      });
+    }
   }
-  for (const [key, display] of concepts) {
+  for (const [key, seed] of concepts) {
     if (byKey.has(key)) continue;
     const created = await fhir.create(
-      buildProcedureFeeDefinition({ procedureConceptKey: key, display }),
+      buildProcedureFeeDefinition({
+        procedureConceptKey: key,
+        display: seed.display,
+        billingCode: seed.billingCode,
+      }),
       {
         "X-ODOS-Source": "procedure-fee-schedule",
         "If-None-Exist": `identifier=${FEE_DEFINITION_IDENTIFIER_SYSTEM}|${key}`,
@@ -94,8 +134,19 @@ export async function listProcedureFeeSchedule(
   fhir: ProcedureFeeScheduleFhir,
 ): Promise<ProcedureFeeScheduleItem[]> {
   const definitions = await ensureProcedureFeeSchedule(fhir);
-  return definitions
-    .map(procedureFeeScheduleItem)
+  const persisted = definitions.map(procedureFeeScheduleItem);
+  const persistedKeys = new Set(persisted.map((item) => item.procedureConceptKey));
+  const virtualSeeds = PROCEDURE_FEE_SEEDS
+    .filter((seed) => !persistedKeys.has(seed.procedureConceptKey))
+    .map((seed): ProcedureFeeScheduleItem => ({
+      id: seed.procedureConceptKey,
+      procedureConceptKey: seed.procedureConceptKey,
+      display: seed.display,
+      active: true,
+      ...(seed.billingCode ? { billingCode: seed.billingCode } : {}),
+      version: "1",
+    }));
+  return [...persisted, ...virtualSeeds]
     .sort((left, right) => left.display.localeCompare(right.display));
 }
 
@@ -103,6 +154,7 @@ export async function saveProcedureFeeScheduleItem(
   fhir: ProcedureFeeScheduleFhir,
   input: {
     procedureConceptKey: string;
+    billingCode?: string | null;
     priceCents?: number | null;
     active: boolean;
   },
@@ -116,12 +168,16 @@ export async function saveProcedureFeeScheduleItem(
   const priceCents = input.priceCents === undefined
     ? definitionPriceCents(existing)
     : input.priceCents ?? undefined;
+  const billingCode = input.billingCode === undefined
+    ? definitionBillingCode(existing)
+    : normalizeBillingCode(input.billingCode);
   const saved = await fhir.update(
     "ChargeItemDefinition",
     existing.id,
     buildProcedureFeeDefinition({
       procedureConceptKey: input.procedureConceptKey,
       display: existing.title ?? displayFromKey(input.procedureConceptKey),
+      billingCode,
       priceCents,
       active: input.active,
       existing,
@@ -226,6 +282,7 @@ export async function materializeAcceptedChargeProposals(input: {
 export function buildProcedureFeeDefinition(input: {
   procedureConceptKey: string;
   display: string;
+  billingCode?: string;
   priceCents?: number;
   active?: boolean;
   existing?: ChargeItemDefinition;
@@ -234,6 +291,7 @@ export function buildProcedureFeeDefinition(input: {
     throw new Error("Procedure concept key must use lowercase letters, numbers, and hyphens.");
   }
   assertCents(input.priceCents);
+  const billingCode = normalizeBillingCode(input.billingCode);
   const version = input.existing ? nextVersion(input.existing.version) : "1";
   return {
     resourceType: "ChargeItemDefinition",
@@ -245,11 +303,18 @@ export function buildProcedureFeeDefinition(input: {
     status: input.active === false ? "retired" : "active",
     title: input.display,
     code: {
-      coding: [{
-        system: PROCEDURE_CONCEPT_SYSTEM,
-        code: input.procedureConceptKey,
-        display: input.display,
-      }],
+      coding: [
+        ...(billingCode ? [{
+          system: billingCodeSystem(billingCode),
+          code: billingCode,
+          display: input.display,
+        }] : []),
+        {
+          system: PROCEDURE_CONCEPT_SYSTEM,
+          code: input.procedureConceptKey,
+          display: input.display,
+        },
+      ],
       text: input.display,
     },
     ...(input.priceCents === undefined ? {} : {
@@ -319,6 +384,7 @@ function procedureFeeScheduleItem(definition: ChargeItemDefinition): ProcedureFe
     procedureConceptKey: key,
     display: definition.title ?? displayFromKey(key),
     active: definition.status === "active",
+    billingCode: definitionBillingCode(definition),
     priceCents: definitionPriceCents(definition),
     version: definition.version ?? "1",
   };
@@ -343,6 +409,26 @@ function definitionPriceCents(definition: ChargeItemDefinition): number | undefi
     throw new Error(`Procedure fee definition ${procedureConceptKey(definition) ?? definition.id ?? "unknown"} has an invalid base price.`);
   }
   return cents;
+}
+
+function definitionBillingCode(definition: ChargeItemDefinition): string | undefined {
+  return definition.code?.coding?.find((coding) =>
+    coding.system === HCPCS_CODE_SYSTEM || coding.system === CPT_CODE_SYSTEM
+  )?.code;
+}
+
+function normalizeBillingCode(value: string | null | undefined): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  const normalized = value.trim().toUpperCase();
+  if (!normalized) return undefined;
+  if (!/^[A-Z0-9]{1,20}$/.test(normalized)) {
+    throw new Error("Billing code must contain only letters and numbers.");
+  }
+  return normalized;
+}
+
+function billingCodeSystem(code: string): string {
+  return /^[A-Z]/.test(code) ? HCPCS_CODE_SYSTEM : CPT_CODE_SYSTEM;
 }
 
 function procedureFeeCanonical(procedureConceptKey: string): string {

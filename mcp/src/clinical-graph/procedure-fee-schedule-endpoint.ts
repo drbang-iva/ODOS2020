@@ -19,6 +19,7 @@ export interface ProcedureFeeScheduleEndpointDeps {
 const mutationSchema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("save"),
+    billingCode: z.string().nullable().optional(),
     priceCents: z.number().int().nonnegative().nullable(),
     active: z.boolean(),
   }).strict(),
@@ -56,7 +57,10 @@ export async function handleProcedureFeeScheduleMutationRequest(
   }
   const item = await saveProcedureFeeScheduleItem(staff.fhir, {
     procedureConceptKey: params.data.procedureConceptKey,
-    ...(mutation.data.action === "save" ? { priceCents: mutation.data.priceCents } : {}),
+    ...(mutation.data.action === "save" ? {
+      billingCode: mutation.data.billingCode,
+      priceCents: mutation.data.priceCents,
+    } : {}),
     active: mutation.data.action === "save" ? mutation.data.active : false,
   });
   return { status: 200, body: { item } };
