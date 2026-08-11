@@ -105,7 +105,7 @@ Refraction and all non-visit procedure concepts are excluded from the options.
 
 ## CPT-literal guard
 
-A test scans shipped files under `mcp/src`, `ui/src`, and `data` for standalone CPT-shaped tokens in strings, comments, and data text. The scanner distinguishes procedure-shaped text from program quantities, dates, ports, pixel values, hyphenated terminology codes, and URL components. Existing Markdown verification ledgers under `data/code-bindings` remain byte-identical; the scanner may exclude those paths or allowlist an exact file-and-token pair. Any remaining allowances are exact file-and-token entries for pre-existing non-procedure values; the list must stay small and named.
+A test scans shipped files under `mcp/src`, `ui/src`, and `data` for standalone CPT-shaped tokens in strings, comments, and data text. The scanner distinguishes procedure-shaped text from program quantities, dates, ports, pixel values, hyphenated terminology codes, and URL components. Existing Markdown verification ledgers under `data/code-bindings` remain byte-identical; the scanner may exclude those paths or exempt an exact file-and-token pair. Any remaining exemptions are exact file-and-token entries for pre-existing non-procedure values; the list must stay small and named.
 
 The guard reports the file, line, and rejected token. A mutation proof temporarily inserts a prohibited five-digit string into the shipped visit seed, records the exact failing output, removes the mutation, and records the green output. No prohibited value remains in the branch, tests, documentation, or PR diff.
 

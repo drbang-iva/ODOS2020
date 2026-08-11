@@ -56,7 +56,7 @@ export function VisitCodeSelector({
 
   return (
     <div className="mt-3 flex flex-wrap items-center gap-3" data-testid="visit-code-selector">
-      <label className="text-xs font-semibold uppercase tracking-widest text-white/45" htmlFor={`visit-code-${encounterId}`}>
+      <label className="text-xs font-semibold uppercase tracking-widest text-[color:var(--odos-faint)]" htmlFor={`visit-code-${encounterId}`}>
         Visit billing code
       </label>
       <select
@@ -74,7 +74,7 @@ export function VisitCodeSelector({
           </option>
         ))}
       </select>
-      {saving && <span className="text-xs text-white/45">Saving…</span>}
+      {saving && <span className="text-xs text-[color:var(--odos-faint)]">Saving…</span>}
       {error && <span role="alert" className="text-xs text-red-200">{error}</span>}
     </div>
   );
