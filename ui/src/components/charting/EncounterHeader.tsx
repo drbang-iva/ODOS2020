@@ -31,6 +31,7 @@ import {
   isUrgentAppointment,
   ODOS_VISIT_TYPE_SYSTEM,
 } from "../../lib/scheduling";
+import { VisitCodeSelector } from "./VisitCodeSelector";
 
 interface Props {
   patient: Patient;
@@ -249,6 +250,8 @@ export function EncounterHeader({ patient, encounterId }: Props) {
           </button>
         </div>
       </div>
+
+      <VisitCodeSelector encounterId={encounterId} disabled={migrated} />
 
       {appointment && <AppointmentContextBanner appointment={appointment} />}
 

@@ -1,0 +1,41 @@
+{
+  "ledger": "visit-billing-codes-phase0",
+  "status": "phase0-seeded",
+  "mandate": "Mandate 14",
+  "accessDate": "2026-08-11",
+  "scope": "HCPCS Level II provenance for the two shipped routine-vision visit billing codes only.",
+  "sources": {
+    "cmsApril2026AlphaNumericHcpcs": {
+      "type": "primary-cms-hcpcs-file",
+      "name": "CMS April 2026 Alpha-Numeric HCPCS File",
+      "url": "https://www.cms.gov/files/zip/april-2026-alpha-numeric-hcpcs-file.zip",
+      "sha256": "c4c2d3d22507a498520e80ce292449fb80e4521f8735d40091729d127ac18421",
+      "accessDate": "2026-08-11"
+    },
+    "cmsJuly2026AlphaNumericHcpcs": {
+      "type": "primary-cms-hcpcs-file",
+      "name": "CMS July 2026 Alpha-Numeric HCPCS File",
+      "url": "https://www.cms.gov/files/zip/july-2026-alpha-numeric-hcpcs-file.zip",
+      "sha256": "5591fed257e4d2307c1d2dc9c66abc8e346b1f4c076e9e48559799e2de14b70a",
+      "accessDate": "2026-08-11"
+    }
+  },
+  "codes": [
+    {
+      "code": "S0620",
+      "descriptor": "Routine ophthalmological examination including refraction; new patient",
+      "sourceRefs": [
+        "cmsApril2026AlphaNumericHcpcs",
+        "cmsJuly2026AlphaNumericHcpcs"
+      ]
+    },
+    {
+      "code": "S0621",
+      "descriptor": "Routine ophthalmological examination including refraction; established patient",
+      "sourceRefs": [
+        "cmsApril2026AlphaNumericHcpcs",
+        "cmsJuly2026AlphaNumericHcpcs"
+      ]
+    }
+  ]
+}

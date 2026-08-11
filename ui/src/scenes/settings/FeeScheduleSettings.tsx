@@ -30,6 +30,7 @@ export function feeScheduleDescriptor(
     adapter,
     canCreate: false,
     fields: [
+      { type: "text", key: "billingCode", label: "Billing code" },
       { type: "currency", key: "priceCents", label: "Fee", min: 0 },
     ],
     createItem: () => ({
@@ -41,6 +42,7 @@ export function feeScheduleDescriptor(
     }),
     label: (item) => item.display,
     facts: (item) => [
+      ...(item.billingCode ? [item.billingCode] : []),
       item.priceCents === undefined ? "No fee set" : money(item.priceCents),
       `Version ${item.version}`,
     ],
@@ -54,7 +56,7 @@ export function feeScheduleDescriptor(
     immediateCommit: true,
     listGrammar: {
       searchPlaceholder: "Find a procedure fee",
-      searchText: (item) => `${item.display} ${item.procedureConceptKey}`,
+      searchText: (item) => `${item.display} ${item.procedureConceptKey} ${item.billingCode ?? ""}`,
       deactivateConsequence: (item) =>
         `${item.display} remains in fee history. Accepted charges will be flagged unpriced until an active fee is available.`,
     },

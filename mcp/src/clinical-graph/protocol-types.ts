@@ -130,7 +130,7 @@ export interface ProcedureChargeRule {
 export interface ChargeProposal {
   id: string;
   encounterId: string;
-  protocolApplicationId: string;
+  protocolApplicationId?: string | null;
   planActionRef: string;
   procedureConceptKey: string;
   units: number;
