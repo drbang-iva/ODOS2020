@@ -102,6 +102,20 @@ test("family-resolution guard rejects unspecified stage labels", () => {
   );
 });
 
+test("family-resolution guard rejects an undeclared active member inside a staged family", () => {
+  const catalog = buildDiagnosisCatalogSeeds();
+  const member = catalog.find((row) => row.stableKey === "poag_mild")!;
+  catalog.push({
+    ...member,
+    stableKey: "poag_new_stage",
+    display: "Primary open-angle glaucoma, new stage",
+  });
+  assert.throws(
+    () => validateFamilyResolutionModes(catalog),
+    /Staged family primary-open-angle-glaucoma has active catalog member poag_new_stage that is not declared\./,
+  );
+});
+
 class MemoryFhir {
   readonly resources: Resource[] = [];
   readonly writes: Array<{ operation: "create" | "update"; resourceType: string; id: string; headers?: Record<string, string> }> = [];

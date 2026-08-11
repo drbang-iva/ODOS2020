@@ -108,6 +108,7 @@ export function validateFamilyResolutionModes(
   }
   for (const [clinicalFamily, mode] of Object.entries(modes)) {
     if (mode.mode !== "staged") continue;
+    const declaredMemberKeys = new Set(mode.members.map((member) => member.stableKey));
     for (const member of mode.members) {
       const row = byStableKey.get(member.stableKey);
       if (!row) {
@@ -119,6 +120,10 @@ export function validateFamilyResolutionModes(
       if (member.stageLabel.toLocaleLowerCase().includes("unspecified")) {
         throw new Error(`Stage label ${member.stageLabel} for ${member.stableKey} must not contain unspecified.`);
       }
+    }
+    const undeclaredMember = byFamily.get(clinicalFamily)?.find((row) => !declaredMemberKeys.has(row.stableKey));
+    if (undeclaredMember) {
+      throw new Error(`Staged family ${clinicalFamily} has active catalog member ${undeclaredMember.stableKey} that is not declared.`);
     }
   }
 }
