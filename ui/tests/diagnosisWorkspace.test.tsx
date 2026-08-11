@@ -1025,6 +1025,49 @@ test("tray leaf and family suggestions reuse the existing scope and stage prompt
   }
 });
 
+test("same-encounter finding refresh reloads diagnosis candidates for newly charted findings", async () => {
+  const originalFetch = globalThis.fetch;
+  const payload = findingsPayload();
+  const leaf = { ...diagnosisRow("macular_drusen", "Macular drusen"), lateralityRequired: true };
+  let candidateReads = 0;
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input);
+    if (url.includes("/fhir/R4/Encounter/e1")) return jsonResponse({ resourceType: "Encounter", id: "e1", status: "in-progress", class: { code: "AMB" }, diagnosis: [] });
+    if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [leaf] });
+    if (url.includes("/clinical-graph/encounters/e1/findings") && init?.method === "PUT") return jsonResponse({});
+    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ ...payload, canWrite: true, findings: [], catalog: [], bySection: {}, visitDiagnoses: [] });
+    if (url.includes("/clinical-graph/encounters/e1/diagnosis-candidates")) {
+      candidateReads += 1;
+      return jsonResponse({ findings: candidateReads === 1 ? [] : [{
+        findingInstanceId: "finding-unassigned",
+        observationReference: "Observation/unassigned",
+        candidates: [{ diagnosisKey: "macular_drusen", display: "Macular drusen", priority: true, source: "mapping" }],
+      }] });
+    }
+    if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
+    if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
+    throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${url}`);
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" onSelectDiagnosis={() => undefined} />);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    assert.equal(candidateReads, 1);
+    assert.equal(renderer.root.findAllByProps({ "aria-label": "Add suggested diagnosis Macular drusen" }).length, 0);
+    await act(async () => {
+      renderer.root.findByProps({ "aria-label": "Record Unassigned finding standalone" }).props.onClick();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    assert.equal(candidateReads, 2);
+    assert.ok(renderer.root.findByProps({ "aria-label": "Add suggested diagnosis Macular drusen" }));
+  } finally {
+    act(() => renderer?.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("imaging hides the prior patient's rows as soon as the patient reference changes", async () => {
   const originalFetch = globalThis.fetch;
   let resolveFirst!: (response: Response) => void;

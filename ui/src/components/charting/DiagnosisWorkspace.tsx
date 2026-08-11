@@ -124,13 +124,15 @@ export function DiagnosisWorkspace({
     loadGeneration.current = requestGeneration;
     const requestFindingsKey = `${encounterId}::${selectedReference ?? ""}`;
     setLoadedFindings((current) => current?.key === requestFindingsKey ? undefined : current);
+    setCandidateFindings([]);
     setLoading(true);
     setError(undefined);
     try {
-      const [nextEncounter, quickResponse, nextFindings] = await Promise.all([
+      const [nextEncounter, quickResponse, nextFindings, nextCandidateFindings] = await Promise.all([
         fhir.read<Encounter>("Encounter", encounterId),
         fetch(`${clinicalGraphApiBase()}/clinical-graph/diagnosis-quick-list`, { headers: authHeaders() }),
         loadDiagnosisFindings(encounterReference, selectedReference),
+        readDiagnosisCandidates(encounterId).catch(() => []),
       ]);
       const quickBody = await quickResponse.json() as QuickListPayload;
       if (!quickResponse.ok) throw new Error(quickBody.error ?? `Common diagnoses failed: ${quickResponse.status}`);
@@ -148,6 +150,7 @@ export function DiagnosisWorkspace({
       setPinnedDiagnosisKeys(quickBody.pinnedDiagnosisKeys ?? []);
       setCanWrite(quickBody.canWrite === true);
       setLoadedFindings({ key: requestFindingsKey, payload: nextFindings });
+      setCandidateFindings(nextCandidateFindings);
     } catch (caught) {
       if (loadGeneration.current !== requestGeneration) return;
       setError(caught instanceof Error ? caught.message : String(caught));
@@ -162,15 +165,6 @@ export function DiagnosisWorkspace({
       loadGeneration.current += 1;
     };
   }, [load]);
-
-  useEffect(() => {
-    let current = true;
-    setCandidateFindings([]);
-    void readDiagnosisCandidates(encounterId)
-      .then((rows) => { if (current) setCandidateFindings(rows); })
-      .catch(() => { if (current) setCandidateFindings([]); });
-    return () => { current = false; };
-  }, [encounterId]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
