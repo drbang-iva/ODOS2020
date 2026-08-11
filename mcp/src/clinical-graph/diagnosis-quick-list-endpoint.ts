@@ -34,6 +34,15 @@ export interface DiagnosisQuickListRow {
   }>;
 }
 
+export interface StagedDiagnosisFamilyProjection {
+  stableKey: string;
+  clinicalFamily: string;
+  display: string;
+  lateralityRequired: boolean;
+  axisLabel: string;
+  members: NonNullable<DiagnosisQuickListRow["members"]>;
+}
+
 interface DiagnosisQuickListDeps {
   authenticate(authHeader: string | undefined): Promise<{
     staffReference: string;
@@ -151,30 +160,46 @@ function diagnosisCatalogRows(
     if (!staged) return [quickListRow(row, pinnedKeys, totals)];
     if (emittedFamilies.has(staged.clinicalFamily)) return [];
     emittedFamilies.add(staged.clinicalFamily);
-    const members = staged.members.flatMap((member) => {
-      const catalogRow = byStableKey.get(member.stableKey);
-      return catalogRow ? [{
-        stableKey: catalogRow.stableKey,
-        stageLabel: member.stageLabel,
-        display: catalogRow.display,
-        lateralityRequired: catalogRow.lateralityRequired,
-        ...(catalogRow.bilateralResolution ? { bilateralResolution: catalogRow.bilateralResolution } : {}),
-        ...(catalogRow.icd10 ? { icd10: catalogRow.icd10 } : {}),
-      }] : [];
-    });
-    const first = members[0];
-    if (!first) return [];
+    const family = stagedDiagnosisFamilyRow([...byStableKey.values()], staged.clinicalFamily);
+    if (!family) return [];
     return [{
-      stableKey: staged.clinicalFamily,
-      clinicalFamily: staged.clinicalFamily,
-      display: familyDisplay(first.display),
-      lateralityRequired: first.lateralityRequired,
+      ...family,
       pinned: pinnedKeys.has(staged.clinicalFamily),
-      tallyCount: members.reduce((sum, member) => sum + (totals.get(member.stableKey) ?? 0), 0),
-      axisLabel: staged.axisLabel,
-      members,
+      tallyCount: family.members.reduce((sum, member) => sum + (totals.get(member.stableKey) ?? 0), 0),
     }];
   });
+}
+
+export function stagedDiagnosisFamilyRow(
+  diagnoses: readonly DiagnosisCatalogRow[],
+  clinicalFamily: string,
+): StagedDiagnosisFamilyProjection | undefined {
+  const mode = FAMILY_RESOLUTION_MODES[clinicalFamily];
+  if (!mode || mode.mode !== "staged") return undefined;
+  const byStableKey = new Map(
+    diagnoses.filter((row) => row.active && row.codingStatus === "verified").map((row) => [row.stableKey, row]),
+  );
+  const members = mode.members.flatMap((member) => {
+    const catalogRow = byStableKey.get(member.stableKey);
+    return catalogRow ? [{
+      stableKey: catalogRow.stableKey,
+      stageLabel: member.stageLabel,
+      display: catalogRow.display,
+      lateralityRequired: catalogRow.lateralityRequired,
+      ...(catalogRow.bilateralResolution ? { bilateralResolution: catalogRow.bilateralResolution } : {}),
+      ...(catalogRow.icd10 ? { icd10: catalogRow.icd10 } : {}),
+    }] : [];
+  });
+  const first = members[0];
+  if (!first) return undefined;
+  return {
+    stableKey: clinicalFamily,
+    clinicalFamily,
+    display: familyDisplay(first.display),
+    lateralityRequired: first.lateralityRequired,
+    axisLabel: mode.axisLabel,
+    members,
+  };
 }
 
 function quickListRow(

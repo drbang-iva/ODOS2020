@@ -63,7 +63,13 @@ export function DiagnosisPicker({
       if (!catalogResponse.ok) throw new Error(catalogBody.error ?? `Diagnosis catalog request failed: ${catalogResponse.status}`);
       if (signal?.aborted || requestVersion !== loadVersion.current) return;
       const allowedObservations = new Set(observationReferences ?? []);
-      setFindings((candidateBody.findings ?? []).filter((finding) =>
+      setFindings((candidateBody.findings ?? []).map((finding) => ({
+        ...finding,
+        candidates: finding.candidates.filter((candidate) => typeof candidate.diagnosisKey === "string"),
+        ...(finding.suppressedCandidates ? {
+          suppressedCandidates: finding.suppressedCandidates.filter((candidate) => typeof candidate.diagnosisKey === "string"),
+        } : {}),
+      })).filter((finding) =>
         (finding.candidates.length > 0 || Boolean(finding.suppression && finding.suppressedCandidates?.length)) &&
         (!findingDefinitionKey || finding.findingDefinitionKey === findingDefinitionKey) &&
         (allowedObservations.size === 0 || Boolean(finding.observationReference && allowedObservations.has(finding.observationReference)))

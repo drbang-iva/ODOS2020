@@ -90,15 +90,21 @@ export function updateDiagnosisCandidate(
 ): { definition: ClinicalFindingDefinition; candidate: DiagnosisCandidateEntry } {
   const current = (definition.diagnosisCandidates ?? []).find((row) => row.id === id);
   if (!current) throw new Error(`Diagnosis mapping ${id} does not exist.`);
-  const candidate: DiagnosisCandidateEntry = {
-    ...current,
-    ...(input.diagnosisKey !== undefined ? { diagnosisKey: input.diagnosisKey } : {}),
-    ...(input.trigger !== undefined ? { trigger: input.trigger } : {}),
+  const common = {
+    id: current.id,
+    trigger: input.trigger ?? current.trigger,
     ...(input.priority !== undefined ? { priority: input.priority } : {}),
-    ...(input.active !== undefined ? { active: input.active } : {}),
+    ...(input.priority === undefined && current.priority !== undefined ? { priority: current.priority } : {}),
+    active: input.active ?? current.active,
+    origin: current.origin,
   };
+  const candidate: DiagnosisCandidateEntry = input.diagnosisKey !== undefined
+    ? { ...common, diagnosisKey: input.diagnosisKey }
+    : current.diagnosisKey !== undefined
+      ? { ...common, diagnosisKey: current.diagnosisKey }
+      : { ...common, familyGroup: current.familyGroup! };
   assertMappingAllowed(definition, candidate.trigger);
-  assertActiveDiagnosis(candidate.diagnosisKey, catalog);
+  if (candidate.diagnosisKey !== undefined) assertActiveDiagnosis(candidate.diagnosisKey, catalog);
   return {
     candidate,
     definition: withCandidates(

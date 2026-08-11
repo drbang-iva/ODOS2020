@@ -280,6 +280,7 @@ test("EOM binocular plus incomitant proposes diplopia and paralytic strabismus w
 class MemoryFhir {
   readonly resources: Resource[] = [];
   readonly writes: Array<{ operation: "create" | "update"; resourceType: string; id: string; headers?: Record<string, string> }> = [];
+  readonly searches: Array<{ resourceType: string; params: Record<string, string> }> = [];
 
   async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
     const resource = this.resources.find((row) => row.resourceType === resourceType && row.id === id);
@@ -288,6 +289,7 @@ class MemoryFhir {
   }
 
   async search<T extends Resource>(resourceType: T["resourceType"], params: Record<string, string> = {}): Promise<Bundle<T>> {
+    this.searches.push({ resourceType, params: { ...params } });
     const resources = this.resources.filter((resource) => resource.resourceType === resourceType).filter((resource) => {
       if (resourceType === "Basic") {
         const basic = resource as Basic;
@@ -296,6 +298,7 @@ class MemoryFhir {
       }
       if (resourceType === "Observation" && params.encounter) return (resource as Observation).encounter?.reference === params.encounter;
       if (resourceType === "Condition" && params.encounter) return (resource as Condition).encounter?.reference === params.encounter;
+      if (resourceType === "Condition" && params.subject) return (resource as Condition).subject?.reference === params.subject;
       return true;
     });
     return { resourceType: "Bundle", type: "searchset", entry: resources.map((resource) => ({ resource: structuredClone(resource as T) })) };
@@ -1142,6 +1145,167 @@ test("staged glaucoma visibly suppresses only the visual-field proposal and over
   assert.deepEqual(fhir.resources.find((resource) => resource.id === "staged-glaucoma"), stagedBefore);
 });
 
+test("prior-encounter confirmed glaucoma reveals both staged glaucoma families without widening encounter suppression scope", async () => {
+  const fhir = diagnosisPickFhir();
+  const authenticate = async () => ({
+    staffReference: "Practitioner/doctor-1",
+    actorRole: "clinician" as PracticeRoleId,
+    fhir,
+  });
+  const beforeHistory = await handleDiagnosisCandidatesRequest({ authenticate }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+  });
+  assert.equal(beforeHistory.status, 200, JSON.stringify(beforeHistory.body));
+  assert.equal((beforeHistory.body as CandidateResponse).findings.some((finding) =>
+    finding.candidates.some((candidate) => candidate.familyGroup !== undefined)
+  ), false);
+
+  const confirmedGlaucoma = {
+    resourceType: "Condition",
+    subject: { reference: "Patient/p1" },
+    code: { coding: [{ system: "http://hl7.org/fhir/sid/icd-10-cm", code: "H40.1113" }] },
+    verificationStatus: { coding: [{ code: "confirmed" }] },
+    clinicalStatus: { coding: [{ code: "active" }] },
+  } as Condition;
+  fhir.resources.push({
+    ...confirmedGlaucoma,
+    id: "current-poag",
+    encounter: { reference: "Encounter/e1" },
+  });
+  const currentEncounter = await handleDiagnosisCandidatesRequest({ authenticate }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+  });
+  assert.equal((currentEncounter.body as CandidateResponse).findings.some((finding) =>
+    finding.candidates.some((candidate) => candidate.familyGroup !== undefined)
+  ), false);
+  fhir.resources.splice(fhir.resources.findIndex((resource) => resource.id === "current-poag"), 1);
+  fhir.resources.push({
+    ...confirmedGlaucoma,
+    id: "prior-poag",
+    encounter: { reference: "Encounter/prior" },
+  });
+  const result = await handleDiagnosisCandidatesRequest({ authenticate }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+  });
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  const cupDisc = (result.body as CandidateResponse).findings.find((finding) =>
+    finding.observationReference === "Observation/finding-od"
+  );
+  assert.deepEqual(cupDisc?.candidates.map((candidate) => candidate.diagnosisKey ?? candidate.familyGroup), [
+    "glaucoma_suspect_open_angle_low",
+    "primary-open-angle-glaucoma",
+    "low-tension-glaucoma",
+  ]);
+  assert.deepEqual(cupDisc?.candidates.slice(1).map((candidate) => ({
+    familyGroup: candidate.familyGroup,
+    clinicalFamily: candidate.clinicalFamily,
+    axisLabel: candidate.axisLabel,
+  })), [{
+    familyGroup: "primary-open-angle-glaucoma",
+    clinicalFamily: "primary-open-angle-glaucoma",
+    axisLabel: "Stage",
+  }, {
+    familyGroup: "low-tension-glaucoma",
+    clinicalFamily: "low-tension-glaucoma",
+    axisLabel: "Stage",
+  }]);
+  assert.equal(fhir.searches.some((search) => search.resourceType === "Condition" &&
+    search.params.encounter === "Encounter/e1" && search.params.subject === undefined), true);
+  assert.equal(fhir.searches.some((search) => search.resourceType === "Condition" &&
+    search.params.subject === "Patient/p1" && search.params.encounter === undefined), true);
+});
+
+test("posterior drusen returns an ordered leaf and staged family while occasional drusen stays leaf-only and read-only", async () => {
+  const fhir = new MemoryFhir();
+  fhir.resources.push({
+    resourceType: "Encounter",
+    id: "drusen",
+    status: "in-progress",
+    class: { system: "http://terminology.hl7.org/CodeSystem/v3-ActCode", code: "AMB" },
+    subject: { reference: "Patient/p1" },
+  } as Encounter);
+  const definitions = await new FhirFindingDefinitionStore(fhir).list();
+  const authenticate = async () => ({
+    staffReference: "Practitioner/doctor-1",
+    actorRole: "clinician" as PracticeRoleId,
+    fhir,
+  });
+  for (const [stableKey, option] of [
+    ["ocular-health:posterior:macula", "drusen"],
+    ["ocular-health:posterior:periphery", "occasional-drusen"],
+  ] as const) {
+    const definition = definitions.find((candidate) => candidate.stableKey === stableKey);
+    assert.ok(definition);
+    const field = Object.values(definition.valueSchema.fields as Record<string, { localCode?: string; valueType?: string }>)
+      .find((candidate) => candidate.valueType === "multi-select");
+    assert.ok(field?.localCode);
+    const capture = await handleCustomSectionCaptureRequest({
+      authenticate,
+      findingDefinitions: () => definitions,
+      now: () => "2026-08-11T12:00:00.000Z",
+    }, {
+      authHeader: "Bearer doctor-1",
+      params: { stableKey },
+      body: {
+        patientReference: "Patient/p1",
+        encounterReference: "Encounter/drusen",
+        eyes: { OD: { state: "abnormal", customFields: [{ code: field.localCode, value: [option] }] } },
+      },
+    });
+    assert.equal(capture.status, 200, JSON.stringify(capture.body));
+  }
+  const writesBeforeRead = fhir.writes.length;
+  const result = await handleDiagnosisCandidatesRequest({ authenticate }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "drusen" },
+  });
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  const findings = (result.body as CandidateResponse).findings;
+  const macula = findings.find((finding) => finding.findingDefinitionKey === "ocular-health:posterior:macula");
+  assert.deepEqual(macula?.candidates.map((candidate) => candidate.diagnosisKey ?? candidate.familyGroup), [
+    "macular_drusen",
+    "nonexudative-amd",
+  ]);
+  assert.deepEqual(macula?.candidates[1], {
+    familyGroup: "nonexudative-amd",
+    clinicalFamily: "nonexudative-amd",
+    display: "Nonexudative AMD",
+    axisLabel: "Stage",
+    members: [
+      { stableKey: "dry_amd_early", stageLabel: "Early" },
+      { stableKey: "dry_amd_intermediate", stageLabel: "Intermediate" },
+      { stableKey: "dry_amd_advanced_atrophic_without_subfoveal", stageLabel: "Advanced atrophic without subfoveal involvement (geographic atrophy)" },
+      { stableKey: "dry_amd_advanced_atrophic_with_subfoveal", stageLabel: "Advanced atrophic with subfoveal involvement (geographic atrophy)" },
+    ],
+    priority: true,
+    source: "mapping",
+  });
+  const periphery = findings.find((finding) => finding.findingDefinitionKey === "ocular-health:posterior:periphery");
+  assert.deepEqual(periphery?.candidates.map((candidate) => candidate.diagnosisKey ?? candidate.familyGroup), [
+    "macular_drusen",
+  ]);
+  assert.equal(fhir.writes.length, writesBeforeRead);
+  assert.equal(fhir.resources.some((resource) => resource.resourceType === "Condition"), false);
+
+  const picked = await handleDiagnosisPickRequest({ authenticate }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "drusen" },
+    body: {
+      findingInstanceId: macula?.observationReference,
+      diagnosisKey: "dry_amd_early",
+      action: "confirm",
+      laterality: "OD",
+      source: "mapping",
+    },
+  });
+  assert.equal(picked.status, 201, JSON.stringify(picked.body));
+  assert.equal((picked.body as { condition: Condition }).condition.code?.coding?.[0]?.code,
+    sourcedDiagnosisCode("dry_amd_early", "right"));
+});
+
 test("homonymous field-side picks never derive field side from eye laterality", async () => {
   const fhir = diagnosisPickFhir();
   const pick = (laterality: "OD" | "OS" | "OU") => handleDiagnosisPickRequest({
@@ -1372,8 +1536,19 @@ test("dedup keeps rule evidence and the higher-priority mapping when no rule exi
 
 type CandidateResponse = {
   findings: Array<{
+    findingDefinitionKey?: string;
     observationReference?: string;
-    candidates: Array<{ diagnosisKey: string; source: string; icd10?: { code?: string } }>;
+    candidates: Array<{
+      diagnosisKey?: string;
+      familyGroup?: string;
+      clinicalFamily?: string;
+      display: string;
+      axisLabel?: string;
+      members?: Array<{ stableKey: string; stageLabel: string }>;
+      priority: boolean;
+      source: string;
+      icd10?: { code?: string };
+    }>;
     suppressedCandidates?: Array<{ diagnosisKey: string; source: string; icd10?: { code?: string } }>;
     suppression?: { message: string; overridable: boolean };
   }>;

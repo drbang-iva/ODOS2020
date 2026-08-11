@@ -910,6 +910,164 @@ test("unassigned tray offers current visit assignment and standalone without dia
   assert.equal(empty.toJSON(), null);
 });
 
+test("unassigned tray renders quiet equal-weight suggestions in endpoint order and delegates the clinician pick", () => {
+  const payload = findingsPayload();
+  const selected: string[] = [];
+  const suggestions = [{
+    diagnosisKey: "macular_drusen",
+    display: "Macular drusen",
+    priority: true,
+    source: "mapping" as const,
+  }, {
+    familyGroup: "nonexudative-amd",
+    clinicalFamily: "nonexudative-amd",
+    display: "Nonexudative AMD",
+    axisLabel: "Stage",
+    members: [{ stableKey: "dry_amd_early", stageLabel: "Early" }],
+    priority: true,
+    source: "mapping" as const,
+  }];
+  const renderer = create(
+    <UnassignedFindingsTray
+      rows={[payload.unassigned[0]!]}
+      visitDiagnoses={[]}
+      patientReference="Patient/p1"
+      disabled={false}
+      suggestionsByObservation={{ "Observation/unassigned": {
+        findingInstanceId: "finding-unassigned",
+        candidates: suggestions,
+      } }}
+      onSuggest={(suggestion) => { selected.push(suggestion.diagnosisKey ?? suggestion.familyGroup); }}
+      onMutate={() => undefined}
+    />,
+  );
+  const buttons = renderer.root.findAllByProps({ className: "odos-unassigned-finding-suggestion" });
+  assert.equal(renderer.root.findByProps({ className: "odos-unassigned-finding-suggestions" }).findByType("small").children.join(""), "suggests:");
+  assert.deepEqual(buttons.map((button) => button.children.join("")), ["Macular drusen", "Nonexudative AMD"]);
+  assert.equal(buttons[0]?.props.className, buttons[1]?.props.className);
+  act(() => buttons[1]?.props.onClick());
+  assert.deepEqual(selected, ["nonexudative-amd"]);
+});
+
+test("tray leaf and family suggestions reuse the existing scope and stage prompt and persist only after explicit scope", async () => {
+  const originalFetch = globalThis.fetch;
+  const payload = findingsPayload();
+  const leaf = { ...diagnosisRow("macular_drusen", "Macular drusen"), lateralityRequired: true };
+  const family = {
+    stableKey: "nonexudative-amd",
+    clinicalFamily: "nonexudative-amd",
+    display: "Nonexudative AMD",
+    lateralityRequired: true,
+    pinned: false,
+    tallyCount: 0,
+    axisLabel: "Stage",
+    members: [{
+      stableKey: "dry_amd_early",
+      stageLabel: "Early",
+      display: "Nonexudative AMD, early dry stage",
+      lateralityRequired: true,
+      icd10: { pattern: { right: "H35.3111", left: "H35.3121", bilateral: "H35.3131" } },
+    }],
+  };
+  const pickBodies: unknown[] = [];
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input);
+    if (url.includes("/fhir/R4/Encounter/e1")) return jsonResponse({ resourceType: "Encounter", id: "e1", status: "in-progress", class: { code: "AMB" }, diagnosis: [] });
+    if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [leaf, family] });
+    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ ...payload, canWrite: true, findings: [], catalog: [], bySection: {}, visitDiagnoses: [] });
+    if (url.includes("/clinical-graph/encounters/e1/diagnosis-candidates")) return jsonResponse({ findings: [{
+      findingInstanceId: "finding-unassigned",
+      observationReference: "Observation/unassigned",
+      candidates: [{ diagnosisKey: "macular_drusen", display: "Macular drusen", priority: true, source: "mapping" }, {
+        familyGroup: "nonexudative-amd", clinicalFamily: "nonexudative-amd", display: "Nonexudative AMD", axisLabel: "Stage",
+        members: [{ stableKey: "dry_amd_early", stageLabel: "Early" }], priority: true, source: "mapping",
+      }],
+    }] });
+    if (url.includes("/clinical-graph/encounters/e1/diagnosis-picks") && init?.method === "POST") {
+      pickBodies.push(JSON.parse(String(init.body)));
+      return jsonResponse({ condition: { resourceType: "Condition", id: "picked", subject: { reference: "Patient/p1" }, code: { text: "Macular drusen" } } });
+    }
+    if (url.includes("/fhir/R4/BodyStructure?")) return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [] });
+    if (url.endsWith("/fhir/R4/BodyStructure") && init?.method === "POST") return jsonResponse({ resourceType: "BodyStructure", id: "eye", patient: { reference: "Patient/p1" } });
+    if (url.includes("/fhir/R4/Condition/picked") && init?.method === "PATCH") return jsonResponse({ resourceType: "Condition", id: "picked", subject: { reference: "Patient/p1" }, code: { text: "Macular drusen" }, bodySite: [{ text: "OD" }] });
+    if (url.endsWith("/fhir/R4/Provenance") && init?.method === "POST") return jsonResponse({ resourceType: "Provenance", id: "p", target: [], recorded: "2026-08-11T12:00:00Z", agent: [] });
+    if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
+    if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
+    throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${url}`);
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" onSelectDiagnosis={() => undefined} />);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    const suggestion = (label: string) => renderer.root.findByProps({ "aria-label": `Add suggested diagnosis ${label}` });
+    act(() => suggestion("Nonexudative AMD").props.onClick());
+    assert.ok(renderer.root.findByProps({ ariaLabel: "Stage for Nonexudative AMD" }));
+    act(() => renderer.root.findAllByType("button").find((button) => button.children.includes("Cancel"))?.props.onClick());
+    act(() => suggestion("Macular drusen").props.onClick());
+    assert.equal(pickBodies.length, 0);
+    const scope = renderer.root.findByProps({ ariaLabel: "Scope for Macular drusen" });
+    await act(async () => {
+      scope.props.onChange(["OD"]);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    assert.deepEqual(pickBodies, [{
+      diagnosisKey: "macular_drusen",
+      action: "confirm",
+      findingInstanceId: "finding-unassigned",
+      laterality: "OD",
+      source: "mapping",
+    }]);
+  } finally {
+    act(() => renderer?.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("same-encounter finding refresh reloads diagnosis candidates for newly charted findings", async () => {
+  const originalFetch = globalThis.fetch;
+  const payload = findingsPayload();
+  const leaf = { ...diagnosisRow("macular_drusen", "Macular drusen"), lateralityRequired: true };
+  let candidateReads = 0;
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input);
+    if (url.includes("/fhir/R4/Encounter/e1")) return jsonResponse({ resourceType: "Encounter", id: "e1", status: "in-progress", class: { code: "AMB" }, diagnosis: [] });
+    if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [leaf] });
+    if (url.includes("/clinical-graph/encounters/e1/findings") && init?.method === "PUT") return jsonResponse({});
+    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ ...payload, canWrite: true, findings: [], catalog: [], bySection: {}, visitDiagnoses: [] });
+    if (url.includes("/clinical-graph/encounters/e1/diagnosis-candidates")) {
+      candidateReads += 1;
+      return jsonResponse({ findings: candidateReads === 1 ? [] : [{
+        findingInstanceId: "finding-unassigned",
+        observationReference: "Observation/unassigned",
+        candidates: [{ diagnosisKey: "macular_drusen", display: "Macular drusen", priority: true, source: "mapping" }],
+      }] });
+    }
+    if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
+    if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
+    throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${url}`);
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" onSelectDiagnosis={() => undefined} />);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    assert.equal(candidateReads, 1);
+    assert.equal(renderer.root.findAllByProps({ "aria-label": "Add suggested diagnosis Macular drusen" }).length, 0);
+    await act(async () => {
+      renderer.root.findByProps({ "aria-label": "Record Unassigned finding standalone" }).props.onClick();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    assert.equal(candidateReads, 2);
+    assert.ok(renderer.root.findByProps({ "aria-label": "Add suggested diagnosis Macular drusen" }));
+  } finally {
+    act(() => renderer?.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("imaging hides the prior patient's rows as soon as the patient reference changes", async () => {
   const originalFetch = globalThis.fetch;
   let resolveFirst!: (response: Response) => void;

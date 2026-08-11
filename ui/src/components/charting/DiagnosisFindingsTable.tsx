@@ -7,6 +7,10 @@ import {
   type DiagnosisFindingsPayload,
   type EncounterFindingRow,
 } from "../../lib/diagnosis-findings";
+import type {
+  DiagnosisCandidateFinding,
+  DiagnosisCandidateSuggestion,
+} from "../../lib/clinical-graph-client";
 
 interface FindingsTableProps {
   payload: DiagnosisFindingsPayload;
@@ -208,6 +212,8 @@ interface UnassignedProps {
   visitDiagnoses: DiagnosisFindingsPayload["visitDiagnoses"];
   patientReference: string;
   disabled: boolean;
+  suggestionsByObservation?: Readonly<Record<string, DiagnosisCandidateFinding>>;
+  onSuggest?: (suggestion: DiagnosisCandidateSuggestion, findingInstanceId: string) => void;
   onMutate: (mutation: DiagnosisFindingMutation) => void | Promise<void>;
 }
 
@@ -216,16 +222,35 @@ export function UnassignedFindingsTray({
   visitDiagnoses,
   patientReference,
   disabled,
+  suggestionsByObservation = {},
+  onSuggest,
   onMutate,
 }: UnassignedProps) {
   if (rows.length === 0) return null;
   return (
     <section className="odos-unassigned-findings" aria-labelledby="unassigned-findings-heading">
       <h2 id="unassigned-findings-heading" className="odos-diagnosis-rail-heading">Unassigned findings</h2>
-      {rows.map((row) => row.observationReference && (
-        <div className="odos-unassigned-finding" key={`${row.observationReference}:${row.atomicFindingId}`}>
+      {rows.map((row) => {
+        if (!row.observationReference) return null;
+        const suggestionFinding = suggestionsByObservation[row.observationReference];
+        return <div className="odos-unassigned-finding" key={`${row.observationReference}:${row.atomicFindingId}`}>
           <strong>{row.display}</strong>
           <small>{row.presence === "absent" ? "Absent" : "Present"} · {row.laterality}</small>
+          {suggestionFinding && suggestionFinding.candidates.length > 0 && (
+            <div className="odos-unassigned-finding-suggestions">
+              <small>suggests:</small>
+              {suggestionFinding.candidates.map((suggestion) => (
+                <button
+                  type="button"
+                  key={suggestion.diagnosisKey ?? suggestion.familyGroup}
+                  className="odos-unassigned-finding-suggestion"
+                  disabled={disabled}
+                  aria-label={`Add suggested diagnosis ${suggestion.display}`}
+                  onClick={() => onSuggest?.(suggestion, suggestionFinding.findingInstanceId)}
+                >{suggestion.display}</button>
+              ))}
+            </div>
+          )}
           <div className="odos-unassigned-finding-actions">
             {visitDiagnoses.map((diagnosis) => (
               <button
@@ -252,8 +277,8 @@ export function UnassignedFindingsTray({
               })}
             >Record standalone</button>
           </div>
-        </div>
-      ))}
+        </div>;
+      })}
     </section>
   );
 }

@@ -5,6 +5,11 @@ import {
   type ClinicalGraphProvenance,
   type DiagnosisCandidateEntry,
 } from "./glaucoma-suspect.js";
+import {
+  buildDiagnosisCatalogSeeds,
+  FAMILY_RESOLUTION_MODES,
+  validateFamilyResolutionModes,
+} from "./diagnosis-catalog-seeds.js";
 
 export const ANTERIOR_OCULAR_HEALTH_PREFIX = "ocular-health:anterior:";
 export const POSTERIOR_OCULAR_HEALTH_PREFIX = "ocular-health:posterior:";
@@ -171,12 +176,16 @@ const POSTERIOR_STRUCTURES: StructureSeed[] = [
   },
 ];
 
-interface DiagnosisCandidateSeed {
+interface DiagnosisCandidateSeedBase {
   option: string;
-  diagnosisKey: string;
   fieldDisplay?: string;
   qualifiers?: Record<string, string>;
 }
+
+type DiagnosisCandidateSeed = DiagnosisCandidateSeedBase & (
+  | { diagnosisKey: string; familyGroup?: never }
+  | { familyGroup: string; diagnosisKey?: never }
+);
 
 const DIAGNOSIS_CANDIDATE_SEEDS: Record<string, readonly DiagnosisCandidateSeed[]> = {
   "ocular-health:anterior:lids-lashes": [
@@ -253,6 +262,16 @@ const DIAGNOSIS_CANDIDATE_SEEDS: Record<string, readonly DiagnosisCandidateSeed[
     { option: "proliferative-diabetic-retinopathy-pdr", qualifiers: { severity: "combined-traction-rhegmatogenous-rd" }, diagnosisKey: "t2_dr_pdr_combined_trd_rrd" },
     { option: "proliferative-diabetic-retinopathy-pdr", qualifiers: { severity: "stable" }, diagnosisKey: "t2_dr_stable_pdr" },
     { option: "proliferative-diabetic-retinopathy-pdr", qualifiers: { severity: "without-macular-edema" }, diagnosisKey: "t2_dr_pdr_without_dme" },
+    { option: "drusen", diagnosisKey: "macular_drusen" },
+    { option: "drusen", familyGroup: "nonexudative-amd" },
+    // A few small occasional drusen are below AMD suspicion (AREDS category 1), so this remains leaf-only.
+    { option: "occasional-drusen", diagnosisKey: "macular_drusen" },
+  ],
+  "ocular-health:posterior:macula": [
+    { option: "drusen", diagnosisKey: "macular_drusen" },
+    { option: "drusen", familyGroup: "nonexudative-amd" },
+    { option: "dry-amd", familyGroup: "nonexudative-amd" },
+    { option: "wet-amd", familyGroup: "exudative-amd" },
   ],
   "ocular-health:posterior:periphery": [
     { option: "horseshoe-tear", diagnosisKey: "retinal_horseshoe_tear" },
@@ -261,6 +280,10 @@ const DIAGNOSIS_CANDIDATE_SEEDS: Record<string, readonly DiagnosisCandidateSeed[
     { option: "operculated-hole", diagnosisKey: "retinal_round_hole" },
     { option: "retinoschisis", diagnosisKey: "retinoschisis" },
     { option: "retinal-detachment", diagnosisKey: "retinal_detachment_single_break" },
+    { option: "drusen", diagnosisKey: "macular_drusen" },
+    { option: "drusen", familyGroup: "nonexudative-amd" },
+    // A few small occasional drusen are below AMD suspicion (AREDS category 1), so this remains leaf-only.
+    { option: "occasional-drusen", diagnosisKey: "macular_drusen" },
   ],
   "dry-eye:markers": [
     {
@@ -373,6 +396,11 @@ export function applyOcularHealthDiagnosisCandidates(
 ): ClinicalFindingDefinition {
   const seeds = DIAGNOSIS_CANDIDATE_SEEDS[definition.stableKey];
   if (!seeds) return definition;
+  validateFamilyResolutionModes(
+    buildDiagnosisCatalogSeeds(),
+    FAMILY_RESOLUTION_MODES,
+    seeds.flatMap((seed) => seed.familyGroup !== undefined ? [seed.familyGroup] : []),
+  );
   const fields = Object.values(
     definition.valueSchema.fields as Record<string, CustomFieldEntry>,
   );
@@ -385,16 +413,13 @@ export function applyOcularHealthDiagnosisCandidates(
         `Finding definition ${definition.stableKey} has no ${seed.fieldDisplay ?? "Abnormal findings"} field.`,
       );
     }
-    return {
-    id: `SEED_${seed.diagnosisKey.toUpperCase()}_${index + 1}`,
-    diagnosisKey: seed.diagnosisKey,
-    trigger: seed.qualifiers
+    const trigger: DiagnosisCandidateEntry["trigger"] = seed.qualifiers
       ? { kind: "qualifier", field: field.localCode, option: seed.option, qualifiers: seed.qualifiers }
-      : { kind: "option", field: field.localCode, anyOf: [seed.option] },
-    priority: true,
-    origin: "seed",
-    active: true,
-    };
+      : { kind: "option", field: field.localCode, anyOf: [seed.option] };
+    const id = `SEED_${(seed.diagnosisKey ?? seed.familyGroup!).toUpperCase()}_${index + 1}`;
+    return seed.diagnosisKey !== undefined
+      ? { id, diagnosisKey: seed.diagnosisKey, trigger, priority: true, origin: "seed", active: true }
+      : { id, familyGroup: seed.familyGroup!, trigger, priority: true, origin: "seed", active: true };
   });
   return {
     ...definition,

@@ -26,6 +26,40 @@ export function clinicalGraphApiBase(): string {
   return import.meta.env?.VITE_ODOS_MCP_BASE_URL?.replace(/\/$/, "") ?? "";
 }
 
+export type DiagnosisCandidateSuggestion = {
+  diagnosisKey: string;
+  familyGroup?: never;
+  display: string;
+  priority: boolean;
+  source: "rule" | "mapping";
+} | {
+  diagnosisKey?: never;
+  familyGroup: string;
+  clinicalFamily: string;
+  display: string;
+  axisLabel: string;
+  members: Array<{ stableKey: string; stageLabel: string }>;
+  priority: boolean;
+  source: "rule" | "mapping";
+};
+
+export interface DiagnosisCandidateFinding {
+  findingInstanceId: string;
+  findingDefinitionKey?: string;
+  observationReference?: string;
+  candidates: DiagnosisCandidateSuggestion[];
+}
+
+export async function readDiagnosisCandidates(encounterId: string): Promise<DiagnosisCandidateFinding[]> {
+  const response = await fetch(
+    `${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/diagnosis-candidates`,
+    { headers: authHeaders() },
+  );
+  const body = await response.json() as { findings?: DiagnosisCandidateFinding[]; error?: string };
+  if (!response.ok) throw clinicalGraphResponseError(response, body, `Diagnosis candidates failed: ${response.status}`);
+  return body.findings ?? [];
+}
+
 export type DiagnosisCompleteness = {
   encounterReference: string;
   diagnoses: Array<{
