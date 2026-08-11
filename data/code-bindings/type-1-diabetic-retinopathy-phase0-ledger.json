@@ -1,0 +1,709 @@
+{
+  "mandate": "Mandate 14",
+  "accessDate": "2026-08-11",
+  "scope": "Type 1 diabetes mellitus with diabetic retinopathy diagnosis seeds. No payer coverage rules are declared.",
+  "sources": {
+    "cdcIcd10Cm2026CodeDescriptions": {
+      "type": "primary",
+      "name": "CDC/NCHS ICD-10-CM FY2026 Code Descriptions in Tabular Order",
+      "url": "https://stacks.cdc.gov/view/cdc/250974/cdc_250974_DS4.zip",
+      "supportingPage": "https://stacks.cdc.gov/view/cdc/250974",
+      "accessDate": "2026-08-11"
+    },
+    "nlmClinicalTablesIcd10Cm": {
+      "type": "primary-official-nih",
+      "name": "NLM Clinical Tables ICD-10-CM API",
+      "url": "https://clinicaltables.nlm.nih.gov/apidoc/icd10cm/v3/doc.html",
+      "verificationQuery": "https://clinicaltables.nlm.nih.gov/api/icd10cm/v3/search?terms=E10.3&sf=code&df=code,name&maxList=500",
+      "accessDate": "2026-08-04"
+    }
+  },
+  "diagnosisFamilies": [
+    {
+      "family": "E10.311",
+      "description": "Type 1 diabetes mellitus with unspecified diabetic retinopathy with macular edema",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "family": "E10.319",
+      "description": "Type 1 diabetes mellitus with unspecified diabetic retinopathy without macular edema",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "family": "E10.321-",
+      "description": "Type 1 diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema",
+      "lateralityDigits": {
+        "1": "OD",
+        "2": "OS",
+        "3": "bilateral",
+        "9": "unspecified"
+      },
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "family": "E10.329-",
+      "description": "Type 1 diabetes mellitus with mild nonproliferative diabetic retinopathy without macular edema",
+      "lateralityDigits": {
+        "1": "OD",
+        "2": "OS",
+        "3": "bilateral",
+        "9": "unspecified"
+      },
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "family": "E10.331-",
+      "description": "Type 1 diabetes mellitus with moderate nonproliferative diabetic retinopathy with macular edema",
+      "lateralityDigits": {
+        "1": "OD",
+        "2": "OS",
+        "3": "bilateral",
+        "9": "unspecified"
+      },
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "family": "E10.339-",
+      "description": "Type 1 diabetes mellitus with moderate nonproliferative diabetic retinopathy without macular edema",
+      "lateralityDigits": {
+        "1": "OD",
+        "2": "OS",
+        "3": "bilateral",
+        "9": "unspecified"
+      },
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "family": "E10.341-",
+      "description": "Type 1 diabetes mellitus with severe nonproliferative diabetic retinopathy with macular edema",
+      "lateralityDigits": {
+        "1": "OD",
+        "2": "OS",
+        "3": "bilateral",
+        "9": "unspecified"
+      },
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "family": "E10.349-",
+      "description": "Type 1 diabetes mellitus with severe nonproliferative diabetic retinopathy without macular edema",
+      "lateralityDigits": {
+        "1": "OD",
+        "2": "OS",
+        "3": "bilateral",
+        "9": "unspecified"
+      },
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "family": "E10.351-",
+      "description": "Type 1 diabetes mellitus with proliferative diabetic retinopathy with macular edema",
+      "lateralityDigits": {
+        "1": "OD",
+        "2": "OS",
+        "3": "bilateral",
+        "9": "unspecified"
+      },
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "family": "E10.352-",
+      "description": "Type 1 diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment involving the macula",
+      "lateralityDigits": {
+        "1": "OD",
+        "2": "OS",
+        "3": "bilateral",
+        "9": "unspecified"
+      },
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "family": "E10.353-",
+      "description": "Type 1 diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment not involving the macula",
+      "lateralityDigits": {
+        "1": "OD",
+        "2": "OS",
+        "3": "bilateral",
+        "9": "unspecified"
+      },
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "family": "E10.354-",
+      "description": "Type 1 diabetes mellitus with proliferative diabetic retinopathy with combined traction retinal detachment and rhegmatogenous retinal detachment",
+      "lateralityDigits": {
+        "1": "OD",
+        "2": "OS",
+        "3": "bilateral",
+        "9": "unspecified"
+      },
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "family": "E10.355-",
+      "description": "Type 1 diabetes mellitus with stable proliferative diabetic retinopathy",
+      "lateralityDigits": {
+        "1": "OD",
+        "2": "OS",
+        "3": "bilateral",
+        "9": "unspecified"
+      },
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "family": "E10.359-",
+      "description": "Type 1 diabetes mellitus with proliferative diabetic retinopathy without macular edema",
+      "lateralityDigits": {
+        "1": "OD",
+        "2": "OS",
+        "3": "bilateral",
+        "9": "unspecified"
+      },
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    }
+  ],
+  "diagnosisCodes": [
+    {
+      "code": "E10.311",
+      "display": "Type 1 diabetes mellitus with unspecified diabetic retinopathy with macular edema",
+      "family": "E10.311",
+      "laterality": "UNKNOWN",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.319",
+      "display": "Type 1 diabetes mellitus with unspecified diabetic retinopathy without macular edema",
+      "family": "E10.319",
+      "laterality": "UNKNOWN",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3211",
+      "display": "Type 1 diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, right eye",
+      "family": "E10.321-",
+      "laterality": "OD",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3212",
+      "display": "Type 1 diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, left eye",
+      "family": "E10.321-",
+      "laterality": "OS",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3213",
+      "display": "Type 1 diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, bilateral",
+      "family": "E10.321-",
+      "laterality": "OU",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3219",
+      "display": "Type 1 diabetes mellitus with mild nonproliferative diabetic retinopathy with macular edema, unspecified eye",
+      "family": "E10.321-",
+      "laterality": "UNKNOWN",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3291",
+      "display": "Type 1 diabetes mellitus with mild nonproliferative diabetic retinopathy without macular edema, right eye",
+      "family": "E10.329-",
+      "laterality": "OD",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3292",
+      "display": "Type 1 diabetes mellitus with mild nonproliferative diabetic retinopathy without macular edema, left eye",
+      "family": "E10.329-",
+      "laterality": "OS",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3293",
+      "display": "Type 1 diabetes mellitus with mild nonproliferative diabetic retinopathy without macular edema, bilateral",
+      "family": "E10.329-",
+      "laterality": "OU",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3299",
+      "display": "Type 1 diabetes mellitus with mild nonproliferative diabetic retinopathy without macular edema, unspecified eye",
+      "family": "E10.329-",
+      "laterality": "UNKNOWN",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3311",
+      "display": "Type 1 diabetes mellitus with moderate nonproliferative diabetic retinopathy with macular edema, right eye",
+      "family": "E10.331-",
+      "laterality": "OD",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3312",
+      "display": "Type 1 diabetes mellitus with moderate nonproliferative diabetic retinopathy with macular edema, left eye",
+      "family": "E10.331-",
+      "laterality": "OS",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3313",
+      "display": "Type 1 diabetes mellitus with moderate nonproliferative diabetic retinopathy with macular edema, bilateral",
+      "family": "E10.331-",
+      "laterality": "OU",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3319",
+      "display": "Type 1 diabetes mellitus with moderate nonproliferative diabetic retinopathy with macular edema, unspecified eye",
+      "family": "E10.331-",
+      "laterality": "UNKNOWN",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3391",
+      "display": "Type 1 diabetes mellitus with moderate nonproliferative diabetic retinopathy without macular edema, right eye",
+      "family": "E10.339-",
+      "laterality": "OD",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3392",
+      "display": "Type 1 diabetes mellitus with moderate nonproliferative diabetic retinopathy without macular edema, left eye",
+      "family": "E10.339-",
+      "laterality": "OS",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3393",
+      "display": "Type 1 diabetes mellitus with moderate nonproliferative diabetic retinopathy without macular edema, bilateral",
+      "family": "E10.339-",
+      "laterality": "OU",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3399",
+      "display": "Type 1 diabetes mellitus with moderate nonproliferative diabetic retinopathy without macular edema, unspecified eye",
+      "family": "E10.339-",
+      "laterality": "UNKNOWN",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3411",
+      "display": "Type 1 diabetes mellitus with severe nonproliferative diabetic retinopathy with macular edema, right eye",
+      "family": "E10.341-",
+      "laterality": "OD",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3412",
+      "display": "Type 1 diabetes mellitus with severe nonproliferative diabetic retinopathy with macular edema, left eye",
+      "family": "E10.341-",
+      "laterality": "OS",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3413",
+      "display": "Type 1 diabetes mellitus with severe nonproliferative diabetic retinopathy with macular edema, bilateral",
+      "family": "E10.341-",
+      "laterality": "OU",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3419",
+      "display": "Type 1 diabetes mellitus with severe nonproliferative diabetic retinopathy with macular edema, unspecified eye",
+      "family": "E10.341-",
+      "laterality": "UNKNOWN",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3491",
+      "display": "Type 1 diabetes mellitus with severe nonproliferative diabetic retinopathy without macular edema, right eye",
+      "family": "E10.349-",
+      "laterality": "OD",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3492",
+      "display": "Type 1 diabetes mellitus with severe nonproliferative diabetic retinopathy without macular edema, left eye",
+      "family": "E10.349-",
+      "laterality": "OS",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3493",
+      "display": "Type 1 diabetes mellitus with severe nonproliferative diabetic retinopathy without macular edema, bilateral",
+      "family": "E10.349-",
+      "laterality": "OU",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3499",
+      "display": "Type 1 diabetes mellitus with severe nonproliferative diabetic retinopathy without macular edema, unspecified eye",
+      "family": "E10.349-",
+      "laterality": "UNKNOWN",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3511",
+      "display": "Type 1 diabetes mellitus with proliferative diabetic retinopathy with macular edema, right eye",
+      "family": "E10.351-",
+      "laterality": "OD",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3512",
+      "display": "Type 1 diabetes mellitus with proliferative diabetic retinopathy with macular edema, left eye",
+      "family": "E10.351-",
+      "laterality": "OS",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3513",
+      "display": "Type 1 diabetes mellitus with proliferative diabetic retinopathy with macular edema, bilateral",
+      "family": "E10.351-",
+      "laterality": "OU",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3519",
+      "display": "Type 1 diabetes mellitus with proliferative diabetic retinopathy with macular edema, unspecified eye",
+      "family": "E10.351-",
+      "laterality": "UNKNOWN",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3521",
+      "display": "Type 1 diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment involving the macula, right eye",
+      "family": "E10.352-",
+      "laterality": "OD",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3522",
+      "display": "Type 1 diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment involving the macula, left eye",
+      "family": "E10.352-",
+      "laterality": "OS",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3523",
+      "display": "Type 1 diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment involving the macula, bilateral",
+      "family": "E10.352-",
+      "laterality": "OU",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3529",
+      "display": "Type 1 diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment involving the macula, unspecified eye",
+      "family": "E10.352-",
+      "laterality": "UNKNOWN",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3531",
+      "display": "Type 1 diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment not involving the macula, right eye",
+      "family": "E10.353-",
+      "laterality": "OD",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3532",
+      "display": "Type 1 diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment not involving the macula, left eye",
+      "family": "E10.353-",
+      "laterality": "OS",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3533",
+      "display": "Type 1 diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment not involving the macula, bilateral",
+      "family": "E10.353-",
+      "laterality": "OU",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3539",
+      "display": "Type 1 diabetes mellitus with proliferative diabetic retinopathy with traction retinal detachment not involving the macula, unspecified eye",
+      "family": "E10.353-",
+      "laterality": "UNKNOWN",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3541",
+      "display": "Type 1 diabetes mellitus with proliferative diabetic retinopathy with combined traction retinal detachment and rhegmatogenous retinal detachment, right eye",
+      "family": "E10.354-",
+      "laterality": "OD",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3542",
+      "display": "Type 1 diabetes mellitus with proliferative diabetic retinopathy with combined traction retinal detachment and rhegmatogenous retinal detachment, left eye",
+      "family": "E10.354-",
+      "laterality": "OS",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3543",
+      "display": "Type 1 diabetes mellitus with proliferative diabetic retinopathy with combined traction retinal detachment and rhegmatogenous retinal detachment, bilateral",
+      "family": "E10.354-",
+      "laterality": "OU",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3549",
+      "display": "Type 1 diabetes mellitus with proliferative diabetic retinopathy with combined traction retinal detachment and rhegmatogenous retinal detachment, unspecified eye",
+      "family": "E10.354-",
+      "laterality": "UNKNOWN",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3551",
+      "display": "Type 1 diabetes mellitus with stable proliferative diabetic retinopathy, right eye",
+      "family": "E10.355-",
+      "laterality": "OD",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3552",
+      "display": "Type 1 diabetes mellitus with stable proliferative diabetic retinopathy, left eye",
+      "family": "E10.355-",
+      "laterality": "OS",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3553",
+      "display": "Type 1 diabetes mellitus with stable proliferative diabetic retinopathy, bilateral",
+      "family": "E10.355-",
+      "laterality": "OU",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3559",
+      "display": "Type 1 diabetes mellitus with stable proliferative diabetic retinopathy, unspecified eye",
+      "family": "E10.355-",
+      "laterality": "UNKNOWN",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3591",
+      "display": "Type 1 diabetes mellitus with proliferative diabetic retinopathy without macular edema, right eye",
+      "family": "E10.359-",
+      "laterality": "OD",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3592",
+      "display": "Type 1 diabetes mellitus with proliferative diabetic retinopathy without macular edema, left eye",
+      "family": "E10.359-",
+      "laterality": "OS",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3593",
+      "display": "Type 1 diabetes mellitus with proliferative diabetic retinopathy without macular edema, bilateral",
+      "family": "E10.359-",
+      "laterality": "OU",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    },
+    {
+      "code": "E10.3599",
+      "display": "Type 1 diabetes mellitus with proliferative diabetic retinopathy without macular edema, unspecified eye",
+      "family": "E10.359-",
+      "laterality": "UNKNOWN",
+      "sourceRefs": [
+        "cdcIcd10Cm2026CodeDescriptions",
+        "nlmClinicalTablesIcd10Cm"
+      ]
+    }
+  ]
+}

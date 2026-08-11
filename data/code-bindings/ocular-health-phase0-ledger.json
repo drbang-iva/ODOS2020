@@ -3,7 +3,7 @@
   "status": "phase0-seeded",
   "mandate": "Mandate 14",
   "accessDate": "2026-08-10",
-  "scope": "Ocular Health (anterior+posterior) finding→dx candidate suggestions, plus the staged families seeded in Wave B: nonexudative and exudative AMD (H35.31-/H35.32-), primary open-angle and low-tension glaucoma (H40.11-/H40.12-), and resolved diabetic macular edema (E11.37X-). Cataract-by-type remains deferred.",
+  "scope": "Ocular Health (anterior+posterior) finding→dx candidate suggestions, plus the staged families seeded in Wave B: nonexudative and exudative AMD (H35.31-/H35.32-), primary open-angle and low-tension glaucoma (H40.11-/H40.12-), and resolved diabetic macular edema (E10.37X-/E11.37X-). Cataract-by-type remains deferred.",
   "sources": {
     "cdcIcd10Cm2026CodeDescriptions": {
       "type": "primary",
@@ -284,6 +284,10 @@
     { "code": "E11.37X2", "display": "Type 2 diabetes mellitus with diabetic macular edema, resolved following treatment, left eye", "family": "E11.37X-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
     { "code": "E11.37X3", "display": "Type 2 diabetes mellitus with diabetic macular edema, resolved following treatment, bilateral", "family": "E11.37X-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
     { "code": "E11.37X9", "display": "Type 2 diabetes mellitus with diabetic macular edema, resolved following treatment, unspecified eye", "family": "E11.37X-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "E10.37X1", "display": "Type 1 diabetes mellitus with diabetic macular edema, resolved following treatment, right eye", "family": "E10.37X-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "E10.37X2", "display": "Type 1 diabetes mellitus with diabetic macular edema, resolved following treatment, left eye", "family": "E10.37X-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "E10.37X3", "display": "Type 1 diabetes mellitus with diabetic macular edema, resolved following treatment, bilateral", "family": "E10.37X-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "E10.37X9", "display": "Type 1 diabetes mellitus with diabetic macular edema, resolved following treatment, unspecified eye", "family": "E10.37X-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
     { "code": "H10.431", "display": "Chronic follicular conjunctivitis, right eye", "family": "H10.43-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
     { "code": "H10.432", "display": "Chronic follicular conjunctivitis, left eye", "family": "H10.43-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
     { "code": "H10.433", "display": "Chronic follicular conjunctivitis, bilateral", "family": "H10.43-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
