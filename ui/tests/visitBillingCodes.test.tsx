@@ -8,7 +8,7 @@ import {
 } from "../src/lib/procedure-fee-schedule";
 import { feeScheduleDescriptor } from "../src/scenes/settings/FeeScheduleSettings";
 import { VisitCodeSelector } from "../src/components/charting/VisitCodeSelector";
-import type { VisitChargeApi, VisitChargeResponse } from "../src/lib/visit-charge";
+import type { VisitChargeApi, VisitChargeResponse } from "../src/lib/clinical-graph-client";
 
 const ROUTINE_ITEM: ProcedureFeeScheduleItem = {
   id: "routine-vision-exam-new",
@@ -104,7 +104,7 @@ test("selector read failure stays local and non-blocking", async () => {
     renderer = create(<VisitCodeSelector encounterId="enc-error" api={api} />);
     await Promise.resolve();
   });
-  assert.match(renderer.root.find((node) => node.props.role === "alert").children.join(""), /Synthetic visit charge read failure/);
+  assert.match(renderer.root.findByProps({ "data-testid": "visit-code-error" }).children.join(""), /Synthetic visit charge read failure/);
   assert.equal(renderer.root.findAllByType("button").length, 0);
   act(() => renderer.unmount());
 });

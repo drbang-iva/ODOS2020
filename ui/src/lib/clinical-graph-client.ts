@@ -26,6 +26,50 @@ export function clinicalGraphApiBase(): string {
   return import.meta.env?.VITE_ODOS_MCP_BASE_URL?.replace(/\/$/, "") ?? "";
 }
 
+export interface VisitChargeOption {
+  procedureConceptKey: string;
+  display: string;
+  billingCode?: string;
+}
+
+export interface VisitChargeResponse {
+  options: VisitChargeOption[];
+  selectedProcedureConceptKey?: string;
+  proposal?: {
+    id: string;
+    procedureConceptKey: string;
+    state: "accepted" | "removed" | "finalized";
+  };
+}
+
+export interface VisitChargeApi {
+  read(encounterId: string): Promise<VisitChargeResponse>;
+  save(encounterId: string, procedureConceptKey: string | null): Promise<Partial<VisitChargeResponse>>;
+}
+
+export function visitChargeApi(fetchImpl: typeof fetch = fetch): VisitChargeApi {
+  const endpoint = (encounterId: string) =>
+    `${clinicalGraphApiBase()}/clinical-graph/protocols/encounters/${encodeURIComponent(encounterId)}/visit-charge`;
+  return {
+    async read(encounterId) {
+      const response = await fetchImpl(endpoint(encounterId), { headers: authHeaders() });
+      const body = await response.json() as VisitChargeResponse & ClinicalGraphErrorBody;
+      if (!response.ok) throw clinicalGraphResponseError(response, body, `Visit charge failed: ${response.status}`);
+      return body;
+    },
+    async save(encounterId, procedureConceptKey) {
+      const response = await fetchImpl(endpoint(encounterId), {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ procedureConceptKey }),
+      });
+      const body = await response.json() as Partial<VisitChargeResponse> & ClinicalGraphErrorBody;
+      if (!response.ok) throw clinicalGraphResponseError(response, body, `Visit charge update failed: ${response.status}`);
+      return body;
+    },
+  };
+}
+
 export type DiagnosisCandidateSuggestion = {
   diagnosisKey: string;
   familyGroup?: never;

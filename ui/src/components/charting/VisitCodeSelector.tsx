@@ -3,7 +3,7 @@ import {
   visitChargeApi,
   type VisitChargeApi,
   type VisitChargeOption,
-} from "../../lib/visit-charge";
+} from "../../lib/clinical-graph-client";
 
 const DEFAULT_API = visitChargeApi();
 
@@ -75,7 +75,7 @@ export function VisitCodeSelector({
         ))}
       </select>
       {saving && <span className="text-xs text-[color:var(--odos-faint)]">Saving…</span>}
-      {error && <span role="alert" className="text-xs text-red-200">{error}</span>}
+      {error && <span aria-live="polite" data-testid="visit-code-error" className="text-xs text-red-200">{error}</span>}
     </div>
   );
 }
