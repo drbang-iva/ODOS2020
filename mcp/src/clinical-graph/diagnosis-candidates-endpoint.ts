@@ -122,7 +122,8 @@ export async function handleDiagnosisCandidatesRequest(
     entry.resource ? isConfirmedStagedGlaucoma(entry.resource) : false
   );
   const patientStagedGlaucomaPresent = (patientConditions.entry ?? []).some((entry) =>
-    entry.resource ? isConfirmedStagedGlaucoma(entry.resource) : false
+    entry.resource?.encounter?.reference !== encounterReference &&
+      (entry.resource ? isConfirmedStagedGlaucoma(entry.resource) : false)
   );
 
   return {

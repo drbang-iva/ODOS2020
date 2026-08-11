@@ -1161,15 +1161,31 @@ test("prior-encounter confirmed glaucoma reveals both staged glaucoma families w
     finding.candidates.some((candidate) => candidate.familyGroup !== undefined)
   ), false);
 
-  fhir.resources.push({
+  const confirmedGlaucoma = {
     resourceType: "Condition",
-    id: "prior-poag",
     subject: { reference: "Patient/p1" },
-    encounter: { reference: "Encounter/prior" },
     code: { coding: [{ system: "http://hl7.org/fhir/sid/icd-10-cm", code: "H40.1113" }] },
     verificationStatus: { coding: [{ code: "confirmed" }] },
     clinicalStatus: { coding: [{ code: "active" }] },
-  } as Condition);
+  } as Condition;
+  fhir.resources.push({
+    ...confirmedGlaucoma,
+    id: "current-poag",
+    encounter: { reference: "Encounter/e1" },
+  });
+  const currentEncounter = await handleDiagnosisCandidatesRequest({ authenticate }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+  });
+  assert.equal((currentEncounter.body as CandidateResponse).findings.some((finding) =>
+    finding.candidates.some((candidate) => candidate.familyGroup !== undefined)
+  ), false);
+  fhir.resources.splice(fhir.resources.findIndex((resource) => resource.id === "current-poag"), 1);
+  fhir.resources.push({
+    ...confirmedGlaucoma,
+    id: "prior-poag",
+    encounter: { reference: "Encounter/prior" },
+  });
   const result = await handleDiagnosisCandidatesRequest({ authenticate }, {
     authHeader: "Bearer doctor-1",
     params: { encounterId: "e1" },
