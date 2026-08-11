@@ -101,6 +101,37 @@ test("Stage later persists a staged family Condition with no ICD-10-CM coding", 
   assert.equal(condition.code?.coding?.some((coding) => coding.system === "http://hl7.org/fhir/sid/icd-10-cm") ?? false, false);
 });
 
+test("Stage later cannot duplicate an existing same-eye staged member Condition", async () => {
+  const fhir = diagnosisPickFhir();
+  const authenticate = async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician" as const, fhir });
+  const confirmed = await handleDiagnosisPickRequest({ authenticate }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+    body: { diagnosisKey: "poag_mild", action: "confirm", laterality: "OD", source: "catalog-search" },
+  });
+  const deferred = await handleDiagnosisPickRequest({ authenticate }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+    body: {
+      diagnosisKey: "primary-open-angle-glaucoma",
+      action: "confirm",
+      laterality: "OD",
+      source: "catalog-search",
+      stageDeferred: true,
+    },
+  });
+
+  assert.equal(confirmed.status, 201, JSON.stringify(confirmed.body));
+  assert.equal(deferred.status, 409, JSON.stringify(deferred.body));
+  assert.deepEqual(deferred.body, {
+    error: "A staged diagnosis already exists for primary-open-angle-glaucoma right. Re-stage the existing diagnosis instead.",
+  });
+  const conditions = fhir.resources.filter((resource): resource is Condition => resource.resourceType === "Condition");
+  assert.equal(conditions.length, 1);
+  assert.equal(conditions[0]?.code?.coding?.[0]?.code, sourcedDiagnosisCode("poag_mild", "right"));
+  assert.deepEqual(conditions[0]?.identifier?.map((identifier) => identifier.value), ["e1::poag_mild::right"]);
+});
+
 test("a member pick completes the same-eye pending family Condition instead of creating a duplicate", async () => {
   const fhir = diagnosisPickFhir();
   const authenticate = async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician" as const, fhir });
