@@ -13,10 +13,12 @@ import {
   conditionMatchesDiagnosisPick,
   DiagnosisWorkspace,
   diagnosisCatalogKey,
+  diagnosisSearchOptions,
   diagnosisPinMoveDisabled,
   diagnosisRankActionsDisabled,
   diagnosisWorkspaceInstanceKey,
   movePinnedDiagnosis,
+  mostRecentPriorStage,
   orderedEncounterConditions,
 } from "../src/components/charting/DiagnosisWorkspace";
 import { OdosSearchPicker } from "../src/components/inputs/OdosSearchPicker";
@@ -31,6 +33,7 @@ import {
   type DiagnosisFindingMutation,
   type DiagnosisFindingsPayload,
 } from "../src/lib/diagnosis-findings";
+import { conditionResolvedCodeLabel } from "../src/lib/diagnosis-code-resolution";
 
 test("diagnosis workspace preferences default safely and round-trip valid selections", () => {
   const storage = memoryStorage();
@@ -180,6 +183,165 @@ test("Find dx searches the eligible catalog beyond bounded Common diagnoses", as
     act(() => renderer?.unmount());
     globalThis.fetch = originalFetch;
   }
+});
+
+test("staged family search resolves an explicit member statement without exposing member rows", () => {
+  const family = stagedFamilyRow();
+  const explicit = diagnosisSearchOptions([family], "poag severe");
+  assert.equal(explicit.length, 1);
+  assert.equal(explicit[0]?.value, "primary-open-angle-glaucoma");
+  assert.equal(explicit[0]?.label, "Primary open-angle glaucoma");
+  assert.equal(explicit[0]?.description, "Stage: Severe");
+  assert.equal(explicit[0]?.item.selectedMemberKey, "poag_severe");
+  assert.equal(explicit[0]?.item.stageSelectionSource, "search");
+  assert.deepEqual(diagnosisSearchOptions([family], "primary open angle").map((row) => row.value), [
+    "primary-open-angle-glaucoma",
+  ]);
+});
+
+test("staged family add uses segmented Stage then Scope and never offers unspecified", async () => {
+  const originalFetch = globalThis.fetch;
+  const family = stagedFamilyRow();
+  globalThis.fetch = stagedWorkspaceFetch(family);
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" onSelectDiagnosis={() => undefined} />);
+      await Promise.resolve();
+    });
+    const familyButton = renderer.root.findAllByType("button").find((button) =>
+      button.findAllByType("span").some((span) => span.children.includes("Primary open-angle glaucoma"))
+    );
+    assert.ok(familyButton);
+    await act(async () => {
+      familyButton.props.onClick();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    const stage = renderer.root.findByProps({ ariaLabel: "Stage for Primary open-angle glaucoma" });
+    const scope = renderer.root.findByProps({ ariaLabel: "Scope for Primary open-angle glaucoma" });
+    assert.deepEqual(stage.props.options.map((option: { label: string }) => option.label), ["Mild", "Moderate", "Severe", "Indeterminate"]);
+    assert.equal(scope.props.disabled, true);
+    assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /unspecified/i);
+    assert.equal(renderer.root.findByProps({ className: "odos-diagnosis-stage-prior" }).children.join(""), "was Moderate · 2026-03-14");
+
+    act(() => stage.props.onChange(["poag_mild"]));
+    assert.equal(renderer.root.findByProps({ ariaLabel: "Scope for Primary open-angle glaucoma" }).props.disabled, false);
+  } finally {
+    act(() => renderer?.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("explicit stage search asks scope only and pending staged codes use the warning label", async () => {
+  const originalFetch = globalThis.fetch;
+  const family = stagedFamilyRow();
+  globalThis.fetch = stagedWorkspaceFetch(family);
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" onSelectDiagnosis={() => undefined} />);
+      await Promise.resolve();
+    });
+    const picker = renderer.root.findByType(OdosSearchPicker);
+    const [option] = await picker.props.search("poag severe", new AbortController().signal);
+    act(() => picker.props.onSelect(option));
+    const add = renderer.root.findAllByType("button").find((button) => button.children.includes("Add to this visit"));
+    assert.ok(add);
+    act(() => add.props.onClick());
+    assert.equal(renderer.root.findAllByProps({ ariaLabel: "Stage for Primary open-angle glaucoma" }).length, 0);
+    assert.equal(renderer.root.findByProps({ ariaLabel: "Scope for Primary open-angle glaucoma" }).props.disabled, false);
+  } finally {
+    act(() => renderer?.unmount());
+    globalThis.fetch = originalFetch;
+  }
+
+  const pending = condition("pending", "Primary open-angle glaucoma");
+  pending.identifier = [{
+    system: "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key",
+    value: "e1::primary-open-angle-glaucoma::right",
+  }];
+  assert.equal(conditionResolvedCodeLabel(pending, [family]), "Code pending — stage required");
+});
+
+test("selected pending family renders warning badges and re-stages from the header control", async () => {
+  const originalFetch = globalThis.fetch;
+  const family = stagedFamilyRow();
+  const pending: Condition = {
+    ...condition("pending", "Primary open-angle glaucoma"),
+    meta: { versionId: "4" },
+    bodySite: [{ text: "OD" }],
+    identifier: [{
+      system: "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key",
+      value: "e1::primary-open-angle-glaucoma::right",
+    }],
+  };
+  let currentCondition = pending;
+  let patchOperations: Array<{ path: string; value?: unknown }> | undefined;
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input);
+    if (url.includes("/fhir/R4/Encounter/e1")) {
+      return jsonResponse({ resourceType: "Encounter", id: "e1", status: "in-progress", class: { code: "AMB" }, diagnosis: [{ condition: { reference: "Condition/pending" }, rank: 1 }] });
+    }
+    if (url.endsWith("/fhir/R4/Condition/pending") && init?.method === "PATCH") {
+      patchOperations = JSON.parse(String(init.body));
+      currentCondition = {
+        ...pending,
+        meta: { versionId: "5" },
+        code: patchOperations?.find((operation) => operation.path === "/code")?.value as Condition["code"],
+        identifier: patchOperations?.find((operation) => operation.path === "/identifier")?.value as Condition["identifier"],
+      };
+      return jsonResponse(currentCondition);
+    }
+    if (url.endsWith("/fhir/R4/Condition/pending")) return jsonResponse(currentCondition);
+    if (url.includes("/fhir/R4/Condition?")) {
+      return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [{ resource: stagedCondition("prior", "poag_moderate", "2026-03-14T12:00:00.000Z") }] });
+    }
+    if (url.endsWith("/fhir/R4/Provenance") && init?.method === "POST") {
+      return jsonResponse({ resourceType: "Provenance", id: "stage-provenance", target: [], recorded: "2026-08-11T12:00:00Z", agent: [] });
+    }
+    if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [family], catalog: [family] });
+    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
+    if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
+    if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
+    throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${url}`);
+  }) as typeof fetch;
+
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" selectedReference="Condition/pending" onSelectDiagnosis={() => undefined} />);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    assert.equal(renderer.root.findAllByProps({ role: "status" }).length, 2);
+    const stage = renderer.root.findByProps({ ariaLabel: "Stage for Primary open-angle glaucoma" });
+    assert.deepEqual(stage.props.selected, []);
+    assert.equal(renderer.root.findByProps({ className: "odos-diagnosis-stage-prior" }).children.join(""), "was Moderate · 2026-03-14");
+    await act(async () => {
+      stage.props.onChange(["poag_mild"]);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    assert.deepEqual(patchOperations?.map((operation) => operation.path), ["/code", "/identifier"]);
+    assert.equal((patchOperations?.[1]?.value as Array<{ value?: string }>)[0]?.value, "e1::poag_mild::right");
+    assert.equal(renderer.root.findAllByProps({ role: "status" }).length, 0);
+    assert.deepEqual(renderer.root.findByProps({ ariaLabel: "Stage for Primary open-angle glaucoma" }).props.selected, ["poag_mild"]);
+  } finally {
+    act(() => renderer?.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("most recent prior stage is dated, excludes the selected Condition, and never supplies a default", () => {
+  const family = stagedFamilyRow();
+  const older = stagedCondition("older", "poag_mild", "2025-11-02T12:00:00.000Z");
+  const prior = stagedCondition("prior", "poag_moderate", "2026-03-14T12:00:00.000Z");
+  const selected = stagedCondition("selected", "poag_severe", "2026-08-11T12:00:00.000Z");
+  assert.deepEqual(mostRecentPriorStage([older, prior, selected], family, "selected"), {
+    stableKey: "poag_moderate",
+    stageLabel: "Moderate",
+    recordedAt: "2026-03-14T12:00:00.000Z",
+  });
+  assert.equal(mostRecentPriorStage([selected], family, "selected"), undefined);
 });
 
 test("bilateral eyelid diagnoses render both resolved codes while legacy unspecified-eyelid codes remain visible", async () => {
@@ -811,6 +973,80 @@ function diagnosisRow(stableKey: string, display: string) {
     pinned: false,
     tallyCount: 0,
   };
+}
+
+function stagedFamilyRow() {
+  const member = (stableKey: string, stageLabel: string, code: string) => ({
+    stableKey,
+    stageLabel,
+    display: `Primary open-angle glaucoma, ${stageLabel.toLocaleLowerCase()} stage`,
+    lateralityRequired: true,
+    icd10: {
+      pattern: {
+        unspecifiedEye: `${code}0`,
+        right: `${code}1`,
+        left: `${code}2`,
+        bilateral: `${code}3`,
+      },
+    },
+  });
+  return {
+    stableKey: "primary-open-angle-glaucoma",
+    clinicalFamily: "primary-open-angle-glaucoma",
+    display: "Primary open-angle glaucoma",
+    lateralityRequired: true,
+    pinned: false,
+    tallyCount: 0,
+    axisLabel: "Stage",
+    members: [
+      member("poag_mild", "Mild", "H40.111"),
+      member("poag_moderate", "Moderate", "H40.112"),
+      member("poag_severe", "Severe", "H40.113"),
+      member("poag_indeterminate", "Indeterminate", "H40.119"),
+    ],
+  };
+}
+
+function stagedCondition(id: string, stableKey: string, recordedDate: string): Condition {
+  return {
+    resourceType: "Condition",
+    id,
+    subject: { reference: "Patient/p1" },
+    encounter: { reference: "Encounter/prior" },
+    clinicalStatus: { coding: [{ code: "active" }] },
+    verificationStatus: { coding: [{ code: "confirmed" }] },
+    identifier: [{
+      system: "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key",
+      value: `prior::${stableKey}::right`,
+    }],
+    code: { text: stableKey },
+    recordedDate,
+  };
+}
+
+function stagedWorkspaceFetch(family: ReturnType<typeof stagedFamilyRow>): typeof fetch {
+  return (async (input: string | URL | Request) => {
+    const url = String(input);
+    if (url.includes("/fhir/R4/Encounter/e1")) {
+      return jsonResponse({ resourceType: "Encounter", id: "e1", status: "in-progress", class: { code: "AMB" }, diagnosis: [] });
+    }
+    if (url.includes("/fhir/R4/Condition?")) {
+      return jsonResponse({
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [{ resource: stagedCondition("prior", "poag_moderate", "2026-03-14T12:00:00.000Z") }],
+      });
+    }
+    if (url.includes("/clinical-graph/diagnosis-quick-list")) {
+      return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [family], catalog: [family] });
+    }
+    if (url.includes("/clinical-graph/encounters/e1/findings")) {
+      return jsonResponse({ canWrite: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
+    }
+    if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
+    if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
+    throw new Error(`Unexpected request: ${url}`);
+  }) as typeof fetch;
 }
 
 function jsonResponse(body: unknown): Response {

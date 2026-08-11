@@ -44,6 +44,24 @@ test("sign advisory renders one quiet diagnosis line with non-blocking actions",
   assert.doesNotMatch(html, /Order tests/);
 });
 
+test("the sign advisory names a deferred staged code in the same completeness dialog", () => {
+  const html = renderToStaticMarkup(
+    <DiagnosisCompletenessDialog
+      diagnoses={[{
+        conditionReference: "Condition/pending-stage",
+        diagnosisKey: "primary-open-angle-glaucoma",
+        laterality: "right",
+        display: "Primary open-angle glaucoma",
+        missing: [{ findingKey: "diagnosis-stage", display: "Code pending — stage required" }],
+      }]}
+      signing={false}
+      onSignAnyway={() => undefined}
+      onAddFindings={() => undefined}
+    />,
+  );
+  assert.match(html, /Primary open-angle glaucoma is active without: Code pending — stage required/);
+});
+
 test("sign-time completeness advises when needed but signs on empty results and read failures", async () => {
   let signed = 0;
   let advisories = 0;

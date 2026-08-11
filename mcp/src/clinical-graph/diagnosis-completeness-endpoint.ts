@@ -3,6 +3,7 @@ import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles
 import { searchAll } from "../fhir-search.js";
 import { isRelativeFhirReference } from "../fhir/reference.js";
 import { FhirDiagnosisCatalogStore } from "./diagnosis-catalog-store.js";
+import { FAMILY_RESOLUTION_MODES } from "./diagnosis-catalog-seeds.js";
 import { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } from "./diagnosis-pick-endpoint.js";
 import { FhirFindingDefinitionStore } from "./finding-definition-store.js";
 import { observationMatchesFindingDefinition } from "./finding-observation-match.js";
@@ -82,9 +83,16 @@ export async function handleDiagnosisCompletenessRequest(
   const diagnoses = confirmed.flatMap((condition): DiagnosisCompletenessRow[] => {
     const identity = diagnosisIdentity(condition);
     if (!identity) return [];
-    const diagnosis = catalogByKey.get(identity.diagnosisKey);
+    const familyMode = FAMILY_RESOLUTION_MODES[identity.diagnosisKey];
+    const pendingStage = familyMode?.mode === "staged" && !condition.code?.coding?.some((coding) =>
+      coding.system === "http://hl7.org/fhir/sid/icd-10-cm" && coding.code
+    );
+    const diagnosis = catalogByKey.get(identity.diagnosisKey) ??
+      (familyMode?.mode === "staged" ? catalogByKey.get(familyMode.members[0]!.stableKey) : undefined);
     if (!diagnosis) return [];
-    const missing = (diagnosis.keyFindings ?? []).flatMap((entry): MissingKeyFinding[] => {
+    const missing = [
+      ...(pendingStage ? [{ findingKey: "diagnosis-stage", display: "Code pending — stage required" }] : []),
+      ...(!pendingStage ? diagnosis.keyFindings ?? [] : []).flatMap((entry): MissingKeyFinding[] => {
       if (!entry.active) return [];
       const definition = definitionsByKey.get(entry.findingKey);
       if (!definition) return [{ findingKey: entry.findingKey, display: entry.label ?? entry.findingKey }];
@@ -96,13 +104,14 @@ export async function handleDiagnosisCompletenessRequest(
         now,
       )) return [];
       return [{ findingKey: entry.findingKey, display: entry.label ?? definition.display }];
-    });
+      }),
+    ];
     if (!missing.length) return [];
     return [{
       ...(condition.id ? { conditionReference: `Condition/${condition.id}` } : {}),
       diagnosisKey: identity.diagnosisKey,
       laterality: identity.laterality,
-      display: diagnosis.display,
+      display: pendingStage ? diagnosis.display.replace(/,.+$/, "") : diagnosis.display,
       missing,
     }];
   });

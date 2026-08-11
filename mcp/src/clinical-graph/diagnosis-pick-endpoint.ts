@@ -18,6 +18,7 @@ import type { DiagnosisCatalogRow } from "./glaucoma-suspect.js";
 import { ICD10_CM_CODE_SYSTEM } from "./glaucoma-suspect.js";
 import { resolveConditionCodes } from "./diagnosis-code-resolution.js";
 export { resolveConditionCodes } from "./diagnosis-code-resolution.js";
+import { FAMILY_RESOLUTION_MODES } from "./diagnosis-catalog-seeds.js";
 import {
   visualFieldDescriptorResolutionFromObservation,
   type VisualFieldDescriptorResolution,
@@ -48,6 +49,7 @@ const pickSchema = z.object({
   laterality: z.enum(["OD", "OS", "OU", "right", "left", "bilateral"]).optional(),
   source: z.enum(["rule", "mapping", "catalog-search"]).optional(),
   status: z.enum(DIAGNOSIS_VISIT_STATUSES).optional(),
+  stageDeferred: z.boolean().optional(),
 }).strict();
 
 export async function handleDiagnosisPickRequest(
@@ -72,10 +74,19 @@ export async function handleDiagnosisPickRequest(
   if (parsed.data.status && parsed.data.action !== "confirm") {
     return { status: 400, body: { error: "Diagnosis visit status is only accepted when confirming a diagnosis." } };
   }
+  if (parsed.data.stageDeferred && parsed.data.action !== "confirm") {
+    return { status: 400, body: { error: "Stage can only be deferred when confirming a diagnosis." } };
+  }
 
   const encounterReference = `Encounter/${encounterId}`;
   const catalog = await new FhirDiagnosisCatalogStore(staff.fhir).list();
-  const diagnosis = catalog.find((row) => row.stableKey === parsed.data.diagnosisKey);
+  const familyMode = FAMILY_RESOLUTION_MODES[parsed.data.diagnosisKey];
+  if (parsed.data.stageDeferred && familyMode?.mode !== "staged") {
+    return { status: 400, body: { error: `${parsed.data.diagnosisKey} is not a staged diagnosis family.` } };
+  }
+  const diagnosis = parsed.data.stageDeferred && familyMode?.mode === "staged"
+    ? pendingStageDiagnosis(catalog, parsed.data.diagnosisKey, familyMode.members.map((member) => member.stableKey))
+    : catalog.find((row) => row.stableKey === parsed.data.diagnosisKey);
   if (!diagnosis) return { status: 404, body: { error: `Diagnosis ${parsed.data.diagnosisKey} does not exist.` } };
   if (!diagnosis.active) return { status: 409, body: { error: `Diagnosis ${parsed.data.diagnosisKey} is inactive.` } };
 
@@ -102,18 +113,44 @@ export async function handleDiagnosisPickRequest(
   );
   const codes = resolveConditionCodes(diagnosis, laterality, visualFieldDescriptor);
   const descriptorEyeLaterality = visualFieldDescriptor?.codeSelection?.kind === "eye";
-  if (diagnosis.lateralityRequired && (codes.length === 0 || !laterality && !descriptorEyeLaterality)) {
+  if (diagnosis.lateralityRequired && (
+    (!parsed.data.stageDeferred && codes.length === 0) ||
+    (!laterality && !descriptorEyeLaterality)
+  )) {
     return { status: 422, body: { error: "This diagnosis requires laterality. Supply laterality explicitly." } };
   }
-  const lateralityBucket = diagnosisLateralityBucket(diagnosis, laterality, visualFieldDescriptor);
+  const lateralityBucket = parsed.data.stageDeferred
+    ? laterality!
+    : diagnosisLateralityBucket(diagnosis, laterality, visualFieldDescriptor);
   const legacyIdentifierValue = `${diagnosis.stableKey}::${lateralityBucket}`;
   const compositeIdentifierValue = `${encounterId}::${legacyIdentifierValue}`;
-  const existing = await findEncounterDiagnosis(
+  const stagedFamily = stagedFamilyForMember(diagnosis.stableKey);
+  const pendingFamilyIdentifierValues = stagedFamily && parsed.data.action === "confirm"
+    ? [`${encounterId}::${stagedFamily}::${lateralityBucket}`, `${stagedFamily}::${lateralityBucket}`]
+    : [];
+  const stagedMemberIdentifierValues = parsed.data.stageDeferred && familyMode?.mode === "staged"
+    ? familyMode.members.flatMap((member) => [
+        `${encounterId}::${member.stableKey}::${lateralityBucket}`,
+        `${member.stableKey}::${lateralityBucket}`,
+      ])
+    : [];
+  const diagnosisMatch = await findEncounterDiagnosis(
     staff.fhir,
     encounterReference,
     compositeIdentifierValue,
     legacyIdentifierValue,
+    pendingFamilyIdentifierValues,
+    stagedMemberIdentifierValues,
   );
+  if (diagnosisMatch.conflictingStagedMember) {
+    return {
+      status: 409,
+      body: {
+        error: `A staged diagnosis already exists for ${diagnosis.stableKey} ${lateralityBucket}. Re-stage the existing diagnosis instead.`,
+      },
+    };
+  }
+  const existing = diagnosisMatch.existing;
   if (parsed.data.action === "discard" && !existing) {
     return { status: 404, body: { error: `No existing Condition for ${diagnosis.stableKey} can be discarded.` } };
   }
@@ -142,7 +179,16 @@ export async function handleDiagnosisPickRequest(
   let condition: Condition;
   if (existing) {
     try {
-      condition = await updateCondition(staff.fhir, existing, diagnosis, compositeIdentifierValue, codes, verificationStatus, evidenceReference);
+      condition = await updateCondition(
+        staff.fhir,
+        existing,
+        diagnosis,
+        compositeIdentifierValue,
+        pendingFamilyIdentifierValues,
+        codes,
+        verificationStatus,
+        evidenceReference,
+      );
     } catch (error) {
       if (isConflict(error)) {
         return { status: 409, body: { error: "This diagnosis was modified concurrently — reload and retry." } };
@@ -233,6 +279,33 @@ export async function handleDiagnosisPickRequest(
   };
 }
 
+function pendingStageDiagnosis(
+  catalog: readonly DiagnosisCatalogRow[],
+  clinicalFamily: string,
+  memberKeys: readonly string[],
+): DiagnosisCatalogRow | undefined {
+  const representative = memberKeys.flatMap((stableKey) => {
+    const row = catalog.find((candidate) => candidate.stableKey === stableKey && candidate.active);
+    return row ? [row] : [];
+  })[0];
+  if (!representative) return undefined;
+  return {
+    ...representative,
+    stableKey: clinicalFamily,
+    display: representative.display.replace(/,\s.*$/, ""),
+    icd10Family: undefined,
+    icd10Code: undefined,
+    icd10Display: undefined,
+    icd10: undefined,
+  };
+}
+
+function stagedFamilyForMember(stableKey: string): string | undefined {
+  return Object.entries(FAMILY_RESOLUTION_MODES).find(([, mode]) =>
+    mode.mode === "staged" && mode.members.some((member) => member.stableKey === stableKey)
+  )?.[0];
+}
+
 async function ensureEncounterDiagnosisLinked(
   fhir: DiagnosisPickFhirClient,
   encounterId: string,
@@ -273,12 +346,27 @@ async function findEncounterDiagnosis(
   encounterReference: string,
   compositeIdentifierValue: string,
   legacyIdentifierValue: string,
-): Promise<Condition | undefined> {
+  pendingFamilyIdentifierValues: readonly string[],
+  stagedMemberIdentifierValues: readonly string[],
+): Promise<{ existing?: Condition; conflictingStagedMember?: Condition }> {
   const bundle = await fhir.search<Condition>("Condition", { encounter: encounterReference, _count: "200" });
-  return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []).find((condition) =>
+  const conditions = (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
+  const exact = conditions.find((condition) =>
     condition.identifier?.some((identifier) => identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM &&
       (identifier.value === compositeIdentifierValue || identifier.value === legacyIdentifierValue))
   );
+  const pendingFamily = conditions.find((condition) =>
+    !condition.code?.coding?.some((coding) => coding.system === ICD10_CM_CODE_SYSTEM && coding.code) &&
+    condition.identifier?.some((identifier) => identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM &&
+      identifier.value !== undefined && pendingFamilyIdentifierValues.includes(identifier.value))
+  );
+  const conflictingStagedMember = conditions.find((condition) =>
+    condition.clinicalStatus?.coding?.some((coding) => coding.code === "active") === true &&
+    condition.verificationStatus?.coding?.some((coding) => coding.code === "refuted" || coding.code === "entered-in-error") !== true &&
+    condition.identifier?.some((identifier) => identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM &&
+      identifier.value !== undefined && stagedMemberIdentifierValues.includes(identifier.value))
+  );
+  return { existing: exact ?? pendingFamily, conflictingStagedMember };
 }
 
 async function updateCondition(
@@ -286,6 +374,7 @@ async function updateCondition(
   existing: Condition,
   diagnosis: DiagnosisCatalogRow,
   compositeIdentifierValue: string,
+  replacedIdentifierValues: readonly string[],
   codes: readonly string[],
   verificationStatus: ConditionVerificationStatusCode,
   evidenceReference: string | undefined,
@@ -295,13 +384,21 @@ async function updateCondition(
   if (evidenceReference && !evidence.flatMap((row) => row.detail ?? []).some((row) => row.reference === evidenceReference)) {
     evidence.push({ detail: [{ reference: evidenceReference }] });
   }
-  const identifiers = [...(existing.identifier ?? [])];
+  const identifiers = (existing.identifier ?? []).map((identifier) =>
+    identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM &&
+      identifier.value !== undefined && replacedIdentifierValues.includes(identifier.value)
+      ? { ...identifier, value: compositeIdentifierValue }
+      : identifier
+  );
   if (!identifiers.some((identifier) => identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM && identifier.value === compositeIdentifierValue)) {
     identifiers.push({ system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM, value: compositeIdentifierValue });
   }
+  const uniqueIdentifiers = identifiers.filter((identifier, index) => identifiers.findIndex((candidate) =>
+    candidate.system === identifier.system && candidate.value === identifier.value
+  ) === index);
   const next: Condition = {
     ...existing,
-    identifier: identifiers,
+    identifier: uniqueIdentifiers,
     verificationStatus: verificationStatusConcept(verificationStatus),
     ...(verificationStatus === "refuted" ? {} : {
       code: conditionCodeForResolution(diagnosis, codes),

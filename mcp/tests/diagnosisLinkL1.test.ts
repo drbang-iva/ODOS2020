@@ -26,6 +26,11 @@ import {
   FhirDiagnosisCatalogStore,
   buildDiagnosisCatalogSeeds,
 } from "../src/clinical-graph/diagnosis-catalog-store.js";
+import {
+  FAMILY_RESOLUTION_MODES,
+  validateFamilyResolutionModes,
+  type FamilyResolutionModes,
+} from "../src/clinical-graph/diagnosis-catalog-seeds.js";
 import { evaluateMappingTrigger } from "../src/clinical-graph/diagnosis-mapping.js";
 import {
   handleFindingDefinitionCreationRequest,
@@ -41,6 +46,75 @@ import { handleRefractionCaptureRequest } from "../src/clinical-graph/refraction
 import type { FindingInstance } from "../src/clinical-graph/glaucoma-suspect.js";
 
 const AUTH = "Bearer test";
+
+test("every active multi-row diagnosis family declares its clinical resolution mode", () => {
+  validateFamilyResolutionModes(buildDiagnosisCatalogSeeds());
+  assert.deepEqual(Object.keys(FAMILY_RESOLUTION_MODES).sort(), [
+    "cataract",
+    "diabetic-retinopathy",
+    "exudative-amd",
+    "glaucoma-suspect",
+    "keratoconus",
+    "lens",
+    "low-tension-glaucoma",
+    "nonexudative-amd",
+    "primary-open-angle-glaucoma",
+    "pterygium",
+    "retinal-break",
+    "visual-field-defect",
+  ]);
+});
+
+test("family-resolution guard fails when an active multi-row family has no declaration", () => {
+  const modes = structuredClone(FAMILY_RESOLUTION_MODES) as Record<string, unknown>;
+  delete modes.lens;
+  assert.throws(
+    () => validateFamilyResolutionModes(buildDiagnosisCatalogSeeds(), modes as FamilyResolutionModes),
+    /Family resolution mode missing for active multi-row family lens\./,
+  );
+});
+
+test("family-resolution guard fails when a staged member is not an active catalog row", () => {
+  const modes = structuredClone(FAMILY_RESOLUTION_MODES) as Record<string, any>;
+  modes["primary-open-angle-glaucoma"].members[0].stableKey = "poag_missing";
+  assert.throws(
+    () => validateFamilyResolutionModes(buildDiagnosisCatalogSeeds(), modes as FamilyResolutionModes),
+    /Staged member poag_missing does not exist as an active diagnosis catalog row\./,
+  );
+});
+
+test("family-resolution guard fails when a staged member belongs to another clinical family", () => {
+  const catalog = buildDiagnosisCatalogSeeds();
+  const member = catalog.find((row) => row.stableKey === "poag_mild")!;
+  member.clinicalFamily = "low-tension-glaucoma";
+  assert.throws(
+    () => validateFamilyResolutionModes(catalog),
+    /Staged member poag_mild belongs to low-tension-glaucoma, not primary-open-angle-glaucoma\./,
+  );
+});
+
+test("family-resolution guard rejects unspecified stage labels", () => {
+  const modes = structuredClone(FAMILY_RESOLUTION_MODES) as Record<string, any>;
+  modes["primary-open-angle-glaucoma"].members[0].stageLabel = "Unspecified";
+  assert.throws(
+    () => validateFamilyResolutionModes(buildDiagnosisCatalogSeeds(), modes as FamilyResolutionModes),
+    /Stage label Unspecified for poag_mild must not contain unspecified\./,
+  );
+});
+
+test("family-resolution guard rejects an undeclared active member inside a staged family", () => {
+  const catalog = buildDiagnosisCatalogSeeds();
+  const member = catalog.find((row) => row.stableKey === "poag_mild")!;
+  catalog.push({
+    ...member,
+    stableKey: "poag_new_stage",
+    display: "Primary open-angle glaucoma, new stage",
+  });
+  assert.throws(
+    () => validateFamilyResolutionModes(catalog),
+    /Staged family primary-open-angle-glaucoma has active catalog member poag_new_stage that is not declared\./,
+  );
+});
 
 class MemoryFhir {
   readonly resources: Resource[] = [];

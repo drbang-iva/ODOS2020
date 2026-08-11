@@ -22,6 +22,33 @@ test("L3 ships empty-tolerant with no seeded clinical key findings or windows", 
   assert.equal(buildDiagnosisCatalogSeeds().every((row) => row.keyFindings?.length === 0), true);
 });
 
+test("the existing confirmation completeness gate surfaces a staged diagnosis with no selected member", async () => {
+  const fhir = new MemoryFhir();
+  fhir.resources.push(encounter());
+  fhir.resources.push(...buildDiagnosisCatalogSeeds().map(buildDiagnosisCatalogResource));
+  fhir.resources.push(diagnosisCondition("confirmed", "primary-open-angle-glaucoma", "right", "pending-stage", true));
+
+  const result = await handleDiagnosisCompletenessRequest(
+    {
+      authenticate: async () => ({ actorRole: "clinician", fhir }),
+      now: () => "2026-08-11T12:00:00.000Z",
+    },
+    { authHeader: AUTH_CLINICIAN, params: { encounterId: "e1" } },
+  );
+
+  assert.equal(result.status, 200);
+  assert.deepEqual(result.body, {
+    encounterReference: "Encounter/e1",
+    diagnoses: [{
+      conditionReference: "Condition/pending-stage",
+      diagnosisKey: "primary-open-angle-glaucoma",
+      laterality: "right",
+      display: "Primary open-angle glaucoma",
+      missing: [{ findingKey: "diagnosis-stage", display: "Code pending — stage required" }],
+    }],
+  });
+});
+
 test("persisted diagnosis rows enforce the same key-finding bounds as mutations", () => {
   const seed = buildDiagnosisCatalogSeeds()[0]!;
   const entry = {

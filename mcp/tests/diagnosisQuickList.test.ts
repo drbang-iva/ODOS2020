@@ -108,6 +108,79 @@ test("quick-list fills positive usage in descending order only to 15 total rows"
   ]);
 });
 
+test("staged diagnosis members collapse into four family entries in Common and Find dx", async () => {
+  const fhir = new MemoryFhir();
+  const diagnoses = buildDiagnosisCatalogSeeds();
+  const store = new FhirDiagnosisPickTallyStore(fhir);
+  await store.increment("Practitioner/doc", "finding-a", "poag_severe", "2026-08-11T12:00:00.000Z");
+  const response = await handleDiagnosisQuickListRequest({
+    authenticate: async () => ({ staffReference: "Practitioner/doc", actorRole: "clinician" }),
+    tallyFhir: fhir,
+    diagnosisCatalog: async () => diagnoses,
+  }, { authHeader: "Bearer doc" });
+  assert.equal(response.status, 200);
+  const body = response.body as {
+    diagnoses: Array<{ stableKey: string; display: string; axisLabel?: string }>;
+    catalog: Array<{ stableKey: string; display: string; axisLabel?: string; members?: Array<{ stableKey: string; stageLabel: string }> }>;
+  };
+  const stagedMembers = new Set([
+    "poag_mild", "poag_moderate", "poag_severe", "poag_indeterminate",
+    "low_tension_glaucoma_mild", "low_tension_glaucoma_moderate", "low_tension_glaucoma_severe", "low_tension_glaucoma_indeterminate",
+    "dry_amd_early", "dry_amd_intermediate", "dry_amd_advanced_atrophic_without_subfoveal", "dry_amd_advanced_atrophic_with_subfoveal",
+    "wet_amd_active_cnv", "wet_amd_inactive_cnv", "wet_amd_inactive_scar",
+  ]);
+  assert.deepEqual(body.diagnoses.map((row) => [row.stableKey, row.display, row.axisLabel]), [
+    ["primary-open-angle-glaucoma", "Primary open-angle glaucoma", "Stage"],
+  ]);
+  assert.deepEqual(body.catalog.filter((row) => row.axisLabel).map((row) => [row.stableKey, row.display, row.axisLabel]), [
+    ["primary-open-angle-glaucoma", "Primary open-angle glaucoma", "Stage"],
+    ["low-tension-glaucoma", "Low-tension glaucoma", "Stage"],
+    ["nonexudative-amd", "Nonexudative AMD", "Stage"],
+    ["exudative-amd", "Exudative AMD", "Activity"],
+  ]);
+  assert.equal(body.catalog.some((row) => stagedMembers.has(row.stableKey)), false);
+  assert.deepEqual(
+    body.catalog.find((row) => row.stableKey === "primary-open-angle-glaucoma")?.members?.map((member) => [member.stableKey, member.stageLabel]),
+    [
+      ["poag_mild", "Mild"],
+      ["poag_moderate", "Moderate"],
+      ["poag_severe", "Severe"],
+      ["poag_indeterminate", "Indeterminate"],
+    ],
+  );
+});
+
+test("member pins migrate idempotently to staged families without dropping unrelated pins", async () => {
+  const fhir = new MemoryFhir();
+  const store = new FhirDiagnosisPickTallyStore(fhir);
+  await store.replacePinned(
+    "Practitioner/doc",
+    ["poag_severe", "myopia", "wet_amd_active_cnv", "poag_mild"],
+    "2026-08-11T12:00:00.000Z",
+  );
+  const deps = {
+    authenticate: async () => ({ staffReference: "Practitioner/doc", actorRole: "clinician" as const }),
+    tallyFhir: fhir,
+    diagnosisCatalog: async () => buildDiagnosisCatalogSeeds(),
+    now: () => "2026-08-11T12:01:00.000Z",
+  };
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const response = await handleDiagnosisQuickListRequest(deps, { authHeader: "Bearer doc" });
+    assert.equal(response.status, 200);
+    assert.deepEqual((response.body as { pinnedDiagnosisKeys: string[] }).pinnedDiagnosisKeys, [
+      "primary-open-angle-glaucoma",
+      "myopia",
+      "exudative-amd",
+    ]);
+  }
+  assert.deepEqual((await store.read("Practitioner/doc"))?.pinnedDiagnosisKeys, [
+    "primary-open-angle-glaucoma",
+    "myopia",
+    "exudative-amd",
+  ]);
+});
+
 test("quick-list routes isolate practitioner pins and reject unknown diagnoses", async () => {
   const fhir = new MemoryFhir();
   const diagnoses = buildDiagnosisCatalogSeeds();
@@ -152,12 +225,21 @@ test("quick-list routes isolate practitioner pins and reject unknown diagnoses",
     [],
   );
   assert.deepEqual(otherBody.diagnoses, []);
-  assert.deepEqual(
-    otherBody.catalog.map((row) => row.stableKey),
-    diagnoses
-      .filter((row) => row.active && row.codingStatus === "verified")
+  const collapsedMembers = new Set([
+    "poag_mild", "poag_moderate", "poag_severe", "poag_indeterminate",
+    "low_tension_glaucoma_mild", "low_tension_glaucoma_moderate", "low_tension_glaucoma_severe", "low_tension_glaucoma_indeterminate",
+    "dry_amd_early", "dry_amd_intermediate", "dry_amd_advanced_atrophic_without_subfoveal", "dry_amd_advanced_atrophic_with_subfoveal",
+    "wet_amd_active_cnv", "wet_amd_inactive_cnv", "wet_amd_inactive_scar",
+  ]);
+  assert.deepEqual(new Set(otherBody.catalog.map((row) => row.stableKey)), new Set([
+    ...diagnoses
+      .filter((row) => row.active && row.codingStatus === "verified" && !collapsedMembers.has(row.stableKey))
       .map((row) => row.stableKey),
-  );
+    "primary-open-angle-glaucoma",
+    "low-tension-glaucoma",
+    "nonexudative-amd",
+    "exudative-amd",
+  ]));
 
   const rejected = await handleDiagnosisQuickListMutationRequest(deps, {
     authHeader: "Bearer one",

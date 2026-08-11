@@ -24,6 +24,110 @@ interface LedgerRow {
   sourceRefs: string[];
 }
 
+export type FamilyResolutionMode =
+  | {
+      mode: "staged";
+      axisLabel: string;
+      members: Array<{ stableKey: string; stageLabel: string }>;
+    }
+  | { mode: "qualifier-resolved" }
+  | { mode: "distinct" };
+
+export type FamilyResolutionModes = Record<string, FamilyResolutionMode>;
+
+export const FAMILY_RESOLUTION_MODES: FamilyResolutionModes = {
+  "primary-open-angle-glaucoma": {
+    mode: "staged",
+    axisLabel: "Stage",
+    members: [
+      { stableKey: "poag_mild", stageLabel: "Mild" },
+      { stableKey: "poag_moderate", stageLabel: "Moderate" },
+      { stableKey: "poag_severe", stageLabel: "Severe" },
+      { stableKey: "poag_indeterminate", stageLabel: "Indeterminate" },
+    ],
+  },
+  "low-tension-glaucoma": {
+    mode: "staged",
+    axisLabel: "Stage",
+    members: [
+      { stableKey: "low_tension_glaucoma_mild", stageLabel: "Mild" },
+      { stableKey: "low_tension_glaucoma_moderate", stageLabel: "Moderate" },
+      { stableKey: "low_tension_glaucoma_severe", stageLabel: "Severe" },
+      { stableKey: "low_tension_glaucoma_indeterminate", stageLabel: "Indeterminate" },
+    ],
+  },
+  "nonexudative-amd": {
+    mode: "staged",
+    axisLabel: "Stage",
+    members: [
+      { stableKey: "dry_amd_early", stageLabel: "Early" },
+      { stableKey: "dry_amd_intermediate", stageLabel: "Intermediate" },
+      {
+        stableKey: "dry_amd_advanced_atrophic_without_subfoveal",
+        stageLabel: "Advanced atrophic without subfoveal involvement (geographic atrophy)",
+      },
+      {
+        stableKey: "dry_amd_advanced_atrophic_with_subfoveal",
+        stageLabel: "Advanced atrophic with subfoveal involvement (geographic atrophy)",
+      },
+    ],
+  },
+  "exudative-amd": {
+    mode: "staged",
+    axisLabel: "Activity",
+    members: [
+      { stableKey: "wet_amd_active_cnv", stageLabel: "With active CNV" },
+      { stableKey: "wet_amd_inactive_cnv", stageLabel: "With inactive CNV" },
+      { stableKey: "wet_amd_inactive_scar", stageLabel: "With inactive scar" },
+    ],
+  },
+  "diabetic-retinopathy": { mode: "qualifier-resolved" },
+  keratoconus: { mode: "qualifier-resolved" },
+  pterygium: { mode: "qualifier-resolved" },
+  "glaucoma-suspect": { mode: "distinct" },
+  "visual-field-defect": { mode: "distinct" },
+  cataract: { mode: "distinct" },
+  lens: { mode: "distinct" },
+  "retinal-break": { mode: "distinct" },
+};
+
+export function validateFamilyResolutionModes(
+  catalog: readonly DiagnosisCatalogRow[],
+  modes: FamilyResolutionModes = FAMILY_RESOLUTION_MODES,
+): void {
+  const activeRows = catalog.filter((row) => row.active);
+  const byFamily = new Map<string, DiagnosisCatalogRow[]>();
+  const byStableKey = new Map(activeRows.map((row) => [row.stableKey, row]));
+  for (const row of activeRows) {
+    byFamily.set(row.clinicalFamily, [...(byFamily.get(row.clinicalFamily) ?? []), row]);
+  }
+  for (const [clinicalFamily, rows] of byFamily) {
+    if (rows.length > 1 && !modes[clinicalFamily]) {
+      throw new Error(`Family resolution mode missing for active multi-row family ${clinicalFamily}.`);
+    }
+  }
+  for (const [clinicalFamily, mode] of Object.entries(modes)) {
+    if (mode.mode !== "staged") continue;
+    const declaredMemberKeys = new Set(mode.members.map((member) => member.stableKey));
+    for (const member of mode.members) {
+      const row = byStableKey.get(member.stableKey);
+      if (!row) {
+        throw new Error(`Staged member ${member.stableKey} does not exist as an active diagnosis catalog row.`);
+      }
+      if (row.clinicalFamily !== clinicalFamily) {
+        throw new Error(`Staged member ${member.stableKey} belongs to ${row.clinicalFamily}, not ${clinicalFamily}.`);
+      }
+      if (member.stageLabel.toLocaleLowerCase().includes("unspecified")) {
+        throw new Error(`Stage label ${member.stageLabel} for ${member.stableKey} must not contain unspecified.`);
+      }
+    }
+    const undeclaredMember = byFamily.get(clinicalFamily)?.find((row) => !declaredMemberKeys.has(row.stableKey));
+    if (undeclaredMember) {
+      throw new Error(`Staged family ${clinicalFamily} has active catalog member ${undeclaredMember.stableKey} that is not declared.`);
+    }
+  }
+}
+
 let cachedDiagnosisCatalogSeeds: DiagnosisCatalogRow[] | undefined;
 
 export function buildDiagnosisCatalogSeeds(): DiagnosisCatalogRow[] {
@@ -44,7 +148,7 @@ function buildSeeds(): DiagnosisCatalogRow[] {
   const diplopia = loadLedger(DIPLOPIA_LEDGER_PATH);
   const visualField = loadLedger(VISUAL_FIELD_LEDGER_PATH);
   const lens = loadLedger(LENS_LEDGER_PATH);
-  return [
+  const seeds = [
     familySeed("glaucoma_suspect_open_angle_low", "Open angle with borderline findings, low risk", "glaucoma-suspect", "H40.01-", glaucoma, provenance),
     familySeed("glaucoma_suspect_open_angle_high", "Open angle with borderline findings, high risk", "glaucoma-suspect", "H40.02-", glaucoma, provenance),
     familySeed("ocular_hypertension", "Ocular hypertension", "ocular-hypertension", "H40.05-", glaucoma, provenance),
@@ -160,6 +264,8 @@ function buildSeeds(): DiagnosisCatalogRow[] {
     familySeed("chronic_follicular_conjunctivitis", "Chronic follicular conjunctivitis", "chronic-follicular-conjunctivitis", "H10.43-", ocularHealth, provenance),
     fixedSeed("demodex_infestation", "Infestation by Demodex mites", "demodex-infestation", "B88.01", ocularHealth, provenance),
   ];
+  validateFamilyResolutionModes(seeds);
+  return seeds;
 }
 
 function loadLedger(path: string): LedgerRow[] {

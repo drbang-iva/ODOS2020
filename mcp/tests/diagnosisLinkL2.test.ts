@@ -52,6 +52,143 @@ test("condition code resolution returns zero, one, or two codes only when the ca
   assert.deepEqual(resolve!({ ...mgd, bilateralResolution: undefined }, "bilateral"), []);
 });
 
+test("staged POAG picks persist the chosen member code and keep different per-eye stages separate", async () => {
+  const fhir = diagnosisPickFhir();
+  const authenticate = async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician" as const, fhir });
+  const mildOd = await handleDiagnosisPickRequest({ authenticate }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+    body: { diagnosisKey: "poag_mild", action: "confirm", laterality: "OD", source: "catalog-search" },
+  });
+  const moderateOs = await handleDiagnosisPickRequest({ authenticate }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+    body: { diagnosisKey: "poag_moderate", action: "confirm", laterality: "OS", source: "catalog-search" },
+  });
+
+  assert.equal(mildOd.status, 201, JSON.stringify(mildOd.body));
+  assert.equal(moderateOs.status, 201, JSON.stringify(moderateOs.body));
+  assert.equal((mildOd.body as { condition: Condition }).condition.code?.coding?.[0]?.code, sourcedDiagnosisCode("poag_mild", "right"));
+  assert.equal((moderateOs.body as { condition: Condition }).condition.code?.coding?.[0]?.code, sourcedDiagnosisCode("poag_moderate", "left"));
+  const conditions = fhir.resources.filter((resource): resource is Condition => resource.resourceType === "Condition");
+  assert.equal(conditions.length, 2);
+  assert.deepEqual(conditions.map((condition) => condition.identifier?.[0]?.value), [
+    "e1::poag_mild::right",
+    "e1::poag_moderate::left",
+  ]);
+});
+
+test("Stage later persists a staged family Condition with no ICD-10-CM coding", async () => {
+  const fhir = diagnosisPickFhir();
+  const result = await handleDiagnosisPickRequest({
+    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician", fhir }),
+  }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+    body: {
+      diagnosisKey: "primary-open-angle-glaucoma",
+      action: "confirm",
+      laterality: "OD",
+      source: "catalog-search",
+      stageDeferred: true,
+    },
+  });
+
+  assert.equal(result.status, 201, JSON.stringify(result.body));
+  const condition = (result.body as { condition: Condition }).condition;
+  assert.deepEqual(condition.identifier?.map((identifier) => identifier.value), ["e1::primary-open-angle-glaucoma::right"]);
+  assert.equal(condition.code?.text, "Primary open-angle glaucoma");
+  assert.equal(condition.code?.coding?.some((coding) => coding.system === "http://hl7.org/fhir/sid/icd-10-cm") ?? false, false);
+});
+
+test("Stage later cannot duplicate an existing same-eye staged member Condition", async () => {
+  const fhir = diagnosisPickFhir();
+  const authenticate = async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician" as const, fhir });
+  const confirmed = await handleDiagnosisPickRequest({ authenticate }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+    body: { diagnosisKey: "poag_mild", action: "confirm", laterality: "OD", source: "catalog-search" },
+  });
+  const deferred = await handleDiagnosisPickRequest({ authenticate }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+    body: {
+      diagnosisKey: "primary-open-angle-glaucoma",
+      action: "confirm",
+      laterality: "OD",
+      source: "catalog-search",
+      stageDeferred: true,
+    },
+  });
+
+  assert.equal(confirmed.status, 201, JSON.stringify(confirmed.body));
+  assert.equal(deferred.status, 409, JSON.stringify(deferred.body));
+  assert.deepEqual(deferred.body, {
+    error: "A staged diagnosis already exists for primary-open-angle-glaucoma right. Re-stage the existing diagnosis instead.",
+  });
+  const conditions = fhir.resources.filter((resource): resource is Condition => resource.resourceType === "Condition");
+  assert.equal(conditions.length, 1);
+  assert.equal(conditions[0]?.code?.coding?.[0]?.code, sourcedDiagnosisCode("poag_mild", "right"));
+  assert.deepEqual(conditions[0]?.identifier?.map((identifier) => identifier.value), ["e1::poag_mild::right"]);
+});
+
+test("a member pick completes the same-eye pending family Condition instead of creating a duplicate", async () => {
+  const fhir = diagnosisPickFhir();
+  const authenticate = async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician" as const, fhir });
+  const deferred = await handleDiagnosisPickRequest({ authenticate }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+    body: {
+      diagnosisKey: "primary-open-angle-glaucoma",
+      action: "confirm",
+      laterality: "OD",
+      source: "catalog-search",
+      stageDeferred: true,
+    },
+  });
+  const completed = await handleDiagnosisPickRequest({ authenticate }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+    body: { diagnosisKey: "poag_mild", action: "confirm", laterality: "OD", source: "catalog-search" },
+  });
+
+  assert.equal(deferred.status, 201, JSON.stringify(deferred.body));
+  assert.equal(completed.status, 200, JSON.stringify(completed.body));
+  const deferredCondition = (deferred.body as { condition: Condition }).condition;
+  const completedCondition = (completed.body as { condition: Condition }).condition;
+  assert.equal(completedCondition.id, deferredCondition.id);
+  assert.equal(completedCondition.code?.coding?.[0]?.code, sourcedDiagnosisCode("poag_mild", "right"));
+  assert.deepEqual(completedCondition.identifier?.map((identifier) => identifier.value), ["e1::poag_mild::right"]);
+  assert.equal(fhir.resources.filter((resource) => resource.resourceType === "Condition").length, 1);
+});
+
+test("discarding an absent staged member cannot refute a same-eye pending family Condition", async () => {
+  const fhir = diagnosisPickFhir();
+  const authenticate = async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician" as const, fhir });
+  const deferred = await handleDiagnosisPickRequest({ authenticate }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+    body: {
+      diagnosisKey: "primary-open-angle-glaucoma",
+      action: "confirm",
+      laterality: "OD",
+      source: "catalog-search",
+      stageDeferred: true,
+    },
+  });
+  const discarded = await handleDiagnosisPickRequest({ authenticate }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+    body: { diagnosisKey: "poag_mild", action: "discard", laterality: "OD", source: "catalog-search" },
+  });
+
+  assert.equal(deferred.status, 201, JSON.stringify(deferred.body));
+  assert.equal(discarded.status, 404, JSON.stringify(discarded.body));
+  const condition = fhir.resources.find((resource): resource is Condition => resource.resourceType === "Condition")!;
+  assert.equal(condition.verificationStatus?.coding?.[0]?.code, "confirmed");
+  assert.deepEqual(condition.identifier?.map((identifier) => identifier.value), ["e1::primary-open-angle-glaucoma::right"]);
+});
+
 test("all three eyelid families write both-lids OD and OS codes and resolve OU without the false 422", async () => {
   const cases = [
     ["ulcerative_blepharitis", "H01.01A", "H01.01B"],

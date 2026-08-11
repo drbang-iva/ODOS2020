@@ -373,7 +373,16 @@ function updatedDiagnosisIdentifierValue(
 export async function updateConditionCode(input: {
   condition: Condition;
   code: CodeInput;
+  diagnosisKey?: string;
 }): Promise<Condition> {
+  const identifiers = input.diagnosisKey
+    ? input.condition.identifier?.map((identifier) => {
+        if (identifier.system !== DIAGNOSIS_KEY_IDENTIFIER_SYSTEM || !identifier.value) return identifier;
+        const parts = identifier.value.split("::");
+        if (parts.length < 2) return identifier;
+        return { ...identifier, value: [...parts.slice(0, -2), input.diagnosisKey!, parts.at(-1)!].join("::") };
+      })
+    : undefined;
   const updated = await fhir.patch<Condition>(
     "Condition",
     requiredId(input.condition),
@@ -383,6 +392,11 @@ export async function updateConditionCode(input: {
         path: "/code",
         value: conditionCodeConcept(input.code),
       },
+      ...(identifiers ? [{
+        op: "replace" as const,
+        path: "/identifier",
+        value: identifiers,
+      }] : []),
     ],
     "update_condition_code",
     requiredVersion(input.condition),
