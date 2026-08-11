@@ -110,7 +110,15 @@ test("encounter-prefilled lines preserve persisted ids, coding systems, diagnosi
   assert.equal(claim.chargeItems[0].id, "charge-1");
   assert.equal(claim.chargeItems[0].code.coding?.[0]?.system, "https://odos.test/fhir/CodeSystem/synthetic-procedure");
   assert.deepEqual(claim.chargeItems[0].diagnosisSequence, [2]);
-  assert.equal(claim.chargeItems[0].laterality, "OS");
+  assert.deepEqual(claim.chargeItems[0].bodysite, [{
+    coding: [{
+      system: "https://odos2020.com/fhir/CodeSystem/laterality",
+      code: "OS",
+    }],
+    text: "OS",
+  }]);
+  const roundTrip = claimDraftFromProfessionalClaimInput(claim, "2026-08-11");
+  assert.equal(roundTrip.charges[0]?.laterality, "OS");
 });
 
 test("claim draft client loads one encounter without submitting it", async () => {

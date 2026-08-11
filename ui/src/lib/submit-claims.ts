@@ -3,6 +3,24 @@ import type { ChargeItem, Coverage, Encounter, Patient, Practitioner, RelatedPer
 export const ICD10_CM_SYSTEM = "http://hl7.org/fhir/sid/icd-10-cm";
 export const CPT_SYSTEM = "urn:ama:cpt";
 export const HCPCS_SYSTEM = "https://bluebutton.cms.gov/resources/codesystem/hcpcs";
+const ODOS_CHARGE_LATERALITY_SYSTEM =
+  "https://odos2020.com/fhir/CodeSystem/laterality";
+
+function chargeLineBodysite(value: string | undefined): ChargeItem["bodysite"] {
+  return value === "OD" || value === "OS" || value === "OU"
+    ? [{ coding: [{ system: ODOS_CHARGE_LATERALITY_SYSTEM, code: value }], text: value }]
+    : undefined;
+}
+
+function chargeLineLaterality(chargeItem: ChargeItem): string | undefined {
+  const coded = chargeItem.bodysite
+    ?.flatMap((site) => site.coding ?? [])
+    .find((coding) => coding.system === ODOS_CHARGE_LATERALITY_SYSTEM)?.code;
+  const value = coded ?? chargeItem.bodysite
+    ?.map((site) => site.text?.trim().toUpperCase())
+    .find((candidate) => candidate === "OD" || candidate === "OS" || candidate === "OU");
+  return value === "OD" || value === "OS" || value === "OU" ? value : undefined;
+}
 
 export interface ClaimMdProviderInput {
   name?: string;
@@ -44,7 +62,6 @@ export interface ProfessionalClaimDiagnosisInput {
 
 export type ProfessionalClaimChargeItemInput = ChargeItem & {
   diagnosisSequence?: number[];
-  laterality?: string;
 };
 
 export interface ProfessionalClaimInput {
@@ -563,6 +580,7 @@ export function buildProfessionalClaimInput(draft: ClaimDraft): ProfessionalClai
     })),
     chargeItems: draft.charges.map((charge): ProfessionalClaimChargeItemInput => {
       const feeCents = dollarsToCents(charge.feeDollars);
+      const bodysite = chargeLineBodysite(charge.laterality);
       return {
         resourceType: "ChargeItem",
         ...(charge.id ? { id: charge.id } : {}),
@@ -578,7 +596,7 @@ export function buildProfessionalClaimInput(draft: ClaimDraft): ProfessionalClai
         quantity: { value: Number(charge.quantity) },
         priceOverride: { value: feeCents / 100, currency: "USD" },
         ...(charge.diagnosisSequence ? { diagnosisSequence: charge.diagnosisSequence } : {}),
-        ...(charge.laterality ? { laterality: charge.laterality } : {}),
+        ...(bodysite ? { bodysite } : {}),
         ...(charge.modifierExtension ? { modifierExtension: charge.modifierExtension } : {}),
       };
     }),
@@ -610,6 +628,7 @@ export function claimDraftFromProfessionalClaimInput(
     })),
     charges: input.chargeItems.map((chargeItem) => {
       const coding = chargeItem.code.coding?.[0];
+      const laterality = chargeLineLaterality(chargeItem);
       return {
         codeType: coding?.system === CPT_SYSTEM ? "CPT" : "HCPCS",
         ...(coding?.system ? { codeSystem: coding.system } : {}),
@@ -618,7 +637,7 @@ export function claimDraftFromProfessionalClaimInput(
         feeDollars: Number(chargeItem.priceOverride?.value ?? 0).toFixed(2),
         quantity: String(chargeItem.quantity?.value ?? 1),
         ...(chargeItem.diagnosisSequence ? { diagnosisSequence: [...chargeItem.diagnosisSequence] } : {}),
-        ...(chargeItem.laterality ? { laterality: chargeItem.laterality } : {}),
+        ...(laterality ? { laterality } : {}),
         ...(chargeItem.modifierExtension ? { modifierExtension: structuredClone(chargeItem.modifierExtension) } : {}),
       };
     }),

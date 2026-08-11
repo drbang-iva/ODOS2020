@@ -14,6 +14,7 @@ import {
   ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL,
   type ProfessionalClaimInput,
 } from "../src/claims/claimmd-fhir.js";
+import { chargeItemBodysite } from "../src/fhir/charge-item-laterality.js";
 
 const PROCEDURE_SYSTEM = "https://odos.test/fhir/CodeSystem/synthetic-procedure";
 const DIAGNOSIS_SYSTEM = "https://odos.test/fhir/CodeSystem/synthetic-diagnosis";
@@ -117,7 +118,7 @@ test("buildProfessionalClaim and Claim.MD preserve real per-line diagnosis point
   const input = structuredClone(professionalClaimInput);
   input.diagnoses.push({ system: DIAGNOSIS_SYSTEM, code: "DX-B" });
   input.chargeItems[0]!.diagnosisSequence = [2];
-  input.chargeItems[0]!.laterality = "OS";
+  input.chargeItems[0]!.bodysite = chargeItemBodysite("OS");
   input.chargeItems[1]!.diagnosisSequence = [1, 2];
 
   const claim = buildProfessionalClaim(input);

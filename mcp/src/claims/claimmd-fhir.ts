@@ -8,6 +8,7 @@ import type {
   Extension,
   Money,
 } from "@medplum/fhirtypes";
+import { chargeItemLaterality } from "../fhir/charge-item-laterality.js";
 
 export const HL7_CLAIM_TYPE_SYSTEM = "http://terminology.hl7.org/CodeSystem/claim-type";
 export const ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL =
@@ -62,7 +63,6 @@ export interface ProfessionalClaimDiagnosisInput {
 
 export type ProfessionalClaimChargeItemInput = ChargeItem & {
   diagnosisSequence?: number[];
-  laterality?: string;
 };
 
 export interface ProfessionalClaimInput {
@@ -191,6 +191,7 @@ export function buildProfessionalClaim(input: ProfessionalClaimInput): Claim {
     const quantity = chargeItem.quantity?.value ?? 1;
     const unitCents = moneyToCents(chargeItem.priceOverride);
     const diagnosisSequence = claimDiagnosisSequence(chargeItem, input.diagnoses.length);
+    const { laterality } = chargeItemLaterality(chargeItem);
     return {
       sequence: index + 1,
       extension: [{
@@ -208,7 +209,7 @@ export function buildProfessionalClaim(input: ProfessionalClaimInput): Claim {
       },
       servicedDate: input.serviceDate,
       ...(diagnosisSequence.length ? { diagnosisSequence } : {}),
-      ...(chargeItem.laterality ? { bodySite: { text: chargeItem.laterality } } : {}),
+      ...(laterality ? { bodySite: { text: laterality } } : {}),
       quantity: { value: quantity },
       unitPrice: money(unitCents),
       net: money(unitCents * quantity),
