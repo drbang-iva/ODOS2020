@@ -17,6 +17,7 @@ test("lists only active coded non-visit procedure fees without mutations", async
     {
       resourceType: "ChargeItemDefinition",
       id: "whitespace-billing-code",
+      url: "https://odos2020.com/practice/odos-practice/charge-rules/procedures/synthetic-whitespace",
       status: "active",
       title: "Whitespace billing code",
       code: {
