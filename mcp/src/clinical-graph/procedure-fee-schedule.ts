@@ -208,7 +208,7 @@ export async function listActiveCodedNonVisitProcedureFees(
     .map(procedureFeeScheduleItem)
     .filter((item): item is CodedProcedureFeeScheduleItem =>
       item.active &&
-      typeof item.billingCode === "string" && item.billingCode.length > 0 &&
+      typeof item.billingCode === "string" && item.billingCode.trim().length > 0 &&
       !isVisitProcedureConceptKey(item.procedureConceptKey)
     )
     .sort((left, right) => left.display.localeCompare(right.display));

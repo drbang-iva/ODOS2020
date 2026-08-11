@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Bundle, ChargeItemDefinition, Resource } from "@medplum/fhirtypes";
 import {
+  HCPCS_CODE_SYSTEM,
+  PROCEDURE_CONCEPT_SYSTEM,
   buildProcedureFeeDefinition,
   listActiveCodedNonVisitProcedureFees,
 } from "../clinical-graph/procedure-fee-schedule.js";
@@ -12,6 +14,18 @@ test("lists only active coded non-visit procedure fees without mutations", async
     buildProcedureFeeDefinition({ procedureConceptKey: "corneal-pachymetry", display: "Corneal pachymetry", active: true }),
     buildProcedureFeeDefinition({ procedureConceptKey: "fundus-photography", display: "Fundus photography", billingCode: "SYNTHB", active: false }),
     buildProcedureFeeDefinition({ procedureConceptKey: "comprehensive-exam-new", display: "Visit", billingCode: "SYNTHC", active: true }),
+    {
+      resourceType: "ChargeItemDefinition",
+      id: "whitespace-billing-code",
+      status: "active",
+      title: "Whitespace billing code",
+      code: {
+        coding: [
+          { system: HCPCS_CODE_SYSTEM, code: "   " },
+          { system: PROCEDURE_CONCEPT_SYSTEM, code: "synthetic-whitespace", display: "Whitespace billing code" },
+        ],
+      },
+    } satisfies ChargeItemDefinition,
   ];
   let mutations = 0;
   const fhir = {
