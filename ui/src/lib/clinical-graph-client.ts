@@ -66,6 +66,7 @@ export async function submitDiagnosisPick(input: {
   laterality?: "OD" | "OS" | "OU";
   source?: "rule" | "mapping" | "catalog-search";
   status?: DiagnosisVisitStatus;
+  stageDeferred?: boolean;
 }): Promise<{ condition: Condition; encounter?: Encounter }> {
   const encounterId = input.encounterReference.replace(/^Encounter\//, "");
   const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/diagnosis-picks`, {
@@ -78,6 +79,7 @@ export async function submitDiagnosisPick(input: {
       ...(input.laterality ? { laterality: input.laterality } : {}),
       ...(input.source ? { source: input.source } : {}),
       ...(input.status ? { status: input.status } : {}),
+      ...(input.stageDeferred ? { stageDeferred: true } : {}),
     }),
   });
   const body = await response.json() as { condition?: Condition; encounter?: Encounter; error?: string };

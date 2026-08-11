@@ -10,6 +10,7 @@ import {
   type DiagnosisPickTallyRow,
 } from "./diagnosis-pick-tally-store.js";
 import type { DiagnosisCatalogRow } from "./glaucoma-suspect.js";
+import { FAMILY_RESOLUTION_MODES } from "./diagnosis-catalog-seeds.js";
 
 type DiagnosisQuickListFhirClient = DiagnosisCatalogFhirClient & DiagnosisPickTallyFhirClient;
 
@@ -21,6 +22,16 @@ export interface DiagnosisQuickListRow {
   icd10?: DiagnosisCatalogRow["icd10"];
   pinned: boolean;
   tallyCount: number;
+  clinicalFamily?: string;
+  axisLabel?: string;
+  members?: Array<{
+    stableKey: string;
+    stageLabel: string;
+    display: string;
+    lateralityRequired: boolean;
+    bilateralResolution?: DiagnosisCatalogRow["bilateralResolution"];
+    icd10?: DiagnosisCatalogRow["icd10"];
+  }>;
 }
 
 interface DiagnosisQuickListDeps {
@@ -49,13 +60,24 @@ export async function handleDiagnosisQuickListRequest(
   if (!staffMay(staff.actorRole, "chart.read")) {
     return { status: 403, body: { error: "chart.read role required" } };
   }
-  const [diagnoses, tally] = await Promise.all([
+  const [diagnoses, storedTally] = await Promise.all([
     diagnosisCatalog(deps),
     new FhirDiagnosisPickTallyStore(deps.tallyFhir).read(staff.staffReference),
   ]);
+  let tally = storedTally ?? emptyTally(deps.now?.() ?? new Date().toISOString());
+  const migratedPins = migrateDiagnosisPins(tally.pinnedDiagnosisKeys);
+  if (!samePins(tally.pinnedDiagnosisKeys, migratedPins)) {
+    tally = staffMay(staff.actorRole, "chart.write")
+      ? await new FhirDiagnosisPickTallyStore(deps.tallyFhir).replacePinned(
+          staff.staffReference,
+          migratedPins,
+          deps.now?.() ?? new Date().toISOString(),
+        )
+      : { ...tally, pinnedDiagnosisKeys: migratedPins };
+  }
   return quickListResponse(
     diagnoses,
-    tally ?? emptyTally(deps.now?.() ?? new Date().toISOString()),
+    tally,
     staffMay(staff.actorRole, "chart.write"),
   );
 }
@@ -74,16 +96,19 @@ export async function handleDiagnosisQuickListMutationRequest(
     return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid Common diagnosis order." } };
   }
   const diagnoses = await diagnosisCatalog(deps);
-  const eligibleKeys = new Set(
+  const eligibleMemberKeys = new Set(
     diagnoses.filter((row) => row.active && row.codingStatus === "verified").map((row) => row.stableKey),
   );
-  const unknownKey = parsed.data.pinnedDiagnosisKeys.find((key) => !eligibleKeys.has(key));
+  const eligibleFamilyKeys = new Set(diagnosisCatalogRows(diagnoses, emptyTally("")).map((row) => row.stableKey));
+  const unknownKey = parsed.data.pinnedDiagnosisKeys.find((key) =>
+    !eligibleMemberKeys.has(key) && !eligibleFamilyKeys.has(key)
+  );
   if (unknownKey) {
     return { status: 400, body: { error: `Diagnosis ${unknownKey} is not an active verified Common diagnosis.` } };
   }
   const tally = await new FhirDiagnosisPickTallyStore(deps.tallyFhir).replacePinned(
     staff.staffReference,
-    parsed.data.pinnedDiagnosisKeys,
+    migrateDiagnosisPins(parsed.data.pinnedDiagnosisKeys),
     deps.now?.() ?? new Date().toISOString(),
   );
   return quickListResponse(diagnoses, tally, true);
@@ -111,24 +136,91 @@ function diagnosisCatalogRows(
   diagnoses: readonly DiagnosisCatalogRow[],
   tally: DiagnosisPickTallyRow,
 ): DiagnosisQuickListRow[] {
-  const pinnedKeys = new Set(tally.pinnedDiagnosisKeys);
+  const pinnedKeys = new Set(migrateDiagnosisPins(tally.pinnedDiagnosisKeys));
   const totals = new Map<string, number>();
   for (const counts of Object.values(tally.counts)) {
     for (const [diagnosisKey, count] of Object.entries(counts)) {
       totals.set(diagnosisKey, (totals.get(diagnosisKey) ?? 0) + count);
     }
   }
-  return diagnoses
-    .filter((row) => row.active && row.codingStatus === "verified")
-    .map((row): DiagnosisQuickListRow => ({
-      stableKey: row.stableKey,
-      display: row.display,
-      lateralityRequired: row.lateralityRequired,
-      ...(row.bilateralResolution ? { bilateralResolution: row.bilateralResolution } : {}),
-      ...(row.icd10 ? { icd10: row.icd10 } : {}),
-      pinned: pinnedKeys.has(row.stableKey),
-      tallyCount: totals.get(row.stableKey) ?? 0,
-    }));
+  const eligible = diagnoses.filter((row) => row.active && row.codingStatus === "verified");
+  const byStableKey = new Map(eligible.map((row) => [row.stableKey, row]));
+  const emittedFamilies = new Set<string>();
+  return eligible.flatMap((row): DiagnosisQuickListRow[] => {
+    const staged = stagedFamilyForMember(row.stableKey);
+    if (!staged) return [quickListRow(row, pinnedKeys, totals)];
+    if (emittedFamilies.has(staged.clinicalFamily)) return [];
+    emittedFamilies.add(staged.clinicalFamily);
+    const members = staged.members.flatMap((member) => {
+      const catalogRow = byStableKey.get(member.stableKey);
+      return catalogRow ? [{
+        stableKey: catalogRow.stableKey,
+        stageLabel: member.stageLabel,
+        display: catalogRow.display,
+        lateralityRequired: catalogRow.lateralityRequired,
+        ...(catalogRow.bilateralResolution ? { bilateralResolution: catalogRow.bilateralResolution } : {}),
+        ...(catalogRow.icd10 ? { icd10: catalogRow.icd10 } : {}),
+      }] : [];
+    });
+    const first = members[0];
+    if (!first) return [];
+    return [{
+      stableKey: staged.clinicalFamily,
+      clinicalFamily: staged.clinicalFamily,
+      display: familyDisplay(first.display),
+      lateralityRequired: first.lateralityRequired,
+      pinned: pinnedKeys.has(staged.clinicalFamily),
+      tallyCount: members.reduce((sum, member) => sum + (totals.get(member.stableKey) ?? 0), 0),
+      axisLabel: staged.axisLabel,
+      members,
+    }];
+  });
+}
+
+function quickListRow(
+  row: DiagnosisCatalogRow,
+  pinnedKeys: ReadonlySet<string>,
+  totals: ReadonlyMap<string, number>,
+): DiagnosisQuickListRow {
+  return {
+    stableKey: row.stableKey,
+    display: row.display,
+    lateralityRequired: row.lateralityRequired,
+    ...(row.bilateralResolution ? { bilateralResolution: row.bilateralResolution } : {}),
+    ...(row.icd10 ? { icd10: row.icd10 } : {}),
+    pinned: pinnedKeys.has(row.stableKey),
+    tallyCount: totals.get(row.stableKey) ?? 0,
+  };
+}
+
+function stagedFamilyForMember(stableKey: string): {
+  clinicalFamily: string;
+  axisLabel: string;
+  members: Array<{ stableKey: string; stageLabel: string }>;
+} | undefined {
+  for (const [clinicalFamily, mode] of Object.entries(FAMILY_RESOLUTION_MODES)) {
+    if (mode.mode === "staged" && mode.members.some((member) => member.stableKey === stableKey)) {
+      return { clinicalFamily, axisLabel: mode.axisLabel, members: mode.members };
+    }
+  }
+  return undefined;
+}
+
+function migrateDiagnosisPins(keys: readonly string[]): string[] {
+  const migrated: string[] = [];
+  for (const key of keys) {
+    const resolved = stagedFamilyForMember(key)?.clinicalFamily ?? key;
+    if (!migrated.includes(resolved)) migrated.push(resolved);
+  }
+  return migrated;
+}
+
+function samePins(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((key, index) => key === right[index]);
+}
+
+function familyDisplay(memberDisplay: string): string {
+  return memberDisplay.replace(/,\s.*$/, "");
 }
 
 async function diagnosisCatalog(deps: DiagnosisQuickListDeps): Promise<DiagnosisCatalogRow[]> {

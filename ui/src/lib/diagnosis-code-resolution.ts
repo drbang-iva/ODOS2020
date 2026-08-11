@@ -17,6 +17,7 @@ export interface DiagnosisCodeResolutionRow {
   icd10?: { code: string; display?: string } | {
     pattern: { unspecifiedEye?: string; right?: string; left?: string; bilateral?: string };
   };
+  members?: Array<{ stableKey: string }>;
 }
 
 export function resolveDiagnosisCodes(
@@ -62,6 +63,10 @@ export function conditionResolvedCodeLabel(
   const usesCatalogConcept = condition.code?.coding?.some((coding) =>
     coding.system === DIAGNOSIS_CATALOG_CODE_SYSTEM
   );
+  const hasIcd10Code = condition.code?.coding?.some((coding) =>
+    coding.system === ICD10_CM_CODE_SYSTEM && coding.code
+  );
+  if (row?.members?.length && !hasIcd10Code) return "Code pending — stage required";
   if (usesCatalogConcept) {
     const codes = row ? resolveDiagnosisCodes(row, conditionLaterality(condition)) : [];
     if (codes.length) return codes.join(" + ");

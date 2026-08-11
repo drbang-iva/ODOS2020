@@ -38,6 +38,7 @@ import {
 import { lateralityConcept, ODOS_EXTENSION_URLS } from "../src/fhir/ophthalmology/extensions.js";
 import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../src/fhir/ophthalmology/codeBindings.js";
 import { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } from "../src/clinical-graph/diagnosis-pick-endpoint.js";
+import { buildDiagnosisCatalogSeeds } from "../src/clinical-graph/diagnosis-catalog-seeds.js";
 import { createAuthenticatedFhirClient, loadRepoEnv } from "./integration-helpers.js";
 import { createMedplumClient } from "../src/fhir-client.js";
 import { searchAll } from "../src/fhir-search.js";
@@ -473,6 +474,38 @@ test("pull posts one present finding atomically while preserving absent source p
   assert.equal(body.conditionReference, "Condition/pulled-condition");
   assert.equal(body.alreadyPresent, false);
   assert.equal((body.transaction as Bundle).type, "transaction-response");
+});
+
+test("pull-forward preserves an existing staged diagnosis code exactly", async (t) => {
+  const fhir = pullFhir();
+  const source = fhir.resource<Condition>("Condition", "source-dry-eye-od");
+  const staged = buildDiagnosisCatalogSeeds().find((row) => row.stableKey === "poag_severe")!;
+  const rightCode = staged.icd10 && "pattern" in staged.icd10 ? staged.icd10.pattern.right : undefined;
+  assert.ok(rightCode);
+  source.identifier = [{
+    system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM,
+    value: "source-pull::poag_severe::right",
+  }];
+  source.code = {
+    coding: [{ system: "http://hl7.org/fhir/sid/icd-10-cm", code: rightCode, display: staged.display }],
+    text: staged.display,
+  };
+  const expectedCode = structuredClone(source.code);
+  const base = await startPreviousExamRoutes(t, fhir, "auditor");
+
+  const response = await fetch(`${base}/clinical-graph/encounters/current-pull/previous-exams`, {
+    method: "POST",
+    headers: { Authorization: AUTH_CLINICIAN, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      sourceEncounterReference: "Encounter/source-pull",
+      sourceConditionReference: "Condition/source-dry-eye-od",
+    }),
+  });
+
+  assert.equal(response.status, 200, await response.clone().text());
+  const pulled = fhir.transactions[0]!.bundle.entry?.find((entry) => entry.resource?.resourceType === "Condition")?.resource as Condition;
+  assert.deepEqual(pulled.code, expectedCode);
+  assert.equal(pulled.identifier?.find((identifier) => identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM)?.value, "current-pull::poag_severe::right");
 });
 
 test("pull puts the optimistic Encounter version guard before every transaction create", async (t) => {

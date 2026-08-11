@@ -5,6 +5,7 @@ import {
   makeConditionPrincipal,
   swapConditionRanks,
   updateConditionBodySite,
+  updateConditionCode,
   updateEncounterDiagnosisProblemStatus,
   type EyeChoice,
 } from "../../lib/clinical-actions";
@@ -17,6 +18,7 @@ import { diagnosisRank, displayCode } from "../../lib/clinical-view-model";
 import { fhir } from "../../lib/fhir";
 import { encounterDiagnosisProblemStatus } from "../../lib/fhir-clinical/condition";
 import { OdosSearchPicker, type OdosSearchPickerOption } from "../inputs/OdosSearchPicker";
+import { OdosChips } from "../inputs/OdosChips";
 import {
   DiagnosisProblemStatusField,
   DiagnosisRankActions,
@@ -37,6 +39,7 @@ import { formatDiagnosisHistoryDate } from "../../lib/diagnosis-carry-forward";
 import { PreviousExams } from "./PreviousExams";
 import {
   conditionCatalogStableKey,
+  conditionCodeForDiagnosisResolution,
   conditionRequiresDeclaredBilateralResolution,
   conditionResolvedCodeLabel,
 } from "../../lib/diagnosis-code-resolution";
@@ -51,6 +54,21 @@ export interface DiagnosisQuickListRow {
   };
   pinned: boolean;
   tallyCount: number;
+  clinicalFamily?: string;
+  axisLabel?: string;
+  members?: Array<{
+    stableKey: string;
+    stageLabel: string;
+    display: string;
+    lateralityRequired: boolean;
+    bilateralResolution?: "emit-both-eyes";
+    icd10?: { code: string; display?: string } | {
+      pattern: { unspecifiedEye?: string; right?: string; left?: string; bilateral?: string };
+    };
+  }>;
+  selectedMemberKey?: string;
+  stageSelectionSource?: "search" | "prompt";
+  stageDeferred?: boolean;
 }
 
 interface QuickListPayload {
@@ -86,6 +104,7 @@ export function DiagnosisWorkspace({
     payload: DiagnosisFindingsPayload;
   }>();
   const [pendingDiagnosis, setPendingDiagnosis] = useState<DiagnosisQuickListRow>();
+  const [stageHistory, setStageHistory] = useState<{ key: string; conditions: Condition[] }>();
   const [searchSelection, setSearchSelection] = useState<OdosSearchPickerOption<DiagnosisQuickListRow>>();
   const [busy, setBusy] = useState<string>();
   const [loading, setLoading] = useState(true);
@@ -161,6 +180,37 @@ export function DiagnosisWorkspace({
   const selectedCondition = visitConditions.find((condition) =>
     `Condition/${condition.id}` === selectedReference
   );
+  const selectedStableKey = selectedCondition ? conditionCatalogStableKey(selectedCondition) : undefined;
+  const selectedStageFamily = selectedStableKey
+    ? catalog.find((row) => row.members?.some((member) => member.stableKey === selectedStableKey) ||
+      row.stableKey === selectedStableKey && row.members?.length)
+    : undefined;
+  const activeStageFamily = pendingDiagnosis?.members?.length ? pendingDiagnosis : selectedStageFamily;
+  const stageHistoryKey = activeStageFamily ? `${patientReference}::${activeStageFamily.stableKey}` : undefined;
+  const priorStage = activeStageFamily && stageHistory && stageHistory.key === stageHistoryKey
+    ? mostRecentPriorStage(stageHistory.conditions, activeStageFamily, selectedCondition?.id)
+    : undefined;
+
+  useEffect(() => {
+    if (!activeStageFamily || !stageHistoryKey) {
+      setStageHistory(undefined);
+      return;
+    }
+    let current = true;
+    setStageHistory((loaded) => loaded?.key === stageHistoryKey ? loaded : undefined);
+    void fhir.search<Condition>("Condition", { subject: patientReference, _count: "200" })
+      .then((bundle) => {
+        if (!current) return;
+        setStageHistory({
+          key: stageHistoryKey,
+          conditions: (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []),
+        });
+      })
+      .catch(() => {
+        if (current) setStageHistory({ key: stageHistoryKey, conditions: [] });
+      });
+    return () => { current = false; };
+  }, [activeStageFamily?.stableKey, patientReference, stageHistoryKey]);
 
   async function run(label: string, action: () => Promise<void>): Promise<boolean> {
     setBusy(label);
@@ -189,11 +239,17 @@ export function DiagnosisWorkspace({
   }
 
   async function addDiagnosis(row: DiagnosisQuickListRow, laterality?: EyeChoice) {
-    if (row.lateralityRequired && !laterality) {
+    const selectedMember = row.members?.find((member) => member.stableKey === row.selectedMemberKey);
+    const resolvedRow = selectedMember ? memberDiagnosisRow(selectedMember) : row;
+    if ((row.members || row.lateralityRequired) && !laterality) {
       setPendingDiagnosis(row);
       return;
     }
-    const existing = visitConditions.find((condition) => conditionMatchesDiagnosisPick(condition, row, laterality));
+    if (row.members && !selectedMember && !row.stageDeferred) {
+      setPendingDiagnosis(row);
+      return;
+    }
+    const existing = visitConditions.find((condition) => conditionMatchesDiagnosisPick(condition, resolvedRow, laterality));
     if (existing) {
       onSelectDiagnosis(`Condition/${existing.id}`);
       setPendingDiagnosis(undefined);
@@ -202,14 +258,20 @@ export function DiagnosisWorkspace({
     await run(`add:${row.stableKey}`, async () => {
       const result = await submitDiagnosisPick({
         encounterReference,
-        diagnosisKey: row.stableKey,
+        diagnosisKey: resolvedRow.stableKey,
         action: "confirm",
         source: "catalog-search",
         ...(laterality ? { laterality } : {}),
+        ...(row.stageDeferred ? { stageDeferred: true } : {}),
       });
       let condition = result.condition;
       if (laterality) {
-        condition = await updateConditionBodySite({ condition, patientReference, laterality, diagnosis: row });
+        condition = await updateConditionBodySite({
+          condition,
+          patientReference,
+          laterality,
+          ...(!row.stageDeferred ? { diagnosis: resolvedRow } : {}),
+        });
       }
       onSelectDiagnosis(`Condition/${condition.id}`);
       setPendingDiagnosis(undefined);
@@ -232,12 +294,7 @@ export function DiagnosisWorkspace({
   }
 
   function searchDiagnoses(query: string): Promise<OdosSearchPickerOption<DiagnosisQuickListRow>[]> {
-    const normalized = query.trim().toLocaleLowerCase();
-    return Promise.resolve(catalog.flatMap((row) => {
-      const code = diagnosisQuickListCode(row);
-      if (!`${row.display} ${row.stableKey} ${code ?? ""}`.toLocaleLowerCase().includes(normalized)) return [];
-      return [{ value: row.stableKey, label: row.display, description: code, item: row }];
-    }).slice(0, 20));
+    return Promise.resolve(diagnosisSearchOptions(catalog, query));
   }
 
   const neighbors = encounter && selectedCondition
@@ -270,7 +327,7 @@ export function DiagnosisWorkspace({
                 onClick={() => onSelectDiagnosis(reference)}
               >
                 <span>{displayCode(condition.code)}</span>
-                <small>{condition.bodySite?.[0]?.text ?? "Scope not set"}{rank ? ` · ${rank}` : ""} · {conditionResolvedCodeLabel(condition, catalog)}</small>
+                <small>{condition.bodySite?.[0]?.text ?? "Scope not set"}{rank ? ` · ${rank}` : ""} · <ResolvedDiagnosisCode condition={condition} catalog={catalog} /></small>
               </button>
             );
           })}
@@ -309,7 +366,9 @@ export function DiagnosisWorkspace({
               <div key={row.stableKey} className="odos-diagnosis-common-row">
                 <button type="button" disabled={!canWrite || busy !== undefined} onClick={() => void addDiagnosis(row)}>
                   <span>{row.display}</span>
-                  <small>{diagnosisQuickListCode(row) ?? "No ICD-10-CM code"}</small>
+                  {row.axisLabel
+                    ? <small className="odos-diagnosis-axis-chip">{row.axisLabel}</small>
+                    : <small>{diagnosisQuickListCode(row) ?? "No ICD-10-CM code"}</small>}
                 </button>
                 <div className="odos-diagnosis-pin-actions">
                   <button
@@ -350,12 +409,56 @@ export function DiagnosisWorkspace({
           </button>
         )}
         {pendingDiagnosis && (
-          <div className="odos-diagnosis-scope-prompt" role="group" aria-label={`Choose scope for ${pendingDiagnosis.display}`}>
-            <span>Choose scope</span>
-            {(["OD", "OS", "OU"] as const).map((eye) => (
-              <button key={eye} type="button" disabled={busy !== undefined} onClick={() => void addDiagnosis(pendingDiagnosis, eye)}>{eye}</button>
-            ))}
-            <button type="button" onClick={() => setPendingDiagnosis(undefined)}>Cancel</button>
+          <div className="odos-diagnosis-scope-prompt" role="group" aria-label={`Resolve ${pendingDiagnosis.display}`}>
+            <strong>{pendingDiagnosis.display}</strong>
+            {pendingDiagnosis.members && pendingDiagnosis.stageSelectionSource !== "search" && (
+              <div className="odos-diagnosis-resolution-row">
+                <span>{pendingDiagnosis.axisLabel}</span>
+                <OdosChips
+                  options={pendingDiagnosis.members.map((member) => ({ value: member.stableKey, label: member.stageLabel }))}
+                  selected={pendingDiagnosis.selectedMemberKey ? [pendingDiagnosis.selectedMemberKey] : []}
+                  onChange={(selected) => setPendingDiagnosis({
+                    ...pendingDiagnosis,
+                    selectedMemberKey: selected[0],
+                    stageSelectionSource: "prompt",
+                    stageDeferred: false,
+                  })}
+                  ariaLabel={`${pendingDiagnosis.axisLabel} for ${pendingDiagnosis.display}`}
+                  disabled={busy !== undefined}
+                  exclusive
+                />
+                {priorStage && (
+                  <small className="odos-diagnosis-stage-prior">
+                    was {priorStage.stageLabel} · {priorStage.recordedAt.slice(0, 10)}
+                  </small>
+                )}
+              </div>
+            )}
+            <div className="odos-diagnosis-resolution-row">
+              <span>Scope</span>
+              <OdosChips
+                options={(["OD", "OS", "OU"] as const).map((eye) => ({ value: eye, label: eye }))}
+                selected={[]}
+                onChange={(selected) => selected[0] && void addDiagnosis(pendingDiagnosis, selected[0])}
+                ariaLabel={`Scope for ${pendingDiagnosis.display}`}
+                disabled={busy !== undefined || Boolean(pendingDiagnosis.members && !pendingDiagnosis.selectedMemberKey && !pendingDiagnosis.stageDeferred)}
+                exclusive
+              />
+              {pendingDiagnosis.members && pendingDiagnosis.stageSelectionSource !== "search" && (
+                <button
+                  type="button"
+                  aria-pressed={pendingDiagnosis.stageDeferred === true}
+                  disabled={busy !== undefined}
+                  onClick={() => setPendingDiagnosis({
+                    ...pendingDiagnosis,
+                    selectedMemberKey: undefined,
+                    stageSelectionSource: "prompt",
+                    stageDeferred: true,
+                  })}
+                >{pendingDiagnosis.axisLabel} later</button>
+              )}
+              <button type="button" onClick={() => setPendingDiagnosis(undefined)}>Cancel</button>
+            </div>
           </div>
         )}
         {findings && (
@@ -382,7 +485,7 @@ export function DiagnosisWorkspace({
               <div>
                 <div className="odos-diagnosis-eyebrow">Selected diagnosis</div>
                 <h2>{displayCode(selectedCondition.code)}</h2>
-                <p>{conditionResolvedCodeLabel(selectedCondition, catalog)}</p>
+                <p><ResolvedDiagnosisCode condition={selectedCondition} catalog={catalog} /></p>
                 {findings?.carryProvenance && (
                   <div className={`odos-diagnosis-carry-state ${carryEditedForDisplay ? "is-edited" : "is-unedited"}`}>
                     {findings.carryProvenance.pulledFromDate && (
@@ -403,22 +506,56 @@ export function DiagnosisWorkspace({
                   </div>
                 )}
               </div>
-              <div className="odos-diagnosis-laterality" role="group" aria-label="Diagnosis scope">
-                {(["OD", "OS", "OU"] as const).map((eye) => (
-                  <button
-                    key={eye}
-                    type="button"
-                    aria-pressed={selectedCondition.bodySite?.[0]?.text === eye}
-                    disabled={!canWrite || busy !== undefined}
-                    onClick={() => void run("laterality", async () => {
-                      const diagnosis = catalog.find((row) => row.stableKey === conditionCatalogStableKey(selectedCondition));
-                      if (conditionRequiresDeclaredBilateralResolution(selectedCondition) && !diagnosis) {
-                        throw new Error("The eyelid diagnosis catalog row is unavailable; laterality was not changed.");
-                      }
-                      await updateConditionBodySite({ condition: selectedCondition, patientReference, laterality: eye, ...(diagnosis ? { diagnosis } : {}) });
-                    })}
-                  >{eye}</button>
-                ))}
+              <div className="odos-diagnosis-header-controls">
+                {selectedStageFamily?.members && (
+                  <div className="odos-diagnosis-stage-control">
+                    <span>{selectedStageFamily.axisLabel}</span>
+                    <OdosChips
+                      options={selectedStageFamily.members.map((member) => ({ value: member.stableKey, label: member.stageLabel }))}
+                      selected={selectedStageFamily.members.some((member) => member.stableKey === selectedStableKey) ? [selectedStableKey!] : []}
+                      onChange={(selected) => selected[0] && void run("stage", async () => {
+                        const member = selectedStageFamily.members!.find((candidate) => candidate.stableKey === selected[0]);
+                        const laterality = selectedCondition.bodySite?.[0]?.text;
+                        if (!member || (laterality !== "OD" && laterality !== "OS" && laterality !== "OU")) {
+                          throw new Error("Diagnosis stage could not be resolved for the current scope.");
+                        }
+                        const code = conditionCodeForDiagnosisResolution(memberDiagnosisRow(member), laterality);
+                        const coding = code?.coding?.[0];
+                        if (!coding?.system || !coding.code) throw new Error("The selected stage has no resolved diagnosis code.");
+                        await updateConditionCode({
+                          condition: selectedCondition,
+                          diagnosisKey: member.stableKey,
+                          code: { system: coding.system, code: coding.code, display: member.display },
+                        });
+                      })}
+                      ariaLabel={`${selectedStageFamily.axisLabel} for ${selectedStageFamily.display}`}
+                      disabled={!canWrite || busy !== undefined}
+                      exclusive
+                    />
+                    {priorStage && (
+                      <small className="odos-diagnosis-stage-prior">
+                        was {priorStage.stageLabel} · {priorStage.recordedAt.slice(0, 10)}
+                      </small>
+                    )}
+                  </div>
+                )}
+                <div className="odos-diagnosis-laterality" role="group" aria-label="Diagnosis scope">
+                  {(["OD", "OS", "OU"] as const).map((eye) => (
+                    <button
+                      key={eye}
+                      type="button"
+                      aria-pressed={selectedCondition.bodySite?.[0]?.text === eye}
+                      disabled={!canWrite || busy !== undefined}
+                      onClick={() => void run("laterality", async () => {
+                        const diagnosis = catalog.find((row) => row.stableKey === conditionCatalogStableKey(selectedCondition));
+                        if (conditionRequiresDeclaredBilateralResolution(selectedCondition) && !diagnosis) {
+                          throw new Error("The eyelid diagnosis catalog row is unavailable; laterality was not changed.");
+                        }
+                        await updateConditionBodySite({ condition: selectedCondition, patientReference, laterality: eye, ...(diagnosis ? { diagnosis } : {}) });
+                      })}
+                    >{eye}</button>
+                  ))}
+                </div>
               </div>
             </div>
             <DiagnosisProblemStatusField
@@ -450,6 +587,19 @@ export function DiagnosisWorkspace({
 
 function RailHeading({ children }: { children: string }) {
   return <h2 className="odos-diagnosis-rail-heading">{children}</h2>;
+}
+
+function ResolvedDiagnosisCode({
+  condition,
+  catalog,
+}: {
+  condition: Condition;
+  catalog: readonly DiagnosisQuickListRow[];
+}) {
+  const label = conditionResolvedCodeLabel(condition, catalog);
+  return label === "Code pending — stage required"
+    ? <span className="odos-diagnosis-code-warning" role="status">{label}</span>
+    : <span>{label}</span>;
 }
 
 export function orderedEncounterConditions(encounter: Encounter, conditions: readonly Condition[]): Condition[] {
@@ -499,6 +649,78 @@ export function conditionMatchesDiagnosisPick(
   if (!row.lateralityRequired) return true;
   const bucket = diagnosisCatalogIdentifier(condition)?.split("::").at(-1);
   return bucket === (laterality === "OD" ? "right" : laterality === "OS" ? "left" : laterality === "OU" ? "bilateral" : undefined);
+}
+
+export function diagnosisSearchOptions(
+  catalog: readonly DiagnosisQuickListRow[],
+  query: string,
+): OdosSearchPickerOption<DiagnosisQuickListRow>[] {
+  const tokens = normalizedSearchText(query).split(" ").filter(Boolean);
+  if (!tokens.length) return [];
+  return catalog.flatMap((row) => {
+    const memberMatches = row.members?.filter((member) => tokens.every((token) =>
+      normalizedSearchText(`${row.display} ${member.display} ${member.stableKey} ${member.stageLabel}`).includes(token)
+    )) ?? [];
+    const rowMatches = tokens.every((token) => normalizedSearchText(
+      `${row.display} ${row.stableKey} ${diagnosisQuickListCode(row) ?? ""} ${row.members?.map((member) => `${member.display} ${member.stableKey} ${member.stageLabel}`).join(" ") ?? ""}`,
+    ).includes(token));
+    if (!rowMatches) return [];
+    const selectedMember = memberMatches.length === 1 ? memberMatches[0] : undefined;
+    const item = selectedMember
+      ? { ...row, selectedMemberKey: selectedMember.stableKey, stageSelectionSource: "search" as const }
+      : row;
+    return [{
+      value: row.stableKey,
+      label: row.display,
+      description: selectedMember && row.axisLabel
+        ? `${row.axisLabel}: ${selectedMember.stageLabel}`
+        : row.axisLabel ?? diagnosisQuickListCode(row),
+      item,
+    }];
+  }).slice(0, 20);
+}
+
+export function mostRecentPriorStage(
+  conditions: readonly Condition[],
+  family: DiagnosisQuickListRow,
+  excludedConditionId?: string,
+): { stableKey: string; stageLabel: string; recordedAt: string } | undefined {
+  const members = new Map(family.members?.map((member) => [member.stableKey, member.stageLabel]) ?? []);
+  const latest = conditions.flatMap((condition) => {
+    if (condition.id === excludedConditionId) return [];
+    if (condition.verificationStatus?.coding?.some((coding) => ["refuted", "entered-in-error"].includes(coding.code ?? ""))) return [];
+    if (condition.clinicalStatus?.coding?.some((coding) => coding.code === "entered-in-error")) return [];
+    const stableKey = conditionCatalogStableKey(condition);
+    const stageLabel = stableKey ? members.get(stableKey) : undefined;
+    const recordedAt = condition.recordedDate ?? condition.meta?.lastUpdated;
+    const timestamp = recordedAt ? Date.parse(recordedAt) : Number.NaN;
+    return stableKey && stageLabel && recordedAt && Number.isFinite(timestamp)
+      ? [{ stableKey, stageLabel, recordedAt, timestamp }]
+      : [];
+  }).sort((left, right) => right.timestamp - left.timestamp)[0];
+  return latest ? {
+    stableKey: latest.stableKey,
+    stageLabel: latest.stageLabel,
+    recordedAt: latest.recordedAt,
+  } : undefined;
+}
+
+function memberDiagnosisRow(
+  member: NonNullable<DiagnosisQuickListRow["members"]>[number],
+): DiagnosisQuickListRow {
+  return {
+    stableKey: member.stableKey,
+    display: member.display,
+    lateralityRequired: member.lateralityRequired,
+    ...(member.bilateralResolution ? { bilateralResolution: member.bilateralResolution } : {}),
+    ...(member.icd10 ? { icd10: member.icd10 } : {}),
+    pinned: false,
+    tallyCount: 0,
+  };
+}
+
+function normalizedSearchText(value: string): string {
+  return value.toLocaleLowerCase().replace(/[_-]+/g, " ").replace(/[^\p{L}\p{N}.]+/gu, " ").trim();
 }
 
 function diagnosisCatalogIdentifier(condition: Condition): string | undefined {

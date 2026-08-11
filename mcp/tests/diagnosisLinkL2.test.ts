@@ -52,6 +52,55 @@ test("condition code resolution returns zero, one, or two codes only when the ca
   assert.deepEqual(resolve!({ ...mgd, bilateralResolution: undefined }, "bilateral"), []);
 });
 
+test("staged POAG picks persist the chosen member code and keep different per-eye stages separate", async () => {
+  const fhir = diagnosisPickFhir();
+  const authenticate = async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician" as const, fhir });
+  const mildOd = await handleDiagnosisPickRequest({ authenticate }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+    body: { diagnosisKey: "poag_mild", action: "confirm", laterality: "OD", source: "catalog-search" },
+  });
+  const moderateOs = await handleDiagnosisPickRequest({ authenticate }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+    body: { diagnosisKey: "poag_moderate", action: "confirm", laterality: "OS", source: "catalog-search" },
+  });
+
+  assert.equal(mildOd.status, 201, JSON.stringify(mildOd.body));
+  assert.equal(moderateOs.status, 201, JSON.stringify(moderateOs.body));
+  assert.equal((mildOd.body as { condition: Condition }).condition.code?.coding?.[0]?.code, sourcedDiagnosisCode("poag_mild", "right"));
+  assert.equal((moderateOs.body as { condition: Condition }).condition.code?.coding?.[0]?.code, sourcedDiagnosisCode("poag_moderate", "left"));
+  const conditions = fhir.resources.filter((resource): resource is Condition => resource.resourceType === "Condition");
+  assert.equal(conditions.length, 2);
+  assert.deepEqual(conditions.map((condition) => condition.identifier?.[0]?.value), [
+    "e1::poag_mild::right",
+    "e1::poag_moderate::left",
+  ]);
+});
+
+test("Stage later persists a staged family Condition with no ICD-10-CM coding", async () => {
+  const fhir = diagnosisPickFhir();
+  const result = await handleDiagnosisPickRequest({
+    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician", fhir }),
+  }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+    body: {
+      diagnosisKey: "primary-open-angle-glaucoma",
+      action: "confirm",
+      laterality: "OD",
+      source: "catalog-search",
+      stageDeferred: true,
+    },
+  });
+
+  assert.equal(result.status, 201, JSON.stringify(result.body));
+  const condition = (result.body as { condition: Condition }).condition;
+  assert.deepEqual(condition.identifier?.map((identifier) => identifier.value), ["e1::primary-open-angle-glaucoma::right"]);
+  assert.equal(condition.code?.text, "Primary open-angle glaucoma");
+  assert.equal(condition.code?.coding?.some((coding) => coding.system === "http://hl7.org/fhir/sid/icd-10-cm") ?? false, false);
+});
+
 test("all three eyelid families write both-lids OD and OS codes and resolve OU without the false 422", async () => {
   const cases = [
     ["ulcerative_blepharitis", "H01.01A", "H01.01B"],

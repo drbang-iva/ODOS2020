@@ -18,6 +18,7 @@ import {
   markConditionEnteredInError,
   swapConditionRanks,
   updateConditionBodySite,
+  updateConditionCode,
   updateEncounterDiagnosisProblemStatus,
 } from "../src/lib/clinical-actions";
 import { encounterDiagnosisProblemStatus } from "../src/lib/fhir-clinical/condition";
@@ -299,6 +300,64 @@ test("diagnosis laterality PATCH atomically reconciles the existing catalog iden
     },
     { system: "urn:example:preserved", value: "retain-me" },
   ]);
+});
+
+test("diagnosis stage PATCH atomically replaces the code and stable catalog key", async () => {
+  const originalFetch = globalThis.fetch;
+  let operations: Array<{ op: string; path: string; value?: unknown }> | undefined;
+  let provenance: Provenance | undefined;
+  const condition: Condition = {
+    ...encounterCondition("secondary-a"),
+    meta: { versionId: "4" },
+    bodySite: [{ text: "OD" }],
+    identifier: [
+      {
+        system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM,
+        value: "encounter-1::primary-open-angle-glaucoma::right",
+      },
+      { system: "urn:example:preserved", value: "retain-me" },
+    ],
+    code: { text: "Primary open-angle glaucoma" },
+  };
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/Condition/secondary-a") && init?.method === "PATCH") {
+      operations = JSON.parse(String(init.body));
+      return jsonResponse({ ...condition, meta: { versionId: "5" } });
+    }
+    if (url.endsWith("/Provenance") && init?.method === "POST") {
+      provenance = JSON.parse(String(init.body)) as Provenance;
+      return jsonResponse({ ...provenance, id: "stage-provenance" });
+    }
+    throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${url}`);
+  };
+  try {
+    await updateConditionCode({
+      condition,
+      diagnosisKey: "poag_mild",
+      code: {
+        system: "http://hl7.org/fhir/sid/icd-10-cm",
+        code: "H40.1111",
+        display: "Primary open-angle glaucoma, mild stage",
+      },
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.deepEqual(operations?.map(({ op, path }) => ({ op, path })), [
+    { op: "replace", path: "/code" },
+    { op: "replace", path: "/identifier" },
+  ]);
+  assert.deepEqual(operations?.[1]?.value, [
+    {
+      system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM,
+      value: "encounter-1::poag_mild::right",
+    },
+    { system: "urn:example:preserved", value: "retain-me" },
+  ]);
+  assert.equal(provenance?.entity?.[0]?.role, "revision");
+  assert.match(provenance?.entity?.[0]?.what?.display ?? "", /prior Condition\.code/);
 });
 
 test("bilateral eyelid laterality PATCH atomically replaces singular ICD coding with the catalog concept", async () => {
