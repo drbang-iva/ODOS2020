@@ -163,6 +163,33 @@ test("diagnosis catalog seeds are ledger-backed durable families and survive a s
     "t2_dr_pdr_without_dme",
     "diplopia",
     "paralytic_strabismus",
+    "macular_drusen",
+    "epiretinal_membrane",
+    "cystoid_macular_degeneration",
+    "macular_hole",
+    "subconjunctival_hemorrhage",
+    "conjunctivochalasis",
+    "vitreous_degeneration",
+    "vitreous_hemorrhage",
+    "vitreous_opacities",
+    "optic_disc_drusen",
+    "iris_neovascularization",
+    "posterior_synechiae",
+    "lattice_degeneration",
+    "microcystoid_degeneration",
+    "paving_stone_degeneration",
+    "hyphema",
+    "hypopyon",
+    "acute_follicular_conjunctivitis",
+    "giant_papillary_conjunctivitis",
+    "anterior_scleritis",
+    "posterior_scleritis",
+    "nodular_episcleritis",
+    "episcleritis_periodica_fugax",
+    "third_nerve_palsy",
+    "fourth_nerve_palsy",
+    "sixth_nerve_palsy",
+    "demodex_infestation",
   ]);
   assert.deepEqual((seeds.find((row) => row.stableKey === "myopia")?.icd10 as { pattern: object }).pattern, {
     unspecifiedEye: "H52.10",
@@ -213,6 +240,58 @@ test("diagnosis catalog seeds are ledger-backed durable families and survive a s
   const restarted = new FhirDiagnosisCatalogStore(fhir);
   assert.equal((await restarted.list()).find((row) => row.stableKey === "custom:kcs")?.codingStatus, "provisional");
   assert.deepEqual(fhir.writes[0]?.headers, DIAGNOSIS_CATALOG_WRITE_HEADERS);
+});
+
+test("Wave A diagnosis families resolve every verified laterality code", () => {
+  const seeds = buildDiagnosisCatalogSeeds();
+  const expected = {
+    macular_drusen: ["H35.361", "H35.362", "H35.363", "H35.369"],
+    epiretinal_membrane: ["H35.371", "H35.372", "H35.373", "H35.379"],
+    cystoid_macular_degeneration: ["H35.351", "H35.352", "H35.353", "H35.359"],
+    macular_hole: ["H35.341", "H35.342", "H35.343", "H35.349"],
+    subconjunctival_hemorrhage: ["H11.31", "H11.32", "H11.33", "H11.30"],
+    conjunctivochalasis: ["H11.821", "H11.822", "H11.823", "H11.829"],
+    vitreous_degeneration: ["H43.811", "H43.812", "H43.813", "H43.819"],
+    vitreous_hemorrhage: ["H43.11", "H43.12", "H43.13", "H43.10"],
+    vitreous_opacities: ["H43.391", "H43.392", "H43.393", "H43.399"],
+    optic_disc_drusen: ["H47.321", "H47.322", "H47.323", "H47.329"],
+    iris_neovascularization: ["H21.1X1", "H21.1X2", "H21.1X3", "H21.1X9"],
+    posterior_synechiae: ["H21.541", "H21.542", "H21.543", "H21.549"],
+    lattice_degeneration: ["H35.411", "H35.412", "H35.413", "H35.419"],
+    microcystoid_degeneration: ["H35.421", "H35.422", "H35.423", "H35.429"],
+    paving_stone_degeneration: ["H35.431", "H35.432", "H35.433", "H35.439"],
+    hyphema: ["H21.01", "H21.02", "H21.03", "H21.00"],
+    hypopyon: ["H20.051", "H20.052", "H20.053", "H20.059"],
+    acute_follicular_conjunctivitis: ["H10.011", "H10.012", "H10.013", "H10.019"],
+    giant_papillary_conjunctivitis: ["H10.411", "H10.412", "H10.413", "H10.419"],
+    anterior_scleritis: ["H15.011", "H15.012", "H15.013", "H15.019"],
+    posterior_scleritis: ["H15.031", "H15.032", "H15.033", "H15.039"],
+    nodular_episcleritis: ["H15.121", "H15.122", "H15.123", "H15.129"],
+    episcleritis_periodica_fugax: ["H15.111", "H15.112", "H15.113", "H15.119"],
+    third_nerve_palsy: ["H49.01", "H49.02", "H49.03", "H49.00"],
+    fourth_nerve_palsy: ["H49.11", "H49.12", "H49.13", "H49.10"],
+    sixth_nerve_palsy: ["H49.21", "H49.22", "H49.23", "H49.20"],
+  } as const;
+
+  for (const [stableKey, [right, left, bilateral, unspecifiedEye]] of Object.entries(expected)) {
+    const seed = seeds.find((row) => row.stableKey === stableKey);
+    assert.ok(seed, `Missing Wave A diagnosis catalog seed ${stableKey}`);
+    assert.deepEqual(seed.icd10, { pattern: { unspecifiedEye, right, left, bilateral } });
+    assert.equal(seed.lateralityRequired, true);
+    assert.deepEqual(seed.provenance.ledgerRefs, [
+      "cdcIcd10Cm2026CodeDescriptions",
+      "nlmClinicalTablesIcd10Cm",
+    ]);
+  }
+
+  const demodex = seeds.find((row) => row.stableKey === "demodex_infestation");
+  assert.ok(demodex, "Missing Wave A diagnosis catalog seed demodex_infestation");
+  assert.deepEqual(demodex.icd10, { code: "B88.01", display: "Infestation by Demodex mites" });
+  assert.equal(demodex.lateralityRequired, false);
+  assert.deepEqual(demodex.provenance.ledgerRefs, [
+    "cdcIcd10Cm2026CodeDescriptions",
+    "nlmClinicalTablesIcd10Cm",
+  ]);
 });
 
 test("eyelid families expose only verified both-lids per-eye slots and declare bilateral expansion", () => {
@@ -531,7 +610,7 @@ test("lens Phase 0 ledger and catalog seeds preserve verified codes and laterali
     lens_dislocation_posterior: { pattern: { unspecifiedEye: "H27.139", right: "H27.131", left: "H27.132", bilateral: "H27.133" } },
   };
 
-  assert.equal(allSeeds.length, 64);
+  assert.equal(allSeeds.length, 91);
   assert.equal(seeds.length, 12);
   for (const [stableKey, icd10] of Object.entries(expected)) {
     const seed = seeds.find((row) => row.stableKey === stableKey);
