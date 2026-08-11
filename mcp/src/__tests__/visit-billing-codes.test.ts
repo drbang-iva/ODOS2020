@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Bundle, ChargeItemDefinition, Encounter, Resource } from "@medplum/fhirtypes";
+import type { Bundle, ChargeItem, ChargeItemDefinition, Encounter, Resource } from "@medplum/fhirtypes";
 import {
+  HCPCS_CODE_SYSTEM,
   PROCEDURE_FEE_SEEDS,
+  PROCEDURE_CONCEPT_SYSTEM,
   buildProcedureFeeDefinition,
   listProcedureFeeSchedule,
   materializeAcceptedChargeProposals,
@@ -10,10 +12,12 @@ import {
 } from "../clinical-graph/procedure-fee-schedule.js";
 import type { ChargeProposal, ProtocolApplication } from "../clinical-graph/protocol-types.js";
 import {
+  handleProtocolSignCleanupRequest,
   handleVisitChargeMutationRequest,
   handleVisitChargeRequest,
 } from "../clinical-graph/protocol-endpoint.js";
 import { PROTOCOL_BASIC_CODES, ProtocolBasicStore } from "../clinical-graph/protocol-store.js";
+import { buildProfessionalClaim } from "../claims/claimmd-fhir.js";
 
 class MemoryFhir {
   resources: Resource[] = [];
@@ -260,7 +264,13 @@ test("manual proposals materialize without weakening non-linkage validation", as
     applications: rowStore<ProtocolApplication>([]),
     now: () => NOW,
   }), { materialized: 1, finalized: 1 });
-  assert.equal(validFhir.resources.filter((row) => row.resourceType === "ChargeItem").length, 1);
+  const conceptOnly = validFhir.resources.filter((row): row is ChargeItem => row.resourceType === "ChargeItem");
+  assert.equal(conceptOnly.length, 1);
+  assert.deepEqual(conceptOnly[0]?.code.coding, [{
+    system: PROCEDURE_CONCEPT_SYSTEM,
+    code: "gonioscopy",
+    display: "Gonioscopy",
+  }]);
 
   const invalidCases: Array<[Partial<ChargeProposal>, RegExp]> = [
     [{ units: 0 }, /invalid units/],
@@ -574,4 +584,103 @@ test("a protocol-linked visit concept conflicts instead of allowing a second vis
   assert.equal(result.status, 409);
   assert.equal(await store.get("manual-visit-code:enc-protocol-visit"), undefined);
   assert.equal((await store.get("protocol-owned-visit"))?.procedureConceptKey, "comprehensive-exam-new");
+});
+
+test("selecting then signing materializes the billing-first visit charge with its diagnosis pointer", async () => {
+  const fhir = new MemoryFhir();
+  fhir.resources.push({
+    resourceType: "Encounter",
+    id: "enc-e2e",
+    status: "in-progress",
+    class: { code: "AMB" },
+    subject: { reference: "Patient/patient-e2e" },
+    period: { start: "2026-08-11T14:00:00.000Z" },
+    diagnosis: [{ condition: { reference: "Condition/principal-e2e" }, rank: 1 }],
+  } satisfies Encounter);
+  const authenticate = async () => ({
+    staffReference: "Practitioner/doc",
+    actorRole: "clinician" as const,
+    fhir,
+  });
+  const selected = await handleVisitChargeMutationRequest({ authenticate, now: () => NOW }, {
+    authHeader: "Bearer clinician",
+    params: { encounterId: "enc-e2e" },
+    body: { procedureConceptKey: "routine-vision-exam-new" },
+  });
+  assert.equal(selected.status, 200);
+  const accepted = (selected.body as { proposal: ChargeProposal }).proposal;
+  assert.equal(accepted.state, "accepted");
+  assert.equal(Object.hasOwn(accepted, "protocolApplicationId"), false);
+  assert.deepEqual(accepted.dxPointers, ["Condition/principal-e2e"]);
+
+  const signed = await handleProtocolSignCleanupRequest({
+    authenticate,
+    feeScheduleFhir: fhir,
+    now: () => NOW,
+  }, {
+    authHeader: "Bearer clinician",
+    params: { encounterId: "enc-e2e" },
+  });
+  assert.deepEqual(signed, {
+    status: 200,
+    body: { abandoned: 0, materialized: 1, finalized: 1 },
+  });
+  const chargeItem = fhir.resources.find((row): row is ChargeItem => row.resourceType === "ChargeItem");
+  assert.ok(chargeItem?.id);
+  assert.deepEqual(chargeItem.code.coding, [
+    {
+      system: HCPCS_CODE_SYSTEM,
+      code: "S0620",
+      display: "Routine vision exam — new patient",
+    },
+    {
+      system: PROCEDURE_CONCEPT_SYSTEM,
+      code: "routine-vision-exam-new",
+      display: "Routine vision exam — new patient",
+    },
+  ]);
+  assert.deepEqual(chargeItem.supportingInformation, [{ reference: "Condition/principal-e2e" }]);
+  const store = new ProtocolBasicStore<ChargeProposal>(fhir, PROTOCOL_BASIC_CODES.chargeProposal);
+  assert.deepEqual(await store.get("manual-visit-code:enc-e2e"), {
+    ...accepted,
+    state: "finalized",
+    chargeItemRef: `ChargeItem/${chargeItem.id}`,
+  });
+
+  const claim = buildProfessionalClaim({
+    created: "2026-08-11",
+    serviceDate: "2026-08-11",
+    patientReference: "Patient/patient-e2e",
+    providerReference: "Practitioner/doc",
+    insurerReference: "Organization/payer",
+    coverageReference: "Coverage/coverage",
+    patientAccountNumber: "SYNTHETIC-E2E",
+    payerId: "SYNTHETIC",
+    billingProvider: { name: "SYNTHETIC PRACTICE", npi: "1111111112" },
+    renderingProvider: { firstName: "TEST", lastName: "CLINICIAN", npi: "1111111112" },
+    subscriber: {
+      firstName: "TEST",
+      lastName: "PATIENT",
+      dateOfBirth: "1980-01-01",
+      sex: "U",
+    },
+    patient: {
+      firstName: "TEST",
+      lastName: "PATIENT",
+      dateOfBirth: "1980-01-01",
+      sex: "U",
+    },
+    diagnoses: [{ system: "https://example.test/diagnosis", code: "DX-E2E" }],
+    chargeItems: [{ ...chargeItem, diagnosisSequence: [1] }],
+  });
+  assert.deepEqual(claim.item?.[0]?.productOrService.coding?.[0], {
+    system: HCPCS_CODE_SYSTEM,
+    code: "S0620",
+    display: "Routine vision exam — new patient",
+  });
+  assert.notEqual(claim.item?.[0]?.productOrService.coding?.[0]?.code, "routine-vision-exam-new");
+
+  if (process.env.ODOS_SHOW_VISIT_CHARGE === "1") {
+    console.log(`VISIT_CHARGE_ITEM=${JSON.stringify(chargeItem, null, 2)}`);
+  }
 });
