@@ -101,6 +101,10 @@ export interface ProcedureFeeScheduleItem {
   version: string;
 }
 
+export type CodedProcedureFeeScheduleItem = ProcedureFeeScheduleItem & {
+  billingCode: string;
+};
+
 type RowStore<T extends { id: string }> = {
   list(): Promise<T[]>;
   save(value: T): Promise<T>;
@@ -195,6 +199,19 @@ export async function listActiveVisitProcedureFees(
       version: "1",
     }];
   });
+}
+
+export async function listActiveCodedNonVisitProcedureFees(
+  fhir: Pick<ProcedureFeeScheduleFhir, "search" | "searchUrl">,
+): Promise<CodedProcedureFeeScheduleItem[]> {
+  return (await listProcedureFeeDefinitions(fhir))
+    .map(procedureFeeScheduleItem)
+    .filter((item): item is CodedProcedureFeeScheduleItem =>
+      item.active &&
+      typeof item.billingCode === "string" && item.billingCode.length > 0 &&
+      !isVisitProcedureConceptKey(item.procedureConceptKey)
+    )
+    .sort((left, right) => left.display.localeCompare(right.display));
 }
 
 export function isVisitProcedureConceptKey(value: string): boolean {
