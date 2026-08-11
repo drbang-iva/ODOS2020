@@ -6,6 +6,7 @@ export interface ProcedureFeeScheduleItem {
   procedureConceptKey: string;
   display: string;
   active: boolean;
+  billingCode?: string;
   priceCents?: number;
   version: string;
 }
@@ -26,6 +27,7 @@ export function procedureFeeScheduleAdapter(
     async save(item) {
       return mutate(item, {
         action: "save",
+        ...(Object.hasOwn(item, "billingCode") ? { billingCode: item.billingCode?.trim() || null } : {}),
         priceCents: item.priceCents ?? null,
         active: item.active,
       }, fetchImpl);
@@ -38,7 +40,12 @@ export function procedureFeeScheduleAdapter(
 
 async function mutate(
   item: ProcedureFeeScheduleItem,
-  body: { action: "save"; priceCents: number | null; active: boolean } | { action: "deactivate" },
+  body: {
+    action: "save";
+    billingCode?: string | null;
+    priceCents: number | null;
+    active: boolean;
+  } | { action: "deactivate" },
   fetchImpl: typeof fetch,
 ): Promise<ProcedureFeeScheduleItem> {
   const response = await fetchImpl(
