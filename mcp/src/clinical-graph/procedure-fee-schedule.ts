@@ -47,6 +47,23 @@ export const PROCEDURE_FEE_SEEDS: readonly ProcedureFeeSeed[] = [
   { procedureConceptKey: "refraction", display: "Refraction" },
 ];
 
+export const VISIT_PROCEDURE_CONCEPT_KEYS = [
+  "comprehensive-exam-new",
+  "comprehensive-exam-established",
+  "intermediate-exam-new",
+  "intermediate-exam-established",
+  "office-visit-new-straightforward",
+  "office-visit-new-low",
+  "office-visit-new-moderate",
+  "office-visit-established-straightforward",
+  "office-visit-established-low",
+  "office-visit-established-moderate",
+  "routine-vision-exam-new",
+  "routine-vision-exam-established",
+] as const;
+
+const VISIT_PROCEDURE_CONCEPT_KEY_SET = new Set<string>(VISIT_PROCEDURE_CONCEPT_KEYS);
+
 const INITIAL_DEFINITION_KEYS = new Set([
   "gonioscopy",
   "corneal-pachymetry",
@@ -150,6 +167,39 @@ export async function listProcedureFeeSchedule(
     .sort((left, right) => left.display.localeCompare(right.display));
 }
 
+export async function listActiveVisitProcedureFees(
+  fhir: Pick<ProcedureFeeScheduleFhir, "search" | "searchUrl">,
+): Promise<ProcedureFeeScheduleItem[]> {
+  const definitions = await listProcedureFeeDefinitions(fhir);
+  const byKey = new Map<string, ChargeItemDefinition>();
+  for (const definition of definitions) {
+    const key = procedureConceptKey(definition);
+    if (!key || !VISIT_PROCEDURE_CONCEPT_KEY_SET.has(key)) continue;
+    if (byKey.has(key)) throw new Error(`Duplicate procedure fee definitions found for ${key}.`);
+    byKey.set(key, definition);
+  }
+  return VISIT_PROCEDURE_CONCEPT_KEYS.flatMap((key) => {
+    const definition = byKey.get(key);
+    if (definition) {
+      const item = procedureFeeScheduleItem(definition);
+      return item.active ? [item] : [];
+    }
+    const seed = PROCEDURE_FEE_SEEDS.find((row) => row.procedureConceptKey === key)!;
+    return [{
+      id: key,
+      procedureConceptKey: key,
+      display: seed.display,
+      active: true,
+      ...(seed.billingCode ? { billingCode: seed.billingCode } : {}),
+      version: "1",
+    }];
+  });
+}
+
+export function isVisitProcedureConceptKey(value: string): boolean {
+  return VISIT_PROCEDURE_CONCEPT_KEY_SET.has(value);
+}
+
 export async function saveProcedureFeeScheduleItem(
   fhir: ProcedureFeeScheduleFhir,
   input: {
@@ -212,10 +262,12 @@ export async function materializeAcceptedChargeProposals(input: {
   const patientId = patientReference.slice("Patient/".length);
   const applications = await input.applications.list();
   for (const proposal of proposals) {
-    const application = applications.find((row) => row.id === proposal.protocolApplicationId);
-    if (!application || application.encounterId !== input.encounterId || application.patientId !== patientId ||
-      !application.confirmed || application.undoState !== "active") {
-      throw new Error(`Charge proposal ${proposal.id} is not linked to an active confirmed application for this encounter and patient.`);
+    if (proposal.protocolApplicationId !== undefined && proposal.protocolApplicationId !== null) {
+      const application = applications.find((row) => row.id === proposal.protocolApplicationId);
+      if (!application || application.encounterId !== input.encounterId || application.patientId !== patientId ||
+        !application.confirmed || application.undoState !== "active") {
+        throw new Error(`Charge proposal ${proposal.id} is not linked to an active confirmed application for this encounter and patient.`);
+      }
     }
     if (!Number.isSafeInteger(proposal.units) || proposal.units < 1) {
       throw new Error(`Charge proposal ${proposal.id} has invalid units.`);
@@ -370,7 +422,7 @@ function buildChargeItem(input: {
 }
 
 async function listProcedureFeeDefinitions(
-  fhir: ProcedureFeeScheduleFhir,
+  fhir: Pick<ProcedureFeeScheduleFhir, "search" | "searchUrl">,
 ): Promise<ChargeItemDefinition[]> {
   return (await searchAll<ChargeItemDefinition>(fhir, "ChargeItemDefinition", { _count: "100" }))
     .filter((definition) => Boolean(procedureConceptKey(definition)));

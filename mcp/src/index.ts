@@ -127,6 +127,8 @@ import {
   handleProtocolRetireRequest,
   handleProtocolUnapplyRequest,
   handleProtocolSignCleanupRequest,
+  handleVisitChargeMutationRequest,
+  handleVisitChargeRequest,
 } from "./clinical-graph/protocol-endpoint.js";
 import { ProtocolDefinitionStore } from "./clinical-graph/protocol-store.js";
 import { GLAUCOMA_SUSPECT_PROTOCOL } from "./clinical-graph/protocol-fixtures.js";
@@ -6837,6 +6839,34 @@ async function startMcpServer(): Promise<void> {
         } catch (error) {
           console.error("odos-mcp: protocol sign cleanup route failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "protocol sign cleanup route failed" });
+        }
+      });
+
+      app.get("/clinical-graph/protocols/encounters/:encounterId/visit-charge", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleVisitChargeRequest(
+            { authenticate: authenticateStaffRouteForAction("chart.read") },
+            { authHeader: req.header("authorization"), params: req.params },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: visit charge route failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "visit charge route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/protocols/encounters/:encounterId/visit-charge", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleVisitChargeMutationRequest(
+            { authenticate: authenticateStaffRouteForAction("chart.write") },
+            { authHeader: req.header("authorization"), params: req.params, body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: visit charge mutation route failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "visit charge mutation route failed" });
         }
       });
 
