@@ -189,6 +189,29 @@ test("diagnosis catalog seeds are ledger-backed durable families and survive a s
     "third_nerve_palsy",
     "fourth_nerve_palsy",
     "sixth_nerve_palsy",
+    "poag_mild",
+    "poag_moderate",
+    "poag_severe",
+    "poag_indeterminate",
+    "low_tension_glaucoma_mild",
+    "low_tension_glaucoma_moderate",
+    "low_tension_glaucoma_severe",
+    "low_tension_glaucoma_indeterminate",
+    "dry_amd_early",
+    "dry_amd_intermediate",
+    "dry_amd_advanced_atrophic_without_subfoveal",
+    "dry_amd_advanced_atrophic_with_subfoveal",
+    "wet_amd_active_cnv",
+    "wet_amd_inactive_cnv",
+    "wet_amd_inactive_scar",
+    "pathological_myopia",
+    "pathological_myopia_cnv",
+    "pathological_myopia_macular_hole",
+    "pathological_myopia_retinal_detachment",
+    "pathological_myopia_foveoschisis",
+    "pathological_myopia_other_maculopathy",
+    "t2_dr_dme_resolved",
+    "chronic_follicular_conjunctivitis",
     "demodex_infestation",
   ]);
   assert.deepEqual((seeds.find((row) => row.stableKey === "myopia")?.icd10 as { pattern: object }).pattern, {
@@ -292,6 +315,67 @@ test("Wave A diagnosis families resolve every verified laterality code", () => {
     "cdcIcd10Cm2026CodeDescriptions",
     "nlmClinicalTablesIcd10Cm",
   ]);
+});
+
+test("Wave B diagnosis families resolve every verified laterality code", () => {
+  const seeds = buildDiagnosisCatalogSeeds();
+  const expected = {
+    poag_mild: ["H40.1111", "H40.1121", "H40.1131", "H40.1191"],
+    poag_moderate: ["H40.1112", "H40.1122", "H40.1132", "H40.1192"],
+    poag_severe: ["H40.1113", "H40.1123", "H40.1133", "H40.1193"],
+    poag_indeterminate: ["H40.1114", "H40.1124", "H40.1134", "H40.1194"],
+    low_tension_glaucoma_mild: ["H40.1211", "H40.1221", "H40.1231", "H40.1291"],
+    low_tension_glaucoma_moderate: ["H40.1212", "H40.1222", "H40.1232", "H40.1292"],
+    low_tension_glaucoma_severe: ["H40.1213", "H40.1223", "H40.1233", "H40.1293"],
+    low_tension_glaucoma_indeterminate: ["H40.1214", "H40.1224", "H40.1234", "H40.1294"],
+    dry_amd_early: ["H35.3111", "H35.3121", "H35.3131", "H35.3191"],
+    dry_amd_intermediate: ["H35.3112", "H35.3122", "H35.3132", "H35.3192"],
+    dry_amd_advanced_atrophic_without_subfoveal: ["H35.3113", "H35.3123", "H35.3133", "H35.3193"],
+    dry_amd_advanced_atrophic_with_subfoveal: ["H35.3114", "H35.3124", "H35.3134", "H35.3194"],
+    wet_amd_active_cnv: ["H35.3211", "H35.3221", "H35.3231", "H35.3291"],
+    wet_amd_inactive_cnv: ["H35.3212", "H35.3222", "H35.3232", "H35.3292"],
+    wet_amd_inactive_scar: ["H35.3213", "H35.3223", "H35.3233", "H35.3293"],
+    pathological_myopia: ["H44.21", "H44.22", "H44.23", "H44.20"],
+    pathological_myopia_cnv: ["H44.2A1", "H44.2A2", "H44.2A3", "H44.2A9"],
+    pathological_myopia_macular_hole: ["H44.2B1", "H44.2B2", "H44.2B3", "H44.2B9"],
+    pathological_myopia_retinal_detachment: ["H44.2C1", "H44.2C2", "H44.2C3", "H44.2C9"],
+    pathological_myopia_foveoschisis: ["H44.2D1", "H44.2D2", "H44.2D3", "H44.2D9"],
+    pathological_myopia_other_maculopathy: ["H44.2E1", "H44.2E2", "H44.2E3", "H44.2E9"],
+    t2_dr_dme_resolved: ["E11.37X1", "E11.37X2", "E11.37X3", "E11.37X9"],
+    chronic_follicular_conjunctivitis: ["H10.431", "H10.432", "H10.433", "H10.439"],
+  } as const;
+
+  for (const [stableKey, [right, left, bilateral, unspecifiedEye]] of Object.entries(expected)) {
+    const seed = seeds.find((row) => row.stableKey === stableKey);
+    assert.ok(seed, `Missing Wave B diagnosis catalog seed ${stableKey}`);
+    assert.deepEqual(
+      seed.icd10,
+      { pattern: { unspecifiedEye, right, left, bilateral } },
+      `Wave B code pattern mismatch for ${stableKey}`,
+    );
+    assert.equal(seed.lateralityRequired, true);
+    assert.deepEqual(seed.provenance.ledgerRefs, [
+      "cdcIcd10Cm2026CodeDescriptions",
+      "nlmClinicalTablesIcd10Cm",
+    ]);
+  }
+});
+
+test("Wave B catalog excludes stage-unspecified glaucoma and AMD codes", () => {
+  const catalogCodes = new Set(buildDiagnosisCatalogSeeds().flatMap((row) =>
+    "code" in row.icd10
+      ? [row.icd10.code]
+      : Object.values(row.icd10.pattern).filter((code): code is string => code !== undefined)
+  ));
+
+  for (const code of [
+    "H40.1110", "H40.1120", "H40.1130", "H40.1190",
+    "H40.1210", "H40.1220", "H40.1230", "H40.1290",
+    "H35.3110", "H35.3120", "H35.3130", "H35.3190",
+    "H35.3210", "H35.3220", "H35.3230", "H35.3290",
+  ]) {
+    assert.equal(catalogCodes.has(code), false, `Stage-unspecified ICD-10 code ${code} must not be seeded`);
+  }
 });
 
 test("eyelid families expose only verified both-lids per-eye slots and declare bilateral expansion", () => {
@@ -610,7 +694,7 @@ test("lens Phase 0 ledger and catalog seeds preserve verified codes and laterali
     lens_dislocation_posterior: { pattern: { unspecifiedEye: "H27.139", right: "H27.131", left: "H27.132", bilateral: "H27.133" } },
   };
 
-  assert.equal(allSeeds.length, 91);
+  assert.equal(allSeeds.length, 114);
   assert.equal(seeds.length, 12);
   for (const [stableKey, icd10] of Object.entries(expected)) {
     const seed = seeds.find((row) => row.stableKey === stableKey);
