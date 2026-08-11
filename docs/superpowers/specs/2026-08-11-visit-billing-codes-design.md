@@ -1,8 +1,8 @@
 # Visit Billing Codes Design
 
-**Date:** 2026-08-11  
-**Status:** Approved  
-**Branch:** `drbang-iva/visit-billing-codes`  
+**Date:** 2026-08-11
+**Status:** Approved
+**Branch:** `drbang-iva/visit-billing-codes`
 **Base:** `main` at `21c9a65b`
 
 ## Goal
