@@ -6,6 +6,7 @@ import type {
   Resource,
 } from "@medplum/fhirtypes";
 import { searchAll } from "../fhir-search.js";
+import { chargeItemBodysite } from "../fhir/charge-item-laterality.js";
 import type { ChargeProposal, ProtocolApplication } from "./protocol-types.js";
 
 const BASE = "https://odos2020.com/fhir";
@@ -415,6 +416,9 @@ function buildChargeItem(input: {
     enterer: { reference: input.actorReference },
     enteredDate: input.enteredDate,
     supportingInformation: [...new Set(input.proposal.dxPointers)].map((reference) => ({ reference })),
+    ...(input.proposal.laterality
+      ? { bodysite: chargeItemBodysite(input.proposal.laterality) }
+      : {}),
     ...(input.unpriced ? {
       extension: [{ url: ODOS_UNPRICED_CHARGE_EXTENSION_URL, valueBoolean: true }],
     } : {}),

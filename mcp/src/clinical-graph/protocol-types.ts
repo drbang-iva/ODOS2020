@@ -1,4 +1,5 @@
 import type { CodeableConcept } from "@medplum/fhirtypes";
+import type { ChargeLaterality } from "../fhir/charge-item-laterality.js";
 
 export type LateralityMode = "inherit-dx" | "OU-always" | { fixed: "OD" | "OS" | "OU" };
 export type DiagnosisVisitStatus =
@@ -134,7 +135,7 @@ export interface ChargeProposal {
   planActionRef: string;
   procedureConceptKey: string;
   units: number;
-  laterality: "OD" | "OS" | "OU";
+  laterality?: ChargeLaterality;
   dxPointers: string[];
   evidenceRefs: string[];
   coverageEvaluations: Array<{
