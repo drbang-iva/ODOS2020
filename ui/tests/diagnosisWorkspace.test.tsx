@@ -276,6 +276,7 @@ test("selected pending family renders warning badges and re-stages from the head
       value: "e1::primary-open-angle-glaucoma::right",
     }],
   };
+  let currentCondition = pending;
   let patchOperations: Array<{ path: string; value?: unknown }> | undefined;
   globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input);
@@ -284,9 +285,15 @@ test("selected pending family renders warning badges and re-stages from the head
     }
     if (url.endsWith("/fhir/R4/Condition/pending") && init?.method === "PATCH") {
       patchOperations = JSON.parse(String(init.body));
-      return jsonResponse({ ...pending, meta: { versionId: "5" } });
+      currentCondition = {
+        ...pending,
+        meta: { versionId: "5" },
+        code: patchOperations?.find((operation) => operation.path === "/code")?.value as Condition["code"],
+        identifier: patchOperations?.find((operation) => operation.path === "/identifier")?.value as Condition["identifier"],
+      };
+      return jsonResponse(currentCondition);
     }
-    if (url.endsWith("/fhir/R4/Condition/pending")) return jsonResponse(pending);
+    if (url.endsWith("/fhir/R4/Condition/pending")) return jsonResponse(currentCondition);
     if (url.includes("/fhir/R4/Condition?")) {
       return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [{ resource: stagedCondition("prior", "poag_moderate", "2026-03-14T12:00:00.000Z") }] });
     }
@@ -316,6 +323,8 @@ test("selected pending family renders warning badges and re-stages from the head
     });
     assert.deepEqual(patchOperations?.map((operation) => operation.path), ["/code", "/identifier"]);
     assert.equal((patchOperations?.[1]?.value as Array<{ value?: string }>)[0]?.value, "e1::poag_mild::right");
+    assert.equal(renderer.root.findAllByProps({ role: "status" }).length, 0);
+    assert.deepEqual(renderer.root.findByProps({ ariaLabel: "Stage for Primary open-angle glaucoma" }).props.selected, ["poag_mild"]);
   } finally {
     act(() => renderer?.unmount());
     globalThis.fetch = originalFetch;

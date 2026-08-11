@@ -125,7 +125,7 @@ export async function handleDiagnosisPickRequest(
   const legacyIdentifierValue = `${diagnosis.stableKey}::${lateralityBucket}`;
   const compositeIdentifierValue = `${encounterId}::${legacyIdentifierValue}`;
   const stagedFamily = stagedFamilyForMember(diagnosis.stableKey);
-  const pendingFamilyIdentifierValues = stagedFamily
+  const pendingFamilyIdentifierValues = stagedFamily && parsed.data.action === "confirm"
     ? [`${encounterId}::${stagedFamily}::${lateralityBucket}`, `${stagedFamily}::${lateralityBucket}`]
     : [];
   const existing = await findEncounterDiagnosis(
