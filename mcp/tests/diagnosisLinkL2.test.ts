@@ -101,6 +101,36 @@ test("Stage later persists a staged family Condition with no ICD-10-CM coding", 
   assert.equal(condition.code?.coding?.some((coding) => coding.system === "http://hl7.org/fhir/sid/icd-10-cm") ?? false, false);
 });
 
+test("a member pick completes the same-eye pending family Condition instead of creating a duplicate", async () => {
+  const fhir = diagnosisPickFhir();
+  const authenticate = async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician" as const, fhir });
+  const deferred = await handleDiagnosisPickRequest({ authenticate }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+    body: {
+      diagnosisKey: "primary-open-angle-glaucoma",
+      action: "confirm",
+      laterality: "OD",
+      source: "catalog-search",
+      stageDeferred: true,
+    },
+  });
+  const completed = await handleDiagnosisPickRequest({ authenticate }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+    body: { diagnosisKey: "poag_mild", action: "confirm", laterality: "OD", source: "catalog-search" },
+  });
+
+  assert.equal(deferred.status, 201, JSON.stringify(deferred.body));
+  assert.equal(completed.status, 200, JSON.stringify(completed.body));
+  const deferredCondition = (deferred.body as { condition: Condition }).condition;
+  const completedCondition = (completed.body as { condition: Condition }).condition;
+  assert.equal(completedCondition.id, deferredCondition.id);
+  assert.equal(completedCondition.code?.coding?.[0]?.code, sourcedDiagnosisCode("poag_mild", "right"));
+  assert.deepEqual(completedCondition.identifier?.map((identifier) => identifier.value), ["e1::poag_mild::right"]);
+  assert.equal(fhir.resources.filter((resource) => resource.resourceType === "Condition").length, 1);
+});
+
 test("all three eyelid families write both-lids OD and OS codes and resolve OU without the false 422", async () => {
   const cases = [
     ["ulcerative_blepharitis", "H01.01A", "H01.01B"],

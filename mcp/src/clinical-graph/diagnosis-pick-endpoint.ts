@@ -124,11 +124,16 @@ export async function handleDiagnosisPickRequest(
     : diagnosisLateralityBucket(diagnosis, laterality, visualFieldDescriptor);
   const legacyIdentifierValue = `${diagnosis.stableKey}::${lateralityBucket}`;
   const compositeIdentifierValue = `${encounterId}::${legacyIdentifierValue}`;
+  const stagedFamily = stagedFamilyForMember(diagnosis.stableKey);
+  const pendingFamilyIdentifierValues = stagedFamily
+    ? [`${encounterId}::${stagedFamily}::${lateralityBucket}`, `${stagedFamily}::${lateralityBucket}`]
+    : [];
   const existing = await findEncounterDiagnosis(
     staff.fhir,
     encounterReference,
     compositeIdentifierValue,
     legacyIdentifierValue,
+    pendingFamilyIdentifierValues,
   );
   if (parsed.data.action === "discard" && !existing) {
     return { status: 404, body: { error: `No existing Condition for ${diagnosis.stableKey} can be discarded.` } };
@@ -158,7 +163,16 @@ export async function handleDiagnosisPickRequest(
   let condition: Condition;
   if (existing) {
     try {
-      condition = await updateCondition(staff.fhir, existing, diagnosis, compositeIdentifierValue, codes, verificationStatus, evidenceReference);
+      condition = await updateCondition(
+        staff.fhir,
+        existing,
+        diagnosis,
+        compositeIdentifierValue,
+        pendingFamilyIdentifierValues,
+        codes,
+        verificationStatus,
+        evidenceReference,
+      );
     } catch (error) {
       if (isConflict(error)) {
         return { status: 409, body: { error: "This diagnosis was modified concurrently — reload and retry." } };
@@ -270,6 +284,12 @@ function pendingStageDiagnosis(
   };
 }
 
+function stagedFamilyForMember(stableKey: string): string | undefined {
+  return Object.entries(FAMILY_RESOLUTION_MODES).find(([, mode]) =>
+    mode.mode === "staged" && mode.members.some((member) => member.stableKey === stableKey)
+  )?.[0];
+}
+
 async function ensureEncounterDiagnosisLinked(
   fhir: DiagnosisPickFhirClient,
   encounterId: string,
@@ -310,11 +330,19 @@ async function findEncounterDiagnosis(
   encounterReference: string,
   compositeIdentifierValue: string,
   legacyIdentifierValue: string,
+  pendingFamilyIdentifierValues: readonly string[],
 ): Promise<Condition | undefined> {
   const bundle = await fhir.search<Condition>("Condition", { encounter: encounterReference, _count: "200" });
-  return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []).find((condition) =>
+  const conditions = (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
+  const exact = conditions.find((condition) =>
     condition.identifier?.some((identifier) => identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM &&
       (identifier.value === compositeIdentifierValue || identifier.value === legacyIdentifierValue))
+  );
+  if (exact) return exact;
+  return conditions.find((condition) =>
+    !condition.code?.coding?.some((coding) => coding.system === ICD10_CM_CODE_SYSTEM && coding.code) &&
+    condition.identifier?.some((identifier) => identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM &&
+      identifier.value !== undefined && pendingFamilyIdentifierValues.includes(identifier.value))
   );
 }
 
@@ -323,6 +351,7 @@ async function updateCondition(
   existing: Condition,
   diagnosis: DiagnosisCatalogRow,
   compositeIdentifierValue: string,
+  replacedIdentifierValues: readonly string[],
   codes: readonly string[],
   verificationStatus: ConditionVerificationStatusCode,
   evidenceReference: string | undefined,
@@ -332,13 +361,21 @@ async function updateCondition(
   if (evidenceReference && !evidence.flatMap((row) => row.detail ?? []).some((row) => row.reference === evidenceReference)) {
     evidence.push({ detail: [{ reference: evidenceReference }] });
   }
-  const identifiers = [...(existing.identifier ?? [])];
+  const identifiers = (existing.identifier ?? []).map((identifier) =>
+    identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM &&
+      identifier.value !== undefined && replacedIdentifierValues.includes(identifier.value)
+      ? { ...identifier, value: compositeIdentifierValue }
+      : identifier
+  );
   if (!identifiers.some((identifier) => identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM && identifier.value === compositeIdentifierValue)) {
     identifiers.push({ system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM, value: compositeIdentifierValue });
   }
+  const uniqueIdentifiers = identifiers.filter((identifier, index) => identifiers.findIndex((candidate) =>
+    candidate.system === identifier.system && candidate.value === identifier.value
+  ) === index);
   const next: Condition = {
     ...existing,
-    identifier: identifiers,
+    identifier: uniqueIdentifiers,
     verificationStatus: verificationStatusConcept(verificationStatus),
     ...(verificationStatus === "refuted" ? {} : {
       code: conditionCodeForResolution(diagnosis, codes),
