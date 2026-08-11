@@ -97,6 +97,42 @@ test("buildClaimDraft reads ranked confirmed diagnoses and real per-charge point
   ]);
 });
 
+test("claim draft expands one bilateral eyelid Condition into two sequenced diagnoses and binds its charge to both", async () => {
+  const bilateralEncounter: Encounter = {
+    ...encounter,
+    diagnosis: [{ condition: { reference: "Condition/dx-mgd-ou" }, rank: 1 }],
+  };
+  const bilateralCondition: Condition = {
+    ...diagnosis("dx-mgd-ou", "meibomian_gland_dysfunction", "OU"),
+    identifier: [{
+      system: "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key",
+      value: "enc-1::meibomian_gland_dysfunction::bilateral",
+    }],
+    code: {
+      coding: [{
+        system: "https://odos2020.com/fhir/CodeSystem/diagnosis-catalog",
+        code: "meibomian_gland_dysfunction",
+        display: "Meibomian gland dysfunction",
+      }],
+      text: "Meibomian gland dysfunction",
+    },
+  };
+  const bilateralCharge: ChargeItem = {
+    ...charges[1]!,
+    id: "charge-mgd-ou",
+    supportingInformation: [{ reference: "Condition/dx-mgd-ou" }],
+  };
+
+  const draft = await buildClaimDraft(
+    client([], bilateralEncounter, coverages, [bilateralCharge], [bilateralCondition]),
+    "enc-1",
+  );
+
+  assert.deepEqual(draft.diagnoses.map(({ code }) => code), ["H02.88A", "H02.88B"]);
+  assert.deepEqual(draft.charges[0]?.diagnosisSequence, [1, 2]);
+  assert.equal(draft.charges[0]?.laterality, "OU");
+});
+
 test("claim assembly never promotes an order-two Coverage while another Coverage record remains", async () => {
   const inactivePrimary = { ...coverage("inactive-primary", 1), status: "cancelled" as const };
   const activeSecondary = coverage("active-secondary", 2);
@@ -266,10 +302,11 @@ function client(
   encounterResource = encounter,
   coverageResources = coverages,
   chargeResources = charges,
+  conditionResources = conditions,
 ) {
   const resources = new Map<string, Resource>([
     ["Encounter/enc-1", encounterResource],
-    ...conditions.map((condition) => [`Condition/${condition.id}`, condition] as const),
+    ...conditionResources.map((condition) => [`Condition/${condition.id}`, condition] as const),
   ]);
   return {
     read: async <T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> => {

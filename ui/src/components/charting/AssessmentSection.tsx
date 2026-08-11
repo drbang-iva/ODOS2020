@@ -50,6 +50,12 @@ import {
 import { ProtocolStagingList } from "./ProtocolStagingList";
 import { OdosSearchPicker } from "../inputs/OdosSearchPicker";
 import { OdosSelect } from "../inputs/OdosSelect";
+import {
+  conditionCatalogStableKey,
+  conditionRequiresDeclaredBilateralResolution,
+  conditionResolvedCodeLabel,
+  ICD10_CM_CODE_SYSTEM,
+} from "../../lib/diagnosis-code-resolution";
 
 const VERIFICATION_STATUS_SYSTEM = "http://terminology.hl7.org/CodeSystem/condition-ver-status";
 
@@ -75,7 +81,9 @@ interface DiagnosisCatalogCodeRow {
   stableKey: string;
   active: boolean;
   codingStatus: "verified" | "placeholder" | "provisional";
-  icd10?: { code?: string; pattern?: Record<string, string> };
+  lateralityRequired?: boolean;
+  bilateralResolution?: "emit-both-eyes";
+  icd10?: { code: string; display?: string } | { pattern: { unspecifiedEye?: string; right?: string; left?: string; bilateral?: string } };
 }
 let cachedDiagnosisCatalog: DiagnosisCatalogCodeRow[] | undefined;
 interface ProtocolOffer {
@@ -119,6 +127,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
   const [selectedProtocolId, setSelectedProtocolId] = useState<string>();
   const [protocolSheetOpen, setProtocolSheetOpen] = useState(false);
   const [protocolSelections, setProtocolSelections] = useState<Record<string, boolean>>({});
+  const [diagnosisCatalog, setDiagnosisCatalog] = useState<DiagnosisCatalogCodeRow[]>([]);
   const [captureOpen, setCaptureOpen] = useState(false);
   const [captureName, setCaptureName] = useState("");
   const protocolTriggerRef = useRef<HTMLButtonElement>(null);
@@ -162,6 +171,12 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
   useEffect(() => {
     void load().catch((err) => setError(err instanceof Error ? err.message : String(err)));
   }, [encounterId, encounterReference]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void loadDiagnosisCatalog(controller.signal).then(setDiagnosisCatalog).catch(() => undefined);
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => {
     const refresh = (event: Event) => {
@@ -216,7 +231,14 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
 
   async function saveLaterality(condition: Condition, laterality: EyeChoice) {
     await runEdit("laterality", async () => {
-      await updateConditionBodySite({ condition, patientReference, laterality });
+      const stableKey = conditionCatalogStableKey(condition);
+      const requiresResolution = conditionRequiresDeclaredBilateralResolution(condition);
+      const diagnosis = requiresResolution
+        ? (diagnosisCatalog.find((row) => row.stableKey === stableKey) ??
+          (await loadDiagnosisCatalog(new AbortController().signal)).find((row) => row.stableKey === stableKey))
+        : undefined;
+      if (requiresResolution && !diagnosis) throw new Error("The eyelid diagnosis catalog row could not be loaded.");
+      await updateConditionBodySite({ condition, patientReference, laterality, ...(diagnosis ? { diagnosis } : {}) });
     });
   }
 
@@ -655,6 +677,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
                 <DiagnosisCard
                   key={condition.id}
                   condition={condition}
+                  codeLabel={conditionResolvedCodeLabel(condition, diagnosisCatalog)}
                   rank={rank}
                   editing={editingId === condition.id}
                   canShowEditing={canShowEditing}
@@ -722,6 +745,7 @@ export function diagnosisRankMoveNeighbors(
 
 function DiagnosisCard({
   condition,
+  codeLabel,
   rank,
   editing,
   canShowEditing,
@@ -748,6 +772,7 @@ function DiagnosisCard({
   onDiscard,
 }: {
   condition: Condition;
+  codeLabel: string;
   rank: number | undefined;
   editing: boolean;
   canShowEditing: boolean;
@@ -774,7 +799,7 @@ function DiagnosisCard({
   onDiscard: () => void;
 }) {
   const [laterality, setLaterality] = useState<EyeChoice>("OU");
-  const [code, setCode] = useState(condition.code?.coding?.[0]?.code ?? "");
+  const [code, setCode] = useState(condition.code?.coding?.find((coding) => coding.system === ICD10_CM_CODE_SYSTEM)?.code ?? "");
   const [display, setDisplay] = useState(displayCode(condition.code));
   const [status, setStatus] = useState<"active" | "recurrence" | "resolved">(
     normalizeClinicalStatus(clinicalStatus(condition)),
@@ -791,7 +816,7 @@ function DiagnosisCard({
           <div>
             <div className="text-base font-semibold text-[color:var(--odos-text)]">{displayCode(condition.code)}</div>
             <div className="mt-1 text-xs text-[color:var(--odos-muted)]">
-              {possible ? "Possible" : rank === 1 ? "Principal" : `Secondary rank ${rank ?? "unranked"}`} · {clinicalStatus(condition)}
+              {possible ? "Possible" : rank === 1 ? "Principal" : `Secondary rank ${rank ?? "unranked"}`} · {clinicalStatus(condition)} · {codeLabel}
             </div>
             {provenanceLine && <div className="mt-1 text-xs text-[color:var(--odos-accent)]">← from {provenanceLine}</div>}
           </div>
@@ -963,7 +988,7 @@ async function searchDiagnosisCodeOptions(query: string, signal: AbortSignal) {
   const diagnoses = await loadDiagnosisCatalog(signal);
   const normalized = query.trim().toLocaleLowerCase();
   return diagnoses.flatMap((row) => {
-    const code = row.icd10?.code ?? row.icd10?.pattern?.unspecifiedEye;
+    const code = row.icd10 && ("code" in row.icd10 ? row.icd10.code : row.icd10.pattern.unspecifiedEye);
     if (
       !row.active
       || row.codingStatus !== "verified"

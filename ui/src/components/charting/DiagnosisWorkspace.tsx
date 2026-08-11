@@ -35,11 +35,17 @@ import {
 } from "../../lib/diagnosis-findings";
 import { formatDiagnosisHistoryDate } from "../../lib/diagnosis-carry-forward";
 import { PreviousExams } from "./PreviousExams";
+import {
+  conditionCatalogStableKey,
+  conditionRequiresDeclaredBilateralResolution,
+  conditionResolvedCodeLabel,
+} from "../../lib/diagnosis-code-resolution";
 
 export interface DiagnosisQuickListRow {
   stableKey: string;
   display: string;
   lateralityRequired: boolean;
+  bilateralResolution?: "emit-both-eyes";
   icd10?: { code: string; display?: string } | {
     pattern: { unspecifiedEye?: string; right?: string; left?: string; bilateral?: string };
   };
@@ -203,7 +209,7 @@ export function DiagnosisWorkspace({
       });
       let condition = result.condition;
       if (laterality) {
-        condition = await updateConditionBodySite({ condition, patientReference, laterality });
+        condition = await updateConditionBodySite({ condition, patientReference, laterality, diagnosis: row });
       }
       onSelectDiagnosis(`Condition/${condition.id}`);
       setPendingDiagnosis(undefined);
@@ -264,7 +270,7 @@ export function DiagnosisWorkspace({
                 onClick={() => onSelectDiagnosis(reference)}
               >
                 <span>{displayCode(condition.code)}</span>
-                <small>{condition.bodySite?.[0]?.text ?? "Scope not set"}{rank ? ` · ${rank}` : ""}</small>
+                <small>{condition.bodySite?.[0]?.text ?? "Scope not set"}{rank ? ` · ${rank}` : ""} · {conditionResolvedCodeLabel(condition, catalog)}</small>
               </button>
             );
           })}
@@ -376,7 +382,7 @@ export function DiagnosisWorkspace({
               <div>
                 <div className="odos-diagnosis-eyebrow">Selected diagnosis</div>
                 <h2>{displayCode(selectedCondition.code)}</h2>
-                <p>{selectedCondition.code?.coding?.[0]?.code ?? "Uncoded"}</p>
+                <p>{conditionResolvedCodeLabel(selectedCondition, catalog)}</p>
                 {findings?.carryProvenance && (
                   <div className={`odos-diagnosis-carry-state ${carryEditedForDisplay ? "is-edited" : "is-unedited"}`}>
                     {findings.carryProvenance.pulledFromDate && (
@@ -405,7 +411,11 @@ export function DiagnosisWorkspace({
                     aria-pressed={selectedCondition.bodySite?.[0]?.text === eye}
                     disabled={!canWrite || busy !== undefined}
                     onClick={() => void run("laterality", async () => {
-                      await updateConditionBodySite({ condition: selectedCondition, patientReference, laterality: eye });
+                      const diagnosis = catalog.find((row) => row.stableKey === conditionCatalogStableKey(selectedCondition));
+                      if (conditionRequiresDeclaredBilateralResolution(selectedCondition) && !diagnosis) {
+                        throw new Error("The eyelid diagnosis catalog row is unavailable; laterality was not changed.");
+                      }
+                      await updateConditionBodySite({ condition: selectedCondition, patientReference, laterality: eye, ...(diagnosis ? { diagnosis } : {}) });
                     })}
                   >{eye}</button>
                 ))}

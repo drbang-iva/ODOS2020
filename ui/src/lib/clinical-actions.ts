@@ -40,6 +40,10 @@ import {
   type SmokingStatusCode,
 } from "./fhir-clinical/smokingStatus";
 import { assertTransactionSuccess } from "./encounter-bundles";
+import {
+  conditionCodeForDiagnosisResolution,
+  type DiagnosisCodeResolutionRow,
+} from "./diagnosis-code-resolution";
 
 const V3_DATA_OPERATION_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-DataOperation";
 const PROVENANCE_PARTICIPANT_TYPE_SYSTEM =
@@ -302,6 +306,7 @@ export async function updateConditionBodySite(input: {
   condition: Condition;
   patientReference: string;
   laterality: EyeChoice;
+  diagnosis?: DiagnosisCodeResolutionRow;
 }): Promise<Condition> {
   const bodyStructure = await ensureEyeBodyStructure(input.patientReference, input.laterality);
   const identifiers = input.condition.identifier?.map((identifier) =>
@@ -312,6 +317,12 @@ export async function updateConditionBodySite(input: {
   const identifierChanged = identifiers?.some((identifier, index) =>
     identifier.value !== input.condition.identifier?.[index]?.value
   );
+  const resolvedCode = input.diagnosis
+    ? conditionCodeForDiagnosisResolution(input.diagnosis, input.laterality)
+    : undefined;
+  if (input.diagnosis && !resolvedCode) {
+    throw new Error(`${input.diagnosis.display} has no verified ICD-10-CM resolution for ${input.laterality}.`);
+  }
   const updated = await fhir.patch<Condition>(
     "Condition",
     requiredId(input.condition),
@@ -325,6 +336,11 @@ export async function updateConditionBodySite(input: {
         op: "replace" as const,
         path: "/identifier",
         value: identifiers,
+      }] : []),
+      ...(resolvedCode ? [{
+        op: input.condition.code ? "replace" as const : "add" as const,
+        path: "/code",
+        value: resolvedCode,
       }] : []),
     ],
     "update_condition_body_site",

@@ -171,11 +171,6 @@ test("diagnosis catalog seeds are ledger-backed durable families and survive a s
     bilateral: "H52.13",
   });
   const ulcerative = seeds.find((row) => row.stableKey === "ulcerative_blepharitis");
-  assert.deepEqual((ulcerative?.icd10 as { pattern: object }).pattern, {
-    unspecifiedEye: "H01.019",
-    right: "H01.013",
-    left: "H01.016",
-  });
   assert.equal(ulcerative?.codingStatus, "verified");
   assert.deepEqual(ulcerative?.provenance.ledgerRefs, [
     "cdcIcd10Cm2026CodeDescriptions",
@@ -218,6 +213,71 @@ test("diagnosis catalog seeds are ledger-backed durable families and survive a s
   const restarted = new FhirDiagnosisCatalogStore(fhir);
   assert.equal((await restarted.list()).find((row) => row.stableKey === "custom:kcs")?.codingStatus, "provisional");
   assert.deepEqual(fhir.writes[0]?.headers, DIAGNOSIS_CATALOG_WRITE_HEADERS);
+});
+
+test("eyelid families expose only verified both-lids per-eye slots and declare bilateral expansion", () => {
+  const seeds = buildDiagnosisCatalogSeeds();
+  const expected = {
+    ulcerative_blepharitis: ["H01.01A", "H01.01B"],
+    squamous_blepharitis: ["H01.02A", "H01.02B"],
+    meibomian_gland_dysfunction: ["H02.88A", "H02.88B"],
+  } as const;
+
+  for (const [stableKey, [right, left]] of Object.entries(expected)) {
+    const row = seeds.find((candidate) => candidate.stableKey === stableKey);
+    assert.ok(row?.icd10 && "pattern" in row.icd10, `Missing ICD-10 pattern for ${stableKey}`);
+    assert.deepEqual(row.icd10.pattern, { right, left });
+    assert.equal(row.bilateralResolution, "emit-both-eyes");
+    assert.notEqual(row.icd10Code, "H01.019");
+    assert.notEqual(row.icd10Code, "H01.029");
+    assert.notEqual(row.icd10Code, "H02.889");
+  }
+
+  const ledger = JSON.parse(readFileSync(
+    new URL("../../data/code-bindings/ocular-health-phase0-ledger.json", import.meta.url),
+    "utf8",
+  )) as { diagnosisCodes: Array<{ code: string; sourceRefs: string[] }> };
+  for (const code of Object.values(expected).flat()) {
+    const entry = ledger.diagnosisCodes.find((candidate) => candidate.code === code);
+    assert.deepEqual(entry?.sourceRefs, [
+      "cdcIcd10Cm2026CodeDescriptions",
+      "nlmClinicalTablesIcd10Cm",
+    ]);
+  }
+  for (const legacyCode of ["H01.013", "H01.016", "H01.019", "H01.023", "H01.026", "H01.029", "H02.883", "H02.886", "H02.889"]) {
+    assert.ok(ledger.diagnosisCodes.some((candidate) => candidate.code === legacyCode), `${legacyCode} must remain ledger-readable`);
+  }
+});
+
+test("persisted eyelid definitions cannot override the verified seed code projection", async () => {
+  const fhir = new MemoryFhir();
+  const current = buildDiagnosisCatalogSeeds().find((row) => row.stableKey === "meibomian_gland_dysfunction")!;
+  await new FhirDiagnosisCatalogStore(fhir).save({
+    ...current,
+    display: "Practice MGD label",
+    icd10: {
+      pattern: {
+        unspecifiedEye: "H02.889",
+        right: "H02.883",
+        left: "H02.886",
+      },
+    },
+    icd10Code: "H02.889",
+    icd10Display: "Meibomian gland dysfunction of unspecified eye, unspecified eyelid",
+    bilateralResolution: undefined,
+    provenance: { ...current.provenance, note: "Practice-authored note remains intact." },
+  });
+
+  const resolved = (await new FhirDiagnosisCatalogStore(fhir).list()).find((row) =>
+    row.stableKey === "meibomian_gland_dysfunction"
+  );
+
+  assert.equal(resolved?.display, "Practice MGD label");
+  assert.deepEqual(resolved?.icd10, { pattern: { right: "H02.88A", left: "H02.88B" } });
+  assert.equal(resolved?.icd10Code, "H02.88A");
+  assert.equal(resolved?.bilateralResolution, "emit-both-eyes");
+  assert.equal(resolved?.provenance.note, "Practice-authored note remains intact.");
+  assert.deepEqual(resolved?.provenance.ledgerRefs, current.provenance.ledgerRefs);
 });
 
 test("glaucoma laterality-only families seed all verified ledger codes", () => {

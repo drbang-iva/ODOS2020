@@ -17,6 +17,10 @@ import type {
   Resource,
 } from "@medplum/fhirtypes";
 import type { MedplumClient } from "../fhir-client.js";
+import { buildDiagnosisCatalogSeeds } from "../clinical-graph/diagnosis-catalog-seeds.js";
+import { resolveConditionCodes } from "../clinical-graph/diagnosis-code-resolution.js";
+import { ICD10_CM_CODE_SYSTEM } from "../clinical-graph/glaucoma-suspect.js";
+import { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } from "../clinical-graph/diagnosis-pick-endpoint.js";
 import {
   conditionEncounterId,
   FHIR_CONDITION_CATEGORY_CODE_SYSTEM,
@@ -472,12 +476,15 @@ function projectOverview(input: {
     const encounterId = conditionEncounterId(condition);
     if (!encounterId || !condition.id) continue;
     const coding = condition.code?.coding?.find((candidate) => candidate.code);
+    const resolvedCode = resolvedDiagnosisCode(condition);
     const row: PatientOverviewDiagnosis = {
       conditionId: condition.id,
       encounterId,
       name: conceptText(condition.code) || "Diagnosis recorded",
-      ...(coding?.code ? { code: coding.code } : {}),
-      ...(coding?.system ? { system: coding.system } : {}),
+      ...(resolvedCode ? { code: resolvedCode, system: ICD10_CM_CODE_SYSTEM } : {
+        ...(coding?.code ? { code: coding.code } : {}),
+        ...(coding?.system ? { system: coding.system } : {}),
+      }),
       ...(condition.bodySite?.[0]?.text ? { laterality: condition.bodySite[0].text } : {}),
     };
     byEncounter.set(encounterId, [...(byEncounter.get(encounterId) ?? []), row]);
@@ -538,6 +545,32 @@ function projectOverview(input: {
       (row) => `${row.system}|${row.code}`,
     ),
   };
+}
+
+function resolvedDiagnosisCode(condition: Condition): string | undefined {
+  const usesCatalogConcept = condition.code?.coding?.some((coding) =>
+    coding.system === "https://odos2020.com/fhir/CodeSystem/diagnosis-catalog"
+  );
+  if (!usesCatalogConcept) return undefined;
+  const identifierValue = condition.identifier?.find((identifier) =>
+    identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM
+  )?.value;
+  const parts = identifierValue?.split("::") ?? [];
+  const stableKey = parts.length >= 2 ? parts.at(-2) : undefined;
+  const row = stableKey
+    ? buildDiagnosisCatalogSeeds().find((candidate) => candidate.stableKey === stableKey)
+    : undefined;
+  if (row?.bilateralResolution !== "emit-both-eyes") return undefined;
+  const scope = condition.bodySite?.[0]?.text ?? parts.at(-1);
+  const laterality = scope === "OD" || scope === "right"
+    ? "right"
+    : scope === "OS" || scope === "left"
+      ? "left"
+      : scope === "OU" || scope === "bilateral"
+        ? "bilateral"
+        : undefined;
+  const codes = resolveConditionCodes(row, laterality);
+  return codes.length ? codes.join(" + ") : undefined;
 }
 
 export function deriveBillingWeather(

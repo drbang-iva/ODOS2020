@@ -223,6 +223,7 @@ export type DiagnosisIcd10 =
 
 export interface DiagnosisCatalogRow extends DiagnosisDefinition {
   icd10?: DiagnosisIcd10;
+  bilateralResolution?: "emit-both-eyes";
   snomed?: { code: string; display: string };
   keyFindings?: KeyFindingEntry[];
   origin: "seed" | "practice";

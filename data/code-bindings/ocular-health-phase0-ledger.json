@@ -2,7 +2,7 @@
   "ledger": "ocular-health-phase0",
   "status": "phase0-seeded",
   "mandate": "Mandate 14",
-  "accessDate": "2026-07-12",
+  "accessDate": "2026-08-10",
   "scope": "Ocular Health (anterior+posterior) finding→dx candidate suggestions. Severity/stage dimensions (DR staging, cataract-by-type, AMD staging) deferred to a later slice.",
   "sources": {
     "cdcIcd10Cm2026CodeDescriptions": {
@@ -10,13 +10,13 @@
       "name": "CDC/NCHS ICD-10-CM FY2026 Code Descriptions in Tabular Order",
       "url": "https://stacks.cdc.gov/view/cdc/250974/cdc_250974_DS4.zip",
       "supportingPage": "https://stacks.cdc.gov/view/cdc/250974",
-      "accessDate": "2026-07-12"
+      "accessDate": "2026-08-10"
     },
     "nlmClinicalTablesIcd10Cm": {
       "type": "primary-official-nih",
       "name": "NLM Clinical Tables ICD-10-CM API",
       "url": "https://clinicaltables.nlm.nih.gov/apidoc/icd10cm/v3/doc.html",
-      "accessDate": "2026-07-12"
+      "accessDate": "2026-08-10"
     }
   },
   "diagnosisCodes": [
@@ -47,12 +47,18 @@
     { "code": "H01.013", "display": "Ulcerative blepharitis right eye, unspecified eyelid", "family": "H01.01-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
     { "code": "H01.016", "display": "Ulcerative blepharitis left eye, unspecified eyelid", "family": "H01.01-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
     { "code": "H01.019", "display": "Ulcerative blepharitis unspecified eye, unspecified eyelid", "family": "H01.01-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H01.01A", "display": "Ulcerative blepharitis right eye, upper and lower eyelids", "family": "H01.01-", "laterality": "OD_BOTH_LIDS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H01.01B", "display": "Ulcerative blepharitis left eye, upper and lower eyelids", "family": "H01.01-", "laterality": "OS_BOTH_LIDS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
     { "code": "H01.023", "display": "Squamous blepharitis right eye, unspecified eyelid", "family": "H01.02-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
     { "code": "H01.026", "display": "Squamous blepharitis left eye, unspecified eyelid", "family": "H01.02-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
     { "code": "H01.029", "display": "Squamous blepharitis unspecified eye, unspecified eyelid", "family": "H01.02-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H01.02A", "display": "Squamous blepharitis right eye, upper and lower eyelids", "family": "H01.02-", "laterality": "OD_BOTH_LIDS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H01.02B", "display": "Squamous blepharitis left eye, upper and lower eyelids", "family": "H01.02-", "laterality": "OS_BOTH_LIDS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
     { "code": "H02.883", "display": "Meibomian gland dysfunction of right eye, unspecified eyelid", "family": "H02.88-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
     { "code": "H02.886", "display": "Meibomian gland dysfunction of left eye, unspecified eyelid", "family": "H02.88-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
     { "code": "H02.889", "display": "Meibomian gland dysfunction of unspecified eye, unspecified eyelid", "family": "H02.88-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H02.88A", "display": "Meibomian gland dysfunction right eye, upper and lower eyelids", "family": "H02.88-", "laterality": "OD_BOTH_LIDS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H02.88B", "display": "Meibomian gland dysfunction left eye, upper and lower eyelids", "family": "H02.88-", "laterality": "OS_BOTH_LIDS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
     { "code": "H11.021", "display": "Central pterygium of right eye", "family": "H11.02-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
     { "code": "H11.022", "display": "Central pterygium of left eye", "family": "H11.02-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
     { "code": "H11.023", "display": "Central pterygium of eye, bilateral", "family": "H11.02-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },

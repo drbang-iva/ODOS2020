@@ -301,6 +301,71 @@ test("diagnosis laterality PATCH atomically reconciles the existing catalog iden
   ]);
 });
 
+test("bilateral eyelid laterality PATCH atomically replaces singular ICD coding with the catalog concept", async () => {
+  const originalFetch = globalThis.fetch;
+  let operations: Array<{ op: string; path: string; value?: unknown }> | undefined;
+  const condition: Condition = {
+    ...encounterCondition("secondary-a"),
+    meta: { versionId: "4" },
+    bodySite: [{ text: "OD" }],
+    identifier: [{
+      system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM,
+      value: "encounter-1::meibomian_gland_dysfunction::right",
+    }],
+    code: {
+      coding: [{ system: "http://hl7.org/fhir/sid/icd-10-cm", code: "H02.88A", display: "Meibomian gland dysfunction" }],
+      text: "Meibomian gland dysfunction",
+    },
+  };
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.includes("/BodyStructure?") && (!init?.method || init.method === "GET")) {
+      return jsonResponse({
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [{ resource: { resourceType: "BodyStructure", id: "both-eyes", patient: { reference: "Patient/patient-1" } } }],
+      });
+    }
+    if (url.endsWith("/Condition/secondary-a") && init?.method === "PATCH") {
+      operations = JSON.parse(String(init.body));
+      return jsonResponse({ ...condition, meta: { versionId: "5" } });
+    }
+    if (url.endsWith("/Provenance") && init?.method === "POST") {
+      return jsonResponse({ resourceType: "Provenance", id: "laterality-provenance", target: [], recorded: "2026-08-10T12:00:00Z", agent: [] });
+    }
+    throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${url}`);
+  };
+  try {
+    await updateConditionBodySite({
+      condition,
+      patientReference: "Patient/patient-1",
+      laterality: "OU",
+      diagnosis: {
+        stableKey: "meibomian_gland_dysfunction",
+        display: "Meibomian gland dysfunction",
+        bilateralResolution: "emit-both-eyes",
+        icd10: { pattern: { right: "H02.88A", left: "H02.88B" } },
+      },
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.deepEqual(operations?.map(({ op, path }) => ({ op, path })), [
+    { op: "replace", path: "/bodySite" },
+    { op: "replace", path: "/identifier" },
+    { op: "replace", path: "/code" },
+  ]);
+  assert.deepEqual(operations?.[2]?.value, {
+    coding: [{
+      system: "https://odos2020.com/fhir/CodeSystem/diagnosis-catalog",
+      code: "meibomian_gland_dysfunction",
+      display: "Meibomian gland dysfunction",
+    }],
+    text: "Meibomian gland dysfunction",
+  });
+});
+
 test("diagnosis laterality PATCH atomically reconciles a legacy two-part catalog identifier suffix", async () => {
   const originalFetch = globalThis.fetch;
   let operations: Array<{ op: string; path: string; value?: unknown }> | undefined;
@@ -385,6 +450,18 @@ test("blocked MDM axis renders the missing problem-status reason where a tier wo
   assert.match(markup, /Blocked/);
   assert.match(markup, /problem status unset on 2 diagnoses/);
   assert.doesNotMatch(markup, /Moderate MDM threshold/);
+});
+
+test("one bilateral eyelid diagnosis contributes exactly one MDM problem", () => {
+  const encounter = rankedEncounter([1]);
+  encounter.diagnosis![0]!.condition.reference = "Condition/mgd-ou";
+  encounter.diagnosis![0]!.extension = [mdmStatusExtension("stable-chronic")];
+
+  const mdm = computeMdmHint({ encounter });
+
+  assert.equal(mdm.sourceDiagnosisCount, 1);
+  assert.equal(mdm.counts.stableChronic, 1);
+  assert.equal(mdm.tier, "Low");
 });
 
 test("retracting a classified diagnosis atomically removes its High MDM contribution", async () => {

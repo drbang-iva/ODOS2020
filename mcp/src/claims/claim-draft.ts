@@ -8,6 +8,13 @@ import type {
 } from "@medplum/fhirtypes";
 import { isConfirmedEncounterDiagnosis, referenceId } from "../fhir/condition.js";
 import { searchAll } from "../fhir-search.js";
+import { buildDiagnosisCatalogSeeds } from "../clinical-graph/diagnosis-catalog-seeds.js";
+import { resolveConditionCodes } from "../clinical-graph/diagnosis-code-resolution.js";
+import { ICD10_CM_CODE_SYSTEM, type DiagnosisCatalogRow } from "../clinical-graph/glaucoma-suspect.js";
+import {
+  DIAGNOSIS_CATALOG_CODE_SYSTEM,
+  DIAGNOSIS_KEY_IDENTIFIER_SYSTEM,
+} from "../clinical-graph/diagnosis-pick-endpoint.js";
 
 export interface ClaimDraftFhirClient {
   read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T>;
@@ -61,6 +68,7 @@ export class ClaimDraftAssemblyError extends Error {
 export async function buildClaimDraft(
   fhir: ClaimDraftFhirClient,
   encounterId: string,
+  diagnosisCatalog: readonly DiagnosisCatalogRow[] = buildDiagnosisCatalogSeeds(),
 ): Promise<EncounterClaimDraft> {
   if (!/^[A-Za-z0-9.-]{1,64}$/.test(encounterId)) {
     throw new ClaimDraftAssemblyError("A valid encounter id is required.");
@@ -99,20 +107,16 @@ export async function buildClaimDraft(
   const confirmedConditions = resolvedConditions.filter((condition) =>
     isConfirmedEncounterDiagnosis(condition) && condition.encounter?.reference === encounterReference
   );
-  const diagnoses = confirmedConditions.map((condition): EncounterClaimDraftDiagnosis => {
-    const coding = condition.code?.coding?.find((candidate) => candidate.system && candidate.code);
-    if (!coding?.system || !coding.code) {
-      throw new ClaimDraftAssemblyError(`Condition/${condition.id ?? "unknown"} has no coded diagnosis for claim assembly.`);
-    }
-    return {
-      system: coding.system,
-      code: coding.code,
-      description: coding.display ?? condition.code?.text ?? "",
-    };
-  });
-  const diagnosisIndex = new Map<string, number>(
-    confirmedConditions.flatMap((condition, index) => condition.id ? [[`Condition/${condition.id}`, index + 1] as const] : []),
+  const diagnosisRows = confirmedConditions.flatMap((condition) =>
+    claimDiagnosesForCondition(condition, diagnosisCatalog).map((diagnosis) => ({ condition, diagnosis }))
   );
+  const diagnoses = diagnosisRows.map((row) => row.diagnosis);
+  const diagnosisIndex = new Map<string, number[]>();
+  diagnosisRows.forEach(({ condition }, index) => {
+    if (!condition.id) return;
+    const key = `Condition/${condition.id}`;
+    diagnosisIndex.set(key, [...(diagnosisIndex.get(key) ?? []), index + 1]);
+  });
 
   const [chargeItems, coverages] = await Promise.all([
     searchAll<ChargeItem>(fhir, "ChargeItem", {
@@ -132,8 +136,9 @@ export async function buildClaimDraft(
       throw new ClaimDraftAssemblyError(`ChargeItem/${chargeItem.id} has no procedure coding.`);
     }
     const linkedConditions = (chargeItem.supportingInformation ?? []).flatMap((reference) => {
-      const sequence = diagnosisIndex.get(reference.reference ?? "");
-      return sequence ? [{ sequence, condition: confirmedConditions[sequence - 1]! }] : [];
+      const sequences = diagnosisIndex.get(reference.reference ?? "") ?? [];
+      const condition = confirmedConditions.find((candidate) => candidate.id && `Condition/${candidate.id}` === reference.reference);
+      return condition ? sequences.map((sequence) => ({ sequence, condition })) : [];
     });
     const diagnosisSequence = [...new Set(linkedConditions.map((entry) => entry.sequence))].sort((a, b) => a - b);
     if (diagnosisSequence.length === 0) {
@@ -206,6 +211,61 @@ export async function buildClaimDraft(
     ...(primaryCoverage?.payor[0]?.identifier?.value ? { payerId: primaryCoverage.payor[0].identifier.value } : {}),
     ...(warnings.length ? { warnings } : {}),
   };
+}
+
+function claimDiagnosesForCondition(
+  condition: Condition,
+  diagnosisCatalog: readonly DiagnosisCatalogRow[],
+): EncounterClaimDraftDiagnosis[] {
+  const stableKey = conditionCatalogStableKey(condition);
+  const catalogRow = stableKey ? diagnosisCatalog.find((row) => row.stableKey === stableKey) : undefined;
+  const usesCatalogConcept = condition.code?.coding?.some((coding) =>
+    coding.system === DIAGNOSIS_CATALOG_CODE_SYSTEM && coding.code === stableKey
+  );
+  if (usesCatalogConcept && !catalogRow) {
+    throw new ClaimDraftAssemblyError(`Condition/${condition.id ?? "unknown"} references an unknown diagnosis catalog concept.`);
+  }
+  if (catalogRow && usesCatalogConcept) {
+    const codes = resolveConditionCodes(catalogRow, conditionLaterality(condition));
+    if (codes.length === 0) {
+      throw new ClaimDraftAssemblyError(`Condition/${condition.id ?? "unknown"} has no coded diagnosis for claim assembly.`);
+    }
+    return codes.map((code) => ({
+      system: ICD10_CM_CODE_SYSTEM,
+      code,
+      description: condition.code?.text ?? catalogRow.display,
+    }));
+  }
+  const coding = condition.code?.coding?.find((candidate) => candidate.system && candidate.code);
+  if (!coding?.system || !coding.code) {
+    throw new ClaimDraftAssemblyError(`Condition/${condition.id ?? "unknown"} has no coded diagnosis for claim assembly.`);
+  }
+  return [{
+    system: coding.system,
+    code: coding.code,
+    description: coding.display ?? condition.code?.text ?? "",
+  }];
+}
+
+function conditionCatalogStableKey(condition: Condition): string | undefined {
+  const identifierValue = condition.identifier?.find((identifier) =>
+    identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM
+  )?.value;
+  if (identifierValue) {
+    const parts = identifierValue.split("::");
+    if (parts.length >= 2) return parts.at(-2);
+  }
+  return condition.code?.coding?.find((coding) => coding.system === DIAGNOSIS_CATALOG_CODE_SYSTEM)?.code;
+}
+
+function conditionLaterality(condition: Condition): "right" | "left" | "bilateral" | undefined {
+  const value = condition.bodySite?.[0]?.text ?? condition.identifier?.find((identifier) =>
+    identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM
+  )?.value?.split("::").at(-1);
+  if (value === "OD" || value === "right") return "right";
+  if (value === "OS" || value === "left") return "left";
+  if (value === "OU" || value === "bilateral") return "bilateral";
+  return undefined;
 }
 
 async function readClaimDraftResource<T extends Resource>(
