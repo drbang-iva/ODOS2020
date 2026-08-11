@@ -105,11 +105,11 @@ Refraction and all non-visit procedure concepts are excluded from the options.
 
 ## CPT-literal guard
 
-A test scans shipped files under `mcp/src`, `ui/src`, and `data` for standalone CPT-shaped tokens in strings, comments, and data text. The scanner distinguishes procedure-shaped text from program quantities, dates, ports, pixel values, hyphenated terminology codes, and URL components. Any remaining allowances are exact file-and-token entries for pre-existing non-procedure values; the list must stay small and named.
+A test scans shipped files under `mcp/src`, `ui/src`, and `data` for standalone CPT-shaped tokens in strings, comments, and data text. The scanner distinguishes procedure-shaped text from program quantities, dates, ports, pixel values, hyphenated terminology codes, and URL components. Existing Markdown verification ledgers under `data/code-bindings` remain byte-identical; the scanner may exclude those paths or allowlist an exact file-and-token pair. Any remaining allowances are exact file-and-token entries for pre-existing non-procedure values; the list must stay small and named.
 
 The guard reports the file, line, and rejected token. A mutation proof temporarily inserts a prohibited five-digit string into the shipped visit seed, records the exact failing output, removes the mutation, and records the green output. No prohibited value remains in the branch, tests, documentation, or PR diff.
 
-Pre-existing procedure-code fixtures encountered by the scan are replaced with synthetic non-medical values. The diagnosis and coverage ledgers are not changed.
+Existing files under `mcp/tests` and existing Markdown files under `data/code-bindings` remain byte-identical. The diagnosis and coverage ledgers are not changed.
 
 ## Mandate 14 ledger
 
@@ -134,8 +134,9 @@ TDD cycles must prove:
 8. Principal diagnosis defaults only on initial creation; no principal produces an empty list without blocking.
 9. The selector is passive, starts blank, excludes refraction, and exposes unset concepts.
 10. Materialization carries the configured billing code when present and still records a concept-only charge when it is unset.
-11. End to end: select a visit code, observe an accepted manual proposal with absent `protocolApplicationId`, sign, and inspect a created `ChargeItem` carrying the visit concept, configured billing code, and principal diagnosis pointer.
-12. The lexical guard is mutation-proven red then green.
+11. For a materialized charge whose concept has a billing code, the existing positional `firstCoding()` claim path returns that billing code and its system rather than the ODOS concept key. This contract is pinned in a new MCP test without editing existing `mcp/tests` files.
+12. End to end: select a visit code, observe an accepted manual proposal with absent `protocolApplicationId`, sign, and inspect a created `ChargeItem` carrying the visit concept, configured billing code, and principal diagnosis pointer.
+13. The lexical guard is mutation-proven red then green.
 
 Final gates are the exact commands from the brief: root preflight, MCP build and full tests, UI build and full tests, focused protocol Phase 5 execution, the lexical grep, rendered encounter evidence, stored `ChargeItemDefinition`, stored manual proposal, and resulting `ChargeItem` resources.
 
@@ -144,4 +145,5 @@ Final gates are the exact commands from the brief: root preflight, MCP build and
 - A future procedure-charge picker may create additional manual `ChargeProposal` rows for refraction, imaging, pachymetry, gonioscopy, and other procedures.
 - A future charge panel may edit diagnosis pointers and coverage review state.
 - A separate slice may project laterality to `ChargeItem` without changing this slice's protocol behavior.
+- A pre-existing claim defect remains for concepts without `billingCode`: the positional claim assembler can submit the ODOS concept coding as `productOrService`. This slice narrows that defect for configured concepts but does not decide whether uncoded lines should be blocked, warned, or omitted. The PR body must state this risk plainly.
 - Claims, invoices, checkout, superbills, automated coding, and retrospective ChargeItem rewrites remain out of scope.
