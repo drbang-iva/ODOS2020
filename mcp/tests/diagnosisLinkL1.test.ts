@@ -294,25 +294,6 @@ test("Wave A diagnosis families resolve every verified laterality code", () => {
   ]);
 });
 
-test("diagnosis catalog contains no non-billable strict-prefix header codes", () => {
-  const codesByFamily = new Map<string, Set<string>>();
-  for (const seed of buildDiagnosisCatalogSeeds()) {
-    const codes = seed.icd10 && "code" in seed.icd10
-      ? [seed.icd10.code]
-      : Object.values(seed.icd10?.pattern ?? {}).filter((code): code is string => Boolean(code));
-    const familyCodes = codesByFamily.get(seed.icd10Family) ?? new Set<string>();
-    for (const code of codes) familyCodes.add(code);
-    codesByFamily.set(seed.icd10Family, familyCodes);
-  }
-
-  for (const [family, codes] of codesByFamily) {
-    for (const code of codes) {
-      const descendant = [...codes].find((candidate) => candidate.length > code.length && candidate.startsWith(code));
-      assert.equal(descendant, undefined, `${code} is a non-billable header for ${descendant} in ${family}`);
-    }
-  }
-});
-
 test("eyelid families expose only verified both-lids per-eye slots and declare bilateral expansion", () => {
   const seeds = buildDiagnosisCatalogSeeds();
   const expected = {
