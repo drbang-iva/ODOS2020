@@ -973,6 +973,40 @@ test("retinal-detachment macula status remains documentation-only for diagnosis 
   ]);
 });
 
+test("posterior drusen seeds preserve leaf ids and add staged-family targets in ruled order", async () => {
+  const definitions = await catalog(new MemoryFhir());
+  const targets = (stableKey: string) => definitions.find((definition) => definition.stableKey === stableKey)
+    ?.diagnosisCandidates?.filter((candidate) => candidate.trigger.kind === "option" &&
+      candidate.trigger.anyOf.some((option) => option === "drusen" || option === "occasional-drusen" || option === "dry-amd" || option === "wet-amd"))
+    .map((candidate) => ({
+      option: candidate.trigger.kind === "option" ? candidate.trigger.anyOf[0] : undefined,
+      id: candidate.id,
+      ...("diagnosisKey" in candidate
+        ? { diagnosisKey: candidate.diagnosisKey }
+        : { familyGroup: candidate.familyGroup }),
+    }));
+
+  assert.deepEqual(targets("ocular-health:posterior:macula"), [
+    { option: "drusen", id: "SEED_MACULAR_DRUSEN_1", diagnosisKey: "macular_drusen" },
+    { option: "drusen", id: "SEED_NONEXUDATIVE-AMD_2", familyGroup: "nonexudative-amd" },
+    { option: "dry-amd", id: "SEED_NONEXUDATIVE-AMD_3", familyGroup: "nonexudative-amd" },
+    { option: "wet-amd", id: "SEED_EXUDATIVE-AMD_4", familyGroup: "exudative-amd" },
+  ]);
+  assert.deepEqual(targets("ocular-health:posterior:fundus")?.slice(-4), [
+    { option: "drusen", id: "SEED_MACULAR_DRUSEN_26", diagnosisKey: "macular_drusen" },
+    { option: "drusen", id: "SEED_NONEXUDATIVE-AMD_27", familyGroup: "nonexudative-amd" },
+    { option: "occasional-drusen", id: "SEED_MACULAR_DRUSEN_28", diagnosisKey: "macular_drusen" },
+  ]);
+  assert.deepEqual(targets("ocular-health:posterior:periphery")?.slice(-3), [
+    { option: "drusen", id: "SEED_MACULAR_DRUSEN_7", diagnosisKey: "macular_drusen" },
+    { option: "drusen", id: "SEED_NONEXUDATIVE-AMD_8", familyGroup: "nonexudative-amd" },
+    { option: "occasional-drusen", id: "SEED_MACULAR_DRUSEN_9", diagnosisKey: "macular_drusen" },
+  ]);
+  const macula = definitions.find((definition) => definition.stableKey === "ocular-health:posterior:macula");
+  assert.equal(macula?.allowDiagnosisMapping, true);
+  assert.equal(macula?.diagnosisCandidates?.length, 4);
+});
+
 test("OH-2 seeds five posterior structures and round-trips their worksheet findings per eye without diagnosis codes", async () => {
   const fhir = new MemoryFhir();
   const definitions = await catalog(fhir);
@@ -981,6 +1015,7 @@ test("OH-2 seeds five posterior structures and round-trips their worksheet findi
   assert.equal(posterior.every((definition) => definition.valueSchema.perEye === true), true);
   assert.deepEqual(posterior.filter((definition) => definition.allowDiagnosisMapping).map((definition) => definition.stableKey), [
     "ocular-health:posterior:fundus",
+    "ocular-health:posterior:macula",
     "ocular-health:posterior:periphery",
   ]);
   assert.equal(posterior.filter((definition) => !definition.allowDiagnosisMapping)

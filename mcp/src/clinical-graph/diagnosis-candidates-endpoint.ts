@@ -23,6 +23,7 @@ import {
 } from "./glaucoma-suspect.js";
 import { evaluateRefractiveErrorSuggestions } from "./refraction-suspect.js";
 import { visualFieldDescriptorResolution } from "./entrance-definition.js";
+import { stagedDiagnosisFamilyRow } from "./diagnosis-quick-list-endpoint.js";
 
 export interface DiagnosisCandidatesFhirClient {
   search<T extends Basic | Condition | Observation>(
@@ -38,7 +39,7 @@ export interface DiagnosisCandidatesFhirClient {
   ): Promise<T>;
 }
 
-export interface DiagnosisCandidateRow {
+export interface DiagnosisCandidateLeafRow {
   diagnosisKey: string;
   display: string;
   icd10?: { code: string; display?: string } | {
@@ -54,12 +55,22 @@ export interface DiagnosisCandidateRow {
   source: "rule" | "mapping";
 }
 
+export interface DiagnosisCandidateFamilyRow {
+  familyGroup: string;
+  clinicalFamily: string;
+  display: string;
+  axisLabel: string;
+  members: Array<{ stableKey: string; stageLabel: string }>;
+  priority: boolean;
+  source: "rule" | "mapping";
+}
+
+export type DiagnosisCandidateRow = DiagnosisCandidateLeafRow | DiagnosisCandidateFamilyRow;
+
 export const VISUAL_FIELD_GLAUCOMA_SUPPRESSION_MESSAGE =
   "H53.4x not proposed — the glaucoma stage already carries the field defect.";
 
-export interface OrderedCandidate extends DiagnosisCandidateRow {
-  order: number;
-}
+export type OrderedCandidate = DiagnosisCandidateRow & { order: number };
 
 export async function handleDiagnosisCandidatesRequest(
   deps: {
@@ -90,6 +101,10 @@ export async function handleDiagnosisCandidatesRequest(
   const findings = (observations.entry ?? []).flatMap((entry) =>
     entry.resource ? findingInstancesFromObservation(entry.resource, definitions) : []
   );
+  const patientReference = findings.find((finding) => finding.patientReference)?.patientReference;
+  const patientConditions: Bundle<Condition> = patientReference
+    ? await staff.fhir.search<Condition>("Condition", { subject: patientReference, _count: "200" })
+    : { resourceType: "Bundle", type: "searchset", entry: [] };
   const provenance: ClinicalGraphProvenance = {
     source: "rule",
     recordedAt: deps.now?.() ?? new Date().toISOString(),
@@ -104,6 +119,9 @@ export async function handleDiagnosisCandidatesRequest(
   const rulesByFinding = groupRulesByFinding(rules);
   const activeCatalog = new Map(catalog.filter((row) => row.active).map((row) => [row.stableKey, row]));
   const stagedGlaucomaPresent = (conditions.entry ?? []).some((entry) =>
+    entry.resource ? isConfirmedStagedGlaucoma(entry.resource) : false
+  );
+  const patientStagedGlaucomaPresent = (patientConditions.entry ?? []).some((entry) =>
     entry.resource ? isConfirmedStagedGlaucoma(entry.resource) : false
   );
 
@@ -130,34 +148,48 @@ export async function handleDiagnosisCandidatesRequest(
         });
         const mappings = definition?.allowDiagnosisMapping === false ? [] : definition?.diagnosisCandidates ?? [];
         const matchedQualifierGroups = new Set(mappings.flatMap((mapping) =>
-          mapping.active && activeCatalog.has(mapping.diagnosisKey)
+          mapping.active && (mapping.diagnosisKey !== undefined
+            ? activeCatalog.has(mapping.diagnosisKey)
+            : stagedDiagnosisFamilyRow(catalog, mapping.familyGroup) !== undefined)
             ? matchingMappingGroups(mapping.trigger, finding).qualifierGroups
             : []
         ));
-        const mappingCandidates = mappings.flatMap((mapping, order) => {
+        const mappingCandidates = mappings.flatMap((mapping, order): OrderedCandidate[] => {
           if (!mapping.active || !evaluateMappingTrigger(mapping.trigger, finding)) return [];
           const matchingGroups = matchingMappingGroups(mapping.trigger, finding);
           if (
             matchingGroups.qualifierGroups.length === 0 &&
             matchingGroups.optionGroups.some((group) => matchedQualifierGroups.has(group))
           ) return [];
-          const row = activeCatalog.get(mapping.diagnosisKey);
-          if (!row) return [];
-          const icd10 = resolvedIcd10(row, finding, definition?.stableKey);
-          return [{
-            diagnosisKey: row.stableKey,
-            display: row.display,
-            ...(icd10 ? { icd10 } : {}),
-            codingStatus: row.codingStatus,
-            priority: mapping.priority === true,
-            source: "mapping" as const,
-            order,
-          }];
+          if (mapping.diagnosisKey !== undefined) {
+            const row = activeCatalog.get(mapping.diagnosisKey);
+            if (!row) return [];
+            const icd10 = resolvedIcd10(row, finding, definition?.stableKey);
+            return [{
+              diagnosisKey: row.stableKey,
+              display: row.display,
+              ...(icd10 ? { icd10 } : {}),
+              codingStatus: row.codingStatus,
+              priority: mapping.priority === true,
+              source: "mapping" as const,
+              order,
+            }];
+          }
+          const family = diagnosisFamilyCandidate(catalog, mapping.familyGroup, "mapping", mapping.priority === true);
+          return family ? [{ ...family, source: "mapping", order }] : [];
         });
-        const candidates = orderDiagnosisCandidates(
+        const baseCandidates = orderDiagnosisCandidates(
           deduplicateDiagnosisCandidates([...ruleCandidates, ...mappingCandidates]),
           definition?.stableKey ? tally?.counts[definition.stableKey] : undefined,
         );
+        const revealedGlaucomaFamilies = definition?.stableKey === "cup_disc_ratio" &&
+          patientStagedGlaucomaPresent && ruleCandidates.length > 0
+          ? ["primary-open-angle-glaucoma", "low-tension-glaucoma"].flatMap((familyGroup) => {
+              const family = diagnosisFamilyCandidate(catalog, familyGroup, "rule", true);
+              return family ? [family] : [];
+            })
+          : [];
+        const candidates = [...baseCandidates, ...revealedGlaucomaFamilies];
         const suppress = definition?.stableKey === "entrance:visual-field-defect" &&
           stagedGlaucomaPresent && candidates.length > 0;
         return {
@@ -181,15 +213,16 @@ export async function handleDiagnosisCandidatesRequest(
 export function deduplicateDiagnosisCandidates(candidates: readonly OrderedCandidate[]): OrderedCandidate[] {
   const byDiagnosisKey = new Map<string, OrderedCandidate>();
   for (const candidate of candidates) {
-    const current = byDiagnosisKey.get(candidate.diagnosisKey);
+    const key = diagnosisCandidateKey(candidate);
+    const current = byDiagnosisKey.get(key);
     if (!current || candidate.source === "rule" && current.source !== "rule") {
-      byDiagnosisKey.set(candidate.diagnosisKey, candidate);
+      byDiagnosisKey.set(key, candidate);
       continue;
     }
     if (current.source === "rule" && candidate.source !== "rule") continue;
     if (Number(candidate.priority) > Number(current.priority) ||
       candidate.priority === current.priority && candidate.order < current.order) {
-      byDiagnosisKey.set(candidate.diagnosisKey, candidate);
+      byDiagnosisKey.set(key, candidate);
     }
   }
   return [...byDiagnosisKey.values()];
@@ -201,12 +234,35 @@ export function orderDiagnosisCandidates(
 ): DiagnosisCandidateRow[] {
   return [...candidates]
     .sort((left, right) =>
-      (counts[right.diagnosisKey] ?? 0) - (counts[left.diagnosisKey] ?? 0) ||
+      (counts[diagnosisCandidateKey(right)] ?? 0) - (counts[diagnosisCandidateKey(left)] ?? 0) ||
       Number(right.priority) - Number(left.priority) ||
       left.order - right.order ||
       left.display.localeCompare(right.display)
     )
     .map(({ order: _order, ...candidate }) => candidate);
+}
+
+function diagnosisCandidateKey(candidate: DiagnosisCandidateRow): string {
+  return "diagnosisKey" in candidate ? candidate.diagnosisKey : candidate.familyGroup;
+}
+
+function diagnosisFamilyCandidate(
+  catalog: readonly DiagnosisCatalogRow[],
+  familyGroup: string,
+  source: DiagnosisCandidateFamilyRow["source"],
+  priority: boolean,
+): DiagnosisCandidateFamilyRow | undefined {
+  const family = stagedDiagnosisFamilyRow(catalog, familyGroup);
+  if (!family?.clinicalFamily || !family.axisLabel || !family.members) return undefined;
+  return {
+    familyGroup,
+    clinicalFamily: family.clinicalFamily,
+    display: family.display,
+    axisLabel: family.axisLabel,
+    members: family.members.map(({ stableKey, stageLabel }) => ({ stableKey, stageLabel })),
+    priority,
+    source,
+  };
 }
 
 export function findingInstancesFromObservation(
@@ -330,7 +386,7 @@ function resolvedIcd10(
   row: DiagnosisCatalogRow,
   finding: FindingInstance,
   definitionStableKey: string | undefined,
-): DiagnosisCandidateRow["icd10"] | undefined {
+): DiagnosisCandidateLeafRow["icd10"] | undefined {
   if (!row.icd10) return undefined;
   if ("code" in row.icd10) return row.icd10;
   const descriptor = visualFieldDescriptorResolution(definitionStableKey, finding.value);

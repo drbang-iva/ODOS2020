@@ -33,6 +33,7 @@ import type {
   DiagnosisCatalogRow,
   MappingTrigger,
 } from "./glaucoma-suspect.js";
+import { FAMILY_RESOLUTION_MODES } from "./diagnosis-catalog-seeds.js";
 import {
   buildFindingInstance,
   patientScopedProvenanceTargets,
@@ -500,7 +501,11 @@ export function materializeAtomicFindingCatalog(
             field.localCode,
             option.code,
           ))
-          .map((candidate) => candidate.diagnosisKey))].sort(),
+          .flatMap((candidate) => {
+            if (candidate.diagnosisKey !== undefined) return [candidate.diagnosisKey];
+            const mode = FAMILY_RESOLUTION_MODES[candidate.familyGroup];
+            return mode?.mode === "staged" ? mode.members.map((member) => member.stableKey) : [];
+          }))].sort(),
         origin: definition.sourceStatus === "local-practice" ? "custom" : "shipped",
       })) ?? []
     ))

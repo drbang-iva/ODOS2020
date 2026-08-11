@@ -116,6 +116,13 @@ test("family-resolution guard rejects an undeclared active member inside a stage
   );
 });
 
+test("family-resolution guard rejects candidate family groups the specificity panel cannot stage", () => {
+  assert.throws(
+    () => validateFamilyResolutionModes(buildDiagnosisCatalogSeeds(), FAMILY_RESOLUTION_MODES, ["lens"]),
+    /Diagnosis candidate familyGroup lens must reference a staged family resolution mode\./,
+  );
+});
+
 class MemoryFhir {
   readonly resources: Resource[] = [];
   readonly writes: Array<{ operation: "create" | "update"; resourceType: string; id: string; headers?: Record<string, string> }> = [];

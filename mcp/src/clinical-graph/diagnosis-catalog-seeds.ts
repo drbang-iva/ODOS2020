@@ -94,6 +94,7 @@ export const FAMILY_RESOLUTION_MODES: FamilyResolutionModes = {
 export function validateFamilyResolutionModes(
   catalog: readonly DiagnosisCatalogRow[],
   modes: FamilyResolutionModes = FAMILY_RESOLUTION_MODES,
+  candidateFamilyGroups: readonly string[] = [],
 ): void {
   const activeRows = catalog.filter((row) => row.active);
   const byFamily = new Map<string, DiagnosisCatalogRow[]>();
@@ -124,6 +125,11 @@ export function validateFamilyResolutionModes(
     const undeclaredMember = byFamily.get(clinicalFamily)?.find((row) => !declaredMemberKeys.has(row.stableKey));
     if (undeclaredMember) {
       throw new Error(`Staged family ${clinicalFamily} has active catalog member ${undeclaredMember.stableKey} that is not declared.`);
+    }
+  }
+  for (const familyGroup of new Set(candidateFamilyGroups)) {
+    if (modes[familyGroup]?.mode !== "staged") {
+      throw new Error(`Diagnosis candidate familyGroup ${familyGroup} must reference a staged family resolution mode.`);
     }
   }
 }

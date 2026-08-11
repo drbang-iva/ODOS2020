@@ -192,14 +192,18 @@ export type MappingTrigger =
   | { kind: "qualifier"; field: string; option: string; qualifiers: Record<string, string> }
   | { kind: "allOf"; triggers: MappingTrigger[] };
 
-export interface DiagnosisCandidateEntry {
+interface DiagnosisCandidateEntryBase {
   id: string;
-  diagnosisKey: string;
   trigger: MappingTrigger;
   priority?: boolean;
   origin: "seed" | "practice";
   active: boolean;
 }
+
+export type DiagnosisCandidateEntry = DiagnosisCandidateEntryBase & (
+  | { diagnosisKey: string; familyGroup?: never }
+  | { familyGroup: string; diagnosisKey?: never }
+);
 
 export interface KeyFindingEntry {
   findingKey: string;

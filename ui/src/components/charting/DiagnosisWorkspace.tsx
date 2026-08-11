@@ -12,7 +12,10 @@ import {
 import {
   authHeaders,
   clinicalGraphApiBase,
+  readDiagnosisCandidates,
   submitDiagnosisPick,
+  type DiagnosisCandidateFinding,
+  type DiagnosisCandidateSuggestion,
 } from "../../lib/clinical-graph-client";
 import { diagnosisRank, displayCode } from "../../lib/clinical-view-model";
 import { fhir } from "../../lib/fhir";
@@ -69,6 +72,8 @@ export interface DiagnosisQuickListRow {
   selectedMemberKey?: string;
   stageSelectionSource?: "search" | "prompt";
   stageDeferred?: boolean;
+  findingInstanceId?: string;
+  suggestionSource?: "rule" | "mapping";
 }
 
 interface QuickListPayload {
@@ -104,6 +109,7 @@ export function DiagnosisWorkspace({
     payload: DiagnosisFindingsPayload;
   }>();
   const [pendingDiagnosis, setPendingDiagnosis] = useState<DiagnosisQuickListRow>();
+  const [candidateFindings, setCandidateFindings] = useState<DiagnosisCandidateFinding[]>([]);
   const [stageHistory, setStageHistory] = useState<{ key: string; conditions: Condition[] }>();
   const [searchSelection, setSearchSelection] = useState<OdosSearchPickerOption<DiagnosisQuickListRow>>();
   const [busy, setBusy] = useState<string>();
@@ -156,6 +162,15 @@ export function DiagnosisWorkspace({
       loadGeneration.current += 1;
     };
   }, [load]);
+
+  useEffect(() => {
+    let current = true;
+    setCandidateFindings([]);
+    void readDiagnosisCandidates(encounterId)
+      .then((rows) => { if (current) setCandidateFindings(rows); })
+      .catch(() => { if (current) setCandidateFindings([]); });
+    return () => { current = false; };
+  }, [encounterId]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -260,7 +275,8 @@ export function DiagnosisWorkspace({
         encounterReference,
         diagnosisKey: resolvedRow.stableKey,
         action: "confirm",
-        source: "catalog-search",
+        source: row.suggestionSource ?? "catalog-search",
+        ...(row.findingInstanceId ? { findingInstanceId: row.findingInstanceId } : {}),
         ...(laterality ? { laterality } : {}),
         ...(row.stageDeferred ? { stageDeferred: true } : {}),
       });
@@ -306,6 +322,20 @@ export function DiagnosisWorkspace({
   const carryEditedForDisplay = Boolean(
     findings?.carryProvenance?.edited || findings?.carryProvenance?.integrityWarning,
   );
+  const suggestionsByObservation = Object.fromEntries(candidateFindings.flatMap((finding) =>
+    finding.observationReference ? [[finding.observationReference, finding]] : []
+  ));
+
+  function chooseSuggestion(suggestion: DiagnosisCandidateSuggestion, findingInstanceId: string) {
+    const stableKey = suggestion.diagnosisKey ?? suggestion.familyGroup;
+    const row = catalog.find((candidate) => candidate.stableKey === stableKey);
+    if (!row) return;
+    void addDiagnosis({
+      ...row,
+      findingInstanceId,
+      suggestionSource: suggestion.source,
+    });
+  }
 
   return (
     <div className="odos-diagnosis-workspace min-h-0 flex-1" data-testid="diagnosis-workspace">
@@ -467,6 +497,8 @@ export function DiagnosisWorkspace({
             visitDiagnoses={findings.visitDiagnoses}
             patientReference={patientReference}
             disabled={!findings.canWrite || busy !== undefined}
+            suggestionsByObservation={suggestionsByObservation}
+            onSuggest={chooseSuggestion}
             onMutate={(mutation) => void updateFinding(mutation)}
           />
         )}

@@ -239,7 +239,13 @@ function assertClinicalFindingDefinition(value: unknown): ClinicalFindingDefinit
     for (const candidate of value.diagnosisCandidates) {
       if (!isRecord(candidate)) throw new Error("Diagnosis mapping entries must be objects.");
       requiredString(candidate.id, "diagnosisCandidates.id");
-      requiredString(candidate.diagnosisKey, "diagnosisCandidates.diagnosisKey");
+      const hasDiagnosisKey = typeof candidate.diagnosisKey === "string" && candidate.diagnosisKey.trim().length > 0;
+      const hasFamilyGroup = typeof candidate.familyGroup === "string" && candidate.familyGroup.trim().length > 0;
+      if (hasDiagnosisKey === hasFamilyGroup) {
+        throw new Error("Diagnosis mapping entries require exactly one diagnosisKey or familyGroup.");
+      }
+      if (hasDiagnosisKey) requiredString(candidate.diagnosisKey, "diagnosisCandidates.diagnosisKey");
+      if (hasFamilyGroup) requiredString(candidate.familyGroup, "diagnosisCandidates.familyGroup");
       if (!isRecord(candidate.trigger)) throw new Error("Diagnosis mapping trigger must be an object.");
       if (!["seed", "practice"].includes(String(candidate.origin)) || typeof candidate.active !== "boolean") {
         throw new Error("Diagnosis mapping origin or active state is invalid.");

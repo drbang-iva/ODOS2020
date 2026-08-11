@@ -55,7 +55,8 @@ type FindingDefinition = {
   allowDiagnosisMapping: boolean;
   diagnosisCandidates: Array<{
     id: string;
-    diagnosisKey: string;
+    diagnosisKey?: string;
+    familyGroup?: string;
     trigger: Record<string, unknown>;
     priority?: boolean;
     active: boolean;
@@ -445,15 +446,23 @@ function mappingAdapter(
         `/clinical-graph/finding-definitions/${encodeURIComponent(findingKey)}`,
         body,
       );
+      if (!result.candidate.diagnosisKey) throw new Error("Diagnosis mapping response did not include a leaf diagnosis.");
       const finding = findings.find((candidate) => candidate.stableKey === findingKey);
-      return mappingRow(finding?.display ?? row.findingDisplay, findingKey, result.candidate);
+      return mappingRow(finding?.display ?? row.findingDisplay, findingKey, {
+        ...result.candidate,
+        diagnosisKey: result.candidate.diagnosisKey,
+      });
     },
     async deactivate(row) {
       const result = await request<{ candidate: FindingDefinition["diagnosisCandidates"][number] }>(
         `/clinical-graph/finding-definitions/${encodeURIComponent(row.findingKey)}`,
         { action: "update-diagnosis-candidate", id: row.id, active: false },
       );
-      return mappingRow(row.findingDisplay, row.findingKey, result.candidate);
+      if (!result.candidate.diagnosisKey) throw new Error("Diagnosis mapping response did not include a leaf diagnosis.");
+      return mappingRow(row.findingDisplay, row.findingKey, {
+        ...result.candidate,
+        diagnosisKey: result.candidate.diagnosisKey,
+      });
     },
   };
 }
@@ -551,13 +560,15 @@ function upsertDiagnosis(rows: DiagnosisRow[], saved: DiagnosisRow): DiagnosisRo
 }
 
 function mappingRows(definition: FindingDefinition): MappingRow[] {
-  return definition.diagnosisCandidates.map((candidate) => mappingRow(definition.display, definition.stableKey, candidate));
+  return definition.diagnosisCandidates.flatMap((candidate) => candidate.diagnosisKey
+    ? [mappingRow(definition.display, definition.stableKey, candidate as typeof candidate & { diagnosisKey: string })]
+    : []);
 }
 
 function mappingRow(
   findingDisplay: string,
   findingKey: string,
-  candidate: FindingDefinition["diagnosisCandidates"][number],
+  candidate: FindingDefinition["diagnosisCandidates"][number] & { diagnosisKey: string },
 ): MappingRow {
   const trigger = record(candidate.trigger);
   const kind = trigger.kind as MappingRow["triggerKind"];
