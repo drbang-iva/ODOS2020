@@ -104,9 +104,11 @@ The pull request body must distinguish these four transport updates from the two
 
 ## Procedure fee options
 
-The procedure selector offers active non-visit concepts from the existing fee schedule only. The twelve keys in `VISIT_PROCEDURE_CONCEPT_KEYS` are excluded. Existing procedure concepts, including refraction and the five pre-existing protocol procedure concepts, remain available when active.
+The procedure selector offers a concept only when it is both active and carries a nonblank `billingCode` in the existing fee schedule. The twelve keys in `VISIT_PROCEDURE_CONCEPT_KEYS` are excluded. An active-but-uncoded concept is absent from the add-procedure response and cannot be shown or selected.
 
-No new clinical code or fee concept is seeded. Billing code remains optional and practice-supplied. An option without a billing code is visibly labeled `Code unset`.
+No new clinical code or fee concept is seeded. Billing codes remain practice-supplied under the existing licensing boundary. `saveProcedureFeeScheduleItem` is unchanged: this is a read-side charting filter, not a new write-time coupling between `active` and `billingCode`.
+
+The filter governs only new manual procedure selection through this surface. Existing materialized ChargeItems, protocol-generated proposals, and other persisted-charge displays are unaffected. Because this surface cannot create an uncoded manual procedure proposal, its charges cannot leak the internal procedure-concept key into claim assembly.
 
 ## Manual procedure proposal identity
 
@@ -114,7 +116,7 @@ Each row has a server-generated stable id with the prefix `manual-procedure-char
 
 - `protocolApplicationId`: absent
 - `encounterId`: the route encounter
-- `procedureConceptKey`: one active non-visit fee concept
+- `procedureConceptKey`: one active, coded, non-visit fee concept
 - `units`: `1`
 - `laterality`: absent, `OD`, `OS`, or `OU`
 - `dxPointers`: empty or exactly one local Condition reference from this Encounter
@@ -163,10 +165,10 @@ The protocol module adds:
 
 - `GET /clinical-graph/protocols/encounters/:encounterId/procedure-charges`
   - requires `chart.read`;
-  - returns active non-visit options, Encounter diagnoses, and all manual procedure proposals including removed rows.
+  - returns active, coded, non-visit options, Encounter diagnoses, and all manual procedure proposals including removed rows.
 - `POST /clinical-graph/protocols/encounters/:encounterId/procedure-charges`
   - requires `chart.write`;
-  - accepts one active non-visit `procedureConceptKey`;
+  - accepts one active, coded, non-visit `procedureConceptKey` from the same filtered option set;
   - creates one stable accepted proposal with absent laterality and the principal-pointer default.
 - `PATCH /clinical-graph/protocols/encounters/:encounterId/procedure-charges/:proposalId`
   - requires `chart.write`;
@@ -189,7 +191,7 @@ Adding uses the server's principal-diagnosis default and leaves laterality unset
 Each accepted procedure row shows and edits:
 
 - procedure concept label;
-- billing code or `Code unset`;
+- its real billing code;
 - laterality selector with `Laterality unset`, `OD`, `OS`, and `OU`;
 - diagnosis selector with `No diagnosis selected` plus every offered Encounter diagnosis;
 - `Remove`.
@@ -234,7 +236,7 @@ The PR body gets a standalone `Claim laterality correctness fix` section contain
 Focused handler and UI tests must prove:
 
 1. Any number of manual procedure proposals coexist with the stable visit proposal and protocol proposals.
-2. Only active non-visit fee concepts are offered.
+2. Only active, coded, non-visit fee concepts are offered; active-but-uncoded concepts are absent and rejected on creation.
 3. Each new row has a unique stable manual identity, absent protocol application, absent laterality, and the correct principal default.
 4. No principal produces an empty pointer without blocking creation.
 5. Laterality and the one pointer can be changed or cleared independently.
