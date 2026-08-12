@@ -21,6 +21,7 @@ import {
   listActiveCodedNonVisitProcedureFees,
 } from "../clinical-graph/procedure-fee-schedule.js";
 import {
+  handleProtocolSignCleanupRequest,
   handleVisitChargeMutationRequest,
 } from "../clinical-graph/protocol-endpoint.js";
 import { PROTOCOL_BASIC_CODES, ProtocolBasicStore } from "../clinical-graph/protocol-store.js";
@@ -272,6 +273,29 @@ async function seed(fhir: MemoryFhir, ...proposals: ChargeProposal[]): Promise<v
   fhir.resetWrites();
 }
 
+function deactivateConcept(fhir: MemoryFhir, procedureConceptKey: string): void {
+  const definition = feeDefinition(fhir, procedureConceptKey);
+  definition.status = "retired";
+}
+
+function clearConceptBillingCode(fhir: MemoryFhir, procedureConceptKey: string): void {
+  const definition = feeDefinition(fhir, procedureConceptKey);
+  definition.code = {
+    ...definition.code,
+    coding: definition.code?.coding?.filter((coding) => coding.system === PROCEDURE_CONCEPT_SYSTEM),
+  };
+}
+
+function feeDefinition(fhir: MemoryFhir, procedureConceptKey: string): ChargeItemDefinition {
+  const found = fhir.resources.find((resource): resource is ChargeItemDefinition =>
+    resource.resourceType === "ChargeItemDefinition" && resourceCodings(resource).some((coding) =>
+      coding.system === PROCEDURE_CONCEPT_SYSTEM && coding.code === procedureConceptKey
+    )
+  );
+  if (!found) throw new Error(`Fee definition ${procedureConceptKey} not found`);
+  return found;
+}
+
 test("lists only active coded non-visit procedure fees without mutations", async () => {
   const definitions = [
     definition("coded", "gonioscopy", "Gonioscopy", "SYNTHA", true),
@@ -488,6 +512,98 @@ test("procedure patch edits, clears, removes, and revives only mutable fields", 
   assert.deepEqual(await store.get(id), manualProcedure({ id, dxPointers: [], state: "removed" }));
   assert.equal((await patch({ state: "accepted" })).status, 200);
   assert.deepEqual(await store.get(id), manualProcedure({ id, dxPointers: [], state: "accepted" }));
+});
+
+test("deactivated procedure can still be removed", async () => {
+  const { deps, fhir, store } = fixture();
+  const id = `${MANUAL_PROCEDURE_CHARGE_ID_PREFIX}deactivated-remove`;
+  await seed(fhir, manualProcedure({ id }));
+  deactivateConcept(fhir, "gonioscopy");
+
+  const removed = await handleProcedureChargePatchRequest(deps, {
+    authHeader: "Bearer clinician",
+    params: { encounterId: "enc-1", proposalId: id },
+    body: { state: "removed" },
+  });
+  assert.equal(removed.status, 200);
+  assert.equal((await store.get(id))?.state, "removed");
+});
+
+test("sign cleanup does not materialize a deactivated procedure after removal", async () => {
+  const { deps, fhir } = fixture();
+  const id = `${MANUAL_PROCEDURE_CHARGE_ID_PREFIX}deactivated-sign`;
+  await seed(fhir, manualProcedure({ id }));
+  deactivateConcept(fhir, "gonioscopy");
+  const removed = await handleProcedureChargePatchRequest(deps, {
+    authHeader: "Bearer clinician",
+    params: { encounterId: "enc-1", proposalId: id },
+    body: { state: "removed" },
+  });
+  assert.equal(removed.status, 200);
+
+  fhir.resetWrites();
+  const signed = await handleProtocolSignCleanupRequest({
+    authenticate: deps.authenticate,
+    feeScheduleFhir: fhir,
+    now: deps.now,
+  }, {
+    authHeader: "Bearer clinician",
+    params: { encounterId: "enc-1" },
+  });
+  assert.deepEqual(signed, {
+    status: 200,
+    body: { abandoned: 0, materialized: 0, finalized: 0 },
+  });
+  assert.equal(fhir.resources.some((resource) => resource.resourceType === "ChargeItem"), false);
+});
+
+test("uncoded procedure can still be removed", async () => {
+  const { deps, fhir, store } = fixture();
+  const id = `${MANUAL_PROCEDURE_CHARGE_ID_PREFIX}uncoded-remove`;
+  await seed(fhir, manualProcedure({ id }));
+  clearConceptBillingCode(fhir, "gonioscopy");
+
+  const removed = await handleProcedureChargePatchRequest(deps, {
+    authHeader: "Bearer clinician",
+    params: { encounterId: "enc-1", proposalId: id },
+    body: { state: "removed" },
+  });
+  assert.equal(removed.status, 200);
+  assert.equal((await store.get(id))?.state, "removed");
+});
+
+test("deactivated procedure rejects laterality edits with no write", async () => {
+  const { deps, fhir } = fixture();
+  const id = `${MANUAL_PROCEDURE_CHARGE_ID_PREFIX}deactivated-edit`;
+  await seed(fhir, manualProcedure({ id }));
+  deactivateConcept(fhir, "gonioscopy");
+  const before = chargeProposalBytes(fhir);
+
+  const result = await handleProcedureChargePatchRequest(deps, {
+    authHeader: "Bearer clinician",
+    params: { encounterId: "enc-1", proposalId: id },
+    body: { laterality: "OD" },
+  });
+  assert.equal(result.status, 409);
+  assert.deepEqual(fhir.writes, []);
+  assert.deepEqual(chargeProposalBytes(fhir), before);
+});
+
+test("deactivated removed procedure rejects revival with no write", async () => {
+  const { deps, fhir } = fixture();
+  const id = `${MANUAL_PROCEDURE_CHARGE_ID_PREFIX}deactivated-revive`;
+  await seed(fhir, manualProcedure({ id, state: "removed" }));
+  deactivateConcept(fhir, "gonioscopy");
+  const before = chargeProposalBytes(fhir);
+
+  const result = await handleProcedureChargePatchRequest(deps, {
+    authHeader: "Bearer clinician",
+    params: { encounterId: "enc-1", proposalId: id },
+    body: { state: "accepted" },
+  });
+  assert.equal(result.status, 409);
+  assert.deepEqual(fhir.writes, []);
+  assert.deepEqual(chargeProposalBytes(fhir), before);
 });
 
 test("procedure lifecycle leaves the visit and every protocol proposal byte-identical", async () => {

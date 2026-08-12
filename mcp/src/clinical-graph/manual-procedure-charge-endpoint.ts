@@ -132,9 +132,13 @@ export async function handleProcedureChargePatchRequest(
   if (proposal.state === "finalized" || proposal.chargeItemRef) {
     return { status: 409, body: { error: "A finalized procedure charge cannot be changed." } };
   }
-  const options = await listActiveCodedNonVisitProcedureFees(staff.fhir);
-  if (!options.some((option) => option.procedureConceptKey === proposal.procedureConceptKey)) {
-    return { status: 409, body: { error: "The procedure charge concept is no longer active and coded." } };
+  const removalOnly = body.data.state === "removed" &&
+    body.data.laterality === undefined && body.data.dxPointer === undefined;
+  if (!removalOnly) {
+    const options = await listActiveCodedNonVisitProcedureFees(staff.fhir);
+    if (!options.some((option) => option.procedureConceptKey === proposal.procedureConceptKey)) {
+      return { status: 409, body: { error: "The procedure charge concept is no longer active and coded." } };
+    }
   }
   if (body.data.dxPointer !== undefined && body.data.dxPointer !== null) {
     const encounter = await staff.fhir.read<Encounter>("Encounter", params.data.encounterId);
