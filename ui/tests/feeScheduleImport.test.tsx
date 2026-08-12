@@ -259,6 +259,28 @@ test("review controls use the shared high-contrast settings styles", async () =>
   }
 });
 
+test("review price rejects over-precision and exponent input without changing the proposed cents", async () => {
+  // Coercing arbitrary Number syntax or rounding beyond two decimals must silently change money.
+  const api = memoryApi();
+  const renderer = create(<FeeScheduleImport api={api} onCommitted={() => undefined} />);
+  await inspectAndReview(renderer);
+  const price = renderer.root.findByProps({ "aria-label": "Price for create-row" });
+
+  for (const invalid of ["1.999", "1e2"]) {
+    await act(async () => price.props.onChange({ currentTarget: { value: invalid } }));
+    assert.equal(renderer.root.findByProps({ "aria-label": "Price for create-row" }).props.value, invalid);
+    assert.match(JSON.stringify(renderer.toJSON()), /at most two decimal places/i);
+    assert.equal(renderer.root.findByProps({ "aria-label": "Commit reviewed fee import" }).props.disabled, true);
+  }
+
+  await act(async () => renderer.root.findByProps({ "aria-label": "Price for create-row" }).props.onChange({
+    currentTarget: { value: "1.99" },
+  }));
+  assert.equal(renderer.root.findByProps({ "aria-label": "Commit reviewed fee import" }).props.disabled, false);
+  await act(async () => renderer.root.findByProps({ "aria-label": "Commit reviewed fee import" }).props.onClick());
+  assert.equal(api.commitCalls[0]?.find((row) => row.proposalId === "create-row")?.priceCents, 199);
+});
+
 test("seeded match inherits read-only display and category while practice match stays editable", async () => {
   // Rendering editable seeded identity or failing to enable practice identity must make this test red.
   const renderer = create(<FeeScheduleImport api={memoryApi()} onCommitted={() => undefined} />);

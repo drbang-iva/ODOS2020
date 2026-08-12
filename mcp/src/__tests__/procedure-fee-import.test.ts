@@ -348,6 +348,41 @@ test("routing required and concept-key conflict flags remain row-visible", () =>
   ), true);
 });
 
+test("duplicate collapse leaves semantically different rows for operator review", () => {
+  // Omitting reviewed category, routing, active, or decision from duplicate identity must hide a source row.
+  const preview = proposeProcedureFeeImport({
+    csvText: [
+      "Label,Group,Code,Fee,Route,Status",
+      "Synthetic semantic conflict,Procedure,SYNTHSEM,14.14,Insurance,yes",
+      "Synthetic semantic conflict,Exam,SYNTHSEM,14.14,Insurance,yes",
+      "Synthetic semantic conflict,Procedure,SYNTHSEM,14.14,Self pay,yes",
+      "Synthetic semantic conflict,Procedure,SYNTHSEM,14.14,Insurance,no",
+      "Synthetic semantic conflict,Procedure,SYNTHSEM,14.14,Scheduling only,yes",
+    ].join("\n"),
+    mapping: {
+      display: "Label",
+      category: "Group",
+      billingCode: "Code",
+      price: "Fee",
+      routing: "Route",
+      active: "Status",
+    },
+    existing: [],
+  });
+
+  assert.equal(preview.proposals.length, 5);
+  assert.deepEqual(preview.proposals.map((row) => row.category), [
+    "procedure", "exam", "procedure", "procedure", "procedure",
+  ]);
+  assert.deepEqual(preview.proposals.map((row) => row.routing), [
+    "insurance-billable", "insurance-billable", "self-pay", "insurance-billable", "scheduling-only",
+  ]);
+  assert.deepEqual(preview.proposals.map((row) => row.active), [true, true, true, false, true]);
+  assert.deepEqual(preview.proposals.map((row) => row.decision), [
+    "create", "create", "create", "create", "skip",
+  ]);
+});
+
 test("seeded matches inherit display and category without category-required", () => {
   // Requiring source category on a seeded match must make this test red.
   const existing = [{

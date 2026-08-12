@@ -39,6 +39,8 @@ export function FeeScheduleImport({
   const [mapping, setMapping] = useState<FeeImportColumnMapping>({});
   const [preview, setPreview] = useState<FeeImportPreview | null>(null);
   const [outcomes, setOutcomes] = useState<Record<string, FeeImportCommitOutcome>>({});
+  const [priceDrafts, setPriceDrafts] = useState<Record<string, string>>({});
+  const [priceErrors, setPriceErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,6 +53,8 @@ export function FeeScheduleImport({
       setMapping(result.suggestedMapping);
       setPreview(null);
       setOutcomes({});
+      setPriceDrafts({});
+      setPriceErrors({});
     } catch (cause) {
       setError(message(cause));
     } finally {
@@ -63,8 +67,14 @@ export function FeeScheduleImport({
     setBusy(true);
     setError(null);
     try {
-      setPreview(await api.propose(csvText, mapping));
+      const result = await api.propose(csvText, mapping);
+      setPreview(result);
       setOutcomes({});
+      setPriceDrafts(Object.fromEntries(result.proposals.map((proposal) => [
+        proposal.proposalId,
+        proposal.priceCents === undefined ? "" : (proposal.priceCents / 100).toFixed(2),
+      ])));
+      setPriceErrors({});
     } catch (cause) {
       setError(message(cause));
     } finally {
@@ -73,7 +83,7 @@ export function FeeScheduleImport({
   }
 
   async function commit(): Promise<void> {
-    if (!preview) return;
+    if (!preview || Object.keys(priceErrors).length > 0) return;
     setBusy(true);
     setError(null);
     try {
@@ -93,6 +103,8 @@ export function FeeScheduleImport({
     setMapping({});
     setPreview(null);
     setOutcomes({});
+    setPriceDrafts({});
+    setPriceErrors({});
     setError(null);
   }
 
@@ -103,6 +115,24 @@ export function FeeScheduleImport({
         proposal.proposalId === proposalId ? { ...proposal, ...change } : proposal
       ),
     } : current);
+  }
+
+  function updatePrice(proposalId: string, value: string): void {
+    setPriceDrafts((current) => ({ ...current, [proposalId]: value }));
+    const parsed = parseDollars(value);
+    if (!parsed.valid) {
+      setPriceErrors((current) => ({
+        ...current,
+        [proposalId]: "Enter a nonnegative dollar amount with at most two decimal places.",
+      }));
+      return;
+    }
+    setPriceErrors((current) => {
+      const next = { ...current };
+      delete next[proposalId];
+      return next;
+    });
+    updateProposal(proposalId, { priceCents: parsed.cents });
   }
 
   const counts = preview ? {
@@ -214,7 +244,10 @@ export function FeeScheduleImport({
                 proposal={proposal}
                 matchOptions={preview.matchOptions}
                 outcome={outcomes[proposal.proposalId]}
+                priceValue={priceDrafts[proposal.proposalId] ?? ""}
+                priceError={priceErrors[proposal.proposalId]}
                 onChange={(change) => updateProposal(proposal.proposalId, change)}
+                onPriceChange={(value) => updatePrice(proposal.proposalId, value)}
               />
             ))}
           </div>
@@ -223,7 +256,7 @@ export function FeeScheduleImport({
               aria-label="Commit reviewed fee import"
               className="scheduler-button"
               type="button"
-              disabled={busy}
+              disabled={busy || Object.keys(priceErrors).length > 0}
               onClick={commit}
             >
               Commit reviewed proposals
@@ -242,12 +275,18 @@ function ProposalRow({
   proposal,
   matchOptions,
   outcome,
+  priceValue,
+  priceError,
   onChange,
+  onPriceChange,
 }: {
   proposal: FeeImportProposal;
   matchOptions: FeeImportMatchOption[];
   outcome?: FeeImportCommitOutcome;
+  priceValue: string;
+  priceError?: string;
   onChange: (change: Partial<FeeImportProposal>) => void;
+  onPriceChange: (value: string) => void;
 }) {
   const match = proposal.decision === "match"
     ? matchOptions.find((option) => option.procedureConceptKey === proposal.matchProcedureConceptKey)
@@ -347,9 +386,10 @@ function ProposalRow({
             aria-label={`Price for ${proposal.proposalId}`}
             className="scheduler-input mt-1"
             inputMode="decimal"
-            value={proposal.priceCents === undefined ? "" : (proposal.priceCents / 100).toFixed(2)}
-            onChange={(event) => onChange({ priceCents: dollarsToCents(event.currentTarget.value) })}
+            value={priceValue}
+            onChange={(event) => onPriceChange(event.currentTarget.value)}
           />
+          {priceError && <span className="mt-1 block text-xs text-red-300" role="alert">{priceError}</span>}
         </label>
         <label className="text-sm text-slate-200">
           Routing <span className="text-xs text-amber-200">recorded only</span>
@@ -385,11 +425,16 @@ function ProposalRow({
   );
 }
 
-function dollarsToCents(value: string): number | undefined {
-  if (!value.trim()) return undefined;
-  const amount = Number(value);
-  const cents = Math.round(amount * 100);
-  return Number.isFinite(amount) && Number.isSafeInteger(cents) ? cents : undefined;
+function parseDollars(value: string): { valid: true; cents?: number } | { valid: false } {
+  const normalized = value.trim();
+  if (!normalized) return { valid: true };
+  if (!/^(?:\d+(?:\.\d{0,2})?|\.\d{1,2})$/.test(normalized)) return { valid: false };
+  const [whole = "0", fraction = ""] = normalized.startsWith(".")
+    ? ["0", normalized.slice(1)]
+    : normalized.split(".");
+  const cents = BigInt(whole) * 100n + BigInt(fraction.padEnd(2, "0") || "0");
+  if (cents > BigInt(Number.MAX_SAFE_INTEGER)) return { valid: false };
+  return { valid: true, cents: Number(cents) };
 }
 
 function message(error: unknown): string {

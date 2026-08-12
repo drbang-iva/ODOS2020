@@ -586,14 +586,27 @@ function declaresInvalidCode(display: string): boolean {
 
 function collapseLateralityRows(proposals: WorkingProposal[]): WorkingProposal[] {
   return collapseRows(proposals, (proposal) => proposal.hadLaterality
-    ? [proposal.billingCode, proposal.displayMeaning, proposal.category, proposal.priceCents,
-      proposal.routing, proposal.active, proposal.modifier].join("|")
+    ? collapseIdentity(proposal)
     : undefined, "laterality");
 }
 
 function collapseDuplicateRows(proposals: WorkingProposal[]): WorkingProposal[] {
-  return collapseRows(proposals, (proposal) => [proposal.billingCode, proposal.displayMeaning,
-    proposal.priceCents, proposal.modifier].join("|"), "duplicate");
+  return collapseRows(proposals, collapseIdentity, "duplicate");
+}
+
+function collapseIdentity(proposal: WorkingProposal): string {
+  return [
+    proposal.billingCode,
+    proposal.displayMeaning,
+    proposal.category,
+    proposal.priceCents,
+    proposal.modifier,
+    proposal.routing,
+    proposal.active,
+    proposal.decision,
+    proposal.matchProcedureConceptKey,
+    proposal.matchSeeded,
+  ].join("|");
 }
 
 function collapseRows(
