@@ -90,6 +90,25 @@ test("fee schedule adapter creates practice concepts through the collection endp
   });
 });
 
+test("fee worksheet adapter saves routing as recorded-only metadata", async () => {
+  // Dropping routing from the worksheet adapter must make the request-body assertion red.
+  const bodies: unknown[] = [];
+  const fetchImpl: typeof fetch = async (_input, init) => {
+    bodies.push(JSON.parse(String(init?.body)));
+    return Response.json({ item: item({ routing: "self-pay" }) });
+  };
+  const routed = item({ routing: "self-pay" });
+  await procedureFeeScheduleAdapter(fetchImpl).save(routed);
+  assert.deepEqual(bodies[0], {
+    action: "save",
+    routing: "self-pay",
+    priceCents: null,
+    active: true,
+  });
+  const descriptor = feeScheduleDescriptor(procedureFeeScheduleAdapter(fetchImpl));
+  assert.equal(descriptor.fields.some((field) => field.key === "routing" && /recorded only/i.test(field.label)), true);
+});
+
 test("Fee Schedule uses CatalogEditor and visibly flags uncoded concepts as not chartable", () => {
   const descriptor = feeScheduleDescriptor({
     capabilities: { reorder: false, deactivate: true, presetSeed: false },

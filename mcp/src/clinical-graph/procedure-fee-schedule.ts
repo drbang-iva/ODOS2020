@@ -19,12 +19,16 @@ const CHARGE_PROPOSAL_IDENTIFIER_SYSTEM = `${BASE}/NamingSystem/charge-proposal-
 const ACT_CODE_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-ActCode";
 const FEE_CATEGORY_EXTENSION_URL = `${BASE}/StructureDefinition/odos-procedure-fee-category`;
 const FEE_MODIFIER_EXTENSION_URL = `${BASE}/StructureDefinition/odos-procedure-fee-modifier`;
+export const FEE_ROUTING_EXTENSION_URL = `${BASE}/StructureDefinition/odos-procedure-fee-routing`;
+const DISALLOWED_CONCEPT_LATERALITY_MODIFIERS = new Set(["RT", "LT", "50"]);
 
 export const ODOS_UNPRICED_CHARGE_EXTENSION_URL =
   `${BASE}/StructureDefinition/odos-unpriced-charge`;
 
 export const PROCEDURE_FEE_CATEGORIES = ["exam", "refraction", "cl-fitting", "procedure"] as const;
 export type ProcedureFeeCategory = (typeof PROCEDURE_FEE_CATEGORIES)[number];
+export const PROCEDURE_FEE_ROUTINGS = ["insurance-billable", "self-pay"] as const;
+export type ProcedureFeeRouting = (typeof PROCEDURE_FEE_ROUTINGS)[number];
 
 interface ProcedureFeeSeed {
   procedureConceptKey: string;
@@ -109,6 +113,7 @@ export interface ProcedureFeeScheduleItem {
   billingCode?: string;
   category?: ProcedureFeeCategory;
   modifier?: string;
+  routing?: ProcedureFeeRouting;
   priceCents?: number;
   version: string;
 }
@@ -170,6 +175,18 @@ export async function listProcedureFeeSchedule(
   fhir: ProcedureFeeScheduleFhir,
 ): Promise<ProcedureFeeScheduleItem[]> {
   const definitions = await ensureProcedureFeeSchedule(fhir);
+  return mergeProcedureFeeSchedule(definitions);
+}
+
+export async function listProcedureFeeScheduleSnapshot(
+  fhir: Pick<ProcedureFeeScheduleFhir, "search" | "searchUrl">,
+): Promise<ProcedureFeeScheduleItem[]> {
+  return mergeProcedureFeeSchedule(await listProcedureFeeDefinitions(fhir));
+}
+
+function mergeProcedureFeeSchedule(
+  definitions: ChargeItemDefinition[],
+): ProcedureFeeScheduleItem[] {
   const persisted = definitions.map(procedureFeeScheduleItem);
   const persistedKeys = new Set(persisted.map((item) => item.procedureConceptKey));
   const virtualSeeds = PROCEDURE_FEE_SEEDS
@@ -241,6 +258,17 @@ export class ProcedureFeeConceptConflictError extends Error {
   }
 }
 
+export class ProcedureFeeScheduleInputError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ProcedureFeeScheduleInputError";
+  }
+}
+
+export function isSeededProcedureFeeConceptKey(value: string): boolean {
+  return PROCEDURE_FEE_SEEDS.some((seed) => seed.procedureConceptKey === value);
+}
+
 export async function createProcedureFeeScheduleItem(
   fhir: ProcedureFeeScheduleFhir,
   input: {
@@ -248,20 +276,21 @@ export async function createProcedureFeeScheduleItem(
     category?: ProcedureFeeCategory;
     billingCode?: string | null;
     modifier?: string | null;
+    routing?: ProcedureFeeRouting;
     priceCents?: number | null;
     active: boolean;
+    knownOccupiedKeys?: ReadonlySet<string>;
   },
 ): Promise<ProcedureFeeScheduleItem> {
   assertCents(input.priceCents);
   const display = normalizeDisplay(input.display);
   const generatedKey = procedureConceptKeyFromDisplay(display);
-  const definitions = await listProcedureFeeDefinitions(fhir);
   const occupiedKeys = new Set([
     ...PROCEDURE_FEE_SEEDS.map((seed) => seed.procedureConceptKey),
-    ...definitions.flatMap((definition) => {
+    ...(input.knownOccupiedKeys ?? (await listProcedureFeeDefinitions(fhir)).flatMap((definition) => {
       const key = procedureConceptKey(definition);
       return key ? [key] : [];
-    }),
+    })),
   ]);
   if (occupiedKeys.has(generatedKey)) {
     throw new ProcedureFeeConceptConflictError(generatedKey);
@@ -275,6 +304,7 @@ export async function createProcedureFeeScheduleItem(
     category: input.category,
     billingCode: normalizeBillingCode(input.billingCode),
     modifier: normalizeModifier(input.modifier),
+    routing: input.routing,
     priceCents: input.priceCents ?? undefined,
     active: input.active,
   }), {
@@ -293,11 +323,27 @@ export async function saveProcedureFeeScheduleItem(
     category?: ProcedureFeeCategory;
     billingCode?: string | null;
     modifier?: string | null;
+    routing?: ProcedureFeeRouting;
     priceCents?: number | null;
     active: boolean;
   },
 ): Promise<ProcedureFeeScheduleItem> {
+  if (isSeededProcedureFeeConceptKey(input.procedureConceptKey)) {
+    if (Object.hasOwn(input, "display")) {
+      throw new ProcedureFeeScheduleInputError(
+        "Display cannot be changed for an ODOS-seeded fee concept.",
+      );
+    }
+    if (Object.hasOwn(input, "category")) {
+      throw new ProcedureFeeScheduleInputError(
+        "Category cannot be changed for an ODOS-seeded fee concept.",
+      );
+    }
+  }
   assertCents(input.priceCents);
+  const normalizedInputModifier = input.modifier === undefined
+    ? undefined
+    : normalizeModifier(input.modifier);
   const definitions = await ensureProcedureFeeSchedule(fhir, [input.procedureConceptKey]);
   const existing = definitions.find((definition) =>
     procedureConceptKey(definition) === input.procedureConceptKey
@@ -320,7 +366,10 @@ export async function saveProcedureFeeScheduleItem(
     : input.category);
   const modifier = input.modifier === undefined
     ? definitionModifier(existing)
-    : normalizeModifier(input.modifier);
+    : normalizedInputModifier;
+  const routing = input.routing === undefined
+    ? definitionRouting(existing)
+    : input.routing;
   const saved = await fhir.update(
     "ChargeItemDefinition",
     existing.id,
@@ -330,6 +379,7 @@ export async function saveProcedureFeeScheduleItem(
       category,
       billingCode,
       modifier,
+      routing,
       priceCents,
       active: input.active,
       existing,
@@ -439,6 +489,7 @@ export function buildProcedureFeeDefinition(input: {
   category?: ProcedureFeeCategory;
   billingCode?: string;
   modifier?: string;
+  routing?: ProcedureFeeRouting;
   priceCents?: number;
   active?: boolean;
   existing?: ChargeItemDefinition;
@@ -450,14 +501,17 @@ export function buildProcedureFeeDefinition(input: {
   const billingCode = normalizeBillingCode(input.billingCode);
   const modifier = normalizeModifier(input.modifier);
   assertCategory(input.category);
+  assertRouting(input.routing);
   const version = input.existing ? nextVersion(input.existing.version) : "1";
   const retainedExtensions = input.existing?.extension?.filter((extension) =>
-    extension.url !== FEE_CATEGORY_EXTENSION_URL && extension.url !== FEE_MODIFIER_EXTENSION_URL
+    extension.url !== FEE_CATEGORY_EXTENSION_URL && extension.url !== FEE_MODIFIER_EXTENSION_URL &&
+    extension.url !== FEE_ROUTING_EXTENSION_URL
   ) ?? [];
   const extensions = [
     ...retainedExtensions,
     ...(input.category ? [{ url: FEE_CATEGORY_EXTENSION_URL, valueCode: input.category }] : []),
     ...(modifier ? [{ url: FEE_MODIFIER_EXTENSION_URL, valueString: modifier }] : []),
+    ...(input.routing ? [{ url: FEE_ROUTING_EXTENSION_URL, valueCode: input.routing }] : []),
   ];
   return {
     resourceType: "ChargeItemDefinition",
@@ -558,6 +612,7 @@ function procedureFeeScheduleItem(definition: ChargeItemDefinition): ProcedureFe
     billingCode: definitionBillingCode(definition),
     category: definitionCategory(definition) ?? seed?.category,
     modifier: definitionModifier(definition),
+    routing: definitionRouting(definition),
     priceCents: definitionPriceCents(definition),
     version: definition.version ?? "1",
   };
@@ -606,6 +661,15 @@ function definitionModifier(definition: ChargeItemDefinition): string | undefine
   return typeof value === "string" ? normalizeModifier(value) : undefined;
 }
 
+function definitionRouting(definition: ChargeItemDefinition): ProcedureFeeRouting | undefined {
+  const value = definition.extension?.find((extension) =>
+    extension.url === FEE_ROUTING_EXTENSION_URL
+  )?.valueCode;
+  return typeof value === "string" && PROCEDURE_FEE_ROUTINGS.includes(value as ProcedureFeeRouting)
+    ? value as ProcedureFeeRouting
+    : undefined;
+}
+
 function normalizeBillingCode(value: string | null | undefined): string | undefined {
   if (value === undefined || value === null) return undefined;
   const normalized = value.trim().toUpperCase();
@@ -623,12 +687,24 @@ function normalizeModifier(value: string | null | undefined): string | undefined
   if (!/^[A-Z0-9]{1,10}$/.test(normalized)) {
     throw new Error("Modifier must contain only letters and numbers.");
   }
+  if (DISALLOWED_CONCEPT_LATERALITY_MODIFIERS.has(normalized)) {
+    throw new ProcedureFeeScheduleInputError(
+      `Laterality modifier ${normalized} is not allowed on a fee-schedule concept. ` +
+      "Side comes from the charge (ChargeItem.bodysite), not the concept.",
+    );
+  }
   return normalized;
 }
 
 function assertCategory(value: ProcedureFeeCategory | undefined): void {
   if (value !== undefined && !PROCEDURE_FEE_CATEGORIES.includes(value)) {
     throw new Error("Procedure fee category is invalid.");
+  }
+}
+
+function assertRouting(value: ProcedureFeeRouting | undefined): void {
+  if (value !== undefined && !PROCEDURE_FEE_ROUTINGS.includes(value)) {
+    throw new Error("Procedure fee routing is invalid.");
   }
 }
 

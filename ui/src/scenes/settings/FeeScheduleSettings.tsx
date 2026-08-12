@@ -1,10 +1,12 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { CatalogAdapter } from "../../lib/catalog-adapter";
 import {
   procedureFeeScheduleAdapter,
   type ProcedureFeeScheduleItem,
 } from "../../lib/procedure-fee-schedule";
 import { CatalogEditor, type CatalogDescriptor } from "./CatalogEditor";
+import { procedureFeeImportApi } from "../../lib/procedure-fee-import";
+import { FeeScheduleImport } from "./FeeScheduleImport";
 
 const CATEGORY_LABELS = {
   exam: "Exams",
@@ -17,6 +19,8 @@ const CATEGORY_ORDER: readonly string[] = Object.values(CATEGORY_LABELS);
 export function FeeScheduleSettings({ canWrite }: { canWrite: boolean }) {
   const adapter = useMemo(() => procedureFeeScheduleAdapter(), []);
   const descriptor = useMemo(() => feeScheduleDescriptor(adapter), [adapter]);
+  const importApi = useMemo(() => procedureFeeImportApi(), []);
+  const [catalogRevision, setCatalogRevision] = useState(0);
   return (
     <>
       {!canWrite && (
@@ -24,7 +28,10 @@ export function FeeScheduleSettings({ canWrite }: { canWrite: boolean }) {
           Read only. Practice-admin access is required to edit the fee schedule.
         </div>
       )}
-      <CatalogEditor descriptor={descriptor} canWrite={canWrite} />
+      {canWrite && (
+        <FeeScheduleImport api={importApi} onCommitted={() => setCatalogRevision((value) => value + 1)} />
+      )}
+      <CatalogEditor key={catalogRevision} descriptor={descriptor} canWrite={canWrite} />
     </>
   );
 }
@@ -39,7 +46,16 @@ export function feeScheduleDescriptor(
     createActionLabel: "+ Add a procedure this practice bills",
     fields: [
       { type: "text", key: "billingCode", label: "Billing code" },
-      { type: "text", key: "modifier", label: "Modifier" },
+      { type: "text", key: "modifier", label: "Modifier (recorded only)" },
+      {
+        type: "select",
+        key: "routing",
+        label: "Routing (recorded only)",
+        options: [
+          { value: "insurance-billable", label: "Insurance billable" },
+          { value: "self-pay", label: "Self-pay" },
+        ],
+      },
       { type: "currency", key: "priceCents", label: "Fee", min: 0 },
     ],
     createFields: [
@@ -52,7 +68,16 @@ export function feeScheduleDescriptor(
         options: Object.entries(CATEGORY_LABELS).map(([value, label]) => ({ value, label })),
       },
       { type: "text", key: "billingCode", label: "Billing code" },
-      { type: "text", key: "modifier", label: "Modifier" },
+      { type: "text", key: "modifier", label: "Modifier (recorded only)" },
+      {
+        type: "select",
+        key: "routing",
+        label: "Routing (recorded only)",
+        options: [
+          { value: "insurance-billable", label: "Insurance billable" },
+          { value: "self-pay", label: "Self-pay" },
+        ],
+      },
       { type: "currency", key: "priceCents", label: "Fee", min: 0 },
     ],
     createItem: () => ({
@@ -67,6 +92,7 @@ export function feeScheduleDescriptor(
     facts: (item, context) => [
       ...(!context?.inFamily && item.billingCode ? [item.billingCode] : []),
       ...(item.modifier ? [`Modifier ${item.modifier}`] : []),
+      ...(item.routing ? [`Routing ${item.routing} — recorded only`] : []),
       item.priceCents === undefined ? "Unpriced" : money(item.priceCents),
       `Version ${item.version}`,
     ],

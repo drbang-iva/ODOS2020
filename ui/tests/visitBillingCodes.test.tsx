@@ -40,7 +40,16 @@ test("fee settings round-trip the optional billing code while allowing practice 
   assert.notEqual(descriptor.canCreate, false);
   assert.deepEqual(descriptor.fields, [
     { type: "text", key: "billingCode", label: "Billing code" },
-    { type: "text", key: "modifier", label: "Modifier" },
+    { type: "text", key: "modifier", label: "Modifier (recorded only)" },
+    {
+      type: "select",
+      key: "routing",
+      label: "Routing (recorded only)",
+      options: [
+        { value: "insurance-billable", label: "Insurance billable" },
+        { value: "self-pay", label: "Self-pay" },
+      ],
+    },
     { type: "currency", key: "priceCents", label: "Fee", min: 0 },
   ]);
   assert.deepEqual(descriptor.facts?.(ROUTINE_ITEM), ["S0620", "Unpriced", "Version 1"]);

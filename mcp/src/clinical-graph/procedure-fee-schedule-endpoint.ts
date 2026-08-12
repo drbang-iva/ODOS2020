@@ -2,7 +2,9 @@ import { z } from "zod";
 import type { PracticeRoleId } from "../authz/roles.js";
 import {
   PROCEDURE_FEE_CATEGORIES,
+  PROCEDURE_FEE_ROUTINGS,
   ProcedureFeeConceptConflictError,
+  ProcedureFeeScheduleInputError,
   createProcedureFeeScheduleItem,
   listProcedureFeeSchedule,
   procedureConceptKeyFromDisplay,
@@ -27,6 +29,7 @@ const mutationSchema = z.discriminatedUnion("action", [
     category: z.enum(PROCEDURE_FEE_CATEGORIES).optional(),
     billingCode: z.string().nullable().optional(),
     modifier: z.string().nullable().optional(),
+    routing: z.enum(PROCEDURE_FEE_ROUTINGS).optional(),
     priceCents: z.number().int().nonnegative().nullable(),
     active: z.boolean(),
   }).strict(),
@@ -46,6 +49,7 @@ const createSchema = z.object({
   category: z.enum(PROCEDURE_FEE_CATEGORIES),
   billingCode: z.string().nullable().optional(),
   modifier: z.string().nullable().optional(),
+  routing: z.enum(PROCEDURE_FEE_ROUTINGS).optional(),
   priceCents: z.number().int().nonnegative().nullable(),
   active: z.boolean(),
 }).strict();
@@ -79,18 +83,26 @@ export async function handleProcedureFeeScheduleMutationRequest(
   if (!mutation.success) {
     return { status: 400, body: { error: mutation.error.issues[0]?.message ?? "Invalid fee schedule update." } };
   }
-  const item = await saveProcedureFeeScheduleItem(staff.fhir, {
-    procedureConceptKey: params.data.procedureConceptKey,
-    ...(mutation.data.action === "save" ? {
-      display: mutation.data.display,
-      category: mutation.data.category,
-      billingCode: mutation.data.billingCode,
-      modifier: mutation.data.modifier,
-      priceCents: mutation.data.priceCents,
-    } : {}),
-    active: mutation.data.action === "save" ? mutation.data.active : false,
-  });
-  return { status: 200, body: { item } };
+  try {
+    const item = await saveProcedureFeeScheduleItem(staff.fhir, {
+      procedureConceptKey: params.data.procedureConceptKey,
+      ...(mutation.data.action === "save" ? {
+        ...(Object.hasOwn(mutation.data, "display") ? { display: mutation.data.display } : {}),
+        ...(Object.hasOwn(mutation.data, "category") ? { category: mutation.data.category } : {}),
+        billingCode: mutation.data.billingCode,
+        modifier: mutation.data.modifier,
+        routing: mutation.data.routing,
+        priceCents: mutation.data.priceCents,
+      } : {}),
+      active: mutation.data.action === "save" ? mutation.data.active : false,
+    });
+    return { status: 200, body: { item } };
+  } catch (error) {
+    if (error instanceof ProcedureFeeScheduleInputError) {
+      return { status: 400, body: { error: error.message } };
+    }
+    throw error;
+  }
 }
 
 export async function handleProcedureFeeScheduleCreateRequest(
@@ -112,6 +124,7 @@ export async function handleProcedureFeeScheduleCreateRequest(
       category: parsed.data.category,
       billingCode: parsed.data.billingCode,
       modifier: parsed.data.modifier,
+      routing: parsed.data.routing,
       priceCents: parsed.data.priceCents,
       active: parsed.data.active,
     });
@@ -119,6 +132,9 @@ export async function handleProcedureFeeScheduleCreateRequest(
   } catch (error) {
     if (error instanceof ProcedureFeeConceptConflictError) {
       return { status: 409, body: { error: error.message } };
+    }
+    if (error instanceof ProcedureFeeScheduleInputError) {
+      return { status: 400, body: { error: error.message } };
     }
     throw error;
   }
