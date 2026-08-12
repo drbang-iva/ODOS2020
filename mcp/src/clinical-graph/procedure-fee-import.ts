@@ -130,7 +130,7 @@ const commitProposalSchema = z.object({
   matchRanking: z.array(z.object({
     procedureConceptKey: z.string().regex(/^[a-z0-9][a-z0-9-]{0,99}$/),
     score: z.number().min(0).max(1),
-  }).strict()),
+  }).strict()).optional(),
   display: z.string().max(200),
   category: z.enum(PROCEDURE_FEE_CATEGORIES).optional(),
   billingCode: z.string().max(20).optional(),

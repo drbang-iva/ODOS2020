@@ -361,6 +361,70 @@ test("a seeded suggestion never changes create until the operator accepts it", a
   );
 });
 
+test("reviewed corrections clear resolved flags but preserve source-history warnings", async () => {
+  // Retaining a warning after its reviewed field changes, or dropping laterality history, must fail this matrix.
+  const api = memoryApi();
+  const preview = reviewPreview();
+  preview.proposals = [
+    proposal({
+      proposalId: "suggestion-row",
+      category: "exam",
+      suggestedMatchProcedureConceptKey: "refraction",
+      matchRanking: [{ procedureConceptKey: "refraction", score: 0.5 }],
+      flags: [
+        { class: "seeded-concept-uncoded", message: "Seed remains uncoded." },
+        { class: "category-required", message: "Category requires review." },
+        { class: "concept-key-conflict", message: "Concept key conflicts." },
+      ],
+    }),
+    proposal({
+      proposalId: "edited-row",
+      category: undefined,
+      flags: [
+        { class: "invalid-active-code-name", message: "Invalid active name." },
+        { class: "zero-price-contradiction", message: "Zero-price contradiction." },
+        { class: "obsolete-or-superseded", message: "Obsolete display." },
+        { class: "category-required", message: "Category requires review." },
+        { class: "active-column-unmapped", message: "Active column unmapped." },
+        { class: "laterality-dropped", message: "Laterality was dropped." },
+        { class: "invalid-price", message: "Price is invalid." },
+        { class: "invalid-source-boolean", message: "Source boolean is invalid." },
+        { class: "concept-key-conflict", message: "Concept key conflicts." },
+      ],
+    }),
+  ];
+  api.propose = async () => preview;
+  const renderer = create(<FeeScheduleImport api={api} onCommitted={() => undefined} />);
+  await inspectAndReview(renderer);
+
+  await act(async () => renderer.root.findByProps({
+    "aria-label": "Match suggestion-row to suggested Refraction",
+  }).props.onClick());
+  const suggestionText = renderer.root.findByProps({ "data-proposal-id": "suggestion-row" })
+    .findAllByType("p").flatMap((node) => node.children).join(" ");
+  assert.doesNotMatch(suggestionText, /Seed remains uncoded|Category requires review|Concept key conflicts/);
+
+  await act(async () => renderer.root.findByProps({ "aria-label": "Display for edited-row" }).props.onChange({
+    currentTarget: { value: "Reviewed display" },
+  }));
+  await act(async () => renderer.root.findByProps({ "aria-label": "Category for edited-row" }).props.onChange({
+    currentTarget: { value: "procedure" },
+  }));
+  await act(async () => renderer.root.findByProps({ "aria-label": "Price for edited-row" }).props.onChange({
+    currentTarget: { value: "12.34" },
+  }));
+  await act(async () => renderer.root.findByProps({ "aria-label": "Active for edited-row" }).props.onChange({
+    currentTarget: { checked: false },
+  }));
+  const editedJson = renderer.root.findByProps({ "data-proposal-id": "edited-row" })
+    .findAllByType("p").flatMap((node) => node.children).join(" ");
+  assert.doesNotMatch(
+    editedJson,
+    /Invalid active name|Zero-price contradiction|Obsolete display|Category requires review|Active column unmapped|Price is invalid|Source boolean is invalid|Concept key conflicts/,
+  );
+  assert.match(editedJson, /Laterality was dropped/);
+});
+
 test("review controls use the shared high-contrast settings styles", async () => {
   // Omitting scheduler-input or scheduler-button reproduces unreadable light controls on the dark settings surface.
   const renderer = create(<FeeScheduleImport api={memoryApi()} onCommitted={() => undefined} />);

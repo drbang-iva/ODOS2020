@@ -223,6 +223,20 @@ test("commit still rejects a non-skip row with no routing", async () => {
   assert.equal(fhir.updateCount, 0);
 });
 
+test("commit does not require advisory match ranking metadata", async () => {
+  // Requiring preview-only ranking data must reject a valid proposal from an older review client.
+  const fhir = new CountingFhir();
+  const { matchRanking: _matchRanking, ...proposal } = reviewedProposal({
+    proposalId: "p-without-ranking",
+    display: "Synthetic legacy reviewed service",
+  });
+
+  const result = await commitProcedureFeeImport(fhir, [proposal]);
+
+  assert.equal(result.outcomes[0]?.status, "created");
+  assert.equal(fhir.createCount, 1);
+});
+
 test("search-only fee schedule snapshot returns all virtual seeds without FHIR writes", async () => {
   const fhir = new CountingFhir();
 

@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   type FeeImportColumnMapping,
   type FeeImportCommitOutcome,
+  type FeeImportFlagClass,
   type FeeImportMatchOption,
   type FeeImportProposal,
   type FeeImportPreview,
@@ -619,9 +620,33 @@ function applyReviewChange(
   change: Partial<FeeImportProposal>,
 ): FeeImportProposal {
   const updated = { ...proposal, ...change };
-  if (!("routing" in change) && !("decision" in change)) return updated;
-  const flags = updated.flags.filter((flag) => flag.class !== "routing-required");
-  if (updated.decision !== "skip" && !updated.routing) {
+  const resolved = new Set<FeeImportFlagClass>();
+  if ("display" in change) {
+    resolved.add("invalid-active-code-name");
+    resolved.add("obsolete-or-superseded");
+    resolved.add("concept-key-conflict");
+  }
+  if ("category" in change && updated.category) resolved.add("category-required");
+  if ("priceCents" in change) {
+    resolved.add("invalid-price");
+    resolved.add("zero-price-contradiction");
+  }
+  if ("active" in change) {
+    resolved.add("active-column-unmapped");
+    resolved.add("invalid-source-boolean");
+    if (!updated.active) resolved.add("invalid-active-code-name");
+  }
+  if ("matchProcedureConceptKey" in change && updated.matchProcedureConceptKey) {
+    resolved.add("seeded-concept-uncoded");
+    resolved.add("concept-key-conflict");
+  }
+  if (("decision" in change && updated.decision !== "create") || updated.matchSeeded) {
+    resolved.add("seeded-concept-uncoded");
+    if (updated.matchSeeded) resolved.add("category-required");
+  }
+  if ("routing" in change || "decision" in change) resolved.add("routing-required");
+  const flags = updated.flags.filter((flag) => !resolved.has(flag.class));
+  if (("routing" in change || "decision" in change) && updated.decision !== "skip" && !updated.routing) {
     flags.push({ class: "routing-required", message: "Routing must be reviewed before commit." });
   }
   return { ...updated, flags };
