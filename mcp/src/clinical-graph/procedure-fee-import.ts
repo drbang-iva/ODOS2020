@@ -221,6 +221,7 @@ export async function commitProcedureFeeImport(
   proposals: readonly unknown[],
 ): Promise<FeeImportCommitResult> {
   const outcomes: FeeImportCommitOutcome[] = [];
+  const createdKeys = new Set<string>();
   for (const raw of proposals) {
     const parsed = commitProposalSchema.safeParse(raw);
     if (!parsed.success) {
@@ -247,6 +248,11 @@ export async function commitProcedureFeeImport(
       const snapshot = await listProcedureFeeScheduleSnapshot(fhir);
       const target = resolveCommitTarget(proposal, snapshot);
       if (target) {
+        if (proposal.decision === "create" && createdKeys.has(target.procedureConceptKey)) {
+          throw new ProcedureFeeImportInputError(
+            "A create row conflicts with a concept created earlier in this batch; review an explicit match target.",
+          );
+        }
         const seeded = isSeededProcedureFeeConceptKey(target.procedureConceptKey);
         if (!seeded) assertEditableIdentity(proposal);
         const item = await saveProcedureFeeScheduleItem(fhir, {
@@ -281,6 +287,7 @@ export async function commitProcedureFeeImport(
           procedureConceptKey: item.procedureConceptKey,
           message: "Created a new fee concept.",
         });
+        createdKeys.add(item.procedureConceptKey);
       }
     } catch (error) {
       outcomes.push({
@@ -580,13 +587,13 @@ function declaresInvalidCode(display: string): boolean {
 function collapseLateralityRows(proposals: WorkingProposal[]): WorkingProposal[] {
   return collapseRows(proposals, (proposal) => proposal.hadLaterality
     ? [proposal.billingCode, proposal.displayMeaning, proposal.category, proposal.priceCents,
-      proposal.routing, proposal.active].join("|")
+      proposal.routing, proposal.active, proposal.modifier].join("|")
     : undefined, "laterality");
 }
 
 function collapseDuplicateRows(proposals: WorkingProposal[]): WorkingProposal[] {
   return collapseRows(proposals, (proposal) => [proposal.billingCode, proposal.displayMeaning,
-    proposal.priceCents].join("|"), "duplicate");
+    proposal.priceCents, proposal.modifier].join("|"), "duplicate");
 }
 
 function collapseRows(

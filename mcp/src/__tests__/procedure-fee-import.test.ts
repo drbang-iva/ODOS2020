@@ -244,6 +244,30 @@ test("laterality rows collapse once and drop concept laterality with the charge-
   assert.ok(proposal.reasons.includes("Laterality rows collapsed; side comes from the charge."));
 });
 
+test("laterality rows with different non-side modifiers remain separate", () => {
+  // Omitting the stored modifier from collapse identity must discard one reviewed modifier.
+  const preview = proposeProcedureFeeImport({
+    csvText: [
+      "Label,Group,Code,Fee,Route,Modifier",
+      "Synthetic modified side RT,Procedure,SYNTHMOD.RT,11.11,Insurance,25",
+      "Synthetic modified side LT,Procedure,SYNTHMOD.LT,11.11,Insurance,59",
+    ].join("\n"),
+    mapping: {
+      display: "Label",
+      category: "Group",
+      billingCode: "Code",
+      price: "Fee",
+      routing: "Route",
+      modifier: "Modifier",
+    },
+    existing: [],
+  });
+
+  assert.equal(preview.proposals.length, 2);
+  assert.deepEqual(preview.proposals.map((row) => row.modifier), ["25", "59"]);
+  assert.deepEqual(preview.proposals.map((row) => row.sourceRows), [[2], [3]]);
+});
+
 test("local price tiers remain separate concepts sharing one derived billing code", () => {
   // Collapsing by billing code alone must make this test red by hiding one price tier.
   const preview = proposeProcedureFeeImport({
@@ -486,6 +510,32 @@ test("committing the same reviewed proposals twice creates no duplicate concepts
   assert.equal((await listProcedureFeeScheduleSnapshot(fhir)).filter((item) =>
     item.procedureConceptKey === "synthetic-repeated-service"
   ).length, 1);
+});
+
+test("two conflicting creates in one batch cannot overwrite the first row", async () => {
+  // Treating a key created earlier in this batch as an implicit match must overwrite its reviewed values.
+  const fhir = new CountingFhir();
+  const result = await commitProcedureFeeImport(fhir, [
+    reviewedProposal({
+      proposalId: "p-conflict-one",
+      display: "Synthetic same-key conflict",
+      billingCode: "SYNTHFIRST",
+      priceCents: 1111,
+    }),
+    reviewedProposal({
+      proposalId: "p-conflict-two",
+      display: "Synthetic same-key conflict",
+      billingCode: "SYNTHSECOND",
+      priceCents: 2222,
+    }),
+  ]);
+
+  assert.deepEqual(result.outcomes.map((outcome) => outcome.status), ["created", "failed"]);
+  const saved = (await listProcedureFeeScheduleSnapshot(fhir)).find((item) =>
+    item.procedureConceptKey === "synthetic-same-key-conflict"
+  );
+  assert.equal(saved?.billingCode, "SYNTHFIRST");
+  assert.equal(saved?.priceCents, 1111);
 });
 
 test("a second preview resolves the previously created concept as a match", async () => {
