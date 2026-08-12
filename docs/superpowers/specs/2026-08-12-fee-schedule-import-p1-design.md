@@ -151,7 +151,9 @@ Commit uses only `createProcedureFeeScheduleItem` and `saveProcedureFeeScheduleI
 
 ## CSV parsing and header suggestions
 
-The server uses the repository's existing `csv-parse` dependency with headers enabled and strict column counts. It accepts quoted commas, embedded newlines, CRLF or LF, and a UTF-8 byte-order mark. It rejects malformed quoting and duplicate header names rather than guessing.
+The server follows the existing conventions in `mcp/src/legacy-import/`: `csv-parse/sync` with `bom: true`, a `columns` callback, and `skip_empty_lines: true`. It uses the already-installed `csv-parse` dependency and adds no package. It accepts quoted commas, embedded newlines, CRLF or LF, and a UTF-8 byte-order mark while retaining strict column counts.
+
+Unlike `appointment-export.ts`, the fee importer does not set `relax_quotes: true`. That is a deliberate stricter boundary: a permissive money-file misparse can attach a code or price to the wrong concept. Malformed quoting and duplicate header names are rejected rather than guessed.
 
 Header suggestions normalize case, punctuation, and whitespace and score generic aliases for:
 
@@ -205,13 +207,13 @@ Proposal IDs are deterministic from source row numbers. Concept identity is auth
 - Prices accept plain decimal dollars, optional currency punctuation, and parenthesized negatives. Negative, non-finite, or fractional-cent inputs are flagged and left unresolved for operator correction.
 - Category values are mapped only when they unambiguously name one of the existing four worksheet categories. Unknown or blank source values do not default to `procedure`.
 - Routing values are mapped only when they unambiguously name one of the three import routes. Unknown or blank values remain unresolved for operator correction.
-- Common explicit true/false values are recognized for active and zero-price source checks. An absent active source-check mapping means `active: true`, matching a fee-schedule import's create default; an explicitly mapped but unknown value is flagged rather than coerced.
+- Common explicit true/false values are recognized for active and zero-price source checks. If no active/status-like header exists, an absent active source-check mapping means `active: true`, matching a hand-split fee-schedule import's create default. If an active/status-like header exists but the operator leaves it unmapped, every affected proposal receives an `active-column-unmapped` flag so activation is never silent. An explicitly mapped but unknown value is flagged rather than coerced.
 
 ### Compound and tiered code handling
 
 The mapped billing-code cell is retained transiently as `originalCode`.
 
-- A final `.RT`, `.LT`, or `.50` suffix is treated as a fixed-side modifier, removed from the billing code, dropped from the concept modifier, and flagged with the charge-side reason.
+- A final `.RT`, `.LT`, or `.50` suffix is treated as a fixed-side modifier, removed from the billing code, dropped from the concept modifier, and flagged with the charge-side reason. Treating `.50` this way is an import heuristic, not a verified statement that every legacy `.50` is bilateral. The visible flag and editable review let the operator override it before commit.
 - A final numeric local suffix other than `.50` is treated as a local price-tier suffix. The suffix is removed from the payer billing code while the row remains a separate concept. Rows in the tier therefore derive the worksheet's existing family solely by sharing one billing code.
 - A separate mapped modifier column follows the same laterality-drop rule.
 
@@ -244,8 +246,9 @@ Flags are attached to their proposal and never make the entire import fail:
 - `invalid-active-code-name`: the source explicitly says active and the display declares an invalid service or procedure code;
 - `zero-price-contradiction`: the source zero-price flag is true and the parsed price is non-zero;
 - `obsolete-or-superseded`: the display declares the row obsolete or superseded;
-- `category-required`: the mapped category source is absent, blank, or unrecognized;
+- `category-required`: the mapped category source is absent, blank, or unrecognized for a create or practice-created match; a seeded match inherits its immutable category and never receives this flag;
 - `routing-required`: routing is absent, blank, or unrecognized;
+- `active-column-unmapped`: an active/status-like source header exists but the operator did not map it;
 - `laterality-dropped`: a mapped or compound modifier is `RT`, `LT`, or `50` and was dropped because side comes from the charge;
 - `invalid-price`: the mapped price cannot be represented as nonnegative whole cents;
 - `invalid-source-boolean`: an active or zero-price source check is present but unrecognized; and
@@ -263,7 +266,7 @@ The workflow has three visible stages:
 2. **Map columns** — one select per ODOS field plus the two optional source checks. Suggested values are visibly marked as suggestions and always editable. The operator explicitly continues to proposal generation.
 3. **Review proposals** — one editable row per canonical proposal with source-row accounting, flags, collapse reasons, and commit outcome.
 
-Every proposal exposes editable controls for:
+Create proposals and matches to practice-created concepts expose editable controls for:
 
 - display;
 - category;
@@ -273,6 +276,8 @@ Every proposal exposes editable controls for:
 - routing;
 - decision; and
 - match target when decision is `match`.
+
+A match to a seeded concept shows the seed's immutable display and category read-only. The operator does not restate either value, and neither can cause a seeded-match row failure. Changing the decision or match target immediately recalculates which fields are editable.
 
 The header reports `N create · N match · N skip · N flagged`. Rows with flags remain committable after required fields are resolved; flags are warnings and evidence, not silent exclusion.
 
@@ -297,7 +302,7 @@ This closes both ordinary re-import duplication and a stale-review race. The exi
 
 A reviewed `match` requires an existing target key.
 
-- For a seeded target, commit never supplies display or category to save. The reviewed category must equal the immutable seed category; otherwise that row fails visibly. Billing code, allowed modifier, price, active state, and recorded routing may be saved.
+- For a seeded target, commit inherits display and category from the seed and never supplies either property to save. Neither field is required in the reviewed payload and neither can cause a row failure. Billing code, allowed modifier, price, active state, and recorded routing may be saved.
 - For a practice-created target, commit supplies the operator-reviewed display and category as well as billing code, allowed modifier, price, active state, and recorded routing.
 
 No commit rewrites a seeded display or category.
@@ -308,7 +313,7 @@ Skip produces an outcome but no FHIR call. `scheduling-only` always follows this
 
 ### Required review values
 
-Create and match require a nonblank display, a valid category, and an explicit non-scheduling routing. Create additionally requires a display that generates a valid concept key. Match requires a valid target. A billing code and price may remain absent, preserving the existing worksheet behavior; an uncoded active concept remains unchartable through the unchanged selector.
+Create and a match to a practice-created concept require a nonblank display, a valid category, and an explicit non-scheduling routing. A seeded match inherits its nonblank display and valid category and requires only an explicit non-scheduling routing plus a valid seeded target. Create additionally requires a display that generates a valid concept key. Any match requires a valid target. A billing code and price may remain absent, preserving the existing worksheet behavior; an uncoded active concept remains unchartable through the unchanged selector.
 
 ## Idempotency and existing data
 
@@ -354,7 +359,8 @@ A synthetic CSV corpus exercises:
 - scheduling-only no-definition routing;
 - the excluded RGP bifocal default skip;
 - every integrity flag class;
-- category and routing remaining unresolved rather than silently defaulted; and
+- category and routing remaining unresolved rather than silently defaulted;
+- an available but unmapped active/status column producing visible `active-column-unmapped` flags; and
 - exact match/create/skip/flagged counts.
 
 Tests name the production behavior that would have to break for each load-bearing assertion to go red. They invoke the real parser and proposal builder rather than stubbing either function.
@@ -383,7 +389,7 @@ Rendered React tests exercise the real import component and client adapter. They
 - upload and paste both reach inspection;
 - mapping suggestions are visible and editable;
 - missing display prevents proposal generation with a clear reason;
-- every proposal field and decision are editable;
+- every field and decision that is mutable for the selected create or match target is editable, while seeded display/category render read-only;
 - counts and every row flag render;
 - the recorded-only warning renders;
 - abandon performs no commit request;
@@ -419,7 +425,11 @@ After all synthetic gates, the real off-git corpus at `performance-od/.context/i
 - counts by flag class; and
 - laterality collapse count.
 
+The `category-required` count is called out explicitly because it tests whether the real corpus's group values map cleanly onto the four worksheet categories. A high count indicates an importer alias gap to investigate, not a conclusion that the source data is bad.
+
 It contains no source code values, prices, names, or row contents.
+
+`mcp/src/legacy-import/import-ledger.ts` remains untouched. Durable migration traceability may belong there in a future slice, but P1 stores no original-code or import-ledger record.
 
 The non-draft pull request has separate sections for the prerequisite, import flow, scope fences, real gate output, behavioral evidence, both literal mutation proofs, counts-only real-corpus dry run, and the two recorded-only fields. It states that Codex authored the slice and did not evaluate it. Independent Fable/Opus evaluation at the exact final head is required before merge.
 
