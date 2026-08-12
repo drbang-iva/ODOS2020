@@ -11,6 +11,7 @@ import { loadDayClose } from "../src/desk/day-close.js";
 import { GLAUCOMA_SUSPECT_PROTOCOL } from "../src/clinical-graph/protocol-fixtures.js";
 import { handleProtocolSignCleanupRequest } from "../src/clinical-graph/protocol-endpoint.js";
 import {
+  handleProcedureFeeScheduleCreateRequest,
   handleProcedureFeeScheduleMutationRequest,
   handleProcedureFeeScheduleRequest,
 } from "../src/clinical-graph/procedure-fee-schedule-endpoint.js";
@@ -263,6 +264,50 @@ test("fee schedule endpoint seeds empty definitions, saves integer cents, and de
   const definitions = fhir.resources.filter((row): row is ChargeItemDefinition => row.resourceType === "ChargeItemDefinition");
   assert.equal(definitions.length, 5);
   assert.equal(definitions.find((definition) => definition.title === "Corneal pachymetry")?.status, "retired");
+});
+
+test("fee schedule creation endpoint is admin-only and reports key conflicts without a write", async () => {
+  const fhir = new MemoryFhir();
+  const authenticate = async (header: string | undefined) => header === "Bearer admin"
+    ? { staffReference: "Practitioner/admin", actorRole: "practice-admin" as const, fhir }
+    : header === "Bearer clinician"
+      ? { staffReference: "Practitioner/doc", actorRole: "clinician" as const, fhir }
+      : null;
+  const body = {
+    action: "create",
+    display: "Custom tear imaging",
+    category: "procedure",
+    modifier: "SYNTHMOD",
+    priceCents: null,
+    active: true,
+  };
+
+  assert.equal((await handleProcedureFeeScheduleCreateRequest({ authenticate }, {
+    authHeader: undefined,
+    body,
+  })).status, 401);
+  assert.equal((await handleProcedureFeeScheduleCreateRequest({ authenticate }, {
+    authHeader: "Bearer clinician",
+    body,
+  })).status, 403);
+
+  const created = await handleProcedureFeeScheduleCreateRequest({ authenticate }, {
+    authHeader: "Bearer admin",
+    body,
+  });
+  assert.equal(created.status, 201);
+  assert.equal((created.body as { item: { procedureConceptKey: string; display: string } }).item.procedureConceptKey,
+    "custom-tear-imaging");
+  assert.equal((created.body as { item: { display: string } }).item.display, "Custom tear imaging");
+  const writesAfterCreate = fhir.resources.length;
+
+  const conflict = await handleProcedureFeeScheduleCreateRequest({ authenticate }, {
+    authHeader: "Bearer admin",
+    body,
+  });
+  assert.equal(conflict.status, 409);
+  assert.match((conflict.body as { error: string }).error, /already exists/);
+  assert.equal(fhir.resources.length, writesAfterCreate);
 });
 
 test("accepted proposals with an invalid patient link fail before any ChargeItem write", async () => {

@@ -19,7 +19,7 @@ const ROUTINE_ITEM: ProcedureFeeScheduleItem = {
   version: "1",
 };
 
-test("fee settings round-trip the optional billing code without enabling item creation", async () => {
+test("fee settings round-trip the optional billing code while allowing practice concept creation", async () => {
   const requests: Array<{ url: string; init?: RequestInit }> = [];
   const fetchImpl: typeof fetch = async (input, init) => {
     requests.push({ url: String(input), init });
@@ -37,12 +37,13 @@ test("fee settings round-trip the optional billing code without enabling item cr
   });
 
   const descriptor = feeScheduleDescriptor(adapter);
-  assert.equal(descriptor.canCreate, false);
+  assert.notEqual(descriptor.canCreate, false);
   assert.deepEqual(descriptor.fields, [
     { type: "text", key: "billingCode", label: "Billing code" },
+    { type: "text", key: "modifier", label: "Modifier" },
     { type: "currency", key: "priceCents", label: "Fee", min: 0 },
   ]);
-  assert.deepEqual(descriptor.facts?.(ROUTINE_ITEM), ["S0620", "No fee set", "Version 1"]);
+  assert.deepEqual(descriptor.facts?.(ROUTINE_ITEM), ["S0620", "Unpriced", "Version 1"]);
   assert.match(descriptor.listGrammar?.searchText?.(ROUTINE_ITEM) ?? "", /S0620/);
   const uncoded = { ...ROUTINE_ITEM, procedureConceptKey: "refraction", display: "Refraction" };
   delete uncoded.billingCode;

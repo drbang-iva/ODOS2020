@@ -7,6 +7,8 @@ export interface ProcedureFeeScheduleItem {
   display: string;
   active: boolean;
   billingCode?: string;
+  category?: "exam" | "refraction" | "cl-fitting" | "procedure";
+  modifier?: string;
   priceCents?: number;
   version: string;
 }
@@ -25,9 +27,13 @@ export function procedureFeeScheduleAdapter(
       return body.items ?? [];
     },
     async save(item) {
+      if (!item.procedureConceptKey) {
+        return createItem(item, fetchImpl);
+      }
       return mutate(item, {
         action: "save",
         ...(Object.hasOwn(item, "billingCode") ? { billingCode: item.billingCode?.trim() || null } : {}),
+        ...(Object.hasOwn(item, "modifier") ? { modifier: item.modifier?.trim() || null } : {}),
         priceCents: item.priceCents ?? null,
         active: item.active,
       }, fetchImpl);
@@ -38,11 +44,36 @@ export function procedureFeeScheduleAdapter(
   };
 }
 
+async function createItem(
+  item: ProcedureFeeScheduleItem,
+  fetchImpl: typeof fetch,
+): Promise<ProcedureFeeScheduleItem> {
+  const response = await fetchImpl(`${clinicalGraphApiBase()}/clinical-graph/fee-schedule`, {
+    method: "POST",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "create",
+      display: item.display,
+      category: item.category,
+      ...(item.billingCode?.trim() ? { billingCode: item.billingCode.trim() } : {}),
+      ...(item.modifier?.trim() ? { modifier: item.modifier.trim() } : {}),
+      priceCents: item.priceCents ?? null,
+      active: item.active,
+    }),
+  });
+  const payload = await response.json() as { item?: ProcedureFeeScheduleItem; error?: string };
+  if (!response.ok || !payload.item) {
+    throw new Error(payload.error ?? `Fee schedule creation failed: ${response.status}`);
+  }
+  return payload.item;
+}
+
 async function mutate(
   item: ProcedureFeeScheduleItem,
   body: {
     action: "save";
     billingCode?: string | null;
+    modifier?: string | null;
     priceCents: number | null;
     active: boolean;
   } | { action: "deactivate" },

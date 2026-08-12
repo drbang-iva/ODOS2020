@@ -36,6 +36,7 @@ type AuthenticatedFhir = Awaited<ReturnType<typeof createAuthenticatedFhirClient
 type SmokeFixture = {
   accessToken: string;
   baseUrl: string;
+  basicIdentifier: string;
   fhir: AuthenticatedFhir;
   references: Record<
     "auditEvent" | "basic" | "chargeItem" | "claim" | "claimResponse" | "invoice" | "patient" | "payment" | "provenance" | "task",
@@ -95,7 +96,7 @@ const searches: SmokeSearch[] = [
   {
     name: "PaymentReconciliation active status",
     resourceType: "PaymentReconciliation",
-    params: () => ({ status: "active", _count: "10" }),
+    params: () => ({ status: "active", _sort: "-created", _count: "10" }),
     expectedReference: (current) => current.references.payment,
   },
   {
@@ -130,9 +131,9 @@ const searches: SmokeSearch[] = [
   {
     name: "Basic code and identifier",
     resourceType: "Basic",
-    params: () => ({
+    params: (current) => ({
       code: `${BASIC_CODE_SYSTEM}|contract-search-smoke`,
-      identifier: `${BASIC_IDENTIFIER_SYSTEM}|contract-search-smoke`,
+      identifier: `${BASIC_IDENTIFIER_SYSTEM}|${current.basicIdentifier}`,
       _count: "10",
     }),
     expectedReference: (current) => current.references.basic,
@@ -241,6 +242,7 @@ async function seedSmokeFixture(
   const timestamp = new Date(Date.now() - 60_000).toISOString();
   const today = timestamp.slice(0, 10);
   const suffix = randomBytes(8).toString("hex");
+  const basicIdentifier = `contract-search-smoke-${suffix}`;
   const patient = await fhir.create<Patient>({
     resourceType: "Patient",
     active: true,
@@ -344,7 +346,7 @@ async function seedSmokeFixture(
   const basic = await fhir.create<Basic>({
     resourceType: "Basic",
     code: { coding: [{ system: BASIC_CODE_SYSTEM, code: "contract-search-smoke" }] },
-    identifier: [{ system: BASIC_IDENTIFIER_SYSTEM, value: "contract-search-smoke" }],
+    identifier: [{ system: BASIC_IDENTIFIER_SYSTEM, value: basicIdentifier }],
     subject: { reference: patientReference },
     created: today,
   });
@@ -369,6 +371,7 @@ async function seedSmokeFixture(
   return {
     accessToken,
     baseUrl,
+    basicIdentifier,
     fhir,
     timestamp,
     references: {

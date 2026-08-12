@@ -6,6 +6,8 @@ import {
   PROCEDURE_FEE_SEEDS,
   PROCEDURE_CONCEPT_SYSTEM,
   buildProcedureFeeDefinition,
+  createProcedureFeeScheduleItem,
+  listActiveCodedNonVisitProcedureFees,
   listProcedureFeeSchedule,
   materializeAcceptedChargeProposals,
   saveProcedureFeeScheduleItem,
@@ -187,6 +189,14 @@ test("the shipped fee schedule contains 12 visit concepts and settings-only refr
       ["routine-vision-exam-established", "S0621"],
     ],
   );
+  assert.deepEqual(
+    PROCEDURE_FEE_SEEDS.map((row) => row.category),
+    [
+      ...Array(5).fill("procedure"),
+      ...Array(12).fill("exam"),
+      "refraction",
+    ],
+  );
 });
 
 test("billing coding is positionally first while the ODOS concept remains system-addressable", () => {
@@ -243,6 +253,114 @@ test("billing code save normalizes, preserves on omission, and removes on blank"
     row.resourceType === "ChargeItemDefinition"
   );
   assert.equal(definitions.length, 6);
+});
+
+test("practice-created concepts persist their typed display and separate worksheet fields across reloads", async () => {
+  const fhir = new MemoryFhir();
+  await listProcedureFeeSchedule(fhir);
+  const seededBefore = structuredClone(fhir.resources);
+
+  const created = await createProcedureFeeScheduleItem(fhir, {
+    display: "Custom dry eye imaging",
+    category: "procedure",
+    modifier: " synthmod ",
+    active: true,
+  });
+  assert.equal(created.id, "custom-dry-eye-imaging");
+  assert.equal(created.procedureConceptKey, "custom-dry-eye-imaging");
+  assert.equal(created.display, "Custom dry eye imaging");
+  assert.equal(created.active, true);
+  assert.equal(created.category, "procedure");
+  assert.equal(created.modifier, "SYNTHMOD");
+  assert.equal(created.version, "1");
+
+  const reloaded = (await listProcedureFeeSchedule(fhir)).find((item) =>
+    item.procedureConceptKey === "custom-dry-eye-imaging"
+  );
+  assert.equal(reloaded?.display, "Custom dry eye imaging");
+  assert.notEqual(String(reloaded?.display), "Custom Dry Eye Imaging");
+  assert.equal(reloaded?.category, "procedure");
+  assert.equal(reloaded?.modifier, "SYNTHMOD");
+  assert.equal(reloaded?.billingCode, undefined);
+  assert.deepEqual(await listActiveCodedNonVisitProcedureFees(fhir), []);
+
+  const coded = await saveProcedureFeeScheduleItem(fhir, {
+    procedureConceptKey: "custom-dry-eye-imaging",
+    billingCode: " syntha ",
+    active: true,
+  });
+  assert.equal(coded.billingCode, "SYNTHA");
+  assert.equal(coded.modifier, "SYNTHMOD");
+  assert.equal(coded.display, "Custom dry eye imaging");
+  assert.deepEqual(
+    (await listActiveCodedNonVisitProcedureFees(fhir)).map((item) => ({
+      procedureConceptKey: item.procedureConceptKey,
+      billingCode: item.billingCode,
+      modifier: item.modifier,
+    })),
+    [{
+      procedureConceptKey: "custom-dry-eye-imaging",
+      billingCode: "SYNTHA",
+      modifier: "SYNTHMOD",
+    }],
+  );
+  assert.equal(coded.billingCode.includes("SYNTHMOD"), false);
+  assert.deepEqual(fhir.resources.slice(0, seededBefore.length), seededBefore);
+});
+
+test("practice-created concept key collisions reject without writing or replacing seeded concepts", async () => {
+  const fhir = new MemoryFhir();
+  await listProcedureFeeSchedule(fhir);
+  const beforeCreate = fhir.resources.length;
+  await createProcedureFeeScheduleItem(fhir, {
+    display: "Special imaging",
+    category: "procedure",
+    active: true,
+  });
+  const afterCreate = fhir.resources.length;
+  assert.equal(afterCreate, beforeCreate + 1);
+
+  await assert.rejects(() => createProcedureFeeScheduleItem(fhir, {
+    display: "Special imaging",
+    category: "exam",
+    active: true,
+  }), /already exists/);
+  assert.equal(fhir.resources.length, afterCreate);
+
+  await assert.rejects(() => createProcedureFeeScheduleItem(fhir, {
+    display: "Refraction",
+    category: "procedure",
+    active: true,
+  }), /already exists/);
+  assert.equal(fhir.resources.length, afterCreate);
+  assert.equal((await listProcedureFeeSchedule(fhir)).filter((item) =>
+    item.procedureConceptKey === "refraction"
+  ).length, 1);
+});
+
+test("six active concepts sharing one code remain six distinct chart procedure options", async () => {
+  const fhir = new MemoryFhir();
+  for (let index = 1; index <= 6; index += 1) {
+    await createProcedureFeeScheduleItem(fhir, {
+      display: `Synthetic fitting ${index}`,
+      category: "cl-fitting",
+      billingCode: "SYNTHA",
+      priceCents: 10_000 + index,
+      active: true,
+    });
+  }
+  const options = await listActiveCodedNonVisitProcedureFees(fhir);
+  assert.equal(options.length, 6);
+  assert.deepEqual(options.map((option) => option.procedureConceptKey), [
+    "synthetic-fitting-1",
+    "synthetic-fitting-2",
+    "synthetic-fitting-3",
+    "synthetic-fitting-4",
+    "synthetic-fitting-5",
+    "synthetic-fitting-6",
+  ]);
+  assert.equal(options.every((option) => option.billingCode === "SYNTHA"), true);
+  assert.equal(new Set(options.map((option) => option.priceCents)).size, 6);
 });
 
 test("manual proposals materialize without weakening non-linkage validation", async () => {

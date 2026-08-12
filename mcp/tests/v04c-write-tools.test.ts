@@ -253,6 +253,7 @@ test("v0.4c Ortho-K and myopia MCP write tools create resources with mandatory P
           encounter_id: "v04c-no-encounter",
           eye: "OD",
           value_mm: 24.12,
+          biometry_method: "OPTICAL_BIOMETRY",
         },
       }),
     );
