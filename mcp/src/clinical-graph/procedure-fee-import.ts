@@ -1,10 +1,17 @@
 import { parse } from "csv-parse/sync";
+import { z } from "zod";
 import {
   PROCEDURE_FEE_CATEGORIES,
+  ProcedureFeeConceptConflictError,
+  ProcedureFeeScheduleInputError,
   type ProcedureFeeCategory,
+  type ProcedureFeeScheduleFhir,
   type ProcedureFeeScheduleItem,
+  createProcedureFeeScheduleItem,
   isSeededProcedureFeeConceptKey,
+  listProcedureFeeScheduleSnapshot,
   procedureConceptKeyFromDisplay,
+  saveProcedureFeeScheduleItem,
 } from "./procedure-fee-schedule.js";
 
 export const FEE_IMPORT_ROUTINGS = ["insurance-billable", "self-pay", "scheduling-only"] as const;
@@ -75,6 +82,18 @@ export interface FeeImportPreview {
   counts: { create: number; match: number; skip: number; flagged: number };
 }
 
+export interface FeeImportCommitOutcome {
+  proposalId: string;
+  status: "created" | "matched" | "skipped" | "failed";
+  procedureConceptKey?: string;
+  message: string;
+}
+
+export interface FeeImportCommitResult {
+  outcomes: FeeImportCommitOutcome[];
+  counts: { created: number; matched: number; skipped: number; failed: number };
+}
+
 export class ProcedureFeeImportInputError extends Error {
   constructor(message: string) {
     super(message);
@@ -91,6 +110,38 @@ interface WorkingProposal extends FeeImportProposal {
   displayMeaning: string;
   hadLaterality: boolean;
 }
+
+const commitProposalSchema = z.object({
+  proposalId: z.string().trim().min(1).max(200),
+  sourceRows: z.array(z.number().int().positive()).min(1),
+  originalCode: z.string().optional(),
+  decision: z.enum(["match", "create", "skip"]),
+  matchProcedureConceptKey: z.string().regex(/^[a-z0-9][a-z0-9-]{0,99}$/).optional(),
+  matchSeeded: z.boolean().optional(),
+  display: z.string().max(200),
+  category: z.enum(PROCEDURE_FEE_CATEGORIES).optional(),
+  billingCode: z.string().max(20).optional(),
+  modifier: z.string().max(10).optional(),
+  priceCents: z.number().int().nonnegative().optional(),
+  routing: z.enum(FEE_IMPORT_ROUTINGS).optional(),
+  active: z.boolean(),
+  flags: z.array(z.object({
+    class: z.enum([
+      "invalid-active-code-name",
+      "zero-price-contradiction",
+      "obsolete-or-superseded",
+      "category-required",
+      "routing-required",
+      "active-column-unmapped",
+      "laterality-dropped",
+      "invalid-price",
+      "invalid-source-boolean",
+      "concept-key-conflict",
+    ]),
+    message: z.string(),
+  }).strict()),
+  reasons: z.array(z.string()),
+}).strict();
 
 const HEADER_ALIASES: Record<keyof FeeImportColumnMapping, readonly string[]> = {
   display: ["display", "name", "description", "service", "procedure", "offering", "title", "label"],
@@ -163,6 +214,137 @@ export function proposeProcedureFeeImport(input: {
       flagged: publicProposals.filter((row) => row.flags.length > 0).length,
     },
   };
+}
+
+export async function commitProcedureFeeImport(
+  fhir: ProcedureFeeScheduleFhir,
+  proposals: readonly unknown[],
+): Promise<FeeImportCommitResult> {
+  const outcomes: FeeImportCommitOutcome[] = [];
+  for (const raw of proposals) {
+    const parsed = commitProposalSchema.safeParse(raw);
+    if (!parsed.success) {
+      outcomes.push({
+        proposalId: safeProposalId(raw),
+        status: "failed",
+        message: parsed.error.issues[0]?.message ?? "Reviewed fee row is invalid.",
+      });
+      continue;
+    }
+    const proposal = parsed.data;
+    if (proposal.decision === "skip" || proposal.routing === "scheduling-only") {
+      outcomes.push({
+        proposalId: proposal.proposalId,
+        status: "skipped",
+        message: proposal.routing === "scheduling-only"
+          ? "Scheduling-only rows create no fee definition."
+          : "Skipped by operator review.",
+      });
+      continue;
+    }
+    try {
+      if (!proposal.routing) throw new ProcedureFeeImportInputError("Routing is required before commit.");
+      const snapshot = await listProcedureFeeScheduleSnapshot(fhir);
+      const target = resolveCommitTarget(proposal, snapshot);
+      if (target) {
+        const seeded = isSeededProcedureFeeConceptKey(target.procedureConceptKey);
+        if (!seeded) assertEditableIdentity(proposal);
+        const item = await saveProcedureFeeScheduleItem(fhir, {
+          procedureConceptKey: target.procedureConceptKey,
+          ...(!seeded ? { display: proposal.display, category: proposal.category } : {}),
+          billingCode: proposal.billingCode ?? null,
+          modifier: proposal.modifier ?? null,
+          priceCents: proposal.priceCents ?? null,
+          routing: proposal.routing,
+          active: proposal.active,
+        });
+        outcomes.push({
+          proposalId: proposal.proposalId,
+          status: "matched",
+          procedureConceptKey: item.procedureConceptKey,
+          message: "Matched and saved to the existing fee concept.",
+        });
+      } else {
+        assertEditableIdentity(proposal);
+        const item = await createProcedureFeeScheduleItem(fhir, {
+          display: proposal.display,
+          category: proposal.category,
+          billingCode: proposal.billingCode ?? null,
+          modifier: proposal.modifier ?? null,
+          priceCents: proposal.priceCents ?? null,
+          routing: proposal.routing,
+          active: proposal.active,
+        });
+        outcomes.push({
+          proposalId: proposal.proposalId,
+          status: "created",
+          procedureConceptKey: item.procedureConceptKey,
+          message: "Created a new fee concept.",
+        });
+      }
+    } catch (error) {
+      outcomes.push({
+        proposalId: proposal.proposalId,
+        status: "failed",
+        message: safeCommitMessage(error),
+      });
+    }
+  }
+  return {
+    outcomes,
+    counts: {
+      created: outcomes.filter((outcome) => outcome.status === "created").length,
+      matched: outcomes.filter((outcome) => outcome.status === "matched").length,
+      skipped: outcomes.filter((outcome) => outcome.status === "skipped").length,
+      failed: outcomes.filter((outcome) => outcome.status === "failed").length,
+    },
+  };
+}
+
+function resolveCommitTarget(
+  proposal: z.infer<typeof commitProposalSchema>,
+  snapshot: readonly ProcedureFeeScheduleItem[],
+): ProcedureFeeScheduleItem | undefined {
+  if (proposal.decision === "match") {
+    if (!proposal.matchProcedureConceptKey) {
+      throw new ProcedureFeeImportInputError("A match target is required before commit.");
+    }
+    const target = snapshot.find((item) =>
+      item.procedureConceptKey === proposal.matchProcedureConceptKey
+    );
+    if (!target) throw new ProcedureFeeImportInputError("The reviewed match target no longer exists.");
+    return target;
+  }
+  const display = proposal.display.trim();
+  if (!display) throw new ProcedureFeeImportInputError("Display is required before commit.");
+  const generatedKey = procedureConceptKeyFromDisplay(display);
+  return snapshot.find((item) => item.procedureConceptKey === generatedKey);
+}
+
+function assertEditableIdentity(proposal: z.infer<typeof commitProposalSchema>): void {
+  if (!proposal.display.trim()) throw new ProcedureFeeImportInputError("Display is required before commit.");
+  procedureConceptKeyFromDisplay(proposal.display);
+  if (!proposal.category) throw new ProcedureFeeImportInputError("Category is required before commit.");
+}
+
+function safeCommitMessage(error: unknown): string {
+  if (error instanceof ProcedureFeeImportInputError ||
+    error instanceof ProcedureFeeScheduleInputError ||
+    error instanceof ProcedureFeeConceptConflictError) {
+    return error.message;
+  }
+  if (error instanceof Error && /^(Modifier|Billing code|Procedure fee|Procedure display name)/.test(error.message)) {
+    return error.message;
+  }
+  return "Fee schedule row could not be committed.";
+}
+
+function safeProposalId(raw: unknown): string {
+  if (raw && typeof raw === "object" && "proposalId" in raw &&
+    typeof raw.proposalId === "string" && raw.proposalId.length <= 200) {
+    return raw.proposalId;
+  }
+  return "invalid-proposal";
 }
 
 function parseFeeCsv(csvText: string): ParsedFeeCsv {

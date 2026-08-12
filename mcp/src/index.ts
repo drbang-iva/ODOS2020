@@ -138,6 +138,10 @@ import {
   handleProcedureFeeScheduleMutationRequest,
   handleProcedureFeeScheduleRequest,
 } from "./clinical-graph/procedure-fee-schedule-endpoint.js";
+import {
+  handleProcedureFeeImportCommitRequest,
+  handleProcedureFeeImportPreviewRequest,
+} from "./clinical-graph/procedure-fee-import-endpoint.js";
 import { registerManualProcedureChargeRoutes } from "./clinical-graph/manual-procedure-charge-endpoint.js";
 import {
   handleImagingCaptureRequest,
@@ -6659,6 +6663,34 @@ async function startMcpServer(): Promise<void> {
         } catch (error) {
           console.error("odos-mcp: fee schedule route failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "fee schedule route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/fee-schedule/import/preview", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleProcedureFeeImportPreviewRequest(
+            { authenticate: authenticateStaffRouteForAction("identity.manage") },
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: fee schedule import preview route failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "fee schedule import preview route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/fee-schedule/import/commit", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleProcedureFeeImportCommitRequest(
+            { authenticate: authenticateStaffRouteForAction("identity.manage") },
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: fee schedule import commit route failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "fee schedule import commit route failed" });
         }
       });
 

@@ -3,14 +3,21 @@ import { test } from "node:test";
 import type { Bundle, ChargeItemDefinition, Resource } from "@medplum/fhirtypes";
 import {
   createProcedureFeeScheduleItem,
+  ensureProcedureFeeSchedule,
   listActiveCodedNonVisitProcedureFees,
   listProcedureFeeScheduleSnapshot,
   saveProcedureFeeScheduleItem,
 } from "../clinical-graph/procedure-fee-schedule.js";
 import {
+  commitProcedureFeeImport,
   inspectProcedureFeeCsv,
   proposeProcedureFeeImport,
+  type FeeImportProposal,
 } from "../clinical-graph/procedure-fee-import.js";
+import {
+  handleProcedureFeeImportCommitRequest,
+  handleProcedureFeeImportPreviewRequest,
+} from "../clinical-graph/procedure-fee-import-endpoint.js";
 
 class CountingFhir {
   resources: Resource[] = [];
@@ -74,6 +81,21 @@ class CountingFhir {
 function resourceIdentifiers(resource: Resource): Array<{ system?: string; value?: string }> {
   if (!("identifier" in resource) || !resource.identifier) return [];
   return Array.isArray(resource.identifier) ? resource.identifier : [resource.identifier];
+}
+
+function reviewedProposal(overrides: Partial<FeeImportProposal> & Pick<FeeImportProposal, "proposalId" | "display">): FeeImportProposal {
+  const { display, ...rest } = overrides;
+  return {
+    sourceRows: [2],
+    decision: "create",
+    display,
+    category: "procedure",
+    routing: "insurance-billable",
+    active: true,
+    flags: [],
+    reasons: [],
+    ...rest,
+  };
 }
 
 test("search-only fee schedule snapshot returns all virtual seeds without FHIR writes", async () => {
@@ -342,3 +364,216 @@ test("RGP bifocal and scheduling-only rows default to explicit skip", () => {
     Array.from({ length: 15 }, (_, index) => index + 2),
   );
 });
+
+test("preview inspect and propose are practice-admin only and perform zero FHIR writes", async () => {
+  // Removing role enforcement or calling the write-seeding schedule list must make this test red.
+  const fhir = new CountingFhir();
+  const csvText = "Service,Group,Route\nSynthetic preview service,Procedure,Insurance\n";
+  const depsFor = (role: "practice-admin" | "clinician" | null) => ({
+    authenticate: async () => role ? {
+      staffReference: "Practitioner/synthetic",
+      actorRole: role,
+      fhir,
+    } : null,
+  });
+  assert.equal((await handleProcedureFeeImportPreviewRequest(depsFor(null), {
+    authHeader: undefined,
+    body: { action: "inspect", csvText },
+  })).status, 401);
+  assert.equal((await handleProcedureFeeImportPreviewRequest(depsFor("clinician"), {
+    authHeader: "Bearer clinician",
+    body: { action: "inspect", csvText },
+  })).status, 403);
+  const inspected = await handleProcedureFeeImportPreviewRequest(depsFor("practice-admin"), {
+    authHeader: "Bearer admin",
+    body: { action: "inspect", csvText },
+  });
+  assert.equal(inspected.status, 200);
+  const proposed = await handleProcedureFeeImportPreviewRequest(depsFor("practice-admin"), {
+    authHeader: "Bearer admin",
+    body: {
+      action: "propose",
+      csvText,
+      mapping: { display: "Service", category: "Group", routing: "Route" },
+    },
+  });
+  assert.equal(proposed.status, 200);
+  assert.equal(fhir.createCount, 0);
+  assert.equal(fhir.updateCount, 0);
+  assert.deepEqual(fhir.resources, []);
+});
+
+test("commit reports create match skip failure and later success without hiding partial results", async () => {
+  // Replacing sequential per-row handling with fail-fast or a transaction must hide the final success and make this test red.
+  const fhir = new CountingFhir();
+  fhir.resources.push({
+    id: "existing-practice-fee",
+    ...createDefinition("synthetic-practice-match", "Synthetic practice match"),
+  });
+  const secretOriginalCode = "SYNTHETIC-TRANSIENT-SECRET";
+  const result = await commitProcedureFeeImport(fhir, [
+    reviewedProposal({ proposalId: "p-create-one", display: "Synthetic created one", billingCode: "SYNTHC1" }),
+    reviewedProposal({
+      proposalId: "p-match",
+      display: "Synthetic practice match",
+      decision: "match",
+      matchProcedureConceptKey: "synthetic-practice-match",
+      billingCode: "SYNTHM1",
+    }),
+    reviewedProposal({ proposalId: "p-skip", display: "Synthetic skipped", decision: "skip" }),
+    reviewedProposal({
+      proposalId: "p-fail",
+      display: "Synthetic rejected modifier",
+      modifier: "RT",
+      originalCode: secretOriginalCode,
+    }),
+    reviewedProposal({ proposalId: "p-create-two", display: "Synthetic created two", billingCode: "SYNTHC2" }),
+  ]);
+  assert.deepEqual(result.outcomes.map((outcome) => outcome.status), [
+    "created", "matched", "skipped", "failed", "created",
+  ]);
+  assert.deepEqual(result.counts, { created: 2, matched: 1, skipped: 1, failed: 1 });
+  assert.ok(fhir.resources.some((row) => JSON.stringify(row).includes("synthetic-created-two")));
+  assert.equal(JSON.stringify(result).includes(secretOriginalCode), false);
+  assert.equal(JSON.stringify(fhir.resources).includes(secretOriginalCode), false);
+});
+
+test("scheduling-only commit is always a no-write skip even with a stale create decision", async () => {
+  // Trusting a stale create decision over scheduling routing must make this test red with a FHIR write.
+  const fhir = new CountingFhir();
+  const result = await commitProcedureFeeImport(fhir, [reviewedProposal({
+    proposalId: "p-scheduling",
+    display: "Synthetic scheduling slot",
+    decision: "create",
+    routing: "scheduling-only",
+  })]);
+  assert.equal(result.outcomes[0]?.status, "skipped");
+  assert.equal(fhir.createCount, 0);
+  assert.equal(fhir.updateCount, 0);
+});
+
+test("seeded match inherits immutable display and category and never supplies them to save", async () => {
+  // Supplying reviewed display/category to the seeded save must trigger the prerequisite guard and make this test red.
+  const fhir = new CountingFhir();
+  const result = await commitProcedureFeeImport(fhir, [reviewedProposal({
+    proposalId: "p-seed",
+    display: "Attempted seed rename",
+    category: "procedure",
+    decision: "match",
+    matchProcedureConceptKey: "refraction",
+    billingCode: "SYNTHSEED",
+    routing: "self-pay",
+  })]);
+  assert.equal(result.outcomes[0]?.status, "matched");
+  const snapshot = await listProcedureFeeScheduleSnapshot(fhir);
+  const seed = snapshot.find((item) => item.procedureConceptKey === "refraction");
+  assert.equal(seed?.display, "Refraction");
+  assert.equal(seed?.category, "refraction");
+});
+
+test("committing the same reviewed proposals twice creates no duplicate concepts", async () => {
+  // Bypassing existing-key-to-match resolution must attempt a duplicate create and make this test red.
+  const fhir = new CountingFhir();
+  await ensureProcedureFeeSchedule(fhir);
+  fhir.createCount = 0;
+  const proposal = reviewedProposal({ proposalId: "p-repeat", display: "Synthetic repeated service" });
+  const first = await commitProcedureFeeImport(fhir, [proposal]);
+  const createsAfterFirst = fhir.createCount;
+  const second = await commitProcedureFeeImport(fhir, [proposal]);
+  assert.equal(first.outcomes[0]?.status, "created");
+  assert.equal(second.outcomes[0]?.status, "matched");
+  assert.equal(fhir.createCount, createsAfterFirst);
+  assert.equal((await listProcedureFeeScheduleSnapshot(fhir)).filter((item) =>
+    item.procedureConceptKey === "synthetic-repeated-service"
+  ).length, 1);
+});
+
+test("a second preview resolves the previously created concept as a match", async () => {
+  // Generating proposal identity independently of the server concept key must leave the second preview as create.
+  const fhir = new CountingFhir();
+  const csvText = "Label,Group,Route\nSynthetic preview repeat,Procedure,Insurance\n";
+  const mapping = { display: "Label", category: "Group", routing: "Route" };
+  const first = proposeProcedureFeeImport({ csvText, mapping, existing: await listProcedureFeeScheduleSnapshot(fhir) });
+  assert.equal(first.proposals[0]?.decision, "create");
+  await commitProcedureFeeImport(fhir, first.proposals);
+  const second = proposeProcedureFeeImport({ csvText, mapping, existing: await listProcedureFeeScheduleSnapshot(fhir) });
+  assert.equal(second.proposals[0]?.decision, "match");
+  assert.equal(second.proposals[0]?.matchProcedureConceptKey, "synthetic-preview-repeat");
+});
+
+test("uncoded import stays out of the unchanged selector until a code is saved", async () => {
+  // Altering the selector contract or treating an uncoded active concept as chartable must make this test red.
+  const fhir = new CountingFhir();
+  const created = await commitProcedureFeeImport(fhir, [reviewedProposal({
+    proposalId: "p-uncoded",
+    display: "Synthetic uncoded service",
+  })]);
+  const key = created.outcomes[0]?.procedureConceptKey;
+  assert.ok(key);
+  assert.equal((await listActiveCodedNonVisitProcedureFees(fhir)).some((item) =>
+    item.procedureConceptKey === key
+  ), false);
+  await commitProcedureFeeImport(fhir, [reviewedProposal({
+    proposalId: "p-coded",
+    display: "Synthetic uncoded service",
+    decision: "match",
+    matchProcedureConceptKey: key,
+    billingCode: "SYNTHCODED",
+  })]);
+  assert.equal((await listActiveCodedNonVisitProcedureFees(fhir)).filter((item) =>
+    item.procedureConceptKey === key
+  ).length, 1);
+});
+
+test("commit endpoint rejects malformed batches before writes and returns row outcomes", async () => {
+  // Removing top-level validation must allow malformed input to reach FHIR.
+  const fhir = new CountingFhir();
+  const unauthenticated = await handleProcedureFeeImportCommitRequest({ authenticate: async () => null }, {
+    authHeader: undefined,
+    body: { proposals: [] },
+  });
+  assert.equal(unauthenticated.status, 401);
+  const forbidden = await handleProcedureFeeImportCommitRequest({ authenticate: async () => ({
+    staffReference: "Practitioner/clinician",
+    actorRole: "clinician" as const,
+    fhir,
+  }) }, {
+    authHeader: "Bearer clinician",
+    body: { proposals: [] },
+  });
+  assert.equal(forbidden.status, 403);
+  const deps = {
+    authenticate: async () => ({
+      staffReference: "Practitioner/admin",
+      actorRole: "practice-admin" as const,
+      fhir,
+    }),
+  };
+  const malformed = await handleProcedureFeeImportCommitRequest(deps, {
+    authHeader: "Bearer admin",
+    body: { proposals: "not-an-array" },
+  });
+  assert.equal(malformed.status, 400);
+  assert.equal(fhir.createCount, 0);
+  const committed = await handleProcedureFeeImportCommitRequest(deps, {
+    authHeader: "Bearer admin",
+    body: { proposals: [reviewedProposal({ proposalId: "p-endpoint", display: "Synthetic endpoint service" })] },
+  });
+  assert.equal(committed.status, 200);
+  assert.match(JSON.stringify(committed.body), /created/);
+});
+
+function createDefinition(procedureConceptKey: string, display: string): ChargeItemDefinition {
+  return {
+    resourceType: "ChargeItemDefinition",
+    url: `https://odos.test/fees/${procedureConceptKey}`,
+    version: "1",
+    status: "active",
+    title: display,
+    code: { coding: [{
+      system: "https://odos2020.com/fhir/CodeSystem/procedure-concept",
+      code: procedureConceptKey,
+      display,
+    }] },
+  };
+}
