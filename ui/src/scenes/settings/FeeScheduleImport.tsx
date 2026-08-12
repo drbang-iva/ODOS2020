@@ -321,7 +321,7 @@ function ProposalRow({
                 onChange({
                   matchProcedureConceptKey: target?.procedureConceptKey,
                   matchSeeded: target?.seeded,
-                  ...(target?.seeded ? { display: target.display, category: target.category } : {}),
+                  ...(target ? { display: target.display, category: target.category } : {}),
                 });
               }}
             >

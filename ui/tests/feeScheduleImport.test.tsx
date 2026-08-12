@@ -289,8 +289,8 @@ test("seeded match inherits read-only display and category while practice match 
   assert.equal(renderer.root.findAllByProps({ "aria-label": "Category for seed-row" }).length, 0);
   const target = renderer.root.findByProps({ "aria-label": "Match target for seed-row" });
   await act(async () => target.props.onChange({ currentTarget: { value: "practice-service" } }));
-  assert.ok(renderer.root.findByProps({ "aria-label": "Display for seed-row" }));
-  assert.ok(renderer.root.findByProps({ "aria-label": "Category for seed-row" }));
+  assert.equal(renderer.root.findByProps({ "aria-label": "Display for seed-row" }).props.value, "Practice service");
+  assert.equal(renderer.root.findByProps({ "aria-label": "Category for seed-row" }).props.value, "procedure");
 });
 
 test("recorded-only modifier and routing warning is visible", async () => {
