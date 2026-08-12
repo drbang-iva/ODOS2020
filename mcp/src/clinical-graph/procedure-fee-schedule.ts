@@ -19,6 +19,7 @@ const CHARGE_PROPOSAL_IDENTIFIER_SYSTEM = `${BASE}/NamingSystem/charge-proposal-
 const ACT_CODE_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-ActCode";
 const FEE_CATEGORY_EXTENSION_URL = `${BASE}/StructureDefinition/odos-procedure-fee-category`;
 const FEE_MODIFIER_EXTENSION_URL = `${BASE}/StructureDefinition/odos-procedure-fee-modifier`;
+const DISALLOWED_CONCEPT_LATERALITY_MODIFIERS = new Set(["RT", "LT", "50"]);
 
 export const ODOS_UNPRICED_CHARGE_EXTENSION_URL =
   `${BASE}/StructureDefinition/odos-unpriced-charge`;
@@ -241,6 +242,17 @@ export class ProcedureFeeConceptConflictError extends Error {
   }
 }
 
+export class ProcedureFeeScheduleInputError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ProcedureFeeScheduleInputError";
+  }
+}
+
+export function isSeededProcedureFeeConceptKey(value: string): boolean {
+  return PROCEDURE_FEE_SEEDS.some((seed) => seed.procedureConceptKey === value);
+}
+
 export async function createProcedureFeeScheduleItem(
   fhir: ProcedureFeeScheduleFhir,
   input: {
@@ -297,7 +309,22 @@ export async function saveProcedureFeeScheduleItem(
     active: boolean;
   },
 ): Promise<ProcedureFeeScheduleItem> {
+  if (isSeededProcedureFeeConceptKey(input.procedureConceptKey)) {
+    if (Object.hasOwn(input, "display")) {
+      throw new ProcedureFeeScheduleInputError(
+        "Display cannot be changed for an ODOS-seeded fee concept.",
+      );
+    }
+    if (Object.hasOwn(input, "category")) {
+      throw new ProcedureFeeScheduleInputError(
+        "Category cannot be changed for an ODOS-seeded fee concept.",
+      );
+    }
+  }
   assertCents(input.priceCents);
+  const normalizedInputModifier = input.modifier === undefined
+    ? undefined
+    : normalizeModifier(input.modifier);
   const definitions = await ensureProcedureFeeSchedule(fhir, [input.procedureConceptKey]);
   const existing = definitions.find((definition) =>
     procedureConceptKey(definition) === input.procedureConceptKey
@@ -320,7 +347,7 @@ export async function saveProcedureFeeScheduleItem(
     : input.category);
   const modifier = input.modifier === undefined
     ? definitionModifier(existing)
-    : normalizeModifier(input.modifier);
+    : normalizedInputModifier;
   const saved = await fhir.update(
     "ChargeItemDefinition",
     existing.id,
@@ -622,6 +649,12 @@ function normalizeModifier(value: string | null | undefined): string | undefined
   if (!normalized) return undefined;
   if (!/^[A-Z0-9]{1,10}$/.test(normalized)) {
     throw new Error("Modifier must contain only letters and numbers.");
+  }
+  if (DISALLOWED_CONCEPT_LATERALITY_MODIFIERS.has(normalized)) {
+    throw new ProcedureFeeScheduleInputError(
+      `Laterality modifier ${normalized} is not allowed on a fee-schedule concept. ` +
+      "Side comes from the charge (ChargeItem.bodysite), not the concept.",
+    );
   }
   return normalized;
 }

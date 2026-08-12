@@ -3,6 +3,7 @@ import type { PracticeRoleId } from "../authz/roles.js";
 import {
   PROCEDURE_FEE_CATEGORIES,
   ProcedureFeeConceptConflictError,
+  ProcedureFeeScheduleInputError,
   createProcedureFeeScheduleItem,
   listProcedureFeeSchedule,
   procedureConceptKeyFromDisplay,
@@ -79,18 +80,25 @@ export async function handleProcedureFeeScheduleMutationRequest(
   if (!mutation.success) {
     return { status: 400, body: { error: mutation.error.issues[0]?.message ?? "Invalid fee schedule update." } };
   }
-  const item = await saveProcedureFeeScheduleItem(staff.fhir, {
-    procedureConceptKey: params.data.procedureConceptKey,
-    ...(mutation.data.action === "save" ? {
-      display: mutation.data.display,
-      category: mutation.data.category,
-      billingCode: mutation.data.billingCode,
-      modifier: mutation.data.modifier,
-      priceCents: mutation.data.priceCents,
-    } : {}),
-    active: mutation.data.action === "save" ? mutation.data.active : false,
-  });
-  return { status: 200, body: { item } };
+  try {
+    const item = await saveProcedureFeeScheduleItem(staff.fhir, {
+      procedureConceptKey: params.data.procedureConceptKey,
+      ...(mutation.data.action === "save" ? {
+        ...(Object.hasOwn(mutation.data, "display") ? { display: mutation.data.display } : {}),
+        ...(Object.hasOwn(mutation.data, "category") ? { category: mutation.data.category } : {}),
+        billingCode: mutation.data.billingCode,
+        modifier: mutation.data.modifier,
+        priceCents: mutation.data.priceCents,
+      } : {}),
+      active: mutation.data.action === "save" ? mutation.data.active : false,
+    });
+    return { status: 200, body: { item } };
+  } catch (error) {
+    if (error instanceof ProcedureFeeScheduleInputError) {
+      return { status: 400, body: { error: error.message } };
+    }
+    throw error;
+  }
 }
 
 export async function handleProcedureFeeScheduleCreateRequest(
@@ -119,6 +127,9 @@ export async function handleProcedureFeeScheduleCreateRequest(
   } catch (error) {
     if (error instanceof ProcedureFeeConceptConflictError) {
       return { status: 409, body: { error: error.message } };
+    }
+    if (error instanceof ProcedureFeeScheduleInputError) {
+      return { status: 400, body: { error: error.message } };
     }
     throw error;
   }
