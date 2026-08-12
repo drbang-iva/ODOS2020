@@ -222,6 +222,7 @@ export async function commitProcedureFeeImport(
 ): Promise<FeeImportCommitResult> {
   const outcomes: FeeImportCommitOutcome[] = [];
   const createdKeys = new Set<string>();
+  let snapshot: ProcedureFeeScheduleItem[] | undefined;
   for (const raw of proposals) {
     const parsed = commitProposalSchema.safeParse(raw);
     if (!parsed.success) {
@@ -245,8 +246,9 @@ export async function commitProcedureFeeImport(
     }
     try {
       if (!proposal.routing) throw new ProcedureFeeImportInputError("Routing is required before commit.");
-      const snapshot = await listProcedureFeeScheduleSnapshot(fhir);
-      const target = resolveCommitTarget(proposal, snapshot);
+      const currentSnapshot = snapshot ?? await listProcedureFeeScheduleSnapshot(fhir);
+      snapshot = currentSnapshot;
+      const target = resolveCommitTarget(proposal, currentSnapshot);
       if (target) {
         if (proposal.decision === "create" && createdKeys.has(target.procedureConceptKey)) {
           throw new ProcedureFeeImportInputError(
@@ -270,6 +272,9 @@ export async function commitProcedureFeeImport(
           procedureConceptKey: item.procedureConceptKey,
           message: "Matched and saved to the existing fee concept.",
         });
+        snapshot = currentSnapshot.map((existing) =>
+          existing.procedureConceptKey === item.procedureConceptKey ? item : existing
+        );
       } else {
         assertEditableIdentity(proposal);
         const item = await createProcedureFeeScheduleItem(fhir, {
@@ -280,6 +285,7 @@ export async function commitProcedureFeeImport(
           priceCents: proposal.priceCents ?? null,
           routing: proposal.routing,
           active: proposal.active,
+          knownOccupiedKeys: new Set(currentSnapshot.map((item) => item.procedureConceptKey)),
         });
         outcomes.push({
           proposalId: proposal.proposalId,
@@ -288,6 +294,7 @@ export async function commitProcedureFeeImport(
           message: "Created a new fee concept.",
         });
         createdKeys.add(item.procedureConceptKey);
+        snapshot = [...currentSnapshot, item];
       }
     } catch (error) {
       outcomes.push({

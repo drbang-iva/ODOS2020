@@ -23,6 +23,7 @@ class CountingFhir {
   resources: Resource[] = [];
   createCount = 0;
   updateCount = 0;
+  searchCount = 0;
   next = 1;
 
   async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
@@ -35,6 +36,7 @@ class CountingFhir {
     resourceType: T["resourceType"],
     params: Record<string, string> = {},
   ): Promise<Bundle<T>> {
+    this.searchCount += 1;
     let rows = this.resources.filter((row) => row.resourceType === resourceType);
     const identifier = params.identifier?.split("|");
     if (identifier?.[1]) {
@@ -533,6 +535,19 @@ test("commit reports create match skip failure and later success without hiding 
   assert.ok(fhir.resources.some((row) => JSON.stringify(row).includes("synthetic-created-two")));
   assert.equal(JSON.stringify(result).includes(secretOriginalCode), false);
   assert.equal(JSON.stringify(fhir.resources).includes(secretOriginalCode), false);
+});
+
+test("commit loads one schedule snapshot and updates it across sequential rows", async () => {
+  // Reloading the full schedule for every proposal must make batch search work grow with row count.
+  const fhir = new CountingFhir();
+  const result = await commitProcedureFeeImport(fhir, [
+    reviewedProposal({ proposalId: "p-cache-one", display: "Synthetic cache one" }),
+    reviewedProposal({ proposalId: "p-cache-two", display: "Synthetic cache two" }),
+    reviewedProposal({ proposalId: "p-cache-three", display: "Synthetic cache three" }),
+  ]);
+
+  assert.deepEqual(result.outcomes.map((outcome) => outcome.status), ["created", "created", "created"]);
+  assert.equal(fhir.searchCount, 1);
 });
 
 test("scheduling-only commit is always a no-write skip even with a stale create decision", async () => {

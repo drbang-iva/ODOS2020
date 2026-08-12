@@ -279,18 +279,18 @@ export async function createProcedureFeeScheduleItem(
     routing?: ProcedureFeeRouting;
     priceCents?: number | null;
     active: boolean;
+    knownOccupiedKeys?: ReadonlySet<string>;
   },
 ): Promise<ProcedureFeeScheduleItem> {
   assertCents(input.priceCents);
   const display = normalizeDisplay(input.display);
   const generatedKey = procedureConceptKeyFromDisplay(display);
-  const definitions = await listProcedureFeeDefinitions(fhir);
   const occupiedKeys = new Set([
     ...PROCEDURE_FEE_SEEDS.map((seed) => seed.procedureConceptKey),
-    ...definitions.flatMap((definition) => {
+    ...(input.knownOccupiedKeys ?? (await listProcedureFeeDefinitions(fhir)).flatMap((definition) => {
       const key = procedureConceptKey(definition);
       return key ? [key] : [];
-    }),
+    })),
   ]);
   if (occupiedKeys.has(generatedKey)) {
     throw new ProcedureFeeConceptConflictError(generatedKey);
