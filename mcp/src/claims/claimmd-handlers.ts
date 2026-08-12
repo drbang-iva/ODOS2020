@@ -1926,7 +1926,6 @@ async function persistClaimChargeItems(
     candidate: ChargeItem;
     identifierValue: string;
     diagnosisSequence?: number[];
-    laterality?: string;
   }> = [];
   for (const [index, chargeItem] of chargeItems.entries()) {
     if (chargeItem.id) {
@@ -1943,13 +1942,12 @@ async function persistClaimChargeItems(
       validated.push({
         ...stored,
         ...(chargeItem.diagnosisSequence ? { diagnosisSequence: chargeItem.diagnosisSequence } : {}),
-        ...(chargeItem.laterality ? { laterality: chargeItem.laterality } : {}),
       });
       continue;
     }
     assertChargeItemPatient(chargeItem, patientReference);
     const identifierValue = `${submissionKey}:${index + 1}`;
-    const { diagnosisSequence, laterality, ...fhirChargeItem } = chargeItem;
+    const { diagnosisSequence, ...fhirChargeItem } = chargeItem;
     validated.push({
       identifierValue,
       candidate: {
@@ -1960,7 +1958,6 @@ async function persistClaimChargeItems(
         ],
       },
       ...(diagnosisSequence ? { diagnosisSequence } : {}),
-      ...(laterality ? { laterality } : {}),
     });
   }
 
@@ -1970,7 +1967,7 @@ async function persistClaimChargeItems(
       persisted.push(item);
       continue;
     }
-    const { candidate, identifierValue, diagnosisSequence, laterality } = item;
+    const { candidate, identifierValue, diagnosisSequence } = item;
     const stored = await auth.fhir.create(candidate, {
       "If-None-Exist": `identifier=${CLAIM_CHARGE_ITEM_IDENTIFIER_SYSTEM}|${identifierValue}`,
     });
@@ -1978,7 +1975,6 @@ async function persistClaimChargeItems(
     persisted.push({
       ...stored,
       ...(diagnosisSequence ? { diagnosisSequence } : {}),
-      ...(laterality ? { laterality } : {}),
     });
   }
   return persisted;

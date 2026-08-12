@@ -45,6 +45,7 @@ import {
   handleClaimDraftRequest,
   type ClaimsHandlerDeps,
 } from "../src/claims/claimmd-handlers.js";
+import { chargeItemBodysite } from "../src/fhir/charge-item-laterality.js";
 import {
   CLAIM_REJECTED_CODE_SYSTEM,
   ERA_WORKLIST_CODE_SYSTEM,
@@ -356,7 +357,7 @@ test("submit reuses a stored ChargeItem without dropping its draft diagnosis poi
   const input = structuredClone(professionalClaim);
   input.diagnoses.push({ system: "https://odos.test/fhir/CodeSystem/synthetic-diagnosis", code: "DX-B" });
   input.chargeItems[0]!.diagnosisSequence = [2];
-  input.chargeItems[0]!.laterality = "OS";
+  fixture.created.ChargeItem[0]!.bodysite = chargeItemBodysite("OS");
   let submittedPayload: any;
   fixture.deps.adapter!.submitProfessionalClaim = async (request) => {
     submittedPayload = request.payload;
@@ -382,7 +383,7 @@ test("submit persists idless ChargeItems once while keeping the Claim.MD payload
   input.diagnoses.push({ system: "https://odos.test/fhir/CodeSystem/synthetic-diagnosis", code: "DX-B" });
   delete input.chargeItems[0].id;
   input.chargeItems[0].diagnosisSequence = [2];
-  input.chargeItems[0].laterality = "OS";
+  input.chargeItems[0].bodysite = chargeItemBodysite("OS");
   let submittedPayload: any;
   d.adapter!.submitProfessionalClaim = async (request) => {
     submittedPayload = request.payload;
@@ -406,6 +407,24 @@ test("submit persists idless ChargeItems once while keeping the Claim.MD payload
   assert.equal(submittedPayload.claim[0].charge[0].remote_chgid, undefined);
   assert.equal(submittedPayload.claim[0].charge[0].from_date, "20260709");
   assert.equal(submittedPayload.claim[0].charge[0].diag_ref, "B");
+});
+
+test("stored ChargeItem bodysite overrides conflicting request-only laterality", async () => {
+  const fixture = deps();
+  fixture.created.ChargeItem[0]!.bodysite = chargeItemBodysite("OD");
+  const input = structuredClone(professionalClaim) as unknown as typeof professionalClaim & {
+    chargeItems: Array<(typeof professionalClaim.chargeItems)[number] & { laterality?: string }>;
+  };
+  input.chargeItems[0]!.laterality = "OS";
+
+  const result = await handleSubmitClaimRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: { claim: input },
+  });
+
+  assert.equal(result.status, 200);
+  assert.deepEqual(fixture.created.ChargeItem[0]!.bodysite, chargeItemBodysite("OD"));
+  assert.equal(fixture.created.Claim[0].item?.[0]?.bodySite?.text, "OD");
 });
 
 test("submit validates the full ChargeItem batch before persisting an idless item", async () => {

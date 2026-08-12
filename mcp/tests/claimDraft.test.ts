@@ -80,7 +80,6 @@ test("buildClaimDraft reads ranked confirmed diagnoses and real per-charge point
     feeDollars: "75.00",
     quantity: "1",
     diagnosisSequence: [2],
-    laterality: "OS",
   });
   assert.deepEqual(draft.charges[1].diagnosisSequence, [1, 2]);
   assert.equal(draft.charges[1].laterality, undefined);
@@ -88,9 +87,7 @@ test("buildClaimDraft reads ranked confirmed diagnoses and real per-charge point
   assert.equal(draft.insurerReference, "Organization/payer-primary");
   assert.equal(draft.payerId, "PAYER-primary");
   assert.equal(draft.serviceDate, "2026-07-21");
-  assert.deepEqual(draft.warnings, [
-    "ChargeItem/charge-both omitted laterality because its linked confirmed diagnoses have conflicting body-site text.",
-  ]);
+  assert.equal(draft.warnings, undefined);
   assert.deepEqual(searches, [
     { resourceType: "ChargeItem", params: { context: "Encounter/enc-1", _count: "100" } },
     { resourceType: "Coverage", params: { beneficiary: "Patient/pat-1", _count: "100" } },
@@ -130,7 +127,7 @@ test("claim draft expands one bilateral eyelid Condition into two sequenced diag
 
   assert.deepEqual(draft.diagnoses.map(({ code }) => code), ["H02.88A", "H02.88B"]);
   assert.deepEqual(draft.charges[0]?.diagnosisSequence, [1, 2]);
-  assert.equal(draft.charges[0]?.laterality, "OU");
+  assert.equal(draft.charges[0]?.laterality, undefined);
 });
 
 test("claim assembly never promotes an order-two Coverage while another Coverage record remains", async () => {

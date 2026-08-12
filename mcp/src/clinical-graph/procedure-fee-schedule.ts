@@ -6,6 +6,7 @@ import type {
   Resource,
 } from "@medplum/fhirtypes";
 import { searchAll } from "../fhir-search.js";
+import { chargeItemBodysite } from "../fhir/charge-item-laterality.js";
 import type { ChargeProposal, ProtocolApplication } from "./protocol-types.js";
 
 const BASE = "https://odos2020.com/fhir";
@@ -99,6 +100,10 @@ export interface ProcedureFeeScheduleItem {
   priceCents?: number;
   version: string;
 }
+
+export type CodedProcedureFeeScheduleItem = ProcedureFeeScheduleItem & {
+  billingCode: string;
+};
 
 type RowStore<T extends { id: string }> = {
   list(): Promise<T[]>;
@@ -194,6 +199,19 @@ export async function listActiveVisitProcedureFees(
       version: "1",
     }];
   });
+}
+
+export async function listActiveCodedNonVisitProcedureFees(
+  fhir: Pick<ProcedureFeeScheduleFhir, "search" | "searchUrl">,
+): Promise<CodedProcedureFeeScheduleItem[]> {
+  return (await listProcedureFeeDefinitions(fhir))
+    .map(procedureFeeScheduleItem)
+    .filter((item): item is CodedProcedureFeeScheduleItem =>
+      item.active &&
+      typeof item.billingCode === "string" && item.billingCode.trim().length > 0 &&
+      !isVisitProcedureConceptKey(item.procedureConceptKey)
+    )
+    .sort((left, right) => left.display.localeCompare(right.display));
 }
 
 export function isVisitProcedureConceptKey(value: string): boolean {
@@ -415,6 +433,9 @@ function buildChargeItem(input: {
     enterer: { reference: input.actorReference },
     enteredDate: input.enteredDate,
     supportingInformation: [...new Set(input.proposal.dxPointers)].map((reference) => ({ reference })),
+    ...(input.proposal.laterality
+      ? { bodysite: chargeItemBodysite(input.proposal.laterality) }
+      : {}),
     ...(input.unpriced ? {
       extension: [{ url: ODOS_UNPRICED_CHARGE_EXTENSION_URL, valueBoolean: true }],
     } : {}),

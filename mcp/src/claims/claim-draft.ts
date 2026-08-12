@@ -7,6 +7,7 @@ import type {
   Resource,
 } from "@medplum/fhirtypes";
 import { isConfirmedEncounterDiagnosis, referenceId } from "../fhir/condition.js";
+import { chargeItemLaterality } from "../fhir/charge-item-laterality.js";
 import { searchAll } from "../fhir-search.js";
 import { buildDiagnosisCatalogSeeds } from "../clinical-graph/diagnosis-catalog-seeds.js";
 import { resolveConditionCodes } from "../clinical-graph/diagnosis-code-resolution.js";
@@ -138,21 +139,19 @@ export async function buildClaimDraft(
     const linkedConditions = (chargeItem.supportingInformation ?? []).flatMap((reference) => {
       const sequences = diagnosisIndex.get(reference.reference ?? "") ?? [];
       const condition = confirmedConditions.find((candidate) => candidate.id && `Condition/${candidate.id}` === reference.reference);
-      return condition ? sequences.map((sequence) => ({ sequence, condition })) : [];
+      return condition ? sequences : [];
     });
-    const diagnosisSequence = [...new Set(linkedConditions.map((entry) => entry.sequence))].sort((a, b) => a - b);
+    const diagnosisSequence = [...new Set(linkedConditions)].sort((a, b) => a - b);
     if (diagnosisSequence.length === 0) {
       warnings.push(
         `ChargeItem/${chargeItem.id} was excluded because it has no linked confirmed encounter diagnosis.`,
       );
       return [];
     }
-    const lateralities = [...new Set(linkedConditions
-      .map((entry) => entry.condition.bodySite?.[0]?.text?.trim())
-      .filter((value): value is string => Boolean(value)))];
-    if (lateralities.length > 1) {
+    const chargeLaterality = chargeItemLaterality(chargeItem);
+    if (chargeLaterality.conflict) {
       warnings.push(
-        `ChargeItem/${chargeItem.id} omitted laterality because its linked confirmed diagnoses have conflicting body-site text.`,
+        `ChargeItem/${chargeItem.id} omitted laterality because bodysite contains conflicting laterality values.`,
       );
     }
     return [{
@@ -166,7 +165,7 @@ export async function buildClaimDraft(
         : chargeItem.priceOverride.value.toFixed(2),
       quantity: String(chargeItem.quantity?.value ?? 1),
       diagnosisSequence,
-      ...(lateralities.length === 1 ? { laterality: lateralities[0] } : {}),
+      ...(chargeLaterality.laterality ? { laterality: chargeLaterality.laterality } : {}),
     }];
   });
 
