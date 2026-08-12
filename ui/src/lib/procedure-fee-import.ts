@@ -18,7 +18,8 @@ export type FeeImportFlagClass =
   | "laterality-dropped"
   | "invalid-price"
   | "invalid-source-boolean"
-  | "concept-key-conflict";
+  | "concept-key-conflict"
+  | "seeded-concept-uncoded";
 
 export interface FeeImportColumnMapping {
   display?: string;
@@ -43,6 +44,8 @@ export interface FeeImportProposal {
   decision: FeeImportDecision;
   matchProcedureConceptKey?: string;
   matchSeeded?: boolean;
+  suggestedMatchProcedureConceptKey?: string;
+  matchRanking: FeeImportMatchRank[];
   display: string;
   category?: ProcedureFeeCategory;
   billingCode?: string;
@@ -52,6 +55,11 @@ export interface FeeImportProposal {
   active: boolean;
   flags: FeeImportFlag[];
   reasons: string[];
+}
+
+export interface FeeImportMatchRank {
+  procedureConceptKey: string;
+  score: number;
 }
 
 export interface FeeImportMatchOption {

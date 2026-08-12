@@ -27,7 +27,8 @@ export type FeeImportFlagClass =
   | "laterality-dropped"
   | "invalid-price"
   | "invalid-source-boolean"
-  | "concept-key-conflict";
+  | "concept-key-conflict"
+  | "seeded-concept-uncoded";
 
 export interface FeeImportColumnMapping {
   display?: string;
@@ -52,6 +53,8 @@ export interface FeeImportProposal {
   decision: FeeImportDecision;
   matchProcedureConceptKey?: string;
   matchSeeded?: boolean;
+  suggestedMatchProcedureConceptKey?: string;
+  matchRanking: FeeImportMatchRank[];
   display: string;
   category?: ProcedureFeeCategory;
   billingCode?: string;
@@ -61,6 +64,11 @@ export interface FeeImportProposal {
   active: boolean;
   flags: FeeImportFlag[];
   reasons: string[];
+}
+
+export interface FeeImportMatchRank {
+  procedureConceptKey: string;
+  score: number;
 }
 
 export interface FeeImportMatchOption {
@@ -106,7 +114,7 @@ interface ParsedFeeCsv {
   rows: Array<Record<string, string>>;
 }
 
-interface WorkingProposal extends FeeImportProposal {
+interface WorkingProposal extends Omit<FeeImportProposal, "matchRanking" | "suggestedMatchProcedureConceptKey"> {
   displayMeaning: string;
   hadLaterality: boolean;
 }
@@ -118,6 +126,11 @@ const commitProposalSchema = z.object({
   decision: z.enum(["match", "create", "skip"]),
   matchProcedureConceptKey: z.string().regex(/^[a-z0-9][a-z0-9-]{0,99}$/).optional(),
   matchSeeded: z.boolean().optional(),
+  suggestedMatchProcedureConceptKey: z.string().regex(/^[a-z0-9][a-z0-9-]{0,99}$/).optional(),
+  matchRanking: z.array(z.object({
+    procedureConceptKey: z.string().regex(/^[a-z0-9][a-z0-9-]{0,99}$/),
+    score: z.number().min(0).max(1),
+  }).strict()).optional(),
   display: z.string().max(200),
   category: z.enum(PROCEDURE_FEE_CATEGORIES).optional(),
   billingCode: z.string().max(20).optional(),
@@ -137,6 +150,7 @@ const commitProposalSchema = z.object({
       "invalid-price",
       "invalid-source-boolean",
       "concept-key-conflict",
+      "seeded-concept-uncoded",
     ]),
     message: z.string(),
   }).strict()),
@@ -153,6 +167,8 @@ const HEADER_ALIASES: Record<keyof FeeImportColumnMapping, readonly string[]> = 
   active: ["active", "status", "state"],
   zeroPrice: ["zero price", "zero fee", "zero amount", "zero", "no charge"],
 };
+
+const MATCH_SUGGESTION_THRESHOLD = 0.5;
 
 export function inspectProcedureFeeCsv(csvText: string): FeeImportInspection {
   const parsed = parseFeeCsv(csvText);
@@ -195,18 +211,43 @@ export function proposeProcedureFeeImport(input: {
   proposals = collapseDuplicateRows(proposals);
   markConceptKeyConflicts(proposals);
 
-  const publicProposals = proposals.map(({ displayMeaning: _displayMeaning, hadLaterality: _hadLaterality, ...proposal }) => ({
-    ...proposal,
-    proposalId: proposalId(proposal.sourceRows),
+  const matchOptions = input.existing.map((item) => ({
+    procedureConceptKey: item.procedureConceptKey,
+    display: item.display,
+    category: item.category,
+    seeded: isSeededProcedureFeeConceptKey(item.procedureConceptKey),
   }));
+  const publicProposals = proposals.map(({ displayMeaning: _displayMeaning, hadLaterality: _hadLaterality, ...proposal }) => {
+    const matchRanking = rankFeeImportMatches(proposal.display, matchOptions);
+    const top = matchRanking[0];
+    const topOption = top
+      ? matchOptions.find((option) => option.procedureConceptKey === top.procedureConceptKey)
+      : undefined;
+    if (proposal.decision === "create" &&
+      (proposal.category === "exam" || proposal.category === "refraction") &&
+      input.existing.some((item) =>
+        item.category === proposal.category &&
+        isSeededProcedureFeeConceptKey(item.procedureConceptKey) &&
+        !item.billingCode?.trim()
+      )) {
+      addFlag(
+        proposal.flags,
+        "seeded-concept-uncoded",
+        `${proposal.category === "exam" ? "Exam" : "Refraction"} charges will flow through the procedure surface instead of the visit-code slot while a seeded concept in this category remains uncoded.`,
+      );
+    }
+    return {
+      ...proposal,
+      proposalId: proposalId(proposal.sourceRows),
+      matchRanking,
+      ...(proposal.decision === "create" && topOption && top.score >= MATCH_SUGGESTION_THRESHOLD
+        ? { suggestedMatchProcedureConceptKey: top.procedureConceptKey }
+        : {}),
+    };
+  });
   return {
     proposals: publicProposals,
-    matchOptions: input.existing.map((item) => ({
-      procedureConceptKey: item.procedureConceptKey,
-      display: item.display,
-      category: item.category,
-      seeded: isSeededProcedureFeeConceptKey(item.procedureConceptKey),
-    })),
+    matchOptions,
     counts: {
       create: publicProposals.filter((row) => row.decision === "create").length,
       match: publicProposals.filter((row) => row.decision === "match").length,
@@ -214,6 +255,40 @@ export function proposeProcedureFeeImport(input: {
       flagged: publicProposals.filter((row) => row.flags.length > 0).length,
     },
   };
+}
+
+function rankFeeImportMatches(
+  display: string,
+  options: readonly FeeImportMatchOption[],
+): FeeImportMatchRank[] {
+  const displayTokens = matchTokens(display);
+  return options.map((option) => ({
+    procedureConceptKey: option.procedureConceptKey,
+    score: tokenOverlapScore(displayTokens, matchTokens(option.display)),
+  })).sort((left, right) =>
+    right.score - left.score || compareText(left.procedureConceptKey, right.procedureConceptKey)
+  );
+}
+
+function matchTokens(value: string): ReadonlySet<string> {
+  const normalized = value
+    .normalize("NFKD")
+    .toLowerCase()
+    .replace(/\p{Mark}+/gu, "")
+    .replace(/[^\p{Letter}\p{Number}]+/gu, " ")
+    .trim();
+  return new Set(normalized ? normalized.split(/\s+/) : []);
+}
+
+function tokenOverlapScore(left: ReadonlySet<string>, right: ReadonlySet<string>): number {
+  if (left.size === 0 || right.size === 0) return 0;
+  let overlap = 0;
+  for (const token of left) if (right.has(token)) overlap += 1;
+  return overlap / Math.max(left.size, right.size);
+}
+
+function compareText(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
 }
 
 export async function commitProcedureFeeImport(
