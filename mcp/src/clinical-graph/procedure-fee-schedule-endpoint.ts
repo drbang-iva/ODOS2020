@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { PracticeRoleId } from "../authz/roles.js";
 import {
   PROCEDURE_FEE_CATEGORIES,
+  PROCEDURE_FEE_ROUTINGS,
   ProcedureFeeConceptConflictError,
   ProcedureFeeScheduleInputError,
   createProcedureFeeScheduleItem,
@@ -28,6 +29,7 @@ const mutationSchema = z.discriminatedUnion("action", [
     category: z.enum(PROCEDURE_FEE_CATEGORIES).optional(),
     billingCode: z.string().nullable().optional(),
     modifier: z.string().nullable().optional(),
+    routing: z.enum(PROCEDURE_FEE_ROUTINGS).optional(),
     priceCents: z.number().int().nonnegative().nullable(),
     active: z.boolean(),
   }).strict(),
@@ -47,6 +49,7 @@ const createSchema = z.object({
   category: z.enum(PROCEDURE_FEE_CATEGORIES),
   billingCode: z.string().nullable().optional(),
   modifier: z.string().nullable().optional(),
+  routing: z.enum(PROCEDURE_FEE_ROUTINGS).optional(),
   priceCents: z.number().int().nonnegative().nullable(),
   active: z.boolean(),
 }).strict();
@@ -88,6 +91,7 @@ export async function handleProcedureFeeScheduleMutationRequest(
         ...(Object.hasOwn(mutation.data, "category") ? { category: mutation.data.category } : {}),
         billingCode: mutation.data.billingCode,
         modifier: mutation.data.modifier,
+        routing: mutation.data.routing,
         priceCents: mutation.data.priceCents,
       } : {}),
       active: mutation.data.action === "save" ? mutation.data.active : false,
@@ -120,6 +124,7 @@ export async function handleProcedureFeeScheduleCreateRequest(
       category: parsed.data.category,
       billingCode: parsed.data.billingCode,
       modifier: parsed.data.modifier,
+      routing: parsed.data.routing,
       priceCents: parsed.data.priceCents,
       active: parsed.data.active,
     });

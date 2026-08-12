@@ -289,3 +289,34 @@ test("seeded display or category save returns 400 and leaves the definition byte
     assert.equal(fhir.updateCount, 0);
   }
 });
+
+test("ordinary fee worksheet create and save persist recorded-only routing", async () => {
+  // Omitting routing from either ordinary endpoint schema must return 400 and make this test red.
+  const fhir = new MemoryFhir();
+  const created = await handleProcedureFeeScheduleCreateRequest(authenticatedDeps(fhir), {
+    authHeader: "Bearer admin",
+    body: {
+      action: "create",
+      display: "Synthetic routed service",
+      category: "procedure",
+      billingCode: "SYNTHROUTE",
+      routing: "self-pay",
+      priceCents: null,
+      active: true,
+    },
+  });
+  assert.equal(created.status, 201);
+  const key = (created.body as { item: { procedureConceptKey: string } }).item.procedureConceptKey;
+  const saved = await handleProcedureFeeScheduleMutationRequest(authenticatedDeps(fhir), {
+    authHeader: "Bearer admin",
+    params: { procedureConceptKey: key },
+    body: {
+      action: "save",
+      routing: "insurance-billable",
+      priceCents: null,
+      active: true,
+    },
+  });
+  assert.equal(saved.status, 200);
+  assert.equal((saved.body as { item: { routing?: string } }).item.routing, "insurance-billable");
+});
