@@ -269,6 +269,31 @@ test("laterality rows with different non-side modifiers remain separate", () => 
   assert.deepEqual(preview.proposals.map((row) => row.sourceRows), [[2], [3]]);
 });
 
+test("a plain side-bearing display stays separate from a coded-laterality row", () => {
+  // Stripping a side-like display from a row without detected laterality must merge distinct source meanings.
+  const preview = proposeProcedureFeeImport({
+    csvText: [
+      "Label,Group,Code,Fee,Route",
+      "Synthetic contrast RT,Procedure,SYNTHCOL.RT,11.11,Insurance",
+      "Synthetic contrast RT,Procedure,SYNTHCOL,11.11,Insurance",
+    ].join("\n"),
+    mapping: {
+      display: "Label",
+      category: "Group",
+      billingCode: "Code",
+      price: "Fee",
+      routing: "Route",
+    },
+    existing: [],
+  });
+
+  assert.equal(preview.proposals.length, 2);
+  assert.deepEqual(preview.proposals.map((row) => row.display), ["Synthetic contrast", "Synthetic contrast RT"]);
+  assert.deepEqual(preview.proposals.map((row) =>
+    row.flags.some((flag) => flag.class === "laterality-dropped")
+  ), [true, false]);
+});
+
 test("local price tiers remain separate concepts sharing one derived billing code", () => {
   // Collapsing by billing code alone must make this test red by hiding one price tier.
   const preview = proposeProcedureFeeImport({

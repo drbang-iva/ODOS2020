@@ -671,7 +671,7 @@ function normalizeDisplay(value: string): string {
 }
 
 function displayMeaning(value: string): string {
-  return procedureConceptKeyFromDisplay(displayWithoutLaterality(value));
+  return procedureConceptKeyFromDisplay(value);
 }
 
 function displayWithoutLaterality(value: string): string {
