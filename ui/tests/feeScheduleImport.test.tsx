@@ -281,6 +281,23 @@ test("review price rejects over-precision and exponent input without changing th
   assert.equal(api.commitCalls[0]?.find((row) => row.proposalId === "create-row")?.priceCents, 199);
 });
 
+test("clearing a populated review price removes proposed cents", async () => {
+  const api = memoryApi();
+  const originalPropose = api.propose;
+  api.propose = async (csvText, mapping) => {
+    const result = await originalPropose(csvText, mapping);
+    result.proposals[0]!.priceCents = 1234;
+    return result;
+  };
+  const renderer = create(<FeeScheduleImport api={api} onCommitted={() => undefined} />);
+  await inspectAndReview(renderer);
+  const price = renderer.root.findByProps({ "aria-label": "Price for create-row" });
+  assert.equal(price.props.value, "12.34");
+  await act(async () => price.props.onChange({ currentTarget: { value: "" } }));
+  await act(async () => renderer.root.findByProps({ "aria-label": "Commit reviewed fee import" }).props.onClick());
+  assert.equal(api.commitCalls[0]?.find((row) => row.proposalId === "create-row")?.priceCents, undefined);
+});
+
 test("seeded match inherits read-only display and category while practice match stays editable", async () => {
   // Rendering editable seeded identity or failing to enable practice identity must make this test red.
   const renderer = create(<FeeScheduleImport api={memoryApi()} onCommitted={() => undefined} />);
