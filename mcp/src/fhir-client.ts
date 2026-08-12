@@ -52,6 +52,10 @@ export interface MedplumClient {
   ): Promise<Bundle<T>>;
   vread<T extends Resource>(rt: T["resourceType"], id: string, versionId: string): Promise<T>;
   create<T extends Resource>(r: T, extraHeaders?: Record<string, string>): Promise<T>;
+  createWithOutcome<T extends Resource>(
+    r: T,
+    extraHeaders?: Record<string, string>,
+  ): Promise<{ resource: T; created: boolean }>;
   update<T extends Resource>(
     rt: T["resourceType"],
     id: string,
@@ -491,6 +495,34 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
           }));
           if (!res.ok) throw await toError(res);
           return (await res.json()) as T;
+        },
+      );
+    },
+
+    async createWithOutcome<T extends Resource>(
+      r: T,
+      extraHeaders: Record<string, string> = {},
+    ): Promise<{ resource: T; created: boolean }> {
+      if (isBinaryResource(r)) {
+        assertBinaryCreateThroughParser(r, extraHeaders);
+      }
+      return audited(
+        {
+          eventType: auditEventTypeForFhirWrite(r.resourceType, "create"),
+          resourceType: r.resourceType,
+          resourceId: r.id,
+          patientId: patientIdFromResource(r),
+          targetReference: r.id ? `${r.resourceType}/${r.id}` : undefined,
+          actionOutcome: "granted",
+        },
+        async () => {
+          const res = await authorizedFetch(`${base}/fhir/R4/${r.resourceType}`, () => ({
+            method: "POST",
+            headers: { ...headers(), ...extraHeaders },
+            body: JSON.stringify(r),
+          }));
+          if (!res.ok) throw await toError(res);
+          return { resource: (await res.json()) as T, created: res.status === 201 };
         },
       );
     },

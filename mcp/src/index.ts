@@ -134,6 +134,7 @@ import { ProtocolDefinitionStore } from "./clinical-graph/protocol-store.js";
 import { GLAUCOMA_SUSPECT_PROTOCOL } from "./clinical-graph/protocol-fixtures.js";
 import { PROCEDURE_FEE_SEEDS } from "./clinical-graph/procedure-fee-schedule.js";
 import {
+  handleProcedureFeeScheduleCreateRequest,
   handleProcedureFeeScheduleMutationRequest,
   handleProcedureFeeScheduleRequest,
 } from "./clinical-graph/procedure-fee-schedule-endpoint.js";
@@ -6672,6 +6673,20 @@ async function startMcpServer(): Promise<void> {
         } catch (error) {
           console.error("odos-mcp: fee schedule mutation route failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "fee schedule mutation route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/fee-schedule", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleProcedureFeeScheduleCreateRequest(
+            { authenticate: authenticateStaffRouteForAction("identity.manage") },
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: fee schedule creation route failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "fee schedule creation route failed" });
         }
       });
 

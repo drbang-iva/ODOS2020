@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Bundle, Patient } from "@medplum/fhirtypes";
+import type { Bundle, ChargeItemDefinition, Patient } from "@medplum/fhirtypes";
 import { createMedplumClient, type MedplumClient } from "../src/fhir-client.js";
 import { TEST_FHIR_AUDIT_CONTEXT, TEST_FHIR_AUDIT_RECORDER } from "./fhirAuditTestStub.js";
 
@@ -69,6 +69,40 @@ test("FHIR client proactively re-authenticates within five minutes of token expi
     await client.read<Patient>("Patient", "p1");
     assert.equal(tokenExchanges, 2);
     assert.deepEqual(authorizations, [`Bearer ${freshToken}`]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("FHIR conditional create reports 201 as created and 200 as an existing match", async () => {
+  const originalFetch = globalThis.fetch;
+  const statuses = [201, 200];
+  globalThis.fetch = async () => Response.json({
+    resourceType: "ChargeItemDefinition",
+    id: "definition-1",
+    url: "https://odos2020.com/test",
+    version: "1",
+    status: "active",
+  }, { status: statuses.shift() });
+  try {
+    const client = createMedplumClient({
+      baseUrl: "http://medplum.test",
+      accessToken: "practice-admin-token",
+      audit: TEST_FHIR_AUDIT_RECORDER,
+      auditContext: TEST_FHIR_AUDIT_CONTEXT,
+    });
+    const definition: ChargeItemDefinition = {
+      resourceType: "ChargeItemDefinition",
+      url: "https://odos2020.com/test",
+      version: "1",
+      status: "active",
+    };
+    const created = await client.createWithOutcome(definition, { "If-None-Exist": "identifier=system|key" });
+    const matched = await client.createWithOutcome(definition, { "If-None-Exist": "identifier=system|key" });
+    assert.equal(created.created, true);
+    assert.equal(matched.created, false);
+    assert.equal(created.resource.id, "definition-1");
+    assert.equal(matched.resource.id, "definition-1");
   } finally {
     globalThis.fetch = originalFetch;
   }

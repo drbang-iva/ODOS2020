@@ -19,18 +19,29 @@ export type CatalogDescriptor<Item extends CatalogItemBase> = {
   singularLabel: string;
   adapter: CatalogAdapter<Item>;
   fields: readonly CatalogFieldDescriptor[];
+  createFields?: readonly CatalogFieldDescriptor[];
   createItem: () => Item;
   canCreate?: boolean;
+  createActionLabel?: string;
   validateItem?: (item: Item, items: Item[]) => void;
   label: (item: Item) => string;
-  facts?: (item: Item) => readonly string[];
+  facts?: (item: Item, context?: { inFamily: boolean }) => readonly string[];
   chips?: (item: Item) => readonly string[];
+  status?: (item: Item) => string;
+  summary?: (items: readonly Item[]) => string;
   color?: (item: Item) => string | undefined;
   readOnlyFacts?: (item: Item) => readonly { label: string; value: string }[];
   groupBy?: {
     label: string;
     value: (item: Item) => string;
     order?: (group: string) => number;
+    values?: readonly string[];
+    alwaysExpanded?: boolean;
+    summary?: (items: readonly Item[]) => string;
+  };
+  familyBy?: {
+    key: (item: Item) => string | undefined;
+    update: (item: Item, key: string) => Item;
   };
   presetSeedOffer?: ReactNode;
   transaction?: CatalogDraftTransaction;
@@ -183,7 +194,7 @@ export function CatalogSection<Item extends CatalogItemBase>({
       : null,
   );
   const [draftFields, setDraftFields] = useState<Record<string, unknown>>(() =>
-    selected ? parseCatalogFields(toRecord(selected), descriptor.fields) : {},
+    selected ? parseCatalogFields(toRecord(selected), fieldsForItem(descriptor, selected)) : {},
   );
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -240,7 +251,7 @@ export function CatalogSection<Item extends CatalogItemBase>({
 
   function openEditor(item: Item) {
     setSelected(item);
-    setDraftFields(parseCatalogFields(toRecord(item), descriptor.fields));
+    setDraftFields(parseCatalogFields(toRecord(item), fieldsForItem(descriptor, item)));
     setFieldErrors({});
   }
 
@@ -257,7 +268,7 @@ export function CatalogSection<Item extends CatalogItemBase>({
     try {
       const built = buildCatalogFields(
         draftFields,
-        descriptor.fields,
+        fieldsForItem(descriptor, selected),
         items.map(toRecord),
         selected.id,
       );
@@ -314,6 +325,26 @@ export function CatalogSection<Item extends CatalogItemBase>({
     scene?.touch();
   }
 
+  async function saveFamily(members: readonly Item[], key: string) {
+    if (!descriptor.familyBy) return;
+    setSaving(true);
+    setLoadError(null);
+    try {
+      const saved: Item[] = [];
+      for (const member of members) {
+        saved.push(await descriptor.adapter.save(descriptor.familyBy.update(member, key.trim())));
+      }
+      const savedById = new Map(saved.map((item) => [item.id, item]));
+      setItems((current) => current.map((item) => savedById.get(item.id) ?? item));
+      scene?.touch();
+      setToast(`Family billing code updated for ${saved.length} concepts.`);
+    } catch (error) {
+      setLoadError(errorMessage(error));
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <section aria-label={`${descriptor.title} section`}>
       {descriptor.listGrammar ? (
@@ -321,7 +352,9 @@ export function CatalogSection<Item extends CatalogItemBase>({
           title={descriptor.title}
           searchValue={query}
           searchPlaceholder={descriptor.listGrammar.searchPlaceholder}
-          newActionLabel={canWrite && descriptor.canCreate !== false ? `New ${descriptor.singularLabel}` : undefined}
+          newActionLabel={canWrite && descriptor.canCreate !== false
+            ? descriptor.createActionLabel ?? `New ${descriptor.singularLabel}`
+            : undefined}
           onSearchChange={setQuery}
           onNew={canWrite && descriptor.canCreate !== false ? () => openEditor(descriptor.createItem()) : undefined}
         />
@@ -330,11 +363,17 @@ export function CatalogSection<Item extends CatalogItemBase>({
           {!hideTitle && <h2 className="text-lg font-semibold text-white/90">{descriptor.title}</h2>}
           {canWrite && descriptor.canCreate !== false && (
             <button className="scheduler-button" type="button" onClick={() => openEditor(descriptor.createItem())}>
-              + Add {descriptor.singularLabel}
+              {descriptor.createActionLabel ?? `+ Add ${descriptor.singularLabel}`}
             </button>
           )}
         </header>
       )}
+
+        {!loading && descriptor.summary && (
+          <div className="mb-4 text-sm font-semibold text-[color:var(--odos-muted)]" aria-label="Catalog progress">
+            {descriptor.summary(items)}
+          </div>
+        )}
 
         {loadError && (
           <div role="alert" className="mb-4 border border-red-400/40 bg-red-950/50 px-4 py-3 text-sm text-red-100">
@@ -355,12 +394,13 @@ export function CatalogSection<Item extends CatalogItemBase>({
           <div className="grid gap-4">
             {groups.map((group) => (
               <section key={group.name}>
-                {descriptor.groupBy && group.hasActive && (
-                  <h2 className="sticky top-0 z-10 border-b border-white/10 bg-[#060610]/95 px-2 py-2 text-xs font-semibold uppercase tracking-wide text-white/55 backdrop-blur">
-                    {group.name}
+                {descriptor.groupBy && (group.hasActive || descriptor.groupBy.alwaysExpanded) && (
+                  <h2 className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-[#060610]/95 px-2 py-2 text-xs font-semibold uppercase tracking-wide text-white/55 backdrop-blur">
+                    <span>{group.name}</span>
+                    {descriptor.groupBy.summary && <span>{descriptor.groupBy.summary(group.items)}</span>}
                   </h2>
                 )}
-                {descriptor.groupBy && !group.hasActive && (
+                {descriptor.groupBy && !group.hasActive && !descriptor.groupBy.alwaysExpanded && (
                   <button
                     type="button"
                     className="sticky top-0 z-10 flex w-full items-center justify-between border-b border-white/10 bg-[#060610]/95 px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-white/55 backdrop-blur"
@@ -378,17 +418,52 @@ export function CatalogSection<Item extends CatalogItemBase>({
                     <span>{query.trim() || expandedInactiveGroups.has(group.name) ? "Collapse" : "Inactive · expand"}</span>
                   </button>
                 )}
-                {(group.hasActive || Boolean(query.trim()) || expandedInactiveGroups.has(group.name)) && (
+                {(group.hasActive || descriptor.groupBy?.alwaysExpanded || Boolean(query.trim()) || expandedInactiveGroups.has(group.name)) && (
                   <div className="grid gap-2 pt-2">
-                  {group.items.map((item) => (
+                  {familyRows(group.items, descriptor).map((row) => row.familyKey ? (
+                    <section key={`family:${row.familyKey}`} className="border border-cyan-300/20 bg-cyan-300/[0.025] p-2">
+                      <header className="mb-2 flex items-center gap-3 border-b border-cyan-300/15 pb-2">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-cyan-100/75">
+                          Family · {row.items.length} concepts
+                        </span>
+                        {canWrite ? (
+                          <input
+                            className="scheduler-input ml-auto max-w-44"
+                            aria-label={`Billing code for ${row.items.length}-concept family`}
+                            defaultValue={row.familyKey}
+                            disabled={saving}
+                            onBlur={(event) => row.familyKey !== event.currentTarget.value.trim()
+                              ? saveFamily(row.items, event.currentTarget.value)
+                              : undefined}
+                          />
+                        ) : (
+                          <span className="ml-auto text-sm font-semibold text-cyan-100">{row.familyKey}</span>
+                        )}
+                      </header>
+                      <div className="grid gap-2">
+                        {row.items.map((item) => (
+                          <CatalogRow
+                            key={item.id}
+                            item={item}
+                            descriptor={descriptor}
+                            canWrite={canWrite}
+                            inFamily
+                            onOpen={() => openEditor(item)}
+                            onDragStart={() => setDraggedId(item.id)}
+                            onDrop={() => void reorder(item.id)}
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  ) : (
                     <CatalogRow
-                      key={item.id}
-                      item={item}
+                      key={row.items[0]!.id}
+                      item={row.items[0]!}
                       descriptor={descriptor}
                       canWrite={canWrite}
-                      onOpen={() => openEditor(item)}
-                      onDragStart={() => setDraggedId(item.id)}
-                      onDrop={() => void reorder(item.id)}
+                      onOpen={() => openEditor(row.items[0]!)}
+                      onDragStart={() => setDraggedId(row.items[0]!.id)}
+                      onDrop={() => void reorder(row.items[0]!.id)}
                     />
                   ))}
                   </div>
@@ -401,6 +476,7 @@ export function CatalogSection<Item extends CatalogItemBase>({
         <CatalogEditorDrawer
           descriptor={descriptor}
           item={selected}
+          fields={fieldsForItem(descriptor, selected)}
           values={draftFields}
           errors={fieldErrors}
           saving={saving}
@@ -426,6 +502,7 @@ function CatalogRow<Item extends CatalogItemBase>({
   item,
   descriptor,
   canWrite,
+  inFamily = false,
   onOpen,
   onDragStart,
   onDrop,
@@ -433,10 +510,12 @@ function CatalogRow<Item extends CatalogItemBase>({
   item: Item;
   descriptor: CatalogDescriptor<Item>;
   canWrite: boolean;
+  inFamily?: boolean;
   onOpen: () => void;
   onDragStart: () => void;
   onDrop: () => void;
 }) {
+  const status = descriptor.status?.(item) ?? (item.active ? "Active" : "Inactive");
   const content = (
     <>
       <span className="h-full w-1 shrink-0" style={{ backgroundColor: descriptor.color?.(item) ?? "#666678" }} />
@@ -447,8 +526,8 @@ function CatalogRow<Item extends CatalogItemBase>({
       )}
       <span className="min-w-0 flex-1 px-3 py-2">
         <span className="block truncate text-sm font-semibold text-white/90">{descriptor.label(item)}</span>
-        {(descriptor.facts?.(item) ?? []).length > 0 && (
-          <span className="mt-1 block text-xs text-white/45">{descriptor.facts?.(item).join(" · ")}</span>
+        {(descriptor.facts?.(item, { inFamily }) ?? []).length > 0 && (
+          <span className="mt-1 block text-xs text-white/45">{descriptor.facts?.(item, { inFamily }).join(" · ")}</span>
         )}
         {(descriptor.chips?.(item) ?? []).length > 0 && (
           <span className="mt-1 flex flex-wrap gap-1">
@@ -461,9 +540,13 @@ function CatalogRow<Item extends CatalogItemBase>({
         )}
       </span>
       <span className={`mr-3 rounded-full px-2 py-1 text-[11px] font-semibold uppercase ${
-        item.active ? "bg-emerald-400/15 text-emerald-200" : "bg-white/10 text-white/45"
+        !item.active
+          ? "bg-white/10 text-white/45"
+          : status.startsWith("Not chartable")
+            ? "bg-amber-300/15 text-amber-100"
+            : "bg-emerald-400/15 text-emerald-200"
       }`}>
-        {item.active ? "Active" : "Inactive"}
+        {status}
       </span>
     </>
   );
@@ -488,6 +571,7 @@ function CatalogRow<Item extends CatalogItemBase>({
 function CatalogEditorDrawer<Item extends CatalogItemBase>({
   descriptor,
   item,
+  fields,
   values,
   errors,
   saving,
@@ -500,6 +584,7 @@ function CatalogEditorDrawer<Item extends CatalogItemBase>({
 }: {
   descriptor: CatalogDescriptor<Item>;
   item: Item;
+  fields: readonly CatalogFieldDescriptor[];
   values: Record<string, unknown>;
   errors: Record<string, string>;
   saving: boolean;
@@ -511,7 +596,7 @@ function CatalogEditorDrawer<Item extends CatalogItemBase>({
   onClose: () => void;
 }) {
   const fieldId = (key: string) => `catalog-${slug(descriptor.title)}-${key}`;
-  const requiredFields = descriptor.fields
+  const requiredFields = fields
     .filter((field) => field.required)
     .map((field) => ({ key: field.key, label: field.label }));
 
@@ -541,7 +626,7 @@ function CatalogEditorDrawer<Item extends CatalogItemBase>({
           </div>
         ))}
         <CatalogFieldKit
-          fields={descriptor.fields}
+          fields={fields}
           values={values}
           errors={errors}
           fieldId={useListGrammar ? fieldId : undefined}
@@ -610,6 +695,7 @@ function CatalogEmptyState({ title, presetSeedOffer }: { title: string; presetSe
 function groupItems<Item extends CatalogItemBase>(items: Item[], descriptor: CatalogDescriptor<Item>) {
   if (!descriptor.groupBy) return [{ name: "All", items, hasActive: true }];
   const grouped = new Map<string, Item[]>();
+  for (const group of descriptor.groupBy.values ?? []) grouped.set(group, []);
   for (const item of items) {
     const group = descriptor.groupBy.value(item) || "Other";
     grouped.set(group, [...(grouped.get(group) ?? []), item]);
@@ -626,6 +712,36 @@ function groupItems<Item extends CatalogItemBase>(items: Item[], descriptor: Cat
         (descriptor.groupBy?.order?.(b.name) ?? Number.MAX_SAFE_INTEGER);
       return byOrder || a.name.localeCompare(b.name);
     });
+}
+
+function fieldsForItem<Item extends CatalogItemBase>(
+  descriptor: CatalogDescriptor<Item>,
+  item: Item,
+): readonly CatalogFieldDescriptor[] {
+  return !item.id && descriptor.createFields ? descriptor.createFields : descriptor.fields;
+}
+
+function familyRows<Item extends CatalogItemBase>(
+  items: Item[],
+  descriptor: CatalogDescriptor<Item>,
+): Array<{ familyKey?: string; items: Item[] }> {
+  if (!descriptor.familyBy) return items.map((item) => ({ items: [item] }));
+  const familyMembers = new Map<string, Item[]>();
+  for (const item of items) {
+    const key = item.active ? descriptor.familyBy.key(item)?.trim() : undefined;
+    if (key) familyMembers.set(key, [...(familyMembers.get(key) ?? []), item]);
+  }
+  const familyKeys = new Set([...familyMembers.entries()]
+    .filter(([, members]) => members.length >= 2)
+    .map(([key]) => key));
+  const emitted = new Set<string>();
+  return items.flatMap((item) => {
+    const key = item.active ? descriptor.familyBy?.key(item)?.trim() : undefined;
+    if (!key || !familyKeys.has(key)) return [{ items: [item] }];
+    if (emitted.has(key)) return [];
+    emitted.add(key);
+    return [{ familyKey: key, items: familyMembers.get(key)! }];
+  });
 }
 
 function toRecord<Item extends CatalogItemBase>(item: Item): Record<string, unknown> {
