@@ -5,6 +5,7 @@ import {
   type FeeImportMatchOption,
   type FeeImportProposal,
   type FeeImportPreview,
+  type FeeImportRouting,
   type ProcedureFeeCategory,
   type ProcedureFeeImportApi,
 } from "../../lib/procedure-fee-import";
@@ -27,6 +28,9 @@ const CATEGORIES: Array<{ value: ProcedureFeeCategory; label: string }> = [
   { value: "procedure", label: "Procedure" },
 ];
 
+const CLINICAL_CATEGORIES = new Set<ProcedureFeeCategory>(["exam", "refraction", "cl-fitting", "procedure"]);
+type ReviewFilter = "all" | "create" | "match" | "skip" | "flagged";
+
 export function FeeScheduleImport({
   api,
   onCommitted,
@@ -41,6 +45,9 @@ export function FeeScheduleImport({
   const [outcomes, setOutcomes] = useState<Record<string, FeeImportCommitOutcome>>({});
   const [priceDrafts, setPriceDrafts] = useState<Record<string, string>>({});
   const [priceErrors, setPriceErrors] = useState<Record<string, string>>({});
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("all");
+  const [bulkRouting, setBulkRouting] = useState<FeeImportRouting>("insurance-billable");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,6 +62,8 @@ export function FeeScheduleImport({
       setOutcomes({});
       setPriceDrafts({});
       setPriceErrors({});
+      setSelectedIds(new Set());
+      setReviewFilter("all");
     } catch (cause) {
       setError(message(cause));
     } finally {
@@ -75,6 +84,8 @@ export function FeeScheduleImport({
         proposal.priceCents === undefined ? "" : (proposal.priceCents / 100).toFixed(2),
       ])));
       setPriceErrors({});
+      setSelectedIds(new Set());
+      setReviewFilter("all");
     } catch (cause) {
       setError(message(cause));
     } finally {
@@ -105,6 +116,8 @@ export function FeeScheduleImport({
     setOutcomes({});
     setPriceDrafts({});
     setPriceErrors({});
+    setSelectedIds(new Set());
+    setReviewFilter("all");
     setError(null);
   }
 
@@ -112,7 +125,7 @@ export function FeeScheduleImport({
     setPreview((current) => current ? {
       ...current,
       proposals: current.proposals.map((proposal) =>
-        proposal.proposalId === proposalId ? { ...proposal, ...change } : proposal
+        proposal.proposalId === proposalId ? applyReviewChange(proposal, change) : proposal
       ),
     } : current);
   }
@@ -135,12 +148,65 @@ export function FeeScheduleImport({
     updateProposal(proposalId, { priceCents: parsed.cents });
   }
 
+  function setRowSelected(proposalId: string, selected: boolean): void {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (selected) next.add(proposalId);
+      else next.delete(proposalId);
+      return next;
+    });
+  }
+
+  function setAllSelected(selected: boolean): void {
+    setSelectedIds(selected && preview ? new Set(preview.proposals.map((proposal) => proposal.proposalId)) : new Set());
+  }
+
+  function setSelectedRouting(routing: FeeImportRouting): void {
+    setPreview((current) => current ? {
+      ...current,
+      proposals: current.proposals.map((proposal) =>
+        selectedIds.has(proposal.proposalId) &&
+        proposal.decision !== "skip" &&
+        proposal.routing !== "scheduling-only"
+          ? applyReviewChange(proposal, { routing })
+          : proposal
+      ),
+    } : current);
+  }
+
+  function applyClinicalInsurancePreset(): void {
+    if (!preview) return;
+    const eligible = preview.proposals.filter((proposal) =>
+      proposal.decision !== "skip" &&
+      proposal.routing !== "scheduling-only" &&
+      proposal.category !== undefined &&
+      CLINICAL_CATEGORIES.has(proposal.category)
+    );
+    const eligibleIds = new Set(eligible.map((proposal) => proposal.proposalId));
+    setSelectedIds(eligibleIds);
+    setPreview({
+      ...preview,
+      proposals: preview.proposals.map((proposal) =>
+        eligibleIds.has(proposal.proposalId)
+          ? applyReviewChange(proposal, { routing: "insurance-billable" })
+          : proposal
+      ),
+    });
+  }
+
   const counts = preview ? {
     create: preview.proposals.filter((proposal) => proposal.decision === "create").length,
     match: preview.proposals.filter((proposal) => proposal.decision === "match").length,
     skip: preview.proposals.filter((proposal) => proposal.decision === "skip").length,
     flagged: preview.proposals.filter((proposal) => proposal.flags.length > 0).length,
   } : null;
+  const visibleProposals = preview?.proposals.filter((proposal) =>
+    reviewFilter === "all" ||
+    reviewFilter === proposal.decision ||
+    (reviewFilter === "flagged" && proposal.flags.length > 0)
+  ) ?? [];
+  const allSelected = Boolean(preview?.proposals.length) &&
+    preview!.proposals.every((proposal) => selectedIds.has(proposal.proposalId));
 
   return (
     <section className="border border-slate-700 bg-slate-900/40 p-4">
@@ -237,8 +303,75 @@ export function FeeScheduleImport({
               {counts.create} create · {counts.match} match · {counts.skip} skip · {counts.flagged} flagged
             </p>
           </div>
+          <div className="grid gap-3 border border-slate-700 p-3 md:grid-cols-2 lg:grid-cols-4">
+            <label className="text-sm text-slate-200">
+              <input
+                aria-label="Select all fee import rows"
+                type="checkbox"
+                checked={allSelected}
+                onChange={(event) => setAllSelected(event.currentTarget.checked)}
+              />
+              Select all rows
+            </label>
+            <label className="text-sm text-slate-200">
+              Review filter
+              <select
+                aria-label="Fee import review filter"
+                className="scheduler-input mt-1 block w-full"
+                value={reviewFilter}
+                onChange={(event) => setReviewFilter(event.currentTarget.value as ReviewFilter)}
+              >
+                <option value="all">All rows</option>
+                <option value="create">Create</option>
+                <option value="match">Match</option>
+                <option value="skip">Skip</option>
+                <option value="flagged">Flagged</option>
+              </select>
+            </label>
+            <button
+              aria-label="Select all filtered fee rows"
+              className="scheduler-button self-end"
+              type="button"
+              onClick={() => setSelectedIds((current) => new Set([
+                ...current,
+                ...visibleProposals.map((proposal) => proposal.proposalId),
+              ]))}
+            >
+              Select all in filter
+            </button>
+            <button
+              aria-label="Set all clinical rows to insurance-billable"
+              className="scheduler-button self-end"
+              type="button"
+              onClick={applyClinicalInsurancePreset}
+            >
+              Set all clinical rows to insurance-billable
+            </button>
+            <label className="text-sm text-slate-200">
+              Bulk routing
+              <select
+                aria-label="Bulk routing value"
+                className="scheduler-input mt-1 block w-full"
+                value={bulkRouting}
+                onChange={(event) => setBulkRouting(event.currentTarget.value as FeeImportRouting)}
+              >
+                <option value="insurance-billable">Insurance billable</option>
+                <option value="self-pay">Self-pay</option>
+                <option value="scheduling-only">Scheduling only</option>
+              </select>
+            </label>
+            <button
+              aria-label="Bulk set routing for selected"
+              className="scheduler-button self-end"
+              type="button"
+              disabled={selectedIds.size === 0}
+              onClick={() => setSelectedRouting(bulkRouting)}
+            >
+              Set routing for selected
+            </button>
+          </div>
           <div className="space-y-4">
-            {preview.proposals.map((proposal) => (
+            {visibleProposals.map((proposal) => (
               <ProposalRow
                 key={proposal.proposalId}
                 proposal={proposal}
@@ -246,6 +379,8 @@ export function FeeScheduleImport({
                 outcome={outcomes[proposal.proposalId]}
                 priceValue={priceDrafts[proposal.proposalId] ?? ""}
                 priceError={priceErrors[proposal.proposalId]}
+                selected={selectedIds.has(proposal.proposalId)}
+                onSelectedChange={(selected) => setRowSelected(proposal.proposalId, selected)}
                 onChange={(change) => updateProposal(proposal.proposalId, change)}
                 onPriceChange={(value) => updatePrice(proposal.proposalId, value)}
               />
@@ -277,6 +412,8 @@ function ProposalRow({
   outcome,
   priceValue,
   priceError,
+  selected,
+  onSelectedChange,
   onChange,
   onPriceChange,
 }: {
@@ -285,6 +422,8 @@ function ProposalRow({
   outcome?: FeeImportCommitOutcome;
   priceValue: string;
   priceError?: string;
+  selected: boolean;
+  onSelectedChange: (selected: boolean) => void;
   onChange: (change: Partial<FeeImportProposal>) => void;
   onPriceChange: (value: string) => void;
 }) {
@@ -292,9 +431,47 @@ function ProposalRow({
     ? matchOptions.find((option) => option.procedureConceptKey === proposal.matchProcedureConceptKey)
     : undefined;
   const immutableSeed = Boolean(match?.seeded);
+  const rankByKey = new Map(proposal.matchRanking.map((rank, index) => [rank.procedureConceptKey, index]));
+  const rankedMatchOptions = [...matchOptions].sort((left, right) =>
+    (rankByKey.get(left.procedureConceptKey) ?? Number.MAX_SAFE_INTEGER) -
+      (rankByKey.get(right.procedureConceptKey) ?? Number.MAX_SAFE_INTEGER) ||
+    compareText(left.procedureConceptKey, right.procedureConceptKey)
+  );
+  const suggestedMatch = proposal.decision === "create"
+    ? matchOptions.find((option) =>
+      option.procedureConceptKey === proposal.suggestedMatchProcedureConceptKey
+    )
+    : undefined;
   return (
     <article className="border border-slate-700 p-3" data-proposal-id={proposal.proposalId}>
-      <p className="text-xs text-slate-400">Source rows {proposal.sourceRows.join(", ")}</p>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs text-slate-400">Source rows {proposal.sourceRows.join(", ")}</p>
+        <label className="text-sm text-slate-200">
+          <input
+            aria-label={`Select fee row ${proposal.proposalId}`}
+            type="checkbox"
+            checked={selected}
+            onChange={(event) => onSelectedChange(event.currentTarget.checked)}
+          />
+          Select row
+        </label>
+      </div>
+      {suggestedMatch && (
+        <button
+          aria-label={`Match ${proposal.proposalId} to suggested ${suggestedMatch.display}`}
+          className="scheduler-button mt-2"
+          type="button"
+          onClick={() => onChange({
+            decision: "match",
+            matchProcedureConceptKey: suggestedMatch.procedureConceptKey,
+            matchSeeded: suggestedMatch.seeded,
+            display: suggestedMatch.display,
+            category: suggestedMatch.category,
+          })}
+        >
+          Resembles {suggestedMatch.seeded ? "seeded" : "existing"} concept {suggestedMatch.display} — match instead?
+        </button>
+      )}
       <div className="mt-2 grid gap-3 md:grid-cols-4">
         <label className="text-sm text-slate-200">
           Decision
@@ -317,7 +494,7 @@ function ProposalRow({
               className="scheduler-input mt-1"
               value={proposal.matchProcedureConceptKey ?? ""}
               onChange={(event) => {
-                const target = matchOptions.find((option) => option.procedureConceptKey === event.currentTarget.value);
+                const target = rankedMatchOptions.find((option) => option.procedureConceptKey === event.currentTarget.value);
                 onChange({
                   matchProcedureConceptKey: target?.procedureConceptKey,
                   matchSeeded: target?.seeded,
@@ -326,7 +503,7 @@ function ProposalRow({
               }}
             >
               <option value="">Choose target</option>
-              {matchOptions.map((option) => (
+              {rankedMatchOptions.map((option) => (
                 <option key={option.procedureConceptKey} value={option.procedureConceptKey}>{option.display}</option>
               ))}
             </select>
@@ -437,6 +614,23 @@ function parseDollars(value: string): { valid: true; cents?: number } | { valid:
   return { valid: true, cents: Number(cents) };
 }
 
+function applyReviewChange(
+  proposal: FeeImportProposal,
+  change: Partial<FeeImportProposal>,
+): FeeImportProposal {
+  const updated = { ...proposal, ...change };
+  if (!("routing" in change) && !("decision" in change)) return updated;
+  const flags = updated.flags.filter((flag) => flag.class !== "routing-required");
+  if (updated.decision !== "skip" && !updated.routing) {
+    flags.push({ class: "routing-required", message: "Routing must be reviewed before commit." });
+  }
+  return { ...updated, flags };
+}
+
 function message(error: unknown): string {
   return error instanceof Error ? error.message : "Fee schedule import failed.";
+}
+
+function compareText(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
 }

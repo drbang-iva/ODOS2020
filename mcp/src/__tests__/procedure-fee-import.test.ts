@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Bundle, ChargeItemDefinition, Resource } from "@medplum/fhirtypes";
 import {
+  VISIT_PROCEDURE_CONCEPT_KEYS,
   createProcedureFeeScheduleItem,
   ensureProcedureFeeSchedule,
   listActiveCodedNonVisitProcedureFees,
@@ -94,11 +95,98 @@ function reviewedProposal(overrides: Partial<FeeImportProposal> & Pick<FeeImport
     category: "procedure",
     routing: "insurance-billable",
     active: true,
+    matchRanking: [],
     flags: [],
     reasons: [],
     ...rest,
   };
 }
+
+test("post-collapse ranking suggests the closest seeded concept without changing create", async () => {
+  // Ranking before duplicate collapse or auto-applying the top result must change the proposal count or decision.
+  const fhir = new CountingFhir();
+  const preview = proposeProcedureFeeImport({
+    csvText: [
+      "Label,Group",
+      "Comprehensive eye exam new patient,Exam",
+      "Comprehensive eye exam new patient,Exam",
+    ].join("\n"),
+    mapping: { display: "Label", category: "Group" },
+    existing: await listProcedureFeeScheduleSnapshot(fhir),
+  });
+
+  assert.equal(preview.proposals.length, 1);
+  const proposal = preview.proposals[0];
+  assert.deepEqual(proposal?.sourceRows, [2, 3]);
+  assert.equal(proposal?.decision, "create");
+  assert.equal(proposal?.matchProcedureConceptKey, undefined);
+  assert.equal(proposal?.matchRanking[0]?.procedureConceptKey, "comprehensive-exam-new");
+  assert.equal(proposal?.matchRanking[0]?.score, 1);
+  assert.equal(proposal?.matchRanking.length, 18);
+  assert.equal(proposal?.flags.some((flag) => flag.class === "seeded-concept-uncoded"), true);
+  assert.equal(preview.matchOptions.length, 18);
+  assert.equal(preview.matchOptions.filter((option) => option.seeded).length, 18);
+  assert.equal(VISIT_PROCEDURE_CONCEPT_KEYS.every((key) =>
+    preview.matchOptions.some((option) => option.procedureConceptKey === key)
+  ), true);
+});
+
+test("seeded-concept warning stops after the category seed is coded", async () => {
+  // Ignoring persisted seed coding must leave the refraction warning visible after commit.
+  const fhir = new CountingFhir();
+  const csvText = "Label,Group\nClinical refraction,Refraction\n";
+  const mapping = { display: "Label", category: "Group" };
+  const first = proposeProcedureFeeImport({
+    csvText,
+    mapping,
+    existing: await listProcedureFeeScheduleSnapshot(fhir),
+  });
+  const proposed = first.proposals[0];
+  assert.equal(proposed?.decision, "create");
+  assert.equal(proposed?.matchRanking[0]?.procedureConceptKey, "refraction");
+  assert.equal(proposed?.flags.some((flag) => flag.class === "seeded-concept-uncoded"), true);
+
+  const committed = await commitProcedureFeeImport(fhir, [{
+    ...proposed,
+    decision: "match",
+    matchProcedureConceptKey: "refraction",
+    matchSeeded: true,
+    billingCode: "SYNTHREF",
+    routing: "insurance-billable",
+  }]);
+  assert.equal(committed.outcomes[0]?.status, "matched");
+  assert.equal(committed.outcomes[0]?.procedureConceptKey, "refraction");
+  const seed = (await listProcedureFeeScheduleSnapshot(fhir)).find((item) =>
+    item.procedureConceptKey === "refraction"
+  );
+  assert.equal(seed?.billingCode, "SYNTHREF");
+  assert.equal(seed?.display, "Refraction");
+  assert.equal(seed?.category, "refraction");
+
+  const second = proposeProcedureFeeImport({
+    csvText,
+    mapping,
+    existing: await listProcedureFeeScheduleSnapshot(fhir),
+  });
+  assert.equal(second.proposals[0]?.flags.some((flag) => flag.class === "seeded-concept-uncoded"), false);
+});
+
+test("commit still rejects a non-skip row with no routing", async () => {
+  // Removing or bypassing the commit-time routing guard must turn this expected failure into a write.
+  const fhir = new CountingFhir();
+  const proposal = reviewedProposal({
+    proposalId: "p-routing-required",
+    display: "Synthetic unrouted service",
+    routing: undefined,
+  });
+
+  const result = await commitProcedureFeeImport(fhir, [proposal]);
+
+  assert.equal(result.outcomes[0]?.status, "failed");
+  assert.equal(result.outcomes[0]?.message, "Routing is required before commit.");
+  assert.equal(fhir.createCount, 0);
+  assert.equal(fhir.updateCount, 0);
+});
 
 test("search-only fee schedule snapshot returns all virtual seeds without FHIR writes", async () => {
   const fhir = new CountingFhir();

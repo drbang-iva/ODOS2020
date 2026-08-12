@@ -22,6 +22,7 @@ function proposal(overrides: Partial<FeeImportProposal> = {}): FeeImportProposal
     category: "procedure",
     routing: "insurance-billable",
     active: true,
+    matchRanking: [],
     flags: [],
     reasons: [],
     ...overrides,
@@ -128,6 +129,11 @@ function reviewPreview(): FeeImportPreview {
     proposals: [
       proposal({
         proposalId: "create-row",
+        suggestedMatchProcedureConceptKey: "refraction",
+        matchRanking: [
+          { procedureConceptKey: "refraction", score: 0.5 },
+          { procedureConceptKey: "practice-service", score: 0 },
+        ],
         flags: [{ class: "active-column-unmapped", message: "Active column must be mapped." }],
       }),
       proposal({
@@ -239,6 +245,120 @@ test("review renders create match skip flagged counts and every mutable field", 
     assert.ok(renderer.root.findAllByProps({ "aria-label": `${label} for create-row` }).length > 0, label);
   }
   assert.ok(renderer.root.findAllByProps({ "aria-label": "Match target for seed-row" }).length > 0);
+});
+
+test("bulk routing changes exactly selected eligible rows and abandon still writes nothing", async () => {
+  // Applying bulk routing to an unselected, skipped, or scheduling-only row must change one of these controls.
+  const api = memoryApi();
+  const preview = reviewPreview();
+  preview.proposals[0]!.routing = undefined;
+  preview.proposals[0]!.flags.push({ class: "routing-required", message: "Routing must be reviewed before commit." });
+  preview.proposals[1]!.routing = "insurance-billable";
+  api.propose = async () => preview;
+  const renderer = create(<FeeScheduleImport api={api} onCommitted={() => undefined} />);
+  await inspectAndReview(renderer);
+
+  await act(async () => renderer.root.findByProps({ "aria-label": "Select fee row create-row" }).props.onChange({
+    currentTarget: { checked: true },
+  }));
+  await act(async () => renderer.root.findByProps({ "aria-label": "Select fee row skip-row" }).props.onChange({
+    currentTarget: { checked: true },
+  }));
+  await act(async () => renderer.root.findByProps({ "aria-label": "Bulk routing value" }).props.onChange({
+    currentTarget: { value: "self-pay" },
+  }));
+  await act(async () => renderer.root.findByProps({ "aria-label": "Bulk set routing for selected" }).props.onClick());
+
+  assert.equal(renderer.root.findByProps({ "aria-label": "Routing for create-row" }).props.value, "self-pay");
+  assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /Routing must be reviewed before commit/);
+  assert.equal(renderer.root.findByProps({ "aria-label": "Routing for seed-row" }).props.value, "insurance-billable");
+  assert.equal(renderer.root.findByProps({ "aria-label": "Routing for skip-row" }).props.value, "scheduling-only");
+  assert.equal(api.commitCalls.length, 0);
+  await act(async () => renderer.root.findByProps({ "aria-label": "Abandon fee import review" }).props.onClick());
+  assert.equal(api.commitCalls.length, 0);
+});
+
+test("global and filtered selection target the visible review rows", async () => {
+  // Ignoring the active filter or omitting global selection must leave the wrong row checkbox state.
+  const renderer = create(<FeeScheduleImport api={memoryApi()} onCommitted={() => undefined} />);
+  await inspectAndReview(renderer);
+
+  await act(async () => renderer.root.findByProps({ "aria-label": "Fee import review filter" }).props.onChange({
+    currentTarget: { value: "create" },
+  }));
+  await act(async () => renderer.root.findByProps({ "aria-label": "Select all filtered fee rows" }).props.onClick());
+  assert.equal(renderer.root.findByProps({ "aria-label": "Select fee row create-row" }).props.checked, true);
+  await act(async () => renderer.root.findByProps({ "aria-label": "Fee import review filter" }).props.onChange({
+    currentTarget: { value: "all" },
+  }));
+  assert.equal(renderer.root.findByProps({ "aria-label": "Select fee row seed-row" }).props.checked, false);
+  assert.equal(renderer.root.findByProps({ "aria-label": "Select fee row skip-row" }).props.checked, false);
+
+  await act(async () => renderer.root.findByProps({ "aria-label": "Select all fee import rows" }).props.onChange({
+    currentTarget: { checked: true },
+  }));
+  assert.equal(renderer.root.findByProps({ "aria-label": "Select fee row create-row" }).props.checked, true);
+  assert.equal(renderer.root.findByProps({ "aria-label": "Select fee row seed-row" }).props.checked, true);
+  assert.equal(renderer.root.findByProps({ "aria-label": "Select fee row skip-row" }).props.checked, true);
+});
+
+test("clinical preset selects exactly non-skip clinical rows and records insurance routing", async () => {
+  // Including a skipped or scheduling-only row, or missing an eligible category, must fail this exact selection matrix.
+  const api = memoryApi();
+  const preview = reviewPreview();
+  preview.proposals[0]!.routing = undefined;
+  preview.proposals[1]!.routing = "self-pay";
+  preview.proposals.push(
+    proposal({ proposalId: "exam-row", sourceRows: [5], category: "exam", routing: undefined }),
+    proposal({ proposalId: "cl-row", sourceRows: [6], category: "cl-fitting", routing: "self-pay" }),
+    proposal({
+      proposalId: "stale-scheduling-row",
+      sourceRows: [7],
+      category: "procedure",
+      decision: "create",
+      routing: "scheduling-only",
+    }),
+  );
+  api.propose = async () => preview;
+  const renderer = create(<FeeScheduleImport api={api} onCommitted={() => undefined} />);
+  await inspectAndReview(renderer);
+
+  await act(async () => renderer.root.findByProps({
+    "aria-label": "Set all clinical rows to insurance-billable",
+  }).props.onClick());
+
+  for (const proposalId of ["create-row", "seed-row", "exam-row", "cl-row"]) {
+    assert.equal(renderer.root.findByProps({ "aria-label": `Select fee row ${proposalId}` }).props.checked, true);
+    assert.equal(renderer.root.findByProps({ "aria-label": `Routing for ${proposalId}` }).props.value, "insurance-billable");
+  }
+  assert.equal(renderer.root.findByProps({ "aria-label": "Select fee row skip-row" }).props.checked, false);
+  assert.equal(renderer.root.findByProps({ "aria-label": "Select fee row stale-scheduling-row" }).props.checked, false);
+  assert.equal(renderer.root.findByProps({ "aria-label": "Routing for skip-row" }).props.value, "scheduling-only");
+  assert.equal(renderer.root.findByProps({ "aria-label": "Routing for stale-scheduling-row" }).props.value, "scheduling-only");
+  assert.equal(api.commitCalls.length, 0);
+});
+
+test("a seeded suggestion never changes create until the operator accepts it", async () => {
+  // Auto-applying the top suggestion must make the initial decision assertion red.
+  const renderer = create(<FeeScheduleImport api={memoryApi()} onCommitted={() => undefined} />);
+  await inspectAndReview(renderer);
+
+  assert.equal(renderer.root.findByProps({ "aria-label": "Decision for create-row" }).props.value, "create");
+  assert.equal(renderer.root.findAllByProps({ "aria-label": "Match target for create-row" }).length, 0);
+  const suggestion = renderer.root.findByProps({
+    "aria-label": "Match create-row to suggested Refraction",
+  });
+  assert.match(suggestion.children.join(""), /Resembles seeded concept Refraction/);
+
+  await act(async () => suggestion.props.onClick());
+
+  assert.equal(renderer.root.findByProps({ "aria-label": "Decision for create-row" }).props.value, "match");
+  const target = renderer.root.findByProps({ "aria-label": "Match target for create-row" });
+  assert.equal(target.props.value, "refraction");
+  assert.deepEqual(
+    target.findAllByType("option").slice(1).map((option) => option.props.value),
+    ["refraction", "practice-service"],
+  );
 });
 
 test("review controls use the shared high-contrast settings styles", async () => {
