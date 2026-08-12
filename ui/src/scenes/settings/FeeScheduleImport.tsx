@@ -142,7 +142,7 @@ export function FeeScheduleImport({
             Or paste CSV
             <textarea
               aria-label="Fee import CSV text"
-              className="mt-1 min-h-28 w-full border border-slate-600 bg-slate-950 p-2"
+              className="scheduler-input mt-1 min-h-28 w-full font-mono text-xs"
               value={csvText}
               onChange={(event) => {
                 setCsvText(event.currentTarget.value);
@@ -153,6 +153,7 @@ export function FeeScheduleImport({
           </label>
           <button
             aria-label="Inspect fee import CSV"
+            className="scheduler-button"
             type="button"
             disabled={busy || !csvText.trim()}
             onClick={inspect}
@@ -172,7 +173,7 @@ export function FeeScheduleImport({
                 {field.label}
                 <select
                   aria-label={`Map ${field.key} column`}
-                  className="mt-1 block w-full bg-slate-950"
+                  className="scheduler-input mt-1 block w-full"
                   value={mapping[field.key] ?? ""}
                   onChange={(event) => setMapping((current) => ({
                     ...current,
@@ -188,6 +189,7 @@ export function FeeScheduleImport({
           {!mapping.display && <p className="text-sm text-amber-200">Choose a display column before building review.</p>}
           <button
             aria-label="Build fee import review"
+            className="scheduler-button"
             type="button"
             disabled={busy || !mapping.display}
             onClick={buildReview}
@@ -219,13 +221,14 @@ export function FeeScheduleImport({
           <div className="flex gap-3">
             <button
               aria-label="Commit reviewed fee import"
+              className="scheduler-button"
               type="button"
               disabled={busy}
               onClick={commit}
             >
               Commit reviewed proposals
             </button>
-            <button aria-label="Abandon fee import review" type="button" disabled={busy} onClick={abandon}>
+            <button aria-label="Abandon fee import review" className="scheduler-button" type="button" disabled={busy} onClick={abandon}>
               Abandon review
             </button>
           </div>
@@ -258,6 +261,7 @@ function ProposalRow({
           Decision
           <select
             aria-label={`Decision for ${proposal.proposalId}`}
+            className="scheduler-input mt-1"
             value={proposal.decision}
             onChange={(event) => onChange({ decision: event.currentTarget.value as FeeImportProposal["decision"] })}
           >
@@ -271,6 +275,7 @@ function ProposalRow({
             Match target
             <select
               aria-label={`Match target for ${proposal.proposalId}`}
+              className="scheduler-input mt-1"
               value={proposal.matchProcedureConceptKey ?? ""}
               onChange={(event) => {
                 const target = matchOptions.find((option) => option.procedureConceptKey === event.currentTarget.value);
@@ -299,6 +304,7 @@ function ProposalRow({
               Display
               <input
                 aria-label={`Display for ${proposal.proposalId}`}
+                className="scheduler-input mt-1"
                 value={proposal.display}
                 onChange={(event) => onChange({ display: event.currentTarget.value })}
               />
@@ -307,6 +313,7 @@ function ProposalRow({
               Category
               <select
                 aria-label={`Category for ${proposal.proposalId}`}
+                className="scheduler-input mt-1"
                 value={proposal.category ?? ""}
                 onChange={(event) => onChange({ category: event.currentTarget.value as ProcedureFeeCategory || undefined })}
               >
@@ -320,6 +327,7 @@ function ProposalRow({
           Billing code
           <input
             aria-label={`Billing code for ${proposal.proposalId}`}
+            className="scheduler-input mt-1"
             value={proposal.billingCode ?? ""}
             onChange={(event) => onChange({ billingCode: event.currentTarget.value || undefined })}
           />
@@ -328,6 +336,7 @@ function ProposalRow({
           Modifier <span className="text-xs text-amber-200">recorded only</span>
           <input
             aria-label={`Modifier for ${proposal.proposalId}`}
+            className="scheduler-input mt-1"
             value={proposal.modifier ?? ""}
             onChange={(event) => onChange({ modifier: event.currentTarget.value || undefined })}
           />
@@ -336,6 +345,7 @@ function ProposalRow({
           Price
           <input
             aria-label={`Price for ${proposal.proposalId}`}
+            className="scheduler-input mt-1"
             inputMode="decimal"
             value={proposal.priceCents === undefined ? "" : (proposal.priceCents / 100).toFixed(2)}
             onChange={(event) => onChange({ priceCents: dollarsToCents(event.currentTarget.value) })}
@@ -345,6 +355,7 @@ function ProposalRow({
           Routing <span className="text-xs text-amber-200">recorded only</span>
           <select
             aria-label={`Routing for ${proposal.proposalId}`}
+            className="scheduler-input mt-1"
             value={proposal.routing ?? ""}
             onChange={(event) => onChange({
               routing: event.currentTarget.value as FeeImportProposal["routing"] || undefined,

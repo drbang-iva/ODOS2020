@@ -241,6 +241,24 @@ test("review renders create match skip flagged counts and every mutable field", 
   assert.ok(renderer.root.findAllByProps({ "aria-label": "Match target for seed-row" }).length > 0);
 });
 
+test("review controls use the shared high-contrast settings styles", async () => {
+  // Omitting scheduler-input or scheduler-button reproduces unreadable light controls on the dark settings surface.
+  const renderer = create(<FeeScheduleImport api={memoryApi()} onCommitted={() => undefined} />);
+  await inspectAndReview(renderer);
+  const reviewControls = renderer.root.findAll((node) =>
+    typeof node.props["aria-label"] === "string" &&
+    / for (?:create-row|seed-row|skip-row)$/.test(node.props["aria-label"])
+  );
+  assert.equal(reviewControls.filter((node) =>
+    node.type === "select" || (node.type === "input" && node.props.type !== "checkbox")
+  ).every((node) =>
+    String(node.props.className ?? "").includes("scheduler-input")
+  ), true);
+  for (const label of ["Commit reviewed fee import", "Abandon fee import review"]) {
+    assert.match(renderer.root.findByProps({ "aria-label": label }).props.className ?? "", /scheduler-button/);
+  }
+});
+
 test("seeded match inherits read-only display and category while practice match stays editable", async () => {
   // Rendering editable seeded identity or failing to enable practice identity must make this test red.
   const renderer = create(<FeeScheduleImport api={memoryApi()} onCommitted={() => undefined} />);
