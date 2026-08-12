@@ -405,7 +405,7 @@ test("reviewed corrections clear resolved flags but preserve source-history warn
   assert.doesNotMatch(suggestionText, /Seed remains uncoded|Category requires review|Concept key conflicts/);
 
   await act(async () => renderer.root.findByProps({ "aria-label": "Display for edited-row" }).props.onChange({
-    currentTarget: { value: "Reviewed display" },
+    currentTarget: { value: "Still obsolete service" },
   }));
   await act(async () => renderer.root.findByProps({ "aria-label": "Category for edited-row" }).props.onChange({
     currentTarget: { value: "procedure" },
@@ -420,9 +420,23 @@ test("reviewed corrections clear resolved flags but preserve source-history warn
     .findAllByType("p").flatMap((node) => node.children).join(" ");
   assert.doesNotMatch(
     editedJson,
-    /Invalid active name|Zero-price contradiction|Obsolete display|Category requires review|Active column unmapped|Price is invalid|Source boolean is invalid|Concept key conflicts/,
+    /Invalid active name|Category requires review|Active column unmapped|Price is invalid|Source boolean is invalid/,
   );
-  assert.match(editedJson, /Laterality was dropped/);
+  for (const message of ["Zero-price contradiction", "Obsolete display", "Concept key conflicts", "Laterality was dropped"]) {
+    assert.match(editedJson, new RegExp(message));
+  }
+
+  await act(async () => renderer.root.findByProps({ "aria-label": "Display for edited-row" }).props.onChange({
+    currentTarget: { value: "Reviewed display" },
+  }));
+  await act(async () => renderer.root.findByProps({ "aria-label": "Price for edited-row" }).props.onChange({
+    currentTarget: { value: "0" },
+  }));
+  const correctedJson = renderer.root.findByProps({ "data-proposal-id": "edited-row" })
+    .findAllByType("p").flatMap((node) => node.children).join(" ");
+  assert.doesNotMatch(correctedJson, /Zero-price contradiction|Obsolete display/);
+  assert.match(correctedJson, /Concept key conflicts/);
+  assert.match(correctedJson, /Laterality was dropped/);
 });
 
 test("review controls use the shared high-contrast settings styles", async () => {

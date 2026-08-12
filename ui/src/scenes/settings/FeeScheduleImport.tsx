@@ -622,19 +622,24 @@ function applyReviewChange(
   const updated = { ...proposal, ...change };
   const resolved = new Set<FeeImportFlagClass>();
   if ("display" in change) {
-    resolved.add("invalid-active-code-name");
-    resolved.add("obsolete-or-superseded");
-    resolved.add("concept-key-conflict");
+    if (!declaresInvalidReviewedDisplay(updated.display) || !updated.active) {
+      resolved.add("invalid-active-code-name");
+    }
+    if (!/\b(obsolete|superseded)\b/i.test(updated.display)) resolved.add("obsolete-or-superseded");
   }
   if ("category" in change && updated.category) resolved.add("category-required");
   if ("priceCents" in change) {
     resolved.add("invalid-price");
-    resolved.add("zero-price-contradiction");
+    if (updated.priceCents === undefined || updated.priceCents === 0) {
+      resolved.add("zero-price-contradiction");
+    }
   }
   if ("active" in change) {
     resolved.add("active-column-unmapped");
     resolved.add("invalid-source-boolean");
-    if (!updated.active) resolved.add("invalid-active-code-name");
+    if (!updated.active || !declaresInvalidReviewedDisplay(updated.display)) {
+      resolved.add("invalid-active-code-name");
+    }
   }
   if ("matchProcedureConceptKey" in change && updated.matchProcedureConceptKey) {
     resolved.add("seeded-concept-uncoded");
@@ -658,4 +663,8 @@ function message(error: unknown): string {
 
 function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function declaresInvalidReviewedDisplay(display: string): boolean {
+  return /\binvalid\b.*\b(code|service|procedure)\b|\b(code|service|procedure)\b.*\binvalid\b/i.test(display);
 }
