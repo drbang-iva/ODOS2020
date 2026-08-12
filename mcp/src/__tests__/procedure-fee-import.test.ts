@@ -131,6 +131,25 @@ test("post-collapse ranking suggests the closest seeded concept without changing
   ), true);
 });
 
+test("match ranking is independent of the host locale", async () => {
+  // Calling locale-sensitive lowercasing must change the top match under a Turkish host locale.
+  const original = String.prototype.toLocaleLowerCase;
+  String.prototype.toLocaleLowerCase = function (): string {
+    return original.call(this, "tr");
+  };
+  try {
+    const fhir = new CountingFhir();
+    const preview = proposeProcedureFeeImport({
+      csvText: "Label,Group\nINTERMEDIATE EYE EXAM NEW PATIENT,Exam\n",
+      mapping: { display: "Label", category: "Group" },
+      existing: await listProcedureFeeScheduleSnapshot(fhir),
+    });
+    assert.equal(preview.proposals[0]?.matchRanking[0]?.procedureConceptKey, "intermediate-exam-new");
+  } finally {
+    String.prototype.toLocaleLowerCase = original;
+  }
+});
+
 test("seeded-concept warning stops after the category seed is coded", async () => {
   // Ignoring persisted seed coding must leave the refraction warning visible after commit.
   const fhir = new CountingFhir();
@@ -145,6 +164,10 @@ test("seeded-concept warning stops after the category seed is coded", async () =
   assert.equal(proposed?.decision, "create");
   assert.equal(proposed?.matchRanking[0]?.procedureConceptKey, "refraction");
   assert.equal(proposed?.flags.some((flag) => flag.class === "seeded-concept-uncoded"), true);
+  assert.match(
+    proposed?.flags.find((flag) => flag.class === "seeded-concept-uncoded")?.message ?? "",
+    /Refraction charges/,
+  );
 
   const committed = await commitProcedureFeeImport(fhir, [{
     ...proposed,

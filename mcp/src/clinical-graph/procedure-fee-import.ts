@@ -233,7 +233,7 @@ export function proposeProcedureFeeImport(input: {
       addFlag(
         proposal.flags,
         "seeded-concept-uncoded",
-        "Exam charges will flow through the procedure surface instead of the visit-code slot while a seeded concept in this category remains uncoded.",
+        `${proposal.category === "exam" ? "Exam" : "Refraction"} charges will flow through the procedure surface instead of the visit-code slot while a seeded concept in this category remains uncoded.`,
       );
     }
     return {
@@ -271,7 +271,7 @@ function rankFeeImportMatches(
 }
 
 function matchTokens(value: string): ReadonlySet<string> {
-  const normalized = value.toLocaleLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const normalized = value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   return new Set(normalized ? normalized.split(/\s+/) : []);
 }
 
