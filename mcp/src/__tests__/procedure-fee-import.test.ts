@@ -238,6 +238,7 @@ test("laterality rows collapse once and drop concept laterality with the charge-
   const proposal = preview.proposals.find((row) => row.sourceRows.includes(2));
   assert.ok(proposal);
   assert.deepEqual(proposal.sourceRows, [2, 3]);
+  assert.equal(proposal.display, "Synthetic side imaging");
   assert.equal(proposal.modifier, undefined);
   assert.equal(proposal.billingCode, "SYNTHSIDE");
   assert.equal(proposal.flags.filter((flag) => flag.class === "laterality-dropped").length, 1);
@@ -322,6 +323,18 @@ test("an available unmapped active column is visible on affected proposals", () 
     row.flags.some((flag) => flag.class === "active-column-unmapped")
   ), false);
   assert.equal(withActive.proposals.find((row) => row.sourceRows.includes(12))?.active, false);
+});
+
+test("an unrecognized mapped active value defaults inactive for explicit operator review", () => {
+  // Falling back to active for an invalid mapped status must silently chart an obsolete concept.
+  const preview = proposeProcedureFeeImport({
+    csvText: "Label,Group,Route,Status\nSynthetic uncertain status,Procedure,Insurance,maybe\n",
+    mapping: { display: "Label", category: "Group", routing: "Route", active: "Status" },
+    existing: [],
+  });
+
+  assert.equal(preview.proposals[0]?.active, false);
+  assert.equal(preview.proposals[0]?.flags.some((flag) => flag.class === "invalid-source-boolean"), true);
 });
 
 test("routing required and concept-key conflict flags remain row-visible", () => {

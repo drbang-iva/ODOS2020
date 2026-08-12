@@ -442,12 +442,13 @@ function buildProposal(input: {
   existingByKey: ReadonlyMap<string, ProcedureFeeScheduleItem>;
   activeColumnUnmapped: boolean;
 }): WorkingProposal {
-  const display = normalizeDisplay(mapped(input.row, input.mapping.display));
+  const sourceDisplay = normalizeDisplay(mapped(input.row, input.mapping.display));
   const rawCode = mapped(input.row, input.mapping.billingCode).trim();
   const compound = normalizeCompoundCode(rawCode);
   const mappedModifier = mapped(input.row, input.mapping.modifier).trim().toUpperCase();
   const modifierLaterality = fixedLaterality(mappedModifier);
   const hadLaterality = compound.laterality !== undefined || modifierLaterality !== undefined;
+  const display = hadLaterality ? displayWithoutLaterality(sourceDisplay) : sourceDisplay;
   const modifier = modifierLaterality ? undefined : mappedModifier || undefined;
   const price = parsePrice(mapped(input.row, input.mapping.price), input.mapping.price !== undefined);
   const category = parseCategory(mapped(input.row, input.mapping.category));
@@ -512,7 +513,7 @@ function buildProposal(input: {
     ...(modifier ? { modifier } : {}),
     ...(price.cents !== undefined ? { priceCents: price.cents } : {}),
     ...(routing ? { routing } : {}),
-    active: activeCheck.value ?? true,
+    active: activeCheck.invalid ? false : activeCheck.value ?? true,
     flags,
     reasons,
     displayMeaning: displayMeaning(display),
@@ -670,7 +671,12 @@ function normalizeDisplay(value: string): string {
 }
 
 function displayMeaning(value: string): string {
-  return procedureConceptKeyFromDisplay(value.replace(/(?:\s+|[-–—])(RT|LT|50|right|left|bilateral)$/i, ""));
+  return procedureConceptKeyFromDisplay(displayWithoutLaterality(value));
+}
+
+function displayWithoutLaterality(value: string): string {
+  const stripped = normalizeDisplay(value.replace(/(?:\s+|[./\-–—])(RT|LT|50|right|left|bilateral)$/i, ""));
+  return stripped || value;
 }
 
 function proposalId(sourceRows: readonly number[]): string {
