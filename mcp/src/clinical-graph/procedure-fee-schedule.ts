@@ -19,6 +19,7 @@ const CHARGE_PROPOSAL_IDENTIFIER_SYSTEM = `${BASE}/NamingSystem/charge-proposal-
 const ACT_CODE_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-ActCode";
 const FEE_CATEGORY_EXTENSION_URL = `${BASE}/StructureDefinition/odos-procedure-fee-category`;
 const FEE_MODIFIER_EXTENSION_URL = `${BASE}/StructureDefinition/odos-procedure-fee-modifier`;
+export const FEE_ROUTING_EXTENSION_URL = `${BASE}/StructureDefinition/odos-procedure-fee-routing`;
 const DISALLOWED_CONCEPT_LATERALITY_MODIFIERS = new Set(["RT", "LT", "50"]);
 
 export const ODOS_UNPRICED_CHARGE_EXTENSION_URL =
@@ -26,6 +27,8 @@ export const ODOS_UNPRICED_CHARGE_EXTENSION_URL =
 
 export const PROCEDURE_FEE_CATEGORIES = ["exam", "refraction", "cl-fitting", "procedure"] as const;
 export type ProcedureFeeCategory = (typeof PROCEDURE_FEE_CATEGORIES)[number];
+export const PROCEDURE_FEE_ROUTINGS = ["insurance-billable", "self-pay"] as const;
+export type ProcedureFeeRouting = (typeof PROCEDURE_FEE_ROUTINGS)[number];
 
 interface ProcedureFeeSeed {
   procedureConceptKey: string;
@@ -110,6 +113,7 @@ export interface ProcedureFeeScheduleItem {
   billingCode?: string;
   category?: ProcedureFeeCategory;
   modifier?: string;
+  routing?: ProcedureFeeRouting;
   priceCents?: number;
   version: string;
 }
@@ -171,6 +175,18 @@ export async function listProcedureFeeSchedule(
   fhir: ProcedureFeeScheduleFhir,
 ): Promise<ProcedureFeeScheduleItem[]> {
   const definitions = await ensureProcedureFeeSchedule(fhir);
+  return mergeProcedureFeeSchedule(definitions);
+}
+
+export async function listProcedureFeeScheduleSnapshot(
+  fhir: Pick<ProcedureFeeScheduleFhir, "search" | "searchUrl">,
+): Promise<ProcedureFeeScheduleItem[]> {
+  return mergeProcedureFeeSchedule(await listProcedureFeeDefinitions(fhir));
+}
+
+function mergeProcedureFeeSchedule(
+  definitions: ChargeItemDefinition[],
+): ProcedureFeeScheduleItem[] {
   const persisted = definitions.map(procedureFeeScheduleItem);
   const persistedKeys = new Set(persisted.map((item) => item.procedureConceptKey));
   const virtualSeeds = PROCEDURE_FEE_SEEDS
@@ -260,6 +276,7 @@ export async function createProcedureFeeScheduleItem(
     category?: ProcedureFeeCategory;
     billingCode?: string | null;
     modifier?: string | null;
+    routing?: ProcedureFeeRouting;
     priceCents?: number | null;
     active: boolean;
   },
@@ -287,6 +304,7 @@ export async function createProcedureFeeScheduleItem(
     category: input.category,
     billingCode: normalizeBillingCode(input.billingCode),
     modifier: normalizeModifier(input.modifier),
+    routing: input.routing,
     priceCents: input.priceCents ?? undefined,
     active: input.active,
   }), {
@@ -305,6 +323,7 @@ export async function saveProcedureFeeScheduleItem(
     category?: ProcedureFeeCategory;
     billingCode?: string | null;
     modifier?: string | null;
+    routing?: ProcedureFeeRouting;
     priceCents?: number | null;
     active: boolean;
   },
@@ -348,6 +367,9 @@ export async function saveProcedureFeeScheduleItem(
   const modifier = input.modifier === undefined
     ? definitionModifier(existing)
     : normalizedInputModifier;
+  const routing = input.routing === undefined
+    ? definitionRouting(existing)
+    : input.routing;
   const saved = await fhir.update(
     "ChargeItemDefinition",
     existing.id,
@@ -357,6 +379,7 @@ export async function saveProcedureFeeScheduleItem(
       category,
       billingCode,
       modifier,
+      routing,
       priceCents,
       active: input.active,
       existing,
@@ -466,6 +489,7 @@ export function buildProcedureFeeDefinition(input: {
   category?: ProcedureFeeCategory;
   billingCode?: string;
   modifier?: string;
+  routing?: ProcedureFeeRouting;
   priceCents?: number;
   active?: boolean;
   existing?: ChargeItemDefinition;
@@ -477,14 +501,17 @@ export function buildProcedureFeeDefinition(input: {
   const billingCode = normalizeBillingCode(input.billingCode);
   const modifier = normalizeModifier(input.modifier);
   assertCategory(input.category);
+  assertRouting(input.routing);
   const version = input.existing ? nextVersion(input.existing.version) : "1";
   const retainedExtensions = input.existing?.extension?.filter((extension) =>
-    extension.url !== FEE_CATEGORY_EXTENSION_URL && extension.url !== FEE_MODIFIER_EXTENSION_URL
+    extension.url !== FEE_CATEGORY_EXTENSION_URL && extension.url !== FEE_MODIFIER_EXTENSION_URL &&
+    extension.url !== FEE_ROUTING_EXTENSION_URL
   ) ?? [];
   const extensions = [
     ...retainedExtensions,
     ...(input.category ? [{ url: FEE_CATEGORY_EXTENSION_URL, valueCode: input.category }] : []),
     ...(modifier ? [{ url: FEE_MODIFIER_EXTENSION_URL, valueString: modifier }] : []),
+    ...(input.routing ? [{ url: FEE_ROUTING_EXTENSION_URL, valueCode: input.routing }] : []),
   ];
   return {
     resourceType: "ChargeItemDefinition",
@@ -585,6 +612,7 @@ function procedureFeeScheduleItem(definition: ChargeItemDefinition): ProcedureFe
     billingCode: definitionBillingCode(definition),
     category: definitionCategory(definition) ?? seed?.category,
     modifier: definitionModifier(definition),
+    routing: definitionRouting(definition),
     priceCents: definitionPriceCents(definition),
     version: definition.version ?? "1",
   };
@@ -633,6 +661,15 @@ function definitionModifier(definition: ChargeItemDefinition): string | undefine
   return typeof value === "string" ? normalizeModifier(value) : undefined;
 }
 
+function definitionRouting(definition: ChargeItemDefinition): ProcedureFeeRouting | undefined {
+  const value = definition.extension?.find((extension) =>
+    extension.url === FEE_ROUTING_EXTENSION_URL
+  )?.valueCode;
+  return typeof value === "string" && PROCEDURE_FEE_ROUTINGS.includes(value as ProcedureFeeRouting)
+    ? value as ProcedureFeeRouting
+    : undefined;
+}
+
 function normalizeBillingCode(value: string | null | undefined): string | undefined {
   if (value === undefined || value === null) return undefined;
   const normalized = value.trim().toUpperCase();
@@ -662,6 +699,12 @@ function normalizeModifier(value: string | null | undefined): string | undefined
 function assertCategory(value: ProcedureFeeCategory | undefined): void {
   if (value !== undefined && !PROCEDURE_FEE_CATEGORIES.includes(value)) {
     throw new Error("Procedure fee category is invalid.");
+  }
+}
+
+function assertRouting(value: ProcedureFeeRouting | undefined): void {
+  if (value !== undefined && !PROCEDURE_FEE_ROUTINGS.includes(value)) {
+    throw new Error("Procedure fee routing is invalid.");
   }
 }
 
