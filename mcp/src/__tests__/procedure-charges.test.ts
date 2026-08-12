@@ -4,6 +4,7 @@ import { test } from "node:test";
 import type {
   Basic,
   Bundle,
+  ChargeItem,
   ChargeItemDefinition,
   Condition,
   Encounter,
@@ -29,6 +30,7 @@ import {
 } from "../clinical-graph/protocol-endpoint.js";
 import { PROTOCOL_BASIC_CODES, ProtocolBasicStore } from "../clinical-graph/protocol-store.js";
 import type { ChargeProposal } from "../clinical-graph/protocol-types.js";
+import { buildProfessionalClaim } from "../claims/claimmd-fhir.js";
 
 const NOW = "2026-08-11T20:00:00.000Z";
 
@@ -717,6 +719,22 @@ test("visit change and removal leave every manual procedure and protocol proposa
   assert.deepEqual(protectedProposalBytes(fhir, protectedIds), before);
 });
 
+test("procedure PATCH rejects visit identity and leaves the visit proposal unchanged", async () => {
+  const { deps, fhir } = fixture();
+  const visit = visitProposal();
+  await seed(fhir, visit, manualProcedure(), protocolProposal("protocol-collateral"));
+  const before = chargeProposalBytes(fhir);
+
+  const result = await handleProcedureChargePatchRequest(deps, {
+    authHeader: "Bearer clinician",
+    params: { encounterId: "enc-1", proposalId: visit.id },
+    body: { state: "removed" },
+  });
+
+  assert.equal(result.status, 409);
+  assert.deepEqual(chargeProposalBytes(fhir), before);
+});
+
 const identityGuardCases: Array<{
   name: string;
   target: ChargeProposal;
@@ -820,3 +838,204 @@ for (const [name, target, body] of [
     assert.deepEqual(chargeProposalBytes(fhir), before);
   });
 }
+
+test("behavioral acceptance: one visit and three procedure charges stay isolated through claim build", async () => {
+  let nextProcedureId = 0;
+  const { deps, fhir, store } = fixture({
+    encounter: encounter({
+      period: { start: NOW },
+      diagnosis: [
+        { condition: { reference: "Condition/principal" }, rank: 1 },
+        { condition: { reference: "Condition/bilateral" }, rank: 2 },
+        { condition: { reference: "Condition/tertiary" }, rank: 3 },
+      ],
+    }),
+    id: () => `acceptance-${++nextProcedureId}`,
+  });
+  fhir.resources.push(
+    {
+      ...condition("bilateral", "Bilateral diagnosis"),
+      bodySite: [{ text: "OU" }],
+    },
+    condition("tertiary", "Tertiary diagnosis"),
+    definition(
+      "fee-intermediate-established",
+      "intermediate-exam-established",
+      "Intermediate established visit",
+      "SYNTHD",
+      true,
+    ),
+  );
+  const pachymetry = feeDefinition(fhir, "corneal-pachymetry");
+  pachymetry.code = {
+    ...pachymetry.code,
+    coding: [
+      { system: HCPCS_CODE_SYSTEM, code: "SYNTHB", display: "Synthetic procedure B" },
+      ...(pachymetry.code?.coding ?? []),
+    ],
+  };
+  const photography = feeDefinition(fhir, "fundus-photography");
+  photography.status = "active";
+  const protocol = protocolProposal("protocol-acceptance");
+  await seed(fhir, protocol);
+  const protocolSnapshot = structuredClone(protocol);
+  const assertProtocolUnchanged = async () => {
+    assert.deepEqual(await store.get(protocol.id), protocolSnapshot);
+  };
+
+  const visitCreated = await handleVisitChargeMutationRequest(deps, {
+    authHeader: "Bearer clinician",
+    params: { encounterId: "enc-1" },
+    body: { procedureConceptKey: "comprehensive-exam-new" },
+  });
+  assert.equal(visitCreated.status, 200);
+  await assertProtocolUnchanged();
+
+  const procedureIds: string[] = [];
+  for (const procedureConceptKey of ["gonioscopy", "corneal-pachymetry", "fundus-photography"]) {
+    const created = await handleProcedureChargeCreateRequest(deps, {
+      authHeader: "Bearer clinician",
+      params: { encounterId: "enc-1" },
+      body: { procedureConceptKey },
+    });
+    assert.equal(created.status, 201);
+    procedureIds.push((created.body as { proposal: ChargeProposal }).proposal.id);
+    await assertProtocolUnchanged();
+  }
+  const [odProcedureId, selectedPointerProcedureId, revivedProcedureId] = procedureIds as [string, string, string];
+
+  assert.equal((await handleProcedureChargePatchRequest(deps, {
+    authHeader: "Bearer clinician",
+    params: { encounterId: "enc-1", proposalId: odProcedureId },
+    body: { laterality: "OD", dxPointer: "Condition/bilateral" },
+  })).status, 200);
+  await assertProtocolUnchanged();
+  assert.equal((await handleProcedureChargePatchRequest(deps, {
+    authHeader: "Bearer clinician",
+    params: { encounterId: "enc-1", proposalId: selectedPointerProcedureId },
+    body: { dxPointer: "Condition/tertiary" },
+  })).status, 200);
+  assert.deepEqual((await store.get(selectedPointerProcedureId))?.dxPointers, ["Condition/tertiary"]);
+  await assertProtocolUnchanged();
+
+  const unaffectedByRemoval = ["manual-visit-code:enc-1", odProcedureId, selectedPointerProcedureId, protocol.id];
+  const beforeRemoval = protectedProposalBytes(fhir, unaffectedByRemoval);
+  const revivedBeforeRemoval = await store.get(revivedProcedureId);
+  assert.ok(revivedBeforeRemoval);
+  assert.equal((await handleProcedureChargePatchRequest(deps, {
+    authHeader: "Bearer clinician",
+    params: { encounterId: "enc-1", proposalId: revivedProcedureId },
+    body: { state: "removed" },
+  })).status, 200);
+  assert.deepEqual(protectedProposalBytes(fhir, unaffectedByRemoval), beforeRemoval);
+  assert.deepEqual(await store.get(revivedProcedureId), { ...revivedBeforeRemoval, state: "removed" });
+  await assertProtocolUnchanged();
+
+  const beforeRevival = protectedProposalBytes(fhir, unaffectedByRemoval);
+  const removedBeforeRevival = await store.get(revivedProcedureId);
+  assert.ok(removedBeforeRevival);
+  assert.equal((await handleProcedureChargePatchRequest(deps, {
+    authHeader: "Bearer clinician",
+    params: { encounterId: "enc-1", proposalId: revivedProcedureId },
+    body: { state: "accepted" },
+  })).status, 200);
+  assert.deepEqual(protectedProposalBytes(fhir, unaffectedByRemoval), beforeRevival);
+  assert.deepEqual(await store.get(revivedProcedureId), { ...removedBeforeRevival, state: "accepted" });
+  await assertProtocolUnchanged();
+
+  const visitBeforeChange = await store.get("manual-visit-code:enc-1");
+  assert.ok(visitBeforeChange);
+  const protectedBeforeVisitChange = protectedProposalBytes(fhir, [...procedureIds, protocol.id]);
+  assert.equal((await handleVisitChargeMutationRequest(deps, {
+    authHeader: "Bearer clinician",
+    params: { encounterId: "enc-1" },
+    body: { procedureConceptKey: "intermediate-exam-established" },
+  })).status, 200);
+  assert.deepEqual(protectedProposalBytes(fhir, [...procedureIds, protocol.id]), protectedBeforeVisitChange);
+  assert.deepEqual(await store.get("manual-visit-code:enc-1"), {
+    ...visitBeforeChange,
+    procedureConceptKey: "intermediate-exam-established",
+  });
+  await assertProtocolUnchanged();
+
+  const acceptedManual = (await store.list()).filter((proposal) =>
+    proposal.encounterId === "enc-1" &&
+    proposal.state === "accepted" &&
+    (proposal.protocolApplicationId === undefined || proposal.protocolApplicationId === null)
+  );
+  assert.equal(acceptedManual.length, 4);
+  assert.equal(acceptedManual.filter((proposal) => proposal.id === "manual-visit-code:enc-1").length, 1);
+  assert.equal(acceptedManual.filter((proposal) => proposal.id.startsWith(MANUAL_PROCEDURE_CHARGE_ID_PREFIX)).length, 3);
+  assert.ok(acceptedManual.every((proposal) => {
+    const fee = feeDefinition(fhir, proposal.procedureConceptKey);
+    return fee.status === "active" && resourceCodings(fee).some((coding) =>
+      coding.system === HCPCS_CODE_SYSTEM && Boolean(coding.code?.trim())
+    );
+  }));
+
+  const beforeChargeCount = fhir.resources.filter((resource) => resource.resourceType === "ChargeItem").length;
+  const signed = await handleProtocolSignCleanupRequest({
+    authenticate: deps.authenticate,
+    feeScheduleFhir: fhir,
+    now: deps.now,
+  }, {
+    authHeader: "Bearer clinician",
+    params: { encounterId: "enc-1" },
+  });
+  assert.deepEqual(signed, {
+    status: 200,
+    body: { abandoned: 0, materialized: 4, finalized: 4 },
+  });
+  const chargeItems = fhir.resources.filter((resource): resource is ChargeItem =>
+    resource.resourceType === "ChargeItem"
+  );
+  assert.equal(chargeItems.length - beforeChargeCount, 4);
+  await assertProtocolUnchanged();
+
+  const chargeForProposal = (proposalId: string) => chargeItems.find((chargeItem) =>
+    resourceIdentifiers(chargeItem).some((identifier) => identifier.value === proposalId)
+  );
+  const odCharge = chargeForProposal(odProcedureId);
+  assert.ok(odCharge?.id);
+  assert.equal(odCharge.bodysite?.[0]?.coding?.[0]?.code, "OD");
+  assert.deepEqual(odCharge.supportingInformation, [{ reference: "Condition/bilateral" }]);
+  assert.ok(chargeItems.every((chargeItem) => resourceCodings(chargeItem).some((coding) =>
+    coding.system === HCPCS_CODE_SYSTEM && Boolean(coding.code?.trim())
+  )));
+
+  const diagnosisSequenceByReference = new Map([
+    ["Condition/principal", 1],
+    ["Condition/bilateral", 2],
+    ["Condition/tertiary", 3],
+  ]);
+  const claim = buildProfessionalClaim({
+    created: "2026-08-11",
+    serviceDate: "2026-08-11",
+    patientReference: "Patient/patient-1",
+    providerReference: "Practitioner/clinician",
+    insurerReference: "Organization/payer",
+    coverageReference: "Coverage/coverage",
+    patientAccountNumber: "SYNTHETIC-ACCEPTANCE",
+    payerId: "SYNTHETIC",
+    billingProvider: { name: "Synthetic practice", npi: "1111111112" },
+    renderingProvider: { name: "Synthetic clinician", npi: "1111111112" },
+    subscriber: { firstName: "Test", lastName: "Patient", dateOfBirth: "1980-01-01", sex: "U" },
+    patient: { firstName: "Test", lastName: "Patient", dateOfBirth: "1980-01-01", sex: "U" },
+    diagnoses: [
+      { system: "https://example.test/diagnosis", code: "DX-A" },
+      { system: "https://example.test/diagnosis", code: "DX-B" },
+      { system: "https://example.test/diagnosis", code: "DX-C" },
+    ],
+    chargeItems: chargeItems.map((chargeItem) => ({
+      ...chargeItem,
+      diagnosisSequence: (chargeItem.supportingInformation ?? []).flatMap((reference) => {
+        const sequence = reference.reference ? diagnosisSequenceByReference.get(reference.reference) : undefined;
+        return sequence === undefined ? [] : [sequence];
+      }),
+    })),
+  });
+  const odClaimItem = claim.item?.find((item) => item.extension?.some((extension) =>
+    extension.valueReference?.reference === `ChargeItem/${odCharge.id}`
+  ));
+  assert.equal(odClaimItem?.bodySite?.text, "OD");
+});
