@@ -1,7 +1,7 @@
 # Fee Schedule Import P1 Design
 
-**Status:** Approved architecture with Amendment 1 incorporated  
-**Base:** `main` at `6ec4b94d`  
+**Status:** Approved architecture with Amendments 1-3 incorporated
+**Base:** `main` at `6ec4b94d`
 **Branch:** `drbang-iva/fee-schedule-import-p1`
 
 ## Purpose
