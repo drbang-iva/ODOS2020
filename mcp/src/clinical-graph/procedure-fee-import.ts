@@ -271,7 +271,12 @@ function rankFeeImportMatches(
 }
 
 function matchTokens(value: string): ReadonlySet<string> {
-  const normalized = value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const normalized = value
+    .normalize("NFKD")
+    .toLowerCase()
+    .replace(/\p{Mark}+/gu, "")
+    .replace(/[^\p{Letter}\p{Number}]+/gu, " ")
+    .trim();
   return new Set(normalized ? normalized.split(/\s+/) : []);
 }
 

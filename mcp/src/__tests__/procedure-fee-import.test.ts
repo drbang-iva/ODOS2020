@@ -150,6 +150,18 @@ test("match ranking is independent of the host locale", async () => {
   }
 });
 
+test("match ranking preserves accented letters while stripping punctuation", async () => {
+  // Treating accented letters as punctuation must bury the matching seed below unrelated options.
+  const fhir = new CountingFhir();
+  const preview = proposeProcedureFeeImport({
+    csvText: "Label,Group\nRéfraction clinique!,Refraction\n",
+    mapping: { display: "Label", category: "Group" },
+    existing: await listProcedureFeeScheduleSnapshot(fhir),
+  });
+  assert.equal(preview.proposals[0]?.matchRanking[0]?.procedureConceptKey, "refraction");
+  assert.equal(preview.proposals[0]?.matchRanking[0]?.score, 0.5);
+});
+
 test("seeded-concept warning stops after the category seed is coded", async () => {
   // Ignoring persisted seed coding must leave the refraction warning visible after commit.
   const fhir = new CountingFhir();
