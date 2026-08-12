@@ -137,6 +137,7 @@ import {
   handleProcedureFeeScheduleMutationRequest,
   handleProcedureFeeScheduleRequest,
 } from "./clinical-graph/procedure-fee-schedule-endpoint.js";
+import { registerManualProcedureChargeRoutes } from "./clinical-graph/manual-procedure-charge-endpoint.js";
 import {
   handleImagingCaptureRequest,
   handleImagingListRequest,
@@ -6869,6 +6870,12 @@ async function startMcpServer(): Promise<void> {
             if (!res.headersSent) res.status(500).json({ error: "visit charge mutation route failed" });
           }
         });
+
+      registerManualProcedureChargeRoutes(app, {
+        authenticateService: authenticateWithMedplum,
+        authenticateRead: authenticateStaffRouteForAction("chart.read"),
+        authenticateWrite: authenticateStaffRouteForAction("chart.write"),
+      });
 
       app.post("/clinical-graph/gonioscopy", async (req, res) => {
         try {

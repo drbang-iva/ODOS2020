@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Condition, Encounter } from "@medplum/fhirtypes";
+import type { Express } from "express";
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
 import {
@@ -26,6 +27,14 @@ export interface ManualProcedureChargeEndpointDeps {
   now?: () => string;
 }
 
+export interface ManualProcedureChargeRouteDeps {
+  authenticateService(): Promise<void>;
+  authenticateRead: ManualProcedureChargeEndpointDeps["authenticate"];
+  authenticateWrite: ManualProcedureChargeEndpointDeps["authenticate"];
+  id?: () => string;
+  now?: () => string;
+}
+
 const encounterParamsSchema = z.object({ encounterId: z.string().min(1) }).strict();
 const proposalParamsSchema = encounterParamsSchema.extend({ proposalId: z.string().min(1) }).strict();
 const createSchema = z.object({ procedureConceptKey: z.string().min(1) }).strict();
@@ -37,6 +46,56 @@ const patchSchema = z.object({
   (value) => Object.keys(value).length > 0,
   "At least one procedure charge change is required.",
 );
+
+export function registerManualProcedureChargeRoutes(
+  app: Express,
+  deps: ManualProcedureChargeRouteDeps,
+): void {
+  app.route("/clinical-graph/protocols/encounters/:encounterId/procedure-charges")
+    .get(async (req, res) => {
+      try {
+        await deps.authenticateService();
+        const result = await handleProcedureChargesRequest(
+          { authenticate: deps.authenticateRead, id: deps.id, now: deps.now },
+          { authHeader: req.header("authorization"), params: req.params },
+        );
+        res.status(result.status).json(result.body);
+      } catch (error) {
+        console.error("odos-mcp: procedure charges route failed:", error);
+        if (!res.headersSent) res.status(500).json({ error: "procedure charges route failed" });
+      }
+    })
+    .post(async (req, res) => {
+      try {
+        await deps.authenticateService();
+        const result = await handleProcedureChargeCreateRequest(
+          { authenticate: deps.authenticateWrite, id: deps.id, now: deps.now },
+          { authHeader: req.header("authorization"), params: req.params, body: req.body },
+        );
+        res.status(result.status).json(result.body);
+      } catch (error) {
+        console.error("odos-mcp: procedure charge create route failed:", error);
+        if (!res.headersSent) res.status(500).json({ error: "procedure charge create route failed" });
+      }
+    });
+
+  app.patch(
+    "/clinical-graph/protocols/encounters/:encounterId/procedure-charges/:proposalId",
+    async (req, res) => {
+      try {
+        await deps.authenticateService();
+        const result = await handleProcedureChargePatchRequest(
+          { authenticate: deps.authenticateWrite, id: deps.id, now: deps.now },
+          { authHeader: req.header("authorization"), params: req.params, body: req.body },
+        );
+        res.status(result.status).json(result.body);
+      } catch (error) {
+        console.error("odos-mcp: procedure charge patch route failed:", error);
+        if (!res.headersSent) res.status(500).json({ error: "procedure charge patch route failed" });
+      }
+    },
+  );
+}
 
 export async function handleProcedureChargesRequest(
   deps: ManualProcedureChargeEndpointDeps,

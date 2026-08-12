@@ -70,6 +70,87 @@ export function visitChargeApi(fetchImpl: typeof fetch = fetch): VisitChargeApi 
   };
 }
 
+export interface ProcedureChargeOption {
+  procedureConceptKey: string;
+  display: string;
+  billingCode: string;
+}
+
+export interface ProcedureChargeDiagnosis {
+  reference: string;
+  display: string;
+  rank?: number;
+}
+
+export interface ManualProcedureCharge {
+  id: string;
+  procedureConceptKey: string;
+  laterality?: "OD" | "OS" | "OU";
+  dxPointers: string[];
+  state: "accepted" | "removed" | "finalized";
+}
+
+export interface ProcedureChargesResponse {
+  options: ProcedureChargeOption[];
+  diagnoses: ProcedureChargeDiagnosis[];
+  proposals: ManualProcedureCharge[];
+}
+
+export interface ProcedureChargeChange {
+  laterality?: "OD" | "OS" | "OU" | null;
+  dxPointer?: string | null;
+  state?: "accepted" | "removed";
+}
+
+export interface ProcedureChargeApi {
+  read(encounterId: string): Promise<ProcedureChargesResponse>;
+  create(encounterId: string, procedureConceptKey: string): Promise<{ proposal: ManualProcedureCharge }>;
+  patch(
+    encounterId: string,
+    proposalId: string,
+    change: ProcedureChargeChange,
+  ): Promise<{ proposal: ManualProcedureCharge }>;
+}
+
+export function procedureChargeApi(fetchImpl: typeof fetch = fetch): ProcedureChargeApi {
+  const collection = (encounterId: string) =>
+    `${clinicalGraphApiBase()}/clinical-graph/protocols/encounters/${encodeURIComponent(encounterId)}/procedure-charges`;
+  return {
+    async read(encounterId) {
+      const response = await fetchImpl(collection(encounterId), { headers: authHeaders() });
+      const body = await response.json() as ProcedureChargesResponse & ClinicalGraphErrorBody;
+      if (!response.ok) {
+        throw clinicalGraphResponseError(response, body, `Procedure charges failed: ${response.status}`);
+      }
+      return body;
+    },
+    async create(encounterId, procedureConceptKey) {
+      const response = await fetchImpl(collection(encounterId), {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ procedureConceptKey }),
+      });
+      const body = await response.json() as { proposal: ManualProcedureCharge } & ClinicalGraphErrorBody;
+      if (!response.ok) {
+        throw clinicalGraphResponseError(response, body, `Procedure charge add failed: ${response.status}`);
+      }
+      return body;
+    },
+    async patch(encounterId, proposalId, change) {
+      const response = await fetchImpl(`${collection(encounterId)}/${encodeURIComponent(proposalId)}`, {
+        method: "PATCH",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify(change),
+      });
+      const body = await response.json() as { proposal: ManualProcedureCharge } & ClinicalGraphErrorBody;
+      if (!response.ok) {
+        throw clinicalGraphResponseError(response, body, `Procedure charge update failed: ${response.status}`);
+      }
+      return body;
+    },
+  };
+}
+
 export type DiagnosisCandidateSuggestion = {
   diagnosisKey: string;
   familyGroup?: never;

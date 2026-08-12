@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import type { AddressInfo } from "node:net";
 import { test } from "node:test";
 import type {
   Basic,
@@ -8,11 +9,13 @@ import type {
   Encounter,
   Resource,
 } from "@medplum/fhirtypes";
+import express from "express";
 import {
   MANUAL_PROCEDURE_CHARGE_ID_PREFIX,
   handleProcedureChargeCreateRequest,
   handleProcedureChargePatchRequest,
   handleProcedureChargesRequest,
+  registerManualProcedureChargeRoutes,
 } from "../clinical-graph/manual-procedure-charge-endpoint.js";
 import {
   HCPCS_CODE_SYSTEM,
@@ -415,6 +418,49 @@ test("procedure read returns the coded option, ranked Encounter diagnoses, and n
       proposals: [],
     },
   });
+});
+
+test("procedure charge HTTP routes reach GET POST and encoded PATCH handlers", async () => {
+  const { deps } = fixture();
+  let serviceAuthCalls = 0;
+  const app = express();
+  app.use(express.json());
+  registerManualProcedureChargeRoutes(app, {
+    authenticateService: async () => { serviceAuthCalls += 1; },
+    authenticateRead: deps.authenticate,
+    authenticateWrite: deps.authenticate,
+    id: deps.id,
+    now: deps.now,
+  });
+  const listener = app.listen(0, "127.0.0.1");
+  await new Promise<void>((resolve, reject) => {
+    listener.once("listening", resolve);
+    listener.once("error", reject);
+  });
+  const { port } = listener.address() as AddressInfo;
+  const base = `http://127.0.0.1:${port}/clinical-graph/protocols/encounters/enc-1/procedure-charges`;
+  try {
+    const headers = { Authorization: "Bearer clinician", "Content-Type": "application/json" };
+    assert.equal((await fetch(base, { headers })).status, 200);
+    const created = await fetch(base, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ procedureConceptKey: "gonioscopy" }),
+    });
+    assert.equal(created.status, 201);
+    const body = await created.json() as { proposal: ChargeProposal };
+    assert.equal(body.proposal.id, `${MANUAL_PROCEDURE_CHARGE_ID_PREFIX}synthetic-1`);
+    const patched = await fetch(`${base}/${encodeURIComponent(body.proposal.id)}`, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({ state: "removed" }),
+    });
+    assert.equal(patched.status, 200);
+    assert.equal(((await patched.json()) as { proposal: ChargeProposal }).proposal.state, "removed");
+    assert.equal(serviceAuthCalls, 3);
+  } finally {
+    await new Promise<void>((resolve, reject) => listener.close((error) => error ? reject(error) : resolve()));
+  }
 });
 
 test("procedure create uses stable manual identity and the sole principal diagnosis", async () => {
