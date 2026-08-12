@@ -83,6 +83,13 @@ class MemoryFhir {
     return structuredClone(saved);
   }
 
+  async createWithOutcome<T extends Resource>(
+    resource: T,
+    headers?: Record<string, string>,
+  ): Promise<{ resource: T; created: boolean }> {
+    return { resource: await this.create(resource, headers), created: true };
+  }
+
   async update<T extends Resource>(
     resourceType: T["resourceType"],
     id: string,

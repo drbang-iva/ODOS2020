@@ -84,6 +84,10 @@ export interface ProcedureFeeScheduleFhir {
   search<T extends Resource>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>>;
   searchUrl?<T extends Resource>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>>;
   create<T extends Resource>(resource: T, headers?: Record<string, string>): Promise<T>;
+  createWithOutcome?<T extends Resource>(
+    resource: T,
+    headers?: Record<string, string>,
+  ): Promise<{ resource: T; created: boolean }>;
   update<T extends Resource>(
     resourceType: T["resourceType"],
     id: string,
@@ -262,7 +266,10 @@ export async function createProcedureFeeScheduleItem(
   if (occupiedKeys.has(generatedKey)) {
     throw new ProcedureFeeConceptConflictError(generatedKey);
   }
-  const created = await fhir.create(buildProcedureFeeDefinition({
+  if (!fhir.createWithOutcome) {
+    throw new Error("Procedure fee creation requires conditional-create outcome support.");
+  }
+  const outcome = await fhir.createWithOutcome(buildProcedureFeeDefinition({
     procedureConceptKey: generatedKey,
     display,
     category: input.category,
@@ -274,7 +281,8 @@ export async function createProcedureFeeScheduleItem(
     "X-ODOS-Source": "procedure-fee-schedule",
     "If-None-Exist": `identifier=${FEE_DEFINITION_IDENTIFIER_SYSTEM}|${generatedKey}`,
   });
-  return procedureFeeScheduleItem(created);
+  if (!outcome.created) throw new ProcedureFeeConceptConflictError(generatedKey);
+  return procedureFeeScheduleItem(outcome.resource);
 }
 
 export async function saveProcedureFeeScheduleItem(

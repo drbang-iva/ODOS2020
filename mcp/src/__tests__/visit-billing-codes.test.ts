@@ -72,6 +72,13 @@ class MemoryFhir {
     return structuredClone(saved);
   }
 
+  async createWithOutcome<T extends Resource>(
+    resource: T,
+    headers?: Record<string, string>,
+  ): Promise<{ resource: T; created: boolean }> {
+    return { resource: await this.create(resource, headers), created: true };
+  }
+
   async update<T extends Resource>(
     resourceType: T["resourceType"],
     id: string,
@@ -336,6 +343,33 @@ test("practice-created concept key collisions reject without writing or replacin
   assert.equal((await listProcedureFeeSchedule(fhir)).filter((item) =>
     item.procedureConceptKey === "refraction"
   ).length, 1);
+});
+
+test("a conditional-create race reports a conflict instead of reusing the competing concept", async () => {
+  class RacingFhir extends MemoryFhir {
+    override async createWithOutcome<T extends Resource>(): Promise<{ resource: T; created: boolean }> {
+      return {
+        resource: {
+          ...buildProcedureFeeDefinition({
+            procedureConceptKey: "racing-procedure",
+            display: "Competing display",
+            category: "exam",
+            billingCode: "SYNTHR",
+          }),
+          id: "competing-definition",
+        } as T,
+        created: false,
+      };
+    }
+  }
+  const fhir = new RacingFhir();
+  await assert.rejects(() => createProcedureFeeScheduleItem(fhir, {
+    display: "Racing procedure",
+    category: "procedure",
+    modifier: "SYNTHMOD",
+    active: true,
+  }), /already exists/);
+  assert.equal(fhir.resources.length, 0);
 });
 
 test("six active concepts sharing one code remain six distinct chart procedure options", async () => {
