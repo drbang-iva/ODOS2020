@@ -375,6 +375,7 @@ async function runCli(): Promise<void> {
     baseUrl,
     accessToken: credentials.accessToken,
     reason: "Operator three-role migration runs outside request handling.",
+    extendedMode: true,
   });
   const projectId = await resolveThreeRoleMigrationProjectId({
     explicitProjectId: argumentValue("--project"),

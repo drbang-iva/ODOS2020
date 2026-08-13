@@ -265,6 +265,7 @@ test("the migration CLI scopes both reads to the resolved project and stays dry-
     assert.match(result.stdout, /"membershipsPlanned": 1/);
     assert.match(result.stdout, /Dry run only/);
     assert.equal(server.projectScopedSearches, 2);
+    assert.equal(server.extendedProjectScopedSearches, 2);
   });
 });
 
@@ -425,12 +426,14 @@ async function withMigrationServer(
     readonly tokenCalls: number;
     readonly sessionProjectSearches: number;
     readonly projectScopedSearches: number;
+    readonly extendedProjectScopedSearches: number;
   }) => Promise<void>,
 ): Promise<void> {
   let loginCalls = 0;
   let tokenCalls = 0;
   let sessionProjectSearches = 0;
   let projectScopedSearches = 0;
+  let extendedProjectScopedSearches = 0;
   const targetPolicy = legacyPolicy("target-desk", "front-desk");
   const foreignPolicy = legacyPolicy("foreign-provider", "provider");
   foreignPolicy.meta!.project = "practice-2";
@@ -469,6 +472,7 @@ async function withMigrationServer(
     if (url.pathname === "/fhir/R4/AccessPolicy") {
       const scoped = url.searchParams.get("_project") === PROJECT;
       if (scoped) projectScopedSearches += 1;
+      if (scoped && request.headers["x-medplum"] === "extended") extendedProjectScopedSearches += 1;
       return json(response, {
         resourceType: "Bundle",
         type: "searchset",
@@ -486,6 +490,7 @@ async function withMigrationServer(
       }
       const scoped = url.searchParams.get("_project") === PROJECT;
       if (scoped) projectScopedSearches += 1;
+      if (scoped && request.headers["x-medplum"] === "extended") extendedProjectScopedSearches += 1;
       return json(response, {
         resourceType: "Bundle",
         type: "searchset",
@@ -503,6 +508,7 @@ async function withMigrationServer(
     get tokenCalls() { return tokenCalls; },
     get sessionProjectSearches() { return sessionProjectSearches; },
     get projectScopedSearches() { return projectScopedSearches; },
+    get extendedProjectScopedSearches() { return extendedProjectScopedSearches; },
   };
   try {
     await run(fixture);
