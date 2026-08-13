@@ -235,6 +235,23 @@ test("migration project resolution refuses ambiguous session memberships and nam
   );
 });
 
+test("the migration CLI accepts an access token, resolves its session membership, and stays dry-run", async () => {
+  await withMigrationServer(async (server) => {
+    const result = await runMigrationCli(server.baseUrl, {
+      MEDPLUM_ACCESS_TOKEN: "fixture-token",
+      MEDPLUM_ADMIN_EMAIL: "admin@example.test",
+      MEDPLUM_ADMIN_PASSWORD: "not-a-real-password",
+    });
+
+    assert.equal(result.code, 0, result.stderr);
+    assert.equal(server.loginCalls, 0);
+    assert.equal(server.sessionProjectSearches, 1);
+    assert.equal(server.projectScopedSearches, 2);
+    assert.match(result.stdout, /"mode": "dry-run"/);
+    assert.match(result.stdout, /Dry run only/);
+  });
+});
+
 test("the migration CLI scopes both reads to the resolved project and stays dry-run", async () => {
   await withMigrationServer(async (server) => {
     const result = await runMigrationCli(server.baseUrl, {
@@ -406,11 +423,13 @@ async function withMigrationServer(
     baseUrl: string;
     readonly loginCalls: number;
     readonly tokenCalls: number;
+    readonly sessionProjectSearches: number;
     readonly projectScopedSearches: number;
   }) => Promise<void>,
 ): Promise<void> {
   let loginCalls = 0;
   let tokenCalls = 0;
+  let sessionProjectSearches = 0;
   let projectScopedSearches = 0;
   const targetPolicy = legacyPolicy("target-desk", "front-desk");
   const foreignPolicy = legacyPolicy("foreign-provider", "provider");
@@ -458,6 +477,7 @@ async function withMigrationServer(
     }
     if (url.pathname === "/fhir/R4/ProjectMembership") {
       if (url.searchParams.get("profile")) {
+        sessionProjectSearches += 1;
         return json(response, {
           resourceType: "Bundle",
           type: "searchset",
@@ -481,6 +501,7 @@ async function withMigrationServer(
     baseUrl: `http://127.0.0.1:${address.port}`,
     get loginCalls() { return loginCalls; },
     get tokenCalls() { return tokenCalls; },
+    get sessionProjectSearches() { return sessionProjectSearches; },
     get projectScopedSearches() { return projectScopedSearches; },
   };
   try {
