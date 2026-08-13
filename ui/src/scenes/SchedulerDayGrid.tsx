@@ -404,7 +404,12 @@ export function SchedulerDayGrid({ roles = [] }: { roles?: readonly PracticeRole
           Press Escape to cancel.
         </div>
       )}
-      {legendOpen && <SchedulerLegend visitTypes={visibleVisitTypes} />}
+      {legendOpen && (
+        <SchedulerLegend
+          visitTypes={visibleVisitTypes}
+          canManageVisitTypes={roles.includes("admin")}
+        />
+      )}
       {error && (
         <div className="border-y border-red-400/40 bg-red-950/50 px-4 py-2 text-sm text-red-100">
           {error}
@@ -812,11 +817,24 @@ export function SchedulerColumnsControl({
   );
 }
 
-function SchedulerLegend({ visitTypes }: { visitTypes: HealthcareService[] }) {
+function SchedulerLegend({
+  visitTypes,
+  canManageVisitTypes,
+}: {
+  visitTypes: HealthcareService[];
+  canManageVisitTypes: boolean;
+}) {
   return (
     <div className="flex flex-wrap gap-2 border-b border-white/10 bg-black/20 px-4 py-2">
       {visitTypes.length === 0 ? (
-        <span className="text-sm text-white/45">No active visit types</span>
+        <span className="flex items-center gap-3 text-sm text-white/45">
+          No active visit types
+          {canManageVisitTypes && (
+            <a className="font-semibold text-blue-300 hover:text-blue-200" href="/settings/visit-types">
+              Manage visit types
+            </a>
+          )}
+        </span>
       ) : (
         visitTypes.map((visitType) => {
           const color = visitTypeDisplayColor(visitType);

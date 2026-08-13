@@ -7,6 +7,7 @@ import { resolve } from "node:path";
 import type {
   AccessPolicy,
   Basic,
+  HealthcareService,
   Location,
   Organization,
   Practitioner,
@@ -31,10 +32,20 @@ import { createOperatorScriptFhirClient, type MedplumClient } from "../mcp/src/f
 import { searchAll } from "../mcp/src/fhir-search.js";
 import { buildSchedulingResource } from "../mcp/src/fhir/schedulingResource.js";
 import {
+  defaultVisitTypeCatalog,
+  visitTypeCode,
+} from "../mcp/src/fhir/schedulingVisitType.js";
+import {
   buildSchedulingPracticeConfigResource,
   ODOS_SCHEDULING_CONFIG_CODE,
   ODOS_SCHEDULING_CONFIG_SYSTEM,
 } from "../mcp/src/scheduling/practice-config.js";
+import {
+  DEFAULT_VISIT_TYPE_CATEGORIES,
+  ODOS_VISIT_TYPE_CONFIG_CODE,
+  ODOS_VISIT_TYPE_CONFIG_SYSTEM,
+  buildVisitTypeConfigResource,
+} from "../mcp/src/scheduling/visit-type-config.js";
 
 export const SETUP_WIZARD_HEADER =
   "Run ODOS on your own hardware. Your patients, your machines, your data.";
@@ -81,6 +92,8 @@ export interface SetupPracticeState {
   schedulingProvisioned?: boolean;
   scheduleId?: string;
   schedulingConfigId?: string;
+  visitTypeIds?: string[];
+  visitTypeConfigId?: string;
   accessPolicyCreated?: boolean;
   accessPolicyId?: string;
   accessPolicyAssigned?: boolean;
@@ -117,6 +130,12 @@ export interface SetupPracticeAdapter {
     scheduleCreated: boolean;
     practiceConfig: Basic;
     practiceConfigCreated: boolean;
+    visitTypes: readonly {
+      resource: HealthcareService;
+      created: boolean;
+    }[];
+    visitTypeConfig: Basic;
+    visitTypeConfigCreated: boolean;
   }>;
   createFirstAdminAccessPolicies(config: SetupPracticeConfig, session: AdminSession): Promise<readonly {
     role: PracticeRoleId;
@@ -298,13 +317,22 @@ export async function runSetupPractice(options: SetupPracticeOptions = {}): Prom
     if (!scheduling.schedule.id || !scheduling.practiceConfig.id) {
       throw new Error("Setup wizard scheduling foundation returned a resource without an id.");
     }
+    if (!scheduling.visitTypeConfig.id || scheduling.visitTypes.some(({ resource }) => !resource.id)) {
+      throw new Error("Setup wizard visit-type foundation returned a resource without an id.");
+    }
     const scheduleAuditRequired = scheduling.scheduleCreated || state.scheduleId === scheduling.schedule.id;
     const practiceConfigAuditRequired = scheduling.practiceConfigCreated
       || state.schedulingConfigId === scheduling.practiceConfig.id;
+    const visitTypeIds = scheduling.visitTypes.map(({ resource }) => resource.id!);
+    const visitTypeAuditIds = new Set(state.visitTypeIds ?? []);
+    const visitTypeConfigAuditRequired = scheduling.visitTypeConfigCreated
+      || state.visitTypeConfigId === scheduling.visitTypeConfig.id;
     state = persistSetupState(config.statePath, {
       ...state,
       scheduleId: scheduling.schedule.id,
       schedulingConfigId: scheduling.practiceConfig.id,
+      visitTypeIds,
+      visitTypeConfigId: scheduling.visitTypeConfig.id,
     });
     if (scheduleAuditRequired) {
       await emit(buildSetupAuditRow({
@@ -319,6 +347,24 @@ export async function runSetupPractice(options: SetupPracticeOptions = {}): Prom
         eventType: "create",
         resourceType: "Basic",
         resourceId: scheduling.practiceConfig.id,
+        actionReason: SETUP_WIZARD_ACTION_REASON,
+      }));
+    }
+    for (const visitType of scheduling.visitTypes) {
+      if (visitType.created || visitTypeAuditIds.has(visitType.resource.id!)) {
+        await emit(buildSetupAuditRow({
+          eventType: "create",
+          resourceType: "HealthcareService",
+          resourceId: visitType.resource.id!,
+          actionReason: SETUP_WIZARD_ACTION_REASON,
+        }));
+      }
+    }
+    if (visitTypeConfigAuditRequired) {
+      await emit(buildSetupAuditRow({
+        eventType: "create",
+        resourceType: "Basic",
+        resourceId: scheduling.visitTypeConfig.id,
         actionReason: SETUP_WIZARD_ACTION_REASON,
       }));
     }
@@ -402,6 +448,8 @@ export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
   readonly locations: Location[] = [];
   readonly schedules: Schedule[] = [];
   readonly schedulingConfigs: Basic[] = [];
+  readonly visitTypes: HealthcareService[] = [];
+  readonly visitTypeConfigs: Basic[] = [];
   readonly policies: AccessPolicy[] = [];
   readonly assignments: { id: string; practitionerId?: string; policyId?: string }[] = [];
   readonly membership: ProjectMembership = {
@@ -509,6 +557,12 @@ export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
     scheduleCreated: boolean;
     practiceConfig: Basic;
     practiceConfigCreated: boolean;
+    visitTypes: readonly {
+      resource: HealthcareService;
+      created: boolean;
+    }[];
+    visitTypeConfig: Basic;
+    visitTypeConfigCreated: boolean;
   }> {
     const schedule = {
       ...buildFirstAdminSchedule(input.config, input.practitioner),
@@ -520,7 +574,35 @@ export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
       id: `scheduling-config-${this.schedulingConfigs.length + 1}`,
     };
     this.schedulingConfigs.push(practiceConfig);
-    return { schedule, scheduleCreated: true, practiceConfig, practiceConfigCreated: true };
+    const visitTypes = defaultVisitTypeCatalog("both").map((seed) => {
+      const code = visitTypeCode(seed)!;
+      const matches = this.visitTypes.filter((candidate) => visitTypeCode(candidate) === code);
+      if (matches.length > 1) {
+        throw new Error(`Expected at most one visit type with code ${code}; found ${matches.length}.`);
+      }
+      if (matches[0]) return { resource: matches[0], created: false };
+      const resource = { ...seed, id: `visit-type-${this.visitTypes.length + 1}` };
+      this.visitTypes.push(resource);
+      return { resource, created: true };
+    });
+    if (this.visitTypeConfigs.length > 1) {
+      throw new Error(`Expected at most one visit-type-config Basic; found ${this.visitTypeConfigs.length}.`);
+    }
+    const existingVisitTypeConfig = this.visitTypeConfigs[0];
+    const visitTypeConfig = existingVisitTypeConfig ?? {
+      ...buildVisitTypeConfigResource({ categories: DEFAULT_VISIT_TYPE_CATEGORIES }),
+      id: `visit-type-config-${this.visitTypeConfigs.length + 1}`,
+    };
+    if (!existingVisitTypeConfig) this.visitTypeConfigs.push(visitTypeConfig);
+    return {
+      schedule,
+      scheduleCreated: true,
+      practiceConfig,
+      practiceConfigCreated: true,
+      visitTypes,
+      visitTypeConfig,
+      visitTypeConfigCreated: !existingVisitTypeConfig,
+    };
   }
 
   async createFirstAdminAccessPolicies(
@@ -765,6 +847,12 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
     scheduleCreated: boolean;
     practiceConfig: Basic;
     practiceConfigCreated: boolean;
+    visitTypes: readonly {
+      resource: HealthcareService;
+      created: boolean;
+    }[];
+    visitTypeConfig: Basic;
+    visitTypeConfigCreated: boolean;
   }> {
     if (!input.practitioner.id) {
       throw new Error("Setup wizard cannot create a Schedule for a Practitioner without an id.");
@@ -797,11 +885,47 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
     const practiceConfig = configs[0] ?? await this.client().create<Basic>(
       buildFirstSchedulingConfig(schedule.id, input.config.timezoneOffset),
     );
+    const existingVisitTypes = await searchAll<HealthcareService>(
+      this.client(),
+      "HealthcareService",
+      { _count: "100" },
+    );
+    const visitTypes = [];
+    for (const seed of defaultVisitTypeCatalog("both")) {
+      const code = visitTypeCode(seed)!;
+      const matches = existingVisitTypes.filter((candidate) => visitTypeCode(candidate) === code);
+      if (matches.length > 1) {
+        throw new Error(`Expected at most one visit type with code ${code}; found ${matches.length}.`);
+      }
+      if (matches[0]) {
+        visitTypes.push({ resource: matches[0], created: false });
+      } else {
+        visitTypes.push({
+          resource: await this.client().create<HealthcareService>(seed),
+          created: true,
+        });
+      }
+    }
+    const visitTypeConfigs = (await searchAll<Basic>(this.client(), "Basic", {
+      code: `${ODOS_VISIT_TYPE_CONFIG_SYSTEM}|${ODOS_VISIT_TYPE_CONFIG_CODE}`,
+      _count: "100",
+    })).filter((basic) => basic.code?.coding?.some((coding) =>
+      coding.system === ODOS_VISIT_TYPE_CONFIG_SYSTEM && coding.code === ODOS_VISIT_TYPE_CONFIG_CODE
+    ));
+    if (visitTypeConfigs.length > 1) {
+      throw new Error(`Expected at most one visit-type-config Basic; found ${visitTypeConfigs.length}.`);
+    }
+    const visitTypeConfig = visitTypeConfigs[0] ?? await this.client().create<Basic>(
+      buildVisitTypeConfigResource({ categories: DEFAULT_VISIT_TYPE_CATEGORIES }),
+    );
     return {
       schedule,
       scheduleCreated: schedules.length === 0,
       practiceConfig,
       practiceConfigCreated: configs.length === 0,
+      visitTypes,
+      visitTypeConfig,
+      visitTypeConfigCreated: visitTypeConfigs.length === 0,
     };
   }
 

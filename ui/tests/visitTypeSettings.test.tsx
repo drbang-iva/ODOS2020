@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import type { Basic, Bundle, HealthcareService, Resource } from "@medplum/fhirtypes";
 import { createSingletonConfigDraft } from "../src/lib/catalog-adapter";
 import { buildVisitType, visibleSchedulingVisitTypes, visitTypeCode } from "../src/lib/scheduling";
@@ -79,6 +80,45 @@ function resourceClient(pages: HealthcareService[][]) {
     },
   };
   return { client, writes, get searchUrlCalls() { return searchUrlCalls; } };
+}
+
+function emptyPracticeClient() {
+  const resources: Resource[] = [];
+  const client = {
+    async search<T extends Resource>(resourceType: T["resourceType"]) {
+      return {
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: resources
+          .filter((resource) => resource.resourceType === resourceType)
+          .map((resource) => ({ resource })),
+      } as Bundle<T>;
+    },
+    async searchUrl<T extends Resource>() {
+      return { resourceType: "Bundle", type: "searchset", entry: [] } as Bundle<T>;
+    },
+    async create<T extends Resource>(resource: T) {
+      const saved = { ...resource, id: `${resource.resourceType}-${resources.length + 1}` } as T;
+      resources.push(saved);
+      return saved;
+    },
+    async update<T extends Resource>(resource: T) {
+      const index = resources.findIndex((candidate) =>
+        candidate.resourceType === resource.resourceType && candidate.id === resource.id
+      );
+      if (index >= 0) resources[index] = resource;
+      return resource;
+    },
+  };
+  return { client, resources };
+}
+
+function button(renderer: ReactTestRenderer, label: string) {
+  const match = renderer.root.findAllByType("button").find((candidate) =>
+    candidate.children.join("") === label
+  );
+  assert.ok(match, `button ${label} exists`);
+  return match;
 }
 
 test("resourceCatalogAdapter lists inactive visit types across every page and fails closed without pagination support", async () => {
@@ -227,4 +267,48 @@ test("visit-type scene offers both starter seeds when empty and removes all edit
   );
   assert.match(readOnly, /Routine Exam/);
   assert.doesNotMatch(readOnly, /\+ Add category|\+ Add visit type|role="dialog"/);
+});
+
+test("the existing starter controls persist categories and visit types for an empty practice", async () => {
+  const fixture = emptyPracticeClient();
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(
+      <VisitTypeSettingsReady
+        config={{ categories: [] }}
+        canWrite
+        client={fixture.client as VisitTypeSettingsClient}
+      />,
+    );
+    await new Promise((resolve) => setImmediate(resolve));
+  });
+
+  await act(async () => {
+    button(renderer, "Use starter categories").props.onClick();
+    await new Promise((resolve) => setImmediate(resolve));
+  });
+  await act(async () => {
+    button(renderer, "Save").props.onClick();
+    await new Promise((resolve) => setImmediate(resolve));
+  });
+  await act(async () => {
+    button(renderer, "Use starter visit types").props.onClick();
+    await new Promise((resolve) => setImmediate(resolve));
+  });
+
+  const categoryConfigs = fixture.resources.filter((resource) => resource.resourceType === "Basic") as Basic[];
+  const visitTypes = fixture.resources.filter(
+    (resource) => resource.resourceType === "HealthcareService",
+  ) as HealthcareService[];
+  assert.deepEqual(
+    categoryConfigs.flatMap((resource) =>
+      JSON.parse(resource.extension?.[0]?.valueString ?? "{}").categories?.map(
+        (category: { id: string }) => category.id,
+      ) ?? []
+    ),
+    ["comprehensive", "dry-eye", "myopia-management", "diagnostic-only"],
+  );
+  assert.equal(visitTypes.length, 10);
+  assert.equal(new Set(visitTypes.map(visitTypeCode)).size, 10);
+  act(() => renderer.unmount());
 });
