@@ -33,6 +33,7 @@ import type { ChargeProposal } from "../clinical-graph/protocol-types.js";
 import { buildProfessionalClaim } from "../claims/claimmd-fhir.js";
 
 const NOW = "2026-08-11T20:00:00.000Z";
+const EDITED_AT = "2026-08-11T20:05:00.000Z";
 
 class MemoryFhir {
   resources: Resource[] = [];
@@ -579,6 +580,7 @@ for (const [name, procedureConceptKey] of [
 test("procedure patch edits, clears, removes, and revives only mutable fields", async () => {
   const { deps, fhir, store } = fixture();
   const id = `${MANUAL_PROCEDURE_CHARGE_ID_PREFIX}synthetic-1`;
+  const lastAmendment = { actor: "Practitioner/clinician", at: NOW };
   await seed(fhir, manualProcedure({ id }));
   const patch = (body: {
     laterality?: "OD" | "OS" | "OU" | null;
@@ -595,13 +597,49 @@ test("procedure patch edits, clears, removes, and revives only mutable fields", 
     id,
     laterality: "OD",
     dxPointers: ["Condition/secondary"],
+    lastAmendment,
   }));
   assert.equal((await patch({ laterality: null, dxPointer: null })).status, 200);
-  assert.deepEqual(await store.get(id), manualProcedure({ id, dxPointers: [] }));
+  assert.deepEqual(await store.get(id), manualProcedure({ id, dxPointers: [], lastAmendment }));
   assert.equal((await patch({ state: "removed" })).status, 200);
-  assert.deepEqual(await store.get(id), manualProcedure({ id, dxPointers: [], state: "removed" }));
+  assert.deepEqual(await store.get(id), manualProcedure({ id, dxPointers: [], state: "removed", lastAmendment }));
   assert.equal((await patch({ state: "accepted" })).status, 200);
-  assert.deepEqual(await store.get(id), manualProcedure({ id, dxPointers: [], state: "accepted" }));
+  assert.deepEqual(await store.get(id), manualProcedure({ id, dxPointers: [], state: "accepted", lastAmendment }));
+});
+
+test("procedure patch preserves creation attribution and records the last amendment", async () => {
+  const { deps } = fixture();
+  const created = await handleProcedureChargeCreateRequest(deps, {
+    authHeader: "Bearer clinician",
+    params: { encounterId: "enc-1" },
+    body: { procedureConceptKey: "gonioscopy" },
+  });
+  const proposal = (created.body as { proposal: ChargeProposal }).proposal;
+  const editorDeps = {
+    ...deps,
+    authenticate: async (authHeader: string | undefined) => {
+      const staff = await deps.authenticate(authHeader);
+      return staff ? { ...staff, staffReference: "Practitioner/editor" } : null;
+    },
+    now: () => EDITED_AT,
+  };
+
+  const edited = await handleProcedureChargePatchRequest(editorDeps, {
+    authHeader: "Bearer clinician",
+    params: { encounterId: "enc-1", proposalId: proposal.id },
+    body: { laterality: "OD" },
+  });
+  const editedProposal = (edited.body as { proposal: ChargeProposal }).proposal;
+
+  assert.deepEqual(editedProposal.provenance, {
+    source: "clinician-entered",
+    actor: "Practitioner/clinician",
+    at: NOW,
+  });
+  assert.deepEqual(editedProposal.lastAmendment, {
+    actor: "Practitioner/editor",
+    at: EDITED_AT,
+  });
 });
 
 test("deactivated procedure can still be removed", async () => {
@@ -970,7 +1008,11 @@ test("behavioral acceptance: one visit and three procedure charges stay isolated
     body: { state: "removed" },
   })).status, 200);
   assert.deepEqual(protectedProposalBytes(fhir, unaffectedByRemoval), beforeRemoval);
-  assert.deepEqual(await store.get(revivedProcedureId), { ...revivedBeforeRemoval, state: "removed" });
+  assert.deepEqual(await store.get(revivedProcedureId), {
+    ...revivedBeforeRemoval,
+    state: "removed",
+    lastAmendment: { actor: "Practitioner/clinician", at: NOW },
+  });
   await assertProtocolUnchanged();
 
   const beforeRevival = protectedProposalBytes(fhir, unaffectedByRemoval);
@@ -982,7 +1024,11 @@ test("behavioral acceptance: one visit and three procedure charges stay isolated
     body: { state: "accepted" },
   })).status, 200);
   assert.deepEqual(protectedProposalBytes(fhir, unaffectedByRemoval), beforeRevival);
-  assert.deepEqual(await store.get(revivedProcedureId), { ...removedBeforeRevival, state: "accepted" });
+  assert.deepEqual(await store.get(revivedProcedureId), {
+    ...removedBeforeRevival,
+    state: "accepted",
+    lastAmendment: { actor: "Practitioner/clinician", at: NOW },
+  });
   await assertProtocolUnchanged();
 
   const visitBeforeChange = await store.get("manual-visit-code:enc-1");

@@ -152,6 +152,7 @@ export interface ChargeProposal {
   override?: { reason: string; actor: string; at: string; abnFlag: boolean };
   chargeItemRef?: string;
   provenance: InstanceProvenance;
+  lastAmendment?: { actor: string; at: string };
 }
 
 export interface ProtocolFindingInstance {

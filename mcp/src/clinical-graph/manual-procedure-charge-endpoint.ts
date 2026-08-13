@@ -226,8 +226,7 @@ export async function handleProcedureChargePatchRequest(
       ? {}
       : { dxPointers: body.data.dxPointer === null ? [] : [body.data.dxPointer] }),
     ...(body.data.state === undefined ? {} : { state: body.data.state }),
-    provenance: {
-      source: "clinician-entered",
+    lastAmendment: {
       actor: staff.staffReference,
       at,
     },
