@@ -39,7 +39,7 @@ export function BalanceChips({
         else console.error("Patient Credit Bank balance unavailable.", bankResult.reason);
         setCanAdminister(
           sessionResult.status === "fulfilled"
-          && sessionResult.value.roles.includes("practice-admin"),
+          && sessionResult.value.roles.includes("admin"),
         );
       });
     return () => { cancelled = true; };

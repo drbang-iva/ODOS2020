@@ -96,7 +96,7 @@ test("setup conditional create reports whether this transaction created or resol
   assert.equal(resolved.resource.id, "existing-location");
 });
 
-test("v0.5d setup wizard creates all five policies while granting the first human admin three roles with front-desk primary", async () => {
+test("setup wizard creates the three canonical policies and grants Staff as the first human admin's primary role", async () => {
   const dir = mkdtempSync(join(tmpdir(), "odos-setup-wizard-"));
   try {
     const statePath = join(dir, ".odos-setup-state.json");
@@ -123,7 +123,7 @@ test("v0.5d setup wizard creates all five policies while granting the first huma
     assert.equal(adapter.locations.length, 1);
     assert.equal(adapter.schedules.length, 1);
     assert.equal(adapter.schedulingConfigs.length, 1);
-    assert.equal(adapter.policies.length, 5);
+    assert.equal(adapter.policies.length, 3);
     assert.equal(adapter.assignments.length, 1);
     assert.equal(firstRun.state.completed, true);
     assert.equal(firstRun.state.organizationCreated, true);
@@ -134,7 +134,7 @@ test("v0.5d setup wizard creates all five policies while granting the first huma
     assert.equal(firstRun.state.scheduleId, "schedule-1");
     assert.equal(firstRun.state.schedulingConfigId, "scheduling-config-1");
     assert.equal(firstRun.practitionerId, "practitioner-1");
-    assert.equal(firstRun.accessPolicyId, "access-policy-2");
+    assert.equal(firstRun.accessPolicyId, "access-policy-1");
     assert.equal(adapter.organizations[0]?.name, "ODOS Test Practice");
     assert.deepEqual(adapter.organizations[0]?.identifier, [{
       system: SETUP_PRACTICE_ORGANIZATION_IDENTIFIER_SYSTEM,
@@ -152,19 +152,17 @@ test("v0.5d setup wizard creates all five policies while granting the first huma
     assert.equal(adapter.locations[0]?.address, undefined);
     assert.equal(adapter.locations[0]?.telecom, undefined);
     assert.deepEqual(adapter.policies.map((policy) => policy.name), [
-      "ODOS Practice Admin",
-      "ODOS Clinician",
-      "ODOS Front Desk",
-      "ODOS Auditor",
-      "ODOS Aesthetics Provider",
+      "ODOS Provider",
+      "ODOS Staff",
+      "ODOS Admin / Manager",
     ]);
-    const clinicianPolicy = adapter.policies.find((policy) => policy.name === "ODOS Clinician");
-    assert.equal(clinicianPolicy?.resourceType, "AccessPolicy");
-    assert.equal(clinicianPolicy?.resource?.some((rule) => rule.resourceType === "Observation"), true);
+    const providerPolicy = adapter.policies.find((policy) => policy.name === "ODOS Provider");
+    assert.equal(providerPolicy?.resourceType, "AccessPolicy");
+    assert.equal(providerPolicy?.resource?.some((rule) => rule.resourceType === "Observation"), true);
     assert.deepEqual(adapter.membership.access?.map((access) => access.policy.reference), [
+      "AccessPolicy/access-policy-2",
       "AccessPolicy/access-policy-3",
       "AccessPolicy/access-policy-1",
-      "AccessPolicy/access-policy-2",
     ]);
     assert.equal(adapter.schedules[0]?.actor?.[0]?.reference, "Practitioner/practitioner-1");
     const schedulingConfig = parseSchedulingPracticeConfig(adapter.schedulingConfigs[0]!);
@@ -173,8 +171,6 @@ test("v0.5d setup wizard creates all five policies while granting the first huma
     assert.equal(schedulingConfig.officeBySchedule["Schedule/schedule-1"], "main");
 
     assert.deepEqual(firstRun.auditRows.map((row) => row.eventType), [
-      "create",
-      "create",
       "create",
       "create",
       "create",
@@ -209,7 +205,7 @@ test("v0.5d setup wizard creates all five policies while granting the first huma
     assert.equal(adapter.locations.length, 1);
     assert.equal(adapter.schedules.length, 1);
     assert.equal(adapter.schedulingConfigs.length, 1);
-    assert.equal(adapter.policies.length, 5);
+    assert.equal(adapter.policies.length, 3);
     assert.equal(adapter.assignments.length, 1);
     assert.equal(secondRun.auditRows.length, 1);
     assert.equal(secondRun.auditRows[0]?.eventType, "noop");
@@ -229,7 +225,7 @@ test("v0.5d setup wizard creates all five policies while granting the first huma
   }
 });
 
-test("setup reuses a pre-existing canonical clinician policy while creating the other canonical policies", async () => {
+test("setup reuses a pre-existing canonical Provider policy while creating Staff and Admin", async () => {
   const dir = mkdtempSync(join(tmpdir(), "odos-setup-wizard-existing-policy-"));
   try {
     const statePath = join(dir, ".odos-setup-state.json");
@@ -237,11 +233,11 @@ test("setup reuses a pre-existing canonical clinician policy while creating the 
     adapter.policies.push({
       resourceType: "AccessPolicy",
       id: "existing-clinician-policy",
-      name: "ODOS Clinician",
+      name: "ODOS Provider",
       meta: {
         tag: [{
           system: "https://odos2020.com/fhir/NamingSystem/practice-role",
-          code: "clinician",
+          code: "provider",
         }],
       },
     });
@@ -261,7 +257,7 @@ test("setup reuses a pre-existing canonical clinician policy while creating the 
 
     assert.equal(result.state.completed, true);
     assert.equal(result.accessPolicyId, "existing-clinician-policy");
-    assert.equal(adapter.policies.length, 5);
+    assert.equal(adapter.policies.length, 3);
     assert.deepEqual(result.auditRows.map((row) => row.resourceType), [
       "Project",
       "Practitioner",
@@ -272,15 +268,13 @@ test("setup reuses a pre-existing canonical clinician policy while creating the 
       "AccessPolicy",
       "AccessPolicy",
       "AccessPolicy",
-      "AccessPolicy",
-      "AccessPolicy",
       "ProjectMembership",
     ]);
     assert.equal(result.auditRows.filter((row) => row.eventType === "update" && row.resourceId === "existing-clinician-policy").length, 1);
     assert.equal(adapter.policies.find((policy) => policy.id === "existing-clinician-policy")?.resource?.length! > 0, true);
     assert.deepEqual(adapter.membership.access?.map((access) => access.policy.reference), [
-      "AccessPolicy/access-policy-3",
       "AccessPolicy/access-policy-2",
+      "AccessPolicy/access-policy-3",
       "AccessPolicy/existing-clinician-policy",
     ]);
   } finally {

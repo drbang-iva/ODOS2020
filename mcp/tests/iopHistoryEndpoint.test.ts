@@ -32,7 +32,7 @@ const provenance: ClinicalGraphProvenance = {
 };
 
 test("IOP history endpoint enforces auth and chart.read", async () => {
-  const normal = deps("clinician");
+  const normal = deps("provider");
 
   const unauthorized = await handleIopHistoryRequest(normal.deps, {
     authHeader: undefined,
@@ -40,15 +40,15 @@ test("IOP history endpoint enforces auth and chart.read", async () => {
   });
   assert.equal(unauthorized.status, 401);
 
-  const forbidden = await handleIopHistoryRequest(deps("auditor").deps, {
+  const adminRead = await handleIopHistoryRequest(deps("admin").deps, {
     authHeader: AUTH,
     query: { patient: PATIENT },
   });
-  assert.equal(forbidden.status, 403);
+  assert.equal(adminRead.status, 200);
 });
 
 test("IOP history endpoint returns empty arrays, zero counts, and definition threshold", async () => {
-  const { deps: d } = deps("clinician", definitionsWithThreshold(24));
+  const { deps: d } = deps("provider", definitionsWithThreshold(24));
 
   const res = await handleIopHistoryRequest(d, {
     authHeader: AUTH,
@@ -144,7 +144,7 @@ test("IOP target endpoint round-trips through history and latest write wins", as
 });
 
 test("IOP target endpoint requires chart.write", async () => {
-  const forbidden = await handleIopTargetRequest(deps("front-desk").deps, {
+  const forbidden = await handleIopTargetRequest(deps("admin").deps, {
     authHeader: AUTH,
     body: {
       patientReference: PATIENT,
@@ -199,7 +199,7 @@ test("IOP target endpoint rejects a stale Goal update without overwriting the co
 });
 
 function deps(
-  role: PracticeRoleId = "clinician",
+  role: PracticeRoleId = "provider",
   findingDefinitions: ClinicalFindingDefinition[] = defaultDefinitions(),
 ) {
   const observations: Observation[] = [];

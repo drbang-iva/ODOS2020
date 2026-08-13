@@ -82,7 +82,7 @@ function deps(fhir: PhotoFhir): ImagingEndpointDeps {
   return {
     authenticate: async (header) => header === AUTH ? {
       staffReference: "Practitioner/doc1",
-      actorRole: "clinician",
+      actorRole: "provider",
       fhir,
       binaryAuth: {
         baseUrl: "http://medplum.test",

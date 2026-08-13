@@ -103,7 +103,7 @@ function assertIfMatch(headers: Record<string, string> | undefined, versionId: s
   throw Object.assign(new Error("FHIR 412 Precondition Failed"), { status: 412 });
 }
 
-function fixture(role: PracticeRoleId = "clinician") {
+function fixture(role: PracticeRoleId = "provider") {
   const fhir = new MemoryFhir();
   let timestamp = 0;
   const deps: ComplaintEndpointDeps = {

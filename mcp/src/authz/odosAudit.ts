@@ -515,7 +515,7 @@ export function assertAuditSessionVisible(input: {
   callerActorId?: string;
   row: OdosAuditEventRecord;
 }): void {
-  if (input.callerRole === "auditor" || input.callerRole === "practice-admin") {
+  if (input.callerRole === "admin") {
     return;
   }
   if (input.row.actorId && input.row.actorId === input.callerActorId) {

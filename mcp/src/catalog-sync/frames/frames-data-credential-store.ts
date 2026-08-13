@@ -46,7 +46,7 @@ export class InMemoryFramesDataSubscriptionStore {
       eventType: "practice.frames-data-subscription.toggled",
       eventTime: now,
       actorId: input.actorId,
-      actorRole: "practice-admin",
+      actorRole: "admin",
       resourceType: "FramesDataSubscriptionConfig",
       resourceId: input.practiceId,
       actionReason: `Frames Data subscription ${input.subscriptionActive ? "active" : "inactive"}`,

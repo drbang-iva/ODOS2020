@@ -18,9 +18,9 @@ test("GET /desk/summary authenticates once and composes the screen from server-s
   registerDeskRoutes(app, {
     authenticateService: async () => { serviceAuthCalls += 1; },
     authenticate: async (header) => header === "Bearer good"
-      ? { staffReference: "Practitioner/staff-1", actorRole: "front-desk", fhir: fhir as never }
+      ? { staffReference: "Practitioner/staff-1", actorRole: "staff", fhir: fhir as never }
       : null,
-    resolveRoles: async () => ({ email: "staff@example.test", roles: ["front-desk"] }),
+    resolveRoles: async () => ({ email: "staff@example.test", roles: ["staff"] }),
     terminalMode: "TEST MODE",
     now: () => "2026-07-11T14:00:00.000Z",
   });
@@ -63,8 +63,8 @@ test("GET /desk/summary keeps other cards available when one scoped Task categor
   const app = express();
   registerDeskRoutes(app, {
     authenticateService: async () => undefined,
-    authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk", fhir: fhir as never }),
-    resolveRoles: async () => ({ email: "staff@example.test", roles: ["front-desk"] }),
+    authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "staff", fhir: fhir as never }),
+    resolveRoles: async () => ({ email: "staff@example.test", roles: ["staff"] }),
     terminalMode: "TEST MODE",
     now: () => "2026-07-11T14:00:00.000Z",
   });
@@ -103,8 +103,8 @@ for (const resourceType of ["Claim", "ClaimResponse", "PaymentReconciliation", "
     const app = express();
     registerDeskRoutes(app, {
       authenticateService: async () => undefined,
-      authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk", fhir: fhir as never }),
-      resolveRoles: async () => ({ email: "staff@example.test", roles: ["front-desk"] }),
+      authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "staff", fhir: fhir as never }),
+      resolveRoles: async () => ({ email: "staff@example.test", roles: ["staff"] }),
       terminalMode: "TEST MODE",
       now: () => "2026-07-11T14:00:00.000Z",
     });
@@ -150,7 +150,7 @@ test("GET /desk/whoami returns the authenticated staff member's practice-role ta
     authenticateService: async () => undefined,
     authenticate: async () => null,
     resolveRoles: async (header) => header === "Bearer good"
-      ? { email: "clinician@example.test", roles: ["clinician", "front-desk"] }
+      ? { email: "clinician@example.test", roles: ["provider", "staff"] }
       : null,
     terminalMode: "TEST MODE",
   });
@@ -162,7 +162,7 @@ test("GET /desk/whoami returns the authenticated staff member's practice-role ta
     assert.equal(unauthorized.status, 401);
     const response = await fetch(`http://127.0.0.1:${port}/desk/whoami`, { headers: { Authorization: "Bearer good" } });
     assert.equal(response.status, 200);
-    assert.deepEqual(await response.json(), { roles: ["clinician", "front-desk"] });
+    assert.deepEqual(await response.json(), { roles: ["provider", "staff"] });
   } finally {
     await new Promise<void>((resolve, reject) => listener.close((error) => error ? reject(error) : resolve()));
   }

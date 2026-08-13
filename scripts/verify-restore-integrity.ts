@@ -159,7 +159,7 @@ async function safeSearchResources<T extends Resource>(
 
 async function runAccessPolicyRoundTrip(fhir: ReturnType<typeof createOperatorScriptFhirClient>): Promise<boolean> {
   try {
-    const policy = buildMedplumAccessPolicy(getRoleDeclaration("auditor"));
+    const policy = buildMedplumAccessPolicy(getRoleDeclaration("admin"));
     const created = await fhir.create<AccessPolicy>({
       ...policy,
       name: `odos-restore-roundtrip-${Date.now()}`,

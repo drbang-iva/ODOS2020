@@ -151,8 +151,8 @@ test("GET /desk/ledger/close returns 200 when Medplum rejects ChargeItem status 
     authenticateService: async () => undefined,
     authenticate: async () => ({
       staffReference: "Practitioner/staff-1",
-      actorRole: "front-desk",
-      roles: ["front-desk"],
+      actorRole: "staff",
+      roles: ["staff"],
       fhir: base as never,
     }),
     resolveRoles: async () => null,
@@ -220,7 +220,7 @@ test("seal endpoint enforces payment.seal-day and returns the sealed summary wit
   const fhir = fixture([paidInvoice("invoice-1", "Patient/p1", "ChargeItem/c1", 4200)]);
   const app = express();
   app.use(express.json());
-  let role: "clinician" | "front-desk" = "clinician";
+  let role: "staff" | "admin" = "staff";
   registerDeskRoutes(app, {
     authenticateService: async () => undefined,
     authenticate: async () => ({
@@ -244,7 +244,7 @@ test("seal endpoint enforces payment.seal-day and returns the sealed summary wit
       body: JSON.stringify({ date: "2026-07-15" }),
     });
     assert.equal(denied.status, 403);
-    role = "front-desk";
+    role = "admin";
     const response = await fetch(`http://127.0.0.1:${port}/desk/ledger/seal`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

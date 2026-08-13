@@ -3,30 +3,29 @@ import { test } from "node:test";
 import type { Practitioner, ProjectMembership, Resource, User } from "@medplum/fhirtypes";
 import { cleanupMembershipOperations, resolveMembershipTargetEmail } from "../../scripts/cleanup-practice-role-memberships.ts";
 
-test("cleanup strips the service identity clinical trio while preserving one non-clinical policy", () => {
+test("cleanup strips all three canonical roles while preserving one unrelated policy", () => {
   const membership = fixture({
     access: [
       { policy: { reference: "AccessPolicy/desk" } },
       { policy: { reference: "AccessPolicy/admin" } },
       { policy: { reference: "AccessPolicy/clinical" } },
-      { policy: { reference: "AccessPolicy/auditor" } },
-      { policy: { reference: "AccessPolicy/auditor" } },
+      { policy: { reference: "AccessPolicy/unrelated" } },
+      { policy: { reference: "AccessPolicy/unrelated" } },
     ],
   });
   const operations = cleanupMembershipOperations({
     membership,
     policyRoles: new Map([
-      ["AccessPolicy/desk", "front-desk"],
-      ["AccessPolicy/admin", "practice-admin"],
-      ["AccessPolicy/clinical", "clinician"],
-      ["AccessPolicy/auditor", "auditor"],
+      ["AccessPolicy/desk", "staff"],
+      ["AccessPolicy/admin", "admin"],
+      ["AccessPolicy/clinical", "provider"],
     ]),
-    stripRoles: new Set(["front-desk", "practice-admin", "clinician"]),
+    stripRoles: new Set(["staff", "admin", "provider"]),
   });
   assert.deepEqual(operations, [{
     op: "replace",
     path: "/access",
-    value: [{ policy: { reference: "AccessPolicy/auditor" } }],
+    value: [{ policy: { reference: "AccessPolicy/unrelated" } }],
   }]);
 });
 

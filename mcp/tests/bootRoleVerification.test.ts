@@ -14,14 +14,11 @@ test("boot role verification names missing policies and missing practice-role ta
   const client = {
     search: async <T,>(_resourceType: string, params: Record<string, string>): Promise<Bundle<T>> => {
       const name = params["name:exact"];
-      if (name === "ODOS Front Desk") {
+      if (name === "ODOS Staff") {
         return { resourceType: "Bundle", type: "searchset" } as Bundle<T>;
       }
-      const role = name === "ODOS Clinician" ? "clinician"
-        : name === "ODOS Practice Admin" ? "practice-admin"
-          : name === "ODOS Auditor" ? "auditor"
-            : "aesthetics-provider";
-      const policy: AccessPolicy = role === "clinician"
+      const role = name === "ODOS Admin / Manager" ? "admin" : "provider";
+      const policy: AccessPolicy = role === "provider"
         ? { resourceType: "AccessPolicy", name }
         : buildMedplumAccessPolicy(getRoleDeclaration(role));
       return {
@@ -33,13 +30,13 @@ test("boot role verification names missing policies and missing practice-role ta
   };
   const missing = await missingPracticeRolePolicies(client as never);
   assert.deepEqual(missing, [
-    "clinician: AccessPolicy \"ODOS Clinician\" lacks its practice-role meta.tag",
-    "front-desk: AccessPolicy \"ODOS Front Desk\" is missing",
+    "provider: AccessPolicy \"ODOS Provider\" lacks its practice-role meta.tag",
+    "staff: AccessPolicy \"ODOS Staff\" is missing",
   ]);
   const output = formatPracticeRoleBootFailure(missing);
   assert.match(output, /^\u001b\[31m\n/);
   assert.match(output, /ODOS PRACTICE ROLE BOOT VERIFICATION FAILED/);
-  assert.match(output, /front-desk: AccessPolicy "ODOS Front Desk" is missing/);
+  assert.match(output, /staff: AccessPolicy "ODOS Staff" is missing/);
 });
 
 test("boot role verification logs a red failure block without throwing when the service lookup fails", async () => {

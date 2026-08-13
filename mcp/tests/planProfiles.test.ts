@@ -126,17 +126,17 @@ test("active plan-profile reads follow every FHIR next link and exclude deactiva
 
 test("margin.read is registered and granted only to practice-admin", () => {
   assert.ok(BUSINESS_ACTIONS.includes("margin.read"));
-  assertBusinessActionAllowed("practice-admin", "margin.read");
+  assertBusinessActionAllowed("admin", "margin.read");
   assert.deepEqual(
     PRACTICE_ROLE_IDS.filter((role) => ROLE_REGISTRY[role].businessActions.includes("margin.read")),
-    ["practice-admin"],
+    ["admin"],
   );
 });
 
 test("plan-profile reads return honest unavailable instead of partial or zero data", async () => {
   const result = await handlePlanProfilesRequest({
     authenticate: async () => ({
-      roles: ["practice-admin"],
+      roles: ["admin"],
       fhir: {
         async search<T extends Resource>(): Promise<Bundle<T>> {
           return {

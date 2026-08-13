@@ -106,7 +106,7 @@ test("missing service FHIR returns a structured server error before encounter wr
   const result = await handleProtocolApplyRequest({
     authenticate: async () => ({
       staffReference: "Practitioner/synthetic-clinician",
-      actorRole: "clinician",
+      actorRole: "provider",
       fhir: fhir as never,
     }),
     now: () => NOW,
@@ -394,7 +394,7 @@ async function applyProtocol(
   return handleProtocolApplyRequest({
     authenticate: async () => ({
       staffReference: "Practitioner/synthetic-clinician",
-      actorRole: "clinician",
+      actorRole: "provider",
       fhir: fhir as never,
     }),
     serviceFhir: fhir as never,
@@ -409,7 +409,7 @@ async function unapplyProtocol(fhir: MemoryDryEyeFhir, applicationId: string) {
   return handleProtocolUnapplyRequest({
     authenticate: async () => ({
       staffReference: "Practitioner/synthetic-clinician",
-      actorRole: "clinician",
+      actorRole: "provider",
       fhir: fhir as never,
     }),
     now: () => NOW,
@@ -429,8 +429,8 @@ async function trackerSeries(fhir: MemoryDryEyeFhir): Promise<Array<{
     authenticateService: async () => undefined,
     authenticate: async () => ({
       staffReference: "Practitioner/synthetic-clinician",
-      actorRole: "clinician",
-      roles: ["clinician"],
+      actorRole: "provider",
+      roles: ["provider"],
       fhir: fhir as never,
     }),
     serviceFhir: fhir as never,

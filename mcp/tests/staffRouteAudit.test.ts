@@ -43,14 +43,14 @@ test("authenticateStaffRoute client changes a previously unaudited operation int
       baseUrl: "http://synthetic-fhir.test",
       accessToken: "synthetic-token",
       staffReference: "Practitioner/real-staff-1",
-      actorRole: "clinician",
+      actorRole: "provider",
       audit,
     });
     await after.read<Patient>("Patient", "patient-1");
     assert.equal(rows.length, 1);
     assert.equal(rows[0]?.eventType, "read");
     assert.equal(rows[0]?.actorId, "real-staff-1");
-    assert.equal(rows[0]?.actorRole, "clinician");
+    assert.equal(rows[0]?.actorRole, "provider");
     assert.equal(rows[0]?.resourceType, "Patient");
     assert.equal(rows[0]?.resourceId, "patient-1");
   } finally {

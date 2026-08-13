@@ -39,7 +39,7 @@ const WRITE_HEADERS = { "X-ODOS-Source": "scripts/grant-migrated-patient-access"
 export interface MigratedPatientAccessGrantAdapter {
   readPatient(id: string): Promise<Patient>;
   resolveMembership(profileReference: string): Promise<ProjectMembership>;
-  resolvePolicy(role: Extract<PracticeRoleId, "clinician" | "front-desk">): Promise<AccessPolicy>;
+  resolvePolicy(role: Extract<PracticeRoleId, "provider" | "staff">): Promise<AccessPolicy>;
   patchPatient(
     id: string,
     operations: JsonPatchOperation[],
@@ -71,7 +71,7 @@ export class MembershipResolutionError extends Error {
 
 export class PolicyDriftError extends Error {
   constructor(
-    readonly role: Extract<PracticeRoleId, "clinician" | "front-desk">,
+    readonly role: Extract<PracticeRoleId, "provider" | "staff">,
     readonly policyReference: string,
   ) {
     super(`${policyReference} rules diverge from the canonical ${role} AccessPolicy.`);
@@ -106,11 +106,11 @@ export async function grantMigratedPatientAccess(input: {
       input.adapter.readPatient(patientId),
       input.adapter.resolveMembership(input.clinicianProfileReference),
       input.adapter.resolveMembership(input.frontDeskProfileReference),
-      input.adapter.resolvePolicy("clinician"),
-      input.adapter.resolvePolicy("front-desk"),
+      input.adapter.resolvePolicy("provider"),
+      input.adapter.resolvePolicy("staff"),
     ]);
-    assertCanonicalPolicyRules(resolved[3], "clinician");
-    assertCanonicalPolicyRules(resolved[4], "front-desk");
+    assertCanonicalPolicyRules(resolved[3], "provider");
+    assertCanonicalPolicyRules(resolved[4], "staff");
   } catch (error) {
     if (error instanceof PolicyDriftError) {
       input.ledger.recordResourceAction({
@@ -204,9 +204,9 @@ implements MigratedPatientAccessGrantAdapter {
   }
 
   async resolvePolicy(
-    role: Extract<PracticeRoleId, "clinician" | "front-desk">,
+    role: Extract<PracticeRoleId, "provider" | "staff">,
   ): Promise<AccessPolicy> {
-    const display = role === "clinician" ? "Clinician" : "Front Desk";
+    const display = getRoleDeclaration(role).display;
     const matches = (await searchAll<AccessPolicy>(
       this.fhir,
       "AccessPolicy",
@@ -254,7 +254,7 @@ implements MigratedPatientAccessGrantAdapter {
 
 export function assertCanonicalPolicyRules(
   policy: AccessPolicy,
-  role: Extract<PracticeRoleId, "clinician" | "front-desk">,
+  role: Extract<PracticeRoleId, "provider" | "staff">,
 ): void {
   const expected = buildMedplumAccessPolicy(getRoleDeclaration(role));
   if (canonicalPolicyRules(policy) !== canonicalPolicyRules(expected)) {

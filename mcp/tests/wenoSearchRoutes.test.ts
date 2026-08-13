@@ -391,7 +391,7 @@ async function startServer(overrides: Partial<Parameters<typeof registerWenoSear
   registerWenoSearchRoutes(app, {
     authenticateService: async () => undefined,
     authenticate: async (header) => header === "Bearer good"
-      ? { staffReference: "Practitioner/staff-1", actorRole: "clinician", fhir: {} as never }
+      ? { staffReference: "Practitioner/staff-1", actorRole: "provider", fhir: {} as never }
       : null,
     drugs: { search: async () => [] },
     pharmacies: { search: async () => [] },
@@ -459,7 +459,7 @@ async function startSendServer(
     authenticate: async (header) => header === "Bearer good"
       ? {
           staffReference: "Practitioner/staff-1",
-          actorRole: "clinician",
+          actorRole: "provider",
           fhir: fhir as never,
         }
       : null,

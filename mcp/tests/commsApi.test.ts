@@ -15,7 +15,7 @@ const OTHER_CALL_ID = `CA${"8".repeat(32)}`;
 const RECORDING_ID = `RE${"4".repeat(32)}`;
 
 test("communications RBAC gives front desk patient content without widening its FHIR scope", () => {
-  const frontDeskDeclaration = getRoleDeclaration("front-desk");
+  const frontDeskDeclaration = getRoleDeclaration("staff");
   const frontDesk = buildMedplumAccessPolicy(frontDeskDeclaration);
   const frontDeskRule = frontDesk.resource?.find((rule) =>
     rule.resourceType === "Communication"
@@ -31,7 +31,7 @@ test("communications RBAC gives front desk patient content without widening its 
   assert.ok(internalOfficeRule);
   assert.equal(internalOfficeRule.interaction?.includes("update"), false);
 
-  for (const role of ["clinician", "aesthetics-provider"] as const) {
+  for (const role of ["provider", "admin"] as const) {
     const policy = buildMedplumAccessPolicy(getRoleDeclaration(role));
     const rule = policy.resource?.find((candidate) =>
       candidate.resourceType === "Communication" && candidate.criteria?.includes("%patient_compartment"));
@@ -40,13 +40,13 @@ test("communications RBAC gives front desk patient content without widening its 
     assert.equal(rule.interaction?.includes("create"), true);
     assert.equal(rule.interaction?.includes("update"), true);
   }
-  const auditor = buildMedplumAccessPolicy(getRoleDeclaration("auditor"));
-  assert.equal(auditor.resource?.some((rule) => rule.resourceType === "Communication"), false);
+  const admin = buildMedplumAccessPolicy(getRoleDeclaration("admin"));
+  assert.equal(admin.resource?.some((rule) => rule.resourceType === "Communication"), true);
 });
 
 test("FHIR policy construction preserves a declared hidden-field mask", () => {
   const policy = buildMedplumAccessPolicy({
-    id: "front-desk",
+    id: "staff",
     display: "Synthetic Masked Role",
     description: "Exercises the retained field-mask mechanism.",
     businessActions: [],
@@ -74,7 +74,7 @@ test("every communications endpoint rejects missing authentication and audits ev
     for (const endpoint of endpoints) {
       const unauthenticated = await request(fixture.base, endpoint.path, endpoint.method, endpoint.body);
       assert.equal(unauthenticated.status, 401, `${endpoint.method} ${endpoint.path}`);
-      const wrongRole = await request(fixture.base, endpoint.path, endpoint.method, endpoint.body, "auditor");
+      const wrongRole = await request(fixture.base, endpoint.path, endpoint.method, endpoint.body, "admin", "none");
       assert.equal(wrongRole.status, 403, `${endpoint.method} ${endpoint.path}`);
     }
     assert.equal(fixture.denials.length, endpoints.length);
@@ -88,13 +88,13 @@ test("every communications endpoint rejects missing authentication and audits ev
 test("conversation reads use caller-bound FHIR and expose bodies to front desk and clinical content roles", async () => {
   const fixture = await startServer();
   try {
-    const desk = await request(fixture.base, "/communications/conversations?patient_id=synthetic-1&limit=10", "GET", undefined, "front-desk");
+    const desk = await request(fixture.base, "/communications/conversations?patient_id=synthetic-1&limit=10", "GET", undefined, "staff");
     assert.equal(desk.status, 200);
     const deskBody = await desk.json() as { conversations: ConversationSummary[] };
     assert.equal(deskBody.conversations[0].messageCount, 1);
     assert.equal(deskBody.conversations[0].messages[0].body, "Synthetic scheduling content");
 
-    const clinician = await request(fixture.base, "/communications/conversations?patient_id=synthetic-1&limit=10", "GET", undefined, "clinician");
+    const clinician = await request(fixture.base, "/communications/conversations?patient_id=synthetic-1&limit=10", "GET", undefined, "provider");
     assert.equal(clinician.status, 200);
     const clinicianBody = await clinician.json() as { conversations: ConversationSummary[] };
     assert.equal(clinicianBody.conversations[0].messages[0].body, "Synthetic scheduling content");
@@ -111,7 +111,7 @@ test("conversation reads use caller-bound FHIR and expose bodies to front desk a
 test("a front-desk GHL thread read is on-demand and never runs for the conversation list", async () => {
   const fixture = await startServer({ providerName: "ghl" });
   try {
-    const list = await request(fixture.base, "/communications/conversations?patient_id=synthetic-1", "GET", undefined, "front-desk");
+    const list = await request(fixture.base, "/communications/conversations?patient_id=synthetic-1", "GET", undefined, "staff");
     assert.equal(list.status, 200);
     assert.deepEqual(fixture.threadReadRequests, []);
 
@@ -120,7 +120,7 @@ test("a front-desk GHL thread read is on-demand and never runs for the conversat
       "/communications/conversations?patient_id=synthetic-1&conversation_id=conversation-synthetic-1",
       "GET",
       undefined,
-      "front-desk",
+      "staff",
     );
     assert.equal(desk.status, 200);
     const body = await desk.json() as { conversations: ConversationSummary[] };
@@ -141,7 +141,7 @@ test("a front-desk GHL thread read is on-demand and never runs for the conversat
 });
 
 test("the API content gate strips previews and bodies and skips thread hydration without content.read", async () => {
-  const frontDesk = getRoleDeclaration("front-desk");
+  const frontDesk = getRoleDeclaration("staff");
   const contentActionIndex = frontDesk.businessActions.indexOf("communications.content.read");
   assert.notEqual(contentActionIndex, -1);
   frontDesk.businessActions.splice(contentActionIndex, 1);
@@ -168,7 +168,7 @@ test("the API content gate strips previews and bodies and skips thread hydration
         "/communications/conversations?conversation_id=conversation-synthetic-1",
         "GET",
         undefined,
-        "front-desk",
+        "staff",
       );
       assert.equal(response.status, 200);
       const body = await response.json() as { conversations: ConversationSummary[] };
@@ -223,7 +223,7 @@ test("conversation listing merges distinct routed providers, sorts globally, tag
     },
   });
   try {
-    const response = await request(fixture.base, "/communications/conversations?limit=4", "GET", undefined, "front-desk");
+    const response = await request(fixture.base, "/communications/conversations?limit=4", "GET", undefined, "staff");
     assert.equal(response.status, 200);
     const body = await response.json() as {
       conversations: ConversationSummary[];
@@ -241,7 +241,7 @@ test("conversation listing merges distinct routed providers, sorts globally, tag
     assert.deepEqual(fixture.listProviderCalls, ["twilio", "ghl"]);
     assert.deepEqual(fixture.listRequests.map(({ limit }) => limit), [100, 100]);
 
-    const limited = await request(fixture.base, "/communications/conversations?limit=2", "GET", undefined, "front-desk");
+    const limited = await request(fixture.base, "/communications/conversations?limit=2", "GET", undefined, "staff");
     assert.equal(limited.status, 200);
     assert.deepEqual((await limited.json() as { conversations: ConversationSummary[] }).conversations
       .map(({ id, provider }) => ({ id, provider })), [
@@ -264,7 +264,7 @@ test("a failed provider degrades to non-PHI status while successful conversation
     },
   });
   try {
-    const response = await request(fixture.base, "/communications/conversations", "GET", undefined, "front-desk");
+    const response = await request(fixture.base, "/communications/conversations", "GET", undefined, "staff");
     assert.equal(response.status, 200);
     const responseText = await response.text();
     assert.equal(responseText.includes("+18645550199"), false);
@@ -283,7 +283,7 @@ test("a failed provider degrades to non-PHI status while successful conversation
       "/communications/conversations?conversation_id=ghl-unavailable-thread",
       "GET",
       undefined,
-      "front-desk",
+      "staff",
     );
     assert.equal(unresolved.status, 200);
     const unresolvedBody = await unresolved.json() as {
@@ -310,7 +310,7 @@ test("a routed provider without conversation-list capability is skipped without 
     },
   });
   try {
-    const response = await request(fixture.base, "/communications/conversations", "GET", undefined, "front-desk");
+    const response = await request(fixture.base, "/communications/conversations", "GET", undefined, "staff");
     assert.equal(response.status, 200);
     const body = await response.json() as {
       conversations: ConversationSummary[];
@@ -341,7 +341,7 @@ test("thread hydration resolves the owning provider before limiting and unresolv
       "/communications/conversations?limit=1&conversation_id=requested-older-thread",
       "GET",
       undefined,
-      "front-desk",
+      "staff",
     );
     assert.equal(hydrated.status, 200);
     const hydratedBody = await hydrated.json() as { conversations: ConversationSummary[] };
@@ -356,7 +356,7 @@ test("thread hydration resolves the owning provider before limiting and unresolv
       "/communications/conversations?limit=1&conversation_id=missing-thread",
       "GET",
       undefined,
-      "front-desk",
+      "staff",
     );
     assert.equal(missing.status, 404);
     assert.deepEqual(await missing.json(), { error: "Conversation not found." });
@@ -381,7 +381,7 @@ test("an explicit provider query keeps conversation listing on that one provider
       "/communications/conversations?provider=ghl",
       "GET",
       undefined,
-      "front-desk",
+      "staff",
     );
     assert.equal(response.status, 200);
     const body = await response.json() as { conversations: ConversationSummary[] };
@@ -402,38 +402,38 @@ test("front-desk SMS succeeds and reaches a durable sent reservation", async () 
       body: "Synthetic staff message",
       idempotencyKey: "synthetic-send-0001",
     };
-    const sent = await request(fixture.base, "/communications/messages", "POST", messageRequest, "front-desk");
+    const sent = await request(fixture.base, "/communications/messages", "POST", messageRequest, "staff");
     assert.equal(sent.status, 200);
     assert.deepEqual(await sent.json(), { outcome: "sent", providerMessageId: "SM-synthetic" });
     assert.deepEqual(fixture.providerCalls, ["sendSms"]);
     assert.equal(fixture.persistedCommunications.length, 1);
     assert.equal(fixture.persistedCommunications[0].status, "in-progress");
     assert.equal(fixture.persistedCommunications[0].subject?.reference, PATIENT_REFERENCE);
-    assert.equal(fixture.persistedCommunications[0].sender?.reference, "Practitioner/front-desk");
+    assert.equal(fixture.persistedCommunications[0].sender?.reference, "Practitioner/staff");
     assert.equal(fixture.persistedCommunications[0].recipient?.[0].reference, PATIENT_REFERENCE);
     assert.equal(fixture.persistedCommunications[0].sent, "2026-08-02T15:00:00.000Z");
     assert.equal(fixture.persistedCommunications[0].payload?.[0].contentString, "Synthetic staff message");
     assert.match(JSON.stringify(fixture.persistedCommunications[0].identifier), /SM-synthetic/);
-    const retry = await request(fixture.base, "/communications/messages", "POST", messageRequest, "front-desk");
+    const retry = await request(fixture.base, "/communications/messages", "POST", messageRequest, "staff");
     assert.equal(retry.status, 200);
     assert.deepEqual(await retry.json(), { outcome: "sent", providerMessageId: "SM-synthetic" });
     assert.deepEqual(fixture.providerCalls, ["sendSms"]);
 
-    const calls = await request(fixture.base, "/communications/calls?limit=12", "GET", undefined, "front-desk");
+    const calls = await request(fixture.base, "/communications/calls?limit=12", "GET", undefined, "staff");
     assert.equal(calls.status, 200);
     assert.equal((await calls.json() as { calls: unknown[] }).calls.length, 1);
 
-    const call = await request(fixture.base, `/communications/calls/${CALL_ID}`, "GET", undefined, "front-desk");
+    const call = await request(fixture.base, `/communications/calls/${CALL_ID}`, "GET", undefined, "staff");
     assert.equal(call.status, 200);
     assert.equal((await call.json() as { call: { id: string } }).call.id, CALL_ID);
 
     const initiated = await request(fixture.base, "/communications/calls", "POST", {
       patientReference: PATIENT_REFERENCE,
-    }, "front-desk");
+    }, "staff");
     assert.equal(initiated.status, 201);
     assert.deepEqual(await initiated.json(), { callId: CALL_ID });
 
-    const recording = await request(fixture.base, `/communications/recordings/${RECORDING_ID}`, "GET", undefined, "clinician");
+    const recording = await request(fixture.base, `/communications/recordings/${RECORDING_ID}`, "GET", undefined, "provider");
     assert.equal(recording.status, 200);
     assert.equal(recording.headers.get("content-type"), "audio/mpeg");
     assert.deepEqual([...new Uint8Array(await recording.arrayBuffer())], [1, 2, 3]);
@@ -457,11 +457,11 @@ test("staff SMS requires a stable idempotency key and retries never dispatch twi
     const missing = await request(fixture.base, "/communications/messages", "POST", {
       patientReference: PATIENT_REFERENCE,
       body: "Synthetic idempotent message",
-    }, "front-desk");
+    }, "staff");
     assert.equal(missing.status, 400);
 
-    const first = await request(fixture.base, "/communications/messages", "POST", body, "front-desk");
-    const retry = await request(fixture.base, "/communications/messages", "POST", body, "front-desk");
+    const first = await request(fixture.base, "/communications/messages", "POST", body, "staff");
+    const retry = await request(fixture.base, "/communications/messages", "POST", body, "staff");
     assert.equal(first.status, 200);
     assert.equal(retry.status, 200);
     assert.deepEqual(await retry.json(), { outcome: "sent", providerMessageId: "SM-synthetic" });
@@ -480,7 +480,7 @@ test("staff SMS persists the selected provider message identifier", async () => 
       patientReference: PATIENT_REFERENCE,
       body: "Synthetic GHL staff message",
       idempotencyKey: "synthetic-ghl-send-0001",
-    }, "front-desk");
+    }, "staff");
     assert.equal(sent.status, 200);
     assert.equal(fixture.persistedCommunications[0].identifier?.some((identifier) =>
       identifier.system === "https://odos2020.com/fhir/NamingSystem/ghl-message-id"
@@ -503,7 +503,7 @@ test("new SMS uses transactional routing while a reply preserves its explicit th
       patientReference: PATIENT_REFERENCE,
       body: "Synthetic new conversation",
       idempotencyKey: "synthetic-route-new-0001",
-    }, "front-desk");
+    }, "staff");
     assert.equal(first.status, 200);
 
     const reply = await request(fixture.base, "/communications/messages", "POST", {
@@ -511,10 +511,10 @@ test("new SMS uses transactional routing while a reply preserves its explicit th
       patientReference: PATIENT_REFERENCE,
       body: "Synthetic thread reply",
       idempotencyKey: "synthetic-route-reply-0001",
-    }, "front-desk");
+    }, "staff");
     assert.equal(reply.status, 200);
 
-    const calls = await request(fixture.base, "/communications/calls?limit=1", "GET", undefined, "front-desk");
+    const calls = await request(fixture.base, "/communications/calls?limit=1", "GET", undefined, "staff");
     assert.equal(calls.status, 200);
     assert.deepEqual(fixture.adapterProviders, ["ghl", "twilio", "twilio"]);
   } finally {
@@ -529,7 +529,7 @@ test("an unassigned channel role is reported as unavailable without resolving an
       patientReference: PATIENT_REFERENCE,
       body: "Synthetic unavailable route",
       idempotencyKey: "synthetic-route-none-0001",
-    }, "front-desk");
+    }, "staff");
     assert.equal(response.status, 409);
     assert.deepEqual(await response.json(), {
       error: 'Communications role "transactional-sms" is not configured for this practice.',
@@ -548,9 +548,9 @@ test("a post-send FHIR failure leaves a durable unknown outcome and blocks dupli
     idempotencyKey: "synthetic-send-0003",
   };
   try {
-    const first = await request(fixture.base, "/communications/messages", "POST", body, "front-desk");
+    const first = await request(fixture.base, "/communications/messages", "POST", body, "staff");
     assert.equal(first.status, 502);
-    const retry = await request(fixture.base, "/communications/messages", "POST", body, "front-desk");
+    const retry = await request(fixture.base, "/communications/messages", "POST", body, "staff");
     assert.equal(retry.status, 409);
     assert.deepEqual(fixture.providerCalls, ["sendSms"]);
   } finally {
@@ -561,7 +561,7 @@ test("a post-send FHIR failure leaves a durable unknown outcome and blocks dupli
 test("recording retrieval degrades cleanly when media authentication is not acknowledged", async () => {
   const fixture = await startServer({ recordingEnabled: false });
   try {
-    const response = await request(fixture.base, `/communications/recordings/${RECORDING_ID}`, "GET", undefined, "clinician");
+    const response = await request(fixture.base, `/communications/recordings/${RECORDING_ID}`, "GET", undefined, "provider");
     assert.equal(response.status, 409);
     assert.deepEqual(await response.json(), { error: "Recording retrieval is not enabled for this communications provider." });
   } finally {
@@ -572,7 +572,7 @@ test("recording retrieval degrades cleanly when media authentication is not ackn
 test("recording retrieval requires a persisted call visible to the caller's FHIR policy", async () => {
   const fixture = await startServer({ recordingVisible: false });
   try {
-    const response = await request(fixture.base, `/communications/recordings/${RECORDING_ID}`, "GET", undefined, "clinician");
+    const response = await request(fixture.base, `/communications/recordings/${RECORDING_ID}`, "GET", undefined, "provider");
     assert.equal(response.status, 404);
     assert.deepEqual(await response.json(), { error: "Recording not found." });
     assert.deepEqual(fixture.providerCalls, []);
@@ -588,11 +588,11 @@ test("recording retrieval requires a persisted call visible to the caller's FHIR
 test("call history and detail require persisted calls visible to the caller's FHIR policy", async () => {
   const fixture = await startServer({ callVisible: false });
   try {
-    const list = await request(fixture.base, "/communications/calls?limit=12", "GET", undefined, "clinician");
+    const list = await request(fixture.base, "/communications/calls?limit=12", "GET", undefined, "provider");
     assert.equal(list.status, 200);
     assert.deepEqual(await list.json(), { calls: [] });
 
-    const detail = await request(fixture.base, `/communications/calls/${CALL_ID}`, "GET", undefined, "clinician");
+    const detail = await request(fixture.base, `/communications/calls/${CALL_ID}`, "GET", undefined, "provider");
     assert.equal(detail.status, 404);
     assert.deepEqual(await detail.json(), { error: "Call not found." });
     assert.deepEqual(fixture.providerCalls, []);
@@ -604,7 +604,7 @@ test("call history and detail require persisted calls visible to the caller's FH
 test("call history applies the requested limit after filtering the provider window by visible calls", async () => {
   const fixture = await startServer();
   try {
-    const response = await request(fixture.base, "/communications/calls?limit=1", "GET", undefined, "clinician");
+    const response = await request(fixture.base, "/communications/calls?limit=1", "GET", undefined, "provider");
     assert.equal(response.status, 200);
     assert.deepEqual((await response.json() as { calls: Array<{ id: string }> }).calls.map((call) => call.id), [CALL_ID]);
     assert.deepEqual(fixture.callListRequests, [{ limit: 1_000 }]);
@@ -690,7 +690,7 @@ async function startServer(options: {
     authenticateService: async () => undefined,
     authenticate: async (header) => {
       const role = header?.replace("Bearer ", "");
-      if (!role || !["practice-admin", "clinician", "front-desk", "auditor", "aesthetics-provider"].includes(role)) return null;
+      if (!role || !["admin", "provider", "staff", "admin", "provider"].includes(role)) return null;
       const accessPolicy = buildMedplumAccessPolicy(getRoleDeclaration(role as never));
       const communicationRule = accessPolicy.resource?.find((rule) =>
         rule.resourceType === "Communication" && rule.criteria?.includes("_compartment"));
@@ -935,14 +935,14 @@ async function startServer(options: {
   };
 }
 
-function request(base: string, path: string, method: string, body?: unknown, role?: string): Promise<Response> {
+function request(base: string, path: string, method: string, body?: unknown, role?: string, claimedRole = role): Promise<Response> {
   return fetch(`${base}${path}`, {
     method,
     headers: {
       ...(body === undefined ? {} : { "content-type": "application/json" }),
       ...(role ? {
         authorization: `Bearer ${role}`,
-        "x-odos-actor-role": role,
+        "x-odos-actor-role": claimedRole!,
         "x-odos-actor-id": role,
       } : {}),
     },

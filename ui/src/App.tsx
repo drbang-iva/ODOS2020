@@ -222,13 +222,12 @@ export function parseSetPasswordPath(pathname: string): { id: string; secret: st
 }
 
 export function defaultHomePath(roles: readonly PracticeRoleId[]): typeof CLINIC_PATH | typeof DESK_HOME_PATH {
-  if (roles.includes("front-desk") || roles.includes("practice-admin")) return DESK_HOME_PATH;
-  return roles.includes("clinician") || roles.includes("aesthetics-provider") ? CLINIC_PATH : DESK_HOME_PATH;
+  return roles.includes("provider") ? CLINIC_PATH : DESK_HOME_PATH;
 }
 
 export function hasCrossSideAccess(roles: readonly PracticeRoleId[]): boolean {
-  const hasDeskSideRole = roles.includes("front-desk") || roles.includes("practice-admin");
-  const hasClinicSideRole = roles.includes("clinician") || roles.includes("aesthetics-provider");
+  const hasDeskSideRole = roles.includes("staff") || roles.includes("admin");
+  const hasClinicSideRole = roles.includes("provider");
   return hasDeskSideRole && hasClinicSideRole;
 }
 
@@ -345,37 +344,37 @@ export function RouteSwitch({
     case "/settings":
       return <SettingsIndex roles={roles} />;
     case "/settings/staff":
-      return roles.includes("practice-admin")
+      return roles.includes("admin")
         ? <StaffSettings />
         : <main role="alert">Practice-admin access is required to manage staff.</main>;
     case "/settings/floor-config":
-      return <FloorConfigSettings canWrite={roles.includes("practice-admin") || roles.includes("front-desk")} />;
+      return <FloorConfigSettings canWrite={roles.includes("admin") || roles.includes("staff")} />;
     case "/settings/vision-plan-templates":
-      return <VisionPlanTemplatesSettings canWrite={roles.includes("practice-admin") || roles.includes("front-desk")} />;
+      return <VisionPlanTemplatesSettings canWrite={roles.includes("admin") || roles.includes("staff")} />;
     case "/settings/visit-types":
-      return <VisitTypeSettings canWrite={roles.includes("practice-admin")} />;
+      return <VisitTypeSettings canWrite={roles.includes("admin")} />;
     case "/settings/suggested-diagnoses":
       return <DiagnosisSettings />;
     case "/settings/optical-pricing":
-      return <OpticalPricingSettings canWrite={roles.includes("practice-admin")} />;
+      return <OpticalPricingSettings canWrite={roles.includes("admin")} />;
     case "/settings/fee-schedule":
-      return <FeeScheduleSettings canWrite={roles.includes("practice-admin")} />;
+      return <FeeScheduleSettings canWrite={roles.includes("admin")} />;
     case "/settings/lens-catalog":
-      return <LensCatalogSettings canWrite={roles.includes("practice-admin")} />;
+      return <LensCatalogSettings canWrite={roles.includes("admin")} />;
     case "/settings/plan-profiles":
-      return <PlanProfilesSettings canWrite={roles.includes("practice-admin")} />;
+      return <PlanProfilesSettings canWrite={roles.includes("admin")} />;
     case "/settings/packages":
-      return <PackageDefinitionsSettings canWrite={roles.includes("practice-admin")} />;
+      return <PackageDefinitionsSettings canWrite={roles.includes("admin")} />;
     case "/settings/treatment-protocols":
-      return <ProtocolDefinitionsSettings canWrite={roles.includes("practice-admin")} />;
+      return <ProtocolDefinitionsSettings canWrite={roles.includes("admin")} />;
     case "/settings/procedure-definitions":
-      return <ProcedureDefinitionsSettings canWrite={roles.includes("practice-admin")} />;
+      return <ProcedureDefinitionsSettings canWrite={roles.includes("admin")} />;
     case "/settings/statement-messages":
-      return <StatementMessagesSettings canWrite={roles.includes("practice-admin")} />;
+      return <StatementMessagesSettings canWrite={roles.includes("admin")} />;
     case "/settings/billing-identity":
-      return <BillingIdentitySettings canWrite={roles.includes("practice-admin")} />;
+      return <BillingIdentitySettings canWrite={roles.includes("admin")} />;
     case "/settings/appearance":
-      return <AppearanceSettings canWrite={roles.includes("practice-admin")} />;
+      return <AppearanceSettings canWrite={roles.includes("admin")} />;
     default:
       return <ViewRouter view={view} />;
   }

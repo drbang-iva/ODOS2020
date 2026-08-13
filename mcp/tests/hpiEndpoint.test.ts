@@ -75,7 +75,7 @@ const BODY = {
   reviewAttestations: ["general"],
 };
 
-function fixture(role: PracticeRoleId = "clinician", withComplaints = true) {
+function fixture(role: PracticeRoleId = "provider", withComplaints = true) {
   const basics = withComplaints
     ? COMPLAINTS.map((complaint, index) => ({ ...buildEncounterComplaintResource(complaint), id: `basic-${index + 1}` }))
     : [];
@@ -142,7 +142,7 @@ test("HPI definition retires the eight-textarea fields and retains extensible Re
 
 test("history capture enforces authority, option validation, encounter scope, and an active complaint", async () => {
   assert.equal((await handleHpiCaptureRequest(fixture().deps, { authHeader: undefined, body: BODY })).status, 401);
-  assert.equal((await handleHpiCaptureRequest(fixture("front-desk").deps, { authHeader: AUTH, body: BODY })).status, 403);
+  assert.equal((await handleHpiCaptureRequest(fixture("admin").deps, { authHeader: AUTH, body: BODY })).status, 403);
   const unknown = await handleHpiCaptureRequest(fixture().deps, {
     authHeader: AUTH,
     body: { ...BODY, reviewOfSystems: [{ code: "invented", display: "Invented", category: "general", status: "positive" }] },
@@ -154,7 +154,7 @@ test("history capture enforces authority, option validation, encounter scope, an
     body: { ...BODY, reviewOfSystems: [{ code: "custom-migraine", display: "Migraine", category: "general", status: "positive" }] },
   });
   assert.equal(encounterOnlyCustom.status, 200);
-  const noComplaint = await handleHpiCaptureRequest(fixture("clinician", false).deps, { authHeader: AUTH, body: BODY });
+  const noComplaint = await handleHpiCaptureRequest(fixture("provider", false).deps, { authHeader: AUTH, body: BODY });
   assert.equal(noComplaint.status, 400);
   assert.match((noComplaint.body as { error: string }).error, /presenting complaint/);
 });

@@ -384,7 +384,7 @@ test("SMART DeviceDefinition catalog scopes require first-party ODOS core client
   const thirdParty = evaluateSmartScopeIntersection({
     appClientId: "third-party-inventory",
     userId: "user-1",
-    roleId: "practice-admin",
+    roleId: "admin",
     clientAuthClass: "confidential-asymmetric",
     requestedScopes,
   });
@@ -393,7 +393,7 @@ test("SMART DeviceDefinition catalog scopes require first-party ODOS core client
   const firstParty = evaluateSmartScopeIntersection({
     appClientId: "odos-core",
     userId: "user-1",
-    roleId: "practice-admin",
+    roleId: "admin",
     clientAuthClass: "confidential-asymmetric",
     requestedScopes,
   });

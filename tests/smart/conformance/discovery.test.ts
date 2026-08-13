@@ -83,7 +83,7 @@ test("v0.55a SMART public authorization-code flow enforces PKCE S256 and returns
         intent: "launch",
         need_patient_banner: "true",
       },
-      { "X-ODOS-Role": "clinician", "X-ODOS-Actor-Id": "practitioner-1" },
+      { "X-ODOS-Role": "provider", "X-ODOS-Actor-Id": "practitioner-1" },
     );
     assert.equal(authorize.status, 302);
     const location = authorize.headers.get("location");
@@ -125,7 +125,7 @@ test("v0.55a SMART introspection is confidential-client protected", async () => 
         code_challenge_method: "S256",
         patient: "Patient/patient-1",
       },
-      { "X-ODOS-Role": "clinician", "X-ODOS-Actor-Id": "practitioner-1" },
+      { "X-ODOS-Role": "provider", "X-ODOS-Actor-Id": "practitioner-1" },
     );
     const code = new URL(authorize.headers.get("location")!).searchParams.get("code")!;
     const token = await server.token({

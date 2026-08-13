@@ -20,7 +20,7 @@ test("assign-provider appends self Practitioner + one complete access entry per 
   const deps = {
     authenticate: async () => ({
       staffReference: "Practitioner/doc-1",
-      actorRole: "clinician" as const,
+      actorRole: "provider" as const,
     }),
     serviceFhir: fhir,
   };
@@ -93,7 +93,7 @@ test("assign-provider resolves PractitionerRole to its Practitioner", async () =
     {
       authenticate: async () => ({
         staffReference: "PractitionerRole/role-1",
-        actorRole: "clinician" as const,
+        actorRole: "provider" as const,
       }),
       serviceFhir: fhir,
     },
@@ -107,7 +107,7 @@ test("assign-provider resolves PractitionerRole to its Practitioner", async () =
   );
 });
 
-test("assign-provider fails closed for unauthenticated or non-chart-write staff", async () => {
+test("assign-provider fails closed for unauthenticated or read-only Admin", async () => {
   const fhir = new AssignmentFhir();
   const unauthenticated = await handleProviderAssignmentRequest(
     { authenticate: async () => null, serviceFhir: fhir },
@@ -116,8 +116,8 @@ test("assign-provider fails closed for unauthenticated or non-chart-write staff"
   const forbidden = await handleProviderAssignmentRequest(
     {
       authenticate: async () => ({
-        staffReference: "Practitioner/front-desk",
-        actorRole: "front-desk" as const,
+        staffReference: "Practitioner/admin",
+        actorRole: "admin" as const,
       }),
       serviceFhir: fhir,
     },

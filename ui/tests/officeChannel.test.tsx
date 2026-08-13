@@ -35,7 +35,7 @@ test("Office bell opens the shared inbox and renders its unread badge on Desk an
     await act(async () => {
       renderer = create(
         <OfficeChannelShell side={side} initialMessages={[message()]} initialSummary={summary()}>
-          <AppShell path={`/${side}`} roles={side === "desk" ? ["front-desk"] : ["clinician"]} homePath={`/${side}`} side={side} email={`${side}@example.test`}><main /></AppShell>
+          <AppShell path={`/${side}`} roles={side === "desk" ? ["staff"] : ["provider"]} homePath={`/${side}`} side={side} email={`${side}@example.test`}><main /></AppShell>
         </OfficeChannelShell>,
       );
     });
@@ -96,7 +96,7 @@ test("Desk home consumes the shell Office source without starting a second poll"
 
 test("unified Sections routes every named surface and gates Settings to practice admins", () => {
   const clinician = renderToStaticMarkup(<ClinicOfficeShell initialMessages={[]} initialSummary={summary()}><ClinicShell><ClinicHome /></ClinicShell></ClinicOfficeShell>);
-  const admin = renderToStaticMarkup(<ClinicOfficeShell initialMessages={[]} initialSummary={summary()}><ClinicShell roles={["clinician", "practice-admin"]}><ClinicHome /></ClinicShell></ClinicOfficeShell>);
+  const admin = renderToStaticMarkup(<ClinicOfficeShell initialMessages={[]} initialSummary={summary()}><ClinicShell roles={["provider", "admin"]}><ClinicHome /></ClinicShell></ClinicOfficeShell>);
   for (const href of ["/schedule/day", "/frontdesk", "/billing/claims/worklist", "/billing/claims/reports/accounts-receivable", "/billing/statements", "/dispensary/lab-orders", "/admin/optical/catalog/frames", "/admin/optical/inventory/frames", "/admin/practice/settings/frames-data", "/audit/log", "/clinic"]) {
     assert.match(clinician, new RegExp(`href="${href.replaceAll("/", "\\/")}"`));
   }
@@ -219,7 +219,7 @@ function OfficeProbe({ api, canAcknowledge = true }: { api: OfficeInboxApi; canA
   return <div><button id="refresh" onClick={() => office.refresh()}>Refresh</button><button id="acknowledge" onClick={() => office.acknowledge("message-1")}>Acknowledge</button><span id="ids">{office.messages.map((item) => item.id).join(",")}</span></div>;
 }
 
-function ClinicShell({ children, roles = ["clinician"] }: { children: React.ReactNode; roles?: Array<"clinician" | "practice-admin"> }) {
+function ClinicShell({ children, roles = ["provider"] }: { children: React.ReactNode; roles?: Array<"provider" | "admin"> }) {
   return <AppShell path="/clinic" roles={roles} homePath="/clinic" side="clinic" email="doctor@example.test">{children}</AppShell>;
 }
 

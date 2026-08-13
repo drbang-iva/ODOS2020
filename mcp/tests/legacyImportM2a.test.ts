@@ -552,7 +552,7 @@ test("operator provisioning records policy drift and refuses every grant", async
   const state = tempState();
   const ledger = new ImportLedger({ stateDirectory: state.path });
   const adapter = new GrantAdapter();
-  adapter.policies.get("front-desk")!.resource![0]!.interaction = ["read"];
+  adapter.policies.get("staff")!.resource![0]!.interaction = ["read"];
   try {
     const runId = ledger.startRun("grant-policy-drift");
     await assert.rejects(
@@ -577,7 +577,7 @@ test("operator provisioning records policy drift and refuses every grant", async
 
 test("live policy resolution uses active-project search context and hard-stops duplicates", async () => {
   const policy: AccessPolicy = {
-    ...buildMedplumAccessPolicy(getRoleDeclaration("front-desk")),
+    ...buildMedplumAccessPolicy(getRoleDeclaration("staff")),
     id: "front-desk-policy",
   };
   const rows = [policy];
@@ -589,7 +589,7 @@ test("live policy resolution uses active-project search context and hard-stops d
     }),
   } as unknown as MedplumClient;
   const adapter = new LiveMigratedPatientAccessGrantAdapter(fhir, PROJECT_ID);
-  assert.equal(await adapter.resolvePolicy("front-desk"), policy);
+  assert.equal(await adapter.resolvePolicy("staff"), policy);
 
   const drifted = structuredClone(policy);
   drifted.resource![0]!.interaction = ["read"];
@@ -601,37 +601,37 @@ test("live policy resolution uses active-project search context and hard-stops d
     }),
   } as unknown as MedplumClient, PROJECT_ID);
   await assert.rejects(
-    driftAdapter.resolvePolicy("front-desk"),
-    /rules diverge from the canonical front-desk AccessPolicy/,
+    driftAdapter.resolvePolicy("staff"),
+    /rules diverge from the canonical staff AccessPolicy/,
   );
 
   rows.push({ ...policy, id: "front-desk-policy-duplicate" });
   await assert.rejects(
-    adapter.resolvePolicy("front-desk"),
-    /Expected one tagged ODOS Front Desk policy; found 2/,
+    adapter.resolvePolicy("staff"),
+    /Expected one tagged ODOS Staff policy; found 2/,
   );
 });
 
 test("reachability gate requires every ordinary-role allow and both front-desk denials", async () => {
   const statuses = new Map<string, number>([
-    ["/fhir/R4/Patient?_id=patient-1|clinician", 200],
-    ["/fhir/R4/Patient/patient-1|clinician", 200],
-    ["/fhir/R4/Encounter/encounter-1|clinician", 200],
-    ["/fhir/R4/Media/media-1|clinician", 200],
-    ["/fhir/R4/Observation/observation-1|clinician", 200],
-    ["/fhir/R4/Patient?_id=patient-1|front-desk", 200],
-    ["/fhir/R4/Patient/patient-1|front-desk", 200],
-    ["/fhir/R4/Coverage/coverage-1|front-desk", 200],
-    ["/fhir/R4/Encounter/encounter-1|front-desk", 200],
-    ["/fhir/R4/Media/media-1|front-desk", 403],
-    ["/fhir/R4/Observation/observation-1|front-desk", 403],
+    ["/fhir/R4/Patient?_id=patient-1|provider", 200],
+    ["/fhir/R4/Patient/patient-1|provider", 200],
+    ["/fhir/R4/Encounter/encounter-1|provider", 200],
+    ["/fhir/R4/Media/media-1|provider", 200],
+    ["/fhir/R4/Observation/observation-1|provider", 200],
+    ["/fhir/R4/Patient?_id=patient-1|staff", 200],
+    ["/fhir/R4/Patient/patient-1|staff", 200],
+    ["/fhir/R4/Coverage/coverage-1|staff", 200],
+    ["/fhir/R4/Encounter/encounter-1|staff", 200],
+    ["/fhir/R4/Media/media-1|staff", 200],
+    ["/fhir/R4/Observation/observation-1|staff", 200],
   ]);
   const request = async (urlValue: string | URL | Request, init?: RequestInit): Promise<Response> => {
     const url = new URL(String(urlValue));
     const token = String((init?.headers as Record<string, string>)?.Authorization ?? "")
       .replace("Bearer ", "");
     if (url.pathname === "/auth/me") {
-      const role = token === "clinician" ? "clinician-1" : "front-desk-1";
+      const role = token === "provider" ? "clinician-1" : "front-desk-1";
       return Response.json({
         project: { id: PROJECT_ID, superAdmin: false },
         profile: { resourceType: "Practitioner", id: role },
@@ -649,8 +649,8 @@ test("reachability gate requires every ordinary-role allow and both front-desk d
   };
   const result = await verifyLegacyImportM2aReachability({
     baseUrl: "http://localhost:8103",
-    clinicianToken: "clinician",
-    frontDeskToken: "front-desk",
+    clinicianToken: "provider",
+    frontDeskToken: "staff",
     clinicianProfileReference: "Practitioner/clinician-1",
     frontDeskProfileReference: "Practitioner/front-desk-1",
     patientReference: "Patient/patient-1",
@@ -670,16 +670,16 @@ test("reachability gate requires every ordinary-role allow and both front-desk d
     "front_desk patient_read status=200",
     "front_desk coverage_read status=200",
     "front_desk encounter_read status=200",
-    "front_desk media_read_denied status=403",
-    "front_desk observation_read_denied status=403",
+    "front_desk media_read status=200",
+    "front_desk observation_read status=200",
   ]);
 
-  statuses.set("/fhir/R4/Media/media-1|front-desk", 200);
+  statuses.set("/fhir/R4/Media/media-1|staff", 403);
   await assert.rejects(
     verifyLegacyImportM2aReachability({
       baseUrl: "http://localhost:8103",
-      clinicianToken: "clinician",
-      frontDeskToken: "front-desk",
+      clinicianToken: "provider",
+      frontDeskToken: "staff",
       clinicianProfileReference: "Practitioner/clinician-1",
       frontDeskProfileReference: "Practitioner/front-desk-1",
       patientReference: "Patient/patient-1",
@@ -691,7 +691,7 @@ test("reachability gate requires every ordinary-role allow and both front-desk d
     }),
     (error: unknown) => {
       assert.ok(error instanceof ReachabilityVerificationError);
-      assert.equal(error.transcript.at(-1), "front_desk media_read_denied status=200");
+      assert.equal(error.transcript.at(-1), "front_desk media_read status=403");
       return true;
     },
   );
@@ -780,8 +780,8 @@ class GrantAdapter implements MigratedPatientAccessGrantAdapter {
     meta: { versionId: "1" },
   };
   readonly policies = new Map<string, AccessPolicy>([
-    ["clinician", policy("clinician-policy", "clinician")],
-    ["front-desk", policy("front-desk-policy", "front-desk")],
+    ["provider", policy("clinician-policy", "provider")],
+    ["staff", policy("front-desk-policy", "staff")],
   ]);
   readonly memberships = new Map<string, ProjectMembership>([
     ["clinician-1", membership(
@@ -805,7 +805,7 @@ class GrantAdapter implements MigratedPatientAccessGrantAdapter {
     return structuredClone(this.memberships.get(profileReference.split("/")[1]!)!);
   }
 
-  async resolvePolicy(role: "clinician" | "front-desk"): Promise<AccessPolicy> {
+  async resolvePolicy(role: "provider" | "staff"): Promise<AccessPolicy> {
     return structuredClone(this.policies.get(role)!);
   }
 
@@ -877,7 +877,7 @@ function nativePatient(id: string): Patient {
   };
 }
 
-function policy(id: string, role: "clinician" | "front-desk"): AccessPolicy {
+function policy(id: string, role: "provider" | "staff"): AccessPolicy {
   return {
     ...buildMedplumAccessPolicy(getRoleDeclaration(role)),
     id,

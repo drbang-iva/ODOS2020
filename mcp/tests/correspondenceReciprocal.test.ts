@@ -63,7 +63,7 @@ test("inbound and outbound ServiceRequest direction is explicit and never inferr
 test("inbound referral capture supports directory references and a free-text fallback at all three entry points", async () => {
   const fhir = new ReciprocalFhir();
   const service = new InboundReferralService(fhir, () => "2026-07-31T12:00:00.000Z");
-  for (const captureSource of ["front-desk", "fax", "chart"] as const) {
+  for (const captureSource of ["staff", "fax", "chart"] as const) {
     const created = await service.create({
       subjectReference: "Patient/p1",
       subjectDisplay: "Synthetic Patient",

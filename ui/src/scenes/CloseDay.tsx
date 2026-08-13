@@ -24,7 +24,7 @@ export function CloseDay({ roles, date, initialData }: {
   const [error, setError] = useState<string>();
   const [counted, setCounted] = useState<Record<PaymentTenderCode, string>>({ CASH: "", CHECK: "", CARD_MANUAL: "" });
   const [sealing, setSealing] = useState(false);
-  const canSeal = roles.includes("front-desk") || roles.includes("practice-admin");
+  const canSeal = roles.includes("admin");
 
   useEffect(() => {
     if (initialData) return;
@@ -61,7 +61,7 @@ export function CloseDay({ roles, date, initialData }: {
       <div><a href={`/desk/ledger${date ? `?${new URLSearchParams({ date })}` : ""}`}>← Day Ledger</a><p>Financials · close ceremony</p><h1>Close the Day</h1><span>{data?.date ?? date ?? "Today"}</span></div>
       <a className="odos-close-archive-link" href="/desk/ledger/archive">Archive</a>
     </header>
-    {!canSeal && <p className="odos-close-role-note">A Front Desk or Practice Admin staffer can seal a day.</p>}
+    {!canSeal && <p className="odos-close-role-note">An Admin / Manager can seal a day.</p>}
     {error && <p className="odos-close-error" role="alert">{error}</p>}
     {!data && !error && <p className="odos-close-loading">Preparing the day for review…</p>}
     {data && <div className="odos-close-steps">

@@ -11,7 +11,7 @@ class MemoryFhir {
   async create<T extends Observation | Provenance>(resource: T): Promise<T> { const saved = { ...resource, id: resource.id ?? `${resource.resourceType.toLowerCase()}-${this.resources.length + 1}` } as T; this.resources.push(saved); return saved; }
   async search<T extends Observation>(resourceType: T["resourceType"]): Promise<Bundle<T>> { return { resourceType: "Bundle", type: "searchset", entry: this.resources.filter((row) => row.resourceType === resourceType).map((resource) => ({ resource: resource as T })) }; }
 }
-function setup(role: PracticeRoleId = "clinician") { const fhir = new MemoryFhir(); const deps: EomEndpointDeps = { authenticate: async (header) => header === AUTH ? { staffReference: "Practitioner/doc", actorRole: role, fhir } : null, findingDefinitions: () => buildFindingDefinitionSeeds(), now: () => "2026-07-22T12:00:00.000Z" }; return { fhir, deps }; }
+function setup(role: PracticeRoleId = "provider") { const fhir = new MemoryFhir(); const deps: EomEndpointDeps = { authenticate: async (header) => header === AUTH ? { staffReference: "Practitioner/doc", actorRole: role, fhir } : null, findingDefinitions: () => buildFindingDefinitionSeeds(), now: () => "2026-07-22T12:00:00.000Z" }; return { fhir, deps }; }
 test("EOM normal and abnormal captures persist shared state, documentation, trigger components, and history", async () => {
   const { fhir, deps } = setup();
   const normal = await handleEomCaptureRequest(deps, { authHeader: AUTH, body: { patientReference: "Patient/p1", encounterReference: "Encounter/e1", state: "normal" } });
@@ -33,7 +33,7 @@ test("EOM normal and abnormal captures persist shared state, documentation, trig
 });
 test("EOM enforces auth, chart.write, and abnormal-detail boundaries", async () => {
   assert.equal((await handleEomCaptureRequest(setup().deps, { authHeader: undefined, body: {} })).status, 401);
-  assert.equal((await handleEomCaptureRequest(setup("front-desk").deps, { authHeader: AUTH, body: {} })).status, 403);
+  assert.equal((await handleEomCaptureRequest(setup("admin").deps, { authHeader: AUTH, body: {} })).status, 403);
   assert.equal((await handleEomCaptureRequest(setup().deps, { authHeader: AUTH, body: { patientReference: "Patient/p1", encounterReference: "Encounter/e1", state: "normal", diplopia: { present: false } } })).status, 400);
   assert.equal((await handleEomCaptureRequest(setup().deps, { authHeader: AUTH, body: { patientReference: "Patient/p1", encounterReference: "Encounter/e1", state: "abnormal", eyes: {}, nystagmus: { present: false }, diplopia: { present: false } } })).status, 400);
 });

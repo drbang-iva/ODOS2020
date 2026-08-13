@@ -68,18 +68,18 @@ test("consult reports use verified LOINC 11488-4 and link to their inbound Servi
 
 test("staff cannot sign or send clinical letters, but the configurable records-transfer default is staff-sendable", async () => {
   assert.throws(
-    () => assertCorrespondenceActionAllowed("front-desk", "sign", "consult-report", ["records-transfer"]),
+    () => assertCorrespondenceActionAllowed("staff", "sign", "consult-report", ["records-transfer"]),
     /provider/,
   );
   assert.throws(
-    () => assertCorrespondenceActionAllowed("front-desk", "send", "referral", ["records-transfer"]),
+    () => assertCorrespondenceActionAllowed("staff", "send", "referral", ["records-transfer"]),
     /provider/,
   );
   assert.doesNotThrow(
-    () => assertCorrespondenceActionAllowed("front-desk", "send", "records-transfer", ["records-transfer"]),
+    () => assertCorrespondenceActionAllowed("staff", "send", "records-transfer", ["records-transfer"]),
   );
   assert.doesNotThrow(
-    () => assertCorrespondenceActionAllowed("clinician", "send", "consult-report", ["records-transfer"]),
+    () => assertCorrespondenceActionAllowed("provider", "send", "consult-report", ["records-transfer"]),
   );
 
   const policy = await new CorrespondencePolicyStore(new EmptyBasicFhir()).read();
@@ -90,7 +90,7 @@ test("sign and send each produce a semantic AuditEvent tied to the document and 
   const signed = buildCorrespondenceAuditEvent({
     action: "sign",
     actorReference: "Practitioner/doctor-1",
-    actorRole: "clinician",
+    actorRole: "provider",
     patientReference: "Patient/p1",
     documentReference: "DocumentReference/d1",
     recordedAt: "2026-07-31T17:00:00.000Z",
@@ -98,7 +98,7 @@ test("sign and send each produce a semantic AuditEvent tied to the document and 
   const sent = buildCorrespondenceAuditEvent({
     action: "send",
     actorReference: "Practitioner/doctor-1",
-    actorRole: "clinician",
+    actorRole: "provider",
     patientReference: "Patient/p1",
     documentReference: "DocumentReference/d1",
     recordedAt: "2026-07-31T17:01:00.000Z",

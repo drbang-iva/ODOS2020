@@ -15,11 +15,11 @@ const membership: ProjectMembership = {
   user: { reference: "User/invitee" },
   profile: { reference: "Practitioner/invitee" },
 };
-const body = { email: "New.Staff@example.test", firstName: "New", lastName: "Staff", roleId: "front-desk" };
+const body = { email: "New.Staff@example.test", firstName: "New", lastName: "Staff", roleId: "staff" };
 
 test("staff invite preserves 401 unauthenticated and 403 wrong-role semantics", async () => {
   assert.equal((await handleStaffInviteRequest(deps({ authenticate: async () => null }), { authHeader: undefined, body })).status, 401);
-  assert.equal((await handleStaffInviteRequest(deps({ authenticate: async () => staff("clinician") }), { authHeader: "Bearer user", body })).status, 403);
+  assert.equal((await handleStaffInviteRequest(deps({ authenticate: async () => staff("provider") }), { authHeader: "Bearer user", body })).status, 403);
 });
 
 test("staff invite validates roleId and rejects caller-supplied policy references", () => {
@@ -58,7 +58,7 @@ test("invite response membership is granted directly and exactly one staff.invit
       calls.push("grant");
       grantedMembership = received;
       assert.equal(email, "new.staff@example.test");
-      assert.equal(roleId, "front-desk");
+      assert.equal(roleId, "staff");
     },
     recordAudit: async (row) => { calls.push("audit"); audits.push(row); },
   }), { authHeader: "Bearer admin", body });
@@ -94,7 +94,7 @@ test("grant failure returns the explicit invited-without-role half-state and rep
 function deps(overrides: Partial<StaffInviteDeps> = {}): StaffInviteDeps {
   return {
     authenticateService: async () => undefined,
-    authenticate: async () => staff("practice-admin"),
+    authenticate: async () => staff("admin"),
     invite: async () => membership,
     grantRole: async () => undefined,
     recordAudit: async () => undefined,
@@ -102,6 +102,6 @@ function deps(overrides: Partial<StaffInviteDeps> = {}): StaffInviteDeps {
   };
 }
 
-function staff(role: "practice-admin" | "clinician") {
+function staff(role: "admin" | "provider") {
   return { staffReference: "Practitioner/admin", roles: [role], projectId: "practice" };
 }

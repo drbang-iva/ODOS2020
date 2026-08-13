@@ -74,13 +74,13 @@ export async function verifyLegacyImportM2aReachability(
     request,
     input.baseUrl,
     input.clinicianToken,
-    "clinician",
+    "provider",
   );
   const frontDesk = await ordinarySessionContext(
     request,
     input.baseUrl,
     input.frontDeskToken,
-    "front-desk",
+    "staff",
   );
   if (clinician.projectId !== frontDesk.projectId) {
     throw new Error("Clinician and front-desk tokens must target the same practice project.");
@@ -176,16 +176,16 @@ export async function verifyLegacyImportM2aReachability(
     request,
     resourceUrl(input.baseUrl, "Media", mediaId),
     input.frontDeskToken,
-    403,
-    "front_desk media_read_denied",
+    200,
+    "front_desk media_read",
     transcript,
   );
   await expectStatus(
     request,
     resourceUrl(input.baseUrl, "Observation", observationId),
     input.frontDeskToken,
-    403,
-    "front_desk observation_read_denied",
+    200,
+    "front_desk observation_read",
     transcript,
   );
   return { transcript };

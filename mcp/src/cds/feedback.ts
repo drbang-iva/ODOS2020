@@ -80,7 +80,7 @@ export async function persistCdsFeedback(input: {
         eventType: item.outcome === "accepted" ? "cds.feedback.accepted" : "cds.feedback.overridden",
         eventTime: now.toISOString(),
         actorId: input.userId,
-        actorRole: "clinician",
+        actorRole: "provider",
         patientId: input.patientId,
         resourceType: "odos_cds_feedback",
         resourceId: row.feedbackId,

@@ -323,7 +323,7 @@ test("a persisted practice option drives capture validation through the runtime 
   const restartedStore = new FhirFindingDefinitionStore(fhir, seeds);
   const definitions = await restartedStore.list();
   const result = await handleRefractionCaptureRequest(
-    endpointDeps("clinician", definitions),
+    endpointDeps("provider", definitions),
     {
       authHeader: AUTH,
       body: {
@@ -451,7 +451,7 @@ test("a handler still receives working definitions when one stored row is garbag
   const { value: definitions, errors } = await captureConsoleErrors(
     () => new FhirFindingDefinitionStore(fhir, seeds).list(),
   );
-  const result = await handleRefractionCaptureRequest(endpointDeps("clinician", definitions), {
+  const result = await handleRefractionCaptureRequest(endpointDeps("provider", definitions), {
     authHeader: AUTH,
     body: {
       patientReference: "Patient/p1",

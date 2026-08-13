@@ -58,6 +58,7 @@ test("apply and transfer mutations are visible on the next patient payment fetch
 
 test("void eligibility is hidden outside the same-day window and the handler returns the backend reason", async () => {
   const fixture = setup({ now: "2026-07-11T12:00:00.000Z" });
+  fixture.setRole("admin");
   const [row] = rows(await list(fixture.deps));
   assert.equal(row.canVoid, false);
 
@@ -90,16 +91,16 @@ test("patient payment list requires a bounded patient and enforces payment.charg
     query: { patientReference: "Patient/patient-1", startDate: "2026-02-31" },
   })).status, 400);
 
-  fixture.setRole("clinician");
+  fixture.setRole(undefined);
   const forbidden = await handlePaymentReconciliationsRequest(fixture.deps, {
     authHeader: "Bearer good",
     query: { patientReference: "Patient/patient-1" },
   });
-  assert.deepEqual(forbidden, { status: 403, body: { error: "payment.charge role required" } });
+  assert.deepEqual(forbidden, { status: 403, body: { error: "billing-context.read role required" } });
 });
 
 function setup(options: { now?: string } = {}) {
-  let role: "front-desk" | "clinician" = "front-desk";
+  let role: "staff" | "provider" | "admin" | undefined = "staff";
   let payment = {
     ...buildPaymentReconciliation({
       outcome: "success",
@@ -159,7 +160,7 @@ function setup(options: { now?: string } = {}) {
   };
   const deps: PaymentCreditHandlerDeps = {
     authenticate: async (header) => header === "Bearer good"
-      ? { staffReference: "Practitioner/staff-1", actorRole: role, roles: [role], fhir: fhir as never }
+      ? { staffReference: "Practitioner/staff-1", actorRole: role ?? "admin", roles: role ? [role] : [], fhir: fhir as never }
       : null,
     lifecycleFhir: fhir,
     dispatch: createPaymentDispatch([{ method: "manual-cash" }]),
@@ -169,7 +170,7 @@ function setup(options: { now?: string } = {}) {
   return {
     deps,
     invoiceSearchCalls: () => invoiceSearchCalls,
-    setRole: (next: "front-desk" | "clinician") => { role = next; },
+    setRole: (next: "staff" | "provider" | "admin" | undefined) => { role = next; },
   };
 }
 

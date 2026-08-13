@@ -20,7 +20,7 @@ test("v0.55a SMART scope intersection stages high-risk reductions and issues app
         code_challenge_method: "S256",
         patient: "Patient/patient-1",
       },
-      { "X-ODOS-Role": "clinician", "X-ODOS-Actor-Id": "practitioner-1" },
+      { "X-ODOS-Role": "provider", "X-ODOS-Actor-Id": "practitioner-1" },
     );
     assert.equal(staged.status, 202);
     const stagedJson = await staged.json() as { decision_id: string };
@@ -30,7 +30,7 @@ test("v0.55a SMART scope intersection stages high-risk reductions and issues app
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-ODOS-Role": "practice-admin",
+        "X-ODOS-Role": "admin",
         "X-ODOS-Actor-Id": "admin-1",
       },
       body: JSON.stringify({ approved_scopes: ["patient/Observation.rs"] }),

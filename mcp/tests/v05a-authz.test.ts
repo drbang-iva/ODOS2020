@@ -33,42 +33,38 @@ import {
 import { createMedplumClient } from "../src/fhir-client.js";
 import { TEST_FHIR_AUDIT_CONTEXT, TEST_FHIR_AUDIT_RECORDER } from "./fhirAuditTestStub.js";
 
-test("v0.5a role registry defines the five practice-scoped roles", () => {
-  assert.deepEqual(PRACTICE_ROLE_IDS, [
-    "practice-admin",
-    "clinician",
-    "front-desk",
-    "auditor",
-    "aesthetics-provider",
-  ]);
+test("the practice role registry defines only Provider, Staff, and Admin", () => {
+  assert.deepEqual(PRACTICE_ROLE_IDS, ["provider", "staff", "admin"]);
   for (const roleId of PRACTICE_ROLE_IDS) {
     assert.equal(getRoleDeclaration(roleId).id, roleId);
   }
 });
 
 test("AccessPolicy generator emits Medplum interactions, criteria, and writeConstraint without business-action leakage", () => {
-  const policy = buildMedplumAccessPolicy(getRoleDeclaration("clinician"));
+  const policy = buildMedplumAccessPolicy(getRoleDeclaration("provider"));
 
   assert.equal(policy.resourceType, "AccessPolicy");
   assert.ok(accessPolicyHasNoBusinessActionVocabulary(policy));
   assert.equal(JSON.stringify(policy).includes("readonly"), false);
 
-  const patientRule = policy.resource?.find((rule) => rule.resourceType === "Patient");
+  const patientRule = policy.resource?.find((rule) =>
+    rule.resourceType === "Patient" && !rule.interaction?.includes("update"));
   assert.deepEqual(patientRule?.interaction, ["read", "search", "history", "vread"]);
-  assert.equal(patientRule?.criteria, "Patient?general-practitioner=%provider_profile");
+  assert.equal(patientRule?.criteria, undefined);
 
-  const observationRule = policy.resource?.find((rule) => rule.resourceType === "Observation");
+  const observationRule = policy.resource?.find((rule) =>
+    rule.resourceType === "Observation" && rule.interaction?.includes("update"));
   assert.ok(observationRule?.interaction?.includes("create"));
   assert.equal(observationRule?.criteria, "Observation?_compartment=%patient_compartment");
   assert.equal(observationRule?.writeConstraint?.[0]?.language, "text/fhirpath");
   assert.match(observationRule?.writeConstraint?.[0]?.expression ?? "", /%before\.status != 'final'/);
 
   const medicationAdministrationRule = policy.resource?.find(
-    (rule) => rule.resourceType === "MedicationAdministration",
+    (rule) => rule.resourceType === "MedicationAdministration" && rule.interaction?.includes("update"),
   );
   assert.deepEqual(
     medicationAdministrationRule?.interaction,
-    ["create", "read", "update", "search", "history", "vread"],
+    ["create", "update"],
   );
   assert.equal(
     medicationAdministrationRule?.criteria,
@@ -76,40 +72,37 @@ test("AccessPolicy generator emits Medplum interactions, criteria, and writeCons
   );
 });
 
-test("protocol authoring is limited to clinician and practice-admin with code-fenced Basic grants", () => {
-  for (const roleId of ["clinician", "practice-admin"] as const) {
+test("protocol authoring is limited to Provider and Admin with code-fenced Basic grants", () => {
+  for (const roleId of ["provider", "admin"] as const) {
     assert.doesNotThrow(() => assertBusinessActionAllowed(roleId, "protocols.author"));
   }
-  for (const roleId of ["front-desk", "auditor", "aesthetics-provider"] as const) {
-    assert.throws(
-      () => assertBusinessActionAllowed(roleId, "protocols.author"),
-      /lacks business action protocols\.author/,
-    );
-  }
+  assert.throws(() => assertBusinessActionAllowed("staff", "protocols.author"), /lacks business action/);
 
-  const clinician = buildMedplumAccessPolicy(getRoleDeclaration("clinician"));
+  const clinician = buildMedplumAccessPolicy(getRoleDeclaration("provider"));
   const definitionRule = clinician.resource?.find(
     (rule) =>
       rule.resourceType === "Basic" &&
-      rule.criteria?.endsWith("|odos-protocol-definition"),
+      rule.criteria?.endsWith("|odos-protocol-definition") &&
+      rule.interaction?.includes("update"),
   );
   const snapshotRule = clinician.resource?.find(
     (rule) =>
       rule.resourceType === "Basic" &&
-      rule.criteria?.endsWith("|odos-protocol-definition-snapshot"),
+      rule.criteria?.endsWith("|odos-protocol-definition-snapshot") &&
+      rule.interaction?.includes("create"),
   );
   assert.deepEqual(
     definitionRule?.interaction,
-    ["create", "read", "update", "search", "history", "vread"],
+    ["create", "update"],
   );
   assert.deepEqual(
     snapshotRule?.interaction,
-    ["create", "read", "search", "history", "vread"],
+    ["create"],
   );
   assert.equal(definitionRule?.interaction?.includes("delete"), false);
   assert.equal(snapshotRule?.interaction?.includes("update"), false);
 
-  for (const roleId of ["front-desk", "auditor", "aesthetics-provider"] as const) {
+  for (const roleId of ["staff"] as const) {
     const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
     const protocolRules = policy.resource?.filter(
       (rule) =>
@@ -126,13 +119,14 @@ test("protocol authoring is limited to clinician and practice-admin with code-fe
 // --- v0.6c payments authorization model: front-desk dispensary grants (decision 2026-07-05 §2) ---
 
 test("front-desk can create the dispensary order + financial resources at practice scope", () => {
-  const policy = buildMedplumAccessPolicy(getRoleDeclaration("front-desk"));
-  const rule = (resourceType: string) => policy.resource?.find((r) => r.resourceType === resourceType);
+  const policy = buildMedplumAccessPolicy(getRoleDeclaration("staff"));
+  const rule = (resourceType: string) => policy.resource?.find((r) =>
+    r.resourceType === resourceType && r.interaction?.includes("create"));
 
   // order resources: create + read, practice scope (no compartment criteria — walk-up counter)
   for (const resourceType of ["DeviceRequest", "ChargeItem"]) {
     const r = rule(resourceType);
-    assert.deepEqual(r?.interaction, ["create", "read", "search", "history", "vread"], resourceType);
+    assert.deepEqual(r?.interaction, ["create"], resourceType);
     assert.equal(r?.criteria, undefined, `${resourceType} is practice-scoped`);
   }
 
@@ -146,47 +140,46 @@ test("front-desk can create the dispensary order + financial resources at practi
 });
 
 test("front-desk cannot update or delete PaymentReconciliation outside the guarded Phase 6a handlers", () => {
-  const policy = buildMedplumAccessPolicy(getRoleDeclaration("front-desk"));
-  const pr = policy.resource?.find((r) => r.resourceType === "PaymentReconciliation");
-  assert.deepEqual(pr?.interaction, ["create", "read", "search", "history", "vread"]);
+  const policy = buildMedplumAccessPolicy(getRoleDeclaration("staff"));
+  const pr = policy.resource?.find((r) =>
+    r.resourceType === "PaymentReconciliation" && r.interaction?.includes("create"));
+  assert.deepEqual(pr?.interaction, ["create"]);
   assert.equal(pr?.interaction?.includes("update"), false);
   assert.equal(pr?.interaction?.includes("delete"), false);
   assert.equal(pr?.criteria, undefined);
 });
 
-test("non-billing roles get no PaymentReconciliation grant (clinician, auditor)", () => {
-  for (const roleId of ["clinician", "auditor"] as const) {
+test("every role can read payments while only custody roles can create them", () => {
+  for (const roleId of PRACTICE_ROLE_IDS) {
     const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
-    assert.equal(
-      policy.resource?.some((r) => r.resourceType === "PaymentReconciliation"),
-      false,
-      roleId,
-    );
+    assert.ok(policy.resource?.some((r) =>
+      r.resourceType === "PaymentReconciliation" && r.interaction?.includes("search")), roleId);
+    assert.equal(policy.resource?.some((r) =>
+      r.resourceType === "PaymentReconciliation" && r.interaction?.includes("create")), roleId !== "admin", roleId);
   }
 });
 
 test("compiled front-desk and practice-admin AccessPolicies grant payer Organization directory operations", () => {
-  const frontDeskPolicy = buildMedplumAccessPolicy(getRoleDeclaration("front-desk"));
+  const frontDeskPolicy = buildMedplumAccessPolicy(getRoleDeclaration("staff"));
   const organizationRule = frontDeskPolicy.resource?.find(
-    (rule) => rule.resourceType === "Organization",
+    (rule) => rule.resourceType === "Organization" && rule.interaction?.includes("create"),
   );
   assert.deepEqual(
     organizationRule?.interaction,
-    ["create", "read", "search", "history", "vread"],
+    ["create"],
   );
   assert.equal(organizationRule?.criteria, undefined);
   assert.equal(organizationRule?.interaction?.includes("update"), false);
   assert.equal(organizationRule?.interaction?.includes("delete"), false);
 
-  const adminPolicy = buildMedplumAccessPolicy(getRoleDeclaration("practice-admin"));
-  const wildcardRule = adminPolicy.resource?.find((rule) => rule.resourceType === "*");
-  for (const interaction of ["create", "read", "search"] as const) {
-    assert.ok(wildcardRule?.interaction?.includes(interaction), `practice-admin needs ${interaction}`);
-  }
+  const adminPolicy = buildMedplumAccessPolicy(getRoleDeclaration("admin"));
+  assert.equal(adminPolicy.resource?.some((rule) => rule.resourceType === "*"), false);
+  assert.ok(adminPolicy.resource?.some((rule) =>
+    rule.resourceType === "Organization" && rule.interaction?.includes("search")));
 });
 
 test("every role's AccessPolicy carries a machine-readable practice-role identifier (resolver anchor)", () => {
-  for (const roleId of ["front-desk", "practice-admin", "clinician", "auditor", "aesthetics-provider"] as const) {
+  for (const roleId of PRACTICE_ROLE_IDS) {
     const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
     const tag = policy.meta?.tag?.find(
       (t) => t.system === "https://odos2020.com/fhir/NamingSystem/practice-role",
@@ -218,7 +211,7 @@ test("ProjectMembership access builder emits parameterized provider, patient, an
 test("aesthetics-provider state scoping rejects out-of-state or out-of-scope procedures", () => {
   assert.doesNotThrow(() =>
     assertAestheticsProviderScope({
-      roleId: "aesthetics-provider",
+      roleId: "provider",
       licensedStates: ["TX", "OK"],
       requestedState: "tx",
       procedureType: "injectables",
@@ -229,7 +222,7 @@ test("aesthetics-provider state scoping rejects out-of-state or out-of-scope pro
   assert.throws(
     () =>
       assertAestheticsProviderScope({
-        roleId: "aesthetics-provider",
+        roleId: "provider",
         licensedStates: ["TX"],
         requestedState: "CA",
       }),
@@ -239,7 +232,7 @@ test("aesthetics-provider state scoping rejects out-of-state or out-of-scope pro
   assert.throws(
     () =>
       assertAestheticsProviderScope({
-        roleId: "aesthetics-provider",
+        roleId: "provider",
         licensedStates: ["TX"],
         requestedState: "TX",
         procedureType: "laser",
@@ -321,14 +314,14 @@ test("ProjectMembership lifecycle transitions emit audit rows and placeholder Au
       membership,
       action,
       actorReference: "Practitioner/admin",
-      actorRole: "practice-admin",
+      actorRole: "admin",
       occurredAt: `2026-04-29T12:0${PROJECT_MEMBERSHIP_LIFECYCLE_STATES.indexOf(resultState(action))}:00.000Z`,
     });
     membership = result.membership;
     assert.equal(getProjectMembershipLifecycleState(membership), resultState(action));
     assert.equal(result.auditRow.actionOutcome, "granted");
     assert.equal(result.auditEvent.resourceType, "AuditEvent");
-    assert.equal(result.auditEvent.agent[0].role?.[0]?.coding?.[0]?.code, "practice-admin");
+    assert.equal(result.auditEvent.agent[0].role?.[0]?.coding?.[0]?.code, "admin");
   }
 });
 
@@ -336,12 +329,12 @@ test("ProjectMembership role review preserves state and emits a review audit row
   const active = transitionProjectMembershipLifecycle({
     membership: membershipFixture(),
     action: "activate",
-    actorRole: "practice-admin",
+    actorRole: "admin",
   }).membership;
   const review = transitionProjectMembershipLifecycle({
     membership: active,
     action: "role-review",
-    actorRole: "practice-admin",
+    actorRole: "admin",
     reviewNote: "Quarterly access review complete.",
   });
 
@@ -354,7 +347,7 @@ test("break-glass requires human reason, creates time-limited access, and flags 
   const result = invokeBreakGlass({
     actorReference: "Practitioner/doctor-1",
     actorDisplay: "Dr. Example",
-    actorRole: "clinician",
+    actorRole: "provider",
     patientReference: "Patient/emergency-1",
     reason: "Emergency on-call care.",
     requestedAt: "2026-04-29T12:00:00.000Z",
@@ -380,7 +373,7 @@ test("break-glass rejects agent self-attestation and blank reason", () => {
   assert.throws(
     () =>
       invokeBreakGlass({
-        actorRole: "clinician",
+        actorRole: "provider",
         patientReference: "Patient/emergency-1",
         reason: "Agent-generated reason",
         source: "agent",
@@ -391,7 +384,7 @@ test("break-glass rejects agent self-attestation and blank reason", () => {
   assert.throws(
     () =>
       invokeBreakGlass({
-        actorRole: "clinician",
+        actorRole: "provider",
         patientReference: "Patient/emergency-1",
         reason: " ",
         source: "human-ui",
@@ -411,7 +404,7 @@ test("AccessPolicy generator POST round-trip is accepted by Medplum when integra
   }
 
   const { fhir } = await createAuthenticatedFhirClient({ baseUrl, email, password });
-  const policy = buildMedplumAccessPolicy(getRoleDeclaration("auditor"));
+  const policy = buildMedplumAccessPolicy(getRoleDeclaration("admin"));
   policy.name = `ODOS v0.5a Auditor Roundtrip ${Date.now()}`;
   const created = await fhir.create<AccessPolicy>(policy);
 
@@ -448,7 +441,7 @@ test(
     assert.ok(projectId, "Could not resolve project id from /auth/me — admin user has no project membership.");
 
     // 2. Generate a fresh auditor AccessPolicy from the v0.5a generator and POST it as the admin.
-    const policy = buildMedplumAccessPolicy(getRoleDeclaration("auditor"));
+    const policy = buildMedplumAccessPolicy(getRoleDeclaration("admin"));
     policy.name = `ODOS v0.5a Auditor Enforcement ${Date.now()}`;
     const createdPolicy = await fhir.create<AccessPolicy>(policy);
     assert.ok(createdPolicy.id, "AccessPolicy create did not return an id.");

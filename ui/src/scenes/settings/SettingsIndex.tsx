@@ -288,7 +288,7 @@ function filterSettingsGroups(
   const terms = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
   return groups
     .map((group) => {
-      const permitted = group.links.filter((link) => !link.practiceAdminOnly || roles.includes("practice-admin"));
+      const permitted = group.links.filter((link) => !link.practiceAdminOnly || roles.includes("admin"));
       if (terms.length === 0) return { ...group, links: permitted };
       const links = permitted.filter((link) => {
         const haystack = [

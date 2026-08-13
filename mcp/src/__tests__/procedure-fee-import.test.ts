@@ -605,7 +605,7 @@ test("preview inspect and propose are practice-admin only and perform zero FHIR 
   // Removing role enforcement or calling the write-seeding schedule list must make this test red.
   const fhir = new CountingFhir();
   const csvText = "Service,Group,Route\nSynthetic preview service,Procedure,Insurance\n";
-  const depsFor = (role: "practice-admin" | "clinician" | null) => ({
+  const depsFor = (role: "admin" | "provider" | null) => ({
     authenticate: async () => role ? {
       staffReference: "Practitioner/synthetic",
       actorRole: role,
@@ -616,16 +616,16 @@ test("preview inspect and propose are practice-admin only and perform zero FHIR 
     authHeader: undefined,
     body: { action: "inspect", csvText },
   })).status, 401);
-  assert.equal((await handleProcedureFeeImportPreviewRequest(depsFor("clinician"), {
+  assert.equal((await handleProcedureFeeImportPreviewRequest(depsFor("provider"), {
     authHeader: "Bearer clinician",
     body: { action: "inspect", csvText },
   })).status, 403);
-  const inspected = await handleProcedureFeeImportPreviewRequest(depsFor("practice-admin"), {
+  const inspected = await handleProcedureFeeImportPreviewRequest(depsFor("admin"), {
     authHeader: "Bearer admin",
     body: { action: "inspect", csvText },
   });
   assert.equal(inspected.status, 200);
-  const proposed = await handleProcedureFeeImportPreviewRequest(depsFor("practice-admin"), {
+  const proposed = await handleProcedureFeeImportPreviewRequest(depsFor("admin"), {
     authHeader: "Bearer admin",
     body: {
       action: "propose",
@@ -810,7 +810,7 @@ test("commit endpoint rejects malformed batches before writes and returns row ou
   assert.equal(unauthenticated.status, 401);
   const forbidden = await handleProcedureFeeImportCommitRequest({ authenticate: async () => ({
     staffReference: "Practitioner/clinician",
-    actorRole: "clinician" as const,
+    actorRole: "provider" as const,
     fhir,
   }) }, {
     authHeader: "Bearer clinician",
@@ -820,7 +820,7 @@ test("commit endpoint rejects malformed batches before writes and returns row ou
   const deps = {
     authenticate: async () => ({
       staffReference: "Practitioner/admin",
-      actorRole: "practice-admin" as const,
+      actorRole: "admin" as const,
       fhir,
     }),
   };

@@ -17,7 +17,7 @@ const DEFAULT_BASE_URL = "http://localhost:8103";
 const DEFAULT_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5433/medplum";
 const ADMIN_EMAIL = "admin@odos.local";
 const CLINICIAN_EMAIL = "clinician@odos.local";
-const ADMIN_ROLES_TO_STRIP = new Set<PracticeRoleId>(["front-desk", "practice-admin", "clinician"]);
+const ADMIN_ROLES_TO_STRIP = new Set<PracticeRoleId>(["staff", "admin", "provider"]);
 
 export interface CleanupMembershipResult {
   membershipId: string;

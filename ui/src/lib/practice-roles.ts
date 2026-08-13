@@ -1,29 +1,17 @@
 import { fhir } from "./fhir";
 
-export const PRACTICE_ROLE_IDS = [
-  "practice-admin",
-  "clinician",
-  "front-desk",
-  "auditor",
-  "aesthetics-provider",
-] as const;
+export const PRACTICE_ROLE_IDS = ["provider", "staff", "admin"] as const;
 
 export type PracticeRoleId = (typeof PRACTICE_ROLE_IDS)[number];
 export const PRACTICE_ROLE_LABELS: Record<PracticeRoleId, string> = {
-  "practice-admin": "Practice admin",
-  clinician: "Clinician",
-  "front-desk": "Front desk",
-  auditor: "Auditor",
-  "aesthetics-provider": "Aesthetics provider",
+  provider: "Provider",
+  staff: "Staff",
+  admin: "Admin / Manager",
 };
 export interface WhoAmIResponse { roles: PracticeRoleId[] }
 
 export function canStartAppointmentChart(roles: readonly PracticeRoleId[]): boolean {
-  return roles.includes("practice-admin")
-    || (
-      roles.includes("front-desk")
-      && (roles.includes("clinician") || roles.includes("aesthetics-provider"))
-    );
+  return roles.includes("provider");
 }
 
 let sessionRequest: { authorization: string; promise: Promise<WhoAmIResponse> } | undefined;

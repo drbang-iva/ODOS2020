@@ -54,7 +54,7 @@ async function handleDefinitions(deps: CommercialEngineRouteDeps, req: Request):
 async function handleSaveDefinition(deps: CommercialEngineRouteDeps, req: Request): Promise<ChargeHandlerResult> {
   const staff = await authenticated(deps, req);
   if (!staff) return unauthorized();
-  if (!staff.roles?.includes("practice-admin")) return forbidden("Practice-admin role required.");
+  if (!staff.roles?.includes("admin")) return forbidden("Practice-admin role required.");
   const draft = definitionDraft(req.body);
   return { status: 200, body: { definition: await deps.store.saveDefinition(draft) } };
 }
@@ -62,7 +62,7 @@ async function handleSaveDefinition(deps: CommercialEngineRouteDeps, req: Reques
 async function handleArchiveDefinition(deps: CommercialEngineRouteDeps, req: Request): Promise<ChargeHandlerResult> {
   const staff = await authenticated(deps, req);
   if (!staff) return unauthorized();
-  if (!staff.roles?.includes("practice-admin")) return forbidden("Practice-admin role required.");
+  if (!staff.roles?.includes("admin")) return forbidden("Practice-admin role required.");
   const id = typeof req.params.id === "string" ? req.params.id : "";
   const definition = await deps.store.archiveDefinition(id);
   return definition ? { status: 200, body: { definition } } : { status: 404, body: { error: "Package definition not found." } };
@@ -141,7 +141,7 @@ async function handlePrepareCreditBankDeposit(
   if ("status" in staff) return staff;
   const body = record(req.body);
   const bonusCents = optionalNumber(body.bonusCents, "bonusCents") ?? 0;
-  if (bonusCents > 0 && !staff.roles?.includes("practice-admin")) {
+  if (bonusCents > 0 && !staff.roles?.includes("admin")) {
     return forbidden("Practice-admin role required for promotional bonus credit.");
   }
   const invoice = await prepareCreditBankDeposit(deps, staff.fhir, {
@@ -165,7 +165,7 @@ async function handleFinalizeCreditBankDeposit(
     patientReference: requiredString(body.patientReference, "patientReference"),
     invoiceReference: requiredString(body.invoiceReference, "invoiceReference"),
     staffReference: staff.staffReference,
-    allowBonus: Boolean(staff.roles?.includes("practice-admin")),
+    allowBonus: Boolean(staff.roles?.includes("admin")),
   });
   return { status: 200, body: { creditBank } };
 }
@@ -229,7 +229,7 @@ async function practiceAdmin(
 ): Promise<AuthenticatedStaff | ChargeHandlerResult> {
   const staff = await authenticated(deps, req);
   if (!staff) return unauthorized();
-  if (!staff.roles?.includes("practice-admin")) return forbidden("Practice-admin role required.");
+  if (!staff.roles?.includes("admin")) return forbidden("Practice-admin role required.");
   return staff;
 }
 

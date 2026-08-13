@@ -78,7 +78,7 @@ export function officeActingRole(
   roles: readonly PracticeRoleId[],
   side: "desk" | "clinic",
 ): PracticeRoleId | undefined {
-  const role = side === "desk" ? "front-desk" : "clinician";
+  const role = side === "desk" ? "staff" : "provider";
   return roles.includes(role) ? role : undefined;
 }
 

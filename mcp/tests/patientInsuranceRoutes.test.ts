@@ -30,8 +30,8 @@ test("all four patient-insurance HTTP routes reach their handlers", async () => 
       resourceId: row.resourceId,
       actionOutcome: row.actionOutcome,
     })), [
-      { eventType: "coverage.write", actorId: "staff-1", actorRole: "front-desk", patientId: "patient-1", resourceType: "Coverage", resourceId: "coverage-created", actionOutcome: "granted" },
-      { eventType: "benefits.manual-entry", actorId: "staff-1", actorRole: "front-desk", patientId: "patient-1", resourceType: "CoverageEligibilityResponse", resourceId: "benefits-created", actionOutcome: "granted" },
+      { eventType: "coverage.write", actorId: "staff-1", actorRole: "staff", patientId: "patient-1", resourceType: "Coverage", resourceId: "coverage-created", actionOutcome: "granted" },
+      { eventType: "benefits.manual-entry", actorId: "staff-1", actorRole: "staff", patientId: "patient-1", resourceType: "CoverageEligibilityResponse", resourceId: "benefits-created", actionOutcome: "granted" },
     ]);
   } finally {
     await fixture.close();
@@ -69,7 +69,7 @@ test("patient-insurance uses a granting role from a clinician-primary multi-role
       { bundle: coverageBundle() },
     );
     assert.equal(response.status, 200);
-    assert.equal(fixture.audits()[0].actorRole, "practice-admin");
+    assert.equal(fixture.audits()[0].actorRole, "staff");
   } finally {
     await fixture.close();
   }
@@ -138,14 +138,14 @@ async function server(conflict = false) {
   app.use(express.json());
   registerPatientInsuranceRoutes(app, async () => { serviceAuthCalls += 1; }, {
     authenticate: async (header) => header === "Bearer good"
-      ? { staffReference: "Practitioner/staff-1", actorRole: "front-desk", roles: ["front-desk"], fhir }
+      ? { staffReference: "Practitioner/staff-1", actorRole: "staff", roles: ["staff"], fhir }
       : header === "Bearer forbidden"
-        ? { staffReference: "Practitioner/staff-2", actorRole: "clinician", roles: ["clinician"], fhir }
+        ? { staffReference: "Practitioner/staff-2", actorRole: "provider", roles: ["provider"], fhir }
         : header === "Bearer owner"
           ? {
               staffReference: "Practitioner/owner",
-              actorRole: "clinician",
-              roles: ["clinician", "front-desk", "practice-admin"],
+              actorRole: "provider",
+              roles: ["provider", "staff", "admin"],
               fhir,
             }
         : null,

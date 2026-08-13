@@ -54,7 +54,7 @@ export async function handleStaffInviteRequest(
 ): Promise<StaffInviteResult> {
   const staff = await deps.authenticate(request.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required." } };
-  if (!staff.roles.includes("practice-admin")) {
+  if (!staff.roles.includes("admin")) {
     return { status: 403, body: { error: "practice-admin role required" } };
   }
 
@@ -93,7 +93,7 @@ export async function handleStaffInviteRequest(
   await deps.recordAudit(buildOdosAuditEventRow({
     eventType: "staff.invite",
     actorReference: staff.staffReference,
-    actorRole: "practice-admin",
+    actorRole: "admin",
     targetReference: membership.id ? `ProjectMembership/${membership.id}` : undefined,
     resourceType: "ProjectMembership",
     resourceId: membership.id,

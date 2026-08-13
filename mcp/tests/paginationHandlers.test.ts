@@ -276,7 +276,7 @@ function pagedFhir(resolvePages: PageResolver, canFollow = true) {
 
 function claimsDeps(fhir: ReturnType<typeof pagedFhir>, adapter: ClaimMdAdapter | null = null): ClaimsHandlerDeps {
   return {
-    authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk", fhir }),
+    authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "staff", fhir }),
     adapter,
     recordAudit: async () => undefined,
     now: () => "2026-07-10T12:00:00.000Z",
@@ -287,8 +287,8 @@ function insuranceDeps(fhir: ReturnType<typeof pagedFhir>): PatientInsuranceHand
   return {
     authenticate: async () => ({
       staffReference: "Practitioner/staff-1",
-      actorRole: "front-desk",
-      roles: ["front-desk"],
+      actorRole: "staff",
+      roles: ["staff"],
       fhir,
     }),
     recordAudit: async () => undefined,

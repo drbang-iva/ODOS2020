@@ -20,7 +20,7 @@ const BODY = {
 };
 
 function deps(
-  role: PracticeRoleId = "clinician",
+  role: PracticeRoleId = "provider",
   findingDefinitions?: PretestEndpointDeps["findingDefinitions"],
 ) {
   const created: Array<{ resource: Observation | Provenance; headers?: Record<string, string> }> = [];
@@ -103,18 +103,18 @@ test("pretest definition endpoints expose practice-editable Wearing and Auto-K o
   assert.equal(autoBody.definitions.autoKeratometry?.fields.flatK.precision, 2);
 });
 
-test("all four pretest handlers enforce authentication and chart permissions", async () => {
+test("all four pretest handlers enforce authentication, practice-wide reads, and read-only Admin", async () => {
   const definitionHandlers = [handleWearingDefinitionRequest, handleAutoRefractionDefinitionRequest];
   for (const handler of definitionHandlers) {
     assert.equal((await handler(deps().deps, { authHeader: undefined })).status, 401);
-    assert.equal((await handler(deps("auditor").deps, { authHeader: AUTH })).status, 403);
+    assert.equal((await handler(deps("admin").deps, { authHeader: AUTH })).status, 200);
   }
 
   assert.equal((await handleWearingCaptureRequest(deps().deps, {
     authHeader: undefined,
     body: wearingBody(),
   })).status, 401);
-  assert.equal((await handleWearingCaptureRequest(deps("front-desk").deps, {
+  assert.equal((await handleWearingCaptureRequest(deps("admin").deps, {
     authHeader: AUTH,
     body: wearingBody(),
   })).status, 403);
@@ -122,7 +122,7 @@ test("all four pretest handlers enforce authentication and chart permissions", a
     authHeader: undefined,
     body: autoBody(),
   })).status, 401);
-  assert.equal((await handleAutoRefractionCaptureRequest(deps("front-desk").deps, {
+  assert.equal((await handleAutoRefractionCaptureRequest(deps("admin").deps, {
     authHeader: AUTH,
     body: autoBody(),
   })).status, 403);
@@ -374,7 +374,7 @@ test("Wearing accepts a practice-edited eyeglass-type definition list", async ()
   const eyeglassType = fields.eyeglassType;
   assert.ok(eyeglassType);
   eyeglassType.options = [{ code: "sports", display: "Sports", active: true }];
-  const res = await handleWearingCaptureRequest(deps("clinician", () => definitions).deps, {
+  const res = await handleWearingCaptureRequest(deps("provider", () => definitions).deps, {
     authHeader: AUTH,
     body: { ...BODY, pairs: [{ eyeglassType: "sports", OD: { sphere: 0 } }] },
   });

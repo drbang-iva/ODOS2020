@@ -122,7 +122,7 @@ export async function authorizationCode(server: SmartTestServer, scope = "patien
       code_challenge_method: "S256",
       patient: "Patient/patient-1",
     },
-    { "X-ODOS-Role": "clinician", "X-ODOS-Actor-Id": "practitioner-1" },
+    { "X-ODOS-Role": "provider", "X-ODOS-Actor-Id": "practitioner-1" },
   );
   const location = response.headers.get("location");
   if (!location) {

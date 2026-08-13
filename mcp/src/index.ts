@@ -2900,7 +2900,7 @@ function createServer(): Server {
             const auditRow = buildClinicalWriteAuditRow({
               eventType: "update",
               actorId: input.clinician_id,
-              actorRole: "clinician",
+              actorRole: "provider",
               observation,
               provenanceId: transaction.provenance.id,
               policyUrl: ODOS_CLINICAL_ATTESTATION_POLICY_URL,
@@ -2922,7 +2922,7 @@ function createServer(): Server {
               .recordDenied(
                 buildRejectedClinicalWriteAuditRow({
                   actorId: input.clinician_id,
-                  actorRole: "clinician",
+                  actorRole: "provider",
                   observation,
                   actionReason: `attestation failed: ${error instanceof Error ? error.message : String(error)}`,
                   policyUrl: ODOS_CLINICAL_ATTESTATION_POLICY_URL,
@@ -2959,7 +2959,7 @@ function createServer(): Server {
             const auditRow = buildClinicalWriteAuditRow({
               eventType: "update",
               actorId: input.clinician_id,
-              actorRole: "clinician",
+              actorRole: "provider",
               observation,
               provenanceId: transaction.provenance.id,
               policyUrl: ODOS_CLINICAL_AMENDMENT_POLICY_URL,
@@ -2978,7 +2978,7 @@ function createServer(): Server {
               .recordDenied(
                 buildRejectedClinicalWriteAuditRow({
                   actorId: input.clinician_id,
-                  actorRole: "clinician",
+                  actorRole: "provider",
                   observation,
                   actionReason: `amendment failed: ${error instanceof Error ? error.message : String(error)}`,
                   policyUrl: ODOS_CLINICAL_AMENDMENT_POLICY_URL,
@@ -3008,7 +3008,7 @@ function createServer(): Server {
             const auditRow = buildClinicalWriteAuditRow({
               eventType: "update",
               actorId: input.clinician_id,
-              actorRole: "clinician",
+              actorRole: "provider",
               observation: transaction.observation,
               provenanceId: transaction.provenance.id,
               policyUrl: ODOS_CLINICAL_AMENDMENT_POLICY_URL,
@@ -3030,7 +3030,7 @@ function createServer(): Server {
               .recordDenied(
                 buildRejectedClinicalWriteAuditRow({
                   actorId: input.clinician_id,
-                  actorRole: "clinician",
+                  actorRole: "provider",
                   observation: sourceObservation,
                   actionReason: `append failed: ${error instanceof Error ? error.message : String(error)}`,
                   policyUrl: ODOS_CLINICAL_AMENDMENT_POLICY_URL,
@@ -6879,7 +6879,7 @@ async function startMcpServer(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleProtocolSignCleanupRequest(
-            { authenticate: authenticateStaffRouteForAction("chart.write"), feeScheduleFhir: fhir },
+            { authenticate: authenticateStaffRouteForAction("clinical.sign"), feeScheduleFhir: fhir },
             { authHeader: req.header("authorization"), params: req.params },
           );
           res.status(result.status).json(result.body);

@@ -20,7 +20,7 @@ const BODY = {
 };
 
 function deps(
-  role: PracticeRoleId = "clinician",
+  role: PracticeRoleId = "provider",
   findingDefinitions?: CupDiscEndpointDeps["findingDefinitions"],
 ) {
   const created: Array<{ resource: Observation | Provenance; headers?: Record<string, string> }> = [];
@@ -66,7 +66,7 @@ test("cup/disc read ignores newer entered-in-error and cancelled values per eye"
   ];
   const result = await handleCupDiscReadRequest({
     authenticate: async () => ({
-      staffReference: "Practitioner/doc1", actorRole: "clinician",
+      staffReference: "Practitioner/doc1", actorRole: "provider",
       fhir: {
         search: async <T extends Observation>(): Promise<Bundle<T>> => ({
           resourceType: "Bundle", type: "searchset", entry: observations.map((resource) => ({ resource: resource as T })),
@@ -231,7 +231,7 @@ test("cup/disc capture validates against a practice-edited runtime definition", 
     display: "Practice custom",
     active: true,
   });
-  const { deps: d } = deps("clinician", () => [edited]);
+  const { deps: d } = deps("provider", () => [edited]);
 
   const result = await handleCupDiscCaptureRequest(d, {
     authHeader: AUTH,
@@ -256,7 +256,7 @@ test("cup/disc endpoint rejects unauthenticated and non-chart-write saves", asyn
   });
   assert.equal(unauth.status, 401);
 
-  const forbidden = await handleCupDiscCaptureRequest(deps("front-desk").deps, {
+  const forbidden = await handleCupDiscCaptureRequest(deps("admin").deps, {
     authHeader: AUTH,
     body: { ...BODY, eyes: { OD: { verticalCupDiscRatio: 0.3 } } },
   });

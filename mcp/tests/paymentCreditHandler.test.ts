@@ -34,7 +34,7 @@ function storedPayment(invoiceReference?: string): PaymentReconciliation {
   };
 }
 
-function setup(initial = storedPayment()) {
+function setup(initial = storedPayment(), roles: Array<"provider" | "staff" | "admin"> = ["staff"]) {
   let resource = structuredClone(initial);
   const audits: OdosAuditEventRecord[] = [];
   let downstreamCalls = 0;
@@ -71,8 +71,8 @@ function setup(initial = storedPayment()) {
     authenticate: async (header) => header === "Bearer good"
       ? {
           staffReference: "Practitioner/staff1",
-          actorRole: "front-desk",
-          roles: ["front-desk"],
+          actorRole: roles[0] ?? "staff",
+          roles,
           fhir,
         }
       : null,
@@ -139,8 +139,8 @@ test("apply and transfer handlers audit payment.credit.applied with the transfer
     const staff = await authenticate(header);
     return staff ? {
       ...staff,
-      actorRole: "clinician",
-      roles: ["clinician", "front-desk", "practice-admin"],
+      actorRole: "provider",
+      roles: ["provider", "staff", "admin"],
     } : null;
   };
   const applyResult = await handleApplyCreditRequest(apply.deps, {
@@ -153,7 +153,7 @@ test("apply and transfer handlers audit payment.credit.applied with the transfer
   });
   assert.equal(applyResult.status, 200);
   assert.equal(apply.audits[0].eventType, "payment.credit.applied");
-  assert.equal(apply.audits[0].actorRole, "practice-admin");
+  assert.equal(apply.audits[0].actorRole, "provider");
   assert.match(apply.audits[0].actionReason ?? "", /apply/);
 
   const transfer = setup(storedPayment("Invoice/wrong"));
@@ -173,7 +173,7 @@ test("apply and transfer handlers audit payment.credit.applied with the transfer
 });
 
 test("same-day void uses the recorded manual tender, cancels the PR, and audits payment.void.*", async () => {
-  const { audits, deps, current } = setup();
+  const { audits, deps, current } = setup(storedPayment(), ["admin"]);
   const result = await handleVoidCreditRequest(deps, {
     authHeader: "Bearer good",
     body: {
@@ -185,4 +185,20 @@ test("same-day void uses the recorded manual tender, cancels the PR, and audits 
   assert.equal(current().status, "cancelled");
   assert.equal(audits[0].eventType, "payment.void.attempted");
   assert.equal(audits[0].actionOutcome, "granted");
+});
+
+test("payment void is Admin-only and stops before FHIR or processor work", async () => {
+  for (const role of ["staff", "provider"] as const) {
+    const fixture = setup(storedPayment(), [role]);
+    const result = await handleVoidCreditRequest(fixture.deps, {
+      authHeader: "Bearer good",
+      body: {
+        paymentReconciliationReference: "PaymentReconciliation/credit-1",
+        method: "manual-cash",
+      },
+    });
+
+    assert.deepEqual(result, { status: 403, body: { error: "payment.void role required" } });
+    assert.equal(fixture.downstreamCalls(), 0);
+  }
 });

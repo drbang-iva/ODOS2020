@@ -234,7 +234,7 @@ export async function handleProviderSignatureRequest(
   if (
     input.action !== "read"
     && authorized.staff.staffReference !== providerReference
-    && !roles.includes("practice-admin")
+    && !roles.includes("admin")
   ) {
     return {
       status: 403,
@@ -822,7 +822,7 @@ async function authorizeReferralStaff(
   if (!staff) {
     return { result: { status: 401, body: { error: "Authentication required to manage referrals." } } };
   }
-  if (!["practice-admin", "clinician", "front-desk"].includes(staff.actorRole)) {
+  if (!["admin", "provider", "staff"].includes(staff.actorRole)) {
     return {
       result: {
         status: 403,

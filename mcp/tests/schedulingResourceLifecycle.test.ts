@@ -272,7 +272,7 @@ test("Schedule HTTP create returns a real 400 for an empty actor id and does not
   app.use(express.json());
   registerSchedulingResourceRoutes(app, {
     authenticateService: async () => undefined,
-    authenticate: async () => ({ roles: ["practice-admin"], fhir }),
+    authenticate: async () => ({ roles: ["admin"], fhir }),
     serviceFhir: fhir,
   });
   const server = app.listen(0);
@@ -312,7 +312,7 @@ test("Schedule HTTP update applies create-equivalent discipline and kind validat
   app.use(express.json());
   registerSchedulingResourceRoutes(app, {
     authenticateService: async () => undefined,
-    authenticate: async () => ({ roles: ["practice-admin"], fhir }),
+    authenticate: async () => ({ roles: ["admin"], fhir }),
     serviceFhir: fhir,
   });
   const server = app.listen(0);

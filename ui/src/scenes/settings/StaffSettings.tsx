@@ -14,7 +14,7 @@ export function StaffSettings({
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [roleId, setRoleId] = useState<PracticeRoleId>("front-desk");
+  const [roleId, setRoleId] = useState<PracticeRoleId>("staff");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [invited, setInvited] = useState<StaffInviteResponse>();

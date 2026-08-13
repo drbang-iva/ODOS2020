@@ -361,7 +361,7 @@ export function buildAppendObservationTransaction(input: {
 export function buildClinicalWriteAuditRow(input: {
   eventType: "create" | "update";
   actorId: string;
-  actorRole: "scribe" | "clinician" | "system";
+  actorRole: "scribe" | "provider" | "system";
   observation: Observation;
   eventTime?: string;
   provenanceId?: string;
@@ -387,7 +387,7 @@ export function buildClinicalWriteAuditRow(input: {
 export function buildRejectedClinicalWriteAuditRow(input: {
   eventType?: "update" | "delete-attempt";
   actorId: string;
-  actorRole: "clinician" | "system";
+  actorRole: "provider" | "system";
   observation: Observation;
   actionReason: string;
   policyUrl?: string;
@@ -413,7 +413,7 @@ export function buildSignedObservationDeleteAttemptAuditRow(input: {
   return buildRejectedClinicalWriteAuditRow({
     eventType: "delete-attempt",
     actorId: input.actorId,
-    actorRole: "clinician",
+    actorRole: "provider",
     observation: input.observation,
     actionReason:
       "Hard-delete rejected for signed clinical Observation; use entered-in-error transition with NULLIFY Provenance as the canonical retract path.",

@@ -31,7 +31,7 @@ const CLOSE_DATA: DayCloseData = {
 };
 
 test("Close the Day renders Verify, Review, Seal, tender counts, exceptions, and a role-specific blocked state", () => {
-  const html = renderToStaticMarkup(<CloseDay roles={["clinician"]} initialData={CLOSE_DATA} />);
+  const html = renderToStaticMarkup(<CloseDay roles={["provider"]} initialData={CLOSE_DATA} />);
   assert.match(html, /Verify/);
   assert.match(html, /Review/);
   assert.match(html, /Seal/);
@@ -41,14 +41,14 @@ test("Close the Day renders Verify, Review, Seal, tender counts, exceptions, and
   assert.match(html, /Unattached billable charges/);
   assert.match(html, /Held credits today/);
   assert.match(html, /Patient skim/);
-  assert.match(html, /Front Desk or Practice Admin/);
+  assert.match(html, /Admin \/ Manager/);
   assert.match(html, /Claims and billing work continue unchanged/);
-  const renderer = create(<CloseDay roles={["clinician"]} initialData={CLOSE_DATA} />);
+  const renderer = create(<CloseDay roles={["provider"]} initialData={CLOSE_DATA} />);
   assert.equal(renderer.root.findByType("button").props.disabled, true);
 });
 
 test("a completed seal renders immutable attribution and the explicit no-claims-change Billing handoff", () => {
-  const html = renderToStaticMarkup(<CloseDay roles={["front-desk"]} initialData={{
+  const html = renderToStaticMarkup(<CloseDay roles={["staff"]} initialData={{
     ...CLOSE_DATA,
     seal: { id: "seal-1", date: "2026-07-15", sealedBy: "Practitioner/alex", sealedAt: "2026-07-15T22:00:00.000Z" },
   }} />);
@@ -56,7 +56,7 @@ test("a completed seal renders immutable attribution and the explicit no-claims-
   assert.match(html, /alex/);
   assert.match(html, /with Billing/);
   assert.match(html, /no claims or billing workflow was changed/);
-  const renderer = create(<CloseDay roles={["front-desk"]} initialData={{
+  const renderer = create(<CloseDay roles={["staff"]} initialData={{
     ...CLOSE_DATA,
     seal: { id: "seal-1", date: "2026-07-15", sealedBy: "Practitioner/alex", sealedAt: "2026-07-15T22:00:00.000Z" },
   }} />);
@@ -64,7 +64,7 @@ test("a completed seal renders immutable attribution and the explicit no-claims-
 });
 
 test("a sealed day never presents unavailable payment totals as zero", () => {
-  const html = renderToStaticMarkup(<CloseDay roles={["front-desk"]} initialData={{
+  const html = renderToStaticMarkup(<CloseDay roles={["staff"]} initialData={{
     ...CLOSE_DATA,
     ledger: { ...CLOSE_DATA.ledger, payments: { available: false, reason: "Payment totals unavailable." } },
     seal: { id: "seal-1", date: "2026-07-15", sealedBy: "Practitioner/alex", sealedAt: "2026-07-15T22:00:00.000Z" },
@@ -73,8 +73,8 @@ test("a sealed day never presents unavailable payment totals as zero", () => {
   assert.doesNotMatch(html, /\$0\.00/);
 });
 
-test("a known nonzero variance does not disable sealing for an authorized staffer", () => {
-  const renderer = create(<CloseDay roles={["front-desk"]} initialData={CLOSE_DATA} />);
+test("a known nonzero variance does not disable sealing for an authorized Admin", () => {
+  const renderer = create(<CloseDay roles={["admin"]} initialData={CLOSE_DATA} />);
   const inputs = renderer.root.findAllByType("input");
   act(() => {
     for (const input of inputs) input.props.onChange({ target: { value: "0.00" } });
@@ -99,8 +99,8 @@ test("Day archive links each seal to the historical ledger and shows live-read t
 });
 
 test("close and archive routes are registered", () => {
-  assert.match(renderToStaticMarkup(<RouteSwitch view={{ kind: "picker" }} path="/desk/ledger/close" roles={["front-desk"]} />), /Close the Day/);
-  assert.match(renderToStaticMarkup(<RouteSwitch view={{ kind: "picker" }} path="/desk/ledger/archive" roles={["front-desk"]} />), /Day Archive/);
+  assert.match(renderToStaticMarkup(<RouteSwitch view={{ kind: "picker" }} path="/desk/ledger/close" roles={["staff"]} />), /Close the Day/);
+  assert.match(renderToStaticMarkup(<RouteSwitch view={{ kind: "picker" }} path="/desk/ledger/archive" roles={["staff"]} />), /Day Archive/);
 });
 
 test("day-close API helpers preserve dates, JSON cents payload boundaries, and endpoint failures", async () => {

@@ -15,31 +15,33 @@ import {
 
 // --- RBAC: who may take a payment (business action gate, same pattern as audit.read) ---
 
-test("front-desk and practice-admin hold the payment.charge business action", () => {
-  assertBusinessActionAllowed("front-desk", "payment.charge");
-  assertBusinessActionAllowed("practice-admin", "payment.charge");
+test("Staff and Provider hold routine payment custody", () => {
+  assertBusinessActionAllowed("staff", "payment.charge");
+  assertBusinessActionAllowed("provider", "payment.charge");
+  assert.throws(() => assertBusinessActionAllowed("admin", "payment.charge"), /lacks business action/);
 });
 
-test("only front-desk and practice-admin hold payment.seal-day", () => {
-  assertBusinessActionAllowed("front-desk", "payment.seal-day");
-  assertBusinessActionAllowed("practice-admin", "payment.seal-day");
-  for (const role of ["clinician", "auditor", "aesthetics-provider"] as const) {
+test("only Admin holds financial correction actions", () => {
+  for (const action of ["payment.void", "payment.write-off", "payment.seal-day", "margin.read"] as const) {
+    assertBusinessActionAllowed("admin", action);
+    for (const role of ["provider", "staff"] as const) {
+      assert.throws(() => assertBusinessActionAllowed(role, action), /lacks business action/);
+    }
+  }
+});
+
+test("Provider and Staff do not inherit Admin-only sealing", () => {
+  for (const role of ["provider", "staff"] as const) {
     assert.throws(() => assertBusinessActionAllowed(role, "payment.seal-day"), /lacks business action/);
   }
 });
 
-test("clinician, auditor, and aesthetics-provider do NOT hold payment.charge", () => {
-  for (const role of ["clinician", "auditor", "aesthetics-provider"] as const) {
-    assert.throws(() => assertBusinessActionAllowed(role, "payment.charge"), /lacks business action/);
-  }
-});
-
 test("business-action acting roles are selected from the full set in registry order", () => {
-  const roles = ["clinician", "front-desk", "practice-admin"] as const;
-  assert.equal(resolveBusinessActionRole(roles, "chart.write"), "clinician");
-  assert.equal(resolveBusinessActionRole(roles, "payment.charge"), "practice-admin");
-  assert.equal(resolveBusinessActionRole(roles, "claims.manage"), "practice-admin");
-  assert.equal(resolveBusinessActionRole(["clinician"], "claims.manage"), undefined);
+  const roles = ["provider", "staff", "admin"] as const;
+  assert.equal(resolveBusinessActionRole(roles, "chart.write"), "provider");
+  assert.equal(resolveBusinessActionRole(roles, "payment.charge"), "provider");
+  assert.equal(resolveBusinessActionRole(roles, "claims.manage"), "staff");
+  assert.equal(resolveBusinessActionRole(["provider"], "payment.void"), undefined);
 });
 
 // --- Adapter registrations from env (service-start configuration) ---
@@ -210,15 +212,14 @@ test("resolveStaffRoles returns every recognized practice-role tag across the ca
     "ap-clinical": {
       resourceType: "AccessPolicy",
       meta: { tag: [
-        { system: ODOS_PRACTICE_ROLE_SYSTEM, code: "clinician" },
-        { system: ODOS_PRACTICE_ROLE_SYSTEM, code: "aesthetics-provider" },
+        { system: ODOS_PRACTICE_ROLE_SYSTEM, code: "provider" },
       ] },
     },
     "ap-desk": {
       resourceType: "AccessPolicy",
       meta: { tag: [
-        { system: "https://example.test/unrelated", code: "front-desk" },
-        { system: ODOS_PRACTICE_ROLE_SYSTEM, code: "front-desk" },
+        { system: "https://example.test/unrelated", code: "staff" },
+        { system: ODOS_PRACTICE_ROLE_SYSTEM, code: "staff" },
       ] },
     },
   };
@@ -236,7 +237,7 @@ test("resolveStaffRoles returns every recognized practice-role tag across the ca
   assert.deepEqual(staff, {
     staffReference: "Practitioner/staff1",
     email: "staff@example.test",
-    roles: ["clinician", "front-desk", "aesthetics-provider"],
+    roles: ["provider", "staff"],
     project: { reference: "Project/p1" },
   });
 
@@ -278,11 +279,11 @@ test("resolveStaffRoles fails closed when one profile has two active project mem
   const policies: Record<string, AccessPolicy> = {
     "ap-clinical": {
       resourceType: "AccessPolicy",
-      meta: { tag: [{ system: ODOS_PRACTICE_ROLE_SYSTEM, code: "clinician" }] },
+      meta: { tag: [{ system: ODOS_PRACTICE_ROLE_SYSTEM, code: "provider" }] },
     },
     "ap-desk": {
       resourceType: "AccessPolicy",
-      meta: { tag: [{ system: ODOS_PRACTICE_ROLE_SYSTEM, code: "front-desk" }] },
+      meta: { tag: [{ system: ODOS_PRACTICE_ROLE_SYSTEM, code: "staff" }] },
     },
   };
 
@@ -405,7 +406,7 @@ test("authenticateStaffRoute carries the selected project on the authenticated r
       }),
       read: async <T,>(): Promise<T> => ({
         resourceType: "AccessPolicy",
-        meta: { tag: [{ system: ODOS_PRACTICE_ROLE_SYSTEM, code: "front-desk" }] },
+        meta: { tag: [{ system: ODOS_PRACTICE_ROLE_SYSTEM, code: "staff" }] },
       }) as unknown as T,
     },
     fetchImpl,

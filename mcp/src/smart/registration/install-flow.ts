@@ -38,7 +38,7 @@ export function assertSmartAppAdminActionAllowed(input: {
   readonly actorId?: string;
   readonly actorRole?: OdosActorRole | string;
 }): void {
-  if (!input.actorId || input.actorRole !== "practice-admin") {
+  if (!input.actorId || input.actorRole !== "admin") {
     throw new SmartAppRegistryError(
       "admin-authorization-required",
       "SMART app registry admin actions require a human-supervised practice-admin session.",
@@ -84,7 +84,7 @@ export function reviewSmartAppInstall(input: {
       buildOdosAuditEventRow({
         eventType: "smart-app-installed",
         actorId: input.adminUserId,
-        actorRole: "practice-admin",
+        actorRole: "admin",
         resourceType: installation.canonicalResourceType,
         resourceId: installation.canonicalResourceId,
         policyUrl: SMART_APP_REGISTRY_POLICY_URL,
@@ -111,7 +111,7 @@ export function reviewSmartAppInstall(input: {
       buildOdosAuditEventRow({
         eventType,
         actorId: input.adminUserId,
-        actorRole: "practice-admin",
+        actorRole: "admin",
         resourceType: installation.canonicalResourceType,
         resourceId: installation.canonicalResourceId,
         policyUrl: SMART_APP_REGISTRY_POLICY_URL,

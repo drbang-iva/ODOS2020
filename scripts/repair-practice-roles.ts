@@ -24,10 +24,10 @@ import { assertLocalMedplumBaseUrl, decidePracticeRoleTag } from "./reseed-pract
 
 const DEFAULT_BASE_URL = "http://localhost:8103";
 const DEFAULT_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5433/medplum";
-export const DEV_ADMIN_ROLE = "front-desk" as const satisfies PracticeRoleId;
-export const DEV_ADMIN_GRANT_ROLES = [DEV_ADMIN_ROLE, "practice-admin", "clinician"] as const;
+export const DEV_ADMIN_ROLE = "staff" as const satisfies PracticeRoleId;
+export const DEV_ADMIN_GRANT_ROLES = [DEV_ADMIN_ROLE, "admin", "provider"] as const;
 export type DevAdminGrantRole = (typeof DEV_ADMIN_GRANT_ROLES)[number];
-export type DevAdminPrimaryRole = Extract<DevAdminGrantRole, "front-desk" | "clinician">;
+export type DevAdminPrimaryRole = Extract<DevAdminGrantRole, "staff" | "provider">;
 
 export interface PracticeRoleRepairAdapter {
   findPoliciesByName(name: string): Promise<AccessPolicy[]>;
@@ -292,8 +292,8 @@ async function runCli(): Promise<void> {
 
 export function devPrimaryRole(value: string | undefined): DevAdminPrimaryRole {
   const role = value?.trim() || DEV_ADMIN_ROLE;
-  if (role !== "front-desk" && role !== "clinician") {
-    throw new Error("ODOS_DEV_PRIMARY_ROLE must be front-desk or clinician.");
+  if (role !== "staff" && role !== "provider") {
+    throw new Error("ODOS_DEV_PRIMARY_ROLE must be staff or provider.");
   }
   return role;
 }

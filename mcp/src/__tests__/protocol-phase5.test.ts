@@ -21,6 +21,7 @@ import {
   handleProtocolOffersRequest,
   handleProtocolPublishRequest,
   handleProtocolRetireRequest,
+  handleProtocolSignCleanupRequest,
   handleProtocolUnapplyRequest,
   protocolFindingObservation,
 } from "../clinical-graph/protocol-endpoint.js";
@@ -633,9 +634,26 @@ test("offers performs no writes on the chart.read path", async () => {
   assert.equal(fhir.writes.length, 0);
 });
 
+test("sign cleanup requires clinical.sign at the handler boundary", async () => {
+  const fhir = new EndpointFhir();
+  const feeScheduleFhir = fhir as never;
+  const staff = await handleProtocolSignCleanupRequest(
+    { ...endpointDeps(fhir, "staff"), feeScheduleFhir },
+    { authHeader: "Bearer test", params: {} },
+  );
+  const provider = await handleProtocolSignCleanupRequest(
+    { ...endpointDeps(fhir, "provider"), feeScheduleFhir },
+    { authHeader: "Bearer test", params: {} },
+  );
+
+  assert.equal(staff.status, 403);
+  assert.deepEqual(staff.body, { error: "clinical.sign role required" });
+  assert.equal(provider.status, 400);
+});
+
 test("all Phase A authoring endpoints reject a non-author and admit a clinician", async () => {
   const blockedFhir = new EndpointFhir();
-  const blocked = endpointDeps(blockedFhir, "front-desk", "Practitioner/disposable-front-desk");
+  const blocked = endpointDeps(blockedFhir, "staff", "Practitioner/disposable-front-desk");
   const blockedResults = await Promise.all([
     handleProtocolLibraryRequest(blocked, { authHeader: "Bearer test" }),
     handleProtocolCreateRequest(blocked, { authHeader: "Bearer test", body: {} }),
@@ -966,10 +984,10 @@ test("applications read enforces chart.read, returns the hydration shape, and du
   assert.deepEqual((read.body as { applications: unknown[] }).applications, [{
     id: "app-1", protocolId: GLAUCOMA_SUSPECT_PROTOCOL.id, version: 1, confirmed: true, undoState: "active",
   }]);
-  const forbidden = await handleProtocolApplicationsRequest(endpointDeps(fhir, "auditor"), {
+  const forbidden = await handleProtocolApplicationsRequest(endpointDeps(fhir, "admin"), {
     authHeader: "Bearer test", query: { encounterId: "enc-1" },
   });
-  assert.equal(forbidden.status, 403);
+  assert.equal(forbidden.status, 200);
   const duplicate = await handleProtocolApplyRequest(endpointDeps(fhir), {
     authHeader: "Bearer test", body: applyBody("H40.021"),
   });
@@ -1031,7 +1049,7 @@ class EndpointFhir {
 
 function endpointDeps(
   fhir: EndpointFhir,
-  actorRole: "clinician" | "front-desk" | "auditor" = "clinician",
+  actorRole: "provider" | "staff" | "admin" = "provider",
   staffReference = "Practitioner/test",
 ) {
   return {

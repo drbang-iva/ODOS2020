@@ -108,7 +108,7 @@ export function approveStagedScopeDecision(input: SmartScopeApprovalInput): Smar
   if (input.actorRole === "autonomous-agent") {
     throw new Error("Mandate 8 boundary: autonomous agents cannot approve SMART staged-review requests.");
   }
-  if (input.adminRole !== "practice-admin") {
+  if (input.adminRole !== "admin") {
     throw new Error("Mandate 8 boundary: SMART staged-review approval requires a practice-admin Practitioner.");
   }
   if (input.decision.outcomeClass !== "staged-review") {

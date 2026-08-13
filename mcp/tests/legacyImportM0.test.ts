@@ -259,7 +259,7 @@ test("migration importer policy reconciliation repairs its canonical tag and pre
 });
 
 test("explicit practice project verification rejects a noncanonical clinician policy without discovery", async () => {
-  const policy = buildMedplumAccessPolicy(getRoleDeclaration("clinician"));
+  const policy = buildMedplumAccessPolicy(getRoleDeclaration("provider"));
   policy.resource![0]!.interaction = ["read"];
   let discoveryCalls = 0;
   const database: PracticeProjectResolutionDatabase = {
@@ -298,7 +298,7 @@ test("explicit practice project requires a PostgreSQL URL before verification", 
     verifyPracticeProjectClinicianPolicy: async () => {
       verificationCalls += 1;
       return storedPracticePolicy(
-        buildMedplumAccessPolicy(getRoleDeclaration("clinician")),
+        buildMedplumAccessPolicy(getRoleDeclaration("provider")),
       );
     },
   };
@@ -333,7 +333,7 @@ test("single-practice callers without an explicit project keep database discover
     verifyPracticeProjectClinicianPolicy: async () => {
       verificationCalls += 1;
       return storedPracticePolicy(
-        buildMedplumAccessPolicy(getRoleDeclaration("clinician")),
+        buildMedplumAccessPolicy(getRoleDeclaration("provider")),
       );
     },
   };
@@ -516,7 +516,7 @@ test("persistCredentials preserves operator-managed entries and enforces mode 06
 });
 
 test("duplicate clinician-policy diagnostic identifies identical definitions and zero-reference copies", () => {
-  const policy = buildMedplumAccessPolicy(getRoleDeclaration("clinician"));
+  const policy = buildMedplumAccessPolicy(getRoleDeclaration("provider"));
   const first = {
     ...policy,
     id: "policy-referenced",
@@ -553,7 +553,7 @@ test("duplicate clinician-policy diagnostic identifies identical definitions and
 });
 
 test("duplicate clinician-policy diagnostic reports definition drift without choosing a copy", () => {
-  const canonical = buildMedplumAccessPolicy(getRoleDeclaration("clinician"));
+  const canonical = buildMedplumAccessPolicy(getRoleDeclaration("provider"));
   const drifted = structuredClone(canonical);
   drifted.resource![0]!.interaction = ["read"];
 

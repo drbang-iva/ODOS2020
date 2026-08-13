@@ -118,7 +118,7 @@ const professionalClaim: ProfessionalClaimInput = {
   ],
 };
 
-function deps(role: "front-desk" | "clinician" = "front-desk") {
+function deps(role: "staff" | "provider" = "staff") {
   const audits: OdosAuditEventRecord[] = [];
   const createHeaders: Array<{ resourceType: string; headers?: Record<string, string> }> = [];
   let searchCalls = 0;
@@ -288,9 +288,9 @@ function deps(role: "front-desk" | "clinician" = "front-desk") {
 }
 
 test("front-desk and practice-admin hold claims.manage; non-billing roles do not", () => {
-  assertBusinessActionAllowed("front-desk", "claims.manage");
-  assertBusinessActionAllowed("practice-admin", "claims.manage");
-  assert.throws(() => assertBusinessActionAllowed("clinician", "claims.manage"), /claims\.manage/);
+  assertBusinessActionAllowed("staff", "claims.manage");
+  assertBusinessActionAllowed("admin", "claims.manage");
+  assert.throws(() => assertBusinessActionAllowed("provider", "claims.manage"), /claims\.manage/);
 });
 
 test("submit claim creates the Claim, calls Claim.MD, and audits claim.submit.completed", async () => {
@@ -2010,8 +2010,8 @@ test("insurance visit flows Claim to ERA to PR Invoice to the unchanged T0 state
   const statementResult = await handleGeneratePatientStatementRequest({
     authenticate: async () => ({
       staffReference: "Practitioner/staff-1",
-      actorRole: "front-desk",
-      roles: ["front-desk"],
+      actorRole: "staff",
+      roles: ["staff"],
       fhir: fixture.fhir,
     }),
     now: () => "2026-07-12T12:00:00.000Z",
@@ -2230,7 +2230,7 @@ test("claims.manage protects GET /claims/worklist with the existing claims 401/4
   });
   assert.equal(unauthenticated.searchCalls(), 0);
 
-  const forbidden = deps("clinician");
+  const forbidden = deps("provider");
   const denied = await handleEraWorklistRequest(forbidden.deps, {
     authHeader: "Bearer good",
   });
@@ -2268,7 +2268,7 @@ test("claims.manage protects GET /claims/era with the existing claims 401/403 sh
   });
   assert.equal(unauthenticated.searchCalls(), 0);
 
-  const forbidden = deps("clinician");
+  const forbidden = deps("provider");
   assert.deepEqual(await handleEraListRequest(forbidden.deps, { authHeader: "Bearer good" }), {
     status: 403,
     body: { error: "claims.manage role required" },
@@ -2302,7 +2302,7 @@ test("manual EOB routes preserve claims.manage 401/403 parity before FHIR access
     body: { error: "Authentication required to manage claims." },
   });
 
-  const forbidden = deps("clinician");
+  const forbidden = deps("provider");
   assert.deepEqual(await handleManualEobListRequest(forbidden.deps, { authHeader: "Bearer good" }), {
     status: 403,
     body: { error: "claims.manage role required" },
@@ -2419,7 +2419,7 @@ test("line-linkage audit migration uses drop-and-re-add and registers its claims
 });
 
 test("claims.manage denial happens before adapter calls or audit writes", async () => {
-  const { audits, deps: d } = deps("clinician");
+  const { audits, deps: d } = deps("provider");
   let called = false;
   d.adapter.submitProfessionalClaim = async () => {
     called = true;

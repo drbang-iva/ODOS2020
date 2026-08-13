@@ -18,11 +18,9 @@ function fixture(input: {
   let auditCount = 0;
   let patchCount = 0;
   const policies = new Map<PracticeRoleId, AccessPolicy>([
-    ["front-desk", { resourceType: "AccessPolicy", id: "desk" }],
-    ["practice-admin", { resourceType: "AccessPolicy", id: "admin" }],
-    ["clinician", { resourceType: "AccessPolicy", id: "clinical" }],
-    ["auditor", { resourceType: "AccessPolicy", id: "audit" }],
-    ["aesthetics-provider", { resourceType: "AccessPolicy", id: "aesthetics" }],
+    ["staff", { resourceType: "AccessPolicy", id: "desk" }],
+    ["admin", { resourceType: "AccessPolicy", id: "admin" }],
+    ["provider", { resourceType: "AccessPolicy", id: "clinical" }],
   ]);
   const deps: PracticeRoleGrantDependencies = {
     serviceIdentityEmail: input.serviceIdentityEmail,
@@ -55,11 +53,11 @@ test("grantPracticeRoles orders bare roles, preserves unique access, and clears 
   });
 
   const result = await grantPracticeRoles(
-    { target: "human@example.test", roles: ["front-desk", "clinician", "front-desk"], primaryRole: "clinician" },
+    { target: "human@example.test", roles: ["staff", "provider", "staff"], primaryRole: "provider" },
     deps,
   );
 
-  assert.deepEqual(result.roles, ["clinician", "front-desk"]);
+  assert.deepEqual(result.roles, ["provider", "staff"]);
   assert.deepEqual(membership.access?.map((access) => access.policy.reference), [
     "AccessPolicy/clinical",
     "AccessPolicy/desk",
@@ -129,7 +127,7 @@ test("grantPracticeRoles is a zero-write no-op when membership access is already
     membership: baseMembership({ access: [{ policy: { reference: "AccessPolicy/clinical" } }] }),
   });
   const result = await grantPracticeRoles(
-    { target: "Practitioner/p1", roles: ["clinician"], primaryRole: "clinician" },
+    { target: "Practitioner/p1", roles: ["provider"], primaryRole: "provider" },
     deps,
   );
   assert.equal(result.changed, false);
@@ -145,7 +143,7 @@ test("grantPracticeRoles rejects a policy owned by a different project", async (
   });
   await assert.rejects(
     grantPracticeRoles(
-      { target: "human@example.test", roles: ["clinician"], primaryRole: "clinician" },
+      { target: "human@example.test", roles: ["provider"], primaryRole: "provider" },
       deps,
     ),
     /belongs to Project\/other-project, not Project\/p1/,
@@ -157,7 +155,7 @@ test("grantPracticeRoles refuses the configured service identity unless explicit
   const denied = fixture({ email: "service@example.test", serviceIdentityEmail: "SERVICE@example.test" });
   await assert.rejects(
     grantPracticeRoles(
-      { target: "service@example.test", roles: ["clinician"], primaryRole: "clinician" },
+      { target: "service@example.test", roles: ["provider"], primaryRole: "provider" },
       denied.deps,
     ),
     /Refusing practice-role grants to configured service identity/,
@@ -168,8 +166,8 @@ test("grantPracticeRoles refuses the configured service identity unless explicit
   const result = await grantPracticeRoles(
     {
       target: "service@example.test",
-      roles: ["clinician"],
-      primaryRole: "clinician",
+      roles: ["provider"],
+      primaryRole: "provider",
       allowServiceIdentity: true,
     },
     allowed.deps,

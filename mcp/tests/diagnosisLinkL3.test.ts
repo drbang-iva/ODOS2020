@@ -30,7 +30,7 @@ test("the existing confirmation completeness gate surfaces a staged diagnosis wi
 
   const result = await handleDiagnosisCompletenessRequest(
     {
-      authenticate: async () => ({ actorRole: "clinician", fhir }),
+      authenticate: async () => ({ actorRole: "provider", fhir }),
       now: () => "2026-08-11T12:00:00.000Z",
     },
     { authHeader: AUTH_CLINICIAN, params: { encounterId: "e1" } },
@@ -144,7 +144,7 @@ test("real HTTP L3 routes persist ordered key findings and report only unsatisfi
   fhir.resources.push(observation("pachymetry_um", "Pachymetry", "Encounter/old", "2024-01-01T12:00:00.000Z", "history-pachymetry"));
 
   const authenticate = async (header: string | undefined) => {
-    const actorRole = header === AUTH_ADMIN ? "practice-admin" : header === AUTH_CLINICIAN ? "clinician" : "auditor";
+    const actorRole = header === AUTH_ADMIN ? "admin" : header === AUTH_CLINICIAN ? "provider" : "admin";
     return header ? { staffReference: "Practitioner/test", actorRole: actorRole as PracticeRoleId, fhir } : null;
   };
   const app = express();

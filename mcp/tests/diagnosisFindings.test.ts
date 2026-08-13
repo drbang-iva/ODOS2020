@@ -28,25 +28,15 @@ import { ODOS_EXTENSION_URLS, lateralityConcept } from "../src/fhir/ophthalmolog
 const FORBIDDEN_AUTH = "Bearer forbidden";
 
 test("GET encounter findings returns 401 when unauthenticated", async (t) => {
-  const base = await startFindingsRoutes(t, "auditor");
+  const base = await startFindingsRoutes(t, "admin");
 
   const response = await fetch(`${base}/clinical-graph/encounters/e1/findings`);
 
   assert.equal(response.status, 401);
 });
 
-test("GET encounter findings returns 403 without chart.read", async (t) => {
-  const base = await startFindingsRoutes(t, "auditor");
-
-  const response = await fetch(`${base}/clinical-graph/encounters/e1/findings`, {
-    headers: { Authorization: FORBIDDEN_AUTH },
-  });
-
-  assert.equal(response.status, 403);
-});
-
 test("PUT encounter findings returns 401 when unauthenticated", async (t) => {
-  const base = await startFindingsRoutes(t, "auditor");
+  const base = await startFindingsRoutes(t, "admin");
 
   const response = await fetch(`${base}/clinical-graph/encounters/e1/findings`, {
     method: "PUT",
@@ -57,8 +47,8 @@ test("PUT encounter findings returns 401 when unauthenticated", async (t) => {
   assert.equal(response.status, 401);
 });
 
-test("PUT encounter findings returns 403 without chart.write", async (t) => {
-  const base = await startFindingsRoutes(t, "front-desk");
+test("PUT encounter findings returns 403 for read-only Admin", async (t) => {
+  const base = await startFindingsRoutes(t, "admin");
 
   const response = await fetch(`${base}/clinical-graph/encounters/e1/findings`, {
     method: "PUT",
@@ -506,7 +496,7 @@ for (const status of [401, 403, 500]) {
   test(`GET findings route preserves the named FHIR ${status} dependency response`, async (t) => {
     const fhir = mutationFhir();
     fhir.readFailures.set("Encounter/e1", status);
-    const base = await startFindingsRoutes(t, "auditor", fhir);
+    const base = await startFindingsRoutes(t, "admin", fhir);
 
     const response = await fetch(`${base}/clinical-graph/encounters/e1/findings`, {
       headers: { Authorization: "Bearer clinician" },
@@ -570,7 +560,7 @@ test("findings gives Condition bodySite laterality precedence over a stale catal
 test("GET findings route returns missing lineage as visible state and a cyclic next link as 502", async (t) => {
   const missingLineage = carryFindingsFhir();
   missingLineage.readFailures.set("Condition/prior-unique", 410);
-  const missingBase = await startFindingsRoutes(t, "auditor", missingLineage);
+  const missingBase = await startFindingsRoutes(t, "admin", missingLineage);
 
   const missingResponse = await fetch(
     `${missingBase}/clinical-graph/encounters/e1/findings?condition=Condition%2Funique`,
@@ -588,7 +578,7 @@ test("GET findings route returns missing lineage as visible state and a cyclic n
   const conditions = cyclic.resources.filter((resource): resource is Condition => resource.resourceType === "Condition");
   cyclic.pages.set("Condition", [conditions, []]);
   cyclic.pageLinks.set("Condition:2", "/fhir/R4/Condition?_page=2");
-  const cyclicBase = await startFindingsRoutes(t, "auditor", cyclic);
+  const cyclicBase = await startFindingsRoutes(t, "admin", cyclic);
   const cyclicResponse = await fetch(`${cyclicBase}/clinical-graph/encounters/e1/findings`, {
     headers: { Authorization: "Bearer clinician" },
   });
@@ -796,7 +786,7 @@ async function startFindingsRoutes(
     : header === "Bearer clinician" && clinicianFhir
       ? {
           staffReference: "Practitioner/doc",
-          actorRole: "clinician" as const,
+          actorRole: "provider" as const,
           fhir: clinicianFhir,
         }
     : null;
@@ -1013,7 +1003,7 @@ function clinicalDeps(fhir: DiagnosisFindingsFhirClient) {
   return {
     fhirBaseUrl: "https://fhir.local",
     authenticate: async (header: string | undefined) => header === "Bearer clinician"
-      ? { staffReference: "Practitioner/doc", actorRole: "clinician" as const, fhir }
+      ? { staffReference: "Practitioner/doc", actorRole: "provider" as const, fhir }
       : null,
     findingDefinitions: async () => [LENS_DEFINITION],
     diagnosisCatalog: async () => DIAGNOSES,

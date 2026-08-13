@@ -209,14 +209,14 @@ export function assertCanonicalClinicianPolicy(stored: StoredPracticeClinicianPo
   ) ?? [];
   let canonicalRules = true;
   try {
-    assertCanonicalPolicyRules(stored.policy, "clinician");
+    assertCanonicalPolicyRules(stored.policy, "provider");
   } catch {
     canonicalRules = false;
   }
   if (
     stored.policy.name !== "ODOS Clinician"
     || roleTags.length !== 1
-    || roleTags[0]?.code !== "clinician"
+    || roleTags[0]?.code !== "provider"
     || !canonicalRules
   ) {
     throw new Error(
