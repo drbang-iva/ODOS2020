@@ -293,7 +293,7 @@ function deps(fhir: MemoryFhir) {
     authenticate: async (authHeader: string | undefined) => authHeader === AUTH
       ? {
           staffReference: "Practitioner/dry-eye-doc",
-          actorRole: "clinician" as const,
+          actorRole: "provider" as const,
           fhir,
         }
       : null,

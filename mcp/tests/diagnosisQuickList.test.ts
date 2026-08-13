@@ -114,7 +114,7 @@ test("staged diagnosis members collapse into four family entries in Common and F
   const store = new FhirDiagnosisPickTallyStore(fhir);
   await store.increment("Practitioner/doc", "finding-a", "poag_severe", "2026-08-11T12:00:00.000Z");
   const response = await handleDiagnosisQuickListRequest({
-    authenticate: async () => ({ staffReference: "Practitioner/doc", actorRole: "clinician" }),
+    authenticate: async () => ({ staffReference: "Practitioner/doc", actorRole: "provider" }),
     tallyFhir: fhir,
     diagnosisCatalog: async () => diagnoses,
   }, { authHeader: "Bearer doc" });
@@ -159,7 +159,7 @@ test("member pins migrate idempotently to staged families without dropping unrel
     "2026-08-11T12:00:00.000Z",
   );
   const deps = {
-    authenticate: async () => ({ staffReference: "Practitioner/doc", actorRole: "clinician" as const }),
+    authenticate: async () => ({ staffReference: "Practitioner/doc", actorRole: "provider" as const }),
     tallyFhir: fhir,
     diagnosisCatalog: async () => buildDiagnosisCatalogSeeds(),
     now: () => "2026-08-11T12:01:00.000Z",
@@ -191,7 +191,7 @@ test("quick-list routes isolate practitioner pins and reject unknown diagnoses",
       ? "Practitioner/two"
       : undefined;
     return staffReference
-      ? { staffReference, actorRole: "clinician" as const, fhir }
+      ? { staffReference, actorRole: "provider" as const, fhir }
       : null;
   };
   const deps = {

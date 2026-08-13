@@ -27,7 +27,7 @@ test("GET /clinic/summary authenticates once and returns every section from seed
   registerClinicRoutes(app, {
     authenticateService: async () => { serviceAuthCalls += 1; },
     authenticate: async (header) => header === "Bearer good"
-      ? { staffReference: "Practitioner/staff-1", actorRole: "clinician", fhir: fhir as never }
+      ? { staffReference: "Practitioner/staff-1", actorRole: "provider", fhir: fhir as never }
       : null,
     now: () => "2026-07-11T15:00:00.000Z",
     timeZone: "America/New_York",
@@ -143,7 +143,7 @@ test("patient overview routes issue filtered FHIR searches and expose native sti
   registerClinicRoutes(app, {
     authenticateService: async () => undefined,
     authenticate: async (header) => header === "Bearer good"
-      ? { staffReference: "Practitioner/staff-1", actorRole: "clinician", fhir: fhir as never }
+      ? { staffReference: "Practitioner/staff-1", actorRole: "provider", fhir: fhir as never }
       : null,
     now: () => "2026-07-11T14:00:00Z",
   });

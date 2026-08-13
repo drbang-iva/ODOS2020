@@ -402,7 +402,7 @@ test("stale HTTP mutations surface a reload-and-retry conflict", async () => {
 
   fhir.concurrentVersionBumpOnNextUpdate = true;
   const groupConflict = await handleFindingSectionGroupMutationRequest(
-    endpointDeps("practice-admin", fhir),
+    endpointDeps("admin", fhir),
     {
       authHeader: AUTH,
       params: { groupKey: sectionGroup.groupKey },
@@ -414,7 +414,7 @@ test("stale HTTP mutations surface a reload-and-retry conflict", async () => {
   await overrideStore.setGroupKeys("encounter-1", [sectionGroup.groupKey]);
   fhir.concurrentVersionBumpOnNextUpdate = true;
   const overrideConflict = await handleEncounterSectionOverrideMutationRequest(
-    endpointDeps("clinician", fhir),
+    endpointDeps("provider", fhir),
     {
       authHeader: AUTH,
       params: { encounterId: "encounter-1" },
@@ -430,7 +430,7 @@ test("stale HTTP mutations surface a reload-and-retry conflict", async () => {
 
 test("group creation rejects non-kebab keys and duplicate keys through the HTTP boundary", async () => {
   const fhir = new MemoryFhir();
-  const deps = endpointDeps("practice-admin", fhir);
+  const deps = endpointDeps("admin", fhir);
   const invalid = await handleFindingSectionGroupCreationRequest(deps, {
     authHeader: AUTH,
     body: {
@@ -496,7 +496,7 @@ test("pull-in persists for one encounter and does not leak to a second encounter
     },
   );
   const result = await handleEncounterSectionOverrideMutationRequest(
-    endpointDeps("clinician", fhir),
+    endpointDeps("provider", fhir),
     {
       authHeader: AUTH,
       params: { encounterId: "encounter-1" },
@@ -522,7 +522,7 @@ test("a deactivated pull-in can be removed and does not resurrect after reactiva
     class: { code: "AMB" },
     subject: { reference: "Patient/patient-1" },
   });
-  const deps = endpointDeps("clinician", fhir);
+  const deps = endpointDeps("provider", fhir);
   const add = await handleEncounterSectionOverrideMutationRequest(deps, {
     authHeader: AUTH,
     params: { encounterId: "encounter-1" },

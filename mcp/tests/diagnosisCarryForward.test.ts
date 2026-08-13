@@ -48,25 +48,15 @@ const AUTH_CLINICIAN = "Bearer clinician";
 const AUTH_FORBIDDEN = "Bearer forbidden";
 
 test("GET previous exams returns 401 when unauthenticated", async (t) => {
-  const base = await startPreviousExamRoutes(t, new MemoryFhir(), "auditor");
+  const base = await startPreviousExamRoutes(t, new MemoryFhir(), "admin");
 
   const response = await fetch(`${base}/clinical-graph/encounters/current/previous-exams`);
 
   assert.equal(response.status, 401);
 });
 
-test("GET previous exams returns 403 without chart.read", async (t) => {
-  const base = await startPreviousExamRoutes(t, new MemoryFhir(), "auditor");
-
-  const response = await fetch(`${base}/clinical-graph/encounters/current/previous-exams`, {
-    headers: { Authorization: AUTH_FORBIDDEN },
-  });
-
-  assert.equal(response.status, 403);
-});
-
 test("POST previous exams returns 401 when unauthenticated", async (t) => {
-  const base = await startPreviousExamRoutes(t, new MemoryFhir(), "auditor");
+  const base = await startPreviousExamRoutes(t, new MemoryFhir(), "admin");
 
   const response = await fetch(`${base}/clinical-graph/encounters/current/previous-exams`, {
     method: "POST",
@@ -81,7 +71,7 @@ test("POST previous exams returns 401 when unauthenticated", async (t) => {
 });
 
 test("POST previous exams returns 403 without chart.write", async (t) => {
-  const base = await startPreviousExamRoutes(t, new MemoryFhir(), "auditor");
+  const base = await startPreviousExamRoutes(t, new MemoryFhir(), "admin");
 
   const response = await fetch(`${base}/clinical-graph/encounters/current/previous-exams`, {
     method: "POST",
@@ -364,14 +354,17 @@ for (const status of [404, 410]) {
   }
 }
 
-test("clinician AccessPolicy makes Provenance reachable through the Patient compartment target", () => {
-  const policy = buildMedplumAccessPolicy(getRoleDeclaration("clinician"));
+test("Provider AccessPolicy separates practice-wide Provenance reads from compartment-scoped creates", () => {
+  const policy = buildMedplumAccessPolicy(getRoleDeclaration("provider"));
   const provenanceRule = policy.resource?.find((rule) => rule.resourceType === "Provenance" &&
     rule.criteria === "Provenance?_compartment=%patient_compartment");
 
   assert.ok(provenanceRule);
   assert.equal(provenanceRule.interaction?.includes("create"), true);
-  assert.equal(provenanceRule.interaction?.includes("read"), true);
+  assert.equal(provenanceRule.interaction?.includes("read"), false);
+  const readRule = policy.resource?.find((rule) =>
+    rule.resourceType === "Provenance" && rule.criteria === undefined);
+  assert.deepEqual(readRule?.interaction, ["read", "search", "history", "vread"]);
 });
 
 test("carry provenance cycles terminate with a visible integrity warning", async () => {
@@ -394,7 +387,7 @@ test("pull posts one present finding atomically while preserving absent source p
   const fhir = pullFhir();
   const sourceCondition = await fhir.read<Condition>("Condition", "source-dry-eye-od");
   const sourcePresent = await fhir.read<Observation>("Observation", "source-staining-present");
-  const base = await startPreviousExamRoutes(t, fhir, "auditor");
+  const base = await startPreviousExamRoutes(t, fhir, "admin");
 
   const response = await fetch(`${base}/clinical-graph/encounters/current-pull/previous-exams`, {
     method: "POST",
@@ -491,7 +484,7 @@ test("pull-forward preserves an existing staged diagnosis code exactly", async (
     text: staged.display,
   };
   const expectedCode = structuredClone(source.code);
-  const base = await startPreviousExamRoutes(t, fhir, "auditor");
+  const base = await startPreviousExamRoutes(t, fhir, "admin");
 
   const response = await fetch(`${base}/clinical-graph/encounters/current-pull/previous-exams`, {
     method: "POST",
@@ -510,7 +503,7 @@ test("pull-forward preserves an existing staged diagnosis code exactly", async (
 
 test("pull puts the optimistic Encounter version guard before every transaction create", async (t) => {
   const fhir = pullFhir();
-  const base = await startPreviousExamRoutes(t, fhir, "auditor");
+  const base = await startPreviousExamRoutes(t, fhir, "admin");
 
   const response = await postPull(base, "source-dry-eye-od");
 
@@ -553,7 +546,7 @@ test("all-success pull accepts representation-free create locations and an updat
     "Observation/pulled-observation",
     "Provenance/pulled-provenance",
   ]);
-  const base = await startPreviousExamRoutes(t, fhir, "auditor", rollback);
+  const base = await startPreviousExamRoutes(t, fhir, "admin", rollback);
 
   const response = await postPull(base, "source-dry-eye-od");
 
@@ -574,7 +567,7 @@ test("mixed conflict rolls back representation-free creates by their exact locat
     "Observation/pulled-observation",
     "Provenance/pulled-provenance",
   ]);
-  const base = await startPreviousExamRoutes(t, fhir, "auditor", rollback);
+  const base = await startPreviousExamRoutes(t, fhir, "admin", rollback);
 
   const response = await postPull(base, "source-dry-eye-od");
 
@@ -605,7 +598,7 @@ test("representation-free 201 without a parseable location fails without privile
     "Observation/pulled-observation",
     "Provenance/pulled-provenance",
   ]);
-  const base = await startPreviousExamRoutes(t, fhir, "auditor", rollback);
+  const base = await startPreviousExamRoutes(t, fhir, "admin", rollback);
 
   const response = await postPull(base, "source-dry-eye-od");
 
@@ -626,7 +619,7 @@ test("representation-free 201 with the wrong positional location type fails with
     "Observation/pulled-observation",
     "Provenance/pulled-provenance",
   ]);
-  const base = await startPreviousExamRoutes(t, fhir, "auditor", rollback);
+  const base = await startPreviousExamRoutes(t, fhir, "admin", rollback);
 
   const response = await postPull(base, "source-dry-eye-od");
 
@@ -659,7 +652,7 @@ test("representation-free Observation 201 with the wrong location type fails wit
     "Observation/pulled-observation",
     "Provenance/pulled-provenance",
   ]);
-  const base = await startPreviousExamRoutes(t, fhir, "auditor", rollback);
+  const base = await startPreviousExamRoutes(t, fhir, "admin", rollback);
 
   const response = await postPull(base, "source-dry-eye-od");
 
@@ -692,7 +685,7 @@ test("representation-free Observation create returning 200 fails without privile
     "Observation/pulled-observation",
     "Provenance/pulled-provenance",
   ]);
-  const base = await startPreviousExamRoutes(t, fhir, "auditor", rollback);
+  const base = await startPreviousExamRoutes(t, fhir, "admin", rollback);
 
   const response = await postPull(base, "source-dry-eye-od");
 
@@ -712,7 +705,7 @@ test("represented 201 with a mismatched location id still refuses privileged rol
     "Observation/pulled-observation",
     "Provenance/pulled-provenance",
   ]);
-  const base = await startPreviousExamRoutes(t, fhir, "auditor", rollback);
+  const base = await startPreviousExamRoutes(t, fhir, "admin", rollback);
 
   const response = await postPull(base, "source-dry-eye-od");
 
@@ -728,7 +721,7 @@ test("mixed stale transaction uses only the service rollback for exact generated
     "Observation/pulled-observation",
     "Provenance/pulled-provenance",
   ]);
-  const base = await startPreviousExamRoutes(t, fhir, "auditor", rollback);
+  const base = await startPreviousExamRoutes(t, fhir, "admin", rollback);
 
   const response = await postPull(base, "source-dry-eye-od");
 
@@ -756,7 +749,7 @@ test("mixed 409 transaction also authorizes only the exact generated create roll
     "Observation/pulled-observation",
     "Provenance/pulled-provenance",
   ]);
-  const base = await startPreviousExamRoutes(t, fhir, "auditor", rollback);
+  const base = await startPreviousExamRoutes(t, fhir, "admin", rollback);
 
   const response = await postPull(base, "source-dry-eye-od");
 
@@ -776,7 +769,7 @@ test("guarded Encounter conflict compensates only validated creates around a lat
     "Condition/pulled-condition",
     "Provenance/pulled-provenance",
   ]);
-  const base = await startPreviousExamRoutes(t, fhir, "auditor", rollback);
+  const base = await startPreviousExamRoutes(t, fhir, "admin", rollback);
 
   const response = await postPull(base, "source-dry-eye-od");
 
@@ -855,7 +848,7 @@ for (const mutation of [
       "Observation/pulled-observation",
       "Provenance/pulled-provenance",
     ]);
-    const base = await startPreviousExamRoutes(t, fhir, "auditor", rollback);
+    const base = await startPreviousExamRoutes(t, fhir, "admin", rollback);
 
     const response = await postPull(base, "source-dry-eye-od");
 
@@ -867,7 +860,7 @@ for (const mutation of [
 test("mixed stale transaction fails closed when privileged rollback is absent", async (t) => {
   const fhir = pullFhir();
   fhir.transactionResponseMutator = mixedConflictTransactionResponse;
-  const base = await startPreviousExamRoutes(t, fhir, "auditor");
+  const base = await startPreviousExamRoutes(t, fhir, "admin");
 
   const response = await postPull(base, "source-dry-eye-od");
 
@@ -891,7 +884,7 @@ for (const mutation of ["wrong-location-type", "delete-failure", "still-readable
     ]);
     rollback.failDelete = mutation === "delete-failure";
     rollback.keepReadable = mutation === "still-readable";
-    const base = await startPreviousExamRoutes(t, fhir, "auditor", rollback);
+    const base = await startPreviousExamRoutes(t, fhir, "admin", rollback);
 
     const response = await postPull(base, "source-dry-eye-od");
 
@@ -910,7 +903,7 @@ for (const status of ["201 Created", "202 Accepted", "206 Partial Content", "226
       "Provenance/pulled-provenance",
     ]);
     rollback.deleteStatus = status;
-    const base = await startPreviousExamRoutes(t, fhir, "auditor", rollback);
+    const base = await startPreviousExamRoutes(t, fhir, "admin", rollback);
 
     const response = await postPull(base, "source-dry-eye-od");
 
@@ -927,7 +920,7 @@ test("mixed stale transaction rejects message-only 404 rollback verification", a
     "Provenance/pulled-provenance",
   ]);
   rollback.readError = new Error("FHIR 404 synthetic message without numeric status");
-  const base = await startPreviousExamRoutes(t, fhir, "auditor", rollback);
+  const base = await startPreviousExamRoutes(t, fhir, "admin", rollback);
 
   const response = await postPull(base, "source-dry-eye-od");
 
@@ -952,7 +945,7 @@ test("pull re-read catches a raced exact OD diagnosis and returns its current re
     ];
     encounterResource.meta = { versionId: "8" };
   };
-  const base = await startPreviousExamRoutes(t, fhir, "auditor");
+  const base = await startPreviousExamRoutes(t, fhir, "admin");
 
   const response = await postPull(base, "source-dry-eye-od");
 
@@ -972,7 +965,7 @@ test("pull does not treat an existing OD diagnosis as the requested OS identity"
   fhir.resource<Encounter>("Encounter", "current-pull").diagnosis!.push(
     buildEncounterDiagnosisComponent("Condition/current-dry-eye-od", 5),
   );
-  const base = await startPreviousExamRoutes(t, fhir, "auditor");
+  const base = await startPreviousExamRoutes(t, fhir, "admin");
 
   const response = await postPull(base, "source-dry-eye-os");
 
@@ -993,7 +986,7 @@ test("pull ignores a matching Condition that does not belong to the current Enco
   fhir.resource<Encounter>("Encounter", "current-pull").diagnosis!.push(
     buildEncounterDiagnosisComponent("Condition/foreign-dry-eye-od", 5),
   );
-  const base = await startPreviousExamRoutes(t, fhir, "auditor");
+  const base = await startPreviousExamRoutes(t, fhir, "admin");
 
   const response = await postPull(base, "source-dry-eye-od");
 
@@ -1021,7 +1014,7 @@ test("pull treats a catalog stable key and recorded laterality as identity despi
   fhir.resource<Encounter>("Encounter", "current-pull").diagnosis!.push(
     buildEncounterDiagnosisComponent("Condition/current-dry-eye-different-literal", 5),
   );
-  const base = await startPreviousExamRoutes(t, fhir, "auditor");
+  const base = await startPreviousExamRoutes(t, fhir, "admin");
 
   const response = await postPull(base, "source-dry-eye-od");
 
@@ -1049,7 +1042,7 @@ test("pull matches uncataloged literal coding text and laterality without a term
   fhir.resource<Encounter>("Encounter", "current-pull").diagnosis!.push(
     buildEncounterDiagnosisComponent("Condition/current-uncataloged", 5),
   );
-  const base = await startPreviousExamRoutes(t, fhir, "auditor");
+  const base = await startPreviousExamRoutes(t, fhir, "admin");
 
   const response = await postPull(base, "source-uncataloged");
 
@@ -1075,7 +1068,7 @@ test("pull keeps uncataloged diagnoses distinct when their literal text differs"
     buildEncounterDiagnosisComponent("Condition/current-uncataloged-different-text", 5),
   );
 
-  const response = await postPull(await startPreviousExamRoutes(t, fhir, "auditor"), "source-uncataloged");
+  const response = await postPull(await startPreviousExamRoutes(t, fhir, "admin"), "source-uncataloged");
 
   assert.equal(response.status, 200, await response.clone().text());
   assert.equal((await response.json() as { alreadyPresent: boolean }).alreadyPresent, false);
@@ -1091,7 +1084,7 @@ test("pull uses the recorded Condition bodySite instead of a stale catalog ident
     buildEncounterDiagnosisComponent("Condition/current-stale-catalog-laterality", 5),
   );
 
-  const response = await postPull(await startPreviousExamRoutes(t, fhir, "auditor"), "source-dry-eye-os");
+  const response = await postPull(await startPreviousExamRoutes(t, fhir, "admin"), "source-dry-eye-os");
 
   assert.equal(response.status, 200, await response.clone().text());
   assert.deepEqual(await response.json(), {
@@ -1112,7 +1105,7 @@ test("pull rejects source Encounters that are not strictly prior full instants",
     const source = fhir.resource<Encounter>("Encounter", "source-pull");
     source.period = start === undefined ? undefined : { start };
 
-    const response = await postPull(await startPreviousExamRoutes(t, fhir, "auditor"), "source-dry-eye-od");
+    const response = await postPull(await startPreviousExamRoutes(t, fhir, "admin"), "source-dry-eye-od");
 
     assert.equal(response.status, 409, `${name}: ${await response.text()}`);
     assert.equal(fhir.transactions.length, 0, name);
@@ -1125,7 +1118,7 @@ test("pull rejects a current Encounter without a valid full start instant before
     const current = fhir.resource<Encounter>("Encounter", "current-pull");
     current.period = start === undefined ? undefined : { start };
 
-    const response = await postPull(await startPreviousExamRoutes(t, fhir, "auditor"), "source-dry-eye-od");
+    const response = await postPull(await startPreviousExamRoutes(t, fhir, "admin"), "source-dry-eye-od");
 
     assert.equal(response.status, 409, `${name}: ${await response.text()}`);
     assert.equal(fhir.transactions.length, 0, name);
@@ -1139,7 +1132,7 @@ test("pull rechecks the current Encounter start instant immediately before idemp
       if (readNumber === 2) fhir.resource<Encounter>("Encounter", "current-pull").period = { start };
     };
 
-    const response = await postPull(await startPreviousExamRoutes(t, fhir, "auditor"), "source-dry-eye-od");
+    const response = await postPull(await startPreviousExamRoutes(t, fhir, "admin"), "source-dry-eye-od");
 
     assert.equal(response.status, 409, `${name}: ${await response.text()}`);
     assert.equal(fhir.transactions.length, 0, name);
@@ -1158,7 +1151,7 @@ test("pull rejects source patient, diagnosis membership, and retracted-condition
         coding: [{ system: "http://terminology.hl7.org/CodeSystem/condition-ver-status", code: "refuted" }],
       };
     }
-    const base = await startPreviousExamRoutes(t, fhir, "auditor");
+    const base = await startPreviousExamRoutes(t, fhir, "admin");
 
     const response = await postPull(base, "source-dry-eye-od");
 
@@ -1171,7 +1164,7 @@ test("pull rejects failed transaction entries and maps precondition failures to 
   for (const failureStatus of ["412 Precondition Failed", "500 Internal Server Error"] as const) {
     const fhir = pullFhir();
     fhir.transactionFailureStatus = failureStatus;
-    const base = await startPreviousExamRoutes(t, fhir, "auditor");
+    const base = await startPreviousExamRoutes(t, fhir, "admin");
 
     const response = await postPull(base, "source-dry-eye-od");
 
@@ -1224,7 +1217,7 @@ for (const malformed of [
   test(`pull rejects ${malformed.name}`, async (t) => {
     const fhir = pullFhir();
     fhir.transactionResponseMutator = malformed.mutate;
-    const base = await startPreviousExamRoutes(t, fhir, "auditor");
+    const base = await startPreviousExamRoutes(t, fhir, "admin");
 
     const response = await postPull(base, "source-dry-eye-od");
 
@@ -1241,7 +1234,7 @@ for (const missing of [
   test(`pull maps a missing ${missing.name} to a non-leaking 404`, async (t) => {
     const fhir = pullFhir();
     fhir.remove(missing.reference);
-    const base = await startPreviousExamRoutes(t, fhir, "auditor");
+    const base = await startPreviousExamRoutes(t, fhir, "admin");
 
     const response = await postPull(base, "source-dry-eye-od");
 
@@ -1254,7 +1247,7 @@ for (const missing of [
 test("pull maps a patient-compartment source read denial to a non-leaking 403", async (t) => {
   const fhir = pullFhir();
   fhir.readFailures.set("Condition/source-dry-eye-od", 403);
-  const base = await startPreviousExamRoutes(t, fhir, "auditor");
+  const base = await startPreviousExamRoutes(t, fhir, "admin");
 
   const response = await postPull(base, "source-dry-eye-od");
 
@@ -1268,7 +1261,7 @@ test("pull maps a patient-compartment source read denial to a non-leaking 403", 
 test("pull maps a missing source evidence Observation to a non-leaking 404", async (t) => {
   const fhir = pullFhir();
   fhir.readFailures.set("Observation/source-staining-present", 404);
-  const base = await startPreviousExamRoutes(t, fhir, "auditor");
+  const base = await startPreviousExamRoutes(t, fhir, "admin");
 
   const response = await postPull(base, "source-dry-eye-od");
 
@@ -1280,7 +1273,7 @@ test("pull maps a missing source evidence Observation to a non-leaking 404", asy
 test("pull maps a gone source Condition to the same non-leaking 404", async (t) => {
   const fhir = pullFhir();
   fhir.readFailures.set("Condition/source-dry-eye-od", 410);
-  const base = await startPreviousExamRoutes(t, fhir, "auditor");
+  const base = await startPreviousExamRoutes(t, fhir, "admin");
 
   const response = await postPull(base, "source-dry-eye-od");
 
@@ -1292,7 +1285,7 @@ test("pull maps a gone source Condition to the same non-leaking 404", async (t) 
 test("pull maps a current-identity Condition compartment denial to a non-leaking 403", async (t) => {
   const fhir = pullFhir();
   fhir.readFailures.set("Condition/current-other-1", 403);
-  const base = await startPreviousExamRoutes(t, fhir, "auditor");
+  const base = await startPreviousExamRoutes(t, fhir, "admin");
 
   const response = await postPull(base, "source-dry-eye-od");
 
@@ -1306,7 +1299,7 @@ test("pull maps a current-identity Condition compartment denial to a non-leaking
 test("pull rejects a source Encounter for another patient", async (t) => {
   const fhir = pullFhir();
   fhir.resource<Encounter>("Encounter", "source-pull").subject = { reference: "Patient/other" };
-  const response = await postPull(await startPreviousExamRoutes(t, fhir, "auditor"), "source-dry-eye-od");
+  const response = await postPull(await startPreviousExamRoutes(t, fhir, "admin"), "source-dry-eye-od");
   assert.equal(response.status, 409, await response.text());
   assert.equal(fhir.transactions.length, 0);
 });
@@ -1314,7 +1307,7 @@ test("pull rejects a source Encounter for another patient", async (t) => {
 test("pull rejects a source Condition declaring another Encounter", async (t) => {
   const fhir = pullFhir();
   fhir.resource<Condition>("Condition", "source-dry-eye-od").encounter = { reference: "Encounter/other" };
-  const response = await postPull(await startPreviousExamRoutes(t, fhir, "auditor"), "source-dry-eye-od");
+  const response = await postPull(await startPreviousExamRoutes(t, fhir, "admin"), "source-dry-eye-od");
   assert.equal(response.status, 409, await response.text());
   assert.equal(fhir.transactions.length, 0);
 });
@@ -1322,7 +1315,7 @@ test("pull rejects a source Condition declaring another Encounter", async (t) =>
 test("pull rejects source evidence for another patient", async (t) => {
   const fhir = pullFhir();
   fhir.resource<Observation>("Observation", "source-staining-present").subject = { reference: "Patient/other" };
-  const response = await postPull(await startPreviousExamRoutes(t, fhir, "auditor"), "source-dry-eye-od");
+  const response = await postPull(await startPreviousExamRoutes(t, fhir, "admin"), "source-dry-eye-od");
   assert.equal(response.status, 409, await response.text());
   assert.equal(fhir.transactions.length, 0);
 });
@@ -1330,7 +1323,7 @@ test("pull rejects source evidence for another patient", async (t) => {
 test("pull rejects source evidence declaring another Encounter", async (t) => {
   const fhir = pullFhir();
   fhir.resource<Observation>("Observation", "source-staining-present").encounter = { reference: "Encounter/other" };
-  const response = await postPull(await startPreviousExamRoutes(t, fhir, "auditor"), "source-dry-eye-od");
+  const response = await postPull(await startPreviousExamRoutes(t, fhir, "admin"), "source-dry-eye-od");
   assert.equal(response.status, 409, await response.text());
   assert.equal(fhir.transactions.length, 0);
 });
@@ -1340,7 +1333,7 @@ test("pull rejects an entered-in-error source Condition", async (t) => {
   fhir.resource<Condition>("Condition", "source-dry-eye-od").verificationStatus = {
     coding: [{ system: "http://terminology.hl7.org/CodeSystem/condition-ver-status", code: "entered-in-error" }],
   };
-  const response = await postPull(await startPreviousExamRoutes(t, fhir, "auditor"), "source-dry-eye-od");
+  const response = await postPull(await startPreviousExamRoutes(t, fhir, "admin"), "source-dry-eye-od");
   assert.equal(response.status, 409, await response.text());
   assert.equal(fhir.transactions.length, 0);
 });
@@ -1348,7 +1341,7 @@ test("pull rejects an entered-in-error source Condition", async (t) => {
 test("pull excludes an entered-in-error source Observation", async (t) => {
   const fhir = pullFhir();
   fhir.resource<Observation>("Observation", "source-staining-present").status = "entered-in-error";
-  const response = await postPull(await startPreviousExamRoutes(t, fhir, "auditor"), "source-dry-eye-od");
+  const response = await postPull(await startPreviousExamRoutes(t, fhir, "admin"), "source-dry-eye-od");
   assert.equal(response.status, 200, await response.clone().text());
   const transaction = fhir.transactions[0]!.bundle;
   assert.deepEqual(transaction.entry?.map((entry) => entry.resource?.resourceType), [
@@ -1363,7 +1356,7 @@ test("pull excludes an entered-in-error source Observation", async (t) => {
 test("pull rejects an entered-in-error source Encounter", async (t) => {
   const fhir = pullFhir();
   fhir.resource<Encounter>("Encounter", "source-pull").status = "entered-in-error";
-  const response = await postPull(await startPreviousExamRoutes(t, fhir, "auditor"), "source-dry-eye-od");
+  const response = await postPull(await startPreviousExamRoutes(t, fhir, "admin"), "source-dry-eye-od");
   assert.equal(response.status, 409, await response.text());
   assert.equal(fhir.transactions.length, 0);
 });
@@ -1371,7 +1364,7 @@ test("pull rejects an entered-in-error source Encounter", async (t) => {
 test("pull rejects an entered-in-error current Encounter", async (t) => {
   const fhir = pullFhir();
   fhir.resource<Encounter>("Encounter", "current-pull").status = "entered-in-error";
-  const response = await postPull(await startPreviousExamRoutes(t, fhir, "auditor"), "source-dry-eye-od");
+  const response = await postPull(await startPreviousExamRoutes(t, fhir, "admin"), "source-dry-eye-od");
   assert.equal(response.status, 409, await response.text());
   assert.equal(fhir.transactions.length, 0);
 });
@@ -1383,7 +1376,7 @@ test("pull rejects a current Encounter entering error on the mutation-time re-re
       fhir.resource<Encounter>("Encounter", "current-pull").status = "entered-in-error";
     }
   };
-  const response = await postPull(await startPreviousExamRoutes(t, fhir, "auditor"), "source-dry-eye-od");
+  const response = await postPull(await startPreviousExamRoutes(t, fhir, "admin"), "source-dry-eye-od");
   assert.equal(response.status, 409, await response.text());
   assert.equal(fhir.transactions.length, 0);
 });
@@ -1395,7 +1388,7 @@ test("pull rejects a current patient change on the mutation-time re-read", async
       fhir.resource<Encounter>("Encounter", "current-pull").subject = { reference: "Patient/other" };
     }
   };
-  const response = await postPull(await startPreviousExamRoutes(t, fhir, "auditor"), "source-dry-eye-od");
+  const response = await postPull(await startPreviousExamRoutes(t, fhir, "admin"), "source-dry-eye-od");
   assert.equal(response.status, 409, await response.text());
   assert.equal(fhir.transactions.length, 0);
 });
@@ -1403,7 +1396,7 @@ test("pull rejects a current patient change on the mutation-time re-read", async
 test("pull rejects a current Encounter without a version", async (t) => {
   const fhir = pullFhir();
   delete fhir.resource<Encounter>("Encounter", "current-pull").meta;
-  const response = await postPull(await startPreviousExamRoutes(t, fhir, "auditor"), "source-dry-eye-od");
+  const response = await postPull(await startPreviousExamRoutes(t, fhir, "admin"), "source-dry-eye-od");
   assert.equal(response.status, 409, await response.text());
   assert.equal(fhir.transactions.length, 0);
 });
@@ -1416,7 +1409,7 @@ test("a repeated exact pull returns the current Condition without a transaction"
   fhir.resource<Encounter>("Encounter", "current-pull").diagnosis!.push(
     buildEncounterDiagnosisComponent("Condition/current-existing-dry-eye-od", 5),
   );
-  const response = await postPull(await startPreviousExamRoutes(t, fhir, "auditor"), "source-dry-eye-od");
+  const response = await postPull(await startPreviousExamRoutes(t, fhir, "admin"), "source-dry-eye-od");
   assert.equal(response.status, 200, await response.clone().text());
   assert.deepEqual(await response.json(), {
     conditionReference: "Condition/current-existing-dry-eye-od",
@@ -1436,7 +1429,7 @@ test("a transaction conflict re-read returns the concurrently created exact Cond
       buildEncounterDiagnosisComponent("Condition/current-conflict-dry-eye-od", 5),
     );
   };
-  const response = await postPull(await startPreviousExamRoutes(t, fhir, "auditor"), "source-dry-eye-od");
+  const response = await postPull(await startPreviousExamRoutes(t, fhir, "admin"), "source-dry-eye-od");
   assert.equal(response.status, 200, await response.clone().text());
   assert.deepEqual(await response.json(), {
     conditionReference: "Condition/current-conflict-dry-eye-od",
@@ -1448,7 +1441,7 @@ test("a transaction conflict re-read returns the concurrently created exact Cond
 test("a transaction conflict without the exact identity returns 409", async (t) => {
   const fhir = pullFhir();
   fhir.transactionErrorStatus = 412;
-  const response = await postPull(await startPreviousExamRoutes(t, fhir, "auditor"), "source-dry-eye-od");
+  const response = await postPull(await startPreviousExamRoutes(t, fhir, "admin"), "source-dry-eye-od");
   assert.equal(response.status, 409, await response.text());
   assert.equal(fhir.transactions.length, 1);
 });
@@ -1457,7 +1450,7 @@ test("a transaction conflict whose current Encounter disappeared returns 409", a
   const fhir = pullFhir();
   fhir.transactionErrorStatus = 412;
   fhir.beforeTransaction = () => fhir.remove("Encounter/current-pull");
-  const response = await postPull(await startPreviousExamRoutes(t, fhir, "auditor"), "source-dry-eye-od");
+  const response = await postPull(await startPreviousExamRoutes(t, fhir, "admin"), "source-dry-eye-od");
   assert.equal(response.status, 409, await response.text());
   assert.equal(fhir.transactions.length, 1);
 });
@@ -1479,7 +1472,7 @@ test("a conflict reread never returns an exact diagnosis from an entered-in-erro
     }
   };
 
-  const response = await postPull(await startPreviousExamRoutes(t, fhir, "auditor"), "source-dry-eye-od");
+  const response = await postPull(await startPreviousExamRoutes(t, fhir, "admin"), "source-dry-eye-od");
 
   assert.equal(response.status, 409, await response.text());
   assert.equal(fhir.transactions.length, 1);
@@ -1552,7 +1545,7 @@ test("live ordinary-clinician policy persists and reads diagnosis carry while pr
       diagnosis: [buildEncounterDiagnosisComponent(`Condition/${sourceCondition.id}`, 1)],
     });
 
-    const clinicianPolicy = buildMedplumAccessPolicy(getRoleDeclaration("clinician"));
+    const clinicianPolicy = buildMedplumAccessPolicy(getRoleDeclaration("provider"));
     clinicianPolicy.name = accessPolicyName;
     const createdPolicy = track(await adminFhir.create<AccessPolicy>(clinicianPolicy));
     accessPolicyId = createdPolicy.id;
@@ -1603,7 +1596,7 @@ test("live ordinary-clinician policy persists and reads diagnosis carry while pr
     });
     const authenticate = async () => ({
       staffReference: `Practitioner/${practitioner.id}`,
-      actorRole: "clinician" as const,
+      actorRole: "provider" as const,
       fhir: clinicianFhir,
     });
     const result = await handleDiagnosisPullRequest({ fhirBaseUrl: baseUrl, authenticate }, {
@@ -1729,7 +1722,7 @@ test("live ordinary-clinician policy persists and reads diagnosis carry while pr
         rollbackFhir: adminFhir,
         authenticate: async () => ({
           staffReference: `Practitioner/${practitioner.id}`,
-          actorRole: "clinician",
+          actorRole: "provider",
           fhir: conflictFhir,
         }),
       }, {
@@ -2323,7 +2316,7 @@ test("previous exams registered route maps cursor-page FHIR denials and missing 
     const cursor = (first.body as PreviousExamsPage).nextCursor;
     assert.ok(cursor);
     fhir.searchUrlFailures.set("/fhir/R4/Encounter?_page=2&_count=4", status);
-    const base = await startPreviousExamRoutes(t, fhir, "auditor");
+    const base = await startPreviousExamRoutes(t, fhir, "admin");
 
     const response = await fetch(
       `${base}/clinical-graph/encounters/current/previous-exams?cursor=${encodeURIComponent(cursor)}`,
@@ -2741,12 +2734,12 @@ async function startPreviousExamRoutes(
     authenticate: async (header: string | undefined) => header === AUTH_FORBIDDEN
       ? { staffReference: "Practitioner/forbidden", actorRole: forbiddenRole, fhir: unreachableFhir }
       : header === AUTH_CLINICIAN
-        ? { staffReference: "Practitioner/doc", actorRole: "clinician", fhir }
+        ? { staffReference: "Practitioner/doc", actorRole: "provider", fhir }
         : null,
     authenticateWrite: async (header: string | undefined) => header === AUTH_FORBIDDEN
       ? { staffReference: "Practitioner/forbidden", actorRole: forbiddenRole, fhir: unreachableFhir }
       : header === AUTH_CLINICIAN
-        ? { staffReference: "Practitioner/doc", actorRole: "clinician", fhir }
+        ? { staffReference: "Practitioner/doc", actorRole: "provider", fhir }
         : null,
     ...(rollbackFhir ? { rollbackFhir } : {}),
   };
@@ -2875,7 +2868,7 @@ function deps(fhir: MemoryFhir) {
   return {
     fhirBaseUrl: "https://fhir.local",
     authenticate: async (header: string | undefined) => header === AUTH_CLINICIAN
-      ? { staffReference: "Practitioner/doc", actorRole: "clinician" as const, fhir }
+      ? { staffReference: "Practitioner/doc", actorRole: "provider" as const, fhir }
       : null,
   };
 }

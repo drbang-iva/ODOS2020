@@ -14,13 +14,13 @@ test("AppShell renders every global control and a linked breadcrumb on a deep ro
   const html = renderToStaticMarkup(
     <AppShell
       path="/settings/staff"
-      roles={["practice-admin", "clinician"]}
+      roles={["admin", "provider"]}
       homePath="/desk"
       side="desk"
       email="eric.bang@example.test"
       switchPill={<RoleSwitchPill target="/clinic" />}
     >
-      <RouteSwitch view={{ kind: "picker" }} path="/settings/staff" roles={["practice-admin", "clinician"]} />
+      <RouteSwitch view={{ kind: "picker" }} path="/settings/staff" roles={["admin", "provider"]} />
     </AppShell>,
   );
 
@@ -35,7 +35,7 @@ test("AppShell renders every global control and a linked breadcrumb on a deep ro
   assert.match(html, /Switch to Clinic/);
   assert.match(html, /aria-label="Account menu"/);
   assert.match(html, /eric\.bang@example\.test/);
-  assert.match(html, /Practice admin · Clinician/);
+  assert.match(html, /Admin \/ Manager · Provider/);
   assert.match(html, />Logout<\/button>/);
   assert.match(html, /Invite a staff member/);
 });
@@ -44,7 +44,7 @@ test("AppShell registers the statement-message settings breadcrumb", () => {
   const html = renderToStaticMarkup(
     <AppShell
       path="/settings/statement-messages"
-      roles={["practice-admin"]}
+      roles={["admin"]}
       homePath="/desk"
       side="desk"
       email="admin@example.test"
@@ -60,7 +60,7 @@ test("AppShell registers the statement-message settings breadcrumb", () => {
 
 test("AppShell registers the billing identity settings breadcrumb", () => {
   const html = renderToStaticMarkup(
-    <AppShell path="/settings/billing-identity" roles={["practice-admin"]} homePath="/desk" side="desk" email="admin@example.test">
+    <AppShell path="/settings/billing-identity" roles={["admin"]} homePath="/desk" side="desk" email="admin@example.test">
       <main />
     </AppShell>,
   );
@@ -71,7 +71,7 @@ test("AppShell registers the Appearance settings breadcrumb", () => {
   const html = renderToStaticMarkup(
     <AppShell
       path="/settings/appearance"
-      roles={["practice-admin"]}
+      roles={["admin"]}
       homePath="/desk"
       side="desk"
       email="admin@example.test"
@@ -87,7 +87,7 @@ test("AppShell registers the Lens Catalog settings breadcrumb", () => {
   const html = renderToStaticMarkup(
     <AppShell
       path="/settings/lens-catalog"
-      roles={["practice-admin"]}
+      roles={["admin"]}
       homePath="/desk"
       side="desk"
       email="admin@example.test"
@@ -99,8 +99,8 @@ test("AppShell registers the Lens Catalog settings breadcrumb", () => {
 });
 
 test("unified Sections includes Schedule and applies the existing practice-admin Settings gate", () => {
-  const frontDesk = renderToStaticMarkup(<AppShell path="/desk" roles={["front-desk"]} homePath="/desk" side="desk" email="desk@example.test"><main /></AppShell>);
-  const admin = renderToStaticMarkup(<AppShell path="/desk" roles={["practice-admin"]} homePath="/desk" side="desk" email="admin@example.test"><main /></AppShell>);
+  const frontDesk = renderToStaticMarkup(<AppShell path="/desk" roles={["staff"]} homePath="/desk" side="desk" email="desk@example.test"><main /></AppShell>);
+  const admin = renderToStaticMarkup(<AppShell path="/desk" roles={["admin"]} homePath="/desk" side="desk" email="admin@example.test"><main /></AppShell>);
   assert.match(frontDesk, /href="\/schedule\/day"[\s\S]*Schedule/);
   assert.doesNotMatch(frontDesk, /href="\/settings"/);
   assert.match(admin, /href="\/settings"[\s\S]*Administration \/ Settings/);
@@ -110,7 +110,7 @@ test("AppShell leaves account-menu overflow visible and places Sections in the r
   const html = renderToStaticMarkup(
     <AppShell
       path="/settings/staff"
-      roles={["practice-admin", "clinician"]}
+      roles={["admin", "provider"]}
       homePath="/desk"
       side="desk"
       email="eric.bang@example.test"
@@ -158,7 +158,7 @@ test("login and full-page routes render without AppShell", () => {
   fhir.logout(storage);
 
   try {
-    const login = renderToStaticMarkup(<App resolveRoles={async () => ({ roles: ["front-desk"] })} />);
+    const login = renderToStaticMarkup(<App resolveRoles={async () => ({ roles: ["staff"] })} />);
     assert.match(login, /Email address/);
     assert.doesNotMatch(login, /data-testid="app-shell"/);
 
@@ -180,7 +180,7 @@ test("the account Logout item clears the persisted session", async () => {
   assert.equal(fhir.rehydrateSession(storage), true);
   let renderer!: ReactTestRenderer;
   await act(async () => {
-    renderer = create(<AppShell path="/settings/staff" roles={["practice-admin"]} homePath="/desk" side="desk" email="admin@example.test"><main /></AppShell>);
+    renderer = create(<AppShell path="/settings/staff" roles={["admin"]} homePath="/desk" side="desk" email="admin@example.test"><main /></AppShell>);
   });
   const logout = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Logout");
   assert.ok(logout);
@@ -216,7 +216,7 @@ test("Command-K focuses global patient search from a non-clinic page", async () 
   try {
     await act(async () => {
       renderer = create(
-        <AppShell path="/billing/claims/worklist" roles={["front-desk"]} homePath="/desk" side="desk" email="desk@example.test"><main /></AppShell>,
+        <AppShell path="/billing/claims/worklist" roles={["staff"]} homePath="/desk" side="desk" email="desk@example.test"><main /></AppShell>,
         { createNodeMock: (element) => element.type === "input" ? { focus: () => { focused = true; } } : null },
       );
     });
@@ -232,8 +232,8 @@ test("Command-K focuses global patient search from a non-clinic page", async () 
 });
 
 test("Desk and Clinic homes have exactly one header after their local headers are folded", () => {
-  const desk = renderToStaticMarkup(<AppShell path="/desk" roles={["front-desk"]} homePath="/desk" side="desk" email="desk@example.test"><DeskHome /></AppShell>);
-  const clinic = renderToStaticMarkup(<AppShell path="/clinic" roles={["clinician"]} homePath="/clinic" side="clinic" email="doctor@example.test"><ClinicHome /></AppShell>);
+  const desk = renderToStaticMarkup(<AppShell path="/desk" roles={["staff"]} homePath="/desk" side="desk" email="desk@example.test"><DeskHome /></AppShell>);
+  const clinic = renderToStaticMarkup(<AppShell path="/clinic" roles={["provider"]} homePath="/clinic" side="clinic" email="doctor@example.test"><ClinicHome /></AppShell>);
   assert.equal((desk.match(/<header class="odos-desk-topbar/g) ?? []).length, 1);
   assert.equal((clinic.match(/<header class="odos-desk-topbar/g) ?? []).length, 1);
 });

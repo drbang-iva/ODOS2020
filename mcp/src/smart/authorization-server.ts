@@ -847,7 +847,7 @@ export async function approveSmartScopeDecisionForTest(input: {
   }
   const approved = approveStagedScopeDecision({
     decision,
-    adminRole: "practice-admin",
+    adminRole: "admin",
     adminUserId: input.adminUserId,
     approvedScopes: input.approvedScopes,
   });
@@ -1378,7 +1378,7 @@ function clientAuthClass(client: SmartClientRegistration): SmartClientAuthClass 
 }
 
 function roleFromRequest(req: Request): PracticeRoleId {
-  const raw = req.header("X-ODOS-Role") ?? stringQuery(req, "odos_role") ?? bodyString(req, "odos_role") ?? "clinician";
+  const raw = req.header("X-ODOS-Role") ?? stringQuery(req, "odos_role") ?? bodyString(req, "odos_role") ?? "provider";
   if (PRACTICE_ROLE_IDS.includes(raw as PracticeRoleId)) {
     return raw as PracticeRoleId;
   }

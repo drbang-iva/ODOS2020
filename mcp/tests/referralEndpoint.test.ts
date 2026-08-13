@@ -74,7 +74,7 @@ test("referral drafts allow front desk while authentication and patient-compartm
     body: CREATE_BODY,
   });
   const frontDeskDraft = await handleCreateReferralRequest(deps(fhir, {
-    role: "front-desk",
+    role: "staff",
     authToken: forbiddenAuth,
     staffReference: "Practitioner/front-desk-denied",
   }), {
@@ -94,7 +94,7 @@ test("referral drafts allow front desk while authentication and patient-compartm
     body: {},
   });
   const frontDeskSend = await handleReferralArtifactRequest(deps(fhir, {
-    role: "front-desk",
+    role: "staff",
     authToken: forbiddenAuth,
     staffReference: "Practitioner/front-desk-denied",
   }), {
@@ -426,7 +426,7 @@ test("each rendered preview is archived while send records one clinician-attribu
   assert.equal(auditRows.length, 3);
   assert.ok(auditRows.every((row) => row.eventType === "document.generate.completed"));
   assert.ok(auditRows.every((row) => row.actorId === "clinician-1"));
-  assert.ok(auditRows.every((row) => row.actorRole === "clinician"));
+  assert.ok(auditRows.every((row) => row.actorRole === "provider"));
   assert.ok(auditRows.every((row) => row.patientId === "p1"));
   assert.ok(auditRows.every((row) => row.resourceType === "DocumentReference"));
   assert.ok(auditRows.every((row) => row.actionReason?.includes("document-kind=letter")));
@@ -599,7 +599,7 @@ test("referral defaults require authentication and remain available to drafting 
   );
   const forbiddenAuth = "Bearer front-desk-denied";
   const frontDesk = await handleSaveReferralDefaultsRequest(deps(fhir, {
-    role: "front-desk",
+    role: "staff",
     authToken: forbiddenAuth,
     staffReference: "Practitioner/front-desk-denied",
   }), {
@@ -766,7 +766,7 @@ function deps(
   fhir: MemoryReferralFhir,
   options: {
     authenticated?: boolean;
-    role?: "clinician" | "front-desk";
+    role?: "provider" | "staff";
     authToken?: string;
     staffReference?: string;
     patientGrant?: string;
@@ -774,7 +774,7 @@ function deps(
   } = {},
 ): ReferralEndpointDeps {
   const authenticated = options.authenticated ?? true;
-  const role = options.role ?? "clinician";
+  const role = options.role ?? "provider";
   const authToken = options.authToken ?? AUTH;
   const staffReference = options.staffReference ?? "Practitioner/clinician-1";
   const patientGrant = options.patientGrant ?? "Patient/p1";

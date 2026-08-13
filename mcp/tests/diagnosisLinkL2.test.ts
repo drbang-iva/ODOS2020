@@ -54,7 +54,7 @@ test("condition code resolution returns zero, one, or two codes only when the ca
 
 test("staged POAG picks persist the chosen member code and keep different per-eye stages separate", async () => {
   const fhir = diagnosisPickFhir();
-  const authenticate = async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician" as const, fhir });
+  const authenticate = async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "provider" as const, fhir });
   const mildOd = await handleDiagnosisPickRequest({ authenticate }, {
     authHeader: "Bearer doctor-1",
     params: { encounterId: "e1" },
@@ -81,7 +81,7 @@ test("staged POAG picks persist the chosen member code and keep different per-ey
 test("Stage later persists a staged family Condition with no ICD-10-CM coding", async () => {
   const fhir = diagnosisPickFhir();
   const result = await handleDiagnosisPickRequest({
-    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician", fhir }),
+    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "provider", fhir }),
   }, {
     authHeader: "Bearer doctor-1",
     params: { encounterId: "e1" },
@@ -103,7 +103,7 @@ test("Stage later persists a staged family Condition with no ICD-10-CM coding", 
 
 test("Stage later cannot duplicate an existing same-eye staged member Condition", async () => {
   const fhir = diagnosisPickFhir();
-  const authenticate = async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician" as const, fhir });
+  const authenticate = async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "provider" as const, fhir });
   const confirmed = await handleDiagnosisPickRequest({ authenticate }, {
     authHeader: "Bearer doctor-1",
     params: { encounterId: "e1" },
@@ -134,7 +134,7 @@ test("Stage later cannot duplicate an existing same-eye staged member Condition"
 
 test("a member pick completes the same-eye pending family Condition instead of creating a duplicate", async () => {
   const fhir = diagnosisPickFhir();
-  const authenticate = async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician" as const, fhir });
+  const authenticate = async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "provider" as const, fhir });
   const deferred = await handleDiagnosisPickRequest({ authenticate }, {
     authHeader: "Bearer doctor-1",
     params: { encounterId: "e1" },
@@ -164,7 +164,7 @@ test("a member pick completes the same-eye pending family Condition instead of c
 
 test("discarding an absent staged member cannot refute a same-eye pending family Condition", async () => {
   const fhir = diagnosisPickFhir();
-  const authenticate = async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician" as const, fhir });
+  const authenticate = async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "provider" as const, fhir });
   const deferred = await handleDiagnosisPickRequest({ authenticate }, {
     authHeader: "Bearer doctor-1",
     params: { encounterId: "e1" },
@@ -200,7 +200,7 @@ test("all three eyelid families write both-lids OD and OS codes and resolve OU w
     for (const [laterality, expected] of [["OD", right], ["OS", left]] as const) {
       const fhir = diagnosisPickFhir();
       const result = await handleDiagnosisPickRequest({
-        authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician", fhir }),
+        authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "provider", fhir }),
       }, {
         authHeader: "Bearer doctor-1",
         params: { encounterId: "e1" },
@@ -216,7 +216,7 @@ test("all three eyelid families write both-lids OD and OS codes and resolve OU w
 
     const fhir = diagnosisPickFhir();
     const bilateral = await handleDiagnosisPickRequest({
-      authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician", fhir }),
+      authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "provider", fhir }),
     }, {
       authHeader: "Bearer doctor-1",
       params: { encounterId: "e1" },
@@ -261,7 +261,7 @@ test("allOf mapping triggers require every nested option trigger", () => {
 test("EOM binocular plus incomitant proposes diplopia and paralytic strabismus without auto-confirming", async () => {
   const fhir = new MemoryFhir();
   const definitions = await new FhirFindingDefinitionStore(fhir).list();
-  const authenticate = async () => ({ staffReference: "Practitioner/doc", actorRole: "clinician" as PracticeRoleId, fhir });
+  const authenticate = async () => ({ staffReference: "Practitioner/doc", actorRole: "provider" as PracticeRoleId, fhir });
   const base = { patientReference: "Patient/p1", encounterReference: "Encounter/eom", state: "abnormal" as const, eyes: { OD: { primary: "-1" as const } }, nystagmus: { present: false } };
   const firing = await handleEomCaptureRequest({ authenticate, findingDefinitions: () => definitions, now: () => "2026-07-22T12:00:00.000Z" }, { authHeader: "Bearer eom", body: { ...base, diplopia: { present: true, type: "binocular", direction: "horizontal", comitancy: "incomitant", worstGaze: "right", frequency: "intermittent" } } });
   assert.equal(firing.status, 200, JSON.stringify(firing.body));
@@ -362,7 +362,7 @@ test("real HTTP diagnosis picks persist right-eye evidence, Provenance, isolated
 
   const authenticate = async (header: string | undefined) => {
     const practitioner = header === "Bearer doctor-1" ? "Practitioner/doctor-1" : header === "Bearer doctor-2" ? "Practitioner/doctor-2" : undefined;
-    return practitioner ? { staffReference: practitioner, actorRole: "clinician" as PracticeRoleId, fhir } : null;
+    return practitioner ? { staffReference: practitioner, actorRole: "provider" as PracticeRoleId, fhir } : null;
   };
   const app = express();
   app.use(express.json());
@@ -443,7 +443,7 @@ test("OH-3 multi-select findings propose verified per-eye diagnoses and explicit
   const definitions = await new FhirFindingDefinitionStore(fhir).list();
   const authenticate = async () => ({
     staffReference: "Practitioner/doctor-1",
-    actorRole: "clinician" as PracticeRoleId,
+    actorRole: "provider" as PracticeRoleId,
     fhir,
   });
   const fieldFor = (stableKey: string) => {
@@ -815,7 +815,7 @@ test("I5 qualifier components cannot diagnose or suppress without an active pare
     } as Observation);
     const authenticate = async () => ({
       staffReference: "Practitioner/doctor-1",
-      actorRole: "clinician" as PracticeRoleId,
+      actorRole: "provider" as PracticeRoleId,
       fhir,
     });
     const result = await handleDiagnosisCandidatesRequest({ authenticate }, {
@@ -848,7 +848,7 @@ test("I6 allOf-wrapped option fallbacks are suppressed like bare option fallback
   assert.ok(field?.localCode);
   const authenticate = async () => ({
     staffReference: "Practitioner/doctor-1",
-    actorRole: "clinician" as PracticeRoleId,
+    actorRole: "provider" as PracticeRoleId,
     fhir,
   });
   const capture = await handleCustomSectionCaptureRequest({
@@ -890,7 +890,7 @@ test("direct laterality-required picks ask once, then write no fabricated eviden
     subject: { reference: "Patient/p1" },
   } as Encounter);
   const result = await handleDiagnosisPickRequest({
-    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician", fhir }),
+    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "provider", fhir }),
   }, {
     authHeader: "Bearer doctor-1",
     params: { encounterId: "e1" },
@@ -899,7 +899,7 @@ test("direct laterality-required picks ask once, then write no fabricated eviden
   assert.equal(result.status, 422);
   assert.match(String((result.body as { error: string }).error), /requires laterality/);
   const discard = await handleDiagnosisPickRequest({
-    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician", fhir }),
+    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "provider", fhir }),
   }, {
     authHeader: "Bearer doctor-1",
     params: { encounterId: "e1" },
@@ -908,7 +908,7 @@ test("direct laterality-required picks ask once, then write no fabricated eviden
   assert.equal(discard.status, 422);
   assert.match(String((discard.body as { error: string }).error), /requires laterality/);
   const explicit = await handleDiagnosisPickRequest({
-    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician", fhir }),
+    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "provider", fhir }),
     now: () => "2026-07-11T16:00:00.000Z",
   }, {
     authHeader: "Bearer doctor-1",
@@ -951,7 +951,7 @@ test("visual-field descriptors derive every approved code while preserving the d
     assert.ok(definition, `Missing visual-field definition for ${descriptor}`);
     const authenticate = async () => ({
       staffReference: "Practitioner/doctor-1",
-      actorRole: "clinician" as PracticeRoleId,
+      actorRole: "provider" as PracticeRoleId,
       fhir,
     });
     const capture = await handleCustomSectionCaptureRequest({
@@ -1033,7 +1033,7 @@ test("staged glaucoma visibly suppresses only the visual-field proposal and over
   assert.ok(definition);
   const authenticate = async () => ({
     staffReference: "Practitioner/doctor-1",
-    actorRole: "clinician" as PracticeRoleId,
+    actorRole: "provider" as PracticeRoleId,
     fhir,
   });
   const capture = await handleCustomSectionCaptureRequest({
@@ -1149,7 +1149,7 @@ test("prior-encounter confirmed glaucoma reveals both staged glaucoma families w
   const fhir = diagnosisPickFhir();
   const authenticate = async () => ({
     staffReference: "Practitioner/doctor-1",
-    actorRole: "clinician" as PracticeRoleId,
+    actorRole: "provider" as PracticeRoleId,
     fhir,
   });
   const beforeHistory = await handleDiagnosisCandidatesRequest({ authenticate }, {
@@ -1230,7 +1230,7 @@ test("posterior drusen returns an ordered leaf and staged family while occasiona
   const definitions = await new FhirFindingDefinitionStore(fhir).list();
   const authenticate = async () => ({
     staffReference: "Practitioner/doctor-1",
-    actorRole: "clinician" as PracticeRoleId,
+    actorRole: "provider" as PracticeRoleId,
     fhir,
   });
   for (const [stableKey, option] of [
@@ -1309,7 +1309,7 @@ test("posterior drusen returns an ordered leaf and staged family while occasiona
 test("homonymous field-side picks never derive field side from eye laterality", async () => {
   const fhir = diagnosisPickFhir();
   const pick = (laterality: "OD" | "OS" | "OU") => handleDiagnosisPickRequest({
-    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician", fhir }),
+    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "provider", fhir }),
     now: () => "2026-08-05T12:00:00.000Z",
   }, {
     authHeader: "Bearer doctor-1",
@@ -1347,7 +1347,7 @@ test("a concurrent Condition update returns 409 without silently retrying the cl
   const seeded = diagnosisPickFhir();
   fhir.resources.push(...seeded.resources);
   const pick = (action: "possible" | "confirm") => handleDiagnosisPickRequest({
-    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician", fhir }),
+    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "provider", fhir }),
     now: () => "2026-07-11T16:00:00.000Z",
   }, {
     authHeader: "Bearer doctor-1",
@@ -1372,7 +1372,7 @@ test("a concurrent Condition update returns 409 without silently retrying the cl
 test("laterality-keyed picks keep both eyes distinct, escalate one eye, and discard only its Condition", async () => {
   const fhir = diagnosisPickFhir();
   const pick = (body: Record<string, unknown>) => handleDiagnosisPickRequest({
-    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician", fhir }),
+    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "provider", fhir }),
     now: () => "2026-07-11T16:00:00.000Z",
   }, { authHeader: "Bearer doctor-1", params: { encounterId: "e1" }, body });
 
@@ -1425,7 +1425,7 @@ test("laterality-keyed picks keep both eyes distinct, escalate one eye, and disc
 test("conditional create makes identical same-eye Possible double-submit idempotent", async () => {
   const fhir = diagnosisPickFhir();
   const request = () => handleDiagnosisPickRequest({
-    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician", fhir }),
+    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "provider", fhir }),
     now: () => "2026-07-11T16:00:00.000Z",
   }, {
     authHeader: "Bearer doctor-1",
@@ -1454,7 +1454,7 @@ test("confirmed catalog picks join Encounter.diagnosis once and preserve rank ga
   encounter.meta = { versionId: "4" };
   encounter.diagnosis = [{ condition: { reference: "Condition/existing" }, rank: 4 }];
   const request = () => handleDiagnosisPickRequest({
-    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician", fhir }),
+    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "provider", fhir }),
     now: () => "2026-07-11T16:00:00.000Z",
   }, {
     authHeader: "Bearer doctor-1",
@@ -1508,7 +1508,7 @@ test("a failed tally side effect never fails a successful explicit diagnosis pic
   console.error = (...values) => errors.push(values.map(String).join(" "));
   try {
     const result = await handleDiagnosisPickRequest({
-      authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician", fhir }),
+      authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "provider", fhir }),
       now: () => "2026-07-11T16:00:00.000Z",
     }, {
       authHeader: "Bearer doctor-1",
@@ -1570,7 +1570,7 @@ async function ocularCandidateKeys(
   assert.ok(field?.localCode);
   const authenticate = async () => ({
     staffReference: "Practitioner/doctor-1",
-    actorRole: "clinician" as PracticeRoleId,
+    actorRole: "provider" as PracticeRoleId,
     fhir,
   });
   const capture = await handleCustomSectionCaptureRequest({

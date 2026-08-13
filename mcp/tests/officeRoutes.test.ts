@@ -152,8 +152,8 @@ test("Office routes authorize a clinician-primary multi-role caller on both side
     assert.equal(sent.response.status, 201);
     assert.equal((await request(server.base, "/desk/office/messages", "owner")).response.status, 200);
     assert.equal((await request(server.base, "/clinic/office/messages", "owner")).response.status, 200);
-    assert.equal(officeActingRole(["clinician", "front-desk", "practice-admin"], "desk"), "front-desk");
-    assert.equal(officeActingRole(["clinician", "front-desk", "practice-admin"], "clinic"), "clinician");
+    assert.equal(officeActingRole(["provider", "staff", "admin"], "desk"), "staff");
+    assert.equal(officeActingRole(["provider", "staff", "admin"], "clinic"), "provider");
   } finally {
     await server.close();
   }
@@ -223,13 +223,13 @@ async function startServer(store: InMemoryFhirStore) {
   registerOfficeRoutes(app, {
     authenticateService: async () => undefined,
     authenticate: async (header) => header === "Bearer desk"
-      ? { staffReference: "Practitioner/desk-1", actorRole: "front-desk", roles: ["front-desk"], fhir: store }
-      : header === "Bearer doctor" ? { staffReference: "Practitioner/doctor-1", actorRole: "clinician", roles: ["clinician"], fhir: store }
-        : header === "Bearer doctor-2" ? { staffReference: "Practitioner/doctor-2", actorRole: "clinician", roles: ["clinician"], fhir: store }
+      ? { staffReference: "Practitioner/desk-1", actorRole: "staff", roles: ["staff"], fhir: store }
+      : header === "Bearer doctor" ? { staffReference: "Practitioner/doctor-1", actorRole: "provider", roles: ["provider"], fhir: store }
+        : header === "Bearer doctor-2" ? { staffReference: "Practitioner/doctor-2", actorRole: "provider", roles: ["provider"], fhir: store }
           : header === "Bearer owner" ? {
               staffReference: "Practitioner/owner-1",
-              actorRole: "clinician",
-              roles: ["clinician", "front-desk", "practice-admin"],
+              actorRole: "provider",
+              roles: ["provider", "staff", "admin"],
               fhir: store,
             } : null,
     now: () => "2026-07-11T15:00:00.000Z",

@@ -16,7 +16,7 @@ test("claims.manage protects GET /claims/search with the existing claims 401/403
   });
   assert.equal(unauthenticated.searchCalls(), 0);
 
-  const forbidden = fixture("clinician");
+  const forbidden = fixture("provider");
   assert.deepEqual(await handleClaimSearchRequest(forbidden.deps, { authHeader: "Bearer good" }), {
     status: 403,
     body: { error: "claims.manage role required" },
@@ -25,7 +25,7 @@ test("claims.manage protects GET /claims/search with the existing claims 401/403
 });
 
 test("GET /claims/search supports patient name, claim number, and derived status combinations", async () => {
-  const { deps } = fixture("front-desk");
+  const { deps } = fixture("staff");
   const patient = await handleClaimSearchRequest(deps, {
     authHeader: "Bearer good",
     query: { patient: "Jamie Two" },
@@ -44,7 +44,7 @@ test("GET /claims/search supports patient name, claim number, and derived status
   assert.deepEqual(references(status), ["Claim/claim-2"]);
 });
 
-function fixture(role: "front-desk" | "clinician" | undefined) {
+function fixture(role: "staff" | "provider" | undefined) {
   let calls = 0;
   const claim1 = claimResource(1);
   const claim2 = claimResource(2);

@@ -32,11 +32,9 @@ export const AUDIT_EVENT_TYPES = [
 export type AuditEventType = (typeof AUDIT_EVENT_TYPES)[number];
 export type AuditOutcome = "granted" | "denied";
 export type AuditReviewRole =
-  | "auditor"
-  | "practice-admin"
-  | "clinician"
-  | "front-desk"
-  | "aesthetics-provider"
+  | "admin"
+  | "provider"
+  | "staff"
   | "system"
   | "unknown";
 
@@ -74,7 +72,7 @@ export interface AuditLogFilters {
   breakGlassOnly: boolean;
 }
 
-export const AUDIT_REVIEW_ALLOWED_ROLES: AuditReviewRole[] = ["auditor", "practice-admin"];
+export const AUDIT_REVIEW_ALLOWED_ROLES: AuditReviewRole[] = ["admin"];
 
 export const AUDIT_LOG_SCHEMA_COLUMNS = [
   "id",
@@ -239,7 +237,7 @@ export function sampleAuditRows(now = new Date("2026-04-29T12:00:00.000Z")): Aud
       eventTime: isoDaysAgo(now, 1),
       eventType: "read",
       actorId: "clinician-1",
-      actorRole: "clinician",
+      actorRole: "provider",
       patientId,
       resourceType: "Patient",
       resourceId: patientId,
@@ -255,7 +253,7 @@ export function sampleAuditRows(now = new Date("2026-04-29T12:00:00.000Z")): Aud
       eventTime: isoDaysAgo(now, 7),
       eventType: "denied",
       actorId: "clinician-2",
-      actorRole: "clinician",
+      actorRole: "provider",
       patientId,
       resourceType: "Patient",
       resourceId: patientId,
@@ -273,7 +271,7 @@ export function sampleAuditRows(now = new Date("2026-04-29T12:00:00.000Z")): Aud
       eventTime: isoDaysAgo(now, 15),
       eventType: "break-glass-invoked",
       actorId: "clinician-3",
-      actorRole: "clinician",
+      actorRole: "provider",
       patientId,
       resourceType: "Encounter",
       resourceId: "emergency-encounter",

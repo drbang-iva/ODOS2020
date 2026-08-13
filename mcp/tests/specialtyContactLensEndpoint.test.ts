@@ -38,7 +38,7 @@ function deps(input: {
     authenticate: async (authHeader) => authHeader === AUTH
       ? {
           staffReference: "Practitioner/doc1",
-          actorRole: input.role ?? "clinician",
+          actorRole: input.role ?? "provider",
           fhir: {
             create: async <T extends Observation | Provenance>(
               resource: T,
@@ -89,14 +89,14 @@ test("specialty CL definition exposes sparse editable catalogs and the fixed add
   assert.equal(additional.find((field) => field.code === "base_curve_2")?.parameterCode, undefined);
 });
 
-test("all specialty CL handlers enforce authentication and chart permissions", async () => {
+test("specialty CL handlers enforce authentication, practice-wide reads, and read-only Admin", async () => {
   assert.equal((await handleSpecialtyContactLensDefinitionRequest(deps().deps, { authHeader: undefined })).status, 401);
-  assert.equal((await handleSpecialtyContactLensDefinitionRequest(deps({ role: "auditor" }).deps, { authHeader: AUTH })).status, 403);
+  assert.equal((await handleSpecialtyContactLensDefinitionRequest(deps({ role: "admin" }).deps, { authHeader: AUTH })).status, 200);
   assert.equal((await handleSpecialtyContactLensCaptureRequest(deps().deps, {
     authHeader: undefined,
     body: specialtyBody(),
   })).status, 401);
-  assert.equal((await handleSpecialtyContactLensCaptureRequest(deps({ role: "front-desk" }).deps, {
+  assert.equal((await handleSpecialtyContactLensCaptureRequest(deps({ role: "admin" }).deps, {
     authHeader: AUTH,
     body: specialtyBody(),
   })).status, 403);
@@ -104,10 +104,10 @@ test("all specialty CL handlers enforce authentication and chart permissions", a
     authHeader: undefined,
     query: { patient: BODY.patientReference },
   })).status, 401);
-  assert.equal((await handleSpecialtyKeratometryRequest(deps({ role: "auditor" }).deps, {
+  assert.equal((await handleSpecialtyKeratometryRequest(deps({ role: "admin" }).deps, {
     authHeader: AUTH,
     query: { patient: BODY.patientReference },
-  })).status, 403);
+  })).status, 200);
 });
 
 test("specialty CL capture persists per eye with existing type, material, and parameter codes", async () => {

@@ -194,7 +194,7 @@ test("the procedure-definition endpoint serves the same persisted data store use
   const store = new FhirProcedureDefinitionStore(fhir);
   const seed = buildProcedureDefinitionSeeds()[0]!;
   const mutation = await handleProcedureDefinitionMutationRequest(
-    deps("practice-admin", fhir, await store.list()),
+    deps("admin", fhir, await store.list()),
     {
       authHeader: AUTH,
       params: { stableKey: seed.stableKey },
@@ -208,7 +208,7 @@ test("the procedure-definition endpoint serves the same persisted data store use
   assert.equal(mutation.status, 200);
   const definitions = await store.list();
   const catalog = await handleProcedureDefinitionCatalogRequest(
-    deps("aesthetics-provider", fhir, definitions),
+    deps("provider", fhir, definitions),
     { authHeader: AUTH },
   );
   assert.equal(catalog.status, 200);
@@ -230,7 +230,7 @@ test("an aesthetics procedure definition constructs and persists a shared-Patien
   const definitions = buildProcedureDefinitionSeeds();
   const stableKey = definitions[0]!.stableKey;
   const result = await handleProcedureDefinitionCaptureRequest(
-    deps("aesthetics-provider", fhir, definitions),
+    deps("provider", fhir, definitions),
     {
       authHeader: AUTH,
       params: { stableKey },
@@ -255,7 +255,7 @@ test("an aesthetics procedure definition constructs and persists a shared-Patien
   assert.equal(fhir.provenances[0]?.target?.[1]?.reference, "Patient/shared-1");
 
   const history = await handleProcedureDefinitionHistoryRequest(
-    deps("aesthetics-provider", fhir, definitions),
+    deps("provider", fhir, definitions),
     {
       authHeader: AUTH,
       params: { stableKey },
@@ -274,7 +274,7 @@ test("procedure capture rejects mismatched and unreadable Encounters before writ
   const mismatched = new MemoryFhir();
   mismatched.encounters[0]!.subject = { reference: "Patient/different" };
   const mismatch = await handleProcedureDefinitionCaptureRequest(
-    deps("aesthetics-provider", mismatched, definitions),
+    deps("provider", mismatched, definitions),
     {
       authHeader: AUTH,
       params: { stableKey },
@@ -291,7 +291,7 @@ test("procedure capture rejects mismatched and unreadable Encounters before writ
   const unreadable = new MemoryFhir();
   unreadable.encounterReadError = new Error("FHIR unavailable");
   const readFailure = await handleProcedureDefinitionCaptureRequest(
-    deps("aesthetics-provider", unreadable, definitions),
+    deps("provider", unreadable, definitions),
     {
       authHeader: AUTH,
       params: { stableKey },
@@ -313,7 +313,7 @@ test("procedure capture rejects an eyecare Encounter before writing", async () =
   };
   const definitions = buildProcedureDefinitionSeeds();
   const result = await handleProcedureDefinitionCaptureRequest(
-    deps("aesthetics-provider", fhir, definitions),
+    deps("provider", fhir, definitions),
     {
       authHeader: AUTH,
       params: { stableKey: definitions[0]!.stableKey },
@@ -334,13 +334,13 @@ test("procedure capture rejects an eyecare Encounter before writing", async () =
 test("cosmetic consent persists as QuestionnaireResponse on the existing shared Patient", async () => {
   const fhir = new MemoryFhir();
   const definition = await handleAestheticsConsentDefinitionRequest(
-    deps("aesthetics-provider", fhir, buildProcedureDefinitionSeeds()),
+    deps("provider", fhir, buildProcedureDefinitionSeeds()),
     { authHeader: AUTH },
   );
   assert.equal(definition.status, 200);
 
   const result = await handleAestheticsConsentSubmissionRequest(
-    deps("aesthetics-provider", fhir, buildProcedureDefinitionSeeds()),
+    deps("provider", fhir, buildProcedureDefinitionSeeds()),
     {
       authHeader: AUTH,
       body: {
@@ -367,7 +367,7 @@ test("cosmetic consent rejects mismatched and unreadable Encounters before writi
   const mismatched = new MemoryFhir();
   mismatched.encounters[0]!.subject = { reference: "Patient/different" };
   const mismatch = await handleAestheticsConsentSubmissionRequest(
-    deps("aesthetics-provider", mismatched, definitions),
+    deps("provider", mismatched, definitions),
     {
       authHeader: AUTH,
       body: {
@@ -384,7 +384,7 @@ test("cosmetic consent rejects mismatched and unreadable Encounters before writi
   const unreadable = new MemoryFhir();
   unreadable.encounterReadError = new Error("FHIR unavailable");
   const readFailure = await handleAestheticsConsentSubmissionRequest(
-    deps("aesthetics-provider", unreadable, definitions),
+    deps("provider", unreadable, definitions),
     {
       authHeader: AUTH,
       body: {
@@ -405,7 +405,7 @@ test("cosmetic consent rejects an eyecare Encounter before writing", async () =>
     coding: [{ system: ODOS_DISCIPLINE_SYSTEM, code: "eyecare" }],
   };
   const result = await handleAestheticsConsentSubmissionRequest(
-    deps("aesthetics-provider", fhir, buildProcedureDefinitionSeeds()),
+    deps("provider", fhir, buildProcedureDefinitionSeeds()),
     {
       authHeader: AUTH,
       body: {

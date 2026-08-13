@@ -170,7 +170,7 @@ function setup() {
   const dispatch = createLabOrderDispatch([{ vendor: "manual" }]);
   const deps: LabOrderHandlerDeps = {
     authenticate: async (header) => header === "Bearer good"
-      ? { staffReference: "Practitioner/verified-staff", actorRole: "front-desk", fhir }
+      ? { staffReference: "Practitioner/verified-staff", actorRole: "staff", fhir }
       : null,
     dispatch: {
       ...dispatch,

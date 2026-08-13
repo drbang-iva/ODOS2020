@@ -135,8 +135,8 @@ const frontDeskMembership = await inviteOrdinaryUser({
   lastName: "Front Desk",
   password: frontDeskPassword,
 });
-await grantRole(adminFhir, clinicianMembership, clinicianEmail, "clinician");
-await grantRole(adminFhir, frontDeskMembership, frontDeskEmail, "front-desk");
+await grantRole(adminFhir, clinicianMembership, clinicianEmail, "provider");
+await grantRole(adminFhir, frontDeskMembership, frontDeskEmail, "staff");
 
 const clinicianProfileReference = requiredProfile(clinicianMembership);
 const frontDeskProfileReference = requiredProfile(frontDeskMembership);
@@ -501,7 +501,7 @@ async function grantRole(
   fhir: MedplumClient,
   membership: ProjectMembership,
   email: string,
-  role: Extract<PracticeRoleId, "clinician" | "front-desk">,
+  role: Extract<PracticeRoleId, "provider" | "staff">,
 ): Promise<void> {
   await grantPracticeRoles(
     {
@@ -527,15 +527,15 @@ async function grantRole(
           throw new Error(`Expected one ${requestedRole} AccessPolicy; found ${policies.length}.`);
         }
         const policy = policies[0]!;
-        if (requestedRole === "clinician") {
+        if (requestedRole === "provider") {
           assertCanonicalClinicianPolicy({
             projectId: membership.project.reference?.replace(/^Project\//, "") ?? "unknown",
             projectName: "M2a gate practice",
             policyId: policy.id ?? "unpersisted",
             policy,
           });
-        } else if (requestedRole === "front-desk") {
-          assertCanonicalPolicyRules(policy, "front-desk");
+        } else if (requestedRole === "staff") {
+          assertCanonicalPolicyRules(policy, "staff");
         } else {
           throw new Error(`M2a gate cannot grant the ${requestedRole} role.`);
         }

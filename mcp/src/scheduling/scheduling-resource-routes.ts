@@ -102,8 +102,8 @@ async function route(
       res.status(401).json({ error: "Authentication required for scheduler resources." });
       return;
     }
-    const allowed = staff.roles.includes("practice-admin")
-      || (access === "read" && staff.roles.includes("front-desk"));
+    const allowed = staff.roles.includes("admin")
+      || (access === "read" && staff.roles.includes("staff"));
     if (!allowed) {
       res.status(403).json({
         error: access === "admin"

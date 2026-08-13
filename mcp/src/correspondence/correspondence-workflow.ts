@@ -86,7 +86,7 @@ export function assertCorrespondenceActionAllowed(
   staffSendableLetterTypes: readonly CorrespondenceLetterType[],
 ): void {
   if (action === "draft") return;
-  const provider = role === "clinician";
+  const provider = role === "provider";
   if (action === "sign" && !provider) {
     throw new Error("Only a provider may sign clinical correspondence.");
   }

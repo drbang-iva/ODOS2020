@@ -22,7 +22,7 @@ const BODY = {
 };
 
 function deps(
-  role: PracticeRoleId = "clinician",
+  role: PracticeRoleId = "provider",
   findingDefinitions?: ContactLensEndpointDeps["findingDefinitions"],
 ) {
   const created: Array<{ resource: Observation | Provenance; headers?: Record<string, string> }> = [];
@@ -104,17 +104,17 @@ test("manufacturer filters products and product metadata drives distinct paramet
   assert.equal(plain?.mfPowerOptions, undefined);
 });
 
-test("both soft CL handlers enforce authentication and chart permissions", async () => {
+test("soft CL handlers enforce authentication and allow practice-wide reads plus Staff preliminary writes", async () => {
   assert.equal((await handleSoftContactLensDefinitionRequest(deps().deps, { authHeader: undefined })).status, 401);
-  assert.equal((await handleSoftContactLensDefinitionRequest(deps("auditor").deps, { authHeader: AUTH })).status, 403);
+  assert.equal((await handleSoftContactLensDefinitionRequest(deps("admin").deps, { authHeader: AUTH })).status, 200);
   assert.equal((await handleSoftContactLensCaptureRequest(deps().deps, {
     authHeader: undefined,
     body: softClBody(),
   })).status, 401);
-  assert.equal((await handleSoftContactLensCaptureRequest(deps("front-desk").deps, {
+  assert.equal((await handleSoftContactLensCaptureRequest(deps("staff").deps, {
     authHeader: AUTH,
     body: softClBody(),
-  })).status, 403);
+  })).status, 200);
 });
 
 test("soft CL capture persists one Observation per eye using existing CL parameter codes and actor context", async () => {
@@ -178,8 +178,8 @@ test("embedded over-refraction persists with a marker linked to the soft CL entr
 test("practice-edited manufacturer, product, and product cascade metadata are accepted end-to-end", async () => {
   const definition = practiceEditedDefinition();
   const configured = () => [definition];
-  const definitionResponse = await handleSoftContactLensDefinitionRequest(deps("clinician", configured).deps, { authHeader: AUTH });
-  const { created, deps: d } = deps("clinician", configured);
+  const definitionResponse = await handleSoftContactLensDefinitionRequest(deps("provider", configured).deps, { authHeader: AUTH });
+  const { created, deps: d } = deps("provider", configured);
   const saveResponse = await handleSoftContactLensCaptureRequest(d, {
     authHeader: AUTH,
     body: {

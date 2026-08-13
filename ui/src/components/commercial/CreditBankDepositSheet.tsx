@@ -39,7 +39,7 @@ export function CreditBankDepositSheet({
   useEffect(() => {
     let cancelled = false;
     resolveSessionRoles()
-      .then(({ roles }) => !cancelled && setCanBonus(roles.includes("practice-admin")))
+      .then(({ roles }) => !cancelled && setCanBonus(roles.includes("admin")))
       .catch((cause) => !cancelled && setError(messageOf(cause)));
     return () => { cancelled = true; };
   }, []);

@@ -289,7 +289,7 @@ async function main(): Promise<void> {
 
   // 6. Front-desk AccessPolicy RESOURCE (ready to attach — no login user created).
   const frontDeskPolicy = await client.create<AccessPolicy>({
-    ...buildMedplumAccessPolicy(getRoleDeclaration("front-desk")),
+    ...buildMedplumAccessPolicy(getRoleDeclaration("staff")),
     name: "ODOS Front Desk (scheduler walkthrough)",
   });
   console.log(`✓ Front-desk AccessPolicy: AccessPolicy/${frontDeskPolicy.id}`);

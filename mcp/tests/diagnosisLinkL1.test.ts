@@ -980,7 +980,7 @@ test("real HTTP routes complete Tear Film mapping, candidates read, deactivation
   app.use(express.json());
   const authenticate = async (header: string | undefined) => header === AUTH || header === "Bearer chart" || header === "Bearer no-grant" ? {
     staffReference: "Practitioner/admin-1",
-    actorRole: (header === AUTH ? "practice-admin" : header === "Bearer chart" ? "clinician" : "auditor") as PracticeRoleId,
+    actorRole: (header === AUTH ? "admin" : header === "Bearer chart" ? "provider" : "admin") as PracticeRoleId,
     fhir,
   } : null;
   const findingDeps = () => ({ authenticate, now: () => "2026-07-11T12:00:00.000Z", shortId: () => "stable01" });
@@ -1030,8 +1030,8 @@ test("real HTTP routes complete Tear Film mapping, candidates read, deactivation
 
   await get(base, "/clinical-graph/encounters/e1/diagnosis-candidates", null, 401);
   await request(base, "/clinical-graph/diagnosis-catalog", {}, 401, null);
-  await get(base, "/clinical-graph/encounters/e1/diagnosis-candidates", "Bearer no-grant", 403);
-  await request(base, "/clinical-graph/diagnosis-catalog", {}, 403, "Bearer no-grant");
+  await get(base, "/clinical-graph/encounters/e1/diagnosis-candidates", "Bearer no-grant", 200);
+  await request(base, "/clinical-graph/diagnosis-catalog", {}, 400, "Bearer no-grant");
 
   const section = await request(base, "/clinical-graph/finding-definitions", {
     action: "create-definition",

@@ -160,7 +160,7 @@ test("attestation audit row carries clinician attribution, policy URL, and Prove
   const row = buildClinicalWriteAuditRow({
     eventType: "update",
     actorId: "clinician-1",
-    actorRole: "clinician",
+    actorRole: "provider",
     observation: PRELIMINARY_OBSERVATION,
     provenanceId: "prov-attest",
     policyUrl: ODOS_CLINICAL_ATTESTATION_POLICY_URL,
@@ -169,7 +169,7 @@ test("attestation audit row carries clinician attribution, policy URL, and Prove
 
   assert.equal(row.eventType, "update");
   assert.equal(row.actorId, "clinician-1");
-  assert.equal(row.actorRole, "clinician");
+  assert.equal(row.actorRole, "provider");
   assert.equal(row.patientId, "patient-1");
   assert.equal(row.provenanceId, "prov-attest");
   assert.equal(auditEvent.outcome, "0");
@@ -179,7 +179,7 @@ test("attestation audit row carries clinician attribution, policy URL, and Prove
 test("Mandate 8 negative 5: failed attestation transaction has serious-failure audit row shape", () => {
   const row = buildRejectedClinicalWriteAuditRow({
     actorId: "clinician-1",
-    actorRole: "clinician",
+    actorRole: "provider",
     observation: PRELIMINARY_OBSERVATION,
     actionReason: "attestation failed: Provenance create rejected; transaction rolled back",
     policyUrl: ODOS_CLINICAL_ATTESTATION_POLICY_URL,
@@ -303,7 +303,7 @@ test("OCR-style 90-day query surfaces v0.5c audit rows with full attribution", (
       eventType: "read",
       eventTime: "2026-04-01T12:00:00.000Z",
       actorId: "front-desk-1",
-      actorRole: "front-desk",
+      actorRole: "staff",
       patientId: "patient-1",
       actionOutcome: "granted",
     }),
@@ -319,7 +319,7 @@ test("OCR-style 90-day query surfaces v0.5c audit rows with full attribution", (
       eventType: "update",
       eventTime: "2026-04-01T12:02:00.000Z",
       actorId: "clinician-1",
-      actorRole: "clinician",
+      actorRole: "provider",
       observation: FINAL_OBSERVATION,
       provenanceId: "prov-amend",
       policyUrl: ODOS_CLINICAL_AMENDMENT_POLICY_URL,

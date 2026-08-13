@@ -26,7 +26,7 @@ const ALL_SETTINGS_HREFS = [
 ] as const;
 
 test("Practice landing groups existing settings and the owner-only plan-profile route", () => {
-  const html = renderToStaticMarkup(<SettingsIndex roles={["practice-admin"]} />);
+  const html = renderToStaticMarkup(<SettingsIndex roles={["admin"]} />);
 
   for (const href of ALL_SETTINGS_HREFS) {
     assert.match(html, new RegExp(`href="${href.replaceAll("/", "\\/")}"`));
@@ -54,7 +54,7 @@ test("Find a setting filters static Manage links and Cmd-K focuses the search", 
 
   let renderer!: ReactTestRenderer;
   await act(async () => {
-    renderer = create(<SettingsIndex roles={["practice-admin"]} />, {
+    renderer = create(<SettingsIndex roles={["admin"]} />, {
       createNodeMock(element) {
         if (element.type === "input" && element.props.placeholder === "Find a setting") {
           return { focus: () => { focused = true; } };

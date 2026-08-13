@@ -38,11 +38,16 @@ test("AR dashboard and every export route preserve their underlying 401 and 403 
   try {
     for (const path of ROUTES) {
       assert.equal((await fetch(`${fixture.baseUrl}${path}`)).status, 401, `${path} 401`);
-      const forbidden = await fetch(`${fixture.baseUrl}${path}`, { headers: { Authorization: "Bearer forbidden" } });
+      const forbiddenToken = path.startsWith("/payments/") ? "admin" : "forbidden";
+      const forbidden = await fetch(`${fixture.baseUrl}${path}`, { headers: { Authorization: `Bearer ${forbiddenToken}` } });
+      if (path.startsWith("/payments/")) {
+        assert.equal(forbidden.status, 200, `${path} practice-wide read`);
+        continue;
+      }
       assert.equal(forbidden.status, 403, `${path} 403`);
       assert.match(
         await forbidden.text(),
-        path.startsWith("/payments/") ? /payment\.charge role required/ : /claims\.manage role required/,
+        /claims\.manage role required/,
         path,
       );
     }
@@ -66,7 +71,7 @@ test("statement list, generate-one, and batch routes use the same authenticated 
     const run = await fetch(`${fixture.baseUrl}/statements/run`, { method: "POST", headers: { Authorization: "Bearer good" } });
     assert.equal(run.status, 200);
     assert.equal((await fetch(`${fixture.baseUrl}/statements`)).status, 401);
-    assert.equal((await fetch(`${fixture.baseUrl}/statements`, { headers: { Authorization: "Bearer forbidden" } })).status, 403);
+    assert.equal((await fetch(`${fixture.baseUrl}/statements`, { headers: { Authorization: "Bearer admin" } })).status, 403);
   } finally {
     await fixture.close();
   }
@@ -136,11 +141,11 @@ async function server() {
     }),
   };
   const authenticate = async (header: string | undefined) => header === "Bearer good"
-    ? { staffReference: "Practitioner/staff-1", actorRole: "front-desk" as const, roles: ["front-desk"] as const, fhir }
+    ? { staffReference: "Practitioner/staff-1", actorRole: "staff" as const, roles: ["staff"] as const, fhir }
     : header === "Bearer admin"
-      ? { staffReference: "Practitioner/admin", actorRole: "practice-admin" as const, roles: ["practice-admin"] as const, fhir }
+      ? { staffReference: "Practitioner/admin", actorRole: "admin" as const, roles: ["admin"] as const, fhir }
     : header === "Bearer forbidden"
-      ? { staffReference: "Practitioner/staff-2", actorRole: "clinician" as const, roles: ["clinician"] as const, fhir }
+      ? { staffReference: "Practitioner/staff-2", actorRole: "provider" as const, roles: ["provider"] as const, fhir }
       : null;
   const app = express();
   app.use(express.json());

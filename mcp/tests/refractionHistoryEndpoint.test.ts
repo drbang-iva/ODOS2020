@@ -27,17 +27,17 @@ test("refraction history enforces chart.read and returns empty tab groups", asyn
     authHeader: undefined,
     query: { patient: PATIENT },
   });
-  const forbidden = await handleRefractionHistoryRequest(fixture.historyDeps("auditor"), {
+  const adminRead = await handleRefractionHistoryRequest(fixture.historyDeps("admin"), {
     authHeader: AUTH,
     query: { patient: PATIENT },
   });
   const empty = await fixture.read();
 
   assert.equal(unauthorized.status, 401);
-  assert.equal(forbidden.status, 403);
+  assert.equal(adminRead.status, 200);
   assert.equal(empty.status, 200);
   assert.deepEqual(empty.body, { glasses: [], softCl: [], specialtyCl: [] });
-  assert.equal(fixture.searches.length, 5);
+  assert.equal(fixture.searches.length, 10);
   for (const search of fixture.searches) {
     assert.equal(search.params.subject, PATIENT);
     assert.equal(search.params._sort, "-date");
@@ -391,15 +391,15 @@ function historyFixture() {
         };
       },
     },
-    authenticate(role: PracticeRoleId = "clinician") {
+    authenticate(role: PracticeRoleId = "provider") {
       return async (authHeader: string | undefined) => authHeader === AUTH
         ? { staffReference: "Practitioner/doc1", actorRole: role, fhir: fixture.fhir }
         : null;
     },
-    captureDeps(role: PracticeRoleId = "clinician") {
+    captureDeps(role: PracticeRoleId = "provider") {
       return { authenticate: fixture.authenticate(role), now: () => fixture.recordedAt };
     },
-    historyDeps(role: PracticeRoleId = "clinician") {
+    historyDeps(role: PracticeRoleId = "provider") {
       return { authenticate: fixture.authenticate(role) };
     },
     read() {

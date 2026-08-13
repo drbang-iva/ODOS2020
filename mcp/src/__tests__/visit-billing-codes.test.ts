@@ -497,11 +497,11 @@ test("visit charge handlers enforce chart access and create one stable manual pr
     diagnosis: [{ condition: { reference: "Condition/principal" }, rank: 1 }],
   } satisfies Encounter);
   const authenticate = async (header: string | undefined) => header === "Bearer clinician"
-    ? { staffReference: "Practitioner/doc", actorRole: "clinician" as const, fhir }
+    ? { staffReference: "Practitioner/doc", actorRole: "provider" as const, fhir }
     : header === "Bearer front"
-      ? { staffReference: "Practitioner/front", actorRole: "front-desk" as const, fhir }
+      ? { staffReference: "Practitioner/front", actorRole: "staff" as const, fhir }
       : header === "Bearer auditor"
-        ? { staffReference: "Practitioner/auditor", actorRole: "auditor" as const, fhir }
+        ? { staffReference: "Practitioner/auditor", actorRole: "admin" as const, fhir }
       : null;
 
   assert.equal((await handleVisitChargeRequest({ authenticate }, {
@@ -511,9 +511,9 @@ test("visit charge handlers enforce chart access and create one stable manual pr
   assert.equal((await handleVisitChargeRequest({ authenticate }, {
     authHeader: "Bearer auditor",
     params: { encounterId: "enc-visit" },
-  })).status, 403);
+  })).status, 200);
   assert.equal((await handleVisitChargeMutationRequest({ authenticate }, {
-    authHeader: "Bearer front",
+    authHeader: "Bearer auditor",
     params: { encounterId: "enc-visit" },
     body: { procedureConceptKey: "routine-vision-exam-new" },
   })).status, 403);
@@ -583,7 +583,7 @@ test("multiple or malformed principal diagnoses default to an empty editable poi
   } satisfies Encounter);
   const authenticate = async () => ({
     staffReference: "Practitioner/doc",
-    actorRole: "clinician" as const,
+    actorRole: "provider" as const,
     fhir,
   });
   for (const encounterId of ["enc-multiple-principal", "enc-malformed-principal"]) {
@@ -608,7 +608,7 @@ test("visit replacement preserves diagnosis edits and remove-revive never touche
   } satisfies Encounter);
   const authenticate = async () => ({
     staffReference: "Practitioner/doc",
-    actorRole: "clinician" as const,
+    actorRole: "provider" as const,
     fhir,
   });
   const store = new ProtocolBasicStore<ChargeProposal>(fhir, PROTOCOL_BASIC_CODES.chargeProposal);
@@ -661,7 +661,7 @@ test("visit charge conflicts and inactive concepts fail closed", async () => {
   } satisfies Encounter);
   const authenticate = async () => ({
     staffReference: "Practitioner/doc",
-    actorRole: "clinician" as const,
+    actorRole: "provider" as const,
     fhir,
   });
   assert.equal((await handleVisitChargeMutationRequest({ authenticate }, {
@@ -718,7 +718,7 @@ test("a protocol-linked visit concept conflicts instead of allowing a second vis
   } satisfies Encounter);
   const authenticate = async () => ({
     staffReference: "Practitioner/doc",
-    actorRole: "clinician" as const,
+    actorRole: "provider" as const,
     fhir,
   });
   const store = new ProtocolBasicStore<ChargeProposal>(fhir, PROTOCOL_BASIC_CODES.chargeProposal);
@@ -751,7 +751,7 @@ test("selecting then signing materializes the billing-first visit charge with it
   } satisfies Encounter);
   const authenticate = async () => ({
     staffReference: "Practitioner/doc",
-    actorRole: "clinician" as const,
+    actorRole: "provider" as const,
     fhir,
   });
   const selected = await handleVisitChargeMutationRequest({ authenticate, now: () => NOW }, {

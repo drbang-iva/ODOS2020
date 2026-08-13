@@ -117,13 +117,11 @@ test("floor card has its own checked-in chart action without nesting buttons", (
 });
 
 test("chart action reachability excludes front-desk-only sessions after the live Provenance gate", () => {
-  assert.equal(canStartAppointmentChart(["front-desk"]), false);
-  assert.equal(canStartAppointmentChart(["clinician"]), false);
-  assert.equal(canStartAppointmentChart(["aesthetics-provider"]), false);
-  assert.equal(canStartAppointmentChart(["auditor"]), false);
-  assert.equal(canStartAppointmentChart(["front-desk", "clinician"]), true);
-  assert.equal(canStartAppointmentChart(["front-desk", "aesthetics-provider"]), true);
-  assert.equal(canStartAppointmentChart(["practice-admin"]), true);
+  assert.equal(canStartAppointmentChart(["staff"]), false);
+  assert.equal(canStartAppointmentChart(["provider"]), true);
+  assert.equal(canStartAppointmentChart(["admin"]), false);
+  assert.equal(canStartAppointmentChart(["staff", "provider"]), true);
+  assert.equal(canStartAppointmentChart(["admin", "provider"]), true);
 });
 
 test("appointment banner trims the note and shows visit type, urgent, and follow-up", () => {

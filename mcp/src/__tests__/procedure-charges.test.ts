@@ -258,7 +258,7 @@ function fixture(input: { encounter?: Encounter; id?: () => string } = {}) {
     if (!authHeader) return null;
     return {
       staffReference: "Practitioner/clinician",
-      actorRole: authHeader === "Bearer auditor" ? "auditor" as const : "clinician" as const,
+      actorRole: authHeader === "Bearer auditor" ? "admin" as const : "provider" as const,
       fhir,
     };
   };
@@ -371,11 +371,11 @@ test("procedure handlers enforce chart access before any FHIR write", async () =
   ];
   for (const call of calls) assert.equal((await call()).status, 401);
 
+  assert.equal((await handleProcedureChargesRequest(deps, {
+    authHeader: "Bearer auditor",
+    params: { encounterId: "enc-1" },
+  })).status, 200);
   const forbiddenCalls = [
-    () => handleProcedureChargesRequest(deps, {
-      authHeader: "Bearer auditor",
-      params: { encounterId: "enc-1" },
-    }),
     () => handleProcedureChargeCreateRequest(deps, {
       authHeader: "Bearer auditor",
       params: { encounterId: "enc-1" },

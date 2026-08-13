@@ -106,7 +106,7 @@ test("denied AccessPolicy compartment isolation writes privacy IB exception and 
   const row = buildOdosAuditEventRow({
     eventType: "denied",
     actorId: "clinician-1",
-    actorRole: "clinician",
+    actorRole: "provider",
     patientId: "patient-outside-compartment",
     resourceType: "Patient",
     resourceId: "patient-outside-compartment",
@@ -127,7 +127,7 @@ test("AuditEvent projection field placement uses agent.role, agent.who, agent.po
   const row = buildOdosAuditEventRow({
     eventType: "read",
     actorId: "doctor-1",
-    actorRole: "clinician",
+    actorRole: "provider",
     patientId: "patient-x",
     resourceType: "Observation",
     resourceId: "obs-1",
@@ -138,7 +138,7 @@ test("AuditEvent projection field placement uses agent.role, agent.who, agent.po
 
   assert.equal(auditEvent.type.system, "http://terminology.hl7.org/CodeSystem/audit-event-type");
   assert.equal(auditEvent.subtype?.[0]?.code, "read");
-  assert.equal(auditEvent.agent[0].role?.[0]?.coding?.[0]?.code, "clinician");
+  assert.equal(auditEvent.agent[0].role?.[0]?.coding?.[0]?.code, "provider");
   assert.equal(auditEvent.agent[0].who?.reference, "Practitioner/doctor-1");
   assert.equal(auditEvent.agent[0].policy?.[0], "AccessPolicy/odos-clinician");
   assert.equal(auditEvent.source.observer?.reference, "Device/odos-instance");
@@ -233,10 +233,10 @@ test("audit UI model is auditor/practice-admin gated and exports OCR query rows 
     breakGlassOnly: false,
   });
 
-  assert.equal(canReviewAuditLog("auditor"), true);
-  assert.equal(canReviewAuditLog("practice-admin"), true);
-  assert.equal(canReviewAuditLog("clinician"), false);
-  assert.equal(canReviewAuditLog("aesthetics-provider"), false);
+  assert.equal(canReviewAuditLog("admin"), true);
+  assert.equal(canReviewAuditLog("admin"), true);
+  assert.equal(canReviewAuditLog("provider"), false);
+  assert.equal(canReviewAuditLog("provider"), false);
   assert.equal(canReviewAuditLog("unknown"), false);
   assert.match(
     exportAuditRowsAsCsv(filtered),
@@ -383,7 +383,7 @@ function seedNinetyDays(patientId: string) {
       eventType: "read",
       eventTime: "2026-04-28T12:00:00.000Z",
       actorId: "doctor-1",
-      actorRole: "clinician",
+      actorRole: "provider",
       patientId,
       resourceType: "Patient",
       resourceId: patientId,
@@ -394,7 +394,7 @@ function seedNinetyDays(patientId: string) {
       eventType: "search",
       eventTime: "2026-04-20T12:00:00.000Z",
       actorId: "front-1",
-      actorRole: "front-desk",
+      actorRole: "staff",
       patientId,
       resourceType: "Encounter",
       actionOutcome: "granted",
@@ -404,7 +404,7 @@ function seedNinetyDays(patientId: string) {
       eventType: "update",
       eventTime: "2026-04-05T12:00:00.000Z",
       actorId: "doctor-1",
-      actorRole: "clinician",
+      actorRole: "provider",
       patientId,
       resourceType: "Observation",
       resourceId: "obs-1",
@@ -415,7 +415,7 @@ function seedNinetyDays(patientId: string) {
       eventType: "denied",
       eventTime: "2026-03-15T12:00:00.000Z",
       actorId: "doctor-2",
-      actorRole: "clinician",
+      actorRole: "provider",
       patientId,
       resourceType: "Patient",
       resourceId: patientId,
@@ -426,7 +426,7 @@ function seedNinetyDays(patientId: string) {
       eventType: "break-glass-invoked",
       eventTime: "2026-02-10T12:00:00.000Z",
       actorId: "doctor-3",
-      actorRole: "clinician",
+      actorRole: "provider",
       patientId,
       resourceType: "Encounter",
       resourceId: "enc-emergency",
@@ -438,7 +438,7 @@ function seedNinetyDays(patientId: string) {
       eventType: "read",
       eventTime: "2025-12-01T12:00:00.000Z",
       actorId: "doctor-1",
-      actorRole: "clinician",
+      actorRole: "provider",
       patientId,
       actionOutcome: "granted",
     }),
@@ -457,7 +457,7 @@ async function createAuditorClientToken(input: {
   const me = (await meRes.json()) as { project?: { id?: string } };
   assert.ok(me.project?.id, "Could not resolve project id from /auth/me.");
 
-  const policy = buildMedplumAccessPolicy(getRoleDeclaration("auditor"));
+  const policy = buildMedplumAccessPolicy(getRoleDeclaration("admin"));
   policy.name = `ODOS v0.5b Auditor Denial ${Date.now()}`;
   const createdPolicy = await input.fhir.create<AccessPolicy>(policy);
   assert.ok(createdPolicy.id);

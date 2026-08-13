@@ -28,7 +28,7 @@ test("v0.55b install flow blocks SC autonomous-refraction app and records the bl
     app,
     repository,
     adminUserId: "admin-1",
-    adminRole: "practice-admin",
+    adminRole: "admin",
     practiceJurisdiction: "US-SC",
     now: "2026-05-01T12:00:00.000Z",
   });

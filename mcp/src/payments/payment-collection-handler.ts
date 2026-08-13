@@ -21,7 +21,7 @@ export type CollectionFhirClient = Pick<MedplumClient, "read" | "search" | "exec
 
 export interface CollectionAuthenticatedStaff {
   staffReference: string;
-  actorRole: "practice-admin" | "clinician" | "front-desk" | "auditor" | "aesthetics-provider";
+  actorRole: PracticeRoleId;
   roles?: readonly PracticeRoleId[];
   fhir: CollectionFhirClient;
 }
@@ -367,11 +367,11 @@ async function authenticatedStaff(
 async function authorizedStaff(
   deps: PaymentCollectionHandlerDeps,
   authHeader: string | undefined,
-): Promise<{ staff: CollectionAuthenticatedStaff; actorRole: "practice-admin" | "front-desk" } | { result: ChargeHandlerResult }> {
+): Promise<{ staff: CollectionAuthenticatedStaff; actorRole: PracticeRoleId } | { result: ChargeHandlerResult }> {
   const authenticated = await authenticatedStaff(deps, authHeader);
   if ("result" in authenticated) return authenticated;
   const actorRole = resolveBusinessActionRole(authenticated.staff.roles ?? [], "payment.charge");
-  if (actorRole !== "practice-admin" && actorRole !== "front-desk") return { result: forbidden() };
+  if (!actorRole) return { result: forbidden() };
   return { staff: authenticated.staff, actorRole };
 }
 

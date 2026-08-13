@@ -535,7 +535,7 @@ export function SchedulerDayGrid({ roles = [] }: { roles?: readonly PracticeRole
           currentDate={date}
           initialBlockIndex={settingsBlockIndex}
           resources={resources}
-          canManageResources={roles.includes("practice-admin")}
+          canManageResources={roles.includes("admin")}
           integrityIssues={integrityIssues}
           integrityLoading={integrityLoading}
           onClose={() => {

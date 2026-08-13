@@ -51,9 +51,9 @@ const DEFAULT_STATE_PATH = resolve(process.cwd(), ".odos-setup-state.json");
 const PRACTICE_ORGANIZATION_IDENTIFIER_VALUE = "primary";
 const DEFAULT_SCHEDULING_OFFICE_ID = "main";
 const DEFAULT_SCHEDULING_OFFICE_NAME = "Main Office";
-const FIRST_ADMIN_GRANT_ROLES = ["front-desk", "practice-admin", "clinician"] as const satisfies readonly PracticeRoleId[];
+const FIRST_ADMIN_GRANT_ROLES = ["staff", "admin", "provider"] as const satisfies readonly PracticeRoleId[];
 type FirstAdminGrantRole = (typeof FIRST_ADMIN_GRANT_ROLES)[number];
-const FIRST_ADMIN_PRIMARY_ROLE: FirstAdminGrantRole = "front-desk";
+const FIRST_ADMIN_PRIMARY_ROLE: FirstAdminGrantRole = "staff";
 
 export interface SetupPracticeConfig {
   readonly baseUrl: string;
@@ -351,7 +351,7 @@ export async function runSetupPractice(options: SetupPracticeOptions = {}): Prom
     const policy = allPolicies.get(role);
     if (policy) policies.set(role, policy);
   }
-  const clinicianPolicy = policies.get("clinician");
+  const clinicianPolicy = policies.get("provider");
   if (!clinicianPolicy?.id || policies.size !== FIRST_ADMIN_GRANT_ROLES.length) {
     throw new Error("Setup wizard did not resolve all first-admin AccessPolicies.");
   }
@@ -577,7 +577,7 @@ export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
     const assignment = {
       id: this.membership.id!,
       practitionerId: input.practitioner.id,
-      policyId: input.policies.get("clinician")?.id,
+      policyId: input.policies.get("provider")?.id,
     };
     this.assignments.push(assignment);
     return assignment;

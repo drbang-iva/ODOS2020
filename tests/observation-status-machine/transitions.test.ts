@@ -34,7 +34,7 @@ test("v0.5c Observation.status machine allows every canonical transition", () =>
 
 test("v0.5c Observation.status machine rejects every disallowed transition", () => {
   const statuses: ObservationStatusBefore[] = [undefined, ...FHIR_OBSERVATION_STATUSES];
-  const roles: ObservationStatusActorRole[] = ["scribe", "clinician"];
+  const roles: ObservationStatusActorRole[] = ["scribe", "provider"];
 
   for (const from of statuses) {
     for (const to of FHIR_OBSERVATION_STATUSES) {
@@ -65,8 +65,9 @@ test("v0.5c Observation.status machine rejects every disallowed transition", () 
 });
 
 test("v0.5c Observation AccessPolicy emits the status-machine writeConstraint", () => {
-  const policy = buildMedplumAccessPolicy(getRoleDeclaration("clinician"));
-  const observationRule = policy.resource?.find((resource) => resource.resourceType === "Observation");
+  const policy = buildMedplumAccessPolicy(getRoleDeclaration("provider"));
+  const observationRule = policy.resource?.find((resource) =>
+    resource.resourceType === "Observation" && resource.interaction?.includes("update"));
 
   assert.ok(observationRule?.writeConstraint?.length);
   assert.ok(

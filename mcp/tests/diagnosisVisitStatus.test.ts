@@ -106,7 +106,7 @@ test("confirm freezes the original setter and timestamp when a different clinici
         : undefined;
     return staffReference ? {
       staffReference,
-      actorRole: "clinician" as PracticeRoleId,
+      actorRole: "provider" as PracticeRoleId,
       fhir,
     } : null;
   };
@@ -151,7 +151,7 @@ test("missing rows read as unset, signed encounters reject updates, and a later 
   const store = new MemoryStatusStore();
   const authenticate = async () => ({
     staffReference: "Practitioner/doctor-1",
-    actorRole: "clinician" as PracticeRoleId,
+    actorRole: "provider" as PracticeRoleId,
     fhir,
   });
   const pick = (encounterId: string, body: Record<string, unknown>, at: string) => handleDiagnosisPickRequest({

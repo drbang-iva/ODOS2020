@@ -22,8 +22,8 @@ test("document print audit rejects a cross-patient target without recording", as
 
 test("document print audit rejects a role without the required business action before reading", async () => {
   const harness = endpointHarness({
-    actorRole: "auditor",
-    roles: ["auditor"],
+    actorRole: "admin",
+    roles: [],
   });
   const result = await handleDocumentPrintAuditRequest(harness.deps, request());
 
@@ -41,7 +41,7 @@ test("document print audit resolves the target and records exactly one token-att
   assert.equal(harness.auditRows.length, 1);
   assert.equal(harness.auditRows[0]?.eventType, "document.print.requested");
   assert.equal(harness.auditRows[0]?.actorId, "real-staff");
-  assert.equal(harness.auditRows[0]?.actorRole, "clinician");
+  assert.equal(harness.auditRows[0]?.actorRole, "provider");
   assert.equal(harness.auditRows[0]?.patientId, "patient-1");
   assert.equal(harness.auditRows[0]?.resourceType, "DocumentReference");
   assert.equal(harness.auditRows[0]?.resourceId, "document-1");
@@ -60,8 +60,8 @@ function request() {
 }
 
 function endpointHarness(options: {
-  actorRole?: "clinician" | "auditor";
-  roles?: Array<"clinician" | "auditor">;
+  actorRole?: "provider" | "admin";
+  roles?: Array<"provider" | "admin">;
   target?: DocumentReference;
 } = {}): {
   deps: DocumentPrintAuditEndpointDeps;
@@ -76,8 +76,8 @@ function endpointHarness(options: {
       authenticate: async (header) => header === AUTH
         ? {
             staffReference: "Practitioner/real-staff",
-            actorRole: options.actorRole ?? "clinician",
-            roles: options.roles ?? ["clinician"],
+            actorRole: options.actorRole ?? "provider",
+            roles: options.roles ?? ["provider"],
             fhir: {
               read: async <T extends Resource>() => {
                 readCalls += 1;

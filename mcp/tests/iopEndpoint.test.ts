@@ -26,7 +26,7 @@ const provenance: ClinicalGraphProvenance = {
 };
 
 function deps(
-  role: PracticeRoleId = "clinician",
+  role: PracticeRoleId = "provider",
   findingDefinitions?: IopEndpointDeps["findingDefinitions"],
 ) {
   const created: Array<{ resource: Observation | Provenance; headers?: Record<string, string> }> = [];
@@ -166,7 +166,7 @@ test("IOP endpoint suppresses not-visualized rows and rejects non-chart-write sa
   assert.equal(body.eyes.OD.riskTier, "normal");
   assert.equal(body.eyes.OD.icd10Code, undefined);
 
-  const forbidden = await handleIopCaptureRequest(deps("front-desk").deps, {
+  const forbidden = await handleIopCaptureRequest(deps("admin").deps, {
     authHeader: AUTH,
     body: {
       ...BODY,
@@ -189,7 +189,7 @@ test("IOP endpoint uses practice-added method data instead of a runtime enum lis
   });
   const editedDefinitions = definitions.map((definition) =>
     definition.id === iop.id ? editedIop : definition);
-  const { created, deps: d } = deps("clinician", () => editedDefinitions);
+  const { created, deps: d } = deps("provider", () => editedDefinitions);
 
   const definitionRes = await handleIopDefinitionRequest(d, { authHeader: AUTH });
   const definitionBody = definitionRes.body as {

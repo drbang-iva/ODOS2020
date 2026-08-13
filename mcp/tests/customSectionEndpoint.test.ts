@@ -37,13 +37,13 @@ const SYNTHETIC_PROVENANCE = {
 
 test("Skin Carotenoid Score creates, captures, reads, renames, and deactivates without changing its stable key", async () => {
   const fhir = new MemoryFhir();
-  const denied = await handleFindingDefinitionCreationRequest(definitionDeps("clinician", fhir, "scs00000"), {
+  const denied = await handleFindingDefinitionCreationRequest(definitionDeps("provider", fhir, "scs00000"), {
     authHeader: AUTH,
     body: scsDefinitionBody(),
   });
   assert.equal(denied.status, 403);
 
-  const created = await handleFindingDefinitionCreationRequest(definitionDeps("practice-admin", fhir, "scs00000"), {
+  const created = await handleFindingDefinitionCreationRequest(definitionDeps("admin", fhir, "scs00000"), {
     authHeader: AUTH,
     body: scsDefinitionBody(),
   });
@@ -60,7 +60,7 @@ test("Skin Carotenoid Score creates, captures, reads, renames, and deactivates w
   const definition = definitions.find((row) => row.stableKey === stableKey);
   assert.equal(definition?.notBillReady, true);
 
-  const backdated = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
+  const backdated = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
     authHeader: AUTH,
     params: { stableKey },
     body: {
@@ -73,7 +73,7 @@ test("Skin Carotenoid Score creates, captures, reads, renames, and deactivates w
   assert.equal(backdated.status, 400);
   assert.equal(fhir.observations.length, 0);
 
-  const capture = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
+  const capture = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
     authHeader: AUTH,
     params: { stableKey },
     body: {
@@ -94,7 +94,7 @@ test("Skin Carotenoid Score creates, captures, reads, renames, and deactivates w
   assert.equal(provenance.target?.[0]?.reference?.startsWith("Observation/"), true);
   assert.equal(provenance.target?.[1]?.reference, "Patient/p1");
 
-  const history = await handleCustomSectionHistoryRequest(clinicalDeps("clinician", fhir, definitions), {
+  const history = await handleCustomSectionHistoryRequest(clinicalDeps("provider", fhir, definitions), {
     authHeader: AUTH,
     params: { stableKey },
     query: { patient: "Patient/p1" },
@@ -106,7 +106,7 @@ test("Skin Carotenoid Score creates, captures, reads, renames, and deactivates w
     remarks: "Discussed nutrition.",
   }]);
 
-  const renamed = await handleFindingDefinitionMutationRequest(definitionDeps("practice-admin", fhir, "unused000"), {
+  const renamed = await handleFindingDefinitionMutationRequest(definitionDeps("admin", fhir, "unused000"), {
     authHeader: AUTH,
     params: { stableKey },
     body: { action: "update-definition", display: "Carotenoid Score" },
@@ -115,7 +115,7 @@ test("Skin Carotenoid Score creates, captures, reads, renames, and deactivates w
   assert.equal((renamed.body as { definition: { stableKey: string; display: string } }).definition.stableKey, stableKey);
   assert.equal((renamed.body as { definition: { display: string } }).definition.display, "Carotenoid Score");
 
-  const fieldRenamed = await handleFindingDefinitionMutationRequest(definitionDeps("practice-admin", fhir, "unused000"), {
+  const fieldRenamed = await handleFindingDefinitionMutationRequest(definitionDeps("admin", fhir, "unused000"), {
     authHeader: AUTH,
     params: { stableKey },
     body: { action: "update-custom-field", localCode, display: "SCS" },
@@ -123,14 +123,14 @@ test("Skin Carotenoid Score creates, captures, reads, renames, and deactivates w
   assert.equal(fieldRenamed.status, 200);
   assert.equal((fieldRenamed.body as { field: { localCode: string } }).field.localCode, localCode);
 
-  const deactivated = await handleFindingDefinitionMutationRequest(definitionDeps("practice-admin", fhir, "unused000"), {
+  const deactivated = await handleFindingDefinitionMutationRequest(definitionDeps("admin", fhir, "unused000"), {
     authHeader: AUTH,
     params: { stableKey },
     body: { action: "update-definition", active: false },
   });
   assert.equal(deactivated.status, 200);
   const inactiveDefinitions = await catalog(fhir);
-  const blocked = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, inactiveDefinitions), {
+  const blocked = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, inactiveDefinitions), {
     authHeader: AUTH,
     params: { stableKey },
     body: {
@@ -142,13 +142,13 @@ test("Skin Carotenoid Score creates, captures, reads, renames, and deactivates w
   assert.equal(blocked.status, 404);
   assert.equal(fhir.observations.length, 1);
 
-  await handleFindingDefinitionMutationRequest(definitionDeps("practice-admin", fhir, "unused000"), {
+  await handleFindingDefinitionMutationRequest(definitionDeps("admin", fhir, "unused000"), {
     authHeader: AUTH,
     params: { stableKey },
     body: { action: "update-definition", active: true },
   });
   const reactivated = await catalog(fhir);
-  const restoredHistory = await handleCustomSectionHistoryRequest(clinicalDeps("clinician", fhir, reactivated), {
+  const restoredHistory = await handleCustomSectionHistoryRequest(clinicalDeps("provider", fhir, reactivated), {
     authHeader: AUTH,
     params: { stableKey },
     query: { patient: "Patient/p1" },
@@ -159,7 +159,7 @@ test("Skin Carotenoid Score creates, captures, reads, renames, and deactivates w
 
 test("per-eye custom sections prefix field components and read OD and OS independently", async () => {
   const fhir = new MemoryFhir();
-  const created = await handleFindingDefinitionCreationRequest(definitionDeps("practice-admin", fhir, "eye00000"), {
+  const created = await handleFindingDefinitionCreationRequest(definitionDeps("admin", fhir, "eye00000"), {
     authHeader: AUTH,
     body: {
       action: "create-definition",
@@ -177,7 +177,7 @@ test("per-eye custom sections prefix field components and read OD and OS indepen
   });
   const body = created.body as { definition: { stableKey: string }; fields: Array<{ localCode: string }> };
   const definitions = await catalog(fhir);
-  const capture = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
+  const capture = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
     authHeader: AUTH,
     params: { stableKey: body.definition.stableKey },
     body: {
@@ -193,7 +193,7 @@ test("per-eye custom sections prefix field components and read OD and OS indepen
   assert.equal(component(fhir.observations[0], `OD_${body.fields[0]!.localCode}`)?.valueCodeableConcept?.coding?.[0]?.code, "stable");
   assert.equal(component(fhir.observations[1], `OS_${body.fields[0]!.localCode}`)?.valueCodeableConcept?.coding?.[0]?.code, "unstable");
 
-  const history = await handleCustomSectionHistoryRequest(clinicalDeps("clinician", fhir, definitions), {
+  const history = await handleCustomSectionHistoryRequest(clinicalDeps("provider", fhir, definitions), {
     authHeader: AUTH,
     params: { stableKey: body.definition.stableKey },
     query: { patient: "Patient/p2" },
@@ -201,12 +201,12 @@ test("per-eye custom sections prefix field components and read OD and OS indepen
   const rows = (history.body as { rows: Array<{ eye: string; values: Array<{ value: string }> }> }).rows;
   assert.deepEqual(rows.map((row) => [row.eye, row.values[0]?.value]), [["OD", "Stable"], ["OS", "Unstable"]]);
 
-  const deniedRead = await handleCustomSectionHistoryRequest(clinicalDeps("auditor", fhir, definitions), {
+  const adminRead = await handleCustomSectionHistoryRequest(clinicalDeps("admin", fhir, definitions), {
     authHeader: AUTH,
     params: { stableKey: body.definition.stableKey },
     query: { patient: "Patient/p2" },
   });
-  const deniedWrite = await handleCustomSectionCaptureRequest(clinicalDeps("front-desk", fhir, definitions), {
+  const deniedWrite = await handleCustomSectionCaptureRequest(clinicalDeps("admin", fhir, definitions), {
     authHeader: AUTH,
     params: { stableKey: body.definition.stableKey },
     body: {
@@ -215,13 +215,13 @@ test("per-eye custom sections prefix field components and read OD and OS indepen
       eyes: { OD: { customFields: [] } },
     },
   });
-  assert.equal(deniedRead.status, 403);
+  assert.equal(adminRead.status, 200);
   assert.equal(deniedWrite.status, 403);
 });
 
 test("per-eye multi-select fields namespace shared option codes, preserve legacy rows, and omit empty selections", async () => {
   const fhir = new MemoryFhir();
-  const created = await handleFindingDefinitionCreationRequest(definitionDeps("practice-admin", fhir, "multi000"), {
+  const created = await handleFindingDefinitionCreationRequest(definitionDeps("admin", fhir, "multi000"), {
     authHeader: AUTH,
     body: {
       action: "create-definition",
@@ -238,7 +238,7 @@ test("per-eye multi-select fields namespace shared option codes, preserve legacy
   const [first, second] = body.fields;
   assert.ok(first && second);
   const definitions = await catalog(fhir);
-  const captured = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
+  const captured = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
     authHeader: AUTH,
     params: { stableKey: body.definition.stableKey },
     body: {
@@ -256,7 +256,7 @@ test("per-eye multi-select fields namespace shared option codes, preserve legacy
   assert.equal(component(fhir.observations[1], `OS_${first.localCode}::shared`), undefined);
   assert.equal(component(fhir.observations[1], `OS_${second.localCode}::shared`)?.valueBoolean, true);
 
-  const history = await handleCustomSectionHistoryRequest(clinicalDeps("clinician", fhir, definitions), {
+  const history = await handleCustomSectionHistoryRequest(clinicalDeps("provider", fhir, definitions), {
     authHeader: AUTH,
     params: { stableKey: body.definition.stableKey },
     query: { patient: "Patient/p-multi", encounter: "Encounter/e-multi" },
@@ -290,7 +290,7 @@ test("per-eye multi-select fields namespace shared option codes, preserve legacy
     options: sharedOption,
   }, "OD_"), ["shared"]);
 
-  const rejectedState = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
+  const rejectedState = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
     authHeader: AUTH,
     params: { stableKey: body.definition.stableKey },
     body: {
@@ -301,7 +301,7 @@ test("per-eye multi-select fields namespace shared option codes, preserve legacy
   });
   assert.equal(rejectedState.status, 400);
   assert.deepEqual(rejectedState.body, { error: "Exam state and other text are only supported for ocular-health structures." });
-  const rejectedOther = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
+  const rejectedOther = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
     authHeader: AUTH,
     params: { stableKey: body.definition.stableKey },
     body: {
@@ -344,7 +344,7 @@ test("bare-string ocular-health seeds keep the current definition and presence-o
 
   const fhir = new MemoryFhir();
   const capture = await handleCustomSectionCaptureRequest(
-    clinicalDeps("clinician", fhir, [definition]),
+    clinicalDeps("provider", fhir, [definition]),
     {
       authHeader: AUTH,
       params: { stableKey: definition.stableKey },
@@ -362,7 +362,7 @@ test("bare-string ocular-health seeds keep the current definition and presence-o
   );
   assert.equal(capture.status, 200, JSON.stringify(capture.body));
   const history = await handleCustomSectionHistoryRequest(
-    clinicalDeps("clinician", fhir, [definition]),
+    clinicalDeps("provider", fhir, [definition]),
     {
       authHeader: AUTH,
       params: { stableKey: definition.stableKey },
@@ -448,7 +448,7 @@ test("finding qualifiers round-trip all four kinds independently by finding and 
   };
   const fhir = new MemoryFhir();
   const capture = await handleCustomSectionCaptureRequest(
-    clinicalDeps("clinician", fhir, [definition]),
+    clinicalDeps("provider", fhir, [definition]),
     {
       authHeader: AUTH,
       params: { stableKey: definition.stableKey },
@@ -484,7 +484,7 @@ test("finding qualifiers round-trip all four kinds independently by finding and 
   assert.equal(component(fhir.observations[0], `OD_${field.localCode}::finding-b`)?.valueBoolean, true);
 
   const history = await handleCustomSectionHistoryRequest(
-    clinicalDeps("clinician", fhir, [definition]),
+    clinicalDeps("provider", fhir, [definition]),
     {
       authHeader: AUTH,
       params: { stableKey: definition.stableKey },
@@ -501,7 +501,7 @@ test("finding qualifiers round-trip all four kinds independently by finding and 
 
   const invalidFhir = new MemoryFhir();
   const invalid = await handleCustomSectionCaptureRequest(
-    clinicalDeps("clinician", invalidFhir, [definition]),
+    clinicalDeps("provider", invalidFhir, [definition]),
     {
       authHeader: AUTH,
       params: { stableKey: definition.stableKey },
@@ -527,7 +527,7 @@ test("finding qualifiers round-trip all four kinds independently by finding and 
   assert.ok(storedExtent);
   storedExtent.valueString = '{"from":0,"to":13,"clockwise":true}';
   const readInvalid = await handleCustomSectionHistoryRequest(
-    clinicalDeps("clinician", fhir, [definition]),
+    clinicalDeps("provider", fhir, [definition]),
     {
       authHeader: AUTH,
       params: { stableKey: definition.stableKey },
@@ -579,7 +579,7 @@ test("OH-1 seeds nine editable structures and persists explicit normal, abnormal
   }>).find((candidate) => candidate.valueType === "multi-select");
   assert.equal(conjunctivaField?.options?.some((option) => option.code === "papillae"), false);
   assert.equal(conjunctivaField?.options?.some((option) => option.code === "follicles"), false);
-  const captured = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, anterior), {
+  const captured = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, anterior), {
     authHeader: AUTH,
     params: { stableKey: lids.stableKey },
     body: {
@@ -603,7 +603,7 @@ test("OH-1 seeds nine editable structures and persists explicit normal, abnormal
   assert.equal(component(fhir.observations[1], "EXAM_STATE")?.valueString, "normal");
   assert.equal(component(fhir.observations[1], "NORMAL_TEMPLATE")?.valueString, lids.normalSemantics?.template);
 
-  const history = await handleCustomSectionHistoryRequest(clinicalDeps("clinician", fhir, anterior), {
+  const history = await handleCustomSectionHistoryRequest(clinicalDeps("provider", fhir, anterior), {
     authHeader: AUTH,
     params: { stableKey: lids.stableKey },
     query: { patient: "Patient/p3", encounter: "Encounter/e3" },
@@ -613,7 +613,7 @@ test("OH-1 seeds nine editable structures and persists explicit normal, abnormal
   assert.deepEqual(rows[0]?.values[0]?.value, ["demodex", "demodex::collarettes"]);
   assert.equal(rows[0]?.other, "Trace sleeves.");
 
-  const missingOtherState = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, anterior), {
+  const missingOtherState = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, anterior), {
     authHeader: AUTH,
     params: { stableKey: lids.stableKey },
     body: {
@@ -630,7 +630,7 @@ test("OH-1 seeds nine editable structures and persists explicit normal, abnormal
 
   const palpebral = anterior.find((definition) => definition.stableKey.endsWith(":palpebral-conjunctiva"));
   assert.ok(palpebral);
-  const deferred = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, anterior), {
+  const deferred = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, anterior), {
     authHeader: AUTH,
     params: { stableKey: palpebral.stableKey },
     body: {
@@ -646,7 +646,7 @@ test("OH-1 seeds nine editable structures and persists explicit normal, abnormal
   assert.equal(component(fhir.observations[2], "EXAM_STATE")?.valueString, "deferred");
 
   for (const definition of anterior.filter((candidate) => candidate !== lids && candidate !== palpebral)) {
-    const result = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, anterior), {
+    const result = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, anterior), {
       authHeader: AUTH,
       params: { stableKey: definition.stableKey },
       body: {
@@ -662,7 +662,7 @@ test("OH-1 seeds nine editable structures and persists explicit normal, abnormal
   }
   assert.equal(fhir.observations.length, 18);
 
-  const unknown = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, anterior), {
+  const unknown = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, anterior), {
     authHeader: AUTH,
     params: { stableKey: lids.stableKey },
     body: {
@@ -687,13 +687,13 @@ test("OH-1 finding options and normal templates are editable through finding-def
     ...field.options.map((option) => option.code === "arcus" ? { ...option, active: false } : option),
     { code: "practice-finding", display: "Practice finding", active: true },
   ];
-  const updated = await handleFindingDefinitionMutationRequest(definitionDeps("practice-admin", fhir, "unused000"), {
+  const updated = await handleFindingDefinitionMutationRequest(definitionDeps("admin", fhir, "unused000"), {
     authHeader: AUTH,
     params: { stableKey: cornea.stableKey },
     body: { action: "update-custom-field", localCode: field.localCode, options },
   });
   assert.equal(updated.status, 200, JSON.stringify(updated.body));
-  const templated = await handleFindingDefinitionMutationRequest(definitionDeps("practice-admin", fhir, "unused000"), {
+  const templated = await handleFindingDefinitionMutationRequest(definitionDeps("admin", fhir, "unused000"), {
     authHeader: AUTH,
     params: { stableKey: cornea.stableKey },
     body: { action: "update-normal-template", template: "Practice-normal cornea." },
@@ -710,7 +710,7 @@ test("OH-1 finding options and normal templates are editable through finding-def
 
   const seededCandidate = storedCornea?.diagnosisCandidates?.find((candidate) => candidate.diagnosisKey === "keratoconus_stable");
   assert.ok(seededCandidate);
-  const mappingUpdate = await handleFindingDefinitionMutationRequest(definitionDeps("practice-admin", fhir, "unused000"), {
+  const mappingUpdate = await handleFindingDefinitionMutationRequest(definitionDeps("admin", fhir, "unused000"), {
     authHeader: AUTH,
     params: { stableKey: cornea.stableKey },
     body: { action: "update-diagnosis-candidate", id: seededCandidate.id, active: false },
@@ -867,7 +867,7 @@ test("GET diagnosis candidates returns nuclear cataract after ocular-health capt
     false,
   );
 
-  const capture = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, [lens]), {
+  const capture = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, [lens]), {
     authHeader: AUTH,
     params: { stableKey: lens.stableKey },
     body: {
@@ -893,7 +893,7 @@ test("GET diagnosis candidates returns nuclear cataract after ocular-health capt
     const result = await handleDiagnosisCandidatesRequest({
       authenticate: async () => ({
         staffReference: "Practitioner/doc-1",
-        actorRole: "clinician",
+        actorRole: "provider",
         fhir,
       }),
       now: () => NOW,
@@ -931,7 +931,7 @@ test("retinal-detachment macula status remains documentation-only for diagnosis 
     valueType: string;
   }>).find((candidate) => candidate.valueType === "multi-select");
   assert.ok(field);
-  const capture = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, [periphery]), {
+  const capture = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, [periphery]), {
     authHeader: AUTH,
     params: { stableKey: periphery.stableKey },
     body: {
@@ -955,7 +955,7 @@ test("retinal-detachment macula status remains documentation-only for diagnosis 
   const candidates = await handleDiagnosisCandidatesRequest({
     authenticate: async () => ({
       staffReference: "Practitioner/doc-1",
-      actorRole: "clinician",
+      actorRole: "provider",
       fhir,
     }),
     now: () => NOW,
@@ -1054,7 +1054,7 @@ test("OH-2 seeds five posterior structures and round-trips their worksheet findi
     assert.ok(field?.localCode && field.options);
     const option = field.options.find((candidate) => candidate.display === expectedPriority.get(definition.display));
     assert.ok(option?.priority, `${definition.display} should expose its worksheet priority finding`);
-    const captured = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, posterior), {
+    const captured = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, posterior), {
       authHeader: AUTH,
       params: { stableKey: definition.stableKey },
       body: {
@@ -1072,7 +1072,7 @@ test("OH-2 seeds five posterior structures and round-trips their worksheet findi
   assert.equal(fhir.observations.length, 10);
 
   for (const definition of posterior) {
-    const history = await handleCustomSectionHistoryRequest(clinicalDeps("clinician", fhir, posterior), {
+    const history = await handleCustomSectionHistoryRequest(clinicalDeps("provider", fhir, posterior), {
       authHeader: AUTH,
       params: { stableKey: definition.stableKey },
       query: { patient: "Patient/p-posterior", encounter: "Encounter/e-posterior" },
@@ -1100,7 +1100,7 @@ test("OH-2b Vessels seeds and round-trips the per-eye A/V ratio grade on normal 
     ["1:4", "1:4", true],
   ]);
 
-  const captured = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, [vessels]), {
+  const captured = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, [vessels]), {
     authHeader: AUTH,
     params: { stableKey: vessels.stableKey },
     body: {
@@ -1116,7 +1116,7 @@ test("OH-2b Vessels seeds and round-trips the per-eye A/V ratio grade on normal 
   assert.equal(component(fhir.observations[0], `OD_${grade.localCode}`)?.valueCodeableConcept?.coding?.[0]?.code, "2:3");
   assert.equal(component(fhir.observations[1], `OS_${grade.localCode}`)?.valueCodeableConcept?.coding?.[0]?.code, "1:2");
 
-  const history = await handleCustomSectionHistoryRequest(clinicalDeps("clinician", fhir, [vessels]), {
+  const history = await handleCustomSectionHistoryRequest(clinicalDeps("provider", fhir, [vessels]), {
     authHeader: AUTH,
     params: { stableKey: vessels.stableKey },
     query: { patient: "Patient/p-vessels-grade", encounter: "Encounter/e-vessels-grade" },
@@ -1181,7 +1181,7 @@ test("anterior structure grades exclude retired LOCS III fields and round-trip t
     [anteriorChamber, "OS", vanHerick, vanHerickGrade2.code, "Grade 2"],
   ] as const) {
     assert.ok(field?.localCode);
-    const captured = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, [definition]), {
+    const captured = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, [definition]), {
       authHeader: AUTH,
       params: { stableKey: definition.stableKey },
       body: {
@@ -1191,7 +1191,7 @@ test("anterior structure grades exclude retired LOCS III fields and round-trip t
       },
     });
     assert.equal(captured.status, 200, JSON.stringify(captured.body));
-    const history = await handleCustomSectionHistoryRequest(clinicalDeps("clinician", fhir, [definition]), {
+    const history = await handleCustomSectionHistoryRequest(clinicalDeps("provider", fhir, [definition]), {
       authHeader: AUTH,
       params: { stableKey: definition.stableKey },
       query: { patient: "Patient/p-anterior-grades", encounter: "Encounter/e-anterior-grades" },
@@ -1200,7 +1200,7 @@ test("anterior structure grades exclude retired LOCS III fields and round-trip t
     assert.deepEqual(rows.map((row) => [row.eye, row.values.find((candidate) => candidate.code === field.localCode)?.value]), [[eye, historyValue]]);
   }
 
-  const editedTbut = await handleFindingDefinitionMutationRequest(definitionDeps("practice-admin", fhir, "unused000"), {
+  const editedTbut = await handleFindingDefinitionMutationRequest(definitionDeps("admin", fhir, "unused000"), {
     authHeader: AUTH,
     params: { stableKey: tearFilm.stableKey },
     body: { action: "update-custom-field", localCode: tbut.localCode, min: 1, max: 45, step: 0.5 },
@@ -1212,7 +1212,7 @@ test("anterior structure grades exclude retired LOCS III fields and round-trip t
     max: 45,
     step: 0.5,
   });
-  const editedVanHerick = await handleFindingDefinitionMutationRequest(definitionDeps("practice-admin", fhir, "unused000"), {
+  const editedVanHerick = await handleFindingDefinitionMutationRequest(definitionDeps("admin", fhir, "unused000"), {
     authHeader: AUTH,
     params: { stableKey: anteriorChamber.stableKey },
     body: {
@@ -1238,7 +1238,7 @@ test("E1 entrance state sections emit coded attributes and round-trip normal and
   const pupils = definitions.find((definition) => definition.stableKey === "entrance:pupils");
   assert.ok(pupils);
   const fields = pupils.valueSchema.fields as Record<string, { localCode: string }>;
-  const normal = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
+  const normal = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
     authHeader: AUTH,
     params: { stableKey: pupils.stableKey },
     body: {
@@ -1254,7 +1254,7 @@ test("E1 entrance state sections emit coded attributes and round-trip normal and
   assert.equal(fields.CUSTOM_PUPIL_RAPD?.localCode, "CUSTOM_PUPIL_RAPD");
   assert.equal(fields.CUSTOM_PUPIL_NEUTRAL_DENSITY?.localCode, "CUSTOM_PUPIL_NEUTRAL_DENSITY");
 
-  const abnormal = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
+  const abnormal = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
     authHeader: AUTH,
     params: { stableKey: pupils.stableKey },
     body: {
@@ -1282,7 +1282,7 @@ test("E1 entrance state sections emit coded attributes and round-trip normal and
   assert.equal(component(last, `OD_${fields.CUSTOM_PUPIL_RAPD!.localCode}`)?.valueCodeableConcept?.coding?.[0]?.code, "trace");
   assert.equal(component(last, `OD_${fields.CUSTOM_PUPIL_NEUTRAL_DENSITY!.localCode}`)?.valueCodeableConcept?.coding?.[0]?.code, "0-6");
 
-  const history = await handleCustomSectionHistoryRequest(clinicalDeps("clinician", fhir, definitions), {
+  const history = await handleCustomSectionHistoryRequest(clinicalDeps("provider", fhir, definitions), {
     authHeader: AUTH,
     params: { stableKey: pupils.stableKey },
     query: { patient: "Patient/entrance-pupils", encounter: "Encounter/entrance-pupils" },
@@ -1300,7 +1300,7 @@ test("screenshot refinement stores binocular stereopsis once with top-level stat
   const stereo = definitions.find((definition) => definition.stableKey === "entrance:stereo");
   assert.ok(stereo);
   assert.equal(stereo.valueSchema.perEye, false);
-  const result = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
+  const result = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
     authHeader: AUTH,
     params: { stableKey: stereo.stableKey },
     body: {
@@ -1318,7 +1318,7 @@ test("screenshot refinement stores binocular stereopsis once with top-level stat
   assert.equal(fhir.observations.length, 1);
   assert.equal(component(fhir.observations[0], "EXAM_STATE")?.valueString, "abnormal");
   assert.equal(component(fhir.observations[0], "CUSTOM_STEREO_TEST")?.valueCodeableConcept?.coding?.[0]?.code, "randot");
-  const history = await handleCustomSectionHistoryRequest(clinicalDeps("clinician", fhir, definitions), {
+  const history = await handleCustomSectionHistoryRequest(clinicalDeps("provider", fhir, definitions), {
     authHeader: AUTH,
     params: { stableKey: stereo.stableKey },
     query: { patient: "Patient/stereo", encounter: "Encounter/stereo" },
@@ -1331,7 +1331,7 @@ test("CVF persists four-quadrant schematic values through the generic entrance e
   const definitions = await catalog(fhir);
   const cvf = definitions.find((definition) => definition.stableKey === "entrance:cvf");
   assert.ok(cvf);
-  const normal = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
+  const normal = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
     authHeader: AUTH,
     params: { stableKey: cvf.stableKey },
     body: { patientReference: "Patient/cvf", encounterReference: "Encounter/cvf", eyes: { OD: { state: "normal", customFields: [] }, OS: { state: "normal", customFields: [] } } },
@@ -1339,13 +1339,13 @@ test("CVF persists four-quadrant schematic values through the generic entrance e
   assert.equal(normal.status, 200, JSON.stringify(normal.body));
   assert.equal(component(fhir.observations[0], "entrance.cvf")?.valueCodeableConcept?.coding?.[0]?.code, "normal");
   assert.equal(component(fhir.observations[0], "NORMAL_TEMPLATE")?.valueString, "Full to finger counting OU");
-  const abnormal = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
+  const abnormal = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
     authHeader: AUTH,
     params: { stableKey: cvf.stableKey },
     body: { patientReference: "Patient/cvf", encounterReference: "Encounter/cvf", eyes: { OD: { state: "abnormal", customFields: [{ code: "CUSTOM_CVF_UPPER_LEFT", value: "restricted" }, { code: "CUSTOM_CVF_LOWER_RIGHT", value: "full" }, { code: "CUSTOM_CVF_METHOD", value: "finger-count" }] } } },
   });
   assert.equal(abnormal.status, 200, JSON.stringify(abnormal.body));
-  const history = await handleCustomSectionHistoryRequest(clinicalDeps("clinician", fhir, definitions), { authHeader: AUTH, params: { stableKey: cvf.stableKey }, query: { patient: "Patient/cvf", encounter: "Encounter/cvf" } });
+  const history = await handleCustomSectionHistoryRequest(clinicalDeps("provider", fhir, definitions), { authHeader: AUTH, params: { stableKey: cvf.stableKey }, query: { patient: "Patient/cvf", encounter: "Encounter/cvf" } });
   assert.equal((history.body as { rows: Array<{ values: Array<{ code: string; value: unknown }> }> }).rows.some((row) => row.values.some((value) => value.code === "CUSTOM_CVF_UPPER_LEFT" && value.value === "restricted")), true);
 });
 
@@ -1355,7 +1355,7 @@ test("E1 Pachymetry and Manual K use measurement capture without exam state", as
   const pachymetry = definitions.find((definition) => definition.stableKey === "pachymetry_um");
   const manualK = definitions.find((definition) => definition.stableKey === "manual_keratometry");
   assert.ok(pachymetry && manualK);
-  const pachy = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
+  const pachy = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
     authHeader: AUTH,
     params: { stableKey: pachymetry.stableKey },
     body: {
@@ -1373,7 +1373,7 @@ test("E1 Pachymetry and Manual K use measurement capture without exam state", as
   assert.equal(component(fhir.observations.at(-1), "OD_CUSTOM_CCT")?.valueQuantity?.value, 542);
   assert.equal(component(fhir.observations.at(-1), "OD_CUSTOM_PACHYMETRY_TIME")?.valueString, "10:42");
 
-  const partial = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
+  const partial = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
     authHeader: AUTH,
     params: { stableKey: manualK.stableKey },
     body: {
@@ -1384,7 +1384,7 @@ test("E1 Pachymetry and Manual K use measurement capture without exam state", as
   });
   assert.equal(partial.status, 400);
   assert.match(String((partial.body as { error: string }).error), /requires flat K/);
-  const complete = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
+  const complete = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
     authHeader: AUTH,
     params: { stableKey: manualK.stableKey },
     body: {
@@ -1407,7 +1407,7 @@ test("E1 Pachymetry and Manual K use measurement capture without exam state", as
 test("dry-eye total score cannot persist without its instrument", async () => {
   const fhir = new MemoryFhir();
   const definitions = await catalog(fhir);
-  const result = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
+  const result = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
     authHeader: AUTH,
     params: { stableKey: "dry-eye:symptoms" },
     body: {
@@ -1542,7 +1542,7 @@ test("DE-1 dry-eye sections round-trip detail fields and per-eye anatomy through
     const definition = dryEye.find((candidate) => candidate.stableKey === row.stableKey);
     assert.ok(definition, row.stableKey);
     const captured = await handleCustomSectionCaptureRequest(
-      clinicalDeps("clinician", fhir, dryEye),
+      clinicalDeps("provider", fhir, dryEye),
       {
         authHeader: AUTH,
         params: { stableKey: row.stableKey },
@@ -1555,7 +1555,7 @@ test("DE-1 dry-eye sections round-trip detail fields and per-eye anatomy through
     );
     assert.equal(captured.status, 200, `${row.stableKey}: ${JSON.stringify(captured.body)}`);
     const history = await handleCustomSectionHistoryRequest(
-      clinicalDeps("clinician", fhir, dryEye),
+      clinicalDeps("provider", fhir, dryEye),
       {
         authHeader: AUTH,
         params: { stableKey: row.stableKey },
@@ -1596,7 +1596,7 @@ test("DE-1 tear-stability and routine tear-film entry share one stableKey and on
     ["Encounter/routine-ocular-health", "OS", 7, "non-invasive"],
   ] as const) {
     const capture = await handleCustomSectionCaptureRequest(
-      clinicalDeps("clinician", fhir, [tearFilm]),
+      clinicalDeps("provider", fhir, [tearFilm]),
       {
         authHeader: AUTH,
         params: { stableKey: tearFilm.stableKey },
@@ -1618,7 +1618,7 @@ test("DE-1 tear-stability and routine tear-film entry share one stableKey and on
     assert.equal(capture.status, 200, JSON.stringify(capture.body));
   }
   const history = await handleCustomSectionHistoryRequest(
-    clinicalDeps("clinician", fhir, [tearFilm]),
+    clinicalDeps("provider", fhir, [tearFilm]),
     {
       authHeader: AUTH,
       params: { stableKey: tearFilm.stableKey },
@@ -1654,7 +1654,7 @@ test("DE-1 abnormal mappings return proposal badges and never auto-confirm a dia
   );
   assert.ok(markers);
   const capture = await handleCustomSectionCaptureRequest(
-    clinicalDeps("clinician", fhir, [markers]),
+    clinicalDeps("provider", fhir, [markers]),
     {
       authHeader: AUTH,
       params: { stableKey: markers.stableKey },
@@ -1676,7 +1676,7 @@ test("DE-1 abnormal mappings return proposal badges and never auto-confirm a dia
   const candidates = await handleDiagnosisCandidatesRequest({
     authenticate: async () => ({
       staffReference: "Practitioner/doc-1",
-      actorRole: "clinician",
+      actorRole: "provider",
       fhir,
     }),
     now: () => NOW,

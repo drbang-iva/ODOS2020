@@ -31,7 +31,7 @@ const provenance: ClinicalGraphProvenance = {
 };
 
 function deps(
-  role: PracticeRoleId = "clinician",
+  role: PracticeRoleId = "provider",
   findingDefinitions?: RefractionEndpointDeps["findingDefinitions"],
 ) {
   const created: Array<{ resource: Observation | Provenance; headers?: Record<string, string> }> = [];
@@ -80,20 +80,20 @@ test("refraction definition endpoint serves practice-editable types, fields, thr
   assert.equal(body.diagnosisOptions.length, 14);
 });
 
-test("refraction endpoints enforce authentication and chart permissions", async () => {
+test("refraction endpoints enforce authentication, practice-wide reads, and read-only Admin", async () => {
   const missingRead = await handleRefractionDefinitionRequest(deps().deps, { authHeader: undefined });
-  const forbiddenRead = await handleRefractionDefinitionRequest(deps("auditor").deps, { authHeader: AUTH });
+  const adminRead = await handleRefractionDefinitionRequest(deps("admin").deps, { authHeader: AUTH });
   const missingWrite = await handleRefractionCaptureRequest(deps().deps, {
     authHeader: undefined,
     body: { ...BODY, blocks: [] },
   });
-  const forbiddenWrite = await handleRefractionCaptureRequest(deps("front-desk").deps, {
+  const forbiddenWrite = await handleRefractionCaptureRequest(deps("admin").deps, {
     authHeader: AUTH,
     body: manifestBody(),
   });
 
   assert.equal(missingRead.status, 401);
-  assert.equal(forbiddenRead.status, 403);
+  assert.equal(adminRead.status, 200);
   assert.equal(missingWrite.status, 401);
   assert.equal(forbiddenWrite.status, 403);
 });
@@ -217,7 +217,7 @@ test("refraction endpoint accepts a practice-added type and never treats it as M
     display: "Subjective custom",
     active: true,
   });
-  const { deps: d } = deps("clinician", () => [definition]);
+  const { deps: d } = deps("provider", () => [definition]);
   const res = await handleRefractionCaptureRequest(d, {
     authHeader: AUTH,
     body: {

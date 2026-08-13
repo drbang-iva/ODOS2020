@@ -41,10 +41,10 @@ test("the settings index route reaches the shared settings stub", () => {
 
 test("the optical-pricing route keeps frame and contact-lens pricing separate from the Lens Catalog", () => {
   const admin = renderToStaticMarkup(
-    <RouteSwitch view={{ kind: "picker" }} path="/settings/optical-pricing" roles={["practice-admin"]} />,
+    <RouteSwitch view={{ kind: "picker" }} path="/settings/optical-pricing" roles={["admin"]} />,
   );
   const desk = renderToStaticMarkup(
-    <RouteSwitch view={{ kind: "picker" }} path="/settings/optical-pricing" roles={["front-desk"]} />,
+    <RouteSwitch view={{ kind: "picker" }} path="/settings/optical-pricing" roles={["staff"]} />,
   );
   assert.match(admin, /Optical pricing/);
   assert.match(admin, /Frame pricing/);
@@ -56,10 +56,10 @@ test("the optical-pricing route keeps frame and contact-lens pricing separate fr
 
 test("the Fee Schedule route is practice-admin writable and names the unpriced clinical fee catalog", () => {
   const admin = renderToStaticMarkup(
-    <RouteSwitch view={{ kind: "picker" }} path="/settings/fee-schedule" roles={["practice-admin"]} />,
+    <RouteSwitch view={{ kind: "picker" }} path="/settings/fee-schedule" roles={["admin"]} />,
   );
   const desk = renderToStaticMarkup(
-    <RouteSwitch view={{ kind: "picker" }} path="/settings/fee-schedule" roles={["front-desk"]} />,
+    <RouteSwitch view={{ kind: "picker" }} path="/settings/fee-schedule" roles={["staff"]} />,
   );
   assert.match(admin, /Fee Schedule/);
   assert.doesNotMatch(admin, /Read only. Practice-admin access is required/);
@@ -69,14 +69,14 @@ test("the Fee Schedule route is practice-admin writable and names the unpriced c
 test("the four round-two settings routes render write controls only for authorized App roles", async () => {
   const cases: Array<{
     path: string;
-    writeRoles: Array<"practice-admin" | "front-desk" | "clinician">;
-    readRoles: Array<"practice-admin" | "front-desk" | "clinician">;
+    writeRoles: Array<"admin" | "staff" | "provider">;
+    readRoles: Array<"admin" | "staff" | "provider">;
     writeControl: RegExp;
   }> = [
-    { path: "/settings/optical-pricing", writeRoles: ["practice-admin"], readRoles: ["front-desk"], writeControl: /New contact lens price/ },
-    { path: "/settings/floor-config", writeRoles: ["front-desk"], readRoles: ["clinician"], writeControl: /\+ Add .*station/ },
-    { path: "/settings/visit-types", writeRoles: ["practice-admin"], readRoles: ["front-desk"], writeControl: /Use starter categories/ },
-    { path: "/settings/vision-plan-templates", writeRoles: ["front-desk"], readRoles: ["clinician"], writeControl: /\+ Add .*plan template/ },
+    { path: "/settings/optical-pricing", writeRoles: ["admin"], readRoles: ["staff"], writeControl: /New contact lens price/ },
+    { path: "/settings/floor-config", writeRoles: ["staff"], readRoles: ["provider"], writeControl: /\+ Add .*station/ },
+    { path: "/settings/visit-types", writeRoles: ["admin"], readRoles: ["staff"], writeControl: /Use starter categories/ },
+    { path: "/settings/vision-plan-templates", writeRoles: ["staff"], readRoles: ["provider"], writeControl: /\+ Add .*plan template/ },
   ];
   for (const route of cases) {
     const writable = await renderAsyncRoute(route.path, route.writeRoles);
@@ -91,7 +91,7 @@ test("audit log renders an empty patient filter", async () => {
   const originalWindow = globalThis.window;
   Object.defineProperty(globalThis, "window", {
     configurable: true,
-    value: { location: { search: "?role=auditor" } },
+    value: { location: { search: "?role=admin" } },
   });
   globalThis.fetch = async () => new Response(JSON.stringify({ rows: [] }), {
     status: 200,
@@ -124,10 +124,10 @@ test("audit log renders an empty patient filter", async () => {
 
 test("the Lens Catalog route reaches its dedicated manager with practice-admin write gating", () => {
   const admin = renderToStaticMarkup(
-    <RouteSwitch view={{ kind: "picker" }} path="/settings/lens-catalog" roles={["practice-admin"]} />,
+    <RouteSwitch view={{ kind: "picker" }} path="/settings/lens-catalog" roles={["admin"]} />,
   );
   const desk = renderToStaticMarkup(
-    <RouteSwitch view={{ kind: "picker" }} path="/settings/lens-catalog" roles={["front-desk"]} />,
+    <RouteSwitch view={{ kind: "picker" }} path="/settings/lens-catalog" roles={["staff"]} />,
   );
   assert.match(admin, /Lens Catalog/);
   assert.match(admin, /Lens products/);
@@ -140,14 +140,14 @@ test("the plan-profile route reaches the owner settings scene with actual-role w
     <RouteSwitch
       view={{ kind: "picker" }}
       path="/settings/plan-profiles"
-      roles={["practice-admin"]}
+      roles={["admin"]}
     />,
   );
   const desk = renderToStaticMarkup(
     <RouteSwitch
       view={{ kind: "picker" }}
       path="/settings/plan-profiles"
-      roles={["front-desk"]}
+      roles={["staff"]}
     />,
   );
   assert.match(admin, /Plan profiles/);
@@ -157,10 +157,10 @@ test("the plan-profile route reaches the owner settings scene with actual-role w
 
 test("the treatment-protocol route reaches the practice-owned protocol editor", () => {
   const admin = renderToStaticMarkup(
-    <RouteSwitch view={{ kind: "picker" }} path="/settings/treatment-protocols" roles={["practice-admin"]} />,
+    <RouteSwitch view={{ kind: "picker" }} path="/settings/treatment-protocols" roles={["admin"]} />,
   );
   const desk = renderToStaticMarkup(
-    <RouteSwitch view={{ kind: "picker" }} path="/settings/treatment-protocols" roles={["front-desk"]} />,
+    <RouteSwitch view={{ kind: "picker" }} path="/settings/treatment-protocols" roles={["staff"]} />,
   );
   assert.match(admin, /Treatment protocols/);
   assert.doesNotMatch(admin, /Read only/);
@@ -172,7 +172,7 @@ test("the statement-message route reaches the practice-admin editor", () => {
     <RouteSwitch
       view={{ kind: "picker" }}
       path="/settings/statement-messages"
-      roles={["practice-admin"]}
+      roles={["admin"]}
     />,
   );
   assert.match(html, /Statement and receipt messages/);
@@ -181,7 +181,7 @@ test("the statement-message route reaches the practice-admin editor", () => {
 
 test("the billing identity route reaches the practice-admin singleton form", () => {
   const html = renderToStaticMarkup(
-    <RouteSwitch view={{ kind: "picker" }} path="/settings/billing-identity" roles={["practice-admin"]} />,
+    <RouteSwitch view={{ kind: "picker" }} path="/settings/billing-identity" roles={["admin"]} />,
   );
   assert.match(html, /Loading billing identity/);
 });
@@ -191,7 +191,7 @@ test("the Appearance route reaches the practice-level scheme picker", () => {
     <RouteSwitch
       view={{ kind: "picker" }}
       path="/settings/appearance"
-      roles={["practice-admin"]}
+      roles={["admin"]}
     />,
   );
   assert.match(html, /Appearance/);
@@ -200,7 +200,7 @@ test("the Appearance route reaches the practice-level scheme picker", () => {
 
 test("the Financials Practice margin route reaches the read-only ledger surface", () => {
   const html = renderToStaticMarkup(
-    <RouteSwitch view={{ kind: "picker" }} path="/financials/practice/margins" search="?period=2026-07" roles={["practice-admin"]} />,
+    <RouteSwitch view={{ kind: "picker" }} path="/financials/practice/margins" search="?period=2026-07" roles={["admin"]} />,
   );
   assert.match(html, /Product <span>Margin Ledger<\/span>/);
   assert.match(html, /The ledger begins <strong>2026-07-15<\/strong>/);
@@ -283,7 +283,7 @@ test("insurance screens expose the MCP base URL as a literal Vite environment re
   }
 });
 
-async function renderAsyncRoute(path: string, roles: Array<"practice-admin" | "front-desk" | "clinician">): Promise<string> {
+async function renderAsyncRoute(path: string, roles: Array<"admin" | "staff" | "provider">): Promise<string> {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (input) => {
     if (String(input).includes("/api/audit")) {

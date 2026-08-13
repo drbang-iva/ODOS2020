@@ -59,7 +59,7 @@ test("buildPaymentAuditRecord attributes a completed charge to the staff member 
   const row = buildPaymentAuditRecord({
     eventType: "payment.charge.completed",
     staffReference: "Practitioner/staff1",
-    actorRole: "front-desk",
+    actorRole: "staff",
     patientReference: "Patient/p1",
     paymentRecordReference: "PaymentReconciliation/pr1",
     purpose: "PATIENT_PAYMENT",
@@ -70,7 +70,7 @@ test("buildPaymentAuditRecord attributes a completed charge to the staff member 
 
   assert.equal(row.eventType, "payment.charge.completed");
   assert.equal(row.actorId, "staff1");
-  assert.equal(row.actorRole, "front-desk");
+  assert.equal(row.actorRole, "staff");
   assert.equal(row.patientId, "p1");
   assert.equal(row.resourceType, "PaymentReconciliation");
   assert.equal(row.resourceId, "pr1");
@@ -91,7 +91,7 @@ test("a failed charge audits as denied against the Invoice it attempted to settl
   const row = buildPaymentAuditRecord({
     eventType: "payment.charge.failed",
     staffReference: "Practitioner/staff1",
-    actorRole: "front-desk",
+    actorRole: "staff",
     patientReference: "Patient/p1",
     paymentRecordReference: "Invoice/inv1",
     purpose: "PATIENT_PAYMENT",
@@ -110,7 +110,7 @@ test("a manual cash charge audits against the tendered Invoice (the manual path'
   const row = buildPaymentAuditRecord({
     eventType: "payment.charge.completed",
     staffReference: "Practitioner/staff1",
-    actorRole: "front-desk",
+    actorRole: "staff",
     patientReference: "Patient/p1",
     paymentRecordReference: "Invoice/inv-cash",
     purpose: "PATIENT_PAYMENT",

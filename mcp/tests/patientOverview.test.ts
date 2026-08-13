@@ -616,7 +616,7 @@ test("patient overview route stays available with more than 1000 other-patient P
   registerClinicRoutes(app, {
     authenticateService: async () => undefined,
     authenticate: async (header) => header === "Bearer good"
-      ? { staffReference: "Practitioner/staff-1", actorRole: "clinician", fhir: fake as never }
+      ? { staffReference: "Practitioner/staff-1", actorRole: "provider", fhir: fake as never }
       : null,
   });
   const listener = app.listen(0, "127.0.0.1");

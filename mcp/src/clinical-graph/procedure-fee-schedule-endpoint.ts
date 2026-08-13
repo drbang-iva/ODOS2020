@@ -60,7 +60,7 @@ export async function handleProcedureFeeScheduleRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to read the fee schedule." } };
-  if (staff.actorRole !== "practice-admin") {
+  if (staff.actorRole !== "admin") {
     return { status: 403, body: { error: "Practice-admin access is required to read the fee schedule." } };
   }
   return { status: 200, body: { items: await listProcedureFeeSchedule(staff.fhir) } };
@@ -72,7 +72,7 @@ export async function handleProcedureFeeScheduleMutationRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to edit the fee schedule." } };
-  if (staff.actorRole !== "practice-admin") {
+  if (staff.actorRole !== "admin") {
     return { status: 403, body: { error: "Practice-admin access is required to edit the fee schedule." } };
   }
   const params = z.object({
@@ -111,7 +111,7 @@ export async function handleProcedureFeeScheduleCreateRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to edit the fee schedule." } };
-  if (staff.actorRole !== "practice-admin") {
+  if (staff.actorRole !== "admin") {
     return { status: 403, body: { error: "Practice-admin access is required to edit the fee schedule." } };
   }
   const parsed = createSchema.safeParse(input.body);

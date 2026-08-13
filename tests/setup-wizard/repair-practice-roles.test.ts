@@ -76,22 +76,22 @@ test("missing role policies are created before the preserved legacy grant", asyn
   const result = await repairPracticeRoles(adapter, "human@example.test");
 
   assert.deepEqual(result.createdPolicies, PRACTICE_ROLE_IDS);
-  assert.equal(result.primaryRole, "front-desk");
+  assert.equal(result.primaryRole, "staff");
   assert.equal(result.targetEmail, "human@example.test");
   assert.equal(result.membershipChanged, true);
   assert.equal(result.membershipReference, "ProjectMembership/dev-membership");
-  assert.equal(adapter.policyWrites, 5);
+  assert.equal(adapter.policyWrites, 3);
   assert.equal(adapter.membershipWrites, 1);
-  assert.equal(adapter.policies.length, 5);
+  assert.equal(adapter.policies.length, 3);
   for (const roleId of PRACTICE_ROLE_IDS) {
     assert.ok(adapter.policies.some((policy) => policy.meta?.tag?.some((tag) =>
       tag.system === ODOS_PRACTICE_ROLE_SYSTEM && tag.code === roleId,
     )));
   }
   assert.deepEqual(membershipPolicyReferences(adapter.membership), [
+    "AccessPolicy/policy-2",
     "AccessPolicy/policy-3",
     "AccessPolicy/policy-1",
-    "AccessPolicy/policy-2",
     "AccessPolicy/keep-legacy",
   ]);
   assert.equal(adapter.membership.accessPolicy, undefined);
@@ -114,7 +114,7 @@ test("a second repair is a zero-write idempotent no-op", async () => {
   assert.equal(adapter.membershipWrites, membershipWrites);
 });
 
-test("clinician primary override reorders role grants, preserves unrelated access, and remains idempotent", async () => {
+test("Provider primary override reorders role grants, preserves unrelated access, and remains idempotent", async () => {
   const adapter = new FakeRepairAdapter({
     membership: membership({
       access: [
@@ -127,15 +127,15 @@ test("clinician primary override reorders role grants, preserves unrelated acces
     }),
   });
 
-  const first = await repairPracticeRoles(adapter, "human@example.test", "clinician");
+  const first = await repairPracticeRoles(adapter, "human@example.test", "provider");
   const writes = adapter.membershipWrites;
-  const second = await repairPracticeRoles(adapter, "human@example.test", "clinician");
+  const second = await repairPracticeRoles(adapter, "human@example.test", "provider");
 
-  assert.equal(first.primaryRole, "clinician");
+  assert.equal(first.primaryRole, "provider");
   assert.deepEqual(adapter.membership.access?.map((access) => access.policy.reference), [
+    "AccessPolicy/policy-1",
     "AccessPolicy/policy-2",
     "AccessPolicy/policy-3",
-    "AccessPolicy/policy-1",
     "AccessPolicy/unrelated",
   ]);
   assert.equal(adapter.membershipWrites, writes);
@@ -143,9 +143,9 @@ test("clinician primary override reorders role grants, preserves unrelated acces
 });
 
 test("the primary-role environment value defaults safely and rejects unsupported roles", () => {
-  assert.equal(devPrimaryRole(undefined), "front-desk");
-  assert.equal(devPrimaryRole(" clinician "), "clinician");
-  assert.throws(() => devPrimaryRole("practice-admin"), /must be front-desk or clinician/);
+  assert.equal(devPrimaryRole(undefined), "staff");
+  assert.equal(devPrimaryRole(" provider "), "provider");
+  assert.throws(() => devPrimaryRole("admin"), /must be staff or provider/);
 });
 
 test("the repair CLI requires an explicit --email target", () => {
@@ -185,34 +185,34 @@ test("one untagged canonical policy is tagged without replacing unrelated metada
     policies: [{
       resourceType: "AccessPolicy",
       id: "admin-policy",
-      name: "ODOS Practice Admin",
+      name: "ODOS Admin / Manager",
       meta: { versionId: "7", tag: [{ system: "https://example.test", code: "keep" }] },
     }],
   });
 
   const result = await repairPracticeRoles(adapter, "human@example.test");
 
-  assert.deepEqual(result.taggedPolicies, ["practice-admin"]);
+  assert.deepEqual(result.taggedPolicies, ["admin"]);
   assert.deepEqual(adapter.policies[0]?.meta?.tag, [
     { system: "https://example.test", code: "keep" },
-    { system: ODOS_PRACTICE_ROLE_SYSTEM, code: "practice-admin" },
+    { system: ODOS_PRACTICE_ROLE_SYSTEM, code: "admin" },
   ]);
 });
 
 test("duplicate canonical policies stop repair before membership mutation", async () => {
-  const adapter = new FakeRepairAdapter({ policies: [policy("a", "practice-admin"), policy("b", "practice-admin")] });
+  const adapter = new FakeRepairAdapter({ policies: [policy("a", "admin"), policy("b", "admin")] });
 
   await assert.rejects(() => repairPracticeRoles(adapter, "human@example.test"), /2 exact matches; repair stopped without guessing/);
   assert.equal(adapter.membershipWrites, 0);
 });
 
 test("a wrong ODOS role tag stops repair without overwriting it", async () => {
-  const wrong = policy("wrong", "practice-admin");
-  wrong.meta!.tag = [{ system: ODOS_PRACTICE_ROLE_SYSTEM, code: "clinician" }];
+  const wrong = policy("wrong", "admin");
+  wrong.meta!.tag = [{ system: ODOS_PRACTICE_ROLE_SYSTEM, code: "provider" }];
   const adapter = new FakeRepairAdapter({ policies: [wrong] });
 
   await assert.rejects(() => repairPracticeRoles(adapter, "human@example.test"), /conflicting practice-role code/);
-  assert.deepEqual(wrong.meta.tag, [{ system: ODOS_PRACTICE_ROLE_SYSTEM, code: "clinician" }]);
+  assert.deepEqual(wrong.meta.tag, [{ system: ODOS_PRACTICE_ROLE_SYSTEM, code: "provider" }]);
   assert.equal(adapter.membershipWrites, 0);
 });
 
@@ -230,8 +230,8 @@ function membership(overrides: Partial<ProjectMembership> = {}): ProjectMembersh
   };
 }
 
-function policy(id: string, roleId: "practice-admin" | "clinician"): AccessPolicy {
-  const display = roleId === "practice-admin" ? "Practice Admin" : "Clinician";
+function policy(id: string, roleId: "admin" | "provider"): AccessPolicy {
+  const display = roleId === "admin" ? "Admin / Manager" : "Provider";
   return {
     resourceType: "AccessPolicy",
     id,

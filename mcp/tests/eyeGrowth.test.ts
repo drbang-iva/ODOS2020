@@ -716,7 +716,7 @@ function endpointFixture(
     authenticate: async (authHeader) => authHeader === AUTH
       ? {
           staffReference: "Practitioner/doc1",
-          actorRole: "clinician",
+          actorRole: "provider",
           fhir: {
             create: async <T extends Observation | Provenance>(resource: T): Promise<T> => {
               const copy = { ...resource, id: resource.id ?? `${resource.resourceType.toLowerCase()}-${created.length + 1}` };

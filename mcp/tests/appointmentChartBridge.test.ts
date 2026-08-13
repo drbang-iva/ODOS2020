@@ -193,29 +193,33 @@ test("conditional-create race returns the winner's encounter instead of a duplic
 });
 
 test("compiled policies cover the Appointment and Encounter operations for both reachable roles", () => {
-  const frontDesk = buildMedplumAccessPolicy(getRoleDeclaration("front-desk"));
-  const appointmentRule = frontDesk.resource?.find((rule) => rule.resourceType === "Appointment");
-  const encounterRule = frontDesk.resource?.find((rule) => rule.resourceType === "Encounter");
-  const provenanceRule = frontDesk.resource?.find((rule) => rule.resourceType === "Provenance");
-  assert.ok(appointmentRule?.interaction?.includes("search"));
+  const frontDesk = buildMedplumAccessPolicy(getRoleDeclaration("staff"));
+  const appointmentRule = frontDesk.resource?.find((rule) =>
+    rule.resourceType === "Appointment" && rule.interaction?.includes("update"));
+  const encounterRule = frontDesk.resource?.find((rule) =>
+    rule.resourceType === "Encounter" && rule.interaction?.includes("update"));
+  const provenanceRule = frontDesk.resource?.find((rule) =>
+    rule.resourceType === "Provenance" && rule.interaction?.includes("create"));
+  assert.deepEqual(appointmentRule?.interaction, ["create", "update"]);
   assert.equal(appointmentRule?.criteria, undefined);
   assert.deepEqual(
     encounterRule?.interaction,
-    ["create", "read", "update", "search", "history", "vread"],
+    ["create", "update"],
   );
   assert.equal(encounterRule?.criteria, "Encounter?_compartment=%patient_compartment");
   assert.deepEqual(
     provenanceRule?.interaction,
-    ["create", "read", "search", "history", "vread"],
+    ["create"],
   );
   assert.equal(
     provenanceRule?.criteria,
-    "Provenance?_tag=https://odos2020.com/fhir/CodeSystem/office-message-kind|acknowledgement",
+    "Provenance?_compartment=%patient_compartment",
   );
 
-  for (const roleId of ["clinician", "aesthetics-provider"] as const) {
+  for (const roleId of ["provider"] as const) {
     const clinical = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
-    const clinicalProvenance = clinical.resource?.find((rule) => rule.resourceType === "Provenance");
+    const clinicalProvenance = clinical.resource?.find((rule) =>
+      rule.resourceType === "Provenance" && rule.interaction?.includes("create"));
     assert.ok(clinicalProvenance?.interaction?.includes("create"), roleId);
     assert.equal(
       clinicalProvenance?.criteria,
@@ -224,11 +228,9 @@ test("compiled policies cover the Appointment and Encounter operations for both 
     );
   }
 
-  const admin = buildMedplumAccessPolicy(getRoleDeclaration("practice-admin"));
+  const admin = buildMedplumAccessPolicy(getRoleDeclaration("admin"));
   const wildcard = admin.resource?.find((rule) => rule.resourceType === "*");
-  for (const interaction of ["create", "read", "update", "search"] as const) {
-    assert.ok(wildcard?.interaction?.includes(interaction), interaction);
-  }
+  assert.equal(wildcard, undefined);
 });
 
 function appointment(): Appointment {

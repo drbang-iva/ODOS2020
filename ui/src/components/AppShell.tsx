@@ -182,11 +182,11 @@ function SectionsDrawer({ open, roles, onClose }: { open: boolean; roles: readon
           <DrawerLink icon="⚭" title="Integrations" detail="Frames Data" href="/admin/practice/settings/frames-data" onClick={route} />
         </DrawerGroup>
         <DrawerGroup label="Practice">
-          {roles.includes("practice-admin") && <DrawerLink icon="×" title="Margin ledger" detail="monthly product margin truth" href="/financials/practice/margins" onClick={route} />}
+          {roles.includes("admin") && <DrawerLink icon="×" title="Margin ledger" detail="monthly product margin truth" href="/financials/practice/margins" onClick={route} />}
           <DrawerLink icon="≡" title="Audit log" detail="every access and change" href="/audit/log" onClick={route} />
-          {roles.includes("practice-admin") && <DrawerLink icon="⚙" title="Administration / Settings" detail="practice configuration" href="/settings" onClick={route} />}
+          {roles.includes("admin") && <DrawerLink icon="⚙" title="Administration / Settings" detail="practice configuration" href="/settings" onClick={route} />}
           <DrawerLink icon="◉" title="Clinic" detail="Clinic home and patients" href={CLINIC_PATH} onClick={route} />
-          {(roles.includes("clinician") || roles.includes("practice-admin")) && (
+          {(roles.includes("provider") || roles.includes("admin")) && (
             <DrawerLink icon="▣" title="Protocol Library" detail="author and manage clinical protocols" href="/clinic/protocols" onClick={route} />
           )}
         </DrawerGroup>

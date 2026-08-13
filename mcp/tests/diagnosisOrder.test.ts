@@ -204,7 +204,7 @@ function reorder(
   return handleDiagnosisOrderRequest({
     authenticate: async () => ({
       staffReference: "Practitioner/clinician",
-      actorRole: "clinician",
+      actorRole: "provider",
       fhir: fixture.fhir,
     }),
   }, {

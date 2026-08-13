@@ -58,7 +58,7 @@ async function listProtocols(deps: SeriesTrackerRouteDeps, req: Request): Promis
 async function saveProtocol(deps: SeriesTrackerRouteDeps, req: Request): Promise<RouteResult> {
   const staff = await authenticated(deps, req);
   if (!staff) return unauthorized();
-  if (!staff.roles?.includes("practice-admin")) return forbidden("Practice-admin role required.");
+  if (!staff.roles?.includes("admin")) return forbidden("Practice-admin role required.");
   const draft = protocolDraft(req.body);
   const store = new FhirSeriesProtocolDefinitionStore(deps.serviceFhir, now(deps));
   return { status: 200, body: { protocol: await store.save(draft) } };
@@ -67,7 +67,7 @@ async function saveProtocol(deps: SeriesTrackerRouteDeps, req: Request): Promise
 async function archiveProtocol(deps: SeriesTrackerRouteDeps, req: Request): Promise<RouteResult> {
   const staff = await authenticated(deps, req);
   if (!staff) return unauthorized();
-  if (!staff.roles?.includes("practice-admin")) return forbidden("Practice-admin role required.");
+  if (!staff.roles?.includes("admin")) return forbidden("Practice-admin role required.");
   const id = identifierParam(req.params.id, "Protocol id");
   const store = new FhirSeriesProtocolDefinitionStore(deps.serviceFhir, now(deps));
   const protocol = await store.archive(id);

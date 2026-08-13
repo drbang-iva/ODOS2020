@@ -611,7 +611,7 @@ export async function handleProtocolSignCleanupRequest(
 ) {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required for protocol sign cleanup." } };
-  if (!may(staff.actorRole, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
+  if (!may(staff.actorRole, "clinical.sign")) return { status: 403, body: { error: "clinical.sign role required" } };
   const parsed = z.object({ encounterId: z.string().min(1) }).safeParse(input.params);
   if (!parsed.success) return { status: 400, body: { error: "encounterId is required." } };
   const service = liveService(staff, deps.now);
@@ -753,7 +753,7 @@ function carePlan(action: PlanActionInstance): CarePlan {
     created: action.provenance.at,
   };
 }
-function may(role: PracticeRoleId, action: "chart.read" | "chart.write" | "protocols.author"): boolean {
+function may(role: PracticeRoleId, action: "chart.read" | "chart.write" | "clinical.sign" | "protocols.author"): boolean {
   try { assertBusinessActionAllowed(role, action); return true; } catch { return false; }
 }
 

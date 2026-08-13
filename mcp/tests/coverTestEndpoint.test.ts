@@ -19,7 +19,7 @@ class MemoryFhir {
   }
 }
 
-function setup(role: PracticeRoleId = "clinician") {
+function setup(role: PracticeRoleId = "provider") {
   const fhir = new MemoryFhir();
   const deps: CoverTestEndpointDeps = {
     authenticate: async (header) => header === AUTH ? { staffReference: "Practitioner/doc", actorRole: role, fhir } : null,
@@ -56,7 +56,7 @@ test("cover test persists independent ortho and bounded deviation rows with docu
 
 test("cover test accepts zero, rejects values above 60, duplicate slots, and unauthorized writes", async () => {
   assert.equal((await handleCoverTestCaptureRequest(setup().deps, { authHeader: undefined, body: {} })).status, 401);
-  assert.equal((await handleCoverTestCaptureRequest(setup("front-desk").deps, { authHeader: AUTH, body: {} })).status, 403);
+  assert.equal((await handleCoverTestCaptureRequest(setup("admin").deps, { authHeader: AUTH, body: {} })).status, 403);
   const duplicate = await handleCoverTestCaptureRequest(setup().deps, { authHeader: AUTH, body: { patientReference: "Patient/p1", encounterReference: "Encounter/e1", rows: [{ slot: "distance-cc", state: "ortho" }, { slot: "distance-cc", state: "ortho" }] } });
   assert.equal(duplicate.status, 400);
   const zero = await deviation(setup().deps, 0);

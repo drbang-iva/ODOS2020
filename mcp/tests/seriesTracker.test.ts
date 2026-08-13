@@ -186,8 +186,8 @@ test("HTTP flow defines a protocol, prescribes it to a test patient, and signs i
     authenticateService: async () => undefined,
     authenticate: async () => ({
       staffReference: "Practitioner/provider-1",
-      actorRole: "practice-admin",
-      roles: ["practice-admin", "clinician"],
+      actorRole: "admin",
+      roles: ["admin", "provider"],
       fhir: staffFhir as never,
     }),
     serviceFhir: serviceFhir as never,

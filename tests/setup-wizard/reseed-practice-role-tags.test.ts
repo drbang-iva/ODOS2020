@@ -39,7 +39,7 @@ test("untagged policy is tagged without replacing other meta fields and is idemp
   const policy: AccessPolicy = {
     resourceType: "AccessPolicy",
     id: "clinician-policy",
-    name: "ODOS Clinician",
+    name: "ODOS Provider",
     meta: { versionId: "legacy-version" },
   };
   const adapter = new FakePracticeRoleReseedAdapter([policy]);
@@ -50,15 +50,15 @@ test("untagged policy is tagged without replacing other meta fields and is idemp
   assert.equal(adapter.writes.length, 1);
   assert.deepEqual(policy.meta, {
     versionId: "legacy-version",
-    tag: [{ system: ODOS_PRACTICE_ROLE_SYSTEM, code: "clinician" }],
+    tag: [{ system: ODOS_PRACTICE_ROLE_SYSTEM, code: "provider" }],
   });
-  assert.equal(decidePracticeRoleTag(policy.meta?.tag, "clinician").kind, "SKIP");
+  assert.equal(decidePracticeRoleTag(policy.meta?.tag, "provider").kind, "SKIP");
 
   const second = await reseedPracticeRoleTags(adapter);
   assert.equal(second.exitCode, 0);
   assert.equal(adapter.writes.length, 1);
-  assert.deepEqual(roleCount(second, "clinician"), {
-    roleId: "clinician",
+  assert.deepEqual(roleCount(second, "provider"), {
+    roleId: "provider",
     matched: 1,
     tagged: 0,
     alreadyCorrect: 1,
@@ -68,8 +68,8 @@ test("untagged policy is tagged without replacing other meta fields and is idemp
 
 test("already-correct policy is skipped with zero writes", async () => {
   const adapter = new FakePracticeRoleReseedAdapter([
-    policyWithTags("front-desk-policy", "ODOS Front Desk", [
-      { system: ODOS_PRACTICE_ROLE_SYSTEM, code: "front-desk" },
+    policyWithTags("front-desk-policy", "ODOS Staff", [
+      { system: ODOS_PRACTICE_ROLE_SYSTEM, code: "staff" },
     ]),
   ]);
 
@@ -77,13 +77,13 @@ test("already-correct policy is skipped with zero writes", async () => {
 
   assert.equal(result.exitCode, 0);
   assert.equal(adapter.writes.length, 0);
-  assert.equal(roleCount(result, "front-desk").alreadyCorrect, 1);
+  assert.equal(roleCount(result, "staff").alreadyCorrect, 1);
 });
 
 test("wrong ODOS role tag is a conflict with no write and a non-zero exit path", async () => {
   const adapter = new FakePracticeRoleReseedAdapter([
-    policyWithTags("auditor-policy", "ODOS Auditor", [
-      { system: ODOS_PRACTICE_ROLE_SYSTEM, code: "clinician" },
+    policyWithTags("auditor-policy", "ODOS Admin / Manager", [
+      { system: ODOS_PRACTICE_ROLE_SYSTEM, code: "provider" },
     ]),
   ]);
 
@@ -91,24 +91,24 @@ test("wrong ODOS role tag is a conflict with no write and a non-zero exit path",
 
   assert.equal(result.exitCode, 1);
   assert.equal(adapter.writes.length, 0);
-  assert.equal(roleCount(result, "auditor").conflicted, 1);
+  assert.equal(roleCount(result, "admin").conflicted, 1);
   assert.deepEqual(result.conflicts, [
     {
-      roleId: "auditor",
+      roleId: "admin",
       policyId: "auditor-policy",
       reason: "role-tag",
-      conflictingCodes: ["clinician"],
+      conflictingCodes: ["provider"],
     },
   ]);
-  assert.deepEqual(decidePracticeRoleTag(adapter.policies[0]?.meta?.tag, "auditor"), {
+  assert.deepEqual(decidePracticeRoleTag(adapter.policies[0]?.meta?.tag, "admin"), {
     kind: "CONFLICT",
-    conflictingCodes: ["clinician"],
+    conflictingCodes: ["provider"],
   });
 });
 
 test("unrelated tag is preserved and the practice-role tag is appended", async () => {
   const unrelatedTag = { system: "https://example.test/tags", code: "preserve-me" };
-  const policy = policyWithTags("admin-policy", "ODOS Practice Admin", [unrelatedTag]);
+  const policy = policyWithTags("admin-policy", "ODOS Admin / Manager", [unrelatedTag]);
   const adapter = new FakePracticeRoleReseedAdapter([policy]);
 
   const result = await reseedPracticeRoleTags(adapter);
@@ -117,13 +117,13 @@ test("unrelated tag is preserved and the practice-role tag is appended", async (
   assert.equal(adapter.writes.length, 1);
   assert.deepEqual(policy.meta?.tag, [
     unrelatedTag,
-    { system: ODOS_PRACTICE_ROLE_SYSTEM, code: "practice-admin" },
+    { system: ODOS_PRACTICE_ROLE_SYSTEM, code: "admin" },
   ]);
   assert.deepEqual(adapter.writes[0]?.operations, [
     {
       op: "add",
       path: "/meta/tag/-",
-      value: { system: ODOS_PRACTICE_ROLE_SYSTEM, code: "practice-admin" },
+      value: { system: ODOS_PRACTICE_ROLE_SYSTEM, code: "admin" },
     },
   ]);
   assert.equal(adapter.writes[0]?.versionId, "1");
@@ -133,7 +133,7 @@ test("a stale version is reported as a conflict without applying the patch", asy
   const policy: AccessPolicy = {
     resourceType: "AccessPolicy",
     id: "stale-clinician-policy",
-    name: "ODOS Clinician",
+    name: "ODOS Provider",
     meta: { versionId: "7" },
   };
   const adapter = new FakePracticeRoleReseedAdapter([policy]);
@@ -142,9 +142,9 @@ test("a stale version is reported as a conflict without applying the patch", asy
   const result = await reseedPracticeRoleTags(adapter);
 
   assert.equal(result.exitCode, 1);
-  assert.equal(roleCount(result, "clinician").conflicted, 1);
+  assert.equal(roleCount(result, "provider").conflicted, 1);
   assert.deepEqual(result.conflicts, [
-    { roleId: "clinician", policyId: "stale-clinician-policy", reason: "stale-version" },
+    { roleId: "provider", policyId: "stale-clinician-policy", reason: "stale-version" },
   ]);
   assert.equal(policy.meta?.tag, undefined);
 });
@@ -153,7 +153,7 @@ test("a missing version is reported as a conflict without attempting a write", a
   const policy: AccessPolicy = {
     resourceType: "AccessPolicy",
     id: "unversioned-clinician-policy",
-    name: "ODOS Clinician",
+    name: "ODOS Provider",
     meta: {},
   };
   const adapter = new FakePracticeRoleReseedAdapter([policy]);
@@ -162,9 +162,9 @@ test("a missing version is reported as a conflict without attempting a write", a
 
   assert.equal(result.exitCode, 1);
   assert.equal(adapter.writes.length, 0);
-  assert.equal(roleCount(result, "clinician").conflicted, 1);
+  assert.equal(roleCount(result, "provider").conflicted, 1);
   assert.deepEqual(result.conflicts, [
-    { roleId: "clinician", policyId: "unversioned-clinician-policy", reason: "missing-version" },
+    { roleId: "provider", policyId: "unversioned-clinician-policy", reason: "missing-version" },
   ]);
 });
 

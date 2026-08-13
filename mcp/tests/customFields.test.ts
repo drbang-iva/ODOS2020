@@ -84,8 +84,8 @@ test("practice admin grants creation through stored data and clinicians cannot m
   const seeds = buildFindingDefinitionSeeds();
   const specialty = seeds.find((definition) => definition.stableKey === "specialty_contact_lens");
   assert.ok(specialty);
-  const adminDeps = endpointDeps("practice-admin", fhir, () => seeds);
-  const clinicianDeps = endpointDeps("clinician", fhir, () => seeds);
+  const adminDeps = endpointDeps("admin", fhir, () => seeds);
+  const clinicianDeps = endpointDeps("provider", fhir, () => seeds);
 
   const catalog = await handleFindingDefinitionCatalogRequest(clinicianDeps, { authHeader: AUTH });
   const denied = await handleFindingDefinitionMutationRequest(clinicianDeps, {
@@ -100,7 +100,7 @@ test("practice admin grants creation through stored data and clinicians cannot m
   });
   const stored = await new FhirFindingDefinitionStore(fhir, seeds).list();
   const created = await handleFindingDefinitionMutationRequest(
-    endpointDeps("practice-admin", fhir, () => stored),
+    endpointDeps("admin", fhir, () => stored),
     {
       authHeader: AUTH,
       params: { stableKey: "specialty_contact_lens" },
@@ -126,7 +126,7 @@ test("Review of Systems Add flag persists through the finding-definition mutatio
   const fhir = new MemoryDefinitionFhir();
   const seeds = buildFindingDefinitionSeeds();
   const result = await handleFindingDefinitionMutationRequest(
-    endpointDeps("practice-admin", fhir, () => seeds),
+    endpointDeps("admin", fhir, () => seeds),
     {
       authHeader: AUTH,
       params: { stableKey: "hpi_ros" },
@@ -388,7 +388,7 @@ function clinicalFixture(initialDefinitions: () => ClinicalFindingDefinition[]) 
     captureDeps() {
       return {
         authenticate: async (authHeader: string | undefined) => authHeader === AUTH
-          ? { staffReference: "Practitioner/doc-1", actorRole: "clinician" as const, fhir }
+          ? { staffReference: "Practitioner/doc-1", actorRole: "provider" as const, fhir }
           : null,
         findingDefinitions: () => definitions(),
         now: () => PROVENANCE.recordedAt,
@@ -397,7 +397,7 @@ function clinicalFixture(initialDefinitions: () => ClinicalFindingDefinition[]) 
     historyDeps() {
       return {
         authenticate: async (authHeader: string | undefined) => authHeader === AUTH
-          ? { staffReference: "Practitioner/doc-1", actorRole: "clinician" as const, fhir }
+          ? { staffReference: "Practitioner/doc-1", actorRole: "provider" as const, fhir }
           : null,
         findingDefinitions: () => definitions(),
       };

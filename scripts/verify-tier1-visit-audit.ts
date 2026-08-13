@@ -53,7 +53,7 @@ const fhir = createMedplumClient({
   audit,
   auditContext: {
     actorId: "tier1-audit-verify",
-    actorRole: "clinician",
+    actorRole: "provider",
     sessionId,
   },
 });

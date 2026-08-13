@@ -150,7 +150,7 @@ test("Mandate 8 boundary: MCP cannot read another user's audit session_id", () =
   const row = buildOdosAuditEventRow({
     eventType: "read",
     actorId: "clinician-2",
-    actorRole: "clinician",
+    actorRole: "provider",
     patientId: "patient-x",
     sessionId: "other-session",
     actionOutcome: "granted",
@@ -159,7 +159,7 @@ test("Mandate 8 boundary: MCP cannot read another user's audit session_id", () =
   assert.throws(
     () =>
       assertAuditSessionVisible({
-        callerRole: "clinician",
+        callerRole: "provider",
         callerActorId: "clinician-1",
         row,
       }),
@@ -311,7 +311,7 @@ test("Mandate 8 boundary: SMART staged review refuses autonomous-agent approval"
       approveStagedScopeDecision({
         decision,
         adminUserId: "admin-1",
-        adminRole: "practice-admin",
+        adminRole: "admin",
         actorRole: "autonomous-agent",
       }),
     /autonomous agents cannot approve/,
@@ -333,10 +333,10 @@ test("Mandate 8 boundary: SMART app registry admin action requires human-supervi
     /practice-admin session/,
   );
   assert.throws(
-    () => assertSmartAppAdminActionAllowed({ actorId: undefined, actorRole: "practice-admin" }),
+    () => assertSmartAppAdminActionAllowed({ actorId: undefined, actorRole: "admin" }),
     /practice-admin session/,
   );
-  assert.doesNotThrow(() => assertSmartAppAdminActionAllowed({ actorId: "admin-1", actorRole: "practice-admin" }));
+  assert.doesNotThrow(() => assertSmartAppAdminActionAllowed({ actorId: "admin-1", actorRole: "admin" }));
 });
 
 test("Mandate 8 boundary: SMART app registry network trace is local-only and has no remote catalog sync", () => {

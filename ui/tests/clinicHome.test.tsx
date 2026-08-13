@@ -43,7 +43,7 @@ test("authorized present rows get start-or-open while scheduled and checked-out 
     row("scheduled", "Scheduled"),
   ]);
   const html = renderToStaticMarkup(
-    <ClinicHome initialSummary={summary} roles={["front-desk", "clinician"]} />,
+    <ClinicHome initialSummary={summary} roles={["staff", "provider"]} />,
   );
 
   assert.equal((html.match(/>Open chart<\/button>/g) ?? []).length, 1);

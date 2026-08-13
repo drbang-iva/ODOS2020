@@ -1,6 +1,6 @@
 import type { Bundle, Invoice, PaymentReconciliation } from "@medplum/fhirtypes";
 import type { OdosAuditEventRecord } from "../authz/odosAudit.js";
-import { resolveBusinessActionRole, type PracticeRoleId } from "../authz/roles.js";
+import { resolveBusinessActionRole } from "../authz/roles.js";
 import { buildPaymentAuditRecord } from "./payment-audit.js";
 import {
   applyPaymentCredit,
@@ -57,7 +57,7 @@ export async function handleApplyCreditRequest(
   deps: PaymentCreditHandlerDeps,
   input: { authHeader: string | undefined; body: unknown },
 ): Promise<ChargeHandlerResult> {
-  const staff = await authorizedStaff(deps, input.authHeader);
+  const staff = await authorizedStaff(deps, input.authHeader, "payment.charge");
   if ("result" in staff) return staff.result;
   const body = objectBody(input.body);
   if ("error" in body) return badRequest(body.error);
@@ -86,7 +86,7 @@ export async function handleTransferCreditRequest(
   deps: PaymentCreditHandlerDeps,
   input: { authHeader: string | undefined; body: unknown },
 ): Promise<ChargeHandlerResult> {
-  const staff = await authorizedStaff(deps, input.authHeader);
+  const staff = await authorizedStaff(deps, input.authHeader, "payment.charge");
   if ("result" in staff) return staff.result;
   const body = objectBody(input.body);
   if ("error" in body) return badRequest(body.error);
@@ -117,7 +117,7 @@ export async function handleVoidCreditRequest(
   deps: PaymentCreditHandlerDeps,
   input: { authHeader: string | undefined; body: unknown },
 ): Promise<ChargeHandlerResult> {
-  const staff = await authorizedStaff(deps, input.authHeader);
+  const staff = await authorizedStaff(deps, input.authHeader, "payment.void");
   if ("result" in staff) return staff.result;
   const body = objectBody(input.body);
   if ("error" in body) return badRequest(body.error);
@@ -179,9 +179,9 @@ export async function handleUnappliedCreditsRequest(
     throw error;
   }
   if (!staff) return { status: 401, body: { error: "Authentication required to view payments." } };
-  const actorRole = resolvePaymentActorRole(staff);
+  const actorRole = resolveBusinessActionRole(staff.roles ?? [], "billing-context.read");
   if (!actorRole) {
-    return { status: 403, body: { error: "payment.charge role required" } };
+    return { status: 403, body: { error: "billing-context.read role required" } };
   }
   staff = { ...staff, actorRole };
   try {
@@ -199,7 +199,7 @@ export async function handlePaymentReconciliationsRequest(
     query?: Record<string, unknown>;
   },
 ): Promise<ChargeHandlerResult> {
-  const staff = await authorizedStaff(deps, input.authHeader);
+  const staff = await authorizedStaff(deps, input.authHeader, "billing-context.read");
   if ("result" in staff) return staff.result;
   const patientReference = queryValue(input.query?.patientReference);
   const startDate = queryValue(input.query?.startDate);
@@ -248,7 +248,12 @@ export async function handlePaymentReconciliationsRequest(
     return {
       status: 200,
       body: {
-        items: payments.map((payment) => patientPaymentRow(payment, invoiceByReference, nowIso)),
+        items: payments.map((payment) => patientPaymentRow(
+          payment,
+          invoiceByReference,
+          nowIso,
+          Boolean(resolveBusinessActionRole(staff.staff.roles ?? [], "payment.void")),
+        )),
       },
     };
   } catch (error) {
@@ -260,6 +265,7 @@ export function patientPaymentRow(
   payment: PaymentReconciliation,
   invoiceByReference: ReadonlyMap<string, Invoice>,
   nowIso: string,
+  canVoidAuthorized = false,
 ): PatientPaymentRow {
   if (!payment.id) throw new Error("PaymentReconciliation is missing its id.");
   const patientReference = paymentSubjectReference(payment);
@@ -295,13 +301,14 @@ export function patientPaymentRow(
       };
     }),
     ...(method ? { method } : {}),
-    canVoid: canVoidPaymentCredit(payment, nowIso),
+    canVoid: canVoidAuthorized && canVoidPaymentCredit(payment, nowIso),
   };
 }
 
 async function authorizedStaff(
   deps: Pick<PaymentCreditHandlerDeps, "authenticate">,
   authHeader: string | undefined,
+  businessAction: "billing-context.read" | "payment.charge" | "payment.void",
 ): Promise<{ staff: AuthenticatedStaff } | { result: ChargeHandlerResult }> {
   let staff: AuthenticatedStaff | null;
   try {
@@ -315,15 +322,11 @@ async function authorizedStaff(
   if (!staff) {
     return { result: { status: 401, body: { error: "Authentication required to manage payments." } } };
   }
-  const actorRole = resolvePaymentActorRole(staff);
+  const actorRole = resolveBusinessActionRole(staff.roles ?? [], businessAction);
   if (!actorRole) {
-    return { result: { status: 403, body: { error: "payment.charge role required" } } };
+    return { result: { status: 403, body: { error: `${businessAction} role required` } } };
   }
   return { staff: { ...staff, actorRole } };
-}
-
-function resolvePaymentActorRole(staff: AuthenticatedStaff): PracticeRoleId | undefined {
-  return resolveBusinessActionRole(staff.roles ?? [], "payment.charge");
 }
 
 async function auditCredit(

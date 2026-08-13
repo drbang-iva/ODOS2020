@@ -75,23 +75,18 @@ test("every non-empty practice-role combination routes from its whoami response 
       headers: { "Content-Type": "application/json" },
     });
     const whoami = await fetchWhoAmI(fetchImpl as typeof fetch);
-    const expected = mockedRoles.includes("front-desk") || mockedRoles.includes("practice-admin")
-      ? DESK_HOME_PATH
-      : mockedRoles.includes("clinician") || mockedRoles.includes("aesthetics-provider")
-        ? CLINIC_PATH
-        : DESK_HOME_PATH;
+    const expected = mockedRoles.includes("provider") ? CLINIC_PATH : DESK_HOME_PATH;
     assert.equal(defaultHomePath(whoami.roles), expected, mockedRoles.join(" + "));
   }
 });
 
-test("entry routing follows the Desk-wins precedence matrix", () => {
+test("entry routing sends Provider to Clinic and Staff or Admin to Desk", () => {
   const cases: Array<[PracticeRoleId[], typeof CLINIC_PATH | typeof DESK_HOME_PATH]> = [
-    [["front-desk"], DESK_HOME_PATH],
-    [["practice-admin"], DESK_HOME_PATH],
-    [["clinician"], CLINIC_PATH],
-    [["aesthetics-provider"], CLINIC_PATH],
-    [["clinician", "front-desk", "practice-admin"], DESK_HOME_PATH],
-    [["clinician", "front-desk"], DESK_HOME_PATH],
+    [["staff"], DESK_HOME_PATH],
+    [["admin"], DESK_HOME_PATH],
+    [["provider"], CLINIC_PATH],
+    [["provider", "staff", "admin"], CLINIC_PATH],
+    [["provider", "staff"], CLINIC_PATH],
     [[], DESK_HOME_PATH],
   ];
 
@@ -101,19 +96,19 @@ test("entry routing follows the Desk-wins precedence matrix", () => {
 });
 
 test("cross-side access requires at least one Desk role and one Clinic role", () => {
-  assert.equal(hasCrossSideAccess(["clinician", "front-desk"]), true);
-  assert.equal(hasCrossSideAccess(["practice-admin", "clinician"]), true);
-  assert.equal(hasCrossSideAccess(["front-desk"]), false);
-  assert.equal(hasCrossSideAccess(["clinician"]), false);
+  assert.equal(hasCrossSideAccess(["provider", "staff"]), true);
+  assert.equal(hasCrossSideAccess(["admin", "provider"]), true);
+  assert.equal(hasCrossSideAccess(["staff"]), false);
+  assert.equal(hasCrossSideAccess(["provider"]), false);
   assert.equal(hasCrossSideAccess([]), false);
 });
 
 test("cross-side users switch between Desk and Clinic in the same tab", () => {
-  const roles: PracticeRoleId[] = ["clinician", "front-desk"];
-  assert.equal(defaultHomePath(roles), DESK_HOME_PATH);
+  const roles: PracticeRoleId[] = ["provider", "staff"];
+  assert.equal(defaultHomePath(roles), CLINIC_PATH);
 
-  const clinic = renderToStaticMarkup(<AppShell path={CLINIC_PATH} roles={roles} homePath={DESK_HOME_PATH} side="clinic" email="doctor@example.test" switchPill={<RoleSwitchPill target={DESK_HOME_PATH} />}><RouteSwitch view={{ kind: "picker" }} path={CLINIC_PATH} roles={roles} /></AppShell>);
-  const desk = renderToStaticMarkup(<AppShell path={DESK_HOME_PATH} roles={roles} homePath={DESK_HOME_PATH} side="desk" email="doctor@example.test" switchPill={<RoleSwitchPill target={CLINIC_PATH} />}><RouteSwitch view={{ kind: "picker" }} path={DESK_HOME_PATH} roles={roles} /></AppShell>);
+  const clinic = renderToStaticMarkup(<AppShell path={CLINIC_PATH} roles={roles} homePath={CLINIC_PATH} side="clinic" email="doctor@example.test" switchPill={<RoleSwitchPill target={DESK_HOME_PATH} />}><RouteSwitch view={{ kind: "picker" }} path={CLINIC_PATH} roles={roles} /></AppShell>);
+  const desk = renderToStaticMarkup(<AppShell path={DESK_HOME_PATH} roles={roles} homePath={CLINIC_PATH} side="desk" email="doctor@example.test" switchPill={<RoleSwitchPill target={CLINIC_PATH} />}><RouteSwitch view={{ kind: "picker" }} path={DESK_HOME_PATH} roles={roles} /></AppShell>);
   assert.match(clinic, /Switch to Desk/);
   assert.match(desk, /Switch to Clinic/);
 
@@ -160,7 +155,7 @@ test("App rehydrates an unexpired session on boot", async () => {
   try {
     await act(async () => {
       renderer = create(<App
-        resolveRoles={async () => ({ roles: ["front-desk"] })}
+        resolveRoles={async () => ({ roles: ["staff"] })}
         RouteComponent={RouteProbe}
       />);
       await Promise.resolve();
@@ -351,8 +346,8 @@ test("an authenticated Request with an explicit empty header override cannot cle
 });
 
 test("single-role users do not render a cross-side switch pill", () => {
-  const clinic = renderToStaticMarkup(<AppShell path={CLINIC_PATH} roles={["clinician"]} homePath={CLINIC_PATH} side="clinic" email="doctor@example.test"><RouteSwitch view={{ kind: "picker" }} path={CLINIC_PATH} roles={["clinician"]} /></AppShell>);
-  const desk = renderToStaticMarkup(<AppShell path={DESK_HOME_PATH} roles={["front-desk"]} homePath={DESK_HOME_PATH} side="desk" email="desk@example.test"><RouteSwitch view={{ kind: "picker" }} path={DESK_HOME_PATH} roles={["front-desk"]} /></AppShell>);
+  const clinic = renderToStaticMarkup(<AppShell path={CLINIC_PATH} roles={["provider"]} homePath={CLINIC_PATH} side="clinic" email="doctor@example.test"><RouteSwitch view={{ kind: "picker" }} path={CLINIC_PATH} roles={["provider"]} /></AppShell>);
+  const desk = renderToStaticMarkup(<AppShell path={DESK_HOME_PATH} roles={["staff"]} homePath={DESK_HOME_PATH} side="desk" email="desk@example.test"><RouteSwitch view={{ kind: "picker" }} path={DESK_HOME_PATH} roles={["staff"]} /></AppShell>);
   assert.doesNotMatch(clinic, /Switch to/);
   assert.doesNotMatch(desk, /Switch to/);
 });
@@ -361,12 +356,12 @@ test("practice roles resolve only once for the same bearer-token session", async
   let calls = 0;
   const load = async () => {
     calls += 1;
-    return { roles: ["front-desk" as const] };
+    return { roles: ["staff" as const] };
   };
   const first = resolveSessionRoles("Bearer session-a", load);
   const second = resolveSessionRoles("Bearer session-a", load);
   assert.equal(first, second);
-  assert.deepEqual(await second, { roles: ["front-desk"] });
+  assert.deepEqual(await second, { roles: ["staff"] });
   assert.equal(calls, 1);
 });
 
@@ -380,7 +375,7 @@ test("leaving the Clinic route resets its patient view while in-Clinic view chan
 test("selecting at Clinic patient search then navigating home renders ClinicHome, not a stale chart", () => {
   const selected: ViewState = { kind: "overview", patientId: "patient-1" };
   const reset = clinicViewAfterNavigation("/clinic/patients", CLINIC_PATH, selected);
-  const clinic = renderToStaticMarkup(<RouteSwitch view={reset} path={CLINIC_PATH} roles={["clinician"]} />);
+  const clinic = renderToStaticMarkup(<RouteSwitch view={reset} path={CLINIC_PATH} roles={["provider"]} />);
   assert.deepEqual(reset, { kind: "picker" });
   assert.match(clinic, /The Clinic/);
   assert.doesNotMatch(clinic, /Loading patient/);
@@ -438,7 +433,7 @@ test("a Clinic deep link stays on the chart after front-desk-only role routing",
   try {
     await act(async () => {
       renderer = create(<App
-        resolveRoles={async () => ({ roles: ["front-desk"] })}
+        resolveRoles={async () => ({ roles: ["staff"] })}
         login={async () => undefined}
         RouteComponent={RouteProbe}
       />);
@@ -449,7 +444,7 @@ test("a Clinic deep link stays on the chart after front-desk-only role routing",
     });
 
     const route = renderer.root.findByType(RouteProbe);
-    assert.equal(defaultHomePath(["front-desk"]), DESK_HOME_PATH);
+    assert.equal(defaultHomePath(["staff"]), DESK_HOME_PATH);
     assert.equal(route.props.path, CLINIC_PATH);
     assert.deepEqual(route.props.view, { kind: "overview", patientId: "patient-1" });
     assert.deepEqual(location, { pathname: CLINIC_PATH, search: "?patientId=patient-1" });
@@ -491,7 +486,7 @@ test("logout and re-login route from the current address instead of the first bo
   try {
     await act(async () => {
       renderer = create(<App
-        resolveRoles={async () => ({ roles: ["practice-admin"] })}
+        resolveRoles={async () => ({ roles: ["admin"] })}
         login={async () => undefined}
         RouteComponent={RouteProbe}
       />);
@@ -544,7 +539,7 @@ test("authenticated bootstrap preserves non-root hard-reload routes", async () =
       try {
         await act(async () => {
           renderer = create(<App
-            resolveRoles={async () => ({ roles: ["practice-admin", "front-desk"] })}
+            resolveRoles={async () => ({ roles: ["admin", "staff"] })}
             login={async () => undefined}
             RouteComponent={RouteProbe}
           />);

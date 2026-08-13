@@ -156,7 +156,7 @@ test("sign cleanup materializes five accepted proposals once and existing money 
   const deps = {
     authenticate: async () => ({
       staffReference: "Practitioner/clinician-1",
-      actorRole: "clinician" as const,
+      actorRole: "provider" as const,
       fhir,
     }),
     feeScheduleFhir: fhir,
@@ -210,8 +210,8 @@ test("sign cleanup materializes five accepted proposals once and existing money 
   const openCharges = await handleOpenChargesRequest({
     authenticate: async () => ({
       staffReference: "Practitioner/front-1",
-      actorRole: "front-desk",
-      roles: ["front-desk"],
+      actorRole: "staff",
+      roles: ["staff"],
       fhir,
     }),
   }, {
@@ -229,9 +229,9 @@ test("sign cleanup materializes five accepted proposals once and existing money 
 test("fee schedule endpoint seeds empty definitions, saves integer cents, and deactivates instead of deleting", async () => {
   const fhir = new MemoryFhir();
   const authenticate = async (header: string | undefined) => header === "Bearer admin"
-    ? { staffReference: "Practitioner/admin", actorRole: "practice-admin" as const, fhir }
+    ? { staffReference: "Practitioner/admin", actorRole: "admin" as const, fhir }
     : header === "Bearer clinician"
-      ? { staffReference: "Practitioner/doc", actorRole: "clinician" as const, fhir }
+      ? { staffReference: "Practitioner/doc", actorRole: "provider" as const, fhir }
       : null;
   assert.equal((await handleProcedureFeeScheduleRequest({ authenticate }, { authHeader: undefined })).status, 401);
   assert.equal((await handleProcedureFeeScheduleRequest({ authenticate }, { authHeader: "Bearer clinician" })).status, 403);
@@ -276,9 +276,9 @@ test("fee schedule endpoint seeds empty definitions, saves integer cents, and de
 test("fee schedule creation endpoint is admin-only and reports key conflicts without a write", async () => {
   const fhir = new MemoryFhir();
   const authenticate = async (header: string | undefined) => header === "Bearer admin"
-    ? { staffReference: "Practitioner/admin", actorRole: "practice-admin" as const, fhir }
+    ? { staffReference: "Practitioner/admin", actorRole: "admin" as const, fhir }
     : header === "Bearer clinician"
-      ? { staffReference: "Practitioner/doc", actorRole: "clinician" as const, fhir }
+      ? { staffReference: "Practitioner/doc", actorRole: "provider" as const, fhir }
       : null;
   const body = {
     action: "create",
@@ -433,7 +433,7 @@ test("sign cleanup abandons unrelated open applications before a corrupt accepte
   await assert.rejects(() => handleProtocolSignCleanupRequest({
     authenticate: async () => ({
       staffReference: "Practitioner/doc",
-      actorRole: "clinician" as const,
+      actorRole: "provider" as const,
       fhir,
     }),
     feeScheduleFhir: fhir,

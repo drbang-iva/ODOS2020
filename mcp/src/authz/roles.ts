@@ -18,11 +18,9 @@ export const FHIR_INTERACTIONS = [
 export type FhirInteraction = (typeof FHIR_INTERACTIONS)[number];
 
 export const PRACTICE_ROLE_IDS = [
-  "practice-admin",
-  "clinician",
-  "front-desk",
-  "auditor",
-  "aesthetics-provider",
+  "provider",
+  "staff",
+  "admin",
 ] as const;
 
 export type PracticeRoleId = (typeof PRACTICE_ROLE_IDS)[number];
@@ -40,8 +38,13 @@ export const BUSINESS_ACTIONS = [
   "aesthetics.procedure.write",
   "break-glass.invoke",
   "payment.charge",
+  "payment.void",
+  // Declared ahead of a dedicated enforcement point; no write-off route or policy rule exists yet.
+  "payment.write-off",
   "payment.seal-day",
   "margin.read",
+  "inventory.adjust",
+  "inventory.price",
   "claims.manage",
   "finding-definitions.write",
   "protocols.author",
@@ -108,16 +111,98 @@ export interface AestheticsProviderScopeInput {
 }
 
 const READ_INTERACTIONS: FhirInteraction[] = ["read", "search", "history", "vread"];
-const UPDATE_INTERACTIONS: FhirInteraction[] = [
-  "create",
-  "read",
-  "update",
-  "search",
-  "history",
-  "vread",
+const UPDATE_INTERACTIONS: FhirInteraction[] = ["create", "update"];
+const CREATE_READ_INTERACTIONS: FhirInteraction[] = ["create"];
+const READ_UPDATE_INTERACTIONS: FhirInteraction[] = ["update"];
+
+const PRACTICE_READ_RESOURCE_TYPES = [
+  "Patient",
+  "RelatedPerson",
+  "Coverage",
+  "Account",
+  "Encounter",
+  "Observation",
+  "Condition",
+  "Procedure",
+  "DiagnosticReport",
+  "DocumentReference",
+  "Media",
+  "Device",
+  "DeviceRequest",
+  "MedicationAdministration",
+  "MedicationStatement",
+  "EpisodeOfCare",
+  "CarePlan",
+  "ChargeItem",
+  "QuestionnaireResponse",
+  "Provenance",
+  "Binary",
+  "ServiceRequest",
+  "Appointment",
+  "Schedule",
+  "Slot",
+  "HealthcareService",
+  "DeviceDefinition",
+  "PaymentReconciliation",
+  "Task",
+  "Invoice",
+  "Claim",
+  "ClaimResponse",
+  "CoverageEligibilityRequest",
+  "CoverageEligibilityResponse",
+  "Organization",
+  "Practitioner",
+  "PractitionerRole",
+  "Communication",
+] as const;
+
+const PRACTICE_READ_RESOURCE_RULES: OdosResourceRule[] = PRACTICE_READ_RESOURCE_TYPES.map(
+  (resourceType) => ({ resourceType, interactions: READ_INTERACTIONS, scope: { kind: "practice" } }),
+);
+
+const STAFF_OBSERVATION_WRITE_CONSTRAINTS: WriteConstraintDeclaration[] = [
+  {
+    description: "Staff and scribe findings remain preliminary until a Provider attests them.",
+    expression:
+      "(%before.exists().not() implies status = 'preliminary') and (%before.exists() implies (%before.status = 'preliminary' and status = 'preliminary'))",
+  },
 ];
-const CREATE_READ_INTERACTIONS: FhirInteraction[] = ["create", "read", "search", "history", "vread"];
-const FULL_INTERACTIONS: FhirInteraction[] = [...FHIR_INTERACTIONS];
+
+const STAFF_ENCOUNTER_WRITE_CONSTRAINTS: WriteConstraintDeclaration[] = [
+  {
+    description: "Staff can create or edit an Encounter only while it remains unfinished.",
+    expression: "status != 'finished' and (%before.exists() implies %before.status != 'finished')",
+  },
+];
+
+const FRAME_INVENTORY_STATUS_URL =
+  "https://odos2020.com/fhir/StructureDefinition/unit-status";
+const FRAME_INVENTORY_STAFF_WRITE_CONSTRAINTS: WriteConstraintDeclaration[] = [
+  {
+    description:
+      "Staff receipts create on-hand units; later writes preserve inventory identity and received-at provenance.",
+    expression: [
+      "(%before.exists().not() implies extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/unit-status').value = 'on_hand')",
+      "and (%before.exists() implies code ~ %before.code)",
+      "and (%before.exists() implies identifier ~ %before.identifier)",
+      "and (%before.exists() implies extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/catalog-canonical-url').value = %before.extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/catalog-canonical-url').value)",
+      "and (%before.exists() implies extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/received-at').value = %before.extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/received-at').value)",
+      "and (%before.exists() implies extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/dispensary-location').value = %before.extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/dispensary-location').value)",
+    ].join(" "),
+  },
+  {
+    description: "Staff can advance inventory workflow status but cannot reverse or arbitrarily adjust it.",
+    expression: [
+      "(%before.exists().not())",
+      `or (%before.extension.where(url = '${FRAME_INVENTORY_STATUS_URL}').value = extension.where(url = '${FRAME_INVENTORY_STATUS_URL}').value)`,
+      `or (%before.extension.where(url = '${FRAME_INVENTORY_STATUS_URL}').value = 'on_hand' and extension.where(url = '${FRAME_INVENTORY_STATUS_URL}').value in ('reserved' | 'hold' | 'dispensed'))`,
+      `or (%before.extension.where(url = '${FRAME_INVENTORY_STATUS_URL}').value = 'reserved' and extension.where(url = '${FRAME_INVENTORY_STATUS_URL}').value in ('outbound' | 'at_lab' | 'dispensed'))`,
+      `or (%before.extension.where(url = '${FRAME_INVENTORY_STATUS_URL}').value = 'outbound' and extension.where(url = '${FRAME_INVENTORY_STATUS_URL}').value in ('at_lab' | 'inbound' | 'dispensed'))`,
+      `or (%before.extension.where(url = '${FRAME_INVENTORY_STATUS_URL}').value = 'at_lab' and extension.where(url = '${FRAME_INVENTORY_STATUS_URL}').value in ('inbound' | 'dispensed'))`,
+      `or (%before.extension.where(url = '${FRAME_INVENTORY_STATUS_URL}').value = 'inbound' and extension.where(url = '${FRAME_INVENTORY_STATUS_URL}').value = 'dispensed')`,
+    ].join(" "),
+  },
+];
 
 /**
  * Dispensary catalog, inventory, order + financial resources granted to front-desk at practice
@@ -127,11 +212,10 @@ const FULL_INTERACTIONS: FhirInteraction[] = [...FHIR_INTERACTIONS];
  * PaymentReconciliation stays create/read-only for staff; Phase 6a mutations cross the guarded
  * odos-core lifecycle handlers. Task/Invoice also need update (status advance / manual cash).
  */
-const DISPENSARY_RESOURCE_RULES: OdosResourceRule[] = [
-  { resourceType: "DeviceDefinition", interactions: READ_INTERACTIONS, scope: { kind: "practice" } },
+const DISPENSARY_READ_RESOURCE_RULES: OdosResourceRule[] = [
   {
     resourceType: "Basic",
-    interactions: UPDATE_INTERACTIONS,
+    interactions: READ_INTERACTIONS,
     scope: {
       kind: "practice-search",
       criteria:
@@ -140,7 +224,59 @@ const DISPENSARY_RESOURCE_RULES: OdosResourceRule[] = [
   },
   {
     resourceType: "Basic",
+    interactions: READ_INTERACTIONS,
+    scope: {
+      kind: "practice-search",
+      criteria:
+        "Basic?code=https://odos2020.com/fhir/CodeSystem/basic-kind|practice-frame-inventory-unit",
+    },
+  },
+  {
+    resourceType: "Basic",
+    interactions: READ_INTERACTIONS,
+    scope: {
+      kind: "practice-search",
+      criteria:
+        "Basic?code=https://odos2020.com/fhir/CodeSystem/basic-kind|practice-frame-variant-settings",
+    },
+  },
+  {
+    resourceType: "Basic",
+    interactions: READ_INTERACTIONS,
+    scope: {
+      kind: "practice-search",
+      criteria: "Basic?code=https://odos2020.com/fhir/CodeSystem/day-seal|day-seal",
+    },
+  },
+];
+
+const STAFF_DISPENSARY_WRITE_RESOURCE_RULES: OdosResourceRule[] = [
+  {
+    resourceType: "Basic",
     interactions: UPDATE_INTERACTIONS,
+    scope: {
+      kind: "practice-search",
+      criteria:
+        "Basic?code=https://odos2020.com/fhir/CodeSystem/basic-kind|practice-frame-inventory-unit",
+    },
+    writeConstraint: FRAME_INVENTORY_STAFF_WRITE_CONSTRAINTS,
+  },
+  { resourceType: "DeviceRequest", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "ChargeItem", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "PaymentReconciliation", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "Task", interactions: UPDATE_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "Invoice", interactions: UPDATE_INTERACTIONS, scope: { kind: "practice" } },
+];
+
+const PAYMENT_CUSTODY_RESOURCE_RULES: OdosResourceRule[] = [
+  { resourceType: "PaymentReconciliation", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "Invoice", interactions: READ_UPDATE_INTERACTIONS, scope: { kind: "practice" } },
+];
+
+const ADMIN_CORRECTION_RESOURCE_RULES: OdosResourceRule[] = [
+  {
+    resourceType: "Basic",
+    interactions: READ_UPDATE_INTERACTIONS,
     scope: {
       kind: "practice-search",
       criteria:
@@ -164,11 +300,7 @@ const DISPENSARY_RESOURCE_RULES: OdosResourceRule[] = [
       criteria: "Basic?code=https://odos2020.com/fhir/CodeSystem/day-seal|day-seal",
     },
   },
-  { resourceType: "DeviceRequest", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
-  { resourceType: "ChargeItem", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
-  { resourceType: "PaymentReconciliation", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
-  { resourceType: "Task", interactions: UPDATE_INTERACTIONS, scope: { kind: "practice" } },
-  { resourceType: "Invoice", interactions: UPDATE_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "Invoice", interactions: READ_UPDATE_INTERACTIONS, scope: { kind: "practice" } },
 ];
 
 const CLAIMS_RESOURCE_RULES: OdosResourceRule[] = [
@@ -178,10 +310,26 @@ const CLAIMS_RESOURCE_RULES: OdosResourceRule[] = [
   { resourceType: "CoverageEligibilityResponse", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
   {
     resourceType: "Basic",
+    interactions: READ_INTERACTIONS,
+    scope: {
+      kind: "practice-search",
+      criteria: "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-era-import|odos-era-import",
+    },
+  },
+  {
+    resourceType: "Basic",
     interactions: UPDATE_INTERACTIONS,
     scope: {
       kind: "practice-search",
       criteria: "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-era-import|odos-era-import",
+    },
+  },
+  {
+    resourceType: "Basic",
+    interactions: READ_INTERACTIONS,
+    scope: {
+      kind: "practice-search",
+      criteria: "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-manual-eob|odos-manual-eob",
     },
   },
   {
@@ -201,6 +349,16 @@ const PAYER_DIRECTORY_RESOURCE_RULES: OdosResourceRule[] = [
 const BILLING_IDENTITY_CONFIG_READ_RULE: OdosResourceRule = {
   resourceType: "Basic",
   interactions: READ_INTERACTIONS,
+  scope: {
+    kind: "practice-search",
+    criteria:
+      "Basic?code=https://odos2020.com/fhir/CodeSystem/billing-identity-config|odos-billing-identity-config",
+  },
+};
+
+const BILLING_IDENTITY_CONFIG_WRITE_RULE: OdosResourceRule = {
+  resourceType: "Basic",
+  interactions: UPDATE_INTERACTIONS,
   scope: {
     kind: "practice-search",
     criteria:
@@ -267,15 +425,77 @@ const PATIENT_COMPARTMENT_CLINICAL_RESOURCES = [
   "QuestionnaireResponse",
 ] as const;
 
-const FRONT_DESK_RESOURCES = [
+const STAFF_DEMOGRAPHIC_RESOURCES = [
   "Patient",
   "RelatedPerson",
   "Coverage",
   "Account",
-  "Encounter",
 ] as const;
 
-const FRONT_DESK_CORRESPONDENCE_RESOURCE_RULES: OdosResourceRule[] = [
+const STAFF_FINDING_RESOURCES = [
+  "Observation",
+  "DiagnosticReport",
+  "DocumentReference",
+  "Media",
+  "QuestionnaireResponse",
+  "MedicationAdministration",
+  "MedicationStatement",
+] as const;
+
+const STAFF_DEMOGRAPHIC_WRITE_RESOURCE_RULES: OdosResourceRule[] =
+  STAFF_DEMOGRAPHIC_RESOURCES.map((resourceType): OdosResourceRule => ({
+    resourceType,
+    interactions: UPDATE_INTERACTIONS,
+    scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
+  }));
+
+const STAFF_ENCOUNTER_WRITE_RESOURCE_RULE: OdosResourceRule = {
+  resourceType: "Encounter",
+  interactions: UPDATE_INTERACTIONS,
+  scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
+  writeConstraint: STAFF_ENCOUNTER_WRITE_CONSTRAINTS,
+};
+
+const STAFF_FINDING_WRITE_RESOURCE_RULES: OdosResourceRule[] =
+  STAFF_FINDING_RESOURCES.map((resourceType): OdosResourceRule => ({
+    resourceType,
+    interactions: UPDATE_INTERACTIONS,
+    scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
+    writeConstraint:
+      resourceType === "Observation" || resourceType === "DiagnosticReport"
+        ? STAFF_OBSERVATION_WRITE_CONSTRAINTS
+        : undefined,
+  }));
+
+const STAFF_PATIENT_WRITE_RESOURCE_RULES: OdosResourceRule[] = [
+  ...STAFF_DEMOGRAPHIC_WRITE_RESOURCE_RULES,
+  STAFF_ENCOUNTER_WRITE_RESOURCE_RULE,
+  ...STAFF_FINDING_WRITE_RESOURCE_RULES,
+  {
+    resourceType: "Provenance",
+    interactions: ["create"],
+    scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
+  },
+];
+
+const PROVIDER_CLINICAL_WRITE_RESOURCE_RULES: OdosResourceRule[] = [
+  ...PATIENT_COMPARTMENT_CLINICAL_RESOURCES.map((resourceType): OdosResourceRule => ({
+    resourceType,
+    interactions: UPDATE_INTERACTIONS,
+    scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
+    writeConstraint:
+      resourceType === "Observation" || resourceType === "DiagnosticReport"
+        ? CLINICAL_WRITE_CONSTRAINTS
+        : undefined,
+  })),
+  {
+    resourceType: "Provenance",
+    interactions: ["create"],
+    scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
+  },
+];
+
+const STAFF_CORRESPONDENCE_RESOURCE_RULES: OdosResourceRule[] = [
   {
     resourceType: "ServiceRequest",
     interactions: UPDATE_INTERACTIONS,
@@ -300,14 +520,11 @@ const FRONT_DESK_CORRESPONDENCE_RESOURCE_RULES: OdosResourceRule[] = [
  */
 const SCHEDULING_RESOURCE_RULES: OdosResourceRule[] = [
   { resourceType: "Appointment", interactions: UPDATE_INTERACTIONS, scope: { kind: "practice" } },
-  { resourceType: "Schedule", interactions: READ_INTERACTIONS, scope: { kind: "practice" } },
-  { resourceType: "Slot", interactions: READ_INTERACTIONS, scope: { kind: "practice" } },
-  { resourceType: "HealthcareService", interactions: READ_INTERACTIONS, scope: { kind: "practice" } },
   // Phase 4a: the practice scheduling-config singleton (hours/templates/blocked time/offices).
   // Criteria-fenced so the desk touches exactly one coded Basic — never Basic at large.
   {
     resourceType: "Basic",
-    interactions: UPDATE_INTERACTIONS,
+    interactions: READ_INTERACTIONS,
     scope: {
       kind: "practice-search",
       criteria:
@@ -320,7 +537,34 @@ const SCHEDULING_RESOURCE_RULES: OdosResourceRule[] = [
     scope: {
       kind: "practice-search",
       criteria:
+        "Basic?code=https://odos2020.com/fhir/CodeSystem/scheduling-config|odos-scheduling-config",
+    },
+  },
+  {
+    resourceType: "Basic",
+    interactions: READ_INTERACTIONS,
+    scope: {
+      kind: "practice-search",
+      criteria:
         "Basic?code=https://odos2020.com/fhir/CodeSystem/floor-config|odos-floor-config",
+    },
+  },
+  {
+    resourceType: "Basic",
+    interactions: UPDATE_INTERACTIONS,
+    scope: {
+      kind: "practice-search",
+      criteria:
+        "Basic?code=https://odos2020.com/fhir/CodeSystem/floor-config|odos-floor-config",
+    },
+  },
+  {
+    resourceType: "Basic",
+    interactions: READ_INTERACTIONS,
+    scope: {
+      kind: "practice-search",
+      criteria:
+        "Basic?code=https://odos2020.com/fhir/CodeSystem/insurance-config|odos-insurance-config",
     },
   },
   {
@@ -368,11 +612,29 @@ const APPEARANCE_CONFIG_READ_RULE: OdosResourceRule = {
 const PROTOCOL_MODULE_RESOURCE_RULES: OdosResourceRule[] = [
   {
     resourceType: "Basic",
+    interactions: READ_INTERACTIONS,
+    scope: {
+      kind: "practice-search",
+      criteria:
+        "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-protocol-module|odos-protocol-definition",
+    },
+  },
+  {
+    resourceType: "Basic",
     interactions: UPDATE_INTERACTIONS,
     scope: {
       kind: "practice-search",
       criteria:
         "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-protocol-module|odos-protocol-definition",
+    },
+  },
+  {
+    resourceType: "Basic",
+    interactions: READ_INTERACTIONS,
+    scope: {
+      kind: "practice-search",
+      criteria:
+        "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-protocol-module|odos-protocol-definition-snapshot",
     },
   },
   {
@@ -389,99 +651,115 @@ const PROTOCOL_MODULE_RESOURCE_RULES: OdosResourceRule[] = [
     "odos-protocol-application",
     "odos-charge-proposal",
     "odos-finding-instance",
-  ].map((code): OdosResourceRule => ({
-    resourceType: "Basic",
-    interactions: UPDATE_INTERACTIONS,
-    scope: {
-      kind: "practice-search",
-      criteria: `Basic?code=https://odos2020.com/fhir/CodeSystem/odos-protocol-module|${code}`,
+  ].flatMap((code): OdosResourceRule[] => [
+    {
+      resourceType: "Basic",
+      interactions: READ_INTERACTIONS,
+      scope: {
+        kind: "practice-search",
+        criteria: `Basic?code=https://odos2020.com/fhir/CodeSystem/odos-protocol-module|${code}`,
+      },
     },
-  })),
+    {
+      resourceType: "Basic",
+      interactions: UPDATE_INTERACTIONS,
+      scope: {
+        kind: "practice-search",
+        criteria: `Basic?code=https://odos2020.com/fhir/CodeSystem/odos-protocol-module|${code}`,
+      },
+    },
+  ]),
 ];
 
 export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
-  "practice-admin": {
-    id: "practice-admin",
-    display: "Practice Admin",
+  provider: {
+    id: "provider",
+    display: "Provider",
     description:
-      "Practice-internal administrator for membership, role review, AccessPolicy binding, and audit-log access.",
-    businessActions: ["identity.manage", "role.review", "audit.read", "break-glass.invoke", "payment.charge", "payment.seal-day", "margin.read", "claims.manage", "finding-definitions.write", "protocols.author", "document.fax-send", "communications.read", "communications.content.read", "communications.send", "communications.call"],
-    resourceRules: [{ resourceType: "*", interactions: FULL_INTERACTIONS, scope: { kind: "practice" } }],
-  },
-  clinician: {
-    id: "clinician",
-    display: "Clinician",
-    description:
-      "Clinical user with patient-compartment-scoped chart access for assigned patients or explicit emergency access.",
-    businessActions: ["chart.read", "chart.write", "clinical.sign", "break-glass.invoke", "protocols.author", "document.fax-send", "communications.read", "communications.content.read", "communications.send", "communications.call"],
+      "Clinical author and signer with practice-wide reads and patient-compartment-constrained writes.",
+    businessActions: [
+      "chart.read",
+      "chart.write",
+      "clinical.sign",
+      "billing-context.read",
+      "aesthetics.procedure.write",
+      "break-glass.invoke",
+      "payment.charge",
+      "protocols.author",
+      "document.fax-send",
+      "communications.read",
+      "communications.content.read",
+      "communications.send",
+      "communications.call",
+    ],
     membershipParameters: [
       {
         name: "provider_profile",
         kind: "reference",
-        description: "Practitioner profile for provider-assigned Patient criteria.",
+        description: "Practitioner profile retained for write/action gates and attribution.",
       },
       {
         name: "patient_compartment",
         kind: "string",
-        description: "Patient/<id> compartment reference granted through assignment or break-glass.",
+        description: "Patient/<id> compartment reference granted for clinical writes.",
+      },
+      {
+        name: "license_state",
+        kind: "string",
+        description: "US state where the provider credential is active for an aesthetics procedure.",
+      },
+      {
+        name: "procedure_scope",
+        kind: "string",
+        description: "Practice-local aesthetics procedure category allowed under the state credential.",
       },
     ],
     resourceRules: [
-      {
-        resourceType: "Patient",
-        interactions: READ_INTERACTIONS,
-        scope: { kind: "provider-assigned-patient", parameterName: "provider_profile" },
-      },
-      ...PATIENT_COMPARTMENT_CLINICAL_RESOURCES.map(
-        (resourceType): OdosResourceRule => ({
-          resourceType,
-          interactions: UPDATE_INTERACTIONS,
-          scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
-          writeConstraint:
-            resourceType === "Observation" || resourceType === "DiagnosticReport"
-              ? CLINICAL_WRITE_CONSTRAINTS
-              : undefined,
-        }),
-      ),
-      {
-        resourceType: "Provenance",
-        interactions: ["create", ...READ_INTERACTIONS],
-        scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
-      },
-      {
-        resourceType: "Binary",
-        interactions: ["read", "vread"],
-        scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
-      },
+      ...PRACTICE_READ_RESOURCE_RULES,
+      ...PROVIDER_CLINICAL_WRITE_RESOURCE_RULES,
+      ...STAFF_CORRESPONDENCE_RESOURCE_RULES,
+      ...PAYMENT_CUSTODY_RESOURCE_RULES,
+      BILLING_IDENTITY_CONFIG_READ_RULE,
       ...OFFICE_CHANNEL_RESOURCE_RULES,
       PATIENT_COMMUNICATION_COMPARTMENT_RULE,
       ...PROTOCOL_MODULE_RESOURCE_RULES,
       APPEARANCE_CONFIG_READ_RULE,
     ],
   },
-  "front-desk": {
-    id: "front-desk",
-    display: "Front Desk",
+  staff: {
+    id: "staff",
+    display: "Staff",
     description:
-      "Scheduling, demographic, and financial-context access inside a patient compartment; no clinical writes.",
-    businessActions: ["chart.read", "scheduling.manage", "demographics.update", "billing-context.read", "payment.charge", "payment.seal-day", "claims.manage", "document.fax-send", "communications.read", "communications.content.read", "communications.send", "communications.call"],
+      "Routine desk, technician, optician, and billing work with preliminary finding entry but no authorship or signature.",
+    businessActions: [
+      "chart.read",
+      "chart.write",
+      "scheduling.manage",
+      "demographics.update",
+      "billing-context.read",
+      "payment.charge",
+      "claims.manage",
+      "document.fax-send",
+      "communications.read",
+      "communications.content.read",
+      "communications.send",
+      "communications.call",
+    ],
     membershipParameters: [
       {
         name: "patient_compartment",
         kind: "string",
-        description: "Patient/<id> compartment reference assigned for front-desk workflow.",
+        description: "Patient/<id> compartment reference granted for routine writes.",
       },
     ],
     resourceRules: [
-      ...FRONT_DESK_RESOURCES.map((resourceType): OdosResourceRule => ({
-        resourceType,
-        interactions: UPDATE_INTERACTIONS,
-        scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
-      })),
-      ...FRONT_DESK_CORRESPONDENCE_RESOURCE_RULES,
+      ...PRACTICE_READ_RESOURCE_RULES,
+      ...DISPENSARY_READ_RESOURCE_RULES,
+      ...STAFF_PATIENT_WRITE_RESOURCE_RULES,
+      ...STAFF_CORRESPONDENCE_RESOURCE_RULES,
       ...SCHEDULING_RESOURCE_RULES,
       APPEARANCE_CONFIG_READ_RULE,
-      ...DISPENSARY_RESOURCE_RULES,
+      ...STAFF_DISPENSARY_WRITE_RESOURCE_RULES,
       ...CLAIMS_RESOURCE_RULES,
       ...PAYER_DIRECTORY_RESOURCE_RULES,
       BILLING_IDENTITY_CONFIG_READ_RULE,
@@ -489,82 +767,45 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
       FRONT_DESK_PATIENT_COMMUNICATION_RULE,
     ],
   },
-  auditor: {
-    id: "auditor",
-    display: "Auditor",
+  admin: {
+    id: "admin",
+    display: "Admin / Manager",
     description:
-      "Read-only security-log and attribution review role; no PHI write capability.",
-    businessActions: ["audit.read"],
+      "Non-clinical administrative and correction authority for identities, settings, audit, money, and inventory.",
+    businessActions: [
+      "identity.manage",
+      "role.review",
+      "chart.read",
+      "scheduling.manage",
+      "billing-context.read",
+      "audit.read",
+      "payment.void",
+      "payment.write-off",
+      "payment.seal-day",
+      "margin.read",
+      "inventory.adjust",
+      "inventory.price",
+      "claims.manage",
+      "finding-definitions.write",
+      "protocols.author",
+      "document.fax-send",
+      "communications.read",
+      "communications.content.read",
+      "communications.send",
+      "communications.call",
+    ],
     resourceRules: [
+      ...PRACTICE_READ_RESOURCE_RULES,
+      ...DISPENSARY_READ_RESOURCE_RULES,
       { resourceType: "AuditEvent", interactions: READ_INTERACTIONS, scope: { kind: "audit-only" } },
-      { resourceType: "Provenance", interactions: READ_INTERACTIONS, scope: { kind: "audit-only" } },
-      APPEARANCE_CONFIG_READ_RULE,
-    ],
-  },
-  "aesthetics-provider": {
-    id: "aesthetics-provider",
-    display: "Aesthetics Provider",
-    description:
-      "Clinical write role constrained by patient compartment plus state-scoped procedure credentials.",
-    businessActions: ["chart.read", "chart.write", "aesthetics.procedure.write", "break-glass.invoke", "document.fax-send", "communications.read", "communications.content.read", "communications.send", "communications.call"],
-    membershipParameters: [
-      {
-        name: "patient_compartment",
-        kind: "string",
-        description: "Patient/<id> compartment reference for the aesthetics encounter.",
-      },
-      {
-        name: "license_state",
-        kind: "string",
-        description: "US state where the provider credential is active for the procedure.",
-      },
-      {
-        name: "procedure_scope",
-        kind: "string",
-        description: "Practice-local procedure category allowed under the state credential.",
-      },
-    ],
-    resourceRules: [
-      {
-        resourceType: "Patient",
-        interactions: READ_INTERACTIONS,
-        scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
-      },
-      {
-        resourceType: "Encounter",
-        interactions: READ_INTERACTIONS,
-        scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
-      },
-      {
-        resourceType: "Procedure",
-        interactions: UPDATE_INTERACTIONS,
-        scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
-      },
-      {
-        resourceType: "QuestionnaireResponse",
-        interactions: UPDATE_INTERACTIONS,
-        scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
-      },
-      {
-        resourceType: "DocumentReference",
-        interactions: UPDATE_INTERACTIONS,
-        scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
-      },
-      {
-        resourceType: "Media",
-        interactions: UPDATE_INTERACTIONS,
-        scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
-      },
-      {
-        resourceType: "Binary",
-        interactions: ["read", "vread"],
-        scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
-      },
-      {
-        resourceType: "Provenance",
-        interactions: ["create", ...READ_INTERACTIONS],
-        scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
-      },
+      ...SCHEDULING_RESOURCE_RULES,
+      ...ADMIN_CORRECTION_RESOURCE_RULES,
+      ...CLAIMS_RESOURCE_RULES,
+      ...PAYER_DIRECTORY_RESOURCE_RULES,
+      BILLING_IDENTITY_CONFIG_READ_RULE,
+      BILLING_IDENTITY_CONFIG_WRITE_RULE,
+      ...OFFICE_CHANNEL_RESOURCE_RULES,
+      ...PROTOCOL_MODULE_RESOURCE_RULES,
       PATIENT_COMMUNICATION_COMPARTMENT_RULE,
       APPEARANCE_CONFIG_READ_RULE,
     ],
@@ -643,7 +884,7 @@ export function resolveBusinessActionRole(
 }
 
 export function assertAestheticsProviderScope(input: AestheticsProviderScopeInput): void {
-  if (input.roleId !== "aesthetics-provider") {
+  if (input.roleId !== "provider") {
     return;
   }
 
@@ -651,7 +892,7 @@ export function assertAestheticsProviderScope(input: AestheticsProviderScopeInpu
   const licensedStates = input.licensedStates.map(normalizeState);
   if (!licensedStates.includes(requestedState)) {
     throw new Error(
-      `ODOS RBAC preflight denied: aesthetics-provider is not credentialed for ${requestedState}.`,
+      `ODOS RBAC preflight denied: provider is not credentialed for ${requestedState}.`,
     );
   }
 
@@ -662,7 +903,7 @@ export function assertAestheticsProviderScope(input: AestheticsProviderScopeInpu
   const allowed = input.allowedProcedureTypesByState[requestedState] ?? [];
   if (!allowed.includes(input.procedureType)) {
     throw new Error(
-      `ODOS RBAC preflight denied: aesthetics-provider credential for ${requestedState} does not include ${input.procedureType}.`,
+      `ODOS RBAC preflight denied: provider credential for ${requestedState} does not include ${input.procedureType}.`,
     );
   }
 }

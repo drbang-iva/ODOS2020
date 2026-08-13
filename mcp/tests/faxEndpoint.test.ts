@@ -32,13 +32,9 @@ import {
 const NOW = "2026-07-23T17:00:00.000Z";
 
 test("document.fax-send is granted to referral-capable clinical and front-desk roles", () => {
-  for (const role of ["practice-admin", "clinician", "front-desk", "aesthetics-provider"] as const) {
+  for (const role of ["admin", "provider", "staff"] as const) {
     assert.doesNotThrow(() => assertBusinessActionAllowed(role, "document.fax-send"));
   }
-  assert.throws(
-    () => assertBusinessActionAllowed("auditor", "document.fax-send"),
-    /document\.fax-send/,
-  );
 });
 
 test("referral fax send persists a pending DocumentReference and callback advances it to Sent", async () => {
@@ -216,8 +212,8 @@ function faxDeps(fhir: MemoryFaxFhir, adapterCalls: FaxSendInput[]) {
     authenticate: async (header: string | undefined) => header === "Bearer clinician"
       ? {
           staffReference: "Practitioner/clinician-1",
-          actorRole: "clinician" as const,
-          roles: ["clinician" as const],
+          actorRole: "provider" as const,
+          roles: ["provider" as const],
         }
       : null,
     serviceFhir: fhir,

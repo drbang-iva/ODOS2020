@@ -430,7 +430,7 @@ test("practice-admin resource lifecycle guards future appointments, supports ack
       },
     });
     await act(async () => {
-      renderer = create(<SchedulerDayGrid roles={["practice-admin"]} />);
+      renderer = create(<SchedulerDayGrid roles={["admin"]} />);
       await Promise.resolve();
     });
     act(() => button(renderer, "Settings").props.onClick());
@@ -479,7 +479,7 @@ test("scheduler resource lifecycle controls stay practice-admin-only", async () 
       loadWindow: async () => undefined,
     });
     await act(async () => {
-      renderer = create(<SchedulerDayGrid roles={["front-desk"]} />);
+      renderer = create(<SchedulerDayGrid roles={["staff"]} />);
       await Promise.resolve();
     });
     act(() => button(renderer, "Settings").props.onClick());

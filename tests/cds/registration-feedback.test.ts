@@ -97,7 +97,7 @@ test("v0.55c CDS feedback endpoint persists acceptance and override outcomes", a
 function postJson(url: string, body: unknown): Promise<Response> {
   return fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "X-ODOS-Actor-Id": "admin-1", "X-ODOS-Role": "practice-admin" },
+    headers: { "Content-Type": "application/json", "X-ODOS-Actor-Id": "admin-1", "X-ODOS-Role": "admin" },
     body: JSON.stringify(body),
   });
 }

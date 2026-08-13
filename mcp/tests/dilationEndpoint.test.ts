@@ -37,7 +37,7 @@ class MemoryFhir {
   }
 }
 
-function deps(role: PracticeRoleId = "clinician") {
+function deps(role: PracticeRoleId = "provider") {
   const fhir = new MemoryFhir();
   const value: DilationEndpointDeps = {
     authenticate: async (authHeader) => authHeader === AUTH
@@ -114,7 +114,7 @@ test("declined dilation creates no administration and returns its medicolegal no
 
 test("Dilation enforces authentication, chart permissions, catalog agents, and declined exclusivity", async () => {
   assert.equal((await handleDilationCaptureRequest(deps().deps, { authHeader: undefined, body: {} })).status, 401);
-  assert.equal((await handleDilationCaptureRequest(deps("front-desk").deps, { authHeader: AUTH, body: {} })).status, 403);
+  assert.equal((await handleDilationCaptureRequest(deps("admin").deps, { authHeader: AUTH, body: {} })).status, 403);
   const invalid = await handleDilationCaptureRequest(deps().deps, {
     authHeader: AUTH,
     body: {

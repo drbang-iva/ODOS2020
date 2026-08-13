@@ -54,7 +54,7 @@ export async function handleProcedureFeeImportPreviewRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to import the fee schedule." } };
-  if (staff.actorRole !== "practice-admin") {
+  if (staff.actorRole !== "admin") {
     return { status: 403, body: { error: "Practice-admin access is required to import the fee schedule." } };
   }
   const parsed = previewSchema.safeParse(input.body);
@@ -88,7 +88,7 @@ export async function handleProcedureFeeImportCommitRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to import the fee schedule." } };
-  if (staff.actorRole !== "practice-admin") {
+  if (staff.actorRole !== "admin") {
     return { status: 403, body: { error: "Practice-admin access is required to import the fee schedule." } };
   }
   const parsed = commitSchema.safeParse(input.body);

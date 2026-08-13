@@ -52,8 +52,8 @@ function fixture(
   const deps: PaymentCollectionHandlerDeps = {
     authenticate: async (header) => header === "Bearer good" ? {
       staffReference: "Practitioner/staff-1",
-      actorRole: "front-desk",
-      roles: ["front-desk"],
+      actorRole: "staff",
+      roles: ["staff"],
       fhir,
     } : null,
     recordAudit: async (row) => { audits.push(row); },

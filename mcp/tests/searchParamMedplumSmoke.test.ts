@@ -211,7 +211,7 @@ test("real Medplum Media search rewrites Binary content for the imaging handler 
   const result = await handleImagingListRequest({
     authenticate: async () => ({
       staffReference: "Practitioner/contract-smoke",
-      actorRole: "clinician",
+      actorRole: "provider",
       fhir: fixture!.fhir,
       binaryAuth: { baseUrl: fixture!.baseUrl, accessToken: fixture!.accessToken },
     }),

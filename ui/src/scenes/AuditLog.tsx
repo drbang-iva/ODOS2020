@@ -168,13 +168,11 @@ export function AuditLog() {
 }
 
 function auditRoleFromLocation(): AuditReviewRole {
-  const raw = new URLSearchParams(window.location.search).get("role") ?? "auditor";
+  const raw = new URLSearchParams(window.location.search).get("role") ?? "admin";
   if (
-    raw === "auditor" ||
-    raw === "practice-admin" ||
-    raw === "clinician" ||
-    raw === "front-desk" ||
-    raw === "aesthetics-provider" ||
+    raw === "admin" ||
+    raw === "provider" ||
+    raw === "staff" ||
     raw === "system"
   ) {
     return raw;

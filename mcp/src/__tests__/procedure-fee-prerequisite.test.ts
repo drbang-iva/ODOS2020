@@ -105,7 +105,7 @@ function authenticatedDeps(fhir: MemoryFhir) {
   return {
     authenticate: async () => ({
       staffReference: "Practitioner/admin",
-      actorRole: "practice-admin" as const,
+      actorRole: "admin" as const,
       fhir,
     }),
   };

@@ -110,7 +110,7 @@ test("gonioscopy read returns the latest quadrant, pigmentation, and note record
   const result = await handleGonioscopyReadRequest({
     authenticate: async () => ({
       staffReference: "Practitioner/test",
-      actorRole: "clinician",
+      actorRole: "provider",
       fhir: {
         async search<T extends Observation>(_type: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>> {
           const code = params?.code?.split("|")[1] ?? "";
@@ -227,7 +227,7 @@ function gonioDeps(
 ) {
   return {
     authenticate: async () => ({
-      staffReference: "Practitioner/test", actorRole: "clinician" as const,
+      staffReference: "Practitioner/test", actorRole: "provider" as const,
       fhir: {
         async search<T extends Observation>(_type: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>> {
           const code = params?.code?.split("|")[1] ?? "";

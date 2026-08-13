@@ -46,20 +46,20 @@ test("GET /payments/methods returns configured methods for staff and 401 without
 test("every patient-payment HTTP route preserves 401 and payment.charge 403 gates", async () => {
   const fixture = await server();
   try {
-    const routes: Array<["GET" | "POST", string]> = [
-      ["POST", "/payments/credit/apply"],
-      ["POST", "/payments/credit/transfer"],
-      ["POST", "/payments/credit/void"],
-      ["GET", "/payments/credit/unapplied?patientReference=Patient%2Fpatient-1"],
-      ["GET", "/payments/reconciliations?patientReference=Patient%2Fpatient-1"],
-      ["GET", "/payments/patient/Patient%2Fpatient-1/open-charges"],
-      ["POST", "/payments/collect"],
+    const routes: Array<["GET" | "POST", string, string, RegExp]> = [
+      ["POST", "/payments/credit/apply", "Bearer admin", /payment\.charge role required/],
+      ["POST", "/payments/credit/transfer", "Bearer admin", /payment\.charge role required/],
+      ["POST", "/payments/credit/void", "Bearer staff", /payment\.void role required/],
+      ["GET", "/payments/credit/unapplied?patientReference=Patient%2Fpatient-1", "Bearer no-role", /billing-context\.read role required/],
+      ["GET", "/payments/reconciliations?patientReference=Patient%2Fpatient-1", "Bearer no-role", /billing-context\.read role required/],
+      ["GET", "/payments/patient/Patient%2Fpatient-1/open-charges", "Bearer admin", /payment\.charge role required/],
+      ["POST", "/payments/collect", "Bearer admin", /payment\.charge role required/],
     ];
-    for (const [method, path] of routes) {
+    for (const [method, path, authorization, error] of routes) {
       assert.equal((await call(fixture.baseUrl, method, path)).status, 401, `${path} 401`);
-      const forbidden = await call(fixture.baseUrl, method, path, "Bearer forbidden");
+      const forbidden = await call(fixture.baseUrl, method, path, authorization);
       assert.equal(forbidden.status, 403, `${path} 403`);
-      assert.match(await forbidden.text(), /payment\.charge role required/, path);
+      assert.match(await forbidden.text(), error, path);
     }
   } finally {
     await fixture.close();
@@ -80,9 +80,13 @@ async function server() {
     authenticateService: async () => { serviceAuthCalls += 1; },
     handlers: {
       authenticate: async (header) => header === "Bearer good"
-        ? { staffReference: "Practitioner/staff-1", actorRole: "front-desk", roles: ["front-desk"], fhir: fhir as never }
-        : header === "Bearer forbidden"
-          ? { staffReference: "Practitioner/staff-2", actorRole: "clinician", roles: ["clinician"], fhir: fhir as never }
+        ? { staffReference: "Practitioner/staff-1", actorRole: "staff", roles: ["staff", "admin"], fhir: fhir as never }
+        : header === "Bearer staff"
+          ? { staffReference: "Practitioner/staff-2", actorRole: "staff", roles: ["staff"], fhir: fhir as never }
+          : header === "Bearer admin"
+            ? { staffReference: "Practitioner/admin", actorRole: "admin", roles: ["admin"], fhir: fhir as never }
+            : header === "Bearer no-role"
+              ? { staffReference: "Practitioner/roleless", actorRole: "admin", roles: [], fhir: fhir as never }
           : null,
       lifecycleFhir: fhir,
       dispatch: createPaymentDispatch([{ method: "manual-cash" }]),
@@ -91,9 +95,13 @@ async function server() {
     },
     collection: {
       authenticate: async (header) => header === "Bearer good"
-        ? { staffReference: "Practitioner/staff-1", actorRole: "front-desk", roles: ["front-desk"], fhir: fhir as never }
-        : header === "Bearer forbidden"
-          ? { staffReference: "Practitioner/staff-2", actorRole: "clinician", roles: ["clinician"], fhir: fhir as never }
+        ? { staffReference: "Practitioner/staff-1", actorRole: "staff", roles: ["staff", "admin"], fhir: fhir as never }
+        : header === "Bearer staff"
+          ? { staffReference: "Practitioner/staff-2", actorRole: "staff", roles: ["staff"], fhir: fhir as never }
+          : header === "Bearer admin"
+            ? { staffReference: "Practitioner/admin", actorRole: "admin", roles: ["admin"], fhir: fhir as never }
+            : header === "Bearer no-role"
+              ? { staffReference: "Practitioner/roleless", actorRole: "admin", roles: [], fhir: fhir as never }
           : null,
       recordAudit: async () => undefined,
     },
