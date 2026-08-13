@@ -58,6 +58,15 @@ test("Make Principal computes one complete exact permutation without losing a di
   ]);
 });
 
+test("Make Principal moves a non-adjacent diagnosis first and shifts earlier diagnoses down in order", () => {
+  const encounter = rankedEncounter([1, 2, 3]);
+  assert.deepEqual(principalDiagnosisOrder(encounter, encounterCondition("secondary-b")), [
+    "Condition/secondary-b",
+    "Condition/principal",
+    "Condition/secondary-a",
+  ]);
+});
+
 test("Make Principal normalizes a rank-gap encounter through the complete permutation", () => {
   const encounter = rankedEncounter([2, 3, 4]);
   assert.deepEqual(principalDiagnosisOrder(encounter, encounterCondition("secondary-a")), [
