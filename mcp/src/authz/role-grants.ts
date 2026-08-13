@@ -46,6 +46,10 @@ export async function grantPracticeRoles(
   if (!membership.id || !membership.meta?.versionId) {
     throw new Error("Target ProjectMembership is missing id or meta.versionId; no safe conditional grant is possible.");
   }
+  const membershipProjectId = membership.project.reference?.match(/^Project\/([^/]+)$/)?.[1];
+  if (!membershipProjectId) {
+    throw new Error(`ProjectMembership/${membership.id} is missing a valid project reference.`);
+  }
   if (membership.active === false) {
     throw new Error(`ProjectMembership/${membership.id} is inactive; role grant stopped.`);
   }
@@ -64,6 +68,13 @@ export async function grantPracticeRoles(
   for (const role of roles) {
     const policy = await deps.resolvePolicy(role);
     if (!policy.id) throw new Error(`${role} AccessPolicy is missing its id.`);
+    const policyProjectId = policy.meta?.project?.replace(/^Project\//, "");
+    if (policyProjectId && policyProjectId !== membershipProjectId) {
+      throw new Error(
+        `${role} AccessPolicy/${policy.id} belongs to Project/${policyProjectId}, ` +
+        `not Project/${membershipProjectId}.`,
+      );
+    }
     policyReferences.set(role, `AccessPolicy/${policy.id}`);
   }
 

@@ -36,6 +36,18 @@ test("existing membership maps the Medplum conflict to 409 naming the account", 
   assert.match(String(result.body.error), /new\.staff@example\.test/i);
 });
 
+test("staff invite creates the membership in the authenticated staff project", async () => {
+  let receivedProject: unknown;
+  const result = await handleStaffInviteRequest(deps({
+    invite: async (projectId) => {
+      receivedProject = projectId;
+      return membership;
+    },
+  }), { authHeader: "Bearer admin", body });
+  assert.equal(result.status, 201);
+  assert.equal(receivedProject, "practice");
+});
+
 test("invite response membership is granted directly and exactly one staff.invite audit is recorded", async () => {
   const calls: string[] = [];
   let grantedMembership: ProjectMembership | undefined;
@@ -91,5 +103,5 @@ function deps(overrides: Partial<StaffInviteDeps> = {}): StaffInviteDeps {
 }
 
 function staff(role: "practice-admin" | "clinician") {
-  return { staffReference: "Practitioner/admin", roles: [role] };
+  return { staffReference: "Practitioner/admin", roles: [role], projectId: "practice" };
 }
