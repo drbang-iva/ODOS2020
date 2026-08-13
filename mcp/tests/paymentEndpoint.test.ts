@@ -322,6 +322,33 @@ test("resolveStaffRoles returns null when the profile has no active project memb
   }), null);
 });
 
+test("resolveStaffRoles admits an unset-active membership without narrowing the server search", async () => {
+  const { fetchImpl } = meTransport(200, {
+    profile: { resourceType: "Practitioner", id: "staff1" },
+    user: { resourceType: "User", id: "u1", email: "staff@example.test" },
+  });
+  assert.equal("active" in MEMBERSHIP_FRONT_DESK, false);
+  const svc = serviceClient({ membership: MEMBERSHIP_FRONT_DESK });
+
+  const staff = await resolveStaffRoles({
+    baseUrl: "http://x",
+    authHeader: "Bearer good",
+    serviceClient: svc,
+    fetchImpl,
+  });
+
+  assert.deepEqual(staff, {
+    staffReference: "Practitioner/staff1",
+    email: "staff@example.test",
+    roles: [],
+    project: { reference: "Project/p1" },
+  });
+  assert.deepEqual(svc.calls.search, [{
+    rt: "ProjectMembership",
+    params: { profile: "Practitioner/staff1" },
+  }]);
+});
+
 test("resolveStaffRoles returns null when the selected membership has no resolvable project reference", async () => {
   const { fetchImpl } = meTransport(200, {
     profile: { resourceType: "Practitioner", id: "staff1" },

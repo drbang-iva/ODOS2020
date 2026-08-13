@@ -220,7 +220,6 @@ async function resolveRolesWithServiceClient(
 ): Promise<ResolvedStaffRoles | null> {
   const memberships = await serviceClient.search<ProjectMembership>("ProjectMembership", {
     profile: verified.staffReference,
-    active: "true",
   });
   const activeMemberships = (memberships.entry ?? [])
     .map((entry) => entry.resource)
