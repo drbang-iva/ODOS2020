@@ -31,7 +31,7 @@ import {
 import express from "express";
 import { isIP } from "node:net";
 import { z } from "zod";
-import { createMedplumClient, createStaffRouteFhirClient, type JsonPatchOperation } from "./fhir-client.js";
+import { createMedplumClient, type JsonPatchOperation } from "./fhir-client.js";
 import { createLiveOdosAuditRuntime, type LiveAuditQueryFilters } from "./authz/liveAudit.js";
 import { handleDocumentPrintAuditRequest } from "./authz/documentPrintAuditEndpoint.js";
 import {
@@ -102,6 +102,7 @@ import {
 } from "./lab-orders/lab-order-dispatch.js";
 import { registerLabOrderRoutes } from "./lab-orders/lab-order-routes.js";
 import {
+  authenticateStaffRoute as resolveAuthenticatedStaffRoute,
   paymentAdapterRegistrationsFromEnv,
   resolveStaffRoles,
 } from "./payments/payment-endpoint.js";
@@ -5702,29 +5703,12 @@ async function authenticateWithMedplum(force = false): Promise<void> {
 }
 
 async function authenticateStaffRoute(header: string | undefined) {
-  const resolved = await resolveStaffRoles({
+  return resolveAuthenticatedStaffRoute({
     baseUrl: BASE_URL,
     authHeader: header,
     serviceClient: fhir,
+    audit: auditRuntime,
   });
-  const actorRole = resolved?.roles[0];
-  if (!resolved || !actorRole || !header) return null;
-  return {
-    staffReference: resolved.staffReference,
-    actorRole,
-    roles: resolved.roles,
-    fhir: createStaffRouteFhirClient({
-      baseUrl: BASE_URL,
-      accessToken: header.slice("Bearer ".length),
-      audit: auditRuntime,
-      staffReference: resolved.staffReference,
-      actorRole,
-    }),
-    binaryAuth: {
-      baseUrl: BASE_URL,
-      accessToken: header.slice("Bearer ".length),
-    },
-  };
 }
 
 function authenticateStaffRouteForAction(businessAction: BusinessAction) {

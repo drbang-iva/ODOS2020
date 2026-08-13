@@ -7,6 +7,7 @@ import {
   resolveBusinessActionRole,
 } from "../src/authz/roles.js";
 import {
+  authenticateStaffRoute,
   paymentAdapterRegistrationsFromEnv,
   resolveStaffRoles,
   verifyMedplumStaffToken,
@@ -236,6 +237,7 @@ test("resolveStaffRoles returns every recognized practice-role tag across the ca
     staffReference: "Practitioner/staff1",
     email: "staff@example.test",
     roles: ["clinician", "front-desk", "aesthetics-provider"],
+    project: { reference: "Project/p1" },
   });
 
   const reversed = await resolveStaffRoles({
@@ -254,12 +256,97 @@ test("resolveStaffRoles returns every recognized practice-role tag across the ca
   assert.deepEqual(reversed?.roles, staff?.roles);
 });
 
+test("resolveStaffRoles fails closed when one profile has two active project memberships", async () => {
+  const { fetchImpl } = meTransport(200, {
+    profile: { resourceType: "Practitioner", id: "staff1" },
+    user: { resourceType: "User", id: "u1", email: "staff@example.test" },
+  });
+  const memberships: ProjectMembership[] = [
+    {
+      ...MEMBERSHIP_FRONT_DESK,
+      active: true,
+      project: { reference: "Project/practice-one" },
+      access: [{ policy: { reference: "AccessPolicy/ap-clinical" } }],
+    },
+    {
+      ...MEMBERSHIP_FRONT_DESK,
+      active: true,
+      project: { reference: "Project/practice-two" },
+      access: [{ policy: { reference: "AccessPolicy/ap-desk" } }],
+    },
+  ];
+  const policies: Record<string, AccessPolicy> = {
+    "ap-clinical": {
+      resourceType: "AccessPolicy",
+      meta: { tag: [{ system: ODOS_PRACTICE_ROLE_SYSTEM, code: "clinician" }] },
+    },
+    "ap-desk": {
+      resourceType: "AccessPolicy",
+      meta: { tag: [{ system: ODOS_PRACTICE_ROLE_SYSTEM, code: "front-desk" }] },
+    },
+  };
+
+  await assert.rejects(
+    resolveStaffRoles({
+      baseUrl: "http://x",
+      authHeader: "Bearer good",
+      serviceClient: {
+        search: async <T,>(): Promise<Bundle<T>> => ({
+          resourceType: "Bundle",
+          type: "searchset",
+          entry: memberships.map((membership) => ({ resource: membership as unknown as T })),
+        }),
+        read: async <T,>(_resourceType: string, id: string): Promise<T> => policies[id] as unknown as T,
+      },
+      fetchImpl,
+    }),
+    (error: Error) => {
+      assert.equal(error.name, "AmbiguousStaffMembershipError");
+      assert.match(error.message, /Staff provisioning fault.*2 active project memberships/);
+      return true;
+    },
+  );
+});
+
+test("resolveStaffRoles returns null when the profile has no active project membership", async () => {
+  const { fetchImpl } = meTransport(200, {
+    profile: { resourceType: "Practitioner", id: "staff1" },
+    user: { resourceType: "User", id: "u1", email: "staff@example.test" },
+  });
+
+  assert.equal(await resolveStaffRoles({
+    baseUrl: "http://x",
+    authHeader: "Bearer good",
+    serviceClient: serviceClient({ membership: null }),
+    fetchImpl,
+  }), null);
+});
+
+test("resolveStaffRoles returns null when the selected membership has no resolvable project reference", async () => {
+  const { fetchImpl } = meTransport(200, {
+    profile: { resourceType: "Practitioner", id: "staff1" },
+    user: { resourceType: "User", id: "u1", email: "staff@example.test" },
+  });
+
+  assert.equal(await resolveStaffRoles({
+    baseUrl: "http://x",
+    authHeader: "Bearer good",
+    serviceClient: serviceClient({
+      membership: {
+        ...MEMBERSHIP_FRONT_DESK,
+        project: { reference: "Organization/not-a-project" } as ProjectMembership["project"],
+      },
+    }),
+    fetchImpl,
+  }), null);
+});
+
 test("resolveStaffRoles preserves authenticated identity when no role-bearing policy exists", async () => {
   const { fetchImpl } = meTransport(200, {
     profile: { resourceType: "Practitioner", id: "staff1" },
     user: { resourceType: "User", id: "u1", email: "roleless@example.test" },
   });
-  const svc = serviceClient({ membership: null });
+  const svc = serviceClient({ membership: { ...MEMBERSHIP_FRONT_DESK, access: [] } });
   const staff = await resolveStaffRoles({
     baseUrl: "http://x",
     authHeader: "Bearer good",
@@ -270,5 +357,36 @@ test("resolveStaffRoles preserves authenticated identity when no role-bearing po
     staffReference: "Practitioner/staff1",
     email: "roleless@example.test",
     roles: [],
+    project: { reference: "Project/p1" },
   });
+});
+
+test("authenticateStaffRoute carries the selected project on the authenticated result", async () => {
+  const { fetchImpl } = meTransport(200, {
+    profile: { resourceType: "Practitioner", id: "staff1" },
+    user: { resourceType: "User", id: "u1", email: "staff@example.test" },
+  });
+  const project = { reference: "Project/practice-one" };
+  const result = await authenticateStaffRoute({
+    baseUrl: "http://x",
+    authHeader: "Bearer good",
+    serviceClient: {
+      search: async <T,>(): Promise<Bundle<T>> => ({
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [{ resource: { ...MEMBERSHIP_FRONT_DESK, project } as unknown as T }],
+      }),
+      read: async <T,>(): Promise<T> => ({
+        resourceType: "AccessPolicy",
+        meta: { tag: [{ system: ODOS_PRACTICE_ROLE_SYSTEM, code: "front-desk" }] },
+      }) as unknown as T,
+    },
+    fetchImpl,
+    audit: {
+      record: async <T,>(_row: unknown, operation: () => Promise<T> | T): Promise<T> => operation(),
+      recordDenied: async () => undefined,
+    },
+  });
+
+  assert.deepEqual(result?.project, project);
 });
