@@ -136,6 +136,23 @@ test("grantPracticeRoles is a zero-write no-op when membership access is already
   assert.deepEqual(counts(), { auditCount: 0, patchCount: 0 });
 });
 
+test("grantPracticeRoles rejects a policy owned by a different project", async () => {
+  const { deps, counts } = fixture();
+  deps.resolvePolicy = async () => ({
+    resourceType: "AccessPolicy",
+    id: "other-project-policy",
+    meta: { project: "other-project" },
+  });
+  await assert.rejects(
+    grantPracticeRoles(
+      { target: "human@example.test", roles: ["clinician"], primaryRole: "clinician" },
+      deps,
+    ),
+    /belongs to Project\/other-project, not Project\/p1/,
+  );
+  assert.deepEqual(counts(), { auditCount: 0, patchCount: 0 });
+});
+
 test("grantPracticeRoles refuses the configured service identity unless explicitly overridden", async () => {
   const denied = fixture({ email: "service@example.test", serviceIdentityEmail: "SERVICE@example.test" });
   await assert.rejects(

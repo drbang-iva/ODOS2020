@@ -7596,10 +7596,13 @@ async function startMcpServer(): Promise<void> {
             authHeader: header,
             serviceClient: fhir,
           });
-          return resolved ? { staffReference: resolved.staffReference, roles: resolved.roles } : null;
+          return resolved ? {
+            staffReference: resolved.staffReference,
+            roles: resolved.roles,
+            projectId: resolved.project.reference!.slice("Project/".length),
+          } : null;
         },
-        invite: async (input) => {
-          const projectId = await fhir.getActiveProjectId();
+        invite: async (projectId, input) => {
           return fhir.invitePractitioner(projectId, {
             resourceType: "Practitioner",
             ...input,
@@ -7607,13 +7610,17 @@ async function startMcpServer(): Promise<void> {
           });
         },
         grantRole: async (membership, email, roleId) => {
+          const projectId = membership.project.reference?.match(/^Project\/([^/]+)$/)?.[1];
+          if (!projectId) throw new Error("Invited ProjectMembership is missing a valid project reference.");
           await grantPracticeRoles(
             { target: `ProjectMembership/${membership.id ?? "invite-response"}`, roles: [roleId], primaryRole: roleId },
             {
               resolveTarget: async () => ({ email, membership }),
               resolvePolicy: async (role) => {
                 const expectedName = `ODOS ${getRoleDeclaration(role).display}`;
-                const bundle = await fhir.search<AccessPolicy>("AccessPolicy", { "name:exact": expectedName });
+                const bundle = await fhir.search<AccessPolicy>("AccessPolicy", {
+                  "name:exact": expectedName,
+                });
                 const matches = (bundle.entry ?? []).map((entry) => entry.resource).filter(
                   (policy): policy is AccessPolicy =>
                     policy?.name === expectedName &&

@@ -36,6 +36,18 @@ test("existing membership maps the Medplum conflict to 409 naming the account", 
   assert.match(String(result.body.error), /new\.staff@example\.test/i);
 });
 
+test("staff invite creates the membership in the authenticated staff project", async () => {
+  let receivedProject: unknown;
+  const result = await handleStaffInviteRequest(deps({
+    invite: async (projectId) => {
+      receivedProject = projectId;
+      return membership;
+    },
+  }), { authHeader: "Bearer admin", body });
+  assert.equal(result.status, 201);
+  assert.equal(receivedProject, "practice");
+});
+
 test("invite response membership is granted directly and exactly one staff.invite audit is recorded", async () => {
   const calls: string[] = [];
   let grantedMembership: ProjectMembership | undefined;
@@ -59,13 +71,23 @@ test("invite response membership is granted directly and exactly one staff.invit
 
 test("grant failure returns the explicit invited-without-role half-state and repair command", async () => {
   let audits = 0;
-  const result = await handleStaffInviteRequest(deps({
-    grantRole: async () => { throw new Error("policy unavailable"); },
-    recordAudit: async () => { audits += 1; },
-  }), { authHeader: "Bearer admin", body });
+  const grantError = new Error("policy unavailable");
+  const logged: unknown[][] = [];
+  const originalConsoleError = console.error;
+  console.error = (...args: unknown[]) => { logged.push(args); };
+  let result;
+  try {
+    result = await handleStaffInviteRequest(deps({
+      grantRole: async () => { throw grantError; },
+      recordAudit: async () => { audits += 1; },
+    }), { authHeader: "Bearer admin", body });
+  } finally {
+    console.error = originalConsoleError;
+  }
   assert.equal(result.status, 500);
   assert.match(String(result.body.error), /invited-without-role half-state/);
   assert.match(String(result.body.error), /npm run repair-practice-roles -- --email new\.staff@example\.test/);
+  assert.deepEqual(logged, [["odos-mcp: staff invite role grant failed:", grantError]]);
   assert.equal(audits, 0);
 });
 
@@ -81,5 +103,5 @@ function deps(overrides: Partial<StaffInviteDeps> = {}): StaffInviteDeps {
 }
 
 function staff(role: "practice-admin" | "clinician") {
-  return { staffReference: "Practitioner/admin", roles: [role] };
+  return { staffReference: "Practitioner/admin", roles: [role], projectId: "practice" };
 }

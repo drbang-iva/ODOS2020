@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Bundle, ChargeItemDefinition, Patient } from "@medplum/fhirtypes";
+import type { Bundle, ChargeItemDefinition, OperationOutcome, Patient, ProjectMembership } from "@medplum/fhirtypes";
 import { createMedplumClient, type MedplumClient } from "../src/fhir-client.js";
 import { TEST_FHIR_AUDIT_CONTEXT, TEST_FHIR_AUDIT_RECORDER } from "./fhirAuditTestStub.js";
 
@@ -103,6 +103,118 @@ test("FHIR conditional create reports 201 as created and 200 as an existing matc
     assert.equal(matched.created, false);
     assert.equal(created.resource.id, "definition-1");
     assert.equal(matched.resource.id, "definition-1");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("practitioner invite recovers the created membership when Medplum returns an email-delivery OperationOutcome", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: string[] = [];
+  const emailOutcome: OperationOutcome = {
+    resourceType: "OperationOutcome",
+    id: "ok",
+    issue: [{
+      severity: "error",
+      code: "exception",
+      details: { text: "Could not send email. Make sure you have AWS SES set up." },
+      diagnostics: "Error sending email: Could not load credentials from any providers",
+    }],
+    extension: [{
+      url: "https://medplum.com/fhir/StructureDefinition/tracing",
+      extension: [
+        { url: "requestId", valueId: "11111111-1111-4111-8111-111111111111" },
+        { url: "traceId", valueId: "22222222-2222-4222-8222-222222222222" },
+      ],
+    }],
+  };
+  const membership: ProjectMembership = {
+    resourceType: "ProjectMembership",
+    id: "membership-created-before-email-failure",
+    meta: { versionId: "1" },
+    project: { reference: "Project/practice-1" },
+    user: { reference: "User/invitee-1" },
+    profile: { reference: "Practitioner/invitee-1" },
+  };
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    calls.push(`${init?.method ?? "GET"} ${url}`);
+    if (url.endsWith("/admin/projects/practice-1/invite")) {
+      return Response.json(emailOutcome);
+    }
+    if (url.includes("/fhir/R4/Practitioner?")) {
+      const search = new URL(url).searchParams;
+      assert.equal(search.get("email"), "new.clinician@example.test");
+      return Response.json({
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [{ resource: {
+          resourceType: "Practitioner",
+          id: "invitee-1",
+          telecom: [{ system: "email", value: "new.clinician@example.test" }],
+        } }],
+      });
+    }
+    if (url.includes("/fhir/R4/ProjectMembership?")) {
+      const search = new URL(url).searchParams;
+      assert.equal(search.get("profile"), "Practitioner/invitee-1");
+      assert.equal(search.get("project"), "Project/practice-1");
+      return Response.json({
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [{ resource: membership }],
+      });
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  };
+  try {
+    const client = createMedplumClient({
+      baseUrl: "http://medplum.test",
+      accessToken: "practice-admin-token",
+      audit: TEST_FHIR_AUDIT_RECORDER,
+      auditContext: TEST_FHIR_AUDIT_CONTEXT,
+    });
+    const result = await client.invitePractitioner("practice-1", {
+      resourceType: "Practitioner",
+      email: "new.clinician@example.test",
+      firstName: "New",
+      lastName: "Clinician",
+      sendEmail: true,
+    });
+    assert.equal(result.id, "membership-created-before-email-failure");
+    assert.equal(result.meta?.versionId, "1");
+    assert.deepEqual(calls.map((call) => call.split(" ", 1)[0]), ["POST", "GET", "GET"]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("practitioner invite rejects an unrecognized successful response instead of casting it as a membership", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => Response.json({
+    membership: {
+      resourceType: "ProjectMembership",
+      id: "unexpected-wrapper-membership",
+      meta: { versionId: "1" },
+    },
+  });
+  try {
+    const client = createMedplumClient({
+      baseUrl: "http://medplum.test",
+      accessToken: "practice-admin-token",
+      audit: TEST_FHIR_AUDIT_RECORDER,
+      auditContext: TEST_FHIR_AUDIT_CONTEXT,
+    });
+    await assert.rejects(
+      client.invitePractitioner("practice-1", {
+        resourceType: "Practitioner",
+        email: "new.clinician@example.test",
+        firstName: "New",
+        lastName: "Clinician",
+        sendEmail: true,
+      }),
+      /Medplum practitioner invite returned an unrecognized successful response/,
+    );
   } finally {
     globalThis.fetch = originalFetch;
   }

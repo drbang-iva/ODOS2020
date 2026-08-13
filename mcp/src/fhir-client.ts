@@ -228,6 +228,65 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
     return error;
   }
 
+  async function searchInviteResources(
+    resourceType: "Practitioner" | "ProjectMembership",
+    params: Record<string, string>,
+  ): Promise<unknown[]> {
+    const qs = new URLSearchParams(params).toString();
+    const res = await authorizedFetch(`${base}/fhir/R4/${resourceType}?${qs}`, () => ({
+      headers: headers(),
+    }));
+    if (!res.ok) throw await toError(res);
+    const body: unknown = await res.json();
+    if (!isRecord(body) || body.resourceType !== "Bundle" || (body.entry !== undefined && !Array.isArray(body.entry))) {
+      throw new Error(`Medplum ${resourceType} invite-recovery search returned a malformed Bundle.`);
+    }
+    return (body.entry ?? []).flatMap((entry) =>
+      isRecord(entry) && entry.resource !== undefined ? [entry.resource] : [],
+    );
+  }
+
+  async function recoverInvitedMembership(
+    projectId: string,
+    email: string,
+  ): Promise<ProjectMembership> {
+    const normalizedEmail = email.trim().toLowerCase();
+    const practitioners = await searchInviteResources("Practitioner", {
+      email,
+      _count: "100",
+    });
+    const practitionerIds = new Set(
+      practitioners
+        .filter((resource) => isPractitionerInviteProfile(resource, normalizedEmail))
+        .map((resource) => resource.id),
+    );
+    const memberships = new Map<string, ProjectMembership>();
+    for (const practitionerId of practitionerIds) {
+      const profileReference = `Practitioner/${practitionerId}`;
+      const resources = await searchInviteResources("ProjectMembership", {
+        profile: profileReference,
+        project: `Project/${projectId}`,
+        _count: "100",
+      });
+      for (const resource of resources) {
+        if (
+          isCompleteProjectMembership(resource) &&
+          resource.project.reference === `Project/${projectId}` &&
+          resource.profile.reference === profileReference
+        ) {
+          memberships.set(resource.id, resource);
+        }
+      }
+    }
+    if (memberships.size !== 1) {
+      throw new Error(
+        `Medplum practitioner invite returned an OperationOutcome after creating account resources, ` +
+        `but recovery found ${memberships.size} complete ProjectMembership records for ${email} in Project/${projectId}.`,
+      );
+    }
+    return [...memberships.values()][0]!;
+  }
+
   async function audited<T>(
     input: BuildOdosAuditEventInput,
     operation: () => Promise<T>,
@@ -640,7 +699,26 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
         body: JSON.stringify(input),
       }));
       if (!res.ok) throw await toError(res);
-      return (await res.json()) as ProjectMembership;
+      const body: unknown = await res.json();
+      if (isCompleteProjectMembership(body)) {
+        if (body.project.reference !== `Project/${projectId}`) {
+          throw new Error(
+            `Medplum practitioner invite returned ProjectMembership/${body.id} for ${body.project.reference}; ` +
+            `expected Project/${projectId}.`,
+          );
+        }
+        return body;
+      }
+      if (isRecord(body) && body.resourceType === "OperationOutcome") {
+        return recoverInvitedMembership(projectId, input.email);
+      }
+      const resourceType = isRecord(body) && typeof body.resourceType === "string"
+        ? body.resourceType
+        : "missing";
+      throw new Error(
+        `Medplum practitioner invite returned an unrecognized successful response (${resourceType}); ` +
+        `expected a complete ProjectMembership or an OperationOutcome recoverable by exact email and project.`,
+      );
     },
 
     async deleteAttempt(rt: string, id: string, reason = "mandate-8-boundary delete-attempt"): Promise<never> {
@@ -679,6 +757,47 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
       throw new Error("ODOS FHIR nullification must use an explicit clinical status workflow.");
     },
   };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isReference(value: unknown): value is { reference: string } {
+  return isRecord(value) && typeof value.reference === "string" && value.reference.length > 0;
+}
+
+function isCompleteProjectMembership(value: unknown): value is ProjectMembership & {
+  id: string;
+  meta: { versionId: string };
+  project: { reference: string };
+  user: { reference: string };
+  profile: { reference: string };
+} {
+  return isRecord(value) &&
+    value.resourceType === "ProjectMembership" &&
+    typeof value.id === "string" && value.id.length > 0 &&
+    isRecord(value.meta) &&
+    typeof value.meta.versionId === "string" && value.meta.versionId.length > 0 &&
+    isReference(value.project) &&
+    isReference(value.user) &&
+    isReference(value.profile);
+}
+
+function isPractitionerInviteProfile(
+  value: unknown,
+  normalizedEmail: string,
+): value is { resourceType: "Practitioner"; id: string; telecom: Array<{ system?: string; value?: string }> } {
+  return isRecord(value) &&
+    value.resourceType === "Practitioner" &&
+    typeof value.id === "string" && value.id.length > 0 &&
+    Array.isArray(value.telecom) &&
+    value.telecom.some((telecom) =>
+      isRecord(telecom) &&
+      telecom.system === "email" &&
+      typeof telecom.value === "string" &&
+      telecom.value.trim().toLowerCase() === normalizedEmail,
+    );
 }
 
 function isBinaryResource(resource: Resource): resource is Binary {

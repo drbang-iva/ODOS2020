@@ -15,8 +15,9 @@ export interface StaffInviteDeps {
   authenticate(authHeader: string | undefined): Promise<{
     staffReference: string;
     roles: readonly PracticeRoleId[];
+    projectId: string;
   } | null>;
-  invite(input: Omit<StaffInviteInput, "roleId">): Promise<ProjectMembership>;
+  invite(projectId: string, input: Omit<StaffInviteInput, "roleId">): Promise<ProjectMembership>;
   grantRole(membership: ProjectMembership, email: string, roleId: PracticeRoleId): Promise<void>;
   recordAudit(row: OdosAuditEventRecord): Promise<void>;
 }
@@ -62,7 +63,7 @@ export async function handleStaffInviteRequest(
 
   let membership: ProjectMembership;
   try {
-    membership = await deps.invite({
+    membership = await deps.invite(staff.projectId, {
       email: parsed.email,
       firstName: parsed.firstName,
       lastName: parsed.lastName,
@@ -76,7 +77,8 @@ export async function handleStaffInviteRequest(
 
   try {
     await deps.grantRole(membership, parsed.email, parsed.roleId);
-  } catch {
+  } catch (error) {
+    console.error("odos-mcp: staff invite role grant failed:", error);
     return {
       status: 500,
       body: {
