@@ -91,6 +91,21 @@ test("planner stops on ambiguous tags, ownership mismatch, missing version, and 
   );
 });
 
+test("planner retains the foreign-membership ownership invariant", () => {
+  const foreignMembership = membershipFixture([access("desk")]);
+  foreignMembership.id = "foreign-membership";
+  foreignMembership.project = { reference: "Project/practice-2" };
+
+  assert.throws(
+    () => planThreeRoleMigration({
+      projectId: PROJECT,
+      policies: [legacyPolicy("desk", "front-desk")],
+      memberships: [foreignMembership],
+    }),
+    /ProjectMembership\/foreign-membership ownership mismatch/,
+  );
+});
+
 test("dry-run performs zero writes; apply creates policies, conditionally patches, audits, and converges", async () => {
   const fixture = adapterFixture();
   const dryRun = await executeThreeRoleMigration(fixture.adapter, { projectId: PROJECT });
@@ -220,19 +235,19 @@ test("migration project resolution refuses ambiguous session memberships and nam
   );
 });
 
-test("the migration CLI accepts an access token, resolves its session membership, and stays dry-run", async () => {
+test("the migration CLI scopes both reads to the resolved project and stays dry-run", async () => {
   await withMigrationServer(async (server) => {
     const result = await runMigrationCli(server.baseUrl, {
       MEDPLUM_ACCESS_TOKEN: "fixture-token",
-      MEDPLUM_ADMIN_EMAIL: "admin@example.test",
-      MEDPLUM_ADMIN_PASSWORD: "not-a-real-password",
+      MEDPLUM_PROJECT_ID: PROJECT,
     });
 
     assert.equal(result.code, 0, result.stderr);
     assert.equal(server.loginCalls, 0);
     assert.match(result.stdout, /"mode": "dry-run"/);
+    assert.match(result.stdout, /"membershipsPlanned": 1/);
     assert.match(result.stdout, /Dry run only/);
-    assert.equal(server.projectMembershipSearches, 2);
+    assert.equal(server.projectScopedSearches, 2);
   });
 });
 
@@ -391,12 +406,20 @@ async function withMigrationServer(
     baseUrl: string;
     readonly loginCalls: number;
     readonly tokenCalls: number;
-    readonly projectMembershipSearches: number;
+    readonly projectScopedSearches: number;
   }) => Promise<void>,
 ): Promise<void> {
   let loginCalls = 0;
   let tokenCalls = 0;
-  let projectMembershipSearches = 0;
+  let projectScopedSearches = 0;
+  const targetPolicy = legacyPolicy("target-desk", "front-desk");
+  const foreignPolicy = legacyPolicy("foreign-provider", "provider");
+  foreignPolicy.meta!.project = "practice-2";
+  const targetMembership = membershipFixture([access("target-desk")]);
+  const foreignMembership = membershipFixture([]);
+  foreignMembership.id = "foreign-membership";
+  foreignMembership.project = { reference: "Project/practice-2" };
+  foreignMembership.accessPolicy = { reference: "AccessPolicy/foreign-legacy" };
   const server = createServer(async (request, response) => {
     const url = new URL(request.url ?? "/", "http://127.0.0.1");
     const chunks: Buffer[] = [];
@@ -425,14 +448,28 @@ async function withMigrationServer(
       return json(response, { profile: { reference: "Practitioner/admin" } });
     }
     if (url.pathname === "/fhir/R4/AccessPolicy") {
-      return json(response, { resourceType: "Bundle", type: "searchset", entry: [] });
-    }
-    if (url.pathname === "/fhir/R4/ProjectMembership") {
-      projectMembershipSearches += 1;
+      const scoped = url.searchParams.get("_project") === PROJECT;
+      if (scoped) projectScopedSearches += 1;
       return json(response, {
         resourceType: "Bundle",
         type: "searchset",
-        entry: [{ resource: sessionMembership("admin-membership", "practice-1") }],
+        entry: (scoped ? [targetPolicy] : [targetPolicy, foreignPolicy]).map((resource) => ({ resource })),
+      });
+    }
+    if (url.pathname === "/fhir/R4/ProjectMembership") {
+      if (url.searchParams.get("profile")) {
+        return json(response, {
+          resourceType: "Bundle",
+          type: "searchset",
+          entry: [{ resource: sessionMembership("admin-membership", PROJECT) }],
+        });
+      }
+      const scoped = url.searchParams.get("_project") === PROJECT;
+      if (scoped) projectScopedSearches += 1;
+      return json(response, {
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: (scoped ? [targetMembership] : [targetMembership, foreignMembership]).map((resource) => ({ resource })),
       });
     }
     response.statusCode = 404;
@@ -444,7 +481,7 @@ async function withMigrationServer(
     baseUrl: `http://127.0.0.1:${address.port}`,
     get loginCalls() { return loginCalls; },
     get tokenCalls() { return tokenCalls; },
-    get projectMembershipSearches() { return projectMembershipSearches; },
+    get projectScopedSearches() { return projectScopedSearches; },
   };
   try {
     await run(fixture);
