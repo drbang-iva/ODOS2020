@@ -7620,7 +7620,6 @@ async function startMcpServer(): Promise<void> {
                 const expectedName = `ODOS ${getRoleDeclaration(role).display}`;
                 const bundle = await fhir.search<AccessPolicy>("AccessPolicy", {
                   "name:exact": expectedName,
-                  _project: projectId,
                 });
                 const matches = (bundle.entry ?? []).map((entry) => entry.resource).filter(
                   (policy): policy is AccessPolicy =>
