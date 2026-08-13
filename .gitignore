@@ -51,3 +51,5 @@ outputs/
 # .osod/keys holds local signing keys; .osod-setup-state.json is per-machine setup state.
 .osod/
 .osod-setup-state.json
+
+.cursor/
