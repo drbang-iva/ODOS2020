@@ -2,8 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Condition, Encounter } from "@medplum/fhirtypes";
 import {
   DIAGNOSIS_KEY_IDENTIFIER_SYSTEM,
-  makeConditionPrincipal,
-  swapConditionRanks,
+  principalDiagnosisOrder,
   updateConditionBodySite,
   updateConditionCode,
   updateEncounterDiagnosisProblemStatus,
@@ -12,8 +11,11 @@ import {
 import {
   authHeaders,
   clinicalGraphApiBase,
+  procedureChargeApi,
   readDiagnosisCandidates,
   submitDiagnosisPick,
+  updateDiagnosisOrder,
+  type AttachedProcedure,
   type DiagnosisCandidateFinding,
   type DiagnosisCandidateSuggestion,
 } from "../../lib/clinical-graph-client";
@@ -25,8 +27,11 @@ import { OdosChips } from "../inputs/OdosChips";
 import {
   DiagnosisProblemStatusField,
   DiagnosisRankActions,
-  diagnosisRankMoveNeighbors,
 } from "./AssessmentSection";
+import {
+  ReorderImpressionsModal,
+  buildReorderImpressionRows,
+} from "./ReorderImpressionsModal";
 import { DiagnosisImagingRegion } from "./DiagnosisImagingRegion";
 import {
   DiagnosisFindingsTable,
@@ -115,6 +120,10 @@ export function DiagnosisWorkspace({
   const [busy, setBusy] = useState<string>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
+  const [attachedProcedures, setAttachedProcedures] = useState<AttachedProcedure[]>([]);
+  const [procedureAttachmentError, setProcedureAttachmentError] = useState<string>();
+  const [reorderError, setReorderError] = useState<string>();
+  const [reorderOpen, setReorderOpen] = useState(false);
   const loadGeneration = useRef(0);
   const findingsKey = `${encounterId}::${selectedReference ?? ""}`;
   const findings = loadedFindings?.key === findingsKey ? loadedFindings.payload : undefined;
@@ -128,11 +137,18 @@ export function DiagnosisWorkspace({
     setLoading(true);
     setError(undefined);
     try {
-      const [nextEncounter, quickResponse, nextFindings, nextCandidateFindings] = await Promise.all([
+      const [nextEncounter, quickResponse, nextFindings, nextCandidateFindings, procedureResult] = await Promise.all([
         fhir.read<Encounter>("Encounter", encounterId),
         fetch(`${clinicalGraphApiBase()}/clinical-graph/diagnosis-quick-list`, { headers: authHeaders() }),
         loadDiagnosisFindings(encounterReference, selectedReference),
         readDiagnosisCandidates(encounterId).catch(() => []),
+        procedureChargeApi().read(encounterId).then(
+          (response) => ({ response, error: undefined }),
+          (caught) => ({
+            response: undefined,
+            error: caught instanceof Error ? caught.message : String(caught),
+          }),
+        ),
       ]);
       const quickBody = await quickResponse.json() as QuickListPayload;
       if (!quickResponse.ok) throw new Error(quickBody.error ?? `Common diagnoses failed: ${quickResponse.status}`);
@@ -149,6 +165,8 @@ export function DiagnosisWorkspace({
       setCatalog(quickBody.catalog ?? []);
       setPinnedDiagnosisKeys(quickBody.pinnedDiagnosisKeys ?? []);
       setCanWrite(quickBody.canWrite === true);
+      setAttachedProcedures(procedureResult.response?.attachedProcedures ?? []);
+      setProcedureAttachmentError(procedureResult.error ? "Attached procedures could not be loaded." : undefined);
       setLoadedFindings({ key: requestFindingsKey, payload: nextFindings });
       setCandidateFindings(nextCandidateFindings);
     } catch (caught) {
@@ -307,9 +325,6 @@ export function DiagnosisWorkspace({
     return Promise.resolve(diagnosisSearchOptions(catalog, query));
   }
 
-  const neighbors = encounter && selectedCondition
-    ? diagnosisRankMoveNeighbors(encounter, visitConditions, selectedCondition)
-    : {};
   const selectedEntry = encounter?.diagnosis?.find((entry) =>
     entry.condition.reference === selectedReference
   );
@@ -329,6 +344,20 @@ export function DiagnosisWorkspace({
       findingInstanceId,
       suggestionSource: suggestion.source,
     });
+  }
+
+  async function saveDiagnosisOrder(conditionReferences: string[]) {
+    setBusy("reorder");
+    setReorderError(undefined);
+    try {
+      await updateDiagnosisOrder(encounterId, conditionReferences);
+      setReorderOpen(false);
+      await load();
+    } catch (caught) {
+      setReorderError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setBusy(undefined);
+    }
   }
 
   return (
@@ -356,21 +385,26 @@ export function DiagnosisWorkspace({
             );
           })}
         </div>
+        {visitConditions.length > 1 && (
+          <button
+            type="button"
+            className="odos-diagnosis-primary-action"
+            disabled={!canWrite || busy !== undefined}
+            onClick={() => {
+              setReorderError(undefined);
+              setReorderOpen(true);
+            }}
+          >
+            Reorder Impressions
+          </button>
+        )}
         {selectedCondition && encounter && (
           <DiagnosisRankActions
-            possible={false}
+            possible={selectedCondition.verificationStatus?.coding?.some((coding) => coding.code === "provisional") === true}
             principal={diagnosisRank(encounter, selectedCondition) === 1}
             busy={diagnosisRankActionsDisabled(canWrite, busy)}
-            canMoveUp={Boolean(neighbors.up)}
-            canMoveDown={Boolean(neighbors.down)}
             onMakePrincipal={() => void run("rank", async () => {
-              await makeConditionPrincipal({ encounter, condition: selectedCondition });
-            })}
-            onMoveUp={() => neighbors.up && void run("rank", async () => {
-              await swapConditionRanks({ encounter, condition: selectedCondition, adjacentCondition: neighbors.up! });
-            })}
-            onMoveDown={() => neighbors.down && void run("rank", async () => {
-              await swapConditionRanks({ encounter, condition: selectedCondition, adjacentCondition: neighbors.down! });
+              await updateDiagnosisOrder(encounterId, principalDiagnosisOrder(encounter, selectedCondition));
             })}
           />
         )}
@@ -607,6 +641,15 @@ export function DiagnosisWorkspace({
       </main>
 
       <DiagnosisImagingRegion patientReference={patientReference} />
+      {reorderOpen && encounter && (
+        <ReorderImpressionsModal
+          rows={buildReorderImpressionRows(encounter, conditions, attachedProcedures)}
+          busy={busy === "reorder"}
+          attachmentError={reorderError ?? procedureAttachmentError}
+          onCancel={() => setReorderOpen(false)}
+          onSave={saveDiagnosisOrder}
+        />
+      )}
     </div>
   );
 }

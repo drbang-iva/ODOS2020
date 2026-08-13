@@ -7,16 +7,14 @@ import { renderToStaticMarkup } from "react-dom/server";
 import {
   DiagnosisProblemStatusField,
   DiagnosisRankActions,
-  diagnosisRankMoveNeighbors,
 } from "../src/components/charting/AssessmentSection";
 import { MdmProblemsAxis } from "../src/components/charting/EncounterHeader";
 import {
   DIAGNOSIS_KEY_IDENTIFIER_SYSTEM,
   diagnosisRankForTier,
   encounterDiagnosisProblemStatusPatchOperations,
-  makeConditionPrincipal,
   markConditionEnteredInError,
-  swapConditionRanks,
+  principalDiagnosisOrder,
   updateConditionBodySite,
   updateConditionCode,
   updateEncounterDiagnosisProblemStatus,
@@ -51,72 +49,46 @@ test("creation rank rules retain the duplicate-principal guard and append second
   assert.equal(diagnosisRankForTier(encounter, "secondary"), 3);
 });
 
-test("Make Principal swaps both ranks in one atomic Encounter PATCH", async () => {
+test("Make Principal computes one complete exact permutation without losing a diagnosis", () => {
   const encounter = rankedEncounter([1, 2, 3]);
-  const capture = await captureEncounterPatch(encounter, async () => {
-    await makeConditionPrincipal({ encounter, condition: CONDITIONS[1]! });
-  });
-
-  assert.equal(capture.encounterRequests, 1);
-  assert.deepEqual(capture.operations, [
-    { op: "replace", path: "/diagnosis/1/rank", value: 1 },
-    { op: "replace", path: "/diagnosis/0/rank", value: 2 },
+  assert.deepEqual(principalDiagnosisOrder(encounter, encounterCondition("secondary-a")), [
+    "Condition/secondary-a",
+    "Condition/principal",
+    "Condition/secondary-b",
   ]);
-  assert.deepEqual(applyRanks(encounter, capture.operations), [2, 1, 3]);
-  assert.equal(new Set(applyRanks(encounter, capture.operations)).size, 3);
 });
 
-test("Make Principal without an existing principal updates only the target rank", async () => {
+test("Make Principal normalizes a rank-gap encounter through the complete permutation", () => {
   const encounter = rankedEncounter([2, 3, 4]);
-  const capture = await captureEncounterPatch(encounter, async () => {
-    await makeConditionPrincipal({ encounter, condition: CONDITIONS[1]! });
-  });
-
-  assert.equal(capture.encounterRequests, 1);
-  assert.deepEqual(capture.operations, [
-    { op: "replace", path: "/diagnosis/1/rank", value: 1 },
+  assert.deepEqual(principalDiagnosisOrder(encounter, encounterCondition("secondary-a")), [
+    "Condition/secondary-a",
+    "Condition/principal",
+    "Condition/secondary-b",
   ]);
-  assert.deepEqual(applyRanks(encounter, capture.operations), [2, 1, 4]);
 });
 
-test("Move up and Move down atomically swap adjacent secondary ranks", async () => {
+test("Make Principal refuses a provisional target before the endpoint call", () => {
   const encounter = rankedEncounter([1, 2, 3]);
-  const movedUp = await captureEncounterPatch(encounter, async () => {
-    await swapConditionRanks({
-      encounter,
-      condition: CONDITIONS[2]!,
-      adjacentCondition: CONDITIONS[1]!,
-    });
-  });
-  assert.equal(movedUp.encounterRequests, 1);
-  assert.deepEqual(applyRanks(encounter, movedUp.operations), [1, 3, 2]);
-
-  const movedDown = await captureEncounterPatch(encounter, async () => {
-    await swapConditionRanks({
-      encounter,
-      condition: CONDITIONS[1]!,
-      adjacentCondition: CONDITIONS[2]!,
-    });
-  });
-  assert.equal(movedDown.encounterRequests, 1);
-  assert.deepEqual(applyRanks(encounter, movedDown.operations), [1, 3, 2]);
+  const provisional = encounterCondition("secondary-a");
+  provisional.verificationStatus = {
+    coding: [{
+      system: "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+      code: "provisional",
+    }],
+  };
+  assert.throws(() => principalDiagnosisOrder(encounter, provisional), /provisional diagnosis cannot be principal/i);
 });
 
-test("rank actions render only for confirmed secondary diagnoses", () => {
+test("rank actions retain one-click Make Principal without legacy secondary move controls", () => {
   const props = {
     busy: false,
-    canMoveUp: true,
-    canMoveDown: true,
     onMakePrincipal: () => undefined,
-    onMoveUp: () => undefined,
-    onMoveDown: () => undefined,
   };
   const secondary = renderToStaticMarkup(
     <DiagnosisRankActions {...props} possible={false} principal={false} />,
   );
   assert.match(secondary, /Make Principal/);
-  assert.match(secondary, /Move up/);
-  assert.match(secondary, /Move down/);
+  assert.doesNotMatch(secondary, /Move up|Move down/);
   assert.doesNotMatch(
     renderToStaticMarkup(<DiagnosisRankActions {...props} possible={true} principal={false} />),
     /Make Principal|Move up|Move down/,
@@ -581,57 +553,57 @@ test("the free-form diagnosis rank input and state wiring are removed", () => {
   assert.doesNotMatch(source, /Save tier|Tier rank|inputMode="numeric"/);
 });
 
-test("rank actions fail closed before PATCH for invalid or duplicate encounter ranks", async () => {
-  for (const ranks of [[1, 0, 3], [1, -1, 3], [1, 2, 2]]) {
-    const encounter = rankedEncounter(ranks);
-    await assertRejectedWithoutEncounterPatch(encounter, () => makeConditionPrincipal({
-      encounter,
-      condition: CONDITIONS[1]!,
-    }));
-    await assertRejectedWithoutEncounterPatch(encounter, () => swapConditionRanks({
-      encounter,
-      condition: CONDITIONS[1]!,
-      adjacentCondition: CONDITIONS[2]!,
-    }));
+test("both diagnosis surfaces retain Make Principal on the authoritative reorder write path", () => {
+  const assessment = readFileSync(
+    new URL("../src/components/charting/AssessmentSection.tsx", import.meta.url),
+    "utf8",
+  );
+  const workspace = readFileSync(
+    new URL("../src/components/charting/DiagnosisWorkspace.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(assessment, /updateDiagnosisOrder\(encounterId, principalDiagnosisOrder\(encounter, condition\)\)/);
+  assert.match(workspace, /updateDiagnosisOrder\(encounterId, principalDiagnosisOrder\(encounter, selectedCondition\)\)/);
+  for (const source of [assessment, workspace]) {
+    assert.match(source, /ReorderImpressionsModal/);
+    assert.doesNotMatch(source, /makeConditionPrincipal|swapConditionRanks|diagnosisRankMoveNeighbors/);
   }
-
-  const multiplePrincipals = rankedEncounter([1, 1, 3]);
-  await assertRejectedWithoutEncounterPatch(multiplePrincipals, () => makeConditionPrincipal({
-    encounter: multiplePrincipals,
-    condition: CONDITIONS[2]!,
-  }), /multiple principal diagnoses/);
-  await assertRejectedWithoutEncounterPatch(multiplePrincipals, () => swapConditionRanks({
-    encounter: multiplePrincipals,
-    condition: CONDITIONS[1]!,
-    adjacentCondition: CONDITIONS[2]!,
-  }), /multiple principal diagnoses/);
 });
 
-test("unranked, invalid, and duplicate-rank secondaries have no enabled Move action", () => {
+test("principal permutation fails closed for invalid or duplicate encounter ranks", () => {
+  for (const ranks of [[1, 0, 3], [1, -1, 3], [1, 2, 2]]) {
+    const encounter = rankedEncounter(ranks);
+    assert.throws(
+      () => principalDiagnosisOrder(encounter, encounterCondition("secondary-a")),
+      /invalid or duplicate diagnosis ranks and must be corrected before reordering/,
+    );
+  }
+
   const unranked = rankedEncounter([1, 2, 3]);
   delete unranked.diagnosis![2]!.rank;
-  const invalid = rankedEncounter([1, 2, 0]);
-  const duplicate = rankedEncounter([1, 2, 2]);
+  assert.throws(
+    () => principalDiagnosisOrder(unranked, encounterCondition("secondary-a")),
+    /invalid or duplicate diagnosis ranks and must be corrected before reordering/,
+  );
 
-  assert.deepEqual(diagnosisRankMoveNeighbors(unranked, CONDITIONS, CONDITIONS[2]!), {});
-  assert.deepEqual(diagnosisRankMoveNeighbors(invalid, CONDITIONS, CONDITIONS[2]!), {});
-  assert.deepEqual(diagnosisRankMoveNeighbors(duplicate, CONDITIONS, CONDITIONS[2]!), {});
+  const multiplePrincipals = rankedEncounter([1, 1, 3]);
+  assert.throws(
+    () => principalDiagnosisOrder(multiplePrincipals, encounterCondition("secondary-b")),
+    /multiple principal diagnoses/,
+  );
+});
 
+test("rank action has no competing arbitrary-order buttons", () => {
   const html = renderToStaticMarkup(
     <DiagnosisRankActions
       possible={false}
       principal={false}
       busy={false}
-      canMoveUp={false}
-      canMoveDown={false}
       onMakePrincipal={() => undefined}
-      onMoveUp={() => undefined}
-      onMoveDown={() => undefined}
     />,
   );
   assert.match(html, /Make Principal/);
-  assert.match(html, /<button disabled=""[^>]*>Move up<\/button>/);
-  assert.match(html, /<button disabled=""[^>]*>Move down<\/button>/);
+  assert.doesNotMatch(html, /Move up|Move down/);
 });
 
 test("claim prefill keeps diagnosis order as the source of per-line pointer positions", () => {

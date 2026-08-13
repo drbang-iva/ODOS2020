@@ -431,58 +431,6 @@ export async function updateConditionStatus(input: {
   return updated;
 }
 
-export async function makeConditionPrincipal(input: {
-  encounter: Encounter;
-  condition: Condition;
-}): Promise<Encounter> {
-  assertValidDiagnosisRanks(input.encounter);
-  const diagnosis = input.encounter.diagnosis ?? [];
-  const targetIndex = encounterDiagnosisIndex(diagnosis, input.condition);
-  const principalIndexes = diagnosis.flatMap((entry, index) => entry.rank === 1 ? [index] : []);
-  if (principalIndexes.length > 1) {
-    throw new Error("This visit has multiple principal diagnoses.");
-  }
-  const principalIndex = principalIndexes[0];
-  if (principalIndex === targetIndex) {
-    throw new Error("This diagnosis is already principal.");
-  }
-  const targetRank = diagnosis[targetIndex]!.rank;
-  const operations: JsonPatchOperation[] = [{
-    op: targetRank === undefined ? "add" : "replace",
-    path: `/diagnosis/${targetIndex}/rank`,
-    value: 1,
-  }];
-  if (principalIndex !== undefined) {
-    operations.push(targetRank === undefined
-      ? { op: "remove", path: `/diagnosis/${principalIndex}/rank` }
-      : { op: "replace", path: `/diagnosis/${principalIndex}/rank`, value: targetRank });
-  }
-  return patchEncounterDiagnosisRanks(input.encounter, operations, "make_diagnosis_principal");
-}
-
-export async function swapConditionRanks(input: {
-  encounter: Encounter;
-  condition: Condition;
-  adjacentCondition: Condition;
-}): Promise<Encounter> {
-  assertValidDiagnosisRanks(input.encounter);
-  const diagnosis = input.encounter.diagnosis ?? [];
-  const targetIndex = encounterDiagnosisIndex(diagnosis, input.condition);
-  const adjacentIndex = encounterDiagnosisIndex(diagnosis, input.adjacentCondition);
-  const targetRank = diagnosis[targetIndex]!.rank;
-  const adjacentRank = diagnosis[adjacentIndex]!.rank;
-  if (targetRank === 1 || adjacentRank === 1) {
-    throw new Error("Only secondary diagnoses can move up or down.");
-  }
-  if (!Number.isInteger(targetRank) || !Number.isInteger(adjacentRank) || targetRank === adjacentRank) {
-    throw new Error("Secondary diagnoses must have distinct ranks before they can move.");
-  }
-  return patchEncounterDiagnosisRanks(input.encounter, [
-    { op: "replace", path: `/diagnosis/${targetIndex}/rank`, value: adjacentRank },
-    { op: "replace", path: `/diagnosis/${adjacentIndex}/rank`, value: targetRank },
-  ], "reorder_encounter_diagnoses");
-}
-
 function assertValidDiagnosisRanks(encounter: Encounter): void {
   const ranks = (encounter.diagnosis ?? [])
     .map((diagnosis) => diagnosis.rank)
@@ -496,26 +444,31 @@ function assertValidDiagnosisRanks(encounter: Encounter): void {
 }
 
 export function hasValidDiagnosisRanks(encounter: Encounter): boolean {
+  const diagnosis = encounter.diagnosis ?? [];
   const ranks = (encounter.diagnosis ?? [])
     .map((diagnosis) => diagnosis.rank)
     .filter((rank): rank is number => rank !== undefined);
-  return ranks.every((rank) => Number.isInteger(rank) && rank >= 1) && new Set(ranks).size === ranks.length;
+  return ranks.length === diagnosis.length &&
+    ranks.every((rank) => Number.isInteger(rank) && rank >= 1) &&
+    new Set(ranks).size === ranks.length;
 }
 
-async function patchEncounterDiagnosisRanks(
-  encounter: Encounter,
-  operations: JsonPatchOperation[],
-  sourceTag: string,
-): Promise<Encounter> {
-  const updated = await fhir.patch<Encounter>(
-    "Encounter",
-    requiredId(encounter),
-    operations,
-    sourceTag,
-    requiredVersion(encounter),
-  );
-  await createUiProvenance(sourceTag, `Encounter/${updated.id}`, "UPDATE");
-  return updated;
+export function principalDiagnosisOrder(encounter: Encounter, condition: Condition): string[] {
+  assertValidDiagnosisRanks(encounter);
+  if (condition.verificationStatus?.coding?.some((coding) => coding.code === "provisional")) {
+    throw new Error("A provisional diagnosis cannot be principal.");
+  }
+  const targetReference = `Condition/${requiredId(condition)}`;
+  const orderedReferences = [...(encounter.diagnosis ?? [])]
+    .sort((left, right) => left.rank! - right.rank!)
+    .map((entry) => entry.condition.reference);
+  if (orderedReferences.some((reference) => !reference?.match(/^Condition\/[A-Za-z0-9.-]+$/))) {
+    throw new Error("This visit has an invalid diagnosis reference and must be corrected before reordering.");
+  }
+  if (!orderedReferences.includes(targetReference)) {
+    throw new Error("The diagnosis is not present on this visit.");
+  }
+  return [targetReference, ...orderedReferences.filter((reference) => reference !== targetReference)] as string[];
 }
 
 function encounterDiagnosisIndex(

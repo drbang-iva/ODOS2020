@@ -94,6 +94,14 @@ export interface ProcedureChargesResponse {
   options: ProcedureChargeOption[];
   diagnoses: ProcedureChargeDiagnosis[];
   proposals: ManualProcedureCharge[];
+  attachedProcedures: AttachedProcedure[];
+}
+
+export interface AttachedProcedure {
+  proposalId: string;
+  procedureConceptKey: string;
+  display: string;
+  diagnosisReferences: string[];
 }
 
 export interface ProcedureChargeChange {
@@ -246,6 +254,32 @@ export async function submitDiagnosisPick(input: {
   if (!body.condition) throw new Error("Diagnosis pick response did not include the Condition.");
   window.dispatchEvent(new CustomEvent("odos:diagnosis-picked", { detail: { encounterReference: input.encounterReference } }));
   return { condition: body.condition, ...(body.encounter ? { encounter: body.encounter } : {}) };
+}
+
+export async function updateDiagnosisOrder(
+  encounterId: string,
+  conditionReferences: string[],
+  fetchImpl: typeof fetch = fetch,
+): Promise<Encounter> {
+  const response = await fetchImpl(
+    `${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/diagnosis-order`,
+    {
+      method: "PUT",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ conditionReferences }),
+    },
+  );
+  const body = await response.json() as { encounter?: Encounter; error?: string; code?: string };
+  if (!response.ok) {
+    throw clinicalGraphResponseError(response, body, `Diagnosis reorder failed: ${response.status}`);
+  }
+  if (!body.encounter) throw new Error("Diagnosis reorder response did not include the Encounter.");
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("odos:encounter-diagnosis-updated", {
+      detail: { encounterReference: `Encounter/${encounterId}` },
+    }));
+  }
+  return body.encounter;
 }
 
 export const DIAGNOSIS_VISIT_STATUSES = [
