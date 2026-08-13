@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import type { AccessPolicyResource, Encounter } from "@medplum/fhirtypes";
+import fhirpath from "fhirpath";
 import {
   ODOS_PRACTICE_ROLE_SYSTEM,
   PRACTICE_ROLE_IDS,
@@ -83,13 +85,18 @@ test("all roles read operational records at practice scope while Staff writes st
     observationWrite?.writeConstraint?.map((constraint) => constraint.expression).join(" ") ?? "",
     /status = 'amended'/,
   );
+});
 
+test("Staff Encounter writes allow unfinished work but reject finalization and reopening", () => {
+  const staff = buildMedplumAccessPolicy(getRoleDeclaration("staff"));
   const encounterWrite = staff.resource?.find((rule) =>
     rule.resourceType === "Encounter" && rule.interaction?.includes("update"));
-  assert.match(
-    encounterWrite?.writeConstraint?.map((constraint) => constraint.expression).join(" ") ?? "",
-    /status != 'finished'/,
-  );
+  assert.ok(encounterWrite?.writeConstraint?.length);
+
+  assert.equal(staffEncounterWriteAllowed(encounterWrite.writeConstraint, undefined, "in-progress"), true);
+  assert.equal(staffEncounterWriteAllowed(encounterWrite.writeConstraint, "planned", "in-progress"), true);
+  assert.equal(staffEncounterWriteAllowed(encounterWrite.writeConstraint, "in-progress", "finished"), false);
+  assert.equal(staffEncounterWriteAllowed(encounterWrite.writeConstraint, "finished", "in-progress"), false);
 });
 
 test("Admin has no wildcard write bypass and Staff inventory writes cannot correct counts or prices", () => {
@@ -133,3 +140,20 @@ test("aesthetics license and procedure scope is a Provider membership parameter"
     allowedProcedureTypesByState: { TX: ["injectables"] },
   }));
 });
+
+function staffEncounterWriteAllowed(
+  constraints: NonNullable<AccessPolicyResource["writeConstraint"]>,
+  beforeStatus: Encounter["status"] | undefined,
+  afterStatus: Encounter["status"],
+): boolean {
+  const before = beforeStatus ? { resourceType: "Encounter" as const, status: beforeStatus } : undefined;
+  const after: Encounter = { resourceType: "Encounter", status: afterStatus, class: { code: "AMB" } };
+
+  return constraints.every((constraint) => {
+    const result = fhirpath.evaluate(after, constraint.expression ?? "", {
+      before: before ?? [],
+      after,
+    });
+    return result.length === 1 && result[0] === true;
+  });
+}

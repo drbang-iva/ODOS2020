@@ -39,6 +39,7 @@ export const BUSINESS_ACTIONS = [
   "break-glass.invoke",
   "payment.charge",
   "payment.void",
+  // Declared ahead of a dedicated enforcement point; no write-off route or policy rule exists yet.
   "payment.write-off",
   "payment.seal-day",
   "margin.read",
@@ -170,7 +171,7 @@ const STAFF_OBSERVATION_WRITE_CONSTRAINTS: WriteConstraintDeclaration[] = [
 const STAFF_ENCOUNTER_WRITE_CONSTRAINTS: WriteConstraintDeclaration[] = [
   {
     description: "Staff can create or edit an Encounter only while it remains unfinished.",
-    expression: "status != 'finished'",
+    expression: "status != 'finished' and (%before.exists() implies %before.status != 'finished')",
   },
 ];
 
