@@ -6,6 +6,7 @@ import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles
 import {
   isVisitProcedureConceptKey,
   listActiveCodedNonVisitProcedureFees,
+  listProcedureFeeScheduleSnapshot,
   type ProcedureFeeScheduleFhir,
 } from "./procedure-fee-schedule.js";
 import { PROTOCOL_BASIC_CODES, ProtocolBasicStore, type ProtocolFhirClient } from "./protocol-store.js";
@@ -109,11 +110,13 @@ export async function handleProcedureChargesRequest(
 
   const encounter = await staff.fhir.read<Encounter>("Encounter", params.data.encounterId);
   const store = chargeStore(staff.fhir);
-  const [options, diagnoses, proposals] = await Promise.all([
+  const [options, diagnoses, proposals, feeSchedule] = await Promise.all([
     listProcedureOptions(staff.fhir),
     encounterDiagnoses(staff.fhir, encounter),
     store.list(),
+    listProcedureFeeScheduleSnapshot(staff.fhir),
   ]);
+  const displayByConcept = new Map(feeSchedule.map((item) => [item.procedureConceptKey, item.display]));
   return {
     status: 200,
     body: {
@@ -122,6 +125,16 @@ export async function handleProcedureChargesRequest(
       proposals: proposals.filter((proposal) =>
         isManualProcedureProposal(proposal, params.data.encounterId)
       ),
+      attachedProcedures: proposals.filter((proposal) =>
+        proposal.encounterId === params.data.encounterId &&
+        proposal.state !== "removed" &&
+        proposal.dxPointers.length > 0
+      ).map((proposal) => ({
+        proposalId: proposal.id,
+        procedureConceptKey: proposal.procedureConceptKey,
+        display: displayByConcept.get(proposal.procedureConceptKey) ?? proposal.procedureConceptKey,
+        diagnosisReferences: [...proposal.dxPointers],
+      })),
     },
   };
 }

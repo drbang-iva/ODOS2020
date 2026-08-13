@@ -245,6 +245,7 @@ import {
   handleDiagnosisQuickListRequest,
 } from "./clinical-graph/diagnosis-quick-list-endpoint.js";
 import { handleDiagnosisCompletenessRequest } from "./clinical-graph/diagnosis-completeness-endpoint.js";
+import { handleDiagnosisOrderRequest } from "./clinical-graph/diagnosis-order-endpoint.js";
 import { handleDiagnosisPickRequest } from "./clinical-graph/diagnosis-pick-endpoint.js";
 import {
   handleDiagnosisVisitStatusListRequest,
@@ -6443,6 +6444,20 @@ async function startMcpServer(): Promise<void> {
         } catch (error) {
           console.error("odos-mcp: encounter diagnosis pick route failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "diagnosis pick route failed" });
+        }
+      });
+
+      app.put("/clinical-graph/encounters/:encounterId/diagnosis-order", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleDiagnosisOrderRequest(
+            { authenticate: authenticateStaffRouteForAction("chart.write") },
+            { authHeader: req.header("authorization"), params: req.params, body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: encounter diagnosis reorder failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "encounter diagnosis reorder failed" });
         }
       });
 

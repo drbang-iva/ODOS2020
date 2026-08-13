@@ -27,6 +27,7 @@ const RESPONSE: ProcedureChargesResponse = {
     { reference: "Condition/third", display: "Third diagnosis", rank: 3 },
   ],
   proposals: [],
+  attachedProcedures: [],
 };
 
 test("procedure charge client sends authenticated narrow GET POST and PATCH requests", async () => {

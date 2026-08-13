@@ -5,10 +5,8 @@ import { useRole } from "../../lib/role-context";
 import {
   DIAGNOSIS_KEY_IDENTIFIER_SYSTEM,
   createEncounterDiagnosis,
-  hasValidDiagnosisRanks,
-  makeConditionPrincipal,
   markConditionEnteredInError,
-  swapConditionRanks,
+  principalDiagnosisOrder,
   updateConditionBodySite,
   updateConditionCode,
   updateConditionStatus,
@@ -27,9 +25,12 @@ import {
   authHeaders,
   clinicalGraphApiBase,
   DIAGNOSIS_VISIT_STATUSES,
+  procedureChargeApi,
   readDiagnosisVisitStatuses,
   submitDiagnosisPick,
+  updateDiagnosisOrder,
   updateDiagnosisVisitStatus,
+  type AttachedProcedure,
   type DiagnosisVisitStatus,
 } from "../../lib/clinical-graph-client";
 import { ODOS_EXTENSION_URLS } from "../../lib/fhir-ophthalmology/extensions";
@@ -48,6 +49,10 @@ import {
   type ProtocolItem,
 } from "../../lib/protocol-authoring";
 import { ProtocolStagingList } from "./ProtocolStagingList";
+import {
+  ReorderImpressionsModal,
+  buildReorderImpressionRows,
+} from "./ReorderImpressionsModal";
 import { OdosSearchPicker } from "../inputs/OdosSearchPicker";
 import { OdosSelect } from "../inputs/OdosSelect";
 import {
@@ -130,6 +135,10 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
   const [diagnosisCatalog, setDiagnosisCatalog] = useState<DiagnosisCatalogCodeRow[]>([]);
   const [captureOpen, setCaptureOpen] = useState(false);
   const [captureName, setCaptureName] = useState("");
+  const [attachedProcedures, setAttachedProcedures] = useState<AttachedProcedure[]>([]);
+  const [procedureAttachmentError, setProcedureAttachmentError] = useState<string>();
+  const [reorderError, setReorderError] = useState<string>();
+  const [reorderOpen, setReorderOpen] = useState(false);
   const protocolTriggerRef = useRef<HTMLButtonElement>(null);
   const protocolDialogRef = useRef<HTMLDivElement>(null);
   const encounterId = encounterReference.replace(/^Encounter\//, "");
@@ -137,15 +146,24 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
   async function load() {
     setError(null);
     const loadedEncounter = await fhir.read<Encounter>("Encounter", encounterId);
-    const [conditionBundle, visitStatuses] = await Promise.all([
+    const [conditionBundle, visitStatuses, procedureResult] = await Promise.all([
       fhir.search<Condition>("Condition", {
         encounter: encounterReference,
         _count: "40",
       }),
       readDiagnosisVisitStatuses(encounterId),
+      procedureChargeApi().read(encounterId).then(
+        (response) => ({ response, error: undefined }),
+        (caught) => ({
+          response: undefined,
+          error: caught instanceof Error ? caught.message : String(caught),
+        }),
+      ),
     ]);
     setEncounter(loadedEncounter);
     setDiagnosisVisitStatuses(Object.fromEntries(visitStatuses.map((row) => [row.conditionReference, row.status])));
+    setAttachedProcedures(procedureResult.response?.attachedProcedures ?? []);
+    setProcedureAttachmentError(procedureResult.error ? "Attached procedures could not be loaded." : undefined);
     const loadedConditions = (conditionBundle.entry ?? [])
         .flatMap((entry) => (entry.resource ? [entry.resource] : []))
         .filter(isEncounterDiagnosisCondition)
@@ -258,15 +276,22 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
   async function savePrincipal(condition: Condition) {
     if (!encounter) return;
     await runEdit("tier", async () => {
-      await makeConditionPrincipal({ encounter, condition });
+      await updateDiagnosisOrder(encounterId, principalDiagnosisOrder(encounter, condition));
     });
   }
 
-  async function saveRankSwap(condition: Condition, adjacentCondition: Condition) {
-    if (!encounter) return;
-    await runEdit("tier", async () => {
-      await swapConditionRanks({ encounter, condition, adjacentCondition });
-    });
+  async function saveDiagnosisOrder(conditionReferences: string[]) {
+    setBusy("reorder");
+    setReorderError(undefined);
+    try {
+      await updateDiagnosisOrder(encounterId, conditionReferences);
+      setReorderOpen(false);
+      await load();
+    } catch (caught) {
+      setReorderError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setBusy(null);
+    }
   }
 
   async function saveStatus(condition: Condition, status: "active" | "recurrence" | "resolved") {
@@ -662,6 +687,22 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
           </div>
         )}
 
+        {canShowEditing && sortedConditions.length > 1 && encounter?.status !== "finished" && (
+          <div className="mt-5 flex justify-end">
+            <button
+              type="button"
+              disabled={busy !== null}
+              onClick={() => {
+                setReorderError(undefined);
+                setReorderOpen(true);
+              }}
+              className={BUTTON_CLASS}
+            >
+              Reorder Impressions
+            </button>
+          </div>
+        )}
+
         <div className="mt-5 space-y-3">
           {sortedConditions.length === 0 ? (
             <div className="rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface)] p-4 text-sm text-[color:var(--odos-muted)]">
@@ -670,9 +711,6 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
           ) : (
             sortedConditions.map((condition) => {
               const rank = encounter ? diagnosisRank(encounter, condition) : undefined;
-              const rankMoves = encounter
-                ? diagnosisRankMoveNeighbors(encounter, sortedConditions, condition)
-                : {};
               return (
                 <DiagnosisCard
                   key={condition.id}
@@ -684,8 +722,6 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
                   busy={busy}
                   provenanceLine={condition.id ? provenanceLines[condition.id] : undefined}
                   possible={verificationStatus(condition) === "provisional"}
-                  canMoveUp={rankMoves.up !== undefined}
-                  canMoveDown={rankMoves.down !== undefined}
                   visitStatus={condition.id ? diagnosisVisitStatuses[`Condition/${condition.id}`] : undefined}
                   visitStatusDisabled={!canShowEditing || encounter?.status === "finished"}
                   problemStatus={encounterProblemStatus(encounter, condition)}
@@ -694,8 +730,6 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
                   onLaterality={(laterality) => saveLaterality(condition, laterality)}
                   onCode={(code, display) => saveCode(condition, code, display)}
                   onMakePrincipal={() => savePrincipal(condition)}
-                  onMoveUp={() => saveRankSwap(condition, rankMoves.up!)}
-                  onMoveDown={() => saveRankSwap(condition, rankMoves.down!)}
                   onStatus={(status) => saveStatus(condition, status)}
                   onVisitStatus={(status) => saveVisitStatus(condition, status)}
                   onProblemStatus={(status) => saveProblemStatus(condition, status)}
@@ -707,6 +741,15 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
             })
           )}
         </div>
+        {reorderOpen && encounter && (
+          <ReorderImpressionsModal
+            rows={buildReorderImpressionRows(encounter, conditions, attachedProcedures)}
+            busy={busy === "reorder"}
+            attachmentError={reorderError ?? procedureAttachmentError}
+            onCancel={() => setReorderOpen(false)}
+            onSave={saveDiagnosisOrder}
+          />
+        )}
       </div>
     </section>
   );
@@ -722,27 +765,6 @@ export function protocolConfirmationLabel(acceptCharges: boolean): string {
   return acceptCharges ? "Confirm, accept charges, and apply" : "Confirm and apply";
 }
 
-export function diagnosisRankMoveNeighbors(
-  encounter: Encounter,
-  sortedConditions: Condition[],
-  condition: Condition,
-): { up?: Condition; down?: Condition } {
-  if (!hasValidDiagnosisRanks(encounter)) return {};
-  const movableSecondaries = sortedConditions.filter((candidate) => {
-    const rank = diagnosisRank(encounter, candidate);
-    return verificationStatus(candidate) !== "provisional" &&
-      rank !== undefined &&
-      Number.isInteger(rank) &&
-      rank > 1;
-  });
-  const index = movableSecondaries.findIndex((candidate) => candidate.id === condition.id);
-  if (index < 0) return {};
-  return {
-    up: movableSecondaries[index - 1],
-    down: movableSecondaries[index + 1],
-  };
-}
-
 function DiagnosisCard({
   condition,
   codeLabel,
@@ -752,8 +774,6 @@ function DiagnosisCard({
   busy,
   provenanceLine,
   possible,
-  canMoveUp,
-  canMoveDown,
   visitStatus,
   visitStatusDisabled,
   problemStatus,
@@ -762,8 +782,6 @@ function DiagnosisCard({
   onLaterality,
   onCode,
   onMakePrincipal,
-  onMoveUp,
-  onMoveDown,
   onStatus,
   onVisitStatus,
   onProblemStatus,
@@ -779,8 +797,6 @@ function DiagnosisCard({
   busy: string | null;
   provenanceLine?: string;
   possible: boolean;
-  canMoveUp: boolean;
-  canMoveDown: boolean;
   visitStatus?: DiagnosisVisitStatus;
   visitStatusDisabled: boolean;
   problemStatus?: MdmProblemStatus;
@@ -789,8 +805,6 @@ function DiagnosisCard({
   onLaterality: (laterality: EyeChoice) => void;
   onCode: (code: string, display: string) => void;
   onMakePrincipal: () => void;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
   onStatus: (status: "active" | "recurrence" | "resolved") => void;
   onVisitStatus: (status: DiagnosisVisitStatus) => void;
   onProblemStatus: (status: MdmProblemStatus) => void;
@@ -887,11 +901,7 @@ function DiagnosisCard({
             possible={possible}
             principal={rank === 1}
             busy={busy !== null}
-            canMoveUp={canMoveUp}
-            canMoveDown={canMoveDown}
             onMakePrincipal={onMakePrincipal}
-            onMoveUp={onMoveUp}
-            onMoveDown={onMoveDown}
           />
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-[180px_1fr_auto_auto]">
             <OdosSelect
@@ -1009,27 +1019,17 @@ export function DiagnosisRankActions({
   possible,
   principal,
   busy,
-  canMoveUp,
-  canMoveDown,
   onMakePrincipal,
-  onMoveUp,
-  onMoveDown,
 }: {
   possible: boolean;
   principal: boolean;
   busy: boolean;
-  canMoveUp: boolean;
-  canMoveDown: boolean;
   onMakePrincipal: () => void;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
 }) {
   if (possible || principal) return null;
   return (
     <div className="flex flex-wrap gap-2">
       <button disabled={busy} onClick={onMakePrincipal} className={BUTTON_CLASS}>Make Principal</button>
-      <button disabled={busy || !canMoveUp} onClick={onMoveUp} className={BUTTON_CLASS}>Move up</button>
-      <button disabled={busy || !canMoveDown} onClick={onMoveDown} className={BUTTON_CLASS}>Move down</button>
     </div>
   );
 }

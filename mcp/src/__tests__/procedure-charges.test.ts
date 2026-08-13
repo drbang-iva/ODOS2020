@@ -418,8 +418,50 @@ test("procedure read returns the coded option, ranked Encounter diagnoses, and n
         { reference: "Condition/secondary", display: "Secondary diagnosis", rank: 2 },
       ],
       proposals: [],
+      attachedProcedures: [],
     },
   });
+});
+
+test("procedure read exposes every active Encounter proposal through its existing diagnosis pointers", async () => {
+  const { deps, fhir } = fixture();
+  await seed(
+    fhir,
+    manualProcedure({ id: `${MANUAL_PROCEDURE_CHARGE_ID_PREFIX}attached`, dxPointers: ["Condition/secondary"] }),
+    visitProposal({ dxPointers: ["Condition/principal"] }),
+    protocolProposal("protocol-attached", {
+      procedureConceptKey: "corneal-pachymetry",
+      dxPointers: ["Condition/secondary"],
+      state: "accepted",
+    }),
+    manualProcedure({ id: `${MANUAL_PROCEDURE_CHARGE_ID_PREFIX}removed`, state: "removed" }),
+  );
+
+  const result = await handleProcedureChargesRequest(deps, {
+    authHeader: "Bearer clinician",
+    params: { encounterId: "enc-1" },
+  });
+
+  assert.deepEqual((result.body as { attachedProcedures: unknown }).attachedProcedures, [
+    {
+      proposalId: `${MANUAL_PROCEDURE_CHARGE_ID_PREFIX}attached`,
+      procedureConceptKey: "gonioscopy",
+      display: "Gonioscopy",
+      diagnosisReferences: ["Condition/secondary"],
+    },
+    {
+      proposalId: "manual-visit-code:enc-1",
+      procedureConceptKey: "comprehensive-exam-new",
+      display: "Visit",
+      diagnosisReferences: ["Condition/principal"],
+    },
+    {
+      proposalId: "protocol-attached",
+      procedureConceptKey: "corneal-pachymetry",
+      display: "Corneal pachymetry",
+      diagnosisReferences: ["Condition/secondary"],
+    },
+  ]);
 });
 
 test("procedure charge HTTP routes reach GET POST and encoded PATCH handlers", async () => {

@@ -20,6 +20,7 @@ import {
 import { ODOS_EXTENSION_URLS } from "../fhir/ophthalmology/extensions.js";
 import { buildProvenance } from "../fhir/ophthalmology/provenance.js";
 import { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } from "./diagnosis-pick-endpoint.js";
+import { isFhirConflict } from "./fhir-conflict.js";
 
 export type PreviousExamLaterality = "OD" | "OS" | "OU" | "UNKNOWN";
 
@@ -942,14 +943,6 @@ function transactionConditionReference(bundle: Bundle, entryIndex: number): stri
   const location = bundle.entry?.[entryIndex]?.response?.location;
   const match = location?.match(/^Condition\/([^/]+)(?:\/_history\/[^/]+)?$/);
   return match ? `Condition/${match[1]}` : undefined;
-}
-
-function isFhirConflict(error: unknown): boolean {
-  const status = typeof error === "object" && error !== null && "status" in error
-    ? (error as { status?: unknown }).status
-    : undefined;
-  const message = error instanceof Error ? error.message : String(error);
-  return status === 409 || status === 412 || /FHIR (409|412)\b/.test(message);
 }
 
 function isMissingFhirResource(error: unknown): boolean {

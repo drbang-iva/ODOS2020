@@ -120,6 +120,77 @@ test("diagnosis rank actions are disabled for read-only users and while a write 
   assert.equal(diagnosisRankActionsDisabled(true, undefined), false);
 });
 
+test("workspace keeps one-click Make Principal on the complete reorder endpoint and opens grouped reorder rows", async () => {
+  const originalFetch = globalThis.fetch;
+  const requests: Array<{ url: string; body?: unknown }> = [];
+  const fallback = workspaceRaceFetch({
+    findings: async (reference) => jsonResponse(raceFindingsPayload(reference, "Finding", "2026-08-01")),
+  });
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input);
+    if (url.includes("/procedure-charges")) {
+      return jsonResponse({
+        options: [],
+        diagnoses: [],
+        proposals: [],
+        attachedProcedures: [{
+          proposalId: "proposal-a",
+          procedureConceptKey: "procedure-a",
+          display: "Procedure attached to A",
+          diagnosisReferences: ["Condition/a"],
+        }],
+      });
+    }
+    if (url.includes("/clinical-graph/encounters/e1/diagnosis-order")) {
+      requests.push({ url, body: JSON.parse(String(init?.body)) });
+      return jsonResponse({
+        encounter: {
+          resourceType: "Encounter",
+          id: "e1",
+          status: "in-progress",
+          class: { code: "AMB" },
+          diagnosis: [
+            { condition: { reference: "Condition/a" }, rank: 2 },
+            { condition: { reference: "Condition/b" }, rank: 1 },
+          ],
+        },
+      });
+    }
+    return fallback(input, init);
+  }) as typeof fetch;
+
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <DiagnosisWorkspace
+          patientReference="Patient/p1"
+          encounterReference="Encounter/e1"
+          selectedReference="Condition/b"
+          onSelectDiagnosis={() => undefined}
+        />,
+      );
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    act(() => renderer.root.findByProps({ children: "Reorder Impressions" }).props.onClick());
+    assert.match(JSON.stringify(renderer.toJSON()), /Procedure attached to A/);
+    act(() => renderer.root.findByProps({ children: "Cancel" }).props.onClick());
+
+    await act(async () => {
+      await renderer.root.findByProps({ children: "Make Principal" }).props.onClick();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    assert.deepEqual(requests, [{
+      url: "/clinical-graph/encounters/e1/diagnosis-order",
+      body: { conditionReferences: ["Condition/b", "Condition/a"] },
+    }]);
+  } finally {
+    act(() => renderer?.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("diagnosis pin moves require write access and respect the ordered-list edges", () => {
   assert.equal(diagnosisPinMoveDisabled(false, undefined, 1, 3, -1), true);
   assert.equal(diagnosisPinMoveDisabled(false, undefined, 1, 3, 1), true);
