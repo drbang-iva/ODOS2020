@@ -76,7 +76,8 @@ export async function handleStaffInviteRequest(
 
   try {
     await deps.grantRole(membership, parsed.email, parsed.roleId);
-  } catch {
+  } catch (error) {
+    console.error("odos-mcp: staff invite role grant failed:", error);
     return {
       status: 500,
       body: {
