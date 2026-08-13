@@ -16,6 +16,7 @@ import {
 } from "../../ui/src/lib/scheduling-store.js";
 import {
   ODOS_VISION_COVERAGE_EXTENSION_URL,
+  appointmentVisitTypeCode,
   buildSchedulingAppointment,
   confirmationStatusOf,
   medicalCoverageOf,
@@ -750,6 +751,10 @@ test("createAppointment writes a mirrored Appointment, source-tags the write, th
   assert.deepEqual(useSchedulingStore.getState().appointments.map((entry) => entry.id), [
     "Appointment-1",
   ]);
+  assert.equal(
+    appointmentVisitTypeCode(useSchedulingStore.getState().appointments[0]!),
+    "routine-exam-new",
+  );
 });
 
 test("setAppointmentStatus and setConfirmationStatus update from the refreshed resource snapshot", async () => {

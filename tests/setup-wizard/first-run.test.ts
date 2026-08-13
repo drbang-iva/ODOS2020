@@ -15,6 +15,8 @@ import {
   runSetupPractice,
 } from "../../scripts/setup-practice.ts";
 import { parseSchedulingPracticeConfig } from "../../mcp/src/scheduling/practice-config.ts";
+import { buildVisitType, visitTypeCode } from "../../mcp/src/fhir/schedulingVisitType.ts";
+import { parseVisitTypeConfig } from "../../mcp/src/scheduling/visit-type-config.ts";
 
 test("fresh Compose startup maps ODOS service credentials into Medplum's super-admin seed settings", () => {
   const compose = readFileSync(new URL("../../docker-compose.yml", import.meta.url), "utf8");
@@ -171,15 +173,7 @@ test("setup wizard creates the three canonical policies and grants Staff as the 
     assert.equal(schedulingConfig.officeBySchedule["Schedule/schedule-1"], "main");
 
     assert.deepEqual(firstRun.auditRows.map((row) => row.eventType), [
-      "create",
-      "create",
-      "create",
-      "create",
-      "create",
-      "create",
-      "create",
-      "create",
-      "create",
+      ...Array.from({ length: 20 }, () => "create"),
       "projectmembership-lifecycle",
     ]);
     for (const row of firstRun.auditRows) {
@@ -225,6 +219,101 @@ test("setup wizard creates the three canonical policies and grants Staff as the 
   }
 });
 
+test("setup persists the default visit-type catalog and category config", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "odos-setup-wizard-visit-types-"));
+  try {
+    const adapter = new InMemorySetupPracticeAdapter();
+    const result = await runSetupPractice({
+      adapter,
+      config: {
+        baseUrl: "http://localhost:8103",
+        practiceName: "ODOS Test Practice",
+        adminEmail: "human-admin@example.test",
+        adminName: "ODOS Admin",
+        adminPassword: "not-real-password",
+        statePath: join(dir, ".odos-setup-state.json"),
+      },
+      skipInteractiveBoundaryCheck: true,
+    });
+
+    assert.equal(result.noOp, false);
+    assert.deepEqual(adapter.visitTypes.map(visitTypeCode), [
+      "routine-exam-new",
+      "routine-exam-established",
+      "contact-lens-exam",
+      "contact-lens-follow-up",
+      "medicaid-exam",
+      "office-visit",
+      "special-testing",
+      "aesthetics-consult",
+      "aesthetics-treatment",
+      "aesthetics-follow-up",
+    ]);
+    assert.deepEqual(
+      parseVisitTypeConfig(adapter.visitTypeConfigs[0]!).categories.map((category) => category.id),
+      ["comprehensive", "dry-eye", "myopia-management", "diagnostic-only"],
+    );
+    assert.equal(
+      result.auditRows.filter((row) => row.resourceType === "HealthcareService" && row.eventType === "create").length,
+      10,
+    );
+    assert.equal(
+      result.auditRows.filter((row) =>
+        row.resourceType === "Basic" && row.resourceId === adapter.visitTypeConfigs[0]?.id
+      ).length,
+      1,
+    );
+  } finally {
+    rmSync(dir, { force: true, recursive: true });
+  }
+});
+
+test("a setup re-run is a no-op and preserves edited or deactivated visit-type defaults", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "odos-setup-wizard-visit-type-rerun-"));
+  try {
+    const adapter = new InMemorySetupPracticeAdapter();
+    const existing = {
+      ...buildVisitType({
+        code: "routine-exam-new",
+        name: "Practice-edited comprehensive visit",
+        discipline: "eyecare",
+        durationMinutes: 45,
+        color: "#123456",
+        active: false,
+      }),
+      id: "existing-routine-exam-new",
+    };
+    adapter.visitTypes.push(existing);
+    const config = {
+      baseUrl: "http://localhost:8103",
+      practiceName: "ODOS Test Practice",
+      adminEmail: "human-admin@example.test",
+      adminName: "ODOS Admin",
+      adminPassword: "not-real-password",
+      statePath: join(dir, ".odos-setup-state.json"),
+    };
+    await runSetupPractice({ adapter, config, skipInteractiveBoundaryCheck: true });
+    const preserved = adapter.visitTypes.find((visitType) => visitTypeCode(visitType) === "routine-exam-new");
+    assert.equal(preserved, existing);
+    assert.equal(adapter.visitTypes.length, 10);
+    assert.equal(adapter.visitTypes.filter((visitType) => visitTypeCode(visitType) === "routine-exam-new").length, 1);
+    assert.equal(preserved.name, "Practice-edited comprehensive visit");
+    assert.equal(preserved.active, false);
+    assert.equal(preserved.extension?.find((extension) => extension.url.endsWith("odos-visit-duration"))?.valuePositiveInt, 45);
+
+    const secondRun = await runSetupPractice({ adapter, config, skipInteractiveBoundaryCheck: true });
+
+    assert.equal(secondRun.noOp, true);
+    assert.equal(adapter.visitTypes.length, 10);
+    assert.equal(preserved.name, "Practice-edited comprehensive visit");
+    assert.equal(preserved.active, false);
+    assert.equal(secondRun.auditRows.length, 1);
+    assert.equal(secondRun.auditRows[0]?.eventType, "noop");
+  } finally {
+    rmSync(dir, { force: true, recursive: true });
+  }
+});
+
 test("setup reuses a pre-existing canonical Provider policy while creating Staff and Admin", async () => {
   const dir = mkdtempSync(join(tmpdir(), "odos-setup-wizard-existing-policy-"));
   try {
@@ -264,6 +353,8 @@ test("setup reuses a pre-existing canonical Provider policy while creating Staff
       "Organization",
       "Location",
       "Schedule",
+      "Basic",
+      ...Array.from({ length: 10 }, () => "HealthcareService"),
       "Basic",
       "AccessPolicy",
       "AccessPolicy",
@@ -429,8 +520,17 @@ test("scheduling provisioning is not committed until both create audits succeed 
     ) {
       const schedule = this.schedules[0];
       const practiceConfig = this.schedulingConfigs[0];
-      if (schedule && practiceConfig) {
-        return { schedule, scheduleCreated: false, practiceConfig, practiceConfigCreated: false };
+      const visitTypeConfig = this.visitTypeConfigs[0];
+      if (schedule && practiceConfig && visitTypeConfig && this.visitTypes.length > 0) {
+        return {
+          schedule,
+          scheduleCreated: false,
+          practiceConfig,
+          practiceConfigCreated: false,
+          visitTypes: this.visitTypes.map((resource) => ({ resource, created: false })),
+          visitTypeConfig,
+          visitTypeConfigCreated: false,
+        };
       }
       return super.createSchedulingFoundation(input);
     }
@@ -475,7 +575,16 @@ test("scheduling provisioning is not committed until both create audits succeed 
     assert.equal(adapter.schedules.length, 1);
     assert.equal(adapter.schedulingConfigs.length, 1);
     assert.equal(adapter.auditRows.filter((row) => row.resourceType === "Schedule" && row.eventType === "create").length, 2);
-    assert.equal(adapter.auditRows.filter((row) => row.resourceType === "Basic" && row.eventType === "create").length, 1);
+    assert.equal(adapter.auditRows.filter((row) =>
+      row.resourceType === "Basic"
+      && row.resourceId === "scheduling-config-1"
+      && row.eventType === "create"
+    ).length, 1);
+    assert.equal(adapter.auditRows.filter((row) =>
+      row.resourceType === "Basic"
+      && row.resourceId === "visit-type-config-1"
+      && row.eventType === "create"
+    ).length, 1);
   } finally {
     rmSync(dir, { force: true, recursive: true });
   }

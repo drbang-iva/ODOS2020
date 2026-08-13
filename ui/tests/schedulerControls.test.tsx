@@ -345,6 +345,43 @@ test("Columns groups current resources, updates Day and Week, restores all, and 
   }
 });
 
+test("the empty visit-type state points only practice admins to Visit Type Settings", async () => {
+  const originalState = useSchedulingStore.getState();
+  let adminRenderer!: ReactTestRenderer;
+  let staffRenderer!: ReactTestRenderer;
+  try {
+    useSchedulingStore.setState({
+      ...originalState,
+      clinicMode: "eyecare",
+      view: "day",
+      date: "2026-07-14",
+      resources: SCHEDULER_RESOURCES,
+      visitTypes: [],
+      appointments: [],
+      appointmentsByDay: {},
+      catalogsLoaded: true,
+      loading: false,
+      error: null,
+      loadDay: async () => undefined,
+      loadWindow: async () => undefined,
+    });
+    await act(async () => {
+      adminRenderer = create(<SchedulerDayGrid roles={["admin"]} />);
+      staffRenderer = create(<SchedulerDayGrid roles={["staff"]} />);
+      await Promise.resolve();
+    });
+
+    const adminLink = adminRenderer.root.findByProps({ href: "/settings/visit-types" });
+    assert.match(testInstanceText(adminLink), /Manage visit types/);
+    assert.equal(staffRenderer.root.findAllByProps({ href: "/settings/visit-types" }).length, 0);
+    assert.match(testInstanceText(staffRenderer.root), /No active visit types/);
+  } finally {
+    adminRenderer?.unmount();
+    staffRenderer?.unmount();
+    useSchedulingStore.setState(originalState, true);
+  }
+});
+
 test("blocked-time selected resources preserve schedule references through OdosChips", () => {
   let renderer!: ReactTestRenderer;
   act(() => {
