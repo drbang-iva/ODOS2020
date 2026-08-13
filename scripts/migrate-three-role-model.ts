@@ -12,6 +12,7 @@ import {
 } from "../mcp/src/authz/roles.js";
 import { createOperatorScriptFhirClient, type MedplumClient } from "../mcp/src/fhir-client.js";
 import { searchAll } from "../mcp/src/fhir-search.js";
+import { loginForLocalRepair } from "./repair-practice-roles.js";
 import { assertLocalMedplumBaseUrl } from "./reseed-practice-role-tags.js";
 
 const LEGACY_ROLE_FOLD = {
@@ -56,6 +57,99 @@ export interface ThreeRoleMigrationResult {
   readonly policiesCreated: number;
   readonly membershipsChanged: number;
   readonly plan: ThreeRoleMigrationPlan;
+}
+
+export type ThreeRoleMigrationCredentialSource = "access-token" | "admin-login";
+
+export async function resolveThreeRoleMigrationCredentials(input: {
+  readonly baseUrl: string;
+  readonly accessToken?: string;
+  readonly adminEmail?: string;
+  readonly adminPassword?: string;
+  readonly login?: typeof loginForLocalRepair;
+}): Promise<{ readonly accessToken: string; readonly source: ThreeRoleMigrationCredentialSource }> {
+  const accessToken = input.accessToken?.trim();
+  if (accessToken) return { accessToken, source: "access-token" };
+
+  const email = input.adminEmail?.trim();
+  const password = input.adminPassword;
+  if (!email || !password?.trim()) {
+    throw new Error(
+      "Provide MEDPLUM_ACCESS_TOKEN, or both MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD.",
+    );
+  }
+  return {
+    accessToken: await (input.login ?? loginForLocalRepair)({
+      baseUrl: input.baseUrl,
+      email,
+      password,
+    }),
+    source: "admin-login",
+  };
+}
+
+export async function resolveThreeRoleMigrationProjectId(input: {
+  readonly explicitProjectId?: string;
+  readonly environmentProjectId?: string;
+  readonly resolveSessionProjectId: () => Promise<string>;
+}): Promise<string> {
+  const explicitProjectId = input.explicitProjectId?.trim();
+  if (explicitProjectId) return explicitProjectId;
+  const environmentProjectId = input.environmentProjectId?.trim();
+  if (environmentProjectId) return environmentProjectId;
+  return input.resolveSessionProjectId();
+}
+
+export async function resolveAuthenticatedSessionProjectId(input: {
+  readonly baseUrl: string;
+  readonly accessToken: string;
+  readonly fhir: Pick<MedplumClient, "search" | "searchUrl">;
+  readonly request?: typeof fetch;
+}): Promise<string> {
+  const response = await (input.request ?? fetch)(`${input.baseUrl.replace(/\/$/, "")}/auth/me`, {
+    headers: { Authorization: `Bearer ${input.accessToken}` },
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (!response.ok) {
+    throw new Error(
+      `Three-role migration /auth/me failed: ${response.status}. ` +
+      "Supply --project <project-id> or MEDPLUM_PROJECT_ID.",
+    );
+  }
+  const body = (await response.json()) as {
+    profile?: { resourceType?: string; id?: string; reference?: string };
+    profileReference?: string;
+  };
+  const profileReference = body.profile?.reference
+    ?? (body.profile?.resourceType && body.profile.id
+      ? `${body.profile.resourceType}/${body.profile.id}`
+      : undefined)
+    ?? body.profileReference;
+  if (!profileReference) {
+    throw new Error(
+      "Authenticated session has no profile reference. " +
+      "Supply --project <project-id> or MEDPLUM_PROJECT_ID.",
+    );
+  }
+
+  const memberships = (await searchAll<ProjectMembership>(
+    input.fhir,
+    "ProjectMembership",
+    { profile: profileReference, _count: "100" },
+  )).filter((membership) =>
+    membership.active !== false && membership.profile.reference === profileReference
+  );
+  const candidates = memberships.flatMap((membership) => {
+    const match = membership.project.reference?.match(/^Project\/([^/]+)$/);
+    return match ? [match[1]!] : [];
+  });
+  if (candidates.length !== 1) {
+    throw new Error(
+      `Authenticated session profile ${profileReference} found ${candidates.length} active project memberships; ` +
+      "supply --project <project-id> or MEDPLUM_PROJECT_ID.",
+    );
+  }
+  return candidates[0]!;
 }
 
 export function planThreeRoleMigration(input: {
@@ -266,13 +360,27 @@ class LiveThreeRoleMigrationAdapter implements ThreeRoleMigrationAdapter {
 async function runCli(): Promise<void> {
   const args = new Set(process.argv.slice(2));
   const apply = args.has("--apply");
-  const projectId = argumentValue("--project") ?? requiredEnv("MEDPLUM_PROJECT_ID");
   const baseUrl = (process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103").replace(/\/$/, "");
   assertLocalMedplumBaseUrl(baseUrl);
+  const credentials = await resolveThreeRoleMigrationCredentials({
+    baseUrl,
+    accessToken: process.env.MEDPLUM_ACCESS_TOKEN,
+    adminEmail: process.env.MEDPLUM_ADMIN_EMAIL,
+    adminPassword: process.env.MEDPLUM_ADMIN_PASSWORD,
+  });
   const fhir = createOperatorScriptFhirClient({
     baseUrl,
-    accessToken: requiredEnv("MEDPLUM_ACCESS_TOKEN"),
+    accessToken: credentials.accessToken,
     reason: "Operator three-role migration runs outside request handling.",
+  });
+  const projectId = await resolveThreeRoleMigrationProjectId({
+    explicitProjectId: argumentValue("--project"),
+    environmentProjectId: process.env.MEDPLUM_PROJECT_ID,
+    resolveSessionProjectId: () => resolveAuthenticatedSessionProjectId({
+      baseUrl,
+      accessToken: credentials.accessToken,
+      fhir,
+    }),
   });
   const result = await executeThreeRoleMigration(new LiveThreeRoleMigrationAdapter(fhir), { projectId, apply });
   console.log(JSON.stringify({
@@ -288,12 +396,6 @@ async function runCli(): Promise<void> {
 function argumentValue(name: string): string | undefined {
   const index = process.argv.indexOf(name);
   return index >= 0 ? process.argv[index + 1] : undefined;
-}
-
-function requiredEnv(name: string): string {
-  const value = process.env[name]?.trim();
-  if (!value) throw new Error(`${name} is required.`);
-  return value;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
