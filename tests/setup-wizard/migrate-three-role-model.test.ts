@@ -139,7 +139,7 @@ test("migration credentials reuse the admin PKCE login when no access token exis
   const result = await resolveThreeRoleMigrationCredentials({
     baseUrl: "http://localhost:8103",
     adminEmail: " admin@example.test ",
-    adminPassword: " not-a-real-password ",
+    adminPassword: " padded-password ",
     login: async (input) => {
       calls.push(input);
       return "session-token";
@@ -149,7 +149,7 @@ test("migration credentials reuse the admin PKCE login when no access token exis
   assert.deepEqual(calls, [{
     baseUrl: "http://localhost:8103",
     email: "admin@example.test",
-    password: "not-a-real-password",
+    password: " padded-password ",
   }]);
   assert.deepEqual(result, { accessToken: "session-token", source: "admin-login" });
 });

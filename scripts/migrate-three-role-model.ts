@@ -72,8 +72,8 @@ export async function resolveThreeRoleMigrationCredentials(input: {
   if (accessToken) return { accessToken, source: "access-token" };
 
   const email = input.adminEmail?.trim();
-  const password = input.adminPassword?.trim();
-  if (!email || !password) {
+  const password = input.adminPassword;
+  if (!email || !password?.trim()) {
     throw new Error(
       "Provide MEDPLUM_ACCESS_TOKEN, or both MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD.",
     );
