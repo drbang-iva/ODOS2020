@@ -1,5 +1,9 @@
-import type { AccessPolicy, ProjectMembership, User } from "@medplum/fhirtypes";
-import type { MedplumClient } from "../fhir-client.js";
+import type { AccessPolicy, Project, ProjectMembership, Reference, User } from "@medplum/fhirtypes";
+import {
+  createStaffRouteFhirClient,
+  type FhirAuditRecorder,
+  type MedplumClient,
+} from "../fhir-client.js";
 import {
   ODOS_PRACTICE_ROLE_SYSTEM,
   PRACTICE_ROLE_IDS,
@@ -127,12 +131,22 @@ export interface ResolvedStaffRoles {
   staffReference: string;
   email: string;
   roles: PracticeRoleId[];
+  project: Reference<Project>;
 }
 
 export class StaffRoleServiceUnavailableError extends Error {
   constructor(cause: unknown) {
     super("Staff role service is temporarily unavailable.", { cause });
     this.name = "StaffRoleServiceUnavailableError";
+  }
+}
+
+export class AmbiguousStaffMembershipError extends Error {
+  constructor(staffReference: string, membershipCount: number) {
+    super(
+      `Staff provisioning fault: ${staffReference} has ${membershipCount} active project memberships; exactly one is required.`,
+    );
+    this.name = "AmbiguousStaffMembershipError";
   }
 }
 
@@ -164,24 +178,65 @@ export async function resolveStaffRoles(opts: {
   }
 }
 
+export async function authenticateStaffRoute(opts: {
+  baseUrl: string;
+  authHeader: string | undefined;
+  serviceClient: Pick<MedplumClient, "search" | "read">;
+  audit: FhirAuditRecorder;
+  fetchImpl?: typeof fetch;
+}): Promise<{
+  staffReference: string;
+  project: Reference<Project>;
+  actorRole: PracticeRoleId;
+  roles: PracticeRoleId[];
+  fhir: MedplumClient;
+  binaryAuth: { baseUrl: string; accessToken: string };
+} | null> {
+  const resolved = await resolveStaffRoles(opts);
+  const actorRole = resolved?.roles[0];
+  if (!resolved || !actorRole || !opts.authHeader) return null;
+  return {
+    staffReference: resolved.staffReference,
+    project: resolved.project,
+    actorRole,
+    roles: resolved.roles,
+    fhir: createStaffRouteFhirClient({
+      baseUrl: opts.baseUrl,
+      accessToken: opts.authHeader.slice("Bearer ".length),
+      audit: opts.audit,
+      staffReference: resolved.staffReference,
+      actorRole,
+    }),
+    binaryAuth: {
+      baseUrl: opts.baseUrl,
+      accessToken: opts.authHeader.slice("Bearer ".length),
+    },
+  };
+}
+
 async function resolveRolesWithServiceClient(
   serviceClient: Pick<MedplumClient, "search" | "read">,
   verified: VerifiedStaffToken,
-): Promise<ResolvedStaffRoles> {
+): Promise<ResolvedStaffRoles | null> {
   const memberships = await serviceClient.search<ProjectMembership>("ProjectMembership", {
     profile: verified.staffReference,
   });
-  const policyIds = new Set<string>();
-  for (const entry of memberships.entry ?? []) {
-    const membership = entry.resource;
-    if (!membership) continue;
-    for (const access of membership.access ?? []) {
-      const id = access.policy.reference?.match(/^AccessPolicy\/([^/]+)$/)?.[1];
-      if (id) policyIds.add(id);
-    }
-    const legacyId = membership.accessPolicy?.reference?.match(/^AccessPolicy\/([^/]+)$/)?.[1];
-    if (legacyId) policyIds.add(legacyId);
+  const activeMemberships = (memberships.entry ?? [])
+    .map((entry) => entry.resource)
+    .filter((membership): membership is ProjectMembership => Boolean(membership && membership.active !== false));
+  if (activeMemberships.length === 0) return null;
+  if (activeMemberships.length > 1) {
+    throw new AmbiguousStaffMembershipError(verified.staffReference, activeMemberships.length);
   }
+  const membership = activeMemberships[0]!;
+  if (!membership.project.reference?.match(/^Project\/[^/]+$/)) return null;
+  const policyIds = new Set<string>();
+  for (const access of membership.access ?? []) {
+    const id = access.policy.reference?.match(/^AccessPolicy\/([^/]+)$/)?.[1];
+    if (id) policyIds.add(id);
+  }
+  const legacyId = membership.accessPolicy?.reference?.match(/^AccessPolicy\/([^/]+)$/)?.[1];
+  if (legacyId) policyIds.add(legacyId);
 
   const found = new Set<PracticeRoleId>();
   for (const policyId of policyIds) {
@@ -204,13 +259,18 @@ async function resolveRolesWithServiceClient(
   }
   const roles = PRACTICE_ROLE_IDS.filter((role) => found.has(role));
   const userReference = verified.userReference ??
-    memberships.entry?.map((entry) => entry.resource?.user.reference).find(Boolean);
+    membership.user.reference;
   let email = verified.email;
   const userId = userReference?.match(/^User\/([^/]+)$/)?.[1];
   if (!email && userId) {
     email = (await serviceClient.read<User>("User", userId)).email;
   }
-  return { staffReference: verified.staffReference, email: email ?? "unknown", roles };
+  return {
+    staffReference: verified.staffReference,
+    email: email ?? "unknown",
+    roles,
+    project: membership.project,
+  };
 }
 
 function isUnauthorizedServiceError(error: unknown): boolean {
