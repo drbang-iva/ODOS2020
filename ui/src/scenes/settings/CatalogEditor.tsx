@@ -119,7 +119,7 @@ export function CatalogScene({
       onCommitted?.(saved);
       setToast("Settings saved successfully.");
     } catch (commitError) {
-      setError(errorMessage(commitError));
+      setError(`Could not save practice settings. ${errorMessage(commitError)}`);
     } finally {
       setSaving(false);
     }
@@ -141,7 +141,7 @@ export function CatalogScene({
             <h1 className="text-2xl font-semibold">{title}</h1>
           </header>
           {error && (
-            <div role="alert" className="mb-4 border border-red-400/40 bg-red-950/50 px-4 py-3 text-sm text-red-100">
+            <div aria-hidden="true" className="mb-4 border border-red-400/40 bg-red-950/50 px-4 py-3 text-sm text-red-100">
               {error}
             </div>
           )}
@@ -149,8 +149,16 @@ export function CatalogScene({
         </div>
 
         {transaction?.dirty && canWrite && (
-          <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-end gap-2 border-t border-white/15 bg-[#10111c] px-6 py-3 shadow-2xl">
+          <div
+            className="odos-bottom-action-bar fixed inset-x-0 bottom-0 flex flex-wrap items-center justify-end gap-2 border-t border-white/15 bg-[#10111c] px-6 py-3 shadow-2xl"
+            data-odos-bottom-bar=""
+          >
             <span className="mr-auto text-sm text-white/55">Unsaved settings changes</span>
+            {error && (
+              <span role="alert" className="max-w-xl text-sm text-red-200">
+                {error}
+              </span>
+            )}
             <button className="scheduler-button" type="button" disabled={saving} onClick={discardTransaction}>
               Discard
             </button>

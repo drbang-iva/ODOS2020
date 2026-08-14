@@ -19,6 +19,23 @@ export interface BuildClassification {
 const STALE_AFTER_MS = 12 * 60 * 60 * 1000;
 const FULL_SHA = /^[0-9a-f]{40}$/i;
 const SHORT_SHA = /^[0-9a-f]{7,8}$/i;
+const BUILD_STAMP_GAP_PX = 12;
+
+type HorizontalRect = Pick<DOMRect, "left" | "right">;
+type BottomObstacleRect = Pick<DOMRect, "left" | "right" | "top" | "bottom">;
+
+export function buildStampBottomOffset(
+  stamp: HorizontalRect,
+  obstacles: readonly BottomObstacleRect[],
+  viewportHeight: number,
+  restingBottom = BUILD_STAMP_GAP_PX,
+): number {
+  return obstacles.reduce((offset, obstacle) => {
+    const overlapsHorizontally = stamp.left < obstacle.right && stamp.right > obstacle.left;
+    if (!overlapsHorizontally || obstacle.bottom <= obstacle.top) return offset;
+    return Math.max(offset, viewportHeight - obstacle.top + BUILD_STAMP_GAP_PX);
+  }, restingBottom);
+}
 
 function isIsoDate(value: unknown): value is string {
   return typeof value === "string" && /^\d{4}-\d{2}-\d{2}T/.test(value) && Number.isFinite(Date.parse(value));
@@ -83,12 +100,39 @@ async function readDeployedVersion(fetcher: typeof fetch): Promise<DeployedVersi
   }
 }
 
+function keepBuildStampClear(root: HTMLElement): void {
+  const update = () => {
+    const obstacles = Array.from(document.querySelectorAll<HTMLElement>("[data-odos-bottom-bar]"));
+    root.style.bottom = `${buildStampBottomOffset(
+      root.getBoundingClientRect(),
+      obstacles.map((obstacle) => obstacle.getBoundingClientRect()),
+      window.innerHeight,
+    )}px`;
+  };
+  const observed = new Set<HTMLElement>();
+  const resizeObserver = new ResizeObserver(update);
+  const syncObstacles = () => {
+    for (const obstacle of document.querySelectorAll<HTMLElement>("[data-odos-bottom-bar]")) {
+      if (observed.has(obstacle)) continue;
+      observed.add(obstacle);
+      resizeObserver.observe(obstacle);
+    }
+    update();
+  };
+
+  resizeObserver.observe(root);
+  new MutationObserver(syncObstacles).observe(document.body, { childList: true, subtree: true });
+  window.addEventListener("resize", update);
+  syncObstacles();
+}
+
 export async function enhanceBuildStamp(
   root = document.getElementById("odos-build-stamp"),
   fetcher: typeof fetch = fetch,
   now = new Date(),
 ): Promise<void> {
   if (!root) return;
+  keepBuildStampClear(root);
 
   const built: BuildStampVersion = {
     sha: root.dataset.buildSha || "unknown",

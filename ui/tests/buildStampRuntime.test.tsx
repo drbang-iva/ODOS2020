@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { classifyBuild, parseDeployedVersion, type BuildStampVersion } from "../src/build-stamp";
+import {
+  buildStampBottomOffset,
+  classifyBuild,
+  parseDeployedVersion,
+  type BuildStampVersion,
+} from "../src/build-stamp";
 
 const BUILT_SHA = "1111111111111111111111111111111111111111";
 const OTHER_SHA = "2222222222222222222222222222222222222222";
@@ -59,4 +64,13 @@ test("unknown built SHA warns without claiming stale or current", (t) => {
 
   t.diagnostic(`signal=${result.signal} state=${result.state}`);
   assert.deepEqual(result, { state: "unknown", signal: "unknown-sha" });
+});
+
+test("build stamp clears overlapping bottom bars but ignores a left-side pinned panel", () => {
+  const stamp = { left: 920, right: 1188 };
+  const saveBar = { left: 0, right: 1200, top: 724, bottom: 800 };
+  const leftPanel = { left: 0, right: 384, top: 0, bottom: 800 };
+
+  assert.equal(buildStampBottomOffset(stamp, [saveBar], 800), 88);
+  assert.equal(buildStampBottomOffset(stamp, [leftPanel], 800), 12);
 });
