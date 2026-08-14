@@ -96,13 +96,15 @@ type BasicWriter = {
 export interface CatalogDraftTransaction {
   readonly dirty: boolean;
   commit(): Promise<Basic | undefined>;
-  discard(): void;
+  discard(): Awaitable<string | void>;
 }
 
 export interface SingletonConfigDraft<Config extends object> extends CatalogDraftTransaction {
   readonly configKey: string;
+  baseline(): Config;
   current(): Config;
   replace(config: Config): void;
+  reset(config: Config, resource?: Basic): void;
 }
 
 export function createSingletonConfigDraft<Config extends object>({
@@ -129,11 +131,19 @@ export function createSingletonConfigDraft<Config extends object>({
     get dirty() {
       return JSON.stringify(draft) !== JSON.stringify(persisted);
     },
+    baseline() {
+      return clone(persisted);
+    },
     current() {
       return clone(draft);
     },
     replace(next) {
       draft = clone(next);
+    },
+    reset(next, nextResource) {
+      persisted = clone(next);
+      draft = clone(next);
+      currentResource = nextResource ? clone(nextResource) : undefined;
     },
     async commit() {
       const built = buildResource(clone(draft), currentResource);

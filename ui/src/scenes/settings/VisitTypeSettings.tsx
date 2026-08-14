@@ -23,6 +23,7 @@ import {
   visitTypeCategoryRows,
   type VisitTypeCatalogItem,
   type VisitTypeCategoryRow,
+  type VisitTypeDraftOperation,
 } from "../../lib/visit-type-settings";
 import {
   DEFAULT_VISIT_TYPE_CATEGORIES,
@@ -159,8 +160,18 @@ export function VisitTypeSettingsReady({
     [draft, stagedVisitTypeAdapter],
   );
   const transaction = useMemo(
-    () => createVisitTypeSettingsTransaction(draft, stagedVisitTypeAdapter),
-    [draft, stagedVisitTypeAdapter],
+    () => createVisitTypeSettingsTransaction(
+      draft,
+      stagedVisitTypeAdapter,
+      async () => {
+        const [authoritativeConfig, authoritativeVisitTypes] = await Promise.all([
+          loadVisitTypeConfigSingleton(client),
+          visitTypeResourceAdapter.list(),
+        ]);
+        return { ...authoritativeConfig, visitTypes: authoritativeVisitTypes };
+      },
+    ),
+    [client, draft, stagedVisitTypeAdapter, visitTypeResourceAdapter],
   );
 
   const categories = visitTypeCategoryRows(draft.current());
@@ -328,39 +339,101 @@ export function VisitTypeSettingsReady({
   );
 }
 
-function createVisitTypeSettingsTransaction(
+export function createVisitTypeSettingsTransaction(
   categoryDraft: ReturnType<typeof createSingletonConfigDraft<PersistedVisitTypeConfig>>,
   visitTypeDraft: ReturnType<typeof createStagedVisitTypeAdapter>,
+  reloadAuthoritative?: () => Promise<LoadedVisitTypeSettings & { visitTypes: VisitTypeCatalogItem[] }>,
 ): CatalogDraftTransaction {
+  let authoritativeReloadRequired = false;
+
   return {
     get dirty() {
-      return categoryDraft.dirty || visitTypeDraft.dirty;
+      return authoritativeReloadRequired || categoryDraft.dirty || visitTypeDraft.dirty;
     },
     async commit() {
       let savedCategory: Basic | undefined;
+      const deactivatedCategoryIds = categoriesChangingToInactive(
+        categoryDraft.baseline(),
+        categoryDraft.current(),
+      );
+      const pendingVisitTypes = await visitTypeDraft.pendingOperations();
+      const preCategoryVisitTypeCodes = new Set(
+        pendingVisitTypes
+          .filter((operation) => visitTypeMustCommitBeforeCategory(operation, deactivatedCategoryIds))
+          .map((operation) => operation.code),
+      );
+      if (preCategoryVisitTypeCodes.size > 0) {
+        try {
+          await visitTypeDraft.commitMatching((operation) => preCategoryVisitTypeCodes.has(operation.code));
+        } catch (error) {
+          authoritativeReloadRequired = true;
+          throw new Error(
+            `Visit type changes required before category deactivation were not completed. ` +
+            `Category settings were not saved. ${errorMessage(error)}`,
+          );
+        }
+      }
       if (categoryDraft.dirty) {
         try {
           savedCategory = await categoryDraft.commit();
         } catch (error) {
+          authoritativeReloadRequired = true;
           throw new Error(
-            `Category settings were not saved. Visit type changes were not attempted. ${errorMessage(error)}`,
+            `${preCategoryVisitTypeCodes.size > 0
+              ? "Required visit type changes were saved. Category settings were not saved. Remaining visit type changes were not attempted."
+              : "Category settings were not saved. Visit type changes were not attempted."} ${errorMessage(error)}`,
           );
         }
       }
       try {
         await visitTypeDraft.commit();
       } catch (error) {
+        authoritativeReloadRequired = true;
         throw new Error(
           `${savedCategory ? "Category settings saved. " : ""}${errorMessage(error)}`,
         );
       }
+      authoritativeReloadRequired = false;
       return savedCategory;
     },
-    discard() {
+    async discard() {
+      if (authoritativeReloadRequired) {
+        if (!reloadAuthoritative) {
+          throw new Error("Authoritative server reload is required before this draft can be discarded.");
+        }
+        const authoritative = await reloadAuthoritative();
+        categoryDraft.reset(authoritative.config, authoritative.configResource);
+        visitTypeDraft.reset(authoritative.visitTypes);
+        authoritativeReloadRequired = false;
+        return "Draft cleared and server state reloaded. Changes applied before the failure remain saved.";
+      }
       categoryDraft.discard();
       visitTypeDraft.discard();
     },
   };
+}
+
+function categoriesChangingToInactive(
+  baseline: PersistedVisitTypeConfig,
+  current: PersistedVisitTypeConfig,
+): Set<string> {
+  const currentById = new Map(current.categories.map((category) => [category.id, category]));
+  return new Set(
+    baseline.categories
+      .filter((category) => category.active !== false)
+      .filter((category) => currentById.get(category.id)?.active === false || !currentById.has(category.id))
+      .map((category) => category.id),
+  );
+}
+
+function visitTypeMustCommitBeforeCategory(
+  operation: VisitTypeDraftOperation,
+  deactivatedCategoryIds: ReadonlySet<string>,
+): boolean {
+  const previousCategory = operation.previous?.categoryCode;
+  return operation.previous?.active !== false
+    && Boolean(previousCategory && deactivatedCategoryIds.has(previousCategory))
+    && (operation.item.active === false || operation.item.categoryCode !== previousCategory);
 }
 
 function createVisitTypeEditorAdapter(

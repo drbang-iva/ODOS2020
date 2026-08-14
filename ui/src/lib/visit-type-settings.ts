@@ -50,8 +50,18 @@ export type VisitTypeCatalogItem = {
 export interface StagedVisitTypeAdapter extends CatalogAdapter<VisitTypeCatalogItem> {
   readonly dirty: boolean;
   commit(): Promise<void>;
+  commitMatching(predicate: (operation: VisitTypeDraftOperation) => boolean): Promise<void>;
+  pendingOperations(): Promise<VisitTypeDraftOperation[]>;
   discard(): void;
+  reset(items: readonly VisitTypeCatalogItem[]): void;
 }
+
+export type VisitTypeDraftOperation = {
+  code: string;
+  item: VisitTypeCatalogItem;
+  previous?: VisitTypeCatalogItem;
+  deactivate: boolean;
+};
 
 type VisitTypeResourceClient = FhirSearchClient & {
   create<T extends Resource>(resource: T, sourceTag: string): Promise<T>;
@@ -158,7 +168,6 @@ export function createStagedVisitTypeAdapter(
   let persisted = cloneItems(initialItems ?? []);
   let draft = cloneItems(initialItems ?? []);
   let reconciliationRequired = false;
-  const deactivations = new Set<string>();
 
   async function ensureLoaded(): Promise<void> {
     if (loaded) return;
@@ -167,13 +176,18 @@ export function createStagedVisitTypeAdapter(
     loaded = true;
   }
 
-  function pending() {
+  function pending(): VisitTypeDraftOperation[] {
     const persistedByCode = new Map(persisted.map((item) => [stableVisitTypeCode(item), item]));
     return draft.flatMap((item) => {
       const code = stableVisitTypeCode(item);
       const previous = persistedByCode.get(code);
       if (previous && sameVisitTypeSettings(previous, item)) return [];
-      return [{ code, item, deactivate: deactivations.has(code) }];
+      return [{
+        code,
+        item: cloneItem(item),
+        ...(previous ? { previous: cloneItem(previous) } : {}),
+        deactivate: item.active === false && previous?.active !== false,
+      }];
     });
   }
 
@@ -193,7 +207,57 @@ export function createStagedVisitTypeAdapter(
       if (!saved) continue;
       replaceByCode(persisted, code, saved);
       replaceByCode(draft, code, saved);
-      deactivations.delete(code);
+    }
+  }
+
+  async function commitOperations(
+    predicate: (operation: VisitTypeDraftOperation) => boolean,
+  ): Promise<void> {
+    await ensureLoaded();
+    if (reconciliationRequired) {
+      try {
+        await reconcileAppliedWrites();
+        reconciliationRequired = false;
+      } catch (error) {
+        throw new Error(
+          `Visit type retry was stopped before any writes because the prior outcome still could not be verified. ${errorMessage(error)}`,
+        );
+      }
+    }
+    const operations = pending().filter(predicate);
+    const operationCodes = new Set(operations.map((operation) => operation.code));
+    const total = operations.length;
+    for (const operation of operations) {
+      try {
+        const saved = await adapter.save(operation.item);
+        replaceByCode(persisted, operation.code, saved);
+        replaceByCode(draft, operation.code, saved);
+      } catch (error) {
+        try {
+          await reconcileAppliedWrites();
+        } catch {
+          reconciliationRequired = true;
+          const applied = total - pending().filter((candidate) => operationCodes.has(candidate.code)).length;
+          throw new Error(
+            `Visit type save failed after ${applied} of ${total} changes were confirmed. ` +
+            `The state of "${operation.item.label}" could not be verified; reload before retrying. ${errorMessage(error)}`,
+          );
+        }
+        const remainingOperations = pending().filter((candidate) => operationCodes.has(candidate.code));
+        const remaining = remainingOperations.length;
+        const applied = total - remaining;
+        const failedStillPending = remainingOperations.some(
+          (candidate) => candidate.code === operation.code,
+        );
+        const boundary = failedStillPending
+          ? `"${operation.item.label}" failed; ${remaining - 1} ${remaining - 1 === 1 ? "change was" : "changes were"} not attempted.`
+          : `Read-back confirmed "${operation.item.label}" was applied; ${remaining} ${remaining === 1 ? "change was" : "changes were"} not attempted.`;
+        throw new Error(
+          `Visit type save failed after ${applied} of ${total} changes were applied. ` +
+          `${boundary} ` +
+          `Re-run Save; already-applied visit types will not be written again. ${errorMessage(error)}`,
+        );
+      }
     }
   }
 
@@ -215,7 +279,6 @@ export function createStagedVisitTypeAdapter(
         code,
       };
       replaceByCode(draft, code, staged);
-      deactivations.delete(code);
       return cloneItem(staged);
     },
     async deactivate(item) {
@@ -223,62 +286,26 @@ export function createStagedVisitTypeAdapter(
       const code = stableVisitTypeCode(item);
       const staged = { ...cloneItem(item), active: false };
       replaceByCode(draft, code, staged);
-      deactivations.add(code);
       return cloneItem(staged);
     },
     async commit() {
+      await commitOperations(() => true);
+    },
+    async commitMatching(predicate) {
+      await commitOperations(predicate);
+    },
+    async pendingOperations() {
       await ensureLoaded();
-      if (reconciliationRequired) {
-        try {
-          await reconcileAppliedWrites();
-          reconciliationRequired = false;
-        } catch (error) {
-          throw new Error(
-            `Visit type retry was stopped before any writes because the prior outcome still could not be verified. ${errorMessage(error)}`,
-          );
-        }
-      }
-      const operations = pending();
-      const total = operations.length;
-      for (const operation of operations) {
-        try {
-          const saved = operation.deactivate
-            ? await adapter.deactivate(operation.item)
-            : await adapter.save(operation.item);
-          replaceByCode(persisted, operation.code, saved);
-          replaceByCode(draft, operation.code, saved);
-          deactivations.delete(operation.code);
-        } catch (error) {
-          try {
-            await reconcileAppliedWrites();
-          } catch {
-            reconciliationRequired = true;
-            const applied = total - pending().length;
-            throw new Error(
-              `Visit type save failed after ${applied} of ${total} changes were confirmed. ` +
-              `The state of "${operation.item.label}" could not be verified; reload before retrying. ${errorMessage(error)}`,
-            );
-          }
-          const remainingOperations = pending();
-          const remaining = remainingOperations.length;
-          const applied = total - remaining;
-          const failedStillPending = remainingOperations.some(
-            (candidate) => candidate.code === operation.code,
-          );
-          const boundary = failedStillPending
-            ? `"${operation.item.label}" failed; ${remaining - 1} ${remaining - 1 === 1 ? "change was" : "changes were"} not attempted.`
-            : `Read-back confirmed "${operation.item.label}" was applied; ${remaining} ${remaining === 1 ? "change was" : "changes were"} not attempted.`;
-          throw new Error(
-            `Visit type save failed after ${applied} of ${total} changes were applied. ` +
-            `${boundary} ` +
-            `Re-run Save; already-applied visit types will not be written again. ${errorMessage(error)}`,
-          );
-        }
-      }
+      return pending();
     },
     discard() {
       draft = cloneItems(persisted);
-      deactivations.clear();
+    },
+    reset(items) {
+      persisted = cloneItems(items);
+      draft = cloneItems(items);
+      reconciliationRequired = false;
+      loaded = true;
     },
   };
 }

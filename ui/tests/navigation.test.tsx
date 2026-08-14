@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   confirmPopstateNavigation,
+  initializeAppHistory,
   interceptAppNavigation,
   markProgrammaticNavigationConfirmed,
+  restoreCancelledHistoryNavigation,
   registerNavigationBlocker,
 } from "../src/lib/navigation";
 
@@ -121,4 +123,66 @@ test("browser history prompts unless the navigation was already confirmed", () =
   } finally {
     unregister();
   }
+});
+
+test("declining browser Back restores the prior index without changing the history stack", () => {
+  const entries = [
+    { state: { __odosHistoryIndex: 0 }, url: "/settings" },
+    { state: { __odosHistoryIndex: 1 }, url: "/settings/visit-types" },
+  ];
+  let index = 1;
+  let pushes = 0;
+  const history = {
+    get state() { return entries[index]?.state; },
+    get length() { return entries.length; },
+    replaceState(state: unknown, _title: string, url?: string | URL | null) {
+      entries[index] = { state: state as { __odosHistoryIndex: number }, url: String(url) };
+    },
+    pushState(state: unknown, _title: string, url?: string | URL | null) {
+      pushes += 1;
+      entries.splice(index + 1, entries.length, {
+        state: state as { __odosHistoryIndex: number },
+        url: String(url),
+      });
+      index += 1;
+    },
+    go(delta: number) { index += delta; },
+  };
+  const priorIndex = initializeAppHistory(history, "/settings/visit-types");
+  const originalLength = history.length;
+
+  index = 0;
+  assert.equal(
+    restoreCancelledHistoryNavigation(history, priorIndex, entries[index]!.state),
+    true,
+  );
+  assert.equal(index, 1);
+  assert.equal(history.length, originalLength);
+  assert.equal(pushes, 0);
+});
+
+test("declining browser Forward restores the prior index without truncating forward history", () => {
+  const entries = [
+    { state: { __odosHistoryIndex: 0 }, url: "/settings" },
+    { state: { __odosHistoryIndex: 1 }, url: "/settings/visit-types" },
+    { state: { __odosHistoryIndex: 2 }, url: "/desk" },
+  ];
+  let index = 1;
+  let pushes = 0;
+  const history = {
+    get state() { return entries[index]?.state; },
+    pushState() { pushes += 1; },
+    go(delta: number) { index += delta; },
+  };
+  const originalLength = entries.length;
+
+  index = 2;
+  assert.equal(
+    restoreCancelledHistoryNavigation(history, 1, entries[index]!.state),
+    true,
+  );
+  assert.equal(index, 1);
+  assert.equal(entries.length, originalLength);
+  assert.equal(pushes, 0);
+  assert.equal(entries[2]?.url, "/desk");
 });

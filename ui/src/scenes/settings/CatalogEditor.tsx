@@ -141,12 +141,19 @@ export function CatalogScene({
     }
   }
 
-  function discardTransaction() {
+  async function discardTransaction() {
     if (!transaction) return;
-    transaction.discard();
-    touch();
-    setError(null);
-    setToast("Draft changes discarded.");
+    setSaving(true);
+    try {
+      const notice = await transaction.discard();
+      touch();
+      setError(null);
+      setToast(notice ?? "Draft changes discarded.");
+    } catch (discardError) {
+      setError(`Could not discard practice settings. ${errorMessage(discardError)}`);
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -176,7 +183,7 @@ export function CatalogScene({
                 {error}
               </span>
             )}
-            <button className="scheduler-button" type="button" disabled={saving} onClick={discardTransaction}>
+            <button className="scheduler-button" type="button" disabled={saving} onClick={() => void discardTransaction()}>
               Discard
             </button>
             <button className="scheduler-button" type="button" disabled={saving} onClick={() => void commitTransaction()}>

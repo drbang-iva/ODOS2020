@@ -23,6 +23,7 @@ import {
 } from "../src/lib/visit-type-config";
 import {
   VisitTypeSettingsReady,
+  createVisitTypeSettingsTransaction,
   type VisitTypeSettingsClient,
 } from "../src/scenes/settings/VisitTypeSettings";
 
@@ -100,18 +101,29 @@ function emptyPracticeClient({
   failAfterPersistingVisitTypeCreate,
   failCategoryCreate = false,
   failFirstRecoverySearch = false,
+  failFirstVisitTypeUpdateAfterPersist = false,
+  initialResources = [],
 }: {
   failAfterPersistingVisitTypeCreate?: number;
   failCategoryCreate?: boolean;
   failFirstRecoverySearch?: boolean;
+  failFirstVisitTypeUpdateAfterPersist?: boolean;
+  initialResources?: Resource[];
 } = {}) {
-  const resources: Resource[] = [];
+  const resources: Resource[] = structuredClone(initialResources);
   const successfulVisitTypeCreateCodes: string[] = [];
+  const writeOrder: string[] = [];
   let visitTypeCreateCount = 0;
   let failurePending = failAfterPersistingVisitTypeCreate !== undefined;
   let recoverySearchFailurePending = failFirstRecoverySearch;
+  let visitTypeUpdateFailurePending = failFirstVisitTypeUpdateAfterPersist;
+  let forcedHealthcareServiceSearchFailures = 0;
   const client = {
     async search<T extends Resource>(resourceType: T["resourceType"]) {
+      if (resourceType === "HealthcareService" && forcedHealthcareServiceSearchFailures > 0) {
+        forcedHealthcareServiceSearchFailures -= 1;
+        throw new Error("authoritative visit type read unavailable");
+      }
       if (resourceType === "HealthcareService" && resources.length > 0 && recoverySearchFailurePending) {
         recoverySearchFailurePending = false;
         throw new Error("recovery read unavailable");
@@ -133,6 +145,9 @@ function emptyPracticeClient({
       }
       const saved = { ...resource, id: `${resource.resourceType}-${resources.length + 1}` } as T;
       resources.push(saved);
+      writeOrder.push(saved.resourceType === "Basic"
+        ? "category"
+        : `visit:${visitTypeCode(saved as HealthcareService)}:${(saved as HealthcareService).active !== false}`);
       if (saved.resourceType === "HealthcareService") {
         visitTypeCreateCount += 1;
         successfulVisitTypeCreateCodes.push(visitTypeCode(saved));
@@ -148,10 +163,23 @@ function emptyPracticeClient({
         candidate.resourceType === resource.resourceType && candidate.id === resource.id
       );
       if (index >= 0) resources[index] = resource;
+      writeOrder.push(resource.resourceType === "Basic"
+        ? "category"
+        : `visit:${visitTypeCode(resource as HealthcareService)}:${(resource as HealthcareService).active !== false}`);
+      if (resource.resourceType === "HealthcareService" && visitTypeUpdateFailurePending) {
+        visitTypeUpdateFailurePending = false;
+        throw new Error("connection dropped after the server applied this visit type");
+      }
       return resource;
     },
   };
-  return { client, resources, successfulVisitTypeCreateCodes };
+  return {
+    client,
+    resources,
+    successfulVisitTypeCreateCodes,
+    writeOrder,
+    failNextHealthcareServiceSearch() { forcedHealthcareServiceSearchFailures += 1; },
+  };
 }
 
 function button(renderer: ReactTestRenderer, label: string) {
@@ -167,6 +195,23 @@ function renderedText(node: ReactTestRenderer["root"] | ReturnType<ReactTestRend
   return node.children.map((child) =>
     typeof child === "string" ? child : renderedText(child)
   ).join("");
+}
+
+async function stageDryEyeDeactivation(renderer: ReactTestRenderer) {
+  await act(async () => {
+    button(renderer, "Deactivate").props.onClick();
+    await new Promise((resolve) => setImmediate(resolve));
+  });
+  const categoryRow = renderer.root.findAllByType("button").find((candidate) => {
+    const text = renderedText(candidate);
+    return text.includes("Dry Eye") && text.includes("dry-eye");
+  });
+  assert.ok(categoryRow, "Dry Eye category row exists");
+  act(() => categoryRow.props.onClick());
+  await act(async () => {
+    button(renderer, "Deactivate").props.onClick();
+    await new Promise((resolve) => setImmediate(resolve));
+  });
 }
 
 test("resourceCatalogAdapter lists inactive visit types across every page and fails closed without pagination support", async () => {
@@ -707,4 +752,161 @@ test("staged visit-type deactivation renders inactive immediately without a writ
   assert.match(JSON.stringify(renderer.toJSON()), /Routine Exam.*Active/);
   assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /Unsaved settings changes/);
   act(() => renderer.unmount());
+});
+
+test("mixed activation and deactivation commits dependent visit types before categories and remaining visit types after", async () => {
+  const config: PersistedVisitTypeConfig = {
+    categories: [
+      { id: "activate-a", label: "Activate A", order: 0, active: false },
+      { id: "deactivate-b", label: "Deactivate B", order: 1 },
+    ],
+  };
+  const nextConfig: PersistedVisitTypeConfig = {
+    categories: [
+      { id: "activate-a", label: "Activate A", order: 0 },
+      { id: "deactivate-b", label: "Deactivate B", order: 1, active: false },
+    ],
+  };
+  const categoryResource = { ...buildVisitTypeConfigResource(config), id: "visit-config" };
+  const visitA = visitType("visit-a", "Visit A", false, "activate-a", "Activate A");
+  const visitB = visitType("visit-b", "Visit B", true, "deactivate-b", "Deactivate B");
+  const fixture = emptyPracticeClient({ initialResources: [categoryResource, visitA, visitB] });
+  const categoryDraft = createSingletonConfigDraft({
+    configKey: "odos-visit-type-config",
+    config,
+    resource: categoryResource,
+    buildResource: buildVisitTypeConfigResource,
+    sourceTag: "visit-type-config",
+    fhirClient: fixture.client,
+  });
+  const resourceAdapter = createVisitTypeResourceAdapter(
+    fixture.client,
+    () => nextConfig.categories.map((category) => ({ ...category, active: category.active !== false })),
+  );
+  const visitDraft = createStagedVisitTypeAdapter(
+    resourceAdapter,
+    [visitTypeCatalogItem(visitA), visitTypeCatalogItem(visitB)],
+  );
+  categoryDraft.replace(nextConfig);
+  await visitDraft.deactivate(visitTypeCatalogItem(visitB));
+  await visitDraft.save({ ...visitTypeCatalogItem(visitA), active: true });
+
+  await createVisitTypeSettingsTransaction(categoryDraft, visitDraft).commit();
+
+  assert.deepEqual(fixture.writeOrder, [
+    "visit:visit-b:false",
+    "category",
+    "visit:visit-a:true",
+  ]);
+});
+
+test("partial deactivation failure never persists an inactive category with an active assigned visit type, and Discard reloads landed server state", async () => {
+  const categoryResource = { ...buildVisitTypeConfigResource(CATEGORIES), id: "visit-config" };
+  const assigned = visitType("assigned", "Assigned Visit", true, "dry-eye", "Dry Eye");
+  const fixture = emptyPracticeClient({
+    initialResources: [categoryResource, assigned],
+    failFirstVisitTypeUpdateAfterPersist: true,
+  });
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(
+      <VisitTypeSettingsReady
+        config={CATEGORIES}
+        configResource={categoryResource}
+        canWrite
+        client={fixture.client as VisitTypeSettingsClient}
+        initialVisitTypes={[assigned]}
+        initialSelectedVisitTypeId="assigned"
+      />,
+    );
+    await new Promise((resolve) => setImmediate(resolve));
+  });
+  await stageDryEyeDeactivation(renderer);
+  await act(async () => {
+    button(renderer, "Save").props.onClick();
+    await new Promise((resolve) => setImmediate(resolve));
+  });
+
+  const serverCategory = fixture.resources.find((resource) => resource.resourceType === "Basic") as Basic;
+  const serverVisit = fixture.resources.find((resource) => resource.resourceType === "HealthcareService") as HealthcareService;
+  const serverConfig = JSON.parse(serverCategory.extension?.[0]?.valueString ?? "{}");
+  const inactiveCategoryIds = new Set(
+    serverConfig.categories.filter((category: { active?: boolean }) => category.active === false)
+      .map((category: { id: string }) => category.id),
+  );
+  assert.equal(
+    serverVisit.active !== false && inactiveCategoryIds.has("dry-eye"),
+    false,
+    "the induced failure cannot leave an active visit type referencing an inactive category",
+  );
+  assert.deepEqual(fixture.writeOrder, ["visit:assigned:false"]);
+  assert.match(JSON.stringify(renderer.toJSON()), /Unsaved settings changes/);
+
+  await act(async () => {
+    button(renderer, "Discard").props.onClick();
+    await new Promise((resolve) => setImmediate(resolve));
+  });
+  const rendered = JSON.stringify(renderer.toJSON());
+  assert.match(rendered, /changes applied before the failure remain saved/i);
+  assert.match(rendered, /Inactive · expand/);
+  assert.doesNotMatch(rendered, /Unsaved settings changes/);
+  act(() => renderer.unmount());
+});
+
+test("failed authoritative Discard after a partial save reports the read failure and remains dirty", async () => {
+  const categoryResource = { ...buildVisitTypeConfigResource(CATEGORIES), id: "visit-config" };
+  const assigned = visitType("assigned", "Assigned Visit", true, "dry-eye", "Dry Eye");
+  const fixture = emptyPracticeClient({
+    initialResources: [categoryResource, assigned],
+    failFirstVisitTypeUpdateAfterPersist: true,
+  });
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(
+      <VisitTypeSettingsReady
+        config={CATEGORIES}
+        configResource={categoryResource}
+        canWrite
+        client={fixture.client as VisitTypeSettingsClient}
+        initialVisitTypes={[assigned]}
+        initialSelectedVisitTypeId="assigned"
+      />,
+    );
+    await new Promise((resolve) => setImmediate(resolve));
+  });
+  await stageDryEyeDeactivation(renderer);
+  await act(async () => {
+    button(renderer, "Save").props.onClick();
+    await new Promise((resolve) => setImmediate(resolve));
+  });
+  fixture.failNextHealthcareServiceSearch();
+  await act(async () => {
+    button(renderer, "Discard").props.onClick();
+    await new Promise((resolve) => setImmediate(resolve));
+  });
+
+  const rendered = JSON.stringify(renderer.toJSON());
+  assert.match(rendered, /Could not discard practice settings/);
+  assert.match(rendered, /authoritative visit type read unavailable/);
+  assert.match(rendered, /Unsaved settings changes/);
+  act(() => renderer.unmount());
+});
+
+test("deactivating an edited visit type commits the full staged draft instead of the original fields", async () => {
+  const original = visitType("routine", "Routine Exam", true, "comprehensive", "Comprehensive");
+  const fixture = resourceClient([[original]]);
+  const staged = createStagedVisitTypeAdapter(
+    createVisitTypeResourceAdapter(fixture.client, () => [
+      { id: "comprehensive", label: "Comprehensive", order: 0, active: true },
+    ]),
+    [visitTypeCatalogItem(original)],
+  );
+  const edited = { ...visitTypeCatalogItem(original), label: "Edited Routine", durationMinutes: 45 };
+  await staged.save(edited);
+  await staged.deactivate(edited);
+  await staged.commit();
+
+  assert.equal(fixture.writes[0]?.resource.name, "Edited Routine");
+  assert.equal(visitTypeDurationMinutes(fixture.writes[0]!.resource), 45);
+  assert.equal(fixture.writes[0]?.resource.active, false);
 });
