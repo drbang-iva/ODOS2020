@@ -100,6 +100,7 @@ export function App({
     historyIndex.current = initializeAppHistory(
       window.history,
       `${window.location.pathname}${window.location.search ?? ""}${window.location.hash ?? ""}`,
+      currentNavigationEntryIndex(),
     );
   }
   const initialPath = useRef(window.location.pathname);
@@ -117,12 +118,16 @@ export function App({
           return;
         }
         if (!confirmPopstateNavigation()) {
-          restoringCancelledNavigation.current = restoreCancelledHistoryNavigation(
+          const restoring = restoreCancelledHistoryNavigation(
             window.history,
             historyIndex.current ?? 0,
             targetState,
+            currentNavigationEntryIndex(),
           );
-          return;
+          if (restoring) {
+            restoringCancelledNavigation.current = true;
+            return;
+          }
         }
         historyIndex.current = appHistoryIndex(targetState) ?? historyIndex.current;
       } else {
@@ -297,6 +302,14 @@ export function openOtherSide(path: typeof CLINIC_PATH | typeof DESK_HOME_PATH):
   markProgrammaticNavigationConfirmed();
   pushAppHistory(window.history, path);
   window.dispatchEvent(new Event("popstate"));
+}
+
+function currentNavigationEntryIndex(): number | undefined {
+  const navigation = (window as Window & {
+    navigation?: { currentEntry?: { index?: number } };
+  }).navigation;
+  const index = navigation?.currentEntry?.index;
+  return typeof index === "number" && Number.isInteger(index) ? index : undefined;
 }
 
 export function RoleSwitchPill({ target }: { target: typeof CLINIC_PATH | typeof DESK_HOME_PATH }) {

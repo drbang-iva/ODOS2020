@@ -186,3 +186,30 @@ test("declining browser Forward restores the prior index without truncating forw
   assert.equal(pushes, 0);
   assert.equal(entries[2]?.url, "/desk");
 });
+
+test("an unindexed pre-app history target uses the browser position without adding an entry", () => {
+  let index = 0;
+  let pushes = 0;
+  const history = {
+    pushState() { pushes += 1; },
+    go(delta: number) { index += delta; },
+  };
+
+  assert.equal(
+    restoreCancelledHistoryNavigation(history, 1, {}, 0),
+    true,
+  );
+  assert.equal(index, 1);
+  assert.equal(pushes, 0);
+});
+
+test("an unindexed target without a browser position is reported as unrestorable", () => {
+  let traversals = 0;
+  const history = {
+    pushState() {},
+    go() { traversals += 1; },
+  };
+
+  assert.equal(restoreCancelledHistoryNavigation(history, 1, {}), false);
+  assert.equal(traversals, 0);
+});

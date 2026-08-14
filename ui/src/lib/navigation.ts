@@ -47,10 +47,11 @@ export function appHistoryIndex(state: unknown): number | undefined {
 export function initializeAppHistory(
   history: NavigationHistory = window.history,
   url?: string | URL | null,
+  knownIndex?: number,
 ): number {
   const existing = appHistoryIndex(history.state);
   if (existing !== undefined) return existing;
-  const index = 0;
+  const index = knownIndex ?? 0;
   history.replaceState?.(withHistoryIndex(history.state, index), "", url);
   return index;
 }
@@ -68,8 +69,9 @@ export function restoreCancelledHistoryNavigation(
   history: NavigationHistory,
   priorIndex: number,
   targetState: unknown,
+  knownTargetIndex?: number,
 ): boolean {
-  const targetIndex = appHistoryIndex(targetState);
+  const targetIndex = appHistoryIndex(targetState) ?? knownTargetIndex;
   if (targetIndex === undefined || !history.go) return false;
   const delta = priorIndex - targetIndex;
   if (delta === 0) return false;
