@@ -54,7 +54,6 @@ test("all roles read operational records at practice scope while Staff writes st
       "Patient",
       "Observation",
       "Coverage",
-      "Appointment",
       "Schedule",
       "PaymentReconciliation",
     ]) {
@@ -85,6 +84,24 @@ test("all roles read operational records at practice scope while Staff writes st
     observationWrite?.writeConstraint?.map((constraint) => constraint.expression).join(" ") ?? "",
     /status = 'amended'/,
   );
+});
+
+test("Provider, Staff, and Admin keep practice-wide Appointment reads", () => {
+  for (const roleId of ["provider", "staff", "admin"] as const) {
+    const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
+    const appointmentReads = policy.resource?.filter((rule) =>
+      rule.resourceType === "Appointment" && rule.interaction?.includes("read")) ?? [];
+    assert.equal(
+      appointmentReads.some((rule) => rule.criteria === undefined),
+      true,
+      `${roleId} keeps its existing practice-wide scheduling read`,
+    );
+    assert.equal(
+      appointmentReads.some((rule) => rule.criteria === "Appointment?actor=%provider_profile"),
+      false,
+      `${roleId} must not receive an actor-scoped Appointment read`,
+    );
+  }
 });
 
 test("three-role policies allow only Admin to write HealthcareService without wildcard or delete", () => {

@@ -4,6 +4,7 @@ import {
   findOpenEncounterForAppointment,
   startOrOpenEncounterForAppointment,
 } from "../lib/encounter-bundles";
+import { assignProviderForAppointment } from "../lib/clinical-graph-client";
 import { fhir } from "../lib/fhir";
 import { odosAppointmentStatusOf } from "../lib/scheduling";
 import { openEncounter } from "../lib/view-state";
@@ -95,6 +96,10 @@ export function AppointmentChartButton(props: AppointmentChartButtonProps) {
     setOpening(true);
     onError?.(null);
     try {
+      if (!appointment.id) {
+        throw new Error("Opening an appointment chart requires Appointment.id.");
+      }
+      await assignProviderForAppointment(appointment.id);
       const result = await startOrOpenEncounterForAppointment(appointment, {
         existingEncounter,
       });

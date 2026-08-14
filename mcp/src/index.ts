@@ -6041,6 +6041,26 @@ async function startMcpServer(): Promise<void> {
         }
       });
 
+      app.post("/clinical-graph/appointments/:appointmentId/assign-provider", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleProviderAssignmentRequest(
+            {
+              authenticate: authenticateStaffRouteForAction("chart.write"),
+              serviceFhir: fhir,
+            },
+            {
+              authHeader: req.header("authorization"),
+              appointmentId: req.params.appointmentId,
+            },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: appointment assign-provider route failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "provider assignment failed" });
+        }
+      });
+
       app.get("/clinical-graph/finding-definitions", async (req, res) => {
         try {
           await authenticateWithMedplum();
