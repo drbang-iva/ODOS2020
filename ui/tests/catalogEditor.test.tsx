@@ -160,12 +160,15 @@ test("CatalogEditor exposes one Save and Discard bar for a dirty singleton trans
 });
 
 test("a rejected transaction renders its detailed failure inside the Save bar", async () => {
-  const transaction: CatalogDraftTransaction = {
+  let transaction: CatalogDraftTransaction;
+  transaction = {
     dirty: true,
     async commit() {
       throw new Error("FHIR 403 Forbidden: Basic write denied by AccessPolicy");
     },
-    discard() {},
+    discard() {
+      transaction.dirty = false;
+    },
   };
   const renderer = create(
     <CatalogEditor
@@ -189,6 +192,13 @@ test("a rejected transaction renders its detailed failure inside the Save bar", 
     alert.children.join(""),
     /Could not save practice settings.*FHIR 403 Forbidden.*Basic write denied by AccessPolicy/,
   );
+
+  const discard = actionBar.findAllByType("button").find((button) => button.children.includes("Discard"));
+  assert.ok(discard);
+  await act(async () => {
+    discard.props.onClick();
+  });
+  assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /Could not save practice settings/);
 });
 
 test("the draft-status toast cannot intercept the transaction Save control", async () => {

@@ -129,6 +129,7 @@ export function CatalogScene({
     if (!transaction) return;
     transaction.discard();
     touch();
+    setError(null);
     setToast("Draft changes discarded.");
   }
 

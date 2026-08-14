@@ -37,6 +37,23 @@ export function buildStampBottomOffset(
   }, restingBottom);
 }
 
+export function syncObservedBottomBars(
+  observed: Set<HTMLElement>,
+  obstacles: ReadonlySet<HTMLElement>,
+  observer: { observe(element: HTMLElement): void; unobserve(element: HTMLElement): void },
+): void {
+  for (const obstacle of observed) {
+    if (obstacles.has(obstacle)) continue;
+    observer.unobserve(obstacle);
+    observed.delete(obstacle);
+  }
+  for (const obstacle of obstacles) {
+    if (observed.has(obstacle)) continue;
+    observed.add(obstacle);
+    observer.observe(obstacle);
+  }
+}
+
 function isIsoDate(value: unknown): value is string {
   return typeof value === "string" && /^\d{4}-\d{2}-\d{2}T/.test(value) && Number.isFinite(Date.parse(value));
 }
@@ -112,11 +129,8 @@ function keepBuildStampClear(root: HTMLElement): void {
   const observed = new Set<HTMLElement>();
   const resizeObserver = new ResizeObserver(update);
   const syncObstacles = () => {
-    for (const obstacle of document.querySelectorAll<HTMLElement>("[data-odos-bottom-bar]")) {
-      if (observed.has(obstacle)) continue;
-      observed.add(obstacle);
-      resizeObserver.observe(obstacle);
-    }
+    const obstacles = new Set(document.querySelectorAll<HTMLElement>("[data-odos-bottom-bar]"));
+    syncObservedBottomBars(observed, obstacles, resizeObserver);
     update();
   };
 

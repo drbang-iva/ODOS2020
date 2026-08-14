@@ -4,6 +4,7 @@ import {
   buildStampBottomOffset,
   classifyBuild,
   parseDeployedVersion,
+  syncObservedBottomBars,
   type BuildStampVersion,
 } from "../src/build-stamp";
 
@@ -73,4 +74,22 @@ test("build stamp clears overlapping bottom bars but ignores a left-side pinned 
 
   assert.equal(buildStampBottomOffset(stamp, [saveBar], 800), 88);
   assert.equal(buildStampBottomOffset(stamp, [leftPanel], 800), 12);
+});
+
+test("build stamp observer releases detached bottom bars and tracks current bars", () => {
+  const detached = {} as HTMLElement;
+  const retained = {} as HTMLElement;
+  const added = {} as HTMLElement;
+  const observed = new Set([detached, retained]);
+  const observeCalls: HTMLElement[] = [];
+  const unobserveCalls: HTMLElement[] = [];
+
+  syncObservedBottomBars(observed, new Set([retained, added]), {
+    observe: (element) => observeCalls.push(element),
+    unobserve: (element) => unobserveCalls.push(element),
+  });
+
+  assert.deepEqual([...observed], [retained, added]);
+  assert.deepEqual(observeCalls, [added]);
+  assert.deepEqual(unobserveCalls, [detached]);
 });
