@@ -19,7 +19,9 @@ import {
   assertAuthenticatedSessionProject,
   readAuthenticatedSessionProject,
   resolveThreeRoleMigrationCredentials,
+  type ThreeRoleMigrationCredentialSource,
 } from "./migrate-three-role-model.js";
+import { loginForLocalRepair } from "./repair-practice-roles.js";
 import { assertLocalMedplumBaseUrl } from "./reseed-practice-role-tags.js";
 
 const DEFAULT_BASE_URL = "http://localhost:8103";
@@ -77,11 +79,15 @@ export async function syncPracticeRolePolicyRules(
   options: {
     readonly projectId: string;
     readonly apply?: boolean;
+    readonly bootstrapServiceIdentity?: boolean;
     readonly assertProjectScope: () => Promise<void>;
   },
 ): Promise<PracticeRolePolicyRuleSyncResult> {
-  await options.assertProjectScope();
+  if (!options.bootstrapServiceIdentity) await options.assertProjectScope();
   const policies = await adapter.readPolicies(options.projectId);
+  if (options.bootstrapServiceIdentity) {
+    assertBootstrapPolicyProjectScope(policies, options.projectId);
+  }
   assertUnambiguousPracticeRoleTags(policies);
   const plan = PRACTICE_ROLE_IDS.map((role) => planPolicyRuleSync(policies, role));
   if (!options.apply) {
@@ -119,6 +125,20 @@ export async function syncPracticeRolePolicyRules(
     policiesUpdated,
     policies: plan.map(({ result }) => result),
   };
+}
+
+function assertBootstrapPolicyProjectScope(
+  policies: readonly AccessPolicy[],
+  projectId: string,
+): void {
+  for (const policy of policies) {
+    if (policy.meta?.project === projectId) continue;
+    const reference = policy.id ? `AccessPolicy/${policy.id}` : "AccessPolicy without id";
+    throw new Error(
+      `${reference} belongs to project ${policy.meta?.project ?? "<missing>"}, not --project ${projectId}; `
+      + "bootstrap service identity refused before composing any patch.",
+    );
+  }
 }
 
 function planPolicyRuleSync(
@@ -220,9 +240,16 @@ export function formatPracticeRolePolicyRuleSync(
 export function requiredPracticeRolePolicyRuleSyncProjectId(
   args: readonly string[],
   environmentProjectId: string | undefined,
+  bootstrapServiceIdentity = false,
 ): string {
   const projectIndex = args.indexOf("--project");
   const explicitProjectId = projectIndex >= 0 ? args[projectIndex + 1]?.trim() : undefined;
+  if (bootstrapServiceIdentity && (!explicitProjectId || explicitProjectId.startsWith("--"))) {
+    throw new Error(
+      "--bootstrap-service-identity requires explicit --project <project-id>; "
+      + "MEDPLUM_PROJECT_ID is not accepted for this break-glass path.",
+    );
+  }
   const projectId = explicitProjectId || environmentProjectId?.trim();
   if (!projectId) {
     throw new Error(
@@ -232,18 +259,72 @@ export function requiredPracticeRolePolicyRuleSyncProjectId(
   return projectId;
 }
 
+export async function resolvePracticeRolePolicyRuleSyncCredentials(input: {
+  readonly baseUrl: string;
+  readonly projectId: string;
+  readonly bootstrapServiceIdentity: boolean;
+  readonly accessToken?: string;
+  readonly adminEmail?: string;
+  readonly adminPassword?: string;
+  readonly login?: typeof loginForLocalRepair;
+}): Promise<{
+  readonly accessToken: string;
+  readonly source: ThreeRoleMigrationCredentialSource | "bootstrap-service-identity";
+}> {
+  if (!input.bootstrapServiceIdentity) {
+    return resolveThreeRoleMigrationCredentials({
+      baseUrl: input.baseUrl,
+      projectId: input.projectId,
+      accessToken: input.accessToken,
+      adminEmail: input.adminEmail,
+      adminPassword: input.adminPassword,
+      login: input.login,
+    });
+  }
+  if (input.accessToken?.trim()) {
+    throw new Error(
+      "--bootstrap-service-identity refuses MEDPLUM_ACCESS_TOKEN; "
+      + "authenticate explicitly with the configured service identity credentials.",
+    );
+  }
+  const email = input.adminEmail?.trim();
+  const password = input.adminPassword;
+  if (!email || !password?.trim()) {
+    throw new Error(
+      "--bootstrap-service-identity requires MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD.",
+    );
+  }
+  return {
+    accessToken: await (input.login ?? loginForLocalRepair)({
+      baseUrl: input.baseUrl,
+      email,
+      password,
+    }),
+    source: "bootstrap-service-identity",
+  };
+}
+
 async function runCli(): Promise<void> {
   const args = process.argv.slice(2);
   const apply = args.includes("--apply");
+  const bootstrapServiceIdentity = args.includes("--bootstrap-service-identity");
   const projectId = requiredPracticeRolePolicyRuleSyncProjectId(
     args,
     process.env.MEDPLUM_PROJECT_ID,
+    bootstrapServiceIdentity,
   );
   const baseUrl = (process.env.MEDPLUM_BASE_URL ?? DEFAULT_BASE_URL).replace(/\/$/, "");
   assertLocalMedplumBaseUrl(baseUrl);
-  const credentials = await resolveThreeRoleMigrationCredentials({
+  if (bootstrapServiceIdentity) {
+    console.warn(
+      "BREAK-GLASS: BOOTSTRAP SERVICE IDENTITY ACTIVE. "
+      + `Target is restricted to AccessPolicy resources in --project ${projectId}.`,
+    );
+  }
+  const credentials = await resolvePracticeRolePolicyRuleSyncCredentials({
     baseUrl,
     projectId,
+    bootstrapServiceIdentity,
     accessToken: process.env.MEDPLUM_ACCESS_TOKEN,
     adminEmail: process.env.MEDPLUM_ADMIN_EMAIL,
     adminPassword: process.env.MEDPLUM_ADMIN_PASSWORD,
@@ -254,12 +335,14 @@ async function runCli(): Promise<void> {
     reason: "Operator practice-role policy rule sync runs outside request handling.",
     extendedMode: true,
   });
-  const result = await syncPracticeRolePolicyRules(
-    new LivePracticeRolePolicyRuleSyncAdapter(fhir),
-    {
-      projectId,
-      apply,
-      assertProjectScope: async () => {
+  const credentialSource = credentials.source;
+  const assertProjectScope = credentialSource === "bootstrap-service-identity"
+    ? async (): Promise<void> => {
+        throw new Error(
+          "Bootstrap service identity must use the target-project resource guard, not the session-project guard.",
+        );
+      }
+    : async (): Promise<void> => {
         const session = await readAuthenticatedSessionProject({
           baseUrl,
           accessToken: credentials.accessToken,
@@ -268,9 +351,16 @@ async function runCli(): Promise<void> {
           session,
           targetProjectId: projectId,
           fhir,
-          credentialSource: credentials.source,
+          credentialSource,
         });
-      },
+      };
+  const result = await syncPracticeRolePolicyRules(
+    new LivePracticeRolePolicyRuleSyncAdapter(fhir),
+    {
+      projectId,
+      apply,
+      bootstrapServiceIdentity,
+      assertProjectScope,
     },
   );
   console.log(formatPracticeRolePolicyRuleSync(result));
