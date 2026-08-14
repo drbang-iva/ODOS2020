@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { test } from "node:test";
 import type { AccessPolicy, Bundle, Practitioner, ProjectMembership, Resource, User } from "@medplum/fhirtypes";
 import {
   devPrimaryRole,
+  loginForLocalRepair,
   membershipPolicyReferences,
   repairPracticeRoles,
   resolvePracticeRoleTarget,
@@ -214,6 +217,41 @@ test("a wrong ODOS role tag stops repair without overwriting it", async () => {
   await assert.rejects(() => repairPracticeRoles(adapter, "human@example.test"), /conflicting practice-role code/);
   assert.deepEqual(wrong.meta.tag, [{ system: ODOS_PRACTICE_ROLE_SYSTEM, code: "provider" }]);
   assert.equal(adapter.membershipWrites, 0);
+});
+
+test("local repair login refuses a multi-membership response before token exchange", async () => {
+  let tokenCalls = 0;
+  const server = createServer(async (request, response) => {
+    if (request.url === "/auth/login") {
+      response.setHeader("Content-Type", "application/json");
+      response.end(JSON.stringify({
+        login: "login-1",
+        memberships: [
+          { id: "membership-super", project: { reference: "Project/super-admin" } },
+          { id: "membership-practice", project: { reference: "Project/practice-1" } },
+        ],
+      }));
+      return;
+    }
+    if (request.url === "/oauth2/token") tokenCalls += 1;
+    response.statusCode = 500;
+    response.end();
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address() as AddressInfo;
+  try {
+    await assert.rejects(
+      () => loginForLocalRepair({
+        baseUrl: `http://127.0.0.1:${address.port}`,
+        email: "admin@example.test",
+        password: "not-a-real-password",
+      }),
+      /found 2 project memberships.*--project <project-id>.*MEDPLUM_PROJECT_ID/,
+    );
+    assert.equal(tokenCalls, 0);
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  }
 });
 
 function membership(overrides: Partial<ProjectMembership> = {}): ProjectMembership {

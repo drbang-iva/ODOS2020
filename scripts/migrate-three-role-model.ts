@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 import { pathToFileURL } from "node:url";
-import type { AccessPolicy, ProjectMembership, ProjectMembershipAccess } from "@medplum/fhirtypes";
+import type { AccessPolicy, Project, ProjectMembership, ProjectMembershipAccess } from "@medplum/fhirtypes";
 import { createLiveOdosAuditRuntime } from "../mcp/src/authz/liveAudit.js";
 import { buildOdosAuditEventRow } from "../mcp/src/authz/odosAudit.js";
 import {
@@ -63,6 +63,7 @@ export type ThreeRoleMigrationCredentialSource = "access-token" | "admin-login";
 
 export async function resolveThreeRoleMigrationCredentials(input: {
   readonly baseUrl: string;
+  readonly projectId?: string;
   readonly accessToken?: string;
   readonly adminEmail?: string;
   readonly adminPassword?: string;
@@ -83,6 +84,7 @@ export async function resolveThreeRoleMigrationCredentials(input: {
       baseUrl: input.baseUrl,
       email,
       password,
+      ...(input.projectId ? { projectId: input.projectId } : {}),
     }),
     source: "admin-login",
   };
@@ -150,6 +152,56 @@ export async function resolveAuthenticatedSessionProjectId(input: {
     );
   }
   return candidates[0]!;
+}
+
+export interface AuthenticatedSessionProject {
+  readonly id: string;
+  readonly name?: string;
+  readonly membershipId: string;
+}
+
+export async function readAuthenticatedSessionProject(input: {
+  readonly baseUrl: string;
+  readonly accessToken: string;
+  readonly request?: typeof fetch;
+}): Promise<AuthenticatedSessionProject> {
+  const response = await (input.request ?? fetch)(`${input.baseUrl.replace(/\/$/, "")}/auth/me`, {
+    headers: { Authorization: `Bearer ${input.accessToken}` },
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (!response.ok) {
+    throw new Error(`Three-role migration /auth/me failed: ${response.status}.`);
+  }
+  const body = (await response.json()) as {
+    project?: { id?: string; name?: string };
+    membership?: { id?: string };
+  };
+  if (!body.project?.id || !body.membership?.id) {
+    throw new Error("Authenticated session has no active Medplum project and membership.");
+  }
+  return { id: body.project.id, name: body.project.name, membershipId: body.membership.id };
+}
+
+export async function assertAuthenticatedSessionProject(input: {
+  readonly session: AuthenticatedSessionProject;
+  readonly targetProjectId: string;
+  readonly fhir: Pick<MedplumClient, "read">;
+  readonly credentialSource: ThreeRoleMigrationCredentialSource;
+}): Promise<void> {
+  if (input.session.id === input.targetProjectId) return;
+  const target = await input.fhir.read<Project>("Project", input.targetProjectId);
+  const sessionLabel = projectLabel(input.session.name, input.session.id);
+  const targetLabel = projectLabel(target.name, input.targetProjectId);
+  const tokenRemedy = `supply a MEDPLUM_ACCESS_TOKEN scoped to ${input.targetProjectId}`;
+  const loginRemedy = `use admin email/password with --project ${input.targetProjectId}`;
+  throw new Error(
+    `Authenticated session project ${sessionLabel} does not match target project ${targetLabel}. ` +
+    `No writes were attempted; ${input.credentialSource === "access-token" ? `${loginRemedy}, or ${tokenRemedy}` : loginRemedy}.`,
+  );
+}
+
+function projectLabel(name: string | undefined, id: string): string {
+  return name ? `"${name}" (${id})` : id;
 }
 
 export function planThreeRoleMigration(input: {
@@ -378,8 +430,12 @@ async function runCli(): Promise<void> {
   const apply = args.has("--apply");
   const baseUrl = (process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103").replace(/\/$/, "");
   assertLocalMedplumBaseUrl(baseUrl);
+  const requestedProjectId = argumentValue("--project")?.trim()
+    || process.env.MEDPLUM_PROJECT_ID?.trim()
+    || undefined;
   const credentials = await resolveThreeRoleMigrationCredentials({
     baseUrl,
+    projectId: requestedProjectId,
     accessToken: process.env.MEDPLUM_ACCESS_TOKEN,
     adminEmail: process.env.MEDPLUM_ADMIN_EMAIL,
     adminPassword: process.env.MEDPLUM_ADMIN_PASSWORD,
@@ -391,13 +447,22 @@ async function runCli(): Promise<void> {
     extendedMode: true,
   });
   const projectId = await resolveThreeRoleMigrationProjectId({
-    explicitProjectId: argumentValue("--project"),
-    environmentProjectId: process.env.MEDPLUM_PROJECT_ID,
+    explicitProjectId: requestedProjectId,
     resolveSessionProjectId: () => resolveAuthenticatedSessionProjectId({
       baseUrl,
       accessToken: credentials.accessToken,
       fhir,
     }),
+  });
+  const session = await readAuthenticatedSessionProject({
+    baseUrl,
+    accessToken: credentials.accessToken,
+  });
+  await assertAuthenticatedSessionProject({
+    session,
+    targetProjectId: projectId,
+    fhir,
+    credentialSource: credentials.source,
   });
   const result = await executeThreeRoleMigration(new LiveThreeRoleMigrationAdapter(fhir, projectId), { projectId, apply });
   console.log(JSON.stringify({

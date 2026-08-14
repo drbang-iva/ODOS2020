@@ -234,6 +234,7 @@ export async function loginForLocalRepair(input: {
   baseUrl: string;
   email: string;
   password: string;
+  projectId?: string;
 }): Promise<string> {
   const verifier = randomBytes(32).toString("base64url");
   const challenge = createHash("sha256").update(verifier).digest("base64url");
@@ -245,12 +246,26 @@ export async function loginForLocalRepair(input: {
       password: input.password,
       codeChallenge: challenge,
       codeChallengeMethod: "S256",
+      ...(input.projectId ? { projectId: input.projectId } : {}),
     }),
   });
   if (!loginResponse.ok) {
     throw new Error(`Medplum login failed: ${loginResponse.status} ${await loginResponse.text()}`);
   }
-  const { code } = (await loginResponse.json()) as { code: string };
+  const loginResult = (await loginResponse.json()) as {
+    code?: string;
+    memberships?: Array<{ id?: string; project?: { reference?: string } }>;
+  };
+  const code = loginResult.code;
+  if (!code) {
+    if (loginResult.memberships) {
+      throw new Error(
+        `Medplum login found ${loginResult.memberships.length} project memberships; ` +
+        "supply --project <project-id> or MEDPLUM_PROJECT_ID.",
+      );
+    }
+    throw new Error("Medplum login returned neither an authorization code nor project memberships.");
+  }
   const tokenResponse = await fetch(`${input.baseUrl}/oauth2/token`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
