@@ -803,6 +803,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
     resourceRules: [
       ...PRACTICE_READ_RESOURCE_RULES,
       ...DISPENSARY_READ_RESOURCE_RULES,
+      { resourceType: "AccessPolicy", interactions: READ_INTERACTIONS, scope: { kind: "practice" } },
       { resourceType: "AuditEvent", interactions: READ_INTERACTIONS, scope: { kind: "audit-only" } },
       ...SCHEDULING_RESOURCE_RULES,
       ...ADMIN_CORRECTION_RESOURCE_RULES,

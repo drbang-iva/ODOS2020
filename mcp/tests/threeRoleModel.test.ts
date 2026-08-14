@@ -121,6 +121,47 @@ test("three-role policies allow only Admin to write HealthcareService without wi
   }
 });
 
+test("three-role policies allow only Admin to read AccessPolicy at practice scope without write access or wildcard", () => {
+  const adminPolicy = buildMedplumAccessPolicy(getRoleDeclaration("admin"));
+  const adminRule = adminPolicy.resource?.find((rule) => rule.resourceType === "AccessPolicy");
+  assert.ok(adminRule, "Admin needs an explicit AccessPolicy rule");
+  assert.equal(adminRule.criteria, undefined, "Admin AccessPolicy reads must be practice-scoped");
+  assert.equal(
+    adminPolicy.resource?.some((rule) => rule.resourceType === "*"),
+    false,
+    "the retired practice-admin wildcard must not return",
+  );
+
+  for (const interaction of ["read", "search", "history", "vread"] as const) {
+    assert.equal(
+      accessPolicyAllows(adminPolicy, "AccessPolicy", interaction),
+      true,
+      `Admin must be permitted to ${interaction} AccessPolicy`,
+    );
+    for (const roleId of ["provider", "staff"] as const) {
+      const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
+      assert.equal(
+        accessPolicyAllows(policy, "AccessPolicy", interaction),
+        false,
+        `${roleId} must be rejected from ${interaction} AccessPolicy`,
+      );
+      assert.equal(
+        policy.resource?.some((rule) => rule.resourceType === "*"),
+        false,
+        `${roleId} must not regain a wildcard`,
+      );
+    }
+  }
+
+  for (const interaction of ["create", "update", "delete"] as const) {
+    assert.equal(
+      accessPolicyAllows(adminPolicy, "AccessPolicy", interaction),
+      false,
+      `Admin must be rejected from ${interaction} AccessPolicy`,
+    );
+  }
+});
+
 test("Staff Encounter writes allow unfinished work but reject finalization and reopening", () => {
   const staff = buildMedplumAccessPolicy(getRoleDeclaration("staff"));
   const encounterWrite = staff.resource?.find((rule) =>
