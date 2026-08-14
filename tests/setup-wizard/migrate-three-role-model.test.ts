@@ -226,9 +226,10 @@ test("migration credentials preserve access-token auth and prefer it over admin 
 });
 
 test("migration credentials reuse the admin PKCE login when no access token exists", async () => {
-  const calls: Array<{ baseUrl: string; email: string; password: string }> = [];
+  const calls: Array<{ baseUrl: string; email: string; password: string; projectId?: string }> = [];
   const result = await resolveThreeRoleMigrationCredentials({
     baseUrl: "http://localhost:8103",
+    projectId: PROJECT,
     adminEmail: " admin@example.test ",
     adminPassword: " padded-password ",
     login: async (input) => {
@@ -241,6 +242,7 @@ test("migration credentials reuse the admin PKCE login when no access token exis
     baseUrl: "http://localhost:8103",
     email: "admin@example.test",
     password: " padded-password ",
+    projectId: PROJECT,
   }]);
   assert.deepEqual(result, { accessToken: "session-token", source: "admin-login" });
 });
@@ -345,15 +347,31 @@ test("the migration CLI scopes both reads to the resolved project and stays dry-
   });
 });
 
+test("the migration CLI refuses a mismatched access-token project before any write", async () => {
+  await withMigrationServer(async (server) => {
+    const result = await runMigrationCli(server.baseUrl, {
+      MEDPLUM_ACCESS_TOKEN: "fixture-token",
+    }, ["--project", PROJECT, "--apply"]);
+
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /Super Admin.*super-admin.*ODOS Local Practice.*practice-1/);
+    assert.match(result.stderr, /admin email.*--project practice-1|access token scoped to practice-1/i);
+    assert.equal(server.writeCalls, 0);
+    assert.equal(server.projectScopedSearches, 0);
+  }, { sessionProjectId: "super-admin", sessionProjectName: "Super Admin" });
+});
+
 test("the migration CLI accepts only admin email and password through the shared PKCE login", async () => {
   await withMigrationServer(async (server) => {
     const result = await runMigrationCli(server.baseUrl, {
       MEDPLUM_ADMIN_EMAIL: "admin@example.test",
       MEDPLUM_ADMIN_PASSWORD: "not-a-real-password",
+      MEDPLUM_PROJECT_ID: PROJECT,
     });
 
     assert.equal(result.code, 0, result.stderr);
     assert.equal(server.loginCalls, 1);
+    assert.deepEqual(server.loginProjectIds, [PROJECT]);
     assert.equal(server.tokenCalls, 1);
     assert.match(result.stdout, /"mode": "dry-run"/);
     assert.match(result.stdout, /Dry run only/);
@@ -470,6 +488,7 @@ function membershipSearchClient(memberships: ProjectMembership[]) {
 async function runMigrationCli(
   baseUrl: string,
   suppliedEnv: Record<string, string>,
+  args: string[] = [],
 ): Promise<{ code: number | null; stdout: string; stderr: string }> {
   const env = { ...process.env };
   for (const name of [
@@ -481,7 +500,7 @@ async function runMigrationCli(
   Object.assign(env, suppliedEnv, { MEDPLUM_BASE_URL: baseUrl });
   const script = fileURLToPath(new URL("../../scripts/migrate-three-role-model.ts", import.meta.url));
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, ["--import", "tsx", script], {
+    const child = spawn(process.execPath, ["--import", "tsx", script, ...args], {
       cwd: fileURLToPath(new URL("../..", import.meta.url)),
       env,
       stdio: ["ignore", "pipe", "pipe"],
@@ -499,17 +518,22 @@ async function withMigrationServer(
   run: (fixture: {
     baseUrl: string;
     readonly loginCalls: number;
+    readonly loginProjectIds: readonly (string | undefined)[];
     readonly tokenCalls: number;
     readonly sessionProjectSearches: number;
     readonly projectScopedSearches: number;
     readonly extendedProjectScopedSearches: number;
+    readonly writeCalls: number;
   }) => Promise<void>,
+  options: { sessionProjectId?: string; sessionProjectName?: string } = {},
 ): Promise<void> {
   let loginCalls = 0;
+  const loginProjectIds: Array<string | undefined> = [];
   let tokenCalls = 0;
   let sessionProjectSearches = 0;
   let projectScopedSearches = 0;
   let extendedProjectScopedSearches = 0;
+  let writeCalls = 0;
   const targetPolicy = legacyPolicy("target-desk", "front-desk");
   const foreignPolicy = legacyPolicy("foreign-provider", "provider");
   foreignPolicy.meta!.project = "practice-2";
@@ -531,6 +555,7 @@ async function withMigrationServer(
       assert.equal(login.password, "not-a-real-password");
       assert.equal(login.codeChallengeMethod, "S256");
       assert.ok(login.codeChallenge);
+      loginProjectIds.push(login.projectId);
       return json(response, { code: "fixture-code" });
     }
     if (url.pathname === "/oauth2/token") {
@@ -543,9 +568,29 @@ async function withMigrationServer(
     }
     assert.equal(request.headers.authorization, "Bearer fixture-token");
     if (url.pathname === "/auth/me") {
-      return json(response, { profile: { reference: "Practitioner/admin" } });
+      return json(response, {
+        project: {
+          resourceType: "Project",
+          id: options.sessionProjectId ?? PROJECT,
+          name: options.sessionProjectName ?? "ODOS Local Practice",
+        },
+        membership: { resourceType: "ProjectMembership", id: "admin-membership" },
+        profile: { reference: "Practitioner/admin" },
+      });
+    }
+    if (url.pathname === `/fhir/R4/Project/${PROJECT}`) {
+      return json(response, { resourceType: "Project", id: PROJECT, name: "ODOS Local Practice" });
     }
     if (url.pathname === "/fhir/R4/AccessPolicy") {
+      if (request.method === "POST") {
+        writeCalls += 1;
+        const policy = JSON.parse(body) as AccessPolicy;
+        return json(response, {
+          ...policy,
+          id: `created-${writeCalls}`,
+          meta: { ...policy.meta, project: options.sessionProjectId ?? PROJECT, versionId: "1" },
+        });
+      }
       const scoped = url.searchParams.get("_project") === PROJECT;
       if (scoped) projectScopedSearches += 1;
       if (scoped && request.headers["x-medplum"] === "extended") extendedProjectScopedSearches += 1;
@@ -581,10 +626,12 @@ async function withMigrationServer(
   const fixture = {
     baseUrl: `http://127.0.0.1:${address.port}`,
     get loginCalls() { return loginCalls; },
+    get loginProjectIds() { return loginProjectIds; },
     get tokenCalls() { return tokenCalls; },
     get sessionProjectSearches() { return sessionProjectSearches; },
     get projectScopedSearches() { return projectScopedSearches; },
     get extendedProjectScopedSearches() { return extendedProjectScopedSearches; },
+    get writeCalls() { return writeCalls; },
   };
   try {
     await run(fixture);
