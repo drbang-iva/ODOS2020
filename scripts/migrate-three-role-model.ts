@@ -185,10 +185,16 @@ export function planThreeRoleMigration(input: {
 
   const memberships = input.memberships.flatMap((membership) => {
     const currentAccess = membership.access ?? [];
+    const legacyPolicyReference = membership.accessPolicy?.reference;
+    const legacyPolicy = legacyPolicyReference
+      ? policiesByReference.get(legacyPolicyReference)
+      : undefined;
     const referencesRolePolicy = currentAccess.some((entry) => {
       const policy = policiesByReference.get(entry.policy.reference ?? "");
       return policy ? practiceRoleTags(policy).length > 0 : true;
-    }) || Boolean(membership.accessPolicy?.reference);
+    }) || Boolean(
+      legacyPolicyReference && (!legacyPolicy || practiceRoleTags(legacyPolicy).length > 0),
+    );
     if (!referencesRolePolicy) return [];
     if (!membership.id || !membership.meta?.versionId) {
       throw new Error("Every changed ProjectMembership must carry id and meta.versionId.");
@@ -196,7 +202,13 @@ export function planThreeRoleMigration(input: {
     if (membership.project?.reference !== projectReference) {
       throw new Error(`ProjectMembership/${membership.id} ownership mismatch.`);
     }
-    if (membership.accessPolicy?.reference) {
+    if (legacyPolicyReference) {
+      if (!legacyPolicy) {
+        throw new Error(
+          `ProjectMembership/${membership.id} references legacy accessPolicy ${legacyPolicyReference}, ` +
+          "but it is unavailable in the target project's scoped policy set.",
+        );
+      }
       throw new Error(`ProjectMembership/${membership.id} has unmappable legacy accessPolicy; normalize access[] first.`);
     }
 
