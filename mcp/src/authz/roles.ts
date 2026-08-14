@@ -79,6 +79,7 @@ export type ResourceScope =
   | { kind: "practice" }
   | { kind: "patient-compartment"; parameterName: "patient_compartment" }
   | { kind: "provider-assigned-patient"; parameterName: "provider_profile" }
+  | { kind: "provider-assigned-appointment"; parameterName: "provider_profile" }
   | { kind: "self-profile"; parameterName: "provider_profile" }
   | { kind: "audit-only" }
   /** Practice-wide but fenced to a fixed search criteria (e.g. one coded singleton). */
@@ -159,6 +160,16 @@ const PRACTICE_READ_RESOURCE_TYPES = [
 const PRACTICE_READ_RESOURCE_RULES: OdosResourceRule[] = PRACTICE_READ_RESOURCE_TYPES.map(
   (resourceType) => ({ resourceType, interactions: READ_INTERACTIONS, scope: { kind: "practice" } }),
 );
+
+const PROVIDER_PRACTICE_READ_RESOURCE_RULES = PRACTICE_READ_RESOURCE_RULES.filter(
+  (rule) => rule.resourceType !== "Appointment",
+);
+
+const PROVIDER_APPOINTMENT_READ_RULE: OdosResourceRule = {
+  resourceType: "Appointment",
+  interactions: READ_INTERACTIONS,
+  scope: { kind: "provider-assigned-appointment", parameterName: "provider_profile" },
+};
 
 const STAFF_OBSERVATION_WRITE_CONSTRAINTS: WriteConstraintDeclaration[] = [
   {
@@ -730,7 +741,8 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
       },
     ],
     resourceRules: [
-      ...PRACTICE_READ_RESOURCE_RULES,
+      ...PROVIDER_PRACTICE_READ_RESOURCE_RULES,
+      PROVIDER_APPOINTMENT_READ_RULE,
       ...PROVIDER_CLINICAL_WRITE_RESOURCE_RULES,
       ...STAFF_CORRESPONDENCE_RESOURCE_RULES,
       ...PAYMENT_CUSTODY_RESOURCE_RULES,
@@ -957,6 +969,8 @@ function criteriaForRule(rule: OdosResourceRule): string | undefined {
       return `${rule.resourceType}?_compartment=%${rule.scope.parameterName}`;
     case "provider-assigned-patient":
       return `${rule.resourceType}?general-practitioner=%${rule.scope.parameterName}`;
+    case "provider-assigned-appointment":
+      return `${rule.resourceType}?actor=%${rule.scope.parameterName}`;
     case "self-profile":
       return `${rule.resourceType}?_id=%${rule.scope.parameterName}.id`;
     case "practice-search":

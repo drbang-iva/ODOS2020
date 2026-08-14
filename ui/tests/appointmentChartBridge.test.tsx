@@ -83,6 +83,120 @@ test("appointment action can load the canonical Appointment by id for Clinic wor
   }
 });
 
+test("Start chart assigns from the caller-readable Appointment before creating the encounter", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalSearch = fhir.search;
+  const originalExecuteTransaction = fhir.executeTransaction;
+  const calls: string[] = [];
+  const errors: Array<string | null> = [];
+  let transaction = 0;
+  globalThis.fetch = (async (input) => {
+    calls.push("assign-appointment");
+    assert.match(String(input), /\/clinical-graph\/appointments\/appointment-1\/assign-provider$/);
+    return new Response(JSON.stringify({ assigned: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }) as typeof fetch;
+  fhir.search = (async () => ({
+    resourceType: "Bundle",
+    type: "searchset",
+    entry: [],
+  })) as typeof fhir.search;
+  fhir.executeTransaction = (async () => {
+    transaction += 1;
+    calls.push("transaction");
+    return transaction === 1
+      ? {
+          resourceType: "Bundle",
+          type: "transaction-response",
+          entry: [
+            { response: { status: "201 Created", location: "Encounter/encounter-1/_history/1" } },
+            { response: { status: "201 Created", location: "Provenance/provenance-1/_history/1" } },
+          ],
+        }
+      : {
+          resourceType: "Bundle",
+          type: "transaction-response",
+          entry: [
+            { response: { status: "200 OK", location: "Encounter/encounter-1/_history/2" } },
+            { response: { status: "201 Created", location: "Provenance/provenance-2/_history/1" } },
+          ],
+        };
+  }) as typeof fhir.executeTransaction;
+
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <AppointmentChartButton appointment={appointment()} onError={(message) => errors.push(message)} />,
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      renderer.root.findByType("button").props.onClick();
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    assert.deepEqual(calls, ["assign-appointment", "transaction", "transaction"]);
+    assert.deepEqual(errors, [null]);
+  } finally {
+    if (renderer) act(() => renderer.unmount());
+    globalThis.fetch = originalFetch;
+    fhir.search = originalSearch;
+    fhir.executeTransaction = originalExecuteTransaction;
+  }
+});
+
+test("Start chart does not create an encounter when Appointment assignment fails", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalSearch = fhir.search;
+  const originalExecuteTransaction = fhir.executeTransaction;
+  const errors: Array<string | null> = [];
+  let transactions = 0;
+  globalThis.fetch = (async () => new Response(
+    JSON.stringify({ error: "Appointment not found." }),
+    { status: 404, headers: { "Content-Type": "application/json" } },
+  )) as typeof fetch;
+  fhir.search = (async () => ({
+    resourceType: "Bundle",
+    type: "searchset",
+    entry: [],
+  })) as typeof fhir.search;
+  fhir.executeTransaction = (async () => {
+    transactions += 1;
+    throw new Error("Encounter transaction must not run after assignment failure.");
+  }) as typeof fhir.executeTransaction;
+
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <AppointmentChartButton appointment={appointment()} onError={(message) => errors.push(message)} />,
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      renderer.root.findByType("button").props.onClick();
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    assert.equal(transactions, 0);
+    assert.deepEqual(errors, [null, "Appointment not found."]);
+  } finally {
+    if (renderer) act(() => renderer.unmount());
+    globalThis.fetch = originalFetch;
+    fhir.search = originalSearch;
+    fhir.executeTransaction = originalExecuteTransaction;
+  }
+});
+
 test("floor card has its own checked-in chart action without nesting buttons", () => {
   const html = renderToStaticMarkup(
     <FloorCard

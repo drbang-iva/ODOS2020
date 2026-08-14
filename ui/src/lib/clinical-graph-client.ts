@@ -26,6 +26,32 @@ export function clinicalGraphApiBase(): string {
   return import.meta.env?.VITE_ODOS_MCP_BASE_URL?.replace(/\/$/, "") ?? "";
 }
 
+const PROVIDER_ASSIGNMENT_TIMEOUT_MS = 15_000;
+
+export async function assignProviderForAppointment(
+  appointmentId: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), PROVIDER_ASSIGNMENT_TIMEOUT_MS);
+  try {
+    const response = await fetchImpl(
+      `${clinicalGraphApiBase()}/clinical-graph/appointments/${encodeURIComponent(appointmentId)}/assign-provider`,
+      {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        signal: controller.signal,
+      },
+    );
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({})) as ClinicalGraphErrorBody;
+      throw new Error(body.error ?? `Provider assignment failed (${response.status}).`);
+    }
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export interface VisitChargeOption {
   procedureConceptKey: string;
   display: string;
