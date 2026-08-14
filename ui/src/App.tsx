@@ -53,7 +53,16 @@ import { AppShell, type AppShellSide } from "./components/AppShell";
 import { LoginScreen } from "./scenes/LoginScreen";
 import { SetPasswordScreen } from "./scenes/SetPasswordScreen";
 import { resolveSessionRoles, type PracticeRoleId, type WhoAmIResponse } from "./lib/practice-roles";
-import { interceptAppNavigation } from "./lib/navigation";
+import {
+  appHistoryIndex,
+  confirmAppNavigation,
+  confirmPopstateNavigation,
+  initializeAppHistory,
+  interceptAppNavigation,
+  markProgrammaticNavigationConfirmed,
+  pushAppHistory,
+  restoreCancelledHistoryNavigation,
+} from "./lib/navigation";
 import type { Patient } from "@medplum/fhirtypes";
 import { loadAndApplyAppearance } from "./lib/appearance";
 
@@ -85,13 +94,45 @@ export function App({
   const view = useViewState((state) => state.view);
   const setView = useViewState((state) => state.setView);
   const previousPath = useRef(path);
+  const historyIndex = useRef<number | null>(null);
+  const restoringCancelledNavigation = useRef(false);
+  if (historyIndex.current === null) {
+    historyIndex.current = initializeAppHistory(
+      window.history,
+      `${window.location.pathname}${window.location.search ?? ""}${window.location.hash ?? ""}`,
+      currentNavigationEntryIndex(),
+    );
+  }
   const initialPath = useRef(window.location.pathname);
   const initialSearch = useRef(window.location.search);
   const initialClinicView = useRef(clinicViewFromSearch(initialSearch.current, { kind: "picker" }));
 
   useEffect(() => {
-    const updatePath = () => {
+    const updatePath = (event?: Event) => {
       const nextPath = window.location.pathname;
+      if (event?.type === "popstate") {
+        const targetState = "state" in event ? (event as PopStateEvent).state : window.history.state;
+        if (restoringCancelledNavigation.current) {
+          restoringCancelledNavigation.current = false;
+          historyIndex.current = appHistoryIndex(targetState) ?? historyIndex.current;
+          return;
+        }
+        if (!confirmPopstateNavigation()) {
+          const restoring = restoreCancelledHistoryNavigation(
+            window.history,
+            historyIndex.current ?? 0,
+            targetState,
+            currentNavigationEntryIndex(),
+          );
+          if (restoring) {
+            restoringCancelledNavigation.current = true;
+            return;
+          }
+        }
+        historyIndex.current = appHistoryIndex(targetState) ?? historyIndex.current;
+      } else {
+        historyIndex.current = appHistoryIndex(window.history.state) ?? historyIndex.current;
+      }
       setView(clinicViewAfterNavigation(previousPath.current, nextPath, useViewState.getState().view));
       previousPath.current = nextPath;
       setPath(nextPath);
@@ -114,6 +155,7 @@ export function App({
       initialSearch.current = window.location.search;
       initialClinicView.current = clinicViewFromSearch(initialSearch.current, { kind: "picker" });
       previousPath.current = initialPath.current;
+      historyIndex.current = appHistoryIndex(window.history.state) ?? historyIndex.current;
       setPath(initialPath.current);
       setAuthed(false);
       setRoles(undefined);
@@ -132,6 +174,7 @@ export function App({
     initialSearch.current = window.location.search;
     initialClinicView.current = clinicViewFromSearch(initialSearch.current, { kind: "picker" });
     previousPath.current = initialPath.current;
+    historyIndex.current = appHistoryIndex(window.history.state) ?? historyIndex.current;
     setPath(initialPath.current);
   }, [authed]);
 
@@ -149,8 +192,9 @@ export function App({
         const destinationUrl = rootRequest ? destination : `${requestedPath}${initialSearch.current}`;
         setRoles(whoami.roles);
         if (clinicDeepLink) setView(initialClinicView.current);
-        window.history.replaceState({}, "", destinationUrl);
+        window.history.replaceState(window.history.state, "", destinationUrl);
         previousPath.current = renderedPath;
+        historyIndex.current = appHistoryIndex(window.history.state) ?? historyIndex.current;
         setPath(renderedPath);
       })
       .catch((error) => {
@@ -254,8 +298,18 @@ export function clinicRouteView(search: string, view: ViewState): ViewState {
 }
 
 export function openOtherSide(path: typeof CLINIC_PATH | typeof DESK_HOME_PATH): void {
-  window.history.pushState({}, "", path);
+  if (!confirmAppNavigation()) return;
+  markProgrammaticNavigationConfirmed();
+  pushAppHistory(window.history, path);
   window.dispatchEvent(new Event("popstate"));
+}
+
+function currentNavigationEntryIndex(): number | undefined {
+  const navigation = (window as Window & {
+    navigation?: { currentEntry?: { index?: number } };
+  }).navigation;
+  const index = navigation?.currentEntry?.index;
+  return typeof index === "number" && Number.isInteger(index) ? index : undefined;
 }
 
 export function RoleSwitchPill({ target }: { target: typeof CLINIC_PATH | typeof DESK_HOME_PATH }) {
