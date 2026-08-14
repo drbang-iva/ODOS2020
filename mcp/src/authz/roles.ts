@@ -275,6 +275,11 @@ const PAYMENT_CUSTODY_RESOURCE_RULES: OdosResourceRule[] = [
 
 const ADMIN_CORRECTION_RESOURCE_RULES: OdosResourceRule[] = [
   {
+    resourceType: "HealthcareService",
+    interactions: UPDATE_INTERACTIONS,
+    scope: { kind: "practice" },
+  },
+  {
     resourceType: "Basic",
     interactions: READ_UPDATE_INTERACTIONS,
     scope: {
@@ -514,9 +519,10 @@ const STAFF_CORRESPONDENCE_RESOURCE_RULES: OdosResourceRule[] = [
  * Schedules, the whole visit-type catalog, and every patient's appointments for the day, and
  * booking writes Appointments for arbitrary patients — Schedule/Slot/HealthcareService are not
  * Patient-compartment resources at all, so a compartment criteria matches nothing. Mirrors the
- * v0.6c dispensary practice-scope precedent (decision 2026-07-05 §2). Schedule/Slot/
- * HealthcareService stay read-only (practice-admin manages them); Appointment gets no delete —
- * cancellation is a status change, never a delete.
+ * v0.6c dispensary practice-scope precedent (decision 2026-07-05 §2). Schedule and Slot stay
+ * direct-policy read-only: Schedule writes use the Admin-gated service route, while Slots are
+ * generated in memory. HealthcareService writes use Admin's explicit practice-scoped correction
+ * rule. No scheduling resource gets delete; cancellation and deactivation are state changes.
  */
 const SCHEDULING_RESOURCE_RULES: OdosResourceRule[] = [
   { resourceType: "Appointment", interactions: UPDATE_INTERACTIONS, scope: { kind: "practice" } },
