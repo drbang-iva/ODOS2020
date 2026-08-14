@@ -24,7 +24,7 @@ import {
 import {
   ODOS_PRACTICE_ROLE_SYSTEM,
 } from "../mcp/src/authz/roles.js";
-import { assertCanonicalPolicyRules } from "./grant-migrated-patient-access.js";
+import { assertCanonicalPolicyRules } from "./access-policy-rules.js";
 
 const DEFAULT_BASE_URL = "http://localhost:8103";
 const DEFAULT_STATE_PATH = resolve(".odos/migration-importer-state.json");

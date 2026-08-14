@@ -9,7 +9,6 @@ import {
   hasPatientCompartmentGrant,
 } from "../mcp/src/clinical-graph/provider-assignment-endpoint.js";
 import {
-  buildMedplumAccessPolicy,
   buildProjectMembershipAccess,
   getRoleDeclaration,
   ODOS_PRACTICE_ROLE_SYSTEM,
@@ -26,12 +25,18 @@ import {
   ImportLedger,
 } from "../mcp/src/legacy-import/import-ledger.js";
 import {
+  PolicyDriftError,
+  assertCanonicalPolicyRules,
+} from "./access-policy-rules.js";
+import {
   cliArgument,
   ordinarySessionContext,
   referenceId,
   requireEnv,
 } from "./legacy-import-m2a-cli.js";
 import { assertLocalMedplumBaseUrl } from "./reseed-practice-role-tags.js";
+
+export { PolicyDriftError, assertCanonicalPolicyRules };
 
 const DEFAULT_BASE_URL = "http://localhost:8103";
 const WRITE_HEADERS = { "X-ODOS-Source": "scripts/grant-migrated-patient-access" } as const;
@@ -66,16 +71,6 @@ export class MembershipResolutionError extends Error {
   ) {
     super(`Expected one project membership for ${profileReference}; found ${matchCount}.`);
     this.name = "MembershipResolutionError";
-  }
-}
-
-export class PolicyDriftError extends Error {
-  constructor(
-    readonly role: Extract<PracticeRoleId, "provider" | "staff">,
-    readonly policyReference: string,
-  ) {
-    super(`${policyReference} rules diverge from the canonical ${role} AccessPolicy.`);
-    this.name = "PolicyDriftError";
   }
 }
 
@@ -250,44 +245,6 @@ implements MigratedPatientAccessGrantAdapter {
       { ...WRITE_HEADERS, "If-Match": `W/"${versionId}"` },
     );
   }
-}
-
-export function assertCanonicalPolicyRules(
-  policy: AccessPolicy,
-  role: Extract<PracticeRoleId, "provider" | "staff">,
-): void {
-  const expected = buildMedplumAccessPolicy(getRoleDeclaration(role));
-  if (canonicalPolicyRules(policy) !== canonicalPolicyRules(expected)) {
-    throw new PolicyDriftError(
-      role,
-      policy.id ? `AccessPolicy/${policy.id}` : `AccessPolicy/${role}`,
-    );
-  }
-}
-
-function canonicalPolicyRules(policy: AccessPolicy): string {
-  return JSON.stringify(
-    (policy.resource ?? [])
-      .map((rule) => canonicalPolicyValue(rule))
-      .sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right))),
-  );
-}
-
-function canonicalPolicyValue(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    return value
-      .map(canonicalPolicyValue)
-      .sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right)));
-  }
-  if (value && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value)
-        .filter(([, nested]) => nested !== undefined)
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([key, nested]) => [key, canonicalPolicyValue(nested)]),
-    );
-  }
-  return value;
 }
 
 async function grantGeneralPractitioner(input: {

@@ -416,8 +416,8 @@ test("setup npm entry loads the env file and passes its explicit project to the 
       readFileSync(new URL("scripts/setup-legacy-importer.ts", root), "utf8"),
     );
     symlinkSync(
-      new URL("scripts/grant-migrated-patient-access.ts", root),
-      join(directory, "scripts", "grant-migrated-patient-access.ts"),
+      new URL("scripts/access-policy-rules.ts", root),
+      join(directory, "scripts", "access-policy-rules.ts"),
     );
     symlinkSync(new URL("data", root), join(directory, "data"), "dir");
     symlinkSync(new URL("mcp", root), join(directory, "mcp"), "dir");
