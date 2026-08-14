@@ -209,6 +209,7 @@ export function VisitTypeSettingsReady({
           type: "select",
           key: "durationMinutes",
           label: "Duration (minutes)",
+          required: true,
           options: VISIT_TYPE_DURATION_OPTIONS.map((minutes) => ({
             value: String(minutes),
             label: String(minutes),
@@ -246,14 +247,6 @@ export function VisitTypeSettingsReady({
             { url: "https://odos2020.com/fhir/StructureDefinition/odos-display-color", valueString: SCHEDULER_PALETTE.newExamBlue },
           ],
         })),
-      validateItem: (item) => {
-        if (!item.durationMinutes && item.legacyDurationMinutes === undefined) {
-          throw new CatalogFieldValidationError(
-            "durationMinutes",
-            "Duration (minutes) must be a listed option.",
-          );
-        }
-      },
       label: (item) => item.label,
       color: (item) => item.color,
       facts: (item) => [

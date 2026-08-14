@@ -288,7 +288,7 @@ test("visit-type duration select offers only 60, 45, 30, 20, 15, and 10 minutes 
   act(() => renderer.unmount());
 });
 
-test("label-only edits preserve an out-of-list legacy duration until a listed duration is chosen", async () => {
+test("an out-of-list legacy duration renders read-only and blocks persistence until a listed duration is chosen", async () => {
   const legacy = visitType("legacy", "Legacy Visit", true, undefined, undefined, 28);
   const fixture = resourceClient([[legacy]]);
   let renderer!: ReactTestRenderer;
@@ -321,9 +321,18 @@ test("label-only edits preserve an out-of-list legacy duration until a listed du
     await new Promise((resolve) => setImmediate(resolve));
   });
 
+  assert.equal(fixture.writes.length, 0);
+  assert.match(JSON.stringify(renderer.toJSON()), /Duration \(minutes\) is required/);
+
+  act(() => duration.props.onChange({ target: { value: "45" } }));
+  await act(async () => {
+    button(renderer, "Save").props.onClick();
+    await new Promise((resolve) => setImmediate(resolve));
+  });
+
   assert.equal(fixture.writes.length, 1);
   assert.equal(fixture.writes[0]?.resource.name, "Renamed Legacy Visit");
-  assert.equal(visitTypeDurationMinutes(fixture.writes[0]!.resource), 28);
+  assert.equal(visitTypeDurationMinutes(fixture.writes[0]!.resource), 45);
   act(() => renderer.unmount());
 });
 
