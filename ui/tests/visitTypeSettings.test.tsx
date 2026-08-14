@@ -5,7 +5,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import type { Basic, Bundle, HealthcareService, Resource } from "@medplum/fhirtypes";
 import { createSingletonConfigDraft } from "../src/lib/catalog-adapter";
-import { buildVisitType, visibleSchedulingVisitTypes, visitTypeCode } from "../src/lib/scheduling";
+import {
+  buildVisitType,
+  visibleSchedulingVisitTypes,
+  visitTypeCode,
+  visitTypeDurationMinutes,
+} from "../src/lib/scheduling";
 import {
   createVisitTypeCategoryAdapter,
   createVisitTypeResourceAdapter,
@@ -34,13 +39,14 @@ function visitType(
   active: boolean,
   categoryCode?: string,
   categoryLabel?: string,
+  durationMinutes = 30,
 ): HealthcareService {
   return {
     ...buildVisitType({
       code: id,
       name,
       discipline: "eyecare",
-      durationMinutes: 30,
+      durationMinutes,
       color: "#4a7dff",
       active,
       ...(categoryCode ? { categoryCode, categoryLabel } : {}),
@@ -242,6 +248,99 @@ test("visit-type scene shows mixed save semantics, grouping, Uncategorized last,
   assert.ok(html.indexOf("Dry Eye") < html.indexOf("Uncategorized"));
   assert.match(html, /Inactive · expand/);
   assert.doesNotMatch(html, /Old Visit/);
+});
+
+test("visit-type duration select offers only 60, 45, 30, 20, 15, and 10 minutes and defaults new items to 30", async () => {
+  const fixture = resourceClient([[]]);
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(
+      <VisitTypeSettingsReady
+        config={CATEGORIES}
+        canWrite
+        client={fixture.client as VisitTypeSettingsClient}
+        initialVisitTypes={[]}
+      />,
+    );
+  });
+
+  act(() => button(renderer, "+ Add visit type").props.onClick());
+  const duration = renderer.root.findAllByType("select").find((candidate) =>
+    candidate.findAllByType("option").some((option) => option.props.value === "60")
+  );
+  assert.ok(duration, "duration renders as a select");
+  assert.deepEqual(
+    duration.findAllByType("option").map((option) => option.props.value).filter(Boolean),
+    ["60", "45", "30", "20", "15", "10"],
+  );
+  assert.equal(duration.props.value, "30");
+
+  const label = renderer.root.findAllByType("input").find((candidate) =>
+    candidate.props.value === ""
+  );
+  assert.ok(label, "new visit type label is editable");
+  act(() => label.props.onChange({ target: { value: "New Visit" } }));
+  await act(async () => {
+    button(renderer, "Save").props.onClick();
+    await new Promise((resolve) => setImmediate(resolve));
+  });
+  assert.equal(visitTypeDurationMinutes(fixture.writes[0]!.resource), 30);
+  act(() => renderer.unmount());
+});
+
+test("an out-of-list legacy duration renders read-only and blocks persistence until a listed duration is chosen", async () => {
+  const legacy = visitType("legacy", "Legacy Visit", true, undefined, undefined, 28);
+  const fixture = resourceClient([[legacy]]);
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(
+      <VisitTypeSettingsReady
+        config={CATEGORIES}
+        canWrite
+        client={fixture.client as VisitTypeSettingsClient}
+        initialVisitTypes={[legacy]}
+        initialSelectedVisitTypeId="legacy"
+      />,
+    );
+  });
+
+  const duration = renderer.root.findAllByType("select").find((candidate) =>
+    candidate.findAllByType("option").some((option) => option.props.value === "60")
+  );
+  assert.ok(duration, "legacy duration still renders the constrained select");
+  assert.equal(duration.props.value, "");
+  assert.match(JSON.stringify(renderer.toJSON()), /Current custom duration.*28 min/);
+
+  const label = renderer.root.findAllByType("input").find((candidate) =>
+    candidate.props.value === "Legacy Visit"
+  );
+  assert.ok(label, "legacy visit label is editable");
+  act(() => label.props.onChange({ target: { value: "Renamed Legacy Visit" } }));
+  await act(async () => {
+    button(renderer, "Save").props.onClick();
+    await new Promise((resolve) => setImmediate(resolve));
+  });
+
+  assert.equal(fixture.writes.length, 0);
+  assert.match(JSON.stringify(renderer.toJSON()), /Duration \(minutes\) is required/);
+
+  await act(async () => {
+    button(renderer, "Deactivate").props.onClick();
+    await new Promise((resolve) => setImmediate(resolve));
+  });
+  assert.equal(fixture.writes.length, 0);
+  assert.match(JSON.stringify(renderer.toJSON()), /Choose a listed duration before changing this 28-minute visit type/);
+
+  act(() => duration.props.onChange({ target: { value: "45" } }));
+  await act(async () => {
+    button(renderer, "Save").props.onClick();
+    await new Promise((resolve) => setImmediate(resolve));
+  });
+
+  assert.equal(fixture.writes.length, 1);
+  assert.equal(fixture.writes[0]?.resource.name, "Renamed Legacy Visit");
+  assert.equal(visitTypeDurationMinutes(fixture.writes[0]!.resource), 45);
+  act(() => renderer.unmount());
 });
 
 test("visit-type scene offers both starter seeds when empty and removes all editor affordances in read-only mode", () => {
