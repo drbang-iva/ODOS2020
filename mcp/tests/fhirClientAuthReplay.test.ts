@@ -1,8 +1,34 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Bundle, ChargeItemDefinition, OperationOutcome, Patient, ProjectMembership } from "@medplum/fhirtypes";
-import { createMedplumClient, type MedplumClient } from "../src/fhir-client.js";
+import {
+  createMedplumClient,
+  createOperatorScriptFhirClient,
+  type MedplumClient,
+} from "../src/fhir-client.js";
 import { TEST_FHIR_AUDIT_CONTEXT, TEST_FHIR_AUDIT_RECORDER } from "./fhirAuditTestStub.js";
+
+test("operator-script FHIR client leaves Medplum extended mode off by default", async () => {
+  const originalFetch = globalThis.fetch;
+  let extendedHeader: string | null | undefined;
+  globalThis.fetch = async (_input, init) => {
+    extendedHeader = new Headers(init?.headers).get("X-Medplum");
+    return Response.json({ resourceType: "Patient", id: "p1" });
+  };
+  try {
+    const client = createOperatorScriptFhirClient({
+      baseUrl: "http://medplum.test",
+      accessToken: "operator-token",
+      reason: "Test the operator-script client default header behavior.",
+    });
+
+    await client.read<Patient>("Patient", "p1");
+
+    assert.equal(extendedHeader, null);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
 
 test("FHIR client forces one re-login and replays a 401 once for every service operation", async () => {
   const originalFetch = globalThis.fetch;

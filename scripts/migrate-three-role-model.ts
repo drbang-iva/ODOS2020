@@ -325,14 +325,17 @@ class LiveThreeRoleMigrationAdapter implements ThreeRoleMigrationAdapter {
     postgresUrl: process.env.ODOS_POSTGRES_URL ?? "postgresql://medplum:medplum@127.0.0.1:5433/medplum",
   });
 
-  constructor(private readonly fhir: MedplumClient) {}
+  constructor(
+    private readonly fhir: MedplumClient,
+    private readonly projectId: string,
+  ) {}
 
   readPolicies(): Promise<AccessPolicy[]> {
-    return searchAll(this.fhir, "AccessPolicy", {});
+    return searchAll(this.fhir, "AccessPolicy", { _project: this.projectId });
   }
 
   readMemberships(): Promise<ProjectMembership[]> {
-    return searchAll(this.fhir, "ProjectMembership", {});
+    return searchAll(this.fhir, "ProjectMembership", { _project: this.projectId });
   }
 
   createPolicy(_role: PracticeRoleId, policy: AccessPolicy): Promise<AccessPolicy> {
@@ -372,6 +375,7 @@ async function runCli(): Promise<void> {
     baseUrl,
     accessToken: credentials.accessToken,
     reason: "Operator three-role migration runs outside request handling.",
+    extendedMode: true,
   });
   const projectId = await resolveThreeRoleMigrationProjectId({
     explicitProjectId: argumentValue("--project"),
@@ -382,7 +386,7 @@ async function runCli(): Promise<void> {
       fhir,
     }),
   });
-  const result = await executeThreeRoleMigration(new LiveThreeRoleMigrationAdapter(fhir), { projectId, apply });
+  const result = await executeThreeRoleMigration(new LiveThreeRoleMigrationAdapter(fhir, projectId), { projectId, apply });
   console.log(JSON.stringify({
     mode: result.mode,
     policiesToCreate: result.plan.canonicalRolesToCreate,

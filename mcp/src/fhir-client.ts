@@ -158,7 +158,7 @@ export function createUnauditedMedplumClient_bootOnly(
 }
 
 export function createOperatorScriptFhirClient(
-  opts: UnauditedMedplumClientOptions & { reason: string },
+  opts: UnauditedMedplumClientOptions & { reason: string; extendedMode?: boolean },
 ): MedplumClient {
   if (!opts.reason.trim()) {
     throw new Error("Operator script FHIR client requires a non-blank unaudited reason.");
@@ -170,6 +170,7 @@ export function createOperatorScriptFhirClient(
 function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
   audit?: FhirAuditRecorder;
   auditContext?: FhirAuditContext;
+  extendedMode?: boolean;
 }): MedplumClient {
   const base = opts.baseUrl.replace(/\/$/, "");
   let token: string | undefined = opts.accessToken;
@@ -184,6 +185,7 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
       Accept: "application/fhir+json",
     };
     if (token) h.Authorization = `Bearer ${token}`;
+    if (opts.extendedMode) h["X-Medplum"] = "extended";
     return h;
   }
 
