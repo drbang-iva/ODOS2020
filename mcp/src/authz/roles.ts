@@ -281,6 +281,15 @@ const ADMIN_CORRECTION_RESOURCE_RULES: OdosResourceRule[] = [
   },
   {
     resourceType: "Basic",
+    interactions: UPDATE_INTERACTIONS,
+    scope: {
+      kind: "practice-search",
+      criteria:
+        "Basic?code=https://odos2020.com/fhir/CodeSystem/visit-type-config|odos-visit-type-config",
+    },
+  },
+  {
+    resourceType: "Basic",
     interactions: READ_UPDATE_INTERACTIONS,
     scope: {
       kind: "practice-search",

@@ -121,6 +121,34 @@ test("three-role policies allow only Admin to write HealthcareService without wi
   }
 });
 
+test("three-role policies allow only Admin to write the visit-type category singleton", () => {
+  const criteria =
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/visit-type-config|odos-visit-type-config";
+  const adminPolicy = buildMedplumAccessPolicy(getRoleDeclaration("admin"));
+
+  assert.equal(
+    adminPolicy.resource?.some((rule) => rule.resourceType === "*"),
+    false,
+    "the retired practice-admin wildcard must not return",
+  );
+
+  for (const interaction of ["create", "update"] as const) {
+    assert.equal(
+      accessPolicyAllows(adminPolicy, "Basic", interaction, criteria),
+      true,
+      `Admin must be permitted to ${interaction} the visit-type category singleton`,
+    );
+    for (const roleId of ["provider", "staff"] as const) {
+      const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
+      assert.equal(
+        accessPolicyAllows(policy, "Basic", interaction, criteria),
+        false,
+        `${roleId} must be rejected from ${interaction} of the visit-type category singleton`,
+      );
+    }
+  }
+});
+
 test("three-role policies allow only Admin to read AccessPolicy at practice scope without write access or wildcard", () => {
   const adminPolicy = buildMedplumAccessPolicy(getRoleDeclaration("admin"));
   const adminRule = adminPolicy.resource?.find((rule) => rule.resourceType === "AccessPolicy");
@@ -237,10 +265,12 @@ function accessPolicyAllows(
   policy: AccessPolicy,
   resourceType: string,
   interaction: NonNullable<AccessPolicyResource["interaction"]>[number],
+  criteria?: string,
 ): boolean {
   return policy.resource?.some(
     (rule) =>
       (rule.resourceType === resourceType || rule.resourceType === "*") &&
-      rule.interaction?.includes(interaction),
+      rule.interaction?.includes(interaction) &&
+      (criteria === undefined || rule.criteria === criteria),
   ) ?? false;
 }

@@ -16,6 +16,11 @@
 
 html, body, #root { height: 100%; margin: 0; }
 
+:root {
+  --odos-z-build-stamp: 20;
+  --odos-z-bottom-action: 30;
+}
+
 body {
   background:
     radial-gradient(ellipse at top, rgba(96, 165, 250, 0.08), transparent 60%),
@@ -27,7 +32,7 @@ body {
   position: fixed;
   right: 0.75rem;
   bottom: 0.75rem;
-  z-index: 100;
+  z-index: var(--odos-z-build-stamp);
   display: flex;
   max-width: calc(100vw - 1.5rem);
   flex-wrap: wrap;
@@ -39,6 +44,11 @@ body {
   color: var(--odos-faint, #cbd5e1);
   font: 600 0.6875rem/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
   box-shadow: var(--odos-shadow-card, 0 10px 30px rgba(0, 0, 0, 0.25));
+  pointer-events: none;
+}
+
+.odos-bottom-action-bar {
+  z-index: var(--odos-z-bottom-action);
 }
 
 .odos-build-stamp code {

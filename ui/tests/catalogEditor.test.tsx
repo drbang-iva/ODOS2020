@@ -156,6 +156,49 @@ test("CatalogEditor exposes one Save and Discard bar for a dirty singleton trans
   assert.match(html, />Discard</);
   assert.match(html, />Apply to draft</);
   assert.equal(html.match(/>Save</g)?.length, 1);
+  assert.match(html, /data-odos-bottom-bar=""/);
+});
+
+test("a rejected transaction renders its detailed failure inside the Save bar", async () => {
+  let transaction: CatalogDraftTransaction;
+  transaction = {
+    dirty: true,
+    async commit() {
+      throw new Error("FHIR 403 Forbidden: Basic write denied by AccessPolicy");
+    },
+    discard() {
+      transaction.dirty = false;
+    },
+  };
+  const renderer = create(
+    <CatalogEditor
+      descriptor={descriptor([ACTIVE], transaction)}
+      canWrite
+      initialState={{ items: [ACTIVE], selectedId: ACTIVE.id }}
+    />,
+  );
+  const save = renderer.root.findAllByType("button").find((button) => button.children.includes("Save"));
+  assert.ok(save);
+  const actionBar = save.parent;
+  assert.ok(actionBar);
+
+  await act(async () => {
+    save.props.onClick();
+    await Promise.resolve();
+  });
+
+  const alert = actionBar.findByProps({ role: "alert" });
+  assert.match(
+    alert.children.join(""),
+    /Could not save practice settings.*FHIR 403 Forbidden.*Basic write denied by AccessPolicy/,
+  );
+
+  const discard = actionBar.findAllByType("button").find((button) => button.children.includes("Discard"));
+  assert.ok(discard);
+  await act(async () => {
+    discard.props.onClick();
+  });
+  assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /Could not save practice settings/);
 });
 
 test("the draft-status toast cannot intercept the transaction Save control", async () => {
