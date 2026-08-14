@@ -1,6 +1,10 @@
 import type { Basic, HealthcareService } from "@medplum/fhirtypes";
 import { useEffect, useMemo, useState } from "react";
-import { createSingletonConfigDraft } from "../../lib/catalog-adapter";
+import {
+  createSingletonConfigDraft,
+  type CatalogAdapter,
+} from "../../lib/catalog-adapter";
+import { CatalogFieldValidationError } from "../../lib/catalog-field-kernel";
 import { CATALOG_COLOR_PALETTE } from "../../components/settings/CatalogFields";
 import { fhir } from "../../lib/fhir";
 import { searchAll } from "../../lib/fhir-search";
@@ -35,6 +39,13 @@ type LoadedVisitTypeSettings = {
   config: PersistedVisitTypeConfig;
   configResource?: Basic;
 };
+
+type VisitTypeEditorItem = Omit<VisitTypeCatalogItem, "durationMinutes"> & {
+  durationMinutes: string;
+  legacyDurationMinutes?: number;
+};
+
+const VISIT_TYPE_DURATION_OPTIONS = [60, 45, 30, 20, 15, 10] as const;
 
 export type VisitTypeSettingsClient = Pick<
   typeof fhir,
@@ -116,9 +127,13 @@ export function VisitTypeSettingsReady({
       }),
     [client, config, configResource],
   );
-  const visitTypeAdapter = useMemo(
+  const visitTypeResourceAdapter = useMemo(
     () => createVisitTypeResourceAdapter(client, () => visitTypeCategoryRows(draft.current())),
     [client, draft],
+  );
+  const visitTypeAdapter = useMemo(
+    () => createVisitTypeEditorAdapter(visitTypeResourceAdapter),
+    [visitTypeResourceAdapter],
   );
   const categoryAdapter = useMemo(
     () =>
@@ -143,7 +158,7 @@ export function VisitTypeSettingsReady({
 
   async function seedVisitTypes() {
     for (const resource of defaultVisitTypeCatalog("both")) {
-      await visitTypeAdapter.save(visitTypeCatalogItem(resource));
+      await visitTypeAdapter.save(visitTypeEditorItem(visitTypeCatalogItem(resource)));
     }
     setCatalogRevision((current) => current + 1);
   }
@@ -175,7 +190,7 @@ export function VisitTypeSettingsReady({
     [categoryAdapter, catalogRevision, draft],
   );
 
-  const visitTypeDescriptor = useMemo<CatalogDescriptor<VisitTypeCatalogItem>>(
+  const visitTypeDescriptor = useMemo<CatalogDescriptor<VisitTypeEditorItem>>(
     () => ({
       title: "Visit types",
       singularLabel: "visit type",
@@ -191,11 +206,13 @@ export function VisitTypeSettingsReady({
           palette: CATALOG_COLOR_PALETTE,
         },
         {
-          type: "duration",
+          type: "select",
           key: "durationMinutes",
           label: "Duration (minutes)",
-          required: true,
-          min: 1,
+          options: VISIT_TYPE_DURATION_OPTIONS.map((minutes) => ({
+            value: String(minutes),
+            label: String(minutes),
+          })),
         },
         {
           type: "select",
@@ -219,7 +236,7 @@ export function VisitTypeSettingsReady({
         },
       ],
       createItem: () =>
-        visitTypeCatalogItem({
+        visitTypeEditorItem(visitTypeCatalogItem({
           resourceType: "HealthcareService",
           active: true,
           name: "",
@@ -228,18 +245,34 @@ export function VisitTypeSettingsReady({
             { url: "https://odos2020.com/fhir/StructureDefinition/odos-visit-duration", valuePositiveInt: 30 },
             { url: "https://odos2020.com/fhir/StructureDefinition/odos-display-color", valueString: SCHEDULER_PALETTE.newExamBlue },
           ],
-        }),
+        })),
+      validateItem: (item) => {
+        if (!item.durationMinutes && item.legacyDurationMinutes === undefined) {
+          throw new CatalogFieldValidationError(
+            "durationMinutes",
+            "Duration (minutes) must be a listed option.",
+          );
+        }
+      },
       label: (item) => item.label,
       color: (item) => item.color,
       facts: (item) => [
-        `${item.durationMinutes} min`,
+        `${item.durationMinutes || item.legacyDurationMinutes} min`,
         categoryById.get(item.categoryCode)?.label ?? "Uncategorized",
       ],
       chips: (item) => [
         SCHEDULING_DISCIPLINES.find((discipline) => discipline.code === item.discipline)?.display ??
           item.discipline,
       ],
-      readOnlyFacts: (item) => (item.code ? [{ label: "Code", value: item.code }] : []),
+      readOnlyFacts: (item) => [
+        ...(item.code ? [{ label: "Code", value: item.code }] : []),
+        ...(item.legacyDurationMinutes === undefined
+          ? []
+          : [{
+              label: "Current custom duration",
+              value: `${item.legacyDurationMinutes} min`,
+            }]),
+      ],
       groupBy: {
         label: "Category",
         value: (item) => categoryById.get(item.categoryCode)?.label ?? "Uncategorized",
@@ -273,7 +306,9 @@ export function VisitTypeSettingsReady({
         initialState={
           initialVisitTypes
             ? {
-                items: initialVisitTypes.map(visitTypeCatalogItem),
+                items: initialVisitTypes.map((resource) =>
+                  visitTypeEditorItem(visitTypeCatalogItem(resource))
+                ),
                 selectedId: initialSelectedVisitTypeId,
               }
             : undefined
@@ -281,6 +316,55 @@ export function VisitTypeSettingsReady({
       />
     </CatalogScene>
   );
+}
+
+function createVisitTypeEditorAdapter(
+  adapter: CatalogAdapter<VisitTypeCatalogItem>,
+): CatalogAdapter<VisitTypeEditorItem> {
+  return {
+    capabilities: adapter.capabilities,
+    async list() {
+      return (await adapter.list()).map(visitTypeEditorItem);
+    },
+    async save(item) {
+      return visitTypeEditorItem(await adapter.save(persistedVisitTypeItem(item)));
+    },
+    async deactivate(item) {
+      return visitTypeEditorItem(await adapter.deactivate(persistedVisitTypeItem(item)));
+    },
+    ...(adapter.reorder
+      ? { reorder: (ids: string[]) => adapter.reorder!(ids) }
+      : {}),
+  };
+}
+
+function visitTypeEditorItem(item: VisitTypeCatalogItem): VisitTypeEditorItem {
+  const listed = VISIT_TYPE_DURATION_OPTIONS.includes(
+    item.durationMinutes as (typeof VISIT_TYPE_DURATION_OPTIONS)[number],
+  );
+  return {
+    ...item,
+    durationMinutes: listed ? String(item.durationMinutes) : "",
+    ...(listed ? {} : { legacyDurationMinutes: item.durationMinutes }),
+  };
+}
+
+function persistedVisitTypeItem(item: VisitTypeEditorItem): VisitTypeCatalogItem {
+  const { durationMinutes, legacyDurationMinutes, ...rest } = item;
+  const selectedDuration = Number(durationMinutes);
+  const listed = VISIT_TYPE_DURATION_OPTIONS.includes(
+    selectedDuration as (typeof VISIT_TYPE_DURATION_OPTIONS)[number],
+  );
+  if (!listed && legacyDurationMinutes === undefined) {
+    throw new CatalogFieldValidationError(
+      "durationMinutes",
+      "Duration (minutes) must be a listed option.",
+    );
+  }
+  return {
+    ...rest,
+    durationMinutes: listed ? selectedDuration : legacyDurationMinutes!,
+  };
 }
 
 function SettingsState({ message, alert = false }: { message: string; alert?: boolean }) {
