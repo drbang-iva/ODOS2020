@@ -95,7 +95,7 @@ type BasicWriter = {
 
 export interface CatalogDraftTransaction {
   readonly dirty: boolean;
-  commit(): Promise<Basic>;
+  commit(): Promise<Basic | undefined>;
   discard(): void;
 }
 

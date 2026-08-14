@@ -159,6 +159,58 @@ test("CatalogEditor exposes one Save and Discard bar for a dirty singleton trans
   assert.match(html, /data-odos-bottom-bar=""/);
 });
 
+test("the same dirty state drives the Save bar and beforeunload guard", async () => {
+  const originalWindow = globalThis.window;
+  const fakeWindow = new EventTarget() as EventTarget & Window;
+  Object.defineProperty(globalThis, "window", { configurable: true, value: fakeWindow });
+  let transaction: CatalogDraftTransaction;
+  transaction = {
+    dirty: true,
+    async commit() {
+      transaction.dirty = false;
+      return { resourceType: "Basic", code: { text: "Fixture" } };
+    },
+    discard() {
+      transaction.dirty = false;
+    },
+  };
+
+  try {
+    let renderer!: ReturnType<typeof create>;
+    await act(async () => {
+      renderer = create(
+        <CatalogEditor
+          descriptor={descriptor([ACTIVE], transaction)}
+          canWrite
+          initialState={{ items: [ACTIVE] }}
+        />,
+      );
+    });
+    assert.match(JSON.stringify(renderer.toJSON()), /Unsaved settings changes/);
+    const guarded = new Event("beforeunload", { cancelable: true });
+    fakeWindow.dispatchEvent(guarded);
+    assert.equal(guarded.defaultPrevented, true);
+
+    transaction.dirty = false;
+    await act(async () => {
+      renderer.update(
+        <CatalogEditor
+          descriptor={descriptor([ACTIVE], transaction)}
+          canWrite
+          initialState={{ items: [ACTIVE] }}
+        />,
+      );
+    });
+    assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /Unsaved settings changes/);
+    const unguarded = new Event("beforeunload", { cancelable: true });
+    fakeWindow.dispatchEvent(unguarded);
+    assert.equal(unguarded.defaultPrevented, false);
+    renderer.unmount();
+  } finally {
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
+});
+
 test("a rejected transaction renders its detailed failure inside the Save bar", async () => {
   let transaction: CatalogDraftTransaction;
   transaction = {

@@ -13,6 +13,7 @@ import type {
   CatalogDraftTransaction,
   CatalogItemBase,
 } from "../../lib/catalog-adapter";
+import { registerNavigationBlocker } from "../../lib/navigation";
 
 export type CatalogDescriptor<Item extends CatalogItemBase> = {
   title: string;
@@ -103,6 +104,21 @@ export function CatalogScene({
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
+  const dirty = Boolean(transaction?.dirty);
+
+  useEffect(() => {
+    if (!dirty || typeof window === "undefined") return;
+    const unregister = registerNavigationBlocker(() => true);
+    const guardReload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", guardReload);
+    return () => {
+      unregister();
+      window.removeEventListener("beforeunload", guardReload);
+    };
+  }, [dirty]);
 
   function touch() {
     setRevision((current) => current + 1);
@@ -116,7 +132,7 @@ export function CatalogScene({
     try {
       const saved = await transaction.commit();
       touch();
-      onCommitted?.(saved);
+      if (saved) onCommitted?.(saved);
       setToast("Settings saved successfully.");
     } catch (commitError) {
       setError(`Could not save practice settings. ${errorMessage(commitError)}`);
@@ -149,7 +165,7 @@ export function CatalogScene({
           <div className="grid gap-8">{children}</div>
         </div>
 
-        {transaction?.dirty && canWrite && (
+        {dirty && canWrite && (
           <div
             className="odos-bottom-action-bar fixed inset-x-0 bottom-0 flex flex-wrap items-center justify-end gap-2 border-t border-white/15 bg-[#10111c] px-6 py-3 shadow-2xl"
             data-odos-bottom-bar=""
@@ -215,7 +231,6 @@ export function CatalogSection<Item extends CatalogItemBase>({
   );
 
   useEffect(() => {
-    if (initialState) return;
     let cancelled = false;
     setLoading(true);
     Promise.resolve(descriptor.adapter.list())

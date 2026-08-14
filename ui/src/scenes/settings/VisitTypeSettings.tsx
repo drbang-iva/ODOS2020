@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   createSingletonConfigDraft,
   type CatalogAdapter,
+  type CatalogDraftTransaction,
 } from "../../lib/catalog-adapter";
 import { CatalogFieldValidationError } from "../../lib/catalog-field-kernel";
 import { CATALOG_COLOR_PALETTE } from "../../components/settings/CatalogFields";
@@ -16,6 +17,8 @@ import {
 import {
   createVisitTypeCategoryAdapter,
   createVisitTypeResourceAdapter,
+  createStagedVisitTypeAdapter,
+  buildVisitTypeCatalogResource,
   visitTypeCatalogItem,
   visitTypeCategoryRows,
   type VisitTypeCatalogItem,
@@ -131,17 +134,33 @@ export function VisitTypeSettingsReady({
     () => createVisitTypeResourceAdapter(client, () => visitTypeCategoryRows(draft.current())),
     [client, draft],
   );
+  const stagedVisitTypeAdapter = useMemo(
+    () => createStagedVisitTypeAdapter(
+      visitTypeResourceAdapter,
+      initialVisitTypes?.map(visitTypeCatalogItem),
+    ),
+    [initialVisitTypes, visitTypeResourceAdapter],
+  );
   const visitTypeAdapter = useMemo(
-    () => createVisitTypeEditorAdapter(visitTypeResourceAdapter),
-    [visitTypeResourceAdapter],
+    () => createVisitTypeEditorAdapter(stagedVisitTypeAdapter),
+    [stagedVisitTypeAdapter],
   );
   const categoryAdapter = useMemo(
     () =>
       createVisitTypeCategoryAdapter(
         draft,
-        async () => (await visitTypeAdapter.list()).map((item) => item.resource),
+        async () => {
+          const categories = visitTypeCategoryRows(draft.current());
+          return (await stagedVisitTypeAdapter.list()).map((item) =>
+            buildVisitTypeCatalogResource(item, categories)
+          );
+        },
       ),
-    [draft, visitTypeAdapter],
+    [draft, stagedVisitTypeAdapter],
+  );
+  const transaction = useMemo(
+    () => createVisitTypeSettingsTransaction(draft, stagedVisitTypeAdapter),
+    [draft, stagedVisitTypeAdapter],
   );
 
   const categories = visitTypeCategoryRows(draft.current());
@@ -185,7 +204,6 @@ export function VisitTypeSettingsReady({
           Use starter categories
         </button>
       ),
-      transaction: draft,
     }),
     [categoryAdapter, catalogRevision, draft],
   );
@@ -195,7 +213,6 @@ export function VisitTypeSettingsReady({
       title: "Visit types",
       singularLabel: "visit type",
       adapter: visitTypeAdapter,
-      immediateCommit: true,
       fields: [
         { type: "text", key: "label", label: "Label", required: true, unique: true },
         {
@@ -285,7 +302,7 @@ export function VisitTypeSettingsReady({
     <CatalogScene
       title="Visit types"
       canWrite={canWrite}
-      transaction={draft}
+      transaction={transaction}
       onChanged={() => setCatalogRevision((current) => current + 1)}
     >
       <CatalogSection
@@ -309,6 +326,41 @@ export function VisitTypeSettingsReady({
       />
     </CatalogScene>
   );
+}
+
+function createVisitTypeSettingsTransaction(
+  categoryDraft: ReturnType<typeof createSingletonConfigDraft<PersistedVisitTypeConfig>>,
+  visitTypeDraft: ReturnType<typeof createStagedVisitTypeAdapter>,
+): CatalogDraftTransaction {
+  return {
+    get dirty() {
+      return categoryDraft.dirty || visitTypeDraft.dirty;
+    },
+    async commit() {
+      let savedCategory: Basic | undefined;
+      if (categoryDraft.dirty) {
+        try {
+          savedCategory = await categoryDraft.commit();
+        } catch (error) {
+          throw new Error(
+            `Category settings were not saved. Visit type changes were not attempted. ${errorMessage(error)}`,
+          );
+        }
+      }
+      try {
+        await visitTypeDraft.commit();
+      } catch (error) {
+        throw new Error(
+          `${savedCategory ? "Category settings saved. " : ""}${errorMessage(error)}`,
+        );
+      }
+      return savedCategory;
+    },
+    discard() {
+      categoryDraft.discard();
+      visitTypeDraft.discard();
+    },
+  };
 }
 
 function createVisitTypeEditorAdapter(

@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { interceptAppNavigation } from "../src/lib/navigation";
+import {
+  confirmPopstateNavigation,
+  interceptAppNavigation,
+  markProgrammaticNavigationConfirmed,
+  registerNavigationBlocker,
+} from "../src/lib/navigation";
 
 function anchor(href: string, attributes: Record<string, string> = {}): HTMLAnchorElement {
   return {
@@ -90,4 +95,30 @@ test("already-handled internal clicks do not create a second history entry", () 
 
   assert.equal(interceptAppNavigation(click.event, location, history), false);
   assert.deepEqual(pushes, []);
+});
+
+test("a blocked settings navigation prevents the same-origin history change", () => {
+  const location = { href: "http://odos.local/settings/visit-types", origin: "http://odos.local" };
+  const pushes: string[] = [];
+  const history = { pushState: (_state: unknown, _title: string, url?: string | URL | null) => pushes.push(String(url)) };
+  const click = clickEvent(anchor("/settings"));
+
+  assert.equal(
+    interceptAppNavigation(click.event, location, history, () => false),
+    false,
+  );
+  assert.equal(click.wasPrevented(), true);
+  assert.deepEqual(pushes, []);
+});
+
+test("browser history prompts unless the navigation was already confirmed", () => {
+  const unregister = registerNavigationBlocker(() => true);
+  try {
+    assert.equal(confirmPopstateNavigation(() => false), false);
+    markProgrammaticNavigationConfirmed();
+    assert.equal(confirmPopstateNavigation(() => false), true);
+    assert.equal(confirmPopstateNavigation(() => false), false);
+  } finally {
+    unregister();
+  }
 });
