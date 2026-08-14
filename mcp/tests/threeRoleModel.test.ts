@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { AccessPolicyResource, Encounter } from "@medplum/fhirtypes";
+import type { AccessPolicy, AccessPolicyResource, Encounter } from "@medplum/fhirtypes";
 import fhirpath from "fhirpath";
 import {
   ODOS_PRACTICE_ROLE_SYSTEM,
@@ -87,6 +87,40 @@ test("all roles read operational records at practice scope while Staff writes st
   );
 });
 
+test("three-role policies allow only Admin to write HealthcareService without wildcard or delete", () => {
+  const adminPolicy = buildMedplumAccessPolicy(getRoleDeclaration("admin"));
+  assert.equal(
+    adminPolicy.resource?.some((rule) => rule.resourceType === "*"),
+    false,
+    "the retired practice-admin wildcard must not return",
+  );
+
+  for (const interaction of ["create", "update"] as const) {
+    assert.equal(
+      accessPolicyAllows(adminPolicy, "HealthcareService", interaction),
+      true,
+      `Admin must be permitted to ${interaction} HealthcareService`,
+    );
+    for (const roleId of ["staff", "provider"] as const) {
+      const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
+      assert.equal(
+        accessPolicyAllows(policy, "HealthcareService", interaction),
+        false,
+        `${roleId} must be rejected from ${interaction} HealthcareService`,
+      );
+    }
+  }
+
+  for (const roleId of PRACTICE_ROLE_IDS) {
+    const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
+    assert.equal(
+      accessPolicyAllows(policy, "HealthcareService", "delete"),
+      false,
+      `${roleId} must be rejected from deleting HealthcareService`,
+    );
+  }
+});
+
 test("Staff Encounter writes allow unfinished work but reject finalization and reopening", () => {
   const staff = buildMedplumAccessPolicy(getRoleDeclaration("staff"));
   const encounterWrite = staff.resource?.find((rule) =>
@@ -156,4 +190,16 @@ function staffEncounterWriteAllowed(
     });
     return result.length === 1 && result[0] === true;
   });
+}
+
+function accessPolicyAllows(
+  policy: AccessPolicy,
+  resourceType: string,
+  interaction: NonNullable<AccessPolicyResource["interaction"]>[number],
+): boolean {
+  return policy.resource?.some(
+    (rule) =>
+      (rule.resourceType === resourceType || rule.resourceType === "*") &&
+      rule.interaction?.includes(interaction),
+  ) ?? false;
 }
