@@ -106,6 +106,82 @@ test("planner retains the foreign-membership ownership invariant", () => {
   );
 });
 
+test("planner skips a migration-importer membership whose legacy policy has no practice-role tag", () => {
+  const servicePrincipalType = ["Client", "Application"].join("");
+  const importerPolicy: AccessPolicy = {
+    resourceType: "AccessPolicy",
+    id: "migration-importer",
+    name: "ODOS Migration Importer",
+    meta: {
+      project: PROJECT,
+      versionId: "2",
+      tag: [{ system: "https://odos2020.com/tags/access-policy", code: "migration-importer" }],
+    },
+  };
+  const importerMembership = {
+    resourceType: "ProjectMembership",
+    id: "migration-importer-membership",
+    meta: { versionId: "7" },
+    project: { reference: `Project/${PROJECT}` },
+    user: { reference: `${servicePrincipalType}/9a88bbde` },
+    profile: { reference: `${servicePrincipalType}/9a88bbde` },
+    access: null,
+    accessPolicy: { reference: "AccessPolicy/migration-importer" },
+  } as unknown as ProjectMembership;
+
+  const plan = planThreeRoleMigration({
+    projectId: PROJECT,
+    policies: [importerPolicy],
+    memberships: [importerMembership],
+  });
+
+  assert.deepEqual(plan.memberships, []);
+});
+
+test("planner skips the entire membership when a non-role legacy policy accompanies role access", () => {
+  const mixedMembership = membershipFixture([access("legacy-clinical")]);
+  mixedMembership.accessPolicy = { reference: "AccessPolicy/migration-importer" };
+
+  const plan = planThreeRoleMigration({
+    projectId: PROJECT,
+    policies: [
+      legacyPolicy("legacy-clinical", "clinician"),
+      unrelatedPolicy("migration-importer"),
+    ],
+    memberships: [mixedMembership],
+  });
+
+  assert.deepEqual(plan.memberships, []);
+});
+
+test("planner refuses a legacy accessPolicy that carries a practice-role tag", () => {
+  const legacyMembership = membershipFixture([]);
+  legacyMembership.accessPolicy = { reference: "AccessPolicy/legacy-clinical" };
+
+  assert.throws(
+    () => planThreeRoleMigration({
+      projectId: PROJECT,
+      policies: [legacyPolicy("legacy-clinical", "clinician")],
+      memberships: [legacyMembership],
+    }),
+    /unmappable legacy accessPolicy/,
+  );
+});
+
+test("planner refuses a legacy accessPolicy unavailable in the target-scoped policy set", () => {
+  const unresolvedMembership = membershipFixture([]);
+  unresolvedMembership.accessPolicy = { reference: "AccessPolicy/outside-target-scope" };
+
+  assert.throws(
+    () => planThreeRoleMigration({
+      projectId: PROJECT,
+      policies: [],
+      memberships: [unresolvedMembership],
+    }),
+    /AccessPolicy\/outside-target-scope.*target.*scoped policy set/,
+  );
+});
+
 test("dry-run performs zero writes; apply creates policies, conditionally patches, audits, and converges", async () => {
   const fixture = adapterFixture();
   const dryRun = await executeThreeRoleMigration(fixture.adapter, { projectId: PROJECT });
