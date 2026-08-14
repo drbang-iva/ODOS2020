@@ -104,6 +104,7 @@ export interface SingletonConfigDraft<Config extends object> extends CatalogDraf
   baseline(): Config;
   current(): Config;
   replace(config: Config): void;
+  reconcile(config: Config, resource?: Basic): void;
   reset(config: Config, resource?: Basic): void;
 }
 
@@ -139,6 +140,10 @@ export function createSingletonConfigDraft<Config extends object>({
     },
     replace(next) {
       draft = clone(next);
+    },
+    reconcile(next, nextResource) {
+      persisted = clone(next);
+      currentResource = nextResource ? clone(nextResource) : undefined;
     },
     reset(next, nextResource) {
       persisted = clone(next);

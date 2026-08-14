@@ -19,6 +19,7 @@ import {
 } from "../src/lib/visit-type-settings";
 import {
   buildVisitTypeConfigResource,
+  parseVisitTypeConfig,
   type PersistedVisitTypeConfig,
 } from "../src/lib/visit-type-config";
 import {
@@ -909,4 +910,92 @@ test("deactivating an edited visit type commits the full staged draft instead of
   assert.equal(fixture.writes[0]?.resource.name, "Edited Routine");
   assert.equal(visitTypeDurationMinutes(fixture.writes[0]!.resource), 45);
   assert.equal(fixture.writes[0]?.resource.active, false);
+});
+
+test("Save rejects a reactivated visit type whose category is staged inactive before issuing any writes", async () => {
+  const config: PersistedVisitTypeConfig = {
+    categories: [{ id: "deactivate-b", label: "Deactivate B", order: 0 }],
+  };
+  const nextConfig: PersistedVisitTypeConfig = {
+    categories: [{ id: "deactivate-b", label: "Deactivate B", order: 0, active: false }],
+  };
+  const categoryResource = { ...buildVisitTypeConfigResource(config), id: "visit-config" };
+  const inactiveVisit = visitType("visit-b", "Visit B", false, "deactivate-b", "Deactivate B");
+  const fixture = emptyPracticeClient({ initialResources: [categoryResource, inactiveVisit] });
+  const categoryDraft = createSingletonConfigDraft({
+    configKey: "odos-visit-type-config",
+    config,
+    resource: categoryResource,
+    buildResource: buildVisitTypeConfigResource,
+    sourceTag: "visit-type-config",
+    fhirClient: fixture.client,
+  });
+  const visitDraft = createStagedVisitTypeAdapter(
+    createVisitTypeResourceAdapter(fixture.client, () => [
+      { id: "deactivate-b", label: "Deactivate B", order: 0, active: false },
+    ]),
+    [visitTypeCatalogItem(inactiveVisit)],
+  );
+  categoryDraft.replace(nextConfig);
+  await visitDraft.save({ ...visitTypeCatalogItem(inactiveVisit), active: true });
+
+  await assert.rejects(
+    () => createVisitTypeSettingsTransaction(categoryDraft, visitDraft).commit(),
+    /Visit B.*cannot be active.*Deactivate B.*inactive/,
+  );
+  assert.deepEqual(fixture.writeOrder, []);
+});
+
+test("retry reconciles a lost category create response before issuing another create", async () => {
+  const desired: PersistedVisitTypeConfig = {
+    categories: [{ id: "new-category", label: "New Category", order: 0 }],
+  };
+  let serverResource: Basic | undefined;
+  let categoryCreates = 0;
+  let reloads = 0;
+  const categoryDraft = createSingletonConfigDraft({
+    configKey: "odos-visit-type-config",
+    config: { categories: [] },
+    buildResource: buildVisitTypeConfigResource,
+    sourceTag: "visit-type-config",
+    fhirClient: {
+      async create(resource) {
+        categoryCreates += 1;
+        serverResource = { ...resource, id: "server-category-config" };
+        if (categoryCreates === 1) {
+          throw new Error("connection dropped after category create");
+        }
+        return serverResource;
+      },
+      async update(resource) { return resource; },
+    },
+  });
+  categoryDraft.replace(desired);
+  const visitDraft = createStagedVisitTypeAdapter({
+    capabilities: { reorder: false, deactivate: true, presetSeed: true },
+    list: () => [],
+    save: (item) => item,
+    deactivate: (item) => ({ ...item, active: false }),
+  }, []);
+  const transaction = createVisitTypeSettingsTransaction(
+    categoryDraft,
+    visitDraft,
+    async () => {
+      reloads += 1;
+      assert.ok(serverResource);
+      return {
+        config: parseVisitTypeConfig(serverResource),
+        configResource: serverResource,
+        visitTypes: [],
+      };
+    },
+  );
+
+  await assert.rejects(() => transaction.commit(), /connection dropped after category create/);
+  assert.equal(transaction.dirty, true);
+  await transaction.commit();
+
+  assert.equal(reloads, 1);
+  assert.equal(categoryCreates, 1);
+  assert.equal(transaction.dirty, false);
 });

@@ -53,6 +53,7 @@ export interface StagedVisitTypeAdapter extends CatalogAdapter<VisitTypeCatalogI
   commitMatching(predicate: (operation: VisitTypeDraftOperation) => boolean): Promise<void>;
   pendingOperations(): Promise<VisitTypeDraftOperation[]>;
   discard(): void;
+  reconcile(items: readonly VisitTypeCatalogItem[]): void;
   reset(items: readonly VisitTypeCatalogItem[]): void;
 }
 
@@ -300,6 +301,21 @@ export function createStagedVisitTypeAdapter(
     },
     discard() {
       draft = cloneItems(persisted);
+    },
+    reconcile(items) {
+      const serverItems = cloneItems(items);
+      const draftCodes = new Set(draft.map(stableVisitTypeCode));
+      draft = draft.map((desired) => {
+        const saved = serverItems.find((candidate) =>
+          stableVisitTypeCode(candidate) === stableVisitTypeCode(desired)
+          && sameVisitTypeSettings(candidate, desired)
+        );
+        return cloneItem(saved ?? desired);
+      });
+      draft.push(...serverItems.filter((item) => !draftCodes.has(stableVisitTypeCode(item))));
+      persisted = serverItems;
+      reconciliationRequired = false;
+      loaded = true;
     },
     reset(items) {
       persisted = cloneItems(items);

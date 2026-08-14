@@ -351,6 +351,26 @@ export function createVisitTypeSettingsTransaction(
       return authoritativeReloadRequired || categoryDraft.dirty || visitTypeDraft.dirty;
     },
     async commit() {
+      if (authoritativeReloadRequired) {
+        if (!reloadAuthoritative) {
+          throw new Error("Authoritative server reload is required before this save can be retried.");
+        }
+        let authoritative: Awaited<ReturnType<NonNullable<typeof reloadAuthoritative>>>;
+        try {
+          authoritative = await reloadAuthoritative();
+        } catch (error) {
+          throw new Error(
+            `Settings retry was stopped before any writes because authoritative state could not be reloaded. ${errorMessage(error)}`,
+          );
+        }
+        categoryDraft.reconcile(authoritative.config, authoritative.configResource);
+        visitTypeDraft.reconcile(authoritative.visitTypes);
+        authoritativeReloadRequired = false;
+      }
+      assertActiveVisitTypesUseActiveCategories(
+        await visitTypeDraft.list(),
+        visitTypeCategoryRows(categoryDraft.current()),
+      );
       let savedCategory: Basic | undefined;
       const deactivatedCategoryIds = categoriesChangingToInactive(
         categoryDraft.baseline(),
@@ -411,6 +431,22 @@ export function createVisitTypeSettingsTransaction(
       visitTypeDraft.discard();
     },
   };
+}
+
+function assertActiveVisitTypesUseActiveCategories(
+  visitTypes: readonly VisitTypeCatalogItem[],
+  categories: readonly VisitTypeCategoryRow[],
+): void {
+  const categoryById = new Map(categories.map((category) => [category.id, category]));
+  const invalid = visitTypes.find((visitType) =>
+    visitType.active && categoryById.get(visitType.categoryCode)?.active === false
+  );
+  if (!invalid) return;
+  const category = categoryById.get(invalid.categoryCode)!;
+  throw new Error(
+    `Visit type "${invalid.label}" cannot be active because category "${category.label}" is inactive. ` +
+    `Save was stopped before any writes.`,
+  );
 }
 
 function categoriesChangingToInactive(
