@@ -324,6 +324,13 @@ test("an out-of-list legacy duration renders read-only and blocks persistence un
   assert.equal(fixture.writes.length, 0);
   assert.match(JSON.stringify(renderer.toJSON()), /Duration \(minutes\) is required/);
 
+  await act(async () => {
+    button(renderer, "Deactivate").props.onClick();
+    await new Promise((resolve) => setImmediate(resolve));
+  });
+  assert.equal(fixture.writes.length, 0);
+  assert.match(JSON.stringify(renderer.toJSON()), /Choose a listed duration before changing this 28-minute visit type/);
+
   act(() => duration.props.onChange({ target: { value: "45" } }));
   await act(async () => {
     button(renderer, "Save").props.onClick();

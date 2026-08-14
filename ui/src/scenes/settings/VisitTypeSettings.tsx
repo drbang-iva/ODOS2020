@@ -348,15 +348,17 @@ function persistedVisitTypeItem(item: VisitTypeEditorItem): VisitTypeCatalogItem
   const listed = VISIT_TYPE_DURATION_OPTIONS.includes(
     selectedDuration as (typeof VISIT_TYPE_DURATION_OPTIONS)[number],
   );
-  if (!listed && legacyDurationMinutes === undefined) {
+  if (!listed) {
     throw new CatalogFieldValidationError(
       "durationMinutes",
-      "Duration (minutes) must be a listed option.",
+      legacyDurationMinutes === undefined
+        ? "Duration (minutes) must be a listed option."
+        : `Choose a listed duration before changing this ${legacyDurationMinutes}-minute visit type.`,
     );
   }
   return {
     ...rest,
-    durationMinutes: listed ? selectedDuration : legacyDurationMinutes!,
+    durationMinutes: selectedDuration,
   };
 }
 
