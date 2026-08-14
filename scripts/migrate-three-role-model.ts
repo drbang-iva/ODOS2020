@@ -189,6 +189,7 @@ export function planThreeRoleMigration(input: {
     const legacyPolicy = legacyPolicyReference
       ? policiesByReference.get(legacyPolicyReference)
       : undefined;
+    if (legacyPolicy && practiceRoleTags(legacyPolicy).length === 0) return [];
     const referencesRolePolicy = currentAccess.some((entry) => {
       const policy = policiesByReference.get(entry.policy.reference ?? "");
       return policy ? practiceRoleTags(policy).length > 0 : true;

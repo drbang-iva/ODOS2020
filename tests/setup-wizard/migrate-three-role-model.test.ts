@@ -138,6 +138,22 @@ test("planner skips a migration-importer membership whose legacy policy has no p
   assert.deepEqual(plan.memberships, []);
 });
 
+test("planner skips the entire membership when a non-role legacy policy accompanies role access", () => {
+  const mixedMembership = membershipFixture([access("legacy-clinical")]);
+  mixedMembership.accessPolicy = { reference: "AccessPolicy/migration-importer" };
+
+  const plan = planThreeRoleMigration({
+    projectId: PROJECT,
+    policies: [
+      legacyPolicy("legacy-clinical", "clinician"),
+      unrelatedPolicy("migration-importer"),
+    ],
+    memberships: [mixedMembership],
+  });
+
+  assert.deepEqual(plan.memberships, []);
+});
+
 test("planner refuses a legacy accessPolicy that carries a practice-role tag", () => {
   const legacyMembership = membershipFixture([]);
   legacyMembership.accessPolicy = { reference: "AccessPolicy/legacy-clinical" };
