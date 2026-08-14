@@ -86,20 +86,8 @@ test("all roles read operational records at practice scope while Staff writes st
   );
 });
 
-test("Provider reads only assigned Appointments while Staff and Admin keep practice scheduling reads", () => {
-  const provider = buildMedplumAccessPolicy(getRoleDeclaration("provider"));
-  const providerAppointmentReads = provider.resource?.filter((rule) =>
-    rule.resourceType === "Appointment" && rule.interaction?.includes("read")) ?? [];
-  assert.deepEqual(
-    providerAppointmentReads.map((rule) => rule.criteria),
-    ["Appointment?actor=%provider_profile"],
-  );
-  assert.deepEqual(
-    providerAppointmentReads[0]?.interaction,
-    ["read", "search", "history", "vread"],
-  );
-
-  for (const roleId of ["staff", "admin"] as const) {
+test("Provider, Staff, and Admin keep practice-wide Appointment reads", () => {
+  for (const roleId of ["provider", "staff", "admin"] as const) {
     const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
     const appointmentReads = policy.resource?.filter((rule) =>
       rule.resourceType === "Appointment" && rule.interaction?.includes("read")) ?? [];
@@ -111,7 +99,7 @@ test("Provider reads only assigned Appointments while Staff and Admin keep pract
     assert.equal(
       appointmentReads.some((rule) => rule.criteria === "Appointment?actor=%provider_profile"),
       false,
-      `${roleId} must not receive the Provider-only Appointment scope`,
+      `${roleId} must not receive an actor-scoped Appointment read`,
     );
   }
 });
