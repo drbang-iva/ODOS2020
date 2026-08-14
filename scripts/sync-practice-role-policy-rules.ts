@@ -49,6 +49,23 @@ export interface PracticeRolePolicyRuleSyncResult {
   readonly policies: readonly PracticeRolePolicyRuleSyncPolicyResult[];
 }
 
+export class PracticeRolePolicyRuleSyncApplyError extends Error {
+  constructor(
+    readonly policyReference: string,
+    readonly policiesUpdated: number,
+    cause: unknown,
+  ) {
+    const updateLabel = policiesUpdated === 1 ? "policy update" : "policy updates";
+    const detail = cause instanceof Error ? cause.message : String(cause);
+    super(
+      `${policyReference} update failed after ${policiesUpdated} ${updateLabel}. `
+      + `Re-run the sync; already-updated policies will report MATCH. Cause: ${detail}`,
+      { cause },
+    );
+    this.name = "PracticeRolePolicyRuleSyncApplyError";
+  }
+}
+
 interface PlannedPolicyRuleSync {
   readonly policy: AccessPolicy & { id: string; meta: { versionId: string } };
   readonly expected: AccessPolicy;
@@ -78,15 +95,23 @@ export async function syncPracticeRolePolicyRules(
   let policiesUpdated = 0;
   for (const item of plan) {
     if (item.result.status === "match") continue;
-    await adapter.patchPolicy(
-      item.policy.id,
-      [{
-        op: item.policy.resource === undefined ? "add" : "replace",
-        path: "/resource",
-        value: structuredClone(item.expected.resource ?? []),
-      }],
-      item.policy.meta.versionId,
-    );
+    try {
+      await adapter.patchPolicy(
+        item.policy.id,
+        [{
+          op: item.policy.resource === undefined ? "add" : "replace",
+          path: "/resource",
+          value: structuredClone(item.expected.resource ?? []),
+        }],
+        item.policy.meta.versionId,
+      );
+    } catch (error) {
+      throw new PracticeRolePolicyRuleSyncApplyError(
+        item.result.policyReference,
+        policiesUpdated,
+        error,
+      );
+    }
     policiesUpdated += 1;
   }
   return {

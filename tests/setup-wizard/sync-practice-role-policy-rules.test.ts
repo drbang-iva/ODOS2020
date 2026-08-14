@@ -244,6 +244,36 @@ test("a stale version fails cleanly without retry or overwrite", async () => {
   assert.deepEqual(adapter.policies, before);
 });
 
+test("a later stale failure reports earlier successful updates and safe rerun guidance", async () => {
+  const policies = canonicalPolicies();
+  const provider = policies.find((policy) => hasRole(policy, "provider"));
+  const staff = policies.find((policy) => hasRole(policy, "staff"));
+  assert.ok(provider);
+  assert.ok(staff);
+  provider.resource = provider.resource?.slice(1);
+  staff.resource = staff.resource?.slice(1);
+  const adapter = new FakePolicyRuleSyncAdapter(policies);
+  adapter.stalePolicyId = "staff-policy";
+
+  await assert.rejects(
+    syncPracticeRolePolicyRules(adapter, {
+      projectId: PROJECT_ID,
+      apply: true,
+      assertProjectScope: async () => {},
+    }),
+    /AccessPolicy\/staff-policy update failed after 1 policy update.*Re-run.*412 Precondition Failed/,
+  );
+
+  assert.equal(adapter.patchRequests.length, 2);
+  const updatedProvider = adapter.policies.find((policy) => policy.id === "provider-policy");
+  assert.deepEqual(
+    updatedProvider?.resource,
+    buildMedplumAccessPolicy(getRoleDeclaration("provider")).resource,
+  );
+  const unchangedStaff = adapter.policies.find((policy) => policy.id === "staff-policy");
+  assert.deepEqual(unchangedStaff?.resource, staff.resource);
+});
+
 test("live adapter sends the deployed version as a weak If-Match header", async () => {
   let captured:
     | { resourceType: string; id: string; operations: JsonPatchOperation[]; headers?: Record<string, string> }
