@@ -32,10 +32,8 @@ import {
 } from "../mcp/src/authz/roles.js";
 import { createOperatorScriptFhirClient, type MedplumClient } from "../mcp/src/fhir-client.js";
 import { searchAll } from "../mcp/src/fhir-search.js";
-import {
-  assertCanonicalPolicyRules,
-  runGrantCli,
-} from "./grant-migrated-patient-access.js";
+import { assertCanonicalPolicyRules } from "./access-policy-rules.js";
+import { runGrantCli } from "./grant-migrated-patient-access.js";
 import { runPatientImportCli } from "./import-legacy-patient-m2a.js";
 import {
   assertCanonicalClinicianPolicy,
