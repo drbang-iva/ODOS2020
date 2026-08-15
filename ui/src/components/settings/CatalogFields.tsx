@@ -125,20 +125,37 @@ function CatalogFieldControl({
     case "number":
       return (
         <FieldFrame field={field} error={error} showRequired={showRequired}>
-          <input
-            id={inputId}
-            className="scheduler-input"
-            type="number"
-            min={field.min}
-            max={field.max}
-            step={field.type === "duration" || field.integer ? 1 : undefined}
-            inputMode={field.type === "duration" || field.integer ? "numeric" : "decimal"}
-            value={typeof value === "number" ? value : ""}
-            aria-describedby={describedBy}
-            onChange={(event) =>
-              onChange(event.target.value === "" ? undefined : Number(event.target.value))
-            }
-          />
+          <div className="grid gap-2">
+            <input
+              id={inputId}
+              className="scheduler-input"
+              type="number"
+              min={field.min}
+              max={field.max}
+              step={field.type === "duration" || field.integer ? 1 : undefined}
+              inputMode={field.type === "duration" || field.integer ? "numeric" : "decimal"}
+              value={typeof value === "number" ? value : ""}
+              aria-describedby={describedBy}
+              onChange={(event) =>
+                onChange(event.target.value === "" ? undefined : Number(event.target.value))
+              }
+            />
+            {field.type === "duration" && field.presets && (
+              <div className="flex flex-wrap gap-2">
+                {field.presets.map((minutes) => (
+                  <button
+                    key={minutes}
+                    className="scheduler-button"
+                    type="button"
+                    aria-label={`Set duration to ${minutes} minutes`}
+                    onClick={() => onChange(minutes)}
+                  >
+                    {minutes === 60 ? "1 hr" : `${minutes} min`}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </FieldFrame>
       );
     case "currency":

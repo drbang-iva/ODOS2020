@@ -338,7 +338,7 @@ test("visit-type scene shows unified draft semantics, grouping, Uncategorized la
   assert.doesNotMatch(html, /Old Visit/);
 });
 
-test("visit-type duration select offers only 60, 45, 30, 20, 15, and 10 minutes and defaults new items to 30", async () => {
+test("visit-type duration accepts 25 minutes, persists it, and reloads it unchanged", async () => {
   const fixture = resourceClient([[]]);
   let renderer!: ReactTestRenderer;
   await act(async () => {
@@ -353,15 +353,18 @@ test("visit-type duration select offers only 60, 45, 30, 20, 15, and 10 minutes 
   });
 
   act(() => button(renderer, "+ Add visit type").props.onClick());
-  const duration = renderer.root.findAllByType("select").find((candidate) =>
-    candidate.findAllByType("option").some((option) => option.props.value === "60")
+  const duration = renderer.root.findAllByType("input").find((candidate) =>
+    candidate.props.type === "number"
   );
-  assert.ok(duration, "duration renders as a select");
-  assert.deepEqual(
-    duration.findAllByType("option").map((option) => option.props.value).filter(Boolean),
-    ["60", "45", "30", "20", "15", "10"],
-  );
-  assert.equal(duration.props.value, "30");
+  assert.ok(duration, "duration renders as a free whole-number input");
+  assert.equal(duration.props.value, 30);
+  for (const minutes of [10, 15, 20, 30, 45, 60]) {
+    assert.equal(
+      renderer.root.findAllByProps({ "aria-label": `Set duration to ${minutes} minutes` }).length,
+      1,
+    );
+  }
+  act(() => duration.props.onChange({ target: { value: "25" } }));
 
   const label = renderer.root.findAllByType("input").find((candidate) =>
     candidate.props.value === ""
@@ -377,12 +380,35 @@ test("visit-type duration select offers only 60, 45, 30, 20, 15, and 10 minutes 
     button(renderer, "Save").props.onClick();
     await new Promise((resolve) => setImmediate(resolve));
   });
-  assert.equal(visitTypeDurationMinutes(fixture.writes[0]!.resource), 30);
+  assert.equal(visitTypeDurationMinutes(fixture.writes[0]!.resource), 25);
+  act(() => renderer.unmount());
+
+  const reloaded = {
+    ...fixture.writes[0]!.resource,
+    id: "created-visit-type",
+    meta: { versionId: "1" },
+  };
+  await act(async () => {
+    renderer = create(
+      <VisitTypeSettingsReady
+        config={CATEGORIES}
+        canWrite
+        client={fixture.client as VisitTypeSettingsClient}
+        initialVisitTypes={[reloaded]}
+        initialSelectedVisitTypeId="created-visit-type"
+      />,
+    );
+  });
+  const reloadedDuration = renderer.root.findAllByType("input").find((candidate) =>
+    candidate.props.type === "number"
+  );
+  assert.ok(reloadedDuration, "saved custom duration reloads into the free input");
+  assert.equal(reloadedDuration.props.value, 25);
   act(() => renderer.unmount());
 });
 
-test("an out-of-list legacy duration renders read-only and blocks persistence until a listed duration is chosen", async () => {
-  const legacy = visitType("legacy", "Legacy Visit", true, undefined, undefined, 28);
+test("an existing 25-minute visit type can change its name without changing duration", async () => {
+  const legacy = visitType("legacy", "Legacy Visit", true, undefined, undefined, 25);
   const fixture = resourceClient([[legacy]]);
   let renderer!: ReactTestRenderer;
   await act(async () => {
@@ -397,12 +423,11 @@ test("an out-of-list legacy duration renders read-only and blocks persistence un
     );
   });
 
-  const duration = renderer.root.findAllByType("select").find((candidate) =>
-    candidate.findAllByType("option").some((option) => option.props.value === "60")
+  const duration = renderer.root.findAllByType("input").find((candidate) =>
+    candidate.props.type === "number"
   );
-  assert.ok(duration, "legacy duration still renders the constrained select");
-  assert.equal(duration.props.value, "");
-  assert.match(JSON.stringify(renderer.toJSON()), /Current custom duration.*28 min/);
+  assert.ok(duration, "custom duration remains editable");
+  assert.equal(duration.props.value, 25);
 
   const label = renderer.root.findAllByType("input").find((candidate) =>
     candidate.props.value === "Legacy Visit"
@@ -415,29 +440,39 @@ test("an out-of-list legacy duration renders read-only and blocks persistence un
   });
 
   assert.equal(fixture.writes.length, 0);
-  assert.match(JSON.stringify(renderer.toJSON()), /Duration \(minutes\) is required/);
-
-  await act(async () => {
-    button(renderer, "Deactivate").props.onClick();
-    await new Promise((resolve) => setImmediate(resolve));
-  });
-  assert.equal(fixture.writes.length, 0);
-  assert.match(JSON.stringify(renderer.toJSON()), /Choose a listed duration before changing this 28-minute visit type/);
-
-  act(() => duration.props.onChange({ target: { value: "45" } }));
-  await act(async () => {
-    button(renderer, "Apply to draft").props.onClick();
-    await new Promise((resolve) => setImmediate(resolve));
-  });
-
-  assert.equal(fixture.writes.length, 0);
   await act(async () => {
     button(renderer, "Save").props.onClick();
     await new Promise((resolve) => setImmediate(resolve));
   });
   assert.equal(fixture.writes.length, 1);
   assert.equal(fixture.writes[0]?.resource.name, "Renamed Legacy Visit");
-  assert.equal(visitTypeDurationMinutes(fixture.writes[0]!.resource), 45);
+  assert.equal(visitTypeDurationMinutes(fixture.writes[0]!.resource), 25);
+  act(() => renderer.unmount());
+});
+
+test("visit-type deactivation cannot bypass the 1440-minute validation ceiling", async () => {
+  const invalid = visitType("invalid", "Invalid Visit", true, undefined, undefined, 1441);
+  const fixture = resourceClient([[invalid]]);
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(
+      <VisitTypeSettingsReady
+        config={CATEGORIES}
+        canWrite
+        client={fixture.client as VisitTypeSettingsClient}
+        initialVisitTypes={[invalid]}
+        initialSelectedVisitTypeId="invalid"
+      />,
+    );
+  });
+
+  await act(async () => {
+    button(renderer, "Deactivate").props.onClick();
+    await new Promise((resolve) => setImmediate(resolve));
+  });
+
+  assert.equal(fixture.writes.length, 0);
+  assert.match(JSON.stringify(renderer.toJSON()), /Duration \(minutes\) must be at most 1440/);
   act(() => renderer.unmount());
 });
 
