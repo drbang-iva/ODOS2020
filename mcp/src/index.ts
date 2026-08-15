@@ -263,7 +263,10 @@ import {
 } from "./clinical-graph/dilation-endpoint.js";
 import { handleEomCaptureRequest, handleEomHistoryRequest } from "./clinical-graph/eom-endpoint.js";
 import { handleCoverTestCaptureRequest, handleCoverTestHistoryRequest } from "./clinical-graph/cover-test-endpoint.js";
-import { handleProviderAssignmentRequest } from "./clinical-graph/provider-assignment-endpoint.js";
+import {
+  handleProviderAssignmentRequest,
+  providerAssignmentErrorStatus,
+} from "./clinical-graph/provider-assignment-endpoint.js";
 import { createClaimMdAdapter, claimMdConfigFromEnv } from "./claims/claimmd-adapter.js";
 import { clearinghouseRoutingFromEnv } from "./claims/clearinghouse-adapter.js";
 import { createStediAdapter, stediConfigFromEnv } from "./claims/stedi-adapter.js";
@@ -6037,7 +6040,9 @@ async function startMcpServer(): Promise<void> {
           res.status(result.status).json(result.body);
         } catch (error) {
           console.error("odos-mcp: assign-provider route failed:", error);
-          if (!res.headersSent) res.status(500).json({ error: "provider assignment failed" });
+          if (!res.headersSent) {
+            res.status(providerAssignmentErrorStatus(error) ?? 500).json({ error: "provider assignment failed" });
+          }
         }
       });
 
@@ -6057,7 +6062,9 @@ async function startMcpServer(): Promise<void> {
           res.status(result.status).json(result.body);
         } catch (error) {
           console.error("odos-mcp: appointment assign-provider route failed:", error);
-          if (!res.headersSent) res.status(500).json({ error: "provider assignment failed" });
+          if (!res.headersSent) {
+            res.status(providerAssignmentErrorStatus(error) ?? 500).json({ error: "provider assignment failed" });
+          }
         }
       });
 

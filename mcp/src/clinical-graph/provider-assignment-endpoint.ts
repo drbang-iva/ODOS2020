@@ -39,6 +39,11 @@ type ProviderAssignmentEndpointInput = {
   | { patientId?: never; appointmentId: unknown }
 );
 
+type AppointmentProvider = {
+  reference: string;
+  display: string;
+};
+
 export async function handleProviderAssignmentRequest(
   deps: ProviderAssignmentEndpointDeps,
   input: ProviderAssignmentEndpointInput,
@@ -69,6 +74,26 @@ export async function handleProviderAssignmentRequest(
       status: 409,
       body: { error: "The authenticated staff profile is not backed by a Practitioner." },
     };
+  }
+
+  if (target.appointmentProviders) {
+    const assignedProvider = target.appointmentProviders[0];
+    if (!assignedProvider) {
+      return {
+        status: 409,
+        body: { error: "This appointment has no assigned provider." },
+      };
+    }
+    if (!target.appointmentProviders.some((provider) => provider.reference === practitionerReference)) {
+      return {
+        status: 403,
+        body: {
+          error: `This appointment is assigned to ${assignedProvider.display}. Reassign it to chart from here.`,
+          assignedProviderReference: assignedProvider.reference,
+          assignedProviderDisplay: assignedProvider.display,
+        },
+      };
+    }
   }
 
   const patientReference = `Patient/${target.patientId}`;
@@ -130,7 +155,7 @@ async function resolveAssignmentTarget(
   callerFhir: Pick<MedplumClient, "read">,
   input: ProviderAssignmentEndpointInput,
 ): Promise<
-  | { patientId: string; patient?: Patient }
+  | { patientId: string; patient?: Patient; appointmentProviders?: AppointmentProvider[] }
   | { result: ProviderAssignmentEndpointResult }
 > {
   if ("appointmentId" in input) {
@@ -142,7 +167,16 @@ async function resolveAssignmentTarget(
     try {
       appointment = await callerFhir.read<Appointment>("Appointment", parsedAppointmentId.data);
     } catch (error) {
-      if (isNotFound(error)) {
+      const status = providerAssignmentErrorStatus(error);
+      if (status === 403) {
+        return {
+          result: {
+            status,
+            body: { error: "You do not have permission to access this appointment." },
+          },
+        };
+      }
+      if (status === 404) {
         return { result: { status: 404, body: { error: "Appointment not found." } } };
       }
       throw error;
@@ -158,7 +192,15 @@ async function resolveAssignmentTarget(
         },
       };
     }
-    return { patientId };
+    const appointmentProviders = appointment.participant.flatMap((participant) => {
+      const reference = participant.actor?.reference;
+      if (!reference || !/^Practitioner\/[A-Za-z0-9.-]{1,64}$/.test(reference)) return [];
+      return [{
+        reference,
+        display: participant.actor?.display?.trim() || reference,
+      }];
+    });
+    return { patientId, appointmentProviders };
   }
 
   const parsedPatientId = patientIdSchema.safeParse(input.patientId);
@@ -169,15 +211,25 @@ async function resolveAssignmentTarget(
     const patient = await callerFhir.read<Patient>("Patient", parsedPatientId.data);
     return { patientId: parsedPatientId.data, patient };
   } catch (error) {
-    if (isNotFound(error)) {
+    const status = providerAssignmentErrorStatus(error);
+    if (status === 403) {
+      return {
+        result: {
+          status,
+          body: { error: "You do not have permission to access this patient." },
+        },
+      };
+    }
+    if (status === 404) {
       return { result: { status: 404, body: { error: "Patient not found." } } };
     }
     throw error;
   }
 }
 
-function isNotFound(error: unknown): boolean {
-  return error instanceof Error && (error as Error & { status?: number }).status === 404;
+export function providerAssignmentErrorStatus(error: unknown): number | undefined {
+  if (typeof error !== "object" || error === null || !("status" in error)) return undefined;
+  return typeof error.status === "number" ? error.status : undefined;
 }
 
 export function hasPatientCompartmentGrant(
