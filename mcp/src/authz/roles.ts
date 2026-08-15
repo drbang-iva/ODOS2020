@@ -134,6 +134,7 @@ const PRACTICE_READ_RESOURCE_TYPES = [
   "EpisodeOfCare",
   "CarePlan",
   "ChargeItem",
+  "ChargeItemDefinition",
   "QuestionnaireResponse",
   "Provenance",
   "Binary",
@@ -276,6 +277,11 @@ const PAYMENT_CUSTODY_RESOURCE_RULES: OdosResourceRule[] = [
 const ADMIN_CORRECTION_RESOURCE_RULES: OdosResourceRule[] = [
   {
     resourceType: "HealthcareService",
+    interactions: UPDATE_INTERACTIONS,
+    scope: { kind: "practice" },
+  },
+  {
+    resourceType: "ChargeItemDefinition",
     interactions: UPDATE_INTERACTIONS,
     scope: { kind: "practice" },
   },

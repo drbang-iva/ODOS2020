@@ -166,6 +166,36 @@ test("three-role policies allow only Admin to write the visit-type category sing
   }
 });
 
+test("compiled three-role policies grant ChargeItemDefinition reads and reserve writes for Admin", () => {
+  for (const roleId of PRACTICE_ROLE_IDS) {
+    const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
+    for (const interaction of ["read", "search"] as const) {
+      assert.equal(
+        accessPolicyAllows(policy, "ChargeItemDefinition", interaction),
+        true,
+        `${roleId} must be permitted to ${interaction} ChargeItemDefinition`,
+      );
+    }
+  }
+
+  const adminPolicy = buildMedplumAccessPolicy(getRoleDeclaration("admin"));
+  for (const interaction of ["create", "update"] as const) {
+    assert.equal(
+      accessPolicyAllows(adminPolicy, "ChargeItemDefinition", interaction),
+      true,
+      `admin must be permitted to ${interaction} ChargeItemDefinition`,
+    );
+    for (const roleId of ["provider", "staff"] as const) {
+      const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
+      assert.equal(
+        accessPolicyAllows(policy, "ChargeItemDefinition", interaction),
+        false,
+        `${roleId} must be refused ${interaction} ChargeItemDefinition`,
+      );
+    }
+  }
+});
+
 test("three-role policies allow only Admin to read AccessPolicy at practice scope without write access or wildcard", () => {
   const adminPolicy = buildMedplumAccessPolicy(getRoleDeclaration("admin"));
   const adminRule = adminPolicy.resource?.find((rule) => rule.resourceType === "AccessPolicy");
