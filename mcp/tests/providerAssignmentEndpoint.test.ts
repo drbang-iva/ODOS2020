@@ -115,7 +115,10 @@ test("assign-provider preserves legacy single-policy membership behavior", async
 test("assign-provider never grants a policy without a patient-compartment rule", async () => {
   const fhir = new AssignmentFhir();
   fhir.membership.access = [policyBinding("unrelated"), policyBinding("provider")];
-  fhir.accessPolicies.set("unrelated", accessPolicy("unrelated", "Basic?code=unrelated"));
+  fhir.accessPolicies.set(
+    "unrelated",
+    accessPolicy("unrelated", "Basic?_compartment=%patient_compartment_archive"),
+  );
   fhir.accessPolicies.set(
     "provider",
     accessPolicy("provider", "Condition?_compartment=%patient_compartment"),

@@ -318,7 +318,9 @@ async function patientCompartmentPolicyReferences(
     fhir.read<AccessPolicy>("AccessPolicy", reference.slice("AccessPolicy/".length))
   ));
   return policyReferences.filter((_, index) =>
-    policies[index]?.resource?.some((rule) => rule.criteria?.includes("%patient_compartment"))
+    policies[index]?.resource?.some((rule) =>
+      /%patient_compartment(?![A-Za-z0-9_])/.test(rule.criteria ?? "")
+    )
   );
 }
 
