@@ -30,7 +30,7 @@ import {
   type PracticeRoleId,
 } from "../mcp/src/authz/roles.js";
 import { createOperatorScriptFhirClient, type MedplumClient } from "../mcp/src/fhir-client.js";
-import { searchAll } from "../mcp/src/fhir-search.js";
+import { searchAll, searchProjectAll } from "../mcp/src/fhir-search.js";
 import { buildSchedulingResource } from "../mcp/src/fhir/schedulingResource.js";
 import {
   defaultVisitTypeCatalog,
@@ -995,9 +995,14 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
     for (const roleId of PRACTICE_ROLE_IDS) {
       const role = getRoleDeclaration(roleId);
       const policyName = `ODOS ${role.display}`;
-      const existing = (await searchAll<AccessPolicy>(this.serviceClient(), "AccessPolicy", {
-        "name:exact": policyName,
-      })).filter((policy) => policy.name === policyName && policy.meta?.project === session.projectId);
+      const existing = (await searchProjectAll<AccessPolicy>(
+        this.serviceClient(),
+        "AccessPolicy",
+        session.projectId,
+        {
+          "name:exact": policyName,
+        },
+      )).filter((policy) => policy.name === policyName && policy.meta?.project === session.projectId);
       if (existing.length > 1) {
         throw new Error(`Expected at most one ${policyName} AccessPolicy; found ${existing.length}.`);
       }
@@ -1036,9 +1041,12 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
     session: AdminSession,
   ): Promise<{ policy: AccessPolicy; created: boolean; updated: boolean }> {
     const desired = buildMedplumCompositeAccessPolicy(roles);
-    const existing = (await searchAll<AccessPolicy>(this.serviceClient(), "AccessPolicy", {
-      "name:exact": desired.name!,
-    })).filter((policy) =>
+    const existing = (await searchProjectAll<AccessPolicy>(
+      this.serviceClient(),
+      "AccessPolicy",
+      session.projectId,
+      { "name:exact": desired.name! },
+    )).filter((policy) =>
       policy.name === desired.name && policy.meta?.project === session.projectId
     );
     if (existing.length > 1) {

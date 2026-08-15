@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Bundle, ChargeItemDefinition, OperationOutcome, Patient, ProjectMembership } from "@medplum/fhirtypes";
+import type { AccessPolicy, Bundle, ChargeItemDefinition, OperationOutcome, Patient, ProjectMembership } from "@medplum/fhirtypes";
 import {
   createMedplumClient,
   createOperatorScriptFhirClient,
   type MedplumClient,
 } from "../src/fhir-client.js";
+import { searchProjectAll } from "../src/fhir-search.js";
 import { TEST_FHIR_AUDIT_CONTEXT, TEST_FHIR_AUDIT_RECORDER } from "./fhirAuditTestStub.js";
 
 test("operator-script FHIR client leaves Medplum extended mode off by default", async () => {
@@ -25,6 +26,108 @@ test("operator-script FHIR client leaves Medplum extended mode off by default", 
     await client.read<Patient>("Patient", "p1");
 
     assert.equal(extendedHeader, null);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("project-scoped search uses Medplum extended mode and cannot be widened by caller parameters", async () => {
+  const originalFetch = globalThis.fetch;
+  let requestedUrl = "";
+  let extendedHeader: string | null | undefined;
+  globalThis.fetch = async (input, init) => {
+    requestedUrl = String(input);
+    extendedHeader = new Headers(init?.headers).get("X-Medplum");
+    return Response.json({ resourceType: "Bundle", type: "searchset" });
+  };
+  try {
+    const client = createMedplumClient({
+      baseUrl: "http://medplum.test",
+      accessToken: "service-token",
+      audit: TEST_FHIR_AUDIT_RECORDER,
+      auditContext: TEST_FHIR_AUDIT_CONTEXT,
+    });
+
+    await client.searchProject<AccessPolicy>("AccessPolicy", "practice-1", {
+      "name:exact": "ODOS Provider + Staff",
+      _project: "wrong-project",
+    });
+
+    const url = new URL(requestedUrl);
+    assert.equal(url.pathname, "/fhir/R4/AccessPolicy");
+    assert.equal(url.searchParams.get("name:exact"), "ODOS Provider + Staff");
+    assert.equal(url.searchParams.get("_project"), "practice-1");
+    assert.equal(extendedHeader, "extended");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("project-scoped search preserves its project boundary and extended mode across pagination", async () => {
+  const originalFetch = globalThis.fetch;
+  const requests: Array<{ url: string; extendedHeader: string | null }> = [];
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    requests.push({ url, extendedHeader: new Headers(init?.headers).get("X-Medplum") });
+    if (requests.length === 1) {
+      return Response.json({
+        resourceType: "Bundle",
+        type: "searchset",
+        link: [{
+          relation: "next",
+          url: "http://medplum.test/fhir/R4/AccessPolicy?_project=practice-1&_cursor=next",
+        }],
+      });
+    }
+    return Response.json({ resourceType: "Bundle", type: "searchset" });
+  };
+  try {
+    const client = createMedplumClient({
+      baseUrl: "http://medplum.test",
+      accessToken: "service-token",
+      audit: TEST_FHIR_AUDIT_RECORDER,
+      auditContext: TEST_FHIR_AUDIT_CONTEXT,
+    });
+
+    assert.deepEqual(
+      await searchProjectAll<AccessPolicy>(client, "AccessPolicy", "practice-1", {
+        "name:exact": "ODOS Provider + Staff",
+      }),
+      [],
+    );
+    assert.equal(requests.length, 2);
+    assert.deepEqual(requests.map(({ extendedHeader }) => extendedHeader), ["extended", "extended"]);
+    assert.deepEqual(
+      requests.map(({ url }) => new URL(url).searchParams.get("_project")),
+      ["practice-1", "practice-1"],
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("project-scoped pagination rejects a next link that changes projects", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => Response.json({
+    resourceType: "Bundle",
+    type: "searchset",
+    link: [{
+      relation: "next",
+      url: "http://medplum.test/fhir/R4/AccessPolicy?_project=other-practice&_cursor=next",
+    }],
+  });
+  try {
+    const client = createMedplumClient({
+      baseUrl: "http://medplum.test",
+      accessToken: "service-token",
+      audit: TEST_FHIR_AUDIT_RECORDER,
+      auditContext: TEST_FHIR_AUDIT_CONTEXT,
+    });
+
+    await assert.rejects(
+      searchProjectAll<AccessPolicy>(client, "AccessPolicy", "practice-1"),
+      /changed or removed the project boundary/,
+    );
   } finally {
     globalThis.fetch = originalFetch;
   }

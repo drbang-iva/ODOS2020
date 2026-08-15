@@ -20,7 +20,7 @@ import {
   type JsonPatchOperation,
   type MedplumClient,
 } from "../mcp/src/fhir-client.js";
-import { searchAll } from "../mcp/src/fhir-search.js";
+import { searchAll, searchProjectAll } from "../mcp/src/fhir-search.js";
 import { readMembershipUserEmail } from "./reconcile-membership-display.js";
 import { assertLocalMedplumBaseUrl, decidePracticeRoleTag } from "./reseed-practice-role-tags.js";
 
@@ -32,7 +32,7 @@ export type DevAdminGrantRole = (typeof DEV_ADMIN_GRANT_ROLES)[number];
 export type DevAdminPrimaryRole = Extract<DevAdminGrantRole, "staff" | "provider">;
 
 export interface PracticeRoleRepairAdapter {
-  findPoliciesByName(name: string): Promise<AccessPolicy[]>;
+  findPoliciesByName(name: string, projectId: string): Promise<AccessPolicy[]>;
   readPolicy(reference: string): Promise<AccessPolicy | undefined>;
   createPolicy(policy: AccessPolicy): Promise<AccessPolicy>;
   patchPolicy(id: string, operations: JsonPatchOperation[], versionId: string): Promise<AccessPolicy>;
@@ -57,6 +57,11 @@ export async function repairPracticeRoles(
   primaryRole: DevAdminPrimaryRole = DEV_ADMIN_ROLE,
   serviceIdentityEmail?: string,
 ): Promise<PracticeRoleRepairResult> {
+  const resolvedTarget = await adapter.resolveTarget(target);
+  const targetProjectId = resolvedTarget.membership.project.reference?.match(/^Project\/([^/]+)$/)?.[1];
+  if (!targetProjectId) {
+    throw new Error("Target ProjectMembership is missing a valid project reference.");
+  }
   const createdPolicies: PracticeRoleId[] = [];
   const taggedPolicies: PracticeRoleId[] = [];
   const existingPolicies: PracticeRoleId[] = [];
@@ -65,8 +70,9 @@ export async function repairPracticeRoles(
   for (const roleId of PRACTICE_ROLE_IDS) {
     const role = getRoleDeclaration(roleId);
     const expectedName = `ODOS ${role.display}`;
-    const matches = (await adapter.findPoliciesByName(expectedName)).filter(
-      (policy) => policy.name === expectedName,
+    const matches = (await adapter.findPoliciesByName(expectedName, targetProjectId)).filter(
+      (policy) => policy.name === expectedName
+        && policy.meta?.project?.replace(/^Project\//, "") === targetProjectId,
     );
     if (matches.length > 1) {
       throw new Error(`${expectedName} has ${matches.length} exact matches; repair stopped without guessing.`);
@@ -74,7 +80,11 @@ export async function repairPracticeRoles(
 
     let policy = matches[0];
     if (!policy) {
-      policy = await adapter.createPolicy(buildMedplumAccessPolicy(role));
+      const expected = buildMedplumAccessPolicy(role);
+      policy = await adapter.createPolicy({
+        ...expected,
+        meta: { ...expected.meta, project: targetProjectId },
+      });
       if (!policy.id) throw new Error(`${expectedName} create returned no id.`);
       createdPolicies.push(roleId);
     } else {
@@ -105,7 +115,7 @@ export async function repairPracticeRoles(
     { target, roles: DEV_ADMIN_GRANT_ROLES, primaryRole },
     {
       serviceIdentityEmail,
-      resolveTarget: (requestedTarget) => adapter.resolveTarget(requestedTarget),
+      resolveTarget: async () => resolvedTarget,
       resolvePolicy: async (role) => {
         const policy = policies.get(role);
         if (!policy) throw new Error(`${role} AccessPolicy was not resolved.`);
@@ -114,8 +124,9 @@ export async function repairPracticeRoles(
       resolveBoundPolicy: (reference) => adapter.readPolicy(reference),
       resolveCompositePolicy: async (roles) => {
         const expected = buildMedplumCompositeAccessPolicy(roles);
-        const matches = (await adapter.findPoliciesByName(expected.name!)).filter(
-          (policy) => policy.name === expected.name,
+        const matches = (await adapter.findPoliciesByName(expected.name!, targetProjectId)).filter(
+          (policy) => policy.name === expected.name
+            && policy.meta?.project?.replace(/^Project\//, "") === targetProjectId,
         );
         if (matches.length > 1) {
           throw new Error(
@@ -123,7 +134,12 @@ export async function repairPracticeRoles(
           );
         }
         const existing = matches[0];
-        if (!existing) return adapter.createPolicy(expected);
+        if (!existing) {
+          return adapter.createPolicy({
+            ...expected,
+            meta: { ...expected.meta, project: targetProjectId },
+          });
+        }
         assertCompositePolicyRoles(existing, roles);
         if (JSON.stringify(existing.resource ?? []) !== JSON.stringify(expected.resource ?? [])) {
           if (!existing.id || !existing.meta?.versionId) {
@@ -198,8 +214,10 @@ class LivePracticeRoleRepairAdapter implements PracticeRoleRepairAdapter {
 
   constructor(private readonly fhir: MedplumClient) {}
 
-  async findPoliciesByName(name: string): Promise<AccessPolicy[]> {
-    return searchAll<AccessPolicy>(this.fhir, "AccessPolicy", { "name:exact": name });
+  async findPoliciesByName(name: string, projectId: string): Promise<AccessPolicy[]> {
+    return searchProjectAll<AccessPolicy>(this.fhir, "AccessPolicy", projectId, {
+      "name:exact": name,
+    });
   }
 
   async createPolicy(policy: AccessPolicy): Promise<AccessPolicy> {

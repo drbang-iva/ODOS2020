@@ -32,7 +32,7 @@ import express from "express";
 import { isIP } from "node:net";
 import { z } from "zod";
 import { createMedplumClient, type JsonPatchOperation } from "./fhir-client.js";
-import { searchAll } from "./fhir-search.js";
+import { searchAll, searchProjectAll } from "./fhir-search.js";
 import { createLiveOdosAuditRuntime, type LiveAuditQueryFilters } from "./authz/liveAudit.js";
 import { handleDocumentPrintAuditRequest } from "./authz/documentPrintAuditEndpoint.js";
 import {
@@ -7665,10 +7665,10 @@ async function startMcpServer(): Promise<void> {
               resolveTarget: async () => ({ email, membership }),
               resolvePolicy: async (role) => {
                 const expectedName = `ODOS ${getRoleDeclaration(role).display}`;
-                const bundle = await fhir.search<AccessPolicy>("AccessPolicy", {
+                const policies = await searchProjectAll<AccessPolicy>(fhir, "AccessPolicy", projectId, {
                   "name:exact": expectedName,
                 });
-                const matches = (bundle.entry ?? []).map((entry) => entry.resource).filter(
+                const matches = policies.filter(
                   (policy): policy is AccessPolicy =>
                     policy?.name === expectedName &&
                     Boolean(policy.meta?.tag?.some(
@@ -7688,7 +7688,9 @@ async function startMcpServer(): Promise<void> {
                 resolveProjectCompositeAccessPolicy(
                   {
                     findPoliciesByName: (name) =>
-                      searchAll<AccessPolicy>(fhir, "AccessPolicy", { "name:exact": name }),
+                      searchProjectAll<AccessPolicy>(fhir, "AccessPolicy", projectId, {
+                        "name:exact": name,
+                      }),
                     createPolicy: (policy) => fhir.create(policy),
                     patchPolicy: (id, operations, versionId) =>
                       fhir.patch("AccessPolicy", id, operations, {

@@ -31,8 +31,10 @@ class FakeRepairAdapter implements PracticeRoleRepairAdapter {
     this.membership = input.membership ?? membership();
   }
 
-  async findPoliciesByName(name: string): Promise<AccessPolicy[]> {
-    return this.policies.filter((policy) => policy.name === name);
+  async findPoliciesByName(name: string, projectId: string): Promise<AccessPolicy[]> {
+    return this.policies.filter((policy) =>
+      policy.name === name && policy.meta?.project === projectId
+    );
   }
 
   async readPolicy(reference: string): Promise<AccessPolicy | undefined> {
@@ -216,7 +218,11 @@ test("one untagged canonical policy is tagged without replacing unrelated metada
       resourceType: "AccessPolicy",
       id: "admin-policy",
       name: "ODOS Admin / Manager",
-      meta: { versionId: "7", tag: [{ system: "https://example.test", code: "keep" }] },
+      meta: {
+        project: "local-practice",
+        versionId: "7",
+        tag: [{ system: "https://example.test", code: "keep" }],
+      },
     }],
   });
 
@@ -227,6 +233,23 @@ test("one untagged canonical policy is tagged without replacing unrelated metada
     { system: "https://example.test", code: "keep" },
     { system: ODOS_PRACTICE_ROLE_SYSTEM, code: "admin" },
   ]);
+});
+
+test("repair ignores an identically named foreign policy and creates a project-owned replacement", async () => {
+  const foreign = policy("foreign-admin", "admin");
+  foreign.meta = { ...foreign.meta, project: "other-practice" };
+  const before = structuredClone(foreign);
+  const adapter = new FakeRepairAdapter({ policies: [foreign] });
+
+  const result = await repairPracticeRoles(adapter, "human@example.test");
+
+  assert.ok(result.createdPolicies.includes("admin"));
+  assert.deepEqual(foreign, before);
+  assert.ok(adapter.policies.some((candidate) =>
+    candidate.id !== foreign.id
+    && candidate.name === foreign.name
+    && candidate.meta?.project === "local-practice"
+  ));
 });
 
 test("duplicate canonical policies stop repair before membership mutation", async () => {
@@ -301,7 +324,11 @@ function policy(id: string, roleId: "admin" | "provider"): AccessPolicy {
     resourceType: "AccessPolicy",
     id,
     name: `ODOS ${display}`,
-    meta: { versionId: "1", tag: [{ system: ODOS_PRACTICE_ROLE_SYSTEM, code: roleId }] },
+    meta: {
+      project: "local-practice",
+      versionId: "1",
+      tag: [{ system: ODOS_PRACTICE_ROLE_SYSTEM, code: roleId }],
+    },
   };
 }
 

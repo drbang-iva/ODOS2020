@@ -32,7 +32,7 @@ import {
   type PracticeRoleId,
 } from "../mcp/src/authz/roles.js";
 import { createOperatorScriptFhirClient, type MedplumClient } from "../mcp/src/fhir-client.js";
-import { searchAll } from "../mcp/src/fhir-search.js";
+import { searchAll, searchProjectAll } from "../mcp/src/fhir-search.js";
 import { assertCanonicalPolicyRules } from "./access-policy-rules.js";
 import { runGrantCli } from "./grant-migrated-patient-access.js";
 import { runPatientImportCli } from "./import-legacy-patient-m2a.js";
@@ -514,9 +514,10 @@ async function grantRole(
       resolveTarget: async (): Promise<ResolvedRoleGrantTarget> => ({ email, membership }),
       resolvePolicy: async (requestedRole): Promise<AccessPolicy> => {
         const expectedName = `ODOS ${getRoleDeclaration(requestedRole).display}`;
-        const policies = (await searchAll<AccessPolicy>(
+        const policies = (await searchProjectAll<AccessPolicy>(
           fhir,
           "AccessPolicy",
+          projectId,
           { "name:exact": expectedName },
         )).filter((policy) =>
           policy.name === expectedName
@@ -550,7 +551,9 @@ async function grantRole(
         resolveProjectCompositeAccessPolicy(
           {
             findPoliciesByName: (name) =>
-              searchAll<AccessPolicy>(fhir, "AccessPolicy", { "name:exact": name }),
+              searchProjectAll<AccessPolicy>(fhir, "AccessPolicy", projectId, {
+                "name:exact": name,
+              }),
             createPolicy: (policy) => fhir.create(policy),
             patchPolicy: (id, operations, versionId) =>
               fhir.patch("AccessPolicy", id, operations, {

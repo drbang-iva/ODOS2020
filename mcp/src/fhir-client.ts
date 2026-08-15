@@ -44,7 +44,17 @@ export interface MedplumClient {
     rt: T["resourceType"],
     params?: FhirSearchParams,
   ): Promise<Bundle<T>>;
+  searchProject<T extends Resource>(
+    rt: T["resourceType"],
+    projectId: string,
+    params?: FhirSearchParams,
+  ): Promise<Bundle<T>>;
   searchUrl?<T extends Resource>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>>;
+  searchProjectUrl?<T extends Resource>(
+    url: string,
+    resourceType: T["resourceType"],
+    projectId: string,
+  ): Promise<Bundle<T>>;
   history<T extends Resource>(
     rt: T["resourceType"],
     id?: string,
@@ -453,6 +463,33 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
       );
     },
 
+    async searchProject<T extends Resource>(
+      rt: T["resourceType"],
+      projectId: string,
+      params: FhirSearchParams = {},
+    ): Promise<Bundle<T>> {
+      if (!projectId || projectId !== projectId.trim()) {
+        throw new Error("Project-scoped FHIR search requires a non-blank project id.");
+      }
+      const scopedParams = new URLSearchParams(params);
+      scopedParams.set("_project", projectId);
+      return audited(
+        {
+          eventType: "search",
+          resourceType: String(rt),
+          patientId: patientIdFromSearch(String(rt), scopedParams),
+          actionOutcome: "granted",
+        },
+        async () => {
+          const res = await authorizedFetch(`${base}/fhir/R4/${rt}?${scopedParams}`, () => ({
+            headers: { ...headers(), "X-Medplum": "extended" },
+          }));
+          if (!res.ok) throw await toError(res);
+          return (await res.json()) as Bundle<T>;
+        },
+      );
+    },
+
     async searchUrl<T extends Resource>(url: string, expectedResourceType: T["resourceType"]): Promise<Bundle<T>> {
       const resolved = new URL(url, `${base}/fhir/R4/${expectedResourceType}`);
       const fhirRoot = new URL(`${base}/fhir/R4/`);
@@ -476,6 +513,45 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
         },
         async () => {
           const res = await authorizedFetch(resolved, () => ({ headers: headers() }));
+          if (!res.ok) throw await toError(res);
+          return (await res.json()) as Bundle<T>;
+        },
+      );
+    },
+
+    async searchProjectUrl<T extends Resource>(
+      url: string,
+      expectedResourceType: T["resourceType"],
+      projectId: string,
+    ): Promise<Bundle<T>> {
+      if (!projectId || projectId !== projectId.trim()) {
+        throw new Error("Project-scoped FHIR search requires a non-blank project id.");
+      }
+      const resolved = new URL(url, `${base}/fhir/R4/${expectedResourceType}`);
+      const fhirRoot = new URL(`${base}/fhir/R4/`);
+      if (resolved.origin !== fhirRoot.origin || !resolved.pathname.startsWith(fhirRoot.pathname)) {
+        throw new Error("FHIR next link must stay within the configured FHIR endpoint.");
+      }
+      const resourceType = resolved.pathname.slice(fhirRoot.pathname.length).split("/")[0];
+      if (resourceType !== expectedResourceType) {
+        throw new Error(`FHIR next link changed resource type from ${expectedResourceType} to ${resourceType || "<missing>"}.`);
+      }
+      const nextProjects = resolved.searchParams.getAll("_project");
+      if (nextProjects.length !== 1 || nextProjects[0] !== projectId) {
+        throw new Error("Project-scoped FHIR next link changed or removed the project boundary.");
+      }
+      const params = Object.fromEntries(resolved.searchParams);
+      return audited(
+        {
+          eventType: "search",
+          resourceType,
+          patientId: patientIdFromSearch(resourceType, params),
+          actionOutcome: "granted",
+        },
+        async () => {
+          const res = await authorizedFetch(resolved, () => ({
+            headers: { ...headers(), "X-Medplum": "extended" },
+          }));
           if (!res.ok) throw await toError(res);
           return (await res.json()) as Bundle<T>;
         },
