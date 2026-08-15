@@ -41,7 +41,15 @@ class FakeRepairAdapter implements PracticeRoleRepairAdapter {
   }
 
   async createPolicy(policy: AccessPolicy): Promise<AccessPolicy> {
-    const created = { ...structuredClone(policy), id: `policy-${this.policies.length + 1}`, meta: { ...policy.meta, versionId: "1" } };
+    const created = {
+      ...structuredClone(policy),
+      id: `policy-${this.policies.length + 1}`,
+      meta: {
+        ...policy.meta,
+        project: this.membership.project.reference?.replace(/^Project\//, ""),
+        versionId: "1",
+      },
+    };
     this.policies.push(created);
     this.policyWrites += 1;
     return created;

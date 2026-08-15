@@ -119,7 +119,12 @@ export async function grantPracticeRoles(
     );
     if (!composite.id) throw new Error("Composite AccessPolicy is missing its id.");
     const compositeProjectId = composite.meta?.project?.replace(/^Project\//, "");
-    if (compositeProjectId && compositeProjectId !== membershipProjectId) {
+    if (!compositeProjectId) {
+      throw new Error(
+        `Composite AccessPolicy/${composite.id} is missing Project/${membershipProjectId} ownership.`,
+      );
+    }
+    if (compositeProjectId !== membershipProjectId) {
       throw new Error(
         `Composite AccessPolicy/${composite.id} belongs to Project/${compositeProjectId}, ` +
         `not Project/${membershipProjectId}.`,

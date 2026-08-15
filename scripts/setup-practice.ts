@@ -494,7 +494,7 @@ export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
   async createOrLoginAdmin(config: SetupPracticeConfig): Promise<AdminSession> {
     const session = {
       accessToken: "in-memory-token",
-      projectId: `project-${this.admins.length + 1}`,
+      projectId: "project-1",
       loginUrl: `${config.baseUrl.replace(/\/$/, "")}/signin`,
     };
     this.admins.push(session);
@@ -648,10 +648,16 @@ export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
 
   async resolveCompositeAccessPolicy(
     roles: readonly PracticeRoleId[],
-    _session: AdminSession,
+    session: AdminSession,
   ): Promise<{ policy: AccessPolicy; created: boolean; updated: boolean }> {
-    const desired = buildMedplumCompositeAccessPolicy(roles);
-    const existing = this.policies.filter((policy) => policy.name === desired.name);
+    const built = buildMedplumCompositeAccessPolicy(roles);
+    const desired = {
+      ...built,
+      meta: { ...built.meta, project: session.projectId },
+    };
+    const existing = this.policies.filter((policy) =>
+      policy.name === desired.name && policy.meta?.project === session.projectId
+    );
     if (existing.length > 1) {
       throw new Error(`Expected at most one ${desired.name} AccessPolicy; found ${existing.length}.`);
     }

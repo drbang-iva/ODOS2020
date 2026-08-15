@@ -280,6 +280,23 @@ test("grantPracticeRoles rejects a policy owned by a different project", async (
   assert.deepEqual(counts(), { auditCount: 0, patchCount: 0 });
 });
 
+test("grantPracticeRoles rejects an unscoped composite policy before membership mutation", async () => {
+  const { deps, counts } = fixture();
+  deps.resolveCompositePolicy = async (roles) => ({
+    ...buildMedplumCompositeAccessPolicy(roles),
+    id: "unscoped-composite",
+  });
+
+  await assert.rejects(
+    grantPracticeRoles(
+      { target: "human@example.test", roles: ["provider", "staff"], primaryRole: "provider" },
+      deps,
+    ),
+    /Composite AccessPolicy\/unscoped-composite is missing Project\/p1 ownership/,
+  );
+  assert.deepEqual(counts(), { auditCount: 0, patchCount: 0 });
+});
+
 test("grantPracticeRoles refuses the configured service identity unless explicitly overridden", async () => {
   const denied = fixture({ email: "service@example.test", serviceIdentityEmail: "SERVICE@example.test" });
   await assert.rejects(
