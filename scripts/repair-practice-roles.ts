@@ -9,7 +9,9 @@ import {
 } from "../mcp/src/authz/role-grants.js";
 import {
   buildMedplumAccessPolicy,
+  buildMedplumCompositeAccessPolicy,
   getRoleDeclaration,
+  ODOS_PRACTICE_ROLE_SYSTEM,
   PRACTICE_ROLE_IDS,
   type PracticeRoleId,
 } from "../mcp/src/authz/roles.js";
@@ -31,6 +33,7 @@ export type DevAdminPrimaryRole = Extract<DevAdminGrantRole, "staff" | "provider
 
 export interface PracticeRoleRepairAdapter {
   findPoliciesByName(name: string): Promise<AccessPolicy[]>;
+  readPolicy(reference: string): Promise<AccessPolicy | undefined>;
   createPolicy(policy: AccessPolicy): Promise<AccessPolicy>;
   patchPolicy(id: string, operations: JsonPatchOperation[], versionId: string): Promise<AccessPolicy>;
   resolveTarget(target: string): Promise<ResolvedRoleGrantTarget>;
@@ -108,6 +111,36 @@ export async function repairPracticeRoles(
         if (!policy) throw new Error(`${role} AccessPolicy was not resolved.`);
         return policy;
       },
+      resolveBoundPolicy: (reference) => adapter.readPolicy(reference),
+      resolveCompositePolicy: async (roles) => {
+        const expected = buildMedplumCompositeAccessPolicy(roles);
+        const matches = (await adapter.findPoliciesByName(expected.name!)).filter(
+          (policy) => policy.name === expected.name,
+        );
+        if (matches.length > 1) {
+          throw new Error(
+            `${expected.name} has ${matches.length} exact matches; repair stopped without guessing.`,
+          );
+        }
+        const existing = matches[0];
+        if (!existing) return adapter.createPolicy(expected);
+        assertCompositePolicyRoles(existing, roles);
+        if (JSON.stringify(existing.resource ?? []) !== JSON.stringify(expected.resource ?? [])) {
+          if (!existing.id || !existing.meta?.versionId) {
+            throw new Error(`${expected.name} cannot be reconciled safely because id or meta.versionId is missing.`);
+          }
+          return adapter.patchPolicy(
+            existing.id,
+            [{
+              op: existing.resource === undefined ? "add" : "replace",
+              path: "/resource",
+              value: structuredClone(expected.resource ?? []),
+            }],
+            existing.meta.versionId,
+          );
+        }
+        return existing;
+      },
       patchMembership: (id, operations, versionId) =>
         adapter.patchMembership(id, operations, versionId),
       recordMembershipChange: (resolvedTarget, operation) =>
@@ -124,6 +157,21 @@ export async function repairPracticeRoles(
     membershipChanged: grant.changed,
     primaryRole,
   };
+}
+
+function assertCompositePolicyRoles(
+  policy: AccessPolicy,
+  roles: readonly PracticeRoleId[],
+): void {
+  const actual = PRACTICE_ROLE_IDS.filter((role) =>
+    policy.meta?.tag?.some((tag) =>
+      tag.system === ODOS_PRACTICE_ROLE_SYSTEM && tag.code === role
+    )
+  );
+  const expected = PRACTICE_ROLE_IDS.filter((role) => roles.includes(role));
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    throw new Error(`${policy.name ?? "Composite AccessPolicy"} has conflicting practice-role tags.`);
+  }
 }
 
 function practiceRoleTagPatch(
@@ -156,6 +204,11 @@ class LivePracticeRoleRepairAdapter implements PracticeRoleRepairAdapter {
 
   async createPolicy(policy: AccessPolicy): Promise<AccessPolicy> {
     return this.fhir.create(policy);
+  }
+
+  async readPolicy(reference: string): Promise<AccessPolicy | undefined> {
+    const id = reference.match(/^AccessPolicy\/([^/]+)$/)?.[1];
+    return id ? this.fhir.read<AccessPolicy>("AccessPolicy", id) : undefined;
   }
 
   async patchPolicy(

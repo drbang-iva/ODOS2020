@@ -98,6 +98,76 @@ test("assign-provider preserves single-role membership behavior", async () => {
   assert.equal(fhir.membership.access?.length, 2);
 });
 
+test("assign-provider appends one patient grant to a compiled Provider and Staff policy", async () => {
+  const fhir = new AssignmentFhir();
+  fhir.membership.access = [policyBinding("provider-staff")];
+  fhir.accessPolicies.set(
+    "provider-staff",
+    accessPolicyWithCriteria("provider-staff", [
+      "Encounter?_compartment=%provider_patient_compartment",
+      "Encounter?_compartment=%staff_patient_compartment",
+    ]),
+  );
+
+  const result = await assignPatient(fhir);
+
+  assert.equal(result.status, 200);
+  assert.deepEqual(patientPolicyReferences(fhir.membership, "Patient/patient-1"), [
+    "AccessPolicy/provider-staff",
+  ]);
+  assert.equal(fhir.membership.access?.length, 2);
+  assert.deepEqual(fhir.membership.access?.[1]?.parameter, [
+    {
+      name: "provider_provider_profile",
+      valueReference: { reference: "Practitioner/doc-1" },
+    },
+    { name: "provider_patient_compartment", valueString: "Patient/patient-1" },
+    {
+      name: "staff_provider_profile",
+      valueReference: { reference: "Practitioner/doc-1" },
+    },
+    { name: "staff_patient_compartment", valueString: "Patient/patient-1" },
+  ]);
+});
+
+test("assign-provider recognizes an existing compiled patient grant without duplicating it", async () => {
+  const fhir = new AssignmentFhir();
+  fhir.patients.get("patient-1")!.generalPractitioner = [{ reference: "Practitioner/doc-1" }];
+  fhir.membership.access = [{
+    policy: { reference: "AccessPolicy/provider-staff" },
+    parameter: [
+      {
+        name: "provider_provider_profile",
+        valueReference: { reference: "Practitioner/doc-1" },
+      },
+      { name: "provider_patient_compartment", valueString: "Patient/patient-1" },
+      {
+        name: "staff_provider_profile",
+        valueReference: { reference: "Practitioner/doc-1" },
+      },
+      { name: "staff_patient_compartment", valueString: "Patient/patient-1" },
+    ],
+  }];
+  fhir.accessPolicies.set(
+    "provider-staff",
+    accessPolicyWithCriteria("provider-staff", [
+      "Encounter?_compartment=%provider_patient_compartment",
+      "Encounter?_compartment=%staff_patient_compartment",
+    ]),
+  );
+
+  const result = await assignPatient(fhir);
+
+  assert.deepEqual(result.body, {
+    assigned: false,
+    patientReference: "Patient/patient-1",
+    practitionerReference: "Practitioner/doc-1",
+    patientUpdated: false,
+    membershipUpdated: false,
+  });
+  assert.deepEqual(fhir.patches, []);
+});
+
 test("assign-provider preserves legacy single-policy membership behavior", async () => {
   const fhir = new AssignmentFhir();
   fhir.membership.access = undefined;
@@ -670,10 +740,14 @@ async function assignPatient(fhir: AssignmentFhir) {
 }
 
 function accessPolicy(id: string, criteria: string): AccessPolicy {
+  return accessPolicyWithCriteria(id, [criteria]);
+}
+
+function accessPolicyWithCriteria(id: string, criteria: string[]): AccessPolicy {
   return {
     resourceType: "AccessPolicy",
     id,
-    resource: [{ resourceType: "Resource", criteria }],
+    resource: criteria.map((value) => ({ resourceType: "Resource", criteria: value })),
   };
 }
 
@@ -703,7 +777,8 @@ function patientPolicyReferences(
 ): string[] {
   return membership.access?.filter((access) =>
     access.parameter?.some((parameter) =>
-      parameter.name === "patient_compartment" && parameter.valueString === patientReference,
+      (parameter.name === "patient_compartment" || parameter.name.endsWith("_patient_compartment"))
+      && parameter.valueString === patientReference,
     )
   ).map((access) => access.policy?.reference).filter(
     (reference): reference is string => Boolean(reference),

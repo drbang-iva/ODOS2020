@@ -45,6 +45,11 @@ type AppointmentProvider = {
   display: string;
 };
 
+type PatientCompartmentPolicyBinding = {
+  policyReference: string;
+  patientParameterNames: string[];
+};
+
 export async function handleProviderAssignmentRequest(
   deps: ProviderAssignmentEndpointDeps,
   input: ProviderAssignmentEndpointInput,
@@ -106,11 +111,11 @@ export async function handleProviderAssignmentRequest(
   if (!membership?.id || policyReferences.length === 0) {
     return { status: 403, body: { error: "No assignable clinician membership was found." } };
   }
-  const qualifyingPolicyReferences = await patientCompartmentPolicyReferences(
+  const qualifyingPolicyBindings = await patientCompartmentPolicyBindings(
     deps.serviceFhir,
     policyReferences,
   );
-  if (qualifyingPolicyReferences.length === 0) {
+  if (qualifyingPolicyBindings.length === 0) {
     return {
       status: 409,
       body: { error: "No referenced AccessPolicy consumes %patient_compartment." },
@@ -121,14 +126,14 @@ export async function handleProviderAssignmentRequest(
   const patientAlreadyAssigned = patient.generalPractitioner?.some(
     (reference) => reference.reference === practitionerReference,
   ) ?? false;
-  const missingPolicyReferences = qualifyingPolicyReferences.filter(
-    (policyReference) => !hasPatientCompartmentGrantForPolicy(
+  const missingPolicyBindings = qualifyingPolicyBindings.filter(
+    (binding) => !hasPatientCompartmentGrantForPolicy(
       membership,
       patientReference,
-      policyReference,
+      binding,
     ),
   );
-  const membershipAlreadyGranted = missingPolicyReferences.length === 0;
+  const membershipAlreadyGranted = missingPolicyBindings.length === 0;
 
   if (!patientAlreadyAssigned) {
     await deps.serviceFhir.patch<Patient>(
@@ -142,8 +147,13 @@ export async function handleProviderAssignmentRequest(
   }
 
   if (!membershipAlreadyGranted) {
-    const access = missingPolicyReferences.map((policyReference) =>
-      patientAccessEntry(policyReference, practitionerReference, patientReference)
+    const access = missingPolicyBindings.map((binding) =>
+      patientAccessEntry(
+        binding.policyReference,
+        practitionerReference,
+        patientReference,
+        binding.patientParameterNames,
+      )
     );
     await deps.serviceFhir.patch<ProjectMembership>(
       "ProjectMembership",
@@ -255,7 +265,8 @@ export function hasPatientCompartmentGrant(
   return membership.access?.some((access) =>
     access.parameter?.some(
       (parameter) =>
-        parameter.name === "patient_compartment" &&
+        (parameter.name === "patient_compartment"
+          || parameter.name.endsWith("_patient_compartment")) &&
         parameter.valueString === patientReference,
     ),
   ) ?? false;
@@ -265,21 +276,25 @@ export function patientAccessEntry(
   policyReference: string,
   practitionerReference: string,
   patientReference: string,
+  patientParameterNames: readonly string[] = ["patient_compartment"],
 ): ProjectMembershipAccess {
   // Medplum 5.1.8 substitutes one value per parameter name, so each patient needs a
   // complete access[] policy instance instead of repeated patient_compartment parameters.
   return {
     policy: { reference: policyReference },
-    parameter: [
-      {
-        name: "provider_profile",
-        valueReference: { reference: practitionerReference },
-      },
-      {
-        name: "patient_compartment",
-        valueString: patientReference,
-      },
-    ],
+    parameter: patientParameterNames.flatMap((patientParameterName) => {
+      const prefix = patientParameterName.slice(0, -"patient_compartment".length);
+      return [
+        {
+          name: `${prefix}provider_profile`,
+          valueReference: { reference: practitionerReference },
+        },
+        {
+          name: patientParameterName,
+          valueString: patientReference,
+        },
+      ];
+    }),
   };
 }
 
@@ -310,32 +325,44 @@ function membershipPolicyReferences(membership: ProjectMembership | undefined): 
   ))];
 }
 
-async function patientCompartmentPolicyReferences(
+async function patientCompartmentPolicyBindings(
   fhir: Pick<MedplumClient, "read">,
   policyReferences: string[],
-): Promise<string[]> {
+): Promise<PatientCompartmentPolicyBinding[]> {
   const policies = await Promise.all(policyReferences.map((reference) =>
     fhir.read<AccessPolicy>("AccessPolicy", reference.slice("AccessPolicy/".length))
   ));
-  return policyReferences.filter((_, index) =>
-    policies[index]?.resource?.some((rule) =>
-      /%patient_compartment(?![A-Za-z0-9_])/.test(rule.criteria ?? "")
-    )
-  );
+  return policyReferences.flatMap((policyReference, index) => {
+    const parameterNames = new Set<string>();
+    for (const rule of policies[index]?.resource ?? []) {
+      const expressions = [
+        rule.criteria,
+        ...((rule.writeConstraint ?? []).map((constraint) => constraint.expression)),
+      ];
+      for (const expression of expressions) {
+        for (const match of expression?.matchAll(
+          /%((?:(?:admin|provider|staff)_)?patient_compartment)(?![A-Za-z0-9_])/g,
+        ) ?? []) {
+          parameterNames.add(match[1]!);
+        }
+      }
+    }
+    return parameterNames.size > 0
+      ? [{ policyReference, patientParameterNames: [...parameterNames] }]
+      : [];
+  });
 }
 
 function hasPatientCompartmentGrantForPolicy(
   membership: ProjectMembership,
   patientReference: string,
-  policyReference: string,
+  binding: PatientCompartmentPolicyBinding,
 ): boolean {
   return membership.access?.some((access) =>
-    access.policy?.reference === policyReference &&
-    access.parameter?.some(
-      (parameter) =>
-        parameter.name === "patient_compartment" &&
-        parameter.valueString === patientReference,
-    )
+    access.policy?.reference === binding.policyReference &&
+    binding.patientParameterNames.every((parameterName) => access.parameter?.some(
+      (parameter) => parameter.name === parameterName && parameter.valueString === patientReference,
+    ))
   ) ?? false;
 }
 

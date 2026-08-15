@@ -8,6 +8,7 @@ import {
   assertAestheticsProviderScope,
   assertBusinessActionAllowed,
   buildMedplumAccessPolicy,
+  buildMedplumCompositeAccessPolicy,
   getRoleDeclaration,
 } from "../src/authz/roles.js";
 
@@ -280,6 +281,93 @@ test("Staff Encounter writes allow unfinished work but reject finalization and r
   assert.equal(staffEncounterWriteAllowed(encounterWrite.writeConstraint, "planned", "in-progress"), true);
   assert.equal(staffEncounterWriteAllowed(encounterWrite.writeConstraint, "in-progress", "finished"), false);
   assert.equal(staffEncounterWriteAllowed(encounterWrite.writeConstraint, "finished", "in-progress"), false);
+});
+
+test("Provider and Staff compile to one order-independent policy without changing clinical compartment criteria", () => {
+  const providerThenStaff = buildMedplumCompositeAccessPolicy(["provider", "staff"]);
+  const staffThenProvider = buildMedplumCompositeAccessPolicy(["staff", "provider"]);
+
+  assert.deepEqual(staffThenProvider, providerThenStaff);
+  assert.deepEqual(
+    providerThenStaff.meta?.tag,
+    [
+      { system: ODOS_PRACTICE_ROLE_SYSTEM, code: "provider" },
+      { system: ODOS_PRACTICE_ROLE_SYSTEM, code: "staff" },
+    ],
+  );
+
+  const compositeEncounterWrite = providerThenStaff.resource?.find((rule) =>
+    rule.resourceType === "Encounter" && rule.interaction?.includes("update"));
+  assert.ok(compositeEncounterWrite);
+  assert.equal(
+    compositeEncounterWrite.criteria,
+    "Encounter?_compartment=%provider_patient_compartment",
+  );
+  assert.equal(
+    staffEncounterWriteAllowed(compositeEncounterWrite.writeConstraint ?? [], "finished", "finished"),
+    true,
+  );
+
+  const compositeObservationWrites = providerThenStaff.resource?.filter((rule) =>
+    rule.resourceType === "Observation" && rule.interaction?.includes("update")
+  ) ?? [];
+  assert.deepEqual(
+    compositeObservationWrites.map((rule) => rule.criteria),
+    [
+      "Observation?_compartment=%provider_patient_compartment",
+      "Observation?_compartment=%staff_patient_compartment",
+    ],
+  );
+  for (const rule of compositeObservationWrites) {
+    for (const constraint of rule.writeConstraint ?? []) {
+      assert.doesNotThrow(() => fhirpath.evaluate(
+        { resourceType: "Observation", status: "final", code: { text: "synthetic" } },
+        constraint.expression ?? "",
+        { before: [], after: { resourceType: "Observation", status: "final" } },
+      ));
+    }
+  }
+
+  const clinicalCriteria = {
+    provider: {
+      Condition: "Condition?_compartment=%patient_compartment",
+      Encounter: "Encounter?_compartment=%patient_compartment",
+      Observation: "Observation?_compartment=%patient_compartment",
+    },
+    staff: {
+      Condition: undefined,
+      Encounter: "Encounter?_compartment=%patient_compartment",
+      Observation: "Observation?_compartment=%patient_compartment",
+    },
+  } as const;
+  for (const roleId of ["provider", "staff"] as const) {
+    const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
+    for (const resourceType of ["Condition", "Encounter", "Observation"] as const) {
+      const rule = policy.resource?.find((candidate) =>
+        candidate.resourceType === resourceType && candidate.interaction?.includes("update")
+      );
+      assert.equal(rule?.criteria, clinicalCriteria[roleId][resourceType]);
+    }
+  }
+});
+
+test("Admin and Provider composites preserve Provider amendment and Admin-only capabilities", () => {
+  const composite = buildMedplumCompositeAccessPolicy(["staff", "provider", "admin"]);
+  const encounterUpdate = composite.resource?.find((rule) =>
+    rule.resourceType === "Encounter" && rule.interaction?.includes("update")
+  );
+  const accessPolicyRead = composite.resource?.find((rule) =>
+    rule.resourceType === "AccessPolicy" && rule.interaction?.includes("read")
+  );
+
+  assert.ok(encounterUpdate);
+  assert.equal(
+    encounterUpdate.criteria,
+    "Encounter?_compartment=%provider_patient_compartment",
+    "Provider finished-Encounter amendment must survive an Admin role",
+  );
+  assert.equal(encounterUpdate.writeConstraint, undefined);
+  assert.ok(accessPolicyRead, "Admin-only AccessPolicy read must survive composite compilation");
 });
 
 test("Admin has no wildcard write bypass and Staff inventory writes cannot correct counts or prices", () => {

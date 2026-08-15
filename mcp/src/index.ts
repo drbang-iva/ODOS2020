@@ -7676,6 +7676,10 @@ async function startMcpServer(): Promise<void> {
                 }
                 return matches[0];
               },
+              resolveBoundPolicy: async (reference) => {
+                const id = reference.match(/^AccessPolicy\/([^/]+)$/)?.[1];
+                return id ? fhir.read<AccessPolicy>("AccessPolicy", id) : undefined;
+              },
               patchMembership: (id, operations, versionId) =>
                 fhir.patch<ProjectMembership>("ProjectMembership", id, operations, {
                   "If-Match": `W/\"${versionId}\"`,

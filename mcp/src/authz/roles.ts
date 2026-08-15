@@ -840,6 +840,18 @@ export function getRoleDeclaration(roleId: PracticeRoleId): OdosRoleDeclaration 
 
 export const ODOS_PRACTICE_ROLE_SYSTEM = "https://odos2020.com/fhir/NamingSystem/practice-role";
 
+const COMPOSITE_ROLE_PRECEDENCE = ["admin", "provider", "staff"] as const satisfies readonly PracticeRoleId[];
+const COMPOSITE_PARAMETER_NAMES = new Set([
+  "provider_profile",
+  "patient_compartment",
+  "license_state",
+  "procedure_scope",
+]);
+
+export function compositeRoleParameterName(roleId: PracticeRoleId, parameterName: string): string {
+  return `${roleId}_${parameterName}`;
+}
+
 export function buildMedplumAccessPolicy(role: OdosRoleDeclaration): AccessPolicy {
   return {
     resourceType: "AccessPolicy",
@@ -850,6 +862,104 @@ export function buildMedplumAccessPolicy(role: OdosRoleDeclaration): AccessPolic
     meta: { tag: [{ system: ODOS_PRACTICE_ROLE_SYSTEM, code: role.id }] },
     resource: role.resourceRules.map(toMedplumResourceRule),
   };
+}
+
+export function buildMedplumCompositeAccessPolicy(
+  roleIds: readonly PracticeRoleId[],
+): AccessPolicy {
+  const roles = PRACTICE_ROLE_IDS.filter((roleId) => roleIds.includes(roleId));
+  if (roles.length === 0) {
+    throw new Error("A composite AccessPolicy requires at least one practice role.");
+  }
+  if (new Set(roleIds).size !== roles.length) {
+    throw new Error("A composite AccessPolicy requires unique recognized practice roles.");
+  }
+
+  const rules = new Map<string, {
+    resourceType: string;
+    interaction: NonNullable<AccessPolicyResource["interaction"]>[number];
+    criteria?: string;
+    constraintAlternatives: NonNullable<AccessPolicyResource["writeConstraint"]>[];
+  }>();
+  for (const roleId of COMPOSITE_ROLE_PRECEDENCE) {
+    if (!roles.includes(roleId)) continue;
+    for (const sourceRule of getRoleDeclaration(roleId).resourceRules.map(toMedplumResourceRule)) {
+      const rule = namespaceCompositeRule(sourceRule, roleId);
+      for (const interaction of rule.interaction ?? []) {
+        const key = JSON.stringify([rule.resourceType, interaction, rule.criteria ?? null]);
+        const existing = rules.get(key);
+        const constraints = structuredClone(rule.writeConstraint ?? []);
+        if (!existing) {
+          rules.set(key, {
+            resourceType: rule.resourceType,
+            interaction,
+            ...(rule.criteria ? { criteria: rule.criteria } : {}),
+            constraintAlternatives: [constraints],
+          });
+        } else if (!existing.constraintAlternatives.some(
+          (candidate) => JSON.stringify(candidate) === JSON.stringify(constraints),
+        )) {
+          existing.constraintAlternatives.push(constraints);
+        }
+      }
+    }
+  }
+
+  const resource: AccessPolicyResource[] = [...rules.values()].map((rule) => {
+    const writeConstraint = compositeWriteConstraint(rule.constraintAlternatives);
+    return {
+      resourceType: rule.resourceType,
+      interaction: [rule.interaction],
+      ...(rule.criteria ? { criteria: rule.criteria } : {}),
+      ...(writeConstraint ? { writeConstraint } : {}),
+    };
+  });
+
+  return {
+    resourceType: "AccessPolicy",
+    name: `ODOS Composite ${roles.map((roleId) => getRoleDeclaration(roleId).display).join(" + ")}`,
+    meta: {
+      tag: roles.map((code) => ({ system: ODOS_PRACTICE_ROLE_SYSTEM, code })),
+    },
+    resource,
+  };
+}
+
+function namespaceCompositeRule(
+  rule: AccessPolicyResource,
+  roleId: PracticeRoleId,
+): AccessPolicyResource {
+  const namespace = (expression: string): string => expression.replace(
+    /%([A-Za-z][A-Za-z0-9_]*)/g,
+    (match, parameterName: string) => COMPOSITE_PARAMETER_NAMES.has(parameterName)
+      ? `%${compositeRoleParameterName(roleId, parameterName)}`
+      : match,
+  );
+  return {
+    ...structuredClone(rule),
+    ...(rule.criteria ? { criteria: namespace(rule.criteria) } : {}),
+    ...(rule.writeConstraint ? {
+      writeConstraint: rule.writeConstraint.map((constraint) => ({
+        ...constraint,
+        ...(constraint.expression ? { expression: namespace(constraint.expression) } : {}),
+      })),
+    } : {}),
+  };
+}
+
+function compositeWriteConstraint(
+  alternatives: readonly NonNullable<AccessPolicyResource["writeConstraint"]>[],
+): AccessPolicyResource["writeConstraint"] | undefined {
+  if (alternatives.some((constraints) => constraints.length === 0)) return undefined;
+  if (alternatives.length === 1) return structuredClone(alternatives[0]);
+  const expression = alternatives.map((constraints) =>
+    `(${constraints.map((constraint) => `(${constraint.expression})`).join(" and ")})`
+  ).join(" or ");
+  return [{
+    language: "text/fhirpath",
+    description: "Allow the write constraints of any compiled practice role.",
+    expression,
+  }];
 }
 
 export function buildProjectMembershipAccess(input: {

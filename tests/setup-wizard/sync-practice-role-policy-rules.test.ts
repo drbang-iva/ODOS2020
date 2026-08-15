@@ -4,9 +4,10 @@ import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import type { AccessPolicy } from "@medplum/fhirtypes";
+import type { AccessPolicy, ProjectMembership, ProjectMembershipAccess } from "@medplum/fhirtypes";
 import {
   buildMedplumAccessPolicy,
+  buildMedplumCompositeAccessPolicy,
   getRoleDeclaration,
   ODOS_PRACTICE_ROLE_SYSTEM,
   PRACTICE_ROLE_IDS,
@@ -26,16 +27,28 @@ const PROJECT_ID = "practice-1";
 
 class FakePolicyRuleSyncAdapter implements PracticeRolePolicyRuleSyncAdapter {
   readonly policies: AccessPolicy[];
+  readonly memberships: ProjectMembership[];
   readonly events: string[];
   readonly patchRequests: {
     id: string;
     operations: JsonPatchOperation[];
     versionId: string;
   }[] = [];
+  readonly createRequests: AccessPolicy[] = [];
+  readonly membershipPatchRequests: {
+    id: string;
+    operations: JsonPatchOperation[];
+    versionId: string;
+  }[] = [];
   stalePolicyId?: string;
 
-  constructor(policies = canonicalPolicies(), events: string[] = []) {
+  constructor(
+    policies = canonicalPolicies(),
+    events: string[] = [],
+    memberships: ProjectMembership[] = [],
+  ) {
     this.policies = structuredClone(policies);
+    this.memberships = structuredClone(memberships);
     this.events = events;
   }
 
@@ -43,6 +56,25 @@ class FakePolicyRuleSyncAdapter implements PracticeRolePolicyRuleSyncAdapter {
     assert.equal(projectId, PROJECT_ID);
     this.events.push("read");
     return structuredClone(this.policies);
+  }
+
+  async readMemberships(projectId: string): Promise<ProjectMembership[]> {
+    assert.equal(projectId, PROJECT_ID);
+    this.events.push("read-memberships");
+    return structuredClone(this.memberships);
+  }
+
+  async createPolicy(projectId: string, policy: AccessPolicy): Promise<AccessPolicy> {
+    assert.equal(projectId, PROJECT_ID);
+    this.events.push(`create:${policy.name}`);
+    this.createRequests.push(structuredClone(policy));
+    const created: AccessPolicy = {
+      ...structuredClone(policy),
+      id: `composite-${this.createRequests.length}`,
+      meta: { ...policy.meta, project: projectId, versionId: "1" },
+    };
+    this.policies.push(created);
+    return structuredClone(created);
   }
 
   async patchPolicy(
@@ -60,6 +92,21 @@ class FakePolicyRuleSyncAdapter implements PracticeRolePolicyRuleSyncAdapter {
     applyPatch(policy, operations);
     policy.meta = { ...policy.meta, versionId: String(Number(versionId) + 1) };
     return structuredClone(policy);
+  }
+
+  async patchMembership(
+    id: string,
+    operations: JsonPatchOperation[],
+    versionId: string,
+  ): Promise<ProjectMembership> {
+    this.events.push(`patch-membership:${id}`);
+    this.membershipPatchRequests.push({ id, operations: structuredClone(operations), versionId });
+    const membership = this.memberships.find((candidate) => candidate.id === id);
+    assert.ok(membership);
+    assert.equal(membership.meta?.versionId, versionId);
+    applyMembershipPatch(membership, operations);
+    membership.meta = { ...membership.meta, versionId: String(Number(versionId) + 1) };
+    return structuredClone(membership);
   }
 }
 
@@ -80,7 +127,7 @@ test("dry-run reports literal missing and unexpected canonicalized rules without
     assertProjectScope: async () => { events.push("guard"); },
   });
 
-  assert.deepEqual(events, ["guard", "read"]);
+  assert.deepEqual(events, ["guard", "read", "read-memberships"]);
   assert.equal(result.mode, "dry-run");
   assert.equal(result.policiesUpdated, 0);
   assert.deepEqual(result.policies.map(({ role, status }) => ({ role, status })), [
@@ -150,6 +197,142 @@ test("apply patches only resource, preserves all other fields, and converges on 
   assert.equal(second.policiesUpdated, 0);
   assert.equal(adapter.patchRequests.length, 1);
   assert.ok(second.policies.every((policy) => policy.status === "match"));
+});
+
+test("split Provider and Staff bindings compile to one project-owned policy independent of access order", async () => {
+  const providerThenStaff = membership("provider-then-staff", [
+    { policy: { reference: "AccessPolicy/provider-policy" } },
+    patientGrant("AccessPolicy/provider-policy", "Patient/one"),
+    { policy: { reference: "AccessPolicy/staff-policy" } },
+    { policy: { reference: "AccessPolicy/unrelated" } },
+  ]);
+  const staffThenProvider = membership("staff-then-provider", [
+    { policy: { reference: "AccessPolicy/staff-policy" } },
+    { policy: { reference: "AccessPolicy/provider-policy" } },
+    patientGrant("AccessPolicy/provider-policy", "Patient/one"),
+    { policy: { reference: "AccessPolicy/unrelated" } },
+  ]);
+  const unrelated: AccessPolicy = {
+    resourceType: "AccessPolicy",
+    id: "unrelated",
+    name: "Unrelated policy",
+    meta: { project: PROJECT_ID, versionId: "3" },
+    resource: [],
+  };
+  const adapter = new FakePolicyRuleSyncAdapter(
+    [...canonicalPolicies(), unrelated],
+    [],
+    [providerThenStaff, staffThenProvider],
+  );
+
+  const dryRun = await syncPracticeRolePolicyRules(adapter, {
+    projectId: PROJECT_ID,
+    assertProjectScope: async () => {},
+  });
+
+  assert.equal(dryRun.policiesCreated, 0);
+  assert.equal(dryRun.membershipsUpdated, 0);
+  assert.equal(dryRun.compositesRequired, 1);
+  assert.equal(dryRun.membershipsDrifted, 2);
+  assert.equal(adapter.createRequests.length, 0);
+  assert.equal(adapter.membershipPatchRequests.length, 0);
+
+  const applied = await syncPracticeRolePolicyRules(adapter, {
+    projectId: PROJECT_ID,
+    apply: true,
+    bootstrapServiceIdentity: true,
+    assertProjectScope: async () => assert.fail("bootstrap must use resource project guards"),
+  });
+
+  assert.equal(applied.policiesCreated, 1);
+  assert.equal(applied.membershipsUpdated, 2);
+  assert.deepEqual(adapter.createRequests, [{
+    ...buildMedplumCompositeAccessPolicy(["provider", "staff"]),
+    meta: {
+      ...buildMedplumCompositeAccessPolicy(["provider", "staff"]).meta,
+      project: PROJECT_ID,
+    },
+  }]);
+  const expectedAccess: ProjectMembershipAccess[] = [
+    { policy: { reference: "AccessPolicy/composite-1" } },
+    patientGrant("AccessPolicy/composite-1", "Patient/one"),
+    { policy: { reference: "AccessPolicy/unrelated" } },
+  ];
+  expectedAccess[1]!.parameter![0]!.name = "provider_patient_compartment";
+  assert.deepEqual(adapter.memberships[0]?.access, expectedAccess);
+  assert.deepEqual(adapter.memberships[1]?.access, expectedAccess);
+
+  const rerun = await syncPracticeRolePolicyRules(adapter, {
+    projectId: PROJECT_ID,
+    apply: true,
+    bootstrapServiceIdentity: true,
+    assertProjectScope: async () => assert.fail("bootstrap must use resource project guards"),
+  });
+  assert.equal(rerun.policiesCreated, 0);
+  assert.equal(rerun.membershipsUpdated, 0);
+  assert.equal(rerun.membershipsDrifted, 0);
+  assert.equal(adapter.createRequests.length, 1);
+  assert.equal(adapter.membershipPatchRequests.length, 2);
+});
+
+test("sync preserves disjoint Provider and Staff patient panels in the compiled policy", async () => {
+  const adapter = new FakePolicyRuleSyncAdapter(canonicalPolicies(), [], [
+    membership("disjoint-panels", [
+      patientGrant("AccessPolicy/provider-policy", "Patient/provider-panel"),
+      patientGrant("AccessPolicy/staff-policy", "Patient/staff-panel"),
+    ]),
+  ]);
+
+  const result = await syncPracticeRolePolicyRules(adapter, {
+    projectId: PROJECT_ID,
+    apply: true,
+    assertProjectScope: async () => {},
+  });
+
+  assert.equal(result.policiesCreated, 1);
+  assert.equal(result.membershipsUpdated, 1);
+  assert.deepEqual(adapter.memberships[0]?.access, [
+    {
+      policy: { reference: "AccessPolicy/composite-1" },
+      parameter: [{
+        name: "provider_patient_compartment",
+        valueString: "Patient/provider-panel",
+      }],
+    },
+    {
+      policy: { reference: "AccessPolicy/composite-1" },
+      parameter: [{ name: "staff_patient_compartment", valueString: "Patient/staff-panel" }],
+    },
+  ]);
+});
+
+test("sync folds a legacy accessPolicy binding into access and removes the first-match hazard", async () => {
+  const legacy = membership("legacy-mixed", [
+    { policy: { reference: "AccessPolicy/provider-policy" } },
+  ]);
+  legacy.accessPolicy = { reference: "AccessPolicy/staff-policy" };
+  const adapter = new FakePolicyRuleSyncAdapter(canonicalPolicies(), [], [legacy]);
+
+  const result = await syncPracticeRolePolicyRules(adapter, {
+    projectId: PROJECT_ID,
+    apply: true,
+    assertProjectScope: async () => {},
+  });
+
+  assert.equal(result.policiesCreated, 1);
+  assert.equal(result.membershipsUpdated, 1);
+  assert.deepEqual(adapter.memberships[0]?.access, [
+    { policy: { reference: "AccessPolicy/composite-1" } },
+  ]);
+  assert.equal(adapter.memberships[0]?.accessPolicy, undefined);
+  assert.deepEqual(adapter.membershipPatchRequests[0]?.operations, [
+    {
+      op: "replace",
+      path: "/access",
+      value: [{ policy: { reference: "AccessPolicy/composite-1" } }],
+    },
+    { op: "remove", path: "/accessPolicy" },
+  ]);
 });
 
 test("sync refuses missing, duplicate, versionless, or ambiguously tagged policies before writing", async () => {
@@ -307,6 +490,50 @@ test("live adapter sends the deployed version as a weak If-Match header", async 
   });
 });
 
+test("live adapter targets composite creation and membership replacement to the named project", async () => {
+  const calls: unknown[] = [];
+  const fhir = {
+    create: async (resource: AccessPolicy) => {
+      calls.push({ kind: "create", resource });
+      return { ...resource, id: "composite-created" };
+    },
+    patch: async (
+      resourceType: string,
+      id: string,
+      operations: JsonPatchOperation[],
+      headers?: Record<string, string>,
+    ) => {
+      calls.push({ kind: "patch", resourceType, id, operations, headers });
+      return membership(id, operations[0]?.value as ProjectMembershipAccess[]);
+    },
+  } as unknown as MedplumClient;
+  const adapter = new LivePracticeRolePolicyRuleSyncAdapter(fhir);
+  const expected = buildMedplumCompositeAccessPolicy(["provider", "staff"]);
+  const access = [{ policy: { reference: "AccessPolicy/composite-created" } }];
+  const membershipOperations: JsonPatchOperation[] = [{
+    op: "replace",
+    path: "/access",
+    value: access,
+  }];
+
+  await adapter.createPolicy(PROJECT_ID, expected);
+  await adapter.patchMembership("membership-1", membershipOperations, "19");
+
+  assert.deepEqual(calls, [
+    {
+      kind: "create",
+      resource: { ...expected, meta: { ...expected.meta, project: PROJECT_ID } },
+    },
+    {
+      kind: "patch",
+      resourceType: "ProjectMembership",
+      id: "membership-1",
+      operations: membershipOperations,
+      headers: { "If-Match": 'W/"19"' },
+    },
+  ]);
+});
+
 test("project id is required from --project or MEDPLUM_PROJECT_ID", () => {
   assert.equal(
     requiredPracticeRolePolicyRuleSyncProjectId(["--project", " practice-explicit "], "practice-env"),
@@ -434,6 +661,24 @@ function canonicalPolicy(role: PracticeRoleId, id: string): AccessPolicy {
   };
 }
 
+function membership(id: string, access: ProjectMembershipAccess[]): ProjectMembership {
+  return {
+    resourceType: "ProjectMembership",
+    id,
+    meta: { project: PROJECT_ID, versionId: "7" },
+    project: { reference: `Project/${PROJECT_ID}` },
+    profile: { reference: `Practitioner/${id}` },
+    access,
+  };
+}
+
+function patientGrant(policyReference: string, patientReference: string): ProjectMembershipAccess {
+  return {
+    policy: { reference: policyReference },
+    parameter: [{ name: "patient_compartment", valueString: patientReference }],
+  };
+}
+
 function hasRole(policy: AccessPolicy, role: PracticeRoleId): boolean {
   return policy.meta?.tag?.some((tag) =>
     tag.system === ODOS_PRACTICE_ROLE_SYSTEM && tag.code === role
@@ -455,6 +700,23 @@ function applyPatch(policy: AccessPolicy, operations: readonly JsonPatchOperatio
       continue;
     }
     assert.fail(`Unexpected patch operation: ${JSON.stringify(operation)}`);
+  }
+}
+
+function applyMembershipPatch(
+  membership: ProjectMembership,
+  operations: readonly JsonPatchOperation[],
+): void {
+  for (const operation of operations) {
+    if ((operation.op === "add" || operation.op === "replace") && operation.path === "/access") {
+      membership.access = structuredClone(operation.value) as ProjectMembershipAccess[];
+      continue;
+    }
+    if (operation.op === "remove" && operation.path === "/accessPolicy") {
+      delete membership.accessPolicy;
+      continue;
+    }
+    assert.fail(`Unexpected membership patch operation: ${JSON.stringify(operation)}`);
   }
 }
 
@@ -557,6 +819,10 @@ async function withPolicySyncServer(
         type: "searchset",
         entry: policies.map((resource) => ({ resource })),
       });
+    }
+    if (url.pathname === "/fhir/R4/ProjectMembership" && request.method === "GET") {
+      assert.equal(url.searchParams.get("_project"), PROJECT_ID);
+      return json(response, { resourceType: "Bundle", type: "searchset", entry: [] });
     }
     if (url.pathname.startsWith("/fhir/R4/AccessPolicy/") && request.method === "PATCH") {
       patchCalls += 1;

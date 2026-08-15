@@ -539,6 +539,10 @@ async function grantRole(
         }
         return policy;
       },
+      resolveBoundPolicy: async (reference): Promise<AccessPolicy | undefined> => {
+        const id = reference.match(/^AccessPolicy\/([^/]+)$/)?.[1];
+        return id ? fhir.read<AccessPolicy>("AccessPolicy", id) : undefined;
+      },
       patchMembership: (id, operations, versionId) =>
         fhir.patch("ProjectMembership", id, operations, {
           "If-Match": `W/"${versionId}"`,
