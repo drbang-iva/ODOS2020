@@ -122,6 +122,7 @@ export interface DiagnosticReportInput {
 
 export interface ProvenanceInput {
   targetReferences: string[];
+  patientReference?: string;
   occurredDateTime?: string;
   recorded?: string;
   policyUrls?: string[];

@@ -230,6 +230,7 @@ export async function handleDiagnosisPickRequest(
   }
   const provenance = await staff.fhir.create<Provenance>(buildProvenance({
     targetReferences: [conditionReference, ...(encounterChanged ? [encounterReference] : [])],
+    patientReference,
     occurredDateTime: recordedAt,
     recorded: recordedAt,
     activityCode: existing ? "UPDATE" : "CREATE",

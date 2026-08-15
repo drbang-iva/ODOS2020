@@ -68,7 +68,7 @@ export function OrthoKSection({ patientReference, encounterReference, onSaved }:
       }),
       "create_ortho_k_lens_device",
     );
-    await createUiProvenance("create_ortho_k_lens_device", [`Device/${created.id}`]);
+    await createUiProvenance("create_ortho_k_lens_device", [`Device/${created.id}`], patientReference);
     setLens(created);
     return created;
   }
@@ -85,7 +85,7 @@ export function OrthoKSection({ patientReference, encounterReference, onSaved }:
           "update_ortho_k_lens_parameters",
           lens.meta?.versionId,
         );
-        await createUiProvenance("update_ortho_k_lens_parameters", [`Device/${updated.id}`]);
+        await createUiProvenance("update_ortho_k_lens_parameters", [`Device/${updated.id}`], patientReference);
         setLens(updated);
         markSaved("Ortho-K lens updated");
       } else {
@@ -116,7 +116,7 @@ export function OrthoKSection({ patientReference, encounterReference, onSaved }:
         }),
         "record_ortho_k_fitting_event",
       );
-      await createUiProvenance("record_ortho_k_fitting_event", [`Procedure/${created.id}`]);
+      await createUiProvenance("record_ortho_k_fitting_event", [`Procedure/${created.id}`], patientReference);
       setSeries(created);
       markSaved("Fitting trail started");
     } catch (err) {
@@ -146,7 +146,7 @@ export function OrthoKSection({ patientReference, encounterReference, onSaved }:
         }),
         "record_ortho_k_trial",
       );
-      await createUiProvenance("record_ortho_k_trial", [`Procedure/${created.id}`]);
+      await createUiProvenance("record_ortho_k_trial", [`Procedure/${created.id}`], patientReference);
       setTrialCount(nextTrial);
       markSaved(`Trial ${nextTrial}`);
     } catch (err) {
@@ -173,7 +173,7 @@ export function OrthoKSection({ patientReference, encounterReference, onSaved }:
         }),
         "record_ortho_k_fit_observation",
       );
-      await createUiProvenance("record_ortho_k_fit_observation", [`Observation/${created.id}`]);
+      await createUiProvenance("record_ortho_k_fit_observation", [`Observation/${created.id}`], patientReference);
       markSaved(`Fit finding: ${finding}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -200,7 +200,7 @@ export function OrthoKSection({ patientReference, encounterReference, onSaved }:
         },
         "record_ortho_k_fitting_event",
       );
-      await createUiProvenance("record_ortho_k_fitting_event", [`AdverseEvent/${adverseEvent.id}`]);
+      await createUiProvenance("record_ortho_k_fitting_event", [`AdverseEvent/${adverseEvent.id}`], patientReference);
       setAdverseEventText("");
       markSaved("Adverse event captured");
     } catch (err) {
@@ -223,7 +223,7 @@ export function OrthoKSection({ patientReference, encounterReference, onSaved }:
       }),
       "record_ortho_k_fitting_event",
     );
-    await createUiProvenance("record_ortho_k_fitting_event", [`Procedure/${created.id}`]);
+    await createUiProvenance("record_ortho_k_fitting_event", [`Procedure/${created.id}`], patientReference);
     setSeries(created);
     return created;
   }
@@ -343,11 +343,15 @@ export function OrthoKSection({ patientReference, encounterReference, onSaved }:
   );
 }
 
-async function createUiProvenance(sourceTag: string, targetReferences: string[]): Promise<Provenance> {
+async function createUiProvenance(
+  sourceTag: string,
+  targetReferences: string[],
+  patientReference: string,
+): Promise<Provenance> {
   return fhir.create<Provenance>(
     {
       resourceType: "Provenance",
-      target: targetReferences.map((reference) => ({ reference })),
+      target: [...targetReferences, patientReference].map((reference) => ({ reference })),
       recorded: new Date().toISOString(),
       activity: {
         coding: [{ system: "http://terminology.hl7.org/CodeSystem/v3-DataOperation", code: "CREATE", display: "Create" }],

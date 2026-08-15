@@ -181,7 +181,8 @@ test("C-CDA import maps source facts, links exactly one Encounter, and converges
   }
 
   const provenance = fhir.ofType<Provenance>("Provenance")[0]!;
-  assert.equal(provenance.target.length, 7);
+  assert.equal(provenance.target.length, 8);
+  assert.equal(provenance.target.some((target) => target.reference === "Patient/patient-1"), true);
   assert.deepEqual(
     provenance.entity?.map((entity) => entity.what.display),
     [

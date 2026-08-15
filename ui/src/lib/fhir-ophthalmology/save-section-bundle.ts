@@ -138,6 +138,7 @@ export function buildSectionSaveBundle(input: BuildSectionSaveBundleInput): Bund
       fullUrl: `urn:uuid:prov-${input.section}-${laterality.toLowerCase()}`,
       resource: buildCreateProvenance({
         targetReference: observationFullUrl,
+        patientReference: input.patientReference,
         recordedAt,
         occurredDateTime: measuredAt,
         operatorDisplay: input.operatorDisplay,
@@ -270,13 +271,17 @@ function prepareBodyStructure(
 
 function buildCreateProvenance(input: {
   targetReference: string;
+  patientReference: string;
   recordedAt: string;
   occurredDateTime: string;
   operatorDisplay: string;
 }): Resource {
   return {
     resourceType: "Provenance",
-    target: [{ reference: input.targetReference }],
+    target: [
+      { reference: input.targetReference },
+      { reference: input.patientReference },
+    ],
     recorded: input.recordedAt,
     occurredDateTime: input.occurredDateTime,
     activity: {

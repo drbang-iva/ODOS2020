@@ -1482,6 +1482,28 @@ test("confirmed catalog picks join Encounter.diagnosis once and preserve rank ga
   assert.equal(fhir.writes.filter((write) => write.resourceType === "Encounter" && write.operation === "update").length, 1);
 });
 
+test("diagnosis pick Provenance targets the patient", async () => {
+  const fhir = diagnosisPickFhir();
+  const result = await handleDiagnosisPickRequest({
+    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "provider", fhir }),
+    now: () => "2026-07-11T16:00:00.000Z",
+  }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+    body: { diagnosisKey: "presbyopia", action: "confirm", source: "catalog-search" },
+  });
+
+  assert.equal(result.status, 201, JSON.stringify(result.body));
+  const provenance = fhir.resources.find((resource): resource is Provenance =>
+    resource.resourceType === "Provenance"
+  );
+  assert.ok(provenance);
+  assert.equal(
+    provenance.target.some((target) => target.reference === "Patient/p1"),
+    true,
+  );
+});
+
 test("a failed tally side effect never fails a successful explicit diagnosis pick", async () => {
   class TallyFailFhir extends MemoryFhir {
     override async create<T extends Resource>(resource: T, headers?: Record<string, string>): Promise<T> {

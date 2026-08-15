@@ -173,6 +173,7 @@ export async function handleReferralFaxRequest(
     const serviceRequestReference = `ServiceRequest/${context.referralId}`;
     const provenance: Provenance = buildProvenance({
       targetReferences: [serviceRequestReference, `DocumentReference/${record.id}`],
+      patientReference: context.patientReference,
       occurredDateTime: recordedAt,
       recorded: recordedAt,
       activityCode: "READ",

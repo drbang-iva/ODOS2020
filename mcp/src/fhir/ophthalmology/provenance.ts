@@ -23,10 +23,14 @@ export function buildProvenance(input: ProvenanceInput): import("./types.js").Pr
   }
 
   const recorded = input.recorded ?? new Date().toISOString();
+  const targetReferences = [
+    ...input.targetReferences,
+    ...(input.patientReference ? [input.patientReference] : []),
+  ].filter((target, index, targets) => targets.indexOf(target) === index);
 
   return {
     resourceType: "Provenance",
-    target: input.targetReferences.map((r) => reference(r)),
+    target: targetReferences.map((r) => reference(r)),
     recorded,
     ...(input.policyUrls?.length ? { policy: input.policyUrls } : {}),
     ...(input.occurredDateTime ? { occurredDateTime: input.occurredDateTime } : {}),
