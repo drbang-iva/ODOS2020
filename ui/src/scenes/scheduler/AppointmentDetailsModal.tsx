@@ -8,6 +8,7 @@ import {
 import {
   APPOINTMENT_CONFIRMATION_STATUSES,
   ODOS_APPOINTMENT_STATUSES,
+  VISIT_DURATION_PRESETS,
   resourceDisplay,
   scheduleReference,
   visitTypeCode,
@@ -42,8 +43,6 @@ import {
   type ReferralConsultant,
 } from "../../components/referral/referral-api";
 
-const DURATION_PRESETS = [10, 15, 30, 60] as const;
-
 type PatientInsuranceLoader = (patientReference: string) => Promise<InsuranceScreenData>;
 
 const defaultPatientInsuranceLoader: PatientInsuranceLoader = (patientReference) =>
@@ -73,7 +72,7 @@ export function AppointmentDetailsModal({
   resources: Schedule[];
   visitTypes: HealthcareService[];
   onClose: () => void;
-  onCreate: (input: ReturnType<typeof draftToBookInput>, deps?: SchedulingWriteDeps) => Promise<void>;
+  onCreate: (input: ReturnType<typeof draftToBookInput>, deps?: SchedulingWriteDeps) => Promise<Appointment>;
   onUpdate: (
     appointment: Appointment,
     changes: AppointmentChangeInput,
@@ -93,13 +92,13 @@ export function AppointmentDetailsModal({
         return undefined;
       }
       if (initialDraft) {
-        return initialDraft;
+        return draftWithConfiguredVisitTypeDuration(initialDraft, visitTypes);
       }
       const resource = resources[0];
       if (!resource) {
         return undefined;
       }
-      return defaultAppointmentModalDraft({
+      return draftWithConfiguredVisitTypeDuration(defaultAppointmentModalDraft({
         date: new Date().toISOString().slice(0, 10),
         startMinutes: 9 * 60,
         timezoneOffset,
@@ -107,7 +106,7 @@ export function AppointmentDetailsModal({
         visitTypes,
         clinicMode,
         resource,
-      });
+      }), visitTypes);
     },
     [appointment, clinicMode, initialDraft, resources, timezoneOffset, visitTypes],
   );
@@ -130,6 +129,7 @@ export function AppointmentDetailsModal({
   const [referralReason, setReferralReason] = useState("");
   const [referrerMatches, setReferrerMatches] = useState<ReferralConsultant[]>([]);
   const [appointmentSaved, setAppointmentSaved] = useState(false);
+  const [createdAppointment, setCreatedAppointment] = useState<Appointment>();
 
   useEffect(() => {
     const nextDraft = appointment ? appointmentModalDraftFromAppointment(appointment, resources) : fallbackDraft ?? emptyDraft(timezoneOffset);
@@ -235,7 +235,8 @@ export function AppointmentDetailsModal({
       if (appointment) {
         await onUpdate(appointment, draftToAppointmentChanges(draft, allowDoubleBook));
       } else if (!savedThisAttempt) {
-        await onCreate(draftToBookInput(draft, allowDoubleBook));
+        const created = await onCreate(draftToBookInput(draft, allowDoubleBook));
+        setCreatedAppointment(created);
         savedThisAttempt = true;
         setAppointmentSaved(true);
       }
@@ -256,20 +257,47 @@ export function AppointmentDetailsModal({
     }
   }
 
-  async function transition(status: OdosAppointmentStatus) {
-    if (!appointment) {
+  async function transition(status: OdosAppointmentStatus, allowDoubleBook = false) {
+    let targetAppointment = appointment ?? createdAppointment;
+    if (!targetAppointment && status !== "checked-in") {
       setDraft((current) => ({ ...current, status }));
       return;
+    }
+    if (!targetAppointment) {
+      if (createDisabled) {
+        setError("No scheduler resources are loaded for this appointment.");
+        return;
+      }
+      const durationError = appointmentModalDurationError(draft);
+      if (durationError) {
+        setError(durationError);
+        return;
+      }
     }
     setSaving(true);
     setError(null);
     try {
-      await onSetStatus(appointment, status);
+      if (!targetAppointment) {
+        targetAppointment = await onCreate(draftToBookInput(
+          { ...draft, status: "scheduled" },
+          allowDoubleBook,
+        ));
+        setCreatedAppointment(targetAppointment);
+        setAppointmentSaved(true);
+      }
+      await onSetStatus(targetAppointment, status);
       setDraft((current) => ({ ...current, status }));
-      if (status === "cancelled") {
+      if (status === "cancelled" || (!appointment && status === "checked-in")) {
         onClose();
       }
     } catch (err) {
+      if (
+        !targetAppointment
+        && !allowDoubleBook
+        && (await confirmDoubleBookAndRetry(err, () => transition(status, true)))
+      ) {
+        return;
+      }
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setSaving(false);
@@ -380,7 +408,7 @@ export function AppointmentDetailsModal({
                     }));
                   }}
                 >
-                  {DURATION_PRESETS.map((minutes) => (
+                  {VISIT_DURATION_PRESETS.map((minutes) => (
                     <option key={minutes} value={minutes}>{minutes === 60 ? "1 hr" : `${minutes} min`}</option>
                   ))}
                   <option value="custom">Custom…</option>
@@ -607,7 +635,7 @@ export function AppointmentDetailsModal({
                   type="button"
                   onClick={() => setPatientQueryOpen((open) => !open)}
                 >
-                  Change Patient
+                  {draft.patient ? "Change Patient" : "Select Patient"}
                 </button>
                 {patientQueryOpen && (
                   <PatientSearch
@@ -745,8 +773,17 @@ function AppointmentCoverageField({
   );
 }
 
-function isDurationPreset(minutes: number): minutes is (typeof DURATION_PRESETS)[number] {
-  return DURATION_PRESETS.includes(minutes as (typeof DURATION_PRESETS)[number]);
+function isDurationPreset(minutes: number): minutes is (typeof VISIT_DURATION_PRESETS)[number] {
+  return VISIT_DURATION_PRESETS.includes(minutes as (typeof VISIT_DURATION_PRESETS)[number]);
+}
+
+function draftWithConfiguredVisitTypeDuration(
+  draft: AppointmentModalDraft,
+  visitTypes: HealthcareService[],
+): AppointmentModalDraft {
+  const visitType = visitTypes.find((candidate) => visitTypeCode(candidate) === draft.visitTypeCode);
+  const durationMinutes = visitType ? visitTypeDurationMinutes(visitType) : undefined;
+  return durationMinutes === undefined ? draft : { ...draft, durationMinutes };
 }
 
 function relevantCoverages(

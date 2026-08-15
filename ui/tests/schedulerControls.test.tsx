@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Appointment, Coverage, HealthcareService, Schedule } from "@medplum/fhirtypes";
+import type { Appointment, Bundle, Coverage, HealthcareService, Resource, Schedule } from "@medplum/fhirtypes";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
@@ -45,6 +45,7 @@ const SCHEDULER_RESOURCES: Schedule[] = [
 
 const ROUTINE = visitType("routine", "Routine Exam", 30);
 const OFF_PRESET = visitType("off-preset", "Off-preset Visit", 20);
+const CUSTOM_DURATION = visitType("custom-duration", "Custom-duration Visit", 25);
 
 test("appointment block content trims notes and omits blank comments", () => {
   const withNote = buildAppointmentBlockContent(
@@ -541,6 +542,45 @@ test("browser Appointment builder rejects an empty-id participant actor before F
   );
 });
 
+test("scheduler creation returns the server-created Appointment for immediate status transition", async () => {
+  const originalState = useSchedulingStore.getState();
+  const persisted = appointment({ id: "server-created-appointment" });
+  try {
+    useSchedulingStore.setState({
+      ...originalState,
+      clinicMode: "both",
+      resources: [SCHEDULER_RESOURCES[0]!],
+      visitTypes: [ROUTINE],
+      appointments: [],
+      loadDay: async () => undefined,
+    });
+    const created = await useSchedulingStore.getState().createAppointment(
+      {
+        patient: { reference: "Patient/patient-1", display: "Patient, Test" },
+        visitTypeCode: "routine",
+        resourceScheduleReferences: ["Schedule/schedule-1"],
+        start: "2026-07-14T09:00:00-05:00",
+        durationMinutes: 30,
+        allowDoubleBook: true,
+      },
+      {
+        fhirClient: {
+          async search<T extends Resource>(): Promise<Bundle<T>> {
+            return { resourceType: "Bundle", type: "searchset", entry: [] };
+          },
+          async create<T>() {
+            return persisted as T;
+          },
+        },
+      },
+    );
+
+    assert.equal((created as Appointment | undefined)?.id, "server-created-appointment");
+  } finally {
+    useSchedulingStore.setState(originalState, true);
+  }
+});
+
 test("one visible hours-less column retains the base practice time axis while true empty cases stay empty", async () => {
   const originalState = useSchedulingStore.getState();
   const originalStorage = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
@@ -629,11 +669,55 @@ test("duration presets update the saved draft and invalid custom input keeps the
   invalid.unmount();
 });
 
-test("visit-type auto-fill maps an off-preset duration to Custom with its value", async () => {
+test("duration presets include the shared 20- and 45-minute quick picks", async () => {
   const renderer = await renderModal({ visitTypes: [ROUTINE, OFF_PRESET] });
   act(() => renderer.root.findByProps({ "aria-label": "Service Type" }).props.onChange({ target: { value: "off-preset" } }));
+  const presets = renderer.root.findByProps({ "aria-label": "Duration preset" });
+  assert.equal(presets.props.value, 20);
+  assert.deepEqual(
+    presets.findAllByType("option").map((option) => option.props.value),
+    [10, 15, 20, 30, 45, 60, "custom"],
+  );
+  renderer.unmount();
+});
+
+test("opening a new modal derives duration from its already-selected visit type", async () => {
+  const renderer = await renderModal({
+    initialDraft: draft({ visitTypeCode: "custom-duration", durationMinutes: 30 }),
+    visitTypes: [ROUTINE, CUSTOM_DURATION],
+  });
   assert.equal(renderer.root.findByProps({ "aria-label": "Duration preset" }).props.value, "custom");
-  assert.equal(renderer.root.findByProps({ "aria-label": "Custom duration minutes" }).props.value, 20);
+  assert.equal(renderer.root.findByProps({ "aria-label": "Custom duration minutes" }).props.value, 25);
+  renderer.unmount();
+});
+
+test("Check In from a creating modal creates first and then invokes the persisted status transition", async () => {
+  const calls: string[] = [];
+  const created = appointment({ id: "created-appointment", status: "booked" });
+  const renderer = await renderModal({
+    initialDraft: draft({ status: "no-show" }),
+    onCreate: async (input) => {
+      calls.push(`create:${input.status}`);
+      return created as never;
+    },
+    onSetStatus: async (savedAppointment, status) => {
+      calls.push(`status:${savedAppointment.id}:${status}`);
+    },
+  });
+
+  await act(async () => {
+    button(renderer, "Check In").props.onClick();
+    await new Promise((resolve) => setImmediate(resolve));
+  });
+
+  assert.deepEqual(calls, ["create:scheduled", "status:created-appointment:checked-in"]);
+  renderer.unmount();
+});
+
+test("a new appointment without a patient uses Select Patient for both title and action", async () => {
+  const renderer = await renderModal();
+  assert.equal(renderer.root.findByType("h2").children.join(""), "Select patient");
+  assert.ok(button(renderer, "Select Patient"));
   renderer.unmount();
 });
 

@@ -103,6 +103,9 @@ export const ODOS_APPOINTMENT_STATUSES = [
 
 export type OdosAppointmentStatus = (typeof ODOS_APPOINTMENT_STATUSES)[number]["code"];
 
+export const VISIT_DURATION_PRESETS = [10, 15, 20, 30, 45, 60] as const;
+export const MAX_VISIT_DURATION_MINUTES = 1_440;
+
 export const ODOS_VISION_COVERAGE_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/odos-vision-coverage";
 export const ODOS_MEDICAL_COVERAGE_EXTENSION_URL =

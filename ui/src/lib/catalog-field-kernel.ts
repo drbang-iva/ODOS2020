@@ -18,7 +18,8 @@ type FieldBase = {
 export type CatalogFieldDefinition =
   | (FieldBase & { type: "text"; unique?: boolean })
   | (FieldBase & { type: "color"; palette: readonly string[] })
-  | (FieldBase & { type: "duration" | "number"; min?: number; max?: number; integer?: boolean })
+  | (FieldBase & { type: "duration"; min?: number; max?: number; presets?: readonly number[] })
+  | (FieldBase & { type: "number"; min?: number; max?: number; integer?: boolean })
   | (FieldBase & { type: "currency"; min?: number; max?: number })
   | (FieldBase & { type: "select"; options: readonly { value: string; label: string }[] })
   | (FieldBase & { type: "multi-select"; options: readonly { value: string; label: string }[] })

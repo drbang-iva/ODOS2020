@@ -279,7 +279,7 @@ export interface SchedulingStoreState {
   createAppointment: (
     input: BookSchedulingAppointmentInput,
     deps?: SchedulingWriteDeps,
-  ) => Promise<void>;
+  ) => Promise<Appointment>;
   updateAppointment: (
     appointment: Appointment,
     changes: AppointmentChangeInput,
@@ -657,8 +657,9 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
         input: checkConflicts ? input : { ...input, allowDoubleBook: true },
         now: deps?.now,
       });
-      await createResource(client, appointment, SCHEDULING_SOURCE_TAGS.create);
+      const created = await createResource(client, appointment, SCHEDULING_SOURCE_TAGS.create);
       await reloadSelectedSchedulerView(get, client, false, deps?.resourceAdmin);
+      return created;
     } catch (err) {
       set({ loading: false, error: errorMessage(err) });
       throw err;
