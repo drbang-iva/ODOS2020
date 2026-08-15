@@ -10,6 +10,7 @@ import fhirpath from "fhirpath";
 import {
   grantPracticeRoles,
   reconcileMembershipAccess,
+  resolveProjectCompositeAccessPolicy,
   type PracticeRoleGrantDependencies,
 } from "../src/authz/role-grants.js";
 import {
@@ -295,6 +296,44 @@ test("grantPracticeRoles rejects an unscoped composite policy before membership 
     /Composite AccessPolicy\/unscoped-composite is missing Project\/p1 ownership/,
   );
   assert.deepEqual(counts(), { auditCount: 0, patchCount: 0 });
+});
+
+test("project composite resolver creates target-owned policy and reconciles rule drift", async () => {
+  const policies: AccessPolicy[] = [];
+  let patches = 0;
+  const store = {
+    findPoliciesByName: async (name: string) => policies.filter((policy) => policy.name === name),
+    createPolicy: async (policy: AccessPolicy) => {
+      const created = { ...structuredClone(policy), id: "composite", meta: { ...policy.meta, versionId: "1" } };
+      policies.push(created);
+      return created;
+    },
+    patchPolicy: async (_id: string, operations: JsonPatchOperation[]) => {
+      patches += 1;
+      const policy = policies[0]!;
+      policy.resource = operations[0]!.value as AccessPolicy["resource"];
+      return policy;
+    },
+  };
+  const expected = buildMedplumCompositeAccessPolicy(["provider", "staff"]);
+
+  const created = await resolveProjectCompositeAccessPolicy(
+    store,
+    "p1",
+    ["provider", "staff"],
+    expected,
+  );
+  assert.equal(created.meta?.project, "p1");
+  created.resource = created.resource?.slice(1);
+
+  const reconciled = await resolveProjectCompositeAccessPolicy(
+    store,
+    "p1",
+    ["provider", "staff"],
+    expected,
+  );
+  assert.deepEqual(reconciled.resource, expected.resource);
+  assert.equal(patches, 1);
 });
 
 test("grantPracticeRoles refuses the configured service identity unless explicitly overridden", async () => {

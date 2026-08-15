@@ -40,6 +40,16 @@ export interface PracticeRoleGrantDependencies {
   ): Promise<T>;
 }
 
+export interface ProjectCompositeAccessPolicyStore {
+  findPoliciesByName(name: string): Promise<AccessPolicy[]>;
+  createPolicy(policy: AccessPolicy): Promise<AccessPolicy>;
+  patchPolicy(
+    id: string,
+    operations: JsonPatchOperation[],
+    versionId: string,
+  ): Promise<AccessPolicy>;
+}
+
 export interface GrantPracticeRolesResult {
   membershipReference: string;
   targetEmail: string;
@@ -152,6 +162,47 @@ export async function grantPracticeRoles(
     roles,
     changed: operations.length > 0,
   };
+}
+
+export async function resolveProjectCompositeAccessPolicy(
+  store: ProjectCompositeAccessPolicyStore,
+  projectId: string,
+  roles: readonly PracticeRoleId[],
+  expected: AccessPolicy,
+): Promise<AccessPolicy> {
+  if (!expected.name) throw new Error("Composite AccessPolicy is missing its canonical name.");
+  const matches = (await store.findPoliciesByName(expected.name)).filter((policy) =>
+    policy.name === expected.name && policy.meta?.project?.replace(/^Project\//, "") === projectId
+  );
+  if (matches.length > 1) {
+    throw new Error(`Expected at most one ${expected.name} in Project/${projectId}; found ${matches.length}.`);
+  }
+  const existing = matches[0];
+  if (!existing) {
+    return store.createPolicy({
+      ...structuredClone(expected),
+      meta: { ...expected.meta, project: projectId },
+    });
+  }
+  const expectedRoles = PRACTICE_ROLE_IDS.filter((role) => roles.includes(role));
+  if (JSON.stringify(practiceRoles(existing)) !== JSON.stringify(expectedRoles)) {
+    throw new Error(`${expected.name} has conflicting practice-role tags.`);
+  }
+  if (JSON.stringify(existing.resource ?? []) === JSON.stringify(expected.resource ?? [])) {
+    return existing;
+  }
+  if (!existing.id || !existing.meta?.versionId) {
+    throw new Error(`${expected.name} cannot be reconciled safely because id or meta.versionId is missing.`);
+  }
+  return store.patchPolicy(
+    existing.id,
+    [{
+      op: existing.resource === undefined ? "add" : "replace",
+      path: "/resource",
+      value: structuredClone(expected.resource ?? []),
+    }],
+    existing.meta.versionId,
+  );
 }
 
 export function reconcileMembershipAccess(

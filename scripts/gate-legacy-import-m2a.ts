@@ -23,6 +23,7 @@ import type {
 import { exchangeClientCredentials } from "../data/medplum-adapters/migration-importer-adapter.js";
 import {
   grantPracticeRoles,
+  resolveProjectCompositeAccessPolicy,
   type ResolvedRoleGrantTarget,
 } from "../mcp/src/authz/role-grants.js";
 import {
@@ -501,6 +502,8 @@ async function grantRole(
   email: string,
   role: Extract<PracticeRoleId, "provider" | "staff">,
 ): Promise<void> {
+  const projectId = membership.project.reference?.match(/^Project\/([^/]+)$/)?.[1];
+  if (!projectId) throw new Error("M2a membership is missing a valid project reference.");
   await grantPracticeRoles(
     {
       target: `ProjectMembership/${membership.id}`,
@@ -543,6 +546,21 @@ async function grantRole(
         const id = reference.match(/^AccessPolicy\/([^/]+)$/)?.[1];
         return id ? fhir.read<AccessPolicy>("AccessPolicy", id) : undefined;
       },
+      resolveCompositePolicy: (roles, expected) =>
+        resolveProjectCompositeAccessPolicy(
+          {
+            findPoliciesByName: (name) =>
+              searchAll<AccessPolicy>(fhir, "AccessPolicy", { "name:exact": name }),
+            createPolicy: (policy) => fhir.create(policy),
+            patchPolicy: (id, operations, versionId) =>
+              fhir.patch("AccessPolicy", id, operations, {
+                "If-Match": `W/\"${versionId}\"`,
+              }),
+          },
+          projectId,
+          roles,
+          expected,
+        ),
       patchMembership: (id, operations, versionId) =>
         fhir.patch("ProjectMembership", id, operations, {
           "If-Match": `W/"${versionId}"`,

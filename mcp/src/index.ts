@@ -32,6 +32,7 @@ import express from "express";
 import { isIP } from "node:net";
 import { z } from "zod";
 import { createMedplumClient, type JsonPatchOperation } from "./fhir-client.js";
+import { searchAll } from "./fhir-search.js";
 import { createLiveOdosAuditRuntime, type LiveAuditQueryFilters } from "./authz/liveAudit.js";
 import { handleDocumentPrintAuditRequest } from "./authz/documentPrintAuditEndpoint.js";
 import {
@@ -53,7 +54,10 @@ import {
   type BusinessAction,
   type PracticeRoleId,
 } from "./authz/roles.js";
-import { grantPracticeRoles } from "./authz/role-grants.js";
+import {
+  grantPracticeRoles,
+  resolveProjectCompositeAccessPolicy,
+} from "./authz/role-grants.js";
 import { handleChargeRequest } from "./payments/payment-charge-handler.js";
 import { createPaymentDispatch } from "./payments/payment-config.js";
 import { registerPatientPaymentRoutes } from "./payments/payment-routes.js";
@@ -7680,6 +7684,21 @@ async function startMcpServer(): Promise<void> {
                 const id = reference.match(/^AccessPolicy\/([^/]+)$/)?.[1];
                 return id ? fhir.read<AccessPolicy>("AccessPolicy", id) : undefined;
               },
+              resolveCompositePolicy: (roles, expected) =>
+                resolveProjectCompositeAccessPolicy(
+                  {
+                    findPoliciesByName: (name) =>
+                      searchAll<AccessPolicy>(fhir, "AccessPolicy", { "name:exact": name }),
+                    createPolicy: (policy) => fhir.create(policy),
+                    patchPolicy: (id, operations, versionId) =>
+                      fhir.patch("AccessPolicy", id, operations, {
+                        "If-Match": `W/\"${versionId}\"`,
+                      }),
+                  },
+                  projectId,
+                  roles,
+                  expected,
+                ),
               patchMembership: (id, operations, versionId) =>
                 fhir.patch<ProjectMembership>("ProjectMembership", id, operations, {
                   "If-Match": `W/\"${versionId}\"`,
