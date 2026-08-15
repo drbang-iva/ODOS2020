@@ -86,7 +86,7 @@ test("all roles read operational records at practice scope while Staff writes st
   );
 });
 
-test("Provider, Staff, and Admin keep practice-wide Appointment reads", () => {
+test("Door 1 actor gating leaves Provider, Staff, and Admin Appointment reads practice-wide", () => {
   for (const roleId of ["provider", "staff", "admin"] as const) {
     const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
     const appointmentReads = policy.resource?.filter((rule) =>
@@ -95,11 +95,6 @@ test("Provider, Staff, and Admin keep practice-wide Appointment reads", () => {
       appointmentReads.some((rule) => rule.criteria === undefined),
       true,
       `${roleId} keeps its existing practice-wide scheduling read`,
-    );
-    assert.equal(
-      appointmentReads.some((rule) => rule.criteria === "Appointment?actor=%provider_profile"),
-      false,
-      `${roleId} must not receive an actor-scoped Appointment read`,
     );
   }
 });
