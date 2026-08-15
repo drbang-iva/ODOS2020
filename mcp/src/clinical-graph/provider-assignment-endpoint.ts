@@ -1,4 +1,5 @@
 import type {
+  AccessPolicy,
   Appointment,
   Bundle,
   Patient,
@@ -101,16 +102,33 @@ export async function handleProviderAssignmentRequest(
     profile: staff.staffReference,
   });
   const membership = memberships.entry?.[0]?.resource;
-  const policyReference = membershipPolicyReference(membership);
-  if (!membership?.id || !policyReference) {
+  const policyReferences = membershipPolicyReferences(membership);
+  if (!membership?.id || policyReferences.length === 0) {
     return { status: 403, body: { error: "No assignable clinician membership was found." } };
+  }
+  const qualifyingPolicyReferences = await patientCompartmentPolicyReferences(
+    deps.serviceFhir,
+    policyReferences,
+  );
+  if (qualifyingPolicyReferences.length === 0) {
+    return {
+      status: 409,
+      body: { error: "No referenced AccessPolicy consumes %patient_compartment." },
+    };
   }
 
   const patient = target.patient ?? await deps.serviceFhir.read<Patient>("Patient", target.patientId);
   const patientAlreadyAssigned = patient.generalPractitioner?.some(
     (reference) => reference.reference === practitionerReference,
   ) ?? false;
-  const membershipAlreadyGranted = hasPatientCompartmentGrant(membership, patientReference);
+  const missingPolicyReferences = qualifyingPolicyReferences.filter(
+    (policyReference) => !hasPatientCompartmentGrantForPolicy(
+      membership,
+      patientReference,
+      policyReference,
+    ),
+  );
+  const membershipAlreadyGranted = missingPolicyReferences.length === 0;
 
   if (!patientAlreadyAssigned) {
     await deps.serviceFhir.patch<Patient>(
@@ -124,17 +142,15 @@ export async function handleProviderAssignmentRequest(
   }
 
   if (!membershipAlreadyGranted) {
-    const access = patientAccessEntry(
-      policyReference,
-      practitionerReference,
-      patientReference,
+    const access = missingPolicyReferences.map((policyReference) =>
+      patientAccessEntry(policyReference, practitionerReference, patientReference)
     );
     await deps.serviceFhir.patch<ProjectMembership>(
       "ProjectMembership",
       membership.id,
       membership.access?.length
-        ? [{ op: "add", path: "/access/-", value: access }]
-        : [{ op: "add", path: "/access", value: [access] }],
+        ? access.map((value) => ({ op: "add" as const, path: "/access/-", value }))
+        : [{ op: "add", path: "/access", value: access }],
       versionHeaders(membership.meta?.versionId),
     );
   }
@@ -284,9 +300,43 @@ async function resolvePractitionerReference(
     : undefined;
 }
 
-function membershipPolicyReference(membership: ProjectMembership | undefined): string | undefined {
-  return membership?.access?.find((access) => access.policy?.reference)?.policy?.reference
-    ?? membership?.accessPolicy?.reference;
+function membershipPolicyReferences(membership: ProjectMembership | undefined): string[] {
+  const references = [
+    ...(membership?.access?.map((access) => access.policy?.reference) ?? []),
+    membership?.accessPolicy?.reference,
+  ];
+  return [...new Set(references.filter(
+    (reference): reference is string => /^AccessPolicy\/[A-Za-z0-9.-]{1,64}$/.test(reference ?? ""),
+  ))];
+}
+
+async function patientCompartmentPolicyReferences(
+  fhir: Pick<MedplumClient, "read">,
+  policyReferences: string[],
+): Promise<string[]> {
+  const policies = await Promise.all(policyReferences.map((reference) =>
+    fhir.read<AccessPolicy>("AccessPolicy", reference.slice("AccessPolicy/".length))
+  ));
+  return policyReferences.filter((_, index) =>
+    policies[index]?.resource?.some((rule) =>
+      /%patient_compartment(?![A-Za-z0-9_])/.test(rule.criteria ?? "")
+    )
+  );
+}
+
+function hasPatientCompartmentGrantForPolicy(
+  membership: ProjectMembership,
+  patientReference: string,
+  policyReference: string,
+): boolean {
+  return membership.access?.some((access) =>
+    access.policy?.reference === policyReference &&
+    access.parameter?.some(
+      (parameter) =>
+        parameter.name === "patient_compartment" &&
+        parameter.valueString === patientReference,
+    )
+  ) ?? false;
 }
 
 function versionHeaders(versionId: string | undefined): Record<string, string> {

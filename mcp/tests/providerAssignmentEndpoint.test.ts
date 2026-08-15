@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type {
+  AccessPolicy,
   Appointment,
   Bundle,
   Patient,
@@ -15,6 +16,146 @@ import {
 import type { JsonPatchOperation } from "../src/fhir-client.js";
 
 const AUTH = "Bearer clinician";
+
+test("assign-provider self-heals a patient granted only on a non-qualifying policy", async () => {
+  const fhir = new AssignmentFhir();
+  fhir.patients.get("patient-1")!.generalPractitioner = [{ reference: "Practitioner/doc-1" }];
+  fhir.membership.access = [
+    patientBinding("unrelated", "Patient/patient-1"),
+    policyBinding("staff"),
+    policyBinding("provider"),
+  ];
+  fhir.accessPolicies.set("unrelated", accessPolicy("unrelated", "Basic?code=unrelated"));
+  fhir.accessPolicies.set(
+    "staff",
+    accessPolicy("staff", "Encounter?_compartment=%patient_compartment"),
+  );
+  fhir.accessPolicies.set(
+    "provider",
+    accessPolicy("provider", "Condition?_compartment=%patient_compartment"),
+  );
+
+  const result = await assignPatient(fhir);
+
+  assert.equal(result.status, 200);
+  assert.deepEqual(result.body, {
+    assigned: true,
+    patientReference: "Patient/patient-1",
+    practitionerReference: "Practitioner/doc-1",
+    patientUpdated: false,
+    membershipUpdated: true,
+  });
+  assert.deepEqual(patientPolicyReferences(fhir.membership, "Patient/patient-1"), [
+    "AccessPolicy/unrelated",
+    "AccessPolicy/staff",
+    "AccessPolicy/provider",
+  ]);
+  assert.equal(fhir.membership.access?.length, 5);
+});
+
+test("assign-provider does not duplicate a patient granted on every qualifying policy", async () => {
+  const fhir = new AssignmentFhir();
+  fhir.patients.get("patient-1")!.generalPractitioner = [{ reference: "Practitioner/doc-1" }];
+  fhir.membership.access = [
+    policyBinding("staff"),
+    policyBinding("provider"),
+    patientBinding("staff", "Patient/patient-1"),
+    patientBinding("provider", "Patient/patient-1"),
+  ];
+  fhir.accessPolicies.set(
+    "staff",
+    accessPolicy("staff", "Encounter?_compartment=%patient_compartment"),
+  );
+  fhir.accessPolicies.set(
+    "provider",
+    accessPolicy("provider", "Condition?_compartment=%patient_compartment"),
+  );
+
+  const result = await assignPatient(fhir);
+
+  assert.deepEqual(result.body, {
+    assigned: false,
+    patientReference: "Patient/patient-1",
+    practitionerReference: "Practitioner/doc-1",
+    patientUpdated: false,
+    membershipUpdated: false,
+  });
+  assert.deepEqual(fhir.reads, ["AccessPolicy/staff", "AccessPolicy/provider"]);
+  assert.deepEqual(fhir.patches, []);
+  assert.equal(fhir.membership.access.length, 4);
+});
+
+test("assign-provider preserves single-role membership behavior", async () => {
+  const fhir = new AssignmentFhir();
+
+  const result = await assignPatient(fhir);
+
+  assert.equal(result.status, 200);
+  assert.deepEqual(fhir.reads, ["AccessPolicy/clinician"]);
+  assert.deepEqual(patientPolicyReferences(fhir.membership, "Patient/patient-1"), [
+    "AccessPolicy/clinician",
+  ]);
+  assert.equal(fhir.membership.access?.length, 2);
+});
+
+test("assign-provider preserves legacy single-policy membership behavior", async () => {
+  const fhir = new AssignmentFhir();
+  fhir.membership.access = undefined;
+  fhir.membership.accessPolicy = { reference: "AccessPolicy/clinician" };
+
+  const result = await assignPatient(fhir);
+
+  assert.equal(result.status, 200);
+  assert.deepEqual(patientPolicyReferences(fhir.membership, "Patient/patient-1"), [
+    "AccessPolicy/clinician",
+  ]);
+  assert.equal(fhir.membership.access?.length, 1);
+});
+
+test("assign-provider never grants a policy without a patient-compartment rule", async () => {
+  const fhir = new AssignmentFhir();
+  fhir.membership.access = [policyBinding("unrelated"), policyBinding("provider")];
+  fhir.accessPolicies.set(
+    "unrelated",
+    accessPolicy("unrelated", "Basic?_compartment=%patient_compartment_archive"),
+  );
+  fhir.accessPolicies.set(
+    "provider",
+    accessPolicy("provider", "Condition?_compartment=%patient_compartment"),
+  );
+
+  const result = await assignPatient(fhir);
+
+  assert.equal(result.status, 200);
+  assert.deepEqual(patientPolicyReferences(fhir.membership, "Patient/patient-1"), [
+    "AccessPolicy/provider",
+  ]);
+});
+
+test("assign-provider fails explicitly when no referenced policy consumes patient-compartment", async () => {
+  const fhir = new AssignmentFhir();
+  fhir.membership.access = [policyBinding("unrelated")];
+  fhir.accessPolicies.set("unrelated", accessPolicy("unrelated", "Basic?code=unrelated"));
+
+  const result = await assignPatient(fhir);
+
+  assert.equal(result.status, 409);
+  assert.deepEqual(result.body, {
+    error: "No referenced AccessPolicy consumes %patient_compartment.",
+  });
+  assert.deepEqual(fhir.patches, []);
+  assert.equal(fhir.patients.get("patient-1")?.generalPractitioner, undefined);
+});
+
+test("assign-provider aborts before every patch when a referenced policy cannot be read", async () => {
+  const fhir = new AssignmentFhir();
+  fhir.membership.access = [policyBinding("missing")];
+
+  await assert.rejects(() => assignPatient(fhir), /FHIR 404 Not Found/);
+
+  assert.deepEqual(fhir.patches, []);
+  assert.equal(fhir.patients.get("patient-1")?.generalPractitioner, undefined);
+});
 
 test("assign-provider appends self Practitioner + one complete access entry per patient and is idempotent", async () => {
   const fhir = new AssignmentFhir();
@@ -438,6 +579,10 @@ class AssignmentFhir {
     id: "role-1",
     practitioner: { reference: "Practitioner/doc-1" },
   };
+  readonly accessPolicies = new Map<string, AccessPolicy>([[
+    "clinician",
+    accessPolicy("clinician", "Condition?_compartment=%patient_compartment"),
+  ]]);
   membership: ProjectMembership = {
     resourceType: "ProjectMembership",
     id: "membership-1",
@@ -459,11 +604,18 @@ class AssignmentFhir {
     headers: Record<string, string>;
   }> = [];
   readonly searches: string[] = [];
+  readonly reads: string[] = [];
 
   async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
     if (resourceType === "Appointment") return this.appointments.get(id) as T;
     if (resourceType === "Patient") return this.patients.get(id) as T;
     if (resourceType === "PractitionerRole") return this.practitionerRole as T;
+    if (resourceType === "AccessPolicy") {
+      this.reads.push(`${resourceType}/${id}`);
+      const policy = this.accessPolicies.get(id);
+      if (!policy) throw notFound();
+      return policy as T;
+    }
     throw new Error(`Unexpected read ${resourceType}/${id}`);
   }
 
@@ -480,22 +632,82 @@ class AssignmentFhir {
     headers: Record<string, string> = {},
   ): Promise<T> {
     this.patches.push({ resourceType, id, operations, headers });
-    const value = operations[0] && "value" in operations[0] ? operations[0].value : undefined;
     if (resourceType === "Patient") {
       const target = this.patients.get(id)!;
-      target.generalPractitioner = operations[0]?.path.endsWith("/-")
-        ? [...(target.generalPractitioner ?? []), value as never]
-        : value as never;
+      for (const operation of operations) {
+        const value = "value" in operation ? operation.value : undefined;
+        target.generalPractitioner = operation.path.endsWith("/-")
+          ? [...(target.generalPractitioner ?? []), value as never]
+          : value as never;
+      }
       return target as T;
     }
     if (resourceType === "ProjectMembership") {
-      this.membership.access = operations[0]?.path.endsWith("/-")
-        ? [...(this.membership.access ?? []), value as never]
-        : value as never;
+      for (const operation of operations) {
+        const value = "value" in operation ? operation.value : undefined;
+        this.membership.access = operation.path.endsWith("/-")
+          ? [...(this.membership.access ?? []), value as never]
+          : value as never;
+      }
       return this.membership as T;
     }
     throw new Error(`Unexpected patch ${resourceType}/${id}`);
   }
+}
+
+async function assignPatient(fhir: AssignmentFhir) {
+  return handleProviderAssignmentRequest(
+    {
+      authenticate: async () => ({
+        staffReference: "Practitioner/doc-1",
+        actorRole: "provider" as const,
+        fhir,
+      }),
+      serviceFhir: fhir,
+    },
+    { authHeader: AUTH, patientId: "patient-1" },
+  );
+}
+
+function accessPolicy(id: string, criteria: string): AccessPolicy {
+  return {
+    resourceType: "AccessPolicy",
+    id,
+    resource: [{ resourceType: "Resource", criteria }],
+  };
+}
+
+function policyBinding(policyId: string): NonNullable<ProjectMembership["access"]>[number] {
+  return { policy: { reference: `AccessPolicy/${policyId}` } };
+}
+
+function patientBinding(
+  policyId: string,
+  patientReference: string,
+): NonNullable<ProjectMembership["access"]>[number] {
+  return {
+    policy: { reference: `AccessPolicy/${policyId}` },
+    parameter: [
+      {
+        name: "provider_profile",
+        valueReference: { reference: "Practitioner/doc-1" },
+      },
+      { name: "patient_compartment", valueString: patientReference },
+    ],
+  };
+}
+
+function patientPolicyReferences(
+  membership: ProjectMembership,
+  patientReference: string,
+): string[] {
+  return membership.access?.filter((access) =>
+    access.parameter?.some((parameter) =>
+      parameter.name === "patient_compartment" && parameter.valueString === patientReference,
+    )
+  ).map((access) => access.policy?.reference).filter(
+    (reference): reference is string => Boolean(reference),
+  ) ?? [];
 }
 
 function patient(id: string): Patient {
