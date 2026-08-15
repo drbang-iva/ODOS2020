@@ -211,6 +211,7 @@ export function buildAttestationTransaction(input: {
   const provenance = buildSignedClinicalProvenance({
     id: input.provenanceId,
     targetReferences: [observationReference(input.observation)],
+    patientReference: observationPatientReference(input.observation),
     clinicianId: input.clinicianId,
     recorded,
     intent: "first-final-attestation",
@@ -262,6 +263,7 @@ export function buildAmendmentTransaction(input: {
   const provenance = buildSignedClinicalProvenance({
     id: input.provenanceId,
     targetReferences: [observationReference(input.observation)],
+    patientReference: observationPatientReference(input.observation),
     clinicianId: input.clinicianId,
     recorded,
     intent,
@@ -335,6 +337,7 @@ export function buildAppendObservationTransaction(input: {
   const provenance = buildSignedClinicalProvenance({
     id: input.provenanceId,
     targetReferences: [observationReference(observation)],
+    patientReference: observationPatientReference(observation),
     clinicianId: input.appendInput.clinician_id,
     recorded,
     intent: "append-clinical-context",
@@ -452,6 +455,7 @@ export function assertSignedObservationDeleteAllowed(observation: Observation): 
 export function buildSignedClinicalProvenance(input: {
   id?: string;
   targetReferences: string[];
+  patientReference: string;
   clinicianId: string;
   recorded: string;
   intent: OdosClinicalProvenanceIntent;
@@ -464,6 +468,7 @@ export function buildSignedClinicalProvenance(input: {
   return {
     ...buildProvenance({
       targetReferences: input.targetReferences,
+      patientReference: input.patientReference,
       recorded: input.recorded,
       policyUrls: [input.policyUrl],
       activityCode: activity.code,
@@ -494,6 +499,14 @@ export function buildSignedClinicalProvenance(input: {
     }),
     id: input.id ?? randomUUID(),
   };
+}
+
+function observationPatientReference(observation: Observation): string {
+  const patientReference = observation.subject?.reference;
+  if (!patientReference) {
+    throw new Error(`Observation/${observation.id ?? "(unknown)"} has no Patient subject for clinical Provenance.`);
+  }
+  return patientReference;
 }
 
 function amendmentIntentForTargetStatus(

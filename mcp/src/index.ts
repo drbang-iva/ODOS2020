@@ -2759,6 +2759,7 @@ function createServer(): Server {
             createdProvenance = await fhir.create(
               buildProvenance({
                 targetReferences: [encounterReference],
+                patientReference: patientReference(input.patient_id),
                 occurredDateTime: encounterResult.resource.period?.start,
                 activityCode: "CREATE",
                 activityDisplay: "Create",
@@ -2812,6 +2813,7 @@ function createServer(): Server {
             createdProvenance = await fhir.create(
               buildProvenance({
                 targetReferences: [observationReference],
+                patientReference: patientReference(input.patient_id),
                 occurredDateTime: observationBodySiteResult.observation.effectiveDateTime,
                 activityCode: "CREATE",
                 activityDisplay: "Create",
@@ -3075,6 +3077,7 @@ function createServer(): Server {
             createdProvenance = await fhir.create(
               buildProvenance({
                 targetReferences: [`DocumentReference/${created.id}`],
+                patientReference: patientReference(input.patient_id),
                 occurredDateTime: documentReference.date,
                 activityCode: "CREATE",
                 activityDisplay: "Create",
@@ -3148,6 +3151,7 @@ function createServer(): Server {
             createdProvenance = await fhir.create(
               buildProvenance({
                 targetReferences: [`VisionPrescription/${created.id}`],
+                patientReference: patientReference(input.patient_id),
                 occurredDateTime: visionPrescription.dateWritten,
                 activityCode: "CREATE",
                 activityDisplay: "Create",
@@ -3197,7 +3201,7 @@ function createServer(): Server {
           const provenance = await createV035Provenance(
             "create_episode_of_care",
             input,
-            [`EpisodeOfCare/${created.id}`],
+            [`EpisodeOfCare/${created.id}`, patientReference(input.patient_id)],
             "CREATE",
             episodeOfCare.period?.start,
           );
@@ -3218,7 +3222,7 @@ function createServer(): Server {
           const provenance = await createV035Provenance(
             "update_episode_of_care",
             input,
-            [`EpisodeOfCare/${updated.id}`],
+            [`EpisodeOfCare/${updated.id}`, existing.patient.reference!],
             "UPDATE",
             updated.period?.start,
           );
@@ -3258,7 +3262,7 @@ function createServer(): Server {
           const provenance = await createV035Provenance(
             "create_condition_with_tier",
             input,
-            [`Condition/${createdCondition.id}`, `Encounter/${updatedEncounter.id}`],
+            [`Condition/${createdCondition.id}`, `Encounter/${updatedEncounter.id}`, patientReference(input.patient_id)],
             "CREATE",
             condition.recordedDate ?? condition.onsetDateTime,
           );
@@ -3285,7 +3289,7 @@ function createServer(): Server {
           const provenance = await createV035Provenance(
             "create_problem_list_condition",
             input,
-            [`Condition/${created.id}`],
+            [`Condition/${created.id}`, patientReference(input.patient_id)],
             "CREATE",
             condition.recordedDate ?? condition.onsetDateTime,
           );
@@ -3311,7 +3315,7 @@ function createServer(): Server {
           const provenance = await createV035Provenance(
             "update_condition_status",
             input,
-            [`Condition/${updated.id}`],
+            [`Condition/${updated.id}`, existing.subject.reference!],
             "UPDATE",
           );
 
@@ -3349,7 +3353,7 @@ function createServer(): Server {
           const provenance = await createV035Provenance(
             "update_condition_tier",
             input,
-            [`Encounter/${updatedEncounter.id}`, `Condition/${condition.id}`],
+            [`Encounter/${updatedEncounter.id}`, `Condition/${condition.id}`, condition.subject.reference!],
             "UPDATE",
           );
 
@@ -3374,7 +3378,7 @@ function createServer(): Server {
           const provenance = await createV035Provenance(
             "update_condition_body_site",
             input,
-            [`Condition/${updated.id}`],
+            [`Condition/${updated.id}`, existing.subject.reference!],
             "UPDATE",
           );
 
@@ -3400,7 +3404,7 @@ function createServer(): Server {
           const provenance = await createV035Provenance(
             "update_condition_code",
             input,
-            [`Condition/${updated.id}`],
+            [`Condition/${updated.id}`, existing.subject.reference!],
             "UPDATE",
             undefined,
             [
@@ -3427,7 +3431,7 @@ function createServer(): Server {
               const provenance = buildV035ProvenanceResource(
                 "mark_condition_entered_in_error",
                 input,
-                [`Condition/${id}`, `Encounter/${encounterId}`],
+                [`Condition/${id}`, `Encounter/${encounterId}`, existing.subject.reference!],
                 "UPDATE",
               );
               const responseBundle = await fhir.executeTransaction(
@@ -3501,7 +3505,7 @@ function createServer(): Server {
           const provenance = await createV035Provenance(
             "mark_condition_entered_in_error",
             input,
-            [`Condition/${updated.id}`],
+            [`Condition/${updated.id}`, existing.subject.reference!],
             "UPDATE",
           );
 
@@ -3526,7 +3530,7 @@ function createServer(): Server {
           const provenance = await createV035Provenance(
             "create_allergy_intolerance",
             input,
-            [`AllergyIntolerance/${created.id}`],
+            [`AllergyIntolerance/${created.id}`, patientReference(input.patient_id)],
             "CREATE",
             allergyIntolerance.recordedDate,
           );
@@ -3548,7 +3552,7 @@ function createServer(): Server {
           const provenance = await createV035Provenance(
             "create_smoking_status_observation",
             input,
-            [`Observation/${created.id}`],
+            [`Observation/${created.id}`, patientReference(input.patient_id)],
             "CREATE",
             observation.effectiveDateTime,
           );
@@ -3580,7 +3584,7 @@ function createServer(): Server {
           const provenance = await createV035Provenance(
             "create_care_team",
             input,
-            [`CareTeam/${created.id}`],
+            [`CareTeam/${created.id}`, patientReference(input.patient_id)],
             "CREATE",
           );
 
@@ -3603,7 +3607,7 @@ function createServer(): Server {
           const provenance = await createV035Provenance(
             "create_procedure",
             input,
-            [`Procedure/${created.id}`],
+            [`Procedure/${created.id}`, patientReference(input.patient_id)],
             "CREATE",
             procedure.performedDateTime,
           );
@@ -3636,7 +3640,7 @@ function createServer(): Server {
           const provenance = await createV035Provenance(
             "update_procedure_body_site",
             input,
-            [`Procedure/${updated.id}`],
+            [`Procedure/${updated.id}`, existing.subject.reference!],
             "UPDATE",
           );
 
@@ -3660,7 +3664,10 @@ function createServer(): Server {
           const provenance = await createV04Provenance(
             "create_lens_device",
             input,
-            [`Device/${created.id}`],
+            [
+              `Device/${created.id}`,
+              ...(input.patient_id ? [patientReference(input.patient_id)] : []),
+            ],
             "CREATE",
           );
 
@@ -3691,7 +3698,10 @@ function createServer(): Server {
           const provenance = await createV04Provenance(
             "update_lens_device_properties",
             input,
-            [`Device/${updated.id}`],
+            [
+              `Device/${updated.id}`,
+              ...(existing.patient?.reference ? [existing.patient.reference] : []),
+            ],
             "UPDATE",
             undefined,
             [
@@ -3813,6 +3823,7 @@ function createServer(): Server {
             [
               `QuestionnaireResponse/${createdQuestionnaireResponse.id}`,
               `Observation/${createdScoreObservation.id}`,
+              patientReference(input.patient_id),
             ],
             "CREATE",
             questionnaireResponse.authored,
@@ -3873,6 +3884,7 @@ function createServer(): Server {
           const targets = [
             ...(createdDocumentReference?.id ? [`DocumentReference/${createdDocumentReference.id}`] : []),
             `Observation/${createdObservation.id}`,
+            patientReference(input.patient_id),
           ];
           const provenance = await createV04Provenance(
             "create_meibography_observation",
@@ -3914,7 +3926,7 @@ function createServer(): Server {
           const provenance = await createV04Provenance(
             "create_dry_eye_treatment_procedure",
             input,
-            [`Procedure/${created.id}`],
+            [`Procedure/${created.id}`, patientReference(input.patient_id)],
             "CREATE",
             procedure.performedDateTime ?? procedure.performedPeriod?.start,
           );
@@ -3969,6 +3981,7 @@ function createServer(): Server {
             [
               `Procedure/${createdParent.id}`,
               ...createdChildren.map((child) => `Procedure/${child.id}`),
+              patientReference(input.patient_id),
             ],
             "CREATE",
             parent.performedDateTime,
@@ -4004,7 +4017,7 @@ function createServer(): Server {
           const provenance = await createV04Provenance(
             "update_dry_eye_treatment_procedure_status",
             input,
-            [`Procedure/${updated.id}`],
+            [`Procedure/${updated.id}`, existing.subject.reference!],
             "UPDATE",
             updated.performedDateTime ?? updated.performedPeriod?.start,
             [{ role: "revision", display: `prior Procedure.status: ${existing.status}` }],
@@ -4039,7 +4052,7 @@ function createServer(): Server {
           const provenance = await createV04Provenance(
             "create_ophthalmic_medication_statement",
             input,
-            [`MedicationStatement/${created.id}`],
+            [`MedicationStatement/${created.id}`, patientReference(input.patient_id)],
             "CREATE",
             medicationStatement.effectiveDateTime ?? medicationStatement.effectivePeriod?.start,
           );
@@ -4065,7 +4078,7 @@ function createServer(): Server {
           const provenance = await createV04Provenance(
             "update_dry_eye_medication_status",
             input,
-            [`MedicationStatement/${updated.id}`],
+            [`MedicationStatement/${updated.id}`, existing.subject.reference!],
             "UPDATE",
             updated.effectiveDateTime ?? updated.effectivePeriod?.start,
             [{ role: "revision", display: `prior MedicationStatement.status: ${existing.status}` }],
@@ -4101,7 +4114,7 @@ function createServer(): Server {
           const provenance = await createV04Provenance(
             "create_dry_eye_adverse_event",
             input,
-            [`AdverseEvent/${created.id}`],
+            [`AdverseEvent/${created.id}`, patientReference(input.patient_id)],
             "CREATE",
             adverseEvent.date ?? adverseEvent.detected ?? adverseEvent.recordedDate,
           );
@@ -4125,7 +4138,7 @@ function createServer(): Server {
           const provenance = await createV04Provenance(
             "create_ortho_k_lens_device",
             input,
-            [`Device/${created.id}`],
+            [`Device/${created.id}`, patientReference(input.patient_id)],
             "CREATE",
           );
 
@@ -4149,7 +4162,7 @@ function createServer(): Server {
           const provenance = await createV04Provenance(
             "record_ortho_k_fitting_event",
             input,
-            [`Procedure/${created.id}`],
+            [`Procedure/${created.id}`, patientReference(input.patient_id)],
             "CREATE",
             procedure.performedDateTime,
           );
@@ -4174,7 +4187,7 @@ function createServer(): Server {
           const provenance = await createV04Provenance(
             "record_ortho_k_fit_observation",
             input,
-            [`Observation/${created.id}`],
+            [`Observation/${created.id}`, patientReference(input.patient_id)],
             "CREATE",
             observation.effectiveDateTime,
           );
@@ -4200,7 +4213,7 @@ function createServer(): Server {
           const provenance = await createV04Provenance(
             "record_ortho_k_trial",
             input,
-            [`Procedure/${created.id}`],
+            [`Procedure/${created.id}`, patientReference(input.patient_id)],
             "CREATE",
             procedure.performedDateTime,
           );
@@ -4220,7 +4233,10 @@ function createServer(): Server {
           const provenance = await createV04Provenance(
             "update_ortho_k_lens_parameters",
             input,
-            [`Device/${updated.id}`],
+            [
+              `Device/${updated.id}`,
+              ...(existing.patient?.reference ? [existing.patient.reference] : []),
+            ],
             "UPDATE",
             undefined,
             [{ role: "revision", display: `prior Device.property count: ${(existing.property ?? []).length}` }],
@@ -4246,7 +4262,7 @@ function createServer(): Server {
           const provenance = await createV04Provenance(
             "create_myopia_management_episode",
             input,
-            [`EpisodeOfCare/${created.id}`],
+            [`EpisodeOfCare/${created.id}`, patientReference(input.patient_id)],
             "CREATE",
             episodeOfCare.period?.start,
           );
@@ -4268,7 +4284,7 @@ function createServer(): Server {
             const provenance = await createV04Provenance(
               "create_or_update_myopia_plan",
               input,
-              [`CarePlan/${updated.id}`],
+              [`CarePlan/${updated.id}`, patientReference(input.patient_id)],
               "UPDATE",
               updated.created,
               [{ role: "revision", display: `prior CarePlan.activity count: ${(existing.activity ?? []).length}` }],
@@ -4292,7 +4308,7 @@ function createServer(): Server {
           const provenance = await createV04Provenance(
             "create_or_update_myopia_plan",
             input,
-            [`CarePlan/${created.id}`],
+            [`CarePlan/${created.id}`, patientReference(input.patient_id)],
             "CREATE",
             carePlan.created,
           );
@@ -4319,7 +4335,7 @@ function createServer(): Server {
           const provenance = await createV04Provenance(
             "create_atropine_medication_statement",
             input,
-            [`MedicationStatement/${created.id}`],
+            [`MedicationStatement/${created.id}`, patientReference(input.patient_id)],
             "CREATE",
             medicationStatement.effectiveDateTime ?? medicationStatement.effectivePeriod?.start,
           );
@@ -4339,7 +4355,7 @@ function createServer(): Server {
           const provenance = await createV04Provenance(
             "update_atropine_medication_status",
             input,
-            [`MedicationStatement/${updated.id}`],
+            [`MedicationStatement/${updated.id}`, existing.subject.reference!],
             "UPDATE",
             updated.effectiveDateTime ?? updated.effectivePeriod?.start,
             [{ role: "revision", display: `prior MedicationStatement.status: ${existing.status}` }],

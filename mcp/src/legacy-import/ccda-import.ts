@@ -302,7 +302,7 @@ export async function importLegacyCcda(input: {
     const provenance: Provenance = {
       resourceType: "Provenance",
       meta: { project: input.projectId },
-      target: createdReferences.map((reference) => ({ reference })),
+      target: [...createdReferences, patientReference].map((reference) => ({ reference })),
       recorded: (input.now ?? new Date()).toISOString(),
       activity: {
         coding: [{

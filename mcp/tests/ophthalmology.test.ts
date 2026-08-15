@@ -252,6 +252,19 @@ test("Provenance supports parser/manual attribution and source entity linkage", 
   assert.equal(provenance.entity?.[0]?.what.reference, "DocumentReference/doc1");
 });
 
+test("patient-scoped clinical Provenance targets the Patient compartment", () => {
+  const provenance = buildProvenance({
+    targetReferences: ["Observation/o1"],
+    patientReference: "Patient/p1",
+    agents: [{ whoReference: "Practitioner/doctor-1", typeCode: "author" }],
+  });
+
+  assert.deepEqual(
+    provenance.target.map((target) => target.reference),
+    ["Observation/o1", "Patient/p1"],
+  );
+});
+
 test("ophthalmology code binding version is 0.3.0", () => {
   assert.equal(OPHTHALMOLOGY_CODE_BINDING_VERSION, "0.3.0");
 });

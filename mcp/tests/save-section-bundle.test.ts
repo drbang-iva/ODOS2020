@@ -96,9 +96,9 @@ function assertSectionBundle(
     assert.equal(provenance.request?.method, "POST");
     assert.equal(provenance.request?.url, "Provenance");
     assert.equal(provenance.resource?.resourceType, "Provenance");
-    assert.equal(
-      (provenance.resource as Provenance).target[0]?.reference,
-      `urn:uuid:obs-${section}-${suffix}`,
+    assert.deepEqual(
+      (provenance.resource as Provenance).target.map((target) => target.reference),
+      [`urn:uuid:obs-${section}-${suffix}`, baseInput.patientReference],
     );
     assert.equal(
       (provenance.resource as Provenance).agent[0]?.who.display,

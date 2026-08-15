@@ -116,7 +116,7 @@ export function MyopiaManagementSection({ patientReference, encounterReference, 
         }),
         "create_myopia_management_episode",
       );
-      await createUiProvenance("create_myopia_management_episode", [`EpisodeOfCare/${created.id}`]);
+      await createUiProvenance("create_myopia_management_episode", [`EpisodeOfCare/${created.id}`], patientReference);
       setEpisode(created);
       markSaved("Myopia episode started");
     } catch (caught) {
@@ -142,7 +142,7 @@ export function MyopiaManagementSection({ patientReference, encounterReference, 
         }),
         "create_atropine_medication_statement",
       );
-      await createUiProvenance("create_atropine_medication_statement", [`MedicationStatement/${created.id}`]);
+      await createUiProvenance("create_atropine_medication_statement", [`MedicationStatement/${created.id}`], patientReference);
       setAtropine(created);
       markSaved(`Atropine ${concentration}`);
     } catch (caught) {
@@ -178,7 +178,7 @@ export function MyopiaManagementSection({ patientReference, encounterReference, 
           "create_or_update_myopia_plan",
           carePlan.meta?.versionId,
         );
-        await createUiProvenance("create_or_update_myopia_plan", [`CarePlan/${updated.id}`]);
+        await createUiProvenance("create_or_update_myopia_plan", [`CarePlan/${updated.id}`], patientReference);
         setCarePlan(updated);
       } else {
         const created = await fhir.create<CarePlan>(
@@ -191,7 +191,7 @@ export function MyopiaManagementSection({ patientReference, encounterReference, 
           }),
           "create_or_update_myopia_plan",
         );
-        await createUiProvenance("create_or_update_myopia_plan", [`CarePlan/${created.id}`]);
+        await createUiProvenance("create_or_update_myopia_plan", [`CarePlan/${created.id}`], patientReference);
         setCarePlan(created);
       }
       markSaved("CarePlan updated");
@@ -329,11 +329,15 @@ function resourceTimestamp(resource: CarePlan | MedicationStatement): number {
   return Number.isFinite(millis) ? millis : 0;
 }
 
-async function createUiProvenance(sourceTag: string, targetReferences: string[]): Promise<Provenance> {
+async function createUiProvenance(
+  sourceTag: string,
+  targetReferences: string[],
+  patientReference: string,
+): Promise<Provenance> {
   return fhir.create<Provenance>(
     {
       resourceType: "Provenance",
-      target: targetReferences.map((reference) => ({ reference })),
+      target: [...targetReferences, patientReference].map((reference) => ({ reference })),
       recorded: new Date().toISOString(),
       activity: {
         coding: [{ system: "http://terminology.hl7.org/CodeSystem/v3-DataOperation", code: "CREATE", display: "Create" }],

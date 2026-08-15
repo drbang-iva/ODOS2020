@@ -209,7 +209,7 @@ export function DryEyeSection({ patientReference, encounterReference, onSaved }:
       await createUiProvenance("create_dry_eye_treatment_series", [
         `Procedure/${parent.id}`,
         `Procedure/${session.id}`,
-      ]);
+      ], patientReference);
       setSeries({ parent, session });
       markSaved("IPL 1/4");
     } catch (err) {
@@ -238,7 +238,7 @@ export function DryEyeSection({ patientReference, encounterReference, onSaved }:
       );
       await createUiProvenance("create_ophthalmic_medication_statement", [
         `MedicationStatement/${medicationStatement.id}`,
-      ]);
+      ], patientReference);
       markSaved(`${option.text} active`);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -265,7 +265,7 @@ export function DryEyeSection({ patientReference, encounterReference, onSaved }:
       );
       await createUiProvenance("create_dry_eye_adverse_event", [
         `AdverseEvent/${adverseEvent.id}`,
-      ]);
+      ], patientReference);
       setAdverseEventText("");
       markSaved("Adverse event captured");
     } catch (err) {
@@ -459,11 +459,15 @@ function questionnaireDraftFromHistory(row: QuestionnaireHistoryRow): {
   };
 }
 
-async function createUiProvenance(sourceTag: string, targetReferences: string[]): Promise<Provenance> {
+async function createUiProvenance(
+  sourceTag: string,
+  targetReferences: string[],
+  patientReference: string,
+): Promise<Provenance> {
   return fhir.create<Provenance>(
     {
       resourceType: "Provenance",
-      target: targetReferences.map((reference) => ({ reference })),
+      target: [...targetReferences, patientReference].map((reference) => ({ reference })),
       recorded: new Date().toISOString(),
       activity: {
         coding: [

@@ -945,6 +945,7 @@ export function captureGlaucomaFinding(input: CaptureGlaucomaFindingInput): Capt
   const observation = projectFindingInstanceToObservation(finding, input.definition);
   const provenance = buildProvenance({
     targetReferences: [observationReference],
+    patientReference: input.patientReference,
     occurredDateTime: input.recordedAt,
     recorded: input.recordedAt,
     activityCode: "CREATE",

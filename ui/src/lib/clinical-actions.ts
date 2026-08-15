@@ -65,7 +65,7 @@ export async function createNoKnownAllergy(patientReference: string): Promise<Al
     buildAllergyIntolerance({ patientReference, noKnownAllergy: true }),
     "create_allergy_intolerance",
   );
-  await createUiProvenance("create_allergy_intolerance", `AllergyIntolerance/${allergy.id}`, "CREATE");
+  await createUiProvenance("create_allergy_intolerance", `AllergyIntolerance/${allergy.id}`, "CREATE", undefined, patientReference);
   return allergy;
 }
 
@@ -83,7 +83,7 @@ export async function createAllergy(input: {
     }),
     "create_allergy_intolerance",
   );
-  await createUiProvenance("create_allergy_intolerance", `AllergyIntolerance/${allergy.id}`, "CREATE");
+  await createUiProvenance("create_allergy_intolerance", `AllergyIntolerance/${allergy.id}`, "CREATE", undefined, input.patientReference);
   return allergy;
 }
 
@@ -99,7 +99,7 @@ export async function createSmokingStatusObservation(input: {
     }),
     "create_smoking_status_observation",
   );
-  await createUiProvenance("create_smoking_status_observation", `Observation/${observation.id}`, "CREATE");
+  await createUiProvenance("create_smoking_status_observation", `Observation/${observation.id}`, "CREATE", undefined, input.patientReference);
   return observation;
 }
 
@@ -126,7 +126,7 @@ export async function createCareTeam(input: {
     }),
     "create_care_team",
   );
-  await createUiProvenance("create_care_team", `CareTeam/${careTeam.id}`, "CREATE");
+  await createUiProvenance("create_care_team", `CareTeam/${careTeam.id}`, "CREATE", undefined, input.patientReference);
   return careTeam;
 }
 
@@ -144,7 +144,7 @@ export async function createProgram(input: {
     }),
     "create_episode_of_care",
   );
-  await createUiProvenance("create_episode_of_care", `EpisodeOfCare/${program.id}`, "CREATE");
+  await createUiProvenance("create_episode_of_care", `EpisodeOfCare/${program.id}`, "CREATE", undefined, input.patientReference);
   return program;
 }
 
@@ -166,7 +166,7 @@ export async function promoteEncounterToProgram(input: {
     "update_episode_of_care",
     requiredVersion(input.encounter),
   );
-  await createUiProvenance("update_episode_of_care", `Encounter/${updated.id}`, "UPDATE");
+  await createUiProvenance("update_episode_of_care", `Encounter/${updated.id}`, "UPDATE", undefined, requiredPatientReference(input.encounter));
   return updated;
 }
 
@@ -185,7 +185,7 @@ export async function createProblemListCondition(input: {
     }),
     "create_problem_list_condition",
   );
-  await createUiProvenance("create_problem_list_condition", `Condition/${condition.id}`, "CREATE");
+  await createUiProvenance("create_problem_list_condition", `Condition/${condition.id}`, "CREATE", undefined, input.patientReference);
   return condition;
 }
 
@@ -216,8 +216,8 @@ export async function createEncounterDiagnosis(input: {
     "create_condition_with_tier",
     requiredVersion(input.encounter),
   );
-  await createUiProvenance("create_condition_with_tier", `Condition/${condition.id}`, "CREATE");
-  await createUiProvenance("create_condition_with_tier", `Encounter/${updatedEncounter.id}`, "UPDATE");
+  await createUiProvenance("create_condition_with_tier", `Condition/${condition.id}`, "CREATE", undefined, input.patientReference);
+  await createUiProvenance("create_condition_with_tier", `Encounter/${updatedEncounter.id}`, "UPDATE", undefined, input.patientReference);
   return { condition, encounter: updatedEncounter };
 }
 
@@ -297,7 +297,7 @@ export async function updateEncounterDiagnosisProblemStatus(input: {
     [`Encounter/${updated.id}`, `Condition/${requiredId(input.condition)}`],
     "UPDATE",
     undefined,
-    input.condition.subject.reference,
+    requiredPatientReference(input.condition),
   );
   return updated;
 }
@@ -406,6 +406,7 @@ export async function updateConditionCode(input: {
     `Condition/${updated.id}`,
     "UPDATE",
     `prior Condition.code: ${JSON.stringify(input.condition.code ?? null)}`,
+    requiredPatientReference(input.condition),
   );
   return updated;
 }
@@ -427,7 +428,7 @@ export async function updateConditionStatus(input: {
     "update_condition_status",
     requiredVersion(input.condition),
   );
-  await createUiProvenance("update_condition_status", `Condition/${updated.id}`, "UPDATE");
+  await createUiProvenance("update_condition_status", `Condition/${updated.id}`, "UPDATE", undefined, requiredPatientReference(input.condition));
   return updated;
 }
 
@@ -522,7 +523,7 @@ export async function markConditionEnteredInError(condition: Condition): Promise
       {
         resource: buildUiProvenance(
           sourceTag,
-          [`Condition/${conditionId}`, `Encounter/${encounterId}`],
+          [`Condition/${conditionId}`, `Encounter/${encounterId}`, requiredPatientReference(condition)],
           "UPDATE",
           recorded,
         ),
@@ -579,14 +580,14 @@ async function createUiProvenance(
   sourceTag: string,
   targetReference: string | readonly string[],
   activityCode: "CREATE" | "UPDATE",
-  entityDisplay?: string,
-  patientReference?: string,
+  entityDisplay: string | undefined,
+  patientReference: string,
 ): Promise<Provenance> {
   return fhir.create<Provenance>(buildUiProvenance(
     sourceTag,
     [
       ...(typeof targetReference === "string" ? [targetReference] : [...targetReference]),
-      ...(patientReference ? [patientReference] : []),
+      patientReference,
     ].filter((reference, index, all) => all.indexOf(reference) === index),
     activityCode,
     new Date().toISOString(),
@@ -647,4 +648,12 @@ function requiredVersion(resource: Resource): string {
     throw new Error(`${resource.resourceType}/${resource.id ?? "(unknown)"} is missing meta.versionId.`);
   }
   return versionId;
+}
+
+function requiredPatientReference(resource: Condition | Encounter): string {
+  const patientReference = resource.subject?.reference;
+  if (!patientReference?.startsWith("Patient/")) {
+    throw new Error(`${resource.resourceType}/${resource.id ?? "(unknown)"} is missing its Patient subject.`);
+  }
+  return patientReference;
 }

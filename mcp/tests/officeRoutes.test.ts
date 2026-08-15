@@ -120,6 +120,36 @@ test("Office message listing follows multiple FHIR pages and fails loudly at the
   assert.equal(cappedCalls, 4);
 });
 
+test("Office acknowledgement Provenance remains tag-scoped and patientless", async () => {
+  const store = new InMemoryFhirStore();
+  store.seed(
+    practitioner("desk-1", "Hannah", "Desk"),
+    practitioner("doctor-1", "Eric", "Bang", "Dr."),
+    { resourceType: "Patient", id: "patient-1", name: [{ given: ["Maya"], family: "Alvarez" }] } satisfies Patient,
+  );
+  const server = await startServer(store);
+  try {
+    const sent = await request(server.base, "/desk/office/messages", "desk", {
+      method: "POST",
+      body: { text: "Patient-pinned checkout note", tier: "patient-pinned", patientId: "patient-1" },
+    });
+    await request(server.base, `/clinic/office/messages/${sent.body.id}/ack`, "doctor", { method: "POST" });
+
+    const acknowledgement = store.resources.find((resource): resource is Provenance =>
+      resource.resourceType === "Provenance" &&
+      resource.activity?.coding?.some((coding) => coding.system === OFFICE_ACK_SYSTEM && coding.code === OFFICE_ACK_CODE)
+    );
+    assert.ok(acknowledgement);
+    assert.deepEqual(acknowledgement.target, [{ reference: `Communication/${sent.body.id}` }]);
+    assert.deepEqual(acknowledgement.meta?.tag, [{
+      system: "https://odos2020.com/fhir/CodeSystem/office-message-kind",
+      code: "acknowledgement",
+    }]);
+  } finally {
+    await server.close();
+  }
+});
+
 test("Office routes enforce Desk and Clinic roles plus unauthenticated rejection", async () => {
   const store = new InMemoryFhirStore();
   store.seed(practitioner("desk-1", "Hannah", "Desk"), practitioner("doctor-1", "Eric", "Bang", "Dr."));
