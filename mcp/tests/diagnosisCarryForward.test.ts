@@ -354,12 +354,13 @@ for (const status of [404, 410]) {
   }
 }
 
-test("Provider AccessPolicy separates practice-wide Provenance reads from compartment-scoped creates", () => {
+test("Provider AccessPolicy keeps Provenance reads and creates in separate practice-wide rules", () => {
   const policy = buildMedplumAccessPolicy(getRoleDeclaration("provider"));
-  const provenanceRule = policy.resource?.find((rule) => rule.resourceType === "Provenance" &&
-    rule.criteria === "Provenance?_compartment=%patient_compartment");
+  const provenanceRule = policy.resource?.find((rule) =>
+    rule.resourceType === "Provenance" && rule.interaction?.includes("create"));
 
   assert.ok(provenanceRule);
+  assert.equal(provenanceRule.criteria, undefined);
   assert.equal(provenanceRule.interaction?.includes("create"), true);
   assert.equal(provenanceRule.interaction?.includes("read"), false);
   const readRule = policy.resource?.find((rule) =>

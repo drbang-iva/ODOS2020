@@ -494,7 +494,7 @@ const STAFF_PATIENT_WRITE_RESOURCE_RULES: OdosResourceRule[] = [
   {
     resourceType: "Provenance",
     interactions: ["create"],
-    scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
+    scope: { kind: "practice" },
   },
 ];
 
@@ -511,7 +511,7 @@ const PROVIDER_CLINICAL_WRITE_RESOURCE_RULES: OdosResourceRule[] = [
   {
     resourceType: "Provenance",
     interactions: ["create"],
-    scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
+    scope: { kind: "practice" },
   },
 ];
 
