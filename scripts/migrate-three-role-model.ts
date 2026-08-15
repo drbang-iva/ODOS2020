@@ -5,6 +5,7 @@ import { createLiveOdosAuditRuntime } from "../mcp/src/authz/liveAudit.js";
 import { buildOdosAuditEventRow } from "../mcp/src/authz/odosAudit.js";
 import {
   buildMedplumAccessPolicy,
+  buildMedplumCompositeAccessPolicy,
   getRoleDeclaration,
   ODOS_PRACTICE_ROLE_SYSTEM,
   PRACTICE_ROLE_IDS,
@@ -218,7 +219,8 @@ export function planThreeRoleMigration(input: {
     policiesByReference.set(`AccessPolicy/${policy.id}`, policy);
     const tags = practiceRoleTags(policy);
     if (tags.length > 1) {
-      throw new Error(`AccessPolicy/${policy.id} has ambiguous practice-role tags: ${tags.join(", ")}.`);
+      assertCompiledCompositePolicy(policy, tags, projectReference);
+      continue;
     }
     const role = tags[0];
     if (role && isCanonicalRole(role)) {
@@ -263,6 +265,22 @@ export function planThreeRoleMigration(input: {
         );
       }
       throw new Error(`ProjectMembership/${membership.id} has unmappable legacy accessPolicy; normalize access[] first.`);
+    }
+
+    const referencedRolePolicies = currentAccess.flatMap((entry) => {
+      const policy = policiesByReference.get(entry.policy.reference ?? "");
+      return policy && practiceRoleTags(policy).length > 0 ? [policy] : [];
+    });
+    if (
+      referencedRolePolicies.length > 0
+      && referencedRolePolicies.every((policy) => practiceRoleTags(policy).length > 1)
+    ) {
+      return [];
+    }
+    if (referencedRolePolicies.some((policy) => practiceRoleTags(policy).length > 1)) {
+      throw new Error(
+        `ProjectMembership/${membership.id} mixes compiled and separate practice-role policies; run the policy rule sync.`,
+      );
     }
 
     const planned: PlannedMembershipAccess[] = [];
@@ -375,6 +393,27 @@ function practiceRoleTags(policy: AccessPolicy): string[] {
 
 function isCanonicalRole(value: string): value is PracticeRoleId {
   return PRACTICE_ROLE_IDS.includes(value as PracticeRoleId);
+}
+
+function assertCompiledCompositePolicy(
+  policy: AccessPolicy,
+  tags: readonly string[],
+  projectReference: string,
+): void {
+  if (!tags.every(isCanonicalRole)) {
+    throw new Error(`AccessPolicy/${policy.id} has ambiguous practice-role tags: ${tags.join(", ")}.`);
+  }
+  const roles = PRACTICE_ROLE_IDS.filter((role) => tags.includes(role));
+  const expected = buildMedplumCompositeAccessPolicy(roles);
+  if (policy.name !== expected.name) {
+    throw new Error(`AccessPolicy/${policy.id} has ambiguous practice-role tags: ${tags.join(", ")}.`);
+  }
+  assertPolicySafe(policy, projectReference);
+  if (JSON.stringify(policy.resource ?? []) !== JSON.stringify(expected.resource ?? [])) {
+    throw new Error(
+      `AccessPolicy/${policy.id} has drifted composite rules; run the policy rule sync.`,
+    );
+  }
 }
 
 function assertPolicySafe(policy: AccessPolicy, projectReference: string): void {

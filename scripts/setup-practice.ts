@@ -24,12 +24,13 @@ import {
 } from "../mcp/src/authz/role-grants.js";
 import {
   buildMedplumAccessPolicy,
+  buildMedplumCompositeAccessPolicy,
   getRoleDeclaration,
   PRACTICE_ROLE_IDS,
   type PracticeRoleId,
 } from "../mcp/src/authz/roles.js";
 import { createOperatorScriptFhirClient, type MedplumClient } from "../mcp/src/fhir-client.js";
-import { searchAll } from "../mcp/src/fhir-search.js";
+import { searchAll, searchProjectAll } from "../mcp/src/fhir-search.js";
 import { buildSchedulingResource } from "../mcp/src/fhir/schedulingResource.js";
 import {
   defaultVisitTypeCatalog,
@@ -143,11 +144,16 @@ export interface SetupPracticeAdapter {
     created: boolean;
     updated: boolean;
   }[]>;
+  resolveCompositeAccessPolicy(
+    roles: readonly PracticeRoleId[],
+    session: AdminSession,
+  ): Promise<{ policy: AccessPolicy; created: boolean; updated: boolean }>;
   grantFirstAdminRoles(input: {
     config: SetupPracticeConfig;
     session: AdminSession;
     practitioner: Practitioner;
     policies: ReadonlyMap<FirstAdminGrantRole, AccessPolicy>;
+    compositePolicy: AccessPolicy;
   }): Promise<{ id: string }>;
   emitAudit(row: OdosAuditEventRecord): Promise<void>;
 }
@@ -401,6 +407,21 @@ export async function runSetupPractice(options: SetupPracticeOptions = {}): Prom
   if (!clinicianPolicy?.id || policies.size !== FIRST_ADMIN_GRANT_ROLES.length) {
     throw new Error("Setup wizard did not resolve all first-admin AccessPolicies.");
   }
+  const compositePolicy = await adapter.resolveCompositeAccessPolicy(
+    FIRST_ADMIN_GRANT_ROLES,
+    session,
+  );
+  if (!compositePolicy.policy.id) {
+    throw new Error("Setup wizard composite AccessPolicy create returned no id.");
+  }
+  if (compositePolicy.created || compositePolicy.updated) {
+    await emit(buildSetupAuditRow({
+      eventType: compositePolicy.created ? "create" : "update",
+      resourceType: "AccessPolicy",
+      resourceId: compositePolicy.policy.id,
+      actionReason: SETUP_WIZARD_ACTION_REASON,
+    }));
+  }
   state = persistSetupState(config.statePath, {
     ...state,
     accessPolicyCreated: true,
@@ -413,6 +434,7 @@ export async function runSetupPractice(options: SetupPracticeOptions = {}): Prom
       session,
       practitioner,
       policies,
+      compositePolicy: compositePolicy.policy,
     });
     state = persistSetupState(config.statePath, {
       ...state,
@@ -472,7 +494,7 @@ export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
   async createOrLoginAdmin(config: SetupPracticeConfig): Promise<AdminSession> {
     const session = {
       accessToken: "in-memory-token",
-      projectId: `project-${this.admins.length + 1}`,
+      projectId: "project-1",
       loginUrl: `${config.baseUrl.replace(/\/$/, "")}/signin`,
     };
     this.admins.push(session);
@@ -624,10 +646,36 @@ export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
     });
   }
 
+  async resolveCompositeAccessPolicy(
+    roles: readonly PracticeRoleId[],
+    session: AdminSession,
+  ): Promise<{ policy: AccessPolicy; created: boolean; updated: boolean }> {
+    const built = buildMedplumCompositeAccessPolicy(roles);
+    const desired = {
+      ...built,
+      meta: { ...built.meta, project: session.projectId },
+    };
+    const existing = this.policies.filter((policy) =>
+      policy.name === desired.name && policy.meta?.project === session.projectId
+    );
+    if (existing.length > 1) {
+      throw new Error(`Expected at most one ${desired.name} AccessPolicy; found ${existing.length}.`);
+    }
+    if (existing[0]) {
+      const updated = accessPolicyNeedsReconciliation(existing[0], desired);
+      if (updated) Object.assign(existing[0], reconciledAccessPolicy(existing[0], desired));
+      return { policy: existing[0], created: false, updated };
+    }
+    const policy = { ...desired, id: `access-policy-${this.policies.length + 1}` };
+    this.policies.push(policy);
+    return { policy, created: true, updated: false };
+  }
+
   async grantFirstAdminRoles(input: {
     config: SetupPracticeConfig;
     practitioner: Practitioner;
     policies: ReadonlyMap<FirstAdminGrantRole, AccessPolicy>;
+    compositePolicy: AccessPolicy;
   }): Promise<{ id: string }> {
     await grantPracticeRoles(
       firstAdminGrant(input.config.adminEmail),
@@ -639,6 +687,11 @@ export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
           if (!policy) throw new Error(`${role} AccessPolicy was not resolved.`);
           return policy;
         },
+        resolveBoundPolicy: async (reference) => {
+          const id = reference.match(/^AccessPolicy\/([^/]+)$/)?.[1];
+          return this.policies.find((policy) => policy.id === id);
+        },
+        resolveCompositePolicy: async () => input.compositePolicy,
         patchMembership: async (_id, operations) => {
           for (const operation of operations) {
             if (operation.path === "/access" && "value" in operation) {
@@ -942,9 +995,14 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
     for (const roleId of PRACTICE_ROLE_IDS) {
       const role = getRoleDeclaration(roleId);
       const policyName = `ODOS ${role.display}`;
-      const existing = (await searchAll<AccessPolicy>(this.serviceClient(), "AccessPolicy", {
-        "name:exact": policyName,
-      })).filter((policy) => policy.name === policyName && policy.meta?.project === session.projectId);
+      const existing = (await searchProjectAll<AccessPolicy>(
+        this.serviceClient(),
+        "AccessPolicy",
+        session.projectId,
+        {
+          "name:exact": policyName,
+        },
+      )).filter((policy) => policy.name === policyName && policy.meta?.project === session.projectId);
       if (existing.length > 1) {
         throw new Error(`Expected at most one ${policyName} AccessPolicy; found ${existing.length}.`);
       }
@@ -978,11 +1036,49 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
     return resolved;
   }
 
+  async resolveCompositeAccessPolicy(
+    roles: readonly PracticeRoleId[],
+    session: AdminSession,
+  ): Promise<{ policy: AccessPolicy; created: boolean; updated: boolean }> {
+    const desired = buildMedplumCompositeAccessPolicy(roles);
+    const existing = (await searchProjectAll<AccessPolicy>(
+      this.serviceClient(),
+      "AccessPolicy",
+      session.projectId,
+      { "name:exact": desired.name! },
+    )).filter((policy) =>
+      policy.name === desired.name && policy.meta?.project === session.projectId
+    );
+    if (existing.length > 1) {
+      throw new Error(`Expected at most one ${desired.name} AccessPolicy; found ${existing.length}.`);
+    }
+    if (existing[0]) {
+      const updated = accessPolicyNeedsReconciliation(existing[0], desired);
+      const policy = updated
+        ? await this.serviceClient().update<AccessPolicy>(
+            "AccessPolicy",
+            requireConfigValue(existing[0].id, `${desired.name} AccessPolicy id`),
+            reconciledAccessPolicy(existing[0], desired),
+          )
+        : existing[0];
+      return { policy, created: false, updated };
+    }
+    return {
+      policy: await this.serviceClient().create<AccessPolicy>({
+        ...desired,
+        meta: { ...desired.meta, project: session.projectId },
+      }),
+      created: true,
+      updated: false,
+    };
+  }
+
   async grantFirstAdminRoles(input: {
     config: SetupPracticeConfig;
     session: AdminSession;
     practitioner: Practitioner;
     policies: ReadonlyMap<FirstAdminGrantRole, AccessPolicy>;
+    compositePolicy: AccessPolicy;
   }): Promise<{ id: string }> {
     const result = await grantPracticeRoles(
       firstAdminGrant(input.config.adminEmail),
@@ -1008,6 +1104,11 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
           if (!policy) throw new Error(`${role} AccessPolicy was not resolved.`);
           return policy;
         },
+        resolveBoundPolicy: async (reference) => {
+          const id = reference.match(/^AccessPolicy\/([^/]+)$/)?.[1];
+          return id ? this.serviceClient().read<AccessPolicy>("AccessPolicy", id) : undefined;
+        },
+        resolveCompositePolicy: async () => input.compositePolicy,
         patchMembership: (id, operations, versionId) =>
           this.serviceClient().patch("ProjectMembership", id, operations, {
             "If-Match": `W/\"${versionId}\"`,
@@ -1063,22 +1164,27 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
 }
 
 function accessPolicyNeedsReconciliation(existing: AccessPolicy, desired: AccessPolicy): boolean {
-  const roleTag = desired.meta?.tag?.[0];
-  const hasRoleTag = roleTag
-    ? existing.meta?.tag?.some((tag) => tag.system === roleTag.system && tag.code === roleTag.code) === true
-    : true;
-  return !hasRoleTag || existing.name !== desired.name || JSON.stringify(existing.resource ?? []) !== JSON.stringify(desired.resource ?? []);
+  const desiredRoleTags = desired.meta?.tag ?? [];
+  const existingRoleTags = (existing.meta?.tag ?? []).filter((tag) =>
+    desiredRoleTags.some((desiredTag) => desiredTag.system === tag.system)
+  );
+  return JSON.stringify(existingRoleTags) !== JSON.stringify(desiredRoleTags)
+    || existing.name !== desired.name
+    || JSON.stringify(existing.resource ?? []) !== JSON.stringify(desired.resource ?? []);
 }
 
 function reconciledAccessPolicy(existing: AccessPolicy, desired: AccessPolicy): AccessPolicy {
-  const desiredRoleTag = desired.meta?.tag?.[0];
-  const preservedTags = (existing.meta?.tag ?? []).filter((tag) => tag.system !== desiredRoleTag?.system);
+  const desiredRoleTags = desired.meta?.tag ?? [];
+  const desiredTagSystems = new Set(desiredRoleTags.map((tag) => tag.system));
+  const preservedTags = (existing.meta?.tag ?? []).filter((tag) =>
+    !desiredTagSystems.has(tag.system)
+  );
   return {
     ...existing,
     name: desired.name,
     meta: {
       ...existing.meta,
-      tag: [...preservedTags, ...(desiredRoleTag ? [desiredRoleTag] : [])],
+      tag: [...preservedTags, ...desiredRoleTags],
     },
     resource: desired.resource,
   };

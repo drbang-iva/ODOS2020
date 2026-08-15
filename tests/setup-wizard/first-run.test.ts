@@ -98,7 +98,7 @@ test("setup conditional create reports whether this transaction created or resol
   assert.equal(resolved.resource.id, "existing-location");
 });
 
-test("setup wizard creates the three canonical policies and grants Staff as the first human admin's primary role", async () => {
+test("setup wizard creates canonical role policies and binds one first-admin composite policy", async () => {
   const dir = mkdtempSync(join(tmpdir(), "odos-setup-wizard-"));
   try {
     const statePath = join(dir, ".odos-setup-state.json");
@@ -125,7 +125,7 @@ test("setup wizard creates the three canonical policies and grants Staff as the 
     assert.equal(adapter.locations.length, 1);
     assert.equal(adapter.schedules.length, 1);
     assert.equal(adapter.schedulingConfigs.length, 1);
-    assert.equal(adapter.policies.length, 3);
+    assert.equal(adapter.policies.length, 4);
     assert.equal(adapter.assignments.length, 1);
     assert.equal(firstRun.state.completed, true);
     assert.equal(firstRun.state.organizationCreated, true);
@@ -157,14 +157,13 @@ test("setup wizard creates the three canonical policies and grants Staff as the 
       "ODOS Provider",
       "ODOS Staff",
       "ODOS Admin / Manager",
+      "ODOS Composite Provider + Staff + Admin / Manager",
     ]);
     const providerPolicy = adapter.policies.find((policy) => policy.name === "ODOS Provider");
     assert.equal(providerPolicy?.resourceType, "AccessPolicy");
     assert.equal(providerPolicy?.resource?.some((rule) => rule.resourceType === "Observation"), true);
     assert.deepEqual(adapter.membership.access?.map((access) => access.policy.reference), [
-      "AccessPolicy/access-policy-2",
-      "AccessPolicy/access-policy-3",
-      "AccessPolicy/access-policy-1",
+      "AccessPolicy/access-policy-4",
     ]);
     assert.equal(adapter.schedules[0]?.actor?.[0]?.reference, "Practitioner/practitioner-1");
     const schedulingConfig = parseSchedulingPracticeConfig(adapter.schedulingConfigs[0]!);
@@ -173,7 +172,7 @@ test("setup wizard creates the three canonical policies and grants Staff as the 
     assert.equal(schedulingConfig.officeBySchedule["Schedule/schedule-1"], "main");
 
     assert.deepEqual(firstRun.auditRows.map((row) => row.eventType), [
-      ...Array.from({ length: 20 }, () => "create"),
+      ...Array.from({ length: 21 }, () => "create"),
       "projectmembership-lifecycle",
     ]);
     for (const row of firstRun.auditRows) {
@@ -199,7 +198,7 @@ test("setup wizard creates the three canonical policies and grants Staff as the 
     assert.equal(adapter.locations.length, 1);
     assert.equal(adapter.schedules.length, 1);
     assert.equal(adapter.schedulingConfigs.length, 1);
-    assert.equal(adapter.policies.length, 3);
+    assert.equal(adapter.policies.length, 4);
     assert.equal(adapter.assignments.length, 1);
     assert.equal(secondRun.auditRows.length, 1);
     assert.equal(secondRun.auditRows[0]?.eventType, "noop");
@@ -346,7 +345,7 @@ test("setup reuses a pre-existing canonical Provider policy while creating Staff
 
     assert.equal(result.state.completed, true);
     assert.equal(result.accessPolicyId, "existing-clinician-policy");
-    assert.equal(adapter.policies.length, 3);
+    assert.equal(adapter.policies.length, 4);
     assert.deepEqual(result.auditRows.map((row) => row.resourceType), [
       "Project",
       "Practitioner",
@@ -359,14 +358,13 @@ test("setup reuses a pre-existing canonical Provider policy while creating Staff
       "AccessPolicy",
       "AccessPolicy",
       "AccessPolicy",
+      "AccessPolicy",
       "ProjectMembership",
     ]);
     assert.equal(result.auditRows.filter((row) => row.eventType === "update" && row.resourceId === "existing-clinician-policy").length, 1);
     assert.equal(adapter.policies.find((policy) => policy.id === "existing-clinician-policy")?.resource?.length! > 0, true);
     assert.deepEqual(adapter.membership.access?.map((access) => access.policy.reference), [
-      "AccessPolicy/access-policy-2",
-      "AccessPolicy/access-policy-3",
-      "AccessPolicy/existing-clinician-policy",
+      "AccessPolicy/access-policy-4",
     ]);
   } finally {
     rmSync(dir, { force: true, recursive: true });

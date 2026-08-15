@@ -11,6 +11,19 @@ export interface FhirSearchClient {
   searchUrl?<T extends Resource>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>>;
 }
 
+export interface ProjectFhirSearchClient {
+  searchProject<T extends Resource>(
+    resourceType: T["resourceType"],
+    projectId: string,
+    params?: Record<string, string>,
+  ): Promise<Bundle<T>>;
+  searchProjectUrl?<T extends Resource>(
+    url: string,
+    resourceType: T["resourceType"],
+    projectId: string,
+  ): Promise<Bundle<T>>;
+}
+
 export class FhirSearchLimitError extends Error {
   readonly status = 409;
 
@@ -106,6 +119,36 @@ export async function searchAll<T extends Resource>(
       throw new Error(`FHIR search returned a next link for ${resourceType}, but the client cannot fetch it.`);
     }
     bundle = await client.searchUrl<T>(nextLink.url, resourceType);
+  }
+}
+
+export async function searchProjectAll<T extends Resource>(
+  client: ProjectFhirSearchClient,
+  resourceType: T["resourceType"],
+  projectId: string,
+  params: Record<string, string> = {},
+  options: { maxRows?: number } = {},
+): Promise<T[]> {
+  const maxRows = options.maxRows ?? DEFAULT_FHIR_SEARCH_MAX_ROWS;
+  let bundle = await client.searchProject<T>(resourceType, projectId, paramsWithCount(params));
+  const resources: T[] = [];
+  for (;;) {
+    const page = (bundle.entry ?? [])
+      .map((entry) => entry.resource)
+      .filter((resource): resource is T => Boolean(resource));
+    if (resources.length + page.length > maxRows) {
+      throw new FhirSearchLimitError(resourceType, maxRows);
+    }
+    resources.push(...page);
+    const nextLink = bundle.link?.find((link) => link.relation === "next");
+    if (!nextLink) return resources;
+    if (!nextLink.url) {
+      throw new Error(`FHIR search returned a next link for ${resourceType} without a URL.`);
+    }
+    if (!client.searchProjectUrl) {
+      throw new Error(`FHIR search returned a next link for ${resourceType}, but the client cannot fetch it.`);
+    }
+    bundle = await client.searchProjectUrl<T>(nextLink.url, resourceType, projectId);
   }
 }
 

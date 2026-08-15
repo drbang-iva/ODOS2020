@@ -23,6 +23,7 @@ import type {
 import { exchangeClientCredentials } from "../data/medplum-adapters/migration-importer-adapter.js";
 import {
   grantPracticeRoles,
+  resolveProjectCompositeAccessPolicy,
   type ResolvedRoleGrantTarget,
 } from "../mcp/src/authz/role-grants.js";
 import {
@@ -31,7 +32,7 @@ import {
   type PracticeRoleId,
 } from "../mcp/src/authz/roles.js";
 import { createOperatorScriptFhirClient, type MedplumClient } from "../mcp/src/fhir-client.js";
-import { searchAll } from "../mcp/src/fhir-search.js";
+import { searchAll, searchProjectAll } from "../mcp/src/fhir-search.js";
 import { assertCanonicalPolicyRules } from "./access-policy-rules.js";
 import { runGrantCli } from "./grant-migrated-patient-access.js";
 import { runPatientImportCli } from "./import-legacy-patient-m2a.js";
@@ -501,6 +502,8 @@ async function grantRole(
   email: string,
   role: Extract<PracticeRoleId, "provider" | "staff">,
 ): Promise<void> {
+  const projectId = membership.project.reference?.match(/^Project\/([^/]+)$/)?.[1];
+  if (!projectId) throw new Error("M2a membership is missing a valid project reference.");
   await grantPracticeRoles(
     {
       target: `ProjectMembership/${membership.id}`,
@@ -511,9 +514,10 @@ async function grantRole(
       resolveTarget: async (): Promise<ResolvedRoleGrantTarget> => ({ email, membership }),
       resolvePolicy: async (requestedRole): Promise<AccessPolicy> => {
         const expectedName = `ODOS ${getRoleDeclaration(requestedRole).display}`;
-        const policies = (await searchAll<AccessPolicy>(
+        const policies = (await searchProjectAll<AccessPolicy>(
           fhir,
           "AccessPolicy",
+          projectId,
           { "name:exact": expectedName },
         )).filter((policy) =>
           policy.name === expectedName
@@ -539,6 +543,27 @@ async function grantRole(
         }
         return policy;
       },
+      resolveBoundPolicy: async (reference): Promise<AccessPolicy | undefined> => {
+        const id = reference.match(/^AccessPolicy\/([^/]+)$/)?.[1];
+        return id ? fhir.read<AccessPolicy>("AccessPolicy", id) : undefined;
+      },
+      resolveCompositePolicy: (roles, expected) =>
+        resolveProjectCompositeAccessPolicy(
+          {
+            findPoliciesByName: (name) =>
+              searchProjectAll<AccessPolicy>(fhir, "AccessPolicy", projectId, {
+                "name:exact": name,
+              }),
+            createPolicy: (policy) => fhir.create(policy),
+            patchPolicy: (id, operations, versionId) =>
+              fhir.patch("AccessPolicy", id, operations, {
+                "If-Match": `W/\"${versionId}\"`,
+              }),
+          },
+          projectId,
+          roles,
+          expected,
+        ),
       patchMembership: (id, operations, versionId) =>
         fhir.patch("ProjectMembership", id, operations, {
           "If-Match": `W/"${versionId}"`,

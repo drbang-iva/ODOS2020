@@ -13,7 +13,13 @@ import {
   resolveThreeRoleMigrationProjectId,
   type ThreeRoleMigrationAdapter,
 } from "../../scripts/migrate-three-role-model.js";
-import { ODOS_PRACTICE_ROLE_SYSTEM } from "../../mcp/src/authz/roles.js";
+import {
+  buildMedplumAccessPolicy,
+  buildMedplumCompositeAccessPolicy,
+  getRoleDeclaration,
+  ODOS_PRACTICE_ROLE_SYSTEM,
+  PRACTICE_ROLE_IDS,
+} from "../../mcp/src/authz/roles.js";
 
 const PROJECT = "practice-1";
 
@@ -61,6 +67,58 @@ test("planner deduplicates only identical canonical role and parameter entries",
     { kind: "canonical", role: "admin", parameter },
     { kind: "canonical", role: "admin" },
   ]);
+});
+
+test("planner treats a compiled multi-role membership as an already migrated no-op", () => {
+  const canonical = PRACTICE_ROLE_IDS.map((role) => ({
+    ...buildMedplumAccessPolicy(getRoleDeclaration(role)),
+    id: `canonical-${role}`,
+    meta: {
+      ...buildMedplumAccessPolicy(getRoleDeclaration(role)).meta,
+      project: PROJECT,
+      versionId: "3",
+    },
+  }));
+  const composite = {
+    ...buildMedplumCompositeAccessPolicy(["provider", "staff"]),
+    id: "provider-staff",
+    meta: {
+      ...buildMedplumCompositeAccessPolicy(["provider", "staff"]).meta,
+      project: PROJECT,
+      versionId: "4",
+    },
+  };
+
+  const plan = planThreeRoleMigration({
+    projectId: PROJECT,
+    policies: [...canonical, composite, unrelatedPolicy("other")],
+    memberships: [membershipFixture([access("provider-staff"), access("other")])],
+  });
+
+  assert.deepEqual(plan.canonicalRolesToCreate, []);
+  assert.deepEqual(plan.memberships, []);
+});
+
+test("planner refuses a drifted compiled policy instead of preserving its authorization", () => {
+  const composite = {
+    ...buildMedplumCompositeAccessPolicy(["provider", "staff"]),
+    id: "provider-staff",
+    meta: {
+      ...buildMedplumCompositeAccessPolicy(["provider", "staff"]).meta,
+      project: PROJECT,
+      versionId: "4",
+    },
+  };
+  composite.resource = composite.resource?.slice(1);
+
+  assert.throws(
+    () => planThreeRoleMigration({
+      projectId: PROJECT,
+      policies: [composite],
+      memberships: [membershipFixture([access("provider-staff")])],
+    }),
+    /AccessPolicy\/provider-staff has drifted composite rules; run the policy rule sync/,
+  );
 });
 
 test("planner stops on ambiguous tags, ownership mismatch, missing version, and unmappable access", () => {

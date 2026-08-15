@@ -31,12 +31,27 @@ class FakeRepairAdapter implements PracticeRoleRepairAdapter {
     this.membership = input.membership ?? membership();
   }
 
-  async findPoliciesByName(name: string): Promise<AccessPolicy[]> {
-    return this.policies.filter((policy) => policy.name === name);
+  async findPoliciesByName(name: string, projectId: string): Promise<AccessPolicy[]> {
+    return this.policies.filter((policy) =>
+      policy.name === name && policy.meta?.project === projectId
+    );
+  }
+
+  async readPolicy(reference: string): Promise<AccessPolicy | undefined> {
+    const id = reference.match(/^AccessPolicy\/([^/]+)$/)?.[1];
+    return this.policies.find((policy) => policy.id === id);
   }
 
   async createPolicy(policy: AccessPolicy): Promise<AccessPolicy> {
-    const created = { ...structuredClone(policy), id: `policy-${this.policies.length + 1}`, meta: { ...policy.meta, versionId: "1" } };
+    const created = {
+      ...structuredClone(policy),
+      id: `policy-${this.policies.length + 1}`,
+      meta: {
+        ...policy.meta,
+        project: this.membership.project.reference?.replace(/^Project\//, ""),
+        versionId: "1",
+      },
+    };
     this.policies.push(created);
     this.policyWrites += 1;
     return created;
@@ -83,18 +98,16 @@ test("missing role policies are created before the preserved legacy grant", asyn
   assert.equal(result.targetEmail, "human@example.test");
   assert.equal(result.membershipChanged, true);
   assert.equal(result.membershipReference, "ProjectMembership/dev-membership");
-  assert.equal(adapter.policyWrites, 3);
+  assert.equal(adapter.policyWrites, 4);
   assert.equal(adapter.membershipWrites, 1);
-  assert.equal(adapter.policies.length, 3);
+  assert.equal(adapter.policies.length, 4);
   for (const roleId of PRACTICE_ROLE_IDS) {
     assert.ok(adapter.policies.some((policy) => policy.meta?.tag?.some((tag) =>
       tag.system === ODOS_PRACTICE_ROLE_SYSTEM && tag.code === roleId,
     )));
   }
   assert.deepEqual(membershipPolicyReferences(adapter.membership), [
-    "AccessPolicy/policy-2",
-    "AccessPolicy/policy-3",
-    "AccessPolicy/policy-1",
+    "AccessPolicy/policy-4",
     "AccessPolicy/keep-legacy",
   ]);
   assert.equal(adapter.membership.accessPolicy, undefined);
@@ -117,7 +130,25 @@ test("a second repair is a zero-write idempotent no-op", async () => {
   assert.equal(adapter.membershipWrites, membershipWrites);
 });
 
-test("Provider primary override reorders role grants, preserves unrelated access, and remains idempotent", async () => {
+test("repair reconciles a drifted composite before leaving membership bindings unchanged", async () => {
+  const adapter = new FakeRepairAdapter();
+  await repairPracticeRoles(adapter, "human@example.test");
+  const composite = adapter.policies.find((candidate) => candidate.name?.startsWith("ODOS Composite"));
+  assert.ok(composite?.resource?.length);
+  const expectedResource = structuredClone(composite.resource);
+  composite.resource = composite.resource.slice(1);
+  const priorPolicyWrites = adapter.policyWrites;
+  const priorMembershipWrites = adapter.membershipWrites;
+
+  const result = await repairPracticeRoles(adapter, "human@example.test");
+
+  assert.equal(result.membershipChanged, false);
+  assert.equal(adapter.policyWrites, priorPolicyWrites + 1);
+  assert.equal(adapter.membershipWrites, priorMembershipWrites);
+  assert.deepEqual(composite.resource, expectedResource);
+});
+
+test("Provider primary override compiles one role policy, preserves unrelated access, and remains idempotent", async () => {
   const adapter = new FakeRepairAdapter({
     membership: membership({
       access: [
@@ -136,9 +167,7 @@ test("Provider primary override reorders role grants, preserves unrelated access
 
   assert.equal(first.primaryRole, "provider");
   assert.deepEqual(adapter.membership.access?.map((access) => access.policy.reference), [
-    "AccessPolicy/policy-1",
-    "AccessPolicy/policy-2",
-    "AccessPolicy/policy-3",
+    "AccessPolicy/policy-4",
     "AccessPolicy/unrelated",
   ]);
   assert.equal(adapter.membershipWrites, writes);
@@ -189,7 +218,11 @@ test("one untagged canonical policy is tagged without replacing unrelated metada
       resourceType: "AccessPolicy",
       id: "admin-policy",
       name: "ODOS Admin / Manager",
-      meta: { versionId: "7", tag: [{ system: "https://example.test", code: "keep" }] },
+      meta: {
+        project: "local-practice",
+        versionId: "7",
+        tag: [{ system: "https://example.test", code: "keep" }],
+      },
     }],
   });
 
@@ -200,6 +233,23 @@ test("one untagged canonical policy is tagged without replacing unrelated metada
     { system: "https://example.test", code: "keep" },
     { system: ODOS_PRACTICE_ROLE_SYSTEM, code: "admin" },
   ]);
+});
+
+test("repair ignores an identically named foreign policy and creates a project-owned replacement", async () => {
+  const foreign = policy("foreign-admin", "admin");
+  foreign.meta = { ...foreign.meta, project: "other-practice" };
+  const before = structuredClone(foreign);
+  const adapter = new FakeRepairAdapter({ policies: [foreign] });
+
+  const result = await repairPracticeRoles(adapter, "human@example.test");
+
+  assert.ok(result.createdPolicies.includes("admin"));
+  assert.deepEqual(foreign, before);
+  assert.ok(adapter.policies.some((candidate) =>
+    candidate.id !== foreign.id
+    && candidate.name === foreign.name
+    && candidate.meta?.project === "local-practice"
+  ));
 });
 
 test("duplicate canonical policies stop repair before membership mutation", async () => {
@@ -274,7 +324,11 @@ function policy(id: string, roleId: "admin" | "provider"): AccessPolicy {
     resourceType: "AccessPolicy",
     id,
     name: `ODOS ${display}`,
-    meta: { versionId: "1", tag: [{ system: ODOS_PRACTICE_ROLE_SYSTEM, code: roleId }] },
+    meta: {
+      project: "local-practice",
+      versionId: "1",
+      tag: [{ system: ODOS_PRACTICE_ROLE_SYSTEM, code: roleId }],
+    },
   };
 }
 
@@ -302,6 +356,9 @@ function applyPatch(target: AccessPolicy | ProjectMembership, operations: JsonPa
     } else if (operation.path === "/accessPolicy") {
       assert.equal(operation.op, "remove");
       delete (target as ProjectMembership).accessPolicy;
+    } else if (operation.path === "/resource") {
+      assert.ok(operation.op === "add" || operation.op === "replace");
+      (target as AccessPolicy).resource = operation.value as AccessPolicy["resource"];
     } else {
       assert.fail(`Unexpected patch path ${operation.path}`);
     }
