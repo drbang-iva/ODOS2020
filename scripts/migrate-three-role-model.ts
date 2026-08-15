@@ -409,6 +409,11 @@ function assertCompiledCompositePolicy(
     throw new Error(`AccessPolicy/${policy.id} has ambiguous practice-role tags: ${tags.join(", ")}.`);
   }
   assertPolicySafe(policy, projectReference);
+  if (JSON.stringify(policy.resource ?? []) !== JSON.stringify(expected.resource ?? [])) {
+    throw new Error(
+      `AccessPolicy/${policy.id} has drifted composite rules; run the policy rule sync.`,
+    );
+  }
 }
 
 function assertPolicySafe(policy: AccessPolicy, projectReference: string): void {

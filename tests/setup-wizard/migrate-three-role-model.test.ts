@@ -99,6 +99,28 @@ test("planner treats a compiled multi-role membership as an already migrated no-
   assert.deepEqual(plan.memberships, []);
 });
 
+test("planner refuses a drifted compiled policy instead of preserving its authorization", () => {
+  const composite = {
+    ...buildMedplumCompositeAccessPolicy(["provider", "staff"]),
+    id: "provider-staff",
+    meta: {
+      ...buildMedplumCompositeAccessPolicy(["provider", "staff"]).meta,
+      project: PROJECT,
+      versionId: "4",
+    },
+  };
+  composite.resource = composite.resource?.slice(1);
+
+  assert.throws(
+    () => planThreeRoleMigration({
+      projectId: PROJECT,
+      policies: [composite],
+      memberships: [membershipFixture([access("provider-staff")])],
+    }),
+    /AccessPolicy\/provider-staff has drifted composite rules; run the policy rule sync/,
+  );
+});
+
 test("planner stops on ambiguous tags, ownership mismatch, missing version, and unmappable access", () => {
   const ambiguous = legacyPolicy("ambiguous", "clinician");
   ambiguous.meta!.tag!.push({ system: ODOS_PRACTICE_ROLE_SYSTEM, code: "front-desk" });
