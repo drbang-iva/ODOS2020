@@ -211,21 +211,14 @@ test("compiled policies cover the Appointment and Encounter operations for both 
     provenanceRule?.interaction,
     ["create"],
   );
-  assert.equal(
-    provenanceRule?.criteria,
-    "Provenance?_compartment=%patient_compartment",
-  );
+  assert.equal(provenanceRule?.criteria, undefined);
 
   for (const roleId of ["provider"] as const) {
     const clinical = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
     const clinicalProvenance = clinical.resource?.find((rule) =>
       rule.resourceType === "Provenance" && rule.interaction?.includes("create"));
     assert.ok(clinicalProvenance?.interaction?.includes("create"), roleId);
-    assert.equal(
-      clinicalProvenance?.criteria,
-      "Provenance?_compartment=%patient_compartment",
-      roleId,
-    );
+    assert.equal(clinicalProvenance?.criteria, undefined, roleId);
   }
 
   const admin = buildMedplumAccessPolicy(getRoleDeclaration("admin"));

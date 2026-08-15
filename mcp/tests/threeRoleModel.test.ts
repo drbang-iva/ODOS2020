@@ -191,6 +191,44 @@ test("compiled three-role policies grant ChargeItemDefinition reads and reserve 
   }
 });
 
+test("compiled Provider and Staff policies create Provenance at practice scope without widening clinical writes", () => {
+  const compartmentCriteria = {
+    Condition: "Condition?_compartment=%patient_compartment",
+    Encounter: "Encounter?_compartment=%patient_compartment",
+    Observation: "Observation?_compartment=%patient_compartment",
+  } as const;
+
+  for (const roleId of ["provider", "staff"] as const) {
+    const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
+    assert.equal(
+      accessPolicyAllows(policy, "Provenance", "create"),
+      true,
+      `${roleId} must be permitted to create Provenance`,
+    );
+    const provenanceCreate = policy.resource?.find((rule) =>
+      rule.resourceType === "Provenance" && rule.interaction?.includes("create"));
+    assert.equal(
+      provenanceCreate?.criteria,
+      undefined,
+      `${roleId} Provenance create must be practice-scoped`,
+    );
+
+    const clinicalResourceTypes = roleId === "provider"
+      ? (["Condition", "Encounter", "Observation"] as const)
+      : (["Encounter", "Observation"] as const);
+    for (const resourceType of clinicalResourceTypes) {
+      const clinicalWrite = policy.resource?.find((rule) =>
+        rule.resourceType === resourceType &&
+        (rule.interaction?.includes("create") || rule.interaction?.includes("update")));
+      assert.equal(
+        clinicalWrite?.criteria,
+        compartmentCriteria[resourceType],
+        `${roleId} ${resourceType} writes must remain patient-compartment-scoped`,
+      );
+    }
+  }
+});
+
 test("three-role policies allow only Admin to read AccessPolicy at practice scope without write access or wildcard", () => {
   const adminPolicy = buildMedplumAccessPolicy(getRoleDeclaration("admin"));
   const adminRule = adminPolicy.resource?.find((rule) => rule.resourceType === "AccessPolicy");
