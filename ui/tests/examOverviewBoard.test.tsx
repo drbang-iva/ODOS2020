@@ -523,6 +523,63 @@ test("an editor save and return to the board each refetch the projection", async
   }
 });
 
+test("a section save refreshes the permanent unassigned count", async () => {
+  const harness = await renderEncounter(PROJECTION, {
+    unassignedResponses: [[], [], [], UNASSIGNED_FINDINGS],
+  });
+  try {
+    assert.equal(harness.findingsFetchCount(), 2);
+    const vaLauncher = harness.renderer.root.findByProps({ "data-editor-section-id": "va" });
+    await act(async () => vaLauncher.props.onClick());
+    const fetchesBeforeSave = harness.findingsFetchCount();
+
+    const va = harness.renderer.root.findByType(VaSection);
+    await act(async () => {
+      va.props.onSaved({ completed: true });
+      await flushEffects();
+      await flushEffects();
+    });
+
+    assert.equal(harness.findingsFetchCount(), fetchesBeforeSave + 1);
+    const unassigned = harness.renderer.root.findByProps({ "data-chart-bar-slot": "unassigned" });
+    assert.equal(textContent(unassigned), "2 unassigned");
+  } finally {
+    harness.restore();
+  }
+});
+
+test("a diagnosis-led finding mutation refreshes permanent completeness", async () => {
+  const refreshed: ExamOverviewProjection = {
+    ...PROJECTION,
+    completeness: {
+      ...PROJECTION.completeness,
+      status: "complete",
+      resolvedSectionCount: 2,
+      trace: PROJECTION.completeness.trace.map((row) => ({ ...row, resolved: true })),
+    },
+  };
+  const harness = await renderEncounter(PROJECTION, {
+    overviewResponses: [PROJECTION, refreshed],
+  });
+  try {
+    window.dispatchEvent(new CustomEvent("odos:encounter-findings-changed", {
+      detail: { encounterReference: "Encounter/exam-1" },
+    }));
+    await act(async () => {
+      await flushEffects();
+      await flushEffects();
+    });
+
+    assert.equal(harness.overviewFetchCount(), 2);
+    const completeness = harness.renderer.root.findByProps({
+      "data-testid": "exam-completeness-trigger",
+    });
+    assert.equal(textContent(completeness), "Exam sections: 2 of 2");
+  } finally {
+    harness.restore();
+  }
+});
+
 interface RenderEncounterOptions {
   discipline?: SchedulingDiscipline;
   findingDefinitions?: CustomFindingDefinition[];
@@ -530,11 +587,13 @@ interface RenderEncounterOptions {
   overviewResponses?: unknown[];
   captureOverviewErrors?: boolean;
   unassignedFindings?: EncounterFindingRow[];
+  unassignedResponses?: EncounterFindingRow[][];
 }
 
 async function renderEncounter(projection: unknown, options: RenderEncounterOptions = {}): Promise<{
   renderer: ReactTestRenderer;
   overviewFetchCount: () => number;
+  findingsFetchCount: () => number;
   overviewErrors: unknown[][];
   focusRestoreCount: () => number;
   restore: () => void;
@@ -542,6 +601,7 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
   const originalFetch = globalThis.fetch;
   const originalRead = fhir.read;
   const originalDocument = Object.getOwnPropertyDescriptor(globalThis, "document");
+  const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
   const originalConsoleError = console.error;
   const overviewErrors: unknown[][] = [];
   if (options.captureOverviewErrors) {
@@ -558,6 +618,7 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
       : {}),
   })) as typeof fhir.read;
   let overviewFetches = 0;
+  let findingsFetches = 0;
   let focusRestores = 0;
   globalThis.fetch = (async (input) => {
     const url = String(input);
@@ -595,11 +656,14 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
       });
     }
     if (url.includes("/clinical-graph/encounters/exam-1/findings")) {
+      const responses = options.unassignedResponses ?? [options.unassignedFindings ?? []];
+      const unassigned = responses[Math.min(findingsFetches, responses.length - 1)] ?? [];
+      findingsFetches += 1;
       return jsonResponse({
         canWrite: false,
         findings: [],
         catalog: [],
-        unassigned: options.unassignedFindings ?? [],
+        unassigned,
         bySection: {},
         visitDiagnoses: [],
       });
@@ -626,6 +690,19 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
       activeElement: { focus: () => { focusRestores += 1; } },
     } as unknown as Document,
   });
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: Object.assign(new EventTarget(), {
+      localStorage: {
+        length: 1,
+        clear() {},
+        getItem(key: string) { return key === "odos:encounter-chart-view" ? "structure" : null; },
+        key() { return null; },
+        removeItem() {},
+        setItem() {},
+      } satisfies Storage,
+    }) as Window,
+  });
 
   let renderer!: ReactTestRenderer;
   await act(async () => {
@@ -643,6 +720,7 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
   return {
     renderer,
     overviewFetchCount: () => overviewFetches,
+    findingsFetchCount: () => findingsFetches,
     overviewErrors,
     focusRestoreCount: () => focusRestores,
     restore: () => {
@@ -652,6 +730,8 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
       console.error = originalConsoleError;
       if (originalDocument) Object.defineProperty(globalThis, "document", originalDocument);
       else delete (globalThis as { document?: Document }).document;
+      if (originalWindow) Object.defineProperty(globalThis, "window", originalWindow);
+      else delete (globalThis as { window?: Window }).window;
     },
   };
 }

@@ -225,6 +225,76 @@ test("the visit selector reports the stored broken pointer without clearing or r
   act(() => renderer.unmount());
 });
 
+test("the visit selector rereads diagnosis inventory before a later link edit", async () => {
+  const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: new EventTarget() as Window,
+  });
+  const options = visitOptions();
+  const initial: VisitChargeResponse = {
+    options,
+    diagnoses: [{ reference: "Condition/old", display: "Old diagnosis", rank: 1 }],
+    selectedProcedureConceptKey: "office-visit-new-low",
+    procedureFamily: "em",
+    proposal: {
+      id: "manual-visit-code:enc-refresh",
+      procedureConceptKey: "office-visit-new-low",
+      dxPointers: ["Condition/old"],
+      state: "accepted",
+    },
+  };
+  const refreshed: VisitChargeResponse = {
+    ...initial,
+    diagnoses: [{ reference: "Condition/new", display: "New diagnosis", rank: 1 }],
+  };
+  const reported: Array<VisitChargeResponse | undefined> = [];
+  let reads = 0;
+  const api: VisitChargeApi = {
+    async read() {
+      reads += 1;
+      return reads === 1 ? initial : refreshed;
+    },
+    async save() {
+      return {
+        ...refreshed,
+        proposal: {
+          ...refreshed.proposal!,
+          dxPointers: ["Condition/new"],
+        },
+      };
+    },
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <VisitCodeSelector
+          encounterId="enc-refresh"
+          api={api}
+          onVisitChargeChange={(state) => reported.push(state)}
+        />,
+      );
+      await Promise.resolve();
+    });
+
+    window.dispatchEvent(new CustomEvent("odos:encounter-diagnosis-updated", {
+      detail: { encounterReference: "Encounter/enc-refresh" },
+    }));
+    await act(async () => { await Promise.resolve(); });
+    assert.equal(reads, 2);
+
+    const diagnosis = renderer.root.findByProps({ "aria-label": "Visit billing diagnosis" });
+    await act(async () => diagnosis.props.onChange({ target: { value: "Condition/new" } }));
+    assert.deepEqual(reported.at(-1)?.diagnoses, refreshed.diagnoses);
+    assert.deepEqual(reported.at(-1)?.proposal?.dxPointers, ["Condition/new"]);
+  } finally {
+    if (renderer) act(() => renderer.unmount());
+    if (originalWindow) Object.defineProperty(globalThis, "window", originalWindow);
+    else delete (globalThis as { window?: Window }).window;
+  }
+});
+
 test("the Visit chip renders none, linked-code, empty-link, and named broken-link states", async () => {
   const cases: Array<{
     label: string;
