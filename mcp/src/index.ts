@@ -250,6 +250,7 @@ import {
   handleDiagnosisQuickListRequest,
 } from "./clinical-graph/diagnosis-quick-list-endpoint.js";
 import { handleDiagnosisCompletenessRequest } from "./clinical-graph/diagnosis-completeness-endpoint.js";
+import { handleExamOverviewRequest } from "./clinical-graph/exam-overview-endpoint.js";
 import { handleDiagnosisOrderRequest } from "./clinical-graph/diagnosis-order-endpoint.js";
 import { handleDiagnosisPickRequest } from "./clinical-graph/diagnosis-pick-endpoint.js";
 import {
@@ -6458,6 +6459,24 @@ async function startMcpServer(): Promise<void> {
         } catch (error) {
           console.error("odos-mcp: encounter diagnosis completeness route failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "diagnosis completeness route failed" });
+        }
+      });
+
+      app.get("/clinical-graph/encounters/:encounterId/exam-overview", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleExamOverviewRequest(
+            {
+              authenticate: authenticateStaffRouteForAction("chart.read"),
+              serviceFhir: fhir,
+              findingDefinitions: () => findingDefinitionStore.list(),
+            },
+            { authHeader: req.header("authorization"), params: req.params },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: encounter exam overview route failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "exam overview route failed" });
         }
       });
 
