@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   visitChargeApi,
   type VisitChargeApi,
@@ -31,6 +31,7 @@ export function VisitCodeSelector({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
+  const visitState = useRef<VisitChargeResponse>();
 
   useEffect(() => {
     let cancelled = false;
@@ -40,6 +41,7 @@ export function VisitCodeSelector({
       setLoading(true);
       setError(undefined);
       if (reset) {
+        visitState.current = undefined;
         setOptions([]);
         setDiagnoses([]);
         setProposal(undefined);
@@ -50,6 +52,7 @@ export function VisitCodeSelector({
       void api.read(encounterId)
         .then((response) => {
           if (cancelled || version !== readVersion) return;
+          visitState.current = response;
           setOptions(response.options);
           setDiagnoses(response.diagnoses);
           setProposal(response.proposal);
@@ -87,16 +90,19 @@ export function VisitCodeSelector({
     setError(undefined);
     try {
       const response = await api.save(encounterId, { procedureConceptKey: value || null });
-      setSelected(value);
-      setProposal(response.proposal);
-      onProcedureFamilyChange?.(response.procedureFamily ?? null);
-      onVisitChargeChange?.({
-        options,
-        diagnoses,
+      const current = visitState.current;
+      const next: VisitChargeResponse = {
+        options: current?.options ?? options,
+        diagnoses: current?.diagnoses ?? diagnoses,
         ...(value ? { selectedProcedureConceptKey: value } : {}),
         ...(response.procedureFamily ? { procedureFamily: response.procedureFamily } : {}),
         ...(response.proposal ? { proposal: response.proposal } : {}),
-      });
+      };
+      visitState.current = next;
+      setSelected(value);
+      setProposal(response.proposal);
+      onProcedureFamilyChange?.(response.procedureFamily ?? null);
+      onVisitChargeChange?.(next);
     } catch (reason) {
       setError(errorMessage(reason));
     } finally {
@@ -109,18 +115,23 @@ export function VisitCodeSelector({
     setError(undefined);
     try {
       const response = await api.save(encounterId, { dxPointer: value || null });
-      const nextProposal = response.proposal ?? proposal;
+      const current = visitState.current;
+      const nextProposal = response.proposal ?? current?.proposal ?? proposal;
+      const nextSelected = current?.selectedProcedureConceptKey ?? selected;
+      const nextFamily = response.procedureFamily ?? current?.procedureFamily;
+      const next: VisitChargeResponse = {
+        options: current?.options ?? options,
+        diagnoses: current?.diagnoses ?? diagnoses,
+        ...(nextSelected ? { selectedProcedureConceptKey: nextSelected } : {}),
+        ...(nextFamily ? { procedureFamily: nextFamily } : {}),
+        ...(nextProposal ? { proposal: nextProposal } : {}),
+      };
+      visitState.current = next;
       if (response.proposal) setProposal(response.proposal);
       if (response.procedureFamily !== undefined) {
         onProcedureFamilyChange?.(response.procedureFamily);
       }
-      onVisitChargeChange?.({
-        options,
-        diagnoses,
-        ...(selected ? { selectedProcedureConceptKey: selected } : {}),
-        ...(response.procedureFamily ? { procedureFamily: response.procedureFamily } : {}),
-        ...(nextProposal ? { proposal: nextProposal } : {}),
-      });
+      onVisitChargeChange?.(next);
     } catch (reason) {
       setError(errorMessage(reason));
     } finally {

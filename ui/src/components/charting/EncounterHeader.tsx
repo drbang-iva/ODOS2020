@@ -392,7 +392,13 @@ export function EncounterHeader({
           tabIndex={0}
           aria-label="Restore screen"
           onClick={restoreFromBlackout}
+          onBlur={() => blackoutOverlay.current?.focus()}
           onKeyDown={(event) => {
+            if (event.key === "Tab") {
+              event.preventDefault();
+              blackoutOverlay.current?.focus();
+              return;
+            }
             if (event.key !== "Escape" && event.key !== "Enter" && event.key !== " ") return;
             event.preventDefault();
             restoreFromBlackout();
