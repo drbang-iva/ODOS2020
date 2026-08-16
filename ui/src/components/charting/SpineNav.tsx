@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { sectionStatus, type ChartSectionId, type SectionStatusMap } from "./types";
 
-interface SpineSection {
+export interface ChartEditorEntry {
   id: ChartSectionId;
   label: string;
   readOnly?: boolean;
@@ -10,7 +10,7 @@ interface SpineSection {
   onDemand?: boolean;
 }
 
-const SECTIONS: SpineSection[] = [
+const SECTIONS: ChartEditorEntry[] = [
   { id: "hpi", label: "Chief Complaint / HPI / ROS", group: "HISTORY" },
   { id: "wearing", label: "Wearing (WRx)", group: "PRETEST" },
   { id: "auto-refraction", label: "Auto-Refraction / Auto-K", group: "PRETEST" },
@@ -50,19 +50,15 @@ interface Props {
   onAddSection?: () => void;
 }
 
-export function SpineNav({
-  active,
-  statuses,
-  onSelect,
+export function chartEditorInventory({
   customSections = [],
   ocularHealthSections = [],
   eyeGrowthDefaultVisible = true,
-  onAddSection,
-}: Props) {
+}: Pick<Props, "customSections" | "ocularHealthSections" | "eyeGrowthDefaultVisible"> = {}): ChartEditorEntry[] {
   const cupDiscIndex = SECTIONS.findIndex((section) => section.id === "cup-disc");
   const anterior = ocularHealthSections.filter((section) => section.segment !== "posterior");
   const posterior = ocularHealthSections.filter((section) => section.segment === "posterior");
-  const sections: SpineSection[] = [
+  return [
     ...SECTIONS.slice(0, cupDiscIndex).map((section) =>
       section.id === "eye-growth" && !eyeGrowthDefaultVisible
         ? { ...section, onDemand: true }
@@ -74,6 +70,18 @@ export function SpineNav({
     ...SECTIONS.slice(cupDiscIndex + 1),
     ...customSections,
   ];
+}
+
+export function SpineNav({
+  active,
+  statuses,
+  onSelect,
+  customSections = [],
+  ocularHealthSections = [],
+  eyeGrowthDefaultVisible = true,
+  onAddSection,
+}: Props) {
+  const sections = chartEditorInventory({ customSections, ocularHealthSections, eyeGrowthDefaultVisible });
   const groups = groupedSections(sections);
   const activeGroup = sections.find((section) => section.id === active)?.group;
   const [openGroup, setOpenGroup] = useState<string | undefined>(() => activeGroup);
@@ -127,7 +135,7 @@ export function SpineNav({
 
 function SpineGroup({ label, sections, active, statuses, open, onToggle, onSelect }: {
   label: string;
-  sections: SpineSection[];
+  sections: ChartEditorEntry[];
   active: ChartSectionId;
   statuses: SectionStatusMap;
   open: boolean;
@@ -197,8 +205,8 @@ function SpineGroup({ label, sections, active, statuses, open, onToggle, onSelec
 }
 
 function SpineRow({ section, previousSection, active, statuses, onSelect }: {
-  section: SpineSection;
-  previousSection?: SpineSection;
+  section: ChartEditorEntry;
+  previousSection?: ChartEditorEntry;
   active: ChartSectionId;
   statuses: SectionStatusMap;
   onSelect(section: ChartSectionId): void;
@@ -243,8 +251,8 @@ function SpineRow({ section, previousSection, active, statuses, onSelect }: {
   );
 }
 
-function groupedSections(sections: SpineSection[]): Array<{ label?: string; sections: SpineSection[] }> {
-  return sections.reduce<Array<{ label?: string; sections: SpineSection[] }>>((groups, section) => {
+function groupedSections(sections: ChartEditorEntry[]): Array<{ label?: string; sections: ChartEditorEntry[] }> {
+  return sections.reduce<Array<{ label?: string; sections: ChartEditorEntry[] }>>((groups, section) => {
     const current = groups.at(-1);
     if (current && current.label === section.group) current.sections.push(section);
     else groups.push({ label: section.group, sections: [section] });

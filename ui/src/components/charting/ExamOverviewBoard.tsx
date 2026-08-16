@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { ChartEditorEntry } from "./SpineNav";
 
 type ExamObservationState =
   | "examined"
@@ -83,9 +84,13 @@ export interface ExamOverviewProjection {
 
 interface Props {
   projection: ExamOverviewProjection;
+  editorEntries: readonly ChartEditorEntry[];
+  refreshing: boolean;
+  onOpenEditor: (sectionId: ChartEditorEntry["id"]) => void;
+  onRefresh: () => void;
 }
 
-export function ExamOverviewBoard({ projection }: Props) {
+export function ExamOverviewBoard({ projection, editorEntries, refreshing, onOpenEditor, onRefresh }: Props) {
   const [traceOpen, setTraceOpen] = useState(false);
   const findingByReference = new Map(
     projection.findings.map((finding) => [finding.observationReference, finding]),
@@ -98,8 +103,21 @@ export function ExamOverviewBoard({ projection }: Props) {
           <p>Structure view</p>
           <h1 id="exam-overview-title">Exam overview</h1>
         </div>
-        <span>{projection.sections.length} sections</span>
+        <div className="odos-exam-overview-actions">
+          <span>{projection.sections.length} sections</span>
+          <button
+            type="button"
+            data-testid="refresh-exam-overview"
+            disabled={refreshing}
+            onClick={onRefresh}
+            className="odos-exam-overview-refresh"
+          >
+            {refreshing ? "Refreshing exam overview…" : "Refresh exam overview"}
+          </button>
+        </div>
       </header>
+
+      <InterimEditorLauncher entries={editorEntries} onOpenEditor={onOpenEditor} />
 
       <div className="odos-exam-overview-board">
         {projection.sections.map((section) => {
@@ -162,6 +180,40 @@ export function ExamOverviewBoard({ projection }: Props) {
         onToggle={() => setTraceOpen((current) => !current)}
       />
     </main>
+  );
+}
+
+// Interim scaffolding only: slice 3's docked entry sheets supersede this flat launcher.
+// Do not grow it into a persistent rail or add navigation behavior beyond editor reachability.
+function InterimEditorLauncher({
+  entries,
+  onOpenEditor,
+}: {
+  entries: readonly ChartEditorEntry[];
+  onOpenEditor: (sectionId: ChartEditorEntry["id"]) => void;
+}) {
+  return (
+    <section className="odos-exam-editor-launcher" aria-labelledby="chart-section-launcher-title">
+      <div className="odos-exam-editor-launcher-heading">
+        <h2 id="chart-section-launcher-title">
+          Chart section
+        </h2>
+        <span>Opens the existing section editor</span>
+      </div>
+      <div className="odos-exam-editor-launcher-list">
+        {entries.map((entry) => (
+          <button
+            key={entry.id}
+            type="button"
+            data-editor-section-id={entry.id}
+            onClick={() => onOpenEditor(entry.id)}
+            className="odos-exam-editor-launcher-button"
+          >
+            {entry.label}
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -272,16 +324,114 @@ function CompletenessFooter({
 }
 
 export function isExamOverviewProjection(value: unknown): value is ExamOverviewProjection {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
-  const row = value as Partial<ExamOverviewProjection>;
-  return typeof row.encounterReference === "string" &&
-    typeof row.patientReference === "string" &&
-    Array.isArray(row.findings) &&
-    Array.isArray(row.sections) &&
-    typeof row.completeness === "object" &&
-    row.completeness !== null &&
-    Array.isArray(row.completeness.trace) &&
-    Array.isArray(row.completeness.documentationIssues);
+  if (!isRecord(value)) return false;
+  return typeof value.encounterReference === "string" &&
+    typeof value.patientReference === "string" &&
+    optionalString(value.visitTypeCategoryId) &&
+    Array.isArray(value.findings) && value.findings.every(isFindingProjection) &&
+    Array.isArray(value.sections) && value.sections.every(isSectionProjection) &&
+    isCompleteness(value.completeness);
+}
+
+function isFindingProjection(value: unknown): value is ExamOverviewFindingProjection {
+  if (!isRecord(value) || !isRecord(value.examination) || !isRecord(value.provenance)) return false;
+  return typeof value.observationReference === "string" &&
+    typeof value.findingKey === "string" &&
+    typeof value.sectionKey === "string" &&
+    typeof value.display === "string" &&
+    oneOf(value.laterality, ["OD", "OS", "OU", "UNKNOWN"]) &&
+    oneOf(value.examination.state, ["examined", "deferred-with-reason", "deferred-without-reason"]) &&
+    optionalString(value.examination.reason) &&
+    oneOf(value.examination.sourceEncoding, ["observation", "exam-state", "dilation-declined", "not-visualized-json"]) &&
+    oneOf(value.interpretation, ["normal", "abnormal", "borderline", "unknown"]) &&
+    oneOf(value.provenance.state, ["current", "carried-unreasserted", "carried-reasserted"]) &&
+    optionalString(value.provenance.sourceDate) &&
+    isObservationSnapshot(value.current) &&
+    (value.prior === undefined || isObservationSnapshot(value.prior)) &&
+    (value.changeFromPrior === undefined || isChangeFromPrior(value.changeFromPrior));
+}
+
+function isSectionProjection(value: unknown): value is ExamOverviewSectionProjection {
+  return isRecord(value) &&
+    typeof value.sectionKey === "string" &&
+    typeof value.label === "string" &&
+    oneOf(value.state, ["examined", "deferred-with-reason", "deferred-without-reason", "not-examined", "not-indicated"]) &&
+    stringArray(value.findingObservationReferences) &&
+    finiteNumber(value.abnormalCount) &&
+    finiteNumber(value.carriedUnreassertedCount) &&
+    finiteNumber(value.deferredWithoutReasonCount);
+}
+
+function isCompleteness(value: unknown): value is ClinicalExamCompleteness {
+  return isRecord(value) &&
+    oneOf(value.status, ["complete", "incomplete", "unconfigured"]) &&
+    finiteNumber(value.requiredSectionCount) &&
+    finiteNumber(value.resolvedSectionCount) &&
+    Array.isArray(value.trace) && value.trace.every((row) =>
+      isRecord(row) &&
+      typeof row.sectionKey === "string" &&
+      typeof row.label === "string" &&
+      oneOf(row.state, ["examined", "deferred-with-reason", "deferred-without-reason", "not-examined", "not-indicated"]) &&
+      typeof row.resolved === "boolean" &&
+      finiteNumber(row.carriedUnreassertedCount)
+    ) &&
+    Array.isArray(value.documentationIssues) && value.documentationIssues.every((issue) =>
+      isRecord(issue) &&
+      typeof issue.sectionKey === "string" &&
+      issue.issue === "deferred-reason-missing"
+    );
+}
+
+function isObservationSnapshot(value: unknown): value is ObservationSnapshot {
+  return isRecord(value) &&
+    optionalString(value.recordedAt) &&
+    (value.value === undefined || isSnapshotValue(value.value)) &&
+    Array.isArray(value.components) && value.components.every((component) =>
+      isRecord(component) &&
+      typeof component.code === "string" &&
+      optionalString(component.display) &&
+      (component.value === undefined || isSnapshotValue(component.value))
+    );
+}
+
+function isSnapshotValue(value: unknown): value is ObservationSnapshotValue {
+  if (!isRecord(value)) return false;
+  if (value.kind === "boolean") return typeof value.value === "boolean";
+  if (value.kind === "number") return finiteNumber(value.value);
+  if (value.kind === "string") return typeof value.value === "string";
+  if (value.kind === "quantity") {
+    return finiteNumber(value.value) && optionalString(value.unit) && optionalString(value.system) && optionalString(value.code);
+  }
+  if (value.kind === "code") {
+    return optionalString(value.code) && optionalString(value.display) && optionalString(value.text);
+  }
+  return value.kind === "json" && isRecord(value.value);
+}
+
+function isChangeFromPrior(value: unknown): value is NonNullable<ExamOverviewFindingProjection["changeFromPrior"]> {
+  return isRecord(value) && (value.kind === "changed" || (
+    value.kind === "numeric" && finiteNumber(value.delta) && optionalString(value.unit)
+  ));
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function optionalString(value: unknown): boolean {
+  return value === undefined || typeof value === "string";
+}
+
+function finiteNumber(value: unknown): boolean {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function stringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function oneOf<const T extends string>(value: unknown, options: readonly T[]): value is T {
+  return typeof value === "string" && options.includes(value as T);
 }
 
 function orderedSectionFindings(

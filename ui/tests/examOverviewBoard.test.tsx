@@ -352,10 +352,12 @@ test("malformed nested finding, section, and completeness rows use the editor fa
   ];
   for (const malformed of malformedPayloads) {
     await context.test(malformed.label, async () => {
-      const harness = await renderEncounter(malformed.value);
+      const harness = await renderEncounter(malformed.value, { captureOverviewErrors: true });
       try {
         assert.equal(harness.renderer.root.findAllByType(ExamOverviewBoard).length, 0);
         assert.equal(harness.renderer.root.findAllByType(SpineNav).length, 1);
+        assert.equal(harness.overviewErrors.length, 1);
+        assert.match(String(harness.overviewErrors[0]?.[0]), /retaining the section editor/i);
       } finally {
         harness.restore();
       }
@@ -419,16 +421,23 @@ interface RenderEncounterOptions {
   findingDefinitions?: CustomFindingDefinition[];
   procedureDefinitions?: CustomFindingDefinition[];
   overviewResponses?: unknown[];
+  captureOverviewErrors?: boolean;
 }
 
 async function renderEncounter(projection: unknown, options: RenderEncounterOptions = {}): Promise<{
   renderer: ReactTestRenderer;
   overviewFetchCount: () => number;
+  overviewErrors: unknown[][];
   restore: () => void;
 }> {
   const originalFetch = globalThis.fetch;
   const originalRead = fhir.read;
   const originalDocument = Object.getOwnPropertyDescriptor(globalThis, "document");
+  const originalConsoleError = console.error;
+  const overviewErrors: unknown[][] = [];
+  if (options.captureOverviewErrors) {
+    console.error = (...args: unknown[]) => { overviewErrors.push(args); };
+  }
   fhir.read = (async (_resourceType: string, id: string) => ({
     resourceType: "Encounter",
     id,
@@ -523,10 +532,12 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
   return {
     renderer,
     overviewFetchCount: () => overviewFetches,
+    overviewErrors,
     restore: () => {
       act(() => renderer.unmount());
       fhir.read = originalRead;
       globalThis.fetch = originalFetch;
+      console.error = originalConsoleError;
       if (originalDocument) Object.defineProperty(globalThis, "document", originalDocument);
       else delete (globalThis as { document?: Document }).document;
     },

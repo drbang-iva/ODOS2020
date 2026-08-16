@@ -256,10 +256,88 @@
   font-size: clamp(20px, 2.2vw, 28px);
 }
 
-.odos-exam-overview-heading > span {
+.odos-exam-overview-heading > span,
+.odos-exam-overview-actions > span {
   color: var(--odos-muted);
   font-size: 12px;
   font-weight: 700;
+}
+
+.odos-exam-overview-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.odos-exam-overview-refresh,
+.odos-exam-editor-launcher-button,
+.odos-exam-editor-return-button {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--odos-line-2);
+  border-radius: 7px;
+  background: var(--odos-surface-2);
+  color: var(--odos-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.odos-exam-overview-refresh:hover,
+.odos-exam-editor-launcher-button:hover,
+.odos-exam-editor-return-button:hover {
+  border-color: var(--odos-brand);
+  color: var(--odos-text);
+}
+
+.odos-exam-overview-refresh:disabled {
+  cursor: wait;
+  opacity: .6;
+}
+
+.odos-exam-editor-launcher {
+  padding: 16px clamp(16px, 2.5vw, 32px);
+  border-bottom: 1px solid var(--odos-line);
+  background: var(--odos-surface);
+}
+
+.odos-exam-editor-launcher-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.odos-exam-editor-launcher-heading h2 {
+  margin: 0;
+  color: var(--odos-muted);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.odos-exam-editor-launcher-heading span {
+  color: var(--odos-faint);
+  font-size: 12px;
+}
+
+.odos-exam-editor-launcher-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.odos-exam-editor-launcher-button {
+  text-align: left;
+}
+
+.odos-exam-editor-return {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--odos-line);
+  background: var(--odos-surface);
 }
 
 .odos-exam-overview-board {
