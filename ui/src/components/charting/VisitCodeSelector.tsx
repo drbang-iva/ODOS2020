@@ -64,7 +64,9 @@ export function VisitCodeSelector({
   }, [api, encounterId, onProcedureFamilyChange, onVisitChargeChange]);
 
   useEffect(() => {
+    const encounterChanged = activeEncounter.current !== encounterId;
     activeEncounter.current = encounterId;
+    if (encounterChanged) setSaving(false);
     const refresh = (event: Event) => {
       const detail = (event as CustomEvent<{ encounterReference?: string }>).detail;
       if (detail?.encounterReference === `Encounter/${encounterId}`) void read(false);
