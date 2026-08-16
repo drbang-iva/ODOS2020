@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import React, { useState } from "react";
-import type { Encounter } from "@medplum/fhirtypes";
+import type { Condition, Encounter } from "@medplum/fhirtypes";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import {
   procedureFeeScheduleAdapter,
@@ -184,6 +184,114 @@ test("visit diagnosis selection is visible, editable, clearable, and warns on an
     { dxPointer: null },
   ]);
   act(() => renderer.unmount());
+});
+
+test("the visit selector reports the stored broken pointer without clearing or re-deriving it", async () => {
+  const response: VisitChargeResponse = {
+    options: visitOptions(),
+    diagnoses: [{ reference: "Condition/current", display: "Current diagnosis", rank: 1 }],
+    selectedProcedureConceptKey: "office-visit-new-low",
+    procedureFamily: "em",
+    proposal: {
+      id: "manual-visit-code:enc-broken",
+      procedureConceptKey: "office-visit-new-low",
+      dxPointers: ["Condition/retracted"],
+      state: "accepted",
+    },
+  };
+  const reported: Array<VisitChargeResponse | undefined> = [];
+  let saveCalls = 0;
+  const api: VisitChargeApi = {
+    async read() { return response; },
+    async save() {
+      saveCalls += 1;
+      throw new Error("broken links must not be rewritten automatically");
+    },
+  };
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(
+      <VisitCodeSelector
+        encounterId="enc-broken"
+        api={api}
+        onVisitChargeChange={(state: VisitChargeResponse | undefined) => reported.push(state)}
+      />,
+    );
+    await Promise.resolve();
+  });
+  assert.deepEqual(reported.at(-1)?.proposal?.dxPointers, ["Condition/retracted"]);
+  assert.equal(saveCalls, 0);
+  assert.deepEqual(response.proposal?.dxPointers, ["Condition/retracted"]);
+  act(() => renderer.unmount());
+});
+
+test("the Visit chip renders none, linked-code, empty-link, and named broken-link states", async () => {
+  const cases: Array<{
+    label: string;
+    response: VisitChargeResponse;
+    expected: RegExp;
+    integrity?: "empty" | "broken";
+  }> = [
+    {
+      label: "none",
+      response: { options: visitOptions(), diagnoses: [] },
+      expected: /Visit — none/,
+    },
+    {
+      label: "linked verified code",
+      response: {
+        options: visitOptions(),
+        diagnoses: [{ reference: "Condition/myopia", display: "Myopia" }],
+        selectedProcedureConceptKey: "routine-vision-exam-new",
+        procedureFamily: "vision-plan",
+        proposal: {
+          id: "manual-visit-code:enc-chip",
+          procedureConceptKey: "routine-vision-exam-new",
+          dxPointers: ["Condition/myopia"],
+          state: "accepted",
+        },
+      },
+      expected: /S0620.*linked diagnosis.*Myopia/,
+    },
+    {
+      label: "empty link with display-label fallback",
+      response: {
+        options: visitOptions(),
+        diagnoses: [],
+        selectedProcedureConceptKey: "comprehensive-exam-established",
+        procedureFamily: "eye-code",
+        proposal: {
+          id: "manual-visit-code:enc-chip",
+          procedureConceptKey: "comprehensive-exam-established",
+          dxPointers: [],
+          state: "accepted",
+        },
+      },
+      expected: /Comprehensive eye exam — established patient.*◇.*no diagnosis linked/,
+      integrity: "empty",
+    },
+    {
+      label: "broken link",
+      response: {
+        options: visitOptions(),
+        diagnoses: [{ reference: "Condition/current", display: "Current diagnosis" }],
+        selectedProcedureConceptKey: "office-visit-new-low",
+        procedureFamily: "em",
+        proposal: {
+          id: "manual-visit-code:enc-chip",
+          procedureConceptKey: "office-visit-new-low",
+          dxPointers: ["Condition/retracted"],
+          state: "accepted",
+        },
+      },
+      expected: /Office visit — new, low complexity.*◇.*broken linked diagnosis.*Keratoconjunctivitis sicca/,
+      integrity: "broken",
+    },
+  ];
+
+  for (const item of cases) {
+    await testVisitChipState(item.label, item.response, item.expected, item.integrity);
+  }
 });
 
 test("selector read failure stays local and non-blocking", async () => {
@@ -409,4 +517,74 @@ function visitOptions(): VisitChargeResponse["options"] {
     { procedureConceptKey: "routine-vision-exam-new", display: "Routine vision exam — new patient", billingCode: "S0620" },
     { procedureConceptKey: "routine-vision-exam-established", display: "Routine vision exam — established", billingCode: "S0621" },
   ];
+}
+
+async function testVisitChipState(
+  label: string,
+  response: VisitChargeResponse,
+  expected: RegExp,
+  integrity?: "empty" | "broken",
+): Promise<void> {
+  const originalRead = fhir.read;
+  fhir.read = (async (resourceType: string, id: string) => {
+    if (resourceType === "Encounter") {
+      return {
+        resourceType: "Encounter",
+        id,
+        status: "in-progress",
+        class: { code: "AMB" },
+        subject: { reference: "Patient/patient-1" },
+      } as Encounter;
+    }
+    assert.equal(resourceType, "Condition");
+    assert.equal(id, "retracted");
+    return {
+      resourceType: "Condition",
+      id,
+      subject: { reference: "Patient/patient-1" },
+      clinicalStatus: { coding: [{ code: "inactive" }] },
+      verificationStatus: { coding: [{ code: "entered-in-error" }] },
+      code: { text: "Keratoconjunctivitis sicca" },
+    } as Condition;
+  }) as typeof fhir.read;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <RoleProvider>
+          <EncounterHeader
+            patient={{ resourceType: "Patient", id: "patient-1", name: [{ text: `Test ${label}` }] }}
+            encounterId="enc-chip"
+          />
+        </RoleProvider>,
+      );
+      await Promise.resolve();
+    });
+    const selector = renderer.root.findByType(VisitCodeSelector);
+    assert.equal(typeof selector.props.onVisitChargeChange, "function");
+    await act(async () => {
+      selector.props.onVisitChargeChange(response);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    const chips = renderer.root.findAllByProps({ "data-testid": "visit-chip" });
+    assert.equal(chips.length, 1);
+    const chip = chips[0]!;
+    assert.match(textContent(chip), expected);
+    const markers = chip.findAll((node) => node.props["data-billing-integrity"] !== undefined);
+    assert.equal(markers.length, integrity ? 1 : 0);
+    if (integrity) {
+      assert.equal(markers[0]!.props["data-billing-integrity"], integrity);
+      assert.doesNotMatch(String(markers[0]!.props.className), /amber|gold|emerald|red/);
+    }
+  } finally {
+    if (renderer) act(() => renderer.unmount());
+    fhir.read = originalRead;
+  }
+}
+
+function textContent(node: { children: Array<string | { children: unknown[] }> }): string {
+  return node.children.map((child) =>
+    typeof child === "string" ? child : textContent(child as { children: Array<string | { children: unknown[] }> })
+  ).join("");
 }
