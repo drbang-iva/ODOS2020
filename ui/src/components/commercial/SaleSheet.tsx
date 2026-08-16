@@ -8,12 +8,7 @@ import {
   type PackageSaleTender,
   type PatientPackageInstance,
 } from "../../lib/commercial-engine";
-
-const TENDERS: Array<{ code: PackageSaleTender; label: string }> = [
-  { code: "CASH", label: "Cash" },
-  { code: "CHECK", label: "Check" },
-  { code: "CARD_MANUAL", label: "Card — manual entry" },
-];
+import { messageOf, money, TENDERS, useDockedPanel } from "./panel-shared";
 
 export function SaleSheet({
   patientReference,
@@ -35,6 +30,7 @@ export function SaleSheet({
   const [error, setError] = useState<string>();
   const [paidInvoiceReference, setPaidInvoiceReference] = useState<string | undefined>(pending?.invoiceReference);
   const selected = useMemo(() => definitions.find((definition) => definition.id === definitionId), [definitionId, definitions]);
+  const { dialogRef, initialFocusRef, titleId } = useDockedPanel(onClose);
 
   useEffect(() => {
     let cancelled = false;
@@ -74,14 +70,14 @@ export function SaleSheet({
   }
 
   return (
-    <aside role="dialog" aria-modal="true" aria-label="Sell care package" className="fixed inset-y-0 right-0 z-[70] flex w-[min(560px,100vw)] flex-col overflow-y-auto border-l border-white/15 bg-[#0c0c18] text-white shadow-2xl">
+    <aside ref={dialogRef} role="dialog" aria-modal="true" aria-label="Sell care package" aria-labelledby={titleId} className="fixed inset-y-0 right-0 z-[70] flex w-[min(560px,100vw)] flex-col overflow-y-auto border-l border-white/15 bg-[#0c0c18] text-white shadow-2xl">
       <header className="flex items-start justify-between border-b border-white/10 px-5 py-4">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-300/70">Prepaid care</p>
-          <h2 className="mt-1 text-xl font-semibold">Sell package</h2>
+          <h2 id={titleId} aria-label="Sell care package" className="mt-1 text-xl font-semibold">Sell package</h2>
           <p className="text-sm text-white/50">{patientName ?? patientReference}</p>
         </div>
-        <button type="button" aria-label="Close package sale" onClick={onClose}>✕</button>
+        <button ref={initialFocusRef} type="button" aria-label="Close package sale" onClick={onClose}>✕</button>
       </header>
       <div className="grid flex-1 gap-5 p-5">
         {loading ? <p className="text-sm text-white/50">Loading package definitions…</p> : (
@@ -121,12 +117,4 @@ export function SaleSheet({
       </footer>
     </aside>
   );
-}
-
-function money(cents: number): string {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
