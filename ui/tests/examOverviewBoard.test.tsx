@@ -4,9 +4,13 @@ import React from "react";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import type { ExamOverviewProjection } from "../../mcp/src/clinical-graph/exam-overview-projection";
 import { DiagnosisWorkspace } from "../src/components/charting/DiagnosisWorkspace";
+import { ExamOverviewBoard } from "../src/components/charting/ExamOverviewBoard";
 import { SpineNav } from "../src/components/charting/SpineNav";
+import { VaSection } from "../src/components/charting/VaSection";
+import type { CustomFindingDefinition } from "../src/components/charting/CustomFindingSection";
 import { fhir } from "../src/lib/fhir";
 import { RoleProvider } from "../src/lib/role-context";
+import { ODOS_DISCIPLINE_SYSTEM, type SchedulingDiscipline } from "../src/lib/scheduling";
 import { EncounterCharting } from "../src/scenes/EncounterCharting";
 
 (globalThis as typeof globalThis & { React: typeof React }).React = React;
@@ -248,8 +252,178 @@ test("switching to the diagnosis view preserves the existing DiagnosisWorkspace 
   }
 });
 
-async function renderEncounter(projection: ExamOverviewProjection): Promise<{
+test("the interim board launcher enumerates every static and dynamic editor and returns from a real pretest editor", async () => {
+  const findingDefinitions: CustomFindingDefinition[] = [
+    findingDefinition("entrance:pupils", "Pupils"),
+    findingDefinition("entrance:dilation", "Dilation"),
+    findingDefinition("ocular-health:anterior:cornea", "Cornea"),
+    findingDefinition("dry-eye:symptoms", "Dry eye symptoms"),
+    findingDefinition("custom:binocular-vision", "Binocular vision"),
+  ];
+  const procedureDefinitions: CustomFindingDefinition[] = [{
+    ...findingDefinition("procedure:aesthetics:test", "Aesthetic procedure"),
+    resourceKind: "procedure",
+    discipline: "aesthetics",
+  }];
+  const harness = await renderEncounter(PROJECTION, {
+    discipline: "aesthetics",
+    findingDefinitions,
+    procedureDefinitions,
+  });
+  try {
+    const editorIds = harness.renderer.root
+      .findAll((node) => typeof node.props["data-editor-section-id"] === "string")
+      .map((node) => node.props["data-editor-section-id"] as string)
+      .sort();
+    assert.deepEqual(editorIds, [
+      "aesthetics-consent",
+      "assessment",
+      "auto-refraction",
+      "color-vision",
+      "cover-test",
+      "cup-disc",
+      "custom:binocular-vision",
+      "cvf",
+      "dilation",
+      "dry-eye",
+      "dry-eye:symptoms",
+      "eom",
+      "eye-growth",
+      "gonioscopy",
+      "hpi",
+      "imaging",
+      "iop",
+      "manual-keratometry",
+      "myopia-management",
+      "ocular-health:anterior:cornea",
+      "ortho-k",
+      "pachymetry",
+      "prescription",
+      "procedure:aesthetics:test",
+      "pupils",
+      "refraction",
+      "refraction-history",
+      "soft-contact-lens",
+      "specialty-contact-lens",
+      "stereopsis",
+      "va",
+      "wearing",
+    ].sort());
+    for (const pretestId of ["va", "pupils", "iop", "cover-test", "dilation"]) {
+      assert.ok(editorIds.includes(pretestId), `${pretestId} must remain reachable`);
+    }
+
+    const vaLauncher = harness.renderer.root.findByProps({ "data-editor-section-id": "va" });
+    await act(async () => vaLauncher.props.onClick());
+    assert.equal(harness.renderer.root.findAllByType(VaSection).length, 1);
+    assert.equal(harness.renderer.root.findAllByType(SpineNav).length, 0);
+
+    const back = harness.renderer.root.findByProps({ "data-testid": "return-to-exam-overview" });
+    await act(async () => {
+      back.props.onClick();
+      await flushEffects();
+    });
+    assert.equal(harness.renderer.root.findAllByType(ExamOverviewBoard).length, 1);
+  } finally {
+    harness.restore();
+  }
+});
+
+test("malformed nested finding, section, and completeness rows use the editor fallback", async (context) => {
+  const malformedPayloads: Array<{ label: string; value: unknown }> = [
+    { label: "finding", value: { ...PROJECTION, findings: [null] } },
+    {
+      label: "section",
+      value: {
+        ...PROJECTION,
+        sections: [{ ...PROJECTION.sections[0], findingObservationReferences: undefined }],
+      },
+    },
+    {
+      label: "completeness trace",
+      value: {
+        ...PROJECTION,
+        completeness: {
+          ...PROJECTION.completeness,
+          trace: [{ ...PROJECTION.completeness.trace[0], label: undefined }],
+        },
+      },
+    },
+  ];
+  for (const malformed of malformedPayloads) {
+    await context.test(malformed.label, async () => {
+      const harness = await renderEncounter(malformed.value);
+      try {
+        assert.equal(harness.renderer.root.findAllByType(ExamOverviewBoard).length, 0);
+        assert.equal(harness.renderer.root.findAllByType(SpineNav).length, 1);
+      } finally {
+        harness.restore();
+      }
+    });
+  }
+});
+
+test("manual refresh replaces the mounted board projection", async () => {
+  const refreshed: ExamOverviewProjection = {
+    ...PROJECTION,
+    sections: PROJECTION.sections.map((section) =>
+      section.sectionKey === "pretest" ? { ...section, label: "Pretest refreshed" } : section
+    ),
+  };
+  const harness = await renderEncounter(PROJECTION, { overviewResponses: [PROJECTION, refreshed] });
+  try {
+    assert.equal(harness.overviewFetchCount(), 1);
+    const refresh = harness.renderer.root.findByProps({ "data-testid": "refresh-exam-overview" });
+    await act(async () => {
+      refresh.props.onClick();
+      await flushEffects();
+      await flushEffects();
+    });
+    assert.equal(harness.overviewFetchCount(), 2);
+    assert.match(JSON.stringify(harness.renderer.toJSON()), /Pretest refreshed/);
+  } finally {
+    harness.restore();
+  }
+});
+
+test("an editor save and return to the board each refetch the projection", async () => {
+  const harness = await renderEncounter(PROJECTION);
+  try {
+    const vaLauncher = harness.renderer.root.findByProps({ "data-editor-section-id": "va" });
+    await act(async () => vaLauncher.props.onClick());
+    assert.equal(harness.overviewFetchCount(), 1);
+
+    const va = harness.renderer.root.findByType(VaSection);
+    await act(async () => {
+      va.props.onSaved({ completed: true });
+      await flushEffects();
+      await flushEffects();
+    });
+    assert.equal(harness.overviewFetchCount(), 2);
+
+    const back = harness.renderer.root.findByProps({ "data-testid": "return-to-exam-overview" });
+    await act(async () => {
+      back.props.onClick();
+      await flushEffects();
+      await flushEffects();
+    });
+    assert.equal(harness.overviewFetchCount(), 3);
+    assert.equal(harness.renderer.root.findAllByType(ExamOverviewBoard).length, 1);
+  } finally {
+    harness.restore();
+  }
+});
+
+interface RenderEncounterOptions {
+  discipline?: SchedulingDiscipline;
+  findingDefinitions?: CustomFindingDefinition[];
+  procedureDefinitions?: CustomFindingDefinition[];
+  overviewResponses?: unknown[];
+}
+
+async function renderEncounter(projection: unknown, options: RenderEncounterOptions = {}): Promise<{
   renderer: ReactTestRenderer;
+  overviewFetchCount: () => number;
   restore: () => void;
 }> {
   const originalFetch = globalThis.fetch;
@@ -261,14 +435,24 @@ async function renderEncounter(projection: ExamOverviewProjection): Promise<{
     status: "in-progress",
     class: { code: "AMB" },
     subject: { reference: "Patient/patient-1" },
+    ...(options.discipline
+      ? { serviceType: { coding: [{ system: ODOS_DISCIPLINE_SYSTEM, code: options.discipline }] } }
+      : {}),
   })) as typeof fhir.read;
+  let overviewFetches = 0;
   globalThis.fetch = (async (input) => {
     const url = String(input);
     if (url.endsWith("/clinical-graph/encounters/exam-1/exam-overview")) {
-      return jsonResponse(projection);
+      const responses = options.overviewResponses ?? [projection];
+      const response = responses[Math.min(overviewFetches, responses.length - 1)];
+      overviewFetches += 1;
+      return jsonResponse(response);
     }
     if (url.includes("/clinical-graph/finding-definitions")) {
-      return jsonResponse({ canWrite: false, definitions: [] });
+      return jsonResponse({ canWrite: false, definitions: options.findingDefinitions ?? [] });
+    }
+    if (url.includes("/clinical-graph/procedure-definitions")) {
+      return jsonResponse({ definitions: options.procedureDefinitions ?? [] });
     }
     if (url.includes("/clinical-graph/finding-section-groups")) {
       return jsonResponse({
@@ -338,6 +522,7 @@ async function renderEncounter(projection: ExamOverviewProjection): Promise<{
   });
   return {
     renderer,
+    overviewFetchCount: () => overviewFetches,
     restore: () => {
       act(() => renderer.unmount());
       fhir.read = originalRead;
@@ -345,6 +530,19 @@ async function renderEncounter(projection: ExamOverviewProjection): Promise<{
       if (originalDocument) Object.defineProperty(globalThis, "document", originalDocument);
       else delete (globalThis as { document?: Document }).document;
     },
+  };
+}
+
+function findingDefinition(stableKey: string, display: string): CustomFindingDefinition {
+  return {
+    resourceKind: "finding",
+    discipline: "eyecare",
+    stableKey,
+    sectionKey: stableKey,
+    display,
+    active: true,
+    perEye: false,
+    customFields: [],
   };
 }
 
