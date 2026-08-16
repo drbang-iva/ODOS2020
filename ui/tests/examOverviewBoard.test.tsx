@@ -178,6 +178,7 @@ const UNASSIGNED_FINDINGS: EncounterFindingRow[] = [
 test("the chart bar switches to its two-row grid before mid-width controls can overflow", () => {
   const css = readFileSync(new URL("../src/styles/charting.css", import.meta.url), "utf8");
   assert.match(css, /@media \(max-width: 1279px\) \{[\s\S]*?\.odos-exam-chart-bar \{[\s\S]*?grid-template-columns: repeat\(12, minmax\(0, 1fr\)\)/);
+  assert.doesNotMatch(css, /\.odos-chart-bar-cc-reserved \{\s*min-width: 160px;\s*\}/);
 });
 
 test("the permanent chart bar renders exactly eight ordered slots with truthful reserved counts", async () => {
