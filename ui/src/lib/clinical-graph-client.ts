@@ -58,19 +58,37 @@ export interface VisitChargeOption {
   billingCode?: string;
 }
 
+export type VisitProcedureFamily = "eye-code" | "em" | "vision-plan";
+
+export interface VisitChargeDiagnosis {
+  reference: string;
+  display: string;
+  rank?: number;
+}
+
+export interface VisitChargeProposal {
+  id: string;
+  procedureConceptKey: string;
+  dxPointers: string[];
+  state: "accepted" | "removed" | "finalized";
+}
+
 export interface VisitChargeResponse {
   options: VisitChargeOption[];
+  diagnoses: VisitChargeDiagnosis[];
   selectedProcedureConceptKey?: string;
-  proposal?: {
-    id: string;
-    procedureConceptKey: string;
-    state: "accepted" | "removed" | "finalized";
-  };
+  procedureFamily?: VisitProcedureFamily;
+  proposal?: VisitChargeProposal;
+}
+
+export interface VisitChargeChange {
+  procedureConceptKey?: string | null;
+  dxPointer?: string | null;
 }
 
 export interface VisitChargeApi {
   read(encounterId: string): Promise<VisitChargeResponse>;
-  save(encounterId: string, procedureConceptKey: string | null): Promise<Partial<VisitChargeResponse>>;
+  save(encounterId: string, change: VisitChargeChange): Promise<Partial<VisitChargeResponse>>;
 }
 
 export function visitChargeApi(fetchImpl: typeof fetch = fetch): VisitChargeApi {
@@ -83,11 +101,11 @@ export function visitChargeApi(fetchImpl: typeof fetch = fetch): VisitChargeApi 
       if (!response.ok) throw clinicalGraphResponseError(response, body, `Visit charge failed: ${response.status}`);
       return body;
     },
-    async save(encounterId, procedureConceptKey) {
+    async save(encounterId, change) {
       const response = await fetchImpl(endpoint(encounterId), {
         method: "POST",
         headers: { ...authHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ procedureConceptKey }),
+        body: JSON.stringify(change),
       });
       const body = await response.json() as Partial<VisitChargeResponse> & ClinicalGraphErrorBody;
       if (!response.ok) throw clinicalGraphResponseError(response, body, `Visit charge update failed: ${response.status}`);

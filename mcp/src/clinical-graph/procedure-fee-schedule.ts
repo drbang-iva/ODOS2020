@@ -75,6 +75,18 @@ export const VISIT_PROCEDURE_CONCEPT_KEYS = [
 
 const VISIT_PROCEDURE_CONCEPT_KEY_SET = new Set<string>(VISIT_PROCEDURE_CONCEPT_KEYS);
 
+export type VisitProcedureFamily = "eye-code" | "em" | "vision-plan";
+
+export function visitProcedureFamily(value: string): VisitProcedureFamily | undefined {
+  if (!VISIT_PROCEDURE_CONCEPT_KEY_SET.has(value)) return undefined;
+  if (value.startsWith("comprehensive-exam-") || value.startsWith("intermediate-exam-")) {
+    return "eye-code";
+  }
+  if (value.startsWith("office-visit-")) return "em";
+  if (value.startsWith("routine-vision-exam-")) return "vision-plan";
+  return undefined;
+}
+
 const INITIAL_DEFINITION_KEYS = new Set([
   "gonioscopy",
   "corneal-pachymetry",

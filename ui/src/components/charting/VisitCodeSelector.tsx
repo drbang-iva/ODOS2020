@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import {
   visitChargeApi,
   type VisitChargeApi,
+  type VisitChargeDiagnosis,
   type VisitChargeOption,
+  type VisitChargeProposal,
+  type VisitProcedureFamily,
 } from "../../lib/clinical-graph-client";
 
 const DEFAULT_API = visitChargeApi();
@@ -11,12 +14,16 @@ export function VisitCodeSelector({
   encounterId,
   disabled = false,
   api = DEFAULT_API,
+  onProcedureFamilyChange,
 }: {
   encounterId: string;
   disabled?: boolean;
   api?: VisitChargeApi;
+  onProcedureFamilyChange?: (family: VisitProcedureFamily | null | undefined) => void;
 }) {
   const [options, setOptions] = useState<VisitChargeOption[]>([]);
+  const [diagnoses, setDiagnoses] = useState<VisitChargeDiagnosis[]>([]);
+  const [proposal, setProposal] = useState<VisitChargeProposal>();
   const [selected, setSelected] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -26,27 +33,53 @@ export function VisitCodeSelector({
     let cancelled = false;
     setLoading(true);
     setError(undefined);
+    setOptions([]);
+    setDiagnoses([]);
+    setProposal(undefined);
+    setSelected("");
+    onProcedureFamilyChange?.(undefined);
     void api.read(encounterId)
       .then((response) => {
         if (cancelled) return;
         setOptions(response.options);
+        setDiagnoses(response.diagnoses);
+        setProposal(response.proposal);
         setSelected(response.selectedProcedureConceptKey ?? "");
+        onProcedureFamilyChange?.(response.procedureFamily ?? null);
       })
       .catch((reason: unknown) => {
         if (!cancelled) setError(errorMessage(reason));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
-      });
+    });
     return () => { cancelled = true; };
-  }, [api, encounterId]);
+  }, [api, encounterId, onProcedureFamilyChange]);
 
-  async function change(value: string) {
+  async function changeProcedure(value: string) {
     setSaving(true);
     setError(undefined);
     try {
-      await api.save(encounterId, value || null);
+      const response = await api.save(encounterId, { procedureConceptKey: value || null });
       setSelected(value);
+      setProposal(response.proposal);
+      onProcedureFamilyChange?.(response.procedureFamily ?? null);
+    } catch (reason) {
+      setError(errorMessage(reason));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function changeDiagnosis(value: string) {
+    setSaving(true);
+    setError(undefined);
+    try {
+      const response = await api.save(encounterId, { dxPointer: value || null });
+      if (response.proposal) setProposal(response.proposal);
+      if (response.procedureFamily !== undefined) {
+        onProcedureFamilyChange?.(response.procedureFamily);
+      }
     } catch (reason) {
       setError(errorMessage(reason));
     } finally {
@@ -65,7 +98,7 @@ export function VisitCodeSelector({
         className="scheduler-input min-w-72"
         value={selected}
         disabled={disabled || loading || saving}
-        onChange={(event) => change(event.target.value)}
+        onChange={(event) => changeProcedure(event.target.value)}
       >
         <option value="">No visit billing code</option>
         {options.map((option) => (
@@ -74,6 +107,39 @@ export function VisitCodeSelector({
           </option>
         ))}
       </select>
+      {selected && proposal?.state === "accepted" && (
+        <>
+          <label
+            className="text-xs font-semibold uppercase tracking-widest text-[color:var(--odos-faint)]"
+            htmlFor={`visit-code-diagnosis-${encounterId}`}
+          >
+            Diagnosis
+          </label>
+          <select
+            id={`visit-code-diagnosis-${encounterId}`}
+            aria-label="Visit billing diagnosis"
+            className="scheduler-input min-w-64"
+            value={proposal.dxPointers[0] ?? ""}
+            disabled={disabled || loading || saving}
+            onChange={(event) => changeDiagnosis(event.target.value)}
+          >
+            <option value="">No diagnosis selected</option>
+            {diagnoses.map((diagnosis) => (
+              <option key={diagnosis.reference} value={diagnosis.reference}>
+                {diagnosis.display}
+              </option>
+            ))}
+          </select>
+          {proposal.dxPointers.length === 0 && (
+            <span
+              data-testid="visit-code-diagnosis-warning"
+              className="text-xs text-amber-100"
+            >
+              No diagnosis selected — this visit charge will not be included in a claim.
+            </span>
+          )}
+        </>
+      )}
       {saving && <span className="text-xs text-[color:var(--odos-faint)]">Saving…</span>}
       {error && <span aria-live="polite" data-testid="visit-code-error" className="text-xs text-red-200">{error}</span>}
     </div>
