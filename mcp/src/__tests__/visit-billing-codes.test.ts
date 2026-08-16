@@ -27,7 +27,11 @@ class MemoryFhir {
 
   async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
     const resource = this.resources.find((row) => row.resourceType === resourceType && row.id === id);
-    if (!resource) throw new Error(`${resourceType}/${id} not found`);
+    if (!resource) {
+      const error = new Error(`${resourceType}/${id} not found`);
+      (error as Error & { status?: number }).status = 404;
+      throw error;
+    }
     return structuredClone(resource) as T;
   }
 
@@ -556,6 +560,7 @@ test("visit charge handlers enforce chart access and create one stable manual pr
     body: { procedureConceptKey: "routine-vision-exam-new" },
   });
   assert.equal(initial.status, 200);
+  assert.equal((initial.body as { procedureFamily?: string }).procedureFamily, "vision-plan");
   const proposal = (initial.body as { proposal: ChargeProposal }).proposal;
   assert.deepEqual(proposal, {
     id: "manual-visit-code:enc-visit",
@@ -599,6 +604,54 @@ test("visit charge handlers enforce chart access and create one stable manual pr
   assert.equal(body.options.length, 12);
   assert.equal(body.options.some((option) => option.procedureConceptKey === "refraction"), false);
   assert.equal(body.options.find((option) => option.procedureConceptKey === "routine-vision-exam-new")?.billingCode, "S0620");
+});
+
+test("visit charge reads remain available when the encounter resource is absent", async () => {
+  const fhir = new MemoryFhir();
+  const authenticate = async () => ({
+    staffReference: "Practitioner/doc",
+    actorRole: "provider" as const,
+    fhir,
+  });
+
+  const result = await handleVisitChargeRequest({ authenticate }, {
+    authHeader: "Bearer clinician",
+    params: { encounterId: "enc-missing" },
+  });
+  assert.equal(result.status, 200);
+  const body = result.body as {
+    diagnoses: unknown[];
+    options: Array<{ procedureConceptKey: string }>;
+    proposal?: ChargeProposal;
+  };
+  assert.deepEqual(body.diagnoses, []);
+  assert.equal(body.options.length, 12);
+  assert.equal(body.proposal, undefined);
+});
+
+test("visit charge reads do not hide a missing diagnosis referenced by an existing encounter", async () => {
+  const fhir = new MemoryFhir();
+  fhir.resources.push({
+    resourceType: "Encounter",
+    id: "enc-missing-diagnosis",
+    status: "in-progress",
+    class: { code: "AMB" },
+    subject: { reference: "Patient/patient-1" },
+    diagnosis: [{ condition: { reference: "Condition/missing" }, rank: 1 }],
+  } satisfies Encounter);
+  const authenticate = async () => ({
+    staffReference: "Practitioner/doc",
+    actorRole: "provider" as const,
+    fhir,
+  });
+
+  await assert.rejects(
+    handleVisitChargeRequest({ authenticate }, {
+      authHeader: "Bearer clinician",
+      params: { encounterId: "enc-missing-diagnosis" },
+    }),
+    /Condition\/missing not found/,
+  );
 });
 
 test("an explicit create pointer wins while omission still derives the principal diagnosis", async () => {
@@ -710,6 +763,33 @@ test("visit diagnosis pointer changes validate, clear, and round-trip without a 
   assert.deepEqual((read.body as { proposal: ChargeProposal }).proposal.dxPointers, []);
 });
 
+test("a pointer-only edit without an existing visit proposal returns 404 without saving a malformed charge", async () => {
+  const fhir = new MemoryFhir();
+  fhir.resources.push({
+    resourceType: "Encounter",
+    id: "enc-missing-proposal",
+    status: "in-progress",
+    class: { code: "AMB" },
+    subject: { reference: "Patient/patient-1" },
+    diagnosis: [{ condition: { reference: "Condition/principal" }, rank: 1 }],
+  } satisfies Encounter);
+  const authenticate = async () => ({
+    staffReference: "Practitioner/doc",
+    actorRole: "provider" as const,
+    fhir,
+  });
+
+  const result = await handleVisitChargeMutationRequest({ authenticate }, {
+    authHeader: "Bearer clinician",
+    params: { encounterId: "enc-missing-proposal" },
+    body: { dxPointer: "Condition/principal" },
+  });
+  assert.equal(result.status, 404);
+  assert.match((result.body as { error: string }).error, /proposal not found/i);
+  const store = new ProtocolBasicStore<ChargeProposal>(fhir, PROTOCOL_BASIC_CODES.chargeProposal);
+  assert.equal(await store.get("manual-visit-code:enc-missing-proposal"), undefined);
+});
+
 test("diagnosis reorder and principal changes never move an operator-selected visit pointer", async () => {
   const fhir = new MemoryFhir();
   const encounter: Encounter = {
@@ -743,8 +823,9 @@ test("diagnosis reorder and principal changes never move an operator-selected vi
   await fhir.update("Encounter", "enc-stable-pointer", {
     ...encounter,
     diagnosis: [
-      { condition: { reference: "Condition/selected" }, rank: 1 },
+      { condition: { reference: "Condition/new-principal" }, rank: 1 },
       { condition: { reference: "Condition/principal" }, rank: 2 },
+      { condition: { reference: "Condition/selected" }, rank: 3 },
     ],
   });
 

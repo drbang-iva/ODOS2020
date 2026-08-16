@@ -138,8 +138,8 @@ export function EncounterHeader({ patient, encounterId }: Props) {
   );
   const mdmHint = useMemo(
     () =>
-      encounter && visitProcedureFamily === "em" ? computeMdmHint({ encounter }) : undefined,
-    [encounter, visitProcedureFamily],
+      encounter ? computeMdmHint({ encounter }) : undefined,
+    [encounter],
   );
   const migrated = isMigratedEncounter(encounter);
 

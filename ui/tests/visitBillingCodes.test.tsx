@@ -9,8 +9,10 @@ import {
 } from "../src/lib/procedure-fee-schedule";
 import { feeScheduleDescriptor } from "../src/scenes/settings/FeeScheduleSettings";
 import { VisitCodeSelector } from "../src/components/charting/VisitCodeSelector";
-import { MdmProblemsAxis } from "../src/components/charting/EncounterHeader";
+import { EncounterHeader, MdmProblemsAxis } from "../src/components/charting/EncounterHeader";
 import { computeMdmHint } from "../src/lib/clinical-view-model";
+import { fhir } from "../src/lib/fhir";
+import { RoleProvider } from "../src/lib/role-context";
 import type {
   VisitChargeApi,
   VisitChargeResponse,
@@ -199,6 +201,61 @@ test("selector read failure stays local and non-blocking", async () => {
   act(() => renderer.unmount());
 });
 
+test("selector clears its visit family before loading a different encounter", async () => {
+  const families: Array<VisitProcedureFamily | null | undefined> = [];
+  let resolveSecond!: (response: VisitChargeResponse) => void;
+  const second = new Promise<VisitChargeResponse>((resolve) => { resolveSecond = resolve; });
+  const api: VisitChargeApi = {
+    async read(encounterId) {
+      return encounterId === "enc-first"
+        ? {
+            options: visitOptions(),
+            diagnoses: [],
+            selectedProcedureConceptKey: "office-visit-new-low",
+            procedureFamily: "em",
+          }
+        : second;
+    },
+    async save() { throw new Error("not reached"); },
+  };
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(
+      <VisitCodeSelector
+        encounterId="enc-first"
+        api={api}
+        onProcedureFamilyChange={(family) => families.push(family)}
+      />,
+    );
+    await Promise.resolve();
+  });
+  assert.equal(families.at(-1), "em");
+
+  act(() => {
+    renderer.update(
+      <VisitCodeSelector
+        encounterId="enc-second"
+        api={api}
+        onProcedureFamilyChange={(family) => families.push(family)}
+      />,
+    );
+  });
+  assert.equal(families.at(-1), undefined);
+  assert.equal(renderer.root.findByProps({ "aria-label": "Visit billing code" }).props.value, "");
+
+  await act(async () => {
+    resolveSecond({
+      options: visitOptions(),
+      diagnoses: [],
+      selectedProcedureConceptKey: "comprehensive-exam-new",
+      procedureFamily: "eye-code",
+    });
+    await second;
+  });
+  assert.equal(families.at(-1), "eye-code");
+  act(() => renderer.unmount());
+});
+
 const MDM_ENCOUNTER: Encounter = {
   resourceType: "Encounter",
   id: "enc-mdm",
@@ -294,6 +351,47 @@ test("MDM is absent when no visit key is selected", async () => {
 
 test("MDM is absent while the visit family is not yet known", async () => {
   assert.equal(await mdmStripCount(new Promise<VisitChargeResponse>(() => undefined)), 0);
+});
+
+test("EncounterHeader wires visit family to MDM and suppresses it across an encounter switch", async () => {
+  const originalRead = fhir.read;
+  fhir.read = (async (resourceType: string, id: string) => {
+    assert.equal(resourceType, "Encounter");
+    return {
+      ...MDM_ENCOUNTER,
+      id,
+      subject: { reference: "Patient/patient-1" },
+    };
+  }) as typeof fhir.read;
+  const patient = { resourceType: "Patient" as const, id: "patient-1", name: [{ text: "Test Patient" }] };
+  const header = (encounterId: string) => (
+    <RoleProvider>
+      <EncounterHeader patient={patient} encounterId={encounterId} />
+    </RoleProvider>
+  );
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(header("enc-first"));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    let selector = renderer.root.findByType(VisitCodeSelector);
+    act(() => selector.props.onProcedureFamilyChange("eye-code"));
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "mdm-hint-counter" }).length, 0);
+    act(() => selector.props.onProcedureFamilyChange("em"));
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "mdm-hint-counter" }).length, 1);
+
+    renderer.update(header("enc-second"));
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "mdm-hint-counter" }).length, 0);
+    await act(async () => { await Promise.resolve(); });
+    selector = renderer.root.findByType(VisitCodeSelector);
+    assert.equal(selector.props.encounterId, "enc-second");
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "mdm-hint-counter" }).length, 0);
+  } finally {
+    if (renderer) act(() => renderer.unmount());
+    fhir.read = originalRead;
+  }
 });
 
 function visitOptions(): VisitChargeResponse["options"] {

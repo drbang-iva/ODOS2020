@@ -484,14 +484,13 @@ export async function handleVisitChargeRequest(
   const parsed = z.object({ encounterId: z.string().min(1) }).strict().safeParse(input.params);
   if (!parsed.success) return { status: 400, body: { error: "encounterId is required." } };
   const service = liveService(staff, deps.now);
-  const [charges, encounter, options] = await Promise.all([
+  const [charges, diagnoses, options] = await Promise.all([
     service.charges.list(),
-    staff.fhir.read<Encounter>("Encounter", parsed.data.encounterId),
+    visitChargeDiagnoses(staff.fhir, parsed.data.encounterId),
     listActiveVisitProcedureFees(staff.fhir),
   ]);
   const resolution = resolveManualVisitProposal(charges, parsed.data.encounterId);
   if (resolution.conflict) return { status: 409, body: { error: resolution.conflict } };
-  const diagnoses = await encounterDiagnoses(staff.fhir, encounter);
   return {
     status: 200,
     body: {
@@ -506,6 +505,18 @@ export async function handleVisitChargeRequest(
         : {}),
     },
   };
+}
+
+async function visitChargeDiagnoses(fhir: Pick<LiveFhir, "read">, encounterId: string) {
+  let encounter: Encounter;
+  try {
+    encounter = await fhir.read<Encounter>("Encounter", encounterId);
+  } catch (error) {
+    const status = Number((error as { status?: unknown }).status);
+    if (status === 404 || status === 410) return [];
+    throw error;
+  }
+  return encounterDiagnoses(fhir, encounter);
 }
 
 export async function handleVisitChargeMutationRequest(
