@@ -5,6 +5,7 @@ import {
   type VisitChargeDiagnosis,
   type VisitChargeOption,
   type VisitChargeProposal,
+  type VisitChargeResponse,
   type VisitProcedureFamily,
 } from "../../lib/clinical-graph-client";
 
@@ -15,11 +16,13 @@ export function VisitCodeSelector({
   disabled = false,
   api = DEFAULT_API,
   onProcedureFamilyChange,
+  onVisitChargeChange,
 }: {
   encounterId: string;
   disabled?: boolean;
   api?: VisitChargeApi;
   onProcedureFamilyChange?: (family: VisitProcedureFamily | null | undefined) => void;
+  onVisitChargeChange?: (response: VisitChargeResponse | undefined) => void;
 }) {
   const [options, setOptions] = useState<VisitChargeOption[]>([]);
   const [diagnoses, setDiagnoses] = useState<VisitChargeDiagnosis[]>([]);
@@ -38,6 +41,7 @@ export function VisitCodeSelector({
     setProposal(undefined);
     setSelected("");
     onProcedureFamilyChange?.(undefined);
+    onVisitChargeChange?.(undefined);
     void api.read(encounterId)
       .then((response) => {
         if (cancelled) return;
@@ -46,6 +50,7 @@ export function VisitCodeSelector({
         setProposal(response.proposal);
         setSelected(response.selectedProcedureConceptKey ?? "");
         onProcedureFamilyChange?.(response.procedureFamily ?? null);
+        onVisitChargeChange?.(response);
       })
       .catch((reason: unknown) => {
         if (!cancelled) setError(errorMessage(reason));
@@ -54,7 +59,7 @@ export function VisitCodeSelector({
         if (!cancelled) setLoading(false);
     });
     return () => { cancelled = true; };
-  }, [api, encounterId, onProcedureFamilyChange]);
+  }, [api, encounterId, onProcedureFamilyChange, onVisitChargeChange]);
 
   async function changeProcedure(value: string) {
     setSaving(true);
@@ -64,6 +69,13 @@ export function VisitCodeSelector({
       setSelected(value);
       setProposal(response.proposal);
       onProcedureFamilyChange?.(response.procedureFamily ?? null);
+      onVisitChargeChange?.({
+        options,
+        diagnoses,
+        ...(value ? { selectedProcedureConceptKey: value } : {}),
+        ...(response.procedureFamily ? { procedureFamily: response.procedureFamily } : {}),
+        ...(response.proposal ? { proposal: response.proposal } : {}),
+      });
     } catch (reason) {
       setError(errorMessage(reason));
     } finally {
@@ -76,10 +88,18 @@ export function VisitCodeSelector({
     setError(undefined);
     try {
       const response = await api.save(encounterId, { dxPointer: value || null });
+      const nextProposal = response.proposal ?? proposal;
       if (response.proposal) setProposal(response.proposal);
       if (response.procedureFamily !== undefined) {
         onProcedureFamilyChange?.(response.procedureFamily);
       }
+      onVisitChargeChange?.({
+        options,
+        diagnoses,
+        ...(selected ? { selectedProcedureConceptKey: selected } : {}),
+        ...(response.procedureFamily ? { procedureFamily: response.procedureFamily } : {}),
+        ...(nextProposal ? { proposal: nextProposal } : {}),
+      });
     } catch (reason) {
       setError(errorMessage(reason));
     } finally {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type Ref } from "react";
-import type { Appointment, Encounter, Patient } from "@medplum/fhirtypes";
+import type { Appointment, Condition, Encounter, Patient } from "@medplum/fhirtypes";
 import { fhir } from "../../lib/fhir";
 import {
   assertTransactionSuccess,
@@ -17,6 +17,7 @@ import {
   clinicalGraphApiBase,
   readDiagnosisCompleteness,
   type DiagnosisCompleteness,
+  type VisitChargeResponse,
   type VisitProcedureFamily,
 } from "../../lib/clinical-graph-client";
 import { isMigratedEncounter } from "../../lib/patient-overview";
@@ -34,13 +35,26 @@ import {
 } from "../../lib/scheduling";
 import { VisitCodeSelector } from "./VisitCodeSelector";
 import { ProcedureChargeList } from "./ProcedureChargeList";
+import {
+  ExamCompletenessControl,
+  type ClinicalExamCompleteness,
+} from "./ExamOverviewBoard";
 
 interface Props {
   patient: Patient;
   encounterId: string;
+  completeness?: ClinicalExamCompleteness;
+  draftCount?: number;
+  unassignedCount?: number;
 }
 
-export function EncounterHeader({ patient, encounterId }: Props) {
+export function EncounterHeader({
+  patient,
+  encounterId,
+  completeness,
+  draftCount = 0,
+  unassignedCount,
+}: Props) {
   const [encounter, setEncounter] = useState<Encounter | null>(null);
   const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [appointmentError, setAppointmentError] = useState<string | null>(null);
@@ -52,6 +66,12 @@ export function EncounterHeader({ patient, encounterId }: Props) {
     encounterId: string;
     family: VisitProcedureFamily | null | undefined;
   }>();
+  const [visitChargeState, setVisitChargeState] = useState<VisitChargeResponse>();
+  const [brokenDiagnosisDisplay, setBrokenDiagnosisDisplay] = useState<string>();
+  const [visitControlsOpen, setVisitControlsOpen] = useState(false);
+  const [blackedOut, setBlackedOut] = useState(false);
+  const focusBeforeBlackout = useRef<{ focus: () => void }>();
+  const blackoutOverlay = useRef<HTMLDivElement>(null);
   const completenessCheckVersion = useRef(0);
 
   useEffect(() => {
@@ -136,6 +156,41 @@ export function EncounterHeader({ patient, encounterId }: Props) {
     },
     [encounterId],
   );
+  const handleVisitChargeChange = useCallback((response: VisitChargeResponse | undefined) => {
+    setVisitChargeState(response);
+  }, []);
+  const linkedVisitDiagnosis = visitChargeState?.proposal?.state === "accepted"
+    ? visitChargeState.proposal.dxPointers[0]
+    : undefined;
+  const brokenVisitDiagnosis = linkedVisitDiagnosis &&
+    !visitChargeState?.diagnoses.some((diagnosis) => diagnosis.reference === linkedVisitDiagnosis)
+    ? linkedVisitDiagnosis
+    : undefined;
+
+  useEffect(() => {
+    setVisitChargeState(undefined);
+    setBrokenDiagnosisDisplay(undefined);
+    setVisitControlsOpen(false);
+  }, [encounterId]);
+
+  useEffect(() => {
+    setBrokenDiagnosisDisplay(undefined);
+    const conditionId = brokenVisitDiagnosis?.match(/^Condition\/([A-Za-z0-9.-]+)$/)?.[1];
+    if (!conditionId) return;
+    let cancelled = false;
+    void fhir.read<Condition>("Condition", conditionId)
+      .then((condition) => {
+        if (!cancelled) setBrokenDiagnosisDisplay(conditionDisplay(condition, brokenVisitDiagnosis));
+      })
+      .catch(() => {
+        if (!cancelled) setBrokenDiagnosisDisplay(brokenVisitDiagnosis);
+      });
+    return () => { cancelled = true; };
+  }, [brokenVisitDiagnosis]);
+
+  useEffect(() => {
+    if (blackedOut) blackoutOverlay.current?.focus();
+  }, [blackedOut]);
   const mdmHint = useMemo(
     () =>
       encounter ? computeMdmHint({ encounter }) : undefined,
@@ -230,79 +285,285 @@ export function EncounterHeader({ patient, encounterId }: Props) {
     }
   }
 
-  return (
-    <header className="border-b border-white/10 bg-bg-panel px-5 py-4">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="text-xs uppercase tracking-widest text-white/35">Comprehensive Exam</div>
-          <div className="mt-1 flex flex-wrap items-center gap-3">
-            <h1 className="text-xl font-semibold text-white">{displayName}</h1>
-            {patient.birthDate && <span className="text-sm text-white/50">DOB {patient.birthDate}</span>}
-            <span className="rounded border border-white/10 px-2 py-1 text-xs text-white/60">
-              {migrated ? "Migrated" : encounter?.status ?? "loading"}
-            </span>
-          </div>
-          {patient.id && <BalanceChips patientReference={`Patient/${patient.id}`} />}
-        </div>
+  function enterBlackout() {
+    const activeElement = typeof document === "undefined" ? undefined : document.activeElement;
+    focusBeforeBlackout.current = activeElement && "focus" in activeElement &&
+        typeof activeElement.focus === "function"
+      ? activeElement as { focus: () => void }
+      : undefined;
+    setBlackedOut(true);
+  }
 
+  function restoreFromBlackout() {
+    const focusTarget = focusBeforeBlackout.current;
+    setBlackedOut(false);
+    void Promise.resolve().then(() => focusTarget?.focus());
+  }
+
+  return (
+    <header className="border-b border-white/10 bg-bg-panel">
+      <ExamChartBar
+        patientName={displayName}
+        patientDetail={[
+          patient.birthDate ? `DOB ${patient.birthDate}` : undefined,
+          migrated ? "Migrated" : encounter?.status ?? "loading",
+        ].filter(Boolean).join(" · ")}
+        completeness={completeness}
+        draftCount={draftCount}
+        unassignedCount={unassignedCount}
+        visitCharge={visitChargeState}
+        brokenDiagnosisDisplay={brokenDiagnosisDisplay}
+        visitControlsOpen={visitControlsOpen}
+        onToggleVisitControls={() => setVisitControlsOpen((current) => !current)}
+        onBlackout={enterBlackout}
+        requestFinishEncounter={requestFinishEncounter}
+        signDisabled={busy !== null || migrated}
+        signLabel={busy === "checking" ? "Checking..." : busy === "finish" ? "Signing..." : "Sign & finish"}
+      />
+
+      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
+        {patient.id && <BalanceChips patientReference={`Patient/${patient.id}`} />}
         <div className="flex flex-wrap items-center gap-2">
           <RoleSelector />
           <button
+            type="button"
             onClick={abandonEncounter}
             disabled={busy !== null || migrated}
             title={migrated ? "Migrated historical encounters are read-only." : undefined}
-            className="rounded border border-white/15 px-3 py-2 text-sm text-white/65 transition hover:border-red-400/60 hover:text-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+            className="min-h-11 rounded border border-white/15 px-3 py-2 text-sm text-white/65 transition hover:border-red-400/60 hover:text-red-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {busy === "abandon" ? "Abandoning..." : "Abandon encounter"}
-          </button>
-          <button
-            onClick={requestFinishEncounter}
-            disabled={busy !== null || migrated}
-            title={migrated ? "Migrated historical encounters are read-only." : undefined}
-            className="rounded border border-emerald-400/60 bg-emerald-400/15 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-400/25 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {busy === "checking" ? "Checking..." : busy === "finish" ? "Signing..." : "Sign & finish"}
           </button>
         </div>
       </div>
 
-      <VisitCodeSelector
-        encounterId={encounterId}
-        disabled={migrated}
-        onProcedureFamilyChange={handleVisitProcedureFamilyChange}
-      />
-      <ProcedureChargeList encounterId={encounterId} disabled={migrated} />
-
-      {appointment && <AppointmentContextBanner appointment={appointment} />}
-
-      {mdmHint && <MdmProblemsAxis mdmHint={mdmHint} procedureFamily={visitProcedureFamily} />}
-
-      {error && (
-        <div className="mt-3 rounded border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-100">
-          {error}
-        </div>
-      )}
-      {appointmentError && (
-        <div className="mt-3 rounded border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-100">
-          Linked appointment could not be loaded: {appointmentError}
-        </div>
-      )}
-      {completenessAdvisories.length > 0 && (
-        <DiagnosisCompletenessDialog
-          diagnoses={completenessAdvisories}
-          signing={busy !== null}
-          onSignAnyway={() => void finishEncounter()}
-          onAddFindings={() => setCompletenessAdvisories([])}
+      <div
+        id="visit-controls-surface"
+        data-testid="visit-controls-surface"
+        hidden={!visitControlsOpen}
+        className="border-t border-white/10 px-5 pb-4"
+      >
+        <VisitCodeSelector
+          encounterId={encounterId}
+          disabled={migrated}
+          onProcedureFamilyChange={handleVisitProcedureFamilyChange}
+          onVisitChargeChange={handleVisitChargeChange}
         />
-      )}
-      {seriesPrompt && (
-        <SeriesSignOffNotice
-          prompt={seriesPrompt}
-          onClose={() => patient.id && openPatientOverview(patient.id, "replace")}
+        <ProcedureChargeList encounterId={encounterId} disabled={migrated} />
+      </div>
+
+      <div className="px-5 pb-4">
+        {appointment && <AppointmentContextBanner appointment={appointment} />}
+
+        {mdmHint && <MdmProblemsAxis mdmHint={mdmHint} procedureFamily={visitProcedureFamily} />}
+
+        {error && (
+          <div className="mt-3 rounded border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-100">
+            {error}
+          </div>
+        )}
+        {appointmentError && (
+          <div className="mt-3 rounded border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-100">
+            Linked appointment could not be loaded: {appointmentError}
+          </div>
+        )}
+        {completenessAdvisories.length > 0 && (
+          <DiagnosisCompletenessDialog
+            diagnoses={completenessAdvisories}
+            signing={busy !== null}
+            onSignAnyway={() => void finishEncounter()}
+            onAddFindings={() => setCompletenessAdvisories([])}
+          />
+        )}
+        {seriesPrompt && (
+          <SeriesSignOffNotice
+            prompt={seriesPrompt}
+            onClose={() => patient.id && openPatientOverview(patient.id, "replace")}
+          />
+        )}
+      </div>
+
+      {blackedOut && (
+        <div
+          ref={blackoutOverlay}
+          data-testid="blackout-overlay"
+          className="odos-blackout-overlay"
+          role="button"
+          tabIndex={0}
+          aria-label="Restore screen"
+          onClick={restoreFromBlackout}
+          onKeyDown={(event) => {
+            if (event.key !== "Escape" && event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            restoreFromBlackout();
+          }}
         />
       )}
     </header>
   );
+}
+
+interface ExamChartBarProps {
+  patientName: string;
+  patientDetail: string;
+  completeness?: ClinicalExamCompleteness;
+  draftCount: number;
+  unassignedCount?: number;
+  visitCharge?: VisitChargeResponse;
+  brokenDiagnosisDisplay?: string;
+  visitControlsOpen: boolean;
+  onToggleVisitControls: () => void;
+  onBlackout: () => void;
+  requestFinishEncounter: () => void | Promise<void>;
+  signDisabled: boolean;
+  signLabel: string;
+}
+
+export function ExamChartBar({
+  patientName: name,
+  patientDetail,
+  completeness,
+  draftCount,
+  unassignedCount,
+  visitCharge,
+  brokenDiagnosisDisplay,
+  visitControlsOpen,
+  onToggleVisitControls,
+  onBlackout,
+  requestFinishEncounter,
+  signDisabled,
+  signLabel,
+}: ExamChartBarProps) {
+  const visit = visitChipView(visitCharge, brokenDiagnosisDisplay);
+  return (
+    <div className="odos-exam-chart-bar" data-testid="exam-chart-bar">
+      <div className="odos-chart-bar-patient" data-chart-bar-slot="patient">
+        <span>Patient</span>
+        <strong>{name}</strong>
+        {patientDetail && <small>{patientDetail}</small>}
+      </div>
+      <div
+        className="odos-chart-bar-cc-reserved"
+        data-chart-bar-slot="cc-hpi-reserved"
+        aria-hidden={true}
+      />
+      <div className="odos-chart-bar-sections" data-chart-bar-slot="exam-sections">
+        <ExamCompletenessControl completeness={completeness} />
+      </div>
+      <div className="odos-chart-bar-count" data-chart-bar-slot="drafts">
+        {draftCount} {draftCount === 1 ? "draft" : "drafts"}
+      </div>
+      <div className="odos-chart-bar-count is-unassigned" data-chart-bar-slot="unassigned">
+        {unassignedCount === undefined ? "Unassigned unavailable" : `${unassignedCount} unassigned`}
+      </div>
+      <button
+        type="button"
+        className="odos-chart-bar-visit"
+        data-chart-bar-slot="visit"
+        data-testid="visit-chip"
+        aria-expanded={visitControlsOpen}
+        aria-controls="visit-controls-surface"
+        onClick={onToggleVisitControls}
+      >
+        {visit.kind === "none" ? (
+          <strong>Visit — none</strong>
+        ) : (
+          <>
+            <span className="odos-chart-bar-visit-label">
+              <small>Visit</small>
+              <strong>{visit.label}</strong>
+              {visit.kind === "linked" && <span>linked diagnosis {visit.diagnosis}</span>}
+            </span>
+            {visit.kind === "empty" && (
+              <BillingIntegrityMarker state="empty" full="no diagnosis linked" short="no dx linked" />
+            )}
+            {visit.kind === "broken" && (
+              <BillingIntegrityMarker
+                state="broken"
+                full={`broken linked diagnosis ${visit.diagnosis}`}
+                short={`broken · ${visit.diagnosis}`}
+              />
+            )}
+          </>
+        )}
+      </button>
+      <button
+        type="button"
+        className="odos-chart-bar-blackout"
+        data-chart-bar-slot="blackout"
+        data-testid="blackout-control"
+        aria-label="Black out screen"
+        onClick={onBlackout}
+      >
+        <span aria-hidden="true">●</span>
+        <span className="odos-chart-bar-blackout-label">Blackout</span>
+      </button>
+      <button
+        type="button"
+        className="odos-chart-bar-sign"
+        data-chart-bar-slot="sign"
+        disabled={signDisabled}
+        onClick={requestFinishEncounter}
+      >
+        <span className="odos-chart-bar-sign-full">{signLabel}</span>
+        <span className="odos-chart-bar-sign-short">Sign</span>
+      </button>
+    </div>
+  );
+}
+
+function BillingIntegrityMarker({
+  state,
+  full,
+  short,
+}: {
+  state: "empty" | "broken";
+  full: string;
+  short: string;
+}) {
+  return (
+    <span
+      className="odos-billing-integrity-marker"
+      data-billing-integrity={state}
+      data-short-label={`◇ ${short}`}
+      aria-label={`Billing integrity: ${full}`}
+    >
+      ◇ {full}
+    </span>
+  );
+}
+
+type VisitChipView =
+  | { kind: "none" }
+  | { kind: "linked"; label: string; diagnosis: string }
+  | { kind: "empty"; label: string }
+  | { kind: "broken"; label: string; diagnosis: string };
+
+function visitChipView(
+  response: VisitChargeResponse | undefined,
+  brokenDiagnosisDisplay: string | undefined,
+): VisitChipView {
+  const proposal = response?.proposal?.state === "accepted" ? response.proposal : undefined;
+  const selectedKey = response?.selectedProcedureConceptKey ?? proposal?.procedureConceptKey;
+  if (!selectedKey || !proposal) return { kind: "none" };
+  const option = response?.options.find((candidate) => candidate.procedureConceptKey === selectedKey);
+  const label = option?.billingCode ?? option?.display ?? selectedKey;
+  const diagnosisReference = proposal.dxPointers[0];
+  if (!diagnosisReference) return { kind: "empty", label };
+  const diagnosis = response?.diagnoses.find((candidate) => candidate.reference === diagnosisReference);
+  if (diagnosis) return { kind: "linked", label, diagnosis: diagnosis.display };
+  return {
+    kind: "broken",
+    label,
+    diagnosis: brokenDiagnosisDisplay ?? diagnosisReference,
+  };
+}
+
+function conditionDisplay(condition: Condition, fallback: string): string {
+  return condition.code?.text ??
+    condition.code?.coding?.find((coding) => coding.display)?.display ??
+    condition.code?.coding?.find((coding) => coding.code)?.code ??
+    fallback;
 }
 
 export function MdmProblemsAxis({
