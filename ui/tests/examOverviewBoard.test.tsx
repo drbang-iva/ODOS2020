@@ -5,9 +5,12 @@ import { act, create, type ReactTestInstance, type ReactTestRenderer } from "rea
 import type { ExamOverviewProjection } from "../../mcp/src/clinical-graph/exam-overview-projection";
 import { DiagnosisWorkspace } from "../src/components/charting/DiagnosisWorkspace";
 import { ExamOverviewBoard } from "../src/components/charting/ExamOverviewBoard";
+import { ProcedureChargeList } from "../src/components/charting/ProcedureChargeList";
 import { SpineNav } from "../src/components/charting/SpineNav";
+import { VisitCodeSelector } from "../src/components/charting/VisitCodeSelector";
 import { VaSection } from "../src/components/charting/VaSection";
 import type { CustomFindingDefinition } from "../src/components/charting/CustomFindingSection";
+import type { EncounterFindingRow } from "../src/lib/diagnosis-findings";
 import { fhir } from "../src/lib/fhir";
 import { RoleProvider } from "../src/lib/role-context";
 import { ODOS_DISCIPLINE_SYSTEM, type SchedulingDiscipline } from "../src/lib/scheduling";
@@ -133,6 +136,83 @@ const PROJECTION: ExamOverviewProjection = {
   },
 };
 
+const UNASSIGNED_FINDINGS: EncounterFindingRow[] = [
+  {
+    atomicFindingId: "tonometry::iop::high",
+    findingDefinitionId: "FindingDefinition/tonometry-iop",
+    findingDefinitionKey: "tonometry-iop",
+    fieldCode: "iop",
+    optionCode: "high",
+    display: "Elevated intraocular pressure",
+    sectionKey: "tonometry",
+    gradeScale: [],
+    diagnosisKeys: ["ocular-hypertension"],
+    origin: "shipped",
+    laterality: "OD",
+    lateralitySource: "explicit",
+    source: "atomic",
+    presence: "present",
+    observationReference: "Observation/unassigned-iop",
+  },
+  {
+    atomicFindingId: "anterior::cornea::staining",
+    findingDefinitionId: "FindingDefinition/cornea-staining",
+    findingDefinitionKey: "cornea-staining",
+    fieldCode: "cornea",
+    optionCode: "staining",
+    display: "Corneal staining",
+    sectionKey: "ocular-health:anterior:cornea",
+    gradeScale: ["trace", "1+", "2+", "3+", "4+"],
+    diagnosisKeys: ["keratitis"],
+    origin: "shipped",
+    laterality: "OS",
+    lateralitySource: "explicit",
+    source: "atomic",
+    presence: "present",
+    grade: "1+",
+    observationReference: "Observation/unassigned-cornea",
+  },
+];
+
+test("the permanent chart bar keeps draft state reserved instead of inferring it from section status", async () => {
+  const harness = await renderEncounter(PROJECTION, { unassignedFindings: UNASSIGNED_FINDINGS });
+  try {
+    const bars = harness.renderer.root.findAllByProps({ "data-testid": "exam-chart-bar" });
+    assert.equal(bars.length, 1);
+    const bar = bars[0]!;
+    const slots = bar.findAll((node) => typeof node.props["data-chart-bar-slot"] === "string");
+    assert.deepEqual(slots.map((slot) => slot.props["data-chart-bar-slot"]), [
+      "patient",
+      "cc-hpi-reserved",
+      "exam-sections",
+      "drafts",
+      "unassigned",
+      "visit",
+      "blackout",
+      "sign",
+    ]);
+    assert.equal(textContent(slots[1]!), "");
+    assert.equal(slots[1]!.props["aria-hidden"], true);
+    assert.equal(textContent(slots[4]!), "2 unassigned");
+
+    act(() => harness.renderer.root.findByType(ExamOverviewBoard).props.onOpenEditor("va"));
+    act(() => harness.renderer.root.findByType(VaSection).props.onSaved({
+      completed: false,
+      summary: "Unsaved local section state",
+    }));
+
+    const updatedBar = harness.renderer.root.findByProps({ "data-testid": "exam-chart-bar" });
+    const updatedSlots = updatedBar.findAll((node) =>
+      typeof node.props["data-chart-bar-slot"] === "string"
+    );
+    assert.equal(textContent(updatedSlots[3]!), "");
+    assert.equal(updatedSlots[3]!.props["aria-hidden"], true);
+    assert.equal(updatedSlots[3]!.props["data-reserved-for"], "slice-4-drafts");
+  } finally {
+    harness.restore();
+  }
+});
+
 test("structure view renders all projected sections and keeps every clinical state channel independent", async () => {
   const harness = await renderEncounter(PROJECTION);
   try {
@@ -188,13 +268,21 @@ test("structure view renders all projected sections and keeps every clinical sta
   }
 });
 
-test("completeness footer opens a traceable section account and disclaims billing-code meaning", async () => {
+test("completeness moves to the chart bar, opens its trace, and disclaims billing-code meaning", async () => {
   const harness = await renderEncounter(PROJECTION);
   try {
-    const trigger = harness.renderer.root.findByProps({ "data-testid": "exam-completeness-trigger" });
+    const chartBars = harness.renderer.root.findAllByProps({ "data-testid": "exam-chart-bar" });
+    assert.equal(chartBars.length, 1);
+    const chartBar = chartBars[0]!;
+    const trigger = chartBar.findByProps({ "data-testid": "exam-completeness-trigger" });
     assert.equal(textContent(trigger), "Exam sections: 1 of 2");
     assert.equal(trigger.props["aria-expanded"], false);
     assert.equal(harness.renderer.root.findAllByProps({ id: "exam-completeness-trace" }).length, 0);
+    assert.equal(
+      harness.renderer.root.findByType(ExamOverviewBoard)
+        .findAllByProps({ "data-testid": "exam-completeness-trigger" }).length,
+      0,
+    );
 
     await act(async () => trigger.props.onClick());
 
@@ -231,6 +319,47 @@ test("unconfigured completeness renders as a neutral state instead of complete o
     assert.match(textContent(footer), /Exam sections: Not configured/);
     assert.doesNotMatch(textContent(footer), /Complete|Error/);
     assert.equal(footer.props.role, "status");
+  } finally {
+    harness.restore();
+  }
+});
+
+test("blackout preserves the structure editor, open visit controls, and focused control through keyboard restore", async () => {
+  const harness = await renderEncounter(PROJECTION);
+  try {
+    const vaLauncher = harness.renderer.root.findByProps({ "data-editor-section-id": "va" });
+    await act(async () => vaLauncher.props.onClick());
+    assert.equal(harness.renderer.root.findAllByType(VaSection).length, 1);
+
+    const visitChips = harness.renderer.root.findAllByProps({ "data-testid": "visit-chip" });
+    assert.equal(visitChips.length, 1);
+    const visitChip = visitChips[0]!;
+    await act(async () => visitChip.props.onClick());
+    const visitSurface = harness.renderer.root.findByProps({ "data-testid": "visit-controls-surface" });
+    assert.equal(visitSurface.findAllByType(VisitCodeSelector).length, 1);
+    assert.equal(visitSurface.findAllByType(ProcedureChargeList).length, 1);
+
+    const blackout = harness.renderer.root.findByProps({ "data-testid": "blackout-control" });
+    assert.equal(blackout.type, "button");
+    await act(async () => blackout.props.onClick());
+    const overlay = harness.renderer.root.findByProps({ "data-testid": "blackout-overlay" });
+    assert.equal(harness.renderer.root.findAllByType(VaSection).length, 1);
+    assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "visit-controls-surface" }).length, 1);
+
+    let tabPrevented = 0;
+    await act(async () => overlay.props.onKeyDown({
+      key: "Tab",
+      preventDefault() { tabPrevented += 1; },
+    }));
+    assert.equal(tabPrevented, 1);
+    assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "blackout-overlay" }).length, 1);
+    assert.equal(harness.focusRestoreCount(), 0);
+
+    await act(async () => overlay.props.onKeyDown({ key: "Escape", preventDefault() {} }));
+    assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "blackout-overlay" }).length, 0);
+    assert.equal(harness.renderer.root.findAllByType(VaSection).length, 1);
+    assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "visit-controls-surface" }).length, 1);
+    assert.equal(harness.focusRestoreCount(), 1);
   } finally {
     harness.restore();
   }
@@ -416,23 +545,85 @@ test("an editor save and return to the board each refetch the projection", async
   }
 });
 
+test("a section save refreshes the permanent unassigned count", async () => {
+  const harness = await renderEncounter(PROJECTION, {
+    unassignedResponses: [[], [], [], UNASSIGNED_FINDINGS],
+  });
+  try {
+    assert.equal(harness.findingsFetchCount(), 2);
+    const vaLauncher = harness.renderer.root.findByProps({ "data-editor-section-id": "va" });
+    await act(async () => vaLauncher.props.onClick());
+    const fetchesBeforeSave = harness.findingsFetchCount();
+
+    const va = harness.renderer.root.findByType(VaSection);
+    await act(async () => {
+      va.props.onSaved({ completed: true });
+      await flushEffects();
+      await flushEffects();
+    });
+
+    assert.equal(harness.findingsFetchCount(), fetchesBeforeSave + 1);
+    const unassigned = harness.renderer.root.findByProps({ "data-chart-bar-slot": "unassigned" });
+    assert.equal(textContent(unassigned), "2 unassigned");
+  } finally {
+    harness.restore();
+  }
+});
+
+test("a diagnosis-led finding mutation refreshes permanent completeness", async () => {
+  const refreshed: ExamOverviewProjection = {
+    ...PROJECTION,
+    completeness: {
+      ...PROJECTION.completeness,
+      status: "complete",
+      resolvedSectionCount: 2,
+      trace: PROJECTION.completeness.trace.map((row) => ({ ...row, resolved: true })),
+    },
+  };
+  const harness = await renderEncounter(PROJECTION, {
+    overviewResponses: [PROJECTION, refreshed],
+  });
+  try {
+    window.dispatchEvent(new CustomEvent("odos:encounter-findings-changed", {
+      detail: { encounterReference: "Encounter/exam-1" },
+    }));
+    await act(async () => {
+      await flushEffects();
+      await flushEffects();
+    });
+
+    assert.equal(harness.overviewFetchCount(), 2);
+    const completeness = harness.renderer.root.findByProps({
+      "data-testid": "exam-completeness-trigger",
+    });
+    assert.equal(textContent(completeness), "Exam sections: 2 of 2");
+  } finally {
+    harness.restore();
+  }
+});
+
 interface RenderEncounterOptions {
   discipline?: SchedulingDiscipline;
   findingDefinitions?: CustomFindingDefinition[];
   procedureDefinitions?: CustomFindingDefinition[];
   overviewResponses?: unknown[];
   captureOverviewErrors?: boolean;
+  unassignedFindings?: EncounterFindingRow[];
+  unassignedResponses?: EncounterFindingRow[][];
 }
 
 async function renderEncounter(projection: unknown, options: RenderEncounterOptions = {}): Promise<{
   renderer: ReactTestRenderer;
   overviewFetchCount: () => number;
+  findingsFetchCount: () => number;
   overviewErrors: unknown[][];
+  focusRestoreCount: () => number;
   restore: () => void;
 }> {
   const originalFetch = globalThis.fetch;
   const originalRead = fhir.read;
   const originalDocument = Object.getOwnPropertyDescriptor(globalThis, "document");
+  const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
   const originalConsoleError = console.error;
   const overviewErrors: unknown[][] = [];
   if (options.captureOverviewErrors) {
@@ -449,6 +640,8 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
       : {}),
   })) as typeof fhir.read;
   let overviewFetches = 0;
+  let findingsFetches = 0;
+  let focusRestores = 0;
   globalThis.fetch = (async (input) => {
     const url = String(input);
     if (url.endsWith("/clinical-graph/encounters/exam-1/exam-overview")) {
@@ -485,11 +678,14 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
       });
     }
     if (url.includes("/clinical-graph/encounters/exam-1/findings")) {
+      const responses = options.unassignedResponses ?? [options.unassignedFindings ?? []];
+      const unassigned = responses[Math.min(findingsFetches, responses.length - 1)] ?? [];
+      findingsFetches += 1;
       return jsonResponse({
         canWrite: false,
         findings: [],
         catalog: [],
-        unassigned: [],
+        unassigned,
         bySection: {},
         visitDiagnoses: [],
       });
@@ -513,7 +709,21 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
     value: {
       addEventListener: () => undefined,
       removeEventListener: () => undefined,
+      activeElement: { focus: () => { focusRestores += 1; } },
     } as unknown as Document,
+  });
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: Object.assign(new EventTarget(), {
+      localStorage: {
+        length: 1,
+        clear() {},
+        getItem(key: string) { return key === "odos:encounter-chart-view" ? "structure" : null; },
+        key() { return null; },
+        removeItem() {},
+        setItem() {},
+      } satisfies Storage,
+    }) as Window,
   });
 
   let renderer!: ReactTestRenderer;
@@ -532,7 +742,9 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
   return {
     renderer,
     overviewFetchCount: () => overviewFetches,
+    findingsFetchCount: () => findingsFetches,
     overviewErrors,
+    focusRestoreCount: () => focusRestores,
     restore: () => {
       act(() => renderer.unmount());
       fhir.read = originalRead;
@@ -540,6 +752,8 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
       console.error = originalConsoleError;
       if (originalDocument) Object.defineProperty(globalThis, "document", originalDocument);
       else delete (globalThis as { document?: Document }).document;
+      if (originalWindow) Object.defineProperty(globalThis, "window", originalWindow);
+      else delete (globalThis as { window?: Window }).window;
     },
   };
 }

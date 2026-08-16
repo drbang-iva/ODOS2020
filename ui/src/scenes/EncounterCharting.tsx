@@ -42,6 +42,7 @@ import { chartEditorInventory, SpineNav } from "../components/charting/SpineNav"
 import { VaSection } from "../components/charting/VaSection";
 import { WearingSection } from "../components/charting/WearingSection";
 import { authHeaders, clinicalGraphApiBase } from "../lib/clinical-graph-client";
+import { loadDiagnosisFindings } from "../lib/diagnosis-findings";
 import { fhir } from "../lib/fhir";
 import {
   loadEncounterChartView,
@@ -102,6 +103,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const [examOverviewRefreshing, setExamOverviewRefreshing] = useState(false);
   const [examOverviewRefreshVersion, setExamOverviewRefreshVersion] = useState(0);
   const [boardEditorOpen, setBoardEditorOpen] = useState(false);
+  const [unassignedCount, setUnassignedCount] = useState<number>();
 
   function setSidebarOpen(expanded: boolean) {
     sidebarExpandedForSession = expanded;
@@ -134,7 +136,6 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   }, [encounterId]);
 
   useEffect(() => {
-    if (chartView !== "structure") return;
     let cancelled = false;
     setExamOverviewRefreshing(true);
     loadExamOverviewProjection(encounterId)
@@ -153,7 +154,41 @@ export function EncounterCharting({ patient, encounterId }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [chartView, encounterId, examOverviewRefreshVersion]);
+  }, [encounterId, examOverviewRefreshVersion]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const encounterReference = `Encounter/${encounterId}`;
+    setUnassignedCount(undefined);
+    void loadDiagnosisFindings(encounterReference)
+      .then((payload) => {
+        if (!cancelled) setUnassignedCount(payload.unassigned.length);
+      })
+      .catch((caught) => {
+        if (!cancelled) {
+          setUnassignedCount(undefined);
+          console.error("Unassigned finding count unavailable.", caught);
+        }
+      });
+    return () => { cancelled = true; };
+  }, [encounterId, examOverviewRefreshVersion]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const encounterReference = `Encounter/${encounterId}`;
+    const refresh = (event: Event) => {
+      const detail = (event as CustomEvent<{ encounterReference?: string }>).detail;
+      if (detail?.encounterReference === encounterReference) refreshExamOverview();
+    };
+    window.addEventListener("odos:diagnosis-picked", refresh);
+    window.addEventListener("odos:encounter-diagnosis-updated", refresh);
+    window.addEventListener("odos:encounter-findings-changed", refresh);
+    return () => {
+      window.removeEventListener("odos:diagnosis-picked", refresh);
+      window.removeEventListener("odos:encounter-diagnosis-updated", refresh);
+      window.removeEventListener("odos:encounter-findings-changed", refresh);
+    };
+  }, [encounterId]);
 
   async function loadCatalog() {
     try {
@@ -388,7 +423,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
       ...current,
       [section]: status,
     }));
-    if (boardEditorOpen) refreshExamOverview();
+    refreshExamOverview();
   }
 
   const patientReference = `Patient/${patient.id}`;
@@ -502,7 +537,12 @@ export function EncounterCharting({ patient, encounterId }: Props) {
 
   return (
     <div className={["odos-charting-workspace flex h-screen w-screen flex-col bg-bg-deep text-white", config.encounterDensity === "compact" ? "text-[0.95rem]" : ""].join(" ")}>
-      <EncounterHeader patient={patient} encounterId={encounterId} />
+      <EncounterHeader
+        patient={patient}
+        encounterId={encounterId}
+        completeness={activeExamOverviewProjection?.completeness}
+        unassignedCount={unassignedCount}
+      />
       <div className="odos-chart-view-toggle" role="group" aria-label="Chart workspace view">
         <button type="button" aria-pressed={chartView === "diagnosis"} onClick={() => selectChartView("diagnosis")}>By diagnosis</button>
         <button type="button" aria-pressed={chartView === "structure"} onClick={() => selectChartView("structure")}>By structure</button>

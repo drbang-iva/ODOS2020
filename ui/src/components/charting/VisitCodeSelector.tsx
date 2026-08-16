@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   visitChargeApi,
   type VisitChargeApi,
+  type VisitChargeChange,
   type VisitChargeDiagnosis,
   type VisitChargeOption,
   type VisitChargeProposal,
+  type VisitChargeResponse,
   type VisitProcedureFamily,
 } from "../../lib/clinical-graph-client";
 
@@ -15,11 +17,13 @@ export function VisitCodeSelector({
   disabled = false,
   api = DEFAULT_API,
   onProcedureFamilyChange,
+  onVisitChargeChange,
 }: {
   encounterId: string;
   disabled?: boolean;
   api?: VisitChargeApi;
   onProcedureFamilyChange?: (family: VisitProcedureFamily | null | undefined) => void;
+  onVisitChargeChange?: (response: VisitChargeResponse | undefined) => void;
 }) {
   const [options, setOptions] = useState<VisitChargeOption[]>([]);
   const [diagnoses, setDiagnoses] = useState<VisitChargeDiagnosis[]>([]);
@@ -28,63 +32,86 @@ export function VisitCodeSelector({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
+  const requestVersion = useRef(0);
+  const activeEncounter = useRef<string>();
 
-  useEffect(() => {
-    let cancelled = false;
+  const read = useCallback(async (reset: boolean) => {
+    const version = ++requestVersion.current;
     setLoading(true);
     setError(undefined);
-    setOptions([]);
-    setDiagnoses([]);
-    setProposal(undefined);
-    setSelected("");
-    onProcedureFamilyChange?.(undefined);
-    void api.read(encounterId)
-      .then((response) => {
-        if (cancelled) return;
-        setOptions(response.options);
-        setDiagnoses(response.diagnoses);
-        setProposal(response.proposal);
-        setSelected(response.selectedProcedureConceptKey ?? "");
-        onProcedureFamilyChange?.(response.procedureFamily ?? null);
-      })
-      .catch((reason: unknown) => {
-        if (!cancelled) setError(errorMessage(reason));
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-    });
-    return () => { cancelled = true; };
-  }, [api, encounterId, onProcedureFamilyChange]);
+    if (reset) {
+      setOptions([]);
+      setDiagnoses([]);
+      setProposal(undefined);
+      setSelected("");
+      onProcedureFamilyChange?.(undefined);
+      onVisitChargeChange?.(undefined);
+    }
+    try {
+      const response = await api.read(encounterId);
+      if (version !== requestVersion.current) return;
+      setOptions(response.options);
+      setDiagnoses(response.diagnoses);
+      setProposal(response.proposal);
+      setSelected(response.selectedProcedureConceptKey ?? "");
+      onProcedureFamilyChange?.(response.procedureFamily ?? null);
+      onVisitChargeChange?.(response);
+    } catch (reason) {
+      if (version === requestVersion.current) setError(errorMessage(reason));
+    } finally {
+      if (version === requestVersion.current) setLoading(false);
+    }
+  }, [api, encounterId, onProcedureFamilyChange, onVisitChargeChange]);
 
-  async function changeProcedure(value: string) {
+  useEffect(() => {
+    const encounterChanged = activeEncounter.current !== encounterId;
+    activeEncounter.current = encounterId;
+    if (encounterChanged) setSaving(false);
+    const refresh = (event: Event) => {
+      const detail = (event as CustomEvent<{ encounterReference?: string }>).detail;
+      if (detail?.encounterReference === `Encounter/${encounterId}`) void read(false);
+    };
+    void read(true);
+    if (typeof window !== "undefined") {
+      window.addEventListener("odos:diagnosis-picked", refresh);
+      window.addEventListener("odos:encounter-diagnosis-updated", refresh);
+    }
+    return () => {
+      if (activeEncounter.current === encounterId) activeEncounter.current = undefined;
+      requestVersion.current += 1;
+      if (typeof window !== "undefined") {
+        window.removeEventListener("odos:diagnosis-picked", refresh);
+        window.removeEventListener("odos:encounter-diagnosis-updated", refresh);
+      }
+    };
+  }, [encounterId, read]);
+
+  async function saveAndRefresh(change: VisitChargeChange) {
+    requestVersion.current += 1;
     setSaving(true);
     setError(undefined);
+    let saveError: string | undefined;
     try {
-      const response = await api.save(encounterId, { procedureConceptKey: value || null });
-      setSelected(value);
-      setProposal(response.proposal);
-      onProcedureFamilyChange?.(response.procedureFamily ?? null);
+      await api.save(encounterId, change);
     } catch (reason) {
-      setError(errorMessage(reason));
+      saveError = errorMessage(reason);
     } finally {
-      setSaving(false);
+      if (activeEncounter.current === encounterId) {
+        await read(false);
+        if (activeEncounter.current === encounterId) {
+          if (saveError) setError(saveError);
+          setSaving(false);
+        }
+      }
     }
   }
 
-  async function changeDiagnosis(value: string) {
-    setSaving(true);
-    setError(undefined);
-    try {
-      const response = await api.save(encounterId, { dxPointer: value || null });
-      if (response.proposal) setProposal(response.proposal);
-      if (response.procedureFamily !== undefined) {
-        onProcedureFamilyChange?.(response.procedureFamily);
-      }
-    } catch (reason) {
-      setError(errorMessage(reason));
-    } finally {
-      setSaving(false);
-    }
+  function changeProcedure(value: string) {
+    return saveAndRefresh({ procedureConceptKey: value || null });
+  }
+
+  function changeDiagnosis(value: string) {
+    return saveAndRefresh({ dxPointer: value || null });
   }
 
   return (

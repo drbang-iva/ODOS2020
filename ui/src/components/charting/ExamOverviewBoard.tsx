@@ -56,7 +56,7 @@ interface ExamOverviewSectionProjection {
   deferredWithoutReasonCount: number;
 }
 
-interface ClinicalExamCompleteness {
+export interface ClinicalExamCompleteness {
   status: "complete" | "incomplete" | "unconfigured";
   requiredSectionCount: number;
   resolvedSectionCount: number;
@@ -91,7 +91,6 @@ interface Props {
 }
 
 export function ExamOverviewBoard({ projection, editorEntries, refreshing, onOpenEditor, onRefresh }: Props) {
-  const [traceOpen, setTraceOpen] = useState(false);
   const findingByReference = new Map(
     projection.findings.map((finding) => [finding.observationReference, finding]),
   );
@@ -174,11 +173,6 @@ export function ExamOverviewBoard({ projection, editorEntries, refreshing, onOpe
         })}
       </div>
 
-      <CompletenessFooter
-        completeness={projection.completeness}
-        open={traceOpen}
-        onToggle={() => setTraceOpen((current) => !current)}
-      />
     </main>
   );
 }
@@ -266,15 +260,15 @@ function FindingRow({ finding }: { finding: ExamOverviewFindingProjection }) {
   );
 }
 
-function CompletenessFooter({
-  completeness,
-  open,
-  onToggle,
-}: {
-  completeness: ClinicalExamCompleteness;
-  open: boolean;
-  onToggle: () => void;
-}) {
+export function ExamCompletenessControl({ completeness }: { completeness?: ClinicalExamCompleteness }) {
+  const [open, setOpen] = useState(false);
+  if (!completeness) {
+    return (
+      <div className="odos-exam-completeness is-loading" role="status">
+        <strong>Exam sections: Loading</strong>
+      </div>
+    );
+  }
   if (completeness.status === "unconfigured") {
     return (
       <footer
@@ -298,7 +292,7 @@ function CompletenessFooter({
         data-testid="exam-completeness-trigger"
         aria-controls="exam-completeness-trace"
         aria-expanded={open}
-        onClick={onToggle}
+        onClick={() => setOpen((current) => !current)}
       >
         Exam sections: {completeness.resolvedSectionCount} of {completeness.requiredSectionCount}
       </button>
