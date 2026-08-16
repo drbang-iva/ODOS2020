@@ -295,6 +295,83 @@ test("the visit selector rereads diagnosis inventory before a later link edit", 
   }
 });
 
+test("an in-flight Visit save cannot overwrite a newer diagnosis refresh", async () => {
+  const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: new EventTarget() as Window,
+  });
+  const options = visitOptions();
+  const initial: VisitChargeResponse = {
+    options,
+    diagnoses: [{ reference: "Condition/old", display: "Old diagnosis", rank: 1 }],
+    selectedProcedureConceptKey: "office-visit-new-low",
+    procedureFamily: "em",
+    proposal: {
+      id: "manual-visit-code:enc-race",
+      procedureConceptKey: "office-visit-new-low",
+      dxPointers: ["Condition/old"],
+      state: "accepted",
+    },
+  };
+  const refreshed: VisitChargeResponse = {
+    ...initial,
+    diagnoses: [{ reference: "Condition/new", display: "New diagnosis", rank: 1 }],
+  };
+  let resolveSave!: (response: Partial<VisitChargeResponse>) => void;
+  const saveResponse = new Promise<Partial<VisitChargeResponse>>((resolve) => {
+    resolveSave = resolve;
+  });
+  const reported: Array<VisitChargeResponse | undefined> = [];
+  let reads = 0;
+  const api: VisitChargeApi = {
+    async read() {
+      reads += 1;
+      return reads === 1 ? initial : refreshed;
+    },
+    async save() { return saveResponse; },
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <VisitCodeSelector
+          encounterId="enc-race"
+          api={api}
+          onVisitChargeChange={(state) => reported.push(state)}
+        />,
+      );
+      await Promise.resolve();
+    });
+
+    const diagnosis = renderer.root.findByProps({ "aria-label": "Visit billing diagnosis" });
+    let save!: Promise<void>;
+    act(() => {
+      save = diagnosis.props.onChange({ target: { value: "Condition/new" } });
+    });
+    window.dispatchEvent(new CustomEvent("odos:encounter-diagnosis-updated", {
+      detail: { encounterReference: "Encounter/enc-race" },
+    }));
+    await act(async () => { await Promise.resolve(); });
+    assert.deepEqual(reported.at(-1)?.diagnoses, refreshed.diagnoses);
+
+    resolveSave({
+      procedureFamily: "em",
+      proposal: {
+        ...initial.proposal!,
+        dxPointers: ["Condition/new"],
+      },
+    });
+    await act(async () => { await save; });
+    assert.deepEqual(reported.at(-1)?.diagnoses, refreshed.diagnoses);
+    assert.deepEqual(reported.at(-1)?.proposal?.dxPointers, ["Condition/new"]);
+  } finally {
+    if (renderer) act(() => renderer.unmount());
+    if (originalWindow) Object.defineProperty(globalThis, "window", originalWindow);
+    else delete (globalThis as { window?: Window }).window;
+  }
+});
+
 test("the Visit chip renders none, linked-code, empty-link, and named broken-link states", async () => {
   const cases: Array<{
     label: string;

@@ -333,6 +333,15 @@ test("blackout preserves the structure editor, open visit controls, and focused 
     assert.equal(harness.renderer.root.findAllByType(VaSection).length, 1);
     assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "visit-controls-surface" }).length, 1);
 
+    let tabPrevented = 0;
+    await act(async () => overlay.props.onKeyDown({
+      key: "Tab",
+      preventDefault() { tabPrevented += 1; },
+    }));
+    assert.equal(tabPrevented, 1);
+    assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "blackout-overlay" }).length, 1);
+    assert.equal(harness.focusRestoreCount(), 0);
+
     await act(async () => overlay.props.onKeyDown({ key: "Escape", preventDefault() {} }));
     assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "blackout-overlay" }).length, 0);
     assert.equal(harness.renderer.root.findAllByType(VaSection).length, 1);
