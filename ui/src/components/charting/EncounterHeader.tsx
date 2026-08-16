@@ -44,7 +44,6 @@ interface Props {
   patient: Patient;
   encounterId: string;
   completeness?: ClinicalExamCompleteness;
-  draftCount?: number;
   unassignedCount?: number;
 }
 
@@ -52,7 +51,6 @@ export function EncounterHeader({
   patient,
   encounterId,
   completeness,
-  draftCount = 0,
   unassignedCount,
 }: Props) {
   const [encounter, setEncounter] = useState<Encounter | null>(null);
@@ -309,7 +307,6 @@ export function EncounterHeader({
           migrated ? "Migrated" : encounter?.status ?? "loading",
         ].filter(Boolean).join(" · ")}
         completeness={completeness}
-        draftCount={draftCount}
         unassignedCount={unassignedCount}
         visitCharge={visitChargeState}
         brokenDiagnosisDisplay={brokenDiagnosisDisplay}
@@ -413,7 +410,6 @@ interface ExamChartBarProps {
   patientName: string;
   patientDetail: string;
   completeness?: ClinicalExamCompleteness;
-  draftCount: number;
   unassignedCount?: number;
   visitCharge?: VisitChargeResponse;
   brokenDiagnosisDisplay?: string;
@@ -429,7 +425,6 @@ export function ExamChartBar({
   patientName: name,
   patientDetail,
   completeness,
-  draftCount,
   unassignedCount,
   visitCharge,
   brokenDiagnosisDisplay,
@@ -456,9 +451,12 @@ export function ExamChartBar({
       <div className="odos-chart-bar-sections" data-chart-bar-slot="exam-sections">
         <ExamCompletenessControl completeness={completeness} />
       </div>
-      <div className="odos-chart-bar-count" data-chart-bar-slot="drafts">
-        {draftCount} {draftCount === 1 ? "draft" : "drafts"}
-      </div>
+      <div
+        className="odos-chart-bar-count"
+        data-chart-bar-slot="drafts"
+        data-reserved-for="slice-4-drafts"
+        aria-hidden={true}
+      />
       <div className="odos-chart-bar-count is-unassigned" data-chart-bar-slot="unassigned">
         {unassignedCount === undefined ? "Unassigned unavailable" : `${unassignedCount} unassigned`}
       </div>
