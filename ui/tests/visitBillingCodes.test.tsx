@@ -72,11 +72,30 @@ test("the passive selector starts blank, selects, and clears without another wor
   const mutations: unknown[] = [];
   const families: Array<VisitProcedureFamily | null | undefined> = [];
   const options = visitOptions();
+  let selectedProcedureConceptKey: string | undefined;
   const api: VisitChargeApi = {
-    async read() { return { options, diagnoses: [] }; },
+    async read() {
+      return {
+        options,
+        diagnoses: [],
+        ...(selectedProcedureConceptKey
+          ? {
+              selectedProcedureConceptKey,
+              procedureFamily: "vision-plan" as const,
+              proposal: {
+                id: "manual-visit-code:enc-1",
+                procedureConceptKey: selectedProcedureConceptKey,
+                dxPointers: [],
+                state: "accepted" as const,
+              },
+            }
+          : {}),
+      };
+    },
     async save(_encounterId, change) {
       mutations.push(change);
       const procedureConceptKey = change.procedureConceptKey;
+      selectedProcedureConceptKey = procedureConceptKey ?? undefined;
       return {
         options,
         diagnoses: [],
@@ -92,7 +111,7 @@ test("the passive selector starts blank, selects, and clears without another wor
     );
     await Promise.resolve();
   });
-  let select = renderer.root.findByType("select");
+  let select = renderer.root.findByProps({ "aria-label": "Visit billing code" });
   assert.equal(select.props.value, "");
   const renderedOptions = select.findAllByType("option");
   assert.equal(renderedOptions.length, 13);
@@ -109,12 +128,12 @@ test("the passive selector starts blank, selects, and clears without another wor
   await act(async () => {
     await select.props.onChange({ target: { value: "routine-vision-exam-new" } });
   });
-  select = renderer.root.findByType("select");
+  select = renderer.root.findByProps({ "aria-label": "Visit billing code" });
   assert.equal(select.props.value, "routine-vision-exam-new");
   await act(async () => {
     await select.props.onChange({ target: { value: "" } });
   });
-  assert.equal(renderer.root.findByType("select").props.value, "");
+  assert.equal(renderer.root.findByProps({ "aria-label": "Visit billing code" }).props.value, "");
   assert.deepEqual(mutations, [
     { procedureConceptKey: "routine-vision-exam-new" },
     { procedureConceptKey: null },
@@ -139,7 +158,7 @@ test("visit diagnosis selection is visible, editable, clearable, and warns on an
         proposal: {
           id: "manual-visit-code:enc-diagnosis",
           procedureConceptKey: "office-visit-new-low",
-          dxPointers: [],
+          dxPointers: pointer ? [pointer] : [],
           state: "accepted",
         },
       };
@@ -250,12 +269,21 @@ test("the visit selector rereads diagnosis inventory before a later link edit", 
   };
   const reported: Array<VisitChargeResponse | undefined> = [];
   let reads = 0;
+  let saved = false;
   const api: VisitChargeApi = {
     async read() {
       reads += 1;
-      return reads === 1 ? initial : refreshed;
+      return reads === 1
+        ? initial
+        : saved
+          ? {
+              ...refreshed,
+              proposal: { ...refreshed.proposal!, dxPointers: ["Condition/new"] },
+            }
+          : refreshed;
     },
     async save() {
+      saved = true;
       return {
         ...refreshed,
         proposal: {
@@ -324,10 +352,18 @@ test("an in-flight Visit save cannot overwrite a newer diagnosis refresh", async
   });
   const reported: Array<VisitChargeResponse | undefined> = [];
   let reads = 0;
+  let saveCommitted = false;
   const api: VisitChargeApi = {
     async read() {
       reads += 1;
-      return reads === 1 ? initial : refreshed;
+      return reads === 1
+        ? initial
+        : saveCommitted
+          ? {
+              ...refreshed,
+              proposal: { ...refreshed.proposal!, dxPointers: ["Condition/new"] },
+            }
+          : refreshed;
     },
     async save() { return saveResponse; },
   };
@@ -355,6 +391,7 @@ test("an in-flight Visit save cannot overwrite a newer diagnosis refresh", async
     await act(async () => { await Promise.resolve(); });
     assert.deepEqual(reported.at(-1)?.diagnoses, refreshed.diagnoses);
 
+    saveCommitted = true;
     resolveSave({
       procedureFamily: "em",
       proposal: {
@@ -365,6 +402,87 @@ test("an in-flight Visit save cannot overwrite a newer diagnosis refresh", async
     await act(async () => { await save; });
     assert.deepEqual(reported.at(-1)?.diagnoses, refreshed.diagnoses);
     assert.deepEqual(reported.at(-1)?.proposal?.dxPointers, ["Condition/new"]);
+  } finally {
+    if (renderer) act(() => renderer.unmount());
+    if (originalWindow) Object.defineProperty(globalThis, "window", originalWindow);
+    else delete (globalThis as { window?: Window }).window;
+  }
+});
+
+test("a pre-save Visit reread cannot overwrite the authoritative post-save state", async () => {
+  const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: new EventTarget() as Window,
+  });
+  const initial: VisitChargeResponse = {
+    options: visitOptions(),
+    diagnoses: [{ reference: "Condition/one", display: "Diagnosis one", rank: 1 }],
+    selectedProcedureConceptKey: "office-visit-new-low",
+    procedureFamily: "em",
+    proposal: {
+      id: "manual-visit-code:enc-inverse-race",
+      procedureConceptKey: "office-visit-new-low",
+      dxPointers: ["Condition/one"],
+      state: "accepted",
+    },
+  };
+  const final: VisitChargeResponse = {
+    ...initial,
+    selectedProcedureConceptKey: "routine-vision-exam-new",
+    procedureFamily: "vision-plan",
+    proposal: {
+      ...initial.proposal!,
+      procedureConceptKey: "routine-vision-exam-new",
+    },
+  };
+  let resolveStaleRead!: (response: VisitChargeResponse) => void;
+  const staleRead = new Promise<VisitChargeResponse>((resolve) => {
+    resolveStaleRead = resolve;
+  });
+  const reported: Array<VisitChargeResponse | undefined> = [];
+  let reads = 0;
+  const api: VisitChargeApi = {
+    async read() {
+      reads += 1;
+      if (reads === 1) return initial;
+      if (reads === 2) return staleRead;
+      return final;
+    },
+    async save() {
+      return {
+        procedureFamily: "vision-plan",
+        proposal: final.proposal,
+      };
+    },
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <VisitCodeSelector
+          encounterId="enc-inverse-race"
+          api={api}
+          onVisitChargeChange={(state) => reported.push(state)}
+        />,
+      );
+      await Promise.resolve();
+    });
+
+    const procedure = renderer.root.findByProps({ "aria-label": "Visit billing code" });
+    window.dispatchEvent(new CustomEvent("odos:encounter-diagnosis-updated", {
+      detail: { encounterReference: "Encounter/enc-inverse-race" },
+    }));
+    await act(async () => { await Promise.resolve(); });
+
+    await act(async () => procedure.props.onChange({ target: { value: "routine-vision-exam-new" } }));
+    assert.equal(reads, 3);
+    assert.equal(reported.at(-1)?.selectedProcedureConceptKey, "routine-vision-exam-new");
+
+    resolveStaleRead(initial);
+    await act(async () => { await Promise.resolve(); });
+    assert.equal(reported.at(-1)?.selectedProcedureConceptKey, "routine-vision-exam-new");
+    assert.equal(reported.at(-1)?.proposal?.procedureConceptKey, "routine-vision-exam-new");
   } finally {
     if (renderer) act(() => renderer.unmount());
     if (originalWindow) Object.defineProperty(globalThis, "window", originalWindow);
