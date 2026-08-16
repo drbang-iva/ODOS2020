@@ -850,6 +850,40 @@
   }
 }
 
+@media (max-width: 479px) {
+  .odos-chart-bar-patient {
+    grid-column: 1 / 7;
+  }
+
+  .odos-chart-bar-cc-reserved {
+    grid-column: 7 / 13;
+  }
+
+  .odos-chart-bar-sections {
+    grid-column: 1 / 13;
+  }
+
+  .odos-chart-bar-count[data-chart-bar-slot="drafts"] {
+    grid-column: 1 / 7;
+  }
+
+  .odos-chart-bar-count[data-chart-bar-slot="unassigned"] {
+    grid-column: 7 / 13;
+  }
+
+  .odos-chart-bar-visit {
+    grid-column: 1 / 7;
+  }
+
+  .odos-chart-bar-blackout {
+    grid-column: 7 / 10;
+  }
+
+  .odos-chart-bar-sign {
+    grid-column: 10 / 13;
+  }
+}
+
 .odos-exam-completeness {
   margin: 0 clamp(12px, 2.5vw, 32px) 24px;
   border: 1px solid var(--odos-line);
