@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type Ref } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type Ref } from "react";
 import type { Appointment, Encounter, Patient } from "@medplum/fhirtypes";
 import { fhir } from "../../lib/fhir";
 import {
@@ -17,6 +17,7 @@ import {
   clinicalGraphApiBase,
   readDiagnosisCompleteness,
   type DiagnosisCompleteness,
+  type VisitProcedureFamily,
 } from "../../lib/clinical-graph-client";
 import { isMigratedEncounter } from "../../lib/patient-overview";
 import { BalanceChips } from "../commercial/BalanceChips";
@@ -47,6 +48,10 @@ export function EncounterHeader({ patient, encounterId }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [completenessAdvisories, setCompletenessAdvisories] = useState<DiagnosisCompleteness["diagnoses"]>([]);
   const [seriesPrompt, setSeriesPrompt] = useState<SeriesSignOffPrompt>();
+  const [visitFamilyState, setVisitFamilyState] = useState<{
+    encounterId: string;
+    family: VisitProcedureFamily | null | undefined;
+  }>();
   const completenessCheckVersion = useRef(0);
 
   useEffect(() => {
@@ -122,6 +127,15 @@ export function EncounterHeader({ patient, encounterId }: Props) {
   }, [encounter]);
 
   const displayName = useMemo(() => patientName(patient), [patient]);
+  const visitProcedureFamily = visitFamilyState?.encounterId === encounterId
+    ? visitFamilyState.family
+    : undefined;
+  const handleVisitProcedureFamilyChange = useCallback(
+    (family: VisitProcedureFamily | null | undefined) => {
+      setVisitFamilyState({ encounterId, family });
+    },
+    [encounterId],
+  );
   const mdmHint = useMemo(
     () =>
       encounter ? computeMdmHint({ encounter }) : undefined,
@@ -252,12 +266,16 @@ export function EncounterHeader({ patient, encounterId }: Props) {
         </div>
       </div>
 
-      <VisitCodeSelector encounterId={encounterId} disabled={migrated} />
+      <VisitCodeSelector
+        encounterId={encounterId}
+        disabled={migrated}
+        onProcedureFamilyChange={handleVisitProcedureFamilyChange}
+      />
       <ProcedureChargeList encounterId={encounterId} disabled={migrated} />
 
       {appointment && <AppointmentContextBanner appointment={appointment} />}
 
-      {mdmHint && <MdmProblemsAxis mdmHint={mdmHint} />}
+      {mdmHint && <MdmProblemsAxis mdmHint={mdmHint} procedureFamily={visitProcedureFamily} />}
 
       {error && (
         <div className="mt-3 rounded border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-100">
@@ -287,7 +305,14 @@ export function EncounterHeader({ patient, encounterId }: Props) {
   );
 }
 
-export function MdmProblemsAxis({ mdmHint }: { mdmHint: MdmHint }) {
+export function MdmProblemsAxis({
+  mdmHint,
+  procedureFamily,
+}: {
+  mdmHint: MdmHint;
+  procedureFamily: VisitProcedureFamily | null | undefined;
+}) {
+  if (procedureFamily !== "em") return null;
   return (
     <div data-testid="mdm-hint-counter" className="mt-3 rounded border border-white/10 bg-bg-deep/70 p-3">
       <div className="flex flex-wrap items-center justify-between gap-3">

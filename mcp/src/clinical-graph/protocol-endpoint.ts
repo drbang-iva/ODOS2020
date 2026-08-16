@@ -36,6 +36,7 @@ import {
   isVisitProcedureConceptKey,
   listActiveVisitProcedureFees,
   materializeAcceptedChargeProposals,
+  visitProcedureFamily,
   type ProcedureChargeFhir,
   type ProcedureFeeScheduleFhir,
 } from "./procedure-fee-schedule.js";
@@ -483,19 +484,39 @@ export async function handleVisitChargeRequest(
   const parsed = z.object({ encounterId: z.string().min(1) }).strict().safeParse(input.params);
   if (!parsed.success) return { status: 400, body: { error: "encounterId is required." } };
   const service = liveService(staff, deps.now);
-  const resolution = resolveManualVisitProposal(await service.charges.list(), parsed.data.encounterId);
+  const [charges, diagnoses, options] = await Promise.all([
+    service.charges.list(),
+    visitChargeDiagnoses(staff.fhir, parsed.data.encounterId),
+    listActiveVisitProcedureFees(staff.fhir),
+  ]);
+  const resolution = resolveManualVisitProposal(charges, parsed.data.encounterId);
   if (resolution.conflict) return { status: 409, body: { error: resolution.conflict } };
-  const options = await listActiveVisitProcedureFees(staff.fhir);
   return {
     status: 200,
     body: {
       options,
+      diagnoses,
       proposal: resolution.proposal,
       ...(resolution.proposal?.state === "accepted"
-        ? { selectedProcedureConceptKey: resolution.proposal.procedureConceptKey }
+        ? {
+            selectedProcedureConceptKey: resolution.proposal.procedureConceptKey,
+            procedureFamily: visitProcedureFamily(resolution.proposal.procedureConceptKey),
+          }
         : {}),
     },
   };
+}
+
+async function visitChargeDiagnoses(fhir: Pick<LiveFhir, "read">, encounterId: string) {
+  let encounter: Encounter;
+  try {
+    encounter = await fhir.read<Encounter>("Encounter", encounterId);
+  } catch (error) {
+    const status = Number((error as { status?: unknown }).status);
+    if (status === 404 || status === 410) return [];
+    throw error;
+  }
+  return encounterDiagnoses(fhir, encounter);
 }
 
 export async function handleVisitChargeMutationRequest(
@@ -506,7 +527,13 @@ export async function handleVisitChargeMutationRequest(
   if (!staff) return { status: 401, body: { error: "Authentication required to edit the visit charge." } };
   if (!may(staff.actorRole, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
   const params = z.object({ encounterId: z.string().min(1) }).strict().safeParse(input.params);
-  const body = z.object({ procedureConceptKey: z.string().min(1).nullable() }).strict().safeParse(input.body);
+  const body = z.object({
+    procedureConceptKey: z.string().min(1).nullable().optional(),
+    dxPointer: z.string().regex(/^Condition\/[A-Za-z0-9.-]+$/).nullable().optional(),
+  }).strict().refine(
+    (value) => Object.keys(value).length > 0,
+    "At least one visit charge change is required.",
+  ).safeParse(input.body);
   if (!params.success || !body.success) {
     return { status: 400, body: { error: "A valid encounter and visit procedure concept are required." } };
   }
@@ -517,12 +544,22 @@ export async function handleVisitChargeMutationRequest(
     return { status: 409, body: { error: "A finalized visit charge cannot be changed." } };
   }
   const procedureConceptKey = body.data.procedureConceptKey;
-  if (procedureConceptKey !== null) {
+  const dxPointer = body.data.dxPointer;
+  if (procedureConceptKey !== undefined && procedureConceptKey !== null) {
     const activeKeys = new Set((await listActiveVisitProcedureFees(staff.fhir))
       .map((item) => item.procedureConceptKey));
     if (!isVisitProcedureConceptKey(procedureConceptKey) || !activeKeys.has(procedureConceptKey)) {
       return { status: 400, body: { error: "An active visit procedure concept is required." } };
     }
+  }
+  if (dxPointer !== undefined && dxPointer !== null) {
+    const encounter = await staff.fhir.read<Encounter>("Encounter", params.data.encounterId);
+    if (!encounterDiagnosisReferences(encounter).includes(dxPointer)) {
+      return { status: 400, body: { error: "The diagnosis pointer is not present on this encounter." } };
+    }
+  }
+  if (!resolution.proposal && procedureConceptKey === undefined) {
+    return { status: 404, body: { error: "Visit charge proposal not found." } };
   }
   if (!resolution.proposal && procedureConceptKey === null) {
     return { status: 200, body: { proposal: undefined } };
@@ -531,8 +568,13 @@ export async function handleVisitChargeMutationRequest(
   const proposal: ChargeProposal = resolution.proposal
     ? {
         ...resolution.proposal,
-        ...(procedureConceptKey === null ? {} : { procedureConceptKey }),
-        state: procedureConceptKey === null ? "removed" : "accepted",
+        ...(procedureConceptKey === undefined || procedureConceptKey === null ? {} : { procedureConceptKey }),
+        ...(dxPointer === undefined
+          ? {}
+          : { dxPointers: dxPointer === null ? [] : [dxPointer] }),
+        ...(procedureConceptKey === undefined
+          ? {}
+          : { state: procedureConceptKey === null ? "removed" : "accepted" }),
         provenance: { source: "clinician-entered", actor: staff.staffReference, at },
       }
     : {
@@ -542,13 +584,56 @@ export async function handleVisitChargeMutationRequest(
         procedureConceptKey: procedureConceptKey!,
         units: 1,
         laterality: "OU",
-        dxPointers: await initialPrincipalDiagnosisPointers(staff.fhir, params.data.encounterId),
+        dxPointers: dxPointer === undefined
+          ? await initialPrincipalDiagnosisPointers(staff.fhir, params.data.encounterId)
+          : dxPointer === null ? [] : [dxPointer],
         evidenceRefs: [],
         coverageEvaluations: [],
         state: "accepted",
         provenance: { source: "clinician-entered", actor: staff.staffReference, at },
       };
-  return { status: 200, body: { proposal: await service.charges.save(proposal) } };
+  const saved = await service.charges.save(proposal);
+  return {
+    status: 200,
+    body: {
+      proposal: saved,
+      ...(saved.state === "accepted"
+        ? { procedureFamily: visitProcedureFamily(saved.procedureConceptKey) }
+        : {}),
+    },
+  };
+}
+
+async function encounterDiagnoses(fhir: Pick<LiveFhir, "read">, encounter: Encounter) {
+  const diagnoses = [];
+  for (const diagnosis of encounter.diagnosis ?? []) {
+    const reference = diagnosis.condition.reference;
+    const match = reference?.match(/^Condition\/([A-Za-z0-9.-]+)$/);
+    if (!reference || !match) continue;
+    const condition = await fhir.read<Condition>("Condition", match[1]!);
+    diagnoses.push({
+      reference,
+      display: conditionDisplay(condition, reference),
+      ...(diagnosis.rank === undefined ? {} : { rank: diagnosis.rank }),
+    });
+  }
+  return diagnoses.sort((left, right) =>
+    (left.rank ?? Number.MAX_SAFE_INTEGER) - (right.rank ?? Number.MAX_SAFE_INTEGER)
+  );
+}
+
+function conditionDisplay(condition: Condition, fallback: string): string {
+  return condition.code?.text ??
+    condition.code?.coding?.find((coding) => coding.display)?.display ??
+    condition.code?.coding?.find((coding) => coding.code)?.code ??
+    fallback;
+}
+
+function encounterDiagnosisReferences(encounter: Encounter): string[] {
+  return (encounter.diagnosis ?? []).flatMap((diagnosis) => {
+    const reference = diagnosis.condition.reference;
+    return reference?.match(/^Condition\/[A-Za-z0-9.-]+$/) ? [reference] : [];
+  });
 }
 
 function resolveManualVisitProposal(

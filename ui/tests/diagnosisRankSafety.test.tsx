@@ -485,7 +485,10 @@ test("problem status control renders a conspicuous required-empty state without 
 test("blocked MDM axis renders the missing problem-status reason where a tier would appear", () => {
   const mdmHint = computeMdmHint({ encounter: rankedEncounter([1, 2]) });
 
-  const markup = renderToStaticMarkup(React.createElement(MdmProblemsAxis, { mdmHint }));
+  const markup = renderToStaticMarkup(React.createElement(MdmProblemsAxis, {
+    mdmHint,
+    procedureFamily: "em",
+  }));
 
   assert.match(markup, /Blocked/);
   assert.match(markup, /problem status unset on 2 diagnoses/);
