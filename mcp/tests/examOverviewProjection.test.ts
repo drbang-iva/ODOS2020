@@ -45,7 +45,7 @@ test("all three persisted deferred encodings normalize without rewriting source 
       definition("cup_disc_ratio", "optic-nerve"),
     ],
     currentObservations: sources,
-    priorObservations: [],
+    priorObservationCandidates: [],
     assessmentPresent: false,
   });
 
@@ -129,7 +129,7 @@ test("prior comparison ignores future and encounter-less Observations", () => {
       effectiveDateTime: "2026-08-16T12:00:00.000Z",
       valueQuantity: { value: 18, unit: "mmHg", code: "mm[Hg]" },
     })],
-    priorObservations: [
+    priorObservationCandidates: [
       observation("iop-valid-prior", "intraocular_pressure", {
         encounter: { reference: "Encounter/e0" },
         effectiveDateTime: "2026-07-10T12:00:00.000Z",
@@ -191,7 +191,7 @@ test("comprehensive clinical completeness is traceable and missing deferred docu
     visitTypeCategoryId: "comprehensive",
     definitions,
     currentObservations: current,
-    priorObservations: [],
+    priorObservationCandidates: [],
     assessmentPresent: true,
   });
 
@@ -215,7 +215,7 @@ test("carried-unreasserted does not resolve today's section while carried-reasse
     visitTypeCategoryId: "comprehensive",
     definitions,
     currentObservations: current,
-    priorObservations: [],
+    priorObservationCandidates: [],
     assessmentPresent: false,
   };
   const unreasserted = buildExamOverviewProjection({
@@ -261,7 +261,7 @@ test("section abnormal counts exclude independently classified borderline findin
         interpretation: [{ coding: [{ code: "borderline" }] }],
       }),
     ],
-    priorObservations: [],
+    priorObservationCandidates: [],
     assessmentPresent: false,
     applicabilityRegistry: registry,
   });
@@ -276,7 +276,16 @@ test("an unpopulated visit category degrades safely without false completeness",
     visitTypeCategoryId: "diagnostic-only",
     definitions: [],
     currentObservations: [],
-    priorObservations: [],
+    priorObservationCandidates: [],
+    assessmentPresent: false,
+  });
+  const prototypeNamedProjection = buildExamOverviewProjection({
+    encounterReference: "Encounter/e1",
+    patientReference: "Patient/p1",
+    visitTypeCategoryId: "constructor",
+    definitions: [],
+    currentObservations: [],
+    priorObservationCandidates: [],
     assessmentPresent: false,
   });
 
@@ -288,6 +297,8 @@ test("an unpopulated visit category degrades safely without false completeness",
     trace: [],
     documentationIssues: [],
   });
+  assert.equal(prototypeNamedProjection.completeness.status, "unconfigured");
+  assert.equal(prototypeNamedProjection.completeness.requiredSectionCount, 0);
 });
 
 test("the applicability registry supports visit-specific not-indicated sections without an office-visit entry", () => {
@@ -303,7 +314,7 @@ test("the applicability registry supports visit-specific not-indicated sections 
     visitTypeCategoryId: "limited",
     definitions: [],
     currentObservations: [],
-    priorObservations: [],
+    priorObservationCandidates: [],
     assessmentPresent: false,
     applicabilityRegistry: registry,
   });

@@ -147,7 +147,7 @@ export interface BuildExamOverviewProjectionInput {
   visitTypeCategoryId?: string;
   definitions: readonly ClinicalFindingDefinition[];
   currentObservations: readonly Observation[];
-  priorObservations: readonly Observation[];
+  priorObservationCandidates: readonly Observation[];
   assessmentPresent: boolean;
   provenanceByObservation?: Readonly<Record<string, {
     state: ExamFindingProvenanceState;
@@ -223,7 +223,7 @@ export function deriveChangeFromPrior(
 export function buildExamOverviewProjection(
   input: BuildExamOverviewProjectionInput,
 ): ExamOverviewProjection {
-  const priorRows = input.priorObservations.filter((observation) =>
+  const priorRows = input.priorObservationCandidates.filter((observation) =>
     observation.encounter?.reference !== undefined &&
     observation.encounter.reference !== input.encounterReference
   ).flatMap((observation) => {
@@ -258,7 +258,10 @@ export function buildExamOverviewProjection(
     })
     .sort(findingOrder);
   const registry = input.applicabilityRegistry ?? CLINICAL_SECTION_REQUIREMENTS;
-  const policy = input.visitTypeCategoryId ? registry[input.visitTypeCategoryId] : undefined;
+  const policy = input.visitTypeCategoryId !== undefined &&
+      Object.hasOwn(registry, input.visitTypeCategoryId)
+    ? registry[input.visitTypeCategoryId]
+    : undefined;
   if (!policy) {
     return {
       encounterReference: input.encounterReference,

@@ -89,7 +89,7 @@ export async function handleExamOverviewRequest(
         ...(visitTypeCategoryId ? { visitTypeCategoryId } : {}),
         definitions,
         currentObservations: current,
-        priorObservations: patientObservations.filter((observation) =>
+        priorObservationCandidates: patientObservations.filter((observation) =>
           observation.encounter?.reference !== encounterReference
         ),
         assessmentPresent: encounterConditions.some(isAssessmentEvidence),

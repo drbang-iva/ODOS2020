@@ -49,7 +49,7 @@ test("derived completeness and prior change survive a fresh reload with zero cli
   const fhir = new OverviewMemoryFhir(resources);
 
   const first = await handleExamOverviewRequest(deps(fhir, "provider"), request());
-  const second = await handleExamOverviewRequest(deps(fhir, "provider"), request());
+  const second = await handleExamOverviewRequest(deps(new OverviewMemoryFhir(resources), "provider"), request());
 
   assert.equal(first.status, 200, JSON.stringify(first.body));
   assert.deepEqual(second, first);
