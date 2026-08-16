@@ -21,6 +21,8 @@ import { buildProvenance } from "../fhir/ophthalmology/provenance.js";
 import { collectAllFhirSearchPages } from "../fhir-search.js";
 import { customFieldEntries } from "./custom-fields.js";
 import {
+  DIAGNOSIS_FINDING_REASSERTION_CODE,
+  ODOS_PROVENANCE_ACTIVITY_CODE_SYSTEM,
   readDiagnosisCarryState,
   type DiagnosisCarryState,
   type SourceAbsentFindingSnapshot,
@@ -352,6 +354,14 @@ export async function handleDiagnosisFindingsMutationRequest(
       observation.code.coding?.some((coding) => coding.code === catalogRow.atomicFindingId) &&
       observationLaterality(observation) === laterality
     );
+    const carryState = await readDiagnosisCarryState(staff.fhir, condition, observations);
+    const existingReference = existing ? observationReference(existing) : undefined;
+    const reassertingCarriedFinding = isCarriedFindingReassertion(
+      carryState,
+      existingReference,
+      assertion.atomicFindingId,
+      laterality,
+    );
     const recordedAt = deps.now?.() ?? new Date().toISOString();
     const observation = existing?.id
       ? await staff.fhir.update<Observation>("Observation", existing.id, {
@@ -373,6 +383,15 @@ export async function handleDiagnosisFindingsMutationRequest(
         }), WRITE_HEADERS);
     const reference = observationReference(observation)!;
     await rehomeEvidence(staff.fhir, conditions, reference, assertion.conditionReference);
+    if (reassertingCarriedFinding) {
+      await persistFindingReassertionProvenance(
+        staff.fhir,
+        reference,
+        assertion.patientReference,
+        staff.staffReference,
+        recordedAt,
+      );
+    }
     await persistMutationProvenance(
       staff.fhir,
       [reference],
@@ -982,6 +1001,45 @@ async function persistMutationProvenance(
     agents: [{ whoReference: staffReference, typeCode: "author" }],
   });
   await fhir.create(provenance, WRITE_HEADERS);
+}
+
+async function persistFindingReassertionProvenance(
+  fhir: DiagnosisFindingsFhirClient,
+  targetReference: string,
+  patientReference: string,
+  staffReference: string,
+  recordedAt: string,
+): Promise<void> {
+  const provenance: Provenance = buildProvenance({
+    targetReferences: [targetReference],
+    patientReference,
+    recorded: recordedAt,
+    activityCode: "UPDATE",
+    activityDisplay: "Diagnosis finding reassertion",
+    agents: [{ whoReference: staffReference, typeCode: "author" }],
+  });
+  provenance.activity = {
+    coding: [{
+      system: ODOS_PROVENANCE_ACTIVITY_CODE_SYSTEM,
+      code: DIAGNOSIS_FINDING_REASSERTION_CODE,
+      display: "Diagnosis finding reasserted",
+    }],
+    text: "Diagnosis finding reassertion",
+  };
+  await fhir.create(provenance, WRITE_HEADERS);
+}
+
+function isCarriedFindingReassertion(
+  carryState: DiagnosisCarryState,
+  existingReference: string | undefined,
+  atomicFindingId: string,
+  laterality: Exclude<FindingLaterality, "UNKNOWN">,
+): boolean {
+  if (existingReference && carryState.observationReasserted[existingReference]) return false;
+  if (existingReference && carryState.observationCarried[existingReference]) return true;
+  return carryState.sourceAbsentSnapshots.some((snapshot) =>
+    snapshot.atomicFindingId === atomicFindingId && snapshot.laterality === laterality
+  );
 }
 
 interface VisitDiagnosis {

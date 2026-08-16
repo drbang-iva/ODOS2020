@@ -16,6 +16,11 @@ import {
   handleDiagnosisFindingsReadRequest,
   type DiagnosisFindingsFhirClient,
 } from "../src/clinical-graph/diagnosis-findings-endpoint.js";
+import {
+  DIAGNOSIS_FINDING_REASSERTION_CODE,
+  ODOS_PROVENANCE_ACTIVITY_CODE_SYSTEM,
+  readDiagnosisCarryState,
+} from "../src/clinical-graph/diagnosis-carry-provenance.js";
 import { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } from "../src/clinical-graph/diagnosis-pick-endpoint.js";
 import type {
   ClinicalFindingDefinition,
@@ -362,6 +367,93 @@ test("reasserting a prior absent offer creates a fresh current row without a car
   assert.equal(reassertedRows[0]?.carried, undefined);
   assert.equal(reassertedRows[0]?.priorPresence, undefined);
   assert.match(reassertedRows[0]?.observationReference ?? "", /^Observation\//);
+  const observationReference = reassertedRows[0]!.observationReference!;
+  const reassertions = findingReassertionProvenances(fhir);
+  assert.equal(reassertions.length, 1);
+  assert.equal(reassertions[0]?.target.some((target) => target.reference === observationReference), true);
+  const condition = fhir.resources.find((resource): resource is Condition =>
+    resource.resourceType === "Condition" && resource.id === "unique"
+  )!;
+  const carryState = await readDiagnosisCarryState(
+    fhir,
+    condition,
+    atomicObservations(fhir).filter((observation) => observation.encounter?.reference === "Encounter/e1"),
+  );
+  assert.equal(carryState.observationReasserted[observationReference], true);
+});
+
+test("a carried finding remains unreasserted until the discriminated Provenance activity exists", async () => {
+  const fhir = carryFindingsFhir();
+  const condition = fhir.resources.find((resource): resource is Condition =>
+    resource.resourceType === "Condition" && resource.id === "unique"
+  )!;
+  const observations = atomicObservations(fhir).filter((observation) =>
+    observation.encounter?.reference === "Encounter/e1"
+  );
+
+  const before = await readDiagnosisCarryState(fhir, condition, observations);
+  assert.equal(before.observationCarried["Observation/current-unique-present"], true);
+  assert.equal(before.observationReasserted["Observation/current-unique-present"], undefined);
+
+  const asserted = await mutate(fhir, {
+    action: "assert",
+    patientReference: "Patient/p1",
+    conditionReference: "Condition/unique",
+    atomicFindingId: atomicId("unique-section"),
+    presence: "present",
+  });
+  assert.equal(asserted.status, 200, JSON.stringify(asserted.body));
+
+  const after = await readDiagnosisCarryState(fhir, condition, atomicObservations(fhir).filter((observation) =>
+    observation.encounter?.reference === "Encounter/e1"
+  ));
+  assert.equal(after.observationCarried["Observation/current-unique-present"], false);
+  assert.equal(after.observationReasserted["Observation/current-unique-present"], true);
+});
+
+test("a reassertion marker older than the current carry does not reassert the carried finding", async () => {
+  const fhir = carryFindingsFhir();
+  fhir.resources.push({
+    resourceType: "Provenance",
+    id: "stale-reassertion",
+    target: [{ reference: "Observation/current-unique-present" }],
+    recorded: "2026-08-09T11:00:00.000Z",
+    activity: {
+      coding: [{
+        system: ODOS_PROVENANCE_ACTIVITY_CODE_SYSTEM,
+        code: DIAGNOSIS_FINDING_REASSERTION_CODE,
+      }],
+    },
+    agent: [{ who: { display: "Synthetic test actor" } }],
+  });
+  const condition = fhir.resources.find((resource): resource is Condition =>
+    resource.resourceType === "Condition" && resource.id === "unique"
+  )!;
+  const state = await readDiagnosisCarryState(fhir, condition, atomicObservations(fhir).filter((observation) =>
+    observation.encounter?.reference === "Encounter/e1"
+  ));
+
+  assert.equal(state.observationCarried["Observation/current-unique-present"], true);
+  assert.equal(state.observationReasserted["Observation/current-unique-present"], undefined);
+});
+
+test("a failed reassertion marker write remains retryable without losing the carry signal", async () => {
+  const fhir = carryFindingsFhir();
+  fhir.failNextReassertionCreate = true;
+  const assertion = {
+    action: "assert",
+    patientReference: "Patient/p1",
+    conditionReference: "Condition/unique",
+    atomicFindingId: atomicId("unique-section"),
+    presence: "present",
+  };
+
+  const failed = await mutate(fhir, assertion);
+  const retried = await mutate(fhir, assertion);
+
+  assert.equal(failed.status, 502);
+  assert.equal(retried.status, 200, JSON.stringify(retried.body));
+  assert.equal(findingReassertionProvenances(fhir).length, 1);
 });
 
 test("asserting absence round-trips and repeated assertions update one logical Observation", async () => {
@@ -395,6 +487,7 @@ test("asserting absence round-trips and repeated assertions update one logical O
   const reference = `Observation/${observations[0]!.id}`;
   assert.deepEqual(conditionEvidence(fhir, "unique"), [reference]);
   assert.equal(fhir.resources.filter((resource) => resource.resourceType === "Provenance").length, 2);
+  assert.equal(findingReassertionProvenances(fhir).length, 0);
 
   const reloaded = await handleDiagnosisFindingsReadRequest(clinicalDeps(fhir), {
     authHeader: "Bearer clinician",
@@ -1162,6 +1255,16 @@ function conditionEvidence(fhir: MemoryFhir, id: string): string[] {
     .flatMap((reference) => reference.reference ? [reference.reference] : []) ?? [];
 }
 
+function findingReassertionProvenances(fhir: MemoryFhir): Provenance[] {
+  return fhir.resources.filter((resource): resource is Provenance =>
+    resource.resourceType === "Provenance" &&
+    resource.activity?.coding?.some((coding) =>
+      coding.system === ODOS_PROVENANCE_ACTIVITY_CODE_SYSTEM &&
+      coding.code === DIAGNOSIS_FINDING_REASSERTION_CODE
+    ) === true
+  );
+}
+
 function componentString(observation: Observation, code: string): string | undefined {
   return observation.component?.find((component) => component.code.coding?.some((coding) => coding.code === code))
     ?.valueString;
@@ -1180,6 +1283,7 @@ class MemoryFhir {
   readonly pageLinks = new Map<string, string>();
   readonly searchUrlFailures = new Map<string, number>();
   readonly followedUrls: string[] = [];
+  failNextReassertionCreate = false;
 
   async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
     const failureStatus = this.readFailures.get(`${resourceType}/${id}`);
@@ -1255,6 +1359,17 @@ class MemoryFhir {
   }
 
   async create<T extends Resource>(resource: T): Promise<T> {
+    if (
+      this.failNextReassertionCreate &&
+      resource.resourceType === "Provenance" &&
+      resource.activity?.coding?.some((coding) =>
+        coding.system === ODOS_PROVENANCE_ACTIVITY_CODE_SYSTEM &&
+        coding.code === DIAGNOSIS_FINDING_REASSERTION_CODE
+      )
+    ) {
+      this.failNextReassertionCreate = false;
+      throw new Error("Synthetic reassertion failure");
+    }
     const persisted = {
       ...resource,
       id: resource.id ?? `${resource.resourceType.toLowerCase()}-${this.resources.length + 1}`,

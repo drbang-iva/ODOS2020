@@ -1,0 +1,312 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import type {
+  Bundle,
+  Condition,
+  Encounter,
+  Observation,
+  Provenance,
+  Resource,
+} from "@medplum/fhirtypes";
+import type { PracticeRoleId } from "../src/authz/roles.js";
+import {
+  DIAGNOSIS_FINDING_REASSERTION_CODE,
+  ODOS_PROVENANCE_ACTIVITY_CODE_SYSTEM,
+} from "../src/clinical-graph/diagnosis-carry-provenance.js";
+import {
+  handleExamOverviewRequest,
+  type ExamOverviewFhirClient,
+} from "../src/clinical-graph/exam-overview-endpoint.js";
+import type {
+  ExamOverviewProjection,
+} from "../src/clinical-graph/exam-overview-projection.js";
+import type { ClinicalFindingDefinition } from "../src/clinical-graph/glaucoma-suspect.js";
+import { ODOS_VISIT_TYPE_SYSTEM } from "../src/fhir/schedulingVisitType.js";
+
+test("exam overview requires chart read access before touching FHIR", async () => {
+  const fhir = new OverviewMemoryFhir([]);
+  const unauthenticated = await handleExamOverviewRequest(deps(fhir, null), request());
+  const forbidden = await handleExamOverviewRequest(
+    deps(fhir, "forbidden" as PracticeRoleId),
+    request(),
+  );
+
+  assert.equal(unauthenticated.status, 401);
+  assert.equal(forbidden.status, 403);
+  assert.equal(fhir.readCount, 0);
+});
+
+test("derived completeness and prior change survive a fresh reload with zero clinical writes", async () => {
+  const resources: Resource[] = [
+    encounter(),
+    historyFinding("history-current", "e1", "2026-08-16T12:00:00.000Z"),
+    {
+      ...quantityFinding("iop-current", "e1", "2026-08-16T12:00:00.000Z", 18),
+      interpretation: [{ coding: [{ code: "abnormal" }] }],
+    },
+    quantityFinding("iop-prior", "e0", "2026-07-10T12:00:00.000Z", 15),
+  ];
+  const fhir = new OverviewMemoryFhir(resources);
+
+  const first = await handleExamOverviewRequest(deps(fhir, "provider"), request());
+  const second = await handleExamOverviewRequest(deps(new OverviewMemoryFhir(resources), "provider"), request());
+
+  assert.equal(first.status, 200, JSON.stringify(first.body));
+  assert.deepEqual(second, first);
+  const body = first.body as ExamOverviewProjection;
+  const iop = body.findings.find((row) => row.findingKey === "intraocular_pressure");
+  assert.deepEqual(iop?.changeFromPrior, {
+    kind: "numeric",
+    delta: 3,
+    unit: "mmHg",
+  });
+  assert.equal(iop?.interpretation, "abnormal");
+  assert.equal(body.sections.find((row) => row.sectionKey === "pretest")?.abnormalCount, 1);
+  assert.equal(body.completeness.status, "incomplete");
+  assert.equal(body.completeness.trace.find((row) => row.sectionKey === "history")?.resolved, true);
+  assert.equal(fhir.writeCount, 0);
+  assert.equal(fhir.resources.some((resource) => resource.resourceType === "Observation" &&
+    resource.component?.some((component) => component.code.coding?.some((coding) => coding.code === "DELTA"))), false);
+});
+
+test("endpoint projects carried-unreasserted and carried-reasserted from durable Provenance", async () => {
+  const current = condition("current-condition", "Encounter/e1", ["Observation/history-current"]);
+  const prior = condition("prior-condition", "Encounter/e0", []);
+  const resources: Resource[] = [
+    encounter(),
+    {
+      ...encounter("e0"),
+      period: { start: "2026-07-10T09:00:00.000Z" },
+    },
+    current,
+    prior,
+    historyFinding("history-current", "e1", "2026-08-16T12:00:00.000Z"),
+    carryProvenance(),
+  ];
+  const fhir = new OverviewMemoryFhir(resources);
+
+  const unreasserted = await handleExamOverviewRequest(deps(fhir, "provider"), request());
+  assert.equal(unreasserted.status, 200, JSON.stringify(unreasserted.body));
+  assert.deepEqual((unreasserted.body as ExamOverviewProjection).findings[0]?.provenance, {
+    state: "carried-unreasserted",
+    sourceDate: "2026-07-10T09:00:00.000Z",
+  });
+
+  fhir.resources.push(reassertionProvenance());
+  const reasserted = await handleExamOverviewRequest(deps(fhir, "provider"), request());
+  assert.equal(reasserted.status, 200, JSON.stringify(reasserted.body));
+  assert.deepEqual((reasserted.body as ExamOverviewProjection).findings[0]?.provenance, {
+    state: "carried-reasserted",
+    sourceDate: "2026-07-10T09:00:00.000Z",
+  });
+});
+
+test("an encounter with no patient is rejected without fabricating a projection", async () => {
+  const missingPatient = encounter();
+  delete missingPatient.subject;
+  const fhir = new OverviewMemoryFhir([missingPatient]);
+
+  const response = await handleExamOverviewRequest(deps(fhir, "provider"), request());
+
+  assert.equal(response.status, 400);
+});
+
+test("an entered-in-error Condition cannot resolve Assessment completeness", async () => {
+  const retracted = condition("retracted-condition", "Encounter/e1", []);
+  retracted.verificationStatus = { coding: [{ code: "entered-in-error" }] };
+  const fhir = new OverviewMemoryFhir([encounter(), retracted]);
+
+  const response = await handleExamOverviewRequest(deps(fhir, "provider"), request());
+
+  assert.equal(response.status, 200, JSON.stringify(response.body));
+  const body = response.body as ExamOverviewProjection;
+  assert.equal(body.sections.find((row) => row.sectionKey === "assessment")?.state, "not-examined");
+  assert.equal(body.completeness.trace.find((row) => row.sectionKey === "assessment")?.resolved, false);
+});
+
+function request() {
+  return { authHeader: "Bearer clinician", params: { encounterId: "e1" } };
+}
+
+function deps(fhir: OverviewMemoryFhir, role: PracticeRoleId | null) {
+  return {
+    fhirBaseUrl: "https://fhir.local",
+    authenticate: async () => role
+      ? { staffReference: "Practitioner/doc", actorRole: role, fhir }
+      : null,
+    serviceFhir: fhir,
+    findingDefinitions: async () => [HISTORY_DEFINITION, IOP_DEFINITION],
+  };
+}
+
+const HISTORY_DEFINITION: ClinicalFindingDefinition = {
+  id: "finding-def-history",
+  stableKey: "hpi_ros",
+  display: "History",
+  sectionKey: "hpi",
+  anatomyTarget: "other",
+  valueSchema: {},
+  normalSemantics: {},
+  sourceStatus: "verified-seed",
+  allowDiagnosisMapping: false,
+  notBillReady: true,
+  active: true,
+  provenance: { source: "manual", recordedAt: "2026-08-16T12:00:00.000Z" },
+};
+
+const IOP_DEFINITION: ClinicalFindingDefinition = {
+  ...HISTORY_DEFINITION,
+  id: "finding-def-iop",
+  stableKey: "intraocular_pressure",
+  display: "Intraocular pressure",
+  sectionKey: "tonometry",
+  anatomyTarget: "eye",
+};
+
+function encounter(id = "e1"): Encounter {
+  return {
+    resourceType: "Encounter",
+    id,
+    status: id === "e1" ? "in-progress" : "finished",
+    class: {},
+    subject: { reference: "Patient/p1" },
+    type: [{ coding: [{ system: ODOS_VISIT_TYPE_SYSTEM, code: "comprehensive" }] }],
+  };
+}
+
+function historyFinding(
+  id: string,
+  encounterId: string,
+  effectiveDateTime: string,
+): Observation {
+  return {
+    resourceType: "Observation",
+    id,
+    status: "final",
+    code: { coding: [{ code: "hpi_ros", display: "History" }] },
+    subject: { reference: "Patient/p1" },
+    encounter: { reference: `Encounter/${encounterId}` },
+    effectiveDateTime,
+    valueString: "Routine comprehensive examination",
+  };
+}
+
+function quantityFinding(
+  id: string,
+  encounterId: string,
+  effectiveDateTime: string,
+  value: number,
+): Observation {
+  return {
+    resourceType: "Observation",
+    id,
+    status: "final",
+    code: { coding: [{ code: "intraocular_pressure", display: "Intraocular pressure" }] },
+    subject: { reference: "Patient/p1" },
+    encounter: { reference: `Encounter/${encounterId}` },
+    effectiveDateTime,
+    valueQuantity: { value, unit: "mmHg", code: "mm[Hg]" },
+  };
+}
+
+function condition(id: string, encounterReference: string, evidence: string[]): Condition {
+  return {
+    resourceType: "Condition",
+    id,
+    subject: { reference: "Patient/p1" },
+    encounter: { reference: encounterReference },
+    code: { text: "Synthetic diagnosis" },
+    evidence: evidence.length ? [{ detail: evidence.map((reference) => ({ reference })) }] : undefined,
+  };
+}
+
+function carryProvenance(): Provenance {
+  return {
+    resourceType: "Provenance",
+    id: "carry",
+    target: [
+      { reference: "Condition/current-condition" },
+      { reference: "Observation/history-current" },
+    ],
+    recorded: "2026-08-16T11:00:00.000Z",
+    activity: {
+      coding: [{
+        system: "http://terminology.hl7.org/CodeSystem/v3-DataOperation",
+        code: "CREATE",
+      }],
+      text: "Diagnosis pull-forward",
+    },
+    agent: [{ who: { reference: "Practitioner/doc" } }],
+    entity: [{ role: "source", what: { reference: "Condition/prior-condition" } }],
+  };
+}
+
+function reassertionProvenance(): Provenance {
+  return {
+    resourceType: "Provenance",
+    id: "reassertion",
+    target: [{ reference: "Observation/history-current" }],
+    recorded: "2026-08-16T12:00:00.000Z",
+    activity: {
+      coding: [{
+        system: ODOS_PROVENANCE_ACTIVITY_CODE_SYSTEM,
+        code: DIAGNOSIS_FINDING_REASSERTION_CODE,
+      }],
+      text: "Diagnosis finding reassertion",
+    },
+    agent: [{ who: { reference: "Practitioner/doc" } }],
+  };
+}
+
+class OverviewMemoryFhir implements ExamOverviewFhirClient {
+  readonly resources: Resource[];
+  readCount = 0;
+  writeCount = 0;
+
+  constructor(resources: Resource[]) {
+    this.resources = structuredClone(resources);
+  }
+
+  async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
+    this.readCount += 1;
+    const resource = this.resources.find((row) => row.resourceType === resourceType && row.id === id);
+    if (!resource) throw Object.assign(new Error(`Missing ${resourceType}/${id}`), { status: 404 });
+    return structuredClone(resource as T);
+  }
+
+  async search<T extends Resource>(
+    resourceType: T["resourceType"],
+    params: Record<string, string> = {},
+  ): Promise<Bundle<T>> {
+    const resources = this.resources.filter((resource) => {
+      if (resource.resourceType !== resourceType) return false;
+      if (params.encounter && (resource as Condition | Observation).encounter?.reference !== params.encounter) {
+        return false;
+      }
+      if (params.subject && (resource as Condition | Observation).subject?.reference !== params.subject) {
+        return false;
+      }
+      return true;
+    });
+    return {
+      resourceType: "Bundle",
+      type: "searchset",
+      entry: resources.map((resource) => ({ resource: structuredClone(resource as T) })),
+    };
+  }
+
+  async create<T extends Resource>(resource: T): Promise<T> {
+    this.writeCount += 1;
+    this.resources.push(structuredClone(resource));
+    return structuredClone(resource);
+  }
+
+  async update<T extends Resource>(
+    _resourceType: T["resourceType"],
+    _id: string,
+    resource: T,
+  ): Promise<T> {
+    this.writeCount += 1;
+    return structuredClone(resource);
+  }
+}

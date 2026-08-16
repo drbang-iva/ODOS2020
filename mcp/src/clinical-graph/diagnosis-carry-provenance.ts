@@ -3,6 +3,10 @@ import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../fhir/ophthalmology/codeBindin
 import { ODOS_EXTENSION_URLS } from "../fhir/ophthalmology/extensions.js";
 import { V3_DATA_OPERATION_CODE_SYSTEM } from "../fhir/ophthalmology/provenance.js";
 
+export const ODOS_PROVENANCE_ACTIVITY_CODE_SYSTEM =
+  "https://odos2020.com/fhir/CodeSystem/provenance-activity";
+export const DIAGNOSIS_FINDING_REASSERTION_CODE = "diagnosis-finding-reasserted";
+
 export interface DiagnosisCarryProvenanceFhirClient {
   read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T>;
   search<T extends Resource>(
@@ -27,6 +31,7 @@ export interface DiagnosisCarryState {
   integrityWarning?: string;
   sourceAbsentSnapshots: SourceAbsentFindingSnapshot[];
   observationCarried: Record<string, boolean>;
+  observationReasserted: Record<string, boolean>;
 }
 
 export async function readDiagnosisCarryState(
@@ -71,6 +76,7 @@ async function readDiagnosisCarryStateFromAvailableLineage(
 
   const sourceAbsentSnapshots = await absentSourceSnapshots(fhir, currentCarry.provenance);
   const observationCarried: Record<string, boolean> = {};
+  const observationReasserted: Record<string, boolean> = {};
   let integrityWarning: string | undefined;
   let edited = false;
 
@@ -88,9 +94,11 @@ async function readDiagnosisCarryStateFromAvailableLineage(
     const reference = resourceReference(observation);
     return reference ? [reference] : [];
   }));
+  const carriedObservationReferences = new Set<string>();
   for (const target of currentCarry.provenance.target) {
     const reference = target.reference;
     if (!reference?.match(observationReferencePattern)) continue;
+    carriedObservationReferences.add(reference);
     const state = await targetState(
       fhir,
       reference,
@@ -102,6 +110,23 @@ async function readDiagnosisCarryStateFromAvailableLineage(
     edited ||= state.edited;
     integrityWarning ??= state.warning;
   }
+  for (const observation of observations) {
+    const reference = resourceReference(observation);
+    if (
+      !reference ||
+      (!carriedObservationReferences.has(reference) &&
+        !matchesSourceAbsentSnapshot(observation, sourceAbsentSnapshots))
+    ) continue;
+    const provenances = await provenancesForTarget(fhir, reference, provenanceCache);
+    if (provenances.some((provenance) => {
+      const reassertedAt = recordedInstant(provenance.recorded);
+      return isFindingReassertionProvenance(provenance) &&
+        reassertedAt !== undefined &&
+        reassertedAt > currentCarry.recorded;
+    })) {
+      observationReasserted[reference] = true;
+    }
+  }
 
   if (edited) {
     return {
@@ -110,6 +135,7 @@ async function readDiagnosisCarryStateFromAvailableLineage(
       ...(integrityWarning ? { integrityWarning } : {}),
       sourceAbsentSnapshots,
       observationCarried,
+      observationReasserted,
     };
   }
 
@@ -126,6 +152,7 @@ async function readDiagnosisCarryStateFromAvailableLineage(
         integrityWarning: "Diagnosis carry provenance cycle detected.",
         sourceAbsentSnapshots,
         observationCarried,
+        observationReasserted,
       };
     }
     visited.add(ancestorReference);
@@ -139,6 +166,7 @@ async function readDiagnosisCarryStateFromAvailableLineage(
         integrityWarning: ancestorCarry.warning,
         sourceAbsentSnapshots,
         observationCarried,
+        observationReasserted,
       };
     }
     if (ancestorCarry.recorded >= descendantCarryRecorded) {
@@ -148,6 +176,7 @@ async function readDiagnosisCarryStateFromAvailableLineage(
         integrityWarning: "Diagnosis carry provenance lineage chronology is invalid.",
         sourceAbsentSnapshots,
         observationCarried,
+        observationReasserted,
       };
     }
     const ancestorTarget = await targetState(
@@ -164,6 +193,7 @@ async function readDiagnosisCarryStateFromAvailableLineage(
         integrityWarning: ancestorTarget.warning,
         sourceAbsentSnapshots,
         observationCarried,
+        observationReasserted,
       };
     }
     if (ancestorTarget.edited) break;
@@ -185,6 +215,7 @@ async function readDiagnosisCarryStateFromAvailableLineage(
           integrityWarning: targetFinding.warning,
           sourceAbsentSnapshots,
           observationCarried,
+          observationReasserted,
         };
       }
       ancestorFindingEdited ||= targetFinding.edited;
@@ -199,6 +230,7 @@ async function readDiagnosisCarryStateFromAvailableLineage(
         integrityWarning: "Diagnosis carry provenance source Condition is missing or ambiguous.",
         sourceAbsentSnapshots,
         observationCarried,
+        observationReasserted,
       };
     }
     if (visited.has(nextReference)) {
@@ -208,6 +240,7 @@ async function readDiagnosisCarryStateFromAvailableLineage(
         integrityWarning: "Diagnosis carry provenance cycle detected.",
         sourceAbsentSnapshots,
         observationCarried,
+        observationReasserted,
       };
     }
     ancestor = await readReference<Condition>(fhir, nextReference, "Condition");
@@ -219,6 +252,7 @@ async function readDiagnosisCarryStateFromAvailableLineage(
         integrityWarning: "Diagnosis carry provenance source encounter date is missing.",
         sourceAbsentSnapshots,
         observationCarried,
+        observationReasserted,
       };
     }
     unchangedSinceDate = nextDate;
@@ -231,7 +265,22 @@ async function readDiagnosisCarryStateFromAvailableLineage(
     edited: false,
     sourceAbsentSnapshots,
     observationCarried,
+    observationReasserted,
   };
+}
+
+function matchesSourceAbsentSnapshot(
+  observation: Observation,
+  snapshots: readonly SourceAbsentFindingSnapshot[],
+): boolean {
+  const atomicFindingId = observation.code.coding?.find((coding) =>
+    coding.system === ODOS_OPHTHALMOLOGY_CODE_SYSTEM && coding.code
+  )?.code;
+  if (!atomicFindingId) return false;
+  const laterality = observationLaterality(observation);
+  return snapshots.some((snapshot) =>
+    snapshot.atomicFindingId === atomicFindingId && snapshot.laterality === laterality
+  );
 }
 
 const conditionReferencePattern = /^Condition\/([^/]+)$/;
@@ -331,6 +380,13 @@ function isCarryProvenance(provenance: Provenance): boolean {
     provenance.activity.coding?.some((coding) =>
       coding.system === V3_DATA_OPERATION_CODE_SYSTEM && coding.code === "CREATE"
     ) === true;
+}
+
+export function isFindingReassertionProvenance(provenance: Provenance): boolean {
+  return provenance.activity?.coding?.some((coding) =>
+    coding.system === ODOS_PROVENANCE_ACTIVITY_CODE_SYSTEM &&
+    coding.code === DIAGNOSIS_FINDING_REASSERTION_CODE
+  ) === true;
 }
 
 function directSourceConditionReference(provenance: Provenance): string | undefined {
@@ -449,6 +505,7 @@ function emptyState(): DiagnosisCarryState {
     edited: false,
     sourceAbsentSnapshots: [],
     observationCarried: {},
+    observationReasserted: {},
   };
 }
 
@@ -458,6 +515,7 @@ function integrityFailure(integrityWarning: string): DiagnosisCarryState {
     integrityWarning,
     sourceAbsentSnapshots: [],
     observationCarried: {},
+    observationReasserted: {},
   };
 }
 
