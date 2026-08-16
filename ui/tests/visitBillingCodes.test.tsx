@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import React from "react";
+import React, { useState } from "react";
+import type { Encounter } from "@medplum/fhirtypes";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import {
   procedureFeeScheduleAdapter,
@@ -8,7 +9,13 @@ import {
 } from "../src/lib/procedure-fee-schedule";
 import { feeScheduleDescriptor } from "../src/scenes/settings/FeeScheduleSettings";
 import { VisitCodeSelector } from "../src/components/charting/VisitCodeSelector";
-import type { VisitChargeApi, VisitChargeResponse } from "../src/lib/clinical-graph-client";
+import { MdmProblemsAxis } from "../src/components/charting/EncounterHeader";
+import { computeMdmHint } from "../src/lib/clinical-view-model";
+import type {
+  VisitChargeApi,
+  VisitChargeResponse,
+  VisitProcedureFamily,
+} from "../src/lib/clinical-graph-client";
 
 const ROUTINE_ITEM: ProcedureFeeScheduleItem = {
   id: "routine-vision-exam-new",
@@ -60,21 +67,27 @@ test("fee settings round-trip the optional billing code while allowing practice 
 });
 
 test("the passive selector starts blank, selects, and clears without another workflow surface", async () => {
-  const mutations: Array<string | null> = [];
+  const mutations: unknown[] = [];
+  const families: Array<VisitProcedureFamily | null | undefined> = [];
   const options = visitOptions();
   const api: VisitChargeApi = {
-    async read() { return { options }; },
-    async save(_encounterId, procedureConceptKey) {
-      mutations.push(procedureConceptKey);
+    async read() { return { options, diagnoses: [] }; },
+    async save(_encounterId, change) {
+      mutations.push(change);
+      const procedureConceptKey = change.procedureConceptKey;
       return {
         options,
+        diagnoses: [],
         ...(procedureConceptKey ? { selectedProcedureConceptKey: procedureConceptKey } : {}),
+        ...(procedureConceptKey ? { procedureFamily: "vision-plan" as const } : {}),
       };
     },
   };
   let renderer!: ReactTestRenderer;
   await act(async () => {
-    renderer = create(<VisitCodeSelector encounterId="enc-1" api={api} />);
+    renderer = create(
+      <VisitCodeSelector encounterId="enc-1" api={api} onProcedureFamilyChange={(family) => families.push(family)} />,
+    );
     await Promise.resolve();
   });
   let select = renderer.root.findByType("select");
@@ -100,7 +113,74 @@ test("the passive selector starts blank, selects, and clears without another wor
     await select.props.onChange({ target: { value: "" } });
   });
   assert.equal(renderer.root.findByType("select").props.value, "");
-  assert.deepEqual(mutations, ["routine-vision-exam-new", null]);
+  assert.deepEqual(mutations, [
+    { procedureConceptKey: "routine-vision-exam-new" },
+    { procedureConceptKey: null },
+  ]);
+  assert.equal(families.at(-1), null);
+  act(() => renderer.unmount());
+});
+
+test("visit diagnosis selection is visible, editable, clearable, and warns on an empty pointer", async () => {
+  const mutations: unknown[] = [];
+  let pointer: string | undefined;
+  const api: VisitChargeApi = {
+    async read() {
+      return {
+        options: visitOptions(),
+        diagnoses: [
+          { reference: "Condition/principal", display: "Principal diagnosis", rank: 1 },
+          { reference: "Condition/secondary", display: "Secondary diagnosis", rank: 2 },
+        ],
+        selectedProcedureConceptKey: "office-visit-new-low",
+        procedureFamily: "em",
+        proposal: {
+          id: "manual-visit-code:enc-diagnosis",
+          procedureConceptKey: "office-visit-new-low",
+          dxPointers: [],
+          state: "accepted",
+        },
+      };
+    },
+    async save(_encounterId, change) {
+      mutations.push(change);
+      pointer = change.dxPointer ?? undefined;
+      return {
+        procedureFamily: "em",
+        proposal: {
+          id: "manual-visit-code:enc-diagnosis",
+          procedureConceptKey: "office-visit-new-low",
+          dxPointers: pointer ? [pointer] : [],
+          state: "accepted",
+        },
+      };
+    },
+  };
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<VisitCodeSelector encounterId="enc-diagnosis" api={api} />);
+    await Promise.resolve();
+  });
+  let diagnosisSelect = renderer.root.findByProps({ "aria-label": "Visit billing diagnosis" });
+  assert.equal(diagnosisSelect.props.value, "");
+  assert.match(renderer.root.findByProps({ "data-testid": "visit-code-diagnosis-warning" }).children.join(""), /will not be included in a claim/i);
+
+  await act(async () => {
+    await diagnosisSelect.props.onChange({ target: { value: "Condition/secondary" } });
+  });
+  diagnosisSelect = renderer.root.findByProps({ "aria-label": "Visit billing diagnosis" });
+  assert.equal(diagnosisSelect.props.value, "Condition/secondary");
+  assert.equal(renderer.root.findAllByProps({ "data-testid": "visit-code-diagnosis-warning" }).length, 0);
+
+  await act(async () => {
+    await diagnosisSelect.props.onChange({ target: { value: "" } });
+  });
+  assert.equal(renderer.root.findByProps({ "aria-label": "Visit billing diagnosis" }).props.value, "");
+  assert.equal(renderer.root.findAllByProps({ "data-testid": "visit-code-diagnosis-warning" }).length, 1);
+  assert.deepEqual(mutations, [
+    { dxPointer: "Condition/secondary" },
+    { dxPointer: null },
+  ]);
   act(() => renderer.unmount());
 });
 
@@ -117,6 +197,103 @@ test("selector read failure stays local and non-blocking", async () => {
   assert.match(renderer.root.findByProps({ "data-testid": "visit-code-error" }).children.join(""), /Synthetic visit charge read failure/);
   assert.equal(renderer.root.findAllByType("button").length, 0);
   act(() => renderer.unmount());
+});
+
+const MDM_ENCOUNTER: Encounter = {
+  resourceType: "Encounter",
+  id: "enc-mdm",
+  status: "in-progress",
+  class: { code: "AMB" },
+  diagnosis: [{ condition: { reference: "Condition/one" }, rank: 1 }],
+};
+const MDM_HINT = computeMdmHint({ encounter: MDM_ENCOUNTER });
+
+function VisitMdmHarness({ api }: { api: VisitChargeApi }) {
+  const [family, setFamily] = useState<VisitProcedureFamily | null>();
+  return (
+    <>
+      <VisitCodeSelector encounterId="enc-mdm" api={api} onProcedureFamilyChange={setFamily} />
+      <MdmProblemsAxis mdmHint={MDM_HINT} procedureFamily={family} />
+    </>
+  );
+}
+
+function mdmApi(response: VisitChargeResponse | Promise<VisitChargeResponse>): VisitChargeApi {
+  return {
+    async read() { return response; },
+    async save() { throw new Error("not reached"); },
+  };
+}
+
+async function mdmStripCount(response: VisitChargeResponse | Promise<VisitChargeResponse>): Promise<number> {
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<VisitMdmHarness api={mdmApi(response)} />);
+    await Promise.resolve();
+  });
+  const count = renderer.root.findAllByProps({ "data-testid": "mdm-hint-counter" }).length;
+  act(() => renderer.unmount());
+  return count;
+}
+
+test("MDM renders for an E/M visit key without changing the existing computation", async () => {
+  assert.deepEqual(MDM_HINT, {
+    status: "blocked",
+    reason: "problem status unset on 1 diagnosis",
+    missingProblemStatusCount: 1,
+    counts: {
+      minimalSelfLimited: 0,
+      stableChronic: 0,
+      chronicExacerbationProgression: 0,
+      chronicSevereExacerbation: 0,
+      acuteUncomplicated: 0,
+      acuteComplicatedOrSystemic: 0,
+      undiagnosedNewProblemUncertainPrognosis: 0,
+      threatToLifeOrBodilyFunction: 0,
+    },
+    sourceDiagnosisCount: 1,
+  });
+  assert.equal(await mdmStripCount({
+    options: visitOptions(),
+    diagnoses: [],
+    selectedProcedureConceptKey: "office-visit-new-low",
+    procedureFamily: "em",
+  }), 1);
+});
+
+test("MDM is absent for a comprehensive eye-code visit key", async () => {
+  assert.equal(await mdmStripCount({
+    options: visitOptions(),
+    diagnoses: [],
+    selectedProcedureConceptKey: "comprehensive-exam-new",
+    procedureFamily: "eye-code",
+  }), 0);
+});
+
+test("MDM is absent for an intermediate eye-code visit key", async () => {
+  assert.equal(await mdmStripCount({
+    options: visitOptions(),
+    diagnoses: [],
+    selectedProcedureConceptKey: "intermediate-exam-established",
+    procedureFamily: "eye-code",
+  }), 0);
+});
+
+test("MDM is absent for a routine vision-plan visit key", async () => {
+  assert.equal(await mdmStripCount({
+    options: visitOptions(),
+    diagnoses: [],
+    selectedProcedureConceptKey: "routine-vision-exam-new",
+    procedureFamily: "vision-plan",
+  }), 0);
+});
+
+test("MDM is absent when no visit key is selected", async () => {
+  assert.equal(await mdmStripCount({ options: visitOptions(), diagnoses: [] }), 0);
+});
+
+test("MDM is absent while the visit family is not yet known", async () => {
+  assert.equal(await mdmStripCount(new Promise<VisitChargeResponse>(() => undefined)), 0);
 });
 
 function visitOptions(): VisitChargeResponse["options"] {
