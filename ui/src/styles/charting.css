@@ -794,7 +794,7 @@
   cursor: default;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1279px) {
   .odos-exam-chart-bar {
     grid-template-columns: repeat(12, minmax(0, 1fr));
     padding: 14px;
