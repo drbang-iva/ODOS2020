@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import React from "react";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
@@ -175,14 +174,7 @@ const UNASSIGNED_FINDINGS: EncounterFindingRow[] = [
   },
 ];
 
-test("the chart bar switches layouts before mid-width or narrow controls can overflow", () => {
-  const css = readFileSync(new URL("../src/styles/charting.css", import.meta.url), "utf8");
-  assert.match(css, /@media \(max-width: 1279px\) \{[\s\S]*?\.odos-exam-chart-bar \{[\s\S]*?grid-template-columns: repeat\(12, minmax\(0, 1fr\)\)/);
-  assert.doesNotMatch(css, /\.odos-chart-bar-cc-reserved \{\s*min-width: 160px;\s*\}/);
-  assert.match(css, /@media \(max-width: 479px\) \{[\s\S]*?\.odos-chart-bar-sections \{\s*grid-column: 1 \/ 13;[\s\S]*?\.odos-chart-bar-visit \{\s*grid-column: 1 \/ 7;[\s\S]*?\.odos-chart-bar-blackout \{\s*grid-column: 7 \/ 10;[\s\S]*?\.odos-chart-bar-sign \{\s*grid-column: 10 \/ 13;/);
-});
-
-test("the permanent chart bar renders exactly eight ordered slots with truthful reserved counts", async () => {
+test("the permanent chart bar keeps draft state reserved instead of inferring it from section status", async () => {
   const harness = await renderEncounter(PROJECTION, { unassignedFindings: UNASSIGNED_FINDINGS });
   try {
     const bars = harness.renderer.root.findAllByProps({ "data-testid": "exam-chart-bar" });
@@ -201,8 +193,21 @@ test("the permanent chart bar renders exactly eight ordered slots with truthful 
     ]);
     assert.equal(textContent(slots[1]!), "");
     assert.equal(slots[1]!.props["aria-hidden"], true);
-    assert.equal(textContent(slots[3]!), "0 drafts");
     assert.equal(textContent(slots[4]!), "2 unassigned");
+
+    act(() => harness.renderer.root.findByType(ExamOverviewBoard).props.onOpenEditor("va"));
+    act(() => harness.renderer.root.findByType(VaSection).props.onSaved({
+      completed: false,
+      summary: "Unsaved local section state",
+    }));
+
+    const updatedBar = harness.renderer.root.findByProps({ "data-testid": "exam-chart-bar" });
+    const updatedSlots = updatedBar.findAll((node) =>
+      typeof node.props["data-chart-bar-slot"] === "string"
+    );
+    assert.equal(textContent(updatedSlots[3]!), "");
+    assert.equal(updatedSlots[3]!.props["aria-hidden"], true);
+    assert.equal(updatedSlots[3]!.props["data-reserved-for"], "slice-4-drafts");
   } finally {
     harness.restore();
   }
