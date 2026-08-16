@@ -159,28 +159,33 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   useEffect(() => {
     let cancelled = false;
     const encounterReference = `Encounter/${encounterId}`;
-    const load = () => {
-      void loadDiagnosisFindings(encounterReference)
-        .then((payload) => {
-          if (!cancelled) setUnassignedCount(payload.unassigned.length);
-        })
-        .catch((caught) => {
-          if (!cancelled) {
-            setUnassignedCount(undefined);
-            console.error("Unassigned finding count unavailable.", caught);
-          }
-        });
-    };
     setUnassignedCount(undefined);
-    load();
-    if (typeof window === "undefined") return () => { cancelled = true; };
+    void loadDiagnosisFindings(encounterReference)
+      .then((payload) => {
+        if (!cancelled) setUnassignedCount(payload.unassigned.length);
+      })
+      .catch((caught) => {
+        if (!cancelled) {
+          setUnassignedCount(undefined);
+          console.error("Unassigned finding count unavailable.", caught);
+        }
+      });
+    return () => { cancelled = true; };
+  }, [encounterId, examOverviewRefreshVersion]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const encounterReference = `Encounter/${encounterId}`;
     const refresh = (event: Event) => {
       const detail = (event as CustomEvent<{ encounterReference?: string }>).detail;
-      if (detail?.encounterReference === encounterReference) load();
+      if (detail?.encounterReference === encounterReference) refreshExamOverview();
     };
+    window.addEventListener("odos:diagnosis-picked", refresh);
+    window.addEventListener("odos:encounter-diagnosis-updated", refresh);
     window.addEventListener("odos:encounter-findings-changed", refresh);
     return () => {
-      cancelled = true;
+      window.removeEventListener("odos:diagnosis-picked", refresh);
+      window.removeEventListener("odos:encounter-diagnosis-updated", refresh);
       window.removeEventListener("odos:encounter-findings-changed", refresh);
     };
   }, [encounterId]);
@@ -418,7 +423,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
       ...current,
       [section]: status,
     }));
-    if (boardEditorOpen) refreshExamOverview();
+    refreshExamOverview();
   }
 
   const patientReference = `Patient/${patient.id}`;

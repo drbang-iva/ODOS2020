@@ -34,31 +34,52 @@ export function VisitCodeSelector({
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(undefined);
-    setOptions([]);
-    setDiagnoses([]);
-    setProposal(undefined);
-    setSelected("");
-    onProcedureFamilyChange?.(undefined);
-    onVisitChargeChange?.(undefined);
-    void api.read(encounterId)
-      .then((response) => {
-        if (cancelled) return;
-        setOptions(response.options);
-        setDiagnoses(response.diagnoses);
-        setProposal(response.proposal);
-        setSelected(response.selectedProcedureConceptKey ?? "");
-        onProcedureFamilyChange?.(response.procedureFamily ?? null);
-        onVisitChargeChange?.(response);
-      })
-      .catch((reason: unknown) => {
-        if (!cancelled) setError(errorMessage(reason));
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-    });
-    return () => { cancelled = true; };
+    let readVersion = 0;
+    const read = (reset: boolean) => {
+      const version = ++readVersion;
+      setLoading(true);
+      setError(undefined);
+      if (reset) {
+        setOptions([]);
+        setDiagnoses([]);
+        setProposal(undefined);
+        setSelected("");
+        onProcedureFamilyChange?.(undefined);
+        onVisitChargeChange?.(undefined);
+      }
+      void api.read(encounterId)
+        .then((response) => {
+          if (cancelled || version !== readVersion) return;
+          setOptions(response.options);
+          setDiagnoses(response.diagnoses);
+          setProposal(response.proposal);
+          setSelected(response.selectedProcedureConceptKey ?? "");
+          onProcedureFamilyChange?.(response.procedureFamily ?? null);
+          onVisitChargeChange?.(response);
+        })
+        .catch((reason: unknown) => {
+          if (!cancelled && version === readVersion) setError(errorMessage(reason));
+        })
+        .finally(() => {
+          if (!cancelled && version === readVersion) setLoading(false);
+        });
+    };
+    const refresh = (event: Event) => {
+      const detail = (event as CustomEvent<{ encounterReference?: string }>).detail;
+      if (detail?.encounterReference === `Encounter/${encounterId}`) read(false);
+    };
+    read(true);
+    if (typeof window !== "undefined") {
+      window.addEventListener("odos:diagnosis-picked", refresh);
+      window.addEventListener("odos:encounter-diagnosis-updated", refresh);
+    }
+    return () => {
+      cancelled = true;
+      if (typeof window !== "undefined") {
+        window.removeEventListener("odos:diagnosis-picked", refresh);
+        window.removeEventListener("odos:encounter-diagnosis-updated", refresh);
+      }
+    };
   }, [api, encounterId, onProcedureFamilyChange, onVisitChargeChange]);
 
   async function changeProcedure(value: string) {
