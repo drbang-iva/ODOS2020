@@ -218,6 +218,485 @@
   scrollbar-gutter: stable;
 }
 
+.odos-exam-overview {
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: var(--odos-ground);
+  color: var(--odos-text);
+}
+
+.odos-exam-overview-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px clamp(16px, 2.5vw, 32px) 14px;
+  border-bottom: 1px solid var(--odos-line);
+  background: var(--odos-surface);
+}
+
+.odos-exam-overview-heading p,
+.odos-exam-overview-heading h1 {
+  margin: 0;
+}
+
+.odos-exam-overview-heading p {
+  color: var(--odos-faint);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.odos-exam-overview-heading h1 {
+  margin-top: 3px;
+  font-size: clamp(20px, 2.2vw, 28px);
+}
+
+.odos-exam-overview-heading > span,
+.odos-exam-overview-actions > span {
+  color: var(--odos-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.odos-exam-overview-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.odos-exam-overview-refresh,
+.odos-exam-editor-launcher-button,
+.odos-exam-editor-return-button {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--odos-line-2);
+  border-radius: 7px;
+  background: var(--odos-surface-2);
+  color: var(--odos-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.odos-exam-overview-refresh:hover,
+.odos-exam-editor-launcher-button:hover,
+.odos-exam-editor-return-button:hover {
+  border-color: var(--odos-brand);
+  color: var(--odos-text);
+}
+
+.odos-exam-overview-refresh:disabled {
+  cursor: wait;
+  opacity: .6;
+}
+
+.odos-exam-editor-launcher {
+  padding: 16px clamp(16px, 2.5vw, 32px);
+  border-bottom: 1px solid var(--odos-line);
+  background: var(--odos-surface);
+}
+
+.odos-exam-editor-launcher-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.odos-exam-editor-launcher-heading h2 {
+  margin: 0;
+  color: var(--odos-muted);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.odos-exam-editor-launcher-heading span {
+  color: var(--odos-faint);
+  font-size: 12px;
+}
+
+.odos-exam-editor-launcher-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.odos-exam-editor-launcher-button {
+  text-align: left;
+}
+
+.odos-exam-editor-return {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--odos-line);
+  background: var(--odos-surface);
+}
+
+.odos-exam-overview-board {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  padding: 16px clamp(12px, 2.5vw, 32px);
+}
+
+.odos-exam-section {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--odos-line);
+  border-radius: 12px;
+  background: var(--odos-surface);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+}
+
+.odos-exam-section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--odos-line);
+  background: var(--odos-surface-2);
+}
+
+.odos-exam-section-heading h2 {
+  margin: 0 0 7px;
+  font-size: 16px;
+}
+
+.odos-exam-section-state {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  padding: 3px 8px;
+  border: 1px solid var(--odos-line-2);
+  border-radius: 999px;
+  color: var(--odos-muted);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.odos-exam-section-state.is-examined {
+  border-color: color-mix(in srgb, var(--odos-emerald) 55%, var(--odos-line));
+  color: var(--odos-emerald);
+}
+
+.odos-exam-section-state.is-deferred-with-reason,
+.odos-exam-section-state.is-deferred-without-reason {
+  border-style: dashed;
+  color: var(--odos-amber);
+}
+
+.odos-exam-section-state.is-not-examined,
+.odos-exam-section-state.is-not-indicated {
+  background: color-mix(in srgb, var(--odos-muted) 8%, transparent);
+}
+
+.odos-exam-section-counts {
+  display: flex;
+  max-width: 58%;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.odos-exam-section-counts span {
+  padding: 3px 7px;
+  border-radius: 4px;
+  background: var(--odos-ground);
+  color: var(--odos-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.odos-exam-section-counts .is-abnormal {
+  border-left: 3px solid var(--odos-alert);
+}
+
+.odos-exam-section-counts .is-carried {
+  border-left: 3px solid #b28bff;
+}
+
+.odos-exam-section-counts .is-deferred-gap {
+  border-left: 3px dashed var(--odos-amber);
+}
+
+.odos-exam-finding-list {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.odos-exam-finding {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 9px;
+  padding: 12px 14px;
+}
+
+.odos-exam-finding + .odos-exam-finding {
+  border-top: 1px solid var(--odos-line);
+}
+
+.odos-exam-finding-main {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.odos-exam-laterality {
+  display: grid;
+  width: 42px;
+  min-height: 32px;
+  align-self: start;
+  border: 1px solid var(--odos-line-2);
+  border-radius: 7px;
+  place-items: center;
+  background: var(--odos-ground);
+  color: var(--odos-text);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.odos-exam-laterality.is-unknown {
+  border-style: dashed;
+  font-size: 9px;
+}
+
+.odos-exam-finding-value {
+  min-width: 0;
+}
+
+.odos-exam-finding-value strong,
+.odos-exam-finding-value span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.odos-exam-finding-value strong {
+  font-size: 13px;
+}
+
+.odos-exam-current {
+  margin-top: 3px;
+  color: var(--odos-text);
+  font-size: 13px;
+}
+
+.odos-exam-prior {
+  margin-top: 3px;
+  color: var(--odos-faint);
+  font-size: 11px;
+}
+
+.odos-exam-finding-channels {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding-left: 52px;
+}
+
+.odos-exam-finding-channels > span {
+  display: inline-flex;
+  min-height: 26px;
+  align-items: center;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.odos-exam-examination {
+  border: 1px dashed var(--odos-line-2);
+  border-radius: 5px;
+  color: var(--odos-muted);
+}
+
+.odos-exam-examination.is-deferred-with-reason {
+  border-color: var(--odos-amber);
+  color: var(--odos-amber);
+}
+
+.odos-exam-examination.is-deferred-without-reason {
+  border: 2px double var(--odos-amber);
+  color: var(--odos-amber);
+}
+
+.odos-exam-provenance {
+  border-radius: 999px;
+  background: color-mix(in srgb, #b28bff 14%, transparent);
+  color: #d8c7ff;
+}
+
+.odos-exam-provenance.is-current {
+  background: color-mix(in srgb, var(--odos-muted) 9%, transparent);
+  color: var(--odos-muted);
+}
+
+.odos-exam-provenance.is-carried-unreasserted {
+  box-shadow: inset 0 0 0 2px #b28bff;
+}
+
+.odos-exam-interpretation {
+  border-bottom: 3px solid var(--odos-line-2);
+  color: var(--odos-muted);
+}
+
+.odos-exam-interpretation.is-abnormal {
+  border-bottom-color: var(--odos-alert);
+  color: var(--odos-alert);
+}
+
+.odos-exam-interpretation.is-borderline {
+  border-bottom-color: var(--odos-amber);
+  color: var(--odos-amber);
+}
+
+.odos-exam-interpretation.is-normal {
+  border-bottom-color: var(--odos-emerald);
+  color: var(--odos-emerald);
+}
+
+.odos-exam-change {
+  border: 1px solid #57b8ff;
+  border-radius: 3px;
+  color: #8dcfff;
+}
+
+.odos-exam-section-empty {
+  margin: 0;
+  padding: 18px 14px;
+  color: var(--odos-faint);
+  font-size: 12px;
+}
+
+.odos-exam-completeness {
+  margin: 0 clamp(12px, 2.5vw, 32px) 24px;
+  border: 1px solid var(--odos-line);
+  border-radius: 10px;
+  background: var(--odos-surface);
+}
+
+.odos-exam-completeness-trigger {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--odos-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  text-align: left;
+}
+
+.odos-exam-completeness-trigger::after {
+  float: right;
+  content: "▾";
+}
+
+.odos-exam-completeness-trigger[aria-expanded="true"]::after {
+  transform: rotate(180deg);
+}
+
+.odos-exam-completeness-trace {
+  padding: 0 14px 14px;
+  border-top: 1px solid var(--odos-line);
+}
+
+.odos-exam-completeness-trace > p {
+  margin: 12px 0;
+  color: var(--odos-muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.odos-exam-completeness-trace ul {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  gap: 6px;
+  list-style: none;
+}
+
+.odos-exam-completeness-trace li {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(110px, 1fr) repeat(3, auto);
+  gap: 8px;
+  padding: 8px;
+  border-radius: 6px;
+  background: var(--odos-surface-2);
+  font-size: 11px;
+}
+
+.odos-exam-completeness.is-unconfigured {
+  display: flex;
+  min-height: 52px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px 12px;
+  padding: 10px 14px;
+  color: var(--odos-muted);
+}
+
+.odos-exam-completeness.is-unconfigured strong {
+  color: var(--odos-text);
+  font-size: 13px;
+}
+
+.odos-exam-completeness.is-unconfigured span {
+  font-size: 11px;
+}
+
+@media (min-width: 960px) {
+  .odos-exam-finding {
+    grid-template-columns: minmax(260px, 1fr) minmax(290px, auto);
+    align-items: center;
+  }
+
+  .odos-exam-finding-channels {
+    justify-content: flex-end;
+    padding-left: 0;
+  }
+}
+
+@media (min-width: 1180px) {
+  .odos-exam-overview-board {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
+@media (max-width: 767px) {
+  .odos-exam-overview-heading,
+  .odos-exam-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .odos-exam-section-counts {
+    max-width: none;
+    justify-content: flex-start;
+  }
+
+  .odos-exam-completeness-trace li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .odos-diagnosis-visit-row,
 .odos-diagnosis-common-row {
   width: 100%;
