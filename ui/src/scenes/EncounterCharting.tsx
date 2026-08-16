@@ -18,6 +18,11 @@ import { CustomSectionEditor, type CustomSectionEditorValue } from "../component
 import { DryEyeSection } from "../components/charting/DryEyeSection";
 import { DryEyeGlandStructureSection } from "../components/charting/DryEyeGlandStructureSection";
 import { EncounterHeader } from "../components/charting/EncounterHeader";
+import {
+  ExamOverviewBoard,
+  isExamOverviewProjection,
+  type ExamOverviewProjection,
+} from "../components/charting/ExamOverviewBoard";
 import { EyeGrowthSection } from "../components/charting/EyeGrowthSection";
 import { EncounterFindingOverlay } from "../components/charting/EncounterFindingOverlay";
 import { IopSection } from "../components/charting/IopSection";
@@ -93,6 +98,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const [sectionGroupError, setSectionGroupError] = useState<string | null>(null);
   const [chartView, setChartView] = useState<EncounterChartView>(loadEncounterChartView);
   const [selectedDiagnosis, setSelectedDiagnosis] = useState<{ workspaceKey: string; reference: string }>();
+  const [examOverviewProjection, setExamOverviewProjection] = useState<ExamOverviewProjection>();
 
   function setSidebarOpen(expanded: boolean) {
     sidebarExpandedForSession = expanded;
@@ -103,6 +109,24 @@ export function EncounterCharting({ patient, encounterId }: Props) {
     setChartView(view);
     saveEncounterChartView(view);
   }
+
+  useEffect(() => {
+    if (chartView !== "structure") return;
+    let cancelled = false;
+    setExamOverviewProjection(undefined);
+    loadExamOverviewProjection(encounterId)
+      .then((projection) => {
+        if (!cancelled) setExamOverviewProjection(projection);
+      })
+      .catch((caught) => {
+        if (!cancelled) {
+          console.error("Exam overview unavailable; retaining the section editor.", caught);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [chartView, encounterId]);
 
   async function loadCatalog() {
     try {
@@ -455,6 +479,8 @@ export function EncounterCharting({ patient, encounterId }: Props) {
           selectedReference={selectedDiagnosis?.workspaceKey === diagnosisWorkspaceKey ? selectedDiagnosis.reference : undefined}
           onSelectDiagnosis={(reference) => setSelectedDiagnosis(reference ? { workspaceKey: diagnosisWorkspaceKey, reference } : undefined)}
         />
+      ) : examOverviewProjection ? (
+        <ExamOverviewBoard projection={examOverviewProjection} />
       ) : (
         <div className="odos-charting-body flex min-h-0 flex-1 flex-col md:flex-row">
         <SpineNav
@@ -818,4 +844,20 @@ function MissingDefinitionState({ section }: { section: string }) {
 
 function section(id: `dry-eye:${string}`, label: string) {
   return { id: id as ChartSectionId, label, group: "DRY EYE WORKUP" };
+}
+
+async function loadExamOverviewProjection(encounterId: string): Promise<ExamOverviewProjection> {
+  const response = await fetch(
+    `${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/exam-overview`,
+    { headers: authHeaders() },
+  );
+  const body = await response.json() as unknown;
+  if (!response.ok) {
+    const error = typeof body === "object" && body !== null && "error" in body
+      ? String((body as { error: unknown }).error)
+      : `Exam overview failed: ${response.status}`;
+    throw new Error(error);
+  }
+  if (!isExamOverviewProjection(body)) throw new Error("Exam overview returned an invalid projection.");
+  return body;
 }
