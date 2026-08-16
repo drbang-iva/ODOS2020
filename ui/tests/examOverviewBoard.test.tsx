@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import React from "react";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
@@ -173,6 +174,11 @@ const UNASSIGNED_FINDINGS: EncounterFindingRow[] = [
     observationReference: "Observation/unassigned-cornea",
   },
 ];
+
+test("the chart bar switches to its two-row grid before mid-width controls can overflow", () => {
+  const css = readFileSync(new URL("../src/styles/charting.css", import.meta.url), "utf8");
+  assert.match(css, /@media \(max-width: 1279px\) \{[\s\S]*?\.odos-exam-chart-bar \{[\s\S]*?grid-template-columns: repeat\(12, minmax\(0, 1fr\)\)/);
+});
 
 test("the permanent chart bar renders exactly eight ordered slots with truthful reserved counts", async () => {
   const harness = await renderEncounter(PROJECTION, { unassignedFindings: UNASSIGNED_FINDINGS });
