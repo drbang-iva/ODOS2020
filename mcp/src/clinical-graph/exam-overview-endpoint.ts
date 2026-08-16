@@ -153,7 +153,9 @@ function conditionObservationReferences(condition: Condition): Set<string> {
 }
 
 function isAssessmentEvidence(condition: Condition): boolean {
-  return condition.verificationStatus?.coding?.some((coding) => coding.code === "refuted") !== true;
+  return condition.verificationStatus?.coding?.some((coding) =>
+    coding.code === "refuted" || coding.code === "entered-in-error"
+  ) !== true;
 }
 
 function readEncounterId(value: unknown): string | undefined {

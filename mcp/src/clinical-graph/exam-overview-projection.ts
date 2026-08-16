@@ -223,7 +223,10 @@ export function deriveChangeFromPrior(
 export function buildExamOverviewProjection(
   input: BuildExamOverviewProjectionInput,
 ): ExamOverviewProjection {
-  const priorRows = input.priorObservations.flatMap((observation) => {
+  const priorRows = input.priorObservations.filter((observation) =>
+    observation.encounter?.reference !== undefined &&
+    observation.encounter.reference !== input.encounterReference
+  ).flatMap((observation) => {
     const identity = observationIdentity(observation, input.definitions);
     return identity ? [{ observation, identity }] : [];
   });
@@ -234,7 +237,7 @@ export function buildExamOverviewProjection(
       const observationReference = observation.id ? `Observation/${observation.id}` : undefined;
       if (!identity || !observationReference) return [];
       const laterality = observationLaterality(observation);
-      const prior = latestPriorObservation(priorRows, identity.findingKey, laterality);
+      const prior = latestPriorObservation(priorRows, identity.findingKey, laterality, observation);
       const currentSnapshot = observationSnapshot(observation);
       const priorSnapshot = prior ? observationSnapshot(prior) : undefined;
       const provenance = input.provenanceByObservation?.[observationReference] ?? { state: "current" as const };
@@ -427,12 +430,26 @@ function latestPriorObservation(
   }>,
   findingKey: string,
   laterality: ExamOverviewFindingProjection["laterality"],
+  current: Observation,
 ): Observation | undefined {
+  const currentInstant = observationComparisonInstant(current);
+  if (currentInstant === undefined) return undefined;
   return rows
     .filter((row) => row.identity.findingKey === findingKey && observationLaterality(row.observation) === laterality)
     .map((row) => row.observation)
     .filter(isUsableObservation)
-    .sort((left, right) => observationTime(right).localeCompare(observationTime(left)))[0];
+    .filter((observation) => {
+      const candidateInstant = observationComparisonInstant(observation);
+      return candidateInstant !== undefined && candidateInstant < currentInstant;
+    })
+    .sort((left, right) => observationComparisonInstant(right)! - observationComparisonInstant(left)!)[0];
+}
+
+function observationComparisonInstant(observation: Observation): number | undefined {
+  const value = observation.effectiveDateTime ?? observation.issued;
+  if (!value) return undefined;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 function observationTime(observation: Observation): string {

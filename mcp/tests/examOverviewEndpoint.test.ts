@@ -111,6 +111,19 @@ test("an encounter with no patient is rejected without fabricating a projection"
   assert.equal(response.status, 400);
 });
 
+test("an entered-in-error Condition cannot resolve Assessment completeness", async () => {
+  const retracted = condition("retracted-condition", "Encounter/e1", []);
+  retracted.verificationStatus = { coding: [{ code: "entered-in-error" }] };
+  const fhir = new OverviewMemoryFhir([encounter(), retracted]);
+
+  const response = await handleExamOverviewRequest(deps(fhir, "provider"), request());
+
+  assert.equal(response.status, 200, JSON.stringify(response.body));
+  const body = response.body as ExamOverviewProjection;
+  assert.equal(body.sections.find((row) => row.sectionKey === "assessment")?.state, "not-examined");
+  assert.equal(body.completeness.trace.find((row) => row.sectionKey === "assessment")?.resolved, false);
+});
+
 function request() {
   return { authHeader: "Bearer clinician", params: { encounterId: "e1" } };
 }

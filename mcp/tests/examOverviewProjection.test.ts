@@ -120,6 +120,48 @@ test("change from prior is derived from snapshots and no delta is persisted", ()
   )), false);
 });
 
+test("prior comparison ignores future and encounter-less Observations", () => {
+  const projection = buildExamOverviewProjection({
+    encounterReference: "Encounter/e1",
+    patientReference: "Patient/p1",
+    definitions: [definition("intraocular_pressure", "tonometry")],
+    currentObservations: [observation("iop-current", "intraocular_pressure", {
+      effectiveDateTime: "2026-08-16T12:00:00.000Z",
+      valueQuantity: { value: 18, unit: "mmHg", code: "mm[Hg]" },
+    })],
+    priorObservations: [
+      observation("iop-valid-prior", "intraocular_pressure", {
+        encounter: { reference: "Encounter/e0" },
+        effectiveDateTime: "2026-07-10T12:00:00.000Z",
+        valueQuantity: { value: 15, unit: "mmHg", code: "mm[Hg]" },
+      }),
+      observation("iop-future", "intraocular_pressure", {
+        encounter: { reference: "Encounter/e2" },
+        effectiveDateTime: "2026-09-10T12:00:00.000Z",
+        valueQuantity: { value: 30, unit: "mmHg", code: "mm[Hg]" },
+      }),
+      observation("iop-encounterless", "intraocular_pressure", {
+        encounter: undefined,
+        effectiveDateTime: "2026-08-01T12:00:00.000Z",
+        valueQuantity: { value: 20, unit: "mmHg", code: "mm[Hg]" },
+      }),
+    ],
+    assessmentPresent: false,
+  });
+
+  assert.deepEqual(projection.findings[0]?.prior?.value, {
+    kind: "quantity",
+    value: 15,
+    unit: "mmHg",
+    code: "mm[Hg]",
+  });
+  assert.deepEqual(projection.findings[0]?.changeFromPrior, {
+    kind: "numeric",
+    delta: 3,
+    unit: "mmHg",
+  });
+});
+
 test("comprehensive clinical completeness is traceable and missing deferred documentation does not make it incomplete", () => {
   const definitions = [
     definition("hpi_ros", "hpi"),
