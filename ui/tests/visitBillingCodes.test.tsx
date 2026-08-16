@@ -490,6 +490,43 @@ test("a pre-save Visit reread cannot overwrite the authoritative post-save state
   }
 });
 
+test("switching encounters clears an in-flight Visit saving state", async () => {
+  const response: VisitChargeResponse = {
+    options: visitOptions(),
+    diagnoses: [],
+  };
+  let resolveSave!: (response: Partial<VisitChargeResponse>) => void;
+  const pendingSave = new Promise<Partial<VisitChargeResponse>>((resolve) => {
+    resolveSave = resolve;
+  });
+  const api: VisitChargeApi = {
+    async read() { return response; },
+    async save() { return pendingSave; },
+  };
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<VisitCodeSelector encounterId="enc-saving-first" api={api} />);
+    await Promise.resolve();
+  });
+  const firstProcedure = renderer.root.findByProps({ "aria-label": "Visit billing code" });
+  let save!: Promise<void>;
+  act(() => {
+    save = firstProcedure.props.onChange({ target: { value: "routine-vision-exam-new" } });
+  });
+  assert.equal(renderer.root.findAllByType("span").filter((node) => textContent(node) === "Saving…").length, 1);
+
+  await act(async () => {
+    renderer.update(<VisitCodeSelector encounterId="enc-saving-second" api={api} />);
+    await Promise.resolve();
+  });
+  assert.equal(renderer.root.findAllByType("span").filter((node) => textContent(node) === "Saving…").length, 0);
+  assert.equal(renderer.root.findByProps({ "aria-label": "Visit billing code" }).props.disabled, false);
+
+  resolveSave({});
+  await act(async () => { await save; });
+  act(() => renderer.unmount());
+});
+
 test("the Visit chip renders none, linked-code, empty-link, and named broken-link states", async () => {
   const cases: Array<{
     label: string;
