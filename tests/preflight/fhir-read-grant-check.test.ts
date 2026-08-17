@@ -35,11 +35,14 @@ test("FHIR read grant scan collects literal ordinary-role reads and requires the
   const files = [{
     path: "mcp/src/fixture.ts",
     text: [
+      "async function searchResource(fhir, resourceType, params) {",
+      "  // search-contract: fixture.computed-search",
+      "  return fhir.search(resourceType, params);",
+      "}",
       'await fhir.read("PlanDefinition", "plan-1");',
       'await this.fhir.search("AllergyIntolerance", { patient });',
       'await staff.fhir.search("Goal", { subject: patient });',
-      '// search-contract: fixture.computed-search',
-      'await fhir.search(resourceType, params);',
+      'await searchResource(fhir, "CarePlan", { patient });',
       'await fhir.read(computedResourceType, id);',
       'await serviceFhir.search("ProjectMembership", { profile });',
     ].join("\n"),
@@ -47,7 +50,7 @@ test("FHIR read grant scan collects literal ordinary-role reads and requires the
 
   assert.deepEqual(
     collectLiteralFhirReadResourceTypes(files),
-    ["AllergyIntolerance", "Goal", "PlanDefinition"],
+    ["AllergyIntolerance", "CarePlan", "Goal", "PlanDefinition"],
   );
   assert.throws(
     () => collectLiteralFhirReadResourceTypes([{

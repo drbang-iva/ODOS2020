@@ -36,6 +36,7 @@ export function collectLiteralFhirReadResourceTypes(
 
   for (const file of files) {
     const source = ts.createSourceFile(file.path, file.text, ts.ScriptTarget.Latest, true);
+    const markedSearchHelpers = new Map<string, number>();
 
     function visit(node: ts.Node): void {
       if (
@@ -47,17 +48,35 @@ export function collectLiteralFhirReadResourceTypes(
         const resourceType = stringLiteral(node.arguments[0]);
         if (resourceType) {
           resourceTypes.add(resourceType);
-        } else if (node.expression.name.text === "search" && !searchContractKey(node, source)) {
-          const position = source.getLineAndCharacterOfPosition(node.getStart(source));
-          throw new Error(
-            `${file.path}:${position.line + 1} has a computed FHIR search resourceType without a search-contract marker.`,
-          );
+        } else if (node.expression.name.text === "search") {
+          if (!searchContractKey(node, source)) {
+            const position = source.getLineAndCharacterOfPosition(node.getStart(source));
+            throw new Error(
+              `${file.path}:${position.line + 1} has a computed FHIR search resourceType without a search-contract marker.`,
+            );
+          }
+          const helper = markedSearchHelper(node);
+          if (helper) markedSearchHelpers.set(helper.name, helper.resourceTypeParameterIndex);
         }
       }
       ts.forEachChild(node, visit);
     }
 
     visit(source);
+    if (markedSearchHelpers.size > 0) {
+      function visitHelperCalls(node: ts.Node): void {
+        if (ts.isCallExpression(node)) {
+          const name = calledName(node.expression);
+          const parameterIndex = name ? markedSearchHelpers.get(name) : undefined;
+          if (parameterIndex !== undefined) {
+            const resourceType = stringLiteral(node.arguments[parameterIndex]);
+            if (resourceType) resourceTypes.add(resourceType);
+          }
+        }
+        ts.forEachChild(node, visitHelperCalls);
+      }
+      visitHelperCalls(source);
+    }
   }
 
   return [...resourceTypes].sort();
@@ -115,6 +134,54 @@ function searchContractKey(node: ts.CallExpression, source: ts.SourceFile): stri
     if (match) return match[1];
     current = current.parent;
   }
+  return undefined;
+}
+
+function markedSearchHelper(
+  node: ts.CallExpression,
+): { readonly name: string; readonly resourceTypeParameterIndex: number } | undefined {
+  const resourceType = unwrappedIdentifier(node.arguments[0]);
+  if (!resourceType) return undefined;
+
+  let current: ts.Node | undefined = node.parent;
+  while (current && !ts.isSourceFile(current)) {
+    if (
+      ts.isFunctionDeclaration(current)
+      || ts.isMethodDeclaration(current)
+      || ts.isFunctionExpression(current)
+      || ts.isArrowFunction(current)
+    ) {
+      const resourceTypeParameterIndex = current.parameters.findIndex((parameter) =>
+        ts.isIdentifier(parameter.name) && parameter.name.text === resourceType.text);
+      const name = functionName(current);
+      if (name && resourceTypeParameterIndex >= 0) return { name, resourceTypeParameterIndex };
+      return undefined;
+    }
+    current = current.parent;
+  }
+  return undefined;
+}
+
+function unwrappedIdentifier(node: ts.Expression | undefined): ts.Identifier | undefined {
+  if (!node) return undefined;
+  if (ts.isIdentifier(node)) return node;
+  if (ts.isAsExpression(node) || ts.isParenthesizedExpression(node)) return unwrappedIdentifier(node.expression);
+  return undefined;
+}
+
+function functionName(
+  node: ts.FunctionDeclaration | ts.MethodDeclaration | ts.FunctionExpression | ts.ArrowFunction,
+): string | undefined {
+  if ("name" in node && node.name) {
+    if (ts.isIdentifier(node.name) || ts.isStringLiteralLike(node.name)) return node.name.text;
+  }
+  if (ts.isVariableDeclaration(node.parent) && ts.isIdentifier(node.parent.name)) return node.parent.name.text;
+  return undefined;
+}
+
+function calledName(expression: ts.LeftHandSideExpression): string | undefined {
+  if (ts.isIdentifier(expression)) return expression.text;
+  if (ts.isPropertyAccessExpression(expression)) return expression.name.text;
   return undefined;
 }
 
