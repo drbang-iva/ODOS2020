@@ -213,6 +213,7 @@ test("diagnosis catalog seeds are ledger-backed durable families and survive a s
     "anisometropia",
     "presbyopia",
     "kcs_not_sjogren",
+    "dry_eye_syndrome",
     "pinguecula",
     "hypertensive_retinopathy",
     "keratoconus_stable",
@@ -243,6 +244,8 @@ test("diagnosis catalog seeds are ledger-backed durable families and survive a s
     "t2_dr_pdr_combined_trd_rrd",
     "t2_dr_stable_pdr",
     "t2_dr_pdr_without_dme",
+    "t2_diabetes_without_complications",
+    "t2_diabetes_other_ophthalmic_complication",
     "t1_dr_unspecified_with_dme",
     "t1_dr_unspecified_without_dme",
     "t1_dr_mild_npdr_with_dme",
@@ -360,6 +363,145 @@ test("diagnosis catalog seeds are ledger-backed durable families and survive a s
   const restarted = new FhirDiagnosisCatalogStore(fhir);
   assert.equal((await restarted.list()).find((row) => row.stableKey === "custom:kcs")?.codingStatus, "provisional");
   assert.deepEqual(fhir.writes[0]?.headers, DIAGNOSIS_CATALOG_WRITE_HEADERS);
+});
+
+test("dry eye syndrome and Type 2 non-retinopathy concepts are distinct verified catalog rows", () => {
+  const stableKeys = [
+    "dry_eye_syndrome",
+    "t2_diabetes_without_complications",
+    "t2_diabetes_other_ophthalmic_complication",
+  ];
+  const rows = buildDiagnosisCatalogSeeds()
+    .filter((row) => stableKeys.includes(row.stableKey))
+    .map((row) => ({
+      stableKey: row.stableKey,
+      display: row.display,
+      clinicalFamily: row.clinicalFamily,
+      lateralityRequired: row.lateralityRequired,
+      icd10: row.icd10,
+      ledgerRefs: row.provenance.ledgerRefs,
+    }));
+
+  assert.deepEqual(rows, [
+    {
+      stableKey: "dry_eye_syndrome",
+      display: "Dry eye syndrome",
+      clinicalFamily: "dry-eye-syndrome",
+      lateralityRequired: true,
+      icd10: {
+        pattern: {
+          unspecifiedEye: "H04.129",
+          right: "H04.121",
+          left: "H04.122",
+          bilateral: "H04.123",
+        },
+      },
+      ledgerRefs: ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"],
+    },
+    {
+      stableKey: "t2_diabetes_without_complications",
+      display: "Type 2 diabetes mellitus without complications",
+      clinicalFamily: "type-2-diabetes-without-complications",
+      lateralityRequired: false,
+      icd10: {
+        code: "E11.9",
+        display: "Type 2 diabetes mellitus without complications",
+      },
+      ledgerRefs: ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"],
+    },
+    {
+      stableKey: "t2_diabetes_other_ophthalmic_complication",
+      display: "Type 2 diabetes mellitus with other diabetic ophthalmic complication",
+      clinicalFamily: "type-2-diabetes-other-ophthalmic-complication",
+      lateralityRequired: false,
+      icd10: {
+        code: "E11.39",
+        display: "Type 2 diabetes mellitus with other diabetic ophthalmic complication",
+      },
+      ledgerRefs: ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"],
+    },
+  ]);
+
+  const kcs = buildDiagnosisCatalogSeeds().find((row) => row.stableKey === "kcs_not_sjogren");
+  assert.notEqual(rows[0]?.stableKey, kcs?.stableKey);
+  assert.notEqual(rows[0]?.clinicalFamily, kcs?.clinicalFamily);
+});
+
+test("ocular-health dry eye amendment dates only the four newly verified rows", () => {
+  const ledger = JSON.parse(readFileSync(
+    resolve(process.cwd(), "../data/code-bindings/ocular-health-phase0-ledger.json"),
+    "utf8",
+  )) as {
+    accessDate: string;
+    scope: string;
+    amendments?: Array<{
+      accessDate: string;
+      scopeDelta: string;
+      codesAdded: string[];
+      sourceRefs: string[];
+    }>;
+    diagnosisCodes: Array<{
+      code: string;
+      display: string;
+      family: string;
+      laterality: string;
+      sourceRefs: string[];
+    }>;
+  };
+
+  assert.equal(ledger.accessDate, "2026-08-10");
+  assert.match(ledger.scope, /dry eye syndrome \(H04\.12-\)/);
+  assert.deepEqual(ledger.amendments, [{
+    accessDate: "2026-08-17",
+    scopeDelta: "Added dry eye syndrome (H04.12-) diagnosis catalog family.",
+    codesAdded: ["H04.121", "H04.122", "H04.123", "H04.129"],
+    sourceRefs: ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"],
+  }]);
+  assert.deepEqual(
+    ledger.diagnosisCodes.filter((row) => row.family === "H04.12-"),
+    [
+      { code: "H04.121", display: "Dry eye syndrome of right lacrimal gland", family: "H04.12-", laterality: "OD", sourceRefs: ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+      { code: "H04.122", display: "Dry eye syndrome of left lacrimal gland", family: "H04.12-", laterality: "OS", sourceRefs: ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+      { code: "H04.123", display: "Dry eye syndrome of bilateral lacrimal glands", family: "H04.12-", laterality: "OU", sourceRefs: ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+      { code: "H04.129", display: "Dry eye syndrome of unspecified lacrimal gland", family: "H04.12-", laterality: "UNKNOWN", sourceRefs: ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    ],
+  );
+});
+
+test("Type 2 diabetes ledger is dual-source and carries no payer coverage claims", () => {
+  const ledger = JSON.parse(readFileSync(
+    resolve(process.cwd(), "../data/code-bindings/type-2-diabetes-phase0-ledger.json"),
+    "utf8",
+  )) as {
+    ledger: string;
+    status: string;
+    mandate: string;
+    accessDate: string;
+    scope: string;
+    sources: Record<string, { url: string; accessDate: string }>;
+    diagnosisFamilies: Array<{ family: string; description: string; sourceRefs: string[] }>;
+    diagnosisCodes: Array<{ code: string; display: string; family: string; laterality: string; sourceRefs: string[] }>;
+    provisionalCoverageRules?: unknown;
+  };
+
+  const sourceRefs = ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"];
+  assert.equal(ledger.ledger, "type-2-diabetes-phase0");
+  assert.equal(ledger.status, "phase0-seeded");
+  assert.equal(ledger.mandate, "Mandate 14");
+  assert.equal(ledger.accessDate, "2026-08-17");
+  assert.match(ledger.scope, /No payer coverage rules are declared\.$/);
+  assert.deepEqual(Object.keys(ledger.sources), sourceRefs);
+  assert.equal(Object.values(ledger.sources).every((source) => source.url.startsWith("https://") && source.accessDate.length === 10), true);
+  assert.deepEqual(ledger.diagnosisFamilies, [
+    { family: "E11.9", description: "Type 2 diabetes mellitus without complications", sourceRefs },
+    { family: "E11.39", description: "Type 2 diabetes mellitus with other diabetic ophthalmic complication", sourceRefs },
+  ]);
+  assert.deepEqual(ledger.diagnosisCodes, [
+    { code: "E11.9", display: "Type 2 diabetes mellitus without complications", family: "E11.9", laterality: "UNKNOWN", sourceRefs },
+    { code: "E11.39", display: "Type 2 diabetes mellitus with other diabetic ophthalmic complication", family: "E11.39", laterality: "UNKNOWN", sourceRefs },
+  ]);
+  assert.equal(ledger.diagnosisCodes.every((row) => row.sourceRefs.length === 2), true);
+  assert.equal(ledger.provisionalCoverageRules, undefined);
 });
 
 test("Wave A diagnosis families resolve every verified laterality code", () => {
