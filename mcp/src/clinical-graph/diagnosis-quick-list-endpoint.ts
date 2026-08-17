@@ -68,6 +68,8 @@ const STARTER_DIAGNOSIS_PINS = [
   { name: "Hypertensive Retinopathy", stableKey: "hypertensive_retinopathy" },
   { name: "Meibomian Gland Dysfunction", stableKey: "meibomian_gland_dysfunction" },
   { name: "Primary Open Angle Glaucoma (POAG)", stableKey: "primary-open-angle-glaucoma" },
+  { name: "Macular Drusen", stableKey: "macular_drusen" },
+  { name: "Optic Disc Drusen", stableKey: "optic_disc_drusen" },
 ] as const;
 
 const mutationSchema = z.object({

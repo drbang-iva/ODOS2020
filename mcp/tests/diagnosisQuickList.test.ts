@@ -26,6 +26,8 @@ const STARTER_DIAGNOSIS_KEYS = [
   "hypertensive_retinopathy",
   "meibomian_gland_dysfunction",
   "primary-open-angle-glaucoma",
+  "macular_drusen",
+  "optic_disc_drusen",
 ] as const;
 
 test("quick-list pins round-trip without changing per-finding usage counts", async () => {
@@ -236,6 +238,26 @@ test("first-read initialization preserves clinician pins that win a conditional-
   assert.equal(fhir.updateCalls, 0);
 });
 
+for (const status of [409, 412] as const) {
+  test(`first-read initialization rereads clinician pins after a conditional-create ${status}`, async () => {
+    const fhir = new ConditionalCreateConflictFhir(status);
+    const response = await handleDiagnosisQuickListRequest({
+      authenticate: async () => ({ staffReference: "Practitioner/conflict", actorRole: "provider" }),
+      tallyFhir: fhir,
+      diagnosisCatalog: async () => buildDiagnosisCatalogSeeds(),
+      now: () => "2026-08-17T12:00:00.000Z",
+    }, { authHeader: "Bearer conflict" });
+
+    assert.equal(response.status, 200);
+    assert.deepEqual((response.body as { pinnedDiagnosisKeys: string[] }).pinnedDiagnosisKeys, ["myopia"]);
+    assert.deepEqual(
+      (await new FhirDiagnosisPickTallyStore(fhir).read("Practitioner/conflict"))?.pinnedDiagnosisKeys,
+      ["myopia"],
+    );
+    assert.equal(fhir.updateCalls, 0);
+  });
+}
+
 test("first-read seed reports a configured diagnosis whose stable key is absent", async () => {
   const fhir = new MemoryFhir();
   const messages: string[] = [];
@@ -439,6 +461,37 @@ class ConditionalCreateRaceFhir extends MemoryFhir {
         pinnedDiagnosisKeys: ["myopia"],
         updatedAt: "2026-08-17T12:00:00.001Z",
       })) as Promise<T>;
+    }
+    return super.create(resource);
+  }
+
+  override async update<T extends Basic>(
+    resourceType: T["resourceType"],
+    id: string,
+    resource: T,
+  ): Promise<T> {
+    this.updateCalls += 1;
+    return super.update(resourceType, id, resource);
+  }
+}
+
+class ConditionalCreateConflictFhir extends MemoryFhir {
+  updateCalls = 0;
+
+  constructor(private readonly status: 409 | 412) {
+    super();
+  }
+
+  override async create<T extends Basic>(resource: T, extraHeaders?: Record<string, string>): Promise<T> {
+    if (extraHeaders?.["If-None-Exist"]) {
+      await super.create(buildDiagnosisPickTallyResource("Practitioner/conflict", {
+        counts: {},
+        pinnedDiagnosisKeys: ["myopia"],
+        updatedAt: "2026-08-17T12:00:00.001Z",
+      }));
+      const error = new Error(`FHIR ${this.status} conditional create conflict`) as Error & { status: number };
+      error.status = this.status;
+      throw error;
     }
     return super.create(resource);
   }
