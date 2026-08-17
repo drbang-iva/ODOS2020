@@ -8,12 +8,7 @@ import {
   type PatientCreditBank,
 } from "../../lib/commercial-engine";
 import { resolveSessionRoles } from "../../lib/practice-roles";
-
-const TENDERS: Array<{ code: PackageSaleTender; label: string }> = [
-  { code: "CASH", label: "Cash" },
-  { code: "CHECK", label: "Check" },
-  { code: "CARD_MANUAL", label: "Card — manual entry" },
-];
+import { messageOf, TENDERS, useDockedPanel } from "./panel-shared";
 
 export function CreditBankDepositSheet({
   patientReference,
@@ -35,6 +30,7 @@ export function CreditBankDepositSheet({
   const [canBonus, setCanBonus] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  const { dialogRef, initialFocusRef, titleId } = useDockedPanel(onClose);
 
   useEffect(() => {
     let cancelled = false;
@@ -77,14 +73,14 @@ export function CreditBankDepositSheet({
   }
 
   return (
-    <aside role="dialog" aria-modal="true" aria-label="Deposit to Credit Bank" className="fixed inset-y-0 right-0 z-[70] flex w-[min(560px,100vw)] flex-col overflow-y-auto border-l border-white/15 bg-[#0c0c18] text-white shadow-2xl">
+    <aside ref={dialogRef} role="dialog" aria-modal="true" aria-label="Deposit to Credit Bank" aria-labelledby={titleId} className="fixed inset-y-0 right-0 z-[70] flex w-[min(560px,100vw)] flex-col overflow-y-auto border-l border-white/15 bg-[#0c0c18] text-white shadow-2xl">
       <header className="flex items-start justify-between border-b border-white/10 px-5 py-4">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-300/70">Stored value</p>
-          <h2 className="mt-1 text-xl font-semibold">Deposit to Credit Bank</h2>
+          <h2 id={titleId} className="mt-1 text-xl font-semibold">Deposit to Credit Bank</h2>
           <p className="text-sm text-white/50">{patientName ?? patientReference}</p>
         </div>
-        <button type="button" aria-label="Close Credit Bank deposit" onClick={onClose}>✕</button>
+        <button ref={initialFocusRef} type="button" aria-label="Close Credit Bank deposit" onClick={onClose}>✕</button>
       </header>
       <div className="grid flex-1 gap-5 p-5">
         <label className="grid gap-2 text-sm font-semibold text-white/70">
@@ -125,8 +121,4 @@ export function CreditBankDepositSheet({
       </footer>
     </aside>
   );
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }

@@ -5,6 +5,7 @@ import {
   type PatientCreditBank,
   type PatientPackageInstance,
 } from "../../lib/commercial-engine";
+import { money, useDockedPanel } from "./panel-shared";
 
 export function BalancePanel({
   patientReference,
@@ -21,11 +22,12 @@ export function BalancePanel({
   onPackageChanged: (packageInstance: PatientPackageInstance, creditBank?: PatientCreditBank) => void;
   onClose: () => void;
 }) {
+  const { dialogRef, initialFocusRef, titleId } = useDockedPanel(onClose);
   return (
-    <aside role="dialog" aria-modal="true" aria-label="Prepaid balances" className="fixed inset-y-0 right-0 z-[65] flex w-[min(720px,100vw)] flex-col overflow-y-auto border-l border-white/15 bg-[#0c0c18] text-white shadow-2xl">
+    <aside ref={dialogRef} role="dialog" aria-modal="true" aria-label="Prepaid balances" aria-labelledby={titleId} className="fixed inset-y-0 right-0 z-[65] flex w-[min(720px,100vw)] flex-col overflow-y-auto border-l border-white/15 bg-[#0c0c18] text-white shadow-2xl">
       <header className="flex items-start justify-between border-b border-white/10 px-5 py-4">
-        <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-cyan-300/70">Prepaid care</p><h2 className="mt-1 text-xl font-semibold">Balances and history</h2></div>
-        <button type="button" aria-label="Close prepaid balances" onClick={onClose}>✕</button>
+        <div><p id={titleId} aria-label="Prepaid balances" className="text-xs font-bold uppercase tracking-[0.16em] text-cyan-300/70">Prepaid care</p><h2 className="mt-1 text-xl font-semibold">Balances and history</h2></div>
+        <button ref={initialFocusRef} type="button" aria-label="Close prepaid balances" onClick={onClose}>✕</button>
       </header>
       <div className="grid gap-4 p-5">
         <CreditBankHistory creditBank={creditBank} />
@@ -169,10 +171,6 @@ function refundPolicyLabel(policy: PatientPackageInstance["refundPolicy"]): stri
   if (policy === "store_credit_only") return "Store credit only";
   if (policy === "prorated_cash") return "Prorated cash — manual attestation required";
   return "Non-refundable";
-}
-
-function money(cents: number): string {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
 }
 
 function localDate(value: string): string {

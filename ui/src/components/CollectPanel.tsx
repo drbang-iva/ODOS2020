@@ -17,17 +17,12 @@ import { CheckoutRedeem } from "./commercial/CheckoutRedeem";
 import { CheckoutBankCredit } from "./commercial/CheckoutBankCredit";
 import { CreditBankDepositSheet } from "./commercial/CreditBankDepositSheet";
 import { SaleSheet } from "./commercial/SaleSheet";
+import { messageOf, money, TENDERS, useDockedPanel } from "./commercial/panel-shared";
 import { loadStatementMessageConfigSingleton } from "../scenes/settings/StatementMessagesSettings";
 import {
   fetchCreditBank,
   type PatientCreditBank,
 } from "../lib/commercial-engine";
-
-const TENDERS: Array<{ code: CollectTender; label: string }> = [
-  { code: "CASH", label: "Cash" },
-  { code: "CHECK", label: "Check" },
-  { code: "CARD_MANUAL", label: "Card — manual entry" },
-];
 
 export type CollectPanelResult = CompletedCollection;
 
@@ -70,6 +65,7 @@ export function CollectPanel({
   const [creditBank, setCreditBank] = useState<PatientCreditBank>();
   const [creditBankLoading, setCreditBankLoading] = useState(false);
   const [creditBankError, setCreditBankError] = useState<string>();
+  const { dialogRef, initialFocusRef, titleId } = useDockedPanel(onClose, !embedded);
 
   useEffect(() => {
     if (initialCharges) {
@@ -179,14 +175,14 @@ export function CollectPanel({
     <>
       <header className="flex items-start justify-between gap-3 border-b border-white/10 px-4 py-3">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/40">Collect payment</p>
+          <p id={titleId} className="text-xs font-bold uppercase tracking-[0.16em] text-white/40">Collect payment</p>
           <h2 className="text-lg font-semibold">{patientName || patientReference}</h2>
           <p className="text-sm text-white/50">Open balance {money(openBalanceCents)}</p>
         </div>
         <div className="flex items-center gap-2">
           {!disabled && <button type="button" onClick={() => setDepositingCreditBank(true)} className="rounded border border-emerald-300/25 bg-emerald-950/20 px-3 py-2 text-xs font-bold text-emerald-100">Deposit Credit Bank</button>}
           {!disabled && <button type="button" onClick={() => setSellingPackage(true)} className="rounded border border-cyan-300/25 bg-cyan-950/20 px-3 py-2 text-xs font-bold text-cyan-100">Add package</button>}
-          {!embedded && <button type="button" aria-label="Close collect panel" onClick={onClose} className="text-white/60 hover:text-white">✕</button>}
+          {!embedded && <button ref={initialFocusRef} type="button" aria-label="Close collect panel" onClick={onClose} className="text-white/60 hover:text-white">✕</button>}
         </div>
       </header>
       <div className="space-y-4 p-4">
@@ -326,7 +322,7 @@ export function CollectPanel({
   return embedded ? (
     <section aria-label="Collect payment" className="rounded border border-white/10">{content}</section>
   ) : (
-    <aside role="dialog" aria-label="Collect payment" className="fixed inset-y-0 right-0 z-50 flex w-[min(620px,100vw)] flex-col overflow-y-auto border-l border-white/15 bg-[#0c0c18] shadow-2xl">
+    <aside ref={dialogRef} role="dialog" aria-modal="true" aria-label="Collect payment" aria-labelledby={titleId} className="fixed inset-y-0 right-0 z-50 flex w-[min(620px,100vw)] flex-col overflow-y-auto border-l border-white/15 bg-[#0c0c18] shadow-2xl">
       {content}
     </aside>
   );
@@ -454,14 +450,6 @@ function receiptSummary(
   };
 }
 
-function money(cents: number): string {
-  return `$${Math.floor(cents / 100)}.${String(cents % 100).padStart(2, "0")}`;
-}
-
 function tenderLabel(tender: CollectTender): string {
   return TENDERS.find((entry) => entry.code === tender)?.label ?? tender;
-}
-
-function messageOf(cause: unknown): string {
-  return cause instanceof Error ? cause.message : String(cause);
 }
