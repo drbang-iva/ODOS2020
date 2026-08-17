@@ -443,7 +443,7 @@ for (const viewport of [
       await page.goto(`${origin}/tests/fixtures/entry-sheets.html?audit=sheet&section=visit-charges`, { waitUntil: "networkidle" });
       const sheet = page.getByRole("dialog");
       await sheet.waitFor();
-      assert.equal(await sheet.getByRole("heading").innerText(), "Visit & charges");
+      assert.equal(await sheet.getByRole("heading", { name: "Visit & charges", level: 2 }).innerText(), "Visit & charges");
       await page.getByRole("combobox", { name: "Visit billing code" }).waitFor();
       await page.getByRole("combobox", { name: "Visit billing diagnosis" }).waitFor();
       await page.getByTestId("procedure-charge-list").waitFor();

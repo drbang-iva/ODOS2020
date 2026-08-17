@@ -401,27 +401,22 @@ test("unconfigured completeness renders as a neutral state instead of complete o
   }
 });
 
-test("blackout preserves the structure editor, open visit controls, and focused control through keyboard restore", async () => {
+test("blackout preserves the open Visit sheet and focused control through keyboard restore", async () => {
   const harness = await renderEncounter(PROJECTION);
   try {
-    const vaLauncher = harness.renderer.root.findByProps({ "data-editor-section-id": "va" });
-    await act(async () => vaLauncher.props.onClick());
-    assert.equal(harness.renderer.root.findAllByType(VaSection).length, 1);
-
     const visitChips = harness.renderer.root.findAllByProps({ "data-testid": "visit-chip" });
     assert.equal(visitChips.length, 1);
     const visitChip = visitChips[0]!;
     await act(async () => visitChip.props.onClick());
-    const visitSurface = harness.renderer.root.findByProps({ "data-testid": "visit-controls-surface" });
-    assert.equal(visitSurface.findAllByType(VisitCodeSelector).length, 1);
-    assert.equal(visitSurface.findAllByType(ProcedureChargeList).length, 1);
+    const visitSheet = harness.renderer.root.findByProps({ "data-entry-sheet-section": "visit-charges" });
+    assert.equal(visitSheet.findAllByType(VisitCodeSelector).length, 1);
+    assert.equal(visitSheet.findAllByType(ProcedureChargeList).length, 1);
 
     const blackout = harness.renderer.root.findByProps({ "data-testid": "blackout-control" });
     assert.equal(blackout.type, "button");
     await act(async () => blackout.props.onClick());
     const overlay = harness.renderer.root.findByProps({ "data-testid": "blackout-overlay" });
-    assert.equal(harness.renderer.root.findAllByType(VaSection).length, 1);
-    assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "visit-controls-surface" }).length, 1);
+    assert.equal(harness.renderer.root.findAllByProps({ "data-entry-sheet-section": "visit-charges" }).length, 1);
 
     let tabPrevented = 0;
     await act(async () => overlay.props.onKeyDown({
@@ -434,8 +429,7 @@ test("blackout preserves the structure editor, open visit controls, and focused 
 
     await act(async () => overlay.props.onKeyDown({ key: "Escape", preventDefault() {} }));
     assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "blackout-overlay" }).length, 0);
-    assert.equal(harness.renderer.root.findAllByType(VaSection).length, 1);
-    assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "visit-controls-surface" }).length, 1);
+    assert.equal(harness.renderer.root.findAllByProps({ "data-entry-sheet-section": "visit-charges" }).length, 1);
     assert.equal(harness.focusRestoreCount(), 1);
   } finally {
     harness.restore();
@@ -478,7 +472,7 @@ test("an open finding sheet visibly requires Finish or Cancel before Visit can o
   const harness = await renderEncounter(PROJECTION);
   try {
     await act(async () => harness.renderer.root.findByProps({ "data-editor-section-id": "pupils" }).props.onClick());
-    assert.equal(harness.renderer.root.findAllByType(ExamEntrySheet).length, 1);
+    assert.equal(harness.renderer.root.findAllByProps({ "data-entry-sheet-section": "pupils" }).length, 1);
 
     const visitChip = harness.renderer.root.findByProps({ "data-testid": "visit-chip" });
     assert.equal(visitChip.props["aria-disabled"], true);
@@ -486,9 +480,11 @@ test("an open finding sheet visibly requires Finish or Cancel before Visit can o
     assert.doesNotMatch(textContent(visitChip), /blocked/i);
 
     await act(async () => visitChip.props.onClick());
-    assert.equal(harness.renderer.root.findAllByType(ExamEntrySheet).length, 1);
-    assert.equal(harness.renderer.root.findAllByProps({ "data-entry-sheet-section": "visit-charges" }).length, 0);
-    assert.equal(harness.renderer.root.findAllByType(EntranceStateSection).length, 1);
+    assert.equal(harness.renderer.root.findAllByProps({ "data-entry-sheet-section": "pupils" }).length, 1);
+    const visitSheet = harness.renderer.root.findAllByType(ExamEntrySheet).find((sheet) => sheet.props.sectionId === "visit-charges");
+    assert.equal(visitSheet?.props.active, false);
+    assert.equal(visitSheet?.props.hidden, true);
+    assert.equal(harness.renderer.root.findAllByProps({ "data-entry-sheet-section": "pupils" }).length, 1);
   } finally {
     harness.restore();
   }
@@ -576,12 +572,15 @@ test("distributed board rows anchor mapped editors and retain full-page fallback
     assert.equal(harness.renderer.root.findAllByType(VaSection).length, 1);
     assert.equal(harness.renderer.root.findAllByType(SpineNav).length, 0);
     assert.equal(harness.renderer.root.findAllByType(ExamOverviewBoard).length, 1);
-    assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "exam-entry-sheet" }).length, 1);
+    assert.equal(harness.renderer.root.findAllByType(ExamEntrySheet).filter((sheet) => !sheet.props.hidden).length, 1);
     assert.equal(vaLauncher.props["aria-pressed"], true);
 
-    const cancel = harness.renderer.root.findByProps({ "data-testid": "cancel-exam-entry-sheet" });
+    const cancel = harness.renderer.root.findByProps({
+      "data-testid": "exam-entry-sheet",
+      "data-entry-sheet-section": "va",
+    }).findByProps({ "data-testid": "cancel-exam-entry-sheet" });
     await act(async () => cancel.props.onClick());
-    assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "exam-entry-sheet" }).length, 0);
+    assert.equal(harness.renderer.root.findAllByType(ExamEntrySheet).filter((sheet) => !sheet.props.hidden).length, 0);
     assert.equal(harness.renderer.root.findAllByType(ExamOverviewBoard).length, 1);
 
     const refractionLauncher = harness.renderer.root.findByProps({ "data-editor-section-id": "refraction" });
@@ -647,8 +646,8 @@ test("each mapped layout wraps its existing section and supports both cancel and
       assert.equal(sheet.findAllByType(contract.component).length, 1, `${contract.sectionId} existing editor`);
       assert.equal(harness.renderer.root.findAllByType(ExamOverviewBoard).length, 1);
 
-      await act(async () => harness.renderer.root.findByProps({ "data-testid": "cancel-exam-entry-sheet" }).props.onClick());
-      assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "exam-entry-sheet" }).length, 0);
+      await act(async () => sheet.findByProps({ "data-testid": "cancel-exam-entry-sheet" }).props.onClick());
+      assert.equal(harness.renderer.root.findAllByType(ExamEntrySheet).filter((entrySheet) => !entrySheet.props.hidden).length, 0);
 
       await act(async () => harness.renderer.root.findByProps({ "data-editor-section-id": contract.sectionId }).props.onClick());
       await act(async () => {
@@ -656,7 +655,7 @@ test("each mapped layout wraps its existing section and supports both cancel and
         await flushEffects();
         await flushEffects();
       });
-      assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "exam-entry-sheet" }).length, 0);
+      assert.equal(harness.renderer.root.findAllByType(ExamEntrySheet).filter((entrySheet) => !entrySheet.props.hidden).length, 0);
       assert.equal(harness.renderer.root.findAllByType(ExamOverviewBoard).length, 1);
     }
   } finally {
@@ -765,7 +764,7 @@ test("a mapped editor save closes its sheet while a deferred editor retains the 
       await flushEffects();
     });
     assert.equal(harness.overviewFetchCount(), 2);
-    assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "exam-entry-sheet" }).length, 0);
+    assert.equal(harness.renderer.root.findAllByType(ExamEntrySheet).filter((sheet) => !sheet.props.hidden).length, 0);
     assert.equal(harness.renderer.root.findAllByType(ExamOverviewBoard).length, 1);
 
     const refractionLauncher = harness.renderer.root.findByProps({ "data-editor-section-id": "refraction" });
@@ -792,13 +791,13 @@ test("a referral suspends the underlying Assessment sheet layer without discardi
     await act(async () => assessment.props.onRefer());
 
     assert.equal(harness.renderer.root.findAllByType(ReferralCompose).length, 1);
-    assert.equal(harness.renderer.root.findByType(ExamEntrySheet).props.active, false);
+    assert.equal(harness.renderer.root.findAllByType(ExamEntrySheet).find((sheet) => sheet.props.sectionId === "assessment")?.props.active, false);
     assert.equal(harness.renderer.root.findAllByType(AssessmentSection).length, 1);
 
     await act(async () => harness.renderer.root.findByType(ReferralCompose).props.onClose());
 
     assert.equal(harness.renderer.root.findAllByType(ReferralCompose).length, 0);
-    assert.equal(harness.renderer.root.findByType(ExamEntrySheet).props.active, true);
+    assert.equal(harness.renderer.root.findAllByType(ExamEntrySheet).find((sheet) => sheet.props.sectionId === "assessment")?.props.active, true);
     assert.equal(harness.renderer.root.findAllByType(AssessmentSection).length, 1);
   } finally {
     harness.restore();

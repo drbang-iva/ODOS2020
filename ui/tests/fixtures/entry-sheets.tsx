@@ -26,10 +26,7 @@ import { SoftContactLensSection } from "../../src/components/charting/SoftContac
 import { SpecialtyContactLensSection } from "../../src/components/charting/SpecialtyContactLensSection";
 import { VaSection } from "../../src/components/charting/VaSection";
 import { WearingSection } from "../../src/components/charting/WearingSection";
-import { MdmProblemsAxis } from "../../src/components/charting/EncounterHeader";
-import { ProcedureChargeList } from "../../src/components/charting/ProcedureChargeList";
-import { VisitCodeSelector } from "../../src/components/charting/VisitCodeSelector";
-import { BalanceChips } from "../../src/components/commercial/BalanceChips";
+import { VisitChargesSheetContent } from "../../src/components/charting/VisitChargesSheet";
 import { chartEditorInventory } from "../../src/components/charting/SpineNav";
 import type { ProcedureChargeApi, VisitChargeApi } from "../../src/lib/clinical-graph-client";
 import { fhir } from "../../src/lib/fhir";
@@ -173,7 +170,7 @@ function Fixture() {
             />
           </section>
           {active && sheetOpen && (
-            <ExamEntrySheet sectionId={mapped ? active : "va"} onCancel={() => setActive(undefined)}>
+            <ExamEntrySheet sectionId={active === "visit-charges" ? "visit-charges" : mapped ? active : "va"} onCancel={() => setActive(undefined)}>
               <div
                 data-fixture-section={active}
                 data-fixture-route={DEFERRED_SECTIONS.has(active) ? "deferred" : "candidate"}
@@ -248,31 +245,28 @@ const PROCEDURE_API: ProcedureChargeApi = {
 };
 
 function VisitChargesFixture() {
+  const [visitCharge, setVisitCharge] = useState<Awaited<ReturnType<VisitChargeApi["read"]>>>();
   return (
-    <section className="odos-visit-charges-content">
-      <div>Coverage recorded at booking · Coverage/synthetic</div>
-      <VisitCodeSelector encounterId="test" api={VISIT_API} />
-      <MdmProblemsAxis
-        procedureFamily="em"
-        mdmHint={{
-          status: "ready",
-          tier: "Low",
-          counts: {
-            minimalSelfLimited: 0,
-            stableChronic: 1,
-            chronicExacerbationProgression: 0,
-            chronicSevereExacerbation: 0,
-            acuteUncomplicated: 0,
-            acuteComplicatedOrSystemic: 0,
-            undiagnosedNewProblemUncertainPrognosis: 0,
-            threatToLifeOrBodilyFunction: 0,
-          },
-          sourceDiagnosisCount: 1,
-        }}
-      />
-      <ProcedureChargeList encounterId="test" api={PROCEDURE_API} />
-      <BalanceChips patientReference="Patient/test" />
-    </section>
+    <VisitChargesSheetContent
+      encounter={{
+        resourceType: "Encounter",
+        id: "test",
+        status: "in-progress",
+        class: { code: "AMB" },
+        subject: { reference: "Patient/test" },
+        extension: [{
+          url: "https://odos2020.com/fhir/StructureDefinition/intended-coverage",
+          valueReference: { reference: "Coverage/synthetic" },
+        }],
+      }}
+      encounterId="test"
+      patientReference="Patient/test"
+      disabled={false}
+      visitCharge={visitCharge}
+      onVisitChargeChange={setVisitCharge}
+      visitApi={VISIT_API}
+      procedureApi={PROCEDURE_API}
+    />
   );
 }
 

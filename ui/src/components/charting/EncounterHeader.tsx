@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type Ref } from "react";
-import type { Appointment, Condition, Encounter, Patient } from "@medplum/fhirtypes";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type Ref } from "react";
+import type { Appointment, Encounter, Patient } from "@medplum/fhirtypes";
 import { fhir } from "../../lib/fhir";
 import {
   assertTransactionSuccess,
@@ -7,10 +7,7 @@ import {
 } from "../../lib/encounter-bundles";
 import { openPatientOverview } from "../../lib/view-state";
 import { RoleSelector } from "../RoleSelector";
-import {
-  computeMdmHint,
-  type MdmHint,
-} from "../../lib/clinical-view-model";
+import type { MdmHint } from "../../lib/clinical-view-model";
 import { patientName } from "../../lib/scheduler-appointment-ui";
 import {
   authHeaders,
@@ -21,7 +18,6 @@ import {
   type VisitProcedureFamily,
 } from "../../lib/clinical-graph-client";
 import { isMigratedEncounter } from "../../lib/patient-overview";
-import { BalanceChips } from "../commercial/BalanceChips";
 import {
   formatSeriesDueWindow,
   formatSeriesSignOffPrompt,
@@ -33,8 +29,6 @@ import {
   isUrgentAppointment,
   ODOS_VISIT_TYPE_SYSTEM,
 } from "../../lib/scheduling";
-import { VisitCodeSelector } from "./VisitCodeSelector";
-import { ProcedureChargeList } from "./ProcedureChargeList";
 import {
   ExamCompletenessControl,
   type ClinicalExamCompleteness,
@@ -45,6 +39,11 @@ interface Props {
   encounterId: string;
   completeness?: ClinicalExamCompleteness;
   unassignedCount?: number;
+  visitCharge?: VisitChargeResponse;
+  brokenDiagnosisDisplay?: string;
+  visitChargesOpen?: boolean;
+  visitUnavailableReason?: string;
+  onToggleVisitCharges?: () => void;
 }
 
 export function EncounterHeader({
@@ -52,6 +51,11 @@ export function EncounterHeader({
   encounterId,
   completeness,
   unassignedCount,
+  visitCharge,
+  brokenDiagnosisDisplay,
+  visitChargesOpen = false,
+  visitUnavailableReason,
+  onToggleVisitCharges,
 }: Props) {
   const [encounter, setEncounter] = useState<Encounter | null>(null);
   const [appointment, setAppointment] = useState<Appointment | null>(null);
@@ -60,13 +64,6 @@ export function EncounterHeader({
   const [error, setError] = useState<string | null>(null);
   const [completenessAdvisories, setCompletenessAdvisories] = useState<DiagnosisCompleteness["diagnoses"]>([]);
   const [seriesPrompt, setSeriesPrompt] = useState<SeriesSignOffPrompt>();
-  const [visitFamilyState, setVisitFamilyState] = useState<{
-    encounterId: string;
-    family: VisitProcedureFamily | null | undefined;
-  }>();
-  const [visitChargeState, setVisitChargeState] = useState<VisitChargeResponse>();
-  const [brokenDiagnosisDisplay, setBrokenDiagnosisDisplay] = useState<string>();
-  const [visitControlsOpen, setVisitControlsOpen] = useState(false);
   const [blackedOut, setBlackedOut] = useState(false);
   const focusBeforeBlackout = useRef<{ focus: () => void }>();
   const blackoutOverlay = useRef<HTMLDivElement>(null);
@@ -145,55 +142,9 @@ export function EncounterHeader({
   }, [encounter]);
 
   const displayName = useMemo(() => patientName(patient), [patient]);
-  const visitProcedureFamily = visitFamilyState?.encounterId === encounterId
-    ? visitFamilyState.family
-    : undefined;
-  const handleVisitProcedureFamilyChange = useCallback(
-    (family: VisitProcedureFamily | null | undefined) => {
-      setVisitFamilyState({ encounterId, family });
-    },
-    [encounterId],
-  );
-  const handleVisitChargeChange = useCallback((response: VisitChargeResponse | undefined) => {
-    setVisitChargeState(response);
-  }, []);
-  const linkedVisitDiagnosis = visitChargeState?.proposal?.state === "accepted"
-    ? visitChargeState.proposal.dxPointers[0]
-    : undefined;
-  const brokenVisitDiagnosis = linkedVisitDiagnosis &&
-    !visitChargeState?.diagnoses.some((diagnosis) => diagnosis.reference === linkedVisitDiagnosis)
-    ? linkedVisitDiagnosis
-    : undefined;
-
-  useEffect(() => {
-    setVisitChargeState(undefined);
-    setBrokenDiagnosisDisplay(undefined);
-    setVisitControlsOpen(false);
-  }, [encounterId]);
-
-  useEffect(() => {
-    setBrokenDiagnosisDisplay(undefined);
-    const conditionId = brokenVisitDiagnosis?.match(/^Condition\/([A-Za-z0-9.-]+)$/)?.[1];
-    if (!conditionId) return;
-    let cancelled = false;
-    void fhir.read<Condition>("Condition", conditionId)
-      .then((condition) => {
-        if (!cancelled) setBrokenDiagnosisDisplay(conditionDisplay(condition, brokenVisitDiagnosis));
-      })
-      .catch(() => {
-        if (!cancelled) setBrokenDiagnosisDisplay(brokenVisitDiagnosis);
-      });
-    return () => { cancelled = true; };
-  }, [brokenVisitDiagnosis]);
-
   useEffect(() => {
     if (blackedOut) blackoutOverlay.current?.focus();
   }, [blackedOut]);
-  const mdmHint = useMemo(
-    () =>
-      encounter ? computeMdmHint({ encounter }) : undefined,
-    [encounter],
-  );
   const migrated = isMigratedEncounter(encounter);
 
   async function finishEncounter() {
@@ -308,18 +259,20 @@ export function EncounterHeader({
         ].filter(Boolean).join(" · ")}
         completeness={completeness}
         unassignedCount={unassignedCount}
-        visitCharge={visitChargeState}
+        visitCharge={visitCharge}
         brokenDiagnosisDisplay={brokenDiagnosisDisplay}
-        visitControlsOpen={visitControlsOpen}
-        onToggleVisitControls={() => setVisitControlsOpen((current) => !current)}
+        visitControlsOpen={visitChargesOpen}
+        visitUnavailableReason={visitUnavailableReason}
+        onToggleVisitControls={() => {
+          if (!visitUnavailableReason) onToggleVisitCharges?.();
+        }}
         onBlackout={enterBlackout}
         requestFinishEncounter={requestFinishEncounter}
         signDisabled={busy !== null || migrated}
         signLabel={busy === "checking" ? "Checking..." : busy === "finish" ? "Signing..." : "Sign & finish"}
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
-        {patient.id && <BalanceChips patientReference={`Patient/${patient.id}`} />}
+      <div className="flex flex-wrap items-center justify-end gap-3 px-5 py-3">
         <div className="flex flex-wrap items-center gap-2">
           <RoleSelector />
           <button
@@ -334,25 +287,8 @@ export function EncounterHeader({
         </div>
       </div>
 
-      <div
-        id="visit-controls-surface"
-        data-testid="visit-controls-surface"
-        hidden={!visitControlsOpen}
-        className="border-t border-white/10 px-5 pb-4"
-      >
-        <VisitCodeSelector
-          encounterId={encounterId}
-          disabled={migrated}
-          onProcedureFamilyChange={handleVisitProcedureFamilyChange}
-          onVisitChargeChange={handleVisitChargeChange}
-        />
-        <ProcedureChargeList encounterId={encounterId} disabled={migrated} />
-      </div>
-
       <div className="px-5 pb-4">
         {appointment && <AppointmentContextBanner appointment={appointment} />}
-
-        {mdmHint && <MdmProblemsAxis mdmHint={mdmHint} procedureFamily={visitProcedureFamily} />}
 
         {error && (
           <div className="mt-3 rounded border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-100">
@@ -414,6 +350,7 @@ interface ExamChartBarProps {
   visitCharge?: VisitChargeResponse;
   brokenDiagnosisDisplay?: string;
   visitControlsOpen: boolean;
+  visitUnavailableReason?: string;
   onToggleVisitControls: () => void;
   onBlackout: () => void;
   requestFinishEncounter: () => void | Promise<void>;
@@ -429,6 +366,7 @@ export function ExamChartBar({
   visitCharge,
   brokenDiagnosisDisplay,
   visitControlsOpen,
+  visitUnavailableReason,
   onToggleVisitControls,
   onBlackout,
   requestFinishEncounter,
@@ -466,7 +404,8 @@ export function ExamChartBar({
         data-chart-bar-slot="visit"
         data-testid="visit-chip"
         aria-expanded={visitControlsOpen}
-        aria-controls="visit-controls-surface"
+        aria-controls="visit-charges-sheet"
+        aria-disabled={visitUnavailableReason ? true : undefined}
         onClick={onToggleVisitControls}
       >
         {visit.kind === "none" ? (
@@ -489,6 +428,9 @@ export function ExamChartBar({
               />
             )}
           </>
+        )}
+        {visitUnavailableReason && (
+          <span className="odos-chart-bar-visit-unavailable">{visitUnavailableReason}</span>
         )}
       </button>
       <button
@@ -563,13 +505,6 @@ function visitChipView(
   };
 }
 
-function conditionDisplay(condition: Condition, fallback: string): string {
-  return condition.code?.text ??
-    condition.code?.coding?.find((coding) => coding.display)?.display ??
-    condition.code?.coding?.find((coding) => coding.code)?.code ??
-    fallback;
-}
-
 export function MdmProblemsAxis({
   mdmHint,
   procedureFamily,
@@ -584,12 +519,12 @@ export function MdmProblemsAxis({
         <div>
           <div className="text-xs uppercase tracking-widest text-white/35">MDM problems axis</div>
           <div className="mt-1 text-sm text-white/70">
-            Calculated only from clinician-set problem status on each visit diagnosis.
+            Clinician-entered problem-status facts. This neither selects nor validates the visit code.
           </div>
         </div>
         {mdmHint.status === "blocked" ? (
           <div className="rounded border border-amber-400/60 bg-amber-400/10 px-3 py-2 text-sm font-semibold text-amber-100">
-            Blocked · {mdmHint.reason}
+            Problem-status facts unavailable · {mdmHint.reason}
           </div>
         ) : (
           <div className="rounded border border-emerald-400/50 bg-emerald-400/10 px-3 py-2 text-sm font-semibold text-emerald-100">

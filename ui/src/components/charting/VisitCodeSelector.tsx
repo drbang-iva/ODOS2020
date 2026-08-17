@@ -12,6 +12,19 @@ import {
 
 const DEFAULT_API = visitChargeApi();
 
+export function visitProcedureFamilyForConceptKey(
+  procedureConceptKey: string | undefined,
+): VisitProcedureFamily | undefined {
+  if (!procedureConceptKey) return undefined;
+  if (procedureConceptKey.startsWith("office-visit-")) return "em";
+  if (
+    procedureConceptKey.startsWith("comprehensive-exam-") ||
+    procedureConceptKey.startsWith("intermediate-exam-")
+  ) return "eye-code";
+  if (procedureConceptKey.startsWith("routine-vision-exam-")) return "vision-plan";
+  return undefined;
+}
+
 export function VisitCodeSelector({
   encounterId,
   disabled = false,
@@ -54,7 +67,9 @@ export function VisitCodeSelector({
       setDiagnoses(response.diagnoses);
       setProposal(response.proposal);
       setSelected(response.selectedProcedureConceptKey ?? "");
-      onProcedureFamilyChange?.(response.procedureFamily ?? null);
+      onProcedureFamilyChange?.(
+        visitProcedureFamilyForConceptKey(response.selectedProcedureConceptKey) ?? null,
+      );
       onVisitChargeChange?.(response);
     } catch (reason) {
       if (version === requestVersion.current) setError(errorMessage(reason));

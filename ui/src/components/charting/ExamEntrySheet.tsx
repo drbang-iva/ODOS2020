@@ -29,21 +29,25 @@ export const EXAM_ENTRY_SHEET_CONFIG = {
 // Eye Growth stays full-page because its imported axial-growth chart creates a 1550px sheet composition.
 
 export type ExamEntrySheetSectionId = keyof typeof EXAM_ENTRY_SHEET_CONFIG;
+export type ExamEntrySheetId = ExamEntrySheetSectionId | "visit-charges";
 
 export function isExamEntrySheetSectionId(sectionId: string): sectionId is ExamEntrySheetSectionId {
   return sectionId in EXAM_ENTRY_SHEET_CONFIG;
 }
 
-export function ExamEntrySheet({ sectionId, onCancel, active = true, children }: {
-  sectionId: ExamEntrySheetSectionId;
+export function ExamEntrySheet({ sectionId, onCancel, active = true, hidden = false, children }: {
+  sectionId: ExamEntrySheetId;
   onCancel: () => void;
   active?: boolean;
+  hidden?: boolean;
   children: ReactNode;
 }) {
   const { dialogRef, initialFocusRef, titleId } = useDockedPanel(onCancel, active);
-  const config = EXAM_ENTRY_SHEET_CONFIG[sectionId];
+  const config = sectionId === "visit-charges"
+    ? { title: "Visit & charges", layout: "visit-charges" }
+    : EXAM_ENTRY_SHEET_CONFIG[sectionId];
   return (
-    <div className="odos-exam-entry-layer" data-testid="exam-entry-layer">
+    <div className="odos-exam-entry-layer" data-testid="exam-entry-layer" hidden={hidden}>
       <div
         className="odos-exam-entry-restore-bar"
         data-testid="exam-entry-restore-bar"
@@ -51,9 +55,10 @@ export function ExamEntrySheet({ sectionId, onCancel, active = true, children }:
         aria-hidden="true"
       >
         <strong>Exam overview</strong>
-        <span>Parked while editing {config.title}</span>
+        <span>{sectionId === "visit-charges" ? "Chart remains visible behind this sheet" : `Parked while editing ${config.title}`}</span>
       </div>
       <aside
+        id={sectionId === "visit-charges" ? "visit-charges-sheet" : undefined}
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
