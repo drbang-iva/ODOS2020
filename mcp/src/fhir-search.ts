@@ -54,6 +54,7 @@ export async function searchBounded<T extends Resource>(
   params: Record<string, string>,
   options: { maxPages: number; maxRows: number },
 ): Promise<T[]> {
+  // search-contract: fhir-search.bounded
   const bundle = await client.search<T>(resourceType, params);
   return collectBoundedSearch(client, resourceType, bundle, options);
 }
@@ -98,6 +99,7 @@ export async function searchAll<T extends Resource>(
   options: { maxRows?: number } = {},
 ): Promise<T[]> {
   const maxRows = options.maxRows ?? DEFAULT_FHIR_SEARCH_MAX_ROWS;
+  // search-contract: fhir-search.all
   let bundle = await client.search<T>(resourceType, paramsWithCount(params));
   const resources: T[] = [];
   for (;;) {

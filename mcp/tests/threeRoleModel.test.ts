@@ -87,16 +87,23 @@ test("all roles read operational records at practice scope while Staff writes st
   );
 });
 
-test("compiled three-role policies grant MedicationRequest reads at practice scope", () => {
+test("compiled three-role policies grant chart sidebar and protocol reads at practice scope", () => {
   for (const roleId of PRACTICE_ROLE_IDS) {
     const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
-    const readRule = policy.resource?.find((rule) =>
-      rule.resourceType === "MedicationRequest" &&
-      !rule.interaction?.includes("create") &&
-      !rule.interaction?.includes("update"));
+    for (const resourceType of [
+      "AllergyIntolerance",
+      "Goal",
+      "MedicationRequest",
+      "PlanDefinition",
+    ]) {
+      const readRule = policy.resource?.find((rule) =>
+        rule.resourceType === resourceType &&
+        !rule.interaction?.includes("create") &&
+        !rule.interaction?.includes("update"));
 
-    assert.deepEqual(readRule?.interaction, ["read", "search", "history", "vread"], roleId);
-    assert.equal(readRule?.criteria, undefined, `${roleId} MedicationRequest read must be practice-scoped`);
+      assert.deepEqual(readRule?.interaction, ["read", "search", "history", "vread"], `${roleId} ${resourceType}`);
+      assert.equal(readRule?.criteria, undefined, `${roleId} ${resourceType} read must be practice-scoped`);
+    }
   }
 });
 
