@@ -3,7 +3,7 @@
   "status": "phase0-seeded",
   "mandate": "Mandate 14",
   "accessDate": "2026-08-10",
-  "scope": "Ocular Health (anterior+posterior) finding→dx candidate suggestions, plus the staged families seeded in Wave B: nonexudative and exudative AMD (H35.31-/H35.32-), primary open-angle and low-tension glaucoma (H40.11-/H40.12-), and resolved diabetic macular edema (E10.37X-/E11.37X-). Cataract-by-type remains deferred.",
+  "scope": "Ocular Health (anterior+posterior) finding→dx candidate suggestions, including dry eye syndrome (H04.12-), plus the staged families seeded in Wave B: nonexudative and exudative AMD (H35.31-/H35.32-), primary open-angle and low-tension glaucoma (H40.11-/H40.12-), and resolved diabetic macular edema (E10.37X-/E11.37X-). Cataract-by-type remains deferred.",
   "sources": {
     "cdcIcd10Cm2026CodeDescriptions": {
       "type": "primary",
@@ -19,11 +19,23 @@
       "accessDate": "2026-08-10"
     }
   },
+  "amendments": [
+    {
+      "accessDate": "2026-08-17",
+      "scopeDelta": "Added dry eye syndrome (H04.12-) diagnosis catalog family.",
+      "codesAdded": ["H04.121", "H04.122", "H04.123", "H04.129"],
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
+    }
+  ],
   "diagnosisCodes": [
     { "code": "H16.221", "display": "Keratoconjunctivitis sicca, not specified as Sjogren's, right eye", "family": "H16.22-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
     { "code": "H16.222", "display": "Keratoconjunctivitis sicca, not specified as Sjogren's, left eye", "family": "H16.22-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
     { "code": "H16.223", "display": "Keratoconjunctivitis sicca, not specified as Sjogren's, bilateral", "family": "H16.22-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
     { "code": "H16.229", "display": "Keratoconjunctivitis sicca, not specified as Sjogren's, unspecified eye", "family": "H16.22-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H04.121", "display": "Dry eye syndrome of right lacrimal gland", "family": "H04.12-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H04.122", "display": "Dry eye syndrome of left lacrimal gland", "family": "H04.12-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H04.123", "display": "Dry eye syndrome of bilateral lacrimal glands", "family": "H04.12-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H04.129", "display": "Dry eye syndrome of unspecified lacrimal gland", "family": "H04.12-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
     { "code": "H11.151", "display": "Pinguecula, right eye", "family": "H11.15-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
     { "code": "H11.152", "display": "Pinguecula, left eye", "family": "H11.15-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
     { "code": "H11.153", "display": "Pinguecula, bilateral", "family": "H11.15-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },

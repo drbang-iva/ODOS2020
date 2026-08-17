@@ -12,6 +12,7 @@ const GLAUCOMA_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/glaucoma-sus
 const REFRACTIVE_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/refractive-error-phase0-ledger.json");
 const OCULAR_HEALTH_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/ocular-health-phase0-ledger.json");
 const DIABETIC_RETINOPATHY_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/diabetic-retinopathy-phase0-ledger.json");
+const TYPE_2_DIABETES_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/type-2-diabetes-phase0-ledger.json");
 const TYPE_1_DIABETIC_RETINOPATHY_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/type-1-diabetic-retinopathy-phase0-ledger.json");
 const DIPLOPIA_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/diplopia-phase0-ledger.json");
 const VISUAL_FIELD_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/visual-field-phase0-ledger.json");
@@ -153,6 +154,7 @@ function buildSeeds(): DiagnosisCatalogRow[] {
   const refractive = loadLedger(REFRACTIVE_LEDGER_PATH);
   const ocularHealth = loadLedger(OCULAR_HEALTH_LEDGER_PATH);
   const diabeticRetinopathy = loadLedger(DIABETIC_RETINOPATHY_LEDGER_PATH);
+  const type2Diabetes = loadLedger(TYPE_2_DIABETES_LEDGER_PATH);
   const type1DiabeticRetinopathy = loadLedger(TYPE_1_DIABETIC_RETINOPATHY_LEDGER_PATH);
   const diplopia = loadLedger(DIPLOPIA_LEDGER_PATH);
   const visualField = loadLedger(VISUAL_FIELD_LEDGER_PATH);
@@ -190,6 +192,7 @@ function buildSeeds(): DiagnosisCatalogRow[] {
     fixedSeed("anisometropia", "Anisometropia", "anisometropia", "H52.31", refractive, provenance),
     fixedSeed("presbyopia", "Presbyopia", "presbyopia", "H52.4", refractive, provenance),
     familySeed("kcs_not_sjogren", "Keratoconjunctivitis sicca (dry eye)", "keratoconjunctivitis-sicca", "H16.22-", ocularHealth, provenance),
+    familySeed("dry_eye_syndrome", "Dry eye syndrome", "dry-eye-syndrome", "H04.12-", ocularHealth, provenance),
     familySeed("pinguecula", "Pinguecula", "pinguecula", "H11.15-", ocularHealth, provenance),
     familySeed("hypertensive_retinopathy", "Hypertensive retinopathy", "hypertensive-retinopathy", "H35.03-", ocularHealth, provenance),
     familySeed("keratoconus_stable", "Keratoconus, stable", "keratoconus", "H18.61-", ocularHealth, provenance),
@@ -220,6 +223,8 @@ function buildSeeds(): DiagnosisCatalogRow[] {
     familySeed("t2_dr_pdr_combined_trd_rrd", "Type 2 diabetes with proliferative diabetic retinopathy with combined traction and rhegmatogenous retinal detachment", "diabetic-retinopathy", "E11.354-", diabeticRetinopathy, provenance),
     familySeed("t2_dr_stable_pdr", "Type 2 diabetes with stable proliferative diabetic retinopathy", "diabetic-retinopathy", "E11.355-", diabeticRetinopathy, provenance),
     familySeed("t2_dr_pdr_without_dme", "Type 2 diabetes with proliferative diabetic retinopathy without macular edema", "diabetic-retinopathy", "E11.359-", diabeticRetinopathy, provenance),
+    fixedSeed("t2_diabetes_without_complications", "Type 2 diabetes mellitus without complications", "type-2-diabetes-without-complications", "E11.9", type2Diabetes, provenance),
+    fixedSeed("t2_diabetes_other_ophthalmic_complication", "Type 2 diabetes mellitus with other diabetic ophthalmic complication", "type-2-diabetes-other-ophthalmic-complication", "E11.39", type2Diabetes, provenance),
     fixedSeed("t1_dr_unspecified_with_dme", "Type 1 diabetes with unspecified diabetic retinopathy with macular edema", "type-1-diabetic-retinopathy", "E10.311", type1DiabeticRetinopathy, provenance),
     fixedSeed("t1_dr_unspecified_without_dme", "Type 1 diabetes with unspecified diabetic retinopathy without macular edema", "type-1-diabetic-retinopathy", "E10.319", type1DiabeticRetinopathy, provenance),
     familySeed("t1_dr_mild_npdr_with_dme", "Type 1 diabetes with mild nonproliferative diabetic retinopathy with macular edema", "type-1-diabetic-retinopathy", "E10.321-", type1DiabeticRetinopathy, provenance),
