@@ -98,7 +98,7 @@ export async function handleDiagnosisQuickListRequest(
         `Diagnosis quick-list starter "${missing.name}" not seeded: stableKey "${missing.stableKey}" is not active and verified.`,
       );
     }
-    tally = await tallyStore.replacePinned(staff.staffReference, starter.pinnedDiagnosisKeys, now);
+    tally = await tallyStore.initializePinnedIfAbsent(staff.staffReference, starter.pinnedDiagnosisKeys, now);
   }
   tally ??= emptyTally(now);
   const migratedPins = migrateDiagnosisPins(tally.pinnedDiagnosisKeys);

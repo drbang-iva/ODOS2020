@@ -7,6 +7,7 @@ import {
   orderDiagnosisQuickList,
 } from "../src/clinical-graph/diagnosis-quick-list-endpoint.js";
 import {
+  buildDiagnosisPickTallyResource,
   FhirDiagnosisPickTallyStore,
 } from "../src/clinical-graph/diagnosis-pick-tally-store.js";
 import { buildDiagnosisCatalogSeeds } from "../src/clinical-graph/diagnosis-catalog-store.js";
@@ -217,6 +218,24 @@ test("fresh writable practitioner receives starter Common diagnoses in operator 
   assert.equal(poag?.axisLabel, "Stage");
 });
 
+test("first-read initialization preserves clinician pins that win a conditional-create race", async () => {
+  const fhir = new ConditionalCreateRaceFhir();
+  const response = await handleDiagnosisQuickListRequest({
+    authenticate: async () => ({ staffReference: "Practitioner/racing", actorRole: "provider" }),
+    tallyFhir: fhir,
+    diagnosisCatalog: async () => buildDiagnosisCatalogSeeds(),
+    now: () => "2026-08-17T12:00:00.000Z",
+  }, { authHeader: "Bearer racing" });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual((response.body as { pinnedDiagnosisKeys: string[] }).pinnedDiagnosisKeys, ["myopia"]);
+  assert.deepEqual(
+    (await new FhirDiagnosisPickTallyStore(fhir).read("Practitioner/racing"))?.pinnedDiagnosisKeys,
+    ["myopia"],
+  );
+  assert.equal(fhir.updateCalls, 0);
+});
+
 test("first-read seed reports a configured diagnosis whose stable key is absent", async () => {
   const fhir = new MemoryFhir();
   const messages: string[] = [];
@@ -407,6 +426,30 @@ class MemoryFhir {
     } as T;
     this.resources[index] = persisted;
     return structuredClone(persisted);
+  }
+}
+
+class ConditionalCreateRaceFhir extends MemoryFhir {
+  updateCalls = 0;
+
+  override async create<T extends Basic>(resource: T, extraHeaders?: Record<string, string>): Promise<T> {
+    if (extraHeaders?.["If-None-Exist"]) {
+      return super.create(buildDiagnosisPickTallyResource("Practitioner/racing", {
+        counts: {},
+        pinnedDiagnosisKeys: ["myopia"],
+        updatedAt: "2026-08-17T12:00:00.001Z",
+      })) as Promise<T>;
+    }
+    return super.create(resource);
+  }
+
+  override async update<T extends Basic>(
+    resourceType: T["resourceType"],
+    id: string,
+    resource: T,
+  ): Promise<T> {
+    this.updateCalls += 1;
+    return super.update(resourceType, id, resource);
   }
 }
 
