@@ -24,6 +24,7 @@ type GrantCheckModule = {
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const SERVICE_FHIR_PROBE_PATH = resolve(REPO_ROOT, "mcp/src/.fhir-read-grant-check-probe.ts");
+const UI_FHIR_PROBE_PATH = resolve(REPO_ROOT, "ui/src/.fhir-read-grant-check-probe.tsx");
 
 async function loadGrantCheck(): Promise<GrantCheckModule> {
   try {
@@ -147,4 +148,55 @@ test("serviceFhir read of an ungranted non-plumbing resource makes the CLI fail 
   assert.equal(result.status, 1, result.stderr || result.stdout);
   assert.match(result.stdout, /FHIR read grant check: FAIL/);
   assert.match(result.stdout, /Missing resourceType grants: RiskAssessment/);
+});
+
+test("an ungranted FHIR read in ui/src makes the CLI fail with its name", () => {
+  writeFileSync(
+    UI_FHIR_PROBE_PATH,
+    [
+      "export async function probe(fhir: { read(t: string, i: string): Promise<unknown> }) {",
+      '  await fhir.read("RiskAssessment", "probe");',
+      "}",
+      "",
+    ].join("\n"),
+  );
+
+  let result: ReturnType<typeof spawnSync>;
+  try {
+    result = spawnSync(
+      process.execPath,
+      ["--import", "tsx", "scripts/fhir-read-grant-check.ts"],
+      { cwd: REPO_ROOT, encoding: "utf8" },
+    );
+  } finally {
+    unlinkSync(UI_FHIR_PROBE_PATH);
+  }
+
+  assert.equal(result.status, 1, result.stderr || result.stdout);
+  assert.match(result.stdout, /FHIR read grant check: FAIL/);
+  assert.match(result.stdout, /Missing resourceType grants: RiskAssessment/);
+});
+
+test("a marked computed search helper carries literal resource types across source files", async () => {
+  const { collectLiteralFhirReadResourceTypes } = await loadGrantCheck();
+  const files = [
+    {
+      path: "ui/src/lib/fhir-search.ts",
+      text: [
+        "export async function searchAll(fhir, resourceType, params) {",
+        "  // search-contract: ui.fhir-search.all",
+        "  return fhir.search(resourceType, params);",
+        "}",
+      ].join("\n"),
+    },
+    {
+      path: "ui/src/scene.tsx",
+      text: [
+        'import { searchAll } from "./lib/fhir-search";',
+        'await searchAll(fhir, "RiskAssessment", { patient });',
+      ].join("\n"),
+    },
+  ];
+
+  assert.deepEqual(collectLiteralFhirReadResourceTypes(files), ["RiskAssessment"]);
 });
