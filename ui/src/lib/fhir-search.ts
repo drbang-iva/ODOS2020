@@ -13,6 +13,7 @@ export async function searchAll<T extends Resource>(
   resourceType: T["resourceType"],
   params?: Record<string, string> | URLSearchParams | Array<[string, string]>,
 ): Promise<T[]> {
+  // search-contract: ui.fhir-search.all
   let bundle = await client.search<T>(resourceType, paramsWithCount(params));
   const resources: T[] = [];
   for (;;) {
