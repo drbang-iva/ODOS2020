@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import React from "react";
+import type { Encounter } from "@medplum/fhirtypes";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import type { ExamOverviewProjection } from "../../mcp/src/clinical-graph/exam-overview-projection";
 import { DiagnosisWorkspace } from "../src/components/charting/DiagnosisWorkspace";
@@ -14,6 +15,7 @@ import { DryEyeSection } from "../src/components/charting/DryEyeSection";
 import { EntranceMeasurementSection } from "../src/components/charting/EntranceMeasurementSection";
 import { EntranceStateSection } from "../src/components/charting/EntranceStateSection";
 import { EomSection } from "../src/components/charting/EomSection";
+import { EncounterHeader } from "../src/components/charting/EncounterHeader";
 import { EyeGrowthSection } from "../src/components/charting/EyeGrowthSection";
 import { ExamEntrySheet } from "../src/components/charting/ExamEntrySheet";
 import { ExamOverviewBoard } from "../src/components/charting/ExamOverviewBoard";
@@ -26,6 +28,7 @@ import { OrthoKSection } from "../src/components/charting/OrthoKSection";
 import { PrescriptionSection } from "../src/components/charting/PrescriptionSection";
 import { RefractionHistorySection } from "../src/components/charting/RefractionHistorySection";
 import { ProcedureChargeList } from "../src/components/charting/ProcedureChargeList";
+import { BalanceChips } from "../src/components/commercial/BalanceChips";
 import { SpineNav } from "../src/components/charting/SpineNav";
 import { VisitCodeSelector } from "../src/components/charting/VisitCodeSelector";
 import { VaSection } from "../src/components/charting/VaSection";
@@ -398,27 +401,22 @@ test("unconfigured completeness renders as a neutral state instead of complete o
   }
 });
 
-test("blackout preserves the structure editor, open visit controls, and focused control through keyboard restore", async () => {
+test("blackout preserves the open Visit sheet and focused control through keyboard restore", async () => {
   const harness = await renderEncounter(PROJECTION);
   try {
-    const vaLauncher = harness.renderer.root.findByProps({ "data-editor-section-id": "va" });
-    await act(async () => vaLauncher.props.onClick());
-    assert.equal(harness.renderer.root.findAllByType(VaSection).length, 1);
-
     const visitChips = harness.renderer.root.findAllByProps({ "data-testid": "visit-chip" });
     assert.equal(visitChips.length, 1);
     const visitChip = visitChips[0]!;
     await act(async () => visitChip.props.onClick());
-    const visitSurface = harness.renderer.root.findByProps({ "data-testid": "visit-controls-surface" });
-    assert.equal(visitSurface.findAllByType(VisitCodeSelector).length, 1);
-    assert.equal(visitSurface.findAllByType(ProcedureChargeList).length, 1);
+    const visitSheet = harness.renderer.root.findByProps({ "data-entry-sheet-section": "visit-charges" });
+    assert.equal(visitSheet.findAllByType(VisitCodeSelector).length, 1);
+    assert.equal(visitSheet.findAllByType(ProcedureChargeList).length, 1);
 
     const blackout = harness.renderer.root.findByProps({ "data-testid": "blackout-control" });
     assert.equal(blackout.type, "button");
     await act(async () => blackout.props.onClick());
     const overlay = harness.renderer.root.findByProps({ "data-testid": "blackout-overlay" });
-    assert.equal(harness.renderer.root.findAllByType(VaSection).length, 1);
-    assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "visit-controls-surface" }).length, 1);
+    assert.equal(harness.renderer.root.findAllByProps({ "data-entry-sheet-section": "visit-charges" }).length, 1);
 
     let tabPrevented = 0;
     await act(async () => overlay.props.onKeyDown({
@@ -431,12 +429,113 @@ test("blackout preserves the structure editor, open visit controls, and focused 
 
     await act(async () => overlay.props.onKeyDown({ key: "Escape", preventDefault() {} }));
     assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "blackout-overlay" }).length, 0);
-    assert.equal(harness.renderer.root.findAllByType(VaSection).length, 1);
-    assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "visit-controls-surface" }).length, 1);
+    assert.equal(harness.renderer.root.findAllByProps({ "data-entry-sheet-section": "visit-charges" }).length, 1);
     assert.equal(harness.focusRestoreCount(), 1);
   } finally {
     harness.restore();
   }
+});
+
+test("Visit opens the shared sheet with exact booking coverage and every relocated billing surface", async () => {
+  const harness = await renderEncounter(PROJECTION, {
+    encounterExtensions: [
+      { url: "https://odos2020.com/fhir/StructureDefinition/intended-coverage", valueReference: { reference: "Coverage/vision-booking" } },
+      { url: "https://odos2020.com/fhir/StructureDefinition/intended-coverage", valueReference: { reference: "Coverage/medical-booking" } },
+    ],
+  });
+  try {
+    const header = harness.renderer.root.findByType(EncounterHeader);
+    assert.equal(header.findAllByType(BalanceChips).length, 0, "balances leave the encounter header");
+
+    const visitChip = harness.renderer.root.findByProps({ "data-testid": "visit-chip" });
+    await act(async () => visitChip.props.onClick());
+
+    const sheet = harness.renderer.root.findByProps({ "data-entry-sheet-section": "visit-charges" });
+    assert.equal(sheet.props.role, "dialog");
+    assert.equal(sheet.findAllByType(VisitCodeSelector).length, 1);
+    assert.equal(sheet.findAllByType(ProcedureChargeList).length, 1);
+    assert.equal(sheet.findAllByType(BalanceChips).length, 1);
+    const copy = textContent(sheet);
+    assert.match(copy, /Coverage recorded at booking/i);
+    assert.match(copy, /Coverage\/vision-booking/);
+    assert.match(copy, /Coverage\/medical-booking/);
+    assert.match(copy, /recorded on the encounter from booking/i);
+    assert.match(copy, /operator-selected link, not a code-support determination/i);
+    assert.match(copy, /does not establish that a changed diagnosis stays aligned with its supporting interpretation/i);
+    assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "visit-controls-surface" }).length, 0);
+  } finally {
+    harness.restore();
+  }
+});
+
+test("an open finding sheet visibly requires Finish or Cancel before Visit can open", async () => {
+  const harness = await renderEncounter(PROJECTION);
+  try {
+    await act(async () => harness.renderer.root.findByProps({ "data-editor-section-id": "pupils" }).props.onClick());
+    assert.equal(harness.renderer.root.findAllByProps({ "data-entry-sheet-section": "pupils" }).length, 1);
+
+    const visitChip = harness.renderer.root.findByProps({ "data-testid": "visit-chip" });
+    assert.equal(visitChip.props["aria-disabled"], true);
+    assert.match(textContent(visitChip), /Finish or cancel Pupils first/i);
+    assert.doesNotMatch(textContent(visitChip), /blocked/i);
+
+    await act(async () => visitChip.props.onClick());
+    assert.equal(harness.renderer.root.findAllByProps({ "data-entry-sheet-section": "pupils" }).length, 1);
+    const visitSheet = harness.renderer.root.findAllByType(ExamEntrySheet).find((sheet) => sheet.props.sectionId === "visit-charges");
+    assert.equal(visitSheet?.props.active, false);
+    assert.equal(visitSheet?.props.hidden, true);
+    assert.equal(harness.renderer.root.findAllByProps({ "data-entry-sheet-section": "pupils" }).length, 1);
+  } finally {
+    harness.restore();
+  }
+});
+
+test("unknown encounter keeps both Visit write surfaces locked during load and after fetch failure", async (t) => {
+  async function assertBillingLocked(
+    harness: Awaited<ReturnType<typeof renderEncounter>>,
+    visibleReason: RegExp,
+  ) {
+    const visitChip = harness.renderer.root.findByProps({ "data-testid": "visit-chip" });
+    assert.equal(visitChip.props["aria-disabled"], true);
+    assert.match(textContent(visitChip), visibleReason);
+    assert.equal(harness.renderer.root.findByType(VisitCodeSelector).props.disabled, true);
+    assert.equal(harness.renderer.root.findByType(ProcedureChargeList).props.disabled, true);
+
+    await act(async () => visitChip.props.onClick());
+
+    const visitSheet = harness.renderer.root.findAllByType(ExamEntrySheet)
+      .find((sheet) => sheet.props.sectionId === "visit-charges");
+    assert.equal(visitSheet?.props.active, false);
+    assert.equal(visitSheet?.props.hidden, true);
+  }
+
+  await t.test("initial encounter load", async () => {
+    const pendingEncounter = new Promise<Encounter>(() => undefined);
+    const harness = await renderEncounter(PROJECTION, {
+      encounterRead: async () => pendingEncounter,
+    });
+    try {
+      await assertBillingLocked(harness, /Loading encounter details.*Visit & charges unavailable/i);
+    } finally {
+      harness.restore();
+    }
+  });
+
+  await t.test("persistent encounter fetch failure", async () => {
+    const harness = await renderEncounter(PROJECTION, {
+      captureOverviewErrors: true,
+      encounterRead: async () => { throw new Error("Synthetic encounter 403"); },
+    });
+    try {
+      await act(async () => {
+        await flushEffects();
+        await flushEffects();
+      });
+      await assertBillingLocked(harness, /Encounter details unavailable.*Visit & charges cannot be changed/i);
+    } finally {
+      harness.restore();
+    }
+  });
 });
 
 test("switching to the diagnosis view preserves the existing DiagnosisWorkspace branch", async () => {
@@ -521,12 +620,15 @@ test("distributed board rows anchor mapped editors and retain full-page fallback
     assert.equal(harness.renderer.root.findAllByType(VaSection).length, 1);
     assert.equal(harness.renderer.root.findAllByType(SpineNav).length, 0);
     assert.equal(harness.renderer.root.findAllByType(ExamOverviewBoard).length, 1);
-    assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "exam-entry-sheet" }).length, 1);
+    assert.equal(harness.renderer.root.findAllByType(ExamEntrySheet).filter((sheet) => !sheet.props.hidden).length, 1);
     assert.equal(vaLauncher.props["aria-pressed"], true);
 
-    const cancel = harness.renderer.root.findByProps({ "data-testid": "cancel-exam-entry-sheet" });
+    const cancel = harness.renderer.root.findByProps({
+      "data-testid": "exam-entry-sheet",
+      "data-entry-sheet-section": "va",
+    }).findByProps({ "data-testid": "cancel-exam-entry-sheet" });
     await act(async () => cancel.props.onClick());
-    assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "exam-entry-sheet" }).length, 0);
+    assert.equal(harness.renderer.root.findAllByType(ExamEntrySheet).filter((sheet) => !sheet.props.hidden).length, 0);
     assert.equal(harness.renderer.root.findAllByType(ExamOverviewBoard).length, 1);
 
     const refractionLauncher = harness.renderer.root.findByProps({ "data-editor-section-id": "refraction" });
@@ -592,8 +694,8 @@ test("each mapped layout wraps its existing section and supports both cancel and
       assert.equal(sheet.findAllByType(contract.component).length, 1, `${contract.sectionId} existing editor`);
       assert.equal(harness.renderer.root.findAllByType(ExamOverviewBoard).length, 1);
 
-      await act(async () => harness.renderer.root.findByProps({ "data-testid": "cancel-exam-entry-sheet" }).props.onClick());
-      assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "exam-entry-sheet" }).length, 0);
+      await act(async () => sheet.findByProps({ "data-testid": "cancel-exam-entry-sheet" }).props.onClick());
+      assert.equal(harness.renderer.root.findAllByType(ExamEntrySheet).filter((entrySheet) => !entrySheet.props.hidden).length, 0);
 
       await act(async () => harness.renderer.root.findByProps({ "data-editor-section-id": contract.sectionId }).props.onClick());
       await act(async () => {
@@ -601,7 +703,7 @@ test("each mapped layout wraps its existing section and supports both cancel and
         await flushEffects();
         await flushEffects();
       });
-      assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "exam-entry-sheet" }).length, 0);
+      assert.equal(harness.renderer.root.findAllByType(ExamEntrySheet).filter((entrySheet) => !entrySheet.props.hidden).length, 0);
       assert.equal(harness.renderer.root.findAllByType(ExamOverviewBoard).length, 1);
     }
   } finally {
@@ -710,7 +812,7 @@ test("a mapped editor save closes its sheet while a deferred editor retains the 
       await flushEffects();
     });
     assert.equal(harness.overviewFetchCount(), 2);
-    assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "exam-entry-sheet" }).length, 0);
+    assert.equal(harness.renderer.root.findAllByType(ExamEntrySheet).filter((sheet) => !sheet.props.hidden).length, 0);
     assert.equal(harness.renderer.root.findAllByType(ExamOverviewBoard).length, 1);
 
     const refractionLauncher = harness.renderer.root.findByProps({ "data-editor-section-id": "refraction" });
@@ -737,13 +839,13 @@ test("a referral suspends the underlying Assessment sheet layer without discardi
     await act(async () => assessment.props.onRefer());
 
     assert.equal(harness.renderer.root.findAllByType(ReferralCompose).length, 1);
-    assert.equal(harness.renderer.root.findByType(ExamEntrySheet).props.active, false);
+    assert.equal(harness.renderer.root.findAllByType(ExamEntrySheet).find((sheet) => sheet.props.sectionId === "assessment")?.props.active, false);
     assert.equal(harness.renderer.root.findAllByType(AssessmentSection).length, 1);
 
     await act(async () => harness.renderer.root.findByType(ReferralCompose).props.onClose());
 
     assert.equal(harness.renderer.root.findAllByType(ReferralCompose).length, 0);
-    assert.equal(harness.renderer.root.findByType(ExamEntrySheet).props.active, true);
+    assert.equal(harness.renderer.root.findAllByType(ExamEntrySheet).find((sheet) => sheet.props.sectionId === "assessment")?.props.active, true);
     assert.equal(harness.renderer.root.findAllByType(AssessmentSection).length, 1);
   } finally {
     harness.restore();
@@ -815,6 +917,8 @@ interface RenderEncounterOptions {
   captureOverviewErrors?: boolean;
   unassignedFindings?: EncounterFindingRow[];
   unassignedResponses?: EncounterFindingRow[][];
+  encounterExtensions?: Encounter["extension"];
+  encounterRead?: (resourceType: string, id: string) => Promise<Encounter>;
 }
 
 async function renderEncounter(projection: unknown, options: RenderEncounterOptions = {}): Promise<{
@@ -834,16 +938,20 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
   if (options.captureOverviewErrors) {
     console.error = (...args: unknown[]) => { overviewErrors.push(args); };
   }
-  fhir.read = (async (_resourceType: string, id: string) => ({
-    resourceType: "Encounter",
-    id,
-    status: "in-progress",
-    class: { code: "AMB" },
-    subject: { reference: "Patient/patient-1" },
-    ...(options.discipline
-      ? { serviceType: { coding: [{ system: ODOS_DISCIPLINE_SYSTEM, code: options.discipline }] } }
-      : {}),
-  })) as typeof fhir.read;
+  fhir.read = (async (resourceType: string, id: string) => {
+    if (options.encounterRead) return options.encounterRead(resourceType, id);
+    return {
+      resourceType: "Encounter",
+      id,
+      status: "in-progress",
+      class: { code: "AMB" },
+      subject: { reference: "Patient/patient-1" },
+      ...(options.encounterExtensions ? { extension: options.encounterExtensions } : {}),
+      ...(options.discipline
+        ? { serviceType: { coding: [{ system: ODOS_DISCIPLINE_SYSTEM, code: options.discipline }] } }
+        : {}),
+    };
+  }) as typeof fhir.read;
   let overviewFetches = 0;
   let findingsFetches = 0;
   let focusRestores = 0;

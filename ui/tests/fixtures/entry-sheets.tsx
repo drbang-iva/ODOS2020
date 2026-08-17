@@ -26,7 +26,10 @@ import { SoftContactLensSection } from "../../src/components/charting/SoftContac
 import { SpecialtyContactLensSection } from "../../src/components/charting/SpecialtyContactLensSection";
 import { VaSection } from "../../src/components/charting/VaSection";
 import { WearingSection } from "../../src/components/charting/WearingSection";
+import { VisitChargesSheetContent } from "../../src/components/charting/VisitChargesSheet";
 import { chartEditorInventory } from "../../src/components/charting/SpineNav";
+import type { ProcedureChargeApi, VisitChargeApi } from "../../src/lib/clinical-graph-client";
+import { fhir } from "../../src/lib/fhir";
 import { RoleProvider } from "../../src/lib/role-context";
 import "../../src/styles/globals.css";
 
@@ -36,6 +39,7 @@ const FIXTURE_SECTIONS = [
   "dilation", "refraction", "eye-growth", "soft-contact-lens",
   "specialty-contact-lens", "ortho-k", "myopia-management", "cup-disc",
   "gonioscopy", "dry-eye", "imaging", "assessment", "prescription",
+  "visit-charges",
 ] as const;
 
 export type FixtureSectionId = typeof FIXTURE_SECTIONS[number];
@@ -121,8 +125,15 @@ window.fetch = async (input) => {
   if (url.includes("/clinical-graph/custom/") && url.includes("/history")) return Response.json({ rows: [] });
   if (url.includes("/history")) return Response.json({ rows: [] });
   if (url.includes("/fhir/R4/")) return Response.json({ resourceType: "Bundle", type: "searchset", total: 0, entry: [] });
+  if (url.endsWith("/commercial-engine/patients/test/packages")) return Response.json({ packages: [] });
+  if (url.endsWith("/commercial-engine/patients/test/credit-bank")) {
+    return Response.json({ creditBank: { patientFhirId: "test", balanceCents: 2500, ledger: [{ id: "credit-1", entryType: "deposit", amountCents: 2500, actorUserId: "synthetic", createdAt: "2026-08-17T12:00:00Z" }] } });
+  }
+  if (url.endsWith("/desk/whoami")) return Response.json({ roles: ["provider"] });
   return Response.json({});
 };
+
+fhir.authHeader = () => "Bearer synthetic-entry-sheet";
 
 function Fixture() {
   const params = new URLSearchParams(window.location.search);
@@ -159,7 +170,7 @@ function Fixture() {
             />
           </section>
           {active && sheetOpen && (
-            <ExamEntrySheet sectionId={mapped ? active : "va"} onCancel={() => setActive(undefined)}>
+            <ExamEntrySheet sectionId={active === "visit-charges" ? "visit-charges" : mapped ? active : "va"} onCancel={() => setActive(undefined)}>
               <div
                 data-fixture-section={active}
                 data-fixture-route={DEFERRED_SECTIONS.has(active) ? "deferred" : "candidate"}
@@ -204,7 +215,59 @@ function renderEditor(sectionId: FixtureSectionId): React.ReactNode {
     case "imaging": return <ImagingSection {...props} />;
     case "assessment": return <AssessmentSection {...props} onRefer={() => undefined} />;
     case "prescription": return <PrescriptionSection {...props} />;
+    case "visit-charges": return <VisitChargesFixture />;
   }
+}
+
+const VISIT_API: VisitChargeApi = {
+  async read() {
+    return {
+      options: [{ procedureConceptKey: "office-visit-new-low", display: "Office visit — new, low complexity" }],
+      diagnoses: [{ reference: "Condition/one", display: "Primary open-angle glaucoma", rank: 1 }],
+      selectedProcedureConceptKey: "office-visit-new-low",
+      proposal: { id: "visit-1", procedureConceptKey: "office-visit-new-low", dxPointers: ["Condition/one"], state: "accepted" },
+    };
+  },
+  async save() { return {}; },
+};
+
+const PROCEDURE_API: ProcedureChargeApi = {
+  async read() {
+    return {
+      options: [{ procedureConceptKey: "gonioscopy", display: "Gonioscopy", billingCode: "SYNTH" }],
+      diagnoses: [{ reference: "Condition/one", display: "Primary open-angle glaucoma", rank: 1 }],
+      proposals: [{ id: "procedure-1", procedureConceptKey: "gonioscopy", dxPointers: ["Condition/one"], state: "accepted" }],
+      attachedProcedures: [],
+    };
+  },
+  async create() { throw new Error("not reached"); },
+  async patch() { throw new Error("not reached"); },
+};
+
+function VisitChargesFixture() {
+  const [visitCharge, setVisitCharge] = useState<Awaited<ReturnType<VisitChargeApi["read"]>>>();
+  return (
+    <VisitChargesSheetContent
+      encounter={{
+        resourceType: "Encounter",
+        id: "test",
+        status: "in-progress",
+        class: { code: "AMB" },
+        subject: { reference: "Patient/test" },
+        extension: [{
+          url: "https://odos2020.com/fhir/StructureDefinition/intended-coverage",
+          valueReference: { reference: "Coverage/synthetic" },
+        }],
+      }}
+      encounterId="test"
+      patientReference="Patient/test"
+      disabled={false}
+      visitCharge={visitCharge}
+      onVisitChargeChange={setVisitCharge}
+      visitApi={VISIT_API}
+      procedureApi={PROCEDURE_API}
+    />
+  );
 }
 
 function isFixtureSectionId(value: string | null): value is FixtureSectionId {
@@ -212,6 +275,7 @@ function isFixtureSectionId(value: string | null): value is FixtureSectionId {
 }
 
 function sectionLabel(sectionId: FixtureSectionId): string {
+  if (sectionId === "visit-charges") return "Visit & charges";
   if (sectionId === "va") return "Visual Acuity";
   if (sectionId === "iop") return "IOP";
   return sectionId.split("-").map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");

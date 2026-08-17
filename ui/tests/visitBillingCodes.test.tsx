@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import React, { useState } from "react";
-import type { Condition, Encounter } from "@medplum/fhirtypes";
+import type { Encounter } from "@medplum/fhirtypes";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import {
   procedureFeeScheduleAdapter,
@@ -9,11 +9,12 @@ import {
 } from "../src/lib/procedure-fee-schedule";
 import { feeScheduleDescriptor } from "../src/scenes/settings/FeeScheduleSettings";
 import { VisitCodeSelector } from "../src/components/charting/VisitCodeSelector";
-import { EncounterHeader, MdmProblemsAxis } from "../src/components/charting/EncounterHeader";
+import * as visitCodeModule from "../src/components/charting/VisitCodeSelector";
+import { VisitChargesSheetContent } from "../src/components/charting/VisitChargesSheet";
+import { ExamChartBar, MdmProblemsAxis } from "../src/components/charting/EncounterHeader";
 import { computeMdmHint } from "../src/lib/clinical-view-model";
-import { fhir } from "../src/lib/fhir";
-import { RoleProvider } from "../src/lib/role-context";
 import type {
+  ProcedureChargeApi,
   VisitChargeApi,
   VisitChargeResponse,
   VisitProcedureFamily,
@@ -675,6 +676,36 @@ const MDM_ENCOUNTER: Encounter = {
 };
 const MDM_HINT = computeMdmHint({ encounter: MDM_ENCOUNTER });
 
+const EMPTY_PROCEDURE_API: ProcedureChargeApi = {
+  async read() {
+    return { options: [], diagnoses: [], proposals: [], attachedProcedures: [] };
+  },
+  async create() { throw new Error("not reached"); },
+  async patch() { throw new Error("not reached"); },
+};
+
+function VisitChargesEncounterHarness({
+  encounterId,
+  api,
+}: {
+  encounterId: string;
+  api: VisitChargeApi;
+}) {
+  const [visitCharge, setVisitCharge] = useState<VisitChargeResponse>();
+  return (
+    <VisitChargesSheetContent
+      encounter={{ ...MDM_ENCOUNTER, id: encounterId }}
+      encounterId={encounterId}
+      patientReference="Patient/test"
+      disabled={false}
+      visitCharge={visitCharge}
+      onVisitChargeChange={setVisitCharge}
+      visitApi={api}
+      procedureApi={EMPTY_PROCEDURE_API}
+    />
+  );
+}
+
 function VisitMdmHarness({ api }: { api: VisitChargeApi }) {
   const [family, setFamily] = useState<VisitProcedureFamily | null>();
   return (
@@ -728,6 +759,59 @@ test("MDM renders for an E/M visit key without changing the existing computation
   }), 1);
 });
 
+test("switching encounters suppresses stale E/M MDM facts before the next Visit response arrives", async () => {
+  const firstResponse: VisitChargeResponse = {
+    options: visitOptions(),
+    diagnoses: [],
+    selectedProcedureConceptKey: "office-visit-new-low",
+    procedureFamily: "em",
+  };
+  const nextResponse = new Promise<VisitChargeResponse>(() => undefined);
+  const api: VisitChargeApi = {
+    async read(encounterId) {
+      return encounterId === "enc-first" ? firstResponse : nextResponse;
+    },
+    async save() { throw new Error("not reached"); },
+  };
+  const view = (encounterId: string) => (
+    <VisitChargesEncounterHarness encounterId={encounterId} api={api} />
+  );
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(view("enc-first"));
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+  assert.equal(renderer.root.findAllByProps({ "data-testid": "mdm-hint-counter" }).length, 1);
+
+  act(() => renderer.update(view("enc-second")));
+
+  assert.equal(renderer.root.findByType(VisitCodeSelector).props.encounterId, "enc-second");
+  assert.equal(renderer.root.findAllByProps({ "data-testid": "mdm-hint-counter" }).length, 0);
+  act(() => renderer.unmount());
+});
+
+test("one UI helper classifies visit families from the selected concept key", () => {
+  const classify = (visitCodeModule as unknown as {
+    visitProcedureFamilyForConceptKey?: (key: string | undefined) => VisitProcedureFamily | undefined;
+  }).visitProcedureFamilyForConceptKey;
+  assert.equal(typeof classify, "function", "the selected-key classifier must be exported from one UI module");
+  assert.equal(classify!("office-visit-new-low"), "em");
+  assert.equal(classify!("comprehensive-exam-established"), "eye-code");
+  assert.equal(classify!("intermediate-exam-new"), "eye-code");
+  assert.equal(classify!("routine-vision-exam-new"), "vision-plan");
+  assert.equal(classify!(undefined), undefined);
+});
+
+test("the MDM fact frame is visibly nonbinding and never uses Blocked as user copy", () => {
+  const renderer = create(<MdmProblemsAxis mdmHint={MDM_HINT} procedureFamily="em" />);
+  const copy = textContent(renderer.root);
+  assert.doesNotMatch(copy, /Blocked/i);
+  assert.match(copy, /clinician-entered problem-status facts/i);
+  assert.match(copy, /neither selects nor validates the visit code/i);
+  act(() => renderer.unmount());
+});
+
 test("MDM is absent for a comprehensive eye-code visit key", async () => {
   assert.equal(await mdmStripCount({
     options: visitOptions(),
@@ -763,45 +847,19 @@ test("MDM is absent while the visit family is not yet known", async () => {
   assert.equal(await mdmStripCount(new Promise<VisitChargeResponse>(() => undefined)), 0);
 });
 
-test("EncounterHeader wires visit family to MDM and suppresses it across an encounter switch", async () => {
-  const originalRead = fhir.read;
-  fhir.read = (async (resourceType: string, id: string) => {
-    assert.equal(resourceType, "Encounter");
-    return {
-      ...MDM_ENCOUNTER,
-      id,
-      subject: { reference: "Patient/patient-1" },
-    };
-  }) as typeof fhir.read;
-  const patient = { resourceType: "Patient" as const, id: "patient-1", name: [{ text: "Test Patient" }] };
-  const header = (encounterId: string) => (
-    <RoleProvider>
-      <EncounterHeader patient={patient} encounterId={encounterId} />
-    </RoleProvider>
-  );
-  let renderer!: ReactTestRenderer;
-  try {
-    await act(async () => {
-      renderer = create(header("enc-first"));
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-    let selector = renderer.root.findByType(VisitCodeSelector);
-    act(() => selector.props.onProcedureFamilyChange("eye-code"));
-    assert.equal(renderer.root.findAllByProps({ "data-testid": "mdm-hint-counter" }).length, 0);
-    act(() => selector.props.onProcedureFamilyChange("em"));
-    assert.equal(renderer.root.findAllByProps({ "data-testid": "mdm-hint-counter" }).length, 1);
-
-    renderer.update(header("enc-second"));
-    assert.equal(renderer.root.findAllByProps({ "data-testid": "mdm-hint-counter" }).length, 0);
-    await act(async () => { await Promise.resolve(); });
-    selector = renderer.root.findByType(VisitCodeSelector);
-    assert.equal(selector.props.encounterId, "enc-second");
-    assert.equal(renderer.root.findAllByProps({ "data-testid": "mdm-hint-counter" }).length, 0);
-  } finally {
-    if (renderer) act(() => renderer.unmount());
-    fhir.read = originalRead;
-  }
+test("selected-key classification, not a server family field, owns MDM visibility", async () => {
+  assert.equal(await mdmStripCount({
+    options: visitOptions(),
+    diagnoses: [],
+    selectedProcedureConceptKey: "office-visit-new-low",
+    procedureFamily: "eye-code",
+  }), 1);
+  assert.equal(await mdmStripCount({
+    options: visitOptions(),
+    diagnoses: [],
+    selectedProcedureConceptKey: "comprehensive-exam-new",
+    procedureFamily: "em",
+  }), 0);
 });
 
 function visitOptions(): VisitChargeResponse["options"] {
@@ -827,48 +885,22 @@ async function testVisitChipState(
   expected: RegExp,
   integrity?: "empty" | "broken",
 ): Promise<void> {
-  const originalRead = fhir.read;
-  fhir.read = (async (resourceType: string, id: string) => {
-    if (resourceType === "Encounter") {
-      return {
-        resourceType: "Encounter",
-        id,
-        status: "in-progress",
-        class: { code: "AMB" },
-        subject: { reference: "Patient/patient-1" },
-      } as Encounter;
-    }
-    assert.equal(resourceType, "Condition");
-    assert.equal(id, "retracted");
-    return {
-      resourceType: "Condition",
-      id,
-      subject: { reference: "Patient/patient-1" },
-      clinicalStatus: { coding: [{ code: "inactive" }] },
-      verificationStatus: { coding: [{ code: "entered-in-error" }] },
-      code: { text: "Keratoconjunctivitis sicca" },
-    } as Condition;
-  }) as typeof fhir.read;
   let renderer!: ReactTestRenderer;
   try {
-    await act(async () => {
-      renderer = create(
-        <RoleProvider>
-          <EncounterHeader
-            patient={{ resourceType: "Patient", id: "patient-1", name: [{ text: `Test ${label}` }] }}
-            encounterId="enc-chip"
-          />
-        </RoleProvider>,
-      );
-      await Promise.resolve();
-    });
-    const selector = renderer.root.findByType(VisitCodeSelector);
-    assert.equal(typeof selector.props.onVisitChargeChange, "function");
-    await act(async () => {
-      selector.props.onVisitChargeChange(response);
-      await Promise.resolve();
-      await Promise.resolve();
-    });
+    renderer = create(
+      <ExamChartBar
+        patientName={`Test ${label}`}
+        patientDetail=""
+        visitCharge={response}
+        brokenDiagnosisDisplay={integrity === "broken" ? "Keratoconjunctivitis sicca" : undefined}
+        visitControlsOpen={false}
+        onToggleVisitControls={() => undefined}
+        onBlackout={() => undefined}
+        requestFinishEncounter={() => undefined}
+        signDisabled={false}
+        signLabel="Sign encounter"
+      />,
+    );
     const chips = renderer.root.findAllByProps({ "data-testid": "visit-chip" });
     assert.equal(chips.length, 1);
     const chip = chips[0]!;
@@ -881,7 +913,6 @@ async function testVisitChipState(
     }
   } finally {
     if (renderer) act(() => renderer.unmount());
-    fhir.read = originalRead;
   }
 }
 

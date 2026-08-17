@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Encounter, Patient } from "@medplum/fhirtypes";
+import type { Condition, Encounter, Patient } from "@medplum/fhirtypes";
 import { ChartSidebar } from "../components/ChartSidebar";
 import { ReferralCompose } from "../components/referral/ReferralCompose";
 import { AestheticsConsentSection } from "../components/charting/AestheticsConsentSection";
@@ -24,10 +24,12 @@ import {
   type ExamOverviewProjection,
 } from "../components/charting/ExamOverviewBoard";
 import {
+  EXAM_ENTRY_SHEET_CONFIG,
   ExamEntrySheet,
   isExamEntrySheetSectionId,
   type ExamEntrySheetSectionId,
 } from "../components/charting/ExamEntrySheet";
+import { VisitChargesSheet } from "../components/charting/VisitChargesSheet";
 import { EyeGrowthSection } from "../components/charting/EyeGrowthSection";
 import { EncounterFindingOverlay } from "../components/charting/EncounterFindingOverlay";
 import { IopSection } from "../components/charting/IopSection";
@@ -46,9 +48,10 @@ import { SpecialtyContactLensSection } from "../components/charting/SpecialtyCon
 import { chartEditorInventory, SpineNav } from "../components/charting/SpineNav";
 import { VaSection } from "../components/charting/VaSection";
 import { WearingSection } from "../components/charting/WearingSection";
-import { authHeaders, clinicalGraphApiBase } from "../lib/clinical-graph-client";
+import { authHeaders, clinicalGraphApiBase, type VisitChargeResponse } from "../lib/clinical-graph-client";
 import { loadDiagnosisFindings } from "../lib/diagnosis-findings";
 import { fhir } from "../lib/fhir";
+import { isMigratedEncounter } from "../lib/patient-overview";
 import {
   loadEncounterChartView,
   saveEncounterChartView,
@@ -77,6 +80,11 @@ interface ProcedureCatalogResponse {
   definitions: CustomFindingDefinition[];
   error?: string;
 }
+
+type EncounterLoadState =
+  | { encounterId: string; status: "loading" }
+  | { encounterId: string; status: "ready"; encounter: Encounter }
+  | { encounterId: string; status: "error" };
 
 let sidebarExpandedForSession = false;
 
@@ -110,6 +118,19 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const [boardEditorOpen, setBoardEditorOpen] = useState(false);
   const [entrySheetSection, setEntrySheetSection] = useState<ExamEntrySheetSectionId>();
   const [unassignedCount, setUnassignedCount] = useState<number>();
+  const [encounterLoadState, setEncounterLoadState] = useState<EncounterLoadState>({
+    encounterId,
+    status: "loading",
+  });
+  const [visitChargesOpen, setVisitChargesOpen] = useState(false);
+  const [visitCharge, setVisitCharge] = useState<VisitChargeResponse>();
+  const [brokenVisitDiagnosisDisplay, setBrokenVisitDiagnosisDisplay] = useState<string>();
+  const currentEncounterLoadState: EncounterLoadState = encounterLoadState.encounterId === encounterId
+    ? encounterLoadState
+    : { encounterId, status: "loading" };
+  const encounter = currentEncounterLoadState.status === "ready"
+    ? currentEncounterLoadState.encounter
+    : undefined;
 
   function setSidebarOpen(expanded: boolean) {
     sidebarExpandedForSession = expanded;
@@ -130,6 +151,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   }
 
   function openBoardEditor(sectionId: ChartSectionId) {
+    setVisitChargesOpen(false);
     setActiveSection(sectionId);
     if (isExamEntrySheetSectionId(sectionId)) {
       setEntrySheetSection(sectionId);
@@ -150,7 +172,33 @@ export function EncounterCharting({ patient, encounterId }: Props) {
     setBoardEditorOpen(false);
     setEntrySheetSection(undefined);
     setExamOverviewProjection(undefined);
+    setVisitChargesOpen(false);
+    setVisitCharge(undefined);
+    setBrokenVisitDiagnosisDisplay(undefined);
   }, [encounterId]);
+
+  const linkedVisitDiagnosis = visitCharge?.proposal?.state === "accepted"
+    ? visitCharge.proposal.dxPointers[0]
+    : undefined;
+  const brokenVisitDiagnosis = linkedVisitDiagnosis &&
+    !visitCharge?.diagnoses.some((diagnosis) => diagnosis.reference === linkedVisitDiagnosis)
+    ? linkedVisitDiagnosis
+    : undefined;
+
+  useEffect(() => {
+    setBrokenVisitDiagnosisDisplay(undefined);
+    const conditionId = brokenVisitDiagnosis?.match(/^Condition\/([A-Za-z0-9.-]+)$/)?.[1];
+    if (!conditionId) return;
+    let cancelled = false;
+    void fhir.read<Condition>("Condition", conditionId)
+      .then((condition) => {
+        if (!cancelled) setBrokenVisitDiagnosisDisplay(conditionDisplay(condition, brokenVisitDiagnosis));
+      })
+      .catch(() => {
+        if (!cancelled) setBrokenVisitDiagnosisDisplay(brokenVisitDiagnosis);
+      });
+    return () => { cancelled = true; };
+  }, [brokenVisitDiagnosis]);
 
   useEffect(() => {
     let cancelled = false;
@@ -292,12 +340,14 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   useEffect(() => {
     let cancelled = false;
     setEncounterRecordedAt(undefined);
+    setEncounterLoadState({ encounterId, status: "loading" });
     fhir.read<Encounter>("Encounter", encounterId)
       .then((encounter) => {
         const code = encounter.serviceType?.coding?.find((coding) =>
           coding.system === ODOS_DISCIPLINE_SYSTEM
         )?.code;
         if (cancelled) return;
+        setEncounterLoadState({ encounterId, status: "ready", encounter });
         setEncounterRecordedAt(encounter.period?.start ?? encounter.period?.end);
         if (code === "eyecare" || code === "aesthetics") {
           setDiscipline(code);
@@ -307,7 +357,10 @@ export function EncounterCharting({ patient, encounterId }: Props) {
         }
       })
       .catch((caught) => {
-        if (!cancelled) console.error("Encounter discipline unavailable.", caught);
+        if (!cancelled) {
+          setEncounterLoadState({ encounterId, status: "error" });
+          console.error("Encounter discipline unavailable.", caught);
+        }
       });
     return () => {
       cancelled = true;
@@ -551,6 +604,14 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const activeExamOverviewProjection = examOverviewProjection?.encounterReference === encounterReference
     ? examOverviewProjection
     : undefined;
+  const visitUnavailableReason = entrySheetSection
+    ? `Finish or cancel ${EXAM_ENTRY_SHEET_CONFIG[entrySheetSection].title} first`
+    : currentEncounterLoadState.status === "loading"
+      ? "Loading encounter details — Visit & charges unavailable"
+      : currentEncounterLoadState.status === "error"
+        ? "Encounter details unavailable — Visit & charges cannot be changed"
+        : undefined;
+  const visitChargesDisabled = currentEncounterLoadState.status !== "ready" || isMigratedEncounter(encounter);
 
   return (
     <div className={["odos-charting-workspace flex h-screen w-screen flex-col bg-bg-deep text-white", config.encounterDensity === "compact" ? "text-[0.95rem]" : ""].join(" ")}>
@@ -559,7 +620,14 @@ export function EncounterCharting({ patient, encounterId }: Props) {
         encounterId={encounterId}
         completeness={activeExamOverviewProjection?.completeness}
         unassignedCount={unassignedCount}
+        visitCharge={visitCharge}
+        brokenDiagnosisDisplay={brokenVisitDiagnosisDisplay}
+        visitChargesOpen={visitChargesOpen}
+        visitUnavailableReason={visitUnavailableReason}
+        onToggleVisitCharges={() => setVisitChargesOpen((current) => !current)}
       />
+      <div className="odos-charting-stage" data-entry-sheet-open={visitChargesOpen ? "true" : "false"}>
+        <div className="odos-charting-primary">
       <div className="odos-chart-view-toggle" role="group" aria-label="Chart workspace view">
         <button type="button" aria-pressed={chartView === "diagnosis"} onClick={() => selectChartView("diagnosis")}>By diagnosis</button>
         <button type="button" aria-pressed={chartView === "structure"} onClick={() => selectChartView("structure")}>By structure</button>
@@ -862,6 +930,18 @@ export function EncounterCharting({ patient, encounterId }: Props) {
         </div>
         </div>
       )}
+        </div>
+        <VisitChargesSheet
+          open={visitChargesOpen}
+          encounter={encounter}
+          encounterId={encounterId}
+          patientReference={patientReference}
+          disabled={visitChargesDisabled}
+          visitCharge={visitCharge}
+          onClose={() => setVisitChargesOpen(false)}
+          onVisitChargeChange={setVisitCharge}
+        />
+      </div>
       {creatingSection && (
         <CustomSectionEditor
           saving={savingSection}
@@ -965,6 +1045,13 @@ function MissingDefinitionState({ section }: { section: string }) {
       </div>
     </section>
   );
+}
+
+function conditionDisplay(condition: Condition, fallback: string): string {
+  return condition.code?.text ??
+    condition.code?.coding?.find((coding) => coding.display)?.display ??
+    condition.code?.coding?.find((coding) => coding.code)?.code ??
+    fallback;
 }
 
 function section(id: `dry-eye:${string}`, label: string) {

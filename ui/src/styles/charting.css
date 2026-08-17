@@ -36,6 +36,29 @@
   overscroll-behavior: contain;
 }
 
+.odos-charting-stage {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr);
+  overflow: hidden;
+  background: var(--odos-ground);
+}
+
+.odos-charting-stage[data-entry-sheet-open="true"] {
+  grid-template-columns: minmax(0, 1fr) clamp(530px, 53vw, 770px);
+}
+
+.odos-charting-primary {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  grid-column: 1;
+  grid-row: 1;
+}
+
 .odos-chart-view-toggle {
   display: flex;
   flex: 0 0 auto;
@@ -260,6 +283,10 @@
   box-shadow: -16px 0 36px rgb(0 0 0 / 28%);
 }
 
+.odos-exam-entry-layer[hidden] {
+  display: none;
+}
+
 .odos-exam-entry-restore-bar {
   display: flex;
   min-width: 44px;
@@ -339,6 +366,71 @@
 
 .odos-exam-entry-sheet[data-entry-sheet-section="va"] .odos-exam-entry-sheet-content > section {
   min-width: max-content;
+}
+
+.odos-visit-charges-content {
+  display: grid;
+  min-width: 0;
+  gap: 14px;
+  padding: 16px;
+}
+
+.odos-visit-charges-section,
+.odos-booking-coverage {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--odos-line);
+  border-radius: 10px;
+  background: var(--odos-surface-2);
+}
+
+.odos-visit-charges-section h3,
+.odos-booking-coverage h3,
+.odos-booking-coverage p,
+.odos-booking-coverage ul {
+  margin: 0;
+}
+
+.odos-booking-coverage > div > span {
+  color: var(--odos-faint);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.odos-booking-coverage h3,
+.odos-visit-charges-section h3 {
+  margin-top: 3px;
+  color: var(--odos-text);
+  font-size: 14px;
+}
+
+.odos-booking-coverage ul,
+.odos-booking-coverage p {
+  margin-top: 10px;
+  color: var(--odos-text);
+  font-size: 13px;
+}
+
+.odos-booking-coverage small,
+.odos-visit-charges-note {
+  display: block;
+  margin: 10px 0 0;
+  color: var(--odos-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.odos-visit-charges-content button,
+.odos-visit-charges-content select,
+.odos-visit-charges-content input,
+.odos-visit-charges-content textarea {
+  min-height: 44px;
+}
+
+.odos-visit-charges-content select {
+  max-width: 100%;
 }
 
 .odos-exam-overview-heading {
@@ -848,6 +940,23 @@
   font-size: 10px;
 }
 
+.odos-chart-bar-visit[aria-disabled="true"] {
+  cursor: not-allowed;
+  border-style: dashed;
+  background: var(--odos-ground);
+  color: var(--odos-muted);
+}
+
+.odos-chart-bar-visit-unavailable {
+  flex: 0 1 190px;
+  padding-left: 8px;
+  border-left: 1px solid var(--odos-line-2);
+  color: var(--odos-faint);
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
 .odos-billing-integrity-marker {
   flex: 0 0 auto;
   color: var(--odos-muted);
@@ -1115,6 +1224,7 @@
 }
 
 @media (max-width: 900px) {
+  .odos-charting-stage[data-entry-sheet-open="true"],
   .odos-exam-overview-stage[data-entry-sheet-open="true"] {
     display: block;
   }
