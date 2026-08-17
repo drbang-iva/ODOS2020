@@ -280,6 +280,9 @@ test("unpinning the seeded POAG family survives reload and another seed trigger 
     (other.body as { pinnedDiagnosisKeys: string[] }).pinnedDiagnosisKeys,
     STARTER_DIAGNOSIS_KEYS,
   );
+  const store = new FhirDiagnosisPickTallyStore(fhir);
+  assert.deepEqual((await store.read("Practitioner/one"))?.pinnedDiagnosisKeys, withoutPoag);
+  assert.deepEqual((await store.read("Practitioner/two"))?.pinnedDiagnosisKeys, STARTER_DIAGNOSIS_KEYS);
 });
 
 test("quick-list routes isolate practitioner pins and reject unknown diagnoses", async () => {
