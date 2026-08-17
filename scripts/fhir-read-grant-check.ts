@@ -16,10 +16,13 @@ export interface FhirReadSourceFile {
 
 export interface FhirReadGrantCheckResult {
   readonly readResourceTypes: readonly string[];
+  readonly excludedServiceIdentityResourceTypes: readonly string[];
   readonly grantedResourceTypes: readonly string[];
   readonly missingResourceTypes: readonly string[];
   readonly limitations: readonly string[];
 }
+
+export const SERVICE_IDENTITY_ONLY_RESOURCE_TYPES = ["ProjectMembership", "User"] as const;
 
 export const FHIR_READ_GRANT_LIMITATIONS = [
   "Literal resourceTypes only; a computed resourceType escapes this scan.",
@@ -43,12 +46,14 @@ export function collectLiteralFhirReadResourceTypes(
         ts.isCallExpression(node)
         && ts.isPropertyAccessExpression(node.expression)
         && (node.expression.name.text === "read" || node.expression.name.text === "search")
-        && /(^|\.)fhir$/.test(node.expression.expression.getText(source))
       ) {
         const resourceType = stringLiteral(node.arguments[0]);
         if (resourceType) {
           resourceTypes.add(resourceType);
-        } else if (node.expression.name.text === "search") {
+        } else if (
+          node.expression.name.text === "search"
+          && isResourceTypeExpression(node.arguments[0])
+        ) {
           if (!searchContractKey(node, source)) {
             const position = source.getLineAndCharacterOfPosition(node.getStart(source));
             throw new Error(
@@ -102,7 +107,14 @@ export function findMissingFhirReadGrants(
 }
 
 export function runFhirReadGrantCheck(): FhirReadGrantCheckResult {
-  const readResourceTypes = collectLiteralFhirReadResourceTypes(readMcpSourceFiles());
+  const discoveredResourceTypes = collectLiteralFhirReadResourceTypes(readMcpSourceFiles());
+  const serviceIdentityOnlyResourceTypes = new Set<string>(SERVICE_IDENTITY_ONLY_RESOURCE_TYPES);
+  const readResourceTypes = discoveredResourceTypes.filter(
+    (resourceType) => !serviceIdentityOnlyResourceTypes.has(resourceType),
+  );
+  const excludedServiceIdentityResourceTypes = discoveredResourceTypes.filter(
+    (resourceType) => serviceIdentityOnlyResourceTypes.has(resourceType),
+  );
   const grantedResourceTypes = [...new Set(PRACTICE_ROLE_IDS.flatMap((roleId) =>
     (buildMedplumAccessPolicy(getRoleDeclaration(roleId)).resource ?? [])
       .flatMap((rule) => rule.resourceType ?? []),
@@ -110,6 +122,7 @@ export function runFhirReadGrantCheck(): FhirReadGrantCheckResult {
 
   return {
     readResourceTypes,
+    excludedServiceIdentityResourceTypes,
     grantedResourceTypes,
     missingResourceTypes: findMissingFhirReadGrants(readResourceTypes, grantedResourceTypes),
     limitations: FHIR_READ_GRANT_LIMITATIONS,
@@ -181,6 +194,15 @@ function unwrappedIdentifier(node: ts.Expression | undefined): ts.Identifier | u
   return undefined;
 }
 
+function isResourceTypeExpression(node: ts.Expression | undefined): boolean {
+  if (!node) return false;
+  if (ts.isAsExpression(node) || ts.isParenthesizedExpression(node)) {
+    return isResourceTypeExpression(node.expression);
+  }
+  if (ts.isIdentifier(node)) return node.text === "resourceType" || node.text === "resource_type";
+  return ts.isPropertyAccessExpression(node) && node.name.text === "resourceType";
+}
+
 function functionName(
   node: ts.FunctionDeclaration | ts.MethodDeclaration | ts.FunctionExpression | ts.ArrowFunction,
 ): string | undefined {
@@ -204,6 +226,9 @@ function renderResult(result: FhirReadGrantCheckResult): string {
         `Missing resourceType grants: ${result.missingResourceTypes.join(", ")}`,
       ]
     : [`FHIR read grant check: PASS (${result.readResourceTypes.length} literal resourceTypes checked)`];
+  lines.push(
+    `Service-identity resourceTypes seen and excluded: ${result.excludedServiceIdentityResourceTypes.join(", ") || "none"}`,
+  );
   lines.push("Limits:", ...result.limitations.map((limitation) => `- ${limitation}`));
   return lines.join("\n");
 }
