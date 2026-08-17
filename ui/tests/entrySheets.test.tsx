@@ -31,7 +31,7 @@ after(async () => {
   await server?.close();
 });
 
-test("the five mapped sections expose truthful layout-only contracts", async () => {
+test("mapped sections expose truthful layout-only contracts while Refraction stays full-page", async () => {
   const entrySheets = await import("../src/components/charting/ExamEntrySheet").catch(() => undefined);
   assert.ok(entrySheets, "the exam entry-sheet module must exist");
   assert.deepEqual(entrySheets.EXAM_ENTRY_SHEET_CONFIG, {
@@ -39,7 +39,6 @@ test("the five mapped sections expose truthful layout-only contracts", async () 
     iop: { title: "Intraocular Pressure", layout: "paired-measurement" },
     gonioscopy: { title: "Gonioscopy", layout: "quadrant-grid" },
     va: { title: "Visual Acuity", layout: "paired-row-form" },
-    refraction: { title: "Refraction", layout: "refraction-blocks" },
   });
   assert.doesNotMatch(
     JSON.stringify(entrySheets.EXAM_ENTRY_SHEET_CONFIG),
@@ -51,14 +50,16 @@ test("the five mapped sections expose truthful layout-only contracts", async () 
 for (const viewport of [
   { width: 1440, height: 1000, expectedMin: 750, expectedMax: 770 },
   { width: 1200, height: 900, expectedMin: 530, expectedMax: 650 },
+  { width: 1000, height: 900, expectedMin: 529, expectedMax: 531 },
+  { width: 901, height: 900, expectedMin: 529, expectedMax: 531 },
 ] as const) {
-  test(`the anchored sheet uses the packet width without covering the exam column at ${viewport.width}px`, { timeout: 30_000 }, async () => {
+  test(`the widest mapped shape uses the packet width without covering the exam column at ${viewport.width}px`, { timeout: 30_000 }, async () => {
     const page = await browser.newPage({ viewport });
     page.setDefaultTimeout(3_000);
     try {
       await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
-      await page.getByRole("button", { name: "Open Pupils" }).click();
-      const dialog = page.getByRole("dialog", { name: "Pupils" });
+      await page.getByRole("button", { name: "Open Visual Acuity" }).click();
+      const dialog = page.getByRole("dialog", { name: "Visual Acuity" });
       await dialog.waitFor();
 
       const geometry = await page.evaluate(() => {
@@ -75,6 +76,70 @@ for (const viewport of [
     }
   });
 }
+
+for (const width of [1200, 1000, 901]) {
+  test(`real Visual Acuity controls have a horizontal reachability path at ${width}px`, { timeout: 30_000 }, async () => {
+    const page = await browser.newPage({ viewport: { width, height: 900 } });
+    page.setDefaultTimeout(3_000);
+    try {
+      await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
+      await page.getByRole("button", { name: "Open Visual Acuity" }).click();
+      await page.getByRole("dialog", { name: "Visual Acuity" }).waitFor();
+
+      const before = await page.evaluate(() => {
+        const content = document.querySelector<HTMLElement>(".odos-exam-entry-sheet-content")!;
+        const correction = Array.from(content.querySelectorAll<HTMLElement>("select")).at(-1)!;
+        const contentRect = content.getBoundingClientRect();
+        const correctionRect = correction.getBoundingClientRect();
+        return {
+          clientWidth: content.clientWidth,
+          scrollWidth: content.scrollWidth,
+          overflowX: getComputedStyle(content).overflowX,
+          correctionRight: correctionRect.right,
+          contentRight: contentRect.right,
+        };
+      });
+      const clipped = before.correctionRight > before.contentRight + 1;
+      assert.ok(clipped, `the ${width}px rung must exercise VA overflow`);
+      assert.ok(
+        before.overflowX === "auto" || before.overflowX === "scroll",
+        `VA content is clipped at ${width}px with overflow-x ${before.overflowX}`,
+      );
+      assert.ok(before.scrollWidth > before.clientWidth, `VA must expose scroll width at ${width}px`);
+
+      await page.evaluate(() => {
+        const content = document.querySelector<HTMLElement>(".odos-exam-entry-sheet-content")!;
+        content.scrollLeft = content.scrollWidth;
+      });
+      const after = await page.evaluate(() => {
+        const content = document.querySelector<HTMLElement>(".odos-exam-entry-sheet-content")!;
+        const correction = Array.from(content.querySelectorAll<HTMLElement>("select")).at(-1)!;
+        return {
+          correctionRight: correction.getBoundingClientRect().right,
+          contentRight: content.getBoundingClientRect().right,
+        };
+      });
+      assert.ok(after.correctionRight <= after.contentRight + 1, `Correction must be reachable after scrolling at ${width}px`);
+    } finally {
+      await page.close();
+    }
+  });
+}
+
+test("real Refraction returns to the full-page editor instead of a narrow entry sheet", { timeout: 30_000 }, async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  page.setDefaultTimeout(3_000);
+  try {
+    await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "Open Refraction" }).click();
+    await page.getByTestId("fixture-full-page-refraction").waitFor();
+    assert.equal(await page.getByRole("dialog").count(), 0);
+    await page.getByRole("heading", { name: "Refraction" }).waitFor();
+    await page.getByRole("combobox", { name: "OD distance visual acuity" }).waitFor();
+  } finally {
+    await page.close();
+  }
+});
 
 test("entry-sheet chrome is 44px-class and the shared layer traps, closes, and restores focus", { timeout: 30_000 }, async () => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
@@ -116,12 +181,12 @@ test("entry-sheet chrome is 44px-class and the shared layer traps, closes, and r
   }
 });
 
-test("narrow entry uses a bottom sheet while retaining visible exam context", { timeout: 30_000 }, async () => {
+test("the widest mapped shape uses a bottom sheet while retaining visible exam context", { timeout: 30_000 }, async () => {
   const page = await browser.newPage({ viewport: { width: 768, height: 900 } });
   page.setDefaultTimeout(3_000);
   try {
     await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
-    await page.getByRole("button", { name: "Open Refraction" }).click();
+    await page.getByRole("button", { name: "Open Visual Acuity" }).click();
     const geometry = await page.evaluate(() => {
       const context = document.querySelector<HTMLElement>("[data-testid=fixture-exam-context]")!.getBoundingClientRect();
       const sheet = document.querySelector<HTMLElement>("[data-testid=exam-entry-sheet]")!.getBoundingClientRect();
