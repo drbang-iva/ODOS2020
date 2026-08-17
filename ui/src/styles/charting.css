@@ -228,6 +228,126 @@
   color: var(--odos-text);
 }
 
+.odos-exam-overview-stage {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr);
+  overflow: hidden;
+  background: var(--odos-ground);
+}
+
+.odos-exam-overview-stage[data-entry-sheet-open="true"] {
+  grid-template-columns: minmax(0, 1fr) clamp(530px, 53vw, 770px);
+}
+
+.odos-exam-overview-stage > .odos-exam-overview {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.odos-exam-entry-layer {
+  z-index: 50;
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  grid-column: 2;
+  grid-row: 1;
+  grid-template-rows: 44px minmax(0, 1fr);
+  border-left: 1px solid var(--odos-line-2);
+  background: var(--odos-ground);
+  box-shadow: -16px 0 36px rgb(0 0 0 / 28%);
+}
+
+.odos-exam-entry-restore-bar {
+  display: flex;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--odos-line);
+  background: var(--odos-surface-2);
+  color: var(--odos-muted);
+  font-size: 12px;
+}
+
+.odos-exam-entry-restore-bar strong {
+  color: var(--odos-text);
+}
+
+.odos-exam-entry-sheet {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  background: var(--odos-deep-surface);
+  color: var(--odos-text);
+}
+
+.odos-exam-entry-sheet-heading {
+  display: flex;
+  min-height: 60px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--odos-line);
+  background: var(--odos-surface);
+}
+
+.odos-exam-entry-sheet-heading span,
+.odos-exam-entry-sheet-heading h2 {
+  margin: 0;
+}
+
+.odos-exam-entry-sheet-heading span {
+  color: var(--odos-faint);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.odos-exam-entry-sheet-heading h2 {
+  margin-top: 2px;
+  font-size: 18px;
+}
+
+.odos-exam-entry-sheet-heading button {
+  min-width: 64px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--odos-line-2);
+  border-radius: 7px;
+  background: var(--odos-surface-2);
+  color: var(--odos-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.odos-exam-entry-sheet-content {
+  min-width: 0;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.odos-exam-entry-sheet[data-entry-sheet-section="va"] .odos-exam-entry-sheet-content > section {
+  min-width: max-content;
+}
+
+.odos-exam-editor-launcher-button.is-active {
+  border-color: var(--odos-brand);
+  background: color-mix(in srgb, var(--odos-brand) 18%, var(--odos-surface-2));
+  color: var(--odos-text);
+  box-shadow: inset 3px 0 0 var(--odos-brand);
+}
+
 .odos-exam-overview-heading {
   display: flex;
   align-items: flex-end;
@@ -963,6 +1083,24 @@
 
   .odos-exam-completeness-trace li {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .odos-exam-overview-stage[data-entry-sheet-open="true"] {
+    display: block;
+  }
+
+  .odos-exam-entry-layer {
+    position: fixed;
+    z-index: 50;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: min(70vh, 640px);
+    border-top: 1px solid var(--odos-line-2);
+    border-left: 0;
+    box-shadow: 0 -16px 36px rgb(0 0 0 / 32%);
   }
 }
 
