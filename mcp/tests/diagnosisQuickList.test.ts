@@ -12,6 +12,21 @@ import {
 import { buildDiagnosisCatalogSeeds } from "../src/clinical-graph/diagnosis-catalog-store.js";
 import type { DiagnosisCatalogRow } from "../src/clinical-graph/glaucoma-suspect.js";
 
+const STARTER_DIAGNOSIS_KEYS = [
+  "astigmatism",
+  "myopia",
+  "hyperopia",
+  "cataract_nuclear_sclerosis",
+  "kcs_not_sjogren",
+  "ocular_hypertension",
+  "pseudophakia",
+  "glaucoma_suspect_open_angle_low",
+  "glaucoma_suspect_open_angle_high",
+  "hypertensive_retinopathy",
+  "meibomian_gland_dysfunction",
+  "primary-open-angle-glaucoma",
+] as const;
+
 test("quick-list pins round-trip without changing per-finding usage counts", async () => {
   const fhir = new MemoryFhir();
   const store = new FhirDiagnosisPickTallyStore(fhir);
@@ -181,6 +196,66 @@ test("member pins migrate idempotently to staged families without dropping unrel
   ]);
 });
 
+test("fresh writable practitioner receives starter Common diagnoses in operator order", async () => {
+  const fhir = new MemoryFhir();
+  const response = await handleDiagnosisQuickListRequest({
+    authenticate: async () => ({ staffReference: "Practitioner/fresh", actorRole: "provider" }),
+    tallyFhir: fhir,
+    diagnosisCatalog: async () => buildDiagnosisCatalogSeeds(),
+    now: () => "2026-08-17T12:00:00.000Z",
+  }, { authHeader: "Bearer fresh" });
+
+  assert.equal(response.status, 200);
+  const body = response.body as {
+    pinnedDiagnosisKeys: string[];
+    diagnoses: Array<{ stableKey: string; pinned: boolean; axisLabel?: string }>;
+  };
+  assert.deepEqual(body.pinnedDiagnosisKeys, STARTER_DIAGNOSIS_KEYS);
+  assert.deepEqual(body.diagnoses.map((row) => row.stableKey), STARTER_DIAGNOSIS_KEYS);
+  const poag = body.diagnoses.find((row) => row.stableKey === "primary-open-angle-glaucoma");
+  assert.equal(poag?.pinned, true);
+  assert.equal(poag?.axisLabel, "Stage");
+});
+
+test("unpinning a seeded diagnosis survives reload and another seed trigger without crossing practitioners", async () => {
+  const fhir = new MemoryFhir();
+  const authenticate = async (header: string | undefined) => ({
+    staffReference: header === "Bearer two" ? "Practitioner/two" : "Practitioner/one",
+    actorRole: "provider" as const,
+  });
+  const deps = {
+    authenticate,
+    tallyFhir: fhir,
+    diagnosisCatalog: async () => buildDiagnosisCatalogSeeds(),
+    now: () => "2026-08-17T12:00:00.000Z",
+  };
+
+  const seeded = await handleDiagnosisQuickListRequest(deps, { authHeader: "Bearer one" });
+  assert.deepEqual(
+    (seeded.body as { pinnedDiagnosisKeys: string[] }).pinnedDiagnosisKeys,
+    STARTER_DIAGNOSIS_KEYS,
+  );
+  const withoutMyopia = STARTER_DIAGNOSIS_KEYS.filter((key) => key !== "myopia");
+  const unpinned = await handleDiagnosisQuickListMutationRequest(deps, {
+    authHeader: "Bearer one",
+    body: { pinnedDiagnosisKeys: withoutMyopia },
+  });
+  assert.equal(unpinned.status, 200);
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const reloaded = await handleDiagnosisQuickListRequest(deps, { authHeader: "Bearer one" });
+    assert.deepEqual(
+      (reloaded.body as { pinnedDiagnosisKeys: string[] }).pinnedDiagnosisKeys,
+      withoutMyopia,
+    );
+  }
+  const other = await handleDiagnosisQuickListRequest(deps, { authHeader: "Bearer two" });
+  assert.deepEqual(
+    (other.body as { pinnedDiagnosisKeys: string[] }).pinnedDiagnosisKeys,
+    STARTER_DIAGNOSIS_KEYS,
+  );
+});
+
 test("quick-list routes isolate practitioner pins and reject unknown diagnoses", async () => {
   const fhir = new MemoryFhir();
   const diagnoses = buildDiagnosisCatalogSeeds();
@@ -222,9 +297,9 @@ test("quick-list routes isolate practitioner pins and reject unknown diagnoses",
   };
   assert.deepEqual(
     otherBody.pinnedDiagnosisKeys,
-    [],
+    STARTER_DIAGNOSIS_KEYS,
   );
-  assert.deepEqual(otherBody.diagnoses, []);
+  assert.deepEqual(otherBody.diagnoses.map((row) => row.stableKey), STARTER_DIAGNOSIS_KEYS);
   const collapsedMembers = new Set([
     "poag_mild", "poag_moderate", "poag_severe", "poag_indeterminate",
     "low_tension_glaucoma_mild", "low_tension_glaucoma_moderate", "low_tension_glaucoma_severe", "low_tension_glaucoma_indeterminate",
