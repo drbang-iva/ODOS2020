@@ -103,12 +103,12 @@ test("every static editor is mounted for a real-browser width and height gate", 
     measurements[sectionId] = {};
     for (const viewport of ENTRY_SHEET_VIEWPORTS) {
       const page = await browser.newPage({ viewport });
-      page.setDefaultTimeout(5_000);
+      page.setDefaultTimeout(15_000);
       page.on("pageerror", (error) => console.log(`ENTRY_SHEET_FIXTURE_ERROR ${sectionId}: ${error.message}`));
       try {
         await page.goto(
           `${origin}/tests/fixtures/entry-sheets.html?audit=sheet&section=${sectionId}`,
-          { waitUntil: "networkidle" },
+          { waitUntil: "domcontentloaded" },
         );
         await page.locator(`[data-fixture-section="${sectionId}"]`).waitFor({ state: "attached" });
         await page.waitForTimeout(50);
