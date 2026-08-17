@@ -24,6 +24,8 @@ import {
 } from "../../scripts/sync-practice-role-policy-rules.js";
 
 const PROJECT_ID = "practice-1";
+const DX_PICK_TALLY_CRITERIA =
+  "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-dx-pick-tally|odos-dx-pick-tally&identifier=https://odos2020.com/fhir/NamingSystem/dx-pick-tally-practitioner|%profile";
 
 class FakePolicyRuleSyncAdapter implements PracticeRolePolicyRuleSyncAdapter {
   readonly policies: AccessPolicy[];
@@ -197,6 +199,28 @@ test("apply patches only resource, preserves all other fields, and converges on 
   assert.equal(second.policiesUpdated, 0);
   assert.equal(adapter.patchRequests.length, 1);
   assert.ok(second.policies.every((policy) => policy.status === "match"));
+});
+
+test("sync restores the profile-fenced tally rule without rewriting its built-in parameter", async () => {
+  const policies = canonicalPolicies();
+  const provider = policies.find((policy) => hasRole(policy, "provider"));
+  assert.ok(provider);
+  provider.resource = provider.resource?.filter((rule) => rule.criteria !== DX_PICK_TALLY_CRITERIA);
+  const adapter = new FakePolicyRuleSyncAdapter(policies);
+
+  const result = await syncPracticeRolePolicyRules(adapter, {
+    projectId: PROJECT_ID,
+    apply: true,
+    assertProjectScope: async () => {},
+  });
+
+  assert.equal(result.policiesUpdated, 1);
+  const replacement = adapter.patchRequests[0]?.operations.find((operation) => operation.path === "/resource")?.value as AccessPolicy["resource"];
+  assert.equal(
+    replacement?.some((rule) => rule.criteria === DX_PICK_TALLY_CRITERIA),
+    true,
+    "sync must preserve literal %profile in the deployed AccessPolicy resource array",
+  );
 });
 
 test("split Provider and Staff bindings compile to one project-owned policy independent of access order", async () => {

@@ -113,7 +113,7 @@ test("Provider has practice-wide scheduling reads but no scheduling writes", () 
   }
 });
 
-test("front-desk Basic grants stay criteria-scoped to approved inventory, config, and billing records", () => {
+test("front-desk Basic grants stay criteria-scoped to approved records and the practitioner tally", () => {
   const rules = rulesFor("staff", "Basic");
   const billingIdentityCriteria = BILLING_IDENTITY_CRITERIA;
   const writeTierCriteria = [
@@ -123,6 +123,7 @@ test("front-desk Basic grants stay criteria-scoped to approved inventory, config
     "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-manual-eob|odos-manual-eob",
     "Basic?code=https://odos2020.com/fhir/CodeSystem/basic-kind|practice-frame-inventory-unit",
     "Basic?code=https://odos2020.com/fhir/CodeSystem/scheduling-config|odos-scheduling-config",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-dx-pick-tally|odos-dx-pick-tally&identifier=https://odos2020.com/fhir/NamingSystem/dx-pick-tally-practitioner|%profile",
   ];
   const readTierCriteria = [
     billingIdentityCriteria,

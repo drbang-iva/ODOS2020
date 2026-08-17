@@ -12,6 +12,9 @@ import {
   getRoleDeclaration,
 } from "../src/authz/roles.js";
 
+const DX_PICK_TALLY_CRITERIA =
+  "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-dx-pick-tally|odos-dx-pick-tally&identifier=https://odos2020.com/fhir/NamingSystem/dx-pick-tally-practitioner|%profile";
+
 test("the active practice-role catalog contains only Provider, Staff, and Admin", () => {
   assert.deepEqual(PRACTICE_ROLE_IDS, ["provider", "staff", "admin"]);
   assert.equal(ODOS_PRACTICE_ROLE_SYSTEM, "https://odos2020.com/fhir/NamingSystem/practice-role");
@@ -103,6 +106,26 @@ test("compiled three-role policies grant chart sidebar and protocol reads at pra
 
       assert.deepEqual(readRule?.interaction, ["read", "search", "history", "vread"], `${roleId} ${resourceType}`);
       assert.equal(readRule?.criteria, undefined, `${roleId} ${resourceType} read must be practice-scoped`);
+    }
+  }
+});
+
+test("diagnosis pick tallies stay profile-fenced with read and write grants split by chart authority", () => {
+  for (const roleId of PRACTICE_ROLE_IDS) {
+    const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
+    for (const interaction of ["read", "search"] as const) {
+      assert.equal(
+        accessPolicyAllows(policy, "Basic", interaction, DX_PICK_TALLY_CRITERIA),
+        true,
+        `${roleId} must ${interaction} only its own diagnosis pick tally`,
+      );
+    }
+    for (const interaction of ["create", "update"] as const) {
+      assert.equal(
+        accessPolicyAllows(policy, "Basic", interaction, DX_PICK_TALLY_CRITERIA),
+        roleId !== "admin",
+        `${roleId} ${interaction} must follow chart.write authority`,
+      );
     }
   }
 });
@@ -314,6 +337,14 @@ test("Provider and Staff compile to one order-independent policy without changin
       { system: ODOS_PRACTICE_ROLE_SYSTEM, code: "provider" },
       { system: ODOS_PRACTICE_ROLE_SYSTEM, code: "staff" },
     ],
+  );
+  const tallyRules = providerThenStaff.resource?.filter((rule) =>
+    rule.resourceType === "Basic" && rule.criteria === DX_PICK_TALLY_CRITERIA
+  ) ?? [];
+  assert.deepEqual(
+    tallyRules.map((rule) => rule.interaction).sort(),
+    [["create"], ["history"], ["read"], ["search"], ["update"], ["vread"]],
+    "the built-in %profile variable must survive composite compilation without role namespacing",
   );
 
   const compositeEncounterWrite = providerThenStaff.resource?.find((rule) =>
