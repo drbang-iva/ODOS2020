@@ -10,9 +10,11 @@ import {
 import { feeScheduleDescriptor } from "../src/scenes/settings/FeeScheduleSettings";
 import { VisitCodeSelector } from "../src/components/charting/VisitCodeSelector";
 import * as visitCodeModule from "../src/components/charting/VisitCodeSelector";
+import { VisitChargesSheetContent } from "../src/components/charting/VisitChargesSheet";
 import { ExamChartBar, MdmProblemsAxis } from "../src/components/charting/EncounterHeader";
 import { computeMdmHint } from "../src/lib/clinical-view-model";
 import type {
+  ProcedureChargeApi,
   VisitChargeApi,
   VisitChargeResponse,
   VisitProcedureFamily,
@@ -674,6 +676,36 @@ const MDM_ENCOUNTER: Encounter = {
 };
 const MDM_HINT = computeMdmHint({ encounter: MDM_ENCOUNTER });
 
+const EMPTY_PROCEDURE_API: ProcedureChargeApi = {
+  async read() {
+    return { options: [], diagnoses: [], proposals: [], attachedProcedures: [] };
+  },
+  async create() { throw new Error("not reached"); },
+  async patch() { throw new Error("not reached"); },
+};
+
+function VisitChargesEncounterHarness({
+  encounterId,
+  api,
+}: {
+  encounterId: string;
+  api: VisitChargeApi;
+}) {
+  const [visitCharge, setVisitCharge] = useState<VisitChargeResponse>();
+  return (
+    <VisitChargesSheetContent
+      encounter={{ ...MDM_ENCOUNTER, id: encounterId }}
+      encounterId={encounterId}
+      patientReference="Patient/test"
+      disabled={false}
+      visitCharge={visitCharge}
+      onVisitChargeChange={setVisitCharge}
+      visitApi={api}
+      procedureApi={EMPTY_PROCEDURE_API}
+    />
+  );
+}
+
 function VisitMdmHarness({ api }: { api: VisitChargeApi }) {
   const [family, setFamily] = useState<VisitProcedureFamily | null>();
   return (
@@ -725,6 +757,38 @@ test("MDM renders for an E/M visit key without changing the existing computation
     selectedProcedureConceptKey: "office-visit-new-low",
     procedureFamily: "em",
   }), 1);
+});
+
+test("switching encounters suppresses stale E/M MDM facts before the next Visit response arrives", async () => {
+  const firstResponse: VisitChargeResponse = {
+    options: visitOptions(),
+    diagnoses: [],
+    selectedProcedureConceptKey: "office-visit-new-low",
+    procedureFamily: "em",
+  };
+  const nextResponse = new Promise<VisitChargeResponse>(() => undefined);
+  const api: VisitChargeApi = {
+    async read(encounterId) {
+      return encounterId === "enc-first" ? firstResponse : nextResponse;
+    },
+    async save() { throw new Error("not reached"); },
+  };
+  const view = (encounterId: string) => (
+    <VisitChargesEncounterHarness encounterId={encounterId} api={api} />
+  );
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(view("enc-first"));
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+  assert.equal(renderer.root.findAllByProps({ "data-testid": "mdm-hint-counter" }).length, 1);
+
+  act(() => renderer.update(view("enc-second")));
+
+  assert.equal(renderer.root.findByType(VisitCodeSelector).props.encounterId, "enc-second");
+  assert.equal(renderer.root.findAllByProps({ "data-testid": "mdm-hint-counter" }).length, 0);
+  act(() => renderer.unmount());
 });
 
 test("one UI helper classifies visit families from the selected concept key", () => {
