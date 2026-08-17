@@ -490,6 +490,54 @@ test("an open finding sheet visibly requires Finish or Cancel before Visit can o
   }
 });
 
+test("unknown encounter keeps both Visit write surfaces locked during load and after fetch failure", async (t) => {
+  async function assertBillingLocked(
+    harness: Awaited<ReturnType<typeof renderEncounter>>,
+    visibleReason: RegExp,
+  ) {
+    const visitChip = harness.renderer.root.findByProps({ "data-testid": "visit-chip" });
+    assert.equal(visitChip.props["aria-disabled"], true);
+    assert.match(textContent(visitChip), visibleReason);
+    assert.equal(harness.renderer.root.findByType(VisitCodeSelector).props.disabled, true);
+    assert.equal(harness.renderer.root.findByType(ProcedureChargeList).props.disabled, true);
+
+    await act(async () => visitChip.props.onClick());
+
+    const visitSheet = harness.renderer.root.findAllByType(ExamEntrySheet)
+      .find((sheet) => sheet.props.sectionId === "visit-charges");
+    assert.equal(visitSheet?.props.active, false);
+    assert.equal(visitSheet?.props.hidden, true);
+  }
+
+  await t.test("initial encounter load", async () => {
+    const pendingEncounter = new Promise<Encounter>(() => undefined);
+    const harness = await renderEncounter(PROJECTION, {
+      encounterRead: async () => pendingEncounter,
+    });
+    try {
+      await assertBillingLocked(harness, /Loading encounter details.*Visit & charges unavailable/i);
+    } finally {
+      harness.restore();
+    }
+  });
+
+  await t.test("persistent encounter fetch failure", async () => {
+    const harness = await renderEncounter(PROJECTION, {
+      captureOverviewErrors: true,
+      encounterRead: async () => { throw new Error("Synthetic encounter 403"); },
+    });
+    try {
+      await act(async () => {
+        await flushEffects();
+        await flushEffects();
+      });
+      await assertBillingLocked(harness, /Encounter details unavailable.*Visit & charges cannot be changed/i);
+    } finally {
+      harness.restore();
+    }
+  });
+});
+
 test("switching to the diagnosis view preserves the existing DiagnosisWorkspace branch", async () => {
   const harness = await renderEncounter(PROJECTION);
   try {
@@ -870,6 +918,7 @@ interface RenderEncounterOptions {
   unassignedFindings?: EncounterFindingRow[];
   unassignedResponses?: EncounterFindingRow[][];
   encounterExtensions?: Encounter["extension"];
+  encounterRead?: (resourceType: string, id: string) => Promise<Encounter>;
 }
 
 async function renderEncounter(projection: unknown, options: RenderEncounterOptions = {}): Promise<{
@@ -889,17 +938,20 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
   if (options.captureOverviewErrors) {
     console.error = (...args: unknown[]) => { overviewErrors.push(args); };
   }
-  fhir.read = (async (_resourceType: string, id: string) => ({
-    resourceType: "Encounter",
-    id,
-    status: "in-progress",
-    class: { code: "AMB" },
-    subject: { reference: "Patient/patient-1" },
-    ...(options.encounterExtensions ? { extension: options.encounterExtensions } : {}),
-    ...(options.discipline
-      ? { serviceType: { coding: [{ system: ODOS_DISCIPLINE_SYSTEM, code: options.discipline }] } }
-      : {}),
-  })) as typeof fhir.read;
+  fhir.read = (async (resourceType: string, id: string) => {
+    if (options.encounterRead) return options.encounterRead(resourceType, id);
+    return {
+      resourceType: "Encounter",
+      id,
+      status: "in-progress",
+      class: { code: "AMB" },
+      subject: { reference: "Patient/patient-1" },
+      ...(options.encounterExtensions ? { extension: options.encounterExtensions } : {}),
+      ...(options.discipline
+        ? { serviceType: { coding: [{ system: ODOS_DISCIPLINE_SYSTEM, code: options.discipline }] } }
+        : {}),
+    };
+  }) as typeof fhir.read;
   let overviewFetches = 0;
   let findingsFetches = 0;
   let focusRestores = 0;

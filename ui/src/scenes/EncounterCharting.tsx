@@ -81,6 +81,11 @@ interface ProcedureCatalogResponse {
   error?: string;
 }
 
+type EncounterLoadState =
+  | { encounterId: string; status: "loading" }
+  | { encounterId: string; status: "ready"; encounter: Encounter }
+  | { encounterId: string; status: "error" };
+
 let sidebarExpandedForSession = false;
 
 export function EncounterCharting({ patient, encounterId }: Props) {
@@ -113,10 +118,19 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const [boardEditorOpen, setBoardEditorOpen] = useState(false);
   const [entrySheetSection, setEntrySheetSection] = useState<ExamEntrySheetSectionId>();
   const [unassignedCount, setUnassignedCount] = useState<number>();
-  const [encounter, setEncounter] = useState<Encounter>();
+  const [encounterLoadState, setEncounterLoadState] = useState<EncounterLoadState>({
+    encounterId,
+    status: "loading",
+  });
   const [visitChargesOpen, setVisitChargesOpen] = useState(false);
   const [visitCharge, setVisitCharge] = useState<VisitChargeResponse>();
   const [brokenVisitDiagnosisDisplay, setBrokenVisitDiagnosisDisplay] = useState<string>();
+  const currentEncounterLoadState: EncounterLoadState = encounterLoadState.encounterId === encounterId
+    ? encounterLoadState
+    : { encounterId, status: "loading" };
+  const encounter = currentEncounterLoadState.status === "ready"
+    ? currentEncounterLoadState.encounter
+    : undefined;
 
   function setSidebarOpen(expanded: boolean) {
     sidebarExpandedForSession = expanded;
@@ -326,14 +340,14 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   useEffect(() => {
     let cancelled = false;
     setEncounterRecordedAt(undefined);
-    setEncounter(undefined);
+    setEncounterLoadState({ encounterId, status: "loading" });
     fhir.read<Encounter>("Encounter", encounterId)
       .then((encounter) => {
         const code = encounter.serviceType?.coding?.find((coding) =>
           coding.system === ODOS_DISCIPLINE_SYSTEM
         )?.code;
         if (cancelled) return;
-        setEncounter(encounter);
+        setEncounterLoadState({ encounterId, status: "ready", encounter });
         setEncounterRecordedAt(encounter.period?.start ?? encounter.period?.end);
         if (code === "eyecare" || code === "aesthetics") {
           setDiscipline(code);
@@ -344,7 +358,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
       })
       .catch((caught) => {
         if (!cancelled) {
-          setEncounter(undefined);
+          setEncounterLoadState({ encounterId, status: "error" });
           console.error("Encounter discipline unavailable.", caught);
         }
       });
@@ -592,7 +606,12 @@ export function EncounterCharting({ patient, encounterId }: Props) {
     : undefined;
   const visitUnavailableReason = entrySheetSection
     ? `Finish or cancel ${EXAM_ENTRY_SHEET_CONFIG[entrySheetSection].title} first`
-    : undefined;
+    : currentEncounterLoadState.status === "loading"
+      ? "Loading encounter details — Visit & charges unavailable"
+      : currentEncounterLoadState.status === "error"
+        ? "Encounter details unavailable — Visit & charges cannot be changed"
+        : undefined;
+  const visitChargesDisabled = currentEncounterLoadState.status !== "ready" || isMigratedEncounter(encounter);
 
   return (
     <div className={["odos-charting-workspace flex h-screen w-screen flex-col bg-bg-deep text-white", config.encounterDensity === "compact" ? "text-[0.95rem]" : ""].join(" ")}>
@@ -917,7 +936,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
           encounter={encounter}
           encounterId={encounterId}
           patientReference={patientReference}
-          disabled={isMigratedEncounter(encounter)}
+          disabled={visitChargesDisabled}
           visitCharge={visitCharge}
           onClose={() => setVisitChargesOpen(false)}
           onVisitChargeChange={setVisitCharge}
