@@ -15,6 +15,7 @@ import { EntranceMeasurementSection } from "../src/components/charting/EntranceM
 import { EntranceStateSection } from "../src/components/charting/EntranceStateSection";
 import { EomSection } from "../src/components/charting/EomSection";
 import { EyeGrowthSection } from "../src/components/charting/EyeGrowthSection";
+import { ExamEntrySheet } from "../src/components/charting/ExamEntrySheet";
 import { ExamOverviewBoard } from "../src/components/charting/ExamOverviewBoard";
 import { GonioscopySection } from "../src/components/charting/GonioscopySection";
 import { HpiSection } from "../src/components/charting/HpiSection";
@@ -32,6 +33,7 @@ import { RefractionSection } from "../src/components/charting/RefractionSection"
 import { SoftContactLensSection } from "../src/components/charting/SoftContactLensSection";
 import { SpecialtyContactLensSection } from "../src/components/charting/SpecialtyContactLensSection";
 import { WearingSection } from "../src/components/charting/WearingSection";
+import { ReferralCompose } from "../src/components/referral/ReferralCompose";
 import type { CustomFindingDefinition } from "../src/components/charting/CustomFindingSection";
 import type { EncounterFindingRow } from "../src/lib/diagnosis-findings";
 import { fhir } from "../src/lib/fhir";
@@ -721,6 +723,28 @@ test("a mapped editor save closes its sheet while a deferred editor retains the 
     });
     assert.equal(harness.overviewFetchCount(), 3);
     assert.equal(harness.renderer.root.findAllByType(ExamOverviewBoard).length, 1);
+  } finally {
+    harness.restore();
+  }
+});
+
+test("a referral suspends the underlying Assessment sheet layer without discarding it", async () => {
+  const harness = await renderEncounter(PROJECTION);
+  try {
+    await act(async () => harness.renderer.root.findByProps({ "data-editor-section-id": "assessment" }).props.onClick());
+    const assessment = harness.renderer.root.findByType(AssessmentSection);
+
+    await act(async () => assessment.props.onRefer());
+
+    assert.equal(harness.renderer.root.findAllByType(ReferralCompose).length, 1);
+    assert.equal(harness.renderer.root.findByType(ExamEntrySheet).props.active, false);
+    assert.equal(harness.renderer.root.findAllByType(AssessmentSection).length, 1);
+
+    await act(async () => harness.renderer.root.findByType(ReferralCompose).props.onClose());
+
+    assert.equal(harness.renderer.root.findAllByType(ReferralCompose).length, 0);
+    assert.equal(harness.renderer.root.findByType(ExamEntrySheet).props.active, true);
+    assert.equal(harness.renderer.root.findAllByType(AssessmentSection).length, 1);
   } finally {
     harness.restore();
   }

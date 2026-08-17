@@ -583,7 +583,11 @@ export function EncounterCharting({ patient, encounterId }: Props) {
             onRefresh={refreshExamOverview}
           />
           {entrySheetSection && (
-            <ExamEntrySheet sectionId={entrySheetSection} onCancel={() => setEntrySheetSection(undefined)}>
+            <ExamEntrySheet
+              sectionId={entrySheetSection}
+              onCancel={() => setEntrySheetSection(undefined)}
+              active={!referralComposeOpen}
+            >
               <MappedExamSection
                 sectionId={entrySheetSection}
                 definitions={{

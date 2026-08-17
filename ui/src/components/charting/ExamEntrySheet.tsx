@@ -34,12 +34,13 @@ export function isExamEntrySheetSectionId(sectionId: string): sectionId is ExamE
   return sectionId in EXAM_ENTRY_SHEET_CONFIG;
 }
 
-export function ExamEntrySheet({ sectionId, onCancel, children }: {
+export function ExamEntrySheet({ sectionId, onCancel, active = true, children }: {
   sectionId: ExamEntrySheetSectionId;
   onCancel: () => void;
+  active?: boolean;
   children: ReactNode;
 }) {
-  const { dialogRef, initialFocusRef, titleId } = useDockedPanel(onCancel);
+  const { dialogRef, initialFocusRef, titleId } = useDockedPanel(onCancel, active);
   const config = EXAM_ENTRY_SHEET_CONFIG[sectionId];
   return (
     <div className="odos-exam-entry-layer" data-testid="exam-entry-layer">
