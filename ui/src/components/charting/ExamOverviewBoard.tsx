@@ -85,12 +85,13 @@ export interface ExamOverviewProjection {
 interface Props {
   projection: ExamOverviewProjection;
   editorEntries: readonly ChartEditorEntry[];
+  activeEditorId?: ChartEditorEntry["id"];
   refreshing: boolean;
   onOpenEditor: (sectionId: ChartEditorEntry["id"]) => void;
   onRefresh: () => void;
 }
 
-export function ExamOverviewBoard({ projection, editorEntries, refreshing, onOpenEditor, onRefresh }: Props) {
+export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, refreshing, onOpenEditor, onRefresh }: Props) {
   const findingByReference = new Map(
     projection.findings.map((finding) => [finding.observationReference, finding]),
   );
@@ -116,7 +117,7 @@ export function ExamOverviewBoard({ projection, editorEntries, refreshing, onOpe
         </div>
       </header>
 
-      <InterimEditorLauncher entries={editorEntries} onOpenEditor={onOpenEditor} />
+      <InterimEditorLauncher entries={editorEntries} activeEditorId={activeEditorId} onOpenEditor={onOpenEditor} />
 
       <div className="odos-exam-overview-board">
         {projection.sections.map((section) => {
@@ -181,9 +182,11 @@ export function ExamOverviewBoard({ projection, editorEntries, refreshing, onOpe
 // Do not grow it into a persistent rail or add navigation behavior beyond editor reachability.
 function InterimEditorLauncher({
   entries,
+  activeEditorId,
   onOpenEditor,
 }: {
   entries: readonly ChartEditorEntry[];
+  activeEditorId?: ChartEditorEntry["id"];
   onOpenEditor: (sectionId: ChartEditorEntry["id"]) => void;
 }) {
   return (
@@ -200,8 +203,9 @@ function InterimEditorLauncher({
             key={entry.id}
             type="button"
             data-editor-section-id={entry.id}
+            aria-pressed={activeEditorId === entry.id}
             onClick={() => onOpenEditor(entry.id)}
-            className="odos-exam-editor-launcher-button"
+            className={`odos-exam-editor-launcher-button${activeEditorId === entry.id ? " is-active" : ""}`}
           >
             {entry.label}
           </button>

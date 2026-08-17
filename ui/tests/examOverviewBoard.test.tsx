@@ -4,11 +4,15 @@ import React from "react";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import type { ExamOverviewProjection } from "../../mcp/src/clinical-graph/exam-overview-projection";
 import { DiagnosisWorkspace } from "../src/components/charting/DiagnosisWorkspace";
+import { EntranceStateSection } from "../src/components/charting/EntranceStateSection";
 import { ExamOverviewBoard } from "../src/components/charting/ExamOverviewBoard";
+import { GonioscopySection } from "../src/components/charting/GonioscopySection";
+import { IopSection } from "../src/components/charting/IopSection";
 import { ProcedureChargeList } from "../src/components/charting/ProcedureChargeList";
 import { SpineNav } from "../src/components/charting/SpineNav";
 import { VisitCodeSelector } from "../src/components/charting/VisitCodeSelector";
 import { VaSection } from "../src/components/charting/VaSection";
+import { RefractionSection } from "../src/components/charting/RefractionSection";
 import type { CustomFindingDefinition } from "../src/components/charting/CustomFindingSection";
 import type { EncounterFindingRow } from "../src/lib/diagnosis-findings";
 import { fhir } from "../src/lib/fhir";
@@ -470,6 +474,48 @@ test("the interim board launcher anchors mapped editors and retains full-page fa
   }
 });
 
+test("each mapped layout wraps its existing section and supports both cancel and saved close paths", async () => {
+  const harness = await renderEncounter(PROJECTION, {
+    findingDefinitions: [{
+      ...findingDefinition("entrance:pupils", "Pupils"),
+      perEye: true,
+    }],
+  });
+  const contracts = [
+    { sectionId: "pupils", component: EntranceStateSection },
+    { sectionId: "iop", component: IopSection },
+    { sectionId: "gonioscopy", component: GonioscopySection },
+    { sectionId: "va", component: VaSection },
+    { sectionId: "refraction", component: RefractionSection },
+  ] as const;
+  try {
+    for (const contract of contracts) {
+      const launcher = harness.renderer.root.findByProps({ "data-editor-section-id": contract.sectionId });
+      await act(async () => launcher.props.onClick());
+      const sheet = harness.renderer.root.findByProps({
+        "data-testid": "exam-entry-sheet",
+        "data-entry-sheet-section": contract.sectionId,
+      });
+      assert.equal(sheet.findAllByType(contract.component).length, 1, `${contract.sectionId} existing editor`);
+      assert.equal(harness.renderer.root.findAllByType(ExamOverviewBoard).length, 1);
+
+      await act(async () => harness.renderer.root.findByProps({ "data-testid": "cancel-exam-entry-sheet" }).props.onClick());
+      assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "exam-entry-sheet" }).length, 0);
+
+      await act(async () => harness.renderer.root.findByProps({ "data-editor-section-id": contract.sectionId }).props.onClick());
+      await act(async () => {
+        harness.renderer.root.findByType(contract.component).props.onSaved({ completed: true });
+        await flushEffects();
+        await flushEffects();
+      });
+      assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "exam-entry-sheet" }).length, 0);
+      assert.equal(harness.renderer.root.findAllByType(ExamOverviewBoard).length, 1);
+    }
+  } finally {
+    harness.restore();
+  }
+});
+
 test("malformed nested finding, section, and completeness rows use the editor fallback", async (context) => {
   const malformedPayloads: Array<{ label: string; value: unknown }> = [
     { label: "finding", value: { ...PROJECTION, findings: [null] } },
@@ -563,7 +609,7 @@ test("a mapped editor save closes its sheet while an unmapped editor retains the
 
 test("a section save refreshes the permanent unassigned count", async () => {
   const harness = await renderEncounter(PROJECTION, {
-    unassignedResponses: [[], [], [], UNASSIGNED_FINDINGS],
+    unassignedResponses: [[], [], UNASSIGNED_FINDINGS],
   });
   try {
     assert.equal(harness.findingsFetchCount(), 2);
@@ -684,6 +730,34 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
     }
     if (url.includes("/clinical-graph/eye-growth/visibility")) {
       return jsonResponse({ defaultVisible: false });
+    }
+    if (url.includes("/clinical-graph/iop/history")) {
+      return jsonResponse({
+        readings: [],
+        cornealHysteresis: [],
+        perEye: {
+          OD: { average: null, tMax: null, count: 0, target: null },
+          OS: { average: null, tMax: null, count: 0, target: null },
+        },
+        threshold: 22,
+      });
+    }
+    if (url.endsWith("/clinical-graph/iop/definition")) {
+      return jsonResponse({
+        definitions: {
+          intraocularPressure: { fields: {} },
+          cornealHysteresis: { fields: {} },
+        },
+      });
+    }
+    if (url.endsWith("/clinical-graph/refraction/definition")) {
+      return jsonResponse({ definition: { fields: {} }, diagnosisOptions: [], refractiveThreshold: 0 });
+    }
+    if (url.includes("/clinical-graph/refraction/history")) {
+      return jsonResponse({ glasses: [], softCl: [], specialtyCl: [] });
+    }
+    if (url.includes("/clinical-graph/custom/") && url.includes("/history")) {
+      return jsonResponse({ rows: [] });
     }
     if (url.includes("/clinical-graph/diagnosis-quick-list")) {
       return jsonResponse({

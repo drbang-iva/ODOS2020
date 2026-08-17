@@ -23,6 +23,11 @@ import {
   isExamOverviewProjection,
   type ExamOverviewProjection,
 } from "../components/charting/ExamOverviewBoard";
+import {
+  ExamEntrySheet,
+  isExamEntrySheetSectionId,
+  type ExamEntrySheetSectionId,
+} from "../components/charting/ExamEntrySheet";
 import { EyeGrowthSection } from "../components/charting/EyeGrowthSection";
 import { EncounterFindingOverlay } from "../components/charting/EncounterFindingOverlay";
 import { IopSection } from "../components/charting/IopSection";
@@ -103,6 +108,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const [examOverviewRefreshing, setExamOverviewRefreshing] = useState(false);
   const [examOverviewRefreshVersion, setExamOverviewRefreshVersion] = useState(0);
   const [boardEditorOpen, setBoardEditorOpen] = useState(false);
+  const [entrySheetSection, setEntrySheetSection] = useState<ExamEntrySheetSectionId>();
   const [unassignedCount, setUnassignedCount] = useState<number>();
 
   function setSidebarOpen(expanded: boolean) {
@@ -112,7 +118,10 @@ export function EncounterCharting({ patient, encounterId }: Props) {
 
   function selectChartView(view: EncounterChartView) {
     setChartView(view);
-    if (view !== "structure") setBoardEditorOpen(false);
+    if (view !== "structure") {
+      setBoardEditorOpen(false);
+      setEntrySheetSection(undefined);
+    }
     saveEncounterChartView(view);
   }
 
@@ -122,16 +131,24 @@ export function EncounterCharting({ patient, encounterId }: Props) {
 
   function openBoardEditor(sectionId: ChartSectionId) {
     setActiveSection(sectionId);
-    setBoardEditorOpen(true);
+    if (isExamEntrySheetSectionId(sectionId)) {
+      setEntrySheetSection(sectionId);
+      setBoardEditorOpen(false);
+    } else {
+      setEntrySheetSection(undefined);
+      setBoardEditorOpen(true);
+    }
   }
 
   function returnToExamOverview() {
     setBoardEditorOpen(false);
+    setEntrySheetSection(undefined);
     refreshExamOverview();
   }
 
   useEffect(() => {
     setBoardEditorOpen(false);
+    setEntrySheetSection(undefined);
     setExamOverviewProjection(undefined);
   }, [encounterId]);
 
@@ -556,13 +573,30 @@ export function EncounterCharting({ patient, encounterId }: Props) {
           onSelectDiagnosis={(reference) => setSelectedDiagnosis(reference ? { workspaceKey: diagnosisWorkspaceKey, reference } : undefined)}
         />
       ) : activeExamOverviewProjection && !boardEditorOpen ? (
-        <ExamOverviewBoard
-          projection={activeExamOverviewProjection}
-          editorEntries={boardEditorEntries}
-          refreshing={examOverviewRefreshing}
-          onOpenEditor={openBoardEditor}
-          onRefresh={refreshExamOverview}
-        />
+        <div className="odos-exam-overview-stage" data-entry-sheet-open={entrySheetSection ? "true" : "false"}>
+          <ExamOverviewBoard
+            projection={activeExamOverviewProjection}
+            editorEntries={boardEditorEntries}
+            activeEditorId={entrySheetSection}
+            refreshing={examOverviewRefreshing}
+            onOpenEditor={openBoardEditor}
+            onRefresh={refreshExamOverview}
+          />
+          {entrySheetSection && (
+            <ExamEntrySheet sectionId={entrySheetSection} onCancel={() => setEntrySheetSection(undefined)}>
+              <MappedExamSection
+                sectionId={entrySheetSection}
+                pupilsDefinition={pupilsDefinition}
+                patientReference={patientReference}
+                encounterReference={encounterReference}
+                onSaved={(status) => {
+                  markSaved(entrySheetSection, status);
+                  setEntrySheetSection(undefined);
+                }}
+              />
+            </ExamEntrySheet>
+          )}
+        </div>
       ) : (
         <div className="odos-charting-body flex min-h-0 flex-1 flex-col md:flex-row">
         {!activeExamOverviewProjection && (
@@ -661,16 +695,15 @@ export function EncounterCharting({ patient, encounterId }: Props) {
           {activeSection === "pachymetry" && (pachymetryDefinition ? (
             <EntranceMeasurementSection definition={pachymetryDefinition} patientReference={patientReference} encounterReference={encounterReference} onSaved={(status) => markSaved("pachymetry", status)} />
           ) : <MissingDefinitionState section="Pachymetry" />)}
-          {activeSection === "va" && (
-            <VaSection
+          {isExamEntrySheetSectionId(activeSection) && (
+            <MappedExamSection
+              sectionId={activeSection}
+              pupilsDefinition={pupilsDefinition}
               patientReference={patientReference}
               encounterReference={encounterReference}
-              onSaved={(status) => markSaved("va", status)}
+              onSaved={(status) => markSaved(activeSection, status)}
             />
           )}
-          {activeSection === "pupils" && (pupilsDefinition ? (
-            <EntranceStateSection definition={pupilsDefinition} patientReference={patientReference} encounterReference={encounterReference} onSaved={(status) => markSaved("pupils", status)} />
-          ) : <MissingDefinitionState section="Pupils" />)}
           {activeSection === "stereopsis" && (stereopsisDefinition ? (
             <EntranceStateSection definition={stereopsisDefinition} patientReference={patientReference} encounterReference={encounterReference} onSaved={(status) => markSaved("stereopsis", status)} />
           ) : <MissingDefinitionState section="Stereopsis" />)}
@@ -696,23 +729,9 @@ export function EncounterCharting({ patient, encounterId }: Props) {
               onSaved={(status) => markSaved("cover-test", status)}
             />
           )}
-          {activeSection === "iop" && (
-            <IopSection
-              patientReference={patientReference}
-              encounterReference={encounterReference}
-              onSaved={(status) => markSaved("iop", status)}
-            />
-          )}
           {activeSection === "dilation" && (dilationDefinition ? (
             <DilationSection definition={dilationDefinition} patientReference={patientReference} encounterReference={encounterReference} onSaved={(status) => markSaved("dilation", status)} />
           ) : <MissingDefinitionState section="Dilation" />)}
-          {activeSection === "refraction" && (
-            <RefractionSection
-              patientReference={patientReference}
-              encounterReference={encounterReference}
-              onSaved={(status) => markSaved("refraction", status)}
-            />
-          )}
           {activeSection === "soft-contact-lens" && (
             <SoftContactLensSection
               patientReference={patientReference}
@@ -766,13 +785,6 @@ export function EncounterCharting({ patient, encounterId }: Props) {
               patientReference={patientReference}
               encounterReference={encounterReference}
               onSaved={(status) => markSaved("cup-disc", status)}
-            />
-          )}
-          {activeSection === "gonioscopy" && (
-            <GonioscopySection
-              patientReference={patientReference}
-              encounterReference={encounterReference}
-              onSaved={(status) => markSaved("gonioscopy", status)}
             />
           )}
           {activeSection === "imaging" && (
@@ -924,6 +936,24 @@ export function EncounterCharting({ patient, encounterId }: Props) {
       )}
     </div>
   );
+}
+
+function MappedExamSection({ sectionId, pupilsDefinition, patientReference, encounterReference, onSaved }: {
+  sectionId: ExamEntrySheetSectionId;
+  pupilsDefinition?: CustomFindingDefinition;
+  patientReference: string;
+  encounterReference: string;
+  onSaved(status: SectionSaveStatus): void;
+}) {
+  if (sectionId === "pupils") {
+    return pupilsDefinition
+      ? <EntranceStateSection definition={pupilsDefinition} patientReference={patientReference} encounterReference={encounterReference} onSaved={onSaved} />
+      : <MissingDefinitionState section="Pupils" />;
+  }
+  if (sectionId === "iop") return <IopSection patientReference={patientReference} encounterReference={encounterReference} onSaved={onSaved} />;
+  if (sectionId === "gonioscopy") return <GonioscopySection patientReference={patientReference} encounterReference={encounterReference} onSaved={onSaved} />;
+  if (sectionId === "va") return <VaSection patientReference={patientReference} encounterReference={encounterReference} onSaved={onSaved} />;
+  return <RefractionSection patientReference={patientReference} encounterReference={encounterReference} onSaved={onSaved} />;
 }
 
 function MissingDefinitionState({ section }: { section: string }) {

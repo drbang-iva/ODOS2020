@@ -2725,7 +2725,9 @@ test("hydrated state is pristine until a capture differs from its baseline", () 
 
 test("EncounterCharting keeps the shipped eyecare branches, adds three dry-eye renderers, and reuses the custom renderer for procedure definitions", () => {
   const source = readFileSync(new URL("../src/scenes/EncounterCharting.tsx", import.meta.url), "utf8");
-  assert.equal((source.match(/activeSection === "/g) ?? []).length, 31);
+  assert.equal((source.match(/activeSection === "/g) ?? []).length, 26);
+  assert.match(source, /isExamEntrySheetSectionId\(activeSection\)[\s\S]*<MappedExamSection/);
+  assert.match(source, /function MappedExamSection[\s\S]*<EntranceStateSection[\s\S]*<IopSection[\s\S]*<GonioscopySection[\s\S]*<VaSection[\s\S]*<RefractionSection/);
   assert.equal((source.match(/activeSection\.startsWith\("custom:"\)/g) ?? []).length, 2);
   assert.equal((source.match(/activeSection\.startsWith\("procedure:"\)/g) ?? []).length, 2);
   assert.match(source, /Custom section catalog unavailable; charting built-ins only\./);
