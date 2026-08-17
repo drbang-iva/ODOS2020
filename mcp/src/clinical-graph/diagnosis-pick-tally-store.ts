@@ -18,6 +18,7 @@ export interface DiagnosisPickTallyFhirClient {
   update<T extends Basic>(resourceType: T["resourceType"], id: string, resource: T, extraHeaders?: Record<string, string>): Promise<T>;
 }
 
+// fhir-scope-contract: Basic?code=https://odos2020.com/fhir/CodeSystem/odos-dx-pick-tally|odos-dx-pick-tally&identifier=https://odos2020.com/fhir/NamingSystem/dx-pick-tally-practitioner|%profile
 export class FhirDiagnosisPickTallyStore {
   constructor(private readonly fhir: DiagnosisPickTallyFhirClient) {}
 

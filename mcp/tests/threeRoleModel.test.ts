@@ -342,8 +342,8 @@ test("Provider and Staff compile to one order-independent policy without changin
     rule.resourceType === "Basic" && rule.criteria === DX_PICK_TALLY_CRITERIA
   ) ?? [];
   assert.deepEqual(
-    tallyRules.map((rule) => rule.interaction),
-    [["create"], ["read"], ["search"], ["update"]],
+    tallyRules.map((rule) => rule.interaction).sort(),
+    [["create"], ["history"], ["read"], ["search"], ["update"], ["vread"]],
     "the built-in %profile variable must survive composite compilation without role namespacing",
   );
 

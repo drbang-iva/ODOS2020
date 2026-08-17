@@ -15,6 +15,8 @@ type SourceFile = { readonly path: string; readonly text: string };
 type GrantCheckResult = {
   readonly readResourceTypes: readonly string[];
   readonly excludedServiceIdentityResourceTypes: readonly string[];
+  readonly excludedServiceIdentityWriteCallSites?: readonly string[];
+  readonly suspectedBrokenPracticeRoleWriteCallSites?: readonly string[];
   readonly excludedNonFhirCallSites: readonly string[];
   readonly grantedResourceTypes: readonly string[];
   readonly missingResourceTypes: readonly string[];
@@ -29,6 +31,7 @@ type GrantCheckResult = {
 type FhirOperation = {
   readonly path: string;
   readonly line: number;
+  readonly callee: string;
   readonly interaction: "read" | "search" | "create" | "update" | "delete" | "patch";
   readonly requiredInteraction: "read" | "search" | "create" | "update" | "delete";
   readonly resourceType: string;
@@ -44,6 +47,13 @@ type NonFhirLiteralCallSite = {
   readonly path: string;
   readonly callee: string;
   readonly literal: string;
+  readonly reason: string;
+};
+type ExactFhirWriteCallSite = {
+  readonly path: string;
+  readonly line: number;
+  readonly callee: string;
+  readonly resourceType: string;
   readonly reason: string;
 };
 type GrantCheckModule = {
@@ -63,6 +73,11 @@ type GrantCheckModule = {
   readonly findMissingFhirOperationGrants?: (
     operations: readonly FhirOperation[],
     grantedRules: readonly AccessPolicyResource[],
+  ) => readonly FhirOperation[];
+  readonly matchExactWriteInventory?: (
+    operations: readonly FhirOperation[],
+    inventory: readonly ExactFhirWriteCallSite[],
+    inventoryName: string,
   ) => readonly FhirOperation[];
 };
 
@@ -183,11 +198,37 @@ test("the PR 397 tally create fails grant comparison when its exact profile fenc
     [{
       path: "mcp/src/clinical-graph/diagnosis-pick-tally-store.ts",
       line: 3,
+      callee: "fhir.create",
       interaction: "create",
       requiredInteraction: "create",
       resourceType: "Basic",
       scopeContract: DX_PICK_TALLY_CRITERIA,
     }],
+  );
+});
+
+test("the exact write ratchet rejects a stale entry instead of silently forgiving it", async () => {
+  const module = await loadGrantCheck();
+  assert.equal(typeof module.matchExactWriteInventory, "function");
+  if (!module.matchExactWriteInventory) return;
+  const operation: FhirOperation = {
+    path: "ui/src/fixture.tsx",
+    line: 10,
+    callee: "fhir.create",
+    interaction: "create",
+    requiredInteraction: "create",
+    resourceType: "RiskAssessment",
+  };
+
+  assert.throws(
+    () => module.matchExactWriteInventory!([operation], [{
+      path: operation.path,
+      line: 11,
+      callee: operation.callee,
+      resourceType: operation.resourceType,
+      reason: "fixture",
+    }], "fixture ratchet"),
+    /no longer matches a real ungranted call site/,
   );
 });
 
@@ -224,7 +265,13 @@ test("live FHIR read grant check covers all four chart resources through compile
 
   assert.deepEqual(result.missingResourceTypes, []);
   assert.deepEqual(result.excludedServiceIdentityResourceTypes, ["ProjectMembership", "User"]);
-  assert.deepEqual(result.excludedNonFhirCallSites, []);
+  assert.equal(result.excludedNonFhirCallSites.length, 6);
+  assert.equal(result.excludedServiceIdentityWriteCallSites?.length, 21);
+  assert.equal(result.suspectedBrokenPracticeRoleWriteCallSites?.length, 16);
+  assert.equal(result.suspectedBrokenPracticeRoleWriteCallSites?.some((entry) =>
+    entry.includes("ui/src/lib/clinical-actions.ts:64 fhir.create AllergyIntolerance")
+    && entry.includes("Mark no known allergies")
+  ), true);
   assert.deepEqual(result.sourceRoots, ["mcp/src", "ui/src"]);
   assert.deepEqual(result.includedExtensions, [".ts", ".tsx"]);
   assert.deepEqual(result.excludedDirectoryNames, ["__tests__"]);
@@ -269,10 +316,12 @@ test("live FHIR read grant check covers all four chart resources through compile
   }
   assert.deepEqual(result.limitations, [
     "Computed read resourceTypes escape this scan.",
+    "Computed create resources require a generic resource type, an object-literal resourceType, or an fhir-scope-contract marker; other computed creates escape this scan.",
+    "Computed update, delete, and patch resourceTypes escape this scan.",
     "A computed search is marker-checked only when its argument is named resourceType, resource_type, or .resourceType; other names escape because receiver-independent matching would misclassify non-FHIR search APIs.",
     "Marked helper propagation follows named parameters; destructured or object-property resourceType forwarding escapes this scan.",
-    "Marked helper propagation is function-name based across scanned roots; same-named non-FHIR helpers require the explicit call-site allowlist.",
-    "This proves a grant exists, not that its scope is correct; a wrong-compartment grant can still 403 at runtime.",
+    "Marked helper propagation is function-name based across scanned roots; an imported helper alias escapes unless its local name matches, and same-named non-FHIR helpers require the explicit call-site allowlist.",
+    "Type-level comparison does not prove criteria scope; criteria-dependent operations without an exact fhir-scope-contract are counted as NOT SCOPE-VERIFIED.",
   ]);
 });
 
@@ -290,9 +339,12 @@ test("FHIR read grant CLI passes only with full coverage and always prints its l
   assert.match(result.stdout, /Excluded source extensions: all except \.ts, \.tsx/);
   assert.match(result.stdout, /ProjectMembership — service identity authorization context/);
   assert.match(result.stdout, /User — service identity account resolution/);
-  assert.match(result.stdout, /Non-FHIR literal call sites excluded:\n- none/);
+  assert.match(result.stdout, /Service-identity ungranted write call sites excluded \(21\):/);
+  assert.match(result.stdout, /SUSPECTED BROKEN FEATURE — known ungranted practice-role write call sites \(16\):/);
+  assert.match(result.stdout, /ui\/src\/lib\/clinical-actions\.ts:64 fhir\.create AllergyIntolerance.*Mark no known allergies/);
+  assert.match(result.stdout, /Non-FHIR literal call sites excluded:\n- mcp\/src\/bulk-data\/router\.ts:141 router\.delete/);
   assert.match(result.stdout, /other names escape because receiver-independent matching would misclassify non-FHIR search APIs/);
-  assert.match(result.stdout, /proves a grant exists, not that its scope is correct/);
+  assert.match(result.stdout, /Type-level comparison does not prove criteria scope/);
   assert.match(result.stdout, /Criteria-scoped resource types \(23\): Account, Basic, .*ServiceRequest/);
   assert.match(result.stdout, /Basic: \d+ operations; \d+ scope-verified; \d+ NOT SCOPE-VERIFIED/);
 });

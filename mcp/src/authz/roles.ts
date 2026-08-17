@@ -81,6 +81,8 @@ export type ResourceScope =
   | { kind: "provider-assigned-patient"; parameterName: "provider_profile" }
   | { kind: "self-profile"; parameterName: "provider_profile" }
   | { kind: "audit-only" }
+  /** Criteria narrowed to the current Medplum ProjectMembership profile through %profile. */
+  | { kind: "profile-search"; criteria: string }
   /** Practice-wide but fenced to a fixed search criteria (e.g. one coded singleton). */
   | { kind: "practice-search"; criteria: string };
 
@@ -392,6 +394,19 @@ const BILLING_IDENTITY_CONFIG_WRITE_RULE: OdosResourceRule = {
     criteria:
       "Basic?code=https://odos2020.com/fhir/CodeSystem/billing-identity-config|odos-billing-identity-config",
   },
+};
+
+const DIAGNOSIS_PICK_TALLY_CRITERIA =
+  "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-dx-pick-tally|odos-dx-pick-tally&identifier=https://odos2020.com/fhir/NamingSystem/dx-pick-tally-practitioner|%profile";
+const DIAGNOSIS_PICK_TALLY_READ_RULE: OdosResourceRule = {
+  resourceType: "Basic",
+  interactions: READ_INTERACTIONS,
+  scope: { kind: "profile-search", criteria: DIAGNOSIS_PICK_TALLY_CRITERIA },
+};
+const DIAGNOSIS_PICK_TALLY_WRITE_RULE: OdosResourceRule = {
+  resourceType: "Basic",
+  interactions: UPDATE_INTERACTIONS,
+  scope: { kind: "profile-search", criteria: DIAGNOSIS_PICK_TALLY_CRITERIA },
 };
 
 const OFFICE_CHANNEL_RESOURCE_RULES: OdosResourceRule[] = [
@@ -749,6 +764,8 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
       ...STAFF_CORRESPONDENCE_RESOURCE_RULES,
       ...PAYMENT_CUSTODY_RESOURCE_RULES,
       BILLING_IDENTITY_CONFIG_READ_RULE,
+      DIAGNOSIS_PICK_TALLY_READ_RULE,
+      DIAGNOSIS_PICK_TALLY_WRITE_RULE,
       ...OFFICE_CHANNEL_RESOURCE_RULES,
       PATIENT_COMMUNICATION_COMPARTMENT_RULE,
       ...PROTOCOL_MODULE_RESOURCE_RULES,
@@ -792,6 +809,8 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
       ...CLAIMS_RESOURCE_RULES,
       ...PAYER_DIRECTORY_RESOURCE_RULES,
       BILLING_IDENTITY_CONFIG_READ_RULE,
+      DIAGNOSIS_PICK_TALLY_READ_RULE,
+      DIAGNOSIS_PICK_TALLY_WRITE_RULE,
       ...OFFICE_CHANNEL_RESOURCE_RULES,
       FRONT_DESK_PATIENT_COMMUNICATION_RULE,
     ],
@@ -834,6 +853,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
       ...PAYER_DIRECTORY_RESOURCE_RULES,
       BILLING_IDENTITY_CONFIG_READ_RULE,
       BILLING_IDENTITY_CONFIG_WRITE_RULE,
+      DIAGNOSIS_PICK_TALLY_READ_RULE,
       ...OFFICE_CHANNEL_RESOURCE_RULES,
       ...PROTOCOL_MODULE_RESOURCE_RULES,
       PATIENT_COMMUNICATION_COMPARTMENT_RULE,
@@ -1083,6 +1103,7 @@ function criteriaForRule(rule: OdosResourceRule): string | undefined {
       return `${rule.resourceType}?general-practitioner=%${rule.scope.parameterName}`;
     case "self-profile":
       return `${rule.resourceType}?_id=%${rule.scope.parameterName}.id`;
+    case "profile-search":
     case "practice-search":
       return rule.scope.criteria;
   }
