@@ -1027,7 +1027,7 @@ test("lens Phase 0 ledger and catalog seeds preserve verified codes and laterali
     lens_dislocation_posterior: { pattern: { unspecifiedEye: "H27.139", right: "H27.131", left: "H27.132", bilateral: "H27.133" } },
   };
 
-  assert.equal(allSeeds.length, 129);
+  assert.equal(allSeeds.length, 132);
   assert.equal(seeds.length, 12);
   for (const [stableKey, icd10] of Object.entries(expected)) {
     const seed = seeds.find((row) => row.stableKey === stableKey);
