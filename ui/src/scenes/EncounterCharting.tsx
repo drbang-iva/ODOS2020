@@ -732,6 +732,13 @@ export function EncounterCharting({ patient, encounterId }: Props) {
           {activeSection === "dilation" && (dilationDefinition ? (
             <DilationSection definition={dilationDefinition} patientReference={patientReference} encounterReference={encounterReference} onSaved={(status) => markSaved("dilation", status)} />
           ) : <MissingDefinitionState section="Dilation" />)}
+          {activeSection === "refraction" && (
+            <RefractionSection
+              patientReference={patientReference}
+              encounterReference={encounterReference}
+              onSaved={(status) => markSaved("refraction", status)}
+            />
+          )}
           {activeSection === "soft-contact-lens" && (
             <SoftContactLensSection
               patientReference={patientReference}
@@ -952,8 +959,7 @@ function MappedExamSection({ sectionId, pupilsDefinition, patientReference, enco
   }
   if (sectionId === "iop") return <IopSection patientReference={patientReference} encounterReference={encounterReference} onSaved={onSaved} />;
   if (sectionId === "gonioscopy") return <GonioscopySection patientReference={patientReference} encounterReference={encounterReference} onSaved={onSaved} />;
-  if (sectionId === "va") return <VaSection patientReference={patientReference} encounterReference={encounterReference} onSaved={onSaved} />;
-  return <RefractionSection patientReference={patientReference} encounterReference={encounterReference} onSaved={onSaved} />;
+  return <VaSection patientReference={patientReference} encounterReference={encounterReference} onSaved={onSaved} />;
 }
 
 function MissingDefinitionState({ section }: { section: string }) {

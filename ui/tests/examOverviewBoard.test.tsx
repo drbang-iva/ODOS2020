@@ -459,9 +459,10 @@ test("the interim board launcher anchors mapped editors and retains full-page fa
     assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "exam-entry-sheet" }).length, 0);
     assert.equal(harness.renderer.root.findAllByType(ExamOverviewBoard).length, 1);
 
-    const coverTestLauncher = harness.renderer.root.findByProps({ "data-editor-section-id": "cover-test" });
-    await act(async () => coverTestLauncher.props.onClick());
+    const refractionLauncher = harness.renderer.root.findByProps({ "data-editor-section-id": "refraction" });
+    await act(async () => refractionLauncher.props.onClick());
     assert.equal(harness.renderer.root.findAllByType(ExamOverviewBoard).length, 0);
+    assert.equal(harness.renderer.root.findAllByType(RefractionSection).length, 1);
 
     const back = harness.renderer.root.findByProps({ "data-testid": "return-to-exam-overview" });
     await act(async () => {
@@ -486,7 +487,6 @@ test("each mapped layout wraps its existing section and supports both cancel and
     { sectionId: "iop", component: IopSection },
     { sectionId: "gonioscopy", component: GonioscopySection },
     { sectionId: "va", component: VaSection },
-    { sectionId: "refraction", component: RefractionSection },
   ] as const;
   try {
     for (const contract of contracts) {

@@ -135,7 +135,7 @@ test("real Refraction returns to the full-page editor instead of a narrow entry 
     await page.getByTestId("fixture-full-page-refraction").waitFor();
     assert.equal(await page.getByRole("dialog").count(), 0);
     await page.getByRole("heading", { name: "Refraction" }).waitFor();
-    await page.getByRole("combobox", { name: "OD distance visual acuity" }).waitFor();
+    await page.getByRole("combobox", { name: "OD distance visual acuity", exact: true }).first().waitFor();
   } finally {
     await page.close();
   }

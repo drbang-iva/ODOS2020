@@ -333,7 +333,12 @@
 .odos-exam-entry-sheet-content {
   min-width: 0;
   min-height: 0;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.odos-exam-entry-sheet[data-entry-sheet-section="va"] .odos-exam-entry-sheet-content > section {
+  min-width: max-content;
 }
 
 .odos-exam-editor-launcher-button.is-active {

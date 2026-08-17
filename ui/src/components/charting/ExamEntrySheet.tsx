@@ -7,9 +7,9 @@ export const EXAM_ENTRY_SHEET_CONFIG = {
   gonioscopy: { title: "Gonioscopy", layout: "quadrant-grid" },
   // Visual Acuity has row fields but commits OD and OS together. Individual row saves are deferred.
   va: { title: "Visual Acuity", layout: "paired-row-form" },
-  // Refraction currently records acuity inside OD and OS blocks only. An independent OU acuity is deferred.
-  refraction: { title: "Refraction", layout: "refraction-blocks" },
 } as const;
+
+// Refraction stays full-page until its 1320px editor has a stacked composition. It records OD/OS acuity only; OU acuity is deferred.
 
 export type ExamEntrySheetSectionId = keyof typeof EXAM_ENTRY_SHEET_CONFIG;
 
