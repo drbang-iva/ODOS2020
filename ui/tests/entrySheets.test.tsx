@@ -88,6 +88,15 @@ const PLANNED_SHEET_SECTIONS = new Set<string>([
 
 const USABLE_HORIZONTAL_SCROLL = new Set<string>(["va", "cup-disc"]);
 
+const DEFERRED_MEASURED_MINIMUMS = {
+  wearing: 1510,
+  "auto-refraction": 1380,
+  refraction: 1500,
+  "eye-growth": 1550,
+  "soft-contact-lens": 1600,
+  "specialty-contact-lens": 1800,
+} as const;
+
 test("every static editor is mounted for a real-browser width and height gate", { timeout: 240_000 }, async () => {
   const measurements: Record<string, unknown> = {};
   for (const sectionId of REAL_SECTION_AUDIT) {
@@ -114,6 +123,14 @@ test("every static editor is mounted for a real-browser width and height gate", 
             return offset + Math.max(rect.width, element.scrollWidth);
           })));
           const requiredHeight = Math.ceil(Math.max(content.scrollHeight, ...elements.map((element) => element.scrollHeight)));
+          const declaredEditorWidth = Math.ceil(Math.max(0, ...elements.flatMap((element) => {
+            const style = getComputedStyle(element);
+            return [style.minWidth, style.maxWidth].flatMap((value) => {
+              const parsed = Number.parseFloat(value);
+              const viewportBound = Math.abs(parsed - (window.innerWidth - 32)) < 1;
+              return Number.isFinite(parsed) && !viewportBound ? [parsed] : [];
+            });
+          })));
           const innerScrollers = elements.filter((element) => {
             const style = getComputedStyle(element);
             return element.scrollHeight > element.clientHeight + 1
@@ -125,6 +142,7 @@ test("every static editor is mounted for a real-browser width and height gate", 
             requiredWidth,
             contentHeight: content.clientHeight,
             requiredHeight,
+            declaredEditorWidth,
             overflowX: getComputedStyle(content).overflowX,
             overflowY: getComputedStyle(content).overflowY,
             innerScrollers,
@@ -153,9 +171,31 @@ test("every static editor is mounted for a real-browser width and height gate", 
         await page.close();
       }
     }
-    console.log(`ENTRY_SHEET_SECTION_GEOMETRY ${sectionId}=${JSON.stringify(measurements[sectionId])}`);
+    if (sectionId in DEFERRED_MEASURED_MINIMUMS) {
+      const desktop = (measurements[sectionId] as Record<string, { requiredWidth: number; declaredEditorWidth: number }>)["1440"]!;
+      const measuredMinimum = sectionId === "eye-growth"
+        ? desktop.requiredWidth
+        : desktop.declaredEditorWidth;
+      assert.equal(
+        measuredMinimum,
+        DEFERRED_MEASURED_MINIMUMS[sectionId as keyof typeof DEFERRED_MEASURED_MINIMUMS],
+        `${sectionId} deferred minimum`,
+      );
+    }
+    const sectionMeasurements = measurements[sectionId] as Record<string, {
+      contentWidth: number;
+      requiredWidth: number;
+      contentHeight: number;
+      requiredHeight: number;
+    }>;
+    console.log(
+      `ENTRY_SHEET_SECTION_GEOMETRY ${sectionId} ` +
+      ENTRY_SHEET_VIEWPORTS.map(({ width }) => {
+        const row = sectionMeasurements[String(width)]!;
+        return `${width}:w${row.requiredWidth}/${row.contentWidth},h${row.requiredHeight}/${row.contentHeight}`;
+      }).join(" "),
+    );
   }
-  console.log("ENTRY_SHEET_GEOMETRY=" + JSON.stringify(measurements));
   assert.equal(Object.keys(measurements).length, REAL_SECTION_AUDIT.length);
 });
 
@@ -298,7 +338,7 @@ test("real Refraction returns to the full-page editor instead of a narrow entry 
   try {
     await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Open Refraction" }).click();
-    await page.getByTestId("fixture-full-page-refraction").waitFor();
+    await page.locator('[data-testid="fixture-full-page-editor"][data-fixture-section="refraction"]').waitFor();
     assert.equal(await page.getByRole("dialog").count(), 0);
     await page.getByRole("heading", { name: "Refraction" }).waitFor();
     await page.getByRole("combobox", { name: "OD distance visual acuity", exact: true }).first().waitFor();
@@ -319,7 +359,7 @@ test("entry-sheet chrome is 44px-class and the shared layer traps, closes, and r
     const dialog = page.getByRole("dialog", { name: "Intraocular Pressure" });
     await dialog.waitFor();
     const cancel = page.getByRole("button", { name: "Cancel Intraocular Pressure entry" });
-    const save = dialog.getByRole("button", { name: "Fixture save" });
+    const lastControl = dialog.locator('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])').last();
     assert.equal(await page.evaluate(() => document.activeElement?.getAttribute("aria-label")), "Cancel Intraocular Pressure entry");
 
     const chromeMeasurements = await page.locator("[data-entry-sheet-chrome]").evaluateAll((nodes) => nodes.map((node) => {
@@ -332,16 +372,40 @@ test("entry-sheet chrome is 44px-class and the shared layer traps, closes, and r
       assert.ok(measurement.height >= 44, `chrome height ${measurement.height}px`);
     }
 
-    await save.focus();
+    await lastControl.focus();
     await page.keyboard.press("Tab");
     assert.equal(await page.evaluate(() => document.activeElement?.getAttribute("aria-label")), "Cancel Intraocular Pressure entry");
     await cancel.focus();
     await page.keyboard.press("Shift+Tab");
-    assert.equal(await page.evaluate(() => document.activeElement?.textContent), "Fixture save");
+    assert.equal(await lastControl.evaluate((node) => node === document.activeElement), true);
 
     await page.keyboard.press("Escape");
     await dialog.waitFor({ state: "detached" });
     assert.equal(await page.evaluate(() => document.activeElement?.textContent), "Open IOP");
+  } finally {
+    await page.close();
+  }
+});
+
+test("distributed editor rows are 44px-class and disclose their interaction before activation", { timeout: 30_000 }, async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  page.setDefaultTimeout(5_000);
+  try {
+    await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
+    const rows = page.getByTestId("exam-editor-entry-row");
+    assert.ok(await rows.count() >= REAL_SECTION_AUDIT.length);
+    const measurements = await rows.evaluateAll((nodes) => nodes.map((node) => {
+      const rect = node.getBoundingClientRect();
+      return { width: rect.width, height: rect.height };
+    }));
+    for (const measurement of measurements) {
+      assert.ok(measurement.width >= 44, `editor-row width ${measurement.width}px`);
+      assert.ok(measurement.height >= 44, `editor-row height ${measurement.height}px`);
+    }
+    await page.locator('[data-editor-section-id="va"][data-editor-presentation="sheet"]').waitFor();
+    await page.locator('[data-editor-section-id="refraction"][data-editor-presentation="full-page"]').waitFor();
+    assert.match(await page.locator('[data-editor-section-id="va"]').innerText(), /Entry sheet/);
+    assert.match(await page.locator('[data-editor-section-id="refraction"]').innerText(), /Full page/);
   } finally {
     await page.close();
   }

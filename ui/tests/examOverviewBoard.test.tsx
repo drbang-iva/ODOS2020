@@ -4,15 +4,34 @@ import React from "react";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import type { ExamOverviewProjection } from "../../mcp/src/clinical-graph/exam-overview-projection";
 import { DiagnosisWorkspace } from "../src/components/charting/DiagnosisWorkspace";
+import { AssessmentSection } from "../src/components/charting/AssessmentSection";
+import { AutoRefractionSection } from "../src/components/charting/AutoRefractionSection";
+import { CoverTestSection } from "../src/components/charting/CoverTestSection";
+import { CupDiscSection } from "../src/components/charting/CupDiscSection";
+import { CvfSection } from "../src/components/charting/CvfSection";
+import { DilationSection } from "../src/components/charting/DilationSection";
+import { DryEyeSection } from "../src/components/charting/DryEyeSection";
+import { EntranceMeasurementSection } from "../src/components/charting/EntranceMeasurementSection";
 import { EntranceStateSection } from "../src/components/charting/EntranceStateSection";
+import { EomSection } from "../src/components/charting/EomSection";
+import { EyeGrowthSection } from "../src/components/charting/EyeGrowthSection";
 import { ExamOverviewBoard } from "../src/components/charting/ExamOverviewBoard";
 import { GonioscopySection } from "../src/components/charting/GonioscopySection";
+import { HpiSection } from "../src/components/charting/HpiSection";
+import { ImagingSection } from "../src/components/charting/ImagingSection";
 import { IopSection } from "../src/components/charting/IopSection";
+import { MyopiaManagementSection } from "../src/components/charting/MyopiaManagementSection";
+import { OrthoKSection } from "../src/components/charting/OrthoKSection";
+import { PrescriptionSection } from "../src/components/charting/PrescriptionSection";
+import { RefractionHistorySection } from "../src/components/charting/RefractionHistorySection";
 import { ProcedureChargeList } from "../src/components/charting/ProcedureChargeList";
 import { SpineNav } from "../src/components/charting/SpineNav";
 import { VisitCodeSelector } from "../src/components/charting/VisitCodeSelector";
 import { VaSection } from "../src/components/charting/VaSection";
 import { RefractionSection } from "../src/components/charting/RefractionSection";
+import { SoftContactLensSection } from "../src/components/charting/SoftContactLensSection";
+import { SpecialtyContactLensSection } from "../src/components/charting/SpecialtyContactLensSection";
+import { WearingSection } from "../src/components/charting/WearingSection";
 import type { CustomFindingDefinition } from "../src/components/charting/CustomFindingSection";
 import type { EncounterFindingRow } from "../src/lib/diagnosis-findings";
 import { fhir } from "../src/lib/fhir";
@@ -220,7 +239,8 @@ test("the permanent chart bar keeps draft state reserved instead of inferring it
 test("structure view renders all projected sections and keeps every clinical state channel independent", async () => {
   const harness = await renderEncounter(PROJECTION);
   try {
-    const sections = harness.renderer.root.findAllByProps({ "data-testid": "exam-overview-section" });
+    const sections = harness.renderer.root.findAllByProps({ "data-testid": "exam-overview-section" })
+      .filter((section) => section.props["data-section-state"] !== "editor-only");
     assert.deepEqual(
       sections.map((section) => section.props["data-section-key"]),
       ["pretest", "history", "assessment"],
@@ -433,7 +453,7 @@ test("switching to the diagnosis view preserves the existing DiagnosisWorkspace 
   }
 });
 
-test("the interim board launcher anchors mapped editors and retains full-page fallback for unmapped editors", async () => {
+test("distributed board rows anchor mapped editors and retain full-page fallback for deferred editors", async () => {
   const findingDefinitions: CustomFindingDefinition[] = [
     findingDefinition("entrance:pupils", "Pupils"),
     findingDefinition("entrance:dilation", "Dilation"),
@@ -525,16 +545,39 @@ test("the interim board launcher anchors mapped editors and retains full-page fa
 
 test("each mapped layout wraps its existing section and supports both cancel and saved close paths", async () => {
   const harness = await renderEncounter(PROJECTION, {
-    findingDefinitions: [{
-      ...findingDefinition("entrance:pupils", "Pupils"),
-      perEye: true,
-    }],
+    findingDefinitions: [
+      { ...findingDefinition("entrance:pupils", "Pupils"), perEye: true },
+      findingDefinition("entrance:stereo", "Stereopsis"),
+      { ...findingDefinition("entrance:color", "Color Vision"), perEye: true },
+      { ...findingDefinition("entrance:eom", "EOM / diplopia"), perEye: true },
+      { ...findingDefinition("entrance:cvf", "Visual Field"), perEye: true },
+      findingDefinition("entrance:visual-field-defect", "Visual Field Defect"),
+      { ...findingDefinition("manual_keratometry", "Manual keratometry"), sectionKey: "entrance:manual-keratometry", perEye: true },
+      { ...findingDefinition("pachymetry_um", "Pachymetry"), sectionKey: "entrance:pachymetry", perEye: true },
+      { ...findingDefinition("entrance:dilation", "Dilation"), fields: { agent: { options: [] } } },
+    ],
   });
   const contracts = [
-    { sectionId: "pupils", component: EntranceStateSection },
-    { sectionId: "iop", component: IopSection },
-    { sectionId: "gonioscopy", component: GonioscopySection },
+    { sectionId: "hpi", component: HpiSection },
+    { sectionId: "manual-keratometry", component: EntranceMeasurementSection },
+    { sectionId: "pachymetry", component: EntranceMeasurementSection },
     { sectionId: "va", component: VaSection },
+    { sectionId: "pupils", component: EntranceStateSection },
+    { sectionId: "stereopsis", component: EntranceStateSection },
+    { sectionId: "color-vision", component: EntranceStateSection },
+    { sectionId: "eom", component: EomSection },
+    { sectionId: "cvf", component: CvfSection },
+    { sectionId: "cover-test", component: CoverTestSection },
+    { sectionId: "iop", component: IopSection },
+    { sectionId: "dilation", component: DilationSection },
+    { sectionId: "ortho-k", component: OrthoKSection },
+    { sectionId: "myopia-management", component: MyopiaManagementSection },
+    { sectionId: "cup-disc", component: CupDiscSection },
+    { sectionId: "gonioscopy", component: GonioscopySection },
+    { sectionId: "dry-eye", component: DryEyeSection },
+    { sectionId: "imaging", component: ImagingSection },
+    { sectionId: "assessment", component: AssessmentSection },
+    { sectionId: "prescription", component: PrescriptionSection },
   ] as const;
   try {
     for (const contract of contracts) {
@@ -558,6 +601,34 @@ test("each mapped layout wraps its existing section and supports both cancel and
       });
       assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "exam-entry-sheet" }).length, 0);
       assert.equal(harness.renderer.root.findAllByType(ExamOverviewBoard).length, 1);
+    }
+  } finally {
+    harness.restore();
+  }
+});
+
+test("every measured deferred editor retains its existing full-page route", async () => {
+  const harness = await renderEncounter(PROJECTION);
+  const contracts = [
+    { sectionId: "wearing", component: WearingSection },
+    { sectionId: "auto-refraction", component: AutoRefractionSection },
+    { sectionId: "refraction", component: RefractionSection },
+    { sectionId: "refraction-history", component: RefractionHistorySection },
+    { sectionId: "eye-growth", component: EyeGrowthSection },
+    { sectionId: "soft-contact-lens", component: SoftContactLensSection },
+    { sectionId: "specialty-contact-lens", component: SpecialtyContactLensSection },
+  ] as const;
+  try {
+    for (const contract of contracts) {
+      const row = harness.renderer.root.findByProps({ "data-editor-section-id": contract.sectionId });
+      assert.equal(row.props["data-editor-presentation"], "full-page");
+      await act(async () => row.props.onClick());
+      assert.equal(harness.renderer.root.findAllByType(ExamOverviewBoard).length, 0);
+      assert.equal(harness.renderer.root.findAllByType(contract.component).length, 1);
+      await act(async () => {
+        harness.renderer.root.findByProps({ "data-testid": "return-to-exam-overview" }).props.onClick();
+        await flushEffects();
+      });
     }
   } finally {
     harness.restore();
@@ -623,7 +694,7 @@ test("manual refresh replaces the mounted board projection", async () => {
   }
 });
 
-test("a mapped editor save closes its sheet while an unmapped editor retains the explicit return path", async () => {
+test("a mapped editor save closes its sheet while a deferred editor retains the explicit return path", async () => {
   const harness = await renderEncounter(PROJECTION);
   try {
     const vaLauncher = harness.renderer.root.findByProps({ "data-editor-section-id": "va" });
@@ -640,8 +711,8 @@ test("a mapped editor save closes its sheet while an unmapped editor retains the
     assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "exam-entry-sheet" }).length, 0);
     assert.equal(harness.renderer.root.findAllByType(ExamOverviewBoard).length, 1);
 
-    const coverTestLauncher = harness.renderer.root.findByProps({ "data-editor-section-id": "cover-test" });
-    await act(async () => coverTestLauncher.props.onClick());
+    const refractionLauncher = harness.renderer.root.findByProps({ "data-editor-section-id": "refraction" });
+    await act(async () => refractionLauncher.props.onClick());
     const back = harness.renderer.root.findByProps({ "data-testid": "return-to-exam-overview" });
     await act(async () => {
       back.props.onClick();
@@ -798,11 +869,32 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
         },
       });
     }
+    if (url.endsWith("/clinical-graph/wearing/definition")) {
+      return jsonResponse({ definition: { fields: { eyeglassType: { options: [] }, sourceType: { options: [] } } } });
+    }
+    if (url.endsWith("/clinical-graph/auto-refraction/definition")) {
+      return jsonResponse({ definitions: { autoRefraction: { fields: {} }, autoKeratometry: { fields: {} } } });
+    }
+    if (url.endsWith("/clinical-graph/contact-lens/soft/definition")) {
+      return jsonResponse({ definition: { fields: {} } });
+    }
+    if (url.endsWith("/clinical-graph/contact-lens/specialty/definition")) {
+      return jsonResponse({ definition: { fields: {} }, canManageFields: false });
+    }
+    if (url.includes("/clinical-graph/contact-lens/keratometry")) {
+      return jsonResponse({ eyes: { OD: null, OS: null } });
+    }
     if (url.endsWith("/clinical-graph/refraction/definition")) {
       return jsonResponse({ definition: { fields: {} }, diagnosisOptions: [], refractiveThreshold: 0 });
     }
     if (url.includes("/clinical-graph/refraction/history")) {
       return jsonResponse({ glasses: [], softCl: [], specialtyCl: [] });
+    }
+    if (url.includes("/clinical-graph/dilation/history")) {
+      return jsonResponse({ notes: [], administrations: [] });
+    }
+    if (url.includes("/clinical-graph/cover-test/history")) {
+      return jsonResponse({ rows: [] });
     }
     if (url.includes("/clinical-graph/custom/") && url.includes("/history")) {
       return jsonResponse({ rows: [] });

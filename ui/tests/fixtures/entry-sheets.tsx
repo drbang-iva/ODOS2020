@@ -12,6 +12,7 @@ import { EntranceMeasurementSection } from "../../src/components/charting/Entran
 import { EntranceStateSection } from "../../src/components/charting/EntranceStateSection";
 import { EomSection } from "../../src/components/charting/EomSection";
 import { ExamEntrySheet, isExamEntrySheetSectionId } from "../../src/components/charting/ExamEntrySheet";
+import { ExamOverviewBoard, type ExamOverviewProjection } from "../../src/components/charting/ExamOverviewBoard";
 import { EyeGrowthSection } from "../../src/components/charting/EyeGrowthSection";
 import { GonioscopySection } from "../../src/components/charting/GonioscopySection";
 import { HpiSection } from "../../src/components/charting/HpiSection";
@@ -25,6 +26,7 @@ import { SoftContactLensSection } from "../../src/components/charting/SoftContac
 import { SpecialtyContactLensSection } from "../../src/components/charting/SpecialtyContactLensSection";
 import { VaSection } from "../../src/components/charting/VaSection";
 import { WearingSection } from "../../src/components/charting/WearingSection";
+import { chartEditorInventory } from "../../src/components/charting/SpineNav";
 import { RoleProvider } from "../../src/lib/role-context";
 import "../../src/styles/globals.css";
 
@@ -41,6 +43,18 @@ export type FixtureSectionId = typeof FIXTURE_SECTIONS[number];
 const DEFERRED_SECTIONS = new Set<FixtureSectionId>([
   "wearing", "auto-refraction", "refraction", "soft-contact-lens", "specialty-contact-lens",
 ]);
+
+const FIXTURE_PROJECTION: ExamOverviewProjection = {
+  encounterReference: "Encounter/test",
+  patientReference: "Patient/test",
+  findings: [],
+  sections: [
+    { sectionKey: "history", label: "History", state: "not-examined", findingObservationReferences: [], abnormalCount: 0, carriedUnreassertedCount: 0, deferredWithoutReasonCount: 0 },
+    { sectionKey: "pretest", label: "Pretest", state: "not-examined", findingObservationReferences: [], abnormalCount: 0, carriedUnreassertedCount: 0, deferredWithoutReasonCount: 0 },
+    { sectionKey: "assessment", label: "Assessment", state: "not-examined", findingObservationReferences: [], abnormalCount: 0, carriedUnreassertedCount: 0, deferredWithoutReasonCount: 0 },
+  ],
+  completeness: { status: "unconfigured", requiredSectionCount: 0, resolvedSectionCount: 0, trace: [], documentationIssues: [] },
+};
 
 window.fetch = async (input) => {
   const url = String(input);
@@ -134,13 +148,23 @@ function Fixture() {
         </div>
       ) : (
         <div className="odos-exam-overview-stage" data-entry-sheet-open={sheetOpen ? "true" : "false"}>
-          <section className="min-h-[700px] border-r border-white/10 p-6" data-testid="fixture-exam-column">
-            <h1>Exam overview</h1>
-            <button type="button">Exam source row</button>
+          <section className="min-h-0 overflow-hidden border-r border-white/10" data-testid="fixture-exam-column">
+            <ExamOverviewBoard
+              projection={FIXTURE_PROJECTION}
+              editorEntries={chartEditorInventory()}
+              activeEditorId={mapped ? active : undefined}
+              refreshing={false}
+              onOpenEditor={(sectionId) => isFixtureSectionId(sectionId) && setActive(sectionId)}
+              onRefresh={() => undefined}
+            />
           </section>
           {active && sheetOpen && (
             <ExamEntrySheet sectionId={mapped ? active : "va"} onCancel={() => setActive(undefined)}>
-              <div data-fixture-section={active} data-fixture-route={DEFERRED_SECTIONS.has(active) ? "deferred" : "candidate"}>
+              <div
+                data-fixture-section={active}
+                data-fixture-route={DEFERRED_SECTIONS.has(active) ? "deferred" : "candidate"}
+                style={active === "va" ? { minWidth: "max-content" } : undefined}
+              >
                 {editor}
               </div>
             </ExamEntrySheet>

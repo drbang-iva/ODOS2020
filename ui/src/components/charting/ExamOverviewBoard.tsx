@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { isExamEntrySheetSectionId } from "./ExamEntrySheet";
 import type { ChartEditorEntry } from "./SpineNav";
 
 type ExamObservationState =
@@ -95,6 +96,26 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, r
   const findingByReference = new Map(
     projection.findings.map((finding) => [finding.observationReference, finding]),
   );
+  const projectedSectionKeys = new Set(projection.sections.map((section) => section.sectionKey));
+  const editorGroups = groupEditorEntries(editorEntries);
+  const boardSections: Array<{
+    sectionKey: string;
+    label: string;
+    projection?: ExamOverviewSectionProjection;
+    entries: ChartEditorEntry[];
+  }> = [
+    ...projection.sections.map((section) => ({
+      sectionKey: section.sectionKey,
+      label: section.label,
+      projection: section,
+      entries: editorGroups.get(section.sectionKey) ?? [],
+    })),
+    ...Array.from(editorGroups.entries()).flatMap(([sectionKey, entries]) =>
+      projectedSectionKeys.has(sectionKey)
+        ? []
+        : [{ sectionKey, label: editorGroupLabel(entries[0]?.group, sectionKey), entries }],
+    ),
+  ];
 
   return (
     <main className="odos-exam-overview" aria-labelledby="exam-overview-title">
@@ -117,12 +138,11 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, r
         </div>
       </header>
 
-      <InterimEditorLauncher entries={editorEntries} activeEditorId={activeEditorId} onOpenEditor={onOpenEditor} />
-
       <div className="odos-exam-overview-board">
-        {projection.sections.map((section) => {
+        {boardSections.map((section) => {
+          const sectionProjection = section.projection;
           const findings = orderedSectionFindings(
-            section.findingObservationReferences.flatMap((reference) => {
+            (sectionProjection?.findingObservationReferences ?? []).flatMap((reference) => {
               const finding = findingByReference.get(reference);
               return finding ? [finding] : [];
             }),
@@ -133,27 +153,33 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, r
               className="odos-exam-section"
               data-testid="exam-overview-section"
               data-section-key={section.sectionKey}
-              data-section-state={section.state}
+              data-section-state={sectionProjection?.state ?? "editor-only"}
               aria-labelledby={`exam-section-${safeId(section.sectionKey)}`}
             >
               <header className="odos-exam-section-heading">
                 <div>
                   <h2 id={`exam-section-${safeId(section.sectionKey)}`}>{section.label}</h2>
-                  <span
-                    className={`odos-exam-section-state is-${section.state}`}
-                    data-channel="section-state"
-                    data-state={section.state}
-                  >
-                    {sectionStateLabel(section.state)}
-                  </span>
+                  {sectionProjection ? (
+                    <span
+                      className={`odos-exam-section-state is-${sectionProjection.state}`}
+                      data-channel="section-state"
+                      data-state={sectionProjection.state}
+                    >
+                      {sectionStateLabel(sectionProjection.state)}
+                    </span>
+                  ) : (
+                    <span className="odos-exam-section-state is-editor-only">Editor access</span>
+                  )}
                 </div>
-                <div className="odos-exam-section-counts" aria-label={`${section.label} status counts`}>
-                  <span className="is-abnormal">{section.abnormalCount} abnormal</span>
-                  <span className="is-carried">{section.carriedUnreassertedCount} carried, not reasserted</span>
-                  <span className="is-deferred-gap">
-                    {`${section.deferredWithoutReasonCount} deferred ${section.deferredWithoutReasonCount === 1 ? "reason" : "reasons"} missing`}
-                  </span>
-                </div>
+                {sectionProjection && (
+                  <div className="odos-exam-section-counts" aria-label={`${section.label} status counts`}>
+                    <span className="is-abnormal">{sectionProjection.abnormalCount} abnormal</span>
+                    <span className="is-carried">{sectionProjection.carriedUnreassertedCount} carried, not reasserted</span>
+                    <span className="is-deferred-gap">
+                      {`${sectionProjection.deferredWithoutReasonCount} deferred ${sectionProjection.deferredWithoutReasonCount === 1 ? "reason" : "reasons"} missing`}
+                    </span>
+                  </div>
+                )}
               </header>
 
               {findings.length > 0 ? (
@@ -164,10 +190,17 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, r
                 </div>
               ) : (
                 <p className="odos-exam-section-empty">
-                  {section.state === "not-indicated"
+                  {sectionProjection?.state === "not-indicated"
                     ? "No findings expected for this visit type."
                     : "No finding observations recorded."}
                 </p>
+              )}
+              {section.entries.length > 0 && (
+                <EditorEntryRows
+                  entries={section.entries}
+                  activeEditorId={activeEditorId}
+                  onOpenEditor={onOpenEditor}
+                />
               )}
             </section>
           );
@@ -178,9 +211,7 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, r
   );
 }
 
-// Interim scaffolding only: slice 3's docked entry sheets supersede this flat launcher.
-// Do not grow it into a persistent rail or add navigation behavior beyond editor reachability.
-function InterimEditorLauncher({
+function EditorEntryRows({
   entries,
   activeEditorId,
   onOpenEditor,
@@ -190,29 +221,52 @@ function InterimEditorLauncher({
   onOpenEditor: (sectionId: ChartEditorEntry["id"]) => void;
 }) {
   return (
-    <section className="odos-exam-editor-launcher" aria-labelledby="chart-section-launcher-title">
-      <div className="odos-exam-editor-launcher-heading">
-        <h2 id="chart-section-launcher-title">
-          Chart section
-        </h2>
-        <span>Opens the existing section editor</span>
-      </div>
-      <div className="odos-exam-editor-launcher-list">
+    <div className="odos-exam-editor-entries">
+      <h3>Chart editors</h3>
+      <div className="odos-exam-editor-entry-list">
         {entries.map((entry) => (
           <button
             key={entry.id}
             type="button"
+            data-testid="exam-editor-entry-row"
             data-editor-section-id={entry.id}
+            data-editor-presentation={isExamEntrySheetSectionId(entry.id) ? "sheet" : "full-page"}
             aria-pressed={activeEditorId === entry.id}
             onClick={() => onOpenEditor(entry.id)}
-            className={`odos-exam-editor-launcher-button${activeEditorId === entry.id ? " is-active" : ""}`}
+            className={`odos-exam-editor-entry${activeEditorId === entry.id ? " is-active" : ""}`}
           >
-            {entry.label}
+            <span className="odos-exam-editor-entry-label">{entry.label}</span>
+            <span className="odos-exam-editor-entry-presentation">
+              <span aria-hidden>{isExamEntrySheetSectionId(entry.id) ? "▣" : "↗"}</span>
+              {isExamEntrySheetSectionId(entry.id) ? "Entry sheet" : "Full page"}
+            </span>
           </button>
         ))}
       </div>
-    </section>
+    </div>
   );
+}
+
+function groupEditorEntries(entries: readonly ChartEditorEntry[]): Map<string, ChartEditorEntry[]> {
+  const groups = new Map<string, ChartEditorEntry[]>();
+  for (const entry of entries) {
+    const sectionKey = editorGroupKey(entry.group);
+    const group = groups.get(sectionKey);
+    if (group) group.push(entry);
+    else groups.set(sectionKey, [entry]);
+  }
+  return groups;
+}
+
+function editorGroupKey(group?: string): string {
+  if (group === "ASSESSMENT & PLAN") return "assessment";
+  if (!group) return "other";
+  return group.toLocaleLowerCase().replaceAll(/[^a-z0-9]+/g, "-").replaceAll(/^-|-$/g, "");
+}
+
+function editorGroupLabel(group: string | undefined, sectionKey: string): string {
+  if (group) return group.toLocaleLowerCase().replaceAll(/\b\w/g, (letter) => letter.toLocaleUpperCase());
+  return sectionKey.replaceAll("-", " ").replaceAll(/\b\w/g, (letter) => letter.toLocaleUpperCase());
 }
 
 function FindingRow({ finding }: { finding: ExamOverviewFindingProjection }) {

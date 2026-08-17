@@ -586,9 +586,20 @@ export function EncounterCharting({ patient, encounterId }: Props) {
             <ExamEntrySheet sectionId={entrySheetSection} onCancel={() => setEntrySheetSection(undefined)}>
               <MappedExamSection
                 sectionId={entrySheetSection}
-                pupilsDefinition={pupilsDefinition}
+                definitions={{
+                  pupils: pupilsDefinition,
+                  stereopsis: stereopsisDefinition,
+                  colorVision: colorDefinition,
+                  eom: eomDefinition,
+                  cvf: cvfDefinition,
+                  visualFieldDefect: visualFieldDefectDefinition,
+                  manualKeratometry: manualKDefinition,
+                  pachymetry: pachymetryDefinition,
+                  dilation: dilationDefinition,
+                }}
                 patientReference={patientReference}
                 encounterReference={encounterReference}
+                onRefer={() => setReferralComposeOpen(true)}
                 onSaved={(status) => {
                   markSaved(entrySheetSection, status);
                   setEntrySheetSection(undefined);
@@ -668,13 +679,6 @@ export function EncounterCharting({ patient, encounterId }: Props) {
               )}
             </div>
           )}
-          {activeSection === "hpi" && (
-            <HpiSection
-              patientReference={patientReference}
-              encounterReference={encounterReference}
-              onSaved={(status) => markSaved("hpi", status)}
-            />
-          )}
           {activeSection === "wearing" && (
             <WearingSection
               patientReference={patientReference}
@@ -689,49 +693,26 @@ export function EncounterCharting({ patient, encounterId }: Props) {
               onSaved={(status) => markSaved("auto-refraction", status)}
             />
           )}
-          {activeSection === "manual-keratometry" && (manualKDefinition ? (
-            <EntranceMeasurementSection definition={manualKDefinition} patientReference={patientReference} encounterReference={encounterReference} onSaved={(status) => markSaved("manual-keratometry", status)} />
-          ) : <MissingDefinitionState section="Manual keratometry" />)}
-          {activeSection === "pachymetry" && (pachymetryDefinition ? (
-            <EntranceMeasurementSection definition={pachymetryDefinition} patientReference={patientReference} encounterReference={encounterReference} onSaved={(status) => markSaved("pachymetry", status)} />
-          ) : <MissingDefinitionState section="Pachymetry" />)}
           {isExamEntrySheetSectionId(activeSection) && (
             <MappedExamSection
               sectionId={activeSection}
-              pupilsDefinition={pupilsDefinition}
+              definitions={{
+                pupils: pupilsDefinition,
+                stereopsis: stereopsisDefinition,
+                colorVision: colorDefinition,
+                eom: eomDefinition,
+                cvf: cvfDefinition,
+                visualFieldDefect: visualFieldDefectDefinition,
+                manualKeratometry: manualKDefinition,
+                pachymetry: pachymetryDefinition,
+                dilation: dilationDefinition,
+              }}
               patientReference={patientReference}
               encounterReference={encounterReference}
+              onRefer={() => setReferralComposeOpen(true)}
               onSaved={(status) => markSaved(activeSection, status)}
             />
           )}
-          {activeSection === "stereopsis" && (stereopsisDefinition ? (
-            <EntranceStateSection definition={stereopsisDefinition} patientReference={patientReference} encounterReference={encounterReference} onSaved={(status) => markSaved("stereopsis", status)} />
-          ) : <MissingDefinitionState section="Stereopsis" />)}
-          {activeSection === "color-vision" && (colorDefinition ? (
-            <EntranceStateSection definition={colorDefinition} patientReference={patientReference} encounterReference={encounterReference} onSaved={(status) => markSaved("color-vision", status)} />
-          ) : <MissingDefinitionState section="Color vision" />)}
-          {activeSection === "eom" && (eomDefinition ? (
-            <EomSection definition={eomDefinition} patientReference={patientReference} encounterReference={encounterReference} onSaved={(status) => markSaved("eom", status)} />
-          ) : <MissingDefinitionState section="EOM / diplopia" />)}
-          {activeSection === "cvf" && (cvfDefinition && visualFieldDefectDefinition ? (
-            <CvfSection
-              definition={cvfDefinition}
-              fieldDefectDefinition={visualFieldDefectDefinition}
-              patientReference={patientReference}
-              encounterReference={encounterReference}
-              onSaved={(status) => markSaved("cvf", status)}
-            />
-          ) : <MissingDefinitionState section="Visual Field" />)}
-          {activeSection === "cover-test" && (
-            <CoverTestSection
-              patientReference={patientReference}
-              encounterReference={encounterReference}
-              onSaved={(status) => markSaved("cover-test", status)}
-            />
-          )}
-          {activeSection === "dilation" && (dilationDefinition ? (
-            <DilationSection definition={dilationDefinition} patientReference={patientReference} encounterReference={encounterReference} onSaved={(status) => markSaved("dilation", status)} />
-          ) : <MissingDefinitionState section="Dilation" />)}
           {activeSection === "refraction" && (
             <RefractionSection
               patientReference={patientReference}
@@ -764,56 +745,6 @@ export function EncounterCharting({ patient, encounterId }: Props) {
                 markSaved("eye-growth", status);
                 void loadEyeGrowthVisibility();
               }}
-            />
-          )}
-          {activeSection === "ortho-k" && (
-            <OrthoKSection
-              patientReference={patientReference}
-              encounterReference={encounterReference}
-              onSaved={(status) => markSaved("ortho-k", status)}
-            />
-          )}
-          {activeSection === "dry-eye" && (
-            <DryEyeSection
-              patientReference={patientReference}
-              encounterReference={encounterReference}
-              onSaved={(status) => markSaved("dry-eye", status)}
-            />
-          )}
-          {activeSection === "myopia-management" && (
-            <MyopiaManagementSection
-              patientReference={patientReference}
-              encounterReference={encounterReference}
-              onSaved={(status) => markSaved("myopia-management", status)}
-            />
-          )}
-          {activeSection === "cup-disc" && (
-            <CupDiscSection
-              patientReference={patientReference}
-              encounterReference={encounterReference}
-              onSaved={(status) => markSaved("cup-disc", status)}
-            />
-          )}
-          {activeSection === "imaging" && (
-            <ImagingSection
-              patientReference={patientReference}
-              encounterReference={encounterReference}
-              onSaved={(status) => markSaved("imaging", status)}
-            />
-          )}
-          {activeSection === "assessment" && (
-            <AssessmentSection
-              patientReference={patientReference}
-              encounterReference={encounterReference}
-              onSaved={(status) => markSaved("assessment", status)}
-              onRefer={() => setReferralComposeOpen(true)}
-            />
-          )}
-          {activeSection === "prescription" && (
-            <PrescriptionSection
-              patientReference={patientReference}
-              encounterReference={encounterReference}
-              onSaved={(status) => markSaved("prescription", status)}
             />
           )}
           {activeSection === "aesthetics-consent" && discipline === "aesthetics" && (
@@ -945,21 +876,79 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   );
 }
 
-function MappedExamSection({ sectionId, pupilsDefinition, patientReference, encounterReference, onSaved }: {
+interface MappedExamDefinitions {
+  pupils?: CustomFindingDefinition;
+  stereopsis?: CustomFindingDefinition;
+  colorVision?: CustomFindingDefinition;
+  eom?: CustomFindingDefinition;
+  cvf?: CustomFindingDefinition;
+  visualFieldDefect?: CustomFindingDefinition;
+  manualKeratometry?: CustomFindingDefinition;
+  pachymetry?: CustomFindingDefinition;
+  dilation?: CustomFindingDefinition;
+}
+
+function MappedExamSection({ sectionId, definitions, patientReference, encounterReference, onSaved, onRefer }: {
   sectionId: ExamEntrySheetSectionId;
-  pupilsDefinition?: CustomFindingDefinition;
+  definitions: MappedExamDefinitions;
   patientReference: string;
   encounterReference: string;
   onSaved(status: SectionSaveStatus): void;
+  onRefer(): void;
 }) {
+  const props = { patientReference, encounterReference, onSaved };
+  if (sectionId === "hpi") return <HpiSection {...props} />;
+  if (sectionId === "manual-keratometry") {
+    return definitions.manualKeratometry
+      ? <EntranceMeasurementSection definition={definitions.manualKeratometry} {...props} />
+      : <MissingDefinitionState section="Manual keratometry" />;
+  }
+  if (sectionId === "pachymetry") {
+    return definitions.pachymetry
+      ? <EntranceMeasurementSection definition={definitions.pachymetry} {...props} />
+      : <MissingDefinitionState section="Pachymetry" />;
+  }
+  if (sectionId === "va") return <VaSection {...props} />;
   if (sectionId === "pupils") {
-    return pupilsDefinition
-      ? <EntranceStateSection definition={pupilsDefinition} patientReference={patientReference} encounterReference={encounterReference} onSaved={onSaved} />
+    return definitions.pupils
+      ? <EntranceStateSection definition={definitions.pupils} {...props} />
       : <MissingDefinitionState section="Pupils" />;
   }
-  if (sectionId === "iop") return <IopSection patientReference={patientReference} encounterReference={encounterReference} onSaved={onSaved} />;
-  if (sectionId === "gonioscopy") return <GonioscopySection patientReference={patientReference} encounterReference={encounterReference} onSaved={onSaved} />;
-  return <VaSection patientReference={patientReference} encounterReference={encounterReference} onSaved={onSaved} />;
+  if (sectionId === "stereopsis") {
+    return definitions.stereopsis
+      ? <EntranceStateSection definition={definitions.stereopsis} {...props} />
+      : <MissingDefinitionState section="Stereopsis" />;
+  }
+  if (sectionId === "color-vision") {
+    return definitions.colorVision
+      ? <EntranceStateSection definition={definitions.colorVision} {...props} />
+      : <MissingDefinitionState section="Color vision" />;
+  }
+  if (sectionId === "eom") {
+    return definitions.eom
+      ? <EomSection definition={definitions.eom} {...props} />
+      : <MissingDefinitionState section="EOM / diplopia" />;
+  }
+  if (sectionId === "cvf") {
+    return definitions.cvf && definitions.visualFieldDefect
+      ? <CvfSection definition={definitions.cvf} fieldDefectDefinition={definitions.visualFieldDefect} {...props} />
+      : <MissingDefinitionState section="Visual Field" />;
+  }
+  if (sectionId === "cover-test") return <CoverTestSection {...props} />;
+  if (sectionId === "iop") return <IopSection {...props} />;
+  if (sectionId === "dilation") {
+    return definitions.dilation
+      ? <DilationSection definition={definitions.dilation} {...props} />
+      : <MissingDefinitionState section="Dilation" />;
+  }
+  if (sectionId === "ortho-k") return <OrthoKSection {...props} />;
+  if (sectionId === "myopia-management") return <MyopiaManagementSection {...props} />;
+  if (sectionId === "cup-disc") return <CupDiscSection {...props} />;
+  if (sectionId === "gonioscopy") return <GonioscopySection {...props} />;
+  if (sectionId === "dry-eye") return <DryEyeSection {...props} />;
+  if (sectionId === "imaging") return <ImagingSection {...props} />;
+  if (sectionId === "assessment") return <AssessmentSection {...props} onRefer={onRefer} />;
+  return <PrescriptionSection {...props} />;
 }
 
 function MissingDefinitionState({ section }: { section: string }) {
