@@ -159,6 +159,10 @@ const PRACTICE_READ_RESOURCE_TYPES = [
   "Practitioner",
   "PractitionerRole",
   "Communication",
+  "BodyStructure",
+  "CareTeam",
+  "DeviceUseStatement",
+  "VisionPrescription",
 ] as const;
 
 const PRACTICE_READ_RESOURCE_RULES: OdosResourceRule[] = PRACTICE_READ_RESOURCE_TYPES.map(

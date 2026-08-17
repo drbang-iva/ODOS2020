@@ -49,6 +49,18 @@ interface ChartData {
   deviceUseStatements: DeviceUseStatement[];
 }
 
+type ChartReadResourceType =
+  | "AllergyIntolerance"
+  | "Observation"
+  | "CareTeam"
+  | "Condition"
+  | "EpisodeOfCare"
+  | "Encounter"
+  | "MedicationStatement"
+  | "DeviceUseStatement";
+
+type ChartLoadFailures = Partial<Record<ChartReadResourceType, string>>;
+
 const EMPTY_DATA: ChartData = {
   allergies: [],
   smokingObservations: [],
@@ -64,49 +76,47 @@ export function ChartSidebar({ patient }: { patient: Patient }) {
   const { role } = useRole();
   const [data, setData] = useState<ChartData>(EMPTY_DATA);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [failures, setFailures] = useState<ChartLoadFailures>({});
 
   async function load() {
     if (!patient.id) return;
     setLoading(true);
-    setError(null);
-    try {
-      const patientReference = `Patient/${patient.id}`;
-      const [
-        allergyBundle,
-        observationBundle,
-        careTeamBundle,
-        conditionBundle,
-        episodeBundle,
-        encounterBundle,
-        medicationBundle,
-        deviceUseBundle,
-      ] = await Promise.all([
-        fhir.search<AllergyIntolerance>("AllergyIntolerance", { patient: patientReference, _count: "20" }),
-        fhir.search<Observation>("Observation", { subject: patientReference, _count: "40", _sort: "-date" }),
-        fhir.search<CareTeam>("CareTeam", { subject: patientReference, _count: "20" }),
-        fhir.search<Condition>("Condition", { subject: patientReference, _count: "80" }),
-        fhir.search<EpisodeOfCare>("EpisodeOfCare", { patient: patientReference, _count: "20" }),
-        fhir.search<Encounter>("Encounter", { subject: patientReference, _count: "30", _sort: "-date" }),
-        fhir.search<MedicationStatement>("MedicationStatement", { subject: patientReference, _count: "60" }),
-        fhir.search<DeviceUseStatement>("DeviceUseStatement", { subject: patientReference, _count: "60" }),
-      ]);
+    setFailures({});
+    const patientReference = `Patient/${patient.id}`;
+    const [
+      allergyResult,
+      observationResult,
+      careTeamResult,
+      conditionResult,
+      episodeResult,
+      encounterResult,
+      medicationResult,
+      deviceUseResult,
+    ] = await Promise.allSettled([
+      fhir.search<AllergyIntolerance>("AllergyIntolerance", { patient: patientReference, _count: "20" }),
+      fhir.search<Observation>("Observation", { subject: patientReference, _count: "40", _sort: "-date" }),
+      fhir.search<CareTeam>("CareTeam", { subject: patientReference, _count: "20" }),
+      fhir.search<Condition>("Condition", { subject: patientReference, _count: "80" }),
+      fhir.search<EpisodeOfCare>("EpisodeOfCare", { patient: patientReference, _count: "20" }),
+      fhir.search<Encounter>("Encounter", { subject: patientReference, _count: "30", _sort: "-date" }),
+      fhir.search<MedicationStatement>("MedicationStatement", { subject: patientReference, _count: "60" }),
+      fhir.search<DeviceUseStatement>("DeviceUseStatement", { subject: patientReference, _count: "60" }),
+    ]);
+    const nextFailures: ChartLoadFailures = {};
 
-      setData({
-        allergies: resources(allergyBundle),
-        smokingObservations: resources(observationBundle),
-        careTeams: resources(careTeamBundle),
-        problemList: resources(conditionBundle).filter(isProblemListCondition),
-        episodes: resources(episodeBundle).filter((episode) => episode.status === "active"),
-        encounters: resources(encounterBundle),
-        medications: resources(medicationBundle),
-        deviceUseStatements: resources(deviceUseBundle),
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setLoading(false);
-    }
+    setData({
+      allergies: settledResources("AllergyIntolerance", allergyResult, nextFailures),
+      smokingObservations: settledResources("Observation", observationResult, nextFailures),
+      careTeams: settledResources("CareTeam", careTeamResult, nextFailures),
+      problemList: settledResources("Condition", conditionResult, nextFailures).filter(isProblemListCondition),
+      episodes: settledResources("EpisodeOfCare", episodeResult, nextFailures)
+        .filter((episode) => episode.status === "active"),
+      encounters: settledResources("Encounter", encounterResult, nextFailures),
+      medications: settledResources("MedicationStatement", medicationResult, nextFailures),
+      deviceUseStatements: settledResources("DeviceUseStatement", deviceUseResult, nextFailures),
+    });
+    setFailures(nextFailures);
+    setLoading(false);
   }
 
   useEffect(() => {
@@ -123,9 +133,12 @@ export function ChartSidebar({ patient }: { patient: Patient }) {
       <div className="border-b border-white/10 p-4">
         <div className="text-xs uppercase tracking-widest text-white/35">Chart sidebar</div>
         <div className="mt-1 text-sm text-white/65">
-          {loading ? "Loading chart context" : `${data.problemList.length} active chart lists`}
+          {loading
+            ? "Loading chart context"
+            : failures.Condition
+              ? "Active chart lists unavailable"
+              : `${data.problemList.length} active chart lists`}
         </div>
-        {error && <div className="mt-2 rounded border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-100">{error}</div>}
       </div>
 
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
@@ -134,6 +147,7 @@ export function ChartSidebar({ patient }: { patient: Patient }) {
             density={density("programs")}
             episodes={data.episodes}
             encounters={data.encounters}
+            failures={failures}
             onChanged={load}
           />
         )}
@@ -142,6 +156,7 @@ export function ChartSidebar({ patient }: { patient: Patient }) {
             density={density("allergies")}
             patient={patient}
             allergies={data.allergies}
+            failure={failures.AllergyIntolerance}
             onChanged={load}
           />
         )}
@@ -150,6 +165,7 @@ export function ChartSidebar({ patient }: { patient: Patient }) {
             density={density("tobacco-use")}
             patient={patient}
             observations={data.smokingObservations}
+            failure={failures.Observation}
             onChanged={load}
           />
         )}
@@ -158,6 +174,7 @@ export function ChartSidebar({ patient }: { patient: Patient }) {
             density={density("product-timeline")}
             medications={data.medications}
             deviceUseStatements={data.deviceUseStatements}
+            failures={failures}
           />
         )}
         {density("care-team") !== "hidden" && (
@@ -165,6 +182,7 @@ export function ChartSidebar({ patient }: { patient: Patient }) {
             density={density("care-team")}
             patient={patient}
             careTeams={data.careTeams}
+            failure={failures.CareTeam}
             onChanged={load}
           />
         )}
@@ -173,6 +191,7 @@ export function ChartSidebar({ patient }: { patient: Patient }) {
             density={density("problem-list")}
             patient={patient}
             conditions={data.problemList}
+            failure={failures.Condition}
             onChanged={load}
           />
         )}
@@ -188,11 +207,13 @@ function ProgramsCard({
   density,
   episodes,
   encounters,
+  failures,
   onChanged,
 }: {
   density: string;
   episodes: EpisodeOfCare[];
   encounters: Encounter[];
+  failures: ChartLoadFailures;
   onChanged: () => Promise<void>;
 }) {
   const [busy, setBusy] = useState<string | null>(null);
@@ -214,22 +235,26 @@ function ProgramsCard({
 
   return (
     <SidebarCard id="programs" title="Active Programs" density={density}>
-      {episodes.length === 0 ? (
+      {failures.EpisodeOfCare && <ResourceReadFailure resourceType="EpisodeOfCare" message={failures.EpisodeOfCare} />}
+      {failures.Encounter && <ResourceReadFailure resourceType="Encounter" message={failures.Encounter} />}
+      {!failures.EpisodeOfCare && episodes.length === 0 ? (
         <EmptyLine>No active programs.</EmptyLine>
-      ) : (
+      ) : !failures.EpisodeOfCare && (
         <div className="space-y-2">
           {episodes.map((episode) => (
             <div key={episode.id} className="rounded border border-white/10 bg-bg-mid/60 p-2">
               <div className="text-sm font-semibold">{episodeTypeLabel(episode)}</div>
               <div className="text-xs text-white/45">
-                {episode.status} · {linkedEncounterCount(episode, encounters)} linked visits
+                {episode.status} · {failures.Encounter
+                  ? "linked visits unavailable"
+                  : `${linkedEncounterCount(episode, encounters)} linked visits`}
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {density === "full" && episodes.length > 0 && standalone.length > 0 && (
+      {density === "full" && !failures.EpisodeOfCare && !failures.Encounter && episodes.length > 0 && standalone.length > 0 && (
         <div className="mt-3 border-t border-white/10 pt-3">
           <div className="text-xs uppercase tracking-widest text-white/35">Stand-alone visits</div>
           <div className="mt-2 space-y-2">
@@ -254,11 +279,13 @@ function AllergiesCard({
   density,
   patient,
   allergies,
+  failure,
   onChanged,
 }: {
   density: string;
   patient: Patient;
   allergies: AllergyIntolerance[];
+  failure?: string;
   onChanged: () => Promise<void>;
 }) {
   const [code, setCode] = useState("");
@@ -298,12 +325,14 @@ function AllergiesCard({
 
   return (
     <SidebarCard id="allergies" title="Allergies" density={density}>
-      {allergies.length === 0 ? (
+      {failure ? (
+        <ResourceReadFailure resourceType="AllergyIntolerance" message={failure} />
+      ) : allergies.length === 0 ? (
         <EmptyLine>No allergies recorded.</EmptyLine>
       ) : (
         <List lines={allergies.map((allergy) => allergyLabel(allergy))} />
       )}
-      {density === "full" && (
+      {density === "full" && !failure && (
         <div className="mt-3 grid gap-2">
           <OdosSearchPicker
             label="Allergy / RxNorm"
@@ -335,11 +364,13 @@ function TobaccoUseCard({
   density,
   patient,
   observations,
+  failure,
   onChanged,
 }: {
   density: string;
   patient: Patient;
   observations: Observation[];
+  failure?: string;
   onChanged: () => Promise<void>;
 }) {
   const current = newestSmokingStatus(observations);
@@ -362,13 +393,15 @@ function TobaccoUseCard({
 
   return (
     <SidebarCard id="tobacco-use" title="Tobacco Use" density={density}>
-      <div className="text-sm text-white/80">
-        {current ? displayCode(current.valueCodeableConcept) : "No tobacco use status recorded."}
-      </div>
-      {current?.effectiveDateTime && (
+      {failure ? (
+        <ResourceReadFailure resourceType="Observation" message={failure} />
+      ) : <div className="text-sm text-white/80">
+          {current ? displayCode(current.valueCodeableConcept) : "No tobacco use status recorded."}
+        </div>}
+      {!failure && current?.effectiveDateTime && (
         <div className="mt-1 text-xs text-white/40">{current.effectiveDateTime.slice(0, 10)}</div>
       )}
-      {density === "full" && (
+      {density === "full" && !failure && (
         <div className="mt-3 grid gap-2">
           <select value={statusCode} onChange={(event) => setStatusCode(event.target.value as SmokingStatusCode)} className="sidebar-input">
             {SMOKING_STATUS_CODES.map((value) => (
@@ -390,18 +423,26 @@ function ProductTimelineCard({
   density,
   medications,
   deviceUseStatements,
+  failures,
 }: {
   density: string;
   medications: MedicationStatement[];
   deviceUseStatements: DeviceUseStatement[];
+  failures: ChartLoadFailures;
 }) {
   const groups = productTimelineGroups(medications, deviceUseStatements);
 
   return (
     <SidebarCard id="product-timeline" title="Product Timeline" density={density}>
-      {groups.length === 0 ? (
+      {failures.MedicationStatement && (
+        <ResourceReadFailure resourceType="MedicationStatement" message={failures.MedicationStatement} />
+      )}
+      {failures.DeviceUseStatement && (
+        <ResourceReadFailure resourceType="DeviceUseStatement" message={failures.DeviceUseStatement} />
+      )}
+      {groups.length === 0 && !failures.MedicationStatement && !failures.DeviceUseStatement ? (
         <EmptyLine>No products recorded.</EmptyLine>
-      ) : (
+      ) : groups.length > 0 && (
         <div className="space-y-3">
           {groups.map((group) => (
             <div key={group.indication} className="rounded border border-white/10 bg-bg-mid/60 p-2">
@@ -429,11 +470,13 @@ function CareTeamCard({
   density,
   patient,
   careTeams,
+  failure,
   onChanged,
 }: {
   density: string;
   patient: Patient;
   careTeams: CareTeam[];
+  failure?: string;
   onChanged: () => Promise<void>;
 }) {
   const [roleText, setRoleText] = useState("Primary care physician");
@@ -463,8 +506,12 @@ function CareTeamCard({
 
   return (
     <SidebarCard id="care-team" title="Care Team" density={density}>
-      {lines.length === 0 ? <EmptyLine>No care team recorded.</EmptyLine> : <List lines={lines} />}
-      {density === "full" && (
+      {failure
+        ? <ResourceReadFailure resourceType="CareTeam" message={failure} />
+        : lines.length === 0
+          ? <EmptyLine>No care team recorded.</EmptyLine>
+          : <List lines={lines} />}
+      {density === "full" && !failure && (
         <div className="mt-3 grid gap-2">
           <select value={roleText} onChange={(event) => setRoleText(event.target.value)} className="sidebar-input">
             {["Primary care physician", "Ophthalmologist", "Endocrinologist", "Neurologist", "Caregiver"].map((role) => (
@@ -534,11 +581,13 @@ function ProblemListCard({
   density,
   patient,
   conditions,
+  failure,
   onChanged,
 }: {
   density: string;
   patient: Patient;
   conditions: Condition[];
+  failure?: string;
   onChanged: () => Promise<void>;
 }) {
   const [display, setDisplay] = useState("");
@@ -572,7 +621,9 @@ function ProblemListCard({
 
   return (
     <SidebarCard id="problem-list" title="Problem List" density={density}>
-      {conditions.length === 0 ? (
+      {failure ? (
+        <ResourceReadFailure resourceType="Condition" message={failure} />
+      ) : conditions.length === 0 ? (
         <EmptyLine>No active longitudinal problems.</EmptyLine>
       ) : (
         <div className="space-y-2">
@@ -587,7 +638,7 @@ function ProblemListCard({
           ))}
         </div>
       )}
-      {density === "full" && (
+      {density === "full" && !failure && (
         <div className="mt-3 grid gap-2">
           {error && <div className="rounded border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-100">{error}</div>}
           <OdosSearchPicker
@@ -722,6 +773,30 @@ function List({ lines }: { lines: string[] }) {
 
 function EmptyLine({ children }: { children: ReactNode }) {
   return <div className="text-sm text-white/45">{children}</div>;
+}
+
+function ResourceReadFailure({
+  resourceType,
+  message,
+}: {
+  resourceType: ChartReadResourceType;
+  message: string;
+}) {
+  return (
+    <div className="rounded border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-100">
+      {resourceType} unavailable: {message}
+    </div>
+  );
+}
+
+function settledResources<T>(
+  resourceType: ChartReadResourceType,
+  result: PromiseSettledResult<{ entry?: Array<{ resource?: T }> }>,
+  failures: ChartLoadFailures,
+): T[] {
+  if (result.status === "fulfilled") return resources(result.value);
+  failures[resourceType] = result.reason instanceof Error ? result.reason.message : String(result.reason);
+  return [];
 }
 
 function resources<T>(bundle: { entry?: Array<{ resource?: T }> }): T[] {

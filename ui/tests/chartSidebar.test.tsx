@@ -13,11 +13,12 @@ test("one forbidden sidebar search names its resource while the other seven resu
   const renderer = await renderSidebar("CareTeam");
   try {
     const rendered = JSON.stringify(renderer.toJSON());
-    assert.match(rendered, /CareTeam unavailable: FHIR 403 : Forbidden/);
+    assert.match(rendered, /CareTeam.*unavailable:.*FHIR 403 : Forbidden/);
     assert.doesNotMatch(rendered, /No care team recorded/);
     assert.match(rendered, /1 active chart lists/);
     assert.match(rendered, /Penicillin/);
     assert.match(rendered, /Never smoker/);
+    assert.match(rendered, /2026-08-17/);
     assert.match(rendered, /Dry eye/);
     assert.match(rendered, /1 linked visits/);
     assert.match(rendered, /Latanoprost/);
@@ -33,7 +34,7 @@ test("a forbidden Condition read cannot render as an empty zero-count problem li
   try {
     const rendered = JSON.stringify(renderer.toJSON());
     assert.match(rendered, /Active chart lists unavailable/);
-    assert.match(rendered, /Condition unavailable: FHIR 403 : Forbidden/);
+    assert.match(rendered, /Condition.*unavailable:.*FHIR 403 : Forbidden/);
     assert.doesNotMatch(rendered, /0 active chart lists/);
     assert.doesNotMatch(rendered, /No active longitudinal problems/);
   } finally {
@@ -41,11 +42,26 @@ test("a forbidden Condition read cannot render as an empty zero-count problem li
   }
 });
 
-async function renderSidebar(failingResourceType: string): Promise<ReactTestRenderer> {
+test("an empty CareTeam read keeps the distinct recorded-empty state", async () => {
+  const renderer = await renderSidebar(undefined, "CareTeam");
+  try {
+    const rendered = JSON.stringify(renderer.toJSON());
+    assert.match(rendered, /No care team recorded/);
+    assert.doesNotMatch(rendered, /CareTeam.*unavailable/);
+  } finally {
+    renderer.unmount();
+  }
+});
+
+async function renderSidebar(
+  failingResourceType?: string,
+  emptyResourceType?: string,
+): Promise<ReactTestRenderer> {
   const originalSearch = fhir.search;
   const originalFetch = globalThis.fetch;
   fhir.search = async <T extends Resource>(resourceType: T["resourceType"]): Promise<Bundle<T>> => {
     if (resourceType === failingResourceType) throw new Error("FHIR 403 : Forbidden");
+    if (resourceType === emptyResourceType) return bundleFor("") as Bundle<T>;
     return bundleFor(resourceType) as Bundle<T>;
   };
   globalThis.fetch = async () => new Response(JSON.stringify({ definitions: [], images: [] }), {

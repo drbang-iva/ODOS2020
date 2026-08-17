@@ -9,12 +9,25 @@ type SourceFile = { readonly path: string; readonly text: string };
 type GrantCheckResult = {
   readonly readResourceTypes: readonly string[];
   readonly excludedServiceIdentityResourceTypes: readonly string[];
+  readonly excludedNonFhirCallSites: readonly string[];
   readonly grantedResourceTypes: readonly string[];
   readonly missingResourceTypes: readonly string[];
+  readonly sourceRoots: readonly string[];
+  readonly includedExtensions: readonly string[];
+  readonly excludedDirectoryNames: readonly string[];
   readonly limitations: readonly string[];
 };
+type NonFhirLiteralCallSite = {
+  readonly path: string;
+  readonly callee: string;
+  readonly literal: string;
+  readonly reason: string;
+};
 type GrantCheckModule = {
-  readonly collectLiteralFhirReadResourceTypes: (files: readonly SourceFile[]) => readonly string[];
+  readonly collectLiteralFhirReadResourceTypes: (
+    files: readonly SourceFile[],
+    nonFhirCallSites?: readonly NonFhirLiteralCallSite[],
+  ) => readonly string[];
   readonly findMissingFhirReadGrants: (
     readResourceTypes: readonly string[],
     grantedResourceTypes: readonly string[],
@@ -93,18 +106,41 @@ test("FHIR read grant comparison reports the exact sorted subset gap", async () 
   );
 });
 
+test("an explicitly reasoned non-FHIR literal call site does not manufacture a grant demand", async () => {
+  const { collectLiteralFhirReadResourceTypes } = await loadGrantCheck();
+  const files = [{
+    path: "ui/src/cache.ts",
+    text: 'await cache.search("recent-patients");\nawait fhir.search("Patient", { active: "true" });\n',
+  }];
+  const allowlist = [{
+    path: "ui/src/cache.ts",
+    callee: "cache.search",
+    literal: "recent-patients",
+    reason: "Local cache lookup, not a FHIR search.",
+  }];
+
+  assert.deepEqual(collectLiteralFhirReadResourceTypes(files, allowlist), ["Patient"]);
+});
+
 test("live FHIR read grant check covers all four chart resources through compiled role policies", async () => {
   const { runFhirReadGrantCheck } = await loadGrantCheck();
   const result = runFhirReadGrantCheck();
 
   assert.deepEqual(result.missingResourceTypes, []);
   assert.deepEqual(result.excludedServiceIdentityResourceTypes, ["ProjectMembership", "User"]);
+  assert.deepEqual(result.excludedNonFhirCallSites, []);
+  assert.deepEqual(result.sourceRoots, ["mcp/src", "ui/src"]);
+  assert.deepEqual(result.includedExtensions, [".ts", ".tsx"]);
+  assert.deepEqual(result.excludedDirectoryNames, ["__tests__"]);
   for (const resourceType of ["AllergyIntolerance", "Goal", "MedicationRequest", "PlanDefinition"]) {
     assert.equal(result.readResourceTypes.includes(resourceType), true, `${resourceType} must be scanned`);
     assert.equal(result.grantedResourceTypes.includes(resourceType), true, `${resourceType} must be granted`);
   }
   assert.deepEqual(result.limitations, [
-    "Literal resourceTypes only; a computed resourceType escapes this scan.",
+    "Computed read resourceTypes escape this scan.",
+    "A computed search is marker-checked only when its argument is named resourceType, resource_type, or .resourceType; other names escape because receiver-independent matching would misclassify non-FHIR search APIs.",
+    "Marked helper propagation follows named parameters; destructured or object-property resourceType forwarding escapes this scan.",
+    "Marked helper propagation is function-name based across scanned roots; same-named non-FHIR helpers require the explicit call-site allowlist.",
     "This proves a grant exists, not that its scope is correct; a wrong-compartment grant can still 403 at runtime.",
   ]);
 });
@@ -117,9 +153,14 @@ test("FHIR read grant CLI passes only with full coverage and always prints its l
   );
 
   assert.equal(result.status, 0, result.stderr || result.stdout);
-  assert.match(result.stdout, /FHIR read grant check: PASS/);
-  assert.match(result.stdout, /Service-identity resourceTypes seen and excluded: ProjectMembership, User/);
-  assert.match(result.stdout, /Literal resourceTypes only; a computed resourceType escapes this scan\./);
+  assert.match(result.stdout, /FHIR read grant check: PASS \(\d+ literal\/marked resourceTypes under mcp\/src \+ ui\/src\)/);
+  assert.match(result.stdout, /Included source extensions: \.ts, \.tsx/);
+  assert.match(result.stdout, /Excluded source directories: __tests__/);
+  assert.match(result.stdout, /Excluded source extensions: all except \.ts, \.tsx/);
+  assert.match(result.stdout, /ProjectMembership — service identity authorization context/);
+  assert.match(result.stdout, /User — service identity account resolution/);
+  assert.match(result.stdout, /Non-FHIR literal call sites excluded:\n- none/);
+  assert.match(result.stdout, /other names escape because receiver-independent matching would misclassify non-FHIR search APIs/);
   assert.match(result.stdout, /proves a grant exists, not that its scope is correct/);
 });
 
