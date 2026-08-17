@@ -39,10 +39,15 @@ test("FHIR read grant scan collects literal ordinary-role reads and requires the
       "  // search-contract: fixture.computed-search",
       "  return fhir.search(resourceType, params);",
       "}",
+      "async function optionalSearchResource(fhir, resourceType, params) {",
+      "  return searchResource(fhir, resourceType, params);",
+      "}",
       'await fhir.read("PlanDefinition", "plan-1");',
       'await this.fhir.search("AllergyIntolerance", { patient });',
       'await staff.fhir.search("Goal", { subject: patient });',
       'await searchResource(fhir, "CarePlan", { patient });',
+      'await optionalSearchResource(fhir, "Coverage", { patient });',
+      'await optionalSearchResource(fhir, "CoverageEligibilityResponse", { patient });',
       'await fhir.read(computedResourceType, id);',
       'await serviceFhir.search("ProjectMembership", { profile });',
     ].join("\n"),
@@ -50,7 +55,14 @@ test("FHIR read grant scan collects literal ordinary-role reads and requires the
 
   assert.deepEqual(
     collectLiteralFhirReadResourceTypes(files),
-    ["AllergyIntolerance", "CarePlan", "Goal", "PlanDefinition"],
+    [
+      "AllergyIntolerance",
+      "CarePlan",
+      "Coverage",
+      "CoverageEligibilityResponse",
+      "Goal",
+      "PlanDefinition",
+    ],
   );
   assert.throws(
     () => collectLiteralFhirReadResourceTypes([{

@@ -55,7 +55,7 @@ export function collectLiteralFhirReadResourceTypes(
               `${file.path}:${position.line + 1} has a computed FHIR search resourceType without a search-contract marker.`,
             );
           }
-          const helper = markedSearchHelper(node);
+          const helper = forwardingSearchHelper(node, node.arguments[0]);
           if (helper) markedSearchHelpers.set(helper.name, helper.resourceTypeParameterIndex);
         }
       }
@@ -63,14 +63,25 @@ export function collectLiteralFhirReadResourceTypes(
     }
 
     visit(source);
-    if (markedSearchHelpers.size > 0) {
+    let discoveredHelper = markedSearchHelpers.size > 0;
+    while (discoveredHelper) {
+      discoveredHelper = false;
       function visitHelperCalls(node: ts.Node): void {
         if (ts.isCallExpression(node)) {
           const name = calledName(node.expression);
           const parameterIndex = name ? markedSearchHelpers.get(name) : undefined;
           if (parameterIndex !== undefined) {
-            const resourceType = stringLiteral(node.arguments[parameterIndex]);
-            if (resourceType) resourceTypes.add(resourceType);
+            const resourceTypeArgument = node.arguments[parameterIndex];
+            const resourceType = stringLiteral(resourceTypeArgument);
+            if (resourceType) {
+              resourceTypes.add(resourceType);
+            } else {
+              const helper = forwardingSearchHelper(node, resourceTypeArgument);
+              if (helper && !markedSearchHelpers.has(helper.name)) {
+                markedSearchHelpers.set(helper.name, helper.resourceTypeParameterIndex);
+                discoveredHelper = true;
+              }
+            }
           }
         }
         ts.forEachChild(node, visitHelperCalls);
@@ -137,10 +148,11 @@ function searchContractKey(node: ts.CallExpression, source: ts.SourceFile): stri
   return undefined;
 }
 
-function markedSearchHelper(
+function forwardingSearchHelper(
   node: ts.CallExpression,
+  resourceTypeArgument: ts.Expression | undefined,
 ): { readonly name: string; readonly resourceTypeParameterIndex: number } | undefined {
-  const resourceType = unwrappedIdentifier(node.arguments[0]);
+  const resourceType = unwrappedIdentifier(resourceTypeArgument);
   if (!resourceType) return undefined;
 
   let current: ts.Node | undefined = node.parent;
