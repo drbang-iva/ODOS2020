@@ -23,6 +23,7 @@ import {
 import { OdosChips } from "../inputs/OdosChips";
 import { OdosSearchPicker } from "../inputs/OdosSearchPicker";
 import { OdosWheel } from "../inputs/OdosWheel";
+import { useDockedPanel } from "../commercial/panel-shared";
 
 const SYSTEM_DEFAULTS: ReferralIncludeList = {
   letter: true,
@@ -110,6 +111,10 @@ export function ReferralCompose({
   const previewSequence = useRef(0);
   const isSending = busy === "send";
   const composerLocked = Boolean(sent) || isSending;
+  const closeCompose = useCallback(() => {
+    if (!sendingRef.current) onClose();
+  }, [onClose]);
+  const { dialogRef, initialFocusRef, titleId } = useDockedPanel(closeCompose);
 
   useEffect(() => {
     if (!sent?.fax || !referral?.id || isFinalFaxStatus(sent.fax.status)) return;
@@ -436,14 +441,21 @@ export function ReferralCompose({
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-[var(--odos-ground)] text-[color:var(--odos-text)]" data-testid="referral-compose">
+    <section
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+      className="fixed inset-0 z-50 overflow-hidden bg-[var(--odos-ground)] text-[color:var(--odos-text)]"
+      data-testid="referral-compose"
+    >
       <div className="flex h-full min-h-0 flex-col">
         <header className="flex items-center justify-between border-b border-[color:var(--odos-line)] bg-[var(--odos-surface-2)] px-4 py-3 sm:px-6">
           <div>
             <div className="text-xs font-semibold uppercase tracking-[0.24em] text-brand">Referral packet</div>
-            <h1 className="mt-1 text-xl font-semibold">One packet, one send</h1>
+            <h1 id={titleId} className="mt-1 text-xl font-semibold">One packet, one send</h1>
           </div>
-          <button type="button" className="sidebar-button" disabled={isSending} onClick={() => { if (!sendingRef.current) onClose(); }}>Return to chart</button>
+          <button ref={initialFocusRef} type="button" className="sidebar-button" disabled={isSending} onClick={closeCompose}>Return to chart</button>
         </header>
 
         <div className="grid min-h-0 flex-1 grid-cols-1 overflow-y-auto lg:grid-cols-[minmax(340px,430px)_minmax(0,1fr)] lg:overflow-hidden">
@@ -663,7 +675,7 @@ export function ReferralCompose({
           </main>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 

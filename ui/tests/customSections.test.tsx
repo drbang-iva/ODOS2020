@@ -2725,9 +2725,22 @@ test("hydrated state is pristine until a capture differs from its baseline", () 
 
 test("EncounterCharting keeps the shipped eyecare branches, adds three dry-eye renderers, and reuses the custom renderer for procedure definitions", () => {
   const source = readFileSync(new URL("../src/scenes/EncounterCharting.tsx", import.meta.url), "utf8");
-  assert.equal((source.match(/activeSection === "/g) ?? []).length, 27);
   assert.match(source, /isExamEntrySheetSectionId\(activeSection\)[\s\S]*<MappedExamSection/);
-  assert.match(source, /function MappedExamSection[\s\S]*<EntranceStateSection[\s\S]*<IopSection[\s\S]*<GonioscopySection[\s\S]*<VaSection/);
+  const mappedRenderer = source.slice(source.indexOf("function MappedExamSection"), source.indexOf("function MissingDefinitionState"));
+  for (const component of [
+    "HpiSection", "EntranceMeasurementSection", "VaSection", "EntranceStateSection",
+    "EomSection", "CvfSection", "CoverTestSection", "IopSection", "DilationSection",
+    "OrthoKSection", "MyopiaManagementSection", "CupDiscSection", "GonioscopySection",
+    "DryEyeSection", "ImagingSection", "AssessmentSection", "PrescriptionSection",
+  ]) {
+    assert.match(mappedRenderer, new RegExp(`<${component}`), `${component} stays in the shared mapped renderer`);
+  }
+  for (const sectionId of [
+    "wearing", "auto-refraction", "refraction", "refraction-history",
+    "eye-growth", "soft-contact-lens", "specialty-contact-lens",
+  ]) {
+    assert.match(source, new RegExp(`activeSection === "${sectionId}"`), `${sectionId} keeps a full-page branch`);
+  }
   assert.equal((source.match(/activeSection\.startsWith\("custom:"\)/g) ?? []).length, 2);
   assert.equal((source.match(/activeSection\.startsWith\("procedure:"\)/g) ?? []).length, 2);
   assert.match(source, /Custom section catalog unavailable; charting built-ins only\./);
