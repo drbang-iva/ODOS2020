@@ -31,14 +31,30 @@ after(async () => {
   await server?.close();
 });
 
-test("mapped sections expose truthful layout-only contracts while Refraction stays full-page", async () => {
+test("all width-safe static sections expose truthful layout-only contracts", async () => {
   const entrySheets = await import("../src/components/charting/ExamEntrySheet").catch(() => undefined);
   assert.ok(entrySheets, "the exam entry-sheet module must exist");
   assert.deepEqual(entrySheets.EXAM_ENTRY_SHEET_CONFIG, {
-    pupils: { title: "Pupils", layout: "laterality-finding" },
-    iop: { title: "Intraocular Pressure", layout: "paired-measurement" },
-    gonioscopy: { title: "Gonioscopy", layout: "quadrant-grid" },
+    hpi: { title: "Chief Complaint / HPI / ROS", layout: "paired-row-form" },
+    "manual-keratometry": { title: "Manual Keratometry", layout: "paired-measurement" },
+    pachymetry: { title: "Pachymetry", layout: "paired-measurement" },
     va: { title: "Visual Acuity", layout: "paired-row-form" },
+    pupils: { title: "Pupils", layout: "laterality-finding" },
+    stereopsis: { title: "Stereopsis", layout: "laterality-finding" },
+    "color-vision": { title: "Color Vision", layout: "laterality-finding" },
+    eom: { title: "EOM / Diplopia", layout: "quadrant-grid" },
+    cvf: { title: "Visual Field", layout: "quadrant-grid" },
+    "cover-test": { title: "Cover Test", layout: "paired-row-form" },
+    iop: { title: "Intraocular Pressure", layout: "paired-measurement" },
+    dilation: { title: "Dilation", layout: "paired-row-form" },
+    "ortho-k": { title: "Ortho-K", layout: "paired-row-form" },
+    "myopia-management": { title: "Myopia Management", layout: "paired-row-form" },
+    "cup-disc": { title: "Cup/Disc", layout: "paired-measurement" },
+    gonioscopy: { title: "Gonioscopy", layout: "quadrant-grid" },
+    "dry-eye": { title: "Dry Eye", layout: "paired-row-form" },
+    imaging: { title: "Manual imaging", layout: "paired-row-form" },
+    assessment: { title: "Assessment", layout: "paired-row-form" },
+    prescription: { title: "Plan · Prescriptions", layout: "paired-row-form" },
   });
   assert.doesNotMatch(
     JSON.stringify(entrySheets.EXAM_ENTRY_SHEET_CONFIG),
@@ -46,6 +62,156 @@ test("mapped sections expose truthful layout-only contracts while Refraction sta
     "layout names must not claim deferred editor behavior",
   );
 });
+
+const REAL_SECTION_AUDIT = [
+  "hpi", "wearing", "auto-refraction", "manual-keratometry", "pachymetry", "va",
+  "pupils", "stereopsis", "color-vision", "eom", "cvf", "cover-test", "iop",
+  "dilation", "refraction", "eye-growth", "soft-contact-lens",
+  "specialty-contact-lens", "ortho-k", "myopia-management", "cup-disc",
+  "gonioscopy", "dry-eye", "imaging", "assessment", "prescription",
+] as const;
+
+const ENTRY_SHEET_VIEWPORTS = [
+  { width: 1440, height: 1000 },
+  { width: 1200, height: 900 },
+  { width: 1000, height: 900 },
+  { width: 901, height: 900 },
+  { width: 768, height: 900 },
+] as const;
+
+const PLANNED_SHEET_SECTIONS = new Set<string>([
+  "hpi", "manual-keratometry", "pachymetry", "va", "pupils", "stereopsis",
+  "color-vision", "eom", "cvf", "cover-test", "iop", "dilation", "ortho-k",
+  "myopia-management", "cup-disc", "gonioscopy", "dry-eye", "imaging",
+  "assessment", "prescription",
+]);
+
+const USABLE_HORIZONTAL_SCROLL = new Set<string>(["va", "cup-disc"]);
+
+test("every static editor is mounted for a real-browser width and height gate", { timeout: 240_000 }, async () => {
+  const measurements: Record<string, unknown> = {};
+  for (const sectionId of REAL_SECTION_AUDIT) {
+    measurements[sectionId] = {};
+    for (const viewport of ENTRY_SHEET_VIEWPORTS) {
+      const page = await browser.newPage({ viewport });
+      page.setDefaultTimeout(5_000);
+      page.on("pageerror", (error) => console.log(`ENTRY_SHEET_FIXTURE_ERROR ${sectionId}: ${error.message}`));
+      try {
+        await page.goto(
+          `${origin}/tests/fixtures/entry-sheets.html?audit=sheet&section=${sectionId}`,
+          { waitUntil: "networkidle" },
+        );
+        await page.locator(`[data-fixture-section="${sectionId}"]`).waitFor({ state: "attached" });
+        await page.waitForTimeout(50);
+        const geometry = await page.evaluate(() => {
+          const content = document.querySelector<HTMLElement>(".odos-exam-entry-sheet-content")!;
+          const fixture = content.querySelector<HTMLElement>("[data-fixture-section]")!;
+          const contentRect = content.getBoundingClientRect();
+          const elements = [fixture, ...Array.from(fixture.querySelectorAll<HTMLElement>("*"))];
+          const requiredWidth = Math.ceil(Math.max(content.scrollWidth, ...elements.map((element) => {
+            const rect = element.getBoundingClientRect();
+            const offset = Math.max(0, rect.left - contentRect.left + content.scrollLeft);
+            return offset + Math.max(rect.width, element.scrollWidth);
+          })));
+          const requiredHeight = Math.ceil(Math.max(content.scrollHeight, ...elements.map((element) => element.scrollHeight)));
+          const innerScrollers = elements.filter((element) => {
+            const style = getComputedStyle(element);
+            return element.scrollHeight > element.clientHeight + 1
+              && (style.overflowY === "auto" || style.overflowY === "scroll");
+          }).length;
+          return {
+            sheetWidth: Math.round(document.querySelector<HTMLElement>("[data-testid=exam-entry-sheet]")!.getBoundingClientRect().width),
+            contentWidth: content.clientWidth,
+            requiredWidth,
+            contentHeight: content.clientHeight,
+            requiredHeight,
+            overflowX: getComputedStyle(content).overflowX,
+            overflowY: getComputedStyle(content).overflowY,
+            innerScrollers,
+          };
+        });
+        (measurements[sectionId] as Record<string, unknown>)[String(viewport.width)] = geometry;
+        if (PLANNED_SHEET_SECTIONS.has(sectionId)) {
+          if (geometry.requiredWidth > geometry.contentWidth + 1) {
+            assert.ok(
+              USABLE_HORIZONTAL_SCROLL.has(sectionId),
+              `${sectionId} requires ${geometry.requiredWidth}px in ${geometry.contentWidth}px at ${viewport.width}px`,
+            );
+            assert.ok(
+              geometry.overflowX === "auto" || geometry.overflowX === "scroll",
+              `${sectionId} has no horizontal reachability path at ${viewport.width}px`,
+            );
+          }
+          if (geometry.requiredHeight > geometry.contentHeight + 1) {
+            assert.ok(
+              geometry.overflowY === "auto" || geometry.overflowY === "scroll" || geometry.innerScrollers > 0,
+              `${sectionId} requires ${geometry.requiredHeight}px vertically in ${geometry.contentHeight}px at ${viewport.width}px`,
+            );
+          }
+        }
+      } finally {
+        await page.close();
+      }
+    }
+    console.log(`ENTRY_SHEET_SECTION_GEOMETRY ${sectionId}=${JSON.stringify(measurements[sectionId])}`);
+  }
+  console.log("ENTRY_SHEET_GEOMETRY=" + JSON.stringify(measurements));
+  assert.equal(Object.keys(measurements).length, REAL_SECTION_AUDIT.length);
+});
+
+test("a tall real editor has a vertical reachability path in the capped bottom sheet", { timeout: 30_000 }, async () => {
+  const page = await browser.newPage({ viewport: { width: 768, height: 900 } });
+  page.setDefaultTimeout(5_000);
+  try {
+    await page.goto(
+      `${origin}/tests/fixtures/entry-sheets.html?audit=sheet&section=prescription`,
+      { waitUntil: "networkidle" },
+    );
+    const content = page.locator(".odos-exam-entry-sheet-content");
+    const before = await content.evaluate((node) => {
+      const element = node as HTMLElement;
+      return {
+        clientHeight: element.clientHeight,
+        scrollHeight: element.scrollHeight,
+        overflowY: getComputedStyle(element).overflowY,
+      };
+    });
+    assert.ok(before.scrollHeight > before.clientHeight, "the real Prescription editor must exercise vertical overflow");
+    assert.ok(
+      before.overflowY === "auto" || before.overflowY === "scroll",
+      `Prescription is vertically clipped with overflow-y ${before.overflowY}`,
+    );
+    await content.evaluate((node) => {
+      const element = node as HTMLElement;
+      element.scrollTop = element.scrollHeight;
+    });
+    const lastControl = page.locator("[data-fixture-section=prescription] button").last();
+    assert.ok(await lastControl.isVisible(), "the final Prescription control must be reachable after scrolling");
+  } finally {
+    await page.close();
+  }
+});
+
+for (const sectionId of [
+  "wearing",
+  "auto-refraction",
+  "refraction",
+  "eye-growth",
+  "soft-contact-lens",
+  "specialty-contact-lens",
+] as const) {
+  test(`${sectionId} remains on the truthful full-page route`, { timeout: 30_000 }, async () => {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    page.setDefaultTimeout(5_000);
+    try {
+      await page.goto(`${origin}/tests/fixtures/entry-sheets.html?section=${sectionId}`, { waitUntil: "networkidle" });
+      await page.locator(`[data-testid=fixture-full-page-editor][data-fixture-section="${sectionId}"]`).waitFor();
+      assert.equal(await page.getByRole("dialog").count(), 0);
+    } finally {
+      await page.close();
+    }
+  });
+}
 
 for (const viewport of [
   { width: 1440, height: 1000, expectedMin: 750, expectedMax: 770 },

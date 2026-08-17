@@ -272,6 +272,54 @@ test("structure view renders all projected sections and keeps every clinical sta
   }
 });
 
+test("editor-entry rows live in their cards, preserve empty-card reachability, and disclose sheet versus full-page behavior", () => {
+  const opened: string[] = [];
+  const renderer = create(
+    <ExamOverviewBoard
+      projection={PROJECTION}
+      editorEntries={[
+        { id: "hpi", label: "Chief Complaint / HPI / ROS", group: "HISTORY" },
+        { id: "va", label: "Visual Acuity", group: "PRETEST" },
+        { id: "refraction", label: "Refraction", group: "REFRACTION" },
+        { id: "soft-contact-lens", label: "Soft Contact Lenses", group: "CONTACT LENSES" },
+      ]}
+      activeEditorId="va"
+      refreshing={false}
+      onOpenEditor={(sectionId) => opened.push(sectionId)}
+      onRefresh={() => undefined}
+    />,
+  );
+  try {
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "interim-editor-launcher" }).length, 0);
+    const rows = renderer.root.findAllByProps({ "data-testid": "exam-editor-entry-row" });
+    assert.equal(rows.length, 4);
+
+    const history = renderer.root.findByProps({ "data-section-key": "history" });
+    assert.equal(history.findAllByProps({ "data-editor-section-id": "hpi" }).length, 1);
+    assert.match(textContent(history), /No finding observations recorded/);
+
+    const pretest = renderer.root.findByProps({ "data-section-key": "pretest" });
+    const va = pretest.findByProps({ "data-editor-section-id": "va" });
+    assert.equal(va.props["data-editor-presentation"], "sheet");
+    assert.equal(va.props["aria-pressed"], true);
+    assert.match(textContent(va), /Entry sheet/);
+    assert.equal(pretest.findAllByProps({ "data-finding-key": "intraocular-pressure" }).length, 2);
+
+    const refraction = renderer.root.findByProps({ "data-section-key": "refraction" });
+    const refractionRow = refraction.findByProps({ "data-editor-section-id": "refraction" });
+    assert.equal(refractionRow.props["data-editor-presentation"], "full-page");
+    assert.match(textContent(refractionRow), /Full page/);
+
+    const contactLenses = renderer.root.findByProps({ "data-section-key": "contact-lenses" });
+    assert.equal(contactLenses.findAllByProps({ "data-editor-section-id": "soft-contact-lens" }).length, 1);
+
+    act(() => va.props.onClick());
+    assert.deepEqual(opened, ["va"]);
+  } finally {
+    renderer.unmount();
+  }
+});
+
 test("completeness moves to the chart bar, opens its trace, and disclaims billing-code meaning", async () => {
   const harness = await renderEncounter(PROJECTION);
   try {
