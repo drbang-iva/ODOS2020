@@ -7,10 +7,28 @@ import {
   orderDiagnosisQuickList,
 } from "../src/clinical-graph/diagnosis-quick-list-endpoint.js";
 import {
+  buildDiagnosisPickTallyResource,
   FhirDiagnosisPickTallyStore,
 } from "../src/clinical-graph/diagnosis-pick-tally-store.js";
 import { buildDiagnosisCatalogSeeds } from "../src/clinical-graph/diagnosis-catalog-store.js";
 import type { DiagnosisCatalogRow } from "../src/clinical-graph/glaucoma-suspect.js";
+
+const STARTER_DIAGNOSIS_KEYS = [
+  "astigmatism",
+  "myopia",
+  "hyperopia",
+  "cataract_nuclear_sclerosis",
+  "kcs_not_sjogren",
+  "ocular_hypertension",
+  "pseudophakia",
+  "glaucoma_suspect_open_angle_low",
+  "glaucoma_suspect_open_angle_high",
+  "hypertensive_retinopathy",
+  "meibomian_gland_dysfunction",
+  "primary-open-angle-glaucoma",
+  "macular_drusen",
+  "optic_disc_drusen",
+] as const;
 
 test("quick-list pins round-trip without changing per-finding usage counts", async () => {
   const fhir = new MemoryFhir();
@@ -181,6 +199,135 @@ test("member pins migrate idempotently to staged families without dropping unrel
   ]);
 });
 
+test("fresh writable practitioner receives starter Common diagnoses in operator order", async () => {
+  const fhir = new MemoryFhir();
+  const response = await handleDiagnosisQuickListRequest({
+    authenticate: async () => ({ staffReference: "Practitioner/fresh", actorRole: "provider" }),
+    tallyFhir: fhir,
+    diagnosisCatalog: async () => buildDiagnosisCatalogSeeds(),
+    now: () => "2026-08-17T12:00:00.000Z",
+  }, { authHeader: "Bearer fresh" });
+
+  assert.equal(response.status, 200);
+  const body = response.body as {
+    pinnedDiagnosisKeys: string[];
+    diagnoses: Array<{ stableKey: string; pinned: boolean; axisLabel?: string }>;
+  };
+  assert.deepEqual(body.pinnedDiagnosisKeys, STARTER_DIAGNOSIS_KEYS);
+  assert.deepEqual(body.diagnoses.map((row) => row.stableKey), STARTER_DIAGNOSIS_KEYS);
+  const poag = body.diagnoses.find((row) => row.stableKey === "primary-open-angle-glaucoma");
+  assert.equal(poag?.pinned, true);
+  assert.equal(poag?.axisLabel, "Stage");
+});
+
+test("first-read initialization preserves clinician pins that win a conditional-create race", async () => {
+  const fhir = new ConditionalCreateRaceFhir();
+  const response = await handleDiagnosisQuickListRequest({
+    authenticate: async () => ({ staffReference: "Practitioner/racing", actorRole: "provider" }),
+    tallyFhir: fhir,
+    diagnosisCatalog: async () => buildDiagnosisCatalogSeeds(),
+    now: () => "2026-08-17T12:00:00.000Z",
+  }, { authHeader: "Bearer racing" });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual((response.body as { pinnedDiagnosisKeys: string[] }).pinnedDiagnosisKeys, ["myopia"]);
+  assert.deepEqual(
+    (await new FhirDiagnosisPickTallyStore(fhir).read("Practitioner/racing"))?.pinnedDiagnosisKeys,
+    ["myopia"],
+  );
+  assert.equal(fhir.updateCalls, 0);
+});
+
+for (const status of [409, 412] as const) {
+  test(`first-read initialization rereads clinician pins after a conditional-create ${status}`, async () => {
+    const fhir = new ConditionalCreateConflictFhir(status);
+    const response = await handleDiagnosisQuickListRequest({
+      authenticate: async () => ({ staffReference: "Practitioner/conflict", actorRole: "provider" }),
+      tallyFhir: fhir,
+      diagnosisCatalog: async () => buildDiagnosisCatalogSeeds(),
+      now: () => "2026-08-17T12:00:00.000Z",
+    }, { authHeader: "Bearer conflict" });
+
+    assert.equal(response.status, 200);
+    assert.deepEqual((response.body as { pinnedDiagnosisKeys: string[] }).pinnedDiagnosisKeys, ["myopia"]);
+    assert.deepEqual(
+      (await new FhirDiagnosisPickTallyStore(fhir).read("Practitioner/conflict"))?.pinnedDiagnosisKeys,
+      ["myopia"],
+    );
+    assert.equal(fhir.updateCalls, 0);
+  });
+}
+
+test("first-read seed reports a configured diagnosis whose stable key is absent", async () => {
+  const fhir = new MemoryFhir();
+  const messages: string[] = [];
+  const originalError = console.error;
+  console.error = (...values: unknown[]) => messages.push(values.map(String).join(" "));
+  try {
+    const response = await handleDiagnosisQuickListRequest({
+      authenticate: async () => ({ staffReference: "Practitioner/gap", actorRole: "provider" }),
+      tallyFhir: fhir,
+      diagnosisCatalog: async () => buildDiagnosisCatalogSeeds().filter((row) => row.stableKey !== "astigmatism"),
+      now: () => "2026-08-17T12:00:00.000Z",
+    }, { authHeader: "Bearer gap" });
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(
+      (response.body as { pinnedDiagnosisKeys: string[] }).pinnedDiagnosisKeys,
+      STARTER_DIAGNOSIS_KEYS.filter((key) => key !== "astigmatism"),
+    );
+    assert.deepEqual(messages, [
+      'Diagnosis quick-list starter "Astigmatism" not seeded: stableKey "astigmatism" is not active and verified.',
+    ]);
+  } finally {
+    console.error = originalError;
+  }
+});
+
+test("unpinning the seeded POAG family survives reload and another seed trigger without crossing practitioners", async () => {
+  const fhir = new MemoryFhir();
+  const authenticate = async (header: string | undefined) => ({
+    staffReference: header === "Bearer two" ? "Practitioner/two" : "Practitioner/one",
+    actorRole: "provider" as const,
+  });
+  const deps = {
+    authenticate,
+    tallyFhir: fhir,
+    diagnosisCatalog: async () => buildDiagnosisCatalogSeeds(),
+    now: () => "2026-08-17T12:00:00.000Z",
+  };
+
+  const seeded = await handleDiagnosisQuickListRequest(deps, { authHeader: "Bearer one" });
+  assert.deepEqual(
+    (seeded.body as { pinnedDiagnosisKeys: string[] }).pinnedDiagnosisKeys,
+    STARTER_DIAGNOSIS_KEYS,
+  );
+  const store = new FhirDiagnosisPickTallyStore(fhir);
+  assert.deepEqual((await store.read("Practitioner/one"))?.pinnedDiagnosisKeys, STARTER_DIAGNOSIS_KEYS);
+  assert.equal(await store.read("Practitioner/two"), undefined);
+  const withoutPoag = STARTER_DIAGNOSIS_KEYS.filter((key) => key !== "primary-open-angle-glaucoma");
+  const unpinned = await handleDiagnosisQuickListMutationRequest(deps, {
+    authHeader: "Bearer one",
+    body: { pinnedDiagnosisKeys: withoutPoag },
+  });
+  assert.equal(unpinned.status, 200);
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const reloaded = await handleDiagnosisQuickListRequest(deps, { authHeader: "Bearer one" });
+    assert.deepEqual(
+      (reloaded.body as { pinnedDiagnosisKeys: string[] }).pinnedDiagnosisKeys,
+      withoutPoag,
+    );
+  }
+  const other = await handleDiagnosisQuickListRequest(deps, { authHeader: "Bearer two" });
+  assert.deepEqual(
+    (other.body as { pinnedDiagnosisKeys: string[] }).pinnedDiagnosisKeys,
+    STARTER_DIAGNOSIS_KEYS,
+  );
+  assert.deepEqual((await store.read("Practitioner/one"))?.pinnedDiagnosisKeys, withoutPoag);
+  assert.deepEqual((await store.read("Practitioner/two"))?.pinnedDiagnosisKeys, STARTER_DIAGNOSIS_KEYS);
+});
+
 test("quick-list routes isolate practitioner pins and reject unknown diagnoses", async () => {
   const fhir = new MemoryFhir();
   const diagnoses = buildDiagnosisCatalogSeeds();
@@ -222,9 +369,9 @@ test("quick-list routes isolate practitioner pins and reject unknown diagnoses",
   };
   assert.deepEqual(
     otherBody.pinnedDiagnosisKeys,
-    [],
+    STARTER_DIAGNOSIS_KEYS,
   );
-  assert.deepEqual(otherBody.diagnoses, []);
+  assert.deepEqual(otherBody.diagnoses.map((row) => row.stableKey), STARTER_DIAGNOSIS_KEYS);
   const collapsedMembers = new Set([
     "poag_mild", "poag_moderate", "poag_severe", "poag_indeterminate",
     "low_tension_glaucoma_mild", "low_tension_glaucoma_moderate", "low_tension_glaucoma_severe", "low_tension_glaucoma_indeterminate",
@@ -301,6 +448,61 @@ class MemoryFhir {
     } as T;
     this.resources[index] = persisted;
     return structuredClone(persisted);
+  }
+}
+
+class ConditionalCreateRaceFhir extends MemoryFhir {
+  updateCalls = 0;
+
+  override async create<T extends Basic>(resource: T, extraHeaders?: Record<string, string>): Promise<T> {
+    if (extraHeaders?.["If-None-Exist"]) {
+      return super.create(buildDiagnosisPickTallyResource("Practitioner/racing", {
+        counts: {},
+        pinnedDiagnosisKeys: ["myopia"],
+        updatedAt: "2026-08-17T12:00:00.001Z",
+      })) as Promise<T>;
+    }
+    return super.create(resource);
+  }
+
+  override async update<T extends Basic>(
+    resourceType: T["resourceType"],
+    id: string,
+    resource: T,
+  ): Promise<T> {
+    this.updateCalls += 1;
+    return super.update(resourceType, id, resource);
+  }
+}
+
+class ConditionalCreateConflictFhir extends MemoryFhir {
+  updateCalls = 0;
+
+  constructor(private readonly status: 409 | 412) {
+    super();
+  }
+
+  override async create<T extends Basic>(resource: T, extraHeaders?: Record<string, string>): Promise<T> {
+    if (extraHeaders?.["If-None-Exist"]) {
+      await super.create(buildDiagnosisPickTallyResource("Practitioner/conflict", {
+        counts: {},
+        pinnedDiagnosisKeys: ["myopia"],
+        updatedAt: "2026-08-17T12:00:00.001Z",
+      }));
+      const error = new Error(`FHIR ${this.status} conditional create conflict`) as Error & { status: number };
+      error.status = this.status;
+      throw error;
+    }
+    return super.create(resource);
+  }
+
+  override async update<T extends Basic>(
+    resourceType: T["resourceType"],
+    id: string,
+    resource: T,
+  ): Promise<T> {
+    this.updateCalls += 1;
+    return super.update(resourceType, id, resource);
   }
 }
 

@@ -25,6 +25,36 @@ export class FhirDiagnosisPickTallyStore {
     return (await this.readResource(practitionerReference))?.row;
   }
 
+  async initializePinnedIfAbsent(
+    practitionerReference: string,
+    pinnedDiagnosisKeys: readonly string[],
+    updatedAt: string,
+  ): Promise<DiagnosisPickTallyRow> {
+    assertPinnedDiagnosisKeys(pinnedDiagnosisKeys);
+    const existing = await this.readResource(practitionerReference);
+    if (existing) return existing.row;
+    const initial: DiagnosisPickTallyRow = {
+      counts: {},
+      pinnedDiagnosisKeys: [...pinnedDiagnosisKeys],
+      updatedAt,
+    };
+    try {
+      const created = await this.fhir.create(
+        buildDiagnosisPickTallyResource(practitionerReference, initial),
+        {
+          ...DX_PICK_TALLY_WRITE_HEADERS,
+          "If-None-Exist": `identifier=${DX_PICK_TALLY_IDENTIFIER_SYSTEM}|${practitionerReference}`,
+        },
+      );
+      return parseDiagnosisPickTallyResource(created, practitionerReference);
+    } catch (error) {
+      if (!isConflict(error)) throw error;
+      const raced = await this.readResource(practitionerReference);
+      if (raced) return raced.row;
+      throw error;
+    }
+  }
+
   async increment(
     practitionerReference: string,
     findingDefinitionStableKey: string,
