@@ -261,6 +261,9 @@ test("unpinning the seeded POAG family survives reload and another seed trigger 
     (seeded.body as { pinnedDiagnosisKeys: string[] }).pinnedDiagnosisKeys,
     STARTER_DIAGNOSIS_KEYS,
   );
+  const store = new FhirDiagnosisPickTallyStore(fhir);
+  assert.deepEqual((await store.read("Practitioner/one"))?.pinnedDiagnosisKeys, STARTER_DIAGNOSIS_KEYS);
+  assert.equal(await store.read("Practitioner/two"), undefined);
   const withoutPoag = STARTER_DIAGNOSIS_KEYS.filter((key) => key !== "primary-open-angle-glaucoma");
   const unpinned = await handleDiagnosisQuickListMutationRequest(deps, {
     authHeader: "Bearer one",
@@ -280,7 +283,6 @@ test("unpinning the seeded POAG family survives reload and another seed trigger 
     (other.body as { pinnedDiagnosisKeys: string[] }).pinnedDiagnosisKeys,
     STARTER_DIAGNOSIS_KEYS,
   );
-  const store = new FhirDiagnosisPickTallyStore(fhir);
   assert.deepEqual((await store.read("Practitioner/one"))?.pinnedDiagnosisKeys, withoutPoag);
   assert.deepEqual((await store.read("Practitioner/two"))?.pinnedDiagnosisKeys, STARTER_DIAGNOSIS_KEYS);
 });
