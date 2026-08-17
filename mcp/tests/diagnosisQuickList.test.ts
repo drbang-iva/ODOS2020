@@ -217,7 +217,33 @@ test("fresh writable practitioner receives starter Common diagnoses in operator 
   assert.equal(poag?.axisLabel, "Stage");
 });
 
-test("unpinning a seeded diagnosis survives reload and another seed trigger without crossing practitioners", async () => {
+test("first-read seed reports a configured diagnosis whose stable key is absent", async () => {
+  const fhir = new MemoryFhir();
+  const messages: string[] = [];
+  const originalError = console.error;
+  console.error = (...values: unknown[]) => messages.push(values.map(String).join(" "));
+  try {
+    const response = await handleDiagnosisQuickListRequest({
+      authenticate: async () => ({ staffReference: "Practitioner/gap", actorRole: "provider" }),
+      tallyFhir: fhir,
+      diagnosisCatalog: async () => buildDiagnosisCatalogSeeds().filter((row) => row.stableKey !== "astigmatism"),
+      now: () => "2026-08-17T12:00:00.000Z",
+    }, { authHeader: "Bearer gap" });
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(
+      (response.body as { pinnedDiagnosisKeys: string[] }).pinnedDiagnosisKeys,
+      STARTER_DIAGNOSIS_KEYS.filter((key) => key !== "astigmatism"),
+    );
+    assert.deepEqual(messages, [
+      'Diagnosis quick-list starter "Astigmatism" not seeded: stableKey "astigmatism" is not active and verified.',
+    ]);
+  } finally {
+    console.error = originalError;
+  }
+});
+
+test("unpinning the seeded POAG family survives reload and another seed trigger without crossing practitioners", async () => {
   const fhir = new MemoryFhir();
   const authenticate = async (header: string | undefined) => ({
     staffReference: header === "Bearer two" ? "Practitioner/two" : "Practitioner/one",
@@ -235,10 +261,10 @@ test("unpinning a seeded diagnosis survives reload and another seed trigger with
     (seeded.body as { pinnedDiagnosisKeys: string[] }).pinnedDiagnosisKeys,
     STARTER_DIAGNOSIS_KEYS,
   );
-  const withoutMyopia = STARTER_DIAGNOSIS_KEYS.filter((key) => key !== "myopia");
+  const withoutPoag = STARTER_DIAGNOSIS_KEYS.filter((key) => key !== "primary-open-angle-glaucoma");
   const unpinned = await handleDiagnosisQuickListMutationRequest(deps, {
     authHeader: "Bearer one",
-    body: { pinnedDiagnosisKeys: withoutMyopia },
+    body: { pinnedDiagnosisKeys: withoutPoag },
   });
   assert.equal(unpinned.status, 200);
 
@@ -246,7 +272,7 @@ test("unpinning a seeded diagnosis survives reload and another seed trigger with
     const reloaded = await handleDiagnosisQuickListRequest(deps, { authHeader: "Bearer one" });
     assert.deepEqual(
       (reloaded.body as { pinnedDiagnosisKeys: string[] }).pinnedDiagnosisKeys,
-      withoutMyopia,
+      withoutPoag,
     );
   }
   const other = await handleDiagnosisQuickListRequest(deps, { authHeader: "Bearer two" });

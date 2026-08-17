@@ -55,6 +55,21 @@ interface DiagnosisQuickListDeps {
 
 const COMMON_DIAGNOSIS_TARGET_COUNT = 15;
 
+const STARTER_DIAGNOSIS_PINS = [
+  { name: "Astigmatism", stableKey: "astigmatism" },
+  { name: "Myopia", stableKey: "myopia" },
+  { name: "Hyperopia", stableKey: "hyperopia" },
+  { name: "Cataract, Nuclear", stableKey: "cataract_nuclear_sclerosis" },
+  { name: "Keratoconjunctivitis Sicca", stableKey: "kcs_not_sjogren" },
+  { name: "Ocular Hypertension", stableKey: "ocular_hypertension" },
+  { name: "Pseudophakia", stableKey: "pseudophakia" },
+  { name: "Borderline Glaucoma, Open Angle, Low Risk", stableKey: "glaucoma_suspect_open_angle_low" },
+  { name: "Borderline Glaucoma, Open Angle, High Risk", stableKey: "glaucoma_suspect_open_angle_high" },
+  { name: "Hypertensive Retinopathy", stableKey: "hypertensive_retinopathy" },
+  { name: "Meibomian Gland Dysfunction", stableKey: "meibomian_gland_dysfunction" },
+  { name: "Primary Open Angle Glaucoma (POAG)", stableKey: "primary-open-angle-glaucoma" },
+] as const;
+
 const mutationSchema = z.object({
   pinnedDiagnosisKeys: z.array(z.string().trim().min(1).max(160)).max(100)
     .refine((keys) => new Set(keys).size === keys.length, "Diagnosis quick-list pins must be unique."),
@@ -69,18 +84,30 @@ export async function handleDiagnosisQuickListRequest(
   if (!staffMay(staff.actorRole, "chart.read")) {
     return { status: 403, body: { error: "chart.read role required" } };
   }
+  const tallyStore = new FhirDiagnosisPickTallyStore(deps.tallyFhir);
   const [diagnoses, storedTally] = await Promise.all([
     diagnosisCatalog(deps),
-    new FhirDiagnosisPickTallyStore(deps.tallyFhir).read(staff.staffReference),
+    tallyStore.read(staff.staffReference),
   ]);
-  let tally = storedTally ?? emptyTally(deps.now?.() ?? new Date().toISOString());
+  const now = deps.now?.() ?? new Date().toISOString();
+  let tally = storedTally;
+  if (!tally && staffMay(staff.actorRole, "chart.write")) {
+    const starter = resolveStarterDiagnosisPins(diagnoses);
+    for (const missing of starter.missing) {
+      console.error(
+        `Diagnosis quick-list starter "${missing.name}" not seeded: stableKey "${missing.stableKey}" is not active and verified.`,
+      );
+    }
+    tally = await tallyStore.replacePinned(staff.staffReference, starter.pinnedDiagnosisKeys, now);
+  }
+  tally ??= emptyTally(now);
   const migratedPins = migrateDiagnosisPins(tally.pinnedDiagnosisKeys);
   if (!samePins(tally.pinnedDiagnosisKeys, migratedPins)) {
     tally = staffMay(staff.actorRole, "chart.write")
-      ? await new FhirDiagnosisPickTallyStore(deps.tallyFhir).replacePinned(
+      ? await tallyStore.replacePinned(
           staff.staffReference,
           migratedPins,
-          deps.now?.() ?? new Date().toISOString(),
+          now,
         )
       : { ...tally, pinnedDiagnosisKeys: migratedPins };
   }
@@ -168,6 +195,24 @@ function diagnosisCatalogRows(
       tallyCount: family.members.reduce((sum, member) => sum + (totals.get(member.stableKey) ?? 0), 0),
     }];
   });
+}
+
+function resolveStarterDiagnosisPins(diagnoses: readonly DiagnosisCatalogRow[]): {
+  pinnedDiagnosisKeys: string[];
+  missing: Array<{ name: string; stableKey: string }>;
+} {
+  const eligibleKeys = new Set(diagnosisCatalogRows(diagnoses, emptyTally("")).map((row) => row.stableKey));
+  return STARTER_DIAGNOSIS_PINS.reduce<{
+    pinnedDiagnosisKeys: string[];
+    missing: Array<{ name: string; stableKey: string }>;
+  }>((resolved, seed) => {
+    if (eligibleKeys.has(seed.stableKey)) {
+      resolved.pinnedDiagnosisKeys.push(seed.stableKey);
+    } else {
+      resolved.missing.push(seed);
+    }
+    return resolved;
+  }, { pinnedDiagnosisKeys: [], missing: [] });
 }
 
 export function stagedDiagnosisFamilyRow(
