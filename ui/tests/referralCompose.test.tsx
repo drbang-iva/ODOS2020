@@ -61,7 +61,98 @@ test("the compose surface presents the locked clinical rail and honest transport
   assert.match(html, /aria-pressed="true"[^>]*>Referral letter/);
   assert.match(html, /aria-pressed="false"[^>]*>Clinical summary/);
     assert.match(html, /role="combobox" aria-label="Prior finalized exam history count"/);
-    assert.match(html, /aria-label="Prior finalized exam history count wheel"/);
+  assert.match(html, /aria-label="Prior finalized exam history count wheel"/);
+});
+
+test("the compose surface owns focus and Escape as the visible top layer", async () => {
+  const originalDocument = Object.getOwnPropertyDescriptor(globalThis, "document");
+  const originalHTMLElement = Object.getOwnPropertyDescriptor(globalThis, "HTMLElement");
+  const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
+  const keydownListeners = new Set<(event: KeyboardEvent) => void>();
+  let focused = "";
+  let closeCalls = 0;
+
+  class MockElement {
+    parentElement = null;
+    children: MockElement[] = [];
+    constructor(private readonly name: string) {}
+    focus() { focused = this.name; }
+    querySelectorAll() { return this.children; }
+    closest() { return null; }
+  }
+
+  const launcher = new MockElement("launcher");
+  const dialog = new MockElement("dialog");
+  const returnButton = new MockElement("return");
+  const secondButton = new MockElement("second");
+  dialog.children = [returnButton, secondButton];
+
+  Object.defineProperty(globalThis, "HTMLElement", { configurable: true, value: MockElement });
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: {
+      activeElement: launcher,
+      addEventListener(type: string, listener: (event: KeyboardEvent) => void) {
+        if (type === "keydown") keydownListeners.add(listener);
+      },
+      removeEventListener(type: string, listener: (event: KeyboardEvent) => void) {
+        if (type === "keydown") keydownListeners.delete(listener);
+      },
+    },
+  });
+  Object.defineProperty(globalThis, "window", { configurable: true, value: immediateTimerWindow() });
+
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <ReferralCompose
+          patientReference="Patient/p1"
+          encounterReference="Encounter/e1"
+          onClose={() => { closeCalls += 1; }}
+          api={apiStub()}
+          loadContext={async () => ({ doctorDisplay: "Dr. Rivera", findingCount: 3, hasPlan: true })}
+        />,
+        {
+          createNodeMock: (element) => {
+            if (element.props["data-testid"] === "referral-compose") return dialog;
+            if (element.type === "button" && element.props.children === "Return to chart") return returnButton;
+            return null;
+          },
+        },
+      );
+      await flushMicrotasks();
+    });
+
+    const surface = renderer.root.findByProps({ "data-testid": "referral-compose" });
+    assert.equal(surface.props.role, "dialog");
+    assert.equal(surface.props["aria-modal"], "true");
+    assert.equal(focused, "return");
+    assert.equal(keydownListeners.size, 1);
+
+    let prevented = 0;
+    let stopped = 0;
+    act(() => {
+      for (const listener of keydownListeners) {
+        listener({
+          key: "Escape",
+          preventDefault: () => { prevented += 1; },
+          stopPropagation: () => { stopped += 1; },
+        } as KeyboardEvent);
+      }
+    });
+    assert.equal(closeCalls, 1);
+    assert.equal(prevented, 1);
+    assert.equal(stopped, 1);
+  } finally {
+    if (renderer) await act(async () => renderer.unmount());
+    if (originalDocument) Object.defineProperty(globalThis, "document", originalDocument);
+    else delete (globalThis as { document?: Document }).document;
+    if (originalHTMLElement) Object.defineProperty(globalThis, "HTMLElement", originalHTMLElement);
+    else delete (globalThis as { HTMLElement?: typeof HTMLElement }).HTMLElement;
+    if (originalWindow) Object.defineProperty(globalThis, "window", originalWindow);
+    else delete (globalThis as { window?: Window }).window;
+  }
 });
 
 test("consultant changes regenerate untouched letters but protect clinician edits", () => {
