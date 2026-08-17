@@ -220,6 +220,25 @@ test("fresh writable practitioner receives starter Common diagnoses in operator 
   assert.equal(poag?.axisLabel, "Stage");
 });
 
+test("fresh Admin reads an honest empty quick list without attempting the writable seed", async () => {
+  const fhir = new MemoryFhir();
+  const response = await handleDiagnosisQuickListRequest({
+    authenticate: async () => ({ staffReference: "Practitioner/admin", actorRole: "admin" }),
+    tallyFhir: fhir,
+    diagnosisCatalog: async () => buildDiagnosisCatalogSeeds(),
+    now: () => "2026-08-17T12:00:00.000Z",
+  }, { authHeader: "Bearer admin" });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(response.body, {
+    canWrite: false,
+    pinnedDiagnosisKeys: [],
+    diagnoses: [],
+    catalog: (response.body as { catalog: unknown[] }).catalog,
+  });
+  assert.equal(fhir.resources.length, 0, "read-only Admin must not create a tally while loading Common");
+});
+
 test("first-read initialization preserves clinician pins that win a conditional-create race", async () => {
   const fhir = new ConditionalCreateRaceFhir();
   const response = await handleDiagnosisQuickListRequest({
