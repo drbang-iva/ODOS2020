@@ -130,6 +130,7 @@ const PRACTICE_READ_RESOURCE_TYPES = [
   "Device",
   "DeviceRequest",
   "MedicationAdministration",
+  "MedicationRequest",
   "MedicationStatement",
   "EpisodeOfCare",
   "CarePlan",

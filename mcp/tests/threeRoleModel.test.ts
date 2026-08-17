@@ -87,6 +87,19 @@ test("all roles read operational records at practice scope while Staff writes st
   );
 });
 
+test("compiled three-role policies grant MedicationRequest reads at practice scope", () => {
+  for (const roleId of PRACTICE_ROLE_IDS) {
+    const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
+    const readRule = policy.resource?.find((rule) =>
+      rule.resourceType === "MedicationRequest" &&
+      !rule.interaction?.includes("create") &&
+      !rule.interaction?.includes("update"));
+
+    assert.deepEqual(readRule?.interaction, ["read", "search", "history", "vread"], roleId);
+    assert.equal(readRule?.criteria, undefined, `${roleId} MedicationRequest read must be practice-scoped`);
+  }
+});
+
 test("Door 1 actor gating leaves Provider, Staff, and Admin Appointment reads practice-wide", () => {
   for (const roleId of ["provider", "staff", "admin"] as const) {
     const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
