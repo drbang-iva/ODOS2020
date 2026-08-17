@@ -429,6 +429,51 @@ test("the widest mapped shape uses a bottom sheet while retaining visible exam c
   }
 });
 
+for (const viewport of [
+  { width: 1440, height: 1000, expectedWidth: 762 },
+  { width: 1200, height: 900, expectedWidth: 635 },
+  { width: 1000, height: 900, expectedWidth: 529 },
+  { width: 901, height: 900, expectedWidth: 529 },
+  { width: 768, height: 900, expectedWidth: 768 },
+] as const) {
+  test(`the real Visit and charges composition is reachable at ${viewport.width}px`, { timeout: 30_000 }, async () => {
+    const page = await browser.newPage({ viewport });
+    page.setDefaultTimeout(5_000);
+    try {
+      await page.goto(`${origin}/tests/fixtures/entry-sheets.html?audit=sheet&section=visit-charges`, { waitUntil: "networkidle" });
+      const sheet = page.getByRole("dialog");
+      await sheet.waitFor();
+      assert.equal(await sheet.getByRole("heading").innerText(), "Visit & charges");
+      await page.getByRole("combobox", { name: "Visit billing code" }).waitFor();
+      await page.getByRole("combobox", { name: "Visit billing diagnosis" }).waitFor();
+      await page.getByTestId("procedure-charge-list").waitFor();
+      await page.getByRole("button", { name: /Credit Bank/ }).waitFor();
+
+      const geometry = await page.evaluate(() => {
+        const sheet = document.querySelector<HTMLElement>("[data-testid=exam-entry-sheet]")!;
+        const content = document.querySelector<HTMLElement>(".odos-exam-entry-sheet-content")!;
+        const controls = Array.from(content.querySelectorAll<HTMLElement>("button, select, input, textarea"));
+        return {
+          sheetWidth: Math.round(sheet.getBoundingClientRect().width),
+          contentWidth: content.clientWidth,
+          scrollWidth: content.scrollWidth,
+          overflowX: getComputedStyle(content).overflowX,
+          smallestControl: Math.min(...controls.map((control) => control.getBoundingClientRect().height)),
+        };
+      });
+      assert.ok(Math.abs(geometry.sheetWidth - viewport.expectedWidth) <= 1, `sheet width ${geometry.sheetWidth}px`);
+      assert.ok(
+        geometry.scrollWidth <= geometry.contentWidth + 1 || geometry.overflowX === "auto" || geometry.overflowX === "scroll",
+        `horizontal content is unreachable at ${viewport.width}px`,
+      );
+      assert.ok(geometry.smallestControl >= 44, `smallest control is ${geometry.smallestControl}px at ${viewport.width}px`);
+      console.log(`VISIT_CHARGES_GEOMETRY ${viewport.width}:w${geometry.sheetWidth},content${geometry.scrollWidth}/${geometry.contentWidth},control${geometry.smallestControl}`);
+    } finally {
+      await page.close();
+    }
+  });
+}
+
 function chromeExecutable(): string {
   const candidates = [
     process.env.ODOS_CHROME_BIN,

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import React from "react";
+import type { Encounter } from "@medplum/fhirtypes";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import type { ExamOverviewProjection } from "../../mcp/src/clinical-graph/exam-overview-projection";
 import { DiagnosisWorkspace } from "../src/components/charting/DiagnosisWorkspace";
@@ -14,6 +15,7 @@ import { DryEyeSection } from "../src/components/charting/DryEyeSection";
 import { EntranceMeasurementSection } from "../src/components/charting/EntranceMeasurementSection";
 import { EntranceStateSection } from "../src/components/charting/EntranceStateSection";
 import { EomSection } from "../src/components/charting/EomSection";
+import { EncounterHeader } from "../src/components/charting/EncounterHeader";
 import { EyeGrowthSection } from "../src/components/charting/EyeGrowthSection";
 import { ExamEntrySheet } from "../src/components/charting/ExamEntrySheet";
 import { ExamOverviewBoard } from "../src/components/charting/ExamOverviewBoard";
@@ -26,6 +28,7 @@ import { OrthoKSection } from "../src/components/charting/OrthoKSection";
 import { PrescriptionSection } from "../src/components/charting/PrescriptionSection";
 import { RefractionHistorySection } from "../src/components/charting/RefractionHistorySection";
 import { ProcedureChargeList } from "../src/components/charting/ProcedureChargeList";
+import { BalanceChips } from "../src/components/commercial/BalanceChips";
 import { SpineNav } from "../src/components/charting/SpineNav";
 import { VisitCodeSelector } from "../src/components/charting/VisitCodeSelector";
 import { VaSection } from "../src/components/charting/VaSection";
@@ -439,6 +442,58 @@ test("blackout preserves the structure editor, open visit controls, and focused 
   }
 });
 
+test("Visit opens the shared sheet with exact booking coverage and every relocated billing surface", async () => {
+  const harness = await renderEncounter(PROJECTION, {
+    encounterExtensions: [
+      { url: "https://odos2020.com/fhir/StructureDefinition/intended-coverage", valueReference: { reference: "Coverage/vision-booking" } },
+      { url: "https://odos2020.com/fhir/StructureDefinition/intended-coverage", valueReference: { reference: "Coverage/medical-booking" } },
+    ],
+  });
+  try {
+    const header = harness.renderer.root.findByType(EncounterHeader);
+    assert.equal(header.findAllByType(BalanceChips).length, 0, "balances leave the encounter header");
+
+    const visitChip = harness.renderer.root.findByProps({ "data-testid": "visit-chip" });
+    await act(async () => visitChip.props.onClick());
+
+    const sheet = harness.renderer.root.findByProps({ "data-entry-sheet-section": "visit-charges" });
+    assert.equal(sheet.props.role, "dialog");
+    assert.equal(sheet.findAllByType(VisitCodeSelector).length, 1);
+    assert.equal(sheet.findAllByType(ProcedureChargeList).length, 1);
+    assert.equal(sheet.findAllByType(BalanceChips).length, 1);
+    const copy = textContent(sheet);
+    assert.match(copy, /Coverage recorded at booking/i);
+    assert.match(copy, /Coverage\/vision-booking/);
+    assert.match(copy, /Coverage\/medical-booking/);
+    assert.match(copy, /recorded on the encounter from booking/i);
+    assert.match(copy, /operator-selected link, not a code-support determination/i);
+    assert.match(copy, /does not establish that a changed diagnosis stays aligned with its supporting interpretation/i);
+    assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "visit-controls-surface" }).length, 0);
+  } finally {
+    harness.restore();
+  }
+});
+
+test("an open finding sheet visibly requires Finish or Cancel before Visit can open", async () => {
+  const harness = await renderEncounter(PROJECTION);
+  try {
+    await act(async () => harness.renderer.root.findByProps({ "data-editor-section-id": "pupils" }).props.onClick());
+    assert.equal(harness.renderer.root.findAllByType(ExamEntrySheet).length, 1);
+
+    const visitChip = harness.renderer.root.findByProps({ "data-testid": "visit-chip" });
+    assert.equal(visitChip.props["aria-disabled"], true);
+    assert.match(textContent(visitChip), /Finish or cancel Pupils first/i);
+    assert.doesNotMatch(textContent(visitChip), /blocked/i);
+
+    await act(async () => visitChip.props.onClick());
+    assert.equal(harness.renderer.root.findAllByType(ExamEntrySheet).length, 1);
+    assert.equal(harness.renderer.root.findAllByProps({ "data-entry-sheet-section": "visit-charges" }).length, 0);
+    assert.equal(harness.renderer.root.findAllByType(EntranceStateSection).length, 1);
+  } finally {
+    harness.restore();
+  }
+});
+
 test("switching to the diagnosis view preserves the existing DiagnosisWorkspace branch", async () => {
   const harness = await renderEncounter(PROJECTION);
   try {
@@ -815,6 +870,7 @@ interface RenderEncounterOptions {
   captureOverviewErrors?: boolean;
   unassignedFindings?: EncounterFindingRow[];
   unassignedResponses?: EncounterFindingRow[][];
+  encounterExtensions?: Encounter["extension"];
 }
 
 async function renderEncounter(projection: unknown, options: RenderEncounterOptions = {}): Promise<{
@@ -840,6 +896,7 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
     status: "in-progress",
     class: { code: "AMB" },
     subject: { reference: "Patient/patient-1" },
+    ...(options.encounterExtensions ? { extension: options.encounterExtensions } : {}),
     ...(options.discipline
       ? { serviceType: { coding: [{ system: ODOS_DISCIPLINE_SYSTEM, code: options.discipline }] } }
       : {}),

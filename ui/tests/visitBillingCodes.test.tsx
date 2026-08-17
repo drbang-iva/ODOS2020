@@ -9,6 +9,7 @@ import {
 } from "../src/lib/procedure-fee-schedule";
 import { feeScheduleDescriptor } from "../src/scenes/settings/FeeScheduleSettings";
 import { VisitCodeSelector } from "../src/components/charting/VisitCodeSelector";
+import * as visitCodeModule from "../src/components/charting/VisitCodeSelector";
 import { EncounterHeader, MdmProblemsAxis } from "../src/components/charting/EncounterHeader";
 import { computeMdmHint } from "../src/lib/clinical-view-model";
 import { fhir } from "../src/lib/fhir";
@@ -726,6 +727,27 @@ test("MDM renders for an E/M visit key without changing the existing computation
     selectedProcedureConceptKey: "office-visit-new-low",
     procedureFamily: "em",
   }), 1);
+});
+
+test("one UI helper classifies visit families from the selected concept key", () => {
+  const classify = (visitCodeModule as unknown as {
+    visitProcedureFamilyForConceptKey?: (key: string | undefined) => VisitProcedureFamily | undefined;
+  }).visitProcedureFamilyForConceptKey;
+  assert.equal(typeof classify, "function", "the selected-key classifier must be exported from one UI module");
+  assert.equal(classify!("office-visit-new-low"), "em");
+  assert.equal(classify!("comprehensive-exam-established"), "eye-code");
+  assert.equal(classify!("intermediate-exam-new"), "eye-code");
+  assert.equal(classify!("routine-vision-exam-new"), "vision-plan");
+  assert.equal(classify!(undefined), undefined);
+});
+
+test("the MDM fact frame is visibly nonbinding and never uses Blocked as user copy", () => {
+  const renderer = create(<MdmProblemsAxis mdmHint={MDM_HINT} procedureFamily="em" />);
+  const copy = textContent(renderer.root);
+  assert.doesNotMatch(copy, /Blocked/i);
+  assert.match(copy, /clinician-entered problem-status facts/i);
+  assert.match(copy, /neither selects nor validates the visit code/i);
+  act(() => renderer.unmount());
 });
 
 test("MDM is absent for a comprehensive eye-code visit key", async () => {
