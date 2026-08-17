@@ -381,7 +381,7 @@ test("switching to the diagnosis view preserves the existing DiagnosisWorkspace 
   }
 });
 
-test("the interim board launcher enumerates every static and dynamic editor and returns from a real pretest editor", async () => {
+test("the interim board launcher anchors mapped editors and retains full-page fallback for unmapped editors", async () => {
   const findingDefinitions: CustomFindingDefinition[] = [
     findingDefinition("entrance:pupils", "Pupils"),
     findingDefinition("entrance:dilation", "Dilation"),
@@ -446,6 +446,18 @@ test("the interim board launcher enumerates every static and dynamic editor and 
     await act(async () => vaLauncher.props.onClick());
     assert.equal(harness.renderer.root.findAllByType(VaSection).length, 1);
     assert.equal(harness.renderer.root.findAllByType(SpineNav).length, 0);
+    assert.equal(harness.renderer.root.findAllByType(ExamOverviewBoard).length, 1);
+    assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "exam-entry-sheet" }).length, 1);
+    assert.equal(vaLauncher.props["aria-pressed"], true);
+
+    const cancel = harness.renderer.root.findByProps({ "data-testid": "cancel-exam-entry-sheet" });
+    await act(async () => cancel.props.onClick());
+    assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "exam-entry-sheet" }).length, 0);
+    assert.equal(harness.renderer.root.findAllByType(ExamOverviewBoard).length, 1);
+
+    const coverTestLauncher = harness.renderer.root.findByProps({ "data-editor-section-id": "cover-test" });
+    await act(async () => coverTestLauncher.props.onClick());
+    assert.equal(harness.renderer.root.findAllByType(ExamOverviewBoard).length, 0);
 
     const back = harness.renderer.root.findByProps({ "data-testid": "return-to-exam-overview" });
     await act(async () => {
@@ -517,7 +529,7 @@ test("manual refresh replaces the mounted board projection", async () => {
   }
 });
 
-test("an editor save and return to the board each refetch the projection", async () => {
+test("a mapped editor save closes its sheet while an unmapped editor retains the explicit return path", async () => {
   const harness = await renderEncounter(PROJECTION);
   try {
     const vaLauncher = harness.renderer.root.findByProps({ "data-editor-section-id": "va" });
@@ -531,7 +543,11 @@ test("an editor save and return to the board each refetch the projection", async
       await flushEffects();
     });
     assert.equal(harness.overviewFetchCount(), 2);
+    assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "exam-entry-sheet" }).length, 0);
+    assert.equal(harness.renderer.root.findAllByType(ExamOverviewBoard).length, 1);
 
+    const coverTestLauncher = harness.renderer.root.findByProps({ "data-editor-section-id": "cover-test" });
+    await act(async () => coverTestLauncher.props.onClick());
     const back = harness.renderer.root.findByProps({ "data-testid": "return-to-exam-overview" });
     await act(async () => {
       back.props.onClick();
