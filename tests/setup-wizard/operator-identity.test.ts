@@ -34,8 +34,10 @@ class MemoryStore {
   previousCredentials?: Credentials;
   state?: IdentityState;
   crashAfterCredentialRemoval = false;
+  crashAfterPendingRotationStateWrite = false;
   crashAfterPreviousCredentialWrite = false;
   crashAfterPreviousCredentialRemoval = false;
+  crashAfterRotationRestore = false;
 
   readCredentials(): Credentials | undefined {
     return this.credentials ? structuredClone(this.credentials) : undefined;
@@ -79,6 +81,14 @@ class MemoryStore {
 
   writeState(state: IdentityState): void {
     this.state = structuredClone(state);
+    if (this.crashAfterPendingRotationStateWrite && state.pendingRevocation) {
+      this.crashAfterPendingRotationStateWrite = false;
+      throw new Error("simulated process crash after pending-rotation state write");
+    }
+    if (this.crashAfterRotationRestore && state.status === "active" && !state.pendingRevocation) {
+      this.crashAfterRotationRestore = false;
+      throw new Error("simulated process crash after rotation state restore");
+    }
   }
 
   removeState(): void {
@@ -390,6 +400,93 @@ test("rotation verifies the replacement before revoking the old client", async (
     "verify:practice-1:client-1",
     "revoke:practice-1:old-client:membership-old-client",
   ]);
+});
+
+test("next rotation cleans the uncommitted replacement after crashing while saving the old credential", async () => {
+  const lifecycle = await subject();
+  const adapter = new FakeAdapter();
+  const store = activeStore("practice-1", "old-client");
+  adapter.clients.add("old-client");
+  adapter.memberships.set("old-client", "membership-old-client");
+  store.crashAfterPreviousCredentialWrite = true;
+
+  await assert.rejects(
+    lifecycle.rotateOperatorIdentity({ projectId: "practice-1", adapter, store, now: () => NOW }),
+    /simulated process crash after previous-credential write/,
+  );
+
+  const recovered = await lifecycle.rotateOperatorIdentity({
+    projectId: "practice-1",
+    adapter,
+    store,
+    now: () => NOW,
+  });
+
+  assert.equal(recovered.state.clientId, "client-2");
+  assert.deepEqual([...adapter.clients], ["client-2"]);
+  assert.deepEqual([...adapter.memberships], [["client-2", "membership-client-2"]]);
+  assert.equal(store.previousCredentials, undefined);
+});
+
+test("next rotation cleans the uncommitted replacement after crashing while saving pending state", async () => {
+  const lifecycle = await subject();
+  const adapter = new FakeAdapter();
+  const store = activeStore("practice-1", "old-client");
+  adapter.clients.add("old-client");
+  adapter.memberships.set("old-client", "membership-old-client");
+  store.crashAfterPendingRotationStateWrite = true;
+
+  await assert.rejects(
+    lifecycle.rotateOperatorIdentity({ projectId: "practice-1", adapter, store, now: () => NOW }),
+    /simulated process crash after pending-rotation state write/,
+  );
+
+  const recovered = await lifecycle.rotateOperatorIdentity({
+    projectId: "practice-1",
+    adapter,
+    store,
+    now: () => NOW,
+  });
+
+  assert.equal(recovered.state.clientId, "client-2");
+  assert.deepEqual([...adapter.clients], ["client-2"]);
+  assert.deepEqual([...adapter.memberships], [["client-2", "membership-client-2"]]);
+  assert.equal(store.previousCredentials, undefined);
+});
+
+test("next rotation discards a duplicate retry credential after crashing during rollback bookkeeping", async () => {
+  const lifecycle = await subject();
+  const adapter = new FakeAdapter();
+  const store = activeStore("practice-1", "old-client");
+  adapter.clients.add("old-client");
+  adapter.memberships.set("old-client", "membership-old-client");
+  store.crashAfterPreviousCredentialWrite = true;
+
+  await assert.rejects(
+    lifecycle.rotateOperatorIdentity({ projectId: "practice-1", adapter, store, now: () => NOW }),
+    /simulated process crash after previous-credential write/,
+  );
+  store.crashAfterRotationRestore = true;
+  await assert.rejects(
+    lifecycle.rotateOperatorIdentity({ projectId: "practice-1", adapter, store, now: () => NOW }),
+    /simulated process crash after rotation state restore/,
+  );
+
+  const actionStart = adapter.actions.length;
+  const recovered = await lifecycle.rotateOperatorIdentity({
+    projectId: "practice-1",
+    adapter,
+    store,
+    now: () => NOW,
+  });
+
+  assert.equal(recovered.state.clientId, "client-2");
+  assert.deepEqual(adapter.actions.slice(actionStart, actionStart + 2), [
+    "verify:practice-1:old-client",
+    "create:practice-1",
+  ]);
+  assert.deepEqual([...adapter.clients], ["client-2"]);
+  assert.equal(store.previousCredentials, undefined);
 });
 
 test("failed replacement verification removes only the replacement and restores the original active identity", async () => {

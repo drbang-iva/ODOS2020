@@ -48,7 +48,15 @@ export interface OperatorIdentityState {
   readonly updatedAt: string;
   readonly replacementReason: OperatorReplacementReason;
   readonly previousClientId?: string;
-  readonly pendingRevocation?: { readonly clientId: string; readonly membershipId?: string };
+  readonly pendingRevocation?: {
+    readonly clientId: string;
+    readonly membershipId?: string;
+    readonly priorState?: {
+      readonly createdAt: string;
+      readonly replacementReason: OperatorReplacementReason;
+      readonly previousClientId?: string;
+    };
+  };
   readonly pendingCleanup?: {
     readonly projectId: string;
     readonly clientId: string;
@@ -303,7 +311,11 @@ export async function rotateOperatorIdentity(input: {
   if (!state || state.status !== "active" || state.projectId !== projectId) {
     throw new Error("Rotation requires one active operator identity in the exact project.");
   }
-  if (state.pendingRevocation) return finishPendingRotation(input, state);
+  if (state.pendingRevocation) {
+    const resumed = await finishPendingRotation(input, state);
+    if (resumed.completed) return resumed;
+    state = resumed.state;
+  }
   const credentials = matchingActiveCredentials(state, input.store.readCredentials());
   await input.adapter.verify(credentials);
   const created = await input.adapter.create(projectId);
@@ -328,11 +340,19 @@ export async function rotateOperatorIdentity(input: {
     updatedAt: now,
     replacementReason: "rotation",
     previousClientId: state.clientId,
-    pendingRevocation: { clientId: state.clientId, ...(state.membershipId ? { membershipId: state.membershipId } : {}) },
+    pendingRevocation: {
+      clientId: state.clientId,
+      ...(state.membershipId ? { membershipId: state.membershipId } : {}),
+      priorState: {
+        createdAt: state.createdAt,
+        replacementReason: state.replacementReason,
+        ...(state.previousClientId ? { previousClientId: state.previousClientId } : {}),
+      },
+    },
   };
+  input.store.writeState(pendingState);
   input.store.writePreviousCredentials(credentials);
   input.store.writeCredentials(replacementCredentials);
-  input.store.writeState(pendingState);
   await input.adapter.revoke(projectId, state.clientId, state.membershipId, credentials);
   const completedState = withoutPendingRevocation(pendingState, timestamp(input.now));
   input.store.writeState(completedState);
@@ -487,9 +507,32 @@ async function finishPendingRotation(
   },
   state: OperatorIdentityState,
   allowUncredentialedRevocation = false,
-): Promise<{ accessToken: string; state: OperatorIdentityState }> {
+): Promise<{ accessToken: string; state: OperatorIdentityState; completed: boolean }> {
   const pending = state.pendingRevocation;
   if (!pending) throw new Error("Operator rotation has no pending revocation to finish.");
+  const storedCurrent = input.store.readCredentials();
+  if (
+    storedCurrent?.projectId === state.projectId &&
+    storedCurrent.clientId === pending.clientId
+  ) {
+    const priorSession = await input.adapter.verify(storedCurrent);
+    await input.adapter.revoke(state.projectId, state.clientId, state.membershipId);
+    const prior = pending.priorState;
+    const restoredState: OperatorIdentityState = {
+      version: 1,
+      status: "active",
+      projectId: state.projectId,
+      clientId: pending.clientId,
+      membershipId: pending.membershipId ?? priorSession.membershipId,
+      createdAt: prior?.createdAt ?? state.createdAt,
+      updatedAt: timestamp(input.now),
+      replacementReason: prior?.replacementReason ?? state.replacementReason,
+      ...(prior?.previousClientId ? { previousClientId: prior.previousClientId } : {}),
+    };
+    input.store.writeState(restoredState);
+    input.store.removePreviousCredentials();
+    return { accessToken: priorSession.accessToken, state: restoredState, completed: false };
+  }
   const current = matchingActiveCredentials(state, input.store.readCredentials());
   const currentSession = await input.adapter.verify(current);
   const previous = input.store.readPreviousCredentials();
@@ -520,7 +563,7 @@ async function finishPendingRotation(
   const completedState = withoutPendingRevocation(state, timestamp(input.now));
   input.store.writeState(completedState);
   input.store.removePreviousCredentials();
-  return { accessToken: currentSession.accessToken, state: completedState };
+  return { accessToken: currentSession.accessToken, state: completedState, completed: true };
 }
 
 async function finishPendingCleanup(
@@ -594,6 +637,19 @@ async function recoverUnrecordedPreviousCredential(
 ): Promise<{ state: OperatorIdentityState | undefined; completed: boolean }> {
   const credentials = input.store.readPreviousCredentials();
   if (!credentials) return { state, completed: false };
+  const activeCredentials = input.store.readCredentials();
+  const duplicatesActiveCredential = state?.status === "active" &&
+    !state.pendingCleanup &&
+    !state.pendingRevocation &&
+    !state.pendingEmergencyRevocation &&
+    state.projectId === credentials.projectId &&
+    state.clientId === credentials.clientId &&
+    activeCredentials?.projectId === credentials.projectId &&
+    activeCredentials.clientId === credentials.clientId;
+  if (duplicatesActiveCredential) {
+    input.store.removePreviousCredentials();
+    return { state, completed: true };
+  }
   const referencedByCleanup = state?.pendingCleanup?.projectId === credentials.projectId &&
     state.pendingCleanup.clientId === credentials.clientId;
   const referencedByRotation = state?.projectId === credentials.projectId &&
