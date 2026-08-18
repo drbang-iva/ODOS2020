@@ -5,9 +5,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { SerialTrendChart } from "../src/components/charting/SerialTrendChart";
 import { PretestVitalsSection } from "../src/components/charting/PretestVitalsSection";
 import { DiagnosisWorkspace } from "../src/components/charting/DiagnosisWorkspace";
-import { carotenoidPresentation } from "../src/lib/carotenoid-score";
+import { CAROTENOID_LABEL_ANCHORS, carotenoidPresentation } from "../src/lib/carotenoid-score";
 
 test("carotenoid label anchors and color bands remain independently derived from the canonical tables", () => {
+  assert.equal(CAROTENOID_LABEL_ANCHORS[0].anchor, 18_000);
+  assert.deepEqual(carotenoidPresentation(15_000), { score: 15_000, label: "Low", color: "Red" });
+  assert.deepEqual(carotenoidPresentation(20_000), { score: 20_000, label: "Below average", color: "Orange" });
   assert.deepEqual(carotenoidPresentation(27_000), { score: 27_000, label: "Below average", color: "Orange" });
   assert.deepEqual(carotenoidPresentation(38_000), { score: 38_000, label: "Lower-middle", color: "Yellow" });
   assert.deepEqual(carotenoidPresentation(51_000), { score: 51_000, label: "Above average", color: "Blue" });

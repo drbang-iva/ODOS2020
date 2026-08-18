@@ -23,7 +23,7 @@ const PAD = 36;
 
 export function SerialTrendChart({ ariaLabel, series, overlays = [], xDomain, yDomain, xSamples, xFormat, yFormat, emptyText = "No readings recorded" }: Props) {
   const points = series.flatMap((row) => row.points);
-  if (points.length === 0) return <div role="img" aria-label={ariaLabel} className="rounded border border-white/10 p-6 text-sm text-white/55">{emptyText}</div>;
+  if (points.length === 0) return <div role="img" aria-label={ariaLabel} className="rounded border border-[color:var(--odos-line)] p-6 text-sm text-[color:var(--odos-muted)]">{emptyText}</div>;
   const xs = points.map((point) => point.x);
   const sampleXs = [...new Set([...(xSamples ?? []), ...xs])].sort((a, b) => a - b);
   const overlayValues = overlays.flatMap((overlay) => overlay.kind === "line"
@@ -40,20 +40,20 @@ export function SerialTrendChart({ ariaLabel, series, overlays = [], xDomain, yD
     "Z",
   ].join(" ");
   return (
-    <figure role="img" aria-label={ariaLabel} className="rounded border border-white/10 bg-white/[0.02] p-3">
+    <figure role="img" aria-label={ariaLabel} className="rounded border border-[color:var(--odos-line)] bg-[var(--odos-surface)] p-3">
       <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="w-full" aria-hidden="true">
-        <line x1={PAD} y1={HEIGHT - PAD} x2={WIDTH - PAD} y2={HEIGHT - PAD} stroke="#64748b" />
-        <line x1={PAD} y1={PAD} x2={PAD} y2={HEIGHT - PAD} stroke="#64748b" />
+        <line x1={PAD} y1={HEIGHT - PAD} x2={WIDTH - PAD} y2={HEIGHT - PAD} stroke="var(--odos-line-2)" />
+        <line x1={PAD} y1={PAD} x2={PAD} y2={HEIGHT - PAD} stroke="var(--odos-line-2)" />
         {overlays.map((overlay) => overlay.kind === "band"
           ? <path key={overlay.id} d={bandPath(overlay.lower, overlay.upper)} fill={overlay.color} opacity={overlay.opacity ?? 0.16}><title>{overlay.label}</title></path>
           : <path key={overlay.id} d={linePath(overlay.value)} fill="none" stroke={overlay.color} strokeDasharray="6 4"><title>{overlay.label}</title></path>)}
         {series.map((row) => <g key={row.id}>{row.points.map((point) => <circle key={point.id} cx={xAt(point.x)} cy={yAt(point.value)} r="5" fill={row.color}><title>{point.title}</title></circle>)}</g>)}
-        <text x={PAD} y={HEIGHT - 8} fill="#94a3b8" fontSize="11">{xFormat(xMin)}</text>
-        <text x={WIDTH - PAD} y={HEIGHT - 8} fill="#94a3b8" fontSize="11" textAnchor="end">{xFormat(xMax)}</text>
-        <text x={4} y={PAD} fill="#94a3b8" fontSize="11">{yFormat(yMax)}</text>
-        <text x={4} y={HEIGHT - PAD} fill="#94a3b8" fontSize="11">{yFormat(yMin)}</text>
+        <text x={PAD} y={HEIGHT - 8} fill="var(--odos-muted)" fontSize="11">{xFormat(xMin)}</text>
+        <text x={WIDTH - PAD} y={HEIGHT - 8} fill="var(--odos-muted)" fontSize="11" textAnchor="end">{xFormat(xMax)}</text>
+        <text x={4} y={PAD} fill="var(--odos-muted)" fontSize="11">{yFormat(yMax)}</text>
+        <text x={4} y={HEIGHT - PAD} fill="var(--odos-muted)" fontSize="11">{yFormat(yMin)}</text>
       </svg>
-      <figcaption className="flex flex-wrap gap-3 text-xs text-white/70">
+      <figcaption className="flex flex-wrap gap-3 text-xs text-[color:var(--odos-muted)]">
         {series.map((row) => <span key={row.id}><i className="mr-1 inline-block h-2 w-2 rounded-full" style={{ background: row.color }} />{row.label}</span>)}
         {overlays.map((overlay) => <span key={overlay.id}><i className="mr-1 inline-block h-2 w-4" style={{ background: overlay.color }} />{overlay.label}</span>)}
       </figcaption>
