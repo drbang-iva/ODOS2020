@@ -34,6 +34,7 @@ class MemoryStore {
   previousCredentials?: Credentials;
   state?: IdentityState;
   crashAfterCredentialRemoval = false;
+  crashAfterPreviousCredentialWrite = false;
   crashAfterPreviousCredentialRemoval = false;
 
   readCredentials(): Credentials | undefined {
@@ -58,6 +59,10 @@ class MemoryStore {
 
   writePreviousCredentials(credentials: Credentials): void {
     this.previousCredentials = structuredClone(credentials);
+    if (this.crashAfterPreviousCredentialWrite) {
+      this.crashAfterPreviousCredentialWrite = false;
+      throw new Error("simulated process crash after previous-credential write");
+    }
   }
 
   removePreviousCredentials(): void {
@@ -271,6 +276,35 @@ test("failed verification cleanup persists the exact new identity for the next i
   assert.equal(store.state?.pendingCleanup, undefined);
 });
 
+test("next setup cleans a failed client after crashing before pending cleanup state", async () => {
+  const lifecycle = await subject();
+  const adapter = new FakeAdapter();
+  const store = new MemoryStore();
+  adapter.rejectVerificationForClientId = "client-1";
+  store.crashAfterPreviousCredentialWrite = true;
+
+  await assert.rejects(
+    lifecycle.ensureOperatorIdentity({ projectId: "practice-1", adapter, store, now: () => NOW }),
+    /simulated process crash after previous-credential write/,
+  );
+  assert.equal(store.state, undefined);
+  assert.equal(store.previousCredentials?.clientId, "client-1");
+  assert.equal(adapter.clients.has("client-1"), true);
+
+  adapter.rejectVerificationForClientId = undefined;
+  const recovered = await lifecycle.ensureOperatorIdentity({
+    projectId: "practice-1",
+    adapter,
+    store,
+    now: () => NOW,
+  });
+
+  assert.equal(recovered.state.clientId, "client-2");
+  assert.deepEqual([...adapter.clients], ["client-2"]);
+  assert.deepEqual([...adapter.memberships], [["client-2", "membership-client-2"]]);
+  assert.equal(store.previousCredentials, undefined);
+});
+
 test("operator setup reuses only a verified exact-project active identity", async () => {
   const lifecycle = await subject();
   const adapter = new FakeAdapter();
@@ -377,6 +411,38 @@ test("failed replacement verification removes only the replacement and restores 
   assert.equal(store.previousCredentials, undefined);
   assert.deepEqual([...adapter.clients], ["old-client"]);
   assert.deepEqual([...adapter.memberships], [["old-client", "membership-old-client"]]);
+});
+
+test("next rotation cleans a failed replacement after crashing before pending cleanup state", async () => {
+  const lifecycle = await subject();
+  const adapter = new FakeAdapter();
+  const store = activeStore("practice-1", "old-client");
+  adapter.clients.add("old-client");
+  adapter.memberships.set("old-client", "membership-old-client");
+  adapter.rejectVerificationForClientId = "client-1";
+  store.crashAfterPreviousCredentialWrite = true;
+
+  await assert.rejects(
+    lifecycle.rotateOperatorIdentity({ projectId: "practice-1", adapter, store, now: () => NOW }),
+    /simulated process crash after previous-credential write/,
+  );
+  assert.equal(store.state?.clientId, "old-client");
+  assert.equal(store.state?.pendingCleanup, undefined);
+  assert.equal(store.previousCredentials?.clientId, "client-1");
+  assert.equal(adapter.clients.has("client-1"), true);
+
+  adapter.rejectVerificationForClientId = undefined;
+  const recovered = await lifecycle.rotateOperatorIdentity({
+    projectId: "practice-1",
+    adapter,
+    store,
+    now: () => NOW,
+  });
+
+  assert.equal(recovered.state.clientId, "client-2");
+  assert.deepEqual([...adapter.clients], ["client-2"]);
+  assert.deepEqual([...adapter.memberships], [["client-2", "membership-client-2"]]);
+  assert.equal(store.previousCredentials, undefined);
 });
 
 test("a failed rotation revocation retains a private retry credential and resumes without creating another client", async () => {

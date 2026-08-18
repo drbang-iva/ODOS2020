@@ -214,6 +214,7 @@ export async function ensureOperatorIdentity(input: {
 }): Promise<{ accessToken: string; state: OperatorIdentityState; reused: boolean }> {
   const projectId = requiredProjectId(input.projectId);
   let state = input.store.readState();
+  state = (await recoverUnrecordedPreviousCredential(input, projectId, state)).state;
   let credentials = input.store.readCredentials();
 
   if (state?.pendingCleanup) {
@@ -294,6 +295,7 @@ export async function rotateOperatorIdentity(input: {
 }): Promise<{ accessToken: string; state: OperatorIdentityState }> {
   const projectId = requiredProjectId(input.projectId);
   let state = input.store.readState();
+  state = (await recoverUnrecordedPreviousCredential(input, projectId, state)).state;
   if (state?.pendingCleanup) {
     await finishPendingCleanup(input, state);
     state = input.store.readState();
@@ -347,6 +349,7 @@ export async function revokeOperatorIdentity(input: {
 }): Promise<{ state: OperatorIdentityState }> {
   const projectId = requiredProjectId(input.projectId);
   let state = input.store.readState();
+  state = (await recoverUnrecordedPreviousCredential(input, projectId, state)).state;
   if (state?.pendingCleanup) {
     await finishPendingCleanup(input, state);
     state = input.store.readState();
@@ -387,7 +390,9 @@ export async function finishOperatorPendingCleanup(input: {
   readonly now?: () => string;
 }): Promise<{ state?: OperatorIdentityState }> {
   const projectId = requiredProjectId(input.projectId);
-  const state = input.store.readState();
+  const recovery = await recoverUnrecordedPreviousCredential(input, projectId, input.store.readState());
+  const state = recovery.state;
+  if (recovery.completed) return { state };
   if (!state || state.projectId !== projectId) {
     throw new Error("No operator identity cleanup is recorded for the exact project.");
   }
@@ -416,7 +421,11 @@ export async function replaceRevokedOperatorIdentity(input: {
   readonly now?: () => string;
 }): Promise<{ accessToken: string; state: OperatorIdentityState }> {
   const projectId = requiredProjectId(input.projectId);
-  const state = input.store.readState();
+  const state = (await recoverUnrecordedPreviousCredential(
+    input,
+    projectId,
+    input.store.readState(),
+  )).state;
   if (!state || state.status !== "revoked" || state.projectId !== projectId) {
     throw new Error("Post-revocation replacement requires a same-project revoked tombstone.");
   }
@@ -571,6 +580,50 @@ async function finishPendingCleanup(
   }
   finishCleanupState(input.store, state, timestamp(input.now));
   input.store.removePreviousCredentials();
+}
+
+async function recoverUnrecordedPreviousCredential(
+  input: {
+    readonly projectId: string;
+    readonly adapter: OperatorIdentityAdapter;
+    readonly store: OperatorIdentityStore;
+    readonly now?: () => string;
+  },
+  projectId: string,
+  state: OperatorIdentityState | undefined,
+): Promise<{ state: OperatorIdentityState | undefined; completed: boolean }> {
+  const credentials = input.store.readPreviousCredentials();
+  if (!credentials) return { state, completed: false };
+  const referencedByCleanup = state?.pendingCleanup?.projectId === credentials.projectId &&
+    state.pendingCleanup.clientId === credentials.clientId;
+  const referencedByRotation = state?.projectId === credentials.projectId &&
+    state.pendingRevocation?.clientId === credentials.clientId;
+  if (referencedByCleanup || referencedByRotation) return { state, completed: false };
+  if (credentials.projectId !== projectId) {
+    throw new Error(
+      `Unrecorded operator cleanup credential targets project ${credentials.projectId}, not requested project ${projectId}.`,
+    );
+  }
+  if (state?.pendingCleanup || state?.pendingRevocation) {
+    throw new Error("Unrecorded operator cleanup credential conflicts with the recorded pending lifecycle operation.");
+  }
+  const now = timestamp(input.now);
+  const pendingCleanup = { projectId, clientId: credentials.clientId };
+  const recoveryState: OperatorIdentityState = state
+    ? { ...state, updatedAt: now, pendingCleanup }
+    : {
+        version: 1,
+        status: "cleanup-pending",
+        projectId,
+        clientId: credentials.clientId,
+        createdAt: now,
+        updatedAt: now,
+        replacementReason: "initial-setup",
+        pendingCleanup,
+      };
+  input.store.writeState(recoveryState);
+  await finishPendingCleanup(input, recoveryState);
+  return { state: input.store.readState(), completed: true };
 }
 
 async function cleanupFailedCreation(
