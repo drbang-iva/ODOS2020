@@ -1,4 +1,4 @@
-import type { Bundle, Observation, Provenance } from "@medplum/fhirtypes";
+import type { Bundle, Observation, Provenance, Resource } from "@medplum/fhirtypes";
 import type { Express } from "express";
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
@@ -14,8 +14,8 @@ const WRITE_HEADERS = { "X-ODOS-Source": "mcp/save_section_observations" } as co
 
 export interface PretestVitalsFhirClient {
   create<T extends Observation | Provenance>(resource: T, headers?: Record<string, string>): Promise<T>;
-  search<T extends Observation>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>>;
-  searchUrl?<T extends Observation>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>>;
+  search<T extends Resource>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>>;
+  searchUrl?<T extends Resource>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>>;
 }
 
 export interface PretestVitalsEndpointDeps {

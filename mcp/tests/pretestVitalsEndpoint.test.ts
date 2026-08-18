@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Bundle, Observation, Provenance } from "@medplum/fhirtypes";
+import type { Bundle, Observation, Provenance, Resource } from "@medplum/fhirtypes";
 import {
   BLOOD_PRESSURE_PANEL_CODE,
   CAROTENOID_SCORE_CODE,
@@ -27,7 +27,7 @@ function fixture() {
           if (saved.resourceType === "Observation") observations.push(saved);
           return saved;
         },
-        search: async <T extends Observation>() => ({
+        search: async <T extends Resource>() => ({
           resourceType: "Bundle",
           type: "searchset",
           entry: observations.map((resource) => ({ resource })),
@@ -159,7 +159,7 @@ test("history follows next links so later BP and carotenoid pages remain visible
       actorRole: "provider",
       fhir: {
         create: async (resource) => resource,
-        search: async <T extends Observation>(_resourceType: T["resourceType"], params?: Record<string, string>) => {
+        search: async <T extends Resource>(_resourceType: T["resourceType"], params?: Record<string, string>) => {
           const kind = params?.code?.includes(BLOOD_PRESSURE_PANEL_CODE) ? "bp" : "carotenoid";
           return {
             resourceType: "Bundle",
@@ -168,7 +168,7 @@ test("history follows next links so later BP and carotenoid pages remain visible
             link: [{ relation: "next", url: `https://example.test/fhir/R4/Observation?kind=${kind}` }],
           } as Bundle<T>;
         },
-        searchUrl: async <T extends Observation>(url: string) => {
+        searchUrl: async <T extends Resource>(url: string) => {
           const kind = url.includes("kind=bp") ? "bp" : "carotenoid";
           return {
             resourceType: "Bundle",
