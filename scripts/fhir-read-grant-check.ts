@@ -141,8 +141,8 @@ export const SERVICE_IDENTITY_FHIR_WRITE_CALL_SITES = [
   { path: "mcp/src/scheduling/scheduling-resource-service.ts", line: 125, callee: "fhir.update", resourceType: "Schedule", reason: "Scheduling resource service receives the explicit serviceFhir client." },
 ] as const satisfies readonly ExactFhirWriteCallSite[];
 
-export const SUSPECTED_BROKEN_PRACTICE_ROLE_WRITE_CALL_SITES = [
-] as const satisfies readonly SuspectedBrokenPracticeRoleWriteCallSite[];
+export const SUSPECTED_BROKEN_PRACTICE_ROLE_WRITE_CALL_SITES:
+  readonly SuspectedBrokenPracticeRoleWriteCallSite[] = [];
 
 export const FHIR_READ_GRANT_LIMITATIONS = [
   "Computed read resourceTypes escape this scan.",
