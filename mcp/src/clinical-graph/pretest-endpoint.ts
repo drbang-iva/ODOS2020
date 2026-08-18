@@ -22,6 +22,7 @@ import {
   validateCustomFieldValues,
 } from "./custom-fields.js";
 import { decimalField } from "./contact-lens-definition.js";
+export { registerPretestVitalsRoutes } from "./pretest-vitals-endpoint.js";
 
 export interface PretestFhirClient {
   create<T extends Observation | Provenance>(

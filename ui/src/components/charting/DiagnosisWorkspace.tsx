@@ -94,6 +94,7 @@ interface Props {
   encounterReference: string;
   selectedReference?: string;
   onSelectDiagnosis: (reference: string | undefined) => void;
+  onOpenBloodPressure?: () => void;
 }
 
 export function DiagnosisWorkspace({
@@ -101,6 +102,7 @@ export function DiagnosisWorkspace({
   encounterReference,
   selectedReference,
   onSelectDiagnosis,
+  onOpenBloodPressure,
 }: Props) {
   const encounterId = encounterReference.replace(/^Encounter\//, "");
   const [encounter, setEncounter] = useState<Encounter>();
@@ -364,6 +366,7 @@ export function DiagnosisWorkspace({
     <div className="odos-diagnosis-workspace min-h-0 flex-1" data-testid="diagnosis-workspace">
       <aside className="odos-diagnosis-rail" aria-label="Diagnosis rail">
         <h1 className="odos-diagnosis-rail-title">Diagnoses</h1>
+        {onOpenBloodPressure && <button type="button" className="odos-diagnosis-primary-action" onClick={onOpenBloodPressure}>Record blood pressure</button>}
         <RailHeading>This visit</RailHeading>
         <div className="odos-diagnosis-visit-list">
           {loading && <p className="odos-diagnosis-muted">Loading diagnoses…</p>}

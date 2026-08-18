@@ -14,6 +14,7 @@ const SECTIONS: ChartEditorEntry[] = [
   { id: "hpi", label: "Chief Complaint / HPI / ROS", group: "HISTORY" },
   { id: "wearing", label: "Wearing (WRx)", group: "PRETEST" },
   { id: "auto-refraction", label: "Auto-Refraction / Auto-K", group: "PRETEST" },
+  { id: "pretest-vitals", label: "BP / BioPhotonic", group: "PRETEST" },
   { id: "manual-keratometry", label: "Manual Keratometry", group: "PRETEST" },
   { id: "pachymetry", label: "Pachymetry", group: "PRETEST" },
   { id: "va", label: "Visual Acuity", group: "PRETEST" },
