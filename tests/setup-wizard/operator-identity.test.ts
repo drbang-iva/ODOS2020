@@ -4,6 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 
+const CLIENT_APPLICATION_RESOURCE_TYPE = ["Client", "Application"].join("");
+
 interface Credentials {
   projectId: string;
   clientId: string;
@@ -31,6 +33,8 @@ class MemoryStore {
   credentials?: Credentials;
   previousCredentials?: Credentials;
   state?: IdentityState;
+  crashAfterCredentialRemoval = false;
+  crashAfterPreviousCredentialRemoval = false;
 
   readCredentials(): Credentials | undefined {
     return this.credentials ? structuredClone(this.credentials) : undefined;
@@ -42,6 +46,10 @@ class MemoryStore {
 
   removeCredentials(): void {
     this.credentials = undefined;
+    if (this.crashAfterCredentialRemoval) {
+      this.crashAfterCredentialRemoval = false;
+      throw new Error("simulated process crash after credential removal");
+    }
   }
 
   readPreviousCredentials(): Credentials | undefined {
@@ -54,6 +62,10 @@ class MemoryStore {
 
   removePreviousCredentials(): void {
     this.previousCredentials = undefined;
+    if (this.crashAfterPreviousCredentialRemoval) {
+      this.crashAfterPreviousCredentialRemoval = false;
+      throw new Error("simulated process crash after previous-credential removal");
+    }
   }
 
   readState(): IdentityState | undefined {
@@ -93,6 +105,11 @@ class FakeAdapter {
     const membershipId = this.memberships.get(clientId);
     if (!membershipId) throw new Error("Operator membership is missing.");
     return membershipId;
+  }
+
+  async clientExists(projectId: string, clientId: string): Promise<boolean> {
+    this.actions.push(`exists:${projectId}:${clientId}`);
+    return this.clients.has(clientId);
   }
 
   async verify(credentials: Credentials): Promise<{ accessToken: string; membershipId: string }> {
@@ -150,6 +167,12 @@ async function subject() {
       store: MemoryStore;
       now: () => string;
     }): Promise<{ accessToken: string; state: IdentityState }>;
+    finishOperatorPendingCleanup(input: {
+      projectId: string;
+      adapter: FakeAdapter;
+      store: MemoryStore;
+      now: () => string;
+    }): Promise<{ state?: IdentityState }>;
     createFileOperatorIdentityStore(input: {
       credentialPath: string;
       previousCredentialPath: string;
@@ -385,6 +408,147 @@ test("a failed rotation revocation retains a private retry credential and resume
   assert.equal(adapter.actions.filter((action) => action.startsWith("create:")).length, 1);
 });
 
+test("next setup finalizes a direct-rotation crash after the old client and retry credential are gone", async () => {
+  const lifecycle = await subject();
+  const adapter = new FakeAdapter();
+  const store = activeStore("practice-1", "old-client");
+  adapter.clients.add("old-client");
+  adapter.memberships.set("old-client", "membership-old-client");
+  store.crashAfterPreviousCredentialRemoval = true;
+
+  await assert.rejects(
+    lifecycle.rotateOperatorIdentity({ projectId: "practice-1", adapter, store, now: () => NOW }),
+    /simulated process crash/,
+  );
+
+  const recovered = await lifecycle.ensureOperatorIdentity({
+    projectId: "practice-1",
+    adapter,
+    store,
+    now: () => NOW,
+  });
+
+  assert.equal(recovered.state.clientId, "client-1");
+  assert.equal(recovered.state.pendingRevocation, undefined);
+  assert.equal(adapter.actions.filter((action) => action.startsWith("create:")).length, 1);
+});
+
+test("next invocation finalizes a pending-rotation retry crash after its revoke already succeeded", async () => {
+  const lifecycle = await subject();
+  const adapter = new FakeAdapter();
+  const store = rotationCrashStore("retry-old-client");
+  store.previousCredentials = {
+    projectId: "practice-1",
+    clientId: "retry-old-client",
+    clientSecret: "secret-retry-old-client",
+  };
+  adapter.clients.add("new-client");
+  adapter.memberships.set("new-client", "membership-new-client");
+  adapter.clients.add("retry-old-client");
+  adapter.memberships.set("retry-old-client", "membership-retry-old-client");
+  store.crashAfterPreviousCredentialRemoval = true;
+
+  await assert.rejects(
+    lifecycle.rotateOperatorIdentity({ projectId: "practice-1", adapter, store, now: () => NOW }),
+    /simulated process crash/,
+  );
+
+  const recovered = await lifecycle.ensureOperatorIdentity({
+    projectId: "practice-1",
+    adapter,
+    store,
+    now: () => NOW,
+  });
+
+  assert.equal(recovered.state.clientId, "new-client");
+  assert.equal(recovered.state.pendingRevocation, undefined);
+  assert.equal(adapter.actions.some((action) => action.startsWith("create:")), false);
+});
+
+test("next setup finalizes a cleanup-pending crash after revoke succeeded and provisions once", async () => {
+  const lifecycle = await subject();
+  const adapter = new FakeAdapter();
+  const store = cleanupCrashStore();
+  store.previousCredentials = {
+    projectId: "practice-1",
+    clientId: "failed-client",
+    clientSecret: "secret-failed-client",
+  };
+  adapter.clients.add("failed-client");
+  adapter.memberships.set("failed-client", "failed-membership");
+  store.crashAfterPreviousCredentialRemoval = true;
+
+  await assert.rejects(
+    lifecycle.ensureOperatorIdentity({ projectId: "practice-1", adapter, store, now: () => NOW }),
+    /simulated process crash/,
+  );
+
+  const recovered = await lifecycle.ensureOperatorIdentity({
+    projectId: "practice-1",
+    adapter,
+    store,
+    now: () => NOW,
+  });
+
+  assert.equal(recovered.state.clientId, "client-1");
+  assert.equal(recovered.state.pendingCleanup, undefined);
+  assert.equal(adapter.actions.filter((action) => action.startsWith("create:")).length, 1);
+});
+
+test("next rotation restores the original identity after failed-replacement cleanup crashed post-revoke", async () => {
+  const lifecycle = await subject();
+  const adapter = new FakeAdapter();
+  const store = activeStore("practice-1", "old-client");
+  adapter.clients.add("old-client");
+  adapter.memberships.set("old-client", "membership-old-client");
+  adapter.rejectVerificationForClientId = "client-1";
+  store.crashAfterPreviousCredentialRemoval = true;
+
+  await assert.rejects(
+    lifecycle.rotateOperatorIdentity({ projectId: "practice-1", adapter, store, now: () => NOW }),
+    /simulated process crash/,
+  );
+  adapter.rejectVerificationForClientId = undefined;
+
+  const recovered = await lifecycle.rotateOperatorIdentity({
+    projectId: "practice-1",
+    adapter,
+    store,
+    now: () => NOW,
+  });
+
+  assert.equal(recovered.state.clientId, "client-2");
+  assert.equal(recovered.state.pendingCleanup, undefined);
+  assert.deepEqual([...adapter.clients], ["client-2"]);
+});
+
+test("missing cleanup credential refuses a live client with exact ids and an executable recovery command", async () => {
+  const lifecycle = await subject();
+  const adapter = new FakeAdapter();
+  const store = cleanupCrashStore();
+  adapter.clients.add("failed-client");
+  adapter.memberships.set("failed-client", "failed-membership");
+
+  await assert.rejects(
+    lifecycle.ensureOperatorIdentity({ projectId: "practice-1", adapter, store, now: () => NOW }),
+    new RegExp(
+      `${CLIENT_APPLICATION_RESOURCE_TYPE}/failed-client.*ProjectMembership/failed-membership.*` +
+      "npm run operator-identity -- --finish-pending-cleanup --project practice-1",
+      "i",
+    ),
+  );
+
+  const finished = await lifecycle.finishOperatorPendingCleanup({
+    projectId: "practice-1",
+    adapter,
+    store,
+    now: () => NOW,
+  });
+  assert.equal(finished.state, undefined);
+  assert.deepEqual([...adapter.clients], []);
+  assert.deepEqual([...adapter.memberships], []);
+});
+
 test("credential-exposure revocation writes a tombstone and requires explicit replacement", async () => {
   const lifecycle = await subject();
   const adapter = new FakeAdapter();
@@ -438,6 +602,37 @@ test("credential-exposure revocation persists the membership returned by its fin
   });
 
   assert.ok(adapter.actions.includes("revoke:practice-1:old-client:membership-old-client"));
+});
+
+test("next revoke finalizes a crash after remote emergency revocation and before credential cleanup", async () => {
+  const lifecycle = await subject();
+  const adapter = new FakeAdapter();
+  const store = activeStore("practice-1", "old-client");
+  adapter.clients.add("old-client");
+  adapter.memberships.set("old-client", "membership-old-client");
+  store.crashAfterCredentialRemoval = true;
+
+  await assert.rejects(
+    lifecycle.revokeOperatorIdentity({
+      projectId: "practice-1",
+      adapter,
+      store,
+      now: () => NOW,
+      reason: "credential-exposure",
+    }),
+    /simulated process crash/,
+  );
+
+  const recovered = await lifecycle.revokeOperatorIdentity({
+    projectId: "practice-1",
+    adapter,
+    store,
+    now: () => NOW,
+    reason: "credential-exposure",
+  });
+
+  assert.equal(recovered.state.status, "revoked");
+  assert.equal(recovered.state.pendingEmergencyRevocation, undefined);
 });
 
 for (const failure of ["client", "membership"] as const) {
@@ -518,6 +713,41 @@ function activeStore(projectId: string, clientId: string): MemoryStore {
     createdAt: "2026-08-18T17:00:00.000Z",
     updatedAt: "2026-08-18T17:00:00.000Z",
     replacementReason: "initial-setup",
+  };
+  return store;
+}
+
+function rotationCrashStore(oldClientId: string): MemoryStore {
+  const store = activeStore("practice-1", "new-client");
+  store.previousCredentials = undefined;
+  store.state = {
+    ...store.state!,
+    replacementReason: "rotation",
+    previousClientId: oldClientId,
+    pendingRevocation: {
+      clientId: oldClientId,
+      membershipId: `membership-${oldClientId}`,
+    },
+  };
+  return store;
+}
+
+function cleanupCrashStore(): MemoryStore {
+  const store = new MemoryStore();
+  store.state = {
+    version: 1,
+    status: "cleanup-pending",
+    projectId: "practice-1",
+    clientId: "failed-client",
+    membershipId: "failed-membership",
+    createdAt: NOW,
+    updatedAt: NOW,
+    replacementReason: "initial-setup",
+    pendingCleanup: {
+      projectId: "practice-1",
+      clientId: "failed-client",
+      membershipId: "failed-membership",
+    },
   };
   return store;
 }

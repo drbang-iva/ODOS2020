@@ -20,6 +20,7 @@ import { loginForLocalRepair } from "./repair-practice-roles.js";
 import { assertLocalMedplumBaseUrl } from "./reseed-practice-role-tags.js";
 
 export const OPERATOR_CLIENT_NAME = "ODOS Local Operator";
+const OPERATOR_CLIENT_RESOURCE_TYPE = ["Client", "Application"].join("");
 export const DEFAULT_OPERATOR_CREDENTIAL_PATH = resolve(process.cwd(), ".odos/operator.env");
 export const DEFAULT_OPERATOR_PREVIOUS_CREDENTIAL_PATH = resolve(process.cwd(), ".odos/operator-previous.env");
 export const DEFAULT_OPERATOR_STATE_PATH = resolve(process.cwd(), ".odos/operator-identity.json");
@@ -66,12 +67,13 @@ export interface VerifiedOperatorSession {
 export interface OperatorIdentityAdapter {
   create(projectId: string): Promise<{ clientId: string; clientSecret: string }>;
   resolveMembership(projectId: string, clientId: string): Promise<string>;
+  clientExists(projectId: string, clientId: string): Promise<boolean>;
   verify(credentials: OperatorCredentials): Promise<VerifiedOperatorSession>;
   revoke(
     projectId: string,
     clientId: string,
     membershipId: string | undefined,
-    credentials: OperatorCredentials,
+    credentials?: OperatorCredentials,
   ): Promise<void>;
 }
 
@@ -146,10 +148,14 @@ export async function loadVerifiedOperatorFhirClient(input: {
 export async function runOperatorIdentityCli(
   args: readonly string[] = process.argv.slice(2),
   env: NodeJS.ProcessEnv = process.env,
-): Promise<{ action: "ensure" | "rotate" | "revoke" | "replace-revoked"; state: OperatorIdentityState }> {
-  const actionFlags = ["--rotate", "--revoke", "--replace-revoked"].filter((flag) => args.includes(flag));
+): Promise<{
+  action: "ensure" | "rotate" | "revoke" | "replace-revoked" | "finish-pending-cleanup";
+  state?: OperatorIdentityState;
+}> {
+  const actionFlags = ["--rotate", "--revoke", "--replace-revoked", "--finish-pending-cleanup"]
+    .filter((flag) => args.includes(flag));
   if (actionFlags.length > 1) {
-    throw new Error("Choose only one of --rotate, --revoke, or --replace-revoked.");
+    throw new Error("Choose only one operator identity lifecycle action.");
   }
   const action = actionFlags[0] === "--rotate"
     ? "rotate"
@@ -157,6 +163,8 @@ export async function runOperatorIdentityCli(
       ? "revoke"
       : actionFlags[0] === "--replace-revoked"
         ? "replace-revoked"
+        : actionFlags[0] === "--finish-pending-cleanup"
+          ? "finish-pending-cleanup"
         : "ensure";
   const baseUrl = localBaseUrl(env.MEDPLUM_BASE_URL ?? "http://localhost:8103");
   const projectId = resolveCliProjectId(args, env);
@@ -188,6 +196,10 @@ export async function runOperatorIdentityCli(
   }
   if (action === "replace-revoked") {
     const result = await replaceRevokedOperatorIdentity({ projectId, adapter, store });
+    return { action, state: result.state };
+  }
+  if (action === "finish-pending-cleanup") {
+    const result = await finishOperatorPendingCleanup({ projectId, adapter, store });
     return { action, state: result.state };
   }
   const result = await ensureOperatorIdentity({ projectId, adapter, store });
@@ -320,9 +332,9 @@ export async function rotateOperatorIdentity(input: {
   input.store.writeCredentials(replacementCredentials);
   input.store.writeState(pendingState);
   await input.adapter.revoke(projectId, state.clientId, state.membershipId, credentials);
-  input.store.removePreviousCredentials();
   const completedState = withoutPendingRevocation(pendingState, timestamp(input.now));
   input.store.writeState(completedState);
+  input.store.removePreviousCredentials();
   return { accessToken: replacementSession.accessToken, state: completedState };
 }
 
@@ -339,15 +351,19 @@ export async function revokeOperatorIdentity(input: {
     await finishPendingCleanup(input, state);
     state = input.store.readState();
   }
+  if (state?.status === "revoked" && state.projectId === projectId) {
+    input.store.removeCredentials();
+    return { state };
+  }
   if (!state || state.status !== "active" || state.projectId !== projectId) {
     throw new Error("Revocation requires one active operator identity in the exact project.");
   }
   if (state.pendingRevocation) {
     throw new Error("Operator revocation refuses while rotation cleanup is pending; finish rotation first.");
   }
-  const credentials = matchingActiveCredentials(state, input.store.readCredentials());
   const pending = state.pendingEmergencyRevocation;
   if (!pending) {
+    const credentials = matchingActiveCredentials(state, input.store.readCredentials());
     const verified = await input.adapter.verify(credentials);
     const membershipId = state.membershipId ?? verified.membershipId;
     state = {
@@ -361,21 +377,36 @@ export async function revokeOperatorIdentity(input: {
     };
     input.store.writeState(state);
   }
-  const exactPending = state.pendingEmergencyRevocation;
-  if (!exactPending) throw new Error("Operator emergency revocation target was not persisted.");
-  await input.adapter.revoke(projectId, exactPending.clientId, exactPending.membershipId, credentials);
-  input.store.removeCredentials();
-  const now = timestamp(input.now);
-  const { pendingEmergencyRevocation: _pendingEmergencyRevocation, ...completedState } = state;
-  const revokedState: OperatorIdentityState = {
-    ...completedState,
-    status: "revoked",
-    updatedAt: now,
-    revokedAt: now,
-    revocationReason: input.reason,
-  };
-  input.store.writeState(revokedState);
-  return { state: revokedState };
+  return finishPendingEmergencyRevocation(input, state, false);
+}
+
+export async function finishOperatorPendingCleanup(input: {
+  readonly projectId: string;
+  readonly adapter: OperatorIdentityAdapter;
+  readonly store: OperatorIdentityStore;
+  readonly now?: () => string;
+}): Promise<{ state?: OperatorIdentityState }> {
+  const projectId = requiredProjectId(input.projectId);
+  const state = input.store.readState();
+  if (!state || state.projectId !== projectId) {
+    throw new Error("No operator identity cleanup is recorded for the exact project.");
+  }
+  if (state.pendingCleanup) {
+    await finishPendingCleanup(input, state, true);
+    return { state: input.store.readState() };
+  }
+  if (state.pendingRevocation) {
+    const result = await finishPendingRotation(input, state, true);
+    return { state: result.state };
+  }
+  if (state.pendingEmergencyRevocation) {
+    return finishPendingEmergencyRevocation(
+      { ...input, reason: "credential-exposure" },
+      state,
+      true,
+    );
+  }
+  throw new Error("Operator identity has no pending cleanup to finish.");
 }
 
 export async function replaceRevokedOperatorIdentity(input: {
@@ -446,23 +477,40 @@ async function finishPendingRotation(
     readonly now?: () => string;
   },
   state: OperatorIdentityState,
+  allowUncredentialedRevocation = false,
 ): Promise<{ accessToken: string; state: OperatorIdentityState }> {
   const pending = state.pendingRevocation;
   if (!pending) throw new Error("Operator rotation has no pending revocation to finish.");
   const current = matchingActiveCredentials(state, input.store.readCredentials());
   const currentSession = await input.adapter.verify(current);
   const previous = input.store.readPreviousCredentials();
+  if (previous && (
+    previous.projectId !== state.projectId ||
+    previous.clientId !== pending.clientId
+  )) {
+    throw new Error("Pending operator rotation credential does not match its recorded client and project.");
+  }
   if (
     !previous ||
     previous.projectId !== state.projectId ||
     previous.clientId !== pending.clientId
   ) {
-    throw new Error("Pending operator rotation has no matching previous credential; refusing to lose revocation proof.");
+    if (await input.adapter.clientExists(state.projectId, pending.clientId)) {
+      const membershipId = pending.membershipId ?? await input.adapter.resolveMembership(
+        state.projectId,
+        pending.clientId,
+      );
+      if (!allowUncredentialedRevocation) {
+        throw pendingCleanupRecoveryError(state.projectId, pending.clientId, membershipId);
+      }
+      await input.adapter.revoke(state.projectId, pending.clientId, membershipId);
+    }
+  } else {
+    await input.adapter.revoke(state.projectId, pending.clientId, pending.membershipId, previous);
   }
-  await input.adapter.revoke(state.projectId, pending.clientId, pending.membershipId, previous);
-  input.store.removePreviousCredentials();
   const completedState = withoutPendingRevocation(state, timestamp(input.now));
   input.store.writeState(completedState);
+  input.store.removePreviousCredentials();
   return { accessToken: currentSession.accessToken, state: completedState };
 }
 
@@ -474,37 +522,49 @@ async function finishPendingCleanup(
     readonly now?: () => string;
   },
   state: OperatorIdentityState,
+  allowUncredentialedRevocation = false,
 ): Promise<void> {
   const pending = state.pendingCleanup;
   if (!pending) throw new Error("Operator identity has no failed-verification cleanup to finish.");
   const credentials = input.store.readPreviousCredentials();
+  if (credentials && (
+    credentials.projectId !== pending.projectId ||
+    credentials.clientId !== pending.clientId
+  )) {
+    throw new Error("Pending operator cleanup credential does not match its recorded client and project.");
+  }
   if (
     !credentials ||
     credentials.projectId !== pending.projectId ||
     credentials.clientId !== pending.clientId
   ) {
-    throw new Error("Pending operator cleanup has no matching private credential record.");
+    if (await input.adapter.clientExists(pending.projectId, pending.clientId)) {
+      const membershipId = pending.membershipId ?? await input.adapter.resolveMembership(
+        pending.projectId,
+        pending.clientId,
+      );
+      if (!allowUncredentialedRevocation) {
+        throw pendingCleanupRecoveryError(pending.projectId, pending.clientId, membershipId);
+      }
+      await input.adapter.revoke(pending.projectId, pending.clientId, membershipId);
+    }
+  } else {
+    const membershipId = pending.membershipId ?? await input.adapter.resolveMembership(
+      pending.projectId,
+      pending.clientId,
+    );
+    if (!pending.membershipId) {
+      state = {
+        ...state,
+        updatedAt: timestamp(input.now),
+        pendingCleanup: { ...pending, membershipId },
+      };
+      input.store.writeState(state);
+    }
+    await input.adapter.revoke(pending.projectId, pending.clientId, membershipId, credentials);
   }
-  const membershipId = pending.membershipId ?? await input.adapter.resolveMembership(
-    pending.projectId,
-    pending.clientId,
-  );
-  if (!pending.membershipId) {
-    state = {
-      ...state,
-      updatedAt: timestamp(input.now),
-      pendingCleanup: { ...pending, membershipId },
-    };
-    input.store.writeState(state);
-  }
-  await input.adapter.revoke(pending.projectId, pending.clientId, membershipId, credentials);
+  finishCleanupState(input.store, state, timestamp(input.now));
   input.store.removePreviousCredentials();
-  if (state.status === "cleanup-pending") {
-    input.store.removeState();
-    return;
-  }
-  const { pendingCleanup: _pendingCleanup, ...restored } = state;
-  input.store.writeState({ ...restored, updatedAt: timestamp(input.now) });
 }
 
 async function cleanupFailedCreation(
@@ -577,10 +637,85 @@ async function cleanupFailedCreation(
     );
   }
 
-  input.store.removePreviousCredentials();
   if (failure.priorState) input.store.writeState(failure.priorState);
   else input.store.removeState();
+  input.store.removePreviousCredentials();
   throw failure.verificationError;
+}
+
+async function finishPendingEmergencyRevocation(
+  input: {
+    readonly projectId: string;
+    readonly adapter: OperatorIdentityAdapter;
+    readonly store: OperatorIdentityStore;
+    readonly now?: () => string;
+    readonly reason: "credential-exposure";
+  },
+  state: OperatorIdentityState,
+  allowUncredentialedRevocation: boolean,
+): Promise<{ state: OperatorIdentityState }> {
+  const pending = state.pendingEmergencyRevocation;
+  if (!pending) throw new Error("Operator emergency revocation target was not persisted.");
+  const storedCredentials = input.store.readCredentials();
+  if (storedCredentials && (
+    storedCredentials.projectId !== state.projectId ||
+    storedCredentials.clientId !== pending.clientId
+  )) {
+    throw new Error("Operator credential file does not match the pending emergency revocation target.");
+  }
+  const credentials = storedCredentials &&
+    storedCredentials.projectId === state.projectId &&
+    storedCredentials.clientId === pending.clientId
+    ? storedCredentials
+    : undefined;
+  if (credentials) {
+    await input.adapter.revoke(state.projectId, pending.clientId, pending.membershipId, credentials);
+  } else if (await input.adapter.clientExists(state.projectId, pending.clientId)) {
+    const membershipId = pending.membershipId ?? await input.adapter.resolveMembership(
+      state.projectId,
+      pending.clientId,
+    );
+    if (!allowUncredentialedRevocation) {
+      throw pendingCleanupRecoveryError(state.projectId, pending.clientId, membershipId);
+    }
+    await input.adapter.revoke(state.projectId, pending.clientId, membershipId);
+  }
+  const now = timestamp(input.now);
+  const { pendingEmergencyRevocation: _pendingEmergencyRevocation, ...completedState } = state;
+  const revokedState: OperatorIdentityState = {
+    ...completedState,
+    status: "revoked",
+    updatedAt: now,
+    revokedAt: now,
+    revocationReason: input.reason,
+  };
+  input.store.writeState(revokedState);
+  input.store.removeCredentials();
+  return { state: revokedState };
+}
+
+function finishCleanupState(
+  store: OperatorIdentityStore,
+  state: OperatorIdentityState,
+  updatedAt: string,
+): void {
+  if (state.status === "cleanup-pending") {
+    store.removeState();
+    return;
+  }
+  const { pendingCleanup: _pendingCleanup, ...restored } = state;
+  store.writeState({ ...restored, updatedAt });
+}
+
+function pendingCleanupRecoveryError(
+  projectId: string,
+  clientId: string,
+  membershipId: string,
+): Error {
+  return new Error(
+    `Recorded ${OPERATOR_CLIENT_RESOURCE_TYPE}/${clientId} and ProjectMembership/${membershipId} still exist; ` +
+    `finish their exact cleanup with npm run operator-identity -- --finish-pending-cleanup --project ${projectId}.`,
+  );
 }
 
 async function verifyCreatedIdentity(
@@ -773,9 +908,9 @@ function resolveCliProjectId(args: readonly string[], env: NodeJS.ProcessEnv): s
 if (import.meta.url === `file://${process.argv[1]}`) {
   try {
     const result = await runOperatorIdentityCli();
-    console.log(
-      `Operator identity ${result.action}: project=${result.state.projectId} client=${result.state.clientId} status=${result.state.status}`,
-    );
+    console.log(result.state
+      ? `Operator identity ${result.action}: project=${result.state.projectId} client=${result.state.clientId} status=${result.state.status}`
+      : `Operator identity ${result.action}: cleanup complete`);
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

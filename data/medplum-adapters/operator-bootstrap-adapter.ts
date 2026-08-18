@@ -110,19 +110,38 @@ export function createLiveOperatorIdentityAdapter(input: {
       });
     },
 
+    async clientExists(projectId: string, clientId: string): Promise<boolean> {
+      required(projectId, "operator project id");
+      const exactClientId = required(clientId, "operator client id");
+      const adminToken = required(serviceAccessToken, "Medplum service access token");
+      const response = await fetch(
+        `${baseUrl}/fhir/R4/ClientApplication/${encodeURIComponent(exactClientId)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            Accept: "application/fhir+json",
+            "X-Medplum": "extended",
+          },
+        },
+      );
+      if (response.ok) return true;
+      if (response.status === 404 || response.status === 410) return false;
+      throw new Error(`Operator ClientApplication existence check failed: ${response.status} ${response.statusText}`);
+    },
+
     async revoke(
       projectId: string,
       clientId: string,
       membershipId: string | undefined,
-      credentials: OperatorCredentials,
+      credentials?: OperatorCredentials,
     ): Promise<void> {
       const exactProjectId = required(projectId, "operator project id");
       const exactClientId = required(clientId, "operator client id");
       const adminToken = required(serviceAccessToken, "Medplum service access token");
-      if (
+      if (credentials && (
         credentials.projectId !== exactProjectId ||
         credentials.clientId !== exactClientId
-      ) {
+      )) {
         throw new Error("Operator revocation credential does not match the exact client and project.");
       }
       const deletionErrors: Error[] = [];
@@ -146,13 +165,30 @@ export function createLiveOperatorIdentityAdapter(input: {
       if (deletionErrors.length > 0) {
         throw new AggregateError(deletionErrors, `Operator revocation failed: ${deletionErrors.map((error) => error.message).join("; ")}`);
       }
-      const tokenResponse = await fetch(`${baseUrl}/oauth2/token`, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: clientCredentialBody(credentials),
-      });
-      if (tokenResponse.ok) {
-        throw new Error("Revoked operator client still obtained an access token.");
+      if (credentials) {
+        const tokenResponse = await fetch(`${baseUrl}/oauth2/token`, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: clientCredentialBody(credentials),
+        });
+        if (tokenResponse.ok) {
+          throw new Error("Revoked operator client still obtained an access token.");
+        }
+      } else {
+        const response = await fetch(
+          `${baseUrl}/fhir/R4/ClientApplication/${encodeURIComponent(exactClientId)}`,
+          {
+            headers: {
+              Authorization: `Bearer ${adminToken}`,
+              Accept: "application/fhir+json",
+              "X-Medplum": "extended",
+            },
+          },
+        );
+        if (response.ok) throw new Error("Revoked operator ClientApplication still exists.");
+        if (response.status !== 404 && response.status !== 410) {
+          throw new Error(`Operator ClientApplication revocation proof failed: ${response.status} ${response.statusText}`);
+        }
       }
     },
   };

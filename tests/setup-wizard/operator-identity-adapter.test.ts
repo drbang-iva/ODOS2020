@@ -16,6 +16,7 @@ async function subject() {
     }): {
       create(projectId: string): Promise<{ clientId: string; clientSecret: string }>;
       resolveMembership(projectId: string, clientId: string): Promise<string>;
+      clientExists(projectId: string, clientId: string): Promise<boolean>;
       verify(credentials: { projectId: string; clientId: string; clientSecret: string }): Promise<{
         accessToken: string;
         membershipId: string;
@@ -99,6 +100,37 @@ test("operator adapter creates a named client without an access policy and verif
       clientId: "operator-client",
       membershipId: "operator-membership",
     }]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test(`operator adapter resolves ${CLIENT_APPLICATION_RESOURCE_TYPE} existence without treating gone as an error`, async () => {
+  const module = await subject();
+  const originalFetch = globalThis.fetch;
+  const statuses = [200, 410];
+  const calls: string[] = [];
+  globalThis.fetch = async (input, init) => {
+    calls.push(`${init?.method ?? "GET"} ${new URL(String(input)).pathname}`);
+    const headers = new Headers(init?.headers);
+    assert.equal(headers.get("authorization"), "Bearer service-token");
+    assert.equal(headers.get("x-medplum"), "extended");
+    return new Response(null, { status: statuses.shift() });
+  };
+  try {
+    const adapter = module.createLiveOperatorIdentityAdapter({
+      baseUrl: "http://medplum.test",
+      serviceAccessToken: "service-token",
+      clientName: "ODOS Local Operator",
+      verifyMembership: async () => undefined,
+      resolveMembership: async () => "operator-membership",
+    });
+    assert.equal(await adapter.clientExists("practice-1", "operator-client"), true);
+    assert.equal(await adapter.clientExists("practice-1", "operator-client"), false);
+    assert.deepEqual(calls, [
+      `GET /fhir/R4/${CLIENT_APPLICATION_RESOURCE_TYPE}/operator-client`,
+      `GET /fhir/R4/${CLIENT_APPLICATION_RESOURCE_TYPE}/operator-client`,
+    ]);
   } finally {
     globalThis.fetch = originalFetch;
   }
