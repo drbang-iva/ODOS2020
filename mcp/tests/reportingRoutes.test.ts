@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
-import type { Bundle, Resource } from "@medplum/fhirtypes";
+import type { Bundle, Resource, Task } from "@medplum/fhirtypes";
 import express from "express";
 import type { ClaimMdAdapter } from "../src/claims/claimmd-adapter.js";
 import { registerReportingRoutes } from "../src/reporting/reporting-routes.js";
@@ -129,15 +129,50 @@ test("margin-ledger route shares margin.read and returns the requested monthly p
 
 async function server() {
   let serviceAuthCalls = 0;
+  const tasks: Task[] = [];
+  let taskCount = 0;
   const fhir = {
     create: async <T extends Resource>(resource: T): Promise<T> => resource,
     read: async <T extends Resource>(): Promise<T> => { throw new Error("not reached"); },
     update: async <T extends Resource>(_resourceType: T["resourceType"], _id: string, resource: T): Promise<T> => resource,
-    search: async <T extends Resource>(): Promise<Bundle<T>> => ({ resourceType: "Bundle", type: "searchset" }),
+    search: async <T extends Resource>(resourceType: T["resourceType"], params: Record<string, string> = {}): Promise<Bundle<T>> => {
+      if (resourceType !== "Task") return { resourceType: "Bundle", type: "searchset" };
+      const resources = tasks.filter((task) => {
+        if (params._id && !params._id.split(",").includes(task.id ?? "")) return false;
+        if (params.status && task.status !== params.status) return false;
+        if (params.code) {
+          const [system, code] = params.code.split("|");
+          if (!task.code?.coding?.some((coding) => coding.system === system && coding.code === code)) return false;
+        }
+        return true;
+      });
+      return {
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: resources.map((resource) => ({ resource: structuredClone(resource) as T })),
+      };
+    },
     executeTransaction: async (bundle: Bundle): Promise<Bundle> => ({
       resourceType: "Bundle",
       type: "transaction-response",
-      entry: (bundle.entry ?? []).map((_, index) => ({ response: { status: "201", location: `Task/statement-${index + 1}/_history/1` } })),
+      entry: (bundle.entry ?? []).map((entry) => {
+        if (entry.request?.method === "DELETE") {
+          const id = entry.request.url.replace("Task/", "");
+          const index = tasks.findIndex((task) => task.id === id);
+          if (index >= 0) tasks.splice(index, 1);
+          return { response: { status: "204" } };
+        }
+        const resource = entry.resource;
+        if (!resource || resource.resourceType !== "Task") throw new Error("Unexpected statement transaction resource");
+        const requestedId = entry.request?.method === "PUT" ? entry.request.url.replace("Task/", "") : undefined;
+        const id = requestedId ?? `statement-${++taskCount}`;
+        const existingIndex = tasks.findIndex((task) => task.id === id);
+        const versionId = String(existingIndex >= 0 ? Number(tasks[existingIndex].meta?.versionId ?? "0") + 1 : 1);
+        const saved: Task = { ...structuredClone(resource), id, meta: { ...resource.meta, versionId } };
+        if (existingIndex >= 0) tasks[existingIndex] = saved;
+        else tasks.push(saved);
+        return { response: { status: requestedId ? "200" : "201", location: `Task/${id}/_history/${versionId}` } };
+      }),
     }),
   };
   const authenticate = async (header: string | undefined) => header === "Bearer good"
