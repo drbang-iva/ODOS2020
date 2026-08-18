@@ -495,6 +495,31 @@ test("next setup finalizes a cleanup-pending crash after revoke succeeded and pr
   assert.equal(adapter.actions.filter((action) => action.startsWith("create:")).length, 1);
 });
 
+test("next setup clears an already-revoked client when no membership was ever recorded", async () => {
+  const lifecycle = await subject();
+  const adapter = new FakeAdapter();
+  const store = cleanupCrashStore();
+  delete store.state!.membershipId;
+  delete store.state!.pendingCleanup!.membershipId;
+  store.previousCredentials = {
+    projectId: "practice-1",
+    clientId: "failed-client",
+    clientSecret: "secret-failed-client",
+  };
+
+  const recovered = await lifecycle.ensureOperatorIdentity({
+    projectId: "practice-1",
+    adapter,
+    store,
+    now: () => NOW,
+  });
+
+  assert.equal(recovered.state.clientId, "client-1");
+  assert.equal(recovered.state.pendingCleanup, undefined);
+  assert.equal(store.previousCredentials, undefined);
+  assert.equal(adapter.actions.includes("resolve:practice-1:failed-client"), false);
+});
+
 test("next rotation restores the original identity after failed-replacement cleanup crashed post-revoke", async () => {
   const lifecycle = await subject();
   const adapter = new FakeAdapter();

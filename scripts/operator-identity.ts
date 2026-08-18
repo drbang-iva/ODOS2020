@@ -526,6 +526,11 @@ async function finishPendingCleanup(
 ): Promise<void> {
   const pending = state.pendingCleanup;
   if (!pending) throw new Error("Operator identity has no failed-verification cleanup to finish.");
+  if (!await input.adapter.clientExists(pending.projectId, pending.clientId)) {
+    finishCleanupState(input.store, state, timestamp(input.now));
+    input.store.removePreviousCredentials();
+    return;
+  }
   const credentials = input.store.readPreviousCredentials();
   if (credentials && (
     credentials.projectId !== pending.projectId ||
@@ -538,16 +543,14 @@ async function finishPendingCleanup(
     credentials.projectId !== pending.projectId ||
     credentials.clientId !== pending.clientId
   ) {
-    if (await input.adapter.clientExists(pending.projectId, pending.clientId)) {
-      const membershipId = pending.membershipId ?? await input.adapter.resolveMembership(
-        pending.projectId,
-        pending.clientId,
-      );
-      if (!allowUncredentialedRevocation) {
-        throw pendingCleanupRecoveryError(pending.projectId, pending.clientId, membershipId);
-      }
-      await input.adapter.revoke(pending.projectId, pending.clientId, membershipId);
+    const membershipId = pending.membershipId ?? await input.adapter.resolveMembership(
+      pending.projectId,
+      pending.clientId,
+    );
+    if (!allowUncredentialedRevocation) {
+      throw pendingCleanupRecoveryError(pending.projectId, pending.clientId, membershipId);
     }
+    await input.adapter.revoke(pending.projectId, pending.clientId, membershipId);
   } else {
     const membershipId = pending.membershipId ?? await input.adapter.resolveMembership(
       pending.projectId,
