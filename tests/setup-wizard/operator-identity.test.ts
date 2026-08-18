@@ -520,6 +520,41 @@ test("next setup clears an already-revoked client when no membership was ever re
   assert.equal(adapter.actions.includes("resolve:practice-1:failed-client"), false);
 });
 
+test("next setup removes a recorded membership left after partial cleanup deleted the client", async () => {
+  const lifecycle = await subject();
+  const adapter = new FakeAdapter();
+  const store = cleanupCrashStore();
+  store.previousCredentials = {
+    projectId: "practice-1",
+    clientId: "failed-client",
+    clientSecret: "secret-failed-client",
+  };
+  adapter.clients.add("failed-client");
+  adapter.memberships.set("failed-client", "failed-membership");
+  adapter.partialRevocationFailure = "membership";
+
+  await assert.rejects(
+    lifecycle.ensureOperatorIdentity({ projectId: "practice-1", adapter, store, now: () => NOW }),
+    /membership deletion failed/,
+  );
+  assert.equal(adapter.clients.has("failed-client"), false);
+  assert.equal(adapter.memberships.has("failed-client"), true);
+
+  const recovered = await lifecycle.ensureOperatorIdentity({
+    projectId: "practice-1",
+    adapter,
+    store,
+    now: () => NOW,
+  });
+
+  assert.equal(recovered.state.clientId, "client-1");
+  assert.deepEqual([...adapter.memberships], [["client-1", "membership-client-1"]]);
+  assert.equal(
+    adapter.actions.filter((action) => action === "revoke:practice-1:failed-client:failed-membership").length,
+    2,
+  );
+});
+
 test("next rotation restores the original identity after failed-replacement cleanup crashed post-revoke", async () => {
   const lifecycle = await subject();
   const adapter = new FakeAdapter();

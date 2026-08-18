@@ -527,6 +527,9 @@ async function finishPendingCleanup(
   const pending = state.pendingCleanup;
   if (!pending) throw new Error("Operator identity has no failed-verification cleanup to finish.");
   if (!await input.adapter.clientExists(pending.projectId, pending.clientId)) {
+    if (pending.membershipId) {
+      await input.adapter.revoke(pending.projectId, pending.clientId, pending.membershipId);
+    }
     finishCleanupState(input.store, state, timestamp(input.now));
     input.store.removePreviousCredentials();
     return;
