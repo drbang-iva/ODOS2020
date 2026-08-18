@@ -31,6 +31,39 @@ export async function verifyOperatorMembershipFromPostgres(input: {
   }
 }
 
+export async function findOperatorMembershipFromPostgres(input: {
+  readonly postgresUrl: string;
+  readonly projectId: string;
+  readonly clientId: string;
+}): Promise<string> {
+  assertLocalPostgresUrl(input.postgresUrl);
+  const pool = new Pool({ connectionString: input.postgresUrl, max: 1 });
+  try {
+    return await findOperatorMembershipRecord({ ...input, database: pool });
+  } finally {
+    await pool.end();
+  }
+}
+
+export async function findOperatorMembershipRecord(input: {
+  readonly database: OperatorMembershipDatabase;
+  readonly projectId: string;
+  readonly clientId: string;
+}): Promise<string> {
+  const projectId = required(input.projectId, "operator project id");
+  const expectedProfile = `${CLIENT_APPLICATION_RESOURCE_TYPE}/${required(input.clientId, "operator client id")}`;
+  const result = await input.database.query(
+    `SELECT id::text
+       FROM "ProjectMembership"
+      WHERE "projectId" = $1::uuid AND profile = $2 AND deleted = false`,
+    [projectId, expectedProfile],
+  );
+  if (result.rows.length !== 1) {
+    throw new Error("Operator ProjectMembership resolution did not find exactly one active row.");
+  }
+  return required((result.rows[0] as OperatorMembershipRow).id, "resolved operator membership id");
+}
+
 export async function verifyOperatorMembershipRecord(input: {
   readonly database: OperatorMembershipDatabase;
   readonly projectId: string;

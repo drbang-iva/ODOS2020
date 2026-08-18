@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  findOperatorMembershipRecord,
   verifyOperatorMembershipRecord,
   type OperatorMembershipDatabase,
 } from "../src/authz/operatorMembershipVerification.js";
@@ -20,6 +21,24 @@ const BASE_ROW = {
     profile: { reference: "ClientApplication/operator-client" },
   }),
 };
+
+test("local membership resolution returns the one active membership for an exact project and client", async () => {
+  const database = fakeDatabase([BASE_ROW]);
+  assert.equal(
+    await findOperatorMembershipRecord({ database, projectId: "practice-1", clientId: "operator-client" }),
+    "membership-1",
+  );
+  assert.deepEqual(database.calls[0]!.values, ["practice-1", "ClientApplication/operator-client"]);
+});
+
+test("local membership resolution rejects missing and duplicate active rows", async () => {
+  for (const rows of [[], [BASE_ROW, { ...BASE_ROW, id: "membership-2" }]]) {
+    await assert.rejects(
+      findOperatorMembershipRecord({ database: fakeDatabase(rows), projectId: "practice-1", clientId: "operator-client" }),
+      /exactly one active row/i,
+    );
+  }
+});
 
 test("local membership verification accepts one exact non-admin policy-free operator row", async () => {
   const database = fakeDatabase([BASE_ROW]);

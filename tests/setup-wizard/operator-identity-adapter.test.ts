@@ -12,8 +12,10 @@ async function subject() {
       serviceAccessToken: string;
       clientName: string;
       verifyMembership(input: { projectId: string; clientId: string; membershipId: string }): Promise<void>;
+      resolveMembership(input: { projectId: string; clientId: string }): Promise<string>;
     }): {
       create(projectId: string): Promise<{ clientId: string; clientSecret: string }>;
+      resolveMembership(projectId: string, clientId: string): Promise<string>;
       verify(credentials: { projectId: string; clientId: string; clientSecret: string }): Promise<{
         accessToken: string;
         membershipId: string;
@@ -79,6 +81,7 @@ test("operator adapter creates a named client without an access policy and verif
       serviceAccessToken: "service-token",
       clientName: "ODOS Local Operator",
       verifyMembership: async (input) => { membershipChecks.push(input); },
+      resolveMembership: async () => "operator-membership",
     });
     const credentials = await adapter.create("practice-1");
     assert.deepEqual(credentials, { clientId: "operator-client", clientSecret: "operator-secret" });
@@ -119,6 +122,7 @@ test("operator adapter propagates a failed local membership verification", async
       serviceAccessToken: "service-token",
       clientName: "ODOS Local Operator",
       verifyMembership: async () => { throw new Error("Operator membership carries AccessPolicy/policy-1."); },
+      resolveMembership: async () => "operator-membership",
     });
     await assert.rejects(
       adapter.verify({ projectId: "practice-1", clientId: "operator-client", clientSecret: "operator-secret" }),
@@ -147,6 +151,7 @@ test("operator adapter revokes membership and client, then proves the old secret
       serviceAccessToken: "service-token",
       clientName: "ODOS Local Operator",
       verifyMembership: async () => undefined,
+      resolveMembership: async () => "operator-membership",
     });
     await adapter.revoke(
       "practice-1",
@@ -163,3 +168,50 @@ test("operator adapter revokes membership and client, then proves the old secret
     globalThis.fetch = originalFetch;
   }
 });
+
+for (const failedDelete of ["ProjectMembership", CLIENT_APPLICATION_RESOURCE_TYPE] as const) {
+  test(`operator adapter retries recorded ids after partial ${failedDelete} deletion`, async () => {
+    const module = await subject();
+    const originalFetch = globalThis.fetch;
+    let firstInvocation = true;
+    const calls: string[] = [];
+    globalThis.fetch = async (input, init) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+      const path = new URL(url).pathname;
+      calls.push(`${method} ${path}`);
+      if (method === "DELETE") {
+        const isFailedTarget = path.includes(`/${failedDelete}/`);
+        if (firstInvocation && isFailedTarget) return new Response("transient", { status: 503, statusText: "Unavailable" });
+        return new Response(null, { status: firstInvocation ? 204 : 404 });
+      }
+      if (url.endsWith("/oauth2/token")) return new Response("invalid_client", { status: 401 });
+      throw new Error(`Unexpected request ${method} ${url}`);
+    };
+    try {
+      const adapter = module.createLiveOperatorIdentityAdapter({
+        baseUrl: "http://medplum.test",
+        serviceAccessToken: "service-token",
+        clientName: "ODOS Local Operator",
+        verifyMembership: async () => undefined,
+        resolveMembership: async () => "operator-membership",
+      });
+      const credentials = { projectId: "practice-1", clientId: "operator-client", clientSecret: "operator-secret" };
+      await assert.rejects(
+        adapter.revoke("practice-1", "operator-client", "operator-membership", credentials),
+        /revocation failed/i,
+      );
+      assert.deepEqual(calls.slice(0, 2), [
+        "DELETE /fhir/R4/ProjectMembership/operator-membership",
+        `DELETE /fhir/R4/${CLIENT_APPLICATION_RESOURCE_TYPE}/operator-client`,
+      ]);
+
+      firstInvocation = false;
+      await adapter.revoke("practice-1", "operator-client", "operator-membership", credentials);
+      assert.equal(calls.filter((call) => call.includes("ProjectMembership/operator-membership")).length, 2);
+      assert.equal(calls.filter((call) => call.includes(`${CLIENT_APPLICATION_RESOURCE_TYPE}/operator-client`)).length, 2);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+}

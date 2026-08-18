@@ -24,6 +24,10 @@ export function createLiveOperatorIdentityAdapter(input: {
     readonly clientId: string;
     readonly membershipId: string;
   }) => Promise<void>;
+  readonly resolveMembership: (input: {
+    readonly projectId: string;
+    readonly clientId: string;
+  }) => Promise<string>;
 }) {
   const baseUrl = input.baseUrl.replace(/\/$/, "");
   const serviceAccessToken = input.serviceAccessToken?.trim();
@@ -84,12 +88,26 @@ export function createLiveOperatorIdentityAdapter(input: {
         throw new Error("Operator credential did not resolve to the named ClientApplication profile.");
       }
 
-      await input.verifyMembership({
-        projectId: credentials.projectId,
-        clientId: credentials.clientId,
-        membershipId,
-      });
+      try {
+        await input.verifyMembership({
+          projectId: credentials.projectId,
+          clientId: credentials.clientId,
+          membershipId,
+        });
+      } catch (error) {
+        throw Object.assign(
+          new Error(error instanceof Error ? error.message : String(error), { cause: error }),
+          { membershipId },
+        );
+      }
       return { accessToken, membershipId };
+    },
+
+    async resolveMembership(projectId: string, clientId: string): Promise<string> {
+      return input.resolveMembership({
+        projectId: required(projectId, "operator project id"),
+        clientId: required(clientId, "operator client id"),
+      });
     },
 
     async revoke(
@@ -100,7 +118,6 @@ export function createLiveOperatorIdentityAdapter(input: {
     ): Promise<void> {
       const exactProjectId = required(projectId, "operator project id");
       const exactClientId = required(clientId, "operator client id");
-      const exactMembershipId = required(membershipId, "operator membership id");
       const adminToken = required(serviceAccessToken, "Medplum service access token");
       if (
         credentials.projectId !== exactProjectId ||
@@ -108,8 +125,27 @@ export function createLiveOperatorIdentityAdapter(input: {
       ) {
         throw new Error("Operator revocation credential does not match the exact client and project.");
       }
-      await deleteExtendedResource(baseUrl, adminToken, "ProjectMembership", exactMembershipId);
-      await deleteExtendedResource(baseUrl, adminToken, "ClientApplication", exactClientId);
+      const deletionErrors: Error[] = [];
+      if (membershipId) {
+        try {
+          await deleteExtendedResource(
+            baseUrl,
+            adminToken,
+            "ProjectMembership",
+            required(membershipId, "operator membership id"),
+          );
+        } catch (error) {
+          deletionErrors.push(asError(error));
+        }
+      }
+      try {
+        await deleteExtendedResource(baseUrl, adminToken, "ClientApplication", exactClientId);
+      } catch (error) {
+        deletionErrors.push(asError(error));
+      }
+      if (deletionErrors.length > 0) {
+        throw new AggregateError(deletionErrors, `Operator revocation failed: ${deletionErrors.map((error) => error.message).join("; ")}`);
+      }
       const tokenResponse = await fetch(`${baseUrl}/oauth2/token`, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -120,6 +156,10 @@ export function createLiveOperatorIdentityAdapter(input: {
       }
     },
   };
+}
+
+function asError(value: unknown): Error {
+  return value instanceof Error ? value : new Error(String(value));
 }
 
 async function exchangeOperatorCredential(baseUrl: string, credentials: OperatorCredentials): Promise<string> {

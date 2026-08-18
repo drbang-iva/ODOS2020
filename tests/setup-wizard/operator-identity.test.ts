@@ -12,7 +12,7 @@ interface Credentials {
 
 interface IdentityState {
   version: 1;
-  status: "active" | "revoked";
+  status: "active" | "revoked" | "cleanup-pending";
   projectId: string;
   clientId: string;
   membershipId?: string;
@@ -21,6 +21,8 @@ interface IdentityState {
   replacementReason: "initial-setup" | "rotation" | "project-rebuild" | "post-revocation";
   previousClientId?: string;
   pendingRevocation?: { clientId: string; membershipId?: string };
+  pendingCleanup?: { projectId: string; clientId: string; membershipId?: string };
+  pendingEmergencyRevocation?: { clientId: string; membershipId?: string };
   revokedAt?: string;
   revocationReason?: "credential-exposure";
 }
@@ -61,29 +63,61 @@ class MemoryStore {
   writeState(state: IdentityState): void {
     this.state = structuredClone(state);
   }
+
+  removeState(): void {
+    this.state = undefined;
+  }
 }
 
 class FakeAdapter {
   readonly actions: string[] = [];
+  readonly clients = new Set<string>();
+  readonly memberships = new Map<string, string>();
   nextClient = 1;
   rejectVerification?: string;
+  rejectVerificationForClientId?: string;
   rejectRevocation?: string;
+  partialRevocationFailure?: "client" | "membership";
 
   async create(projectId: string): Promise<{ clientId: string; clientSecret: string }> {
     this.actions.push(`create:${projectId}`);
     const suffix = this.nextClient++;
-    return { clientId: `client-${suffix}`, clientSecret: `secret-${suffix}` };
+    const clientId = `client-${suffix}`;
+    this.clients.add(clientId);
+    this.memberships.set(clientId, `membership-${clientId}`);
+    return { clientId, clientSecret: `secret-${suffix}` };
+  }
+
+  async resolveMembership(projectId: string, clientId: string): Promise<string> {
+    this.actions.push(`resolve:${projectId}:${clientId}`);
+    const membershipId = this.memberships.get(clientId);
+    if (!membershipId) throw new Error("Operator membership is missing.");
+    return membershipId;
   }
 
   async verify(credentials: Credentials): Promise<{ accessToken: string; membershipId: string }> {
     this.actions.push(`verify:${credentials.projectId}:${credentials.clientId}`);
-    if (this.rejectVerification) throw new Error(this.rejectVerification);
+    if (this.rejectVerification || this.rejectVerificationForClientId === credentials.clientId) {
+      throw new Error(this.rejectVerification ?? "Operator membership verification failed.");
+    }
     return { accessToken: `token-${credentials.clientId}`, membershipId: `membership-${credentials.clientId}` };
   }
 
   async revoke(projectId: string, clientId: string, membershipId?: string): Promise<void> {
     this.actions.push(`revoke:${projectId}:${clientId}:${membershipId ?? "missing"}`);
     if (this.rejectRevocation) throw new Error(this.rejectRevocation);
+    if (this.partialRevocationFailure === "client") {
+      this.memberships.delete(clientId);
+      this.partialRevocationFailure = undefined;
+      throw new Error("client deletion failed");
+    }
+    if (this.partialRevocationFailure === "membership") {
+      this.clients.delete(clientId);
+      this.partialRevocationFailure = undefined;
+      throw new Error("membership deletion failed");
+    }
+    this.clients.delete(clientId);
+    this.memberships.delete(clientId);
   }
 }
 
@@ -156,6 +190,62 @@ test("operator setup creates and verifies one policy-free client before persisti
     updatedAt: NOW,
     replacementReason: "initial-setup",
   });
+});
+
+test("failed initial verification revokes the just-created client and membership without persisting them", async () => {
+  const lifecycle = await subject();
+  const adapter = new FakeAdapter();
+  const store = new MemoryStore();
+  adapter.rejectVerification = "Operator membership verification failed.";
+
+  await assert.rejects(
+    lifecycle.ensureOperatorIdentity({ projectId: "practice-1", adapter, store, now: () => NOW }),
+    /membership verification failed/,
+  );
+
+  assert.deepEqual([...adapter.clients], []);
+  assert.deepEqual([...adapter.memberships], []);
+  assert.equal(store.credentials, undefined);
+  assert.equal(store.previousCredentials, undefined);
+  assert.equal(store.state, undefined);
+});
+
+test("failed verification cleanup persists the exact new identity for the next invocation", async () => {
+  const lifecycle = await subject();
+  const adapter = new FakeAdapter();
+  const store = new MemoryStore();
+  adapter.rejectVerification = "Operator membership verification failed.";
+  adapter.rejectRevocation = "cleanup deletion failed";
+
+  await assert.rejects(
+    lifecycle.ensureOperatorIdentity({ projectId: "practice-1", adapter, store, now: () => NOW }),
+    /cleanup deletion failed/,
+  );
+
+  assert.deepEqual(store.previousCredentials, {
+    projectId: "practice-1",
+    clientId: "client-1",
+    clientSecret: "secret-1",
+  });
+  assert.deepEqual(store.state?.pendingCleanup, {
+    projectId: "practice-1",
+    clientId: "client-1",
+    membershipId: "membership-client-1",
+  });
+
+  adapter.rejectVerification = undefined;
+  adapter.rejectRevocation = undefined;
+  const retried = await lifecycle.ensureOperatorIdentity({
+    projectId: "practice-1",
+    adapter,
+    store,
+    now: () => NOW,
+  });
+  assert.equal(retried.state.clientId, "client-2");
+  assert.deepEqual([...adapter.clients], ["client-2"]);
+  assert.deepEqual([...adapter.memberships], [["client-2", "membership-client-2"]]);
+  assert.equal(store.previousCredentials, undefined);
+  assert.equal(store.state?.pendingCleanup, undefined);
 });
 
 test("operator setup reuses only a verified exact-project active identity", async () => {
@@ -245,6 +335,27 @@ test("rotation verifies the replacement before revoking the old client", async (
   ]);
 });
 
+test("failed replacement verification removes only the replacement and restores the original active identity", async () => {
+  const lifecycle = await subject();
+  const adapter = new FakeAdapter();
+  const store = activeStore("practice-1", "old-client");
+  adapter.clients.add("old-client");
+  adapter.memberships.set("old-client", "membership-old-client");
+  adapter.rejectVerificationForClientId = "client-1";
+
+  await assert.rejects(
+    lifecycle.rotateOperatorIdentity({ projectId: "practice-1", adapter, store, now: () => NOW }),
+    /membership verification failed/i,
+  );
+
+  assert.equal(store.state?.clientId, "old-client");
+  assert.equal(store.state?.pendingCleanup, undefined);
+  assert.equal(store.credentials?.clientId, "old-client");
+  assert.equal(store.previousCredentials, undefined);
+  assert.deepEqual([...adapter.clients], ["old-client"]);
+  assert.deepEqual([...adapter.memberships], [["old-client", "membership-old-client"]]);
+});
+
 test("a failed rotation revocation retains a private retry credential and resumes without creating another client", async () => {
   const lifecycle = await subject();
   const adapter = new FakeAdapter();
@@ -309,6 +420,69 @@ test("credential-exposure revocation writes a tombstone and requires explicit re
   assert.equal(replacement.state.replacementReason, "post-revocation");
   assert.equal(replacement.state.previousClientId, "old-client");
 });
+
+test("credential-exposure revocation persists the membership returned by its final verification", async () => {
+  const lifecycle = await subject();
+  const adapter = new FakeAdapter();
+  const store = activeStore("practice-1", "old-client");
+  delete store.state!.membershipId;
+  adapter.clients.add("old-client");
+  adapter.memberships.set("old-client", "membership-old-client");
+
+  await lifecycle.revokeOperatorIdentity({
+    projectId: "practice-1",
+    adapter,
+    store,
+    now: () => NOW,
+    reason: "credential-exposure",
+  });
+
+  assert.ok(adapter.actions.includes("revoke:practice-1:old-client:membership-old-client"));
+});
+
+for (const failure of ["client", "membership"] as const) {
+  test(`credential-exposure revocation retries after ${failure} deletion fails second`, async () => {
+    const lifecycle = await subject();
+    const adapter = new FakeAdapter();
+    const store = activeStore("practice-1", "old-client");
+    adapter.clients.add("old-client");
+    adapter.memberships.set("old-client", "membership-old-client");
+    adapter.partialRevocationFailure = failure;
+
+    await assert.rejects(
+      lifecycle.revokeOperatorIdentity({
+        projectId: "practice-1",
+        adapter,
+        store,
+        now: () => NOW,
+        reason: "credential-exposure",
+      }),
+      new RegExp(`${failure} deletion failed`),
+    );
+    assert.deepEqual(store.state?.pendingEmergencyRevocation, {
+      clientId: "old-client",
+      membershipId: "membership-old-client",
+    });
+
+    adapter.rejectVerification = "half-revoked identity cannot verify";
+    const result = await lifecycle.revokeOperatorIdentity({
+      projectId: "practice-1",
+      adapter,
+      store,
+      now: () => NOW,
+      reason: "credential-exposure",
+    });
+
+    assert.equal(result.state.status, "revoked");
+    assert.equal(store.credentials, undefined);
+    assert.deepEqual([...adapter.clients], []);
+    assert.deepEqual([...adapter.memberships], []);
+    assert.equal(
+      adapter.actions.filter((action) => action === "verify:practice-1:old-client").length,
+      1,
+    );
+  });
+}
 
 test("operator credentials and lifecycle state are stored as owner-only local files", async () => {
   const lifecycle = await subject();
