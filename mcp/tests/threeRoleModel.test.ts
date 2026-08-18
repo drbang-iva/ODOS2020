@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { AccessPolicy, AccessPolicyResource, Encounter } from "@medplum/fhirtypes";
+import type { AccessPolicy, AccessPolicyResource, Encounter, MedicationRequest } from "@medplum/fhirtypes";
 import fhirpath from "fhirpath";
 import {
   ODOS_PRACTICE_ROLE_SYSTEM,
@@ -14,6 +14,104 @@ import {
 
 const DX_PICK_TALLY_CRITERIA =
   "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-dx-pick-tally|odos-dx-pick-tally&identifier=https://odos2020.com/fhir/NamingSystem/dx-pick-tally-practitioner|%profile";
+
+const REPAIRED_WRITE_SURFACES = [
+  { surface: "IOP Timeline target editor — Save an existing target", resourceType: "Goal", interaction: "update", roles: ["provider"] },
+  { surface: "IOP Timeline target editor — Save a new target", resourceType: "Goal", interaction: "create", roles: ["provider"] },
+  { surface: "Prescriptions — Send to pharmacy (reserve WENO message id)", resourceType: "MedicationRequest", interaction: "update", roles: ["provider", "staff"] },
+  { surface: "Prescriptions — Send to pharmacy (record indeterminate outcome)", resourceType: "MedicationRequest", interaction: "update", roles: ["provider", "staff"] },
+  { surface: "Prescriptions — Send to pharmacy (record successful transmission)", resourceType: "MedicationRequest", interaction: "update", roles: ["provider", "staff"] },
+  { surface: "Prescriptions — Send to pharmacy (record WENO error)", resourceType: "MedicationRequest", interaction: "update", roles: ["provider", "staff"] },
+  { surface: "Prescriptions — Pharmacy verified not received — clear reservation", resourceType: "MedicationRequest", interaction: "update", roles: ["provider", "staff"] },
+  { surface: "Dry Eye > Adverse Event — Capture", resourceType: "AdverseEvent", interaction: "create", roles: ["provider"] },
+  { surface: "Ortho-K > Adverse Event — Capture", resourceType: "AdverseEvent", interaction: "create", roles: ["provider"] },
+  { surface: "Prescriptions — Add prescription", resourceType: "MedicationRequest", interaction: "create", roles: ["provider"] },
+  { surface: "Chart sidebar > Allergies — Mark no known allergies", resourceType: "AllergyIntolerance", interaction: "create", roles: ["provider", "staff"] },
+  { surface: "Chart sidebar > Allergies — Add allergy", resourceType: "AllergyIntolerance", interaction: "create", roles: ["provider", "staff"] },
+  { surface: "Chart sidebar > Care Team — Add team member", resourceType: "CareTeam", interaction: "create", roles: ["provider", "staff"] },
+  { surface: "Diagnosis workspace/assessment — add an eye-specific diagnosis or save diagnosis laterality", resourceType: "BodyStructure", interaction: "create", roles: ["provider"] },
+] as const;
+
+for (const expected of REPAIRED_WRITE_SURFACES) {
+  test(`compiled policy and grant-removal mutation: ${expected.surface}`, () => {
+    const criteria = `${expected.resourceType}?_compartment=%patient_compartment`;
+    for (const roleId of PRACTICE_ROLE_IDS) {
+      const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
+      const shouldAllow = expected.roles.includes(roleId as never);
+      const assertSurfaceGrant = (candidate: AccessPolicy) => assert.equal(
+        accessPolicyAllows(candidate, expected.resourceType, expected.interaction, criteria),
+        shouldAllow,
+        `${expected.surface}: ${roleId} ${expected.interaction}`,
+      );
+      assertSurfaceGrant(policy);
+
+      if (shouldAllow) {
+        const mutated: AccessPolicy = {
+          ...policy,
+          resource: policy.resource?.filter((rule) => !(
+            rule.resourceType === expected.resourceType
+            && rule.interaction?.includes(expected.interaction)
+            && rule.criteria === criteria
+          )),
+        };
+        assert.throws(
+          () => assertSurfaceGrant(mutated),
+          /false !== true/,
+          `${expected.surface}: removing the exact grant must turn the same surface assertion RED for ${roleId}`,
+        );
+      }
+    }
+  });
+}
+
+test("Staff MedicationRequest transmission updates preserve every clinical field", () => {
+  const staff = buildMedplumAccessPolicy(getRoleDeclaration("staff"));
+  const rule = staff.resource?.find((candidate) =>
+    candidate.resourceType === "MedicationRequest"
+    && candidate.interaction?.includes("update")
+    && candidate.criteria === "MedicationRequest?_compartment=%patient_compartment"
+  );
+  assert.ok(rule?.writeConstraint?.length, "Staff MedicationRequest update needs a writeConstraint");
+
+  const before: MedicationRequest = {
+    resourceType: "MedicationRequest",
+    id: "rx-1",
+    status: "active",
+    intent: "order",
+    medicationCodeableConcept: { coding: [{ system: "http://www.nlm.nih.gov/research/umls/rxnorm", code: "fixture-a" }] },
+    subject: { reference: "Patient/p1" },
+    requester: { reference: "Practitioner/provider-1" },
+    authoredOn: "2026-08-17",
+    dosageInstruction: [{ text: "fixture dose" }],
+  };
+  const metadataOnly: MedicationRequest = {
+    ...structuredClone(before),
+    note: [{ text: "WENO transmission fixture" }],
+  };
+  assert.equal(ruleAllowsWrite(rule, before, metadataOnly), true, "transmission metadata must remain writable");
+
+  for (const [field, mutate] of [
+    ["medication", (resource: MedicationRequest) => { resource.medicationCodeableConcept = { text: "changed" }; }],
+    ["dosageInstruction", (resource: MedicationRequest) => { resource.dosageInstruction = [{ text: "changed" }]; }],
+    ["subject", (resource: MedicationRequest) => { resource.subject = { reference: "Patient/p2" }; }],
+    ["requester", (resource: MedicationRequest) => { resource.requester = { reference: "Practitioner/provider-2" }; }],
+    ["authoredOn", (resource: MedicationRequest) => { resource.authoredOn = "2026-08-18"; }],
+    ["status", (resource: MedicationRequest) => { resource.status = "cancelled"; }],
+  ] as const) {
+    const changed = structuredClone(before);
+    mutate(changed);
+    assert.equal(ruleAllowsWrite(rule, before, changed), false, `Staff must not change ${field}`);
+  }
+});
+
+test("no practice role can create AuditEvent or read AdverseEvent speculatively", () => {
+  for (const roleId of PRACTICE_ROLE_IDS) {
+    const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
+    assert.equal(accessPolicyAllows(policy, "AuditEvent", "create"), false, `${roleId} AuditEvent create`);
+    assert.equal(accessPolicyAllows(policy, "AdverseEvent", "read"), false, `${roleId} AdverseEvent read`);
+    assert.equal(accessPolicyAllows(policy, "AdverseEvent", "search"), false, `${roleId} AdverseEvent search`);
+  }
+});
 
 test("the active practice-role catalog contains only Provider, Staff, and Admin", () => {
   assert.deepEqual(PRACTICE_ROLE_IDS, ["provider", "staff", "admin"]);
@@ -492,4 +590,15 @@ function accessPolicyAllows(
       rule.interaction?.includes(interaction) &&
       (criteria === undefined || rule.criteria === criteria),
   ) ?? false;
+}
+
+function ruleAllowsWrite(
+  rule: AccessPolicyResource,
+  before: MedicationRequest,
+  after: MedicationRequest,
+): boolean {
+  return (rule.writeConstraint ?? []).every((constraint) => {
+    const result = fhirpath.evaluate(after, constraint.expression ?? "", { before, after });
+    return result.length === 1 && result[0] === true;
+  });
 }

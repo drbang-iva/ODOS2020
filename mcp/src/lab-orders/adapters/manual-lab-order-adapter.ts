@@ -1,6 +1,5 @@
-import type { AuditEvent, Bundle, Resource, Task } from "@medplum/fhirtypes";
+import type { Bundle, Resource, Task } from "@medplum/fhirtypes";
 import {
-  buildAuditEventProjection,
   buildOdosAuditEventRow,
   type OdosAuditEventRecord,
 } from "../../authz/odosAudit.js";
@@ -39,16 +38,20 @@ export type LabOrderFhirClient = {
 
 export interface ManualLabOrderAdapterOptions {
   now?: () => string;
-  recordAudit?(row: OdosAuditEventRecord): Promise<void>;
+  recordAudit: ((row: OdosAuditEventRecord) => Promise<void>) | undefined;
 }
 
 const VENDOR_ONLY_STATES: readonly LabTransportState[] = ["acknowledged", "in-production", "shipped"];
 
 export function createManualLabOrderAdapter(
   fhir: LabOrderFhirClient,
-  options: ManualLabOrderAdapterOptions = {},
+  options: ManualLabOrderAdapterOptions,
 ): LabOrderAdapter {
+  if (!options?.recordAudit) {
+    throw new Error("Manual lab-order adapter recordAudit is required.");
+  }
   const now = options.now ?? (() => new Date().toISOString());
+  const recordAudit = options.recordAudit;
 
   async function emitAudit(input: {
     eventType: "create" | "update";
@@ -65,11 +68,7 @@ export function createManualLabOrderAdapter(
       actionOutcome: "granted",
       actionReason: input.reason,
     });
-    if (options.recordAudit) {
-      await options.recordAudit(row);
-      return;
-    }
-    await fhir.create<AuditEvent>(buildAuditEventProjection(row));
+    await recordAudit(row);
   }
 
   async function updateState(

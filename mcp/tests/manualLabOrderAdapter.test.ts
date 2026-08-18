@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { AuditEvent, Bundle, Resource, Task, VisionPrescription } from "@medplum/fhirtypes";
+import type { Bundle, Resource, Task, VisionPrescription } from "@medplum/fhirtypes";
+import type { OdosAuditEventRecord } from "../src/authz/odosAudit.js";
 import { buildLabOrder, type LabOrder } from "../src/fhir/opticalLabOrder.js";
 import { ODOS_OPTICAL_ORDER_STATUS_SYSTEM, opticalOrderStatusConcept } from "../src/fhir/opticalOrderStatus.js";
 import { ODOS_LAB_TRANSPORT_STATE_SYSTEM } from "../src/fhir/labTransportState.js";
@@ -10,6 +11,13 @@ import {
 } from "../src/lab-orders/adapters/manual-lab-order-adapter.js";
 
 const NOW = "2026-07-11T14:00:00.000Z";
+
+test("manual adapter refuses to construct without the service audit recorder", () => {
+  assert.throws(
+    () => createManualLabOrderAdapter(fakeFhir()),
+    /recordAudit.*required/i,
+  );
+});
 
 function order(): LabOrder {
   const rx: VisionPrescription = {
@@ -61,9 +69,10 @@ function fakeFhir(initialTransmissions: Task[] = []) {
   for (const task of initialTransmissions) tasks.set(task.id!, structuredClone(task));
   const created: Resource[] = [];
   const updated: Task[] = [];
+  const auditRows: OdosAuditEventRecord[] = [];
 
   return {
-    store: { clinical, tasks, created, updated },
+    store: { clinical, tasks, created, updated, auditRows },
     read: async <T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> => {
       assert.equal(resourceType, "Task");
       const task = tasks.get(id);
@@ -89,15 +98,23 @@ function fakeFhir(initialTransmissions: Task[] = []) {
         created.push(structuredClone(task));
         return structuredClone(task) as T;
       }
-      const audit = { ...copy, id: `audit-${created.filter((row) => row.resourceType === "AuditEvent").length + 1}` };
-      created.push(structuredClone(audit));
-      return audit as T;
+      created.push(structuredClone(copy));
+      return copy;
     },
     update: async <T extends Resource>(_resourceType: T["resourceType"], id: string, resource: T): Promise<T> => {
       const task = structuredClone(resource) as Task;
       tasks.set(id, task);
       updated.push(task);
       return structuredClone(resource);
+    },
+  };
+}
+
+function adapterOptions(fhir: ReturnType<typeof fakeFhir>) {
+  return {
+    now: () => NOW,
+    recordAudit: async (row: OdosAuditEventRecord) => {
+      fhir.store.auditRows.push(structuredClone(row));
     },
   };
 }
@@ -112,10 +129,10 @@ function submitRequest(overrides: Record<string, unknown> = {}) {
   } as never;
 }
 
-test("manual submit persists a sent transmission Task, round-trippable export, AuditEvent, and printable artifact without changing the clinical Task", async () => {
+test("manual submit persists a sent transmission Task, round-trippable export, service audit row, and printable artifact without changing the clinical Task", async () => {
   const fhir = fakeFhir();
   const before = structuredClone(fhir.store.tasks.get("order-1"));
-  const adapter = createManualLabOrderAdapter(fhir, { now: () => NOW });
+  const adapter = createManualLabOrderAdapter(fhir, adapterOptions(fhir));
 
   const result = await adapter.submit(submitRequest());
 
@@ -140,17 +157,18 @@ test("manual submit persists a sent transmission Task, round-trippable export, A
     order: order(),
   });
 
-  const audit = fhir.store.created.find((resource): resource is AuditEvent => resource.resourceType === "AuditEvent");
+  const audit = fhir.store.auditRows[0];
   assert.ok(audit);
-  assert.equal(audit.agent?.[0]?.who?.reference, "Practitioner/staff-1");
-  assert.ok(audit.entity?.some((entity) => entity.what?.reference === "Task/lab-1"));
+  assert.equal(audit.actorId, "staff-1");
+  assert.equal(audit.resourceType, "Task");
+  assert.equal(audit.resourceId, "lab-1");
   assert.deepEqual(fhir.store.tasks.get("order-1"), before);
   assert.equal(fhir.store.tasks.get("order-1")?.businessStatus?.coding?.[0]?.system, ODOS_OPTICAL_ORDER_STATUS_SYSTEM);
 });
 
 test("manual submit rejects an active transmission for the same optical order", async () => {
   const fhir = fakeFhir();
-  const adapter = createManualLabOrderAdapter(fhir, { now: () => NOW });
+  const adapter = createManualLabOrderAdapter(fhir, adapterOptions(fhir));
   await adapter.submit(submitRequest());
   await assert.rejects(() => adapter.submit(submitRequest()), /already transmitted/i);
   assert.equal([...fhir.store.tasks.keys()].filter((id) => id.startsWith("lab-")).length, 1);
@@ -158,7 +176,7 @@ test("manual submit rejects an active transmission for the same optical order", 
 
 test("manual transport advances sent to received, derives completed Task.status, and audits the update", async () => {
   const fhir = fakeFhir();
-  const adapter = createManualLabOrderAdapter(fhir, { now: () => NOW });
+  const adapter = createManualLabOrderAdapter(fhir, adapterOptions(fhir));
   const submitted = await adapter.submit(submitRequest());
 
   const state = await adapter.advanceTransportState({
@@ -172,12 +190,12 @@ test("manual transport advances sent to received, derives completed Task.status,
   assert.equal(await adapter.getTransportState(submitted.labOrderReference), "received");
   assert.equal(fhir.store.tasks.get("lab-1")?.status, "completed");
   assert.equal(fhir.store.tasks.get("lab-1")?.businessStatus?.coding?.[0]?.code, "received");
-  assert.equal(fhir.store.created.filter((resource) => resource.resourceType === "AuditEvent").length, 2);
+  assert.equal(fhir.store.auditRows.length, 2);
 });
 
 test("manual cancel advances a non-terminal transmission to cancelled", async () => {
   const fhir = fakeFhir();
-  const adapter = createManualLabOrderAdapter(fhir, { now: () => NOW });
+  const adapter = createManualLabOrderAdapter(fhir, adapterOptions(fhir));
   const submitted = await adapter.submit(submitRequest());
 
   await adapter.cancel(submitted.labOrderReference, "Practitioner/staff-1");
@@ -188,7 +206,7 @@ test("manual cancel advances a non-terminal transmission to cancelled", async ()
 
 test("manual adapter rejects vendor-only states, illegal transitions, and terminal changes with explicit errors", async () => {
   const fhir = fakeFhir();
-  const adapter = createManualLabOrderAdapter(fhir, { now: () => NOW });
+  const adapter = createManualLabOrderAdapter(fhir, adapterOptions(fhir));
   const submitted = await adapter.submit(submitRequest());
 
   for (const toState of ["acknowledged", "in-production", "shipped"] as const) {
@@ -219,7 +237,7 @@ test("manual adapter rejects vendor-only states, illegal transitions, and termin
 
 test("manual adapter rejects malformed order, transmission, and staff references before writes", async () => {
   const fhir = fakeFhir();
-  const adapter = createManualLabOrderAdapter(fhir, { now: () => NOW });
+  const adapter = createManualLabOrderAdapter(fhir, adapterOptions(fhir));
 
   await assert.rejects(() => adapter.submit(submitRequest({ orderTaskReference: "order-1" })), /Task\/<id>/);
   await assert.rejects(() => adapter.submit(submitRequest({ staffReference: "staff-1" })), /Practitioner/);
@@ -230,7 +248,8 @@ test("manual adapter rejects malformed order, transmission, and staff references
 });
 
 test("manual adapter metadata declares a no-API transport", () => {
-  const adapter = createManualLabOrderAdapter(fakeFhir());
+  const fhir = fakeFhir();
+  const adapter = createManualLabOrderAdapter(fhir, adapterOptions(fhir));
   assert.equal(adapter.vendorId, "manual");
   assert.equal(adapter.name, "manual-lab-order");
   assert.equal(adapter.vendorApiRequired, false);

@@ -142,22 +142,6 @@ export const SERVICE_IDENTITY_FHIR_WRITE_CALL_SITES = [
 ] as const satisfies readonly ExactFhirWriteCallSite[];
 
 export const SUSPECTED_BROKEN_PRACTICE_ROLE_WRITE_CALL_SITES = [
-  { path: "mcp/src/clinical-graph/iop-history-endpoint.ts", line: 184, callee: "staff.fhir.update", resourceType: "Goal", reason: "Practice-role client has no Goal update grant.", surface: "IOP Timeline target editor — Save an existing target." },
-  { path: "mcp/src/clinical-graph/iop-history-endpoint.ts", line: 198, callee: "staff.fhir.create", resourceType: "Goal", reason: "Practice-role client has no Goal create grant.", surface: "IOP Timeline target editor — Save a new target." },
-  { path: "mcp/src/lab-orders/adapters/manual-lab-order-adapter.ts", line: 72, callee: "fhir.create", resourceType: "AuditEvent", reason: "Adapter receives the logged-in staff client; production injects recordAudit, so this is its fallback path.", surface: "Manual lab-order submit, advance, and cancel audit fallback." },
-  { path: "mcp/src/lab-orders/adapters/ocuco-gatekeeper-lab-order-adapter.ts", line: 80, callee: "fhir.create", resourceType: "AuditEvent", reason: "Adapter receives the logged-in staff client; production injects recordAudit, so this is its fallback path.", surface: "Ocuco lab-order submit, advance, and cancel audit fallback." },
-  { path: "mcp/src/weno/weno-search-routes.ts", line: 171, callee: "staff.fhir.update", resourceType: "MedicationRequest", reason: "Practice-role client has no MedicationRequest update grant.", surface: "Prescriptions — Send to pharmacy (reserve WENO message id)." },
-  { path: "mcp/src/weno/weno-search-routes.ts", line: 184, callee: "staff.fhir.update", resourceType: "MedicationRequest", reason: "Practice-role client has no MedicationRequest update grant.", surface: "Prescriptions — Send to pharmacy (record indeterminate outcome)." },
-  { path: "mcp/src/weno/weno-search-routes.ts", line: 212, callee: "staff.fhir.update", resourceType: "MedicationRequest", reason: "Practice-role client has no MedicationRequest update grant.", surface: "Prescriptions — Send to pharmacy (record successful transmission)." },
-  { path: "mcp/src/weno/weno-search-routes.ts", line: 218, callee: "staff.fhir.update", resourceType: "MedicationRequest", reason: "Practice-role client has no MedicationRequest update grant.", surface: "Prescriptions — Send to pharmacy (record WENO error)." },
-  { path: "mcp/src/weno/weno-search-routes.ts", line: 291, callee: "staff.fhir.update", resourceType: "MedicationRequest", reason: "Practice-role client has no MedicationRequest update grant.", surface: "Prescriptions — Pharmacy verified not received — clear reservation." },
-  { path: "ui/src/components/charting/DryEyeSection.tsx", line: 255, callee: "fhir.create", resourceType: "AdverseEvent", reason: "UI practice-role client has no AdverseEvent create grant.", surface: "Dry Eye > Adverse Event — Capture." },
-  { path: "ui/src/components/charting/OrthoKSection.tsx", line: 190, callee: "fhir.create", resourceType: "AdverseEvent", reason: "UI practice-role client has no AdverseEvent create grant.", surface: "Ortho-K > Adverse Event — Capture." },
-  { path: "ui/src/components/charting/PrescriptionSection.tsx", line: 412, callee: "fhir.create", resourceType: "MedicationRequest", reason: "UI practice-role client has no MedicationRequest create grant.", surface: "Prescriptions — Add prescription." },
-  { path: "ui/src/lib/clinical-actions.ts", line: 64, callee: "fhir.create", resourceType: "AllergyIntolerance", reason: "UI practice-role client has no AllergyIntolerance create grant.", surface: "Chart sidebar > Allergies — Mark no known allergies." },
-  { path: "ui/src/lib/clinical-actions.ts", line: 77, callee: "fhir.create", resourceType: "AllergyIntolerance", reason: "UI practice-role client has no AllergyIntolerance create grant.", surface: "Chart sidebar > Allergies — Add allergy." },
-  { path: "ui/src/lib/clinical-actions.ts", line: 114, callee: "fhir.create", resourceType: "CareTeam", reason: "UI practice-role client has no CareTeam create grant.", surface: "Chart sidebar > Care Team — Add team member." },
-  { path: "ui/src/lib/clinical-actions.ts", line: 572, callee: "fhir.create", resourceType: "BodyStructure", reason: "UI practice-role client has no BodyStructure create grant.", surface: "Diagnosis workspace/assessment — add an eye-specific diagnosis or save diagnosis laterality." },
 ] as const satisfies readonly SuspectedBrokenPracticeRoleWriteCallSite[];
 
 export const FHIR_READ_GRANT_LIMITATIONS = [
@@ -308,11 +292,18 @@ export function findMissingFhirOperationGrants(
 
 export function runFhirReadGrantCheck(): FhirReadGrantCheckResult {
   const discoveredOperations = collectFhirOperations(readProductSourceFiles(), NON_FHIR_LITERAL_CALL_SITES);
+  const excludedServiceIdentityWrites = matchExactWriteInventory(
+    discoveredOperations.filter((operation) => WRITE_INTERACTIONS.has(operation.interaction)),
+    SERVICE_IDENTITY_FHIR_WRITE_CALL_SITES,
+    "Service-identity FHIR write exclusion",
+  );
+  const excludedServiceIdentityOperationSet = new Set(excludedServiceIdentityWrites);
   const serviceIdentityOnlyResourceTypes = new Set<string>(
     SERVICE_IDENTITY_ONLY_RESOURCE_TYPES.map(({ resourceType }) => resourceType),
   );
   const practiceAndUnclassifiedOperations = discoveredOperations.filter((operation) =>
     !serviceIdentityOnlyResourceTypes.has(operation.resourceType)
+    && !excludedServiceIdentityOperationSet.has(operation)
   );
   const excludedServiceIdentityResourceTypes = uniqueResourceTypes(
     discoveredOperations.filter((operation) => serviceIdentityOnlyResourceTypes.has(operation.resourceType)),
@@ -321,11 +312,6 @@ export function runFhirReadGrantCheck(): FhirReadGrantCheckResult {
     buildMedplumAccessPolicy(getRoleDeclaration(roleId)).resource ?? []
   );
   const rawMissingOperations = findMissingFhirOperationGrants(practiceAndUnclassifiedOperations, grantedRules);
-  const excludedServiceIdentityWrites = matchExactWriteInventory(
-    rawMissingOperations,
-    SERVICE_IDENTITY_FHIR_WRITE_CALL_SITES,
-    "Service-identity FHIR write exclusion",
-  );
   const suspectedBrokenPracticeRoleWrites = matchExactWriteInventory(
     rawMissingOperations,
     SUSPECTED_BROKEN_PRACTICE_ROLE_WRITE_CALL_SITES,
@@ -336,10 +322,7 @@ export function runFhirReadGrantCheck(): FhirReadGrantCheckResult {
     ...suspectedBrokenPracticeRoleWrites,
   ]);
   const missingOperations = rawMissingOperations.filter((operation) => !classifiedMissingOperations.has(operation));
-  const excludedServiceIdentityOperationSet = new Set(excludedServiceIdentityWrites);
-  const operations = practiceAndUnclassifiedOperations.filter((operation) =>
-    !excludedServiceIdentityOperationSet.has(operation)
-  );
+  const operations = practiceAndUnclassifiedOperations;
   const readOperations = operations.filter((operation) =>
     operation.interaction === "read" || operation.interaction === "search"
   );
@@ -394,6 +377,14 @@ export function matchExactWriteInventory<T extends ExactFhirWriteCallSite>(
   inventory: readonly T[],
   inventoryName: string,
 ): readonly FhirOperation[] {
+  if (inventoryName === "Service-identity FHIR write exclusion") {
+    const uiEntry = inventory.find((entry) => entry.path.startsWith("ui/src/"));
+    if (uiEntry) {
+      throw new Error(
+        `Service-identity FHIR write exclusion cannot classify ui/src call sites: ${formatExactInventoryEntry(uiEntry)}.`,
+      );
+    }
+  }
   const matched = inventory.map((entry) => {
     const operation = missingOperations.find((candidate) => exactWriteCallSiteMatches(candidate, entry));
     if (!operation) {
@@ -660,7 +651,7 @@ function renderResult(result: FhirReadGrantCheckResult): string {
   );
   if (result.excludedServiceIdentityResourceTypes.length === 0) lines.push("- none");
   lines.push(
-    `Service-identity ungranted write call sites excluded (${result.excludedServiceIdentityWriteCallSites.length}):`,
+    `Service-identity FHIR write call sites excluded (${result.excludedServiceIdentityWriteCallSites.length}):`,
     ...result.excludedServiceIdentityWriteCallSites.map((item) => `- ${item}`),
     `SUSPECTED BROKEN FEATURE — known ungranted practice-role write call sites (${result.suspectedBrokenPracticeRoleWriteCallSites.length}):`,
     ...result.suspectedBrokenPracticeRoleWriteCallSites.map((item) => `- ${item}`),
