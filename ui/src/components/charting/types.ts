@@ -3,6 +3,7 @@ export type BuiltInSectionId =
   | "hpi"
   | "wearing"
   | "auto-refraction"
+  | "pretest-vitals"
   | "pupils"
   | "stereopsis"
   | "color-vision"

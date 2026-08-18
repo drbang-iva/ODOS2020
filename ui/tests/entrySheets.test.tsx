@@ -64,7 +64,7 @@ test("all width-safe static sections expose truthful layout-only contracts", asy
 });
 
 const REAL_SECTION_AUDIT = [
-  "hpi", "wearing", "auto-refraction", "manual-keratometry", "pachymetry", "va",
+  "hpi", "wearing", "auto-refraction", "pretest-vitals", "manual-keratometry", "pachymetry", "va",
   "pupils", "stereopsis", "color-vision", "eom", "cvf", "cover-test", "iop",
   "dilation", "refraction", "eye-growth", "soft-contact-lens",
   "specialty-contact-lens", "ortho-k", "myopia-management", "cup-disc",
@@ -91,6 +91,7 @@ const USABLE_HORIZONTAL_SCROLL = new Set<string>(["va", "cup-disc"]);
 const DEFERRED_MEASURED_MINIMUMS = {
   wearing: 1510,
   "auto-refraction": 1380,
+  "pretest-vitals": 1152,
   refraction: 1500,
   "eye-growth": 1550,
   "soft-contact-lens": 1600,

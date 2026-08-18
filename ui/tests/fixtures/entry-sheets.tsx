@@ -26,6 +26,7 @@ import { SoftContactLensSection } from "../../src/components/charting/SoftContac
 import { SpecialtyContactLensSection } from "../../src/components/charting/SpecialtyContactLensSection";
 import { VaSection } from "../../src/components/charting/VaSection";
 import { WearingSection } from "../../src/components/charting/WearingSection";
+import { PretestVitalsSection } from "../../src/components/charting/PretestVitalsSection";
 import { VisitChargesSheetContent } from "../../src/components/charting/VisitChargesSheet";
 import { chartEditorInventory } from "../../src/components/charting/SpineNav";
 import type { ProcedureChargeApi, VisitChargeApi } from "../../src/lib/clinical-graph-client";
@@ -34,7 +35,7 @@ import { RoleProvider } from "../../src/lib/role-context";
 import "../../src/styles/globals.css";
 
 const FIXTURE_SECTIONS = [
-  "hpi", "wearing", "auto-refraction", "manual-keratometry", "pachymetry", "va",
+  "hpi", "wearing", "auto-refraction", "pretest-vitals", "manual-keratometry", "pachymetry", "va",
   "pupils", "stereopsis", "color-vision", "eom", "cvf", "cover-test", "iop",
   "dilation", "refraction", "eye-growth", "soft-contact-lens",
   "specialty-contact-lens", "ortho-k", "myopia-management", "cup-disc",
@@ -45,7 +46,7 @@ const FIXTURE_SECTIONS = [
 export type FixtureSectionId = typeof FIXTURE_SECTIONS[number];
 
 const DEFERRED_SECTIONS = new Set<FixtureSectionId>([
-  "wearing", "auto-refraction", "refraction", "soft-contact-lens", "specialty-contact-lens",
+  "wearing", "auto-refraction", "pretest-vitals", "refraction", "soft-contact-lens", "specialty-contact-lens",
 ]);
 
 const FIXTURE_PROJECTION: ExamOverviewProjection = {
@@ -192,6 +193,7 @@ function renderEditor(sectionId: FixtureSectionId): React.ReactNode {
     case "hpi": return <HpiSection {...props} />;
     case "wearing": return <WearingSection {...props} />;
     case "auto-refraction": return <AutoRefractionSection {...props} />;
+    case "pretest-vitals": return <PretestVitalsSection {...props} />;
     case "manual-keratometry": return <EntranceMeasurementSection definition={manualKeratometryDefinition()} {...props} />;
     case "pachymetry": return <EntranceMeasurementSection definition={pachymetryDefinition()} {...props} />;
     case "va": return <VaSection {...props} />;

@@ -191,8 +191,8 @@ import {
 import {
   handleAutoRefractionCaptureRequest,
   handleAutoRefractionDefinitionRequest,
-  handleWearingCaptureRequest,
-  handleWearingDefinitionRequest,
+  handleWearingCaptureRequest, handleWearingDefinitionRequest,
+  registerPretestVitalsRoutes,
 } from "./clinical-graph/pretest-endpoint.js";
 import {
   handleIopHistoryRequest,
@@ -7356,7 +7356,7 @@ async function startMcpServer(): Promise<void> {
           }
         }
       });
-
+      registerPretestVitalsRoutes(app, authenticateWithMedplum, clinicalGraphRouteDeps);
       app.get("/clinical-graph/wearing/definition", async (req, res) => {
         try {
           await authenticateWithMedplum();

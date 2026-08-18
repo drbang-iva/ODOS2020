@@ -600,6 +600,7 @@ test("distributed board rows anchor mapped editors and retain full-page fallback
       "ocular-health:anterior:cornea",
       "ortho-k",
       "pachymetry",
+      "pretest-vitals",
       "prescription",
       "procedure:aesthetics:test",
       "pupils",

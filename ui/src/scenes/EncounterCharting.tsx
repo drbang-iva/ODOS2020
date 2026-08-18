@@ -5,6 +5,7 @@ import { ReferralCompose } from "../components/referral/ReferralCompose";
 import { AestheticsConsentSection } from "../components/charting/AestheticsConsentSection";
 import { AssessmentSection } from "../components/charting/AssessmentSection";
 import { AutoRefractionSection } from "../components/charting/AutoRefractionSection";
+import { PretestVitalsSection } from "../components/charting/PretestVitalsSection";
 import { EntranceStateSection } from "../components/charting/EntranceStateSection";
 import { EntranceMeasurementSection } from "../components/charting/EntranceMeasurementSection";
 import { DilationSection } from "../components/charting/DilationSection";
@@ -166,6 +167,11 @@ export function EncounterCharting({ patient, encounterId }: Props) {
     setBoardEditorOpen(false);
     setEntrySheetSection(undefined);
     refreshExamOverview();
+  }
+
+  function openBloodPressureFromDiagnosis() {
+    selectChartView("structure");
+    openBoardEditor("pretest-vitals");
   }
 
   useEffect(() => {
@@ -639,6 +645,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
           encounterReference={encounterReference}
           selectedReference={selectedDiagnosis?.workspaceKey === diagnosisWorkspaceKey ? selectedDiagnosis.reference : undefined}
           onSelectDiagnosis={(reference) => setSelectedDiagnosis(reference ? { workspaceKey: diagnosisWorkspaceKey, reference } : undefined)}
+          onOpenBloodPressure={openBloodPressureFromDiagnosis}
         />
       ) : activeExamOverviewProjection && !boardEditorOpen ? (
         <div className="odos-exam-overview-stage" data-entry-sheet-open={entrySheetSection ? "true" : "false"}>
@@ -763,6 +770,13 @@ export function EncounterCharting({ patient, encounterId }: Props) {
               patientReference={patientReference}
               encounterReference={encounterReference}
               onSaved={(status) => markSaved("auto-refraction", status)}
+            />
+          )}
+          {activeSection === "pretest-vitals" && (
+            <PretestVitalsSection
+              patientReference={patientReference}
+              encounterReference={encounterReference}
+              onSaved={(status) => markSaved("pretest-vitals", status)}
             />
           )}
           {isExamEntrySheetSectionId(activeSection) && (
