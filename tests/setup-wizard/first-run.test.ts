@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import {
   conditionalCreateSetupResource,
+  createSetupServiceFhirClient,
   InMemorySetupPracticeAdapter,
   projectFromInitResponse,
   readSetupState,
@@ -30,6 +31,28 @@ test("setup accepts Medplum 5.1.8's direct Project response from Project/$init",
     projectFromInitResponse({ resourceType: "Project", id: "practice-project", name: "ODOS Test Practice" }),
     { resourceType: "Project", id: "practice-project", name: "ODOS Test Practice" },
   );
+});
+
+test("setup service reads retain Medplum project ownership metadata", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (_input, init) => {
+    const extended = new Headers(init?.headers).get("X-Medplum");
+    return new Response(JSON.stringify({
+      resourceType: "AccessPolicy",
+      id: "policy-1",
+      meta: extended === "extended" ? { project: "project-1" } : {},
+    }), {
+      status: 200,
+      headers: { "Content-Type": "application/fhir+json" },
+    });
+  };
+  try {
+    const client = createSetupServiceFhirClient("http://medplum.test", "service-token");
+    const policy = await client.read("AccessPolicy", "policy-1");
+    assert.equal(policy.meta?.project, "project-1");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("setup conditional create reports whether this transaction created or resolved the resource", async () => {
