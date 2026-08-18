@@ -22,6 +22,7 @@ import { paymentTenderExtension } from "../src/fhir/odosPaymentTender.js";
 import {
   addStatementDetail,
   buildStatementSnapshot,
+  generatePatientStatementForOperator,
   handleGeneratePatientStatementRequest,
   handleRunStatementsRequest,
   handleStatementListRequest,
@@ -113,6 +114,23 @@ test("configured statement message originates in the Basic singleton and round-t
     ?.output?.find((item) => item.type.coding?.some((coding) => coding.code === "snapshot"))
     ?.valueString;
   assert.equal((JSON.parse(storedSnapshot ?? "{}") as { statementFooterMessage?: string }).statementFooterMessage, message);
+});
+
+test("operator statement generation invokes the domain workflow without request authentication", async () => {
+  const fixture = fakeFhir({
+    patients: [patient("p1", "Alex Rivera")],
+    invoices: [invoice("i1", "p1", 10_000)],
+    payments: [],
+  });
+
+  const result = await generatePatientStatementForOperator(fixture.fhir, {
+    patientReference: "Patient/p1",
+    generatedAt: GENERATED_AT,
+  });
+
+  assert.equal(result.generatedCount, 1);
+  assert.equal(result.generatedAt, GENERATED_AT);
+  assert.equal(result.statements[0]?.patientReference, "Patient/p1");
 });
 
 test("an internally inconsistent Invoice is rejected instead of emitting a wrong balance", () => {

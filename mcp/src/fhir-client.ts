@@ -226,7 +226,10 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
     return response;
   }
 
-  async function toError(res: Response): Promise<Error> {
+  async function toError(
+    res: Response,
+    context: { method: string; path: string; resourceType?: string },
+  ): Promise<Error> {
     const body = await res.text();
     let detail = body;
     try {
@@ -235,7 +238,10 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
     } catch {
       /* ignore */
     }
-    const error = new Error(`FHIR ${res.status} ${res.statusText}: ${detail}`);
+    const resourceType = context.resourceType ? ` [${context.resourceType}]` : "";
+    const error = new Error(
+      `FHIR ${context.method} ${context.path}${resourceType} ${res.status} ${res.statusText}: ${detail}`,
+    );
     (error as Error & { status?: number }).status = res.status;
     return error;
   }
@@ -248,7 +254,13 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
     const res = await authorizedFetch(`${base}/fhir/R4/${resourceType}?${qs}`, () => ({
       headers: headers(),
     }));
-    if (!res.ok) throw await toError(res);
+    if (!res.ok) {
+      throw await toError(res, {
+        method: "GET",
+        path: `/fhir/R4/${resourceType}`,
+        resourceType,
+      });
+    }
     const body: unknown = await res.json();
     if (!isRecord(body) || body.resourceType !== "Bundle" || (body.entry !== undefined && !Array.isArray(body.entry))) {
       throw new Error(`Medplum ${resourceType} invite-recovery search returned a malformed Bundle.`);
@@ -374,7 +386,7 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
           codeChallengeMethod: "S256",
         }),
       });
-      if (!loginRes.ok) throw await toError(loginRes);
+      if (!loginRes.ok) throw await toError(loginRes, { method: "POST", path: "/auth/login" });
       const { code } = (await loginRes.json()) as { login: string; code: string };
 
       const tokenRes = await fetchWithThrottleRetry(`${base}/oauth2/token`, {
@@ -386,7 +398,7 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
           code_verifier: verifier,
         }),
       });
-      if (!tokenRes.ok) throw await toError(tokenRes);
+      if (!tokenRes.ok) throw await toError(tokenRes, { method: "POST", path: "/oauth2/token" });
       const { access_token } = (await tokenRes.json()) as { access_token: string };
       token = access_token;
     });
@@ -410,7 +422,13 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
         },
         async () => {
           const res = await authorizedFetch(`${base}/fhir/R4/${rt}/${id}`, () => ({ headers: headers() }));
-          if (!res.ok) throw await toError(res);
+          if (!res.ok) {
+            throw await toError(res, {
+              method: "GET",
+              path: `/fhir/R4/${rt}/:id`,
+              resourceType: String(rt),
+            });
+          }
           return (await res.json()) as T;
         },
       );
@@ -432,7 +450,13 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
               ...(token ? { Authorization: `Bearer ${token}` } : {}),
             },
           }));
-          if (!res.ok) throw await toError(res);
+          if (!res.ok) {
+            throw await toError(res, {
+              method: "GET",
+              path: "/fhir/R4/Binary/:id",
+              resourceType: "Binary",
+            });
+          }
           return {
             contentType: res.headers.get("content-type")?.split(";")[0]?.trim() || "application/octet-stream",
             bytes: new Uint8Array(await res.arrayBuffer()),
@@ -457,7 +481,13 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
           const res = await authorizedFetch(`${base}/fhir/R4/${rt}${qs ? "?" + qs : ""}`, () => ({
             headers: headers(),
           }));
-          if (!res.ok) throw await toError(res);
+          if (!res.ok) {
+            throw await toError(res, {
+              method: "GET",
+              path: `/fhir/R4/${rt}`,
+              resourceType: String(rt),
+            });
+          }
           return (await res.json()) as Bundle<T>;
         },
       );
@@ -484,7 +514,13 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
           const res = await authorizedFetch(`${base}/fhir/R4/${rt}?${scopedParams}`, () => ({
             headers: { ...headers(), "X-Medplum": "extended" },
           }));
-          if (!res.ok) throw await toError(res);
+          if (!res.ok) {
+            throw await toError(res, {
+              method: "GET",
+              path: `/fhir/R4/${rt}`,
+              resourceType: String(rt),
+            });
+          }
           return (await res.json()) as Bundle<T>;
         },
       );
@@ -513,7 +549,13 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
         },
         async () => {
           const res = await authorizedFetch(resolved, () => ({ headers: headers() }));
-          if (!res.ok) throw await toError(res);
+          if (!res.ok) {
+            throw await toError(res, {
+              method: "GET",
+              path: `/fhir/R4/${resourceType}`,
+              resourceType,
+            });
+          }
           return (await res.json()) as Bundle<T>;
         },
       );
@@ -552,7 +594,13 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
           const res = await authorizedFetch(resolved, () => ({
             headers: { ...headers(), "X-Medplum": "extended" },
           }));
-          if (!res.ok) throw await toError(res);
+          if (!res.ok) {
+            throw await toError(res, {
+              method: "GET",
+              path: `/fhir/R4/${resourceType}`,
+              resourceType,
+            });
+          }
           return (await res.json()) as Bundle<T>;
         },
       );
@@ -578,7 +626,13 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
           const res = await authorizedFetch(`${base}/fhir/R4/${path}${qs ? "?" + qs : ""}`, () => ({
             headers: headers(),
           }));
-          if (!res.ok) throw await toError(res);
+          if (!res.ok) {
+            throw await toError(res, {
+              method: "GET",
+              path: id ? `/fhir/R4/${rt}/:id/_history` : `/fhir/R4/${rt}/_history`,
+              resourceType: String(rt),
+            });
+          }
           return (await res.json()) as Bundle<T>;
         },
       );
@@ -602,7 +656,13 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
           const res = await authorizedFetch(`${base}/fhir/R4/${rt}/${id}/_history/${versionId}`, () => ({
             headers: headers(),
           }));
-          if (!res.ok) throw await toError(res);
+          if (!res.ok) {
+            throw await toError(res, {
+              method: "GET",
+              path: `/fhir/R4/${rt}/:id/_history/:versionId`,
+              resourceType: String(rt),
+            });
+          }
           return (await res.json()) as T;
         },
       );
@@ -630,7 +690,13 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
             headers: { ...headers(), ...extraHeaders },
             body: JSON.stringify(r),
           }));
-          if (!res.ok) throw await toError(res);
+          if (!res.ok) {
+            throw await toError(res, {
+              method: "POST",
+              path: `/fhir/R4/${r.resourceType}`,
+              resourceType: r.resourceType,
+            });
+          }
           return (await res.json()) as T;
         },
       );
@@ -658,7 +724,13 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
             headers: { ...headers(), ...extraHeaders },
             body: JSON.stringify(r),
           }));
-          if (!res.ok) throw await toError(res);
+          if (!res.ok) {
+            throw await toError(res, {
+              method: "POST",
+              path: `/fhir/R4/${r.resourceType}`,
+              resourceType: r.resourceType,
+            });
+          }
           return { resource: (await res.json()) as T, created: res.status === 201 };
         },
       );
@@ -688,7 +760,13 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
             headers: { ...headers(), ...extraHeaders },
             body: JSON.stringify(r),
           }));
-          if (!res.ok) throw await toError(res);
+          if (!res.ok) {
+            throw await toError(res, {
+              method: "PUT",
+              path: `/fhir/R4/${rt}/:id`,
+              resourceType: String(rt),
+            });
+          }
           return (await res.json()) as T;
         },
       );
@@ -722,7 +800,13 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
             },
             body: JSON.stringify(operations),
           }));
-          if (!res.ok) throw await toError(res);
+          if (!res.ok) {
+            throw await toError(res, {
+              method: "PATCH",
+              path: `/fhir/R4/${rt}/:id`,
+              resourceType: String(rt),
+            });
+          }
           return (await res.json()) as T;
         },
       );
@@ -749,7 +833,13 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
             headers: { ...headers(), ...extraHeaders },
             body: JSON.stringify(transactionBundle),
           }));
-          if (!res.ok) throw await toError(res);
+          if (!res.ok) {
+            throw await toError(res, {
+              method: "POST",
+              path: "/fhir/R4",
+              resourceType: "Bundle",
+            });
+          }
           const responseBundle = (await res.json()) as Bundle;
           if (options.autoRollbackCreatedEntries !== false && hasEntryFailure(responseBundle)) {
             await rollbackCreatedEntries(base, headers(), responseBundle, extraHeaders);
@@ -761,7 +851,7 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
 
     async getActiveProjectId(): Promise<string> {
       const res = await authorizedFetch(`${base}/auth/me`, () => ({ headers: headers() }));
-      if (!res.ok) throw await toError(res);
+      if (!res.ok) throw await toError(res, { method: "GET", path: "/auth/me" });
       const body = (await res.json()) as { project?: { id?: string } };
       if (!body.project?.id) throw new Error("The service session has no active Medplum project.");
       return body.project.id;
@@ -776,7 +866,13 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
         headers: { ...headers(), "Content-Type": "application/json" },
         body: JSON.stringify(input),
       }));
-      if (!res.ok) throw await toError(res);
+      if (!res.ok) {
+        throw await toError(res, {
+          method: "POST",
+          path: "/admin/projects/:projectId/invite",
+          resourceType: "ProjectMembership",
+        });
+      }
       const body: unknown = await res.json();
       if (isCompleteProjectMembership(body)) {
         if (body.project.reference !== `Project/${projectId}`) {

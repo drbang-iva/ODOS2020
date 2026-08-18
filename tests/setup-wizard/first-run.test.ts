@@ -8,6 +8,7 @@ import {
   createSetupServiceFhirClient,
   InMemorySetupPracticeAdapter,
   projectFromInitResponse,
+  provisionSetupOperatorIdentity,
   readSetupState,
   SETUP_WIZARD_ACTION_REASON,
   SETUP_WIZARD_NOOP_REASON,
@@ -662,4 +663,36 @@ test("setup fails before provisioning when the human admin email collides with t
   } finally {
     rmSync(dir, { force: true, recursive: true });
   }
+});
+
+test("setup provisions the dedicated operator identity for the exact resulting project", async () => {
+  const calls: unknown[] = [];
+  const result = await provisionSetupOperatorIdentity({
+    setupResult: {
+      noOp: true,
+      auditRows: [],
+      state: { version: "v0.5d", projectId: "practice-1", completed: true },
+    },
+    config: {
+      baseUrl: "http://localhost:8103",
+      serviceIdentityEmail: "service@example.test",
+      serviceIdentityPassword: "service-password",
+    },
+    provision: async (input) => {
+      calls.push(input);
+      return {
+        accessToken: "operator-token",
+        reused: false,
+        state: { clientId: "operator-client", status: "active" },
+      } as never;
+    },
+  });
+
+  assert.equal(result.state.clientId, "operator-client");
+  assert.deepEqual(calls, [{
+    baseUrl: "http://localhost:8103",
+    projectId: "practice-1",
+    serviceEmail: "service@example.test",
+    servicePassword: "service-password",
+  }]);
 });

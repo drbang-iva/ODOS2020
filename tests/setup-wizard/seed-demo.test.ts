@@ -7,6 +7,7 @@ import {
   assertInsuranceAwareDemoStatement,
   buildDemoStatementRun,
   demoAppointmentStart,
+  runSeedDemoCli,
   seedDemo,
   type DemoSeedAdapter,
 } from "../../scripts/seed-demo.ts";
@@ -199,6 +200,42 @@ test("demo statement visibility marker uses the shipped completed-run codes", ()
     "invalid-reject-count",
     "skipped-zero-balance-count",
   ]);
+});
+
+test("demo seed CLI requires the exact project and loads only the dedicated operator identity", async () => {
+  const calls: unknown[] = [];
+  const expected = {
+    created: [],
+    existing: [],
+    patientReference: "Patient/p1",
+    insuredPatientReference: "Patient/p2",
+    statement: "EXISTING" as const,
+    insuredStatement: "EXISTING" as const,
+  };
+  const result = await runSeedDemoCli({
+    env: {
+      MEDPLUM_BASE_URL: "http://localhost:8103",
+      MEDPLUM_PROJECT_ID: "practice-1",
+      ODOS_ADMIN_EMAIL: "must-not-be-used@example.test",
+      ODOS_ADMIN_PASSWORD: "must-not-be-used",
+    },
+    loadOperator: async (input) => {
+      calls.push(input);
+      return { fhir: {} as never, accessToken: "operator-token", state: {} as never };
+    },
+    seed: async () => expected,
+  });
+  assert.deepEqual(result, expected);
+  assert.deepEqual(calls, [{ baseUrl: "http://localhost:8103", projectId: "practice-1" }]);
+
+  await assert.rejects(
+    runSeedDemoCli({
+      env: { ODOS_ADMIN_EMAIL: "ignored@example.test", ODOS_ADMIN_PASSWORD: "ignored" },
+      loadOperator: async () => ({ fhir: {} as never, accessToken: "unused", state: {} as never }),
+      seed: async () => expected,
+    }),
+    /MEDPLUM_PROJECT_ID is required/i,
+  );
 });
 
 function identifierValues(resource: Resource): string[] {

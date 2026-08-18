@@ -545,6 +545,25 @@ export function latestStatementRun(tasks: readonly Task[]): {
 
 export class StatementValidationError extends Error {}
 
+export async function generatePatientStatementForOperator(
+  fhir: AuthenticatedStatementStaff["fhir"],
+  input: { patientReference: string; generatedAt: string; generateId?: () => string },
+): Promise<StatementRunResult> {
+  if (!isPatientReference(input.patientReference)) {
+    throw new StatementValidationError("Operator statement generation requires a local Patient/<id> reference.");
+  }
+  const result = await runStatements(fhir, input);
+  if (result.status !== 200) {
+    const message = (result.body as { error?: unknown })?.error;
+    throw new Error(
+      `Operator statement generation failed with status ${result.status}${
+        typeof message === "string" ? `: ${message}` : ""
+      }`,
+    );
+  }
+  return result.body as StatementRunResult;
+}
+
 async function runStatements(
   fhir: AuthenticatedStatementStaff["fhir"],
   options: { generatedAt: string; patientReference?: string; generateId?: () => string },

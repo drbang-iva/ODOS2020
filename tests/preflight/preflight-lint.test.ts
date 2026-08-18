@@ -90,7 +90,7 @@ test("v0.5d preflight pass 4 source-tree canonical-shape lint passes live tree a
   assert.equal(salted.findings[0]?.code, "observation-attestation-property");
 });
 
-test("preflight fences direct FHIR HTTP and both named client escape hatches", () => {
+test("preflight fences direct FHIR HTTP, named client escape hatches, and operator maintenance credentials", () => {
   assert.deepEqual(DIRECT_MEDPLUM_FHIR_BYPASS_ALLOWLIST, [
     "mcp/src/smart/registration/dynamic-client-registration.ts",
     "mcp/src/legacy-import/orphan-sweep.ts",
@@ -117,6 +117,16 @@ test("preflight fences direct FHIR HTTP and both named client escape hatches", (
   });
   assert.equal(operator.status, "hard-block");
   assert.equal(operator.findings[0]?.code, `${operatorFactory}-scope`);
+
+  for (const salted of [
+    { path: "mcp/src/request-handler.ts", text: 'const secret = process.env.ODOS_OPERATOR_CLIENT_SECRET;\n' },
+    { path: "ui/src/operator.ts", text: 'import { loadVerifiedOperatorFhirClient } from "../../scripts/operator-identity";\n' },
+    { path: "mcp/src/statements/operator-route.ts", text: 'await generatePatientStatementForOperator(fhir, input);\n' },
+  ]) {
+    const result = runVendorCanonicalShapePass({ files: [salted] });
+    assert.equal(result.status, "hard-block", salted.path);
+    assert.equal(result.findings[0]?.code, "operator-maintenance-request-path");
+  }
 });
 
 test("capability test base URLs do not trip the direct FHIR HTTP fence", () => {

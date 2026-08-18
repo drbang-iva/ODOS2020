@@ -19,6 +19,7 @@
     "seed-dry-eye-treatment": "tsx --env-file-if-exists=.env scripts/seed-dry-eye-treatment.ts",
     "install-profiles": "tsx scripts/install-profiles.ts",
     "setup-practice": "tsx scripts/setup-practice.ts",
+    "operator-identity": "tsx --env-file-if-exists=.env scripts/operator-identity.ts",
     "generate-medplum-signing-keys": "tsx scripts/generate-medplum-signing-keys.ts",
     "setup-legacy-importer": "tsx --env-file-if-exists=.odos/migration-importer.env scripts/setup-legacy-importer.ts",
     "gate:legacy-import-m2a": "tsx --env-file-if-exists=.env scripts/gate-legacy-import-m2a.ts",

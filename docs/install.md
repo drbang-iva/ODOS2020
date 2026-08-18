@@ -224,6 +224,9 @@ The wizard:
 - Stops before provisioning if `ODOS_ADMIN_EMAIL` matches the `MEDPLUM_ADMIN_EMAIL` service identity.
 - Emits `odos_audit_events` rows with `actor_id = setup-wizard`, `actor_role = system`, and `action_reason = "v0.5d setup wizard first-run provisioning"`.
 - Records resumable progress in `.odos-setup-state.json`.
+- Creates or verifies a distinct `ODOS Local Operator` client in the exact project. Its
+  policy-free, non-admin membership is used only by local maintenance scripts; setup stores its
+  secret in `.odos/operator.env` with mode `0600`.
 
 Downstream local tooling reads `organizationId` and `locationId` from the setup state at
 `ODOS_SETUP_STATE_PATH` (default `.odos-setup-state.json`) and constructs
@@ -238,6 +241,54 @@ Practice already provisioned. To re-provision, see docs/install.md §Re-provisio
 ```
 
 The no-op path emits an audit row with `event_type = noop` and `action_reason = "v0.5d setup wizard re-run, already provisioned"`.
+
+### Local operator identity
+
+The operator client is a non-human maintenance identity. It is not the human clinical admin, the
+Medplum service login, or the default client Medplum creates with a project. Operator scripts
+verify the exact project, named client profile, `admin=false`, empty `access[]`, and no attached
+`accessPolicy` before using the credential. Missing, mismatched, constrained, or revoked state
+stops the script; there is no `ODOS_ADMIN_*` or `MEDPLUM_ADMIN_*` fallback for the work itself.
+
+Setup uses the Medplum service login only to create or manage this local client. The operator
+credential stays under the gitignored `.odos/` directory and is forbidden by preflight in
+`mcp/src` and `ui/src` request-serving code.
+
+Quiesce all operator scripts before lifecycle changes. Rotate in the same project with:
+
+```bash
+npm run operator-identity -- --rotate --project <project-id>
+```
+
+Rotation creates and verifies the replacement before cutting over. If deletion of the old client
+fails after cutover, `.odos/operator-previous.env` remains mode `0600` and lifecycle state records
+the pending revocation. Re-run the same command to finish old-client deletion; it resumes rather
+than creating another client. A process holding the old access token can fail or continue until
+Medplum rejects or expires that token, which is why rotation is not an in-flight operation.
+
+If `.odos/operator.env` may have leaked, revoke it explicitly:
+
+```bash
+npm run operator-identity -- --revoke --project <project-id>
+```
+
+This deletes the named membership and client, proves the old secret cannot exchange, removes the
+active credential file, and writes a same-project `credential-exposure` tombstone. Ordinary setup
+will not recreate it. After reviewing the exposure, create a replacement explicitly:
+
+```bash
+npm run operator-identity -- --replace-revoked --project <project-id>
+```
+
+A destructive rebuild is different: the new project ID causes setup to record
+`replacementReason=project-rebuild` and create a new project-local client. A 5.1.8 process cannot
+be pointed back at a volume migrated by 5.1.30; rollback requires another destructive rebuild, not
+a volume restore.
+
+Operator-client FHIR writes are deliberately outside the ODOS request-path audit wrapper. Setup
+emits its existing selected audit rows, and FHIR history preserves resource versions and times,
+but `seed-demo` does not currently emit a complete durable per-write actor/reason record. Treat
+this as an accepted maintenance-plane audit gap, not as equivalent to Audit Slices 1 and 2.
 
 ## Legacy Import Transport Identity
 
@@ -355,10 +406,15 @@ To open a patient chart directly, use `http://localhost:5173/clinic?patientId=<i
 With both dev servers running, seed synthetic screen data:
 
 ```bash
+export MEDPLUM_PROJECT_ID=<project-id>
 npm run seed-demo
 ```
 
-The idempotent seed creates one clearly synthetic `TEST-` patient, provider, visit type, schedule, current-day appointment, issued Invoice, and $25 unapplied prepaid credit. It also generates the patient's statement through the running MCP service, so the Statements table immediately shows the unapplied-credit line. Re-running the seed keeps the existing marked resources and statement.
+The idempotent seed loads only the verified dedicated operator credential. It creates one clearly
+synthetic `TEST-` patient, provider, visit type, schedule, current-day appointment, issued Invoice,
+and $25 unapplied prepaid credit. It generates the patient's statement by invoking the statement
+domain workflow locally; the operator bearer token is never sent through an MCP request. Re-running
+the seed keeps the existing marked resources and statement.
 
 Regular bring-up after the one-time repair is: start Compose, start `odos-mcp` and `odos-ui`, open `http://localhost:5173`, and use the regular local login. Run `npm run seed-demo` only when the synthetic demo rows are missing.
 
