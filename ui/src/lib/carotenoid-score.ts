@@ -19,10 +19,8 @@ export const CAROTENOID_COLOR_BANDS = [
 ] as const;
 
 export function carotenoidPresentation(score: number): { score: number; label: string; color: string } {
-  const label = [...CAROTENOID_LABEL_ANCHORS].reverse().find((row, reversedIndex) => {
-    const index = CAROTENOID_LABEL_ANCHORS.length - reversedIndex - 1;
-    return score >= (CAROTENOID_COLOR_BANDS[index]?.min ?? row.anchor);
-  })?.label ?? CAROTENOID_LABEL_ANCHORS[0].label;
+  const label = [...CAROTENOID_LABEL_ANCHORS].reverse()
+    .find((row) => score >= row.anchor)?.label ?? CAROTENOID_LABEL_ANCHORS[0].label;
   const color = [...CAROTENOID_COLOR_BANDS].reverse().find((row) => score >= row.min)?.color ?? CAROTENOID_COLOR_BANDS[0].color;
   return { score, label, color };
 }
