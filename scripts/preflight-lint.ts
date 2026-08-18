@@ -263,6 +263,13 @@ const DIRECT_MEDPLUM_FHIR_BYPASS_BASELINE = 4;
 const DIRECT_MEDPLUM_FHIR_LITERAL_PATTERN = /\/fhir\/R4/i;
 const BOOT_ONLY_CLIENT_FACTORY = ["createUnauditedMedplumClient", "_bootOnly"].join("");
 const OPERATOR_SCRIPT_CLIENT_FACTORY = "createOperatorScriptFhirClient";
+const OPERATOR_MAINTENANCE_REQUEST_PATH_PATTERNS = [
+  "ODOS_OPERATOR_CLIENT_SECRET",
+  "ODOS_OPERATOR_CLIENT_ID",
+  "loadVerifiedOperatorFhirClient",
+  "generatePatientStatementForOperator",
+  "verifyOperatorMembershipFromPostgres",
+] as const;
 const IN_CONTAINER_PACKET_FILTER_PATTERN = new RegExp(
   `${["ipt", "ables"].join("")}.*--uid-owner|${["in-container", ["ipt", "ables"].join("")].join(" ")}`,
   "i",
@@ -967,6 +974,29 @@ function fhirClientBoundaryFindings(
             severity: "hard-block",
             code: `${OPERATOR_SCRIPT_CLIENT_FACTORY}-scope`,
             message: `${OPERATOR_SCRIPT_CLIENT_FACTORY} may only be used under scripts/`,
+            source: path,
+            line: index + 1,
+          });
+        }
+      }
+    }
+
+    if (path.startsWith("mcp/src/") || path.startsWith("ui/src/")) {
+      for (const [index, line] of lines.entries()) {
+        const isStatementMaintenanceDefinition = path === "mcp/src/statements/statements.ts"
+          && line.includes("export async function generatePatientStatementForOperator");
+        const isMembershipMaintenanceDefinition = path === "mcp/src/authz/operatorMembershipVerification.ts"
+          && line.includes("export async function verifyOperatorMembershipFromPostgres");
+        if (
+          !isStatementMaintenanceDefinition
+          && !isMembershipMaintenanceDefinition
+          && OPERATOR_MAINTENANCE_REQUEST_PATH_PATTERNS.some((pattern) => line.includes(pattern))
+        ) {
+          findings.push({
+            pass: "vendor-canonical-shapes",
+            severity: "hard-block",
+            code: "operator-maintenance-request-path",
+            message: "Operator identity credentials and maintenance entrypoints are forbidden in MCP and UI request paths",
             source: path,
             line: index + 1,
           });

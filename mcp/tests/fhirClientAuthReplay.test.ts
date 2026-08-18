@@ -31,6 +31,33 @@ test("operator-script FHIR client leaves Medplum extended mode off by default", 
   }
 });
 
+test("failed FHIR requests name the method and safe path without exposing the resource id", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response("Forbidden", {
+    status: 403,
+    statusText: "Forbidden",
+  });
+  try {
+    const client = createOperatorScriptFhirClient({
+      baseUrl: "http://medplum.test",
+      accessToken: "operator-token",
+      reason: "Test safe FHIR failure context.",
+    });
+
+    await assert.rejects(
+      client.read<Patient>("Patient", "patient-sensitive-123"),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.match(error.message, /FHIR GET \/fhir\/R4\/Patient\/:id \[Patient\] 403 Forbidden: Forbidden/);
+        assert.doesNotMatch(error.message, /patient-sensitive-123|operator-token/);
+        return true;
+      },
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("project-scoped search uses Medplum extended mode and cannot be widened by caller parameters", async () => {
   const originalFetch = globalThis.fetch;
   let requestedUrl = "";

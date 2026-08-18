@@ -207,7 +207,10 @@ function deps(role: "staff" | "provider" = "staff") {
         if (!resource || resource.resourceType !== "Task") throw new Error("Unexpected statement transaction resource");
         const requestedId = entry.request?.method === "PUT" ? entry.request.url.replace("Task/", "") : undefined;
         const id = requestedId ?? `task-${created.Task.length + 1}`;
-        created.Task.push({ ...structuredClone(resource), id });
+        const saved = { ...structuredClone(resource), id, meta: { ...resource.meta, versionId: "1" } };
+        const existingIndex = created.Task.findIndex((task) => task.id === id);
+        if (existingIndex >= 0) created.Task[existingIndex] = saved;
+        else created.Task.push(saved);
         return { response: { status: requestedId ? "200" : "201", location: `Task/${id}/_history/1` } };
       });
       return { resourceType: "Bundle", type: "transaction-response", entry: responseEntries };
@@ -2723,6 +2726,7 @@ function matchesSearch(resource: Resource, params: Record<string, string>): bool
   }
   if (resource.resourceType === "Task") {
     const task = resource as Task;
+    if (params._id && !params._id.split(",").includes(task.id ?? "")) return false;
     if (params.identifier && !matchesIdentifierToken(task.identifier, params.identifier)) return false;
     if (params.code && !matchesCodingToken(task.code?.coding, params.code)) return false;
     if (params.focus && task.focus?.reference !== params.focus) return false;

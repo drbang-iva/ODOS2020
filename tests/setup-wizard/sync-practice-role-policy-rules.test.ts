@@ -623,7 +623,7 @@ test("bootstrap service identity completes dry-run after the ordinary operator p
       MEDPLUM_ADMIN_PASSWORD: "not-a-real-password",
     }, ["--project", PROJECT_ID]);
     assert.equal(ordinary.code, 1);
-    assert.match(ordinary.stderr, /FHIR 403 Forbidden/);
+    assert.match(ordinary.stderr, /FHIR GET \/fhir\/R4\/AccessPolicy \[AccessPolicy\] 403 Forbidden/);
 
     const bootstrap = await runPolicySyncCli(server.baseUrl, {
       MEDPLUM_ADMIN_EMAIL: "service@example.test",

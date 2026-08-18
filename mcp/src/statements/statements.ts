@@ -439,7 +439,7 @@ export function buildStatementTransaction(input: {
   generateId?: () => string;
 }): {
   startBundle: Bundle;
-  buildLinkedBundles(runReference: string): { childBundles: Bundle[]; completionBundle: Bundle };
+  buildLinkedBundles(runReference: string, persistedRun: Task): { childBundles: Bundle[]; completionBundle: Bundle };
 } {
   const generateId = input.generateId ?? randomUUID;
   const runIdentifier = generateId();
@@ -463,8 +463,8 @@ export function buildStatementTransaction(input: {
       type: "transaction",
       entry: [{ resource: runTask, request: { method: "POST", url: "Task" } }],
     },
-    buildLinkedBundles(runReference) {
-      const runId = referenceId(runReference);
+    buildLinkedBundles(runReference, persistedRun) {
+      const runId = localReferenceId(runReference);
       const childTasks: Array<{ fullUrl: string; task: Task }> = [];
       for (const snapshot of input.statements) {
         childTasks.push({ fullUrl: `urn:uuid:${generateId()}`, task: statementTask(snapshot, runReference) });
@@ -492,7 +492,7 @@ export function buildStatementTransaction(input: {
           type: "transaction",
           entry: [{
             resource: {
-              ...runTask,
+              ...persistedRun,
               id: runId,
               status: "completed",
               executionPeriod: { start: input.generatedAt, end: input.generatedAt },
@@ -544,6 +544,25 @@ export function latestStatementRun(tasks: readonly Task[]): {
 }
 
 export class StatementValidationError extends Error {}
+
+export async function generatePatientStatementForOperator(
+  fhir: AuthenticatedStatementStaff["fhir"],
+  input: { patientReference: string; generatedAt: string; generateId?: () => string },
+): Promise<StatementRunResult> {
+  if (!isPatientReference(input.patientReference)) {
+    throw new StatementValidationError("Operator statement generation requires a local Patient/<id> reference.");
+  }
+  const result = await runStatements(fhir, input);
+  if (result.status !== 200) {
+    const message = (result.body as { error?: unknown })?.error;
+    throw new Error(
+      `Operator statement generation failed with status ${result.status}${
+        typeof message === "string" ? `: ${message}` : ""
+      }`,
+    );
+  }
+  return result.body as StatementRunResult;
+}
 
 async function runStatements(
   fhir: AuthenticatedStatementStaff["fhir"],
@@ -662,7 +681,13 @@ async function runStatements(
     });
     const startResponse = await fhir.executeTransaction(transaction.startBundle);
     const runReference = transactionReference(startResponse.entry?.[0], "Task");
-    const linkedBundles = transaction.buildLinkedBundles(runReference);
+    const runId = localReferenceId(runReference);
+    const persistedRuns = (await searchAll<Task>(fhir, "Task", { _id: runId }))
+      .filter((task) => task.id === runId);
+    if (persistedRuns.length !== 1 || !persistedRuns[0]?.meta?.versionId) {
+      throw new Error("Statement run create could not be reloaded with persisted version metadata.");
+    }
+    const linkedBundles = transaction.buildLinkedBundles(runReference, persistedRuns[0]);
     const childResponses: BundleEntry[] = [];
     const createdChildReferences: string[] = [];
     try {
@@ -683,11 +708,15 @@ async function runStatements(
       throw error;
     }
     try {
-      await fhir.executeTransaction(linkedBundles.completionBundle);
+      const completionResponse = await fhir.executeTransaction(linkedBundles.completionBundle);
+      const completionStatus = completionResponse.entry?.[0]?.response?.status;
+      if (!completionStatus || !/^2\d\d/.test(completionStatus)) {
+        throw new Error(`Statement run completion returned ${completionStatus ?? "no entry status"}.`);
+      }
     } catch (error) {
       let runCompleted = true;
       try {
-        const runId = referenceId(runReference);
+        const runId = localReferenceId(runReference);
         const runs = await searchAll<Task>(fhir, "Task", { _id: runId });
         runCompleted = runs.some((task) => task.id === runId && task.status === "completed" && taskCodeIs(task, STATEMENT_RUN_CODE));
       } catch {}

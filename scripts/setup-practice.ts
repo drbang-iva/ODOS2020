@@ -47,6 +47,7 @@ import {
   ODOS_VISIT_TYPE_CONFIG_SYSTEM,
   buildVisitTypeConfigResource,
 } from "../mcp/src/scheduling/visit-type-config.js";
+import { ensureLiveOperatorIdentity } from "./operator-identity.js";
 
 export const SETUP_WIZARD_HEADER =
   "Run ODOS on your own hardware. Your patients, your machines, your data.";
@@ -461,6 +462,24 @@ export async function runSetupPractice(options: SetupPracticeOptions = {}): Prom
     auditRows,
     state,
   };
+}
+
+export async function provisionSetupOperatorIdentity(input: {
+  readonly setupResult: SetupPracticeResult;
+  readonly config: Pick<
+    SetupPracticeConfig,
+    "baseUrl" | "serviceIdentityEmail" | "serviceIdentityPassword" | "postgresUrl"
+  >;
+  readonly provision?: typeof ensureLiveOperatorIdentity;
+}) {
+  const projectId = requireConfigValue(input.setupResult.state.projectId, "setup project id");
+  return (input.provision ?? ensureLiveOperatorIdentity)({
+    baseUrl: input.config.baseUrl,
+    projectId,
+    serviceEmail: requireConfigValue(input.config.serviceIdentityEmail, "MEDPLUM_ADMIN_EMAIL"),
+    servicePassword: requireConfigValue(input.config.serviceIdentityPassword, "MEDPLUM_ADMIN_PASSWORD"),
+    postgresUrl: input.config.postgresUrl,
+  });
 }
 
 export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
@@ -1610,16 +1629,19 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   try {
     assertInteractiveSetupWizardAllowed();
     const interactiveConfig = process.stdin.isTTY ? await collectInteractiveConfig() : {};
+    const cliConfig = buildSetupConfig({ config: interactiveConfig });
     const result = await runSetupPractice({
-      config: interactiveConfig,
+      config: cliConfig,
       skipInteractiveBoundaryCheck: true,
     });
+    const operator = await provisionSetupOperatorIdentity({ setupResult: result, config: cliConfig });
     if (result.noOp) {
       console.log("Practice already provisioned. To re-provision, see docs/install.md §Re-provisioning.");
     } else {
       console.log(`Setup complete. Practitioner: ${result.practitionerId}`);
       console.log(`Login URL: ${result.loginUrl ?? DEFAULT_BASE_URL}`);
     }
+    console.log(`Operator identity active. Project: ${operator.state.projectId}; client: ${operator.state.clientId}`);
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

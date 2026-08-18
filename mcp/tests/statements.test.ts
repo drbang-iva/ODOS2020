@@ -22,6 +22,7 @@ import { paymentTenderExtension } from "../src/fhir/odosPaymentTender.js";
 import {
   addStatementDetail,
   buildStatementSnapshot,
+  generatePatientStatementForOperator,
   handleGeneratePatientStatementRequest,
   handleRunStatementsRequest,
   handleStatementListRequest,
@@ -113,6 +114,39 @@ test("configured statement message originates in the Basic singleton and round-t
     ?.output?.find((item) => item.type.coding?.some((coding) => coding.code === "snapshot"))
     ?.valueString;
   assert.equal((JSON.parse(storedSnapshot ?? "{}") as { statementFooterMessage?: string }).statementFooterMessage, message);
+});
+
+test("operator statement generation invokes the domain workflow without request authentication", async () => {
+  const fixture = fakeFhir({
+    patients: [patient("p1", "Alex Rivera")],
+    invoices: [invoice("i1", "p1", 10_000)],
+    payments: [],
+  });
+
+  const result = await generatePatientStatementForOperator(fixture.fhir, {
+    patientReference: "Patient/p1",
+    generatedAt: GENERATED_AT,
+  });
+
+  assert.equal(result.generatedCount, 1);
+  assert.equal(result.generatedAt, GENERATED_AT);
+  assert.equal(result.statements[0]?.patientReference, "Patient/p1");
+});
+
+test("operator statement generation completes its run with the persisted Task id and version metadata", async () => {
+  const fixture = fakeFhir({
+    patients: [patient("p1", "Alex Rivera")],
+    invoices: [invoice("i1", "p1", 10_000)],
+    payments: [],
+  }, { requireVersionedPut: true });
+
+  await generatePatientStatementForOperator(fixture.fhir, {
+    patientReference: "Patient/p1",
+    generatedAt: GENERATED_AT,
+  });
+
+  const run = fixture.storedTasks.find((task) => code(task) === STATEMENT_RUN_CODE);
+  assert.equal(run?.status, "completed");
 });
 
 test("an internally inconsistent Invoice is rejected instead of emitting a wrong balance", () => {
@@ -637,7 +671,7 @@ function fakeFhir(
     accounts?: Account[];
     relatedPeople?: RelatedPerson[];
   },
-  options: { failTransactionAt?: number; failCleanup?: boolean } = {},
+  options: { failTransactionAt?: number; failCleanup?: boolean; requireVersionedPut?: boolean } = {},
 ) {
   const transactions: Bundle[] = [];
   const storedTasks: Task[] = [];
@@ -654,7 +688,10 @@ function fakeFhir(
                     : resourceType === "Basic" ? input.basics ?? []
                       : resourceType === "Account" ? input.accounts ?? []
                         : resourceType === "RelatedPerson" ? input.relatedPeople ?? []
-                          : resourceType === "Task" ? storedTasks
+                          : resourceType === "Task" ? storedTasks.map((task) => ({
+                              ...task,
+                              meta: { ...task.meta, versionId: task.meta?.versionId ?? "1" },
+                            }))
                             : [];
       return { resourceType: "Bundle", type: "searchset", entry: rows.map((resource) => ({ resource: structuredClone(resource) as T })) };
     },
@@ -666,6 +703,11 @@ function fakeFhir(
         throw new Error("cleanup failed");
       }
       const assignedReferences = new Map<string, string>();
+      const rejectedPut = entries.map((entry) =>
+        entry.request?.method === "PUT" && options.requireVersionedPut && (
+          !entry.resource?.meta?.versionId || entry.resource.id !== entry.request.url.replace("Task/", "")
+        )
+      );
       const assignedIds = entries.map((entry) => {
         if (entry.request?.method === "DELETE") return undefined;
         const requestedId = entry.request?.method === "PUT" ? entry.request.url.replace("Task/", "") : undefined;
@@ -683,19 +725,22 @@ function fakeFhir(
         }
         const task = structuredClone(entry.resource) as Task;
         const id = assignedIds[index]!;
+        if (rejectedPut[index]) return `Task/${id}/_history/1`;
         if (entry.request?.method === "POST" || !storedTasks.some((stored) => stored.id === id)) delete task.id;
         rewriteReferences(task, assignedReferences);
         if (entry.resource?.resourceType === "Task") {
           const storedIndex = storedTasks.findIndex((stored) => stored.id === id);
           if (storedIndex >= 0) storedTasks[storedIndex] = { ...task, id };
-          else storedTasks.push({ ...task, id });
+          else storedTasks.push({ ...task, id, meta: { ...task.meta, versionId: "1" } });
         }
         return `Task/${id}/_history/1`;
       });
       return {
         resourceType: "Bundle",
         type: "transaction-response",
-        entry: locations.map((location) => ({ response: { status: "201", location } })),
+        entry: locations.map((location, index) => ({
+          response: { status: rejectedPut[index] ? "409" : "201", location },
+        })),
       };
     },
   };

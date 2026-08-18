@@ -21,20 +21,22 @@ import { buildPatientResponsibilityInvoice } from "../mcp/src/claims/patient-res
 import { buildSchedulingAppointment } from "../mcp/src/fhir/schedulingAppointment.js";
 import { buildSchedulingResource } from "../mcp/src/fhir/schedulingResource.js";
 import { buildVisitType } from "../mcp/src/fhir/schedulingVisitType.js";
-import { createOperatorScriptFhirClient, type MedplumClient } from "../mcp/src/fhir-client.js";
+import type { MedplumClient } from "../mcp/src/fhir-client.js";
 import { searchAll } from "../mcp/src/fhir-search.js";
 import { buildPaymentReconciliation } from "../mcp/src/payments/payment-reconciliation.js";
 import {
+  PATIENT_STATEMENT_CODE,
   STATEMENT_OUTPUT_CODE_SYSTEM,
   STATEMENT_RUN_CODE,
   STATEMENT_TASK_CODE_SYSTEM,
+  generatePatientStatementForOperator,
+  parseStatementTask,
   type StatementSnapshot,
 } from "../mcp/src/statements/statements.js";
 import { assertLocalMedplumBaseUrl } from "./reseed-practice-role-tags.js";
-import { loginForLocalRepair } from "./repair-practice-roles.js";
+import { loadVerifiedOperatorFhirClient } from "./operator-identity.js";
 
 const DEFAULT_MEDPLUM_BASE_URL = "http://localhost:8103";
-const DEFAULT_MCP_BASE_URL = "http://localhost:3333";
 export const DEMO_SEED_SYSTEM = "https://odos2020.com/seed/operator-demo";
 
 type DemoResource = Patient | Practitioner | PractitionerRole | HealthcareService | Schedule | Appointment
@@ -435,11 +437,7 @@ export function demoAppointmentStart(now = new Date()): string {
 }
 
 class LiveDemoSeedAdapter implements DemoSeedAdapter {
-  constructor(
-    private readonly fhir: MedplumClient,
-    private readonly mcpBaseUrl: string,
-    private readonly authorization: string,
-  ) {}
+  constructor(private readonly fhir: MedplumClient) {}
 
   async findByIdentifier<T extends DemoResource>(
     resourceType: T["resourceType"],
@@ -459,14 +457,26 @@ class LiveDemoSeedAdapter implements DemoSeedAdapter {
   }
 
   async hasStatement(patientReference: string): Promise<boolean> {
-    const response = await fetch(
-      `${this.mcpBaseUrl}/statements?patientReference=${encodeURIComponent(patientReference)}`,
-      { headers: { Authorization: this.authorization } },
-    );
-    const body = await response.text();
-    if (!response.ok) throw new Error(`Statement lookup failed: ${response.status} ${body}`);
-    const parsed = JSON.parse(body) as { items?: unknown[] };
-    return (parsed.items?.length ?? 0) > 0;
+    const [tasks, runs] = await Promise.all([
+      searchAll<Task>(this.fhir, "Task", {
+        code: `${STATEMENT_TASK_CODE_SYSTEM}|${PATIENT_STATEMENT_CODE}`,
+        status: "completed",
+      }),
+      searchAll<Task>(this.fhir, "Task", {
+        code: `${STATEMENT_TASK_CODE_SYSTEM}|${STATEMENT_RUN_CODE}`,
+        status: "completed",
+      }),
+    ]);
+    const completedRuns = new Set(runs.flatMap((run) => run.id ? [`Task/${run.id}`] : []));
+    return tasks.some((task) => {
+      try {
+        const statement = parseStatementTask(task);
+        return statement.patientReference === patientReference
+          && Boolean(statement.runReference && completedRuns.has(statement.runReference));
+      } catch {
+        return false;
+      }
+    });
   }
 
   async generateStatement(patientReference: string): Promise<{
@@ -474,47 +484,10 @@ class LiveDemoSeedAdapter implements DemoSeedAdapter {
     generatedAt?: string;
     statements: GeneratedDemoStatement[];
   }> {
-    const response = await fetch(`${this.mcpBaseUrl}/statements/generate`, {
-      method: "POST",
-      headers: {
-        Authorization: this.authorization,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ patientReference }),
+    return generatePatientStatementForOperator(this.fhir, {
+      patientReference,
+      generatedAt: new Date().toISOString(),
     });
-    const body = await response.text();
-    if (!response.ok) throw new Error(`Statement generation failed: ${response.status} ${body}`);
-    const result = JSON.parse(body) as {
-      generatedCount: number;
-      generatedAt?: string;
-      statements: GeneratedDemoStatement[];
-    };
-    if (result.generatedCount === 1 && !(await this.hasStatement(patientReference))) {
-      await this.finishSyntheticStatementRun(result);
-    }
-    return result;
-  }
-
-  private async finishSyntheticStatementRun(result: {
-    generatedAt?: string;
-    statements: Array<{ statementReference?: string }>;
-  }): Promise<void> {
-    const generatedAt = result.generatedAt;
-    const statementReference = result.statements[0]?.statementReference;
-    const statementId = statementReference?.match(/^Task\/([^/]+)$/)?.[1];
-    if (!generatedAt || !statementId) {
-      throw new Error("Demo statement response is missing its generated timestamp or Task reference.");
-    }
-    const run = await this.fhir.create<Task>(buildDemoStatementRun(generatedAt));
-    if (!run.id) throw new Error("Demo statement run create returned no id.");
-    const statement = await this.fhir.read<Task>("Task", statementId);
-    if (!statement.meta?.versionId) throw new Error("Demo statement Task is missing meta.versionId.");
-    await this.fhir.patch<Task>(
-      "Task",
-      statementId,
-      [{ op: "replace", path: "/partOf", value: [{ reference: `Task/${run.id}` }] }],
-      { "If-Match": `W/"${statement.meta.versionId}"` },
-    );
   }
 }
 
@@ -545,23 +518,24 @@ function statementRunCount(code: string, valueInteger: number) {
   };
 }
 
-async function runCli(): Promise<void> {
-  const medplumBaseUrl = (process.env.MEDPLUM_BASE_URL ?? DEFAULT_MEDPLUM_BASE_URL).replace(/\/$/, "");
-  const mcpBaseUrl = (process.env.ODOS_MCP_BASE_URL ?? DEFAULT_MCP_BASE_URL).replace(/\/$/, "");
+export async function runSeedDemoCli(options: {
+  readonly env?: NodeJS.ProcessEnv;
+  readonly loadOperator?: typeof loadVerifiedOperatorFhirClient;
+  readonly seed?: typeof seedDemo;
+} = {}): Promise<DemoSeedResult> {
+  const env = options.env ?? process.env;
+  const medplumBaseUrl = (env.MEDPLUM_BASE_URL ?? DEFAULT_MEDPLUM_BASE_URL).replace(/\/$/, "");
   assertLocalMedplumBaseUrl(medplumBaseUrl);
-  assertLocalMedplumBaseUrl(mcpBaseUrl);
-  const email = requireEnv("ODOS_ADMIN_EMAIL", "MEDPLUM_ADMIN_EMAIL");
-  const password = requireEnv("ODOS_ADMIN_PASSWORD", "MEDPLUM_ADMIN_PASSWORD");
-  const accessToken = await loginForLocalRepair({ baseUrl: medplumBaseUrl, email, password });
-  const result = await seedDemo(new LiveDemoSeedAdapter(
-    createOperatorScriptFhirClient({
-      baseUrl: medplumBaseUrl,
-      accessToken,
-      reason: "Operator demo-data seed runs outside request handling.",
-    }),
-    mcpBaseUrl,
-    `Bearer ${accessToken}`,
-  ));
+  const projectId = requireEnv(env, "MEDPLUM_PROJECT_ID");
+  const operator = await (options.loadOperator ?? loadVerifiedOperatorFhirClient)({
+    baseUrl: medplumBaseUrl,
+    projectId,
+  });
+  return (options.seed ?? seedDemo)(new LiveDemoSeedAdapter(operator.fhir));
+}
+
+async function runCli(): Promise<void> {
+  const result = await runSeedDemoCli();
   console.log(`Demo resources created: ${result.created.length} [${result.created.join(", ")}]`);
   console.log(`Demo resources already present: ${result.existing.length} [${result.existing.join(", ")}]`);
   console.log(`Demo statement: ${result.statement}`);
@@ -570,9 +544,9 @@ async function runCli(): Promise<void> {
   console.log(`Demo insured patient: ${result.insuredPatientReference}`);
 }
 
-function requireEnv(primary: string, fallback: string): string {
-  const value = process.env[primary]?.trim() || process.env[fallback]?.trim();
-  if (!value) throw new Error(`${primary} or ${fallback} is required.`);
+function requireEnv(env: NodeJS.ProcessEnv, name: string): string {
+  const value = env[name]?.trim();
+  if (!value) throw new Error(`${name} is required.`);
   return value;
 }
 
