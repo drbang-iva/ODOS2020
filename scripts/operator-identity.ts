@@ -11,6 +11,7 @@ import {
 } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { createLiveOperatorIdentityAdapter } from "../data/medplum-adapters/operator-bootstrap-adapter.js";
+import { verifyOperatorMembershipFromPostgres } from "../mcp/src/authz/operatorMembershipVerification.js";
 import { createOperatorScriptFhirClient, type MedplumClient } from "../mcp/src/fhir-client.js";
 import { loginForLocalRepair } from "./repair-practice-roles.js";
 import { assertLocalMedplumBaseUrl } from "./reseed-practice-role-tags.js";
@@ -19,6 +20,7 @@ export const OPERATOR_CLIENT_NAME = "ODOS Local Operator";
 export const DEFAULT_OPERATOR_CREDENTIAL_PATH = resolve(process.cwd(), ".odos/operator.env");
 export const DEFAULT_OPERATOR_PREVIOUS_CREDENTIAL_PATH = resolve(process.cwd(), ".odos/operator-previous.env");
 export const DEFAULT_OPERATOR_STATE_PATH = resolve(process.cwd(), ".odos/operator-identity.json");
+const DEFAULT_OPERATOR_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5433/medplum";
 
 export interface OperatorCredentials {
   readonly projectId: string;
@@ -79,6 +81,7 @@ export async function ensureLiveOperatorIdentity(input: {
   readonly projectId: string;
   readonly serviceEmail: string;
   readonly servicePassword: string;
+  readonly postgresUrl?: string;
   readonly credentialPath?: string;
   readonly statePath?: string;
 }): Promise<{ accessToken: string; state: OperatorIdentityState; reused: boolean }> {
@@ -94,6 +97,7 @@ export async function ensureLiveOperatorIdentity(input: {
       baseUrl,
       serviceAccessToken,
       clientName: OPERATOR_CLIENT_NAME,
+      verifyMembership: membershipVerifier(input.postgresUrl),
     }),
     store: createFileOperatorIdentityStore(input),
   });
@@ -102,13 +106,18 @@ export async function ensureLiveOperatorIdentity(input: {
 export async function loadVerifiedOperatorFhirClient(input: {
   readonly baseUrl: string;
   readonly projectId: string;
+  readonly postgresUrl?: string;
   readonly credentialPath?: string;
   readonly statePath?: string;
 }): Promise<{ fhir: MedplumClient; accessToken: string; state: OperatorIdentityState }> {
   const baseUrl = localBaseUrl(input.baseUrl);
   const verified = await verifyStoredOperatorIdentity({
     projectId: input.projectId,
-    adapter: createLiveOperatorIdentityAdapter({ baseUrl, clientName: OPERATOR_CLIENT_NAME }),
+    adapter: createLiveOperatorIdentityAdapter({
+      baseUrl,
+      clientName: OPERATOR_CLIENT_NAME,
+      verifyMembership: membershipVerifier(input.postgresUrl),
+    }),
     store: createFileOperatorIdentityStore(input),
   });
   return {
@@ -147,6 +156,7 @@ export async function runOperatorIdentityCli(
     baseUrl,
     serviceAccessToken,
     clientName: OPERATOR_CLIENT_NAME,
+    verifyMembership: membershipVerifier(env.ODOS_POSTGRES_URL),
   });
   const store = createFileOperatorIdentityStore();
   if (action === "rotate") {
@@ -515,6 +525,14 @@ function localBaseUrl(value: string): string {
   const baseUrl = value.replace(/\/$/, "");
   assertLocalMedplumBaseUrl(baseUrl);
   return baseUrl;
+}
+
+function membershipVerifier(postgresUrl: string | undefined) {
+  return (input: { projectId: string; clientId: string; membershipId: string }) =>
+    verifyOperatorMembershipFromPostgres({
+      postgresUrl: postgresUrl ?? process.env.ODOS_POSTGRES_URL ?? DEFAULT_OPERATOR_POSTGRES_URL,
+      ...input,
+    });
 }
 
 function resolveCliProjectId(args: readonly string[], env: NodeJS.ProcessEnv): string {

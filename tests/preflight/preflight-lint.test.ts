@@ -122,6 +122,7 @@ test("preflight fences direct FHIR HTTP, named client escape hatches, and operat
     { path: "mcp/src/request-handler.ts", text: 'const secret = process.env.ODOS_OPERATOR_CLIENT_SECRET;\n' },
     { path: "ui/src/operator.ts", text: 'import { loadVerifiedOperatorFhirClient } from "../../scripts/operator-identity";\n' },
     { path: "mcp/src/statements/operator-route.ts", text: 'await generatePatientStatementForOperator(fhir, input);\n' },
+    { path: "mcp/src/request-db.ts", text: 'await verifyOperatorMembershipFromPostgres(input);\n' },
   ]) {
     const result = runVendorCanonicalShapePass({ files: [salted] });
     assert.equal(result.status, "hard-block", salted.path);

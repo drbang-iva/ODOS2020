@@ -677,6 +677,7 @@ test("setup provisions the dedicated operator identity for the exact resulting p
       baseUrl: "http://localhost:8103",
       serviceIdentityEmail: "service@example.test",
       serviceIdentityPassword: "service-password",
+      postgresUrl: "postgresql://medplum:medplum@127.0.0.1:5433/medplum",
     },
     provision: async (input) => {
       calls.push(input);
@@ -694,5 +695,6 @@ test("setup provisions the dedicated operator identity for the exact resulting p
     projectId: "practice-1",
     serviceEmail: "service@example.test",
     servicePassword: "service-password",
+    postgresUrl: "postgresql://medplum:medplum@127.0.0.1:5433/medplum",
   }]);
 });

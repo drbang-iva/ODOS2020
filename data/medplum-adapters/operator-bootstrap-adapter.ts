@@ -19,6 +19,11 @@ export function createLiveOperatorIdentityAdapter(input: {
   readonly baseUrl: string;
   readonly serviceAccessToken?: string;
   readonly clientName: string;
+  readonly verifyMembership: (input: {
+    readonly projectId: string;
+    readonly clientId: string;
+    readonly membershipId: string;
+  }) => Promise<void>;
 }) {
   const baseUrl = input.baseUrl.replace(/\/$/, "");
   const serviceAccessToken = input.serviceAccessToken?.trim();
@@ -79,34 +84,11 @@ export function createLiveOperatorIdentityAdapter(input: {
         throw new Error("Operator credential did not resolve to the named ClientApplication profile.");
       }
 
-      const membershipResponse = await fetch(
-        `${baseUrl}/fhir/R4/ProjectMembership/${encodeURIComponent(membershipId)}`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            Accept: "application/fhir+json",
-            "X-Medplum": "extended",
-          },
-        },
-      );
-      if (!membershipResponse.ok) {
-        throw new Error(
-          `Operator ProjectMembership verification failed: ${membershipResponse.status} ${membershipResponse.statusText}`,
-        );
-      }
-      const membership = (await membershipResponse.json()) as ProjectMembershipShape;
-      if (
-        membership.id !== membershipId ||
-        membership.project?.reference !== `Project/${credentials.projectId}` ||
-        membership.user?.reference !== expectedProfile ||
-        membership.profile?.reference !== expectedProfile ||
-        membership.admin === true
-      ) {
-        throw new Error("Operator ProjectMembership does not match the exact non-admin client and project.");
-      }
-      if ((membership.access?.length ?? 0) !== 0 || membership.accessPolicy?.reference) {
-        throw new Error("Operator ProjectMembership must have no access entries and no attached access policy.");
-      }
+      await input.verifyMembership({
+        projectId: credentials.projectId,
+        clientId: credentials.clientId,
+        membershipId,
+      });
       return { accessToken, membershipId };
     },
 

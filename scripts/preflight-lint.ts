@@ -268,6 +268,7 @@ const OPERATOR_MAINTENANCE_REQUEST_PATH_PATTERNS = [
   "ODOS_OPERATOR_CLIENT_ID",
   "loadVerifiedOperatorFhirClient",
   "generatePatientStatementForOperator",
+  "verifyOperatorMembershipFromPostgres",
 ] as const;
 const IN_CONTAINER_PACKET_FILTER_PATTERN = new RegExp(
   `${["ipt", "ables"].join("")}.*--uid-owner|${["in-container", ["ipt", "ables"].join("")].join(" ")}`,
@@ -984,8 +985,11 @@ function fhirClientBoundaryFindings(
       for (const [index, line] of lines.entries()) {
         const isStatementMaintenanceDefinition = path === "mcp/src/statements/statements.ts"
           && line.includes("export async function generatePatientStatementForOperator");
+        const isMembershipMaintenanceDefinition = path === "mcp/src/authz/operatorMembershipVerification.ts"
+          && line.includes("export async function verifyOperatorMembershipFromPostgres");
         if (
           !isStatementMaintenanceDefinition
+          && !isMembershipMaintenanceDefinition
           && OPERATOR_MAINTENANCE_REQUEST_PATH_PATTERNS.some((pattern) => line.includes(pattern))
         ) {
           findings.push({

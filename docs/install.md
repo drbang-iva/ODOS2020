@@ -246,9 +246,13 @@ The no-op path emits an audit row with `event_type = noop` and `action_reason = 
 
 The operator client is a non-human maintenance identity. It is not the human clinical admin, the
 Medplum service login, or the default client Medplum creates with a project. Operator scripts
-verify the exact project, named client profile, `admin=false`, empty `access[]`, and no attached
-`accessPolicy` before using the credential. Missing, mismatched, constrained, or revoked state
-stops the script; there is no `ODOS_ADMIN_*` or `MEDPLUM_ADMIN_*` fallback for the work itself.
+verify the exact project and named client profile through client credentials plus `/auth/me`.
+Medplum 5.1.30 denies a client principal FHIR read access to its own extended membership, so the
+script separately reads that one exact `ProjectMembership` row from the local Medplum Postgres
+database to prove it is non-admin with empty `access[]` and no attached `accessPolicy`. Missing,
+mismatched, constrained, or revoked state stops the script; there is no `ODOS_ADMIN_*` or
+`MEDPLUM_ADMIN_*` fallback for the work itself. `ODOS_POSTGRES_URL` must resolve to localhost or
+the local Compose `postgres` service.
 
 Setup uses the Medplum service login only to create or manage this local client. The operator
 credential stays under the gitignored `.odos/` directory and is forbidden by preflight in

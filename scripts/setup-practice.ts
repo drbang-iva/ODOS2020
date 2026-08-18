@@ -468,7 +468,7 @@ export async function provisionSetupOperatorIdentity(input: {
   readonly setupResult: SetupPracticeResult;
   readonly config: Pick<
     SetupPracticeConfig,
-    "baseUrl" | "serviceIdentityEmail" | "serviceIdentityPassword"
+    "baseUrl" | "serviceIdentityEmail" | "serviceIdentityPassword" | "postgresUrl"
   >;
   readonly provision?: typeof ensureLiveOperatorIdentity;
 }) {
@@ -478,6 +478,7 @@ export async function provisionSetupOperatorIdentity(input: {
     projectId,
     serviceEmail: requireConfigValue(input.config.serviceIdentityEmail, "MEDPLUM_ADMIN_EMAIL"),
     servicePassword: requireConfigValue(input.config.serviceIdentityPassword, "MEDPLUM_ADMIN_PASSWORD"),
+    postgresUrl: input.config.postgresUrl,
   });
 }
 
