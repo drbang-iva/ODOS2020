@@ -178,8 +178,20 @@ test("synced practice policies enforce all repaired clinical writes on running M
     let prescription: MedicationRequest;
     await t.test("Prescriptions — Add prescription", async () => {
       const body = prescriptionFixture(patientReference, practitionerReference, `create-${runId}`);
-      await denied("staff", "POST", "MedicationRequest", body);
-      prescription = await created<MedicationRequest>("provider", body);
+      await denied("admin", "POST", "MedicationRequest", body);
+      prescription = await created<MedicationRequest>("staff", body);
+    });
+
+    await t.test("Prescriptions — Staff edits repeats before transmission", async () => {
+      const body: MedicationRequest = {
+        ...prescription,
+        dispenseRequest: {
+          ...prescription.dispenseRequest,
+          numberOfRepeatsAllowed: (prescription.dispenseRequest?.numberOfRepeatsAllowed ?? 0) + 1,
+        },
+      };
+      await denied("admin", "PUT", `MedicationRequest/${prescription.id}`, body);
+      prescription = await updated<MedicationRequest>("staff", body);
     });
 
     await t.test("Prescriptions — Send to pharmacy (reserve WENO message id)", async () => {
@@ -245,13 +257,21 @@ test("synced practice policies enforce all repaired clinical writes on running M
       failedTransmission = await updated<MedicationRequest>("staff", body);
     });
 
-    await t.test("Staff prescription mutation is denied while Provider control succeeds", async () => {
+    await t.test("Staff transmitted prescription mutation is denied while Provider control succeeds", async () => {
       const body: MedicationRequest = {
-        ...failedTransmission,
+        ...successfulTransmission,
         medicationCodeableConcept: { text: "Changed synthetic medication" },
       };
+      await denied("staff", "PUT", `MedicationRequest/${successfulTransmission.id}`, body);
+      successfulTransmission = await updated<MedicationRequest>("provider", body);
+    });
+
+    await t.test("Staff prescription requester mutation is denied before transmission", async () => {
+      const body: MedicationRequest = {
+        ...failedTransmission,
+        requester: { reference: `Practitioner/${randomUUID()}` },
+      };
       await denied("staff", "PUT", `MedicationRequest/${failedTransmission.id}`, body);
-      failedTransmission = await updated<MedicationRequest>("provider", body);
     });
 
     await t.test("Dry Eye > Adverse Event — Capture and persist Provenance", async () => {
@@ -407,6 +427,7 @@ function prescriptionFixture(
   return buildMedicationRequest({
     patientReference,
     practitionerReference,
+    recorderReference: practitionerReference,
     medicationText: `Synthetic medication ${identifier}`,
     dosageText: "One synthetic unit daily",
     transmissionMethod: "not-transmitted",

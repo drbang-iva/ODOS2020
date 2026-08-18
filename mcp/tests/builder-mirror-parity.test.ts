@@ -84,6 +84,7 @@ test("UI medication-order mirror matches the canonical MCP builder output", () =
   const input = {
     patientReference: "Patient/p1",
     practitionerReference: "Practitioner/dr1",
+    recorderReference: "Practitioner/staff1",
     encounterReference: "Encounter/e1",
     medicationText: "Prednisolone acetate 1%",
     drugDbCode: "445141",

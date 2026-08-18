@@ -22,6 +22,7 @@ import {
   type WenoSwitchNewRxResult,
 } from "../integrations/weno/wenoSwitchNewRx.js";
 import type { AuthenticatedStaff } from "../payments/payment-charge-handler.js";
+import type { MedplumClient } from "../fhir-client.js";
 import {
   searchDrugs,
   WenoDrugSearchValidationError,
@@ -51,6 +52,7 @@ export interface WenoPharmacySearchClient {
 export interface WenoSearchRouteDeps {
   authenticateService(): Promise<void>;
   authenticate(authHeader: string | undefined): Promise<AuthenticatedStaff | null>;
+  serviceFhir: MedplumClient;
   drugs: WenoDrugSearchClient;
   pharmacies: WenoPharmacySearchClient;
   switchConfig: WenoSwitchConfig;
@@ -168,7 +170,7 @@ async function handlePrescriptionSend(
       medicationRequestId,
     );
     const context = await prepareSendContext(staff, medicationRequest, deps);
-    const reserved = await staff.fhir.update<MedicationRequest>(
+    const reserved = await deps.serviceFhir.update<MedicationRequest>(
       "MedicationRequest",
       medicationRequestId,
       withMessageId(medicationRequest, context.messageId),
@@ -181,7 +183,7 @@ async function handlePrescriptionSend(
       });
     } catch (error) {
       const reason = sendFailureReason(error);
-      const updated = await staff.fhir.update<MedicationRequest>(
+      const updated = await deps.serviceFhir.update<MedicationRequest>(
         "MedicationRequest",
         medicationRequestId,
         withWenoOutcomeUnknown(reserved, context.messageId, reason, context.sentTime),
@@ -209,13 +211,13 @@ async function handlePrescriptionSend(
       return;
     }
     const updated = result.kind === "status"
-      ? await staff.fhir.update<MedicationRequest>(
+      ? await deps.serviceFhir.update<MedicationRequest>(
           "MedicationRequest",
           medicationRequestId,
           withElectronicTransmission(reserved),
           versionHeaders(reserved),
         )
-      : await staff.fhir.update<MedicationRequest>(
+      : await deps.serviceFhir.update<MedicationRequest>(
           "MedicationRequest",
           medicationRequestId,
           withWenoError(reserved, context.messageId, result, context.sentTime),
@@ -288,7 +290,7 @@ async function handleClearIndeterminateSend(
       );
     }
     const clearedAt = deps.now?.() ?? new Date().toISOString();
-    const updated = await staff.fhir.update<MedicationRequest>(
+    const updated = await deps.serviceFhir.update<MedicationRequest>(
       "MedicationRequest",
       medicationRequestId,
       withClearedIndeterminateReservation(

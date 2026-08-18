@@ -139,6 +139,11 @@ export const SERVICE_IDENTITY_FHIR_WRITE_CALL_SITES = [
   { path: "mcp/src/referral/referral-endpoint.ts", line: 566, callee: "deps.serviceFhir.create", resourceType: "AuditEvent", reason: "Explicit referral service client." },
   { path: "mcp/src/referral/referral-endpoint.ts", line: 574, callee: "deps.serviceFhir.create", resourceType: "AuditEvent", reason: "Explicit referral service client." },
   { path: "mcp/src/scheduling/scheduling-resource-service.ts", line: 125, callee: "fhir.update", resourceType: "Schedule", reason: "Scheduling resource service receives the explicit serviceFhir client." },
+  { path: "mcp/src/weno/weno-search-routes.ts", line: 173, callee: "deps.serviceFhir.update", resourceType: "MedicationRequest", reason: "WENO service client reserves the message id after authenticated Staff action; audit retains the Staff actor." },
+  { path: "mcp/src/weno/weno-search-routes.ts", line: 186, callee: "deps.serviceFhir.update", resourceType: "MedicationRequest", reason: "WENO service client records an indeterminate external outcome; audit retains the Staff actor." },
+  { path: "mcp/src/weno/weno-search-routes.ts", line: 214, callee: "deps.serviceFhir.update", resourceType: "MedicationRequest", reason: "WENO service client records the accepted electronic transmission; audit retains the Staff actor." },
+  { path: "mcp/src/weno/weno-search-routes.ts", line: 220, callee: "deps.serviceFhir.update", resourceType: "MedicationRequest", reason: "WENO service client records a structured external error; audit retains the Staff actor." },
+  { path: "mcp/src/weno/weno-search-routes.ts", line: 293, callee: "deps.serviceFhir.update", resourceType: "MedicationRequest", reason: "WENO service client clears a verified indeterminate reservation; audit retains the Staff actor." },
 ] as const satisfies readonly ExactFhirWriteCallSite[];
 
 export const SUSPECTED_BROKEN_PRACTICE_ROLE_WRITE_CALL_SITES:

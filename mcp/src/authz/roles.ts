@@ -188,22 +188,22 @@ const STAFF_ENCOUNTER_WRITE_CONSTRAINTS: WriteConstraintDeclaration[] = [
 
 const STAFF_MEDICATION_REQUEST_WRITE_CONSTRAINTS: WriteConstraintDeclaration[] = [
   {
-    description:
-      "Staff may update prescription transmission metadata but cannot change its clinical payload.",
+    description: "Staff cannot update an electronically transmitted prescription.",
+    expression:
+      "%before.extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/odos-transmission-method' and value = 'electronically-sent').empty()",
+  },
+  {
+    description: "Staff cannot change the prescription requester after creation.",
     expression: [
-      "medicationCodeableConcept.exists() = %before.medicationCodeableConcept.exists()",
-      "and (medicationCodeableConcept.empty() or medicationCodeableConcept = %before.medicationCodeableConcept)",
-      "and medicationReference.exists() = %before.medicationReference.exists()",
-      "and (medicationReference.empty() or medicationReference = %before.medicationReference)",
-      "and dosageInstruction.count() = %before.dosageInstruction.count()",
-      "and dosageInstruction.all($this in %before.dosageInstruction)",
-      "and subject.exists() = %before.subject.exists()",
-      "and (subject.empty() or subject = %before.subject)",
-      "and requester.exists() = %before.requester.exists()",
+      "requester.exists() = %before.requester.exists()",
       "and (requester.empty() or requester = %before.requester)",
-      "and authoredOn.exists() = %before.authoredOn.exists()",
-      "and (authoredOn.empty() or authoredOn = %before.authoredOn)",
-      "and status = %before.status",
+    ].join(" "),
+  },
+  {
+    description: "Staff cannot change the prescription recorder after creation.",
+    expression: [
+      "recorder.exists() = %before.recorder.exists()",
+      "and (recorder.empty() or recorder = %before.recorder)",
     ].join(" "),
   },
 ];
@@ -543,6 +543,11 @@ const STAFF_PATIENT_WRITE_RESOURCE_RULES: OdosResourceRule[] = [
   },
   {
     resourceType: "CareTeam",
+    interactions: CREATE_READ_INTERACTIONS,
+    scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
+  },
+  {
+    resourceType: "MedicationRequest",
     interactions: CREATE_READ_INTERACTIONS,
     scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
   },

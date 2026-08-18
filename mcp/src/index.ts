@@ -7744,6 +7744,7 @@ async function startMcpServer(): Promise<void> {
       registerWenoSearchRoutes(app, {
         authenticateService: authenticateWithMedplum,
         authenticate: authenticateStaffRoute,
+        serviceFhir: fhir,
         drugs: new PostgresWenoDrugDatabaseStorage(),
         pharmacies: new PostgresWenoPharmacyDirectoryStorage(),
         switchConfig: wenoSwitchConfigFromEnv(),

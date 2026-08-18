@@ -87,7 +87,7 @@ test("a test-populated controlled match shows the banner and forces phoned-in tr
   assert.match(html, /value="phoned-in"[^>]*checked=""|checked=""[^>]*value="phoned-in"/);
 });
 
-test("saving an edit preserves an on-hold prescription status and original requester", () => {
+test("saving an edit preserves an on-hold prescription status, original requester, and original recorder", () => {
   const existing: MedicationRequest = {
     resourceType: "MedicationRequest",
     id: "rx-1",
@@ -96,6 +96,7 @@ test("saving an edit preserves an on-hold prescription status and original reque
     subject: { reference: "Patient/patient-1" },
     medicationCodeableConcept: { text: "Original medication" },
     requester: { reference: "Practitioner/original-prescriber" },
+    recorder: { reference: "Practitioner/original-keyer" },
   };
   const edited: MedicationRequest = {
     resourceType: "MedicationRequest",
@@ -104,6 +105,7 @@ test("saving an edit preserves an on-hold prescription status and original reque
     subject: { reference: "Patient/patient-1" },
     medicationCodeableConcept: { text: "Edited medication" },
     requester: { reference: "Practitioner/current-user" },
+    recorder: { reference: "Practitioner/current-user" },
   };
 
   const update = mergeMedicationRequestUpdate(existing, edited);
@@ -111,6 +113,7 @@ test("saving an edit preserves an on-hold prescription status and original reque
   assert.equal(update.medicationCodeableConcept?.text, "Edited medication");
   assert.equal(update.status, "on-hold");
   assert.deepEqual(update.requester, { reference: "Practitioner/original-prescriber" });
+  assert.deepEqual(update.recorder, { reference: "Practitioner/original-keyer" });
 });
 
 test("PrescriptionSection rejects a stale loaded version with the friendly concurrent-edit message", async () => {
