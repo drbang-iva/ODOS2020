@@ -59,6 +59,7 @@ test("pretest section names the two honest empty states and the fixed S3 device"
   assert.match(html, /Blood pressure not recorded/);
   assert.match(html, /Skin carotenoid score not recorded/);
   assert.match(html, /Nu Skin Pharmanex S3/);
+  assert.match(html, /aria-label="Skin carotenoid score"[^>]*max="90000"/);
 });
 
 test("diagnosis axis exposes an explicit blood-pressure entry control without selecting a diagnosis", () => {

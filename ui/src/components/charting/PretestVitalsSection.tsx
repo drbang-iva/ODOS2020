@@ -118,7 +118,7 @@ export function PretestVitalsSection({ patientReference, encounterReference, onS
             <h3 className="font-semibold text-[color:var(--odos-text)]">BioPhotonic skin carotenoid score</h3>
             <p className="mt-1 text-xs text-[color:var(--odos-muted)]">Device: Nu Skin Pharmanex S3 · score stored as a unitless integer</p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <Field label="Score"><input aria-label="Skin carotenoid score" type="number" min={10_000} step="1" value={score} onChange={(e) => setScore(e.target.value)} /></Field>
+              <Field label="Score"><input aria-label="Skin carotenoid score" type="number" min={10_000} max={90_000} step="1" value={score} onChange={(e) => setScore(e.target.value)} /></Field>
               <Field label="Time"><input aria-label="Skin carotenoid score time" type="datetime-local" value={scoreTime} onChange={(e) => setScoreTime(e.target.value)} /></Field>
             </div>
             <button type="button" disabled={saving} onClick={() => void saveCarotenoid()} className="mt-4 rounded bg-brand px-4 py-2 text-sm font-semibold text-[color:var(--odos-accent-ink)]">Save score</button>

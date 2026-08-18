@@ -3,6 +3,7 @@ import type { Express } from "express";
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
 import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../fhir/ophthalmology/codeBindings.js";
+import { searchAll } from "../fhir-search.js";
 import { patientScopedProvenanceTargets } from "./glaucoma-suspect.js";
 
 export const BLOOD_PRESSURE_PANEL_CODE = "85354-9";
@@ -14,6 +15,7 @@ const WRITE_HEADERS = { "X-ODOS-Source": "mcp/save_section_observations" } as co
 export interface PretestVitalsFhirClient {
   create<T extends Observation | Provenance>(resource: T, headers?: Record<string, string>): Promise<T>;
   search<T extends Observation>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>>;
+  searchUrl?<T extends Observation>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>>;
 }
 
 export interface PretestVitalsEndpointDeps {
@@ -83,7 +85,7 @@ const bloodPressureSchema = z.object({
 
 const carotenoidSchema = z.object({
   ...shared,
-  score: z.number().int().min(10_000),
+  score: z.number().int().min(10_000).max(90_000),
 }).strict();
 
 const historySchema = z.object({ patient: z.string().regex(/^Patient\/[^/]+$/) }).strict();
@@ -154,11 +156,11 @@ export async function handlePretestVitalsHistoryRequest(
   if (!staffMay(staff.actorRole, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
   const parsed = historySchema.safeParse(input.query);
   if (!parsed.success) return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid history request." } };
-  const [bpBundle, carotenoidBundle] = await Promise.all([
-    staff.fhir.search<Observation>("Observation", { subject: parsed.data.patient, code: `${LOINC}|${BLOOD_PRESSURE_PANEL_CODE}`, _count: "200" }),
-    staff.fhir.search<Observation>("Observation", { subject: parsed.data.patient, code: `${ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|${CAROTENOID_SCORE_CODE}`, _count: "200" }),
+  const [bpRows, carotenoidRows] = await Promise.all([
+    searchAll<Observation>(staff.fhir, "Observation", { subject: parsed.data.patient, code: `${LOINC}|${BLOOD_PRESSURE_PANEL_CODE}`, _count: "200" }),
+    searchAll<Observation>(staff.fhir, "Observation", { subject: parsed.data.patient, code: `${ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|${CAROTENOID_SCORE_CODE}`, _count: "200" }),
   ]);
-  const bloodPressure = resources(bpBundle).filter((row) => hasCode(row, LOINC, BLOOD_PRESSURE_PANEL_CODE)).map((row) => ({
+  const bloodPressure = bpRows.filter((row) => hasCode(row, LOINC, BLOOD_PRESSURE_PANEL_CODE)).map((row) => ({
     observationReference: `Observation/${row.id}`,
     encounterReference: row.encounter?.reference,
     recordedAt: row.effectiveDateTime ?? "",
@@ -167,7 +169,7 @@ export async function handlePretestVitalsHistoryRequest(
     cuffSite: row.bodySite?.text ?? "",
     position: row.component?.find((part) => part.code.coding?.some((coding) => coding.code === "patient-position"))?.valueCodeableConcept?.coding?.[0]?.code ?? "",
   })).sort(byRecordedAt);
-  const carotenoid = resources(carotenoidBundle).filter((row) => hasCode(row, ODOS_OPHTHALMOLOGY_CODE_SYSTEM, CAROTENOID_SCORE_CODE)).map((row) => ({
+  const carotenoid = carotenoidRows.filter((row) => hasCode(row, ODOS_OPHTHALMOLOGY_CODE_SYSTEM, CAROTENOID_SCORE_CODE)).map((row) => ({
     observationReference: `Observation/${row.id}`,
     encounterReference: row.encounter?.reference,
     recordedAt: row.effectiveDateTime ?? "",
@@ -199,10 +201,6 @@ async function persistObservation(
   };
   const savedProvenance = await fhir.create(provenance, WRITE_HEADERS);
   return { status: 200, body: { observationReference: `Observation/${saved.id}`, provenanceReference: savedProvenance.id ? `Provenance/${savedProvenance.id}` : undefined } };
-}
-
-function resources(bundle: Bundle<Observation>): Observation[] {
-  return bundle.entry?.flatMap((entry) => entry.resource ? [entry.resource] : []) ?? [];
 }
 
 function hasCode(observation: Observation, system: string, code: string): boolean {

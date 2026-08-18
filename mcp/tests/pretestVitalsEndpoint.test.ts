@@ -107,6 +107,17 @@ test("carotenoid capture stores only the integer score and S3 device, with no di
   assert.equal(JSON.stringify(result.body).match(/diagnos|charge|coverage/gi), null);
 });
 
+test("carotenoid capture rejects scores above the S3 scale before any write", async () => {
+  const { created, deps } = fixture();
+  const result = await handleCarotenoidCaptureRequest(deps, {
+    authHeader: AUTH,
+    body: { patientReference: "Patient/p1", encounterReference: "Encounter/e1", score: 90_001 },
+  });
+
+  assert.equal(result.status, 400);
+  assert.equal(created.length, 0);
+});
+
 test("history returns every BP and carotenoid reading in chronological order", async () => {
   const { deps } = fixture();
   await handleCarotenoidCaptureRequest(deps, { authHeader: AUTH, body: {
@@ -121,4 +132,56 @@ test("history returns every BP and carotenoid reading in chronological order", a
   const body = result.body as { bloodPressure: unknown[]; carotenoid: unknown[] };
   assert.equal(body.bloodPressure.length, 1);
   assert.equal(body.carotenoid.length, 1);
+});
+
+test("history follows next links so later BP and carotenoid pages remain visible", async () => {
+  const makeObservation = (kind: "bp" | "carotenoid", id: string, recordedAt: string): Observation => kind === "bp" ? {
+    resourceType: "Observation",
+    id,
+    status: "preliminary",
+    code: { coding: [{ system: "http://loinc.org", code: BLOOD_PRESSURE_PANEL_CODE }] },
+    effectiveDateTime: recordedAt,
+    component: [
+      { code: { coding: [{ system: "http://loinc.org", code: "8480-6" }] }, valueQuantity: { value: 120 } },
+      { code: { coding: [{ system: "http://loinc.org", code: "8462-4" }] }, valueQuantity: { value: 76 } },
+    ],
+  } : {
+    resourceType: "Observation",
+    id,
+    status: "preliminary",
+    code: { coding: [{ system: "https://odos2020.com/fhir/CodeSystem/ophthalmology", code: CAROTENOID_SCORE_CODE }] },
+    effectiveDateTime: recordedAt,
+    valueInteger: 42_000,
+  };
+  const deps: PretestVitalsEndpointDeps = {
+    authenticate: async () => ({
+      staffReference: "Practitioner/doc1",
+      actorRole: "provider",
+      fhir: {
+        create: async (resource) => resource,
+        search: async <T extends Observation>(_resourceType: T["resourceType"], params?: Record<string, string>) => {
+          const kind = params?.code?.includes(BLOOD_PRESSURE_PANEL_CODE) ? "bp" : "carotenoid";
+          return {
+            resourceType: "Bundle",
+            type: "searchset",
+            entry: [{ resource: makeObservation(kind, `${kind}-1`, "2026-08-17T14:00:00.000Z") as T }],
+            link: [{ relation: "next", url: `https://example.test/fhir/R4/Observation?kind=${kind}` }],
+          } as Bundle<T>;
+        },
+        searchUrl: async <T extends Observation>(url: string) => {
+          const kind = url.includes("kind=bp") ? "bp" : "carotenoid";
+          return {
+            resourceType: "Bundle",
+            type: "searchset",
+            entry: [{ resource: makeObservation(kind, `${kind}-2`, "2026-08-17T15:00:00.000Z") as T }],
+          } as Bundle<T>;
+        },
+      },
+    }),
+  };
+
+  const result = await handlePretestVitalsHistoryRequest(deps, { authHeader: AUTH, query: { patient: "Patient/p1" } });
+  const body = result.body as { bloodPressure: unknown[]; carotenoid: unknown[] };
+  assert.equal(body.bloodPressure.length, 2);
+  assert.equal(body.carotenoid.length, 2);
 });
