@@ -71,7 +71,7 @@ test("operator adapter creates a named client without an access policy and verif
     }
     if (url.endsWith("/fhir/R4/ProjectMembership/operator-membership")) {
       assert.equal(new Headers(init?.headers).get("authorization"), "Bearer operator-token");
-      assert.equal(new Headers(init?.headers).get("x-medplum"), null);
+      assert.equal(new Headers(init?.headers).get("x-medplum"), "extended");
       return Response.json({
         resourceType: "ProjectMembership",
         id: "operator-membership",

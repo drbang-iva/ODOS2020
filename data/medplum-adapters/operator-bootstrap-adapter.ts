@@ -85,6 +85,7 @@ export function createLiveOperatorIdentityAdapter(input: {
           headers: {
             Authorization: `Bearer ${accessToken}`,
             Accept: "application/fhir+json",
+            "X-Medplum": "extended",
           },
         },
       );
@@ -99,7 +100,7 @@ export function createLiveOperatorIdentityAdapter(input: {
         membership.project?.reference !== `Project/${credentials.projectId}` ||
         membership.user?.reference !== expectedProfile ||
         membership.profile?.reference !== expectedProfile ||
-        membership.admin !== false
+        membership.admin === true
       ) {
         throw new Error("Operator ProjectMembership does not match the exact non-admin client and project.");
       }
