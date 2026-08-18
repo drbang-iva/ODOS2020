@@ -17,8 +17,10 @@ function fakeFhir() {
   };
 }
 
+const recordAudit = async () => {};
+
 test("lab-order dispatch resolves and lists the registered manual adapter", () => {
-  const dispatch = createLabOrderDispatch([{ vendor: "manual" }]);
+  const dispatch = createLabOrderDispatch([{ vendor: "manual" }], { recordAudit });
   assert.deepEqual(dispatch.vendors(), ["manual"]);
   const adapter = dispatch.getAdapter("manual", fakeFhir());
   assert.equal(adapter.vendorId, "manual");
@@ -38,6 +40,7 @@ test("lab-order dispatch lists and constructs the Ocuco Gatekeeper adapter", () 
   ], {
     ocucoConfig: { baseUrl: "https://gatekeeper.example", jwtKey: "key", jwtSecret: "secret" },
     ocucoClient: client,
+    recordAudit,
   });
 
   assert.deepEqual(dispatch.vendors(), ["manual", "ocuco-gatekeeper"]);
@@ -48,7 +51,7 @@ test("lab-order dispatch lists and constructs the Ocuco Gatekeeper adapter", () 
 });
 
 test("lab-order selection and environment routing default to manual", () => {
-  const manual = createLabOrderDispatch([{ vendor: "manual" }]).getAdapter("manual", fakeFhir());
+  const manual = createLabOrderDispatch([{ vendor: "manual" }], { recordAudit }).getAdapter("manual", fakeFhir());
   assert.equal(selectLabOrderAdapter({ manual }, undefined), manual);
   assert.deepEqual(labOrderRoutingFromEnv({}), { vendor: "manual" });
   assert.deepEqual(labOrderRoutingFromEnv({ ODOS_LAB_ORDER_VENDOR_DEFAULT: "manual" }), { vendor: "manual" });

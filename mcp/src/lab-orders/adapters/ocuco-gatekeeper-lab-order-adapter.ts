@@ -1,6 +1,5 @@
-import type { AuditEvent, Bundle, Resource, Task } from "@medplum/fhirtypes";
+import type { Bundle, Resource, Task } from "@medplum/fhirtypes";
 import {
-  buildAuditEventProjection,
   buildOdosAuditEventRow,
   type OdosAuditEventRecord,
 } from "../../authz/odosAudit.js";
@@ -47,16 +46,20 @@ export const ODOS_OCUCO_ORDER_ID_SYSTEM = "https://odos2020.com/fhir/NamingSyste
 
 export interface OcucoGatekeeperLabOrderAdapterOptions {
   now?: () => string;
-  recordAudit?(row: OdosAuditEventRecord): Promise<void>;
+  recordAudit: ((row: OdosAuditEventRecord) => Promise<void>) | undefined;
 }
 
 export function createOcucoGatekeeperLabOrderAdapter(
   fhir: LabOrderFhirClient,
   config: OcucoGatekeeperConfig,
   client: OcucoGatekeeperClient,
-  options: OcucoGatekeeperLabOrderAdapterOptions = {},
+  options: OcucoGatekeeperLabOrderAdapterOptions,
 ): LabOrderAdapter {
+  if (!options?.recordAudit) {
+    throw new Error("Ocuco lab-order adapter recordAudit is required.");
+  }
   const now = options.now ?? (() => new Date().toISOString());
+  const recordAudit = options.recordAudit;
 
   async function emitAudit(input: {
     eventType: "create" | "update";
@@ -73,11 +76,7 @@ export function createOcucoGatekeeperLabOrderAdapter(
       actionOutcome: "granted",
       actionReason: input.reason,
     });
-    if (options.recordAudit) {
-      await options.recordAudit(row);
-      return;
-    }
-    await fhir.create<AuditEvent>(buildAuditEventProjection(row));
+    await recordAudit(row);
   }
 
   async function updateState(

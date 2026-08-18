@@ -382,9 +382,13 @@ export function PrescriptionSection({ patientReference, encounterReference, onSa
       if (editingId && !existing) {
         throw new Error("The prescription being edited could not be found. Reload the chart and try again.");
       }
+      const recorderId = fhir.practitionerId();
       const resource = buildMedicationRequest({
         patientReference,
         practitionerReference,
+        ...(recorderId
+          ? { recorderReference: `Practitioner/${recorderId}` }
+          : {}),
         encounterReference,
         medicationText: draft.drug.trim(),
         drugDbCode: draft.drugDbCode,
@@ -874,6 +878,7 @@ export function mergeMedicationRequestUpdate(
     meta: existing.meta,
     status: existing.status,
     requester: existing.requester,
+    recorder: existing.recorder,
   };
 }
 

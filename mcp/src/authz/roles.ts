@@ -186,6 +186,28 @@ const STAFF_ENCOUNTER_WRITE_CONSTRAINTS: WriteConstraintDeclaration[] = [
   },
 ];
 
+const STAFF_MEDICATION_REQUEST_WRITE_CONSTRAINTS: WriteConstraintDeclaration[] = [
+  {
+    description: "Staff cannot update an electronically transmitted prescription.",
+    expression:
+      "%before.extension.where(url = 'https://odos2020.com/fhir/StructureDefinition/odos-transmission-method' and value = 'electronically-sent').empty()",
+  },
+  {
+    description: "Staff cannot change the prescription requester after creation.",
+    expression: [
+      "requester.exists() = %before.requester.exists()",
+      "and (requester.empty() or requester = %before.requester)",
+    ].join(" "),
+  },
+  {
+    description: "Staff cannot change the prescription recorder after creation.",
+    expression: [
+      "recorder.exists() = %before.recorder.exists()",
+      "and (recorder.empty() or recorder = %before.recorder)",
+    ].join(" "),
+  },
+];
+
 const FRAME_INVENTORY_STATUS_URL =
   "https://odos2020.com/fhir/StructureDefinition/unit-status";
 const FRAME_INVENTORY_STAFF_WRITE_CONSTRAINTS: WriteConstraintDeclaration[] = [
@@ -515,6 +537,27 @@ const STAFF_PATIENT_WRITE_RESOURCE_RULES: OdosResourceRule[] = [
   STAFF_ENCOUNTER_WRITE_RESOURCE_RULE,
   ...STAFF_FINDING_WRITE_RESOURCE_RULES,
   {
+    resourceType: "AllergyIntolerance",
+    interactions: CREATE_READ_INTERACTIONS,
+    scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
+  },
+  {
+    resourceType: "CareTeam",
+    interactions: CREATE_READ_INTERACTIONS,
+    scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
+  },
+  {
+    resourceType: "MedicationRequest",
+    interactions: CREATE_READ_INTERACTIONS,
+    scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
+  },
+  {
+    resourceType: "MedicationRequest",
+    interactions: READ_UPDATE_INTERACTIONS,
+    scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
+    writeConstraint: STAFF_MEDICATION_REQUEST_WRITE_CONSTRAINTS,
+  },
+  {
     resourceType: "Provenance",
     interactions: ["create"],
     scope: { kind: "practice" },
@@ -531,6 +574,28 @@ const PROVIDER_CLINICAL_WRITE_RESOURCE_RULES: OdosResourceRule[] = [
         ? CLINICAL_WRITE_CONSTRAINTS
         : undefined,
   })),
+  ...(["AllergyIntolerance", "CareTeam", "BodyStructure", "AdverseEvent"] as const).map(
+    (resourceType): OdosResourceRule => ({
+      resourceType,
+      interactions: CREATE_READ_INTERACTIONS,
+      scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
+    }),
+  ),
+  {
+    resourceType: "Goal",
+    interactions: UPDATE_INTERACTIONS,
+    scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
+  },
+  {
+    resourceType: "MedicationRequest",
+    interactions: CREATE_READ_INTERACTIONS,
+    scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
+  },
+  {
+    resourceType: "MedicationRequest",
+    interactions: READ_UPDATE_INTERACTIONS,
+    scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
+  },
   {
     resourceType: "Provenance",
     interactions: ["create"],

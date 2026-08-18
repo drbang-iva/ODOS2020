@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { AccessPolicy, AccessPolicyResource, Encounter } from "@medplum/fhirtypes";
+import type { AccessPolicy, AccessPolicyResource, Encounter, MedicationRequest } from "@medplum/fhirtypes";
 import fhirpath from "fhirpath";
+import r4Model from "fhirpath/fhir-context/r4/index.js";
 import {
   ODOS_PRACTICE_ROLE_SYSTEM,
   PRACTICE_ROLE_IDS,
@@ -14,6 +15,172 @@ import {
 
 const DX_PICK_TALLY_CRITERIA =
   "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-dx-pick-tally|odos-dx-pick-tally&identifier=https://odos2020.com/fhir/NamingSystem/dx-pick-tally-practitioner|%profile";
+
+const REPAIRED_WRITE_SURFACES = [
+  { surface: "IOP Timeline target editor — Save an existing target", resourceType: "Goal", interaction: "update", roles: ["provider"] },
+  { surface: "IOP Timeline target editor — Save a new target", resourceType: "Goal", interaction: "create", roles: ["provider"] },
+  { surface: "Prescriptions — Send to pharmacy (reserve WENO message id)", resourceType: "MedicationRequest", interaction: "update", roles: ["provider", "staff"] },
+  { surface: "Prescriptions — Send to pharmacy (record indeterminate outcome)", resourceType: "MedicationRequest", interaction: "update", roles: ["provider", "staff"] },
+  { surface: "Prescriptions — Send to pharmacy (record successful transmission)", resourceType: "MedicationRequest", interaction: "update", roles: ["provider", "staff"] },
+  { surface: "Prescriptions — Send to pharmacy (record WENO error)", resourceType: "MedicationRequest", interaction: "update", roles: ["provider", "staff"] },
+  { surface: "Prescriptions — Pharmacy verified not received — clear reservation", resourceType: "MedicationRequest", interaction: "update", roles: ["provider", "staff"] },
+  { surface: "Dry Eye > Adverse Event — Capture", resourceType: "AdverseEvent", interaction: "create", roles: ["provider"] },
+  { surface: "Ortho-K > Adverse Event — Capture", resourceType: "AdverseEvent", interaction: "create", roles: ["provider"] },
+  { surface: "Prescriptions — Add prescription", resourceType: "MedicationRequest", interaction: "create", roles: ["provider", "staff"] },
+  { surface: "Chart sidebar > Allergies — Mark no known allergies", resourceType: "AllergyIntolerance", interaction: "create", roles: ["provider", "staff"] },
+  { surface: "Chart sidebar > Allergies — Add allergy", resourceType: "AllergyIntolerance", interaction: "create", roles: ["provider", "staff"] },
+  { surface: "Chart sidebar > Care Team — Add team member", resourceType: "CareTeam", interaction: "create", roles: ["provider", "staff"] },
+  { surface: "Diagnosis workspace/assessment — add an eye-specific diagnosis or save diagnosis laterality", resourceType: "BodyStructure", interaction: "create", roles: ["provider"] },
+] as const;
+
+for (const expected of REPAIRED_WRITE_SURFACES) {
+  test(`compiled policy and grant-removal mutation: ${expected.surface}`, () => {
+    const criteria = `${expected.resourceType}?_compartment=%patient_compartment`;
+    for (const roleId of PRACTICE_ROLE_IDS) {
+      const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
+      const shouldAllow = expected.roles.includes(roleId as never);
+      const assertSurfaceGrant = (candidate: AccessPolicy) => assert.equal(
+        accessPolicyAllows(candidate, expected.resourceType, expected.interaction, criteria),
+        shouldAllow,
+        `${expected.surface}: ${roleId} ${expected.interaction}`,
+      );
+      assertSurfaceGrant(policy);
+
+      if (shouldAllow) {
+        const mutated: AccessPolicy = {
+          ...policy,
+          resource: policy.resource?.filter((rule) => !(
+            rule.resourceType === expected.resourceType
+            && rule.interaction?.includes(expected.interaction)
+            && rule.criteria === criteria
+          )),
+        };
+        assert.throws(
+          () => assertSurfaceGrant(mutated),
+          /false !== true/,
+          `${expected.surface}: removing the exact grant must turn the same surface assertion RED for ${roleId}`,
+        );
+      }
+    }
+  });
+}
+
+test("Staff MedicationRequest edits stop after electronic transmission while requester and recorder stay pinned", () => {
+  const staff = buildMedplumAccessPolicy(getRoleDeclaration("staff"));
+  const updateRule = staff.resource?.find((candidate) =>
+    candidate.resourceType === "MedicationRequest"
+    && candidate.interaction?.includes("update")
+    && candidate.criteria === "MedicationRequest?_compartment=%patient_compartment"
+  );
+  const createRule = staff.resource?.find((candidate) =>
+    candidate.resourceType === "MedicationRequest"
+    && candidate.interaction?.includes("create")
+    && candidate.criteria === "MedicationRequest?_compartment=%patient_compartment"
+  );
+  assert.ok(updateRule?.writeConstraint?.length, "Staff MedicationRequest update needs a writeConstraint");
+  assert.ok(createRule, "Staff must be able to create MedicationRequest");
+
+  const before: MedicationRequest = {
+    resourceType: "MedicationRequest",
+    id: "rx-1",
+    status: "active",
+    intent: "order",
+    medicationCodeableConcept: { coding: [{ system: "http://www.nlm.nih.gov/research/umls/rxnorm", code: "fixture-a" }] },
+    subject: { reference: "Patient/p1" },
+    requester: { reference: "Practitioner/provider-1" },
+    recorder: { reference: "Practitioner/staff-1" },
+    authoredOn: "2026-08-17",
+    dosageInstruction: [{ text: "fixture dose" }],
+    dispenseRequest: {
+      quantity: { value: 1, unit: "bottle" },
+      numberOfRepeatsAllowed: 1,
+      expectedSupplyDuration: { value: 30, unit: "days" },
+    },
+    substitution: { allowedBoolean: false },
+    extension: [{
+      url: "https://odos2020.com/fhir/StructureDefinition/odos-transmission-method",
+      valueCode: "printed",
+    }],
+  };
+  const preTransmissionRepeatEdit: MedicationRequest = {
+    ...structuredClone(before),
+    dispenseRequest: { ...structuredClone(before.dispenseRequest), numberOfRepeatsAllowed: 2 },
+  };
+  assert.equal(
+    ruleAllowsWrite(updateRule, before, preTransmissionRepeatEdit),
+    true,
+    "Staff may edit repeats before transmission",
+  );
+
+  for (const method of [undefined, "printed", "phoned-in"] as const) {
+    const ordinary = structuredClone(before);
+    ordinary.extension = method === undefined
+      ? undefined
+      : ordinary.extension?.map((entry) => ({ ...entry, valueCode: method }));
+    const changed = structuredClone(ordinary);
+    changed.dispenseRequest!.numberOfRepeatsAllowed = 3;
+    assert.equal(
+      ruleAllowsWrite(updateRule, ordinary, changed),
+      true,
+      `Staff may edit an ordinary ${method ?? "unmarked"} prescription`,
+    );
+  }
+
+  const transmitted = structuredClone(before);
+  transmitted.extension = transmitted.extension?.map((entry) => ({ ...entry, valueCode: "electronically-sent" }));
+  const transmittedMutations: Array<readonly [string, (resource: MedicationRequest) => void]> = [
+    ["numberOfRepeatsAllowed", (resource) => { resource.dispenseRequest!.numberOfRepeatsAllowed = 4; }],
+    ["quantity", (resource) => { resource.dispenseRequest!.quantity = { value: 2, unit: "bottle" }; }],
+    ["expectedSupplyDuration", (resource) => { resource.dispenseRequest!.expectedSupplyDuration = { value: 60, unit: "days" }; }],
+    ["dosageInstruction", (resource) => { resource.dosageInstruction = [{ text: "changed" }]; }],
+    ["substitution", (resource) => { resource.substitution = { allowedBoolean: true }; }],
+  ];
+  for (const [field, mutate] of transmittedMutations) {
+    const changed = structuredClone(transmitted);
+    mutate(changed);
+    assert.equal(ruleAllowsWrite(updateRule, transmitted, changed), false, `Staff must not change transmitted ${field}`);
+
+    const withoutTransmissionLock: AccessPolicyResource = {
+      ...updateRule,
+      writeConstraint: updateRule.writeConstraint?.filter((constraint) =>
+        !constraint.description?.includes("electronically transmitted")
+      ),
+    };
+    assert.equal(
+      ruleAllowsWrite(withoutTransmissionLock, transmitted, changed),
+      true,
+      `mutation control: removing the transmission clause must turn ${field} denial RED`,
+    );
+  }
+
+  const requesterChanged = structuredClone(before);
+  requesterChanged.requester = { reference: "Practitioner/provider-2" };
+  assert.equal(ruleAllowsWrite(updateRule, before, requesterChanged), false, "Staff must not change requester");
+  const withoutRequesterPin: AccessPolicyResource = {
+    ...updateRule,
+    writeConstraint: updateRule.writeConstraint?.filter((constraint) =>
+      !constraint.description?.includes("requester")
+    ),
+  };
+  assert.equal(
+    ruleAllowsWrite(withoutRequesterPin, before, requesterChanged),
+    true,
+    "mutation control: removing the requester clause must turn requester denial RED",
+  );
+
+  const recorderChanged = structuredClone(before);
+  recorderChanged.recorder = { reference: "Practitioner/staff-2" };
+  assert.equal(ruleAllowsWrite(updateRule, before, recorderChanged), false, "Staff must not change recorder");
+});
+
+test("no practice role can create AuditEvent or read AdverseEvent speculatively", () => {
+  for (const roleId of PRACTICE_ROLE_IDS) {
+    const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
+    assert.equal(accessPolicyAllows(policy, "AuditEvent", "create"), false, `${roleId} AuditEvent create`);
+    assert.equal(accessPolicyAllows(policy, "AdverseEvent", "read"), false, `${roleId} AdverseEvent read`);
+    assert.equal(accessPolicyAllows(policy, "AdverseEvent", "search"), false, `${roleId} AdverseEvent search`);
+  }
+});
 
 test("the active practice-role catalog contains only Provider, Staff, and Admin", () => {
   assert.deepEqual(PRACTICE_ROLE_IDS, ["provider", "staff", "admin"]);
@@ -492,4 +659,15 @@ function accessPolicyAllows(
       rule.interaction?.includes(interaction) &&
       (criteria === undefined || rule.criteria === criteria),
   ) ?? false;
+}
+
+function ruleAllowsWrite(
+  rule: AccessPolicyResource,
+  before: MedicationRequest,
+  after: MedicationRequest,
+): boolean {
+  return (rule.writeConstraint ?? []).every((constraint) => {
+    const result = fhirpath.evaluate(after, constraint.expression ?? "", { before, after }, r4Model);
+    return result.length === 1 && result[0] === true;
+  });
 }

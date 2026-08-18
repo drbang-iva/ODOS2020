@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { AuditEvent, Bundle, Resource, Task } from "@medplum/fhirtypes";
+import type { Bundle, Resource, Task } from "@medplum/fhirtypes";
+import type { OdosAuditEventRecord } from "../src/authz/odosAudit.js";
 import type { LabOrder } from "../src/fhir/opticalLabOrder.js";
 import { ODOS_LAB_TRANSPORT_STATE_SYSTEM } from "../src/fhir/labTransportState.js";
 import {
@@ -10,6 +11,13 @@ import {
 
 const NOW = "2026-07-17T18:00:00.000Z";
 const CONFIG = { baseUrl: "https://gatekeeper.example", jwtKey: "key", jwtSecret: "secret" };
+
+test("Ocuco adapter refuses to construct without the service audit recorder", () => {
+  assert.throws(
+    () => createOcucoGatekeeperLabOrderAdapter(fakeFhir(), CONFIG, fakeClient()),
+    /recordAudit.*required/i,
+  );
+});
 
 function order(): LabOrder {
   return {
@@ -56,8 +64,9 @@ function fakeFhir() {
   const tasks = new Map<string, Task>([["order-1", clinicalTask()]]);
   const created: Resource[] = [];
   const updated: Task[] = [];
+  const auditRows: OdosAuditEventRecord[] = [];
   return {
-    store: { tasks, created, updated },
+    store: { tasks, created, updated, auditRows },
     read: async <T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> => {
       assert.equal(resourceType, "Task");
       const task = tasks.get(id);
@@ -83,15 +92,23 @@ function fakeFhir() {
         created.push(structuredClone(task));
         return structuredClone(task) as T;
       }
-      const audit = { ...copy, id: `audit-${created.length + 1}` };
-      created.push(structuredClone(audit));
-      return audit as T;
+      created.push(structuredClone(copy));
+      return copy;
     },
     update: async <T extends Resource>(_type: T["resourceType"], id: string, resource: T): Promise<T> => {
       const task = structuredClone(resource) as Task;
       tasks.set(id, task);
       updated.push(task);
       return structuredClone(resource);
+    },
+  };
+}
+
+function adapterOptions(fhir: ReturnType<typeof fakeFhir>) {
+  return {
+    now: () => NOW,
+    recordAudit: async (row: OdosAuditEventRecord) => {
+      fhir.store.auditRows.push(structuredClone(row));
     },
   };
 }
@@ -130,7 +147,7 @@ function submitRequest() {
 test("Ocuco submit sends the JSON-ready Hashref, persists the shared transmission Task, and audits", async () => {
   const fhir = fakeFhir();
   const client = fakeClient();
-  const adapter = createOcucoGatekeeperLabOrderAdapter(fhir, CONFIG, client, { now: () => NOW });
+  const adapter = createOcucoGatekeeperLabOrderAdapter(fhir, CONFIG, client, adapterOptions(fhir));
 
   const result = await adapter.submit(submitRequest());
 
@@ -154,13 +171,14 @@ test("Ocuco submit sends the JSON-ready Hashref, persists the shared transmissio
   assert.ok(transmission.identifier?.some((identifier) =>
     identifier.system === ODOS_OCUCO_ORDER_ID_SYSTEM && identifier.value === "50481940"));
   assert.ok(transmission.input?.some((input) => input.valueString?.includes('"format":"odos-lab-order"')));
-  const audit = fhir.store.created.find((resource): resource is AuditEvent => resource.resourceType === "AuditEvent");
-  assert.ok(audit?.entity?.some((entity) => entity.what?.reference === "Task/ocuco-1"));
+  const audit = fhir.store.auditRows[0];
+  assert.equal(audit?.resourceType, "Task");
+  assert.equal(audit?.resourceId, "ocuco-1");
 });
 
 test("Ocuco adapter reaches vendor-only states through legal forward transitions", async () => {
   const fhir = fakeFhir();
-  const adapter = createOcucoGatekeeperLabOrderAdapter(fhir, CONFIG, fakeClient(), { now: () => NOW });
+  const adapter = createOcucoGatekeeperLabOrderAdapter(fhir, CONFIG, fakeClient(), adapterOptions(fhir));
   const submitted = await adapter.submit(submitRequest());
 
   for (const state of ["acknowledged", "in-production", "shipped", "received"] as const) {
@@ -177,7 +195,7 @@ test("Ocuco adapter reaches vendor-only states through legal forward transitions
 test("Ocuco advanceTransportState cannot bypass the remote cancellation flow", async () => {
   const fhir = fakeFhir();
   const client = fakeClient();
-  const adapter = createOcucoGatekeeperLabOrderAdapter(fhir, CONFIG, client, { now: () => NOW });
+  const adapter = createOcucoGatekeeperLabOrderAdapter(fhir, CONFIG, client, adapterOptions(fhir));
   const submitted = await adapter.submit(submitRequest());
   const taskBefore = structuredClone(fhir.store.tasks.get("ocuco-1"));
 
@@ -198,7 +216,7 @@ test("Ocuco advanceTransportState cannot bypass the remote cancellation flow", a
 test("Ocuco cancellation re-submits the original order with cancel:1 before cancelling the Task", async () => {
   const fhir = fakeFhir();
   const client = fakeClient();
-  const adapter = createOcucoGatekeeperLabOrderAdapter(fhir, CONFIG, client, { now: () => NOW });
+  const adapter = createOcucoGatekeeperLabOrderAdapter(fhir, CONFIG, client, adapterOptions(fhir));
   const submitted = await adapter.submit(submitRequest());
 
   await adapter.cancel(submitted.labOrderReference, "Practitioner/staff-1");
@@ -212,7 +230,7 @@ test("Ocuco cancellation re-submits the original order with cancel:1 before canc
 test("Ocuco cancellation fails before a remote call when the stored original order id is absent", async () => {
   const fhir = fakeFhir();
   const client = fakeClient();
-  const adapter = createOcucoGatekeeperLabOrderAdapter(fhir, CONFIG, client, { now: () => NOW });
+  const adapter = createOcucoGatekeeperLabOrderAdapter(fhir, CONFIG, client, adapterOptions(fhir));
   const submitted = await adapter.submit(submitRequest());
   const task = fhir.store.tasks.get("ocuco-1")!;
   const exportInput = task.input?.find((input) => input.valueString?.includes('"format":"odos-lab-order"'));
@@ -231,7 +249,7 @@ test("Ocuco cancellation fails before a remote call when the stored original ord
 test("Ocuco submit fails clearly when runtime config is absent and never falls back to manual", async () => {
   const fhir = fakeFhir();
   const client = fakeClient();
-  const adapter = createOcucoGatekeeperLabOrderAdapter(fhir, {}, client, { now: () => NOW });
+  const adapter = createOcucoGatekeeperLabOrderAdapter(fhir, {}, client, adapterOptions(fhir));
 
   await assert.rejects(
     () => adapter.submit(submitRequest()),
@@ -242,7 +260,8 @@ test("Ocuco submit fails clearly when runtime config is absent and never falls b
 });
 
 test("Ocuco adapter metadata identifies the real BP Digital API transport", () => {
-  const adapter = createOcucoGatekeeperLabOrderAdapter(fakeFhir(), CONFIG, fakeClient());
+  const fhir = fakeFhir();
+  const adapter = createOcucoGatekeeperLabOrderAdapter(fhir, CONFIG, fakeClient(), adapterOptions(fhir));
   assert.equal(adapter.vendorId, "ocuco-gatekeeper");
   assert.equal(adapter.name, "Ocuco Gatekeeper (BP Digital Labs)");
   assert.equal(adapter.vendorApiRequired, true);

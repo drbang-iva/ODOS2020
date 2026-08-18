@@ -40,6 +40,7 @@ export interface MedicationOrderPharmacy {
 export interface MedicationOrderInput {
   patientReference: string;
   practitionerReference?: string;
+  recorderReference?: string;
   encounterReference?: string;
   medicationText: string;
   drugDbCode?: string;
@@ -99,6 +100,9 @@ export function buildMedicationRequest(input: MedicationOrderInput): MedicationR
     subject: { reference: input.patientReference },
     ...(input.practitionerReference
       ? { requester: { reference: input.practitionerReference } }
+      : {}),
+    ...(input.recorderReference
+      ? { recorder: { reference: input.recorderReference } }
       : {}),
     ...(input.encounterReference ? { encounter: { reference: input.encounterReference } } : {}),
     authoredOn: input.authoredOn ?? new Date().toISOString(),

@@ -167,7 +167,7 @@ function setup() {
       calls.push({ operation: "cancel", staff: staffReference, reference });
     },
   };
-  const dispatch = createLabOrderDispatch([{ vendor: "manual" }]);
+  const dispatch = createLabOrderDispatch([{ vendor: "manual" }], { recordAudit: async () => {} });
   const deps: LabOrderHandlerDeps = {
     authenticate: async (header) => header === "Bearer good"
       ? { staffReference: "Practitioner/verified-staff", actorRole: "staff", fhir }

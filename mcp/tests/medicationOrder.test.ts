@@ -14,6 +14,7 @@ test("buildMedicationRequest captures the prescription, linked diagnosis, and di
   const request = buildMedicationRequest({
     patientReference: "Patient/p1",
     practitionerReference: "Practitioner/dr1",
+    recorderReference: "Practitioner/staff1",
     encounterReference: "Encounter/e1",
     medicationText: "Prednisolone acetate 1%",
     dosageText: "1 drop OU four times daily",
@@ -35,6 +36,7 @@ test("buildMedicationRequest captures the prescription, linked diagnosis, and di
   assert.equal(request.medicationCodeableConcept.coding, undefined);
   assert.equal(request.subject.reference, "Patient/p1");
   assert.equal(request.requester?.reference, "Practitioner/dr1");
+  assert.equal(request.recorder?.reference, "Practitioner/staff1");
   assert.equal(request.encounter?.reference, "Encounter/e1");
   assert.equal(request.dosageInstruction?.[0]?.text, "1 drop OU four times daily");
   assert.equal(request.dosageInstruction?.[0]?.route?.text, "Ophthalmic");

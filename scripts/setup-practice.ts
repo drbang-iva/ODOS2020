@@ -753,6 +753,15 @@ export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
   }
 }
 
+export function createSetupServiceFhirClient(baseUrl: string, accessToken: string): MedplumClient {
+  return createOperatorScriptFhirClient({
+    baseUrl,
+    accessToken,
+    extendedMode: true,
+    reason: "Operator practice setup service bootstrap runs before request handling.",
+  });
+}
+
 class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
   private fhir?: MedplumClient;
   private serviceFhir?: MedplumClient;
@@ -771,11 +780,7 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
       serviceIdentityEmail,
       serviceIdentityPassword,
     );
-    this.serviceFhir = createOperatorScriptFhirClient({
-      baseUrl: config.baseUrl,
-      accessToken: serviceAccessToken,
-      reason: "Operator practice setup service bootstrap runs before request handling.",
-    });
+    this.serviceFhir = createSetupServiceFhirClient(config.baseUrl, serviceAccessToken);
 
     try {
       const accessToken = await loginForAccessToken(config);

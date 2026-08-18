@@ -232,6 +232,31 @@ test("the exact write ratchet rejects a stale entry instead of silently forgivin
   );
 });
 
+test("the service-identity write inventory rejects an exact ui/src relocation", async () => {
+  const module = await loadGrantCheck();
+  assert.equal(typeof module.matchExactWriteInventory, "function");
+  if (!module.matchExactWriteInventory) return;
+  const relocatedAllergyWrite: FhirOperation = {
+    path: "ui/src/lib/clinical-actions.ts",
+    line: 64,
+    callee: "fhir.create",
+    interaction: "create",
+    requiredInteraction: "create",
+    resourceType: "AllergyIntolerance",
+  };
+
+  assert.throws(
+    () => module.matchExactWriteInventory!([relocatedAllergyWrite], [{
+      path: relocatedAllergyWrite.path,
+      line: relocatedAllergyWrite.line,
+      callee: relocatedAllergyWrite.callee,
+      resourceType: relocatedAllergyWrite.resourceType,
+      reason: "invented service-identity exception",
+    }], "Service-identity FHIR write exclusion"),
+    /service-identity.*ui\/src/i,
+  );
+});
+
 test("FHIR read grant comparison reports the exact sorted subset gap", async () => {
   const { findMissingFhirReadGrants } = await loadGrantCheck();
   assert.deepEqual(
@@ -266,12 +291,15 @@ test("live FHIR read grant check covers all four chart resources through compile
   assert.deepEqual(result.missingResourceTypes, []);
   assert.deepEqual(result.excludedServiceIdentityResourceTypes, ["ProjectMembership", "User"]);
   assert.equal(result.excludedNonFhirCallSites.length, 6);
-  assert.equal(result.excludedServiceIdentityWriteCallSites?.length, 21);
-  assert.equal(result.suspectedBrokenPracticeRoleWriteCallSites?.length, 16);
-  assert.equal(result.suspectedBrokenPracticeRoleWriteCallSites?.some((entry) =>
-    entry.includes("ui/src/lib/clinical-actions.ts:64 fhir.create AllergyIntolerance")
-    && entry.includes("Mark no known allergies")
-  ), true);
+  assert.equal(result.excludedServiceIdentityWriteCallSites?.length, 26);
+  assert.equal(
+    result.excludedServiceIdentityWriteCallSites?.filter((entry) =>
+      entry.startsWith("mcp/src/weno/weno-search-routes.ts:")
+      && entry.includes("deps.serviceFhir.update MedicationRequest")
+    ).length,
+    5,
+  );
+  assert.equal(result.suspectedBrokenPracticeRoleWriteCallSites?.length, 0);
   assert.deepEqual(result.sourceRoots, ["mcp/src", "ui/src"]);
   assert.deepEqual(result.includedExtensions, [".ts", ".tsx"]);
   assert.deepEqual(result.excludedDirectoryNames, ["__tests__"]);
@@ -282,8 +310,12 @@ test("live FHIR read grant check covers all four chart resources through compile
   ), true, "the live scan must identify the tally create and its exact scope contract");
   assert.deepEqual(result.criteriaScopedResourceTypes, [
     "Account",
+    "AdverseEvent",
+    "AllergyIntolerance",
     "Basic",
+    "BodyStructure",
     "CarePlan",
+    "CareTeam",
     "ChargeItem",
     "Communication",
     "Condition",
@@ -294,8 +326,10 @@ test("live FHIR read grant check covers all four chart resources through compile
     "DocumentReference",
     "Encounter",
     "EpisodeOfCare",
+    "Goal",
     "Media",
     "MedicationAdministration",
+    "MedicationRequest",
     "MedicationStatement",
     "Observation",
     "Patient",
@@ -339,13 +373,12 @@ test("FHIR read grant CLI passes only with full coverage and always prints its l
   assert.match(result.stdout, /Excluded source extensions: all except \.ts, \.tsx/);
   assert.match(result.stdout, /ProjectMembership — service identity authorization context/);
   assert.match(result.stdout, /User — service identity account resolution/);
-  assert.match(result.stdout, /Service-identity ungranted write call sites excluded \(21\):/);
-  assert.match(result.stdout, /SUSPECTED BROKEN FEATURE — known ungranted practice-role write call sites \(16\):/);
-  assert.match(result.stdout, /ui\/src\/lib\/clinical-actions\.ts:64 fhir\.create AllergyIntolerance.*Mark no known allergies/);
+  assert.match(result.stdout, /Service-identity FHIR write call sites excluded \(26\):/);
+  assert.match(result.stdout, /SUSPECTED BROKEN FEATURE — known ungranted practice-role write call sites \(0\):/);
   assert.match(result.stdout, /Non-FHIR literal call sites excluded:\n- mcp\/src\/bulk-data\/router\.ts:141 router\.delete/);
   assert.match(result.stdout, /other names escape because receiver-independent matching would misclassify non-FHIR search APIs/);
   assert.match(result.stdout, /Type-level comparison does not prove criteria scope/);
-  assert.match(result.stdout, /Criteria-scoped resource types \(23\): Account, Basic, .*ServiceRequest/);
+  assert.match(result.stdout, /Criteria-scoped resource types \(29\): Account, AdverseEvent, .*ServiceRequest/);
   assert.match(result.stdout, /Basic: \d+ operations; \d+ scope-verified; \d+ NOT SCOPE-VERIFIED/);
 });
 

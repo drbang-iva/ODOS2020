@@ -215,6 +215,7 @@ test("WENO error persistence leaves transmission unchanged and status alone mark
     assert.equal(statusBody.resendable, false);
     assert.equal(transmissionMethod(statusBody.medicationRequest), "electronically-sent");
     assert.equal(wenoMessageId(statusBody.medicationRequest), "test-message-id");
+    assert.equal(server.serviceUpdateCalls(), 4, "reserve, error, reserve, and success use service identity");
   } finally {
     await server.close();
   }
@@ -253,6 +254,7 @@ test("a thrown WENO send stays reserved until an audited staff clear permits a r
   const audits: Array<{
     actionReason?: string;
     actorId?: string;
+    actorRole?: string;
     eventTime: string;
     eventType: string;
   }> = [];
@@ -322,6 +324,7 @@ test("a thrown WENO send stays reserved until an audited staff clear permits a r
     assert.ok(audits.some((row) =>
       row.eventType === "update"
       && row.actorId === "staff-1"
+      && row.actorRole === "staff"
       && row.eventTime === "2026-07-31T12:00:00.000Z"
       && row.actionReason === "WENO_SWITCH_INDETERMINATE_RESERVATION_CLEARED test-message-id"
     ));
@@ -338,6 +341,7 @@ test("a thrown WENO send stays reserved until an audited staff clear permits a r
     assert.equal(successfulBody.result.kind, "status");
     assert.equal(transmissionMethod(successfulBody.medicationRequest), "electronically-sent");
     assert.equal(sendCalls, 2);
+    assert.equal(server.serviceUpdateCalls(), 5, "reserve, unknown, clear, reserve, and success use service identity");
   } finally {
     await server.close();
   }
@@ -377,6 +381,7 @@ test("a structured WENO error still clears its reservation and permits an immedi
     );
     assert.equal(retryResponse.status, 200);
     assert.equal(sendCalls, 2);
+    assert.equal(server.serviceUpdateCalls(), 4, "reserve, WENO error, reserve, and success use service identity");
   } finally {
     await server.close();
   }
@@ -395,6 +400,7 @@ async function startServer(overrides: Partial<Parameters<typeof registerWenoSear
       : null,
     drugs: { search: async () => [] },
     pharmacies: { search: async () => [] },
+    serviceFhir: {} as never,
     switchConfig: {},
     recordAudit: async () => undefined,
     ...overrides,
@@ -421,18 +427,25 @@ async function startSendServer(
     ["Patient/patient-1", fixture.patient],
     ["Practitioner/prescriber-1", fixture.prescriber],
   ]);
-  const fhir = {
+  const readFhir = {
     async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
       const resource = resources.get(`${resourceType}/${id}`);
       if (!resource) throw new Error(`${resourceType}/${id} not found`);
       return structuredClone(resource) as T;
     },
+    async update(): Promise<never> {
+      throw new Error("WENO route attempted a practice-role FHIR write");
+    },
+  };
+  let serviceUpdateCalls = 0;
+  const serviceFhir = {
     async update<T extends Resource>(
       resourceType: T["resourceType"],
       id: string,
       resource: T,
       headers?: Record<string, string>,
     ): Promise<T> {
+      serviceUpdateCalls += 1;
       const current = resources.get(`${resourceType}/${id}`);
       if (!current) throw new Error(`${resourceType}/${id} not found`);
       const expected = current.meta?.versionId
@@ -455,12 +468,12 @@ async function startSendServer(
       return structuredClone(next);
     },
   };
-  return startServer({
+  const server = await startServer({
     authenticate: async (header) => header === "Bearer good"
       ? {
           staffReference: "Practitioner/staff-1",
-          actorRole: "provider",
-          fhir: fhir as never,
+          actorRole: "staff",
+          fhir: readFhir as never,
         }
       : null,
     switchConfig: {
@@ -474,8 +487,10 @@ async function startSendServer(
     createMessageId: () => "test-message-id",
     now: () => "2026-07-31T12:00:00.000Z",
     sendNewRx,
+    serviceFhir: serviceFhir as never,
     ...overrides,
   });
+  return { ...server, serviceUpdateCalls: () => serviceUpdateCalls };
 }
 
 function sendFixture(overrides: { medicationRequest?: MedicationRequest } = {}) {
