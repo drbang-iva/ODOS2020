@@ -144,17 +144,17 @@ async function encounterSeries(
     };
   }
   const legacyParent = legacyParents[0];
-  const legacyAdoptable = legacyParent?.id
+  const legacyChildren = legacyParent?.id
     ? (
         await Promise.all(legacyProcedures.map(async (procedure) =>
-          isActiveProcedure(procedure)
-          && procedure.partOf?.some((reference) => reference.reference === `Procedure/${legacyParent.id}`)
+          procedure.partOf?.some((reference) => reference.reference === `Procedure/${legacyParent.id}`)
           && await resourceIsInEncounterScope(staff.fhir, procedure, encounter)
             ? [procedure]
             : []
         ))
       ).flat()
     : [];
+  const legacyAdoptable = legacyChildren.filter(isActiveProcedure);
   if (recordSession && legacyParent
     && ((matchingCarePlans.length === 0 && legacyAdoptable.length !== 1) || legacyAdoptable.length > 1)) {
     return {
@@ -171,6 +171,15 @@ async function encounterSeries(
     return {
       status: 409,
       body: { error: `${protocol.name} already has an active session in another encounter.` },
+    };
+  }
+  const legacyAdoption = legacyAdoptable[0]
+    ? legacyAdoptionPlan(legacyAdoptable[0], legacyChildren, protocol.sessionCount)
+    : undefined;
+  if (recordSession && legacyAdoptable[0] && !legacyAdoption) {
+    return {
+      status: 409,
+      body: { error: `Legacy ${protocol.name} session position cannot be adopted unambiguously.` },
     };
   }
   let carePlan = matchingCarePlans[0];
@@ -256,9 +265,10 @@ async function encounterSeries(
       body: { error: `${protocol.name} already has an active session in another encounter.` },
     };
   }
-  const series = buildSeriesTrackerView(carePlan, boundProcedures);
+  let series = buildSeriesTrackerView(carePlan, boundProcedures);
   const completedCount = series.sessions.filter((session) => session.status === "completed").length;
-  const sessionNumber = Math.min(completedCount + 1, protocol.sessionCount);
+  const sessionNumber = legacyAdoption?.activePosition.number
+    ?? Math.min(completedCount + 1, protocol.sessionCount);
   let createdSession = false;
   if (!currentSession && recordSession && completedCount < protocol.sessionCount) {
     if (legacyAdoptable.length === 0 && !procedureDefinition) {
@@ -270,22 +280,33 @@ async function encounterSeries(
     const sessionIdentifier = `${carePlanReference}:${sessionNumber}-of-${protocol.sessionCount}`;
     const adopted = legacyAdoptable[0];
     if (adopted?.id) {
-      currentSession = {
-        ...adopted,
-        basedOn: uniqueProcedureReferences([...(adopted.basedOn ?? []), { reference: carePlanReference }]),
-        identifier: [
-          ...(adopted.identifier ?? []),
-          { system: DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM, value: sessionIdentifier },
-        ],
-      };
+      const migration = migrateLegacySessions(carePlan, legacyAdoption!, carePlanReference);
+      if (!migration) {
+        return {
+          status: 409,
+          body: { error: `Legacy ${protocol.name} history conflicts with the canonical series.` },
+        };
+      }
+      carePlan = migration.carePlan;
+      currentSession = migration.activeProcedure;
       await staff.fhir.executeTransaction({
         resourceType: "Bundle",
         type: "transaction",
-        entry: [{
-          resource: currentSession,
-          request: { method: "PUT", url: `Procedure/${adopted.id}` },
-        }],
+        entry: [
+          ...migration.completedProcedures,
+          currentSession,
+          carePlan,
+        ].map((resource) => ({
+          resource,
+          request: { method: "PUT", url: `${resource.resourceType}/${resource.id}` },
+        })),
       }, { "X-ODOS-Source": "series-tracker-dry-eye" });
+      boundProcedures = uniqueProcedures([
+        ...boundProcedures,
+        ...migration.completedProcedures,
+        currentSession,
+      ]);
+      series = buildSeriesTrackerView(carePlan, boundProcedures);
       createdSession = true;
     } else {
       const outcome = await staff.fhir.createWithOutcome<Procedure>({
@@ -577,6 +598,7 @@ function procedureMatchesBoundSession(
   const position = sessionPosition(procedure);
   const sessionIdentifier = procedure.identifier?.find((identifier) =>
     identifier.system === DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM
+    && identifier.value?.startsWith(`${carePlanReference}:`)
   )?.value;
   const totalSessions = carePlan.activity?.length ?? 0;
   return isActiveProcedure(procedure)
@@ -667,6 +689,135 @@ function statusRank(status: CarePlan["status"]): number {
 
 function isActiveProcedure(procedure: Procedure): boolean {
   return !["completed", "entered-in-error", "not-done", "stopped"].includes(procedure.status);
+}
+
+interface LegacyAdoptionPlan {
+  activeProcedure: Procedure;
+  activePosition: { number: number; total: number };
+  completed: Array<{ procedure: Procedure; position: { number: number; total: number } }>;
+}
+
+function legacyAdoptionPlan(
+  activeProcedure: Procedure,
+  legacyChildren: readonly Procedure[],
+  totalSessions: number,
+): LegacyAdoptionPlan | undefined {
+  const activePosition = legacySessionPosition(activeProcedure, totalSessions);
+  if (!activeProcedure.id || !activePosition) return undefined;
+  const completed = legacyChildren
+    .filter((procedure) => procedure.status === "completed")
+    .map((procedure) => ({ procedure, position: legacySessionPosition(procedure, totalSessions) }));
+  if (completed.some(({ procedure, position }) => !procedure.id || !position)) return undefined;
+  const positioned = completed as Array<{
+    procedure: Procedure;
+    position: { number: number; total: number };
+  }>;
+  const completedByNumber = new Map<number, typeof positioned[number]>();
+  for (const candidate of positioned) {
+    if (candidate.position.number >= activePosition.number || completedByNumber.has(candidate.position.number)) {
+      return undefined;
+    }
+    completedByNumber.set(candidate.position.number, candidate);
+  }
+  for (let number = 1; number < activePosition.number; number += 1) {
+    if (!completedByNumber.has(number)) return undefined;
+  }
+  return {
+    activeProcedure,
+    activePosition,
+    completed: [...completedByNumber.values()].sort((left, right) => left.position.number - right.position.number),
+  };
+}
+
+function legacySessionPosition(
+  procedure: Procedure,
+  totalSessions: number,
+): { number: number; total: number } | undefined {
+  const values = procedure.identifier
+    ?.filter((identifier) =>
+      identifier.system === DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM
+      && /^\d+-of-\d+$/.test(identifier.value ?? "")
+    )
+    .flatMap((identifier) => identifier.value ? [identifier.value] : []) ?? [];
+  if (values.length !== 1) return undefined;
+  const match = values[0]!.match(/^(\d+)-of-(\d+)$/);
+  const number = Number(match?.[1]);
+  const total = Number(match?.[2]);
+  return Number.isSafeInteger(number) && number > 0 && total === totalSessions && number <= total
+    ? { number, total }
+    : undefined;
+}
+
+function migrateLegacySessions(
+  carePlan: CarePlan,
+  migration: LegacyAdoptionPlan,
+  carePlanReference: string,
+): { carePlan: CarePlan; activeProcedure: Procedure; completedProcedures: Procedure[] } | undefined {
+  const activities = structuredClone(carePlan.activity ?? []);
+  if (activities.length !== migration.activePosition.total) return undefined;
+  const completedProcedures: Procedure[] = [];
+  for (const completed of migration.completed) {
+    const activity = activities[completed.position.number - 1];
+    if (!activity?.detail) return undefined;
+    const procedureReference = `Procedure/${completed.procedure.id}`;
+    const existingOutcomes = activity.outcomeReference?.flatMap((reference) =>
+      reference.reference ? [reference.reference] : []
+    ) ?? [];
+    if (activity.detail.status === "completed"
+      && existingOutcomes.length > 0
+      && !existingOutcomes.includes(procedureReference)) {
+      return undefined;
+    }
+    if (activity.detail.status !== "completed" && existingOutcomes.length > 0) return undefined;
+    activity.detail.status = "completed";
+    activity.outcomeReference = [{ reference: procedureReference }];
+    completedProcedures.push(bindLegacyProcedure(
+      completed.procedure,
+      carePlan,
+      carePlanReference,
+      completed.position,
+    ));
+  }
+  if (activities[migration.activePosition.number - 1]?.detail?.status === "completed") return undefined;
+  return {
+    carePlan: { ...carePlan, activity: activities },
+    activeProcedure: bindLegacyProcedure(
+      migration.activeProcedure,
+      carePlan,
+      carePlanReference,
+      migration.activePosition,
+    ),
+    completedProcedures,
+  };
+}
+
+function bindLegacyProcedure(
+  procedure: Procedure,
+  carePlan: CarePlan,
+  carePlanReference: string,
+  position: { number: number; total: number },
+): Procedure {
+  const eligibleCodings = carePlan.activity?.[position.number - 1]?.detail?.code?.coding ?? [];
+  const codings = [...(procedure.code?.coding ?? []), ...eligibleCodings];
+  return {
+    ...procedure,
+    code: {
+      ...procedure.code,
+      coding: [...new Map(codings.map((coding) => [`${coding.system ?? ""}|${coding.code ?? ""}`, coding])).values()],
+    },
+    basedOn: uniqueProcedureReferences([...(procedure.basedOn ?? []), { reference: carePlanReference }]),
+    identifier: [...new Map([
+      ...(procedure.identifier ?? []),
+      {
+        system: DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM,
+        value: `${carePlanReference}:${position.number}-of-${position.total}`,
+      },
+    ].map((identifier) => [`${identifier.system ?? ""}|${identifier.value ?? ""}`, identifier])).values()],
+  };
+}
+
+function uniqueProcedures(procedures: readonly Procedure[]): Procedure[] {
+  return [...new Map(procedures.map((procedure) => [`Procedure/${procedure.id}`, procedure])).values()];
 }
 
 function sessionPosition(procedure: Procedure): { number: number; total: number } | undefined {

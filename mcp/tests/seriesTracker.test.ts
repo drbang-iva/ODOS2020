@@ -448,13 +448,22 @@ test("Dry Eye sheet round-trip conditionally creates one canonical CarePlan and 
       note: [{ text: "4-session dry-eye treatment series" }],
     } satisfies Procedure, {
       resourceType: "Procedure",
+      id: "legacy-session-completed",
+      status: "completed",
+      subject: { reference: "Patient/test-patient" },
+      encounter: { reference: "Encounter/encounter-1" },
+      code: { coding: [{ code: "IPL" }] },
+      partOf: [{ reference: "Procedure/legacy-parent" }],
+      identifier: [{ system: DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM, value: "1-of-4" }],
+    } satisfies Procedure, {
+      resourceType: "Procedure",
       id: "legacy-session",
       status: "in-progress",
       subject: { reference: "Patient/test-patient" },
       encounter: { reference: "Encounter/encounter-1" },
       code: { coding: [{ code: "IPL" }] },
       partOf: [{ reference: "Procedure/legacy-parent" }],
-      identifier: [{ system: "https://odos2020.com/fhir/Identifier/dry-eye-treatment-session", value: "1-of-4" }],
+      identifier: [{ system: DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM, value: "2-of-4" }],
     } satisfies Procedure, {
       resourceType: "Procedure",
       id: "legacy-session-other-program",
@@ -467,16 +476,56 @@ test("Dry Eye sheet round-trip conditionally creates one canonical CarePlan and 
 
     const adoptedResponse = await fetch(endpoint, { method: "POST", headers, body: "{}" });
     assert.equal(adoptedResponse.status, 201);
+    const adoptedBody = await adoptedResponse.json() as {
+      series: { sessions: Array<{ number: number; status: string; procedureReference?: string }> };
+      currentSession: { number: number; total: number; procedureReference: string };
+      remainingSessions: number;
+    };
+    assert.deepEqual(adoptedBody.currentSession, {
+      number: 2,
+      total: 4,
+      procedureReference: "Procedure/legacy-session",
+    });
+    assert.equal(adoptedBody.remainingSessions, 2);
+    assert.deepEqual(adoptedBody.series.sessions.map(({ number, status }) => ({ number, status })), [
+      { number: 1, status: "completed" },
+      { number: 2, status: "next" },
+      { number: 3, status: "future" },
+      { number: 4, status: "future" },
+    ]);
     const adopted = resources.find((resource): resource is Procedure =>
       resource.resourceType === "Procedure" && resource.id === "legacy-session"
     );
     const adoptedCarePlan = resources.find((resource): resource is CarePlan => resource.resourceType === "CarePlan");
     assert.deepEqual(adopted?.basedOn, [{ reference: `CarePlan/${adoptedCarePlan?.id}` }]);
+    assert.equal(
+      adopted?.identifier?.find((identifier) =>
+        identifier.system === DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM
+        && identifier.value?.startsWith("CarePlan/")
+      )?.value,
+      `CarePlan/${adoptedCarePlan?.id}:2-of-4`,
+    );
     assert.equal(adopted?.code?.coding?.[0]?.code, "IPL", "adoption preserves the historical clinical code");
     const otherProgramSession = resources.find((resource): resource is Procedure =>
       resource.resourceType === "Procedure" && resource.id === "legacy-session-other-program"
     );
     assert.equal(otherProgramSession?.basedOn, undefined);
+
+    const reloadedAdoption = await fetch(endpoint, { headers });
+    assert.equal(reloadedAdoption.status, 200);
+    const reloadedBody = await reloadedAdoption.json() as {
+      series: { sessions: Array<{ number: number; status: string }> };
+      currentSession: { number: number; total: number; procedureReference: string };
+      remainingSessions: number;
+    };
+    assert.deepEqual(reloadedBody.currentSession, adoptedBody.currentSession);
+    assert.equal(reloadedBody.remainingSessions, 2);
+    assert.deepEqual(reloadedBody.series.sessions.map(({ number, status }) => ({ number, status })), [
+      { number: 1, status: "completed" },
+      { number: 2, status: "next" },
+      { number: 3, status: "future" },
+      { number: 4, status: "future" },
+    ]);
 
     resources.push({
       resourceType: "Procedure",
@@ -577,6 +626,41 @@ test("Dry Eye refuses to adopt a legacy session from another encounter", async (
 
     assert.equal(response.status, 409);
     assert.match((await response.json() as { error: string }).error, /active session in another encounter/);
+    assert.equal(created.length, 0);
+  });
+});
+
+test("Dry Eye refuses an ambiguous legacy session ordinal before creating a CarePlan", async () => {
+  const legacyParent: Procedure = {
+    resourceType: "Procedure",
+    id: "legacy-parent-1",
+    status: "in-progress",
+    subject: { reference: "Patient/test-patient" },
+    encounter: { reference: "Encounter/encounter-1" },
+    code: { coding: [{ code: "IPL" }] },
+    note: [{ text: "4-session dry-eye treatment series" }],
+  };
+  const unpositionedSession: Procedure = {
+    resourceType: "Procedure",
+    id: "legacy-session-1",
+    status: "in-progress",
+    subject: { reference: "Patient/test-patient" },
+    encounter: { reference: "Encounter/encounter-1" },
+    code: { coding: [{ code: "IPL" }] },
+    partOf: [{ reference: "Procedure/legacy-parent-1" }],
+  };
+  await withDryEyeEncounterRoute({
+    procedureSearch: () => ({
+      resourceType: "Bundle",
+      type: "searchset",
+      total: 2,
+      entry: [{ resource: legacyParent }, { resource: unpositionedSession }],
+    }),
+  }, async ({ endpoint, headers, created }) => {
+    const response = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+
+    assert.equal(response.status, 409);
+    assert.match((await response.json() as { error: string }).error, /position cannot be adopted unambiguously/);
     assert.equal(created.length, 0);
   });
 });
