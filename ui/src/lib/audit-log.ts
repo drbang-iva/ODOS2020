@@ -1,3 +1,5 @@
+import { authHeaders } from "./clinical-graph-client";
+
 export const AUDIT_EVENT_TYPES = [
   "read",
   "search",
@@ -72,6 +74,27 @@ export interface AuditLogFilters {
   breakGlassOnly: boolean;
 }
 
+export interface AuditLogResponse {
+  actorRole: AuditReviewRole;
+  rows: AuditLogRow[];
+}
+
+export interface AuditLogRequestOptions {
+  authorization?: string;
+  fetchImpl?: typeof fetch;
+  signal?: AbortSignal;
+}
+
+export class AuditLogRequestError extends Error {
+  constructor(
+    message: string,
+    readonly actorRole: AuditReviewRole,
+  ) {
+    super(message);
+    this.name = "AuditLogRequestError";
+  }
+}
+
 export const AUDIT_REVIEW_ALLOWED_ROLES: AuditReviewRole[] = ["admin"];
 
 export const AUDIT_LOG_SCHEMA_COLUMNS = [
@@ -138,9 +161,8 @@ export function exportAuditRowsAsCsv(rows: readonly AuditLogRow[]): string {
 
 export async function fetchAuditLogRows(
   filters: AuditLogFilters,
-  role: AuditReviewRole,
-  actorId = "audit-ui",
-): Promise<AuditLogRow[]> {
+  options: AuditLogRequestOptions = {},
+): Promise<AuditLogResponse> {
   const params = new URLSearchParams();
   if (filters.patientId) params.set("patient_id", filters.patientId);
   if (filters.actorId) params.set("actor_id", filters.actorId);
@@ -152,17 +174,58 @@ export async function fetchAuditLogRows(
     params.append("event_type", eventType);
   }
 
-  const response = await fetch(`${auditApiBase()}/audit/events?${params.toString()}`, {
-    headers: {
-      "X-ODOS-Role": role,
-      "X-ODOS-Actor-Id": actorId,
-    },
+  const response = await (options.fetchImpl ?? fetch)(`${auditApiBase()}/audit/events?${params.toString()}`, {
+    headers: options.authorization
+      ? { Authorization: options.authorization }
+      : authHeaders(),
+    signal: options.signal,
   });
   if (!response.ok) {
-    throw new Error(`Audit log request failed: ${response.status}`);
+    const body = await response.json().catch(() => ({})) as { actorRole?: string };
+    throw new AuditLogRequestError(
+      `Audit log request failed: ${response.status}`,
+      normalizeAuditReviewRole(body.actorRole),
+    );
   }
-  const body = (await response.json()) as { rows?: AuditLogRow[] };
-  return (body.rows ?? []).map(normalizeAuditLogRow);
+  return normalizeAuditLogResponse(await response.json());
+}
+
+export async function fetchPatientHistory(
+  patientId: string,
+  options: AuditLogRequestOptions = {},
+): Promise<AuditLogResponse> {
+  const params = new URLSearchParams({
+    scope: "patient-history",
+    patient_id: patientId,
+  });
+  const response = await (options.fetchImpl ?? fetch)(`${auditApiBase()}/audit/events?${params.toString()}`, {
+    headers: options.authorization
+      ? { Authorization: options.authorization }
+      : authHeaders(),
+    signal: options.signal,
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({})) as { actorRole?: string };
+    throw new AuditLogRequestError(
+      `Patient History request failed: ${response.status}`,
+      normalizeAuditReviewRole(body.actorRole),
+    );
+  }
+  return normalizeAuditLogResponse(await response.json());
+}
+
+function normalizeAuditReviewRole(value: string | undefined): AuditReviewRole {
+  return value === "admin" || value === "provider" || value === "staff" || value === "system"
+    ? value
+    : "unknown";
+}
+
+function normalizeAuditLogResponse(value: unknown): AuditLogResponse {
+  const body = value as { actorRole?: string; rows?: AuditLogRow[] };
+  return {
+    actorRole: normalizeAuditReviewRole(body.actorRole),
+    rows: (body.rows ?? []).map(normalizeAuditLogRow),
+  };
 }
 
 export async function recordDocumentPrintRequested(
