@@ -701,7 +701,7 @@ test("Dry Eye refuses to convert an ineligible child returned by the legacy sear
   });
 });
 
-test("Dry Eye ignores a completed legacy parent after a canonical series exists", async () => {
+test("Dry Eye ignores completed legacy parents after a canonical series exists", async () => {
   const { protocol } = dryEyeProtocolFixture();
   const carePlan = {
     ...buildSeriesCarePlan({
@@ -721,6 +721,10 @@ test("Dry Eye ignores a completed legacy parent after a canonical series exists"
     code: { coding: [{ code: "IPL" }] },
     note: [{ text: "4-session dry-eye treatment series" }],
   };
+  const secondHistoricalParent: Procedure = {
+    ...historicalParent,
+    id: "historical-legacy-parent-2",
+  };
   await withDryEyeEncounterRoute({
     carePlans: [carePlan],
     procedureSearch: (params) => params["based-on"]
@@ -728,8 +732,8 @@ test("Dry Eye ignores a completed legacy parent after a canonical series exists"
       : {
           resourceType: "Bundle",
           type: "searchset",
-          total: 1,
-          entry: [{ resource: historicalParent }],
+          total: 2,
+          entry: [{ resource: historicalParent }, { resource: secondHistoricalParent }],
         },
   }, async ({ endpoint, headers, created }) => {
     const response = await fetch(endpoint, { method: "POST", headers, body: "{}" });

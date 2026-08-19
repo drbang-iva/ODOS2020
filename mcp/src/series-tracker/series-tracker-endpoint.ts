@@ -137,6 +137,7 @@ async function encounterSeries(
   const legacyParents = (
     await Promise.all(legacyProcedures.map(async (procedure) =>
       isLegacySeriesParent(procedure, protocolId)
+      && !(matchingCarePlans.length > 0 && procedure.status === "completed")
       && await resourceIsInEncounterScope(staff.fhir, procedure, encounter)
         ? [procedure]
         : []
