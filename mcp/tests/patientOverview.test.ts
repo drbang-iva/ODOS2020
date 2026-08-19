@@ -139,6 +139,32 @@ test("patient overview reflects active program enrollment and CarePlan session d
   assert.equal(overview.visits[0]?.seriesDesignation, "IPL · session 2 of 4");
 });
 
+test("patient overview does not label a routine CarePlan Procedure as a treatment series", async () => {
+  const fake = new FakeFhir();
+  fake.add(patient());
+  fake.add(encounter("routine-visit", "2026-08-19T14:00:00Z"));
+  fake.add({
+    resourceType: "CarePlan",
+    id: "routine-plan",
+    status: "active",
+    intent: "plan",
+    subject: { reference: "Patient/p1" },
+    title: "Routine care",
+  } satisfies CarePlan);
+  fake.add({
+    resourceType: "Procedure",
+    id: "routine-procedure",
+    status: "completed",
+    subject: { reference: "Patient/p1" },
+    encounter: { reference: "Encounter/routine-visit" },
+    basedOn: [{ reference: "CarePlan/routine-plan" }],
+  } satisfies Procedure);
+
+  const overview = await loadPatientOverview(fake as never, "p1");
+
+  assert.equal(overview.visits[0]?.seriesDesignation, undefined);
+});
+
 test("patient overview preserves a completed program title on its historical visit", async () => {
   const fake = new FakeFhir();
   fake.add(patient());

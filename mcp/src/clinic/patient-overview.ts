@@ -596,6 +596,10 @@ function seriesDesignation(
     candidate.status !== "entered-in-error"
     && candidate.encounter?.reference === `Encounter/${encounterId}`
     && candidate.basedOn?.some((reference) => carePlanTitles.has(reference.reference ?? ""))
+    && candidate.identifier?.some((identifier) =>
+      identifier.system === DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM
+      && /:\d+-of-\d+$/.test(identifier.value ?? "")
+    )
   );
   const carePlanReference = procedure?.basedOn?.find((reference) =>
     carePlanTitles.has(reference.reference ?? "")
@@ -606,7 +610,7 @@ function seriesDesignation(
     && /:\d+-of-\d+$/.test(identifier.value ?? "")
   )?.value?.match(/:(\d+)-of-(\d+)$/);
   const title = carePlanTitles.get(carePlanReference);
-  return title && session ? `${title} · session ${session[1]} of ${session[2]}` : title;
+  return title && session ? `${title} · session ${session[1]} of ${session[2]}` : undefined;
 }
 
 function resolvedDiagnosisCode(condition: Condition): string | undefined {
