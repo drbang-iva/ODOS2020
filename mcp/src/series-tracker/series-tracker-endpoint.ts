@@ -165,6 +165,13 @@ async function encounterSeries(
       },
     };
   }
+  if (recordSession && legacyAdoptable[0]
+    && legacyAdoptable[0].encounter?.reference !== `Encounter/${encounterId}`) {
+    return {
+      status: 409,
+      body: { error: `${protocol.name} already has an active session in another encounter.` },
+    };
+  }
   let carePlan = matchingCarePlans[0];
   let createdCarePlan = false;
   let procedureDefinition: ClinicalProcedureDefinition | undefined;
