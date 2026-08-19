@@ -596,28 +596,28 @@ function seriesDesignation(
   seriesCarePlans: ReadonlyMap<string, CarePlan>,
   encounterId: string,
 ): string | undefined {
-  const procedure = procedures.find((candidate) =>
-    candidate.status !== "entered-in-error"
-    && candidate.encounter?.reference === `Encounter/${encounterId}`
-    && candidate.basedOn?.some((reference) => {
-      const carePlan = seriesCarePlans.get(reference.reference ?? "");
-      return carePlan ? procedureMatchesCarePlan(candidate, carePlan) : false;
-    })
-    && candidate.identifier?.some((identifier) =>
-      identifier.system === DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM
-      && /:\d+-of-\d+$/.test(identifier.value ?? "")
-    )
-  );
-  const carePlanReference = procedure?.basedOn?.find((reference) =>
-    seriesCarePlans.has(reference.reference ?? "")
-  )?.reference;
-  if (!procedure || !carePlanReference) return undefined;
-  const session = procedure.identifier?.find((identifier) =>
-    identifier.system === DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM
-    && /:\d+-of-\d+$/.test(identifier.value ?? "")
-  )?.value?.match(/:(\d+)-of-(\d+)$/);
-  const title = seriesCarePlans.get(carePlanReference)?.title?.trim() || "Treatment series";
-  return title && session ? `${title} · session ${session[1]} of ${session[2]}` : undefined;
+  for (const procedure of procedures) {
+    if (procedure.status === "entered-in-error"
+      || procedure.encounter?.reference !== `Encounter/${encounterId}`) continue;
+    for (const basedOn of procedure.basedOn ?? []) {
+      const carePlanReference = basedOn.reference;
+      const carePlan = carePlanReference ? seriesCarePlans.get(carePlanReference) : undefined;
+      if (!carePlanReference || !carePlan || !procedureMatchesCarePlan(procedure, carePlan)) continue;
+      const value = procedure.identifier?.find((identifier) =>
+        identifier.system === DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM
+        && identifier.value?.startsWith(`${carePlanReference}:`)
+      )?.value;
+      const session = value?.slice(carePlanReference.length + 1).match(/^(\d+)-of-(\d+)$/);
+      const number = Number(session?.[1]);
+      const total = Number(session?.[2]);
+      if (!Number.isSafeInteger(number)
+        || number < 1
+        || total !== carePlan.activity?.length
+        || number > total) continue;
+      return `${carePlan.title?.trim() || "Treatment series"} · session ${number} of ${total}`;
+    }
+  }
+  return undefined;
 }
 
 function resolvedDiagnosisCode(condition: Condition): string | undefined {

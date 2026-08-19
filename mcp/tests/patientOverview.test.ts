@@ -108,6 +108,21 @@ test("patient overview reflects active program enrollment and CarePlan session d
   fake.add(visit);
   fake.add({
     resourceType: "CarePlan",
+    id: "other-series",
+    status: "active",
+    intent: "plan",
+    subject: { reference: "Patient/p1" },
+    title: "Other series",
+    instantiatesCanonical: ["https://odos2020.com/fhir/PlanDefinition/series-protocol-other"],
+    activity: [{
+      detail: {
+        status: "not-started",
+        code: { coding: [{ system: SERIES_PROCEDURE_TYPE_SYSTEM, code: "other-procedure" }] },
+      },
+    }],
+  } satisfies CarePlan);
+  fake.add({
+    resourceType: "CarePlan",
     id: "ipl-series",
     status: "active",
     intent: "plan",
@@ -129,7 +144,7 @@ test("patient overview reflects active program enrollment and CarePlan session d
     subject: { reference: "Patient/p1" },
     encounter: { reference: "Encounter/series-visit" },
     code: { coding: [{ system: SERIES_PROCEDURE_TYPE_SYSTEM, code: DRY_EYE_PROCEDURE_STABLE_KEYS.ipl }] },
-    basedOn: [{ reference: "CarePlan/ipl-series" }],
+    basedOn: [{ reference: "CarePlan/other-series" }, { reference: "CarePlan/ipl-series" }],
     identifier: [{
       system: DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM,
       value: "CarePlan/ipl-series:2-of-4",
