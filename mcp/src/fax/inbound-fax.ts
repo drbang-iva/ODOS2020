@@ -350,6 +350,34 @@ export class InboundFaxTriageService {
     assertTriageRole(input.actorRole);
     const current = await this.readInboundFax(input.faxDocumentReference);
     const faxId = inboundFaxId(current);
+    const existingReferral = await findExistingInboundReferral(this.fhir, faxId);
+    if (existingReferral?.subject.reference !== undefined
+      && existingReferral.subject.reference !== input.patientReference) {
+      throw new InboundFaxTriageConflictError(
+        `This fax is already promoted to ${existingReferral.subject.reference} and cannot be reassigned to ${input.patientReference}.`,
+      );
+    }
+    const existingReferralReference = existingReferral
+      ? requiredReference(existingReferral, "ServiceRequest")
+      : undefined;
+    const documentReference = await this.updateFax(
+      existingReferralReference
+        ? {
+            ...current,
+            context: {
+              ...current.context,
+              related: [
+                ...(current.context?.related ?? []).filter(
+                  (reference) => reference.reference !== existingReferralReference,
+                ),
+                { reference: existingReferralReference },
+              ],
+            },
+          }
+        : current,
+      input.patientReference,
+      "promoted",
+    );
     const serviceRequest = await this.fhir.create<ServiceRequest>({
       ...buildInboundReferralServiceRequest({
         subjectReference: input.patientReference,
@@ -377,22 +405,6 @@ export class InboundFaxTriageService {
         `This fax is already promoted to ${serviceRequest.subject.reference} and cannot be reassigned to ${input.patientReference}.`,
       );
     }
-    const documentReference = await this.updateFax(
-      {
-        ...current,
-        context: {
-          ...current.context,
-          related: [
-            ...(current.context?.related ?? []).filter(
-              (reference) => reference.reference !== serviceRequestReference,
-            ),
-            { reference: serviceRequestReference },
-          ],
-        },
-      },
-      input.patientReference,
-      "promoted",
-    );
     await this.fhir.create<AuditEvent>(buildInboundFaxAuditEvent({
       action: "promote",
       actorReference: input.actorReference,
@@ -620,6 +632,41 @@ async function searchCompleteResources<T extends Resource>(
   const hasNext = bundle.link?.some((link) => link.relation === "next") ?? false;
   if (hasNext || (bundle.total !== undefined && bundle.total > resources.length)) return undefined;
   return resources;
+}
+
+async function findExistingInboundReferral(
+  fhir: Pick<InboundFaxFhir, "search">,
+  faxId: string,
+): Promise<ServiceRequest | undefined> {
+  const resourceType: ServiceRequest["resourceType"] = "ServiceRequest";
+  const params: FhirSearchParams = {
+    identifier: `${INBOUND_FAX_REFERRAL_IDENTIFIER_SYSTEM}|${faxId}`,
+    _count: "2",
+  };
+  let bundle: Bundle<ServiceRequest>;
+  try {
+    // search-contract: inbound-fax.find-referral
+    bundle = await fhir.search<ServiceRequest>(resourceType, params);
+  } catch {
+    throw new InboundFaxTriageConflictError(
+      "Could not verify whether this fax already has a referral. No changes were made.",
+    );
+  }
+  const entries = bundle.entry ?? [];
+  const referrals = entries.flatMap((entry) => entry.resource ? [entry.resource] : []);
+  const hasNext = bundle.link?.some((link) => link.relation === "next") ?? false;
+  if (referrals.length > 1 || (bundle.total !== undefined && bundle.total > 1) || hasNext) {
+    throw new InboundFaxTriageConflictError(
+      "More than one referral uses this fax identifier. No changes were made.",
+    );
+  }
+  if (referrals.length !== entries.length
+    || (bundle.total !== undefined && bundle.total > referrals.length)) {
+    throw new InboundFaxTriageConflictError(
+      "Could not verify whether this fax already has a referral. No changes were made.",
+    );
+  }
+  return referrals[0];
 }
 
 function inboundFaxId(document: DocumentReference): string {

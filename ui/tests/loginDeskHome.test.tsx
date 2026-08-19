@@ -8,7 +8,8 @@ import { LoginScreen, PASSWORD_RESET_CONFIRMATION, requestPasswordReset, submitL
 import { PasswordResetTransportError } from "../src/lib/auth-api";
 import { fetchWhoAmI } from "../src/lib/practice-roles";
 import { fetchDeskSummary, type DeskSummary } from "../src/lib/desk-summary";
-import { triageInboundFax } from "../src/lib/inbound-fax";
+import { openInboundFaxDocument, triageInboundFax } from "../src/lib/inbound-fax";
+import { fhir } from "../src/lib/fhir";
 import { submitSetPassword } from "../src/scenes/SetPasswordScreen";
 import { CLINIC_PATH, COCKPIT_HOVER_CLOSE_DELAY_MS, DESK_CARD_STORAGE_KEY, DESK_HOME_PATH, DeskHome, displayStat, loadDeskCardIds, reorderDeskCards, sanitizeDeskCardIds } from "../src/scenes/DeskHome";
 import { clearCockpitPanelPosition, COCKPIT_PANEL_POSITION_STORAGE_KEY, loadCockpitPanelPosition, saveCockpitPanelPosition } from "../src/scenes/frontdesk/CockpitGuestPanel";
@@ -139,6 +140,43 @@ test("inbound fax actions accept empty success bodies and preserve JSON error de
     ),
     /Synthetic conflict/,
   );
+});
+
+test("inbound fax PDF rejects a cross-origin URL before reading or sending authorization", async () => {
+  const originalWindow = globalThis.window;
+  const originalAuthHeader = fhir.authHeader;
+  let tokenReads = 0;
+  let fetches = 0;
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: {
+      location: {
+        href: "https://practice.example.test/desk",
+        origin: "https://practice.example.test",
+      },
+    } as unknown as Window & typeof globalThis,
+  });
+  fhir.authHeader = () => {
+    tokenReads += 1;
+    return "Bearer synthetic-session-token";
+  };
+  try {
+    await assert.rejects(
+      openInboundFaxDocument(
+        "https://attacker.example.test/collect",
+        async () => {
+          fetches += 1;
+          throw new Error("cross-origin fetch executed");
+        },
+      ),
+      /same-origin/i,
+    );
+    assert.equal(tokenReads, 0);
+    assert.equal(fetches, 0);
+  } finally {
+    fhir.authHeader = originalAuthHeader;
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
 });
 
 test("Desk home keeps Customize on-page and leaves global navigation to AppShell", () => {

@@ -30,10 +30,14 @@ export async function openInboundFaxDocument(
   documentUrl: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<void> {
+  if (!isSameOriginDocumentUrl(documentUrl)) {
+    throw new Error("Inbound fax document URL must be same-origin.");
+  }
+  const authorization = fhir.authHeader();
   const response = await fetchImpl(documentUrl, {
     headers: {
       Accept: "application/pdf",
-      ...(fhir.authHeader() ? { Authorization: fhir.authHeader()! } : {}),
+      ...(authorization ? { Authorization: authorization } : {}),
     },
   });
   if (!response.ok) {
@@ -47,4 +51,13 @@ export async function openInboundFaxDocument(
   link.rel = "noopener noreferrer";
   link.click();
   window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+}
+
+function isSameOriginDocumentUrl(documentUrl: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return new URL(documentUrl, window.location.href).origin === window.location.origin;
+  } catch {
+    return false;
+  }
 }

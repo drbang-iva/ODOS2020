@@ -11,6 +11,7 @@ import type {
 } from "@medplum/fhirtypes";
 import {
   INBOUND_FAX_IDENTIFIER_SYSTEM,
+  INBOUND_FAX_REFERRAL_IDENTIFIER_SYSTEM,
   INBOUND_FAX_TRIAGE_STATUS_EXTENSION_URL,
   InboundFaxTriageConflictError,
   InboundFaxTriageService,
@@ -254,6 +255,91 @@ test("re-promoting a fax to a different patient fails closed without moving the 
   const stored = await fhir.read<DocumentReference>("DocumentReference", record.id!);
   assert.equal(stored.subject?.reference, "Patient/patient-1");
   assert.equal((fhir.resources("ServiceRequest") as ServiceRequest[])[0]?.subject.reference, "Patient/patient-1");
+});
+
+test("a 412 during promotion leaves no orphan ServiceRequest", async () => {
+  const fhir = new InboundFaxFhir();
+  await createInboundFaxPoller({
+    fhir,
+    adapter: new InboundFaxAdapter(),
+    suggestPatient: async () => undefined,
+  }).run();
+  const record = fhir.resources("DocumentReference")[0] as DocumentReference;
+  fhir.conflictStatusOnNextUpdate = 412;
+  const triage = new InboundFaxTriageService(fhir, () => "2026-07-31T15:30:00.000Z");
+
+  await assert.rejects(
+    promoteFax(triage, record, "Patient/patient-1"),
+    /changed by another staff member.*Reload the Desk/i,
+  );
+
+  assert.equal(fhir.resources("ServiceRequest").length, 0);
+});
+
+test("an existing referral patient mismatch fails before any fax version mutation", async () => {
+  const fhir = new InboundFaxFhir();
+  await createInboundFaxPoller({
+    fhir,
+    adapter: new InboundFaxAdapter(),
+    suggestPatient: async () => undefined,
+  }).run();
+  const record = fhir.resources("DocumentReference")[0] as DocumentReference;
+  fhir.put(inboundReferral("referral-existing", FAX_ID.id, "Patient/patient-1"));
+  fhir.failServiceRequestCreates = true;
+  const before = await fhir.read<DocumentReference>("DocumentReference", record.id!);
+  const triage = new InboundFaxTriageService(fhir, () => "2026-07-31T15:30:00.000Z");
+
+  await assert.rejects(
+    promoteFax(triage, record, "Patient/patient-2"),
+    /already promoted to Patient\/patient-1.*cannot be reassigned to Patient\/patient-2/i,
+  );
+
+  const after = await fhir.read<DocumentReference>("DocumentReference", record.id!);
+  assert.equal(after.meta?.versionId, before.meta?.versionId);
+});
+
+test("an indeterminate existing-referral search fails closed without update or create", async () => {
+  const fhir = new InboundFaxFhir();
+  await createInboundFaxPoller({
+    fhir,
+    adapter: new InboundFaxAdapter(),
+    suggestPatient: async () => undefined,
+  }).run();
+  const record = fhir.resources("DocumentReference")[0] as DocumentReference;
+  const before = await fhir.read<DocumentReference>("DocumentReference", record.id!);
+  fhir.failServiceRequestSearches = true;
+  const triage = new InboundFaxTriageService(fhir, () => "2026-07-31T15:30:00.000Z");
+
+  await assert.rejects(
+    promoteFax(triage, record, "Patient/patient-1"),
+    /could not verify whether this fax already has a referral/i,
+  );
+
+  const after = await fhir.read<DocumentReference>("DocumentReference", record.id!);
+  assert.equal(after.meta?.versionId, before.meta?.versionId);
+  assert.equal(fhir.resources("ServiceRequest").length, 0);
+});
+
+test("duplicate referral identifiers fail closed as ambiguous before fax mutation", async () => {
+  const fhir = new InboundFaxFhir();
+  await createInboundFaxPoller({
+    fhir,
+    adapter: new InboundFaxAdapter(),
+    suggestPatient: async () => undefined,
+  }).run();
+  const record = fhir.resources("DocumentReference")[0] as DocumentReference;
+  fhir.put(inboundReferral("referral-one", FAX_ID.id, "Patient/patient-1"));
+  fhir.put(inboundReferral("referral-two", FAX_ID.id, "Patient/patient-1"));
+  const before = await fhir.read<DocumentReference>("DocumentReference", record.id!);
+  const triage = new InboundFaxTriageService(fhir, () => "2026-07-31T15:30:00.000Z");
+
+  await assert.rejects(
+    promoteFax(triage, record, "Patient/patient-1"),
+    /more than one referral uses this fax identifier/i,
+  );
+
+  const after = await fhir.read<DocumentReference>("DocumentReference", record.id!);
+  assert.equal(after.meta?.versionId, before.meta?.versionId);
 });
 
 test("triage writes use the version read and inbox routing is audited without inventing a patient", async () => {
@@ -504,6 +590,8 @@ function threeFaxAdapterWithMultiFileFailure(): {
 class InboundFaxFhir {
   private readonly rows: Resource[] = [];
   failDocumentCreates = false;
+  failServiceRequestCreates = false;
+  failServiceRequestSearches = false;
   conflictStatusOnNextUpdate?: 409 | 412;
   readonly updateHeaders: Record<string, string>[] = [];
 
@@ -527,11 +615,21 @@ class InboundFaxFhir {
     type: T["resourceType"],
     params: Record<string, string> = {},
   ): Promise<Bundle<T>> {
+    if (type === "ServiceRequest" && this.failServiceRequestSearches) {
+      throw new Error("synthetic ServiceRequest search failure");
+    }
     let resources = this.rows.filter((resource): resource is T => resource.resourceType === type);
     if (type === "ServiceRequest" && params.category) {
       resources = resources.filter((resource) =>
         (resource as ServiceRequest).category?.some((category) =>
           category.coding?.some((coding) => `${coding.system}|${coding.code}` === params.category)));
+    }
+    if (type === "ServiceRequest" && params.identifier) {
+      const [system, value] = params.identifier.split("|");
+      resources = resources.filter((resource) =>
+        (resource as ServiceRequest).identifier?.some(
+          (identifier) => identifier.system === system && identifier.value === value,
+        ));
     }
     if (type === "Encounter" && params.patient) {
       resources = resources.filter((resource) =>
@@ -546,6 +644,7 @@ class InboundFaxFhir {
     return {
       resourceType: "Bundle",
       type: "searchset",
+      total: resources.length,
       entry: resources.map((resource) => ({ resource: structuredClone(resource) })),
     };
   }
@@ -556,6 +655,9 @@ class InboundFaxFhir {
   ): Promise<T> {
     if (resource.resourceType === "DocumentReference" && this.failDocumentCreates) {
       throw new Error("synthetic record failure");
+    }
+    if (resource.resourceType === "ServiceRequest" && this.failServiceRequestCreates) {
+      throw new Error("synthetic ServiceRequest create failure");
     }
     const conditional = headers["If-None-Exist"]?.match(/^identifier=([^|]+)\|(.+)$/);
     if (conditional) {
@@ -608,6 +710,40 @@ class InboundFaxFhir {
     this.rows[index] = saved;
     return structuredClone(saved);
   }
+}
+
+function promoteFax(
+  triage: InboundFaxTriageService,
+  record: DocumentReference,
+  patientReference: string,
+) {
+  return triage.promote({
+    faxDocumentReference: `DocumentReference/${record.id}`,
+    patientReference,
+    patientDisplay: patientReference,
+    referrerDisplay: "Synthetic Referrer",
+    performerReference: "Practitioner/doctor-1",
+    performerDisplay: "Doctor One",
+    reasonText: "Evaluate synthetic finding",
+    actorReference: "Practitioner/staff-1",
+    actorRole: "staff",
+  });
+}
+
+function inboundReferral(
+  id: string,
+  faxId: string,
+  patientReference: string,
+): ServiceRequest {
+  return {
+    resourceType: "ServiceRequest",
+    id,
+    status: "active",
+    intent: "order",
+    subject: { reference: patientReference },
+    code: { text: "Synthetic inbound referral" },
+    identifier: [{ system: INBOUND_FAX_REFERRAL_IDENTIFIER_SYSTEM, value: faxId }],
+  };
 }
 
 function bundle<T extends Resource>(resources: T[], total: number): Bundle<T> {
