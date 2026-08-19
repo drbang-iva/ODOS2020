@@ -1,8 +1,14 @@
 import type { Application, Request, Response } from "express";
-import type { Bundle, CarePlan, Encounter, Procedure, Resource } from "@medplum/fhirtypes";
+import type { Bundle, CarePlan, Encounter, Procedure, Provenance, Resource } from "@medplum/fhirtypes";
 import { resolveBusinessActionRole, type BusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import type { MedplumClient } from "../fhir-client.js";
 import { isRelativeFhirReference } from "../fhir/reference.js";
+import { buildProvenance } from "../fhir/ophthalmology/provenance.js";
+import { DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM } from "../fhir/dryEyeProcedure.js";
+import {
+  buildProcedureFromDefinition,
+  type ClinicalProcedureDefinition,
+} from "../clinical-graph/procedure-definition-store.js";
 import {
   FhirSeriesProtocolDefinitionStore,
   SeriesProtocolConflictError,
@@ -14,6 +20,7 @@ import {
   buildSeriesTrackerView,
   completeNextSeriesSession,
   procedureMatchesCarePlan,
+  SERIES_CARE_PLAN_SOURCE_IDENTIFIER_SYSTEM,
   type SeriesRebookingPrompt,
 } from "./series-care-plan.js";
 
@@ -21,6 +28,7 @@ export interface SeriesTrackerRouteDeps {
   authenticateService(): Promise<void>;
   authenticate(authHeader: string | undefined): Promise<SeriesTrackerStaff | null>;
   serviceFhir: MedplumClient;
+  procedureDefinitions?: () => Promise<ClinicalProcedureDefinition[]>;
   now?: () => string;
 }
 
@@ -42,7 +50,201 @@ export function registerSeriesTrackerRoutes(
   post(app, "/series-tracker/protocols/:id/archive", deps, (req) => archiveProtocol(deps, req));
   get(app, "/series-tracker/patients/:patientId", deps, (req) => patientSeries(deps, req));
   post(app, "/series-tracker/patients/:patientId/care-plans", deps, (req) => prescribeProtocol(deps, req));
+  get(app, "/series-tracker/encounters/:encounterId/series/:protocolId", deps, (req) => encounterSeries(deps, req, false));
+  post(app, "/series-tracker/encounters/:encounterId/series/:protocolId", deps, (req) => encounterSeries(deps, req, true));
   post(app, "/series-tracker/encounters/:encounterId/sign-off", deps, (req) => signOffSeriesProcedures(deps, req));
+}
+
+async function encounterSeries(
+  deps: SeriesTrackerRouteDeps,
+  req: Request,
+  recordSession: boolean,
+): Promise<RouteResult> {
+  const staff = await permittedStaff(deps, req, recordSession ? "chart.write" : "chart.read");
+  if ("status" in staff) return staff;
+  const encounterId = identifierParam(req.params.encounterId, "Encounter id");
+  const protocolId = identifierParam(req.params.protocolId, "Series protocol id");
+  const encounter = await staff.fhir.read<Encounter>("Encounter", encounterId);
+  const patientReference = encounter.subject?.reference;
+  if (!isRelativeFhirReference(patientReference, "Patient")) {
+    return { status: 422, body: { error: "Encounter has no patient subject." } };
+  }
+  const protocol = (await new FhirSeriesProtocolDefinitionStore(deps.serviceFhir, now(deps)).list({ includeArchived: true }))
+    .find((candidate) => candidate.id === protocolId);
+  if (!protocol?.active) {
+    return { status: 409, body: { error: `Active series protocol ${protocolId} is unavailable.` } };
+  }
+  const scopeIdentifier = `${encounter.episodeOfCare?.[0]?.reference ?? `Encounter/${encounterId}`}:${protocolId}`;
+  const carePlanBundle = await staff.fhir.search<CarePlan>("CarePlan", { subject: patientReference, _count: "200" });
+  const patientCarePlans = resourcesOf(carePlanBundle);
+  const matchingCarePlans = (
+    await Promise.all(patientCarePlans.map(async (carePlan) =>
+      carePlan.status === "active"
+      && carePlan.instantiatesCanonical?.includes(protocol.planDefinitionCanonical)
+      && await resourceIsInEncounterScope(staff.fhir, carePlan, encounter)
+        ? [carePlan]
+        : []
+    ))
+  ).flat();
+  if (matchingCarePlans.length > 1) {
+    return {
+      status: 409,
+      body: { error: `${matchingCarePlans.length} active ${protocol.name} series exist in this program.` },
+    };
+  }
+
+  const procedureBundle = await staff.fhir.search<Procedure>("Procedure", { subject: patientReference, _count: "500" });
+  const patientProcedures = resourcesOf(procedureBundle);
+  const legacyParents = (
+    await Promise.all(patientProcedures.map(async (procedure) =>
+      isLegacySeriesParent(procedure, protocolId)
+      && await resourceIsInEncounterScope(staff.fhir, procedure, encounter)
+        ? [procedure]
+        : []
+    ))
+  ).flat();
+  if (legacyParents.length > 1) {
+    return {
+      status: 409,
+      body: { error: `${legacyParents.length} legacy ${protocol.name} series conflict in this program.` },
+    };
+  }
+  const legacyParent = legacyParents[0];
+  const legacyAdoptable = legacyParent?.id
+    ? patientProcedures.filter((procedure) =>
+        isActiveProcedure(procedure)
+        && procedure.partOf?.some((reference) => reference.reference === `Procedure/${legacyParent.id}`)
+      )
+    : [];
+  if (recordSession && legacyParent && legacyAdoptable.length !== 1) {
+    return {
+      status: 409,
+      body: {
+        error: legacyAdoptable.length === 0
+          ? `Legacy ${protocol.name} series has no active session that can be adopted.`
+          : `${legacyAdoptable.length} legacy ${protocol.name} sessions cannot be adopted unambiguously.`,
+      },
+    };
+  }
+  let carePlan = matchingCarePlans[0];
+  let createdCarePlan = false;
+  let procedureDefinition: ClinicalProcedureDefinition | undefined;
+  if (!carePlan && recordSession) {
+    if (legacyAdoptable.length === 0) {
+      procedureDefinition = await resolveProcedureDefinition(deps, protocol.eligibleProcedureTypeCodes);
+      if (!procedureDefinition) {
+        return { status: 409, body: { error: `Active procedure definition for ${protocol.name} is unavailable.` } };
+      }
+    }
+    carePlan = await staff.fhir.create<CarePlan>({
+      ...buildSeriesCarePlan({
+        protocol,
+        patientReference,
+        authorReference: staff.staffReference,
+        created: now(deps)(),
+      }),
+      encounter: { reference: `Encounter/${encounterId}` },
+      identifier: [{ system: SERIES_CARE_PLAN_SOURCE_IDENTIFIER_SYSTEM, value: scopeIdentifier }],
+    }, {
+      "X-ODOS-Source": "series-tracker-dry-eye",
+      "If-None-Exist": `identifier=${SERIES_CARE_PLAN_SOURCE_IDENTIFIER_SYSTEM}|${scopeIdentifier}`,
+    });
+    createdCarePlan = true;
+  }
+  if (!carePlan?.id) {
+    return {
+      status: 200,
+      body: { series: null, currentSession: null, remainingSessions: protocol.sessionCount },
+    };
+  }
+
+  const carePlanReference = `CarePlan/${carePlan.id}`;
+  const boundProcedures = patientProcedures.filter((procedure) =>
+    procedure.basedOn?.some((reference) => reference.reference === carePlanReference)
+  );
+  let currentSession = boundProcedures.find((procedure) =>
+    procedure.encounter?.reference === `Encounter/${encounterId}` && isActiveProcedure(procedure)
+  );
+  const activeBoundProcedure = boundProcedures.find(isActiveProcedure);
+  if (!currentSession && activeBoundProcedure && recordSession) {
+    return {
+      status: 409,
+      body: { error: `${protocol.name} already has an active session in another encounter.` },
+    };
+  }
+  const series = buildSeriesTrackerView(carePlan, boundProcedures);
+  const completedCount = series.sessions.filter((session) => session.status === "completed").length;
+  const sessionNumber = Math.min(completedCount + 1, protocol.sessionCount);
+  let createdSession = false;
+  if (!currentSession && recordSession && completedCount < protocol.sessionCount) {
+    if (legacyAdoptable.length === 0 && !procedureDefinition) {
+      procedureDefinition = await resolveProcedureDefinition(deps, protocol.eligibleProcedureTypeCodes);
+      if (!procedureDefinition) {
+        return { status: 409, body: { error: `Active procedure definition for ${protocol.name} is unavailable.` } };
+      }
+    }
+    const sessionIdentifier = `${carePlanReference}:${sessionNumber}-of-${protocol.sessionCount}`;
+    const adopted = legacyAdoptable[0];
+    if (adopted?.id) {
+      currentSession = {
+        ...adopted,
+        basedOn: uniqueProcedureReferences([...(adopted.basedOn ?? []), { reference: carePlanReference }]),
+        identifier: [
+          ...(adopted.identifier ?? []),
+          { system: DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM, value: sessionIdentifier },
+        ],
+      };
+      await staff.fhir.executeTransaction({
+        resourceType: "Bundle",
+        type: "transaction",
+        entry: [{
+          resource: currentSession,
+          request: { method: "PUT", url: `Procedure/${adopted.id}` },
+        }],
+      }, { "X-ODOS-Source": "series-tracker-dry-eye" });
+    } else {
+      currentSession = await staff.fhir.create<Procedure>({
+        ...buildProcedureFromDefinition(procedureDefinition!, {
+          patientReference,
+          encounterReference: `Encounter/${encounterId}`,
+          performedDateTime: now(deps)(),
+          status: "in-progress",
+        }),
+        basedOn: [{ reference: carePlanReference }],
+        identifier: [{ system: DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM, value: sessionIdentifier }],
+      }, {
+        "X-ODOS-Source": "series-tracker-dry-eye",
+        "If-None-Exist": `identifier=${DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM}|${sessionIdentifier}`,
+      });
+    }
+    createdSession = true;
+    if (currentSession.id) {
+      await staff.fhir.create<Provenance>(buildProvenance({
+        targetReferences: [`Procedure/${currentSession.id}`, carePlanReference, patientReference],
+        occurredDateTime: now(deps)(),
+        activityCode: "CREATE",
+        activityDisplay: "Create",
+        agents: [{
+          typeCode: "author",
+          typeDisplay: "Author",
+          whoReference: staff.staffReference,
+        }],
+      }), { "X-ODOS-Source": "series-tracker-dry-eye" });
+    }
+  }
+  const resolvedNumber = currentSession ? sessionPosition(currentSession)?.number ?? sessionNumber : sessionNumber;
+  return {
+    status: createdCarePlan || createdSession ? 201 : 200,
+    body: {
+      series,
+      currentSession: currentSession?.id ? {
+        number: resolvedNumber,
+        total: protocol.sessionCount,
+        procedureReference: `Procedure/${currentSession.id}`,
+      } : null,
+      remainingSessions: Math.max(0, protocol.sessionCount - resolvedNumber),
+    },
+  };
 }
 
 async function listProtocols(deps: SeriesTrackerRouteDeps, req: Request): Promise<RouteResult> {
@@ -275,6 +477,70 @@ function identifierParam(value: string | string[] | undefined, label: string): s
 
 function statusRank(status: CarePlan["status"]): number {
   return status === "active" ? 0 : status === "on-hold" ? 1 : status === "completed" ? 2 : 3;
+}
+
+function isActiveProcedure(procedure: Procedure): boolean {
+  return !["completed", "entered-in-error", "not-done", "stopped"].includes(procedure.status);
+}
+
+function sessionPosition(procedure: Procedure): { number: number; total: number } | undefined {
+  const value = procedure.identifier?.find((identifier) =>
+    identifier.system === DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM
+    && /:\d+-of-\d+$/.test(identifier.value ?? "")
+  )?.value;
+  const match = value?.match(/:(\d+)-of-(\d+)$/);
+  if (!match) return undefined;
+  const number = Number(match[1]);
+  const total = Number(match[2]);
+  return Number.isSafeInteger(number) && Number.isSafeInteger(total) && number > 0 && total >= number
+    ? { number, total }
+    : undefined;
+}
+
+async function resourceIsInEncounterScope(
+  fhir: SeriesTrackerStaff["fhir"],
+  resource: CarePlan | Procedure,
+  encounter: Encounter,
+): Promise<boolean> {
+  const currentReference = `Encounter/${encounter.id}`;
+  const resourceEncounter = resource.encounter?.reference
+    ?? legacySourceEncounterReference(resource);
+  if (!resourceEncounter || resourceEncounter === currentReference) return resourceEncounter === currentReference;
+  if (!encounter.episodeOfCare?.[0]?.reference || !isRelativeFhirReference(resourceEncounter, "Encounter")) return false;
+  const related = await fhir.read<Encounter>("Encounter", resourceEncounter.slice("Encounter/".length));
+  return related.episodeOfCare?.some((reference) =>
+    reference.reference === encounter.episodeOfCare?.[0]?.reference
+  ) ?? false;
+}
+
+function legacySourceEncounterReference(resource: CarePlan | Procedure): string | undefined {
+  const value = resource.identifier?.find((identifier) =>
+    identifier.system === SERIES_CARE_PLAN_SOURCE_IDENTIFIER_SYSTEM
+  )?.value;
+  const encounterId = value?.split(":")[0];
+  return encounterId && !encounterId.startsWith("EpisodeOfCare/") && !encounterId.startsWith("Encounter/")
+    ? `Encounter/${encounterId}`
+    : undefined;
+}
+
+function isLegacySeriesParent(procedure: Procedure, protocolId: string): boolean {
+  return protocolId === "dry-eye-ipl"
+    && procedure.status !== "entered-in-error"
+    && procedure.code?.coding?.some((coding) => coding.code === "IPL") === true
+    && procedure.note?.some((note) => /^\d+-session dry-eye treatment series$/.test(note.text ?? "")) === true;
+}
+
+function uniqueProcedureReferences(references: NonNullable<Procedure["basedOn"]>): NonNullable<Procedure["basedOn"]> {
+  return [...new Map(references.map((reference) => [reference.reference, reference])).values()];
+}
+
+async function resolveProcedureDefinition(
+  deps: SeriesTrackerRouteDeps,
+  eligibleProcedureTypeCodes: readonly string[],
+): Promise<ClinicalProcedureDefinition | undefined> {
+  return (await deps.procedureDefinitions?.())?.find((candidate) =>
+    candidate.active && eligibleProcedureTypeCodes.includes(candidate.stableKey)
+  );
 }
 
 function now(deps: SeriesTrackerRouteDeps): () => string {

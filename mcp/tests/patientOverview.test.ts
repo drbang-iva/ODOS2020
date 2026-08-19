@@ -11,6 +11,7 @@ import type {
   CoverageEligibilityResponse,
   DocumentReference,
   Encounter,
+  EpisodeOfCare,
   MedicationRequest,
   MedicationStatement,
   Observation,
@@ -39,6 +40,7 @@ import { buildEyeBodyStructure } from "../src/fhir/ophthalmology/bodyStructure.j
 import { ODOS_VISIT_TYPE_SYSTEM } from "../src/fhir/schedulingVisitType.js";
 import { buildDiagnosisCatalogSeeds } from "../src/clinical-graph/diagnosis-catalog-store.js";
 import { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } from "../src/clinical-graph/diagnosis-pick-endpoint.js";
+import { DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM } from "../src/fhir/dryEyeProcedure.js";
 
 test("patient overview projects real snapshot resources and newest-first encounter diagnoses", async () => {
   const fake = new FakeFhir();
@@ -87,6 +89,54 @@ test("patient overview projects real snapshot resources and newest-first encount
   assert.equal(provenanceSearch?.params.patient, "Patient/p1");
   assert.equal(provenanceSearch?.params.recorded, undefined);
   assert.equal(provenanceSearch?.params._sort, "recorded");
+});
+
+test("patient overview reflects active program enrollment and CarePlan session designation in the visit ledger", async () => {
+  const fake = new FakeFhir();
+  fake.add(patient());
+  fake.add({
+    resourceType: "EpisodeOfCare",
+    id: "dry-eye-program",
+    status: "active",
+    patient: { reference: "Patient/p1" },
+    type: [{ text: "Dry eye" }],
+  } satisfies EpisodeOfCare);
+  const visit = encounter("series-visit", "2026-08-19T14:00:00Z");
+  visit.episodeOfCare = [{ reference: "EpisodeOfCare/dry-eye-program" }];
+  fake.add(visit);
+  fake.add({
+    resourceType: "CarePlan",
+    id: "ipl-series",
+    status: "active",
+    intent: "plan",
+    subject: { reference: "Patient/p1" },
+    title: "IPL",
+    activity: Array.from({ length: 4 }, (_, index) => ({
+      detail: { status: index === 0 ? "completed" : "not-started", description: `Session ${index + 1} of 4` },
+    })),
+  } satisfies CarePlan);
+  fake.add({
+    resourceType: "Procedure",
+    id: "ipl-session-2",
+    status: "in-progress",
+    subject: { reference: "Patient/p1" },
+    encounter: { reference: "Encounter/series-visit" },
+    basedOn: [{ reference: "CarePlan/ipl-series" }],
+    identifier: [{
+      system: DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM,
+      value: "CarePlan/ipl-series:2-of-4",
+    }],
+  } satisfies Procedure);
+
+  const overview = await loadPatientOverview(fake as never, "p1");
+
+  assert.deepEqual(overview.programs, [{
+    episodeOfCareReference: "EpisodeOfCare/dry-eye-program",
+    title: "Dry eye",
+    status: "active",
+  }]);
+  assert.equal(overview.visits[0]?.program, "Dry eye");
+  assert.equal(overview.visits[0]?.seriesDesignation, "IPL · session 2 of 4");
 });
 
 test("billing weather reads stored eligibility and never promotes uncertain coverage to green", async () => {

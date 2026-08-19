@@ -177,6 +177,9 @@ test("Dry Eye questionnaire persists total-score-only records and keeps unsaved 
   const writes: Array<{ customFields: Array<{ code: string; value: number | string }> }> = [];
   globalThis.fetch = (async (input, init) => {
     const url = String(input);
+    if (url.includes("/series-tracker/encounters/e1/series/dry-eye-ipl")) {
+      return jsonResponse({ series: null, currentSession: null, remainingSessions: 4 });
+    }
     if (url.includes("/clinical-graph/custom/dry-eye%3Asymptoms/history")) {
       return jsonResponse({ rows });
     }
@@ -273,6 +276,74 @@ test("Dry Eye questionnaire persists total-score-only records and keeps unsaved 
     assert.equal(totalScore().props.value, "12");
     assert.equal(dateAdministered().props.value, "2026-07-01");
     assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /(?:OSDI|SPEED|DEQ-5) item \d+/);
+  } finally {
+    if (renderer) act(() => renderer!.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("Dry Eye treatment series survives a navigate-away-and-back round trip", async () => {
+  const originalFetch = globalThis.fetch;
+  let persisted = {
+    series: null as null | { carePlanReference: string; title: string; sessions: unknown[] },
+    currentSession: null as null | { number: number; total: number; procedureReference: string },
+    remainingSessions: 4,
+  };
+  const requests: Array<{ method: string; url: string }> = [];
+  globalThis.fetch = (async (input, init) => {
+    const url = String(input);
+    requests.push({ method: init?.method ?? "GET", url });
+    if (url.includes("/clinical-graph/custom/dry-eye%3Asymptoms/history")) {
+      return jsonResponse({ rows: [] });
+    }
+    if (url.includes("/series-tracker/encounters/e1/series/dry-eye-ipl")) {
+      if (init?.method === "POST") {
+        persisted = {
+          series: { carePlanReference: "CarePlan/cp1", title: "IPL", sessions: [] },
+          currentSession: { number: 1, total: 4, procedureReference: "Procedure/p1" },
+          remainingSessions: 3,
+        };
+      }
+      return jsonResponse(persisted, init?.method === "POST" ? 201 : 200);
+    }
+    throw new Error(`Unexpected Dry Eye request: ${url}`);
+  }) as typeof fetch;
+
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    await act(async () => {
+      renderer = create(
+        <DryEyeSection
+          patientReference="Patient/p1"
+          encounterReference="Encounter/e1"
+          onSaved={() => undefined}
+        />,
+      );
+      await flushEffects();
+    });
+    assert.match(JSON.stringify(renderer.toJSON()), /No active IPL series in this program/);
+    const start = renderer.root.findAllByType("button").find((button) => button.children.includes("Start IPL"));
+    assert.ok(start);
+    await act(async () => {
+      await start.props.onClick();
+      await flushEffects();
+    });
+    assert.match(JSON.stringify(renderer.toJSON()), /IPL session 1\/4 in progress · 3 remaining/);
+
+    act(() => renderer!.unmount());
+    await act(async () => {
+      renderer = create(
+        <DryEyeSection
+          patientReference="Patient/p1"
+          encounterReference="Encounter/e1"
+          onSaved={() => undefined}
+        />,
+      );
+      await flushEffects();
+    });
+    assert.match(JSON.stringify(renderer.toJSON()), /IPL session 1\/4 in progress · 3 remaining/);
+    assert.equal(requests.filter((request) => request.url.includes("/series-tracker/") && request.method === "GET").length, 2);
+    assert.equal(requests.filter((request) => request.url.includes("/series-tracker/") && request.method === "POST").length, 1);
   } finally {
     if (renderer) act(() => renderer!.unmount());
     globalThis.fetch = originalFetch;

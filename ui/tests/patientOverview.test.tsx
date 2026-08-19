@@ -119,6 +119,22 @@ test("seeded overview renders real snapshot data, newest-first visits, and linke
   assert.match(html, /Start today&#x27;s visit →/);
 });
 
+test("patient overview renders program enrollment and the CarePlan session designation on its visit", () => {
+  const overview = fixture();
+  overview.programs = [{
+    episodeOfCareReference: "EpisodeOfCare/dry-eye-program",
+    title: "Dry eye",
+    status: "active",
+  }];
+  overview.visits[0]!.program = "Dry eye";
+  overview.visits[0]!.seriesDesignation = "IPL · session 2 of 4";
+
+  const html = renderToStaticMarkup(<PatientOverview patient={patient} initialOverview={overview} />);
+
+  assert.match(html, /Dry eye · active/);
+  assert.match(html, /IPL · session 2 of 4/);
+});
+
 test("overview registry assigns the doctor panel tiers and hides commercial panels", () => {
   const panels = new Map(OVERVIEW_PANEL_REGISTRY.map((panel) => [panel.id, panel]));
   assert.equal(panels.get("billing-weather")?.tier, 1);

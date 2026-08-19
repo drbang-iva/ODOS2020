@@ -7390,6 +7390,7 @@ async function startMcpServer(): Promise<void> {
         authenticateService: authenticateWithMedplum,
         authenticate: authenticateStaffRoute,
         serviceFhir: fhir,
+        procedureDefinitions: () => procedureDefinitionStore.list(),
       });
       registerSchedulingResourceRoutes(app, {
         authenticateService: authenticateWithMedplum,

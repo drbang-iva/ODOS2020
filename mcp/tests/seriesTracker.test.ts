@@ -16,6 +16,11 @@ import {
   completeNextSeriesSession,
 } from "../src/series-tracker/series-care-plan.js";
 import { registerSeriesTrackerRoutes } from "../src/series-tracker/series-tracker-endpoint.js";
+import {
+  buildProcedureDefinitionSeeds,
+  DRY_EYE_PROCEDURE_STABLE_KEYS,
+} from "../src/clinical-graph/procedure-definition-store.js";
+import { SERIES_PROCEDURE_TYPE_SYSTEM } from "../src/series-tracker/protocol-definition-store.js";
 
 const draft: SeriesProtocolDefinitionDraft = {
   name: "Dry-Eye IPL",
@@ -228,6 +233,203 @@ test("HTTP flow defines a protocol, prescribes it to a test patient, and signs i
     assert.equal(signedBody.updatedProcedureCount, 1);
     assert.deepEqual(signedBody.prompt.dueWindow, { start: "2026-07-28", end: "2026-08-04", minWeeks: 3, maxWeeks: 4 });
     assert.deepEqual(signedTransaction?.entry?.map((entry) => entry.resource?.resourceType), ["Procedure", "CarePlan"]);
+  } finally {
+    await new Promise<void>((resolve, reject) => listener.close((error) => error ? reject(error) : resolve()));
+  }
+});
+
+test("Dry Eye sheet round-trip conditionally creates one canonical CarePlan and one bound session", async () => {
+  const dryEyeDraft: SeriesProtocolDefinitionDraft = {
+    id: "dry-eye-ipl",
+    name: "IPL",
+    eligibleProcedureTypeCodes: [DRY_EYE_PROCEDURE_STABLE_KEYS.ipl],
+    sessionCount: 4,
+    intervalMinDays: 21,
+    intervalMaxDays: 28,
+    maintenanceAfter: true,
+  };
+  const recordedAt = "2026-08-19T15:00:00.000Z";
+  const activity = buildSeriesActivityDefinition("dry-eye-ipl", dryEyeDraft, recordedAt);
+  const plan = buildSeriesPlanDefinition("dry-eye-ipl", dryEyeDraft, activity.url!, recordedAt);
+  const resources: Resource[] = [{
+    resourceType: "Encounter",
+    id: "encounter-1",
+    status: "in-progress",
+    class: { code: "AMB" },
+    subject: { reference: "Patient/test-patient" },
+    episodeOfCare: [{ reference: "EpisodeOfCare/dry-eye-program" }],
+  } satisfies Encounter, {
+    resourceType: "Encounter",
+    id: "encounter-2",
+    status: "in-progress",
+    class: { code: "AMB" },
+    subject: { reference: "Patient/test-patient" },
+    episodeOfCare: [{ reference: "EpisodeOfCare/dry-eye-program" }],
+  } satisfies Encounter];
+  let nextId = 1;
+  let procedureDefinitionsAvailable = true;
+  const staffFhir = {
+    async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
+      const resource = resources.find((candidate) => candidate.resourceType === resourceType && candidate.id === id);
+      if (!resource) throw new Error(`${resourceType}/${id} not found`);
+      return structuredClone(resource) as T;
+    },
+    async search<T extends Resource>(resourceType: T["resourceType"], params: Record<string, string> = {}): Promise<Bundle<T>> {
+      const matches = resources.filter((resource) => {
+        if (resource.resourceType !== resourceType) return false;
+        if (params.subject && "subject" in resource && resource.subject?.reference !== params.subject) return false;
+        if (params.patient && "patient" in resource && resource.patient?.reference !== params.patient) return false;
+        return true;
+      });
+      return { resourceType: "Bundle", type: "searchset", entry: matches.map((resource) => ({ resource: structuredClone(resource) as T })) };
+    },
+    async create<T extends Resource>(resource: T, headers: Record<string, string> = {}): Promise<T> {
+      const conditional = headers["If-None-Exist"]?.match(/^identifier=([^|]+)\|(.+)$/);
+      const existing = conditional && resources.find((candidate) =>
+        "identifier" in candidate && candidate.identifier?.some((identifier) =>
+          identifier.system === conditional[1] && identifier.value === conditional[2]
+        )
+      );
+      if (existing) return structuredClone(existing) as T;
+      const saved = { ...structuredClone(resource), id: `${resource.resourceType.toLowerCase()}-${nextId++}` } as T;
+      resources.push(saved);
+      return structuredClone(saved);
+    },
+    async executeTransaction(bundle: Bundle): Promise<Bundle> {
+      for (const entry of bundle.entry ?? []) {
+        if (entry.request?.method !== "PUT" || !entry.resource?.id) continue;
+        const index = resources.findIndex((resource) =>
+          resource.resourceType === entry.resource?.resourceType && resource.id === entry.resource.id
+        );
+        if (index >= 0) resources[index] = structuredClone(entry.resource);
+      }
+      return { resourceType: "Bundle", type: "transaction-response" };
+    },
+  };
+  const app = express();
+  app.use(express.json());
+  registerSeriesTrackerRoutes(app, {
+    authenticateService: async () => undefined,
+    authenticate: async () => ({
+      staffReference: "Practitioner/provider-1",
+      actorRole: "provider",
+      roles: ["provider"],
+      fhir: staffFhir as never,
+    }),
+    serviceFhir: {
+      async search<T extends Resource>(resourceType: T["resourceType"]): Promise<Bundle<T>> {
+        const definitions = resourceType === "PlanDefinition" ? [plan] : [];
+        return { resourceType: "Bundle", type: "searchset", entry: definitions.map((resource) => ({ resource: resource as T })) };
+      },
+    } as never,
+    procedureDefinitions: async () => procedureDefinitionsAvailable ? buildProcedureDefinitionSeeds() : [],
+    now: () => recordedAt,
+  });
+  const listener = app.listen(0, "127.0.0.1");
+  await new Promise<void>((resolve, reject) => {
+    listener.once("listening", resolve);
+    listener.once("error", reject);
+  });
+  const { port } = listener.address() as AddressInfo;
+  const endpoint = `http://127.0.0.1:${port}/series-tracker/encounters/encounter-1/series/dry-eye-ipl`;
+  const headers = { Authorization: "Bearer test", "Content-Type": "application/json" };
+  try {
+    procedureDefinitionsAvailable = false;
+    const unavailableDefinition = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+    assert.equal(unavailableDefinition.status, 409);
+    assert.equal(resources.some((resource) => ["CarePlan", "Procedure"].includes(resource.resourceType)), false);
+    procedureDefinitionsAvailable = true;
+
+    const first = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+    assert.equal(first.status, 201);
+    const second = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+    assert.equal(second.status, 200);
+    const hydrated = await fetch(endpoint, { headers });
+    assert.equal(hydrated.status, 200);
+    const body = await hydrated.json() as {
+      series: { title: string; sessions: Array<{ number: number; status: string }> };
+      currentSession: { number: number; total: number; procedureReference: string };
+      remainingSessions: number;
+    };
+    assert.equal(body.series.title, "IPL");
+    assert.deepEqual(body.currentSession, {
+      number: 1,
+      total: 4,
+      procedureReference: "Procedure/procedure-2",
+    });
+    assert.equal(body.remainingSessions, 3);
+    assert.equal(resources.filter((resource) => resource.resourceType === "CarePlan").length, 1);
+    const procedures = resources.filter((resource): resource is Procedure => resource.resourceType === "Procedure");
+    assert.equal(procedures.length, 1);
+    assert.deepEqual(procedures[0]?.basedOn, [{ reference: "CarePlan/careplan-1" }]);
+    assert.deepEqual(procedures[0]?.code?.coding?.[0], {
+      system: SERIES_PROCEDURE_TYPE_SYSTEM,
+      code: DRY_EYE_PROCEDURE_STABLE_KEYS.ipl,
+      display: "IPL (OptiLight-class)",
+    });
+
+    const sameProgram = await fetch(endpoint.replace("encounter-1", "encounter-2"), {
+      method: "POST",
+      headers,
+      body: "{}",
+    });
+    assert.equal(sameProgram.status, 409);
+    assert.match((await sameProgram.json() as { error: string }).error, /active session in another encounter/);
+    assert.equal(resources.filter((resource) => resource.resourceType === "CarePlan").length, 1);
+    assert.equal(resources.filter((resource) => resource.resourceType === "Procedure").length, 1);
+
+    const beforeMissing = resources.length;
+    const missing = await fetch(endpoint.replace("dry-eye-ipl", "missing-protocol"), {
+      method: "POST",
+      headers,
+      body: "{}",
+    });
+    assert.equal(missing.status, 409);
+    assert.equal(resources.length, beforeMissing);
+
+    for (let index = resources.length - 1; index >= 0; index -= 1) {
+      if (["CarePlan", "Procedure"].includes(resources[index]!.resourceType)) resources.splice(index, 1);
+    }
+    resources.push({
+      resourceType: "Procedure",
+      id: "legacy-parent",
+      status: "in-progress",
+      subject: { reference: "Patient/test-patient" },
+      encounter: { reference: "Encounter/encounter-1" },
+      code: { coding: [{ code: "IPL" }] },
+      note: [{ text: "4-session dry-eye treatment series" }],
+    } satisfies Procedure, {
+      resourceType: "Procedure",
+      id: "legacy-session",
+      status: "in-progress",
+      subject: { reference: "Patient/test-patient" },
+      encounter: { reference: "Encounter/encounter-1" },
+      code: { coding: [{ code: "IPL" }] },
+      partOf: [{ reference: "Procedure/legacy-parent" }],
+      identifier: [{ system: "https://odos2020.com/fhir/Identifier/dry-eye-treatment-session", value: "1-of-4" }],
+    } satisfies Procedure);
+
+    const adoptedResponse = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+    assert.equal(adoptedResponse.status, 201);
+    const adopted = resources.find((resource): resource is Procedure =>
+      resource.resourceType === "Procedure" && resource.id === "legacy-session"
+    );
+    const adoptedCarePlan = resources.find((resource): resource is CarePlan => resource.resourceType === "CarePlan");
+    assert.deepEqual(adopted?.basedOn, [{ reference: `CarePlan/${adoptedCarePlan?.id}` }]);
+    assert.equal(adopted?.code?.coding?.[0]?.code, "IPL", "adoption preserves the historical clinical code");
+
+    resources.push({
+      resourceType: "Procedure",
+      id: "legacy-parent-duplicate",
+      status: "in-progress",
+      subject: { reference: "Patient/test-patient" },
+      encounter: { reference: "Encounter/encounter-1" },
+      code: { coding: [{ code: "IPL" }] },
+      note: [{ text: "4-session dry-eye treatment series" }],
+    } satisfies Procedure);
+    const conflict = await fetch(endpoint, { headers });
+    assert.equal(conflict.status, 409);
+    assert.match((await conflict.json() as { error: string }).error, /2 legacy IPL series conflict/);
   } finally {
     await new Promise<void>((resolve, reject) => listener.close((error) => error ? reject(error) : resolve()));
   }

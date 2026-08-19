@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import type {
   AdverseEvent,
   MedicationStatement,
-  Procedure,
   Provenance,
 } from "@medplum/fhirtypes";
 import { fhir } from "../../lib/fhir";
@@ -15,9 +14,10 @@ import {
   type OphthalmicSupplyTypeCode,
 } from "../../lib/fhir-dry-eye/ophthalmicMedicationStatement";
 import {
-  buildDryEyeTreatmentProcedure,
-  buildDryEyeTreatmentSeriesProcedure,
-} from "../../lib/fhir-dry-eye/procedure";
+  fetchEncounterSeries,
+  recordEncounterSeriesSession,
+  type EncounterSeriesState,
+} from "../../lib/series-tracker";
 import { OdosSelect } from "../inputs/OdosSelect";
 import type { SectionSaveStatus } from "./types";
 
@@ -37,6 +37,7 @@ const PRODUCT_OPTIONS = [
 ] as const;
 
 const SYMPTOM_INSTRUMENTS = ["OSDI", "SPEED", "DEQ-5"] as const;
+const IPL_SERIES_PROTOCOL_ID = "dry-eye-ipl";
 type SymptomInstrument = (typeof SYMPTOM_INSTRUMENTS)[number];
 
 interface QuestionnaireDraft {
@@ -69,7 +70,8 @@ export function DryEyeSection({ patientReference, encounterReference, onSaved }:
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<SectionSaveStatus | null>(null);
-  const [series, setSeries] = useState<{ parent?: Procedure; session?: Procedure }>({});
+  const [series, setSeries] = useState<EncounterSeriesState>();
+  const [seriesLoading, setSeriesLoading] = useState(true);
   const [productText, setProductText] = useState<string>(PRODUCT_OPTIONS[0].text);
   const [adverseEventText, setAdverseEventText] = useState("");
   const questionnaireDraft = questionnaireDrafts[instrument];
@@ -113,6 +115,25 @@ export function DryEyeSection({ patientReference, encounterReference, onSaved }:
       });
     return () => controller.abort();
   }, [encounterReference, patientReference]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setSeries(undefined);
+    setSeriesLoading(true);
+    fetchEncounterSeries(encounterReference, IPL_SERIES_PROTOCOL_ID)
+      .then((value) => {
+        if (!cancelled) setSeries(value);
+      })
+      .catch((caught) => {
+        if (!cancelled) setError(caught instanceof Error ? caught.message : String(caught));
+      })
+      .finally(() => {
+        if (!cancelled) setSeriesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [encounterReference]);
 
   function updateQuestionnaireDraft(update: Partial<QuestionnaireDraft>) {
     setQuestionnaireDrafts((current) => ({
@@ -178,40 +199,11 @@ export function DryEyeSection({ patientReference, encounterReference, onSaved }:
     setBusy("series");
     setError(null);
     try {
-      const now = new Date().toISOString();
-      const parent = await fhir.create<Procedure>(
-        buildDryEyeTreatmentSeriesProcedure({
-          patientReference,
-          encounterReference,
-          treatmentType: "IPL",
-          totalSessions: 4,
-          seriesStartDateTime: now,
-          reasonText: "Dry eye",
-          parameters: { energyMj: 14, wavelengthNm: 590, spotCount: 42 },
-        }),
-        "create_dry_eye_treatment_series",
-      );
-      const session = await fhir.create<Procedure>(
-        buildDryEyeTreatmentProcedure({
-          patientReference,
-          encounterReference,
-          treatmentType: "IPL",
-          status: "in-progress",
-          seriesProcedureReference: `Procedure/${parent.id}`,
-          performedDateTime: now,
-          reasonText: "Dry eye",
-          sessionNumber: 1,
-          totalSessions: 4,
-          parameters: { energyMj: 14, wavelengthNm: 590, spotCount: 42 },
-        }),
-        "create_dry_eye_treatment_series",
-      );
-      await createUiProvenance("create_dry_eye_treatment_series", [
-        `Procedure/${parent.id}`,
-        `Procedure/${session.id}`,
-      ], patientReference);
-      setSeries({ parent, session });
-      markSaved("IPL 1/4");
+      const saved = await recordEncounterSeriesSession(encounterReference, IPL_SERIES_PROTOCOL_ID);
+      setSeries(saved);
+      markSaved(saved.currentSession
+        ? `IPL ${saved.currentSession.number}/${saved.currentSession.total}`
+        : "IPL series active");
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -259,7 +251,9 @@ export function DryEyeSection({ patientReference, encounterReference, onSaved }:
           event: { text: adverseEventText.trim() },
           actuality: "actual",
           date: new Date().toISOString(),
-          suspectEntityReferences: series.session?.id ? [`Procedure/${series.session.id}`] : undefined,
+          suspectEntityReferences: series?.currentSession?.procedureReference
+            ? [series.currentSession.procedureReference]
+            : undefined,
         }),
         "create_dry_eye_adverse_event",
       );
@@ -371,14 +365,24 @@ export function DryEyeSection({ patientReference, encounterReference, onSaved }:
             <div className="rounded border border-white/10 bg-bg-panel/70 p-4">
               <h3 className="text-sm font-semibold text-white">Treatment Series</h3>
               <div className="mt-3 rounded border border-white/10 bg-bg-mid/60 p-3 text-sm text-white/75">
-                {series.session ? "IPL session 1/4 in progress" : "No active IPL series in this encounter."}
+                {seriesLoading
+                  ? "Loading IPL series…"
+                  : series?.currentSession
+                    ? `IPL session ${series.currentSession.number}/${series.currentSession.total} in progress · ${series.remainingSessions} remaining`
+                    : series?.series
+                      ? `IPL series active · ${series.remainingSessions} sessions remaining`
+                      : "No active IPL series in this program."}
               </div>
               <button
                 onClick={saveIplSeries}
-                disabled={busy !== null}
+                disabled={busy !== null || seriesLoading || Boolean(series?.currentSession)}
                 className="mt-3 w-full rounded border border-brand/60 bg-brand/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand/25 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {busy === "series" ? "Saving..." : "Start IPL 1/4"}
+                {busy === "series"
+                  ? "Saving..."
+                  : series?.currentSession
+                    ? `IPL ${series.currentSession.number}/${series.currentSession.total} in progress`
+                    : "Start IPL"}
               </button>
             </div>
 
