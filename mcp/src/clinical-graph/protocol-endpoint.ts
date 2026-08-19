@@ -7,7 +7,10 @@ import {
   FhirSeriesProtocolDefinitionStore,
   type SeriesProtocolDefinition,
 } from "../series-tracker/protocol-definition-store.js";
-import { buildSeriesCarePlan } from "../series-tracker/series-care-plan.js";
+import {
+  buildSeriesCarePlan,
+  SERIES_CARE_PLAN_SOURCE_IDENTIFIER_SYSTEM,
+} from "../series-tracker/series-care-plan.js";
 import {
   BUILTIN_CHARGE_RULES,
   BUILTIN_PROTOCOLS,
@@ -42,8 +45,6 @@ import {
 } from "./procedure-fee-schedule.js";
 
 const FINDING_SOURCE_URL = "https://odos2020.com/fhir/StructureDefinition/finding-source";
-const SERIES_CARE_PLAN_SOURCE_IDENTIFIER_SYSTEM =
-  "https://odos2020.com/fhir/NamingSystem/series-care-plan-source";
 export const MANUAL_VISIT_CHARGE_ID_PREFIX = "manual-visit-code:";
 export const MANUAL_VISIT_PLAN_ACTION_REF = "manual-visit-code";
 

@@ -364,8 +364,17 @@ export function PatientOverview({
                   <div className="odos-overview-kicker">Active programs</div>
                   <PatientProgramPanels
                     compact
+                    programEnrollment={overview.programs?.length ? (
+                      <div aria-label="Program enrollment" className="grid gap-2">
+                        {overview.programs.map((program) => (
+                          <div key={program.episodeOfCareReference} className="odos-program-enrollment-row">
+                            {program.title} · {program.status}
+                          </div>
+                        ))}
+                      </div>
+                    ) : undefined}
                     packageStatus={isVisible("balance-chips") ? <BalanceChips patientReference={`Patient/${patient.id}`} revision={packageRevision} /> : undefined}
-                    seriesStatus={<SeriesTrackerPanel patientReference={`Patient/${patient.id}`} api={api.seriesTracker} compact emptyMessage={isVisible("balance-chips") ? "No active treatment series" : "No active programs"} />}
+                    seriesStatus={<SeriesTrackerPanel patientReference={`Patient/${patient.id}`} api={api.seriesTracker} compact emptyMessage={isVisible("balance-chips") || overview.programs?.length ? "No active treatment series" : "No active programs"} />}
                   />
                 </section>
               )}
@@ -917,6 +926,8 @@ function MedicationList({
 function visitMetadata(visit: PatientOverviewPayload["visits"][number]): { visitType?: string; context?: string } {
   const visitType = recordedMetadata(visit.visitType, "Visit type not recorded");
   const context = [
+    recordedMetadata(visit.program, "Program not recorded"),
+    recordedMetadata(visit.seriesDesignation, "Series not recorded"),
     recordedMetadata(visit.provider, "Provider not recorded"),
     recordedMetadata(visit.facility, "Facility not recorded"),
   ].filter((value): value is string => Boolean(value)).join(" · ");

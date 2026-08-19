@@ -8,6 +8,7 @@ import type {
   CoverageEligibilityResponse,
   DocumentReference,
   Encounter,
+  EpisodeOfCare,
   MedicationRequest,
   MedicationStatement,
   Observation,
@@ -30,6 +31,8 @@ import {
 } from "../fhir/condition.js";
 import { ODOS_VISIT_TYPE_SYSTEM } from "../fhir/schedulingVisitType.js";
 import { TOBACCO_SMOKING_STATUS_LOINC_CODE } from "../fhir/smokingStatus.js";
+import { DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM } from "../fhir/dryEyeProcedure.js";
+import { procedureMatchesCarePlan } from "../series-tracker/series-care-plan.js";
 import {
   MIGRATION_TAG_CODE,
   MIGRATION_TAG_SYSTEM,
@@ -59,7 +62,15 @@ export interface PatientOverviewVisit {
   facility?: string;
   visitType: string;
   status: "Preliminary" | "Final" | "Migrated";
+  program?: string;
+  seriesDesignation?: string;
   diagnoses: PatientOverviewDiagnosis[];
+}
+
+export interface PatientOverviewProgram {
+  episodeOfCareReference: string;
+  title: string;
+  status: EpisodeOfCare["status"];
 }
 
 export interface PatientOverviewVisitDetailCard {
@@ -114,6 +125,7 @@ export interface PatientOverviewPayload {
     ophthalmicMedications: PatientOverviewMedication[];
     systemicMedications: PatientOverviewMedication[];
   };
+  programs: PatientOverviewProgram[];
   visits: PatientOverviewVisit[];
   diagnosisChoices: Array<{ name: string; code: string; system: string }>;
 }
@@ -168,6 +180,8 @@ export async function loadPatientOverview(
     stickyNote,
     problemConditions,
     procedures,
+    carePlans,
+    episodesOfCare,
     medicationStatements,
     medicationRequestResult,
     smokingStatuses,
@@ -179,6 +193,8 @@ export async function loadPatientOverview(
     findPatientStickyNote(fhir, patientId, true),
     searchAll<Condition>(fhir, "Condition", { patient: patientId, category: "problem-list-item", _count: "100" }),
     searchAll<Procedure>(fhir, "Procedure", { patient: patientId, _count: "100", _sort: "-date" }),
+    searchAll<CarePlan>(fhir, "CarePlan", { patient: patientId, _count: "100" }),
+    searchAll<EpisodeOfCare>(fhir, "EpisodeOfCare", { patient: patientReference, _count: "100" }),
     searchAll<MedicationStatement>(fhir, "MedicationStatement", { patient: patientId, status: "active", _count: "100" }),
     optionalSearchAll<MedicationRequest>(fhir, "MedicationRequest", { patient: patientId, status: "active", _count: "100" }),
     searchAll<Observation>(fhir, "Observation", { patient: patientId, code: TOBACCO_SMOKING_STATUS_LOINC_CODE, _count: "1", _sort: "-date" }),
@@ -209,6 +225,8 @@ export async function loadPatientOverview(
       stickyNote,
       problemConditions,
       procedures,
+      carePlans,
+      episodesOfCare,
       medicationStatements,
       medicationRequests: medicationRequestResult.resources,
       smokingStatuses,
@@ -267,6 +285,8 @@ export async function loadPatientOverview(
     stickyNote,
     problemConditions,
     procedures,
+    carePlans,
+    episodesOfCare,
     medicationStatements,
     medicationRequests: medicationRequestResult.resources,
     smokingStatuses,
@@ -424,6 +444,8 @@ function projectOverview(input: {
   stickyNote?: DocumentReference;
   problemConditions: Condition[];
   procedures: Procedure[];
+  carePlans: CarePlan[];
+  episodesOfCare: EpisodeOfCare[];
   medicationStatements: MedicationStatement[];
   medicationRequests: MedicationRequest[];
   smokingStatuses: Observation[];
@@ -471,6 +493,15 @@ function projectOverview(input: {
   ].filter((medication) => medication.name);
   const diagnoses = input.encounterDiagnoses.filter(isConfirmedEncounterCondition);
   const signedEncounterIds = signedEncounters(input.encounters, input.provenances ?? []);
+  const programTitles = new Map<string, string>(input.episodesOfCare.flatMap((episode) =>
+    episode.id ? [[`EpisodeOfCare/${episode.id}`, conceptText(episode.type?.[0]) || "Program"] as const] : []
+  ));
+  const seriesCarePlans = new Map<string, CarePlan>(input.carePlans.flatMap((carePlan) =>
+    carePlan.id
+    && carePlan.instantiatesCanonical?.some((canonical) => canonical.includes("/PlanDefinition/series-protocol-"))
+      ? [[`CarePlan/${carePlan.id}`, carePlan] as const]
+      : []
+  ));
   const byEncounter = new Map<string, PatientOverviewDiagnosis[]>();
   for (const condition of diagnoses) {
     const encounterId = conditionEncounterId(condition);
@@ -522,9 +553,17 @@ function projectOverview(input: {
       ophthalmicMedications: allMedications.filter((medication) => medication.ophthalmic).map(({ ophthalmic: _, ...row }) => row),
       systemicMedications: allMedications.filter((medication) => !medication.ophthalmic).map(({ ophthalmic: _, ...row }) => row),
     },
+    programs: input.episodesOfCare.flatMap((episode): PatientOverviewProgram[] => episode.id && episode.status === "active" ? [{
+      episodeOfCareReference: `EpisodeOfCare/${episode.id}`,
+      title: conceptText(episode.type?.[0]) || "Program",
+      status: episode.status,
+    }] : []),
     visits: [...input.encounters]
       .sort((left, right) => encounterTime(right) - encounterTime(left))
-      .flatMap((encounter): PatientOverviewVisit[] => encounter.id ? [{
+      .flatMap((encounter): PatientOverviewVisit[] => {
+        if (!encounter.id) return [];
+        const designation = seriesDesignation(input.procedures, seriesCarePlans, encounter.id);
+        return [{
         encounterId: encounter.id,
         ...(encounter.period?.start ?? encounter.period?.end ? { date: encounter.period?.start ?? encounter.period?.end } : {}),
         ...(encounter.participant?.[0]?.individual?.display ? { provider: encounter.participant[0].individual.display } : {}),
@@ -535,8 +574,13 @@ function projectOverview(input: {
         status: isMigratedEncounter(encounter)
           ? "Migrated"
           : signedEncounterIds.has(encounter.id) ? "Final" : "Preliminary",
+        ...(encounter.episodeOfCare?.[0]?.reference
+          ? { program: programTitles.get(encounter.episodeOfCare[0].reference) ?? "Program" }
+          : {}),
+        ...(designation ? { seriesDesignation: designation } : {}),
         diagnoses: byEncounter.get(encounter.id) ?? [],
-      }] : []),
+        }];
+      }),
     diagnosisChoices: uniqueBy(
       diagnoses.flatMap((condition) => {
         const coding = condition.code?.coding?.find((candidate) => candidate.system && candidate.code);
@@ -545,6 +589,35 @@ function projectOverview(input: {
       (row) => `${row.system}|${row.code}`,
     ),
   };
+}
+
+function seriesDesignation(
+  procedures: readonly Procedure[],
+  seriesCarePlans: ReadonlyMap<string, CarePlan>,
+  encounterId: string,
+): string | undefined {
+  for (const procedure of procedures) {
+    if (procedure.status === "entered-in-error"
+      || procedure.encounter?.reference !== `Encounter/${encounterId}`) continue;
+    for (const basedOn of procedure.basedOn ?? []) {
+      const carePlanReference = basedOn.reference;
+      const carePlan = carePlanReference ? seriesCarePlans.get(carePlanReference) : undefined;
+      if (!carePlanReference || !carePlan || !procedureMatchesCarePlan(procedure, carePlan)) continue;
+      const value = procedure.identifier?.find((identifier) =>
+        identifier.system === DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM
+        && identifier.value?.startsWith(`${carePlanReference}:`)
+      )?.value;
+      const session = value?.slice(carePlanReference.length + 1).match(/^(\d+)-of-(\d+)$/);
+      const number = Number(session?.[1]);
+      const total = Number(session?.[2]);
+      if (!Number.isSafeInteger(number)
+        || number < 1
+        || total !== carePlan.activity?.length
+        || number > total) continue;
+      return `${carePlan.title?.trim() || "Treatment series"} · session ${number} of ${total}`;
+    }
+  }
+  return undefined;
 }
 
 function resolvedDiagnosisCode(condition: Condition): string | undefined {

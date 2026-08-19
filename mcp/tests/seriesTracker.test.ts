@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
-import type { Bundle, CarePlan, Encounter, PlanDefinition, Procedure, Resource } from "@medplum/fhirtypes";
+import type { Bundle, CarePlan, Encounter, EpisodeOfCare, PlanDefinition, Procedure, Resource } from "@medplum/fhirtypes";
 import express from "express";
 import {
   FhirSeriesProtocolDefinitionStore,
@@ -14,8 +14,15 @@ import {
   buildSeriesCarePlan,
   buildSeriesTrackerView,
   completeNextSeriesSession,
+  SERIES_CARE_PLAN_SOURCE_IDENTIFIER_SYSTEM,
 } from "../src/series-tracker/series-care-plan.js";
 import { registerSeriesTrackerRoutes } from "../src/series-tracker/series-tracker-endpoint.js";
+import {
+  buildProcedureDefinitionSeeds,
+  DRY_EYE_PROCEDURE_STABLE_KEYS,
+} from "../src/clinical-graph/procedure-definition-store.js";
+import { SERIES_PROCEDURE_TYPE_SYSTEM } from "../src/series-tracker/protocol-definition-store.js";
+import { DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM } from "../src/fhir/dryEyeProcedure.js";
 
 const draft: SeriesProtocolDefinitionDraft = {
   name: "Dry-Eye IPL",
@@ -232,3 +239,1145 @@ test("HTTP flow defines a protocol, prescribes it to a test patient, and signs i
     await new Promise<void>((resolve, reject) => listener.close((error) => error ? reject(error) : resolve()));
   }
 });
+
+test("Dry Eye sheet round-trip conditionally creates one canonical CarePlan and one bound session", async () => {
+  const dryEyeDraft: SeriesProtocolDefinitionDraft = {
+    id: "dry-eye-ipl",
+    name: "IPL",
+    eligibleProcedureTypeCodes: [DRY_EYE_PROCEDURE_STABLE_KEYS.ipl],
+    sessionCount: 4,
+    intervalMinDays: 21,
+    intervalMaxDays: 28,
+    maintenanceAfter: true,
+  };
+  const recordedAt = "2026-08-19T15:00:00.000Z";
+  const activity = buildSeriesActivityDefinition("dry-eye-ipl", dryEyeDraft, recordedAt);
+  const plan = buildSeriesPlanDefinition("dry-eye-ipl", dryEyeDraft, activity.url!, recordedAt);
+  const resources: Resource[] = [{
+    resourceType: "EpisodeOfCare",
+    id: "dry-eye-program",
+    status: "active",
+    patient: { reference: "Patient/test-patient" },
+  } satisfies EpisodeOfCare, {
+    resourceType: "Encounter",
+    id: "encounter-1",
+    status: "in-progress",
+    class: { code: "AMB" },
+    subject: { reference: "Patient/test-patient" },
+    episodeOfCare: [{ reference: "EpisodeOfCare/dry-eye-program" }],
+  } satisfies Encounter, {
+    resourceType: "Encounter",
+    id: "encounter-2",
+    status: "in-progress",
+    class: { code: "AMB" },
+    subject: { reference: "Patient/test-patient" },
+    episodeOfCare: [{ reference: "EpisodeOfCare/dry-eye-program" }],
+  } satisfies Encounter];
+  let nextId = 1;
+  let procedureDefinitionsAvailable = true;
+  const staffFhir = {
+    async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
+      const resource = resources.find((candidate) => candidate.resourceType === resourceType && candidate.id === id);
+      if (!resource) throw new Error(`${resourceType}/${id} not found`);
+      return structuredClone(resource) as T;
+    },
+    async search<T extends Resource>(resourceType: T["resourceType"], params: Record<string, string> = {}): Promise<Bundle<T>> {
+      const matches = resources.filter((resource) => {
+        if (resource.resourceType !== resourceType) return false;
+        if (params.subject && "subject" in resource && resource.subject?.reference !== params.subject) return false;
+        if (params.patient && "patient" in resource && resource.patient?.reference !== params.patient) return false;
+        if (params.code && resource.resourceType === "Procedure"
+          && !resource.code?.coding?.some((coding) => coding.code === params.code)) return false;
+        if (params["based-on"] && resource.resourceType === "Procedure"
+          && !resource.basedOn?.some((reference) => reference.reference === params["based-on"])) return false;
+        return true;
+      });
+      return { resourceType: "Bundle", type: "searchset", entry: matches.map((resource) => ({ resource: structuredClone(resource) as T })) };
+    },
+    async create<T extends Resource>(resource: T, headers: Record<string, string> = {}): Promise<T> {
+      const conditional = headers["If-None-Exist"]?.match(/^identifier=([^|]+)\|(.+)$/);
+      const existing = conditional && resources.find((candidate) =>
+        "identifier" in candidate && candidate.identifier?.some((identifier) =>
+          identifier.system === conditional[1] && identifier.value === conditional[2]
+        )
+      );
+      if (existing) return structuredClone(existing) as T;
+      const saved = { ...structuredClone(resource), id: `${resource.resourceType.toLowerCase()}-${nextId++}` } as T;
+      resources.push(saved);
+      return structuredClone(saved);
+    },
+    async createWithOutcome<T extends Resource>(resource: T, headers: Record<string, string> = {}): Promise<{ resource: T; created: boolean }> {
+      const before = resources.length;
+      const saved = await staffFhir.create(resource, headers);
+      return { resource: saved, created: resources.length > before };
+    },
+    async executeTransaction(bundle: Bundle): Promise<Bundle> {
+      for (const entry of bundle.entry ?? []) {
+        if (entry.request?.method !== "PUT" || !entry.resource?.id) continue;
+        const index = resources.findIndex((resource) =>
+          resource.resourceType === entry.resource?.resourceType && resource.id === entry.resource.id
+        );
+        if (index >= 0) resources[index] = structuredClone(entry.resource);
+      }
+      return { resourceType: "Bundle", type: "transaction-response" };
+    },
+  };
+  const app = express();
+  app.use(express.json());
+  registerSeriesTrackerRoutes(app, {
+    authenticateService: async () => undefined,
+    authenticate: async () => ({
+      staffReference: "Practitioner/provider-1",
+      actorRole: "provider",
+      roles: ["provider"],
+      fhir: staffFhir as never,
+    }),
+    serviceFhir: {
+      async search<T extends Resource>(resourceType: T["resourceType"]): Promise<Bundle<T>> {
+        const definitions = resourceType === "PlanDefinition" ? [plan] : [];
+        return { resourceType: "Bundle", type: "searchset", entry: definitions.map((resource) => ({ resource: resource as T })) };
+      },
+    } as never,
+    procedureDefinitions: async () => procedureDefinitionsAvailable ? buildProcedureDefinitionSeeds() : [],
+    now: () => recordedAt,
+  });
+  const listener = app.listen(0, "127.0.0.1");
+  await new Promise<void>((resolve, reject) => {
+    listener.once("listening", resolve);
+    listener.once("error", reject);
+  });
+  const { port } = listener.address() as AddressInfo;
+  const endpoint = `http://127.0.0.1:${port}/series-tracker/encounters/encounter-1/series/dry-eye-ipl`;
+  const headers = { Authorization: "Bearer test", "Content-Type": "application/json" };
+  try {
+    procedureDefinitionsAvailable = false;
+    const unavailableDefinition = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+    assert.equal(unavailableDefinition.status, 409);
+    assert.equal(resources.some((resource) => ["CarePlan", "Procedure"].includes(resource.resourceType)), false);
+    procedureDefinitionsAvailable = true;
+
+    const first = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+    assert.equal(first.status, 201);
+    const second = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+    assert.equal(second.status, 200);
+    const hydrated = await fetch(endpoint, { headers });
+    assert.equal(hydrated.status, 200);
+    const body = await hydrated.json() as {
+      series: { title: string; sessions: Array<{ number: number; status: string }> };
+      currentSession: { number: number; total: number; procedureReference: string };
+      remainingSessions: number;
+    };
+    assert.equal(body.series.title, "IPL");
+    assert.deepEqual(body.currentSession, {
+      number: 1,
+      total: 4,
+      procedureReference: "Procedure/procedure-2",
+    });
+    assert.equal(body.remainingSessions, 3);
+    assert.equal(resources.filter((resource) => resource.resourceType === "CarePlan").length, 1);
+    const procedures = resources.filter((resource): resource is Procedure => resource.resourceType === "Procedure");
+    assert.equal(procedures.length, 1);
+    assert.deepEqual(procedures[0]?.basedOn, [{ reference: "CarePlan/careplan-1" }]);
+    assert.deepEqual(procedures[0]?.code?.coding?.[0], {
+      system: SERIES_PROCEDURE_TYPE_SYSTEM,
+      code: DRY_EYE_PROCEDURE_STABLE_KEYS.ipl,
+      display: "IPL (OptiLight-class)",
+    });
+
+    const otherEncounter = endpoint.replace("encounter-1", "encounter-2");
+    const crossEncounter = await fetch(otherEncounter, { headers });
+    assert.equal(crossEncounter.status, 200);
+    assert.deepEqual(await crossEncounter.json(), {
+      series: body.series,
+      currentSession: null,
+      remainingSessions: 3,
+    });
+
+    const sameProgram = await fetch(otherEncounter, {
+      method: "POST",
+      headers,
+      body: "{}",
+    });
+    assert.equal(sameProgram.status, 409);
+    assert.match((await sameProgram.json() as { error: string }).error, /active session in another encounter/);
+    assert.equal(resources.filter((resource) => resource.resourceType === "CarePlan").length, 1);
+    assert.equal(resources.filter((resource) => resource.resourceType === "Procedure").length, 1);
+
+    procedures[0]!.status = "completed";
+    const betweenSessionsCarePlan = resources.find((resource): resource is CarePlan =>
+      resource.resourceType === "CarePlan"
+    );
+    assert.ok(betweenSessionsCarePlan?.activity?.[0]?.detail);
+    betweenSessionsCarePlan.activity[0].detail.status = "completed";
+    betweenSessionsCarePlan.activity[0].outcomeReference = [{ reference: `Procedure/${procedures[0]!.id}` }];
+    const betweenSessions = await fetch(endpoint, { headers });
+    assert.equal(betweenSessions.status, 200);
+    const betweenSessionsBody = await betweenSessions.json() as {
+      currentSession: null;
+      remainingSessions: number;
+    };
+    assert.equal(betweenSessionsBody.currentSession, null);
+    assert.equal(betweenSessionsBody.remainingSessions, 3);
+
+    const beforeMissing = resources.length;
+    const missing = await fetch(endpoint.replace("dry-eye-ipl", "missing-protocol"), {
+      method: "POST",
+      headers,
+      body: "{}",
+    });
+    assert.equal(missing.status, 409);
+    assert.equal(resources.length, beforeMissing);
+
+    for (let index = resources.length - 1; index >= 0; index -= 1) {
+      if (["CarePlan", "Procedure"].includes(resources[index]!.resourceType)) resources.splice(index, 1);
+    }
+    resources.push({
+      resourceType: "Encounter",
+      id: "encounter-other-program",
+      status: "in-progress",
+      class: { code: "AMB" },
+      subject: { reference: "Patient/test-patient" },
+      episodeOfCare: [{ reference: "EpisodeOfCare/other-program" }],
+    } satisfies Encounter, {
+      resourceType: "Procedure",
+      id: "legacy-parent",
+      status: "in-progress",
+      subject: { reference: "Patient/test-patient" },
+      encounter: { reference: "Encounter/encounter-1" },
+      code: { coding: [{ code: "IPL" }] },
+      note: [{ text: "4-session dry-eye treatment series" }],
+    } satisfies Procedure, {
+      resourceType: "Procedure",
+      id: "legacy-session-completed",
+      status: "completed",
+      subject: { reference: "Patient/test-patient" },
+      encounter: { reference: "Encounter/encounter-1" },
+      code: { coding: [{ code: "IPL" }] },
+      partOf: [{ reference: "Procedure/legacy-parent" }],
+      identifier: [{ system: DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM, value: "1-of-4" }],
+    } satisfies Procedure, {
+      resourceType: "Procedure",
+      id: "legacy-session",
+      status: "in-progress",
+      subject: { reference: "Patient/test-patient" },
+      encounter: { reference: "Encounter/encounter-1" },
+      code: { coding: [{ code: "IPL" }] },
+      partOf: [{ reference: "Procedure/legacy-parent" }],
+      identifier: [{ system: DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM, value: "2-of-4" }],
+    } satisfies Procedure, {
+      resourceType: "Procedure",
+      id: "legacy-session-other-program",
+      status: "in-progress",
+      subject: { reference: "Patient/test-patient" },
+      encounter: { reference: "Encounter/encounter-other-program" },
+      code: { coding: [{ code: "IPL" }] },
+      partOf: [{ reference: "Procedure/legacy-parent" }],
+    } satisfies Procedure);
+
+    const adoptedResponse = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+    assert.equal(adoptedResponse.status, 201);
+    const adoptedBody = await adoptedResponse.json() as {
+      series: { sessions: Array<{ number: number; status: string; procedureReference?: string }> };
+      currentSession: { number: number; total: number; procedureReference: string };
+      remainingSessions: number;
+    };
+    assert.deepEqual(adoptedBody.currentSession, {
+      number: 2,
+      total: 4,
+      procedureReference: "Procedure/legacy-session",
+    });
+    assert.equal(adoptedBody.remainingSessions, 2);
+    assert.deepEqual(adoptedBody.series.sessions.map(({ number, status }) => ({ number, status })), [
+      { number: 1, status: "completed" },
+      { number: 2, status: "next" },
+      { number: 3, status: "future" },
+      { number: 4, status: "future" },
+    ]);
+    const adopted = resources.find((resource): resource is Procedure =>
+      resource.resourceType === "Procedure" && resource.id === "legacy-session"
+    );
+    const adoptedCarePlan = resources.find((resource): resource is CarePlan => resource.resourceType === "CarePlan");
+    assert.deepEqual(adopted?.basedOn, [{ reference: `CarePlan/${adoptedCarePlan?.id}` }]);
+    assert.equal(
+      adopted?.identifier?.find((identifier) =>
+        identifier.system === DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM
+        && identifier.value?.startsWith("CarePlan/")
+      )?.value,
+      `CarePlan/${adoptedCarePlan?.id}:2-of-4`,
+    );
+    assert.equal(adopted?.code?.coding?.[0]?.code, "IPL", "adoption preserves the historical clinical code");
+    const otherProgramSession = resources.find((resource): resource is Procedure =>
+      resource.resourceType === "Procedure" && resource.id === "legacy-session-other-program"
+    );
+    assert.equal(otherProgramSession?.basedOn, undefined);
+
+    const reloadedAdoption = await fetch(endpoint, { headers });
+    assert.equal(reloadedAdoption.status, 200);
+    const reloadedBody = await reloadedAdoption.json() as {
+      series: { sessions: Array<{ number: number; status: string }> };
+      currentSession: { number: number; total: number; procedureReference: string };
+      remainingSessions: number;
+    };
+    assert.deepEqual(reloadedBody.currentSession, adoptedBody.currentSession);
+    assert.equal(reloadedBody.remainingSessions, 2);
+    assert.deepEqual(reloadedBody.series.sessions.map(({ number, status }) => ({ number, status })), [
+      { number: 1, status: "completed" },
+      { number: 2, status: "next" },
+      { number: 3, status: "future" },
+      { number: 4, status: "future" },
+    ]);
+
+    resources.push({
+      resourceType: "Procedure",
+      id: "legacy-parent-duplicate",
+      status: "in-progress",
+      subject: { reference: "Patient/test-patient" },
+      encounter: { reference: "Encounter/encounter-1" },
+      code: { coding: [{ code: "IPL" }] },
+      note: [{ text: "4-session dry-eye treatment series" }],
+    } satisfies Procedure);
+    const conflict = await fetch(endpoint, { headers });
+    assert.equal(conflict.status, 409);
+    assert.match((await conflict.json() as { error: string }).error, /2 legacy IPL series conflict/);
+  } finally {
+    await new Promise<void>((resolve, reject) => listener.close((error) => error ? reject(error) : resolve()));
+  }
+});
+
+test("Dry Eye session creation fails closed when the legacy Procedure result is truncated", async () => {
+  await withDryEyeEncounterRoute({
+    procedureSearch: () => ({
+      resourceType: "Bundle",
+      type: "searchset",
+      total: 2,
+      entry: [{ resource: unrelatedProcedure("unrelated-1") }],
+    }),
+  }, async ({ endpoint, headers, created }) => {
+    const response = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+
+    assert.equal(response.status, 409);
+    assert.equal(created.length, 0);
+  });
+});
+
+test("Dry Eye refuses creation when a second legacy parent is outside the first Procedure page", async () => {
+  const legacyParent: Procedure = {
+    resourceType: "Procedure",
+    id: "legacy-parent-1",
+    status: "in-progress",
+    subject: { reference: "Patient/test-patient" },
+    encounter: { reference: "Encounter/encounter-1" },
+    code: { coding: [{ code: "IPL" }] },
+    note: [{ text: "4-session dry-eye treatment series" }],
+  };
+  const legacySession: Procedure = {
+    resourceType: "Procedure",
+    id: "legacy-session-1",
+    status: "in-progress",
+    subject: { reference: "Patient/test-patient" },
+    encounter: { reference: "Encounter/encounter-1" },
+    code: { coding: [{ code: "IPL" }] },
+    partOf: [{ reference: "Procedure/legacy-parent-1" }],
+  };
+  await withDryEyeEncounterRoute({
+    procedureSearch: () => ({
+      resourceType: "Bundle",
+      type: "searchset",
+      total: 3,
+      entry: [{ resource: legacyParent }, { resource: legacySession }],
+      link: [{ relation: "next", url: "https://example.test/fhir/R4/Procedure?page=2" }],
+    }),
+  }, async ({ endpoint, headers, created }) => {
+    const response = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+
+    assert.equal(response.status, 409);
+    assert.equal(created.length, 0);
+  });
+});
+
+test("Dry Eye refuses to adopt a legacy session from another encounter", async () => {
+  const legacyParent: Procedure = {
+    resourceType: "Procedure",
+    id: "legacy-parent-1",
+    status: "in-progress",
+    subject: { reference: "Patient/test-patient" },
+    encounter: { reference: "Encounter/encounter-1" },
+    code: { coding: [{ code: "IPL" }] },
+    note: [{ text: "4-session dry-eye treatment series" }],
+  };
+  const crossEncounterSession: Procedure = {
+    resourceType: "Procedure",
+    id: "legacy-session-1",
+    status: "in-progress",
+    subject: { reference: "Patient/test-patient" },
+    encounter: { reference: "Encounter/encounter-2" },
+    code: { coding: [{ code: "IPL" }] },
+    partOf: [{ reference: "Procedure/legacy-parent-1" }],
+  };
+  await withDryEyeEncounterRoute({
+    procedureSearch: () => ({
+      resourceType: "Bundle",
+      type: "searchset",
+      total: 2,
+      entry: [{ resource: legacyParent }, { resource: crossEncounterSession }],
+    }),
+  }, async ({ endpoint, headers, created }) => {
+    const response = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+
+    assert.equal(response.status, 409);
+    assert.match((await response.json() as { error: string }).error, /active session in another encounter/);
+    assert.equal(created.length, 0);
+  });
+});
+
+test("Dry Eye refuses an ambiguous legacy session ordinal before creating a CarePlan", async () => {
+  const legacyParent: Procedure = {
+    resourceType: "Procedure",
+    id: "legacy-parent-1",
+    status: "in-progress",
+    subject: { reference: "Patient/test-patient" },
+    encounter: { reference: "Encounter/encounter-1" },
+    code: { coding: [{ code: "IPL" }] },
+    note: [{ text: "4-session dry-eye treatment series" }],
+  };
+  const unpositionedSession: Procedure = {
+    resourceType: "Procedure",
+    id: "legacy-session-1",
+    status: "in-progress",
+    subject: { reference: "Patient/test-patient" },
+    encounter: { reference: "Encounter/encounter-1" },
+    code: { coding: [{ code: "IPL" }] },
+    partOf: [{ reference: "Procedure/legacy-parent-1" }],
+  };
+  await withDryEyeEncounterRoute({
+    procedureSearch: () => ({
+      resourceType: "Bundle",
+      type: "searchset",
+      total: 2,
+      entry: [{ resource: legacyParent }, { resource: unpositionedSession }],
+    }),
+  }, async ({ endpoint, headers, created }) => {
+    const response = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+
+    assert.equal(response.status, 409);
+    assert.match((await response.json() as { error: string }).error, /position cannot be adopted unambiguously/);
+    assert.equal(created.length, 0);
+  });
+});
+
+test("Dry Eye refuses to convert an ineligible child returned by the legacy search", async () => {
+  const legacyParent: Procedure = {
+    resourceType: "Procedure",
+    id: "legacy-parent-1",
+    status: "in-progress",
+    subject: { reference: "Patient/test-patient" },
+    encounter: { reference: "Encounter/encounter-1" },
+    code: { coding: [{ code: "IPL" }] },
+    note: [{ text: "4-session dry-eye treatment series" }],
+  };
+  const ineligibleChild: Procedure = {
+    resourceType: "Procedure",
+    id: "legacy-session-1",
+    status: "in-progress",
+    subject: { reference: "Patient/test-patient" },
+    encounter: { reference: "Encounter/encounter-1" },
+    code: { coding: [{ code: "unrelated" }] },
+    partOf: [{ reference: "Procedure/legacy-parent-1" }],
+    identifier: [{ system: DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM, value: "1-of-4" }],
+  };
+  await withDryEyeEncounterRoute({
+    procedureSearch: () => ({
+      resourceType: "Bundle",
+      type: "searchset",
+      total: 2,
+      entry: [{ resource: legacyParent }, { resource: ineligibleChild }],
+    }),
+  }, async ({ endpoint, headers, created }) => {
+    const response = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+
+    assert.equal(response.status, 409);
+    assert.match((await response.json() as { error: string }).error, /no active session that can be adopted/);
+    assert.equal(created.length, 0);
+  });
+});
+
+test("Dry Eye ignores completed legacy parents after a canonical series exists", async () => {
+  const { protocol } = dryEyeProtocolFixture();
+  const carePlan = {
+    ...buildSeriesCarePlan({
+      protocol,
+      patientReference: "Patient/test-patient",
+      authorReference: "Practitioner/provider-1",
+    }),
+    id: "care-plan-1",
+    encounter: { reference: "Encounter/encounter-1" },
+  } satisfies CarePlan;
+  const historicalParent: Procedure = {
+    resourceType: "Procedure",
+    id: "historical-legacy-parent",
+    status: "completed",
+    subject: { reference: "Patient/test-patient" },
+    encounter: { reference: "Encounter/encounter-1" },
+    code: { coding: [{ code: "IPL" }] },
+    note: [{ text: "4-session dry-eye treatment series" }],
+  };
+  const secondHistoricalParent: Procedure = {
+    ...historicalParent,
+    id: "historical-legacy-parent-2",
+  };
+  await withDryEyeEncounterRoute({
+    carePlans: [carePlan],
+    procedureSearch: (params) => params["based-on"]
+      ? { resourceType: "Bundle", type: "searchset", total: 0 }
+      : {
+          resourceType: "Bundle",
+          type: "searchset",
+          total: 2,
+          entry: [{ resource: historicalParent }, { resource: secondHistoricalParent }],
+        },
+  }, async ({ endpoint, headers, created }) => {
+    const response = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+
+    assert.equal(response.status, 201);
+    assert.deepEqual(created.map((resource) => resource.resourceType), ["Procedure", "Provenance"]);
+  });
+});
+
+test("Dry Eye finds the active bound session when unrelated patient Procedures exceed one page", async () => {
+  const { protocol } = dryEyeProtocolFixture();
+  const carePlan = {
+    ...buildSeriesCarePlan({
+      protocol,
+      patientReference: "Patient/test-patient",
+      authorReference: "Practitioner/provider-1",
+      created: "2026-08-19T15:00:00.000Z",
+    }),
+    id: "care-plan-1",
+    encounter: { reference: "Encounter/encounter-1" },
+  } satisfies CarePlan;
+  for (let index = 0; index < 3; index += 1) {
+    carePlan.activity![index]!.detail!.status = "completed";
+    carePlan.activity![index]!.outcomeReference = [{ reference: `Procedure/completed-${index + 1}` }];
+  }
+  const boundProcedures: Procedure[] = [1, 2, 3].map((number) => ({
+    resourceType: "Procedure",
+    id: `completed-${number}`,
+    status: "completed",
+    subject: { reference: "Patient/test-patient" },
+    encounter: { reference: "Encounter/encounter-1" },
+    basedOn: [{ reference: "CarePlan/care-plan-1" }],
+    performedDateTime: `2026-0${number + 4}-01T15:00:00.000Z`,
+  }));
+  boundProcedures.push({
+    resourceType: "Procedure",
+    id: "active-session-4",
+    status: "in-progress",
+    subject: { reference: "Patient/test-patient" },
+    encounter: { reference: "Encounter/encounter-1" },
+    code: { coding: [{ system: SERIES_PROCEDURE_TYPE_SYSTEM, code: DRY_EYE_PROCEDURE_STABLE_KEYS.ipl }] },
+    basedOn: [{ reference: "CarePlan/care-plan-1" }],
+    identifier: [{
+      system: DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM,
+      value: "CarePlan/care-plan-1:4-of-4",
+    }],
+  });
+  const unrelated = Array.from({ length: 500 }, (_, index) => unrelatedProcedure(`unrelated-${index + 1}`));
+  await withDryEyeEncounterRoute({
+    carePlans: [carePlan],
+    existingProcedures: boundProcedures,
+    procedureSearch: (params) => params["based-on"] === "CarePlan/care-plan-1"
+      ? {
+          resourceType: "Bundle",
+          type: "searchset",
+          total: boundProcedures.length,
+          entry: boundProcedures.map((resource) => ({ resource })),
+        }
+      : params.code === "IPL"
+        ? { resourceType: "Bundle", type: "searchset", total: 0 }
+        : {
+            resourceType: "Bundle",
+            type: "searchset",
+            total: unrelated.length + boundProcedures.length,
+            entry: unrelated.map((resource) => ({ resource })),
+            link: [{ relation: "next", url: "https://example.test/fhir/R4/Procedure?page=2" }],
+          },
+  }, async ({ endpoint, headers, created }) => {
+    const response = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+    const body = await response.json() as {
+      series: { sessions: Array<{ status: string }> };
+      currentSession: { number: number; procedureReference: string };
+      remainingSessions: number;
+    };
+
+    assert.equal(response.status, 200);
+    assert.equal(body.series.sessions.filter((session) => session.status === "completed").length, 3);
+    assert.deepEqual(body.currentSession, { number: 4, total: 4, procedureReference: "Procedure/active-session-4" });
+    assert.equal(body.remainingSessions, 0);
+    assert.equal(created.length, 0);
+  });
+});
+
+test("Dry Eye reloads a completed canonical series with no sessions remaining", async () => {
+  const { protocol } = dryEyeProtocolFixture();
+  const carePlan = {
+    ...buildSeriesCarePlan({
+      protocol,
+      patientReference: "Patient/test-patient",
+      authorReference: "Practitioner/provider-1",
+      created: "2026-08-19T15:00:00.000Z",
+    }),
+    id: "completed-care-plan",
+    status: "completed",
+    encounter: { reference: "Encounter/encounter-1" },
+  } satisfies CarePlan;
+  const completedProcedures: Procedure[] = carePlan.activity!.map((activity, index) => {
+    const number = index + 1;
+    activity.detail!.status = "completed";
+    activity.outcomeReference = [{ reference: `Procedure/completed-session-${number}` }];
+    return {
+      resourceType: "Procedure",
+      id: `completed-session-${number}`,
+      status: "completed",
+      subject: { reference: "Patient/test-patient" },
+      encounter: { reference: "Encounter/encounter-1" },
+      basedOn: [{ reference: "CarePlan/completed-care-plan" }],
+      performedDateTime: `2026-0${number + 4}-01T15:00:00.000Z`,
+    };
+  });
+  await withDryEyeEncounterRoute({
+    carePlans: [carePlan],
+    procedureSearch: (params) => params["based-on"] === "CarePlan/completed-care-plan"
+      ? {
+          resourceType: "Bundle",
+          type: "searchset",
+          total: completedProcedures.length,
+          entry: completedProcedures.map((resource) => ({ resource })),
+        }
+      : { resourceType: "Bundle", type: "searchset", total: 0 },
+  }, async ({ endpoint, headers, created }) => {
+    const response = await fetch(endpoint, { headers });
+    const body = await response.json() as {
+      series: { status: string; sessions: Array<{ status: string }> } | null;
+      currentSession: null;
+      remainingSessions: number;
+    };
+
+    assert.equal(response.status, 200);
+    assert.equal(body.series?.status, "completed");
+    assert.equal(body.series?.sessions.filter((session) => session.status === "completed").length, 4);
+    assert.equal(body.currentSession, null);
+    assert.equal(body.remainingSessions, 0);
+    assert.equal(created.length, 0);
+  });
+});
+
+test("Dry Eye rejects two active canonical series in the same program", async () => {
+  const { protocol } = dryEyeProtocolFixture();
+  const carePlans = ["care-plan-1", "care-plan-2"].map((id) => ({
+    ...buildSeriesCarePlan({
+      protocol,
+      patientReference: "Patient/test-patient",
+      authorReference: "Practitioner/provider-1",
+      created: "2026-08-19T15:00:00.000Z",
+    }),
+    id,
+    encounter: { reference: "Encounter/encounter-1" },
+  } satisfies CarePlan));
+  await withDryEyeEncounterRoute({
+    carePlans,
+    procedureSearch: () => ({ resourceType: "Bundle", type: "searchset", total: 0 }),
+  }, async ({ endpoint, headers, created }) => {
+    const response = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+
+    assert.equal(response.status, 409);
+    assert.deepEqual(await response.json(), { error: "2 active IPL series exist in this program." });
+    assert.equal(created.filter((resource) => resource.resourceType === "CarePlan").length, 0);
+    assert.equal(created.filter((resource) => resource.resourceType === "Procedure").length, 0);
+  });
+});
+
+test("Dry Eye rejects two completed canonical series when no active series exists", async () => {
+  const { protocol } = dryEyeProtocolFixture();
+  const carePlans = ["completed-care-plan-1", "completed-care-plan-2"].map((id) => ({
+    ...buildSeriesCarePlan({
+      protocol,
+      patientReference: "Patient/test-patient",
+      authorReference: "Practitioner/provider-1",
+      created: "2026-08-19T15:00:00.000Z",
+    }),
+    id,
+    status: "completed" as const,
+    encounter: { reference: "Encounter/encounter-1" },
+  } satisfies CarePlan));
+  await withDryEyeEncounterRoute({
+    carePlans,
+    procedureSearch: () => ({ resourceType: "Bundle", type: "searchset", total: 0 }),
+  }, async ({ endpoint, headers, created }) => {
+    const response = await fetch(endpoint, { headers });
+
+    assert.equal(response.status, 409);
+    assert.deepEqual(await response.json(), { error: "2 active IPL series exist in this program." });
+    assert.equal(created.filter((resource) => resource.resourceType === "CarePlan").length, 0);
+    assert.equal(created.filter((resource) => resource.resourceType === "Procedure").length, 0);
+  });
+});
+
+test("Dry Eye refuses to create a session in a finished EpisodeOfCare program", async () => {
+  await withDryEyeEncounterRoute({
+    episodeStatus: "finished",
+    procedureSearch: () => ({ resourceType: "Bundle", type: "searchset", total: 0 }),
+  }, async ({ endpoint, headers, created }) => {
+    const response = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+
+    assert.equal(response.status, 409);
+    assert.match((await response.json() as { error: string }).error, /active program/);
+    assert.equal(created.length, 0);
+  });
+});
+
+test("Dry Eye reuses the canonical CarePlan when a broad patient result would paginate", async () => {
+  const { protocol } = dryEyeProtocolFixture();
+  const existingCarePlan = {
+    ...buildSeriesCarePlan({
+      protocol,
+      patientReference: "Patient/test-patient",
+      authorReference: "Practitioner/provider-1",
+      created: "2026-08-19T15:00:00.000Z",
+    }),
+    id: "existing-care-plan",
+    encounter: { reference: "Encounter/encounter-1" },
+  } satisfies CarePlan;
+  await withDryEyeEncounterRoute({
+    carePlanSearch: (params) => params["instantiates-canonical"]
+      ? {
+          resourceType: "Bundle",
+          type: "searchset",
+          total: 1,
+          entry: [{ resource: existingCarePlan }],
+        }
+      : {
+          resourceType: "Bundle",
+          type: "searchset",
+          total: 201,
+          entry: [{ resource: { ...existingCarePlan, id: "unrelated", instantiatesCanonical: [] } }],
+          link: [{ relation: "next", url: "https://example.test/fhir/R4/CarePlan?page=2" }],
+        },
+    procedureSearch: () => ({ resourceType: "Bundle", type: "searchset", total: 0 }),
+  }, async ({ endpoint, headers, created }) => {
+    const response = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+
+    assert.equal(response.status, 201);
+    assert.equal(created.filter((resource) => resource.resourceType === "CarePlan").length, 0);
+    assert.equal(created.filter((resource) => resource.resourceType === "Procedure").length, 1);
+  });
+});
+
+test("Dry Eye fails closed when the narrowed canonical CarePlan result is truncated", async () => {
+  await withDryEyeEncounterRoute({
+    carePlanSearch: () => ({
+      resourceType: "Bundle",
+      type: "searchset",
+      total: 2,
+      entry: [{
+        resource: {
+          resourceType: "CarePlan",
+          id: "care-plan-1",
+          status: "active",
+          intent: "plan",
+          subject: { reference: "Patient/test-patient" },
+        },
+      }],
+      link: [{ relation: "next", url: "https://example.test/fhir/R4/CarePlan?page=2" }],
+    }),
+    procedureSearch: () => ({ resourceType: "Bundle", type: "searchset", total: 0 }),
+  }, async ({ endpoint, headers, created }) => {
+    const response = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+
+    assert.equal(response.status, 409);
+    assert.equal(created.length, 0);
+  });
+});
+
+test("Dry Eye fails closed when one CarePlan has multiple active bound sessions", async () => {
+  const { protocol } = dryEyeProtocolFixture();
+  const carePlan = {
+    ...buildSeriesCarePlan({
+      protocol,
+      patientReference: "Patient/test-patient",
+      authorReference: "Practitioner/provider-1",
+    }),
+    id: "care-plan-1",
+    encounter: { reference: "Encounter/encounter-1" },
+  } satisfies CarePlan;
+  const activeSessions: Procedure[] = ["active-1", "active-2"].map((id, index) => ({
+    resourceType: "Procedure",
+    id,
+    status: "in-progress",
+    subject: { reference: "Patient/test-patient" },
+    encounter: { reference: "Encounter/encounter-1" },
+    code: { coding: [{ system: SERIES_PROCEDURE_TYPE_SYSTEM, code: DRY_EYE_PROCEDURE_STABLE_KEYS.ipl }] },
+    basedOn: [{ reference: "CarePlan/care-plan-1" }],
+    identifier: [{
+      system: DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM,
+      value: `CarePlan/care-plan-1:${index + 1}-of-4`,
+    }],
+  }));
+  await withDryEyeEncounterRoute({
+    carePlans: [carePlan],
+    procedureSearch: (params) => params["based-on"]
+      ? {
+          resourceType: "Bundle",
+          type: "searchset",
+          total: 2,
+          entry: activeSessions.map((resource) => ({ resource })),
+        }
+      : { resourceType: "Bundle", type: "searchset", total: 0 },
+  }, async ({ endpoint, headers, created }) => {
+    const response = await fetch(endpoint, { headers });
+
+    assert.equal(response.status, 409);
+    assert.match((await response.json() as { error: string }).error, /2 active IPL sessions/);
+    assert.equal(created.length, 0);
+  });
+});
+
+test("Dry Eye ignores malformed active Procedures bound to a canonical CarePlan", async () => {
+  const { protocol } = dryEyeProtocolFixture();
+  const carePlan = {
+    ...buildSeriesCarePlan({
+      protocol,
+      patientReference: "Patient/test-patient",
+      authorReference: "Practitioner/provider-1",
+    }),
+    id: "care-plan-1",
+    encounter: { reference: "Encounter/encounter-1" },
+  } satisfies CarePlan;
+  const malformedProcedures: Procedure[] = [{
+    resourceType: "Procedure",
+    id: "missing-session-identifier",
+    status: "in-progress",
+    subject: { reference: "Patient/test-patient" },
+    encounter: { reference: "Encounter/encounter-1" },
+    code: { coding: [{ system: SERIES_PROCEDURE_TYPE_SYSTEM, code: DRY_EYE_PROCEDURE_STABLE_KEYS.ipl }] },
+    basedOn: [{ reference: "CarePlan/care-plan-1" }],
+  }, {
+    resourceType: "Procedure",
+    id: "wrong-procedure-type",
+    status: "in-progress",
+    subject: { reference: "Patient/test-patient" },
+    encounter: { reference: "Encounter/encounter-1" },
+    code: { coding: [{ code: "other" }] },
+    basedOn: [{ reference: "CarePlan/care-plan-1" }],
+    identifier: [{
+      system: DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM,
+      value: "CarePlan/care-plan-1:1-of-4",
+    }],
+  }];
+  await withDryEyeEncounterRoute({
+    carePlans: [carePlan],
+    procedureSearch: (params) => params["based-on"]
+      ? {
+          resourceType: "Bundle",
+          type: "searchset",
+          total: 2,
+          entry: malformedProcedures.map((resource) => ({ resource })),
+        }
+      : { resourceType: "Bundle", type: "searchset", total: 0 },
+  }, async ({ endpoint, headers, created }) => {
+    const read = await fetch(endpoint, { headers });
+    assert.equal(read.status, 200);
+    assert.equal((await read.json() as { currentSession: unknown }).currentSession, null);
+
+    const write = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+    assert.equal(write.status, 201);
+    assert.deepEqual(created.map((resource) => resource.resourceType), ["Procedure", "Provenance"]);
+  });
+});
+
+test("Dry Eye completes a genuinely new series without an orphaning post-create scan", async () => {
+  await withDryEyeEncounterRoute({
+    procedureSearch: (params) => params["based-on"]
+      ? {
+          resourceType: "Bundle",
+          type: "searchset",
+          total: 2,
+          entry: [{ resource: unrelatedProcedure("unexpected-existing-session") }],
+          link: [{ relation: "next", url: "https://example.test/fhir/R4/Procedure?page=2" }],
+        }
+      : { resourceType: "Bundle", type: "searchset", total: 0 },
+  }, async ({ endpoint, headers, created }) => {
+    const response = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+
+    assert.equal(response.status, 201);
+    assert.deepEqual(created.map((resource) => resource.resourceType), ["CarePlan", "Procedure", "Provenance"]);
+  });
+});
+
+test("Dry Eye rejects a conditional session won concurrently by another encounter", async () => {
+  const { protocol } = dryEyeProtocolFixture();
+  const carePlan = {
+    ...buildSeriesCarePlan({
+      protocol,
+      patientReference: "Patient/test-patient",
+      authorReference: "Practitioner/provider-1",
+    }),
+    id: "care-plan-1",
+    encounter: { reference: "Encounter/encounter-1" },
+  } satisfies CarePlan;
+  const concurrentSession: Procedure = {
+    resourceType: "Procedure",
+    id: "concurrent-session",
+    status: "in-progress",
+    subject: { reference: "Patient/test-patient" },
+    encounter: { reference: "Encounter/encounter-2" },
+    basedOn: [{ reference: "CarePlan/care-plan-1" }],
+    identifier: [{
+      system: DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM,
+      value: "CarePlan/care-plan-1:1-of-4",
+    }],
+  };
+  await withDryEyeEncounterRoute({
+    carePlans: [carePlan],
+    existingProcedures: [concurrentSession],
+    procedureSearch: () => ({ resourceType: "Bundle", type: "searchset", total: 0 }),
+  }, async ({ endpoint, headers, created }) => {
+    const response = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+
+    assert.equal(response.status, 409);
+    assert.match((await response.json() as { error: string }).error, /active session in another encounter/);
+    assert.equal(created.length, 0);
+  });
+});
+
+test("Dry Eye validates a Procedure returned by conditional create", async () => {
+  const { protocol } = dryEyeProtocolFixture();
+  const carePlan = {
+    ...buildSeriesCarePlan({
+      protocol,
+      patientReference: "Patient/test-patient",
+      authorReference: "Practitioner/provider-1",
+    }),
+    id: "care-plan-1",
+    encounter: { reference: "Encounter/encounter-1" },
+  } satisfies CarePlan;
+  const conditionalSession: Procedure = {
+    resourceType: "Procedure",
+    id: "conditional-session",
+    status: "in-progress",
+    subject: { reference: "Patient/test-patient" },
+    encounter: { reference: "Encounter/encounter-1" },
+    code: { coding: [{ system: SERIES_PROCEDURE_TYPE_SYSTEM, code: DRY_EYE_PROCEDURE_STABLE_KEYS.ipl }] },
+    basedOn: [{ reference: "CarePlan/care-plan-1" }],
+    identifier: [{
+      system: DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM,
+      value: "CarePlan/care-plan-1:1-of-4",
+    }],
+  };
+  const invalidWinners: Array<[string, Procedure]> = [
+    ["completed", { ...conditionalSession, status: "completed" }],
+    ["wrong patient", { ...conditionalSession, subject: { reference: "Patient/other" } }],
+    ["wrong CarePlan", { ...conditionalSession, basedOn: [{ reference: "CarePlan/other" }] }],
+    ["wrong procedure type", { ...conditionalSession, code: { coding: [{ code: "other" }] } }],
+  ];
+  for (const [label, procedure] of invalidWinners) {
+    await withDryEyeEncounterRoute({
+      carePlans: [carePlan],
+      existingProcedures: [procedure],
+      procedureSearch: () => ({ resourceType: "Bundle", type: "searchset", total: 0 }),
+    }, async ({ endpoint, headers, created }) => {
+      const response = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+
+      assert.equal(response.status, 409, label);
+      assert.match((await response.json() as { error: string }).error, /conditional IPL session/, label);
+      assert.equal(created.length, 0, label);
+    });
+  }
+
+  await withDryEyeEncounterRoute({
+    carePlans: [carePlan],
+    existingProcedures: [conditionalSession],
+    procedureSearch: () => ({ resourceType: "Bundle", type: "searchset", total: 0 }),
+  }, async ({ endpoint, headers, created }) => {
+    const response = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+
+    assert.equal(response.status, 200);
+    assert.equal((await response.json() as { currentSession: { procedureReference: string } }).currentSession.procedureReference,
+      "Procedure/conditional-session");
+    assert.equal(created.length, 0);
+  });
+});
+
+test("Dry Eye validates a CarePlan returned by conditional create", async () => {
+  const { protocol } = dryEyeProtocolFixture();
+  const conditionalCarePlan = {
+    ...buildSeriesCarePlan({
+      protocol,
+      patientReference: "Patient/test-patient",
+      authorReference: "Practitioner/provider-1",
+    }),
+    id: "inactive-care-plan",
+    encounter: { reference: "Encounter/encounter-1" },
+    identifier: [{
+      system: SERIES_CARE_PLAN_SOURCE_IDENTIFIER_SYSTEM,
+      value: "EpisodeOfCare/dry-eye-program:dry-eye-ipl",
+    }],
+  } satisfies CarePlan;
+  const invalidWinners: Array<[string, CarePlan]> = [
+    ["inactive", { ...conditionalCarePlan, status: "completed" }],
+    ["wrong patient", { ...conditionalCarePlan, subject: { reference: "Patient/other" } }],
+    ["wrong canonical", { ...conditionalCarePlan, instantiatesCanonical: ["https://example.test/PlanDefinition/other"] }],
+    ["wrong scope", { ...conditionalCarePlan, encounter: undefined }],
+  ];
+  for (const [label, carePlan] of invalidWinners) {
+    await withDryEyeEncounterRoute({
+      conditionalMatches: [carePlan],
+      procedureSearch: () => ({ resourceType: "Bundle", type: "searchset", total: 0 }),
+    }, async ({ endpoint, headers, created }) => {
+      const response = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+
+      assert.equal(response.status, 409, label);
+      assert.match((await response.json() as { error: string }).error, /active IPL series/, label);
+      assert.equal(created.length, 0, label);
+    });
+  }
+});
+
+function dryEyeProtocolFixture() {
+  const draft: SeriesProtocolDefinitionDraft = {
+    id: "dry-eye-ipl",
+    name: "IPL",
+    eligibleProcedureTypeCodes: [DRY_EYE_PROCEDURE_STABLE_KEYS.ipl],
+    sessionCount: 4,
+    intervalMinDays: 21,
+    intervalMaxDays: 28,
+    maintenanceAfter: true,
+  };
+  const recordedAt = "2026-08-19T15:00:00.000Z";
+  const plan = buildSeriesPlanDefinition(
+    "dry-eye-ipl",
+    draft,
+    buildSeriesActivityDefinition("dry-eye-ipl", draft, recordedAt).url!,
+    recordedAt,
+  );
+  return { plan, protocol: parseSeriesProtocolPlanDefinition(plan) };
+}
+
+function unrelatedProcedure(id: string): Procedure {
+  return {
+    resourceType: "Procedure",
+    id,
+    status: "completed",
+    subject: { reference: "Patient/test-patient" },
+    code: { coding: [{ code: "unrelated" }] },
+  };
+}
+
+async function withDryEyeEncounterRoute(
+  input: {
+    carePlans?: CarePlan[];
+    carePlanSearch?(params: Record<string, string>): Bundle<CarePlan>;
+    episodeStatus?: EpisodeOfCare["status"];
+    conditionalMatches?: Resource[];
+    existingProcedures?: Procedure[];
+    procedureSearch(params: Record<string, string>): Bundle<Procedure>;
+  },
+  run: (context: {
+    endpoint: string;
+    headers: Record<string, string>;
+    created: Resource[];
+  }) => Promise<void>,
+): Promise<void> {
+  const { plan } = dryEyeProtocolFixture();
+  const created: Resource[] = [];
+  const conditionalMatches = [...(input.conditionalMatches ?? []), ...(input.existingProcedures ?? [])];
+  const staffFhir = {
+    async read<T extends Resource>(resourceType: T["resourceType"]): Promise<T> {
+      if (resourceType === "EpisodeOfCare") {
+        return {
+          resourceType: "EpisodeOfCare",
+          id: "dry-eye-program",
+          status: input.episodeStatus ?? "active",
+          patient: { reference: "Patient/test-patient" },
+        } as EpisodeOfCare as T;
+      }
+      return {
+        resourceType: "Encounter",
+        id: "encounter-1",
+        status: "in-progress",
+        class: { code: "AMB" },
+        subject: { reference: "Patient/test-patient" },
+        episodeOfCare: [{ reference: "EpisodeOfCare/dry-eye-program" }],
+      } as Encounter as T;
+    },
+    async search<T extends Resource>(resourceType: T["resourceType"], params: Record<string, string> = {}): Promise<Bundle<T>> {
+      if (resourceType === "CarePlan") {
+        if (input.carePlanSearch) return structuredClone(input.carePlanSearch(params)) as Bundle<T>;
+        return {
+          resourceType: "Bundle",
+          type: "searchset",
+          total: input.carePlans?.length ?? 0,
+          entry: input.carePlans?.map((resource) => ({ resource: structuredClone(resource) as T })),
+        };
+      }
+      return structuredClone(input.procedureSearch(params)) as Bundle<T>;
+    },
+    async create<T extends Resource>(resource: T, headers: Record<string, string> = {}): Promise<T> {
+      const conditional = headers["If-None-Exist"]?.match(/^identifier=([^|]+)\|(.+)$/);
+      const existing = conditional && conditionalMatches.find((candidate) =>
+        "identifier" in candidate && candidate.identifier?.some((identifier) =>
+          identifier.system === conditional[1] && identifier.value === conditional[2]
+        )
+      );
+      if (existing) return structuredClone(existing) as T;
+      const saved = { ...structuredClone(resource), id: `${resource.resourceType.toLowerCase()}-${created.length + 1}` } as T;
+      created.push(saved);
+      return saved;
+    },
+    async createWithOutcome<T extends Resource>(resource: T, headers: Record<string, string> = {}): Promise<{ resource: T; created: boolean }> {
+      const before = created.length;
+      const saved = await staffFhir.create(resource, headers);
+      return { resource: saved, created: created.length > before };
+    },
+    async executeTransaction(): Promise<Bundle> {
+      return { resourceType: "Bundle", type: "transaction-response" };
+    },
+  };
+  const app = express();
+  app.use(express.json());
+  registerSeriesTrackerRoutes(app, {
+    authenticateService: async () => undefined,
+    authenticate: async () => ({
+      staffReference: "Practitioner/provider-1",
+      actorRole: "provider",
+      roles: ["provider"],
+      fhir: staffFhir as never,
+    }),
+    serviceFhir: {
+      async search<T extends Resource>(resourceType: T["resourceType"]): Promise<Bundle<T>> {
+        const definitions = resourceType === "PlanDefinition" ? [plan] : [];
+        return {
+          resourceType: "Bundle",
+          type: "searchset",
+          entry: definitions.map((resource) => ({ resource: resource as unknown as T })),
+        };
+      },
+    } as never,
+    procedureDefinitions: async () => buildProcedureDefinitionSeeds(),
+    now: () => "2026-08-19T15:00:00.000Z",
+  });
+  const listener = app.listen(0, "127.0.0.1");
+  await new Promise<void>((resolve, reject) => {
+    listener.once("listening", resolve);
+    listener.once("error", reject);
+  });
+  const { port } = listener.address() as AddressInfo;
+  try {
+    await run({
+      endpoint: `http://127.0.0.1:${port}/series-tracker/encounters/encounter-1/series/dry-eye-ipl`,
+      headers: { Authorization: "Bearer test", "Content-Type": "application/json" },
+      created,
+    });
+  } finally {
+    await new Promise<void>((resolve, reject) => listener.close((error) => error ? reject(error) : resolve()));
+  }
+}

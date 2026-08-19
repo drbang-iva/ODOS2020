@@ -11,6 +11,7 @@ import type {
   CoverageEligibilityResponse,
   DocumentReference,
   Encounter,
+  EpisodeOfCare,
   MedicationRequest,
   MedicationStatement,
   Observation,
@@ -39,6 +40,9 @@ import { buildEyeBodyStructure } from "../src/fhir/ophthalmology/bodyStructure.j
 import { ODOS_VISIT_TYPE_SYSTEM } from "../src/fhir/schedulingVisitType.js";
 import { buildDiagnosisCatalogSeeds } from "../src/clinical-graph/diagnosis-catalog-store.js";
 import { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } from "../src/clinical-graph/diagnosis-pick-endpoint.js";
+import { DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM } from "../src/fhir/dryEyeProcedure.js";
+import { DRY_EYE_PROCEDURE_STABLE_KEYS } from "../src/clinical-graph/procedure-definition-store.js";
+import { SERIES_PROCEDURE_TYPE_SYSTEM } from "../src/series-tracker/protocol-definition-store.js";
 
 test("patient overview projects real snapshot resources and newest-first encounter diagnoses", async () => {
   const fake = new FakeFhir();
@@ -87,6 +91,159 @@ test("patient overview projects real snapshot resources and newest-first encount
   assert.equal(provenanceSearch?.params.patient, "Patient/p1");
   assert.equal(provenanceSearch?.params.recorded, undefined);
   assert.equal(provenanceSearch?.params._sort, "recorded");
+});
+
+test("patient overview reflects active program enrollment and CarePlan session designation in the visit ledger", async () => {
+  const fake = new FakeFhir();
+  fake.add(patient());
+  fake.add({
+    resourceType: "EpisodeOfCare",
+    id: "dry-eye-program",
+    status: "active",
+    patient: { reference: "Patient/p1" },
+    type: [{ text: "Dry eye" }],
+  } satisfies EpisodeOfCare);
+  const visit = encounter("series-visit", "2026-08-19T14:00:00Z");
+  visit.episodeOfCare = [{ reference: "EpisodeOfCare/dry-eye-program" }];
+  fake.add(visit);
+  fake.add({
+    resourceType: "CarePlan",
+    id: "other-series",
+    status: "active",
+    intent: "plan",
+    subject: { reference: "Patient/p1" },
+    title: "Other series",
+    instantiatesCanonical: ["https://odos2020.com/fhir/PlanDefinition/series-protocol-other"],
+    activity: [{
+      detail: {
+        status: "not-started",
+        code: { coding: [{ system: SERIES_PROCEDURE_TYPE_SYSTEM, code: "other-procedure" }] },
+      },
+    }],
+  } satisfies CarePlan);
+  fake.add({
+    resourceType: "CarePlan",
+    id: "ipl-series",
+    status: "active",
+    intent: "plan",
+    subject: { reference: "Patient/p1" },
+    title: "IPL",
+    instantiatesCanonical: ["https://odos2020.com/fhir/PlanDefinition/series-protocol-dry-eye-ipl"],
+    activity: Array.from({ length: 4 }, (_, index) => ({
+      detail: {
+        status: index === 0 ? "completed" : "not-started",
+        description: `Session ${index + 1} of 4`,
+        code: { coding: [{ system: SERIES_PROCEDURE_TYPE_SYSTEM, code: DRY_EYE_PROCEDURE_STABLE_KEYS.ipl }] },
+      },
+    })),
+  } satisfies CarePlan);
+  fake.add({
+    resourceType: "Procedure",
+    id: "ipl-session-2",
+    status: "in-progress",
+    subject: { reference: "Patient/p1" },
+    encounter: { reference: "Encounter/series-visit" },
+    code: { coding: [{ system: SERIES_PROCEDURE_TYPE_SYSTEM, code: DRY_EYE_PROCEDURE_STABLE_KEYS.ipl }] },
+    basedOn: [{ reference: "CarePlan/other-series" }, { reference: "CarePlan/ipl-series" }],
+    identifier: [{
+      system: DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM,
+      value: "CarePlan/ipl-series:2-of-4",
+    }],
+  } satisfies Procedure);
+
+  const overview = await loadPatientOverview(fake as never, "p1");
+
+  assert.deepEqual(overview.programs, [{
+    episodeOfCareReference: "EpisodeOfCare/dry-eye-program",
+    title: "Dry eye",
+    status: "active",
+  }]);
+  assert.equal(overview.visits[0]?.program, "Dry eye");
+  assert.equal(overview.visits[0]?.seriesDesignation, "IPL · session 2 of 4");
+});
+
+test("patient overview does not label a routine CarePlan Procedure as a treatment series", async () => {
+  const fake = new FakeFhir();
+  fake.add(patient());
+  fake.add(encounter("routine-visit", "2026-08-19T14:00:00Z"));
+  fake.add({
+    resourceType: "CarePlan",
+    id: "routine-plan",
+    status: "active",
+    intent: "plan",
+    subject: { reference: "Patient/p1" },
+    title: "Routine care",
+  } satisfies CarePlan);
+  fake.add({
+    resourceType: "Procedure",
+    id: "routine-procedure",
+    status: "completed",
+    subject: { reference: "Patient/p1" },
+    encounter: { reference: "Encounter/routine-visit" },
+    basedOn: [{ reference: "CarePlan/routine-plan" }],
+  } satisfies Procedure);
+
+  const overview = await loadPatientOverview(fake as never, "p1");
+
+  assert.equal(overview.visits[0]?.seriesDesignation, undefined);
+});
+
+test("patient overview does not label a malformed Procedure as a canonical series session", async () => {
+  const fake = new FakeFhir();
+  fake.add(patient());
+  fake.add(encounter("malformed-visit", "2026-08-19T14:00:00Z"));
+  fake.add({
+    resourceType: "CarePlan",
+    id: "ipl-series",
+    status: "active",
+    intent: "plan",
+    subject: { reference: "Patient/p1" },
+    title: "IPL",
+    instantiatesCanonical: ["https://odos2020.com/fhir/PlanDefinition/series-protocol-dry-eye-ipl"],
+    activity: [{
+      detail: {
+        status: "not-started",
+        code: { coding: [{ system: SERIES_PROCEDURE_TYPE_SYSTEM, code: DRY_EYE_PROCEDURE_STABLE_KEYS.ipl }] },
+      },
+    }],
+  } satisfies CarePlan);
+  fake.add({
+    resourceType: "Procedure",
+    id: "malformed-session",
+    status: "in-progress",
+    subject: { reference: "Patient/p1" },
+    encounter: { reference: "Encounter/malformed-visit" },
+    code: { coding: [{ code: "routine-procedure" }] },
+    basedOn: [{ reference: "CarePlan/ipl-series" }],
+    identifier: [{
+      system: DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM,
+      value: "CarePlan/ipl-series:1-of-4",
+    }],
+  } satisfies Procedure);
+
+  const overview = await loadPatientOverview(fake as never, "p1");
+
+  assert.equal(overview.visits[0]?.seriesDesignation, undefined);
+});
+
+test("patient overview preserves a completed program title on its historical visit", async () => {
+  const fake = new FakeFhir();
+  fake.add(patient());
+  fake.add({
+    resourceType: "EpisodeOfCare",
+    id: "completed-dry-eye-program",
+    status: "finished",
+    patient: { reference: "Patient/p1" },
+    type: [{ text: "Dry eye" }],
+  } satisfies EpisodeOfCare);
+  const historicalVisit = encounter("historical-series-visit", "2026-07-19T14:00:00Z");
+  historicalVisit.episodeOfCare = [{ reference: "EpisodeOfCare/completed-dry-eye-program" }];
+  fake.add(historicalVisit);
+
+  const overview = await loadPatientOverview(fake as never, "p1");
+
+  assert.deepEqual(overview.programs, []);
+  assert.equal(overview.visits[0]?.program, "Dry eye");
 });
 
 test("billing weather reads stored eligibility and never promotes uncertain coverage to green", async () => {
@@ -1024,6 +1181,9 @@ class FakeFhir {
       ));
     }
     if (resourceType === "Encounter" && params._id) rows = rows.filter((resource) => params._id.split(",").includes(resource.id ?? ""));
+    if (resourceType === "EpisodeOfCare" && params.status) {
+      rows = rows.filter((resource) => (resource as EpisodeOfCare).status === params.status);
+    }
     if (resourceType === "Encounter" && params.type) {
       const requestedTypes = params.type.split(",");
       rows = rows.filter((resource) => (resource as Encounter).type?.some((concept) =>

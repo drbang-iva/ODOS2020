@@ -58,6 +58,16 @@ export interface SeriesSignOffPrompt {
   procedureTypeCode?: string;
 }
 
+export interface EncounterSeriesState {
+  series: SeriesTrackerView | null;
+  currentSession: {
+    number: number;
+    total: number;
+    procedureReference: string;
+  } | null;
+  remainingSessions: number;
+}
+
 interface ApiOptions {
   fetchImpl?: typeof fetch;
   authorization?: string;
@@ -123,6 +133,32 @@ export async function signOffSeriesProcedures(
   options: ApiOptions = {},
 ): Promise<{ updatedProcedureCount: number; prompt?: SeriesSignOffPrompt }> {
   return request(`/series-tracker/encounters/${encodeURIComponent(encounterId)}/sign-off`, {}, options);
+}
+
+export async function fetchEncounterSeries(
+  encounterReference: string,
+  protocolId: string,
+  options: ApiOptions = {},
+): Promise<EncounterSeriesState> {
+  const encounterId = encounterReference.replace(/^Encounter\//, "");
+  return request(
+    `/series-tracker/encounters/${encodeURIComponent(encounterId)}/series/${encodeURIComponent(protocolId)}`,
+    undefined,
+    options,
+  );
+}
+
+export async function recordEncounterSeriesSession(
+  encounterReference: string,
+  protocolId: string,
+  options: ApiOptions = {},
+): Promise<EncounterSeriesState> {
+  const encounterId = encounterReference.replace(/^Encounter\//, "");
+  return request(
+    `/series-tracker/encounters/${encodeURIComponent(encounterId)}/series/${encodeURIComponent(protocolId)}`,
+    {},
+    options,
+  );
 }
 
 export function formatSeriesDueWindow(window: SeriesDueWindow): string {

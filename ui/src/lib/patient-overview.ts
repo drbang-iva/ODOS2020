@@ -66,6 +66,11 @@ export interface PatientOverviewPayload {
     ophthalmicMedications: PatientOverviewMedication[];
     systemicMedications: PatientOverviewMedication[];
   };
+  programs?: Array<{
+    episodeOfCareReference: string;
+    title: string;
+    status: string;
+  }>;
   visits: Array<{
     encounterId: string;
     date?: string;
@@ -73,6 +78,8 @@ export interface PatientOverviewPayload {
     facility?: string;
     visitType: string;
     status: "Preliminary" | "Final" | "Migrated";
+    program?: string;
+    seriesDesignation?: string;
     diagnoses: PatientOverviewDiagnosis[];
   }>;
   diagnosisChoices: Array<{ name: string; code: string; system: string }>;
@@ -169,6 +176,7 @@ function isPatientOverviewPayload(body: unknown): body is PatientOverviewPayload
     isRecord(body.patient) &&
     Array.isArray(body.insurance) &&
     isRecord(body.snapshot) &&
+    (body.programs === undefined || Array.isArray(body.programs)) &&
     Array.isArray(body.visits) &&
     body.visits.every((visit) => isRecord(visit) && Array.isArray(visit.diagnoses)) &&
     Array.isArray(body.diagnosisChoices);

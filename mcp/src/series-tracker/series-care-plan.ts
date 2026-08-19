@@ -5,6 +5,9 @@ import {
   type SeriesProtocolDefinition,
 } from "./protocol-definition-store.js";
 
+export const SERIES_CARE_PLAN_SOURCE_IDENTIFIER_SYSTEM =
+  "https://odos2020.com/fhir/NamingSystem/series-care-plan-source";
+
 export interface SeriesDueWindow {
   start: string;
   end: string;

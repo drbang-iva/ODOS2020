@@ -113,6 +113,7 @@
 .odos-overview-list-toggle { margin-top: 8px; padding: 0; border: 0; background: transparent; color: var(--overview-muted); font: inherit; font-size: 11.5px; cursor: pointer; }
 .odos-overview-list-toggle:hover { color: var(--overview-text); }
 .odos-overview-list-toggle:focus-visible { outline: 2px solid var(--overview-muted); outline-offset: 3px; border-radius: 2px; }
+.odos-program-enrollment-row { padding: 8px 12px; border: 1px solid var(--overview-line); border-radius: 6px; background: color-mix(in srgb, var(--overview-text) 3%, transparent); color: var(--overview-muted); font-size: 14px; }
 .odos-overview-error { padding: 10px 12px; border: 1px solid rgba(226, 92, 106, 0.45); border-radius: 10px; color: #f2a5ad; }
 .odos-overview-tier-link { width: 100%; padding: 10px 14px; border: 1px solid var(--overview-line); border-radius: 12px; background: var(--overview-surface); color: var(--overview-muted); font: inherit; font-size: 12px; text-align: left; text-decoration: none; cursor: pointer; }
 
