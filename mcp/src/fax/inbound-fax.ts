@@ -112,14 +112,16 @@ export function createInboundFaxPoller(deps: InboundFaxPollerDeps): InboundFaxPo
         if (!faxIds.length) continue;
         for (const batch of batches(faxIds, WESTFAX_INBOUND_BATCH_SIZE)) {
           const descriptions = await deps.adapter.getFaxDescriptions(product.id, batch);
-          const documents = await deps.adapter.getFaxDocuments(product.id, batch, "pdf");
           const descriptionsById = new Map(descriptions.map((fax) => [fax.id, fax]));
-          const documentsById = new Map(documents.map((fax) => [fax.id, fax]));
           for (const faxId of batch) {
             const description = descriptionsById.get(faxId.id);
-            const document = documentsById.get(faxId.id);
             try {
-              if (!description || !document) {
+              if (!description) {
+                throw new Error("WestFax did not return both description and PDF document.");
+              }
+              const documents = await deps.adapter.getFaxDocuments(product.id, [faxId], "pdf");
+              const document = documents.find((fax) => fax.id === faxId.id);
+              if (!document) {
                 throw new Error("WestFax did not return both description and PDF document.");
               }
               const patientSuggestion = await suggestPatient(description);

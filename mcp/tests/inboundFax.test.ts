@@ -12,6 +12,7 @@ import type {
 import {
   INBOUND_FAX_IDENTIFIER_SYSTEM,
   INBOUND_FAX_TRIAGE_STATUS_EXTENSION_URL,
+  InboundFaxTriageConflictError,
   InboundFaxTriageService,
   createInboundFaxPoller,
   inboundFaxTriageStatus,
@@ -100,6 +101,50 @@ test("a recording failure is loud, repeat-surfaced, and never marked Retrieved",
   assert.equal(adapter.retrieved, 0);
   assert.equal(surfaced.length, 1);
   assert.match(surfaced[0]!, /fax-inbound-1:synthetic record failure/);
+});
+
+test("a multi-file fax fails alone while neighboring faxes are recorded", async () => {
+  const fhir = new InboundFaxFhir();
+  const { adapter, retrieved } = threeFaxAdapterWithMultiFileFailure();
+
+  const results = await createInboundFaxPoller({
+    fhir,
+    adapter,
+    suggestPatient: async () => undefined,
+  }).run();
+
+  assert.deepEqual(results.map(({ faxId, outcome }) => ({ faxId, outcome })), [
+    { faxId: "fax-good-1", outcome: "recorded" },
+    { faxId: "fax-multi-file", outcome: "failed" },
+    { faxId: "fax-good-2", outcome: "recorded" },
+  ]);
+  assert.match(
+    results[1]?.detail ?? "",
+    /fax fax-multi-file must contain exactly one PDF file; received 2/i,
+  );
+  assert.deepEqual(retrieved, ["fax-good-1", "fax-good-2"]);
+});
+
+test("a repeatedly rejected multi-file fax reaches the repeated-failure signal", async () => {
+  const fhir = new InboundFaxFhir();
+  const { adapter } = threeFaxAdapterWithMultiFileFailure();
+  const surfaced: string[] = [];
+  const poller = createInboundFaxPoller({
+    fhir,
+    adapter,
+    suggestPatient: async () => undefined,
+    failureThreshold: 2,
+    onRepeatedFailure: (faxId, error) => surfaced.push(`${faxId}:${error.message}`),
+  });
+
+  const first = await poller.run();
+  const second = await poller.run();
+
+  assert.equal(first.find(({ faxId }) => faxId === "fax-multi-file")?.outcome, "failed");
+  assert.equal(second.find(({ faxId }) => faxId === "fax-multi-file")?.outcome, "failed");
+  assert.deepEqual(surfaced, [
+    "fax-multi-file:WestFax fax fax-multi-file must contain exactly one PDF file; received 2.",
+  ]);
 });
 
 test("an unmatched fax is retained in the general inbox rather than dropped", async () => {
@@ -237,6 +282,42 @@ test("triage writes use the version read and inbox routing is audited without in
   ]);
 });
 
+test("stale If-Match conflicts at 409 and 412 surface the reload message without applying triage", async (t) => {
+  for (const status of [409, 412] as const) {
+    await t.test(String(status), async () => {
+      const fhir = new InboundFaxFhir();
+      await createInboundFaxPoller({
+        fhir,
+        adapter: new InboundFaxAdapter(),
+        suggestPatient: async () => ({
+          reference: "Patient/suggested",
+          display: "Suggested Patient",
+        }),
+      }).run();
+      const record = fhir.resources("DocumentReference")[0] as DocumentReference;
+      fhir.conflictStatusOnNextUpdate = status;
+      const triage = new InboundFaxTriageService(fhir, () => "2026-07-31T15:30:00.000Z");
+
+      await assert.rejects(
+        triage.routeToInbox(
+          `DocumentReference/${record.id}`,
+          "Practitioner/staff-1",
+          "staff",
+        ),
+        (error: unknown) => {
+          assert.ok(error instanceof InboundFaxTriageConflictError);
+          assert.match(error.message, /changed by another staff member.*Reload the Desk/i);
+          return true;
+        },
+      );
+
+      const stored = await fhir.read<DocumentReference>("DocumentReference", record.id!);
+      assert.equal(inboundFaxTriageStatus(stored), "received");
+      assert.equal(fhir.updateHeaders[0]?.["If-Match"], 'W/"1"');
+    });
+  }
+});
+
 test("patient suggestions use bounded server filters and fail closed on truncated results", async () => {
   const calls: Array<{ resourceType: string; params: Record<string, string> }> = [];
   const complete = await suggestInboundFaxPatient({
@@ -370,9 +451,60 @@ class InboundFaxAdapter implements WestFaxAdapter {
   }
 }
 
+function threeFaxAdapterWithMultiFileFailure(): {
+  adapter: WestFaxAdapter;
+  retrieved: string[];
+} {
+  const faxIds = ["fax-good-1", "fax-multi-file", "fax-good-2"].map((id) => ({
+    id,
+    direction: "Inbound" as const,
+    date: "2026-07-31T14:00:00.000Z",
+    tag: "None",
+  }));
+  const retrieved: string[] = [];
+  return {
+    retrieved,
+    adapter: {
+      async sendFax() {
+        throw new Error("not used");
+      },
+      async getProductsWithInboundFaxes() {
+        return [{ id: "product-1", inboundNumber: "8645550100" }];
+      },
+      async getFaxIdentifiers() {
+        return faxIds;
+      },
+      async getFaxDescriptions(_productId, requested) {
+        return requested.map((fax) => ({
+          ...fax,
+          pageCount: 2,
+          senderNumber: "8645550199",
+        }));
+      },
+      async getFaxDocuments(_productId, requested) {
+        if (requested.some(({ id }) => id === "fax-multi-file")) {
+          throw new Error(
+            "WestFax fax fax-multi-file must contain exactly one PDF file; received 2.",
+          );
+        }
+        return requested.map((fax) => ({
+          ...fax,
+          pageCount: 2,
+          contentType: "application/pdf" as const,
+          fileContents: Buffer.from(`%PDF-${fax.id}`).toString("base64"),
+        }));
+      },
+      async changeFaxFilterValue(_productId, requested) {
+        retrieved.push(...requested.map(({ id }) => id));
+      },
+    },
+  };
+}
+
 class InboundFaxFhir {
   private readonly rows: Resource[] = [];
   failDocumentCreates = false;
+  conflictStatusOnNextUpdate?: 409 | 412;
   readonly updateHeaders: Record<string, string>[] = [];
 
   resources(type: Resource["resourceType"]): Resource[] {
@@ -454,6 +586,23 @@ class InboundFaxFhir {
     const index = this.rows.findIndex((candidate) =>
       candidate.resourceType === type && candidate.id === id);
     if (index < 0) throw new Error(`${type}/${id} not found`);
+    const conflictStatus = this.conflictStatusOnNextUpdate;
+    if (conflictStatus) {
+      const current = this.rows[index]!;
+      const concurrentVersion = Number(current.meta?.versionId ?? "0") + 1;
+      this.rows[index] = {
+        ...current,
+        meta: { ...current.meta, versionId: String(concurrentVersion) },
+      };
+      this.conflictStatusOnNextUpdate = undefined;
+    }
+    const currentVersion = this.rows[index]?.meta?.versionId;
+    const ifMatch = headers["If-Match"];
+    if (ifMatch && ifMatch !== `W/"${currentVersion}"`) {
+      const error = new Error(`synthetic stale If-Match conflict (${conflictStatus ?? 412})`);
+      (error as Error & { status?: number }).status = conflictStatus ?? 412;
+      throw error;
+    }
     const version = Number(this.rows[index]?.meta?.versionId ?? "0") + 1;
     const saved = { ...structuredClone(resource), id, meta: { ...resource.meta, versionId: String(version) } } as T;
     this.rows[index] = saved;
