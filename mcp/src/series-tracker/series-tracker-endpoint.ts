@@ -1,5 +1,5 @@
 import type { Application, Request, Response } from "express";
-import type { Bundle, CarePlan, Encounter, Procedure, Provenance, Resource } from "@medplum/fhirtypes";
+import type { Bundle, CarePlan, Encounter, EpisodeOfCare, Procedure, Provenance, Resource } from "@medplum/fhirtypes";
 import { resolveBusinessActionRole, type BusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import type { MedplumClient } from "../fhir-client.js";
 import { isRelativeFhirReference } from "../fhir/reference.js";
@@ -69,12 +69,22 @@ async function encounterSeries(
   if (!isRelativeFhirReference(patientReference, "Patient")) {
     return { status: 422, body: { error: "Encounter has no patient subject." } };
   }
+  const programReference = encounter.episodeOfCare?.[0]?.reference;
+  if (recordSession && programReference) {
+    if (!isRelativeFhirReference(programReference, "EpisodeOfCare")) {
+      return { status: 409, body: { error: "Encounter is not linked to a valid active program." } };
+    }
+    const program = await staff.fhir.read<EpisodeOfCare>("EpisodeOfCare", programReference.slice("EpisodeOfCare/".length));
+    if (program.status !== "active" || program.patient.reference !== patientReference) {
+      return { status: 409, body: { error: "Encounter is not linked to this patient's active program." } };
+    }
+  }
   const protocol = (await new FhirSeriesProtocolDefinitionStore(deps.serviceFhir, now(deps)).list({ includeArchived: true }))
     .find((candidate) => candidate.id === protocolId);
   if (!protocol?.active) {
     return { status: 409, body: { error: `Active series protocol ${protocolId} is unavailable.` } };
   }
-  const scopeIdentifier = `${encounter.episodeOfCare?.[0]?.reference ?? `Encounter/${encounterId}`}:${protocolId}`;
+  const scopeIdentifier = `${programReference ?? `Encounter/${encounterId}`}:${protocolId}`;
   const carePlanBundle = await staff.fhir.search<CarePlan>("CarePlan", { subject: patientReference, _count: "200" });
   const patientCarePlans = resourcesOf(carePlanBundle);
   const matchingCarePlans = (

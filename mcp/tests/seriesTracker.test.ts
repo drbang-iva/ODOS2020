@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
-import type { Bundle, CarePlan, Encounter, PlanDefinition, Procedure, Resource } from "@medplum/fhirtypes";
+import type { Bundle, CarePlan, Encounter, EpisodeOfCare, PlanDefinition, Procedure, Resource } from "@medplum/fhirtypes";
 import express from "express";
 import {
   FhirSeriesProtocolDefinitionStore,
@@ -252,6 +252,11 @@ test("Dry Eye sheet round-trip conditionally creates one canonical CarePlan and 
   const activity = buildSeriesActivityDefinition("dry-eye-ipl", dryEyeDraft, recordedAt);
   const plan = buildSeriesPlanDefinition("dry-eye-ipl", dryEyeDraft, activity.url!, recordedAt);
   const resources: Resource[] = [{
+    resourceType: "EpisodeOfCare",
+    id: "dry-eye-program",
+    status: "active",
+    patient: { reference: "Patient/test-patient" },
+  } satisfies EpisodeOfCare, {
     resourceType: "Encounter",
     id: "encounter-1",
     status: "in-progress",
@@ -579,6 +584,19 @@ test("Dry Eye finds the active bound session when unrelated patient Procedures e
   });
 });
 
+test("Dry Eye refuses to create a session in a finished EpisodeOfCare program", async () => {
+  await withDryEyeEncounterRoute({
+    episodeStatus: "finished",
+    procedureSearch: () => ({ resourceType: "Bundle", type: "searchset", total: 0 }),
+  }, async ({ endpoint, headers, created }) => {
+    const response = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+
+    assert.equal(response.status, 409);
+    assert.match((await response.json() as { error: string }).error, /active program/);
+    assert.equal(created.length, 0);
+  });
+});
+
 function dryEyeProtocolFixture() {
   const draft: SeriesProtocolDefinitionDraft = {
     id: "dry-eye-ipl",
@@ -612,6 +630,7 @@ function unrelatedProcedure(id: string): Procedure {
 async function withDryEyeEncounterRoute(
   input: {
     carePlans?: CarePlan[];
+    episodeStatus?: EpisodeOfCare["status"];
     existingProcedures?: Procedure[];
     procedureSearch(params: Record<string, string>): Bundle<Procedure>;
   },
@@ -625,7 +644,15 @@ async function withDryEyeEncounterRoute(
   const created: Resource[] = [];
   const existingProcedures = input.existingProcedures ?? [];
   const staffFhir = {
-    async read<T extends Resource>(): Promise<T> {
+    async read<T extends Resource>(resourceType: T["resourceType"]): Promise<T> {
+      if (resourceType === "EpisodeOfCare") {
+        return {
+          resourceType: "EpisodeOfCare",
+          id: "dry-eye-program",
+          status: input.episodeStatus ?? "active",
+          patient: { reference: "Patient/test-patient" },
+        } as EpisodeOfCare as T;
+      }
       return {
         resourceType: "Encounter",
         id: "encounter-1",
