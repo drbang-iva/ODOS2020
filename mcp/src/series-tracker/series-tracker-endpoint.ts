@@ -242,7 +242,10 @@ async function encounterSeries(
         total: protocol.sessionCount,
         procedureReference: `Procedure/${currentSession.id}`,
       } : null,
-      remainingSessions: Math.max(0, protocol.sessionCount - resolvedNumber),
+      remainingSessions: Math.max(
+        0,
+        protocol.sessionCount - (currentSession ? resolvedNumber : completedCount),
+      ),
     },
   };
 }

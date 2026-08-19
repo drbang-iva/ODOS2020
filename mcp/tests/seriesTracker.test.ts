@@ -378,6 +378,22 @@ test("Dry Eye sheet round-trip conditionally creates one canonical CarePlan and 
     assert.equal(resources.filter((resource) => resource.resourceType === "CarePlan").length, 1);
     assert.equal(resources.filter((resource) => resource.resourceType === "Procedure").length, 1);
 
+    procedures[0]!.status = "completed";
+    const betweenSessionsCarePlan = resources.find((resource): resource is CarePlan =>
+      resource.resourceType === "CarePlan"
+    );
+    assert.ok(betweenSessionsCarePlan?.activity?.[0]?.detail);
+    betweenSessionsCarePlan.activity[0].detail.status = "completed";
+    betweenSessionsCarePlan.activity[0].outcomeReference = [{ reference: `Procedure/${procedures[0]!.id}` }];
+    const betweenSessions = await fetch(endpoint, { headers });
+    assert.equal(betweenSessions.status, 200);
+    const betweenSessionsBody = await betweenSessions.json() as {
+      currentSession: null;
+      remainingSessions: number;
+    };
+    assert.equal(betweenSessionsBody.currentSession, null);
+    assert.equal(betweenSessionsBody.remainingSessions, 3);
+
     const beforeMissing = resources.length;
     const missing = await fetch(endpoint.replace("dry-eye-ipl", "missing-protocol"), {
       method: "POST",
