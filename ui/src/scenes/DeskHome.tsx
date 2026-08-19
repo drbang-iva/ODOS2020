@@ -19,7 +19,13 @@ export interface DeskOfficeApi {
   send: typeof sendOfficeMessage;
 }
 
+export interface InboundFaxApi {
+  triage: typeof triageInboundFax;
+  open: typeof openInboundFaxDocument;
+}
+
 const defaultDeskOfficeApi: DeskOfficeApi = { list: fetchDeskOfficeMessages, send: sendOfficeMessage };
+const defaultInboundFaxApi: InboundFaxApi = { triage: triageInboundFax, open: openInboundFaxDocument };
 
 export const DESK_CARDS = [
   { id: "schedule", title: "Today's schedule", href: "/frontdesk", span: "wide" },
@@ -71,7 +77,17 @@ function navigateWithinApp(event: MouseEvent<HTMLAnchorElement>) {
   window.dispatchEvent(new PopStateEvent("popstate"));
 }
 
-export function DeskHome({ initialSummary, initialOfficeMessages, officeApi = defaultDeskOfficeApi }: { initialSummary?: DeskSummary; initialOfficeMessages?: OfficeMessage[]; officeApi?: DeskOfficeApi } = {}) {
+export function DeskHome({
+  initialSummary,
+  initialOfficeMessages,
+  officeApi = defaultDeskOfficeApi,
+  inboundFaxApi = defaultInboundFaxApi,
+}: {
+  initialSummary?: DeskSummary;
+  initialOfficeMessages?: OfficeMessage[];
+  officeApi?: DeskOfficeApi;
+  inboundFaxApi?: InboundFaxApi;
+} = {}) {
   const sharedOffice = useOfficeChannel();
   const [customizing, setCustomizing] = useState(false);
   const [cardIds, setCardIds] = useState<DeskCardId[]>(() => loadDeskCardIds(typeof window === "undefined" ? undefined : window.localStorage));
@@ -172,6 +188,31 @@ export function DeskHome({ initialSummary, initialOfficeMessages, officeApi = de
     }
   }, [officeApi]);
 
+  const completeInboundFax = useCallback((faxId: string) => {
+    setSummary((current) => {
+      const correspondence = current?.cards.correspondence;
+      if (!current || !correspondence) return current;
+      const items = correspondence.items.filter(
+        (item) => item.kind !== "inbound-fax" || item.faxId !== faxId,
+      );
+      const inboundCount = items.filter((item) => item.kind === "inbound-fax").length;
+      return {
+        ...current,
+        cards: {
+          ...current.cards,
+          correspondence: {
+            ...correspondence,
+            items,
+            inboundFaxes: {
+              value: inboundCount,
+              tone: inboundCount > 0 ? "warn" : "ok",
+            },
+          },
+        },
+      };
+    });
+  }, []);
+
   useEffect(() => { window.localStorage.setItem(DESK_CARD_STORAGE_KEY, JSON.stringify(cardIds)); }, [cardIds]);
   useEffect(() => () => cancelHoverClose(), [cancelHoverClose]);
   useEffect(() => {
@@ -239,7 +280,7 @@ export function DeskHome({ initialSummary, initialOfficeMessages, officeApi = de
             const card = DESK_CARDS.find((candidate) => candidate.id === id)!;
             const model = id === "office"
               ? { tone: sentMessages.some((message) => !message.acknowledgement) ? "warn" as const : "ok" as const, kicker: sentMessages.some((message) => !message.acknowledgement) ? "awaiting acknowledgement" : "closed loop", target: "every message acknowledged", content: <OfficeDeskCard /> }
-              : cardModel(id, summary);
+              : cardModel(id, summary, inboundFaxApi, completeInboundFax);
             return (
               <article id={card.id} key={card.id} className={`odos-desk-card odos-live-tone-${model.tone} odos-span-${card.span}`} draggable={customizing}
                 onDragStart={() => setDragged(card.id)} onDragOver={(event) => customizing && event.preventDefault()}
@@ -337,7 +378,12 @@ function PracticePulse({ summary, error }: { summary?: DeskSummary; error?: stri
   return <p className="odos-practice-pulse"><b>{count} item{count === 1 ? "" : "s"} need you</b> · everything else at target · last claim transmission {last}{summary.pulse.lastClaimTransmissionTone === "ok" ? " ✓" : ""}</p>;
 }
 
-function cardModel(id: DeskCardId, summary?: DeskSummary): { tone: DeskTone; kicker: string; target: string; content: ReactNode } {
+function cardModel(
+  id: DeskCardId,
+  summary: DeskSummary | undefined,
+  inboundFaxApi: InboundFaxApi,
+  onInboundFaxCompleted: (faxId: string) => void,
+): { tone: DeskTone; kicker: string; target: string; content: ReactNode } {
   if (!summary) return { tone: "off", kicker: "loading", target: "live practice data", content: <WiringPanel>Loading live counts…</WiringPanel> };
   switch (id) {
     case "office": throw new Error("Office card is rendered from live Office channel state.");
@@ -360,7 +406,7 @@ function cardModel(id: DeskCardId, summary?: DeskSummary): { tone: DeskTone; kic
           || value.inboundFaxes.value > 0
           ? "warn"
           : "ok";
-      const inbound = value.items.filter((item) => item.kind === "inbound-fax");
+      const inbound = value.items.filter(isInboundFaxDeskItem);
       return {
         tone,
         kicker: value.items.length
@@ -374,7 +420,11 @@ function cardModel(id: DeskCardId, summary?: DeskSummary): { tone: DeskTone; kic
             ["Replies owed", value.repliesOwed],
             ["Send failures", value.sendFailures],
           ]} />
-          {inbound.length > 0 && <InboundFaxWorklist items={inbound} />}
+          {inbound.length > 0 && <InboundFaxWorklist
+            items={inbound}
+            api={inboundFaxApi}
+            onCompleted={onInboundFaxCompleted}
+          />}
         </>,
       };
     }
@@ -388,15 +438,45 @@ function cardModel(id: DeskCardId, summary?: DeskSummary): { tone: DeskTone; kic
   }
 }
 
-type InboundFaxDeskItem = DeskSummary["cards"]["correspondence"]["items"][number];
+type CorrespondenceDeskItem = NonNullable<DeskSummary["cards"]["correspondence"]>["items"][number];
+type InboundFaxDeskItem = CorrespondenceDeskItem & {
+  kind: "inbound-fax";
+  faxId: string;
+  documentUrl: string;
+};
 
-function InboundFaxWorklist({ items }: { items: InboundFaxDeskItem[] }) {
+function isInboundFaxDeskItem(item: CorrespondenceDeskItem): item is InboundFaxDeskItem {
+  return item.kind === "inbound-fax" && Boolean(item.faxId && item.documentUrl);
+}
+
+function InboundFaxWorklist({
+  items,
+  api,
+  onCompleted,
+}: {
+  items: InboundFaxDeskItem[];
+  api: InboundFaxApi;
+  onCompleted: (faxId: string) => void;
+}) {
   return <div className="odos-inbound-fax-list" aria-label="Inbound fax triage">
-    {items.map((item) => <InboundFaxRow key={item.faxId} item={item} />)}
+    {items.map((item) => <InboundFaxRow
+      key={item.faxId}
+      item={item}
+      api={api}
+      onCompleted={onCompleted}
+    />)}
   </div>;
 }
 
-function InboundFaxRow({ item }: { item: InboundFaxDeskItem }) {
+function InboundFaxRow({
+  item,
+  api,
+  onCompleted,
+}: {
+  item: InboundFaxDeskItem;
+  api: InboundFaxApi;
+  onCompleted: (faxId: string) => void;
+}) {
   const suggestedReference = item.suggestedPatient?.reference ?? "";
   const [patientReference, setPatientReference] = useState(suggestedReference);
   const [patientDisplay, setPatientDisplay] = useState(item.suggestedPatient?.display ?? "");
@@ -410,19 +490,17 @@ function InboundFaxRow({ item }: { item: InboundFaxDeskItem }) {
   const [completed, setCompleted] = useState<string>();
   const [error, setError] = useState<string>();
 
-  if (!item.faxId || !item.documentUrl || completed) {
-    return completed ? <p className="odos-inbound-fax-done">{completed}</p> : null;
-  }
+  if (completed) return <p className="odos-inbound-fax-done">{completed}</p>;
 
   const run = async (action: "attach" | "promote" | "inbox") => {
     setBusy(true);
     setError(undefined);
     try {
       if (action === "attach") {
-        await triageInboundFax(item.faxId!, action, { patientReference });
+        await api.triage(item.faxId, action, { patientReference });
         setCompleted("Fax attached to the confirmed patient chart.");
       } else if (action === "promote") {
-        await triageInboundFax(item.faxId!, action, {
+        await api.triage(item.faxId, action, {
           patientReference,
           patientDisplay,
           referrerDisplay,
@@ -432,9 +510,10 @@ function InboundFaxRow({ item }: { item: InboundFaxDeskItem }) {
         });
         setCompleted("Fax promoted to the inbound referral worklist.");
       } else {
-        await triageInboundFax(item.faxId!, action, {});
+        await api.triage(item.faxId, action, {});
         setCompleted("Fax routed to the general correspondence inbox.");
       }
+      onCompleted(item.faxId);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Inbound fax action failed.");
     } finally {
@@ -446,7 +525,7 @@ function InboundFaxRow({ item }: { item: InboundFaxDeskItem }) {
     setBusy(true);
     setError(undefined);
     try {
-      await openInboundFaxDocument(item.documentUrl!);
+      await api.open(item.documentUrl);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Inbound fax document failed.");
     } finally {
@@ -467,8 +546,10 @@ function InboundFaxRow({ item }: { item: InboundFaxDeskItem }) {
     <details>
       <summary>{patientDisplay || "Choose patient"}</summary>
       {item.suggestedPatient && <button type="button" onClick={() => {
-        setPatientReference(item.suggestedPatient!.reference);
-        setPatientDisplay(item.suggestedPatient!.display ?? item.suggestedPatient!.reference);
+        const suggested = item.suggestedPatient;
+        if (!suggested) return;
+        setPatientReference(suggested.reference);
+        setPatientDisplay(suggested.display ?? suggested.reference);
       }}>Use suggested patient</button>}
       <PatientSearch actionLabel="Confirm patient" onSelect={(patient) => {
         setPatientReference(`Patient/${patient.id}`);

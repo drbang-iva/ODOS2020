@@ -34,6 +34,21 @@ test("Desk Correspondence block exposes drafts, replies, failures, and actionabl
   } satisfies DocumentReference);
   fhir.put({
     resourceType: "DocumentReference",
+    id: "fax-promoted",
+    identifier: [{ system: INBOUND_FAX_IDENTIFIER_SYSTEM, value: "westfax-promoted" }],
+    status: "current",
+    content: [{ attachment: { contentType: "application/pdf" } }],
+    extension: [{ url: INBOUND_FAX_TRIAGE_STATUS_EXTENSION_URL, valueCode: "promoted" }],
+  } satisfies DocumentReference);
+  fhir.put({
+    resourceType: "DocumentReference",
+    identifier: [{ system: INBOUND_FAX_IDENTIFIER_SYSTEM, value: "westfax-no-id" }],
+    status: "current",
+    content: [{ attachment: { contentType: "application/pdf" } }],
+    extension: [{ url: INBOUND_FAX_TRIAGE_STATUS_EXTENSION_URL, valueCode: "received" }],
+  } satisfies DocumentReference);
+  fhir.put({
+    resourceType: "DocumentReference",
     id: "fax-inbound",
     identifier: [{ system: INBOUND_FAX_IDENTIFIER_SYSTEM, value: "westfax-1" }],
     status: "current",
@@ -101,6 +116,7 @@ test("Desk Correspondence block exposes drafts, replies, failures, and actionabl
   assert.equal(block.repliesOwed.value, 1);
   assert.equal(block.sendFailures.value, 1);
   assert.equal(block.inboundFaxes.value, 1);
+  assert.equal(block.items.some((item) => item.faxId === "fax-promoted"), false);
   assert.deepEqual(block.items.map((item) => Object.keys(item)), [
     ["kind", "title", "patientReference", "severity", "ageMinutes", "action", "owner", "status"],
     ["kind", "title", "patientReference", "severity", "ageMinutes", "action", "owner", "status"],

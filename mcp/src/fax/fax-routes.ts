@@ -71,6 +71,8 @@ export function registerFaxRoutes(
       }
       res.status(200);
       res.header("Content-Type", result.contentType);
+      res.header("X-Content-Type-Options", "nosniff");
+      res.header("Content-Security-Policy", "default-src 'none'; object-src 'none'; sandbox");
       res.header(
         "Content-Disposition",
         `inline; filename="${safeFilename(result.filename ?? "inbound-fax.pdf")}"`,

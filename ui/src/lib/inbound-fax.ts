@@ -20,8 +20,8 @@ export async function triageInboundFax(
       body: JSON.stringify(body),
     },
   );
-  const result = await response.json() as { error?: string };
   if (!response.ok) {
+    const result = await response.json().catch(() => ({})) as { error?: string };
     throw new Error(result.error ?? `Inbound fax action failed with HTTP ${response.status}.`);
   }
 }

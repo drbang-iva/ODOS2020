@@ -15,7 +15,10 @@ import {
   InboundFaxTriageService,
   createInboundFaxPoller,
   inboundFaxTriageStatus,
+  inboundFaxWorkerEnabled,
   inboundFaxWorkerIntervalMs,
+  startInboundFaxWorker,
+  suggestInboundFaxPatient,
 } from "../src/fax/inbound-fax.js";
 import type {
   WestFaxAdapter,
@@ -132,7 +135,7 @@ test("front desk attach and promote are explicit, audited actions and promotion 
     faxDocumentReference: `DocumentReference/${record.id}`,
     patientReference: "Patient/patient-1",
     actorReference: "Practitioner/front-desk-1",
-    actorRole: "front-desk",
+    actorRole: "staff",
   });
   assert.equal(attached.subject?.reference, "Patient/patient-1");
   assert.equal(inboundFaxTriageStatus(attached), "attached");
@@ -152,7 +155,7 @@ test("front desk attach and promote are explicit, audited actions and promotion 
     performerDisplay: "Doctor One",
     reasonText: "Evaluate synthetic retinal finding",
     actorReference: "Practitioner/front-desk-1",
-    actorRole: "front-desk",
+    actorRole: "staff",
   });
   const captureSource = promoted.serviceRequest.extension?.find(
     (extension) => extension.url === REFERRAL_CAPTURE_SOURCE_EXTENSION_URL,
@@ -176,10 +179,157 @@ test("front desk attach and promote are explicit, audited actions and promotion 
   assert.equal(rows[0]?.serviceRequestReference, `ServiceRequest/${promoted.serviceRequest.id}`);
 });
 
+test("re-promoting a fax to a different patient fails closed without moving the fax", async () => {
+  const fhir = new InboundFaxFhir();
+  await createInboundFaxPoller({
+    fhir,
+    adapter: new InboundFaxAdapter(),
+    suggestPatient: async () => undefined,
+  }).run();
+  const record = fhir.resources("DocumentReference")[0] as DocumentReference;
+  const triage = new InboundFaxTriageService(fhir, () => "2026-07-31T15:30:00.000Z");
+  const promote = (patientReference: string) => triage.promote({
+    faxDocumentReference: `DocumentReference/${record.id}`,
+    patientReference,
+    patientDisplay: patientReference,
+    referrerDisplay: "Synthetic Referrer",
+    performerReference: "Practitioner/doctor-1",
+    performerDisplay: "Doctor One",
+    reasonText: "Evaluate synthetic finding",
+    actorReference: "Practitioner/staff-1",
+    actorRole: "staff",
+  });
+
+  await promote("Patient/patient-1");
+  await assert.rejects(
+    promote("Patient/patient-2"),
+    /already promoted to Patient\/patient-1.*cannot be reassigned to Patient\/patient-2/i,
+  );
+
+  const stored = await fhir.read<DocumentReference>("DocumentReference", record.id!);
+  assert.equal(stored.subject?.reference, "Patient/patient-1");
+  assert.equal((fhir.resources("ServiceRequest") as ServiceRequest[])[0]?.subject.reference, "Patient/patient-1");
+});
+
+test("triage writes use the version read and inbox routing is audited without inventing a patient", async () => {
+  const fhir = new InboundFaxFhir();
+  await createInboundFaxPoller({
+    fhir,
+    adapter: new InboundFaxAdapter(),
+    suggestPatient: async () => undefined,
+  }).run();
+  const record = fhir.resources("DocumentReference")[0] as DocumentReference;
+  const triage = new InboundFaxTriageService(fhir, () => "2026-07-31T15:30:00.000Z");
+
+  await triage.routeToInbox(
+    `DocumentReference/${record.id}`,
+    "Practitioner/staff-1",
+    "staff",
+  );
+
+  assert.equal(fhir.updateHeaders[0]?.["If-Match"], 'W/"1"');
+  const audit = (fhir.resources("AuditEvent") as AuditEvent[]).find(
+    (event) => event.type.code === "correspondence.inbound-fax-inbox",
+  );
+  assert.ok(audit);
+  assert.deepEqual(audit.entity?.map((entity) => entity.what.reference), [
+    `DocumentReference/${record.id}`,
+  ]);
+});
+
+test("patient suggestions use bounded server filters and fail closed on truncated results", async () => {
+  const calls: Array<{ resourceType: string; params: Record<string, string> }> = [];
+  const complete = await suggestInboundFaxPatient({
+    search: async <T extends Resource>(resourceType: T["resourceType"], params: Record<string, string> = {}) => {
+      calls.push({ resourceType, params });
+      if (resourceType === "Practitioner") {
+        return bundle([{
+          resourceType: "Practitioner",
+          id: "referrer-1",
+          telecom: [{ system: "fax", value: "8645550199" }],
+        }], 1) as Bundle<T>;
+      }
+      if (resourceType === "ServiceRequest") {
+        return bundle([{
+          resourceType: "ServiceRequest",
+          status: "active",
+          intent: "order",
+          subject: { reference: "Patient/patient-1", display: "Synthetic Patient" },
+          requester: { reference: "Practitioner/referrer-1" },
+          category: [{ coding: [{ system: "https://odos2020.com/fhir/CodeSystem/referral-direction", code: "inbound" }] }],
+        }], 1) as Bundle<T>;
+      }
+      return bundle([], 0) as Bundle<T>;
+    },
+  }, "(864) 555-0199");
+
+  assert.equal(complete?.reference, "Patient/patient-1");
+  assert.deepEqual(calls.map(({ resourceType, params }) => [resourceType, params]), [
+    ["Practitioner", { telecom: "fax|8645550199", _count: "200" }],
+    ["PractitionerRole", { telecom: "fax|8645550199", _count: "200" }],
+    ["ServiceRequest", {
+      category: "https://odos2020.com/fhir/CodeSystem/referral-direction|inbound",
+      requester: "Practitioner/referrer-1",
+      _sort: "-authored",
+      _count: "200",
+    }],
+  ]);
+
+  const truncated = await suggestInboundFaxPatient({
+    search: async <T extends Resource>(resourceType: T["resourceType"]) => {
+      if (resourceType === "Practitioner") {
+        return bundle([{
+          resourceType: "Practitioner",
+          id: "referrer-1",
+          telecom: [{ system: "fax", value: "8645550199" }],
+        }], 2) as Bundle<T>;
+      }
+      if (resourceType === "PractitionerRole") return bundle([], 0) as Bundle<T>;
+      throw new Error("A truncated directory result must stop before referral search.");
+    },
+  }, "8645550199");
+  assert.equal(truncated, undefined);
+});
+
+test("inbound worker skips interval ticks while a sweep is still running", async (t) => {
+  t.mock.timers.enable({ apis: ["setInterval"] });
+  let release!: () => void;
+  const blocked = new Promise<void>((resolve) => { release = resolve; });
+  let runs = 0;
+  const timer = startInboundFaxWorker({
+    authenticate: async () => undefined,
+    poller: {
+      run: async () => {
+        runs += 1;
+        await blocked;
+        return [];
+      },
+    },
+    intervalMs: 15_000,
+  });
+  await Promise.resolve();
+  assert.equal(runs, 1);
+
+  t.mock.timers.tick(30_000);
+  await Promise.resolve();
+  assert.equal(runs, 1);
+
+  release();
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  t.mock.timers.tick(15_000);
+  await Promise.resolve();
+  assert.equal(runs, 2);
+  clearInterval(timer);
+});
+
 test("inbound worker cadence defaults to three minutes and validates operator overrides", () => {
+  assert.equal(inboundFaxWorkerEnabled(undefined), false);
+  assert.equal(inboundFaxWorkerEnabled("false"), false);
+  assert.equal(inboundFaxWorkerEnabled("TRUE"), false);
+  assert.equal(inboundFaxWorkerEnabled("true"), true);
   assert.equal(inboundFaxWorkerIntervalMs(undefined), 180_000);
   assert.equal(inboundFaxWorkerIntervalMs("240000"), 240_000);
-  assert.throws(() => inboundFaxWorkerIntervalMs("14999"), /at least 15000/);
+  assert.throws(() => inboundFaxWorkerIntervalMs("14999"), /at least 15,000/);
 });
 
 class InboundFaxAdapter implements WestFaxAdapter {
@@ -223,6 +373,7 @@ class InboundFaxAdapter implements WestFaxAdapter {
 class InboundFaxFhir {
   private readonly rows: Resource[] = [];
   failDocumentCreates = false;
+  readonly updateHeaders: Record<string, string>[] = [];
 
   resources(type: Resource["resourceType"]): Resource[] {
     return this.rows.filter((resource) => resource.resourceType === type);
@@ -287,6 +438,7 @@ class InboundFaxFhir {
     const saved = {
       ...structuredClone(resource),
       id: resource.id ?? `${resource.resourceType.toLowerCase()}-${this.rows.length + 1}`,
+      meta: { ...structuredClone(resource.meta), versionId: "1" },
     } as T;
     this.rows.push(saved);
     return structuredClone(saved);
@@ -296,12 +448,24 @@ class InboundFaxFhir {
     type: T["resourceType"],
     id: string,
     resource: T,
+    headers: Record<string, string> = {},
   ): Promise<T> {
+    this.updateHeaders.push(structuredClone(headers));
     const index = this.rows.findIndex((candidate) =>
       candidate.resourceType === type && candidate.id === id);
     if (index < 0) throw new Error(`${type}/${id} not found`);
-    const saved = { ...structuredClone(resource), id } as T;
+    const version = Number(this.rows[index]?.meta?.versionId ?? "0") + 1;
+    const saved = { ...structuredClone(resource), id, meta: { ...resource.meta, versionId: String(version) } } as T;
     this.rows[index] = saved;
     return structuredClone(saved);
   }
+}
+
+function bundle<T extends Resource>(resources: T[], total: number): Bundle<T> {
+  return {
+    resourceType: "Bundle",
+    type: "searchset",
+    total,
+    entry: resources.map((resource) => ({ resource })),
+  };
 }

@@ -23,6 +23,7 @@ import {
 } from "./fax/westfax-adapter.js";
 import {
   createInboundFaxPoller,
+  inboundFaxWorkerEnabled,
   inboundFaxWorkerIntervalMs,
   startInboundFaxWorker,
 } from "./fax/inbound-fax.js";
@@ -5613,7 +5614,7 @@ async function startMcpServer(): Promise<void> {
   await logProtocolSeedBootFailure({
     seed: () => protocolDefinitionStore.ensureSeed(GLAUCOMA_SUSPECT_PROTOCOL).then(() => undefined),
   });
-  if (westFaxAdapter && process.env.ODOS_INBOUND_FAX_WORKER_ENABLED !== "false") {
+  if (westFaxAdapter && inboundFaxWorkerEnabled(process.env.ODOS_INBOUND_FAX_WORKER_ENABLED)) {
     startInboundFaxWorker({
       authenticate: authenticateWithMedplum,
       poller: createInboundFaxPoller({

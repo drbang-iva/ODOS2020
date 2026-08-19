@@ -127,7 +127,7 @@ Create `.env` from `.env.example` or export these variables in the shell that ru
 | `ODOS_REMINDER_LOOKBACK_MINUTES` | no | Bounded positive-offset recovery window; defaults to 1,440 minutes. Negative appointment reminders recover while the appointment is still upcoming. |
 | `ODOS_COMMS_PUBLIC_BASE_URL` | yes for tracked links | HTTPS practice-domain origin for campaign redirect links. |
 | `WESTFAX_USERNAME`, `WESTFAX_PASSWORD`, `WESTFAX_PRODUCT_ID`, `WESTFAX_CALLBACK_BASE_URL` | yes for fax | Server-only WestFax credentials, the practice fax-line ProductId, and the HTTPS callback origin. |
-| `ODOS_INBOUND_FAX_WORKER_ENABLED` | no | Inbound polling starts when WestFax is configured unless this is explicitly `false`. |
+| `ODOS_INBOUND_FAX_WORKER_ENABLED` | no | Set to `true` to opt in to inbound polling after WestFax is configured; defaults to off. |
 | `ODOS_INBOUND_FAX_WORKER_MS` | no | Inbound polling cadence in milliseconds; defaults to 180,000 (3 minutes), minimum 15,000. |
 
 Google Workspace communications setup and the documented manual-send verification path are in
@@ -204,7 +204,7 @@ Complete this sequence before any real patient Voice, SMS, or MMS traffic:
 
 Inbound fax retrieval is a server-side polling workflow. WestFax credentials and downloaded PDF
 content must stay in the local MCP service; never expose them through Vite variables or browser
-storage. Configure the four `WESTFAX_*` values above, leave
+storage. Configure the four `WESTFAX_*` values above, set
 `ODOS_INBOUND_FAX_WORKER_ENABLED=true`, and restart `odos-core`. The worker polls unread inbound
 faxes every three minutes by default. A failed local FHIR write leaves the fax unread at WestFax
 for a later retry and logs the failure; it does not advance the vendor cursor.

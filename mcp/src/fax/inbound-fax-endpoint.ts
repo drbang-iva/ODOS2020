@@ -1,7 +1,13 @@
-import type { Resource } from "@medplum/fhirtypes";
+import type { ProjectMembership, Resource } from "@medplum/fhirtypes";
 import { z } from "zod";
-import type { PracticeRoleId } from "../authz/roles.js";
 import {
+  resolveBusinessActionRole,
+  type PracticeRoleId,
+} from "../authz/roles.js";
+import { hasPatientCompartmentGrant } from "../clinical-graph/provider-assignment-endpoint.js";
+import {
+  INBOUND_FAX_TRIAGE_ROLES,
+  InboundFaxTriageConflictError,
   InboundFaxTriageService,
   type InboundFaxFhir,
 } from "./inbound-fax.js";
@@ -10,6 +16,7 @@ export interface InboundFaxEndpointDeps {
   authenticate(authHeader: string | undefined): Promise<{
     staffReference: string;
     actorRole: PracticeRoleId;
+    roles?: readonly PracticeRoleId[];
   } | null>;
   serviceFhir: InboundFaxFhir;
   now?: () => string;
@@ -59,6 +66,25 @@ export async function handleInboundFaxActionRequest(
     body: unknown;
   },
 ): Promise<InboundFaxEndpointResult> {
+  try {
+    return await handleInboundFaxActionRequestCore(deps, input);
+  } catch (error) {
+    if (error instanceof InboundFaxTriageConflictError) {
+      return { status: 409, body: { error: error.message } };
+    }
+    throw error;
+  }
+}
+
+async function handleInboundFaxActionRequestCore(
+  deps: InboundFaxEndpointDeps,
+  input: {
+    authHeader: string | undefined;
+    faxId: unknown;
+    action: "attach" | "promote" | "inbox";
+    body: unknown;
+  },
+): Promise<InboundFaxEndpointResult> {
   const authorized = await authorizeInboundFax(deps, input.authHeader);
   if ("result" in authorized) {
     return {
@@ -81,6 +107,7 @@ export async function handleInboundFaxActionRequest(
     }
     const document = await triage.routeToInbox(
       documentReference,
+      authorized.staff.staffReference,
       authorized.staff.actorRole,
     );
     return { status: 200, body: { documentReference: referenceOf(document) } };
@@ -93,11 +120,21 @@ export async function handleInboundFaxActionRequest(
         body: { error: parsed.error.issues[0]?.message ?? "Invalid inbound fax attachment." },
       };
     }
+    const patientWrite = await authorizePatientWrite(
+      deps,
+      authorized.staff,
+      parsed.data.patientReference,
+    );
+    if (patientWrite) return patientWrite;
+    const actorRole = resolveBusinessActionRole(
+      authorized.staff.roles ?? [authorized.staff.actorRole],
+      "chart.write",
+    )!;
     const document = await triage.attach({
       faxDocumentReference: documentReference,
       patientReference: parsed.data.patientReference,
       actorReference: authorized.staff.staffReference,
-      actorRole: authorized.staff.actorRole,
+      actorRole,
     });
     return { status: 200, body: { documentReference: referenceOf(document) } };
   }
@@ -108,11 +145,21 @@ export async function handleInboundFaxActionRequest(
       body: { error: parsed.error.issues[0]?.message ?? "Invalid inbound referral promotion." },
     };
   }
+  const patientWrite = await authorizePatientWrite(
+    deps,
+    authorized.staff,
+    parsed.data.patientReference,
+  );
+  if (patientWrite) return patientWrite;
+  const actorRole = resolveBusinessActionRole(
+    authorized.staff.roles ?? [authorized.staff.actorRole],
+    "chart.write",
+  )!;
   const promoted = await triage.promote({
     faxDocumentReference: documentReference,
     ...parsed.data,
     actorReference: authorized.staff.staffReference,
-    actorRole: authorized.staff.actorRole,
+    actorRole,
   });
   return {
     status: 200,
@@ -144,7 +191,10 @@ export async function handleInboundFaxDocumentRequest(
   const pdf = await new InboundFaxTriageService(
     deps.serviceFhir,
     deps.now,
-  ).pdf(`DocumentReference/${faxId.data}`);
+  ).pdf(`DocumentReference/${faxId.data}`, {
+    actorReference: authorized.staff.staffReference,
+    actorRole: authorized.staff.actorRole,
+  });
   return {
     status: 200,
     contentType: pdf.contentType,
@@ -169,7 +219,7 @@ async function authorizeInboundFax(
       },
     };
   }
-  if (!["practice-admin", "clinician", "front-desk"].includes(staff.actorRole)) {
+  if (!INBOUND_FAX_TRIAGE_ROLES.includes(staff.actorRole)) {
     return {
       result: {
         status: 403,
@@ -178,6 +228,28 @@ async function authorizeInboundFax(
     };
   }
   return { staff };
+}
+
+async function authorizePatientWrite(
+  deps: InboundFaxEndpointDeps,
+  staff: NonNullable<Awaited<ReturnType<InboundFaxEndpointDeps["authenticate"]>>>,
+  patientReference: string,
+): Promise<InboundFaxEndpointResult | undefined> {
+  const writeRole = resolveBusinessActionRole(staff.roles ?? [staff.actorRole], "chart.write");
+  if (!writeRole) {
+    return { status: 403, body: { error: "chart.write role required for patient fax triage." } };
+  }
+  const memberships = await deps.serviceFhir.search<ProjectMembership>("ProjectMembership", {
+    profile: staff.staffReference,
+  });
+  const membership = memberships.entry?.[0]?.resource;
+  if (!membership || !hasPatientCompartmentGrant(membership, patientReference)) {
+    return {
+      status: 403,
+      body: { error: "The requested patient is outside the staff member's patient compartment." },
+    };
+  }
+  return undefined;
 }
 
 function referenceOf(resource: Pick<Resource, "resourceType" | "id">): string {

@@ -1,5 +1,6 @@
 export const WESTFAX_BASE_URL = "https://api2.westfax.com";
 export const WESTFAX_REQUEST_TIMEOUT_MS = 30_000;
+export const WESTFAX_INBOUND_BATCH_SIZE = 25;
 
 export interface WestFaxConfig {
   baseUrl: string;
@@ -216,72 +217,77 @@ export function createWestFaxAdapter(
 
     async getFaxDescriptions(productId, faxIds) {
       if (!faxIds.length) return [];
-      const form = authForm(config, productId);
-      addFaxIds(form, faxIds);
-      const raw = await successfulWestFaxCall(
-        fetchImpl,
-        baseUrl,
-        "Fax_GetFaxDescriptionsUsingIds",
-        form,
-      );
-      return resultArray(raw).flatMap((value) => {
-        const row = objectValue(value);
-        const id = stringValue(row?.Id);
-        if (!id || row?.Direction !== "Inbound") return [];
-        const call = Array.isArray(row.FaxCallInfoList)
-          ? objectValue(row.FaxCallInfoList[0])
-          : undefined;
-        const senderNumber = stringValue(call?.OrigNumber);
-        const pageCount = integerValue(row.PageCount);
-        return [{
-          id,
-          direction: "Inbound" as const,
-          ...(stringValue(row.Date) ? { date: stringValue(row.Date) } : {}),
-          ...(stringValue(row.Tag) ? { tag: stringValue(row.Tag) } : {}),
-          ...(pageCount !== undefined ? { pageCount } : {}),
-          ...(senderNumber ? { senderNumber } : {}),
-          ...(stringValue(row.Reference) ? { reference: stringValue(row.Reference) } : {}),
-        }];
-      });
+      const descriptions: WestFaxFaxDescription[] = [];
+      for (const batch of batches(faxIds, WESTFAX_INBOUND_BATCH_SIZE)) {
+        const form = authForm(config, productId);
+        addFaxIds(form, batch);
+        const raw = await successfulWestFaxCall(
+          fetchImpl,
+          baseUrl,
+          "Fax_GetFaxDescriptionsUsingIds",
+          form,
+        );
+        descriptions.push(...resultArray(raw).flatMap((value) => {
+          const row = objectValue(value);
+          const id = stringValue(row?.Id);
+          if (!id || row?.Direction !== "Inbound") return [];
+          const call = Array.isArray(row.FaxCallInfoList)
+            ? objectValue(row.FaxCallInfoList[0])
+            : undefined;
+          const senderNumber = stringValue(call?.OrigNumber);
+          const pageCount = integerValue(row.PageCount);
+          return [{
+            id,
+            direction: "Inbound" as const,
+            ...(stringValue(row.Date) ? { date: stringValue(row.Date) } : {}),
+            ...(stringValue(row.Tag) ? { tag: stringValue(row.Tag) } : {}),
+            ...(pageCount !== undefined ? { pageCount } : {}),
+            ...(senderNumber ? { senderNumber } : {}),
+            ...(stringValue(row.Reference) ? { reference: stringValue(row.Reference) } : {}),
+          }];
+        }));
+      }
+      return descriptions;
     },
 
     async getFaxDocuments(productId, faxIds, format) {
       if (!faxIds.length) return [];
-      const form = authForm(config, productId);
-      addFaxIds(form, faxIds);
-      form.set("Format", format);
-      const raw = await successfulWestFaxCall(
-        fetchImpl,
-        baseUrl,
-        "Fax_GetFaxDocuments",
-        form,
-      );
-      return resultArray(raw).flatMap((value) => {
-        const row = objectValue(value);
-        const id = stringValue(row?.Id);
-        const file = Array.isArray(row?.FaxFiles)
-          ? objectValue(row.FaxFiles[0])
-          : undefined;
-        const fileContents = stringValue(file?.FileContents);
-        if (
-          !id
-          || row?.Direction !== "Inbound"
-          || file?.ContentType !== "application/pdf"
-          || !fileContents
-        ) {
-          return [];
-        }
-        const pageCount = integerValue(row.PageCount);
-        return [{
-          id,
-          direction: "Inbound" as const,
-          ...(stringValue(row.Date) ? { date: stringValue(row.Date) } : {}),
-          ...(stringValue(row.Tag) ? { tag: stringValue(row.Tag) } : {}),
-          ...(pageCount !== undefined ? { pageCount } : {}),
-          contentType: "application/pdf" as const,
-          fileContents,
-        }];
-      });
+      const documents: WestFaxFaxDocument[] = [];
+      for (const batch of batches(faxIds, WESTFAX_INBOUND_BATCH_SIZE)) {
+        const form = authForm(config, productId);
+        addFaxIds(form, batch);
+        form.set("Format", format);
+        const raw = await successfulWestFaxCall(
+          fetchImpl,
+          baseUrl,
+          "Fax_GetFaxDocuments",
+          form,
+        );
+        documents.push(...resultArray(raw).flatMap((value) => {
+          const row = objectValue(value);
+          const id = stringValue(row?.Id);
+          if (!id || row?.Direction !== "Inbound") return [];
+          if (!Array.isArray(row.FaxFiles) || row.FaxFiles.length !== 1) {
+            throw new Error(
+              `WestFax fax ${id} must contain exactly one PDF file; received ${Array.isArray(row.FaxFiles) ? row.FaxFiles.length : 0}.`,
+            );
+          }
+          const file = objectValue(row.FaxFiles[0]);
+          const fileContents = stringValue(file?.FileContents);
+          if (file?.ContentType !== "application/pdf" || !fileContents) return [];
+          const pageCount = integerValue(row.PageCount);
+          return [{
+            id,
+            direction: "Inbound" as const,
+            ...(stringValue(row.Date) ? { date: stringValue(row.Date) } : {}),
+            ...(stringValue(row.Tag) ? { tag: stringValue(row.Tag) } : {}),
+            ...(pageCount !== undefined ? { pageCount } : {}),
+            contentType: "application/pdf" as const,
+            fileContents,
+          }];
+        }));
+      }
+      return documents;
     },
 
     async changeFaxFilterValue(productId, faxIds, filter) {
@@ -318,6 +324,14 @@ function addFaxIds(form: FormData, faxIds: WestFaxFaxIdentifier[]): void {
       Direction: faxId.direction,
     }));
   });
+}
+
+function batches<T>(values: readonly T[], size: number): T[][] {
+  const result: T[][] = [];
+  for (let index = 0; index < values.length; index += size) {
+    result.push(values.slice(index, index + size));
+  }
+  return result;
 }
 
 async function successfulWestFaxCall(

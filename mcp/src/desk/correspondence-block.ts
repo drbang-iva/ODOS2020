@@ -151,6 +151,7 @@ export async function loadCorrespondenceDeskBlock(
       }];
     }),
   ];
+  const inboundFaxCount = items.filter((item) => item.kind === "inbound-fax").length;
   return {
     draftsAwaitingSignature: {
       value: drafts.length,
@@ -165,8 +166,8 @@ export async function loadCorrespondenceDeskBlock(
       tone: sendFailures.length ? "alert" : "ok",
     },
     inboundFaxes: {
-      value: inboundFaxes.length,
-      tone: inboundFaxes.length ? "warn" : "ok",
+      value: inboundFaxCount,
+      tone: inboundFaxCount ? "warn" : "ok",
     },
     items,
   };
