@@ -650,9 +650,10 @@ test("Dry Eye finds the active bound session when unrelated patient Procedures e
     status: "in-progress",
     subject: { reference: "Patient/test-patient" },
     encounter: { reference: "Encounter/encounter-1" },
+    code: { coding: [{ system: SERIES_PROCEDURE_TYPE_SYSTEM, code: DRY_EYE_PROCEDURE_STABLE_KEYS.ipl }] },
     basedOn: [{ reference: "CarePlan/care-plan-1" }],
     identifier: [{
-      system: "https://odos2020.com/fhir/Identifier/dry-eye-treatment-session",
+      system: DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM,
       value: "CarePlan/care-plan-1:4-of-4",
     }],
   });
@@ -779,13 +780,18 @@ test("Dry Eye fails closed when one CarePlan has multiple active bound sessions"
     id: "care-plan-1",
     encounter: { reference: "Encounter/encounter-1" },
   } satisfies CarePlan;
-  const activeSessions: Procedure[] = ["active-1", "active-2"].map((id) => ({
+  const activeSessions: Procedure[] = ["active-1", "active-2"].map((id, index) => ({
     resourceType: "Procedure",
     id,
     status: "in-progress",
     subject: { reference: "Patient/test-patient" },
     encounter: { reference: "Encounter/encounter-1" },
+    code: { coding: [{ system: SERIES_PROCEDURE_TYPE_SYSTEM, code: DRY_EYE_PROCEDURE_STABLE_KEYS.ipl }] },
     basedOn: [{ reference: "CarePlan/care-plan-1" }],
+    identifier: [{
+      system: DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM,
+      value: `CarePlan/care-plan-1:${index + 1}-of-4`,
+    }],
   }));
   await withDryEyeEncounterRoute({
     carePlans: [carePlan],
@@ -803,6 +809,59 @@ test("Dry Eye fails closed when one CarePlan has multiple active bound sessions"
     assert.equal(response.status, 409);
     assert.match((await response.json() as { error: string }).error, /2 active IPL sessions/);
     assert.equal(created.length, 0);
+  });
+});
+
+test("Dry Eye ignores malformed active Procedures bound to a canonical CarePlan", async () => {
+  const { protocol } = dryEyeProtocolFixture();
+  const carePlan = {
+    ...buildSeriesCarePlan({
+      protocol,
+      patientReference: "Patient/test-patient",
+      authorReference: "Practitioner/provider-1",
+    }),
+    id: "care-plan-1",
+    encounter: { reference: "Encounter/encounter-1" },
+  } satisfies CarePlan;
+  const malformedProcedures: Procedure[] = [{
+    resourceType: "Procedure",
+    id: "missing-session-identifier",
+    status: "in-progress",
+    subject: { reference: "Patient/test-patient" },
+    encounter: { reference: "Encounter/encounter-1" },
+    code: { coding: [{ system: SERIES_PROCEDURE_TYPE_SYSTEM, code: DRY_EYE_PROCEDURE_STABLE_KEYS.ipl }] },
+    basedOn: [{ reference: "CarePlan/care-plan-1" }],
+  }, {
+    resourceType: "Procedure",
+    id: "wrong-procedure-type",
+    status: "in-progress",
+    subject: { reference: "Patient/test-patient" },
+    encounter: { reference: "Encounter/encounter-1" },
+    code: { coding: [{ code: "other" }] },
+    basedOn: [{ reference: "CarePlan/care-plan-1" }],
+    identifier: [{
+      system: DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM,
+      value: "CarePlan/care-plan-1:1-of-4",
+    }],
+  }];
+  await withDryEyeEncounterRoute({
+    carePlans: [carePlan],
+    procedureSearch: (params) => params["based-on"]
+      ? {
+          resourceType: "Bundle",
+          type: "searchset",
+          total: 2,
+          entry: malformedProcedures.map((resource) => ({ resource })),
+        }
+      : { resourceType: "Bundle", type: "searchset", total: 0 },
+  }, async ({ endpoint, headers, created }) => {
+    const read = await fetch(endpoint, { headers });
+    assert.equal(read.status, 200);
+    assert.equal((await read.json() as { currentSession: unknown }).currentSession, null);
+
+    const write = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+    assert.equal(write.status, 201);
+    assert.deepEqual(created.map((resource) => resource.resourceType), ["Procedure", "Provenance"]);
   });
 });
 

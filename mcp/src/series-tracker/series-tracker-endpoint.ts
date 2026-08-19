@@ -237,7 +237,9 @@ async function encounterSeries(
   }
 
   const carePlanReference = `CarePlan/${carePlan.id}`;
-  const activeBoundProcedures = boundProcedures.filter(isActiveProcedure);
+  const activeBoundProcedures = boundProcedures.filter((procedure) =>
+    procedureMatchesBoundSession(procedure, carePlan, patientReference, carePlanReference)
+  );
   if (activeBoundProcedures.length > 1) {
     return {
       status: 409,
@@ -558,14 +560,33 @@ function procedureMatchesConditionalSession(
   carePlanReference: string,
   sessionIdentifier: string,
 ): boolean {
-  return isActiveProcedure(procedure)
-    && procedure.subject.reference === patientReference
+  return procedureMatchesBoundSession(procedure, carePlan, patientReference, carePlanReference)
     && procedure.encounter?.reference === encounterReference
-    && procedure.basedOn?.some((reference) => reference.reference === carePlanReference) === true
     && procedure.identifier?.some((identifier) =>
       identifier.system === DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM
       && identifier.value === sessionIdentifier
-    ) === true
+    ) === true;
+}
+
+function procedureMatchesBoundSession(
+  procedure: Procedure,
+  carePlan: CarePlan,
+  patientReference: string,
+  carePlanReference: string,
+): boolean {
+  const position = sessionPosition(procedure);
+  const sessionIdentifier = procedure.identifier?.find((identifier) =>
+    identifier.system === DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM
+  )?.value;
+  const totalSessions = carePlan.activity?.length ?? 0;
+  return isActiveProcedure(procedure)
+    && procedure.subject.reference === patientReference
+    && procedure.basedOn?.some((reference) => reference.reference === carePlanReference) === true
+    && sessionIdentifier?.startsWith(`${carePlanReference}:`) === true
+    && position !== undefined
+    && position.number >= 1
+    && position.number <= totalSessions
+    && position.total === totalSessions
     && procedureMatchesCarePlan(procedure, carePlan);
 }
 
