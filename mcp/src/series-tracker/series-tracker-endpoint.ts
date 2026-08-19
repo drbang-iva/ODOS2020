@@ -96,7 +96,7 @@ async function encounterSeries(
       body: { error: `Could not verify all active ${protocol.name} CarePlans. No session was created.` },
     };
   }
-  const matchingCarePlans = (
+  const scopedCarePlans = (
     await Promise.all(patientCarePlans.map(async (carePlan) =>
       await carePlanMatchesSeriesScope(
         staff.fhir,
@@ -104,11 +104,16 @@ async function encounterSeries(
         encounter,
         patientReference,
         protocol.planDefinitionCanonical,
+        recordSession ? ["active"] : ["active", "completed"],
       )
         ? [carePlan]
         : []
     ))
   ).flat();
+  const activeCarePlans = scopedCarePlans.filter((carePlan) => carePlan.status === "active");
+  const matchingCarePlans = activeCarePlans.length > 0
+    ? activeCarePlans
+    : scopedCarePlans.filter((carePlan) => carePlan.status === "completed");
   if (matchingCarePlans.length > 1) {
     return {
       status: 409,
@@ -567,8 +572,9 @@ async function carePlanMatchesSeriesScope(
   encounter: Encounter,
   patientReference: string,
   planDefinitionCanonical: string,
+  allowedStatuses: readonly CarePlan["status"][] = ["active"],
 ): Promise<boolean> {
-  return carePlan.status === "active"
+  return allowedStatuses.includes(carePlan.status)
     && carePlan.subject?.reference === patientReference
     && carePlan.instantiatesCanonical?.includes(planDefinitionCanonical) === true
     && await resourceIsInEncounterScope(fhir, carePlan, encounter);

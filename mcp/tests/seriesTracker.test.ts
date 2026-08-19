@@ -813,6 +813,60 @@ test("Dry Eye finds the active bound session when unrelated patient Procedures e
   });
 });
 
+test("Dry Eye reloads a completed canonical series with no sessions remaining", async () => {
+  const { protocol } = dryEyeProtocolFixture();
+  const carePlan = {
+    ...buildSeriesCarePlan({
+      protocol,
+      patientReference: "Patient/test-patient",
+      authorReference: "Practitioner/provider-1",
+      created: "2026-08-19T15:00:00.000Z",
+    }),
+    id: "completed-care-plan",
+    status: "completed",
+    encounter: { reference: "Encounter/encounter-1" },
+  } satisfies CarePlan;
+  const completedProcedures: Procedure[] = carePlan.activity!.map((activity, index) => {
+    const number = index + 1;
+    activity.detail!.status = "completed";
+    activity.outcomeReference = [{ reference: `Procedure/completed-session-${number}` }];
+    return {
+      resourceType: "Procedure",
+      id: `completed-session-${number}`,
+      status: "completed",
+      subject: { reference: "Patient/test-patient" },
+      encounter: { reference: "Encounter/encounter-1" },
+      basedOn: [{ reference: "CarePlan/completed-care-plan" }],
+      performedDateTime: `2026-0${number + 4}-01T15:00:00.000Z`,
+    };
+  });
+  await withDryEyeEncounterRoute({
+    carePlans: [carePlan],
+    procedureSearch: (params) => params["based-on"] === "CarePlan/completed-care-plan"
+      ? {
+          resourceType: "Bundle",
+          type: "searchset",
+          total: completedProcedures.length,
+          entry: completedProcedures.map((resource) => ({ resource })),
+        }
+      : { resourceType: "Bundle", type: "searchset", total: 0 },
+  }, async ({ endpoint, headers, created }) => {
+    const response = await fetch(endpoint, { headers });
+    const body = await response.json() as {
+      series: { status: string; sessions: Array<{ status: string }> } | null;
+      currentSession: null;
+      remainingSessions: number;
+    };
+
+    assert.equal(response.status, 200);
+    assert.equal(body.series?.status, "completed");
+    assert.equal(body.series?.sessions.filter((session) => session.status === "completed").length, 4);
+    assert.equal(body.currentSession, null);
+    assert.equal(body.remainingSessions, 0);
+    assert.equal(created.length, 0);
+  });
+});
+
 test("Dry Eye refuses to create a session in a finished EpisodeOfCare program", async () => {
   await withDryEyeEncounterRoute({
     episodeStatus: "finished",
