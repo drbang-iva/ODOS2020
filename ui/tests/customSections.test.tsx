@@ -350,6 +350,42 @@ test("Dry Eye treatment series survives a navigate-away-and-back round trip", as
   }
 });
 
+test("Dry Eye disables series creation when the server reports a clinical conflict", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input) => {
+    const url = String(input);
+    if (url.includes("/clinical-graph/custom/dry-eye%3Asymptoms/history")) {
+      return jsonResponse({ rows: [] });
+    }
+    if (url.includes("/series-tracker/encounters/e1/series/dry-eye-ipl")) {
+      return jsonResponse({ error: "3 legacy IPL series conflict in this program." }, 409);
+    }
+    throw new Error(`Unexpected Dry Eye request: ${url}`);
+  }) as typeof fetch;
+
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    await act(async () => {
+      renderer = create(
+        <DryEyeSection
+          patientReference="Patient/p1"
+          encounterReference="Encounter/e1"
+          onSaved={() => undefined}
+        />,
+      );
+      await flushEffects();
+    });
+
+    assert.match(JSON.stringify(renderer.toJSON()), /3 legacy IPL series conflict in this program/);
+    const start = renderer.root.findAllByType("button").find((button) => button.children.includes("Start IPL"));
+    assert.ok(start);
+    assert.equal(start.props.disabled, true);
+  } finally {
+    if (renderer) act(() => renderer!.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("Eye Growth is default-visible for paediatric patients independent of reference-band coverage", async () => {
   const paediatric = renderToStaticMarkup(
     <SpineNav
@@ -3549,8 +3585,8 @@ function anteriorGradeDefinitions() {
   }];
 }
 
-function jsonResponse(body: unknown): Response {
-  return new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } });
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 }
 
 async function flushEffects(): Promise<void> {

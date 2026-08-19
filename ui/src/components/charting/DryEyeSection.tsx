@@ -72,6 +72,7 @@ export function DryEyeSection({ patientReference, encounterReference, onSaved }:
   const [status, setStatus] = useState<SectionSaveStatus | null>(null);
   const [series, setSeries] = useState<EncounterSeriesState>();
   const [seriesLoading, setSeriesLoading] = useState(true);
+  const [seriesBlocked, setSeriesBlocked] = useState(false);
   const [productText, setProductText] = useState<string>(PRODUCT_OPTIONS[0].text);
   const [adverseEventText, setAdverseEventText] = useState("");
   const questionnaireDraft = questionnaireDrafts[instrument];
@@ -120,12 +121,19 @@ export function DryEyeSection({ patientReference, encounterReference, onSaved }:
     let cancelled = false;
     setSeries(undefined);
     setSeriesLoading(true);
+    setSeriesBlocked(false);
     fetchEncounterSeries(encounterReference, IPL_SERIES_PROTOCOL_ID)
       .then((value) => {
-        if (!cancelled) setSeries(value);
+        if (!cancelled) {
+          setSeries(value);
+          setSeriesBlocked(false);
+        }
       })
       .catch((caught) => {
-        if (!cancelled) setError(caught instanceof Error ? caught.message : String(caught));
+        if (!cancelled) {
+          setSeriesBlocked(true);
+          setError(caught instanceof Error ? caught.message : String(caught));
+        }
       })
       .finally(() => {
         if (!cancelled) setSeriesLoading(false);
@@ -201,10 +209,12 @@ export function DryEyeSection({ patientReference, encounterReference, onSaved }:
     try {
       const saved = await recordEncounterSeriesSession(encounterReference, IPL_SERIES_PROTOCOL_ID);
       setSeries(saved);
+      setSeriesBlocked(false);
       markSaved(saved.currentSession
         ? `IPL ${saved.currentSession.number}/${saved.currentSession.total}`
         : "IPL series active");
     } catch (err) {
+      setSeriesBlocked(true);
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setBusy(null);
@@ -375,7 +385,7 @@ export function DryEyeSection({ patientReference, encounterReference, onSaved }:
               </div>
               <button
                 onClick={saveIplSeries}
-                disabled={busy !== null || seriesLoading || Boolean(series?.currentSession)}
+                disabled={busy !== null || seriesLoading || seriesBlocked || Boolean(series?.currentSession)}
                 className="mt-3 w-full rounded border border-brand/60 bg-brand/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand/25 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {busy === "series"
