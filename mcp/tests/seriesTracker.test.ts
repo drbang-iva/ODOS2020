@@ -581,6 +581,44 @@ test("Dry Eye refuses to adopt a legacy session from another encounter", async (
   });
 });
 
+test("Dry Eye ignores a completed legacy parent after a canonical series exists", async () => {
+  const { protocol } = dryEyeProtocolFixture();
+  const carePlan = {
+    ...buildSeriesCarePlan({
+      protocol,
+      patientReference: "Patient/test-patient",
+      authorReference: "Practitioner/provider-1",
+    }),
+    id: "care-plan-1",
+    encounter: { reference: "Encounter/encounter-1" },
+  } satisfies CarePlan;
+  const historicalParent: Procedure = {
+    resourceType: "Procedure",
+    id: "historical-legacy-parent",
+    status: "completed",
+    subject: { reference: "Patient/test-patient" },
+    encounter: { reference: "Encounter/encounter-1" },
+    code: { coding: [{ code: "IPL" }] },
+    note: [{ text: "4-session dry-eye treatment series" }],
+  };
+  await withDryEyeEncounterRoute({
+    carePlans: [carePlan],
+    procedureSearch: (params) => params["based-on"]
+      ? { resourceType: "Bundle", type: "searchset", total: 0 }
+      : {
+          resourceType: "Bundle",
+          type: "searchset",
+          total: 1,
+          entry: [{ resource: historicalParent }],
+        },
+  }, async ({ endpoint, headers, created }) => {
+    const response = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+
+    assert.equal(response.status, 201);
+    assert.deepEqual(created.map((resource) => resource.resourceType), ["Procedure", "Provenance"]);
+  });
+});
+
 test("Dry Eye finds the active bound session when unrelated patient Procedures exceed one page", async () => {
   const { protocol } = dryEyeProtocolFixture();
   const carePlan = {

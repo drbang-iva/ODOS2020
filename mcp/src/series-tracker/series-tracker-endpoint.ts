@@ -155,7 +155,8 @@ async function encounterSeries(
         ))
       ).flat()
     : [];
-  if (recordSession && legacyParent && legacyAdoptable.length !== 1) {
+  if (recordSession && legacyParent
+    && ((matchingCarePlans.length === 0 && legacyAdoptable.length !== 1) || legacyAdoptable.length > 1)) {
     return {
       status: 409,
       body: {
