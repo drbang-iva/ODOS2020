@@ -258,6 +258,11 @@ async function encounterSeries(
     }
   }
   const resolvedNumber = currentSession ? sessionPosition(currentSession)?.number ?? sessionNumber : sessionNumber;
+  const consumedSessionCount = currentSession
+    ? resolvedNumber
+    : activeBoundProcedure
+      ? sessionPosition(activeBoundProcedure)?.number ?? sessionNumber
+      : completedCount;
   return {
     status: createdCarePlan || createdSession ? 201 : 200,
     body: {
@@ -267,10 +272,7 @@ async function encounterSeries(
         total: protocol.sessionCount,
         procedureReference: `Procedure/${currentSession.id}`,
       } : null,
-      remainingSessions: Math.max(
-        0,
-        protocol.sessionCount - (currentSession ? resolvedNumber : completedCount),
-      ),
+      remainingSessions: Math.max(0, protocol.sessionCount - consumedSessionCount),
     },
   };
 }

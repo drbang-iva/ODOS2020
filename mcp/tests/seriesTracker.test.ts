@@ -377,7 +377,16 @@ test("Dry Eye sheet round-trip conditionally creates one canonical CarePlan and 
       display: "IPL (OptiLight-class)",
     });
 
-    const sameProgram = await fetch(endpoint.replace("encounter-1", "encounter-2"), {
+    const otherEncounter = endpoint.replace("encounter-1", "encounter-2");
+    const crossEncounter = await fetch(otherEncounter, { headers });
+    assert.equal(crossEncounter.status, 200);
+    assert.deepEqual(await crossEncounter.json(), {
+      series: body.series,
+      currentSession: null,
+      remainingSessions: 3,
+    });
+
+    const sameProgram = await fetch(otherEncounter, {
       method: "POST",
       headers,
       body: "{}",
