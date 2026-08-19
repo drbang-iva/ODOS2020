@@ -98,9 +98,13 @@ async function encounterSeries(
   }
   const matchingCarePlans = (
     await Promise.all(patientCarePlans.map(async (carePlan) =>
-      carePlan.status === "active"
-      && carePlan.instantiatesCanonical?.includes(protocol.planDefinitionCanonical)
-      && await resourceIsInEncounterScope(staff.fhir, carePlan, encounter)
+      await carePlanMatchesSeriesScope(
+        staff.fhir,
+        carePlan,
+        encounter,
+        patientReference,
+        protocol.planDefinitionCanonical,
+      )
         ? [carePlan]
         : []
     ))
@@ -195,6 +199,18 @@ async function encounterSeries(
     });
     carePlan = outcome.resource;
     createdCarePlan = outcome.created;
+    if (!createdCarePlan && !await carePlanMatchesSeriesScope(
+      staff.fhir,
+      carePlan,
+      encounter,
+      patientReference,
+      protocol.planDefinitionCanonical,
+    )) {
+      return {
+        status: 409,
+        body: { error: `Conditional create returned a CarePlan that is not an active ${protocol.name} series in this program.` },
+      };
+    }
     if (!createdCarePlan && carePlan.id) {
       boundProcedures = await loadBoundProcedures(staff.fhir, patientReference, `CarePlan/${carePlan.id}`);
       if (!boundProcedures) {
@@ -500,6 +516,19 @@ function loadBoundProcedures(
   });
 }
 
+async function carePlanMatchesSeriesScope(
+  fhir: Pick<MedplumClient, "read">,
+  carePlan: CarePlan,
+  encounter: Encounter,
+  patientReference: string,
+  planDefinitionCanonical: string,
+): Promise<boolean> {
+  return carePlan.status === "active"
+    && carePlan.subject?.reference === patientReference
+    && carePlan.instantiatesCanonical?.includes(planDefinitionCanonical) === true
+    && await resourceIsInEncounterScope(fhir, carePlan, encounter);
+}
+
 async function searchCompleteResources<T extends Resource>(
   fhir: Pick<MedplumClient, "search">,
   resourceType: T["resourceType"],
@@ -594,7 +623,7 @@ function sessionPosition(procedure: Procedure): { number: number; total: number 
 }
 
 async function resourceIsInEncounterScope(
-  fhir: SeriesTrackerStaff["fhir"],
+  fhir: Pick<MedplumClient, "read">,
   resource: CarePlan | Procedure,
   encounter: Encounter,
 ): Promise<boolean> {

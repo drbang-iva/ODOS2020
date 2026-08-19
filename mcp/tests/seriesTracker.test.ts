@@ -14,6 +14,7 @@ import {
   buildSeriesCarePlan,
   buildSeriesTrackerView,
   completeNextSeriesSession,
+  SERIES_CARE_PLAN_SOURCE_IDENTIFIER_SYSTEM,
 } from "../src/series-tracker/series-care-plan.js";
 import { registerSeriesTrackerRoutes } from "../src/series-tracker/series-tracker-endpoint.js";
 import {
@@ -787,6 +788,41 @@ test("Dry Eye rejects a conditional session won concurrently by another encounte
   });
 });
 
+test("Dry Eye validates a CarePlan returned by conditional create", async () => {
+  const { protocol } = dryEyeProtocolFixture();
+  const conditionalCarePlan = {
+    ...buildSeriesCarePlan({
+      protocol,
+      patientReference: "Patient/test-patient",
+      authorReference: "Practitioner/provider-1",
+    }),
+    id: "inactive-care-plan",
+    encounter: { reference: "Encounter/encounter-1" },
+    identifier: [{
+      system: SERIES_CARE_PLAN_SOURCE_IDENTIFIER_SYSTEM,
+      value: "EpisodeOfCare/dry-eye-program:dry-eye-ipl",
+    }],
+  } satisfies CarePlan;
+  const invalidWinners: Array<[string, CarePlan]> = [
+    ["inactive", { ...conditionalCarePlan, status: "completed" }],
+    ["wrong patient", { ...conditionalCarePlan, subject: { reference: "Patient/other" } }],
+    ["wrong canonical", { ...conditionalCarePlan, instantiatesCanonical: ["https://example.test/PlanDefinition/other"] }],
+    ["wrong scope", { ...conditionalCarePlan, encounter: undefined }],
+  ];
+  for (const [label, carePlan] of invalidWinners) {
+    await withDryEyeEncounterRoute({
+      conditionalMatches: [carePlan],
+      procedureSearch: () => ({ resourceType: "Bundle", type: "searchset", total: 0 }),
+    }, async ({ endpoint, headers, created }) => {
+      const response = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+
+      assert.equal(response.status, 409, label);
+      assert.match((await response.json() as { error: string }).error, /active IPL series/, label);
+      assert.equal(created.length, 0, label);
+    });
+  }
+});
+
 function dryEyeProtocolFixture() {
   const draft: SeriesProtocolDefinitionDraft = {
     id: "dry-eye-ipl",
@@ -822,6 +858,7 @@ async function withDryEyeEncounterRoute(
     carePlans?: CarePlan[];
     carePlanSearch?(params: Record<string, string>): Bundle<CarePlan>;
     episodeStatus?: EpisodeOfCare["status"];
+    conditionalMatches?: Resource[];
     existingProcedures?: Procedure[];
     procedureSearch(params: Record<string, string>): Bundle<Procedure>;
   },
@@ -833,7 +870,7 @@ async function withDryEyeEncounterRoute(
 ): Promise<void> {
   const { plan } = dryEyeProtocolFixture();
   const created: Resource[] = [];
-  const existingProcedures = input.existingProcedures ?? [];
+  const conditionalMatches = [...(input.conditionalMatches ?? []), ...(input.existingProcedures ?? [])];
   const staffFhir = {
     async read<T extends Resource>(resourceType: T["resourceType"]): Promise<T> {
       if (resourceType === "EpisodeOfCare") {
@@ -867,8 +904,8 @@ async function withDryEyeEncounterRoute(
     },
     async create<T extends Resource>(resource: T, headers: Record<string, string> = {}): Promise<T> {
       const conditional = headers["If-None-Exist"]?.match(/^identifier=([^|]+)\|(.+)$/);
-      const existing = conditional && existingProcedures.find((candidate) =>
-        candidate.identifier?.some((identifier) =>
+      const existing = conditional && conditionalMatches.find((candidate) =>
+        "identifier" in candidate && candidate.identifier?.some((identifier) =>
           identifier.system === conditional[1] && identifier.value === conditional[2]
         )
       );
