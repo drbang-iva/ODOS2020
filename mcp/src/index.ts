@@ -33,8 +33,9 @@ import { isIP } from "node:net";
 import { z } from "zod";
 import { createMedplumClient, type JsonPatchOperation } from "./fhir-client.js";
 import { searchAll, searchProjectAll } from "./fhir-search.js";
-import { createLiveOdosAuditRuntime, type LiveAuditQueryFilters } from "./authz/liveAudit.js";
+import { createLiveOdosAuditRuntime } from "./authz/liveAudit.js";
 import { handleDocumentPrintAuditRequest } from "./authz/documentPrintAuditEndpoint.js";
+import { createAuditEventsGetHandler } from "./authz/audit-events-endpoint.js";
 import {
   logProtocolSeedBootFailure,
   logPracticeRoleBootVerification,
@@ -43,12 +44,9 @@ import {
 import {
   buildOdosAuditEventRow,
   type OdosAuditEventRecord,
-  type OdosAuditEventType,
 } from "./authz/odosAudit.js";
 import {
-  PRACTICE_ROLE_IDS,
   ODOS_PRACTICE_ROLE_SYSTEM,
-  assertBusinessActionAllowed,
   getRoleDeclaration,
   resolveBusinessActionRole,
   type BusinessAction,
@@ -5548,156 +5546,6 @@ function enforceSseTlsGate(host: string): void {
   }
 }
 
-function auditRouteRole(req: express.Request): PracticeRoleId | undefined {
-  const raw = req.header("X-ODOS-Role") ?? auditRouteString(req, "role");
-  return PRACTICE_ROLE_IDS.includes(raw as PracticeRoleId) ? (raw as PracticeRoleId) : undefined;
-}
-
-function auditRouteFilters(req: express.Request): LiveAuditQueryFilters {
-  const eventTypeValues = auditRouteStringList(req, "event_type", "eventTypes");
-  return {
-    patientId: auditRouteString(req, "patient_id", "patientId"),
-    actorId: auditRouteString(req, "actor_id", "actorId"),
-    from: auditRouteString(req, "from"),
-    to: auditRouteString(req, "to"),
-    eventTypes: eventTypeValues.filter((value): value is OdosAuditEventType =>
-      isOdosAuditEventType(value),
-    ),
-    outcome: auditRouteOutcome(req),
-    breakGlassOnly: auditRouteBoolean(req, "break_glass_only", "breakGlassOnly"),
-    limit: auditRouteNumber(req, "limit"),
-  };
-}
-
-function auditRouteString(
-  req: express.Request,
-  ...names: string[]
-): string | undefined {
-  for (const name of names) {
-    const value = req.query[name];
-    const raw = Array.isArray(value) ? value[0] : value;
-    if (typeof raw === "string" && raw.trim()) {
-      return raw.trim();
-    }
-  }
-  return undefined;
-}
-
-function auditRouteStringList(req: express.Request, ...names: string[]): string[] {
-  return names.flatMap((name) => {
-    const value = req.query[name];
-    const values = Array.isArray(value) ? value : [value];
-    return values.flatMap((item) =>
-      typeof item === "string"
-        ? item.split(",").map((part) => part.trim()).filter(Boolean)
-        : [],
-    );
-  });
-}
-
-function auditRouteBoolean(req: express.Request, ...names: string[]): boolean {
-  const value = auditRouteString(req, ...names);
-  return value === "1" || value === "true";
-}
-
-function auditRouteNumber(req: express.Request, name: string): number | undefined {
-  const value = auditRouteString(req, name);
-  if (!value) {
-    return undefined;
-  }
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
-}
-
-function auditRouteOutcome(req: express.Request): "granted" | "denied" | undefined {
-  const value = auditRouteString(req, "outcome", "actionOutcome");
-  return value === "granted" || value === "denied" ? value : undefined;
-}
-
-function auditRouteJsonRow(row: OdosAuditEventRecord): Record<string, string | boolean | null> {
-  return {
-    id: row.id,
-    eventTime: row.eventTime,
-    eventType: row.eventType,
-    actorId: row.actorId ?? null,
-    actorRole: row.actorRole ?? null,
-    patientId: row.patientId ?? null,
-    resourceType: row.resourceType ?? null,
-    resourceId: row.resourceId ?? null,
-    actionOutcome: row.actionOutcome,
-    actionReason: row.actionReason ?? null,
-    policyUrl: row.policyUrl ?? null,
-    sessionId: row.sessionId ?? null,
-    ipAddress: row.ipAddress ?? null,
-    userAgent: row.userAgent ?? null,
-    breakGlass: row.breakGlass,
-    breakGlassReason: row.breakGlassReason ?? null,
-    ibActorClassification: row.ibActorClassification,
-    ibException: row.ibException ?? null,
-    provenanceId: row.provenanceId ?? null,
-    auditEventId: row.auditEventId ?? null,
-    createdAt: row.createdAt,
-  };
-}
-
-function isOdosAuditEventType(value: string): value is OdosAuditEventType {
-  return [
-    "read",
-    "search",
-    "history",
-    "vread",
-    "create",
-    "update",
-    "patch",
-    "transaction",
-    "nullify-attempt",
-    "delete-attempt",
-    "denied",
-    "break-glass-invoked",
-    "break-glass-expired",
-    "login",
-    "logout",
-    "login-failed",
-    "role-change",
-    "policy-change",
-    "projectmembership-lifecycle",
-    "staff.invite",
-    "document.generate.completed",
-    "document.generate.failed",
-    "document.print.requested",
-    "document.print.completed",
-    "backup-started",
-    "backup-completed",
-    "restore-started",
-    "restore-completed",
-    "external-api-call",
-  ].includes(value);
-}
-
-async function recordAuditRouteDenial(input: {
-  actorId: string;
-  actorRole: PracticeRoleId | "system";
-  filters: LiveAuditQueryFilters;
-  reason: string;
-  req: express.Request;
-}): Promise<void> {
-  await auditRuntime.recordDenied(
-    buildOdosAuditEventRow({
-      eventType: "denied",
-      actorId: input.actorId,
-      actorRole: input.actorRole,
-      patientId: input.filters.patientId,
-      resourceType: "odos_audit_events",
-      actionOutcome: "denied",
-      actionReason: input.reason,
-      policyUrl:
-        input.actorRole === "system" ? undefined : `AccessPolicy/odos-${input.actorRole}`,
-      ipAddress: requestIp(input.req),
-      userAgent: input.req.header("user-agent"),
-    }),
-  );
-}
-
 function requestIp(req: express.Request): string | undefined {
   return req.ip?.replace(/^::ffff:/, "");
 }
@@ -5875,60 +5723,10 @@ async function startMcpServer(): Promise<void> {
         audit: auditRuntime,
       });
 
-      app.get("/audit/events", async (req, res) => {
-        const actorRole = auditRouteRole(req);
-        const actorId = auditRouteString(req, "actor_id") ?? req.header("X-ODOS-Actor-Id") ?? "audit-ui";
-        const filters = auditRouteFilters(req);
-
-        try {
-          if (!actorRole) {
-            await recordAuditRouteDenial({
-              actorId,
-              actorRole: "system",
-              filters,
-              reason: "access-policy-compartment-isolation: unknown audit-review role",
-              req,
-            });
-            res.status(403).json({ error: "audit.read role required" });
-            return;
-          }
-
-          assertBusinessActionAllowed(actorRole, "audit.read");
-          const rows = await auditRuntime.record(
-            buildOdosAuditEventRow({
-              eventType: "read",
-              actorId,
-              actorRole,
-              patientId: filters.patientId,
-              resourceType: "odos_audit_events",
-              actionOutcome: "granted",
-              actionReason: "audit-log-review",
-              policyUrl: `AccessPolicy/odos-${actorRole}`,
-              ipAddress: requestIp(req),
-              userAgent: req.header("user-agent"),
-            }),
-            () => auditRuntime.queryRows(filters),
-          );
-          res.json({ rows: rows.map(auditRouteJsonRow) });
-        } catch (error) {
-          if (actorRole) {
-            await recordAuditRouteDenial({
-              actorId,
-              actorRole,
-              filters,
-              reason:
-                error instanceof Error
-                  ? `access-policy-compartment-isolation: ${error.message}`
-                  : "access-policy-compartment-isolation",
-              req,
-            }).catch((auditError) => {
-              console.error("odos-mcp: failed to audit /audit/events denial:", auditError);
-            });
-          }
-          const status = error instanceof Error && /lacks business action/.test(error.message) ? 403 : 500;
-          res.status(status).json({ error: status === 403 ? "audit.read role required" : "audit route failed" });
-        }
-      });
+      app.get("/audit/events", createAuditEventsGetHandler({
+        authenticate: authenticateStaffRoute,
+        audit: auditRuntime,
+      }));
 
       app.post("/audit/events", async (req, res) => {
         try {

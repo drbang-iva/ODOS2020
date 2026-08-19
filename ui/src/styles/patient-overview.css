@@ -193,10 +193,31 @@ button.odos-visit-detail-card:focus-visible { outline: 2px solid var(--overview-
   to { opacity: 1; transform: none; }
 }
 
+.odos-patient-tabs { display: flex; gap: 4px; margin: 14px 0 18px; border-bottom: 1px solid var(--overview-line); }
+.odos-patient-tabs button { min-height: 44px; padding: 0 18px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--overview-muted); font: inherit; font-size: 13px; cursor: pointer; }
+.odos-patient-tabs button[aria-selected="true"] { border-bottom-color: var(--overview-amethyst); color: var(--overview-text); }
+.odos-patient-tabs button:focus-visible { outline: 2px solid var(--overview-amethyst); outline-offset: 2px; }
+.odos-patient-history { overflow: hidden; border: 1px solid var(--overview-line); border-radius: 14px; background: var(--overview-surface); }
+.odos-patient-history > header { display: flex; justify-content: space-between; gap: 24px; padding: 18px 20px; border-bottom: 1px solid var(--overview-line); }
+.odos-patient-history > header span { color: var(--overview-amethyst); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; }
+.odos-patient-history > header h2 { margin: 4px 0 0; color: var(--overview-text); font-size: 18px; }
+.odos-patient-history > header p { max-width: 540px; margin: 0; color: var(--overview-muted); font-size: 12px; line-height: 1.55; }
+.odos-patient-history-row { display: grid; grid-template-columns: minmax(150px, 0.8fr) minmax(250px, 2fr) minmax(190px, 1fr) auto; gap: 16px; align-items: center; padding: 14px 20px; border-top: 1px solid var(--overview-line); }
+.odos-patient-history-row:first-of-type { border-top: 0; }
+.odos-patient-history-row time, .odos-patient-history-actor { color: var(--overview-muted); font-size: 12px; }
+.odos-patient-history-event { color: var(--overview-text); font-size: 13px; }
+.odos-patient-history-outcome { justify-self: end; padding: 3px 8px; border: 1px solid var(--overview-line); border-radius: 999px; color: var(--overview-muted); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; }
+.odos-patient-history-outcome.is-granted { border-color: color-mix(in srgb, var(--overview-emerald) 45%, transparent); color: var(--overview-emerald); }
+.odos-patient-history-outcome.is-denied { border-color: rgba(248, 113, 113, 0.35); color: #fca5a5; }
+.odos-patient-history-empty, .odos-patient-history > .odos-overview-loading, .odos-patient-history > .odos-overview-error { margin: 0; padding: 24px 20px; }
+
 @media (max-width: 900px) {
   .odos-overview-grid { grid-template-columns: 1fr; }
   .odos-sticky-note { align-items: flex-start; flex-wrap: wrap; }
   .odos-sticky-stamp { margin-left: 0; }
+  .odos-patient-history > header { flex-direction: column; }
+  .odos-patient-history-row { grid-template-columns: 1fr auto; }
+  .odos-patient-history-event, .odos-patient-history-actor { grid-column: 1 / -1; }
 }
 
 @media (max-width: 620px) {

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { OdosChips } from "../components/inputs/OdosChips";
 import {
   AUDIT_EVENT_TYPES,
-  canReviewAuditLog,
+  AuditLogRequestError,
   defaultAuditDateRange,
   exportAuditRowsAsCsv,
   exportAuditRowsAsJson,
@@ -14,8 +14,8 @@ import {
 } from "../lib/audit-log";
 
 export function AuditLog() {
-  const role = auditRoleFromLocation();
   const dateRange = useMemo(() => defaultAuditDateRange(), []);
+  const [role, setRole] = useState<AuditReviewRole>("unknown");
   const [patientId, setPatientId] = useState("");
   const [actorId, setActorId] = useState("");
   const [from, setFrom] = useState(dateRange.from);
@@ -36,19 +36,18 @@ export function AuditLog() {
   }), [actorId, breakGlassOnly, eventTypes, from, outcome, patientId, to]);
 
   useEffect(() => {
-    if (!canReviewAuditLog(role)) {
-      return;
-    }
     let cancelled = false;
-    fetchAuditLogRows(filters, role)
-      .then((nextRows) => {
+    fetchAuditLogRows(filters)
+      .then((response) => {
         if (!cancelled) {
-          setRows(nextRows);
+          setRole(response.actorRole);
+          setRows(response.rows);
           setError(undefined);
         }
       })
       .catch((nextError: unknown) => {
         if (!cancelled) {
+          if (nextError instanceof AuditLogRequestError) setRole(nextError.actorRole);
           setRows([]);
           setError(nextError instanceof Error ? nextError.message : String(nextError));
         }
@@ -56,18 +55,7 @@ export function AuditLog() {
     return () => {
       cancelled = true;
     };
-  }, [filters, role]);
-
-  if (!canReviewAuditLog(role)) {
-    return (
-      <div className="min-h-screen bg-bg-deep p-8 text-white">
-        <div className="mx-auto max-w-3xl border border-red-500/40 bg-red-950/20 p-6">
-          <h1 className="text-lg font-semibold text-red-200">Audit log unavailable</h1>
-          <p className="mt-2 text-sm text-red-100/80">Current role: {role}</p>
-        </div>
-      </div>
-    );
-  }
+  }, [filters]);
 
   return (
     <div className="min-h-screen bg-bg-deep text-white">
@@ -165,19 +153,6 @@ export function AuditLog() {
       </main>
     </div>
   );
-}
-
-function auditRoleFromLocation(): AuditReviewRole {
-  const raw = new URLSearchParams(window.location.search).get("role") ?? "admin";
-  if (
-    raw === "admin" ||
-    raw === "provider" ||
-    raw === "staff" ||
-    raw === "system"
-  ) {
-    return raw;
-  }
-  return "unknown";
 }
 
 function download(filename: string, body: string, type: string): void {

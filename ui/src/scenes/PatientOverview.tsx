@@ -27,6 +27,8 @@ import { PatientProgramPanels } from "../components/series-tracker/PatientProgra
 import { LongitudinalImagingCard } from "../components/LongitudinalImagingCard";
 import { OdosSelect } from "../components/inputs/OdosSelect";
 import { StartExam } from "../components/StartExam";
+import { PatientHistoryTimeline } from "../components/PatientHistoryTimeline";
+import { fetchPatientHistory } from "../lib/audit-log";
 import {
   findLatestActiveVisionPrescription,
   opticalOrderPath,
@@ -43,6 +45,7 @@ interface PatientOverviewApi {
   fetchHistory: typeof fetchStickyNoteHistory;
   saveNote: typeof saveStickyNote;
   findActiveRx?: typeof findLatestActiveVisionPrescription;
+  fetchAuditHistory?: typeof fetchPatientHistory;
   seriesTracker?: SeriesTrackerPanelApi;
   correspondence?: Pick<ReferralApi, "listInboundReferrals" | "previewConsultReport">;
 }
@@ -55,6 +58,7 @@ const defaultPatientOverviewApi: PatientOverviewApi = {
   fetchHistory: fetchStickyNoteHistory,
   saveNote: saveStickyNote,
   findActiveRx: findLatestActiveVisionPrescription,
+  fetchAuditHistory: fetchPatientHistory,
 };
 
 export function PatientOverview({
@@ -71,6 +75,7 @@ export function PatientOverview({
   const density = (panelId: OverviewPanelId) => overviewPanelDensity(panelId, role);
   const isVisible = (panelId: OverviewPanelId) => density(panelId) !== "hidden";
   const [overview, setOverview] = useState(initialOverview);
+  const [activePatientTab, setActivePatientTab] = useState<"overview" | "history">("overview");
   const [filter, setFilter] = useState<VisitLedgerFilter>("all");
   const [diagnosisFilter, setDiagnosisFilter] = useState("");
   const [error, setError] = useState<string>();
@@ -252,6 +257,32 @@ export function PatientOverview({
             <StartExam patient={patient} />
           </div>
         </header>
+        <nav className="odos-patient-tabs" role="tablist" aria-label="Patient chart views">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activePatientTab === "overview"}
+            onClick={() => setActivePatientTab("overview")}
+          >
+            Overview
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-label="Chart History"
+            aria-selected={activePatientTab === "history"}
+            onClick={() => setActivePatientTab("history")}
+          >
+            <span>History</span>
+          </button>
+        </nav>
+        {activePatientTab === "history" && patient.id && (
+          <PatientHistoryTimeline
+            patientId={patient.id}
+            loadHistory={api.fetchAuditHistory ?? fetchPatientHistory}
+          />
+        )}
+        <div hidden={activePatientTab !== "overview"}>
         <div className="odos-overview-context">
           {isVisible("demographic-detail") && density("demographic-detail") === "compact" ? (
             <details className="odos-overview-demographics">
@@ -487,6 +518,7 @@ export function PatientOverview({
             onDeposited={() => setPackageRevision((current) => current + 1)}
           />
         )}
+        </div>
       </section>
     </main>
   );

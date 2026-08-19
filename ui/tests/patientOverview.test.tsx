@@ -26,6 +26,7 @@ import { BillingWeatherReport, ConsultReportDraftPanel, PatientOverview } from "
 import { StartExam, type StartExamApi } from "../src/components/StartExam";
 import { OdosSelect } from "../src/components/inputs/OdosSelect";
 import { SeriesTrackerPanel } from "../src/components/series-tracker/SeriesTrackerPanel";
+import { sampleAuditRows } from "../src/lib/audit-log";
 
 const seriesTrackerApiStub = {
   fetchSeries: async () => [],
@@ -184,6 +185,51 @@ test("the header band contains one StartExam and keeps DOB and age in its identi
   const html = renderToStaticMarkup(<RoleProvider initialRole="doctor"><PatientOverview patient={patient} initialOverview={fixture()} /></RoleProvider>);
   assert.match(html, /odos-overview-band[\s\S]*Howard Enwright[\s\S]*DOB[\s\S]*4\/9\/1950[\s\S]*Age[\s\S]*\d+/);
   assert.equal(renderer.root.findAllByType(StartExam).length, 1);
+  act(() => renderer.unmount());
+});
+
+test("patient chart History renders a patient-scoped change line without field diffs", async () => {
+  const printRow = {
+    ...sampleAuditRows()[0]!,
+    id: "print-1",
+    eventTime: "2026-08-18T14:30:00.000Z",
+    eventType: "document.print.requested" as const,
+    actorId: "Practitioner/provider-1",
+    actorRole: "provider",
+    patientId: "patient-1",
+    resourceType: "DocumentReference",
+    resourceId: "letter-1",
+    actionOutcome: "granted" as const,
+    breakGlass: false,
+  };
+  let requestedPatientId = "";
+  const api = {
+    fetchOverview: async () => fixture(),
+    fetchHistory: async () => [],
+    saveNote: async () => { throw new Error("not used"); },
+    fetchAuditHistory: async (patientId: string) => {
+      requestedPatientId = patientId;
+      return { actorRole: "staff" as const, rows: [printRow] };
+    },
+  };
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<PatientOverview patient={patient} initialOverview={fixture()} api={api as never} />);
+  });
+
+  const historyTab = renderer.root.findByProps({ role: "tab", "aria-label": "Chart History" });
+  await act(async () => {
+    historyTab.props.onClick();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+
+  assert.equal(requestedPatientId, "patient-1");
+  const timeline = renderer.root.findByProps({ "data-testid": "patient-history-timeline" });
+  const text = timeline.findAllByType("span").map((node) => node.children.join("")).join(" ");
+  assert.match(text, /Document print requested/);
+  assert.match(text, /Practitioner\/provider-1/);
+  assert.match(text, /Granted/);
+  assert.equal(timeline.findAllByType("details").length, 0);
   act(() => renderer.unmount());
 });
 

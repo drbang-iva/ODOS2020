@@ -108,6 +108,7 @@ export interface LiveAuditQueryFilters {
   eventTypes?: readonly OdosAuditEventType[];
   outcome?: OdosActionOutcome;
   breakGlassOnly?: boolean;
+  excludeBreakGlass?: boolean;
   limit?: number;
 }
 
@@ -193,6 +194,7 @@ export class LiveOdosAuditRuntime implements FhirAuditRecorder {
     if (filters.eventTypes?.length) add("event_type = ANY(?::text[])", [...filters.eventTypes]);
     if (filters.outcome) add("action_outcome = ?", filters.outcome);
     if (filters.breakGlassOnly) clauses.push("break_glass = true");
+    if (filters.excludeBreakGlass) clauses.push("break_glass = false");
 
     const limit = Math.min(Math.max(filters.limit ?? 500, 1), 5000);
     values.push(limit);
