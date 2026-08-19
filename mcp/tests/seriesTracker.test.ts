@@ -665,6 +665,42 @@ test("Dry Eye refuses an ambiguous legacy session ordinal before creating a Care
   });
 });
 
+test("Dry Eye refuses to convert an ineligible child returned by the legacy search", async () => {
+  const legacyParent: Procedure = {
+    resourceType: "Procedure",
+    id: "legacy-parent-1",
+    status: "in-progress",
+    subject: { reference: "Patient/test-patient" },
+    encounter: { reference: "Encounter/encounter-1" },
+    code: { coding: [{ code: "IPL" }] },
+    note: [{ text: "4-session dry-eye treatment series" }],
+  };
+  const ineligibleChild: Procedure = {
+    resourceType: "Procedure",
+    id: "legacy-session-1",
+    status: "in-progress",
+    subject: { reference: "Patient/test-patient" },
+    encounter: { reference: "Encounter/encounter-1" },
+    code: { coding: [{ code: "unrelated" }] },
+    partOf: [{ reference: "Procedure/legacy-parent-1" }],
+    identifier: [{ system: DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM, value: "1-of-4" }],
+  };
+  await withDryEyeEncounterRoute({
+    procedureSearch: () => ({
+      resourceType: "Bundle",
+      type: "searchset",
+      total: 2,
+      entry: [{ resource: legacyParent }, { resource: ineligibleChild }],
+    }),
+  }, async ({ endpoint, headers, created }) => {
+    const response = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+
+    assert.equal(response.status, 409);
+    assert.match((await response.json() as { error: string }).error, /no active session that can be adopted/);
+    assert.equal(created.length, 0);
+  });
+});
+
 test("Dry Eye ignores a completed legacy parent after a canonical series exists", async () => {
   const { protocol } = dryEyeProtocolFixture();
   const carePlan = {

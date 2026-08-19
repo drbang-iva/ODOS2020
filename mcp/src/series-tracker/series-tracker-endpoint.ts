@@ -147,7 +147,8 @@ async function encounterSeries(
   const legacyChildren = legacyParent?.id
     ? (
         await Promise.all(legacyProcedures.map(async (procedure) =>
-          procedure.partOf?.some((reference) => reference.reference === `Procedure/${legacyParent.id}`)
+          isLegacySeriesProcedure(procedure, protocolId)
+          && procedure.partOf?.some((reference) => reference.reference === `Procedure/${legacyParent.id}`)
           && await resourceIsInEncounterScope(staff.fhir, procedure, encounter)
             ? [procedure]
             : []
@@ -861,10 +862,14 @@ function legacySourceEncounterReference(resource: CarePlan | Procedure): string 
 }
 
 function isLegacySeriesParent(procedure: Procedure, protocolId: string): boolean {
-  return protocolId === "dry-eye-ipl"
-    && procedure.status !== "entered-in-error"
-    && procedure.code?.coding?.some((coding) => coding.code === "IPL") === true
+  return procedure.status !== "entered-in-error"
+    && isLegacySeriesProcedure(procedure, protocolId)
     && procedure.note?.some((note) => /^\d+-session dry-eye treatment series$/.test(note.text ?? "")) === true;
+}
+
+function isLegacySeriesProcedure(procedure: Procedure, protocolId: string): boolean {
+  return protocolId === "dry-eye-ipl"
+    && procedure.code?.coding?.some((coding) => coding.code === "IPL") === true;
 }
 
 function uniqueProcedureReferences(references: NonNullable<Procedure["basedOn"]>): NonNullable<Procedure["basedOn"]> {
