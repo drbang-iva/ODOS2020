@@ -21,6 +21,7 @@ import {
   DRY_EYE_PROCEDURE_STABLE_KEYS,
 } from "../src/clinical-graph/procedure-definition-store.js";
 import { SERIES_PROCEDURE_TYPE_SYSTEM } from "../src/series-tracker/protocol-definition-store.js";
+import { DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM } from "../src/fhir/dryEyeProcedure.js";
 
 const draft: SeriesProtocolDefinitionDraft = {
   name: "Dry-Eye IPL",
@@ -747,6 +748,42 @@ test("Dry Eye completes a genuinely new series without an orphaning post-create 
 
     assert.equal(response.status, 201);
     assert.deepEqual(created.map((resource) => resource.resourceType), ["CarePlan", "Procedure", "Provenance"]);
+  });
+});
+
+test("Dry Eye rejects a conditional session won concurrently by another encounter", async () => {
+  const { protocol } = dryEyeProtocolFixture();
+  const carePlan = {
+    ...buildSeriesCarePlan({
+      protocol,
+      patientReference: "Patient/test-patient",
+      authorReference: "Practitioner/provider-1",
+    }),
+    id: "care-plan-1",
+    encounter: { reference: "Encounter/encounter-1" },
+  } satisfies CarePlan;
+  const concurrentSession: Procedure = {
+    resourceType: "Procedure",
+    id: "concurrent-session",
+    status: "in-progress",
+    subject: { reference: "Patient/test-patient" },
+    encounter: { reference: "Encounter/encounter-2" },
+    basedOn: [{ reference: "CarePlan/care-plan-1" }],
+    identifier: [{
+      system: DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM,
+      value: "CarePlan/care-plan-1:1-of-4",
+    }],
+  };
+  await withDryEyeEncounterRoute({
+    carePlans: [carePlan],
+    existingProcedures: [concurrentSession],
+    procedureSearch: () => ({ resourceType: "Bundle", type: "searchset", total: 0 }),
+  }, async ({ endpoint, headers, created }) => {
+    const response = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+
+    assert.equal(response.status, 409);
+    assert.match((await response.json() as { error: string }).error, /active session in another encounter/);
+    assert.equal(created.length, 0);
   });
 });
 

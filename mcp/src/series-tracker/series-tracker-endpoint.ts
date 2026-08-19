@@ -260,8 +260,9 @@ async function encounterSeries(
           request: { method: "PUT", url: `Procedure/${adopted.id}` },
         }],
       }, { "X-ODOS-Source": "series-tracker-dry-eye" });
+      createdSession = true;
     } else {
-      currentSession = await staff.fhir.create<Procedure>({
+      const outcome = await staff.fhir.createWithOutcome<Procedure>({
         ...buildProcedureFromDefinition(procedureDefinition!, {
           patientReference,
           encounterReference: `Encounter/${encounterId}`,
@@ -274,9 +275,16 @@ async function encounterSeries(
         "X-ODOS-Source": "series-tracker-dry-eye",
         "If-None-Exist": `identifier=${DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM}|${sessionIdentifier}`,
       });
+      currentSession = outcome.resource;
+      createdSession = outcome.created;
+      if (!createdSession && currentSession.encounter?.reference !== `Encounter/${encounterId}`) {
+        return {
+          status: 409,
+          body: { error: `${protocol.name} already has an active session in another encounter.` },
+        };
+      }
     }
-    createdSession = true;
-    if (currentSession.id) {
+    if (createdSession && currentSession.id) {
       await staff.fhir.create<Provenance>(buildProvenance({
         targetReferences: [`Procedure/${currentSession.id}`, carePlanReference, patientReference],
         occurredDateTime: now(deps)(),
