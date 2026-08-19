@@ -299,6 +299,19 @@ async function encounterSeries(
           body: { error: `${protocol.name} already has an active session in another encounter.` },
         };
       }
+      if (!createdSession && !procedureMatchesConditionalSession(
+        currentSession,
+        carePlan,
+        patientReference,
+        `Encounter/${encounterId}`,
+        carePlanReference,
+        sessionIdentifier,
+      )) {
+        return {
+          status: 409,
+          body: { error: `Conditional create returned an invalid conditional ${protocol.name} session.` },
+        };
+      }
     }
     if (createdSession && currentSession.id) {
       await staff.fhir.create<Provenance>(buildProvenance({
@@ -527,6 +540,25 @@ async function carePlanMatchesSeriesScope(
     && carePlan.subject?.reference === patientReference
     && carePlan.instantiatesCanonical?.includes(planDefinitionCanonical) === true
     && await resourceIsInEncounterScope(fhir, carePlan, encounter);
+}
+
+function procedureMatchesConditionalSession(
+  procedure: Procedure,
+  carePlan: CarePlan,
+  patientReference: string,
+  encounterReference: string,
+  carePlanReference: string,
+  sessionIdentifier: string,
+): boolean {
+  return isActiveProcedure(procedure)
+    && procedure.subject.reference === patientReference
+    && procedure.encounter?.reference === encounterReference
+    && procedure.basedOn?.some((reference) => reference.reference === carePlanReference) === true
+    && procedure.identifier?.some((identifier) =>
+      identifier.system === DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM
+      && identifier.value === sessionIdentifier
+    ) === true
+    && procedureMatchesCarePlan(procedure, carePlan);
 }
 
 async function searchCompleteResources<T extends Resource>(

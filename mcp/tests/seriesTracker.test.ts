@@ -788,6 +788,64 @@ test("Dry Eye rejects a conditional session won concurrently by another encounte
   });
 });
 
+test("Dry Eye validates a Procedure returned by conditional create", async () => {
+  const { protocol } = dryEyeProtocolFixture();
+  const carePlan = {
+    ...buildSeriesCarePlan({
+      protocol,
+      patientReference: "Patient/test-patient",
+      authorReference: "Practitioner/provider-1",
+    }),
+    id: "care-plan-1",
+    encounter: { reference: "Encounter/encounter-1" },
+  } satisfies CarePlan;
+  const conditionalSession: Procedure = {
+    resourceType: "Procedure",
+    id: "conditional-session",
+    status: "in-progress",
+    subject: { reference: "Patient/test-patient" },
+    encounter: { reference: "Encounter/encounter-1" },
+    code: { coding: [{ system: SERIES_PROCEDURE_TYPE_SYSTEM, code: DRY_EYE_PROCEDURE_STABLE_KEYS.ipl }] },
+    basedOn: [{ reference: "CarePlan/care-plan-1" }],
+    identifier: [{
+      system: DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM,
+      value: "CarePlan/care-plan-1:1-of-4",
+    }],
+  };
+  const invalidWinners: Array<[string, Procedure]> = [
+    ["completed", { ...conditionalSession, status: "completed" }],
+    ["wrong patient", { ...conditionalSession, subject: { reference: "Patient/other" } }],
+    ["wrong CarePlan", { ...conditionalSession, basedOn: [{ reference: "CarePlan/other" }] }],
+    ["wrong procedure type", { ...conditionalSession, code: { coding: [{ code: "other" }] } }],
+  ];
+  for (const [label, procedure] of invalidWinners) {
+    await withDryEyeEncounterRoute({
+      carePlans: [carePlan],
+      existingProcedures: [procedure],
+      procedureSearch: () => ({ resourceType: "Bundle", type: "searchset", total: 0 }),
+    }, async ({ endpoint, headers, created }) => {
+      const response = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+
+      assert.equal(response.status, 409, label);
+      assert.match((await response.json() as { error: string }).error, /conditional IPL session/, label);
+      assert.equal(created.length, 0, label);
+    });
+  }
+
+  await withDryEyeEncounterRoute({
+    carePlans: [carePlan],
+    existingProcedures: [conditionalSession],
+    procedureSearch: () => ({ resourceType: "Bundle", type: "searchset", total: 0 }),
+  }, async ({ endpoint, headers, created }) => {
+    const response = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+
+    assert.equal(response.status, 200);
+    assert.equal((await response.json() as { currentSession: { procedureReference: string } }).currentSession.procedureReference,
+      "Procedure/conditional-session");
+    assert.equal(created.length, 0);
+  });
+});
+
 test("Dry Eye validates a CarePlan returned by conditional create", async () => {
   const { protocol } = dryEyeProtocolFixture();
   const conditionalCarePlan = {
