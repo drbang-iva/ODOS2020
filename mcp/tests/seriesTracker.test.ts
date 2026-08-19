@@ -425,6 +425,13 @@ test("Dry Eye sheet round-trip conditionally creates one canonical CarePlan and 
       if (["CarePlan", "Procedure"].includes(resources[index]!.resourceType)) resources.splice(index, 1);
     }
     resources.push({
+      resourceType: "Encounter",
+      id: "encounter-other-program",
+      status: "in-progress",
+      class: { code: "AMB" },
+      subject: { reference: "Patient/test-patient" },
+      episodeOfCare: [{ reference: "EpisodeOfCare/other-program" }],
+    } satisfies Encounter, {
       resourceType: "Procedure",
       id: "legacy-parent",
       status: "in-progress",
@@ -441,6 +448,14 @@ test("Dry Eye sheet round-trip conditionally creates one canonical CarePlan and 
       code: { coding: [{ code: "IPL" }] },
       partOf: [{ reference: "Procedure/legacy-parent" }],
       identifier: [{ system: "https://odos2020.com/fhir/Identifier/dry-eye-treatment-session", value: "1-of-4" }],
+    } satisfies Procedure, {
+      resourceType: "Procedure",
+      id: "legacy-session-other-program",
+      status: "in-progress",
+      subject: { reference: "Patient/test-patient" },
+      encounter: { reference: "Encounter/encounter-other-program" },
+      code: { coding: [{ code: "IPL" }] },
+      partOf: [{ reference: "Procedure/legacy-parent" }],
     } satisfies Procedure);
 
     const adoptedResponse = await fetch(endpoint, { method: "POST", headers, body: "{}" });
@@ -451,6 +466,10 @@ test("Dry Eye sheet round-trip conditionally creates one canonical CarePlan and 
     const adoptedCarePlan = resources.find((resource): resource is CarePlan => resource.resourceType === "CarePlan");
     assert.deepEqual(adopted?.basedOn, [{ reference: `CarePlan/${adoptedCarePlan?.id}` }]);
     assert.equal(adopted?.code?.coding?.[0]?.code, "IPL", "adoption preserves the historical clinical code");
+    const otherProgramSession = resources.find((resource): resource is Procedure =>
+      resource.resourceType === "Procedure" && resource.id === "legacy-session-other-program"
+    );
+    assert.equal(otherProgramSession?.basedOn, undefined);
 
     resources.push({
       resourceType: "Procedure",

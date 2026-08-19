@@ -141,10 +141,15 @@ async function encounterSeries(
   }
   const legacyParent = legacyParents[0];
   const legacyAdoptable = legacyParent?.id
-    ? legacyProcedures.filter((procedure) =>
-        isActiveProcedure(procedure)
-        && procedure.partOf?.some((reference) => reference.reference === `Procedure/${legacyParent.id}`)
-      )
+    ? (
+        await Promise.all(legacyProcedures.map(async (procedure) =>
+          isActiveProcedure(procedure)
+          && procedure.partOf?.some((reference) => reference.reference === `Procedure/${legacyParent.id}`)
+          && await resourceIsInEncounterScope(staff.fhir, procedure, encounter)
+            ? [procedure]
+            : []
+        ))
+      ).flat()
     : [];
   if (recordSession && legacyParent && legacyAdoptable.length !== 1) {
     return {
