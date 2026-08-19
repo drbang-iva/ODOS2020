@@ -304,6 +304,11 @@ test("Dry Eye sheet round-trip conditionally creates one canonical CarePlan and 
       resources.push(saved);
       return structuredClone(saved);
     },
+    async createWithOutcome<T extends Resource>(resource: T, headers: Record<string, string> = {}): Promise<{ resource: T; created: boolean }> {
+      const before = resources.length;
+      const saved = await staffFhir.create(resource, headers);
+      return { resource: saved, created: resources.length > before };
+    },
     async executeTransaction(bundle: Bundle): Promise<Bundle> {
       for (const entry of bundle.entry ?? []) {
         if (entry.request?.method !== "PUT" || !entry.resource?.id) continue;
@@ -688,6 +693,63 @@ test("Dry Eye fails closed when the narrowed canonical CarePlan result is trunca
   });
 });
 
+test("Dry Eye fails closed when one CarePlan has multiple active bound sessions", async () => {
+  const { protocol } = dryEyeProtocolFixture();
+  const carePlan = {
+    ...buildSeriesCarePlan({
+      protocol,
+      patientReference: "Patient/test-patient",
+      authorReference: "Practitioner/provider-1",
+    }),
+    id: "care-plan-1",
+    encounter: { reference: "Encounter/encounter-1" },
+  } satisfies CarePlan;
+  const activeSessions: Procedure[] = ["active-1", "active-2"].map((id) => ({
+    resourceType: "Procedure",
+    id,
+    status: "in-progress",
+    subject: { reference: "Patient/test-patient" },
+    encounter: { reference: "Encounter/encounter-1" },
+    basedOn: [{ reference: "CarePlan/care-plan-1" }],
+  }));
+  await withDryEyeEncounterRoute({
+    carePlans: [carePlan],
+    procedureSearch: (params) => params["based-on"]
+      ? {
+          resourceType: "Bundle",
+          type: "searchset",
+          total: 2,
+          entry: activeSessions.map((resource) => ({ resource })),
+        }
+      : { resourceType: "Bundle", type: "searchset", total: 0 },
+  }, async ({ endpoint, headers, created }) => {
+    const response = await fetch(endpoint, { headers });
+
+    assert.equal(response.status, 409);
+    assert.match((await response.json() as { error: string }).error, /2 active IPL sessions/);
+    assert.equal(created.length, 0);
+  });
+});
+
+test("Dry Eye completes a genuinely new series without an orphaning post-create scan", async () => {
+  await withDryEyeEncounterRoute({
+    procedureSearch: (params) => params["based-on"]
+      ? {
+          resourceType: "Bundle",
+          type: "searchset",
+          total: 2,
+          entry: [{ resource: unrelatedProcedure("unexpected-existing-session") }],
+          link: [{ relation: "next", url: "https://example.test/fhir/R4/Procedure?page=2" }],
+        }
+      : { resourceType: "Bundle", type: "searchset", total: 0 },
+  }, async ({ endpoint, headers, created }) => {
+    const response = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+
+    assert.equal(response.status, 201);
+    assert.deepEqual(created.map((resource) => resource.resourceType), ["CarePlan", "Procedure", "Provenance"]);
+  });
+});
+
 function dryEyeProtocolFixture() {
   const draft: SeriesProtocolDefinitionDraft = {
     id: "dry-eye-ipl",
@@ -777,6 +839,11 @@ async function withDryEyeEncounterRoute(
       const saved = { ...structuredClone(resource), id: `${resource.resourceType.toLowerCase()}-${created.length + 1}` } as T;
       created.push(saved);
       return saved;
+    },
+    async createWithOutcome<T extends Resource>(resource: T, headers: Record<string, string> = {}): Promise<{ resource: T; created: boolean }> {
+      const before = created.length;
+      const saved = await staffFhir.create(resource, headers);
+      return { resource: saved, created: created.length > before };
     },
     async executeTransaction(): Promise<Bundle> {
       return { resourceType: "Bundle", type: "transaction-response" };

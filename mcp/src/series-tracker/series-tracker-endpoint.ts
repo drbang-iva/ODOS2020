@@ -36,7 +36,7 @@ export interface SeriesTrackerStaff {
   staffReference: string;
   actorRole: PracticeRoleId;
   roles?: PracticeRoleId[];
-  fhir: Pick<MedplumClient, "read" | "search" | "create" | "executeTransaction">;
+  fhir: Pick<MedplumClient, "read" | "search" | "create" | "createWithOutcome" | "executeTransaction">;
 }
 
 type RouteResult = { status: number; body: unknown };
@@ -164,6 +164,15 @@ async function encounterSeries(
   let carePlan = matchingCarePlans[0];
   let createdCarePlan = false;
   let procedureDefinition: ClinicalProcedureDefinition | undefined;
+  let boundProcedures = carePlan?.id
+    ? await loadBoundProcedures(staff.fhir, patientReference, `CarePlan/${carePlan.id}`)
+    : [];
+  if (!boundProcedures) {
+    return {
+      status: 409,
+      body: { error: `Could not verify all ${protocol.name} session Procedures. No session was created.` },
+    };
+  }
   if (!carePlan && recordSession) {
     if (legacyAdoptable.length === 0) {
       procedureDefinition = await resolveProcedureDefinition(deps, protocol.eligibleProcedureTypeCodes);
@@ -171,7 +180,7 @@ async function encounterSeries(
         return { status: 409, body: { error: `Active procedure definition for ${protocol.name} is unavailable.` } };
       }
     }
-    carePlan = await staff.fhir.create<CarePlan>({
+    const outcome = await staff.fhir.createWithOutcome<CarePlan>({
       ...buildSeriesCarePlan({
         protocol,
         patientReference,
@@ -184,7 +193,17 @@ async function encounterSeries(
       "X-ODOS-Source": "series-tracker-dry-eye",
       "If-None-Exist": `identifier=${SERIES_CARE_PLAN_SOURCE_IDENTIFIER_SYSTEM}|${scopeIdentifier}`,
     });
-    createdCarePlan = true;
+    carePlan = outcome.resource;
+    createdCarePlan = outcome.created;
+    if (!createdCarePlan && carePlan.id) {
+      boundProcedures = await loadBoundProcedures(staff.fhir, patientReference, `CarePlan/${carePlan.id}`);
+      if (!boundProcedures) {
+        return {
+          status: 409,
+          body: { error: `Could not verify all ${protocol.name} session Procedures. No session was created.` },
+        };
+      }
+    }
   }
   if (!carePlan?.id) {
     return {
@@ -194,21 +213,17 @@ async function encounterSeries(
   }
 
   const carePlanReference = `CarePlan/${carePlan.id}`;
-  const boundProcedures = await searchCompleteResources<Procedure>(staff.fhir, "Procedure", {
-    subject: patientReference,
-    "based-on": carePlanReference,
-    _count: "100",
-  });
-  if (!boundProcedures) {
+  const activeBoundProcedures = boundProcedures.filter(isActiveProcedure);
+  if (activeBoundProcedures.length > 1) {
     return {
       status: 409,
-      body: { error: `Could not verify all ${protocol.name} session Procedures. No session was created.` },
+      body: { error: `${activeBoundProcedures.length} active ${protocol.name} sessions conflict in this series.` },
     };
   }
-  let currentSession = boundProcedures.find((procedure) =>
-    procedure.encounter?.reference === `Encounter/${encounterId}` && isActiveProcedure(procedure)
+  let currentSession = activeBoundProcedures.find((procedure) =>
+    procedure.encounter?.reference === `Encounter/${encounterId}`
   );
-  const activeBoundProcedure = boundProcedures.find(isActiveProcedure);
+  const activeBoundProcedure = activeBoundProcedures[0];
   if (!currentSession && activeBoundProcedure && recordSession) {
     return {
       status: 409,
@@ -463,6 +478,18 @@ function updateTransaction(resources: Resource[]): Bundle {
 
 function resourcesOf<T extends Resource>(bundle: Bundle<T>): T[] {
   return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
+}
+
+function loadBoundProcedures(
+  fhir: Pick<MedplumClient, "search">,
+  patientReference: string,
+  carePlanReference: string,
+): Promise<Procedure[] | undefined> {
+  return searchCompleteResources<Procedure>(fhir, "Procedure", {
+    subject: patientReference,
+    "based-on": carePlanReference,
+    _count: "100",
+  });
 }
 
 async function searchCompleteResources<T extends Resource>(
