@@ -193,7 +193,7 @@ export async function loadPatientOverview(
     searchAll<Condition>(fhir, "Condition", { patient: patientId, category: "problem-list-item", _count: "100" }),
     searchAll<Procedure>(fhir, "Procedure", { patient: patientId, _count: "100", _sort: "-date" }),
     searchAll<CarePlan>(fhir, "CarePlan", { patient: patientId, _count: "100" }),
-    searchAll<EpisodeOfCare>(fhir, "EpisodeOfCare", { patient: patientReference, status: "active", _count: "100" }),
+    searchAll<EpisodeOfCare>(fhir, "EpisodeOfCare", { patient: patientReference, _count: "100" }),
     searchAll<MedicationStatement>(fhir, "MedicationStatement", { patient: patientId, status: "active", _count: "100" }),
     optionalSearchAll<MedicationRequest>(fhir, "MedicationRequest", { patient: patientId, status: "active", _count: "100" }),
     searchAll<Observation>(fhir, "Observation", { patient: patientId, code: TOBACCO_SMOKING_STATUS_LOINC_CODE, _count: "1", _sort: "-date" }),
@@ -549,7 +549,7 @@ function projectOverview(input: {
       ophthalmicMedications: allMedications.filter((medication) => medication.ophthalmic).map(({ ophthalmic: _, ...row }) => row),
       systemicMedications: allMedications.filter((medication) => !medication.ophthalmic).map(({ ophthalmic: _, ...row }) => row),
     },
-    programs: input.episodesOfCare.flatMap((episode): PatientOverviewProgram[] => episode.id ? [{
+    programs: input.episodesOfCare.flatMap((episode): PatientOverviewProgram[] => episode.id && episode.status === "active" ? [{
       episodeOfCareReference: `EpisodeOfCare/${episode.id}`,
       title: conceptText(episode.type?.[0]) || "Program",
       status: episode.status,

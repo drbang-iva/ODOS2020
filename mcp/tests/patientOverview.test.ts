@@ -139,6 +139,26 @@ test("patient overview reflects active program enrollment and CarePlan session d
   assert.equal(overview.visits[0]?.seriesDesignation, "IPL · session 2 of 4");
 });
 
+test("patient overview preserves a completed program title on its historical visit", async () => {
+  const fake = new FakeFhir();
+  fake.add(patient());
+  fake.add({
+    resourceType: "EpisodeOfCare",
+    id: "completed-dry-eye-program",
+    status: "finished",
+    patient: { reference: "Patient/p1" },
+    type: [{ text: "Dry eye" }],
+  } satisfies EpisodeOfCare);
+  const historicalVisit = encounter("historical-series-visit", "2026-07-19T14:00:00Z");
+  historicalVisit.episodeOfCare = [{ reference: "EpisodeOfCare/completed-dry-eye-program" }];
+  fake.add(historicalVisit);
+
+  const overview = await loadPatientOverview(fake as never, "p1");
+
+  assert.deepEqual(overview.programs, []);
+  assert.equal(overview.visits[0]?.program, "Dry eye");
+});
+
 test("billing weather reads stored eligibility and never promotes uncertain coverage to green", async () => {
   const activeCoverage: Coverage = {
     resourceType: "Coverage",
@@ -1074,6 +1094,9 @@ class FakeFhir {
       ));
     }
     if (resourceType === "Encounter" && params._id) rows = rows.filter((resource) => params._id.split(",").includes(resource.id ?? ""));
+    if (resourceType === "EpisodeOfCare" && params.status) {
+      rows = rows.filter((resource) => (resource as EpisodeOfCare).status === params.status);
+    }
     if (resourceType === "Encounter" && params.type) {
       const requestedTypes = params.type.split(",");
       rows = rows.filter((resource) => (resource as Encounter).type?.some((concept) =>
