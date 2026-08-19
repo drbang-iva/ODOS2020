@@ -871,6 +871,57 @@ test("Dry Eye reloads a completed canonical series with no sessions remaining", 
   });
 });
 
+test("Dry Eye rejects two active canonical series in the same program", async () => {
+  const { protocol } = dryEyeProtocolFixture();
+  const carePlans = ["care-plan-1", "care-plan-2"].map((id) => ({
+    ...buildSeriesCarePlan({
+      protocol,
+      patientReference: "Patient/test-patient",
+      authorReference: "Practitioner/provider-1",
+      created: "2026-08-19T15:00:00.000Z",
+    }),
+    id,
+    encounter: { reference: "Encounter/encounter-1" },
+  } satisfies CarePlan));
+  await withDryEyeEncounterRoute({
+    carePlans,
+    procedureSearch: () => ({ resourceType: "Bundle", type: "searchset", total: 0 }),
+  }, async ({ endpoint, headers, created }) => {
+    const response = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+
+    assert.equal(response.status, 409);
+    assert.deepEqual(await response.json(), { error: "2 active IPL series exist in this program." });
+    assert.equal(created.filter((resource) => resource.resourceType === "CarePlan").length, 0);
+    assert.equal(created.filter((resource) => resource.resourceType === "Procedure").length, 0);
+  });
+});
+
+test("Dry Eye rejects two completed canonical series when no active series exists", async () => {
+  const { protocol } = dryEyeProtocolFixture();
+  const carePlans = ["completed-care-plan-1", "completed-care-plan-2"].map((id) => ({
+    ...buildSeriesCarePlan({
+      protocol,
+      patientReference: "Patient/test-patient",
+      authorReference: "Practitioner/provider-1",
+      created: "2026-08-19T15:00:00.000Z",
+    }),
+    id,
+    status: "completed" as const,
+    encounter: { reference: "Encounter/encounter-1" },
+  } satisfies CarePlan));
+  await withDryEyeEncounterRoute({
+    carePlans,
+    procedureSearch: () => ({ resourceType: "Bundle", type: "searchset", total: 0 }),
+  }, async ({ endpoint, headers, created }) => {
+    const response = await fetch(endpoint, { headers });
+
+    assert.equal(response.status, 409);
+    assert.deepEqual(await response.json(), { error: "2 active IPL series exist in this program." });
+    assert.equal(created.filter((resource) => resource.resourceType === "CarePlan").length, 0);
+    assert.equal(created.filter((resource) => resource.resourceType === "Procedure").length, 0);
+  });
+});
+
 test("Dry Eye refuses to create a session in a finished EpisodeOfCare program", async () => {
   await withDryEyeEncounterRoute({
     episodeStatus: "finished",
