@@ -32,6 +32,7 @@ import {
 import { ODOS_VISIT_TYPE_SYSTEM } from "../fhir/schedulingVisitType.js";
 import { TOBACCO_SMOKING_STATUS_LOINC_CODE } from "../fhir/smokingStatus.js";
 import { DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM } from "../fhir/dryEyeProcedure.js";
+import { procedureMatchesCarePlan } from "../series-tracker/series-care-plan.js";
 import {
   MIGRATION_TAG_CODE,
   MIGRATION_TAG_SYSTEM,
@@ -495,8 +496,11 @@ function projectOverview(input: {
   const programTitles = new Map<string, string>(input.episodesOfCare.flatMap((episode) =>
     episode.id ? [[`EpisodeOfCare/${episode.id}`, conceptText(episode.type?.[0]) || "Program"] as const] : []
   ));
-  const carePlanTitles = new Map<string, string>(input.carePlans.flatMap((carePlan) =>
-    carePlan.id ? [[`CarePlan/${carePlan.id}`, carePlan.title?.trim() || "Treatment series"] as const] : []
+  const seriesCarePlans = new Map<string, CarePlan>(input.carePlans.flatMap((carePlan) =>
+    carePlan.id
+    && carePlan.instantiatesCanonical?.some((canonical) => canonical.includes("/PlanDefinition/series-protocol-"))
+      ? [[`CarePlan/${carePlan.id}`, carePlan] as const]
+      : []
   ));
   const byEncounter = new Map<string, PatientOverviewDiagnosis[]>();
   for (const condition of diagnoses) {
@@ -558,7 +562,7 @@ function projectOverview(input: {
       .sort((left, right) => encounterTime(right) - encounterTime(left))
       .flatMap((encounter): PatientOverviewVisit[] => {
         if (!encounter.id) return [];
-        const designation = seriesDesignation(input.procedures, carePlanTitles, encounter.id);
+        const designation = seriesDesignation(input.procedures, seriesCarePlans, encounter.id);
         return [{
         encounterId: encounter.id,
         ...(encounter.period?.start ?? encounter.period?.end ? { date: encounter.period?.start ?? encounter.period?.end } : {}),
@@ -589,27 +593,30 @@ function projectOverview(input: {
 
 function seriesDesignation(
   procedures: readonly Procedure[],
-  carePlanTitles: ReadonlyMap<string, string>,
+  seriesCarePlans: ReadonlyMap<string, CarePlan>,
   encounterId: string,
 ): string | undefined {
   const procedure = procedures.find((candidate) =>
     candidate.status !== "entered-in-error"
     && candidate.encounter?.reference === `Encounter/${encounterId}`
-    && candidate.basedOn?.some((reference) => carePlanTitles.has(reference.reference ?? ""))
+    && candidate.basedOn?.some((reference) => {
+      const carePlan = seriesCarePlans.get(reference.reference ?? "");
+      return carePlan ? procedureMatchesCarePlan(candidate, carePlan) : false;
+    })
     && candidate.identifier?.some((identifier) =>
       identifier.system === DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM
       && /:\d+-of-\d+$/.test(identifier.value ?? "")
     )
   );
   const carePlanReference = procedure?.basedOn?.find((reference) =>
-    carePlanTitles.has(reference.reference ?? "")
+    seriesCarePlans.has(reference.reference ?? "")
   )?.reference;
   if (!procedure || !carePlanReference) return undefined;
   const session = procedure.identifier?.find((identifier) =>
     identifier.system === DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM
     && /:\d+-of-\d+$/.test(identifier.value ?? "")
   )?.value?.match(/:(\d+)-of-(\d+)$/);
-  const title = carePlanTitles.get(carePlanReference);
+  const title = seriesCarePlans.get(carePlanReference)?.title?.trim() || "Treatment series";
   return title && session ? `${title} · session ${session[1]} of ${session[2]}` : undefined;
 }
 

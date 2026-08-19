@@ -41,6 +41,8 @@ import { ODOS_VISIT_TYPE_SYSTEM } from "../src/fhir/schedulingVisitType.js";
 import { buildDiagnosisCatalogSeeds } from "../src/clinical-graph/diagnosis-catalog-store.js";
 import { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } from "../src/clinical-graph/diagnosis-pick-endpoint.js";
 import { DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM } from "../src/fhir/dryEyeProcedure.js";
+import { DRY_EYE_PROCEDURE_STABLE_KEYS } from "../src/clinical-graph/procedure-definition-store.js";
+import { SERIES_PROCEDURE_TYPE_SYSTEM } from "../src/series-tracker/protocol-definition-store.js";
 
 test("patient overview projects real snapshot resources and newest-first encounter diagnoses", async () => {
   const fake = new FakeFhir();
@@ -111,8 +113,13 @@ test("patient overview reflects active program enrollment and CarePlan session d
     intent: "plan",
     subject: { reference: "Patient/p1" },
     title: "IPL",
+    instantiatesCanonical: ["https://odos2020.com/fhir/PlanDefinition/series-protocol-dry-eye-ipl"],
     activity: Array.from({ length: 4 }, (_, index) => ({
-      detail: { status: index === 0 ? "completed" : "not-started", description: `Session ${index + 1} of 4` },
+      detail: {
+        status: index === 0 ? "completed" : "not-started",
+        description: `Session ${index + 1} of 4`,
+        code: { coding: [{ system: SERIES_PROCEDURE_TYPE_SYSTEM, code: DRY_EYE_PROCEDURE_STABLE_KEYS.ipl }] },
+      },
     })),
   } satisfies CarePlan);
   fake.add({
@@ -121,6 +128,7 @@ test("patient overview reflects active program enrollment and CarePlan session d
     status: "in-progress",
     subject: { reference: "Patient/p1" },
     encounter: { reference: "Encounter/series-visit" },
+    code: { coding: [{ system: SERIES_PROCEDURE_TYPE_SYSTEM, code: DRY_EYE_PROCEDURE_STABLE_KEYS.ipl }] },
     basedOn: [{ reference: "CarePlan/ipl-series" }],
     identifier: [{
       system: DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM,
@@ -158,6 +166,44 @@ test("patient overview does not label a routine CarePlan Procedure as a treatmen
     subject: { reference: "Patient/p1" },
     encounter: { reference: "Encounter/routine-visit" },
     basedOn: [{ reference: "CarePlan/routine-plan" }],
+  } satisfies Procedure);
+
+  const overview = await loadPatientOverview(fake as never, "p1");
+
+  assert.equal(overview.visits[0]?.seriesDesignation, undefined);
+});
+
+test("patient overview does not label a malformed Procedure as a canonical series session", async () => {
+  const fake = new FakeFhir();
+  fake.add(patient());
+  fake.add(encounter("malformed-visit", "2026-08-19T14:00:00Z"));
+  fake.add({
+    resourceType: "CarePlan",
+    id: "ipl-series",
+    status: "active",
+    intent: "plan",
+    subject: { reference: "Patient/p1" },
+    title: "IPL",
+    instantiatesCanonical: ["https://odos2020.com/fhir/PlanDefinition/series-protocol-dry-eye-ipl"],
+    activity: [{
+      detail: {
+        status: "not-started",
+        code: { coding: [{ system: SERIES_PROCEDURE_TYPE_SYSTEM, code: DRY_EYE_PROCEDURE_STABLE_KEYS.ipl }] },
+      },
+    }],
+  } satisfies CarePlan);
+  fake.add({
+    resourceType: "Procedure",
+    id: "malformed-session",
+    status: "in-progress",
+    subject: { reference: "Patient/p1" },
+    encounter: { reference: "Encounter/malformed-visit" },
+    code: { coding: [{ code: "routine-procedure" }] },
+    basedOn: [{ reference: "CarePlan/ipl-series" }],
+    identifier: [{
+      system: DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM,
+      value: "CarePlan/ipl-series:1-of-4",
+    }],
   } satisfies Procedure);
 
   const overview = await loadPatientOverview(fake as never, "p1");
