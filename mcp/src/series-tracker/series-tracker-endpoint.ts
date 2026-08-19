@@ -93,10 +93,17 @@ async function encounterSeries(
     };
   }
 
-  const procedureBundle = await staff.fhir.search<Procedure>("Procedure", { subject: patientReference, _count: "500" });
-  const patientProcedures = resourcesOf(procedureBundle);
+  const legacyProcedures = protocolId === "dry-eye-ipl"
+    ? await searchCompleteProcedures(staff.fhir, { subject: patientReference, code: "IPL", _count: "100" })
+    : [];
+  if (!legacyProcedures) {
+    return {
+      status: 409,
+      body: { error: `Could not verify all legacy ${protocol.name} Procedures. No session was created.` },
+    };
+  }
   const legacyParents = (
-    await Promise.all(patientProcedures.map(async (procedure) =>
+    await Promise.all(legacyProcedures.map(async (procedure) =>
       isLegacySeriesParent(procedure, protocolId)
       && await resourceIsInEncounterScope(staff.fhir, procedure, encounter)
         ? [procedure]
@@ -111,7 +118,7 @@ async function encounterSeries(
   }
   const legacyParent = legacyParents[0];
   const legacyAdoptable = legacyParent?.id
-    ? patientProcedures.filter((procedure) =>
+    ? legacyProcedures.filter((procedure) =>
         isActiveProcedure(procedure)
         && procedure.partOf?.some((reference) => reference.reference === `Procedure/${legacyParent.id}`)
       )
@@ -159,9 +166,17 @@ async function encounterSeries(
   }
 
   const carePlanReference = `CarePlan/${carePlan.id}`;
-  const boundProcedures = patientProcedures.filter((procedure) =>
-    procedure.basedOn?.some((reference) => reference.reference === carePlanReference)
-  );
+  const boundProcedures = await searchCompleteProcedures(staff.fhir, {
+    subject: patientReference,
+    "based-on": carePlanReference,
+    _count: "100",
+  });
+  if (!boundProcedures) {
+    return {
+      status: 409,
+      body: { error: `Could not verify all ${protocol.name} session Procedures. No session was created.` },
+    };
+  }
   let currentSession = boundProcedures.find((procedure) =>
     procedure.encounter?.reference === `Encounter/${encounterId}` && isActiveProcedure(procedure)
   );
@@ -418,6 +433,18 @@ function updateTransaction(resources: Resource[]): Bundle {
 
 function resourcesOf<T extends Resource>(bundle: Bundle<T>): T[] {
   return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
+}
+
+async function searchCompleteProcedures(
+  fhir: Pick<MedplumClient, "search">,
+  params: Record<string, string>,
+): Promise<Procedure[] | undefined> {
+  // search-contract: series-tracker.search-procedures
+  const bundle = await fhir.search<Procedure>("Procedure", params);
+  const procedures = resourcesOf(bundle);
+  const hasNext = bundle.link?.some((link) => link.relation === "next") ?? false;
+  if (hasNext || (bundle.total !== undefined && bundle.total > procedures.length)) return undefined;
+  return procedures;
 }
 
 async function permittedStaff(

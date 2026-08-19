@@ -101,6 +101,10 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
     spec("CarePlan", "patient", "encounter", "_count"),
   ],
   "reminder-engine.search-anchor": [spec("Appointment", "date", "_count")],
+  "series-tracker.search-procedures": [
+    spec("Procedure", "subject", "code", "_count"),
+    spec("Procedure", "subject", "based-on", "_count"),
+  ],
   "scheduling-service.search-resource": [
     spec("Appointment", "actor"),
     spec("HealthcareService"),

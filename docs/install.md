@@ -242,6 +242,21 @@ Practice already provisioned. To re-provision, see docs/install.md §Re-provisio
 
 The no-op path emits an audit row with `event_type = noop` and `action_reason = "v0.5d setup wizard re-run, already provisioned"`.
 
+### Dry-eye treatment configuration
+
+After the MCP server is running, initialize the dry-eye series protocols and package definitions:
+
+```bash
+npm run seed-dry-eye-treatment
+```
+
+This idempotent step is required before the Dry Eye sheet's **Start IPL** action can create a
+treatment-series CarePlan. It also installs the RF and LLLT protocol definitions and package
+definitions. The command uses the local admin credentials from `.env` and stops on archived or
+duplicate definitions rather than replacing them. Review the seeded package prices as practice
+configuration; they are not clinical defaults. Existing installations must run this command once
+because re-running `setup-practice` exits on its completed state and does not add the definitions.
+
 ### Local operator identity
 
 The operator client is a non-human maintenance identity. It is not the human clinical admin, the
