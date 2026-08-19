@@ -606,6 +606,69 @@ test("Dry Eye refuses to create a session in a finished EpisodeOfCare program", 
   });
 });
 
+test("Dry Eye reuses the canonical CarePlan when a broad patient result would paginate", async () => {
+  const { protocol } = dryEyeProtocolFixture();
+  const existingCarePlan = {
+    ...buildSeriesCarePlan({
+      protocol,
+      patientReference: "Patient/test-patient",
+      authorReference: "Practitioner/provider-1",
+      created: "2026-08-19T15:00:00.000Z",
+    }),
+    id: "existing-care-plan",
+    encounter: { reference: "Encounter/encounter-1" },
+  } satisfies CarePlan;
+  await withDryEyeEncounterRoute({
+    carePlanSearch: (params) => params["instantiates-canonical"]
+      ? {
+          resourceType: "Bundle",
+          type: "searchset",
+          total: 1,
+          entry: [{ resource: existingCarePlan }],
+        }
+      : {
+          resourceType: "Bundle",
+          type: "searchset",
+          total: 201,
+          entry: [{ resource: { ...existingCarePlan, id: "unrelated", instantiatesCanonical: [] } }],
+          link: [{ relation: "next", url: "https://example.test/fhir/R4/CarePlan?page=2" }],
+        },
+    procedureSearch: () => ({ resourceType: "Bundle", type: "searchset", total: 0 }),
+  }, async ({ endpoint, headers, created }) => {
+    const response = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+
+    assert.equal(response.status, 201);
+    assert.equal(created.filter((resource) => resource.resourceType === "CarePlan").length, 0);
+    assert.equal(created.filter((resource) => resource.resourceType === "Procedure").length, 1);
+  });
+});
+
+test("Dry Eye fails closed when the narrowed canonical CarePlan result is truncated", async () => {
+  await withDryEyeEncounterRoute({
+    carePlanSearch: () => ({
+      resourceType: "Bundle",
+      type: "searchset",
+      total: 2,
+      entry: [{
+        resource: {
+          resourceType: "CarePlan",
+          id: "care-plan-1",
+          status: "active",
+          intent: "plan",
+          subject: { reference: "Patient/test-patient" },
+        },
+      }],
+      link: [{ relation: "next", url: "https://example.test/fhir/R4/CarePlan?page=2" }],
+    }),
+    procedureSearch: () => ({ resourceType: "Bundle", type: "searchset", total: 0 }),
+  }, async ({ endpoint, headers, created }) => {
+    const response = await fetch(endpoint, { method: "POST", headers, body: "{}" });
+
+    assert.equal(response.status, 409);
+    assert.equal(created.length, 0);
+  });
+});
+
 function dryEyeProtocolFixture() {
   const draft: SeriesProtocolDefinitionDraft = {
     id: "dry-eye-ipl",
@@ -639,6 +702,7 @@ function unrelatedProcedure(id: string): Procedure {
 async function withDryEyeEncounterRoute(
   input: {
     carePlans?: CarePlan[];
+    carePlanSearch?(params: Record<string, string>): Bundle<CarePlan>;
     episodeStatus?: EpisodeOfCare["status"];
     existingProcedures?: Procedure[];
     procedureSearch(params: Record<string, string>): Bundle<Procedure>;
@@ -673,6 +737,7 @@ async function withDryEyeEncounterRoute(
     },
     async search<T extends Resource>(resourceType: T["resourceType"], params: Record<string, string> = {}): Promise<Bundle<T>> {
       if (resourceType === "CarePlan") {
+        if (input.carePlanSearch) return structuredClone(input.carePlanSearch(params)) as Bundle<T>;
         return {
           resourceType: "Bundle",
           type: "searchset",

@@ -85,8 +85,17 @@ async function encounterSeries(
     return { status: 409, body: { error: `Active series protocol ${protocolId} is unavailable.` } };
   }
   const scopeIdentifier = `${programReference ?? `Encounter/${encounterId}`}:${protocolId}`;
-  const carePlanBundle = await staff.fhir.search<CarePlan>("CarePlan", { subject: patientReference, _count: "200" });
-  const patientCarePlans = resourcesOf(carePlanBundle);
+  const patientCarePlans = await searchCompleteResources<CarePlan>(staff.fhir, "CarePlan", {
+    subject: patientReference,
+    "instantiates-canonical": protocol.planDefinitionCanonical,
+    _count: "100",
+  });
+  if (!patientCarePlans) {
+    return {
+      status: 409,
+      body: { error: `Could not verify all active ${protocol.name} CarePlans. No session was created.` },
+    };
+  }
   const matchingCarePlans = (
     await Promise.all(patientCarePlans.map(async (carePlan) =>
       carePlan.status === "active"
@@ -104,7 +113,11 @@ async function encounterSeries(
   }
 
   const legacyProcedures = protocolId === "dry-eye-ipl"
-    ? await searchCompleteProcedures(staff.fhir, { subject: patientReference, code: "IPL", _count: "100" })
+    ? await searchCompleteResources<Procedure>(staff.fhir, "Procedure", {
+        subject: patientReference,
+        code: "IPL",
+        _count: "100",
+      })
     : [];
   if (!legacyProcedures) {
     return {
@@ -176,7 +189,7 @@ async function encounterSeries(
   }
 
   const carePlanReference = `CarePlan/${carePlan.id}`;
-  const boundProcedures = await searchCompleteProcedures(staff.fhir, {
+  const boundProcedures = await searchCompleteResources<Procedure>(staff.fhir, "Procedure", {
     subject: patientReference,
     "based-on": carePlanReference,
     _count: "100",
@@ -447,16 +460,17 @@ function resourcesOf<T extends Resource>(bundle: Bundle<T>): T[] {
   return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
 }
 
-async function searchCompleteProcedures(
+async function searchCompleteResources<T extends Resource>(
   fhir: Pick<MedplumClient, "search">,
+  resourceType: T["resourceType"],
   params: Record<string, string>,
-): Promise<Procedure[] | undefined> {
-  // search-contract: series-tracker.search-procedures
-  const bundle = await fhir.search<Procedure>("Procedure", params);
-  const procedures = resourcesOf(bundle);
+): Promise<T[] | undefined> {
+  // search-contract: series-tracker.search-complete
+  const bundle = await fhir.search<T>(resourceType, params);
+  const resources = resourcesOf(bundle);
   const hasNext = bundle.link?.some((link) => link.relation === "next") ?? false;
-  if (hasNext || (bundle.total !== undefined && bundle.total > procedures.length)) return undefined;
-  return procedures;
+  if (hasNext || (bundle.total !== undefined && bundle.total > resources.length)) return undefined;
+  return resources;
 }
 
 async function permittedStaff(
