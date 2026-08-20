@@ -1,4 +1,4 @@
-export interface WenoEzIntegrationConfig {
+export interface WenoDirectoryDownloadConfig {
   encryptionKey?: string;
   baseUrl?: string;
   syncAdminEmail?: string;
@@ -17,9 +17,9 @@ export interface WenoSwitchConfig {
 export const DEFAULT_WENO_SWITCH_ENDPOINT =
   "https://cert.wenoexchange.com/wenox/restapi/WenoSwitch";
 
-export function wenoEzIntegrationConfigFromEnv(
+export function wenoDirectoryDownloadConfigFromEnv(
   env: NodeJS.ProcessEnv = process.env,
-): WenoEzIntegrationConfig {
+): WenoDirectoryDownloadConfig {
   return {
     encryptionKey: env.WENO_EZ_ENCRYPTION_KEY,
     baseUrl: env.WENO_EZ_BASE_URL,
@@ -28,7 +28,9 @@ export function wenoEzIntegrationConfigFromEnv(
   };
 }
 
-export function isWenoConfigured(config: WenoEzIntegrationConfig): boolean {
+export function isWenoDirectoryDownloadConfigured(
+  config: WenoDirectoryDownloadConfig,
+): boolean {
   return [
     config.encryptionKey,
     config.baseUrl,
