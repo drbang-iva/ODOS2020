@@ -349,6 +349,7 @@ export class InboundFaxTriageService {
   }): Promise<{ documentReference: DocumentReference; serviceRequest: ServiceRequest }> {
     assertTriageRole(input.actorRole);
     const current = await this.readInboundFax(input.faxDocumentReference);
+    const priorTriageStatus = inboundFaxTriageStatus(current);
     const faxId = inboundFaxId(current);
     const existingReferral = await findExistingInboundReferral(this.fhir, faxId);
     if (existingReferral?.subject.reference !== undefined
@@ -378,27 +379,43 @@ export class InboundFaxTriageService {
       input.patientReference,
       "promoted",
     );
-    const serviceRequest = await this.fhir.create<ServiceRequest>({
-      ...buildInboundReferralServiceRequest({
-        subjectReference: input.patientReference,
-        subjectDisplay: input.patientDisplay,
-        ...(input.referrerReference ? { referrerReference: input.referrerReference } : {}),
-        referrerDisplay: input.referrerDisplay,
-        performerReference: input.performerReference,
-        performerDisplay: input.performerDisplay,
-        captureSource: "fax",
-        authoredOn: this.now(),
-        reasonText: input.reasonText,
-      }),
-      identifier: [{
-        system: INBOUND_FAX_REFERRAL_IDENTIFIER_SYSTEM,
-        value: faxId,
-      }],
-    }, {
-      ...INBOUND_REFERRAL_WRITE_HEADERS,
-      "If-None-Exist":
-        `identifier=${INBOUND_FAX_REFERRAL_IDENTIFIER_SYSTEM}|${faxId}`,
-    });
+    let serviceRequest: ServiceRequest;
+    try {
+      serviceRequest = await this.fhir.create<ServiceRequest>({
+        ...buildInboundReferralServiceRequest({
+          subjectReference: input.patientReference,
+          subjectDisplay: input.patientDisplay,
+          ...(input.referrerReference ? { referrerReference: input.referrerReference } : {}),
+          referrerDisplay: input.referrerDisplay,
+          performerReference: input.performerReference,
+          performerDisplay: input.performerDisplay,
+          captureSource: "fax",
+          authoredOn: this.now(),
+          reasonText: input.reasonText,
+        }),
+        identifier: [{
+          system: INBOUND_FAX_REFERRAL_IDENTIFIER_SYSTEM,
+          value: faxId,
+        }],
+      }, {
+        ...INBOUND_REFERRAL_WRITE_HEADERS,
+        "If-None-Exist":
+          `identifier=${INBOUND_FAX_REFERRAL_IDENTIFIER_SYSTEM}|${faxId}`,
+      });
+    } catch (createError) {
+      try {
+        await this.restoreFax(documentReference, current, priorTriageStatus);
+      } catch (restoreError) {
+        const original = asError(createError);
+        const restore = asError(restoreError);
+        throw new AggregateError(
+          [original, restore],
+          `${original.message}; fax triage restore also failed: ${restore.message}`,
+          { cause: original },
+        );
+      }
+      throw createError;
+    }
     const serviceRequestReference = requiredReference(serviceRequest, "ServiceRequest");
     if (serviceRequest.subject.reference !== input.patientReference) {
       throw new InboundFaxTriageConflictError(
@@ -512,6 +529,37 @@ export class InboundFaxTriageService {
       }
       throw error;
     }
+  }
+
+  private async restoreFax(
+    current: DocumentReference,
+    prior: DocumentReference,
+    priorStatus: InboundFaxTriageStatus | undefined,
+  ): Promise<DocumentReference> {
+    if (!current.id) throw new Error("Inbound fax DocumentReference has no id.");
+    const versionId = current.meta?.versionId;
+    if (!versionId) throw new Error("Inbound fax DocumentReference has no version for safe update.");
+    const { subject: _promotedSubject, ...withoutSubject } = current;
+    return this.fhir.update(
+      "DocumentReference",
+      current.id,
+      {
+        ...withoutSubject,
+        ...(prior.subject ? { subject: prior.subject } : {}),
+        extension: [
+          ...(current.extension ?? []).filter(
+            (extension) => extension.url !== INBOUND_FAX_TRIAGE_STATUS_EXTENSION_URL,
+          ),
+          ...(priorStatus
+            ? [{ url: INBOUND_FAX_TRIAGE_STATUS_EXTENSION_URL, valueCode: priorStatus }]
+            : []),
+        ],
+      },
+      {
+        "X-ODOS-Source": "mcp/inbound-fax-triage",
+        "If-Match": `W/"${versionId}"`,
+      },
+    );
   }
 }
 

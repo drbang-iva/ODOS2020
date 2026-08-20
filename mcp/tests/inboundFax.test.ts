@@ -32,6 +32,7 @@ import {
   REFERRAL_CAPTURE_SOURCE_EXTENSION_URL,
   ReferralReplyWorklist,
 } from "../src/referral/reciprocal-referral.js";
+import { loadCorrespondenceDeskBlock } from "../src/desk/correspondence-block.js";
 
 const FAX_ID: WestFaxFaxIdentifier = {
   id: "fax-inbound-1",
@@ -274,6 +275,91 @@ test("a 412 during promotion leaves no orphan ServiceRequest", async () => {
   );
 
   assert.equal(fhir.resources("ServiceRequest").length, 0);
+});
+
+test("a failed referral create restores the fax to its independently readable Desk state", async () => {
+  const fhir = new InboundFaxFhir();
+  await createInboundFaxPoller({
+    fhir,
+    adapter: new InboundFaxAdapter(),
+    suggestPatient: async () => undefined,
+  }).run();
+  const record = fhir.resources("DocumentReference")[0] as DocumentReference;
+  fhir.failServiceRequestCreates = true;
+  const triage = new InboundFaxTriageService(fhir, () => "2026-07-31T15:30:00.000Z");
+
+  await assert.rejects(
+    promoteFax(triage, record, "Patient/patient-1"),
+    /synthetic ServiceRequest create failure/,
+  );
+
+  const stored = await fhir.read<DocumentReference>("DocumentReference", record.id!);
+  assert.equal(inboundFaxTriageStatus(stored), "inbox");
+  assert.equal(stored.subject, undefined);
+  const desk = await loadCorrespondenceDeskBlock(fhir, {
+    loadRepliesOwed: async () => [],
+  });
+  assert.equal(desk.items.some((item) => item.faxId === record.id), true);
+});
+
+test("a failed referral create rolls back before retry and replay converge to one referral", async () => {
+  const fhir = new InboundFaxFhir();
+  await createInboundFaxPoller({
+    fhir,
+    adapter: new InboundFaxAdapter(),
+    suggestPatient: async () => undefined,
+  }).run();
+  const record = fhir.resources("DocumentReference")[0] as DocumentReference;
+  fhir.failServiceRequestCreates = true;
+  const triage = new InboundFaxTriageService(fhir, () => "2026-07-31T15:30:00.000Z");
+
+  await assert.rejects(promoteFax(triage, record, "Patient/patient-1"));
+  fhir.failServiceRequestCreates = false;
+  const retried = await promoteFax(triage, record, "Patient/patient-1");
+  const replayed = await promoteFax(triage, record, "Patient/patient-1");
+
+  assert.equal(replayed.serviceRequest.id, retried.serviceRequest.id);
+  assert.equal(fhir.resources("ServiceRequest").length, 1);
+});
+
+test("retry after an ambiguous create failure converges to the referral committed server-side", async () => {
+  const fhir = new InboundFaxFhir();
+  await createInboundFaxPoller({
+    fhir,
+    adapter: new InboundFaxAdapter(),
+    suggestPatient: async () => undefined,
+  }).run();
+  const record = fhir.resources("DocumentReference")[0] as DocumentReference;
+  fhir.failServiceRequestCreateAfterPersisting = true;
+  const triage = new InboundFaxTriageService(fhir, () => "2026-07-31T15:30:00.000Z");
+
+  await assert.rejects(
+    promoteFax(triage, record, "Patient/patient-1"),
+    /synthetic ambiguous ServiceRequest create failure/,
+  );
+  const committed = fhir.resources("ServiceRequest")[0] as ServiceRequest;
+  const retried = await promoteFax(triage, record, "Patient/patient-1");
+
+  assert.equal(retried.serviceRequest.id, committed.id);
+  assert.equal(fhir.resources("ServiceRequest").length, 1);
+});
+
+test("a failed fax restore surfaces both failures without masking the referral create error", async () => {
+  const fhir = new InboundFaxFhir();
+  await createInboundFaxPoller({
+    fhir,
+    adapter: new InboundFaxAdapter(),
+    suggestPatient: async () => undefined,
+  }).run();
+  const record = fhir.resources("DocumentReference")[0] as DocumentReference;
+  fhir.failServiceRequestCreates = true;
+  fhir.failFaxRestoreUpdates = true;
+  const triage = new InboundFaxTriageService(fhir, () => "2026-07-31T15:30:00.000Z");
+
+  await assert.rejects(
+    promoteFax(triage, record, "Patient/patient-1"),
+    /synthetic ServiceRequest create failure.*synthetic fax restore failure/i,
+  );
 });
 
 test("an existing referral patient mismatch fails before any fax version mutation", async () => {
@@ -591,9 +677,12 @@ class InboundFaxFhir {
   private readonly rows: Resource[] = [];
   failDocumentCreates = false;
   failServiceRequestCreates = false;
+  failServiceRequestCreateAfterPersisting = false;
   failServiceRequestSearches = false;
+  failFaxRestoreUpdates = false;
   conflictStatusOnNextUpdate?: 409 | 412;
   readonly updateHeaders: Record<string, string>[] = [];
+  private faxUpdateCount = 0;
 
   resources(type: Resource["resourceType"]): Resource[] {
     return this.rows.filter((resource) => resource.resourceType === type);
@@ -675,6 +764,10 @@ class InboundFaxFhir {
       meta: { ...structuredClone(resource.meta), versionId: "1" },
     } as T;
     this.rows.push(saved);
+    if (resource.resourceType === "ServiceRequest" && this.failServiceRequestCreateAfterPersisting) {
+      this.failServiceRequestCreateAfterPersisting = false;
+      throw new Error("synthetic ambiguous ServiceRequest create failure");
+    }
     return structuredClone(saved);
   }
 
@@ -685,6 +778,12 @@ class InboundFaxFhir {
     headers: Record<string, string> = {},
   ): Promise<T> {
     this.updateHeaders.push(structuredClone(headers));
+    if (type === "DocumentReference") {
+      this.faxUpdateCount += 1;
+      if (this.failFaxRestoreUpdates && this.faxUpdateCount > 1) {
+        throw new Error("synthetic fax restore failure");
+      }
+    }
     const index = this.rows.findIndex((candidate) =>
       candidate.resourceType === type && candidate.id === id);
     if (index < 0) throw new Error(`${type}/${id} not found`);
