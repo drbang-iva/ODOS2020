@@ -126,6 +126,9 @@ Create `.env` from `.env.example` or export these variables in the shell that ru
 | `ODOS_REMINDER_ENGINE_ENABLED` | no | Must be explicitly `true` after Google Workspace and BAA setup is confirmed. |
 | `ODOS_REMINDER_LOOKBACK_MINUTES` | no | Bounded positive-offset recovery window; defaults to 1,440 minutes. Negative appointment reminders recover while the appointment is still upcoming. |
 | `ODOS_COMMS_PUBLIC_BASE_URL` | yes for tracked links | HTTPS practice-domain origin for campaign redirect links. |
+| `WESTFAX_USERNAME`, `WESTFAX_PASSWORD`, `WESTFAX_PRODUCT_ID`, `WESTFAX_CALLBACK_BASE_URL` | yes for fax | Server-only WestFax credentials, the practice fax-line ProductId, and the HTTPS callback origin. |
+| `ODOS_INBOUND_FAX_WORKER_ENABLED` | no | Set to `true` to opt in to inbound polling after WestFax is configured; defaults to off. |
+| `ODOS_INBOUND_FAX_WORKER_MS` | no | Inbound polling cadence in milliseconds; defaults to 180,000 (3 minutes), minimum 15,000. |
 
 Google Workspace communications setup and the documented manual-send verification path are in
 [`docs/google-workspace-comms.md`](google-workspace-comms.md).
@@ -197,6 +200,19 @@ Complete this sequence before any real patient Voice, SMS, or MMS traffic:
    v3 for a PHI-bearing workflow. ([Real-Time Transcription TwiML](https://www.twilio.com/docs/voice/twiml/transcription),
    accessed 2026-08-02; [Real-Time Transcription HIPAA eligibility table](https://www.twilio.com/docs/voice/api/realtime-transcription-resource#hipaa-eligibility-and-pci-compliance),
    accessed 2026-08-02.)
+### Inbound WestFax deployment
+
+Inbound fax retrieval is a server-side polling workflow. WestFax credentials and downloaded PDF
+content must stay in the local MCP service; never expose them through Vite variables or browser
+storage. Configure the four `WESTFAX_*` values above, set
+`ODOS_INBOUND_FAX_WORKER_ENABLED=true`, and restart `odos-core`. The worker polls unread inbound
+faxes every three minutes by default. A failed local FHIR write leaves the fax unread at WestFax
+for a later retry and logs the failure; it does not advance the vendor cursor.
+
+The received PDF is stored inside its local FHIR `DocumentReference`. A sender-number match can
+suggest a patient only when it resolves through a known referrer and exactly one prior inbound
+referral; staff must still confirm every chart attachment. There is no automatic patient attach
+path.
 
 ## Setup Wizard
 

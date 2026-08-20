@@ -21,6 +21,12 @@ import {
   createWestFaxAdapter,
   westFaxConfigFromEnv,
 } from "./fax/westfax-adapter.js";
+import {
+  createInboundFaxPoller,
+  inboundFaxWorkerEnabled,
+  inboundFaxWorkerIntervalMs,
+  startInboundFaxWorker,
+} from "./fax/inbound-fax.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -5594,6 +5600,8 @@ function authenticateStaffRouteForAction(businessAction: BusinessAction) {
 
 async function startMcpServer(): Promise<void> {
   const transportMode = process.env.ODOS_MCP_TRANSPORT ?? "stdio";
+  const westFaxConfig = westFaxConfigFromEnv(process.env);
+  const westFaxAdapter = westFaxConfig ? createWestFaxAdapter(westFaxConfig) : null;
   if (transportMode === "sse") {
     await logSsePracticeRoleBootVerification({
       authenticate: authenticateWithMedplum,
@@ -5606,6 +5614,22 @@ async function startMcpServer(): Promise<void> {
   await logProtocolSeedBootFailure({
     seed: () => protocolDefinitionStore.ensureSeed(GLAUCOMA_SUSPECT_PROTOCOL).then(() => undefined),
   });
+  if (westFaxAdapter && inboundFaxWorkerEnabled(process.env.ODOS_INBOUND_FAX_WORKER_ENABLED)) {
+    startInboundFaxWorker({
+      authenticate: authenticateWithMedplum,
+      poller: createInboundFaxPoller({
+        fhir,
+        adapter: westFaxAdapter,
+        onRepeatedFailure: (faxId, error) => {
+          console.error(
+            `odos-mcp: inbound fax ${faxId} has failed repeatedly and remains unread in WestFax:`,
+            error,
+          );
+        },
+      }),
+      intervalMs: inboundFaxWorkerIntervalMs(process.env.ODOS_INBOUND_FAX_WORKER_MS),
+    });
+  }
   if (process.env.ODOS_REMINDER_ENGINE_ENABLED === "true") {
     const campaigns = appointmentReminderCampaignsFromEnv(process.env);
     for (const provider of new Set(campaigns.map((campaign) => campaign.provider))) {
@@ -5770,8 +5794,6 @@ async function startMcpServer(): Promise<void> {
       const claimMdAdapter = claimMdConfig ? createClaimMdAdapter({ config: claimMdConfig }) : null;
       const stediConfig = stediConfigFromEnv(process.env);
       const stediAdapter = stediConfig ? createStediAdapter({ config: stediConfig }) : null;
-      const westFaxConfig = westFaxConfigFromEnv(process.env);
-      const westFaxAdapter = westFaxConfig ? createWestFaxAdapter(westFaxConfig) : null;
       const clearinghouseAdapters = {
         ...(claimMdAdapter ? { claimmd: claimMdAdapter } : {}),
         ...(stediAdapter ? { stedi: stediAdapter } : {}),

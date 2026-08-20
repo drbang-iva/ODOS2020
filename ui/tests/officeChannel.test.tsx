@@ -304,6 +304,7 @@ function emptyDeskSummary() {
         draftsAwaitingSignature: n,
         repliesOwed: n,
         sendFailures: n,
+        inboundFaxes: n,
         items: [],
       },
       frontLine: { available: false, message: "Not wired", needsReply: off, missedCalls: off, voicemails: off, urgent: off, messages: [] },

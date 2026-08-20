@@ -126,6 +126,18 @@
 .odos-attention-list span { display: flex; min-width: 0; flex-direction: column; }
 .odos-desk-card .odos-attention-list b { margin: 0; color: var(--odos-text); font-family: inherit; font-size: 12px; font-weight: 600; }
 .odos-attention-list small { color: var(--odos-faint); font-size: 10px; }
+.odos-inbound-fax-list { display: flex; max-height: 330px; flex-direction: column; gap: 10px; overflow-y: auto; }
+.odos-inbound-fax-list article { padding: 10px; border: 1px solid var(--odos-line); border-radius: 10px; background: rgba(255,255,255,.02); color: var(--odos-text); }
+.odos-inbound-fax-list header { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; }
+.odos-inbound-fax-list header span, .odos-inbound-fax-list p { color: var(--odos-muted); font-size: 10px; }
+.odos-inbound-fax-list button { padding: 5px 8px; border: 1px solid var(--odos-line-2); border-radius: 7px; background: transparent; color: var(--odos-text); font-size: 10px; }
+.odos-inbound-fax-list button:disabled { cursor: not-allowed; opacity: .45; }
+.odos-inbound-fax-list details { margin: 8px 0; color: var(--odos-muted); font-size: 10px; }
+.odos-inbound-fax-promotion { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 8px 0; }
+.odos-inbound-fax-promotion label { display: flex; flex-direction: column; gap: 3px; color: var(--odos-faint); font-size: 9px; }
+.odos-inbound-fax-promotion input { min-width: 0; padding: 5px; border: 1px solid var(--odos-line); border-radius: 6px; background: var(--odos-ground); color: var(--odos-text); font: inherit; }
+.odos-inbound-fax-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.odos-inbound-fax-done { color: var(--odos-emerald); font-size: 11px; }
 .odos-agenda { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 14px; }
 .odos-agenda > div { display: grid; grid-template-columns: auto 1fr; gap: 2px 7px; min-width: 0; padding-top: 6px; border-top: 1px solid var(--odos-line); font-size: 10px; }
 .odos-agenda time { color: var(--odos-sapphire); } .odos-agenda span { overflow: hidden; color: var(--odos-text); text-overflow: ellipsis; white-space: nowrap; } .odos-agenda em { grid-column: 2; color: var(--odos-faint); font-style: normal; }

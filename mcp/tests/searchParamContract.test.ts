@@ -106,6 +106,12 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
     spec("Procedure", "subject", "code", "_count"),
     spec("Procedure", "subject", "based-on", "_count"),
   ],
+  "inbound-fax.search-resource": [
+    spec("Practitioner", "telecom", "_count"),
+    spec("PractitionerRole", "telecom", "_count"),
+    spec("ServiceRequest", "category", "requester", "_sort", "_count"),
+  ],
+  "inbound-fax.find-referral": [spec("ServiceRequest", "identifier", "_count")],
   "scheduling-service.search-resource": [
     spec("Appointment", "actor"),
     spec("HealthcareService"),

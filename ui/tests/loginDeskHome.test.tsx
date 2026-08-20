@@ -8,6 +8,8 @@ import { LoginScreen, PASSWORD_RESET_CONFIRMATION, requestPasswordReset, submitL
 import { PasswordResetTransportError } from "../src/lib/auth-api";
 import { fetchWhoAmI } from "../src/lib/practice-roles";
 import { fetchDeskSummary, type DeskSummary } from "../src/lib/desk-summary";
+import { openInboundFaxDocument, triageInboundFax } from "../src/lib/inbound-fax";
+import { fhir } from "../src/lib/fhir";
 import { submitSetPassword } from "../src/scenes/SetPasswordScreen";
 import { CLINIC_PATH, COCKPIT_HOVER_CLOSE_DELAY_MS, DESK_CARD_STORAGE_KEY, DESK_HOME_PATH, DeskHome, displayStat, loadDeskCardIds, reorderDeskCards, sanitizeDeskCardIds } from "../src/scenes/DeskHome";
 import { clearCockpitPanelPosition, COCKPIT_PANEL_POSITION_STORAGE_KEY, loadCockpitPanelPosition, saveCockpitPanelPosition } from "../src/scenes/frontdesk/CockpitGuestPanel";
@@ -119,6 +121,64 @@ test("whoami and Desk summary reject successful empty or non-JSON bodies", async
   );
 });
 
+test("inbound fax actions accept empty success bodies and preserve JSON error details", async () => {
+  await triageInboundFax(
+    "fax-1",
+    "inbox",
+    {},
+    async () => new Response(null, { status: 200 }),
+  );
+  await assert.rejects(
+    triageInboundFax(
+      "fax-1",
+      "attach",
+      { patientReference: "Patient/p1" },
+      async () => new Response(JSON.stringify({ error: "Synthetic conflict" }), {
+        status: 409,
+        headers: { "Content-Type": "application/json" },
+      }),
+    ),
+    /Synthetic conflict/,
+  );
+});
+
+test("inbound fax PDF rejects a cross-origin URL before reading or sending authorization", async () => {
+  const originalWindow = globalThis.window;
+  const originalAuthHeader = fhir.authHeader;
+  let tokenReads = 0;
+  let fetches = 0;
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: {
+      location: {
+        href: "https://practice.example.test/desk",
+        origin: "https://practice.example.test",
+      },
+    } as unknown as Window & typeof globalThis,
+  });
+  fhir.authHeader = () => {
+    tokenReads += 1;
+    return "Bearer synthetic-session-token";
+  };
+  try {
+    await assert.rejects(
+      openInboundFaxDocument(
+        "https://attacker.example.test/collect",
+        async () => {
+          fetches += 1;
+          throw new Error("cross-origin fetch executed");
+        },
+      ),
+      /same-origin/i,
+    );
+    assert.equal(tokenReads, 0);
+    assert.equal(fetches, 0);
+  } finally {
+    fhir.authHeader = originalAuthHeader;
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
+});
+
 test("Desk home keeps Customize on-page and leaves global navigation to AppShell", () => {
   const html = renderToStaticMarkup(<DeskHome />);
   assert.match(html, /The Desk/);
@@ -171,6 +231,193 @@ test("Needs attention renders the exact all-clear state when every target is met
   assert.match(html, /All clear — nothing needs you\./);
   assert.match(html, /Day open · \$0\.00 collected/);
   assert.match(html, /href="\/desk\/ledger"/);
+});
+
+test("Desk Correspondence renders inbound fax metadata, advisory matching, PDF view, and all three actions", () => {
+  const summary = emptyDeskSummary();
+  summary.cards.correspondence.inboundFaxes = { value: 1, tone: "warn" };
+  summary.cards.correspondence.items = [{
+    kind: "inbound-fax",
+    title: "Inbound fax from 8645550199",
+    patientReference: "Patient/unknown",
+    severity: "info",
+    ageMinutes: 5,
+    action: "Review and triage",
+    owner: "front-desk",
+    status: "open",
+    faxId: "fax-1",
+    receivedAt: "2026-07-31T14:30:00.000Z",
+    senderNumber: "8645550199",
+    pageCount: 2,
+    documentUrl: "/fax/inbound/fax-1/document",
+    triageStatus: "received",
+    suggestedPatient: { reference: "Patient/p1", display: "Suggested Patient" },
+  }];
+
+  const html = renderToStaticMarkup(<DeskHome initialSummary={summary} />);
+  assert.match(html, /8645550199/);
+  assert.match(html, /2 pages/);
+  assert.match(html, /suggestion only; no chart action happens until staff confirms/i);
+  assert.match(html, /View PDF/);
+  assert.match(html, /Attach to chart/);
+  assert.match(html, /Promote to referral/);
+  assert.match(html, /General inbox/);
+});
+
+test("successful inbound fax triage updates the Desk count and removes the completed row", async () => {
+  const summary = emptyDeskSummary();
+  summary.cards.correspondence.inboundFaxes = { value: 1, tone: "warn" };
+  summary.cards.correspondence.items = [inboundFaxDeskItem()];
+  const calls: unknown[][] = [];
+  const originalWindow = globalThis.window;
+  const windowStub = {
+    localStorage: memoryStorage(),
+    setInterval: () => 1,
+    clearInterval: () => undefined,
+  } as unknown as Window & typeof globalThis;
+  Object.defineProperty(globalThis, "window", { configurable: true, value: windowStub });
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<DeskHome
+        initialSummary={summary}
+        initialOfficeMessages={[]}
+        inboundFaxApi={{
+          triage: async (...args) => { calls.push(args); },
+          open: async () => undefined,
+        }}
+      />);
+    });
+    const inbox = renderer.root.findAllByType("button").find(
+      (button) => button.children.join("") === "General inbox",
+    );
+    assert.ok(inbox);
+
+    await act(async () => { inbox.props.onClick(); });
+
+    assert.deepEqual(calls, [["fax-1", "inbox", {}]]);
+    const inboundStat = renderer.root.findAllByType("div").find((node) =>
+      node.props.className?.startsWith("odos-stat-tone-")
+      && node.findAllByType("span").some((span) => span.children.includes("Inbound faxes"))
+    );
+    assert.ok(inboundStat);
+    assert.deepEqual(inboundStat.findByType("strong").children, ["0"]);
+    assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /General inbox/);
+  } finally {
+    act(() => renderer?.unmount());
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
+});
+
+test("inbound fax attach and promote buttons send the confirmed payloads", async () => {
+  const originalWindow = globalThis.window;
+  const windowStub = {
+    localStorage: memoryStorage(),
+    setInterval: () => 1,
+    clearInterval: () => undefined,
+  } as unknown as Window & typeof globalThis;
+  Object.defineProperty(globalThis, "window", { configurable: true, value: windowStub });
+  let renderer!: ReactTestRenderer;
+  const calls: unknown[][] = [];
+  const renderFax = async () => {
+    const summary = emptyDeskSummary();
+    summary.cards.correspondence.inboundFaxes = { value: 1, tone: "warn" };
+    summary.cards.correspondence.items = [inboundFaxDeskItem()];
+    await act(async () => {
+      renderer = create(<DeskHome
+        initialSummary={summary}
+        initialOfficeMessages={[]}
+        inboundFaxApi={{
+          triage: async (...args) => { calls.push(args); },
+          open: async () => undefined,
+        }}
+      />);
+    });
+  };
+  try {
+    await renderFax();
+    const attach = renderer.root.findAllByType("button").find(
+      (button) => button.children.join("") === "Attach to chart",
+    );
+    assert.ok(attach);
+    await act(async () => { attach.props.onClick(); });
+    assert.deepEqual(calls.shift(), ["fax-1", "attach", { patientReference: "Patient/p1" }]);
+    act(() => renderer.unmount());
+
+    await renderFax();
+    const inputs = renderer.root.findAllByType("input");
+    const performerReference = inputs.find((input) => input.props.placeholder === "Practitioner/…");
+    assert.ok(performerReference);
+    const performerIndex = inputs.indexOf(performerReference);
+    const performerDisplay = inputs[performerIndex + 1];
+    assert.ok(performerDisplay);
+    act(() => {
+      performerReference.props.onChange({ target: { value: "Practitioner/doctor-1" } });
+      performerDisplay.props.onChange({ target: { value: "Doctor One" } });
+    });
+    const promote = renderer.root.findAllByType("button").find(
+      (button) => button.children.join("") === "Promote to referral",
+    );
+    assert.ok(promote);
+    assert.equal(promote.props.disabled, false);
+    await act(async () => { promote.props.onClick(); });
+    assert.deepEqual(calls.shift(), ["fax-1", "promote", {
+      patientReference: "Patient/p1",
+      patientDisplay: "Suggested Patient",
+      referrerDisplay: "Fax sender 8645550199",
+      performerReference: "Practitioner/doctor-1",
+      performerDisplay: "Doctor One",
+      reasonText: "Review inbound fax correspondence",
+    }]);
+  } finally {
+    act(() => renderer?.unmount());
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
+});
+
+test("inbound fax actions disable while pending and surface failures without removing the row", async () => {
+  const summary = emptyDeskSummary();
+  summary.cards.correspondence.inboundFaxes = { value: 1, tone: "warn" };
+  summary.cards.correspondence.items = [inboundFaxDeskItem()];
+  const originalWindow = globalThis.window;
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: {
+      localStorage: memoryStorage(),
+      setInterval: () => 1,
+      clearInterval: () => undefined,
+    } as unknown as Window & typeof globalThis,
+  });
+  let rejectAction!: (reason: Error) => void;
+  const pending = new Promise<void>((_resolve, reject) => { rejectAction = reject; });
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<DeskHome
+        initialSummary={summary}
+        initialOfficeMessages={[]}
+        inboundFaxApi={{ triage: async () => pending, open: async () => undefined }}
+      />);
+    });
+    const inbox = renderer.root.findAllByType("button").find(
+      (button) => button.children.join("") === "General inbox",
+    );
+    assert.ok(inbox);
+    act(() => { inbox.props.onClick(); });
+    assert.equal(renderer.root.findAllByType("button").find(
+      (button) => button.children.join("") === "General inbox",
+    )?.props.disabled, true);
+
+    await act(async () => { rejectAction(new Error("Synthetic triage conflict")); });
+
+    assert.match(renderer.root.findByProps({ role: "alert" }).children.join(""), /Synthetic triage conflict/);
+    assert.ok(renderer.root.findAllByType("button").some(
+      (button) => button.children.join("") === "General inbox",
+    ));
+  } finally {
+    act(() => renderer?.unmount());
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
 });
 
 test("Desk statement date-time formatting degrades malformed values to an em dash", () => {
@@ -420,6 +667,7 @@ function emptyDeskSummary(): DeskSummary {
         draftsAwaitingSignature: n,
         repliesOwed: n,
         sendFailures: n,
+        inboundFaxes: n,
         items: [],
       },
       frontLine: { available: false, message: "Comms counts arrive with the GHL adapter — Phase 3b", needsReply: off, missedCalls: off, voicemails: off, urgent: off, messages: [] },
@@ -431,6 +679,26 @@ function emptyDeskSummary(): DeskSummary {
       statements: { available: true, cadence: { value: "Weekly · Wednesdays recommended", tone: "info" }, invalidRejects: n, lastStatement: { value: null, tone: "off" } },
     },
     pulse: { itemsNeedingYou: 0, everythingElseAtTarget: true, lastClaimTransmission: null, lastClaimTransmissionTone: "off" },
+  };
+}
+
+function inboundFaxDeskItem(): NonNullable<DeskSummary["cards"]["correspondence"]>["items"][number] {
+  return {
+    kind: "inbound-fax",
+    title: "Inbound fax from 8645550199",
+    patientReference: "Patient/unknown",
+    severity: "info",
+    ageMinutes: 5,
+    action: "Review and triage",
+    owner: "front-desk",
+    status: "open",
+    faxId: "fax-1",
+    receivedAt: "2026-07-31T14:30:00.000Z",
+    senderNumber: "8645550199",
+    pageCount: 2,
+    documentUrl: "/fax/inbound/fax-1/document",
+    triageStatus: "received",
+    suggestedPatient: { reference: "Patient/p1", display: "Suggested Patient" },
   };
 }
 

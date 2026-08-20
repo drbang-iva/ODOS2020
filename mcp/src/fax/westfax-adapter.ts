@@ -1,5 +1,6 @@
 export const WESTFAX_BASE_URL = "https://api2.westfax.com";
 export const WESTFAX_REQUEST_TIMEOUT_MS = 30_000;
+export const WESTFAX_INBOUND_BATCH_SIZE = 25;
 
 export interface WestFaxConfig {
   baseUrl: string;
@@ -26,8 +27,51 @@ export interface FaxSendResult {
   infoString?: string;
 }
 
+export interface WestFaxInboundProduct {
+  id: string;
+  inboundNumber?: string;
+}
+
+export interface WestFaxFaxIdentifier {
+  id: string;
+  direction: "Inbound";
+  date?: string;
+  tag?: string;
+}
+
+export interface WestFaxFaxDescription extends WestFaxFaxIdentifier {
+  pageCount?: number;
+  senderNumber?: string;
+  reference?: string;
+}
+
+export interface WestFaxFaxDocument extends WestFaxFaxIdentifier {
+  pageCount?: number;
+  contentType: "application/pdf";
+  fileContents: string;
+}
+
 export interface WestFaxAdapter {
   sendFax(input: FaxSendInput): Promise<FaxSendResult>;
+  getProductsWithInboundFaxes(filter: "None"): Promise<WestFaxInboundProduct[]>;
+  getFaxIdentifiers(
+    productId: string,
+    direction: "Inbound",
+  ): Promise<WestFaxFaxIdentifier[]>;
+  getFaxDescriptions(
+    productId: string,
+    faxIds: WestFaxFaxIdentifier[],
+  ): Promise<WestFaxFaxDescription[]>;
+  getFaxDocuments(
+    productId: string,
+    faxIds: WestFaxFaxIdentifier[],
+    format: "pdf",
+  ): Promise<WestFaxFaxDocument[]>;
+  changeFaxFilterValue(
+    productId: string,
+    faxIds: WestFaxFaxIdentifier[],
+    filter: "Retrieved",
+  ): Promise<void>;
 }
 
 interface WestFaxResponse {
@@ -116,37 +160,240 @@ export function createWestFaxAdapter(
       optional(form, "FaxQuality", input.faxQuality);
       optional(form, "CallbackUrl", input.callbackUrl);
 
-      const controller = new AbortController();
-      let timedOut = false;
-      const timeout = setTimeout(() => {
-        timedOut = true;
-        controller.abort();
-      }, WESTFAX_REQUEST_TIMEOUT_MS);
-      try {
-        const response = await fetchImpl(`${baseUrl}/REST/Fax_SendFax/json`, {
-          method: "POST",
-          headers: { Accept: "application/json" },
-          body: form,
-          signal: controller.signal,
-        });
-        const raw = await parseResponse(response);
-        const jobId = stringValue(raw.Result);
-        return {
-          success: response.ok && raw.Success === true,
-          ...(jobId ? { jobId } : {}),
-          ...(stringValue(raw.ErrorString) ? { errorString: stringValue(raw.ErrorString) } : {}),
-          ...(stringValue(raw.InfoString) ? { infoString: stringValue(raw.InfoString) } : {}),
-        };
-      } catch (error) {
-        if (timedOut && error instanceof Error && error.name === "AbortError") {
-          throw new Error("WestFax request timed out after 30 seconds.");
-        }
-        throw error;
-      } finally {
-        clearTimeout(timeout);
+      const { response, raw } = await postWestFax(
+        fetchImpl,
+        baseUrl,
+        "Fax_SendFax",
+        form,
+      );
+      const jobId = stringValue(raw.Result);
+      return {
+        success: response.ok && raw.Success === true,
+        ...(jobId ? { jobId } : {}),
+        ...(stringValue(raw.ErrorString) ? { errorString: stringValue(raw.ErrorString) } : {}),
+        ...(stringValue(raw.InfoString) ? { infoString: stringValue(raw.InfoString) } : {}),
+      };
+    },
+
+    async getProductsWithInboundFaxes(filter) {
+      const form = authForm(config);
+      form.set("Filter", filter);
+      const raw = await successfulWestFaxCall(
+        fetchImpl,
+        baseUrl,
+        "Fax_GetProductsWithInboundFaxes",
+        form,
+      );
+      return resultArray(raw).flatMap((value) => {
+        const row = objectValue(value);
+        const id = stringValue(row?.Id);
+        if (!id) return [];
+        const inboundNumber = stringValue(row?.InboundNumber);
+        return [{ id, ...(inboundNumber ? { inboundNumber } : {}) }];
+      });
+    },
+
+    async getFaxIdentifiers(productId, direction) {
+      const form = authForm(config, productId);
+      form.set("FaxDirection", direction);
+      const raw = await successfulWestFaxCall(
+        fetchImpl,
+        baseUrl,
+        "Fax_GetFaxIdentifiers",
+        form,
+      );
+      return resultArray(raw).flatMap((value) => {
+        const row = objectValue(value);
+        const id = stringValue(row?.Id);
+        if (!id || row?.Direction !== "Inbound") return [];
+        return [{
+          id,
+          direction: "Inbound" as const,
+          ...(stringValue(row.Date) ? { date: stringValue(row.Date) } : {}),
+          ...(stringValue(row.Tag) ? { tag: stringValue(row.Tag) } : {}),
+        }];
+      });
+    },
+
+    async getFaxDescriptions(productId, faxIds) {
+      if (!faxIds.length) return [];
+      const descriptions: WestFaxFaxDescription[] = [];
+      for (const batch of batches(faxIds, WESTFAX_INBOUND_BATCH_SIZE)) {
+        const form = authForm(config, productId);
+        addFaxIds(form, batch);
+        const raw = await successfulWestFaxCall(
+          fetchImpl,
+          baseUrl,
+          "Fax_GetFaxDescriptionsUsingIds",
+          form,
+        );
+        descriptions.push(...resultArray(raw).flatMap((value) => {
+          const row = objectValue(value);
+          const id = stringValue(row?.Id);
+          if (!id || row?.Direction !== "Inbound") return [];
+          const call = Array.isArray(row.FaxCallInfoList)
+            ? objectValue(row.FaxCallInfoList[0])
+            : undefined;
+          const senderNumber = stringValue(call?.OrigNumber);
+          const pageCount = integerValue(row.PageCount);
+          return [{
+            id,
+            direction: "Inbound" as const,
+            ...(stringValue(row.Date) ? { date: stringValue(row.Date) } : {}),
+            ...(stringValue(row.Tag) ? { tag: stringValue(row.Tag) } : {}),
+            ...(pageCount !== undefined ? { pageCount } : {}),
+            ...(senderNumber ? { senderNumber } : {}),
+            ...(stringValue(row.Reference) ? { reference: stringValue(row.Reference) } : {}),
+          }];
+        }));
+      }
+      return descriptions;
+    },
+
+    async getFaxDocuments(productId, faxIds, format) {
+      if (!faxIds.length) return [];
+      const documents: WestFaxFaxDocument[] = [];
+      for (const batch of batches(faxIds, WESTFAX_INBOUND_BATCH_SIZE)) {
+        const form = authForm(config, productId);
+        addFaxIds(form, batch);
+        form.set("Format", format);
+        const raw = await successfulWestFaxCall(
+          fetchImpl,
+          baseUrl,
+          "Fax_GetFaxDocuments",
+          form,
+        );
+        documents.push(...resultArray(raw).flatMap((value) => {
+          const row = objectValue(value);
+          const id = stringValue(row?.Id);
+          if (!id || row?.Direction !== "Inbound") return [];
+          if (!Array.isArray(row.FaxFiles) || row.FaxFiles.length !== 1) {
+            throw new Error(
+              `WestFax fax ${id} must contain exactly one PDF file; received ${Array.isArray(row.FaxFiles) ? row.FaxFiles.length : 0}.`,
+            );
+          }
+          const file = objectValue(row.FaxFiles[0]);
+          const fileContents = stringValue(file?.FileContents);
+          if (file?.ContentType !== "application/pdf" || !fileContents) return [];
+          const pageCount = integerValue(row.PageCount);
+          return [{
+            id,
+            direction: "Inbound" as const,
+            ...(stringValue(row.Date) ? { date: stringValue(row.Date) } : {}),
+            ...(stringValue(row.Tag) ? { tag: stringValue(row.Tag) } : {}),
+            ...(pageCount !== undefined ? { pageCount } : {}),
+            contentType: "application/pdf" as const,
+            fileContents,
+          }];
+        }));
+      }
+      return documents;
+    },
+
+    async changeFaxFilterValue(productId, faxIds, filter) {
+      if (!faxIds.length) return;
+      const form = authForm(config, productId);
+      addFaxIds(form, faxIds);
+      form.set("Filter", filter);
+      const raw = await successfulWestFaxCall(
+        fetchImpl,
+        baseUrl,
+        "Fax_ChangeFaxFilterValue",
+        form,
+      );
+      if (raw.Result !== true) {
+        throw new Error("WestFax did not confirm the inbound fax filter update.");
       }
     },
   };
+}
+
+function authForm(config: WestFaxConfig, productId?: string): FormData {
+  const form = new FormData();
+  form.set("Username", config.username);
+  form.set("Password", config.password);
+  form.set("Cookies", "false");
+  if (productId) form.set("ProductId", productId);
+  return form;
+}
+
+function addFaxIds(form: FormData, faxIds: WestFaxFaxIdentifier[]): void {
+  faxIds.forEach((faxId, index) => {
+    form.set(`FaxIds${index + 1}`, JSON.stringify({
+      Id: faxId.id,
+      Direction: faxId.direction,
+    }));
+  });
+}
+
+function batches<T>(values: readonly T[], size: number): T[][] {
+  const result: T[][] = [];
+  for (let index = 0; index < values.length; index += size) {
+    result.push(values.slice(index, index + size));
+  }
+  return result;
+}
+
+async function successfulWestFaxCall(
+  fetchImpl: typeof fetch,
+  baseUrl: string,
+  method: string,
+  form: FormData,
+): Promise<WestFaxResponse> {
+  const { response, raw } = await postWestFax(fetchImpl, baseUrl, method, form);
+  if (!response.ok || raw.Success !== true) {
+    const detail = stringValue(raw.ErrorString)
+      ?? stringValue(raw.InfoString)
+      ?? `HTTP ${response.status}`;
+    throw new Error(`WestFax ${method} failed: ${detail}`);
+  }
+  return raw;
+}
+
+async function postWestFax(
+  fetchImpl: typeof fetch,
+  baseUrl: string,
+  method: string,
+  form: FormData,
+): Promise<{ response: Response; raw: WestFaxResponse }> {
+  const controller = new AbortController();
+  let timedOut = false;
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, WESTFAX_REQUEST_TIMEOUT_MS);
+  try {
+    const response = await fetchImpl(`${baseUrl}/REST/${method}/json`, {
+      method: "POST",
+      headers: { Accept: "application/json" },
+      body: form,
+      signal: controller.signal,
+    });
+    return { response, raw: await parseResponse(response) };
+  } catch (error) {
+    if (timedOut && error instanceof Error && error.name === "AbortError") {
+      throw new Error("WestFax request timed out after 30 seconds.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function resultArray(raw: WestFaxResponse): unknown[] {
+  return Array.isArray(raw.Result) ? raw.Result : [];
+}
+
+function objectValue(value: unknown): Record<string, unknown> | undefined {
+  return value !== null && typeof value === "object"
+    ? value as Record<string, unknown>
+    : undefined;
+}
+
+function integerValue(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0
+    ? value
+    : undefined;
 }
 
 function optional(form: FormData, name: string, value: string | undefined): void {

@@ -419,6 +419,7 @@ function emptyCorrespondenceBlock(): CorrespondenceDeskBlock {
     draftsAwaitingSignature: { value: 0, tone: "ok" },
     repliesOwed: { value: 0, tone: "ok" },
     sendFailures: { value: 0, tone: "ok" },
+    inboundFaxes: { value: 0, tone: "ok" },
     items: [],
   };
 }

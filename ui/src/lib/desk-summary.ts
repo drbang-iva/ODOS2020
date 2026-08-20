@@ -11,7 +11,9 @@ export interface DeskSummary {
       draftsAwaitingSignature: { value: number; tone: "ok" | "warn" };
       repliesOwed: { value: number; tone: "ok" | "warn" };
       sendFailures: { value: number; tone: "ok" | "alert" };
+      inboundFaxes: { value: number; tone: "ok" | "warn" };
       items: Array<{
+        kind: "draft" | "reply-owed" | "send-failure" | "inbound-fax";
         title: string;
         patientReference: string;
         severity: "info" | "warning" | "urgent";
@@ -19,6 +21,13 @@ export interface DeskSummary {
         action: string;
         owner: "provider" | "front-desk";
         status: "open" | "failed";
+        faxId?: string;
+        receivedAt?: string;
+        senderNumber?: string;
+        pageCount?: number;
+        documentUrl?: string;
+        triageStatus?: "received" | "inbox";
+        suggestedPatient?: { reference: string; display?: string };
       }>;
     };
     frontLine: { available: false; message: string; needsReply: DeskStat<null>; missedCalls: DeskStat<null>; voicemails: DeskStat<null>; urgent: DeskStat<null>; messages: [] };
