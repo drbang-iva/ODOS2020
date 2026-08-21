@@ -402,6 +402,221 @@ test("an indeterminate WENO send stays blocked until staff clears it after pharm
   }
 });
 
+test("the cancel action is hidden when a prescription was never electronically sent", async () => {
+  const originalFetch = globalThis.fetch;
+  const request = prescriptionRequest();
+  globalThis.fetch = prescriptionSectionFetch(request);
+
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    renderer = await renderPrescriptionSection();
+    assert.equal(Boolean(findButton(renderer, "Cancel prescription")), false);
+  } finally {
+    if (renderer) act(() => renderer.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("the cancel action is hidden when an electronically sent prescription is already cancelled", async () => {
+  const originalFetch = globalThis.fetch;
+  const request = electronicallySentPrescription({ status: "cancelled" });
+  globalThis.fetch = prescriptionSectionFetch(request);
+
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    renderer = await renderPrescriptionSection();
+    assert.match(JSON.stringify(renderer.toJSON()), /cancelled/);
+    assert.equal(Boolean(findButton(renderer, "Cancel prescription")), false);
+  } finally {
+    if (renderer) act(() => renderer.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("declining cancellation confirmation does not call the WENO cancel route", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalWindow = globalThis.window;
+  const requests: Array<{ url: string; method: string | undefined }> = [];
+  const confirmations: string[] = [];
+  const request = electronicallySentPrescription();
+  globalThis.fetch = prescriptionSectionFetch(request, async (url, init) => {
+    requests.push({ url, method: init?.method });
+    return undefined;
+  });
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: {
+      confirm(message: string) {
+        confirmations.push(message);
+        return false;
+      },
+    },
+  });
+
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    renderer = await renderPrescriptionSection();
+    const cancel = findButton(renderer, "Cancel prescription");
+    assert.ok(cancel);
+    await act(async () => cancel.props.onClick());
+
+    assert.equal(confirmations.length, 1);
+    assert.match(confirmations[0]!, /already at the pharmacy/i);
+    assert.match(confirmations[0]!, /cannot be undone from ODOS/i);
+    assert.equal(
+      requests.some(({ url }) => url.endsWith("/weno/medication-requests/rx-1/cancel")),
+      false,
+    );
+  } finally {
+    if (renderer) act(() => renderer.unmount());
+    restoreWindow(originalWindow);
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a successful WENO cancellation updates the row and shows status feedback", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalWindow = globalThis.window;
+  const cancelRequests: Array<{ url: string; method: string | undefined }> = [];
+  const request = electronicallySentPrescription();
+  const cancelled = { ...request, status: "cancelled" as const };
+  globalThis.fetch = prescriptionSectionFetch(request, async (url, init) => {
+    if (!url.endsWith("/weno/medication-requests/rx-1/cancel")) return undefined;
+    cancelRequests.push({ url, method: init?.method });
+    return jsonResponse({
+      result: { kind: "status", code: "000", description: "Cancellation accepted" },
+      medicationRequest: cancelled,
+      resendable: false,
+    });
+  });
+  stubWindowConfirm(true);
+
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    renderer = await renderPrescriptionSection();
+    const cancel = findButton(renderer, "Cancel prescription");
+    assert.ok(cancel);
+    await act(async () => {
+      cancel.props.onClick();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    assert.deepEqual(cancelRequests, [{
+      url: "/weno/medication-requests/rx-1/cancel",
+      method: "POST",
+    }]);
+    assert.match(JSON.stringify(renderer.toJSON()), /cancelled/);
+    assert.match(JSON.stringify(renderer.toJSON()), /WENO Cancellation Status 000: Cancellation accepted/);
+    assert.equal(findButton(renderer, "Cancel prescription"), undefined);
+  } finally {
+    if (renderer) act(() => renderer.unmount());
+    restoreWindow(originalWindow);
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("an unknown WENO cancellation outcome renders the cancellation reservation panel", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalWindow = globalThis.window;
+  const request = electronicallySentPrescription();
+  globalThis.fetch = prescriptionSectionFetch(request, async (url) => {
+    if (!url.endsWith("/weno/medication-requests/rx-1/cancel")) return undefined;
+    return jsonResponse({
+      result: {
+        kind: "unknown",
+        messageId: "cancel-message-id",
+        description: "Synthetic transport timeout",
+      },
+      medicationRequest: {
+        ...request,
+        identifier: [
+          ...(request.identifier ?? []),
+          {
+            system: "https://odos2020.com/fhir/sid/weno-switch-cancel-message-id",
+            value: "cancel-message-id",
+          },
+        ],
+      },
+      resendable: false,
+    });
+  });
+  stubWindowConfirm(true);
+
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    renderer = await renderPrescriptionSection();
+    const cancel = findButton(renderer, "Cancel prescription");
+    assert.ok(cancel);
+    await act(async () => {
+      cancel.props.onClick();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    const rendered = JSON.stringify(renderer.toJSON());
+    assert.match(rendered, /Cancellation outcome unknown/);
+    assert.match(rendered, /WENO did not confirm whether the pharmacy received the cancellation/);
+    assert.match(rendered, /Verify with the pharmacy before retrying/);
+    assert.ok(findButton(renderer, "Pharmacy verified — clear cancellation reservation"));
+  } finally {
+    if (renderer) act(() => renderer.unmount());
+    restoreWindow(originalWindow);
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("clearing an indeterminate cancellation calls the cancel clear route and re-enables cancelling", async () => {
+  const originalFetch = globalThis.fetch;
+  const clearRequests: Array<{ url: string; method: string | undefined }> = [];
+  const request = electronicallySentPrescription({
+    identifier: [
+      {
+        system: WENO_MESSAGE_ID_IDENTIFIER_SYSTEM,
+        value: "new-rx-message-id",
+      },
+      {
+        system: "https://odos2020.com/fhir/sid/weno-switch-cancel-message-id",
+        value: "cancel-message-id",
+      },
+    ],
+  });
+  globalThis.fetch = prescriptionSectionFetch(request, async (url, init) => {
+    if (!url.endsWith("/weno/medication-requests/rx-1/clear-indeterminate-cancel")) {
+      return undefined;
+    }
+    clearRequests.push({ url, method: init?.method });
+    return jsonResponse({
+      medicationRequest: electronicallySentPrescription(),
+      clearedMessageId: "cancel-message-id",
+    });
+  });
+
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    renderer = await renderPrescriptionSection();
+    const blockedCancel = findButton(renderer, "Cancel prescription");
+    assert.ok(blockedCancel);
+    assert.equal(blockedCancel.props.disabled, true);
+    const clear = findButton(renderer, "Pharmacy verified — clear cancellation reservation");
+    assert.ok(clear);
+    await act(async () => {
+      clear.props.onClick();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    assert.deepEqual(clearRequests, [{
+      url: "/weno/medication-requests/rx-1/clear-indeterminate-cancel",
+      method: "POST",
+    }]);
+    assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /Cancellation outcome unknown/);
+    const enabledCancel = findButton(renderer, "Cancel prescription");
+    assert.ok(enabledCancel);
+    assert.equal(enabledCancel.props.disabled, false);
+  } finally {
+    if (renderer) act(() => renderer.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("FHIR conflict conversion only humanizes explicitly versioned writes", async () => {
   const versionedError = await toError(new Response("conflict", {
     status: 409,
@@ -728,6 +943,117 @@ function directoryResult(): DirectoryResult {
     phone: "8645550100",
     onWeno: true,
   };
+}
+
+function prescriptionRequest(
+  overrides: Partial<MedicationRequest> = {},
+): MedicationRequest {
+  return {
+    resourceType: "MedicationRequest",
+    id: "rx-1",
+    meta: { versionId: "2" },
+    status: "active",
+    intent: "order",
+    subject: { reference: "Patient/patient-1" },
+    encounter: { reference: "Encounter/encounter-1" },
+    medicationCodeableConcept: { text: "Latanoprost" },
+    dosageInstruction: [{ text: "1 drop OU nightly" }],
+    requester: { reference: "Practitioner/doc-1" },
+    authoredOn: "2026-08-21",
+    ...overrides,
+  };
+}
+
+function electronicallySentPrescription(
+  overrides: Partial<MedicationRequest> = {},
+): MedicationRequest {
+  return prescriptionRequest({
+    extension: [{
+      url: "https://odos2020.com/fhir/StructureDefinition/odos-transmission-method",
+      valueCode: "electronically-sent",
+    }],
+    identifier: [{
+      system: WENO_MESSAGE_ID_IDENTIFIER_SYSTEM,
+      value: "new-rx-message-id",
+    }],
+    ...overrides,
+  });
+}
+
+function prescriptionSectionFetch(
+  request: MedicationRequest,
+  handle?: (url: string, init?: RequestInit) => Promise<Response | undefined>,
+): typeof fetch {
+  return async (input, init) => {
+    const url = String(input);
+    const handled = await handle?.(url, init);
+    if (handled) return handled;
+    if (url.endsWith("/Encounter/encounter-1")) {
+      return jsonResponse({
+        resourceType: "Encounter",
+        id: "encounter-1",
+        status: "in-progress",
+        class: {},
+        subject: { reference: "Patient/patient-1" },
+        participant: [{ individual: { reference: "Practitioner/doc-1" } }],
+      });
+    }
+    if (url.endsWith("/Patient/patient-1")) {
+      return jsonResponse({ resourceType: "Patient", id: "patient-1" });
+    }
+    if (url.endsWith("/weno/switch/configuration")) {
+      return jsonResponse({ configured: true, reason: "WENO Switch is configured." });
+    }
+    if (url.includes("/Condition?")) {
+      return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [] });
+    }
+    if (url.includes("/MedicationRequest?")) {
+      return jsonResponse({
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [{ resource: request }],
+      });
+    }
+    throw new Error(`Unexpected request ${url}`);
+  };
+}
+
+async function renderPrescriptionSection(): Promise<ReactTestRenderer> {
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(
+      <PrescriptionSection
+        patientReference="Patient/patient-1"
+        encounterReference="Encounter/encounter-1"
+        onSaved={NOOP}
+      />,
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+  return renderer;
+}
+
+function findButton(renderer: ReactTestRenderer, text: string) {
+  return renderer.root.findAllByType("button")
+    .find((button) => button.children.includes(text));
+}
+
+function stubWindowConfirm(result: boolean): void {
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: { confirm: () => result },
+  });
+}
+
+function restoreWindow(originalWindow: Window & typeof globalThis | undefined): void {
+  if (originalWindow) {
+    Object.defineProperty(globalThis, "window", {
+      configurable: true,
+      value: originalWindow,
+    });
+    return;
+  }
+  Reflect.deleteProperty(globalThis, "window");
 }
 
 function jsonResponse(body: unknown): Response {

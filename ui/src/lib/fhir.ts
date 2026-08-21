@@ -356,6 +356,52 @@ export const fhir = {
     return body as WenoIndeterminateSendClearResponse;
   },
 
+  async cancelWenoPrescription(
+    baseUrl: string,
+    medicationRequestId: string,
+  ): Promise<WenoPrescriptionSendResponse> {
+    const res = await fetch(
+      `${baseUrl}/weno/medication-requests/${encodeURIComponent(medicationRequestId)}/cancel`,
+      {
+        method: "POST",
+        headers: token
+          ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
+          : { "Content-Type": "application/json" },
+      },
+    );
+    const body = await res.json() as Partial<WenoPrescriptionSendResponse> & { error?: string };
+    if (!res.ok) throw new Error(body.error ?? `WENO prescription cancellation failed: ${res.status}`);
+    if (!body.result || !body.medicationRequest || typeof body.resendable !== "boolean") {
+      throw new Error("WENO prescription cancellation response is incomplete.");
+    }
+    return body as WenoPrescriptionSendResponse;
+  },
+
+  async clearWenoIndeterminateCancel(
+    baseUrl: string,
+    medicationRequestId: string,
+  ): Promise<WenoIndeterminateSendClearResponse> {
+    const res = await fetch(
+      `${baseUrl}/weno/medication-requests/${encodeURIComponent(medicationRequestId)}/clear-indeterminate-cancel`,
+      {
+        method: "POST",
+        headers: token
+          ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
+          : { "Content-Type": "application/json" },
+      },
+    );
+    const body = await res.json() as Partial<WenoIndeterminateSendClearResponse> & {
+      error?: string;
+    };
+    if (!res.ok) {
+      throw new Error(body.error ?? `WENO indeterminate cancellation clear failed: ${res.status}`);
+    }
+    if (!body.medicationRequest || typeof body.clearedMessageId !== "string") {
+      throw new Error("WENO indeterminate cancellation clear response is incomplete.");
+    }
+    return body as WenoIndeterminateSendClearResponse;
+  },
+
   async read<T extends Resource>(
     resourceType: T["resourceType"],
     id: string,
