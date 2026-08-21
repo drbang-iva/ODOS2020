@@ -1,16 +1,21 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { MedicationRequest, Patient, Practitioner } from "@medplum/fhirtypes";
-import { ODOS_CONTROLLED_SUBSTANCE_FLAG_EXTENSION_URL } from "../src/fhir/medicationOrder.js";
+import {
+  ODOS_CONTROLLED_SUBSTANCE_FLAG_EXTENSION_URL,
+  WENO_MESSAGE_ID_IDENTIFIER_SYSTEM,
+} from "../src/fhir/medicationOrder.js";
 import {
   isWenoSwitchConfigured,
   type WenoSwitchConfig,
   wenoSwitchConfigFromEnv,
 } from "../src/integrations/weno/config.js";
 import {
+  buildWenoSwitchCancelRx,
   buildWenoSwitchNewRx,
   createWenoSwitchMessageId,
   parseWenoSwitchResponse,
+  sendWenoSwitchCancelRx,
   sendWenoSwitchNewRx,
   WENO_SWITCH_CERT_ENDPOINT,
   type WenoSwitchPharmacy,
@@ -226,6 +231,74 @@ test("NewRx builder rejects a required FHIR field and an overlong drug descripti
   );
 });
 
+test("CancelRx uses a fresh MessageID and relates it to the stored NewRx MessageID", () => {
+  const built = buildWenoSwitchCancelRx(cancelRxInput("cancel-message-id"));
+
+  assert.match(
+    built,
+    /<MessageID>cancel-message-id<\/MessageID><RelatesToMessageID>original-newrx-id<\/RelatesToMessageID>/,
+  );
+});
+
+test("CancelRx emits the six required MedicationPrescribed children in order without NewRx-only fields", () => {
+  const built = buildWenoSwitchCancelRx(cancelRxInput("cancel-medication-id"));
+  const medication = built.match(/<MedicationPrescribed>(.*?)<\/MedicationPrescribed>/)?.[1];
+  assert.ok(medication);
+
+  assertOrdered(medication, [
+    "<DrugDescription>",
+    "<Quantity>",
+    "<WrittenDate>",
+    "<Substitutions>",
+    "<NumberOfRefills>",
+    "<Sig>",
+  ]);
+  assert.doesNotMatch(medication, /<DrugCoded>|<DaysSupply>/);
+});
+
+test("CancelRx emits only the settled patient, pharmacy, prescriber, and medication body sections", () => {
+  const built = buildWenoSwitchCancelRx(cancelRxInput("cancel-body-id"));
+
+  assert.match(built, /<Body><CancelRx><Patient><HumanPatient>/);
+  assertOrdered(built, ["<Patient>", "<Pharmacy>", "<Prescriber>", "<MedicationPrescribed>"]);
+  assert.doesNotMatch(built, /<Observation\b|<BenefitsCoordination\b/);
+});
+
+test("CancelRx rejects a controlled-substance-flagged MedicationRequest", () => {
+  assert.throws(
+    () => buildWenoSwitchCancelRx({
+      ...cancelRxInput("cancel-controlled-id"),
+      medicationRequest: {
+        ...MEDICATION_REQUEST,
+        identifier: [{ system: WENO_MESSAGE_ID_IDENTIFIER_SYSTEM, value: "original-newrx-id" }],
+        extension: [{
+          url: ODOS_CONTROLLED_SUBSTANCE_FLAG_EXTENSION_URL,
+          valueBoolean: true,
+        }],
+      },
+    }),
+    /non-controlled prescriptions only/,
+  );
+});
+
+test("CancelRx send validates the message, posts through the Switch transport, and parses Status", async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = [];
+  const xml = buildWenoSwitchCancelRx(cancelRxInput("cancel-transport-id"));
+
+  const result = await sendWenoSwitchCancelRx(xml, {
+    endpoint: CONFIG.endpoint,
+    fetchImpl: (async (input, init) => {
+      calls.push({ url: String(input), init });
+      return new Response(statusResponse("001", "Accepted"), { status: 200 });
+    }) as typeof fetch,
+  });
+
+  assert.deepEqual(result, { kind: "status", code: "001", description: "Accepted" });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0]?.url, CONFIG.endpoint);
+  assert.equal(calls[0]?.init?.body, xml);
+});
+
 test("send validates before HTTP, posts only to cert, and preserves unknown Status codes", async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = [];
   const fetchImpl = (async (input: string | URL | Request, init?: RequestInit) => {
@@ -360,6 +433,22 @@ function buildInput(messageId: string) {
     pharmacy: TEST_PHARMACY,
     drugDbCode: "TEST_DRUG_CODE",
     drugDbCodeQualifier: "TEST_DRUG_QUALIFIER",
+    quantityUnitOfMeasureCode: "TEST_UOM_CODE",
+    config: CONFIG,
+    messageId,
+    sentTime: "2026-07-17T12:31:00-05:00",
+  };
+}
+
+function cancelRxInput(messageId: string) {
+  return {
+    patient: PATIENT,
+    prescriber: PRESCRIBER,
+    medicationRequest: {
+      ...MEDICATION_REQUEST,
+      identifier: [{ system: WENO_MESSAGE_ID_IDENTIFIER_SYSTEM, value: "original-newrx-id" }],
+    },
+    pharmacy: TEST_PHARMACY,
     quantityUnitOfMeasureCode: "TEST_UOM_CODE",
     config: CONFIG,
     messageId,

@@ -7,7 +7,10 @@ import type {
   Practitioner,
 } from "@medplum/fhirtypes";
 import { XMLParser, XMLValidator } from "fast-xml-parser";
-import { ODOS_CONTROLLED_SUBSTANCE_FLAG_EXTENSION_URL } from "../../fhir/medicationOrder.js";
+import {
+  ODOS_CONTROLLED_SUBSTANCE_FLAG_EXTENSION_URL,
+  WENO_MESSAGE_ID_IDENTIFIER_SYSTEM,
+} from "../../fhir/medicationOrder.js";
 import {
   DEFAULT_WENO_SWITCH_ENDPOINT,
   isWenoSwitchConfigured,
@@ -46,6 +49,18 @@ export interface BuildWenoSwitchNewRxInput {
   prescriberPlaceOfService?: string;
 }
 
+export interface BuildWenoSwitchCancelRxInput {
+  patient: Patient;
+  prescriber: Practitioner;
+  medicationRequest: MedicationRequest;
+  pharmacy: WenoSwitchPharmacy;
+  quantityUnitOfMeasureCode: string;
+  config: WenoSwitchConfig;
+  messageId: string;
+  sentTime: string;
+  prescriberPlaceOfService?: string;
+}
+
 // A Status result confirms only WENO's synchronous acceptance, never pharmacy delivery.
 export type WenoSwitchNewRxResult =
   | { kind: "status"; code: string; description: string }
@@ -62,12 +77,7 @@ export function createWenoSwitchMessageId(): string {
 
 export function buildWenoSwitchNewRx(input: BuildWenoSwitchNewRxInput): string {
   const config = requireSwitchConfig(input.config);
-  if (input.medicationRequest.extension?.some((extension) =>
-    extension.url === ODOS_CONTROLLED_SUBSTANCE_FLAG_EXTENSION_URL
-      && extension.valueBoolean === true
-  )) {
-    throw new Error("WENO Switch NewRx supports non-controlled prescriptions only.");
-  }
+  assertNonControlled(input.medicationRequest, "NewRx");
   const patientName = requiredName(input.patient.name, "Patient name");
   const patientAddress = requiredAddress(input.patient.address, "Patient address");
   const prescriberName = requiredName(input.prescriber.name, "Prescriber name");
@@ -169,13 +179,129 @@ export function buildWenoSwitchNewRx(input: BuildWenoSwitchNewRxInput): string {
   ].filter(Boolean).join("");
 }
 
+export function buildWenoSwitchCancelRx(input: BuildWenoSwitchCancelRxInput): string {
+  const config = requireSwitchConfig(input.config);
+  assertNonControlled(input.medicationRequest, "CancelRx");
+  const patientName = requiredName(input.patient.name, "Patient name");
+  const prescriberName = requiredName(input.prescriber.name, "Prescriber name");
+  const prescriberAddress = requiredAddress(input.prescriber.address, "Prescriber address");
+  const patientGender = requiredGender(input.patient.gender);
+  const patientBirthDate = requiredDate(input.patient.birthDate, "Patient date of birth");
+  const prescriberNpi = required(
+    input.prescriber.identifier?.find((identifier) => identifier.system === NPI_SYSTEM)?.value,
+    "Prescriber NPI",
+  );
+  const drugDescription = required(
+    input.medicationRequest.medicationCodeableConcept?.text,
+    "DrugDescription",
+  );
+  if (drugDescription.length > 105) {
+    throw new Error("WENO CancelRx DrugDescription must be 105 characters or fewer.");
+  }
+  const quantity = medicationQuantity(input.medicationRequest);
+  const numberOfRefills = requiredNumber(
+    input.medicationRequest.dispenseRequest?.numberOfRepeatsAllowed,
+    "NumberOfRefills",
+  );
+  const sig = required(input.medicationRequest.dosageInstruction?.[0]?.text, "Sig");
+  const writtenDate = isoDateTime(input.medicationRequest.authoredOn, "WrittenDate");
+  const sentTime = isoDateTime(input.sentTime, "SentTime");
+  const messageId = required(input.messageId, "MessageID");
+  validateMessageId(messageId);
+  const relatesToMessageId = required(
+    input.medicationRequest.identifier?.find(
+      (identifier) => identifier.system === WENO_MESSAGE_ID_IDENTIFIER_SYSTEM,
+    )?.value,
+    "RelatesToMessageID",
+  );
+  validateMessageId(relatesToMessageId);
+  const substitutions = input.medicationRequest.substitution?.allowedBoolean === false ? "1" : "0";
+  const pharmacyNpi = optionalElement("NPI", input.pharmacy.npi);
+  const prescriberCommunication = communicationNumbers(phone(input.prescriber.telecom));
+
+  return [
+    '<?xml version="1.0" encoding="utf-8"?>',
+    `<Message DatatypesVersion="${SCRIPT_VERSION}" TransportVersion="${SCRIPT_VERSION}" TransactionDomain="SCRIPT" TransactionVersion="${SCRIPT_VERSION}" StructuresVersion="${SCRIPT_VERSION}" ECLVersion="${SCRIPT_VERSION}">`,
+    "<Header>",
+    `<To Qualifier="P">${xml(required(input.pharmacy.ncpdpId, "Pharmacy NCPDP ID"))}</To>`,
+    `<From Qualifier="D">${xml(config.routingId)}</From>`,
+    `<MessageID>${xml(messageId)}</MessageID>`,
+    `<RelatesToMessageID>${xml(relatesToMessageId)}</RelatesToMessageID>`,
+    `<SentTime>${xml(sentTime)}</SentTime>`,
+    "<Security>",
+    "<UsernameToken>",
+    `<Username>${xml(config.partnerId)}</Username>`,
+    `<Password Type="PasswordDigest">${xml(config.partnerPasswordMd5)}</Password>`,
+    "</UsernameToken>",
+    "</Security>",
+    "<SenderSoftware>",
+    `<SenderSoftwareDeveloper>${xml(config.senderSoftwareDeveloper)}</SenderSoftwareDeveloper>`,
+    "<SenderSoftwareProduct>ODOS 20/20</SenderSoftwareProduct>",
+    `<SenderSoftwareVersionRelease>${xml(config.senderSoftwareVersion)}</SenderSoftwareVersionRelease>`,
+    "</SenderSoftware>",
+    "</Header>",
+    "<Body>",
+    "<CancelRx>",
+    "<Patient>",
+    "<HumanPatient>",
+    `<Name><LastName>${xml(patientName.family)}</LastName><FirstName>${xml(patientName.given)}</FirstName></Name>`,
+    `<Gender>${patientGender}</Gender>`,
+    `<DateOfBirth><Date>${xml(patientBirthDate)}</Date></DateOfBirth>`,
+    "</HumanPatient>",
+    "</Patient>",
+    "<Pharmacy>",
+    `<Identification><NCPDPID>${xml(required(input.pharmacy.ncpdpId, "Pharmacy NCPDP ID"))}</NCPDPID>${pharmacyNpi}</Identification>`,
+    `<BusinessName>${xml(required(input.pharmacy.name, "Pharmacy name"))}</BusinessName>`,
+    `<Address><AddressLine1>${xml(required(input.pharmacy.addressLine1, "Pharmacy address"))}</AddressLine1><City>${xml(required(input.pharmacy.city, "Pharmacy city"))}</City><StateProvince>${xml(required(input.pharmacy.state, "Pharmacy state"))}</StateProvince><PostalCode>${xml(required(input.pharmacy.postalCode, "Pharmacy postal code"))}</PostalCode><CountryCode>US</CountryCode></Address>`,
+    communicationNumbers(required(input.pharmacy.phone, "Pharmacy phone")),
+    "</Pharmacy>",
+    "<Prescriber>",
+    "<NonVeterinarian>",
+    `<Identification><NPI>${xml(prescriberNpi)}</NPI></Identification>`,
+    `<Name><LastName>${xml(prescriberName.family)}</LastName><FirstName>${xml(prescriberName.given)}</FirstName><Suffix>OD</Suffix></Name>`,
+    `<Address><AddressLine1>${xml(prescriberAddress.line1)}</AddressLine1><City>${xml(prescriberAddress.city)}</City><StateProvince>${xml(prescriberAddress.state)}</StateProvince><PostalCode>${xml(prescriberAddress.postalCode)}</PostalCode><CountryCode>US</CountryCode></Address>`,
+    prescriberCommunication,
+    `<PrescriberPlaceOfService>${xml(required(input.prescriberPlaceOfService ?? "11", "PrescriberPlaceOfService"))}</PrescriberPlaceOfService>`,
+    "</NonVeterinarian>",
+    "</Prescriber>",
+    "<MedicationPrescribed>",
+    `<DrugDescription>${xml(drugDescription)}</DrugDescription>`,
+    `<Quantity><Value>${xml(quantity)}</Value><CodeListQualifier>38</CodeListQualifier><QuantityUnitOfMeasure><Code>${xml(required(input.quantityUnitOfMeasureCode, "QuantityUnitOfMeasure code"))}</Code></QuantityUnitOfMeasure></Quantity>`,
+    `<WrittenDate><DateTime>${xml(writtenDate)}</DateTime></WrittenDate>`,
+    `<Substitutions>${substitutions}</Substitutions>`,
+    `<NumberOfRefills>${numberOfRefills}</NumberOfRefills>`,
+    `<Sig><SigText>${xml(sig)}</SigText></Sig>`,
+    "</MedicationPrescribed>",
+    "</CancelRx>",
+    "</Body>",
+    "</Message>",
+  ].filter(Boolean).join("");
+}
+
 export async function sendWenoSwitchNewRx(
   newRxXml: string,
   options: SendWenoSwitchNewRxOptions = {},
 ): Promise<WenoSwitchNewRxResult> {
   const messageId = validateNewRxXml(newRxXml);
+  return sendWenoSwitchMessage(newRxXml, messageId, "NewRx", options);
+}
+
+export async function sendWenoSwitchCancelRx(
+  cancelRxXml: string,
+  options: SendWenoSwitchNewRxOptions = {},
+): Promise<WenoSwitchNewRxResult> {
+  const messageId = validateCancelRxXml(cancelRxXml);
+  return sendWenoSwitchMessage(cancelRxXml, messageId, "CancelRx", options);
+}
+
+async function sendWenoSwitchMessage(
+  messageXml: string,
+  messageId: string,
+  messageType: "NewRx" | "CancelRx",
+  options: SendWenoSwitchNewRxOptions,
+): Promise<WenoSwitchNewRxResult> {
   if (sentMessageIds.has(messageId)) {
-    throw new Error(`WENO NewRx MessageID ${messageId} was already sent by this process.`);
+    throw new Error(`WENO ${messageType} MessageID ${messageId} was already sent by this process.`);
   }
   sentMessageIds.add(messageId);
 
@@ -187,7 +313,7 @@ export async function sendWenoSwitchNewRx(
       Accept: "application/xml",
       "Content-Type": "application/xml; charset=utf-8",
     },
-    body: newRxXml,
+    body: messageXml,
     },
   );
   const responseBody = await response.text();
@@ -315,11 +441,106 @@ function validateNewRxXml(newRxXml: string): string {
   return messageId;
 }
 
+function validateCancelRxXml(cancelRxXml: string): string {
+  const parsed = parseXml(cancelRxXml, "WENO CancelRx");
+  const message = objectAt(parsed, "Message");
+  const expectedAttributes: Record<string, string> = {
+    "@_DatatypesVersion": SCRIPT_VERSION,
+    "@_TransportVersion": SCRIPT_VERSION,
+    "@_TransactionDomain": "SCRIPT",
+    "@_TransactionVersion": SCRIPT_VERSION,
+    "@_StructuresVersion": SCRIPT_VERSION,
+    "@_ECLVersion": SCRIPT_VERSION,
+  };
+  for (const [attribute, expected] of Object.entries(expectedAttributes)) {
+    if (message[attribute] !== expected) {
+      throw new Error(`WENO CancelRx Message ${attribute.slice(2)} must be ${expected}.`);
+    }
+  }
+
+  const header = objectAt(message, "Header");
+  attributedTextAt(header, "To", "Header To");
+  attributedTextAt(header, "From", "Header From");
+  const messageId = textAt(header, "MessageID", "MessageID");
+  validateMessageId(messageId);
+  validateMessageId(textAt(header, "RelatesToMessageID", "RelatesToMessageID"));
+  requireOffset(textAt(header, "SentTime", "SentTime"), "SentTime");
+  const usernameToken = objectAt(objectAt(header, "Security"), "UsernameToken");
+  textAt(usernameToken, "Username", "Security Username");
+  attributedTextAt(usernameToken, "Password", "Security Password");
+  const senderSoftware = objectAt(header, "SenderSoftware");
+  textAt(senderSoftware, "SenderSoftwareDeveloper", "SenderSoftwareDeveloper");
+  textAt(senderSoftware, "SenderSoftwareProduct", "SenderSoftwareProduct");
+  textAt(senderSoftware, "SenderSoftwareVersionRelease", "SenderSoftwareVersionRelease");
+
+  const cancelRx = objectAt(objectAt(message, "Body"), "CancelRx");
+  if (cancelRx.Observation !== undefined || cancelRx.BenefitsCoordination !== undefined) {
+    throw new Error("WENO CancelRx must not contain Observation or BenefitsCoordination.");
+  }
+  const humanPatient = objectAt(objectAt(cancelRx, "Patient"), "HumanPatient");
+  const patientName = objectAt(humanPatient, "Name");
+  textAt(patientName, "LastName", "Patient last name");
+  textAt(patientName, "FirstName", "Patient first name");
+  textAt(humanPatient, "Gender", "Patient gender");
+  textAt(objectAt(humanPatient, "DateOfBirth"), "Date", "Patient date of birth");
+
+  const pharmacy = objectAt(cancelRx, "Pharmacy");
+  textAt(objectAt(pharmacy, "Identification"), "NCPDPID", "Pharmacy NCPDP ID");
+  textAt(pharmacy, "BusinessName", "Pharmacy name");
+  requiredAddressXml(objectAt(pharmacy, "Address"), "Pharmacy");
+
+  const prescriber = objectAt(objectAt(cancelRx, "Prescriber"), "NonVeterinarian");
+  textAt(objectAt(prescriber, "Identification"), "NPI", "Prescriber NPI");
+  const prescriberName = objectAt(prescriber, "Name");
+  textAt(prescriberName, "LastName", "Prescriber last name");
+  textAt(prescriberName, "FirstName", "Prescriber first name");
+  requiredAddressXml(objectAt(prescriber, "Address"), "Prescriber");
+  textAt(prescriber, "PrescriberPlaceOfService", "PrescriberPlaceOfService");
+
+  const medication = objectAt(cancelRx, "MedicationPrescribed");
+  if (medication.DrugCoded !== undefined || medication.DaysSupply !== undefined) {
+    throw new Error("WENO CancelRx MedicationPrescribed must not contain DrugCoded or DaysSupply.");
+  }
+  const drugDescription = textAt(medication, "DrugDescription", "DrugDescription");
+  if (drugDescription.length > 105) {
+    throw new Error("WENO CancelRx DrugDescription must be 105 characters or fewer.");
+  }
+  const quantity = objectAt(medication, "Quantity");
+  textAt(quantity, "Value", "Quantity");
+  if (textAt(quantity, "CodeListQualifier", "Quantity CodeListQualifier") !== "38") {
+    throw new Error("WENO CancelRx Quantity CodeListQualifier must be 38.");
+  }
+  textAt(objectAt(quantity, "QuantityUnitOfMeasure"), "Code", "QuantityUnitOfMeasure code");
+  requireOffset(
+    textAt(objectAt(medication, "WrittenDate"), "DateTime", "WrittenDate"),
+    "WrittenDate",
+  );
+  const substitutions = textAt(medication, "Substitutions", "Substitutions");
+  if (substitutions !== "0" && substitutions !== "1") {
+    throw new Error("WENO CancelRx Substitutions must be 0 or 1.");
+  }
+  textAt(medication, "NumberOfRefills", "NumberOfRefills");
+  textAt(objectAt(medication, "Sig"), "SigText", "Sig");
+  return messageId;
+}
+
 function requireSwitchConfig(config: WenoSwitchConfig): Required<WenoSwitchConfig> {
   if (!isWenoSwitchConfigured(config)) {
     throw new Error("WENO Switch is not configured.");
   }
   return config as Required<WenoSwitchConfig>;
+}
+
+function assertNonControlled(
+  medicationRequest: MedicationRequest,
+  messageType: "NewRx" | "CancelRx",
+): void {
+  if (medicationRequest.extension?.some((extension) =>
+    extension.url === ODOS_CONTROLLED_SUBSTANCE_FLAG_EXTENSION_URL
+      && extension.valueBoolean === true
+  )) {
+    throw new Error(`WENO Switch ${messageType} supports non-controlled prescriptions only.`);
+  }
 }
 
 function requiredName(names: HumanName[] | undefined, label: string): { family: string; given: string } {

@@ -387,6 +387,370 @@ test("a structured WENO error still clears its reservation and permits an immedi
   }
 });
 
+test("CancelRx requires staff authentication", async () => {
+  const server = await startServer({
+    authenticate: async () => null,
+  });
+  try {
+    const response = await fetch(
+      `${server.baseUrl}/weno/medication-requests/rx-1/cancel`,
+      { method: "POST" },
+    );
+    assert.equal(response.status, 401);
+    assert.deepEqual(await response.json(), {
+      error: "Authentication required to cancel a prescription.",
+    });
+  } finally {
+    await server.close();
+  }
+});
+
+test("CancelRx refuses an unconfigured WENO Switch before reading the prescription", async () => {
+  const server = await startServer();
+  try {
+    const response = await fetch(
+      `${server.baseUrl}/weno/medication-requests/rx-1/cancel`,
+      { ...auth(), method: "POST" },
+    );
+    assert.equal(response.status, 503);
+    assert.deepEqual(await response.json(), {
+      error: "WENO Switch is not configured. Complete the WENO_SWITCH settings before cancelling.",
+    });
+  } finally {
+    await server.close();
+  }
+});
+
+test("CancelRx refuses a prescription without a stored WENO MessageID", async () => {
+  const fixture = sendFixture({
+    medicationRequest: medicationRequest({ transmissionMethod: "electronically-sent" }),
+  });
+  const server = await startCancelServer(fixture, async () => {
+    throw new Error("cancel send must not run");
+  });
+  try {
+    const response = await fetch(
+      `${server.baseUrl}/weno/medication-requests/rx-1/cancel`,
+      { ...auth(), method: "POST" },
+    );
+    assert.equal(response.status, 409);
+    assert.deepEqual(await response.json(), {
+      error: "This prescription has no stored WENO MessageID and cannot be cancelled.",
+    });
+    assert.equal(server.serviceUpdateCalls(), 0);
+  } finally {
+    await server.close();
+  }
+});
+
+test("CancelRx refuses a prescription that was never electronically sent", async () => {
+  const fixture = sendFixture({ medicationRequest: cancelMedicationRequest("printed") });
+  const server = await startCancelServer(fixture, async () => {
+    throw new Error("cancel send must not run");
+  });
+  try {
+    const response = await fetch(
+      `${server.baseUrl}/weno/medication-requests/rx-1/cancel`,
+      { ...auth(), method: "POST" },
+    );
+    assert.equal(response.status, 409);
+    assert.deepEqual(await response.json(), {
+      error: "Only an electronically sent prescription can be cancelled through WENO.",
+    });
+    assert.equal(server.serviceUpdateCalls(), 0);
+  } finally {
+    await server.close();
+  }
+});
+
+test("CancelRx refuses a prescription that is already cancelled", async () => {
+  const fixture = sendFixture({
+    medicationRequest: { ...cancelMedicationRequest(), status: "cancelled" },
+  });
+  const server = await startCancelServer(fixture, async () => {
+    throw new Error("cancel send must not run");
+  });
+  try {
+    const response = await fetch(
+      `${server.baseUrl}/weno/medication-requests/rx-1/cancel`,
+      { ...auth(), method: "POST" },
+    );
+    assert.equal(response.status, 409);
+    assert.deepEqual(await response.json(), {
+      error: "This prescription is already cancelled.",
+    });
+    assert.equal(server.serviceUpdateCalls(), 0);
+  } finally {
+    await server.close();
+  }
+});
+
+test("CancelRx status cancels the MedicationRequest and audits MessageID plus Status code", async () => {
+  const fixture = sendFixture({ medicationRequest: cancelMedicationRequest() });
+  const audits: Array<{ actionReason?: string }> = [];
+  let sentXml = "";
+  let updatesBeforeTransport = -1;
+  let server: Awaited<ReturnType<typeof startCancelServer>>;
+  server = await startCancelServer(
+    fixture,
+    async (xml) => {
+      updatesBeforeTransport = server.serviceUpdateCalls();
+      sentXml = xml;
+      return { kind: "status", code: "001", description: "Accepted" };
+    },
+    { recordAudit: async (row) => { audits.push(row); } },
+  );
+  try {
+    const response = await fetch(
+      `${server.baseUrl}/weno/medication-requests/rx-1/cancel`,
+      { ...auth(), method: "POST" },
+    );
+    assert.equal(response.status, 200);
+    const body = await response.json() as { medicationRequest: MedicationRequest };
+    assert.equal(body.medicationRequest.status, "cancelled");
+    assert.equal(wenoMessageId(body.medicationRequest), "original-newrx-id");
+    assert.doesNotMatch(
+      body.medicationRequest.note?.map((note) => note.text).join("\n") ?? "",
+      /WENO Switch CancelRx outcome pending/,
+    );
+    assert.match(sentXml, /<MessageID>test-message-id<\/MessageID><RelatesToMessageID>original-newrx-id<\/RelatesToMessageID>/);
+    assert.deepEqual(audits.map((row) => row.actionReason), [
+      "WENO_SWITCH_CANCELRX_STATUS test-message-id 001: Accepted",
+    ]);
+    assert.doesNotMatch(audits[0]?.actionReason ?? "", /<Message|Synthetic latanoprost/);
+    assert.equal(updatesBeforeTransport, 1);
+    assert.equal(server.serviceUpdateCalls(), 2);
+  } finally {
+    await server.close();
+  }
+});
+
+test("CancelRx error records the error and audits MessageID plus Error code", async () => {
+  const fixture = sendFixture({ medicationRequest: cancelMedicationRequest() });
+  const audits: Array<{ actionReason?: string }> = [];
+  let sendAttempts = 0;
+  const server = await startCancelServer(
+    fixture,
+    async () => {
+      sendAttempts += 1;
+      return {
+        kind: "error",
+        code: "900",
+        descriptionCode: "P001",
+        description: "Synthetic cancellation failure",
+      };
+    },
+    { recordAudit: async (row) => { audits.push(row); } },
+  );
+  try {
+    const response = await fetch(
+      `${server.baseUrl}/weno/medication-requests/rx-1/cancel`,
+      { ...auth(), method: "POST" },
+    );
+    assert.equal(response.status, 200);
+    const body = await response.json() as { medicationRequest: MedicationRequest };
+    assert.equal(body.medicationRequest.status, "active");
+    assert.equal(wenoMessageId(body.medicationRequest), "original-newrx-id");
+    assert.match(
+      body.medicationRequest.note?.at(-1)?.text ?? "",
+      /WENO Switch error 900\/P001: Synthetic cancellation failure/,
+    );
+    assert.doesNotMatch(
+      body.medicationRequest.note?.map((note) => note.text).join("\n") ?? "",
+      /WENO Switch CancelRx outcome pending/,
+    );
+    assert.deepEqual(audits.map((row) => row.actionReason), [
+      "WENO_SWITCH_CANCELRX_ERROR test-message-id 900/P001: Synthetic cancellation failure",
+    ]);
+    assert.doesNotMatch(audits[0]?.actionReason ?? "", /<Message|Synthetic latanoprost/);
+    assert.equal(server.serviceUpdateCalls(), 2);
+    assert.equal(sendAttempts, 1);
+
+    const retry = await fetch(
+      `${server.baseUrl}/weno/medication-requests/rx-1/cancel`,
+      { ...auth(), method: "POST" },
+    );
+    assert.equal(retry.status, 200);
+    const retryBody = await retry.json() as { medicationRequest: MedicationRequest };
+    assert.doesNotMatch(
+      retryBody.medicationRequest.note?.map((note) => note.text).join("\n") ?? "",
+      /WENO Switch CancelRx outcome pending/,
+    );
+    assert.equal(sendAttempts, 2);
+    assert.equal(server.serviceUpdateCalls(), 4);
+  } finally {
+    await server.close();
+  }
+});
+
+test("CancelRx thrown send can be cleared and then cancelled successfully", async () => {
+  const fixture = sendFixture({ medicationRequest: cancelMedicationRequest() });
+  const audits: Array<{ actionReason?: string }> = [];
+  let sendAttempts = 0;
+  let messageIdIndex = 0;
+  const server = await startCancelServer(
+    fixture,
+    async () => {
+      sendAttempts += 1;
+      if (sendAttempts === 1) throw new Error("Synthetic response timeout");
+      return { kind: "status", code: "001", description: "Accepted" };
+    },
+    {
+      createMessageId: () => ["cancel-attempt-1", "cancel-attempt-2"][messageIdIndex++] ?? "unexpected-message-id",
+      recordAudit: async (row) => { audits.push(row); },
+    },
+  );
+  try {
+    const response = await fetch(
+      `${server.baseUrl}/weno/medication-requests/rx-1/cancel`,
+      { ...auth(), method: "POST" },
+    );
+    assert.equal(response.status, 200);
+    const body = await response.json() as {
+      result: { kind: string; messageId: string };
+      medicationRequest: MedicationRequest;
+    };
+    assert.deepEqual(body.result, {
+      kind: "unknown",
+      messageId: "cancel-attempt-1",
+      description: "Synthetic response timeout",
+    });
+    assert.equal(body.medicationRequest.status, "active");
+    assert.equal(wenoMessageId(body.medicationRequest), "original-newrx-id");
+    assert.equal(wenoCancelMessageId(body.medicationRequest), "cancel-attempt-1");
+    assert.match(
+      body.medicationRequest.note?.at(-1)?.text ?? "",
+      /WENO Switch outcome unknown cancel-attempt-1: Synthetic response timeout/,
+    );
+    assert.deepEqual(audits.map((row) => row.actionReason), [
+      "WENO_SWITCH_CANCELRX_OUTCOME_UNKNOWN cancel-attempt-1: Synthetic response timeout",
+    ]);
+    assert.equal(server.serviceUpdateCalls(), 2);
+    assert.equal(sendAttempts, 1);
+
+    const retry = await fetch(
+      `${server.baseUrl}/weno/medication-requests/rx-1/cancel`,
+      { ...auth(), method: "POST" },
+    );
+    assert.equal(retry.status, 409);
+    assert.deepEqual(await retry.json(), {
+      error: "This prescription has an indeterminate WENO CancelRx outcome and cannot be resent.",
+    });
+    assert.equal(sendAttempts, 1);
+    assert.equal(server.serviceUpdateCalls(), 2);
+
+    const clearResponse = await fetch(
+      `${server.baseUrl}/weno/medication-requests/rx-1/clear-indeterminate-cancel`,
+      { ...auth(), method: "POST" },
+    );
+    assert.equal(clearResponse.status, 200);
+    const clearBody = await clearResponse.json() as {
+      medicationRequest: MedicationRequest;
+      clearedMessageId: string;
+    };
+    assert.equal(clearBody.clearedMessageId, "cancel-attempt-1");
+    assert.equal(wenoMessageId(clearBody.medicationRequest), "original-newrx-id");
+    assert.doesNotMatch(
+      clearBody.medicationRequest.note?.map((note) => note.text).join("\n") ?? "",
+      /WENO Switch CancelRx outcome pending/,
+    );
+    assert.match(
+      clearBody.medicationRequest.note?.at(-1)?.text ?? "",
+      /WENO Switch CancelRx outcome-unknown reservation cleared cancel-attempt-1 by Practitioner\/staff-1\./,
+    );
+    assert.equal(server.serviceUpdateCalls(), 3);
+
+    const successfulRetry = await fetch(
+      `${server.baseUrl}/weno/medication-requests/rx-1/cancel`,
+      { ...auth(), method: "POST" },
+    );
+    assert.equal(successfulRetry.status, 200);
+    const successfulBody = await successfulRetry.json() as {
+      result: { kind: string };
+      medicationRequest: MedicationRequest;
+    };
+    assert.equal(successfulBody.result.kind, "status");
+    assert.equal(successfulBody.medicationRequest.status, "cancelled");
+    assert.equal(wenoMessageId(successfulBody.medicationRequest), "original-newrx-id");
+    assert.equal(wenoCancelMessageId(successfulBody.medicationRequest), undefined);
+    assert.equal(sendAttempts, 2);
+    assert.equal(server.serviceUpdateCalls(), 5);
+    assert.deepEqual(audits.map((row) => row.actionReason), [
+      "WENO_SWITCH_CANCELRX_OUTCOME_UNKNOWN cancel-attempt-1: Synthetic response timeout",
+      "WENO_SWITCH_CANCELRX_INDETERMINATE_RESERVATION_CLEARED cancel-attempt-1",
+      "WENO_SWITCH_CANCELRX_STATUS cancel-attempt-2 001: Accepted",
+    ]);
+  } finally {
+    await server.close();
+  }
+});
+
+test("CancelRx clear refuses a prescription with no cancel reservation", async () => {
+  const fixture = sendFixture({ medicationRequest: cancelMedicationRequest() });
+  const server = await startCancelServer(fixture, async () => {
+    throw new Error("cancel send must not run");
+  });
+  try {
+    const response = await fetch(
+      `${server.baseUrl}/weno/medication-requests/rx-1/clear-indeterminate-cancel`,
+      { ...auth(), method: "POST" },
+    );
+    assert.equal(response.status, 409);
+    assert.deepEqual(await response.json(), {
+      error: "Only an indeterminate WENO CancelRx reservation on a non-cancelled prescription can be cleared.",
+    });
+    assert.equal(server.serviceUpdateCalls(), 0);
+  } finally {
+    await server.close();
+  }
+});
+
+test("CancelRx clear refuses an already-cancelled prescription", async () => {
+  const fixture = sendFixture({
+    medicationRequest: {
+      ...cancelMedicationRequest(),
+      status: "cancelled",
+      identifier: [
+        ...(cancelMedicationRequest().identifier ?? []),
+        { system: WENO_CANCEL_MESSAGE_ID_IDENTIFIER_SYSTEM, value: "cancel-attempt-1" },
+      ],
+    },
+  });
+  const server = await startCancelServer(fixture, async () => {
+    throw new Error("cancel send must not run");
+  });
+  try {
+    const response = await fetch(
+      `${server.baseUrl}/weno/medication-requests/rx-1/clear-indeterminate-cancel`,
+      { ...auth(), method: "POST" },
+    );
+    assert.equal(response.status, 409);
+    assert.equal(server.serviceUpdateCalls(), 0);
+  } finally {
+    await server.close();
+  }
+});
+
+test("NewRx clear still refuses an electronically-sent prescription without a cancel reservation", async () => {
+  const fixture = sendFixture({ medicationRequest: cancelMedicationRequest() });
+  const server = await startCancelServer(fixture, async () => {
+    throw new Error("cancel send must not run");
+  });
+  try {
+    const response = await fetch(
+      `${server.baseUrl}/weno/medication-requests/rx-1/clear-indeterminate-send`,
+      { ...auth(), method: "POST" },
+    );
+    assert.equal(response.status, 409);
+    assert.deepEqual(await response.json(), {
+      error: "Only an indeterminate WENO send reservation can be cleared.",
+    });
+    assert.equal(server.serviceUpdateCalls(), 0);
+  } finally {
+    await server.close();
+  }
+});
+
 function auth(): RequestInit {
   return { headers: { Authorization: "Bearer good" } };
 }
@@ -493,6 +857,18 @@ async function startSendServer(
   return { ...server, serviceUpdateCalls: () => serviceUpdateCalls };
 }
 
+async function startCancelServer(
+  fixture: ReturnType<typeof sendFixture>,
+  sendCancelRx: NonNullable<Parameters<typeof registerWenoSearchRoutes>[1]["sendCancelRx"]>,
+  overrides: Partial<Parameters<typeof registerWenoSearchRoutes>[1]> = {},
+) {
+  return startSendServer(
+    fixture,
+    async () => { throw new Error("NewRx send must not run during CancelRx tests"); },
+    { sendCancelRx, ...overrides },
+  );
+}
+
 function sendFixture(overrides: { medicationRequest?: MedicationRequest } = {}) {
   const patient: Patient = {
     resourceType: "Patient",
@@ -565,6 +941,18 @@ function medicationRequest(options: {
   };
 }
 
+function cancelMedicationRequest(
+  transmissionMethod: "printed" | "electronically-sent" = "electronically-sent",
+): MedicationRequest {
+  return {
+    ...medicationRequest({ transmissionMethod }),
+    identifier: [{
+      system: WENO_MESSAGE_ID_IDENTIFIER_SYSTEM,
+      value: "original-newrx-id",
+    }],
+  };
+}
+
 function transmissionMethod(request: MedicationRequest): string | undefined {
   return request.extension?.find(
     (extension) => extension.url === ODOS_TRANSMISSION_METHOD_EXTENSION_URL,
@@ -574,6 +962,15 @@ function transmissionMethod(request: MedicationRequest): string | undefined {
 function wenoMessageId(request: MedicationRequest): string | undefined {
   return request.identifier?.find(
     (identifier) => identifier.system === WENO_MESSAGE_ID_IDENTIFIER_SYSTEM,
+  )?.value;
+}
+
+const WENO_CANCEL_MESSAGE_ID_IDENTIFIER_SYSTEM =
+  "https://odos2020.com/fhir/sid/weno-switch-cancel-message-id";
+
+function wenoCancelMessageId(request: MedicationRequest): string | undefined {
+  return request.identifier?.find(
+    (identifier) => identifier.system === WENO_CANCEL_MESSAGE_ID_IDENTIFIER_SYSTEM,
   )?.value;
 }
 

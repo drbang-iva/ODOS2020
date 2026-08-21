@@ -4,11 +4,11 @@ import { fileURLToPath } from "node:url";
 import { parse } from "csv-parse/sync";
 import { unzipSync } from "fflate";
 import { Pool, type PoolClient } from "pg";
-import type { WenoEzIntegrationConfig } from "../integrations/weno/config.js";
+import type { WenoDirectoryDownloadConfig } from "../integrations/weno/config.js";
 import {
   downloadPharmacyDirectory,
   type PharmacyDirectoryRequest,
-} from "../integrations/weno/wenoEzIntegrationClient.js";
+} from "../integrations/weno/wenoDirectoryDownloadClient.js";
 
 const DEFAULT_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5433/medplum";
 const SCHEMA_MIGRATIONS_DDL_FILE = fileURLToPath(
@@ -234,7 +234,7 @@ export type WenoPharmacyDirectoryTrigger =
 
 export interface SyncWenoPharmacyDirectoryInput {
   trigger: WenoPharmacyDirectoryTrigger;
-  config: WenoEzIntegrationConfig;
+  config: WenoDirectoryDownloadConfig;
   request: PharmacyDirectoryRequest;
   storage: WenoPharmacyDirectoryStorageClient;
 }
