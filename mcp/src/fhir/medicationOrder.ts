@@ -15,6 +15,8 @@ export const NCPDP_PROVIDER_IDENTIFIER_SYSTEM =
   "http://terminology.hl7.org/CodeSystem/NCPDPProviderIdentificationNumber";
 export const WENO_MESSAGE_ID_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/sid/weno-switch-message-id";
+export const WENO_CANCEL_MESSAGE_ID_IDENTIFIER_SYSTEM =
+  "https://odos2020.com/fhir/sid/weno-switch-cancel-message-id";
 
 export const MEDICATION_TRANSMISSION_METHOD_CODES = [
   "not-transmitted",
