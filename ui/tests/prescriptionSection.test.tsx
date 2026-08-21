@@ -433,6 +433,76 @@ test("the cancel action is hidden when an electronically sent prescription is al
   }
 });
 
+test("a cancelled WENO prescription shows its durable electronic cancellation date", async () => {
+  const originalFetch = globalThis.fetch;
+  const request = electronicallySentPrescription({
+    status: "cancelled",
+    note: [{
+      time: "2026-08-21T14:15:00.000Z",
+      text: "WENO Switch CancelRx completed cancel-message-id by Practitioner/staff-1.",
+    }],
+  });
+  globalThis.fetch = prescriptionSectionFetch(request);
+
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    renderer = await renderPrescriptionSection();
+    const provenance = renderer.root.findAllByProps({
+      className: "mt-2 text-xs text-white/45",
+    }).find((node) => node.children.join("").startsWith("Cancelled electronically via WENO"));
+    assert.ok(provenance);
+    assert.equal(
+      provenance.children.join(""),
+      "Cancelled electronically via WENO on Aug 21, 2026",
+    );
+  } finally {
+    if (renderer) act(() => renderer.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a cancelled prescription without WENO completion provenance makes no electronic claim", async () => {
+  const originalFetch = globalThis.fetch;
+  const request = electronicallySentPrescription({ status: "cancelled" });
+  globalThis.fetch = prescriptionSectionFetch(request);
+
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    renderer = await renderPrescriptionSection();
+    assert.doesNotMatch(
+      JSON.stringify(renderer.toJSON()),
+      /Cancelled electronically via WENO/,
+    );
+  } finally {
+    if (renderer) act(() => renderer.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a non-cancelled prescription never shows completed WENO cancellation provenance", async () => {
+  const originalFetch = globalThis.fetch;
+  const request = electronicallySentPrescription({
+    status: "active",
+    note: [{
+      time: "2026-08-21T14:15:00.000Z",
+      text: "WENO Switch CancelRx completed cancel-message-id by Practitioner/staff-1.",
+    }],
+  });
+  globalThis.fetch = prescriptionSectionFetch(request);
+
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    renderer = await renderPrescriptionSection();
+    assert.doesNotMatch(
+      JSON.stringify(renderer.toJSON()),
+      /Cancelled electronically via WENO/,
+    );
+  } finally {
+    if (renderer) act(() => renderer.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("declining cancellation confirmation does not call the WENO cancel route", async () => {
   const originalFetch = globalThis.fetch;
   const originalWindow = globalThis.window;
