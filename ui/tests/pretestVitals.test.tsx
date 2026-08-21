@@ -144,7 +144,7 @@ test("height and weight save together to the body-measurements endpoint in inche
   }
 });
 
-test("diagnosis axis exposes an explicit blood-pressure entry control without selecting a diagnosis", () => {
-  const html = renderToStaticMarkup(<DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" onSelectDiagnosis={() => undefined} onOpenBloodPressure={() => undefined} />);
-  assert.match(html, /Record blood pressure/);
+test("diagnosis workspace does not expose a blood-pressure entry control", () => {
+  const html = renderToStaticMarkup(<DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" onSelectDiagnosis={() => undefined} />);
+  assert.doesNotMatch(html, /Record blood pressure/);
 });

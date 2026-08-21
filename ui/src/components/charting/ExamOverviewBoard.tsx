@@ -238,7 +238,7 @@ function EditorEntryRows({
             <span className="odos-exam-editor-entry-label">{entry.label}</span>
             <span className="odos-exam-editor-entry-presentation">
               <span aria-hidden>{isExamEntrySheetSectionId(entry.id) ? "▣" : "↗"}</span>
-              {isExamEntrySheetSectionId(entry.id) ? "Entry sheet" : "Full page"}
+              {isExamEntrySheetSectionId(entry.id) ? "Entry sheet" : "Expand"}
             </span>
           </button>
         ))}

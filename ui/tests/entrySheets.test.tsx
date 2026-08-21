@@ -406,7 +406,38 @@ test("distributed editor rows are 44px-class and disclose their interaction befo
     await page.locator('[data-editor-section-id="va"][data-editor-presentation="sheet"]').waitFor();
     await page.locator('[data-editor-section-id="refraction"][data-editor-presentation="full-page"]').waitFor();
     assert.match(await page.locator('[data-editor-section-id="va"]').innerText(), /Entry sheet/);
-    assert.match(await page.locator('[data-editor-section-id="refraction"]').innerText(), /Full page/);
+    const fullPageRow = page.locator('[data-editor-section-id="refraction"]');
+    const sheetPill = page.locator('[data-editor-section-id="va"] .odos-exam-editor-entry-presentation');
+    const expandPill = fullPageRow.locator(".odos-exam-editor-entry-presentation");
+    const [sheetStyle, expandStyle, emeraldColor] = await Promise.all([
+      sheetPill.evaluate((element) => ({ borderStyle: getComputedStyle(element).borderStyle })),
+      expandPill.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return {
+          backdropFilter: style.backdropFilter,
+          backgroundColor: style.backgroundColor,
+          borderStyle: style.borderStyle,
+          boxShadow: style.boxShadow,
+          color: style.color,
+        };
+      }),
+      page.evaluate(() => {
+        const probe = document.createElement("span");
+        probe.style.color = "var(--odos-emerald)";
+        document.body.append(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        return color;
+      }),
+    ]);
+    assert.equal(expandStyle.borderStyle, "solid");
+    assert.equal(expandStyle.color, emeraldColor);
+    assert.notEqual(expandStyle.backgroundColor, "rgba(0, 0, 0, 0)");
+    assert.match(expandStyle.backdropFilter, /blur/);
+    assert.match(expandStyle.boxShadow, /inset/);
+    assert.equal(sheetStyle.borderStyle, "solid");
+    assert.match(await fullPageRow.innerText(), /Expand/);
+    assert.doesNotMatch(await fullPageRow.innerText(), /Full page/);
   } finally {
     await page.close();
   }
