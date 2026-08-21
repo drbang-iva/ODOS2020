@@ -18,17 +18,35 @@ const AUTH = "Bearer good";
 function fixture() {
   const observations: Observation[] = [];
   const created: Array<Observation | Provenance> = [];
+  const transactions: Bundle[] = [];
+  let standaloneCreates = 0;
   const deps: PretestVitalsEndpointDeps = {
     authenticate: async (header) => header === AUTH ? {
       staffReference: "Practitioner/doc1",
       actorRole: "provider",
       fhir: {
         create: async (resource, headers) => {
+          standaloneCreates += 1;
           assert.equal(headers?.["X-ODOS-Source"], "mcp/save_section_observations");
           const saved = { ...resource, id: `${resource.resourceType.toLowerCase()}-${created.length + 1}` };
           created.push(saved);
           if (saved.resourceType === "Observation") observations.push(saved);
           return saved;
+        },
+        executeTransaction: async (bundle, headers) => {
+          assert.equal(headers?.["X-ODOS-Source"], "mcp/save_section_observations");
+          transactions.push(bundle);
+          const entry = (bundle.entry ?? []).map((item) => {
+            assert.ok(item.resource?.resourceType === "Observation" || item.resource?.resourceType === "Provenance");
+            const saved = { ...item.resource, id: `${item.resource.resourceType.toLowerCase()}-${created.length + 1}` } as Observation | Provenance;
+            created.push(saved);
+            if (saved.resourceType === "Observation") observations.push(saved);
+            return {
+              resource: saved,
+              response: { status: "201 Created", location: `${saved.resourceType}/${saved.id}/_history/1` },
+            };
+          });
+          return { resourceType: "Bundle", type: "transaction-response", entry };
         },
         search: async <T extends Resource>() => ({
           resourceType: "Bundle",
@@ -39,8 +57,34 @@ function fixture() {
     } : null,
     now: () => "2026-08-17T14:30:00.000Z",
   };
-  return { created, observations, deps };
+  return { created, observations, transactions, standaloneCreates: () => standaloneCreates, deps };
 }
+
+test("body measurements use one atomic FHIR transaction with no standalone clinical writes", async () => {
+  const { deps, transactions, standaloneCreates } = fixture();
+  const result = await handleBodyMeasurementsCaptureRequest(deps, { authHeader: AUTH, body: {
+    patientReference: "Patient/p1", encounterReference: "Encounter/e1", recordedAt: "2026-08-21T09:15:00.000Z",
+    height: { value: 68.5, unit: "in" }, weight: { value: 154.25, unit: "lb" },
+  } });
+
+  assert.equal(result.status, 200);
+  assert.equal(standaloneCreates(), 0);
+  assert.equal(transactions.length, 1);
+  const transaction = transactions[0];
+  assert.equal(transaction?.type, "transaction");
+  assert.deepEqual(transaction?.entry?.map((entry) => ({
+    fullUrl: entry.fullUrl,
+    resourceType: entry.resource?.resourceType,
+    request: entry.request,
+  })), [
+    { fullUrl: "urn:uuid:body-height", resourceType: "Observation", request: { method: "POST", url: "Observation" } },
+    { fullUrl: "urn:uuid:body-height-provenance", resourceType: "Provenance", request: { method: "POST", url: "Provenance" } },
+    { fullUrl: "urn:uuid:body-weight", resourceType: "Observation", request: { method: "POST", url: "Observation" } },
+    { fullUrl: "urn:uuid:body-weight-provenance", resourceType: "Provenance", request: { method: "POST", url: "Provenance" } },
+  ]);
+  assert.deepEqual((transaction?.entry?.[1]?.resource as Provenance).target.map((target) => target.reference), ["urn:uuid:body-height", "Patient/p1"]);
+  assert.deepEqual((transaction?.entry?.[3]?.resource as Provenance).target.map((target) => target.reference), ["urn:uuid:body-weight", "Patient/p1"]);
+});
 
 test("body measurements persist two separate US Core Observations with exact verified LOINC and UCUM pairs", async () => {
   const { created, deps } = fixture();
@@ -341,6 +385,7 @@ test("history follows next links so later BP and carotenoid pages remain visible
       actorRole: "provider",
       fhir: {
         create: async (resource) => resource,
+        executeTransaction: async (bundle) => bundle,
         search: async <T extends Resource>(_resourceType: T["resourceType"], params?: Record<string, string>) => {
           const kind = params?.code?.includes(BLOOD_PRESSURE_PANEL_CODE) ? "bp" : "carotenoid";
           return {

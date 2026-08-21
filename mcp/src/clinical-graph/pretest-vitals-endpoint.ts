@@ -16,6 +16,7 @@ const WRITE_HEADERS = { "X-ODOS-Source": "mcp/save_section_observations" } as co
 
 export interface PretestVitalsFhirClient {
   create<T extends Observation | Provenance>(resource: T, headers?: Record<string, string>): Promise<T>;
+  executeTransaction(bundle: Bundle, headers?: Record<string, string>): Promise<Bundle>;
   search<T extends Resource>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>>;
   searchUrl?<T extends Resource>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>>;
 }
@@ -200,9 +201,39 @@ export async function handleBodyMeasurementsCaptureRequest(
     staffReference: staff.staffReference,
     recordedAt,
   });
-  const savedHeight = await persistObservation(staff.fhir, height, parsed.data.patientReference, staff.staffReference, recordedAt);
-  const savedWeight = await persistObservation(staff.fhir, weight, parsed.data.patientReference, staff.staffReference, recordedAt);
-  return { status: 200, body: { height: savedHeight.body, weight: savedWeight.body } };
+  const heightFullUrl = "urn:uuid:body-height";
+  const weightFullUrl = "urn:uuid:body-weight";
+  const transaction = await staff.fhir.executeTransaction({
+    resourceType: "Bundle",
+    type: "transaction",
+    entry: [
+      { fullUrl: heightFullUrl, resource: height, request: { method: "POST", url: "Observation" } },
+      {
+        fullUrl: "urn:uuid:body-height-provenance",
+        resource: observationProvenance(heightFullUrl, parsed.data.patientReference, staff.staffReference, recordedAt),
+        request: { method: "POST", url: "Provenance" },
+      },
+      { fullUrl: weightFullUrl, resource: weight, request: { method: "POST", url: "Observation" } },
+      {
+        fullUrl: "urn:uuid:body-weight-provenance",
+        resource: observationProvenance(weightFullUrl, parsed.data.patientReference, staff.staffReference, recordedAt),
+        request: { method: "POST", url: "Provenance" },
+      },
+    ],
+  }, { ...WRITE_HEADERS, Prefer: "return=representation" });
+  return {
+    status: 200,
+    body: {
+      height: {
+        observationReference: transactionCreatedReference(transaction, 0, "Observation"),
+        provenanceReference: transactionCreatedReference(transaction, 1, "Provenance"),
+      },
+      weight: {
+        observationReference: transactionCreatedReference(transaction, 2, "Observation"),
+        provenanceReference: transactionCreatedReference(transaction, 3, "Provenance"),
+      },
+    },
+  };
 }
 
 export async function handlePretestVitalsHistoryRequest(
@@ -303,15 +334,41 @@ async function persistObservation(
 ): Promise<EndpointResult> {
   const saved = await fhir.create(observation, WRITE_HEADERS);
   if (!saved.id) throw new Error("Observation create response did not include an id.");
-  const provenance: Provenance = {
+  const provenance = observationProvenance(`Observation/${saved.id}`, patientReference, staffReference, recordedAt);
+  const savedProvenance = await fhir.create(provenance, WRITE_HEADERS);
+  return { status: 200, body: { observationReference: `Observation/${saved.id}`, provenanceReference: savedProvenance.id ? `Provenance/${savedProvenance.id}` : undefined } };
+}
+
+function observationProvenance(
+  observationReference: string,
+  patientReference: string,
+  staffReference: string,
+  recordedAt: string,
+): Provenance {
+  return {
     resourceType: "Provenance",
-    target: patientScopedProvenanceTargets(`Observation/${saved.id}`, patientReference),
+    target: patientScopedProvenanceTargets(observationReference, patientReference),
     recorded: recordedAt,
     agent: [{ who: { reference: staffReference } }],
     activity: { coding: [{ system: "http://terminology.hl7.org/CodeSystem/v3-DataOperation", code: "CREATE" }] },
   };
-  const savedProvenance = await fhir.create(provenance, WRITE_HEADERS);
-  return { status: 200, body: { observationReference: `Observation/${saved.id}`, provenanceReference: savedProvenance.id ? `Provenance/${savedProvenance.id}` : undefined } };
+}
+
+function transactionCreatedReference(bundle: Bundle, index: number, resourceType: "Observation" | "Provenance"): string {
+  if (bundle.resourceType !== "Bundle" || bundle.type !== "transaction-response") {
+    throw new Error("Body measurements FHIR transaction did not return a transaction-response Bundle.");
+  }
+  const entry = bundle.entry?.[index];
+  if (!entry?.response?.status?.startsWith("2")) {
+    throw new Error(`Body measurements FHIR transaction entry ${index + 1} did not succeed.`);
+  }
+  if (entry.resource?.resourceType === resourceType && entry.resource.id) return `${resourceType}/${entry.resource.id}`;
+  const location = entry.response.location;
+  if (location?.startsWith(`${resourceType}/`)) {
+    const id = location.slice(resourceType.length + 1).split("/")[0];
+    if (id) return `${resourceType}/${id}`;
+  }
+  throw new Error(`Body measurements FHIR transaction entry ${index + 1} did not identify the created ${resourceType}.`);
 }
 
 function hasCode(observation: Observation, system: string, code: string): boolean {
