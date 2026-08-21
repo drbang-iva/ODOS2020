@@ -604,12 +604,14 @@ async function prepareSendContext(
       staff.fhir.search<Observation>("Observation", {
         patient: patientId,
         code: `${LOINC_CODE_SYSTEM}|${BODY_HEIGHT_LOINC_CODE}`,
+        "status:not": "entered-in-error",
         _sort: "-date",
         _count: "1",
       }),
       staff.fhir.search<Observation>("Observation", {
         patient: patientId,
         code: `${LOINC_CODE_SYSTEM}|${BODY_WEIGHT_LOINC_CODE}`,
+        "status:not": "entered-in-error",
         _sort: "-date",
         _count: "1",
       }),
@@ -653,15 +655,18 @@ function convertedVital(
   kind: "height" | "weight",
 ): { value: number; observedOn: string } {
   const value = observation.valueQuantity?.value;
-  const unit = observation.valueQuantity?.code ?? observation.valueQuantity?.unit;
+  const units = [observation.valueQuantity?.code, observation.valueQuantity?.unit]
+    .filter((unit): unit is string => Boolean(unit?.trim()))
+    .map((unit) => unit.trim().toLowerCase());
   const observedOn = observationDate(observation);
-  if (value === undefined || !Number.isFinite(value) || value <= 0 || !unit || !observedOn) {
+  if (value === undefined || !Number.isFinite(value) || value <= 0 || units.length === 0 || !observedOn) {
     throw missingPediatricVitalsError();
   }
-  const normalizedUnit = unit.trim().toLowerCase();
-  const converted = kind === "height"
-    ? convertHeightToInches(value, normalizedUnit)
-    : convertWeightToPounds(value, normalizedUnit);
+  const converted = units
+    .map((unit) => kind === "height"
+      ? convertHeightToInches(value, unit)
+      : convertWeightToPounds(value, unit))
+    .find((candidate) => candidate !== undefined);
   if (converted === undefined) {
     throw new WenoPrescriptionSendError(
       400,

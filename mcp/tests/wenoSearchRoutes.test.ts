@@ -211,6 +211,7 @@ test("pediatric WENO send retrieves the latest metric vitals and emits converted
         params: {
           patient: "patient-1",
           code: "http://loinc.org|8302-2",
+          "status:not": "entered-in-error",
           _sort: "-date",
           _count: "1",
         },
@@ -220,11 +221,68 @@ test("pediatric WENO send retrieves the latest metric vitals and emits converted
         params: {
           patient: "patient-1",
           code: "http://loinc.org|29463-7",
+          "status:not": "entered-in-error",
           _sort: "-date",
           _count: "1",
         },
       },
     ]);
+  } finally {
+    await server.close();
+  }
+});
+
+test("pediatric WENO send accepts canonical customary codes through their literal display units", async () => {
+  const fixture = sendFixture();
+  fixture.patient.birthDate = "2010-08-01";
+  const height = vitalObservation("height", 62, "inches", "2026-07-30T09:00:00.000Z");
+  const weight = vitalObservation("weight", 112, "pounds", "2026-07-30T09:00:00.000Z");
+  height.valueQuantity!.code = ["[", "in_i", "]"].join("");
+  weight.valueQuantity!.code = ["[", "lb_av", "]"].join("");
+  fixture.observations.push(height, weight);
+  let sentXml = "";
+  const server = await startSendServer(fixture, async (xml) => {
+    sentXml = xml;
+    return { kind: "status", code: "001", description: "Accepted" };
+  });
+  try {
+    const response = await fetch(`${server.baseUrl}/weno/medication-requests/rx-1/send`, {
+      ...auth(),
+      method: "POST",
+    });
+
+    assert.equal(response.status, 200);
+    assert.match(sentXml, /<VitalSign>Weight<\/VitalSign>.*<UnitOfMeasure>pounds<\/UnitOfMeasure>/);
+    assert.match(sentXml, /<VitalSign>Height<\/VitalSign>.*<UnitOfMeasure>inches<\/UnitOfMeasure>/);
+  } finally {
+    await server.close();
+  }
+});
+
+test("pediatric WENO send ignores a newer entered-in-error vital", async () => {
+  const fixture = sendFixture();
+  fixture.patient.birthDate = "2010-08-01";
+  const invalidHeight = vitalObservation("height", 75, "inches", "2026-07-31T09:00:00.000Z");
+  invalidHeight.status = "entered-in-error";
+  fixture.observations.push(
+    invalidHeight,
+    vitalObservation("height", 62, "inches", "2026-07-30T09:00:00.000Z"),
+    vitalObservation("weight", 112, "pounds", "2026-07-30T09:00:00.000Z"),
+  );
+  let sentXml = "";
+  const server = await startSendServer(fixture, async (xml) => {
+    sentXml = xml;
+    return { kind: "status", code: "001", description: "Accepted" };
+  });
+  try {
+    const response = await fetch(`${server.baseUrl}/weno/medication-requests/rx-1/send`, {
+      ...auth(),
+      method: "POST",
+    });
+
+    assert.equal(response.status, 200);
+    assert.match(sentXml, /<VitalSign>Height<\/VitalSign>.*<Value>62<\/Value>/);
+    assert.doesNotMatch(sentXml, /<VitalSign>Height<\/VitalSign>.*<Value>75<\/Value>/);
   } finally {
     await server.close();
   }
@@ -943,6 +1001,9 @@ async function startSendServer(
       const code = params.code?.split("|").at(-1);
       const observations = fixture.observations
         .filter((observation) => observation.code.coding?.some((coding) => coding.code === code))
+        .filter((observation) =>
+          params["status:not"] !== "entered-in-error" || observation.status !== "entered-in-error"
+        )
         .toSorted((left, right) =>
           (right.effectiveDateTime ?? "").localeCompare(left.effectiveDateTime ?? "")
         )
