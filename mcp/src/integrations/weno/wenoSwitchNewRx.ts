@@ -22,9 +22,8 @@ export const WENO_SWITCH_CERT_ENDPOINT = DEFAULT_WENO_SWITCH_ENDPOINT;
 const SCRIPT_VERSION = "20170715";
 const NON_CONTROLLED_DEA_SCHEDULE_CODE = "C38046";
 const NPI_SYSTEM = "http://hl7.org/fhir/sid/us-npi";
-// PROVISIONAL: WENO's single supplied sample mixes these versions; vendor confirmation is pending.
-const WENO_WEIGHT_LOINC_VERSION = "2.64";
-const WENO_HEIGHT_LOINC_VERSION = "2.66";
+// WENO confirms this field is free alphanumeric and both measurements may use the sample-attested 2.66.
+const WENO_LOINC_VERSION = "2.66";
 const WENO_UCUM_VERSION = "2.1";
 const sentMessageIds = new Set<string>();
 
@@ -657,15 +656,14 @@ function pediatricObservation(input: BuildWenoSwitchNewRxInput): string {
   }
   return [
     "<Observation>",
-    measurementXml("Weight", WENO_WEIGHT_LOINC_VERSION, input.bodyWeightPounds, "pounds"),
-    measurementXml("Height", WENO_HEIGHT_LOINC_VERSION, input.bodyHeightInches, "inches"),
+    measurementXml("Weight", input.bodyWeightPounds, "pounds"),
+    measurementXml("Height", input.bodyHeightInches, "inches"),
     "</Observation>",
   ].join("");
 }
 
 function measurementXml(
   vitalSign: "Height" | "Weight",
-  loincVersion: "2.64" | "2.66",
   measurement: { value: number; observedOn: string },
   unit: "inches" | "pounds",
 ): string {
@@ -673,7 +671,7 @@ function measurementXml(
     throw new WenoPrescriptionSendError(400, `WENO ${vitalSign} must be a positive number.`);
   }
   const observedOn = requiredDate(measurement.observedOn, `${vitalSign} observation date`);
-  return `<Measurement><VitalSign>${vitalSign}</VitalSign><LOINCVersion>${loincVersion}</LOINCVersion><Value>${measurement.value}</Value><UnitOfMeasure>${unit}</UnitOfMeasure><UCUMVersion>${WENO_UCUM_VERSION}</UCUMVersion><ObservationDate><Date>${observedOn}</Date></ObservationDate></Measurement>`;
+  return `<Measurement><VitalSign>${vitalSign}</VitalSign><LOINCVersion>${WENO_LOINC_VERSION}</LOINCVersion><Value>${measurement.value}</Value><UnitOfMeasure>${unit}</UnitOfMeasure><UCUMVersion>${WENO_UCUM_VERSION}</UCUMVersion><ObservationDate><Date>${observedOn}</Date></ObservationDate></Measurement>`;
 }
 
 function validateObservation(newRx: Record<string, unknown>, pediatric: boolean): void {
@@ -694,20 +692,19 @@ function validateObservation(newRx: Record<string, unknown>, pediatric: boolean)
   if (measurements.length !== 2) {
     throw new Error("WENO NewRx Observation must contain exactly height and weight Measurements.");
   }
-  validateMeasurement(measurements, "Weight", WENO_WEIGHT_LOINC_VERSION, "pounds");
-  validateMeasurement(measurements, "Height", WENO_HEIGHT_LOINC_VERSION, "inches");
+  validateMeasurement(measurements, "Weight", "pounds");
+  validateMeasurement(measurements, "Height", "inches");
 }
 
 function validateMeasurement(
   measurements: Record<string, unknown>[],
   vitalSign: "Height" | "Weight",
-  loincVersion: "2.64" | "2.66",
   unit: "inches" | "pounds",
 ): void {
   const measurement = measurements.find((candidate) => candidate.VitalSign === vitalSign);
   if (!measurement) throw new Error(`WENO NewRx Observation missing ${vitalSign} Measurement.`);
-  if (textAt(measurement, "LOINCVersion", `${vitalSign} LOINCVersion`) !== loincVersion) {
-    throw new Error(`WENO NewRx ${vitalSign} LOINCVersion must be ${loincVersion}.`);
+  if (textAt(measurement, "LOINCVersion", `${vitalSign} LOINCVersion`) !== WENO_LOINC_VERSION) {
+    throw new Error(`WENO NewRx ${vitalSign} LOINCVersion must be ${WENO_LOINC_VERSION}.`);
   }
   const value = Number(textAt(measurement, "Value", `${vitalSign} Value`));
   if (!Number.isFinite(value) || value <= 0) {

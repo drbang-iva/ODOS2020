@@ -199,7 +199,7 @@ test("pediatric WENO send retrieves the latest metric vitals and emits converted
     assert.equal(response.status, 200);
     assert.match(
       sentXml,
-      /<Measurement><VitalSign>Weight<\/VitalSign><LOINCVersion>2\.64<\/LOINCVersion><Value>110\.23<\/Value><UnitOfMeasure>pounds<\/UnitOfMeasure><UCUMVersion>2\.1<\/UCUMVersion><ObservationDate><Date>2026-07-30<\/Date><\/ObservationDate><\/Measurement>/,
+      /<Measurement><VitalSign>Weight<\/VitalSign><LOINCVersion>2\.66<\/LOINCVersion><Value>110\.23<\/Value><UnitOfMeasure>pounds<\/UnitOfMeasure><UCUMVersion>2\.1<\/UCUMVersion><ObservationDate><Date>2026-07-30<\/Date><\/ObservationDate><\/Measurement>/,
     );
     assert.match(
       sentXml,

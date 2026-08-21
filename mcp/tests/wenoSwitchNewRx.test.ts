@@ -153,7 +153,7 @@ test("under-19 NewRx emits the vendor Observation shape with literal values and 
   assert.equal(
     observation,
     "<Observation>"
-      + "<Measurement><VitalSign>Weight</VitalSign><LOINCVersion>2.64</LOINCVersion><Value>112</Value><UnitOfMeasure>pounds</UnitOfMeasure><UCUMVersion>2.1</UCUMVersion><ObservationDate><Date>2020-07-05</Date></ObservationDate></Measurement>"
+      + "<Measurement><VitalSign>Weight</VitalSign><LOINCVersion>2.66</LOINCVersion><Value>112</Value><UnitOfMeasure>pounds</UnitOfMeasure><UCUMVersion>2.1</UCUMVersion><ObservationDate><Date>2020-07-05</Date></ObservationDate></Measurement>"
       + "<Measurement><VitalSign>Height</VitalSign><LOINCVersion>2.66</LOINCVersion><Value>62</Value><UnitOfMeasure>inches</UnitOfMeasure><UCUMVersion>2.1</UCUMVersion><ObservationDate><Date>2020-07-05</Date></ObservationDate></Measurement>"
       + "</Observation>",
   );
