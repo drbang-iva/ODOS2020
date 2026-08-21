@@ -662,17 +662,19 @@
   align-items: center;
   gap: 5px;
   padding: 4px 7px;
-  border: 1px solid color-mix(in srgb, var(--odos-brand) 55%, var(--odos-line));
+  border: 1px solid color-mix(in srgb, var(--odos-accent) 55%, var(--odos-line));
   border-radius: 999px;
-  color: var(--odos-brand);
+  color: var(--odos-accent);
   font-size: 10px;
   font-weight: 800;
 }
 
 .odos-exam-editor-entry[data-editor-presentation="full-page"] .odos-exam-editor-entry-presentation {
-  border-style: dashed;
-  border-color: color-mix(in srgb, var(--odos-amber) 65%, var(--odos-line));
-  color: var(--odos-amber);
+  border: 1px solid color-mix(in srgb, var(--odos-emerald) 55%, var(--odos-line));
+  background: color-mix(in srgb, var(--odos-emerald) 10%, transparent);
+  color: var(--odos-emerald);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--odos-emerald) 28%, transparent);
+  backdrop-filter: blur(5px);
 }
 
 .odos-exam-finding {

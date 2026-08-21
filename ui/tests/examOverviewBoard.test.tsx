@@ -333,7 +333,8 @@ test("editor-entry rows live in their cards, preserve empty-card reachability, a
     const refraction = renderer.root.findByProps({ "data-section-key": "refraction" });
     const refractionRow = refraction.findByProps({ "data-editor-section-id": "refraction" });
     assert.equal(refractionRow.props["data-editor-presentation"], "full-page");
-    assert.match(textContent(refractionRow), /Full page/);
+    assert.match(textContent(refractionRow), /Expand/);
+    assert.doesNotMatch(textContent(refractionRow), /Full page/);
 
     const contactLenses = renderer.root.findByProps({ "data-section-key": "contact-lenses" });
     assert.equal(contactLenses.findAllByProps({ "data-editor-section-id": "soft-contact-lens" }).length, 1);

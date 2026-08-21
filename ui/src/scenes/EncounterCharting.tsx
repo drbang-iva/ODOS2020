@@ -169,11 +169,6 @@ export function EncounterCharting({ patient, encounterId }: Props) {
     refreshExamOverview();
   }
 
-  function openBloodPressureFromDiagnosis() {
-    selectChartView("structure");
-    openBoardEditor("pretest-vitals");
-  }
-
   useEffect(() => {
     setBoardEditorOpen(false);
     setEntrySheetSection(undefined);
@@ -645,7 +640,6 @@ export function EncounterCharting({ patient, encounterId }: Props) {
           encounterReference={encounterReference}
           selectedReference={selectedDiagnosis?.workspaceKey === diagnosisWorkspaceKey ? selectedDiagnosis.reference : undefined}
           onSelectDiagnosis={(reference) => setSelectedDiagnosis(reference ? { workspaceKey: diagnosisWorkspaceKey, reference } : undefined)}
-          onOpenBloodPressure={openBloodPressureFromDiagnosis}
         />
       ) : activeExamOverviewProjection && !boardEditorOpen ? (
         <div className="odos-exam-overview-stage" data-entry-sheet-open={entrySheetSection ? "true" : "false"}>
