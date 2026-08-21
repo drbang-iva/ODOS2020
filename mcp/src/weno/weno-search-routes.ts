@@ -1,5 +1,5 @@
 import type { Application, Request, Response } from "express";
-import type { MedicationRequest, Patient, Practitioner } from "@medplum/fhirtypes";
+import type { MedicationRequest, Observation, Patient, Practitioner } from "@medplum/fhirtypes";
 import { buildOdosAuditEventRow, type OdosAuditEventRecord } from "../authz/odosAudit.js";
 import {
   NCPDP_PROVIDER_IDENTIFIER_SYSTEM,
@@ -20,8 +20,10 @@ import {
   buildWenoSwitchCancelRx,
   buildWenoSwitchNewRx,
   createWenoSwitchMessageId,
+  patientIsUnder19,
   sendWenoSwitchCancelRx,
   sendWenoSwitchNewRx,
+  WenoPrescriptionSendError,
   type WenoSwitchNewRxResult,
 } from "../integrations/weno/wenoSwitchNewRx.js";
 import type { AuthenticatedStaff } from "../payments/payment-charge-handler.js";
@@ -47,6 +49,10 @@ const WENO_CANCEL_RESERVATION_CLEARED_NOTE_PREFIX =
   "WENO Switch CancelRx outcome-unknown reservation cleared";
 const WENO_CANCEL_COMPLETED_NOTE_PREFIX = "WENO Switch CancelRx completed";
 const WENO_RESERVATION_CLEARED_NOTE_PREFIX = "WENO Switch outcome-unknown reservation cleared";
+// These identify stored FHIR Observations only; WENO serializes literal vital names and units.
+const LOINC_CODE_SYSTEM = "http://loinc.org";
+const BODY_HEIGHT_LOINC_CODE = "8302-2";
+const BODY_WEIGHT_LOINC_CODE = "29463-7";
 
 export interface WenoDrugSearchClient {
   search(query: string): Promise<WenoDrugRow[]>;
@@ -586,12 +592,37 @@ async function prepareSendContext(
   }
   const patientId = referenceId(medicationRequest.subject.reference, "Patient");
   const practitionerId = referenceId(medicationRequest.requester?.reference, "Practitioner");
+  const sentTime = deps.now?.() ?? new Date().toISOString();
   const [patient, prescriber] = await Promise.all([
     staff.fhir.read<Patient>("Patient", patientId),
     staff.fhir.read<Practitioner>("Practitioner", practitionerId),
   ]);
+  let bodyHeightInches: { value: number; observedOn: string } | undefined;
+  let bodyWeightPounds: { value: number; observedOn: string } | undefined;
+  if (patientIsUnder19(patient.birthDate, sentTime)) {
+    const [heightBundle, weightBundle] = await Promise.all([
+      staff.fhir.search<Observation>("Observation", {
+        patient: patientId,
+        code: `${LOINC_CODE_SYSTEM}|${BODY_HEIGHT_LOINC_CODE}`,
+        _sort: "-date",
+        _count: "1",
+      }),
+      staff.fhir.search<Observation>("Observation", {
+        patient: patientId,
+        code: `${LOINC_CODE_SYSTEM}|${BODY_WEIGHT_LOINC_CODE}`,
+        _sort: "-date",
+        _count: "1",
+      }),
+    ]);
+    const height = heightBundle.entry?.[0]?.resource;
+    const weight = weightBundle.entry?.[0]?.resource;
+    if (!height || !weight) {
+      throw missingPediatricVitalsError();
+    }
+    bodyHeightInches = convertedVital(height, "height");
+    bodyWeightPounds = convertedVital(weight, "weight");
+  }
   const messageId = (deps.createMessageId ?? createWenoSwitchMessageId)();
-  const sentTime = deps.now?.() ?? new Date().toISOString();
   return {
     messageId,
     sentTime,
@@ -604,8 +635,69 @@ async function prepareSendContext(
       config: deps.switchConfig,
       messageId,
       sentTime,
+      bodyHeightInches,
+      bodyWeightPounds,
     }),
   };
+}
+
+function missingPediatricVitalsError(): WenoPrescriptionSendError {
+  return new WenoPrescriptionSendError(
+    400,
+    "This patient is under 19. WENO requires height and weight on an electronic prescription. Record both before sending.",
+  );
+}
+
+function convertedVital(
+  observation: Observation,
+  kind: "height" | "weight",
+): { value: number; observedOn: string } {
+  const value = observation.valueQuantity?.value;
+  const unit = observation.valueQuantity?.code ?? observation.valueQuantity?.unit;
+  const observedOn = observationDate(observation);
+  if (value === undefined || !Number.isFinite(value) || value <= 0 || !unit || !observedOn) {
+    throw missingPediatricVitalsError();
+  }
+  const normalizedUnit = unit.trim().toLowerCase();
+  const converted = kind === "height"
+    ? convertHeightToInches(value, normalizedUnit)
+    : convertWeightToPounds(value, normalizedUnit);
+  if (converted === undefined) {
+    throw new WenoPrescriptionSendError(
+      400,
+      kind === "height"
+        ? "The most recent body height uses a unit WENO cannot convert to inches. Record height in inches or centimeters before sending."
+        : "The most recent body weight uses a unit WENO cannot convert to pounds. Record weight in pounds or kilograms before sending.",
+    );
+  }
+  return { value: roundMeasurement(converted), observedOn };
+}
+
+function convertHeightToInches(value: number, unit: string): number | undefined {
+  if (["in", "inch", "inches"].includes(unit)) return value;
+  if (["cm", "centimeter", "centimeters"].includes(unit)) return value / 2.54;
+  if (["m", "meter", "meters"].includes(unit)) return value / 0.0254;
+  return undefined;
+}
+
+function convertWeightToPounds(value: number, unit: string): number | undefined {
+  if (["lb", "lbs", "pound", "pounds"].includes(unit)) return value;
+  if (["kg", "kilogram", "kilograms"].includes(unit)) return value * 2.2046226218;
+  if (["g", "gram", "grams"].includes(unit)) return value * 0.0022046226218;
+  return undefined;
+}
+
+function observationDate(observation: Observation): string | undefined {
+  const date = (observation.effectiveDateTime ?? observation.issued)?.match(/^\d{4}-\d{2}-\d{2}/)?.[0];
+  if (!date) return undefined;
+  const parsed = new Date(`${date}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date
+    ? date
+    : undefined;
+}
+
+function roundMeasurement(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
 async function prepareCancelContext(
@@ -933,12 +1025,6 @@ function referenceId(reference: string | undefined, resourceType: string): strin
 function fhirErrorStatus(error: unknown): number | undefined {
   const status = (error as { status?: unknown } | undefined)?.status;
   return typeof status === "number" ? status : undefined;
-}
-
-class WenoPrescriptionSendError extends Error {
-  constructor(readonly status: number, message: string) {
-    super(message);
-  }
 }
 
 function pharmacySearchInput(req: Request): PharmacySearchInput {

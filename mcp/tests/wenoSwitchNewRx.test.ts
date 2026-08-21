@@ -138,6 +138,104 @@ test("NewRx builder maps ODOS FHIR data into the verified ordered non-controlled
   ]);
 });
 
+test("under-19 NewRx emits the vendor Observation shape with literal values and exact element order", () => {
+  const built = buildWenoSwitchNewRx({
+    ...buildInput("pediatric-observation-shape"),
+    patient: { ...PATIENT, birthDate: "2010-07-18" },
+    bodyWeightPounds: { value: 112, observedOn: "2020-07-05" },
+    bodyHeightInches: { value: 62, observedOn: "2020-07-05" },
+  } as Parameters<typeof buildWenoSwitchNewRx>[0] & {
+    bodyWeightPounds: { value: number; observedOn: string };
+    bodyHeightInches: { value: number; observedOn: string };
+  });
+  const observation = built.match(/<Observation>.*?<\/Observation>/)?.[0];
+
+  assert.equal(
+    observation,
+    "<Observation>"
+      + "<Measurement><VitalSign>Weight</VitalSign><LOINCVersion>2.64</LOINCVersion><Value>112</Value><UnitOfMeasure>pounds</UnitOfMeasure><UCUMVersion>2.1</UCUMVersion><ObservationDate><Date>2020-07-05</Date></ObservationDate></Measurement>"
+      + "<Measurement><VitalSign>Height</VitalSign><LOINCVersion>2.66</LOINCVersion><Value>62</Value><UnitOfMeasure>inches</UnitOfMeasure><UCUMVersion>2.1</UCUMVersion><ObservationDate><Date>2020-07-05</Date></ObservationDate></Measurement>"
+      + "</Observation>",
+  );
+  assertOrdered(built, ["</Prescriber>", "<Observation>", "<MedicationPrescribed>"]);
+  for (const measurement of observation?.match(/<Measurement>.*?<\/Measurement>/g) ?? []) {
+    assertOrdered(measurement, [
+      "<VitalSign>",
+      "<LOINCVersion>",
+      "<Value>",
+      "<UnitOfMeasure>",
+      "<UCUMVersion>",
+      "<ObservationDate><Date>",
+    ]);
+  }
+});
+
+test("patient aged exactly 19 at SentTime emits no Observation", () => {
+  const built = buildWenoSwitchNewRx({
+    ...buildInput("exactly-nineteen-boundary"),
+    patient: { ...PATIENT, birthDate: "2007-07-17" },
+  });
+
+  assert.doesNotMatch(built, /<Observation>/);
+});
+
+test("adult NewRx remains byte-identical to the captured pre-change builder output", () => {
+  const built = buildWenoSwitchNewRx({
+    ...buildInput("adult-byte-identical-baseline"),
+    patient: PATIENT,
+  });
+
+  assert.equal(built, PRE_CHANGE_ADULT_XML);
+});
+
+for (const missing of ["height", "weight"] as const) {
+  test(`under-19 NewRx missing ${missing} throws the 400-class actionable error`, () => {
+    const input = {
+      ...buildInput(`missing-${missing}-measurement`),
+      patient: { ...PATIENT, birthDate: "2010-07-18" },
+      ...(missing === "height"
+        ? { bodyWeightPounds: { value: 112, observedOn: "2020-07-05" } }
+        : { bodyHeightInches: { value: 62, observedOn: "2020-07-05" } }),
+    } as Parameters<typeof buildWenoSwitchNewRx>[0] & {
+      bodyWeightPounds?: { value: number; observedOn: string };
+      bodyHeightInches?: { value: number; observedOn: string };
+    };
+
+    assert.throws(
+      () => buildWenoSwitchNewRx(input),
+      (error: unknown) => error instanceof Error
+        && error.name === "WenoPrescriptionSendError"
+        && (error as Error & { status?: number }).status === 400
+        && error.message === "This patient is under 19. WENO requires height and weight on an electronic prescription. Record both before sending.",
+    );
+  });
+}
+
+test("NewRx validation rejects a pediatric message whose required Observation is removed", async () => {
+  let calls = 0;
+  const built = buildWenoSwitchNewRx({
+    ...buildInput("pediatric-validator-guard"),
+    patient: { ...PATIENT, birthDate: "2010-07-18" },
+    bodyWeightPounds: { value: 112, observedOn: "2020-07-05" },
+    bodyHeightInches: { value: 62, observedOn: "2020-07-05" },
+  } as Parameters<typeof buildWenoSwitchNewRx>[0] & {
+    bodyWeightPounds: { value: number; observedOn: string };
+    bodyHeightInches: { value: number; observedOn: string };
+  });
+  const malformed = built.replace(/<Observation>.*?<\/Observation>/, "");
+
+  await assert.rejects(
+    sendWenoSwitchNewRx(malformed, {
+      fetchImpl: (async () => {
+        calls += 1;
+        return new Response(statusResponse("001", "Accepted"));
+      }) as typeof fetch,
+    }),
+    /under 19.*Observation/i,
+  );
+  assert.equal(calls, 0);
+});
+
 test("NewRx builder defaults substitutions to allowed and place of service can be overridden", () => {
   const built = buildWenoSwitchNewRx({
     ...buildInput("1123456789abcdef0123456789abcdef"),
@@ -262,6 +360,23 @@ test("CancelRx emits only the settled patient, pharmacy, prescriber, and medicat
   assert.match(built, /<Body><CancelRx><Patient><HumanPatient>/);
   assertOrdered(built, ["<Patient>", "<Pharmacy>", "<Prescriber>", "<MedicationPrescribed>"]);
   assert.doesNotMatch(built, /<Observation\b|<BenefitsCoordination\b/);
+});
+
+test("CancelRx validation still rejects an injected Observation before transport", async () => {
+  let calls = 0;
+  const malformed = buildWenoSwitchCancelRx(cancelRxInput("cancel-observation-guard"))
+    .replace("<MedicationPrescribed>", "<Observation><Measurement /></Observation><MedicationPrescribed>");
+
+  await assert.rejects(
+    sendWenoSwitchCancelRx(malformed, {
+      fetchImpl: (async () => {
+        calls += 1;
+        return new Response(statusResponse("001", "Accepted"));
+      }) as typeof fetch,
+    }),
+    /CancelRx must not contain Observation or BenefitsCoordination/,
+  );
+  assert.equal(calls, 0);
 });
 
 test("CancelRx rejects a controlled-substance-flagged MedicationRequest", () => {
@@ -472,3 +587,5 @@ function assertOrdered(value: string, needles: string[]): void {
     prior = index;
   }
 }
+
+const PRE_CHANGE_ADULT_XML = `<?xml version="1.0" encoding="utf-8"?><Message DatatypesVersion="20170715" TransportVersion="20170715" TransactionDomain="SCRIPT" TransactionVersion="20170715" StructuresVersion="20170715" ECLVersion="20170715"><Header><To Qualifier="P">1234567</To><From Qualifier="D">TEST_ROUTING_ID</From><MessageID>adult-byte-identical-baseline</MessageID><SentTime>2026-07-17T17:31:00.000Z</SentTime><Security><UsernameToken><Username>1417</Username><Password Type="PasswordDigest">TEST_MD5_PLACEHOLDER</Password></UsernameToken></Security><SenderSoftware><SenderSoftwareDeveloper>Test Developer</SenderSoftwareDeveloper><SenderSoftwareProduct>ODOS 20/20</SenderSoftwareProduct><SenderSoftwareVersionRelease>0.0.1-test</SenderSoftwareVersionRelease></SenderSoftware></Header><Body><NewRx><Patient><HumanPatient><Name><LastName>O&apos;Neil &amp; Sons</LastName><FirstName>Jane &lt;Test&gt;</FirstName></Name><Gender>F</Gender><DateOfBirth><Date>1990-01-02</Date></DateOfBirth><Address><AddressLine1>1 Main &amp; First</AddressLine1><City>Austin</City><StateProvince>TX</StateProvince><PostalCode>78701</PostalCode><CountryCode>US</CountryCode></Address><CommunicationNumbers><PrimaryTelephone><Number>5125550100</Number></PrimaryTelephone></CommunicationNumbers></HumanPatient></Patient><Pharmacy><Identification><NCPDPID>1234567</NCPDPID></Identification><BusinessName>Test Direct Pharmacy</BusinessName><Address><AddressLine1>3 Cert Way</AddressLine1><City>Austin</City><StateProvince>TX</StateProvince><PostalCode>78703</PostalCode><CountryCode>US</CountryCode></Address><CommunicationNumbers><PrimaryTelephone><Number>5125550102</Number></PrimaryTelephone></CommunicationNumbers></Pharmacy><Prescriber><NonVeterinarian><Identification><NPI>1234567893</NPI></Identification><Name><LastName>Bang</LastName><FirstName>Eric</FirstName><Suffix>OD</Suffix></Name><Address><AddressLine1>2 Clinic Rd</AddressLine1><City>Austin</City><StateProvince>TX</StateProvince><PostalCode>78702</PostalCode><CountryCode>US</CountryCode></Address><CommunicationNumbers><PrimaryTelephone><Number>5125550101</Number></PrimaryTelephone></CommunicationNumbers><PrescriberPlaceOfService>11</PrescriberPlaceOfService></NonVeterinarian></Prescriber><MedicationPrescribed><DrugDescription>Test Drug 10 mg tablet</DrugDescription><DrugCoded><DrugDBCode><Code>TEST_DRUG_CODE</Code><Qualifier>TEST_DRUG_QUALIFIER</Qualifier></DrugDBCode><DEASchedule><Code>C38046</Code></DEASchedule></DrugCoded><Quantity><Value>30</Value><CodeListQualifier>38</CodeListQualifier><QuantityUnitOfMeasure><Code>TEST_UOM_CODE</Code></QuantityUnitOfMeasure></Quantity><DaysSupply>30</DaysSupply><WrittenDate><DateTime>2026-07-17T17:30:00.000Z</DateTime></WrittenDate><Substitutions>1</Substitutions><NumberOfRefills>2</NumberOfRefills><Sig><SigText>Take 1 tablet by mouth daily.</SigText></Sig></MedicationPrescribed></NewRx></Body></Message>`;
