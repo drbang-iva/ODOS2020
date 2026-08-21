@@ -22,6 +22,9 @@ export const WENO_SWITCH_CERT_ENDPOINT = DEFAULT_WENO_SWITCH_ENDPOINT;
 const SCRIPT_VERSION = "20170715";
 const NON_CONTROLLED_DEA_SCHEDULE_CODE = "C38046";
 const NPI_SYSTEM = "http://hl7.org/fhir/sid/us-npi";
+// WENO confirms this field is free alphanumeric and both measurements may use the sample-attested 2.66.
+const WENO_LOINC_VERSION = "2.66";
+const WENO_UCUM_VERSION = "2.1";
 const sentMessageIds = new Set<string>();
 
 export interface WenoSwitchPharmacy {
@@ -47,6 +50,8 @@ export interface BuildWenoSwitchNewRxInput {
   messageId: string;
   sentTime: string;
   prescriberPlaceOfService?: string;
+  bodyHeightInches?: { value: number; observedOn: string };
+  bodyWeightPounds?: { value: number; observedOn: string };
 }
 
 export interface BuildWenoSwitchCancelRxInput {
@@ -69,6 +74,13 @@ export type WenoSwitchNewRxResult =
 export interface SendWenoSwitchNewRxOptions {
   fetchImpl?: typeof fetch;
   endpoint?: string;
+}
+
+export class WenoPrescriptionSendError extends Error {
+  constructor(readonly status: number, message: string) {
+    super(message);
+    this.name = "WenoPrescriptionSendError";
+  }
 }
 
 export function createWenoSwitchMessageId(): string {
@@ -116,6 +128,9 @@ export function buildWenoSwitchNewRx(input: BuildWenoSwitchNewRxInput): string {
   const pharmacyNpi = optionalElement("NPI", input.pharmacy.npi);
   const patientCommunication = communicationNumbers(patientPhone);
   const prescriberCommunication = communicationNumbers(prescriberPhone);
+  const observation = patientIsUnder19(patientBirthDate, sentTime)
+    ? pediatricObservation(input)
+    : "";
 
   return [
     '<?xml version="1.0" encoding="utf-8"?>',
@@ -163,6 +178,7 @@ export function buildWenoSwitchNewRx(input: BuildWenoSwitchNewRxInput): string {
     `<PrescriberPlaceOfService>${xml(required(input.prescriberPlaceOfService ?? "11", "PrescriberPlaceOfService"))}</PrescriberPlaceOfService>`,
     "</NonVeterinarian>",
     "</Prescriber>",
+    observation,
     "<MedicationPrescribed>",
     `<DrugDescription>${xml(drugDescription)}</DrugDescription>`,
     `<DrugCoded><DrugDBCode><Code>${xml(required(input.drugDbCode, "DrugDBCode"))}</Code><Qualifier>${xml(required(input.drugDbCodeQualifier, "DrugDBCode qualifier"))}</Qualifier></DrugDBCode><DEASchedule><Code>${NON_CONTROLLED_DEA_SCHEDULE_CODE}</Code></DEASchedule></DrugCoded>`,
@@ -396,7 +412,8 @@ function validateNewRxXml(newRxXml: string): string {
   attributedTextAt(header, "From", "Header From");
   const messageId = textAt(header, "MessageID", "MessageID");
   validateMessageId(messageId);
-  requireOffset(textAt(header, "SentTime", "SentTime"), "SentTime");
+  const sentTime = textAt(header, "SentTime", "SentTime");
+  requireOffset(sentTime, "SentTime");
   const usernameToken = objectAt(objectAt(header, "Security"), "UsernameToken");
   textAt(usernameToken, "Username", "Security Username");
   attributedTextAt(usernameToken, "Password", "Security Password");
@@ -407,7 +424,12 @@ function validateNewRxXml(newRxXml: string): string {
   textAt(patientName, "LastName", "Patient last name");
   textAt(patientName, "FirstName", "Patient first name");
   textAt(humanPatient, "Gender", "Patient gender");
-  textAt(objectAt(humanPatient, "DateOfBirth"), "Date", "Patient date of birth");
+  const patientBirthDate = textAt(
+    objectAt(humanPatient, "DateOfBirth"),
+    "Date",
+    "Patient date of birth",
+  );
+  requiredDate(patientBirthDate, "Patient date of birth");
   requiredAddressXml(patientAddress, "Patient");
   textAt(pharmacyIdentification, "NCPDPID", "Pharmacy NCPDP ID");
   textAt(pharmacy, "BusinessName", "Pharmacy name");
@@ -417,6 +439,7 @@ function validateNewRxXml(newRxXml: string): string {
   textAt(prescriberName, "FirstName", "Prescriber first name");
   requiredAddressXml(prescriberAddress, "Prescriber");
   textAt(prescriber, "PrescriberPlaceOfService", "PrescriberPlaceOfService");
+  validateObservation(newRx, patientIsUnder19(patientBirthDate, sentTime));
   if (drugDescription.length > 105) {
     throw new Error("WENO NewRx DrugDescription must be 105 characters or fewer.");
   }
@@ -612,6 +635,93 @@ function requiredDate(value: string | undefined, label: string): string {
   return date;
 }
 
+export function patientIsUnder19(patientBirthDate: string | undefined, sentTime: string): boolean {
+  const birthDate = requiredDate(patientBirthDate, "Patient date of birth");
+  const sent = new Date(isoDateTime(sentTime, "SentTime"));
+  const [birthYear, birthMonth, birthDay] = birthDate.split("-").map(Number) as [number, number, number];
+  let age = sent.getUTCFullYear() - birthYear;
+  if (sent.getUTCMonth() + 1 < birthMonth
+    || (sent.getUTCMonth() + 1 === birthMonth && sent.getUTCDate() < birthDay)) {
+    age -= 1;
+  }
+  return age < 19;
+}
+
+function pediatricObservation(input: BuildWenoSwitchNewRxInput): string {
+  if (!input.bodyHeightInches || !input.bodyWeightPounds) {
+    throw new WenoPrescriptionSendError(
+      400,
+      "This patient is under 19. WENO requires height and weight on an electronic prescription. Record both before sending.",
+    );
+  }
+  return [
+    "<Observation>",
+    measurementXml("Weight", input.bodyWeightPounds, "pounds"),
+    measurementXml("Height", input.bodyHeightInches, "inches"),
+    "</Observation>",
+  ].join("");
+}
+
+function measurementXml(
+  vitalSign: "Height" | "Weight",
+  measurement: { value: number; observedOn: string },
+  unit: "inches" | "pounds",
+): string {
+  if (!Number.isFinite(measurement.value) || measurement.value <= 0) {
+    throw new WenoPrescriptionSendError(400, `WENO ${vitalSign} must be a positive number.`);
+  }
+  const observedOn = requiredDate(measurement.observedOn, `${vitalSign} observation date`);
+  return `<Measurement><VitalSign>${vitalSign}</VitalSign><LOINCVersion>${WENO_LOINC_VERSION}</LOINCVersion><Value>${measurement.value}</Value><UnitOfMeasure>${unit}</UnitOfMeasure><UCUMVersion>${WENO_UCUM_VERSION}</UCUMVersion><ObservationDate><Date>${observedOn}</Date></ObservationDate></Measurement>`;
+}
+
+function validateObservation(newRx: Record<string, unknown>, pediatric: boolean): void {
+  if (!pediatric) {
+    if (newRx.Observation !== undefined) {
+      throw new Error("WENO NewRx patients 19 and over must not contain Observation.");
+    }
+    return;
+  }
+  if (newRx.Observation === undefined) {
+    throw new Error("WENO NewRx patient is under 19 and requires Observation height and weight.");
+  }
+  const observation = objectAt(newRx, "Observation");
+  if (observation.ObservationNotes !== undefined) {
+    throw new Error("WENO NewRx Observation must not contain ObservationNotes.");
+  }
+  const measurements = objectArrayAt(observation, "Measurement");
+  if (measurements.length !== 2) {
+    throw new Error("WENO NewRx Observation must contain exactly height and weight Measurements.");
+  }
+  validateMeasurement(measurements, "Weight", "pounds");
+  validateMeasurement(measurements, "Height", "inches");
+}
+
+function validateMeasurement(
+  measurements: Record<string, unknown>[],
+  vitalSign: "Height" | "Weight",
+  unit: "inches" | "pounds",
+): void {
+  const measurement = measurements.find((candidate) => candidate.VitalSign === vitalSign);
+  if (!measurement) throw new Error(`WENO NewRx Observation missing ${vitalSign} Measurement.`);
+  if (textAt(measurement, "LOINCVersion", `${vitalSign} LOINCVersion`) !== WENO_LOINC_VERSION) {
+    throw new Error(`WENO NewRx ${vitalSign} LOINCVersion must be ${WENO_LOINC_VERSION}.`);
+  }
+  const value = Number(textAt(measurement, "Value", `${vitalSign} Value`));
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new Error(`WENO NewRx ${vitalSign} Value must be a positive number.`);
+  }
+  if (textAt(measurement, "UnitOfMeasure", `${vitalSign} UnitOfMeasure`) !== unit) {
+    throw new Error(`WENO NewRx ${vitalSign} UnitOfMeasure must be ${unit}.`);
+  }
+  if (textAt(measurement, "UCUMVersion", `${vitalSign} UCUMVersion`) !== WENO_UCUM_VERSION) {
+    throw new Error(`WENO NewRx ${vitalSign} UCUMVersion must be ${WENO_UCUM_VERSION}.`);
+  }
+  requiredDate(
+    textAt(objectAt(measurement, "ObservationDate"), "Date", `${vitalSign} ObservationDate`),
+    `${vitalSign} observation date`,
+  );
+}
+
 function isoDateTime(value: string | undefined, label: string): string {
   const requiredValue = required(value, label);
   const parsed = new Date(requiredValue);
@@ -664,6 +774,12 @@ function parseXml(value: string, label: string): Record<string, unknown> {
 
 function objectAt(value: Record<string, unknown>, key: string): Record<string, unknown> {
   return objectValue(value[key], key);
+}
+
+function objectArrayAt(value: Record<string, unknown>, key: string): Record<string, unknown>[] {
+  const field = value[key];
+  const values = Array.isArray(field) ? field : [field];
+  return values.map((candidate) => objectValue(candidate, key));
 }
 
 function objectValue(value: unknown, label: string): Record<string, unknown> {

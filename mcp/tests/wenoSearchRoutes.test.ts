@@ -2,7 +2,14 @@ import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
 import express from "express";
-import type { MedicationRequest, Patient, Practitioner, Resource } from "@medplum/fhirtypes";
+import type {
+  Bundle,
+  MedicationRequest,
+  Observation,
+  Patient,
+  Practitioner,
+  Resource,
+} from "@medplum/fhirtypes";
 import {
   buildMedicationRequest,
   ODOS_TRANSMISSION_METHOD_EXTENSION_URL,
@@ -166,6 +173,181 @@ test("WENO send refuses free-text drug and pharmacy distinctly while preserving 
     assert.equal(transmissionMethod(freeTextPharmacy.medicationRequest), "printed");
   } finally {
     await pharmacyServer.close();
+  }
+});
+
+test("pediatric WENO send retrieves the latest metric vitals and emits converted customary literals", async () => {
+  const fixture = sendFixture();
+  fixture.patient.birthDate = "2010-08-01";
+  fixture.observations.push(
+    vitalObservation("height", 150, "cm", "2026-07-01T09:00:00.000Z"),
+    vitalObservation("height", 160, "cm", "2026-07-30T09:00:00.000Z"),
+    vitalObservation("weight", 45, "kg", "2026-07-01T09:00:00.000Z"),
+    vitalObservation("weight", 50, "kg", "2026-07-30T09:00:00.000Z"),
+  );
+  let sentXml = "";
+  const server = await startSendServer(fixture, async (xml) => {
+    sentXml = xml;
+    return { kind: "status", code: "001", description: "Accepted" };
+  });
+  try {
+    const response = await fetch(`${server.baseUrl}/weno/medication-requests/rx-1/send`, {
+      ...auth(),
+      method: "POST",
+    });
+
+    assert.equal(response.status, 200);
+    assert.match(
+      sentXml,
+      /<Measurement><VitalSign>Weight<\/VitalSign><LOINCVersion>2\.66<\/LOINCVersion><Value>110\.23<\/Value><UnitOfMeasure>pounds<\/UnitOfMeasure><UCUMVersion>2\.1<\/UCUMVersion><ObservationDate><Date>2026-07-30<\/Date><\/ObservationDate><\/Measurement>/,
+    );
+    assert.match(
+      sentXml,
+      /<Measurement><VitalSign>Height<\/VitalSign><LOINCVersion>2\.66<\/LOINCVersion><Value>62\.99<\/Value><UnitOfMeasure>inches<\/UnitOfMeasure><UCUMVersion>2\.1<\/UCUMVersion><ObservationDate><Date>2026-07-30<\/Date><\/ObservationDate><\/Measurement>/,
+    );
+    assert.deepEqual(server.searchCalls(), [
+      {
+        resourceType: "Observation",
+        params: {
+          patient: "patient-1",
+          code: "http://loinc.org|8302-2",
+          "status:not": "entered-in-error",
+          _sort: "-date",
+          _count: "1",
+        },
+      },
+      {
+        resourceType: "Observation",
+        params: {
+          patient: "patient-1",
+          code: "http://loinc.org|29463-7",
+          "status:not": "entered-in-error",
+          _sort: "-date",
+          _count: "1",
+        },
+      },
+    ]);
+  } finally {
+    await server.close();
+  }
+});
+
+test("pediatric WENO send accepts canonical-only customary FHIR quantities", async () => {
+  const fixture = sendFixture();
+  fixture.patient.birthDate = "2010-08-01";
+  const height = vitalObservation("height", 62, "inches", "2026-07-30T09:00:00.000Z");
+  const weight = vitalObservation("weight", 112, "pounds", "2026-07-30T09:00:00.000Z");
+  height.valueQuantity!.code = ["[", "in_i", "]"].join("");
+  weight.valueQuantity!.code = ["[", "lb_av", "]"].join("");
+  height.valueQuantity!.unit = height.valueQuantity!.code;
+  weight.valueQuantity!.unit = weight.valueQuantity!.code;
+  fixture.observations.push(height, weight);
+  let sentXml = "";
+  const server = await startSendServer(fixture, async (xml) => {
+    sentXml = xml;
+    return { kind: "status", code: "001", description: "Accepted" };
+  });
+  try {
+    const response = await fetch(`${server.baseUrl}/weno/medication-requests/rx-1/send`, {
+      ...auth(),
+      method: "POST",
+    });
+
+    assert.equal(response.status, 200);
+    assert.match(sentXml, /<VitalSign>Weight<\/VitalSign>.*<UnitOfMeasure>pounds<\/UnitOfMeasure>/);
+    assert.match(sentXml, /<VitalSign>Height<\/VitalSign>.*<UnitOfMeasure>inches<\/UnitOfMeasure>/);
+  } finally {
+    await server.close();
+  }
+});
+
+test("pediatric WENO send ignores a newer entered-in-error vital", async () => {
+  const fixture = sendFixture();
+  fixture.patient.birthDate = "2010-08-01";
+  const invalidHeight = vitalObservation("height", 75, "inches", "2026-07-31T09:00:00.000Z");
+  invalidHeight.status = "entered-in-error";
+  fixture.observations.push(
+    invalidHeight,
+    vitalObservation("height", 62, "inches", "2026-07-30T09:00:00.000Z"),
+    vitalObservation("weight", 112, "pounds", "2026-07-30T09:00:00.000Z"),
+  );
+  let sentXml = "";
+  const server = await startSendServer(fixture, async (xml) => {
+    sentXml = xml;
+    return { kind: "status", code: "001", description: "Accepted" };
+  });
+  try {
+    const response = await fetch(`${server.baseUrl}/weno/medication-requests/rx-1/send`, {
+      ...auth(),
+      method: "POST",
+    });
+
+    assert.equal(response.status, 200);
+    assert.match(sentXml, /<VitalSign>Height<\/VitalSign>.*<Value>62<\/Value>/);
+    assert.doesNotMatch(sentXml, /<VitalSign>Height<\/VitalSign>.*<Value>75<\/Value>/);
+  } finally {
+    await server.close();
+  }
+});
+
+for (const missing of ["height", "weight"] as const) {
+  test(`pediatric WENO send missing ${missing} fails with 400 before reservation or transport`, async () => {
+    const fixture = sendFixture();
+    fixture.patient.birthDate = "2010-08-01";
+    fixture.observations.push(
+      missing === "height"
+        ? vitalObservation("weight", 112, "pounds", "2026-07-30T09:00:00.000Z")
+        : vitalObservation("height", 62, "inches", "2026-07-30T09:00:00.000Z"),
+    );
+    let sendCalls = 0;
+    const server = await startSendServer(fixture, async () => {
+      sendCalls += 1;
+      return { kind: "status", code: "001", description: "Accepted" };
+    });
+    try {
+      const response = await fetch(`${server.baseUrl}/weno/medication-requests/rx-1/send`, {
+        ...auth(),
+        method: "POST",
+      });
+
+      assert.equal(response.status, 400);
+      assert.deepEqual(await response.json(), {
+        error: "This patient is under 19. WENO requires height and weight on an electronic prescription. Record both before sending.",
+      });
+      assert.equal(sendCalls, 0);
+      assert.equal(server.serviceUpdateCalls(), 0);
+    } finally {
+      await server.close();
+    }
+  });
+}
+
+test("pediatric WENO send rejects an unconvertible stored vital unit before reservation or transport", async () => {
+  const fixture = sendFixture();
+  fixture.patient.birthDate = "2010-08-01";
+  fixture.observations.push(
+    vitalObservation("height", 160, "furlongs", "2026-07-30T09:00:00.000Z"),
+    vitalObservation("weight", 50, "kg", "2026-07-30T09:00:00.000Z"),
+  );
+  let sendCalls = 0;
+  const server = await startSendServer(fixture, async () => {
+    sendCalls += 1;
+    return { kind: "status", code: "001", description: "Accepted" };
+  });
+  try {
+    const response = await fetch(`${server.baseUrl}/weno/medication-requests/rx-1/send`, {
+      ...auth(),
+      method: "POST",
+    });
+
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), {
+      error: "The most recent body height uses a unit WENO cannot convert to inches. Record height in inches or centimeters before sending.",
+    });
+    assert.equal(sendCalls, 0);
+    assert.equal(server.serviceUpdateCalls(), 0);
+  } finally {
+    await server.close();
   }
 });
 
@@ -810,10 +992,35 @@ async function startSendServer(
       if (!resource) throw new Error(`${resourceType}/${id} not found`);
       return structuredClone(resource) as T;
     },
+    async search<T extends Resource>(
+      resourceType: T["resourceType"],
+      params: Record<string, string> = {},
+    ): Promise<Bundle<T>> {
+      searchCalls.push({ resourceType, params: structuredClone(params) });
+      if (resourceType !== "Observation") {
+        throw new Error(`Unexpected ${resourceType} search`);
+      }
+      const code = params.code?.split("|").at(-1);
+      const observations = fixture.observations
+        .filter((observation) => observation.code.coding?.some((coding) => coding.code === code))
+        .filter((observation) =>
+          params["status:not"] !== "entered-in-error" || observation.status !== "entered-in-error"
+        )
+        .toSorted((left, right) =>
+          (right.effectiveDateTime ?? "").localeCompare(left.effectiveDateTime ?? "")
+        )
+        .slice(0, Number(params._count ?? "100"));
+      return {
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: observations.map((resource) => ({ resource })),
+      } as Bundle<T>;
+    },
     async update(): Promise<never> {
       throw new Error("WENO route attempted a practice-role FHIR write");
     },
   };
+  const searchCalls: Array<{ resourceType: string; params: Record<string, string> }> = [];
   let serviceUpdateCalls = 0;
   const serviceFhir = {
     async update<T extends Resource>(
@@ -867,7 +1074,11 @@ async function startSendServer(
     serviceFhir: serviceFhir as never,
     ...overrides,
   });
-  return { ...server, serviceUpdateCalls: () => serviceUpdateCalls };
+  return {
+    ...server,
+    serviceUpdateCalls: () => serviceUpdateCalls,
+    searchCalls: () => structuredClone(searchCalls),
+  };
 }
 
 async function startCancelServer(
@@ -916,6 +1127,34 @@ function sendFixture(overrides: { medicationRequest?: MedicationRequest } = {}) 
     patient,
     prescriber,
     medicationRequest: overrides.medicationRequest ?? medicationRequest(),
+    observations: [] as Observation[],
+  };
+}
+
+function vitalObservation(
+  kind: "height" | "weight",
+  value: number,
+  unit: string,
+  effectiveDateTime: string,
+): Observation {
+  return {
+    resourceType: "Observation",
+    status: "final",
+    code: {
+      coding: [{
+        system: "http://loinc.org",
+        code: kind === "height" ? "8302-2" : "29463-7",
+        display: kind === "height" ? "Body height" : "Body weight",
+      }],
+    },
+    subject: { reference: "Patient/patient-1" },
+    effectiveDateTime,
+    valueQuantity: {
+      value,
+      unit,
+      system: "http://unitsofmeasure.org",
+      code: unit,
+    },
   };
 }
 
