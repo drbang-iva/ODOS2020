@@ -7,6 +7,8 @@ import { searchAll } from "../fhir-search.js";
 import { patientScopedProvenanceTargets } from "./glaucoma-suspect.js";
 
 export const BLOOD_PRESSURE_PANEL_CODE = "85354-9";
+export const BODY_HEIGHT_CODE = "8302-2";
+export const BODY_WEIGHT_CODE = "29463-7";
 export const CAROTENOID_SCORE_CODE = "biophotonic-skin-carotenoid-score";
 const LOINC = "http://loinc.org";
 const UCUM = "http://unitsofmeasure.org";
@@ -54,6 +56,17 @@ export function registerPretestVitalsRoutes(
       if (!res.headersSent) res.status(500).json({ error: "Blood pressure route failed" });
     }
   });
+  app.post("/clinical-graph/pretest-vitals/body-measurements", async (req, res) => {
+    try {
+      await authenticateService();
+      const authHeader = req.header("authorization");
+      const result = await handleBodyMeasurementsCaptureRequest(await routeDeps(authHeader, "chart.write"), { authHeader, body: req.body });
+      res.status(result.status).json(result.body);
+    } catch (error) {
+      console.error("odos-mcp: body measurements capture failed:", error);
+      if (!res.headersSent) res.status(500).json({ error: "Body measurements route failed" });
+    }
+  });
   app.post("/clinical-graph/pretest-vitals/carotenoid", async (req, res) => {
     try {
       await authenticateService();
@@ -86,6 +99,12 @@ const bloodPressureSchema = z.object({
 const carotenoidSchema = z.object({
   ...shared,
   score: z.number().int().min(10_000).max(90_000),
+}).strict();
+
+const bodyMeasurementsSchema = z.object({
+  ...shared,
+  height: z.object({ value: z.number().positive(), unit: z.enum(["in", "cm"]) }).strict(),
+  weight: z.object({ value: z.number().positive(), unit: z.enum(["lb", "kg"]) }).strict(),
 }).strict();
 
 const historySchema = z.object({ patient: z.string().regex(/^Patient\/[^/]+$/) }).strict();
@@ -147,6 +166,45 @@ export async function handleCarotenoidCaptureRequest(
   return persistObservation(staff.fhir, observation, parsed.data.patientReference, staff.staffReference, recordedAt);
 }
 
+export async function handleBodyMeasurementsCaptureRequest(
+  deps: PretestVitalsEndpointDeps,
+  input: { authHeader: string | undefined; body: unknown },
+): Promise<EndpointResult> {
+  const staff = await deps.authenticate(input.authHeader);
+  if (!staff) return { status: 401, body: { error: "Authentication required to save height and weight." } };
+  if (!staffMay(staff.actorRole, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
+  const parsed = bodyMeasurementsSchema.safeParse(input.body);
+  if (!parsed.success) return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid height and weight request." } };
+  const recordedAt = parsed.data.recordedAt ?? deps.now?.() ?? new Date().toISOString();
+  const height = bodyMeasurementObservation({
+    profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-body-height",
+    code: BODY_HEIGHT_CODE,
+    display: "Body height",
+    value: parsed.data.height.unit === "cm" ? parsed.data.height.value / 2.54 : parsed.data.height.value,
+    unit: "in",
+    unitCode: "[in_i]",
+    patientReference: parsed.data.patientReference,
+    encounterReference: parsed.data.encounterReference,
+    staffReference: staff.staffReference,
+    recordedAt,
+  });
+  const weight = bodyMeasurementObservation({
+    profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-body-weight",
+    code: BODY_WEIGHT_CODE,
+    display: "Body weight",
+    value: parsed.data.weight.unit === "kg" ? parsed.data.weight.value / 0.45359237 : parsed.data.weight.value,
+    unit: "lb",
+    unitCode: "[lb_av]",
+    patientReference: parsed.data.patientReference,
+    encounterReference: parsed.data.encounterReference,
+    staffReference: staff.staffReference,
+    recordedAt,
+  });
+  const savedHeight = await persistObservation(staff.fhir, height, parsed.data.patientReference, staff.staffReference, recordedAt);
+  const savedWeight = await persistObservation(staff.fhir, weight, parsed.data.patientReference, staff.staffReference, recordedAt);
+  return { status: 200, body: { height: savedHeight.body, weight: savedWeight.body } };
+}
+
 export async function handlePretestVitalsHistoryRequest(
   deps: PretestVitalsEndpointDeps,
   input: { authHeader: string | undefined; query: unknown },
@@ -156,9 +214,11 @@ export async function handlePretestVitalsHistoryRequest(
   if (!staffMay(staff.actorRole, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
   const parsed = historySchema.safeParse(input.query);
   if (!parsed.success) return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid history request." } };
-  const [bpRows, carotenoidRows] = await Promise.all([
+  const [bpRows, carotenoidRows, heightRows, weightRows] = await Promise.all([
     searchAll<Observation>(staff.fhir, "Observation", { subject: parsed.data.patient, code: `${LOINC}|${BLOOD_PRESSURE_PANEL_CODE}`, _count: "200" }),
     searchAll<Observation>(staff.fhir, "Observation", { subject: parsed.data.patient, code: `${ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|${CAROTENOID_SCORE_CODE}`, _count: "200" }),
+    searchAll<Observation>(staff.fhir, "Observation", { subject: parsed.data.patient, code: `${LOINC}|${BODY_HEIGHT_CODE}`, "status:not": "entered-in-error", _sort: "-date", _count: "1" }),
+    searchAll<Observation>(staff.fhir, "Observation", { subject: parsed.data.patient, code: `${LOINC}|${BODY_WEIGHT_CODE}`, "status:not": "entered-in-error", _sort: "-date", _count: "1" }),
   ]);
   const bloodPressure = bpRows.filter((row) => hasCode(row, LOINC, BLOOD_PRESSURE_PANEL_CODE)).map((row) => ({
     observationReference: `Observation/${row.id}`,
@@ -176,7 +236,58 @@ export async function handlePretestVitalsHistoryRequest(
     score: row.valueInteger,
     device: row.device?.display ?? "",
   })).sort(byRecordedAt);
-  return { status: 200, body: { bloodPressure, carotenoid } };
+  const height = latestBodyMeasurement(heightRows, BODY_HEIGHT_CODE);
+  const weight = latestBodyMeasurement(weightRows, BODY_WEIGHT_CODE);
+  return { status: 200, body: { bloodPressure, carotenoid, height, weight } };
+}
+
+function bodyMeasurementObservation(input: {
+  profile: string;
+  code: string;
+  display: string;
+  value: number;
+  unit: "in" | "lb";
+  unitCode: "[in_i]" | "[lb_av]";
+  patientReference: string;
+  encounterReference: string;
+  staffReference: string;
+  recordedAt: string;
+}): Observation {
+  return {
+    resourceType: "Observation",
+    meta: { profile: [input.profile] },
+    status: "preliminary",
+    category: [{ coding: [{ system: "http://terminology.hl7.org/CodeSystem/observation-category", code: "vital-signs", display: "Vital Signs" }] }],
+    code: { coding: [{ system: LOINC, code: input.code, display: input.display }], text: input.display },
+    subject: { reference: input.patientReference },
+    encounter: { reference: input.encounterReference },
+    effectiveDateTime: input.recordedAt,
+    performer: [{ reference: input.staffReference }],
+    valueQuantity: { value: input.value, unit: input.unit, system: UCUM, code: input.unitCode },
+  };
+}
+
+function latestBodyMeasurement(rows: Observation[], code: string): {
+  observationReference: string;
+  encounterReference: string | undefined;
+  recordedAt: string;
+  value: number | undefined;
+  unit: string | undefined;
+  code: string | undefined;
+} | null {
+  const row = rows
+    .filter((candidate) => candidate.status !== "entered-in-error" && hasCode(candidate, LOINC, code))
+    .sort((a, b) => (a.effectiveDateTime ?? "").localeCompare(b.effectiveDateTime ?? ""))
+    .at(-1);
+  if (!row) return null;
+  return {
+    observationReference: `Observation/${row.id}`,
+    encounterReference: row.encounter?.reference,
+    recordedAt: row.effectiveDateTime ?? "",
+    value: row.valueQuantity?.value,
+    unit: row.valueQuantity?.unit,
+    code: row.valueQuantity?.code,
+  };
 }
 
 function pressureComponent(code: string, display: string, value: number): NonNullable<Observation["component"]>[number] {
