@@ -12,6 +12,7 @@ import {
   ODOS_WENO_DRUG_DB_CODE_QUALIFIER_EXTENSION_URL,
   ODOS_WENO_QUANTITY_UNIT_OF_MEASURE_CODE_EXTENSION_URL,
   RXNORM_CODE_SYSTEM,
+  WENO_CANCEL_MESSAGE_ID_IDENTIFIER_SYSTEM,
   WENO_MESSAGE_ID_IDENTIFIER_SYSTEM,
   isStructuredPharmacy,
   pharmacyDisplay,
@@ -311,7 +312,13 @@ export function PrescriptionSection({ patientReference, encounterReference, onSa
   const [savingPreferredPharmacy, setSavingPreferredPharmacy] = useState(false);
   const [sendingId, setSendingId] = useState<string>();
   const [clearingId, setClearingId] = useState<string>();
+  const [cancellingId, setCancellingId] = useState<string>();
+  const [clearingCancelId, setClearingCancelId] = useState<string>();
   const [sendFeedback, setSendFeedback] = useState<Record<string, {
+    kind: "status" | "error" | "unknown";
+    text: string;
+  }>>({});
+  const [cancelFeedback, setCancelFeedback] = useState<Record<string, {
     kind: "status" | "error" | "unknown";
     text: string;
   }>>({});
@@ -362,7 +369,7 @@ export function PrescriptionSection({ patientReference, encounterReference, onSa
 
   const displayedRequests = useMemo(
     () => requests
-      .filter((request) => !["cancelled", "completed", "stopped", "entered-in-error"].includes(request.status))
+      .filter((request) => !["completed", "stopped", "entered-in-error"].includes(request.status))
       .sort((left, right) => (right.authoredOn ?? "").localeCompare(left.authoredOn ?? "")),
     [requests],
   );
@@ -546,6 +553,87 @@ export function PrescriptionSection({ patientReference, encounterReference, onSa
     }
   }
 
+  async function cancelPrescription(request: MedicationRequest) {
+    if (!request.id) {
+      setError("This prescription must be saved before it can be cancelled.");
+      return;
+    }
+    if (!window.confirm(
+      "This prescription is already at the pharmacy. Cancelling it cannot be undone from ODOS. Continue?",
+    )) return;
+    setCancellingId(request.id);
+    setCancelFeedback((current) => {
+      const next = { ...current };
+      delete next[request.id!];
+      return next;
+    });
+    try {
+      const response = await fhir.cancelWenoPrescription(clinicalGraphApiBase(), request.id);
+      setRequests((current) => current.map((candidate) =>
+        candidate.id === request.id ? response.medicationRequest : candidate));
+      setCancelFeedback((current) => ({
+        ...current,
+        [request.id!]: response.result.kind === "status"
+          ? {
+              kind: "status",
+              text: `WENO Cancellation Status ${response.result.code}: ${response.result.description}`,
+            }
+          : response.result.kind === "error"
+            ? {
+                kind: "error",
+                text: `WENO Cancellation Error ${response.result.code}/${response.result.descriptionCode}: ${response.result.description}`,
+              }
+            : {
+                kind: "unknown",
+                text: "WENO did not return a determinate cancellation outcome.",
+              },
+      }));
+    } catch (caught) {
+      setCancelFeedback((current) => ({
+        ...current,
+        [request.id!]: {
+          kind: "error",
+          text: caught instanceof Error ? caught.message : String(caught),
+        },
+      }));
+    } finally {
+      setCancellingId(undefined);
+    }
+  }
+
+  async function clearIndeterminateCancel(request: MedicationRequest) {
+    if (!request.id) {
+      setError("This prescription must be saved before its WENO cancellation reservation can be cleared.");
+      return;
+    }
+    setClearingCancelId(request.id);
+    try {
+      const response = await fhir.clearWenoIndeterminateCancel(
+        clinicalGraphApiBase(),
+        request.id,
+      );
+      setRequests((current) => current.map((candidate) =>
+        candidate.id === request.id ? response.medicationRequest : candidate));
+      setCancelFeedback((current) => ({
+        ...current,
+        [request.id!]: {
+          kind: "status",
+          text: "WENO cancellation reservation cleared after staff verification. This prescription can be cancelled again.",
+        },
+      }));
+    } catch (caught) {
+      setCancelFeedback((current) => ({
+        ...current,
+        [request.id!]: {
+          kind: "error",
+          text: caught instanceof Error ? caught.message : String(caught),
+        },
+      }));
+    } finally {
+      setClearingCancelId(undefined);
+    }
+  }
+
   return (
     <section className="h-full overflow-y-auto p-6">
       <div className="max-w-5xl">
@@ -613,16 +701,26 @@ export function PrescriptionSection({ patientReference, encounterReference, onSa
           ) : displayedRequests.length === 0 ? (
             <div className="rounded border border-white/10 bg-bg-panel/60 p-4 text-sm text-white/45">No active or pending prescriptions.</div>
           ) : displayedRequests.map((request) => {
-            const feedback = request.id ? sendFeedback[request.id] : undefined;
+            const feedback = request.id
+              ? cancelFeedback[request.id] ?? sendFeedback[request.id]
+              : undefined;
             const sent = isElectronicallySent(request);
             const reserved = hasWenoMessageId(request);
             const outcomeUnknown = wenoOutcomeUnknown(request);
+            const cancelReserved = hasWenoCancelMessageId(request);
             const sending = request.id !== undefined && sendingId === request.id;
             const clearing = request.id !== undefined && clearingId === request.id;
+            const cancelling = request.id !== undefined && cancellingId === request.id;
+            const clearingCancel = request.id !== undefined && clearingCancelId === request.id;
             const sendDisabled = !request.id || sending || sent || reserved || !switchConfiguration.configured;
+            const cancelDisabled = !request.id
+              || cancelling
+              || clearingCancel
+              || cancelReserved
+              || !switchConfiguration.configured;
             return (
               <div key={request.id ?? request.authoredOn} className="rounded border border-white/10 bg-bg-panel/60 p-4">
-                <div className="grid gap-3 md:grid-cols-[1.2fr_2fr_auto_auto_auto_auto] md:items-center">
+                <div className="grid gap-3 md:grid-cols-[1.2fr_2fr_auto_auto_auto_auto_auto] md:items-center">
                   <div className="font-semibold text-white">{request.medicationCodeableConcept?.text ?? "Unnamed medication"}</div>
                   <div className="text-sm text-white/65">{request.dosageInstruction?.[0]?.text ?? "No sig recorded"}</div>
                   <div className="text-xs text-white/45">{formatDate(request.authoredOn)}</div>
@@ -649,6 +747,21 @@ export function PrescriptionSection({ patientReference, encounterReference, onSa
                   >
                     {sending ? "Sending…" : sent ? "Sent electronically" : "Send to pharmacy"}
                   </button>
+                  {sent && request.status !== "cancelled" && (
+                    <button
+                      type="button"
+                      className="sidebar-button"
+                      disabled={cancelDisabled}
+                      title={!switchConfiguration.configured
+                        ? switchConfiguration.reason
+                        : cancelReserved
+                          ? "This prescription has an indeterminate WENO cancellation outcome that requires pharmacy verification."
+                          : undefined}
+                      onClick={() => void cancelPrescription(request)}
+                    >
+                      {cancelling ? "Cancelling…" : "Cancel prescription"}
+                    </button>
+                  )}
                 </div>
                 {feedback && (
                   <div className={`mt-3 text-sm ${
@@ -677,6 +790,24 @@ export function PrescriptionSection({ patientReference, encounterReference, onSa
                       {clearing
                         ? "Clearing…"
                         : "Pharmacy verified not received — clear reservation"}
+                    </button>
+                  </div>
+                )}
+                {cancelReserved && (
+                  <div className="mt-3 rounded border border-amber-400/40 bg-amber-400/10 p-3 text-sm text-amber-100">
+                    <div className="font-semibold">Cancellation outcome unknown</div>
+                    <p className="mt-1">
+                      WENO did not confirm whether the pharmacy received the cancellation. Verify with the pharmacy before retrying.
+                    </p>
+                    <button
+                      type="button"
+                      className="sidebar-button mt-3"
+                      disabled={clearingCancel}
+                      onClick={() => void clearIndeterminateCancel(request)}
+                    >
+                      {clearingCancel
+                        ? "Clearing…"
+                        : "Pharmacy verified — clear cancellation reservation"}
                     </button>
                   </div>
                 )}
@@ -825,6 +956,14 @@ function hasWenoMessageId(request: MedicationRequest): boolean {
   return request.identifier?.some(
     (identifier) =>
       identifier.system === WENO_MESSAGE_ID_IDENTIFIER_SYSTEM
+      && Boolean(identifier.value?.trim()),
+  ) ?? false;
+}
+
+function hasWenoCancelMessageId(request: MedicationRequest): boolean {
+  return request.identifier?.some(
+    (identifier) =>
+      identifier.system === WENO_CANCEL_MESSAGE_ID_IDENTIFIER_SYSTEM
       && Boolean(identifier.value?.trim()),
   ) ?? false;
 }
