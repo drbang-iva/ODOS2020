@@ -232,13 +232,15 @@ test("pediatric WENO send retrieves the latest metric vitals and emits converted
   }
 });
 
-test("pediatric WENO send accepts canonical customary codes through their literal display units", async () => {
+test("pediatric WENO send accepts canonical-only customary FHIR quantities", async () => {
   const fixture = sendFixture();
   fixture.patient.birthDate = "2010-08-01";
   const height = vitalObservation("height", 62, "inches", "2026-07-30T09:00:00.000Z");
   const weight = vitalObservation("weight", 112, "pounds", "2026-07-30T09:00:00.000Z");
   height.valueQuantity!.code = ["[", "in_i", "]"].join("");
   weight.valueQuantity!.code = ["[", "lb_av", "]"].join("");
+  height.valueQuantity!.unit = height.valueQuantity!.code;
+  weight.valueQuantity!.unit = weight.valueQuantity!.code;
   fixture.observations.push(height, weight);
   let sentXml = "";
   const server = await startSendServer(fixture, async (xml) => {

@@ -49,10 +49,12 @@ const WENO_CANCEL_RESERVATION_CLEARED_NOTE_PREFIX =
   "WENO Switch CancelRx outcome-unknown reservation cleared";
 const WENO_CANCEL_COMPLETED_NOTE_PREFIX = "WENO Switch CancelRx completed";
 const WENO_RESERVATION_CLEARED_NOTE_PREFIX = "WENO Switch outcome-unknown reservation cleared";
-// These identify stored FHIR Observations only; WENO serializes literal vital names and units.
+// These identify and convert stored FHIR Observations only; WENO serializes literal names and units.
 const LOINC_CODE_SYSTEM = "http://loinc.org";
 const BODY_HEIGHT_LOINC_CODE = "8302-2";
 const BODY_WEIGHT_LOINC_CODE = "29463-7";
+const UCUM_INCH_CODE = "[in_i]";
+const UCUM_AVOIRDUPOIS_POUND_CODE = "[lb_av]";
 
 export interface WenoDrugSearchClient {
   search(query: string): Promise<WenoDrugRow[]>;
@@ -679,14 +681,14 @@ function convertedVital(
 }
 
 function convertHeightToInches(value: number, unit: string): number | undefined {
-  if (["in", "inch", "inches"].includes(unit)) return value;
+  if ([UCUM_INCH_CODE, "in", "inch", "inches"].includes(unit)) return value;
   if (["cm", "centimeter", "centimeters"].includes(unit)) return value / 2.54;
   if (["m", "meter", "meters"].includes(unit)) return value / 0.0254;
   return undefined;
 }
 
 function convertWeightToPounds(value: number, unit: string): number | undefined {
-  if (["lb", "lbs", "pound", "pounds"].includes(unit)) return value;
+  if ([UCUM_AVOIRDUPOIS_POUND_CODE, "lb", "lbs", "pound", "pounds"].includes(unit)) return value;
   if (["kg", "kilogram", "kilograms"].includes(unit)) return value * 2.2046226218;
   if (["g", "gram", "grams"].includes(unit)) return value * 0.0022046226218;
   return undefined;
