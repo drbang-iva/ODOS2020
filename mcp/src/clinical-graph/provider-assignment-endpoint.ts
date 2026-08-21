@@ -40,11 +40,6 @@ type ProviderAssignmentEndpointInput = {
   | { patientId?: never; appointmentId: unknown }
 );
 
-type AppointmentProvider = {
-  reference: string;
-  display: string;
-};
-
 type PatientCompartmentPolicyBinding = {
   policyReference: string;
   patientParameterNames: string[];
@@ -61,13 +56,6 @@ export async function handleProviderAssignmentRequest(
   if (!staffMay(staff.actorRole, "chart.write")) {
     return { status: 403, body: { error: "chart.write role required" } };
   }
-  if ("appointmentId" in input && staff.actorRole !== "provider") {
-    return {
-      status: 403,
-      body: { error: "Provider role required for appointment assignment." },
-    };
-  }
-
   const target = await resolveAssignmentTarget(staff.fhir, input);
   if ("result" in target) return target.result;
 
@@ -80,26 +68,6 @@ export async function handleProviderAssignmentRequest(
       status: 409,
       body: { error: "The authenticated staff profile is not backed by a Practitioner." },
     };
-  }
-
-  if (target.appointmentProviders) {
-    const assignedProvider = target.appointmentProviders[0];
-    if (!assignedProvider) {
-      return {
-        status: 409,
-        body: { error: "This appointment has no assigned provider." },
-      };
-    }
-    if (!target.appointmentProviders.some((provider) => provider.reference === practitionerReference)) {
-      return {
-        status: 403,
-        body: {
-          error: `This appointment is assigned to ${assignedProvider.display}. Reassign it to chart from here.`,
-          assignedProviderReference: assignedProvider.reference,
-          assignedProviderDisplay: assignedProvider.display,
-        },
-      };
-    }
   }
 
   const patientReference = `Patient/${target.patientId}`;
@@ -181,7 +149,7 @@ async function resolveAssignmentTarget(
   callerFhir: Pick<MedplumClient, "read">,
   input: ProviderAssignmentEndpointInput,
 ): Promise<
-  | { patientId: string; patient?: Patient; appointmentProviders?: AppointmentProvider[] }
+  | { patientId: string; patient?: Patient }
   | { result: ProviderAssignmentEndpointResult }
 > {
   if ("appointmentId" in input) {
@@ -218,15 +186,7 @@ async function resolveAssignmentTarget(
         },
       };
     }
-    const appointmentProviders = appointment.participant.flatMap((participant) => {
-      const reference = participant.actor?.reference;
-      if (!reference || !/^Practitioner\/[A-Za-z0-9.-]{1,64}$/.test(reference)) return [];
-      return [{
-        reference,
-        display: participant.actor?.display?.trim() || reference,
-      }];
-    });
-    return { patientId, appointmentProviders };
+    return { patientId };
   }
 
   const parsedPatientId = patientIdSchema.safeParse(input.patientId);

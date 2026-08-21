@@ -437,7 +437,7 @@ test("appointment-id assignment derives its Patient only after the caller can re
   assert.equal(hasPatientCompartmentGrant(serviceFhir.membership, "Patient/patient-1"), true);
 });
 
-test("appointment-id assignment refuses a provider absent from every practitioner actor before membership lookup or patches", async () => {
+test("appointment-id assignment grants a provider absent from every practitioner actor", async () => {
   const fhir = new AssignmentFhir();
   fhir.appointments.set("appointment-1", {
     resourceType: "Appointment",
@@ -462,14 +462,21 @@ test("appointment-id assignment refuses a provider absent from every practitione
     { authHeader: AUTH, appointmentId: "appointment-1" },
   );
 
-  assert.equal(result.status, 403);
+  assert.equal(result.status, 200);
   assert.deepEqual(result.body, {
-    error: "This appointment is assigned to Doctor Two. Reassign it to chart from here.",
-    assignedProviderReference: "Practitioner/doc-2",
-    assignedProviderDisplay: "Doctor Two",
+    assigned: true,
+    patientReference: "Patient/patient-1",
+    practitionerReference: "Practitioner/doc-1",
+    patientUpdated: true,
+    membershipUpdated: true,
   });
-  assert.deepEqual(fhir.searches, []);
-  assert.deepEqual(fhir.patches, []);
+  assert.deepEqual(fhir.searches, ["ProjectMembership"]);
+  assert.deepEqual(
+    fhir.patients.get("patient-1")?.generalPractitioner,
+    [{ reference: "Practitioner/doc-1" }],
+  );
+  assert.equal(hasPatientCompartmentGrant(fhir.membership, "Patient/patient-1"), true);
+  assert.equal(fhir.patches.length, 2);
 });
 
 test("appointment-id assignment permits the second of two practitioner actors", async () => {
@@ -566,7 +573,7 @@ test("caller-scoped 403 remains 403 for patient-id and appointment-id assignment
   }
 });
 
-test("appointment-id assignment rejects an appointment without a practitioner actor before writes", async () => {
+test("appointment-id assignment grants charting when the appointment has no practitioner actor", async () => {
   const fhir = new AssignmentFhir();
   fhir.appointments.set("appointment-1", {
     resourceType: "Appointment",
@@ -587,41 +594,67 @@ test("appointment-id assignment rejects an appointment without a practitioner ac
     { authHeader: AUTH, appointmentId: "appointment-1" },
   );
 
-  assert.equal(result.status, 409);
-  assert.deepEqual(result.body, { error: "This appointment has no assigned provider." });
-  assert.deepEqual(fhir.searches, []);
-  assert.deepEqual(fhir.patches, []);
+  assert.equal(result.status, 200);
+  assert.deepEqual(fhir.searches, ["ProjectMembership"]);
+  assert.deepEqual(
+    fhir.patients.get("patient-1")?.generalPractitioner,
+    [{ reference: "Practitioner/doc-1" }],
+  );
+  assert.equal(hasPatientCompartmentGrant(fhir.membership, "Patient/patient-1"), true);
+  assert.equal(fhir.patches.length, 2);
 });
 
-test("appointment-id assignment is Provider-only even when Staff can read the schedule", async () => {
-  const serviceFhir = new AssignmentFhir();
-  let callerReads = 0;
-  const result = await handleProviderAssignmentRequest(
+test("appointment-id assignment uses chart.write as the only role gate", async () => {
+  const staffFhir = new AssignmentFhir();
+  staffFhir.appointments.set("appointment-1", {
+    resourceType: "Appointment",
+    id: "appointment-1",
+    status: "arrived",
+    participant: [
+      { actor: { reference: "Patient/patient-1" }, status: "accepted" },
+      { actor: { reference: "Practitioner/doc-2" }, status: "accepted" },
+    ],
+  });
+  const staffResult = await handleProviderAssignmentRequest(
     {
       authenticate: async () => ({
         staffReference: "Practitioner/staff-1",
         actorRole: "staff" as const,
-        fhir: {
-          read: async <T extends Resource>(): Promise<T> => {
-            callerReads += 1;
-            return {
-              resourceType: "Appointment",
-              id: "appointment-1",
-              status: "arrived",
-              participant: [{ actor: { reference: "Patient/patient-1" } }],
-            } as T;
-          },
-        },
+        fhir: staffFhir,
       }),
-      serviceFhir,
+      serviceFhir: staffFhir,
     },
     { authHeader: AUTH, appointmentId: "appointment-1" },
   );
 
-  assert.equal(result.status, 403);
-  assert.deepEqual(result.body, { error: "Provider role required for appointment assignment." });
-  assert.equal(callerReads, 0);
-  assert.equal(serviceFhir.patches.length, 0);
+  const adminFhir = new AssignmentFhir();
+  adminFhir.appointments.set("appointment-1", {
+    resourceType: "Appointment",
+    id: "appointment-1",
+    status: "arrived",
+    participant: [{ actor: { reference: "Patient/patient-1" }, status: "accepted" }],
+  });
+  const adminResult = await handleProviderAssignmentRequest(
+    {
+      authenticate: async () => ({
+        staffReference: "Practitioner/admin",
+        actorRole: "admin" as const,
+        fhir: adminFhir,
+      }),
+      serviceFhir: adminFhir,
+    },
+    { authHeader: AUTH, appointmentId: "appointment-1" },
+  );
+
+  assert.equal(staffResult.status, 200);
+  assert.deepEqual(
+    staffFhir.patients.get("patient-1")?.generalPractitioner,
+    [{ reference: "Practitioner/staff-1" }],
+  );
+  assert.equal(hasPatientCompartmentGrant(staffFhir.membership, "Patient/patient-1"), true);
+  assert.equal(adminResult.status, 403);
+  assert.deepEqual(adminResult.body, { error: "chart.write role required" });
+  assert.deepEqual(adminFhir.patches, []);
 });
 
 class AssignmentFhir {
