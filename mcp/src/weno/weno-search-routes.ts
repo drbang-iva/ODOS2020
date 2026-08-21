@@ -45,6 +45,7 @@ const WENO_OUTCOME_UNKNOWN_NOTE_PREFIX = "WENO Switch outcome unknown";
 const WENO_CANCEL_RESERVATION_NOTE_PREFIX = "WENO Switch CancelRx outcome pending";
 const WENO_CANCEL_RESERVATION_CLEARED_NOTE_PREFIX =
   "WENO Switch CancelRx outcome-unknown reservation cleared";
+const WENO_CANCEL_COMPLETED_NOTE_PREFIX = "WENO Switch CancelRx completed";
 const WENO_RESERVATION_CLEARED_NOTE_PREFIX = "WENO Switch outcome-unknown reservation cleared";
 
 export interface WenoDrugSearchClient {
@@ -338,7 +339,12 @@ async function handlePrescriptionCancel(
       ? await deps.serviceFhir.update<MedicationRequest>(
           "MedicationRequest",
           medicationRequestId,
-          { ...withoutWenoCancelReservation(reserved, context.messageId), status: "cancelled" },
+          withCompletedWenoCancel(
+            reserved,
+            context.messageId,
+            staff.staffReference,
+            context.sentTime,
+          ),
           versionHeaders(reserved),
         )
       : await deps.serviceFhir.update<MedicationRequest>(
@@ -795,6 +801,26 @@ function withoutWenoCancelReservation(
     ...medicationRequest,
     identifier: identifier.length ? identifier : undefined,
     note: note.length ? note : undefined,
+  };
+}
+
+function withCompletedWenoCancel(
+  medicationRequest: MedicationRequest,
+  messageId: string,
+  staffReference: string,
+  completedAt: string,
+): MedicationRequest {
+  const completed = withoutWenoCancelReservation(medicationRequest, messageId);
+  return {
+    ...completed,
+    status: "cancelled",
+    note: [
+      ...(completed.note ?? []),
+      {
+        time: completedAt,
+        text: `${WENO_CANCEL_COMPLETED_NOTE_PREFIX} ${messageId} by ${staffReference}.`,
+      },
+    ],
   };
 }
 

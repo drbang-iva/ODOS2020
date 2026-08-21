@@ -84,6 +84,7 @@ type FormularySelection =
 
 export const CONTROLLED_SUBSTANCE_DRUG_TERMS: readonly string[] = [];
 const WENO_OUTCOME_UNKNOWN_NOTE_PREFIX = "WENO Switch outcome unknown";
+const WENO_CANCEL_COMPLETED_NOTE_PREFIX = "WENO Switch CancelRx completed";
 const REFILL_OPTIONS = numericOptions(undefined, 0, 11, 1);
 const DAYS_SUPPLY_OPTIONS = numericOptions(undefined, 1, 365, 1);
 const ROUTE_OPTIONS = ["Ophthalmic", "Oral", "Topical", "Otic", "Nasal", "Other"];
@@ -707,6 +708,7 @@ export function PrescriptionSection({ patientReference, encounterReference, onSa
             const sent = isElectronicallySent(request);
             const reserved = hasWenoMessageId(request);
             const outcomeUnknown = wenoOutcomeUnknown(request);
+            const cancelCompleted = wenoCancelCompleted(request);
             const cancelReserved = hasWenoCancelMessageId(request);
             const sending = request.id !== undefined && sendingId === request.id;
             const clearing = request.id !== undefined && clearingId === request.id;
@@ -763,6 +765,11 @@ export function PrescriptionSection({ patientReference, encounterReference, onSa
                     </button>
                   )}
                 </div>
+                {request.status === "cancelled" && cancelCompleted && (
+                  <div className="mt-2 text-xs text-white/45">
+                    Cancelled electronically via WENO on {formatDate(cancelCompleted.time)}
+                  </div>
+                )}
                 {feedback && (
                   <div className={`mt-3 text-sm ${
                     feedback.kind === "status"
@@ -987,6 +994,24 @@ function wenoOutcomeUnknown(
       reason: text.slice(prefix.length).trim()
         || "WENO Switch did not return a determinate response.",
     };
+  }
+  return undefined;
+}
+
+function wenoCancelCompleted(
+  request: MedicationRequest,
+): { messageId: string; time: string | undefined } | undefined {
+  const prefix = `${WENO_CANCEL_COMPLETED_NOTE_PREFIX} `;
+  const notes = request.note ?? [];
+  for (let index = notes.length - 1; index >= 0; index -= 1) {
+    const note = notes[index];
+    const text = note?.text;
+    if (!text?.startsWith(prefix)) continue;
+    const actorIndex = text.indexOf(" by ", prefix.length);
+    if (actorIndex < 0) continue;
+    const messageId = text.slice(prefix.length, actorIndex).trim();
+    if (!messageId) continue;
+    return { messageId, time: note.time };
   }
   return undefined;
 }

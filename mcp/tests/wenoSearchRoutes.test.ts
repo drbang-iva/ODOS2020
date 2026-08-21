@@ -509,10 +509,15 @@ test("CancelRx status cancels the MedicationRequest and audits MessageID plus St
     const body = await response.json() as { medicationRequest: MedicationRequest };
     assert.equal(body.medicationRequest.status, "cancelled");
     assert.equal(wenoMessageId(body.medicationRequest), "original-newrx-id");
+    assert.equal(wenoCancelMessageId(body.medicationRequest), undefined);
     assert.doesNotMatch(
       body.medicationRequest.note?.map((note) => note.text).join("\n") ?? "",
       /WENO Switch CancelRx outcome pending/,
     );
+    assert.deepEqual(body.medicationRequest.note?.at(-1), {
+      time: "2026-07-31T12:00:00.000Z",
+      text: "WENO Switch CancelRx completed test-message-id by Practitioner/staff-1.",
+    });
     assert.match(sentXml, /<MessageID>test-message-id<\/MessageID><RelatesToMessageID>original-newrx-id<\/RelatesToMessageID>/);
     assert.deepEqual(audits.map((row) => row.actionReason), [
       "WENO_SWITCH_CANCELRX_STATUS test-message-id 001: Accepted",
@@ -558,6 +563,10 @@ test("CancelRx error records the error and audits MessageID plus Error code", as
     assert.doesNotMatch(
       body.medicationRequest.note?.map((note) => note.text).join("\n") ?? "",
       /WENO Switch CancelRx outcome pending/,
+    );
+    assert.doesNotMatch(
+      body.medicationRequest.note?.map((note) => note.text).join("\n") ?? "",
+      /WENO Switch CancelRx completed/,
     );
     assert.deepEqual(audits.map((row) => row.actionReason), [
       "WENO_SWITCH_CANCELRX_ERROR test-message-id 900/P001: Synthetic cancellation failure",
@@ -621,6 +630,10 @@ test("CancelRx thrown send can be cleared and then cancelled successfully", asyn
     assert.match(
       body.medicationRequest.note?.at(-1)?.text ?? "",
       /WENO Switch outcome unknown cancel-attempt-1: Synthetic response timeout/,
+    );
+    assert.doesNotMatch(
+      body.medicationRequest.note?.map((note) => note.text).join("\n") ?? "",
+      /WENO Switch CancelRx completed/,
     );
     assert.deepEqual(audits.map((row) => row.actionReason), [
       "WENO_SWITCH_CANCELRX_OUTCOME_UNKNOWN cancel-attempt-1: Synthetic response timeout",
