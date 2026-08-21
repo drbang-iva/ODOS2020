@@ -125,7 +125,7 @@ export function buildWenoSwitchNewRx(input: BuildWenoSwitchNewRxInput): string {
 
   const patientPhone = phone(input.patient.telecom);
   const prescriberPhone = phone(input.prescriber.telecom);
-  const pharmacyNpi = optionalElement("NPI", input.pharmacy.npi);
+  const pharmacyNpi = pharmacyNpiElement(input.pharmacy.npi);
   const patientCommunication = communicationNumbers(patientPhone);
   const prescriberCommunication = communicationNumbers(prescriberPhone);
   const observation = patientIsUnder19(patientBirthDate, sentTime)
@@ -232,7 +232,7 @@ export function buildWenoSwitchCancelRx(input: BuildWenoSwitchCancelRxInput): st
   );
   validateMessageId(relatesToMessageId);
   const substitutions = input.medicationRequest.substitution?.allowedBoolean === false ? "1" : "0";
-  const pharmacyNpi = optionalElement("NPI", input.pharmacy.npi);
+  const pharmacyNpi = pharmacyNpiElement(input.pharmacy.npi);
   const prescriberCommunication = communicationNumbers(phone(input.prescriber.telecom));
 
   return [
@@ -740,9 +740,8 @@ function communicationNumbers(value: string | undefined): string {
   return `<CommunicationNumbers><PrimaryTelephone><Number>${xml(value)}</Number></PrimaryTelephone></CommunicationNumbers>`;
 }
 
-function optionalElement(name: string, value: string | undefined): string {
-  if (!value?.trim()) return "";
-  return `<${name}>${xml(value)}</${name}>`;
+function pharmacyNpiElement(value: string | undefined): string {
+  return `<NPI>${xml(value?.trim() || "NONE")}</NPI>`;
 }
 
 function required(value: string | undefined, label: string): string {
