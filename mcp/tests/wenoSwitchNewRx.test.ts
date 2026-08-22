@@ -86,6 +86,9 @@ const TEST_PHARMACY: WenoSwitchPharmacy = {
   phone: "5125550102",
 };
 
+const CAPTURED_WRAPPED_ERROR_RESPONSE = `<string xmlns="http://schemas.microsoft.com/2003/10/Serialization/">&lt;Message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" DatatypesVersion="20170715" TransportVersion="20170715" TransactionDomain="SCRIPT" TransactionVersion="20170715" StructuresVersion="20170715" ECLVersion="20170715"&gt;&lt;Header&gt;&lt;To Qualifier="D"&gt;Unknown due to rejected transaction&lt;/To&gt;&lt;From Qualifier="M"&gt;WENO_Switch&lt;/From&gt;&lt;MessageID&gt;683d421f4a0a450382da72b93caff71a&lt;/MessageID&gt;&lt;RelatesToMessageID&gt;0&lt;/RelatesToMessageID&gt;&lt;SentTime&gt;2026-08-22T00:58:16.04268Z&lt;/SentTime&gt;&lt;SenderSoftware&gt;&lt;SenderSoftwareDeveloper&gt;WENO_DEV&lt;/SenderSoftwareDeveloper&gt;&lt;SenderSoftwareProduct&gt;WENO_Switch&lt;/SenderSoftwareProduct&gt;&lt;SenderSoftwareVersionRelease&gt;V1&lt;/SenderSoftwareVersionRelease&gt;&lt;/SenderSoftware&gt;&lt;/Header&gt;&lt;Body&gt;&lt;Error&gt;&lt;Code&gt;900&lt;/Code&gt;&lt;DescriptionCode&gt;4010&lt;/DescriptionCode&gt;&lt;Description&gt;Transaction rejected - One or more of these fields does not match DrugDb code and qualifier provided: DEA schedule code, QuantityUnitOfMeasure Code, or proper drug description.&lt;/Description&gt;&lt;/Error&gt;&lt;/Body&gt;&lt;/Message&gt;</string>`;
+const CAPTURED_ERROR_DESCRIPTION = "Transaction rejected - One or more of these fields does not match DrugDb code and qualifier provided: DEA schedule code, QuantityUnitOfMeasure Code, or proper drug description.";
+
 test("WENO Switch config is all-or-nothing and reads only its own env keys", () => {
   assert.equal(isWenoSwitchConfigured(CONFIG), true);
   for (const field of Object.keys(CONFIG) as Array<keyof WenoSwitchConfig>) {
@@ -513,6 +516,22 @@ test("send parses a synchronous WENO Error without treating it as transport fail
   });
 });
 
+test("send returns the parsed result from WENO's captured wrapped response", async () => {
+  const result = await sendWenoSwitchNewRx(
+    buildFixture("d123456789abcdef0123456789abcdef"),
+    {
+      fetchImpl: (async () => new Response(CAPTURED_WRAPPED_ERROR_RESPONSE, { status: 200 })) as typeof fetch,
+    },
+  );
+
+  assert.deepEqual(result, {
+    kind: "error",
+    code: "900",
+    descriptionCode: "4010",
+    description: CAPTURED_ERROR_DESCRIPTION,
+  });
+});
+
 test("send rejects missing required data before HTTP and blocks repeated MessageIDs", async () => {
   let calls = 0;
   const fetchImpl = (async () => {
@@ -545,6 +564,32 @@ test("response parser requires the documented Status or Error body", () => {
   assert.throws(
     () => parseWenoSwitchResponse("<Message><Body><Verify /></Body></Message>"),
     /Body\/Status or Body\/Error/,
+  );
+});
+
+test("response parser reads WENO's captured wrapped Error response", () => {
+  assert.deepEqual(parseWenoSwitchResponse(CAPTURED_WRAPPED_ERROR_RESPONSE), {
+    kind: "error",
+    code: "900",
+    descriptionCode: "4010",
+    description: CAPTURED_ERROR_DESCRIPTION,
+  });
+});
+
+test("response parser reads a synthetic Status inside WENO's captured envelope", () => {
+  assert.deepEqual(parseWenoSwitchResponse(wrappedStatusResponse()), {
+    kind: "status",
+    code: "001",
+    description: "Accepted",
+  });
+});
+
+test("response parser names an unexpected root element", () => {
+  assert.throws(
+    () => parseWenoSwitchResponse(
+      `<?xml version="1.0" encoding="utf-8"?><UnexpectedRoot><Body /></UnexpectedRoot>`,
+    ),
+    /UnexpectedRoot/,
   );
 });
 
@@ -597,6 +642,13 @@ function statusResponse(code: string, description: string): string {
 
 function errorResponse(): string {
   return `<?xml version="1.0" encoding="utf-8"?><Message><Header><MessageID>0</MessageID></Header><Body><Error><Code>900</Code><DescriptionCode>P001</DescriptionCode><Description>Test transmission failure</Description></Error></Body></Message>`;
+}
+
+function wrappedStatusResponse(): string {
+  return CAPTURED_WRAPPED_ERROR_RESPONSE.replace(
+    "&lt;Body&gt;&lt;Error&gt;&lt;Code&gt;900&lt;/Code&gt;&lt;DescriptionCode&gt;4010&lt;/DescriptionCode&gt;&lt;Description&gt;Transaction rejected - One or more of these fields does not match DrugDb code and qualifier provided: DEA schedule code, QuantityUnitOfMeasure Code, or proper drug description.&lt;/Description&gt;&lt;/Error&gt;&lt;/Body&gt;",
+    "&lt;Body&gt;&lt;Status&gt;&lt;Code&gt;001&lt;/Code&gt;&lt;Description&gt;Accepted&lt;/Description&gt;&lt;/Status&gt;&lt;/Body&gt;",
+  );
 }
 
 function assertOrdered(value: string, needles: string[]): void {

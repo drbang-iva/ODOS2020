@@ -349,7 +349,24 @@ export function resetWenoSwitchProcessStateForTests(): void {
 
 export function parseWenoSwitchResponse(responseXml: string): WenoSwitchNewRxResult {
   const parsed = parseXml(responseXml, "WENO Switch response");
-  const body = objectAt(objectAt(parsed, "Message"), "Body");
+  let message: Record<string, unknown>;
+  if (parsed.Message !== undefined) {
+    message = objectAt(parsed, "Message");
+  } else if (parsed.string !== undefined) {
+    const serializedMessage = textAt(
+      objectAt(parsed, "string"),
+      "#text",
+      "WENO Switch serialized Message",
+    );
+    const inner = parseXml(serializedMessage, "WENO Switch serialized Message");
+    if (inner.Message === undefined) {
+      throw unexpectedWenoSwitchResponseRoot(inner);
+    }
+    message = objectAt(inner, "Message");
+  } else {
+    throw unexpectedWenoSwitchResponseRoot(parsed);
+  }
+  const body = objectAt(message, "Body");
   if (body.Status !== undefined) {
     const status = objectValue(body.Status, "Status");
     return {
@@ -368,6 +385,11 @@ export function parseWenoSwitchResponse(responseXml: string): WenoSwitchNewRxRes
     };
   }
   throw new Error("WENO Switch response must contain Body/Status or Body/Error.");
+}
+
+function unexpectedWenoSwitchResponseRoot(parsed: Record<string, unknown>): Error {
+  const root = Object.keys(parsed).find((key) => !key.startsWith("?")) ?? "(none)";
+  return new Error(`WENO Switch response root must be Message or string; received ${root}.`);
 }
 
 function validateNewRxXml(newRxXml: string): string {
