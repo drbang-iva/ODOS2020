@@ -596,6 +596,111 @@ test("Inventory ledger expands to individual units and decrements its rollup wit
   assert.equal(loadCalls, 1);
 });
 
+test("adjustFrameInventoryUnit posts a reasoned correction to the guarded MCP endpoint", async () => {
+  const module = await import("../src/lib/optical-frames");
+  const candidate = (module as Record<string, unknown>).adjustFrameInventoryUnit;
+  assert.equal(typeof candidate, "function", "frame inventory adjustment client is not implemented");
+  const adjust = candidate as (
+    unitId: string,
+    status: PracticeFrameInventoryUnit["status"],
+    reason: string,
+    options: { fetchImpl: typeof fetch; authorization: string },
+  ) => Promise<PracticeFrameInventoryUnit>;
+  let requestUrl = "";
+  let requestInit: RequestInit | undefined;
+
+  const updated = await adjust("unit-1", "hold", "Damaged during handling", {
+    authorization: "Bearer test-token",
+    fetchImpl: async (input, init) => {
+      requestUrl = String(input);
+      requestInit = init;
+      return jsonResponse({
+        unit: unit("unit-1", CATALOG_URL, "hold", "Optical Front"),
+      });
+    },
+  });
+
+  assert.equal(requestUrl, "/inventory/frame-units/unit-1/adjustments");
+  assert.equal(requestInit?.method, "POST");
+  assert.equal(new Headers(requestInit?.headers).get("Authorization"), "Bearer test-token");
+  assert.equal(new Headers(requestInit?.headers).get("Content-Type"), "application/json");
+  assert.deepEqual(JSON.parse(String(requestInit?.body)), {
+    status: "hold",
+    reason: "Damaged during handling",
+  });
+  assert.equal(updated.status, "hold");
+});
+
+test("Inventory ledger requires a reason and replaces a corrected unit without reloading", async () => {
+  const original = unit("unit-1", CATALOG_URL, "on_hand", "Optical Front");
+  let adjustment: { unitId: string; status: PracticeFrameInventoryUnit["status"]; reason: string } | undefined;
+  const api = testApi({
+    loadInventoryUnits: async () => ({ units: [original], skippedCount: 0 }),
+  }) as OpticalFramesApi & {
+    adjustUnit(
+      unitId: string,
+      status: PracticeFrameInventoryUnit["status"],
+      reason: string,
+    ): Promise<PracticeFrameInventoryUnit>;
+  };
+  api.adjustUnit = async (unitId, status, reason) => {
+    adjustment = { unitId, status, reason };
+    return { ...original, status };
+  };
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<RoleProvider><OpticalFrames route="inventory" api={api} /></RoleProvider>);
+  });
+  act(() => renderer.root.findByProps({ "aria-label": "Expand Test Frame" }).props.onClick());
+  const adjustButton = renderer.root.findAllByType("button")
+    .find((button) => button.children.join("") === "Adjust");
+  assert.ok(adjustButton, "inventory unit has no adjustment entry point");
+  act(() => adjustButton.props.onClick());
+  const form = renderer.root.findByProps({ "aria-label": "Adjust unit unit-1" });
+  const status = renderer.root.findByProps({ "aria-label": "Corrected status" });
+  const reason = renderer.root.findByProps({ "aria-label": "Reason" });
+  assert.equal(reason.props.required, true);
+  act(() => {
+    status.props.onChange({ target: { value: "hold" } });
+    reason.props.onChange({ target: { value: "Damaged during handling" } });
+  });
+  await act(async () => {
+    form.props.onSubmit({ preventDefault() {} });
+    await Promise.resolve();
+  });
+
+  assert.deepEqual(adjustment, {
+    unitId: "unit-1",
+    status: "hold",
+    reason: "Damaged during handling",
+  });
+  assert.ok(renderer.root.findAllByType("td").some((cell) => cell.children.join("") === "Hold"));
+});
+
+test("Inventory adjustment cannot be closed while its correction is pending", async () => {
+  const original = unit("unit-1", CATALOG_URL, "on_hand", "Optical Front");
+  const api = testApi({
+    loadInventoryUnits: async () => ({ units: [original], skippedCount: 0 }),
+    adjustUnit: () => new Promise<PracticeFrameInventoryUnit>(() => {}),
+  });
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<RoleProvider><OpticalFrames route="inventory" api={api} /></RoleProvider>);
+  });
+  act(() => renderer.root.findByProps({ "aria-label": "Expand Test Frame" }).props.onClick());
+  const adjust = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Adjust");
+  assert.ok(adjust);
+  act(() => adjust.props.onClick());
+  const form = renderer.root.findByProps({ "aria-label": "Adjust unit unit-1" });
+  act(() => renderer.root.findByProps({ "aria-label": "Reason" }).props.onChange({ target: { value: "Miscount" } }));
+  act(() => form.props.onSubmit({ preventDefault() {} }));
+
+  const close = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Close");
+  assert.ok(close);
+  assert.equal(close.props.disabled, true);
+  assert.ok(renderer.root.findByProps({ "aria-label": "Adjust unit unit-1" }));
+});
+
 test("malformed-unit warnings stay visible across catalog, inventory, and POS routes", async () => {
   for (const route of ["catalog", "inventory", "lookup"] as const) {
     let renderer!: ReactTestRenderer;
@@ -703,6 +808,7 @@ function testApi(overrides: Partial<OpticalFramesApi> = {}): OpticalFramesApi {
     loadVariantSettings: async () => [],
     receiveInventory: async () => ({ units: [] }),
     dispenseUnit: async () => { throw new Error("Unexpected dispense"); },
+    adjustUnit: async () => { throw new Error("Unexpected adjustment"); },
     ...overrides,
   };
 }
