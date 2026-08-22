@@ -144,6 +144,7 @@ function Fixture() {
   const mapped = active ? isExamEntrySheetSectionId(active) : false;
   const sheetOpen = Boolean(active && (mapped || forceSheet));
   const editor = active ? renderEditor(active) : null;
+  const showReturnButton = params.get("returnButton") === "true";
 
   return (
     <main className="flex h-screen flex-col overflow-hidden bg-bg-deep text-white">
@@ -161,6 +162,13 @@ function Fixture() {
       ) : (
         <div className="odos-exam-overview-stage" data-entry-sheet-open={sheetOpen ? "true" : "false"}>
           <section className="min-h-0 overflow-hidden border-r border-white/10" data-testid="fixture-exam-column">
+            {showReturnButton && (
+              <div className="odos-exam-editor-return">
+                <button type="button" data-testid="return-to-exam-overview" className="odos-exam-editor-return-button">
+                  Back to exam overview
+                </button>
+              </div>
+            )}
             <ExamOverviewBoard
               projection={FIXTURE_PROJECTION}
               editorEntries={chartEditorInventory()}

@@ -489,7 +489,7 @@
 
 .odos-exam-overview-refresh:hover,
 .odos-exam-editor-return-button:hover {
-  border-color: var(--odos-brand);
+  border-color: var(--odos-accent);
   color: var(--odos-text);
 }
 
@@ -637,13 +637,13 @@
 }
 
 .odos-exam-editor-entry:hover {
-  border-color: var(--odos-brand);
+  border-color: var(--odos-accent);
 }
 
 .odos-exam-editor-entry.is-active {
-  border-color: var(--odos-brand);
-  background: color-mix(in srgb, var(--odos-brand) 18%, var(--odos-surface-2));
-  box-shadow: inset 3px 0 0 var(--odos-brand);
+  border-color: var(--odos-accent);
+  background: color-mix(in srgb, var(--odos-accent) 18%, var(--odos-surface-2));
+  box-shadow: inset 3px 0 0 var(--odos-accent);
 }
 
 .odos-exam-editor-entry-label {
