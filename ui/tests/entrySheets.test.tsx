@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { after, before, test } from "node:test";
 import { resolve } from "node:path";
-import { chromium, type Browser } from "playwright-core";
+import { chromium, type Browser, type Locator, type Page } from "playwright-core";
 import { createServer, type ViteDevServer } from "vite";
 
 let server: ViteDevServer;
@@ -443,6 +443,71 @@ test("distributed editor rows are 44px-class and disclose their interaction befo
   }
 });
 
+test("the active distributed editor row resolves a visible selection background", { timeout: 30_000 }, async () => {
+  const page = await openActiveVisualAcuityPage();
+  try {
+    const backgroundColor = await activeVisualAcuityRow(page).evaluate((element) => getComputedStyle(element).backgroundColor);
+    assert.notEqual(backgroundColor, "rgba(0, 0, 0, 0)");
+  } finally {
+    await page.close();
+  }
+});
+
+test("the active distributed editor row resolves an inset selection indicator", { timeout: 30_000 }, async () => {
+  const page = await openActiveVisualAcuityPage();
+  try {
+    const boxShadow = await activeVisualAcuityRow(page).evaluate((element) => getComputedStyle(element).boxShadow);
+    assert.notEqual(boxShadow, "none");
+    assert.match(boxShadow, /inset/);
+  } finally {
+    await page.close();
+  }
+});
+
+test("the active distributed editor row resolves its border to the document accent", { timeout: 30_000 }, async () => {
+  const page = await openActiveVisualAcuityPage();
+  try {
+    const [style, accentColor] = await Promise.all([
+      activeVisualAcuityRow(page).evaluate((element) => {
+        const computed = getComputedStyle(element);
+        return { borderColor: computed.borderColor, color: computed.color };
+      }),
+      resolveTokenColor(page, "--odos-accent"),
+    ]);
+    assert.notEqual(style.borderColor, style.color, "the active border must not fall back to currentColor");
+    assert.equal(style.borderColor, accentColor);
+  } finally {
+    await page.close();
+  }
+});
+
+test("the distributed editor row hover visibly engages and resolves to the document accent", { timeout: 30_000 }, async () => {
+  const page = await openExamOverviewPage();
+  try {
+    await assertHoverBorderResolvesAccent(page, page.locator('[data-editor-section-id="iop"]'));
+  } finally {
+    await page.close();
+  }
+});
+
+test("the return-button hover visibly engages and resolves to the document accent", { timeout: 30_000 }, async () => {
+  const page = await openExamOverviewPage(true);
+  try {
+    await assertHoverBorderResolvesAccent(page, page.getByTestId("return-to-exam-overview"));
+  } finally {
+    await page.close();
+  }
+});
+
+test("the overview-refresh hover visibly engages and resolves to the document accent", { timeout: 30_000 }, async () => {
+  const page = await openExamOverviewPage();
+  try {
+    await assertHoverBorderResolvesAccent(page, page.getByTestId("refresh-exam-overview"));
+  } finally {
+    await page.close();
+  }
+});
+
 test("the widest mapped shape uses a bottom sheet while retaining visible exam context", { timeout: 30_000 }, async () => {
   const page = await browser.newPage({ viewport: { width: 768, height: 900 } });
   page.setDefaultTimeout(3_000);
@@ -504,6 +569,51 @@ for (const viewport of [
       await page.close();
     }
   });
+}
+
+async function openActiveVisualAcuityPage(): Promise<Page> {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  page.setDefaultTimeout(5_000);
+  await page.goto(
+    `${origin}/tests/fixtures/entry-sheets.html?audit=sheet&section=va`,
+    { waitUntil: "networkidle" },
+  );
+  await activeVisualAcuityRow(page).waitFor();
+  return page;
+}
+
+async function openExamOverviewPage(showReturnButton = false): Promise<Page> {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  page.setDefaultTimeout(5_000);
+  const returnButton = showReturnButton ? "?returnButton=true" : "";
+  await page.goto(`${origin}/tests/fixtures/entry-sheets.html${returnButton}`, { waitUntil: "networkidle" });
+  await page.getByTestId("refresh-exam-overview").waitFor();
+  return page;
+}
+
+function activeVisualAcuityRow(page: Page): Locator {
+  return page.locator('[data-editor-section-id="va"].is-active');
+}
+
+async function resolveTokenColor(page: Page, token: string): Promise<string> {
+  return page.evaluate((cssToken) => {
+    const probe = document.createElement("span");
+    probe.style.color = `var(${cssToken})`;
+    document.body.append(probe);
+    const color = getComputedStyle(probe).color;
+    probe.remove();
+    return color;
+  }, token);
+}
+
+async function assertHoverBorderResolvesAccent(page: Page, target: Locator): Promise<void> {
+  await target.waitFor();
+  const before = await target.evaluate((element) => getComputedStyle(element).borderColor);
+  await target.hover();
+  const after = await target.evaluate((element) => getComputedStyle(element).borderColor);
+  const accentColor = await resolveTokenColor(page, "--odos-accent");
+  assert.notEqual(after, before, `hover border must change from ${before}`);
+  assert.equal(after, accentColor);
 }
 
 function chromeExecutable(): string {
