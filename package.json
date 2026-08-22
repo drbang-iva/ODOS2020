@@ -36,6 +36,8 @@
     "verify-legacy-import-m2a": "tsx --env-file-if-exists=.odos/migration-importer.env scripts/verify-legacy-import-m2a.ts",
     "sweep-legacy-import-binaries": "tsx --env-file-if-exists=.odos/migration-importer.env scripts/sweep-legacy-import-binaries.ts",
     "verify-legacy-import-m0": "tsx --env-file-if-exists=.odos/migration-importer.env scripts/verify-legacy-import-m0.ts",
+    "ingest-weno-pharmacy-directory": "tsx --env-file-if-exists=.env scripts/ingest-weno-pharmacy-directory.ts",
+    "ingest-weno-drug-database": "tsx --env-file-if-exists=.env scripts/ingest-weno-drug-database.ts",
     "backfill-patient-mrns": "tsx --env-file-if-exists=.env scripts/backfill-patient-mrns.ts",
     "repair-practice-roles": "tsx --env-file-if-exists=.env scripts/repair-practice-roles.ts",
     "migrate-three-role-model": "tsx --env-file-if-exists=.env scripts/migrate-three-role-model.ts",
@@ -53,7 +55,8 @@
   },
   "dependencies": {
     "@medplum/fhirtypes": "^4.0.0",
-    "csv-parse": "^7.0.1"
+    "csv-parse": "^7.0.1",
+    "fflate": "^0.8.3"
   },
   "devDependencies": {
     "tsx": "^4.19.0",
