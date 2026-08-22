@@ -677,6 +677,30 @@ test("Inventory ledger requires a reason and replaces a corrected unit without r
   assert.ok(renderer.root.findAllByType("td").some((cell) => cell.children.join("") === "Hold"));
 });
 
+test("Inventory adjustment cannot be closed while its correction is pending", async () => {
+  const original = unit("unit-1", CATALOG_URL, "on_hand", "Optical Front");
+  const api = testApi({
+    loadInventoryUnits: async () => ({ units: [original], skippedCount: 0 }),
+    adjustUnit: () => new Promise<PracticeFrameInventoryUnit>(() => {}),
+  });
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<RoleProvider><OpticalFrames route="inventory" api={api} /></RoleProvider>);
+  });
+  act(() => renderer.root.findByProps({ "aria-label": "Expand Test Frame" }).props.onClick());
+  const adjust = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Adjust");
+  assert.ok(adjust);
+  act(() => adjust.props.onClick());
+  const form = renderer.root.findByProps({ "aria-label": "Adjust unit unit-1" });
+  act(() => renderer.root.findByProps({ "aria-label": "Reason" }).props.onChange({ target: { value: "Miscount" } }));
+  act(() => form.props.onSubmit({ preventDefault() {} }));
+
+  const close = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Close");
+  assert.ok(close);
+  assert.equal(close.props.disabled, true);
+  assert.ok(renderer.root.findByProps({ "aria-label": "Adjust unit unit-1" }));
+});
+
 test("malformed-unit warnings stay visible across catalog, inventory, and POS routes", async () => {
   for (const route of ["catalog", "inventory", "lookup"] as const) {
     let renderer!: ReactTestRenderer;

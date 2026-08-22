@@ -607,6 +607,7 @@ function InventoryTable({
             <button
               className="text-[color:var(--odos-muted)] hover:text-[color:var(--odos-text)]"
               type="button"
+              disabled={adjustmentPending}
               onClick={() => setAdjustmentUnit(undefined)}
             >
               Close

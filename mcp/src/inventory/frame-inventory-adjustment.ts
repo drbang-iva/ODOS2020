@@ -60,6 +60,9 @@ export async function handleFrameInventoryAdjustmentRequest(
   try {
     const current = await deps.serviceFhir.read<Basic>("Basic", parsed.unitId);
     const currentStatus = inventoryUnitStatus(current);
+    const canonicalUrl = requiredExtension(current, EXTENSION_URLS.canonicalUrl, "catalog URL");
+    const receivedAt = requiredExtension(current, EXTENSION_URLS.receivedAt, "received-at");
+    const location = optionalExtension(current, EXTENSION_URLS.location);
     const statusIndex = current.extension?.findIndex((entry) => entry.url === EXTENSION_URLS.status) ?? -1;
     if (statusIndex < 0) throw new Error("Frame inventory unit is missing unit status.");
     const now = deps.now?.() ?? new Date().toISOString();
@@ -112,12 +115,10 @@ export async function handleFrameInventoryAdjustmentRequest(
       body: {
         unit: {
           id: parsed.unitId,
-          canonicalUrl: requiredExtension(current, EXTENSION_URLS.canonicalUrl, "catalog URL"),
+          canonicalUrl,
           status: parsed.status,
-          ...(optionalExtension(current, EXTENSION_URLS.location)
-            ? { location: optionalExtension(current, EXTENSION_URLS.location) }
-            : {}),
-          receivedAt: requiredExtension(current, EXTENSION_URLS.receivedAt, "received-at"),
+          ...(location ? { location } : {}),
+          receivedAt,
         },
       },
     };

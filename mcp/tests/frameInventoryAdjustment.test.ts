@@ -102,6 +102,21 @@ test("a caller holding inventory.adjust can correct the unit", async () => {
   assert.equal(extensionValue(fixture.fhir.currentUnit(), URLS.status), "hold");
 });
 
+test("required response metadata is validated before any correction is committed", async () => {
+  const handle = await adjustmentHandler();
+  const malformed = unitBasic("on_hand");
+  malformed.extension = malformed.extension?.filter((entry) => entry.url !== URLS.canonical);
+  const fixture = setup(["admin"], malformed);
+
+  const result = await handle(fixture.deps, request({ status: "hold", reason: "Physical count correction" }));
+
+  assert.deepEqual(result, { status: 400, body: { error: "Frame inventory unit is missing catalog URL." } });
+  assert.equal(fixture.fhir.transactionCalls, 0);
+  assert.equal(extensionValue(fixture.fhir.currentUnit(), URLS.status), "on_hand");
+  assert.equal(fixture.fhir.all("AuditEvent").length, 0);
+  assert.equal(fixture.fhir.all("Provenance").length, 0);
+});
+
 async function adjustmentHandler(): Promise<AdjustmentHandler> {
   const module = await import("../src/inventory/frame-inventory-adjustment.js")
     .catch(() => ({} as Record<string, unknown>));
@@ -118,8 +133,8 @@ function request(body: unknown) {
   return { authHeader: "Bearer good", unitId: "unit-1", body };
 }
 
-function setup(roles: Array<"provider" | "staff" | "admin">) {
-  const fhir = new MemoryFhir(unitBasic("on_hand"));
+function setup(roles: Array<"provider" | "staff" | "admin">, inventoryUnit = unitBasic("on_hand")) {
+  const fhir = new MemoryFhir(inventoryUnit);
   return {
     fhir,
     deps: {
