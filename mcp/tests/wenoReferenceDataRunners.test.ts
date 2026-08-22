@@ -99,6 +99,33 @@ test("pharmacy runner passes a ZIP file directly to the existing parser", async 
   }
 });
 
+test("pharmacy runner refuses to replace the directory when a readable file yields zero rows", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "odos-weno-pharmacy-empty-runner-"));
+  const path = join(directory, "empty-directory.csv");
+  let storeCalls = 0;
+  try {
+    await writeFile(path, pharmacyDirectoryCsv().split("\n").slice(0, 2).join("\n"));
+    await assert.rejects(
+      runWenoPharmacyDirectoryIngest(path, {
+        storage: {
+          async store() {
+            storeCalls += 1;
+            return 0;
+          },
+          async close() {},
+        },
+        log() {},
+      }),
+      (error: unknown) => error instanceof Error
+        && error.message.includes(path)
+        && /yielded zero rows/.test(error.message),
+    );
+    assert.equal(storeCalls, 0);
+  } finally {
+    await rm(directory, { recursive: true });
+  }
+});
+
 test("drug runner names the required local file when its path is missing", async () => {
   await assert.rejects(
     runWenoDrugDatabaseIngest(undefined, { log() {} }),

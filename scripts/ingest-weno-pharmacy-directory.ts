@@ -51,6 +51,9 @@ export async function runWenoPharmacyDirectoryIngest(
   }
 
   const parsed = parsePharmacyDirectoryZip(Uint8Array.from(zipBytes).buffer);
+  if (parsed.rows.length === 0) {
+    throw new Error(`WENO pharmacy directory file yielded zero rows; replacement refused: ${filePath}`);
+  }
   const storage = options.storage ?? new PostgresWenoPharmacyDirectoryStorage(
     options.postgresUrl ? { postgresUrl: options.postgresUrl } : {},
   );
