@@ -21,6 +21,7 @@ import {
   customFieldOptionInputSchema,
   observationCustomValue,
 } from "../src/clinical-graph/custom-fields.js";
+import { buildExamOverviewProjection } from "../src/clinical-graph/exam-overview-projection.js";
 import type { ClinicalFindingDefinition } from "../src/clinical-graph/glaucoma-suspect.js";
 import {
   buildOcularHealthDefinitions,
@@ -538,6 +539,92 @@ test("finding qualifiers round-trip all four kinds independently by finding and 
     rows: Array<{ eye: string; findingDetails?: Record<string, Record<string, unknown>> }>;
   }).rows;
   assert.equal(invalidRows[0]?.findingDetails?.["finding-a"]?.span, undefined);
+});
+
+test("ocular-health saves round-trip normal and abnormal interpretations without interpreting deferred", async () => {
+  const fhir = new MemoryFhir();
+  const definitions = await catalog(fhir);
+  const lids = definitions.find((definition) =>
+    definition.stableKey === "ocular-health:anterior:lids-lashes"
+  );
+  const palpebral = definitions.find((definition) =>
+    definition.stableKey === "ocular-health:anterior:palpebral-conjunctiva"
+  );
+  assert.ok(lids && palpebral);
+
+  const interpreted = await handleCustomSectionCaptureRequest(
+    clinicalDeps("provider", fhir, definitions),
+    {
+      authHeader: AUTH,
+      params: { stableKey: lids.stableKey },
+      body: {
+        patientReference: "Patient/exam-overview-interpretation",
+        encounterReference: "Encounter/exam-overview-interpretation",
+        eyes: {
+          OD: { state: "abnormal", customFields: [] },
+          OS: { state: "normal", customFields: [] },
+        },
+      },
+    },
+  );
+  assert.equal(interpreted.status, 200, JSON.stringify(interpreted.body));
+  const deferred = await handleCustomSectionCaptureRequest(
+    clinicalDeps("provider", fhir, definitions),
+    {
+      authHeader: AUTH,
+      params: { stableKey: palpebral.stableKey },
+      body: {
+        patientReference: "Patient/exam-overview-interpretation",
+        encounterReference: "Encounter/exam-overview-interpretation",
+        eyes: {
+          OD: {
+            state: "deferred",
+            customFields: [],
+            other: "Patient declined lid eversion.",
+          },
+        },
+      },
+    },
+  );
+  assert.equal(deferred.status, 200, JSON.stringify(deferred.body));
+
+  assert.deepEqual(fhir.observations[0]?.interpretation, [{
+    coding: [{
+      system: "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+      code: "A",
+      display: "Abnormal",
+    }],
+  }]);
+  assert.deepEqual(fhir.observations[1]?.interpretation, [{
+    coding: [{
+      system: "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+      code: "N",
+      display: "Normal",
+    }],
+  }]);
+  assert.equal(fhir.observations[2]?.interpretation, undefined);
+  assert.deepEqual(fhir.observations.map((observation) =>
+    component(observation, "EXAM_STATE")?.valueString
+  ), ["abnormal", "normal", "deferred"]);
+
+  const projection = buildExamOverviewProjection({
+    encounterReference: "Encounter/exam-overview-interpretation",
+    patientReference: "Patient/exam-overview-interpretation",
+    definitions,
+    currentObservations: fhir.observations,
+    priorObservationCandidates: [],
+    assessmentPresent: false,
+  });
+  assert.deepEqual(projection.findings.map((finding) => [
+    finding.findingKey,
+    finding.laterality,
+    finding.interpretation,
+    finding.examination.state,
+  ]), [
+    ["ocular-health:anterior:lids-lashes", "OD", "abnormal", "examined"],
+    ["ocular-health:anterior:lids-lashes", "OS", "normal", "examined"],
+    ["ocular-health:anterior:palpebral-conjunctiva", "OD", "unknown", "deferred-with-reason"],
+  ]);
 });
 
 test("OH-1 seeds nine editable structures and persists explicit normal, abnormal, nested, other, and deferred states", async () => {
