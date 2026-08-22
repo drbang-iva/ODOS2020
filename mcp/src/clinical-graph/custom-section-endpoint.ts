@@ -232,16 +232,29 @@ export async function handleCustomSectionCaptureRequest(
     });
     const coded = {
       ...captured,
-      observation: withDocumentationElements(
-        appendCustomFieldComponentsToObservation(
-          captured.observation,
-          row.values,
+      observation: {
+        ...withDocumentationElements(
+          appendCustomFieldComponentsToObservation(
+            captured.observation,
+            row.values,
+            definition,
+            perEye ? `${row.eye}_` : "",
+          ),
           definition,
-          perEye ? `${row.eye}_` : "",
+          row.state ?? "normal",
         ),
-        definition,
-        row.state ?? "normal",
-      ),
+        ...(row.state === "normal" || row.state === "abnormal"
+          ? {
+              interpretation: [{
+                coding: [{
+                  system: "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+                  code: row.state === "normal" ? "N" : "A",
+                  display: row.state === "normal" ? "Normal" : "Abnormal",
+                }],
+              }],
+            }
+          : {}),
+      },
     };
     coded.observation = appendFindingDetailComponentsToObservation(
       coded.observation,
