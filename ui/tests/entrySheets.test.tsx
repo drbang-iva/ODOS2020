@@ -574,21 +574,31 @@ for (const viewport of [
 async function openActiveVisualAcuityPage(): Promise<Page> {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   page.setDefaultTimeout(5_000);
-  await page.goto(
-    `${origin}/tests/fixtures/entry-sheets.html?audit=sheet&section=va`,
-    { waitUntil: "networkidle" },
-  );
-  await activeVisualAcuityRow(page).waitFor();
-  return page;
+  try {
+    await page.goto(
+      `${origin}/tests/fixtures/entry-sheets.html?audit=sheet&section=va`,
+      { waitUntil: "networkidle" },
+    );
+    await activeVisualAcuityRow(page).waitFor();
+    return page;
+  } catch (error) {
+    await page.close();
+    throw error;
+  }
 }
 
 async function openExamOverviewPage(showReturnButton = false): Promise<Page> {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   page.setDefaultTimeout(5_000);
   const returnButton = showReturnButton ? "?returnButton=true" : "";
-  await page.goto(`${origin}/tests/fixtures/entry-sheets.html${returnButton}`, { waitUntil: "networkidle" });
-  await page.getByTestId("refresh-exam-overview").waitFor();
-  return page;
+  try {
+    await page.goto(`${origin}/tests/fixtures/entry-sheets.html${returnButton}`, { waitUntil: "networkidle" });
+    await page.getByTestId("refresh-exam-overview").waitFor();
+    return page;
+  } catch (error) {
+    await page.close();
+    throw error;
+  }
 }
 
 function activeVisualAcuityRow(page: Page): Locator {
