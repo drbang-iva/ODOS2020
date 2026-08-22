@@ -40,6 +40,41 @@ export interface PracticeRoleReseedResult {
   readonly exitCode: 0 | 1;
 }
 
+export type PracticeRoleTagReseedCredentials =
+  | { readonly source: "access-token"; readonly accessToken: string }
+  | {
+      readonly source: "admin-login";
+      readonly adminEmail: string;
+      readonly adminPassword: string;
+    };
+
+export function resolvePracticeRoleTagReseedCredentials(input: {
+  readonly accessToken?: string;
+  readonly adminEmail?: string;
+  readonly adminPassword?: string;
+}): PracticeRoleTagReseedCredentials {
+  const accessToken = input.accessToken?.trim();
+  if (accessToken) {
+    return { source: "access-token", accessToken };
+  }
+
+  const adminEmail = input.adminEmail?.trim();
+  const adminPassword = input.adminPassword;
+  if (adminEmail && adminPassword?.trim()) {
+    return { source: "admin-login", adminEmail, adminPassword };
+  }
+
+  const absent = [
+    !accessToken && "MEDPLUM_ACCESS_TOKEN",
+    !adminEmail && "MEDPLUM_ADMIN_EMAIL",
+    !adminPassword?.trim() && "MEDPLUM_ADMIN_PASSWORD",
+  ].filter((name): name is string => Boolean(name));
+  throw new Error(
+    "Need MEDPLUM_ACCESS_TOKEN, or MEDPLUM_ADMIN_EMAIL + MEDPLUM_ADMIN_PASSWORD. "
+    + `Absent: ${absent.join(", ")}.`,
+  );
+}
+
 export function decidePracticeRoleTag(
   existingTags: readonly Coding[] | undefined,
   expectedRoleCode: PracticeRoleId,
@@ -172,11 +207,19 @@ function printSummary(result: PracticeRoleReseedResult): void {
 async function runCli(): Promise<void> {
   const baseUrl = process.env.MEDPLUM_BASE_URL ?? DEFAULT_BASE_URL;
   assertLocalMedplumBaseUrl(baseUrl);
+  const credentials = resolvePracticeRoleTagReseedCredentials({
+    accessToken: process.env.MEDPLUM_ACCESS_TOKEN,
+    adminEmail: process.env.MEDPLUM_ADMIN_EMAIL,
+    adminPassword: process.env.MEDPLUM_ADMIN_PASSWORD,
+  });
   const fhir = createOperatorScriptFhirClient({
     baseUrl,
-    accessToken: requireEnv("MEDPLUM_ACCESS_TOKEN"),
+    ...(credentials.source === "access-token" ? { accessToken: credentials.accessToken } : {}),
     reason: "Operator practice-role tag reseed runs outside request handling.",
   });
+  if (credentials.source === "admin-login") {
+    await fhir.login(credentials.adminEmail, credentials.adminPassword);
+  }
   const result = await reseedPracticeRoleTags(new LivePracticeRoleReseedAdapter(fhir));
   printSummary(result);
   process.exitCode = result.exitCode;
@@ -221,14 +264,6 @@ function isLocalOrPrivateHostname(hostname: string): boolean {
 
 function isPreconditionFailure(error: unknown): boolean {
   return (error as { status?: number }).status === 412;
-}
-
-function requireEnv(name: string): string {
-  const value = process.env[name]?.trim();
-  if (!value) {
-    throw new Error(`${name} is required.`);
-  }
-  return value;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

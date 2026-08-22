@@ -1,9 +1,13 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 import type { AccessPolicy } from "@medplum/fhirtypes";
 import {
   assertLocalMedplumBaseUrl,
   decidePracticeRoleTag,
+  resolvePracticeRoleTagReseedCredentials,
   reseedPracticeRoleTags,
   type PracticeRoleReseedAdapter,
 } from "../../scripts/reseed-practice-role-tags.ts";
@@ -175,6 +179,99 @@ test("the live migration target must be local or private", () => {
   assert.throws(
     () => assertLocalMedplumBaseUrl("https://medplum.example.com"),
     /must target a local or private/,
+  );
+});
+
+test("reseed credentials use an explicit access token", () => {
+  assert.deepEqual(resolvePracticeRoleTagReseedCredentials({
+    accessToken: " explicit-token ",
+  }), {
+    source: "access-token",
+    accessToken: "explicit-token",
+  });
+});
+
+test("reseed credentials fall back to admin email and password", () => {
+  assert.deepEqual(resolvePracticeRoleTagReseedCredentials({
+    adminEmail: " admin@example.test ",
+    adminPassword: " padded-password ",
+  }), {
+    source: "admin-login",
+    adminEmail: "admin@example.test",
+    adminPassword: " padded-password ",
+  });
+});
+
+test("reseed credentials prefer an explicit token over admin credentials", () => {
+  assert.deepEqual(resolvePracticeRoleTagReseedCredentials({
+    accessToken: " preferred-token ",
+    adminEmail: "admin@example.test",
+    adminPassword: "not-a-real-password",
+  }), {
+    source: "access-token",
+    accessToken: "preferred-token",
+  });
+});
+
+test("reseed credential failure names both accepted shapes and every absent variable", () => {
+  assert.throws(
+    () => resolvePracticeRoleTagReseedCredentials({}),
+    (error) => {
+      assert.ok(error instanceof Error);
+      assert.match(
+        error.message,
+        /MEDPLUM_ACCESS_TOKEN, or MEDPLUM_ADMIN_EMAIL \+ MEDPLUM_ADMIN_PASSWORD/,
+      );
+      assert.match(
+        error.message,
+        /Absent: MEDPLUM_ACCESS_TOKEN, MEDPLUM_ADMIN_EMAIL, MEDPLUM_ADMIN_PASSWORD/,
+      );
+      return true;
+    },
+  );
+});
+
+test("reseed CLI never echoes a present credential value when another credential is absent", () => {
+  const secretEmail = "operator-secret-value@example.test";
+  const scriptPath = fileURLToPath(new URL("../../scripts/reseed-practice-role-tags.ts", import.meta.url));
+  const result = spawnSync(process.execPath, ["--import", "tsx", scriptPath], {
+    cwd: fileURLToPath(new URL("../..", import.meta.url)),
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      MEDPLUM_BASE_URL: "http://localhost:8103",
+      MEDPLUM_ACCESS_TOKEN: "",
+      MEDPLUM_ADMIN_EMAIL: secretEmail,
+      MEDPLUM_ADMIN_PASSWORD: "",
+    },
+  });
+  const output = `${result.stdout}${result.stderr}`;
+
+  assert.equal(result.status, 1);
+  assert.match(
+    output,
+    /MEDPLUM_ACCESS_TOKEN, or MEDPLUM_ADMIN_EMAIL \+ MEDPLUM_ADMIN_PASSWORD/,
+  );
+  assert.match(output, /Absent: MEDPLUM_ACCESS_TOKEN, MEDPLUM_ADMIN_PASSWORD/);
+  assert.doesNotMatch(output, new RegExp(secretEmail));
+});
+
+test("credential-reading npm scripts load the repo env file", () => {
+  const packageJson = JSON.parse(
+    readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
+  ) as { scripts: Record<string, string> };
+
+  assert.equal(
+    packageJson.scripts["reseed-role-tags"],
+    "tsx --env-file-if-exists=.env scripts/reseed-practice-role-tags.ts",
+  );
+  assert.equal(
+    packageJson.scripts["seed-scheduler"],
+    "tsx --env-file-if-exists=.env scripts/seed-scheduler-demo.ts",
+  );
+  assert.equal(
+    packageJson.scripts.poc,
+    "tsx --env-file-if-exists=.env src/index.ts",
   );
 });
 
