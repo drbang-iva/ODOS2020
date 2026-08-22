@@ -458,7 +458,10 @@ test("Inventory UI has no password field and no raw SQL route", () => {
   ].map((file) => readFileSync(file, "utf8")).join("\n");
   assert.doesNotMatch(uiFiles, /type=["']password["']/i);
   assert.doesNotMatch(uiFiles, /passwordSecret|framesDataPassword|bearer token|api key/i);
-  assert.doesNotMatch(uiFiles, /\bSELECT\b|\bodos_frames_catalog\b|\bodos_practice_frames_inventory\b/i);
+  assert.doesNotMatch(
+    uiFiles,
+    /\bSELECT\s+(?:\*|[a-z_][a-z0-9_]*(?:\s*,\s*[a-z_][a-z0-9_]*)*)\s+FROM\b|\bodos_frames_catalog\b|\bodos_practice_frames_inventory\b/i,
+  );
   assert.match(uiFiles, /DeviceDefinition/);
   assert.match(uiFiles, /Basic/);
   assert.match(uiFiles, /Username/);

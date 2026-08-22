@@ -1,8 +1,10 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import {
+  adjustFrameInventoryUnit,
   canExportFrameCatalogCsv,
   dispenseFrameInventoryUnit,
   dollarsToCentsExact,
+  FRAME_INVENTORY_UNIT_STATUS_LABELS,
   frameInventoryUnitStatusLabel,
   exportableFrameRows,
   loadFramesDataSubscriptionSettings,
@@ -35,6 +37,11 @@ export interface OpticalFramesApi {
   loadVariantSettings(): Promise<PracticeFrameVariantSettings[]>;
   receiveInventory(item: FrameCatalogItem, input: ReceiveFrameInventoryInput): Promise<ReceivedFrameInventory>;
   dispenseUnit(unitId: string): Promise<PracticeFrameInventoryUnit>;
+  adjustUnit(
+    unitId: string,
+    status: PracticeFrameInventoryUnit["status"],
+    reason: string,
+  ): Promise<PracticeFrameInventoryUnit>;
 }
 
 const defaultApi: OpticalFramesApi = {
@@ -43,6 +50,7 @@ const defaultApi: OpticalFramesApi = {
   loadVariantSettings: loadPracticeFrameVariantSettings,
   receiveInventory: (item, input) => receiveFrameInventory(item, input, actingPractitionerId()),
   dispenseUnit: (unitId) => dispenseFrameInventoryUnit(unitId, actingPractitionerId()),
+  adjustUnit: (unitId, status, reason) => adjustFrameInventoryUnit(unitId, status, reason),
 };
 
 function actingPractitionerId(): string {
@@ -160,7 +168,8 @@ export function OpticalFrames({ route, api = defaultApi }: { route: OpticalFrame
             units={units}
             catalog={catalogRows}
             onDispense={api.dispenseUnit}
-            onDispensed={unitDispensed}
+            onAdjust={api.adjustUnit}
+            onChanged={unitDispensed}
             onError={setError}
           />
         ) : null}
@@ -388,18 +397,28 @@ function InventoryTable({
   units,
   catalog,
   onDispense,
-  onDispensed,
+  onAdjust,
+  onChanged,
   onError,
 }: {
   rows: readonly PracticeFrameInventorySummary[];
   units: readonly PracticeFrameInventoryUnit[];
   catalog: readonly FrameCatalogItem[];
   onDispense(unitId: string): Promise<PracticeFrameInventoryUnit>;
-  onDispensed(unit: PracticeFrameInventoryUnit): void;
+  onAdjust(
+    unitId: string,
+    status: PracticeFrameInventoryUnit["status"],
+    reason: string,
+  ): Promise<PracticeFrameInventoryUnit>;
+  onChanged(unit: PracticeFrameInventoryUnit): void;
   onError(message: string | null): void;
 }) {
   const [expandedUrls, setExpandedUrls] = useState<Set<string>>(() => new Set());
   const [pendingIds, setPendingIds] = useState<Set<string>>(() => new Set());
+  const [adjustmentUnit, setAdjustmentUnit] = useState<PracticeFrameInventoryUnit>();
+  const [correctedStatus, setCorrectedStatus] = useState<PracticeFrameInventoryUnit["status"]>("on_hand");
+  const [reason, setReason] = useState("");
+  const [adjustmentPending, setAdjustmentPending] = useState(false);
   const catalogByUrl = useMemo(() => new Map(catalog.map((row) => [row.canonicalUrl, row])), [catalog]);
   const unitsByUrl = useMemo(() => {
     const grouped = new Map<string, PracticeFrameInventoryUnit[]>();
@@ -424,7 +443,7 @@ function InventoryTable({
     setPendingIds((current) => new Set(current).add(unitId));
     onError(null);
     try {
-      onDispensed(await onDispense(unitId));
+      onChanged(await onDispense(unitId));
     } catch (err) {
       onError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -436,7 +455,35 @@ function InventoryTable({
     }
   }
 
+  function openAdjustment(unit: PracticeFrameInventoryUnit) {
+    setAdjustmentUnit(unit);
+    setCorrectedStatus(unit.status);
+    setReason("");
+    onError(null);
+  }
+
+  async function submitAdjustment(event: { preventDefault(): void }) {
+    event.preventDefault();
+    if (!adjustmentUnit) return;
+    const correctionReason = reason.trim();
+    if (!correctionReason) {
+      onError("A correction reason is required.");
+      return;
+    }
+    setAdjustmentPending(true);
+    onError(null);
+    try {
+      onChanged(await onAdjust(adjustmentUnit.id, correctedStatus, correctionReason));
+      setAdjustmentUnit(undefined);
+    } catch (err) {
+      onError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setAdjustmentPending(false);
+    }
+  }
+
   return (
+    <>
     <div className="overflow-hidden rounded border border-[color:var(--odos-line)]">
       <table className="w-full table-fixed text-left text-sm">
         <thead className="bg-[color:var(--odos-surface-2)] text-[color:var(--odos-muted)]">
@@ -511,6 +558,7 @@ function InventoryTable({
                               <td className="py-2">{unit.receivedAt}</td>
                               <td className="py-2">{frameInventoryUnitStatusLabel(unit.status)}</td>
                               <td className="py-2 text-right">
+                                <div className="flex justify-end gap-2">
                                 {unit.status === "on_hand" ? (
                                   <button
                                     className="sidebar-button py-1"
@@ -521,6 +569,15 @@ function InventoryTable({
                                     {pendingIds.has(unit.id) ? "Marking…" : "Mark Dispensed"}
                                   </button>
                                 ) : null}
+                                <button
+                                  className="sidebar-button py-1"
+                                  type="button"
+                                  disabled={pendingIds.has(unit.id)}
+                                  onClick={() => openAdjustment(unit)}
+                                >
+                                  Adjust
+                                </button>
+                                </div>
                               </td>
                             </tr>
                           ))}
@@ -535,6 +592,63 @@ function InventoryTable({
         </tbody>
       </table>
     </div>
+    {adjustmentUnit ? (
+      <div className="fixed inset-0 z-50 grid place-items-center bg-[color:var(--odos-chart-scrim)] p-4 backdrop-blur-sm">
+        <form
+          aria-label={`Adjust unit ${adjustmentUnit.id}`}
+          className="w-full max-w-lg rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-popover)] p-5 shadow-2xl"
+          onSubmit={(event) => void submitAdjustment(event)}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold">Adjust inventory unit</h2>
+              <div className="text-sm text-[color:var(--odos-muted)]">{adjustmentUnit.id}</div>
+            </div>
+            <button
+              className="text-[color:var(--odos-muted)] hover:text-[color:var(--odos-text)]"
+              type="button"
+              onClick={() => setAdjustmentUnit(undefined)}
+            >
+              Close
+            </button>
+          </div>
+          <div className="mt-5 grid gap-4">
+            <label className="grid gap-1 text-sm">
+              <span className="text-[color:var(--odos-muted)]">Corrected status</span>
+              <select
+                aria-label="Corrected status"
+                className="sidebar-input"
+                value={correctedStatus}
+                onChange={(event) => setCorrectedStatus(event.target.value as PracticeFrameInventoryUnit["status"])}
+              >
+                {Object.entries(FRAME_INVENTORY_UNIT_STATUS_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </label>
+            <label className="grid gap-1 text-sm">
+              <span className="text-[color:var(--odos-muted)]">Reason *</span>
+              <textarea
+                aria-label="Reason"
+                className="sidebar-input min-h-24"
+                required
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+              />
+            </label>
+          </div>
+          <div className="mt-5 flex justify-end gap-2">
+            <button className="sidebar-button" type="button" disabled={adjustmentPending} onClick={() => setAdjustmentUnit(undefined)}>
+              Cancel
+            </button>
+            <button className="sidebar-button" type="submit" disabled={adjustmentPending}>
+              {adjustmentPending ? "Saving…" : "Save adjustment"}
+            </button>
+          </div>
+        </form>
+      </div>
+    ) : null}
+    </>
   );
 }
 

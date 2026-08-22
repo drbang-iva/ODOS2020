@@ -1,5 +1,6 @@
 import type { AuditEvent, Basic, Binary, Bundle, DeviceDefinition, Provenance } from "@medplum/fhirtypes";
 import { assertTransactionSuccess } from "./encounter-bundles";
+import { clinicalGraphApiBase } from "./clinical-graph-client";
 import { fhir } from "./fhir";
 import type { RoleId } from "./roles";
 
@@ -220,6 +221,50 @@ export async function dispenseFrameInventoryUnit(
     "dispensed",
     actorId,
   );
+}
+
+export async function adjustFrameInventoryUnit(
+  unitId: string,
+  status: FrameInventoryUnitStatus,
+  reason: string,
+  options: { fetchImpl?: typeof fetch; authorization?: string } = {},
+): Promise<PracticeFrameInventoryUnit> {
+  const authorization = options.authorization ?? fhir.authHeader();
+  const response = await (options.fetchImpl ?? fetch)(
+    `${clinicalGraphApiBase()}/inventory/frame-units/${encodeURIComponent(unitId)}/adjustments`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(authorization ? { Authorization: authorization } : {}),
+      },
+      body: JSON.stringify({ status, reason }),
+    },
+  );
+  const body = await response.json().catch(() => ({})) as {
+    error?: string;
+    unit?: Partial<PracticeFrameInventoryUnit>;
+  };
+  if (!response.ok) {
+    throw new Error(body.error ?? `Frame inventory adjustment failed (${response.status}).`);
+  }
+  const unit = body.unit;
+  const unitStatus = unit?.status;
+  if (!unit
+    || typeof unit.id !== "string"
+    || typeof unit.canonicalUrl !== "string"
+    || typeof unit.receivedAt !== "string"
+    || typeof unitStatus !== "string"
+    || !isUnitStatus(unitStatus)) {
+    throw new Error("Frame inventory adjustment returned an invalid unit.");
+  }
+  return {
+    id: unit.id,
+    canonicalUrl: unit.canonicalUrl,
+    status: unitStatus,
+    ...(typeof unit.location === "string" ? { location: unit.location } : {}),
+    receivedAt: unit.receivedAt,
+  };
 }
 
 export async function transitionFrameInventoryUnitStatus(

@@ -109,6 +109,7 @@ import {
   labOrderRoutingFromEnv,
 } from "./lab-orders/lab-order-dispatch.js";
 import { registerLabOrderRoutes } from "./lab-orders/lab-order-routes.js";
+import { handleFrameInventoryAdjustmentRequest } from "./inventory/frame-inventory-adjustment.js";
 import {
   authenticateStaffRoute as resolveAuthenticatedStaffRoute,
   paymentAdapterRegistrationsFromEnv,
@@ -7394,6 +7395,26 @@ async function startMcpServer(): Promise<void> {
           console.error("odos-mcp: /payments/charge failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "payment route failed" });
+          }
+        }
+      });
+
+      app.post("/inventory/frame-units/:unitId/adjustments", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleFrameInventoryAdjustmentRequest(
+            { authenticate: authenticateStaffRoute, serviceFhir: fhir },
+            {
+              authHeader: req.header("authorization"),
+              unitId: req.params.unitId,
+              body: req.body,
+            },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: frame inventory adjustment route failed:", error);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "frame inventory adjustment failed" });
           }
         }
       });
