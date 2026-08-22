@@ -10,6 +10,8 @@ import {
   type WenoPharmacyDirectoryStorageClient,
 } from "../mcp/src/jobs/syncWenoPharmacyDirectory.js";
 
+const MINIMUM_PHARMACY_DIRECTORY_REPLACEMENT_ROWS = 90_000;
+
 type PharmacyDirectoryIngestResult = Pick<
   SyncWenoPharmacyDirectoryResult,
   "parsed" | "stored" | "malformedRows" | "deduplicatedRows"
@@ -20,6 +22,7 @@ type CloseablePharmacyDirectoryStorage = WenoPharmacyDirectoryStorageClient & {
 };
 
 export interface WenoPharmacyDirectoryRunnerOptions {
+  minimumReplacementRows?: number;
   postgresUrl?: string;
   storage?: CloseablePharmacyDirectoryStorage;
   log?: (line: string) => void;
@@ -53,6 +56,15 @@ export async function runWenoPharmacyDirectoryIngest(
   const parsed = parsePharmacyDirectoryZip(Uint8Array.from(zipBytes).buffer);
   if (parsed.rows.length === 0) {
     throw new Error(`WENO pharmacy directory file yielded zero rows; replacement refused: ${filePath}`);
+  }
+  const activeRows = parsed.rows.filter((row) => !row.deleted).length;
+  const minimumReplacementRows = options.minimumReplacementRows
+    ?? MINIMUM_PHARMACY_DIRECTORY_REPLACEMENT_ROWS;
+  if (activeRows < minimumReplacementRows) {
+    throw new Error(
+      `WENO pharmacy directory file yielded ${activeRows} active rows; `
+      + `minimum ${minimumReplacementRows} required for replacement: ${filePath}`,
+    );
   }
   const storage = options.storage ?? new PostgresWenoPharmacyDirectoryStorage(
     options.postgresUrl ? { postgresUrl: options.postgresUrl } : {},

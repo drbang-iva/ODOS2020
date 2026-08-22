@@ -1,5 +1,6 @@
 #!/usr/bin/env tsx
-import { readFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { access } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import {
   ingestWenoDrugDatabaseFile,
@@ -8,11 +9,14 @@ import {
   type WenoDrugDatabaseStorageClient,
 } from "../mcp/src/jobs/syncWenoDrugDatabase.js";
 
+const MINIMUM_DRUG_DATABASE_REPLACEMENT_ROWS = 9_000;
+
 type CloseableWenoDrugDatabaseStorage = WenoDrugDatabaseStorageClient & {
   close(): Promise<void>;
 };
 
 export interface WenoDrugDatabaseRunnerOptions {
+  minimumReplacementRows?: number;
   postgresUrl?: string;
   storage?: CloseableWenoDrugDatabaseStorage;
   log?: (line: string) => void;
@@ -27,7 +31,7 @@ export async function runWenoDrugDatabaseIngest(
   }
 
   try {
-    await readFile(filePath);
+    await access(filePath, constants.R_OK);
   } catch (error) {
     throw new Error(`WENO drug database file could not be read: ${filePath}`, { cause: error });
   }
@@ -36,7 +40,19 @@ export async function runWenoDrugDatabaseIngest(
     options.postgresUrl ? { postgresUrl: options.postgresUrl } : {},
   );
   try {
-    const result = await ingestWenoDrugDatabaseFile(filePath, storage);
+    const minimumReplacementRows = options.minimumReplacementRows
+      ?? MINIMUM_DRUG_DATABASE_REPLACEMENT_ROWS;
+    const result = await ingestWenoDrugDatabaseFile(filePath, {
+      async store(rows) {
+        if (rows.length < minimumReplacementRows) {
+          throw new Error(
+            `WENO drug database file yielded ${rows.length} storable rows; `
+            + `minimum ${minimumReplacementRows} required for replacement: ${filePath}`,
+          );
+        }
+        return storage.store(rows);
+      },
+    });
     (options.log ?? console.log)(
       `WENO drug database ingest complete: total=${result.totalRows} parsed=${result.parsed} `
       + `stored=${result.stored} controlled=${result.filteredControlled} `

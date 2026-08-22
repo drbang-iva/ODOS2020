@@ -48,6 +48,7 @@ test("pharmacy runner wraps a bare CSV for the real parser and reports stored co
   try {
     await writeFile(path, pharmacyDirectoryCsv());
     const result = await runWenoPharmacyDirectoryIngest(path, {
+      minimumReplacementRows: 1,
       postgresUrl: SECRET_POSTGRES_URL,
       storage: {
         async store(rows, mode) {
@@ -84,6 +85,7 @@ test("pharmacy runner passes a ZIP file directly to the existing parser", async 
   try {
     await writeFile(path, zipSync({ "directory.csv": new TextEncoder().encode(pharmacyDirectoryCsv()) }));
     await runWenoPharmacyDirectoryIngest(path, {
+      minimumReplacementRows: 1,
       storage: {
         async store(rows) {
           storedRows.push([...rows]);
@@ -107,6 +109,7 @@ test("pharmacy runner refuses to replace the directory when a readable file yiel
     await writeFile(path, pharmacyDirectoryCsv().split("\n").slice(0, 2).join("\n"));
     await assert.rejects(
       runWenoPharmacyDirectoryIngest(path, {
+        minimumReplacementRows: 1,
         storage: {
           async store() {
             storeCalls += 1;
@@ -119,6 +122,34 @@ test("pharmacy runner refuses to replace the directory when a readable file yiel
       (error: unknown) => error instanceof Error
         && error.message.includes(path)
         && /yielded zero rows/.test(error.message),
+    );
+    assert.equal(storeCalls, 0);
+  } finally {
+    await rm(directory, { recursive: true });
+  }
+});
+
+test("pharmacy runner refuses a parseable partial replacement before storage", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "odos-weno-pharmacy-partial-runner-"));
+  const path = join(directory, "partial-directory.csv");
+  let storeCalls = 0;
+  try {
+    await writeFile(path, pharmacyDirectoryCsv());
+    await assert.rejects(
+      runWenoPharmacyDirectoryIngest(path, {
+        storage: {
+          async store() {
+            storeCalls += 1;
+            return 0;
+          },
+          async close() {},
+        },
+        log() {},
+      }),
+      (error: unknown) => error instanceof Error
+        && error.message.includes(path)
+        && /1 active rows/.test(error.message)
+        && /minimum 90000/.test(error.message),
     );
     assert.equal(storeCalls, 0);
   } finally {
@@ -152,6 +183,7 @@ test("drug runner calls the existing file ingest and reports real counts without
   try {
     await writeFile(path, drugDatabaseFile());
     const result = await runWenoDrugDatabaseIngest(path, {
+      minimumReplacementRows: 1,
       postgresUrl: SECRET_POSTGRES_URL,
       storage: {
         async store(rows) {
@@ -176,6 +208,34 @@ test("drug runner calls the existing file ingest and reports real counts without
     assert.equal(closed, true);
     assert.match(output.join("\n"), /total=2 parsed=1 stored=1 controlled=1 retired=0 suppressed=0 malformed=0/);
     assert.equal(output.join("\n").includes(SECRET_POSTGRES_URL), false);
+  } finally {
+    await rm(directory, { recursive: true });
+  }
+});
+
+test("drug runner refuses a parseable partial replacement before storage", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "odos-weno-drug-partial-runner-"));
+  const path = join(directory, "partial-drug-database.txt");
+  let storeCalls = 0;
+  try {
+    await writeFile(path, drugDatabaseFile());
+    await assert.rejects(
+      runWenoDrugDatabaseIngest(path, {
+        storage: {
+          async store() {
+            storeCalls += 1;
+            return 0;
+          },
+          async close() {},
+        },
+        log() {},
+      }),
+      (error: unknown) => error instanceof Error
+        && error.message.includes(path)
+        && /1 storable rows/.test(error.message)
+        && /minimum 9000/.test(error.message),
+    );
+    assert.equal(storeCalls, 0);
   } finally {
     await rm(directory, { recursive: true });
   }
