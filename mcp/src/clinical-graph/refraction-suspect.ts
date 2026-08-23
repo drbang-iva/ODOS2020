@@ -100,6 +100,25 @@ export function buildRefractionFindingDefinitionStub(
           unit: "degrees",
         },
         add: powerField("Add"),
+        prismAmount: {
+          display: "Prism amount",
+          type: "quarter-diopter-select",
+          minimum: 0.25,
+          maximum: 20,
+          step: 0.25,
+          unit: "PD",
+        },
+        prismBase: {
+          display: "Prism base",
+          type: "single-select",
+          editable: true,
+          options: [
+            { code: "up", display: "Up", active: true },
+            { code: "down", display: "Down", active: true },
+            { code: "in", display: "In", active: true },
+            { code: "out", display: "Out", active: true },
+          ],
+        },
         purpose: {
           display: "Purpose",
           type: "string",
