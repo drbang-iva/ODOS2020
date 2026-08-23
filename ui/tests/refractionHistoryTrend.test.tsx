@@ -46,6 +46,22 @@ test("an unparseable manifest distance acuity remains visible", async () => {
   }
 });
 
+test("chartable and unchartable manifest distance acuities remain visible together", async () => {
+  const harness = await renderHistory([
+    glassesRow("MANIFEST", "OD", "2025-08-02T14:00:00.000Z", "20/20"),
+    glassesRow("MANIFEST", "OS", "2025-08-02T14:00:00.000Z", "CF"),
+  ]);
+  try {
+    const trend = harness.renderer.root.findByProps({ "aria-label": "Manifest distance acuity trend" });
+    assert.equal(trend.findAllByType("circle").length, 1);
+    assert.match(textContent(harness.renderer.root), /1 reading not chartable/);
+    assert.match(textContent(harness.renderer.root), /OS/);
+    assert.match(textContent(harness.renderer.root), /CF/);
+  } finally {
+    harness.restore();
+  }
+});
+
 test("manifest distance acuity trend states the empty condition when no manifest history exists", async () => {
   const harness = await renderHistory([]);
   try {

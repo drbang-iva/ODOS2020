@@ -3,6 +3,7 @@ import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-clie
 import { OdosWheel } from "../inputs/OdosWheel";
 import { OdosChips } from "../inputs/OdosChips";
 import { formatStepValue } from "./power-options";
+import { SerialTrendChart, type SerialTrendSeries } from "./SerialTrendChart";
 import type { SectionSaveStatus } from "./types";
 
 type Eye = "OD" | "OS";
@@ -83,7 +84,24 @@ interface HistoryRow {
   remarks?: string;
 }
 
+interface NumericHistoryTrendConfig {
+  title: string;
+  ariaLabel: string;
+  valueCode: string;
+  axisUnit: string;
+  emptyText: string;
+}
+
 const EYES: Eye[] = ["OD", "OS"];
+const NUMERIC_HISTORY_TRENDS = new Map<string, NumericHistoryTrendConfig>([
+  ["dry-eye:markers", {
+    title: "Tear osmolarity trend",
+    ariaLabel: "Tear osmolarity trend",
+    valueCode: "CUSTOM_OSMOLARITY_MOSM_L",
+    axisUnit: "mOsm/L",
+    emptyText: "No tear osmolarity recorded",
+  }],
+]);
 
 export function CustomFindingSection({ definition, patientReference, encounterReference, onSaved, apiBase }: Props) {
   const [values, setValues] = useState<Record<string, string | string[]>>({});
@@ -97,6 +115,7 @@ export function CustomFindingSection({ definition, patientReference, encounterRe
   const [historyVersion, setHistoryVersion] = useState(0);
   const resourceKind = definition.resourceKind ?? "finding";
   const fields = definition.customFields.filter((field) => field.active).sort((left, right) => left.order - right.order);
+  const trendConfig = NUMERIC_HISTORY_TRENDS.get(definition.stableKey);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -222,6 +241,9 @@ export function CustomFindingSection({ definition, patientReference, encounterRe
           </div>
           <button type="button" onClick={save} disabled={saving} className="rounded border border-brand/60 bg-brand/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand/25 disabled:opacity-50">{saving ? "Saving…" : resourceKind === "procedure" ? `Record ${definition.display}` : `Save ${definition.display}`}</button>
         </div>
+        {!historyLoading && !historyError && trendConfig && (
+          <NumericHistoryTrend config={trendConfig} rows={history} />
+        )}
         <div className="mt-8 overflow-hidden rounded border border-white/10 bg-bg-panel/55">
           <div className="border-b border-white/10 px-4 py-3 text-sm font-semibold text-white">History</div>
           {historyLoading && <div className="p-6 text-sm text-white/45">Loading history…</div>}
@@ -238,6 +260,42 @@ export function CustomFindingSection({ definition, patientReference, encounterRe
         </div>
       </div>
     </section>
+  );
+}
+
+function NumericHistoryTrend({ config, rows }: { config: NumericHistoryTrendConfig; rows: HistoryRow[] }) {
+  const points: Record<Eye, SerialTrendSeries["points"]> = { OD: [], OS: [] };
+  rows.forEach((row, index) => {
+    if (row.eye !== "OD" && row.eye !== "OS") return;
+    const reading = row.values.find((value) => value.code === config.valueCode);
+    if (typeof reading?.value !== "number" || !Number.isFinite(reading.value)) return;
+    const recordedAt = Date.parse(row.recordedAt);
+    if (!Number.isFinite(recordedAt)) return;
+    points[row.eye].push({
+      id: `${row.recordedAt}-${row.eye}-${index}`,
+      x: recordedAt,
+      value: reading.value,
+      title: `${row.eye} · ${reading.value} ${config.axisUnit} · ${formatTrendDate(row.recordedAt)}`,
+    });
+  });
+  const series: SerialTrendSeries[] = [
+    { id: `${config.valueCode}-od`, label: "OD", color: "var(--odos-sapphire)", points: points.OD },
+    { id: `${config.valueCode}-os`, label: "OS", color: "var(--odos-amber)", points: points.OS },
+  ];
+  return (
+    <div className="mt-8 rounded border border-[color:var(--odos-line)] bg-bg-panel/55 p-4">
+      <div className="mb-3">
+        <h3 className="font-semibold text-[color:var(--odos-text)]">{config.title}</h3>
+        <p className="mt-1 text-xs text-[color:var(--odos-muted)]">{config.axisUnit} · higher readings plot higher</p>
+      </div>
+      <SerialTrendChart
+        ariaLabel={config.ariaLabel}
+        series={series}
+        xFormat={(value) => formatTrendDate(new Date(value).toISOString())}
+        yFormat={(value) => `${Math.round(value)} ${config.axisUnit}`}
+        emptyText={config.emptyText}
+      />
+    </div>
   );
 }
 
@@ -425,4 +483,9 @@ function historyUrl(
 function formatDate(value: string): string {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+}
+
+function formatTrendDate(value: string): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString();
 }
