@@ -151,12 +151,28 @@ test("refraction capture persists typed per-eye graph Observations with VA, Purp
   assert.equal(componentValue(observation, "DISTANCE_VA", "string"), "20/20 +1");
   assert.equal(componentValue(observation, "NEAR_VA", "string"), "J1 (20/25) 4pt 0.50M");
   assert.equal(componentValue(observation, "DISTANCE_PH_VA", "string"), "20/15");
-  const prismAmount = observation.component?.find((row) => row.code.coding?.some((coding) => coding.code === "PRISM_AMOUNT"));
-  assert.equal(prismAmount?.valueQuantity?.value, 2);
-  assert.equal(prismAmount?.valueQuantity?.unit, "PD");
+  const refractionComponent = (code: string) => observation.component
+    ?.find((row) => row.code.coding?.some((coding) => coding.code === code));
+  assert.equal(refractionComponent("PRISM"), undefined);
+  const prismAmount = refractionComponent("PRISM_AMOUNT");
+  assert.equal(prismAmount?.code.coding?.[0]?.system, "https://odos2020.com/fhir/CodeSystem/ophthalmology");
+  assert.deepEqual(prismAmount?.valueQuantity, {
+    value: 2,
+    unit: "PD",
+    system: "http://unitsofmeasure.org",
+    code: "[diop]",
+  });
   assert.equal(prismAmount?.valueCodeableConcept, undefined);
-  const prismBase = observation.component?.find((row) => row.code.coding?.some((coding) => coding.code === "PRISM_BASE"));
-  assert.equal(prismBase?.valueCodeableConcept?.coding?.[0]?.code, "in");
+  const prismBase = refractionComponent("PRISM_BASE");
+  assert.equal(prismBase?.code.coding?.[0]?.system, "https://odos2020.com/fhir/CodeSystem/ophthalmology");
+  assert.deepEqual(prismBase?.valueCodeableConcept, {
+    coding: [{
+      system: "http://hl7.org/fhir/vision-base-codes",
+      code: "in",
+      display: "in",
+    }],
+    text: "in",
+  });
   assert.equal(prismBase?.valueQuantity, undefined);
   assert.equal(created.some((entry) => entry.resource.resourceType === "Condition"), false);
 });
