@@ -94,9 +94,8 @@ function numberComponent(observation: Observation, code: string): number | undef
 function prismComponent(
   observation: Observation,
 ): VisionPrescriptionLensSpecificationPrism | undefined {
-  const prism = component(observation, "PRISM");
-  const amount = prism?.valueQuantity?.value;
-  const base = prism?.valueCodeableConcept?.coding?.find(
+  const amount = component(observation, "PRISM_AMOUNT")?.valueQuantity?.value;
+  const base = component(observation, "PRISM_BASE")?.valueCodeableConcept?.coding?.find(
     (coding) => coding.system === "http://hl7.org/fhir/vision-base-codes",
   )?.code;
 
