@@ -7,7 +7,10 @@ import {
   UCUM_CODE_SYSTEM,
 } from "../src/fhir/contactLens.js";
 import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../src/fhir/ophthalmology/codeBindings.js";
-import { buildSoftContactLensFindingDefinitionStub } from "../src/clinical-graph/contact-lens-definition.js";
+import {
+  buildSoftContactLensFindingDefinitionStub,
+  isFinalContactLensRx,
+} from "../src/clinical-graph/contact-lens-definition.js";
 import {
   handleSoftContactLensCaptureRequest,
   handleSoftContactLensDefinitionRequest,
@@ -20,6 +23,23 @@ const BODY = {
   patientReference: "Patient/p1",
   encounterReference: "Encounter/e1",
 };
+
+test("final_rx classifies as a final contact lens prescription", () => {
+  assert.equal(isFinalContactLensRx("final_rx"), true);
+});
+
+test("dispensed_unsuccessful classifies as not final", () => {
+  assert.equal(isFinalContactLensRx("dispensed_unsuccessful"), false);
+});
+
+test("legacy dispensed_successful classifies as final", () => {
+  assert.equal(isFinalContactLensRx("dispensed_successful"), true);
+});
+
+test("an absent contact lens status is unclassifiable rather than not final", () => {
+  assert.equal(isFinalContactLensRx(undefined), undefined);
+  assert.notEqual(isFinalContactLensRx(undefined), isFinalContactLensRx("order_trial"));
+});
 
 function deps(
   role: PracticeRoleId = "provider",
@@ -155,7 +175,7 @@ test("soft CL capture persists one Observation per eye using existing CL paramet
     assert.equal(component?.valueQuantity?.system, UCUM_CODE_SYSTEM);
   }
   assert.equal(componentValue(od, "USAGE"), "multifocal");
-  assert.equal(componentValue(od, "STATUS"), "dispensed_successful");
+  assert.equal(componentValue(od, "STATUS"), "final_rx");
   assert.equal(componentValue(od, "BINOCULAR_PD_DISTANCE"), 62);
   assert.equal(componentValue(od, "COLOR_MF_POWER"), "high");
 });
@@ -233,7 +253,7 @@ function softClBody() {
   return {
     ...BODY,
     usage: "multifocal",
-    status: "dispensed_successful",
+    status: "final_rx",
     binocularPdDistance: 62,
     binocularPdNear: 59,
     ouDistanceVisualAcuity: "20/20",

@@ -11,8 +11,14 @@ import { OrthoKSection } from "../src/components/charting/OrthoKSection";
 import { PowerDropdown } from "../src/components/charting/PowerDropdown";
 import { RefractionSection } from "../src/components/charting/RefractionSection";
 import { SoftContactLensSection, softLensProductParameterOptions } from "../src/components/charting/SoftContactLensSection";
+import { SpecialtyContactLensSection } from "../src/components/charting/SpecialtyContactLensSection";
 import { VaSection } from "../src/components/charting/VaSection";
 import { VaValueSelect } from "../src/components/charting/VaValueSelect";
+import { OdosSelect } from "../src/components/inputs/OdosSelect";
+import {
+  buildSoftContactLensFindingDefinitionStub,
+  buildSpecialtyContactLensFindingDefinitionStub,
+} from "../../mcp/src/clinical-graph/contact-lens-definition.js";
 
 const PROPS = {
   patientReference: "Patient/p1",
@@ -141,6 +147,67 @@ test("soft contact lens details neither render nor save spectacle PD", async () 
     assert.equal("binocularPdNear" in savedBody, false);
   } finally {
     renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("contact lens status pickers hide deprecated dispensing states while legacy labels remain resolvable", async () => {
+  const originalFetch = globalThis.fetch;
+  const provenance = { source: "manual" as const, recordedAt: "2026-08-23T12:00:00.000Z" };
+  const definitions = {
+    soft: buildSoftContactLensFindingDefinitionStub(provenance),
+    specialty: buildSpecialtyContactLensFindingDefinitionStub(provenance),
+  };
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith("/clinical-graph/contact-lens/soft/definition")) {
+      return Response.json({ definition: { fields: definitions.soft.valueSchema.fields } });
+    }
+    if (url.endsWith("/clinical-graph/contact-lens/specialty/definition")) {
+      return Response.json({ definition: { fields: definitions.specialty.valueSchema.fields } });
+    }
+    if (url.includes("/clinical-graph/refraction/history?")) {
+      return Response.json({ glasses: [], softCl: [], specialtyCl: [] });
+    }
+    if (url.includes("/clinical-graph/contact-lens/keratometry?")) {
+      return Response.json({ eyes: { OD: null, OS: null } });
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  };
+
+  const deprecatedCodes = [
+    "dispensed",
+    "dispensed_patient_confirm",
+    "dispensed_successful",
+    "dispensed_unsuccessful",
+  ];
+  const renderers: ReactTestRenderer[] = [];
+  try {
+    for (const Component of [SoftContactLensSection, SpecialtyContactLensSection]) {
+      let renderer!: ReactTestRenderer;
+      await act(async () => {
+        renderer = create(<Component {...PROPS} />);
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      renderers.push(renderer);
+      const status = renderer.root.findAllByType(OdosSelect).find((select) => select.props.ariaLabel === "Status");
+      assert.ok(status);
+      const activeCodes = status.props.options.map((option: { value: string }) => option.value);
+      assert.ok(activeCodes.includes("final_rx"));
+      for (const code of deprecatedCodes) assert.equal(activeCodes.includes(code), false, code);
+    }
+
+    for (const definition of Object.values(definitions)) {
+      const statusOptions = definition.valueSchema.fields.status?.options ?? [];
+      const legacyRecord = { status: "dispensed_successful" };
+      assert.equal(
+        statusOptions.find((option) => option.code === legacyRecord.status)?.display,
+        "Dispensed Successful",
+      );
+    }
+  } finally {
+    for (const renderer of renderers) act(() => renderer.unmount());
     globalThis.fetch = originalFetch;
   }
 });

@@ -229,7 +229,7 @@ test("soft contact lens capture round-trips canonical CL parameters and tab-spec
     body: {
       patientReference: PATIENT,
       encounterReference: ENCOUNTER,
-      status: "dispensed_successful",
+      status: "final_rx",
       eyes: {
         OS: {
           manufacturer: "alcon",
@@ -271,7 +271,7 @@ test("soft contact lens capture round-trips canonical CL parameters and tab-spec
     colorMfPower: "high",
     distVA: "20/20",
     nearVA: "J1",
-    status: "dispensed_successful",
+    status: "final_rx",
   }]);
   assert.deepEqual(history.glasses, []);
   assert.deepEqual(history.specialtyCl, []);
@@ -289,7 +289,7 @@ test("same-time soft contact lens captures retain separate two-eye prescription 
       body: {
         patientReference: PATIENT,
         encounterReference: ENCOUNTER,
-        status: "dispensed_successful",
+        status: "final_rx",
         eyes: {
           OD: { manufacturer: "alcon", product: lens.product, baseCurve: lens.baseCurve, diameter: 14.2, sphere: lens.sphere },
           OS: { manufacturer: "alcon", product: lens.product, baseCurve: lens.baseCurve, diameter: 14.2, sphere: lens.sphere + 0.25 },
