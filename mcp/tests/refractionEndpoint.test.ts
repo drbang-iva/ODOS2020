@@ -151,10 +151,13 @@ test("refraction capture persists typed per-eye graph Observations with VA, Purp
   assert.equal(componentValue(observation, "DISTANCE_VA", "string"), "20/20 +1");
   assert.equal(componentValue(observation, "NEAR_VA", "string"), "J1 (20/25) 4pt 0.50M");
   assert.equal(componentValue(observation, "DISTANCE_PH_VA", "string"), "20/15");
-  const prism = observation.component?.find((row) => row.code.coding?.some((coding) => coding.code === "PRISM"));
-  assert.equal(prism?.valueQuantity?.value, 2);
-  assert.equal(prism?.valueQuantity?.unit, "PD");
-  assert.equal(prism?.valueCodeableConcept?.coding?.[0]?.code, "in");
+  const prismAmount = observation.component?.find((row) => row.code.coding?.some((coding) => coding.code === "PRISM_AMOUNT"));
+  assert.equal(prismAmount?.valueQuantity?.value, 2);
+  assert.equal(prismAmount?.valueQuantity?.unit, "PD");
+  assert.equal(prismAmount?.valueCodeableConcept, undefined);
+  const prismBase = observation.component?.find((row) => row.code.coding?.some((coding) => coding.code === "PRISM_BASE"));
+  assert.equal(prismBase?.valueCodeableConcept?.coding?.[0]?.code, "in");
+  assert.equal(prismBase?.valueQuantity, undefined);
   assert.equal(created.some((entry) => entry.resource.resourceType === "Condition"), false);
 });
 
