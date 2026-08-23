@@ -311,7 +311,7 @@ test("SoftContactLensSection pulls a current trial into a separately selected fi
     const pull = renderer.root.findAllByType(OdosSelect).find((item) => item.props.ariaLabel === "Pull contact lens values from");
     assert.ok(status);
     assert.ok(pull);
-    act(() => status.props.onChange("dispensed_successful"));
+    act(() => status.props.onChange("final_rx"));
     act(() => pull.props.onChange("current-trial-soft-cl"));
 
     const odSphere = renderer.root.findAll((item) => item.props.ariaLabel === "OD sphere").find((item) => typeof item.props.onChange === "function");
@@ -326,7 +326,7 @@ test("SoftContactLensSection pulls a current trial into a separately selected fi
     });
 
     assert.ok(savedBody);
-    assert.equal(savedBody.status, "dispensed_successful");
+    assert.equal(savedBody.status, "final_rx");
     const eyes = savedBody.eyes as Record<string, Record<string, unknown>>;
     assert.equal(eyes.OD?.product, "precision7");
     assert.equal(eyes.OD?.sphere, -2.5);
@@ -565,7 +565,8 @@ function softClDefinition() {
       fields: {
         status: { options: [
           { code: "order_trial", display: "Order Trial", active: true },
-          { code: "dispensed_successful", display: "Dispensed Successful", active: true },
+          { code: "dispensed_successful", display: "Dispensed Successful", active: false },
+          { code: "final_rx", display: "Final Rx", active: true },
         ] },
         manufacturer: { options: [{ code: "alcon", display: "Alcon Laboratories Inc", active: true }] },
         product: { options: [{

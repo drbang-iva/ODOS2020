@@ -47,11 +47,27 @@ const STATUS_OPTIONS: ClinicalFindingOption[] = [
   option("order_trial", "Order Trial"),
   option("order_trial_doctor_fit", "Order Trial and Needs Fitting by Doctor"),
   option("order_trial_staff_fit", "Order Trial and Needs Fitting by Staff"),
-  option("dispensed", "Dispensed"),
-  option("dispensed_patient_confirm", "Dispensed and Patient Can Confirm Fit"),
-  option("dispensed_successful", "Dispensed Successful"),
-  option("dispensed_unsuccessful", "Dispensed Unsuccessful"),
+  { ...option("dispensed", "Dispensed"), active: false },
+  { ...option("dispensed_patient_confirm", "Dispensed and Patient Can Confirm Fit"), active: false },
+  { ...option("dispensed_successful", "Dispensed Successful"), active: false },
+  { ...option("dispensed_unsuccessful", "Dispensed Unsuccessful"), active: false },
+  option("final_rx", "Final Rx"),
 ];
+
+const FINAL_CONTACT_LENS_RX_BY_STATUS: Readonly<Record<string, boolean>> = {
+  final_rx: true,
+  dispensed_successful: true,
+  dispensed: true,
+  dispensed_patient_confirm: true,
+  dispensed_unsuccessful: false,
+  order_trial: false,
+  order_trial_doctor_fit: false,
+  order_trial_staff_fit: false,
+};
+
+export function isFinalContactLensRx(status: string | undefined): boolean | undefined {
+  return status ? FINAL_CONTACT_LENS_RX_BY_STATUS[status] : undefined;
+}
 
 const UNDERLYING_CONDITION_OPTIONS: ClinicalFindingOption[] = [
   option("prosthesis", "Prosthesis"),
