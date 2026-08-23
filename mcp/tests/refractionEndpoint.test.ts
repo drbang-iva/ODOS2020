@@ -76,6 +76,11 @@ test("refraction definition endpoint serves practice-editable types, fields, thr
   );
   assert.equal(body.definition.fields.sphere.step, 0.25);
   assert.equal(body.definition.fields.axis.step, 1);
+  assert.equal(body.definition.fields.prismAmount.step, 0.25);
+  assert.deepEqual(
+    body.definition.fields.prismBase.options?.map((option) => option.code),
+    ["up", "down", "in", "out"],
+  );
   assert.equal(body.refractiveThreshold, 0.25);
   assert.equal(body.diagnosisOptions.length, 14);
 });
@@ -113,6 +118,8 @@ test("refraction capture persists typed per-eye graph Observations with VA, Purp
           cylinder: -0.5,
           axis: 90,
           add: 2,
+          prismAmount: 2,
+          prismBase: "in",
           distanceVisualAcuity: "20/20 +1",
           nearVisualAcuity: "J1 (20/25) 4pt 0.50M",
           distancePinholeVisualAcuity: "20/15",
@@ -144,6 +151,10 @@ test("refraction capture persists typed per-eye graph Observations with VA, Purp
   assert.equal(componentValue(observation, "DISTANCE_VA", "string"), "20/20 +1");
   assert.equal(componentValue(observation, "NEAR_VA", "string"), "J1 (20/25) 4pt 0.50M");
   assert.equal(componentValue(observation, "DISTANCE_PH_VA", "string"), "20/15");
+  const prism = observation.component?.find((row) => row.code.coding?.some((coding) => coding.code === "PRISM"));
+  assert.equal(prism?.valueQuantity?.value, 2);
+  assert.equal(prism?.valueQuantity?.unit, "PD");
+  assert.equal(prism?.valueCodeableConcept?.coding?.[0]?.code, "in");
   assert.equal(created.some((entry) => entry.resource.resourceType === "Condition"), false);
 });
 
@@ -202,6 +213,14 @@ test("refraction request validation rejects empty, unknown-type, and non-quarter
     authHeader: AUTH,
     body: { ...BODY, blocks: [{ type: "MANIFEST", OD: { sphere: -0.3 } }] },
   });
+  const incompletePrism = await handleRefractionCaptureRequest(deps().deps, {
+    authHeader: AUTH,
+    body: { ...BODY, blocks: [{ type: "MANIFEST", OD: { sphere: -1, prismAmount: 2 } }] },
+  });
+  const unknownPrismBase = await handleRefractionCaptureRequest(deps().deps, {
+    authHeader: AUTH,
+    body: { ...BODY, blocks: [{ type: "MANIFEST", OD: { sphere: -1, prismAmount: 2, prismBase: "nasal" } }] },
+  });
 
   assert.equal(empty.status, 400);
   assert.match(String((empty.body as { error: string }).error), /populated eye/);
@@ -209,6 +228,10 @@ test("refraction request validation rejects empty, unknown-type, and non-quarter
   assert.match(String((unknown.body as { error: string }).error), /unknown option/);
   assert.equal(increment.status, 400);
   assert.match(String((increment.body as { error: string }).error), /0\.25 D increments/);
+  assert.equal(incompletePrism.status, 400);
+  assert.match(String((incompletePrism.body as { error: string }).error), /prism amount and base must be saved together/);
+  assert.equal(unknownPrismBase.status, 400);
+  assert.match(String((unknownPrismBase.body as { error: string }).error), /prismBase contains an unknown option/);
 });
 
 test("refraction endpoint accepts a practice-added type and never treats it as Manifest", async () => {

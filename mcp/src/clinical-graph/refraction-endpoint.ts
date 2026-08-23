@@ -59,6 +59,8 @@ const eyePayloadSchema = z.object({
   cylinder: z.number().optional(),
   axis: z.number().int().optional(),
   add: z.number().optional(),
+  prismAmount: z.number().optional(),
+  prismBase: z.string().trim().min(1).optional(),
   distanceVisualAcuity: z.string().trim().min(1).max(100).optional(),
   nearVisualAcuity: z.string().trim().min(1).max(100).optional(),
   distancePinholeVisualAcuity: z.string().trim().min(1).max(100).optional(),
@@ -251,6 +253,8 @@ function captureBlocks(
             cylinder: payload.cylinder,
             axis: payload.axis,
             add: payload.add,
+            prismAmount: payload.prismAmount,
+            prismBase: payload.prismBase,
             distanceVisualAcuity: payload.distanceVisualAcuity,
             nearVisualAcuity: payload.nearVisualAcuity,
             distancePinholeVisualAcuity: payload.distancePinholeVisualAcuity,
@@ -278,6 +282,9 @@ function captureBlocks(
         cylinder: payload.cylinder,
         axis: payload.axis,
         add: payload.add,
+        prism: payload.prismAmount === undefined
+          ? undefined
+          : { amount: payload.prismAmount, base: payload.prismBase },
         visualAcuity: {
           distance: payload.distanceVisualAcuity,
           near: payload.nearVisualAcuity,
@@ -304,6 +311,7 @@ function captureBlocks(
 
 function validateRequest(request: RefractionRequest, definition: ClinicalFindingDefinition): string | undefined {
   const allowedTypes = new Set(fieldOptions(definition, "type").map((option) => option.code));
+  const prismBases = new Set(fieldOptions(definition, "prismBase").map((option) => option.code));
   for (const [index, block] of request.blocks.entries()) {
     if (!allowedTypes.has(block.type)) {
       return `Block ${index + 1} type contains an unknown option: ${block.type}.`;
@@ -326,6 +334,18 @@ function validateRequest(request: RefractionRequest, definition: ClinicalFinding
       }
       if (payload.axis !== undefined && (payload.axis < 0 || payload.axis > 180)) {
         return `Block ${index + 1} ${eye} axis must be an integer from 0 to 180.`;
+      }
+      if ((payload.prismAmount === undefined) !== (payload.prismBase === undefined)) {
+        return `Block ${index + 1} ${eye} prism amount and base must be saved together.`;
+      }
+      const prismError = validatePrismAmount(
+        payload.prismAmount,
+        definition,
+        `Block ${index + 1} ${eye} prism amount`,
+      );
+      if (prismError) return prismError;
+      if (payload.prismBase && !prismBases.has(payload.prismBase)) {
+        return `Block ${index + 1} ${eye} prismBase contains an unknown option: ${payload.prismBase}.`;
       }
       const customFieldError = validateCustomFieldValues(
         payload.customFields,
@@ -355,6 +375,26 @@ function validatePower(
   const steps = (value - minimum) / step;
   if (Math.abs(steps - Math.round(steps)) > 1e-9) {
     return `${label} must use ${step.toFixed(2)} D increments.`;
+  }
+  return undefined;
+}
+
+function validatePrismAmount(
+  value: number | undefined,
+  definition: ClinicalFindingDefinition,
+  label: string,
+): string | undefined {
+  if (value === undefined) return undefined;
+  const field = asRecord(asRecord(definition.valueSchema.fields).prismAmount);
+  const minimum = readNumber(field.minimum) ?? 0.25;
+  const maximum = readNumber(field.maximum) ?? 20;
+  const step = readNumber(field.step) ?? 0.25;
+  if (value < minimum || value > maximum) {
+    return `${label} must be from ${minimum} to ${maximum} PD.`;
+  }
+  const steps = (value - minimum) / step;
+  if (Math.abs(steps - Math.round(steps)) > 1e-9) {
+    return `${label} must use ${step.toFixed(2)} PD increments.`;
   }
   return undefined;
 }

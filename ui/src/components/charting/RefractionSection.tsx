@@ -55,6 +55,8 @@ interface EyeState {
   cylinder: string;
   axis: string;
   add: string;
+  prismAmount: string;
+  prismBase: string;
   distanceVisualAcuity: string;
   nearVisualAcuity: string;
   distancePinholeVisualAcuity: string;
@@ -65,6 +67,7 @@ interface BlockState {
   type: string;
   purpose: string;
   remarks: string;
+  prismEnabled: boolean;
   OD: EyeState;
   OS: EyeState;
 }
@@ -74,6 +77,8 @@ interface EyePayload {
   cylinder?: number;
   axis?: number;
   add?: number;
+  prismAmount?: number;
+  prismBase?: string;
   distanceVisualAcuity?: string;
   nearVisualAcuity?: string;
   distancePinholeVisualAcuity?: string;
@@ -167,6 +172,8 @@ export function RefractionSection({ patientReference, encounterReference, onSave
   const typeOptions = useMemo(() => activeOptions(fields.type), [fields.type]);
   const sourceTypes = useMemo(() => activeOptions(fields.sourceType), [fields.sourceType]);
   const powerOptions = useMemo(() => numericOptions(fields.sphere, -20, 20, 0.25), [fields.sphere]);
+  const prismOptions = useMemo(() => numericOptions(fields.prismAmount, 0.25, 20, 0.25), [fields.prismAmount]);
+  const prismBases = useMemo(() => activeOptions(fields.prismBase), [fields.prismBase]);
   const axisMinimum = fields.axis?.minimum ?? 0;
   const axisMaximum = fields.axis?.maximum ?? 180;
   const axisStep = fields.axis?.step ?? 1;
@@ -185,6 +192,20 @@ export function RefractionSection({ patientReference, encounterReference, onSave
       block.id === blockId
         ? { ...block, [eye]: { ...block[eye], ...next } }
         : block));
+    clearSavedObservationReferences(blockId);
+  }
+
+  function togglePrism(blockId: string) {
+    setBlocks((current) => current.map((block) => {
+      if (block.id !== blockId) return block;
+      if (!block.prismEnabled) return { ...block, prismEnabled: true };
+      return {
+        ...block,
+        prismEnabled: false,
+        OD: { ...block.OD, prismAmount: "", prismBase: "" },
+        OS: { ...block.OS, prismAmount: "", prismBase: "" },
+      };
+    }));
     clearSavedObservationReferences(blockId);
   }
 
@@ -369,6 +390,16 @@ export function RefractionSection({ patientReference, encounterReference, onSave
                     className="h-10 w-full rounded border border-white/15 bg-bg-deep px-3 text-sm text-white outline-none focus:border-brand"
                   />
                 </label>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={block.prismEnabled}
+                  aria-label={`Prism for refraction ${blockIndex + 1}`}
+                  onClick={() => togglePrism(block.id)}
+                  className={`rounded border px-3 py-2 text-sm font-semibold transition ${block.prismEnabled ? "border-brand/60 bg-brand/15 text-white" : "border-white/15 text-white/55 hover:border-brand/40 hover:text-white"}`}
+                >
+                  Prism {block.prismEnabled ? "On" : "Off"}
+                </button>
                 <div className="ml-auto flex items-center gap-2">
                   <span className="text-xs uppercase tracking-widest text-white/25">Block {blockIndex + 1}</span>
                   {blocks.length > 1 && (
@@ -384,13 +415,14 @@ export function RefractionSection({ patientReference, encounterReference, onSave
               </div>
 
               <div className="overflow-x-auto">
-                <div className="min-w-[1320px]">
-                  <div className="grid grid-cols-[54px_repeat(4,105px)_repeat(3,minmax(220px,1fr))_100px] gap-2 bg-white/[0.025] px-4 py-2 text-xs uppercase tracking-widest text-white/35">
+                <div className={block.prismEnabled ? "min-w-[1510px]" : "min-w-[1320px]"}>
+                  <div className={`grid ${block.prismEnabled ? "grid-cols-[54px_repeat(4,105px)_110px_100px_repeat(3,minmax(220px,1fr))_100px]" : "grid-cols-[54px_repeat(4,105px)_repeat(3,minmax(220px,1fr))_100px]"} gap-2 bg-white/[0.025] px-4 py-2 text-xs uppercase tracking-widest text-white/35`}>
                     <div>Eye</div><div>Sphere</div><div>Cylinder</div><div>Axis</div><div>Add</div>
+                    {block.prismEnabled && <><div>Prism</div><div>Base</div></>}
                     <div>Dist VA</div><div>Near VA</div><div>Dist PH</div><div />
                   </div>
                   {EYES.map((eye) => (
-                    <div key={eye} className="grid grid-cols-[54px_repeat(4,105px)_repeat(3,minmax(220px,1fr))_100px] items-center gap-2 border-t border-white/10 px-4 py-3">
+                    <div key={eye} className={`grid ${block.prismEnabled ? "grid-cols-[54px_repeat(4,105px)_110px_100px_repeat(3,minmax(220px,1fr))_100px]" : "grid-cols-[54px_repeat(4,105px)_repeat(3,minmax(220px,1fr))_100px]"} items-center gap-2 border-t border-white/10 px-4 py-3`}>
                       <div className="text-sm font-semibold text-white">{eye}</div>
                       {(["sphere", "cylinder", "add"] as const).slice(0, 2).map((field) => (
                         <PowerDropdown
@@ -425,6 +457,26 @@ export function RefractionSection({ patientReference, encounterReference, onSave
                         ariaLabel={`${eye} add`}
                         formatOption={formatDiopterOption}
                       />
+                      {block.prismEnabled && (
+                        <>
+                          <PowerDropdown
+                            value={block[eye].prismAmount}
+                            options={prismOptions}
+                            defaultValue="0.25"
+                            onChange={(value) => updateEye(block.id, eye, { prismAmount: value })}
+                            ariaLabel={`${eye} prism amount`}
+                          />
+                          <OdosSelect
+                            value={block[eye].prismBase}
+                            options={[
+                              { value: "", label: "Select" },
+                              ...prismBases.map((option) => ({ value: option.code, label: option.display })),
+                            ]}
+                            onChange={(prismBase) => updateEye(block.id, eye, { prismBase })}
+                            ariaLabel={`${eye} prism base`}
+                          />
+                        </>
+                      )}
                       <VaValueSelect
                         value={block[eye].distanceVisualAcuity}
                         onChange={(value) => updateEye(block.id, eye, { distanceVisualAcuity: value })}
@@ -519,6 +571,7 @@ function emptyBlock(type = ""): BlockState {
     type,
     purpose: "",
     remarks: "",
+    prismEnabled: false,
     OD: emptyEye(),
     OS: emptyEye(),
   };
@@ -530,6 +583,8 @@ function emptyEye(): EyeState {
     cylinder: "",
     axis: "",
     add: "",
+    prismAmount: "",
+    prismBase: "",
     distanceVisualAcuity: "",
     nearVisualAcuity: "",
     distancePinholeVisualAcuity: "",
@@ -544,11 +599,16 @@ function buildPayload(blocks: BlockState[]): Array<{ blockId: string; payload: B
       if ((row.cylinder && !row.axis) || (!row.cylinder && row.axis)) {
         throw new Error(`Block ${blockIndex + 1} ${eye} cylinder and axis must be saved together.`);
       }
+      if ((row.prismAmount && !row.prismBase) || (!row.prismAmount && row.prismBase)) {
+        throw new Error(`Block ${blockIndex + 1} ${eye} prism amount and base must be saved together.`);
+      }
       return [[eye, definedRecord({
         sphere: parseOptionalNumber(row.sphere),
         cylinder: parseOptionalNumber(row.cylinder),
         axis: parseOptionalNumber(row.axis),
         add: parseOptionalNumber(row.add),
+        prismAmount: parseOptionalNumber(row.prismAmount),
+        prismBase: row.prismBase || undefined,
         distanceVisualAcuity: row.distanceVisualAcuity || undefined,
         nearVisualAcuity: row.nearVisualAcuity || undefined,
         distancePinholeVisualAcuity: row.distancePinholeVisualAcuity || undefined,
