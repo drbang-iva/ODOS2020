@@ -1,4 +1,4 @@
-export interface SerialTrendPoint { id: string; x: number; value: number; title: string }
+export interface SerialTrendPoint { id: string; x: number; value: number; title: string; xOffset?: number }
 export interface SerialTrendSeries { id: string; label: string; color: string; points: SerialTrendPoint[] }
 type Bound = number | ((x: number) => number);
 export type SerialTrendOverlay =
@@ -47,7 +47,7 @@ export function SerialTrendChart({ ariaLabel, series, overlays = [], xDomain, yD
         {overlays.map((overlay) => overlay.kind === "band"
           ? <path key={overlay.id} d={bandPath(overlay.lower, overlay.upper)} fill={overlay.color} opacity={overlay.opacity ?? 0.16}><title>{overlay.label}</title></path>
           : <path key={overlay.id} d={linePath(overlay.value)} fill="none" stroke={overlay.color} strokeDasharray="6 4"><title>{overlay.label}</title></path>)}
-        {series.map((row) => <g key={row.id}>{row.points.map((point) => <circle key={point.id} cx={xAt(point.x)} cy={yAt(point.value)} r="5" fill={row.color}><title>{point.title}</title></circle>)}</g>)}
+        {series.map((row) => <g key={row.id}>{row.points.map((point) => <circle key={point.id} cx={xAt(point.x) + (point.xOffset ?? 0)} cy={yAt(point.value)} r="5" fill={row.color}><title>{point.title}</title></circle>)}</g>)}
         <text x={PAD} y={HEIGHT - 8} fill="var(--odos-muted)" fontSize="11">{xFormat(xMin)}</text>
         <text x={WIDTH - PAD} y={HEIGHT - 8} fill="var(--odos-muted)" fontSize="11" textAnchor="end">{xFormat(xMax)}</text>
         <text x={4} y={PAD} fill="var(--odos-muted)" fontSize="11">{yFormat(yMax)}</text>

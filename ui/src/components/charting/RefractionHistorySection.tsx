@@ -200,7 +200,7 @@ function ManifestDistanceAcuityTrend({ rows }: { rows: GlassesRow[] }) {
         series={trend.series}
         yDomain={trend.yDomain}
         xFormat={(value) => formatDate(new Date(value).toISOString())}
-        yFormat={formatLogmarAsSnellen}
+        yFormat={(value) => formatLogmarAsSnellen(trend.constantLogmar ?? value)}
         emptyText={trend.recordedCount === 0
           ? "No manifest distance acuity recorded"
           : "No chartable manifest distance acuity"}
@@ -219,6 +219,7 @@ function ManifestDistanceAcuityTrend({ rows }: { rows: GlassesRow[] }) {
 function manifestDistanceAcuityTrend(rows: GlassesRow[]): {
   series: SerialTrendSeries[];
   yDomain?: [number, number];
+  constantLogmar?: number;
   recordedCount: number;
   unparseable: Array<{ date: string; eye: Eye; distVA: string }>;
 } {
@@ -245,6 +246,19 @@ function manifestDistanceAcuityTrend(rows: GlassesRow[]): {
   });
 
   const values = [...points.OD, ...points.OS].map((point) => point.value);
+  const coincidentPoints = new Map<string, SerialTrendSeries["points"]>();
+  for (const point of [...points.OD, ...points.OS]) {
+    const key = `${point.x}:${point.value}`;
+    const group = coincidentPoints.get(key) ?? [];
+    group.push(point);
+    coincidentPoints.set(key, group);
+  }
+  for (const group of coincidentPoints.values()) {
+    if (group.length < 2) continue;
+    group.forEach((point, index) => {
+      point.xOffset = (index - (group.length - 1) / 2) * 10;
+    });
+  }
   const min = values.length > 0 ? Math.min(...values) : undefined;
   const max = values.length > 0 ? Math.max(...values) : undefined;
   const yDomain = min === undefined || max === undefined
@@ -259,6 +273,7 @@ function manifestDistanceAcuityTrend(rows: GlassesRow[]): {
       { id: "manifest-os", label: "OS", color: "var(--odos-amber)", points: points.OS },
     ],
     yDomain,
+    constantLogmar: min === max ? min : undefined,
     recordedCount,
     unparseable,
   };

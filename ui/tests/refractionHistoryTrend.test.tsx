@@ -56,6 +56,36 @@ test("manifest distance acuity trend states the empty condition when no manifest
   }
 });
 
+test("a constant manifest acuity labels the axis with the recorded Snellen equivalent", async () => {
+  const harness = await renderHistory([
+    glassesRow("MANIFEST", "OD", "2025-08-03T14:00:00.000Z", "20/20"),
+  ]);
+  try {
+    const trend = harness.renderer.root.findByProps({ "aria-label": "Manifest distance acuity trend" });
+    const yLabels = trend.findAllByType("text")
+      .filter((node) => node.props.x === 4)
+      .map(textContent);
+    assert.deepEqual(yLabels, ["20/20", "20/20"]);
+  } finally {
+    harness.restore();
+  }
+});
+
+test("coincident manifest readings remain independently visible", async () => {
+  const harness = await renderHistory([
+    glassesRow("MANIFEST", "OD", "2025-08-04T14:00:00.000Z", "20/20"),
+    glassesRow("MANIFEST", "OS", "2025-08-04T14:00:00.000Z", "20/20"),
+  ]);
+  try {
+    const trend = harness.renderer.root.findByProps({ "aria-label": "Manifest distance acuity trend" });
+    const circles = trend.findAllByType("circle");
+    assert.equal(circles.length, 2);
+    assert.notEqual(circles[0]?.props.cx, circles[1]?.props.cx);
+  } finally {
+    harness.restore();
+  }
+});
+
 function glassesRow(typeCode: string, eye: "OD" | "OS", date: string, distVA: string) {
   return {
     type: typeCode,
