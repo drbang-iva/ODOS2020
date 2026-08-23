@@ -167,19 +167,37 @@ test("refraction stores signed numeric components and validates axis", () => {
   );
 });
 
-test("refraction stores prism as structured quantity and base concept", () => {
+test("refraction prism components each carry at most one value[x]", () => {
   const { resource } = buildRefractionObservation({
     ...common,
     refractionType: "MANIFEST",
     sphere: -1,
     prism: { amount: 2, base: "up" },
   });
-  const prism = component(resource, "PRISM");
 
-  assert.equal(prism.valueString, undefined);
-  assert.equal(prism.valueQuantity?.value, 2);
-  assert.equal(prism.valueQuantity?.code, "[diop]");
-  assert.equal(prism.valueCodeableConcept?.coding?.[0]?.code, "up");
+  for (const candidate of resource.component ?? []) {
+    const valueKeys = Object.keys(candidate).filter((key) => key.startsWith("value"));
+    assert.ok(
+      valueKeys.length <= 1,
+      `Expected at most one value[x] on ${candidate.code.text ?? "unnamed component"}; found ${valueKeys.join(", ")}`,
+    );
+  }
+});
+
+test("refraction stores prism amount and coded base as separate components", () => {
+  const { resource } = buildRefractionObservation({
+    ...common,
+    refractionType: "MANIFEST",
+    sphere: -1,
+    prism: { amount: 2, base: "up" },
+  });
+  const amount = component(resource, "PRISM_AMOUNT");
+  const base = component(resource, "PRISM_BASE");
+
+  assert.equal(amount.valueQuantity?.value, 2);
+  assert.equal(amount.valueQuantity?.code, "[diop]");
+  assert.equal(base.valueCodeableConcept?.coding?.[0]?.system, "http://hl7.org/fhir/vision-base-codes");
+  assert.equal(base.valueCodeableConcept?.coding?.[0]?.code, "up");
 });
 
 test("Observation bodySite extension references contained BodyStructure", () => {

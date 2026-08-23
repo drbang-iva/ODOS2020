@@ -4,11 +4,13 @@ import type { Observation } from "@medplum/fhirtypes";
 import { buildEyeBodyStructure as buildMcpEyeBodyStructure } from "../src/fhir/ophthalmology/bodyStructure.js";
 import { buildIopObservation as buildMcpIopObservation } from "../src/fhir/ophthalmology/iop.js";
 import { buildRefractionObservation as buildMcpRefractionObservation } from "../src/fhir/ophthalmology/refraction.js";
+import { OPHTHALMOLOGY_CONCEPT_IDS as MCP_OPHTHALMOLOGY_CONCEPT_IDS } from "../src/fhir/ophthalmology/codeBindings.js";
 import { buildSectionSaveBundle as buildMcpSectionSaveBundle } from "../src/fhir/ophthalmology/save-section-bundle.js";
 import { buildVisualAcuityObservation as buildMcpVisualAcuityObservation } from "../src/fhir/ophthalmology/visualAcuity.js";
 import { buildEyeBodyStructure as buildUiEyeBodyStructure } from "../../ui/src/lib/fhir-ophthalmology/bodyStructure.js";
 import { buildIopObservation as buildUiIopObservation } from "../../ui/src/lib/fhir-ophthalmology/iop.js";
 import { buildRefractionObservation as buildUiRefractionObservation } from "../../ui/src/lib/fhir-ophthalmology/refraction.js";
+import { OPHTHALMOLOGY_CONCEPT_IDS as UI_OPHTHALMOLOGY_CONCEPT_IDS } from "../../ui/src/lib/fhir-ophthalmology/codeBindings.js";
 import { buildSectionSaveBundle as buildUiSectionSaveBundle } from "../../ui/src/lib/fhir-ophthalmology/save-section-bundle.js";
 import { buildVisualAcuityObservation as buildUiVisualAcuityObservation } from "../../ui/src/lib/fhir-ophthalmology/visualAcuity.js";
 import { odosConcept as mcpOdosConcept } from "../src/fhir/ophthalmology/extensions.js";
@@ -120,25 +122,32 @@ test("UI ophthalmology mirror matches MCP IOP builder output", () => {
   );
 });
 
-test("UI ophthalmology mirror matches MCP refraction builder output", () => {
-  assertJsonEqual(
-    buildMcpRefractionObservation({
-      ...common,
-      refractionType: "MANIFEST",
-      sphere: -1.25,
-      cylinder: -0.5,
-      axis: 90,
-      add: 2,
-    }),
-    buildUiRefractionObservation({
-      ...common,
-      refractionType: "MANIFEST",
-      sphere: -1.25,
-      cylinder: -0.5,
-      axis: 90,
-      add: 2,
-    }),
-  );
+test("UI ophthalmology mirror matches MCP refraction prism component output", () => {
+  const input = {
+    ...common,
+    refractionType: "MANIFEST" as const,
+    sphere: -1.25,
+    cylinder: -0.5,
+    axis: 90,
+    add: 2,
+    prism: { amount: 1.5, base: "out" },
+  };
+  const mcpResult = buildMcpRefractionObservation(input);
+  const uiResult = buildUiRefractionObservation(input);
+
+  assertJsonEqual(mcpResult, uiResult);
+  assert.ok(mcpResult.resource.component?.some((candidate) =>
+    candidate.code.coding?.some((coding) => coding.code === "PRISM_AMOUNT"),
+  ));
+  assert.ok(mcpResult.resource.component?.some((candidate) =>
+    candidate.code.coding?.some((coding) => coding.code === "PRISM_BASE"),
+  ));
+});
+
+test("UI and MCP ophthalmology bindings register the split prism component codes", () => {
+  assertJsonEqual(MCP_OPHTHALMOLOGY_CONCEPT_IDS, UI_OPHTHALMOLOGY_CONCEPT_IDS);
+  assert.ok(MCP_OPHTHALMOLOGY_CONCEPT_IDS.includes("PRISM_AMOUNT"));
+  assert.ok(MCP_OPHTHALMOLOGY_CONCEPT_IDS.includes("PRISM_BASE"));
 });
 
 test("UI ophthalmology mirror matches MCP visual acuity builder output", () => {

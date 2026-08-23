@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import type { ObservationComponent } from "@medplum/fhirtypes";
+import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../src/fhir/ophthalmology/codeBindings.js";
 import { buildRefractionObservation } from "../src/fhir/ophthalmology/refraction.js";
 import { buildVisionPrescription } from "../src/fhir/ophthalmology/visionPrescription.js";
 
@@ -58,3 +60,50 @@ test("buildVisionPrescription rejects non-FINAL_RX refractions", () => {
     /FINAL_RX/,
   );
 });
+
+test("buildVisionPrescription reads separate prism amount and coded-base components", () => {
+  const { resource: refractionObservation } = buildRefractionObservation({
+    patientReference: "Patient/p1",
+    eye: "OS",
+    refractionType: "FINAL_RX",
+    sphere: -1.25,
+  });
+  refractionObservation.component?.push(
+    prismComponent("PRISM_AMOUNT", "Prism amount", {
+      valueQuantity: {
+        value: 2.5,
+        unit: "PD",
+        system: "http://unitsofmeasure.org",
+        code: "[diop]",
+      },
+    }),
+    prismComponent("PRISM_BASE", "Prism base", {
+      valueCodeableConcept: {
+        coding: [{ system: "http://hl7.org/fhir/vision-base-codes", code: "down" }],
+      },
+    }),
+  );
+
+  const visionPrescription = buildVisionPrescription({
+    refractionObservation,
+    patientReference: "Patient/p1",
+    prescriberReference: "Practitioner/pr1",
+  });
+
+  assert.equal(visionPrescription.lensSpecification[0].prism?.[0]?.amount, 2.5);
+  assert.equal(visionPrescription.lensSpecification[0].prism?.[0]?.base, "down");
+});
+
+function prismComponent(
+  code: string,
+  display: string,
+  value: Partial<ObservationComponent>,
+): ObservationComponent {
+  return {
+    code: {
+      coding: [{ system: ODOS_OPHTHALMOLOGY_CODE_SYSTEM, code, display }],
+      text: display,
+    },
+    ...value,
+  };
+}

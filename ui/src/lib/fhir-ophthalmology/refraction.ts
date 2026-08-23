@@ -68,8 +68,10 @@ export function buildRefractionObservation(
       throw new Error("Refraction prism requires amount when prism is supplied.");
     }
     components.push(
-      component("PRISM", "Prism", {
+      component("PRISM_AMOUNT", "Prism amount", {
         valueQuantity: quantity(input.prism.amount, "PD", "http://unitsofmeasure.org", "[diop]"),
+      }),
+      component("PRISM_BASE", "Prism base", {
         valueCodeableConcept: prismBaseConcept(input.prism.base),
       }),
     );
