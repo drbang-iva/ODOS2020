@@ -1,6 +1,8 @@
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { parseSnellen } from "../../lib/fhir-ophthalmology/visualAcuity";
 import { formatPowerOption } from "./power-options";
+import { SerialTrendChart, type SerialTrendSeries } from "./SerialTrendChart";
 
 type Eye = "OD" | "OS";
 type Tab = "glasses" | "softCl" | "specialtyCl";
@@ -19,6 +21,7 @@ interface HistoryExtra {
 
 interface GlassesRow {
   type: string;
+  typeCode?: string;
   date: string;
   eye: Eye;
   sphere?: number;
@@ -138,6 +141,8 @@ export function RefractionHistorySection({ patientReference }: Props) {
           <p className="mt-1 text-sm text-white/45">Longitudinal spectacle and contact lens prescriptions</p>
         </div>
 
+        {!loading && !error && history && <ManifestDistanceAcuityTrend rows={history.glasses} />}
+
         <div className="mt-5 flex flex-wrap gap-2" role="tablist" aria-label="Refraction history categories">
           {TABS.map((tab) => (
             <button
@@ -180,6 +185,102 @@ export function RefractionHistorySection({ patientReference }: Props) {
       </div>
     </section>
   );
+}
+
+function ManifestDistanceAcuityTrend({ rows }: { rows: GlassesRow[] }) {
+  const trend = manifestDistanceAcuityTrend(rows);
+  return (
+    <div className="mt-5 rounded border border-[color:var(--odos-line)] bg-bg-panel/55 p-4">
+      <div className="mb-3">
+        <h2 className="font-semibold text-[color:var(--odos-text)]">Manifest distance acuity trend</h2>
+        <p className="mt-1 text-xs text-[color:var(--odos-muted)]">Snellen equivalent · better vision ↑</p>
+      </div>
+      <SerialTrendChart
+        ariaLabel="Manifest distance acuity trend"
+        series={trend.series}
+        yDomain={trend.yDomain}
+        xFormat={(value) => formatDate(new Date(value).toISOString())}
+        yFormat={(value) => formatLogmarAsSnellen(trend.constantLogmar ?? value)}
+        emptyText={trend.recordedCount === 0
+          ? "No manifest distance acuity recorded"
+          : "No chartable manifest distance acuity"}
+      />
+      {trend.unparseable.length > 0 && (
+        <p role="note" className="mt-3 text-xs text-[color:var(--odos-amber)]">
+          {trend.unparseable.length} {trend.unparseable.length === 1 ? "reading" : "readings"} not chartable: {trend.unparseable
+            .map((row) => `${row.eye} ${row.distVA} (${formatDate(row.date)})`)
+            .join("; ")}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function manifestDistanceAcuityTrend(rows: GlassesRow[]): {
+  series: SerialTrendSeries[];
+  yDomain?: [number, number];
+  constantLogmar?: number;
+  recordedCount: number;
+  unparseable: Array<{ date: string; eye: Eye; distVA: string }>;
+} {
+  const points: Record<Eye, SerialTrendSeries["points"]> = { OD: [], OS: [] };
+  const unparseable: Array<{ date: string; eye: Eye; distVA: string }> = [];
+  let recordedCount = 0;
+
+  rows.forEach((row, index) => {
+    if (row.typeCode !== "MANIFEST") return;
+    const distVA = row.distVA?.trim();
+    if (!distVA) return;
+    recordedCount += 1;
+    const parsed = parseSnellen(distVA);
+    if (!parsed) {
+      unparseable.push({ date: row.date, eye: row.eye, distVA });
+      return;
+    }
+    points[row.eye].push({
+      id: `${row.date}-${row.eye}-${index}`,
+      x: new Date(row.date).getTime(),
+      value: parsed.logmar,
+      title: `${row.eye} · ${distVA} · ${formatDate(row.date)}`,
+    });
+  });
+
+  const values = [...points.OD, ...points.OS].map((point) => point.value);
+  const coincidentPoints = new Map<string, SerialTrendSeries["points"]>();
+  for (const point of [...points.OD, ...points.OS]) {
+    const key = `${point.x}:${point.value}`;
+    const group = coincidentPoints.get(key) ?? [];
+    group.push(point);
+    coincidentPoints.set(key, group);
+  }
+  for (const group of coincidentPoints.values()) {
+    if (group.length < 2) continue;
+    group.forEach((point, index) => {
+      point.xOffset = (index - (group.length - 1) / 2) * 10;
+    });
+  }
+  const min = values.length > 0 ? Math.min(...values) : undefined;
+  const max = values.length > 0 ? Math.max(...values) : undefined;
+  const yDomain = min === undefined || max === undefined
+    ? undefined
+    : min === max
+      ? [max + 0.1, min - 0.1] satisfies [number, number]
+      : [max, min] satisfies [number, number];
+
+  return {
+    series: [
+      { id: "manifest-od", label: "OD", color: "var(--odos-sapphire)", points: points.OD },
+      { id: "manifest-os", label: "OS", color: "var(--odos-amber)", points: points.OS },
+    ],
+    yDomain,
+    constantLogmar: min === max ? min : undefined,
+    recordedCount,
+    unparseable,
+  };
+}
+
+function formatLogmarAsSnellen(logmar: number): string {
+  return `20/${Math.round(20 * 10 ** logmar)}`;
 }
 
 function GlassesTable({ rows, sort, onSort }: TableProps<GlassesRow>) {
