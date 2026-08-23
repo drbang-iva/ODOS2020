@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import React from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
@@ -34,6 +35,15 @@ import {
   type DiagnosisFindingsPayload,
 } from "../src/lib/diagnosis-findings";
 import { conditionResolvedCodeLabel } from "../src/lib/diagnosis-code-resolution";
+
+test("height-capped common diagnosis rows opt out of flex shrinking", () => {
+  const css = readFileSync(new URL("../src/styles/charting.css", import.meta.url), "utf8");
+  const rules = [...css.matchAll(/\.odos-diagnosis-common-row\s*\{([^}]*)\}/g)].map((match) => match[1]);
+  const gridRule = rules.find((rule) => /(?:^|\n)\s*display:\s*grid\s*;/.test(rule ?? ""));
+
+  assert.ok(gridRule);
+  assert.match(gridRule, /(?:^|\n)\s*flex-shrink:\s*0\s*;/);
+});
 
 test("diagnosis workspace preferences default safely and round-trip valid selections", () => {
   const storage = memoryStorage();

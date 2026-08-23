@@ -1278,6 +1278,7 @@
 
 .odos-diagnosis-common-row {
   display: grid;
+  flex-shrink: 0;
   grid-template-columns: minmax(0, 1fr) auto;
   overflow: hidden;
 }
