@@ -42,6 +42,21 @@ test("an absent tear osmolarity reading never becomes a zero point", async () =>
   }
 });
 
+test("coincident tear osmolarity readings remain independently visible", async () => {
+  const harness = await renderOsmolarityHistory([
+    historyRow("OD", "2026-08-01T14:00:00.000Z", [osmolarityValue(300)]),
+    historyRow("OD", "2026-08-01T14:00:00.000Z", [osmolarityValue(300)]),
+  ]);
+  try {
+    const trend = harness.renderer.root.findByProps({ "aria-label": "Tear osmolarity trend" });
+    const circles = trend.findAllByType("circle");
+    assert.equal(circles.length, 2);
+    assert.notEqual(circles[0]?.props.cx, circles[1]?.props.cx);
+  } finally {
+    harness.restore();
+  }
+});
+
 test("tear osmolarity trend states the empty condition when history has no osmolarity", async () => {
   const harness = await renderOsmolarityHistory([
     historyRow("OD", "2026-08-01T14:00:00.000Z", [

@@ -278,6 +278,19 @@ function NumericHistoryTrend({ config, rows }: { config: NumericHistoryTrendConf
       title: `${row.eye} · ${reading.value} ${config.axisUnit} · ${formatTrendDate(row.recordedAt)}`,
     });
   });
+  const coincidentPoints = new Map<string, SerialTrendSeries["points"]>();
+  for (const point of [...points.OD, ...points.OS]) {
+    const key = `${point.x}:${point.value}`;
+    const group = coincidentPoints.get(key) ?? [];
+    group.push(point);
+    coincidentPoints.set(key, group);
+  }
+  for (const group of coincidentPoints.values()) {
+    if (group.length < 2) continue;
+    group.forEach((point, index) => {
+      point.xOffset = (index - (group.length - 1) / 2) * 10;
+    });
+  }
   const series: SerialTrendSeries[] = [
     { id: `${config.valueCode}-od`, label: "OD", color: "var(--odos-sapphire)", points: points.OD },
     { id: `${config.valueCode}-os`, label: "OS", color: "var(--odos-amber)", points: points.OS },
