@@ -584,6 +584,10 @@ function designTypeLabel(type: LensDesignType): string {
     "anti-fatigue": "Anti-Fatigue",
     trifocal: "Trifocal",
     lenticular: "Lenticular",
+    executive: "Executive",
+    stellest: "Stellest",
+    multifocal: "Multifocal",
+    bifocal: "Bifocal",
   };
   return labels[type];
 }

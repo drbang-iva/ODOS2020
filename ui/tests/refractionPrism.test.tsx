@@ -12,6 +12,91 @@ const PROPS = {
   onSaved: () => undefined,
 };
 
+const PURPOSES = [
+  "Full-time",
+  "Part-time",
+  "Schoolwork",
+  "Distance only",
+  "Reading",
+  "Intermediate/computer",
+  "Occupational",
+  "Safety",
+  "Sunwear",
+  "Driving",
+  "Sports & hobby",
+  "Transitional Ortho-K",
+];
+
+const LENS_DESIGNS = [
+  "single-vision",
+  "flat-top-28",
+  "flat-top-35",
+  "7x28",
+  "8x35",
+  "round",
+  "blended",
+  "double-segment",
+  "aspheric",
+  "progressive",
+  "office-computer",
+  "anti-fatigue",
+  "trifocal",
+  "lenticular",
+  "executive",
+  "stellest",
+  "multifocal",
+  "bifocal",
+];
+
+test("Rx purpose is definition-driven, lens design uses the shared vocabulary, and over contacts defaults false", async () => {
+  const harness = await renderRefraction();
+  try {
+    assert.deepEqual(
+      findSelect(harness.renderer, "Refraction 1 purpose", 0).props.options.map((option: { value: string }) => option.value),
+      ["", ...PURPOSES],
+    );
+    assert.deepEqual(
+      findSelect(harness.renderer, "Refraction 1 lens design", 0).props.options.map((option: { value: string }) => option.value),
+      ["", ...LENS_DESIGNS],
+    );
+    const overContacts = findCheckbox(harness.renderer, "Refraction 1 over contacts", 0);
+    assert.equal(overContacts.props.checked, false);
+  } finally {
+    harness.restore();
+  }
+});
+
+test("Rx purpose, lens design, and over contacts persist in the saved block payload", async () => {
+  const harness = await renderRefraction();
+  try {
+    act(() => {
+      findPower(harness.renderer, "OD sphere", 0).props.onChange("-1.00");
+      findSelect(harness.renderer, "Refraction 1 purpose", 0).props.onChange("Full-time");
+      findSelect(harness.renderer, "Refraction 1 lens design", 0).props.onChange("progressive");
+      findCheckbox(harness.renderer, "Refraction 1 over contacts", 0).props.onChange({ target: { checked: true } });
+    });
+
+    const save = harness.renderer.root.findAllByType("button")
+      .find((button) => button.children.join("") === "Save Refraction");
+    assert.ok(save);
+    await act(async () => {
+      await save.props.onClick();
+      await Promise.resolve();
+    });
+
+    const blocks = harness.savedBodies[0]!.blocks as Array<Record<string, unknown>>;
+    assert.deepEqual(blocks[0], {
+      type: "MANIFEST",
+      purpose: "Full-time",
+      lensDesign: "progressive",
+      overContacts: true,
+      OD: { sphere: -1 },
+    });
+  } finally {
+    harness.restore();
+  }
+});
+
 test("prism is off by default and renders no prism inputs", async () => {
   const harness = await renderRefraction();
   try {
@@ -144,6 +229,11 @@ function findSelect(renderer: ReactTestRenderer, ariaLabel: string, index: numbe
   return renderer.root.findAllByType(OdosSelect).filter((input) => input.props.ariaLabel === ariaLabel)[index]!;
 }
 
+function findCheckbox(renderer: ReactTestRenderer, ariaLabel: string, index: number) {
+  return renderer.root.findAllByType("input")
+    .filter((input) => input.props.type === "checkbox" && input.props["aria-label"] === ariaLabel)[index]!;
+}
+
 function refractionDefinition() {
   return {
     definition: {
@@ -162,6 +252,10 @@ function refractionDefinition() {
           { code: "in", display: "In", active: true },
           { code: "out", display: "Out", active: true },
           { code: "retired", display: "Retired", active: false },
+        ] },
+        purpose: { options: [
+          ...PURPOSES.map((purpose) => ({ code: purpose, display: purpose, active: true })),
+          { code: "Retired", display: "Retired", active: false },
         ] },
       },
     },

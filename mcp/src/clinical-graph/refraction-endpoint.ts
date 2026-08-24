@@ -70,6 +70,8 @@ const eyePayloadSchema = z.object({
 const blockPayloadSchema = z.object({
   type: z.string().trim().min(1),
   purpose: z.string().trim().max(200).optional(),
+  lensDesign: z.string().trim().min(1).max(100).optional(),
+  overContacts: z.boolean().default(false),
   remarks: z.string().trim().max(2000).optional(),
   OD: eyePayloadSchema.optional(),
   OS: eyePayloadSchema.optional(),
@@ -185,6 +187,9 @@ export async function handleRefractionCaptureRequest(
         return {
           blockId: items[0]?.blockId,
           type: block.type,
+          purpose: block.purpose,
+          lensDesign: block.lensDesign,
+          overContacts: block.overContacts,
           eyes: Object.fromEntries(items.map((item) => [
             item.eye,
             {
@@ -248,6 +253,8 @@ function captureBlocks(
             blockId,
             refractionType: block.type,
             purpose: block.purpose,
+            lensDesign: block.lensDesign,
+            overContacts: block.overContacts,
             remarks: block.remarks,
             sphere: payload.sphere,
             cylinder: payload.cylinder,
@@ -268,7 +275,7 @@ function captureBlocks(
         sourceType: request.sourceType,
         performerReferences: provenance.actorReference ? [provenance.actorReference] : [],
       });
-      const observation = appendCustomFieldComponentsToObservation(buildRefractionObservation({
+      const baseObservation = appendCustomFieldComponentsToObservation(buildRefractionObservation({
         patientReference: request.patientReference,
         encounterReference: request.encounterReference,
         eye,
@@ -293,6 +300,16 @@ function captureBlocks(
         performerReferences: provenance.actorReference ? [provenance.actorReference] : [],
         sourceType: request.sourceType,
       }).resource, payload.customFields, definition);
+      const observation: Observation = {
+        ...baseObservation,
+        component: [
+          ...(baseObservation.component ?? []),
+          ...(block.lensDesign
+            ? [{ code: odosConcept("LENS_DESIGN", "Lens design"), valueString: block.lensDesign }]
+            : []),
+          { code: odosConcept("OVER_CONTACTS", "Over contacts"), valueBoolean: block.overContacts },
+        ],
+      };
       return [{
         blockIndex,
         blockId,
@@ -311,10 +328,14 @@ function captureBlocks(
 
 function validateRequest(request: RefractionRequest, definition: ClinicalFindingDefinition): string | undefined {
   const allowedTypes = new Set(fieldOptions(definition, "type").map((option) => option.code));
+  const allowedPurposes = new Set(fieldOptions(definition, "purpose").map((option) => option.code));
   const prismBases = new Set(fieldOptions(definition, "prismBase").map((option) => option.code));
   for (const [index, block] of request.blocks.entries()) {
     if (!allowedTypes.has(block.type)) {
       return `Block ${index + 1} type contains an unknown option: ${block.type}.`;
+    }
+    if (block.purpose && !allowedPurposes.has(block.purpose)) {
+      return `Block ${index + 1} purpose contains an unknown option: ${block.purpose}.`;
     }
     const populatedEyes = EYES.filter((eye) => block[eye] && eyeTouched(block[eye]));
     if (populatedEyes.length === 0) {

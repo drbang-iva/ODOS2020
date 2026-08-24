@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { LENS_DESIGN_TYPES } from "../../lib/lens-catalog";
 import type { SectionSaveStatus } from "./types";
 import { formatPowerOption, numericOptions } from "./power-options";
 import { PowerDropdown } from "./PowerDropdown";
@@ -66,6 +67,8 @@ interface BlockState {
   id: string;
   type: string;
   purpose: string;
+  lensDesign: string;
+  overContacts: boolean;
   remarks: string;
   prismEnabled: boolean;
   OD: EyeState;
@@ -87,6 +90,8 @@ interface EyePayload {
 interface BlockPayload {
   type: string;
   purpose?: string;
+  lensDesign?: string;
+  overContacts: boolean;
   remarks?: string;
   OD?: EyePayload;
   OS?: EyePayload;
@@ -94,7 +99,6 @@ interface BlockPayload {
 
 const EYES: Eye[] = ["OD", "OS"];
 const OPERATOR = "ODOS UI clinical_graph_refraction";
-const PURPOSE_OPTIONS = ["Distance", "Reading", "Intermediate", "Progressive", "Bifocal", "Safety", "Sunglasses"];
 
 export function RefractionSection({ patientReference, encounterReference, onSaved }: Props) {
   const [definition, setDefinition] = useState<RefractionDefinitionResponse | null>(null);
@@ -174,6 +178,7 @@ export function RefractionSection({ patientReference, encounterReference, onSave
   const powerOptions = useMemo(() => numericOptions(fields.sphere, -20, 20, 0.25), [fields.sphere]);
   const prismOptions = useMemo(() => numericOptions(fields.prismAmount, 0.25, 20, 0.25), [fields.prismAmount]);
   const prismBases = useMemo(() => activeOptions(fields.prismBase), [fields.prismBase]);
+  const purposes = useMemo(() => activeOptions(fields.purpose), [fields.purpose]);
   const axisMinimum = fields.axis?.minimum ?? 0;
   const axisMaximum = fields.axis?.maximum ?? 180;
   const axisStep = fields.axis?.step ?? 1;
@@ -374,11 +379,33 @@ export function RefractionSection({ patientReference, encounterReference, onSave
                     value={block.purpose}
                     options={[
                       { value: "", label: "Select" },
-                      ...PURPOSE_OPTIONS.map((purpose) => ({ value: purpose, label: purpose })),
+                      ...purposes.map((purpose) => ({ value: purpose.code, label: purpose.display })),
                     ]}
                     onChange={(purpose) => updateBlock(block.id, { purpose })}
                     ariaLabel={`Refraction ${blockIndex + 1} purpose`}
                   />
+                </label>
+                <label className="block min-w-[260px] flex-1">
+                  <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">Lens Design</span>
+                  <OdosSelect
+                    value={block.lensDesign}
+                    options={[
+                      { value: "", label: "Select" },
+                      ...LENS_DESIGN_TYPES.map((lensDesign) => ({ value: lensDesign, label: lensDesign })),
+                    ]}
+                    onChange={(lensDesign) => updateBlock(block.id, { lensDesign })}
+                    ariaLabel={`Refraction ${blockIndex + 1} lens design`}
+                  />
+                </label>
+                <label className="flex h-10 items-center gap-2 rounded border border-white/15 px-3 text-sm text-white/65">
+                  <input
+                    type="checkbox"
+                    aria-label={`Refraction ${blockIndex + 1} over contacts`}
+                    checked={block.overContacts}
+                    onChange={(event) => updateBlock(block.id, { overContacts: event.target.checked })}
+                    className="accent-brand"
+                  />
+                  Over contacts
                 </label>
                 <label className="block min-w-[260px] flex-1">
                   <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">Remarks</span>
@@ -570,6 +597,8 @@ function emptyBlock(type = ""): BlockState {
     id: crypto.randomUUID(),
     type,
     purpose: "",
+    lensDesign: "",
+    overContacts: false,
     remarks: "",
     prismEnabled: false,
     OD: emptyEye(),
@@ -623,6 +652,8 @@ function buildPayload(blocks: BlockState[]): Array<{ blockId: string; payload: B
       payload: {
         type: block.type,
         ...(block.purpose.trim() ? { purpose: block.purpose.trim() } : {}),
+        ...(block.lensDesign ? { lensDesign: block.lensDesign } : {}),
+        overContacts: block.overContacts,
         ...(block.remarks.trim() ? { remarks: block.remarks.trim() } : {}),
         ...eyes,
       },

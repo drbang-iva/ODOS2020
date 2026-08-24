@@ -144,10 +144,12 @@ test("UI ophthalmology mirror matches MCP refraction prism component output", ()
   ));
 });
 
-test("UI and MCP ophthalmology bindings register the split prism component codes", () => {
+test("UI and MCP ophthalmology bindings register the split prism and Rx intent component codes", () => {
   assertJsonEqual(MCP_OPHTHALMOLOGY_CONCEPT_IDS, UI_OPHTHALMOLOGY_CONCEPT_IDS);
   assert.ok(MCP_OPHTHALMOLOGY_CONCEPT_IDS.includes("PRISM_AMOUNT"));
   assert.ok(MCP_OPHTHALMOLOGY_CONCEPT_IDS.includes("PRISM_BASE"));
+  assert.ok(MCP_OPHTHALMOLOGY_CONCEPT_IDS.includes("LENS_DESIGN"));
+  assert.ok(MCP_OPHTHALMOLOGY_CONCEPT_IDS.includes("OVER_CONTACTS"));
 });
 
 test("UI ophthalmology mirror matches MCP visual acuity builder output", () => {

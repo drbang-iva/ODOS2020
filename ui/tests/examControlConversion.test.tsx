@@ -9,7 +9,6 @@ import { CupDiscSection } from "../src/components/charting/CupDiscSection";
 import { IopSection } from "../src/components/charting/IopSection";
 import { OrthoKSection } from "../src/components/charting/OrthoKSection";
 import { PowerDropdown } from "../src/components/charting/PowerDropdown";
-import { RefractionSection } from "../src/components/charting/RefractionSection";
 import { SoftContactLensSection, softLensProductParameterOptions } from "../src/components/charting/SoftContactLensSection";
 import { SpecialtyContactLensSection } from "../src/components/charting/SpecialtyContactLensSection";
 import { VaSection } from "../src/components/charting/VaSection";
@@ -44,15 +43,6 @@ test("Auto-Refraction uses centered PD and K spinners plus plano-centered axis w
   for (const label of ["OD flat axis", "OD steep axis", "OS flat axis", "OS steep axis"]) {
     assert.match(html, new RegExp(`role="combobox"[^>]*aria-label="${label}"`));
   }
-});
-
-test("Refraction Purpose is the exact seven-option dropdown", () => {
-  const html = renderToStaticMarkup(<RefractionSection {...PROPS} />);
-  assert.match(html, /role="combobox"[^>]*aria-label="Refraction 1 purpose"/);
-  for (const purpose of ["Distance", "Reading", "Intermediate", "Progressive", "Bifocal", "Safety", "Sunglasses"]) {
-    assert.equal((html.match(new RegExp(`>${purpose}</button>`, "g")) ?? []).length, 2);
-  }
-  assert.doesNotMatch(source("RefractionSection.tsx"), /<input[\s\S]{0,160}value=\{block\.purpose\}/);
 });
 
 test("standalone Visual Acuity uses the curated VA selector for both eyes", () => {

@@ -66,7 +66,12 @@ test("refraction definition endpoint serves practice-editable types, fields, thr
 
   assert.equal(res.status, 200);
   const body = res.body as {
-    definition: { fields: Record<string, { options?: Array<{ code: string }>; step?: number }> };
+    definition: { fields: Record<string, {
+      type?: string;
+      editable?: boolean;
+      options?: Array<{ code: string }>;
+      step?: number;
+    }> };
     diagnosisOptions: Array<{ code: string }>;
     refractiveThreshold: number;
   };
@@ -80,6 +85,25 @@ test("refraction definition endpoint serves practice-editable types, fields, thr
   assert.deepEqual(
     body.definition.fields.prismBase.options?.map((option) => option.code),
     ["up", "down", "in", "out"],
+  );
+  assert.equal(body.definition.fields.purpose.type, "single-select");
+  assert.equal(body.definition.fields.purpose.editable, true);
+  assert.deepEqual(
+    body.definition.fields.purpose.options?.map((option) => option.code),
+    [
+      "Full-time",
+      "Part-time",
+      "Schoolwork",
+      "Distance only",
+      "Reading",
+      "Intermediate/computer",
+      "Occupational",
+      "Safety",
+      "Sunwear",
+      "Driving",
+      "Sports & hobby",
+      "Transitional Ortho-K",
+    ],
   );
   assert.equal(body.refractiveThreshold, 0.25);
   assert.equal(body.diagnosisOptions.length, 14);
@@ -111,7 +135,9 @@ test("refraction capture persists typed per-eye graph Observations with VA, Purp
       ...BODY,
       blocks: [{
         type: "FINAL_RX",
-        purpose: "General wear",
+        purpose: "Full-time",
+        lensDesign: "progressive",
+        overContacts: true,
         remarks: "Reduce cylinder if adaptation is difficult.",
         OD: {
           sphere: -1.25,
@@ -130,6 +156,12 @@ test("refraction capture persists typed per-eye graph Observations with VA, Purp
   });
 
   assert.equal(res.status, 200);
+  const savedBlock = (res.body as {
+    blocks: Array<{ purpose?: string; lensDesign?: string; overContacts: boolean }>;
+  }).blocks[0]!;
+  assert.equal(savedBlock.purpose, "Full-time");
+  assert.equal(savedBlock.lensDesign, "progressive");
+  assert.equal(savedBlock.overContacts, true);
   assert.deepEqual(created.map((entry) => entry.resource.resourceType), [
     "Observation", "Provenance", "Observation", "Provenance",
   ]);
@@ -146,7 +178,9 @@ test("refraction capture persists typed per-eye graph Observations with VA, Purp
   const observation = observations[0]!;
   assert.equal(componentValue(observation, "REFRACTION_TYPE", "code"), "FINAL_RX");
   assert.match(String(componentValue(observation, "REFRACTION_BLOCK_ID", "string")), /^refraction-block-/);
-  assert.equal(componentValue(observation, "PURPOSE", "string"), "General wear");
+  assert.equal(componentValue(observation, "PURPOSE", "string"), "Full-time");
+  assert.equal(componentValue(observation, "LENS_DESIGN", "string"), "progressive");
+  assert.equal(componentValue(observation, "OVER_CONTACTS", "boolean"), true);
   assert.equal(componentValue(observation, "REMARKS", "string"), "Reduce cylinder if adaptation is difficult.");
   assert.equal(componentValue(observation, "DISTANCE_VA", "string"), "20/20 +1");
   assert.equal(componentValue(observation, "NEAR_VA", "string"), "J1 (20/25) 4pt 0.50M");
@@ -175,6 +209,27 @@ test("refraction capture persists typed per-eye graph Observations with VA, Purp
   });
   assert.equal(prismBase?.valueQuantity, undefined);
   assert.equal(created.some((entry) => entry.resource.resourceType === "Condition"), false);
+});
+
+test("over contacts defaults false and persists when the request omits it", async () => {
+  const { created, deps: d } = deps();
+  const res = await handleRefractionCaptureRequest(d, {
+    authHeader: AUTH,
+    body: {
+      ...BODY,
+      blocks: [{ type: "FINAL_RX", purpose: "Full-time", OD: { sphere: -1 } }],
+    },
+  });
+
+  assert.equal(res.status, 200);
+  assert.equal(
+    (res.body as { blocks: Array<{ overContacts: boolean }> }).blocks[0]?.overContacts,
+    false,
+  );
+  const observation = created
+    .map((entry) => entry.resource)
+    .find((resource): resource is Observation => resource.resourceType === "Observation")!;
+  assert.equal(componentValue(observation, "OVER_CONTACTS", "boolean"), false);
 });
 
 test("Manifest produces all independent refractive suggestions while identical Final/Rx values produce none", async () => {
@@ -251,6 +306,22 @@ test("refraction request validation rejects empty, unknown-type, and non-quarter
   assert.match(String((incompletePrism.body as { error: string }).error), /prism amount and base must be saved together/);
   assert.equal(unknownPrismBase.status, 400);
   assert.match(String((unknownPrismBase.body as { error: string }).error), /prismBase contains an unknown option/);
+});
+
+test("refraction request validation rejects an unknown purpose by name", async () => {
+  const unknownPurpose = await handleRefractionCaptureRequest(deps().deps, {
+    authHeader: AUTH,
+    body: {
+      ...BODY,
+      blocks: [{ type: "MANIFEST", purpose: "Progressive", OD: { sphere: 0 } }],
+    },
+  });
+
+  assert.equal(unknownPurpose.status, 400);
+  assert.equal(
+    (unknownPurpose.body as { error: string }).error,
+    "Block 1 purpose contains an unknown option: Progressive.",
+  );
 });
 
 test("refraction endpoint accepts a practice-added type and never treats it as Manifest", async () => {
@@ -363,11 +434,11 @@ function manifestBody() {
 function componentValue(
   observation: Observation,
   code: string,
-  kind: "code" | "string",
-): string | undefined {
+  kind: "boolean" | "code" | "string",
+): boolean | string | undefined {
   const component = observation.component?.find((row) =>
     row.code.coding?.some((coding) => coding.code === code));
-  return kind === "code"
-    ? component?.valueCodeableConcept?.coding?.[0]?.code
-    : component?.valueString;
+  if (kind === "boolean") return component?.valueBoolean;
+  if (kind === "code") return component?.valueCodeableConcept?.coding?.[0]?.code;
+  return component?.valueString;
 }

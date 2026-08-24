@@ -115,6 +115,18 @@ concepts:
     mappings:
       loinc:
         status: "todo-verify"
+  - id: LENS_DESIGN
+    display: "Lens design"
+    category: "observation-component"
+    mappings:
+      loinc:
+        status: "todo-verify"
+  - id: OVER_CONTACTS
+    display: "Over contacts"
+    category: "observation-component"
+    mappings:
+      loinc:
+        status: "todo-verify"
   - id: OPHTHALMIC_RAW_ASSET
     display: "Ophthalmic raw asset"
     category: "document-reference"

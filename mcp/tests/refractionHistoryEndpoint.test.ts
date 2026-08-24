@@ -55,7 +55,7 @@ test("refraction capture round-trips structured powers, VA, type, eye, and purpo
       encounterReference: ENCOUNTER,
       blocks: [{
         type: "FINAL_RX",
-        purpose: "General wear",
+        purpose: "Full-time",
         OD: {
           sphere: -1.25,
           cylinder: -0.5,
@@ -85,7 +85,7 @@ test("refraction capture round-trips structured powers, VA, type, eye, and purpo
     add: 2,
     distVA: "20/20 +1",
     nearVA: "J1",
-    purpose: "General wear",
+    purpose: "Full-time",
   }]);
   assert.deepEqual(history.softCl, []);
   assert.deepEqual(history.specialtyCl, []);
