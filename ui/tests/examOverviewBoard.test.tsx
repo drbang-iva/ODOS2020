@@ -411,6 +411,24 @@ test("five row patterns use clinical display values without exposing machine sta
     } finally {
       normalCvf.unmount();
     }
+
+    const machineOnlyValues = create(
+      <ExamOverviewBoard
+        projection={machineOnlyValueProjection()}
+        editorEntries={[]}
+        refreshing={false}
+        onOpenEditor={() => undefined}
+        onRefresh={() => undefined}
+      />,
+    );
+    try {
+      const machineRendered = JSON.stringify(machineOnlyValues.toJSON());
+      const leakedMachineValues = ["INTERNAL_CODE_ONLY", "serialized-bookkeeping-marker"]
+        .filter((marker) => machineRendered.includes(marker));
+      assert.deepEqual(leakedMachineValues, []);
+    } finally {
+      machineOnlyValues.unmount();
+    }
   } finally {
     renderer.unmount();
   }
@@ -465,12 +483,12 @@ test("refraction chooses the latest manifest, preserves stored signs, and keeps 
     assert.match(rendered, /OS −1\.25 sph 20\/20/);
     assert.match(rendered, /Add \+2\.00/);
     assert.match(rendered, /Wearing Rx OD −0\.75 −0\.50 ×175 OS −1\.00 sph/);
-    assert.match(rendered, /Full battery · 3 blocks/);
+    assert.match(rendered, /Full battery · 2 blocks/);
     assert.doesNotMatch(rendered, /−2\.00|Final Rx|refraction-block-/);
 
     const positiveCylinder = create(
       <ExamOverviewBoard
-        projection={positiveCylinderProjection()}
+        projection={manifestOnlyProjection()}
         editorEntries={[]}
         refreshing={false}
         onOpenEditor={() => undefined}
@@ -521,6 +539,30 @@ test("refraction chooses the latest manifest, preserves stored signs, and keeps 
   } finally {
     renderer.unmount();
   }
+});
+
+test("refraction uses a manifest when present and otherwise labels the recorded non-final block by type", () => {
+  const manifestOnly = renderRefraction(manifestOnlyProjection());
+  assert.match(manifestOnly, /Refraction — Manifest/);
+  assert.doesNotMatch(manifestOnly, /not recorded/i);
+
+  const cycloplegicOnly = renderRefraction(cycloplegicOnlyProjection());
+  assert.match(cycloplegicOnly, /Refraction — Cycloplegic/);
+  assert.match(cycloplegicOnly, /OD −0\.25 sph 20\/20/);
+  assert.doesNotMatch(cycloplegicOnly, /Manifest|not recorded|Final Rx/i);
+
+  const manifestAndFinal = renderRefraction(manifestAndFinalProjection());
+  assert.match(manifestAndFinal, /Refraction — Manifest/);
+  assert.match(manifestAndFinal, /OD −1\.00 sph 20\/20/);
+  assert.match(manifestAndFinal, /Full battery · 1 block/);
+  assert.doesNotMatch(manifestAndFinal, /−9\.00|Final Rx|not recorded/i);
+});
+
+test("refraction distance acuity never renders a code-only machine value", () => {
+  const rendered = renderRefraction(codeOnlyDistanceVaProjection());
+  assert.match(rendered, /Refraction — Manifest/);
+  assert.match(rendered, /OD −1\.00 sph/);
+  assert.doesNotMatch(rendered, /INTERNAL_DISTANCE_VA_CODE/);
 });
 
 test("manual keratometry projects only its allowlisted measurements in OD-first order", () => {
@@ -609,8 +651,14 @@ function refractionFinding(
     axis?: number;
     add?: number;
     distanceVisualAcuity?: string;
+    distanceVisualAcuityCode?: string;
   },
 ) {
+  const typeDisplay = {
+    MANIFEST: "Manifest",
+    CYCLOPLEGIC: "Cycloplegic",
+    FINAL_RX: "Final Rx",
+  }[type] ?? "Other refraction";
   return {
     observationReference: `Observation/${id}`,
     findingKey: "refraction",
@@ -623,13 +671,14 @@ function refractionFinding(
     current: {
       recordedAt,
       components: [
-        { code: "REFRACTION_TYPE", display: "Refraction type", value: { kind: "code", code: type, display: type === "MANIFEST" ? "Manifest" : "Final Rx" } },
+        { code: "REFRACTION_TYPE", display: "Refraction type", value: { kind: "code", code: type, display: typeDisplay } },
         { code: "REFRACTION_BLOCK_ID", display: "Refraction block ID", value: { kind: "string", value: `refraction-block-${blockId}-af27abe2-90b0-435f-806e-1c596cdafc66` } },
         ...(values.sphere === undefined ? [] : [component("SPHERE", "Sphere", values.sphere, "D")]),
         ...(values.cylinder === undefined ? [] : [component("CYLINDER", "Cylinder", values.cylinder, "D")]),
         ...(values.axis === undefined ? [] : [component("AXIS", "Axis", values.axis, "degrees")]),
         ...(values.add === undefined ? [] : [component("ADD", "Near add", values.add, "D")]),
         ...(values.distanceVisualAcuity === undefined ? [] : [{ code: "DISTANCE_VA", display: "Distance visual acuity", value: { kind: "string", value: values.distanceVisualAcuity } }]),
+        ...(values.distanceVisualAcuityCode === undefined ? [] : [{ code: "DISTANCE_VA", display: "Distance visual acuity", value: { kind: "code", code: values.distanceVisualAcuityCode } }]),
       ],
     },
   };
@@ -656,7 +705,7 @@ function overviewSection(
   };
 }
 
-function positiveCylinderProjection(): ExamOverviewProjection {
+function manifestOnlyProjection(): ExamOverviewProjection {
   const rows = [refractionFinding("positive-od", "OD", "2026-08-24T15:00:00.000Z", "positive", "MANIFEST", {
     sphere: 1,
     cylinder: 0.5,
@@ -667,6 +716,104 @@ function positiveCylinderProjection(): ExamOverviewProjection {
     patientReference: "Patient/patient-1",
     findings: rows,
     sections: [overviewSection("refraction", "Refraction", ["Observation/positive-od"])],
+    completeness: PROJECTION.completeness,
+  } as ExamOverviewProjection;
+}
+
+function cycloplegicOnlyProjection(): ExamOverviewProjection {
+  return refractionOnlyProjection([
+    refractionFinding("cycloplegic-od", "OD", "2026-08-24T15:00:00.000Z", "cycloplegic", "CYCLOPLEGIC", {
+      sphere: -0.25,
+      distanceVisualAcuity: "20/20",
+    }),
+  ]);
+}
+
+function manifestAndFinalProjection(): ExamOverviewProjection {
+  return refractionOnlyProjection([
+    refractionFinding("manifest-only-od", "OD", "2026-08-24T15:00:00.000Z", "manifest-only", "MANIFEST", {
+      sphere: -1,
+      distanceVisualAcuity: "20/20",
+    }),
+    refractionFinding("final-only-od", "OD", "2026-08-24T15:01:00.000Z", "final-only", "FINAL_RX", {
+      sphere: -9,
+      distanceVisualAcuity: "20/400",
+    }),
+  ]);
+}
+
+function codeOnlyDistanceVaProjection(): ExamOverviewProjection {
+  return refractionOnlyProjection([
+    refractionFinding("code-only-distance-va", "OD", "2026-08-24T15:00:00.000Z", "code-only-va", "MANIFEST", {
+      sphere: -1,
+      distanceVisualAcuityCode: "INTERNAL_DISTANCE_VA_CODE",
+    }),
+  ]);
+}
+
+function refractionOnlyProjection(rows: ReturnType<typeof refractionFinding>[]): ExamOverviewProjection {
+  return {
+    encounterReference: "Encounter/exam-1",
+    patientReference: "Patient/patient-1",
+    findings: rows,
+    sections: [overviewSection("refraction", "Refraction", rows.map((row) => row.observationReference))],
+    completeness: PROJECTION.completeness,
+  } as ExamOverviewProjection;
+}
+
+function renderRefraction(projection: ExamOverviewProjection): string {
+  const renderer = create(
+    <ExamOverviewBoard
+      projection={projection}
+      editorEntries={[]}
+      refreshing={false}
+      onOpenEditor={() => undefined}
+      onRefresh={() => undefined}
+    />,
+  );
+  try {
+    return textContent(renderer.root.findByProps({ "data-finding-key": "refraction" }));
+  } finally {
+    renderer.unmount();
+  }
+}
+
+function machineOnlyValueProjection(): ExamOverviewProjection {
+  const findings = [
+    {
+      observationReference: "Observation/code-only-value",
+      findingKey: "code-only-value",
+      sectionKey: "entrance",
+      display: "Code-only value",
+      laterality: "OU",
+      examination: { state: "examined", sourceEncoding: "observation" },
+      interpretation: "unknown",
+      provenance: { state: "current" },
+      current: {
+        value: { kind: "code", code: "INTERNAL_CODE_ONLY" },
+        components: [],
+      },
+    },
+    {
+      observationReference: "Observation/json-only-value",
+      findingKey: "json-only-value",
+      sectionKey: "entrance",
+      display: "JSON-only value",
+      laterality: "OU",
+      examination: { state: "examined", sourceEncoding: "observation" },
+      interpretation: "unknown",
+      provenance: { state: "current" },
+      current: {
+        value: { kind: "json", value: { internalId: "serialized-bookkeeping-marker" } },
+        components: [],
+      },
+    },
+  ];
+  return {
+    encounterReference: "Encounter/exam-1",
+    patientReference: "Patient/patient-1",
+    findings,
+    sections: [overviewSection("entrance", "Entrance", findings.map((finding) => finding.observationReference))],
     completeness: PROJECTION.completeness,
   } as ExamOverviewProjection;
 }

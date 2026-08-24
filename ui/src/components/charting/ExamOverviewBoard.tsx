@@ -120,7 +120,8 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, r
   }> = projection.sections.flatMap((section) => {
     const findings = (section.findingObservationReferences ?? []).flatMap((reference) => {
       const finding = findingByReference.get(reference);
-      return finding && finding.provenance.state === "current" && finding.findingKey !== "wearing_rx"
+      return finding && finding.provenance.state === "current" && finding.findingKey !== "wearing_rx" &&
+        snapshotComponentCode(finding.current, "REFRACTION_TYPE") !== "FINAL_RX"
         ? [finding]
         : [];
     });
@@ -288,6 +289,9 @@ function FindingRow({
   onOpenEditor: (sectionId: ChartEditorEntry["id"]) => void;
 }) {
   const pattern = findingPattern(group);
+  const blocks = pattern === "rx" ? refractionBlocks(group.rows) : [];
+  const primaryRefraction = pattern === "rx" ? primaryRefractionBlock(blocks) : undefined;
+  if (pattern === "rx" && !primaryRefraction) return null;
   const exception = group.rows.some((row) =>
     row.interpretation === "abnormal" || row.interpretation === "borderline" || row.examination.state !== "examined"
   );
@@ -300,13 +304,17 @@ function FindingRow({
       data-row-pattern={pattern}
       onClick={openEditor}
     >
-      <span className="odos-exam-finding-name">{group.display}{pattern === "rx" ? " — Manifest" : ""}</span>
+      <span className="odos-exam-finding-name">
+        {group.display}{primaryRefraction?.typeLabel ? ` — ${primaryRefraction.typeLabel}` : ""}
+      </span>
       <div className="odos-exam-finding-value">
         {pattern === "word" && <WordResult group={group} />}
         {pattern === "eye-pair" && <EyePairResult group={group} />}
         {pattern === "event" && <EventResult group={group} />}
         {pattern === "diagram" && <DiagramResult group={group} />}
-        {pattern === "rx" && <RxResult group={group} wearingFindings={wearingFindings} />}
+        {pattern === "rx" && primaryRefraction && (
+          <RxResult block={primaryRefraction} blockCount={blocks.length} wearingFindings={wearingFindings} />
+        )}
       </div>
       {openEditor && (
         <button
@@ -399,20 +407,23 @@ function VisualFieldDiagram({ eye, finding }: { eye: "OD" | "OS"; finding?: Exam
   );
 }
 
-function RxResult({ group, wearingFindings }: { group: FindingGroup; wearingFindings: ExamOverviewFindingProjection[] }) {
-  const blocks = refractionBlocks(group.rows);
-  const manifest = blocks
-    .filter((block) => block.type === "MANIFEST")
-    .sort((left, right) => instantMillis(right.recordedAt) - instantMillis(left.recordedAt))[0];
-  if (!manifest) return <span>Manifest not recorded</span>;
-  const add = manifest.eyes.OD?.add ?? manifest.eyes.OS?.add;
+function RxResult({
+  block,
+  blockCount,
+  wearingFindings,
+}: {
+  block: RefractionBlock;
+  blockCount: number;
+  wearingFindings: ExamOverviewFindingProjection[];
+}) {
+  const add = block.eyes.OD?.add ?? block.eyes.OS?.add;
   const wearing = wearingRx(wearingFindings);
-  const comparison = wearing ?? manifest.priorEyes;
-  const comparisonLabel = wearing ? "Wearing Rx" : Object.keys(manifest.priorEyes).length ? "Prior refraction" : undefined;
+  const comparison = wearing ?? block.priorEyes;
+  const comparisonLabel = wearing ? "Wearing Rx" : Object.keys(block.priorEyes).length ? "Prior refraction" : undefined;
   return (
     <span className="odos-exam-rx-result">
       <span className="odos-exam-rx-primary">
-        {rxEyeLine("OD", manifest.eyes.OD)} {rxEyeLine("OS", manifest.eyes.OS)}
+        {rxEyeLine("OD", block.eyes.OD)} {rxEyeLine("OS", block.eyes.OS)}
         {add !== undefined ? ` Add ${signedPower(add)}` : ""}
       </span>
       {comparisonLabel && (
@@ -421,7 +432,7 @@ function RxResult({ group, wearingFindings }: { group: FindingGroup; wearingFind
         </span>
       )}
       <details className="odos-exam-rx-battery" onClick={(event) => event.stopPropagation()}>
-        <summary>Full battery · {blocks.length} {blocks.length === 1 ? "block" : "blocks"} ▸</summary>
+        <summary>Full battery · {blockCount} {blockCount === 1 ? "block" : "blocks"} ▸</summary>
       </details>
     </span>
   );
@@ -774,6 +785,13 @@ function snapshotComponentText(snapshot: ObservationSnapshot | undefined, code: 
   return safeSnapshotValueLabel(value);
 }
 
+function snapshotComponentCode(snapshot: ObservationSnapshot | undefined, code: string): string | undefined {
+  const value = snapshotComponent(snapshot, code)?.value;
+  if (value?.kind === "code") return value.code;
+  if (value?.kind === "string") return value.value;
+  return undefined;
+}
+
 function snapshotComponentLabel(snapshot: ObservationSnapshot | undefined, code: string): string | undefined {
   const value = snapshotComponent(snapshot, code)?.value;
   return value ? safeSnapshotValueLabel(value) : undefined;
@@ -795,6 +813,7 @@ interface RxEyeValues {
 interface RefractionBlock {
   id: string;
   type: string;
+  typeLabel?: string;
   recordedAt: string;
   eyes: Partial<Record<"OD" | "OS", RxEyeValues>>;
   priorEyes: Partial<Record<"OD" | "OS", RxEyeValues>>;
@@ -808,9 +827,11 @@ function refractionBlocks(findings: readonly ExamOverviewFindingProjection[]): R
     const type = typeValue?.kind === "code"
       ? typeValue.code ?? typeValue.display ?? typeValue.text ?? ""
       : snapshotComponentText(finding.current, "REFRACTION_TYPE") ?? "";
+    const typeLabel = snapshotComponentLabel(finding.current, "REFRACTION_TYPE");
     const block = blocks.get(blockId) ?? {
       id: blockId,
       type,
+      ...(typeLabel ? { typeLabel } : {}),
       recordedAt: finding.current.recordedAt ?? "",
       eyes: {},
       priorEyes: {},
@@ -822,9 +843,17 @@ function refractionBlocks(findings: readonly ExamOverviewFindingProjection[]): R
     if (instantMillis(finding.current.recordedAt) > instantMillis(block.recordedAt)) {
       block.recordedAt = finding.current.recordedAt ?? "";
     }
+    if (!block.typeLabel && typeLabel) block.typeLabel = typeLabel;
     blocks.set(blockId, block);
   });
   return [...blocks.values()];
+}
+
+function primaryRefractionBlock(blocks: readonly RefractionBlock[]): RefractionBlock | undefined {
+  const byLatest = (left: RefractionBlock, right: RefractionBlock) =>
+    instantMillis(right.recordedAt) - instantMillis(left.recordedAt);
+  return blocks.filter((block) => block.type === "MANIFEST").sort(byLatest)[0] ??
+    [...blocks].sort(byLatest)[0];
 }
 
 function rxEyeFromSnapshot(snapshot: ObservationSnapshot): RxEyeValues {
@@ -833,7 +862,7 @@ function rxEyeFromSnapshot(snapshot: ObservationSnapshot): RxEyeValues {
     ...quantityField(snapshot, "CYLINDER", "cylinder"),
     ...quantityField(snapshot, "AXIS", "axis"),
     ...quantityField(snapshot, "ADD", "add"),
-    ...(snapshotComponentText(snapshot, "DISTANCE_VA") ? { distanceVisualAcuity: snapshotComponentText(snapshot, "DISTANCE_VA") } : {}),
+    ...(snapshotComponentLabel(snapshot, "DISTANCE_VA") ? { distanceVisualAcuity: snapshotComponentLabel(snapshot, "DISTANCE_VA") } : {}),
   };
 }
 
