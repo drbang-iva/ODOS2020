@@ -187,6 +187,7 @@ async function dilationEvent(
   ));
   const displayRows = administrations.flatMap((administration) => {
     if (
+      administration.status !== "completed" ||
       administration.subject.reference !== observation.subject?.reference ||
       administration.context?.reference !== observation.encounter?.reference
     ) return [];
@@ -210,7 +211,13 @@ async function practitionerNamesByReference(
   ))];
   const practitioners = await Promise.all(references.map(async (reference) => {
     const id = reference.slice("Practitioner/".length);
-    const practitioner = await fhir.read<Practitioner>("Practitioner", id);
+    let practitioner: Practitioner;
+    try {
+      practitioner = await fhir.read<Practitioner>("Practitioner", id);
+    } catch (error) {
+      if (errorStatus(error) === 404 || errorStatus(error) === 410) return undefined;
+      throw error;
+    }
     const display = practitionerDisplay(practitioner);
     return display ? [reference, display] as const : undefined;
   }));
