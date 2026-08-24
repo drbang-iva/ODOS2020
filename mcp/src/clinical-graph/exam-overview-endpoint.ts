@@ -2,7 +2,9 @@ import type {
   Bundle,
   Condition,
   Encounter,
+  MedicationAdministration,
   Observation,
+  Practitioner,
   Resource,
 } from "@medplum/fhirtypes";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
@@ -17,6 +19,7 @@ import {
   type ExamFindingProvenanceState,
 } from "./exam-overview-projection.js";
 import type { ClinicalFindingDefinition } from "./glaucoma-suspect.js";
+import { COVER_TEST_KEY, DILATION_KEY } from "./entrance-definition.js";
 
 export interface ExamOverviewFhirClient {
   read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T>;
@@ -81,6 +84,11 @@ export async function handleExamOverviewRequest(
       encounterConditions,
       current,
     );
+    const clinicalContextByObservation = await findingClinicalContextProjection(
+      staff.fhir,
+      encounterConditions,
+      current,
+    );
     return {
       status: 200,
       body: buildExamOverviewProjection({
@@ -94,6 +102,7 @@ export async function handleExamOverviewRequest(
         ),
         assessmentPresent: encounterConditions.some(isAssessmentEvidence),
         provenanceByObservation,
+        clinicalContextByObservation,
       }),
     };
   } catch (error) {
@@ -106,6 +115,122 @@ export async function handleExamOverviewRequest(
     }
     return { status: 502, body: { error: "FHIR exam overview dependency failed." } };
   }
+}
+
+async function findingClinicalContextProjection(
+  fhir: ExamOverviewFhirClient,
+  conditions: readonly Condition[],
+  observations: readonly Observation[],
+) {
+  const performerNames = await practitionerNamesByReference(fhir, observations);
+  const rows = await Promise.all(observations.flatMap((observation) => {
+    const observationReference = observation.id ? `Observation/${observation.id}` : undefined;
+    if (!observationReference) return [];
+    return [findingClinicalContext(
+      fhir,
+      observationReference,
+      observation,
+      conditions,
+      performerNames,
+    )];
+  }));
+  return Object.fromEntries(rows.flatMap((row) => row.context ? [[row.reference, row.context]] : []));
+}
+
+async function findingClinicalContext(
+  fhir: ExamOverviewFhirClient,
+  observationReference: string,
+  observation: Observation,
+  conditions: readonly Condition[],
+  performerNames: ReadonlyMap<string, string>,
+) {
+  const findingCode = observation.code.coding?.find((coding) => coding.code)?.code;
+  const summary = findingCode === COVER_TEST_KEY ? observation.note?.find((note) => note.text?.trim())?.text?.trim() : undefined;
+  const event = findingCode === DILATION_KEY ? await dilationEvent(fhir, observation) : undefined;
+  const diagnoses = conditions.flatMap((condition) => {
+    if (!conditionObservationReferences(condition).has(observationReference)) return [];
+    const display = condition.code?.text?.trim() ?? condition.code?.coding?.find((coding) => coding.display?.trim())?.display?.trim();
+    if (!display) return [];
+    const laterality = conditionLaterality(condition);
+    return [{ display, ...(laterality ? { laterality } : {}) }];
+  });
+  const attestedBy = [...new Set((observation.performer ?? []).flatMap((performer) => {
+    const display = performer.display?.trim() ?? (performer.reference ? performerNames.get(performer.reference) : undefined);
+    return display ? [display] : [];
+  }))];
+  const recordedAt = observation.effectiveDateTime ?? observation.issued ?? observation.meta?.lastUpdated;
+  const attestation = attestedBy.length > 0
+    ? { attestedBy, ...(recordedAt ? { recordedAt } : {}) }
+    : undefined;
+  const context = {
+    ...(summary ? { summary } : {}),
+    ...(event ? { event } : {}),
+    ...(diagnoses.length ? { diagnoses } : {}),
+    ...(attestation ? { attestation } : {}),
+  };
+  return {
+    reference: observationReference,
+    context: Object.keys(context).length > 0 ? context : undefined,
+  };
+}
+
+async function dilationEvent(
+  fhir: ExamOverviewFhirClient,
+  observation: Observation,
+) {
+  const references = (observation.partOf ?? []).flatMap((reference) => {
+    const match = reference.reference?.match(/^MedicationAdministration\/([A-Za-z0-9.-]+)$/);
+    return match?.[1] ? [match[1]] : [];
+  });
+  const administrations = await Promise.all(references.map((id) =>
+    fhir.read<MedicationAdministration>("MedicationAdministration", id)
+  ));
+  const displayRows = administrations.flatMap((administration) => {
+    const agent = administration.medicationCodeableConcept?.coding?.find((coding) => coding.display?.trim())?.display?.trim();
+    const occurredAt = administration.effectiveDateTime;
+    return agent && occurredAt ? [{ agent, occurredAt }] : [];
+  });
+  return displayRows.length ? { administrations: displayRows } : undefined;
+}
+
+async function practitionerNamesByReference(
+  fhir: ExamOverviewFhirClient,
+  observations: readonly Observation[],
+): Promise<Map<string, string>> {
+  const references = [...new Set(observations.flatMap((observation) =>
+    (observation.performer ?? []).flatMap((performer) =>
+      performer.display?.trim() || !performer.reference?.match(/^Practitioner\/[A-Za-z0-9.-]+$/)
+        ? []
+        : [performer.reference]
+    )
+  ))];
+  const practitioners = await Promise.all(references.map(async (reference) => {
+    const id = reference.slice("Practitioner/".length);
+    const practitioner = await fhir.read<Practitioner>("Practitioner", id);
+    const display = practitionerDisplay(practitioner);
+    return display ? [reference, display] as const : undefined;
+  }));
+  return new Map(practitioners.flatMap((row) => row ? [row] : []));
+}
+
+function practitionerDisplay(practitioner: Practitioner): string | undefined {
+  const name = practitioner.name?.[0];
+  if (!name) return undefined;
+  const display = [
+    ...(name.prefix ?? []),
+    ...(name.given ?? []),
+    name.family,
+    ...(name.suffix ?? []),
+  ].filter((part): part is string => Boolean(part?.trim())).join(" ").trim();
+  return display || name.text?.trim() || undefined;
+}
+
+function conditionLaterality(condition: Condition): "OD" | "OS" | "OU" | undefined {
+  const code = condition.bodySite?.flatMap((site) => site.coding ?? []).find((coding) => coding.code)?.code;
+  if (code === "OD" || code === "right") return "OD";
+  if (code === "OS" || code === "left") return "OS";
+  if (code === "OU" || code === "bilateral") return "OU";
+  return undefined;
 }
 
 async function findingProvenanceProjection(

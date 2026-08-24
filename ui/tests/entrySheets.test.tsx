@@ -388,11 +388,17 @@ test("entry-sheet chrome is 44px-class and the shared layer traps, closes, and r
   }
 });
 
-test("distributed editor rows are 44px-class and disclose their interaction before activation", { timeout: 30_000 }, async () => {
+test("chart-another entries are 44px-class and disclose their interaction after deliberate expansion", { timeout: 30_000 }, async () => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   page.setDefaultTimeout(5_000);
   try {
     await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
+    const chartAnotherGroups = page.getByTestId("chart-another-finding");
+    const chartAnotherCount = await chartAnotherGroups.count();
+    assert.ok(chartAnotherCount > 0);
+    for (let index = 0; index < chartAnotherCount; index += 1) {
+      await chartAnotherGroups.nth(index).locator("summary").click();
+    }
     const rows = page.getByTestId("exam-editor-entry-row");
     assert.ok(await rows.count() >= REAL_SECTION_AUDIT.length);
     const measurements = await rows.evaluateAll((nodes) => nodes.map((node) => {
@@ -443,39 +449,19 @@ test("distributed editor rows are 44px-class and disclose their interaction befo
   }
 });
 
-test("the active distributed editor row resolves a visible selection background", { timeout: 30_000 }, async () => {
-  const page = await openActiveVisualAcuityPage();
+test("an open entry sheet does not reopen a hidden per-finding launcher behind the modal", { timeout: 30_000 }, async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  page.setDefaultTimeout(5_000);
   try {
-    const backgroundColor = await activeVisualAcuityRow(page).evaluate((element) => getComputedStyle(element).backgroundColor);
-    assert.notEqual(backgroundColor, "rgba(0, 0, 0, 0)");
-  } finally {
-    await page.close();
-  }
-});
-
-test("the active distributed editor row resolves an inset selection indicator", { timeout: 30_000 }, async () => {
-  const page = await openActiveVisualAcuityPage();
-  try {
-    const boxShadow = await activeVisualAcuityRow(page).evaluate((element) => getComputedStyle(element).boxShadow);
-    assert.notEqual(boxShadow, "none");
-    assert.match(boxShadow, /inset/);
-  } finally {
-    await page.close();
-  }
-});
-
-test("the active distributed editor row resolves its border to the document accent", { timeout: 30_000 }, async () => {
-  const page = await openActiveVisualAcuityPage();
-  try {
-    const [style, accentColor] = await Promise.all([
-      activeVisualAcuityRow(page).evaluate((element) => {
-        const computed = getComputedStyle(element);
-        return { borderColor: computed.borderColor, color: computed.color };
-      }),
-      resolveTokenColor(page, "--odos-accent"),
-    ]);
-    assert.notEqual(style.borderColor, style.color, "the active border must not fall back to currentColor");
-    assert.equal(style.borderColor, accentColor);
+    await page.goto(
+      `${origin}/tests/fixtures/entry-sheets.html?audit=sheet&section=va`,
+      { waitUntil: "networkidle" },
+    );
+    await page.getByRole("dialog", { name: "Visual Acuity" }).waitFor();
+    assert.equal(await page.locator('[data-editor-section-id="va"].is-active').isVisible(), false);
+    assert.equal(await page.getByTestId("chart-another-finding").filter({
+      has: page.locator('[data-editor-section-id="va"]'),
+    }).getAttribute("open"), null);
   } finally {
     await page.close();
   }
@@ -484,6 +470,7 @@ test("the active distributed editor row resolves its border to the document acce
 test("the distributed editor row hover visibly engages and resolves to the document accent", { timeout: 30_000 }, async () => {
   const page = await openExamOverviewPage();
   try {
+    await openChartAnotherGroup(page, "iop");
     await assertHoverBorderResolvesAccent(page, page.locator('[data-editor-section-id="iop"]'));
   } finally {
     await page.close();
@@ -571,20 +558,11 @@ for (const viewport of [
   });
 }
 
-async function openActiveVisualAcuityPage(): Promise<Page> {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
-  page.setDefaultTimeout(5_000);
-  try {
-    await page.goto(
-      `${origin}/tests/fixtures/entry-sheets.html?audit=sheet&section=va`,
-      { waitUntil: "networkidle" },
-    );
-    await activeVisualAcuityRow(page).waitFor();
-    return page;
-  } catch (error) {
-    await page.close();
-    throw error;
-  }
+async function openChartAnotherGroup(page: Page, sectionId: string): Promise<void> {
+  const group = page.getByTestId("chart-another-finding").filter({
+    has: page.locator(`[data-editor-section-id="${sectionId}"]`),
+  });
+  await group.locator("summary").click();
 }
 
 async function openExamOverviewPage(showReturnButton = false): Promise<Page> {
@@ -599,10 +577,6 @@ async function openExamOverviewPage(showReturnButton = false): Promise<Page> {
     await page.close();
     throw error;
   }
-}
-
-function activeVisualAcuityRow(page: Page): Locator {
-  return page.locator('[data-editor-section-id="va"].is-active');
 }
 
 async function resolveTokenColor(page: Page, token: string): Promise<string> {

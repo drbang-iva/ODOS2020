@@ -4,7 +4,9 @@ import type {
   Bundle,
   Condition,
   Encounter,
+  MedicationAdministration,
   Observation,
+  Practitioner,
   Provenance,
   Resource,
 } from "@medplum/fhirtypes";
@@ -101,6 +103,74 @@ test("endpoint projects carried-unreasserted and carried-reasserted from durable
   });
 });
 
+test("overview context explicitly allowlists stored human-facing event, diagnosis, attestation, and summary fields", async () => {
+  const dilation: Observation = {
+    ...historyFinding("dilation", "e1", "2026-08-24T14:42:00.000Z"),
+    code: { coding: [{ code: "entrance:dilation", display: "Dilation" }] },
+    performer: [{ reference: "Practitioner/doc" }],
+    partOf: [{ reference: "MedicationAdministration/dilation-agent" }],
+    component: [{
+      code: { coding: [{ code: "DFE_PERFORMED", display: "DFE performed" }] },
+      valueBoolean: true,
+    }],
+    note: [{ text: "internal dilation bookkeeping must not become the event label" }],
+  };
+  const cover: Observation = {
+    ...historyFinding("cover", "e1", "2026-08-24T14:41:00.000Z"),
+    code: { coding: [{ code: "entrance:cover", display: "Cover test" }] },
+    note: [{ text: "NEAR 3 XP" }],
+  };
+  const administration: MedicationAdministration = {
+    resourceType: "MedicationAdministration",
+    id: "dilation-agent",
+    status: "completed",
+    medicationCodeableConcept: {
+      coding: [{ code: "tropicamide-1", display: "Tropicamide 1%" }],
+      text: "must not override the allowlisted display",
+    },
+    subject: { reference: "Patient/p1" },
+    context: { reference: "Encounter/e1" },
+    effectiveDateTime: "2026-08-24T14:42:00.000Z",
+    performer: [{ actor: { reference: "Practitioner/doc" } }],
+  };
+  const practitioner: Practitioner = {
+    resourceType: "Practitioner",
+    id: "doc",
+    active: true,
+    name: [{ prefix: ["Dr."], given: ["Avery"], family: "Chen" }],
+    identifier: [{ value: "internal-staff-uuid" }],
+  };
+  const diagnosis = condition("diagnosis", "Encounter/e1", ["Observation/dilation"]);
+  diagnosis.code = { text: "Cataract, nuclear" };
+  diagnosis.bodySite = [{ coding: [{ code: "OU", display: "OU" }] }];
+  const fhir = new OverviewMemoryFhir([encounter(), dilation, cover, administration, practitioner, diagnosis]);
+
+  const response = await handleExamOverviewRequest(deps(fhir, "provider"), request());
+
+  assert.equal(response.status, 200, JSON.stringify(response.body));
+  const body = response.body as ExamOverviewProjection;
+  const dilationRow = body.findings.find((row) => row.findingKey === "entrance:dilation");
+  const coverRow = body.findings.find((row) => row.findingKey === "entrance:cover");
+  assert.deepEqual(dilationRow?.event, {
+    administrations: [{
+      agent: "Tropicamide 1%",
+      occurredAt: "2026-08-24T14:42:00.000Z",
+    }],
+  });
+  assert.deepEqual(dilationRow?.diagnoses, [{ display: "Cataract, nuclear", laterality: "OU" }]);
+  assert.deepEqual(dilationRow?.attestation, {
+    attestedBy: ["Dr. Avery Chen"],
+    recordedAt: "2026-08-24T14:42:00.000Z",
+  });
+  assert.equal(coverRow?.summary, "NEAR 3 XP");
+  assert.doesNotMatch(JSON.stringify({
+    event: dilationRow?.event,
+    diagnoses: dilationRow?.diagnoses,
+    attestation: dilationRow?.attestation,
+    summary: coverRow?.summary,
+  }), /dilation-agent|Practitioner\/doc|internal-staff-uuid|internal dilation bookkeeping|must not override/);
+});
+
 test("an encounter with no patient is rejected without fabricating a projection", async () => {
   const missingPatient = encounter();
   delete missingPatient.subject;
@@ -135,7 +205,7 @@ function deps(fhir: OverviewMemoryFhir, role: PracticeRoleId | null) {
       ? { staffReference: "Practitioner/doc", actorRole: role, fhir }
       : null,
     serviceFhir: fhir,
-    findingDefinitions: async () => [HISTORY_DEFINITION, IOP_DEFINITION],
+    findingDefinitions: async () => [HISTORY_DEFINITION, IOP_DEFINITION, DILATION_DEFINITION, COVER_DEFINITION],
   };
 }
 
@@ -160,6 +230,24 @@ const IOP_DEFINITION: ClinicalFindingDefinition = {
   stableKey: "intraocular_pressure",
   display: "Intraocular pressure",
   sectionKey: "tonometry",
+  anatomyTarget: "eye",
+};
+
+const DILATION_DEFINITION: ClinicalFindingDefinition = {
+  ...HISTORY_DEFINITION,
+  id: "finding-def-dilation",
+  stableKey: "entrance:dilation",
+  display: "Dilation",
+  sectionKey: "entrance:dilation",
+  anatomyTarget: "eye",
+};
+
+const COVER_DEFINITION: ClinicalFindingDefinition = {
+  ...HISTORY_DEFINITION,
+  id: "finding-def-cover",
+  stableKey: "entrance:cover",
+  display: "Cover test",
+  sectionKey: "entrance:cover",
   anatomyTarget: "eye",
 };
 

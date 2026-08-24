@@ -43,6 +43,21 @@ interface ExamOverviewFindingProjection {
   interpretation: FindingInterpretation;
   provenance: { state: ExamFindingProvenanceState; sourceDate?: string };
   current: ObservationSnapshot;
+  summary?: string;
+  event?: {
+    administrations: Array<{
+      agent: string;
+      occurredAt: string;
+    }>;
+  };
+  diagnoses?: Array<{
+    display: string;
+    laterality?: "OD" | "OS" | "OU";
+  }>;
+  attestation?: {
+    attestedBy: string[];
+    recordedAt?: string;
+  };
   prior?: ObservationSnapshot;
   changeFromPrior?: { kind: "numeric"; delta: number; unit?: string } | { kind: "changed" };
 }
@@ -96,26 +111,36 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, r
   const findingByReference = new Map(
     projection.findings.map((finding) => [finding.observationReference, finding]),
   );
-  const projectedSectionKeys = new Set(projection.sections.map((section) => section.sectionKey));
   const editorGroups = groupEditorEntries(editorEntries);
+  const wearingFindings = projection.findings.filter((finding) => finding.findingKey === "wearing_rx");
   const boardSections: Array<{
     sectionKey: string;
     label: string;
-    projection?: ExamOverviewSectionProjection;
-    entries: ChartEditorEntry[];
-  }> = [
-    ...projection.sections.map((section) => ({
+    groups: FindingGroup[];
+  }> = projection.sections.flatMap((section) => {
+    const findings = (section.findingObservationReferences ?? []).flatMap((reference) => {
+      const finding = findingByReference.get(reference);
+      return finding && finding.provenance.state === "current" && finding.findingKey !== "wearing_rx"
+        ? [finding]
+        : [];
+    });
+    const groups = groupFindings(findings);
+    return groups.length ? [{
       sectionKey: section.sectionKey,
       label: section.label,
-      projection: section,
-      entries: editorGroups.get(section.sectionKey) ?? [],
-    })),
-    ...Array.from(editorGroups.entries()).flatMap(([sectionKey, entries]) =>
-      projectedSectionKeys.has(sectionKey)
-        ? []
-        : [{ sectionKey, label: editorGroupLabel(entries[0]?.group, sectionKey), entries }],
-    ),
-  ];
+      groups,
+    }] : [];
+  });
+  const performedEditorIds = new Set(boardSections.flatMap((section) =>
+    section.groups.flatMap((group) => {
+      const editor = editorForFinding(group, editorEntries);
+      return editor ? [editor.id] : [];
+    })
+  ));
+  const chartAnotherGroups = Array.from(editorGroups.entries()).flatMap(([sectionKey, entries]) => {
+    const remaining = entries.filter((entry) => !performedEditorIds.has(entry.id));
+    return remaining.length ? [[sectionKey, remaining] as const] : [];
+  });
 
   return (
     <main className="odos-exam-overview" aria-labelledby="exam-overview-title">
@@ -125,7 +150,7 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, r
           <h1 id="exam-overview-title">Exam overview</h1>
         </div>
         <div className="odos-exam-overview-actions">
-          <span>{projection.sections.length} sections</span>
+          <span>{boardSections.length} sections</span>
           <button
             type="button"
             data-testid="refresh-exam-overview"
@@ -139,90 +164,64 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, r
       </header>
 
       <div className="odos-exam-overview-board">
-        {boardSections.map((section) => {
-          const sectionProjection = section.projection;
-          const findings = orderedSectionFindings(
-            (sectionProjection?.findingObservationReferences ?? []).flatMap((reference) => {
-              const finding = findingByReference.get(reference);
-              return finding ? [finding] : [];
-            }),
-          );
-          return (
+        {boardSections.map((section) => (
             <section
               key={section.sectionKey}
               className="odos-exam-section"
               data-testid="exam-overview-section"
               data-section-key={section.sectionKey}
-              data-section-state={sectionProjection?.state ?? "editor-only"}
               aria-labelledby={`exam-section-${safeId(section.sectionKey)}`}
             >
               <header className="odos-exam-section-heading">
-                <div>
-                  <h2 id={`exam-section-${safeId(section.sectionKey)}`}>{section.label}</h2>
-                  {sectionProjection ? (
-                    <span
-                      className={`odos-exam-section-state is-${sectionProjection.state}`}
-                      data-channel="section-state"
-                      data-state={sectionProjection.state}
-                    >
-                      {sectionStateLabel(sectionProjection.state)}
-                    </span>
-                  ) : (
-                    <span className="odos-exam-section-state is-editor-only">Editor access</span>
-                  )}
-                </div>
-                {sectionProjection && (
-                  <div className="odos-exam-section-counts" aria-label={`${section.label} status counts`}>
-                    <span className="is-abnormal">{sectionProjection.abnormalCount} abnormal</span>
-                    <span className="is-carried">{sectionProjection.carriedUnreassertedCount} carried, not reasserted</span>
-                    <span className="is-deferred-gap">
-                      {`${sectionProjection.deferredWithoutReasonCount} deferred ${sectionProjection.deferredWithoutReasonCount === 1 ? "reason" : "reasons"} missing`}
-                    </span>
-                  </div>
-                )}
+                <h2 id={`exam-section-${safeId(section.sectionKey)}`}>{section.label}</h2>
               </header>
-
-              {findings.length > 0 ? (
-                <div className="odos-exam-finding-list">
-                  {findings.map((finding) => (
-                    <FindingRow key={finding.observationReference} finding={finding} />
-                  ))}
-                </div>
-              ) : (
-                <p className="odos-exam-section-empty">
-                  {sectionProjection?.state === "not-indicated"
-                    ? "No findings expected for this visit type."
-                    : "No finding observations recorded."}
-                </p>
-              )}
-              {section.entries.length > 0 && (
-                <EditorEntryRows
-                  entries={section.entries}
-                  activeEditorId={activeEditorId}
-                  onOpenEditor={onOpenEditor}
-                />
-              )}
+              <div className="odos-exam-finding-list">
+                {section.groups.map((group) => (
+                  <FindingRow
+                    key={`${group.findingKey}\u0000${group.display}`}
+                    group={group}
+                    wearingFindings={wearingFindings}
+                    editor={editorForFinding(group, editorEntries)}
+                    onOpenEditor={onOpenEditor}
+                  />
+                ))}
+              </div>
             </section>
-          );
-        })}
+        ))}
       </div>
+
+      {chartAnotherGroups.length > 0 && (
+        <nav className="odos-exam-chart-another" aria-label="Chart another finding">
+          {chartAnotherGroups.map(([sectionKey, entries]) => (
+            <ChartAnotherFinding
+              key={sectionKey}
+              label={editorGroupLabel(entries[0]?.group, sectionKey)}
+              entries={entries}
+              activeEditorId={activeEditorId}
+              onOpenEditor={onOpenEditor}
+            />
+          ))}
+        </nav>
+      )}
 
     </main>
   );
 }
 
-function EditorEntryRows({
+function ChartAnotherFinding({
+  label,
   entries,
   activeEditorId,
   onOpenEditor,
 }: {
+  label: string;
   entries: readonly ChartEditorEntry[];
   activeEditorId?: ChartEditorEntry["id"];
   onOpenEditor: (sectionId: ChartEditorEntry["id"]) => void;
 }) {
   return (
-    <div className="odos-exam-editor-entries">
-      <h3>Chart editors</h3>
+    <details className="odos-exam-editor-entries" data-testid="chart-another-finding">
+      <summary>Chart another finding <span>{label}</span></summary>
       <div className="odos-exam-editor-entry-list">
         {entries.map((entry) => (
           <button
@@ -243,7 +242,7 @@ function EditorEntryRows({
           </button>
         ))}
       </div>
-    </div>
+    </details>
   );
 }
 
@@ -269,52 +268,178 @@ function editorGroupLabel(group: string | undefined, sectionKey: string): string
   return sectionKey.replaceAll("-", " ").replaceAll(/\b\w/g, (letter) => letter.toLocaleUpperCase());
 }
 
-function FindingRow({ finding }: { finding: ExamOverviewFindingProjection }) {
+type RowPattern = "word" | "eye-pair" | "event" | "diagram" | "rx";
+
+interface FindingGroup {
+  findingKey: string;
+  display: string;
+  rows: ExamOverviewFindingProjection[];
+}
+
+function FindingRow({
+  group,
+  wearingFindings,
+  editor,
+  onOpenEditor,
+}: {
+  group: FindingGroup;
+  wearingFindings: ExamOverviewFindingProjection[];
+  editor?: ChartEditorEntry;
+  onOpenEditor: (sectionId: ChartEditorEntry["id"]) => void;
+}) {
+  const pattern = findingPattern(group);
+  const exception = group.rows.some((row) =>
+    row.interpretation === "abnormal" || row.interpretation === "borderline" || row.examination.state !== "examined"
+  );
+  const openEditor = editor ? () => onOpenEditor(editor.id) : undefined;
   return (
-    <article className="odos-exam-finding" data-finding-key={finding.findingKey}>
-      <div className="odos-exam-finding-main">
-        <span className={`odos-exam-laterality is-${finding.laterality.toLowerCase()}`} data-testid="finding-laterality">
-          {finding.laterality}
-        </span>
-        <div className="odos-exam-finding-value">
-          <strong>{finding.display}</strong>
-          <span className="odos-exam-current">{snapshotLabel(finding.current)}</span>
-          {finding.prior && (
-            <span className="odos-exam-prior" data-testid="finding-prior">
-              Prior {snapshotLabel(finding.prior)}
-            </span>
-          )}
-        </div>
+    <article
+      className={`odos-exam-finding${exception ? " is-exception" : ""}${openEditor ? " is-clickable" : ""}`}
+      data-testid="exam-finding-row"
+      data-finding-key={group.findingKey}
+      data-row-pattern={pattern}
+      onClick={openEditor}
+      onKeyDown={openEditor ? (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openEditor();
+        }
+      } : undefined}
+      role={openEditor ? "button" : undefined}
+      tabIndex={openEditor ? 0 : undefined}
+    >
+      <span className="odos-exam-finding-name">{group.display}{pattern === "rx" ? " — Manifest" : ""}</span>
+      <div className="odos-exam-finding-value">
+        {pattern === "word" && <WordResult group={group} />}
+        {pattern === "eye-pair" && <EyePairResult group={group} />}
+        {pattern === "event" && <EventResult group={group} />}
+        {pattern === "diagram" && <DiagramResult group={group} />}
+        {pattern === "rx" && <RxResult group={group} wearingFindings={wearingFindings} />}
       </div>
-      <div className="odos-exam-finding-channels">
-        <span
-          className={`odos-exam-examination is-${finding.examination.state}`}
-          data-channel="examination"
-          data-state={finding.examination.state}
-        >
-          {examinationLabel(finding.examination)}
-        </span>
-        <span
-          className={`odos-exam-provenance is-${finding.provenance.state}`}
-          data-channel="provenance"
-          data-state={finding.provenance.state}
-        >
-          {provenanceLabel(finding.provenance)}
-        </span>
-        <span
-          className={`odos-exam-interpretation is-${finding.interpretation}`}
-          data-channel="interpretation"
-          data-state={finding.interpretation}
-        >
-          {interpretationLabel(finding.interpretation)}
-        </span>
-        {finding.changeFromPrior && (
-          <span className="odos-exam-change" data-channel="change-from-prior">
-            {changeLabel(finding.changeFromPrior)}
-          </span>
-        )}
-      </div>
+      {exception && <FindingExpansion group={group} />}
     </article>
+  );
+}
+
+function WordResult({ group }: { group: FindingGroup }) {
+  return <span>{wordValue(group.rows[0]!)}</span>;
+}
+
+function EyePairResult({ group }: { group: FindingGroup }) {
+  const rows = [...group.rows].sort((left, right) => lateralityOrder(left.laterality) - lateralityOrder(right.laterality));
+  const values = rows.map((row) => ({ row, value: findingValue(row) }));
+  const equalNormal = values.length > 1 && values.every(({ row, value }) =>
+    row.interpretation === "normal" && value === values[0]?.value
+  );
+  if (equalNormal) return <span>{values[0]?.value}</span>;
+  return (
+    <span className="odos-exam-eye-pair">
+      {values.map(({ row, value }) => (
+        <span key={row.laterality} className="odos-exam-eye-value">
+          <small>{row.laterality}</small> {value}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function EventResult({ group }: { group: FindingGroup }) {
+  const administrations = group.rows.flatMap((row) => row.event?.administrations ?? []);
+  const instants = [...new Set(administrations.map((administration) => administration.occurredAt))];
+  if (instants.length === 1) {
+    return <span>{administrations.map((administration) => administration.agent).join(" + ")} · {timeLabel(instants[0]!)}</span>;
+  }
+  return <span>{administrations.map((administration) => `${administration.agent} · ${timeLabel(administration.occurredAt)}`).join(" + ")}</span>;
+}
+
+function DiagramResult({ group }: { group: FindingGroup }) {
+  if (group.rows.every((row) => row.interpretation === "normal")) return <span>full</span>;
+  const byEye = new Map(group.rows.map((row) => [row.laterality, row]));
+  return (
+    <span className="odos-exam-field-pair">
+      {(["OD", "OS"] as const).map((eye) => (
+        <VisualFieldDiagram key={eye} eye={eye} finding={byEye.get(eye)} />
+      ))}
+    </span>
+  );
+}
+
+const CVF_QUADRANTS = [
+  ["upper-left", "CUSTOM_CVF_UPPER_LEFT"],
+  ["upper-right", "CUSTOM_CVF_UPPER_RIGHT"],
+  ["lower-left", "CUSTOM_CVF_LOWER_LEFT"],
+  ["lower-right", "CUSTOM_CVF_LOWER_RIGHT"],
+] as const;
+
+function VisualFieldDiagram({ eye, finding }: { eye: "OD" | "OS"; finding?: ExamOverviewFindingProjection }) {
+  const restricted = CVF_QUADRANTS.flatMap(([quadrant, code]) =>
+    snapshotComponentText(finding?.current, code)?.toLowerCase() === "restricted" ? [quadrant] : []
+  );
+  return (
+    <span className="odos-exam-field-eye">
+      <small>{eye}</small>
+      <span
+        className="odos-exam-field-diagram"
+        data-testid="visual-field-diagram"
+        data-eye={eye}
+        data-restricted-quadrants={restricted.join(",")}
+        aria-label={`${eye} confrontation field: ${restricted.length ? `${restricted.join(", ")} restricted` : "clear"}`}
+      >
+        {CVF_QUADRANTS.map(([quadrant]) => (
+          <span key={quadrant} className={`is-${quadrant}${restricted.includes(quadrant) ? " is-restricted" : ""}`} />
+        ))}
+      </span>
+    </span>
+  );
+}
+
+function RxResult({ group, wearingFindings }: { group: FindingGroup; wearingFindings: ExamOverviewFindingProjection[] }) {
+  const blocks = refractionBlocks(group.rows);
+  const manifest = blocks
+    .filter((block) => block.type === "MANIFEST")
+    .sort((left, right) => right.recordedAt.localeCompare(left.recordedAt))[0];
+  if (!manifest) return <span>Manifest not recorded</span>;
+  const add = manifest.eyes.OD?.add ?? manifest.eyes.OS?.add;
+  const wearing = wearingRx(wearingFindings);
+  const comparison = wearing ?? manifest.priorEyes;
+  const comparisonLabel = wearing ? "Wearing Rx" : Object.keys(manifest.priorEyes).length ? "Prior refraction" : undefined;
+  return (
+    <span className="odos-exam-rx-result">
+      <span className="odos-exam-rx-primary">
+        {rxEyeLine("OD", manifest.eyes.OD)} {rxEyeLine("OS", manifest.eyes.OS)}
+        {add !== undefined ? ` Add ${signedPower(add)}` : ""}
+      </span>
+      {comparisonLabel && (
+        <span className="odos-exam-rx-comparison">
+          <small>{comparisonLabel}</small> {rxEyeLine("OD", comparison.OD, false)} {rxEyeLine("OS", comparison.OS, false)}
+        </span>
+      )}
+      <details className="odos-exam-rx-battery" onClick={(event) => event.stopPropagation()}>
+        <summary>Full battery · {blocks.length} {blocks.length === 1 ? "block" : "blocks"} ▸</summary>
+      </details>
+    </span>
+  );
+}
+
+function FindingExpansion({ group }: { group: FindingGroup }) {
+  const diagnoses = uniqueRows(group.rows.flatMap((row) => row.diagnoses ?? []), (row) => `${row.display}\u0000${row.laterality ?? ""}`);
+  const attesters = [...new Set(group.rows.flatMap((row) => row.attestation?.attestedBy ?? []))];
+  const recordedAt = group.rows.map((row) => row.attestation?.recordedAt).find(Boolean);
+  return (
+    <details className="odos-exam-finding-expansion" onClick={(event) => event.stopPropagation()}>
+      <summary>Details</summary>
+      {diagnoses.map((diagnosis) => (
+        <span key={`${diagnosis.display}-${diagnosis.laterality ?? ""}`} className="odos-exam-filed-under">
+          filed under: {diagnosis.display}{diagnosis.laterality ? ` — ${diagnosis.laterality}` : ""}
+        </span>
+      ))}
+      {attesters.length > 0 && (
+        <span className="odos-exam-attestation">
+          Attested by {attesters.join(", ")}
+          {recordedAt ? ` · ${timeLabel(recordedAt)}` : ""} · current visit
+        </span>
+      )}
+    </details>
   );
 }
 
@@ -399,8 +524,29 @@ function isFindingProjection(value: unknown): value is ExamOverviewFindingProjec
     oneOf(value.provenance.state, ["current", "carried-unreasserted", "carried-reasserted"]) &&
     optionalString(value.provenance.sourceDate) &&
     isObservationSnapshot(value.current) &&
+    optionalString(value.summary) &&
+    (value.event === undefined || isFindingEvent(value.event)) &&
+    (value.diagnoses === undefined || isFindingDiagnoses(value.diagnoses)) &&
+    (value.attestation === undefined || isFindingAttestation(value.attestation)) &&
     (value.prior === undefined || isObservationSnapshot(value.prior)) &&
     (value.changeFromPrior === undefined || isChangeFromPrior(value.changeFromPrior));
+}
+
+function isFindingEvent(value: unknown): boolean {
+  return isRecord(value) && Array.isArray(value.administrations) && value.administrations.every((administration) =>
+    isRecord(administration) && typeof administration.agent === "string" && typeof administration.occurredAt === "string"
+  );
+}
+
+function isFindingDiagnoses(value: unknown): boolean {
+  return Array.isArray(value) && value.every((diagnosis) =>
+    isRecord(diagnosis) && typeof diagnosis.display === "string" &&
+    (diagnosis.laterality === undefined || oneOf(diagnosis.laterality, ["OD", "OS", "OU"]))
+  );
+}
+
+function isFindingAttestation(value: unknown): boolean {
+  return isRecord(value) && stringArray(value.attestedBy) && optionalString(value.recordedAt);
 }
 
 function isSectionProjection(value: unknown): value is ExamOverviewSectionProjection {
@@ -486,34 +632,100 @@ function oneOf<const T extends string>(value: unknown, options: readonly T[]): v
   return typeof value === "string" && options.includes(value as T);
 }
 
-function orderedSectionFindings(
-  findings: readonly ExamOverviewFindingProjection[],
-): ExamOverviewFindingProjection[] {
+function groupFindings(findings: readonly ExamOverviewFindingProjection[]): FindingGroup[] {
   const groups = new Map<string, ExamOverviewFindingProjection[]>();
   for (const finding of findings) {
     const key = `${finding.findingKey}\u0000${finding.display}`;
     groups.set(key, [...(groups.get(key) ?? []), finding]);
   }
-  return [...groups.values()].flatMap((group) =>
-    group.sort((left, right) => lateralityOrder(left.laterality) - lateralityOrder(right.laterality))
-  );
+  return [...groups.values()].map((rows) => ({
+    findingKey: rows[0]!.findingKey,
+    display: rows[0]!.display,
+    rows: rows.sort((left, right) => lateralityOrder(left.laterality) - lateralityOrder(right.laterality)),
+  }));
 }
 
 function lateralityOrder(laterality: ExamOverviewFindingProjection["laterality"]): number {
   return { OD: 0, OS: 1, OU: 2, UNKNOWN: 3 }[laterality];
 }
 
-function snapshotLabel(snapshot: ObservationSnapshot): string {
-  const parts = [
-    ...(snapshot.value ? [snapshotValueLabel(snapshot.value)] : []),
-    ...snapshot.components.map((component) =>
-      `${component.display ?? component.code}: ${component.value ? snapshotValueLabel(component.value) : "Not recorded"}`
-    ),
-  ];
-  return parts.join(" · ") || "No recorded value";
+function editorForFinding(
+  group: FindingGroup,
+  editorEntries: readonly ChartEditorEntry[],
+): ChartEditorEntry | undefined {
+  const knownEditor = {
+    "entrance:cover": "cover-test",
+    "entrance:color": "color-vision",
+    "entrance:stereo": "stereopsis",
+    intraocular_pressure: "iop",
+    cup_disc_ratio: "cup-disc",
+    manual_keratometry: "manual-keratometry",
+    auto_refraction: "auto-refraction",
+    hpi_ros: "hpi",
+  }[group.findingKey];
+  const candidates = [
+    knownEditor,
+    group.findingKey,
+    group.findingKey.split(":").at(-1),
+    group.rows[0]?.sectionKey,
+    group.rows[0]?.sectionKey.split(":").at(-1),
+    group.findingKey === "pachymetry_um" ? "pachymetry" : undefined,
+    group.findingKey === "entrance:cvf" ? "cvf" : undefined,
+    group.findingKey === "entrance:eom" ? "eom" : undefined,
+  ].filter(Boolean);
+  return editorEntries.find((entry) => candidates.includes(entry.id));
 }
 
-function snapshotValueLabel(value: ObservationSnapshotValue): string {
+function findingPattern(group: FindingGroup): RowPattern {
+  if (group.rows.every((row) => row.examination.state !== "examined")) return "word";
+  if (group.rows.some((row) => (row.event?.administrations.length ?? 0) > 0)) return "event";
+  if (group.findingKey === "refraction" || group.rows.some((row) =>
+    ["SPHERE", "CYLINDER", "AXIS", "ADD"].some((code) => snapshotComponent(row.current, code))
+  )) return "rx";
+  if (group.findingKey === "entrance:cvf" || group.rows.some((row) =>
+    CVF_QUADRANTS.some(([, code]) => snapshotComponent(row.current, code))
+  )) return "diagram";
+  if (group.rows.some((row) => row.laterality === "OD" || row.laterality === "OS")) return "eye-pair";
+  return "word";
+}
+
+function wordValue(finding: ExamOverviewFindingProjection): string {
+  if (finding.examination.state !== "examined") {
+    return `deferred — ${finding.examination.reason ?? "reason not recorded"}`;
+  }
+  return finding.summary ?? findingValue(finding);
+}
+
+function findingValue(finding: ExamOverviewFindingProjection): string {
+  const normalWord = finding.interpretation === "normal" ? normalFindingWord(finding.findingKey) : undefined;
+  if (normalWord) return normalWord;
+  if (finding.summary) return finding.summary;
+  if (finding.current.value) {
+    const label = safeSnapshotValueLabel(finding.current.value);
+    if (label) return label;
+  }
+  const preferredCode = {
+    pachymetry_um: "CUSTOM_CCT",
+  }[finding.findingKey];
+  if (preferredCode) {
+    const label = snapshotComponentLabel(finding.current, preferredCode);
+    if (label) return label;
+  }
+  if (finding.interpretation === "abnormal") return "abnormal";
+  if (finding.interpretation === "borderline") return "borderline";
+  return "recorded";
+}
+
+function normalFindingWord(findingKey: string): string | undefined {
+  return {
+    "entrance:eom": "full",
+    "entrance:cvf": "full",
+    "confrontation-visual-fields": "full",
+    "entrance:color": "normal",
+  }[findingKey];
+}
+
+function safeSnapshotValueLabel(value: ObservationSnapshotValue): string | undefined {
   switch (value.kind) {
     case "boolean":
       return value.value ? "Yes" : "No";
@@ -524,10 +736,129 @@ function snapshotValueLabel(value: ObservationSnapshotValue): string {
     case "quantity":
       return `${value.value}${value.unit ? ` ${value.unit}` : ""}`;
     case "code":
-      return value.display ?? value.text ?? value.code ?? "Code not recorded";
+      return value.display ?? value.text;
     case "json":
-      return Object.entries(value.value).map(([key, nested]) => `${key}: ${String(nested)}`).join(" · ");
+      return undefined;
   }
+}
+
+function snapshotComponent(snapshot: ObservationSnapshot | undefined, code: string) {
+  return snapshot?.components.find((component) => component.code === code);
+}
+
+function snapshotComponentText(snapshot: ObservationSnapshot | undefined, code: string): string | undefined {
+  const value = snapshotComponent(snapshot, code)?.value;
+  if (!value) return undefined;
+  if (value.kind === "string") return value.value;
+  if (value.kind === "code") return value.display ?? value.text ?? value.code;
+  return safeSnapshotValueLabel(value);
+}
+
+function snapshotComponentLabel(snapshot: ObservationSnapshot | undefined, code: string): string | undefined {
+  const value = snapshotComponent(snapshot, code)?.value;
+  return value ? safeSnapshotValueLabel(value) : undefined;
+}
+
+interface RxEyeValues {
+  sphere?: number;
+  cylinder?: number;
+  axis?: number;
+  add?: number;
+  distanceVisualAcuity?: string;
+}
+
+interface RefractionBlock {
+  id: string;
+  type: string;
+  recordedAt: string;
+  eyes: Partial<Record<"OD" | "OS", RxEyeValues>>;
+  priorEyes: Partial<Record<"OD" | "OS", RxEyeValues>>;
+}
+
+function refractionBlocks(findings: readonly ExamOverviewFindingProjection[]): RefractionBlock[] {
+  const blocks = new Map<string, RefractionBlock>();
+  findings.forEach((finding, index) => {
+    const blockId = snapshotComponentText(finding.current, "REFRACTION_BLOCK_ID") ?? `ungrouped-${index}`;
+    const typeValue = snapshotComponent(finding.current, "REFRACTION_TYPE")?.value;
+    const type = typeValue?.kind === "code"
+      ? typeValue.code ?? typeValue.display ?? typeValue.text ?? ""
+      : snapshotComponentText(finding.current, "REFRACTION_TYPE") ?? "";
+    const block = blocks.get(blockId) ?? {
+      id: blockId,
+      type,
+      recordedAt: finding.current.recordedAt ?? "",
+      eyes: {},
+      priorEyes: {},
+    };
+    if (finding.laterality === "OD" || finding.laterality === "OS") {
+      block.eyes[finding.laterality] = rxEyeFromSnapshot(finding.current);
+      if (finding.prior) block.priorEyes[finding.laterality] = rxEyeFromSnapshot(finding.prior);
+    }
+    if ((finding.current.recordedAt ?? "") > block.recordedAt) block.recordedAt = finding.current.recordedAt ?? "";
+    blocks.set(blockId, block);
+  });
+  return [...blocks.values()];
+}
+
+function rxEyeFromSnapshot(snapshot: ObservationSnapshot): RxEyeValues {
+  return {
+    ...quantityField(snapshot, "SPHERE", "sphere"),
+    ...quantityField(snapshot, "CYLINDER", "cylinder"),
+    ...quantityField(snapshot, "AXIS", "axis"),
+    ...quantityField(snapshot, "ADD", "add"),
+    ...(snapshotComponentText(snapshot, "DISTANCE_VA") ? { distanceVisualAcuity: snapshotComponentText(snapshot, "DISTANCE_VA") } : {}),
+  };
+}
+
+function quantityField(snapshot: ObservationSnapshot, code: string, key: keyof RxEyeValues) {
+  const value = snapshotComponent(snapshot, code)?.value;
+  return value?.kind === "quantity" || value?.kind === "number" ? { [key]: value.value } : {};
+}
+
+function wearingRx(findings: readonly ExamOverviewFindingProjection[]): Partial<Record<"OD" | "OS", RxEyeValues>> | undefined {
+  const latest = [...findings].sort((left, right) =>
+    (right.current.recordedAt ?? "").localeCompare(left.current.recordedAt ?? "")
+  )[0];
+  if (!latest) return undefined;
+  const eyes = Object.fromEntries((["OD", "OS"] as const).flatMap((eye) => {
+    const values: RxEyeValues = {
+      ...quantityField(latest.current, `${eye}_SPHERE`, "sphere"),
+      ...quantityField(latest.current, `${eye}_CYLINDER`, "cylinder"),
+      ...quantityField(latest.current, `${eye}_AXIS`, "axis"),
+      ...quantityField(latest.current, `${eye}_ADD`, "add"),
+    };
+    return Object.keys(values).length ? [[eye, values]] : [];
+  })) as Partial<Record<"OD" | "OS", RxEyeValues>>;
+  return Object.keys(eyes).length ? eyes : undefined;
+}
+
+function rxEyeLine(eye: "OD" | "OS", values: RxEyeValues | undefined, showAcuity = true): string {
+  if (!values || values.sphere === undefined) return `${eye} —`;
+  const cylinder = values.cylinder === undefined
+    ? "sph"
+    : `${signedPower(values.cylinder)}${values.axis === undefined ? "" : ` ×${String(values.axis).padStart(3, "0")}`}`;
+  return `${eye} ${signedPower(values.sphere)} ${cylinder}${showAcuity && values.distanceVisualAcuity ? ` ${values.distanceVisualAcuity}` : ""}`;
+}
+
+function signedPower(value: number): string {
+  if (value < 0) return `−${Math.abs(value).toFixed(2)}`;
+  return `+${value.toFixed(2)}`;
+}
+
+function timeLabel(value: string): string {
+  const instant = new Date(value);
+  if (!Number.isFinite(instant.getTime())) return value;
+  return new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit", hour12: false }).format(instant);
+}
+
+function uniqueRows<T>(rows: readonly T[], key: (row: T) => string): T[] {
+  const seen = new Set<string>();
+  return rows.filter((row) => {
+    const value = key(row);
+    if (seen.has(value)) return false;
+    seen.add(value);
+    return true;
+  });
 }
 
 function sectionStateLabel(state: ExamSectionState): string {
@@ -538,36 +869,6 @@ function sectionStateLabel(state: ExamSectionState): string {
     "not-examined": "Not examined",
     "not-indicated": "Not indicated",
   }[state];
-}
-
-function examinationLabel(examination: ExamOverviewFindingProjection["examination"]): string {
-  if (examination.state === "examined") return "Examined";
-  if (examination.state === "deferred-with-reason") {
-    return `Deferred — ${examination.reason ?? "reason recorded"}`;
-  }
-  return "Deferred — reason not recorded";
-}
-
-function provenanceLabel(provenance: ExamOverviewFindingProjection["provenance"]): string {
-  const date = provenance.sourceDate ? ` from ${provenance.sourceDate}` : "";
-  if (provenance.state === "carried-unreasserted") return `Carried — not reasserted${date}`;
-  if (provenance.state === "carried-reasserted") return `Carried — reasserted${date}`;
-  return "Current visit";
-}
-
-function interpretationLabel(interpretation: FindingInterpretation): string {
-  return {
-    normal: "Normal",
-    abnormal: "Abnormal",
-    borderline: "Borderline",
-    unknown: "Interpretation not recorded",
-  }[interpretation];
-}
-
-function changeLabel(change: NonNullable<ExamOverviewFindingProjection["changeFromPrior"]>): string {
-  if (change.kind === "changed") return "Changed from prior";
-  const sign = change.delta > 0 ? "+" : "";
-  return `Changed ${sign}${change.delta}${change.unit ? ` ${change.unit}` : ""}`;
 }
 
 function safeId(value: string): string {

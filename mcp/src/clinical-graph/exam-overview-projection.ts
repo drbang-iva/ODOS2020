@@ -65,6 +65,21 @@ export interface ExamOverviewFindingProjection {
     sourceDate?: string;
   };
   current: ObservationSnapshot;
+  summary?: string;
+  event?: {
+    administrations: Array<{
+      agent: string;
+      occurredAt: string;
+    }>;
+  };
+  diagnoses?: Array<{
+    display: string;
+    laterality?: "OD" | "OS" | "OU";
+  }>;
+  attestation?: {
+    attestedBy: string[];
+    recordedAt?: string;
+  };
   prior?: ObservationSnapshot;
   changeFromPrior?: ExamOverviewChange;
 }
@@ -152,6 +167,12 @@ export interface BuildExamOverviewProjectionInput {
   provenanceByObservation?: Readonly<Record<string, {
     state: ExamFindingProvenanceState;
     sourceDate?: string;
+  }>>;
+  clinicalContextByObservation?: Readonly<Record<string, {
+    summary?: string;
+    event?: ExamOverviewFindingProjection["event"];
+    diagnoses?: ExamOverviewFindingProjection["diagnoses"];
+    attestation?: ExamOverviewFindingProjection["attestation"];
   }>>;
   applicabilityRegistry?: ClinicalSectionApplicabilityRegistry;
 }
@@ -241,6 +262,7 @@ export function buildExamOverviewProjection(
       const currentSnapshot = observationSnapshot(observation);
       const priorSnapshot = prior ? observationSnapshot(prior) : undefined;
       const provenance = input.provenanceByObservation?.[observationReference] ?? { state: "current" as const };
+      const clinicalContext = input.clinicalContextByObservation?.[observationReference];
       const changeFromPrior = deriveChangeFromPrior(currentSnapshot, priorSnapshot);
       return [{
         observationReference,
@@ -252,6 +274,10 @@ export function buildExamOverviewProjection(
         interpretation: observationInterpretation(observation),
         provenance,
         current: currentSnapshot,
+        ...(clinicalContext?.summary ? { summary: clinicalContext.summary } : {}),
+        ...(clinicalContext?.event ? { event: clinicalContext.event } : {}),
+        ...(clinicalContext?.diagnoses?.length ? { diagnoses: clinicalContext.diagnoses } : {}),
+        ...(clinicalContext?.attestation ? { attestation: clinicalContext.attestation } : {}),
         ...(priorSnapshot ? { prior: priorSnapshot } : {}),
         ...(changeFromPrior ? { changeFromPrior } : {}),
       }];
