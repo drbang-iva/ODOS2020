@@ -16,6 +16,51 @@ import {
 const DX_PICK_TALLY_CRITERIA =
   "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-dx-pick-tally|odos-dx-pick-tally&identifier=https://odos2020.com/fhir/NamingSystem/dx-pick-tally-practitioner|%profile";
 
+const CLINICAL_BASIC_CRITERIA = {
+  complaintDefinition:
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/osod-complaint-definition|osod-complaint-definition",
+  diagnosisDefinition:
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-diagnosis-definition|odos-diagnosis-definition",
+  encounterComplaint:
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-encounter-complaint|odos-encounter-complaint",
+  encounterSectionOverride:
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-finding-section-group|odos-encounter-section-override",
+  findingDefinition:
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-finding-definition|odos-finding-definition",
+  findingSectionGroup:
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-finding-section-group|odos-finding-section-group",
+  procedureDefinition:
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-procedure-definition|odos-procedure-definition",
+  procedureChargeRule:
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-protocol-module|odos-procedure-charge-rule",
+  planActionInstance:
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-protocol-module|odos-plan-action-instance",
+  protocolApplication:
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-protocol-module|odos-protocol-application",
+  chargeProposal:
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-protocol-module|odos-charge-proposal",
+  findingInstance:
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-protocol-module|odos-finding-instance",
+} as const;
+
+const CHART_BASIC_CRITERIA = [
+  CLINICAL_BASIC_CRITERIA.encounterComplaint,
+  CLINICAL_BASIC_CRITERIA.encounterSectionOverride,
+] as const;
+const CONFIGURATION_BASIC_CRITERIA = [
+  CLINICAL_BASIC_CRITERIA.complaintDefinition,
+  CLINICAL_BASIC_CRITERIA.findingDefinition,
+  CLINICAL_BASIC_CRITERIA.findingSectionGroup,
+  CLINICAL_BASIC_CRITERIA.diagnosisDefinition,
+  CLINICAL_BASIC_CRITERIA.procedureDefinition,
+] as const;
+const PROTOCOL_RUNTIME_BASIC_CRITERIA = [
+  CLINICAL_BASIC_CRITERIA.planActionInstance,
+  CLINICAL_BASIC_CRITERIA.protocolApplication,
+  CLINICAL_BASIC_CRITERIA.chargeProposal,
+  CLINICAL_BASIC_CRITERIA.findingInstance,
+] as const;
+
 const REPAIRED_WRITE_SURFACES = [
   { surface: "IOP Timeline target editor — Save an existing target", resourceType: "Goal", interaction: "update", roles: ["provider"] },
   { surface: "IOP Timeline target editor — Save a new target", resourceType: "Goal", interaction: "create", roles: ["provider"] },
@@ -294,6 +339,46 @@ test("diagnosis pick tallies stay profile-fenced with read and write grants spli
         `${roleId} ${interaction} must follow chart.write authority`,
       );
     }
+  }
+});
+
+test("Provider clinical Basic grants cover chart records and procedure charge authoring", () => {
+  const policy = buildMedplumAccessPolicy(getRoleDeclaration("provider"));
+  const criteria = [...CHART_BASIC_CRITERIA, CLINICAL_BASIC_CRITERIA.procedureChargeRule];
+  assertBasicReadWriteCriteria(policy, criteria, "provider");
+  assertDeletedBasicGrantTurnsRed(policy, CLINICAL_BASIC_CRITERIA.encounterComplaint, "provider");
+});
+
+test("Staff clinical Basic grants cover chart records and protocol runtime records", () => {
+  const policy = buildMedplumAccessPolicy(getRoleDeclaration("staff"));
+  const criteria = [...CHART_BASIC_CRITERIA, ...PROTOCOL_RUNTIME_BASIC_CRITERIA];
+  assertBasicReadWriteCriteria(policy, criteria, "staff");
+  assertDeletedBasicGrantTurnsRed(policy, CLINICAL_BASIC_CRITERIA.protocolApplication, "staff");
+});
+
+test("Admin clinical Basic grants cover configuration and procedure charge authoring", () => {
+  const policy = buildMedplumAccessPolicy(getRoleDeclaration("admin"));
+  const criteria = [...CONFIGURATION_BASIC_CRITERIA, CLINICAL_BASIC_CRITERIA.procedureChargeRule];
+  assertBasicReadWriteCriteria(policy, criteria, "admin");
+  assertDeletedBasicGrantTurnsRed(policy, CLINICAL_BASIC_CRITERIA.findingDefinition, "admin");
+});
+
+test("clinical Basic grants remain criteria-fenced to their approved role tier", () => {
+  const provider = buildMedplumAccessPolicy(getRoleDeclaration("provider"));
+  const staff = buildMedplumAccessPolicy(getRoleDeclaration("staff"));
+  const admin = buildMedplumAccessPolicy(getRoleDeclaration("admin"));
+
+  for (const criteria of CONFIGURATION_BASIC_CRITERIA) {
+    assert.equal(basicPolicyAllows(provider, "create", criteria), false, `provider must not create ${criteria}`);
+    assert.equal(basicPolicyAllows(staff, "create", criteria), false, `staff must not create ${criteria}`);
+  }
+  assert.equal(
+    basicPolicyAllows(staff, "create", CLINICAL_BASIC_CRITERIA.procedureChargeRule),
+    false,
+    "staff must not create procedure charge rules",
+  );
+  for (const criteria of CHART_BASIC_CRITERIA) {
+    assert.equal(basicPolicyAllows(admin, "create", criteria), false, `admin must not create ${criteria}`);
   }
 });
 
@@ -659,6 +744,55 @@ function accessPolicyAllows(
       rule.interaction?.includes(interaction) &&
       (criteria === undefined || rule.criteria === criteria),
   ) ?? false;
+}
+
+function basicPolicyAllows(
+  policy: AccessPolicy,
+  interaction: "create" | "read" | "search" | "update",
+  criteria: string,
+): boolean {
+  return policy.resource?.some((rule) =>
+    (rule.resourceType === "Basic" || rule.resourceType === "*")
+    && rule.interaction?.includes(interaction)
+    && (rule.criteria === undefined || rule.criteria === criteria)
+  ) ?? false;
+}
+
+function assertBasicReadWriteCriteria(
+  policy: AccessPolicy,
+  criteriaList: readonly string[],
+  roleId: string,
+): void {
+  for (const criteria of criteriaList) {
+    for (const interaction of ["read", "search", "create", "update"] as const) {
+      assert.equal(
+        basicPolicyAllows(policy, interaction, criteria),
+        true,
+        `${roleId} must ${interaction} ${criteria}`,
+      );
+    }
+  }
+}
+
+function assertDeletedBasicGrantTurnsRed(
+  policy: AccessPolicy,
+  criteria: string,
+  roleId: string,
+): void {
+  const mutated: AccessPolicy = {
+    ...policy,
+    resource: policy.resource?.filter((rule) => !(
+      rule.resourceType === "Basic"
+      && rule.criteria === criteria
+      && rule.interaction?.some((interaction) => interaction === "create" || interaction === "update")
+    )),
+  };
+  assert.equal(basicPolicyAllows(policy, "create", criteria), true, `${roleId} control grant`);
+  assert.equal(
+    basicPolicyAllows(mutated, "create", criteria),
+    false,
+    `${roleId} removing the exact Basic grant must turn the positive assertion RED`,
+  );
 }
 
 function ruleAllowsWrite(
