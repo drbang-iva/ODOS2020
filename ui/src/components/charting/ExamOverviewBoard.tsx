@@ -403,7 +403,7 @@ function RxResult({ group, wearingFindings }: { group: FindingGroup; wearingFind
   const blocks = refractionBlocks(group.rows);
   const manifest = blocks
     .filter((block) => block.type === "MANIFEST")
-    .sort((left, right) => right.recordedAt.localeCompare(left.recordedAt))[0];
+    .sort((left, right) => instantMillis(right.recordedAt) - instantMillis(left.recordedAt))[0];
   if (!manifest) return <span>Manifest not recorded</span>;
   const add = manifest.eyes.OD?.add ?? manifest.eyes.OS?.add;
   const wearing = wearingRx(wearingFindings);
@@ -819,7 +819,9 @@ function refractionBlocks(findings: readonly ExamOverviewFindingProjection[]): R
       block.eyes[finding.laterality] = rxEyeFromSnapshot(finding.current);
       if (finding.prior) block.priorEyes[finding.laterality] = rxEyeFromSnapshot(finding.prior);
     }
-    if ((finding.current.recordedAt ?? "") > block.recordedAt) block.recordedAt = finding.current.recordedAt ?? "";
+    if (instantMillis(finding.current.recordedAt) > instantMillis(block.recordedAt)) {
+      block.recordedAt = finding.current.recordedAt ?? "";
+    }
     blocks.set(blockId, block);
   });
   return [...blocks.values()];
@@ -842,7 +844,7 @@ function quantityField(snapshot: ObservationSnapshot, code: string, key: keyof R
 
 function wearingRx(findings: readonly ExamOverviewFindingProjection[]): Partial<Record<"OD" | "OS", RxEyeValues>> | undefined {
   const latest = [...findings].sort((left, right) =>
-    (right.current.recordedAt ?? "").localeCompare(left.current.recordedAt ?? "")
+    instantMillis(right.current.recordedAt) - instantMillis(left.current.recordedAt)
   )[0];
   if (!latest) return undefined;
   const eyes = Object.fromEntries((["OD", "OS"] as const).flatMap((eye) => {
@@ -855,6 +857,11 @@ function wearingRx(findings: readonly ExamOverviewFindingProjection[]): Partial<
     return Object.keys(values).length ? [[eye, values]] : [];
   })) as Partial<Record<"OD" | "OS", RxEyeValues>>;
   return Object.keys(eyes).length ? eyes : undefined;
+}
+
+function instantMillis(value: string | undefined): number {
+  const parsed = Date.parse(value ?? "");
+  return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
 }
 
 function rxEyeLine(eye: "OD" | "OS", values: RxEyeValues | undefined, showAcuity = true): string {

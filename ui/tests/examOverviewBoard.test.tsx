@@ -500,6 +500,24 @@ test("refraction chooses the latest manifest, preserves stored signs, and keeps 
     } finally {
       priorComparison.unmount();
     }
+
+    const offsetMixed = create(
+      <ExamOverviewBoard
+        projection={offsetMixedRxProjection()}
+        editorEntries={[]}
+        refreshing={false}
+        onOpenEditor={() => undefined}
+        onRefresh={() => undefined}
+      />,
+    );
+    try {
+      const offsetText = textContent(offsetMixed.root.findByProps({ "data-finding-key": "refraction" }));
+      assert.match(offsetText, /OD −1\.00 sph/);
+      assert.match(offsetText, /Wearing Rx OD −0\.75 sph/);
+      assert.doesNotMatch(offsetText, /−2\.00|−3\.00/);
+    } finally {
+      offsetMixed.unmount();
+    }
   } finally {
     renderer.unmount();
   }
@@ -651,6 +669,39 @@ function positiveCylinderProjection(): ExamOverviewProjection {
     sections: [overviewSection("refraction", "Refraction", ["Observation/positive-od"])],
     completeness: PROJECTION.completeness,
   } as ExamOverviewProjection;
+}
+
+function offsetMixedRxProjection(): ExamOverviewProjection {
+  const rows = [
+    refractionFinding("offset-old", "OD", "2026-08-24T14:00:00Z", "offset-old", "MANIFEST", { sphere: -2 }),
+    refractionFinding("offset-new", "OD", "2026-08-24T10:00:00-05:00", "offset-new", "MANIFEST", { sphere: -1 }),
+    wearingFinding("wearing-offset-old", "2026-08-24T14:30:00Z", -3),
+    wearingFinding("wearing-offset-new", "2026-08-24T10:00:00-05:00", -0.75),
+  ];
+  return {
+    encounterReference: "Encounter/exam-1",
+    patientReference: "Patient/patient-1",
+    findings: rows,
+    sections: [overviewSection("refraction", "Refraction", rows.map((row) => row.observationReference))],
+    completeness: PROJECTION.completeness,
+  } as ExamOverviewProjection;
+}
+
+function wearingFinding(id: string, recordedAt: string, sphere: number) {
+  return {
+    observationReference: `Observation/${id}`,
+    findingKey: "wearing_rx",
+    sectionKey: "wearing",
+    display: "Wearing Rx",
+    laterality: "OU",
+    examination: { state: "examined", sourceEncoding: "observation" },
+    interpretation: "unknown",
+    provenance: { state: "current" },
+    current: {
+      recordedAt,
+      components: [component("OD_SPHERE", "OD sphere", sphere, "D")],
+    },
+  };
 }
 
 function manualKeratometryProjection(): ExamOverviewProjection {
