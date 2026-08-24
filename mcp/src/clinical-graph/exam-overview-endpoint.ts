@@ -2,9 +2,14 @@ import type {
   Bundle,
   Condition,
   Encounter,
+  MedicationAdministration,
   Observation,
+  Practitioner,
+  Provenance,
+  Reference,
   Resource,
 } from "@medplum/fhirtypes";
+import { ODOS_CLINICAL_ATTESTATION_POLICY_URL } from "../../../policy/attestation-policy-urls.js";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
 import { resolveVisitTypeCategoryForEncounter } from "../clinic/clinic-summary.js";
 import { searchAll } from "../fhir-search.js";
@@ -17,6 +22,7 @@ import {
   type ExamFindingProvenanceState,
 } from "./exam-overview-projection.js";
 import type { ClinicalFindingDefinition } from "./glaucoma-suspect.js";
+import { COVER_TEST_KEY, DILATION_KEY } from "./entrance-definition.js";
 
 export interface ExamOverviewFhirClient {
   read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T>;
@@ -81,6 +87,12 @@ export async function handleExamOverviewRequest(
       encounterConditions,
       current,
     );
+    const clinicalContextByObservation = await findingClinicalContextProjection(
+      staff.fhir,
+      patientReference,
+      encounterConditions,
+      current,
+    );
     return {
       status: 200,
       body: buildExamOverviewProjection({
@@ -94,6 +106,7 @@ export async function handleExamOverviewRequest(
         ),
         assessmentPresent: encounterConditions.some(isAssessmentEvidence),
         provenanceByObservation,
+        clinicalContextByObservation,
       }),
     };
   } catch (error) {
@@ -106,6 +119,188 @@ export async function handleExamOverviewRequest(
     }
     return { status: 502, body: { error: "FHIR exam overview dependency failed." } };
   }
+}
+
+async function findingClinicalContextProjection(
+  fhir: ExamOverviewFhirClient,
+  patientReference: string,
+  conditions: readonly Condition[],
+  observations: readonly Observation[],
+) {
+  const observationReferences = new Set(observations.flatMap((observation) =>
+    observation.id ? [`Observation/${observation.id}`] : []
+  ));
+  const attestationProofs = await optionalAttestationProofs(
+    fhir,
+    patientReference,
+    observationReferences,
+  );
+  const signerNames = await practitionerNamesByReference(
+    fhir,
+    attestationProofs.flatMap((provenance) =>
+      provenance.signature?.map((signature) => signature.who) ?? []
+    ),
+  );
+  const rows = await Promise.all(observations.flatMap((observation) => {
+    const observationReference = observation.id ? `Observation/${observation.id}` : undefined;
+    if (!observationReference) return [];
+    return [findingClinicalContext(
+      fhir,
+      observationReference,
+      observation,
+      conditions,
+      attestationProofs,
+      signerNames,
+    )];
+  }));
+  return Object.fromEntries(rows.flatMap((row) => row.context ? [[row.reference, row.context]] : []));
+}
+
+async function optionalAttestationProofs(
+  fhir: ExamOverviewFhirClient,
+  patientReference: string,
+  observationReferences: ReadonlySet<string>,
+): Promise<Provenance[]> {
+  try {
+    return (await searchAll<Provenance>(fhir, "Provenance", {
+      patient: patientReference,
+      _count: "100",
+      _sort: "-recorded",
+    })).filter((provenance) =>
+      provenance.policy?.includes(ODOS_CLINICAL_ATTESTATION_POLICY_URL) === true &&
+      provenance.target.some((target) => target.reference === patientReference) &&
+      provenance.target.some((target) => observationReferences.has(target.reference ?? "")) &&
+      provenance.signature?.some((signature) => Boolean(signature.data)) === true
+    );
+  } catch {
+    return [];
+  }
+}
+
+async function findingClinicalContext(
+  fhir: ExamOverviewFhirClient,
+  observationReference: string,
+  observation: Observation,
+  conditions: readonly Condition[],
+  attestationProofs: readonly Provenance[],
+  signerNames: ReadonlyMap<string, string>,
+) {
+  const findingCode = observation.code.coding?.find((coding) => coding.code)?.code;
+  const summary = findingCode === COVER_TEST_KEY ? observation.note?.find((note) => note.text?.trim())?.text?.trim() : undefined;
+  const event = findingCode === DILATION_KEY ? await dilationEvent(fhir, observation) : undefined;
+  const diagnoses = conditions.flatMap((condition) => {
+    if (!conditionObservationReferences(condition).has(observationReference)) return [];
+    const display = condition.code?.text?.trim() ?? condition.code?.coding?.find((coding) => coding.display?.trim())?.display?.trim();
+    if (!display) return [];
+    const laterality = conditionLaterality(condition);
+    return [{ display, ...(laterality ? { laterality } : {}) }];
+  });
+  const attestation = attestationForObservation(
+    observationReference,
+    attestationProofs,
+    signerNames,
+  );
+  const context = {
+    ...(summary ? { summary } : {}),
+    ...(event ? { event } : {}),
+    ...(diagnoses.length ? { diagnoses } : {}),
+    ...(attestation ? { attestation } : {}),
+  };
+  return {
+    reference: observationReference,
+    context: Object.keys(context).length > 0 ? context : undefined,
+  };
+}
+
+async function dilationEvent(
+  fhir: ExamOverviewFhirClient,
+  observation: Observation,
+) {
+  const references = (observation.partOf ?? []).flatMap((reference) => {
+    const match = reference.reference?.match(/^MedicationAdministration\/([A-Za-z0-9.-]+)$/);
+    return match?.[1] ? [match[1]] : [];
+  });
+  const administrations = (await Promise.all(references.map(async (id) => {
+    try {
+      return await fhir.read<MedicationAdministration>("MedicationAdministration", id);
+    } catch {
+      return undefined;
+    }
+  }))).filter((administration): administration is MedicationAdministration => administration !== undefined);
+  const displayRows = administrations.flatMap((administration) => {
+    if (
+      administration.status !== "completed" ||
+      administration.subject.reference !== observation.subject?.reference ||
+      administration.context?.reference !== observation.encounter?.reference
+    ) return [];
+    const agent = administration.medicationCodeableConcept?.coding?.find((coding) => coding.display?.trim())?.display?.trim() ??
+      administration.medicationCodeableConcept?.text?.trim();
+    const occurredAt = administration.effectiveDateTime;
+    return agent && occurredAt ? [{ agent, occurredAt }] : [];
+  });
+  return displayRows.length ? { administrations: displayRows } : undefined;
+}
+
+function attestationForObservation(
+  observationReference: string,
+  provenances: readonly Provenance[],
+  signerNames: ReadonlyMap<string, string>,
+) {
+  const proof = provenances.filter((provenance) =>
+    provenance.target.some((target) => target.reference === observationReference)
+  ).sort((left, right) => Date.parse(right.recorded) - Date.parse(left.recorded))[0];
+  if (!proof) return undefined;
+  const attestedBy = [...new Set((proof.signature ?? []).flatMap((signature) => {
+    const display = signature.who.display?.trim() ??
+      (signature.who.reference ? signerNames.get(signature.who.reference) : undefined);
+    return display ? [display] : [];
+  }))];
+  return attestedBy.length > 0
+    ? { attestedBy, recordedAt: proof.recorded }
+    : undefined;
+}
+
+async function practitionerNamesByReference(
+  fhir: ExamOverviewFhirClient,
+  signers: readonly Reference[],
+): Promise<Map<string, string>> {
+  const references = [...new Set(signers.flatMap((signer) =>
+    signer.display?.trim() || !signer.reference?.match(/^Practitioner\/[A-Za-z0-9.-]+$/)
+      ? []
+      : [signer.reference]
+  ))];
+  const practitioners = await Promise.all(references.map(async (reference) => {
+    const id = reference.slice("Practitioner/".length);
+    let practitioner: Practitioner;
+    try {
+      practitioner = await fhir.read<Practitioner>("Practitioner", id);
+    } catch {
+      return undefined;
+    }
+    const display = practitionerDisplay(practitioner);
+    return display ? [reference, display] as const : undefined;
+  }));
+  return new Map(practitioners.flatMap((row) => row ? [row] : []));
+}
+
+function practitionerDisplay(practitioner: Practitioner): string | undefined {
+  const name = practitioner.name?.[0];
+  if (!name) return undefined;
+  const display = [
+    ...(name.prefix ?? []),
+    ...(name.given ?? []),
+    name.family,
+    ...(name.suffix ?? []),
+  ].filter((part): part is string => Boolean(part?.trim())).join(" ").trim();
+  return display || name.text?.trim() || undefined;
+}
+
+function conditionLaterality(condition: Condition): "OD" | "OS" | "OU" | undefined {
+  const code = condition.bodySite?.flatMap((site) => site.coding ?? []).find((coding) => coding.code)?.code;
+  if (code === "OD" || code === "right") return "OD";
+  if (code === "OS" || code === "left") return "OS";
+  if (code === "OU" || code === "bilateral") return "OU";
+  return undefined;
 }
 
 async function findingProvenanceProjection(

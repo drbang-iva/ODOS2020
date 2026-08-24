@@ -164,6 +164,772 @@ const PROJECTION: ExamOverviewProjection = {
   },
 };
 
+const BY_EXCEPTION_PROJECTION = {
+  encounterReference: "Encounter/exam-1",
+  patientReference: "Patient/patient-1",
+  visitTypeCategoryId: "comprehensive",
+  findings: [
+    {
+      observationReference: "Observation/eom-od",
+      findingKey: "entrance:eom",
+      sectionKey: "entrance:eom",
+      display: "EOM",
+      laterality: "OD",
+      examination: { state: "examined", sourceEncoding: "observation" },
+      interpretation: "normal",
+      provenance: { state: "current" },
+      current: { recordedAt: "2026-08-24T14:35:00.000Z", components: [] },
+    },
+    {
+      observationReference: "Observation/eom-os",
+      findingKey: "entrance:eom",
+      sectionKey: "entrance:eom",
+      display: "EOM",
+      laterality: "OS",
+      examination: { state: "examined", sourceEncoding: "observation" },
+      interpretation: "normal",
+      provenance: { state: "current" },
+      current: { recordedAt: "2026-08-24T14:35:00.000Z", components: [] },
+    },
+    {
+      observationReference: "Observation/cover",
+      findingKey: "entrance:cover",
+      sectionKey: "entrance:cover",
+      display: "Cover test",
+      laterality: "OU",
+      examination: { state: "examined", sourceEncoding: "observation" },
+      interpretation: "normal",
+      provenance: { state: "current" },
+      summary: "NEAR 3 XP",
+      current: { recordedAt: "2026-08-24T14:36:00.000Z", components: [] },
+    },
+    {
+      observationReference: "Observation/pachy-od",
+      findingKey: "pachymetry_um",
+      sectionKey: "entrance:pachymetry",
+      display: "Pachymetry",
+      laterality: "OD",
+      examination: { state: "examined", sourceEncoding: "observation" },
+      interpretation: "normal",
+      provenance: { state: "current" },
+      current: {
+        recordedAt: "2026-08-24T14:37:00.000Z",
+        components: [
+          { code: "CUSTOM_CCT", display: "Central corneal thickness", value: { kind: "quantity", value: 541, unit: "um" } },
+          { code: "entrance.pachymetry", value: { kind: "string", value: "must-not-render" } },
+        ],
+      },
+    },
+    {
+      observationReference: "Observation/pachy-os",
+      findingKey: "pachymetry_um",
+      sectionKey: "entrance:pachymetry",
+      display: "Pachymetry",
+      laterality: "OS",
+      examination: { state: "examined", sourceEncoding: "observation" },
+      interpretation: "normal",
+      provenance: { state: "current" },
+      current: {
+        recordedAt: "2026-08-24T14:37:00.000Z",
+        components: [{ code: "CUSTOM_CCT", display: "Central corneal thickness", value: { kind: "quantity", value: 538, unit: "um" } }],
+      },
+    },
+    {
+      observationReference: "Observation/dilation",
+      findingKey: "entrance:dilation",
+      sectionKey: "entrance:dilation",
+      display: "Dilation",
+      laterality: "OU",
+      examination: { state: "examined", sourceEncoding: "observation" },
+      interpretation: "unknown",
+      provenance: { state: "current" },
+      event: {
+        administrations: [
+          { agent: "tropicamide 1%", occurredAt: "2026-08-24T14:42:00.000Z" },
+          { agent: "phenylephrine 2.5%", occurredAt: "2026-08-24T14:42:00.000Z" },
+        ],
+      },
+      current: { recordedAt: "2026-08-24T14:42:00.000Z", components: [] },
+    },
+    {
+      observationReference: "Observation/cvf-od",
+      findingKey: "entrance:cvf",
+      sectionKey: "entrance:cvf",
+      display: "Confrontation fields",
+      laterality: "OD",
+      examination: { state: "examined", sourceEncoding: "observation" },
+      interpretation: "abnormal",
+      provenance: { state: "current" },
+      diagnoses: [{ display: "Visual field defect", laterality: "OD" }],
+      attestation: { attestedBy: ["Dr. Avery Chen"], recordedAt: "2026-08-24T14:43:00.000Z" },
+      current: {
+        recordedAt: "2026-08-24T14:43:00.000Z",
+        components: [
+          { code: "CUSTOM_CVF_UPPER_LEFT", display: "Upper left", value: { kind: "string", value: "restricted" } },
+          { code: "CUSTOM_CVF_UPPER_RIGHT", display: "Upper right", value: { kind: "string", value: "full" } },
+          { code: "CUSTOM_CVF_LOWER_LEFT", display: "Lower left", value: { kind: "string", value: "full" } },
+          { code: "CUSTOM_CVF_LOWER_RIGHT", display: "Lower right", value: { kind: "string", value: "full" } },
+          { code: "EXAM_STATE", display: "Exam state", value: { kind: "string", value: "abnormal" } },
+        ],
+      },
+    },
+    {
+      observationReference: "Observation/cvf-os",
+      findingKey: "entrance:cvf",
+      sectionKey: "entrance:cvf",
+      display: "Confrontation fields",
+      laterality: "OS",
+      examination: { state: "examined", sourceEncoding: "observation" },
+      interpretation: "normal",
+      provenance: { state: "current" },
+      current: { recordedAt: "2026-08-24T14:43:00.000Z", components: [] },
+    },
+    ...refractionFixtureRows(),
+    {
+      observationReference: "Observation/dilation-deferred",
+      findingKey: "entrance:dilation-deferred",
+      sectionKey: "entrance:dilation",
+      display: "Dilation",
+      laterality: "OU",
+      examination: { state: "deferred-with-reason", reason: "patient driving", sourceEncoding: "exam-state" },
+      interpretation: "unknown",
+      provenance: { state: "current" },
+      current: { recordedAt: "2026-08-24T14:46:00.000Z", components: [] },
+    },
+    {
+      observationReference: "Observation/carried-iop",
+      findingKey: "intraocular_pressure",
+      sectionKey: "tonometry",
+      display: "Intraocular pressure",
+      laterality: "OD",
+      examination: { state: "examined", sourceEncoding: "observation" },
+      interpretation: "abnormal",
+      provenance: { state: "carried-reasserted", sourceDate: "2026-07-01" },
+      current: { value: { kind: "quantity", value: 24, unit: "mmHg" }, components: [] },
+    },
+  ],
+  sections: [
+    overviewSection("entrance", "Entrance", [
+      "Observation/eom-od", "Observation/eom-os", "Observation/cover", "Observation/pachy-od",
+      "Observation/pachy-os", "Observation/dilation", "Observation/cvf-od", "Observation/cvf-os",
+      "Observation/dilation-deferred",
+    ]),
+    overviewSection("refraction", "Refraction", [
+      "Observation/manifest-old-od", "Observation/manifest-old-os", "Observation/manifest-new-od",
+      "Observation/manifest-new-os", "Observation/final-od", "Observation/final-os", "Observation/wearing",
+    ]),
+    overviewSection("pretest", "Pretest", ["Observation/carried-iop"]),
+    overviewSection("history", "History", [], "not-examined"),
+    overviewSection("assessment", "Assessment", [], "not-indicated"),
+  ],
+  completeness: PROJECTION.completeness,
+} as ExamOverviewProjection;
+
+test("by-exception board renders exactly one row per performed or deferred finding", () => {
+  const renderer = create(
+    <ExamOverviewBoard
+      projection={BY_EXCEPTION_PROJECTION}
+      editorEntries={[
+        { id: "eom", label: "EOM", group: "ENTRANCE" },
+        { id: "color-vision", label: "Color vision", group: "ENTRANCE" },
+        { id: "stereopsis", label: "Stereopsis", group: "ENTRANCE" },
+        { id: "refraction", label: "Refraction", group: "REFRACTION" },
+        { id: "hpi", label: "History", group: "HISTORY" },
+      ]}
+      refreshing={false}
+      onOpenEditor={() => undefined}
+      onRefresh={() => undefined}
+    />,
+  );
+  try {
+    const rows = renderer.root.findAllByProps({ "data-testid": "exam-finding-row" });
+    assert.equal(rows.length, 7);
+    assert.deepEqual(rows.map((row) => row.props["data-row-pattern"]), [
+      "eye-pair", "word", "eye-pair", "event", "diagram", "word", "rx",
+    ]);
+    assert.equal(rows.filter((row) => row.props["data-finding-key"] === "pachymetry_um").length, 1);
+    assert.equal(rows.filter((row) => row.props["data-finding-key"] === "intraocular_pressure").length, 0);
+    assert.equal(renderer.root.findAllByProps({ "data-section-key": "history" }).length, 0);
+    assert.equal(renderer.root.findAllByProps({ "data-section-key": "assessment" }).length, 0);
+    const rendered = JSON.stringify(renderer.toJSON());
+    assert.doesNotMatch(rendered, /not charted|not examined|not indicated|No finding observations recorded/i);
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "chart-another-finding" }).length, 2);
+  } finally {
+    renderer.unmount();
+  }
+});
+
+test("five row patterns use clinical display values without exposing machine state", () => {
+  const renderer = create(
+    <ExamOverviewBoard
+      projection={BY_EXCEPTION_PROJECTION}
+      editorEntries={[]}
+      refreshing={false}
+      onOpenEditor={() => undefined}
+      onRefresh={() => undefined}
+    />,
+  );
+  try {
+    const rendered = JSON.stringify(renderer.toJSON());
+    const eom = renderer.root.findByProps({ "data-finding-key": "entrance:eom" });
+    assert.equal(textContent(eom), "EOMfull");
+    assert.doesNotMatch(textContent(eom), /OD|OS/);
+    assert.match(rendered, /Cover test.*NEAR 3 XP/);
+    assert.match(rendered, /Pachymetry.*OD.*541.*OS.*538/);
+    assert.match(
+      rendered,
+      new RegExp(`Dilation.*tropicamide 1%.*phenylephrine 2\\.5%.*${testTimeLabel("2026-08-24T14:42:00.000Z")}`),
+    );
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "visual-field-diagram" }).length, 2);
+    assert.equal(renderer.root.findAllByProps({ "data-eye": "OD", "data-restricted-quadrants": "upper-left" }).length, 1);
+    assert.equal(renderer.root.findAllByProps({ "data-eye": "OS", "data-restricted-quadrants": "" }).length, 1);
+    const cvf = renderer.root.findByProps({ "data-finding-key": "entrance:cvf" });
+    assert.match(cvf.props.className, /is-exception/);
+    assert.match(textContent(cvf), /filed under: Visual field defect — OD/);
+    assert.match(
+      textContent(cvf),
+      new RegExp(`Attested by Dr\\. Avery Chen · ${testTimeLabel("2026-08-24T14:43:00.000Z")} · current visit`),
+    );
+    assert.match(rendered, /deferred — patient driving/);
+    assert.doesNotMatch(rendered, /Examined|Current visit|Interpretation not recorded|Exam state|Normal template/);
+    assert.doesNotMatch(rendered, /entrance\.pachymetry|must-not-render|refraction-block-|Observation\/|Encounter\//);
+
+    const normalCvf = create(
+      <ExamOverviewBoard
+        projection={normalCvfProjection()}
+        editorEntries={[]}
+        refreshing={false}
+        onOpenEditor={() => undefined}
+        onRefresh={() => undefined}
+      />,
+    );
+    try {
+      const normalRow = normalCvf.root.findByProps({ "data-finding-key": "entrance:cvf" });
+      assert.equal(normalRow.props["data-row-pattern"], "diagram");
+      assert.equal(textContent(normalRow), "Confrontation fieldsfull");
+      assert.equal(normalRow.findAllByProps({ "data-testid": "visual-field-diagram" }).length, 0);
+    } finally {
+      normalCvf.unmount();
+    }
+
+    const machineOnlyValues = create(
+      <ExamOverviewBoard
+        projection={machineOnlyValueProjection()}
+        editorEntries={[]}
+        refreshing={false}
+        onOpenEditor={() => undefined}
+        onRefresh={() => undefined}
+      />,
+    );
+    try {
+      const machineRendered = JSON.stringify(machineOnlyValues.toJSON());
+      const leakedMachineValues = ["INTERNAL_CODE_ONLY", "serialized-bookkeeping-marker"]
+        .filter((marker) => machineRendered.includes(marker));
+      assert.deepEqual(leakedMachineValues, []);
+    } finally {
+      machineOnlyValues.unmount();
+    }
+  } finally {
+    renderer.unmount();
+  }
+});
+
+test("finding rows keep native disclosures accessible beside a finite editor button", () => {
+  const opened: string[] = [];
+  const renderer = create(
+    <ExamOverviewBoard
+      projection={BY_EXCEPTION_PROJECTION}
+      editorEntries={[{ id: "cvf", label: "Confrontation fields", group: "ENTRANCE" }]}
+      refreshing={false}
+      onOpenEditor={(id) => opened.push(id)}
+      onRefresh={() => undefined}
+    />,
+  );
+  try {
+    const row = renderer.root.findByProps({ "data-finding-key": "entrance:cvf" });
+    assert.equal(row.props.role, undefined);
+    assert.equal(row.props.tabIndex, undefined);
+    assert.equal(row.props.onKeyDown, undefined);
+    assert.equal(row.findAllByType("details").length, 1);
+    assert.deepEqual(opened, []);
+
+    let propagationStopped = false;
+    const edit = row.findByProps({ "data-testid": "exam-finding-editor" });
+    assert.equal(edit.type, "button");
+    assert.equal(edit.props["aria-label"], "Edit Confrontation fields");
+    act(() => edit.props.onClick({ stopPropagation: () => { propagationStopped = true; } }));
+    assert.equal(propagationStopped, true);
+    assert.deepEqual(opened, ["cvf"]);
+  } finally {
+    renderer.unmount();
+  }
+});
+
+test("refraction chooses the latest manifest, preserves stored signs, and keeps non-primary blocks collapsed", () => {
+  const renderer = create(
+    <ExamOverviewBoard
+      projection={BY_EXCEPTION_PROJECTION}
+      editorEntries={[]}
+      refreshing={false}
+      onOpenEditor={() => undefined}
+      onRefresh={() => undefined}
+    />,
+  );
+  try {
+    const row = renderer.root.findByProps({ "data-finding-key": "refraction" });
+    const rendered = textContent(row);
+    assert.match(rendered, /Refraction — Manifest/);
+    assert.match(rendered, /OD −1\.00 −0\.50 ×180 20\/20/);
+    assert.match(rendered, /OS −1\.25 sph 20\/20/);
+    assert.match(rendered, /Add \+2\.00/);
+    assert.match(rendered, /Wearing Rx OD −0\.75 −0\.50 ×175 OS −1\.00 sph/);
+    assert.match(rendered, /Full battery · 2 blocks/);
+    assert.doesNotMatch(rendered, /−2\.00|Final Rx|refraction-block-/);
+
+    const positiveCylinder = create(
+      <ExamOverviewBoard
+        projection={manifestOnlyProjection()}
+        editorEntries={[]}
+        refreshing={false}
+        onOpenEditor={() => undefined}
+        onRefresh={() => undefined}
+      />,
+    );
+    try {
+      assert.match(textContent(positiveCylinder.root.findByProps({ "data-finding-key": "refraction" })), /\+0\.50 ×090/);
+    } finally {
+      positiveCylinder.unmount();
+    }
+
+    const priorComparison = create(
+      <ExamOverviewBoard
+        projection={priorRefractionProjection()}
+        editorEntries={[]}
+        refreshing={false}
+        onOpenEditor={() => undefined}
+        onRefresh={() => undefined}
+      />,
+    );
+    try {
+      assert.match(
+        textContent(priorComparison.root.findByProps({ "data-finding-key": "refraction" })),
+        /Prior refraction OD −1\.50 sph OS −1\.75 sph/,
+      );
+    } finally {
+      priorComparison.unmount();
+    }
+
+    const offsetMixed = create(
+      <ExamOverviewBoard
+        projection={offsetMixedRxProjection()}
+        editorEntries={[]}
+        refreshing={false}
+        onOpenEditor={() => undefined}
+        onRefresh={() => undefined}
+      />,
+    );
+    try {
+      const offsetText = textContent(offsetMixed.root.findByProps({ "data-finding-key": "refraction" }));
+      assert.match(offsetText, /OD −1\.00 sph/);
+      assert.match(offsetText, /Wearing Rx OD −0\.75 sph/);
+      assert.doesNotMatch(offsetText, /−2\.00|−3\.00/);
+    } finally {
+      offsetMixed.unmount();
+    }
+  } finally {
+    renderer.unmount();
+  }
+});
+
+test("refraction uses a manifest when present and otherwise labels the recorded non-final block by type", () => {
+  const manifestOnly = renderRefraction(manifestOnlyProjection());
+  assert.match(manifestOnly, /Refraction — Manifest/);
+  assert.doesNotMatch(manifestOnly, /not recorded/i);
+
+  const cycloplegicOnly = renderRefraction(cycloplegicOnlyProjection());
+  assert.match(cycloplegicOnly, /Refraction — Cycloplegic/);
+  assert.match(cycloplegicOnly, /OD −0\.25 sph 20\/20/);
+  assert.doesNotMatch(cycloplegicOnly, /Manifest|not recorded|Final Rx/i);
+
+  const manifestAndFinal = renderRefraction(manifestAndFinalProjection());
+  assert.match(manifestAndFinal, /Refraction — Manifest/);
+  assert.match(manifestAndFinal, /OD −1\.00 sph 20\/20/);
+  assert.match(manifestAndFinal, /Full battery · 1 block/);
+  assert.doesNotMatch(manifestAndFinal, /−9\.00|Final Rx|not recorded/i);
+});
+
+test("refraction distance acuity never renders a code-only machine value", () => {
+  const rendered = renderRefraction(codeOnlyDistanceVaProjection());
+  assert.match(rendered, /Refraction — Manifest/);
+  assert.match(rendered, /OD −1\.00 sph/);
+  assert.doesNotMatch(rendered, /INTERNAL_DISTANCE_VA_CODE/);
+});
+
+test("manual keratometry projects only its allowlisted measurements in OD-first order", () => {
+  const renderer = create(
+    <ExamOverviewBoard
+      projection={manualKeratometryProjection()}
+      editorEntries={[]}
+      refreshing={false}
+      onOpenEditor={() => undefined}
+      onRefresh={() => undefined}
+    />,
+  );
+  try {
+    const rendered = textContent(renderer.root.findByProps({ "data-finding-key": "manual_keratometry" }));
+    assert.equal(
+      rendered,
+      "Manual keratometryOD 43.25 @180 / 44.00 @090OS 42.75 @175 / 43.50 @085",
+    );
+    assert.doesNotMatch(rendered, /CUSTOM_|Observation\/|recorded/);
+  } finally {
+    renderer.unmount();
+  }
+});
+
+function refractionFixtureRows() {
+  return [
+    refractionFinding("manifest-old-od", "OD", "2026-08-24T14:30:00.000Z", "old-block", "MANIFEST", {
+      sphere: -2,
+      cylinder: -0.5,
+      axis: 170,
+      distanceVisualAcuity: "20/25",
+    }),
+    refractionFinding("manifest-old-os", "OS", "2026-08-24T14:30:00.000Z", "old-block", "MANIFEST", {
+      sphere: -2.25,
+      distanceVisualAcuity: "20/25",
+    }),
+    refractionFinding("manifest-new-od", "OD", "2026-08-24T14:45:00.000Z", "new-block", "MANIFEST", {
+      sphere: -1,
+      cylinder: -0.5,
+      axis: 180,
+      add: 2,
+      distanceVisualAcuity: "20/20",
+    }),
+    refractionFinding("manifest-new-os", "OS", "2026-08-24T14:45:00.000Z", "new-block", "MANIFEST", {
+      sphere: -1.25,
+      add: 2,
+      distanceVisualAcuity: "20/20",
+    }),
+    refractionFinding("final-od", "OD", "2026-08-24T14:45:00.000Z", "final-block", "FINAL_RX", {
+      sphere: -0.75,
+    }),
+    refractionFinding("final-os", "OS", "2026-08-24T14:45:00.000Z", "final-block", "FINAL_RX", {
+      sphere: -1,
+    }),
+    {
+      observationReference: "Observation/wearing",
+      findingKey: "wearing_rx",
+      sectionKey: "wearing",
+      display: "Wearing Rx",
+      laterality: "OU",
+      examination: { state: "examined", sourceEncoding: "observation" },
+      interpretation: "unknown",
+      provenance: { state: "current" },
+      current: {
+        recordedAt: "2026-08-24T14:20:00.000Z",
+        components: [
+          component("OD_SPHERE", "OD sphere", -0.75, "D"),
+          component("OD_CYLINDER", "OD cylinder", -0.5, "D"),
+          component("OD_AXIS", "OD axis", 175, "degrees"),
+          component("OS_SPHERE", "OS sphere", -1, "D"),
+        ],
+      },
+    },
+  ];
+}
+
+function refractionFinding(
+  id: string,
+  laterality: "OD" | "OS",
+  recordedAt: string,
+  blockId: string,
+  type: string,
+  values: {
+    sphere?: number;
+    cylinder?: number;
+    axis?: number;
+    add?: number;
+    distanceVisualAcuity?: string;
+    distanceVisualAcuityCode?: string;
+  },
+) {
+  const typeDisplay = {
+    MANIFEST: "Manifest",
+    CYCLOPLEGIC: "Cycloplegic",
+    FINAL_RX: "Final Rx",
+  }[type] ?? "Other refraction";
+  return {
+    observationReference: `Observation/${id}`,
+    findingKey: "refraction",
+    sectionKey: "refraction",
+    display: "Refraction",
+    laterality,
+    examination: { state: "examined", sourceEncoding: "observation" },
+    interpretation: "normal",
+    provenance: { state: "current" },
+    current: {
+      recordedAt,
+      components: [
+        { code: "REFRACTION_TYPE", display: "Refraction type", value: { kind: "code", code: type, display: typeDisplay } },
+        { code: "REFRACTION_BLOCK_ID", display: "Refraction block ID", value: { kind: "string", value: `refraction-block-${blockId}-af27abe2-90b0-435f-806e-1c596cdafc66` } },
+        ...(values.sphere === undefined ? [] : [component("SPHERE", "Sphere", values.sphere, "D")]),
+        ...(values.cylinder === undefined ? [] : [component("CYLINDER", "Cylinder", values.cylinder, "D")]),
+        ...(values.axis === undefined ? [] : [component("AXIS", "Axis", values.axis, "degrees")]),
+        ...(values.add === undefined ? [] : [component("ADD", "Near add", values.add, "D")]),
+        ...(values.distanceVisualAcuity === undefined ? [] : [{ code: "DISTANCE_VA", display: "Distance visual acuity", value: { kind: "string", value: values.distanceVisualAcuity } }]),
+        ...(values.distanceVisualAcuityCode === undefined ? [] : [{ code: "DISTANCE_VA", display: "Distance visual acuity", value: { kind: "code", code: values.distanceVisualAcuityCode } }]),
+      ],
+    },
+  };
+}
+
+function component(code: string, display: string, value: number, unit: string) {
+  return { code, display, value: { kind: "quantity" as const, value, unit } };
+}
+
+function overviewSection(
+  sectionKey: string,
+  label: string,
+  findingObservationReferences: string[],
+  state: "examined" | "not-examined" | "not-indicated" = "examined",
+) {
+  return {
+    sectionKey,
+    label,
+    state,
+    findingObservationReferences,
+    abnormalCount: 0,
+    carriedUnreassertedCount: 0,
+    deferredWithoutReasonCount: 0,
+  };
+}
+
+function manifestOnlyProjection(): ExamOverviewProjection {
+  const rows = [refractionFinding("positive-od", "OD", "2026-08-24T15:00:00.000Z", "positive", "MANIFEST", {
+    sphere: 1,
+    cylinder: 0.5,
+    axis: 90,
+  })];
+  return {
+    encounterReference: "Encounter/exam-1",
+    patientReference: "Patient/patient-1",
+    findings: rows,
+    sections: [overviewSection("refraction", "Refraction", ["Observation/positive-od"])],
+    completeness: PROJECTION.completeness,
+  } as ExamOverviewProjection;
+}
+
+function cycloplegicOnlyProjection(): ExamOverviewProjection {
+  return refractionOnlyProjection([
+    refractionFinding("cycloplegic-od", "OD", "2026-08-24T15:00:00.000Z", "cycloplegic", "CYCLOPLEGIC", {
+      sphere: -0.25,
+      distanceVisualAcuity: "20/20",
+    }),
+  ]);
+}
+
+function manifestAndFinalProjection(): ExamOverviewProjection {
+  return refractionOnlyProjection([
+    refractionFinding("manifest-only-od", "OD", "2026-08-24T15:00:00.000Z", "manifest-only", "MANIFEST", {
+      sphere: -1,
+      distanceVisualAcuity: "20/20",
+    }),
+    refractionFinding("final-only-od", "OD", "2026-08-24T15:01:00.000Z", "final-only", "FINAL_RX", {
+      sphere: -9,
+      distanceVisualAcuity: "20/400",
+    }),
+  ]);
+}
+
+function codeOnlyDistanceVaProjection(): ExamOverviewProjection {
+  return refractionOnlyProjection([
+    refractionFinding("code-only-distance-va", "OD", "2026-08-24T15:00:00.000Z", "code-only-va", "MANIFEST", {
+      sphere: -1,
+      distanceVisualAcuityCode: "INTERNAL_DISTANCE_VA_CODE",
+    }),
+  ]);
+}
+
+function refractionOnlyProjection(rows: ReturnType<typeof refractionFinding>[]): ExamOverviewProjection {
+  return {
+    encounterReference: "Encounter/exam-1",
+    patientReference: "Patient/patient-1",
+    findings: rows,
+    sections: [overviewSection("refraction", "Refraction", rows.map((row) => row.observationReference))],
+    completeness: PROJECTION.completeness,
+  } as ExamOverviewProjection;
+}
+
+function renderRefraction(projection: ExamOverviewProjection): string {
+  const renderer = create(
+    <ExamOverviewBoard
+      projection={projection}
+      editorEntries={[]}
+      refreshing={false}
+      onOpenEditor={() => undefined}
+      onRefresh={() => undefined}
+    />,
+  );
+  try {
+    return textContent(renderer.root.findByProps({ "data-finding-key": "refraction" }));
+  } finally {
+    renderer.unmount();
+  }
+}
+
+function machineOnlyValueProjection(): ExamOverviewProjection {
+  const findings = [
+    {
+      observationReference: "Observation/code-only-value",
+      findingKey: "code-only-value",
+      sectionKey: "entrance",
+      display: "Code-only value",
+      laterality: "OU",
+      examination: { state: "examined", sourceEncoding: "observation" },
+      interpretation: "unknown",
+      provenance: { state: "current" },
+      current: {
+        value: { kind: "code", code: "INTERNAL_CODE_ONLY" },
+        components: [],
+      },
+    },
+    {
+      observationReference: "Observation/json-only-value",
+      findingKey: "json-only-value",
+      sectionKey: "entrance",
+      display: "JSON-only value",
+      laterality: "OU",
+      examination: { state: "examined", sourceEncoding: "observation" },
+      interpretation: "unknown",
+      provenance: { state: "current" },
+      current: {
+        value: { kind: "json", value: { internalId: "serialized-bookkeeping-marker" } },
+        components: [],
+      },
+    },
+  ];
+  return {
+    encounterReference: "Encounter/exam-1",
+    patientReference: "Patient/patient-1",
+    findings,
+    sections: [overviewSection("entrance", "Entrance", findings.map((finding) => finding.observationReference))],
+    completeness: PROJECTION.completeness,
+  } as ExamOverviewProjection;
+}
+
+function offsetMixedRxProjection(): ExamOverviewProjection {
+  const rows = [
+    refractionFinding("offset-old", "OD", "2026-08-24T14:00:00Z", "offset-old", "MANIFEST", { sphere: -2 }),
+    refractionFinding("offset-new", "OD", "2026-08-24T10:00:00-05:00", "offset-new", "MANIFEST", { sphere: -1 }),
+    wearingFinding("wearing-offset-old", "2026-08-24T14:30:00Z", -3),
+    wearingFinding("wearing-offset-new", "2026-08-24T10:00:00-05:00", -0.75),
+  ];
+  return {
+    encounterReference: "Encounter/exam-1",
+    patientReference: "Patient/patient-1",
+    findings: rows,
+    sections: [overviewSection("refraction", "Refraction", rows.map((row) => row.observationReference))],
+    completeness: PROJECTION.completeness,
+  } as ExamOverviewProjection;
+}
+
+function wearingFinding(id: string, recordedAt: string, sphere: number) {
+  return {
+    observationReference: `Observation/${id}`,
+    findingKey: "wearing_rx",
+    sectionKey: "wearing",
+    display: "Wearing Rx",
+    laterality: "OU",
+    examination: { state: "examined", sourceEncoding: "observation" },
+    interpretation: "unknown",
+    provenance: { state: "current" },
+    current: {
+      recordedAt,
+      components: [component("OD_SPHERE", "OD sphere", sphere, "D")],
+    },
+  };
+}
+
+function manualKeratometryProjection(): ExamOverviewProjection {
+  const findings = [
+    manualKeratometryFinding("OD", 43.25, 180, 44, 90),
+    manualKeratometryFinding("OS", 42.75, 175, 43.5, 85),
+  ];
+  return {
+    encounterReference: "Encounter/exam-1",
+    patientReference: "Patient/patient-1",
+    findings,
+    sections: [overviewSection("entrance", "Entrance", findings.map((finding) => finding.observationReference))],
+    completeness: PROJECTION.completeness,
+  } as ExamOverviewProjection;
+}
+
+function manualKeratometryFinding(
+  laterality: "OD" | "OS",
+  flatK: number,
+  flatAxis: number,
+  steepK: number,
+  steepAxis: number,
+) {
+  return {
+    observationReference: `Observation/manual-k-${laterality.toLowerCase()}`,
+    findingKey: "manual_keratometry",
+    sectionKey: "entrance:manual-keratometry",
+    display: "Manual keratometry",
+    laterality,
+    examination: { state: "examined", sourceEncoding: "observation" },
+    interpretation: "unknown",
+    provenance: { state: "current" },
+    current: {
+      recordedAt: "2026-08-24T15:00:00.000Z",
+      components: [
+        component(`${laterality}_CUSTOM_FLAT_K`, "Flat K", flatK, "[diop]"),
+        component(`${laterality}_CUSTOM_FLAT_AXIS`, "Flat axis", flatAxis, "degrees"),
+        component(`${laterality}_CUSTOM_STEEP_K`, "Steep K", steepK, "[diop]"),
+        component(`${laterality}_CUSTOM_STEEP_AXIS`, "Steep axis", steepAxis, "degrees"),
+      ],
+    },
+  };
+}
+
+function normalCvfProjection(): ExamOverviewProjection {
+  const findings = (["OD", "OS"] as const).map((laterality) => ({
+    observationReference: `Observation/cvf-${laterality.toLowerCase()}`,
+    findingKey: "entrance:cvf",
+    sectionKey: "entrance:cvf",
+    display: "Confrontation fields",
+    laterality,
+    examination: { state: "examined" as const, sourceEncoding: "observation" as const },
+    interpretation: "normal" as const,
+    provenance: { state: "current" as const },
+    current: { recordedAt: "2026-08-24T15:00:00.000Z", components: [] },
+  }));
+  return {
+    encounterReference: "Encounter/exam-1",
+    patientReference: "Patient/patient-1",
+    findings,
+    sections: [overviewSection("entrance", "Entrance", findings.map((finding) => finding.observationReference))],
+    completeness: PROJECTION.completeness,
+  };
+}
+
+function priorRefractionProjection(): ExamOverviewProjection {
+  const rows = [
+    refractionFinding("current-od", "OD", "2026-08-24T15:00:00.000Z", "current", "MANIFEST", { sphere: -1 }),
+    refractionFinding("current-os", "OS", "2026-08-24T15:00:00.000Z", "current", "MANIFEST", { sphere: -1.25 }),
+  ];
+  rows[0]!.prior = { components: [component("SPHERE", "Sphere", -1.5, "D")] };
+  rows[1]!.prior = { components: [component("SPHERE", "Sphere", -1.75, "D")] };
+  return {
+    encounterReference: "Encounter/exam-1",
+    patientReference: "Patient/patient-1",
+    findings: rows,
+    sections: [overviewSection("refraction", "Refraction", rows.map((row) => row.observationReference))],
+    completeness: PROJECTION.completeness,
+  } as ExamOverviewProjection;
+}
+
 const UNASSIGNED_FINDINGS: EncounterFindingRow[] = [
   {
     atomicFindingId: "tonometry::iop::high",
@@ -241,63 +1007,28 @@ test("the permanent chart bar keeps draft state reserved instead of inferring it
   }
 });
 
-test("structure view renders all projected sections and keeps every clinical state channel independent", async () => {
+test("structure view omits empty sections and collapses performed findings into by-exception rows", async () => {
   const harness = await renderEncounter(PROJECTION);
   try {
     const sections = harness.renderer.root.findAllByProps({ "data-testid": "exam-overview-section" })
       .filter((section) => section.props["data-section-state"] !== "editor-only");
     assert.deepEqual(
       sections.map((section) => section.props["data-section-key"]),
-      ["pretest", "history", "assessment"],
-    );
-    assert.deepEqual(
-      sections.map((section) => section.props["data-section-state"]),
-      ["examined", "not-examined", "not-indicated"],
+      ["pretest"],
     );
     assert.equal(harness.renderer.root.findAllByType(SpineNav).length, 0);
-
-    const laterality = harness.renderer.root.findAllByProps({ "data-testid": "finding-laterality" });
-    assert.deepEqual(laterality.map(textContent), ["OD", "OS", "OU", "UNKNOWN"]);
-
-    const rowStates = harness.renderer.root.findAllByProps({ "data-channel": "examination" });
-    assert.deepEqual(rowStates.map((node) => node.props["data-state"]), [
-      "examined",
-      "examined",
-      "deferred-with-reason",
-      "deferred-without-reason",
-    ]);
-    assert.match(textContent(rowStates[2]!), /Deferred — Patient declined/);
-    assert.equal(textContent(rowStates[3]!), "Deferred — reason not recorded");
-
-    const sectionStates = harness.renderer.root.findAllByProps({ "data-channel": "section-state" });
-    assert.ok(sectionStates.some((node) => textContent(node) === "Not examined"));
-    assert.ok(sectionStates.some((node) => textContent(node) === "Not indicated"));
-
-    const interpretation = harness.renderer.root.findByProps({
-      "data-channel": "interpretation",
-      "data-state": "abnormal",
-    });
-    const provenance = harness.renderer.root.findByProps({
-      "data-channel": "provenance",
-      "data-state": "carried-unreasserted",
-    });
-    const change = harness.renderer.root.findByProps({ "data-channel": "change-from-prior" });
-    assert.equal(textContent(interpretation), "Abnormal");
-    assert.match(textContent(provenance), /Carried — not reasserted/);
-    assert.match(textContent(change), /Changed \+4 mmHg/);
-    assert.notEqual(interpretation.props.className, provenance.props.className);
-    assert.notEqual(interpretation.props.className, change.props.className);
-    assert.notEqual(provenance.props.className, change.props.className);
-
-    assert.equal(harness.renderer.root.findAllByProps({ "data-testid": "finding-prior" }).length, 2);
-    assert.match(JSON.stringify(harness.renderer.toJSON()), /1 deferred reason missing/);
-    assert.doesNotMatch(JSON.stringify(harness.renderer.toJSON()), /not-visualized-json|sourceEncoding/);
+    const rows = harness.renderer.root.findAllByProps({ "data-testid": "exam-finding-row" });
+    assert.equal(rows.length, 2);
+    assert.equal(rows.filter((row) => row.props["data-finding-key"] === "intraocular-pressure").length, 1);
+    const rendered = JSON.stringify(harness.renderer.toJSON());
+    assert.match(rendered, /deferred — reason not recorded/);
+    assert.doesNotMatch(rendered, /Examined|Current visit|Interpretation not recorded|not-visualized-json|sourceEncoding/);
   } finally {
     harness.restore();
   }
 });
 
-test("editor-entry rows live in their cards, preserve empty-card reachability, and disclose sheet versus full-page behavior", () => {
+test("one chart-another-finding affordance per group preserves editor reachability without placeholder rows", () => {
   const opened: string[] = [];
   const renderer = create(
     <ExamOverviewBoard
@@ -319,25 +1050,22 @@ test("editor-entry rows live in their cards, preserve empty-card reachability, a
     const rows = renderer.root.findAllByProps({ "data-testid": "exam-editor-entry-row" });
     assert.equal(rows.length, 4);
 
-    const history = renderer.root.findByProps({ "data-section-key": "history" });
-    assert.equal(history.findAllByProps({ "data-editor-section-id": "hpi" }).length, 1);
-    assert.match(textContent(history), /No finding observations recorded/);
-
     const pretest = renderer.root.findByProps({ "data-section-key": "pretest" });
-    const va = pretest.findByProps({ "data-editor-section-id": "va" });
+    const va = renderer.root.findByProps({ "data-editor-section-id": "va" });
     assert.equal(va.props["data-editor-presentation"], "sheet");
     assert.equal(va.props["aria-pressed"], true);
     assert.match(textContent(va), /Entry sheet/);
-    assert.equal(pretest.findAllByProps({ "data-finding-key": "intraocular-pressure" }).length, 2);
+    assert.equal(pretest.findAllByProps({ "data-finding-key": "intraocular-pressure" }).length, 1);
 
-    const refraction = renderer.root.findByProps({ "data-section-key": "refraction" });
-    const refractionRow = refraction.findByProps({ "data-editor-section-id": "refraction" });
+    const refractionRow = renderer.root.findByProps({ "data-editor-section-id": "refraction" });
     assert.equal(refractionRow.props["data-editor-presentation"], "full-page");
     assert.match(textContent(refractionRow), /Expand/);
     assert.doesNotMatch(textContent(refractionRow), /Full page/);
 
-    const contactLenses = renderer.root.findByProps({ "data-section-key": "contact-lenses" });
-    assert.equal(contactLenses.findAllByProps({ "data-editor-section-id": "soft-contact-lens" }).length, 1);
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "chart-another-finding" }).length, 4);
+    assert.equal(renderer.root.findAllByProps({ "data-section-key": "history" }).length, 0);
+    assert.equal(renderer.root.findAllByProps({ "data-section-key": "refraction" }).length, 0);
+    assert.equal(renderer.root.findAllByProps({ "data-editor-section-id": "soft-contact-lens" }).length, 1);
 
     act(() => va.props.onClick());
     assert.deepEqual(opened, ["va"]);
@@ -587,7 +1315,6 @@ test("distributed board rows anchor mapped editors and retain full-page fallback
       "cup-disc",
       "custom:binocular-vision",
       "cvf",
-      "dilation",
       "dry-eye",
       "dry-eye:symptoms",
       "eom",
@@ -613,9 +1340,12 @@ test("distributed board rows anchor mapped editors and retain full-page fallback
       "va",
       "wearing",
     ].sort());
-    for (const pretestId of ["va", "pupils", "iop", "cover-test", "dilation"]) {
+    for (const pretestId of ["va", "pupils", "iop", "cover-test"]) {
       assert.ok(editorIds.includes(pretestId), `${pretestId} must remain reachable`);
     }
+    const dilationFinding = harness.renderer.root.findByProps({ "data-finding-key": "dilation" });
+    assert.equal(dilationFinding.props.role, undefined);
+    assert.equal(dilationFinding.findByProps({ "data-testid": "exam-finding-editor" }).type, "button");
 
     const vaLauncher = harness.renderer.root.findByProps({ "data-editor-section-id": "va" });
     await act(async () => vaLauncher.props.onClick());
@@ -687,7 +1417,7 @@ test("each mapped layout wraps its existing section and supports both cancel and
   ] as const;
   try {
     for (const contract of contracts) {
-      const launcher = harness.renderer.root.findByProps({ "data-editor-section-id": contract.sectionId });
+      const launcher = editorControl(harness.renderer.root, contract.sectionId);
       await act(async () => launcher.props.onClick());
       const sheet = harness.renderer.root.findByProps({
         "data-testid": "exam-entry-sheet",
@@ -699,7 +1429,7 @@ test("each mapped layout wraps its existing section and supports both cancel and
       await act(async () => sheet.findByProps({ "data-testid": "cancel-exam-entry-sheet" }).props.onClick());
       assert.equal(harness.renderer.root.findAllByType(ExamEntrySheet).filter((entrySheet) => !entrySheet.props.hidden).length, 0);
 
-      await act(async () => harness.renderer.root.findByProps({ "data-editor-section-id": contract.sectionId }).props.onClick());
+      await act(async () => editorControl(harness.renderer.root, contract.sectionId).props.onClick());
       await act(async () => {
         harness.renderer.root.findByType(contract.component).props.onSaved({ completed: true });
         await flushEffects();
@@ -1133,6 +1863,22 @@ function findingDefinition(stableKey: string, display: string): CustomFindingDef
     perEye: false,
     customFields: [],
   };
+}
+
+function editorControl(root: ReactTestInstance, sectionId: string): ReactTestInstance {
+  const launcher = root.findAllByProps({ "data-editor-section-id": sectionId })[0];
+  if (launcher) return launcher;
+  if (sectionId === "dilation") {
+    const finding = root.findAll((node) =>
+      node.props["data-finding-key"] === "dilation" || node.props["data-finding-key"] === "entrance:dilation"
+    )[0];
+    if (finding) return finding;
+  }
+  throw new Error(`No editor control found for ${sectionId}`);
+}
+
+function testTimeLabel(value: string): string {
+  return new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(value));
 }
 
 function textContent(node: ReactTestInstance): string {

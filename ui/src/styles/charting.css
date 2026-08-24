@@ -823,6 +823,168 @@
   font-size: 12px;
 }
 
+.odos-exam-finding {
+  grid-template-columns: minmax(130px, .34fr) minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 10px 18px;
+  padding: 9px 14px 9px 12px;
+  border-left: 2px solid transparent;
+}
+
+.odos-exam-finding.is-exception {
+  border-left-color: var(--odos-amber);
+}
+
+.odos-exam-finding.is-clickable {
+  cursor: pointer;
+}
+
+.odos-exam-finding-name {
+  min-width: 0;
+  color: var(--odos-muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.odos-exam-finding-value {
+  color: var(--odos-text);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.45;
+}
+
+.odos-exam-finding-editor {
+  align-self: center;
+  padding: 4px 7px;
+  border: 1px solid var(--odos-line-2);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--odos-faint);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.odos-exam-finding-editor:hover,
+.odos-exam-finding-editor:focus-visible {
+  border-color: var(--odos-accent);
+  color: var(--odos-accent);
+}
+
+.odos-exam-eye-pair,
+.odos-exam-field-pair,
+.odos-exam-rx-result {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.odos-exam-eye-value small,
+.odos-exam-field-eye > small,
+.odos-exam-rx-comparison small {
+  margin-right: 4px;
+  color: var(--odos-faint);
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.odos-exam-field-eye {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.odos-exam-field-diagram {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  overflow: hidden;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  border: 1px solid var(--odos-line-2);
+  border-radius: 50%;
+  background: var(--odos-ground);
+}
+
+.odos-exam-field-diagram > span {
+  border: .5px solid color-mix(in srgb, var(--odos-line-2) 70%, transparent);
+}
+
+.odos-exam-field-diagram > .is-restricted {
+  background: var(--odos-text);
+}
+
+.odos-exam-rx-result {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.odos-exam-rx-primary,
+.odos-exam-rx-comparison {
+  word-spacing: 3px;
+}
+
+.odos-exam-rx-comparison,
+.odos-exam-rx-battery {
+  color: var(--odos-faint);
+  font-size: 11px;
+}
+
+.odos-exam-rx-battery summary,
+.odos-exam-finding-expansion summary,
+.odos-exam-editor-entries summary {
+  cursor: pointer;
+}
+
+.odos-exam-finding-expansion {
+  grid-column: 2 / 4;
+  color: var(--odos-muted);
+  font-size: 11px;
+}
+
+.odos-exam-finding-expansion > span {
+  display: block;
+  margin-top: 5px;
+}
+
+.odos-exam-attestation {
+  color: var(--odos-faint);
+}
+
+.odos-exam-chart-another {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+  gap: 8px;
+  padding: 0 clamp(12px, 2.5vw, 32px) 18px;
+}
+
+.odos-exam-chart-another .odos-exam-editor-entries {
+  padding: 10px 12px;
+  border: 1px solid var(--odos-line);
+  border-radius: 8px;
+}
+
+.odos-exam-editor-entries summary {
+  color: var(--odos-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.odos-exam-editor-entries summary span {
+  display: block;
+  margin-top: 2px;
+  color: var(--odos-faint);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.odos-exam-editor-entries[open] .odos-exam-editor-entry-list {
+  margin-top: 8px;
+}
+
 .odos-exam-chart-bar {
   display: grid;
   min-width: 0;
@@ -1191,7 +1353,7 @@
 
 @media (min-width: 960px) {
   .odos-exam-finding {
-    grid-template-columns: minmax(260px, 1fr) minmax(290px, auto);
+    grid-template-columns: minmax(260px, 1fr) minmax(290px, auto) auto;
     align-items: center;
   }
 
