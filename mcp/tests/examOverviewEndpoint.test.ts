@@ -112,6 +112,7 @@ test("overview context explicitly allowlists stored human-facing event, diagnosi
       { reference: "MedicationAdministration/dilation-agent" },
       { reference: "MedicationAdministration/foreign-dilation-agent" },
       { reference: "MedicationAdministration/not-done-dilation-agent" },
+      { reference: "MedicationAdministration/missing" },
     ],
     component: [{
       code: { coding: [{ code: "DFE_PERFORMED", display: "DFE performed" }] },

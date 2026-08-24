@@ -182,9 +182,14 @@ async function dilationEvent(
     const match = reference.reference?.match(/^MedicationAdministration\/([A-Za-z0-9.-]+)$/);
     return match?.[1] ? [match[1]] : [];
   });
-  const administrations = await Promise.all(references.map((id) =>
-    fhir.read<MedicationAdministration>("MedicationAdministration", id)
-  ));
+  const administrations = (await Promise.all(references.map(async (id) => {
+    try {
+      return await fhir.read<MedicationAdministration>("MedicationAdministration", id);
+    } catch (error) {
+      if (errorStatus(error) === 404 || errorStatus(error) === 410) return undefined;
+      throw error;
+    }
+  }))).filter((administration): administration is MedicationAdministration => administration !== undefined);
   const displayRows = administrations.flatMap((administration) => {
     if (
       administration.status !== "completed" ||

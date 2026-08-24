@@ -700,6 +700,8 @@ function findingValue(finding: ExamOverviewFindingProjection): string {
   const normalWord = finding.interpretation === "normal" ? normalFindingWord(finding.findingKey) : undefined;
   if (normalWord) return normalWord;
   if (finding.summary) return finding.summary;
+  const manualKeratometry = manualKeratometryValue(finding);
+  if (manualKeratometry) return manualKeratometry;
   if (finding.current.value) {
     const label = safeSnapshotValueLabel(finding.current.value);
     if (label) return label;
@@ -714,6 +716,18 @@ function findingValue(finding: ExamOverviewFindingProjection): string {
   if (finding.interpretation === "abnormal") return "abnormal";
   if (finding.interpretation === "borderline") return "borderline";
   return "recorded";
+}
+
+function manualKeratometryValue(finding: ExamOverviewFindingProjection): string | undefined {
+  if (finding.findingKey !== "manual_keratometry") return undefined;
+  const prefix = finding.laterality === "OD" || finding.laterality === "OS" ? `${finding.laterality}_` : "";
+  const value = (code: string) => snapshotNumber(finding.current, `${prefix}${code}`) ?? snapshotNumber(finding.current, code);
+  const flatK = value("CUSTOM_FLAT_K");
+  const flatAxis = value("CUSTOM_FLAT_AXIS");
+  const steepK = value("CUSTOM_STEEP_K");
+  const steepAxis = value("CUSTOM_STEEP_AXIS");
+  if (flatK === undefined || flatAxis === undefined || steepK === undefined || steepAxis === undefined) return undefined;
+  return `${flatK.toFixed(2)} @${String(flatAxis).padStart(3, "0")} / ${steepK.toFixed(2)} @${String(steepAxis).padStart(3, "0")}`;
 }
 
 function normalFindingWord(findingKey: string): string | undefined {
@@ -757,6 +771,11 @@ function snapshotComponentText(snapshot: ObservationSnapshot | undefined, code: 
 function snapshotComponentLabel(snapshot: ObservationSnapshot | undefined, code: string): string | undefined {
   const value = snapshotComponent(snapshot, code)?.value;
   return value ? safeSnapshotValueLabel(value) : undefined;
+}
+
+function snapshotNumber(snapshot: ObservationSnapshot | undefined, code: string): number | undefined {
+  const value = snapshotComponent(snapshot, code)?.value;
+  return value?.kind === "quantity" || value?.kind === "number" ? value.value : undefined;
 }
 
 interface RxEyeValues {

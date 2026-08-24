@@ -468,6 +468,28 @@ test("refraction chooses the latest manifest, preserves stored signs, and keeps 
   }
 });
 
+test("manual keratometry projects only its allowlisted measurements in OD-first order", () => {
+  const renderer = create(
+    <ExamOverviewBoard
+      projection={manualKeratometryProjection()}
+      editorEntries={[]}
+      refreshing={false}
+      onOpenEditor={() => undefined}
+      onRefresh={() => undefined}
+    />,
+  );
+  try {
+    const rendered = textContent(renderer.root.findByProps({ "data-finding-key": "manual_keratometry" }));
+    assert.equal(
+      rendered,
+      "Manual keratometryOD 43.25 @180 / 44.00 @090OS 42.75 @175 / 43.50 @085",
+    );
+    assert.doesNotMatch(rendered, /CUSTOM_|Observation\/|recorded/);
+  } finally {
+    renderer.unmount();
+  }
+});
+
 function refractionFixtureRows() {
   return [
     refractionFinding("manifest-old-od", "OD", "2026-08-24T14:30:00.000Z", "old-block", "MANIFEST", {
@@ -592,6 +614,48 @@ function positiveCylinderProjection(): ExamOverviewProjection {
     sections: [overviewSection("refraction", "Refraction", ["Observation/positive-od"])],
     completeness: PROJECTION.completeness,
   } as ExamOverviewProjection;
+}
+
+function manualKeratometryProjection(): ExamOverviewProjection {
+  const findings = [
+    manualKeratometryFinding("OD", 43.25, 180, 44, 90),
+    manualKeratometryFinding("OS", 42.75, 175, 43.5, 85),
+  ];
+  return {
+    encounterReference: "Encounter/exam-1",
+    patientReference: "Patient/patient-1",
+    findings,
+    sections: [overviewSection("entrance", "Entrance", findings.map((finding) => finding.observationReference))],
+    completeness: PROJECTION.completeness,
+  } as ExamOverviewProjection;
+}
+
+function manualKeratometryFinding(
+  laterality: "OD" | "OS",
+  flatK: number,
+  flatAxis: number,
+  steepK: number,
+  steepAxis: number,
+) {
+  return {
+    observationReference: `Observation/manual-k-${laterality.toLowerCase()}`,
+    findingKey: "manual_keratometry",
+    sectionKey: "entrance:manual-keratometry",
+    display: "Manual keratometry",
+    laterality,
+    examination: { state: "examined", sourceEncoding: "observation" },
+    interpretation: "unknown",
+    provenance: { state: "current" },
+    current: {
+      recordedAt: "2026-08-24T15:00:00.000Z",
+      components: [
+        component(`${laterality}_CUSTOM_FLAT_K`, "Flat K", flatK, "[diop]"),
+        component(`${laterality}_CUSTOM_FLAT_AXIS`, "Flat axis", flatAxis, "degrees"),
+        component(`${laterality}_CUSTOM_STEEP_K`, "Steep K", steepK, "[diop]"),
+        component(`${laterality}_CUSTOM_STEEP_AXIS`, "Steep axis", steepAxis, "degrees"),
+      ],
+    },
+  };
 }
 
 function normalCvfProjection(): ExamOverviewProjection {
