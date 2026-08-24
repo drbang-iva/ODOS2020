@@ -124,6 +124,12 @@ test("front-desk Basic grants stay criteria-scoped to approved records and the p
     "Basic?code=https://odos2020.com/fhir/CodeSystem/basic-kind|practice-frame-inventory-unit",
     "Basic?code=https://odos2020.com/fhir/CodeSystem/scheduling-config|odos-scheduling-config",
     "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-dx-pick-tally|odos-dx-pick-tally&identifier=https://odos2020.com/fhir/NamingSystem/dx-pick-tally-practitioner|%profile",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-encounter-complaint|odos-encounter-complaint",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-finding-section-group|odos-encounter-section-override",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-protocol-module|odos-plan-action-instance",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-protocol-module|odos-protocol-application",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-protocol-module|odos-charge-proposal",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-protocol-module|odos-finding-instance",
   ];
   const readTierCriteria = [
     billingIdentityCriteria,
@@ -133,6 +139,11 @@ test("front-desk Basic grants stay criteria-scoped to approved records and the p
     "Basic?code=https://odos2020.com/fhir/CodeSystem/basic-kind|practice-frame-inventory",
     "Basic?code=https://odos2020.com/fhir/CodeSystem/basic-kind|practice-frame-variant-settings",
     "Basic?code=https://odos2020.com/fhir/CodeSystem/day-seal|day-seal",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/osod-complaint-definition|osod-complaint-definition",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-finding-definition|odos-finding-definition",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-finding-section-group|odos-finding-section-group",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-diagnosis-definition|odos-diagnosis-definition",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-procedure-definition|odos-procedure-definition",
   ];
   const createOnceCriteria: string[] = [];
   assert.deepEqual(
