@@ -10,6 +10,7 @@ import type {
   Provenance,
   Resource,
 } from "@medplum/fhirtypes";
+import { ODOS_CLINICAL_ATTESTATION_POLICY_URL } from "../../policy/attestation-policy-urls.js";
 import type { PracticeRoleId } from "../src/authz/roles.js";
 import {
   DIAGNOSIS_FINDING_REASSERTION_CODE,
@@ -107,7 +108,7 @@ test("overview context explicitly allowlists stored human-facing event, diagnosi
   const dilation: Observation = {
     ...historyFinding("dilation", "e1", "2026-08-24T14:42:00.000Z"),
     code: { coding: [{ code: "entrance:dilation", display: "Dilation" }] },
-    performer: [{ reference: "Practitioner/doc" }],
+    performer: [{ display: "Technician Taylor" }],
     partOf: [
       { reference: "MedicationAdministration/dilation-agent" },
       { reference: "MedicationAdministration/foreign-dilation-agent" },
@@ -171,9 +172,36 @@ test("overview context explicitly allowlists stored human-facing event, diagnosi
   const diagnosis = condition("diagnosis", "Encounter/e1", ["Observation/dilation"]);
   diagnosis.code = { text: "Cataract, nuclear" };
   diagnosis.bodySite = [{ coding: [{ code: "OU", display: "OU" }] }];
+  const attestation: Provenance = {
+    resourceType: "Provenance",
+    id: "signed-dilation",
+    target: [{ reference: "Observation/dilation" }, { reference: "Patient/p1" }],
+    recorded: "2026-08-24T14:43:00.000Z",
+    policy: [ODOS_CLINICAL_ATTESTATION_POLICY_URL],
+    agent: [{ who: { reference: "Practitioner/doc" } }],
+    signature: [{
+      type: [{ code: "1.2.840.10065.1.12.1.1" }],
+      when: "2026-08-24T14:43:00.000Z",
+      who: { reference: "Practitioner/doc" },
+      data: "signed-proof",
+    }],
+  };
+  const unsignedPerformerEvent: Provenance = {
+    resourceType: "Provenance",
+    id: "not-an-attestation",
+    target: [{ reference: "Observation/cover" }, { reference: "Patient/p1" }],
+    recorded: "2026-08-24T14:44:00.000Z",
+    agent: [{ who: { display: "Must not become an attestation" } }],
+    signature: [{
+      type: [{ code: "untrusted-signature" }],
+      when: "2026-08-24T14:44:00.000Z",
+      who: { display: "Must not become an attestation" },
+      data: "untrusted-proof",
+    }],
+  };
   const fhir = new OverviewMemoryFhir([
     encounter(), dilation, cover, administration, foreignAdministration, notDoneAdministration,
-    textOnlyAdministration, practitioner, diagnosis,
+    textOnlyAdministration, practitioner, diagnosis, attestation, unsignedPerformerEvent,
   ]);
 
   const response = await handleExamOverviewRequest(deps(fhir, "provider"), request());
@@ -194,15 +222,16 @@ test("overview context explicitly allowlists stored human-facing event, diagnosi
   assert.deepEqual(dilationRow?.diagnoses, [{ display: "Cataract, nuclear", laterality: "OU" }]);
   assert.deepEqual(dilationRow?.attestation, {
     attestedBy: ["Dr. Avery Chen"],
-    recordedAt: "2026-08-24T14:42:00.000Z",
+    recordedAt: "2026-08-24T14:43:00.000Z",
   });
   assert.equal(coverRow?.summary, "NEAR 3 XP");
+  assert.equal(coverRow?.attestation, undefined);
   assert.doesNotMatch(JSON.stringify({
     event: dilationRow?.event,
     diagnoses: dilationRow?.diagnoses,
     attestation: dilationRow?.attestation,
     summary: coverRow?.summary,
-  }), /dilation-agent|Practitioner\/doc|internal-staff-uuid|internal-agent-code|internal dilation bookkeeping|must not override/);
+  }), /dilation-agent|Practitioner\/doc|internal-staff-uuid|internal-agent-code|Technician Taylor|Must not become an attestation|internal dilation bookkeeping|must not override/);
 });
 
 test("an encounter with no patient is rejected without fabricating a projection", async () => {

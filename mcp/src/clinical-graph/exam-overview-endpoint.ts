@@ -5,8 +5,11 @@ import type {
   MedicationAdministration,
   Observation,
   Practitioner,
+  Provenance,
+  Reference,
   Resource,
 } from "@medplum/fhirtypes";
+import { ODOS_CLINICAL_ATTESTATION_POLICY_URL } from "../../../policy/attestation-policy-urls.js";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
 import { resolveVisitTypeCategoryForEncounter } from "../clinic/clinic-summary.js";
 import { searchAll } from "../fhir-search.js";
@@ -86,6 +89,7 @@ export async function handleExamOverviewRequest(
     );
     const clinicalContextByObservation = await findingClinicalContextProjection(
       staff.fhir,
+      patientReference,
       encounterConditions,
       current,
     );
@@ -119,10 +123,29 @@ export async function handleExamOverviewRequest(
 
 async function findingClinicalContextProjection(
   fhir: ExamOverviewFhirClient,
+  patientReference: string,
   conditions: readonly Condition[],
   observations: readonly Observation[],
 ) {
-  const performerNames = await practitionerNamesByReference(fhir, observations);
+  const observationReferences = new Set(observations.flatMap((observation) =>
+    observation.id ? [`Observation/${observation.id}`] : []
+  ));
+  const attestationProofs = (await searchAll<Provenance>(fhir, "Provenance", {
+    patient: patientReference,
+    _count: "100",
+    _sort: "-recorded",
+  })).filter((provenance) =>
+    provenance.policy?.includes(ODOS_CLINICAL_ATTESTATION_POLICY_URL) === true &&
+    provenance.target.some((target) => target.reference === patientReference) &&
+    provenance.target.some((target) => observationReferences.has(target.reference ?? "")) &&
+    provenance.signature?.some((signature) => Boolean(signature.data)) === true
+  );
+  const signerNames = await practitionerNamesByReference(
+    fhir,
+    attestationProofs.flatMap((provenance) =>
+      provenance.signature?.map((signature) => signature.who) ?? []
+    ),
+  );
   const rows = await Promise.all(observations.flatMap((observation) => {
     const observationReference = observation.id ? `Observation/${observation.id}` : undefined;
     if (!observationReference) return [];
@@ -131,7 +154,8 @@ async function findingClinicalContextProjection(
       observationReference,
       observation,
       conditions,
-      performerNames,
+      attestationProofs,
+      signerNames,
     )];
   }));
   return Object.fromEntries(rows.flatMap((row) => row.context ? [[row.reference, row.context]] : []));
@@ -142,7 +166,8 @@ async function findingClinicalContext(
   observationReference: string,
   observation: Observation,
   conditions: readonly Condition[],
-  performerNames: ReadonlyMap<string, string>,
+  attestationProofs: readonly Provenance[],
+  signerNames: ReadonlyMap<string, string>,
 ) {
   const findingCode = observation.code.coding?.find((coding) => coding.code)?.code;
   const summary = findingCode === COVER_TEST_KEY ? observation.note?.find((note) => note.text?.trim())?.text?.trim() : undefined;
@@ -154,14 +179,11 @@ async function findingClinicalContext(
     const laterality = conditionLaterality(condition);
     return [{ display, ...(laterality ? { laterality } : {}) }];
   });
-  const attestedBy = [...new Set((observation.performer ?? []).flatMap((performer) => {
-    const display = performer.display?.trim() ?? (performer.reference ? performerNames.get(performer.reference) : undefined);
-    return display ? [display] : [];
-  }))];
-  const recordedAt = observation.effectiveDateTime ?? observation.issued ?? observation.meta?.lastUpdated;
-  const attestation = attestedBy.length > 0
-    ? { attestedBy, ...(recordedAt ? { recordedAt } : {}) }
-    : undefined;
+  const attestation = attestationForObservation(
+    observationReference,
+    attestationProofs,
+    signerNames,
+  );
   const context = {
     ...(summary ? { summary } : {}),
     ...(event ? { event } : {}),
@@ -204,16 +226,33 @@ async function dilationEvent(
   return displayRows.length ? { administrations: displayRows } : undefined;
 }
 
+function attestationForObservation(
+  observationReference: string,
+  provenances: readonly Provenance[],
+  signerNames: ReadonlyMap<string, string>,
+) {
+  const proof = provenances.filter((provenance) =>
+    provenance.target.some((target) => target.reference === observationReference)
+  ).sort((left, right) => Date.parse(right.recorded) - Date.parse(left.recorded))[0];
+  if (!proof) return undefined;
+  const attestedBy = [...new Set((proof.signature ?? []).flatMap((signature) => {
+    const display = signature.who.display?.trim() ??
+      (signature.who.reference ? signerNames.get(signature.who.reference) : undefined);
+    return display ? [display] : [];
+  }))];
+  return attestedBy.length > 0
+    ? { attestedBy, recordedAt: proof.recorded }
+    : undefined;
+}
+
 async function practitionerNamesByReference(
   fhir: ExamOverviewFhirClient,
-  observations: readonly Observation[],
+  signers: readonly Reference[],
 ): Promise<Map<string, string>> {
-  const references = [...new Set(observations.flatMap((observation) =>
-    (observation.performer ?? []).flatMap((performer) =>
-      performer.display?.trim() || !performer.reference?.match(/^Practitioner\/[A-Za-z0-9.-]+$/)
-        ? []
-        : [performer.reference]
-    )
+  const references = [...new Set(signers.flatMap((signer) =>
+    signer.display?.trim() || !signer.reference?.match(/^Practitioner\/[A-Za-z0-9.-]+$/)
+      ? []
+      : [signer.reference]
   ))];
   const practitioners = await Promise.all(references.map(async (reference) => {
     const id = reference.slice("Practitioner/".length);
