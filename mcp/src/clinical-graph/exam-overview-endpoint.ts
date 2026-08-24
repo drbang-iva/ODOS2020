@@ -186,6 +186,10 @@ async function dilationEvent(
     fhir.read<MedicationAdministration>("MedicationAdministration", id)
   ));
   const displayRows = administrations.flatMap((administration) => {
+    if (
+      administration.subject.reference !== observation.subject?.reference ||
+      administration.context?.reference !== observation.encounter?.reference
+    ) return [];
     const agent = administration.medicationCodeableConcept?.coding?.find((coding) => coding.display?.trim())?.display?.trim();
     const occurredAt = administration.effectiveDateTime;
     return agent && occurredAt ? [{ agent, occurredAt }] : [];

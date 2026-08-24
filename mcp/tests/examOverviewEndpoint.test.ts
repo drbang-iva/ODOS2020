@@ -108,7 +108,10 @@ test("overview context explicitly allowlists stored human-facing event, diagnosi
     ...historyFinding("dilation", "e1", "2026-08-24T14:42:00.000Z"),
     code: { coding: [{ code: "entrance:dilation", display: "Dilation" }] },
     performer: [{ reference: "Practitioner/doc" }],
-    partOf: [{ reference: "MedicationAdministration/dilation-agent" }],
+    partOf: [
+      { reference: "MedicationAdministration/dilation-agent" },
+      { reference: "MedicationAdministration/foreign-dilation-agent" },
+    ],
     component: [{
       code: { coding: [{ code: "DFE_PERFORMED", display: "DFE performed" }] },
       valueBoolean: true,
@@ -140,10 +143,19 @@ test("overview context explicitly allowlists stored human-facing event, diagnosi
     name: [{ prefix: ["Dr."], given: ["Avery"], family: "Chen" }],
     identifier: [{ value: "internal-staff-uuid" }],
   };
+  const foreignAdministration: MedicationAdministration = {
+    ...administration,
+    id: "foreign-dilation-agent",
+    medicationCodeableConcept: { coding: [{ display: "Must not cross patient boundary" }] },
+    subject: { reference: "Patient/other-patient" },
+    context: { reference: "Encounter/other-encounter" },
+  };
   const diagnosis = condition("diagnosis", "Encounter/e1", ["Observation/dilation"]);
   diagnosis.code = { text: "Cataract, nuclear" };
   diagnosis.bodySite = [{ coding: [{ code: "OU", display: "OU" }] }];
-  const fhir = new OverviewMemoryFhir([encounter(), dilation, cover, administration, practitioner, diagnosis]);
+  const fhir = new OverviewMemoryFhir([
+    encounter(), dilation, cover, administration, foreignAdministration, practitioner, diagnosis,
+  ]);
 
   const response = await handleExamOverviewRequest(deps(fhir, "provider"), request());
 
