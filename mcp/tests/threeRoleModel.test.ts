@@ -346,6 +346,7 @@ test("Provider clinical Basic grants cover chart records and procedure charge au
   const policy = buildMedplumAccessPolicy(getRoleDeclaration("provider"));
   const criteria = [...CHART_BASIC_CRITERIA, CLINICAL_BASIC_CRITERIA.procedureChargeRule];
   assertBasicReadWriteCriteria(policy, criteria, "provider");
+  assertBasicReadCriteria(policy, CONFIGURATION_BASIC_CRITERIA, "provider");
   assertDeletedBasicGrantTurnsRed(policy, CLINICAL_BASIC_CRITERIA.encounterComplaint, "provider");
 });
 
@@ -353,6 +354,7 @@ test("Staff clinical Basic grants cover chart records and protocol runtime recor
   const policy = buildMedplumAccessPolicy(getRoleDeclaration("staff"));
   const criteria = [...CHART_BASIC_CRITERIA, ...PROTOCOL_RUNTIME_BASIC_CRITERIA];
   assertBasicReadWriteCriteria(policy, criteria, "staff");
+  assertBasicReadCriteria(policy, CONFIGURATION_BASIC_CRITERIA, "staff");
   assertDeletedBasicGrantTurnsRed(policy, CLINICAL_BASIC_CRITERIA.protocolApplication, "staff");
 });
 
@@ -765,6 +767,22 @@ function assertBasicReadWriteCriteria(
 ): void {
   for (const criteria of criteriaList) {
     for (const interaction of ["read", "search", "create", "update"] as const) {
+      assert.equal(
+        basicPolicyAllows(policy, interaction, criteria),
+        true,
+        `${roleId} must ${interaction} ${criteria}`,
+      );
+    }
+  }
+}
+
+function assertBasicReadCriteria(
+  policy: AccessPolicy,
+  criteriaList: readonly string[],
+  roleId: string,
+): void {
+  for (const criteria of criteriaList) {
+    for (const interaction of ["read", "search"] as const) {
       assert.equal(
         basicPolicyAllows(policy, interaction, criteria),
         true,

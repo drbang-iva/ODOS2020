@@ -447,24 +447,27 @@ const CHART_BASIC_RESOURCE_RULES = [
   },
 ]);
 
-const FINDING_CONFIGURATION_BASIC_RESOURCE_RULES = [
+const FINDING_CONFIGURATION_BASIC_CRITERIA = [
   "Basic?code=https://odos2020.com/fhir/CodeSystem/osod-complaint-definition|osod-complaint-definition",
   "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-finding-definition|odos-finding-definition",
   "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-finding-section-group|odos-finding-section-group",
   "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-diagnosis-definition|odos-diagnosis-definition",
   "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-procedure-definition|odos-procedure-definition",
-].flatMap((criteria): OdosResourceRule[] => [
-  {
+] as const;
+
+const FINDING_CONFIGURATION_BASIC_READ_RESOURCE_RULES =
+  FINDING_CONFIGURATION_BASIC_CRITERIA.map((criteria): OdosResourceRule => ({
     resourceType: "Basic",
     interactions: READ_INTERACTIONS,
     scope: { kind: "practice-search", criteria },
-  },
-  {
+  }));
+
+const FINDING_CONFIGURATION_BASIC_WRITE_RESOURCE_RULES =
+  FINDING_CONFIGURATION_BASIC_CRITERIA.map((criteria): OdosResourceRule => ({
     resourceType: "Basic",
     interactions: UPDATE_INTERACTIONS,
     scope: { kind: "practice-search", criteria },
-  },
-]);
+  }));
 
 const PROCEDURE_CHARGE_RULE_BASIC_RESOURCE_RULES = [
   {
@@ -890,6 +893,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
       DIAGNOSIS_PICK_TALLY_READ_RULE,
       DIAGNOSIS_PICK_TALLY_WRITE_RULE,
       ...CHART_BASIC_RESOURCE_RULES,
+      ...FINDING_CONFIGURATION_BASIC_READ_RESOURCE_RULES,
       ...OFFICE_CHANNEL_RESOURCE_RULES,
       PATIENT_COMMUNICATION_COMPARTMENT_RULE,
       ...PROTOCOL_MODULE_RESOURCE_RULES,
@@ -937,6 +941,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
       DIAGNOSIS_PICK_TALLY_READ_RULE,
       DIAGNOSIS_PICK_TALLY_WRITE_RULE,
       ...CHART_BASIC_RESOURCE_RULES,
+      ...FINDING_CONFIGURATION_BASIC_READ_RESOURCE_RULES,
       ...PROTOCOL_RUNTIME_RESOURCE_RULES,
       ...OFFICE_CHANNEL_RESOURCE_RULES,
       FRONT_DESK_PATIENT_COMMUNICATION_RULE,
@@ -981,7 +986,8 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
       BILLING_IDENTITY_CONFIG_READ_RULE,
       BILLING_IDENTITY_CONFIG_WRITE_RULE,
       DIAGNOSIS_PICK_TALLY_READ_RULE,
-      ...FINDING_CONFIGURATION_BASIC_RESOURCE_RULES,
+      ...FINDING_CONFIGURATION_BASIC_READ_RESOURCE_RULES,
+      ...FINDING_CONFIGURATION_BASIC_WRITE_RESOURCE_RULES,
       ...OFFICE_CHANNEL_RESOURCE_RULES,
       ...PROTOCOL_MODULE_RESOURCE_RULES,
       ...PROCEDURE_CHARGE_RULE_BASIC_RESOURCE_RULES,

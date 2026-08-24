@@ -139,6 +139,11 @@ test("front-desk Basic grants stay criteria-scoped to approved records and the p
     "Basic?code=https://odos2020.com/fhir/CodeSystem/basic-kind|practice-frame-inventory",
     "Basic?code=https://odos2020.com/fhir/CodeSystem/basic-kind|practice-frame-variant-settings",
     "Basic?code=https://odos2020.com/fhir/CodeSystem/day-seal|day-seal",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/osod-complaint-definition|osod-complaint-definition",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-finding-definition|odos-finding-definition",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-finding-section-group|odos-finding-section-group",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-diagnosis-definition|odos-diagnosis-definition",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-procedure-definition|odos-procedure-definition",
   ];
   const createOnceCriteria: string[] = [];
   assert.deepEqual(
