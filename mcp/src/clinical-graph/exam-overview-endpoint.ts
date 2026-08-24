@@ -130,15 +130,10 @@ async function findingClinicalContextProjection(
   const observationReferences = new Set(observations.flatMap((observation) =>
     observation.id ? [`Observation/${observation.id}`] : []
   ));
-  const attestationProofs = (await searchAll<Provenance>(fhir, "Provenance", {
-    patient: patientReference,
-    _count: "100",
-    _sort: "-recorded",
-  })).filter((provenance) =>
-    provenance.policy?.includes(ODOS_CLINICAL_ATTESTATION_POLICY_URL) === true &&
-    provenance.target.some((target) => target.reference === patientReference) &&
-    provenance.target.some((target) => observationReferences.has(target.reference ?? "")) &&
-    provenance.signature?.some((signature) => Boolean(signature.data)) === true
+  const attestationProofs = await optionalAttestationProofs(
+    fhir,
+    patientReference,
+    observationReferences,
   );
   const signerNames = await practitionerNamesByReference(
     fhir,
@@ -159,6 +154,27 @@ async function findingClinicalContextProjection(
     )];
   }));
   return Object.fromEntries(rows.flatMap((row) => row.context ? [[row.reference, row.context]] : []));
+}
+
+async function optionalAttestationProofs(
+  fhir: ExamOverviewFhirClient,
+  patientReference: string,
+  observationReferences: ReadonlySet<string>,
+): Promise<Provenance[]> {
+  try {
+    return (await searchAll<Provenance>(fhir, "Provenance", {
+      patient: patientReference,
+      _count: "100",
+      _sort: "-recorded",
+    })).filter((provenance) =>
+      provenance.policy?.includes(ODOS_CLINICAL_ATTESTATION_POLICY_URL) === true &&
+      provenance.target.some((target) => target.reference === patientReference) &&
+      provenance.target.some((target) => observationReferences.has(target.reference ?? "")) &&
+      provenance.signature?.some((signature) => Boolean(signature.data)) === true
+    );
+  } catch {
+    return [];
+  }
 }
 
 async function findingClinicalContext(
@@ -207,9 +223,8 @@ async function dilationEvent(
   const administrations = (await Promise.all(references.map(async (id) => {
     try {
       return await fhir.read<MedicationAdministration>("MedicationAdministration", id);
-    } catch (error) {
-      if (errorStatus(error) === 404 || errorStatus(error) === 410) return undefined;
-      throw error;
+    } catch {
+      return undefined;
     }
   }))).filter((administration): administration is MedicationAdministration => administration !== undefined);
   const displayRows = administrations.flatMap((administration) => {
@@ -259,9 +274,8 @@ async function practitionerNamesByReference(
     let practitioner: Practitioner;
     try {
       practitioner = await fhir.read<Practitioner>("Practitioner", id);
-    } catch (error) {
-      if (errorStatus(error) === 404 || errorStatus(error) === 410) return undefined;
-      throw error;
+    } catch {
+      return undefined;
     }
     const display = practitionerDisplay(practitioner);
     return display ? [reference, display] as const : undefined;

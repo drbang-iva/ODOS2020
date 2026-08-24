@@ -234,6 +234,53 @@ test("overview context explicitly allowlists stored human-facing event, diagnosi
   }), /dilation-agent|Practitioner\/doc|internal-staff-uuid|internal-agent-code|Technician Taylor|Must not become an attestation|internal dilation bookkeeping|must not override/);
 });
 
+test("optional context dependency failures omit enrichment without hiding the core overview", async () => {
+  const dilation: Observation = {
+    ...historyFinding("dilation", "e1", "2026-08-24T14:42:00.000Z"),
+    code: { coding: [{ code: "entrance:dilation", display: "Dilation" }] },
+    partOf: [{ reference: "MedicationAdministration/unavailable" }],
+  };
+  const attestation: Provenance = {
+    resourceType: "Provenance",
+    id: "signed-dilation",
+    target: [{ reference: "Observation/dilation" }, { reference: "Patient/p1" }],
+    recorded: "2026-08-24T14:43:00.000Z",
+    policy: [ODOS_CLINICAL_ATTESTATION_POLICY_URL],
+    agent: [{ who: { reference: "Practitioner/unavailable" } }],
+    signature: [{
+      type: [{ code: "1.2.840.10065.1.12.1.1" }],
+      when: "2026-08-24T14:43:00.000Z",
+      who: { reference: "Practitioner/unavailable" },
+      data: "signed-proof",
+    }],
+  };
+  const fhir = new OverviewMemoryFhir([encounter(), dilation, attestation]);
+  fhir.failedReads.add("MedicationAdministration/unavailable");
+  fhir.failedReads.add("Practitioner/unavailable");
+
+  const response = await handleExamOverviewRequest(deps(fhir, "provider"), request());
+
+  assert.equal(response.status, 200, JSON.stringify(response.body));
+  const row = (response.body as ExamOverviewProjection).findings.find((finding) =>
+    finding.findingKey === "entrance:dilation"
+  );
+  assert.equal(row?.event, undefined);
+  assert.equal(row?.attestation, undefined);
+});
+
+test("an unavailable optional attestation search does not hide current findings", async () => {
+  const fhir = new OverviewMemoryFhir([
+    encounter(),
+    historyFinding("history-current", "e1", "2026-08-24T14:40:00.000Z"),
+  ]);
+  fhir.failedSearches.add("Provenance");
+
+  const response = await handleExamOverviewRequest(deps(fhir, "provider"), request());
+
+  assert.equal(response.status, 200, JSON.stringify(response.body));
+  assert.equal((response.body as ExamOverviewProjection).findings.length, 1);
+});
+
 test("an encounter with no patient is rejected without fabricating a projection", async () => {
   const missingPatient = encounter();
   delete missingPatient.subject;
@@ -411,6 +458,8 @@ function reassertionProvenance(): Provenance {
 
 class OverviewMemoryFhir implements ExamOverviewFhirClient {
   readonly resources: Resource[];
+  readonly failedReads = new Set<string>();
+  readonly failedSearches = new Set<Resource["resourceType"]>();
   readCount = 0;
   writeCount = 0;
 
@@ -420,6 +469,9 @@ class OverviewMemoryFhir implements ExamOverviewFhirClient {
 
   async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
     this.readCount += 1;
+    if (this.failedReads.has(`${resourceType}/${id}`)) {
+      throw Object.assign(new Error(`Unavailable ${resourceType}/${id}`), { status: 503 });
+    }
     const resource = this.resources.find((row) => row.resourceType === resourceType && row.id === id);
     if (!resource) throw Object.assign(new Error(`Missing ${resourceType}/${id}`), { status: 404 });
     return structuredClone(resource as T);
@@ -429,6 +481,9 @@ class OverviewMemoryFhir implements ExamOverviewFhirClient {
     resourceType: T["resourceType"],
     params: Record<string, string> = {},
   ): Promise<Bundle<T>> {
+    if (this.failedSearches.has(resourceType)) {
+      throw Object.assign(new Error(`Unavailable ${resourceType} search`), { status: 503 });
+    }
     const resources = this.resources.filter((resource) => {
       if (resource.resourceType !== resourceType) return false;
       if (params.encounter && (resource as Condition | Observation).encounter?.reference !== params.encounter) {
