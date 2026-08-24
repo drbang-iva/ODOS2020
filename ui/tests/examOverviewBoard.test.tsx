@@ -416,7 +416,7 @@ test("five row patterns use clinical display values without exposing machine sta
   }
 });
 
-test("nested exception details keep native keyboard control without triggering the row editor", () => {
+test("finding rows keep native disclosures accessible beside a finite editor button", () => {
   const opened: string[] = [];
   const renderer = create(
     <ExamOverviewBoard
@@ -429,26 +429,18 @@ test("nested exception details keep native keyboard control without triggering t
   );
   try {
     const row = renderer.root.findByProps({ "data-finding-key": "entrance:cvf" });
-    const rowTarget = {};
-    const nestedTarget = {};
-    let nestedPrevented = false;
-    act(() => row.props.onKeyDown({
-      key: "Enter",
-      target: nestedTarget,
-      currentTarget: rowTarget,
-      preventDefault: () => { nestedPrevented = true; },
-    }));
-    assert.equal(nestedPrevented, false);
+    assert.equal(row.props.role, undefined);
+    assert.equal(row.props.tabIndex, undefined);
+    assert.equal(row.props.onKeyDown, undefined);
+    assert.equal(row.findAllByType("details").length, 1);
     assert.deepEqual(opened, []);
 
-    let rowPrevented = false;
-    act(() => row.props.onKeyDown({
-      key: "Enter",
-      target: rowTarget,
-      currentTarget: rowTarget,
-      preventDefault: () => { rowPrevented = true; },
-    }));
-    assert.equal(rowPrevented, true);
+    let propagationStopped = false;
+    const edit = row.findByProps({ "data-testid": "exam-finding-editor" });
+    assert.equal(edit.type, "button");
+    assert.equal(edit.props["aria-label"], "Edit Confrontation fields");
+    act(() => edit.props.onClick({ stopPropagation: () => { propagationStopped = true; } }));
+    assert.equal(propagationStopped, true);
     assert.deepEqual(opened, ["cvf"]);
   } finally {
     renderer.unmount();
@@ -1154,7 +1146,8 @@ test("distributed board rows anchor mapped editors and retain full-page fallback
       assert.ok(editorIds.includes(pretestId), `${pretestId} must remain reachable`);
     }
     const dilationFinding = harness.renderer.root.findByProps({ "data-finding-key": "dilation" });
-    assert.equal(dilationFinding.props.role, "button");
+    assert.equal(dilationFinding.props.role, undefined);
+    assert.equal(dilationFinding.findByProps({ "data-testid": "exam-finding-editor" }).type, "button");
 
     const vaLauncher = harness.renderer.root.findByProps({ "data-editor-section-id": "va" });
     await act(async () => vaLauncher.props.onClick());

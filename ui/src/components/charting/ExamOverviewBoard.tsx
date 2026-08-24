@@ -299,15 +299,6 @@ function FindingRow({
       data-finding-key={group.findingKey}
       data-row-pattern={pattern}
       onClick={openEditor}
-      onKeyDown={openEditor ? (event) => {
-        if (event.target !== event.currentTarget) return;
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          openEditor();
-        }
-      } : undefined}
-      role={openEditor ? "button" : undefined}
-      tabIndex={openEditor ? 0 : undefined}
     >
       <span className="odos-exam-finding-name">{group.display}{pattern === "rx" ? " — Manifest" : ""}</span>
       <div className="odos-exam-finding-value">
@@ -317,6 +308,20 @@ function FindingRow({
         {pattern === "diagram" && <DiagramResult group={group} />}
         {pattern === "rx" && <RxResult group={group} wearingFindings={wearingFindings} />}
       </div>
+      {openEditor && (
+        <button
+          type="button"
+          className="odos-exam-finding-editor"
+          data-testid="exam-finding-editor"
+          aria-label={`Edit ${group.display}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            openEditor();
+          }}
+        >
+          Edit
+        </button>
+      )}
       {exception && <FindingExpansion group={group} />}
     </article>
   );
