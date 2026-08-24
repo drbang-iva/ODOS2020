@@ -102,6 +102,55 @@ test("the real chart bar stays inside its viewport with touch-sized controls", {
   }
 });
 
+test("the confrontation-field diagram keeps seeing field light and restriction dark across appearances", {
+  timeout: 60_000,
+}, async () => {
+  const server = await createServer({
+    root: resolve(import.meta.dirname, ".."),
+    logLevel: "silent",
+    server: { host: "127.0.0.1", port: 0 },
+  });
+  await server.listen();
+  const address = server.httpServer?.address();
+  assert.ok(address && typeof address !== "string", "Vite did not expose its test port");
+
+  const browser = await chromium.launch({
+    executablePath: chromeExecutable(),
+    headless: true,
+    args: process.platform === "linux" ? ["--no-sandbox"] : [],
+  });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    await page.goto(
+      `http://127.0.0.1:${address.port}/tests/fixtures/exam-chart-bar-responsive.html?board=1`,
+      { waitUntil: "networkidle" },
+    );
+    const appearances = ["unset", "midnight", "space-black", "light"] as const;
+    const fills: Record<string, { ground: string; restricted: string }> = {};
+    for (const appearance of appearances) {
+      await page.evaluate((surface) => {
+        if (surface === "unset") {
+          delete document.documentElement.dataset.surface;
+        } else {
+          document.documentElement.dataset.surface = surface;
+        }
+      }, appearance);
+      fills[appearance] = await page.locator('[data-testid="visual-field-diagram"][data-eye="OD"]').evaluate((diagram) => ({
+        ground: getComputedStyle(diagram).backgroundColor,
+        restricted: getComputedStyle(diagram.querySelector<HTMLElement>(".is-restricted")!).backgroundColor,
+      }));
+    }
+    assert.deepEqual(fills, Object.fromEntries(appearances.map((appearance) => [
+      appearance,
+      { ground: "rgb(242, 244, 248)", restricted: "rgb(17, 21, 31)" },
+    ])));
+    await page.close();
+  } finally {
+    await browser.close();
+    await server.close();
+  }
+});
+
 function chromeExecutable(): string {
   const candidates = [
     process.env.ODOS_CHROME_BIN,
