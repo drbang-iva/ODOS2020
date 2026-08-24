@@ -410,6 +410,45 @@ test("five row patterns use clinical display values without exposing machine sta
   }
 });
 
+test("nested exception details keep native keyboard control without triggering the row editor", () => {
+  const opened: string[] = [];
+  const renderer = create(
+    <ExamOverviewBoard
+      projection={BY_EXCEPTION_PROJECTION}
+      editorEntries={[{ id: "cvf", label: "Confrontation fields", group: "ENTRANCE" }]}
+      refreshing={false}
+      onOpenEditor={(id) => opened.push(id)}
+      onRefresh={() => undefined}
+    />,
+  );
+  try {
+    const row = renderer.root.findByProps({ "data-finding-key": "entrance:cvf" });
+    const rowTarget = {};
+    const nestedTarget = {};
+    let nestedPrevented = false;
+    act(() => row.props.onKeyDown({
+      key: "Enter",
+      target: nestedTarget,
+      currentTarget: rowTarget,
+      preventDefault: () => { nestedPrevented = true; },
+    }));
+    assert.equal(nestedPrevented, false);
+    assert.deepEqual(opened, []);
+
+    let rowPrevented = false;
+    act(() => row.props.onKeyDown({
+      key: "Enter",
+      target: rowTarget,
+      currentTarget: rowTarget,
+      preventDefault: () => { rowPrevented = true; },
+    }));
+    assert.equal(rowPrevented, true);
+    assert.deepEqual(opened, ["cvf"]);
+  } finally {
+    renderer.unmount();
+  }
+});
+
 test("refraction chooses the latest manifest, preserves stored signs, and keeps non-primary blocks collapsed", () => {
   const renderer = create(
     <ExamOverviewBoard
