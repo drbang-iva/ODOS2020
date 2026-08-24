@@ -376,14 +376,20 @@ test("five row patterns use clinical display values without exposing machine sta
     assert.doesNotMatch(textContent(eom), /OD|OS/);
     assert.match(rendered, /Cover test.*NEAR 3 XP/);
     assert.match(rendered, /Pachymetry.*OD.*541.*OS.*538/);
-    assert.match(rendered, /Dilation.*tropicamide 1%.*phenylephrine 2\.5%.*10:42/);
+    assert.match(
+      rendered,
+      new RegExp(`Dilation.*tropicamide 1%.*phenylephrine 2\\.5%.*${testTimeLabel("2026-08-24T14:42:00.000Z")}`),
+    );
     assert.equal(renderer.root.findAllByProps({ "data-testid": "visual-field-diagram" }).length, 2);
     assert.equal(renderer.root.findAllByProps({ "data-eye": "OD", "data-restricted-quadrants": "upper-left" }).length, 1);
     assert.equal(renderer.root.findAllByProps({ "data-eye": "OS", "data-restricted-quadrants": "" }).length, 1);
     const cvf = renderer.root.findByProps({ "data-finding-key": "entrance:cvf" });
     assert.match(cvf.props.className, /is-exception/);
     assert.match(textContent(cvf), /filed under: Visual field defect — OD/);
-    assert.match(textContent(cvf), /Attested by Dr\. Avery Chen · 10:43 · current visit/);
+    assert.match(
+      textContent(cvf),
+      new RegExp(`Attested by Dr\\. Avery Chen · ${testTimeLabel("2026-08-24T14:43:00.000Z")} · current visit`),
+    );
     assert.match(rendered, /deferred — patient driving/);
     assert.doesNotMatch(rendered, /Examined|Current visit|Interpretation not recorded|Exam state|Normal template/);
     assert.doesNotMatch(rendered, /entrance\.pachymetry|must-not-render|refraction-block-|Observation\/|Encounter\//);
@@ -1678,6 +1684,10 @@ function editorControl(root: ReactTestInstance, sectionId: string): ReactTestIns
     if (finding) return finding;
   }
   throw new Error(`No editor control found for ${sectionId}`);
+}
+
+function testTimeLabel(value: string): string {
+  return new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(value));
 }
 
 function textContent(node: ReactTestInstance): string {
