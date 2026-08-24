@@ -196,7 +196,8 @@ async function dilationEvent(
       administration.subject.reference !== observation.subject?.reference ||
       administration.context?.reference !== observation.encounter?.reference
     ) return [];
-    const agent = administration.medicationCodeableConcept?.coding?.find((coding) => coding.display?.trim())?.display?.trim();
+    const agent = administration.medicationCodeableConcept?.coding?.find((coding) => coding.display?.trim())?.display?.trim() ??
+      administration.medicationCodeableConcept?.text?.trim();
     const occurredAt = administration.effectiveDateTime;
     return agent && occurredAt ? [{ agent, occurredAt }] : [];
   });

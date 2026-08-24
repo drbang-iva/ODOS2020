@@ -113,6 +113,7 @@ test("overview context explicitly allowlists stored human-facing event, diagnosi
       { reference: "MedicationAdministration/foreign-dilation-agent" },
       { reference: "MedicationAdministration/not-done-dilation-agent" },
       { reference: "MedicationAdministration/missing" },
+      { reference: "MedicationAdministration/text-only-dilation-agent" },
     ],
     component: [{
       code: { coding: [{ code: "DFE_PERFORMED", display: "DFE performed" }] },
@@ -159,11 +160,20 @@ test("overview context explicitly allowlists stored human-facing event, diagnosi
     status: "not-done",
     medicationCodeableConcept: { coding: [{ display: "Must not render as administered" }] },
   };
+  const textOnlyAdministration: MedicationAdministration = {
+    ...administration,
+    id: "text-only-dilation-agent",
+    medicationCodeableConcept: {
+      coding: [{ code: "internal-agent-code" }],
+      text: "Text-only dilating agent",
+    },
+  };
   const diagnosis = condition("diagnosis", "Encounter/e1", ["Observation/dilation"]);
   diagnosis.code = { text: "Cataract, nuclear" };
   diagnosis.bodySite = [{ coding: [{ code: "OU", display: "OU" }] }];
   const fhir = new OverviewMemoryFhir([
-    encounter(), dilation, cover, administration, foreignAdministration, notDoneAdministration, practitioner, diagnosis,
+    encounter(), dilation, cover, administration, foreignAdministration, notDoneAdministration,
+    textOnlyAdministration, practitioner, diagnosis,
   ]);
 
   const response = await handleExamOverviewRequest(deps(fhir, "provider"), request());
@@ -175,6 +185,9 @@ test("overview context explicitly allowlists stored human-facing event, diagnosi
   assert.deepEqual(dilationRow?.event, {
     administrations: [{
       agent: "Tropicamide 1%",
+      occurredAt: "2026-08-24T14:42:00.000Z",
+    }, {
+      agent: "Text-only dilating agent",
       occurredAt: "2026-08-24T14:42:00.000Z",
     }],
   });
@@ -189,7 +202,7 @@ test("overview context explicitly allowlists stored human-facing event, diagnosi
     diagnoses: dilationRow?.diagnoses,
     attestation: dilationRow?.attestation,
     summary: coverRow?.summary,
-  }), /dilation-agent|Practitioner\/doc|internal-staff-uuid|internal dilation bookkeeping|must not override/);
+  }), /dilation-agent|Practitioner\/doc|internal-staff-uuid|internal-agent-code|internal dilation bookkeeping|must not override/);
 });
 
 test("an encounter with no patient is rejected without fabricating a projection", async () => {
