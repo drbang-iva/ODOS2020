@@ -44,7 +44,7 @@ test("canonical lens axes preserve the locked vocabulary and numeric material in
   assert.deepEqual(LENS_DESIGN_TYPES, [
     "single-vision", "flat-top-28", "flat-top-35", "7x28", "8x35", "round",
     "blended", "double-segment", "aspheric", "progressive", "office-computer",
-    "anti-fatigue", "trifocal", "lenticular",
+    "anti-fatigue", "trifocal", "lenticular", "executive", "stellest", "multifocal", "bifocal",
   ]);
   assert.deepEqual(TREATMENT_FAMILIES, [
     "clear", "photochromic", "polarized", "photochromic-polarized", "blue-embedded", "tint-embedded",

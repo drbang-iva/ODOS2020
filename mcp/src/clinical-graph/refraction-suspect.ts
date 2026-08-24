@@ -33,6 +33,21 @@ export const REFRACTION_TYPE_OPTIONS: ClinicalFindingOption[] = [
   { code: "OTHER", display: "Other", active: true },
 ];
 
+const RX_PURPOSE_OPTIONS: ClinicalFindingOption[] = [
+  { code: "Full-time", display: "Full-time", active: true },
+  { code: "Part-time", display: "Part-time", active: true },
+  { code: "Schoolwork", display: "Schoolwork", active: true },
+  { code: "Distance only", display: "Distance only", active: true },
+  { code: "Reading", display: "Reading", active: true },
+  { code: "Intermediate/computer", display: "Intermediate/computer", active: true },
+  { code: "Occupational", display: "Occupational", active: true },
+  { code: "Safety", display: "Safety", active: true },
+  { code: "Sunwear", display: "Sunwear", active: true },
+  { code: "Driving", display: "Driving", active: true },
+  { code: "Sports & hobby", display: "Sports & hobby", active: true },
+  { code: "Transitional Ortho-K", display: "Transitional Ortho-K", active: true },
+];
+
 export interface RefractiveErrorDiagnosisCode {
   code: string;
   display: string;
@@ -121,7 +136,9 @@ export function buildRefractionFindingDefinitionStub(
         },
         purpose: {
           display: "Purpose",
-          type: "string",
+          type: "single-select",
+          editable: true,
+          options: RX_PURPOSE_OPTIONS,
         },
         distanceVisualAcuity: {
           display: "Distance VA",

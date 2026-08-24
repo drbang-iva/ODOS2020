@@ -45,6 +45,10 @@ export const LENS_DESIGN_TYPES = [
   "anti-fatigue",
   "trifocal",
   "lenticular",
+  "executive",
+  "stellest",
+  "multifocal",
+  "bifocal",
 ] as const;
 
 export type LensDesignType = (typeof LENS_DESIGN_TYPES)[number];
@@ -1181,6 +1185,10 @@ function designTypeLabel(type: LensDesignType): string {
     "anti-fatigue": "Anti-fatigue",
     trifocal: "Trifocal",
     lenticular: "Lenticular",
+    executive: "Executive",
+    stellest: "Stellest",
+    multifocal: "Multifocal",
+    bifocal: "Bifocal",
   };
   return labels[type];
 }
