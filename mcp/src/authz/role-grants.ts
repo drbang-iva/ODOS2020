@@ -1,5 +1,15 @@
-import type { AccessPolicy, ProjectMembership, ProjectMembershipAccess } from "@medplum/fhirtypes";
+import type {
+  AccessPolicy,
+  Bundle,
+  Patient,
+  Project,
+  ProjectMembership,
+  ProjectMembershipAccess,
+  Reference,
+  Resource,
+} from "@medplum/fhirtypes";
 import type { JsonPatchOperation } from "../fhir-client.js";
+import type { MedplumClient } from "../fhir-client.js";
 import {
   ODOS_PRACTICE_ROLE_SYSTEM,
   PRACTICE_ROLE_IDS,
@@ -55,6 +65,68 @@ export interface GrantPracticeRolesResult {
   targetEmail: string;
   roles: readonly PracticeRoleId[];
   changed: boolean;
+}
+
+export interface GrantNewlyRegisteredPatientInput {
+  staffReference: string;
+  project: Reference<Project>;
+  registrationRequest: Bundle;
+  registrationResponse: Bundle;
+}
+
+export interface GrantNewlyRegisteredPatientDependencies {
+  serviceFhir: Pick<MedplumClient, "searchProject" | "patch">;
+}
+
+export async function grantNewlyRegisteredPatientAccess(
+  input: GrantNewlyRegisteredPatientInput,
+  deps: GrantNewlyRegisteredPatientDependencies,
+): Promise<{ patientReference: string; changed: boolean }> {
+  const projectId = input.project.reference?.match(/^Project\/([A-Za-z0-9.-]{1,64})$/)?.[1];
+  if (!projectId) throw new Error("Registration caller is missing a valid project reference.");
+  const patientReference = createdPatientReference(input.registrationRequest, input.registrationResponse);
+  const patientId = patientReference.slice("Patient/".length);
+  const patientMatches = await deps.serviceFhir.searchProject<Patient>("Patient", projectId, {
+    _id: patientId,
+    _count: "2",
+  });
+  const patients = resources(patientMatches);
+  if (patients.length !== 1 || patients[0]?.meta?.project?.replace(/^Project\//, "") !== projectId) {
+    throw new Error("Newly registered Patient is not owned by the caller's project.");
+  }
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const membership = await registrationMembership(deps.serviceFhir, projectId, input.staffReference);
+    const additions = await registrationGrantEntries(
+      deps.serviceFhir,
+      projectId,
+      membership,
+      input.staffReference,
+      patientReference,
+    );
+    if (additions.length === 0) return { patientReference, changed: false };
+    if (!membership.id || !membership.meta?.versionId) {
+      throw new Error("Registration membership is missing id or meta.versionId.");
+    }
+    try {
+      await deps.serviceFhir.patch<ProjectMembership>(
+        "ProjectMembership",
+        membership.id,
+        membership.access?.length
+          ? additions.map((value) => ({ op: "add" as const, path: "/access/-", value }))
+          : [{ op: "add", path: "/access", value: additions }],
+        {
+          "If-Match": `W/"${membership.meta.versionId}"`,
+          "X-ODOS-Source": "mcp/patient-registration-grant",
+        },
+      );
+      return { patientReference, changed: true };
+    } catch (error) {
+      if (attempt === 0 && isMembershipVersionConflict(error)) continue;
+      throw error;
+    }
+  }
+  throw new Error("Patient registration grant retry was exhausted.");
 }
 
 export async function grantPracticeRoles(
@@ -384,4 +456,109 @@ function normalizeRoles(
   return [primaryRole, ...requested.filter((role) => role !== primaryRole)].filter(
     (role, index, roles) => roles.indexOf(role) === index,
   );
+}
+
+function createdPatientReference(request: Bundle, response: Bundle): string {
+  const requestEntry = request.entry?.[0];
+  if (
+    request.type !== "transaction" ||
+    requestEntry?.request?.method !== "POST" ||
+    requestEntry.request.url !== "Patient" ||
+    requestEntry.resource?.resourceType !== "Patient"
+  ) {
+    throw new Error("Registration grant requires the server-built Patient transaction entry.");
+  }
+  const responseEntry = response.entry?.[0]?.response;
+  if (!responseEntry?.status?.startsWith("201")) {
+    throw new Error("Registration grant requires a newly created Patient response.");
+  }
+  const patientId = responseEntry.location?.match(/^Patient\/([A-Za-z0-9.-]{1,64})(?:\/|$)/)?.[1];
+  if (!patientId) throw new Error("Registration response did not identify the newly created Patient.");
+  return `Patient/${patientId}`;
+}
+
+async function registrationMembership(
+  fhir: Pick<MedplumClient, "searchProject">,
+  projectId: string,
+  staffReference: string,
+): Promise<ProjectMembership> {
+  const matches = await fhir.searchProject<ProjectMembership>("ProjectMembership", projectId, {
+    profile: staffReference,
+    active: "true",
+    _count: "2",
+  });
+  const memberships = resources(matches).filter((membership) => membership.active !== false);
+  if (memberships.length !== 1) {
+    throw new Error(`Registration caller has ${memberships.length} active project memberships; exactly one is required.`);
+  }
+  const membership = memberships[0]!;
+  if (membership.project.reference !== `Project/${projectId}`) {
+    throw new Error("Registration membership does not belong to the caller's project.");
+  }
+  return membership;
+}
+
+async function registrationGrantEntries(
+  fhir: Pick<MedplumClient, "searchProject">,
+  projectId: string,
+  membership: ProjectMembership,
+  staffReference: string,
+  patientReference: string,
+): Promise<ProjectMembershipAccess[]> {
+  const policyReferences = [...new Set([
+    ...(membership.access ?? []).flatMap((access) => access.policy.reference ?? []),
+    ...(membership.accessPolicy?.reference ? [membership.accessPolicy.reference] : []),
+  ])].filter((reference) => /^AccessPolicy\/[A-Za-z0-9.-]{1,64}$/.test(reference));
+  const additions: ProjectMembershipAccess[] = [];
+  for (const policyReference of policyReferences) {
+    const policyId = policyReference.slice("AccessPolicy/".length);
+    const matches = await fhir.searchProject<AccessPolicy>("AccessPolicy", projectId, {
+      _id: policyId,
+      _count: "2",
+    });
+    const policies = resources(matches);
+    if (policies.length !== 1 || policies[0]?.meta?.project?.replace(/^Project\//, "") !== projectId) {
+      throw new Error(`${policyReference} is not uniquely owned by the caller's project.`);
+    }
+    const expressions = (policies[0]?.resource ?? []).flatMap((rule) => [
+      rule.criteria,
+      ...(rule.writeConstraint ?? []).map((constraint) => constraint.expression),
+    ]).filter((value): value is string => Boolean(value));
+    const patientParameterNames = [...new Set(expressions.flatMap((expression) =>
+      [...expression.matchAll(/%((?:(?:admin|provider|staff)_)?patient_compartment)(?![A-Za-z0-9_])/g)]
+        .map((match) => match[1]!)
+    ))];
+    if (patientParameterNames.length === 0) continue;
+    if (membership.access?.some((access) =>
+      access.policy.reference === policyReference && patientParameterNames.every((parameterName) =>
+        access.parameter?.some((parameter) =>
+          parameter.name === parameterName && parameter.valueString === patientReference
+        )
+      )
+    )) continue;
+    const parameters = patientParameterNames.flatMap((patientParameterName) => {
+      const prefix = patientParameterName.slice(0, -"patient_compartment".length);
+      const providerParameterName = `${prefix}provider_profile`;
+      const needsProviderProfile = expressions.some((expression) =>
+        expression.includes(`%${providerParameterName}`)
+      );
+      return [
+        ...(needsProviderProfile
+          ? [{ name: providerParameterName, valueReference: { reference: staffReference } }]
+          : []),
+        { name: patientParameterName, valueString: patientReference },
+      ];
+    });
+    additions.push({ policy: { reference: policyReference }, parameter: sortAccessParameters(parameters) });
+  }
+  return additions;
+}
+
+function resources<T extends Resource>(bundle: Bundle<T>): T[] {
+  return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
+}
+
+function isMembershipVersionConflict(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "status" in error &&
+    (error.status === 409 || error.status === 412);
 }

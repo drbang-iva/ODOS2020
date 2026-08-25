@@ -7,6 +7,139 @@ import { registerClinicRoutes } from "../src/clinic/clinic-routes.js";
 import { loadClinicSummary } from "../src/clinic/clinic-summary.js";
 import { PATIENT_STICKY_NOTE_IDENTIFIER_SYSTEM } from "../src/clinic/patient-overview.js";
 
+test("POST /clinic/patients is an authenticated registration route", async () => {
+  const app = express();
+  app.use(express.json());
+  registerClinicRoutes(app, {
+    authenticateService: async () => undefined,
+    authenticate: async () => null,
+  });
+  const listener = app.listen(0, "127.0.0.1");
+  await new Promise<void>((resolve, reject) => {
+    listener.once("listening", resolve);
+    listener.once("error", reject);
+  });
+  const { port } = listener.address() as AddressInfo;
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/clinic/patients`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    assert.equal(response.status, 401);
+  } finally {
+    await new Promise<void>((resolve, reject) =>
+      listener.close((error) => error ? reject(error) : resolve())
+    );
+  }
+});
+
+test("registration uses its action-gated authenticator without replacing other clinic authentication", async () => {
+  let clinicAuthCalls = 0;
+  let registrationAuthCalls = 0;
+  const app = express();
+  app.use(express.json());
+  registerClinicRoutes(app, {
+    authenticateService: async () => undefined,
+    authenticate: async () => {
+      clinicAuthCalls += 1;
+      return null;
+    },
+    authenticateRegistration: async () => {
+      registrationAuthCalls += 1;
+      return null;
+    },
+  } as never);
+  const listener = app.listen(0, "127.0.0.1");
+  await new Promise<void>((resolve, reject) => {
+    listener.once("listening", resolve);
+    listener.once("error", reject);
+  });
+  const { port } = listener.address() as AddressInfo;
+  try {
+    assert.equal((await fetch(`http://127.0.0.1:${port}/clinic/summary`)).status, 401);
+    assert.equal((await fetch(`http://127.0.0.1:${port}/clinic/patients`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    })).status, 401);
+    assert.equal(clinicAuthCalls, 1);
+    assert.equal(registrationAuthCalls, 1);
+  } finally {
+    await new Promise<void>((resolve, reject) =>
+      listener.close((error) => error ? reject(error) : resolve())
+    );
+  }
+});
+
+test("POST /clinic/patients strictly rejects fields outside the real registration form payload", async () => {
+  const app = express();
+  app.use(express.json());
+  registerClinicRoutes(app, {
+    authenticateService: async () => undefined,
+    authenticate: async () => ({
+      staffReference: "Practitioner/staff-1",
+      actorRole: "staff",
+      fhir: {} as never,
+    }),
+  });
+  const listener = app.listen(0, "127.0.0.1");
+  await new Promise<void>((resolve, reject) => {
+    listener.once("listening", resolve);
+    listener.once("error", reject);
+  });
+  const { port } = listener.address() as AddressInfo;
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/clinic/patients`, {
+      method: "POST",
+      headers: { Authorization: "Bearer good", "Content-Type": "application/json" },
+      body: JSON.stringify({
+        demographics: {
+          firstName: "Synthetic",
+          middleName: "",
+          lastName: "Registration",
+          preferredName: "",
+          birthDate: "1980-01-02",
+          gender: "female",
+          phone: "864-555-0100",
+          email: "",
+          address: "1 Synthetic Way",
+          city: "Greenville",
+          state: "SC",
+          postalCode: "29601",
+        },
+        responsibleParties: [{
+          localId: "self",
+          kind: "self",
+          relationship: "other",
+          firstName: "",
+          middleName: "",
+          lastName: "",
+          phone: "",
+          address: "",
+          city: "",
+          state: "",
+          postalCode: "",
+          financialResponsible: true,
+          consentAuthority: false,
+          primary: true,
+          courtOrderNotes: "",
+          effectiveDate: "",
+          endDate: "",
+        }],
+        confirmDuplicate: false,
+        source: "browser-built-fhir",
+      }),
+    });
+    assert.equal(response.status, 400);
+    assert.match(JSON.stringify(await response.json()), /unrecognized|unsupported/i);
+  } finally {
+    await new Promise<void>((resolve, reject) =>
+      listener.close((error) => error ? reject(error) : resolve())
+    );
+  }
+});
+
 test("GET /clinic/summary authenticates once and returns every section from seeded FHIR data", async () => {
   const searched: string[] = [];
   const resources: Partial<Record<Resource["resourceType"], Resource[]>> = {

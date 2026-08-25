@@ -1,14 +1,6 @@
-import type {
-  Account,
-  Bundle,
-  BundleEntry,
-  Patient,
-  RelatedPerson,
-} from "@medplum/fhirtypes";
+import type { Patient } from "@medplum/fhirtypes";
 
 export const ODOS_MRN_SYSTEM = "https://odos2020.com/fhir/NamingSystem/odos-mrn";
-export const ODOS_MRN_ALLOCATION_TOKEN_SYSTEM =
-  "https://odos2020.com/fhir/NamingSystem/odos-mrn-allocation-token";
 export const EYEFINITY_EPM_PATIENT_ID_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/eyefinity-epm-patient-id";
 export const EYEFINITY_EHR_PATIENT_ID_SYSTEM =
@@ -21,7 +13,6 @@ export const COURT_ORDER_NOTES_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes";
 export const ODOS_MRN_MIN = 100_001;
 export const ODOS_MRN_MAX = 999_999;
-export const ODOS_MRN_ALLOCATION_ATTEMPTS = 100;
 
 export type ResponsiblePartyRelationship =
   | "parent"
@@ -47,17 +38,6 @@ export interface ResponsiblePartyDraft {
   courtOrderNotes: string;
   effectiveDate: string;
   endDate: string;
-}
-
-export interface MrnReservationStore {
-  patientIdentifierExists(mrn: string): Promise<boolean>;
-  createReservation(account: Account, ifNoneExist: string): Promise<Account>;
-}
-
-export interface ReservedMrn {
-  mrn: string;
-  allocationToken: string;
-  account: Account;
 }
 
 export function emptySelfResponsibleParty(localId: string): ResponsiblePartyDraft {
@@ -221,191 +201,8 @@ export function validateResponsibleParties(
   return errors;
 }
 
-export async function reserveOdosMrn(
-  store: MrnReservationStore,
-  nextBase: () => number,
-  nextToken: () => string,
-): Promise<ReservedMrn> {
-  for (let attempt = 0; attempt < ODOS_MRN_ALLOCATION_ATTEMPTS; attempt += 1) {
-    const mrn = formatOdosMrn(nextBase());
-    if (await store.patientIdentifierExists(mrn)) continue;
-    const allocationToken = nextToken();
-    const account = await store.createReservation(
-      buildMrnReservationAccount(mrn, allocationToken),
-      `identifier=${ODOS_MRN_SYSTEM}|${mrn}`,
-    );
-    if (account.identifier?.some(
-      (identifier) =>
-        identifier.system === ODOS_MRN_ALLOCATION_TOKEN_SYSTEM
-        && identifier.value === allocationToken,
-    )) {
-      if (!account.id) throw new Error("MRN reservation Account was returned without an id.");
-      return { mrn, allocationToken, account };
-    }
-  }
-  throw new Error(`Unable to allocate a unique ODOS MRN after ${ODOS_MRN_ALLOCATION_ATTEMPTS} attempts.`);
-}
-
-export function buildMrnReservationAccount(mrn: string, allocationToken: string): Account {
-  if (!isValidOdosMrn(mrn)) throw new Error("Cannot reserve an invalid ODOS MRN.");
-  if (!allocationToken) throw new Error("MRN allocation token is required.");
-  return {
-    resourceType: "Account",
-    identifier: [
-      { use: "usual", type: { text: "ODOS medical record number" }, system: ODOS_MRN_SYSTEM, value: mrn },
-      { system: ODOS_MRN_ALLOCATION_TOKEN_SYSTEM, value: allocationToken },
-    ],
-    status: "on-hold",
-    name: `Pending ODOS chart ${mrn}`,
-  };
-}
-
-export function buildPatientIdentityTransaction(input: {
-  patient: Patient;
-  reservation: ReservedMrn;
-  responsibleParties: readonly ResponsiblePartyDraft[];
-  today: string;
-  nextUuid: () => string;
-}): Bundle {
-  const errors = validateResponsibleParties(
-    input.responsibleParties,
-    input.patient.birthDate ?? "",
-    input.today,
-  );
-  if (Object.keys(errors).length > 0) throw new Error(Object.values(errors).join(" "));
-  if (!input.reservation.account.id) throw new Error("MRN reservation Account is missing its id.");
-
-  const patientFullUrl = `urn:uuid:${input.nextUuid()}`;
-  const patient: Patient = {
-    ...input.patient,
-    identifier: [
-      ...(input.patient.identifier ?? []).filter((identifier) => identifier.system !== ODOS_MRN_SYSTEM),
-      {
-        use: "usual",
-        type: { text: "ODOS medical record number" },
-        system: ODOS_MRN_SYSTEM,
-        value: input.reservation.mrn,
-      },
-    ],
-  };
-  const entries: BundleEntry[] = [{
-    fullUrl: patientFullUrl,
-    resource: patient,
-    request: { method: "POST", url: "Patient" },
-  }];
-  const partyReferences = new Map<string, string>();
-
-  for (const party of input.responsibleParties) {
-    if (party.kind === "self") {
-      partyReferences.set(party.localId, patientFullUrl);
-      continue;
-    }
-    const fullUrl = `urn:uuid:${input.nextUuid()}`;
-    partyReferences.set(party.localId, fullUrl);
-    entries.push({
-      fullUrl,
-      resource: buildRelatedPerson(party, patientFullUrl, input.today),
-      request: { method: "POST", url: "RelatedPerson" },
-    });
-  }
-
-  const account: Account = {
-    resourceType: "Account",
-    id: input.reservation.account.id,
-    meta: input.reservation.account.meta,
-    identifier: [
-      ...(input.reservation.account.identifier ?? []).filter(
-        (identifier) =>
-          identifier.system !== ODOS_MRN_SYSTEM
-          && identifier.system !== ODOS_MRN_ALLOCATION_TOKEN_SYSTEM,
-      ),
-      {
-        use: "usual",
-        type: { text: "ODOS medical record number" },
-        system: ODOS_MRN_SYSTEM,
-        value: input.reservation.mrn,
-      },
-    ],
-    status: "active",
-    type: { text: "Patient account" },
-    name: `ODOS chart ${input.reservation.mrn}`,
-    subject: [{ reference: patientFullUrl }],
-    guarantor: input.responsibleParties.flatMap((party) => {
-      if (!party.financialResponsible) return [];
-      const reference = partyReferences.get(party.localId);
-      if (!reference) throw new Error("Responsible party reference was not built.");
-      return [{
-        party: { reference },
-        onHold: false,
-        ...(party.kind === "person" ? { period: responsiblePartyPeriod(party) } : {}),
-      }];
-    }),
-  };
-  entries.push({
-    resource: account,
-    request: {
-      method: "PUT",
-      url: `Account/${account.id}`,
-      ...(account.meta?.versionId ? { ifMatch: `W/"${account.meta.versionId}"` } : {}),
-    },
-  });
-  return { resourceType: "Bundle", type: "transaction", entry: entries };
-}
-
-function buildRelatedPerson(
-  party: ResponsiblePartyDraft,
-  patientReference: string,
-  today: string,
-): RelatedPerson {
-  const hasAddress = [party.address, party.city, party.state, party.postalCode]
-    .some((value) => value.trim());
-  return {
-    resourceType: "RelatedPerson",
-    active: responsiblePartyActiveOn(party, today),
-    patient: { reference: patientReference },
-    relationship: [{ text: relationshipLabel(party.relationship) }],
-    name: [{
-      use: "official",
-      given: [party.firstName.trim(), party.middleName.trim()].filter(Boolean),
-      family: party.lastName.trim(),
-    }],
-    telecom: party.phone.trim()
-      ? [{ system: "phone", use: "home", value: party.phone.trim() }]
-      : undefined,
-    address: hasAddress
-      ? [{
-          use: "home",
-          line: party.address.trim() ? [party.address.trim()] : undefined,
-          city: party.city.trim() || undefined,
-          state: party.state.trim() || undefined,
-          postalCode: party.postalCode.trim() || undefined,
-        }]
-      : undefined,
-    period: responsiblePartyPeriod(party),
-    extension: [
-      { url: CONSENT_AUTHORITY_EXTENSION_URL, valueBoolean: party.consentAuthority },
-      { url: RESPONSIBLE_PARTY_PRIMARY_EXTENSION_URL, valueBoolean: party.primary },
-      ...(party.courtOrderNotes.trim()
-        ? [{ url: COURT_ORDER_NOTES_EXTENSION_URL, valueString: party.courtOrderNotes.trim() }]
-        : []),
-    ],
-  };
-}
-
-function responsiblePartyPeriod(party: ResponsiblePartyDraft): { start?: string; end?: string } {
-  return {
-    ...(party.effectiveDate ? { start: party.effectiveDate } : {}),
-    ...(party.endDate ? { end: party.endDate } : {}),
-  };
-}
-
 function responsiblePartyActiveOn(party: ResponsiblePartyDraft, today: string): boolean {
   if (party.kind === "self") return true;
   return (!party.effectiveDate || party.effectiveDate <= today)
     && (!party.endDate || party.endDate >= today);
-}
-
-function relationshipLabel(value: ResponsiblePartyRelationship): string {
-  if (value === "legal-guardian") return "Legal guardian";
-  return value[0].toUpperCase() + value.slice(1);
 }

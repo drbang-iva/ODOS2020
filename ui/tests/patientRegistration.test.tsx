@@ -1,30 +1,19 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type {
-  Account,
-  Bundle,
-  Patient,
-  Resource,
-} from "@medplum/fhirtypes";
+import type { Patient } from "@medplum/fhirtypes";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { PatientDemographicsEditor } from "../src/components/patient/PatientDemographicsEditor";
 import {
   createPatientDemographicsActions,
-  createPatient,
   emptyPatientDemographics,
   localCalendarDate,
   patientDemographicsFromPatient,
-  registerPatient,
   validatePatientDemographics,
   validatePatientRegistration,
   type PatientDemographicsDraft,
 } from "../src/lib/patient-registration";
 import {
-  CONSENT_AUTHORITY_EXTENSION_URL,
-  COURT_ORDER_NOTES_EXTENSION_URL,
-  ODOS_MRN_SYSTEM,
-  RESPONSIBLE_PARTY_PRIMARY_EXTENSION_URL,
   emptyRelatedResponsibleParty,
   emptySelfResponsibleParty,
   formatOdosMrn,
@@ -33,6 +22,7 @@ import {
 } from "../src/lib/patient-identity";
 import {
   DuplicatePatientWarning,
+  RegistrationRepairNotice,
   withoutResponsiblePartyErrors,
 } from "../src/scenes/NewPatient";
 
@@ -73,21 +63,7 @@ test("registration uses the local calendar date and clears stale responsible-par
   });
 });
 
-test("exact duplicate search returns a warning result and does not create", async () => {
-  let createCalls = 0;
-  let searchParams: Record<string, string> | undefined;
-  const api = {
-    search: async (_resourceType: string, params: Record<string, string>) => {
-      searchParams = params;
-      return { resourceType: "Bundle", type: "searchset", entry: [{ resource: EXISTING }] } as Bundle<Patient>;
-    },
-    create: async (patient: Patient) => { createCalls += 1; return patient; },
-    update: async (patient: Patient) => patient,
-  };
-  const result = await registerPatient(COMPLETE_DRAFT, api as never);
-  assert.equal(result.kind, "duplicates");
-  assert.equal(createCalls, 0);
-  assert.deepEqual(searchParams, { given: "Jane", family: "Doe", birthdate: "1980-01-02" });
+test("exact duplicate warning presents both safe choices", () => {
   const html = renderToStaticMarkup(<DuplicatePatientWarning patients={[EXISTING]} saving={false} onUseExisting={() => undefined} onBack={() => undefined} onCreateAnyway={() => undefined} />);
   assert.match(html, /Possible duplicate patient/);
   assert.match(html, /Jane Q Doe/);
@@ -96,18 +72,17 @@ test("exact duplicate search returns a warning result and does not create", asyn
   assert.match(html, /Create anyway/);
 });
 
-test("no exact duplicate creates the patient with the registration source tag", async () => {
-  const api = new FakeRegistrationApi([
-    { ...EXISTING, name: [{ use: "official", given: ["Janet"], family: "Doe" }] },
-  ]);
-  const result = await registerPatient(COMPLETE_DRAFT, api as never);
-  assert.equal(result.kind, "created");
-  assert.deepEqual(api.sourceTags, ["patient-mrn-reservation", "patient-registration"]);
-  assert.equal(result.patient.name?.find((name) => name.use === "usual")?.given?.[0], "Janie");
-  assert.equal(result.patient.telecom?.find((entry) => entry.system === "phone")?.value, "864-555-0100");
-  assert.equal(isValidOdosMrn(result.patient.identifier?.find((identifier) => identifier.system === ODOS_MRN_SYSTEM)?.value ?? ""), true);
-  const accountEntry = api.transactions[0].entry?.find((entry) => entry.resource?.resourceType === "Account");
-  assert.equal(accountEntry?.request?.ifMatch, 'W/"1"');
+test("a completed registration warning renders a terminal repair state without another create action", () => {
+  const html = renderToStaticMarkup(<RegistrationRepairNotice
+    warning={{
+      message: "Ask a practice administrator to repair your patient access.",
+    }}
+    onBack={() => undefined}
+  />);
+  assert.match(html, /Patient registered/);
+  assert.match(html, /Back to patient search/);
+  assert.doesNotMatch(html, /Create patient|Create anyway/);
+  assert.doesNotMatch(html, /Patient\/patient-1/);
 });
 
 test("ODOS MRNs use a six-digit base plus a valid appended Luhn check digit", () => {
@@ -118,56 +93,7 @@ test("ODOS MRNs use a six-digit base plus a valid appended Luhn check digit", ()
   assert.equal(isValidOdosMrn(`${mrn.slice(0, 6)}${(Number(mrn[6]) + 1) % 10}`), false);
 });
 
-test("concurrent native registrations reserve unique MRNs when their first candidates collide", async () => {
-  const api = new FakeRegistrationApi();
-  const firstBases = [200_001, 200_003];
-  const secondBases = [200_001, 200_002];
-  const [first, second] = await Promise.all([
-    createPatient(COMPLETE_DRAFT, api as never, {
-      today: "2026-07-30",
-      nextMrnBase: () => firstBases.shift()!,
-      nextUuid: sequentialUuid("first"),
-    }),
-    createPatient({ ...COMPLETE_DRAFT, firstName: "Janet" }, api as never, {
-      today: "2026-07-30",
-      nextMrnBase: () => secondBases.shift()!,
-      nextUuid: sequentialUuid("second"),
-    }),
-  ]);
-  const firstMrn = first.identifier?.find((identifier) => identifier.system === ODOS_MRN_SYSTEM)?.value;
-  const secondMrn = second.identifier?.find((identifier) => identifier.system === ODOS_MRN_SYSTEM)?.value;
-  assert.equal(isValidOdosMrn(firstMrn ?? ""), true);
-  assert.equal(isValidOdosMrn(secondMrn ?? ""), true);
-  assert.notEqual(firstMrn, secondMrn);
-  assert.equal(api.accounts.size, 2);
-});
-
-test("native registration skips an MRN already present on a Patient whose Account is missing", async () => {
-  const existingMrn = formatOdosMrn(250_001);
-  const api = new FakeRegistrationApi([{
-    ...EXISTING,
-    id: "legacy-without-account",
-    identifier: [{ system: ODOS_MRN_SYSTEM, value: existingMrn }],
-  }]);
-  const bases = [250_001, 250_002];
-
-  const created = await createPatient(
-    { ...COMPLETE_DRAFT, firstName: "Taylor" },
-    api as never,
-    {
-      today: "2026-07-30",
-      nextMrnBase: () => bases.shift()!,
-      nextUuid: sequentialUuid("patient-collision"),
-    },
-  );
-
-  const createdMrn = created.identifier?.find((identifier) => identifier.system === ODOS_MRN_SYSTEM)?.value;
-  assert.equal(createdMrn, formatOdosMrn(250_002));
-  assert.equal(api.accounts.has(existingMrn), false);
-});
-
-test("minor registration refuses a missing consent authority before reserving an MRN", async () => {
-  const api = new FakeRegistrationApi();
+test("minor registration validation refuses a missing consent authority", () => {
   const guardian = {
     ...emptyRelatedResponsibleParty("guardian", "2026-07-30"),
     firstName: "Pat",
@@ -186,24 +112,11 @@ test("minor registration refuses a missing consent authority before reserving an
     }).responsibleParties,
     /consent-authority/,
   );
-  await assert.rejects(
-    createPatient(minorDraft, api as never, {
-      today: "2026-07-30",
-      responsibleParties: [guardian],
-    }),
-    /consent-authority/,
-  );
-  assert.equal(api.sourceTags.length, 0);
 });
 
-test("registration refuses missing and invalid birth dates before reserving an MRN", async () => {
+test("registration validation refuses missing and invalid birth dates", () => {
   for (const birthDate of ["", "2026-02-30"]) {
-    const api = new FakeRegistrationApi();
-    await assert.rejects(
-      createPatient({ ...COMPLETE_DRAFT, birthDate }, api as never),
-      /Date of birth/,
-    );
-    assert.equal(api.sourceTags.length, 0);
+    assert.match(validatePatientRegistration({ ...COMPLETE_DRAFT, birthDate }).birthDate, /Date of birth/);
   }
 });
 
@@ -219,60 +132,6 @@ test("responsible-party collection errors accumulate without hiding minor consen
   assert.match(errors.responsibleParties, /appear as self only once/);
   assert.match(errors.responsibleParties, /minor cannot be registered as their own responsible party/);
   assert.match(errors.responsibleParties, /minor must have at least one current consent-authority party/);
-});
-
-test("minor registration writes RelatedPerson authority, primary, custody period, notes, and Account guarantor", async () => {
-  const api = new FakeRegistrationApi();
-  const guardian = {
-    ...emptyRelatedResponsibleParty("guardian", "2026-07-01"),
-    firstName: "Pat",
-    lastName: "Doe",
-    address: "2 Main St",
-    city: "Greenville",
-    state: "SC",
-    postalCode: "29601",
-    endDate: "2030-01-01",
-    courtOrderNotes: "Medical decisions shared under current order.",
-  };
-  await createPatient({ ...COMPLETE_DRAFT, birthDate: "2015-01-02" }, api as never, {
-    today: "2026-07-30",
-    responsibleParties: [guardian],
-    nextMrnBase: () => 300_001,
-    nextUuid: sequentialUuid("minor"),
-  });
-  const transaction = api.transactions[0];
-  const relatedPersonEntry = transaction.entry?.find((entry) => entry.resource?.resourceType === "RelatedPerson");
-  const relatedPerson = relatedPersonEntry?.resource;
-  const account = transaction.entry?.find((entry) => entry.resource?.resourceType === "Account")?.resource as Account;
-  assert.equal(relatedPerson?.resourceType, "RelatedPerson");
-  if (relatedPerson?.resourceType !== "RelatedPerson") throw new Error("RelatedPerson missing");
-  assert.deepEqual(relatedPerson.period, { start: "2026-07-01", end: "2030-01-01" });
-  assert.equal(relatedPerson.extension?.find((extension) => extension.url === CONSENT_AUTHORITY_EXTENSION_URL)?.valueBoolean, true);
-  assert.equal(relatedPerson.extension?.find((extension) => extension.url === RESPONSIBLE_PARTY_PRIMARY_EXTENSION_URL)?.valueBoolean, true);
-  assert.equal(relatedPerson.extension?.find((extension) => extension.url === COURT_ORDER_NOTES_EXTENSION_URL)?.valueString, "Medical decisions shared under current order.");
-  assert.equal(account.guarantor?.[0]?.party.reference, relatedPersonEntry?.fullUrl);
-});
-
-test("registration omits an entirely blank RelatedPerson address", async () => {
-  const api = new FakeRegistrationApi();
-  const related = {
-    ...emptyRelatedResponsibleParty("contact", "2026-07-30"),
-    firstName: "Pat",
-    lastName: "Doe",
-    financialResponsible: false,
-    consentAuthority: false,
-  };
-  await createPatient(COMPLETE_DRAFT, api as never, {
-    today: "2026-07-30",
-    responsibleParties: [emptySelfResponsibleParty("self"), related],
-    nextMrnBase: () => 300_002,
-    nextUuid: sequentialUuid("blank-address"),
-  });
-  const relatedPerson = api.transactions[0].entry
-    ?.find((entry) => entry.resource?.resourceType === "RelatedPerson")?.resource;
-  assert.equal(relatedPerson?.resourceType, "RelatedPerson");
-  if (relatedPerson?.resourceType !== "RelatedPerson") throw new Error("RelatedPerson missing");
-  assert.equal(relatedPerson.address, undefined);
 });
 
 test("required fields block creation while address and email remain optional", () => {
@@ -306,87 +165,3 @@ test("demographics editor loads shared Patient fields, saves with the update sou
   assert.deepEqual(actions.discard(), COMPLETE_DRAFT);
   assert.equal(updates, 1);
 });
-
-class FakeRegistrationApi {
-  readonly accounts = new Map<string, Account>();
-  readonly patients = new Map<string, Patient>();
-  readonly sourceTags: string[] = [];
-  readonly transactions: Bundle[] = [];
-  private accountSequence = 0;
-  private patientSequence = 0;
-
-  constructor(private readonly duplicateRows: Patient[] = []) {}
-
-  async search<T extends Resource>(resourceType: T["resourceType"]): Promise<Bundle<T>> {
-    const rows = resourceType === "Patient" ? this.duplicateRows : [];
-    return {
-      resourceType: "Bundle",
-      type: "searchset",
-      entry: rows.map((resource) => ({ resource: structuredClone(resource) as T })),
-    };
-  }
-
-  async create<T extends Resource>(
-    resource: T,
-    sourceTag: string,
-    headers: Record<string, string>,
-  ): Promise<T> {
-    this.sourceTags.push(sourceTag);
-    assert.equal(resource.resourceType, "Account");
-    assert.match(headers["If-None-Exist"] ?? "", /^identifier=/);
-    const account = resource as Account;
-    const mrn = account.identifier?.find((identifier) => identifier.system === ODOS_MRN_SYSTEM)?.value;
-    assert.ok(mrn);
-    const existing = this.accounts.get(mrn);
-    if (existing) return structuredClone(existing) as T;
-    const created = { ...structuredClone(account), id: `account-${++this.accountSequence}`, meta: { versionId: "1" } };
-    this.accounts.set(mrn, created);
-    return structuredClone(created) as T;
-  }
-
-  async executeTransaction(bundle: Bundle, sourceTag: string): Promise<Bundle> {
-    this.sourceTags.push(sourceTag);
-    this.transactions.push(structuredClone(bundle));
-    const patientEntry = bundle.entry?.find((entry) => entry.resource?.resourceType === "Patient");
-    const patientId = `patient-${++this.patientSequence}`;
-    const patient = { ...(patientEntry?.resource as Patient), id: patientId, meta: { versionId: "1" } };
-    this.patients.set(patientId, patient);
-    for (const entry of bundle.entry ?? []) {
-      if (entry.resource?.resourceType !== "Account") continue;
-      const mrn = entry.resource.identifier?.find((identifier) => identifier.system === ODOS_MRN_SYSTEM)?.value;
-      const expectedAccount = mrn ? this.accounts.get(mrn) : undefined;
-      if (expectedAccount?.meta?.versionId) {
-        assert.equal(entry.request?.ifMatch, `W/"${expectedAccount.meta.versionId}"`);
-      }
-      if (mrn) this.accounts.set(mrn, { ...entry.resource, meta: { versionId: "2" } });
-    }
-    return {
-      resourceType: "Bundle",
-      type: "transaction-response",
-      entry: (bundle.entry ?? []).map((entry) => ({
-        response: {
-          status: entry.request?.method === "PUT" ? "200 OK" : "201 Created",
-          location: entry.resource?.resourceType === "Patient"
-            ? `Patient/${patientId}/_history/1`
-            : `${entry.resource?.resourceType}/${entry.resource?.id ?? "created"}/_history/1`,
-        },
-      })),
-    };
-  }
-
-  async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
-    assert.equal(resourceType, "Patient");
-    const patient = this.patients.get(id);
-    assert.ok(patient);
-    return structuredClone(patient) as T;
-  }
-
-  async update<T extends Resource>(resource: T): Promise<T> {
-    return resource;
-  }
-}
-
-function sequentialUuid(prefix: string): () => string {
-  let sequence = 0;
-  return () => `${prefix}-${++sequence}`;
-}

@@ -13,13 +13,15 @@ import {
   ODOS_MRN_MAX,
   ODOS_MRN_MIN,
   ODOS_MRN_SYSTEM,
-  isR4Date,
-  isMinorOn,
   isValidOdosMrn,
-  patientOdosMrn,
   reserveOdosMrn,
   type MrnReservationStore,
   type ReservedMrn,
+} from "../mcp/src/clinic/patient-mrn.js";
+import {
+  isR4Date,
+  isMinorOn,
+  patientOdosMrn,
 } from "../ui/src/lib/patient-identity.js";
 
 const DEFAULT_BASE_URL = "http://localhost:8103";

@@ -30,6 +30,7 @@ export const BUSINESS_ACTIONS = [
   "role.review",
   "chart.read",
   "chart.write",
+  "patients.register",
   "clinical.sign",
   "scheduling.manage",
   "demographics.update",
@@ -113,9 +114,9 @@ export interface AestheticsProviderScopeInput {
 }
 
 const READ_INTERACTIONS: FhirInteraction[] = ["read", "search", "history", "vread"];
-const UPDATE_INTERACTIONS: FhirInteraction[] = ["create", "update"];
-const CREATE_READ_INTERACTIONS: FhirInteraction[] = ["create"];
-const READ_UPDATE_INTERACTIONS: FhirInteraction[] = ["update"];
+const CREATE_UPDATE_INTERACTIONS: FhirInteraction[] = ["create", "update"];
+const CREATE_ONLY_INTERACTIONS: FhirInteraction[] = ["create"];
+const UPDATE_ONLY_INTERACTIONS: FhirInteraction[] = ["update"];
 
 const PRACTICE_READ_RESOURCE_TYPES = [
   "Patient",
@@ -286,7 +287,7 @@ const DISPENSARY_READ_RESOURCE_RULES: OdosResourceRule[] = [
 const STAFF_DISPENSARY_WRITE_RESOURCE_RULES: OdosResourceRule[] = [
   {
     resourceType: "Basic",
-    interactions: UPDATE_INTERACTIONS,
+    interactions: CREATE_UPDATE_INTERACTIONS,
     scope: {
       kind: "practice-search",
       criteria:
@@ -294,32 +295,32 @@ const STAFF_DISPENSARY_WRITE_RESOURCE_RULES: OdosResourceRule[] = [
     },
     writeConstraint: FRAME_INVENTORY_STAFF_WRITE_CONSTRAINTS,
   },
-  { resourceType: "DeviceRequest", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
-  { resourceType: "ChargeItem", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
-  { resourceType: "PaymentReconciliation", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
-  { resourceType: "Task", interactions: UPDATE_INTERACTIONS, scope: { kind: "practice" } },
-  { resourceType: "Invoice", interactions: UPDATE_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "DeviceRequest", interactions: CREATE_ONLY_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "ChargeItem", interactions: CREATE_ONLY_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "PaymentReconciliation", interactions: CREATE_ONLY_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "Task", interactions: CREATE_UPDATE_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "Invoice", interactions: CREATE_UPDATE_INTERACTIONS, scope: { kind: "practice" } },
 ];
 
 const PAYMENT_CUSTODY_RESOURCE_RULES: OdosResourceRule[] = [
-  { resourceType: "PaymentReconciliation", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
-  { resourceType: "Invoice", interactions: READ_UPDATE_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "PaymentReconciliation", interactions: CREATE_ONLY_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "Invoice", interactions: UPDATE_ONLY_INTERACTIONS, scope: { kind: "practice" } },
 ];
 
 const ADMIN_CORRECTION_RESOURCE_RULES: OdosResourceRule[] = [
   {
     resourceType: "HealthcareService",
-    interactions: UPDATE_INTERACTIONS,
+    interactions: CREATE_UPDATE_INTERACTIONS,
     scope: { kind: "practice" },
   },
   {
     resourceType: "ChargeItemDefinition",
-    interactions: UPDATE_INTERACTIONS,
+    interactions: CREATE_UPDATE_INTERACTIONS,
     scope: { kind: "practice" },
   },
   {
     resourceType: "Basic",
-    interactions: UPDATE_INTERACTIONS,
+    interactions: CREATE_UPDATE_INTERACTIONS,
     scope: {
       kind: "practice-search",
       criteria:
@@ -328,7 +329,7 @@ const ADMIN_CORRECTION_RESOURCE_RULES: OdosResourceRule[] = [
   },
   {
     resourceType: "Basic",
-    interactions: READ_UPDATE_INTERACTIONS,
+    interactions: UPDATE_ONLY_INTERACTIONS,
     scope: {
       kind: "practice-search",
       criteria:
@@ -337,7 +338,7 @@ const ADMIN_CORRECTION_RESOURCE_RULES: OdosResourceRule[] = [
   },
   {
     resourceType: "Basic",
-    interactions: UPDATE_INTERACTIONS,
+    interactions: CREATE_UPDATE_INTERACTIONS,
     scope: {
       kind: "practice-search",
       criteria:
@@ -346,20 +347,20 @@ const ADMIN_CORRECTION_RESOURCE_RULES: OdosResourceRule[] = [
   },
   {
     resourceType: "Basic",
-    interactions: CREATE_READ_INTERACTIONS,
+    interactions: CREATE_ONLY_INTERACTIONS,
     scope: {
       kind: "practice-search",
       criteria: "Basic?code=https://odos2020.com/fhir/CodeSystem/day-seal|day-seal",
     },
   },
-  { resourceType: "Invoice", interactions: READ_UPDATE_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "Invoice", interactions: UPDATE_ONLY_INTERACTIONS, scope: { kind: "practice" } },
 ];
 
 const CLAIMS_RESOURCE_RULES: OdosResourceRule[] = [
-  { resourceType: "Claim", interactions: UPDATE_INTERACTIONS, scope: { kind: "practice" } },
-  { resourceType: "ClaimResponse", interactions: UPDATE_INTERACTIONS, scope: { kind: "practice" } },
-  { resourceType: "CoverageEligibilityRequest", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
-  { resourceType: "CoverageEligibilityResponse", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "Claim", interactions: CREATE_UPDATE_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "ClaimResponse", interactions: CREATE_UPDATE_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "CoverageEligibilityRequest", interactions: CREATE_ONLY_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "CoverageEligibilityResponse", interactions: CREATE_ONLY_INTERACTIONS, scope: { kind: "practice" } },
   {
     resourceType: "Basic",
     interactions: READ_INTERACTIONS,
@@ -370,7 +371,7 @@ const CLAIMS_RESOURCE_RULES: OdosResourceRule[] = [
   },
   {
     resourceType: "Basic",
-    interactions: UPDATE_INTERACTIONS,
+    interactions: CREATE_UPDATE_INTERACTIONS,
     scope: {
       kind: "practice-search",
       criteria: "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-era-import|odos-era-import",
@@ -386,7 +387,7 @@ const CLAIMS_RESOURCE_RULES: OdosResourceRule[] = [
   },
   {
     resourceType: "Basic",
-    interactions: UPDATE_INTERACTIONS,
+    interactions: CREATE_UPDATE_INTERACTIONS,
     scope: {
       kind: "practice-search",
       criteria: "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-manual-eob|odos-manual-eob",
@@ -395,7 +396,7 @@ const CLAIMS_RESOURCE_RULES: OdosResourceRule[] = [
 ];
 
 const PAYER_DIRECTORY_RESOURCE_RULES: OdosResourceRule[] = [
-  { resourceType: "Organization", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "Organization", interactions: CREATE_ONLY_INTERACTIONS, scope: { kind: "practice" } },
 ];
 
 const BILLING_IDENTITY_CONFIG_READ_RULE: OdosResourceRule = {
@@ -410,7 +411,7 @@ const BILLING_IDENTITY_CONFIG_READ_RULE: OdosResourceRule = {
 
 const BILLING_IDENTITY_CONFIG_WRITE_RULE: OdosResourceRule = {
   resourceType: "Basic",
-  interactions: UPDATE_INTERACTIONS,
+  interactions: CREATE_UPDATE_INTERACTIONS,
   scope: {
     kind: "practice-search",
     criteria:
@@ -427,7 +428,7 @@ const DIAGNOSIS_PICK_TALLY_READ_RULE: OdosResourceRule = {
 };
 const DIAGNOSIS_PICK_TALLY_WRITE_RULE: OdosResourceRule = {
   resourceType: "Basic",
-  interactions: UPDATE_INTERACTIONS,
+  interactions: CREATE_UPDATE_INTERACTIONS,
   scope: { kind: "profile-search", criteria: DIAGNOSIS_PICK_TALLY_CRITERIA },
 };
 
@@ -442,7 +443,7 @@ const CHART_BASIC_RESOURCE_RULES = [
   },
   {
     resourceType: "Basic",
-    interactions: UPDATE_INTERACTIONS,
+    interactions: CREATE_UPDATE_INTERACTIONS,
     scope: { kind: "practice-search", criteria },
   },
 ]);
@@ -465,7 +466,7 @@ const FINDING_CONFIGURATION_BASIC_READ_RESOURCE_RULES =
 const FINDING_CONFIGURATION_BASIC_WRITE_RESOURCE_RULES =
   FINDING_CONFIGURATION_BASIC_CRITERIA.map((criteria): OdosResourceRule => ({
     resourceType: "Basic",
-    interactions: UPDATE_INTERACTIONS,
+    interactions: CREATE_UPDATE_INTERACTIONS,
     scope: { kind: "practice-search", criteria },
   }));
 
@@ -481,7 +482,7 @@ const PROCEDURE_CHARGE_RULE_BASIC_RESOURCE_RULES = [
   },
   {
     resourceType: "Basic",
-    interactions: UPDATE_INTERACTIONS,
+    interactions: CREATE_UPDATE_INTERACTIONS,
     scope: {
       kind: "practice-search",
       criteria:
@@ -495,25 +496,25 @@ const OFFICE_CHANNEL_RESOURCE_RULES: OdosResourceRule[] = [
   { resourceType: "PractitionerRole", interactions: READ_INTERACTIONS, scope: { kind: "practice" } },
   {
     resourceType: "Communication",
-    interactions: CREATE_READ_INTERACTIONS,
+    interactions: CREATE_ONLY_INTERACTIONS,
     scope: { kind: "practice-search", criteria: "Communication?category=https://odos2020.com/fhir/CodeSystem/communication-category|internal-office" },
   },
   {
     resourceType: "Provenance",
-    interactions: CREATE_READ_INTERACTIONS,
+    interactions: CREATE_ONLY_INTERACTIONS,
     scope: { kind: "practice-search", criteria: "Provenance?_tag=https://odos2020.com/fhir/CodeSystem/office-message-kind|acknowledgement" },
   },
 ];
 
 const PATIENT_COMMUNICATION_COMPARTMENT_RULE: OdosResourceRule = {
   resourceType: "Communication",
-  interactions: UPDATE_INTERACTIONS,
+  interactions: CREATE_UPDATE_INTERACTIONS,
   scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
 };
 
 const FRONT_DESK_PATIENT_COMMUNICATION_RULE: OdosResourceRule = {
   resourceType: "Communication",
-  interactions: UPDATE_INTERACTIONS,
+  interactions: CREATE_UPDATE_INTERACTIONS,
   scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
 };
 
@@ -569,13 +570,13 @@ const STAFF_FINDING_RESOURCES = [
 const STAFF_DEMOGRAPHIC_WRITE_RESOURCE_RULES: OdosResourceRule[] =
   STAFF_DEMOGRAPHIC_RESOURCES.map((resourceType): OdosResourceRule => ({
     resourceType,
-    interactions: UPDATE_INTERACTIONS,
+    interactions: CREATE_UPDATE_INTERACTIONS,
     scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
   }));
 
 const STAFF_ENCOUNTER_WRITE_RESOURCE_RULE: OdosResourceRule = {
   resourceType: "Encounter",
-  interactions: UPDATE_INTERACTIONS,
+  interactions: CREATE_UPDATE_INTERACTIONS,
   scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
   writeConstraint: STAFF_ENCOUNTER_WRITE_CONSTRAINTS,
 };
@@ -583,7 +584,7 @@ const STAFF_ENCOUNTER_WRITE_RESOURCE_RULE: OdosResourceRule = {
 const STAFF_FINDING_WRITE_RESOURCE_RULES: OdosResourceRule[] =
   STAFF_FINDING_RESOURCES.map((resourceType): OdosResourceRule => ({
     resourceType,
-    interactions: UPDATE_INTERACTIONS,
+    interactions: CREATE_UPDATE_INTERACTIONS,
     scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
     writeConstraint:
       resourceType === "Observation" || resourceType === "DiagnosticReport"
@@ -597,22 +598,22 @@ const STAFF_PATIENT_WRITE_RESOURCE_RULES: OdosResourceRule[] = [
   ...STAFF_FINDING_WRITE_RESOURCE_RULES,
   {
     resourceType: "AllergyIntolerance",
-    interactions: CREATE_READ_INTERACTIONS,
+    interactions: CREATE_ONLY_INTERACTIONS,
     scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
   },
   {
     resourceType: "CareTeam",
-    interactions: CREATE_READ_INTERACTIONS,
+    interactions: CREATE_ONLY_INTERACTIONS,
     scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
   },
   {
     resourceType: "MedicationRequest",
-    interactions: CREATE_READ_INTERACTIONS,
+    interactions: CREATE_ONLY_INTERACTIONS,
     scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
   },
   {
     resourceType: "MedicationRequest",
-    interactions: READ_UPDATE_INTERACTIONS,
+    interactions: UPDATE_ONLY_INTERACTIONS,
     scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
     writeConstraint: STAFF_MEDICATION_REQUEST_WRITE_CONSTRAINTS,
   },
@@ -626,7 +627,7 @@ const STAFF_PATIENT_WRITE_RESOURCE_RULES: OdosResourceRule[] = [
 const PROVIDER_CLINICAL_WRITE_RESOURCE_RULES: OdosResourceRule[] = [
   ...PATIENT_COMPARTMENT_CLINICAL_RESOURCES.map((resourceType): OdosResourceRule => ({
     resourceType,
-    interactions: UPDATE_INTERACTIONS,
+    interactions: CREATE_UPDATE_INTERACTIONS,
     scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
     writeConstraint:
       resourceType === "Observation" || resourceType === "DiagnosticReport"
@@ -636,23 +637,23 @@ const PROVIDER_CLINICAL_WRITE_RESOURCE_RULES: OdosResourceRule[] = [
   ...(["AllergyIntolerance", "CareTeam", "BodyStructure", "AdverseEvent"] as const).map(
     (resourceType): OdosResourceRule => ({
       resourceType,
-      interactions: CREATE_READ_INTERACTIONS,
+      interactions: CREATE_ONLY_INTERACTIONS,
       scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
     }),
   ),
   {
     resourceType: "Goal",
-    interactions: UPDATE_INTERACTIONS,
+    interactions: CREATE_UPDATE_INTERACTIONS,
     scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
   },
   {
     resourceType: "MedicationRequest",
-    interactions: CREATE_READ_INTERACTIONS,
+    interactions: CREATE_ONLY_INTERACTIONS,
     scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
   },
   {
     resourceType: "MedicationRequest",
-    interactions: READ_UPDATE_INTERACTIONS,
+    interactions: UPDATE_ONLY_INTERACTIONS,
     scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
   },
   {
@@ -665,12 +666,12 @@ const PROVIDER_CLINICAL_WRITE_RESOURCE_RULES: OdosResourceRule[] = [
 const STAFF_CORRESPONDENCE_RESOURCE_RULES: OdosResourceRule[] = [
   {
     resourceType: "ServiceRequest",
-    interactions: UPDATE_INTERACTIONS,
+    interactions: CREATE_UPDATE_INTERACTIONS,
     scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
   },
   {
     resourceType: "DocumentReference",
-    interactions: CREATE_READ_INTERACTIONS,
+    interactions: CREATE_ONLY_INTERACTIONS,
     scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
   },
 ];
@@ -687,7 +688,7 @@ const STAFF_CORRESPONDENCE_RESOURCE_RULES: OdosResourceRule[] = [
  * rule. No scheduling resource gets delete; cancellation and deactivation are state changes.
  */
 const SCHEDULING_RESOURCE_RULES: OdosResourceRule[] = [
-  { resourceType: "Appointment", interactions: UPDATE_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "Appointment", interactions: CREATE_UPDATE_INTERACTIONS, scope: { kind: "practice" } },
   // Phase 4a: the practice scheduling-config singleton (hours/templates/blocked time/offices).
   // Criteria-fenced so the desk touches exactly one coded Basic — never Basic at large.
   {
@@ -701,7 +702,7 @@ const SCHEDULING_RESOURCE_RULES: OdosResourceRule[] = [
   },
   {
     resourceType: "Basic",
-    interactions: UPDATE_INTERACTIONS,
+    interactions: CREATE_UPDATE_INTERACTIONS,
     scope: {
       kind: "practice-search",
       criteria:
@@ -719,7 +720,7 @@ const SCHEDULING_RESOURCE_RULES: OdosResourceRule[] = [
   },
   {
     resourceType: "Basic",
-    interactions: UPDATE_INTERACTIONS,
+    interactions: CREATE_UPDATE_INTERACTIONS,
     scope: {
       kind: "practice-search",
       criteria:
@@ -737,7 +738,7 @@ const SCHEDULING_RESOURCE_RULES: OdosResourceRule[] = [
   },
   {
     resourceType: "Basic",
-    interactions: UPDATE_INTERACTIONS,
+    interactions: CREATE_UPDATE_INTERACTIONS,
     scope: {
       kind: "practice-search",
       criteria:
@@ -793,7 +794,7 @@ const PROTOCOL_RUNTIME_RESOURCE_RULES = [
   },
   {
     resourceType: "Basic",
-    interactions: UPDATE_INTERACTIONS,
+    interactions: CREATE_UPDATE_INTERACTIONS,
     scope: {
       kind: "practice-search",
       criteria: `Basic?code=https://odos2020.com/fhir/CodeSystem/odos-protocol-module|${code}`,
@@ -813,7 +814,7 @@ const PROTOCOL_MODULE_RESOURCE_RULES: OdosResourceRule[] = [
   },
   {
     resourceType: "Basic",
-    interactions: UPDATE_INTERACTIONS,
+    interactions: CREATE_UPDATE_INTERACTIONS,
     scope: {
       kind: "practice-search",
       criteria:
@@ -831,7 +832,7 @@ const PROTOCOL_MODULE_RESOURCE_RULES: OdosResourceRule[] = [
   },
   {
     resourceType: "Basic",
-    interactions: CREATE_READ_INTERACTIONS,
+    interactions: CREATE_ONLY_INTERACTIONS,
     scope: {
       kind: "practice-search",
       criteria:
@@ -850,6 +851,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
     businessActions: [
       "chart.read",
       "chart.write",
+      "patients.register",
       "clinical.sign",
       "billing-context.read",
       "aesthetics.procedure.write",
@@ -909,6 +911,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
     businessActions: [
       "chart.read",
       "chart.write",
+      "patients.register",
       "scheduling.manage",
       "demographics.update",
       "billing-context.read",
@@ -956,6 +959,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
       "identity.manage",
       "role.review",
       "chart.read",
+      "patients.register",
       "scheduling.manage",
       "billing-context.read",
       "audit.read",

@@ -84,6 +84,12 @@ export interface MedplumClient {
     extraHeaders?: Record<string, string>,
     options?: FhirTransactionExecutionOptions,
   ): Promise<Bundle>;
+  executeTransactionAsActor(
+    bundle: Bundle,
+    actor: FhirTransactionActor,
+    extraHeaders?: Record<string, string>,
+    options?: FhirAttributedTransactionExecutionOptions,
+  ): Promise<Bundle>;
   getActiveProjectId(): Promise<string>;
   invitePractitioner(
     projectId: string,
@@ -95,6 +101,17 @@ export interface MedplumClient {
 
 export interface FhirTransactionExecutionOptions {
   autoRollbackCreatedEntries?: boolean;
+}
+
+export interface FhirTransactionActor {
+  actorReference: string;
+  actorRole: OdosActorRole;
+  actionReason: string;
+}
+
+export interface FhirAttributedTransactionExecutionOptions extends FhirTransactionExecutionOptions {
+  validateResponse?: (response: Bundle) => void;
+  reconcileError?: (error: unknown) => Promise<Bundle>;
 }
 
 export type FhirSearchParams = Record<string, string> | URLSearchParams | Array<[string, string]>;
@@ -403,6 +420,30 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
       const { access_token } = (await tokenRes.json()) as { access_token: string };
       token = access_token;
     });
+  }
+
+  async function performTransaction(
+    transactionBundle: Bundle,
+    extraHeaders: Record<string, string>,
+    options: FhirTransactionExecutionOptions,
+  ): Promise<Bundle> {
+    const res = await authorizedFetch(`${base}/fhir/R4`, () => ({
+      method: "POST",
+      headers: { ...headers(), ...extraHeaders },
+      body: JSON.stringify(transactionBundle),
+    }));
+    if (!res.ok) {
+      throw await toError(res, {
+        method: "POST",
+        path: "/fhir/R4",
+        resourceType: "Bundle",
+      });
+    }
+    const responseBundle = (await res.json()) as Bundle;
+    if (options.autoRollbackCreatedEntries !== false && hasEntryFailure(responseBundle)) {
+      await rollbackCreatedEntries(base, headers(), responseBundle, extraHeaders);
+    }
+    return responseBundle;
   }
 
   return {
@@ -829,24 +870,41 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
           patientId: patientIdFromBundle(transactionBundle),
           actionOutcome: "granted",
         },
+        () => performTransaction(transactionBundle, extraHeaders, options),
+      );
+    },
+
+    async executeTransactionAsActor(
+      bundle: Bundle,
+      actor: FhirTransactionActor,
+      extraHeaders: Record<string, string> = {},
+      options: FhirAttributedTransactionExecutionOptions = {},
+    ): Promise<Bundle> {
+      const actorId = actor.actorReference.match(/^Practitioner\/([A-Za-z0-9.-]{1,64})$/)?.[1];
+      if (!actorId) throw new Error("FHIR transaction actor must be a valid Practitioner reference.");
+      if (!actor.actionReason.trim()) throw new Error("FHIR transaction actor reason is required.");
+      const transactionBundle: Bundle = { ...bundle, type: "transaction" };
+      assertTransactionBinaryWritesUseParser(transactionBundle, extraHeaders);
+      return audited(
+        {
+          eventType: "transaction",
+          actorId,
+          actorRole: actor.actorRole,
+          resourceType: transactionBundle.entry?.[0]?.resource?.resourceType ?? "Bundle",
+          resourceId: transactionBundle.id,
+          patientId: patientIdFromBundle(transactionBundle),
+          actionOutcome: "granted",
+          actionReason: actor.actionReason,
+        },
         async () => {
-          const res = await authorizedFetch(`${base}/fhir/R4`, () => ({
-            method: "POST",
-            headers: { ...headers(), ...extraHeaders },
-            body: JSON.stringify(transactionBundle),
-          }));
-          if (!res.ok) {
-            throw await toError(res, {
-              method: "POST",
-              path: "/fhir/R4",
-              resourceType: "Bundle",
-            });
+          try {
+            const response = await performTransaction(transactionBundle, extraHeaders, options);
+            options.validateResponse?.(response);
+            return response;
+          } catch (error) {
+            if (!options.reconcileError) throw error;
+            return options.reconcileError(error);
           }
-          const responseBundle = (await res.json()) as Bundle;
-          if (options.autoRollbackCreatedEntries !== false && hasEntryFailure(responseBundle)) {
-            await rollbackCreatedEntries(base, headers(), responseBundle, extraHeaders);
-          }
-          return responseBundle;
         },
       );
     },
