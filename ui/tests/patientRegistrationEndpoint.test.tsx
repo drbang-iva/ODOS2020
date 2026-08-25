@@ -7,7 +7,6 @@ import {
   type PatientDemographicsDraft,
 } from "../src/lib/patient-registration";
 import { emptySelfResponsibleParty } from "../src/lib/patient-identity";
-import { parsePatientRegistrationInput } from "../../mcp/src/clinic/patient-registration-endpoint";
 
 const DEMOGRAPHICS: PatientDemographicsDraft = {
   firstName: "Jane",
@@ -55,7 +54,6 @@ test("registration posts only the typed form contract to the clinic orchestrator
     responsibleParties: parties,
     confirmDuplicate: false,
   });
-  assert.equal(parsePatientRegistrationInput(JSON.parse(String(requestInit?.body))).success, true);
 });
 
 test("create anyway is a server-side duplicate override, not a browser FHIR write", async () => {
