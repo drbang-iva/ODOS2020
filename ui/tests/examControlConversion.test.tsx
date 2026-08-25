@@ -14,6 +14,7 @@ import { SpecialtyContactLensSection } from "../src/components/charting/Specialt
 import { VaSection } from "../src/components/charting/VaSection";
 import { VaValueSelect } from "../src/components/charting/VaValueSelect";
 import { OdosSelect } from "../src/components/inputs/OdosSelect";
+import { OdosWheel } from "../src/components/inputs/OdosWheel";
 import {
   buildSoftContactLensFindingDefinitionStub,
   buildSpecialtyContactLensFindingDefinitionStub,
@@ -202,6 +203,111 @@ test("contact lens status pickers hide deprecated dispensing states while legacy
   }
 });
 
+for (const fixture of [
+  {
+    label: "soft contact lens",
+    kind: "soft" as const,
+    Component: SoftContactLensSection,
+    definitionPath: "/clinical-graph/contact-lens/soft/definition",
+    savePath: "/clinical-graph/contact-lens/soft",
+    saveLabel: "Save Soft Contact Lenses",
+  },
+  {
+    label: "specialty contact lens",
+    kind: "specialty" as const,
+    Component: SpecialtyContactLensSection,
+    definitionPath: "/clinical-graph/contact-lens/specialty/definition",
+    savePath: "/clinical-graph/contact-lens/specialty",
+    saveLabel: "Save Specialty Contact Lens",
+  },
+]) {
+  test(`${fixture.label} saves a complete eye with an untouched or incomplete optional over-refraction`, async () => {
+    const originalFetch = globalThis.fetch;
+    const savedBodies: Array<Record<string, unknown>> = [];
+    globalThis.fetch = contactLensFetch(fixture.kind, fixture.definitionPath, fixture.savePath, savedBodies);
+    let renderer: ReactTestRenderer | undefined;
+    try {
+      await act(async () => {
+        renderer = create(<fixture.Component {...PROPS} />);
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      populateCompleteContactLensEye(renderer!, fixture.kind, "OD");
+
+      await clickSave(renderer!, fixture.saveLabel);
+      assert.equal(savedBodies.length, 1);
+      const untouchedEye = savedEye(savedBodies[0]!, "OD");
+      assert.equal(untouchedEye.manufacturer, "Alcon");
+      assert.equal(untouchedEye.product, "Precision7");
+      assert.equal(untouchedEye.sphere, -0.5);
+      assert.equal("overRefraction" in untouchedEye, false);
+
+      act(() => {
+        contactLensWheel(renderer!, "OD over-refraction sphere").props.onChange(-0.25);
+        contactLensWheel(renderer!, "OD over-refraction axis").props.onChange(0);
+      });
+      await clickSave(renderer!, fixture.saveLabel);
+
+      assert.equal(savedBodies.length, 2);
+      const incompleteEye = savedEye(savedBodies[1]!, "OD");
+      assert.equal(incompleteEye.manufacturer, "Alcon");
+      assert.equal(incompleteEye.product, "Precision7");
+      assert.equal(incompleteEye.sphere, -0.5);
+      assert.equal("overRefraction" in incompleteEye, false);
+      assert.deepEqual(incompleteEye, untouchedEye);
+      assert.ok(alertTexts(renderer!).includes(
+        "OD over-refraction: clear the axis or enter a cylinder.",
+      ));
+      assert.ok(findButton(renderer!, "Clear OD over-refraction axis"));
+    } finally {
+      if (renderer) act(() => renderer!.unmount());
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test(`${fixture.label} blocks only an eye with an incomplete main pair and exposes both remedies`, async () => {
+    const originalFetch = globalThis.fetch;
+    const savedBodies: Array<Record<string, unknown>> = [];
+    globalThis.fetch = contactLensFetch(fixture.kind, fixture.definitionPath, fixture.savePath, savedBodies);
+    let renderer: ReactTestRenderer | undefined;
+    try {
+      await act(async () => {
+        renderer = create(<fixture.Component {...PROPS} />);
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      populateCompleteContactLensEye(renderer!, fixture.kind, "OD");
+      populateCompleteContactLensEye(renderer!, fixture.kind, "OS");
+
+      act(() => contactLensWheel(renderer!, "OD axis").props.onChange(0));
+      await clickSave(renderer!, fixture.saveLabel);
+      assert.equal(savedBodies.length, 1);
+      assert.deepEqual(Object.keys(savedEyes(savedBodies[0]!)), ["OS"]);
+      assert.ok(alertTexts(renderer!).includes(
+        "OD cylinder and axis: clear the axis or enter a cylinder.",
+      ));
+      const clearAxis = findButton(renderer!, "Clear OD axis");
+      assert.ok(clearAxis);
+      act(() => clearAxis.props.onClick());
+
+      act(() => contactLensWheel(renderer!, "OD cylinder").props.onChange(-0.75));
+      await clickSave(renderer!, fixture.saveLabel);
+      assert.equal(savedBodies.length, 2);
+      assert.deepEqual(Object.keys(savedEyes(savedBodies[1]!)), ["OS"]);
+      assert.ok(alertTexts(renderer!).includes(
+        "OD cylinder and axis: clear the cylinder or enter an axis.",
+      ));
+      const clearCylinder = findButton(renderer!, "Clear OD cylinder");
+      assert.ok(clearCylinder);
+      act(() => clearCylinder.props.onClick());
+      assert.equal(alertTexts(renderer!).length, 0);
+    } finally {
+      if (renderer) act(() => renderer!.unmount());
+      globalThis.fetch = originalFetch;
+    }
+  });
+}
+
 test("specialty-lens numeric geometry uses centered spinner fields", () => {
   const specialty = source("SpecialtyContactLensSection.tsx");
   assert.match(specialty, /PowerDropdown value=\{state\.baseCurve\}[\s\S]*defaultValue="7\.80"/);
@@ -388,6 +494,107 @@ test("the two deferred clinical-vocabulary fields remain free text", () => {
   assert.match(source("SoftContactLensSection.tsx"), /TextAreaField label="Assessment and CL Regimen"/);
   assert.match(source("OrthoKSection.tsx"), /<input value=\{findingText\} onChange=/);
 });
+
+function contactLensFetch(
+  kind: "soft" | "specialty",
+  definitionPath: string,
+  savePath: string,
+  savedBodies: Array<Record<string, unknown>>,
+) {
+  const provenance = { source: "manual" as const, recordedAt: "2026-08-25T12:00:00.000Z" };
+  const definition = kind === "soft"
+    ? buildSoftContactLensFindingDefinitionStub(provenance)
+    : buildSpecialtyContactLensFindingDefinitionStub(provenance);
+  return async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+    const url = String(input);
+    if (url.endsWith(definitionPath)) {
+      return Response.json({ definition: { fields: definition.valueSchema.fields } });
+    }
+    if (url.includes("/clinical-graph/refraction/history?")) {
+      return Response.json({ glasses: [], softCl: [], specialtyCl: [] });
+    }
+    if (url.includes("/clinical-graph/contact-lens/keratometry?")) {
+      return Response.json({ eyes: { OD: null, OS: null } });
+    }
+    if (url.endsWith(savePath) && init?.method === "POST") {
+      const body = JSON.parse(String(init.body)) as Record<string, unknown>;
+      savedBodies.push(body);
+      return Response.json({ eyes: body.eyes });
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  };
+}
+
+function populateCompleteContactLensEye(
+  renderer: ReactTestRenderer,
+  kind: "soft" | "specialty",
+  eye: "OD" | "OS",
+) {
+  const eyeIndex = eye === "OD" ? 0 : 1;
+  const manualEntries = renderer.root.findAllByType("input").filter((input) => input.props.type === "checkbox");
+  act(() => manualEntries[eyeIndex]!.props.onChange({ target: { checked: true } }));
+  act(() => {
+    labeledTextInput(renderer, "Manufacturer", eyeIndex).props.onChange({ target: { value: "Alcon" } });
+    labeledTextInput(renderer, "Product", eyeIndex).props.onChange({ target: { value: "Precision7" } });
+    contactLensWheel(renderer, `${eye} sphere`).props.onChange(-0.5);
+    if (kind === "soft") {
+      contactLensWheel(renderer, `${eye} manual base curve`).props.onChange(8.4);
+      contactLensWheel(renderer, `${eye} manual diameter`).props.onChange(14.2);
+      const dates = renderer.root.findAllByType("input").filter((input) => input.props.type === "date");
+      dates[eyeIndex * 2]!.props.onChange({ target: { value: "2026-08-25" } });
+      dates[eyeIndex * 2 + 1]!.props.onChange({ target: { value: "2027-08-25" } });
+    } else {
+      const baseCurves = renderer.root.findAllByType(PowerDropdown)
+        .filter((field) => field.props.ariaLabel === "Base Curve (mm)");
+      const diameters = renderer.root.findAllByType(PowerDropdown)
+        .filter((field) => field.props.ariaLabel === "Diameter (mm)");
+      baseCurves[eyeIndex]!.props.onChange("8.40");
+      diameters[eyeIndex]!.props.onChange("14.20");
+    }
+  });
+}
+
+function labeledTextInput(renderer: ReactTestRenderer, label: string, index: number) {
+  const labels = renderer.root.findAllByType("label").filter((candidate) =>
+    candidate.findAllByType("span").some((span) => span.children.join("") === label)
+    && candidate.findAllByType("input").some((input) => input.props.type === "text" && !input.props["aria-label"]));
+  return labels[index]!.findAllByType("input")
+    .find((input) => input.props.type === "text" && !input.props["aria-label"])!;
+}
+
+function contactLensWheel(renderer: ReactTestRenderer, ariaLabel: string) {
+  const wheel = renderer.root.findAllByType(OdosWheel).find((candidate) => candidate.props.ariaLabel === ariaLabel);
+  assert.ok(wheel, `Missing wheel: ${ariaLabel}`);
+  return wheel;
+}
+
+async function clickSave(renderer: ReactTestRenderer, label: string) {
+  const save = renderer.root.findAllByType("button").find((button) => button.children.join("") === label);
+  assert.ok(save, `Missing save button: ${label}`);
+  await act(async () => {
+    await save.props.onClick();
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+}
+
+function findButton(renderer: ReactTestRenderer, ariaLabel: string) {
+  return renderer.root.findAllByType("button").find((button) => button.props["aria-label"] === ariaLabel);
+}
+
+function alertTexts(renderer: ReactTestRenderer): string[] {
+  return renderer.root.findAllByProps({ role: "alert" }).map((alert) => alert.children.join(""));
+}
+
+function savedEyes(body: Record<string, unknown>): Record<string, Record<string, unknown>> {
+  return body.eyes as Record<string, Record<string, unknown>>;
+}
+
+function savedEye(body: Record<string, unknown>, eye: "OD" | "OS"): Record<string, unknown> {
+  const value = savedEyes(body)[eye];
+  assert.ok(value, `Missing saved eye: ${eye}`);
+  return value;
+}
 
 function source(file: string): string {
   return readFileSync(new URL(`../src/components/charting/${file}`, import.meta.url), "utf8");
