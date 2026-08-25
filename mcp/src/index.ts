@@ -502,7 +502,7 @@ import type {
   VisualAcuityCorrection,
 } from "./fhir/ophthalmology/types.js";
 
-const BASE_URL = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
+const BASE_URL = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103/";
 const EMAIL = process.env.MEDPLUM_ADMIN_EMAIL;
 const PASSWORD = process.env.MEDPLUM_ADMIN_PASSWORD;
 const ACCESS_TOKEN = process.env.MEDPLUM_ACCESS_TOKEN;

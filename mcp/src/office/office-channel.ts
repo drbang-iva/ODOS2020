@@ -14,7 +14,7 @@ export const OFFICE_TEXT_LIMIT = 1000;
 const RECENT_ACKNOWLEDGED_TAIL = 20;
 const OFFICE_SEARCH_LIMITS = { maxPages: 5, maxRows: 5_000 } as const;
 
-export type OfficeFhir = Pick<MedplumClient, "read" | "search" | "searchUrl" | "create">;
+export type OfficeFhir = Pick<MedplumClient, "baseUrl" | "read" | "search" | "searchUrl" | "create">;
 export type OfficeTier = "ambient" | "urgent" | "patient-pinned";
 export type OfficeMailbox = "clinic" | "desk";
 
@@ -183,7 +183,7 @@ function resourceId(value: string): boolean {
 }
 
 async function searchOfficePages<T extends Resource>(
-  fhir: Pick<OfficeFhir, "search" | "searchUrl">,
+  fhir: Pick<OfficeFhir, "baseUrl" | "search" | "searchUrl">,
   resourceType: T["resourceType"],
   params: Record<string, string>,
 ): Promise<T[]> {

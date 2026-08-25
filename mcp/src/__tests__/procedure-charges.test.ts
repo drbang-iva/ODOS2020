@@ -36,6 +36,7 @@ const NOW = "2026-08-11T20:00:00.000Z";
 const EDITED_AT = "2026-08-11T20:05:00.000Z";
 
 class MemoryFhir {
+  readonly baseUrl = "http://localhost:8103/";
   resources: Resource[] = [];
   writes: string[] = [];
   private next = 1;
@@ -324,6 +325,7 @@ test("lists only active coded non-visit procedure fees without mutations", async
   ];
   let mutations = 0;
   const fhir = {
+    baseUrl: "http://localhost:8103/",
     async search<T extends Resource>(): Promise<Bundle<T>> {
       return {
         resourceType: "Bundle",

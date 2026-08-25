@@ -290,6 +290,7 @@ test("frequency-cap evaluation follows FHIR next links before allowing a send", 
   };
   const fhir = {
     ...fhirFor(patient()),
+    baseUrl: "https://odos.local/",
     search: async <T extends Resource>(): Promise<Bundle<T>> => ({
       resourceType: "Bundle",
       type: "searchset",

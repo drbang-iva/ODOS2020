@@ -157,7 +157,7 @@ export interface LegacyCcdaImportResult {
 
 type LegacyCcdaFhirClient = Pick<
   MedplumClient,
-  "search" | "searchUrl" | "create"
+  "baseUrl" | "search" | "searchUrl" | "create"
 >;
 
 interface SourceDocument {

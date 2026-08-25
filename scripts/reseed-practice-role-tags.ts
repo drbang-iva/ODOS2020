@@ -170,7 +170,7 @@ export function practiceRoleTagPatch(policy: AccessPolicy, tag: Coding): JsonPat
 }
 
 class LivePracticeRoleReseedAdapter implements PracticeRoleReseedAdapter {
-  constructor(private readonly fhir: Pick<MedplumClient, "search" | "searchUrl" | "patch">) {}
+  constructor(private readonly fhir: Pick<MedplumClient, "baseUrl" | "search" | "searchUrl" | "patch">) {}
 
   async findPoliciesByName(name: string): Promise<AccessPolicy[]> {
     return searchAll<AccessPolicy>(this.fhir, "AccessPolicy", { "name:exact": name });

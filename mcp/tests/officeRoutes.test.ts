@@ -80,17 +80,18 @@ test("Office message listing follows multiple FHIR pages and fails loudly at the
   });
   let nextCalls = 0;
   const multipage = {
+    baseUrl: "http://localhost:8103/",
     search: async <T extends Resource>(resourceType: T["resourceType"]): Promise<Bundle<T>> => resourceType === "Communication"
       ? {
           resourceType: "Bundle",
           type: "searchset",
           entry: [{ resource: officeMessage("office-1") as T }],
-          link: [{ relation: "next", url: "/office-page-2" }],
+          link: [{ relation: "next", url: "/fhir/R4/Communication?_page=2" }],
         }
       : { resourceType: "Bundle", type: "searchset" },
     searchUrl: async <T extends Resource>(url: string): Promise<Bundle<T>> => {
       nextCalls += 1;
-      assert.equal(url, "/office-page-2");
+      assert.equal(url, "/fhir/R4/Communication?_page=2");
       return { resourceType: "Bundle", type: "searchset", entry: [{ resource: officeMessage("office-2") as T }] };
     },
   };
@@ -103,14 +104,15 @@ test("Office message listing follows multiple FHIR pages and fails loudly at the
 
   let cappedCalls = 0;
   const capped = {
+    baseUrl: "http://localhost:8103/",
     search: async <T extends Resource>(): Promise<Bundle<T>> => ({
       resourceType: "Bundle",
       type: "searchset",
-      link: [{ relation: "next", url: "/next" }],
+      link: [{ relation: "next", url: "/fhir/R4/Communication?_page=2" }],
     }),
     searchUrl: async <T extends Resource>(): Promise<Bundle<T>> => {
       cappedCalls += 1;
-      return { resourceType: "Bundle", type: "searchset", link: [{ relation: "next", url: "/next" }] };
+      return { resourceType: "Bundle", type: "searchset", link: [{ relation: "next", url: "/fhir/R4/Communication?_page=2" }] };
     },
   };
   await assert.rejects(
@@ -218,6 +220,7 @@ test("Office routes return typed 400 validation errors and generic 500s", async 
 });
 
 class InMemoryFhirStore {
+  readonly baseUrl = "http://localhost:8103/";
   resources: Resource[] = [];
   failSearch?: Error;
   private nextId = 1;

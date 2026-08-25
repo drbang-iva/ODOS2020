@@ -29,7 +29,7 @@ export const SYSTEM_REFERRAL_INCLUDE_DEFAULTS: Readonly<ReferralIncludeList> = {
 
 export type ReferralDefaultsFhirClient = Pick<
   MedplumClient,
-  "search" | "searchUrl" | "create" | "update"
+  "baseUrl" | "search" | "searchUrl" | "create" | "update"
 >;
 
 export class ReferralDefaultsStore {

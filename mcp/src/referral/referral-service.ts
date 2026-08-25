@@ -50,6 +50,7 @@ export interface ReferralIncludeList {
 }
 
 export interface ReferralFhirClient {
+  readonly baseUrl: string;
   read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T>;
   readBinaryData?(id: string): Promise<{ contentType: string; bytes: Uint8Array }>;
   search<T extends Resource>(

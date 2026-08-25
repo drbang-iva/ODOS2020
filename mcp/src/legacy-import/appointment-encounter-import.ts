@@ -121,7 +121,7 @@ interface ResourceResult<T extends Resource> {
 
 type VisitFhirClient = Pick<
   MedplumClient,
-  "search" | "searchUrl" | "create" | "update"
+  "baseUrl" | "search" | "searchUrl" | "create" | "update"
 >;
 
 export async function importLegacyAppointmentsAndEncounters(input: {

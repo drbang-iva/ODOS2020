@@ -165,12 +165,11 @@ export async function handleDryEyeMeibographyCaptureRequest(
       },
     };
   } catch (error) {
+    console.error("odos-mcp: meibography persistence failed:", error);
     return {
       status: 502,
       body: {
-        error: `Meibography persistence failed: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
+        error: "Meibography persistence failed.",
       },
     };
   }
@@ -281,9 +280,11 @@ export async function handleDryEyeMeibographyImageRequest(
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return /not found|404/i.test(message)
-      ? { status: 404, body: { error: "Meibography image not found." } }
-      : { status: 502, body: { error: `Meibography image read failed: ${message}` } };
+    if (/not found|404/i.test(message)) {
+      return { status: 404, body: { error: "Meibography image not found." } };
+    }
+    console.error("odos-mcp: meibography image read failed:", error);
+    return { status: 502, body: { error: "Meibography image read failed." } };
   }
 }
 

@@ -96,7 +96,7 @@ jobs:
       - name: run Medplum search contract smoke lane
         working-directory: mcp
         env:
-          MEDPLUM_BASE_URL: http://localhost:18103
+          MEDPLUM_BASE_URL: http://localhost:18103/
           MEDPLUM_ADMIN_EMAIL: contract-admin@odos.local
           MEDPLUM_ADMIN_PASSWORD: Odos-contract-CI-Password-1!
           MEDPLUM_CONTRACT_BOOTSTRAP: "1"

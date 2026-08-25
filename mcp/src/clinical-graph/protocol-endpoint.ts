@@ -3,6 +3,7 @@ import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
 import type { MedplumClient } from "../fhir-client.js";
+import { validateLocalFhirSearchNextPath } from "../fhir-search.js";
 import {
   FhirSeriesProtocolDefinitionStore,
   type SeriesProtocolDefinition,
@@ -49,12 +50,13 @@ export const MANUAL_VISIT_CHARGE_ID_PREFIX = "manual-visit-code:";
 export const MANUAL_VISIT_PLAN_ACTION_REF = "manual-visit-code";
 
 interface LiveFhir extends ProtocolFhirClient {
+  readonly baseUrl: string;
   read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T>;
   search<T extends Resource>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>>;
   searchUrl?<T extends Resource>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>>;
   create<T extends Basic | Observation | ServiceRequest | CarePlan>(resource: T, headers?: Record<string, string>): Promise<T>;
 }
-type CaptureFhir = Pick<LiveFhir, "read" | "search" | "searchUrl">;
+type CaptureFhir = Pick<LiveFhir, "baseUrl" | "read" | "search" | "searchUrl">;
 interface Staff { staffReference: string; actorRole: PracticeRoleId; fhir: LiveFhir }
 export interface ProtocolEndpointDeps {
   authenticate(authHeader: string | undefined): Promise<Staff | null>;
@@ -861,8 +863,9 @@ async function searchAll<T extends Resource>(
     const next = bundle.link?.find((link) => link.relation === "next")?.url;
     if (!next) return resources;
     if (!fhir.searchUrl) throw new Error("Protocol capture search requires pagination support.");
-    if (visited.has(next)) throw new Error("Protocol capture search returned a repeated next link.");
-    visited.add(next);
-    bundle = await fhir.searchUrl<T>(next, resourceType);
+    const path = validateLocalFhirSearchNextPath(next, fhir.baseUrl, resourceType);
+    if (visited.has(path)) throw new Error("Protocol capture search returned a repeated next link.");
+    visited.add(path);
+    bundle = await fhir.searchUrl<T>(path, resourceType);
   }
 }

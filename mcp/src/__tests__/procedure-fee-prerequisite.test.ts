@@ -24,6 +24,7 @@ import {
 } from "../claims/claimmd-fhir.js";
 
 class MemoryFhir {
+  readonly baseUrl = "http://localhost:8103/";
   resources: Resource[] = [];
   createCount = 0;
   updateCount = 0;

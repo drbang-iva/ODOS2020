@@ -31,7 +31,7 @@ const PROVIDER_MESSAGE_ID_URL =
 
 export type ReminderFhir = Pick<
   MedplumClient,
-  "read" | "search" | "searchUrl" | "create" | "update"
+  "baseUrl" | "read" | "search" | "searchUrl" | "create" | "update"
 >;
 
 export interface ReminderAnchorConfig {

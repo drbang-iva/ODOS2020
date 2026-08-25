@@ -21,7 +21,7 @@ export interface AuthenticatedInsuranceStaff {
   staffReference: string;
   actorRole: OdosActorRole;
   roles: readonly PracticeRoleId[];
-  fhir: Pick<MedplumClient, "search" | "searchUrl" | "executeTransaction">;
+  fhir: Pick<MedplumClient, "baseUrl" | "search" | "searchUrl" | "executeTransaction">;
 }
 
 export interface PatientInsuranceHandlerDeps {

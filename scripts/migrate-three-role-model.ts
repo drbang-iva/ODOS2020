@@ -106,7 +106,7 @@ export async function resolveThreeRoleMigrationProjectId(input: {
 export async function resolveAuthenticatedSessionProjectId(input: {
   readonly baseUrl: string;
   readonly accessToken: string;
-  readonly fhir: Pick<MedplumClient, "search" | "searchUrl">;
+  readonly fhir: Pick<MedplumClient, "baseUrl" | "search" | "searchUrl">;
   readonly request?: typeof fetch;
 }): Promise<string> {
   const response = await (input.request ?? fetch)(`${input.baseUrl.replace(/\/$/, "")}/auth/me`, {

@@ -18,6 +18,7 @@ import type {
   Resource,
 } from "@medplum/fhirtypes";
 import type { MedplumClient } from "../fhir-client.js";
+import { validateLocalFhirSearchNextPath } from "../fhir-search.js";
 import { buildDiagnosisCatalogSeeds } from "../clinical-graph/diagnosis-catalog-seeds.js";
 import { resolveConditionCodes } from "../clinical-graph/diagnosis-code-resolution.js";
 import { ICD10_CM_CODE_SYSTEM } from "../clinical-graph/glaucoma-suspect.js";
@@ -137,7 +138,9 @@ export interface StickyNoteHistoryEntry {
   editedBy?: string;
 }
 
-export type OverviewFhir = Pick<MedplumClient, "read" | "search" | "searchUrl" | "history" | "create" | "update">;
+export type OverviewFhir = Pick<MedplumClient, "read" | "search" | "searchUrl" | "history" | "create" | "update"> & {
+  readonly baseUrl: string;
+};
 
 export class StickyNoteValidationError extends Error {}
 export class PatientOverviewVisitNotFoundError extends Error {}
@@ -959,7 +962,7 @@ function stickyNoteText(resource: DocumentReference): string {
 }
 
 async function searchAll<T extends Resource>(
-  fhir: Pick<MedplumClient, "search" | "searchUrl">,
+  fhir: Pick<MedplumClient, "baseUrl" | "search" | "searchUrl">,
   resourceType: T["resourceType"],
   params: Record<string, string>,
 ): Promise<T[]> {
@@ -971,12 +974,13 @@ async function searchAll<T extends Resource>(
     const next = bundle.link?.find((link) => link.relation === "next")?.url;
     if (!next) return resources;
     if (!fhir.searchUrl) throw new Error(`${resourceType} patient-overview query requires pagination support.`);
-    bundle = await fhir.searchUrl<T>(next, resourceType);
+    const path = validateLocalFhirSearchNextPath(next, fhir.baseUrl, resourceType);
+    bundle = await fhir.searchUrl<T>(path, resourceType);
   }
 }
 
 async function optionalSearchAll<T extends Resource>(
-  fhir: Pick<MedplumClient, "search" | "searchUrl">,
+  fhir: Pick<MedplumClient, "baseUrl" | "search" | "searchUrl">,
   resourceType: T["resourceType"],
   params: Record<string, string>,
 ): Promise<{ resources: T[]; available: boolean }> {

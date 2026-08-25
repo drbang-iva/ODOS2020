@@ -39,6 +39,7 @@ export interface PlanProfile {
 }
 
 export interface PlanProfileFhirClient {
+  readonly baseUrl: string;
   search<T extends Resource>(
     resourceType: T["resourceType"],
     params?: Record<string, string>,

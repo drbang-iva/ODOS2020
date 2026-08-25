@@ -25,7 +25,7 @@ const FUTURE_APPOINTMENT_STATUSES = new Set<Appointment["status"]>([
 
 export type SchedulingResourceFhir = Pick<
   MedplumClient,
-  "read" | "search" | "searchUrl" | "create" | "update"
+  "baseUrl" | "read" | "search" | "searchUrl" | "create" | "update"
 >;
 
 export interface SchedulingIntegrityIssue {

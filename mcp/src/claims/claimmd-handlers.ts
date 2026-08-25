@@ -123,7 +123,7 @@ export const STEDI_277CA_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSy
 export interface AuthenticatedClaimsStaff {
   staffReference: string;
   actorRole: OdosActorRole;
-  fhir: Pick<MedplumClient, "create" | "search" | "searchUrl" | "read" | "update">;
+  fhir: Pick<MedplumClient, "baseUrl" | "create" | "search" | "searchUrl" | "read" | "update">;
 }
 
 export interface ClaimsHandlerDeps {

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
-import type { Bundle, Patient, Resource } from "@medplum/fhirtypes";
+import type { Bundle, Patient, Provenance, Resource } from "@medplum/fhirtypes";
 import { createMedplumClient } from "../src/fhir-client.js";
 import { TEST_FHIR_AUDIT_CONTEXT, TEST_FHIR_AUDIT_RECORDER } from "./fhirAuditTestStub.js";
 import {
@@ -15,6 +15,7 @@ import {
 test("MCP searchAll follows every next link and defaults the page size to 100", async () => {
   let params: Record<string, string> | undefined;
   const client = {
+    baseUrl: "http://localhost:8103/",
     search: async <T extends Resource>(_resourceType: T["resourceType"], input?: Record<string, string>) => {
       params = input;
       return page<T>([patient("patient-1")], "/fhir/R4/Patient?_getpages=2");
@@ -31,9 +32,72 @@ test("MCP searchAll follows every next link and defaults the page size to 100", 
   assert.equal(params?._count, "100");
 });
 
+test("MCP searchAll collects more than 100 Provenance rows through a validated next path", async () => {
+  const baseUrl = "http://localhost:8103/";
+  const firstPage = Array.from({ length: 100 }, (_, index) => provenance(`provenance-${index}`));
+  const secondPage = Array.from({ length: 50 }, (_, index) => provenance(`provenance-${index + 100}`));
+  const nextPath = "/fhir/R4/Provenance?_count=100&_offset=100&_sort=recorded";
+  const client = {
+    baseUrl,
+    search: async <T extends Resource>() => page<T>(firstPage, `${baseUrl}fhir/R4/Provenance?_count=100&_offset=100&_sort=recorded`),
+    searchUrl: async <T extends Resource>(url: string) => {
+      assert.equal(url, nextPath);
+      return page<T>(secondPage);
+    },
+  };
+
+  const resources = await searchAll<Provenance>(client, "Provenance", {}, { maxRows: 200 });
+
+  assert.equal(resources.length, 150);
+  assert.equal(resources[0]?.id, "provenance-0");
+  assert.equal(resources[149]?.id, "provenance-149");
+});
+
+test("MCP searchAll rejects a malformed Medplum next link without surfacing TypeError", async () => {
+  const client = {
+    baseUrl: "http://localhost:8103/",
+    search: async <T extends Resource>() => page<T>(
+      [provenance("provenance-0")],
+      "http://localhost:8103fhir/R4/Provenance?_count=100&_offset=100&_sort=recorded",
+    ),
+    searchUrl: async <T extends Resource>(url: string) => {
+      new URL(url, "http://localhost:8103/fhir/R4/Provenance");
+      return page<T>([]);
+    },
+  };
+
+  await assert.rejects(
+    searchAll<Provenance>(client, "Provenance"),
+    (error: unknown) => error instanceof Error
+      && !(error instanceof TypeError)
+      && error.message === "FHIR Provenance next link is invalid.",
+  );
+});
+
+test("MCP searchAll rejects a next link from a different origin", async () => {
+  const client = {
+    baseUrl: "http://localhost:8103/",
+    search: async <T extends Resource>() => page<T>(
+      [patient("patient-1")],
+      "https://foreign.example/fhir/R4/Patient?_page=2",
+    ),
+    searchUrl: async <T extends Resource>() => page<T>([patient("patient-2")]),
+  };
+
+  await assert.rejects(
+    searchAll<Patient>(client, "Patient"),
+    (error: unknown) => error instanceof Error
+      && error.message === "FHIR Patient next link is invalid.",
+  );
+});
+
 test("MCP searchAll honors a per-call row cap without returning a partial result", async () => {
   const client = {
-    search: async <T extends Resource>() => page<T>([patient("patient-1"), patient("patient-2")], "/next"),
+    baseUrl: "http://localhost:8103/",
+    search: async <T extends Resource>() => page<T>(
+      [patient("patient-1"), patient("patient-2")],
+      "/fhir/R4/Patient?_page=2",
+    ),
     searchUrl: async <T extends Resource>() => page<T>([patient("patient-3")]),
   };
 
@@ -48,6 +112,7 @@ test("MCP searchAll honors a per-call row cap without returning a partial result
 
 test("MCP searchAll fails when a returned next link cannot be followed", async () => {
   const client = {
+    baseUrl: "http://localhost:8103/",
     search: async <T extends Resource>() => page<T>([patient("patient-1")], "/next"),
   };
 
@@ -58,6 +123,7 @@ test("MCP searchAll fails when a returned next link cannot be followed", async (
 
   await assert.rejects(
     searchAll<Patient>({
+      baseUrl: "http://localhost:8103/",
       search: async <T extends Resource>() => ({
         ...page<T>([patient("patient-1")]),
         link: [{ relation: "next" }],
@@ -71,10 +137,11 @@ test("MCP searchAll fails when a returned next link cannot be followed", async (
 test("MCP bounded search enforces explicit page and row caps without partial results", async () => {
   let pageCalls = 0;
   const pagedClient = {
-    search: async <T extends Resource>() => page<T>([patient("patient-1")], "/next-2"),
+    baseUrl: "http://localhost:8103/",
+    search: async <T extends Resource>() => page<T>([patient("patient-1")], "/fhir/R4/Patient?_page=2"),
     searchUrl: async <T extends Resource>() => {
       pageCalls += 1;
-      return page<T>([patient(`patient-${pageCalls + 1}`)], `/next-${pageCalls + 2}`);
+      return page<T>([patient(`patient-${pageCalls + 1}`)], `/fhir/R4/Patient?_page=${pageCalls + 2}`);
     },
   };
   await assert.rejects(
@@ -87,6 +154,7 @@ test("MCP bounded search enforces explicit page and row caps without partial res
 
   await assert.rejects(
     searchBounded<Patient>({
+      baseUrl: "http://localhost:8103/",
       search: async <T extends Resource>() => page<T>(Array.from({ length: 5_001 }, (_, index) => patient(`patient-${index}`))),
     }, "Patient", { _count: "1000" }, { maxPages: 5, maxRows: 5_000 }),
     (error: unknown) => error instanceof FhirSearchLimitError && error.maxRows === 5_000,
@@ -125,6 +193,16 @@ test("MCP Medplum client follows same-endpoint next links and rejects cross-orig
 
 function patient(id: string): Patient {
   return { resourceType: "Patient", id };
+}
+
+function provenance(id: string): Provenance {
+  return {
+    resourceType: "Provenance",
+    id,
+    target: [{ reference: "Encounter/encounter-1" }],
+    recorded: "2026-08-25T12:00:00.000Z",
+    agent: [{ who: { reference: "Practitioner/practitioner-1" } }],
+  };
 }
 
 function page<T extends Resource>(resources: Resource[], nextUrl?: string): Bundle<T> {

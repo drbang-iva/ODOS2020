@@ -384,6 +384,7 @@ test("history follows next links so later BP and carotenoid pages remain visible
       staffReference: "Practitioner/doc1",
       actorRole: "provider",
       fhir: {
+        baseUrl: "https://example.test/",
         create: async (resource) => resource,
         executeTransaction: async (bundle) => bundle,
         search: async <T extends Resource>(_resourceType: T["resourceType"], params?: Record<string, string>) => {

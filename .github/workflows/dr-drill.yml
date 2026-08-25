@@ -30,7 +30,7 @@ jobs:
         working-directory: mcp
       - name: Run isolated DR drill
         env:
-          MEDPLUM_BASE_URL: http://localhost:18103
+          MEDPLUM_BASE_URL: http://localhost:18103/
           MEDPLUM_ADMIN_EMAIL: drill-admin@odos.local
           MEDPLUM_ADMIN_PASSWORD: Odos-dr-drill-Password-1!
           ODOS_POSTGRES_URL: postgresql://medplum:medplum@127.0.0.1:15432/medplum

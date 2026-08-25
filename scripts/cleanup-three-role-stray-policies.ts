@@ -108,7 +108,7 @@ class LiveThreeRoleStrayPolicyCleanupAdapter implements ThreeRoleStrayPolicyClea
   });
 
   constructor(
-    private readonly fhir: Pick<MedplumClient, "search" | "searchUrl">,
+    private readonly fhir: Pick<MedplumClient, "baseUrl" | "search" | "searchUrl">,
     private readonly baseUrl: string,
     private readonly accessToken: string,
   ) {}

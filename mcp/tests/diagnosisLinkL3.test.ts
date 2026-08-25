@@ -76,6 +76,7 @@ test("persisted diagnosis rows enforce the same key-finding bounds as mutations"
 });
 
 class MemoryFhir {
+  readonly baseUrl = "http://localhost:8103/";
   readonly resources: Resource[] = [];
   readonly followedUrls: string[] = [];
 
@@ -88,14 +89,14 @@ class MemoryFhir {
   async search<T extends Resource>(resourceType: T["resourceType"], params: Record<string, string> = {}): Promise<Bundle<T>> {
     const resources = this.filtered(resourceType, params);
     if (resourceType === "Observation" && params.subject && resources.length > 1) {
-      return bundle(resources.slice(0, 1) as T[], "memory://Observation/history-page-2");
+      return bundle(resources.slice(0, 1) as T[], "/fhir/R4/Observation?_page=2");
     }
     return bundle(resources as T[]);
   }
 
   async searchUrl<T extends Resource>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>> {
     this.followedUrls.push(url);
-    if (url !== "memory://Observation/history-page-2" || resourceType !== "Observation") {
+    if (url !== "/fhir/R4/Observation?_page=2" || resourceType !== "Observation") {
       throw new Error(`Unexpected next URL ${url}`);
     }
     return bundle(this.filtered("Observation", { subject: "Patient/p1" }).slice(1) as T[]);
@@ -198,7 +199,7 @@ test("real HTTP L3 routes persist ordered key findings and report only unsatisfi
     { findingKey: "cup_disc_ratio", display: "Cup/disc ratio" },
     { findingKey: "pachymetry_um", display: "Corneal thickness" },
   ]);
-  assert.deepEqual(fhir.followedUrls, ["memory://Observation/history-page-2"]);
+  assert.deepEqual(fhir.followedUrls, ["/fhir/R4/Observation?_page=2"]);
 
   fhir.resources.push(observation("cup_disc_ratio", "Cup-to-disc ratio", "Encounter/e1", "2026-07-11T11:00:00.000Z", "encounter-cup-disc"));
   const missingHistorical = await completeness(base) as CompletenessResponse;

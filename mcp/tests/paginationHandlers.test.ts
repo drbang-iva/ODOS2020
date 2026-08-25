@@ -258,6 +258,7 @@ function pagedFhir(resolvePages: PageResolver, canFollow = true) {
     return bundle(current, nextUrl);
   }
   return {
+    baseUrl: "http://localhost:8103/",
     create: async <T extends Resource>(resource: T) => resource,
     read: async <T extends Resource>(): Promise<T> => { throw new Error("unexpected read"); },
     update: async <T extends Resource>(_resourceType: T["resourceType"], _id: string, resource: T) => resource,

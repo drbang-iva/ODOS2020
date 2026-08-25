@@ -15,6 +15,7 @@ const UCUM = "http://unitsofmeasure.org";
 const WRITE_HEADERS = { "X-ODOS-Source": "mcp/save_section_observations" } as const;
 
 export interface PretestVitalsFhirClient {
+  readonly baseUrl: string;
   create<T extends Observation | Provenance>(resource: T, headers?: Record<string, string>): Promise<T>;
   executeTransaction(bundle: Bundle, headers?: Record<string, string>): Promise<Bundle>;
   search<T extends Resource>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>>;

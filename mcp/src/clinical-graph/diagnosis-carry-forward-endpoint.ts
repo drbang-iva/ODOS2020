@@ -226,6 +226,7 @@ export async function handlePreviousExamsReadRequest(
     return { status: 200, body: page };
   } catch (error) {
     if (error instanceof InvalidCursorError) {
+      console.error("odos-mcp: previous exams next link is invalid:", error);
       return { status: 502, body: { error: "FHIR previous-exams next link is invalid." } };
     }
     return previousExamsDependencyResponse(error);
@@ -403,15 +404,18 @@ export async function handleDiagnosisPullRequest(
       transaction,
     );
     if (rollback === "failed") {
+      console.error("odos-mcp: diagnosis pull transaction rollback was not verified:", new Error(transactionValidation.kind));
       return { status: 502, body: { error: "FHIR diagnosis pull transaction rollback was not verified." } };
     }
     if (transactionValidation.kind === "conflict") {
       return diagnosisConflict(staff.fhir, currentEncounterId, patientReference, sourceIdentity);
     }
+    console.error("odos-mcp: diagnosis pull transaction response was invalid:", new Error(transactionValidation.kind));
     return { status: 502, body: { error: "FHIR diagnosis pull transaction response was invalid." } };
   }
   const conditionReference = transactionConditionReference(transaction, 1);
   if (!conditionReference) {
+    console.error("odos-mcp: diagnosis pull transaction omitted the created Condition:", new Error("missing Condition reference"));
     return { status: 502, body: { error: "FHIR diagnosis pull transaction did not return the created Condition." } };
   }
   return {
@@ -966,6 +970,7 @@ function previousExamsDependencyResponse(error: unknown): { status: number; body
       body: { error: "Previous exams resources were not found." },
     };
   }
+  console.error("odos-mcp: previous exams dependency failed:", error);
   return { status: 502, body: { error: "FHIR previous-exams dependency failed." } };
 }
 

@@ -42,6 +42,7 @@ export type SignatureImageProcessor = (input: {
 }) => Promise<ProcessedSignatureImage>;
 
 interface SignatureFhirClient {
+  readonly baseUrl: string;
   read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T>;
   search<T extends Resource>(
     resourceType: T["resourceType"],
