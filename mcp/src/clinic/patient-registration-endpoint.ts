@@ -10,7 +10,6 @@ import type {
 } from "@medplum/fhirtypes";
 import { z } from "zod";
 import { grantNewlyRegisteredPatientAccess } from "../authz/role-grants.js";
-import { buildOdosAuditEventRow, type OdosAuditEventRecord } from "../authz/odosAudit.js";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
 import type { MedplumClient } from "../fhir-client.js";
 import {
@@ -58,10 +57,9 @@ export interface PatientRegistrationStaff {
 }
 
 export interface PatientRegistrationEndpointDeps {
-  serviceFhir: Pick<MedplumClient, "search" | "searchProject" | "create" | "read" | "update" | "patch" | "executeTransaction">;
+  serviceFhir: Pick<MedplumClient, "search" | "searchProject" | "create" | "read" | "update" | "patch" | "executeTransactionAsActor">;
   now?: () => string;
   logGrantFailure?: (message: string, error: unknown) => void;
-  recordAudit?<T>(row: OdosAuditEventRecord, operation: () => Promise<T>): Promise<T>;
 }
 
 export type PatientRegistrationEndpointResult = { status: number; body: unknown };
@@ -80,9 +78,6 @@ export async function registerPatientFromDemographics(
   } catch (error) {
     throw Object.assign(error instanceof Error ? error : new Error(String(error)), { status: 403 });
   }
-  if (!deps.recordAudit) {
-    throw Object.assign(new Error("Patient registration audit service is unavailable."), { status: 503 });
-  }
   const today = registrationDate(deps.now?.());
   validateRegistration(input, today);
   const projectId = registrationProjectId(staff.project);
@@ -95,28 +90,18 @@ export async function registerPatientFromDemographics(
   const request = buildPatientIdentityTransaction(input, reservation, today);
   let response: Bundle;
   try {
-    response = await deps.recordAudit(
-      buildOdosAuditEventRow({
-        eventType: "transaction",
+    response = await deps.serviceFhir.executeTransactionAsActor(
+      request,
+      {
         actorReference: staff.staffReference,
         actorRole: staff.actorRole,
-        resourceType: "Patient",
-        actionOutcome: "granted",
         actionReason: "patients.register service transaction: Patient, RelatedPerson, Account",
-        eventTime: deps.now?.(),
-      }),
-      async () => {
-        try {
-          const transactionResponse = await deps.serviceFhir.executeTransaction(
-            request,
-            { "X-ODOS-Source": "mcp/patient-registration" },
-            { autoRollbackCreatedEntries: false },
-          );
-          assertTransactionSuccess(transactionResponse);
-          return transactionResponse;
-        } catch (error) {
-          return reconcileUnknownTransactionOutcome(deps.serviceFhir, reservation, error);
-        }
+      },
+      { "X-ODOS-Source": "mcp/patient-registration" },
+      {
+        autoRollbackCreatedEntries: false,
+        validateResponse: assertTransactionSuccess,
+        reconcileError: (error) => reconcileUnknownTransactionOutcome(deps.serviceFhir, reservation, error),
       },
     );
   } catch (error) {

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { AccessPolicy, Bundle, ChargeItemDefinition, OperationOutcome, Patient, ProjectMembership } from "@medplum/fhirtypes";
+import type { OdosAuditEventRecord } from "../src/authz/odosAudit.js";
 import {
   createMedplumClient,
   createOperatorScriptFhirClient,
@@ -404,6 +405,49 @@ test("FHIR transaction can disable staff-token compensation without weakening th
     await client.executeTransaction(transactionRequest());
     assert.deepEqual(calls.map((call) => call.method), ["POST", "DELETE"]);
     assert.equal(calls[1]?.authorization, "Bearer ordinary-clinician-token");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("service transaction actor override emits one human-attributed audit row", async () => {
+  const originalFetch = globalThis.fetch;
+  const auditRows: OdosAuditEventRecord[] = [];
+  globalThis.fetch = async () => Response.json({
+    resourceType: "Bundle",
+    type: "transaction-response",
+    entry: [{ response: { status: "201 Created", location: "Condition/condition-1" } }],
+  });
+  try {
+    const client = createMedplumClient({
+      baseUrl: "http://medplum.test",
+      accessToken: "service-token",
+      audit: {
+        record: async (row, operation) => {
+          auditRows.push(row);
+          return operation();
+        },
+        recordDenied: async () => undefined,
+      },
+      auditContext: { actorId: "odos-mcp", actorRole: "system" },
+    });
+
+    await client.executeTransactionAsActor(
+      transactionRequest(),
+      {
+        actorReference: "Practitioner/staff-1",
+        actorRole: "staff",
+        actionReason: "patients.register service transaction",
+      },
+      {},
+      { autoRollbackCreatedEntries: false },
+    );
+
+    assert.equal(auditRows.length, 1);
+    assert.equal(auditRows[0]?.eventType, "transaction");
+    assert.equal(auditRows[0]?.actorId, "staff-1");
+    assert.equal(auditRows[0]?.actorRole, "staff");
+    assert.equal(auditRows[0]?.resourceType, "Condition");
   } finally {
     globalThis.fetch = originalFetch;
   }

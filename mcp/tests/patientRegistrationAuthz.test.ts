@@ -348,10 +348,6 @@ async function postRegistration(
       fhir: {} as never,
     }),
     serviceFhir,
-    recordRegistrationAudit: async (row: OdosAuditEventRecord, operation: () => Promise<unknown>) => {
-      serviceFhir.auditRows.push(row);
-      return operation();
-    },
     logRegistrationGrantFailure,
     now: () => "2026-08-25T12:00:00.000Z",
   } as never);
@@ -503,6 +499,31 @@ class RegistrationFhir {
         { response: { status: "200 OK", location: "Account/reservation-1/_history/2" } },
       ],
     };
+  }
+
+  async executeTransactionAsActor(
+    bundle: Bundle,
+    actor: { actorReference: string; actorRole: PracticeRoleId },
+    _headers: Record<string, string>,
+    options: {
+      validateResponse?: (response: Bundle) => void;
+      reconcileError?: (error: unknown) => Promise<Bundle>;
+    },
+  ): Promise<Bundle> {
+    this.auditRows.push({
+      eventType: "transaction",
+      actorId: actor.actorReference.replace(/^Practitioner\//, ""),
+      actorRole: actor.actorRole,
+      resourceType: bundle.entry?.[0]?.resource?.resourceType,
+    } as OdosAuditEventRecord);
+    try {
+      const response = await this.executeTransaction(bundle);
+      options.validateResponse?.(response);
+      return response;
+    } catch (error) {
+      if (!options.reconcileError) throw error;
+      return options.reconcileError(error);
+    }
   }
 
   async update<T extends Resource>(resourceType: T["resourceType"], id: string, resource: T): Promise<T> {
