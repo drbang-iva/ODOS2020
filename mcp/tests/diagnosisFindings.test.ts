@@ -1276,6 +1276,7 @@ function observationLateralityCode(observation: Observation): string | undefined
 }
 
 class MemoryFhir {
+  readonly baseUrl = "http://localhost:8103/";
   readonly resources: Resource[] = [];
   readonly readFailures = new Map<string, number>();
   readonly searchFailures = new Map<string, number>();

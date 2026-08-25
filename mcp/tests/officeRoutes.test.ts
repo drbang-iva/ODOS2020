@@ -80,6 +80,7 @@ test("Office message listing follows multiple FHIR pages and fails loudly at the
   });
   let nextCalls = 0;
   const multipage = {
+    baseUrl: "http://localhost:8103/",
     search: async <T extends Resource>(resourceType: T["resourceType"]): Promise<Bundle<T>> => resourceType === "Communication"
       ? {
           resourceType: "Bundle",
@@ -103,6 +104,7 @@ test("Office message listing follows multiple FHIR pages and fails loudly at the
 
   let cappedCalls = 0;
   const capped = {
+    baseUrl: "http://localhost:8103/",
     search: async <T extends Resource>(): Promise<Bundle<T>> => ({
       resourceType: "Bundle",
       type: "searchset",
@@ -218,6 +220,7 @@ test("Office routes return typed 400 validation errors and generic 500s", async 
 });
 
 class InMemoryFhirStore {
+  readonly baseUrl = "http://localhost:8103/";
   resources: Resource[] = [];
   failSearch?: Error;
   private nextId = 1;

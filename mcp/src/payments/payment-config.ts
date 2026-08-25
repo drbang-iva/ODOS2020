@@ -26,7 +26,7 @@ export interface PaymentDispatchDeps {
 }
 
 /** The per-request FHIR client the resolved adapter uses (bound to the caller in the endpoint). */
-export type DispatchFhirClient = Pick<MedplumClient, "read" | "search" | "update" | "create">;
+export type DispatchFhirClient = Pick<MedplumClient, "baseUrl" | "read" | "search" | "searchUrl" | "update" | "create">;
 
 export interface PaymentDispatch {
   /** Resolve the configured adapter for a method, wired with the caller's FHIR client. */

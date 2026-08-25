@@ -269,7 +269,7 @@ class LivePracticeRoleRepairAdapter implements PracticeRoleRepairAdapter {
 }
 
 export async function resolvePracticeRoleTarget(
-  fhir: Pick<MedplumClient, "read" | "search" | "searchUrl">,
+  fhir: Pick<MedplumClient, "baseUrl" | "read" | "search" | "searchUrl">,
   target: string,
 ): Promise<ResolvedRoleGrantTarget> {
   const practitionerReference = target.match(/^Practitioner\/([^/]+)$/);

@@ -4,7 +4,7 @@ import { fhirSearchNextPath } from "./fhir-client.js";
 export const DEFAULT_FHIR_SEARCH_MAX_ROWS = 1_000;
 
 export interface FhirSearchClient {
-  readonly baseUrl?: string;
+  readonly baseUrl: string;
   search<T extends Resource>(
     resourceType: T["resourceType"],
     params?: Record<string, string>,
@@ -13,7 +13,7 @@ export interface FhirSearchClient {
 }
 
 export interface ProjectFhirSearchClient {
-  readonly baseUrl?: string;
+  readonly baseUrl: string;
   searchProject<T extends Resource>(
     resourceType: T["resourceType"],
     projectId: string,
@@ -183,18 +183,10 @@ export async function collectAllFhirSearchPages<T extends Resource>(
 
 export function validateLocalFhirSearchNextPath(
   url: string,
-  fhirBaseUrl: string | undefined,
+  fhirBaseUrl: string,
   resourceType: Resource["resourceType"],
 ): string {
-  let effectiveBaseUrl = fhirBaseUrl;
-  if (!effectiveBaseUrl) {
-    try {
-      effectiveBaseUrl = new URL(url).origin;
-    } catch {
-      effectiveBaseUrl = "http://localhost:8103/";
-    }
-  }
-  const path = fhirSearchNextPath(url, effectiveBaseUrl, resourceType);
+  const path = fhirSearchNextPath(url, fhirBaseUrl, resourceType);
   if (!path) {
     throw new Error(`FHIR ${resourceType} next link is invalid.`);
   }

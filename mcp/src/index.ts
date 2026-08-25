@@ -502,7 +502,7 @@ import type {
   VisualAcuityCorrection,
 } from "./fhir/ophthalmology/types.js";
 
-const BASE_URL = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103/"; if (!BASE_URL.endsWith("/")) throw new Error("MEDPLUM_BASE_URL must end with '/'.");
+const BASE_URL = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103/";
 const EMAIL = process.env.MEDPLUM_ADMIN_EMAIL;
 const PASSWORD = process.env.MEDPLUM_ADMIN_PASSWORD;
 const ACCESS_TOKEN = process.env.MEDPLUM_ACCESS_TOKEN;

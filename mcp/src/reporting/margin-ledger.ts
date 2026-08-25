@@ -82,7 +82,7 @@ export interface MarginLedger {
   lines: MarginLine[];
 }
 
-export interface MarginLedgerFhirClient extends Pick<MedplumClient, "search" | "searchUrl"> {}
+export interface MarginLedgerFhirClient extends Pick<MedplumClient, "baseUrl" | "search" | "searchUrl"> {}
 
 export interface MarginLedgerEndpointDeps {
   authenticate(authHeader: string | undefined): Promise<{

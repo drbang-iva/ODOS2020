@@ -93,6 +93,7 @@ export interface DiagnosisFindingsPayload {
 }
 
 export interface DiagnosisFindingsFhirClient {
+  readonly baseUrl: string;
   read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T>;
   search<T extends Resource>(
     resourceType: T["resourceType"],

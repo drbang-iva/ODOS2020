@@ -108,6 +108,7 @@ function lateralityFixture(proposal: ChargeProposal, applications: ProtocolAppli
     },
   };
   const feeScheduleFhir = {
+    baseUrl: "http://localhost:8103/",
     async search<T extends Resource>(): Promise<Bundle<T>> {
       return { resourceType: "Bundle", type: "searchset", entry: [{ resource: definition as T }] };
     },
@@ -268,6 +269,7 @@ function signedClaimFixture(input: {
     ["Condition/dx-1", condition],
   ]);
   const fhir = {
+    baseUrl: "http://localhost:8103/",
     async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
       const resource = resources.get(`${resourceType}/${id}`);
       if (!resource) throw new Error(`${resourceType}/${id} not found`);

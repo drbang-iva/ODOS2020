@@ -63,7 +63,7 @@ export interface LegacyVisitDocumentPidResult {
 
 type VisitDocumentFhirClient = Pick<
   MedplumClient,
-  "search" | "searchUrl" | "create" | "update"
+  "baseUrl" | "search" | "searchUrl" | "create" | "update"
 >;
 
 export async function importLegacyVisitDocumentsForPid(input: {

@@ -17,6 +17,7 @@ test("GET /clinic/summary authenticates once and returns every section from seed
     Task: [] as Task[],
   };
   const fhir = {
+    baseUrl: "http://localhost:8103/",
     search: async <T extends Resource>(resourceType: T["resourceType"]): Promise<Bundle<T>> => {
       searched.push(String(resourceType));
       return { resourceType: "Bundle", type: "searchset", entry: (resources[resourceType] ?? []).map((resource) => ({ resource: resource as T })) };
@@ -58,6 +59,7 @@ test("Clinic summary follows multiple FHIR pages and fails loudly at the five-pa
   });
   let nextCalls = 0;
   const multipage = {
+    baseUrl: "http://localhost:8103/",
     search: async <T extends Resource>(resourceType: T["resourceType"]): Promise<Bundle<T>> => {
       if (resourceType === "Appointment") {
         return {
@@ -91,6 +93,7 @@ test("Clinic summary follows multiple FHIR pages and fails loudly at the five-pa
 
   let cappedCalls = 0;
   const capped = {
+    baseUrl: "http://localhost:8103/",
     search: async <T extends Resource>(resourceType: T["resourceType"]): Promise<Bundle<T>> => resourceType === "Appointment"
       ? { resourceType: "Bundle", type: "searchset", link: [{ relation: "next", url: "/fhir/R4/Appointment?_page=2" }] }
       : { resourceType: "Bundle", type: "searchset" },
@@ -111,6 +114,7 @@ test("patient overview routes issue filtered FHIR searches and expose native sti
   let sticky: DocumentReference | undefined;
   const versions: DocumentReference[] = [];
   const fhir = {
+    baseUrl: "http://localhost:8103/",
     read: async (resourceType: Resource["resourceType"], id: string) => {
       if (resourceType === "Encounter" && id === "missing") {
         const error = new Error("Encounter not found") as Error & { status: number };

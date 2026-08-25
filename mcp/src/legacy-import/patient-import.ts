@@ -69,7 +69,7 @@ export interface PatientImportResult {
 }
 
 export async function importLegacyPatient(input: {
-  readonly fhir: Pick<MedplumClient, "search" | "searchUrl" | "create" | "update">;
+  readonly fhir: Pick<MedplumClient, "baseUrl" | "search" | "searchUrl" | "create" | "update">;
   readonly ledger: ImportLedger;
   readonly runId: string;
   readonly projectId: string;
@@ -291,7 +291,7 @@ function assertOperatorChartAcknowledged(
 }
 
 async function findByMigrationIdentifiers(
-  fhir: Pick<MedplumClient, "search" | "searchUrl">,
+  fhir: Pick<MedplumClient, "baseUrl" | "search" | "searchUrl">,
   identifiers: readonly { system: string; value: string }[],
 ): Promise<{ kind: "ok"; patient?: Patient } | { kind: "conflict"; reason: string }> {
   const matches = await Promise.all(identifiers.map((identifier) =>
@@ -314,7 +314,7 @@ async function findByMigrationIdentifiers(
 }
 
 async function findNativeIdentityMatches(
-  fhir: Pick<MedplumClient, "search" | "searchUrl">,
+  fhir: Pick<MedplumClient, "baseUrl" | "search" | "searchUrl">,
   source: SourcePerson,
 ): Promise<Patient[]> {
   const candidates = await searchAll<Patient>(fhir, "Patient", {

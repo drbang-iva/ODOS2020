@@ -26,7 +26,7 @@ export interface CorrespondenceLetterhead extends CorrespondenceLetterheadInput 
 
 type LetterheadFhirClient = Pick<
   MedplumClient,
-  "search" | "searchUrl" | "create" | "update"
+  "baseUrl" | "search" | "searchUrl" | "create" | "update"
 >;
 
 export class CorrespondenceLetterheadStore {

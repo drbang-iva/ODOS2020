@@ -40,6 +40,7 @@ test("protocol-phase5.test.ts is included in full MCP discovery", () => {
 });
 
 class MemoryFhir implements ProtocolFhirClient {
+  readonly baseUrl = "http://localhost:8103/";
   rows: Basic[] = [];
   headers: Array<Record<string, string> | undefined> = [];
   next = 1;
@@ -1008,6 +1009,7 @@ test("protocol numeric findings require the explicit cup-disc ratio unit mapping
 type EndpointResource = Basic | Observation | ServiceRequest | CarePlan | Condition | Encounter;
 
 class EndpointFhir {
+  readonly baseUrl = "http://localhost:8103/";
   resources: EndpointResource[] = [];
   writes: EndpointResource[] = [];
   next = 1;

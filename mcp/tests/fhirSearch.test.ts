@@ -15,6 +15,7 @@ import {
 test("MCP searchAll follows every next link and defaults the page size to 100", async () => {
   let params: Record<string, string> | undefined;
   const client = {
+    baseUrl: "http://localhost:8103/",
     search: async <T extends Resource>(_resourceType: T["resourceType"], input?: Record<string, string>) => {
       params = input;
       return page<T>([patient("patient-1")], "/fhir/R4/Patient?_getpages=2");
@@ -73,8 +74,26 @@ test("MCP searchAll rejects a malformed Medplum next link without surfacing Type
   );
 });
 
+test("MCP searchAll rejects a next link from a different origin", async () => {
+  const client = {
+    baseUrl: "http://localhost:8103/",
+    search: async <T extends Resource>() => page<T>(
+      [patient("patient-1")],
+      "https://foreign.example/fhir/R4/Patient?_page=2",
+    ),
+    searchUrl: async <T extends Resource>() => page<T>([patient("patient-2")]),
+  };
+
+  await assert.rejects(
+    searchAll<Patient>(client, "Patient"),
+    (error: unknown) => error instanceof Error
+      && error.message === "FHIR Patient next link is invalid.",
+  );
+});
+
 test("MCP searchAll honors a per-call row cap without returning a partial result", async () => {
   const client = {
+    baseUrl: "http://localhost:8103/",
     search: async <T extends Resource>() => page<T>(
       [patient("patient-1"), patient("patient-2")],
       "/fhir/R4/Patient?_page=2",
@@ -93,6 +112,7 @@ test("MCP searchAll honors a per-call row cap without returning a partial result
 
 test("MCP searchAll fails when a returned next link cannot be followed", async () => {
   const client = {
+    baseUrl: "http://localhost:8103/",
     search: async <T extends Resource>() => page<T>([patient("patient-1")], "/next"),
   };
 
@@ -103,6 +123,7 @@ test("MCP searchAll fails when a returned next link cannot be followed", async (
 
   await assert.rejects(
     searchAll<Patient>({
+      baseUrl: "http://localhost:8103/",
       search: async <T extends Resource>() => ({
         ...page<T>([patient("patient-1")]),
         link: [{ relation: "next" }],
@@ -116,6 +137,7 @@ test("MCP searchAll fails when a returned next link cannot be followed", async (
 test("MCP bounded search enforces explicit page and row caps without partial results", async () => {
   let pageCalls = 0;
   const pagedClient = {
+    baseUrl: "http://localhost:8103/",
     search: async <T extends Resource>() => page<T>([patient("patient-1")], "/fhir/R4/Patient?_page=2"),
     searchUrl: async <T extends Resource>() => {
       pageCalls += 1;
@@ -132,6 +154,7 @@ test("MCP bounded search enforces explicit page and row caps without partial res
 
   await assert.rejects(
     searchBounded<Patient>({
+      baseUrl: "http://localhost:8103/",
       search: async <T extends Resource>() => page<T>(Array.from({ length: 5_001 }, (_, index) => patient(`patient-${index}`))),
     }, "Patient", { _count: "1000" }, { maxPages: 5, maxRows: 5_000 }),
     (error: unknown) => error instanceof FhirSearchLimitError && error.maxRows === 5_000,

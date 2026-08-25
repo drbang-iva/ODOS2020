@@ -184,7 +184,7 @@ export interface StatementHandlerDeps {
 
 export interface AuthenticatedStatementStaff extends Omit<AuthenticatedStaff, "fhir"> {
   roles: readonly PracticeRoleId[];
-  fhir: Pick<MedplumClient, "search" | "searchUrl" | "executeTransaction">;
+  fhir: Pick<MedplumClient, "baseUrl" | "search" | "searchUrl" | "executeTransaction">;
 }
 
 export async function handleStatementListRequest(

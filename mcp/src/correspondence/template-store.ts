@@ -79,7 +79,7 @@ export const CURATED_CONSULT_REPORT_TEMPLATES: readonly CorrespondenceTemplateIn
 
 type TemplateFhirClient = Pick<
   MedplumClient,
-  "search" | "searchUrl" | "create" | "update"
+  "baseUrl" | "search" | "searchUrl" | "create" | "update"
 >;
 
 export class CorrespondenceTemplateStore {

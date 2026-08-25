@@ -89,7 +89,7 @@ export function parseStatementMessageConfig(basic: Basic): PersistedStatementMes
 }
 
 export async function loadStatementMessageConfig(
-  client: Pick<MedplumClient, "search" | "searchUrl">,
+  client: Pick<MedplumClient, "baseUrl" | "search" | "searchUrl">,
 ): Promise<PersistedStatementMessageConfig> {
   const resources = await searchAll<Basic>(client, "Basic", {
     code: `${ODOS_STATEMENT_MESSAGE_CONFIG_SYSTEM}|${ODOS_STATEMENT_MESSAGE_CONFIG_CODE}`,

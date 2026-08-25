@@ -20,6 +20,7 @@ export interface CorrespondencePolicy {
 }
 
 interface PolicyFhirClient {
+  readonly baseUrl: string;
   search<T extends Resource>(
     resourceType: T["resourceType"],
     params?: Record<string, string>,

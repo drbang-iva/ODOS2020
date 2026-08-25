@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import {
   DIRECT_MEDPLUM_FHIR_BYPASS_ALLOWLIST,
+  runMedplumBaseUrlPass,
   runEnvVarPhiPass,
   runAppearanceStylingDebtPass,
   runLogScrubPass,
@@ -12,6 +13,24 @@ import {
   runResourceNamePass,
   runVendorCanonicalShapePass,
 } from "../../scripts/preflight-lint.ts";
+
+test("preflight hard-blocks a slashless Medplum server base URL before deployment", () => {
+  const valid = runMedplumBaseUrlPass({ env: { MEDPLUM_BASE_URL: "http://localhost:8103/" } });
+  assert.equal(valid.status, "pass");
+
+  const missing = runMedplumBaseUrlPass({ env: {} });
+  assert.equal(missing.status, "pass");
+
+  const slashless = runMedplumBaseUrlPass({ env: { MEDPLUM_BASE_URL: "http://localhost:8103" } });
+  assert.equal(slashless.status, "hard-block");
+  assert.deepEqual(slashless.findings, [{
+    pass: "medplum-base-url",
+    severity: "hard-block",
+    code: "medplum-base-url-trailing-slash",
+    message: "MEDPLUM_BASE_URL must end with '/' for Medplum Bundle next links.",
+    source: "MEDPLUM_BASE_URL",
+  }]);
+});
 
 test("appearance styling debt ratchet blocks new and increased debt while allowing the baseline", () => {
   const baseline = { "ui/src/existing.tsx": 1 };

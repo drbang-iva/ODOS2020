@@ -17,7 +17,7 @@ export const ODOS_COMMS_CAMPAIGN_TYPE_SYSTEM =
 export const ODOS_COMMS_SEND_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/comms-send";
 
-export type SuppressionFhir = Pick<MedplumClient, "read" | "search" | "searchUrl">;
+export type SuppressionFhir = Pick<MedplumClient, "baseUrl" | "read" | "search" | "searchUrl">;
 
 export interface SuppressionGateDeps {
   fhir: SuppressionFhir;

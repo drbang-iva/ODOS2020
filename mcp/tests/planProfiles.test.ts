@@ -102,6 +102,7 @@ test("active plan-profile reads follow every FHIR next link and exclude deactiva
   });
   const seen: string[] = [];
   const client = {
+    baseUrl: "http://localhost:8103/",
     async search<T extends Resource>(): Promise<Bundle<T>> {
       return {
         resourceType: "Bundle",

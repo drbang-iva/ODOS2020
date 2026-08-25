@@ -139,7 +139,7 @@ export interface StickyNoteHistoryEntry {
 }
 
 export type OverviewFhir = Pick<MedplumClient, "read" | "search" | "searchUrl" | "history" | "create" | "update"> & {
-  readonly baseUrl?: string;
+  readonly baseUrl: string;
 };
 
 export class StickyNoteValidationError extends Error {}
@@ -962,7 +962,7 @@ function stickyNoteText(resource: DocumentReference): string {
 }
 
 async function searchAll<T extends Resource>(
-  fhir: Pick<MedplumClient, "search" | "searchUrl"> & { readonly baseUrl?: string },
+  fhir: Pick<MedplumClient, "baseUrl" | "search" | "searchUrl">,
   resourceType: T["resourceType"],
   params: Record<string, string>,
 ): Promise<T[]> {
@@ -980,7 +980,7 @@ async function searchAll<T extends Resource>(
 }
 
 async function optionalSearchAll<T extends Resource>(
-  fhir: Pick<MedplumClient, "search" | "searchUrl">,
+  fhir: Pick<MedplumClient, "baseUrl" | "search" | "searchUrl">,
   resourceType: T["resourceType"],
   params: Record<string, string>,
 ): Promise<{ resources: T[]; available: boolean }> {

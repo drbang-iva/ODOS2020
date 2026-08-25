@@ -388,6 +388,7 @@ function syntheticPatient(): Patient {
 }
 
 class MemoryCcdaFhir {
+  readonly baseUrl = "http://localhost:8103/";
   readonly resources: Resource[];
 
   constructor(resources: Resource[]) {

@@ -76,6 +76,7 @@ test("persisted diagnosis rows enforce the same key-finding bounds as mutations"
 });
 
 class MemoryFhir {
+  readonly baseUrl = "http://localhost:8103/";
   readonly resources: Resource[] = [];
   readonly followedUrls: string[] = [];
 

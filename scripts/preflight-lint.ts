@@ -19,7 +19,7 @@ export type PreflightSeverity = "warning" | "hard-block";
 export type PreflightPassStatus = "pass" | "warning" | "hard-block";
 
 export interface PreflightFinding {
-  readonly pass: "logs" | "resource-names" | "env-vars" | "vendor-canonical-shapes" | "appearance-styling-debt";
+  readonly pass: "logs" | "resource-names" | "env-vars" | "medplum-base-url" | "vendor-canonical-shapes" | "appearance-styling-debt";
   readonly severity: PreflightSeverity;
   readonly code: string;
   readonly message: string;
@@ -362,6 +362,20 @@ export function runEnvVarPhiPass(options: EnvVarPhiPassOptions = {}): PreflightP
   return { ...passReport("env-vars", findings), auditRows };
 }
 
+export function runMedplumBaseUrlPass(options: EnvVarPhiPassOptions = {}): PreflightPassReport {
+  const baseUrl = (options.env ?? readComposeEnvironment()).MEDPLUM_BASE_URL;
+  const findings: PreflightFinding[] = baseUrl && !baseUrl.endsWith("/")
+    ? [{
+        pass: "medplum-base-url",
+        severity: "hard-block",
+        code: "medplum-base-url-trailing-slash",
+        message: "MEDPLUM_BASE_URL must end with '/' for Medplum Bundle next links.",
+        source: "MEDPLUM_BASE_URL",
+      }]
+    : [];
+  return passReport("medplum-base-url", findings);
+}
+
 export function runVendorCanonicalShapePass(
   options: VendorCanonicalShapePassOptions = {},
 ): PreflightPassReport {
@@ -596,9 +610,10 @@ export function runPreflightLint(options: RunPreflightOptions = {}): PreflightRe
   const logPass = runLogScrubPass(options);
   const resourcePass = runResourceNamePass(options);
   const envPass = runEnvVarPhiPass(options);
+  const medplumBaseUrlPass = runMedplumBaseUrlPass(options);
   const shapePass = runVendorCanonicalShapePass(options);
   const appearanceDebtPass = runAppearanceStylingDebtPass(options);
-  const passes = [logPass, resourcePass, envPass, shapePass, appearanceDebtPass];
+  const passes = [logPass, resourcePass, envPass, medplumBaseUrlPass, shapePass, appearanceDebtPass];
   const findings = passes.flatMap((pass) => [...pass.findings]);
   const report: PreflightReport = {
     generatedAt: options.now ?? new Date().toISOString(),

@@ -19,7 +19,7 @@ export interface MembershipDisplayReconciliationResult {
 }
 
 export async function reconcileMembershipDisplays(
-  fhir: Pick<MedplumClient, "search" | "searchUrl" | "read" | "patch">,
+  fhir: Pick<MedplumClient, "baseUrl" | "search" | "searchUrl" | "read" | "patch">,
   apply: boolean,
 ): Promise<MembershipDisplayReconciliationResult> {
   const memberships = await searchAll<ProjectMembership>(fhir, "ProjectMembership");

@@ -205,7 +205,7 @@ export function projectClinicSummary(input: ClinicSummaryInput): ClinicSummary {
 }
 
 export async function loadClinicSummary(
-  fhir: Pick<MedplumClient, "search" | "searchUrl">,
+  fhir: Pick<MedplumClient, "baseUrl" | "search" | "searchUrl">,
   options: { now?: string; date?: string; timeZone?: string } = {},
 ): Promise<ClinicSummary> {
   const now = options.now ?? new Date().toISOString();
@@ -244,7 +244,7 @@ export async function loadClinicSummary(
 }
 
 async function searchClinicPages<T extends Resource>(
-  fhir: Pick<MedplumClient, "search" | "searchUrl">,
+  fhir: Pick<MedplumClient, "baseUrl" | "search" | "searchUrl">,
   resourceType: T["resourceType"],
   params: Record<string, string>,
 ): Promise<T[]> {

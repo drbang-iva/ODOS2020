@@ -56,6 +56,7 @@ function fakeFhir(appointments: Appointment[]) {
   let nextId = 1;
 
   return {
+    baseUrl: "https://odos.local/",
     communications,
     read: async <T extends Resource>(
       resourceType: T["resourceType"],

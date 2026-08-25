@@ -25,6 +25,7 @@ import type { ClinicalFindingDefinition } from "./glaucoma-suspect.js";
 import { COVER_TEST_KEY, DILATION_KEY } from "./entrance-definition.js";
 
 export interface ExamOverviewFhirClient {
+  readonly baseUrl: string;
   read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T>;
   search<T extends Resource>(
     resourceType: T["resourceType"],

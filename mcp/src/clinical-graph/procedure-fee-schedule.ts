@@ -96,6 +96,7 @@ const INITIAL_DEFINITION_KEYS = new Set([
 ]);
 
 export interface ProcedureFeeScheduleFhir {
+  readonly baseUrl: string;
   read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T>;
   search<T extends Resource>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>>;
   searchUrl?<T extends Resource>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>>;
@@ -191,7 +192,7 @@ export async function listProcedureFeeSchedule(
 }
 
 export async function listProcedureFeeScheduleSnapshot(
-  fhir: Pick<ProcedureFeeScheduleFhir, "search" | "searchUrl">,
+  fhir: Pick<ProcedureFeeScheduleFhir, "baseUrl" | "search" | "searchUrl">,
 ): Promise<ProcedureFeeScheduleItem[]> {
   return mergeProcedureFeeSchedule(await listProcedureFeeDefinitions(fhir));
 }
@@ -217,7 +218,7 @@ function mergeProcedureFeeSchedule(
 }
 
 export async function listActiveVisitProcedureFees(
-  fhir: Pick<ProcedureFeeScheduleFhir, "search" | "searchUrl">,
+  fhir: Pick<ProcedureFeeScheduleFhir, "baseUrl" | "search" | "searchUrl">,
 ): Promise<ProcedureFeeScheduleItem[]> {
   const definitions = await listProcedureFeeDefinitions(fhir);
   const byKey = new Map<string, ChargeItemDefinition>();
@@ -247,7 +248,7 @@ export async function listActiveVisitProcedureFees(
 }
 
 export async function listActiveCodedNonVisitProcedureFees(
-  fhir: Pick<ProcedureFeeScheduleFhir, "search" | "searchUrl">,
+  fhir: Pick<ProcedureFeeScheduleFhir, "baseUrl" | "search" | "searchUrl">,
 ): Promise<CodedProcedureFeeScheduleItem[]> {
   return (await listProcedureFeeDefinitions(fhir))
     .map(procedureFeeScheduleItem)
@@ -606,7 +607,7 @@ function buildChargeItem(input: {
 }
 
 async function listProcedureFeeDefinitions(
-  fhir: Pick<ProcedureFeeScheduleFhir, "search" | "searchUrl">,
+  fhir: Pick<ProcedureFeeScheduleFhir, "baseUrl" | "search" | "searchUrl">,
 ): Promise<ChargeItemDefinition[]> {
   return (await searchAll<ChargeItemDefinition>(fhir, "ChargeItemDefinition", { _count: "100" }))
     .filter((definition) => Boolean(procedureConceptKey(definition)));

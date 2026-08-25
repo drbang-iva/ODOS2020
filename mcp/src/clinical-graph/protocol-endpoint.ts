@@ -50,7 +50,7 @@ export const MANUAL_VISIT_CHARGE_ID_PREFIX = "manual-visit-code:";
 export const MANUAL_VISIT_PLAN_ACTION_REF = "manual-visit-code";
 
 interface LiveFhir extends ProtocolFhirClient {
-  readonly baseUrl?: string;
+  readonly baseUrl: string;
   read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T>;
   search<T extends Resource>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>>;
   searchUrl?<T extends Resource>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>>;

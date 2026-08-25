@@ -31,7 +31,7 @@ interface PayerOrganizationBackfillResult {
 }
 
 export async function backfillPayerOrganizationType(
-  fhir: Pick<MedplumClient, "search" | "searchUrl" | "read" | "patch">,
+  fhir: Pick<MedplumClient, "baseUrl" | "search" | "searchUrl" | "read" | "patch">,
   apply: boolean,
 ): Promise<PayerOrganizationBackfillResult> {
   const coverages = await searchAll<Coverage>(fhir, "Coverage");

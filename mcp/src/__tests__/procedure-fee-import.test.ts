@@ -21,6 +21,7 @@ import {
 } from "../clinical-graph/procedure-fee-import-endpoint.js";
 
 class CountingFhir {
+  readonly baseUrl = "http://localhost:8103/";
   resources: Resource[] = [];
   createCount = 0;
   updateCount = 0;
