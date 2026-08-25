@@ -312,12 +312,14 @@ function validateRegistration(input: PatientRegistrationInput, today: string): v
   const relatedParties = input.responsibleParties.filter((party) => party.kind === "person");
   const activePeople = relatedParties.filter((party) => responsiblePartyActiveOn(party, today));
   if (activePeople.length > 0 && activePeople.filter((party) => party.primary).length !== 1) errors.push("Choose exactly one current related person as primary.");
+  for (const party of input.responsibleParties) {
+    if (party.financialResponsible && [party.address, party.city, party.state, party.postalCode].some((value) => !value.trim())) errors.push("A guarantor mailing address is required.");
+  }
   for (const party of relatedParties) {
     if (!party.firstName.trim() || !party.lastName.trim()) errors.push("Responsible-party name is required.");
     if (!isR4Date(party.effectiveDate)) errors.push("A valid responsible-party effective date is required.");
     if (party.endDate && !isR4Date(party.endDate)) errors.push("Responsible-party end date must be valid.");
     if (party.endDate && party.endDate < party.effectiveDate) errors.push("Responsible-party end date cannot precede the effective date.");
-    if (party.financialResponsible && [party.address, party.city, party.state, party.postalCode].some((value) => !value.trim())) errors.push("A guarantor mailing address is required.");
   }
   if (errors.length > 0) throw Object.assign(new Error(errors.join(" ")), { status: 400 });
 }

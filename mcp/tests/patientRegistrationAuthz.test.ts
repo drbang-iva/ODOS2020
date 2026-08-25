@@ -268,6 +268,21 @@ test("authoritative registration validation rejects form-invalid input before se
         { ...REGISTRATION_BODY.responsibleParties[0], primary: false },
       ],
     },
+    {
+      ...REGISTRATION_BODY,
+      demographics: { ...REGISTRATION_BODY.demographics, birthDate: "1980-01-02" },
+      responsibleParties: [{
+        ...REGISTRATION_BODY.responsibleParties[0],
+        kind: "self",
+        relationship: "other",
+        address: "",
+        city: "",
+        state: "",
+        postalCode: "",
+        consentAuthority: false,
+        primary: false,
+      }],
+    },
   ];
 
   for (const body of invalidBodies) {
