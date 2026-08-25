@@ -898,14 +898,14 @@
 
 .odos-exam-field-diagram {
   display: grid;
-  width: 34px;
-  height: 34px;
+  width: 38px;
+  height: 38px;
   overflow: hidden;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr;
   border: 1px solid var(--odos-line-2);
   border-radius: 50%;
-  background: var(--odos-ground);
+  background: #f2f4f8;
 }
 
 .odos-exam-field-diagram > span {
@@ -913,7 +913,7 @@
 }
 
 .odos-exam-field-diagram > .is-restricted {
-  background: var(--odos-text);
+  background: #11151f;
 }
 
 .odos-exam-rx-result {
