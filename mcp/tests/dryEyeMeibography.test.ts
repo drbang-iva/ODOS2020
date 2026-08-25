@@ -128,10 +128,7 @@ test("meibography capture distinguishes input validation from upstream persisten
     },
   );
   assert.equal(unavailableResult.status, 502);
-  assert.match(
-    (unavailableResult.body as { error: string }).error,
-    /persistence failed: synthetic FHIR unavailable/,
-  );
+  assert.deepEqual(unavailableResult.body, { error: "Meibography persistence failed." });
 
   const missingId = new MemoryFhir();
   missingId.omitIdFor = "DocumentReference";
@@ -143,10 +140,7 @@ test("meibography capture distinguishes input validation from upstream persisten
     },
   );
   assert.equal(missingIdResult.status, 502);
-  assert.match(
-    (missingIdResult.body as { error: string }).error,
-    /DocumentReference create response did not include an id/,
-  );
+  assert.deepEqual(missingIdResult.body, { error: "Meibography persistence failed." });
 });
 
 test("meibography capture rejects a decoded payload one byte above 1 MiB", async () => {

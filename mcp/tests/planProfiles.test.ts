@@ -107,7 +107,7 @@ test("active plan-profile reads follow every FHIR next link and exclude deactiva
         resourceType: "Bundle",
         type: "searchset",
         entry: [{ resource: first as T }],
-        link: [{ relation: "next", url: "https://fhir.test/Basic?_page=2" }],
+        link: [{ relation: "next", url: "/fhir/R4/Basic?_page=2" }],
       };
     },
     async searchUrl<T extends Resource>(url: string): Promise<Bundle<T>> {
@@ -121,7 +121,7 @@ test("active plan-profile reads follow every FHIR next link and exclude deactiva
   };
   const rows = await loadPlanProfiles(client, { activeOnly: true });
   assert.deepEqual(rows.map((row) => row.planKey), ["payer:EyeMed", "payer:VSP:choice"]);
-  assert.deepEqual(seen, ["https://fhir.test/Basic?_page=2"]);
+  assert.deepEqual(seen, ["/fhir/R4/Basic?_page=2"]);
 });
 
 test("margin.read is registered and granted only to practice-admin", () => {

@@ -85,12 +85,12 @@ test("Office message listing follows multiple FHIR pages and fails loudly at the
           resourceType: "Bundle",
           type: "searchset",
           entry: [{ resource: officeMessage("office-1") as T }],
-          link: [{ relation: "next", url: "/office-page-2" }],
+          link: [{ relation: "next", url: "/fhir/R4/Communication?_page=2" }],
         }
       : { resourceType: "Bundle", type: "searchset" },
     searchUrl: async <T extends Resource>(url: string): Promise<Bundle<T>> => {
       nextCalls += 1;
-      assert.equal(url, "/office-page-2");
+      assert.equal(url, "/fhir/R4/Communication?_page=2");
       return { resourceType: "Bundle", type: "searchset", entry: [{ resource: officeMessage("office-2") as T }] };
     },
   };
@@ -106,11 +106,11 @@ test("Office message listing follows multiple FHIR pages and fails loudly at the
     search: async <T extends Resource>(): Promise<Bundle<T>> => ({
       resourceType: "Bundle",
       type: "searchset",
-      link: [{ relation: "next", url: "/next" }],
+      link: [{ relation: "next", url: "/fhir/R4/Communication?_page=2" }],
     }),
     searchUrl: async <T extends Resource>(): Promise<Bundle<T>> => {
       cappedCalls += 1;
-      return { resourceType: "Bundle", type: "searchset", link: [{ relation: "next", url: "/next" }] };
+      return { resourceType: "Bundle", type: "searchset", link: [{ relation: "next", url: "/fhir/R4/Communication?_page=2" }] };
     },
   };
   await assert.rejects(

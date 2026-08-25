@@ -64,7 +64,7 @@ test("Clinic summary follows multiple FHIR pages and fails loudly at the five-pa
           resourceType: "Bundle",
           type: "searchset",
           entry: [{ resource: appointment("p1") as T }],
-          link: [{ relation: "next", url: "/appointments-page-2" }],
+          link: [{ relation: "next", url: "/fhir/R4/Appointment?_page=2" }],
         };
       }
       if (resourceType === "Patient") {
@@ -78,7 +78,7 @@ test("Clinic summary follows multiple FHIR pages and fails loudly at the five-pa
     },
     searchUrl: async <T extends Resource>(url: string): Promise<Bundle<T>> => {
       nextCalls += 1;
-      assert.equal(url, "/appointments-page-2");
+      assert.equal(url, "/fhir/R4/Appointment?_page=2");
       return { resourceType: "Bundle", type: "searchset", entry: [{ resource: appointment("p2") as T }] };
     },
   };
@@ -92,11 +92,11 @@ test("Clinic summary follows multiple FHIR pages and fails loudly at the five-pa
   let cappedCalls = 0;
   const capped = {
     search: async <T extends Resource>(resourceType: T["resourceType"]): Promise<Bundle<T>> => resourceType === "Appointment"
-      ? { resourceType: "Bundle", type: "searchset", link: [{ relation: "next", url: "/next" }] }
+      ? { resourceType: "Bundle", type: "searchset", link: [{ relation: "next", url: "/fhir/R4/Appointment?_page=2" }] }
       : { resourceType: "Bundle", type: "searchset" },
     searchUrl: async <T extends Resource>(): Promise<Bundle<T>> => {
       cappedCalls += 1;
-      return { resourceType: "Bundle", type: "searchset", link: [{ relation: "next", url: "/next" }] };
+      return { resourceType: "Bundle", type: "searchset", link: [{ relation: "next", url: "/fhir/R4/Appointment?_page=2" }] };
     },
   };
   await assert.rejects(

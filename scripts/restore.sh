@@ -52,7 +52,7 @@ hash_path() {
 }
 
 wait_for_medplum() {
-  local base_url="${MEDPLUM_BASE_URL:-http://localhost:8103}"
+  local base_url="${MEDPLUM_BASE_URL:-http://localhost:8103/}"
   for _ in $(seq 1 90); do
     if node -e "fetch('${base_url%/}/healthcheck').then(r=>process.exit(r.status < 500 ? 0 : 1)).catch(()=>process.exit(1))" >/dev/null 2>&1; then
       return 0

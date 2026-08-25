@@ -4,6 +4,7 @@ import { fhirSearchNextPath } from "./fhir-client.js";
 export const DEFAULT_FHIR_SEARCH_MAX_ROWS = 1_000;
 
 export interface FhirSearchClient {
+  readonly baseUrl?: string;
   search<T extends Resource>(
     resourceType: T["resourceType"],
     params?: Record<string, string>,
@@ -12,6 +13,7 @@ export interface FhirSearchClient {
 }
 
 export interface ProjectFhirSearchClient {
+  readonly baseUrl?: string;
   searchProject<T extends Resource>(
     resourceType: T["resourceType"],
     projectId: string,
@@ -88,7 +90,8 @@ export async function collectBoundedSearch<T extends Resource>(
     if (!client.searchUrl) {
       throw new Error(`FHIR search returned a next link for ${resourceType}, but the client cannot fetch it.`);
     }
-    bundle = await client.searchUrl<T>(nextLink.url, resourceType);
+    const path = validateLocalFhirSearchNextPath(nextLink.url, client.baseUrl, resourceType);
+    bundle = await client.searchUrl<T>(path, resourceType);
   }
 }
 
@@ -120,7 +123,8 @@ export async function searchAll<T extends Resource>(
     if (!client.searchUrl) {
       throw new Error(`FHIR search returned a next link for ${resourceType}, but the client cannot fetch it.`);
     }
-    bundle = await client.searchUrl<T>(nextLink.url, resourceType);
+    const path = validateLocalFhirSearchNextPath(nextLink.url, client.baseUrl, resourceType);
+    bundle = await client.searchUrl<T>(path, resourceType);
   }
 }
 
@@ -150,7 +154,8 @@ export async function searchProjectAll<T extends Resource>(
     if (!client.searchProjectUrl) {
       throw new Error(`FHIR search returned a next link for ${resourceType}, but the client cannot fetch it.`);
     }
-    bundle = await client.searchProjectUrl<T>(nextLink.url, resourceType, projectId);
+    const path = validateLocalFhirSearchNextPath(nextLink.url, client.baseUrl, resourceType);
+    bundle = await client.searchProjectUrl<T>(path, resourceType, projectId);
   }
 }
 
@@ -178,10 +183,18 @@ export async function collectAllFhirSearchPages<T extends Resource>(
 
 export function validateLocalFhirSearchNextPath(
   url: string,
-  fhirBaseUrl: string,
+  fhirBaseUrl: string | undefined,
   resourceType: Resource["resourceType"],
 ): string {
-  const path = fhirSearchNextPath(url, fhirBaseUrl, resourceType);
+  let effectiveBaseUrl = fhirBaseUrl;
+  if (!effectiveBaseUrl) {
+    try {
+      effectiveBaseUrl = new URL(url).origin;
+    } catch {
+      effectiveBaseUrl = "http://localhost:8103/";
+    }
+  }
+  const path = fhirSearchNextPath(url, effectiveBaseUrl, resourceType);
   if (!path) {
     throw new Error(`FHIR ${resourceType} next link is invalid.`);
   }

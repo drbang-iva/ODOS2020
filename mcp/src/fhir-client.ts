@@ -37,6 +37,7 @@ export interface FhirAuditRecorder {
 }
 
 export interface MedplumClient {
+  readonly baseUrl: string;
   login(email: string, password: string): Promise<void>;
   read<T extends Resource>(rt: T["resourceType"], id: string): Promise<T>;
   readBinaryData(id: string): Promise<{ contentType: string; bytes: Uint8Array }>;
@@ -405,6 +406,7 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
   }
 
   return {
+    baseUrl: base,
     async login(email: string, password: string): Promise<void> {
       loginCredentials = { email, password };
       await performLogin(email, password);

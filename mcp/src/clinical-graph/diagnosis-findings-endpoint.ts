@@ -835,6 +835,7 @@ function diagnosisFindingsDependencyResponse(error: unknown): { status: number; 
       body: { error: "Diagnosis findings resources were not found." },
     };
   }
+  console.error("odos-mcp: diagnosis findings dependency failed:", error);
   return {
     status: 502,
     body: { error: "FHIR diagnosis findings dependency failed." },

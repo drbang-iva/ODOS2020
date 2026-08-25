@@ -117,6 +117,7 @@ export async function handleExamOverviewRequest(
     if (status === 404 || status === 410) {
       return { status: 404, body: { error: "Exam overview resources were not found." } };
     }
+    console.error("odos-mcp: exam overview dependency failed:", error);
     return { status: 502, body: { error: "FHIR exam overview dependency failed." } };
   }
 }
