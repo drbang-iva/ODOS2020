@@ -39,6 +39,9 @@ test("admin canonicalization ignores rule, interaction, and object-key ordering"
       ...(rule.criteria === undefined ? [] : [["criteria", rule.criteria] as const]),
       ["interaction", [...(rule.interaction ?? [])].reverse()],
       ["resourceType", rule.resourceType],
+      ...(rule.writeConstraint === undefined
+        ? []
+        : [["writeConstraint", structuredClone(rule.writeConstraint)] as const]),
     ]) as AccessPolicyResource);
 
   assert.equal(canonicalPolicyRules(reordered), canonicalPolicyRules(expected));

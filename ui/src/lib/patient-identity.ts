@@ -230,10 +230,20 @@ export async function reserveOdosMrn(
     const mrn = formatOdosMrn(nextBase());
     if (await store.patientIdentifierExists(mrn)) continue;
     const allocationToken = nextToken();
-    const account = await store.createReservation(
-      buildMrnReservationAccount(mrn, allocationToken),
-      `identifier=${ODOS_MRN_SYSTEM}|${mrn}`,
-    );
+    let account: Account;
+    try {
+      account = await store.createReservation(
+        buildMrnReservationAccount(mrn, allocationToken),
+        `identifier=${ODOS_MRN_SYSTEM}|${mrn}`,
+      );
+    } catch (error) {
+      if (error instanceof Error && /\bFHIR 403\b/.test(error.message)) {
+        throw new Error(
+          "Patient registration is not authorized for your account. Ask a practice administrator to verify registration permissions, then try again.",
+        );
+      }
+      throw error;
+    }
     if (account.identifier?.some(
       (identifier) =>
         identifier.system === ODOS_MRN_ALLOCATION_TOKEN_SYSTEM

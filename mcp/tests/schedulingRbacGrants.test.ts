@@ -82,17 +82,40 @@ test("front-desk books/edits Appointments for the whole practice day (create/rea
   assert.ok(!rule.interaction?.includes("delete"), "cancel is a status change, never a delete");
 });
 
-test("front-desk demographic/financial-context resources stay patient-compartment scoped (unchanged)", () => {
-  for (const resourceType of ["Patient", "RelatedPerson", "Coverage", "Account", "Encounter"]) {
+test("front-desk registration creates are practice-scoped while later demographic updates stay patient-scoped", () => {
+  for (const resourceType of ["Patient", "RelatedPerson", "Coverage", "Account"]) {
     const rules = rulesFor("staff", resourceType);
-    assert.equal(rules.length, 2, `${resourceType} should have separate read and write rules`);
-    const writeRule = rules.find((candidate) => candidate.interaction?.includes("update"));
+    assert.equal(
+      rules.length,
+      resourceType === "Account" ? 4 : 3,
+      `${resourceType} should have separate read, create, and update rules`,
+    );
+    const createRule = rules.find((candidate) =>
+      candidate.criteria === undefined && candidate.interaction?.includes("create")
+    );
+    assert.deepEqual(createRule?.interaction, ["create"], `${resourceType} create is practice-scoped`);
+    const writeRule = rules.find((candidate) =>
+      candidate.criteria === `${resourceType}?_compartment=%patient_compartment`
+      && candidate.interaction?.includes("update")
+    );
     assert.equal(
       writeRule?.criteria,
       `${resourceType}?_compartment=%patient_compartment`,
-      `${resourceType} keeps the compartment criteria`,
+      `${resourceType} updates keep the compartment criteria`,
     );
+    if (resourceType === "Account") {
+      const finalizationRule = rules.find((candidate) => candidate.writeConstraint !== undefined);
+      assert.deepEqual(finalizationRule?.interaction, ["update"]);
+      assert.equal(finalizationRule?.criteria, undefined);
+    }
   }
+
+  const encounterRules = rulesFor("staff", "Encounter");
+  assert.equal(encounterRules.length, 2, "Encounter keeps separate patient-scoped read and write rules");
+  assert.equal(
+    encounterRules.find((candidate) => candidate.interaction?.includes("update"))?.criteria,
+    "Encounter?_compartment=%patient_compartment",
+  );
 });
 
 test("the scheduling.manage business action and the role↔policy meta.tag link are preserved", () => {
