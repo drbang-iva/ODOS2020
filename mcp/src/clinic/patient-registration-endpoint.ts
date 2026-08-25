@@ -16,6 +16,7 @@ import type { MedplumClient } from "../fhir-client.js";
 import {
   ODOS_MRN_MAX,
   ODOS_MRN_MIN,
+  ODOS_MRN_ALLOCATION_TOKEN_SYSTEM,
   ODOS_MRN_SYSTEM,
   reserveOdosMrn,
   type ReservedMrn,
@@ -104,25 +105,35 @@ export async function registerPatientFromDemographics(
         actionReason: "patients.register service transaction: Patient, RelatedPerson, Account",
         eventTime: deps.now?.(),
       }),
-      () => deps.serviceFhir.executeTransaction(
-        request,
-        { "X-ODOS-Source": "mcp/patient-registration" },
-        { autoRollbackCreatedEntries: false },
-      ),
-    );
-    assertTransactionSuccess(response);
-  } catch (error) {
-    await deps.serviceFhir.update<Account>(
-      "Account",
-      reservation.account.id!,
-      { ...reservation.account, status: "entered-in-error" },
-      {
-        ...(reservation.account.meta?.versionId
-          ? { "If-Match": `W/"${reservation.account.meta.versionId}"` }
-          : {}),
-        "X-ODOS-Source": "mcp/patient-registration-rollback",
+      async () => {
+        try {
+          const transactionResponse = await deps.serviceFhir.executeTransaction(
+            request,
+            { "X-ODOS-Source": "mcp/patient-registration" },
+            { autoRollbackCreatedEntries: false },
+          );
+          assertTransactionSuccess(transactionResponse);
+          return transactionResponse;
+        } catch (error) {
+          return reconcileUnknownTransactionOutcome(deps.serviceFhir, reservation, error);
+        }
       },
     );
+  } catch (error) {
+    if (error instanceof ConfirmedRegistrationTransactionFailure) {
+      await deps.serviceFhir.update<Account>(
+        "Account",
+        reservation.account.id!,
+        { ...reservation.account, status: "entered-in-error" },
+        {
+          ...(reservation.account.meta?.versionId
+            ? { "If-Match": `W/"${reservation.account.meta.versionId}"` }
+            : {}),
+          "X-ODOS-Source": "mcp/patient-registration-rollback",
+        },
+      );
+      throw error.transactionError;
+    }
     throw error;
   }
 
@@ -316,6 +327,69 @@ function registrationDate(now: string | undefined): string { return (now ?? new 
 function assertTransactionSuccess(bundle: Bundle): void {
   const failure = (bundle.entry ?? []).find((entry) => !/^2\d\d/.test(entry.response?.status ?? ""));
   if (failure) throw new Error(`Patient registration transaction failed: ${failure.response?.status ?? "missing status"}.`);
+}
+
+class ConfirmedRegistrationTransactionFailure extends Error {
+  constructor(readonly transactionError: unknown) {
+    super("Patient registration transaction did not commit.", { cause: transactionError });
+  }
+}
+
+async function reconcileUnknownTransactionOutcome(
+  fhir: Pick<MedplumClient, "read">,
+  reservation: ReservedMrn,
+  transactionError: unknown,
+): Promise<Bundle> {
+  let account: Account;
+  try {
+    account = await fhir.read<Account>("Account", reservation.account.id!);
+  } catch {
+    throw transactionError;
+  }
+  if (isUnchangedReservation(account, reservation)) {
+    throw new ConfirmedRegistrationTransactionFailure(transactionError);
+  }
+  const patientId = committedRegistrationPatientId(account, reservation);
+  if (!patientId) throw transactionError;
+  return {
+    resourceType: "Bundle",
+    type: "transaction-response",
+    entry: [{ response: { status: "201 Created", location: `Patient/${patientId}` } }],
+  };
+}
+
+function isUnchangedReservation(account: Account, reservation: ReservedMrn): boolean {
+  return sameReservationAccount(account, reservation)
+    && account.status === "on-hold"
+    && account.name === `Pending ODOS chart ${reservation.mrn}`
+    && !account.subject?.length
+    && hasIdentifier(account, ODOS_MRN_ALLOCATION_TOKEN_SYSTEM, reservation.allocationToken);
+}
+
+function committedRegistrationPatientId(account: Account, reservation: ReservedMrn): string | undefined {
+  if (
+    !sameReservationAccount(account, reservation)
+    || account.status !== "active"
+    || account.name !== `ODOS chart ${reservation.mrn}`
+    || account.subject?.length !== 1
+  ) {
+    return undefined;
+  }
+  return account.subject[0]?.reference?.match(/^Patient\/([A-Za-z0-9.-]{1,64})$/)?.[1];
+}
+
+function sameReservationAccount(account: Account, reservation: ReservedMrn): boolean {
+  const reservationProject = reservation.account.meta?.project?.replace(/^Project\//, "");
+  return Boolean(
+    account.id === reservation.account.id
+    && reservationProject
+    && account.meta?.project?.replace(/^Project\//, "") === reservationProject
+    && hasIdentifier(account, ODOS_MRN_SYSTEM, reservation.mrn),
+  );
+}
+
+function hasIdentifier(account: Account, system: string, value: string): boolean {
+  return account.identifier?.some((identifier) => identifier.system === system && identifier.value === value) ?? false;
 }
 
 function createdIdFromEntry(bundle: Bundle, index: number, resourceType: string): string {

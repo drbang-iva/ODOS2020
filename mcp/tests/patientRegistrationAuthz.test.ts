@@ -103,6 +103,21 @@ test("a failed identity transaction leaves no Patient and marks its MRN reservat
   assert.equal(fhir.account?.status, "entered-in-error");
 });
 
+test("a committed identity transaction with a dropped response is reconciled and preserved", async () => {
+  const fhir = new RegistrationFhir("staff");
+  fhir.dropCommittedTransactionResponse = true;
+
+  const response = await postRegistration("staff", fhir);
+  const body = await response.json() as { patient: Patient; warning?: unknown };
+
+  assert.equal(response.status, 201);
+  assert.equal(body.patient.id, "patient-1");
+  assert.equal(body.warning, undefined);
+  assert.equal(fhir.patientCreated, true);
+  assert.equal(fhir.account?.status, "active");
+  assert.equal(fhir.canRead("Patient/patient-1"), true);
+});
+
 test("a membership version conflict is refetched and retried before registration returns", async () => {
   const fhir = new RegistrationFhir("provider");
   fhir.conflictGrantOnce = true;
@@ -348,6 +363,7 @@ class RegistrationFhir {
   account?: Account;
   transaction?: Bundle;
   failTransaction = false;
+  dropCommittedTransactionResponse = false;
   patientCreated = false;
   conflictGrantOnce = false;
   failGrantAlways = false;
@@ -457,8 +473,12 @@ class RegistrationFhir {
       ...(bundle.entry?.at(-1)?.resource as Account),
       id: "reservation-1",
       status: "active",
+      subject: [{ reference: "Patient/patient-1" }],
       meta: { versionId: "2", project: "Project/practice-1" },
     };
+    if (this.dropCommittedTransactionResponse) {
+      throw new Error("synthetic connection loss after commit");
+    }
     return {
       resourceType: "Bundle",
       type: "transaction-response",
@@ -479,6 +499,9 @@ class RegistrationFhir {
 
   async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
     if (resourceType === "Patient" && id === "patient-1") return structuredClone(this.patient) as T;
+    if (resourceType === "Account" && id === "reservation-1" && this.account) {
+      return structuredClone(this.account) as T;
+    }
     throw new Error(`unexpected read ${resourceType}/${id}`);
   }
 
