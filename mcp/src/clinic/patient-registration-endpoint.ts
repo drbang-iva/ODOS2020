@@ -79,7 +79,8 @@ export async function registerPatientFromDemographics(
   }
   const today = registrationDate(deps.now?.());
   validateRegistration(input, today);
-  const duplicates = await findExactDuplicates(deps.serviceFhir, input.demographics);
+  const projectId = registrationProjectId(staff.project);
+  const duplicates = await findExactDuplicates(deps.serviceFhir, projectId, input.demographics);
   if (duplicates.length > 0 && !input.confirmDuplicate) {
     return { status: 409, body: { kind: "duplicates", patients: duplicates } };
   }
@@ -240,17 +241,28 @@ function buildRelatedPerson(party: ResponsiblePartyInput, patientReference: stri
 }
 
 async function findExactDuplicates(
-  fhir: Pick<MedplumClient, "search">,
+  fhir: Pick<MedplumClient, "searchProject">,
+  projectId: string,
   demographics: PatientRegistrationInput["demographics"],
 ): Promise<Patient[]> {
-  const bundle = await fhir.search<Patient>("Patient", {
+  const bundle = await fhir.searchProject<Patient>("Patient", projectId, {
     given: demographics.firstName.trim(), family: demographics.lastName.trim(), birthdate: demographics.birthDate,
   });
-  return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []).filter((patient) => {
+  const patients = (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
+  if (patients.some((patient) => patient.meta?.project?.replace(/^Project\//, "") !== projectId)) {
+    throw new Error("Project-scoped duplicate search returned a Patient outside the caller project.");
+  }
+  return patients.filter((patient) => {
     const name = patient.name?.find((candidate) => candidate.use === "official") ?? patient.name?.[0];
     return normalized(name?.given?.[0]) === normalized(demographics.firstName) &&
       normalized(name?.family) === normalized(demographics.lastName) && patient.birthDate === demographics.birthDate;
   });
+}
+
+function registrationProjectId(project: Reference<Project>): string {
+  const projectId = project.reference?.match(/^Project\/([A-Za-z0-9.-]{1,64})$/)?.[1];
+  if (!projectId) throw new Error("Registration caller is missing a valid project reference.");
+  return projectId;
 }
 
 function validateRegistration(input: PatientRegistrationInput, today: string): void {

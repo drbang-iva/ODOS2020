@@ -175,6 +175,19 @@ test("an exact pre-existing Patient is returned as a duplicate and never receive
   assert.equal(fhir.canRead("Patient/preexisting-1"), false);
 });
 
+test("duplicate detection never returns a Patient owned by another project", async () => {
+  const fhir = new RegistrationFhir("staff");
+  fhir.exactDuplicate = true;
+  fhir.duplicateProjectId = "other-practice";
+
+  const response = await postRegistration("staff", fhir);
+  const body = await response.json() as { patients?: Patient[] };
+
+  assert.equal(response.status, 500);
+  assert.equal(body.patients, undefined);
+  assert.equal(fhir.transaction, undefined);
+});
+
 test("confirmDuplicate creates a distinct server-owned Patient after the duplicate warning", async () => {
   const fhir = new RegistrationFhir("staff");
   fhir.exactDuplicate = true;
@@ -329,6 +342,7 @@ class RegistrationFhir {
   conflictGrantOnce = false;
   failGrantAlways = false;
   exactDuplicate = false;
+  duplicateProjectId = "practice-1";
   searchCalls = 0;
   grantPatchAttempts = 0;
   readonly membership: ProjectMembership;
@@ -373,7 +387,7 @@ class RegistrationFhir {
         ? {
             ...this.patient,
             id: "preexisting-1",
-            meta: { versionId: "1", project: "Project/practice-1" },
+            meta: { versionId: "1", project: `Project/${this.duplicateProjectId}` },
           }
         : undefined;
       return {
@@ -388,6 +402,7 @@ class RegistrationFhir {
   async searchProject<T extends Resource>(
     resourceType: T["resourceType"],
     projectId: string,
+    params: Record<string, string> = {},
   ): Promise<Bundle<T>> {
     assert.equal(projectId, "practice-1");
     const resource = resourceType === "ProjectMembership"
@@ -395,7 +410,15 @@ class RegistrationFhir {
       : resourceType === "AccessPolicy"
       ? this.policy
       : resourceType === "Patient"
-      ? this.patient
+      ? params.given
+        ? this.exactDuplicate
+          ? {
+              ...this.patient,
+              id: "preexisting-1",
+              meta: { versionId: "1", project: `Project/${this.duplicateProjectId}` },
+            }
+          : undefined
+        : this.patient
       : undefined;
     return {
       resourceType: "Bundle",
