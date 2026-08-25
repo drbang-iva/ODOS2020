@@ -367,18 +367,18 @@ export function SpecialtyContactLensSection({ patientReference, encounterReferen
   }
 
   async function save() {
-    let payloadEyes: Partial<Record<Eye, EyePayload>>;
-    try {
-      payloadEyes = Object.fromEntries(EYES.flatMap((eye) => {
+    const blockedEyes: string[] = [];
+    const payloadEyes = Object.fromEntries(EYES.flatMap((eye) => {
+      try {
         const payload = buildEyePayload(eyes[eye], eye, visibleAdditional);
         return payload ? [[eye, payload]] : [];
-      }));
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
-      return;
-    }
+      } catch (caught) {
+        blockedEyes.push(caught instanceof Error ? caught.message : String(caught));
+        return [];
+      }
+    })) as Partial<Record<Eye, EyePayload>>;
     if (Object.keys(payloadEyes).length === 0) {
-      setError("Enter at least one specialty contact lens eye before saving.");
+      setError(blockedEyes[0] ?? "Enter at least one specialty contact lens eye before saving.");
       return;
     }
 
@@ -415,6 +415,7 @@ export function SpecialtyContactLensSection({ patientReference, encounterReferen
       };
       setSaved(nextSaved);
       onSaved(nextSaved);
+      setError(blockedEyes.length > 0 ? `${blockedEyes.join(" ")} That eye was not saved.` : null);
       setRefresh((current) => current + 1);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
@@ -487,6 +488,12 @@ export function SpecialtyContactLensSection({ patientReference, encounterReferen
             <div className="grid gap-5 xl:grid-cols-2">
               {EYES.map((eye) => {
                 const state = eyes[eye];
+                const mainPairingMessage = cylinderAxisMessage(state.cylinder, state.axis, `${eye} cylinder and axis`);
+                const overRefractionPairingMessage = cylinderAxisMessage(
+                  state.overRefraction.cylinder,
+                  state.overRefraction.axis,
+                  `${eye} over-refraction`,
+                );
                 const filteredProducts = products.filter((product) => product.manufacturerCode === state.manufacturer);
                 return (
                   <div key={eye} className="rounded border border-white/10 bg-bg-panel/75 p-4">
@@ -527,8 +534,8 @@ export function SpecialtyContactLensSection({ patientReference, encounterReferen
                         <PowerDropdown value={state.diameter} options={diameterOptions} defaultValue="15.00" onChange={(value) => updateEye(eye, { diameter: value })} ariaLabel="Diameter (mm)" />
                       </label>
                       <PowerField label="Sphere" value={state.sphere} onChange={(value) => updateEye(eye, { sphere: value })} options={sphereOptions} ariaLabel={`${eye} sphere`} />
-                      <PowerField label="Cylinder" value={state.cylinder} onChange={(value) => updateEye(eye, { cylinder: value })} options={cylinderOptions} ariaLabel={`${eye} cylinder`} />
-                      <AxisField label="Axis" value={state.axis} onChange={(value) => updateEye(eye, { axis: value })} options={axisOptions} ariaLabel={`${eye} axis`} />
+                      <PowerField label="Cylinder" value={state.cylinder} onChange={(value) => updateEye(eye, { cylinder: value })} options={cylinderOptions} ariaLabel={`${eye} cylinder`} clearable validationMessage={state.cylinder ? mainPairingMessage : undefined} />
+                      <AxisField label="Axis" value={state.axis} onChange={(value) => updateEye(eye, { axis: value })} options={axisOptions} ariaLabel={`${eye} axis`} validationMessage={state.axis ? mainPairingMessage : undefined} />
                       <PowerField label="Add" value={state.add} onChange={(value) => updateEye(eye, { add: value })} options={addOptions} ariaLabel={`${eye} add`} />
                       <VaField label="Dist VA" value={state.distanceVisualAcuity} onChange={(value) => updateEye(eye, { distanceVisualAcuity: value })} />
                       <VaField label="Near VA" value={state.nearVisualAcuity} onChange={(value) => updateEye(eye, { nearVisualAcuity: value })} />
@@ -574,8 +581,8 @@ export function SpecialtyContactLensSection({ patientReference, encounterReferen
                       <h4 className="text-sm font-semibold text-white">Over-Refraction over this {eye} lens</h4>
                       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                         <PowerField label="Sphere" value={state.overRefraction.sphere} onChange={(value) => updateOverRefraction(eye, { sphere: value })} options={overSphereOptions} ariaLabel={`${eye} over-refraction sphere`} />
-                        <PowerField label="Cylinder" value={state.overRefraction.cylinder} onChange={(value) => updateOverRefraction(eye, { cylinder: value })} options={overCylinderOptions} ariaLabel={`${eye} over-refraction cylinder`} />
-                        <AxisField label="Axis" value={state.overRefraction.axis} onChange={(value) => updateOverRefraction(eye, { axis: value })} options={overAxisOptions} ariaLabel={`${eye} over-refraction axis`} />
+                        <PowerField label="Cylinder" value={state.overRefraction.cylinder} onChange={(value) => updateOverRefraction(eye, { cylinder: value })} options={overCylinderOptions} ariaLabel={`${eye} over-refraction cylinder`} clearable validationMessage={state.overRefraction.cylinder ? overRefractionPairingMessage : undefined} />
+                        <AxisField label="Axis" value={state.overRefraction.axis} onChange={(value) => updateOverRefraction(eye, { axis: value })} options={overAxisOptions} ariaLabel={`${eye} over-refraction axis`} validationMessage={state.overRefraction.axis ? overRefractionPairingMessage : undefined} />
                         <VaField label="Dist VA" value={state.overRefraction.distanceVisualAcuity} onChange={(value) => updateOverRefraction(eye, { distanceVisualAcuity: value })} />
                         <VaField label="Near VA" value={state.overRefraction.nearVisualAcuity} onChange={(value) => updateOverRefraction(eye, { nearVisualAcuity: value })} />
                       </div>
@@ -720,17 +727,23 @@ function additionalSpinnerFallback(field: DefinitionOption) {
   return { minimum: 0, maximum: 30, step: 0.1, defaultValue: "15.00" };
 }
 
-function PowerField({ label, value, onChange, options, ariaLabel }: {
+function PowerField({ label, value, onChange, options, ariaLabel, clearable = false, validationMessage }: {
   label: string;
   value: string;
   onChange(value: string): void;
   options: string[];
   ariaLabel: string;
+  clearable?: boolean;
+  validationMessage?: string;
 }) {
   const wheel = requiredWheel(options);
+  const messageId = `${ariaLabel.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-pairing-message`;
   return (
-    <label className="block">
-      <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">{label}</span>
+    <div className="block">
+      <div className="mb-1 flex min-h-5 items-center justify-between gap-2">
+        <span className="text-xs uppercase tracking-widest text-white/35">{label}</span>
+        {clearable && value !== "" && <button type="button" aria-label={`Clear ${ariaLabel}`} onClick={() => onChange("")} className="text-xs text-brand hover:underline">Clear</button>}
+      </div>
       <OdosWheel
         value={value === "" ? 0 : Number(value)}
         centerOn={0}
@@ -740,26 +753,34 @@ function PowerField({ label, value, onChange, options, ariaLabel }: {
         format={formatSpherePower}
         onChange={(next) => onChange(next.toFixed(2))}
         ariaLabel={ariaLabel}
+        ariaDescribedBy={validationMessage ? messageId : undefined}
+        ariaInvalid={validationMessage ? true : undefined}
         unit="D"
         states={[{ value: "", label: "Not recorded" }]}
         selectedState={value === "" ? "" : undefined}
         onStateChange={onChange}
       />
-    </label>
+      {validationMessage && <span id={messageId} role="alert" className="mt-1 block text-xs text-amber-200">{validationMessage}</span>}
+    </div>
   );
 }
 
-function AxisField({ label, value, onChange, options, ariaLabel }: {
+function AxisField({ label, value, onChange, options, ariaLabel, validationMessage }: {
   label: string;
   value: string;
   onChange(value: string): void;
   options: string[];
   ariaLabel: string;
+  validationMessage?: string;
 }) {
   const wheel = requiredWheel(options);
+  const messageId = `${ariaLabel.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-pairing-message`;
   return (
-    <label className="block">
-      <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">{label}</span>
+    <div className="block">
+      <div className="mb-1 flex min-h-5 items-center justify-between gap-2">
+        <span className="text-xs uppercase tracking-widest text-white/35">{label}</span>
+        {value !== "" && <button type="button" aria-label={`Clear ${ariaLabel}`} onClick={() => onChange("")} className="text-xs text-brand hover:underline">Clear</button>}
+      </div>
       <OdosWheel
         value={value === "" ? 0 : Number(value)}
         centerOn={0}
@@ -769,12 +790,15 @@ function AxisField({ label, value, onChange, options, ariaLabel }: {
         format={String}
         onChange={(next) => onChange(String(next))}
         ariaLabel={ariaLabel}
+        ariaDescribedBy={validationMessage ? messageId : undefined}
+        ariaInvalid={validationMessage ? true : undefined}
         unit="°"
         states={[{ value: "", label: "Not recorded" }]}
         selectedState={value === "" ? "" : undefined}
         onStateChange={onChange}
       />
-    </label>
+      {validationMessage && <span id={messageId} role="alert" className="mt-1 block text-xs text-amber-200">{validationMessage}</span>}
+    </div>
   );
 }
 
@@ -846,15 +870,19 @@ function buildEyePayload(state: EyeState, eye: Eye, visibleAdditional: Definitio
       value: field.valueType === "select" ? raw : requiredNumber(raw, `${eye} ${field.display}`),
     }];
   });
+  const mainPairingMessage = cylinderAxisMessage(state.cylinder, state.axis, `${eye} cylinder and axis`);
+  const overRefractionPairingMessage = cylinderAxisMessage(
+    state.overRefraction.cylinder,
+    state.overRefraction.axis,
+    `${eye} over-refraction`,
+  );
   const touched = state.manualEntry || Object.entries(state).some(([key, value]) =>
     !["manualEntry", "additionalValues", "overRefraction"].includes(key) && value !== "") ||
-    additionalFields.length > 0 || customFields.length > 0 || Object.values(state.overRefraction).some(Boolean);
+    additionalFields.length > 0 || customFields.length > 0 ||
+    (!overRefractionPairingMessage && Object.values(state.overRefraction).some(Boolean));
   if (!touched) return undefined;
-  if ((state.cylinder === "") !== (state.axis === "")) throw new Error(`${eye} cylinder and axis must be entered together.`);
-  if ((state.overRefraction.cylinder === "") !== (state.overRefraction.axis === "")) {
-    throw new Error(`${eye} over-refraction cylinder and axis must be entered together.`);
-  }
-  const overRefraction = compact({
+  if (mainPairingMessage) throw new Error(mainPairingMessage);
+  const overRefraction = overRefractionPairingMessage ? {} : compact({
     sphere: optionalNumber(state.overRefraction.sphere, `${eye} over-refraction sphere`),
     cylinder: optionalNumber(state.overRefraction.cylinder, `${eye} over-refraction cylinder`),
     axis: optionalNumber(state.overRefraction.axis, `${eye} over-refraction axis`),
@@ -882,6 +910,12 @@ function buildEyePayload(state: EyeState, eye: Eye, visibleAdditional: Definitio
     customFields,
     overRefraction: Object.keys(overRefraction).length > 0 ? overRefraction : undefined,
   }) as EyePayload;
+}
+
+function cylinderAxisMessage(cylinder: string, axis: string, label: string): string | undefined {
+  if (cylinder !== "" && axis === "") return `${label}: clear the cylinder or enter an axis.`;
+  if (cylinder === "" && axis !== "") return `${label}: clear the axis or enter a cylinder.`;
+  return undefined;
 }
 
 function activeOptions(field: DefinitionField | undefined): DefinitionOption[] {
