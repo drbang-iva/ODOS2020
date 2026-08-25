@@ -583,14 +583,12 @@ const REGISTRATION_ACCOUNT_FINALIZATION_RULE: OdosResourceRule = {
   }],
 };
 
-const REGISTRATION_RESOURCE_RULES: OdosResourceRule[] = [
-  ...DEMOGRAPHIC_RESOURCES.map((resourceType): OdosResourceRule => ({
+const REGISTRATION_CREATE_RESOURCE_RULES: OdosResourceRule[] =
+  DEMOGRAPHIC_RESOURCES.map((resourceType): OdosResourceRule => ({
     resourceType,
     interactions: CREATE_ONLY_INTERACTIONS,
     scope: { kind: "practice" },
-  })),
-  REGISTRATION_ACCOUNT_FINALIZATION_RULE,
-];
+  }));
 
 const STAFF_ENCOUNTER_WRITE_RESOURCE_RULE: OdosResourceRule = {
   resourceType: "Encounter",
@@ -905,8 +903,9 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
     ],
     resourceRules: [
       ...PRACTICE_READ_RESOURCE_RULES,
-      ...REGISTRATION_RESOURCE_RULES,
+      ...REGISTRATION_CREATE_RESOURCE_RULES,
       ...DEMOGRAPHIC_COMPARTMENT_WRITE_RESOURCE_RULES,
+      REGISTRATION_ACCOUNT_FINALIZATION_RULE,
       ...PROVIDER_CLINICAL_WRITE_RESOURCE_RULES,
       ...STAFF_CORRESPONDENCE_RESOURCE_RULES,
       ...PAYMENT_CUSTODY_RESOURCE_RULES,
@@ -951,8 +950,9 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
     resourceRules: [
       ...PRACTICE_READ_RESOURCE_RULES,
       ...DISPENSARY_READ_RESOURCE_RULES,
-      ...REGISTRATION_RESOURCE_RULES,
+      ...REGISTRATION_CREATE_RESOURCE_RULES,
       ...STAFF_PATIENT_WRITE_RESOURCE_RULES,
+      REGISTRATION_ACCOUNT_FINALIZATION_RULE,
       ...STAFF_CORRESPONDENCE_RESOURCE_RULES,
       ...SCHEDULING_RESOURCE_RULES,
       APPEARANCE_CONFIG_READ_RULE,
@@ -999,8 +999,9 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
     resourceRules: [
       ...PRACTICE_READ_RESOURCE_RULES,
       ...DISPENSARY_READ_RESOURCE_RULES,
-      ...REGISTRATION_RESOURCE_RULES,
+      ...REGISTRATION_CREATE_RESOURCE_RULES,
       ...DEMOGRAPHIC_COMPARTMENT_WRITE_RESOURCE_RULES,
+      REGISTRATION_ACCOUNT_FINALIZATION_RULE,
       { resourceType: "AccessPolicy", interactions: READ_INTERACTIONS, scope: { kind: "practice" } },
       { resourceType: "AuditEvent", interactions: READ_INTERACTIONS, scope: { kind: "audit-only" } },
       ...SCHEDULING_RESOURCE_RULES,

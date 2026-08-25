@@ -21,6 +21,7 @@ import {
 } from "../../ui/src/lib/patient-registration.js";
 import {
   ODOS_MRN_SYSTEM,
+  emptyRelatedResponsibleParty,
   reserveOdosMrn,
 } from "../../ui/src/lib/patient-identity.js";
 
@@ -46,6 +47,15 @@ for (const [index, roleId] of (["provider", "staff", "admin"] as const).entries(
       today: "2026-08-25",
       nextMrnBase: () => 410_001 + index,
       nextUuid: sequentialUuid(roleId),
+      responsibleParties: [{
+        ...emptyRelatedResponsibleParty("guardian", "2026-08-25"),
+        firstName: "Responsible",
+        lastName: "Person",
+        address: "1 Synthetic Way",
+        city: "Greenville",
+        state: "SC",
+        postalCode: "29601",
+      }],
     });
 
     assert.equal(result.kind, "created");
@@ -63,6 +73,11 @@ test("every practice role creates registration resources at practice scope and u
         true,
         `${roleId} must create ${resourceType} at practice scope during registration`,
       );
+      assert.deepEqual(
+        practiceScopedRule(policy, resourceType, "create")?.interaction,
+        ["create"],
+        `${roleId} must not gain practice-scoped ${resourceType} interactions beyond create`,
+      );
       assert.equal(
         policyAllowsWithCriteria(
           policy,
@@ -74,6 +89,27 @@ test("every practice role creates registration resources at practice scope and u
         `${roleId} must update ${resourceType} only through its patient compartment`,
       );
     }
+  }
+});
+
+test("ordered Account rules preserve bound updates and route only fresh unbound reservations to finalization", () => {
+  for (const roleId of ["provider", "staff", "admin"] as const) {
+    const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
+    assert.equal(
+      policyAllowsOrdered(policy, account("active"), "update", account("active"), true),
+      true,
+      `${roleId} must reach the patient-compartment rule for an established Account`,
+    );
+    assert.equal(
+      policyAllowsOrdered(policy, account("active"), "update", account("active"), false),
+      false,
+      `${roleId} must not update an established Account without a compartment binding`,
+    );
+    assert.equal(
+      policyAllowsOrdered(policy, account("active"), "update", account("on-hold"), false),
+      true,
+      `${roleId} must reach the finalization exception for an unbound reservation`,
+    );
   }
 });
 
@@ -198,12 +234,7 @@ class PolicyEnforcedRegistrationApi {
     interaction: "create" | "update",
     before?: Resource,
   ): void {
-    const allowed = this.policy.resource?.some((rule) =>
-      rule.resourceType === resource.resourceType
-      && rule.interaction?.includes(interaction)
-      && rule.criteria === undefined
-      && writeConstraintsAllow(rule, before, resource)
-    ) ?? false;
+    const allowed = policyAllowsOrdered(this.policy, resource, interaction, before, false);
     if (!allowed) throw new Error(`FHIR 403 Forbidden: ${interaction} ${resource.resourceType}`);
   }
 }
@@ -242,11 +273,37 @@ function policyAllowsAtPracticeScope(
   resourceType: string,
   interaction: "create" | "update",
 ): boolean {
-  return policy.resource?.some((rule) =>
+  return practiceScopedRule(policy, resourceType, interaction) !== undefined;
+}
+
+function practiceScopedRule(
+  policy: AccessPolicy,
+  resourceType: string,
+  interaction: "create" | "update",
+): AccessPolicyResource | undefined {
+  return policy.resource?.find((rule) =>
     rule.resourceType === resourceType
     && rule.interaction?.includes(interaction)
     && rule.criteria === undefined
-  ) ?? false;
+  );
+}
+
+function policyAllowsOrdered(
+  policy: AccessPolicy,
+  after: Resource,
+  interaction: "create" | "update",
+  before: Resource | undefined,
+  patientCompartmentBound: boolean,
+): boolean {
+  const matchingRule = policy.resource?.find((rule) => {
+    if (rule.resourceType !== after.resourceType || !rule.interaction?.includes(interaction)) {
+      return false;
+    }
+    if (rule.criteria === undefined) return true;
+    return patientCompartmentBound
+      && rule.criteria === `${after.resourceType}?_compartment=%patient_compartment`;
+  });
+  return matchingRule !== undefined && writeConstraintsAllow(matchingRule, before, after);
 }
 
 function policyAllowsWithCriteria(
