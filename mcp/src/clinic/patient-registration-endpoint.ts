@@ -12,6 +12,7 @@ import { z } from "zod";
 import { grantNewlyRegisteredPatientAccess } from "../authz/role-grants.js";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
 import type { MedplumClient } from "../fhir-client.js";
+import { searchProjectAll } from "../fhir-search.js";
 import {
   ODOS_MRN_MAX,
   ODOS_MRN_MIN,
@@ -57,7 +58,7 @@ export interface PatientRegistrationStaff {
 }
 
 export interface PatientRegistrationEndpointDeps {
-  serviceFhir: Pick<MedplumClient, "search" | "searchProject" | "create" | "read" | "update" | "patch" | "executeTransactionAsActor">;
+  serviceFhir: Pick<MedplumClient, "baseUrl" | "search" | "searchProject" | "searchProjectUrl" | "create" | "read" | "update" | "patch" | "executeTransactionAsActor">;
   now?: () => string;
   logGrantFailure?: (message: string, error: unknown) => void;
 }
@@ -253,14 +254,13 @@ function buildRelatedPerson(party: ResponsiblePartyInput, patientReference: stri
 }
 
 async function findExactDuplicates(
-  fhir: Pick<MedplumClient, "searchProject">,
+  fhir: Pick<MedplumClient, "baseUrl" | "searchProject" | "searchProjectUrl">,
   projectId: string,
   demographics: PatientRegistrationInput["demographics"],
 ): Promise<Patient[]> {
-  const bundle = await fhir.searchProject<Patient>("Patient", projectId, {
+  const patients = await searchProjectAll<Patient>(fhir, "Patient", projectId, {
     given: demographics.firstName.trim(), family: demographics.lastName.trim(), birthdate: demographics.birthDate,
   });
-  const patients = (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
   if (patients.some((patient) => patient.meta?.project?.replace(/^Project\//, "") !== projectId)) {
     throw new Error("Project-scoped duplicate search returned a Patient outside the caller project.");
   }

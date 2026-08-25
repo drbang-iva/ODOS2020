@@ -196,6 +196,18 @@ test("an exact pre-existing Patient is returned as a duplicate and never receive
   assert.equal(fhir.canRead("Patient/preexisting-1"), false);
 });
 
+test("an exact duplicate on a later project-scoped search page still requires confirmation", async () => {
+  const fhir = new RegistrationFhir("staff");
+  fhir.exactDuplicateOnSecondPage = true;
+
+  const response = await postRegistration("staff", fhir);
+  const body = await response.json() as { patients: Patient[] };
+
+  assert.equal(response.status, 409);
+  assert.deepEqual(body.patients.map((patient) => patient.id), ["preexisting-1"]);
+  assert.equal(fhir.transaction, undefined);
+});
+
 test("duplicate detection never returns a Patient owned by another project", async () => {
   const fhir = new RegistrationFhir("staff");
   fhir.exactDuplicate = true;
@@ -371,6 +383,7 @@ async function postRegistration(
 }
 
 class RegistrationFhir {
+  readonly baseUrl = "http://fhir.test";
   account?: Account;
   transaction?: Bundle;
   failTransaction = false;
@@ -379,6 +392,7 @@ class RegistrationFhir {
   conflictGrantOnce = false;
   failGrantAlways = false;
   exactDuplicate = false;
+  exactDuplicateOnSecondPage = false;
   duplicateProjectId = "practice-1";
   searchCalls = 0;
   grantPatchAttempts = 0;
@@ -462,6 +476,29 @@ class RegistrationFhir {
       resourceType: "Bundle",
       type: "searchset",
       entry: resource ? [{ resource: resource as T }] : [],
+      link: resourceType === "Patient" && params.given && this.exactDuplicateOnSecondPage
+        ? [{ relation: "next", url: "http://fhir.test/fhir/R4/Patient?_project=practice-1&_cursor=next" }]
+        : undefined,
+    };
+  }
+
+  async searchProjectUrl<T extends Resource>(
+    _url: string,
+    resourceType: T["resourceType"],
+    projectId: string,
+  ): Promise<Bundle<T>> {
+    assert.equal(resourceType, "Patient");
+    assert.equal(projectId, "practice-1");
+    return {
+      resourceType: "Bundle",
+      type: "searchset",
+      entry: [{
+        resource: {
+          ...this.patient,
+          id: "preexisting-1",
+          meta: { versionId: "1", project: "Project/practice-1" },
+        } as T,
+      }],
     };
   }
 
