@@ -9,7 +9,6 @@ import {
   validatePatientRegistration,
   type PatientDemographicsDraft,
 } from "../lib/patient-registration";
-import { fhir } from "../lib/fhir";
 import {
   emptyRelatedResponsibleParty,
   emptySelfResponsibleParty,
@@ -50,9 +49,11 @@ export function NewPatient() {
     setSaving(true);
     setSaveError(undefined);
     try {
-      const result = await registerPatient(draft, fhir, registrationOptions);
+      const result = await registerPatient(draft, registrationOptions);
       if (result.kind === "duplicates") {
         setDuplicates(result.patients);
+      } else if (result.warning) {
+        setSaveError(result.warning.message);
       } else {
         openPatient(result.patient);
       }
@@ -67,7 +68,12 @@ export function NewPatient() {
     setSaving(true);
     setSaveError(undefined);
     try {
-      openPatient(await createPatient(draft, fhir, { responsibleParties, today }));
+      const result = await createPatient(draft, { responsibleParties, today });
+      if (result.warning) {
+        setSaveError(result.warning.message);
+      } else {
+        openPatient(result.patient);
+      }
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : String(cause));
     } finally {

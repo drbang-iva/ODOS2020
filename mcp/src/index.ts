@@ -7577,6 +7577,9 @@ async function startMcpServer(): Promise<void> {
       registerClinicRoutes(app, {
         authenticateService: authenticateWithMedplum,
         authenticate: authenticateStaffRoute,
+        authenticateRegistration: authenticateStaffRouteForAction("patients.register"),
+        serviceFhir: fhir,
+        logRegistrationGrantFailure: (message, error) => console.error(message, error),
         timeZone: process.env.ODOS_TIMEZONE,
       });
       registerOfficeRoutes(app, {

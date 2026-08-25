@@ -13,11 +13,13 @@ import {
 import {
   EYEFINITY_EHR_PATIENT_ID_SYSTEM,
   EYEFINITY_EPM_PATIENT_ID_SYSTEM,
+} from "../../ui/src/lib/patient-identity.ts";
+import {
   ODOS_MRN_ALLOCATION_TOKEN_SYSTEM,
   ODOS_MRN_SYSTEM,
   formatOdosMrn,
   isValidOdosMrn,
-} from "../../ui/src/lib/patient-identity.ts";
+} from "../../mcp/src/clinic/patient-mrn.ts";
 
 test("MRN backfill URL guard accepts bracketed IPv6 loopback and rejects public hosts", () => {
   assert.doesNotThrow(() => assertLocalOrPrivateBaseUrl("http://[::1]:8103"));

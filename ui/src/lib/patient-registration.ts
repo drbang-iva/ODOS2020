@@ -1,15 +1,9 @@
 import type { Patient } from "@medplum/fhirtypes";
-import { assertTransactionSuccess, createdIdFromEntry } from "./encounter-bundles";
 import { fhir } from "./fhir";
 import { emptySubscriber, subscriberFromPatient } from "./patient-insurance";
 import {
-  buildPatientIdentityTransaction,
-  ODOS_MRN_MAX,
-  ODOS_MRN_MIN,
-  ODOS_MRN_SYSTEM,
   emptySelfResponsibleParty,
   isR4Date,
-  reserveOdosMrn,
   validateResponsibleParties,
   type ResponsiblePartyDraft,
 } from "./patient-identity";
@@ -33,19 +27,21 @@ export interface PatientDemographicsDraft {
 
 export type PatientRegistrationResult =
   | { kind: "duplicates"; patients: Patient[] }
-  | { kind: "created"; patient: Patient };
+  | {
+      kind: "created";
+      patient: Patient;
+      warning?: {
+        code: "access-grant-repair-required";
+        message: string;
+        patientReference: string;
+      };
+    };
+export type CreatedPatientRegistrationResult = Extract<PatientRegistrationResult, { kind: "created" }>;
 
 export interface PatientRegistrationOptions {
   responsibleParties?: readonly ResponsiblePartyDraft[];
   today?: string;
-  nextMrnBase?: () => number;
-  nextUuid?: () => string;
 }
-
-type PatientWriteApi = Pick<
-  typeof fhir,
-  "search" | "create" | "read" | "executeTransaction" | "update"
->;
 
 export function emptyPatientDemographics(): PatientDemographicsDraft {
   return {
@@ -142,62 +138,26 @@ export function buildPatientResource(draft: PatientDemographicsDraft, existing?:
 
 export async function registerPatient(
   draft: PatientDemographicsDraft,
-  api: PatientWriteApi = fhir,
   options: PatientRegistrationOptions = {},
+  fetchImpl: typeof fetch = fetch,
 ): Promise<PatientRegistrationResult> {
   const errors = validatePatientRegistration(draft, options);
   if (Object.keys(errors).length) throw new Error(Object.values(errors).join(" "));
-  const bundle = await api.search<Patient>("Patient", {
-    given: draft.firstName.trim(),
-    family: draft.lastName.trim(),
-    birthdate: draft.birthDate,
-  });
-  const patients = (bundle.entry ?? [])
-    .flatMap((entry) => entry.resource ? [entry.resource] : [])
-    .filter((patient) => isExactDuplicate(patient, draft));
-  if (patients.length) return { kind: "duplicates", patients };
-  return { kind: "created", patient: await createPatient(draft, api, options) };
+  return requestPatientRegistration(draft, options, false, fetchImpl);
 }
 
 export async function createPatient(
   draft: PatientDemographicsDraft,
-  api: Pick<typeof fhir, "search" | "create" | "read" | "executeTransaction"> = fhir,
   options: PatientRegistrationOptions = {},
-): Promise<Patient> {
+  fetchImpl: typeof fetch = fetch,
+): Promise<CreatedPatientRegistrationResult> {
   const errors = validatePatientRegistration(draft, options);
   if (Object.keys(errors).length) throw new Error(Object.values(errors).join(" "));
-  const nextUuid = options.nextUuid ?? crypto.randomUUID.bind(crypto);
-  const reservation = await reserveOdosMrn(
-    {
-      patientIdentifierExists: async (mrn) => {
-        const matches = await api.search<Patient>("Patient", {
-          identifier: `${ODOS_MRN_SYSTEM}|${mrn}`,
-          _count: "1",
-        });
-        return (matches.entry ?? []).some((entry) =>
-          entry.resource?.identifier?.some(
-            (identifier) => identifier.system === ODOS_MRN_SYSTEM && identifier.value === mrn,
-          ),
-        );
-      },
-      createReservation: (account, ifNoneExist) =>
-        api.create(account, "patient-mrn-reservation", { "If-None-Exist": ifNoneExist }),
-    },
-    options.nextMrnBase ?? secureMrnBase,
-    nextUuid,
-  );
-  const response = await api.executeTransaction(
-    buildPatientIdentityTransaction({
-      patient: buildPatientResource(draft),
-      reservation,
-      responsibleParties: registrationResponsibleParties(options),
-      today: registrationToday(options),
-      nextUuid,
-    }),
-    "patient-registration",
-  );
-  assertTransactionSuccess(response);
-  return api.read<Patient>("Patient", createdIdFromEntry(response, 0, "Patient"));
+  const result = await requestPatientRegistration(draft, options, true, fetchImpl);
+  if (result.kind !== "created") {
+    throw new Error("The server did not honor the confirmed duplicate registration.");
+  }
+  return result;
 }
 
 export function validatePatientRegistration(
@@ -225,15 +185,77 @@ export function createPatientDemographicsActions(
   };
 }
 
-function isExactDuplicate(patient: Patient, draft: PatientDemographicsDraft): boolean {
-  const name = patient.name?.find((candidate) => candidate.use === "official") ?? patient.name?.[0];
-  return normalized(name?.given?.[0]) === normalized(draft.firstName)
-    && normalized(name?.family) === normalized(draft.lastName)
-    && patient.birthDate === draft.birthDate;
+async function requestPatientRegistration(
+  draft: PatientDemographicsDraft,
+  options: PatientRegistrationOptions,
+  confirmDuplicate: boolean,
+  fetchImpl: typeof fetch,
+): Promise<PatientRegistrationResult> {
+  const authorization = fhir.authHeader();
+  const response = await fetchImpl("/clinic/patients", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(authorization ? { Authorization: authorization } : {}),
+    },
+    body: JSON.stringify({
+      demographics: draft,
+      responsibleParties: registrationResponsibleParties(options),
+      confirmDuplicate,
+    }),
+  });
+  const body = await readRegistrationResponse(response);
+  if (isDuplicateResult(body) && response.status === 409) return body;
+  if (!response.ok) {
+    throw new Error(
+      isErrorResponse(body)
+        ? body.error
+        : response.status === 403
+          ? "You do not have permission to register patients. Ask a practice administrator to review your role."
+          : "Patient registration could not be confirmed. Check patient search before trying again, or ask a practice administrator for help.",
+    );
+  }
+  if (!isCreatedResult(body)) {
+    throw new Error("Patient registration returned an invalid response. Ask an administrator for help.");
+  }
+  return body;
 }
 
-function normalized(value: string | undefined): string {
-  return value?.trim().toLocaleLowerCase() ?? "";
+async function readRegistrationResponse(response: Response): Promise<unknown> {
+  try {
+    return await response.json();
+  } catch {
+    return undefined;
+  }
+}
+
+function isDuplicateResult(value: unknown): value is Extract<PatientRegistrationResult, { kind: "duplicates" }> {
+  return isObject(value)
+    && value.kind === "duplicates"
+    && Array.isArray(value.patients)
+    && value.patients.every(isPatient);
+}
+
+function isCreatedResult(value: unknown): value is Extract<PatientRegistrationResult, { kind: "created" }> {
+  if (!isObject(value) || value.kind !== "created" || !isPatient(value.patient)) return false;
+  if (value.warning === undefined) return true;
+  return isObject(value.warning)
+    && value.warning.code === "access-grant-repair-required"
+    && typeof value.warning.message === "string"
+    && typeof value.warning.patientReference === "string";
+}
+
+function isErrorResponse(value: unknown): value is { error: string } {
+  return isObject(value) && typeof value.error === "string" && value.error.trim().length > 0;
+}
+
+function isPatient(value: unknown): value is Patient {
+  return isObject(value) && value.resourceType === "Patient";
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 
 function isPhoneNumber(value: string): boolean {
@@ -282,14 +304,4 @@ export function localCalendarDate(date = new Date()): string {
     String(date.getMonth() + 1).padStart(2, "0"),
     String(date.getDate()).padStart(2, "0"),
   ].join("-");
-}
-
-function secureMrnBase(): number {
-  const range = ODOS_MRN_MAX - ODOS_MRN_MIN + 1;
-  const ceiling = 2 ** 32 - ((2 ** 32) % range);
-  const value = new Uint32Array(1);
-  do {
-    crypto.getRandomValues(value);
-  } while (value[0] >= ceiling);
-  return ODOS_MRN_MIN + (value[0] % range);
 }
