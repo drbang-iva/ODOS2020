@@ -10,6 +10,7 @@ import type {
 } from "@medplum/fhirtypes";
 import { z } from "zod";
 import { grantNewlyRegisteredPatientAccess } from "../authz/role-grants.js";
+import { buildOdosAuditEventRow, type OdosAuditEventRecord } from "../authz/odosAudit.js";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
 import type { MedplumClient } from "../fhir-client.js";
 import {
@@ -59,6 +60,7 @@ export interface PatientRegistrationEndpointDeps {
   serviceFhir: Pick<MedplumClient, "search" | "searchProject" | "create" | "read" | "update" | "patch" | "executeTransaction">;
   now?: () => string;
   logGrantFailure?: (message: string, error: unknown) => void;
+  recordAudit?<T>(row: OdosAuditEventRecord, operation: () => Promise<T>): Promise<T>;
 }
 
 export type PatientRegistrationEndpointResult = { status: number; body: unknown };
@@ -77,6 +79,9 @@ export async function registerPatientFromDemographics(
   } catch (error) {
     throw Object.assign(error instanceof Error ? error : new Error(String(error)), { status: 403 });
   }
+  if (!deps.recordAudit) {
+    throw Object.assign(new Error("Patient registration audit service is unavailable."), { status: 503 });
+  }
   const today = registrationDate(deps.now?.());
   validateRegistration(input, today);
   const projectId = registrationProjectId(staff.project);
@@ -89,10 +94,21 @@ export async function registerPatientFromDemographics(
   const request = buildPatientIdentityTransaction(input, reservation, today);
   let response: Bundle;
   try {
-    response = await deps.serviceFhir.executeTransaction(
-      request,
-      { "X-ODOS-Source": "mcp/patient-registration" },
-      { autoRollbackCreatedEntries: false },
+    response = await deps.recordAudit(
+      buildOdosAuditEventRow({
+        eventType: "transaction",
+        actorReference: staff.staffReference,
+        actorRole: staff.actorRole,
+        resourceType: "Patient",
+        actionOutcome: "granted",
+        actionReason: "patients.register service transaction: Patient, RelatedPerson, Account",
+        eventTime: deps.now?.(),
+      }),
+      () => deps.serviceFhir.executeTransaction(
+        request,
+        { "X-ODOS-Source": "mcp/patient-registration" },
+        { autoRollbackCreatedEntries: false },
+      ),
     );
     assertTransactionSuccess(response);
   } catch (error) {

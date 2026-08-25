@@ -29,6 +29,7 @@ export function NewPatient() {
   const [duplicates, setDuplicates] = useState<Patient[]>([]);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string>();
+  const [repairWarning, setRepairWarning] = useState<{ message: string }>();
 
   const openPatient = (patient: Patient) => {
     if (patient.id) {
@@ -53,7 +54,7 @@ export function NewPatient() {
       if (result.kind === "duplicates") {
         setDuplicates(result.patients);
       } else if (result.warning) {
-        setSaveError(result.warning.message);
+        setRepairWarning({ message: result.warning.message });
       } else {
         openPatient(result.patient);
       }
@@ -70,7 +71,8 @@ export function NewPatient() {
     try {
       const result = await createPatient(draft, { responsibleParties, today });
       if (result.warning) {
-        setSaveError(result.warning.message);
+        setDuplicates([]);
+        setRepairWarning({ message: result.warning.message });
       } else {
         openPatient(result.patient);
       }
@@ -80,6 +82,10 @@ export function NewPatient() {
       setSaving(false);
     }
   };
+
+  if (repairWarning) {
+    return <RegistrationRepairNotice warning={repairWarning} onBack={returnToSearch} />;
+  }
 
   return (
     <main className="min-h-screen bg-bg-deep p-5 text-white">
@@ -106,6 +112,33 @@ export function NewPatient() {
       </section>
 
       {duplicates.length > 0 && <DuplicatePatientWarning patients={duplicates} saving={saving} onUseExisting={openPatient} onBack={() => setDuplicates([])} onCreateAnyway={() => void createAnyway()} />}
+    </main>
+  );
+}
+
+export function RegistrationRepairNotice({
+  warning,
+  onBack,
+}: {
+  warning: { message: string };
+  onBack: () => void;
+}) {
+  return (
+    <main className="min-h-screen bg-bg-deep p-5 text-[color:var(--odos-text)]">
+      <section className="mx-auto max-w-xl rounded border border-[color:var(--odos-accent-border)] bg-bg-panel p-6">
+        <p className="text-xs uppercase tracking-widest text-[color:var(--odos-muted)]">Registration complete</p>
+        <h1 className="mt-2 text-2xl font-semibold">Patient registered</h1>
+        <p role="alert" className="mt-4 text-sm text-[color:var(--odos-text)]">
+          {warning.message}
+        </p>
+        <button
+          type="button"
+          onClick={onBack}
+          className="mt-6 rounded border border-[color:var(--odos-line-2)] px-4 py-2 text-sm text-[color:var(--odos-muted)]"
+        >
+          Back to patient search
+        </button>
+      </section>
     </main>
   );
 }

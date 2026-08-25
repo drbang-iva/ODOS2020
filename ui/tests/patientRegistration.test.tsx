@@ -22,6 +22,7 @@ import {
 } from "../src/lib/patient-identity";
 import {
   DuplicatePatientWarning,
+  RegistrationRepairNotice,
   withoutResponsiblePartyErrors,
 } from "../src/scenes/NewPatient";
 
@@ -69,6 +70,19 @@ test("exact duplicate warning presents both safe choices", () => {
   assert.match(html, /DOB 1980-01-02 · ID patient-1/);
   assert.match(html, /Use existing patient/);
   assert.match(html, /Create anyway/);
+});
+
+test("a completed registration warning renders a terminal repair state without another create action", () => {
+  const html = renderToStaticMarkup(<RegistrationRepairNotice
+    warning={{
+      message: "Ask a practice administrator to repair your patient access.",
+    }}
+    onBack={() => undefined}
+  />);
+  assert.match(html, /Patient registered/);
+  assert.match(html, /Back to patient search/);
+  assert.doesNotMatch(html, /Create patient|Create anyway/);
+  assert.doesNotMatch(html, /Patient\/patient-1/);
 });
 
 test("ODOS MRNs use a six-digit base plus a valid appended Luhn check digit", () => {

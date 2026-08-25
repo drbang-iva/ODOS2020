@@ -9,6 +9,7 @@ import type {
   ProjectMembership,
   Resource,
 } from "@medplum/fhirtypes";
+import type { OdosAuditEventRecord } from "../src/authz/odosAudit.js";
 import express from "express";
 import { registerClinicRoutes } from "../src/clinic/clinic-routes.js";
 import { registerPatientFromDemographics } from "../src/clinic/patient-registration-endpoint.js";
@@ -51,6 +52,11 @@ for (const role of ["provider", "staff", "admin"] as const) {
     );
     assert.equal(fhir.account?.status, "active");
     assert.equal(fhir.canRead("Patient/patient-1"), true);
+    assert.equal(fhir.auditRows.length, 1);
+    assert.equal(fhir.auditRows[0]?.eventType, "transaction");
+    assert.equal(fhir.auditRows[0]?.actorId, `${role}-1`);
+    assert.equal(fhir.auditRows[0]?.actorRole, role);
+    assert.equal(fhir.auditRows[0]?.resourceType, "Patient");
   });
 }
 
@@ -312,6 +318,10 @@ async function postRegistration(
       fhir: {} as never,
     }),
     serviceFhir,
+    recordRegistrationAudit: async (row: OdosAuditEventRecord, operation: () => Promise<unknown>) => {
+      serviceFhir.auditRows.push(row);
+      return operation();
+    },
     logRegistrationGrantFailure,
     now: () => "2026-08-25T12:00:00.000Z",
   } as never);
@@ -346,6 +356,7 @@ class RegistrationFhir {
   searchCalls = 0;
   grantPatchAttempts = 0;
   readonly membership: ProjectMembership;
+  readonly auditRows: OdosAuditEventRecord[] = [];
   readonly patient: Patient = {
     resourceType: "Patient",
     id: "patient-1",
@@ -438,6 +449,7 @@ class RegistrationFhir {
   }
 
   async executeTransaction(bundle: Bundle): Promise<Bundle> {
+    assert.equal(this.auditRows.length, 1, "registration transaction must execute inside human-attributed audit");
     this.transaction = structuredClone(bundle);
     if (this.failTransaction) throw new Error("synthetic transaction failure");
     this.patientCreated = true;

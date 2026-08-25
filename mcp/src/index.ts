@@ -7580,6 +7580,7 @@ async function startMcpServer(): Promise<void> {
         authenticateRegistration: authenticateStaffRouteForAction("patients.register"),
         serviceFhir: fhir,
         logRegistrationGrantFailure: (message, error) => console.error(message, error),
+        recordRegistrationAudit: (row, operation) => auditRuntime.record(row, operation),
         timeZone: process.env.ODOS_TIMEZONE,
       });
       registerOfficeRoutes(app, {

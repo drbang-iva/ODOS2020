@@ -34,6 +34,7 @@ export interface ClinicRouteDeps {
   now?: () => string;
   serviceFhir?: PatientRegistrationEndpointDeps["serviceFhir"];
   logRegistrationGrantFailure?: PatientRegistrationEndpointDeps["logGrantFailure"];
+  recordRegistrationAudit?: PatientRegistrationEndpointDeps["recordAudit"];
 }
 
 export function registerClinicRoutes(app: Pick<Application, "get" | "post">, deps: ClinicRouteDeps): void {
@@ -60,7 +61,7 @@ async function handlePatientRegistration(req: Request, res: Response, deps: Clin
     });
     return;
   }
-  if (!deps.serviceFhir || !staff.project) {
+  if (!deps.serviceFhir || !staff.project || !deps.recordRegistrationAudit) {
     res.status(503).json({ error: "Patient registration service is unavailable." });
     return;
   }
@@ -77,6 +78,7 @@ async function handlePatientRegistration(req: Request, res: Response, deps: Clin
         serviceFhir: deps.serviceFhir,
         now: deps.now,
         logGrantFailure: deps.logRegistrationGrantFailure,
+        recordAudit: deps.recordRegistrationAudit,
       },
     );
     res.status(result.status).json(result.body);
