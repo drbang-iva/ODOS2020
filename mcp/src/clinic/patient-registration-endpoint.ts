@@ -7,6 +7,7 @@ import type {
   Project,
   Reference,
   RelatedPerson,
+  Resource,
 } from "@medplum/fhirtypes";
 import { z } from "zod";
 import { grantNewlyRegisteredPatientAccess } from "../authz/role-grants.js";
@@ -87,8 +88,8 @@ export async function registerPatientFromDemographics(
     return { status: 409, body: { kind: "duplicates", patients: duplicates } };
   }
 
-  const reservation = await reserveMrn(deps.serviceFhir);
-  const request = buildPatientIdentityTransaction(input, reservation, today);
+  const reservation = await reserveMrn(deps.serviceFhir, projectId);
+  const request = buildPatientIdentityTransaction(input, reservation, today, projectId);
   let response: Bundle;
   try {
     response = await deps.serviceFhir.executeTransactionAsActor(
@@ -157,7 +158,10 @@ export async function registerPatientFromDemographics(
   }
 }
 
-async function reserveMrn(fhir: Pick<MedplumClient, "search" | "create">): Promise<ReservedMrn> {
+async function reserveMrn(
+  fhir: Pick<MedplumClient, "search" | "create">,
+  projectId: string,
+): Promise<ReservedMrn> {
   return reserveOdosMrn(
     {
       patientIdentifierExists: async (mrn) => {
@@ -169,19 +173,28 @@ async function reserveMrn(fhir: Pick<MedplumClient, "search" | "create">): Promi
           (identifier) => identifier.system === ODOS_MRN_SYSTEM && identifier.value === mrn
         ));
       },
-      createReservation: (account, ifNoneExist) => fhir.create<Account>(account, {
-        "If-None-Exist": ifNoneExist,
-        "X-ODOS-Source": "mcp/patient-mrn-reservation",
-      }),
+      createReservation: (account, ifNoneExist) => fhir.create<Account>(
+        registrationResourceInProject(account, projectId),
+        {
+          "If-None-Exist": ifNoneExist,
+          "X-Medplum": "extended",
+          "X-ODOS-Source": "mcp/patient-mrn-reservation",
+        },
+      ),
     },
     () => randomInt(ODOS_MRN_MIN, ODOS_MRN_MAX + 1),
     randomUUID,
   );
 }
 
-function buildPatientIdentityTransaction(input: PatientRegistrationInput, reservation: ReservedMrn, today: string): Bundle {
+function buildPatientIdentityTransaction(
+  input: PatientRegistrationInput,
+  reservation: ReservedMrn,
+  today: string,
+  projectId: string,
+): Bundle {
   const patientFullUrl = `urn:uuid:${randomUUID()}`;
-  const patient: Patient = {
+  const patient = registrationResourceInProject<Patient>({
     resourceType: "Patient",
     active: true,
     identifier: [{ use: "usual", type: { text: "ODOS medical record number" }, system: ODOS_MRN_SYSTEM, value: reservation.mrn }],
@@ -198,7 +211,7 @@ function buildPatientIdentityTransaction(input: PatientRegistrationInput, reserv
     address: [input.demographics.address, input.demographics.city, input.demographics.state, input.demographics.postalCode].some((value) => value.trim())
       ? [{ use: "home", line: input.demographics.address.trim() ? [input.demographics.address.trim()] : undefined, city: input.demographics.city.trim() || undefined, state: input.demographics.state.trim() || undefined, postalCode: input.demographics.postalCode.trim() || undefined }]
       : undefined,
-  };
+  }, projectId);
   const entries: BundleEntry[] = [{ fullUrl: patientFullUrl, resource: patient, request: { method: "POST", url: "Patient" } }];
   const partyReferences = new Map<string, string>();
   for (const party of input.responsibleParties) {
@@ -208,9 +221,13 @@ function buildPatientIdentityTransaction(input: PatientRegistrationInput, reserv
     }
     const fullUrl = `urn:uuid:${randomUUID()}`;
     partyReferences.set(party.localId, fullUrl);
-    entries.push({ fullUrl, resource: buildRelatedPerson(party, patientFullUrl, today), request: { method: "POST", url: "RelatedPerson" } });
+    entries.push({
+      fullUrl,
+      resource: registrationResourceInProject(buildRelatedPerson(party, patientFullUrl, today), projectId),
+      request: { method: "POST", url: "RelatedPerson" },
+    });
   }
-  const account: Account = {
+  const account = registrationResourceInProject<Account>({
     resourceType: "Account",
     id: reservation.account.id,
     meta: reservation.account.meta,
@@ -225,12 +242,20 @@ function buildPatientIdentityTransaction(input: PatientRegistrationInput, reserv
       if (!reference) throw new Error("Responsible party reference was not built.");
       return [{ party: { reference }, onHold: false, ...(party.kind === "person" ? { period: responsiblePartyPeriod(party) } : {}) }];
     }),
-  };
+  }, projectId);
   entries.push({
     resource: account,
     request: { method: "PUT", url: `Account/${account.id}`, ...(account.meta?.versionId ? { ifMatch: `W/"${account.meta.versionId}"` } : {}) },
   });
   return { resourceType: "Bundle", type: "transaction", entry: entries };
+}
+
+function registrationResourceInProject<T extends Resource>(resource: T, projectId: string): T {
+  const existingProjectId = resource.meta?.project?.replace(/^Project\//, "");
+  if (existingProjectId && existingProjectId !== projectId) {
+    throw new Error(`Registration resource belongs to Project/${existingProjectId}, not Project/${projectId}.`);
+  }
+  return { ...resource, meta: { ...resource.meta, project: projectId } };
 }
 
 function buildRelatedPerson(party: ResponsiblePartyInput, patientReference: string, today: string): RelatedPerson {
