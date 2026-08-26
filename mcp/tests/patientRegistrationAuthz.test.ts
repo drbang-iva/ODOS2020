@@ -204,6 +204,35 @@ test("a membership version conflict is refetched and retried before registration
   assert.equal(fhir.canRead("Patient/patient-1"), true);
 });
 
+test("registration grants access when the caller membership omits active", async () => {
+  const fhir = new RegistrationFhir("staff");
+  delete fhir.membership.active;
+
+  const response = await postRegistration("staff", fhir);
+  const body = await response.json() as { warning?: unknown };
+
+  assert.equal(response.status, 201);
+  assert.equal(body.warning, undefined);
+  assert.equal(fhir.canRead("Patient/patient-1"), true);
+});
+
+test("inactive memberships do not consume the registration membership search count", async () => {
+  const fhir = new RegistrationFhir("staff");
+  delete fhir.membership.active;
+  fhir.memberships.unshift(
+    inactiveMembership("inactive-1", fhir.membership),
+    inactiveMembership("inactive-2", fhir.membership),
+    inactiveMembership("inactive-3", fhir.membership),
+  );
+
+  const response = await postRegistration("staff", fhir);
+  const body = await response.json() as { warning?: unknown };
+
+  assert.equal(response.status, 201);
+  assert.equal(body.warning, undefined);
+  assert.equal(fhir.canRead("Patient/patient-1"), true);
+});
+
 test("registration appends every named compartment parameter on a stacked composite membership", async () => {
   const fhir = new RegistrationFhir("staff");
   fhir.policy.id = "provider-staff-admin";
@@ -476,6 +505,7 @@ class RegistrationFhir {
   searchCalls = 0;
   grantPatchAttempts = 0;
   readonly membership: ProjectMembership;
+  readonly memberships: ProjectMembership[];
   readonly auditRows: OdosAuditEventRecord[] = [];
   patient: Patient = {
     resourceType: "Patient",
@@ -497,6 +527,7 @@ class RegistrationFhir {
       active: true,
       access: [{ policy: { reference: `AccessPolicy/${role}` } }],
     };
+    this.memberships = [this.membership];
     this.policy = {
       resourceType: "AccessPolicy",
       id: role,
@@ -536,8 +567,12 @@ class RegistrationFhir {
     params: Record<string, string> = {},
   ): Promise<Bundle<T>> {
     assert.equal(projectId, "practice-1");
-    const resource = resourceType === "ProjectMembership"
-      ? this.membership
+    const resources = resourceType === "ProjectMembership"
+      ? this.memberships
+        .filter((membership) => !params.profile || membership.profile?.reference === params.profile)
+        .filter((membership) => params.active === "true" ? membership.active === true : true)
+        .filter((membership) => params["active:not"] === "false" ? membership.active !== false : true)
+        .slice(0, Number(params._count ?? this.memberships.length))
       : resourceType === "AccessPolicy"
       ? this.policy
       : resourceType === "Patient"
@@ -556,7 +591,11 @@ class RegistrationFhir {
     return {
       resourceType: "Bundle",
       type: "searchset",
-      entry: resource ? [{ resource: resource as T }] : [],
+      entry: Array.isArray(resources)
+        ? resources.map((resource) => ({ resource: resource as T }))
+        : resources
+        ? [{ resource: resources as T }]
+        : [],
       link: resourceType === "Patient" && params.given && this.exactDuplicateOnSecondPage
         ? [{ relation: "next", url: "http://fhir.test/fhir/R4/Patient?_project=practice-1&_cursor=next" }]
         : undefined,
@@ -704,6 +743,14 @@ class RegistrationFhir {
       (parameter) => parameter.valueString === patientReference,
     )) ?? false;
   }
+}
+
+function inactiveMembership(id: string, membership: ProjectMembership): ProjectMembership {
+  return {
+    ...structuredClone(membership),
+    id,
+    active: false,
+  };
 }
 
 function projectIdFromMeta(project: string | undefined): string | undefined {

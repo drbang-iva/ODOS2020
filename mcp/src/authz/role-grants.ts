@@ -484,7 +484,7 @@ async function registrationMembership(
 ): Promise<ProjectMembership> {
   const matches = await fhir.searchProject<ProjectMembership>("ProjectMembership", projectId, {
     profile: staffReference,
-    active: "true",
+    "active:not": "false",
     _count: "2",
   });
   const memberships = resources(matches).filter((membership) => membership.active !== false);
