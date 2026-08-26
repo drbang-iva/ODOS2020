@@ -13,6 +13,7 @@ import type { OdosAuditEventRecord } from "../src/authz/odosAudit.js";
 import express from "express";
 import { registerClinicRoutes } from "../src/clinic/clinic-routes.js";
 import { registerPatientFromDemographics } from "../src/clinic/patient-registration-endpoint.js";
+import { grantNewlyRegisteredPatientAccess } from "../src/authz/role-grants.js";
 import {
   buildMedplumAccessPolicy,
   getRoleDeclaration,
@@ -59,6 +60,78 @@ for (const role of ["provider", "staff", "admin"] as const) {
     assert.equal(fhir.auditRows[0]?.resourceType, "Patient");
   });
 }
+
+test("registration creates the MRN reservation and identity resources in the caller project", async () => {
+  const fhir = new RegistrationFhir("staff");
+  fhir.serviceProjectId = "service-project";
+
+  const response = await postRegistration("staff", fhir);
+  const body = await response.json() as { patient: Patient; warning?: unknown };
+
+  assert.equal(response.status, 201);
+  assert.equal(body.warning, undefined);
+  assert.equal(fhir.persistedReservationProjectId, "practice-1");
+  assert.equal(fhir.account?.meta?.project, "practice-1");
+  assert.equal(fhir.patient.meta?.project, "practice-1");
+  assert.deepEqual(fhir.persistedTransactionProjectIds, ["practice-1", "practice-1", "practice-1"]);
+});
+
+test("a caller in project A never submits registration writes to service project B", async () => {
+  const fhir = new RegistrationFhir("provider");
+  fhir.serviceProjectId = "project-b";
+
+  const response = await postRegistration("provider", fhir);
+
+  assert.equal(response.status, 201);
+  assert.deepEqual(fhir.submittedWriteProjectIds, [
+    "practice-1",
+    "practice-1",
+    "practice-1",
+    "practice-1",
+  ]);
+  assert.equal(fhir.submittedWriteProjectIds.includes("project-b"), false);
+});
+
+test("registration stops when an MRN reservation is returned from another project", async () => {
+  const fhir = new RegistrationFhir("staff");
+  fhir.reservationResponseProjectId = "project-b";
+
+  const response = await postRegistration("staff", fhir);
+
+  assert.equal(response.status, 500);
+  assert.equal(fhir.transaction, undefined);
+});
+
+test("registration access grant rejects a Patient outside the caller project", async () => {
+  const fhir = new RegistrationFhir("staff");
+  fhir.patient.meta = { ...fhir.patient.meta, project: "other-practice" };
+  fhir.returnOutOfProjectPatient = true;
+
+  await assert.rejects(
+    grantNewlyRegisteredPatientAccess(
+      {
+        staffReference: "Practitioner/staff-1",
+        project: { reference: "Project/practice-1" },
+        registrationRequest: {
+          resourceType: "Bundle",
+          type: "transaction",
+          entry: [{
+            resource: { resourceType: "Patient" },
+            request: { method: "POST", url: "Patient" },
+          }],
+        },
+        registrationResponse: {
+          resourceType: "Bundle",
+          type: "transaction-response",
+          entry: [{ response: { status: "201 Created", location: "Patient/patient-1/_history/1" } }],
+        },
+      },
+      { serviceFhir: fhir },
+    ),
+    /Newly registered Patient is not owned by the caller's project/,
+  );
+  assert.equal(fhir.grantPatchAttempts, 0);
+});
 
 test("a role without patients.register is refused before any service FHIR call", async () => {
   const actions = getRoleDeclaration("staff").businessActions;
@@ -386,6 +459,12 @@ class RegistrationFhir {
   readonly baseUrl = "http://fhir.test";
   account?: Account;
   transaction?: Bundle;
+  serviceProjectId = "practice-1";
+  reservationResponseProjectId?: string;
+  persistedReservationProjectId?: string;
+  returnOutOfProjectPatient = false;
+  readonly submittedWriteProjectIds: string[] = [];
+  readonly persistedTransactionProjectIds: string[] = [];
   failTransaction = false;
   dropCommittedTransactionResponse = false;
   patientCreated = false;
@@ -398,7 +477,7 @@ class RegistrationFhir {
   grantPatchAttempts = 0;
   readonly membership: ProjectMembership;
   readonly auditRows: OdosAuditEventRecord[] = [];
-  readonly patient: Patient = {
+  patient: Patient = {
     resourceType: "Patient",
     id: "patient-1",
     meta: { versionId: "1", project: "Project/practice-1" },
@@ -470,7 +549,9 @@ class RegistrationFhir {
               meta: { versionId: "1", project: `Project/${this.duplicateProjectId}` },
             }
           : undefined
-        : this.patient
+        : this.returnOutOfProjectPatient || projectIdFromMeta(this.patient.meta?.project) === projectId
+          ? this.patient
+          : undefined
       : undefined;
     return {
       resourceType: "Bundle",
@@ -504,10 +585,13 @@ class RegistrationFhir {
 
   async create<T extends Resource>(resource: T): Promise<T> {
     assert.equal(resource.resourceType, "Account");
+    const requestedProjectId = projectIdFromMeta(resource.meta?.project) ?? this.serviceProjectId;
+    this.submittedWriteProjectIds.push(requestedProjectId);
+    this.persistedReservationProjectId = this.reservationResponseProjectId ?? requestedProjectId;
     this.account = {
       ...(resource as Account),
       id: "reservation-1",
-      meta: { versionId: "1", project: "Project/practice-1" },
+      meta: { versionId: "1", project: this.persistedReservationProjectId },
     };
     return structuredClone(this.account) as T;
   }
@@ -516,13 +600,27 @@ class RegistrationFhir {
     assert.equal(this.auditRows.length, 1, "registration transaction must execute inside human-attributed audit");
     this.transaction = structuredClone(bundle);
     if (this.failTransaction) throw new Error("synthetic transaction failure");
+    this.persistedTransactionProjectIds.splice(0);
+    for (const entry of bundle.entry ?? []) {
+      if (!entry.resource) continue;
+      const projectId = projectIdFromMeta(entry.resource.meta?.project) ?? this.serviceProjectId;
+      this.submittedWriteProjectIds.push(projectId);
+      this.persistedTransactionProjectIds.push(projectId);
+    }
     this.patientCreated = true;
+    this.patient = {
+      ...this.patient,
+      meta: {
+        ...this.patient.meta,
+        project: this.persistedTransactionProjectIds[0],
+      },
+    };
     this.account = {
       ...(bundle.entry?.at(-1)?.resource as Account),
       id: "reservation-1",
       status: "active",
       subject: [{ reference: "Patient/patient-1" }],
-      meta: { versionId: "2", project: "Project/practice-1" },
+      meta: { versionId: "2", project: this.persistedTransactionProjectIds.at(-1) },
     };
     if (this.dropCommittedTransactionResponse) {
       throw new Error("synthetic connection loss after commit");
@@ -606,4 +704,8 @@ class RegistrationFhir {
       (parameter) => parameter.valueString === patientReference,
     )) ?? false;
   }
+}
+
+function projectIdFromMeta(project: string | undefined): string | undefined {
+  return project?.replace(/^Project\//, "");
 }
