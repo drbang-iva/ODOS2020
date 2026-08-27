@@ -388,7 +388,7 @@ test("entry-sheet chrome is 44px-class and the shared layer traps, closes, and r
   }
 });
 
-test("chart-another entries are 44px-class and disclose their interaction after deliberate expansion", { timeout: 30_000 }, async () => {
+test("editor launch rows are 44px-class and disclosures reveal their interaction after expansion", { timeout: 30_000 }, async () => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   page.setDefaultTimeout(5_000);
   try {
@@ -399,7 +399,7 @@ test("chart-another entries are 44px-class and disclose their interaction after 
     for (let index = 0; index < chartAnotherCount; index += 1) {
       await chartAnotherGroups.nth(index).locator("summary").click();
     }
-    const rows = page.getByTestId("exam-editor-entry-row");
+    const rows = page.locator('[data-testid="exam-editor-entry-row"], [data-testid="exam-section-blank"]');
     assert.ok(await rows.count() >= REAL_SECTION_AUDIT.length);
     const measurements = await rows.evaluateAll((nodes) => nodes.map((node) => {
       const rect = node.getBoundingClientRect();
@@ -444,6 +444,34 @@ test("chart-another entries are 44px-class and disclose their interaction after 
     assert.equal(sheetStyle.borderStyle, "solid");
     assert.match(await fullPageRow.innerText(), /Expand/);
     assert.doesNotMatch(await fullPageRow.innerText(), /Full page/);
+  } finally {
+    await page.close();
+  }
+});
+
+test("zero-finding comprehensive Pretest keeps all 14 editor slots inside its section scroll", { timeout: 30_000 }, async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  page.setDefaultTimeout(5_000);
+  try {
+    await page.goto(`${origin}/tests/fixtures/entry-sheets.html?comprehensive=true`, { waitUntil: "networkidle" });
+    const pretest = page.locator('[data-section-key="pretest"]');
+    const slots = pretest.getByTestId("exam-section-blank");
+    assert.equal(await slots.count(), 14);
+    assert.equal(new Set(await slots.evaluateAll((nodes) => nodes.map((node) =>
+      node.getAttribute("data-editor-section-id")
+    ))).size, 14);
+
+    const scroll = await pretest.getByTestId("exam-section-body").evaluate((node) => {
+      const style = getComputedStyle(node);
+      return {
+        clientHeight: node.clientHeight,
+        scrollHeight: node.scrollHeight,
+        overflowY: style.overflowY,
+      };
+    });
+    assert.equal(scroll.overflowY, "auto");
+    assert.ok(scroll.clientHeight <= 288, `Pretest body is ${scroll.clientHeight}px tall`);
+    assert.ok(scroll.scrollHeight > scroll.clientHeight, `${scroll.scrollHeight}px must overflow ${scroll.clientHeight}px`);
   } finally {
     await page.close();
   }

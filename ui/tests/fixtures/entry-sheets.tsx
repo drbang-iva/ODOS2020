@@ -61,6 +61,25 @@ const FIXTURE_PROJECTION: ExamOverviewProjection = {
   completeness: { status: "unconfigured", requiredSectionCount: 0, resolvedSectionCount: 0, trace: [], documentationIssues: [] },
 };
 
+const COMPREHENSIVE_PROJECTION: ExamOverviewProjection = {
+  ...FIXTURE_PROJECTION,
+  visitTypeCategoryId: "comprehensive",
+  completeness: {
+    status: "incomplete",
+    requiredSectionCount: 6,
+    resolvedSectionCount: 0,
+    trace: [
+      { sectionKey: "history", label: "History", state: "not-examined", resolved: false, carriedUnreassertedCount: 0 },
+      { sectionKey: "entrance", label: "Entrance", state: "not-examined", resolved: false, carriedUnreassertedCount: 0 },
+      { sectionKey: "pretest", label: "Pretest", state: "not-examined", resolved: false, carriedUnreassertedCount: 0 },
+      { sectionKey: "refraction", label: "Refraction", state: "not-examined", resolved: false, carriedUnreassertedCount: 0 },
+      { sectionKey: "ocular-health", label: "Ocular Health", state: "not-examined", resolved: false, carriedUnreassertedCount: 0 },
+      { sectionKey: "assessment", label: "Assessment & Plan", state: "not-examined", resolved: false, carriedUnreassertedCount: 0 },
+    ],
+    documentationIssues: [],
+  },
+};
+
 window.fetch = async (input) => {
   const url = String(input);
   if (url.endsWith("/clinical-graph/refraction/definition")) {
@@ -145,6 +164,7 @@ function Fixture() {
   const sheetOpen = Boolean(active && (mapped || forceSheet));
   const editor = active ? renderEditor(active) : null;
   const showReturnButton = params.get("returnButton") === "true";
+  const projection = params.get("comprehensive") === "true" ? COMPREHENSIVE_PROJECTION : FIXTURE_PROJECTION;
 
   return (
     <main className="flex h-screen flex-col overflow-hidden bg-bg-deep text-white">
@@ -170,7 +190,7 @@ function Fixture() {
               </div>
             )}
             <ExamOverviewBoard
-              projection={FIXTURE_PROJECTION}
+              projection={projection}
               editorEntries={chartEditorInventory()}
               activeEditorId={mapped ? active : undefined}
               refreshing={false}

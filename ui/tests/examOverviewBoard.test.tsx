@@ -357,7 +357,7 @@ test("by-exception board renders exactly one row per performed or deferred findi
     const rendered = JSON.stringify(renderer.toJSON());
     assert.match(rendered, /Not examined/);
     assert.doesNotMatch(rendered, /not charted|No finding observations recorded/i);
-    assert.equal(renderer.root.findAllByProps({ "data-testid": "chart-another-finding" }).length, 2);
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "chart-another-finding" }).length, 1);
   } finally {
     renderer.unmount();
   }
@@ -1141,7 +1141,7 @@ test("worksheet rows expose owners and keep Contact Lenses and Imaging visibly o
   }
 });
 
-test("every worksheet section body owns its scroll and a blank opens the existing group editor", () => {
+test("a zero-finding Pretest section renders one labeled blank per chartable editor", () => {
   const opened: string[] = [];
   const renderer = create(
     <ExamOverviewBoard
@@ -1158,10 +1158,77 @@ test("every worksheet section body owns its scroll and a blank opens the existin
     for (const body of bodies) {
       assert.deepEqual(body.props.style, { maxHeight: "18rem", overflowY: "auto" });
     }
-    const blank = renderer.root.findByProps({ "data-blank-section-key": "history" });
-    assert.equal(blank.type, "button");
-    act(() => blank.props.onClick());
-    assert.deepEqual(opened, ["hpi"]);
+
+    const pretest = renderer.root.findByProps({ "data-section-key": "pretest" });
+    const blanks = pretest.findAllByProps({ "data-testid": "exam-section-blank" });
+    const expectedSlots = [
+      ["wearing", "Wearing (WRx)"],
+      ["auto-refraction", "Auto-Refraction / Auto-K"],
+      ["pretest-vitals", "Vitals / BioPhotonic"],
+      ["manual-keratometry", "Manual Keratometry"],
+      ["pachymetry", "Pachymetry"],
+      ["va", "Visual Acuity"],
+      ["pupils", "Pupils"],
+      ["stereopsis", "Stereopsis"],
+      ["color-vision", "Color Vision"],
+      ["eom", "EOM / Diplopia"],
+      ["cvf", "Visual Field"],
+      ["cover-test", "Cover Test"],
+      ["iop", "IOP"],
+      ["dilation", "Dilation"],
+    ];
+    assert.equal(blanks.length, 14);
+    assert.deepEqual(
+      blanks.map((blank) => [blank.props["data-editor-section-id"], textContent(blank).replace("Tap to chart", "")]),
+      expectedSlots,
+    );
+
+    for (const blank of blanks) act(() => blank.props.onClick());
+    assert.deepEqual(opened, expectedSlots.map(([editorId]) => editorId));
+  } finally {
+    renderer.unmount();
+  }
+});
+
+test("only the single-slot Refraction group keeps Chart another finding", () => {
+  const renderer = create(
+    <ExamOverviewBoard
+      projection={zeroFindingComprehensiveProjection()}
+      editorEntries={chartEditorInventory()}
+      refreshing={false}
+      onOpenEditor={() => undefined}
+      onRefresh={() => undefined}
+    />,
+  );
+  try {
+    const expectedBlankIdsBySection = {
+      history: ["hpi"],
+      refraction: ["refraction"],
+      "contact-lenses": ["soft-contact-lens", "specialty-contact-lens", "ortho-k", "myopia-management"],
+      "ocular-health": ["cup-disc", "gonioscopy", "dry-eye"],
+      imaging: ["imaging"],
+      assessment: ["assessment", "prescription"],
+    } as const;
+    for (const [sectionKey, expectedEditorIds] of Object.entries(expectedBlankIdsBySection)) {
+      const section = renderer.root.findByProps({ "data-section-key": sectionKey });
+      assert.deepEqual(
+        section.findAllByProps({ "data-testid": "exam-section-blank" })
+          .map((blank) => blank.props["data-editor-section-id"]),
+        expectedEditorIds,
+      );
+    }
+
+    const blankEditorIds = renderer.root.findAllByProps({ "data-testid": "exam-section-blank" })
+      .map((blank) => blank.props["data-editor-section-id"]);
+    assert.equal(blankEditorIds.includes("refraction-history"), false);
+
+    const disclosures = renderer.root.findAllByProps({ "data-testid": "chart-another-finding" });
+    assert.equal(disclosures.length, 1);
+    assert.deepEqual(
+      disclosures[0]!.findAllByProps({ "data-testid": "exam-editor-entry-row" })
+        .map((row) => row.props["data-editor-section-id"]),
+      ["refraction", "refraction-history", "eye-growth"],
+    );
   } finally {
     renderer.unmount();
   }
@@ -1205,7 +1272,7 @@ test("structure view keeps required blanks while collapsing performed findings i
   }
 });
 
-test("one chart-another-finding affordance per group preserves editor reachability beside worksheet rows", () => {
+test("charted findings keep their FindingRow while sibling editors receive distinct empty slots", () => {
   const opened: string[] = [];
   const renderer = create(
     <ExamOverviewBoard
@@ -1224,22 +1291,18 @@ test("one chart-another-finding affordance per group preserves editor reachabili
   );
   try {
     assert.equal(renderer.root.findAllByProps({ "data-testid": "interim-editor-launcher" }).length, 0);
-    const rows = renderer.root.findAllByProps({ "data-testid": "exam-editor-entry-row" });
-    assert.equal(rows.length, 4);
-
     const pretest = renderer.root.findByProps({ "data-section-key": "pretest" });
-    const va = renderer.root.findByProps({ "data-editor-section-id": "va" });
-    assert.equal(va.props["data-editor-presentation"], "sheet");
-    assert.equal(va.props["aria-pressed"], true);
-    assert.match(textContent(va), /Entry sheet/);
     assert.equal(pretest.findAllByProps({ "data-finding-key": "intraocular-pressure" }).length, 1);
+    assert.equal(pretest.findAllByProps({ "data-editor-section-id": "iop" }).length, 0);
+    const va = pretest.findByProps({ "data-editor-section-id": "va" });
+    assert.match(textContent(va), /Visual Acuity/);
 
     const refractionRow = renderer.root.findByProps({ "data-editor-section-id": "refraction" });
     assert.equal(refractionRow.props["data-editor-presentation"], "full-page");
     assert.match(textContent(refractionRow), /Expand/);
     assert.doesNotMatch(textContent(refractionRow), /Full page/);
 
-    assert.equal(renderer.root.findAllByProps({ "data-testid": "chart-another-finding" }).length, 4);
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "chart-another-finding" }).length, 1);
     assert.equal(renderer.root.findAllByProps({ "data-section-key": "history" }).length, 1);
     assert.equal(renderer.root.findAllByProps({ "data-section-key": "refraction" }).length, 0);
     assert.equal(renderer.root.findAllByProps({ "data-editor-section-id": "soft-contact-lens" }).length, 1);
