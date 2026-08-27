@@ -591,6 +591,11 @@
   color: var(--odos-amber);
 }
 
+.odos-exam-section-state.is-partial {
+  border-color: color-mix(in srgb, var(--odos-amber) 55%, var(--odos-line));
+  color: var(--odos-amber);
+}
+
 .odos-exam-section-state.is-not-examined,
 .odos-exam-section-state.is-not-indicated {
   background: color-mix(in srgb, var(--odos-muted) 8%, transparent);

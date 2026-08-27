@@ -13,6 +13,7 @@ import { ODOS_CLINICAL_ATTESTATION_POLICY_URL } from "../../../policy/attestatio
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
 import { resolveVisitTypeCategoryForEncounter } from "../clinic/clinic-summary.js";
 import { searchAll } from "../fhir-search.js";
+import { encounterDiagnosisProblemStatus } from "../fhir/condition.js";
 import {
   readDiagnosisCarryState,
   type DiagnosisCarryState,
@@ -105,7 +106,7 @@ export async function handleExamOverviewRequest(
         priorObservationCandidates: patientObservations.filter((observation) =>
           observation.encounter?.reference !== encounterReference
         ),
-        assessmentPresent: encounterConditions.some(isAssessmentEvidence),
+        assessmentRows: assessmentEvidenceRows(encounter, encounterConditions),
         provenanceByObservation,
         clinicalContextByObservation,
       }),
@@ -353,6 +354,20 @@ function isAssessmentEvidence(condition: Condition): boolean {
   return condition.verificationStatus?.coding?.some((coding) =>
     coding.code === "refuted" || coding.code === "entered-in-error"
   ) !== true;
+}
+
+function assessmentEvidenceRows(
+  encounter: Encounter,
+  conditions: readonly Condition[],
+): Array<{ problemStatusRecorded: boolean }> {
+  const eligibleReferences = new Set(conditions.flatMap((condition) =>
+    condition.id && isAssessmentEvidence(condition) ? [`Condition/${condition.id}`] : []
+  ));
+  return (encounter.diagnosis ?? []).flatMap((diagnosis) =>
+    diagnosis.condition.reference && eligibleReferences.has(diagnosis.condition.reference)
+      ? [{ problemStatusRecorded: encounterDiagnosisProblemStatus(diagnosis) !== undefined }]
+      : []
+  );
 }
 
 function readEncounterId(value: unknown): string | undefined {

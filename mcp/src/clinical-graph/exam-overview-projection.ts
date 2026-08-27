@@ -1,5 +1,10 @@
 import type { Observation } from "@medplum/fhirtypes";
 import { ODOS_EXTENSION_URLS } from "../fhir/ophthalmology/extensions.js";
+import {
+  customFieldEntries,
+  observationCustomValue,
+  type QualifierSeed,
+} from "./custom-fields.js";
 import { findingDefinitionForObservation } from "./finding-observation-match.js";
 import type {
   ClinicalFindingDefinition,
@@ -11,7 +16,9 @@ export type ExamObservationState =
   | "deferred-with-reason"
   | "deferred-without-reason";
 
-export type ExamSectionState = ExamObservationState | "not-examined" | "not-indicated";
+export type ExamSectionState = ExamObservationState | "partial" | "not-examined" | "not-indicated";
+
+export type ExamSectionRowState = NormalizedObservationExamState | { state: "not-examined" };
 
 export type ExamFindingProvenanceState =
   | "current"
@@ -65,6 +72,11 @@ export interface ExamOverviewFindingProjection {
     sourceDate?: string;
   };
   current: ObservationSnapshot;
+  normalLabel?: string;
+  sheetFindings?: Array<{
+    display: string;
+    qualifiers: string[];
+  }>;
   summary?: string;
   event?: {
     administrations: Array<{
@@ -163,7 +175,7 @@ export interface BuildExamOverviewProjectionInput {
   definitions: readonly ClinicalFindingDefinition[];
   currentObservations: readonly Observation[];
   priorObservationCandidates: readonly Observation[];
-  assessmentPresent: boolean;
+  assessmentRows: ReadonlyArray<{ problemStatusRecorded: boolean }>;
   provenanceByObservation?: Readonly<Record<string, {
     state: ExamFindingProvenanceState;
     sourceDate?: string;
@@ -195,10 +207,12 @@ export function normalizeObservationExamState(
 
 export function deriveExamSectionState(input: {
   applicable: boolean;
-  rows: readonly NormalizedObservationExamState[];
+  rows: readonly ExamSectionRowState[];
 }): ExamSectionState {
   if (!input.applicable) return "not-indicated";
   if (input.rows.length === 0) return "not-examined";
+  if (input.rows.every((row) => row.state === "not-examined")) return "not-examined";
+  if (!input.rows.every((row) => row.state !== "not-examined")) return "partial";
   if (input.rows.some((row) => row.state === "examined")) return "examined";
   if (input.rows.some((row) => row.state === "deferred-without-reason")) {
     return "deferred-without-reason";
@@ -264,6 +278,8 @@ export function buildExamOverviewProjection(
       const provenance = input.provenanceByObservation?.[observationReference] ?? { state: "current" as const };
       const clinicalContext = input.clinicalContextByObservation?.[observationReference];
       const changeFromPrior = deriveChangeFromPrior(currentSnapshot, priorSnapshot);
+      const definition = input.definitions.find((row) => row.active && row.stableKey === identity.findingKey);
+      const sheet = definition ? sheetFindingProjection(observation, definition, laterality) : {};
       return [{
         observationReference,
         findingKey: identity.findingKey,
@@ -274,6 +290,7 @@ export function buildExamOverviewProjection(
         interpretation: observationInterpretation(observation),
         provenance,
         current: currentSnapshot,
+        ...sheet,
         ...(clinicalContext?.summary ? { summary: clinicalContext.summary } : {}),
         ...(clinicalContext?.event ? { event: clinicalContext.event } : {}),
         ...(clinicalContext?.diagnoses?.length ? { diagnoses: clinicalContext.diagnoses } : {}),
@@ -282,7 +299,7 @@ export function buildExamOverviewProjection(
         ...(changeFromPrior ? { changeFromPrior } : {}),
       }];
     })
-    .sort(findingOrder);
+    .sort((left, right) => findingOrder(left, right, input.definitions));
   const registry = input.applicabilityRegistry ?? CLINICAL_SECTION_REQUIREMENTS;
   const policy = input.visitTypeCategoryId !== undefined &&
       Object.hasOwn(registry, input.visitTypeCategoryId)
@@ -302,13 +319,15 @@ export function buildExamOverviewProjection(
     requirement,
     true,
     findings,
-    input.assessmentPresent,
+    input.definitions,
+    input.assessmentRows,
   ));
   const notIndicatedSections = policy.notIndicated.map((requirement) => sectionProjection(
     requirement,
     false,
     findings,
-    input.assessmentPresent,
+    input.definitions,
+    input.assessmentRows,
   ));
   const trace = requiredSections.map((section): ClinicalCompletenessTraceRow => ({
     sectionKey: section.sectionKey,
@@ -508,7 +527,8 @@ function sectionProjection(
   requirement: ClinicalSectionRequirement,
   applicable: boolean,
   findings: readonly ExamOverviewFindingProjection[],
-  assessmentPresent: boolean,
+  definitions: readonly ClinicalFindingDefinition[],
+  assessmentRows: ReadonlyArray<{ problemStatusRecorded: boolean }>,
 ): ExamOverviewSectionProjection {
   const evidence = requirement.evidence;
   const rows = evidence.kind === "assessment"
@@ -520,11 +540,19 @@ function sectionProjection(
     row.provenance.state === "carried-unreasserted"
   ).length;
   const currentRows = rows.filter((row) => row.provenance.state !== "carried-unreasserted");
+  const definitionSlots = evidence.kind === "assessment"
+    ? []
+    : definitions.filter((definition) => definition.active && evidence.sectionKeyPrefixes.some((prefix) =>
+      (definition.sectionKey ?? definition.stableKey).startsWith(prefix)
+    ));
+  const findingSlots = evidence.kind === "assessment"
+    ? []
+    : findingSectionSlots(definitionSlots, currentRows);
   const state = !applicable
     ? "not-indicated"
     : requirement.evidence.kind === "assessment"
-      ? assessmentPresent ? "examined" : "not-examined"
-      : deriveExamSectionState({ applicable: true, rows: currentRows.map((row) => row.examination) });
+      ? assessmentSectionState(assessmentRows)
+      : deriveExamSectionState({ applicable: true, rows: findingSlots });
   return {
     sectionKey: requirement.sectionKey,
     label: requirement.label,
@@ -544,6 +572,13 @@ function sectionResolved(state: ExamSectionState): boolean {
     state === "deferred-without-reason";
 }
 
+function assessmentSectionState(
+  rows: ReadonlyArray<{ problemStatusRecorded: boolean }>,
+): ExamSectionState {
+  if (rows.length === 0) return "not-examined";
+  return rows.every((row) => row.problemStatusRecorded) ? "examined" : "partial";
+}
+
 function unconfiguredCompleteness(): ClinicalExamCompleteness {
   return {
     status: "unconfigured",
@@ -561,10 +596,93 @@ function isUsableObservation(observation: Observation): boolean {
 function findingOrder(
   left: ExamOverviewFindingProjection,
   right: ExamOverviewFindingProjection,
+  definitions: readonly ClinicalFindingDefinition[],
 ): number {
   const lateralityRank = (value: ExamOverviewFindingProjection["laterality"]): number =>
     value === "OD" ? 0 : value === "OS" ? 1 : value === "OU" ? 2 : 3;
-  return left.sectionKey.localeCompare(right.sectionKey) ||
+  const order = new Map(definitions.filter((row) => row.active).map((row, index) => [row.stableKey, index]));
+  const leftOrder = order.get(left.findingKey) ?? Number.MAX_SAFE_INTEGER;
+  const rightOrder = order.get(right.findingKey) ?? Number.MAX_SAFE_INTEGER;
+  return leftOrder - rightOrder ||
+    left.sectionKey.localeCompare(right.sectionKey) ||
     left.display.localeCompare(right.display) ||
     lateralityRank(left.laterality) - lateralityRank(right.laterality);
+}
+
+function findingSectionSlots(
+  definitions: readonly ClinicalFindingDefinition[],
+  findings: readonly ExamOverviewFindingProjection[],
+): ExamSectionRowState[] {
+  const definitionKeys = new Set(definitions.map((row) => row.stableKey));
+  const definedSlots = definitions.map((definition): ExamSectionRowState => {
+    const rows = findings.filter((finding) => finding.findingKey === definition.stableKey);
+    return rows.length === 0
+      ? { state: "not-examined" }
+      : { state: deriveExamSectionState({ applicable: true, rows: rows.map((row) => row.examination) }) as ExamObservationState,
+          sourceEncoding: "observation" };
+  });
+  const observedOnlySlots = [...new Set(findings
+    .filter((finding) => !definitionKeys.has(finding.findingKey))
+    .map((finding) => finding.findingKey))]
+    .map((findingKey): ExamSectionRowState => {
+      const rows = findings.filter((finding) => finding.findingKey === findingKey);
+      return {
+        state: deriveExamSectionState({ applicable: true, rows: rows.map((row) => row.examination) }) as ExamObservationState,
+        sourceEncoding: "observation",
+      };
+    });
+  return [...definedSlots, ...observedOnlySlots];
+}
+
+function sheetFindingProjection(
+  observation: Observation,
+  definition: ClinicalFindingDefinition,
+  laterality: ExamOverviewFindingProjection["laterality"],
+): Pick<ExamOverviewFindingProjection, "normalLabel" | "sheetFindings"> {
+  const normalLabel = typeof definition.normalSemantics?.sheetLabel === "string"
+    ? definition.normalSemantics.sheetLabel
+    : undefined;
+  const prefix = definition.valueSchema.perEye === true && (laterality === "OD" || laterality === "OS")
+    ? `${laterality}_`
+    : "";
+  const sheetFindings = customFieldEntries(definition, true).flatMap((field) => {
+    if (field.valueType !== "multi-select") return [];
+    const selected = observationCustomValue(observation, field, prefix);
+    if (!Array.isArray(selected)) return [];
+    return selected.flatMap((optionCode) => {
+      const option = field.options?.find((candidate) => candidate.code === optionCode);
+      if (!option) return [];
+      const qualifiers = (option.qualifiers ?? []).flatMap((qualifier) => {
+        const component = observation.component?.find((row) => row.code.coding?.some((coding) =>
+          coding.code === `${prefix}${field.localCode}::${option.code}::${qualifier.key}`
+        ));
+        const label = component ? sheetQualifierLabel(component, qualifier) : undefined;
+        return label ? [label] : [];
+      });
+      return [{ display: option.display, qualifiers }];
+    });
+  });
+  return {
+    ...(normalLabel ? { normalLabel } : {}),
+    ...(sheetFindings.length ? { sheetFindings } : {}),
+  };
+}
+
+function sheetQualifierLabel(
+  component: NonNullable<Observation["component"]>[number],
+  qualifier: QualifierSeed,
+): string | undefined {
+  if (component.valueQuantity?.value !== undefined) {
+    return `${component.valueQuantity.value}${component.valueQuantity.unit ? ` ${component.valueQuantity.unit}` : ""}`;
+  }
+  const coded = conceptDisplay(component.valueCodeableConcept ?? {}) ??
+    component.valueCodeableConcept?.coding?.find((coding) => coding.code)?.code;
+  if (coded) return coded;
+  if (qualifier.kind === "extent" && component.valueString) {
+    const extent = jsonObject(component.valueString);
+    if (typeof extent?.from === "number" && typeof extent.to === "number" && typeof extent.clockwise === "boolean") {
+      return `${extent.from}–${extent.to} o'clock ${extent.clockwise ? "clockwise" : "counterclockwise"}`;
+    }
+  }
+  return component.valueString?.trim() || undefined;
 }

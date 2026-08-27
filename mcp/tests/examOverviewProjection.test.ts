@@ -11,6 +11,40 @@ import {
   type ClinicalSectionApplicabilityRegistry,
 } from "../src/clinical-graph/exam-overview-projection.js";
 import type { ClinicalFindingDefinition } from "../src/clinical-graph/glaucoma-suspect.js";
+import {
+  buildAnteriorOcularHealthDefinitions,
+  buildPosteriorOcularHealthDefinitions,
+} from "../src/clinical-graph/ocular-health-definition.js";
+
+const PROVENANCE = {
+  source: "manual" as const,
+  recordedAt: "2026-08-27T12:00:00.000Z",
+  actorReference: "Practitioner/pr1",
+};
+
+test("the 14 ocular structures expose the approved affirmative worksheet labels in anatomical order", () => {
+  const definitions = [
+    ...buildAnteriorOcularHealthDefinitions(PROVENANCE),
+    ...buildPosteriorOcularHealthDefinitions(PROVENANCE),
+  ];
+
+  assert.deepEqual(definitions.map((row) => [row.display, row.normalSemantics?.sheetLabel]), [
+    ["Periocular Adnexa", "Periorbital region normal"],
+    ["Lids & Lashes", "Normal lid position and lashes"],
+    ["Palpebral Conjunctiva", "Smooth and pink"],
+    ["Conjunctiva", "White and quiet"],
+    ["Tear Film", "Adequate film and meniscus"],
+    ["Cornea", "Clear and compact"],
+    ["Anterior Chamber", "Deep and quiet"],
+    ["Iris", "Flat and intact"],
+    ["Lens", "Clear"],
+    ["Vitreous", "Optically clear"],
+    ["Fundus", "Healthy background"],
+    ["Macula", "Healthy foveal reflex"],
+    ["Vessels", "Normal caliber and course"],
+    ["Periphery", "Flat and attached"],
+  ]);
+});
 
 test("all three persisted deferred encodings normalize without rewriting source Observations", () => {
   const sources = [
@@ -46,7 +80,7 @@ test("all three persisted deferred encodings normalize without rewriting source 
     ],
     currentObservations: sources,
     priorObservationCandidates: [],
-    assessmentPresent: false,
+    assessmentRows: [],
   });
 
   assert.deepEqual(sources.map(normalizeObservationExamState), [
@@ -56,8 +90,8 @@ test("all three persisted deferred encodings normalize without rewriting source 
     { state: "deferred-without-reason", sourceEncoding: "not-visualized-json" },
   ]);
   assert.deepEqual(projection.findings.map((row) => row.examination), [
-    { state: "deferred-with-reason", reason: "Patient is driving", sourceEncoding: "dilation-declined" },
     { state: "deferred-with-reason", reason: "Unable to position", sourceEncoding: "exam-state" },
+    { state: "deferred-with-reason", reason: "Patient is driving", sourceEncoding: "dilation-declined" },
     { state: "deferred-without-reason", sourceEncoding: "not-visualized-json" },
     { state: "deferred-without-reason", sourceEncoding: "not-visualized-json" },
   ]);
@@ -93,6 +127,112 @@ test("examined, not-examined, deferred, and not-indicated are separate section s
   assert.equal(deriveExamSectionState({ applicable: true, rows: [] }), "not-examined");
   assert.equal(deriveExamSectionState({ applicable: true, rows: [deferred] }), "deferred-without-reason");
   assert.equal(deriveExamSectionState({ applicable: false, rows: [] }), "not-indicated");
+});
+
+test("one resolved applicable row cannot make a multi-row section examined", () => {
+  const examined = normalizeObservationExamState(observation("examined", "hpi_ros", {
+    valueString: "Routine examination",
+  }));
+
+  assert.equal(deriveExamSectionState({
+    applicable: true,
+    rows: [examined, { state: "not-examined" }],
+  }), "partial");
+
+  const registry: ClinicalSectionApplicabilityRegistry = {
+    limited: {
+      required: [{
+        sectionKey: "ocular-health",
+        label: "Ocular Health",
+        evidence: { kind: "finding", sectionKeyPrefixes: ["ocular-health:"] },
+      }],
+      notIndicated: [],
+    },
+  };
+  const definitions = [
+    definition("ocular-health:anterior:lids-lashes", "ocular-health:anterior:lids-lashes"),
+    definition("ocular-health:anterior:cornea", "ocular-health:anterior:cornea"),
+  ];
+  const projection = buildExamOverviewProjection({
+    encounterReference: "Encounter/e1",
+    patientReference: "Patient/p1",
+    visitTypeCategoryId: "limited",
+    definitions,
+    currentObservations: [observation("lids", definitions[0]!.stableKey)],
+    priorObservationCandidates: [],
+    assessmentRows: [],
+    applicabilityRegistry: registry,
+  });
+  assert.equal(projection.sections[0]?.state, "partial");
+  assert.equal(projection.completeness.trace[0]?.resolved, false);
+  assert.equal(projection.completeness.resolvedSectionCount, 0);
+});
+
+test("ocular findings project affirmative normal text and every selected qualifier without truncation", () => {
+  const lens = buildAnteriorOcularHealthDefinitions(PROVENANCE)
+    .find((row) => row.stableKey === "ocular-health:anterior:lens");
+  assert.ok(lens);
+  const field = Object.values(lens.valueSchema.fields as Record<string, {
+    localCode: string;
+    valueType: string;
+  }>).find((row) => row.valueType === "multi-select");
+  assert.ok(field);
+  const prefix = `OD_${field.localCode}`;
+  const projection = buildExamOverviewProjection({
+    encounterReference: "Encounter/e1",
+    patientReference: "Patient/p1",
+    definitions: [lens],
+    currentObservations: [
+      observation("lens-normal", lens.stableKey, {
+        extension: [{
+          url: "https://odos2020.com/fhir/StructureDefinition/eye-laterality",
+          valueCodeableConcept: { coding: [{ code: "OS" }] },
+        }],
+        interpretation: [{ coding: [{ code: "normal" }] }],
+      }),
+      observation("lens-abnormal", lens.stableKey, {
+        extension: [{
+          url: "https://odos2020.com/fhir/StructureDefinition/eye-laterality",
+          valueCodeableConcept: { coding: [{ code: "OD" }] },
+        }],
+        interpretation: [{ coding: [{ code: "abnormal" }] }],
+        component: [
+          booleanComponent(`${prefix}::nuclear-sclerosis`, true),
+          codeComponent(`${prefix}::nuclear-sclerosis::grade`, "2+", "2+"),
+          booleanComponent(`${prefix}::posterior-subcapsular-psc`, true),
+          codeComponent(`${prefix}::posterior-subcapsular-psc::grade`, "3+", "3+"),
+        ],
+      }),
+    ],
+    priorObservationCandidates: [],
+    assessmentRows: [],
+  });
+
+  assert.equal(projection.findings.find((row) => row.laterality === "OS")?.normalLabel, "Clear");
+  assert.deepEqual(projection.findings.find((row) => row.laterality === "OD")?.sheetFindings, [
+    { display: "nuclear sclerosis", qualifiers: ["2+"] },
+    { display: "posterior subcapsular (PSC)", qualifiers: ["3+"] },
+  ]);
+});
+
+test("finding projection follows definition order instead of lexical section keys", () => {
+  const definitions = [
+    definition("ocular-health:anterior:lids-lashes", "ocular-health:anterior:lids-lashes"),
+    definition("ocular-health:anterior:cornea", "ocular-health:anterior:cornea"),
+  ];
+  const projection = buildExamOverviewProjection({
+    encounterReference: "Encounter/e1",
+    patientReference: "Patient/p1",
+    definitions,
+    currentObservations: [
+      observation("cornea", definitions[1]!.stableKey),
+      observation("lids", definitions[0]!.stableKey),
+    ],
+    priorObservationCandidates: [],
+    assessmentRows: [],
+  });
+
+  assert.deepEqual(projection.findings.map((row) => row.findingKey), definitions.map((row) => row.stableKey));
 });
 
 test("change from prior is derived from snapshots and no delta is persisted", () => {
@@ -146,7 +286,7 @@ test("prior comparison ignores future and encounter-less Observations", () => {
         valueQuantity: { value: 20, unit: "mmHg", code: "mm[Hg]" },
       }),
     ],
-    assessmentPresent: false,
+    assessmentRows: [],
   });
 
   assert.deepEqual(projection.findings[0]?.prior?.value, {
@@ -192,7 +332,7 @@ test("comprehensive clinical completeness is traceable and missing deferred docu
     definitions,
     currentObservations: current,
     priorObservationCandidates: [],
-    assessmentPresent: true,
+    assessmentRows: [{ problemStatusRecorded: true }],
   });
 
   assert.equal(projection.completeness.status, "complete");
@@ -216,7 +356,7 @@ test("carried-unreasserted does not resolve today's section while carried-reasse
     definitions,
     currentObservations: current,
     priorObservationCandidates: [],
-    assessmentPresent: false,
+    assessmentRows: [],
   };
   const unreasserted = buildExamOverviewProjection({
     ...common,
@@ -262,7 +402,7 @@ test("section abnormal counts exclude independently classified borderline findin
       }),
     ],
     priorObservationCandidates: [],
-    assessmentPresent: false,
+    assessmentRows: [],
     applicabilityRegistry: registry,
   });
 
@@ -277,7 +417,7 @@ test("an unpopulated visit category degrades safely without false completeness",
     definitions: [],
     currentObservations: [],
     priorObservationCandidates: [],
-    assessmentPresent: false,
+    assessmentRows: [],
   });
   const prototypeNamedProjection = buildExamOverviewProjection({
     encounterReference: "Encounter/e1",
@@ -286,7 +426,7 @@ test("an unpopulated visit category degrades safely without false completeness",
     definitions: [],
     currentObservations: [],
     priorObservationCandidates: [],
-    assessmentPresent: false,
+    assessmentRows: [],
   });
 
   assert.equal(Object.hasOwn(CLINICAL_SECTION_REQUIREMENTS, "diagnostic-only"), false);
@@ -315,7 +455,7 @@ test("the applicability registry supports visit-specific not-indicated sections 
     definitions: [],
     currentObservations: [],
     priorObservationCandidates: [],
-    assessmentPresent: false,
+    assessmentRows: [],
     applicabilityRegistry: registry,
   });
 
@@ -368,4 +508,15 @@ function stringComponent(code: string, value: string): NonNullable<Observation["
 
 function booleanComponent(code: string, value: boolean): NonNullable<Observation["component"]>[number] {
   return { code: { coding: [{ code }] }, valueBoolean: value };
+}
+
+function codeComponent(
+  code: string,
+  value: string,
+  display: string,
+): NonNullable<Observation["component"]>[number] {
+  return {
+    code: { coding: [{ code }] },
+    valueCodeableConcept: { coding: [{ code: value, display }] },
+  };
 }

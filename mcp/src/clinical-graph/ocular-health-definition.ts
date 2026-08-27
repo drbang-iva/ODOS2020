@@ -24,6 +24,7 @@ export interface StructureSeed {
   key: string;
   display: string;
   normalTemplate: string;
+  sheetLabel?: string;
   priority: Array<string | FindingSeed>;
   additional: Array<string | FindingSeed>;
   allowDeferred?: boolean;
@@ -39,6 +40,7 @@ const ANTERIOR_STRUCTURES: StructureSeed[] = [
     key: "periocular-adnexa",
     display: "Periocular Adnexa",
     normalTemplate: "Periorbital region normal; no lesions, edema, or asymmetry.",
+    sheetLabel: "Periorbital region normal",
     priority: ["dermatochalasis", "periorbital edema"],
     additional: ["facial asymmetry", "brow ptosis", "proptosis", "enophthalmos", "preauricular node", "orbital mass", "ecchymosis", "dermatitis"],
   },
@@ -46,6 +48,7 @@ const ANTERIOR_STRUCTURES: StructureSeed[] = [
     key: "lids-lashes",
     display: "Lids & Lashes",
     normalTemplate: "Normal lid position and lashes; no MGD, blepharitis, or lesions.",
+    sheetLabel: "Normal lid position and lashes",
     priority: ["meibomian gland dysfunction", "chalazion", "trichiasis"],
     additional: ["hordeolum", "ptosis", "ectropion", "entropion", "madarosis", "lagophthalmos", "lid lesion", "dermatochalasis", "floppy eyelid", "telangiectasia", "lid margin keratinization", "poliosis"],
     nested: [
@@ -58,6 +61,7 @@ const ANTERIOR_STRUCTURES: StructureSeed[] = [
     key: "palpebral-conjunctiva",
     display: "Palpebral Conjunctiva",
     normalTemplate: "Palpebral conjunctiva normal; no papillae or follicles.",
+    sheetLabel: "Smooth and pink",
     priority: ["papillae", "follicles", "giant papillae (GPC)"],
     additional: ["concretions", "symblepharon", "scarring", "membrane/pseudomembrane", "hyperemia"],
     allowDeferred: true,
@@ -66,6 +70,7 @@ const ANTERIOR_STRUCTURES: StructureSeed[] = [
     key: "conjunctiva",
     display: "Conjunctiva",
     normalTemplate: "White and quiet; no injection or discharge.",
+    sheetLabel: "White and quiet",
     priority: ["injection", "pinguecula", pterygiumFinding("pterygium", "pterygium"), "chemosis"],
     additional: ["subconjunctival hemorrhage", "nevus", "pigmentation", "concretion", "conjunctivochalasis", "episcleritis", "scleritis", "phlyctenule", "lymphangiectasia", "scleral thinning", "nodule"],
   },
@@ -73,6 +78,7 @@ const ANTERIOR_STRUCTURES: StructureSeed[] = [
     key: "tear-film",
     display: "Tear Film",
     normalTemplate: "Adequate tear film; normal meniscus and break-up.",
+    sheetLabel: "Adequate film and meniscus",
     priority: ["reduced tear meniscus", "rapid TBUT", "debris in tear film"],
     additional: ["mucus strands", { key: "foam", display: "foam/frothing" }],
     gradeFields: [
@@ -89,6 +95,7 @@ const ANTERIOR_STRUCTURES: StructureSeed[] = [
     key: "cornea",
     display: "Cornea",
     normalTemplate: "Clear, no staining; normal thickness and clarity.",
+    sheetLabel: "Clear and compact",
     priority: [cornealStainingFinding(), "dry eye keratopathy", "arcus", "scar", keratoconusFinding(), "guttata", pterygiumFinding("pterygium-encroaching", "pterygium (encroaching)"), "neovascularization", "infiltrate"],
     additional: ["abrasion", "dendrite", "edema", "foreign body", "filaments", "erosion", "RCES (recurrent erosion)", "EBMD (map-dot-fingerprint)", "Fuchs' endothelial dystrophy", "band keratopathy", "Salzmann's nodule", "keratic precipitates", "ulcer", "haze", "opacification", "pannus", "nodules", "phlyctenule", "Descemet folds", "Krukenberg spindle", "iron line (Hudson-Stahli/Stocker's/Fleischer's)", "Vogt striae", "vortex keratopathy (verticillata)", "Thygeson's SPK", "lipid keratopathy", "Mooren's ulcer", "Terrien's marginal degeneration", "peripheral thinning", "central thinning", "hydrops", "pigment on endothelium"],
     gradeFields: [
@@ -104,6 +111,7 @@ const ANTERIOR_STRUCTURES: StructureSeed[] = [
     key: "anterior-chamber",
     display: "Anterior Chamber",
     normalTemplate: "Deep and quiet; no cells or flare.",
+    sheetLabel: "Deep and quiet",
     priority: ["cells", "flare", "shallow AC"],
     additional: ["hyphema", "hypopyon", "peripheral anterior synechiae", "pigment", "narrow angle (by exam)"],
     gradeFields: [{
@@ -117,6 +125,7 @@ const ANTERIOR_STRUCTURES: StructureSeed[] = [
     key: "iris",
     display: "Iris",
     normalTemplate: "Flat and intact; round reactive pupil.",
+    sheetLabel: "Flat and intact",
     priority: ["nevus", "transillumination defect", "posterior synechiae"],
     additional: ["atrophy", "neovascularization (rubeosis)", "coloboma", "heterochromia", "iridodonesis", "nodules", "sphincter tears", "plateau iris", "irregular pupil", "sectoral atrophy", "pseudoexfoliation material on pupil margin"],
   },
@@ -124,6 +133,7 @@ const ANTERIOR_STRUCTURES: StructureSeed[] = [
     key: "lens",
     display: "Lens",
     normalTemplate: "Clear; no cataract.",
+    sheetLabel: "Clear",
     priority: [
       gradedLensFinding("nuclear-sclerosis", "nuclear sclerosis"),
       gradedLensFinding("cortical-cataract", "cortical cataract"),
@@ -142,6 +152,7 @@ const POSTERIOR_STRUCTURES: StructureSeed[] = [
     key: "vitreous",
     display: "Vitreous",
     normalTemplate: "No vitreal hemorrhage, cells, or pigment.",
+    sheetLabel: "Optically clear",
     priority: ["posterior vitreous detachment (PVD)", "syneresis", "floaters"],
     additional: ["asteroid hyalosis", "vitreous hemorrhage", "vitreous cells", "Shafer's sign (tobacco dust)", "vitreous opacities", "anterior hyaloid", "synchysis"],
   },
@@ -149,6 +160,7 @@ const POSTERIOR_STRUCTURES: StructureSeed[] = [
     key: "fundus",
     display: "Fundus",
     normalTemplate: "Normal retinal appearance; healthy background, no lesions.",
+    sheetLabel: "Healthy background",
     priority: [npdrFinding(), "hypertensive retinopathy", "dot/blot hemorrhage", "hard exudate", "cotton-wool spot", "choroidal nevus", "chorioretinal scar"],
     additional: ["microaneurysm", pdrFinding(), "neovascularization elsewhere (NVE)", "preretinal hemorrhage", "choroidal lesion", "RPE atrophy", "Roth spot", "myelinated nerve fiber", "drusen", "occasional drusen"],
   },
@@ -156,6 +168,7 @@ const POSTERIOR_STRUCTURES: StructureSeed[] = [
     key: "macula",
     display: "Macula",
     normalTemplate: "Healthy foveal reflex; no drusen, edema, or exudate.",
+    sheetLabel: "Healthy foveal reflex",
     priority: ["drusen", "RPE changes", "dry AMD", "epiretinal membrane (ERM)", "pigment mottling"],
     additional: ["wet AMD", "CNVM", "geographic atrophy", "macular hole (full/lamellar)", "cystoid macular edema (CME)", "diabetic macular edema", "vitreomacular traction", "subretinal fluid", "macular edema", "pigment clumping"],
   },
@@ -163,6 +176,7 @@ const POSTERIOR_STRUCTURES: StructureSeed[] = [
     key: "vessels",
     display: "Vessels",
     normalTemplate: "Normal caliber without tortuosity, AV nicking, or crossing changes.",
+    sheetLabel: "Normal caliber and course",
     priority: ["AV nicking", "arteriolar attenuation", "tortuosity"],
     additional: ["AV crossing changes", "sclerotic (copper/silver-wire) changes", "Hollenhorst plaque", "retinal embolus", "vascular sheathing", "venous beading", "neovascularization of the disc (NVD)"],
     gradeFields: [{ display: "A/V ratio", kind: "select", options: ["2:3", "1:2", "1:3", "1:4"] }],
@@ -171,6 +185,7 @@ const POSTERIOR_STRUCTURES: StructureSeed[] = [
     key: "periphery",
     display: "Periphery",
     normalTemplate: "Normal peripheral retina without tears, breaks, holes, or detachment.",
+    sheetLabel: "Flat and attached",
     priority: ["lattice degeneration", "cobblestone/paving-stone degeneration", "retinal hole", "white-without-pressure", "chorioretinal scar"],
     additional: ["retinal tear", retinalDetachmentFinding(), "retinoschisis", "retinal tuft", "pigmentary changes", "cystoid degeneration", "operculated hole", "horseshoe tear", "drusen", "occasional drusen"],
   },
@@ -380,6 +395,7 @@ export function buildOcularHealthDefinitions(
       },
       normalSemantics: {
         template: structure.normalTemplate,
+        ...(structure.sheetLabel ? { sheetLabel: structure.sheetLabel } : {}),
         allowDeferred: structure.allowDeferred === true,
       },
       sourceStatus: "verified-seed",

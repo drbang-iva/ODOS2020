@@ -1234,6 +1234,122 @@ test("only the single-slot Refraction group keeps Chart another finding", () => 
   }
 });
 
+test("Assessment keeps prescription available but visibly not required", () => {
+  const projection = zeroFindingComprehensiveProjection();
+  projection.sections = projection.sections.map((section) =>
+    section.sectionKey === "assessment" ? { ...section, state: "examined" } : section
+  );
+  projection.completeness.trace = projection.completeness.trace.map((row) =>
+    row.sectionKey === "assessment" ? { ...row, state: "examined", resolved: true } : row
+  );
+  const renderer = create(
+    <ExamOverviewBoard
+      projection={projection}
+      editorEntries={chartEditorInventory()}
+      refreshing={false}
+      onOpenEditor={() => undefined}
+      onRefresh={() => undefined}
+    />,
+  );
+  try {
+    const assessment = renderer.root.findByProps({ "data-section-key": "assessment" });
+    const plan = assessment.findByProps({ "data-editor-section-id": "prescription" });
+    assert.equal(plan.props["data-required"], false);
+    assert.match(textContent(plan), /Available when needed/);
+    assert.doesNotMatch(textContent(plan), /Tap to chart/);
+  } finally {
+    renderer.unmount();
+  }
+});
+
+test("partial sections use a clinical label and remain unresolved", () => {
+  const projection = zeroFindingComprehensiveProjection();
+  projection.sections = projection.sections.map((section) =>
+    section.sectionKey === "ocular-health" ? { ...section, state: "partial" } : section
+  );
+  projection.completeness.trace = projection.completeness.trace.map((row) =>
+    row.sectionKey === "ocular-health" ? { ...row, state: "partial", resolved: false } : row
+  );
+  const renderer = create(
+    <ExamOverviewBoard
+      projection={projection}
+      editorEntries={chartEditorInventory()}
+      refreshing={false}
+      onOpenEditor={() => undefined}
+      onRefresh={() => undefined}
+    />,
+  );
+  try {
+    const state = renderer.root.findByProps({
+      "data-testid": "exam-overview-trace-row",
+      "data-trace-section-key": "ocular-health",
+    });
+    assert.equal(textContent(state), "Partial examination");
+    assert.equal(state.props["data-resolved"], false);
+    assert.match(state.props.className, /is-partial/);
+  } finally {
+    renderer.unmount();
+  }
+});
+
+test("ocular rows stay in anatomical slots and render findings instead of status words", () => {
+  const base = zeroFindingComprehensiveProjection();
+  const findings: ExamOverviewProjection["findings"] = [
+    ocularSheetFinding("Observation/cornea", "ocular-health:anterior:cornea", "Cornea", "OD", {
+      interpretation: "abnormal",
+      sheetFindings: [
+        { display: "nuclear sclerosis", qualifiers: ["2+"] },
+        { display: "posterior subcapsular (PSC)", qualifiers: ["3+"] },
+      ],
+    }),
+    ocularSheetFinding("Observation/lids", "ocular-health:anterior:lids-lashes", "Lids & Lashes", "OU", {
+      interpretation: "normal",
+      normalLabel: "Normal lid position and lashes",
+    }),
+  ];
+  const projection: ExamOverviewProjection = {
+    ...base,
+    findings,
+    sections: base.sections.map((section) => section.sectionKey === "ocular-health"
+      ? { ...section, findingObservationReferences: findings.map((row) => row.observationReference) }
+      : section),
+  };
+  const renderer = create(
+    <ExamOverviewBoard
+      projection={projection}
+      editorEntries={chartEditorInventory({ ocularHealthSections: [
+        { id: "ocular-health:anterior:lids-lashes", label: "Lids & Lashes", segment: "anterior" },
+        { id: "ocular-health:anterior:conjunctiva", label: "Conjunctiva", segment: "anterior" },
+        { id: "ocular-health:anterior:cornea", label: "Cornea", segment: "anterior" },
+      ] })}
+      refreshing={false}
+      onOpenEditor={() => undefined}
+      onRefresh={() => undefined}
+    />,
+  );
+  try {
+    const ocular = renderer.root.findByProps({ "data-section-key": "ocular-health" });
+    const slots = ocular.findAll((node) =>
+      node.props["data-testid"] === "exam-finding-row" || node.props["data-testid"] === "exam-section-blank"
+    );
+    assert.deepEqual(slots.slice(0, 3).map((row) =>
+      row.props["data-finding-key"] ?? row.props["data-editor-section-id"]
+    ), [
+      "ocular-health:anterior:lids-lashes",
+      "ocular-health:anterior:conjunctiva",
+      "ocular-health:anterior:cornea",
+    ]);
+    const normalValue = textContent(slots[0]!.findByProps({ className: "odos-exam-finding-value" }));
+    const abnormalValue = textContent(slots[2]!.findByProps({ className: "odos-exam-finding-value" }));
+    assert.doesNotMatch(normalValue, /^(?:normal|WNL)$/i);
+    assert.equal(normalValue, "Normal lid position and lashes");
+    assert.doesNotMatch(abnormalValue.replace(/^OD /, ""), /^abnormal$/i);
+    assert.match(abnormalValue, /OD nuclear sclerosis 2\+; posterior subcapsular \(PSC\) 3\+/);
+  } finally {
+    renderer.unmount();
+  }
+});
+
 test("the encounter screen renders only the registry-backed completeness count", async () => {
   const projection = zeroFindingComprehensiveProjection();
   const harness = await renderEncounter(projection);
@@ -2112,6 +2228,32 @@ function findingDefinition(stableKey: string, display: string): CustomFindingDef
   };
 }
 
+function ocularSheetFinding(
+  observationReference: string,
+  findingKey: string,
+  display: string,
+  laterality: "OD" | "OS" | "OU",
+  sheet: {
+    interpretation: "normal" | "abnormal";
+    normalLabel?: string;
+    sheetFindings?: Array<{ display: string; qualifiers: string[] }>;
+  },
+): ExamOverviewProjection["findings"][number] {
+  return {
+    observationReference,
+    findingKey,
+    sectionKey: findingKey,
+    display,
+    laterality,
+    examination: { state: "examined", sourceEncoding: "observation" },
+    interpretation: sheet.interpretation,
+    provenance: { state: "current" },
+    current: { components: [] },
+    ...(sheet.normalLabel ? { normalLabel: sheet.normalLabel } : {}),
+    ...(sheet.sheetFindings ? { sheetFindings: sheet.sheetFindings } : {}),
+  };
+}
+
 function zeroFindingComprehensiveProjection(): ExamOverviewProjection {
   return buildExamOverviewProjection({
     encounterReference: "Encounter/exam-1",
@@ -2120,7 +2262,7 @@ function zeroFindingComprehensiveProjection(): ExamOverviewProjection {
     definitions: [],
     currentObservations: [],
     priorObservationCandidates: [],
-    assessmentPresent: false,
+    assessmentRows: [],
   });
 }
 
