@@ -49,6 +49,27 @@ const DEFERRED_SECTIONS = new Set<FixtureSectionId>([
   "wearing", "auto-refraction", "pretest-vitals", "refraction", "soft-contact-lens", "specialty-contact-lens",
 ]);
 
+const WORKSHEET_OCULAR_HEALTH_SECTIONS: Array<{
+  id: `ocular-health:${string}`;
+  label: string;
+  segment: "anterior" | "posterior";
+}> = [
+  { id: "ocular-health:anterior:periocular-adnexa", label: "Periocular Adnexa", segment: "anterior" },
+  { id: "ocular-health:anterior:lids-lashes", label: "Lids & Lashes", segment: "anterior" },
+  { id: "ocular-health:anterior:palpebral-conjunctiva", label: "Palpebral Conjunctiva", segment: "anterior" },
+  { id: "ocular-health:anterior:conjunctiva", label: "Conjunctiva", segment: "anterior" },
+  { id: "ocular-health:anterior:tear-film", label: "Tear Film", segment: "anterior" },
+  { id: "ocular-health:anterior:cornea", label: "Cornea", segment: "anterior" },
+  { id: "ocular-health:anterior:anterior-chamber", label: "Anterior Chamber", segment: "anterior" },
+  { id: "ocular-health:anterior:iris", label: "Iris", segment: "anterior" },
+  { id: "ocular-health:anterior:lens", label: "Lens", segment: "anterior" },
+  { id: "ocular-health:posterior:vitreous", label: "Vitreous", segment: "posterior" },
+  { id: "ocular-health:posterior:fundus", label: "Fundus", segment: "posterior" },
+  { id: "ocular-health:posterior:macula", label: "Macula", segment: "posterior" },
+  { id: "ocular-health:posterior:vessels", label: "Vessels", segment: "posterior" },
+  { id: "ocular-health:posterior:periphery", label: "Periphery", segment: "posterior" },
+];
+
 const FIXTURE_PROJECTION: ExamOverviewProjection = {
   encounterReference: "Encounter/test",
   patientReference: "Patient/test",
@@ -160,6 +181,7 @@ function Fixture() {
   const initialSection = params.get("section");
   const [active, setActive] = useState<FixtureSectionId | undefined>(isFixtureSectionId(initialSection) ? initialSection : undefined);
   const forceSheet = params.get("audit") === "sheet";
+  const worksheet = params.get("worksheet") === "true";
   const mapped = active ? isExamEntrySheetSectionId(active) : false;
   const sheetOpen = Boolean(active && (mapped || forceSheet));
   const editor = active ? renderEditor(active) : null;
@@ -191,7 +213,9 @@ function Fixture() {
             )}
             <ExamOverviewBoard
               projection={projection}
-              editorEntries={chartEditorInventory()}
+              editorEntries={chartEditorInventory({
+                ocularHealthSections: worksheet ? WORKSHEET_OCULAR_HEALTH_SECTIONS : [],
+              })}
               activeEditorId={mapped ? active : undefined}
               refreshing={false}
               onOpenEditor={(sectionId) => isFixtureSectionId(sectionId) && setActive(sectionId)}
