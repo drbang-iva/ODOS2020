@@ -119,9 +119,16 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: ui/package-lock.json
+          cache-dependency-path: |
+            mcp/package-lock.json
+            ui/package-lock.json
       - name: install ui deps
         working-directory: ui
+        run: npm ci
+      # ui/tests cross-import the real MCP history handler for the ocular-health
+      # remount contract, so this job needs mcp/node_modules too.
+      - name: install mcp deps
+        working-directory: mcp
         run: npm ci
       - name: typecheck ui
         working-directory: ui
