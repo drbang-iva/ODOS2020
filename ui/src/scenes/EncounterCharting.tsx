@@ -673,9 +673,9 @@ export function EncounterCharting({ patient, encounterId }: Props) {
                 patientReference={patientReference}
                 encounterReference={encounterReference}
                 onRefer={() => setReferralComposeOpen(true)}
-                onSaved={(status) => {
+                onSaved={(status, keepOpen) => {
                   markSaved(entrySheetSection, status);
-                  setEntrySheetSection(undefined);
+                  if (!keepOpen) setEntrySheetSection(undefined);
                 }}
               />
             </ExamEntrySheet>
@@ -985,7 +985,7 @@ function MappedExamSection({ sectionId, definitions, patientReference, encounter
   definitions: MappedExamDefinitions;
   patientReference: string;
   encounterReference: string;
-  onSaved(status: SectionSaveStatus): void;
+  onSaved(status: SectionSaveStatus, keepOpen?: boolean): void;
   onRefer(): void;
 }) {
   const props = { patientReference, encounterReference, onSaved };
