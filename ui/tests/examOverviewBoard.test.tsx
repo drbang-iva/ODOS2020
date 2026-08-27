@@ -1611,6 +1611,30 @@ test("an open finding sheet visibly requires Finish or Cancel before Visit can o
   }
 });
 
+test("EncounterCharting passes the clinical sheet guard to enabled and disabled header actions", async () => {
+  const harness = await renderEncounter(PROJECTION);
+  try {
+    let header = harness.renderer.root.findByType(EncounterHeader);
+    let sign = header.findByProps({ "data-chart-bar-slot": "sign" });
+    let abandon = header.findAllByType("button").find((button) => textContent(button) === "Abandon encounter");
+
+    assert.equal(header.props.clinicalActionUnavailableReason, undefined);
+    assert.equal(sign.props.disabled, false);
+    assert.equal(abandon?.props.disabled, false);
+
+    await act(async () => harness.renderer.root.findByProps({ "data-editor-section-id": "pupils" }).props.onClick());
+
+    header = harness.renderer.root.findByType(EncounterHeader);
+    sign = header.findByProps({ "data-chart-bar-slot": "sign" });
+    abandon = header.findAllByType("button").find((button) => textContent(button) === "Abandon encounter");
+    assert.equal(header.props.clinicalActionUnavailableReason, "Finish or cancel Pupils first");
+    assert.equal(sign.props.disabled, true);
+    assert.equal(abandon?.props.disabled, true);
+  } finally {
+    harness.restore();
+  }
+});
+
 test("unknown encounter keeps both Visit write surfaces locked during load and after fetch failure", async (t) => {
   async function assertBillingLocked(
     harness: Awaited<ReturnType<typeof renderEncounter>>,
