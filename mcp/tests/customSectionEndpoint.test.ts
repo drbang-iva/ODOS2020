@@ -85,6 +85,8 @@ test("Skin Carotenoid Score creates, captures, reads, renames, and deactivates w
     },
   });
   assert.equal(capture.status, 200, JSON.stringify(capture.body));
+  const captureReference = (capture.body as { observationReference: string }).observationReference;
+  assert.equal(captureReference, `Observation/${fhir.observations[0]?.id}`);
   assert.equal(fhir.observations.length, 1);
   assert.equal(fhir.observations[0]?.status, "preliminary");
   assert.equal(component(fhir.observations[0], localCode)?.valueQuantity?.value, 72);
@@ -102,6 +104,7 @@ test("Skin Carotenoid Score creates, captures, reads, renames, and deactivates w
   });
   assert.equal(history.status, 200);
   assert.deepEqual((history.body as { rows: unknown[] }).rows, [{
+    observationReference: captureReference,
     recordedAt: NOW,
     values: [{ code: localCode, label: "Score", value: 72 }],
     remarks: "Discussed nutrition.",
@@ -362,6 +365,10 @@ test("bare-string ocular-health seeds keep the current definition and presence-o
     },
   );
   assert.equal(capture.status, 200, JSON.stringify(capture.body));
+  const captureReference = (capture.body as {
+    eyes: { OD: { observationReference: string } };
+  }).eyes.OD.observationReference;
+  assert.equal(captureReference, `Observation/${fhir.observations[0]?.id}`);
   const history = await handleCustomSectionHistoryRequest(
     clinicalDeps("provider", fhir, [definition]),
     {
@@ -371,6 +378,7 @@ test("bare-string ocular-health seeds keep the current definition and presence-o
     },
   );
   assert.deepEqual((history.body as { rows: unknown[] }).rows, [{
+    observationReference: captureReference,
     recordedAt: NOW,
     eye: "OD",
     values: [{
@@ -1169,6 +1177,54 @@ test("OH-2 seeds five posterior structures and round-trips their worksheet findi
     assert.equal(rows[0]!.values[0]!.value.length, 1);
     assert.equal(rows[1]!.normalTemplate, definition.normalSemantics?.template);
   }
+});
+
+test("ocular-health history returns the Observation reference written by the save", async () => {
+  const fhir = new MemoryFhir();
+  const definitions = await catalog(fhir);
+  const lens = definitions.find((definition) => definition.stableKey === "ocular-health:anterior:lens");
+  assert.ok(lens);
+  const field = Object.values(lens.valueSchema.fields as Record<string, {
+    localCode?: string;
+    valueType?: string;
+    options?: Array<{ code: string; active: boolean }>;
+  }>).find((candidate) => candidate.valueType === "multi-select");
+  const finding = field?.options?.find((option) => option.active);
+  assert.ok(field?.localCode && finding);
+
+  const capture = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: lens.stableKey },
+    body: {
+      patientReference: "Patient/p-history-reference",
+      encounterReference: "Encounter/e-history-reference",
+      eyes: {
+        OD: {
+          state: "abnormal",
+          customFields: [{ code: field.localCode, value: [finding.code] }],
+        },
+      },
+    },
+  });
+  assert.equal(capture.status, 200, JSON.stringify(capture.body));
+  const savedReference = (capture.body as { eyes: { OD: { observationReference: string } } })
+    .eyes.OD.observationReference;
+  const savedObservation = fhir.observations.find((observation) =>
+    `Observation/${observation.id}` === savedReference
+  );
+  assert.ok(savedObservation);
+
+  const history = await handleCustomSectionHistoryRequest(clinicalDeps("provider", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: lens.stableKey },
+    query: { patient: "Patient/p-history-reference", encounter: "Encounter/e-history-reference" },
+  });
+  assert.equal(history.status, 200, JSON.stringify(history.body));
+  const historyReference = (history.body as {
+    rows: Array<{ eye?: string; observationReference?: string }>;
+  }).rows.find((row) => row.eye === "OD")?.observationReference;
+  assert.equal(historyReference, savedReference);
+  assert.equal(historyReference, `Observation/${savedObservation.id}`);
 });
 
 test("OH-2b Vessels seeds and round-trips the per-eye A/V ratio grade on normal and abnormal eyes", async () => {

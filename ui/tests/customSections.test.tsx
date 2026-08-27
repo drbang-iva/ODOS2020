@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import type { Condition, MedicationStatement } from "@medplum/fhirtypes";
+import type { Bundle, Condition, MedicationStatement, Observation, Provenance } from "@medplum/fhirtypes";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
@@ -35,6 +35,11 @@ import { PatientRoute } from "../src/App";
 import { fhir } from "../src/lib/fhir";
 import { RoleProvider } from "../src/lib/role-context";
 import { EncounterCharting } from "../src/scenes/EncounterCharting";
+import {
+  handleCustomSectionCaptureRequest,
+  handleCustomSectionHistoryRequest,
+} from "../../mcp/src/clinical-graph/custom-section-endpoint";
+import type { ClinicalFindingDefinition } from "../../mcp/src/clinical-graph/glaucoma-suspect";
 
 test("SpineNav preserves its section inventory for an empty custom registry and safely appends missing-status custom sections", () => {
   const before = renderToStaticMarkup(<SpineNav active="va" statuses={{}} onSelect={() => undefined} />);
@@ -2725,6 +2730,181 @@ test("saved ocular-health findings expose real scoped diagnosis suggestions and 
       await flushEffects();
     });
     assert.equal(diagnosisWrites[1]?.action, "discard");
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
+});
+
+test("fresh ocular-health history restores scoped diagnosis suggestions without a save", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalWindow = globalThis.window;
+  const historyRequests: string[] = [];
+  const observations: Observation[] = [];
+  const serverFhir = {
+    async create<T extends Observation | Provenance>(resource: T): Promise<T> {
+      const saved = { ...resource, id: resource.id ?? `${resource.resourceType.toLowerCase()}-${observations.length + 1}` } as T;
+      if (saved.resourceType === "Observation") observations.push(saved as Observation);
+      return saved;
+    },
+    async search<T extends Observation>(
+      _resourceType: T["resourceType"],
+      params: Record<string, string> = {},
+    ): Promise<Bundle<T>> {
+      const [codeSystem, code] = params.code?.split("|") ?? [];
+      const rows = observations
+        .filter((observation) => !params.subject || observation.subject?.reference === params.subject)
+        .filter((observation) => !params.encounter || observation.encounter?.reference === params.encounter)
+        .filter((observation) => !params.code || observation.code.coding?.some((coding) =>
+          coding.system === codeSystem && coding.code === code
+        ));
+      return {
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: rows.map((resource) => ({ resource: resource as T })),
+      };
+    },
+  };
+  const serverDefinition: ClinicalFindingDefinition = {
+    id: "finding-definition-lens",
+    stableKey: "ocular-health:anterior:lens",
+    display: "Lens",
+    sectionKey: "ocular-health:anterior:lens",
+    valueSchema: {
+      type: "ocular-health-structure",
+      perEye: true,
+      fields: {
+        CUSTOM_LENS_FINDINGS: {
+          localCode: "CUSTOM_LENS_FINDINGS",
+          display: "Abnormal findings",
+          origin: "practice",
+          valueType: "multi-select",
+          options: [{
+            code: "nuclear-sclerosis",
+            display: "nuclear sclerosis",
+            active: true,
+            priority: true,
+          }],
+          order: 0,
+          active: true,
+        },
+      },
+    },
+    normalSemantics: { template: "Clear; no cataract.", allowDeferred: true },
+    sourceStatus: "verified-seed",
+    notBillReady: true,
+    active: true,
+    provenance: {
+      source: "manual",
+      recordedAt: "2026-08-27T14:00:00.000Z",
+      actorReference: "Practitioner/test",
+    },
+  };
+  const serverDeps = {
+    authenticate: async () => ({
+      staffReference: "Practitioner/test",
+      actorRole: "provider" as const,
+      fhir: serverFhir,
+    }),
+    findingDefinitions: () => [serverDefinition],
+    now: () => "2026-08-27T14:00:00.000Z",
+  };
+  const saved = await handleCustomSectionCaptureRequest(serverDeps, {
+    authHeader: "Bearer test",
+    params: { stableKey: serverDefinition.stableKey },
+    body: {
+      patientReference: "Patient/p-history-structure-dx",
+      encounterReference: "Encounter/e-history-structure-dx",
+      eyes: {
+        OD: {
+          state: "abnormal",
+          customFields: [{ code: "CUSTOM_LENS_FINDINGS", value: ["nuclear-sclerosis"] }],
+        },
+      },
+    },
+  });
+  assert.equal(saved.status, 200, JSON.stringify(saved.body));
+  const savedReference = (saved.body as { eyes: { OD: { observationReference: string } } })
+    .eyes.OD.observationReference;
+  assert.equal(savedReference, `Observation/${observations[0]?.id}`);
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: { dispatchEvent: () => true },
+  });
+  globalThis.fetch = (async (input, init) => {
+    const url = String(input);
+    if (init?.method === "POST") throw new Error(`Unexpected write during remount: ${url}`);
+    if (url.includes("diagnosis-candidates")) {
+      return jsonResponse({
+        findings: [{
+          findingInstanceId: savedReference,
+          findingDefinitionKey: "ocular-health:anterior:lens",
+          observationReference: savedReference,
+          candidates: [{
+            diagnosisKey: "cataract_nuclear_sclerosis",
+            display: "Age-related nuclear cataract",
+            codingStatus: "verified",
+            priority: true,
+            source: "mapping",
+          }],
+        }],
+      });
+    }
+    if (url.includes("diagnosis-catalog")) return jsonResponse({ diagnoses: [] });
+    if (url.includes("/fhir/R4/Condition")) {
+      return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [] });
+    }
+    throw new Error(`Unexpected global request: ${url}`);
+  }) as typeof fetch;
+  const definition = {
+    stableKey: "ocular-health:anterior:lens",
+    sectionKey: "ocular-health:anterior:lens",
+    display: "Lens",
+    active: true,
+    perEye: true,
+    normalTemplate: "Clear; no cataract.",
+    allowDeferred: true,
+    customFields: [{
+      localCode: "CUSTOM_LENS_FINDINGS",
+      display: "Abnormal findings",
+      valueType: "multi-select" as const,
+      options: [{ code: "nuclear-sclerosis", display: "nuclear sclerosis", active: true, priority: true }],
+      order: 0,
+      active: true,
+    }],
+  };
+  const fetchImpl = (async (input, init) => {
+    const url = String(input);
+    historyRequests.push(url);
+    if (init?.method === "POST") throw new Error(`Unexpected save during remount: ${url}`);
+    const history = await handleCustomSectionHistoryRequest(serverDeps, {
+      authHeader: "Bearer test",
+      params: { stableKey: serverDefinition.stableKey },
+      query: {
+        patient: "Patient/p-history-structure-dx",
+        encounter: "Encounter/e-history-structure-dx",
+      },
+    });
+    return jsonResponse(history.body, history.status);
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={[definition]}
+        patientReference="Patient/p-history-structure-dx"
+        encounterReference="Encounter/e-history-structure-dx"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+      await flushEffects();
+    });
+    const rail = renderer.root.findByProps({ "data-testid": "structure-diagnosis-rail" });
+    assert.match(renderedText(rail), /Age-related nuclear cataract/);
+    assert.equal(historyRequests.length, 1);
   } finally {
     renderer?.unmount();
     globalThis.fetch = originalFetch;

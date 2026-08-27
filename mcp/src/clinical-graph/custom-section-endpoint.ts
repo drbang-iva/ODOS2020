@@ -311,7 +311,7 @@ export async function handleCustomSectionHistoryRequest(
     });
     const findingDetails = observationFindingDetails(observation, definition, prefix);
     return [{
-      ...(definition.stableKey === "entrance:visual-field-defect" && observation.id
+      ...(observation.id
         ? { observationReference: `Observation/${observation.id}` }
         : {}),
       recordedAt: observation.effectiveDateTime ?? observation.issued ?? observation.meta?.lastUpdated ?? "",
