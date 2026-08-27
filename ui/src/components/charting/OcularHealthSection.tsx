@@ -36,6 +36,7 @@ export interface EyeCapture {
 }
 
 interface HistoryRow {
+  observationReference?: string;
   recordedAt: string;
   eye?: Eye;
   state?: ExamState;
@@ -113,13 +114,19 @@ export function OcularHealthSection({
       const currentBody = await currentResponse.json() as { rows?: HistoryRow[]; error?: string };
       if (!currentResponse.ok) throw new Error(currentBody.error ?? `${definition.display} history failed: ${currentResponse.status}`);
       const currentRows = currentBody.rows ?? [];
-      return [definition.stableKey, currentRows, captureFromRows(definition, currentRows)] as const;
+      return [
+        definition.stableKey,
+        currentRows,
+        captureFromRows(definition, currentRows),
+        diagnosisObservationReferences(definition, currentRows),
+      ] as const;
     }))
       .then((rows) => {
         if (controller.signal.aborted) return;
         const hydrated = Object.fromEntries(rows.map(([stableKey, , capture]) => [stableKey, capture]));
         setCaptures(hydrated);
         setPristine(hydrated);
+        setSavedDiagnosisObservations(Object.fromEntries(rows.map(([stableKey, , , references]) => [stableKey, references])));
         setCurrentHistory({
           identity: historyIdentity,
           rowsByStableKey: Object.fromEntries(rows.map(([stableKey, currentRows]) => [stableKey, currentRows])),
@@ -678,6 +685,18 @@ function captureFromRows(definition: CustomFindingDefinition, rows: HistoryRow[]
       ...(row?.normalTemplate ? { normalTemplate: row.normalTemplate } : {}),
     }];
   })) as Record<Eye, EyeCapture>;
+}
+
+function diagnosisObservationReferences(definition: CustomFindingDefinition, rows: HistoryRow[]): string[] {
+  const field = abnormalField(definition);
+  if (!field) return [];
+  return EYES.flatMap((eye) => {
+    const row = rows.find((candidate) => candidate.eye === eye);
+    const selections = row?.values.find((candidate) => candidate.code === field.localCode)?.value;
+    return Array.isArray(selections) && selections.length > 0 && row?.observationReference
+      ? [row.observationReference]
+      : [];
+  });
 }
 
 function excludeCurrentEncounterRows(patientRows: HistoryRow[], currentRows: HistoryRow[]): HistoryRow[] {
