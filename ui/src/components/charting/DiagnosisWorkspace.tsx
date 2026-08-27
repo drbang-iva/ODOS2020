@@ -707,13 +707,14 @@ export function orderedEncounterConditions(encounter: Encounter, conditions: rea
   return conditions
     .filter(isEncounterDiagnosisCondition)
     .filter((condition) => !["refuted", "entered-in-error"].includes(conditionVerificationStatus(condition)))
-    .map((condition, index) => ({ condition, rank: diagnosisRank(encounter, condition), index }))
+    .map((condition) => ({ condition, rank: diagnosisRank(encounter, condition) }))
     .sort((left, right) => {
       const leftGroup = left.rank !== undefined ? 0 : isProvisionalCondition(left.condition) ? 2 : 1;
       const rightGroup = right.rank !== undefined ? 0 : isProvisionalCondition(right.condition) ? 2 : 1;
       if (leftGroup !== rightGroup) return leftGroup - rightGroup;
       if (left.rank !== undefined && right.rank !== undefined && left.rank !== right.rank) return left.rank - right.rank;
-      return left.index - right.index;
+      return (left.condition.recordedDate ?? "").localeCompare(right.condition.recordedDate ?? "") ||
+        (left.condition.id ?? "").localeCompare(right.condition.id ?? "");
     })
     .map(({ condition }) => condition);
 }
@@ -846,6 +847,7 @@ export function diagnosisQuickListCode(
   row: DiagnosisQuickListRow,
   conditions: readonly Condition[] = [],
 ): string | undefined {
+  if (!row.lateralityRequired) return catalogFallbackCode(row);
   const stableKeys = new Set([row.stableKey, ...(row.members?.map((member) => member.stableKey) ?? [])]);
   const proposals = conditions.filter((condition) =>
     isProvisionalCondition(condition) &&
@@ -871,6 +873,10 @@ export function diagnosisQuickListCode(
     if (ordered.length === 1) return ordered[0]!.label;
     return ordered.map(({ eye, label }) => `${eye} ${label}`).join(" · ");
   }
+  return catalogFallbackCode(row);
+}
+
+function catalogFallbackCode(row: DiagnosisQuickListRow): string | undefined {
   if (!row.icd10) return undefined;
   return "code" in row.icd10 ? row.icd10.code : row.icd10.pattern.unspecifiedEye;
 }

@@ -125,6 +125,36 @@ test("Common names both active proposal eyes instead of arbitrarily choosing one
   assert.equal(code, "OD H25.11 · OS H25.12");
 });
 
+test("a non-lateralized Possible preserves the Common catalog code", async () => {
+  const workspaceModule = await import("../src/components/charting/DiagnosisWorkspace") as {
+    diagnosisQuickListCode?: (row: ReturnType<typeof dryEyeRow>, conditions?: readonly Condition[]) => string | undefined;
+  };
+  const possible = visitCondition("possible-dry-eye", "Dry eye syndrome", "provisional");
+  possible.identifier = [{
+    system: "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key",
+    value: "e1::dry_eye_syndrome::none",
+  }];
+  possible.code = {
+    coding: [{ system: "http://hl7.org/fhir/sid/icd-10-cm", code: "H04.123" }],
+    text: "Dry eye syndrome",
+  };
+
+  assert.equal(workspaceModule.diagnosisQuickListCode?.(dryEyeRow()), "H04.123");
+  assert.equal(workspaceModule.diagnosisQuickListCode?.(dryEyeRow(), [possible]), "H04.123");
+});
+
+test("Possible rows with identical recordedDate use id instead of FHIR search order", () => {
+  const laterId = visitCondition("possible-b", "Possible B", "provisional");
+  laterId.recordedDate = "2026-08-27T12:00:00.000Z";
+  const earlierId = visitCondition("possible-a", "Possible A", "provisional");
+  earlierId.recordedDate = "2026-08-27T12:00:00.000Z";
+
+  assert.deepEqual(
+    orderedEncounterConditions(emptyEncounter(), [laterId, earlierId]).map((condition) => condition.id),
+    ["possible-a", "possible-b"],
+  );
+});
+
 test("diagnosis door pages encounter Conditions and renders Possible provenance plus confirmed rank drift", async () => {
   const originalFetch = globalThis.fetch;
   let conditionPages = 0;
@@ -1400,6 +1430,26 @@ function cataractRow() {
     icd10: { pattern: { unspecifiedEye: "H25.10", right: "H25.11", left: "H25.12", bilateral: "H25.13" } },
     pinned: false,
     tallyCount: 0,
+  };
+}
+
+function dryEyeRow() {
+  return {
+    stableKey: "dry_eye_syndrome",
+    display: "Dry eye syndrome",
+    lateralityRequired: false,
+    icd10: { pattern: { unspecifiedEye: "H04.123" } },
+    pinned: false,
+    tallyCount: 0,
+  };
+}
+
+function emptyEncounter(): Encounter {
+  return {
+    resourceType: "Encounter",
+    status: "in-progress",
+    class: { system: "http://terminology.hl7.org/CodeSystem/v3-ActCode", code: "AMB" },
+    diagnosis: [],
   };
 }
 
