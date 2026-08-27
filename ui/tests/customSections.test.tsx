@@ -2618,7 +2618,6 @@ test("saved ocular-health findings expose real scoped diagnosis suggestions and 
           display: "Age-related nuclear cataract",
           active: true,
           codingStatus: "verified",
-          icd10: { code: "H25.1" },
         }],
       });
     }
