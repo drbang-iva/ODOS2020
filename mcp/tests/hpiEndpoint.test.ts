@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Basic, Bundle, Encounter, Observation, Provenance } from "@medplum/fhirtypes";
+import type { Basic, Bundle, Encounter, Observation, Provenance, Resource } from "@medplum/fhirtypes";
 import type { PracticeRoleId } from "../src/authz/roles.js";
 import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../src/fhir/ophthalmology/codeBindings.js";
 import { buildEncounterComplaintResource } from "../src/clinical-graph/encounter-complaint-store.js";
@@ -10,6 +10,7 @@ import {
   handleHpiDefinitionRequest,
   type HpiEndpointDeps,
 } from "../src/clinical-graph/hpi-endpoint.js";
+import { buildExamOverviewProjection } from "../src/clinical-graph/exam-overview-projection.js";
 
 const AUTH = "Bearer good";
 const ENCOUNTER: Encounter = {
@@ -80,6 +81,8 @@ function fixture(role: PracticeRoleId = "provider", withComplaints = true) {
     ? COMPLAINTS.map((complaint, index) => ({ ...buildEncounterComplaintResource(complaint), id: `basic-${index + 1}` }))
     : [];
   const created: Array<{ resource: Observation | Provenance; headers?: Record<string, string> }> = [];
+  const observations: Observation[] = [];
+  const transactions: Array<{ bundle: Bundle; headers?: Record<string, string> }> = [];
   const definition = buildHpiFindingDefinition({
     source: "manual",
     recordedAt: "1970-01-01T00:00:00.000Z",
@@ -91,7 +94,17 @@ function fixture(role: PracticeRoleId = "provider", withComplaints = true) {
       actorRole: role,
       fhir: {
         read: async <T extends Encounter>(): Promise<T> => structuredClone(ENCOUNTER) as T,
-        search: async <T extends Basic>(_resourceType: T["resourceType"], params: Record<string, string> = {}): Promise<Bundle<T>> => {
+        search: async <T extends Resource>(resourceType: T["resourceType"], params: Record<string, string> = {}): Promise<Bundle<T>> => {
+          if (resourceType === "Observation") {
+            return {
+              resourceType: "Bundle",
+              type: "searchset",
+              entry: observations.filter((observation) =>
+                (!params.encounter || observation.encounter?.reference === params.encounter) &&
+                (!params.code || observation.code.coding?.some((coding) => `${coding.system}|${coding.code}` === params.code))
+              ).map((resource) => ({ resource: structuredClone(resource) as T })),
+            };
+          }
           const filtered = basics.filter((resource) => {
             if (!params.code) return true;
             const [system, code] = params.code.split("|");
@@ -101,33 +114,133 @@ function fixture(role: PracticeRoleId = "provider", withComplaints = true) {
         },
         create: async <T extends Basic | Observation | Provenance>(resource: T, headers?: Record<string, string>): Promise<T> => {
           if (resource.resourceType !== "Basic") created.push({ resource, headers });
-          return { ...resource, id: `${resource.resourceType.toLowerCase()}-${created.length}` };
+          const persisted = { ...resource, id: `${resource.resourceType.toLowerCase()}-${created.length}` } as T;
+          if (persisted.resourceType === "Observation") observations.push(structuredClone(persisted));
+          return persisted;
         },
         update: async <T extends Basic | Encounter>(_resourceType: T["resourceType"], _id: string, resource: T): Promise<T> => resource,
+        executeTransaction: async (bundle: Bundle, headers?: Record<string, string>): Promise<Bundle> => {
+          transactions.push({ bundle: structuredClone(bundle), headers });
+          const responseEntries: NonNullable<Bundle["entry"]> = [];
+          for (const entry of bundle.entry ?? []) {
+            const resource = structuredClone(entry.resource);
+            if (resource?.resourceType === "Observation") {
+              const identifier = resource.identifier?.[0];
+              const conditionalMatch = entry.request?.method === "POST" && entry.request.ifNoneExist
+                ? observations.find((candidate) => candidate.identifier?.some((row) =>
+                    row.system === identifier?.system && row.value === identifier?.value
+                  ))
+                : undefined;
+              const id = conditionalMatch?.id ?? resource.id ?? `observation-${observations.length + 1}`;
+              const persisted = { ...resource, id };
+              const index = observations.findIndex((candidate) => candidate.id === id);
+              if (index >= 0) observations[index] = persisted;
+              else observations.push(persisted);
+              responseEntries.push({ response: {
+                status: conditionalMatch ? "200 OK" : index >= 0 ? "200 OK" : "201 Created",
+                location: `Observation/${id}/_history/1`,
+              } });
+              continue;
+            }
+            if (resource?.resourceType === "Provenance") {
+              const id = `provenance-${created.length + responseEntries.length + 1}`;
+              created.push({ resource });
+              responseEntries.push({ response: { status: "201 Created", location: `Provenance/${id}/_history/1` } });
+            }
+          }
+          return { resourceType: "Bundle", type: "transaction-response", entry: responseEntries };
+        },
       },
     } : null,
     findingDefinitions: () => [definition],
     now: () => "2026-07-21T12:30:00.000Z",
   };
-  return { created, deps };
+  return { basics, created, deps, observations, transactions };
 }
 
 test("history capture persists ordinal complaint narratives and explicitly reviewed ROS in one Observation", async () => {
-  const { created, deps } = fixture();
-  const result = await handleHpiCaptureRequest(deps, { authHeader: AUTH, body: BODY });
-  assert.equal(result.status, 200);
-  assert.deepEqual(created.map((entry) => entry.resource.resourceType), ["Observation", "Provenance"]);
-  assert.equal(created.every((entry) => entry.headers?.["X-ODOS-Source"] === "mcp/save_hpi_ros"), true);
-  const observation = created[0]!.resource as Observation;
+  const setup = fixture();
+  const captured = await handleHpiCaptureRequest(setup.deps, { authHeader: AUTH, body: BODY });
+  assert.equal(captured.status, 200);
+  assert.equal(setup.transactions.length, 1);
+  assert.equal(setup.transactions[0]?.headers?.["X-ODOS-Source"], "mcp/save_hpi_ros");
+  assert.equal(setup.transactions[0]?.headers?.Prefer, "return=representation");
+  assert.deepEqual(setup.transactions[0]?.bundle.entry?.map((entry) => entry.resource?.resourceType), ["Observation", "Provenance"]);
+  const observation = setup.observations[0]!;
   assert.equal(observation.code.coding?.[0]?.system, ODOS_OPHTHALMOLOGY_CODE_SYSTEM);
   assert.equal(observation.code.coding?.[0]?.code, "hpi_ros");
   assert.match(componentValue(observation, "HISTORY_COMPLAINT_1") ?? "", /Patient reports dry eyes/);
   assert.match(componentValue(observation, "HISTORY_COMPLAINT_2") ?? "", /Patient reports Headache/);
   assert.equal(componentValue(observation, "ROS_VISION_CHANGES"), "positive");
-  const provenance = created[1]!.resource as Provenance;
+  const provenance = setup.created[0]!.resource as Provenance;
   assert.match(provenance.activity?.text ?? "", /presenting complaints, history narrative/i);
   assert.match(provenance.activity?.text ?? "", /general remaining items reviewed negative/);
-  assert.deepEqual((result.body as { narratives: string[] }).narratives.length, 2);
+  assert.deepEqual((captured.body as { narratives: string[] }).narratives.length, 2);
+});
+
+test("saving two complaints refreshes exactly one live hpi_ros Observation for the encounter", async () => {
+  const setup = fixture();
+  setup.basics.splice(1);
+
+  assert.equal((await handleHpiCaptureRequest(setup.deps, { authHeader: AUTH, body: BODY })).status, 200);
+  setup.basics.push({ ...buildEncounterComplaintResource(COMPLAINTS[1]!), id: "basic-2" });
+  assert.equal((await handleHpiCaptureRequest(setup.deps, { authHeader: AUTH, body: BODY })).status, 200);
+
+  const liveHistory = setup.observations.filter((observation) =>
+    observation.status !== "entered-in-error" &&
+    observation.encounter?.reference === "Encounter/e1" &&
+    observation.code.coding?.some((coding) => coding.code === "hpi_ros")
+  );
+  assert.equal(liveHistory.length, 1);
+  assert.match(componentValue(liveHistory[0]!, "HISTORY_COMPLAINT_2") ?? "", /Headache/);
+});
+
+test("a capture retires pre-existing extra live History findings in the same transaction", async () => {
+  const setup = fixture();
+  assert.equal((await handleHpiCaptureRequest(setup.deps, { authHeader: AUTH, body: BODY })).status, 200);
+  setup.observations.push({
+    ...structuredClone(setup.observations[0]!),
+    id: "legacy-history-duplicate",
+    identifier: undefined,
+    effectiveDateTime: "2026-07-21T11:00:00.000Z",
+  });
+
+  assert.equal((await handleHpiCaptureRequest(setup.deps, { authHeader: AUTH, body: BODY })).status, 200);
+  assert.equal(setup.observations.filter((observation) => observation.status !== "entered-in-error").length, 1);
+  assert.equal(setup.observations.find((observation) => observation.id === "legacy-history-duplicate")?.status, "entered-in-error");
+  assert.deepEqual(setup.transactions.at(-1)?.bundle.entry?.map((entry) => ({
+    type: entry.resource?.resourceType,
+    method: entry.request?.method,
+  })), [
+    { type: "Observation", method: "PUT" },
+    { type: "Provenance", method: "POST" },
+    { type: "Observation", method: "PUT" },
+  ]);
+});
+
+test("a complaint-backed hpi_ros capture makes the exam overview report History as charted", async () => {
+  const setup = fixture();
+  const result = await handleHpiCaptureRequest(setup.deps, { authHeader: AUTH, body: {
+    ...BODY,
+    reviewOfSystems: [],
+    reviewAttestations: [],
+  } });
+  assert.equal(result.status, 200);
+
+  const projection = buildExamOverviewProjection({
+    encounterReference: "Encounter/e1",
+    patientReference: "Patient/p1",
+    visitTypeCategoryId: "comprehensive",
+    definitions: [buildHpiFindingDefinition({
+      source: "manual",
+      recordedAt: "1970-01-01T00:00:00.000Z",
+      actorReference: "Practitioner/odos-system",
+    })],
+    currentObservations: setup.observations,
+    priorObservationCandidates: [],
+    assessmentRows: [],
+  });
+  assert.equal(projection.sections.find((section) => section.sectionKey === "history")?.state, "examined");
 });
 
 test("HPI definition retires the eight-textarea fields and retains extensible Review of Systems", async () => {

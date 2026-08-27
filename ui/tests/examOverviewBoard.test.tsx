@@ -1913,6 +1913,71 @@ test("HPI entry sheet closes after plain Save Complaint", async () => {
   }
 });
 
+test("saving a complaint records History and refreshes the exam overview to Examined", async () => {
+  const charted: ExamOverviewProjection = {
+    ...PROJECTION,
+    findings: [
+      ...PROJECTION.findings,
+      {
+        observationReference: "Observation/history-1",
+        findingKey: "hpi_ros",
+        sectionKey: "hpi",
+        display: "History",
+        laterality: "UNKNOWN",
+        examination: { state: "examined", sourceEncoding: "observation" },
+        interpretation: "unknown",
+        provenance: { state: "current" },
+        current: { components: [{ code: "HISTORY_COMPLAINT_1", value: { kind: "string", value: "Patient reports dry eyes." } }] },
+      },
+    ],
+    sections: PROJECTION.sections.map((section) => section.sectionKey === "history"
+      ? { ...section, state: "examined", findingObservationReferences: ["Observation/history-1"] }
+      : section),
+    completeness: {
+      ...PROJECTION.completeness,
+      status: "complete",
+      resolvedSectionCount: 2,
+      trace: PROJECTION.completeness.trace.map((row) => row.sectionKey === "history"
+        ? { ...row, state: "examined", resolved: true }
+        : row),
+    },
+  };
+  const harness = await renderEncounter(PROJECTION, {
+    hpiDefinitions: [HPI_DRY_EYE],
+    hpiGenericOptions: HPI_GENERIC_OPTIONS,
+    hpiSavedComplaints: [hpiComplaintFixture("complaint-1", "Patient reports dry eyes.")],
+    overviewAfterHpiCapture: charted,
+  });
+  try {
+    await act(async () => editorControl(harness.renderer.root, "hpi").props.onClick());
+    await act(async () => {
+      await flushEffects();
+      await flushEffects();
+    });
+    const complaint = harness.renderer.root.findAllByType("button")
+      .find((button) => textContent(button) === "Patient (Dry Eye)");
+    assert.ok(complaint);
+    await act(async () => complaint.props.onClick());
+    const save = harness.renderer.root.findAllByType("button")
+      .find((button) => textContent(button) === "Save Complaint");
+    assert.ok(save);
+    await act(async () => {
+      save.props.onClick();
+      await flushEffects();
+      await flushEffects();
+    });
+
+    assert.equal(harness.hpiCaptureCount(), 1);
+    const historyTrace = harness.renderer.root.findAllByProps({ "data-testid": "exam-overview-trace-row" })
+      .find((row) => row.props["data-trace-section-key"] === "history");
+    assert.ok(historyTrace);
+    assert.equal(historyTrace.props["data-section-state"], "examined");
+    assert.equal(textContent(historyTrace), "Examined");
+  } finally {
+    harness.restore();
+  }
+});
+
 test("every measured deferred editor retains its existing full-page route", async () => {
   const harness = await renderEncounter(PROJECTION);
   const contracts = [
@@ -2131,12 +2196,14 @@ interface RenderEncounterOptions {
   hpiDefinitions?: ComplaintDefinition[];
   hpiGenericOptions?: GenericComplaintOptions;
   hpiSavedComplaints?: EncounterComplaint[];
+  overviewAfterHpiCapture?: unknown;
 }
 
 async function renderEncounter(projection: unknown, options: RenderEncounterOptions = {}): Promise<{
   renderer: ReactTestRenderer;
   overviewFetchCount: () => number;
   findingsFetchCount: () => number;
+  hpiCaptureCount: () => number;
   overviewErrors: unknown[][];
   focusRestoreCount: () => number;
   restore: () => void;
@@ -2166,12 +2233,15 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
   }) as typeof fhir.read;
   let overviewFetches = 0;
   let findingsFetches = 0;
+  let hpiCaptures = 0;
   let focusRestores = 0;
   globalThis.fetch = (async (input, init) => {
     const url = String(input);
     if (url.endsWith("/clinical-graph/encounters/exam-1/exam-overview")) {
       const responses = options.overviewResponses ?? [projection];
-      const response = responses[Math.min(overviewFetches, responses.length - 1)];
+      const response = options.overviewAfterHpiCapture !== undefined && hpiCaptures > 0
+        ? options.overviewAfterHpiCapture
+        : responses[Math.min(overviewFetches, responses.length - 1)];
       overviewFetches += 1;
       return jsonResponse(response);
     }
@@ -2242,6 +2312,10 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
     }
     if (url.endsWith("/clinical-graph/encounters/exam-1/complaints")) {
       return jsonResponse({ complaints: init?.method === "POST" ? options.hpiSavedComplaints ?? [] : [] });
+    }
+    if (url.endsWith("/clinical-graph/hpi") && init?.method === "POST") {
+      hpiCaptures += 1;
+      return jsonResponse({ observationReference: "Observation/history-1" });
     }
     if (url.includes("/clinical-graph/refraction/history")) {
       return jsonResponse({ glasses: [], softCl: [], specialtyCl: [] });
@@ -2329,6 +2403,7 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
     renderer,
     overviewFetchCount: () => overviewFetches,
     findingsFetchCount: () => findingsFetches,
+    hpiCaptureCount: () => hpiCaptures,
     overviewErrors,
     focusRestoreCount: () => focusRestores,
     restore: () => {

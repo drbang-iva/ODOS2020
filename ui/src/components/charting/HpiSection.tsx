@@ -22,6 +22,7 @@ interface Props {
 
 type RosCategory = "eye" | "general";
 type RosStatus = "" | "positive" | "negative";
+type PendingHistoryCapture = { status: SectionSaveStatus; addAnother: boolean };
 
 export interface HpiRosOption {
   code: string;
@@ -58,6 +59,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
+  const [pendingHistoryCapture, setPendingHistoryCapture] = useState<PendingHistoryCapture | null>(null);
   const presentingConcernRef = useRef<HTMLInputElement>(null);
   const pendingNextConcernFocus = useRef(false);
 
@@ -163,6 +165,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
     if (!draft || (!draft.complaintKey && !draft.freeTextLabel?.trim())) return;
     setSaving(true);
     setError(null);
+    setSaved(null);
     try {
       const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/complaints`, {
         method: "POST",
@@ -173,18 +176,21 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
       });
       const body = await response.json() as { complaints?: EncounterComplaint[]; error?: string };
       if (!response.ok || !body.complaints) throw new Error(body.error ?? `Complaint save failed: ${response.status}`);
+      const status = complaintSectionStatus(body.complaints);
       setComplaints(body.complaints);
-      setSaved("Presenting complaint saved.");
-      onSaved({
-        completed: body.complaints.length > 0,
-        summary: body.complaints.map((complaint) => complaint.renderedNarrative).join(" "),
-        savedAt: new Date().toISOString(),
-        operator: "ODOS UI Complaint Intake",
-      }, addAnother);
-      pendingNextConcernFocus.current = addAnother;
-      setDraft(addAnother ? blankComplaintDraft() : null);
+      setDraft(null);
       setEditingId(null);
       setOverrideDirty(false);
+      const pending = { status, addAnother };
+      setPendingHistoryCapture(pending);
+      try {
+        await captureHistory();
+        finishComplaintCapture(pending);
+      } catch (caught) {
+        setSaved(null);
+        const detail = caught instanceof Error ? caught.message : String(caught);
+        setError(`The complaint was saved, but History was not recorded on the chart. Retry recording History. ${detail}`);
+      }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
@@ -264,28 +270,47 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
     setError(null);
     setSaved(null);
     try {
-      const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/hpi`, {
-        method: "POST",
-        headers: { ...authHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify(buildHpiRequestBody({ patientReference, encounterReference, rosStatuses, rosOptions, reviewAttestations })),
-      });
-      const body = await response.json() as { observationReference?: string; error?: string };
-      if (!response.ok || !body.observationReference) throw new Error(body.error ?? `History save failed: ${response.status}`);
-      const summary = complaints.map((complaint) => complaint.renderedNarrative).join(" ");
-      setSaved("History narrative and Review of Systems saved to the encounter.");
-      onSaved({ completed: true, summary, savedAt: new Date().toISOString(), operator: "ODOS UI History / ROS" }, false);
+      await captureHistory();
+      if (pendingHistoryCapture) {
+        finishComplaintCapture(pendingHistoryCapture);
+      } else {
+        setSaved("Reviewed ROS saved to the encounter.");
+        onSaved(complaintSectionStatus(complaints, "ODOS UI History / ROS"), false);
+      }
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
+      const detail = caught instanceof Error ? caught.message : String(caught);
+      setError(pendingHistoryCapture
+        ? `The complaint was saved, but History was not recorded on the chart. Retry recording History. ${detail}`
+        : detail);
     } finally {
       setSaving(false);
     }
+  }
+
+  async function captureHistory(): Promise<void> {
+    const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/hpi`, {
+      method: "POST",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify(buildHpiRequestBody({ patientReference, encounterReference, rosStatuses, rosOptions, reviewAttestations })),
+    });
+    const body = await response.json() as { observationReference?: string; error?: string };
+    if (!response.ok || !body.observationReference) throw new Error(body.error ?? `History save failed: ${response.status}`);
+  }
+
+  function finishComplaintCapture(pending: PendingHistoryCapture) {
+    setPendingHistoryCapture(null);
+    setError(null);
+    setSaved("Presenting complaint saved. History recorded on the chart.");
+    onSaved(pending.status, pending.addAnother);
+    pendingNextConcernFocus.current = pending.addAnother;
+    setDraft(pending.addAnother ? blankComplaintDraft() : null);
   }
 
   return (
     <section className="h-full overflow-y-auto p-6">
       <div className="max-w-6xl">
         <h2 className="odos-hpi-text text-lg font-semibold">Chief complaint / HPI / ROS</h2>
-        <p className="odos-hpi-muted mt-1 text-sm">Capture each presenting concern independently, then review the assembled history before saving.</p>
+        <p className="odos-hpi-muted mt-1 text-sm">Each saved presenting complaint records History on the chart. Save reviewed ROS after assessing it.</p>
 
         <div className="odos-hpi-border mt-6 rounded border bg-bg-panel/70 p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -406,11 +431,23 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
         {error && <div role="alert" className="mt-4 rounded border border-red-400/40 bg-red-400/10 p-3 text-sm text-red-100">{error}</div>}
         {saved && <div role="status" className="mt-4 rounded border border-emerald-400/40 bg-emerald-400/10 p-3 text-sm text-emerald-100">{saved}</div>}
         <button type="button" className="sidebar-button mt-5" disabled={saving || complaints.length === 0} onClick={() => void saveHistory()}>
-          {saving ? "Saving…" : "Save history"}
+          {saving ? "Saving…" : pendingHistoryCapture ? "Retry recording History" : "Save reviewed ROS"}
         </button>
       </div>
     </section>
   );
+}
+
+function complaintSectionStatus(
+  complaints: EncounterComplaint[],
+  operator = "ODOS UI Complaint Intake",
+): SectionSaveStatus {
+  return {
+    completed: complaints.length > 0,
+    summary: complaints.map((complaint) => complaint.renderedNarrative).join(" "),
+    savedAt: new Date().toISOString(),
+    operator,
+  };
 }
 
 export function ComplaintIntake(props: {
