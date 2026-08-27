@@ -116,7 +116,8 @@ export function ExamEntrySheet({
         onClickCapture={(event) => {
           const target = event.target instanceof Element ? event.target : undefined;
           const control = target?.closest('button, [role="button"]');
-          if (!control?.closest("[data-entry-sheet-chrome]")) onDirty?.();
+          if (!control) return;
+          if (!control.closest("[data-entry-sheet-chrome], [data-entry-sheet-pristine-action]")) onDirty?.();
         }}
         onFocusCapture={(event) => onFocusWithin?.(event.target as HTMLElement)}
       >

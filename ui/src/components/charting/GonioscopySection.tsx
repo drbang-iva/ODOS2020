@@ -179,6 +179,7 @@ export function GonioscopySection({ patientReference, encounterReference, onSave
                   </select>
                 </label>
                 <button type="button" aria-expanded={expanded[eye]}
+                  data-entry-sheet-pristine-action
                   onClick={() => setExpanded((current) => ({ ...current, [eye]: !current[eye] }))}
                   className="mt-3 rounded text-sm text-[color:var(--odos-accent-hi)] outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--odos-accent-border)]">
                   {expanded[eye] ? "⌄ Hide quadrants" : "› Show quadrants"}

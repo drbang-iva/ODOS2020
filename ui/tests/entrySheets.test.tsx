@@ -487,7 +487,29 @@ test("focusing a pristine field does not warn before a clinical sheet swap", { t
     await page.getByRole("button", { name: "Open IOP" }).click();
     const field = page.getByRole("combobox", { name: "OD IOP value" });
     await field.waitFor();
-    await field.focus();
+    await field.click();
+    await openChartAnotherGroup(page, "va");
+    await page.locator('[data-editor-section-id="va"]').click();
+
+    await page.getByRole("dialog", { name: "Visual Acuity" }).waitFor();
+    assert.deepEqual(dialogs, []);
+  } finally {
+    await page.close();
+  }
+});
+
+test("presentational sheet controls do not warn before a clinical sheet swap", { timeout: 30_000 }, async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  page.setDefaultTimeout(5_000);
+  const dialogs: string[] = [];
+  page.on("dialog", async (dialog) => {
+    dialogs.push(dialog.message());
+    await dialog.accept();
+  });
+  try {
+    await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "Open Gonioscopy" }).click();
+    await page.getByRole("button", { name: /Show quadrants/ }).first().click();
     await openChartAnotherGroup(page, "va");
     await page.locator('[data-editor-section-id="va"]').click();
 
