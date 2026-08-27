@@ -20,6 +20,7 @@ import {
   type PriorFindingReadings,
 } from "./FindingWorksheetControls";
 import { formatStepValue } from "./power-options";
+import { DiagnosisPicker } from "./DiagnosisPicker";
 import type { SectionSaveStatus } from "./types";
 
 export type Eye = "OD" | "OS";
@@ -83,6 +84,7 @@ export function OcularHealthSection({
   const [priors, setPriors] = useState<Record<string, PriorReadings>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savedDiagnosisObservations, setSavedDiagnosisObservations] = useState<Record<string, string[]>>({});
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const definitionKey = useMemo(() => definitions.map((definition) => definition.stableKey).join("|"), [definitions]);
@@ -102,6 +104,7 @@ export function OcularHealthSection({
     setError(null);
     setCurrentHistory(null);
     setPriors({});
+    setSavedDiagnosisObservations({});
     const base = apiBase ?? clinicalGraphApiBase();
     Promise.all(definitions.map(async (definition) => {
       const endpoint = `${base}/clinical-graph/custom/${encodeURIComponent(definition.stableKey)}/history`;
@@ -301,8 +304,18 @@ export function OcularHealthSection({
             body: JSON.stringify({ patientReference, encounterReference, eyes }),
           },
         );
-        const body = await response.json() as { error?: string };
+        const body = await response.json() as {
+          eyes?: Partial<Record<Eye, { observationReference?: string }>>;
+          error?: string;
+        };
         if (!response.ok) throw new Error(body.error ?? `${definition.display} save failed: ${response.status}`);
+        setSavedDiagnosisObservations((current) => ({
+          ...current,
+          [definition.stableKey]: EYES.flatMap((eye) => {
+            const observationReference = body.eyes?.[eye]?.observationReference;
+            return row[eye]?.selections.length && observationReference ? [observationReference] : [];
+          }),
+        }));
         const savedRow = Object.fromEntries(EYES.map((eye) => {
           const capture = row[eye] ?? emptyEye();
           return [eye, {
@@ -359,6 +372,7 @@ export function OcularHealthSection({
             const grades = gradeFields(definition);
             const row = captures[definition.stableKey] ?? emptyRow();
             const prior = priors[definition.stableKey] ?? emptyPriorReadings();
+            const diagnosisObservations = savedDiagnosisObservations[definition.stableKey] ?? [];
             const focused = runnerEnabled && definition.stableKey === highlightedStructureKey;
             return (
               <article
@@ -386,6 +400,12 @@ export function OcularHealthSection({
                     onCopy={() => copyEye(definition, eye, eye === "OD" ? "OS" : "OD")}
                   />
                 ))}</div>
+                {diagnosisObservations.length > 0 && <DiagnosisPicker
+                  encounterReference={encounterReference}
+                  findingDefinitionKey={definition.stableKey}
+                  observationReferences={diagnosisObservations}
+                  mode="proposal"
+                />}
               </article>
             );
             })}

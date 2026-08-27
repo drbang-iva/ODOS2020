@@ -13,6 +13,7 @@ import { EntranceMeasurementSection } from "../src/components/charting/EntranceM
 import { colorPlateTotal, EntranceStateSection } from "../src/components/charting/EntranceStateSection";
 import { SpineNav } from "../src/components/charting/SpineNav";
 import type { CustomFindingDefinition } from "../src/components/charting/CustomFindingSection";
+import { OdosSearchPicker } from "../src/components/inputs/OdosSearchPicker";
 
 test("screenshot refinement preserves PRETEST order with a rail-safe Visual Field label", () => {
   const html = renderToStaticMarkup(<SpineNav active="pupils" statuses={{}} onSelect={() => undefined} />);
@@ -330,6 +331,196 @@ test("suppressed visual-field diagnosis stays visible and the override reveals c
     assert.match(serialized(), /Other localized visual field defect/);
     assert.match(serialized(), /Possible/);
     assert.match(serialized(), /Confirm/);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("structure diagnosis rail keeps full search when the persisted finding has no seeded suggestions", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.includes("diagnosis-candidates")) {
+      return Response.json({
+        findings: [{
+          findingInstanceId: "iris-observation",
+          findingDefinitionKey: "ocular-health:anterior:iris",
+          observationReference: "Observation/iris-observation",
+          candidates: [],
+        }],
+      });
+    }
+    if (url.includes("diagnosis-catalog")) {
+      return Response.json({
+        diagnoses: [{
+          stableKey: "iritis",
+          display: "Iritis",
+          active: true,
+          codingStatus: "verified",
+        }],
+      });
+    }
+    if (url.includes("/fhir/R4/Condition")) {
+      return Response.json({ resourceType: "Bundle", type: "searchset", entry: [] });
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<DiagnosisPicker
+        encounterReference="Encounter/e1"
+        observationReferences={["Observation/iris-observation"]}
+        findingDefinitionKey="ocular-health:anterior:iris"
+        mode="proposal"
+      />);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    const rail = renderer.root.findByProps({ "data-testid": "structure-diagnosis-rail" });
+    assert.match(JSON.stringify(renderer.toJSON()), /Full diagnosis catalog/);
+    assert.equal(rail.findAllByProps({ "data-testid": "suggested-diagnoses" }).length, 0);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("bilateral structure catalog picks stay scoped to the eye where the search selection was made", async () => {
+  const originalFetch = globalThis.fetch;
+  const writes: Array<Record<string, unknown>> = [];
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.includes("diagnosis-candidates")) {
+      return Response.json({
+        findings: ["lens-od", "lens-os"].map((findingInstanceId) => ({
+          findingInstanceId,
+          findingDefinitionKey: "ocular-health:anterior:lens",
+          observationReference: `Observation/${findingInstanceId}`,
+          candidates: [],
+        })),
+      });
+    }
+    if (url.includes("diagnosis-catalog")) {
+      return Response.json({
+        diagnoses: [{
+          stableKey: "cataract_nuclear_sclerosis",
+          display: "Age-related nuclear cataract",
+          active: true,
+          codingStatus: "verified",
+        }],
+      });
+    }
+    if (url.includes("/fhir/R4/Condition")) {
+      return Response.json({ resourceType: "Bundle", type: "searchset", entry: [] });
+    }
+    if (url.includes("/diagnosis-picks") && init?.method === "POST") {
+      writes.push(JSON.parse(String(init.body)) as Record<string, unknown>);
+      return Response.json({ condition: { resourceType: "Condition", id: "condition-1" } });
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<DiagnosisPicker
+        encounterReference="Encounter/e1"
+        observationReferences={["Observation/lens-od", "Observation/lens-os"]}
+        findingDefinitionKey="ocular-health:anterior:lens"
+        mode="proposal"
+      />);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    const searches = renderer.root.findAllByType(OdosSearchPicker);
+    assert.equal(searches.length, 2);
+    act(() => searches[0]!.props.onSelect({
+      value: "cataract_nuclear_sclerosis",
+      label: "Age-related nuclear cataract",
+      item: {
+        stableKey: "cataract_nuclear_sclerosis",
+        display: "Age-related nuclear cataract",
+        active: true,
+        codingStatus: "verified",
+      },
+    }));
+    const proposalButtons = renderer.root.findAllByProps({ "aria-label": "Propose Age-related nuclear cataract" });
+    assert.equal(proposalButtons.length, 1);
+    await act(async () => proposalButtons[0]!.props.onClick());
+    assert.equal(writes[0]?.findingInstanceId, "lens-od");
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("structure proposal toggles find provisional Conditions beyond the first FHIR search page", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.includes("diagnosis-candidates")) {
+      return Response.json({
+        findings: [{
+          findingInstanceId: "lens-od",
+          findingDefinitionKey: "ocular-health:anterior:lens",
+          observationReference: "Observation/lens-od",
+          candidates: [{
+            diagnosisKey: "cataract_nuclear_sclerosis",
+            display: "Age-related nuclear cataract",
+            codingStatus: "verified",
+            priority: true,
+            source: "mapping",
+          }],
+        }],
+      });
+    }
+    if (url.includes("diagnosis-catalog")) {
+      return Response.json({ diagnoses: [] });
+    }
+    if (url.includes("page=2")) {
+      return Response.json({
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [{
+          resource: {
+            resourceType: "Condition",
+            id: "condition-cataract",
+            subject: { reference: "Patient/p1" },
+            encounter: { reference: "Encounter/e1" },
+            verificationStatus: { coding: [{ code: "provisional" }] },
+            identifier: [{
+              system: "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key",
+              value: "e1::cataract_nuclear_sclerosis::right",
+            }],
+            evidence: [{ detail: [{ reference: "Observation/lens-od" }] }],
+          },
+        }],
+      });
+    }
+    if (url.includes("/fhir/R4/Condition")) {
+      return Response.json({
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [],
+        link: [{ relation: "next", url: "/fhir/R4/Condition?page=2" }],
+      });
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<DiagnosisPicker
+        encounterReference="Encounter/e1"
+        observationReferences={["Observation/lens-od"]}
+        findingDefinitionKey="ocular-health:anterior:lens"
+        mode="proposal"
+      />);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    assert.equal(renderer.root.findAllByProps({ "aria-label": "Retract proposed Age-related nuclear cataract" }).length, 1);
   } finally {
     renderer?.unmount();
     globalThis.fetch = originalFetch;

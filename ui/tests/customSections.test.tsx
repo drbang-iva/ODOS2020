@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import type { MedicationStatement } from "@medplum/fhirtypes";
+import type { Condition, MedicationStatement } from "@medplum/fhirtypes";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
@@ -2570,6 +2570,165 @@ test("the ocular-health runner derives finding count from capture selections", a
     assert.equal(railEntry("ocular-health:anterior:palpebral-conjunctiva")?.props["data-structure-state"], "1 finding · deferred");
   } finally {
     renderer?.unmount();
+  }
+});
+
+test("saved ocular-health findings expose real scoped diagnosis suggestions and only explicit taps propose or retract", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalWindow = globalThis.window;
+  const diagnosisWrites: Array<Record<string, unknown>> = [];
+  let proposedCondition: Condition | undefined;
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: { dispatchEvent: () => true },
+  });
+  globalThis.fetch = (async (input, init) => {
+    const url = String(input);
+    if (url.includes("diagnosis-candidates")) {
+      return jsonResponse({
+        findings: [{
+          findingInstanceId: "lens-stale",
+          findingDefinitionKey: "ocular-health:anterior:lens",
+          observationReference: "Observation/lens-stale",
+          candidates: [{
+            diagnosisKey: "stale_diagnosis",
+            display: "Wrong stale diagnosis",
+            codingStatus: "verified",
+            priority: true,
+            source: "mapping",
+          }],
+        }, {
+          findingInstanceId: "lens-current",
+          findingDefinitionKey: "ocular-health:anterior:lens",
+          observationReference: "Observation/lens-current",
+          candidates: [{
+            diagnosisKey: "cataract_nuclear_sclerosis",
+            display: "Age-related nuclear cataract",
+            codingStatus: "verified",
+            priority: true,
+            source: "mapping",
+          }],
+        }],
+      });
+    }
+    if (url.includes("diagnosis-catalog")) {
+      return jsonResponse({
+        diagnoses: [{
+          stableKey: "cataract_nuclear_sclerosis",
+          display: "Age-related nuclear cataract",
+          active: true,
+          codingStatus: "verified",
+        }],
+      });
+    }
+    if (url.includes("/fhir/R4/Condition")) {
+      return jsonResponse({
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: proposedCondition ? [{ resource: proposedCondition }] : [],
+      });
+    }
+    if (url.includes("/diagnosis-picks") && init?.method === "POST") {
+      const body = JSON.parse(String(init.body)) as Record<string, unknown>;
+      diagnosisWrites.push(body);
+      proposedCondition = {
+        resourceType: "Condition",
+        id: "condition-cataract",
+        subject: { reference: "Patient/p-structure-dx" },
+        encounter: { reference: "Encounter/e-structure-dx" },
+        code: { text: "Age-related nuclear cataract" },
+        verificationStatus: { coding: [{ code: body.action === "possible" ? "provisional" : "refuted" }] },
+        identifier: [{
+          system: "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key",
+          value: "e-structure-dx::cataract_nuclear_sclerosis::right",
+        }],
+        evidence: [{ detail: [{ reference: "Observation/lens-current" }] }],
+      };
+      return jsonResponse({
+        condition: proposedCondition,
+      });
+    }
+    throw new Error(`Unexpected global request: ${url}`);
+  }) as typeof fetch;
+  const definition = {
+    stableKey: "ocular-health:anterior:lens",
+    sectionKey: "ocular-health:anterior:lens",
+    display: "Lens",
+    active: true,
+    perEye: true,
+    normalTemplate: "Clear; no cataract.",
+    allowDeferred: true,
+    customFields: [{
+      localCode: "CUSTOM_LENS_FINDINGS",
+      display: "Abnormal findings",
+      valueType: "multi-select" as const,
+      options: [{ code: "nuclear-sclerosis", display: "nuclear sclerosis", active: true, priority: true }],
+      order: 0,
+      active: true,
+    }],
+  };
+  const fetchImpl = (async (input, init) => {
+    if (init?.method === "POST") {
+      return jsonResponse({
+        eyes: {
+          OD: { eye: "OD", observationReference: "Observation/lens-current" },
+        },
+      });
+    }
+    return jsonResponse({ rows: [] });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={[definition]}
+        patientReference="Patient/p-structure-dx"
+        encounterReference="Encounter/e-structure-dx"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    const eye = renderer.root.findByProps({ "data-eye-panel": "OD" });
+    act(() => eye.findAllByType("button").find((button) => renderedText(button) === "Abnormal")!.props.onClick());
+    act(() => eye.findAllByType("button").find((button) => renderedText(button) === "Nuclear Sclerosis")!.props.onClick());
+    assert.deepEqual(diagnosisWrites, [], "selecting the finding must not emit a diagnosis");
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "structure-diagnosis-rail" }).length, 0);
+
+    const save = renderer.root.findAllByType("button").find((button) => renderedText(button) === "Save Ocular Health");
+    assert.ok(save);
+    await act(async () => {
+      await save.props.onClick();
+      await flushEffects();
+      await flushEffects();
+    });
+    const rail = renderer.root.findByProps({ "data-testid": "structure-diagnosis-rail" });
+    assert.match(renderedText(rail), /Age-related nuclear cataract/);
+    assert.doesNotMatch(renderedText(rail), /Wrong stale diagnosis/);
+    assert.deepEqual(diagnosisWrites, [], "saving the finding must not emit a diagnosis");
+
+    const propose = rail.findByProps({ "aria-label": "Propose Age-related nuclear cataract" });
+    await act(async () => {
+      await propose.props.onClick();
+      await flushEffects();
+    });
+    assert.deepEqual(diagnosisWrites[0], {
+      diagnosisKey: "cataract_nuclear_sclerosis",
+      action: "possible",
+      findingInstanceId: "lens-current",
+      source: "mapping",
+    });
+    const retract = renderer.root.findByProps({ "aria-label": "Retract proposed Age-related nuclear cataract" });
+    await act(async () => {
+      await retract.props.onClick();
+      await flushEffects();
+    });
+    assert.equal(diagnosisWrites[1]?.action, "discard");
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
   }
 });
 
