@@ -231,6 +231,49 @@ test("diagnosis door pages encounter Conditions and renders Possible provenance 
   }
 });
 
+test("excluded Encounter diagnosis references cannot expose the reorder surface", async () => {
+  const originalFetch = globalThis.fetch;
+  const confirmed = visitCondition("confirmed", "Confirmed", "confirmed");
+  const discarded = visitCondition("discarded", "Discarded", "refuted");
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url = String(input);
+    if (url.includes("/fhir/R4/Encounter/e1")) {
+      return jsonResponse({
+        resourceType: "Encounter",
+        id: "e1",
+        status: "in-progress",
+        class: { code: "AMB" },
+        diagnosis: [
+          { condition: { reference: "Condition/confirmed" }, rank: 1 },
+          { condition: { reference: "Condition/discarded" }, rank: 2 },
+        ],
+      });
+    }
+    if (url.includes("/fhir/R4/Condition?")) {
+      return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [{ resource: confirmed }, { resource: discarded }] });
+    }
+    if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
+    if (url.includes("/clinical-graph/encounters/e1/diagnosis-candidates")) return jsonResponse({ findings: [] });
+    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
+    if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
+    if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
+    if (url.includes("/procedure-charges")) return jsonResponse({ options: [], diagnoses: [], proposals: [], attachedProcedures: [] });
+    throw new Error(`Unexpected request: ${url}`);
+  }) as typeof fetch;
+
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" onSelectDiagnosis={() => undefined} />);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    assert.equal(renderer.root.findAllByProps({ children: "Reorder Impressions" }).length, 0);
+  } finally {
+    act(() => renderer?.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("catalog identity and pin reorder are explicit and stable", () => {
   const row = condition("c1", "Presbyopia");
   row.identifier = [{

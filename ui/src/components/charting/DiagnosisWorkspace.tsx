@@ -417,7 +417,7 @@ export function DiagnosisWorkspace({
             );
           })}
         </div>
-        {(encounter?.diagnosis?.length ?? 0) > 1 && (
+        {encounter && canReorderEncounterDiagnoses(encounter, visitConditions) && (
           <button
             type="button"
             className="odos-diagnosis-primary-action"
@@ -717,6 +717,21 @@ export function orderedEncounterConditions(encounter: Encounter, conditions: rea
         (left.condition.id ?? "").localeCompare(right.condition.id ?? "");
     })
     .map(({ condition }) => condition);
+}
+
+function canReorderEncounterDiagnoses(encounter: Encounter, conditions: readonly Condition[]): boolean {
+  const entries = encounter.diagnosis ?? [];
+  if (entries.length <= 1) return false;
+  const rankedConfirmedReferences = new Set(conditions.flatMap((condition) =>
+    condition.id &&
+    conditionVerificationStatus(condition) === "confirmed" &&
+    diagnosisRank(encounter, condition) !== undefined
+      ? [`Condition/${condition.id}`]
+      : []
+  ));
+  return rankedConfirmedReferences.size === entries.length && entries.every((entry) =>
+    Boolean(entry.condition.reference && rankedConfirmedReferences.has(entry.condition.reference))
+  );
 }
 
 export function diagnosisWorkspaceInstanceKey(patientReference: string, encounterReference: string): string {
