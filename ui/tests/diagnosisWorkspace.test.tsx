@@ -231,7 +231,7 @@ test("diagnosis door pages encounter Conditions and renders Possible provenance 
   }
 });
 
-test("excluded Encounter diagnosis references cannot expose the reorder surface", async () => {
+test("excluded Encounter diagnosis references expose a disabled reorder explanation naming the condition", async () => {
   const originalFetch = globalThis.fetch;
   const confirmed = visitCondition("confirmed", "Confirmed", "confirmed");
   const discarded = visitCondition("discarded", "Discarded", "refuted");
@@ -267,7 +267,88 @@ test("excluded Encounter diagnosis references cannot expose the reorder surface"
       renderer = create(<DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" onSelectDiagnosis={() => undefined} />);
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
-    assert.equal(renderer.root.findAllByProps({ children: "Reorder Impressions" }).length, 0);
+    const reorder = renderer.root.findByProps({ children: "Reorder Impressions" });
+    assert.equal(reorder.props.disabled, true);
+    assert.match(JSON.stringify(renderer.toJSON()), /Reorder unavailable.*Discarded/);
+  } finally {
+    act(() => renderer?.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("server-cleaned three-minus-one state renders two rows and submits their exact reorder", async () => {
+  const originalFetch = globalThis.fetch;
+  const requests: unknown[] = [];
+  const confirmedA = visitCondition("a", "Diagnosis A", "confirmed");
+  const discarded = visitCondition("discarded", "Discarded diagnosis", "refuted");
+  const confirmedC = visitCondition("c", "Diagnosis C", "confirmed");
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input);
+    if (url.includes("/fhir/R4/Encounter/e1")) {
+      return jsonResponse({
+        resourceType: "Encounter",
+        id: "e1",
+        status: "in-progress",
+        class: { code: "AMB" },
+        diagnosis: [
+          { condition: { reference: "Condition/a" }, rank: 1 },
+          { condition: { reference: "Condition/c" }, rank: 3 },
+        ],
+      });
+    }
+    if (url.includes("/fhir/R4/Condition?")) {
+      return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [
+        { resource: confirmedA },
+        { resource: discarded },
+        { resource: confirmedC },
+      ] });
+    }
+    if (url.includes("/clinical-graph/encounters/e1/diagnosis-order")) {
+      const body = JSON.parse(String(init?.body)) as { conditionReferences?: string[] };
+      requests.push(body);
+      const references = body.conditionReferences ?? [];
+      const exact = references.length === 2 &&
+        new Set(references).size === 2 &&
+        references.includes("Condition/a") &&
+        references.includes("Condition/c");
+      return new Response(JSON.stringify(exact ? {
+        encounter: {
+          resourceType: "Encounter",
+          id: "e1",
+          status: "in-progress",
+          class: { code: "AMB" },
+          diagnosis: references.map((reference, index) => ({ condition: { reference }, rank: index + 1 })),
+        },
+      } : { error: "Diagnosis order must be an exact permutation of the Encounter diagnoses." }), {
+        status: exact ? 200 : 422,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
+    if (url.includes("/clinical-graph/encounters/e1/diagnosis-candidates")) return jsonResponse({ findings: [] });
+    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
+    if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
+    if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
+    if (url.includes("/procedure-charges")) return jsonResponse({ options: [], diagnoses: [], proposals: [], attachedProcedures: [] });
+    throw new Error(`Unexpected request: ${url}`);
+  }) as typeof fetch;
+
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" onSelectDiagnosis={() => undefined} />);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    assert.equal(renderer.root.findAllByProps({ className: "odos-diagnosis-visit-row" }).length, 2);
+    const reorder = renderer.root.findByProps({ children: "Reorder Impressions" });
+    assert.equal(reorder.props.disabled, false);
+    act(() => reorder.props.onClick());
+    assert.equal(renderer.root.findAll((node) => node.props["data-condition-reference"]).length, 2);
+    await act(async () => {
+      await renderer.root.findByProps({ children: "Save" }).props.onClick();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    assert.deepEqual(requests, [{ conditionReferences: ["Condition/a", "Condition/c"] }]);
   } finally {
     act(() => renderer?.unmount());
     globalThis.fetch = originalFetch;

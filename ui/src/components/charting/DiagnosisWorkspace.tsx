@@ -185,7 +185,7 @@ export function DiagnosisWorkspace({
       }));
       if (loadGeneration.current !== requestGeneration) return;
       setEncounter(nextEncounter);
-      setConditions(nextConditions);
+      setConditions(searchedConditions);
       setProvenanceLines(nextProvenanceLines);
       setQuickList(quickBody.diagnoses ?? []);
       setCatalog(quickBody.catalog ?? []);
@@ -360,6 +360,10 @@ export function DiagnosisWorkspace({
   const suggestionsByObservation = Object.fromEntries(candidateFindings.flatMap((finding) =>
     finding.observationReference ? [[finding.observationReference, finding]] : []
   ));
+  const reorderAvailable = encounter ? canReorderEncounterDiagnoses(encounter, visitConditions) : false;
+  const reorderUnavailable = encounter
+    ? encounterDiagnosisReorderUnavailable(encounter, visitConditions, conditions)
+    : undefined;
 
   function chooseSuggestion(suggestion: DiagnosisCandidateSuggestion, findingInstanceId: string) {
     const stableKey = suggestion.diagnosisKey ?? suggestion.familyGroup;
@@ -417,18 +421,21 @@ export function DiagnosisWorkspace({
             );
           })}
         </div>
-        {encounter && canReorderEncounterDiagnoses(encounter, visitConditions) && (
-          <button
-            type="button"
-            className="odos-diagnosis-primary-action"
-            disabled={!canWrite || busy !== undefined}
-            onClick={() => {
-              setReorderError(undefined);
-              setReorderOpen(true);
-            }}
-          >
-            Reorder Impressions
-          </button>
+        {encounter && (reorderAvailable || reorderUnavailable) && (
+          <>
+            <button
+              type="button"
+              className="odos-diagnosis-primary-action"
+              disabled={!reorderAvailable || !canWrite || busy !== undefined}
+              onClick={() => {
+                setReorderError(undefined);
+                setReorderOpen(true);
+              }}
+            >
+              Reorder Impressions
+            </button>
+            {reorderUnavailable && <p className="odos-diagnosis-muted" role="status">{reorderUnavailable}</p>}
+          </>
         )}
         {selectedCondition && encounter && (
           <DiagnosisRankActions
@@ -675,7 +682,7 @@ export function DiagnosisWorkspace({
       <DiagnosisImagingRegion patientReference={patientReference} />
       {reorderOpen && encounter && (
         <ReorderImpressionsModal
-          rows={buildReorderImpressionRows(encounter, conditions, attachedProcedures)}
+          rows={buildReorderImpressionRows(encounter, visitConditions, attachedProcedures)}
           busy={busy === "reorder"}
           attachmentError={reorderError ?? procedureAttachmentError}
           onCancel={() => setReorderOpen(false)}
@@ -732,6 +739,30 @@ function canReorderEncounterDiagnoses(encounter: Encounter, conditions: readonly
   return rankedConfirmedReferences.size === entries.length && entries.every((entry) =>
     Boolean(entry.condition.reference && rankedConfirmedReferences.has(entry.condition.reference))
   );
+}
+
+function encounterDiagnosisReorderUnavailable(
+  encounter: Encounter,
+  visibleConditions: readonly Condition[],
+  allConditions: readonly Condition[],
+): string | undefined {
+  const entries = encounter.diagnosis ?? [];
+  if (entries.length <= 1 || canReorderEncounterDiagnoses(encounter, visibleConditions)) return undefined;
+  const visibleReferences = new Set<string>(visibleConditions.flatMap((condition) =>
+    condition.id && diagnosisRank(encounter, condition) !== undefined ? [`Condition/${condition.id}`] : []
+  ));
+  const conditionsByReference = new Map<string, Condition>(allConditions.flatMap((condition) =>
+    condition.id ? [[`Condition/${condition.id}`, condition] as const] : []
+  ));
+  const blockedNames = entries.flatMap((entry) => {
+    const reference = entry.condition.reference;
+    if (!reference || visibleReferences.has(reference)) return [];
+    const condition = conditionsByReference.get(reference);
+    return [condition ? displayCode(condition.code) : reference];
+  });
+  const names = [...new Set(blockedNames)];
+  if (names.length === 0) return "Reorder unavailable because the encounter diagnosis list is out of sync.";
+  return `Reorder unavailable while ${names.join(", ")} remains linked to this encounter.`;
 }
 
 export function diagnosisWorkspaceInstanceKey(patientReference: string, encounterReference: string): string {
