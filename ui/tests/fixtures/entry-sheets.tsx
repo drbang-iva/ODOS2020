@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
+import type { Patient } from "@medplum/fhirtypes";
 import { AssessmentSection } from "../../src/components/charting/AssessmentSection";
 import { AutoRefractionSection } from "../../src/components/charting/AutoRefractionSection";
 import { CoverTestSection } from "../../src/components/charting/CoverTestSection";
@@ -11,7 +12,8 @@ import { DryEyeSection } from "../../src/components/charting/DryEyeSection";
 import { EntranceMeasurementSection } from "../../src/components/charting/EntranceMeasurementSection";
 import { EntranceStateSection } from "../../src/components/charting/EntranceStateSection";
 import { EomSection } from "../../src/components/charting/EomSection";
-import { ExamEntrySheet, isExamEntrySheetSectionId, useExamEntrySheetGuard } from "../../src/components/charting/ExamEntrySheet";
+import { EncounterHeader } from "../../src/components/charting/EncounterHeader";
+import { EXAM_ENTRY_SHEET_CONFIG, ExamEntrySheet, isExamEntrySheetSectionId, useExamEntrySheetGuard } from "../../src/components/charting/ExamEntrySheet";
 import { ExamOverviewBoard, type ExamOverviewProjection } from "../../src/components/charting/ExamOverviewBoard";
 import { EyeGrowthSection } from "../../src/components/charting/EyeGrowthSection";
 import { GonioscopySection } from "../../src/components/charting/GonioscopySection";
@@ -80,6 +82,12 @@ const FIXTURE_PROJECTION: ExamOverviewProjection = {
     { sectionKey: "assessment", label: "Assessment", state: "not-examined", findingObservationReferences: [], abnormalCount: 0, carriedUnreassertedCount: 0, deferredWithoutReasonCount: 0 },
   ],
   completeness: { status: "unconfigured", requiredSectionCount: 0, resolvedSectionCount: 0, trace: [], documentationIssues: [] },
+};
+
+const FIXTURE_PATIENT: Patient = {
+  resourceType: "Patient",
+  id: "test",
+  name: [{ given: ["Synthetic"], family: "Patient" }],
 };
 
 const COMPREHENSIVE_PROJECTION: ExamOverviewProjection = {
@@ -204,8 +212,18 @@ function Fixture() {
   const sheetGuard = useExamEntrySheetGuard(mapped ? active : undefined);
   const sheetOpen = Boolean(active && (mapped || forceSheet));
   const editor = active ? renderEditor(active, sheetGuard.resetDirty) : null;
+  const showHeader = params.get("header") === "true";
   const showReturnButton = params.get("returnButton") === "true";
   const projection = params.get("comprehensive") === "true" ? COMPREHENSIVE_PROJECTION : FIXTURE_PROJECTION;
+  const clinicalActionUnavailableReason = mapped && active
+    ? `Finish or cancel ${EXAM_ENTRY_SHEET_CONFIG[active].title} first`
+    : undefined;
+  const headerProps = {
+    patient: FIXTURE_PATIENT,
+    encounterId: "test",
+    visitUnavailableReason: clinicalActionUnavailableReason,
+    clinicalActionUnavailableReason,
+  };
   const openSection = (sectionId: FixtureSectionId) => {
     if (mapped && active && active !== sectionId) {
       sheetGuard.requestTransition(sectionLabel(sectionId), () => setActive(sectionId));
@@ -216,6 +234,7 @@ function Fixture() {
 
   return (
     <main className="flex h-screen flex-col overflow-hidden bg-bg-deep text-white">
+      {showHeader && <EncounterHeader {...headerProps} />}
       <div className="flex min-h-14 flex-wrap items-center gap-3 border-b border-white/10 px-4" data-testid="fixture-exam-context">
         {(forceSheet && active ? [active] : FIXTURE_SECTIONS).map((sectionId) => (
           <button key={sectionId} type="button" onClick={() => openSection(sectionId)}>

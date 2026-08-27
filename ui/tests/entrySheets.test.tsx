@@ -989,6 +989,29 @@ test("the widest mapped shape uses a bottom sheet while retaining visible exam c
   }
 });
 
+test("an open clinical sheet disables Sign and Abandon in the encounter header", { timeout: 30_000 }, async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  page.setDefaultTimeout(5_000);
+  page.on("pageerror", (error) => console.log(`ENTRY_SHEET_HEADER_ERROR: ${error.message}`));
+  try {
+    await page.goto(
+      `${origin}/tests/fixtures/entry-sheets.html?header=true&section=va`,
+      { waitUntil: "networkidle" },
+    );
+    await page.getByRole("dialog", { name: "Visual Acuity" }).waitFor();
+    const reason = "Finish or cancel Visual Acuity first";
+    const sign = page.getByRole("button", { name: "Sign & finish" });
+    const abandon = page.getByRole("button", { name: "Abandon encounter" });
+
+    assert.equal(await sign.isDisabled(), true);
+    assert.equal(await sign.getAttribute("title"), reason);
+    assert.equal(await abandon.isDisabled(), true);
+    assert.equal(await abandon.getAttribute("title"), reason);
+  } finally {
+    await page.close();
+  }
+});
+
 for (const viewport of [
   { width: 1440, height: 1000, expectedWidth: 762 },
   { width: 1200, height: 900, expectedWidth: 635 },

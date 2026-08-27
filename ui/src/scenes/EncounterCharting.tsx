@@ -622,13 +622,15 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const activeExamOverviewProjection = examOverviewProjection?.encounterReference === encounterReference
     ? examOverviewProjection
     : undefined;
-  const visitUnavailableReason = entrySheetSection
+  const clinicalActionUnavailableReason = entrySheetSection
     ? `Finish or cancel ${EXAM_ENTRY_SHEET_CONFIG[entrySheetSection].title} first`
-    : currentEncounterLoadState.status === "loading"
+    : undefined;
+  const visitUnavailableReason = clinicalActionUnavailableReason
+    ?? (currentEncounterLoadState.status === "loading"
       ? "Loading encounter details — Visit & charges unavailable"
       : currentEncounterLoadState.status === "error"
         ? "Encounter details unavailable — Visit & charges cannot be changed"
-        : undefined;
+        : undefined);
   const visitChargesDisabled = currentEncounterLoadState.status !== "ready" || isMigratedEncounter(encounter);
 
   return (
@@ -642,6 +644,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
         brokenDiagnosisDisplay={brokenVisitDiagnosisDisplay}
         visitChargesOpen={visitChargesOpen}
         visitUnavailableReason={visitUnavailableReason}
+        clinicalActionUnavailableReason={clinicalActionUnavailableReason}
         onToggleVisitCharges={() => setVisitChargesOpen((current) => !current)}
       />
       <div className="odos-charting-stage" data-entry-sheet-open={visitChargesOpen ? "true" : "false"}>

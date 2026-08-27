@@ -43,6 +43,7 @@ interface Props {
   brokenDiagnosisDisplay?: string;
   visitChargesOpen?: boolean;
   visitUnavailableReason?: string;
+  clinicalActionUnavailableReason?: string;
   onToggleVisitCharges?: () => void;
 }
 
@@ -55,6 +56,7 @@ export function EncounterHeader({
   brokenDiagnosisDisplay,
   visitChargesOpen = false,
   visitUnavailableReason,
+  clinicalActionUnavailableReason,
   onToggleVisitCharges,
 }: Props) {
   const [encounter, setEncounter] = useState<Encounter | null>(null);
@@ -186,7 +188,7 @@ export function EncounterHeader({
   }
 
   async function requestFinishEncounter() {
-    if (!patient.id || migrated || busy) return;
+    if (!patient.id || migrated || busy || clinicalActionUnavailableReason) return;
     const requestVersion = ++completenessCheckVersion.current;
     setBusy("checking");
     setError(null);
@@ -204,7 +206,7 @@ export function EncounterHeader({
   }
 
   async function abandonEncounter() {
-    if (!patient.id || migrated || busy) return;
+    if (!patient.id || migrated || busy || clinicalActionUnavailableReason) return;
     setBusy("abandon");
     setError(null);
     try {
@@ -268,7 +270,8 @@ export function EncounterHeader({
         }}
         onBlackout={enterBlackout}
         requestFinishEncounter={requestFinishEncounter}
-        signDisabled={busy !== null || migrated}
+        signDisabled={busy !== null || migrated || Boolean(clinicalActionUnavailableReason)}
+        signUnavailableReason={clinicalActionUnavailableReason}
         signLabel={busy === "checking" ? "Checking..." : busy === "finish" ? "Signing..." : "Sign & finish"}
       />
 
@@ -278,8 +281,8 @@ export function EncounterHeader({
           <button
             type="button"
             onClick={abandonEncounter}
-            disabled={busy !== null || migrated}
-            title={migrated ? "Migrated historical encounters are read-only." : undefined}
+            disabled={busy !== null || migrated || Boolean(clinicalActionUnavailableReason)}
+            title={migrated ? "Migrated historical encounters are read-only." : clinicalActionUnavailableReason}
             className="min-h-11 rounded border border-white/15 px-3 py-2 text-sm text-white/65 transition hover:border-red-400/60 hover:text-red-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {busy === "abandon" ? "Abandoning..." : "Abandon encounter"}
@@ -355,6 +358,7 @@ interface ExamChartBarProps {
   onBlackout: () => void;
   requestFinishEncounter: () => void | Promise<void>;
   signDisabled: boolean;
+  signUnavailableReason?: string;
   signLabel: string;
 }
 
@@ -371,6 +375,7 @@ export function ExamChartBar({
   onBlackout,
   requestFinishEncounter,
   signDisabled,
+  signUnavailableReason,
   signLabel,
 }: ExamChartBarProps) {
   const visit = visitChipView(visitCharge, brokenDiagnosisDisplay);
@@ -449,6 +454,7 @@ export function ExamChartBar({
         className="odos-chart-bar-sign"
         data-chart-bar-slot="sign"
         disabled={signDisabled}
+        title={signUnavailableReason}
         onClick={requestFinishEncounter}
       >
         <span className="odos-chart-bar-sign-full">{signLabel}</span>
