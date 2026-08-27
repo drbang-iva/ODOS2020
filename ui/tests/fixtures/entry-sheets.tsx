@@ -274,10 +274,18 @@ function Fixture() {
   );
 }
 
-function renderEditor(sectionId: FixtureSectionId, onSaved: () => void): React.ReactNode {
-  const props = { patientReference: "Patient/test", encounterReference: "Encounter/test", onSaved };
+function renderEditor(sectionId: FixtureSectionId, resetDirty: (keepCancelableEditorOpen?: boolean) => void): React.ReactNode {
+  const patientReference = "Patient/test";
+  const encounterReference = "Encounter/test";
+  const props = { patientReference, encounterReference, onSaved: () => resetDirty() };
   switch (sectionId) {
-    case "hpi": return <HpiSection {...props} />;
+    case "hpi": return (
+      <HpiSection
+        patientReference={patientReference}
+        encounterReference={encounterReference}
+        onSaved={(_status, keepOpen) => resetDirty(keepOpen)}
+      />
+    );
     case "wearing": return <WearingSection {...props} />;
     case "auto-refraction": return <AutoRefractionSection {...props} />;
     case "pretest-vitals": return <PretestVitalsSection {...props} />;

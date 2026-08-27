@@ -597,6 +597,33 @@ test("Save and Add Another resets the sheet guard before a later swap", { timeou
   }
 });
 
+test("Save and Add Another seeds a clean checkpoint for canceling the next complaint", { timeout: 30_000 }, async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  page.setDefaultTimeout(5_000);
+  const dialogs: string[] = [];
+  page.on("dialog", async (dialog) => {
+    dialogs.push(dialog.message());
+    await dialog.accept();
+  });
+  try {
+    await page.goto(`${origin}/tests/fixtures/entry-sheets.html?section=hpi`, { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "Other", exact: true }).click();
+    const concern = page.getByLabel("Presenting concern");
+    await concern.fill("Saved synthetic complaint");
+    await page.getByRole("button", { name: "Save and Add Another" }).click();
+    await page.getByRole("status").filter({ hasText: "Presenting complaint saved." }).waitFor();
+    await concern.fill("Discarded second complaint");
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+
+    await openChartAnotherGroup(page, "va");
+    await page.locator('[data-editor-section-id="va"]').click();
+    await page.getByRole("dialog", { name: "Visual Acuity" }).waitFor();
+    assert.deepEqual(dialogs, []);
+  } finally {
+    await page.close();
+  }
+});
+
 test("dirty Escape and Cancel share the discard guard while pristine Escape remains silent", { timeout: 30_000 }, async () => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   page.setDefaultTimeout(5_000);

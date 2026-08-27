@@ -46,9 +46,9 @@ export function useExamEntrySheetGuard(sectionId?: ExamEntrySheetSectionId) {
     lastFocusRef.current = null;
   }, [sectionId]);
 
-  const resetDirty = useCallback(() => {
+  const resetDirty = useCallback((keepCancelableEditorOpen = false) => {
     dirtyRef.current = false;
-    dirtyCheckpointRef.current = undefined;
+    dirtyCheckpointRef.current = keepCancelableEditorOpen ? false : undefined;
   }, []);
   const markDirty = useCallback(() => {
     dirtyRef.current = true;
