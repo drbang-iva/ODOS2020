@@ -1,5 +1,14 @@
+import type { Condition } from "@medplum/fhirtypes";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { authHeaders, clinicalGraphApiBase, submitDiagnosisPick } from "../../lib/clinical-graph-client";
+import { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } from "../../lib/clinical-actions";
+import {
+  authHeaders,
+  clinicalGraphApiBase,
+  readDiagnosisCandidates,
+  submitDiagnosisPick,
+  type DiagnosisCandidateSuggestion,
+} from "../../lib/clinical-graph-client";
+import { fhir } from "../../lib/fhir";
 import { OdosSearchPicker } from "../inputs/OdosSearchPicker";
 
 interface Candidate {
@@ -33,16 +42,19 @@ export function DiagnosisPicker({
   observationReferences,
   findingDefinitionKey,
   refreshKey,
+  mode = "decision",
 }: {
   encounterReference: string;
   observationReferences?: string[];
   findingDefinitionKey?: string;
   refreshKey?: number | string;
+  mode?: "decision" | "proposal";
 }) {
   const [findings, setFindings] = useState<CandidateFinding[]>([]);
   const [catalog, setCatalog] = useState<CatalogRow[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
   const [catalogSelection, setCatalogSelection] = useState<CatalogRow>();
+  const [proposedConditions, setProposedConditions] = useState<Condition[]>([]);
   const [overridden, setOverridden] = useState<Set<string>>(() => new Set());
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -53,28 +65,30 @@ export function DiagnosisPicker({
   async function load(signal?: AbortSignal) {
     const requestVersion = ++loadVersion.current;
     try {
-      const [candidateResponse, catalogResponse] = await Promise.all([
-        fetch(`${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/diagnosis-candidates`, { headers: authHeaders(), signal }),
+      const [candidateFindings, catalogResponse, conditionBundle] = await Promise.all([
+        readDiagnosisCandidates(encounterId),
         fetch(`${clinicalGraphApiBase()}/clinical-graph/diagnosis-catalog`, { headers: authHeaders(), signal }),
+        mode === "proposal"
+          ? fhir.search<Condition>("Condition", { encounter: encounterReference, _count: "200" })
+          : Promise.resolve(undefined),
       ]);
-      const candidateBody = await candidateResponse.json() as { findings?: CandidateFinding[]; error?: string };
       const catalogBody = await catalogResponse.json() as { diagnoses?: CatalogRow[]; error?: string };
-      if (!candidateResponse.ok) throw new Error(candidateBody.error ?? `Diagnosis candidates request failed: ${candidateResponse.status}`);
       if (!catalogResponse.ok) throw new Error(catalogBody.error ?? `Diagnosis catalog request failed: ${catalogResponse.status}`);
       if (signal?.aborted || requestVersion !== loadVersion.current) return;
       const allowedObservations = new Set(observationReferences ?? []);
-      setFindings((candidateBody.findings ?? []).map((finding) => ({
+      setFindings(candidateFindings.map((finding) => ({
         ...finding,
-        candidates: finding.candidates.filter((candidate) => typeof candidate.diagnosisKey === "string"),
-        ...(finding.suppressedCandidates ? {
-          suppressedCandidates: finding.suppressedCandidates.filter((candidate) => typeof candidate.diagnosisKey === "string"),
-        } : {}),
+        candidates: finding.candidates.filter(isLeafCandidate),
+        suppressedCandidates: finding.suppressedCandidates?.filter(isLeafCandidate),
       })).filter((finding) =>
-        (finding.candidates.length > 0 || Boolean(finding.suppression && finding.suppressedCandidates?.length)) &&
+        (mode === "proposal" || finding.candidates.length > 0 || Boolean(finding.suppression && finding.suppressedCandidates?.length)) &&
         (!findingDefinitionKey || finding.findingDefinitionKey === findingDefinitionKey) &&
         (allowedObservations.size === 0 || Boolean(finding.observationReference && allowedObservations.has(finding.observationReference)))
       ));
       setCatalog((catalogBody.diagnoses ?? []).filter((row) => row.active));
+      setProposedConditions((conditionBundle?.entry ?? []).flatMap((entry) =>
+        entry.resource && isProvisional(entry.resource) ? [entry.resource] : []
+      ));
       setError(null);
     } catch (err) {
       if (!signal?.aborted && requestVersion === loadVersion.current) {
@@ -96,7 +110,7 @@ export function DiagnosisPicker({
       controller.abort();
       loadVersion.current += 1;
     };
-  }, [encounterId, findingDefinitionKey, observationKey, refreshKey]);
+  }, [encounterId, encounterReference, findingDefinitionKey, mode, observationKey, refreshKey]);
 
   const searchCatalog = useMemo(() => async (query: string) => {
     const term = query.trim().toLocaleLowerCase();
@@ -111,7 +125,7 @@ export function DiagnosisPicker({
       }));
   }, [catalog]);
 
-  async function pick(finding: CandidateFinding, diagnosisKey: string, action: "possible" | "confirm", source: Candidate["source"] | "catalog-search") {
+  async function pick(finding: CandidateFinding, diagnosisKey: string, action: "possible" | "confirm" | "discard", source: Candidate["source"] | "catalog-search") {
     setBusy(`${finding.findingInstanceId}:${diagnosisKey}:${action}`);
     setError(null);
     try {
@@ -133,6 +147,59 @@ export function DiagnosisPicker({
   }
 
   if (findings.length === 0) return error ? <div className="mt-3 text-xs text-[color:var(--odos-alert)]">{error}</div> : null;
+
+  if (mode === "proposal") {
+    return (
+      <div data-testid="structure-diagnosis-rail" className="mt-4 space-y-3 border-t border-[color:var(--odos-line)] pt-4">
+        {findings.map((finding) => (
+          <div key={finding.findingInstanceId} className="space-y-3 rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface)] p-3">
+            {finding.candidates.length > 0 && (
+              <div data-testid="suggested-diagnoses" className="space-y-2">
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--odos-muted)]">Suggested diagnoses</div>
+                <div className="flex flex-wrap gap-2">
+                  {finding.candidates.map((candidate) => {
+                    const proposed = isProposedDiagnosis(proposedConditions, candidate.diagnosisKey, finding.observationReference);
+                    return <ProposalChoice
+                      key={candidate.diagnosisKey}
+                      display={candidate.display}
+                      code={catalogCode(candidate)}
+                      proposed={proposed}
+                      busy={busy !== null}
+                      onToggle={() => pick(finding, candidate.diagnosisKey, proposed ? "discard" : "possible", candidate.source)}
+                    />;
+                  })}
+                </div>
+              </div>
+            )}
+            <div>
+              <OdosSearchPicker
+                label="Full diagnosis catalog"
+                value={catalogSelection?.stableKey ?? ""}
+                selectedLabel={catalogSelection?.display}
+                placeholder="Search full diagnosis catalog"
+                search={searchCatalog}
+                onClear={() => setCatalogSelection(undefined)}
+                onSelect={(option) => setCatalogSelection(option.item)}
+              />
+              {catalogSelection && (() => {
+                const proposed = isProposedDiagnosis(proposedConditions, catalogSelection.stableKey, finding.observationReference);
+                return <div className="mt-2">
+                  <ProposalChoice
+                    display={catalogSelection.display}
+                    code={catalogCode(catalogSelection)}
+                    proposed={proposed}
+                    busy={busy !== null}
+                    onToggle={() => pick(finding, catalogSelection.stableKey, proposed ? "discard" : "possible", "catalog-search")}
+                  />
+                </div>;
+              })()}
+            </div>
+          </div>
+        ))}
+        {error && <div className="text-xs text-[color:var(--odos-alert)]">{error}</div>}
+      </div>
+    );
+  }
 
   return (
     <div className="mt-3 space-y-2">
@@ -228,6 +295,36 @@ export function DiagnosisPicker({
   );
 }
 
+function ProposalChoice({
+  display,
+  code,
+  proposed,
+  busy,
+  onToggle,
+}: {
+  display: string;
+  code?: string;
+  proposed: boolean;
+  busy: boolean;
+  onToggle: () => void | Promise<void>;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={proposed ? `Retract proposed ${display}` : `Propose ${display}`}
+      aria-pressed={proposed}
+      disabled={busy}
+      onClick={onToggle}
+      className={proposed
+        ? "rounded-full border border-[color:var(--odos-amber)] bg-[color:var(--odos-accent-tint-hi)] px-3 py-2 text-left text-xs font-semibold text-[color:var(--odos-text)] disabled:opacity-45"
+        : "rounded-full border border-[color:var(--odos-accent-border)] bg-[color:var(--odos-accent-tint-lo)] px-3 py-2 text-left text-xs font-semibold text-[color:var(--odos-text)] disabled:opacity-45"}
+    >
+      <span>{display}</span>
+      {code && <small className="ml-2 text-[color:var(--odos-muted)]">{code}</small>}
+    </button>
+  );
+}
+
 function DiagnosisChoice({
   display,
   code,
@@ -264,4 +361,34 @@ function catalogCode(row: Pick<CatalogRow, "icd10">): string | undefined {
   if (!row.icd10) return undefined;
   if (row.icd10.code) return row.icd10.code;
   return row.icd10.pattern?.unspecifiedEye;
+}
+
+function isLeafCandidate(candidate: DiagnosisCandidateSuggestion): candidate is Candidate {
+  return typeof candidate.diagnosisKey === "string" &&
+    "codingStatus" in candidate &&
+    (candidate.codingStatus === "verified" || candidate.codingStatus === "placeholder" || candidate.codingStatus === "provisional");
+}
+
+function isProvisional(condition: Condition): boolean {
+  return condition.verificationStatus?.coding?.some((coding) => coding.code === "provisional") === true;
+}
+
+function isProposedDiagnosis(
+  conditions: readonly Condition[],
+  diagnosisKey: string,
+  observationReference: string | undefined,
+): boolean {
+  return conditions.some((condition) =>
+    conditionDiagnosisKey(condition) === diagnosisKey &&
+    (!observationReference || condition.evidence?.some((evidence) =>
+      evidence.detail?.some((detail) => detail.reference === observationReference)
+    ) === true)
+  );
+}
+
+function conditionDiagnosisKey(condition: Condition): string | undefined {
+  const value = condition.identifier?.find((identifier) =>
+    identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM
+  )?.value;
+  return value?.split("::").at(-2);
 }

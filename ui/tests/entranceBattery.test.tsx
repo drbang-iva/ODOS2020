@@ -336,6 +336,56 @@ test("suppressed visual-field diagnosis stays visible and the override reveals c
   }
 });
 
+test("structure diagnosis rail keeps full search when the persisted finding has no seeded suggestions", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.includes("diagnosis-candidates")) {
+      return Response.json({
+        findings: [{
+          findingInstanceId: "iris-observation",
+          findingDefinitionKey: "ocular-health:anterior:iris",
+          observationReference: "Observation/iris-observation",
+          candidates: [],
+        }],
+      });
+    }
+    if (url.includes("diagnosis-catalog")) {
+      return Response.json({
+        diagnoses: [{
+          stableKey: "iritis",
+          display: "Iritis",
+          active: true,
+          codingStatus: "verified",
+        }],
+      });
+    }
+    if (url.includes("/fhir/R4/Condition")) {
+      return Response.json({ resourceType: "Bundle", type: "searchset", entry: [] });
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<DiagnosisPicker
+        encounterReference="Encounter/e1"
+        observationReferences={["Observation/iris-observation"]}
+        findingDefinitionKey="ocular-health:anterior:iris"
+        mode="proposal"
+      />);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    const rail = renderer.root.findByProps({ "data-testid": "structure-diagnosis-rail" });
+    assert.match(JSON.stringify(renderer.toJSON()), /Full diagnosis catalog/);
+    assert.equal(rail.findAllByProps({ "data-testid": "suggested-diagnoses" }).length, 0);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("cover magnitude uses the shared spinner and is bounded from 0 through 60 delta", () => {
   assert.equal(COVER_MAGNITUDES.length, 61);
   assert.deepEqual([COVER_MAGNITUDES[0], COVER_MAGNITUDES.at(-1)], ["0", "60"]);

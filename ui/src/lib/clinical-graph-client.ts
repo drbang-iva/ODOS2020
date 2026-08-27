@@ -207,6 +207,8 @@ export type DiagnosisCandidateSuggestion = {
   diagnosisKey: string;
   familyGroup?: never;
   display: string;
+  icd10?: { code?: string; pattern?: Record<string, string> };
+  codingStatus: "verified" | "placeholder" | "provisional";
   priority: boolean;
   source: "rule" | "mapping";
 } | {
@@ -225,6 +227,8 @@ export interface DiagnosisCandidateFinding {
   findingDefinitionKey?: string;
   observationReference?: string;
   candidates: DiagnosisCandidateSuggestion[];
+  suppressedCandidates?: DiagnosisCandidateSuggestion[];
+  suppression?: { message: string; overridable: boolean };
 }
 
 export async function readDiagnosisCandidates(encounterId: string): Promise<DiagnosisCandidateFinding[]> {
