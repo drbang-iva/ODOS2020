@@ -521,6 +521,11 @@
   box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
 }
 
+.odos-exam-section.is-optional {
+  border-style: dashed;
+  opacity: .62;
+}
+
 .odos-exam-section-heading {
   display: flex;
   align-items: flex-start;
@@ -534,6 +539,33 @@
 .odos-exam-section-heading h2 {
   margin: 0 0 7px;
   font-size: 16px;
+}
+
+.odos-exam-section-trace {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.odos-exam-section-trace .odos-exam-section-state {
+  gap: 5px;
+}
+
+.odos-exam-section-trace .odos-exam-section-state strong {
+  color: var(--odos-text);
+  font-size: 10px;
+}
+
+.odos-exam-section-owner {
+  flex: none;
+  padding: 3px 7px;
+  border: 1px solid var(--odos-line-2);
+  border-radius: 999px;
+  color: var(--odos-faint);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
 }
 
 .odos-exam-section-state {
@@ -597,6 +629,40 @@
   display: flex;
   min-width: 0;
   flex-direction: column;
+}
+
+.odos-exam-section-body {
+  scrollbar-gutter: stable;
+}
+
+.odos-exam-section-blank {
+  display: flex;
+  min-height: 76px;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 0;
+  background: transparent;
+  color: var(--odos-faint);
+  font: inherit;
+  cursor: pointer;
+}
+
+.odos-exam-section-blank:hover {
+  background: color-mix(in srgb, var(--odos-accent) 6%, transparent);
+  color: var(--odos-text);
+}
+
+.odos-exam-section-blank > span {
+  min-width: 72px;
+  border-bottom: 1px solid var(--odos-line-2);
+  text-align: center;
+}
+
+.odos-exam-section-blank small {
+  font-size: 10px;
+  font-weight: 700;
 }
 
 .odos-exam-editor-entries {
