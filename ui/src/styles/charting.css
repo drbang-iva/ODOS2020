@@ -1502,6 +1502,15 @@
   box-shadow: inset 3px 0 0 var(--odos-accent);
 }
 
+.odos-diagnosis-visit-row.is-possible {
+  border-color: color-mix(in srgb, var(--odos-amber) 55%, var(--odos-line));
+  background: color-mix(in srgb, var(--odos-amber) 8%, var(--odos-surface-2));
+}
+
+.odos-diagnosis-provenance {
+  color: var(--odos-accent) !important;
+}
+
 .odos-diagnosis-visit-row small,
 .odos-diagnosis-common-row small,
 .odos-diagnosis-imaging-card small {

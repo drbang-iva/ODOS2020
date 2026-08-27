@@ -63,7 +63,15 @@ test("diagnosis workspace preferences default safely and round-trip valid select
 });
 
 test("diagnosis rail follows Encounter.diagnosis rank order without normalizing gaps", () => {
-  const conditions = [condition("second", "Second"), condition("first", "First"), condition("unlinked", "Unlinked")];
+  const conditions = [
+    visitCondition("second", "Second", "confirmed"),
+    visitCondition("first", "First", "confirmed"),
+    visitCondition("rank-drift", "Rank drift", "confirmed"),
+    visitCondition("possible", "Possible", "provisional"),
+    visitCondition("discarded", "Discarded", "refuted"),
+    visitCondition("error", "Error", "entered-in-error"),
+    { ...visitCondition("wrong-category", "Wrong category", "confirmed"), category: [{ coding: [{ code: "problem-list-item" }] }] },
+  ];
   const encounter = {
     resourceType: "Encounter",
     status: "in-progress",
@@ -71,11 +79,280 @@ test("diagnosis rail follows Encounter.diagnosis rank order without normalizing 
     diagnosis: [
       { condition: { reference: "Condition/second" }, rank: 8 },
       { condition: { reference: "Condition/first" }, rank: 3 },
+      { condition: { reference: "Condition/discarded" }, rank: 4 },
+      { condition: { reference: "Condition/error" }, rank: 5 },
+      { condition: { reference: "Condition/wrong-category" }, rank: 6 },
     ],
   } satisfies Encounter;
 
-  assert.deepEqual(orderedEncounterConditions(encounter, conditions).map((row) => row.id), ["first", "second"]);
-  assert.deepEqual(encounter.diagnosis?.map((row) => row.rank), [8, 3]);
+  assert.deepEqual(orderedEncounterConditions(encounter, conditions).map((row) => row.id), [
+    "first",
+    "second",
+    "rank-drift",
+    "possible",
+  ]);
+  assert.deepEqual(encounter.diagnosis?.map((row) => row.rank), [8, 3, 4, 5, 6]);
+});
+
+test("lateralized structure, Assessment, and Common surfaces keep one resolved code", async () => {
+  const pickerModule = await import("../src/components/charting/DiagnosisPicker") as {
+    catalogCode?: (row: { icd10?: { code?: string; pattern?: Record<string, string> } }) => string | undefined;
+  };
+  const workspaceModule = await import("../src/components/charting/DiagnosisWorkspace") as {
+    diagnosisQuickListCode?: (row: ReturnType<typeof cataractRow>, conditions?: readonly Condition[]) => string | undefined;
+  };
+  const row = cataractRow();
+  const possibleOd = cataractCondition("possible-od", "OD", "H25.11");
+
+  const structureCode = pickerModule.catalogCode?.({ icd10: { code: "H25.11" } });
+  const assessmentCode = conditionResolvedCodeLabel(possibleOd, [row]);
+  const commonCode = workspaceModule.diagnosisQuickListCode?.(row, [possibleOd]);
+
+  assert.equal(structureCode, "H25.11");
+  assert.equal(assessmentCode, "H25.11");
+  assert.equal(commonCode, "H25.11");
+});
+
+test("Common names both active proposal eyes instead of arbitrarily choosing one code", async () => {
+  const workspaceModule = await import("../src/components/charting/DiagnosisWorkspace") as {
+    diagnosisQuickListCode?: (row: ReturnType<typeof cataractRow>, conditions?: readonly Condition[]) => string | undefined;
+  };
+  const code = workspaceModule.diagnosisQuickListCode?.(cataractRow(), [
+    cataractCondition("possible-os", "OS", "H25.12"),
+    cataractCondition("possible-od", "OD", "H25.11"),
+  ]);
+
+  assert.equal(code, "OD H25.11 · OS H25.12");
+});
+
+test("a non-lateralized Possible preserves the Common catalog code", async () => {
+  const workspaceModule = await import("../src/components/charting/DiagnosisWorkspace") as {
+    diagnosisQuickListCode?: (row: ReturnType<typeof dryEyeRow>, conditions?: readonly Condition[]) => string | undefined;
+  };
+  const possible = visitCondition("possible-dry-eye", "Dry eye syndrome", "provisional");
+  possible.identifier = [{
+    system: "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key",
+    value: "e1::dry_eye_syndrome::none",
+  }];
+  possible.code = {
+    coding: [{ system: "http://hl7.org/fhir/sid/icd-10-cm", code: "H04.123" }],
+    text: "Dry eye syndrome",
+  };
+
+  assert.equal(workspaceModule.diagnosisQuickListCode?.(dryEyeRow()), "H04.123");
+  assert.equal(workspaceModule.diagnosisQuickListCode?.(dryEyeRow(), [possible]), "H04.123");
+});
+
+test("Possible rows with identical recordedDate use id instead of FHIR search order", () => {
+  const laterId = visitCondition("possible-b", "Possible B", "provisional");
+  laterId.recordedDate = "2026-08-27T12:00:00.000Z";
+  const earlierId = visitCondition("possible-a", "Possible A", "provisional");
+  earlierId.recordedDate = "2026-08-27T12:00:00.000Z";
+
+  assert.deepEqual(
+    orderedEncounterConditions(emptyEncounter(), [laterId, earlierId]).map((condition) => condition.id),
+    ["possible-a", "possible-b"],
+  );
+});
+
+test("diagnosis door pages encounter Conditions and renders Possible provenance plus confirmed rank drift", async () => {
+  const originalFetch = globalThis.fetch;
+  let conditionPages = 0;
+  const possibleOd = cataractCondition("possible-od", "OD", "H25.11");
+  possibleOd.evidence = [{ detail: [{ reference: "Observation/lens-od" }] }];
+  const rankDrift = visitCondition("rank-drift", "Confirmed rank drift", "confirmed");
+  rankDrift.code = { coding: [{ system: "http://hl7.org/fhir/sid/icd-10-cm", code: "Z96.1" }], text: "Confirmed rank drift" };
+
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url = String(input);
+    if (url.includes("/fhir/R4/Encounter/e1")) {
+      return jsonResponse({ resourceType: "Encounter", id: "e1", status: "in-progress", class: { code: "AMB" }, diagnosis: [] });
+    }
+    if (url.includes("/fhir/R4/Condition?") && !url.includes("page=2")) {
+      conditionPages += 1;
+      return jsonResponse({
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [
+          { resource: possibleOd },
+          { resource: visitCondition("discarded", "Discarded", "refuted") },
+        ],
+        link: [{ relation: "next", url: "/fhir/R4/Condition?page=2" }],
+      });
+    }
+    if (url.includes("/fhir/R4/Condition?page=2")) {
+      conditionPages += 1;
+      return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [{ resource: rankDrift }] });
+    }
+    if (url.includes("/fhir/R4/Observation/lens-od")) {
+      return jsonResponse({
+        resourceType: "Observation",
+        id: "lens-od",
+        status: "final",
+        code: { text: "Lens" },
+        subject: { reference: "Patient/p1" },
+        encounter: { reference: "Encounter/e1" },
+        extension: [{
+          url: "https://odos2020.com/fhir/StructureDefinition/eye-laterality",
+          valueCodeableConcept: { coding: [{ code: "OD" }] },
+        }],
+      });
+    }
+    if (url.includes("/fhir/R4/Condition?")) return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [] });
+    if (url.includes("/clinical-graph/diagnosis-quick-list")) {
+      return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [cataractRow()], catalog: [cataractRow()] });
+    }
+    if (url.includes("/clinical-graph/encounters/e1/diagnosis-candidates")) return jsonResponse({ findings: [] });
+    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
+    if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
+    if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
+    if (url.includes("/procedure-charges")) return jsonResponse({ options: [], diagnoses: [], proposals: [], attachedProcedures: [] });
+    throw new Error(`Unexpected request: ${url}`);
+  }) as typeof fetch;
+
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" onSelectDiagnosis={() => undefined} />);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    const rendered = JSON.stringify(renderer.toJSON());
+    assert.equal(conditionPages, 2);
+    assert.match(rendered, /Possible/);
+    assert.match(rendered, /H25\.11/);
+    assert.equal(renderer.root.findByProps({ className: "odos-diagnosis-provenance" }).children.join(""), "← from Lens OD");
+    assert.match(rendered, /Confirmed rank drift/);
+    assert.match(rendered, /Rank missing/);
+    assert.doesNotMatch(rendered, /Discarded/);
+    assert.equal(renderer.root.findAll((node) => node.type === "button" && node.children.join("") === "Reorder Impressions").length, 0);
+  } finally {
+    act(() => renderer?.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("excluded Encounter diagnosis references expose a disabled reorder explanation naming the condition", async () => {
+  const originalFetch = globalThis.fetch;
+  const confirmed = visitCondition("confirmed", "Confirmed", "confirmed");
+  const discarded = visitCondition("discarded", "Discarded", "refuted");
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url = String(input);
+    if (url.includes("/fhir/R4/Encounter/e1")) {
+      return jsonResponse({
+        resourceType: "Encounter",
+        id: "e1",
+        status: "in-progress",
+        class: { code: "AMB" },
+        diagnosis: [
+          { condition: { reference: "Condition/confirmed" }, rank: 1 },
+          { condition: { reference: "Condition/discarded" }, rank: 2 },
+        ],
+      });
+    }
+    if (url.includes("/fhir/R4/Condition?")) {
+      return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [{ resource: confirmed }, { resource: discarded }] });
+    }
+    if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
+    if (url.includes("/clinical-graph/encounters/e1/diagnosis-candidates")) return jsonResponse({ findings: [] });
+    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
+    if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
+    if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
+    if (url.includes("/procedure-charges")) return jsonResponse({ options: [], diagnoses: [], proposals: [], attachedProcedures: [] });
+    throw new Error(`Unexpected request: ${url}`);
+  }) as typeof fetch;
+
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" onSelectDiagnosis={() => undefined} />);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    const reorder = renderer.root.findByProps({ children: "Reorder Impressions" });
+    assert.equal(reorder.props.disabled, true);
+    assert.match(JSON.stringify(renderer.toJSON()), /Reorder unavailable.*Discarded/);
+  } finally {
+    act(() => renderer?.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("server-cleaned three-minus-one state renders two rows and submits their exact reorder", async () => {
+  const originalFetch = globalThis.fetch;
+  const requests: unknown[] = [];
+  const confirmedA = visitCondition("a", "Diagnosis A", "confirmed");
+  const discarded = visitCondition("discarded", "Discarded diagnosis", "refuted");
+  const confirmedC = visitCondition("c", "Diagnosis C", "confirmed");
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input);
+    if (url.includes("/fhir/R4/Encounter/e1")) {
+      return jsonResponse({
+        resourceType: "Encounter",
+        id: "e1",
+        status: "in-progress",
+        class: { code: "AMB" },
+        diagnosis: [
+          { condition: { reference: "Condition/a" }, rank: 1 },
+          { condition: { reference: "Condition/c" }, rank: 3 },
+        ],
+      });
+    }
+    if (url.includes("/fhir/R4/Condition?")) {
+      return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [
+        { resource: confirmedA },
+        { resource: discarded },
+        { resource: confirmedC },
+      ] });
+    }
+    if (url.includes("/clinical-graph/encounters/e1/diagnosis-order")) {
+      const body = JSON.parse(String(init?.body)) as { conditionReferences?: string[] };
+      requests.push(body);
+      const references = body.conditionReferences ?? [];
+      const exact = references.length === 2 &&
+        new Set(references).size === 2 &&
+        references.includes("Condition/a") &&
+        references.includes("Condition/c");
+      return new Response(JSON.stringify(exact ? {
+        encounter: {
+          resourceType: "Encounter",
+          id: "e1",
+          status: "in-progress",
+          class: { code: "AMB" },
+          diagnosis: references.map((reference, index) => ({ condition: { reference }, rank: index + 1 })),
+        },
+      } : { error: "Diagnosis order must be an exact permutation of the Encounter diagnoses." }), {
+        status: exact ? 200 : 422,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
+    if (url.includes("/clinical-graph/encounters/e1/diagnosis-candidates")) return jsonResponse({ findings: [] });
+    if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
+    if (url.includes("/clinical-graph/encounters/e1/previous-exams")) return jsonResponse({ pageSize: 4, encounters: [] });
+    if (url.includes("/clinical-graph/imaging")) return jsonResponse({ images: [] });
+    if (url.includes("/procedure-charges")) return jsonResponse({ options: [], diagnoses: [], proposals: [], attachedProcedures: [] });
+    throw new Error(`Unexpected request: ${url}`);
+  }) as typeof fetch;
+
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" onSelectDiagnosis={() => undefined} />);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    assert.equal(renderer.root.findAllByProps({ className: "odos-diagnosis-visit-row" }).length, 2);
+    const reorder = renderer.root.findByProps({ children: "Reorder Impressions" });
+    assert.equal(reorder.props.disabled, false);
+    act(() => reorder.props.onClick());
+    assert.equal(renderer.root.findAll((node) => node.props["data-condition-reference"]).length, 2);
+    await act(async () => {
+      await renderer.root.findByProps({ children: "Save" }).props.onClick();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    assert.deepEqual(requests, [{ conditionReferences: ["Condition/a", "Condition/c"] }]);
+  } finally {
+    act(() => renderer?.unmount());
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("catalog identity and pin reorder are explicit and stable", () => {
@@ -225,6 +502,7 @@ test("Find dx searches the eligible catalog beyond bounded Common diagnoses", as
         diagnosis: [],
       });
     }
+    if (url.includes("/fhir/R4/Condition?")) return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [] });
     if (url.includes("/clinical-graph/diagnosis-quick-list")) {
       return jsonResponse({
         canWrite: true,
@@ -375,6 +653,9 @@ test("selected pending family renders warning badges and re-stages from the head
       return jsonResponse(currentCondition);
     }
     if (url.endsWith("/fhir/R4/Condition/pending")) return jsonResponse(currentCondition);
+    if (url.includes("/fhir/R4/Condition?") && url.includes("encounter=Encounter%2Fe1")) {
+      return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [{ resource: currentCondition }] });
+    }
     if (url.includes("/fhir/R4/Condition?")) {
       return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [{ resource: stagedCondition("prior", "poag_moderate", "2026-03-14T12:00:00.000Z") }] });
     }
@@ -432,6 +713,9 @@ test("bilateral eyelid diagnoses render both resolved codes while legacy unspeci
     id: "mgd-ou",
     subject: { reference: "Patient/p1" },
     encounter: { reference: "Encounter/e1" },
+    category: [{ coding: [{ system: "http://terminology.hl7.org/CodeSystem/condition-category", code: "encounter-diagnosis" }] }],
+    clinicalStatus: { coding: [{ system: "http://terminology.hl7.org/CodeSystem/condition-clinical", code: "active" }] },
+    verificationStatus: { coding: [{ system: "http://terminology.hl7.org/CodeSystem/condition-ver-status", code: "confirmed" }] },
     identifier: [{
       system: "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key",
       value: "e1::meibomian_gland_dysfunction::bilateral",
@@ -451,6 +735,9 @@ test("bilateral eyelid diagnoses render both resolved codes while legacy unspeci
     id: "legacy-ulcerative",
     subject: { reference: "Patient/p1" },
     encounter: { reference: "Encounter/e1" },
+    category: [{ coding: [{ system: "http://terminology.hl7.org/CodeSystem/condition-category", code: "encounter-diagnosis" }] }],
+    clinicalStatus: { coding: [{ system: "http://terminology.hl7.org/CodeSystem/condition-clinical", code: "active" }] },
+    verificationStatus: { coding: [{ system: "http://terminology.hl7.org/CodeSystem/condition-ver-status", code: "confirmed" }] },
     identifier: [{
       system: "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key",
       value: "e1::ulcerative_blepharitis::right",
@@ -479,6 +766,7 @@ test("bilateral eyelid diagnoses render both resolved codes while legacy unspeci
         ],
       });
     }
+    if (url.includes("/fhir/R4/Condition?")) return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [{ resource: bilateral }, { resource: legacy }] });
     if (url.includes("/fhir/R4/Condition/mgd-ou")) return jsonResponse(bilateral);
     if (url.includes("/fhir/R4/Condition/legacy-ulcerative")) return jsonResponse(legacy);
     if (url.includes("/clinical-graph/diagnosis-quick-list")) {
@@ -544,6 +832,9 @@ test("eyelid laterality edit fails closed before FHIR writes when its declared c
     meta: { versionId: "1" },
     subject: { reference: "Patient/p1" },
     encounter: { reference: "Encounter/e1" },
+    category: [{ coding: [{ system: "http://terminology.hl7.org/CodeSystem/condition-category", code: "encounter-diagnosis" }] }],
+    clinicalStatus: { coding: [{ system: "http://terminology.hl7.org/CodeSystem/condition-clinical", code: "active" }] },
+    verificationStatus: { coding: [{ system: "http://terminology.hl7.org/CodeSystem/condition-ver-status", code: "confirmed" }] },
     identifier: [{
       system: "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key",
       value: "e1::meibomian_gland_dysfunction::right",
@@ -565,6 +856,7 @@ test("eyelid laterality edit fails closed before FHIR writes when its declared c
         diagnosis: [{ condition: { reference: "Condition/mgd-od" }, rank: 1 }],
       });
     }
+    if (url.includes("/fhir/R4/Condition?")) return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [{ resource: condition }] });
     if (url.includes("/fhir/R4/Condition/mgd-od")) return jsonResponse(condition);
     if (url.includes("/clinical-graph/diagnosis-quick-list")) {
       return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
@@ -619,6 +911,7 @@ test("selected diagnosis fails closed to edited when carry integrity is uncertai
         diagnosis: [{ condition: { reference: "Condition/selected" }, rank: 1 }],
       });
     }
+    if (url.includes("/fhir/R4/Condition?")) return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [{ resource: condition("selected", "Dry eye syndrome") }] });
     if (url.includes("/fhir/R4/Condition/selected")) return jsonResponse(condition("selected", "Dry eye syndrome"));
     if (url.includes("/clinical-graph/diagnosis-quick-list")) {
       return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
@@ -676,6 +969,7 @@ test("edited diagnosis carry is named distinctly without unchanged aging", async
     if (url.includes("/fhir/R4/Encounter/e1")) {
       return jsonResponse({ resourceType: "Encounter", id: "e1", status: "in-progress", class: { code: "AMB" }, diagnosis: [{ condition: { reference: "Condition/selected" }, rank: 1 }] });
     }
+    if (url.includes("/fhir/R4/Condition?")) return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [{ resource: condition("selected", "Dry eye syndrome") }] });
     if (url.includes("/fhir/R4/Condition/selected")) return jsonResponse(condition("selected", "Dry eye syndrome"));
     if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
     if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ canWrite: true, carryProvenance: { pulledFromDate: "2026-08-01", unchangedSinceDate: "2026-06-15", edited: true }, findings: [], catalog: [], unassigned: [], bySection: {}, visitDiagnoses: [] });
@@ -744,6 +1038,7 @@ test("a failed same-diagnosis verification refresh cannot retain stale carry ass
     if (url.includes("/fhir/R4/Encounter/e1")) {
       return jsonResponse({ resourceType: "Encounter", id: "e1", status: "in-progress", class: { code: "AMB" }, diagnosis: [{ condition: { reference: "Condition/selected" }, rank: 1 }] });
     }
+    if (url.includes("/fhir/R4/Condition?")) return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [{ resource: condition("selected", "Dry eye syndrome") }] });
     if (url.includes("/fhir/R4/Condition/selected")) return jsonResponse(condition("selected", "Dry eye syndrome"));
     if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [] });
     if (url.includes("/clinical-graph/encounters/e1/findings")) {
@@ -1054,6 +1349,7 @@ test("tray leaf and family suggestions reuse the existing scope and stage prompt
   globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input);
     if (url.includes("/fhir/R4/Encounter/e1")) return jsonResponse({ resourceType: "Encounter", id: "e1", status: "in-progress", class: { code: "AMB" }, diagnosis: [] });
+    if (url.includes("/fhir/R4/Condition?")) return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [] });
     if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [leaf, family] });
     if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ ...payload, canWrite: true, findings: [], catalog: [], bySection: {}, visitDiagnoses: [] });
     if (url.includes("/clinical-graph/encounters/e1/diagnosis-candidates")) return jsonResponse({ findings: [{
@@ -1114,6 +1410,7 @@ test("same-encounter finding refresh reloads diagnosis candidates for newly char
   globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input);
     if (url.includes("/fhir/R4/Encounter/e1")) return jsonResponse({ resourceType: "Encounter", id: "e1", status: "in-progress", class: { code: "AMB" }, diagnosis: [] });
+    if (url.includes("/fhir/R4/Condition?")) return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [] });
     if (url.includes("/clinical-graph/diagnosis-quick-list")) return jsonResponse({ canWrite: true, pinnedDiagnosisKeys: [], diagnoses: [], catalog: [leaf] });
     if (url.includes("/clinical-graph/encounters/e1/findings") && init?.method === "PUT") return jsonResponse({});
     if (url.includes("/clinical-graph/encounters/e1/findings")) return jsonResponse({ ...payload, canWrite: true, findings: [], catalog: [], bySection: {}, visitDiagnoses: [] });
@@ -1200,7 +1497,83 @@ function condition(id: string, display: string): Condition {
     resourceType: "Condition",
     id,
     subject: { reference: "Patient/p1" },
+    encounter: { reference: "Encounter/e1" },
+    category: [{ coding: [{
+      system: "http://terminology.hl7.org/CodeSystem/condition-category",
+      code: "encounter-diagnosis",
+    }] }],
+    clinicalStatus: { coding: [{ system: "http://terminology.hl7.org/CodeSystem/condition-clinical", code: "active" }] },
+    verificationStatus: { coding: [{ system: "http://terminology.hl7.org/CodeSystem/condition-ver-status", code: "confirmed" }] },
     code: { text: display },
+  };
+}
+
+function visitCondition(
+  id: string,
+  display: string,
+  verificationStatus: "confirmed" | "provisional" | "refuted" | "entered-in-error",
+): Condition {
+  return {
+    ...condition(id, display),
+    encounter: { reference: "Encounter/e1" },
+    category: [{ coding: [{
+      system: "http://terminology.hl7.org/CodeSystem/condition-category",
+      code: "encounter-diagnosis",
+    }] }],
+    clinicalStatus: verificationStatus === "entered-in-error" ? undefined : { coding: [{
+      system: "http://terminology.hl7.org/CodeSystem/condition-clinical",
+      code: "active",
+    }] },
+    verificationStatus: { coding: [{
+      system: "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+      code: verificationStatus,
+    }] },
+  };
+}
+
+function cataractCondition(id: string, eye: "OD" | "OS", code: "H25.11" | "H25.12"): Condition {
+  return {
+    ...visitCondition(id, "Age-related nuclear cataract", "provisional"),
+    identifier: [{
+      system: "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key",
+      value: `e1::cataract_nuclear_sclerosis::${eye === "OD" ? "right" : "left"}`,
+    }],
+    bodySite: [{ text: eye }],
+    code: {
+      coding: [{ system: "http://hl7.org/fhir/sid/icd-10-cm", code }],
+      text: "Age-related nuclear cataract",
+    },
+  };
+}
+
+function cataractRow() {
+  return {
+    stableKey: "cataract_nuclear_sclerosis",
+    display: "Age-related nuclear cataract",
+    lateralityRequired: true,
+    icd10: { pattern: { unspecifiedEye: "H25.10", right: "H25.11", left: "H25.12", bilateral: "H25.13" } },
+    pinned: false,
+    tallyCount: 0,
+  };
+}
+
+function dryEyeRow() {
+  return {
+    stableKey: "dry_eye_syndrome",
+    display: "Dry eye syndrome",
+    lateralityRequired: false,
+    icd10: { pattern: { unspecifiedEye: "H04.123" } },
+    pinned: false,
+    tallyCount: 0,
+  };
+}
+
+function emptyEncounter(): Encounter {
+  return {
+    resourceType: "Encounter",
+    status: "in-progress",
+    class: { system: "http://terminology.hl7.org/CodeSystem/v3-ActCode", code: "AMB" },
+    diagnosis: [],
   };
 }
 
@@ -1321,6 +1694,12 @@ function workspaceRaceFetch({
           { condition: { reference: "Condition/b" }, rank: 2 },
         ],
       });
+    }
+    if (url.includes("/fhir/R4/Condition?")) {
+      return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [
+        { resource: condition("a", "Diagnosis A") },
+        { resource: condition("b", "Diagnosis B") },
+      ] });
     }
     if (url.includes("/fhir/R4/Condition/a")) return jsonResponse(condition("a", "Diagnosis A"));
     if (url.includes("/fhir/R4/Condition/b")) return jsonResponse(condition("b", "Diagnosis B"));

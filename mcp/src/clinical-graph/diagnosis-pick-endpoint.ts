@@ -161,10 +161,10 @@ export async function handleDiagnosisPickRequest(
     encounter = await staff.fhir.read<Encounter>("Encounter", encounterId);
     patientReference = encounter.subject?.reference;
   }
-  if (parsed.data.status && !encounter) {
+  if ((parsed.data.status || parsed.data.action === "discard") && !encounter) {
     encounter = await staff.fhir.read<Encounter>("Encounter", encounterId);
   }
-  if (parsed.data.status && encounter?.status === "finished") {
+  if ((parsed.data.status || parsed.data.action === "discard") && encounter?.status === "finished") {
     return { status: 409, body: { error: "Diagnosis visit status cannot change after the encounter is signed." } };
   }
   if (!isRelativeFhirReference(patientReference, "Patient")) {
@@ -221,6 +221,17 @@ export async function handleDiagnosisPickRequest(
       const linked = await ensureEncounterDiagnosisLinked(staff.fhir, encounterId, conditionReference, encounter);
       linkedEncounter = linked.encounter;
       encounterChanged = linked.changed;
+    } catch (error) {
+      if (isConflict(error)) {
+        return { status: 409, body: { error: "The encounter diagnoses changed concurrently — reload and retry." } };
+      }
+      throw error;
+    }
+  } else if (parsed.data.action === "discard") {
+    try {
+      const unlinked = await ensureEncounterDiagnosisUnlinked(staff.fhir, encounterId, conditionReference, encounter);
+      linkedEncounter = unlinked.encounter;
+      encounterChanged = unlinked.changed;
     } catch (error) {
       if (isConflict(error)) {
         return { status: 409, body: { error: "The encounter diagnoses changed concurrently — reload and retry." } };
@@ -340,6 +351,35 @@ async function ensureEncounterDiagnosisLinked(
     }
   }
   throw new Error("Encounter diagnosis linking exhausted its retry budget.");
+}
+
+async function ensureEncounterDiagnosisUnlinked(
+  fhir: DiagnosisPickFhirClient,
+  encounterId: string,
+  conditionReference: string,
+  initialEncounter: Encounter | undefined,
+): Promise<{ encounter: Encounter; changed: boolean }> {
+  let encounter = initialEncounter;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    encounter ??= await fhir.read<Encounter>("Encounter", encounterId);
+    if (!encounter.diagnosis?.some((diagnosis) => diagnosis.condition.reference === conditionReference)) {
+      return { encounter, changed: false };
+    }
+    try {
+      const updated = await fhir.update<Encounter>("Encounter", encounterId, {
+        ...encounter,
+        diagnosis: encounter.diagnosis.filter((diagnosis) => diagnosis.condition.reference !== conditionReference),
+      }, {
+        ...DIAGNOSIS_PICK_WRITE_HEADERS,
+        ...(encounter.meta?.versionId ? { "If-Match": `W/\"${encounter.meta.versionId}\"` } : {}),
+      });
+      return { encounter: updated, changed: true };
+    } catch (error) {
+      if (!isConflict(error) || attempt === 1) throw error;
+      encounter = await fhir.read<Encounter>("Encounter", encounterId);
+    }
+  }
+  throw new Error("Encounter diagnosis unlinking exhausted its retry budget.");
 }
 
 async function findEncounterDiagnosis(

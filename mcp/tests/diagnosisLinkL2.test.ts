@@ -14,6 +14,7 @@ import {
   deduplicateDiagnosisCandidates,
   handleDiagnosisCandidatesRequest,
 } from "../src/clinical-graph/diagnosis-candidates-endpoint.js";
+import { handleDiagnosisOrderRequest } from "../src/clinical-graph/diagnosis-order-endpoint.js";
 import { buildDiagnosisCatalogSeeds } from "../src/clinical-graph/diagnosis-catalog-store.js";
 import * as diagnosisPickEndpoint from "../src/clinical-graph/diagnosis-pick-endpoint.js";
 import {
@@ -1480,6 +1481,161 @@ test("confirmed catalog picks join Encounter.diagnosis once and preserve rank ga
   assert.equal(second.status, 200);
   assert.equal((second.body as { encounter: Encounter }).encounter.diagnosis?.length, 2);
   assert.equal(fhir.writes.filter((write) => write.resourceType === "Encounter" && write.operation === "update").length, 1);
+});
+
+test("three confirmed diagnoses can discard the middle row and submit the remaining exact reorder", async () => {
+  const fhir = diagnosisPickFhir();
+  const pick = (diagnosisKey: string, action: "confirm" | "discard") => handleDiagnosisPickRequest({
+    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "provider", fhir }),
+    now: () => "2026-08-27T16:00:00.000Z",
+  }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+    body: { diagnosisKey, action, source: "catalog-search" },
+  });
+
+  const first = await pick("presbyopia", "confirm");
+  const discarded = await pick("diplopia", "confirm");
+  const third = await pick("anisometropia", "confirm");
+  assert.equal(first.status, 201, JSON.stringify(first.body));
+  assert.equal(discarded.status, 201, JSON.stringify(discarded.body));
+  assert.equal(third.status, 201, JSON.stringify(third.body));
+
+  const firstReference = `Condition/${(first.body as { condition: Condition }).condition.id}`;
+  const discardedReference = `Condition/${(discarded.body as { condition: Condition }).condition.id}`;
+  const thirdReference = `Condition/${(third.body as { condition: Condition }).condition.id}`;
+  const discard = await pick("diplopia", "discard");
+  assert.equal(discard.status, 200, JSON.stringify(discard.body));
+
+  const afterDiscard = await fhir.read<Encounter>("Encounter", "e1");
+  assert.deepEqual(afterDiscard.diagnosis?.map((entry) => ({
+    reference: entry.condition.reference,
+    rank: entry.rank,
+  })), [
+    { reference: firstReference, rank: 1 },
+    { reference: thirdReference, rank: 3 },
+  ]);
+  assert.equal(afterDiscard.diagnosis?.some((entry) => entry.condition.reference === discardedReference), false);
+  const discardProvenance = [...fhir.resources].reverse().find((resource): resource is Provenance =>
+    resource.resourceType === "Provenance" && resource.activity?.text === "discard encounter diagnosis"
+  );
+  assert.ok(discardProvenance);
+  assert.equal(discardProvenance.target.some((target) => target.reference === "Encounter/e1"), true);
+
+  const reordered = await handleDiagnosisOrderRequest({
+    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "provider", fhir }),
+  }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+    body: { conditionReferences: [thirdReference, firstReference] },
+  });
+  assert.equal(reordered.status, 200, JSON.stringify(reordered.body));
+  assert.deepEqual((reordered.body as { encounter: Encounter }).encounter.diagnosis?.map((entry) => ({
+    reference: entry.condition.reference,
+    rank: entry.rank,
+  })), [
+    { reference: firstReference, rank: 2 },
+    { reference: thirdReference, rank: 1 },
+  ]);
+});
+
+test("discard unlink is idempotent and confirm after discard relinks through the existing path", async () => {
+  const fhir = diagnosisPickFhir();
+  const pick = (action: "confirm" | "discard") => handleDiagnosisPickRequest({
+    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "provider", fhir }),
+    now: () => "2026-08-27T16:00:00.000Z",
+  }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+    body: { diagnosisKey: "presbyopia", action, source: "catalog-search" },
+  });
+
+  const confirmed = await pick("confirm");
+  const conditionReference = `Condition/${(confirmed.body as { condition: Condition }).condition.id}`;
+  assert.equal((await pick("discard")).status, 200);
+  assert.deepEqual((await fhir.read<Encounter>("Encounter", "e1")).diagnosis, []);
+  const encounterWritesAfterFirstDiscard = fhir.writes.filter((write) =>
+    write.resourceType === "Encounter" && write.operation === "update"
+  ).length;
+
+  const repeated = await pick("discard");
+  assert.equal(repeated.status, 200, JSON.stringify(repeated.body));
+  assert.equal(fhir.writes.filter((write) =>
+    write.resourceType === "Encounter" && write.operation === "update"
+  ).length, encounterWritesAfterFirstDiscard);
+  const repeatedProvenance = [...fhir.resources].reverse().find((resource): resource is Provenance =>
+    resource.resourceType === "Provenance" && resource.activity?.text === "discard encounter diagnosis"
+  );
+  assert.ok(repeatedProvenance);
+  assert.equal(repeatedProvenance.target.some((target) => target.reference === "Encounter/e1"), false);
+
+  const reconfirmed = await pick("confirm");
+  assert.equal(reconfirmed.status, 200, JSON.stringify(reconfirmed.body));
+  assert.deepEqual((reconfirmed.body as { encounter: Encounter }).encounter.diagnosis?.map((entry) => ({
+    reference: entry.condition.reference,
+    rank: entry.rank,
+  })), [{ reference: conditionReference, rank: 1 }]);
+});
+
+test("discard returns reload-and-retry after the Encounter unlink exhausts conflict retries", async () => {
+  class ConcurrentEncounterUpdateFhir extends MemoryFhir {
+    encounterConflictsRemaining = 0;
+
+    override async update<T extends Resource>(resourceType: T["resourceType"], id: string, resource: T, headers?: Record<string, string>): Promise<T> {
+      if (resourceType === "Encounter" && this.encounterConflictsRemaining > 0) {
+        this.encounterConflictsRemaining -= 1;
+        const current = this.resources.find((candidate) => candidate.resourceType === resourceType && candidate.id === id)!;
+        current.meta = { ...(current.meta ?? {}), versionId: String(Number(current.meta?.versionId ?? "0") + 1) };
+      }
+      return super.update(resourceType, id, resource, headers);
+    }
+  }
+
+  const fhir = new ConcurrentEncounterUpdateFhir();
+  fhir.resources.push(...diagnosisPickFhir().resources);
+  const pick = (action: "confirm" | "discard") => handleDiagnosisPickRequest({
+    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "provider", fhir }),
+  }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+    body: { diagnosisKey: "presbyopia", action, source: "catalog-search" },
+  });
+
+  const confirmed = await pick("confirm");
+  const conditionReference = `Condition/${(confirmed.body as { condition: Condition }).condition.id}`;
+  fhir.encounterConflictsRemaining = 2;
+  const discarded = await pick("discard");
+
+  assert.equal(discarded.status, 409, JSON.stringify(discarded.body));
+  assert.match(String((discarded.body as { error: string }).error), /reload and retry/);
+  const encounter = await fhir.read<Encounter>("Encounter", "e1");
+  assert.equal(encounter.diagnosis?.some((entry) => entry.condition.reference === conditionReference), true);
+});
+
+test("a signed Encounter refuses discard before changing the Condition or Encounter", async () => {
+  const fhir = diagnosisPickFhir();
+  const pick = (action: "confirm" | "discard") => handleDiagnosisPickRequest({
+    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "provider", fhir }),
+  }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+    body: { diagnosisKey: "presbyopia", action, source: "catalog-search" },
+  });
+  const confirmed = await pick("confirm");
+  const condition = (confirmed.body as { condition: Condition }).condition;
+  const encounter = fhir.resources.find((resource): resource is Encounter =>
+    resource.resourceType === "Encounter" && resource.id === "e1"
+  )!;
+  encounter.status = "finished";
+  const writesBeforeDiscard = fhir.writes.length;
+
+  const discarded = await pick("discard");
+
+  assert.equal(discarded.status, 409, JSON.stringify(discarded.body));
+  assert.match(String((discarded.body as { error: string }).error), /after the encounter is signed/);
+  assert.equal(fhir.writes.length, writesBeforeDiscard);
+  assert.equal((await fhir.read<Condition>("Condition", condition.id!)).verificationStatus?.coding?.[0]?.code, "confirmed");
+  assert.equal((await fhir.read<Encounter>("Encounter", "e1")).diagnosis?.length, 1);
 });
 
 test("diagnosis pick Provenance targets the patient", async () => {

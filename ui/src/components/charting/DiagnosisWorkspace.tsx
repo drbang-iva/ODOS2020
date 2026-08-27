@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Condition, Encounter } from "@medplum/fhirtypes";
+import type { Condition, Encounter, Observation } from "@medplum/fhirtypes";
 import {
   DIAGNOSIS_KEY_IDENTIFIER_SYSTEM,
   principalDiagnosisOrder,
@@ -19,14 +19,24 @@ import {
   type DiagnosisCandidateFinding,
   type DiagnosisCandidateSuggestion,
 } from "../../lib/clinical-graph-client";
-import { diagnosisRank, displayCode } from "../../lib/clinical-view-model";
+import {
+  diagnosisRank,
+  displayCode,
+  isActiveCondition,
+  isEncounterDiagnosisCondition,
+} from "../../lib/clinical-view-model";
 import { fhir } from "../../lib/fhir";
-import { encounterDiagnosisProblemStatus } from "../../lib/fhir-clinical/condition";
+import {
+  encounterDiagnosisProblemStatus,
+  FHIR_CONDITION_VERIFICATION_STATUS_CODE_SYSTEM,
+} from "../../lib/fhir-clinical/condition";
+import { searchAll } from "../../lib/fhir-search";
 import { OdosSearchPicker, type OdosSearchPickerOption } from "../inputs/OdosSearchPicker";
 import { OdosChips } from "../inputs/OdosChips";
 import {
   DiagnosisProblemStatusField,
   DiagnosisRankActions,
+  findingProvenanceLine,
 } from "./AssessmentSection";
 import {
   ReorderImpressionsModal,
@@ -105,6 +115,7 @@ export function DiagnosisWorkspace({
   const encounterId = encounterReference.replace(/^Encounter\//, "");
   const [encounter, setEncounter] = useState<Encounter>();
   const [conditions, setConditions] = useState<Condition[]>([]);
+  const [provenanceLines, setProvenanceLines] = useState<Record<string, string>>({});
   const [quickList, setQuickList] = useState<DiagnosisQuickListRow[]>([]);
   const [catalog, setCatalog] = useState<DiagnosisQuickListRow[]>([]);
   const [pinnedDiagnosisKeys, setPinnedDiagnosisKeys] = useState<string[]>([]);
@@ -137,8 +148,9 @@ export function DiagnosisWorkspace({
     setLoading(true);
     setError(undefined);
     try {
-      const [nextEncounter, quickResponse, nextFindings, nextCandidateFindings, procedureResult] = await Promise.all([
+      const [nextEncounter, searchedConditions, quickResponse, nextFindings, nextCandidateFindings, procedureResult] = await Promise.all([
         fhir.read<Encounter>("Encounter", encounterId),
+        searchAll<Condition>(fhir, "Condition", { encounter: encounterReference }),
         fetch(`${clinicalGraphApiBase()}/clinical-graph/diagnosis-quick-list`, { headers: authHeaders() }),
         loadDiagnosisFindings(encounterReference, selectedReference),
         readDiagnosisCandidates(encounterId).catch(() => []),
@@ -152,15 +164,29 @@ export function DiagnosisWorkspace({
       ]);
       const quickBody = await quickResponse.json() as QuickListPayload;
       if (!quickResponse.ok) throw new Error(quickBody.error ?? `Common diagnoses failed: ${quickResponse.status}`);
-      const references = [...new Set((nextEncounter.diagnosis ?? []).flatMap((entry) =>
-        entry.condition.reference?.startsWith("Condition/") ? [entry.condition.reference] : []
+      const nextConditions = orderedEncounterConditions(nextEncounter, searchedConditions);
+      const evidenceReferences = [...new Set(nextConditions.flatMap((condition) =>
+        (condition.evidence ?? []).flatMap((evidence) => (evidence.detail ?? []).flatMap((detail) =>
+          detail.reference?.startsWith("Observation/") ? [detail.reference] : []
+        ))
       ))];
-      const nextConditions = await Promise.all(references.map((reference) =>
-        fhir.read<Condition>("Condition", reference.replace(/^Condition\//, ""))
+      const observationResults = await Promise.allSettled(evidenceReferences.map(async (reference) =>
+        fhir.read<Observation>("Observation", reference.replace(/^Observation\//, ""))
       ));
+      const observationsByReference = new Map<string, Observation>(observationResults.flatMap((result) =>
+        result.status === "fulfilled" ? [[`Observation/${result.value.id}`, result.value] as const] : []
+      ));
+      const nextProvenanceLines = Object.fromEntries(nextConditions.flatMap((condition) => {
+        if (!condition.id) return [];
+        const lines = (condition.evidence ?? []).flatMap((evidence) => evidence.detail ?? [])
+          .flatMap((detail) => detail.reference ? [observationsByReference.get(detail.reference)] : [])
+          .flatMap((observation) => observation ? [findingProvenanceLine(observation)] : []);
+        return lines.length ? [[condition.id, lines.join(" · ")]] : [];
+      }));
       if (loadGeneration.current !== requestGeneration) return;
       setEncounter(nextEncounter);
-      setConditions(nextConditions);
+      setConditions(searchedConditions);
+      setProvenanceLines(nextProvenanceLines);
       setQuickList(quickBody.diagnoses ?? []);
       setCatalog(quickBody.catalog ?? []);
       setPinnedDiagnosisKeys(quickBody.pinnedDiagnosisKeys ?? []);
@@ -334,6 +360,10 @@ export function DiagnosisWorkspace({
   const suggestionsByObservation = Object.fromEntries(candidateFindings.flatMap((finding) =>
     finding.observationReference ? [[finding.observationReference, finding]] : []
   ));
+  const reorderAvailable = encounter ? canReorderEncounterDiagnoses(encounter, visitConditions) : false;
+  const reorderUnavailable = encounter
+    ? encounterDiagnosisReorderUnavailable(encounter, visitConditions, conditions)
+    : undefined;
 
   function chooseSuggestion(suggestion: DiagnosisCandidateSuggestion, findingInstanceId: string) {
     const stableKey = suggestion.diagnosisKey ?? suggestion.familyGroup;
@@ -371,32 +401,41 @@ export function DiagnosisWorkspace({
           {visitConditions.map((condition) => {
             const reference = `Condition/${condition.id}`;
             const rank = encounter ? diagnosisRank(encounter, condition) : undefined;
+            const possible = isProvisionalCondition(condition);
             return (
               <button
                 type="button"
                 key={reference}
                 aria-pressed={selectedReference === reference}
-                className="odos-diagnosis-visit-row"
+                className={`odos-diagnosis-visit-row${possible ? " is-possible" : ""}`}
                 onClick={() => onSelectDiagnosis(reference)}
               >
                 <span>{displayCode(condition.code)}</span>
-                <small>{condition.bodySite?.[0]?.text ?? "Scope not set"}{rank ? ` · ${rank}` : ""} · <ResolvedDiagnosisCode condition={condition} catalog={catalog} /></small>
+                <small>
+                  {possible ? "Possible" : rank === undefined ? "Confirmed · Rank missing" : `Confirmed · Rank ${rank}`} · {condition.bodySite?.[0]?.text ?? "Scope not set"} · <ResolvedDiagnosisCode condition={condition} catalog={catalog} />
+                </small>
+                {condition.id && provenanceLines[condition.id] && (
+                  <small className="odos-diagnosis-provenance">← from {provenanceLines[condition.id]}</small>
+                )}
               </button>
             );
           })}
         </div>
-        {visitConditions.length > 1 && (
-          <button
-            type="button"
-            className="odos-diagnosis-primary-action"
-            disabled={!canWrite || busy !== undefined}
-            onClick={() => {
-              setReorderError(undefined);
-              setReorderOpen(true);
-            }}
-          >
-            Reorder Impressions
-          </button>
+        {encounter && (reorderAvailable || reorderUnavailable) && (
+          <>
+            <button
+              type="button"
+              className="odos-diagnosis-primary-action"
+              disabled={!reorderAvailable || !canWrite || busy !== undefined}
+              onClick={() => {
+                setReorderError(undefined);
+                setReorderOpen(true);
+              }}
+            >
+              Reorder Impressions
+            </button>
+            {reorderUnavailable && <p className="odos-diagnosis-muted" role="status">{reorderUnavailable}</p>}
+          </>
         )}
         {selectedCondition && encounter && (
           <DiagnosisRankActions
@@ -426,7 +465,7 @@ export function DiagnosisWorkspace({
                   <span>{row.display}</span>
                   {row.axisLabel
                     ? <small className="odos-diagnosis-axis-chip">{row.axisLabel}</small>
-                    : <small>{diagnosisQuickListCode(row) ?? "No ICD-10-CM code"}</small>}
+                    : <small>{diagnosisQuickListCode(row, visitConditions) ?? "No ICD-10-CM code"}</small>}
                 </button>
                 <div className="odos-diagnosis-pin-actions">
                   <button
@@ -643,7 +682,7 @@ export function DiagnosisWorkspace({
       <DiagnosisImagingRegion patientReference={patientReference} />
       {reorderOpen && encounter && (
         <ReorderImpressionsModal
-          rows={buildReorderImpressionRows(encounter, conditions, attachedProcedures)}
+          rows={buildReorderImpressionRows(encounter, visitConditions, attachedProcedures)}
           busy={busy === "reorder"}
           attachmentError={reorderError ?? procedureAttachmentError}
           onCancel={() => setReorderOpen(false)}
@@ -672,15 +711,58 @@ function ResolvedDiagnosisCode({
 }
 
 export function orderedEncounterConditions(encounter: Encounter, conditions: readonly Condition[]): Condition[] {
-  const byReference = new Map(conditions.map((condition) => [`Condition/${condition.id}`, condition]));
-  return (encounter.diagnosis ?? []).flatMap((entry, index) => {
-    const condition = entry.condition.reference ? byReference.get(entry.condition.reference) : undefined;
-    return condition ? [{ condition, rank: entry.rank, index }] : [];
-  }).sort((left, right) => {
-    const leftRank = Number.isInteger(left.rank) ? left.rank! : Number.MAX_SAFE_INTEGER;
-    const rightRank = Number.isInteger(right.rank) ? right.rank! : Number.MAX_SAFE_INTEGER;
-    return leftRank - rightRank || left.index - right.index;
-  }).map(({ condition }) => condition);
+  return conditions
+    .filter(isEncounterDiagnosisCondition)
+    .filter((condition) => !["refuted", "entered-in-error"].includes(conditionVerificationStatus(condition)))
+    .map((condition) => ({ condition, rank: diagnosisRank(encounter, condition) }))
+    .sort((left, right) => {
+      const leftGroup = left.rank !== undefined ? 0 : isProvisionalCondition(left.condition) ? 2 : 1;
+      const rightGroup = right.rank !== undefined ? 0 : isProvisionalCondition(right.condition) ? 2 : 1;
+      if (leftGroup !== rightGroup) return leftGroup - rightGroup;
+      if (left.rank !== undefined && right.rank !== undefined && left.rank !== right.rank) return left.rank - right.rank;
+      return (left.condition.recordedDate ?? "").localeCompare(right.condition.recordedDate ?? "") ||
+        (left.condition.id ?? "").localeCompare(right.condition.id ?? "");
+    })
+    .map(({ condition }) => condition);
+}
+
+function canReorderEncounterDiagnoses(encounter: Encounter, conditions: readonly Condition[]): boolean {
+  const entries = encounter.diagnosis ?? [];
+  if (entries.length <= 1) return false;
+  const rankedConfirmedReferences = new Set(conditions.flatMap((condition) =>
+    condition.id &&
+    conditionVerificationStatus(condition) === "confirmed" &&
+    diagnosisRank(encounter, condition) !== undefined
+      ? [`Condition/${condition.id}`]
+      : []
+  ));
+  return rankedConfirmedReferences.size === entries.length && entries.every((entry) =>
+    Boolean(entry.condition.reference && rankedConfirmedReferences.has(entry.condition.reference))
+  );
+}
+
+function encounterDiagnosisReorderUnavailable(
+  encounter: Encounter,
+  visibleConditions: readonly Condition[],
+  allConditions: readonly Condition[],
+): string | undefined {
+  const entries = encounter.diagnosis ?? [];
+  if (entries.length <= 1 || canReorderEncounterDiagnoses(encounter, visibleConditions)) return undefined;
+  const visibleReferences = new Set<string>(visibleConditions.flatMap((condition) =>
+    condition.id && diagnosisRank(encounter, condition) !== undefined ? [`Condition/${condition.id}`] : []
+  ));
+  const conditionsByReference = new Map<string, Condition>(allConditions.flatMap((condition) =>
+    condition.id ? [[`Condition/${condition.id}`, condition] as const] : []
+  ));
+  const blockedNames = entries.flatMap((entry) => {
+    const reference = entry.condition.reference;
+    if (!reference || visibleReferences.has(reference)) return [];
+    const condition = conditionsByReference.get(reference);
+    return [condition ? displayCode(condition.code) : reference];
+  });
+  const names = [...new Set(blockedNames)];
+  if (names.length === 0) return "Reorder unavailable because the encounter diagnosis list is out of sync.";
+  return `Reorder unavailable while ${names.join(", ")} remains linked to this encounter.`;
 }
 
 export function diagnosisWorkspaceInstanceKey(patientReference: string, encounterReference: string): string {
@@ -807,7 +889,57 @@ export function movePinnedDiagnosis(keys: readonly string[], key: string, direct
   return next;
 }
 
-function diagnosisQuickListCode(row: DiagnosisQuickListRow): string | undefined {
+export function diagnosisQuickListCode(
+  row: DiagnosisQuickListRow,
+  conditions: readonly Condition[] = [],
+): string | undefined {
+  if (!row.lateralityRequired) return catalogFallbackCode(row);
+  const stableKeys = new Set([row.stableKey, ...(row.members?.map((member) => member.stableKey) ?? [])]);
+  const proposals = conditions.filter((condition) =>
+    isProvisionalCondition(condition) &&
+    isActiveCondition(condition) &&
+    Boolean(conditionCatalogStableKey(condition) && stableKeys.has(conditionCatalogStableKey(condition)!))
+  );
+  if (proposals.length > 0) {
+    const resolved = proposals.map((condition) => ({
+      eye: conditionEye(condition),
+      codes: condition.code?.coding
+        ?.filter((coding) => coding.system === "http://hl7.org/fhir/sid/icd-10-cm" && coding.code)
+        .map((coding) => coding.code!) ?? [],
+    }));
+    if (resolved.some((proposal) => !proposal.eye || proposal.codes.length === 0)) return undefined;
+    const byEye = new Map<string, string[]>();
+    for (const proposal of resolved) {
+      byEye.set(proposal.eye!, [...new Set([...(byEye.get(proposal.eye!) ?? []), ...proposal.codes])].sort());
+    }
+    const ordered = (["OD", "OS", "OU"] as const).flatMap((eye) => {
+      const codes = byEye.get(eye);
+      return codes ? [{ eye, label: codes.join(" / ") }] : [];
+    });
+    if (ordered.length === 1) return ordered[0]!.label;
+    return ordered.map(({ eye, label }) => `${eye} ${label}`).join(" · ");
+  }
+  return catalogFallbackCode(row);
+}
+
+function catalogFallbackCode(row: DiagnosisQuickListRow): string | undefined {
   if (!row.icd10) return undefined;
   return "code" in row.icd10 ? row.icd10.code : row.icd10.pattern.unspecifiedEye;
+}
+
+function conditionVerificationStatus(condition: Condition): string {
+  return condition.verificationStatus?.coding?.find((coding) =>
+    coding.system === FHIR_CONDITION_VERIFICATION_STATUS_CODE_SYSTEM
+  )?.code ?? condition.verificationStatus?.coding?.find((coding) => coding.code)?.code ?? condition.verificationStatus?.text ?? "unknown";
+}
+
+function isProvisionalCondition(condition: Condition): boolean {
+  return conditionVerificationStatus(condition) === "provisional";
+}
+
+function conditionEye(condition: Condition): "OD" | "OS" | "OU" | undefined {
+  const bodySite = condition.bodySite?.map((site) => site.text).find((text) => text === "OD" || text === "OS" || text === "OU");
+  if (bodySite === "OD" || bodySite === "OS" || bodySite === "OU") return bodySite;
+  const bucket = condition.identifier?.find((identifier) => identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM)?.value?.split("::").at(-1);
+  return bucket === "right" ? "OD" : bucket === "left" ? "OS" : bucket === "bilateral" ? "OU" : undefined;
 }

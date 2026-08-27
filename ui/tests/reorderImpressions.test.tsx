@@ -216,6 +216,26 @@ test("row builder sorts by Encounter rank and groups procedure displays from exi
   ]);
 });
 
+test("row builder excludes Encounter diagnosis references that do not resolve to a Condition", () => {
+  const rows = buildReorderImpressionRows({
+    resourceType: "Encounter",
+    id: "enc-stale",
+    status: "in-progress",
+    class: {},
+    diagnosis: [
+      { condition: { reference: "Condition/a" }, rank: 1 },
+      { condition: { reference: "Condition/refuted" }, rank: 2 },
+      { condition: { reference: "Condition/b" }, rank: 3 },
+    ],
+  }, [
+    condition("a", "Diagnosis A", "confirmed"),
+    condition("b", "Diagnosis B", "confirmed"),
+  ], []);
+
+  assert.deepEqual(rows.map((row) => row.conditionReference), ["Condition/a", "Condition/b"]);
+  assert.equal(rows.some((row) => row.diagnosisDisplay === "Condition/refuted"), false);
+});
+
 function renderModal(onSave: (references: string[]) => Promise<void>): ReactTestRenderer {
   let renderer!: ReactTestRenderer;
   act(() => {

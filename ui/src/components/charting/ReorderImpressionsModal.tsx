@@ -167,6 +167,7 @@ export function buildReorderImpressionRows(
       const reference = entry.condition.reference;
       if (!reference) return [];
       const condition = conditionsByReference.get(reference);
+      if (!condition) return [];
       return [{
         conditionReference: reference,
         diagnosisDisplay: conditionDisplay(condition, reference),
