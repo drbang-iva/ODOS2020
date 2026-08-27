@@ -192,9 +192,8 @@ export async function handleHpiCaptureRequest(
             fullUrl: observationFullUrl,
             resource: observation,
             request: {
-              method: "POST",
-              url: "Observation",
-              ifNoneExist: `identifier=${HPI_OBSERVATION_IDENTIFIER_SYSTEM}|${identifierValue}`,
+              method: "PUT",
+              url: `Observation?identifier=${HPI_OBSERVATION_IDENTIFIER_SYSTEM}|${identifierValue}`,
             },
           },
       { fullUrl: "urn:uuid:hpi-provenance", resource: provenanceResource, request: { method: "POST", url: "Provenance" } },

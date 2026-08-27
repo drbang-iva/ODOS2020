@@ -6,6 +6,7 @@ import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../src/fhir/ophthalmology/codeBi
 import { buildEncounterComplaintResource } from "../src/clinical-graph/encounter-complaint-store.js";
 import { buildHpiFindingDefinition } from "../src/clinical-graph/hpi-definition.js";
 import {
+  HPI_OBSERVATION_IDENTIFIER_SYSTEM,
   handleHpiCaptureRequest,
   handleHpiDefinitionRequest,
   type HpiEndpointDeps,
@@ -83,6 +84,7 @@ function fixture(role: PracticeRoleId = "provider", withComplaints = true) {
   const created: Array<{ resource: Observation | Provenance; headers?: Record<string, string> }> = [];
   const observations: Observation[] = [];
   const transactions: Array<{ bundle: Bundle; headers?: Record<string, string> }> = [];
+  let beforeTransaction: (() => void) | undefined;
   const definition = buildHpiFindingDefinition({
     source: "manual",
     recordedAt: "1970-01-01T00:00:00.000Z",
@@ -120,19 +122,25 @@ function fixture(role: PracticeRoleId = "provider", withComplaints = true) {
         },
         update: async <T extends Basic | Encounter>(_resourceType: T["resourceType"], _id: string, resource: T): Promise<T> => resource,
         executeTransaction: async (bundle: Bundle, headers?: Record<string, string>): Promise<Bundle> => {
+          beforeTransaction?.();
+          beforeTransaction = undefined;
           transactions.push({ bundle: structuredClone(bundle), headers });
           const responseEntries: NonNullable<Bundle["entry"]> = [];
           for (const entry of bundle.entry ?? []) {
             const resource = structuredClone(entry.resource);
             if (resource?.resourceType === "Observation") {
               const identifier = resource.identifier?.[0];
-              const conditionalMatch = entry.request?.method === "POST" && entry.request.ifNoneExist
+              const conditionalRequest = entry.request?.method === "POST" && entry.request.ifNoneExist ||
+                entry.request?.method === "PUT" && entry.request.url?.startsWith("Observation?identifier=");
+              const conditionalMatch = conditionalRequest
                 ? observations.find((candidate) => candidate.identifier?.some((row) =>
                     row.system === identifier?.system && row.value === identifier?.value
                   ))
                 : undefined;
               const id = conditionalMatch?.id ?? resource.id ?? `observation-${observations.length + 1}`;
-              const persisted = { ...resource, id };
+              const persisted = conditionalMatch && entry.request?.method === "POST"
+                ? conditionalMatch
+                : { ...resource, id };
               const index = observations.findIndex((candidate) => candidate.id === id);
               if (index >= 0) observations[index] = persisted;
               else observations.push(persisted);
@@ -155,7 +163,14 @@ function fixture(role: PracticeRoleId = "provider", withComplaints = true) {
     findingDefinitions: () => [definition],
     now: () => "2026-07-21T12:30:00.000Z",
   };
-  return { basics, created, deps, observations, transactions };
+  return {
+    basics,
+    created,
+    deps,
+    observations,
+    transactions,
+    beforeNextTransaction(callback: () => void) { beforeTransaction = callback; },
+  };
 }
 
 test("history capture persists ordinal complaint narratives and explicitly reviewed ROS in one Observation", async () => {
@@ -216,6 +231,30 @@ test("a capture retires pre-existing extra live History findings in the same tra
     { type: "Provenance", method: "POST" },
     { type: "Observation", method: "PUT" },
   ]);
+});
+
+test("a concurrent first capture cannot make a successful request lose its History content", async () => {
+  const setup = fixture();
+  setup.beforeNextTransaction(() => setup.observations.push({
+    resourceType: "Observation",
+    id: "concurrent-history",
+    status: "final",
+    code: { coding: [{ system: ODOS_OPHTHALMOLOGY_CODE_SYSTEM, code: "hpi_ros", display: "History" }] },
+    subject: { reference: "Patient/p1" },
+    encounter: { reference: "Encounter/e1" },
+    effectiveDateTime: "2026-07-21T12:29:00.000Z",
+    identifier: [{ system: HPI_OBSERVATION_IDENTIFIER_SYSTEM, value: "e1" }],
+    component: [{ code: { coding: [{ code: "HISTORY_COMPLAINT_1" }] }, valueString: "Concurrent stale content" }],
+  }));
+
+  assert.equal((await handleHpiCaptureRequest(setup.deps, { authHeader: AUTH, body: BODY })).status, 200);
+  assert.equal(setup.observations.length, 1);
+  assert.equal(setup.observations[0]?.id, "concurrent-history");
+  assert.match(componentValue(setup.observations[0]!, "HISTORY_COMPLAINT_1") ?? "", /Patient reports dry eyes/);
+  assert.deepEqual(setup.transactions[0]?.bundle.entry?.[0]?.request, {
+    method: "PUT",
+    url: `Observation?identifier=${HPI_OBSERVATION_IDENTIFIER_SYSTEM}|e1`,
+  });
 });
 
 test("a complaint-backed hpi_ros capture makes the exam overview report History as charted", async () => {
