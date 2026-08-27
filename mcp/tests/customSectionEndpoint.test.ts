@@ -621,7 +621,7 @@ test("ocular-health saves round-trip normal and abnormal interpretations without
     definitions,
     currentObservations: fhir.observations,
     priorObservationCandidates: [],
-    assessmentPresent: false,
+    assessmentRows: [],
   });
   assert.deepEqual(projection.findings.map((finding) => [
     finding.findingKey,
