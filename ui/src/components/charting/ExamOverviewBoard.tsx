@@ -140,8 +140,6 @@ const EXAM_SHEET_ROWS: readonly ExamSheetRowDefinition[] = [
   },
 ];
 
-const EXAM_SECTION_BODY_STYLE = { maxHeight: "18rem", overflowY: "auto" } as const;
-
 export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, refreshing, onOpenEditor, onRefresh }: Props) {
   const findingByReference = new Map(
     projection.findings.map((finding) => [finding.observationReference, finding]),
@@ -283,7 +281,6 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, r
               <div
                 className="odos-exam-finding-list odos-exam-section-body"
                 data-testid="exam-section-body"
-                style={EXAM_SECTION_BODY_STYLE}
               >
                 {definition.singleBlank
                   ? groups.length > 0

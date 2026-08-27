@@ -1156,7 +1156,7 @@ test("a zero-finding Pretest section renders one labeled blank per chartable edi
     const bodies = renderer.root.findAllByProps({ "data-testid": "exam-section-body" });
     assert.equal(bodies.length, 7);
     for (const body of bodies) {
-      assert.deepEqual(body.props.style, { maxHeight: "18rem", overflowY: "auto" });
+      assert.equal(body.props.style, undefined);
     }
 
     const pretest = renderer.root.findByProps({ "data-section-key": "pretest" });

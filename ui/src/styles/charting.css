@@ -637,7 +637,9 @@
 }
 
 .odos-exam-section-body {
-  scrollbar-gutter: stable;
+  width: 100%;
+  max-width: 56rem;
+  margin-inline: auto;
 }
 
 .odos-exam-section-blank {
@@ -1445,6 +1447,12 @@
   .odos-exam-overview-board {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;
+  }
+
+  .odos-exam-section[data-section-key="history"],
+  .odos-exam-section[data-section-key="pretest"],
+  .odos-exam-section[data-section-key="ocular-health"] {
+    grid-column: 1 / -1;
   }
 }
 

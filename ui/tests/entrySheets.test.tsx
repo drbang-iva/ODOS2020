@@ -449,29 +449,104 @@ test("editor launch rows are 44px-class and disclosures reveal their interaction
   }
 });
 
-test("zero-finding comprehensive Pretest keeps all 14 editor slots inside its section scroll", { timeout: 30_000 }, async () => {
+test("every comprehensive worksheet section exposes all rows without an inner scroller", { timeout: 30_000 }, async () => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   page.setDefaultTimeout(5_000);
   try {
-    await page.goto(`${origin}/tests/fixtures/entry-sheets.html?comprehensive=true`, { waitUntil: "networkidle" });
-    const pretest = page.locator('[data-section-key="pretest"]');
-    const slots = pretest.getByTestId("exam-section-blank");
-    assert.equal(await slots.count(), 14);
-    assert.equal(new Set(await slots.evaluateAll((nodes) => nodes.map((node) =>
-      node.getAttribute("data-editor-section-id")
-    ))).size, 14);
-
-    const scroll = await pretest.getByTestId("exam-section-body").evaluate((node) => {
-      const style = getComputedStyle(node);
+    await page.goto(`${origin}/tests/fixtures/entry-sheets.html?comprehensive=true&worksheet=true`, { waitUntil: "networkidle" });
+    const sections = await page.getByTestId("exam-overview-section").evaluateAll((nodes) => nodes.map((section) => {
+      const body = section.querySelector<HTMLElement>('[data-testid="exam-section-body"]')!;
       return {
-        clientHeight: node.clientHeight,
-        scrollHeight: node.scrollHeight,
-        overflowY: style.overflowY,
+        sectionKey: section.getAttribute("data-section-key"),
+        clientHeight: body.clientHeight,
+        scrollHeight: body.scrollHeight,
       };
-    });
-    assert.equal(scroll.overflowY, "auto");
-    assert.ok(scroll.clientHeight <= 288, `Pretest body is ${scroll.clientHeight}px tall`);
-    assert.ok(scroll.scrollHeight > scroll.clientHeight, `${scroll.scrollHeight}px must overflow ${scroll.clientHeight}px`);
+    }));
+    assert.equal(sections.length, 7);
+    for (const section of sections) {
+      assert.ok(
+        section.scrollHeight <= section.clientHeight,
+        `${section.sectionKey} body scrollHeight ${section.scrollHeight}px exceeds clientHeight ${section.clientHeight}px`,
+      );
+    }
+  } finally {
+    await page.close();
+  }
+});
+
+test("the comprehensive worksheet renders all 17 Ocular Health rows in anatomical order", { timeout: 30_000 }, async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  page.setDefaultTimeout(5_000);
+  try {
+    await page.goto(`${origin}/tests/fixtures/entry-sheets.html?comprehensive=true&worksheet=true`, { waitUntil: "networkidle" });
+    const ocular = page.locator('[data-section-key="ocular-health"]');
+    const rowIds = await ocular.locator('[data-testid="exam-section-body"] > *').evaluateAll((nodes) =>
+      nodes.map((node) => node.getAttribute("data-editor-section-id")),
+    );
+    assert.deepEqual(rowIds, [
+      "ocular-health:anterior:periocular-adnexa",
+      "ocular-health:anterior:lids-lashes",
+      "ocular-health:anterior:palpebral-conjunctiva",
+      "ocular-health:anterior:conjunctiva",
+      "ocular-health:anterior:tear-film",
+      "ocular-health:anterior:cornea",
+      "ocular-health:anterior:anterior-chamber",
+      "ocular-health:anterior:iris",
+      "ocular-health:anterior:lens",
+      "ocular-health:posterior:vitreous",
+      "cup-disc",
+      "ocular-health:posterior:fundus",
+      "ocular-health:posterior:macula",
+      "ocular-health:posterior:vessels",
+      "ocular-health:posterior:periphery",
+      "gonioscopy",
+      "dry-eye",
+    ]);
+  } finally {
+    await page.close();
+  }
+});
+
+test("wide worksheet cards keep dense sections full width and row content within a readable measure", { timeout: 30_000 }, async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  page.setDefaultTimeout(5_000);
+  try {
+    await page.goto(`${origin}/tests/fixtures/entry-sheets.html?comprehensive=true&worksheet=true`, { waitUntil: "networkidle" });
+    const geometry = await page.getByTestId("exam-overview-section").evaluateAll((nodes) => Object.fromEntries(nodes.map((section) => {
+      const sectionRect = section.getBoundingClientRect();
+      const bodyRect = section.querySelector<HTMLElement>('[data-testid="exam-section-body"]')!.getBoundingClientRect();
+      return [section.getAttribute("data-section-key"), {
+        x: Math.round(sectionRect.x),
+        y: Math.round(sectionRect.y),
+        width: Math.round(sectionRect.width),
+        bodyWidth: Math.round(bodyRect.width),
+      }];
+    })) as Record<string, { x: number; y: number; width: number; bodyWidth: number }>);
+
+    for (const sectionKey of ["history", "pretest", "ocular-health"]) {
+      assert.ok(geometry[sectionKey]!.width > 1_200, `${sectionKey} width is ${geometry[sectionKey]!.width}px`);
+      assert.ok(geometry[sectionKey]!.bodyWidth <= 896, `${sectionKey} row content is ${geometry[sectionKey]!.bodyWidth}px wide`);
+    }
+    assert.ok(geometry.history!.y < geometry.pretest!.y);
+    assert.ok(geometry.pretest!.y < geometry.refraction!.y);
+    assert.equal(geometry.refraction!.y, geometry["contact-lenses"]!.y);
+    assert.notEqual(geometry.refraction!.x, geometry["contact-lenses"]!.x);
+    assert.ok(geometry["contact-lenses"]!.y < geometry["ocular-health"]!.y);
+    assert.ok(geometry["ocular-health"]!.y < geometry.imaging!.y);
+    assert.equal(geometry.imaging!.y, geometry.assessment!.y);
+    assert.notEqual(geometry.imaging!.x, geometry.assessment!.x);
+
+    await page.setViewportSize({ width: 1179, height: 1000 });
+    const narrowGeometry = await page.getByTestId("exam-overview-section").evaluateAll((nodes) => nodes.map((section) => {
+      const rect = section.getBoundingClientRect();
+      return { x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width) };
+    }));
+    assert.equal(new Set(narrowGeometry.map((section) => section.x)).size, 1);
+    assert.equal(new Set(narrowGeometry.map((section) => section.width)).size, 1);
+    assert.deepEqual(
+      narrowGeometry.map((section) => section.y),
+      narrowGeometry.map((section) => section.y).toSorted((left, right) => left - right),
+    );
   } finally {
     await page.close();
   }
