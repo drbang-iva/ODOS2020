@@ -636,16 +636,18 @@
 }
 
 .odos-exam-section-blank {
-  display: flex;
-  min-height: 76px;
+  display: grid;
+  min-height: 44px;
   width: 100%;
+  grid-template-columns: minmax(120px, auto) minmax(36px, 1fr) auto;
   align-items: center;
-  justify-content: center;
   gap: 10px;
+  padding: 8px 12px;
   border: 0;
   background: transparent;
   color: var(--odos-faint);
   font: inherit;
+  text-align: left;
   cursor: pointer;
 }
 
@@ -654,10 +656,15 @@
   color: var(--odos-text);
 }
 
-.odos-exam-section-blank > span {
-  min-width: 72px;
+.odos-exam-section-blank-label {
+  min-width: 0;
+  color: var(--odos-muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.odos-exam-section-blank-line {
   border-bottom: 1px solid var(--odos-line-2);
-  text-align: center;
 }
 
 .odos-exam-section-blank small {

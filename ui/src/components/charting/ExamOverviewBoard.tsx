@@ -114,12 +114,13 @@ interface ExamSheetRowDefinition {
   traceSectionKeys: readonly string[];
   owner: "Tech" | "Doctor";
   optional?: boolean;
+  singleBlank?: boolean;
 }
 
 const EXAM_SHEET_ROWS: readonly ExamSheetRowDefinition[] = [
   { sectionKey: "history", label: "History", editorGroupKey: "history", traceSectionKeys: ["history"], owner: "Doctor" },
   { sectionKey: "pretest", label: "Pretest", editorGroupKey: "pretest", traceSectionKeys: ["entrance", "pretest"], owner: "Tech" },
-  { sectionKey: "refraction", label: "Refraction", editorGroupKey: "refraction", traceSectionKeys: ["refraction"], owner: "Doctor" },
+  { sectionKey: "refraction", label: "Refraction", editorGroupKey: "refraction", traceSectionKeys: ["refraction"], owner: "Doctor", singleBlank: true },
   { sectionKey: "contact-lenses", label: "Contact Lenses", editorGroupKey: "contact-lenses", traceSectionKeys: [], owner: "Doctor", optional: true },
   { sectionKey: "ocular-health", label: "Ocular Health", editorGroupKey: "ocular-health", traceSectionKeys: ["ocular-health"], owner: "Doctor" },
   { sectionKey: "imaging", label: "Imaging", editorGroupKey: "imaging", traceSectionKeys: [], owner: "Doctor", optional: true },
@@ -187,7 +188,11 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, r
       return editor ? [editor.id] : [];
     })
   ));
+  const fullySlottedEditorGroupKeys = new Set(sheetSections.flatMap(({ definition }) =>
+    definition.singleBlank ? [] : [definition.editorGroupKey]
+  ));
   const chartAnotherGroups = Array.from(editorGroups.entries()).flatMap(([sectionKey, entries]) => {
+    if (fullySlottedEditorGroupKeys.has(sectionKey)) return [];
     const remaining = entries.filter((entry) => !performedEditorIds.has(entry.id));
     return remaining.length ? [[sectionKey, remaining] as const] : [];
   });
@@ -214,8 +219,9 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, r
 
       <div className="odos-exam-overview-board">
         {sheetSections.map(({ definition, traceRows, groups }) => {
-          const blankEditor = (editorGroups.get(definition.editorGroupKey) ?? [])
-            .find((entry) => !entry.readOnly);
+          const chartableEditors = (editorGroups.get(definition.editorGroupKey) ?? [])
+            .filter((entry) => !entry.readOnly);
+          const unperformedEditors = chartableEditors.filter((entry) => !performedEditorIds.has(entry.id));
           return (
             <section
               key={definition.sectionKey}
@@ -273,19 +279,24 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, r
                     onOpenEditor={onOpenEditor}
                   />
                 ))}
-                {groups.length === 0 && blankEditor && (
-                  <button
-                    type="button"
-                    className="odos-exam-section-blank"
-                    data-testid="exam-section-blank"
-                    data-blank-section-key={definition.sectionKey}
-                    onClick={() => onOpenEditor(blankEditor.id)}
-                    aria-label={`Open ${definition.label} editor`}
-                  >
-                    <span aria-hidden>—</span>
-                    <small>{definition.optional ? "Available when needed" : "Tap to chart"}</small>
-                  </button>
-                )}
+                {definition.singleBlank
+                  ? groups.length === 0 && chartableEditors[0] && (
+                    <EmptyEditorRow
+                      definition={definition}
+                      editor={chartableEditors[0]}
+                      activeEditorId={activeEditorId}
+                      onOpenEditor={onOpenEditor}
+                    />
+                  )
+                  : unperformedEditors.map((editor) => (
+                    <EmptyEditorRow
+                      key={editor.id}
+                      definition={definition}
+                      editor={editor}
+                      activeEditorId={activeEditorId}
+                      onOpenEditor={onOpenEditor}
+                    />
+                  ))}
               </div>
             </section>
           );
@@ -307,6 +318,37 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, r
       )}
 
     </main>
+  );
+}
+
+function EmptyEditorRow({
+  definition,
+  editor,
+  activeEditorId,
+  onOpenEditor,
+}: {
+  definition: ExamSheetRowDefinition;
+  editor: ChartEditorEntry;
+  activeEditorId?: ChartEditorEntry["id"];
+  onOpenEditor: (sectionId: ChartEditorEntry["id"]) => void;
+}) {
+  const active = activeEditorId === editor.id;
+  return (
+    <button
+      type="button"
+      className={`odos-exam-section-blank${active ? " is-active" : ""}`}
+      data-testid="exam-section-blank"
+      data-blank-section-key={definition.sectionKey}
+      data-editor-section-id={editor.id}
+      data-editor-presentation={isExamEntrySheetSectionId(editor.id) ? "sheet" : "full-page"}
+      aria-pressed={active}
+      onClick={() => onOpenEditor(editor.id)}
+      aria-label={`Open ${editor.label} editor`}
+    >
+      <span className="odos-exam-section-blank-label">{editor.label}</span>
+      <span className="odos-exam-section-blank-line" aria-hidden />
+      <small>{definition.optional ? "Available when needed" : "Tap to chart"}</small>
+    </button>
   );
 }
 
