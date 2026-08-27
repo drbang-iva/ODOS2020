@@ -370,7 +370,7 @@ function DiagnosisChoice({
   );
 }
 
-function catalogCode(row: Pick<CatalogRow, "icd10">): string | undefined {
+export function catalogCode(row: Pick<CatalogRow, "icd10">): string | undefined {
   if (!row.icd10) return undefined;
   if (row.icd10.code) return row.icd10.code;
   return row.icd10.pattern?.unspecifiedEye;

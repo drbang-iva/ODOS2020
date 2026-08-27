@@ -1054,7 +1054,7 @@ function verificationStatus(condition: Condition): string {
     condition.verificationStatus?.text ?? "unknown";
 }
 
-function findingProvenanceLine(observation: Observation): string {
+export function findingProvenanceLine(observation: Observation): string {
   const stableCode = observation.code.coding?.find((coding) => coding.code)?.code;
   const label = stableCode === "cup_disc_ratio"
     ? "Cup/Disc"
