@@ -1522,6 +1522,48 @@ test("possible, confirm, and discard use atomic transactions with per-resource v
   ), [false, true, true]);
 });
 
+test("direct confirm and discard each send one atomic Condition-and-Encounter transaction with version guards", async () => {
+  const fhir = diagnosisPickFhir();
+  const encounter = fhir.resources.find((resource): resource is Encounter =>
+    resource.resourceType === "Encounter" && resource.id === "e1"
+  )!;
+  encounter.meta = { versionId: "7" };
+  const pick = (action: "confirm" | "discard") => handleDiagnosisPickRequest({
+    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "provider", fhir }),
+  }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+    body: { diagnosisKey: "presbyopia", action, source: "catalog-search" },
+  });
+
+  const confirmed = await pick("confirm");
+
+  assert.equal(confirmed.status, 201, JSON.stringify(confirmed.body));
+  assert.equal(fhir.transactions.length, 1);
+  const confirmBundle = fhir.transactions[0]!.bundle;
+  assert.equal(confirmBundle.type, "transaction");
+  assert.deepEqual(confirmBundle.entry?.map((entry) => entry.resource?.resourceType), [
+    "Condition", "Encounter", "Provenance",
+  ]);
+  assert.equal(confirmBundle.entry?.find((entry) => entry.resource?.resourceType === "Encounter")?.request?.ifMatch, 'W/"7"');
+  const condition = (confirmed.body as { condition: Condition }).condition;
+  const persistedReference = (await fhir.read<Encounter>("Encounter", "e1")).diagnosis?.[0]?.condition.reference;
+  assert.equal(persistedReference, `Condition/${condition.id}`);
+  assert.doesNotMatch(persistedReference ?? "", /^urn:uuid:/);
+
+  const discarded = await pick("discard");
+
+  assert.equal(discarded.status, 200, JSON.stringify(discarded.body));
+  assert.equal(fhir.transactions.length, 2);
+  const discardBundle = fhir.transactions[1]!.bundle;
+  assert.equal(discardBundle.type, "transaction");
+  assert.deepEqual(discardBundle.entry?.map((entry) => entry.resource?.resourceType), [
+    "Condition", "Encounter", "Provenance",
+  ]);
+  assert.equal(discardBundle.entry?.find((entry) => entry.resource?.resourceType === "Condition")?.request?.ifMatch, 'W/"1"');
+  assert.equal(discardBundle.entry?.find((entry) => entry.resource?.resourceType === "Encounter")?.request?.ifMatch, 'W/"8"');
+});
+
 test("laterality-keyed picks keep both eyes distinct, escalate one eye, and discard only its Condition", async () => {
   const fhir = diagnosisPickFhir();
   const pick = (body: Record<string, unknown>) => handleDiagnosisPickRequest({
