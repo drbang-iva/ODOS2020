@@ -4,7 +4,7 @@ import { test } from "node:test";
 import type { MedicationStatement } from "@medplum/fhirtypes";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { act, create, type ReactTestRenderer } from "react-test-renderer";
+import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import { CustomFieldEditor, type CustomFieldEditorValue } from "../src/components/charting/CustomFieldEditor";
 import { AestheticsConsentSection } from "../src/components/charting/AestheticsConsentSection";
 import { CustomFindingSection } from "../src/components/charting/CustomFindingSection";
@@ -2444,6 +2444,158 @@ test("SpineNav groups anterior and posterior definitions with Cup Disc in poster
   assert.ok(html.indexOf("Fundus") < html.indexOf("Dry Eye"));
 });
 
+test("the full ocular-health runner lists all seeded structures blank and stays out of tear-film-only charting", async () => {
+  const definitions = [...ocularDefinitions(), ...posteriorDefinitions()];
+  const fetchImpl = (async () => jsonResponse({ rows: [] })) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  let tearFilmRenderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={definitions}
+        patientReference="Patient/p-runner-empty"
+        encounterReference="Encounter/e-runner-empty"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    const rail = renderer.root.findByProps({ "data-testid": "ocular-health-structure-rail" });
+    const entries = rail.findAll((node) => typeof node.props["data-structure-rail-key"] === "string");
+    assert.equal(entries.length, 14);
+    assert.deepEqual(entries.map((entry) => [
+      entry.props["data-structure-rail-key"],
+      entry.props["data-structure-state"],
+    ]), definitions.map((definition) => [definition.stableKey, "blank"]));
+    assert.deepEqual(
+      rail.findAll((node) => typeof node.props["data-structure-rail-group"] === "string")
+        .map((group) => group.props["data-structure-rail-group"]),
+      ["Anterior Segment", "Posterior Segment"],
+    );
+    for (const definition of definitions) {
+      const entry = entries.find((candidate) => candidate.props["data-structure-rail-key"] === definition.stableKey);
+      assert.ok(entry);
+      assert.match(renderedText(entry), new RegExp(definition.display.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    }
+    const anteriorAllNormal = renderer.root.findAllByType("button")
+      .find((button) => renderedText(button) === "Anterior All Normal");
+    assert.ok(anteriorAllNormal);
+    act(() => anteriorAllNormal.props.onClick());
+    assert.deepEqual(
+      entries.map((entry) => entry.props["data-structure-state"]),
+      [...Array(9).fill("normal"), ...Array(5).fill("blank")],
+    );
+
+    const tearFilm = definitions.find((definition) => definition.stableKey === "ocular-health:anterior:tear-film");
+    assert.ok(tearFilm);
+    await act(async () => {
+      tearFilmRenderer = create(<OcularHealthSection
+        definitions={[tearFilm]}
+        patientReference="Patient/p-tear-film-only"
+        encounterReference="Encounter/e-tear-film-only"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    assert.equal(tearFilmRenderer.root.findAllByProps({ "data-testid": "ocular-health-structure-rail" }).length, 0);
+  } finally {
+    renderer?.unmount();
+    tearFilmRenderer?.unmount();
+  }
+});
+
+test("the ocular-health runner derives finding count from capture selections", async () => {
+  const definitions = [...ocularDefinitions(), ...posteriorDefinitions()];
+  const fetchImpl = (async () => jsonResponse({ rows: [] })) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={definitions}
+        patientReference="Patient/p-runner-state"
+        encounterReference="Encounter/e-runner-state"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    const cornea = renderer.root.findByProps({ id: "structure-ocular-health-anterior-cornea" });
+    const od = cornea.findByProps({ "data-eye-panel": "OD" });
+    const abnormal = od.findAllByType("button").find((button) => renderedText(button) === "Abnormal");
+    assert.ok(abnormal);
+    act(() => abnormal.props.onClick());
+    const finding = od.findAllByType("button").find((button) => renderedText(button) === "Finding");
+    assert.ok(finding);
+    act(() => finding.props.onClick());
+
+    const entries = renderer.root.findByProps({ "data-testid": "ocular-health-structure-rail" })
+      .findAll((node) => typeof node.props["data-structure-rail-key"] === "string");
+    const corneaEntry = entries.find((entry) => entry.props["data-structure-rail-key"] === "ocular-health:anterior:cornea");
+    assert.equal(corneaEntry?.props["data-structure-state"], "1 finding");
+    assert.match(renderedText(corneaEntry!), /1 finding/);
+    assert.equal(
+      entries.find((entry) => entry.props["data-structure-rail-key"] === "ocular-health:anterior:lens")
+        ?.props["data-structure-state"],
+      "blank",
+    );
+  } finally {
+    renderer?.unmount();
+  }
+});
+
+test("the ocular-health runner Next and Previous reuse structure scrolling and update the highlight", async () => {
+  const definitions = [...ocularDefinitions(), ...posteriorDefinitions()];
+  const fetchImpl = (async () => jsonResponse({ rows: [] })) as typeof fetch;
+  const originalDocument = globalThis.document;
+  const scrolled: string[] = [];
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: {
+      getElementById(id: string) {
+        return { scrollIntoView: () => scrolled.push(id) };
+      },
+    },
+  });
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={definitions}
+        patientReference="Patient/p-runner-nav"
+        encounterReference="Encounter/e-runner-nav"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    const focusedKey = () => renderer.root
+      .findAll((node) => node.props["aria-current"] === "true")
+      .map((node) => node.props["data-structure-rail-key"]);
+    assert.deepEqual(focusedKey(), ["ocular-health:anterior:periocular-adnexa"]);
+
+    const next = renderer.root.findByProps({ "aria-label": "Next ocular-health structure" });
+    await act(async () => next.props.onClick());
+    assert.deepEqual(focusedKey(), ["ocular-health:anterior:lids-lashes"]);
+    assert.deepEqual(scrolled, ["structure-ocular-health-anterior-lids-lashes"]);
+
+    const previous = renderer.root.findByProps({ "aria-label": "Previous ocular-health structure" });
+    await act(async () => previous.props.onClick());
+    assert.deepEqual(focusedKey(), ["ocular-health:anterior:periocular-adnexa"]);
+    assert.deepEqual(scrolled, [
+      "structure-ocular-health-anterior-lids-lashes",
+      "structure-ocular-health-anterior-periocular-adnexa",
+    ]);
+  } finally {
+    renderer?.unmount();
+    Object.defineProperty(globalThis, "document", { configurable: true, value: originalDocument });
+  }
+});
+
 test("posterior seeded history renders honestly and zero-data eyes remain untouched", async () => {
   const definitions = posteriorDefinitions();
   const fetchImpl = (async (input) => String(input).includes("posterior%3Afundus")
@@ -3490,10 +3642,20 @@ test("EncounterCharting collapses its chart sidebar at the existing tablet conta
 });
 
 function ocularDefinitions() {
-  return ["periocular-adnexa", "lids-lashes", "palpebral-conjunctiva", "bulbar-conjunctiva", "tear-film", "cornea", "anterior-chamber", "iris-pupil", "lens"].map((name) => ({
+  return [
+    ["periocular-adnexa", "Periocular Adnexa"],
+    ["lids-lashes", "Lids & Lashes"],
+    ["palpebral-conjunctiva", "Palpebral Conjunctiva"],
+    ["conjunctiva", "Conjunctiva"],
+    ["tear-film", "Tear Film"],
+    ["cornea", "Cornea"],
+    ["anterior-chamber", "Anterior Chamber"],
+    ["iris", "Iris"],
+    ["lens", "Lens"],
+  ].map(([name, display]) => ({
     stableKey: `ocular-health:anterior:${name}`,
     sectionKey: `ocular-health:anterior:${name}`,
-    display: name.split("-").map((part) => `${part[0]!.toUpperCase()}${part.slice(1)}`).join(" "),
+    display: display!,
     active: true,
     perEye: true,
     normalTemplate: `Live ${name} normal.`,
@@ -3587,6 +3749,10 @@ function anteriorGradeDefinitions() {
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+}
+
+function renderedText(node: ReactTestInstance): string {
+  return node.children.map((child) => typeof child === "string" ? child : renderedText(child)).join("");
 }
 
 async function flushEffects(): Promise<void> {

@@ -87,6 +87,14 @@ export function OcularHealthSection({
   const [error, setError] = useState<string | null>(null);
   const definitionKey = useMemo(() => definitions.map((definition) => definition.stableKey).join("|"), [definitions]);
   const historyIdentity = `${patientReference}\u0000${encounterReference}\u0000${definitionKey}`;
+  const groups = useMemo(() => segmentGroups(definitions), [definitions]);
+  const runnerEnabled = groups.some((group) => group.label === "Anterior Segment") &&
+    groups.some((group) => group.label === "Posterior Segment");
+  const runnerDefinitions = groups.flatMap((group) => group.definitions);
+  const [focusedStructureKey, setFocusedStructureKey] = useState<string | undefined>(focusedStableKey);
+  const highlightedStructureKey = runnerDefinitions.some((definition) => definition.stableKey === focusedStructureKey)
+    ? focusedStructureKey
+    : runnerDefinitions[0]?.stableKey;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -159,9 +167,18 @@ export function OcularHealthSection({
   }, [historyIdentity, currentHistory, encounterRecordedAt, apiBase, fetchImpl]);
 
   useEffect(() => {
+    if (runnerEnabled) {
+      if (focusedStableKey) setFocusedStructureKey(focusedStableKey);
+      return;
+    }
     if (!focusedStableKey) return;
     document.getElementById(domId(focusedStableKey))?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [focusedStableKey]);
+  }, [focusedStableKey, runnerEnabled]);
+
+  useEffect(() => {
+    if (!runnerEnabled || !focusedStructureKey) return;
+    document.getElementById(domId(focusedStructureKey))?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [focusedStructureKey, runnerEnabled]);
 
   function updateEye(stableKey: string, eye: Eye, update: (capture: EyeCapture) => EyeCapture) {
     setCaptures((current) => ({
@@ -320,44 +337,118 @@ export function OcularHealthSection({
           </div>
         </div>
         {loading && <div className="py-8 text-sm text-white/45">Loading ocular-health findings…</div>}
-        {!loading && <div className="mt-5 space-y-5">{segmentGroups(definitions).map((group) => <div key={group.label} className="space-y-5">
-          <div className="border-b border-white/10 pb-2 text-xs font-semibold uppercase tracking-[0.18em] text-brand-light">{group.label}</div>
-          {group.definitions.map((definition) => {
-          const field = abnormalField(definition);
-          const grades = gradeFields(definition);
-          const row = captures[definition.stableKey] ?? emptyRow();
-          const prior = priors[definition.stableKey] ?? emptyPriorReadings();
-          return (
-            <article id={domId(definition.stableKey)} key={definition.stableKey} className="scroll-mt-24 rounded border border-white/10 bg-bg-panel/65 p-4">
-              <div className="mb-4"><h3 className="font-semibold text-white">{definition.display}</h3></div>
-              <div className="grid gap-4 xl:grid-cols-2">{EYES.map((eye) => (
-                <EyePanel
-                  key={eye}
-                  eye={eye}
-                  capture={row[eye]}
-                  prior={prior[eye]}
-                  field={field}
-                  gradeFields={grades}
-                  normalTemplate={definition.normalTemplate}
-                  allowDeferred={definition.allowDeferred === true}
-                  onState={(state) => setExamState(definition, eye, state)}
-                  onSelections={(selections) => setSelections(definition, eye, selections)}
-                  onFindingDetail={(optionCode, qualifierKey, value) => setFindingDetail(definition, eye, optionCode, qualifierKey, value)}
-                  onGrade={(localCode, value) => updateEye(definition.stableKey, eye, (current) => ({ ...current, grades: { ...current.grades, [localCode]: value } }))}
-                  onOther={(other) => updateEye(definition.stableKey, eye, (current) => ({ ...current, other }))}
-                  onCopy={() => copyEye(definition, eye, eye === "OD" ? "OS" : "OD")}
-                />
-              ))}</div>
-            </article>
-          );
-          })}
-        </div>)}</div>}
+        {!loading && <div className={runnerEnabled ? "mt-5 grid items-start gap-5 lg:grid-cols-[13rem_minmax(0,1fr)]" : "mt-5"}>
+          {runnerEnabled && highlightedStructureKey && <StructureRail
+            groups={groups}
+            captures={captures}
+            focusedStableKey={highlightedStructureKey}
+            onFocus={setFocusedStructureKey}
+          />}
+          <div className="space-y-5">{groups.map((group) => <div key={group.label} className="space-y-5">
+            <div className="border-b border-white/10 pb-2 text-xs font-semibold uppercase tracking-[0.18em] text-brand-light">{group.label}</div>
+            {group.definitions.map((definition) => {
+            const field = abnormalField(definition);
+            const grades = gradeFields(definition);
+            const row = captures[definition.stableKey] ?? emptyRow();
+            const prior = priors[definition.stableKey] ?? emptyPriorReadings();
+            const focused = runnerEnabled && definition.stableKey === highlightedStructureKey;
+            return (
+              <article
+                id={domId(definition.stableKey)}
+                key={definition.stableKey}
+                data-structure-focused={focused || undefined}
+                className={`scroll-mt-24 rounded border bg-bg-panel/65 p-4 ${focused ? "border-brand/60 ring-1 ring-brand/30" : "border-white/10"}`}
+              >
+                <div className="mb-4"><h3 className="font-semibold text-white">{definition.display}</h3></div>
+                <div className="grid gap-4 xl:grid-cols-2">{EYES.map((eye) => (
+                  <EyePanel
+                    key={eye}
+                    eye={eye}
+                    capture={row[eye]}
+                    prior={prior[eye]}
+                    field={field}
+                    gradeFields={grades}
+                    normalTemplate={definition.normalTemplate}
+                    allowDeferred={definition.allowDeferred === true}
+                    onState={(state) => setExamState(definition, eye, state)}
+                    onSelections={(selections) => setSelections(definition, eye, selections)}
+                    onFindingDetail={(optionCode, qualifierKey, value) => setFindingDetail(definition, eye, optionCode, qualifierKey, value)}
+                    onGrade={(localCode, value) => updateEye(definition.stableKey, eye, (current) => ({ ...current, grades: { ...current.grades, [localCode]: value } }))}
+                    onOther={(other) => updateEye(definition.stableKey, eye, (current) => ({ ...current, other }))}
+                    onCopy={() => copyEye(definition, eye, eye === "OD" ? "OS" : "OD")}
+                  />
+                ))}</div>
+              </article>
+            );
+            })}
+          </div>)}</div>
+        </div>}
         <div className="sticky bottom-0 mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 bg-bg-deep/95 py-4 backdrop-blur">
           <div className="min-h-6 text-sm">{error ? <span className="text-rose-200">{error}</span> : <span className="text-white/55">{message}</span>}</div>
           <button type="button" onClick={save} disabled={saving || loading} className="rounded bg-brand px-5 py-2 text-sm font-semibold text-white disabled:opacity-45">{saving ? "Saving…" : "Save Ocular Health"}</button>
         </div>
       </div>
     </section>
+  );
+}
+
+function StructureRail({ groups, captures, focusedStableKey, onFocus }: {
+  groups: Array<{ label: string; definitions: CustomFindingDefinition[] }>;
+  captures: Record<string, Record<Eye, EyeCapture>>;
+  focusedStableKey: string;
+  onFocus(stableKey: string): void;
+}) {
+  const definitions = groups.flatMap((group) => group.definitions);
+  const focusedIndex = definitions.findIndex((definition) => definition.stableKey === focusedStableKey);
+  return (
+    <nav
+      aria-label="Ocular-health structures"
+      data-testid="ocular-health-structure-rail"
+      className="sticky top-28 max-h-[calc(100vh-12rem)] overflow-y-auto rounded border border-white/10 bg-bg-panel/80 p-3"
+    >
+      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">Structures</div>
+      <div className="mt-3 space-y-3">
+        {groups.map((group) => <div key={group.label} data-structure-rail-group={group.label}>
+          <div className="px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-light">{group.label}</div>
+          <div className="mt-1 space-y-1">{group.definitions.map((definition) => {
+            const state = structureRailState(captures[definition.stableKey] ?? emptyRow());
+            const focused = definition.stableKey === focusedStableKey;
+            return <button
+              type="button"
+              key={definition.stableKey}
+              data-structure-rail-key={definition.stableKey}
+              data-structure-state={state}
+              aria-current={focused ? "true" : undefined}
+              onClick={() => onFocus(definition.stableKey)}
+              className={`flex min-h-9 w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-xs transition ${focused ? "bg-brand/20 text-white ring-1 ring-brand/45" : "text-white/65 hover:bg-white/[0.05] hover:text-white"}`}
+            >
+              <span className="min-w-0 truncate font-medium">{definition.display}</span>
+              <span className="shrink-0 text-[10px] text-white/40">{state}</span>
+            </button>;
+          })}</div>
+        </div>)}
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2 border-t border-white/10 pt-3">
+        <button
+          type="button"
+          aria-label="Previous ocular-health structure"
+          disabled={focusedIndex <= 0}
+          onClick={() => onFocus(definitions[focusedIndex - 1]!.stableKey)}
+          className="rounded border border-white/15 px-2 py-2 text-xs font-semibold text-white/70 transition hover:bg-white/[0.05] disabled:opacity-30"
+        >
+          Prev
+        </button>
+        <button
+          type="button"
+          aria-label="Next ocular-health structure"
+          disabled={focusedIndex < 0 || focusedIndex >= definitions.length - 1}
+          onClick={() => onFocus(definitions[focusedIndex + 1]!.stableKey)}
+          className="rounded border border-white/15 px-2 py-2 text-xs font-semibold text-white/70 transition hover:bg-white/[0.05] disabled:opacity-30"
+        >
+          Next
+        </button>
+      </div>
+    </nav>
   );
 }
 
@@ -661,6 +752,16 @@ function touched(capture: EyeCapture): boolean {
     capture.state || capture.other.trim() || capture.selections.length ||
     Object.keys(capture.grades ?? {}).length || hasFindingDetails(capture.findingDetails)
   );
+}
+
+function structureRailState(row: Record<Eye, EyeCapture>): string {
+  const touchedCaptures = EYES.map((eye) => row[eye]).filter(touched);
+  if (touchedCaptures.length === 0) return "blank";
+  const findingCount = touchedCaptures.reduce((count, capture) => count + capture.selections.length, 0);
+  if (findingCount > 0 || touchedCaptures.some((capture) => capture.state !== "normal")) {
+    return `${findingCount} ${findingCount === 1 ? "finding" : "findings"}`;
+  }
+  return "normal";
 }
 
 export function changedDefinitions<T extends Pick<CustomFindingDefinition, "stableKey">>(
