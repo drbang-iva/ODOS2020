@@ -253,8 +253,11 @@ function Fixture() {
               key={active}
               sectionId={active === "visit-charges" ? "visit-charges" : mapped ? active : "va"}
               onCancel={() => sheetGuard.requestTransition(undefined, () => setActive(undefined))}
+              onCheckpointDirty={sheetGuard.checkpointDirty}
+              onClearDirtyCheckpoint={sheetGuard.clearDirtyCheckpoint}
               onDirty={sheetGuard.markDirty}
               onFocusWithin={sheetGuard.rememberFocus}
+              onRestoreDirtyCheckpoint={sheetGuard.restoreDirtyCheckpoint}
             >
               <div
                 data-fixture-section={active}

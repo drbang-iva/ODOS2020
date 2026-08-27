@@ -673,8 +673,11 @@ export function EncounterCharting({ patient, encounterId }: Props) {
               key={entrySheetSection}
               sectionId={entrySheetSection}
               onCancel={() => entrySheetGuard.requestTransition(undefined, () => setEntrySheetSection(undefined))}
+              onCheckpointDirty={entrySheetGuard.checkpointDirty}
+              onClearDirtyCheckpoint={entrySheetGuard.clearDirtyCheckpoint}
               onDirty={entrySheetGuard.markDirty}
               onFocusWithin={entrySheetGuard.rememberFocus}
+              onRestoreDirtyCheckpoint={entrySheetGuard.restoreDirtyCheckpoint}
               active={!referralComposeOpen}
             >
               <MappedExamSection

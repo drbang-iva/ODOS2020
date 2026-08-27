@@ -520,6 +520,57 @@ test("presentational sheet controls do not warn before a clinical sheet swap", {
   }
 });
 
+test("canceling an HPI complaint draft restores the sheet guard checkpoint", { timeout: 30_000 }, async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  page.setDefaultTimeout(5_000);
+  const dialogs: string[] = [];
+  page.on("dialog", async (dialog) => {
+    dialogs.push(dialog.message());
+    await dialog.accept();
+  });
+  try {
+    await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "Open HPI" }).click();
+    await page.getByRole("button", { name: "Other", exact: true }).click();
+    await page.getByLabel("Presenting concern").fill("Discarded synthetic complaint");
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    await openChartAnotherGroup(page, "va");
+    await page.locator('[data-editor-section-id="va"]').click();
+
+    await page.getByRole("dialog", { name: "Visual Acuity" }).waitFor();
+    assert.deepEqual(dialogs, []);
+  } finally {
+    await page.close();
+  }
+});
+
+test("canceling an HPI complaint draft preserves unrelated sheet dirtiness", { timeout: 30_000 }, async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  page.setDefaultTimeout(5_000);
+  const dialogs: string[] = [];
+  page.on("dialog", async (dialog) => {
+    dialogs.push(dialog.message());
+    await dialog.dismiss();
+  });
+  try {
+    await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "Open HPI" }).click();
+    await page.getByRole("combobox", { name: "Vision changes review status" }).selectOption("negative");
+    await page.getByRole("button", { name: "Other", exact: true }).click();
+    await page.getByLabel("Presenting concern").fill("Discarded synthetic complaint");
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    await openChartAnotherGroup(page, "va");
+    await page.locator('[data-editor-section-id="va"]').click();
+
+    assert.deepEqual(dialogs, [
+      "Discard unsaved changes in Chief Complaint / HPI / ROS and open Visual Acuity?",
+    ]);
+    await page.getByRole("dialog", { name: "Chief Complaint / HPI / ROS" }).waitFor();
+  } finally {
+    await page.close();
+  }
+});
+
 test("Save and Add Another resets the sheet guard before a later swap", { timeout: 30_000 }, async () => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   page.setDefaultTimeout(5_000);
