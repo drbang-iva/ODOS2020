@@ -7,7 +7,7 @@ type ExamObservationState =
   | "deferred-with-reason"
   | "deferred-without-reason";
 
-type ExamSectionState = ExamObservationState | "not-examined" | "not-indicated";
+type ExamSectionState = ExamObservationState | "partial" | "not-examined" | "not-indicated";
 type ExamFindingProvenanceState = "current" | "carried-unreasserted" | "carried-reasserted";
 type FindingInterpretation = "normal" | "abnormal" | "borderline" | "unknown";
 
@@ -43,6 +43,11 @@ interface ExamOverviewFindingProjection {
   interpretation: FindingInterpretation;
   provenance: { state: ExamFindingProvenanceState; sourceDate?: string };
   current: ObservationSnapshot;
+  normalLabel?: string;
+  sheetFindings?: Array<{
+    display: string;
+    qualifiers: string[];
+  }>;
   summary?: string;
   event?: {
     administrations: Array<{
@@ -114,6 +119,7 @@ interface ExamSheetRowDefinition {
   traceSectionKeys: readonly string[];
   owner: "Tech" | "Doctor";
   optional?: boolean;
+  optionalEditorIds?: readonly ChartEditorEntry["id"][];
   singleBlank?: boolean;
 }
 
@@ -124,7 +130,14 @@ const EXAM_SHEET_ROWS: readonly ExamSheetRowDefinition[] = [
   { sectionKey: "contact-lenses", label: "Contact Lenses", editorGroupKey: "contact-lenses", traceSectionKeys: [], owner: "Doctor", optional: true },
   { sectionKey: "ocular-health", label: "Ocular Health", editorGroupKey: "ocular-health", traceSectionKeys: ["ocular-health"], owner: "Doctor" },
   { sectionKey: "imaging", label: "Imaging", editorGroupKey: "imaging", traceSectionKeys: [], owner: "Doctor", optional: true },
-  { sectionKey: "assessment", label: "Assessment & Plan", editorGroupKey: "assessment", traceSectionKeys: ["assessment"], owner: "Doctor" },
+  {
+    sectionKey: "assessment",
+    label: "Assessment & Plan",
+    editorGroupKey: "assessment",
+    traceSectionKeys: ["assessment"],
+    owner: "Doctor",
+    optionalEditorIds: ["prescription"],
+  },
 ];
 
 const EXAM_SECTION_BODY_STYLE = { maxHeight: "18rem", overflowY: "auto" } as const;
@@ -221,7 +234,9 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, r
         {sheetSections.map(({ definition, traceRows, groups }) => {
           const chartableEditors = (editorGroups.get(definition.editorGroupKey) ?? [])
             .filter((entry) => !entry.readOnly);
-          const unperformedEditors = chartableEditors.filter((entry) => !performedEditorIds.has(entry.id));
+          const slottedGroups = new Set(groups.flatMap((group) =>
+            editorForFinding(group, chartableEditors) ? [group] : []
+          ));
           return (
             <section
               key={definition.sectionKey}
@@ -270,33 +285,58 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, r
                 data-testid="exam-section-body"
                 style={EXAM_SECTION_BODY_STYLE}
               >
-                {groups.map((group) => (
-                  <FindingRow
-                    key={`${group.findingKey}\u0000${group.display}`}
-                    group={group}
-                    wearingFindings={wearingFindings}
-                    editor={editorForFinding(group, editorEntries)}
-                    onOpenEditor={onOpenEditor}
-                  />
-                ))}
                 {definition.singleBlank
-                  ? groups.length === 0 && chartableEditors[0] && (
-                    <EmptyEditorRow
-                      definition={definition}
-                      editor={chartableEditors[0]}
-                      activeEditorId={activeEditorId}
-                      onOpenEditor={onOpenEditor}
-                    />
-                  )
-                  : unperformedEditors.map((editor) => (
-                    <EmptyEditorRow
-                      key={editor.id}
-                      definition={definition}
-                      editor={editor}
-                      activeEditorId={activeEditorId}
-                      onOpenEditor={onOpenEditor}
-                    />
-                  ))}
+                  ? groups.length > 0
+                    ? groups.map((group) => (
+                        <FindingRow
+                          key={`${group.findingKey}\u0000${group.display}`}
+                          group={group}
+                          wearingFindings={wearingFindings}
+                          editor={editorForFinding(group, editorEntries)}
+                          onOpenEditor={onOpenEditor}
+                        />
+                      ))
+                    : chartableEditors[0] && (
+                        <EmptyEditorRow
+                          definition={definition}
+                          editor={chartableEditors[0]}
+                          activeEditorId={activeEditorId}
+                          onOpenEditor={onOpenEditor}
+                        />
+                      )
+                  : <>
+                      {chartableEditors.flatMap((editor) => {
+                        const matches = groups.filter((group) => editorForFinding(group, chartableEditors)?.id === editor.id);
+                        return matches.length > 0
+                          ? matches.map((group) => (
+                              <FindingRow
+                                key={`${group.findingKey}\u0000${group.display}`}
+                                group={group}
+                                wearingFindings={wearingFindings}
+                                editor={editor}
+                                onOpenEditor={onOpenEditor}
+                              />
+                            ))
+                          : [
+                              <EmptyEditorRow
+                                key={editor.id}
+                                definition={definition}
+                                editor={editor}
+                                activeEditorId={activeEditorId}
+                                onOpenEditor={onOpenEditor}
+                              />,
+                            ];
+                      })}
+                      {groups.filter((group) => !slottedGroups.has(group)).map((group) => (
+                        <FindingRow
+                          key={`${group.findingKey}\u0000${group.display}`}
+                          group={group}
+                          wearingFindings={wearingFindings}
+                          editor={editorForFinding(group, editorEntries)}
+                          onOpenEditor={onOpenEditor}
+                        />
+                      ))}
+                    </>}
               </div>
             </section>
           );
@@ -333,6 +373,7 @@ function EmptyEditorRow({
   onOpenEditor: (sectionId: ChartEditorEntry["id"]) => void;
 }) {
   const active = activeEditorId === editor.id;
+  const optional = definition.optional || definition.optionalEditorIds?.includes(editor.id) === true;
   return (
     <button
       type="button"
@@ -340,6 +381,7 @@ function EmptyEditorRow({
       data-testid="exam-section-blank"
       data-blank-section-key={definition.sectionKey}
       data-editor-section-id={editor.id}
+      data-required={!optional}
       data-editor-presentation={isExamEntrySheetSectionId(editor.id) ? "sheet" : "full-page"}
       aria-pressed={active}
       onClick={() => onOpenEditor(editor.id)}
@@ -347,7 +389,7 @@ function EmptyEditorRow({
     >
       <span className="odos-exam-section-blank-label">{editor.label}</span>
       <span className="odos-exam-section-blank-line" aria-hidden />
-      <small>{definition.optional ? "Available when needed" : "Tap to chart"}</small>
+      <small>{optional ? "Available when needed" : "Tap to chart"}</small>
     </button>
   );
 }
@@ -688,12 +730,20 @@ function isFindingProjection(value: unknown): value is ExamOverviewFindingProjec
     oneOf(value.provenance.state, ["current", "carried-unreasserted", "carried-reasserted"]) &&
     optionalString(value.provenance.sourceDate) &&
     isObservationSnapshot(value.current) &&
+    optionalString(value.normalLabel) &&
+    (value.sheetFindings === undefined || isSheetFindings(value.sheetFindings)) &&
     optionalString(value.summary) &&
     (value.event === undefined || isFindingEvent(value.event)) &&
     (value.diagnoses === undefined || isFindingDiagnoses(value.diagnoses)) &&
     (value.attestation === undefined || isFindingAttestation(value.attestation)) &&
     (value.prior === undefined || isObservationSnapshot(value.prior)) &&
     (value.changeFromPrior === undefined || isChangeFromPrior(value.changeFromPrior));
+}
+
+function isSheetFindings(value: unknown): boolean {
+  return Array.isArray(value) && value.every((row) =>
+    isRecord(row) && typeof row.display === "string" && stringArray(row.qualifiers)
+  );
 }
 
 function isFindingEvent(value: unknown): boolean {
@@ -717,7 +767,7 @@ function isSectionProjection(value: unknown): value is ExamOverviewSectionProjec
   return isRecord(value) &&
     typeof value.sectionKey === "string" &&
     typeof value.label === "string" &&
-    oneOf(value.state, ["examined", "deferred-with-reason", "deferred-without-reason", "not-examined", "not-indicated"]) &&
+    oneOf(value.state, ["examined", "deferred-with-reason", "deferred-without-reason", "partial", "not-examined", "not-indicated"]) &&
     stringArray(value.findingObservationReferences) &&
     finiteNumber(value.abnormalCount) &&
     finiteNumber(value.carriedUnreassertedCount) &&
@@ -733,7 +783,7 @@ function isCompleteness(value: unknown): value is ClinicalExamCompleteness {
       isRecord(row) &&
       typeof row.sectionKey === "string" &&
       typeof row.label === "string" &&
-      oneOf(row.state, ["examined", "deferred-with-reason", "deferred-without-reason", "not-examined", "not-indicated"]) &&
+      oneOf(row.state, ["examined", "deferred-with-reason", "deferred-without-reason", "partial", "not-examined", "not-indicated"]) &&
       typeof row.resolved === "boolean" &&
       finiteNumber(row.carriedUnreassertedCount)
     ) &&
@@ -861,6 +911,12 @@ function wordValue(finding: ExamOverviewFindingProjection): string {
 }
 
 function findingValue(finding: ExamOverviewFindingProjection): string {
+  if (finding.interpretation === "normal" && finding.normalLabel) return finding.normalLabel;
+  if (finding.sheetFindings?.length) {
+    return finding.sheetFindings.map((row) =>
+      `${row.display}${row.qualifiers.length ? ` ${row.qualifiers.join(" ")}` : ""}`
+    ).join("; ");
+  }
   const normalWord = finding.interpretation === "normal" ? normalFindingWord(finding.findingKey) : undefined;
   if (normalWord) return normalWord;
   if (finding.summary) return finding.summary;
@@ -877,7 +933,7 @@ function findingValue(finding: ExamOverviewFindingProjection): string {
     const label = snapshotComponentLabel(finding.current, preferredCode);
     if (label) return label;
   }
-  if (finding.interpretation === "abnormal") return "abnormal";
+  if (finding.interpretation === "abnormal") return "Finding not specified";
   if (finding.interpretation === "borderline") return "borderline";
   return "recorded";
 }
@@ -1072,6 +1128,7 @@ function uniqueRows<T>(rows: readonly T[], key: (row: T) => string): T[] {
 function sectionStateLabel(state: ExamSectionState): string {
   return {
     examined: "Examined",
+    partial: "Partial examination",
     "deferred-with-reason": "Deferred — reason recorded",
     "deferred-without-reason": "Deferred — reason not recorded",
     "not-examined": "Not examined",

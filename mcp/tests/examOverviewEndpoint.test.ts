@@ -25,6 +25,7 @@ import type {
 } from "../src/clinical-graph/exam-overview-projection.js";
 import type { ClinicalFindingDefinition } from "../src/clinical-graph/glaucoma-suspect.js";
 import { ODOS_VISIT_TYPE_SYSTEM } from "../src/fhir/schedulingVisitType.js";
+import { mdmProblemStatusExtension } from "../src/fhir/condition.js";
 
 test("exam overview requires chart read access before touching FHIR", async () => {
   const fhir = new OverviewMemoryFhir([]);
@@ -302,6 +303,30 @@ test("an entered-in-error Condition cannot resolve Assessment completeness", asy
   const body = response.body as ExamOverviewProjection;
   assert.equal(body.sections.find((row) => row.sectionKey === "assessment")?.state, "not-examined");
   assert.equal(body.completeness.trace.find((row) => row.sectionKey === "assessment")?.resolved, false);
+});
+
+test("Conditions alone cannot resolve Assessment without diagnosis rows and required problem statuses", async () => {
+  const diagnosisOnly = condition("diagnosis-only", "Encounter/e1", []);
+  const diagnosisRowWithoutStatus = encounter();
+  diagnosisRowWithoutStatus.diagnosis = [{ condition: { reference: "Condition/diagnosis-only" } }];
+  const completeAssessment = encounter();
+  completeAssessment.diagnosis = [{
+    condition: { reference: "Condition/diagnosis-only" },
+    extension: [mdmProblemStatusExtension("stable-chronic")],
+  }];
+
+  const states = await Promise.all([
+    new OverviewMemoryFhir([encounter(), diagnosisOnly]),
+    new OverviewMemoryFhir([diagnosisRowWithoutStatus, diagnosisOnly]),
+    new OverviewMemoryFhir([completeAssessment, diagnosisOnly]),
+  ].map(async (fhir) => {
+    const response = await handleExamOverviewRequest(deps(fhir, "provider"), request());
+    assert.equal(response.status, 200, JSON.stringify(response.body));
+    return (response.body as ExamOverviewProjection).sections
+      .find((row) => row.sectionKey === "assessment")?.state;
+  }));
+
+  assert.deepEqual(states, ["not-examined", "partial", "examined"]);
 });
 
 function request() {
