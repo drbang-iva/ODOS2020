@@ -766,12 +766,16 @@ function structureRailState(row: Record<Eye, EyeCapture>): string {
   const touchedCaptures = EYES.map((eye) => row[eye]).filter(touched);
   if (touchedCaptures.length === 0) return "blank";
   const findingCount = touchedCaptures.reduce((count, capture) => count + capture.selections.length, 0);
+  const unselectedCaptures = touchedCaptures.filter((capture) => capture.selections.length === 0);
+  const unselectedStates = [
+    ...(unselectedCaptures.some((capture) => capture.state === "abnormal") ? ["abnormal"] : []),
+    ...(unselectedCaptures.some((capture) => capture.state === "deferred") ? ["deferred"] : []),
+    ...(unselectedCaptures.some((capture) => !capture.state) ? ["incomplete"] : []),
+  ];
   if (findingCount > 0) {
-    return `${findingCount} ${findingCount === 1 ? "finding" : "findings"}`;
+    return [`${findingCount} ${findingCount === 1 ? "finding" : "findings"}`, ...unselectedStates].join(" · ");
   }
-  if (touchedCaptures.some((capture) => capture.state === "abnormal")) return "abnormal";
-  if (touchedCaptures.some((capture) => capture.state === "deferred")) return "deferred";
-  return touchedCaptures.every((capture) => capture.state === "normal") ? "normal" : "incomplete";
+  return unselectedStates.length > 0 ? unselectedStates.join(" · ") : "normal";
 }
 
 export function changedDefinitions<T extends Pick<CustomFindingDefinition, "stableKey">>(

@@ -2543,6 +2543,11 @@ test("the ocular-health runner derives finding count from capture selections", a
     const corneaEntry = entries.find((entry) => entry.props["data-structure-rail-key"] === "ocular-health:anterior:cornea");
     assert.equal(corneaEntry?.props["data-structure-state"], "1 finding");
     assert.match(renderedText(corneaEntry!), /1 finding/);
+    const os = cornea.findByProps({ "data-eye-panel": "OS" });
+    const osAbnormal = os.findAllByType("button").find((button) => renderedText(button) === "Abnormal");
+    assert.ok(osAbnormal);
+    act(() => osAbnormal.props.onClick());
+    assert.equal(corneaEntry?.props["data-structure-state"], "1 finding · abnormal");
     assert.equal(
       entries.find((entry) => entry.props["data-structure-rail-key"] === "ocular-health:anterior:lens")
         ?.props["data-structure-state"],
@@ -2555,6 +2560,14 @@ test("the ocular-health runner derives finding count from capture selections", a
     assert.ok(deferred);
     act(() => deferred.props.onClick());
     assert.equal(railEntry("ocular-health:anterior:palpebral-conjunctiva")?.props["data-structure-state"], "deferred");
+    const palpebralOd = palpebral.findByProps({ "data-eye-panel": "OD" });
+    const palpebralAbnormal = palpebralOd.findAllByType("button").find((button) => renderedText(button) === "Abnormal");
+    assert.ok(palpebralAbnormal);
+    act(() => palpebralAbnormal.props.onClick());
+    const palpebralFinding = palpebralOd.findAllByType("button").find((button) => renderedText(button) === "Finding");
+    assert.ok(palpebralFinding);
+    act(() => palpebralFinding.props.onClick());
+    assert.equal(railEntry("ocular-health:anterior:palpebral-conjunctiva")?.props["data-structure-state"], "1 finding · deferred");
   } finally {
     renderer?.unmount();
   }
