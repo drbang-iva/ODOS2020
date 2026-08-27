@@ -624,6 +624,36 @@ test("Save and Add Another seeds a clean checkpoint for canceling the next compl
   }
 });
 
+test("Save and Add Another retains later ROS dirtiness when the next complaint is canceled", { timeout: 30_000 }, async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  page.setDefaultTimeout(5_000);
+  const dialogs: string[] = [];
+  page.on("dialog", async (dialog) => {
+    dialogs.push(dialog.message());
+    await dialog.dismiss();
+  });
+  try {
+    await page.goto(`${origin}/tests/fixtures/entry-sheets.html?section=hpi`, { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "Other", exact: true }).click();
+    const concern = page.getByLabel("Presenting concern");
+    await concern.fill("Saved synthetic complaint");
+    await page.getByRole("button", { name: "Save and Add Another" }).click();
+    await page.getByRole("status").filter({ hasText: "Presenting complaint saved." }).waitFor();
+    await page.getByRole("combobox", { name: "Vision changes review status" }).selectOption("negative");
+    await concern.fill("Discarded second complaint");
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+
+    await openChartAnotherGroup(page, "va");
+    await page.locator('[data-editor-section-id="va"]').click();
+    assert.deepEqual(dialogs, [
+      "Discard unsaved changes in Chief Complaint / HPI / ROS and open Visual Acuity?",
+    ]);
+    await page.getByRole("dialog", { name: "Chief Complaint / HPI / ROS" }).waitFor();
+  } finally {
+    await page.close();
+  }
+});
+
 test("dirty Escape and Cancel share the discard guard while pristine Escape remains silent", { timeout: 30_000 }, async () => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   page.setDefaultTimeout(5_000);

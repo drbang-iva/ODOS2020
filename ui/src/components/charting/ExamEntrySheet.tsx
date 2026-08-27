@@ -53,6 +53,9 @@ export function useExamEntrySheetGuard(sectionId?: ExamEntrySheetSectionId) {
   const markDirty = useCallback(() => {
     dirtyRef.current = true;
   }, []);
+  const markDirtyCheckpoint = useCallback(() => {
+    if (dirtyCheckpointRef.current !== undefined) dirtyCheckpointRef.current = true;
+  }, []);
   const checkpointDirty = useCallback(() => {
     dirtyCheckpointRef.current = dirtyRef.current;
   }, []);
@@ -88,6 +91,7 @@ export function useExamEntrySheetGuard(sectionId?: ExamEntrySheetSectionId) {
     checkpointDirty,
     clearDirtyCheckpoint,
     markDirty,
+    markDirtyCheckpoint,
     rememberFocus,
     requestTransition,
     resetDirty,
@@ -101,6 +105,7 @@ export function ExamEntrySheet({
   onCheckpointDirty,
   onClearDirtyCheckpoint,
   onDirty,
+  onDirtyCheckpoint,
   onFocusWithin,
   onRestoreDirtyCheckpoint,
   active = true,
@@ -112,6 +117,7 @@ export function ExamEntrySheet({
   onCheckpointDirty?: () => void;
   onClearDirtyCheckpoint?: () => void;
   onDirty?: () => void;
+  onDirtyCheckpoint?: () => void;
   onFocusWithin?: (element: HTMLElement) => void;
   onRestoreDirtyCheckpoint?: () => void;
   active?: boolean;
@@ -123,6 +129,14 @@ export function ExamEntrySheet({
   const config = sectionId === "visit-charges"
     ? { title: "Visit & charges", layout: "visit-charges" }
     : EXAM_ENTRY_SHEET_CONFIG[sectionId];
+  const findInnerCancel = () => Array.from(dialogRef.current?.querySelectorAll("button") ?? [])
+    .find((button) => !button.closest("[data-entry-sheet-chrome]") && button.textContent?.trim() === "Cancel");
+  const markEventDirty = (target: EventTarget | null) => {
+    onDirty?.();
+    const element = target instanceof Element ? target : undefined;
+    const editorRoot = findInnerCancel()?.parentElement?.parentElement;
+    if (element && editorRoot && !editorRoot.contains(element)) onDirtyCheckpoint?.();
+  };
   return (
     <div className="odos-exam-entry-layer" data-testid="exam-entry-layer" hidden={hidden}>
       <div
@@ -144,27 +158,23 @@ export function ExamEntrySheet({
         data-testid="exam-entry-sheet"
         data-entry-sheet-layout={config.layout}
         data-entry-sheet-section={sectionId}
-        onInputCapture={onDirty}
-        onChangeCapture={onDirty}
+        onInputCapture={(event) => markEventDirty(event.target)}
+        onChangeCapture={(event) => markEventDirty(event.target)}
         onClickCapture={(event) => {
           const target = event.target instanceof Element ? event.target : undefined;
           const control = target?.closest('button, [role="button"]');
           if (!control) return;
           if (control.closest("[data-entry-sheet-chrome], [data-entry-sheet-pristine-action]")) return;
-          const innerCancel = control.matches("button") && control.textContent?.trim() === "Cancel";
-          if (innerCancel) {
+          const activeInnerCancel = findInnerCancel();
+          if (control === activeInnerCancel) {
             queueMicrotask(() => onRestoreDirtyCheckpoint?.());
             return;
           }
-          const hadInnerCancel = Array.from(dialogRef.current?.querySelectorAll("button") ?? [])
-            .some((button) => !button.closest("[data-entry-sheet-chrome]") && button.textContent?.trim() === "Cancel");
-          if (!hadInnerCancel) onCheckpointDirty?.();
-          onDirty?.();
-          if (!hadInnerCancel) {
+          if (!activeInnerCancel) onCheckpointDirty?.();
+          markEventDirty(event.target);
+          if (!activeInnerCancel) {
             window.setTimeout(() => {
-              const hasInnerCancel = Array.from(dialogRef.current?.querySelectorAll("button") ?? [])
-                .some((button) => !button.closest("[data-entry-sheet-chrome]") && button.textContent?.trim() === "Cancel");
-              if (!hasInnerCancel) onClearDirtyCheckpoint?.();
+              if (!findInnerCancel()) onClearDirtyCheckpoint?.();
             }, 0);
           }
         }}

@@ -256,6 +256,7 @@ function Fixture() {
               onCheckpointDirty={sheetGuard.checkpointDirty}
               onClearDirtyCheckpoint={sheetGuard.clearDirtyCheckpoint}
               onDirty={sheetGuard.markDirty}
+              onDirtyCheckpoint={sheetGuard.markDirtyCheckpoint}
               onFocusWithin={sheetGuard.rememberFocus}
               onRestoreDirtyCheckpoint={sheetGuard.restoreDirtyCheckpoint}
             >

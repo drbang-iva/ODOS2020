@@ -676,6 +676,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
               onCheckpointDirty={entrySheetGuard.checkpointDirty}
               onClearDirtyCheckpoint={entrySheetGuard.clearDirtyCheckpoint}
               onDirty={entrySheetGuard.markDirty}
+              onDirtyCheckpoint={entrySheetGuard.markDirtyCheckpoint}
               onFocusWithin={entrySheetGuard.rememberFocus}
               onRestoreDirtyCheckpoint={entrySheetGuard.restoreDirtyCheckpoint}
               active={!referralComposeOpen}
