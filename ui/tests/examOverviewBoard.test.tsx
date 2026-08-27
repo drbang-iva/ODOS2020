@@ -1675,6 +1675,37 @@ test("switching to the diagnosis view preserves the existing DiagnosisWorkspace 
   }
 });
 
+test("EncounterCharting keeps a dirty mapped sheet mounted until its guarded transition is accepted", async () => {
+  const harness = await renderEncounter(PROJECTION);
+  const prompts: string[] = [];
+  try {
+    Object.assign(globalThis.window, {
+      confirm(message: string) {
+        prompts.push(message);
+        return false;
+      },
+    });
+    await act(async () => editorControl(harness.renderer.root, "hpi").props.onClick());
+    const hpiSheet = harness.renderer.root.findAllByType(ExamEntrySheet).find((sheet) => !sheet.props.hidden);
+    assert.ok(hpiSheet);
+    await act(async () => hpiSheet.props.onDirty());
+
+    await act(async () => editorControl(harness.renderer.root, "va").props.onClick());
+    assert.equal(harness.renderer.root.findAllByType(ExamEntrySheet).find((sheet) => !sheet.props.hidden)?.props.sectionId, "hpi");
+    assert.deepEqual(prompts, [
+      "Discard unsaved changes in Chief Complaint / HPI / ROS and open Visual Acuity?",
+    ]);
+
+    Object.assign(globalThis.window, { confirm: () => true });
+    await act(async () => editorControl(harness.renderer.root, "va").props.onClick());
+    assert.equal(harness.renderer.root.findAllByType(ExamEntrySheet).find((sheet) => !sheet.props.hidden)?.props.sectionId, "va");
+    assert.equal(harness.renderer.root.findAllByType(HpiSection).length, 0);
+    assert.equal(harness.renderer.root.findAllByType(VaSection).length, 1);
+  } finally {
+    harness.restore();
+  }
+});
+
 test("distributed board rows anchor mapped editors and retain full-page fallback for deferred editors", async () => {
   const findingDefinitions: CustomFindingDefinition[] = [
     findingDefinition("entrance:pupils", "Pupils"),

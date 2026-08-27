@@ -18,6 +18,7 @@ interface DockedPanelLayer {
   root: HTMLElement;
   initialFocus: HTMLButtonElement;
   restoreFocus: HTMLElement | null;
+  modal: boolean;
   close(): void;
 }
 
@@ -26,7 +27,7 @@ const suppressedElements = new Map<HTMLElement, boolean>();
 const useBrowserLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-export function useDockedPanel(onClose: () => void, active = true) {
+export function useDockedPanel(onClose: () => void, active = true, { modal = true }: { modal?: boolean } = {}) {
   const dialogRef = useRef<HTMLElement>(null);
   const initialFocusRef = useRef<HTMLButtonElement>(null);
   const closeRef = useRef(onClose);
@@ -42,6 +43,7 @@ export function useDockedPanel(onClose: () => void, active = true) {
       root,
       initialFocus,
       restoreFocus: document.activeElement instanceof HTMLElement ? document.activeElement : null,
+      modal,
       close: () => closeRef.current(),
     };
     layers.push(layer);
@@ -56,7 +58,7 @@ export function useDockedPanel(onClose: () => void, active = true) {
         layer.close();
         return;
       }
-      if (event.key !== "Tab") return;
+      if (event.key !== "Tab" || !modal) return;
       const controls = focusableControls(root);
       const last = controls.at(-1);
       if (!last) return;
@@ -76,7 +78,7 @@ export function useDockedPanel(onClose: () => void, active = true) {
       suppressOutsideTopLayer();
       layer.restoreFocus?.focus();
     };
-  }, [active]);
+  }, [active, modal]);
 
   return { dialogRef, initialFocusRef, titleId };
 }
@@ -97,7 +99,9 @@ function focusableControls(root: HTMLElement): HTMLElement[] {
 function suppressOutsideTopLayer(): void {
   for (const [element, wasInert] of suppressedElements) element.toggleAttribute("inert", wasInert);
   suppressedElements.clear();
-  let current: HTMLElement | null = layers.at(-1)?.root ?? null;
+  const topLayer = layers.at(-1);
+  if (!topLayer?.modal) return;
+  let current: HTMLElement | null = topLayer.root;
   while (current?.parentElement) {
     for (const sibling of current.parentElement.children) {
       if (sibling === current || !(sibling instanceof HTMLElement)) continue;

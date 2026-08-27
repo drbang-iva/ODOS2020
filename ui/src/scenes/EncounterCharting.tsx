@@ -29,6 +29,7 @@ import {
   ExamEntrySheet,
   isExamEntrySheetSectionId,
   type ExamEntrySheetSectionId,
+  useExamEntrySheetGuard,
 } from "../components/charting/ExamEntrySheet";
 import { VisitChargesSheet } from "../components/charting/VisitChargesSheet";
 import { EyeGrowthSection } from "../components/charting/EyeGrowthSection";
@@ -118,6 +119,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const [examOverviewRefreshVersion, setExamOverviewRefreshVersion] = useState(0);
   const [boardEditorOpen, setBoardEditorOpen] = useState(false);
   const [entrySheetSection, setEntrySheetSection] = useState<ExamEntrySheetSectionId>();
+  const entrySheetGuard = useExamEntrySheetGuard(entrySheetSection);
   const [unassignedCount, setUnassignedCount] = useState<number>();
   const [encounterLoadState, setEncounterLoadState] = useState<EncounterLoadState>({
     encounterId,
@@ -139,12 +141,19 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   }
 
   function selectChartView(view: EncounterChartView) {
-    setChartView(view);
-    if (view !== "structure") {
-      setBoardEditorOpen(false);
-      setEntrySheetSection(undefined);
+    const transition = () => {
+      setChartView(view);
+      if (view !== "structure") {
+        setBoardEditorOpen(false);
+        setEntrySheetSection(undefined);
+      }
+      saveEncounterChartView(view);
+    };
+    if (view !== "structure" && entrySheetSection) {
+      entrySheetGuard.requestTransition("By diagnosis", transition);
+      return;
     }
-    saveEncounterChartView(view);
+    transition();
   }
 
   function refreshExamOverview() {
@@ -152,15 +161,23 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   }
 
   function openBoardEditor(sectionId: ChartSectionId) {
-    setVisitChargesOpen(false);
-    setActiveSection(sectionId);
-    if (isExamEntrySheetSectionId(sectionId)) {
-      setEntrySheetSection(sectionId);
-      setBoardEditorOpen(false);
-    } else {
-      setEntrySheetSection(undefined);
-      setBoardEditorOpen(true);
+    const transition = () => {
+      setVisitChargesOpen(false);
+      setActiveSection(sectionId);
+      if (isExamEntrySheetSectionId(sectionId)) {
+        setEntrySheetSection(sectionId);
+        setBoardEditorOpen(false);
+      } else {
+        setEntrySheetSection(undefined);
+        setBoardEditorOpen(true);
+      }
+    };
+    if (entrySheetSection && sectionId !== entrySheetSection) {
+      const destinationTitle = boardEditorEntries.find((entry) => entry.id === sectionId)?.label ?? sectionId;
+      entrySheetGuard.requestTransition(destinationTitle, transition);
+      return;
     }
+    transition();
   }
 
   function returnToExamOverview() {
@@ -653,11 +670,15 @@ export function EncounterCharting({ patient, encounterId }: Props) {
           />
           {entrySheetSection && (
             <ExamEntrySheet
+              key={entrySheetSection}
               sectionId={entrySheetSection}
-              onCancel={() => setEntrySheetSection(undefined)}
+              onCancel={() => entrySheetGuard.requestTransition(undefined, () => setEntrySheetSection(undefined))}
+              onDirty={entrySheetGuard.markDirty}
+              onFocusWithin={entrySheetGuard.rememberFocus}
               active={!referralComposeOpen}
             >
               <MappedExamSection
+                key={entrySheetSection}
                 sectionId={entrySheetSection}
                 definitions={{
                   pupils: pupilsDefinition,
@@ -674,6 +695,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
                 encounterReference={encounterReference}
                 onRefer={() => setReferralComposeOpen(true)}
                 onSaved={(status, keepOpen) => {
+                  entrySheetGuard.resetDirty();
                   markSaved(entrySheetSection, status);
                   if (!keepOpen) setEntrySheetSection(undefined);
                 }}

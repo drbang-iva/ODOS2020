@@ -387,7 +387,175 @@ test("real Refraction returns to the full-page editor instead of a narrow entry 
   }
 });
 
-test("entry-sheet chrome is 44px-class and the shared layer traps, closes, and restores focus", { timeout: 30_000 }, async () => {
+test("a pristine clinical sheet swaps from HPI to VA through a real overview click", { timeout: 30_000 }, async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  page.setDefaultTimeout(3_000);
+  try {
+    await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "Open HPI" }).click();
+
+    const hpiDialog = page.getByRole("dialog", { name: "Chief Complaint / HPI / ROS" });
+    await hpiDialog.waitFor();
+    await openChartAnotherGroup(page, "va");
+    await page.locator('[data-editor-section-id="va"]').click();
+
+    await hpiDialog.waitFor({ state: "detached" });
+    const vaDialog = page.getByRole("dialog", { name: "Visual Acuity" });
+    await vaDialog.waitFor();
+    assert.equal(await vaDialog.getAttribute("aria-modal"), null);
+    assert.equal(
+      await page.evaluate(() => document.activeElement?.getAttribute("aria-label")),
+      "Cancel Visual Acuity entry",
+    );
+  } finally {
+    await page.close();
+  }
+});
+
+for (const contract of [
+  {
+    sectionId: "hpi",
+    opener: "Open HPI",
+    currentTitle: "Chief Complaint / HPI / ROS",
+    edit: async (page: Page) => {
+      await page.getByRole("button", { name: "Other", exact: true }).click();
+      await page.getByRole("button", { name: "Override", exact: true }).click();
+      await page.getByLabel("History Narrative override").fill("Synthetic changed narrative");
+    },
+    focusLabel: "History Narrative override",
+  },
+  {
+    sectionId: "iop",
+    opener: "Open IOP",
+    currentTitle: "Intraocular Pressure",
+    edit: async (page: Page) => {
+      const field = page.getByRole("combobox", { name: "OD IOP value" });
+      await field.waitFor();
+      await field.fill("16");
+    },
+  },
+  {
+    sectionId: "cover-test",
+    opener: "Open Cover Test",
+    currentTitle: "Cover Test",
+    edit: async (page: Page) => {
+      await page.getByRole("button", { name: "Ortho", exact: true }).first().click();
+    },
+  },
+] as const) {
+  test(`${contract.sectionId} edits warn before an overview swap`, { timeout: 30_000 }, async () => {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    page.setDefaultTimeout(5_000);
+    const dialogs: string[] = [];
+    page.on("dialog", async (dialog) => {
+      dialogs.push(dialog.message());
+      await dialog.dismiss();
+    });
+    try {
+      await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
+      await page.getByRole("button", { name: contract.opener }).click();
+      await contract.edit(page);
+      await openChartAnotherGroup(page, "va");
+      await page.locator('[data-editor-section-id="va"]').click();
+
+      assert.deepEqual(dialogs, [
+        `Discard unsaved changes in ${contract.currentTitle} and open Visual Acuity?`,
+      ]);
+      await page.getByRole("dialog", { name: contract.currentTitle }).waitFor();
+      if (contract.focusLabel) {
+        assert.equal(
+          await page.getByLabel(contract.focusLabel).evaluate((node) => node === document.activeElement),
+          true,
+        );
+      }
+    } finally {
+      await page.close();
+    }
+  });
+}
+
+test("focusing a pristine field does not warn before a clinical sheet swap", { timeout: 30_000 }, async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  page.setDefaultTimeout(5_000);
+  const dialogs: string[] = [];
+  page.on("dialog", async (dialog) => {
+    dialogs.push(dialog.message());
+    await dialog.accept();
+  });
+  try {
+    await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "Open IOP" }).click();
+    const field = page.getByRole("combobox", { name: "OD IOP value" });
+    await field.waitFor();
+    await field.focus();
+    await openChartAnotherGroup(page, "va");
+    await page.locator('[data-editor-section-id="va"]').click();
+
+    await page.getByRole("dialog", { name: "Visual Acuity" }).waitFor();
+    assert.deepEqual(dialogs, []);
+  } finally {
+    await page.close();
+  }
+});
+
+test("Save and Add Another resets the sheet guard before a later swap", { timeout: 30_000 }, async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  page.setDefaultTimeout(5_000);
+  const dialogs: string[] = [];
+  page.on("dialog", async (dialog) => {
+    dialogs.push(dialog.message());
+    await dialog.accept();
+  });
+  try {
+    await page.goto(`${origin}/tests/fixtures/entry-sheets.html?section=hpi`, { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "Other", exact: true }).click();
+    const concern = page.getByLabel("Presenting concern");
+    await concern.fill("Blurred vision");
+    await page.getByRole("button", { name: "Save and Add Another" }).click();
+    await page.getByRole("status").filter({ hasText: "Presenting complaint saved." }).waitFor();
+    assert.equal(await concern.inputValue(), "");
+
+    await openChartAnotherGroup(page, "va");
+    await page.locator('[data-editor-section-id="va"]').click();
+    await page.getByRole("dialog", { name: "Visual Acuity" }).waitFor();
+    assert.deepEqual(dialogs, []);
+  } finally {
+    await page.close();
+  }
+});
+
+test("dirty Escape and Cancel share the discard guard while pristine Escape remains silent", { timeout: 30_000 }, async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  page.setDefaultTimeout(5_000);
+  const dialogs: string[] = [];
+  let accept = false;
+  page.on("dialog", async (dialog) => {
+    dialogs.push(dialog.message());
+    if (accept) await dialog.accept();
+    else await dialog.dismiss();
+  });
+  try {
+    await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "Open IOP" }).click();
+    const field = page.getByRole("combobox", { name: "OD IOP value" });
+    await field.waitFor();
+    await field.fill("16");
+
+    await page.keyboard.press("Escape");
+    await page.getByRole("dialog", { name: "Intraocular Pressure" }).waitFor();
+    accept = true;
+    await page.getByRole("button", { name: "Cancel Intraocular Pressure entry" }).click();
+    await page.getByRole("dialog", { name: "Intraocular Pressure" }).waitFor({ state: "detached" });
+    assert.deepEqual(dialogs, [
+      "Discard unsaved changes in Intraocular Pressure?",
+      "Discard unsaved changes in Intraocular Pressure?",
+    ]);
+  } finally {
+    await page.close();
+  }
+});
+
+test("clinical entry-sheet chrome is 44px-class, releases Tab, closes on pristine Escape, and restores focus", { timeout: 30_000 }, async () => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   page.setDefaultTimeout(3_000);
   try {
@@ -401,6 +569,7 @@ test("entry-sheet chrome is 44px-class and the shared layer traps, closes, and r
     const cancel = page.getByRole("button", { name: "Cancel Intraocular Pressure entry" });
     const lastControl = dialog.locator('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])').last();
     assert.equal(await page.evaluate(() => document.activeElement?.getAttribute("aria-label")), "Cancel Intraocular Pressure entry");
+    assert.equal(await dialog.getAttribute("aria-modal"), null);
 
     const chromeMeasurements = await page.locator("[data-entry-sheet-chrome]").evaluateAll((nodes) => nodes.map((node) => {
       const rect = node.getBoundingClientRect();
@@ -414,11 +583,13 @@ test("entry-sheet chrome is 44px-class and the shared layer traps, closes, and r
 
     await lastControl.focus();
     await page.keyboard.press("Tab");
-    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute("aria-label")), "Cancel Intraocular Pressure entry");
-    await cancel.focus();
-    await page.keyboard.press("Shift+Tab");
-    assert.equal(await lastControl.evaluate((node) => node === document.activeElement), true);
+    assert.notEqual(await page.evaluate(() => document.activeElement?.getAttribute("aria-label")), "Cancel Intraocular Pressure entry");
 
+    const overviewControl = page.getByTestId("refresh-exam-overview");
+    await overviewControl.focus();
+    assert.equal(await overviewControl.evaluate((node) => node === document.activeElement), true);
+
+    await cancel.focus();
     await page.keyboard.press("Escape");
     await dialog.waitFor({ state: "detached" });
     assert.equal(await page.evaluate(() => document.activeElement?.textContent), "Open IOP");

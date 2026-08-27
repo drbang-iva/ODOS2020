@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useDockedPanel } from "../commercial/panel-shared";
 
 export const EXAM_ENTRY_SHEET_CONFIG = {
@@ -35,14 +35,58 @@ export function isExamEntrySheetSectionId(sectionId: string): sectionId is ExamE
   return sectionId in EXAM_ENTRY_SHEET_CONFIG;
 }
 
-export function ExamEntrySheet({ sectionId, onCancel, active = true, hidden = false, children }: {
+export function useExamEntrySheetGuard(sectionId?: ExamEntrySheetSectionId) {
+  const [dirty, setDirty] = useState(false);
+  const lastFocusRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    setDirty(false);
+    lastFocusRef.current = null;
+  }, [sectionId]);
+
+  const resetDirty = useCallback(() => setDirty(false), []);
+  const markDirty = useCallback(() => setDirty(true), []);
+  const rememberFocus = useCallback((element: HTMLElement) => {
+    lastFocusRef.current = element;
+  }, []);
+  const requestTransition = useCallback((destinationTitle: string | undefined, transition: () => void) => {
+    if (sectionId && dirty) {
+      const currentTitle = EXAM_ENTRY_SHEET_CONFIG[sectionId].title;
+      const message = destinationTitle
+        ? `Discard unsaved changes in ${currentTitle} and open ${destinationTitle}?`
+        : `Discard unsaved changes in ${currentTitle}?`;
+      if (typeof window === "undefined" || typeof window.confirm !== "function" || !window.confirm(message)) {
+        lastFocusRef.current?.focus();
+        return false;
+      }
+    }
+    setDirty(false);
+    transition();
+    return true;
+  }, [dirty, sectionId]);
+
+  return { markDirty, rememberFocus, requestTransition, resetDirty };
+}
+
+export function ExamEntrySheet({
+  sectionId,
+  onCancel,
+  onDirty,
+  onFocusWithin,
+  active = true,
+  hidden = false,
+  children,
+}: {
   sectionId: ExamEntrySheetId;
   onCancel: () => void;
+  onDirty?: () => void;
+  onFocusWithin?: (element: HTMLElement) => void;
   active?: boolean;
   hidden?: boolean;
   children: ReactNode;
 }) {
-  const { dialogRef, initialFocusRef, titleId } = useDockedPanel(onCancel, active);
+  const modal = sectionId === "visit-charges";
+  const { dialogRef, initialFocusRef, titleId } = useDockedPanel(onCancel, active, { modal });
   const config = sectionId === "visit-charges"
     ? { title: "Visit & charges", layout: "visit-charges" }
     : EXAM_ENTRY_SHEET_CONFIG[sectionId];
@@ -61,12 +105,20 @@ export function ExamEntrySheet({ sectionId, onCancel, active = true, hidden = fa
         id={sectionId === "visit-charges" ? "visit-charges-sheet" : undefined}
         ref={dialogRef}
         role="dialog"
-        aria-modal="true"
+        aria-modal={modal ? "true" : undefined}
         aria-labelledby={titleId}
         className="odos-exam-entry-sheet"
         data-testid="exam-entry-sheet"
         data-entry-sheet-layout={config.layout}
         data-entry-sheet-section={sectionId}
+        onInputCapture={onDirty}
+        onChangeCapture={onDirty}
+        onClickCapture={(event) => {
+          const target = event.target instanceof Element ? event.target : undefined;
+          const control = target?.closest('button, [role="button"]');
+          if (!control?.closest("[data-entry-sheet-chrome]")) onDirty?.();
+        }}
+        onFocusCapture={(event) => onFocusWithin?.(event.target as HTMLElement)}
       >
         <header className="odos-exam-entry-sheet-heading">
           <div>

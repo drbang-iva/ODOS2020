@@ -11,7 +11,7 @@ import { DryEyeSection } from "../../src/components/charting/DryEyeSection";
 import { EntranceMeasurementSection } from "../../src/components/charting/EntranceMeasurementSection";
 import { EntranceStateSection } from "../../src/components/charting/EntranceStateSection";
 import { EomSection } from "../../src/components/charting/EomSection";
-import { ExamEntrySheet, isExamEntrySheetSectionId } from "../../src/components/charting/ExamEntrySheet";
+import { ExamEntrySheet, isExamEntrySheetSectionId, useExamEntrySheetGuard } from "../../src/components/charting/ExamEntrySheet";
 import { ExamOverviewBoard, type ExamOverviewProjection } from "../../src/components/charting/ExamOverviewBoard";
 import { EyeGrowthSection } from "../../src/components/charting/EyeGrowthSection";
 import { GonioscopySection } from "../../src/components/charting/GonioscopySection";
@@ -201,16 +201,24 @@ function Fixture() {
   const forceSheet = params.get("audit") === "sheet";
   const worksheet = params.get("worksheet") === "true";
   const mapped = active ? isExamEntrySheetSectionId(active) : false;
+  const sheetGuard = useExamEntrySheetGuard(mapped ? active : undefined);
   const sheetOpen = Boolean(active && (mapped || forceSheet));
-  const editor = active ? renderEditor(active) : null;
+  const editor = active ? renderEditor(active, sheetGuard.resetDirty) : null;
   const showReturnButton = params.get("returnButton") === "true";
   const projection = params.get("comprehensive") === "true" ? COMPREHENSIVE_PROJECTION : FIXTURE_PROJECTION;
+  const openSection = (sectionId: FixtureSectionId) => {
+    if (mapped && active && active !== sectionId) {
+      sheetGuard.requestTransition(sectionLabel(sectionId), () => setActive(sectionId));
+      return;
+    }
+    setActive(sectionId);
+  };
 
   return (
     <main className="flex h-screen flex-col overflow-hidden bg-bg-deep text-white">
       <div className="flex min-h-14 flex-wrap items-center gap-3 border-b border-white/10 px-4" data-testid="fixture-exam-context">
         {(forceSheet && active ? [active] : FIXTURE_SECTIONS).map((sectionId) => (
-          <button key={sectionId} type="button" onClick={() => setActive(sectionId)}>
+          <button key={sectionId} type="button" onClick={() => openSection(sectionId)}>
             Open {sectionLabel(sectionId)}
           </button>
         ))}
@@ -236,12 +244,18 @@ function Fixture() {
               })}
               activeEditorId={mapped ? active : undefined}
               refreshing={false}
-              onOpenEditor={(sectionId) => isFixtureSectionId(sectionId) && setActive(sectionId)}
+              onOpenEditor={(sectionId) => isFixtureSectionId(sectionId) && openSection(sectionId)}
               onRefresh={() => undefined}
             />
           </section>
           {active && sheetOpen && (
-            <ExamEntrySheet sectionId={active === "visit-charges" ? "visit-charges" : mapped ? active : "va"} onCancel={() => setActive(undefined)}>
+            <ExamEntrySheet
+              key={active}
+              sectionId={active === "visit-charges" ? "visit-charges" : mapped ? active : "va"}
+              onCancel={() => sheetGuard.requestTransition(undefined, () => setActive(undefined))}
+              onDirty={sheetGuard.markDirty}
+              onFocusWithin={sheetGuard.rememberFocus}
+            >
               <div
                 data-fixture-section={active}
                 data-fixture-route={DEFERRED_SECTIONS.has(active) ? "deferred" : "candidate"}
@@ -257,8 +271,8 @@ function Fixture() {
   );
 }
 
-function renderEditor(sectionId: FixtureSectionId): React.ReactNode {
-  const props = { patientReference: "Patient/test", encounterReference: "Encounter/test", onSaved: () => undefined };
+function renderEditor(sectionId: FixtureSectionId, onSaved: () => void): React.ReactNode {
+  const props = { patientReference: "Patient/test", encounterReference: "Encounter/test", onSaved };
   switch (sectionId) {
     case "hpi": return <HpiSection {...props} />;
     case "wearing": return <WearingSection {...props} />;
