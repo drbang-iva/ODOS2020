@@ -412,9 +412,9 @@ function StructureRail({ groups, captures, focusedStableKey, onFocus }: {
     <nav
       aria-label="Ocular-health structures"
       data-testid="ocular-health-structure-rail"
-      className="max-h-64 overflow-y-auto rounded border border-white/10 bg-bg-panel/80 p-3 lg:sticky lg:top-28 lg:max-h-[calc(100vh-12rem)]"
+      className="max-h-64 overflow-y-auto rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface)] p-3 lg:sticky lg:top-28 lg:max-h-[calc(100vh-12rem)]"
     >
-      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">Structures</div>
+      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--odos-muted)]">Structures</div>
       <div className="mt-3 space-y-3">
         {groups.map((group) => <div key={group.label} data-structure-rail-group={group.label}>
           <div className="px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-light">{group.label}</div>
@@ -428,21 +428,21 @@ function StructureRail({ groups, captures, focusedStableKey, onFocus }: {
               data-structure-state={state}
               aria-current={focused ? "true" : undefined}
               onClick={() => onFocus(definition.stableKey)}
-              className={`flex min-h-9 w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-xs transition ${focused ? "bg-brand/20 text-white ring-1 ring-brand/45" : "text-white/65 hover:bg-white/[0.05] hover:text-white"}`}
+              className={`flex min-h-9 w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-xs transition ${focused ? "bg-brand/20 text-[color:var(--odos-text)] ring-1 ring-brand/45" : "text-[color:var(--odos-muted)] hover:bg-[var(--odos-surface-2)] hover:text-[color:var(--odos-text)]"}`}
             >
               <span className="min-w-0 truncate font-medium">{definition.display}</span>
-              <span className="shrink-0 text-[10px] text-white/40">{state}</span>
+              <span className="shrink-0 text-[10px] text-[color:var(--odos-muted)]">{state}</span>
             </button>;
           })}</div>
         </div>)}
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-2 border-t border-white/10 pt-3">
+      <div className="mt-3 grid grid-cols-2 gap-2 border-t border-[color:var(--odos-line)] pt-3">
         <button
           type="button"
           aria-label="Previous ocular-health structure"
           disabled={focusedIndex <= 0}
           onClick={() => onFocus(definitions[focusedIndex - 1]!.stableKey)}
-          className="rounded border border-white/15 px-2 py-2 text-xs font-semibold text-white/70 transition hover:bg-white/[0.05] disabled:opacity-30"
+          className="rounded border border-[color:var(--odos-line-2)] px-2 py-2 text-xs font-semibold text-[color:var(--odos-muted)] transition hover:bg-[var(--odos-surface-2)] disabled:opacity-30"
         >
           Prev
         </button>
@@ -451,7 +451,7 @@ function StructureRail({ groups, captures, focusedStableKey, onFocus }: {
           aria-label="Next ocular-health structure"
           disabled={focusedIndex < 0 || focusedIndex >= definitions.length - 1}
           onClick={() => onFocus(definitions[focusedIndex + 1]!.stableKey)}
-          className="rounded border border-white/15 px-2 py-2 text-xs font-semibold text-white/70 transition hover:bg-white/[0.05] disabled:opacity-30"
+          className="rounded border border-[color:var(--odos-line-2)] px-2 py-2 text-xs font-semibold text-[color:var(--odos-muted)] transition hover:bg-[var(--odos-surface-2)] disabled:opacity-30"
         >
           Next
         </button>
