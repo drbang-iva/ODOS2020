@@ -3,7 +3,10 @@ import { test } from "node:test";
 import React from "react";
 import type { Encounter } from "@medplum/fhirtypes";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
-import type { ExamOverviewProjection } from "../../mcp/src/clinical-graph/exam-overview-projection";
+import {
+  buildExamOverviewProjection,
+  type ExamOverviewProjection,
+} from "../../mcp/src/clinical-graph/exam-overview-projection";
 import { DiagnosisWorkspace } from "../src/components/charting/DiagnosisWorkspace";
 import { AssessmentSection } from "../src/components/charting/AssessmentSection";
 import { AutoRefractionSection } from "../src/components/charting/AutoRefractionSection";
@@ -29,7 +32,7 @@ import { PrescriptionSection } from "../src/components/charting/PrescriptionSect
 import { RefractionHistorySection } from "../src/components/charting/RefractionHistorySection";
 import { ProcedureChargeList } from "../src/components/charting/ProcedureChargeList";
 import { BalanceChips } from "../src/components/commercial/BalanceChips";
-import { SpineNav } from "../src/components/charting/SpineNav";
+import { chartEditorInventory, SpineNav } from "../src/components/charting/SpineNav";
 import { VisitCodeSelector } from "../src/components/charting/VisitCodeSelector";
 import { VaSection } from "../src/components/charting/VaSection";
 import { RefractionSection } from "../src/components/charting/RefractionSection";
@@ -349,10 +352,11 @@ test("by-exception board renders exactly one row per performed or deferred findi
     ]);
     assert.equal(rows.filter((row) => row.props["data-finding-key"] === "pachymetry_um").length, 1);
     assert.equal(rows.filter((row) => row.props["data-finding-key"] === "intraocular_pressure").length, 0);
-    assert.equal(renderer.root.findAllByProps({ "data-section-key": "history" }).length, 0);
+    assert.equal(renderer.root.findAllByProps({ "data-section-key": "history" }).length, 1);
     assert.equal(renderer.root.findAllByProps({ "data-section-key": "assessment" }).length, 0);
     const rendered = JSON.stringify(renderer.toJSON());
-    assert.doesNotMatch(rendered, /not charted|not examined|not indicated|No finding observations recorded/i);
+    assert.match(rendered, /Not examined/);
+    assert.doesNotMatch(rendered, /not charted|No finding observations recorded/i);
     assert.equal(renderer.root.findAllByProps({ "data-testid": "chart-another-finding" }).length, 2);
   } finally {
     renderer.unmount();
@@ -391,7 +395,9 @@ test("five row patterns use clinical display values without exposing machine sta
       new RegExp(`Attested by Dr\\. Avery Chen · ${testTimeLabel("2026-08-24T14:43:00.000Z")} · current visit`),
     );
     assert.match(rendered, /deferred — patient driving/);
-    assert.doesNotMatch(rendered, /Examined|Current visit|Interpretation not recorded|Exam state|Normal template/);
+    const findingText = renderer.root.findAllByProps({ "data-testid": "exam-finding-row" })
+      .map(textContent).join(" ");
+    assert.doesNotMatch(findingText, /Examined|Current visit|Interpretation not recorded|Exam state|Normal template/);
     assert.doesNotMatch(rendered, /entrance\.pachymetry|must-not-render|refraction-block-|Observation\/|Encounter\//);
 
     const normalCvf = create(
@@ -1007,14 +1013,184 @@ test("the permanent chart bar keeps draft state reserved instead of inferring it
   }
 });
 
-test("structure view omits empty sections and collapses performed findings into by-exception rows", async () => {
+test("a zero-finding comprehensive encounter renders every required trace row with its projected state", () => {
+  const renderer = create(
+    <ExamOverviewBoard
+      projection={zeroFindingComprehensiveProjection()}
+      editorEntries={chartEditorInventory()}
+      refreshing={false}
+      onOpenEditor={() => undefined}
+      onRefresh={() => undefined}
+    />,
+  );
+  try {
+    const sections = renderer.root.findAllByProps({ "data-testid": "exam-overview-section" });
+    assert.deepEqual(
+      sections.map((section) => section.props["data-section-key"]),
+      ["history", "pretest", "refraction", "contact-lenses", "ocular-health", "imaging", "assessment"],
+    );
+    const traceRows = renderer.root.findAllByProps({ "data-testid": "exam-overview-trace-row" });
+    assert.deepEqual(
+      traceRows.map((row) => [
+        row.props["data-trace-section-key"],
+        row.props["data-section-state"],
+        row.props["data-resolved"],
+      ]),
+      [
+        ["history", "not-examined", false],
+        ["entrance", "not-examined", false],
+        ["pretest", "not-examined", false],
+        ["refraction", "not-examined", false],
+        ["ocular-health", "not-examined", false],
+        ["assessment", "not-examined", false],
+      ],
+    );
+  } finally {
+    renderer.unmount();
+  }
+});
+
+test("the combined Pretest row resolves only when both Entrance and Pretest traces resolve", () => {
+  const projection = zeroFindingComprehensiveProjection();
+  const oneResolved: ExamOverviewProjection = {
+    ...projection,
+    completeness: {
+      ...projection.completeness,
+      trace: projection.completeness.trace.map((row) =>
+        row.sectionKey === "entrance"
+          ? { ...row, state: "examined", resolved: true }
+          : row
+      ),
+    },
+  };
+  const renderer = create(
+    <ExamOverviewBoard
+      projection={oneResolved}
+      editorEntries={chartEditorInventory()}
+      refreshing={false}
+      onOpenEditor={() => undefined}
+      onRefresh={() => undefined}
+    />,
+  );
+  try {
+    assert.equal(
+      renderer.root.findByProps({ "data-section-key": "pretest" }).props["data-resolved"],
+      false,
+    );
+    renderer.update(
+      <ExamOverviewBoard
+        projection={{
+          ...oneResolved,
+          completeness: {
+            ...oneResolved.completeness,
+            trace: oneResolved.completeness.trace.map((row) =>
+              row.sectionKey === "pretest"
+                ? { ...row, state: "examined", resolved: true }
+                : row
+            ),
+          },
+        }}
+        editorEntries={chartEditorInventory()}
+        refreshing={false}
+        onOpenEditor={() => undefined}
+        onRefresh={() => undefined}
+      />,
+    );
+    assert.equal(
+      renderer.root.findByProps({ "data-section-key": "pretest" }).props["data-resolved"],
+      true,
+    );
+  } finally {
+    renderer.unmount();
+  }
+});
+
+test("worksheet rows expose owners and keep Contact Lenses and Imaging visibly optional", () => {
+  const renderer = create(
+    <ExamOverviewBoard
+      projection={zeroFindingComprehensiveProjection()}
+      editorEntries={chartEditorInventory()}
+      refreshing={false}
+      onOpenEditor={() => undefined}
+      onRefresh={() => undefined}
+    />,
+  );
+  try {
+    const owners = renderer.root.findAllByProps({ "data-testid": "exam-section-owner" });
+    assert.deepEqual(
+      owners.map((owner) => [owner.props["data-owner-section-key"], textContent(owner)]),
+      [
+        ["history", "Doctor"],
+        ["pretest", "Tech"],
+        ["refraction", "Doctor"],
+        ["contact-lenses", "Doctor"],
+        ["ocular-health", "Doctor"],
+        ["imaging", "Doctor"],
+        ["assessment", "Doctor"],
+      ],
+    );
+    for (const sectionKey of ["contact-lenses", "imaging"]) {
+      const section = renderer.root.findByProps({ "data-section-key": sectionKey });
+      assert.equal(section.props["data-required"], false);
+      assert.match(section.props.className, /is-optional/);
+      assert.match(textContent(section), /Not required for this visit type/);
+      assert.doesNotMatch(textContent(section), /Not configured/);
+    }
+  } finally {
+    renderer.unmount();
+  }
+});
+
+test("every worksheet section body owns its scroll and a blank opens the existing group editor", () => {
+  const opened: string[] = [];
+  const renderer = create(
+    <ExamOverviewBoard
+      projection={zeroFindingComprehensiveProjection()}
+      editorEntries={chartEditorInventory()}
+      refreshing={false}
+      onOpenEditor={(sectionId) => opened.push(sectionId)}
+      onRefresh={() => undefined}
+    />,
+  );
+  try {
+    const bodies = renderer.root.findAllByProps({ "data-testid": "exam-section-body" });
+    assert.equal(bodies.length, 7);
+    for (const body of bodies) {
+      assert.deepEqual(body.props.style, { maxHeight: "18rem", overflowY: "auto" });
+    }
+    const blank = renderer.root.findByProps({ "data-blank-section-key": "history" });
+    assert.equal(blank.type, "button");
+    act(() => blank.props.onClick());
+    assert.deepEqual(opened, ["hpi"]);
+  } finally {
+    renderer.unmount();
+  }
+});
+
+test("the encounter screen renders only the registry-backed completeness count", async () => {
+  const projection = zeroFindingComprehensiveProjection();
+  const harness = await renderEncounter(projection);
+  try {
+    const triggers = harness.renderer.root.findAllByProps({ "data-testid": "exam-completeness-trigger" });
+    assert.equal(triggers.length, 1);
+    assert.equal(textContent(triggers[0]!), "Exam sections: 0 of 6");
+    const secondaryCounts = harness.renderer.root.findAll((node) =>
+      node.type === "span" && /^\d+ sections$/.test(textContent(node))
+    );
+    assert.equal(secondaryCounts.length, 0);
+  } finally {
+    harness.restore();
+  }
+});
+
+test("structure view keeps required blanks while collapsing performed findings into by-exception rows", async () => {
   const harness = await renderEncounter(PROJECTION);
   try {
     const sections = harness.renderer.root.findAllByProps({ "data-testid": "exam-overview-section" })
       .filter((section) => section.props["data-section-state"] !== "editor-only");
     assert.deepEqual(
       sections.map((section) => section.props["data-section-key"]),
-      ["pretest"],
+      ["history", "pretest", "contact-lenses", "imaging"],
     );
     assert.equal(harness.renderer.root.findAllByType(SpineNav).length, 0);
     const rows = harness.renderer.root.findAllByProps({ "data-testid": "exam-finding-row" });
@@ -1022,13 +1198,14 @@ test("structure view omits empty sections and collapses performed findings into 
     assert.equal(rows.filter((row) => row.props["data-finding-key"] === "intraocular-pressure").length, 1);
     const rendered = JSON.stringify(harness.renderer.toJSON());
     assert.match(rendered, /deferred — reason not recorded/);
-    assert.doesNotMatch(rendered, /Examined|Current visit|Interpretation not recorded|not-visualized-json|sourceEncoding/);
+    const findingText = rows.map(textContent).join(" ");
+    assert.doesNotMatch(findingText, /Examined|Current visit|Interpretation not recorded|not-visualized-json|sourceEncoding/);
   } finally {
     harness.restore();
   }
 });
 
-test("one chart-another-finding affordance per group preserves editor reachability without placeholder rows", () => {
+test("one chart-another-finding affordance per group preserves editor reachability beside worksheet rows", () => {
   const opened: string[] = [];
   const renderer = create(
     <ExamOverviewBoard
@@ -1063,7 +1240,7 @@ test("one chart-another-finding affordance per group preserves editor reachabili
     assert.doesNotMatch(textContent(refractionRow), /Full page/);
 
     assert.equal(renderer.root.findAllByProps({ "data-testid": "chart-another-finding" }).length, 4);
-    assert.equal(renderer.root.findAllByProps({ "data-section-key": "history" }).length, 0);
+    assert.equal(renderer.root.findAllByProps({ "data-section-key": "history" }).length, 1);
     assert.equal(renderer.root.findAllByProps({ "data-section-key": "refraction" }).length, 0);
     assert.equal(renderer.root.findAllByProps({ "data-editor-section-id": "soft-contact-lens" }).length, 1);
 
@@ -1510,9 +1687,14 @@ test("malformed nested finding, section, and completeness rows use the editor fa
 test("manual refresh replaces the mounted board projection", async () => {
   const refreshed: ExamOverviewProjection = {
     ...PROJECTION,
-    sections: PROJECTION.sections.map((section) =>
-      section.sectionKey === "pretest" ? { ...section, label: "Pretest refreshed" } : section
-    ),
+    completeness: {
+      ...PROJECTION.completeness,
+      trace: PROJECTION.completeness.trace.map((row) =>
+        row.sectionKey === "pretest"
+          ? { ...row, state: "deferred-with-reason", resolved: true }
+          : row
+      ),
+    },
   };
   const harness = await renderEncounter(PROJECTION, { overviewResponses: [PROJECTION, refreshed] });
   try {
@@ -1524,7 +1706,9 @@ test("manual refresh replaces the mounted board projection", async () => {
       await flushEffects();
     });
     assert.equal(harness.overviewFetchCount(), 2);
-    assert.match(JSON.stringify(harness.renderer.toJSON()), /Pretest refreshed/);
+    const pretestTrace = harness.renderer.root.findByProps({ "data-trace-section-key": "pretest" });
+    assert.equal(pretestTrace.props["data-section-state"], "deferred-with-reason");
+    assert.match(textContent(pretestTrace), /Deferred/);
   } finally {
     harness.restore();
   }
@@ -1863,6 +2047,18 @@ function findingDefinition(stableKey: string, display: string): CustomFindingDef
     perEye: false,
     customFields: [],
   };
+}
+
+function zeroFindingComprehensiveProjection(): ExamOverviewProjection {
+  return buildExamOverviewProjection({
+    encounterReference: "Encounter/exam-1",
+    patientReference: "Patient/patient-1",
+    visitTypeCategoryId: "comprehensive",
+    definitions: [],
+    currentObservations: [],
+    priorObservationCandidates: [],
+    assessmentPresent: false,
+  });
 }
 
 function editorControl(root: ReactTestInstance, sectionId: string): ReactTestInstance {

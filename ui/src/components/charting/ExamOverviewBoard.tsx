@@ -107,17 +107,35 @@ interface Props {
   onRefresh: () => void;
 }
 
+interface ExamSheetRowDefinition {
+  sectionKey: string;
+  label: string;
+  editorGroupKey: string;
+  traceSectionKeys: readonly string[];
+  owner: "Tech" | "Doctor";
+  optional?: boolean;
+}
+
+const EXAM_SHEET_ROWS: readonly ExamSheetRowDefinition[] = [
+  { sectionKey: "history", label: "History", editorGroupKey: "history", traceSectionKeys: ["history"], owner: "Doctor" },
+  { sectionKey: "pretest", label: "Pretest", editorGroupKey: "pretest", traceSectionKeys: ["entrance", "pretest"], owner: "Tech" },
+  { sectionKey: "refraction", label: "Refraction", editorGroupKey: "refraction", traceSectionKeys: ["refraction"], owner: "Doctor" },
+  { sectionKey: "contact-lenses", label: "Contact Lenses", editorGroupKey: "contact-lenses", traceSectionKeys: [], owner: "Doctor", optional: true },
+  { sectionKey: "ocular-health", label: "Ocular Health", editorGroupKey: "ocular-health", traceSectionKeys: ["ocular-health"], owner: "Doctor" },
+  { sectionKey: "imaging", label: "Imaging", editorGroupKey: "imaging", traceSectionKeys: [], owner: "Doctor", optional: true },
+  { sectionKey: "assessment", label: "Assessment & Plan", editorGroupKey: "assessment", traceSectionKeys: ["assessment"], owner: "Doctor" },
+];
+
+const EXAM_SECTION_BODY_STYLE = { maxHeight: "18rem", overflowY: "auto" } as const;
+
 export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, refreshing, onOpenEditor, onRefresh }: Props) {
   const findingByReference = new Map(
     projection.findings.map((finding) => [finding.observationReference, finding]),
   );
   const editorGroups = groupEditorEntries(editorEntries);
   const wearingFindings = projection.findings.filter((finding) => finding.findingKey === "wearing_rx");
-  const boardSections: Array<{
-    sectionKey: string;
-    label: string;
-    groups: FindingGroup[];
-  }> = projection.sections.flatMap((section) => {
+  const groupsBySheetSection = new Map<string, FindingGroup[]>();
+  for (const section of projection.sections) {
     const findings = (section.findingObservationReferences ?? []).flatMap((reference) => {
       const finding = findingByReference.get(reference);
       return finding && finding.provenance.state === "current" && finding.findingKey !== "wearing_rx" &&
@@ -126,13 +144,44 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, r
         : [];
     });
     const groups = groupFindings(findings);
-    return groups.length ? [{
-      sectionKey: section.sectionKey,
-      label: section.label,
-      groups,
-    }] : [];
+    if (groups.length === 0) continue;
+    const sheetSectionKey = sheetSectionKeyForClinicalSection(section.sectionKey);
+    groupsBySheetSection.set(sheetSectionKey, [
+      ...(groupsBySheetSection.get(sheetSectionKey) ?? []),
+      ...groups,
+    ]);
+  }
+  const referencedFindings = new Set(projection.sections.flatMap((section) =>
+    section.findingObservationReferences ?? []
+  ));
+  for (const group of groupFindings(projection.findings.filter((finding) =>
+    !referencedFindings.has(finding.observationReference) &&
+    finding.provenance.state === "current" &&
+    finding.findingKey !== "wearing_rx" &&
+    snapshotComponentCode(finding.current, "REFRACTION_TYPE") !== "FINAL_RX"
+  ))) {
+    const editor = editorForFinding(group, editorEntries);
+    if (!editor) continue;
+    const sheetSectionKey = editorGroupKey(editor.group);
+    groupsBySheetSection.set(sheetSectionKey, [
+      ...(groupsBySheetSection.get(sheetSectionKey) ?? []),
+      group,
+    ]);
+  }
+  const traceBySectionKey = new Map(
+    projection.completeness.trace.map((row) => [row.sectionKey, row]),
+  );
+  const sheetSections = EXAM_SHEET_ROWS.flatMap((definition) => {
+    const traceRows = definition.traceSectionKeys.flatMap((sectionKey) => {
+      const trace = traceBySectionKey.get(sectionKey);
+      return trace ? [trace] : [];
+    });
+    const groups = groupsBySheetSection.get(definition.sectionKey) ?? [];
+    return definition.optional || traceRows.length > 0 || groups.length > 0
+      ? [{ definition, traceRows, groups }]
+      : [];
   });
-  const performedEditorIds = new Set(boardSections.flatMap((section) =>
+  const performedEditorIds = new Set(sheetSections.flatMap((section) =>
     section.groups.flatMap((group) => {
       const editor = editorForFinding(group, editorEntries);
       return editor ? [editor.id] : [];
@@ -151,7 +200,6 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, r
           <h1 id="exam-overview-title">Exam overview</h1>
         </div>
         <div className="odos-exam-overview-actions">
-          <span>{boardSections.length} sections</span>
           <button
             type="button"
             data-testid="refresh-exam-overview"
@@ -165,19 +213,58 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, r
       </header>
 
       <div className="odos-exam-overview-board">
-        {boardSections.map((section) => (
+        {sheetSections.map(({ definition, traceRows, groups }) => {
+          const blankEditor = (editorGroups.get(definition.editorGroupKey) ?? [])
+            .find((entry) => !entry.readOnly);
+          return (
             <section
-              key={section.sectionKey}
-              className="odos-exam-section"
+              key={definition.sectionKey}
+              className={`odos-exam-section${definition.optional ? " is-optional" : ""}`}
               data-testid="exam-overview-section"
-              data-section-key={section.sectionKey}
-              aria-labelledby={`exam-section-${safeId(section.sectionKey)}`}
+              data-section-key={definition.sectionKey}
+              data-required={definition.optional ? false : true}
+              data-resolved={definition.optional ? undefined :
+                traceRows.length === definition.traceSectionKeys.length && traceRows.every((row) => row.resolved)}
+              aria-labelledby={`exam-section-${safeId(definition.sectionKey)}`}
             >
               <header className="odos-exam-section-heading">
-                <h2 id={`exam-section-${safeId(section.sectionKey)}`}>{section.label}</h2>
+                <div>
+                  <h2 id={`exam-section-${safeId(definition.sectionKey)}`}>{definition.label}</h2>
+                  <div className="odos-exam-section-trace">
+                    {traceRows.map((row) => (
+                      <span
+                        key={row.sectionKey}
+                        className={`odos-exam-section-state is-${row.state}`}
+                        data-testid="exam-overview-trace-row"
+                        data-trace-section-key={row.sectionKey}
+                        data-section-state={row.state}
+                        data-resolved={row.resolved}
+                      >
+                        {traceRows.length > 1 && <strong>{row.label}</strong>}
+                        {sectionStateLabel(row.state)}
+                      </span>
+                    ))}
+                    {definition.optional && (
+                      <span className="odos-exam-section-state is-not-indicated">
+                        Not required for this visit type
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <span
+                  className="odos-exam-section-owner"
+                  data-testid="exam-section-owner"
+                  data-owner-section-key={definition.sectionKey}
+                >
+                  {definition.owner}
+                </span>
               </header>
-              <div className="odos-exam-finding-list">
-                {section.groups.map((group) => (
+              <div
+                className="odos-exam-finding-list odos-exam-section-body"
+                data-testid="exam-section-body"
+                style={EXAM_SECTION_BODY_STYLE}
+              >
+                {groups.map((group) => (
                   <FindingRow
                     key={`${group.findingKey}\u0000${group.display}`}
                     group={group}
@@ -186,9 +273,23 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, r
                     onOpenEditor={onOpenEditor}
                   />
                 ))}
+                {groups.length === 0 && blankEditor && (
+                  <button
+                    type="button"
+                    className="odos-exam-section-blank"
+                    data-testid="exam-section-blank"
+                    data-blank-section-key={definition.sectionKey}
+                    onClick={() => onOpenEditor(blankEditor.id)}
+                    aria-label={`Open ${definition.label} editor`}
+                  >
+                    <span aria-hidden>—</span>
+                    <small>{definition.optional ? "Available when needed" : "Tap to chart"}</small>
+                  </button>
+                )}
               </div>
             </section>
-        ))}
+          );
+        })}
       </div>
 
       {chartAnotherGroups.length > 0 && (
@@ -262,6 +363,10 @@ function editorGroupKey(group?: string): string {
   if (group === "ASSESSMENT & PLAN") return "assessment";
   if (!group) return "other";
   return group.toLocaleLowerCase().replaceAll(/[^a-z0-9]+/g, "-").replaceAll(/^-|-$/g, "");
+}
+
+function sheetSectionKeyForClinicalSection(sectionKey: string): string {
+  return sectionKey === "entrance" ? "pretest" : sectionKey;
 }
 
 function editorGroupLabel(group: string | undefined, sectionKey: string): string {
