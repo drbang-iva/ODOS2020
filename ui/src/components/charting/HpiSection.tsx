@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type Ref } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import {
   blankComplaintDraft,
@@ -17,7 +17,7 @@ import { OdosSearchPicker } from "../inputs/OdosSearchPicker";
 interface Props {
   patientReference: string;
   encounterReference: string;
-  onSaved: (status: SectionSaveStatus) => void;
+  onSaved: (status: SectionSaveStatus, addAnother: boolean) => void;
 }
 
 type RosCategory = "eye" | "general";
@@ -58,12 +58,22 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
+  const presentingConcernRef = useRef<HTMLInputElement>(null);
+  const pendingNextConcernFocus = useRef(false);
 
   useEffect(() => {
     void load().catch((caught) => {
       setError(caught instanceof Error ? caught.message : String(caught));
     });
   }, [encounterReference]);
+
+  useLayoutEffect(() => {
+    if (!pendingNextConcernFocus.current || saving) return;
+    pendingNextConcernFocus.current = false;
+    const input = presentingConcernRef.current;
+    if (!input || input.disabled) return;
+    input.focus();
+  }, [draft, saving]);
 
   const selectedDefinition = definitions.find((definition) => definition.stableKey === draft?.complaintKey);
   const options = effectiveComplaintOptions(genericOptions, selectedDefinition);
@@ -170,7 +180,8 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
         summary: body.complaints.map((complaint) => complaint.renderedNarrative).join(" "),
         savedAt: new Date().toISOString(),
         operator: "ODOS UI Complaint Intake",
-      });
+      }, addAnother);
+      pendingNextConcernFocus.current = addAnother;
       setDraft(addAnother ? blankComplaintDraft() : null);
       setEditingId(null);
       setOverrideDirty(false);
@@ -262,7 +273,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
       if (!response.ok || !body.observationReference) throw new Error(body.error ?? `History save failed: ${response.status}`);
       const summary = complaints.map((complaint) => complaint.renderedNarrative).join(" ");
       setSaved("History narrative and Review of Systems saved to the encounter.");
-      onSaved({ completed: true, summary, savedAt: new Date().toISOString(), operator: "ODOS UI History / ROS" });
+      onSaved({ completed: true, summary, savedAt: new Date().toISOString(), operator: "ODOS UI History / ROS" }, false);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
@@ -321,6 +332,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
             preview={preview}
             overrideDirty={overrideDirty}
             saving={saving}
+            presentingConcernRef={presentingConcernRef}
             onUpdate={updateDraft}
             onToggle={toggleCode}
             onNarrativeMode={setNarrativeMode}
@@ -408,6 +420,7 @@ export function ComplaintIntake(props: {
   preview: string;
   overrideDirty: boolean;
   saving: boolean;
+  presentingConcernRef: Ref<HTMLInputElement>;
   onUpdate: (patch: Partial<ComplaintDraft>, codedChange?: boolean) => void;
   onToggle: (field: "conditions" | "qualities" | "treatmentsTried", code: string) => void;
   onNarrativeMode: (mode: "automated" | "override") => void;
@@ -420,7 +433,7 @@ export function ComplaintIntake(props: {
     <div className="mt-5 rounded border border-brand/30 bg-bg-panel/80 p-5">
       <h3 className="odos-hpi-text text-base font-semibold">Complaint Intake</h3>
       <p className="odos-hpi-muted mt-1 text-sm">{props.definition?.display ?? "Other presenting complaint"}</p>
-      {!props.draft.complaintKey && <label className="odos-hpi-muted mt-5 block text-sm">Presenting concern<input className="sidebar-input mt-2" maxLength={4000} value={props.draft.freeTextLabel ?? ""} onChange={(event) => props.onUpdate({ freeTextLabel: event.target.value })} /></label>}
+      {!props.draft.complaintKey && <label className="odos-hpi-muted mt-5 block text-sm">Presenting concern<input autoFocus ref={props.presentingConcernRef} className="sidebar-input mt-2" maxLength={4000} value={props.draft.freeTextLabel ?? ""} onChange={(event) => props.onUpdate({ freeTextLabel: event.target.value })} /></label>}
 
       {symptom && <IntakeCluster title="Symptoms"><OptionButtons options={props.options.conditions} selected={props.draft.conditions} onToggle={(code) => props.onToggle("conditions", code)} /></IntakeCluster>}
       <IntakeCluster title="Laterality">

@@ -41,6 +41,12 @@ import { SpecialtyContactLensSection } from "../src/components/charting/Specialt
 import { WearingSection } from "../src/components/charting/WearingSection";
 import { ReferralCompose } from "../src/components/referral/ReferralCompose";
 import type { CustomFindingDefinition } from "../src/components/charting/CustomFindingSection";
+import {
+  blankComplaintDraft,
+  type ComplaintDefinition,
+  type EncounterComplaint,
+  type GenericComplaintOptions,
+} from "../src/lib/complaints";
 import type { EncounterFindingRow } from "../src/lib/diagnosis-findings";
 import { fhir } from "../src/lib/fhir";
 import { RoleProvider } from "../src/lib/role-context";
@@ -165,6 +171,24 @@ const PROJECTION: ExamOverviewProjection = {
     ],
     documentationIssues: [{ sectionKey: "pretest", issue: "deferred-reason-missing" }],
   },
+};
+
+const HPI_GENERIC_OPTIONS: GenericComplaintOptions = {
+  conditions: [{ code: "dry-eyes", display: "Dry Eyes", active: true }],
+  qualities: [{ code: "constant", display: "constant", active: true }],
+  treatments: [{ code: "artificial-tears", display: "artificial tears", active: true }],
+};
+
+const HPI_DRY_EYE: ComplaintDefinition = {
+  id: "complaint-definition-dry-eye",
+  stableKey: "dry-eye",
+  display: "Patient (Dry Eye)",
+  kind: "patient-symptom",
+  conditionOptions: [],
+  qualityOptions: [],
+  treatmentOptions: [],
+  seedRank: 1,
+  status: "active",
 };
 
 const BY_EXCEPTION_PROJECTION = {
@@ -708,6 +732,18 @@ function overviewSection(
     abnormalCount: 0,
     carriedUnreassertedCount: 0,
     deferredWithoutReasonCount: 0,
+  };
+}
+
+function hpiComplaintFixture(id: string, renderedNarrative: string): EncounterComplaint {
+  return {
+    ...blankComplaintDraft({ complaintKey: "dry-eye" }),
+    id,
+    encounterId: "exam-1",
+    patientId: "patient-1",
+    ordinal: 1,
+    status: "active",
+    renderedNarrative,
   };
 }
 
@@ -1799,6 +1835,84 @@ test("each mapped layout wraps its existing section and supports both cancel and
   }
 });
 
+test("HPI entry sheet stays open with a blank intake and the saved complaint after Save and Add Another", async () => {
+  const savedComplaint = hpiComplaintFixture("complaint-1", "Patient reports dry eyes.");
+  const harness = await renderEncounter(PROJECTION, {
+    hpiDefinitions: [HPI_DRY_EYE],
+    hpiGenericOptions: HPI_GENERIC_OPTIONS,
+    hpiSavedComplaints: [savedComplaint],
+  });
+  try {
+    await act(async () => editorControl(harness.renderer.root, "hpi").props.onClick());
+    await act(async () => {
+      await flushEffects();
+      await flushEffects();
+    });
+
+    const complaint = harness.renderer.root.findAllByType("button")
+      .find((button) => textContent(button) === "Patient (Dry Eye)");
+    assert.ok(complaint);
+    await act(async () => complaint.props.onClick());
+
+    const saveAndAdd = harness.renderer.root.findAllByType("button")
+      .find((button) => textContent(button) === "Save and Add Another");
+    assert.ok(saveAndAdd);
+    await act(async () => {
+      saveAndAdd.props.onClick();
+      await flushEffects();
+      await flushEffects();
+    });
+
+    const sheet = harness.renderer.root.findByProps({
+      "data-testid": "exam-entry-sheet",
+      "data-entry-sheet-section": "hpi",
+    });
+    assert.match(textContent(sheet), /Patient reports dry eyes\./);
+    const concern = sheet.findAllByType("input").find((input) => input.props.maxLength === 4000);
+    assert.ok(concern);
+    assert.equal(concern.props.value, "");
+  } finally {
+    harness.restore();
+  }
+});
+
+test("HPI entry sheet closes after plain Save Complaint", async () => {
+  const harness = await renderEncounter(PROJECTION, {
+    hpiDefinitions: [HPI_DRY_EYE],
+    hpiGenericOptions: HPI_GENERIC_OPTIONS,
+    hpiSavedComplaints: [hpiComplaintFixture("complaint-1", "Patient reports dry eyes.")],
+  });
+  try {
+    await act(async () => editorControl(harness.renderer.root, "hpi").props.onClick());
+    await act(async () => {
+      await flushEffects();
+      await flushEffects();
+    });
+
+    const complaint = harness.renderer.root.findAllByType("button")
+      .find((button) => textContent(button) === "Patient (Dry Eye)");
+    assert.ok(complaint);
+    await act(async () => complaint.props.onClick());
+
+    const save = harness.renderer.root.findAllByType("button")
+      .find((button) => textContent(button) === "Save Complaint");
+    assert.ok(save);
+    await act(async () => {
+      save.props.onClick();
+      await flushEffects();
+      await flushEffects();
+    });
+
+    assert.equal(harness.renderer.root.findAllByProps({
+      "data-testid": "exam-entry-sheet",
+      "data-entry-sheet-section": "hpi",
+    }).length, 0);
+    assert.equal(harness.renderer.root.findAllByType(ExamOverviewBoard).length, 1);
+  } finally {
+    harness.restore();
+  }
+});
+
 test("every measured deferred editor retains its existing full-page route", async () => {
   const harness = await renderEncounter(PROJECTION);
   const contracts = [
@@ -2014,6 +2128,9 @@ interface RenderEncounterOptions {
   unassignedResponses?: EncounterFindingRow[][];
   encounterExtensions?: Encounter["extension"];
   encounterRead?: (resourceType: string, id: string) => Promise<Encounter>;
+  hpiDefinitions?: ComplaintDefinition[];
+  hpiGenericOptions?: GenericComplaintOptions;
+  hpiSavedComplaints?: EncounterComplaint[];
 }
 
 async function renderEncounter(projection: unknown, options: RenderEncounterOptions = {}): Promise<{
@@ -2050,7 +2167,7 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
   let overviewFetches = 0;
   let findingsFetches = 0;
   let focusRestores = 0;
-  globalThis.fetch = (async (input) => {
+  globalThis.fetch = (async (input, init) => {
     const url = String(input);
     if (url.endsWith("/clinical-graph/encounters/exam-1/exam-overview")) {
       const responses = options.overviewResponses ?? [projection];
@@ -2113,6 +2230,18 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
     }
     if (url.endsWith("/clinical-graph/refraction/definition")) {
       return jsonResponse({ definition: { fields: {} }, diagnosisOptions: [], refractiveThreshold: 0 });
+    }
+    if (url.endsWith("/clinical-graph/hpi/definition")) {
+      return jsonResponse({ definition: { fields: { reviewOfSystems: { options: [] } } } });
+    }
+    if (url.endsWith("/clinical-graph/complaint-definitions")) {
+      return jsonResponse({
+        definitions: options.hpiDefinitions ?? [],
+        genericOptions: options.hpiGenericOptions ?? { conditions: [], qualities: [], treatments: [] },
+      });
+    }
+    if (url.endsWith("/clinical-graph/encounters/exam-1/complaints")) {
+      return jsonResponse({ complaints: init?.method === "POST" ? options.hpiSavedComplaints ?? [] : [] });
     }
     if (url.includes("/clinical-graph/refraction/history")) {
       return jsonResponse({ glasses: [], softCl: [], specialtyCl: [] });
