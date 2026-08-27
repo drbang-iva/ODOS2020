@@ -172,13 +172,21 @@ export function OcularHealthSection({
       return;
     }
     if (!focusedStableKey) return;
-    document.getElementById(domId(focusedStableKey))?.scrollIntoView({ behavior: "smooth", block: "start" });
+    scrollToStructure(focusedStableKey);
   }, [focusedStableKey, runnerEnabled]);
 
   useEffect(() => {
     if (!runnerEnabled || !focusedStructureKey) return;
-    document.getElementById(domId(focusedStructureKey))?.scrollIntoView({ behavior: "smooth", block: "start" });
+    scrollToStructure(focusedStructureKey);
   }, [focusedStructureKey, runnerEnabled]);
+
+  function focusStructure(stableKey: string) {
+    if (stableKey === focusedStructureKey) {
+      scrollToStructure(stableKey);
+      return;
+    }
+    setFocusedStructureKey(stableKey);
+  }
 
   function updateEye(stableKey: string, eye: Eye, update: (capture: EyeCapture) => EyeCapture) {
     setCaptures((current) => ({
@@ -342,7 +350,7 @@ export function OcularHealthSection({
             groups={groups}
             captures={captures}
             focusedStableKey={highlightedStructureKey}
-            onFocus={setFocusedStructureKey}
+            onFocus={focusStructure}
           />}
           <div className="space-y-5">{groups.map((group) => <div key={group.label} className="space-y-5">
             <div className="border-b border-white/10 pb-2 text-xs font-semibold uppercase tracking-[0.18em] text-brand-light">{group.label}</div>
@@ -404,7 +412,7 @@ function StructureRail({ groups, captures, focusedStableKey, onFocus }: {
     <nav
       aria-label="Ocular-health structures"
       data-testid="ocular-health-structure-rail"
-      className="sticky top-28 max-h-[calc(100vh-12rem)] overflow-y-auto rounded border border-white/10 bg-bg-panel/80 p-3"
+      className="max-h-64 overflow-y-auto rounded border border-white/10 bg-bg-panel/80 p-3 lg:sticky lg:top-28 lg:max-h-[calc(100vh-12rem)]"
     >
       <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">Structures</div>
       <div className="mt-3 space-y-3">
@@ -758,10 +766,12 @@ function structureRailState(row: Record<Eye, EyeCapture>): string {
   const touchedCaptures = EYES.map((eye) => row[eye]).filter(touched);
   if (touchedCaptures.length === 0) return "blank";
   const findingCount = touchedCaptures.reduce((count, capture) => count + capture.selections.length, 0);
-  if (findingCount > 0 || touchedCaptures.some((capture) => capture.state !== "normal")) {
+  if (findingCount > 0) {
     return `${findingCount} ${findingCount === 1 ? "finding" : "findings"}`;
   }
-  return "normal";
+  if (touchedCaptures.some((capture) => capture.state === "abnormal")) return "abnormal";
+  if (touchedCaptures.some((capture) => capture.state === "deferred")) return "deferred";
+  return touchedCaptures.every((capture) => capture.state === "normal") ? "normal" : "incomplete";
 }
 
 export function changedDefinitions<T extends Pick<CustomFindingDefinition, "stableKey">>(
@@ -930,4 +940,8 @@ function segmentGroups(definitions: CustomFindingDefinition[]) {
 
 function domId(stableKey: string): string {
   return `structure-${stableKey.replace(/[^A-Za-z0-9_-]/g, "-")}`;
+}
+
+function scrollToStructure(stableKey: string): void {
+  document.getElementById(domId(stableKey))?.scrollIntoView({ behavior: "smooth", block: "start" });
 }

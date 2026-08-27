@@ -2462,6 +2462,9 @@ test("the full ocular-health runner lists all seeded structures blank and stays 
       await flushEffects();
     });
     const rail = renderer.root.findByProps({ "data-testid": "ocular-health-structure-rail" });
+    assert.match(rail.props.className, /max-h-64 overflow-y-auto/);
+    assert.match(rail.props.className, /lg:sticky lg:top-28/);
+    assert.doesNotMatch(rail.props.className, /(?:^|\s)sticky(?:\s|$)/);
     const entries = rail.findAll((node) => typeof node.props["data-structure-rail-key"] === "string");
     assert.equal(entries.length, 14);
     assert.deepEqual(entries.map((entry) => [
@@ -2528,11 +2531,14 @@ test("the ocular-health runner derives finding count from capture selections", a
     const abnormal = od.findAllByType("button").find((button) => renderedText(button) === "Abnormal");
     assert.ok(abnormal);
     act(() => abnormal.props.onClick());
+    const rail = renderer.root.findByProps({ "data-testid": "ocular-health-structure-rail" });
+    const railEntry = (stableKey: string) => rail.findAll((node) => node.props["data-structure-rail-key"] === stableKey)[0];
+    assert.equal(railEntry("ocular-health:anterior:cornea")?.props["data-structure-state"], "abnormal");
     const finding = od.findAllByType("button").find((button) => renderedText(button) === "Finding");
     assert.ok(finding);
     act(() => finding.props.onClick());
 
-    const entries = renderer.root.findByProps({ "data-testid": "ocular-health-structure-rail" })
+    const entries = rail
       .findAll((node) => typeof node.props["data-structure-rail-key"] === "string");
     const corneaEntry = entries.find((entry) => entry.props["data-structure-rail-key"] === "ocular-health:anterior:cornea");
     assert.equal(corneaEntry?.props["data-structure-state"], "1 finding");
@@ -2542,6 +2548,13 @@ test("the ocular-health runner derives finding count from capture selections", a
         ?.props["data-structure-state"],
       "blank",
     );
+
+    const palpebral = renderer.root.findByProps({ id: "structure-ocular-health-anterior-palpebral-conjunctiva" });
+    const deferred = palpebral.findByProps({ "data-eye-panel": "OS" }).findAllByType("button")
+      .find((button) => renderedText(button) === "Not performed / deferred");
+    assert.ok(deferred);
+    act(() => deferred.props.onClick());
+    assert.equal(railEntry("ocular-health:anterior:palpebral-conjunctiva")?.props["data-structure-state"], "deferred");
   } finally {
     renderer?.unmount();
   }
@@ -2588,6 +2601,16 @@ test("the ocular-health runner Next and Previous reuse structure scrolling and u
     assert.deepEqual(focusedKey(), ["ocular-health:anterior:periocular-adnexa"]);
     assert.deepEqual(scrolled, [
       "structure-ocular-health-anterior-lids-lashes",
+      "structure-ocular-health-anterior-periocular-adnexa",
+    ]);
+
+    const current = renderer.root.findByProps({
+      "data-structure-rail-key": "ocular-health:anterior:periocular-adnexa",
+    });
+    await act(async () => current.props.onClick());
+    assert.deepEqual(scrolled, [
+      "structure-ocular-health-anterior-lids-lashes",
+      "structure-ocular-health-anterior-periocular-adnexa",
       "structure-ocular-health-anterior-periocular-adnexa",
     ]);
   } finally {
