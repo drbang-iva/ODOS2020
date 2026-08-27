@@ -9,6 +9,7 @@ import {
   type DiagnosisCandidateSuggestion,
 } from "../../lib/clinical-graph-client";
 import { fhir } from "../../lib/fhir";
+import { searchAll } from "../../lib/fhir-search";
 import { OdosSearchPicker } from "../inputs/OdosSearchPicker";
 
 interface Candidate {
@@ -54,6 +55,7 @@ export function DiagnosisPicker({
   const [catalog, setCatalog] = useState<CatalogRow[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
   const [catalogSelection, setCatalogSelection] = useState<CatalogRow>();
+  const [proposalCatalogSelections, setProposalCatalogSelections] = useState<Record<string, CatalogRow>>({});
   const [proposedConditions, setProposedConditions] = useState<Condition[]>([]);
   const [overridden, setOverridden] = useState<Set<string>>(() => new Set());
   const [busy, setBusy] = useState<string | null>(null);
@@ -65,12 +67,12 @@ export function DiagnosisPicker({
   async function load(signal?: AbortSignal) {
     const requestVersion = ++loadVersion.current;
     try {
-      const [candidateFindings, catalogResponse, conditionBundle] = await Promise.all([
+      const [candidateFindings, catalogResponse, conditions] = await Promise.all([
         readDiagnosisCandidates(encounterId),
         fetch(`${clinicalGraphApiBase()}/clinical-graph/diagnosis-catalog`, { headers: authHeaders(), signal }),
         mode === "proposal"
-          ? fhir.search<Condition>("Condition", { encounter: encounterReference, _count: "200" })
-          : Promise.resolve(undefined),
+          ? searchAll<Condition>(fhir, "Condition", { encounter: encounterReference })
+          : Promise.resolve([]),
       ]);
       const catalogBody = await catalogResponse.json() as { diagnoses?: CatalogRow[]; error?: string };
       if (!catalogResponse.ok) throw new Error(catalogBody.error ?? `Diagnosis catalog request failed: ${catalogResponse.status}`);
@@ -86,9 +88,7 @@ export function DiagnosisPicker({
         (allowedObservations.size === 0 || Boolean(finding.observationReference && allowedObservations.has(finding.observationReference)))
       ));
       setCatalog((catalogBody.diagnoses ?? []).filter((row) => row.active));
-      setProposedConditions((conditionBundle?.entry ?? []).flatMap((entry) =>
-        entry.resource && isProvisional(entry.resource) ? [entry.resource] : []
-      ));
+      setProposedConditions(conditions.filter(isProvisional));
       setError(null);
     } catch (err) {
       if (!signal?.aborted && requestVersion === loadVersion.current) {
@@ -139,6 +139,11 @@ export function DiagnosisPicker({
       await load();
       setOpenId(null);
       setCatalogSelection(undefined);
+      setProposalCatalogSelections((current) => {
+        const next = { ...current };
+        delete next[finding.findingInstanceId];
+        return next;
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -174,22 +179,30 @@ export function DiagnosisPicker({
             <div>
               <OdosSearchPicker
                 label="Full diagnosis catalog"
-                value={catalogSelection?.stableKey ?? ""}
-                selectedLabel={catalogSelection?.display}
+                value={proposalCatalogSelections[finding.findingInstanceId]?.stableKey ?? ""}
+                selectedLabel={proposalCatalogSelections[finding.findingInstanceId]?.display}
                 placeholder="Search full diagnosis catalog"
                 search={searchCatalog}
-                onClear={() => setCatalogSelection(undefined)}
-                onSelect={(option) => setCatalogSelection(option.item)}
+                onClear={() => setProposalCatalogSelections((current) => {
+                  const next = { ...current };
+                  delete next[finding.findingInstanceId];
+                  return next;
+                })}
+                onSelect={(option) => setProposalCatalogSelections((current) => ({
+                  ...current,
+                  [finding.findingInstanceId]: option.item,
+                }))}
               />
-              {catalogSelection && (() => {
-                const proposed = isProposedDiagnosis(proposedConditions, catalogSelection.stableKey, finding.observationReference);
+              {proposalCatalogSelections[finding.findingInstanceId] && (() => {
+                const selected = proposalCatalogSelections[finding.findingInstanceId]!;
+                const proposed = isProposedDiagnosis(proposedConditions, selected.stableKey, finding.observationReference);
                 return <div className="mt-2">
                   <ProposalChoice
-                    display={catalogSelection.display}
-                    code={catalogCode(catalogSelection)}
+                    display={selected.display}
+                    code={catalogCode(selected)}
                     proposed={proposed}
                     busy={busy !== null}
-                    onToggle={() => pick(finding, catalogSelection.stableKey, proposed ? "discard" : "possible", "catalog-search")}
+                    onToggle={() => pick(finding, selected.stableKey, proposed ? "discard" : "possible", "catalog-search")}
                   />
                 </div>;
               })()}
