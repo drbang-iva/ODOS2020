@@ -101,7 +101,7 @@ const COMPREHENSIVE_PROJECTION: ExamOverviewProjection = {
   },
 };
 
-window.fetch = async (input) => {
+window.fetch = async (input, init) => {
   const url = String(input);
   if (url.endsWith("/clinical-graph/refraction/definition")) {
     return Response.json({
@@ -157,7 +157,25 @@ window.fetch = async (input) => {
   }
   if (url.endsWith("/clinical-graph/hpi/definition")) return Response.json({ definition: {} });
   if (url.endsWith("/clinical-graph/complaint-definitions")) return Response.json({ definitions: [], genericOptions: { conditions: [], qualities: [], treatments: [] } });
-  if (url.includes("/complaints")) return Response.json({ complaints: [] });
+  if (url.includes("/complaints")) return Response.json({ complaints: init?.method === "POST" ? [{
+    id: "fixture-complaint-1",
+    encounterId: "test",
+    patientId: "test",
+    ordinal: 1,
+    freeTextLabel: "Blurred vision",
+    conditions: [],
+    eyeLocation: "not-applicable",
+    qualities: [],
+    treatmentsTried: [],
+    additionalHistory: "",
+    narrative: { mode: "automated" },
+    resolvedDx: [],
+    status: "active",
+    renderedNarrative: "Patient reports Blurred vision.",
+    provenance: { source: "manual", recordedAt: "2026-08-27T12:00:00.000Z", actorReference: "Practitioner/test" },
+    provenanceHistory: [],
+  }] : [] });
+  if (url.endsWith("/clinical-graph/hpi")) return Response.json({ observationReference: "Observation/history-1" });
   if (url.endsWith("/clinical-graph/diagnosis-catalog")) return Response.json({ diagnoses: [] });
   if (url.includes("/clinical-graph/protocols/")) return Response.json({ applications: [], offers: [] });
   if (url.includes("/clinical-graph/eye-growth/history")) return Response.json({ rows: [] });

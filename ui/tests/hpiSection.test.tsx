@@ -21,6 +21,7 @@ import {
   type GenericComplaintOptions,
 } from "../src/lib/complaints";
 import { SpineNav } from "../src/components/charting/SpineNav";
+import type { SectionSaveStatus } from "../src/components/charting/types";
 
 const GENERIC: GenericComplaintOptions = {
   conditions: [{ code: "dry-eyes", display: "Dry Eyes", active: true }],
@@ -69,6 +70,8 @@ test("HPI section renders Presenting Complaints, Top Complaints, persistent ROS 
   assert.match(html, /Mark remaining reviewed: negative/);
   assert.match(html, /Add another medical flag/);
   assert.match(html, /Add flag/);
+  assert.match(html, /Save reviewed ROS/);
+  assert.doesNotMatch(html, /Save history/);
   assert.doesNotMatch(html, /aria-label="Chief complaint"/);
   for (const legacy of ["Modifying factors", "Associated signs / symptoms", "History of present illness"]) assert.doesNotMatch(html, new RegExp(legacy));
 });
@@ -224,6 +227,9 @@ test("Save and Add Another keeps a fresh complaint intake open", async () => {
     if (url.endsWith("/clinical-graph/encounters/e1/complaints") && init?.method === "POST") {
       return jsonResponse({ complaints: [complaintFixture("complaint-1", 1)] });
     }
+    if (url.endsWith("/clinical-graph/hpi") && init?.method === "POST") {
+      return jsonResponse({ observationReference: "Observation/history-1" });
+    }
     if (url.endsWith("/clinical-graph/encounters/e1/complaints")) {
       return jsonResponse({ complaints: [] });
     }
@@ -251,6 +257,92 @@ test("Save and Add Another keeps a fresh complaint intake open", async () => {
       .find((input) => input.props.maxLength === 4000);
     assert.ok(concern);
     assert.equal(concern.props.value, "");
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a failed automatic History capture keeps the saved complaint visible and retries without saving it twice", async () => {
+  const originalFetch = globalThis.fetch;
+  let complaintPosts = 0;
+  let historyPosts = 0;
+  let failHistory = true;
+  const savedReports: Array<{ status: SectionSaveStatus; keepOpen?: boolean }> = [];
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/clinical-graph/hpi/definition")) {
+      return jsonResponse({ definition: { fields: { reviewOfSystems: { options: DEFAULT_HPI_ROS_OPTIONS } } } });
+    }
+    if (url.endsWith("/clinical-graph/complaint-definitions")) {
+      return jsonResponse({ definitions: [DRY_EYE, ROUTINE], genericOptions: GENERIC });
+    }
+    if (url.endsWith("/clinical-graph/encounters/e1/complaints") && init?.method === "POST") {
+      complaintPosts += 1;
+      return jsonResponse({ complaints: [complaintFixture("complaint-1", 1)] });
+    }
+    if (url.endsWith("/clinical-graph/encounters/e1/complaints")) {
+      return jsonResponse({ complaints: [] });
+    }
+    if (url.endsWith("/clinical-graph/hpi") && init?.method === "POST") {
+      historyPosts += 1;
+      return failHistory
+        ? new Response(JSON.stringify({ error: "FHIR write unavailable" }), { status: 503, headers: { "Content-Type": "application/json" } })
+        : jsonResponse({ observationReference: "Observation/history-1" });
+    }
+    throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${url}`);
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<HpiSection
+        patientReference="Patient/p1"
+        encounterReference="Encounter/e1"
+        onSaved={(status, keepOpen) => { savedReports.push({ status, keepOpen }); }}
+      />);
+      await flushEffects();
+    });
+    const complaint = renderer.root.findAllByType("button")
+      .find((button) => button.children.join("") === "Patient (Dry Eye)");
+    assert.ok(complaint);
+    act(() => complaint.props.onClick());
+    const save = renderer.root.findAllByType("button")
+      .find((button) => button.children.join("") === "Save Complaint");
+    assert.ok(save);
+    await act(async () => {
+      save.props.onClick();
+      await flushEffects();
+    });
+
+    assert.equal(complaintPosts, 1);
+    assert.equal(historyPosts, 1);
+    assert.equal(savedReports.length, 1);
+    assert.equal(savedReports[0]?.status.completed, false);
+    assert.equal(savedReports[0]?.keepOpen, true);
+    assert.match(renderer.root.findByProps({ role: "alert" }).children.join(""), /complaint was saved.*History was not recorded/i);
+    assert.ok(renderer.root.findAllByType("p").some((paragraph) =>
+      paragraph.children.join("") === "Complaint 1"
+    ));
+    const nav = renderToStaticMarkup(<SpineNav
+      active="hpi"
+      statuses={{ hpi: savedReports[0]!.status }}
+      onSelect={() => undefined}
+    />);
+    assert.match(nav, /aria-label="Incomplete — Complaint 1"/);
+    assert.doesNotMatch(nav, /aria-label="Complete — Complaint 1"/);
+
+    failHistory = false;
+    const retry = renderer.root.findAllByType("button")
+      .find((button) => button.children.join("") === "Retry recording History");
+    assert.ok(retry);
+    await act(async () => {
+      retry.props.onClick();
+      await flushEffects();
+    });
+    assert.equal(complaintPosts, 1);
+    assert.equal(historyPosts, 2);
+    assert.equal(savedReports.length, 2);
+    assert.equal(savedReports[1]?.status.completed, true);
   } finally {
     renderer?.unmount();
     globalThis.fetch = originalFetch;

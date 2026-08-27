@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
-import type { Basic, Encounter, Observation, Provenance } from "@medplum/fhirtypes";
+import type { Basic, Bundle, Encounter, Observation, Provenance, Resource } from "@medplum/fhirtypes";
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
+import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../fhir/ophthalmology/codeBindings.js";
 import { odosConcept, reference } from "../fhir/ophthalmology/extensions.js";
 import { FhirComplaintDefinitionStore } from "./complaint-definition-store.js";
 import { renderComplaintNarrative } from "./complaint-model.js";
@@ -16,10 +17,11 @@ import {
 
 export interface HpiFhirClient {
   read<T extends Encounter>(resourceType: T["resourceType"], id: string): Promise<T>;
-  search<T extends Basic>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<import("@medplum/fhirtypes").Bundle<T>>;
-  searchUrl?<T extends Basic>(url: string, resourceType: T["resourceType"]): Promise<import("@medplum/fhirtypes").Bundle<T>>;
-  create<T extends Basic | Observation | Provenance>(resource: T, extraHeaders?: Record<string, string>): Promise<T>;
+  search<T extends Resource>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>>;
+  searchUrl?<T extends Resource>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>>;
+  create<T extends Basic>(resource: T, extraHeaders?: Record<string, string>): Promise<T>;
   update<T extends Basic | Encounter>(resourceType: T["resourceType"], id: string, resource: T, extraHeaders?: Record<string, string>): Promise<T>;
+  executeTransaction(bundle: Bundle, extraHeaders?: Record<string, string>): Promise<Bundle>;
 }
 
 export interface HpiEndpointDeps {
@@ -33,6 +35,7 @@ export interface HpiEndpointDeps {
 }
 
 const WRITE_HEADERS = { "X-ODOS-Source": "mcp/save_hpi_ros" } as const;
+export const HPI_OBSERVATION_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/hpi-observation-encounter";
 const rosFlagSchema = z.object({
   code: z.string().regex(/^[a-z][a-z0-9-]{0,79}$/),
   display: z.string().trim().min(1).max(120),
@@ -104,7 +107,7 @@ export async function handleHpiCaptureRequest(
   if (!complaints.length) return { status: 400, body: { error: "At least one presenting complaint is required before saving history." } };
 
   const recordedAt = deps.now?.() ?? new Date().toISOString();
-  const provenance: ClinicalGraphProvenance = {
+  const captureProvenance: ClinicalGraphProvenance = {
     source: "manual",
     recordedAt,
     actorReference: staff.staffReference,
@@ -123,24 +126,89 @@ export async function handleHpiCaptureRequest(
     sourceType: "manual",
     performerReferences: [staff.staffReference],
     recordedAt,
-    provenance,
+    provenance: captureProvenance,
     findingInstanceId: findingId,
     observationId: findingId,
   });
-  const observation = await staff.fhir.create<Observation>(captured.observation, WRITE_HEADERS);
-  const observationReference = resourceReference(observation.id, captured.observation.id);
-  const createdProvenance = await staff.fhir.create<Provenance>({
+  const existingBundle = await staff.fhir.search<Observation>("Observation", {
+    encounter: parsed.data.encounterReference,
+    code: `${ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|${HPI_STABLE_KEY}`,
+    _count: "200",
+  });
+  if (existingBundle.link?.some((link) => link.relation === "next")) {
+    throw new Error("History upsert found more matching Observations than it can safely reconcile.");
+  }
+  const liveHistory = (existingBundle.entry ?? []).flatMap((entry) => {
+    const observation = entry.resource;
+    return observation && isLiveHistoryObservation(observation, parsed.data.encounterReference)
+      ? [observation]
+      : [];
+  });
+  if (liveHistory.some((observation) => !observation.id)) {
+    throw new Error("History upsert found a persisted Observation without an id.");
+  }
+  const identifierValue = encounterId;
+  const canonical = chooseCanonicalHistory(liveHistory, identifierValue);
+  const observation = historyObservationForUpsert(captured.observation, canonical, identifierValue);
+  const observationFullUrl = "urn:uuid:hpi-observation";
+  const observationTarget = canonical?.id ? `Observation/${canonical.id}` : observationFullUrl;
+  const activityCode = canonical ? "UPDATE" : "CREATE";
+  const provenanceResource: Provenance = {
     ...captured.provenance,
-    activity: odosConcept("CREATE", [
+    activity: odosConcept(activityCode, [
       "Capture presenting complaints, history narrative, and review of systems",
       ...parsed.data.reviewAttestations.map((group) => `${group} remaining items reviewed negative`),
     ].join("; ")),
     target: [
-      reference(observationReference),
+      reference(observationTarget),
       reference(parsed.data.encounterReference),
       reference(parsed.data.patientReference),
     ],
-  }, WRITE_HEADERS);
+  };
+  const duplicateEntries = liveHistory
+    .filter((candidate) => candidate.id !== canonical?.id)
+    .map((duplicate) => ({
+      resource: { ...duplicate, status: "entered-in-error" as const },
+      request: {
+        method: "PUT" as const,
+        url: `Observation/${duplicate.id}`,
+        ...(duplicate.meta?.versionId ? { ifMatch: `W/\"${duplicate.meta.versionId}\"` } : {}),
+      },
+    }));
+  const transactionRequest: Bundle = {
+    resourceType: "Bundle",
+    type: "transaction",
+    entry: [
+      canonical?.id
+        ? {
+            resource: observation,
+            request: {
+              method: "PUT",
+              url: `Observation/${canonical.id}`,
+              ...(canonical.meta?.versionId ? { ifMatch: `W/\"${canonical.meta.versionId}\"` } : {}),
+            },
+          }
+        : {
+            fullUrl: observationFullUrl,
+            resource: observation,
+            request: {
+              method: "PUT",
+              url: `Observation?identifier=${HPI_OBSERVATION_IDENTIFIER_SYSTEM}|${identifierValue}`,
+            },
+          },
+      { fullUrl: "urn:uuid:hpi-provenance", resource: provenanceResource, request: { method: "POST", url: "Provenance" } },
+      ...duplicateEntries,
+    ],
+  };
+  const transaction = await staff.fhir.executeTransaction(transactionRequest, {
+    ...WRITE_HEADERS,
+    Prefer: "return=representation",
+  });
+  assertSuccessfulTransaction(transactionRequest, transaction);
+  const observationReference = canonical?.id
+    ? `Observation/${canonical.id}`
+    : transactionResourceReference(transaction, 0, "Observation");
+  const provenanceReference = transactionResourceReference(transaction, 1, "Provenance");
   return {
     status: 200,
     body: {
@@ -150,9 +218,80 @@ export async function handleHpiCaptureRequest(
         complaint,
         definitions.find((candidate) => candidate.stableKey === complaint.complaintKey),
       )),
-      ...(createdProvenance.id ? { provenanceReference: `Provenance/${createdProvenance.id}` } : {}),
+      ...(provenanceReference ? { provenanceReference } : {}),
     },
   };
+}
+
+function isLiveHistoryObservation(observation: Observation, encounterReference: string): boolean {
+  return observation.status !== "entered-in-error" && observation.status !== "cancelled" &&
+    observation.encounter?.reference === encounterReference &&
+    observation.code.coding?.some((coding) =>
+      coding.system === ODOS_OPHTHALMOLOGY_CODE_SYSTEM && coding.code === HPI_STABLE_KEY
+    ) === true;
+}
+
+function chooseCanonicalHistory(observations: Observation[], identifierValue: string): Observation | undefined {
+  return [...observations].sort((left, right) => {
+    const leftIdentified = hasHistoryIdentifier(left, identifierValue) ? 1 : 0;
+    const rightIdentified = hasHistoryIdentifier(right, identifierValue) ? 1 : 0;
+    return rightIdentified - leftIdentified ||
+      historyInstant(right).localeCompare(historyInstant(left)) ||
+      (left.id ?? "").localeCompare(right.id ?? "");
+  })[0];
+}
+
+function historyObservationForUpsert(
+  captured: Observation,
+  existing: Observation | undefined,
+  identifierValue: string,
+): Observation {
+  const identifiers = (existing?.identifier ?? []).filter((identifier) =>
+    identifier.system !== HPI_OBSERVATION_IDENTIFIER_SYSTEM
+  );
+  return {
+    ...captured,
+    ...(existing?.id ? { id: existing.id } : { id: undefined }),
+    ...(existing?.meta ? { meta: existing.meta } : {}),
+    identifier: [
+      ...identifiers,
+      { system: HPI_OBSERVATION_IDENTIFIER_SYSTEM, value: identifierValue },
+    ],
+  };
+}
+
+function hasHistoryIdentifier(observation: Observation, identifierValue: string): boolean {
+  return observation.identifier?.some((identifier) =>
+    identifier.system === HPI_OBSERVATION_IDENTIFIER_SYSTEM && identifier.value === identifierValue
+  ) === true;
+}
+
+function historyInstant(observation: Observation): string {
+  return observation.effectiveDateTime ?? observation.issued ?? observation.meta?.lastUpdated ?? "";
+}
+
+function assertSuccessfulTransaction(request: Bundle, response: Bundle): void {
+  const entries = response.entry;
+  if (response.type !== "transaction-response" || !entries || entries.length !== request.entry?.length) {
+    throw new Error("History upsert did not return a complete transaction response.");
+  }
+  for (const entry of entries) {
+    const status = Number.parseInt(entry.response?.status ?? "", 10);
+    if (!Number.isInteger(status) || status < 200 || status >= 300) {
+      throw new Error(`History upsert transaction failed with ${entry.response?.status ?? "no status"}.`);
+    }
+  }
+}
+
+function transactionResourceReference(
+  transaction: Bundle,
+  index: number,
+  resourceType: "Observation" | "Provenance",
+): string {
+  const location = transaction.entry?.[index]?.response?.location;
+  const match = location?.match(new RegExp(`^${resourceType}/([A-Za-z0-9.-]+)(?:/_history/[A-Za-z0-9.-]+)?$`));
+  if (!match) throw new Error(`History upsert transaction did not identify the ${resourceType}.`);
+  return `${resourceType}/${match[1]}`;
 }
 
 function historyFindingValue(
