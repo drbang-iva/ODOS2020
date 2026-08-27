@@ -639,7 +639,7 @@
 .odos-exam-section-body {
   width: 100%;
   max-width: 56rem;
-  margin-inline: auto;
+  margin-inline: 0 auto;
 }
 
 .odos-exam-section-blank {

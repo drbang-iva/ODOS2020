@@ -552,6 +552,39 @@ test("wide worksheet cards keep dense sections full width and row content within
   }
 });
 
+test("worksheet row labels align with section titles in full-width and paired cards", { timeout: 30_000 }, async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  page.setDefaultTimeout(5_000);
+  try {
+    await page.goto(`${origin}/tests/fixtures/entry-sheets.html?comprehensive=true&worksheet=true`, { waitUntil: "networkidle" });
+    const geometry = await page.getByTestId("exam-overview-section").evaluateAll((nodes) => nodes.map((section) => {
+      const sectionRect = section.getBoundingClientRect();
+      const titleRect = section.querySelector<HTMLElement>(".odos-exam-section-heading h2")!.getBoundingClientRect();
+      const firstRowLabelRect = section.querySelector<HTMLElement>(
+        '[data-testid="exam-section-body"] > :first-child .odos-exam-section-blank-label',
+      )!.getBoundingClientRect();
+      return {
+        sectionKey: section.getAttribute("data-section-key"),
+        sectionWidth: Math.round(sectionRect.width),
+        titleLeft: Math.round(titleRect.left),
+        firstRowLeft: Math.round(firstRowLabelRect.left),
+      };
+    }));
+
+    assert.equal(geometry.length, 7);
+    assert.ok(geometry.some((section) => section.sectionWidth > 1_200), "fixture must include full-width cards");
+    assert.ok(geometry.some((section) => section.sectionWidth < 800), "fixture must include paired cards");
+    for (const section of geometry) {
+      assert.ok(
+        Math.abs(section.firstRowLeft - section.titleLeft) <= 3,
+        `${section.sectionKey} first row left ${section.firstRowLeft}px differs from title left ${section.titleLeft}px`,
+      );
+    }
+  } finally {
+    await page.close();
+  }
+});
+
 test("an open entry sheet does not reopen a hidden per-finding launcher behind the modal", { timeout: 30_000 }, async () => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   page.setDefaultTimeout(5_000);
