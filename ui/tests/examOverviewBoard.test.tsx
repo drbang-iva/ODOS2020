@@ -1835,7 +1835,7 @@ test("each mapped layout wraps its existing section and supports both cancel and
   }
 });
 
-test("HPI entry sheet stays open with a blank focused intake and the saved complaint after Save and Add Another", async () => {
+test("HPI entry sheet stays open with a blank intake and the saved complaint after Save and Add Another", async () => {
   const savedComplaint = hpiComplaintFixture("complaint-1", "Patient reports dry eyes.");
   const harness = await renderEncounter(PROJECTION, {
     hpiDefinitions: [HPI_DRY_EYE],
@@ -1871,7 +1871,6 @@ test("HPI entry sheet stays open with a blank focused intake and the saved compl
     const concern = sheet.findAllByType("input").find((input) => input.props.maxLength === 4000);
     assert.ok(concern);
     assert.equal(concern.props.value, "");
-    assert.equal(concern.props.autoFocus, true);
   } finally {
     harness.restore();
   }

@@ -233,6 +233,45 @@ test("a tall real editor has a vertical reachability path in the capped bottom s
   }
 });
 
+test("Save and Add Another focuses an enabled blank concern within the viewport", { timeout: 30_000 }, async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  page.setDefaultTimeout(5_000);
+  try {
+    await page.goto(`${origin}/tests/fixtures/entry-sheets.html?section=hpi`, { waitUntil: "networkidle" });
+    const dialog = page.getByRole("dialog", { name: "Chief Complaint / HPI / ROS" });
+    await dialog.waitFor();
+    await page.getByRole("button", { name: "Other", exact: true }).click();
+
+    const concern = page.getByLabel("Presenting concern");
+    await concern.fill("Blurred vision");
+    await page.getByRole("button", { name: "Save and Add Another" }).click();
+    await page.getByRole("status").filter({ hasText: "Presenting complaint saved." }).waitFor();
+
+    assert.equal(await dialog.count(), 1, "the HPI entry sheet must remain mounted");
+    assert.equal(await concern.inputValue(), "", "the next concern must start blank");
+    const focus = await concern.evaluate((node) => {
+      const input = node as HTMLInputElement;
+      const bounds = input.getBoundingClientRect();
+      return {
+        disabled: input.disabled,
+        focused: document.activeElement === input,
+        top: bounds.top,
+        bottom: bounds.bottom,
+        viewportHeight: window.innerHeight,
+      };
+    });
+    assert.equal(focus.disabled, false, "focus must run only after the next concern is enabled");
+    assert.equal(focus.focused, true, "the blank concern must own document.activeElement");
+    assert.ok(focus.top >= 0, `focused concern starts above the viewport at ${focus.top}px`);
+    assert.ok(
+      focus.bottom <= focus.viewportHeight,
+      `focused concern ends at ${focus.bottom}px beyond the ${focus.viewportHeight}px viewport`,
+    );
+  } finally {
+    await page.close();
+  }
+});
+
 for (const sectionId of [
   "wearing",
   "auto-refraction",
