@@ -21,6 +21,7 @@ import {
   type GenericComplaintOptions,
 } from "../src/lib/complaints";
 import { SpineNav } from "../src/components/charting/SpineNav";
+import type { SectionSaveStatus } from "../src/components/charting/types";
 
 const GENERIC: GenericComplaintOptions = {
   conditions: [{ code: "dry-eyes", display: "Dry Eyes", active: true }],
@@ -267,7 +268,7 @@ test("a failed automatic History capture keeps the saved complaint visible and r
   let complaintPosts = 0;
   let historyPosts = 0;
   let failHistory = true;
-  let savedCalls = 0;
+  const savedReports: Array<{ status: SectionSaveStatus; keepOpen?: boolean }> = [];
   globalThis.fetch = async (input, init) => {
     const url = String(input);
     if (url.endsWith("/clinical-graph/hpi/definition")) {
@@ -297,7 +298,7 @@ test("a failed automatic History capture keeps the saved complaint visible and r
       renderer = create(<HpiSection
         patientReference="Patient/p1"
         encounterReference="Encounter/e1"
-        onSaved={() => { savedCalls += 1; }}
+        onSaved={(status, keepOpen) => { savedReports.push({ status, keepOpen }); }}
       />);
       await flushEffects();
     });
@@ -315,11 +316,20 @@ test("a failed automatic History capture keeps the saved complaint visible and r
 
     assert.equal(complaintPosts, 1);
     assert.equal(historyPosts, 1);
-    assert.equal(savedCalls, 0);
+    assert.equal(savedReports.length, 1);
+    assert.equal(savedReports[0]?.status.completed, false);
+    assert.equal(savedReports[0]?.keepOpen, true);
     assert.match(renderer.root.findByProps({ role: "alert" }).children.join(""), /complaint was saved.*History was not recorded/i);
     assert.ok(renderer.root.findAllByType("p").some((paragraph) =>
       paragraph.children.join("") === "Complaint 1"
     ));
+    const nav = renderToStaticMarkup(<SpineNav
+      active="hpi"
+      statuses={{ hpi: savedReports[0]!.status }}
+      onSelect={() => undefined}
+    />);
+    assert.match(nav, /aria-label="Incomplete — Complaint 1"/);
+    assert.doesNotMatch(nav, /aria-label="Complete — Complaint 1"/);
 
     failHistory = false;
     const retry = renderer.root.findAllByType("button")
@@ -331,7 +341,8 @@ test("a failed automatic History capture keeps the saved complaint visible and r
     });
     assert.equal(complaintPosts, 1);
     assert.equal(historyPosts, 2);
-    assert.equal(savedCalls, 1);
+    assert.equal(savedReports.length, 2);
+    assert.equal(savedReports[1]?.status.completed, true);
   } finally {
     renderer?.unmount();
     globalThis.fetch = originalFetch;

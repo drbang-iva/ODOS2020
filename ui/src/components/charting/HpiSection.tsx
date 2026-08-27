@@ -187,6 +187,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
         await captureHistory();
         finishComplaintCapture(pending);
       } catch (caught) {
+        reportComplaintCaptureFailure(pending);
         setSaved(null);
         const detail = caught instanceof Error ? caught.message : String(caught);
         setError(`The complaint was saved, but History was not recorded on the chart. Retry recording History. ${detail}`);
@@ -279,6 +280,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
       }
     } catch (caught) {
       const detail = caught instanceof Error ? caught.message : String(caught);
+      if (pendingHistoryCapture) reportComplaintCaptureFailure(pendingHistoryCapture);
       setError(pendingHistoryCapture
         ? `The complaint was saved, but History was not recorded on the chart. Retry recording History. ${detail}`
         : detail);
@@ -304,6 +306,10 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
     onSaved(pending.status, pending.addAnother);
     pendingNextConcernFocus.current = pending.addAnother;
     setDraft(pending.addAnother ? blankComplaintDraft() : null);
+  }
+
+  function reportComplaintCaptureFailure(pending: PendingHistoryCapture) {
+    onSaved({ ...pending.status, completed: false }, true);
   }
 
   return (
