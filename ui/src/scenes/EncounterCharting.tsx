@@ -702,7 +702,8 @@ export function EncounterCharting({ patient, encounterId }: Props) {
                 encounterReference={encounterReference}
                 onRefer={() => setReferralComposeOpen(true)}
                 onSaved={(status, keepOpen) => {
-                  entrySheetGuard.resetDirty(Boolean(keepOpen));
+                  if (keepOpen && !status.completed) entrySheetGuard.markDirty();
+                  else entrySheetGuard.resetDirty(Boolean(keepOpen));
                   markSaved(entrySheetSection, status);
                   if (!keepOpen) setEntrySheetSection(undefined);
                 }}

@@ -597,6 +597,35 @@ test("Save and Add Another resets the sheet guard before a later swap", { timeou
   }
 });
 
+test("a failed automatic History capture keeps the HPI sheet dirty", { timeout: 30_000 }, async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  page.setDefaultTimeout(5_000);
+  const dialogs: string[] = [];
+  page.on("dialog", async (dialog) => {
+    dialogs.push(dialog.message());
+    await dialog.dismiss();
+  });
+  try {
+    await page.goto(
+      `${origin}/tests/fixtures/entry-sheets.html?section=hpi&failHistory=true`,
+      { waitUntil: "networkidle" },
+    );
+    await page.getByRole("button", { name: "Other", exact: true }).click();
+    await page.getByLabel("Presenting concern").fill("Persisted complaint with failed History");
+    await page.getByRole("button", { name: "Save Complaint" }).click();
+    await page.getByRole("alert").filter({ hasText: "History was not recorded" }).waitFor();
+
+    await openChartAnotherGroup(page, "va");
+    await page.locator('[data-editor-section-id="va"]').click();
+    assert.deepEqual(dialogs, [
+      "Discard unsaved changes in Chief Complaint / HPI / ROS and open Visual Acuity?",
+    ]);
+    await page.getByRole("dialog", { name: "Chief Complaint / HPI / ROS" }).waitFor();
+  } finally {
+    await page.close();
+  }
+});
+
 test("Save and Add Another seeds a clean checkpoint for canceling the next complaint", { timeout: 30_000 }, async () => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   page.setDefaultTimeout(5_000);

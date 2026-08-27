@@ -183,7 +183,11 @@ window.fetch = async (input, init) => {
     provenance: { source: "manual", recordedAt: "2026-08-27T12:00:00.000Z", actorReference: "Practitioner/test" },
     provenanceHistory: [],
   }] : [] });
-  if (url.endsWith("/clinical-graph/hpi")) return Response.json({ observationReference: "Observation/history-1" });
+  if (url.endsWith("/clinical-graph/hpi")) {
+    return new URLSearchParams(window.location.search).get("failHistory") === "true" && init?.method === "POST"
+      ? Response.json({ error: "Synthetic History failure" }, { status: 503 })
+      : Response.json({ observationReference: "Observation/history-1" });
+  }
   if (url.endsWith("/clinical-graph/diagnosis-catalog")) return Response.json({ diagnoses: [] });
   if (url.includes("/clinical-graph/protocols/")) return Response.json({ applications: [], offers: [] });
   if (url.includes("/clinical-graph/eye-growth/history")) return Response.json({ rows: [] });
@@ -211,7 +215,7 @@ function Fixture() {
   const mapped = active ? isExamEntrySheetSectionId(active) : false;
   const sheetGuard = useExamEntrySheetGuard(mapped ? active : undefined);
   const sheetOpen = Boolean(active && (mapped || forceSheet));
-  const editor = active ? renderEditor(active, sheetGuard.resetDirty) : null;
+  const editor = active ? renderEditor(active, sheetGuard.resetDirty, sheetGuard.markDirty) : null;
   const showHeader = params.get("header") === "true";
   const showReturnButton = params.get("returnButton") === "true";
   const projection = params.get("comprehensive") === "true" ? COMPREHENSIVE_PROJECTION : FIXTURE_PROJECTION;
@@ -294,7 +298,11 @@ function Fixture() {
   );
 }
 
-function renderEditor(sectionId: FixtureSectionId, resetDirty: (keepCancelableEditorOpen?: boolean) => void): React.ReactNode {
+function renderEditor(
+  sectionId: FixtureSectionId,
+  resetDirty: (keepCancelableEditorOpen?: boolean) => void,
+  markDirty: () => void,
+): React.ReactNode {
   const patientReference = "Patient/test";
   const encounterReference = "Encounter/test";
   const props = { patientReference, encounterReference, onSaved: () => resetDirty() };
@@ -303,7 +311,10 @@ function renderEditor(sectionId: FixtureSectionId, resetDirty: (keepCancelableEd
       <HpiSection
         patientReference={patientReference}
         encounterReference={encounterReference}
-        onSaved={(_status, keepOpen) => resetDirty(keepOpen)}
+        onSaved={(status, keepOpen) => {
+          if (keepOpen && !status.completed) markDirty();
+          else resetDirty(keepOpen);
+        }}
       />
     );
     case "wearing": return <WearingSection {...props} />;
