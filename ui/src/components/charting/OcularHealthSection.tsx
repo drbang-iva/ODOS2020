@@ -371,11 +371,8 @@ export function OcularHealthSection({
             const field = abnormalField(definition);
             const grades = gradeFields(definition);
             const row = captures[definition.stableKey] ?? emptyRow();
-            const persistedRow = pristine[definition.stableKey] ?? emptyRow();
             const prior = priors[definition.stableKey] ?? emptyPriorReadings();
-            const diagnosisObservations = savedDiagnosisObservations[definition.stableKey];
-            const diagnosisReady = EYES.some((eye) => persistedRow[eye].selections.length > 0) &&
-              EYES.every((eye) => sameCapture(row[eye], persistedRow[eye]));
+            const diagnosisObservations = savedDiagnosisObservations[definition.stableKey] ?? [];
             const focused = runnerEnabled && definition.stableKey === highlightedStructureKey;
             return (
               <article
@@ -403,7 +400,7 @@ export function OcularHealthSection({
                     onCopy={() => copyEye(definition, eye, eye === "OD" ? "OS" : "OD")}
                   />
                 ))}</div>
-                {diagnosisReady && <DiagnosisPicker
+                {diagnosisObservations.length > 0 && <DiagnosisPicker
                   encounterReference={encounterReference}
                   findingDefinitionKey={definition.stableKey}
                   observationReferences={diagnosisObservations}
