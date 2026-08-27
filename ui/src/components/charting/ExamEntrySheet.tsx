@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useCallback, useEffect, useRef, type ReactNode } from "react";
 import { useDockedPanel } from "../commercial/panel-shared";
 
 export const EXAM_ENTRY_SHEET_CONFIG = {
@@ -35,17 +35,108 @@ export function isExamEntrySheetSectionId(sectionId: string): sectionId is ExamE
   return sectionId in EXAM_ENTRY_SHEET_CONFIG;
 }
 
-export function ExamEntrySheet({ sectionId, onCancel, active = true, hidden = false, children }: {
+export function useExamEntrySheetGuard(sectionId?: ExamEntrySheetSectionId) {
+  const dirtyRef = useRef(false);
+  const dirtyCheckpointRef = useRef<boolean>();
+  const lastFocusRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    dirtyRef.current = false;
+    dirtyCheckpointRef.current = undefined;
+    lastFocusRef.current = null;
+  }, [sectionId]);
+
+  const resetDirty = useCallback((keepCancelableEditorOpen = false) => {
+    dirtyRef.current = false;
+    dirtyCheckpointRef.current = keepCancelableEditorOpen ? false : undefined;
+  }, []);
+  const markDirty = useCallback(() => {
+    dirtyRef.current = true;
+  }, []);
+  const markDirtyCheckpoint = useCallback(() => {
+    if (dirtyCheckpointRef.current !== undefined) dirtyCheckpointRef.current = true;
+  }, []);
+  const checkpointDirty = useCallback(() => {
+    dirtyCheckpointRef.current = dirtyRef.current;
+  }, []);
+  const restoreDirtyCheckpoint = useCallback(() => {
+    if (dirtyCheckpointRef.current === undefined) return;
+    dirtyRef.current = dirtyCheckpointRef.current;
+    dirtyCheckpointRef.current = undefined;
+  }, []);
+  const clearDirtyCheckpoint = useCallback(() => {
+    dirtyCheckpointRef.current = undefined;
+  }, []);
+  const rememberFocus = useCallback((element: HTMLElement) => {
+    lastFocusRef.current = element;
+  }, []);
+  const requestTransition = useCallback((destinationTitle: string | undefined, transition: () => void) => {
+    if (sectionId && dirtyRef.current) {
+      const currentTitle = EXAM_ENTRY_SHEET_CONFIG[sectionId].title;
+      const message = destinationTitle
+        ? `Discard unsaved changes in ${currentTitle} and open ${destinationTitle}?`
+        : `Discard unsaved changes in ${currentTitle}?`;
+      if (typeof window === "undefined" || typeof window.confirm !== "function" || !window.confirm(message)) {
+        lastFocusRef.current?.focus();
+        return false;
+      }
+    }
+    dirtyRef.current = false;
+    dirtyCheckpointRef.current = undefined;
+    transition();
+    return true;
+  }, [sectionId]);
+
+  return {
+    checkpointDirty,
+    clearDirtyCheckpoint,
+    markDirty,
+    markDirtyCheckpoint,
+    rememberFocus,
+    requestTransition,
+    resetDirty,
+    restoreDirtyCheckpoint,
+  };
+}
+
+export function ExamEntrySheet({
+  sectionId,
+  onCancel,
+  onCheckpointDirty,
+  onClearDirtyCheckpoint,
+  onDirty,
+  onDirtyCheckpoint,
+  onFocusWithin,
+  onRestoreDirtyCheckpoint,
+  active = true,
+  hidden = false,
+  children,
+}: {
   sectionId: ExamEntrySheetId;
   onCancel: () => void;
+  onCheckpointDirty?: () => void;
+  onClearDirtyCheckpoint?: () => void;
+  onDirty?: () => void;
+  onDirtyCheckpoint?: () => void;
+  onFocusWithin?: (element: HTMLElement) => void;
+  onRestoreDirtyCheckpoint?: () => void;
   active?: boolean;
   hidden?: boolean;
   children: ReactNode;
 }) {
-  const { dialogRef, initialFocusRef, titleId } = useDockedPanel(onCancel, active);
+  const modal = sectionId === "visit-charges";
+  const { dialogRef, initialFocusRef, titleId } = useDockedPanel(onCancel, active, { modal });
   const config = sectionId === "visit-charges"
     ? { title: "Visit & charges", layout: "visit-charges" }
     : EXAM_ENTRY_SHEET_CONFIG[sectionId];
+  const findInnerCancel = () => Array.from(dialogRef.current?.querySelectorAll("button") ?? [])
+    .find((button) => !button.closest("[data-entry-sheet-chrome]") && button.textContent?.trim() === "Cancel");
+  const markEventDirty = (target: EventTarget | null) => {
+    onDirty?.();
+    const element = target instanceof Element ? target : undefined;
+    const editorRoot = findInnerCancel()?.parentElement?.parentElement;
+    if (element && editorRoot && !editorRoot.contains(element)) onDirtyCheckpoint?.();
+  };
   return (
     <div className="odos-exam-entry-layer" data-testid="exam-entry-layer" hidden={hidden}>
       <div
@@ -61,12 +152,33 @@ export function ExamEntrySheet({ sectionId, onCancel, active = true, hidden = fa
         id={sectionId === "visit-charges" ? "visit-charges-sheet" : undefined}
         ref={dialogRef}
         role="dialog"
-        aria-modal="true"
+        aria-modal={modal ? "true" : undefined}
         aria-labelledby={titleId}
         className="odos-exam-entry-sheet"
         data-testid="exam-entry-sheet"
         data-entry-sheet-layout={config.layout}
         data-entry-sheet-section={sectionId}
+        onInputCapture={(event) => markEventDirty(event.target)}
+        onChangeCapture={(event) => markEventDirty(event.target)}
+        onClickCapture={(event) => {
+          const target = event.target instanceof Element ? event.target : undefined;
+          const control = target?.closest('button, [role="button"]');
+          if (!control) return;
+          if (control.closest("[data-entry-sheet-chrome], [data-entry-sheet-pristine-action]")) return;
+          const activeInnerCancel = findInnerCancel();
+          if (control === activeInnerCancel) {
+            queueMicrotask(() => onRestoreDirtyCheckpoint?.());
+            return;
+          }
+          if (!activeInnerCancel) onCheckpointDirty?.();
+          markEventDirty(event.target);
+          if (!activeInnerCancel) {
+            window.setTimeout(() => {
+              if (!findInnerCancel()) onClearDirtyCheckpoint?.();
+            }, 0);
+          }
+        }}
+        onFocusCapture={(event) => onFocusWithin?.(event.target as HTMLElement)}
       >
         <header className="odos-exam-entry-sheet-heading">
           <div>

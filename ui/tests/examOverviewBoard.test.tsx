@@ -1611,6 +1611,30 @@ test("an open finding sheet visibly requires Finish or Cancel before Visit can o
   }
 });
 
+test("EncounterCharting passes the clinical sheet guard to enabled and disabled header actions", async () => {
+  const harness = await renderEncounter(PROJECTION);
+  try {
+    let header = harness.renderer.root.findByType(EncounterHeader);
+    let sign = header.findByProps({ "data-chart-bar-slot": "sign" });
+    let abandon = header.findAllByType("button").find((button) => textContent(button) === "Abandon encounter");
+
+    assert.equal(header.props.clinicalActionUnavailableReason, undefined);
+    assert.equal(sign.props.disabled, false);
+    assert.equal(abandon?.props.disabled, false);
+
+    await act(async () => harness.renderer.root.findByProps({ "data-editor-section-id": "pupils" }).props.onClick());
+
+    header = harness.renderer.root.findByType(EncounterHeader);
+    sign = header.findByProps({ "data-chart-bar-slot": "sign" });
+    abandon = header.findAllByType("button").find((button) => textContent(button) === "Abandon encounter");
+    assert.equal(header.props.clinicalActionUnavailableReason, "Finish or cancel Pupils first");
+    assert.equal(sign.props.disabled, true);
+    assert.equal(abandon?.props.disabled, true);
+  } finally {
+    harness.restore();
+  }
+});
+
 test("unknown encounter keeps both Visit write surfaces locked during load and after fetch failure", async (t) => {
   async function assertBillingLocked(
     harness: Awaited<ReturnType<typeof renderEncounter>>,
@@ -1670,6 +1694,37 @@ test("switching to the diagnosis view preserves the existing DiagnosisWorkspace 
       await flushEffects();
     });
     assert.equal(harness.renderer.root.findAllByType(DiagnosisWorkspace).length, 1);
+  } finally {
+    harness.restore();
+  }
+});
+
+test("EncounterCharting keeps a dirty mapped sheet mounted until its guarded transition is accepted", async () => {
+  const harness = await renderEncounter(PROJECTION);
+  const prompts: string[] = [];
+  try {
+    Object.assign(globalThis.window, {
+      confirm(message: string) {
+        prompts.push(message);
+        return false;
+      },
+    });
+    await act(async () => editorControl(harness.renderer.root, "hpi").props.onClick());
+    const hpiSheet = harness.renderer.root.findAllByType(ExamEntrySheet).find((sheet) => !sheet.props.hidden);
+    assert.ok(hpiSheet);
+    await act(async () => hpiSheet.props.onDirty());
+
+    await act(async () => editorControl(harness.renderer.root, "va").props.onClick());
+    assert.equal(harness.renderer.root.findAllByType(ExamEntrySheet).find((sheet) => !sheet.props.hidden)?.props.sectionId, "hpi");
+    assert.deepEqual(prompts, [
+      "Discard unsaved changes in Chief Complaint / HPI / ROS and open Visual Acuity?",
+    ]);
+
+    Object.assign(globalThis.window, { confirm: () => true });
+    await act(async () => editorControl(harness.renderer.root, "va").props.onClick());
+    assert.equal(harness.renderer.root.findAllByType(ExamEntrySheet).find((sheet) => !sheet.props.hidden)?.props.sectionId, "va");
+    assert.equal(harness.renderer.root.findAllByType(HpiSection).length, 0);
+    assert.equal(harness.renderer.root.findAllByType(VaSection).length, 1);
   } finally {
     harness.restore();
   }

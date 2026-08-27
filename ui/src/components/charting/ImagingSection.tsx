@@ -318,8 +318,8 @@ export function ImagingSection({ patientReference, encounterReference, onSaved }
             <p className="mt-1 text-sm text-[color:var(--odos-muted)]">Review chart imaging by category and date, or add a native capture.</p>
           </div>
           <div className="flex rounded border border-[color:var(--odos-line)] bg-bg-panel p-1">
-            <button type="button" aria-pressed={scope === "patient"} className={scope === "patient" ? "sidebar-button" : "px-3 py-1 text-xs text-[color:var(--odos-muted)]"} onClick={() => setScope("patient")}>All chart imaging</button>
-            <button type="button" aria-pressed={scope === "encounter"} className={scope === "encounter" ? "sidebar-button" : "px-3 py-1 text-xs text-[color:var(--odos-muted)]"} onClick={() => setScope("encounter")}>This visit</button>
+            <button type="button" aria-pressed={scope === "patient"} data-entry-sheet-pristine-action className={scope === "patient" ? "sidebar-button" : "px-3 py-1 text-xs text-[color:var(--odos-muted)]"} onClick={() => setScope("patient")}>All chart imaging</button>
+            <button type="button" aria-pressed={scope === "encounter"} data-entry-sheet-pristine-action className={scope === "encounter" ? "sidebar-button" : "px-3 py-1 text-xs text-[color:var(--odos-muted)]"} onClick={() => setScope("encounter")}>This visit</button>
           </div>
         </div>
 

@@ -548,10 +548,10 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
           </div>
           <div className="flex items-center gap-2">
             {canShowEditing && onRefer && (
-              <button type="button" className="sidebar-button" onClick={onRefer}>Refer to…</button>
+              <button type="button" className="sidebar-button" data-entry-sheet-pristine-action onClick={onRefer}>Refer to…</button>
             )}
             {canShowEditing && (
-              <button type="button" className="sidebar-button" onClick={() => setCaptureOpen((current) => !current)}>
+              <button type="button" className="sidebar-button" data-entry-sheet-pristine-action onClick={() => setCaptureOpen((current) => !current)}>
                 Save as Protocol
               </button>
             )}
