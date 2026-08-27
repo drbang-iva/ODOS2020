@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Basic, Bundle, CodeableConcept, Condition, Encounter, Observation, Provenance } from "@medplum/fhirtypes";
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
@@ -40,6 +41,11 @@ export interface DiagnosisPickFhirClient {
   search<T extends PickResource>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>>;
   create<T extends PickResource>(resource: T, extraHeaders?: Record<string, string>): Promise<T>;
   update<T extends PickResource>(resourceType: T["resourceType"], id: string, resource: T, extraHeaders?: Record<string, string>): Promise<T>;
+  executeTransaction(
+    bundle: Bundle,
+    extraHeaders?: Record<string, string>,
+    options?: { autoRollbackCreatedEntries?: boolean },
+  ): Promise<Bundle>;
 }
 
 const pickSchema = z.object({
@@ -161,7 +167,7 @@ export async function handleDiagnosisPickRequest(
     encounter = await staff.fhir.read<Encounter>("Encounter", encounterId);
     patientReference = encounter.subject?.reference;
   }
-  if ((parsed.data.status || parsed.data.action === "discard") && !encounter) {
+  if ((parsed.data.status || parsed.data.action === "confirm" || parsed.data.action === "discard") && !encounter) {
     encounter = await staff.fhir.read<Encounter>("Encounter", encounterId);
   }
   if ((parsed.data.status || parsed.data.action === "discard") && encounter?.status === "finished") {
@@ -176,11 +182,8 @@ export async function handleDiagnosisPickRequest(
     : parsed.data.action === "possible" ? "provisional" : "confirmed";
   const recordedAt = deps.now?.() ?? new Date().toISOString();
   const evidenceReference = observation?.id ? `Observation/${observation.id}` : undefined;
-  let condition: Condition;
-  if (existing) {
-    try {
-      condition = await updateCondition(
-        staff.fhir,
+  const conditionDraft = existing
+    ? updatedCondition(
         existing,
         diagnosis,
         compositeIdentifierValue,
@@ -188,16 +191,8 @@ export async function handleDiagnosisPickRequest(
         codes,
         verificationStatus,
         evidenceReference,
-      );
-    } catch (error) {
-      if (isConflict(error)) {
-        return { status: 409, body: { error: "This diagnosis was modified concurrently — reload and retry." } };
-      }
-      throw error;
-    }
-  } else {
-    condition = await staff.fhir.create<Condition>(
-      buildEncounterDiagnosisCondition({
+      )
+    : buildEncounterDiagnosisCondition({
         patientReference,
         encounterReference,
         code: conditionCodeForResolution(diagnosis, codes),
@@ -205,56 +200,109 @@ export async function handleDiagnosisPickRequest(
         recordedDate: recordedAt,
         identifiers: [{ system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM, value: compositeIdentifierValue }],
         ...(evidenceReference ? { evidenceObservationReferences: [evidenceReference] } : {}),
-      }),
-      {
+      });
+  const conditionFullUrl = existing ? `Condition/${existing.id}` : `urn:uuid:${randomUUID()}`;
+  const provenanceFullUrl = `urn:uuid:${randomUUID()}`;
+  let condition: Condition | undefined;
+  let linkedEncounter: Encounter | undefined;
+  let provenance: Provenance | undefined;
+  let encounterSnapshot = encounter;
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const encounterChange = parsed.data.action === "confirm"
+      ? linkEncounterDiagnosis(encounterSnapshot!, conditionFullUrl)
+      : parsed.data.action === "discard"
+        ? unlinkEncounterDiagnosis(encounterSnapshot!, conditionFullUrl)
+        : undefined;
+    const provenanceDraft = buildProvenance({
+      targetReferences: [conditionFullUrl, ...(encounterChange?.changed ? [encounterReference] : [])],
+      patientReference,
+      occurredDateTime: recordedAt,
+      recorded: recordedAt,
+      activityCode: existing ? "UPDATE" : "CREATE",
+      activityDisplay: `${parsed.data.action} encounter diagnosis`,
+      agents: [{ typeCode: "author", typeDisplay: "Author", whoReference: staff.staffReference }],
+      ...(evidenceReference ? { entityReferences: [evidenceReference] } : {}),
+      entityValues: [{
+        role: "source",
+        display: parsed.data.source
+          ? `Explicit ${parsed.data.source} diagnosis pick: ${diagnosis.stableKey}`
+          : `Explicit diagnosis pick: ${diagnosis.stableKey}`,
+      }],
+    }) as Provenance;
+    const transactionBundle: Bundle = {
+      resourceType: "Bundle",
+      type: "transaction",
+      entry: [
+        existing
+          ? {
+              fullUrl: conditionFullUrl,
+              resource: conditionDraft,
+              request: {
+                method: "PUT",
+                url: conditionFullUrl,
+                ...(existing.meta?.versionId ? { ifMatch: `W/\"${existing.meta.versionId}\"` } : {}),
+              },
+            }
+          : {
+              fullUrl: conditionFullUrl,
+              resource: conditionDraft,
+              request: {
+                method: "POST",
+                url: "Condition",
+                ifNoneExist: `identifier=${DIAGNOSIS_KEY_IDENTIFIER_SYSTEM}|${compositeIdentifierValue}`,
+              },
+            },
+        ...(encounterChange?.changed ? [{
+          fullUrl: encounterReference,
+          resource: encounterChange.encounter,
+          request: {
+            method: "PUT" as const,
+            url: encounterReference,
+            ...(encounterSnapshot?.meta?.versionId ? { ifMatch: `W/\"${encounterSnapshot.meta.versionId}\"` } : {}),
+          },
+        }] : []),
+        {
+          fullUrl: provenanceFullUrl,
+          resource: provenanceDraft,
+          request: { method: "POST", url: "Provenance" },
+        },
+      ],
+    };
+
+    try {
+      const response = await staff.fhir.executeTransaction(transactionBundle, {
         ...DIAGNOSIS_PICK_WRITE_HEADERS,
-        "If-None-Exist": `identifier=${DIAGNOSIS_KEY_IDENTIFIER_SYSTEM}|${compositeIdentifierValue}`,
-      },
-    );
+        Prefer: "return=representation",
+      }, { autoRollbackCreatedEntries: false });
+      const persisted = diagnosisPickTransactionResources(transactionBundle, response, encounterChange?.changed === true);
+      condition = persisted.condition;
+      linkedEncounter = encounterChange ? persisted.encounter ?? encounterChange.encounter : undefined;
+      provenance = persisted.provenance;
+      break;
+    } catch (error) {
+      if (!isConflict(error)) throw error;
+      if (existing?.id) {
+        const currentCondition = await staff.fhir.read<Condition>("Condition", existing.id);
+        if (currentCondition.meta?.versionId !== existing.meta?.versionId) {
+          return { status: 409, body: { error: "This diagnosis was modified concurrently — reload and retry." } };
+        }
+      }
+      if (encounterChange?.changed && attempt === 0) {
+        encounterSnapshot = await staff.fhir.read<Encounter>("Encounter", encounterId);
+        continue;
+      }
+      return {
+        status: 409,
+        body: { error: encounterChange?.changed
+          ? "The encounter diagnoses changed concurrently — reload and retry."
+          : "This diagnosis was modified concurrently — reload and retry." },
+      };
+    }
   }
+  if (!condition || !provenance) throw new Error("Diagnosis pick transaction exhausted its retry budget.");
 
   const conditionReference = `Condition/${condition.id}`;
-  let linkedEncounter: Encounter | undefined;
-  let encounterChanged = false;
-  if (parsed.data.action === "confirm") {
-    try {
-      const linked = await ensureEncounterDiagnosisLinked(staff.fhir, encounterId, conditionReference, encounter);
-      linkedEncounter = linked.encounter;
-      encounterChanged = linked.changed;
-    } catch (error) {
-      if (isConflict(error)) {
-        return { status: 409, body: { error: "The encounter diagnoses changed concurrently — reload and retry." } };
-      }
-      throw error;
-    }
-  } else if (parsed.data.action === "discard") {
-    try {
-      const unlinked = await ensureEncounterDiagnosisUnlinked(staff.fhir, encounterId, conditionReference, encounter);
-      linkedEncounter = unlinked.encounter;
-      encounterChanged = unlinked.changed;
-    } catch (error) {
-      if (isConflict(error)) {
-        return { status: 409, body: { error: "The encounter diagnoses changed concurrently — reload and retry." } };
-      }
-      throw error;
-    }
-  }
-  const provenance = await staff.fhir.create<Provenance>(buildProvenance({
-    targetReferences: [conditionReference, ...(encounterChanged ? [encounterReference] : [])],
-    patientReference,
-    occurredDateTime: recordedAt,
-    recorded: recordedAt,
-    activityCode: existing ? "UPDATE" : "CREATE",
-    activityDisplay: `${parsed.data.action} encounter diagnosis`,
-    agents: [{ typeCode: "author", typeDisplay: "Author", whoReference: staff.staffReference }],
-    ...(evidenceReference ? { entityReferences: [evidenceReference] } : {}),
-    entityValues: [{
-      role: "source",
-      display: parsed.data.source
-        ? `Explicit ${parsed.data.source} diagnosis pick: ${diagnosis.stableKey}`
-        : `Explicit diagnosis pick: ${diagnosis.stableKey}`,
-    }],
-  }), DIAGNOSIS_PICK_WRITE_HEADERS);
 
   const diagnosisVisitStatus = parsed.data.status
     ? await deps.diagnosisVisitStatusStore.upsert({
@@ -318,68 +366,42 @@ function stagedFamilyForMember(stableKey: string): string | undefined {
   )?.[0];
 }
 
-async function ensureEncounterDiagnosisLinked(
-  fhir: DiagnosisPickFhirClient,
-  encounterId: string,
+function linkEncounterDiagnosis(
+  encounter: Encounter,
   conditionReference: string,
-  initialEncounter: Encounter | undefined,
-): Promise<{ encounter: Encounter; changed: boolean }> {
-  let encounter = initialEncounter;
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    encounter ??= await fhir.read<Encounter>("Encounter", encounterId);
-    if (encounter.diagnosis?.some((diagnosis) => diagnosis.condition.reference === conditionReference)) {
-      return { encounter, changed: false };
-    }
-    const nextRank = Math.max(0, ...(encounter.diagnosis ?? []).map((diagnosis) =>
-      Number.isInteger(diagnosis.rank) && (diagnosis.rank ?? 0) > 0 ? diagnosis.rank! : 0
-    )) + 1;
-    try {
-      const updated = await fhir.update<Encounter>("Encounter", encounterId, {
-        ...encounter,
-        diagnosis: [
-          ...(encounter.diagnosis ?? []),
-          buildEncounterDiagnosisComponent(conditionReference, nextRank),
-        ],
-      }, {
-        ...DIAGNOSIS_PICK_WRITE_HEADERS,
-        ...(encounter.meta?.versionId ? { "If-Match": `W/\"${encounter.meta.versionId}\"` } : {}),
-      });
-      return { encounter: updated, changed: true };
-    } catch (error) {
-      if (!isConflict(error) || attempt === 1) throw error;
-      encounter = await fhir.read<Encounter>("Encounter", encounterId);
-    }
+): { encounter: Encounter; changed: boolean } {
+  if (encounter.diagnosis?.some((diagnosis) => diagnosis.condition.reference === conditionReference)) {
+    return { encounter, changed: false };
   }
-  throw new Error("Encounter diagnosis linking exhausted its retry budget.");
+  const nextRank = Math.max(0, ...(encounter.diagnosis ?? []).map((diagnosis) =>
+    Number.isInteger(diagnosis.rank) && (diagnosis.rank ?? 0) > 0 ? diagnosis.rank! : 0
+  )) + 1;
+  return {
+    encounter: {
+      ...encounter,
+      diagnosis: [
+        ...(encounter.diagnosis ?? []),
+        buildEncounterDiagnosisComponent(conditionReference, nextRank),
+      ],
+    },
+    changed: true,
+  };
 }
 
-async function ensureEncounterDiagnosisUnlinked(
-  fhir: DiagnosisPickFhirClient,
-  encounterId: string,
+function unlinkEncounterDiagnosis(
+  encounter: Encounter,
   conditionReference: string,
-  initialEncounter: Encounter | undefined,
-): Promise<{ encounter: Encounter; changed: boolean }> {
-  let encounter = initialEncounter;
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    encounter ??= await fhir.read<Encounter>("Encounter", encounterId);
-    if (!encounter.diagnosis?.some((diagnosis) => diagnosis.condition.reference === conditionReference)) {
-      return { encounter, changed: false };
-    }
-    try {
-      const updated = await fhir.update<Encounter>("Encounter", encounterId, {
-        ...encounter,
-        diagnosis: encounter.diagnosis.filter((diagnosis) => diagnosis.condition.reference !== conditionReference),
-      }, {
-        ...DIAGNOSIS_PICK_WRITE_HEADERS,
-        ...(encounter.meta?.versionId ? { "If-Match": `W/\"${encounter.meta.versionId}\"` } : {}),
-      });
-      return { encounter: updated, changed: true };
-    } catch (error) {
-      if (!isConflict(error) || attempt === 1) throw error;
-      encounter = await fhir.read<Encounter>("Encounter", encounterId);
-    }
+): { encounter: Encounter; changed: boolean } {
+  if (!encounter.diagnosis?.some((diagnosis) => diagnosis.condition.reference === conditionReference)) {
+    return { encounter, changed: false };
   }
-  throw new Error("Encounter diagnosis unlinking exhausted its retry budget.");
+  return {
+    encounter: {
+      ...encounter,
+      diagnosis: encounter.diagnosis.filter((diagnosis) => diagnosis.condition.reference !== conditionReference),
+    },
+    changed: true,
+  };
 }
 
 async function findEncounterDiagnosis(
@@ -410,8 +432,7 @@ async function findEncounterDiagnosis(
   return { existing: exact ?? pendingFamily, conflictingStagedMember };
 }
 
-async function updateCondition(
-  fhir: DiagnosisPickFhirClient,
+function updatedCondition(
   existing: Condition,
   diagnosis: DiagnosisCatalogRow,
   compositeIdentifierValue: string,
@@ -419,7 +440,7 @@ async function updateCondition(
   codes: readonly string[],
   verificationStatus: ConditionVerificationStatusCode,
   evidenceReference: string | undefined,
-): Promise<Condition> {
+): Condition {
   if (!existing.id) throw new Error("Existing diagnosis Condition has no id.");
   const evidence = [...(existing.evidence ?? [])];
   if (evidenceReference && !evidence.flatMap((row) => row.detail ?? []).some((row) => row.reference === evidenceReference)) {
@@ -437,7 +458,7 @@ async function updateCondition(
   const uniqueIdentifiers = identifiers.filter((identifier, index) => identifiers.findIndex((candidate) =>
     candidate.system === identifier.system && candidate.value === identifier.value
   ) === index);
-  const next: Condition = {
+  return {
     ...existing,
     identifier: uniqueIdentifiers,
     verificationStatus: verificationStatusConcept(verificationStatus),
@@ -446,10 +467,45 @@ async function updateCondition(
     }),
     ...(evidence.length ? { evidence } : {}),
   };
-  return fhir.update("Condition", existing.id, next, {
-    ...DIAGNOSIS_PICK_WRITE_HEADERS,
-    ...(existing.meta?.versionId ? { "If-Match": `W/\"${existing.meta.versionId}\"` } : {}),
-  });
+}
+
+function diagnosisPickTransactionResources(
+  request: Bundle,
+  response: Bundle,
+  encounterChanged: boolean,
+): { condition: Condition; encounter?: Encounter; provenance: Provenance } {
+  if (response.resourceType !== "Bundle" || response.type !== "transaction-response") {
+    throw new Error("Diagnosis pick FHIR transaction did not return a transaction-response Bundle.");
+  }
+  const responseEntries = response.entry;
+  if (!responseEntries || responseEntries.length !== request.entry?.length) {
+    throw new Error("Diagnosis pick FHIR transaction returned an incomplete response.");
+  }
+  for (const entry of responseEntries) {
+    const status = Number.parseInt(entry.response?.status ?? "", 10);
+    if (!Number.isInteger(status) || status < 200 || status >= 300) {
+      throw Object.assign(new Error(`Diagnosis pick FHIR transaction failed with ${entry.response?.status ?? "no status"}.`), {
+        ...(Number.isInteger(status) ? { status } : {}),
+      });
+    }
+  }
+  const condition = responseEntries[0]?.resource;
+  const encounter = encounterChanged ? responseEntries[1]?.resource : undefined;
+  const provenance = responseEntries.at(-1)?.resource;
+  if (condition?.resourceType !== "Condition" || !condition.id) {
+    throw new Error("Diagnosis pick FHIR transaction did not return the persisted Condition.");
+  }
+  if (encounterChanged && (encounter?.resourceType !== "Encounter" || !encounter.id)) {
+    throw new Error("Diagnosis pick FHIR transaction did not return the persisted Encounter.");
+  }
+  if (provenance?.resourceType !== "Provenance" || !provenance.id) {
+    throw new Error("Diagnosis pick FHIR transaction did not return the persisted Provenance.");
+  }
+  return {
+    condition,
+    ...(encounter?.resourceType === "Encounter" ? { encounter } : {}),
+    provenance,
+  };
 }
 
 function conditionCodeForResolution(row: DiagnosisCatalogRow, codes: readonly string[]): CodeableConcept {

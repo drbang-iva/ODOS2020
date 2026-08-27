@@ -282,6 +282,7 @@ class MemoryFhir {
   readonly resources: Resource[] = [];
   readonly writes: Array<{ operation: "create" | "update"; resourceType: string; id: string; headers?: Record<string, string> }> = [];
   readonly searches: Array<{ resourceType: string; params: Record<string, string> }> = [];
+  readonly transactions: Array<{ bundle: Bundle; headers?: Record<string, string>; options?: { autoRollbackCreatedEntries?: boolean } }> = [];
 
   async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
     const resource = this.resources.find((row) => row.resourceType === resourceType && row.id === id);
@@ -338,6 +339,60 @@ class MemoryFhir {
     this.writes.push({ operation: "update", resourceType, id, headers });
     return structuredClone(persisted);
   }
+
+  async executeTransaction(
+    bundle: Bundle,
+    headers?: Record<string, string>,
+    options?: { autoRollbackCreatedEntries?: boolean },
+  ): Promise<Bundle> {
+    this.transactions.push({ bundle: structuredClone(bundle), headers, options });
+    const resourcesBefore = structuredClone(this.resources);
+    const writesBefore = structuredClone(this.writes);
+    const references = new Map<string, string>();
+    try {
+      const responseEntries = [];
+      for (const entry of bundle.entry ?? []) {
+        const request = entry.request;
+        if (!request || !entry.resource) throw new Error("Synthetic transaction entry is incomplete.");
+        const resource = replaceTransactionReferences(structuredClone(entry.resource), references);
+        if (request.method === "POST") {
+          const writesAtStart = this.writes.length;
+          const persisted = await this.create(resource, {
+            ...headers,
+            ...(request.ifNoneExist ? { "If-None-Exist": request.ifNoneExist } : {}),
+          });
+          if (entry.fullUrl && persisted.id) references.set(entry.fullUrl, `${persisted.resourceType}/${persisted.id}`);
+          responseEntries.push({
+            resource: persisted,
+            response: { status: this.writes.length === writesAtStart ? "200 OK" : "201 Created" },
+          });
+        } else if (request.method === "PUT") {
+          const [resourceType, id] = request.url.split("/");
+          if (!resourceType || !id || resource.resourceType !== resourceType) {
+            throw new Error(`Synthetic transaction PUT mismatch for ${request.url}.`);
+          }
+          const persisted = await this.update(resource.resourceType, id, resource, {
+            ...headers,
+            ...(request.ifMatch ? { "If-Match": request.ifMatch } : {}),
+          });
+          responseEntries.push({ resource: persisted, response: { status: "200 OK" } });
+        } else {
+          throw new Error(`Synthetic transaction does not support ${request.method}.`);
+        }
+      }
+      return { resourceType: "Bundle", type: "transaction-response", entry: responseEntries };
+    } catch (error) {
+      this.resources.splice(0, this.resources.length, ...resourcesBefore);
+      this.writes.splice(0, this.writes.length, ...writesBefore);
+      throw error;
+    }
+  }
+}
+
+function replaceTransactionReferences<T extends Resource>(resource: T, references: ReadonlyMap<string, string>): T {
+  return JSON.parse(JSON.stringify(resource), (_key, value) =>
+    typeof value === "string" ? references.get(value) ?? value : value
+  ) as T;
 }
 
 test("real HTTP diagnosis picks persist right-eye evidence, Provenance, isolated tally ordering, and refuted audit state", async (t) => {
@@ -1334,6 +1389,19 @@ test("a concurrent Condition update returns 409 without silently retrying the cl
   class ConcurrentUpdateFhir extends MemoryFhir {
     conflictOnConditionUpdate = false;
 
+    override async executeTransaction(
+      bundle: Bundle,
+      headers?: Record<string, string>,
+      options?: { autoRollbackCreatedEntries?: boolean },
+    ): Promise<Bundle> {
+      if (this.conflictOnConditionUpdate) {
+        this.conflictOnConditionUpdate = false;
+        const current = this.resources.find((candidate) => candidate.resourceType === "Condition")!;
+        current.meta = { ...(current.meta ?? {}), versionId: String(Number(current.meta?.versionId ?? "0") + 1) };
+      }
+      return super.executeTransaction(bundle, headers, options);
+    }
+
     override async update<T extends Resource>(resourceType: T["resourceType"], id: string, resource: T, headers?: Record<string, string>): Promise<T> {
       if (resourceType === "Condition" && this.conflictOnConditionUpdate) {
         this.conflictOnConditionUpdate = false;
@@ -1368,6 +1436,90 @@ test("a concurrent Condition update returns 409 without silently retrying the cl
   const condition = fhir.resources.find((resource): resource is Condition => resource.resourceType === "Condition")!;
   assert.equal(condition.verificationStatus?.coding?.[0]?.code, "provisional");
   assert.equal(fhir.writes.filter((write) => write.resourceType === "Condition" && write.operation === "update").length, 0);
+});
+
+test("a failed diagnosis pick transaction leaves the Condition and Encounter unchanged", async () => {
+  class MidOperationFailureFhir extends MemoryFhir {
+    failEncounterWrite = false;
+
+    override async update<T extends Resource>(resourceType: T["resourceType"], id: string, resource: T, headers?: Record<string, string>): Promise<T> {
+      if (resourceType === "Encounter" && this.failEncounterWrite) {
+        throw Object.assign(new Error("FHIR 412 Precondition Failed"), { status: 412 });
+      }
+      return super.update(resourceType, id, resource, headers);
+    }
+  }
+
+  const fhir = new MidOperationFailureFhir();
+  fhir.resources.push(...diagnosisPickFhir().resources);
+  const pick = (action: "confirm" | "discard") => handleDiagnosisPickRequest({
+    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "provider", fhir }),
+  }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+    body: { diagnosisKey: "presbyopia", action, source: "catalog-search" },
+  });
+
+  const confirmed = await pick("confirm");
+  assert.equal(confirmed.status, 201, JSON.stringify(confirmed.body));
+  const condition = (confirmed.body as { condition: Condition }).condition;
+  const conditionReference = `Condition/${condition.id}`;
+  fhir.failEncounterWrite = true;
+
+  const discarded = await pick("discard");
+
+  assert.equal(discarded.status, 409, JSON.stringify(discarded.body));
+  assert.equal((await fhir.read<Condition>("Condition", condition.id!)).verificationStatus?.coding?.[0]?.code, "confirmed");
+  assert.equal((await fhir.read<Encounter>("Encounter", "e1")).diagnosis?.some((entry) =>
+    entry.condition.reference === conditionReference
+  ), true);
+});
+
+test("possible, confirm, and discard use atomic transactions with per-resource version preconditions", async () => {
+  const fhir = diagnosisPickFhir();
+  const encounter = fhir.resources.find((resource): resource is Encounter =>
+    resource.resourceType === "Encounter" && resource.id === "e1"
+  )!;
+  encounter.meta = { versionId: "7" };
+  const pick = (action: "possible" | "confirm" | "discard") => handleDiagnosisPickRequest({
+    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "provider", fhir }),
+  }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+    body: { diagnosisKey: "presbyopia", action, source: "catalog-search" },
+  });
+
+  assert.equal((await pick("possible")).status, 201);
+  assert.equal((await pick("confirm")).status, 200);
+  assert.equal((await pick("discard")).status, 200);
+
+  assert.equal(fhir.transactions.length, 3);
+  assert.deepEqual(fhir.transactions.map(({ bundle, options }) => ({
+    resources: bundle.entry?.map((entry) => entry.resource?.resourceType),
+    methods: bundle.entry?.map((entry) => entry.request?.method),
+    ifMatches: bundle.entry?.map((entry) => entry.request?.ifMatch),
+    noClientRollback: options?.autoRollbackCreatedEntries === false,
+  })), [{
+    resources: ["Condition", "Provenance"],
+    methods: ["POST", "POST"],
+    ifMatches: [undefined, undefined],
+    noClientRollback: true,
+  }, {
+    resources: ["Condition", "Encounter", "Provenance"],
+    methods: ["PUT", "PUT", "POST"],
+    ifMatches: ['W/"1"', 'W/"7"', undefined],
+    noClientRollback: true,
+  }, {
+    resources: ["Condition", "Encounter", "Provenance"],
+    methods: ["PUT", "PUT", "POST"],
+    ifMatches: ['W/"2"', 'W/"8"', undefined],
+    noClientRollback: true,
+  }]);
+  assert.equal(fhir.transactions[0]?.bundle.entry?.[0]?.request?.ifNoneExist,
+    "identifier=https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key|e1::presbyopia::none");
+  assert.deepEqual(fhir.transactions.map(({ bundle }) =>
+    (bundle.entry?.at(-1)?.resource as Provenance).target.some((target) => target.reference === "Encounter/e1")
+  ), [false, true, true]);
 });
 
 test("laterality-keyed picks keep both eyes distinct, escalate one eye, and discard only its Condition", async () => {
@@ -1580,9 +1732,28 @@ test("discard unlink is idempotent and confirm after discard relinks through the
 test("discard returns reload-and-retry after the Encounter unlink exhausts conflict retries", async () => {
   class ConcurrentEncounterUpdateFhir extends MemoryFhir {
     encounterConflictsRemaining = 0;
+    transactionInFlight = false;
+
+    override async executeTransaction(
+      bundle: Bundle,
+      headers?: Record<string, string>,
+      options?: { autoRollbackCreatedEntries?: boolean },
+    ): Promise<Bundle> {
+      if (this.encounterConflictsRemaining > 0) {
+        this.encounterConflictsRemaining -= 1;
+        const current = this.resources.find((candidate) => candidate.resourceType === "Encounter" && candidate.id === "e1")!;
+        current.meta = { ...(current.meta ?? {}), versionId: String(Number(current.meta?.versionId ?? "0") + 1) };
+      }
+      this.transactionInFlight = true;
+      try {
+        return await super.executeTransaction(bundle, headers, options);
+      } finally {
+        this.transactionInFlight = false;
+      }
+    }
 
     override async update<T extends Resource>(resourceType: T["resourceType"], id: string, resource: T, headers?: Record<string, string>): Promise<T> {
-      if (resourceType === "Encounter" && this.encounterConflictsRemaining > 0) {
+      if (resourceType === "Encounter" && !this.transactionInFlight && this.encounterConflictsRemaining > 0) {
         this.encounterConflictsRemaining -= 1;
         const current = this.resources.find((candidate) => candidate.resourceType === resourceType && candidate.id === id)!;
         current.meta = { ...(current.meta ?? {}), versionId: String(Number(current.meta?.versionId ?? "0") + 1) };
@@ -1610,6 +1781,15 @@ test("discard returns reload-and-retry after the Encounter unlink exhausts confl
   assert.match(String((discarded.body as { error: string }).error), /reload and retry/);
   const encounter = await fhir.read<Encounter>("Encounter", "e1");
   assert.equal(encounter.diagnosis?.some((entry) => entry.condition.reference === conditionReference), true);
+
+  const retried = await pick("discard");
+
+  assert.equal(retried.status, 200, JSON.stringify(retried.body));
+  assert.equal((await fhir.read<Condition>("Condition", conditionReference.split("/")[1]!)).verificationStatus?.coding?.[0]?.code, "refuted");
+  assert.equal((await fhir.read<Encounter>("Encounter", "e1")).diagnosis?.some((entry) =>
+    entry.condition.reference === conditionReference
+  ), false);
+  assert.equal(fhir.resources.filter((resource) => resource.resourceType === "Condition").length, 1);
 });
 
 test("a signed Encounter refuses discard before changing the Condition or Encounter", async () => {

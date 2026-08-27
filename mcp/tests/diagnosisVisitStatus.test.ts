@@ -93,6 +93,45 @@ class MemoryFhir {
     this.resources[index] = persisted;
     return structuredClone(persisted);
   }
+
+  async executeTransaction(bundle: Bundle): Promise<Bundle> {
+    const resourcesBefore = structuredClone(this.resources);
+    const references = new Map<string, string>();
+    try {
+      const responseEntries = [];
+      for (const entry of bundle.entry ?? []) {
+        const request = entry.request;
+        if (!request || !entry.resource) throw new Error("Synthetic transaction entry is incomplete.");
+        const resource = replaceTransactionReferences(structuredClone(entry.resource), references);
+        if (request.method === "POST") {
+          const persisted = await this.create(resource, request.ifNoneExist
+            ? { "If-None-Exist": request.ifNoneExist }
+            : undefined);
+          if (entry.fullUrl && persisted.id) references.set(entry.fullUrl, `${persisted.resourceType}/${persisted.id}`);
+          responseEntries.push({ resource: persisted, response: { status: "201 Created" } });
+        } else if (request.method === "PUT") {
+          const [resourceType, id] = request.url.split("/");
+          if (!resourceType || !id || resource.resourceType !== resourceType) {
+            throw new Error(`Synthetic transaction PUT mismatch for ${request.url}.`);
+          }
+          const persisted = await this.update(resource.resourceType, id, resource);
+          responseEntries.push({ resource: persisted, response: { status: "200 OK" } });
+        } else {
+          throw new Error(`Synthetic transaction does not support ${request.method}.`);
+        }
+      }
+      return { resourceType: "Bundle", type: "transaction-response", entry: responseEntries };
+    } catch (error) {
+      this.resources.splice(0, this.resources.length, ...resourcesBefore);
+      throw error;
+    }
+  }
+}
+
+function replaceTransactionReferences<T extends Resource>(resource: T, references: ReadonlyMap<string, string>): T {
+  return JSON.parse(JSON.stringify(resource), (_key, value) =>
+    typeof value === "string" ? references.get(value) ?? value : value
+  ) as T;
 }
 
 test("confirm freezes the original setter and timestamp when a different clinician changes status", async () => {
