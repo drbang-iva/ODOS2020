@@ -43,7 +43,7 @@ test("all width-safe static sections expose truthful layout-only contracts", asy
     stereopsis: { title: "Stereopsis", layout: "laterality-finding" },
     "color-vision": { title: "Color Vision", layout: "laterality-finding" },
     eom: { title: "EOM / Diplopia", layout: "quadrant-grid" },
-    cvf: { title: "Visual Field", layout: "quadrant-grid" },
+    cvf: { title: "Confrontation visual fields", layout: "quadrant-grid" },
     "cover-test": { title: "Cover Test", layout: "paired-row-form" },
     iop: { title: "Intraocular Pressure", layout: "paired-measurement" },
     dilation: { title: "Dilation", layout: "paired-row-form" },

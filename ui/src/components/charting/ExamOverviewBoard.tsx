@@ -150,7 +150,7 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, r
   for (const section of projection.sections) {
     const findings = (section.findingObservationReferences ?? []).flatMap((reference) => {
       const finding = findingByReference.get(reference);
-      return finding && finding.provenance.state === "current" && finding.findingKey !== "wearing_rx" &&
+      return finding && finding.provenance.state === "current" &&
         snapshotComponentCode(finding.current, "REFRACTION_TYPE") !== "FINAL_RX"
         ? [finding]
         : [];
@@ -169,7 +169,6 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, r
   for (const group of groupFindings(projection.findings.filter((finding) =>
     !referencedFindings.has(finding.observationReference) &&
     finding.provenance.state === "current" &&
-    finding.findingKey !== "wearing_rx" &&
     snapshotComponentCode(finding.current, "REFRACTION_TYPE") !== "FINAL_RX"
   ))) {
     const editor = editorForFinding(group, editorEntries);
@@ -522,7 +521,8 @@ function FindingRow({
 }
 
 function WordResult({ group }: { group: FindingGroup }) {
-  return <span>{wordValue(group.rows[0]!)}</span>;
+  const wearing = group.findingKey === "wearing_rx" ? wearingRxValue(group.rows) : undefined;
+  return <span>{wearing ?? wordValue(group.rows[0]!)}</span>;
 }
 
 function EyePairResult({ group }: { group: FindingGroup }) {
@@ -917,17 +917,14 @@ function findingValue(finding: ExamOverviewFindingProjection): string {
   const normalWord = finding.interpretation === "normal" ? normalFindingWord(finding.findingKey) : undefined;
   if (normalWord) return normalWord;
   if (finding.summary) return finding.summary;
-  const manualKeratometry = manualKeratometryValue(finding);
-  if (manualKeratometry) return manualKeratometry;
+  const visualAcuity = visualAcuityValue(finding);
+  if (visualAcuity) return visualAcuity;
+  const keratometry = keratometryValue(finding);
+  if (keratometry) return keratometry;
+  const pachymetry = pachymetryValue(finding);
+  if (pachymetry) return pachymetry;
   if (finding.current.value) {
     const label = safeSnapshotValueLabel(finding.current.value);
-    if (label) return label;
-  }
-  const preferredCode = {
-    pachymetry_um: "CUSTOM_CCT",
-  }[finding.findingKey];
-  if (preferredCode) {
-    const label = snapshotComponentLabel(finding.current, preferredCode);
     if (label) return label;
   }
   if (finding.interpretation === "abnormal") return "Finding not specified";
@@ -935,16 +932,54 @@ function findingValue(finding: ExamOverviewFindingProjection): string {
   return "recorded";
 }
 
-function manualKeratometryValue(finding: ExamOverviewFindingProjection): string | undefined {
-  if (finding.findingKey !== "manual_keratometry") return undefined;
-  const prefix = finding.laterality === "OD" || finding.laterality === "OS" ? `${finding.laterality}_` : "";
-  const value = (code: string) => snapshotNumber(finding.current, `${prefix}${code}`) ?? snapshotNumber(finding.current, code);
-  const flatK = value("CUSTOM_FLAT_K");
-  const flatAxis = value("CUSTOM_FLAT_AXIS");
-  const steepK = value("CUSTOM_STEEP_K");
-  const steepAxis = value("CUSTOM_STEEP_AXIS");
+function visualAcuityValue(finding: ExamOverviewFindingProjection): string | undefined {
+  if (finding.findingKey !== "VISUAL_ACUITY" && finding.findingKey !== "VISUAL_ACUITY_PANEL") return undefined;
+  const raw = snapshotComponentText(finding.current, "VA_SNELLEN_RAW");
+  if (!raw) return undefined;
+  const correction = snapshotComponentLabel(finding.current, "VA_CORRECTION");
+  const chartType = snapshotComponentLabel(finding.current, "VA_CHART_TYPE");
+  return `${raw}${correction ? ` ${correction}` : ""}${chartType && chartType.toUpperCase() !== "SNELLEN" ? ` · ${chartType}` : ""}`;
+}
+
+function keratometryValue(finding: ExamOverviewFindingProjection): string | undefined {
+  const componentPrefix = finding.findingKey === "manual_keratometry"
+    ? "CUSTOM_"
+    : finding.findingKey === "auto_keratometry" ? "" : undefined;
+  if (componentPrefix === undefined) return undefined;
+  const value = (code: string) => findingComponentNumber(finding, `${componentPrefix}${code}`);
+  const flatK = value("FLAT_K");
+  const flatAxis = value("FLAT_AXIS");
+  const steepK = value("STEEP_K");
+  const steepAxis = value("STEEP_AXIS");
   if (flatK === undefined || flatAxis === undefined || steepK === undefined || steepAxis === undefined) return undefined;
   return `${flatK.toFixed(2)} @${String(flatAxis).padStart(3, "0")} / ${steepK.toFixed(2)} @${String(steepAxis).padStart(3, "0")}`;
+}
+
+function pachymetryValue(finding: ExamOverviewFindingProjection): string | undefined {
+  return finding.findingKey === "pachymetry_um"
+    ? findingComponentLabel(finding, "CUSTOM_CCT")
+    : undefined;
+}
+
+function wearingRxValue(findings: readonly ExamOverviewFindingProjection[]): string | undefined {
+  const eyes = wearingRx(findings);
+  if (!eyes) return undefined;
+  return (["OD", "OS"] as const).flatMap((eye) => eyes[eye] ? [rxEyeLine(eye, eyes[eye], false)] : []).join(" ");
+}
+
+function findingComponent(finding: ExamOverviewFindingProjection, code: string) {
+  const prefix = finding.laterality === "OD" || finding.laterality === "OS" ? `${finding.laterality}_` : "";
+  return snapshotComponent(finding.current, `${prefix}${code}`) ?? snapshotComponent(finding.current, code);
+}
+
+function findingComponentNumber(finding: ExamOverviewFindingProjection, code: string): number | undefined {
+  const value = findingComponent(finding, code)?.value;
+  return value?.kind === "quantity" || value?.kind === "number" ? value.value : undefined;
+}
+
+function findingComponentLabel(finding: ExamOverviewFindingProjection, code: string): string | undefined {
+  const value = findingComponent(finding, code)?.value;
+  return value ? safeSnapshotValueLabel(value) : undefined;
 }
 
 function normalFindingWord(findingKey: string): string | undefined {
@@ -995,11 +1030,6 @@ function snapshotComponentCode(snapshot: ObservationSnapshot | undefined, code: 
 function snapshotComponentLabel(snapshot: ObservationSnapshot | undefined, code: string): string | undefined {
   const value = snapshotComponent(snapshot, code)?.value;
   return value ? safeSnapshotValueLabel(value) : undefined;
-}
-
-function snapshotNumber(snapshot: ObservationSnapshot | undefined, code: string): number | undefined {
-  const value = snapshotComponent(snapshot, code)?.value;
-  return value?.kind === "quantity" || value?.kind === "number" ? value.value : undefined;
 }
 
 interface RxEyeValues {
@@ -1072,20 +1102,26 @@ function quantityField(snapshot: ObservationSnapshot, code: string, key: keyof R
 }
 
 function wearingRx(findings: readonly ExamOverviewFindingProjection[]): Partial<Record<"OD" | "OS", RxEyeValues>> | undefined {
-  const latest = [...findings].sort((left, right) =>
+  const latestFirst = [...findings].sort((left, right) =>
     instantMillis(right.current.recordedAt) - instantMillis(left.current.recordedAt)
-  )[0];
-  if (!latest) return undefined;
+  );
   const eyes = Object.fromEntries((["OD", "OS"] as const).flatMap((eye) => {
-    const values: RxEyeValues = {
-      ...quantityField(latest.current, `${eye}_SPHERE`, "sphere"),
-      ...quantityField(latest.current, `${eye}_CYLINDER`, "cylinder"),
-      ...quantityField(latest.current, `${eye}_AXIS`, "axis"),
-      ...quantityField(latest.current, `${eye}_ADD`, "add"),
-    };
-    return Object.keys(values).length ? [[eye, values]] : [];
+    const values = latestFirst
+      .map((finding) => wearingEyeFromSnapshot(finding.current, eye))
+      .find((value): value is RxEyeValues => value !== undefined);
+    return values ? [[eye, values]] : [];
   })) as Partial<Record<"OD" | "OS", RxEyeValues>>;
   return Object.keys(eyes).length ? eyes : undefined;
+}
+
+function wearingEyeFromSnapshot(snapshot: ObservationSnapshot, eye: "OD" | "OS"): RxEyeValues | undefined {
+  const values: RxEyeValues = {
+    ...quantityField(snapshot, `${eye}_SPHERE`, "sphere"),
+    ...quantityField(snapshot, `${eye}_CYLINDER`, "cylinder"),
+    ...quantityField(snapshot, `${eye}_AXIS`, "axis"),
+    ...quantityField(snapshot, `${eye}_ADD`, "add"),
+  };
+  return Object.keys(values).length ? values : undefined;
 }
 
 function instantMillis(value: string | undefined): number {
