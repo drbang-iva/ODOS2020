@@ -103,6 +103,12 @@ export interface ExamOverviewProjection {
   completeness: ClinicalExamCompleteness;
 }
 
+// Each entry is a section whose correct rendering needs work outside this slice.
+// Adding to this list requires a decision file naming the slice that removes it.
+export const UNFORMATTED_PENDING_PROJECTION = {
+  hpi_ros: "ODOS-OVERVIEW-HISTORY-PROJECTION (A2) — overview must read complaint records",
+} as const;
+
 interface Props {
   projection: ExamOverviewProjection;
   editorEntries: readonly ChartEditorEntry[];
@@ -923,6 +929,12 @@ function findingValue(finding: ExamOverviewFindingProjection): string {
   if (keratometry) return keratometry;
   const pachymetry = pachymetryValue(finding);
   if (pachymetry) return pachymetry;
+  const eom = eomValue(finding);
+  if (eom) return eom;
+  if (!Object.hasOwn(UNFORMATTED_PENDING_PROJECTION, finding.findingKey)) {
+    const components = chartedComponentValue(finding);
+    if (components) return components;
+  }
   if (finding.current.value) {
     const label = safeSnapshotValueLabel(finding.current.value);
     if (label) return label;
@@ -930,6 +942,26 @@ function findingValue(finding: ExamOverviewFindingProjection): string {
   if (finding.interpretation === "abnormal") return "Finding not specified";
   if (finding.interpretation === "borderline") return "borderline";
   return "recorded";
+}
+
+function eomValue(finding: ExamOverviewFindingProjection): string | undefined {
+  if (finding.findingKey !== "entrance:eom") return undefined;
+  const positions = finding.current.components.flatMap((component) => {
+    if (!component.code.match(/^(?:OD_|OS_)?CUSTOM_EOM_POS_/)) return [];
+    const value = component.value ? safeSnapshotValueLabel(component.value) : undefined;
+    return value && component.display ? [`${component.display} ${value}`] : [];
+  });
+  return positions.length ? positions.join(" · ") : undefined;
+}
+
+function chartedComponentValue(finding: ExamOverviewFindingProjection): string | undefined {
+  if (finding.findingKey === "entrance:eom") return undefined;
+  const values = finding.current.components.flatMap((component) => {
+    if (["EXAM_STATE", "NORMAL_TEMPLATE", "OTHER"].includes(component.code)) return [];
+    const value = component.value ? safeSnapshotValueLabel(component.value) : undefined;
+    return value && component.display ? [`${component.display} ${value}`] : [];
+  });
+  return values.length ? values.join(" · ") : undefined;
 }
 
 function visualAcuityValue(finding: ExamOverviewFindingProjection): string | undefined {

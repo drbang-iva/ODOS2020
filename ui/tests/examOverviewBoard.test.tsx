@@ -7,6 +7,7 @@ import {
   buildExamOverviewProjection,
   type ExamOverviewProjection,
 } from "../../mcp/src/clinical-graph/exam-overview-projection";
+import { buildFindingDefinitionSeeds } from "../../mcp/src/clinical-graph/finding-definition-store";
 import { DiagnosisWorkspace } from "../src/components/charting/DiagnosisWorkspace";
 import { AssessmentSection } from "../src/components/charting/AssessmentSection";
 import { AutoRefractionSection } from "../src/components/charting/AutoRefractionSection";
@@ -21,7 +22,10 @@ import { EomSection } from "../src/components/charting/EomSection";
 import { EncounterHeader } from "../src/components/charting/EncounterHeader";
 import { EyeGrowthSection } from "../src/components/charting/EyeGrowthSection";
 import { ExamEntrySheet } from "../src/components/charting/ExamEntrySheet";
-import { ExamOverviewBoard } from "../src/components/charting/ExamOverviewBoard";
+import {
+  ExamOverviewBoard,
+  UNFORMATTED_PENDING_PROJECTION,
+} from "../src/components/charting/ExamOverviewBoard";
 import { GonioscopySection } from "../src/components/charting/GonioscopySection";
 import { HpiSection } from "../src/components/charting/HpiSection";
 import { ImagingSection } from "../src/components/charting/ImagingSection";
@@ -723,6 +727,69 @@ test("overview truth changes preserve the exact Dilation event value", () => {
   }
 });
 
+test("the pending overview projection exception is exactly the History slice", () => {
+  const pending = pendingOverviewProjectionExceptions();
+  assert.equal(Object.keys(pending).length, 1);
+  assert.equal(
+    pending.hpi_ros,
+    "ODOS-OVERVIEW-HISTORY-PROJECTION (A2) — overview must read complaint records",
+  );
+});
+
+test("every active catalog finding outside the guarded exception renders a charted value", () => {
+  const pending = pendingOverviewProjectionExceptions();
+  const failures = buildFindingDefinitionSeeds().filter((definition) =>
+    definition.active && !Object.hasOwn(pending, definition.stableKey)
+  ).flatMap((definition) => {
+    const renderer = create(
+      <ExamOverviewBoard
+        projection={catalogGuardProjection(definition)}
+        editorEntries={[]}
+        refreshing={false}
+        onOpenEditor={() => undefined}
+        onRefresh={() => undefined}
+      />,
+    );
+    try {
+      const value = findingValueText(renderer, definition.stableKey).trim();
+      return value && value !== "recorded"
+        ? []
+        : [`${definition.stableKey} (${definition.display}): ${value || "blank"}`];
+    } finally {
+      renderer.unmount();
+    }
+  });
+  assert.deepEqual(failures, []);
+});
+
+test("charted EOM renders every recorded cardinal position on the preserved grading scale", () => {
+  const definition = buildFindingDefinitionSeeds().find((row) => row.stableKey === "entrance:eom");
+  assert.ok(definition);
+  const projection = catalogGuardProjection(definition);
+  projection.findings[0]!.current.components = [
+    snapshotStringComponent("CUSTOM_EOM_POS_UP_LEFT", "Up left", "-4"),
+    snapshotStringComponent("CUSTOM_EOM_POS_PRIMARY", "Primary", "0"),
+    snapshotStringComponent("CUSTOM_EOM_POS_DOWN_RIGHT", "Down right", "+4"),
+  ];
+  const renderer = create(
+    <ExamOverviewBoard
+      projection={projection}
+      editorEntries={[]}
+      refreshing={false}
+      onOpenEditor={() => undefined}
+      onRefresh={() => undefined}
+    />,
+  );
+  try {
+    assert.equal(
+      findingValueText(renderer, "entrance:eom"),
+      "OD Up left -4 · Primary 0 · Down right +4",
+    );
+  } finally {
+    renderer.unmount();
+  }
+});
+
 function refractionFixtureRows() {
   return [
     refractionFinding("manifest-old-od", "OD", "2026-08-24T14:30:00.000Z", "old-block", "MANIFEST", {
@@ -1224,6 +1291,99 @@ function overviewTruthProjection(chartType: string, acuity: string, correction: 
     sections: [overviewSection("pretest", "Pretest", findings.map((finding) => finding.observationReference))],
     completeness: PROJECTION.completeness,
   } as ExamOverviewProjection;
+}
+
+type CatalogDefinition = ReturnType<typeof buildFindingDefinitionSeeds>[number];
+
+function pendingOverviewProjectionExceptions(): Readonly<Record<string, string>> {
+  return UNFORMATTED_PENDING_PROJECTION;
+}
+
+function catalogGuardProjection(definition: CatalogDefinition): ExamOverviewProjection {
+  const valueSchema = definition.valueSchema as Record<string, unknown>;
+  const fields = Object.values((valueSchema.fields ?? {}) as Record<string, Record<string, unknown>>);
+  const components = fields.flatMap((field) => {
+    const fieldKey = Object.entries((valueSchema.fields ?? {}) as Record<string, Record<string, unknown>>)
+      .find(([, candidate]) => candidate === field)?.[0];
+    const code = typeof field.localCode === "string" ? field.localCode : fieldKey
+      ?.replace(/([a-z0-9])([A-Z])/g, "$1_$2").replaceAll("-", "_").toUpperCase();
+    if (!code) return [];
+    const display = typeof field.display === "string" ? field.display : code;
+    const numeric = field.valueType === "number" || field.valueType === "integer" ||
+      typeof field.type === "string" && [
+        "number", "derived-number", "number-input", "integer-input", "integer-select",
+        "decimal-input", "quarter-diopter-select",
+      ].includes(field.type);
+    return [{
+      code,
+      display,
+      value: numeric
+        ? { kind: "number" as const, value: typeof field.defaultValue === "number" ? field.defaultValue : 1 }
+        : { kind: "string" as const, value: representativeFieldValue(field) },
+    }];
+  });
+  const sheetFindings = fields.flatMap((field) => {
+    if (field.valueType !== "multi-select" || !Array.isArray(field.options)) return [];
+    const option = field.options.find((candidate) => isRecord(candidate) && candidate.active !== false);
+    return isRecord(option) && typeof option.display === "string"
+      ? [{ display: option.display, qualifiers: [] }]
+      : [];
+  });
+  const value = catalogScalarValue(valueSchema);
+  const type = typeof valueSchema.type === "string" ? valueSchema.type : undefined;
+  const finding = {
+    observationReference: `Observation/catalog-${definition.stableKey.replaceAll(/[^A-Za-z0-9.-]/g, "-")}`,
+    findingKey: definition.stableKey,
+    sectionKey: definition.sectionKey ?? definition.stableKey,
+    display: definition.display,
+    laterality: definition.valueSchema.perEye === true ? "OD" as const : "UNKNOWN" as const,
+    examination: { state: "examined" as const, sourceEncoding: "observation" as const },
+    interpretation: "unknown" as const,
+    provenance: { state: "current" as const },
+    current: { ...(value ? { value } : {}), components },
+    ...(sheetFindings.length ? { sheetFindings } : {}),
+    ...(type === "cover-test-section" ? { summary: "Near orthophoria" } : {}),
+    ...(type === "dilation-administration" ? {
+      event: { administrations: [{ agent: "Tropicamide 1%", occurredAt: "2026-08-28T14:00:00.000Z" }] },
+    } : {}),
+  };
+  return {
+    encounterReference: "Encounter/catalog-guard",
+    patientReference: "Patient/catalog-guard",
+    findings: [finding],
+    sections: [overviewSection("pretest", "Pretest", [finding.observationReference])],
+    completeness: PROJECTION.completeness,
+  };
+}
+
+function representativeFieldValue(field: Record<string, unknown>): string {
+  if (Array.isArray(field.options)) {
+    const option = field.options.find((candidate) => isRecord(candidate) && candidate.active !== false);
+    if (isRecord(option)) {
+      if (typeof option.display === "string") return option.display;
+      if (typeof option.code === "string") return option.code;
+    }
+  }
+  return "charted";
+}
+
+function catalogScalarValue(valueSchema: Record<string, unknown>) {
+  if (valueSchema.valueKind === "coded" && Array.isArray(valueSchema.options)) {
+    const option = valueSchema.options.find(isRecord);
+    if (option) return {
+      kind: "code" as const,
+      ...(typeof option.code === "string" ? { code: option.code } : {}),
+      ...(typeof option.display === "string" ? { display: option.display } : {}),
+    };
+  }
+  if (valueSchema.valueKind === "string" || valueSchema.valueKind === "component-panel") {
+    return { kind: "string" as const, value: "charted" };
+  }
+  return undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function measurementFinding(
