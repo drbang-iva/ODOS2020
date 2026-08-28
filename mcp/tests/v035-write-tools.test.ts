@@ -17,6 +17,7 @@ import {
   createAuthenticatedFhirClient,
   loadRepoEnv,
   parseToolOutput,
+  requireMedplumAdmin,
   toolText,
 } from "./integration-helpers.js";
 import { CONDITION_BODY_SITE_EXTENSION_URL } from "../src/fhir/condition.js";
@@ -42,13 +43,11 @@ test("v0.35 MCP write tools create version-aware FHIR resources with Provenance"
   loadRepoEnv();
 
   const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
-  const email = process.env.MEDPLUM_ADMIN_EMAIL;
-  const password = process.env.MEDPLUM_ADMIN_PASSWORD;
-
-  if (!email || !password) {
-    t.skip("MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.");
+  const credentials = requireMedplumAdmin(t, "v035-write-tools");
+  if (!credentials) {
     return;
   }
+  const { email, password } = credentials;
 
   const { fhir, accessToken } = await createAuthenticatedFhirClient({ baseUrl, email, password });
   const patient = await fhir.create<Patient>({

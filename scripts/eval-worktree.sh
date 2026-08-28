@@ -285,7 +285,7 @@ run_step "Root dependency install" install "$worktree_path" npm ci --no-audit --
 run_step "MCP dependency install" install "$worktree_path/mcp" npm ci --no-audit --no-fund
 run_step "UI dependency install" install "$worktree_path/ui" npm ci --no-audit --no-fund
 run_step "MCP build" mcp-build "$worktree_path/mcp" npm run build
-run_step "MCP full test" mcp-test "$worktree_path/mcp" npm test
+run_step "MCP full test" mcp-test "$worktree_path/mcp" env ODOS_ALLOW_UNGATED_MCP=1 npm test
 run_step "UI build" ui-build "$worktree_path/ui" env ODOS_BUILD_BRANCH="$head_branch" npm run build
 run_step "UI full test" ui-test "$worktree_path/ui" npm test
 run_step "Root preflight" preflight "$worktree_path" npm run preflight

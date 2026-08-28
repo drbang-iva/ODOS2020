@@ -39,7 +39,7 @@ import { lateralityConcept, ODOS_EXTENSION_URLS } from "../src/fhir/ophthalmolog
 import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../src/fhir/ophthalmology/codeBindings.js";
 import { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } from "../src/clinical-graph/diagnosis-pick-endpoint.js";
 import { buildDiagnosisCatalogSeeds } from "../src/clinical-graph/diagnosis-catalog-seeds.js";
-import { createAuthenticatedFhirClient, loadRepoEnv } from "./integration-helpers.js";
+import { createAuthenticatedFhirClient, loadRepoEnv, requireMedplumAdmin } from "./integration-helpers.js";
 import { createMedplumClient } from "../src/fhir-client.js";
 import { searchAll } from "../src/fhir-search.js";
 import { TEST_FHIR_AUDIT_CONTEXT, TEST_FHIR_AUDIT_RECORDER } from "./fhirAuditTestStub.js";
@@ -1482,12 +1482,15 @@ test("a conflict reread never returns an exact diagnosis from an entered-in-erro
 test("live ordinary-clinician policy persists and reads diagnosis carry while preserving atomic conflict rollback", { timeout: 90_000 }, async (t) => {
   loadRepoEnv();
   const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
-  const email = process.env.MEDPLUM_ADMIN_EMAIL;
-  const password = process.env.MEDPLUM_ADMIN_PASSWORD;
-  if (!email || !password) {
-    t.skip("MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the diagnosis pull integration proof.");
+  const credentials = requireMedplumAdmin(
+    t,
+    "diagnosisCarryForward",
+    "MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the diagnosis pull integration proof.",
+  );
+  if (!credentials) {
     return;
   }
+  const { email, password } = credentials;
 
   const { fhir: adminFhir, accessToken: adminAccessToken } = await createAuthenticatedFhirClient({ baseUrl, email, password });
   const runId = randomUUID();

@@ -4,18 +4,18 @@ import type { Patient } from "@medplum/fhirtypes";
 import {
   createAuthenticatedFhirClient,
   loadRepoEnv,
+  requireMedplumAdmin,
 } from "./integration-helpers.js";
 
 test("executeTransaction rolls back created entries when a later transaction entry fails", { timeout: 90_000 }, async (t) => {
   loadRepoEnv();
 
   const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
-  const email = process.env.MEDPLUM_ADMIN_EMAIL;
-  const password = process.env.MEDPLUM_ADMIN_PASSWORD;
-  if (!email || !password) {
-    t.skip("MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.");
+  const credentials = requireMedplumAdmin(t, "transaction-atomicity");
+  if (!credentials) {
     return;
   }
+  const { email, password } = credentials;
 
   const { fhir } = await createAuthenticatedFhirClient({ baseUrl, email, password });
   const marker = `atomicity-${Date.now()}`;

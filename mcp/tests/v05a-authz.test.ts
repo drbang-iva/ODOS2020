@@ -29,6 +29,7 @@ import {
 import {
   createAuthenticatedFhirClient,
   loadRepoEnv,
+  requireMedplumAdmin,
 } from "./integration-helpers.js";
 import { createMedplumClient } from "../src/fhir-client.js";
 import { TEST_FHIR_AUDIT_CONTEXT, TEST_FHIR_AUDIT_RECORDER } from "./fhirAuditTestStub.js";
@@ -396,12 +397,15 @@ test("break-glass rejects agent self-attestation and blank reason", () => {
 test("audit-only boundary AccessPolicy POST round-trip is accepted by Medplum when integration env is available", { timeout: 90_000 }, async (t) => {
   loadRepoEnv();
   const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
-  const email = process.env.MEDPLUM_ADMIN_EMAIL;
-  const password = process.env.MEDPLUM_ADMIN_PASSWORD;
-  if (!email || !password) {
-    t.skip("MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum AccessPolicy round-trip.");
+  const credentials = requireMedplumAdmin(
+    t,
+    "v05a-authz",
+    "MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum AccessPolicy round-trip.",
+  );
+  if (!credentials) {
     return;
   }
+  const { email, password } = credentials;
 
   const { fhir } = await createAuthenticatedFhirClient({ baseUrl, email, password });
   // This test-local boundary is intentionally not a named product role; see performance-od/decisions/2026-08-28-odos-auditor-fixture-fossil-verdict.md.
@@ -419,15 +423,16 @@ test(
   async (t) => {
     loadRepoEnv();
     const baseUrl = (process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103").replace(/\/$/, "");
-    const email = process.env.MEDPLUM_ADMIN_EMAIL;
-    const password = process.env.MEDPLUM_ADMIN_PASSWORD;
-    if (!email || !password) {
-      t.skip(
-        "MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the v0.5a enforcement fixture. " +
-          "This is the human-provisioned step per Mandate 8 — the agent does not create credentials, only uses what the human dropped into env vars.",
-      );
+    const credentials = requireMedplumAdmin(
+      t,
+      "v05a-authz",
+      "MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the v0.5a enforcement fixture. " +
+        "This is the human-provisioned step per Mandate 8 — the agent does not create credentials, only uses what the human dropped into env vars.",
+    );
+    if (!credentials) {
       return;
     }
+    const { email, password } = credentials;
 
     const { fhir, accessToken } = await createAuthenticatedFhirClient({ baseUrl, email, password });
 

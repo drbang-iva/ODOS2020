@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { createHash, randomBytes } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import type { TestContext } from "node:test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { createMedplumClient } from "../src/fhir-client.js";
@@ -31,6 +32,26 @@ export function loadRepoEnv(): void {
 
     process.env[key] = stripEnvQuotes(rawValue.trim());
   }
+}
+
+export function requireMedplumAdmin(
+  t: Pick<TestContext, "skip">,
+  surface: string,
+  message = "MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.",
+): { email: string; password: string } | undefined {
+  loadRepoEnv();
+  const email = process.env.MEDPLUM_ADMIN_EMAIL;
+  const password = process.env.MEDPLUM_ADMIN_PASSWORD;
+  if (email && password) {
+    return { email, password };
+  }
+
+  const recordPath = process.env.ODOS_MCP_LIVE_SKIP_RECORD;
+  if (recordPath) {
+    appendFileSync(recordPath, `${JSON.stringify({ surface })}\n`, "utf8");
+  }
+  t.skip(message);
+  return undefined;
 }
 
 export async function createAuthenticatedFhirClient(input: {

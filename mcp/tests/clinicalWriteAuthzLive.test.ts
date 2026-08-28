@@ -28,24 +28,31 @@ import {
 import { buildEyeBodyStructure } from "../src/fhir/ophthalmology/bodyStructure.js";
 import { buildProvenance } from "../src/fhir/ophthalmology/provenance.js";
 import { searchAll } from "../src/fhir-search.js";
-import { createAuthenticatedFhirClient } from "./integration-helpers.js";
+import { createAuthenticatedFhirClient, requireMedplumAdmin } from "./integration-helpers.js";
 
 const baseUrl = process.env.MEDPLUM_BASE_URL?.replace(/\/$/, "") ?? "http://localhost:8103";
-const email = process.env.MEDPLUM_ADMIN_EMAIL;
-const password = process.env.MEDPLUM_ADMIN_PASSWORD;
-const projectId = process.env.ODOS_LIVE_AUTHZ_PROJECT_ID;
-const LIVE_ENV_AVAILABLE = Boolean(email && password && projectId);
-
-test("synced practice policies enforce all repaired clinical writes on running Medplum", {
-  skip: LIVE_ENV_AVAILABLE
-    ? false
-    : "MEDPLUM_ADMIN_EMAIL, MEDPLUM_ADMIN_PASSWORD, and ODOS_LIVE_AUTHZ_PROJECT_ID are required.",
-}, async (t) => {
+test("synced practice policies enforce all repaired clinical writes on running Medplum", async (t) => {
+  const credentials = requireMedplumAdmin(t, "clinicalWriteAuthzLive");
+  if (!credentials) {
+    return;
+  }
+  const { email, password } = credentials;
   const { fhir: adminFhir, accessToken: adminToken } = await createAuthenticatedFhirClient({
     baseUrl,
-    email: email!,
-    password: password!,
+    email,
+    password,
   });
+  const meResponse = await fetch(`${baseUrl}/auth/me`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+  });
+  if (!meResponse.ok) {
+    throw new Error(`GET /auth/me failed: ${meResponse.status}`);
+  }
+  const me = await meResponse.json() as { project?: { id?: string } };
+  const projectId = me.project?.id;
+  if (!projectId) {
+    throw new Error("Authenticated Medplum session has no active project id.");
+  }
   const runId = randomUUID();
   const cleanup: string[] = [];
   const track = <T extends Resource>(resource: T): T => {
@@ -56,7 +63,7 @@ test("synced practice policies enforce all repaired clinical writes on running M
 
   try {
     const policies = await searchAll<AccessPolicy>(adminFhir, "AccessPolicy", {
-      _project: projectId!,
+      _project: projectId,
       _count: "1000",
     });
     const rolePolicies = new Map<PracticeRoleId, AccessPolicy>();

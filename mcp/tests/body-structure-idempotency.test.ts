@@ -4,6 +4,7 @@ import type { BodyStructure, Encounter, Patient } from "@medplum/fhirtypes";
 import {
   createAuthenticatedFhirClient,
   loadRepoEnv,
+  requireMedplumAdmin,
 } from "./integration-helpers.js";
 import { buildSectionSaveBundle } from "../src/fhir/ophthalmology/save-section-bundle.js";
 
@@ -11,12 +12,11 @@ test("section saves reuse BodyStructure by patient and location", { timeout: 90_
   loadRepoEnv();
 
   const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
-  const email = process.env.MEDPLUM_ADMIN_EMAIL;
-  const password = process.env.MEDPLUM_ADMIN_PASSWORD;
-  if (!email || !password) {
-    t.skip("MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.");
+  const credentials = requireMedplumAdmin(t, "body-structure-idempotency");
+  if (!credentials) {
     return;
   }
+  const { email, password } = credentials;
 
   const { fhir } = await createAuthenticatedFhirClient({ baseUrl, email, password });
   const patient = await fhir.create<Patient>({
