@@ -1,12 +1,19 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import React from "react";
-import type { Encounter } from "@medplum/fhirtypes";
+import type { Bundle, Encounter, Observation, Provenance } from "@medplum/fhirtypes";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import {
   buildExamOverviewProjection,
+  observationSnapshot,
+  type ExamOverviewFindingProjection,
   type ExamOverviewProjection,
 } from "../../mcp/src/clinical-graph/exam-overview-projection";
+import {
+  handleCustomSectionCaptureRequest,
+  type CustomSectionEndpointDeps,
+} from "../../mcp/src/clinical-graph/custom-section-endpoint";
+import { handleEomCaptureRequest, type EomEndpointDeps } from "../../mcp/src/clinical-graph/eom-endpoint";
 import { buildFindingDefinitionSeeds } from "../../mcp/src/clinical-graph/finding-definition-store";
 import { DiagnosisWorkspace } from "../src/components/charting/DiagnosisWorkspace";
 import { AssessmentSection } from "../src/components/charting/AssessmentSection";
@@ -24,7 +31,9 @@ import { EyeGrowthSection } from "../src/components/charting/EyeGrowthSection";
 import { ExamEntrySheet } from "../src/components/charting/ExamEntrySheet";
 import {
   ExamOverviewBoard,
+  UNFORMATTED_FINDING_VALUE,
   UNFORMATTED_PENDING_PROJECTION,
+  findingValue,
 } from "../src/components/charting/ExamOverviewBoard";
 import { GonioscopySection } from "../src/components/charting/GonioscopySection";
 import { HpiSection } from "../src/components/charting/HpiSection";
@@ -736,41 +745,42 @@ test("the pending overview projection exception is exactly the History slice", (
   );
 });
 
-test("every active catalog finding outside the guarded exception renders a charted value", () => {
-  const pending = pendingOverviewProjectionExceptions();
-  const failures = buildFindingDefinitionSeeds().filter((definition) =>
-    definition.active && !Object.hasOwn(pending, definition.stableKey)
-  ).flatMap((definition) => {
-    const renderer = create(
-      <ExamOverviewBoard
-        projection={catalogGuardProjection(definition)}
-        editorEntries={[]}
-        refreshing={false}
-        onOpenEditor={() => undefined}
-        onRefresh={() => undefined}
-      />,
-    );
-    try {
-      const value = findingValueText(renderer, definition.stableKey).trim();
-      return value && value !== "recorded"
-        ? []
-        : [`${definition.stableKey} (${definition.display}): ${value || "blank"}`];
-    } finally {
-      renderer.unmount();
-    }
+test("the finding formatter exposes one exact unformatted sentinel", () => {
+  assert.equal(UNFORMATTED_FINDING_VALUE, "recorded");
+  assert.equal(findingValue(bareCatalogFinding(FIXTURE_DEFINITIONS.get("entrance:eom")!)), "recorded");
+});
+
+test("every active catalog finding has a fixture or the one guarded exception", () => {
+  const activeKeys = buildFindingDefinitionSeeds()
+    .filter((definition) => definition.active)
+    .map((definition) => definition.stableKey);
+  const missing = activeKeys.filter((key) =>
+    !Object.hasOwn(FIXTURES, key) && !Object.hasOwn(UNFORMATTED_PENDING_PROJECTION, key)
+  );
+  const stale = Object.keys(FIXTURES).filter((key) => !activeKeys.includes(key));
+  assert.deepEqual({ missing, stale }, { missing: [], stale: [] });
+});
+
+test("every catalog fixture control reaches the exact unformatted sentinel", () => {
+  const failures = Object.entries(FIXTURES).flatMap(([key, fixture]) => {
+    const value = findingValue(fixture.control);
+    return value === UNFORMATTED_FINDING_VALUE ? [] : [`${key}: ${value}`];
   });
   assert.deepEqual(failures, []);
 });
 
-test("charted EOM renders every recorded cardinal position on the preserved grading scale", () => {
+test("every charted catalog fixture leaves the exact unformatted sentinel", () => {
+  const failures = Object.entries(FIXTURES).flatMap(([key, fixture]) => {
+    const value = findingValue(fixture.charted);
+    return value !== UNFORMATTED_FINDING_VALUE ? [] : [`${key}: ${value}`];
+  });
+  assert.deepEqual(failures, []);
+});
+
+test("charted EOM renders writer-shaped OU positions in anatomical eye groups on the preserved grading scale", () => {
   const definition = buildFindingDefinitionSeeds().find((row) => row.stableKey === "entrance:eom");
   assert.ok(definition);
   const projection = catalogGuardProjection(definition);
-  projection.findings[0]!.current.components = [
-    snapshotStringComponent("CUSTOM_EOM_POS_UP_LEFT", "Up left", "-4"),
-    snapshotStringComponent("CUSTOM_EOM_POS_PRIMARY", "Primary", "0"),
-    snapshotStringComponent("CUSTOM_EOM_POS_DOWN_RIGHT", "Down right", "+4"),
-  ];
   const renderer = create(
     <ExamOverviewBoard
       projection={projection}
@@ -783,11 +793,311 @@ test("charted EOM renders every recorded cardinal position on the preserved grad
   try {
     assert.equal(
       findingValueText(renderer, "entrance:eom"),
-      "OD Up left -4 · Primary 0 · Down right +4",
+      "OD Up left -4 · Primary 0 · Down right +4 · OS Up left -3 · Primary +1 · Down right +3",
     );
   } finally {
     renderer.unmount();
   }
+});
+
+test("charted EOM renders writer-permitted abnormal details and the normal template", async () => {
+  const eyes = {
+    OD: { "up-left": "-4", primary: "0", "down-right": "+4" },
+    OS: { "up-left": "-3", primary: "+1", "down-right": "+3" },
+  };
+  const diplopia = {
+    present: true,
+    type: "binocular",
+    direction: "horizontal",
+    comitancy: "incomitant",
+    worstGaze: "right",
+    frequency: "intermittent",
+    onset: "2026-07-20",
+    note: "Distance only",
+  };
+  const actual = {
+    gazeOnly: await renderedWriterEomValue({ eyes }),
+    diplopiaOnly: await renderedWriterEomValue({ diplopia }),
+    combined: await renderedWriterEomValue({
+      eyes,
+      nystagmus: { present: true, note: "Gaze evoked" },
+      diplopia,
+    }),
+    normal: await renderedWriterEomValue({}, "normal"),
+  };
+  assert.deepEqual(actual, {
+    gazeOnly: "OD Up left -4 · Primary 0 · Down right +4 · OS Up left -3 · Primary +1 · Down right +3",
+    diplopiaOnly: "Diplopia present Yes · binocular Yes · incomitant Yes · Diplopia direction horizontal · Worst gaze right · Frequency intermittent · Onset 2026-07-20 · Diplopia note Distance only",
+    combined: "OD Up left -4 · Primary 0 · Down right +4 · OS Up left -3 · Primary +1 · Down right +3 · Nystagmus present Yes · Nystagmus note Gaze evoked · Diplopia present Yes · binocular Yes · incomitant Yes · Diplopia direction horizontal · Worst gaze right · Frequency intermittent · Onset 2026-07-20 · Diplopia note Distance only",
+    normal: "Full OU — SAFE",
+  });
+});
+
+test("EOM free-text notes preserve delimiter text as one atomic segment", async () => {
+  const value = await renderedWriterEomValue({
+    diplopia: {
+      present: true,
+      type: "binocular",
+      direction: "horizontal",
+      comitancy: "incomitant",
+      worstGaze: "right",
+      frequency: "intermittent",
+      onset: "2026-07-20",
+      note: "Distance only · Diplopia present Yes",
+    },
+  });
+
+  assert.equal(
+    value,
+    "Diplopia present Yes · binocular Yes · incomitant Yes · Diplopia direction horizontal · Worst gaze right · Frequency intermittent · Onset 2026-07-20 · Diplopia note Distance only · Diplopia present Yes",
+  );
+});
+
+test("custom state writer preserves other-only notes and uses OTHER once as a deferred reason", async () => {
+  const abnormal = await renderedWriterStateSectionValue(
+    "ocular-health:anterior:conjunctiva",
+    "abnormal",
+    "Reports intermittent shimmer",
+  );
+  const normal = await renderedWriterStateSectionValue(
+    "entrance:stereo",
+    "normal",
+    "Reliable responses throughout",
+  );
+  const deferred = await renderedWriterStateSectionValue(
+    "entrance:stereo",
+    "deferred",
+    "Unable through language barrier",
+  );
+  assert.deepEqual({
+    abnormal: abnormal.value,
+    normal: normal.value,
+    deferred: deferred.value,
+  }, {
+    abnormal: "OD Other Reports intermittent shimmer",
+    normal: "Stereo present · Other Reliable responses throughout",
+    deferred: "deferred — Unable through language barrier",
+  });
+  assert.equal(abnormal.formattedValue, "Other Reports intermittent shimmer");
+  assert.equal(deferred.value.match(/Unable through language barrier/g)?.length, 1);
+  assert.doesNotMatch(`${abnormal.value} ${normal.value}`, /Exam state|Normal template|entrance\.stereo/);
+  assert.deepEqual(normal.componentCodes, ["entrance.stereo", "EXAM_STATE", "NORMAL_TEMPLATE", "OTHER"]);
+});
+
+test("normal OTHER notes preserve delimiter text exactly once", async () => {
+  const normal = await renderedWriterStateSectionValue(
+    "entrance:pupils",
+    "normal",
+    "dim light · repeat next visit",
+  );
+
+  assert.equal(normal.value, "OD PERRLA; no RAPD OU · Other dim light · repeat next visit");
+});
+
+test("abnormal custom state other-only value leaves the exact unformatted sentinel behind", async () => {
+  const abnormal = await renderedWriterStateSectionValue(
+    "ocular-health:anterior:conjunctiva",
+    "abnormal",
+    "Reports intermittent shimmer",
+  );
+  assert.equal(abnormal.formattedValue, "Other Reports intermittent shimmer");
+});
+
+test("normal other composition preserves the template and every selected sheet finding", () => {
+  const finding: ExamOverviewFindingProjection = {
+    observationReference: "Observation/normal-other-sheet-probe",
+    findingKey: "normal-other-sheet-probe",
+    sectionKey: "normal-other-sheet-probe",
+    display: "Normal other sheet probe",
+    laterality: "UNKNOWN",
+    examination: { state: "examined", sourceEncoding: "observation" },
+    interpretation: "normal",
+    provenance: { state: "current" },
+    sheetFindings: [{ display: "Trace anomaly", qualifiers: [] }],
+    current: {
+      components: [
+        { code: "NORMAL_TEMPLATE", display: "Normal template", value: { kind: "string", value: "normal" } },
+        { code: "OTHER", display: "Other", value: { kind: "string", value: "Patient reports glare" } },
+      ],
+    },
+  };
+
+  assert.equal(findingValue(finding), "normal · Trace anomaly · Other Patient reports glare");
+});
+
+test("normal other composition preserves sheet findings when a normal label wins the base formatter", () => {
+  const normalLabelFinding: ExamOverviewFindingProjection = {
+    observationReference: "Observation/normal-label-other-sheet-probe",
+    findingKey: "entrance:pupils",
+    sectionKey: "entrance:pupils",
+    display: "Pupils",
+    laterality: "OU",
+    examination: { state: "examined", sourceEncoding: "observation" },
+    interpretation: "normal",
+    normalLabel: "PERRLA; no RAPD OU",
+    provenance: { state: "current" },
+    sheetFindings: [{ display: "Trace anomaly", qualifiers: [] }],
+    current: {
+      components: [
+        { code: "OTHER", display: "Other", value: { kind: "string", value: "Sluggish left" } },
+      ],
+    },
+  };
+  const normalWordFinding: ExamOverviewFindingProjection = {
+    ...normalLabelFinding,
+    observationReference: "Observation/normal-word-other-sheet-probe",
+    findingKey: "entrance:color",
+    sectionKey: "entrance:color",
+    display: "Color vision",
+    normalLabel: undefined,
+    sheetFindings: [{ display: "Ishihara 7/7", qualifiers: [] }],
+    current: {
+      components: [
+        { code: "OTHER", display: "Other", value: { kind: "string", value: "Testing repeated" } },
+      ],
+    },
+  };
+
+  assert.deepEqual({
+    normalLabel: findingValue(normalLabelFinding),
+    normalWord: findingValue(normalWordFinding),
+  }, {
+    normalLabel: "PERRLA; no RAPD OU · Trace anomaly · Other Sluggish left",
+    normalWord: "normal · Ishihara 7/7 · Other Testing repeated",
+  });
+});
+
+test("slice-added component formatters preserve a stored scalar value", () => {
+  const base: ExamOverviewFindingProjection = {
+    observationReference: "Observation/additive-component-probe",
+    findingKey: "additive-component-probe",
+    sectionKey: "additive-component-probe",
+    display: "Additive component probe",
+    laterality: "UNKNOWN",
+    examination: { state: "examined", sourceEncoding: "observation" },
+    interpretation: "unknown",
+    provenance: { state: "current" },
+    current: {
+      value: { kind: "string", value: "Scalar context" },
+      components: [{ code: "DETAIL", display: "Detail", value: { kind: "string", value: "Component detail" } }],
+    },
+  };
+  const eom: ExamOverviewFindingProjection = {
+    ...base,
+    observationReference: "Observation/additive-eom-probe",
+    findingKey: "entrance:eom",
+    sectionKey: "entrance:eom",
+    display: "EOM / diplopia",
+    laterality: "OU",
+    current: {
+      ...base.current,
+      components: [{ code: "OD_CUSTOM_EOM_POS_UP_LEFT", display: "OD up-left", value: { kind: "string", value: "-4" } }],
+    },
+  };
+
+  assert.deepEqual({
+    components: findingValue(base),
+    eom: findingValue(eom),
+  }, {
+    components: "Detail Component detail · Scalar context",
+    eom: "OD Up left -4 · Scalar context",
+  });
+});
+
+test("normal other composition preserves downstream summary and scalar values", () => {
+  const base: ExamOverviewFindingProjection = {
+    observationReference: "Observation/normal-other-downstream-probe",
+    findingKey: "normal-other-downstream-probe",
+    sectionKey: "normal-other-downstream-probe",
+    display: "Normal other downstream probe",
+    laterality: "UNKNOWN",
+    examination: { state: "examined", sourceEncoding: "observation" },
+    interpretation: "normal",
+    provenance: { state: "current" },
+    current: {
+      components: [
+        { code: "NORMAL_TEMPLATE", display: "Normal template", value: { kind: "string", value: "normal" } },
+        { code: "OTHER", display: "Other", value: { kind: "string", value: "Patient reports glare" } },
+      ],
+    },
+  };
+
+  assert.deepEqual({
+    summary: findingValue({ ...base, summary: "Stored summary" }),
+    scalar: findingValue({
+      ...base,
+      current: { ...base.current, value: { kind: "string", value: "Scalar context" } },
+    }),
+  }, {
+    summary: "normal · Stored summary · Other Patient reports glare",
+    scalar: "normal · Scalar context · Other Patient reports glare",
+  });
+});
+
+const KNOWN_EXERCISED_WRITER_SCHEMA_BLIND_SPOTS: Readonly<Record<string, string>> = {
+  "entrance:eom:DIPLOPIA_DIRECTION": "Covered by the endpoint-backed EOM detail fixture.",
+  "entrance:eom:DIPLOPIA_FREQUENCY": "Covered by the endpoint-backed EOM detail fixture.",
+  "entrance:eom:DIPLOPIA_NOTE": "Covered by the endpoint-backed EOM detail fixture.",
+  "entrance:eom:DIPLOPIA_ONSET": "Covered by the endpoint-backed EOM detail fixture.",
+  "entrance:eom:DIPLOPIA_PRESENT": "Covered by the endpoint-backed EOM detail fixture.",
+  "entrance:eom:DIPLOPIA_WORST_GAZE": "Covered by the endpoint-backed EOM detail fixture.",
+  "entrance:eom:EXAM_STATE": "Internal state is asserted through the projected interpretation and rendered value.",
+  "entrance:eom:NORMAL_TEMPLATE": "Covered by the endpoint-backed normal EOM fixture.",
+  "entrance:eom:NYSTAGMUS_NOTE": "Covered by the endpoint-backed EOM detail fixture.",
+  "entrance:eom:NYSTAGMUS_PRESENT": "Covered by the endpoint-backed EOM detail fixture.",
+  "entrance:eom:OD_CUSTOM_EOM_POS_DOWN_RIGHT": "Covered; the writer adds an OD prefix to the schema position code.",
+  "entrance:eom:OD_CUSTOM_EOM_POS_PRIMARY": "Covered; the writer adds an OD prefix to the schema position code.",
+  "entrance:eom:OD_CUSTOM_EOM_POS_UP_LEFT": "Covered; the writer adds an OD prefix to the schema position code.",
+  "entrance:eom:OS_CUSTOM_EOM_POS_DOWN_RIGHT": "Covered; the writer adds an OS prefix to the schema position code.",
+  "entrance:eom:OS_CUSTOM_EOM_POS_PRIMARY": "Covered; the writer adds an OS prefix to the schema position code.",
+  "entrance:eom:OS_CUSTOM_EOM_POS_UP_LEFT": "Covered; the writer adds an OS prefix to the schema position code.",
+  "entrance:eom:binocular::yes": "Covered by stored-display rendering in the endpoint-backed EOM fixture.",
+  "entrance:eom:entrance.eom": "Internal documentation marker is suppressed by the EOM formatter.",
+  "entrance:eom:incomitant::yes": "Covered by stored-display rendering in the endpoint-backed EOM fixture.",
+  "entrance:stereo:EXAM_STATE": "Internal state is asserted through the rendered normal and deferred branches.",
+  "entrance:stereo:NORMAL_TEMPLATE": "Covered by the endpoint-backed normal custom-state fixture.",
+  "entrance:stereo:OTHER": "Covered by the endpoint-backed normal and deferred custom-state fixtures.",
+  "entrance:stereo:entrance.stereo": "Internal documentation marker is bypassed by the normal and deferred render paths.",
+  "ocular-health:anterior:conjunctiva:EXAM_STATE": "Internal state is asserted through the abnormal projection branch.",
+  "ocular-health:anterior:conjunctiva:OTHER": "Covered by the endpoint-backed abnormal other-only fixture.",
+};
+
+test("exercised EOM and custom-state writers declare every schema-blind component code", async () => {
+  const eom = await renderedWriterEomFinding({
+    eyes: {
+      OD: { "up-left": "-4", primary: "0", "down-right": "+4" },
+      OS: { "up-left": "-3", primary: "+1", "down-right": "+3" },
+    },
+    nystagmus: { present: true, note: "Gaze evoked" },
+    diplopia: {
+      present: true,
+      type: "binocular",
+      direction: "horizontal",
+      comitancy: "incomitant",
+      worstGaze: "right",
+      frequency: "intermittent",
+      onset: "2026-07-20",
+      note: "Distance only",
+    },
+  });
+  const normalEom = await renderedWriterEomFinding({}, "normal");
+  const abnormalState = await renderedWriterStateSectionValue(
+    "ocular-health:anterior:conjunctiva",
+    "abnormal",
+    "Reports intermittent shimmer",
+  );
+  const normalState = await renderedWriterStateSectionValue(
+    "entrance:stereo",
+    "normal",
+    "Reliable responses throughout",
+  );
+  const definitions = buildFindingDefinitionSeeds();
+  const actual = [eom.finding, normalEom.finding, abnormalState.finding, normalState.finding]
+    .flatMap((finding) => writerSchemaBlindSpots(finding, definitions))
+    .filter((value, index, values) => values.indexOf(value) === index)
+    .sort();
+  assert.deepEqual(actual, Object.keys(KNOWN_EXERCISED_WRITER_SCHEMA_BLIND_SPOTS).sort());
+  assert.equal(Object.values(KNOWN_EXERCISED_WRITER_SCHEMA_BLIND_SPOTS).every((reason) => reason.trim().length > 0), true);
 });
 
 function refractionFixtureRows() {
@@ -1294,12 +1604,112 @@ function overviewTruthProjection(chartType: string, acuity: string, correction: 
 }
 
 type CatalogDefinition = ReturnType<typeof buildFindingDefinitionSeeds>[number];
+type CatalogFindingFixture = {
+  control: ExamOverviewFindingProjection;
+  charted: ExamOverviewFindingProjection;
+};
+
+const FIXTURE_DEFINITIONS = new Map(
+  buildFindingDefinitionSeeds().filter((definition) => definition.active)
+    .map((definition) => [definition.stableKey, definition] as const),
+);
+
+const FIXTURES: Record<string, CatalogFindingFixture> = {
+  cup_disc_ratio: catalogFixture("cup_disc_ratio"),
+  intraocular_pressure: catalogFixture("intraocular_pressure"),
+  corneal_hysteresis: catalogFixture("corneal_hysteresis"),
+  rnfl_gcc: catalogFixture("rnfl_gcc"),
+  gonio_angle_structures: catalogFixture("gonio_angle_structures"),
+  gonio_tm_pigmentation: catalogFixture("gonio_tm_pigmentation"),
+  gonio_note: catalogFixture("gonio_note"),
+  refraction: catalogFixture("refraction"),
+  soft_contact_lens: catalogFixture("soft_contact_lens"),
+  specialty_contact_lens: catalogFixture("specialty_contact_lens"),
+  wearing_rx: catalogFixture("wearing_rx"),
+  auto_refraction: catalogFixture("auto_refraction"),
+  auto_keratometry: catalogFixture("auto_keratometry"),
+  "entrance:pupils": catalogFixture("entrance:pupils"),
+  "entrance:stereo": catalogFixture("entrance:stereo"),
+  "entrance:color": catalogFixture("entrance:color"),
+  "entrance:eom": catalogFixture("entrance:eom"),
+  "entrance:cvf": catalogFixture("entrance:cvf"),
+  "entrance:visual-field-defect": catalogFixture("entrance:visual-field-defect"),
+  "entrance:cover": catalogFixture("entrance:cover"),
+  pachymetry_um: catalogFixture("pachymetry_um"),
+  manual_keratometry: catalogFixture("manual_keratometry"),
+  "entrance:dilation": catalogFixture("entrance:dilation"),
+  AXIAL_LENGTH: catalogFixture("AXIAL_LENGTH"),
+  CORNEAL_RADIUS: catalogFixture("CORNEAL_RADIUS"),
+  "dry-eye:symptoms": catalogFixture("dry-eye:symptoms"),
+  "dry-eye:tear-volume": catalogFixture("dry-eye:tear-volume"),
+  "dry-eye:markers": catalogFixture("dry-eye:markers"),
+  "dry-eye:gland-structure": catalogFixture("dry-eye:gland-structure"),
+  "dry-eye:gland-function": catalogFixture("dry-eye:gland-function"),
+  "dry-eye:conjunctival-staining": catalogFixture("dry-eye:conjunctival-staining"),
+  "dry-eye:staging": catalogFixture("dry-eye:staging"),
+  "ocular-health:anterior:periocular-adnexa": catalogFixture("ocular-health:anterior:periocular-adnexa"),
+  "ocular-health:anterior:lids-lashes": catalogFixture("ocular-health:anterior:lids-lashes"),
+  "ocular-health:anterior:palpebral-conjunctiva": catalogFixture("ocular-health:anterior:palpebral-conjunctiva"),
+  "ocular-health:anterior:conjunctiva": catalogFixture("ocular-health:anterior:conjunctiva"),
+  "ocular-health:anterior:tear-film": catalogFixture("ocular-health:anterior:tear-film"),
+  "ocular-health:anterior:cornea": catalogFixture("ocular-health:anterior:cornea"),
+  "ocular-health:anterior:anterior-chamber": catalogFixture("ocular-health:anterior:anterior-chamber"),
+  "ocular-health:anterior:iris": catalogFixture("ocular-health:anterior:iris"),
+  "ocular-health:anterior:lens": catalogFixture("ocular-health:anterior:lens"),
+  "ocular-health:posterior:vitreous": catalogFixture("ocular-health:posterior:vitreous"),
+  "ocular-health:posterior:fundus": catalogFixture("ocular-health:posterior:fundus"),
+  "ocular-health:posterior:macula": catalogFixture("ocular-health:posterior:macula"),
+  "ocular-health:posterior:vessels": catalogFixture("ocular-health:posterior:vessels"),
+  "ocular-health:posterior:periphery": catalogFixture("ocular-health:posterior:periphery"),
+};
 
 function pendingOverviewProjectionExceptions(): Readonly<Record<string, string>> {
   return UNFORMATTED_PENDING_PROJECTION;
 }
 
+function catalogFixture(stableKey: string): CatalogFindingFixture {
+  const definition = FIXTURE_DEFINITIONS.get(stableKey);
+  assert.ok(definition, `Missing active catalog definition for fixture ${stableKey}`);
+  return {
+    control: bareCatalogFinding(definition),
+    charted: chartedCatalogFinding(definition),
+  };
+}
+
+function bareCatalogFinding(definition: CatalogDefinition): ExamOverviewFindingProjection {
+  return {
+    observationReference: `Observation/catalog-control-${definition.stableKey.replaceAll(/[^A-Za-z0-9.-]/g, "-")}`,
+    findingKey: definition.stableKey,
+    sectionKey: definition.sectionKey ?? definition.stableKey,
+    display: definition.display,
+    laterality: definition.valueSchema.perEye === true ? "OD" : "UNKNOWN",
+    examination: { state: "examined", sourceEncoding: "observation" },
+    interpretation: "unknown",
+    provenance: { state: "current" },
+    current: { components: [] },
+  };
+}
+
 function catalogGuardProjection(definition: CatalogDefinition): ExamOverviewProjection {
+  const finding = chartedCatalogFinding(definition);
+  return {
+    encounterReference: "Encounter/catalog-guard",
+    patientReference: "Patient/catalog-guard",
+    findings: [finding],
+    sections: [overviewSection("pretest", "Pretest", [finding.observationReference])],
+    completeness: PROJECTION.completeness,
+  };
+}
+
+function chartedCatalogFinding(definition: CatalogDefinition): ExamOverviewFindingProjection {
+  if (definition.stableKey === "entrance:eom") {
+    return {
+      ...bareCatalogFinding(definition),
+      observationReference: "Observation/catalog-entrance-eom",
+      laterality: "OU",
+      current: writerShapedEomSnapshot(),
+    };
+  }
   const valueSchema = definition.valueSchema as Record<string, unknown>;
   const fields = Object.values((valueSchema.fields ?? {}) as Record<string, Record<string, unknown>>);
   const components = fields.flatMap((field) => {
@@ -1331,7 +1741,7 @@ function catalogGuardProjection(definition: CatalogDefinition): ExamOverviewProj
   });
   const value = catalogScalarValue(valueSchema);
   const type = typeof valueSchema.type === "string" ? valueSchema.type : undefined;
-  const finding = {
+  return {
     observationReference: `Observation/catalog-${definition.stableKey.replaceAll(/[^A-Za-z0-9.-]/g, "-")}`,
     findingKey: definition.stableKey,
     sectionKey: definition.sectionKey ?? definition.stableKey,
@@ -1346,13 +1756,6 @@ function catalogGuardProjection(definition: CatalogDefinition): ExamOverviewProj
     ...(type === "dilation-administration" ? {
       event: { administrations: [{ agent: "Tropicamide 1%", occurredAt: "2026-08-28T14:00:00.000Z" }] },
     } : {}),
-  };
-  return {
-    encounterReference: "Encounter/catalog-guard",
-    patientReference: "Patient/catalog-guard",
-    findings: [finding],
-    sections: [overviewSection("pretest", "Pretest", [finding.observationReference])],
-    completeness: PROJECTION.completeness,
   };
 }
 
@@ -1410,6 +1813,199 @@ function measurementFinding(
 
 function snapshotStringComponent(code: string, display: string, value: string) {
   return { code, display, value: { kind: "string" as const, value } };
+}
+
+function writerShapedEomSnapshot() {
+  const components = [
+    { code: "EXAM_STATE", display: "Exam state", value: "abnormal" },
+    { code: "OD_CUSTOM_EOM_POS_UP_LEFT", display: "OD up-left", value: "-4" },
+    { code: "OD_CUSTOM_EOM_POS_PRIMARY", display: "OD primary", value: "0" },
+    { code: "OD_CUSTOM_EOM_POS_DOWN_RIGHT", display: "OD down-right", value: "+4" },
+    { code: "OS_CUSTOM_EOM_POS_UP_LEFT", display: "OS up-left", value: "-3" },
+    { code: "OS_CUSTOM_EOM_POS_PRIMARY", display: "OS primary", value: "+1" },
+    { code: "OS_CUSTOM_EOM_POS_DOWN_RIGHT", display: "OS down-right", value: "+3" },
+  ];
+  return observationSnapshot({
+    resourceType: "Observation",
+    status: "final",
+    code: { coding: [{ code: "entrance:eom" }] },
+    component: components.map((component) => ({
+      code: { coding: [{ code: component.code, display: component.display }] },
+      valueString: component.value,
+    })),
+  } satisfies Observation);
+}
+
+class EomWriterFhir {
+  resources: Array<Observation | Provenance> = [];
+
+  async create<T extends Observation | Provenance>(resource: T): Promise<T> {
+    const saved = { ...resource, id: resource.id ?? `${resource.resourceType.toLowerCase()}-${this.resources.length + 1}` } as T;
+    this.resources.push(saved);
+    return saved;
+  }
+
+  async search<T extends Observation>(resourceType: T["resourceType"]): Promise<Bundle<T>> {
+    return {
+      resourceType: "Bundle",
+      type: "searchset",
+      entry: this.resources.filter((resource) => resource.resourceType === resourceType)
+        .map((resource) => ({ resource: resource as T })),
+    };
+  }
+}
+
+async function renderedWriterEomValue(
+  details: Record<string, unknown>,
+  state: "normal" | "abnormal" = "abnormal",
+): Promise<string> {
+  return (await renderedWriterEomFinding(details, state)).value;
+}
+
+async function renderedWriterEomFinding(
+  details: Record<string, unknown>,
+  state: "normal" | "abnormal" = "abnormal",
+): Promise<{ value: string; componentCodes: string[]; finding: ExamOverviewFindingProjection }> {
+  const definitions = buildFindingDefinitionSeeds();
+  const fhir = new EomWriterFhir();
+  const deps: EomEndpointDeps = {
+    authenticate: async () => ({
+      staffReference: "Practitioner/eom-writer-fixture",
+      actorRole: "provider",
+      fhir,
+    }),
+    findingDefinitions: () => definitions,
+    now: () => "2026-07-22T12:00:00.000Z",
+  };
+  const result = await handleEomCaptureRequest(deps, {
+    authHeader: "Bearer writer-fixture",
+    body: {
+      patientReference: "Patient/eom-writer-fixture",
+      encounterReference: "Encounter/eom-writer-fixture",
+      state,
+      ...details,
+    },
+  });
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  const observation = fhir.resources.find((resource): resource is Observation => resource.resourceType === "Observation");
+  assert.ok(observation);
+  const writerProjection = buildExamOverviewProjection({
+    encounterReference: "Encounter/eom-writer-fixture",
+    patientReference: "Patient/eom-writer-fixture",
+    definitions,
+    currentObservations: [observation],
+    priorObservationCandidates: [],
+    assessmentRows: [],
+  });
+  const finding = writerProjection.findings.find((candidate) => candidate.findingKey === "entrance:eom");
+  assert.ok(finding);
+  const renderedFinding = finding;
+  assert.equal(renderedFinding.interpretation, "unknown");
+  const projection = catalogGuardProjection(definitions.find((definition) => definition.stableKey === "entrance:eom")!);
+  projection.findings = [renderedFinding];
+  projection.sections = [overviewSection("pretest", "Pretest", [renderedFinding.observationReference])];
+  const renderer = create(
+    <ExamOverviewBoard
+      projection={projection}
+      editorEntries={[]}
+      refreshing={false}
+      onOpenEditor={() => undefined}
+      onRefresh={() => undefined}
+    />,
+  );
+  try {
+    return {
+      value: findingValueText(renderer, "entrance:eom"),
+      componentCodes: finding.current.components.map((component) => component.code),
+      finding,
+    };
+  } finally {
+    renderer.unmount();
+  }
+}
+
+async function renderedWriterStateSectionValue(
+  stableKey: "entrance:pupils" | "entrance:stereo" | "ocular-health:anterior:conjunctiva",
+  state: "normal" | "abnormal" | "deferred",
+  other: string,
+): Promise<{
+  value: string;
+  formattedValue: string;
+  componentCodes: string[];
+  finding: ExamOverviewFindingProjection;
+}> {
+  const definitions = buildFindingDefinitionSeeds();
+  const definition = definitions.find((candidate) => candidate.stableKey === stableKey);
+  assert.ok(definition);
+  const fhir = new EomWriterFhir();
+  const deps: CustomSectionEndpointDeps = {
+    authenticate: async () => ({
+      staffReference: "Practitioner/state-writer-fixture",
+      actorRole: "provider",
+      fhir,
+    }),
+    findingDefinitions: () => definitions,
+    now: () => "2026-07-22T12:00:00.000Z",
+  };
+  const result = await handleCustomSectionCaptureRequest(deps, {
+    authHeader: "Bearer state-writer-fixture",
+    params: { stableKey },
+    body: {
+      patientReference: "Patient/state-writer-fixture",
+      encounterReference: "Encounter/state-writer-fixture",
+      ...(definition.valueSchema.perEye === true
+        ? { eyes: { OD: { customFields: [], state, other } } }
+        : { customFields: [], state, other }),
+    },
+  });
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  const observation = fhir.resources.find((resource): resource is Observation => resource.resourceType === "Observation");
+  assert.ok(observation);
+  const writerProjection = buildExamOverviewProjection({
+    encounterReference: "Encounter/state-writer-fixture",
+    patientReference: "Patient/state-writer-fixture",
+    definitions,
+    currentObservations: [observation],
+    priorObservationCandidates: [],
+    assessmentRows: [],
+  });
+  const finding = writerProjection.findings.find((candidate) => candidate.findingKey === stableKey);
+  assert.ok(finding);
+  const projection = catalogGuardProjection(definition);
+  projection.findings = [finding];
+  projection.sections = [overviewSection("pretest", "Pretest", [finding.observationReference])];
+  const renderer = create(
+    <ExamOverviewBoard
+      projection={projection}
+      editorEntries={[]}
+      refreshing={false}
+      onOpenEditor={() => undefined}
+      onRefresh={() => undefined}
+    />,
+  );
+  try {
+    return {
+      value: findingValueText(renderer, stableKey),
+      formattedValue: findingValue(finding),
+      componentCodes: finding.current.components.map((component) => component.code),
+      finding,
+    };
+  } finally {
+    renderer.unmount();
+  }
+}
+
+function writerSchemaBlindSpots(
+  finding: ExamOverviewFindingProjection,
+  definitions: ReturnType<typeof buildFindingDefinitionSeeds>,
+): string[] {
+  const definition = definitions.find((candidate) => candidate.stableKey === finding.findingKey);
+  assert.ok(definition);
+  const fields = (definition.valueSchema.fields ?? {}) as Record<string, { localCode?: string }>;
+  const schemaCodes = new Set(Object.entries(fields).flatMap(([key, field]) => field.localCode ?? key));
+  return finding.current.components.flatMap((component) =>
+    schemaCodes.has(component.code) ? [] : [`${finding.findingKey}:${component.code}`]
+  );
 }
 
 function snapshotCodeComponent(code: string, display: string, value: string) {

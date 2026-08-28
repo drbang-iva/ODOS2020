@@ -109,6 +109,8 @@ export const UNFORMATTED_PENDING_PROJECTION = {
   hpi_ros: "ODOS-OVERVIEW-HISTORY-PROJECTION (A2) — overview must read complaint records",
 } as const;
 
+export const UNFORMATTED_FINDING_VALUE = "recorded";
+
 interface Props {
   projection: ExamOverviewProjection;
   editorEntries: readonly ChartEditorEntry[];
@@ -913,55 +915,143 @@ function wordValue(finding: ExamOverviewFindingProjection): string {
   return finding.summary ?? findingValue(finding);
 }
 
-function findingValue(finding: ExamOverviewFindingProjection): string {
-  if (finding.interpretation === "normal" && finding.normalLabel) return finding.normalLabel;
-  if (finding.sheetFindings?.length) {
-    return finding.sheetFindings.map((row) =>
-      `${row.display}${row.qualifiers.length ? ` ${row.qualifiers.join(" ")}` : ""}`
-    ).join("; ");
+export function findingValue(finding: ExamOverviewFindingProjection): string {
+  const value = baseFindingSegments(finding);
+  const other = chartedComponentDisplay(finding, "OTHER");
+  let segments = value;
+  if (finding.interpretation === "normal" && other) {
+    const normal = finding.normalLabel ?? normalFindingWord(finding.findingKey) ??
+      snapshotComponentLabel(finding.current, "NORMAL_TEMPLATE");
+    const internalDocumentation = new Set(finding.current.components.flatMap((component) => {
+      // Documentation markers repeat projected state and are not clinician-entered finding details.
+      if (component.display !== component.code || component.value?.kind !== "code") return [];
+      const code = component.value.code?.toLowerCase();
+      if (code !== "normal" && code !== "abnormal" && code !== "deferred" && code !== "absent") return [];
+      const display = safeSnapshotValueLabel(component.value);
+      return display ? [`${component.display} ${display}`] : [];
+    }));
+    internalDocumentation.add(UNFORMATTED_FINDING_VALUE);
+    const preserved = distinctFindingSegments(normal ? [normal] : undefined, sheetFindingsValue(finding), value)
+      .filter((segment) => segment !== other && !internalDocumentation.has(segment));
+    segments = [...preserved, other];
   }
+  return segments.join(" · ");
+}
+
+function baseFindingSegments(finding: ExamOverviewFindingProjection): string[] {
+  if (finding.interpretation === "normal" && finding.normalLabel) return [finding.normalLabel];
+  const sheetFindings = sheetFindingsValue(finding);
+  if (sheetFindings.length) return sheetFindings;
   const normalWord = finding.interpretation === "normal" ? normalFindingWord(finding.findingKey) : undefined;
-  if (normalWord) return normalWord;
-  if (finding.summary) return finding.summary;
+  if (normalWord) return [normalWord];
+  if (finding.summary) return [finding.summary];
   const visualAcuity = visualAcuityValue(finding);
-  if (visualAcuity) return visualAcuity;
+  if (visualAcuity) return [visualAcuity];
   const keratometry = keratometryValue(finding);
-  if (keratometry) return keratometry;
+  if (keratometry) return [keratometry];
   const pachymetry = pachymetryValue(finding);
-  if (pachymetry) return pachymetry;
+  if (pachymetry) return [pachymetry];
+  const currentValue = finding.current.value ? safeSnapshotValueLabel(finding.current.value) : undefined;
   const eom = eomValue(finding);
-  if (eom) return eom;
+  if (eom) return distinctFindingSegments(eom, currentValue ? [currentValue] : undefined);
   if (!Object.hasOwn(UNFORMATTED_PENDING_PROJECTION, finding.findingKey)) {
     const components = chartedComponentValue(finding);
-    if (components) return components;
+    if (components) return distinctFindingSegments(components, currentValue ? [currentValue] : undefined);
   }
-  if (finding.current.value) {
-    const label = safeSnapshotValueLabel(finding.current.value);
-    if (label) return label;
-  }
-  if (finding.interpretation === "abnormal") return "Finding not specified";
-  if (finding.interpretation === "borderline") return "borderline";
-  return "recorded";
+  if (currentValue) return [currentValue];
+  if (finding.interpretation === "abnormal") return ["Finding not specified"];
+  if (finding.interpretation === "borderline") return ["borderline"];
+  return [UNFORMATTED_FINDING_VALUE];
 }
 
-function eomValue(finding: ExamOverviewFindingProjection): string | undefined {
+function sheetFindingsValue(finding: ExamOverviewFindingProjection): string[] {
+  if (!finding.sheetFindings?.length) return [];
+  return [finding.sheetFindings.map((row) =>
+    `${row.display}${row.qualifiers.length ? ` ${row.qualifiers.join(" ")}` : ""}`
+  ).join("; ")];
+}
+
+function distinctFindingSegments(...values: Array<readonly string[] | undefined>): string[] {
+  return values.flatMap((value) => value ?? [])
+    .filter((value, index, all) => all.indexOf(value) === index);
+}
+
+function eomValue(finding: ExamOverviewFindingProjection): string[] | undefined {
   if (finding.findingKey !== "entrance:eom") return undefined;
+  const normalTemplate = finding.current.components.find((component) => component.code === "NORMAL_TEMPLATE")?.value;
+  if (normalTemplate) {
+    const value = safeSnapshotValueLabel(normalTemplate);
+    if (value) return [value];
+  }
+  const positionOrder = new Map([
+    "UP_LEFT", "UP", "UP_RIGHT", "LEFT", "PRIMARY", "RIGHT", "DOWN_LEFT", "DOWN", "DOWN_RIGHT",
+  ].map((position, index) => [position, index]));
   const positions = finding.current.components.flatMap((component) => {
-    if (!component.code.match(/^(?:OD_|OS_)?CUSTOM_EOM_POS_/)) return [];
+    const match = component.code.match(/^(OD|OS)_CUSTOM_EOM_POS_(.+)$/);
+    if (!match) return [];
+    const eye = match[1] as "OD" | "OS";
+    const position = match[2]!;
+    const order = positionOrder.get(position);
+    if (order === undefined) return [];
     const value = component.value ? safeSnapshotValueLabel(component.value) : undefined;
-    return value && component.display ? [`${component.display} ${value}`] : [];
+    return value ? [{ eye, position, order, value }] : [];
   });
-  return positions.length ? positions.join(" · ") : undefined;
+  const values = (["OD", "OS"] as const).flatMap((eye) =>
+    positions.filter((position) => position.eye === eye)
+      .sort((left, right) => left.order - right.order)
+      .map((position, index) => {
+        const label = position.position.toLowerCase().replaceAll("_", " ");
+        const display = `${label.charAt(0).toUpperCase()}${label.slice(1)}`;
+        return `${index === 0 ? `${eye} ` : ""}${display} ${position.value}`;
+      })
+  );
+  const detailOrder = new Map([
+    "NYSTAGMUS_PRESENT",
+    "NYSTAGMUS_NOTE",
+    "DIPLOPIA_PRESENT",
+    "monocular::yes",
+    "binocular::yes",
+    "comitant::yes",
+    "incomitant::yes",
+    "DIPLOPIA_DIRECTION",
+    "DIPLOPIA_WORST_GAZE",
+    "DIPLOPIA_FREQUENCY",
+    "DIPLOPIA_ONSET",
+    "DIPLOPIA_NOTE",
+  ].map((code, index) => [code, index]));
+  const details = finding.current.components.flatMap((component) => {
+    if (component.code === "EXAM_STATE") return []; // Internal state drives projection interpretation and examination state.
+    if (component.code === "NORMAL_TEMPLATE") return []; // The EOM normal branch above renders its stored template value.
+    if (component.code === "entrance.eom") return []; // Documentation marker, not a clinician-entered finding detail.
+    if (component.code.includes("CUSTOM_EOM_POS_")) return []; // The anatomical gaze path above renders these values.
+    const value = component.value ? safeSnapshotValueLabel(component.value) : undefined;
+    return value && component.display ? [{
+      code: component.code,
+      display: `${component.display} ${value}`,
+    }] : [];
+  }).sort((left, right) =>
+    (detailOrder.get(left.code) ?? detailOrder.size) - (detailOrder.get(right.code) ?? detailOrder.size)
+      || left.code.localeCompare(right.code)
+  ).map((detail) => detail.display);
+  values.push(...details);
+  return values.length ? values : undefined;
 }
 
-function chartedComponentValue(finding: ExamOverviewFindingProjection): string | undefined {
+function chartedComponentValue(finding: ExamOverviewFindingProjection): string[] | undefined {
   if (finding.findingKey === "entrance:eom") return undefined;
   const values = finding.current.components.flatMap((component) => {
-    if (["EXAM_STATE", "NORMAL_TEMPLATE", "OTHER"].includes(component.code)) return [];
+    if (component.code === "EXAM_STATE") return []; // Internal state is projected into interpretation/examination state.
+    if (component.code === "NORMAL_TEMPLATE") return []; // The normal finding path renders its label or stored template value.
     const value = component.value ? safeSnapshotValueLabel(component.value) : undefined;
     return value && component.display ? [`${component.display} ${value}`] : [];
   });
-  return values.length ? values.join(" · ") : undefined;
+  return values.length ? values : undefined;
+}
+
+function chartedComponentDisplay(finding: ExamOverviewFindingProjection, code: string): string | undefined {
+  const component = finding.current.components.find((candidate) => candidate.code === code);
+  const value = component?.value ? safeSnapshotValueLabel(component.value) : undefined;
+  return value && component?.display ? `${component.display} ${value}` : undefined;
 }
 
 function visualAcuityValue(finding: ExamOverviewFindingProjection): string | undefined {
