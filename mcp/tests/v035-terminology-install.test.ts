@@ -12,6 +12,7 @@ import {
 import {
   createAuthenticatedFhirClient,
   loadRepoEnv,
+  requireMedplumAdmin,
 } from "./integration-helpers.js";
 
 const execFileAsync = promisify(execFile);
@@ -20,13 +21,11 @@ test("profile installer idempotently installs ODOS EpisodeOfCare terminology", {
   loadRepoEnv();
 
   const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
-  const email = process.env.MEDPLUM_ADMIN_EMAIL;
-  const password = process.env.MEDPLUM_ADMIN_PASSWORD;
-
-  if (!email || !password) {
-    t.skip("MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.");
+  const credentials = requireMedplumAdmin(t, "v035-terminology-install");
+  if (!credentials) {
     return;
   }
+  const { email, password } = credentials;
 
   const repoRoot = resolve(process.cwd(), "..");
   const install = await execFileAsync("npm", ["run", "install-profiles", "--silent"], {

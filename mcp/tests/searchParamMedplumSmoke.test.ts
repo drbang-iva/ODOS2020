@@ -28,6 +28,7 @@ import { buildPaymentReconciliation } from "../src/payments/payment-reconciliati
 import {
   createAuthenticatedFhirClient,
   loadRepoEnv,
+  requireMedplumAdmin,
 } from "./integration-helpers.js";
 import type { ContractResourceType } from "./search-param-contract.js";
 
@@ -155,8 +156,10 @@ const searches: SmokeSearch[] = [
 for (const search of searches) {
   test(`Medplum 5.1.8 accepts ${search.name} search`, async (t) => {
     if (!fixture) {
-      t.skip(MEDPLUM_SKIP_MESSAGE);
-      return;
+      if (!requireMedplumAdmin(t, "searchParamMedplumSmoke", MEDPLUM_SKIP_MESSAGE)) {
+        return;
+      }
+      throw new Error("Medplum search smoke fixture was not created after credentialed setup.");
     }
 
     const bundle = await fixture.fhir.search<Resource>(
@@ -176,8 +179,10 @@ for (const search of searches) {
 
 test("real Medplum Media search rewrites Binary content for the imaging handler to a fetchable URL", async (t) => {
   if (!fixture) {
-    t.skip(MEDPLUM_SKIP_MESSAGE);
-    return;
+    if (!requireMedplumAdmin(t, "searchParamMedplumSmoke", MEDPLUM_SKIP_MESSAGE)) {
+      return;
+    }
+    throw new Error("Medplum search smoke fixture was not created after credentialed setup.");
   }
   const bytes = Buffer.from(`contract-imaging-${randomBytes(12).toString("hex")}`);
   const binary = await uploadBinary({

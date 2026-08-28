@@ -13,7 +13,8 @@
     "build": "tsc",
     "dev": "tsx src/index.ts",
     "start": "node .",
-    "test": "node --import tsx --test --test-concurrency=1 \"src/__tests__/**/*.test.ts\" \"tests/**/*.test.ts\" \"../tests/boundaries/**/*.test.ts\" \"../tests/observation-status-machine/**/*.test.ts\" \"../tests/setup-wizard/**/*.test.ts\" \"../tests/preflight/**/*.test.ts\" \"../tests/smart/**/*.test.ts\" \"../tests/cds/**/*.test.ts\" \"../tests/agentops/**/*.test.ts\" \"../tests/bulk-data/**/*.test.ts\" \"../tests/mandate-8/**/*.test.ts\""
+    "test": "node scripts/run-tests.mjs",
+    "test:live-authz": "node scripts/run-tests.mjs tests/audit-header.test.ts tests/billingIdentityConfigParity.test.ts tests/body-structure-idempotency.test.ts tests/clinicalWriteAuthzLive.test.ts tests/diagnosisCarryForward.test.ts tests/encounter-lifecycle.test.ts tests/encounter.test.ts tests/patient-update.test.ts tests/profile-validation.test.ts tests/provenance-defaults.test.ts tests/searchParamMedplumSmoke.test.ts tests/transaction-atomicity.test.ts tests/v035-terminology-install.test.ts tests/v035-write-tools.test.ts tests/v04-observation-focus-conformance.test.ts tests/v04-write-tools.test.ts tests/v04b-write-tools.test.ts tests/v04c-write-tools.test.ts tests/v05a-authz.test.ts tests/v05b-audit-ib-backup.test.ts"
   },
   "dependencies": {
     "@medplum/fhirtypes": "^4.0.0",

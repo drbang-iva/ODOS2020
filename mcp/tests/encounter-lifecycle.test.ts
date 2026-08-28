@@ -4,6 +4,7 @@ import type { Bundle, Encounter, Patient, Provenance } from "@medplum/fhirtypes"
 import {
   createAuthenticatedFhirClient,
   loadRepoEnv,
+  requireMedplumAdmin,
 } from "./integration-helpers.js";
 import type { JsonPatchOperation } from "../src/fhir-client.js";
 
@@ -11,12 +12,11 @@ test("comprehensive Encounter lifecycle records history and Provenance per state
   loadRepoEnv();
 
   const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
-  const email = process.env.MEDPLUM_ADMIN_EMAIL;
-  const password = process.env.MEDPLUM_ADMIN_PASSWORD;
-  if (!email || !password) {
-    t.skip("MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.");
+  const credentials = requireMedplumAdmin(t, "encounter-lifecycle");
+  if (!credentials) {
     return;
   }
+  const { email, password } = credentials;
 
   const { fhir, accessToken } = await createAuthenticatedFhirClient({ baseUrl, email, password });
   const patient = await fhir.create<Patient>({

@@ -103,6 +103,14 @@ jobs:
         run: |
           node --import tsx --test --test-concurrency=1 tests/searchParamMedplumSmoke.test.ts
           node --import tsx --test --test-concurrency=1 tests/profile-validation.test.ts
+      - name: run credentialed live authorization lane
+        working-directory: mcp
+        env:
+          MEDPLUM_BASE_URL: http://localhost:18103/
+          MEDPLUM_ADMIN_EMAIL: contract-admin@odos.local
+          MEDPLUM_ADMIN_PASSWORD: Odos-contract-CI-Password-1!
+          MEDPLUM_CONTRACT_BOOTSTRAP: "1"
+        run: npm run test:live-authz
       - name: stop Medplum contract backend
         if: always()
         run: >-

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { test } from "node:test";
 import type { Basic } from "@medplum/fhirtypes";
-import { createAuthenticatedFhirClient, loadRepoEnv } from "./integration-helpers.js";
+import { createAuthenticatedFhirClient, loadRepoEnv, requireMedplumAdmin } from "./integration-helpers.js";
 import {
   ODOS_BILLING_IDENTITY_CONFIG_CODE as mcpCode,
   ODOS_BILLING_IDENTITY_CONFIG_RESOURCE_ID as mcpResourceId,
@@ -75,12 +75,15 @@ test("UI and MCP billing identity validation reject the same invalid NPI check d
 test("real Medplum assigns ids and reloads coded Basic singletons", { timeout: 90_000 }, async (t) => {
   loadRepoEnv();
   const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
-  const email = process.env.MEDPLUM_ADMIN_EMAIL;
-  const password = process.env.MEDPLUM_ADMIN_PASSWORD;
-  if (!email || !password) {
-    t.skip("MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the singleton persistence integration test.");
+  const credentials = requireMedplumAdmin(
+    t,
+    "billingIdentityConfigParity",
+    "MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the singleton persistence integration test.",
+  );
+  if (!credentials) {
     return;
   }
+  const { email, password } = credentials;
 
   const { fhir, accessToken } = await createAuthenticatedFhirClient({ baseUrl, email, password });
   const runId = randomUUID();

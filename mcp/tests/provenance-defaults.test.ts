@@ -6,6 +6,7 @@ import {
   createAuthenticatedFhirClient,
   loadRepoEnv,
   parseToolOutput,
+  requireMedplumAdmin,
 } from "./integration-helpers.js";
 
 interface CreateEncounterToolOutput {
@@ -37,13 +38,11 @@ test("clinical MCP write tools default Provenance ON", { timeout: 90_000 }, asyn
   loadRepoEnv();
 
   const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
-  const email = process.env.MEDPLUM_ADMIN_EMAIL;
-  const password = process.env.MEDPLUM_ADMIN_PASSWORD;
-
-  if (!email || !password) {
-    t.skip("MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.");
+  const credentials = requireMedplumAdmin(t, "provenance-defaults");
+  if (!credentials) {
     return;
   }
+  const { email, password } = credentials;
 
   const { fhir, accessToken } = await createAuthenticatedFhirClient({ baseUrl, email, password });
   const patient = await fhir.create<Patient>({
