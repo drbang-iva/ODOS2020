@@ -677,6 +677,28 @@ test("stored Wearing Rx renders in its own worksheet row", () => {
   }
 });
 
+test("a newer OD-only Wearing save retains the latest stored OS in the worksheet row", () => {
+  const renderer = renderSplitWearingHistoryBoard();
+  try {
+    assert.equal(
+      findingValueText(renderer, "wearing_rx"),
+      "OD −0.50 sph OS −2.00 −0.75 ×170",
+    );
+  } finally {
+    renderer.unmount();
+  }
+});
+
+test("a newer OD-only Wearing save retains both eyes in the refraction comparison", () => {
+  const renderer = renderSplitWearingHistoryBoard();
+  try {
+    const rendered = textContent(renderer.root.findByProps({ "data-finding-key": "refraction" }));
+    assert.match(rendered, /Wearing Rx OD −0\.50 sph OS −2\.00 −0\.75 ×170/);
+  } finally {
+    renderer.unmount();
+  }
+});
+
 test("overview truth changes preserve the exact IOP value", () => {
   const renderer = renderOverviewTruthBoard();
   try {
@@ -973,6 +995,69 @@ function wearingFinding(id: string, recordedAt: string, sphere: number) {
     current: {
       recordedAt,
       components: [component("OD_SPHERE", "OD sphere", sphere, "D")],
+    },
+  };
+}
+
+function renderSplitWearingHistoryBoard(): ReactTestRenderer {
+  return create(
+    <ExamOverviewBoard
+      projection={splitWearingHistoryProjection()}
+      editorEntries={chartEditorInventory()}
+      refreshing={false}
+      onOpenEditor={() => undefined}
+      onRefresh={() => undefined}
+    />,
+  );
+}
+
+function splitWearingHistoryProjection(): ExamOverviewProjection {
+  const findings = [
+    refractionFinding("split-wearing-manifest-od", "OD", "2026-08-24T15:00:00.000Z", "split-wearing", "MANIFEST", {
+      sphere: -0.75,
+    }),
+    refractionFinding("split-wearing-manifest-os", "OS", "2026-08-24T15:00:00.000Z", "split-wearing", "MANIFEST", {
+      sphere: -1.25,
+    }),
+    wearingSnapshotFinding("split-wearing-bilateral", "2026-08-24T14:00:00.000Z", {
+      OD: { sphere: -1 },
+      OS: { sphere: -2, cylinder: -0.75, axis: 170 },
+    }),
+    wearingSnapshotFinding("split-wearing-od-only", "2026-08-24T16:00:00.000Z", {
+      OD: { sphere: -0.5 },
+    }),
+  ];
+  return {
+    encounterReference: "Encounter/exam-1",
+    patientReference: "Patient/patient-1",
+    findings,
+    sections: [overviewSection("refraction", "Refraction", findings.map((finding) => finding.observationReference))],
+    completeness: PROJECTION.completeness,
+  } as ExamOverviewProjection;
+}
+
+function wearingSnapshotFinding(
+  id: string,
+  recordedAt: string,
+  eyes: Partial<Record<"OD" | "OS", { sphere: number; cylinder?: number; axis?: number; add?: number }>>,
+) {
+  return {
+    observationReference: `Observation/${id}`,
+    findingKey: "wearing_rx",
+    sectionKey: "wearing",
+    display: "Wearing Rx",
+    laterality: "OU",
+    examination: { state: "examined", sourceEncoding: "observation" },
+    interpretation: "unknown",
+    provenance: { state: "current" },
+    current: {
+      recordedAt,
+      components: (Object.entries(eyes) as Array<["OD" | "OS", NonNullable<(typeof eyes)["OD"]>]>).flatMap(([eye, values]) => [
+        component(`${eye}_SPHERE`, `${eye} sphere`, values.sphere, "D"),
+        ...(values.cylinder === undefined ? [] : [component(`${eye}_CYLINDER`, `${eye} cylinder`, values.cylinder, "D")]),
+        ...(values.axis === undefined ? [] : [component(`${eye}_AXIS`, `${eye} axis`, values.axis, "degrees")]),
+        ...(values.add === undefined ? [] : [component(`${eye}_ADD`, `${eye} add`, values.add, "D")]),
+      ]),
     },
   };
 }

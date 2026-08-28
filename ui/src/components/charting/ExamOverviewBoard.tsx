@@ -1102,20 +1102,26 @@ function quantityField(snapshot: ObservationSnapshot, code: string, key: keyof R
 }
 
 function wearingRx(findings: readonly ExamOverviewFindingProjection[]): Partial<Record<"OD" | "OS", RxEyeValues>> | undefined {
-  const latest = [...findings].sort((left, right) =>
+  const latestFirst = [...findings].sort((left, right) =>
     instantMillis(right.current.recordedAt) - instantMillis(left.current.recordedAt)
-  )[0];
-  if (!latest) return undefined;
+  );
   const eyes = Object.fromEntries((["OD", "OS"] as const).flatMap((eye) => {
-    const values: RxEyeValues = {
-      ...quantityField(latest.current, `${eye}_SPHERE`, "sphere"),
-      ...quantityField(latest.current, `${eye}_CYLINDER`, "cylinder"),
-      ...quantityField(latest.current, `${eye}_AXIS`, "axis"),
-      ...quantityField(latest.current, `${eye}_ADD`, "add"),
-    };
-    return Object.keys(values).length ? [[eye, values]] : [];
+    const values = latestFirst
+      .map((finding) => wearingEyeFromSnapshot(finding.current, eye))
+      .find((value): value is RxEyeValues => value !== undefined);
+    return values ? [[eye, values]] : [];
   })) as Partial<Record<"OD" | "OS", RxEyeValues>>;
   return Object.keys(eyes).length ? eyes : undefined;
+}
+
+function wearingEyeFromSnapshot(snapshot: ObservationSnapshot, eye: "OD" | "OS"): RxEyeValues | undefined {
+  const values: RxEyeValues = {
+    ...quantityField(snapshot, `${eye}_SPHERE`, "sphere"),
+    ...quantityField(snapshot, `${eye}_CYLINDER`, "cylinder"),
+    ...quantityField(snapshot, `${eye}_AXIS`, "axis"),
+    ...quantityField(snapshot, `${eye}_ADD`, "add"),
+  };
+  return Object.keys(values).length ? values : undefined;
 }
 
 function instantMillis(value: string | undefined): number {
