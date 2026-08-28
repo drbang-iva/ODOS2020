@@ -16,7 +16,6 @@ import {
 import { createLiveOdosAuditRuntime } from "../src/authz/liveAudit.js";
 import { verifyRestoreIntegrity } from "../src/authz/restoreIntegrity.js";
 import { informationBlockingExceptionForDenial } from "../src/policy/ib-exception-map.js";
-import { buildMedplumAccessPolicy, getRoleDeclaration } from "../src/authz/roles.js";
 import { auditEventTypeForFhirWrite, type MedplumClient } from "../src/fhir-client.js";
 import {
   connectMcpServer,
@@ -281,7 +280,7 @@ test("restore integrity suite passes all five v0.5b post-restore checks", () => 
 });
 
 test(
-  "live MCP audit worker records actual read, write, and AccessPolicy denial with AuditEvent projection",
+  "live MCP audit worker records actual read, write, and audit-only boundary denial with AuditEvent projection",
   { timeout: 120_000 },
   async (t) => {
     loadRepoEnv();
@@ -336,19 +335,19 @@ test(
       }),
     );
 
-    const auditorToken = await createAuditorClientToken({ baseUrl, accessToken, fhir });
-    const auditorMcp = await connectMcpServer({
+    const auditOnlyBoundaryToken = await createAuditOnlyBoundaryClientToken({ baseUrl, accessToken, fhir });
+    const auditOnlyBoundaryMcp = await connectMcpServer({
       baseUrl,
       email,
       password,
-      accessToken: auditorToken,
-      clientName: "odos-mcp-v05b-live-audit-auditor-denial",
+      accessToken: auditOnlyBoundaryToken,
+      clientName: "odos-mcp-v05b-live-audit-only-boundary-denial",
     });
     t.after(async () => {
-      await auditorMcp.client.close();
+      await auditOnlyBoundaryMcp.client.close();
     });
 
-    const denied = await auditorMcp.client.callTool({
+    const denied = await auditOnlyBoundaryMcp.client.callTool({
       name: "get_patient",
       arguments: { patient_id: patient.id },
     });
@@ -445,7 +444,7 @@ function seedNinetyDays(patientId: string) {
   ];
 }
 
-async function createAuditorClientToken(input: {
+async function createAuditOnlyBoundaryClientToken(input: {
   baseUrl: string;
   accessToken: string;
   fhir: MedplumClient;
@@ -457,8 +456,8 @@ async function createAuditorClientToken(input: {
   const me = (await meRes.json()) as { project?: { id?: string } };
   assert.ok(me.project?.id, "Could not resolve project id from /auth/me.");
 
-  const policy = buildMedplumAccessPolicy(getRoleDeclaration("admin"));
-  policy.name = `ODOS v0.5b Auditor Denial ${Date.now()}`;
+  // This test-local boundary is intentionally not a named product role; see performance-od/decisions/2026-08-28-odos-auditor-fixture-fossil-verdict.md.
+  const policy = buildAuditOnlyBoundaryPolicy(`ODOS v0.5b Audit-Only Boundary Denial ${Date.now()}`);
   const createdPolicy = await input.fhir.create<AccessPolicy>(policy);
   assert.ok(createdPolicy.id);
 
@@ -472,7 +471,7 @@ async function createAuditorClientToken(input: {
       },
       body: JSON.stringify({
         name: `v0.5b-live-audit-denial-${Date.now()}`,
-        description: "v0.5b live audit denial integration fixture",
+        description: "v0.5b live audit-only boundary denial integration fixture",
         accessPolicy: { reference: `AccessPolicy/${createdPolicy.id}` },
       }),
     },
@@ -496,6 +495,23 @@ async function createAuditorClientToken(input: {
   assert.ok(tokenRes.ok, `client_credentials grant failed: ${tokenRes.status}`);
   const { access_token: clientToken } = (await tokenRes.json()) as { access_token: string };
   return clientToken;
+}
+
+function buildAuditOnlyBoundaryPolicy(name: string): AccessPolicy {
+  const readInteractions = ["read", "search", "history", "vread"] as const;
+  return {
+    resourceType: "AccessPolicy",
+    name,
+    resource: [
+      { resourceType: "AuditEvent", interaction: [...readInteractions] },
+      { resourceType: "Provenance", interaction: [...readInteractions] },
+      {
+        resourceType: "Basic",
+        interaction: [...readInteractions],
+        criteria: "Basic?code=https://odos2020.com/fhir/CodeSystem/appearance-config|odos-appearance-config",
+      },
+    ],
+  };
 }
 
 function bundleResources<T extends Resource>(bundle: Bundle<T>): T[] {

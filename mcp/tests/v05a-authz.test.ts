@@ -393,7 +393,7 @@ test("break-glass rejects agent self-attestation and blank reason", () => {
   );
 });
 
-test("AccessPolicy generator POST round-trip is accepted by Medplum when integration env is available", { timeout: 90_000 }, async (t) => {
+test("audit-only boundary AccessPolicy POST round-trip is accepted by Medplum when integration env is available", { timeout: 90_000 }, async (t) => {
   loadRepoEnv();
   const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
   const email = process.env.MEDPLUM_ADMIN_EMAIL;
@@ -404,8 +404,8 @@ test("AccessPolicy generator POST round-trip is accepted by Medplum when integra
   }
 
   const { fhir } = await createAuthenticatedFhirClient({ baseUrl, email, password });
-  const policy = buildMedplumAccessPolicy(getRoleDeclaration("admin"));
-  policy.name = `ODOS v0.5a Auditor Roundtrip ${Date.now()}`;
+  // This test-local boundary is intentionally not a named product role; see performance-od/decisions/2026-08-28-odos-auditor-fixture-fossil-verdict.md.
+  const policy = buildAuditOnlyBoundaryPolicy(`ODOS v0.5a Audit-Only Boundary Roundtrip ${Date.now()}`);
   const created = await fhir.create<AccessPolicy>(policy);
 
   assert.equal(created.resourceType, "AccessPolicy");
@@ -414,7 +414,7 @@ test("AccessPolicy generator POST round-trip is accepted by Medplum when integra
 });
 
 test(
-  "v0.5a auditor AccessPolicy enforces compartment isolation when bound via ProjectMembership (closes Mandate 8 fixture caveat)",
+  "v0.5a audit-only boundary AccessPolicy enforces compartment isolation when bound via ProjectMembership (closes Mandate 8 fixture caveat)",
   { timeout: 90_000 },
   async (t) => {
     loadRepoEnv();
@@ -440,9 +440,8 @@ test(
     const projectId = me.project?.id;
     assert.ok(projectId, "Could not resolve project id from /auth/me — admin user has no project membership.");
 
-    // 2. Generate a fresh auditor AccessPolicy from the v0.5a generator and POST it as the admin.
-    const policy = buildMedplumAccessPolicy(getRoleDeclaration("admin"));
-    policy.name = `ODOS v0.5a Auditor Enforcement ${Date.now()}`;
+    // This test-local boundary is intentionally not a named product role; see performance-od/decisions/2026-08-28-odos-auditor-fixture-fossil-verdict.md.
+    const policy = buildAuditOnlyBoundaryPolicy(`ODOS v0.5a Audit-Only Boundary Enforcement ${Date.now()}`);
     const createdPolicy = await fhir.create<AccessPolicy>(policy);
     assert.ok(createdPolicy.id, "AccessPolicy create did not return an id.");
 
@@ -456,8 +455,8 @@ test(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        name: `v0.5a-auditor-enforcement-${Date.now()}`,
-        description: "v0.5a Mandate 8 enforcement fixture (auto-provisioned by integration test)",
+        name: `v0.5a-audit-only-boundary-enforcement-${Date.now()}`,
+        description: "v0.5a audit-only boundary enforcement fixture (auto-provisioned by integration test)",
         accessPolicy: { reference: `AccessPolicy/${createdPolicy.id}` },
       }),
     });
@@ -486,15 +485,15 @@ test(
 
     const auth = { Authorization: `Bearer ${clientToken}` };
 
-    // 5a. POSITIVE: GET AuditEvent — auditor role grants AuditEvent read.
+    // 5a. POSITIVE: GET AuditEvent — the audit-only boundary grants AuditEvent read.
     const auditRes = await fetch(`${baseUrl}/fhir/R4/AuditEvent?_count=1`, { headers: auth });
     assert.equal(auditRes.status, 200, "auditor should be allowed to read AuditEvent.");
 
-    // 5b. POSITIVE: GET Provenance — auditor role grants Provenance read.
+    // 5b. POSITIVE: GET Provenance — the audit-only boundary grants Provenance read.
     const provRes = await fetch(`${baseUrl}/fhir/R4/Provenance?_count=1`, { headers: auth });
     assert.equal(provRes.status, 200, "auditor should be allowed to read Provenance.");
 
-    // 5c. NEGATIVE: POST Observation — auditor role grants no clinical write capability.
+    // 5c. NEGATIVE: POST Observation — the audit-only boundary grants no clinical write capability.
     const obsRes = await fetch(`${baseUrl}/fhir/R4/Observation`, {
       method: "POST",
       headers: { ...auth, "Content-Type": "application/fhir+json" },
@@ -509,7 +508,7 @@ test(
       `auditor must NOT be allowed to write Observation; got ${obsRes.status}.`,
     );
 
-    // 5d. NEGATIVE: GET Patient — auditor role does not include Patient in its resourceRules.
+    // 5d. NEGATIVE: GET Patient — the audit-only boundary does not include Patient in its resourceRules.
     const patRes = await fetch(`${baseUrl}/fhir/R4/Patient?_count=1`, { headers: auth });
     assert.ok(
       patRes.status >= 400 && patRes.status < 500,
@@ -517,6 +516,23 @@ test(
     );
   },
 );
+
+function buildAuditOnlyBoundaryPolicy(name: string): AccessPolicy {
+  const readInteractions = ["read", "search", "history", "vread"] as const;
+  return {
+    resourceType: "AccessPolicy",
+    name,
+    resource: [
+      { resourceType: "AuditEvent", interaction: [...readInteractions] },
+      { resourceType: "Provenance", interaction: [...readInteractions] },
+      {
+        resourceType: "Basic",
+        interaction: [...readInteractions],
+        criteria: "Basic?code=https://odos2020.com/fhir/CodeSystem/appearance-config|odos-appearance-config",
+      },
+    ],
+  };
+}
 
 function membershipFixture(): ProjectMembership {
   return {
