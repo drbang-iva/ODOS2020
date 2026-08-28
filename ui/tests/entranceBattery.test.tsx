@@ -15,7 +15,7 @@ import { SpineNav } from "../src/components/charting/SpineNav";
 import type { CustomFindingDefinition } from "../src/components/charting/CustomFindingSection";
 import { OdosSearchPicker } from "../src/components/inputs/OdosSearchPicker";
 
-test("screenshot refinement preserves PRETEST order with a rail-safe Visual Field label", () => {
+test("screenshot refinement preserves PRETEST order with the backend confrontation label", () => {
   const html = renderToStaticMarkup(<SpineNav active="pupils" statuses={{}} onSelect={() => undefined} />);
   const labels = [
     "Auto-Refraction / Auto-K",
@@ -26,7 +26,7 @@ test("screenshot refinement preserves PRETEST order with a rail-safe Visual Fiel
     "Stereopsis",
     "Color Vision",
     "EOM / Diplopia",
-    "Visual Field",
+    "Confrontation visual fields",
     "Cover Test",
     "IOP",
     "Dilation",
@@ -586,7 +586,7 @@ test("manual keratometry uses a shrinkable five-column grid that fits the conten
 test("missing entrance definitions render an explicit practice-setup state", () => {
   const source = readFileSync(new URL("../src/scenes/EncounterCharting.tsx", import.meta.url), "utf8");
   assert.match(source, /MissingDefinitionState section="Pupils"/);
-  assert.match(source, /MissingDefinitionState section="Visual Field"/);
+  assert.match(source, /MissingDefinitionState section="Confrontation visual fields"/);
   assert.match(source, /Its finding definition is missing or inactive/);
 });
 

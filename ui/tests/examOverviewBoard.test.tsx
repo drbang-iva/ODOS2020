@@ -370,9 +370,9 @@ test("by-exception board renders exactly one row per performed or deferred findi
   );
   try {
     const rows = renderer.root.findAllByProps({ "data-testid": "exam-finding-row" });
-    assert.equal(rows.length, 7);
+    assert.equal(rows.length, 8);
     assert.deepEqual(rows.map((row) => row.props["data-row-pattern"]), [
-      "eye-pair", "word", "eye-pair", "event", "diagram", "word", "rx",
+      "eye-pair", "word", "eye-pair", "event", "diagram", "word", "rx", "word",
     ]);
     assert.equal(rows.filter((row) => row.props["data-finding-key"] === "pachymetry_um").length, 1);
     assert.equal(rows.filter((row) => row.props["data-finding-key"] === "intraocular_pressure").length, 0);
@@ -612,6 +612,90 @@ test("manual keratometry projects only its allowlisted measurements in OD-first 
       "Manual keratometryOD 43.25 @180 / 44.00 @090OS 42.75 @175 / 43.50 @085",
     );
     assert.doesNotMatch(rendered, /CUSTOM_|Observation\/|recorded/);
+  } finally {
+    renderer.unmount();
+  }
+});
+
+test("stored visual acuity renders the raw Snellen value and correction", () => {
+  const renderer = renderOverviewTruthBoard();
+  try {
+    assert.equal(
+      findingValueText(renderer, "VISUAL_ACUITY"),
+      "OD 20/70 SC",
+    );
+  } finally {
+    renderer.unmount();
+  }
+});
+
+test("stored non-Snellen visual acuity discloses its chart type", () => {
+  const renderer = renderOverviewTruthBoard("ETDRS", "65", "CC");
+  try {
+    assert.equal(
+      findingValueText(renderer, "VISUAL_ACUITY"),
+      "OD 65 CC · ETDRS",
+    );
+  } finally {
+    renderer.unmount();
+  }
+});
+
+test("stored pachymetry resolves laterality-prefixed CCT components", () => {
+  const renderer = renderOverviewTruthBoard();
+  try {
+    assert.equal(
+      findingValueText(renderer, "pachymetry_um"),
+      "OD 213 umOS 208 um",
+    );
+  } finally {
+    renderer.unmount();
+  }
+});
+
+test("stored auto keratometry shares the manual keratometry display convention", () => {
+  const renderer = renderOverviewTruthBoard();
+  try {
+    assert.equal(
+      findingValueText(renderer, "auto_keratometry"),
+      "OD 42.50 @180 / 43.25 @090OS 41.75 @175 / 42.50 @085",
+    );
+  } finally {
+    renderer.unmount();
+  }
+});
+
+test("stored Wearing Rx renders in its own worksheet row", () => {
+  const renderer = renderOverviewTruthBoard();
+  try {
+    assert.equal(
+      findingValueText(renderer, "wearing_rx"),
+      "OD −0.25 sph OS −0.25 sph",
+    );
+  } finally {
+    renderer.unmount();
+  }
+});
+
+test("overview truth changes preserve the exact IOP value", () => {
+  const renderer = renderOverviewTruthBoard();
+  try {
+    assert.equal(
+      findingValueText(renderer, "intraocular_pressure"),
+      "OD 21 mmHgOS 16 mmHg",
+    );
+  } finally {
+    renderer.unmount();
+  }
+});
+
+test("overview truth changes preserve the exact Dilation event value", () => {
+  const renderer = renderOverviewTruthBoard();
+  try {
+    assert.equal(
+      findingValueText(renderer, "entrance:dilation"),
+      "Tropicamide 1% · 20:31",
+    );
   } finally {
     renderer.unmount();
   }
@@ -935,6 +1019,158 @@ function manualKeratometryFinding(
   };
 }
 
+function renderOverviewTruthBoard(
+  chartType = "SNELLEN",
+  acuity = "20/70",
+  correction = "SC",
+): ReactTestRenderer {
+  return create(
+    <ExamOverviewBoard
+      projection={overviewTruthProjection(chartType, acuity, correction)}
+      editorEntries={chartEditorInventory()}
+      refreshing={false}
+      onOpenEditor={() => undefined}
+      onRefresh={() => undefined}
+    />,
+  );
+}
+
+function overviewTruthProjection(chartType: string, acuity: string, correction: string): ExamOverviewProjection {
+  const findings = [
+    {
+      observationReference: "Observation/va-od",
+      findingKey: "VISUAL_ACUITY",
+      sectionKey: "va",
+      display: "Visual acuity",
+      laterality: "OD",
+      examination: { state: "examined", sourceEncoding: "observation" },
+      interpretation: "unknown",
+      provenance: { state: "current" },
+      current: {
+        recordedAt: "2026-08-24T15:00:00.000Z",
+        components: [
+          snapshotStringComponent("VA_SNELLEN_RAW", "Visual acuity Snellen raw", acuity),
+          snapshotCodeComponent("VA_CHART_TYPE", "Visual acuity chart type", chartType),
+          snapshotCodeComponent("VA_CORRECTION", "Visual acuity correction", correction),
+          component("VA_LOGMAR", "Visual acuity logMAR", 0.544, "logMAR"),
+        ],
+      },
+    },
+    measurementFinding("pachy-od", "pachymetry_um", "entrance:pachymetry", "Pachymetry", "OD", [
+      component("OD_CUSTOM_CCT", "Central corneal thickness", 213, "um"),
+    ]),
+    measurementFinding("pachy-os", "pachymetry_um", "entrance:pachymetry", "Pachymetry", "OS", [
+      component("OS_CUSTOM_CCT", "Central corneal thickness", 208, "um"),
+    ]),
+    measurementFinding("auto-k-od", "auto_keratometry", "auto-refraction", "Auto-keratometry", "OD", [
+      component("FLAT_K", "Flat K", 42.5, "D"),
+      component("FLAT_AXIS", "Flat axis", 180, "degrees"),
+      component("STEEP_K", "Steep K", 43.25, "D"),
+      component("STEEP_AXIS", "Steep axis", 90, "degrees"),
+    ]),
+    measurementFinding("auto-k-os", "auto_keratometry", "auto-refraction", "Auto-keratometry", "OS", [
+      component("FLAT_K", "Flat K", 41.75, "D"),
+      component("FLAT_AXIS", "Flat axis", 175, "degrees"),
+      component("STEEP_K", "Steep K", 42.5, "D"),
+      component("STEEP_AXIS", "Steep axis", 85, "degrees"),
+    ]),
+    {
+      observationReference: "Observation/wearing-old-overview",
+      findingKey: "wearing_rx",
+      sectionKey: "wearing",
+      display: "Wearing spectacle prescription",
+      laterality: "OU",
+      examination: { state: "examined", sourceEncoding: "observation" },
+      interpretation: "unknown",
+      provenance: { state: "current" },
+      current: {
+        recordedAt: "2026-08-24T14:00:00.000Z",
+        components: [
+          component("OD_SPHERE", "OD sphere", -3, "D"),
+          component("OS_SPHERE", "OS sphere", -3, "D"),
+        ],
+      },
+    },
+    {
+      observationReference: "Observation/wearing",
+      findingKey: "wearing_rx",
+      sectionKey: "wearing",
+      display: "Wearing spectacle prescription",
+      laterality: "OU",
+      examination: { state: "examined", sourceEncoding: "observation" },
+      interpretation: "unknown",
+      provenance: { state: "current" },
+      current: {
+        recordedAt: "2026-08-24T15:00:00.000Z",
+        components: [
+          component("OD_SPHERE", "OD sphere", -0.25, "D"),
+          component("OS_SPHERE", "OS sphere", -0.25, "D"),
+        ],
+      },
+    },
+    measurementFinding("iop-od", "intraocular_pressure", "tonometry", "Intraocular pressure", "OD", [], {
+      kind: "quantity", value: 21, unit: "mmHg",
+    }),
+    measurementFinding("iop-os", "intraocular_pressure", "tonometry", "Intraocular pressure", "OS", [], {
+      kind: "quantity", value: 16, unit: "mmHg",
+    }),
+    {
+      observationReference: "Observation/dilation",
+      findingKey: "entrance:dilation",
+      sectionKey: "entrance:dilation",
+      display: "Dilation",
+      laterality: "OU",
+      examination: { state: "examined", sourceEncoding: "observation" },
+      interpretation: "unknown",
+      provenance: { state: "current" },
+      event: {
+        administrations: [{
+          agent: "Tropicamide 1%",
+          occurredAt: new Date(2026, 7, 26, 20, 31).toISOString(),
+        }],
+      },
+      current: { components: [] },
+    },
+  ];
+  return {
+    encounterReference: "Encounter/exam-1",
+    patientReference: "Patient/patient-1",
+    findings,
+    sections: [overviewSection("pretest", "Pretest", findings.map((finding) => finding.observationReference))],
+    completeness: PROJECTION.completeness,
+  } as ExamOverviewProjection;
+}
+
+function measurementFinding(
+  id: string,
+  findingKey: string,
+  sectionKey: string,
+  display: string,
+  laterality: "OD" | "OS",
+  components: Array<ReturnType<typeof component>>,
+  value?: { kind: "quantity"; value: number; unit: string },
+) {
+  return {
+    observationReference: `Observation/${id}`,
+    findingKey,
+    sectionKey,
+    display,
+    laterality,
+    examination: { state: "examined" as const, sourceEncoding: "observation" as const },
+    interpretation: "unknown" as const,
+    provenance: { state: "current" as const },
+    current: { ...(value ? { value } : {}), components },
+  };
+}
+
+function snapshotStringComponent(code: string, display: string, value: string) {
+  return { code, display, value: { kind: "string" as const, value } };
+}
+
+function snapshotCodeComponent(code: string, display: string, value: string) {
+  return { code, display, value: { kind: "code" as const, code: value, display: value } };
+}
+
 function normalCvfProjection(): ExamOverviewProjection {
   const findings = (["OD", "OS"] as const).map((laterality) => ({
     observationReference: `Observation/cvf-${laterality.toLowerCase()}`,
@@ -1208,7 +1444,7 @@ test("a zero-finding Pretest section renders one labeled blank per chartable edi
       ["stereopsis", "Stereopsis"],
       ["color-vision", "Color Vision"],
       ["eom", "EOM / Diplopia"],
-      ["cvf", "Visual Field"],
+      ["cvf", "Confrontation visual fields"],
       ["cover-test", "Cover Test"],
       ["iop", "IOP"],
       ["dilation", "Dilation"],
@@ -2545,6 +2781,11 @@ function textContent(node: ReactTestInstance): string {
   return node.children.map((child) =>
     typeof child === "string" ? child : textContent(child)
   ).join("");
+}
+
+function findingValueText(renderer: ReactTestRenderer, findingKey: string): string {
+  const row = renderer.root.findByProps({ "data-finding-key": findingKey });
+  return textContent(row.findByProps({ className: "odos-exam-finding-value" }));
 }
 
 function jsonResponse(body: unknown): Response {

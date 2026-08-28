@@ -1054,7 +1054,7 @@ function MappedExamSection({ sectionId, definitions, patientReference, encounter
   if (sectionId === "cvf") {
     return definitions.cvf && definitions.visualFieldDefect
       ? <CvfSection definition={definitions.cvf} fieldDefectDefinition={definitions.visualFieldDefect} {...props} />
-      : <MissingDefinitionState section="Visual Field" />;
+      : <MissingDefinitionState section="Confrontation visual fields" />;
   }
   if (sectionId === "cover-test") return <CoverTestSection {...props} />;
   if (sectionId === "iop") return <IopSection {...props} />;
