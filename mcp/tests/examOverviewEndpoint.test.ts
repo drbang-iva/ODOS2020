@@ -127,6 +127,33 @@ test("History omits ROS reviewed when no structured attestation was saved", asyn
   assert.doesNotMatch(summary, /ROS reviewed/);
 });
 
+test("History omits ROS reviewed when a structured attestation is explicitly false", async () => {
+  const workflow = historyWorkflow();
+  await saveComplaint(workflow, "Blurred vision");
+  assert.equal((await saveHistory(workflow, ["eye"])).status, 200);
+
+  const historyObservation = workflow.fhir.resources.find((resource): resource is Observation =>
+    resource.resourceType === "Observation" &&
+    resource.code.coding?.some((coding) => coding.code === "hpi_ros") === true
+  );
+  assert.ok(historyObservation);
+  const attestation = historyObservation.component?.find((component) =>
+    component.code.coding?.some((coding) => coding.code === "ROS_ATTESTED_EYE")
+  );
+  assert.ok(attestation);
+  assert.equal(attestation.valueBoolean, true);
+  attestation.valueBoolean = false;
+
+  const overview = await handleExamOverviewRequest(workflow.overviewDeps, request());
+  assert.equal(overview.status, 200, JSON.stringify(overview.body));
+  const projection = overview.body as ExamOverviewProjection;
+  assert.equal(projection.historySummary, "Blurred vision");
+  assert.equal(
+    projection.findings.find((finding) => finding.findingKey === "hpi_ros")?.summary,
+    "Blurred vision",
+  );
+});
+
 test("complaints render before the separate History Observation save without claiming ROS review", async () => {
   const workflow = historyWorkflow();
   await saveComplaint(workflow, "Blurred vision");
