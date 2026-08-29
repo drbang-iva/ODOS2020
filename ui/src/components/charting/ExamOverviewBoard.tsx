@@ -98,6 +98,7 @@ export interface ExamOverviewProjection {
   encounterReference: string;
   patientReference: string;
   visitTypeCategoryId?: string;
+  historySummary?: string;
   findings: ExamOverviewFindingProjection[];
   sections: ExamOverviewSectionProjection[];
   completeness: ClinicalExamCompleteness;
@@ -106,7 +107,6 @@ export interface ExamOverviewProjection {
 // Each entry is a section whose correct rendering needs work outside this slice.
 // Adding to this list requires a decision file naming the slice that removes it.
 export const UNFORMATTED_PENDING_PROJECTION = {
-  hpi_ros: "ODOS-OVERVIEW-HISTORY-PROJECTION (A2) — overview must read complaint records",
 } as const;
 
 export const UNFORMATTED_FINDING_VALUE = "recorded";
@@ -304,6 +304,7 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, r
                         <EmptyEditorRow
                           definition={definition}
                           editor={chartableEditors[0]}
+                          summary={definition.sectionKey === "history" ? projection.historySummary : undefined}
                           activeEditorId={activeEditorId}
                           onOpenEditor={onOpenEditor}
                         />
@@ -326,6 +327,7 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, r
                                 key={editor.id}
                                 definition={definition}
                                 editor={editor}
+                                summary={definition.sectionKey === "history" ? projection.historySummary : undefined}
                                 activeEditorId={activeEditorId}
                                 onOpenEditor={onOpenEditor}
                               />,
@@ -368,11 +370,13 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, r
 function EmptyEditorRow({
   definition,
   editor,
+  summary,
   activeEditorId,
   onOpenEditor,
 }: {
   definition: ExamSheetRowDefinition;
   editor: ChartEditorEntry;
+  summary?: string;
   activeEditorId?: ChartEditorEntry["id"];
   onOpenEditor: (sectionId: ChartEditorEntry["id"]) => void;
 }) {
@@ -391,9 +395,9 @@ function EmptyEditorRow({
       onClick={() => onOpenEditor(editor.id)}
       aria-label={`Open ${editor.label} editor`}
     >
-      <span className="odos-exam-section-blank-label">{editor.label}</span>
+      <span className="odos-exam-section-blank-label">{summary ?? editor.label}</span>
       <span className="odos-exam-section-blank-line" aria-hidden />
-      <small>{optional ? "Available when needed" : "Tap to chart"}</small>
+      <small>{summary ? "Continue charting" : optional ? "Available when needed" : "Tap to chart"}</small>
     </button>
   );
 }
@@ -716,6 +720,7 @@ export function isExamOverviewProjection(value: unknown): value is ExamOverviewP
   return typeof value.encounterReference === "string" &&
     typeof value.patientReference === "string" &&
     optionalString(value.visitTypeCategoryId) &&
+    optionalString(value.historySummary) &&
     Array.isArray(value.findings) && value.findings.every(isFindingProjection) &&
     Array.isArray(value.sections) && value.sections.every(isSectionProjection) &&
     isCompleteness(value.completeness);

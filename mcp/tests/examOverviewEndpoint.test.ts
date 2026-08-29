@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type {
+  Basic,
   Bundle,
   Condition,
   Encounter,
@@ -13,6 +14,10 @@ import type {
 import { ODOS_CLINICAL_ATTESTATION_POLICY_URL } from "../../policy/attestation-policy-urls.js";
 import type { PracticeRoleId } from "../src/authz/roles.js";
 import {
+  handleEncounterComplaintMutationRequest,
+  type ComplaintEndpointDeps,
+} from "../src/clinical-graph/complaint-endpoint.js";
+import {
   DIAGNOSIS_FINDING_REASSERTION_CODE,
   ODOS_PROVENANCE_ACTIVITY_CODE_SYSTEM,
 } from "../src/clinical-graph/diagnosis-carry-provenance.js";
@@ -24,6 +29,11 @@ import type {
   ExamOverviewProjection,
 } from "../src/clinical-graph/exam-overview-projection.js";
 import type { ClinicalFindingDefinition } from "../src/clinical-graph/glaucoma-suspect.js";
+import { buildHpiFindingDefinition } from "../src/clinical-graph/hpi-definition.js";
+import {
+  handleHpiCaptureRequest,
+  type HpiEndpointDeps,
+} from "../src/clinical-graph/hpi-endpoint.js";
 import { ODOS_VISIT_TYPE_SYSTEM } from "../src/fhir/schedulingVisitType.js";
 import { mdmProblemStatusExtension } from "../src/fhir/condition.js";
 
@@ -71,6 +81,65 @@ test("derived completeness and prior change survive a fresh reload with zero cli
   assert.equal(fhir.writeCount, 0);
   assert.equal(fhir.resources.some((resource) => resource.resourceType === "Observation" &&
     resource.component?.some((component) => component.code.coding?.some((coding) => coding.code === "DELTA"))), false);
+});
+
+test("one complaint and an eye ROS attestation project the exact History summary", async () => {
+  const workflow = historyWorkflow();
+  await saveComplaint(workflow, "Blurred vision");
+  const capture = await saveHistory(workflow, ["eye"]);
+  assert.equal(capture.status, 200, JSON.stringify(capture.body));
+
+  const historyObservation = workflow.fhir.resources.find((resource): resource is Observation =>
+    resource.resourceType === "Observation" &&
+    resource.code.coding?.some((coding) => coding.code === "hpi_ros") === true
+  );
+  assert.ok(historyObservation);
+  assert.equal(componentBoolean(historyObservation, "ROS_ATTESTED_EYE"), true);
+  assert.equal(await projectedHistorySummary(workflow), "Blurred vision · ROS reviewed");
+});
+
+test("two complaints project both labels in ordinal order", async () => {
+  const workflow = historyWorkflow();
+  await saveComplaint(workflow, "Blurred vision");
+  await saveComplaint(workflow, "Discharge");
+  assert.equal((await saveHistory(workflow, ["eye"])).status, 200);
+
+  assert.equal(await projectedHistorySummary(workflow), "Blurred vision, Discharge · ROS reviewed");
+});
+
+test("three complaints project the first two labels and the exact remainder count", async () => {
+  const workflow = historyWorkflow();
+  await saveComplaint(workflow, "Blurred vision");
+  await saveComplaint(workflow, "Discharge");
+  await saveComplaint(workflow, "Photophobia");
+  assert.equal((await saveHistory(workflow, ["eye"])).status, 200);
+
+  assert.equal(await projectedHistorySummary(workflow), "Blurred vision, Discharge +1 more · ROS reviewed");
+});
+
+test("History omits ROS reviewed when no structured attestation was saved", async () => {
+  const workflow = historyWorkflow();
+  await saveComplaint(workflow, "Blurred vision");
+  assert.equal((await saveHistory(workflow, [])).status, 200);
+
+  const summary = await projectedHistorySummary(workflow);
+  assert.equal(summary, "Blurred vision");
+  assert.doesNotMatch(summary, /ROS reviewed/);
+});
+
+test("complaints render before the separate History Observation save without claiming ROS review", async () => {
+  const workflow = historyWorkflow();
+  await saveComplaint(workflow, "Blurred vision");
+  await saveComplaint(workflow, "Discharge");
+  await saveComplaint(workflow, "Photophobia");
+
+  const overview = await handleExamOverviewRequest(workflow.overviewDeps, request());
+  assert.equal(overview.status, 200, JSON.stringify(overview.body));
+  const projection = overview.body as ExamOverviewProjection;
+  const summary = projection.historySummary;
+  assert.equal(summary, "Blurred vision, Discharge +1 more");
+  assert.doesNotMatch(summary, /ROS reviewed/);
+  assert.equal(projection.completeness.trace.find((row) => row.sectionKey === "history")?.state, "not-examined");
 });
 
 test("endpoint projects carried-unreasserted and carried-reasserted from durable Provenance", async () => {
@@ -414,6 +483,93 @@ function historyFinding(
   };
 }
 
+interface HistoryWorkflow {
+  fhir: HistoryWorkflowFhir;
+  complaintDeps: ComplaintEndpointDeps;
+  hpiDeps: HpiEndpointDeps;
+  overviewDeps: ReturnType<typeof deps>;
+}
+
+function historyWorkflow(): HistoryWorkflow {
+  const fhir = new HistoryWorkflowFhir([encounter()]);
+  const definition = buildHpiFindingDefinition({
+    source: "manual",
+    recordedAt: "1970-01-01T00:00:00.000Z",
+    actorReference: "Practitioner/odos-system",
+  });
+  let complaintSequence = 0;
+  const authenticate = async (authHeader: string | undefined) => authHeader === "Bearer clinician"
+    ? { staffReference: "Practitioner/doc", actorRole: "provider" as const, fhir }
+    : null;
+  return {
+    fhir,
+    complaintDeps: {
+      authenticate,
+      now: () => "2026-08-29T12:00:00.000Z",
+      id: () => `complaint-${++complaintSequence}`,
+    },
+    hpiDeps: {
+      authenticate,
+      findingDefinitions: () => [definition],
+      now: () => "2026-08-29T12:05:00.000Z",
+    },
+    overviewDeps: {
+      authenticate,
+      serviceFhir: fhir,
+      findingDefinitions: async () => [definition],
+    },
+  };
+}
+
+async function saveComplaint(workflow: HistoryWorkflow, label: string): Promise<void> {
+  const result = await handleEncounterComplaintMutationRequest(workflow.complaintDeps, {
+    authHeader: "Bearer clinician",
+    params: { encounterId: "e1" },
+    body: {
+      action: "create",
+      patientReference: "Patient/p1",
+      complaint: {
+        freeTextLabel: label,
+        conditions: [],
+        eyeLocation: "not-applicable",
+        qualities: [],
+        treatmentsTried: [],
+        additionalHistory: "",
+        narrative: { mode: "automated" },
+      },
+    },
+  });
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+}
+
+function saveHistory(workflow: HistoryWorkflow, reviewAttestations: Array<"eye" | "general">) {
+  return handleHpiCaptureRequest(workflow.hpiDeps, {
+    authHeader: "Bearer clinician",
+    body: {
+      patientReference: "Patient/p1",
+      encounterReference: "Encounter/e1",
+      reviewOfSystems: [],
+      reviewAttestations,
+    },
+  });
+}
+
+async function projectedHistorySummary(workflow: HistoryWorkflow): Promise<string> {
+  const result = await handleExamOverviewRequest(workflow.overviewDeps, request());
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  const summary = (result.body as ExamOverviewProjection).findings.find((finding) =>
+    finding.findingKey === "hpi_ros"
+  )?.summary;
+  assert.ok(summary);
+  return summary;
+}
+
+function componentBoolean(observation: Observation, code: string): boolean | undefined {
+  return observation.component?.find((component) =>
+    component.code.coding?.some((coding) => coding.code === code)
+  )?.valueBoolean;
+}
+
 function quantityFinding(
   id: string,
   encounterId: string,
@@ -482,6 +638,7 @@ function reassertionProvenance(): Provenance {
 }
 
 class OverviewMemoryFhir implements ExamOverviewFhirClient {
+  readonly baseUrl = "https://fhir.local/";
   readonly resources: Resource[];
   readonly failedReads = new Set<string>();
   readonly failedSearches = new Set<Resource["resourceType"]>();
@@ -511,6 +668,20 @@ class OverviewMemoryFhir implements ExamOverviewFhirClient {
     }
     const resources = this.resources.filter((resource) => {
       if (resource.resourceType !== resourceType) return false;
+      if (params.code) {
+        const [system, code] = params.code.split("|");
+        const coded = (resource as Basic | Condition | Observation).code?.coding?.some((coding) =>
+          coding.system === system && coding.code === code
+        );
+        if (!coded) return false;
+      }
+      if (params.identifier) {
+        const [system, value] = params.identifier.split("|");
+        const identified = (resource as Basic | Observation).identifier?.some((identifier) =>
+          identifier.system === system && identifier.value === value
+        );
+        if (!identified) return false;
+      }
       if (params.encounter && (resource as Condition | Observation).encounter?.reference !== params.encounter) {
         return false;
       }
@@ -539,5 +710,55 @@ class OverviewMemoryFhir implements ExamOverviewFhirClient {
   ): Promise<T> {
     this.writeCount += 1;
     return structuredClone(resource);
+  }
+}
+
+class HistoryWorkflowFhir extends OverviewMemoryFhir {
+  private sequence = 0;
+
+  override async create<T extends Resource>(resource: T): Promise<T> {
+    this.writeCount += 1;
+    const persisted = {
+      ...structuredClone(resource),
+      id: resource.id ?? `${resource.resourceType.toLowerCase()}-${++this.sequence}`,
+      meta: { ...resource.meta, versionId: "1", lastUpdated: "2026-08-29T12:00:00.000Z" },
+    } as T;
+    this.resources.push(persisted);
+    return structuredClone(persisted);
+  }
+
+  override async update<T extends Resource>(
+    _resourceType: T["resourceType"],
+    id: string,
+    resource: T,
+  ): Promise<T> {
+    this.writeCount += 1;
+    const index = this.resources.findIndex((candidate) =>
+      candidate.resourceType === resource.resourceType && candidate.id === id
+    );
+    const persisted = {
+      ...structuredClone(resource),
+      id,
+      meta: { ...resource.meta, versionId: "2", lastUpdated: "2026-08-29T12:01:00.000Z" },
+    } as T;
+    if (index >= 0) this.resources[index] = persisted;
+    else this.resources.push(persisted);
+    return structuredClone(persisted);
+  }
+
+  async executeTransaction(bundle: Bundle): Promise<Bundle> {
+    const responseEntries: NonNullable<Bundle["entry"]> = [];
+    for (const entry of bundle.entry ?? []) {
+      const resource = entry.resource;
+      if (!resource) continue;
+      const persisted = resource.id
+        ? await this.update(resource.resourceType, resource.id, resource)
+        : await this.create(resource);
+      responseEntries.push({ response: {
+        status: resource.id ? "200 OK" : "201 Created",
+        location: `${persisted.resourceType}/${persisted.id}/_history/1`,
+      } });
+    }
+    return { resourceType: "Bundle", type: "transaction-response", entry: responseEntries };
   }
 }

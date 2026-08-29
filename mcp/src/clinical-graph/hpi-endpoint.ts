@@ -122,7 +122,12 @@ export async function handleHpiCaptureRequest(
     patientReference: parsed.data.patientReference,
     encounterReference: parsed.data.encounterReference,
     laterality: "UNKNOWN",
-    value: historyFindingValue(complaints, definitions, parsed.data.reviewOfSystems),
+    value: historyFindingValue(
+      complaints,
+      definitions,
+      parsed.data.reviewOfSystems,
+      parsed.data.reviewAttestations,
+    ),
     sourceType: "manual",
     performerReferences: [staff.staffReference],
     recordedAt,
@@ -298,6 +303,7 @@ function historyFindingValue(
   complaints: Awaited<ReturnType<FhirEncounterComplaintStore["listByEncounter"]>>,
   definitions: Awaited<ReturnType<FhirComplaintDefinitionStore["list"]>>,
   reviewOfSystems: z.infer<typeof rosFlagSchema>[],
+  reviewAttestations: Array<"eye" | "general">,
 ): Extract<FindingValue, { type: "components" }> {
   const components: Extract<FindingValue, { type: "components" }>["components"] = complaints.map((complaint) => ({
     code: `HISTORY_COMPLAINT_${complaint.ordinal}`,
@@ -306,6 +312,13 @@ function historyFindingValue(
   }));
   for (const flag of reviewOfSystems) {
     components.push({ code: `ROS_${snakeCase(flag.code)}`, display: flag.display, value: flag.status });
+  }
+  for (const group of reviewAttestations) {
+    components.push({
+      code: `ROS_ATTESTED_${snakeCase(group)}`,
+      display: `${group === "eye" ? "Eye" : "General"} review of systems attested`,
+      value: true,
+    });
   }
   return { type: "components", components };
 }

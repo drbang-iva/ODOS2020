@@ -1,4 +1,5 @@
 import type {
+  Basic,
   Bundle,
   Condition,
   Encounter,
@@ -18,8 +19,12 @@ import {
   readDiagnosisCarryState,
   type DiagnosisCarryState,
 } from "./diagnosis-carry-provenance.js";
+import { FhirComplaintDefinitionStore } from "./complaint-definition-store.js";
+import type { ComplaintDefinition, EncounterComplaint } from "./complaint-model.js";
+import { FhirEncounterComplaintStore } from "./encounter-complaint-store.js";
 import {
   buildExamOverviewProjection,
+  type ExamOverviewFindingProjection,
   type ExamFindingProvenanceState,
 } from "./exam-overview-projection.js";
 import type { ClinicalFindingDefinition } from "./glaucoma-suspect.js";
@@ -33,6 +38,8 @@ export interface ExamOverviewFhirClient {
     params?: Record<string, string>,
   ): Promise<Bundle<T>>;
   searchUrl?<T extends Resource>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>>;
+  create<T extends Basic>(resource: T, extraHeaders?: Record<string, string>): Promise<T>;
+  update<T extends Basic | Encounter>(resourceType: T["resourceType"], id: string, resource: T, extraHeaders?: Record<string, string>): Promise<T>;
 }
 
 export interface ExamOverviewEndpointDeps {
@@ -70,13 +77,15 @@ export async function handleExamOverviewRequest(
     }
     const encounterReference = `Encounter/${encounterId}`;
     const serviceFhir = deps.serviceFhir ?? staff.fhir;
-    const [definitions, currentObservations, patientObservations, conditions, visitTypeCategoryId] =
+    const [definitions, currentObservations, patientObservations, conditions, visitTypeCategoryId, complaintDefinitions, complaints] =
       await Promise.all([
         deps.findingDefinitions(),
         searchAll<Observation>(staff.fhir, "Observation", { encounter: encounterReference }),
         searchAll<Observation>(staff.fhir, "Observation", { subject: patientReference }),
         searchAll<Condition>(staff.fhir, "Condition", { encounter: encounterReference }),
         resolveVisitTypeCategoryForEncounter(encounter, undefined, serviceFhir),
+        new FhirComplaintDefinitionStore(staff.fhir).list(),
+        new FhirEncounterComplaintStore(staff.fhir).listByEncounter(encounterId),
       ]);
     const current = currentObservations.filter((observation) =>
       observation.subject?.reference === patientReference
@@ -95,21 +104,44 @@ export async function handleExamOverviewRequest(
       encounterConditions,
       current,
     );
+    const projection = buildExamOverviewProjection({
+      encounterReference,
+      patientReference,
+      ...(visitTypeCategoryId ? { visitTypeCategoryId } : {}),
+      definitions,
+      currentObservations: current,
+      priorObservationCandidates: patientObservations.filter((observation) =>
+        observation.encounter?.reference !== encounterReference
+      ),
+      assessmentRows: assessmentEvidenceRows(encounter, encounterConditions),
+      provenanceByObservation,
+      clinicalContextByObservation,
+    });
+    const complaintSummary = historyComplaintSummary(
+      complaints.filter((complaint) => complaint.status === "active")
+        .sort((left, right) => left.ordinal - right.ordinal),
+      complaintDefinitions,
+    );
+    const historyAttested = projection.findings.some((finding) =>
+      finding.findingKey === "hpi_ros" && hasStructuredRosAttestation(finding)
+    );
+    const historySummary = complaintSummary
+      ? `${complaintSummary}${historyAttested ? " · ROS reviewed" : ""}`
+      : undefined;
     return {
       status: 200,
-      body: buildExamOverviewProjection({
-        encounterReference,
-        patientReference,
-        ...(visitTypeCategoryId ? { visitTypeCategoryId } : {}),
-        definitions,
-        currentObservations: current,
-        priorObservationCandidates: patientObservations.filter((observation) =>
-          observation.encounter?.reference !== encounterReference
+      body: {
+        ...projection,
+        ...(historySummary ? { historySummary } : {}),
+        findings: projection.findings.map((finding) =>
+          finding.findingKey === "hpi_ros" && complaintSummary
+            ? {
+                ...finding,
+                summary: `${complaintSummary}${hasStructuredRosAttestation(finding) ? " · ROS reviewed" : ""}`,
+              }
+            : finding
         ),
-        assessmentRows: assessmentEvidenceRows(encounter, encounterConditions),
-        provenanceByObservation,
-        clinicalContextByObservation,
-      }),
+      },
     };
   } catch (error) {
     const status = errorStatus(error);
@@ -391,4 +423,37 @@ function errorStatus(error: unknown): unknown {
   return typeof error === "object" && error !== null && "status" in error
     ? (error as { status?: unknown }).status
     : undefined;
+}
+
+function historyComplaintSummary(
+  complaints: readonly EncounterComplaint[],
+  definitions: readonly ComplaintDefinition[],
+): string | undefined {
+  const labels = complaints.map((complaint) => complaintOverviewLabel(
+    complaint,
+    definitions.find((definition) => definition.stableKey === complaint.complaintKey),
+  ));
+  if (labels.length === 0) return undefined;
+  if (labels.length === 1) return labels[0];
+  if (labels.length === 2) return labels.join(", ");
+  return `${labels.slice(0, 2).join(", ")} +${labels.length - 2} more`;
+}
+
+function complaintOverviewLabel(
+  complaint: EncounterComplaint,
+  definition: ComplaintDefinition | undefined,
+): string {
+  const freeText = complaint.freeTextLabel?.trim();
+  if (freeText) return freeText;
+  const display = definition?.display.trim();
+  const patientDisplay = display?.match(/^Patient \((.+)\)$/)?.[1];
+  const label = patientDisplay ?? display ?? "Presenting concern";
+  return `${label.charAt(0).toUpperCase()}${label.slice(1).toLowerCase()}`;
+}
+
+function hasStructuredRosAttestation(finding: ExamOverviewFindingProjection): boolean {
+  return finding.current.components.some((component) =>
+    (component.code === "ROS_ATTESTED_EYE" || component.code === "ROS_ATTESTED_GENERAL") &&
+    component.value?.kind === "boolean" && component.value.value
+  );
 }
