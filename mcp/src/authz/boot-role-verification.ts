@@ -1,5 +1,5 @@
 import type { AccessPolicy } from "@medplum/fhirtypes";
-import type { MedplumClient } from "../fhir-client.js";
+import { searchAll, type FhirSearchClient } from "../fhir-search.js";
 import { diffCanonicalPolicyRules } from "../../../scripts/access-policy-rules.js";
 import {
   buildMedplumAccessPolicy,
@@ -33,16 +33,17 @@ export type PracticeRolePolicySyncStatusReport =
     };
 
 export async function readPracticeRolePolicySyncStatus(
-  fhir: Pick<MedplumClient, "search">,
+  fhir: FhirSearchClient,
 ): Promise<PracticeRolePolicySyncStatus> {
   const policies: PracticeRolePolicyStatus[] = [];
   for (const role of PRACTICE_ROLE_IDS) {
     const expected = buildMedplumAccessPolicy(getRoleDeclaration(role));
     const expectedName = expected.name!;
-    const bundle = await fhir.search<AccessPolicy>("AccessPolicy", { "name:exact": expectedName });
-    const matches = (bundle.entry ?? [])
-      .map((entry) => entry.resource)
-      .filter((policy): policy is AccessPolicy => policy?.name === expectedName);
+    const matches = (await searchAll<AccessPolicy>(
+      fhir,
+      "AccessPolicy",
+      { "name:exact": expectedName },
+    )).filter((policy) => policy.name === expectedName);
     if (matches.length === 0) {
       policies.push({
         role,
@@ -95,7 +96,7 @@ export async function readPracticeRolePolicySyncStatus(
 }
 
 export async function readPracticeRolePolicySyncStatusReport(
-  fhir: Pick<MedplumClient, "search">,
+  fhir: FhirSearchClient,
 ): Promise<PracticeRolePolicySyncStatusReport> {
   try {
     return {
@@ -112,7 +113,7 @@ export async function readPracticeRolePolicySyncStatusReport(
 }
 
 export async function missingPracticeRolePolicies(
-  fhir: Pick<MedplumClient, "search">,
+  fhir: FhirSearchClient,
 ): Promise<string[]> {
   const status = await readPracticeRolePolicySyncStatus(fhir);
   return status.policies.flatMap((policy) =>
@@ -167,7 +168,7 @@ export async function logSsePracticeRoleBootVerification(input: {
 }
 
 export async function logPracticeRoleBootVerification(
-  fhir: Pick<MedplumClient, "search">,
+  fhir: FhirSearchClient,
   log: (message: string) => void = console.error,
 ): Promise<void> {
   try {

@@ -162,6 +162,34 @@ test("policy sync status remains reachable and reports unavailable when its iden
   });
 });
 
+test("policy sync status follows Bundle next links and detects a duplicate on a later page", async () => {
+  const policies = deployedPolicies();
+  const provider = policies.find((policy) => policy.name === "ODOS Provider")!;
+  const duplicate = { ...structuredClone(provider), id: "provider-policy-duplicate" };
+  const status = await readPracticeRolePolicySyncStatus({
+    baseUrl: "http://localhost:8103",
+    search: async <T,>(_resourceType: string, params: Record<string, string>): Promise<Bundle<T>> => {
+      const match = policies.find((policy) => policy.name === params["name:exact"]);
+      return {
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: match ? [{ resource: match as unknown as T }] : [],
+        ...(match === provider
+          ? { link: [{ relation: "next", url: "http://localhost:8103/fhir/R4/AccessPolicy?page=2" }] }
+          : {}),
+      } as Bundle<T>;
+    },
+    searchUrl: async <T,>(): Promise<Bundle<T>> => ({
+      resourceType: "Bundle",
+      type: "searchset",
+      entry: [{ resource: duplicate as unknown as T }],
+    } as Bundle<T>),
+  } as never);
+
+  assert.equal(status.inSync, false);
+  assert.equal(status.policies.find((policy) => policy.role === "provider")?.status, "duplicate");
+});
+
 test("boot warns with named resource rule drift and continues starting", async () => {
   const messages: string[] = [];
   let serverStarted = false;
