@@ -13,6 +13,11 @@ import { odosConcept } from "../src/fhir/ophthalmology/extensions.js";
 import { buildIopObservation } from "../src/fhir/ophthalmology/iop.js";
 import { buildRefractionObservation } from "../src/fhir/ophthalmology/refraction.js";
 import { buildVisualAcuityObservation } from "../src/fhir/ophthalmology/visualAcuity.js";
+import {
+  buildGlaucomaCupDiscSuggestion,
+  buildGlaucomaFindingDefinitionStubs,
+  projectFindingInstanceToObservation,
+} from "../src/clinical-graph/glaucoma-suspect.js";
 
 const PROFILE = {
   encounter: "https://odos2020.com/fhir/StructureDefinition/Encounter-ComprehensiveExam",
@@ -103,6 +108,40 @@ test("profile validation accepts conformant v0.3 resources", async (t) => {
 
   const createdEncounter = await fhir.create<Encounter>(buildEncounter("arrived"));
   assert.ok(createdEncounter.id, "Expected comprehensive Encounter to create.");
+});
+
+test("profile validation accepts standard Equivocal cup-disc interpretation", async (t) => {
+  const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
+  const credentials = requireMedplumAdmin(t, "profile-validation", MEDPLUM_SKIP_MESSAGE);
+  if (!credentials) {
+    return;
+  }
+  const { email, password } = credentials;
+
+  await ensureProfileValidationFixture(baseUrl, email, password);
+  const provenance = {
+    source: "manual" as const,
+    recordedAt: "2026-08-28T12:00:00.000Z",
+    actorReference: "Practitioner/profile-validation",
+  };
+  const definition = buildGlaucomaFindingDefinitionStubs({ provenance })
+    .find((candidate) => candidate.stableKey === "cup_disc_ratio");
+  assert.ok(definition);
+  const { finding } = buildGlaucomaCupDiscSuggestion({
+    cupDiscRatio: 0.5,
+    laterality: "OD",
+    patientReference: `Patient/${patient.id}`,
+    encounterReference: `Encounter/${encounter.id}`,
+    findingDefinitionId: definition.id,
+    findingInstanceId: "profile-validation-borderline-cup-disc",
+    recordedAt: provenance.recordedAt,
+    provenance,
+  });
+  const observation = projectFindingInstanceToObservation(finding, definition);
+  assert.equal(observation.interpretation?.[0]?.coding?.[0]?.code, "E");
+
+  const created = await fhir.create<Observation>(observation);
+  assert.ok(created.id, "Expected standard Equivocal interpretation Observation to create.");
 });
 
 test("profile validation rejects IOP with non-UCUM pressure unit", async (t) => {

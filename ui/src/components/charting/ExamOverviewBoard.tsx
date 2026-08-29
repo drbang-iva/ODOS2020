@@ -942,6 +942,9 @@ function baseFindingSegments(finding: ExamOverviewFindingProjection): string[] {
   if (finding.interpretation === "normal" && finding.normalLabel) return [finding.normalLabel];
   const sheetFindings = sheetFindingsValue(finding);
   if (sheetFindings.length) return sheetFindings;
+  const currentValue = finding.current.value ? safeSnapshotValueLabel(finding.current.value) : undefined;
+  const eom = eomValue(finding);
+  if (eom) return distinctFindingSegments(eom, currentValue ? [currentValue] : undefined);
   const normalWord = finding.interpretation === "normal" ? normalFindingWord(finding.findingKey) : undefined;
   if (normalWord) return [normalWord];
   if (finding.summary) return [finding.summary];
@@ -951,9 +954,6 @@ function baseFindingSegments(finding: ExamOverviewFindingProjection): string[] {
   if (keratometry) return [keratometry];
   const pachymetry = pachymetryValue(finding);
   if (pachymetry) return [pachymetry];
-  const currentValue = finding.current.value ? safeSnapshotValueLabel(finding.current.value) : undefined;
-  const eom = eomValue(finding);
-  if (eom) return distinctFindingSegments(eom, currentValue ? [currentValue] : undefined);
   if (!Object.hasOwn(UNFORMATTED_PENDING_PROJECTION, finding.findingKey)) {
     const components = chartedComponentValue(finding);
     if (components) return distinctFindingSegments(components, currentValue ? [currentValue] : undefined);

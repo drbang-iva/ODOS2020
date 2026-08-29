@@ -37,6 +37,21 @@ test("EOM enforces auth, chart.write, and abnormal-detail boundaries", async () 
   assert.equal((await handleEomCaptureRequest(setup().deps, { authHeader: AUTH, body: { patientReference: "Patient/p1", encounterReference: "Encounter/e1", state: "normal", diplopia: { present: false } } })).status, 400);
   assert.equal((await handleEomCaptureRequest(setup().deps, { authHeader: AUTH, body: { patientReference: "Patient/p1", encounterReference: "Encounter/e1", state: "abnormal", eyes: {}, nystagmus: { present: false }, diplopia: { present: false } } })).status, 400);
 });
+test("EOM indeterminate state writes no Observation interpretation", async () => {
+  const { fhir, deps } = setup();
+  const result = await handleEomCaptureRequest(deps, {
+    authHeader: AUTH,
+    body: {
+      patientReference: "Patient/p1",
+      encounterReference: "Encounter/e1",
+      state: "deferred",
+    },
+  });
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  const observation = fhir.resources.find((row): row is Observation => row.resourceType === "Observation");
+  assert.ok(observation);
+  assert.equal(observation.interpretation, undefined);
+});
 function component(observation: Observation, name: string) { return observation.component?.find((row) => row.code.coding?.some((coding) => coding.code === name)); }
 function value(observation: Observation, name: string) { return component(observation, name)?.valueString; }
 function boolean(observation: Observation, name: string) { return component(observation, name)?.valueBoolean; }

@@ -487,6 +487,30 @@ test("cup/disc vertical C/D classifies normal, low, and high without emitting H4
   }
 });
 
+test("low-risk cup/disc projects borderline with the standard Equivocal interpretation code", () => {
+  const definition = cupDiscDefinition();
+  const { finding } = buildGlaucomaCupDiscSuggestion({
+    cupDiscRatio: 0.5,
+    laterality: "OD",
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    findingDefinitionId: definition.id,
+    findingInstanceId: "finding-cd-borderline",
+    recordedAt: "2026-08-28T12:00:00.000Z",
+    provenance,
+  });
+
+  const observation = projectFindingInstanceToObservation(finding, definition);
+
+  assert.deepEqual(observation.interpretation, [{
+    coding: [{
+      system: "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+      code: "E",
+      display: "Equivocal",
+    }],
+  }]);
+});
+
 test("Phase 3 pure evaluator turns large C/D into an unreviewed suggestion, not a Condition", () => {
   const definitions = buildGlaucomaFindingDefinitionStubs({ provenance });
   const cupDisc = definitions.find((definition) => definition.stableKey === "cup_disc_ratio");

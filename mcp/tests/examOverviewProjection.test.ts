@@ -409,6 +409,29 @@ test("section abnormal counts exclude independently classified borderline findin
   assert.equal(projection.sections[0]?.abnormalCount, 1);
 });
 
+test("standard Equivocal interpretation projects as borderline", () => {
+  const projection = buildExamOverviewProjection({
+    encounterReference: "Encounter/e1",
+    patientReference: "Patient/p1",
+    definitions: [definition("cup_disc_ratio", "ocular-health")],
+    currentObservations: [
+      observation("cup-disc-equivocal", "cup_disc_ratio", {
+        interpretation: [{
+          coding: [{
+            system: "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+            code: "E",
+            display: "Equivocal",
+          }],
+        }],
+      }),
+    ],
+    priorObservationCandidates: [],
+    assessmentRows: [],
+  });
+
+  assert.equal(projection.findings[0]?.interpretation, "borderline");
+});
+
 test("an unpopulated visit category degrades safely without false completeness", () => {
   const projection = buildExamOverviewProjection({
     encounterReference: "Encounter/e1",
