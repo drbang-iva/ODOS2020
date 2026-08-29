@@ -163,6 +163,7 @@ export interface ExamOverviewProjection {
   encounterReference: string;
   patientReference: string;
   visitTypeCategoryId?: string;
+  historySummary?: string;
   findings: ExamOverviewFindingProjection[];
   sections: ExamOverviewSectionProjection[];
   completeness: ClinicalExamCompleteness;

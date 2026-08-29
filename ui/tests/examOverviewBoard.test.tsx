@@ -744,13 +744,35 @@ test("overview truth changes preserve the exact Dilation event value", () => {
   }
 });
 
-test("the pending overview projection exception is exactly the History slice", () => {
+test("the pending overview projection exception map is empty after History is formatted", () => {
   const pending = pendingOverviewProjectionExceptions();
-  assert.equal(Object.keys(pending).length, 1);
-  assert.equal(
-    pending.hpi_ros,
-    "ODOS-OVERVIEW-HISTORY-PROJECTION (A2) — overview must read complaint records",
+  assert.equal(Object.keys(pending).length, 0);
+  assert.equal(Object.hasOwn(pending, "hpi_ros"), false);
+  assert.equal(findingValue(FIXTURES.hpi_ros!.charted), "Blurred vision · ROS reviewed");
+});
+
+test("complaint-only History renders its summary while completeness remains Not examined", () => {
+  const projection = {
+    ...zeroFindingComprehensiveProjection(),
+    historySummary: "Blurred vision, Discharge +1 more",
+  } as ExamOverviewProjection;
+  const renderer = create(
+    <ExamOverviewBoard
+      projection={projection}
+      editorEntries={chartEditorInventory()}
+      refreshing={false}
+      onOpenEditor={() => undefined}
+      onRefresh={() => undefined}
+    />,
   );
+  try {
+    const history = renderer.root.findByProps({ "data-section-key": "history" });
+    assert.match(textContent(history), /Blurred vision, Discharge \+1 more/);
+    assert.match(textContent(history), /Not examined/);
+    assert.doesNotMatch(textContent(history), /ROS reviewed/);
+  } finally {
+    renderer.unmount();
+  }
 });
 
 test("the finding formatter exposes one exact unformatted sentinel", () => {
@@ -758,7 +780,7 @@ test("the finding formatter exposes one exact unformatted sentinel", () => {
   assert.equal(findingValue(bareCatalogFinding(FIXTURE_DEFINITIONS.get("entrance:eom")!)), "recorded");
 });
 
-test("every active catalog finding has a fixture or the one guarded exception", () => {
+test("every active catalog finding has a fixture and no pending exception", () => {
   const activeKeys = buildFindingDefinitionSeeds()
     .filter((definition) => definition.active)
     .map((definition) => definition.stableKey);
@@ -1736,6 +1758,7 @@ const FIXTURE_DEFINITIONS = new Map(
 );
 
 const FIXTURES: Record<string, CatalogFindingFixture> = {
+  hpi_ros: historyCatalogFixture(),
   cup_disc_ratio: catalogFixture("cup_disc_ratio"),
   intraocular_pressure: catalogFixture("intraocular_pressure"),
   corneal_hysteresis: catalogFixture("corneal_hysteresis"),
@@ -1794,6 +1817,19 @@ function catalogFixture(stableKey: string): CatalogFindingFixture {
   return {
     control: bareCatalogFinding(definition),
     charted: chartedCatalogFinding(definition),
+  };
+}
+
+function historyCatalogFixture(): CatalogFindingFixture {
+  const definition = FIXTURE_DEFINITIONS.get("hpi_ros");
+  assert.ok(definition, "Missing active catalog definition for fixture hpi_ros");
+  return {
+    control: bareCatalogFinding(definition),
+    charted: {
+      ...bareCatalogFinding(definition),
+      observationReference: "Observation/catalog-hpi-ros",
+      summary: "Blurred vision · ROS reviewed",
+    },
   };
 }
 

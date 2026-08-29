@@ -187,6 +187,7 @@ test("history capture persists ordinal complaint narratives and explicitly revie
   assert.match(componentValue(observation, "HISTORY_COMPLAINT_1") ?? "", /Patient reports dry eyes/);
   assert.match(componentValue(observation, "HISTORY_COMPLAINT_2") ?? "", /Patient reports Headache/);
   assert.equal(componentValue(observation, "ROS_VISION_CHANGES"), "positive");
+  assert.equal(componentBoolean(observation, "ROS_ATTESTED_GENERAL"), true);
   const provenance = setup.created[0]!.resource as Provenance;
   assert.match(provenance.activity?.text ?? "", /presenting complaints, history narrative/i);
   assert.match(provenance.activity?.text ?? "", /general remaining items reviewed negative/);
@@ -313,4 +314,8 @@ test("history capture enforces authority, option validation, encounter scope, an
 
 function componentValue(observation: Observation, code: string): string | undefined {
   return observation.component?.find((component) => component.code.coding?.[0]?.code === code)?.valueString;
+}
+
+function componentBoolean(observation: Observation, code: string): boolean | undefined {
+  return observation.component?.find((component) => component.code.coding?.[0]?.code === code)?.valueBoolean;
 }
