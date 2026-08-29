@@ -46,6 +46,7 @@ import {
   logProtocolSeedBootFailure,
   logPracticeRoleBootVerification,
   logSsePracticeRoleBootVerification,
+  readPracticeRolePolicySyncStatusReport,
 } from "./authz/boot-role-verification.js";
 import {
   buildOdosAuditEventRow,
@@ -641,6 +642,16 @@ const commsDispatch = createCommsDispatch(commsRegistrations, {
  * ------------------------------------------------------------------------ */
 
 const tools = [
+  {
+    name: "get_policy_sync_status",
+    description:
+      "Read whether every ODOS practice-role AccessPolicy resource[] matches the canonical roles.ts declaration. This tool never writes policy or membership data.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+    },
+  },
   {
     name: "list_patients",
     description:
@@ -2687,6 +2698,10 @@ function createServer(): Server {
 
     try {
       switch (name) {
+        case "get_policy_sync_status": {
+          const status = await readPracticeRolePolicySyncStatusReport(fhir);
+          return { content: [{ type: "text", text: JSON.stringify(status, null, 2) }] };
+        }
         case "list_patients": {
           const { name: nameQ, limit } = listPatientsSchema.parse(args);
           const p: Record<string, string> = { _count: String(limit ?? 20) };

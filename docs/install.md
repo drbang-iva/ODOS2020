@@ -453,6 +453,32 @@ the seed keeps the existing marked resources and statement.
 
 Regular bring-up after the one-time repair is: start Compose, start `odos-mcp` and `odos-ui`, open `http://localhost:5173`, and use the regular local login. Run `npm run seed-demo` only when the synthetic demo rows are missing.
 
+### Practice-role policy synchronization
+
+Before restarting `odos-mcp` after a deployment, compare every deployed practice-role policy's
+`resource[]` with the declarations in `mcp/src/authz/roles.ts`:
+
+```bash
+npm run sync-practice-role-policy-rules -- --project "$MEDPLUM_PROJECT_ID"
+```
+
+The default is a read-only dry run. Review every named missing and unexpected rule, then apply the
+same plan explicitly when the differences are intended:
+
+```bash
+npm run sync-practice-role-policy-rules -- --project "$MEDPLUM_PROJECT_ID" --apply
+```
+
+Start `odos-mcp` only after that sync step. At boot, the server repeats the read-only `resource[]`
+comparison. Drift produces a red warning that names the affected policy and rule differences, but
+does not stop the server. MCP clients can request `get_policy_sync_status` at any time for the same
+structured, read-only comparison; `inSync: true` means every declared practice role matches.
+
+A `403` from the dry run or status tool is an identity-binding failure, not proof of policy drift.
+Inspect the authenticated `ProjectMembership` and confirm that it belongs to the target project and
+is bound to an AccessPolicy that can read AccessPolicy resources. Do not broaden a role policy merely
+to make this diagnostic succeed.
+
 ## Re-provisioning
 
 For an empty test stack, reset compose volumes and remove the local setup state:

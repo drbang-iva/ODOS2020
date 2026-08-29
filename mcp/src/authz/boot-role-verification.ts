@@ -1,37 +1,124 @@
 import type { AccessPolicy } from "@medplum/fhirtypes";
-import type { MedplumClient } from "../fhir-client.js";
+import { searchAll, type FhirSearchClient } from "../fhir-search.js";
+import { diffCanonicalPolicyRules } from "../../../scripts/access-policy-rules.js";
 import {
+  buildMedplumAccessPolicy,
   getRoleDeclaration,
   ODOS_PRACTICE_ROLE_SYSTEM,
   PRACTICE_ROLE_IDS,
+  type PracticeRoleId,
 } from "./roles.js";
 
-export async function missingPracticeRolePolicies(
-  fhir: Pick<MedplumClient, "search">,
-): Promise<string[]> {
-  const missing: string[] = [];
-  for (const roleId of PRACTICE_ROLE_IDS) {
-    const expectedName = `ODOS ${getRoleDeclaration(roleId).display}`;
-    const bundle = await fhir.search<AccessPolicy>("AccessPolicy", { "name:exact": expectedName });
-    const policies = (bundle.entry ?? [])
-      .map((entry) => entry.resource)
-      .filter((policy): policy is AccessPolicy => policy?.name === expectedName);
-    if (policies.length === 0) {
-      missing.push(`${roleId}: AccessPolicy "${expectedName}" is missing`);
+export interface PracticeRolePolicyStatus {
+  readonly role: PracticeRoleId;
+  readonly policyName: string;
+  readonly policyReference?: string;
+  readonly status: "match" | "drift" | "missing" | "duplicate";
+  readonly issues: readonly string[];
+  readonly missingRules: readonly unknown[];
+  readonly unexpectedRules: readonly unknown[];
+}
+
+export interface PracticeRolePolicySyncStatus {
+  readonly inSync: boolean;
+  readonly policies: readonly PracticeRolePolicyStatus[];
+}
+
+export type PracticeRolePolicySyncStatusReport =
+  | (PracticeRolePolicySyncStatus & { readonly availability: "available" })
+  | {
+      readonly availability: "unavailable";
+      readonly inSync: null;
+      readonly error: string;
+    };
+
+export async function readPracticeRolePolicySyncStatus(
+  fhir: FhirSearchClient,
+): Promise<PracticeRolePolicySyncStatus> {
+  const policies: PracticeRolePolicyStatus[] = [];
+  for (const role of PRACTICE_ROLE_IDS) {
+    const expected = buildMedplumAccessPolicy(getRoleDeclaration(role));
+    const expectedName = expected.name!;
+    const matches = (await searchAll<AccessPolicy>(
+      fhir,
+      "AccessPolicy",
+      { "name:exact": expectedName },
+    )).filter((policy) => policy.name === expectedName);
+    if (matches.length === 0) {
+      policies.push({
+        role,
+        policyName: expectedName,
+        status: "missing",
+        issues: [`AccessPolicy "${expectedName}" is missing`],
+        missingRules: expected.resource ?? [],
+        unexpectedRules: [],
+      });
       continue;
     }
-    if (policies.length > 1) {
-      missing.push(`${roleId}: expected one AccessPolicy "${expectedName}", found ${policies.length}`);
+    if (matches.length > 1) {
+      policies.push({
+        role,
+        policyName: expectedName,
+        status: "duplicate",
+        issues: [`expected one AccessPolicy "${expectedName}", found ${matches.length}`],
+        missingRules: [],
+        unexpectedRules: [],
+      });
       continue;
     }
-    const tagged = policies[0]!.meta?.tag?.some(
-      (tag) => tag.system === ODOS_PRACTICE_ROLE_SYSTEM && tag.code === roleId,
+    const deployed = matches[0]!;
+    const issues: string[] = [];
+    const tagged = deployed.meta?.tag?.some(
+      (tag) => tag.system === ODOS_PRACTICE_ROLE_SYSTEM && tag.code === role,
     );
-    if (!tagged) {
-      missing.push(`${roleId}: AccessPolicy "${expectedName}" lacks its practice-role meta.tag`);
+    if (!tagged) issues.push(`AccessPolicy "${expectedName}" lacks its practice-role meta.tag`);
+    const diff = diffCanonicalPolicyRules(deployed, expected);
+    const policyReference = deployed.id ? `AccessPolicy/${deployed.id}` : undefined;
+    if (!diff.matches) {
+      issues.push(`AccessPolicy "${expectedName}"${policyReference ? ` (${policyReference})` : ""} resource[] drift`);
+      issues.push(...diff.missingRules.map((rule) => `missing rule ${JSON.stringify(rule)}`));
+      issues.push(...diff.unexpectedRules.map((rule) => `unexpected rule ${JSON.stringify(rule)}`));
     }
+    policies.push({
+      role,
+      policyName: expectedName,
+      ...(policyReference ? { policyReference } : {}),
+      status: issues.length === 0 ? "match" : "drift",
+      issues,
+      missingRules: diff.missingRules,
+      unexpectedRules: diff.unexpectedRules,
+    });
   }
-  return missing;
+  return {
+    inSync: policies.every((policy) => policy.status === "match"),
+    policies,
+  };
+}
+
+export async function readPracticeRolePolicySyncStatusReport(
+  fhir: FhirSearchClient,
+): Promise<PracticeRolePolicySyncStatusReport> {
+  try {
+    return {
+      availability: "available",
+      ...await readPracticeRolePolicySyncStatus(fhir),
+    };
+  } catch (error) {
+    return {
+      availability: "unavailable",
+      inSync: null,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+export async function missingPracticeRolePolicies(
+  fhir: FhirSearchClient,
+): Promise<string[]> {
+  const status = await readPracticeRolePolicySyncStatus(fhir);
+  return status.policies.flatMap((policy) =>
+    policy.issues.map((issue) => `${policy.role}: ${issue}`)
+  );
 }
 
 export function formatPracticeRoleBootFailure(missing: readonly string[]): string {
@@ -81,7 +168,7 @@ export async function logSsePracticeRoleBootVerification(input: {
 }
 
 export async function logPracticeRoleBootVerification(
-  fhir: Pick<MedplumClient, "search">,
+  fhir: FhirSearchClient,
   log: (message: string) => void = console.error,
 ): Promise<void> {
   try {
