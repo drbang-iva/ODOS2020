@@ -2,12 +2,26 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { act, create, type ReactTestRenderer } from "react-test-renderer";
+import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import { SerialTrendChart } from "../src/components/charting/SerialTrendChart";
 import { PretestVitalsSection } from "../src/components/charting/PretestVitalsSection";
 import { SpineNav } from "../src/components/charting/SpineNav";
 import { DiagnosisWorkspace } from "../src/components/charting/DiagnosisWorkspace";
 import { CAROTENOID_COLOR_BANDS, carotenoidPresentation } from "../src/lib/carotenoid-score";
+
+const BLOOD_PRESSURE_HISTORY = [
+  { observationReference: "Observation/bp1", recordedAt: "2026-08-29T13:00:00.000Z", systolic: 120, diastolic: 80, cuffSite: "", position: "" },
+  { observationReference: "Observation/bp2", recordedAt: "2026-08-29T13:05:00.000Z", systolic: 121, diastolic: 81, cuffSite: "Left upper arm", position: "" },
+  { observationReference: "Observation/bp3", recordedAt: "2026-08-29T13:10:00.000Z", systolic: 122, diastolic: 82, cuffSite: "", position: "standing" },
+  { observationReference: "Observation/bp4", recordedAt: "2026-08-29T13:15:00.000Z", systolic: 123, diastolic: 83, cuffSite: "Right upper arm", position: "sitting" },
+];
+
+const BLOOD_PRESSURE_SUMMARIES = [
+  "120/80 mmHg",
+  "121/81 mmHg · Left upper arm",
+  "122/82 mmHg · standing",
+  "123/83 mmHg · Right upper arm · sitting",
+];
 
 test("carotenoid labels use label anchors while colors use independent color bands", () => {
   assert.deepEqual(carotenoidPresentation(15_000), { score: 15_000, label: "Low", color: "Red" });
@@ -84,6 +98,80 @@ test("pretest section names the two honest empty states and the fixed S3 device"
   assert.match(html, /aria-label="Skin carotenoid score"[^>]*max="90000"/);
 });
 
+test("blood pressure position starts as Not recorded", () => {
+  const html = renderToStaticMarkup(<PretestVitalsSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} />);
+  assert.match(html, /aria-label="Patient position"><option value="" selected="">Not recorded<\/option>/);
+});
+
+test("blood pressure save omits blank cuff site and position", async () => {
+  const originalFetch = globalThis.fetch;
+  const writes: Array<{ url: string; body: unknown }> = [];
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (init?.method === "POST") {
+      writes.push({ url, body: JSON.parse(String(init.body)) });
+      return Response.json({});
+    }
+    if (url.includes("/clinical-graph/pretest-vitals/history")) {
+      return Response.json({ bloodPressure: [], carotenoid: [], height: null, weight: null });
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<PretestVitalsSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} />);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    act(() => renderer.root.findByProps({ "aria-label": "Systolic blood pressure" }).props.onChange({ target: { value: "120" } }));
+    act(() => renderer.root.findByProps({ "aria-label": "Diastolic blood pressure" }).props.onChange({ target: { value: "80" } }));
+    const save = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save blood pressure");
+    assert.ok(save);
+    await act(async () => {
+      save.props.onClick();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    assert.deepEqual(writes, [{
+      url: "/clinical-graph/pretest-vitals/blood-pressure",
+      body: {
+        patientReference: "Patient/p1",
+        encounterReference: "Encounter/e1",
+        systolic: 120,
+        diastolic: 80,
+      },
+    }]);
+  } finally {
+    if (renderer) renderer.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("systolic chart titles compose only recorded blood pressure context", async () => {
+  await withBloodPressureHistory((renderer) => {
+    const chart = renderer.root.findAllByType(SerialTrendChart).find((candidate) => candidate.props.ariaLabel === "Blood pressure trend");
+    assert.ok(chart);
+    assert.deepEqual(chart.props.series[0].points.map((point: { title: string }) => point.title), BLOOD_PRESSURE_SUMMARIES);
+  });
+});
+
+test("diastolic chart titles compose only recorded blood pressure context", async () => {
+  await withBloodPressureHistory((renderer) => {
+    const chart = renderer.root.findAllByType(SerialTrendChart).find((candidate) => candidate.props.ariaLabel === "Blood pressure trend");
+    assert.ok(chart);
+    assert.deepEqual(chart.props.series[1].points.map((point: { title: string }) => point.title), BLOOD_PRESSURE_SUMMARIES);
+  });
+});
+
+test("blood pressure history rows compose only recorded context before the timestamp", async () => {
+  await withBloodPressureHistory((renderer) => {
+    const expected = BLOOD_PRESSURE_HISTORY.map((row, index) =>
+      `${BLOOD_PRESSURE_SUMMARIES[index]} · ${new Date(row.recordedAt).toLocaleString()}`);
+    assert.deepEqual(renderer.root.findAllByType("li").map(renderedText), expected);
+  });
+});
+
 test("pretest section presents height and weight as one customary-unit card with one shared time", () => {
   const html = renderToStaticMarkup(<PretestVitalsSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} />);
   assert.match(html, />Height and weight</);
@@ -148,3 +236,30 @@ test("diagnosis workspace does not expose a blood-pressure entry control", () =>
   const html = renderToStaticMarkup(<DiagnosisWorkspace patientReference="Patient/p1" encounterReference="Encounter/e1" onSelectDiagnosis={() => undefined} />);
   assert.doesNotMatch(html, /Record blood pressure/);
 });
+
+async function withBloodPressureHistory(assertion: (renderer: ReactTestRenderer) => void): Promise<void> {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (!init?.method && url.includes("/clinical-graph/pretest-vitals/history")) {
+      return Response.json({ bloodPressure: BLOOD_PRESSURE_HISTORY, carotenoid: [], height: null, weight: null });
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<PretestVitalsSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} />);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    assertion(renderer);
+  } finally {
+    if (renderer) renderer.unmount();
+    globalThis.fetch = originalFetch;
+  }
+}
+
+function renderedText(node: ReactTestInstance | string): string {
+  return typeof node === "string" ? node : node.children.map((child) => renderedText(child as ReactTestInstance | string)).join("");
+}

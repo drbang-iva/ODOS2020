@@ -90,12 +90,16 @@ const shared = {
   recordedAt: z.string().datetime().optional(),
 };
 
+function blankToUndefined(value: unknown): unknown {
+  return typeof value === "string" && value.trim() === "" ? undefined : value;
+}
+
 const bloodPressureSchema = z.object({
   ...shared,
   systolic: z.number().int().min(30).max(300),
   diastolic: z.number().int().min(20).max(200),
-  cuffSite: z.string().trim().min(1).max(120),
-  position: z.enum(["sitting", "standing"]),
+  cuffSite: z.preprocess(blankToUndefined, z.string().trim().min(1).max(120).optional()),
+  position: z.preprocess(blankToUndefined, z.enum(["sitting", "standing"]).optional()),
 }).strict();
 
 const carotenoidSchema = z.object({
@@ -131,14 +135,14 @@ export async function handleBloodPressureCaptureRequest(
     encounter: { reference: parsed.data.encounterReference },
     effectiveDateTime: recordedAt,
     performer: [{ reference: staff.staffReference }],
-    bodySite: { text: parsed.data.cuffSite },
+    ...(parsed.data.cuffSite ? { bodySite: { text: parsed.data.cuffSite } } : {}),
     component: [
       pressureComponent("8480-6", "Systolic blood pressure", parsed.data.systolic),
       pressureComponent("8462-4", "Diastolic blood pressure", parsed.data.diastolic),
-      {
+      ...(parsed.data.position ? [{
         code: { coding: [{ system: ODOS_OPHTHALMOLOGY_CODE_SYSTEM, code: "patient-position", display: "Patient position" }] },
         valueCodeableConcept: { coding: [{ system: ODOS_OPHTHALMOLOGY_CODE_SYSTEM, code: parsed.data.position, display: capitalize(parsed.data.position) }] },
-      },
+      }] : []),
     ],
   };
   return persistObservation(staff.fhir, observation, parsed.data.patientReference, staff.staffReference, recordedAt);
