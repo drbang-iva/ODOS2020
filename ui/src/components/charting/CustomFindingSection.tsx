@@ -362,8 +362,8 @@ function CustomFieldControl({ field, value, onChange }: {
       ) : field.valueType === "number" ? (
         hasWheelBounds ? (
           <OdosWheel
-            value={numericValue === "" ? 0 : Number(numericValue)}
-            centerOn={0}
+            value={numericValue === "" ? null : Number(numericValue)}
+            centerOn={Number(field.defaultValue ?? 0)}
             min={field.min!}
             max={field.max!}
             step={field.step!}

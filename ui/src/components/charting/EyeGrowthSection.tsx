@@ -188,7 +188,7 @@ export function EyeGrowthSection({ patientReference, encounterReference, onSaved
                     <div key={eye} className="contents">
                       <div className="self-center text-sm font-semibold text-[color:var(--odos-text)]">{eye}</div>
                       <OdosWheel
-                        value={eyes[eye].axialLength === "" ? 0 : Number(eyes[eye].axialLength)}
+                        value={eyes[eye].axialLength === "" ? null : Number(eyes[eye].axialLength)}
                         centerOn={0}
                         min={18}
                         max={32}
@@ -233,7 +233,7 @@ export function EyeGrowthSection({ patientReference, encounterReference, onSaved
                         }}
                       >
                         <OdosWheel
-                          value={eyes[eye].cornealRadius === "" ? 0 : Number(eyes[eye].cornealRadius)}
+                          value={eyes[eye].cornealRadius === "" ? null : Number(eyes[eye].cornealRadius)}
                           centerOn={0}
                           min={5}
                           max={12}

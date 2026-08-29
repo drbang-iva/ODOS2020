@@ -12,6 +12,7 @@ test("OdosWheel centerOn stays a required compile-time prop", () => {
   execFileSync(tsc, [
     "--noEmit",
     "--skipLibCheck",
+    "--strictNullChecks",
     "--jsx", "react-jsx",
     "--module", "ESNext",
     "--moduleResolution", "Bundler",
@@ -268,7 +269,7 @@ test("OdosWheel preserves a blank state while keeping direct typing available", 
   act(() => {
     renderer = create(
       <OdosWheel
-        value={0}
+        value={null}
         centerOn={0}
         min={-1}
         max={1}
@@ -300,6 +301,31 @@ test("OdosWheel preserves a blank state while keeping direct typing available", 
     preventDefault: () => undefined,
   }));
   assert.equal(input().props.value, "");
+  act(() => renderer.unmount());
+});
+
+test("OdosWheel leaves every numeric option unselected while a blank state owns the selection", () => {
+  let renderer: ReturnType<typeof create>;
+  act(() => {
+    renderer = create(
+      <OdosWheel
+        value={0}
+        centerOn={0}
+        min={-1}
+        max={1}
+        step={1}
+        format={String}
+        onChange={() => undefined}
+        ariaLabel="Blank power"
+        states={[{ value: "", label: "Not recorded" }]}
+        selectedState=""
+        onStateChange={() => undefined}
+      />,
+    );
+  });
+  const selectedNumericOptions = renderer.root.findAllByProps({ role: "option" })
+    .filter((option) => option.children.join("") !== "Not recorded" && option.props["aria-selected"] === true);
+  assert.equal(selectedNumericOptions.length, 0);
   act(() => renderer.unmount());
 });
 

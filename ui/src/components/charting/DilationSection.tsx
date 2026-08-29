@@ -115,7 +115,7 @@ export function DilationSection({ definition, patientReference, encounterReferen
                   <OdosWheel
                     ariaLabel={`Drops ${index + 1}`}
                     value={Number(row.drops)}
-                    centerOn={0}
+                    centerOn={Number(row.drops)}
                     min={1}
                     max={10}
                     step={1}

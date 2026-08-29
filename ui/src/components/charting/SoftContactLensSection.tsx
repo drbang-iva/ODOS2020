@@ -578,7 +578,7 @@ function DefinitionWheelField({ label, value, onChange, field, ariaLabel }: {
     <label className="block">
       <span className={FIELD_LABEL_CLASS}>{label}</span>
       <OdosWheel
-        value={value === "" ? 0 : Number(value)}
+        value={value === "" ? null : Number(value)}
         centerOn={0}
         min={field.minimum}
         max={field.maximum}
@@ -611,7 +611,7 @@ function CatalogWheelField({ label, value, onChange, options, disabled, ariaLabe
     <label className="block">
       <span className={FIELD_LABEL_CLASS}>{label}</span>
       <OdosWheel
-        value={value === "" ? wheel.min : Number(value)}
+        value={value === "" ? null : Number(value)}
         centerOn={0}
         min={wheel.min}
         max={wheel.max}
@@ -648,7 +648,7 @@ function PowerField({ label, value, onChange, options, ariaLabel, format = forma
         {clearable && value !== "" && <button type="button" aria-label={`Clear ${ariaLabel}`} onClick={() => onChange("")} className="text-xs text-brand hover:underline">Clear</button>}
       </div>
       <OdosWheel
-        value={value === "" ? 0 : Number(value)}
+        value={value === "" ? null : Number(value)}
         centerOn={0}
         min={wheel.min}
         max={wheel.max}
@@ -682,7 +682,7 @@ function SphereWheelField({ label, value, onChange, field, ariaLabel }: {
     <label className="block">
       <span className="mb-1 block text-xs uppercase tracking-widest text-[color:var(--odos-faint)]">{label}</span>
       <OdosWheel
-        value={value === "" ? 0 : Number(value)}
+        value={value === "" ? null : Number(value)}
         centerOn={0}
         min={minimum}
         max={maximum}
@@ -716,7 +716,7 @@ function AxisField({ label, value, onChange, options, ariaLabel, validationMessa
         {value !== "" && <button type="button" aria-label={`Clear ${ariaLabel}`} onClick={() => onChange("")} className="text-xs text-brand hover:underline">Clear</button>}
       </div>
       <OdosWheel
-        value={value === "" ? 0 : Number(value)}
+        value={value === "" ? null : Number(value)}
         centerOn={0}
         min={wheel.min}
         max={wheel.max}

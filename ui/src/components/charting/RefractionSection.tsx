@@ -463,7 +463,7 @@ export function RefractionSection({ patientReference, encounterReference, onSave
                         />
                       ))}
                       <OdosWheel
-                        value={block[eye].axis === "" ? 0 : Number(block[eye].axis)}
+                        value={block[eye].axis === "" ? null : Number(block[eye].axis)}
                         centerOn={0}
                         min={axisMinimum}
                         max={axisMaximum}

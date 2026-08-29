@@ -3135,7 +3135,7 @@ test("remaining anterior structure grades render blank, persist typed values, an
     });
     const numbers = renderer.root.findAllByType(OdosWheel);
     assert.equal(numbers.length, 2);
-    assert.deepEqual(numbers.slice(0, 2).map((input) => input.props.value), [6, 0]);
+    assert.deepEqual(numbers.slice(0, 2).map((input) => input.props.value), [6, null]);
     const selects = renderer.root.findAllByType(OdosSelect);
     assert.equal(selects.length, 2);
     assert.deepEqual(selects.map((select) => select.props.value), ["", ""]);

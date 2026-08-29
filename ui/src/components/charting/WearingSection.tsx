@@ -267,7 +267,7 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
                       <PowerDropdown value={pair[eye].sphere} options={sphereOptions} defaultValue="0.00" onChange={(value) => updateEye(pair.id, eye, { sphere: value })} ariaLabel={`${eye} sphere`} formatOption={formatDiopterOption} />
                       <PowerDropdown value={pair[eye].cylinder} options={cylinderOptions} defaultValue="0.00" onChange={(value) => updateEye(pair.id, eye, { cylinder: value })} ariaLabel={`${eye} cylinder`} formatOption={formatDiopterOption} />
                       <OdosWheel
-                        value={pair[eye].axis === "" ? 0 : Number(pair[eye].axis)}
+                        value={pair[eye].axis === "" ? null : Number(pair[eye].axis)}
                         centerOn={0}
                         min={axisMinimum}
                         max={axisMaximum}

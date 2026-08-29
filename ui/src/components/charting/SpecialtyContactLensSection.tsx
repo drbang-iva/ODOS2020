@@ -745,7 +745,7 @@ function PowerField({ label, value, onChange, options, ariaLabel, clearable = fa
         {clearable && value !== "" && <button type="button" aria-label={`Clear ${ariaLabel}`} onClick={() => onChange("")} className="text-xs text-brand hover:underline">Clear</button>}
       </div>
       <OdosWheel
-        value={value === "" ? 0 : Number(value)}
+        value={value === "" ? null : Number(value)}
         centerOn={0}
         min={wheel.min}
         max={wheel.max}
@@ -782,7 +782,7 @@ function AxisField({ label, value, onChange, options, ariaLabel, validationMessa
         {value !== "" && <button type="button" aria-label={`Clear ${ariaLabel}`} onClick={() => onChange("")} className="text-xs text-brand hover:underline">Clear</button>}
       </div>
       <OdosWheel
-        value={value === "" ? 0 : Number(value)}
+        value={value === "" ? null : Number(value)}
         centerOn={0}
         min={wheel.min}
         max={wheel.max}

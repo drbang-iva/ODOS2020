@@ -121,8 +121,8 @@ function MeasurementControl({ field, value, onChange }: { field: CustomFindingFi
   if (field.valueType === "number" && field.min !== undefined && field.max !== undefined && field.step !== undefined) {
     return (
       <OdosWheel
-        value={value === "" ? 0 : Number(value)}
-        centerOn={0}
+        value={value === "" ? null : Number(value)}
+        centerOn={Number(field.defaultValue ?? 0)}
         min={field.min}
         max={field.max}
         step={field.step}

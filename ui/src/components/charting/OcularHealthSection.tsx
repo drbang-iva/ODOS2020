@@ -526,7 +526,7 @@ function EyePanel({ eye, capture, prior, field, gradeFields, normalTemplate, all
         <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-white/45">{grade.display}</span>
         {grade.valueType === "number" ? (
           grade.min !== undefined && grade.max !== undefined && grade.step !== undefined ? <OdosWheel
-            value={capture.grades?.[grade.localCode] === undefined ? 0 : Number(capture.grades?.[grade.localCode])}
+            value={capture.grades?.[grade.localCode] === undefined ? null : Number(capture.grades?.[grade.localCode])}
             centerOn={0}
             min={grade.min}
             max={grade.max}

@@ -586,7 +586,7 @@ export function ReferralCompose({
                   <div className="w-28">
                     <OdosWheel
                       value={includeList.history_count}
-                      centerOn={0}
+                      centerOn={includeList.history_count}
                       min={1}
                       max={50}
                       step={1}
