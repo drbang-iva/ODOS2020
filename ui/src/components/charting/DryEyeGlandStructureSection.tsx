@@ -312,7 +312,7 @@ export function DryEyeGlandStructureSection({
             <div className="mt-2">
               <OdosWheel
                 ariaLabel="Meibography total score"
-                value={totalScore === "" ? 0 : Number(totalScore)}
+                value={totalScore === "" ? null : Number(totalScore)}
                 centerOn={0}
                 min={0}
                 max={maximumScore}

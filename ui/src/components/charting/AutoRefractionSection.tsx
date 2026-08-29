@@ -314,7 +314,7 @@ function AxisWheel({ value, onChange, ariaLabel, min, max, step }: {
 }) {
   return (
     <OdosWheel
-      value={value === "" ? 0 : Number(value)}
+      value={value === "" ? null : Number(value)}
       centerOn={0}
       min={min}
       max={max}

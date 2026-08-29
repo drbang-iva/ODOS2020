@@ -435,7 +435,7 @@ export function IopTimeline({ patientReference, refreshSignal }: Props) {
                   <div className="w-28">
                     <OdosWheel
                       value={Number(targetDraft.percent)}
-                      centerOn={0}
+                      centerOn={Number(targetDraft.percent)}
                       min={0}
                       max={100}
                       step={1}
@@ -453,7 +453,7 @@ export function IopTimeline({ patientReference, refreshSignal }: Props) {
                 <div className="mt-3 w-40">
                   <OdosWheel
                     value={Number(targetDraft.directValue)}
-                    centerOn={0}
+                    centerOn={Number(targetDraft.directValue)}
                     min={3}
                     max={80}
                     step={0.1}

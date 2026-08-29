@@ -345,7 +345,13 @@ test("Batch 4 contact-lens wheels consume corrected definition bounds with clini
   assert.equal((definition.match(/overRefractionCylinder: powerField\("Over-Refraction Cylinder", -8, 0\)/g) ?? []).length, 2);
 });
 
-test("every Batch 4 wheel declaration is explicitly plano-centered", () => {
+test("Batch 4 wheels retain plano power centers with six explicit non-power defaults", () => {
+  const allowedNonPlanoCenters: Record<string, string[]> = {
+    "CustomFindingSection.tsx": ["Number(field.defaultValue ?? 0)"],
+    "DilationSection.tsx": ["Number(row.drops)"],
+    "EntranceMeasurementSection.tsx": ["Number(field.defaultValue ?? 0)"],
+    "IopTimeline.tsx": ["Number(targetDraft.percent)", "Number(targetDraft.directValue)"],
+  };
   for (const file of [
     "AutoRefractionSection.tsx",
     "CustomFindingSection.tsx",
@@ -361,15 +367,32 @@ test("every Batch 4 wheel declaration is explicitly plano-centered", () => {
     "WearingSection.tsx",
   ]) {
     const component = source(file);
-    assert.match(component, /centerOn=\{0\}/, file);
-    assert.doesNotMatch(component, /centerOn=\{(?!0\})/, file);
+    const nonPlanoCenters = [...component.matchAll(/centerOn=\{([^}]+)\}/g)]
+      .map((match) => match[1]!)
+      .filter((center) => center !== "0");
+    assert.deepEqual(nonPlanoCenters, allowedNonPlanoCenters[file] ?? [], file);
   }
+  const autoRefraction = source("AutoRefractionSection.tsx");
+  const refraction = source("RefractionSection.tsx");
+  const soft = source("SoftContactLensSection.tsx");
+  const specialty = source("SpecialtyContactLensSection.tsx");
+  const wearing = source("WearingSection.tsx");
+  assert.match(autoRefraction, /function AxisWheel[\s\S]*?centerOn=\{0\}/);
+  assert.match(refraction, /value=\{block\[eye\]\.axis[\s\S]*?centerOn=\{0\}/);
+  assert.match(soft, /function PowerField[\s\S]*?centerOn=\{0\}/);
+  assert.match(soft, /function SphereWheelField[\s\S]*?centerOn=\{0\}/);
+  assert.match(soft, /function AxisField[\s\S]*?centerOn=\{0\}/);
+  assert.match(specialty, /function PowerField[\s\S]*?centerOn=\{0\}/);
+  assert.match(specialty, /function AxisField[\s\S]*?centerOn=\{0\}/);
+  assert.match(wearing, /value=\{pair\[eye\]\.axis[\s\S]*?centerOn=\{0\}/);
   const referral = readFileSync(
     new URL("../src/components/referral/ReferralCompose.tsx", import.meta.url),
     "utf8",
   );
-  assert.match(referral, /centerOn=\{0\}/);
-  assert.doesNotMatch(referral, /centerOn=\{(?!0\})/);
+  assert.deepEqual(
+    [...referral.matchAll(/centerOn=\{([^}]+)\}/g)].map((match) => match[1]!),
+    ["includeList.history_count"],
+  );
 });
 
 test("unknown Batch 4 bounds stay typed instead of acquiring guessed wheel ranges", () => {

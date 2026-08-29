@@ -6,7 +6,7 @@ export interface OdosWheelState {
 }
 
 export interface OdosWheelProps {
-  value: number;
+  value: number | null;
   centerOn: number;
   step: number;
   min: number;
@@ -45,9 +45,10 @@ export function OdosWheel({
   const values = useMemo(() => wheelValues(min, max, step), [max, min, step]);
   const centerIndex = closestIndex(values, centerOn);
   const selectedStateLabel = states.find((state) => state.value === selectedState)?.label;
+  const hasNumericSelection = value !== null && selectedStateLabel === undefined;
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [typedValue, setTypedValue] = useState(() => selectedStateLabel === undefined ? format(value) : "");
+  const [typedValue, setTypedValue] = useState(() => hasNumericSelection ? format(value) : "");
   const editingRef = useRef(editing);
   const formatRef = useRef(format);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -60,8 +61,8 @@ export function OdosWheel({
   formatRef.current = format;
 
   useEffect(() => {
-    if (!editingRef.current) setTypedValue(selectedStateLabel === undefined ? formatRef.current(value) : "");
-  }, [selectedStateLabel, value]);
+    if (!editingRef.current) setTypedValue(hasNumericSelection ? formatRef.current(value) : "");
+  }, [hasNumericSelection, value]);
 
   useEffect(() => {
     if (!open || centerIndex < 0) return;
@@ -86,7 +87,7 @@ export function OdosWheel({
   }, [disabled]);
 
   function restoreTypedValue() {
-    setTypedValue(selectedStateLabel === undefined ? format(value) : "");
+    setTypedValue(hasNumericSelection ? format(value) : "");
     setEditing(false);
   }
 
@@ -110,13 +111,13 @@ export function OdosWheel({
     const normalized = normalizeWheelValue(parsed, min, max, step);
     setTypedValue(format(normalized));
     setEditing(false);
-    if (normalized !== value) onChange(normalized);
+    if (value === null || normalized !== value) onChange(normalized);
   }
 
   const changeBy = useCallback((next: number) => {
     const normalized = normalizeWheelValue(next, min, max, step);
     setTypedValue(format(normalized));
-    if (normalized !== value) onChange(normalized);
+    if (value === null || normalized !== value) onChange(normalized);
   }, [format, max, min, onChange, step, value]);
 
   const commitScrolledValue = useCallback(() => {
@@ -167,11 +168,11 @@ export function OdosWheel({
     const handleWheel = (event: WheelEvent) => {
       if (disabled) return;
       event.preventDefault();
-      changeBy(value + (event.deltaY > 0 ? step : -step));
+      changeBy((value ?? centerOn) + (event.deltaY > 0 ? step : -step));
     };
     input.addEventListener("wheel", handleWheel, { passive: false });
     return () => input.removeEventListener("wheel", handleWheel);
-  }, [changeBy, disabled, step, value]);
+  }, [centerOn, changeBy, disabled, step, value]);
 
   function select(next: number) {
     changeBy(next);
@@ -181,7 +182,7 @@ export function OdosWheel({
   function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
-      changeBy(value + (event.key === "ArrowDown" ? step : -step));
+      changeBy((value ?? centerOn) + (event.key === "ArrowDown" ? step : -step));
     } else if (event.key === "Home") {
       event.preventDefault();
       changeBy(min);
@@ -288,13 +289,13 @@ export function OdosWheel({
               ref={(node) => { optionRefs.current[index] = node; }}
               type="button"
               role="option"
-              aria-selected={option === value}
+              aria-selected={hasNumericSelection && option === value}
               data-center={index === centerIndex ? "true" : undefined}
               disabled={disabled}
               onClick={() => select(option)}
               className={[
                 "block min-h-11 w-full snap-center rounded px-3 py-2 text-center text-sm outline-none",
-                option === value
+                hasNumericSelection && option === value
                   ? "bg-brand/20 text-[color:var(--odos-text)]"
                   : "text-[color:var(--odos-muted)] hover:bg-[var(--odos-surface-2)] focus-visible:bg-brand/20",
               ].join(" ")}
