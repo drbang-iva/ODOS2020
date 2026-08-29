@@ -300,6 +300,87 @@ test("blood pressure persists the US Core panel with verified component codes an
   assert.equal((created[1] as Provenance).target[1]?.reference, "Patient/p1");
 });
 
+test("blood pressure omits body site and patient position when neither was recorded", async () => {
+  const { created, deps } = fixture();
+  const result = await handleBloodPressureCaptureRequest(deps, {
+    authHeader: AUTH,
+    body: {
+      patientReference: "Patient/p1",
+      encounterReference: "Encounter/e1",
+      systolic: 120,
+      diastolic: 80,
+    },
+  });
+
+  assert.equal(result.status, 200);
+  const observation = created[0] as Observation;
+  assert.equal(Object.hasOwn(observation, "bodySite"), false);
+  assert.equal(observation.component?.some((part) =>
+    part.code.coding?.some((coding) => coding.code === "patient-position")), false);
+});
+
+test("blood pressure normalizes blank optional context to unrecorded", async () => {
+  const { created, deps } = fixture();
+  const result = await handleBloodPressureCaptureRequest(deps, {
+    authHeader: AUTH,
+    body: {
+      patientReference: "Patient/p1",
+      encounterReference: "Encounter/e1",
+      systolic: 120,
+      diastolic: 80,
+      cuffSite: "   ",
+      position: "   ",
+    },
+  });
+
+  assert.equal(result.status, 200);
+  const observation = created[0] as Observation;
+  assert.equal(Object.hasOwn(observation, "bodySite"), false);
+  assert.equal(observation.component?.some((part) =>
+    part.code.coding?.some((coding) => coding.code === "patient-position")), false);
+});
+
+test("blood pressure can record cuff site without inventing patient position", async () => {
+  const { created, deps } = fixture();
+  const result = await handleBloodPressureCaptureRequest(deps, {
+    authHeader: AUTH,
+    body: {
+      patientReference: "Patient/p1",
+      encounterReference: "Encounter/e1",
+      systolic: 120,
+      diastolic: 80,
+      cuffSite: "Left upper arm",
+    },
+  });
+
+  assert.equal(result.status, 200);
+  const observation = created[0] as Observation;
+  assert.equal(observation.bodySite?.text, "Left upper arm");
+  assert.equal(observation.component?.some((part) =>
+    part.code.coding?.some((coding) => coding.code === "patient-position")), false);
+});
+
+test("blood pressure can record patient position without inventing body site", async () => {
+  const { created, deps } = fixture();
+  const result = await handleBloodPressureCaptureRequest(deps, {
+    authHeader: AUTH,
+    body: {
+      patientReference: "Patient/p1",
+      encounterReference: "Encounter/e1",
+      systolic: 120,
+      diastolic: 80,
+      position: "standing",
+    },
+  });
+
+  assert.equal(result.status, 200);
+  const observation = created[0] as Observation;
+  assert.equal(Object.hasOwn(observation, "bodySite"), false);
+  const position = observation.component?.find((part) =>
+    part.code.coding?.some((coding) => coding.code === "patient-position"));
+  assert.equal(position?.valueCodeableConcept?.coding?.[0]?.code, "standing");
+});
+
 test("repeat blood pressure capture creates another reading instead of overwriting", async () => {
   const { observations, deps } = fixture();
   const body = {

@@ -49,7 +49,7 @@ export function PretestVitalsSection({ patientReference, encounterReference, onS
   const [systolic, setSystolic] = useState("");
   const [diastolic, setDiastolic] = useState("");
   const [cuffSite, setCuffSite] = useState("");
-  const [position, setPosition] = useState("sitting");
+  const [position, setPosition] = useState("");
   const [bpTime, setBpTime] = useState("");
   const [height, setHeight] = useState("");
   const [weight, setWeight] = useState("");
@@ -76,13 +76,15 @@ export function PretestVitalsSection({ patientReference, encounterReference, onS
   async function saveBloodPressure() {
     const sys = Number(systolic);
     const dia = Number(diastolic);
-    if (!Number.isInteger(sys) || !Number.isInteger(dia) || !cuffSite.trim()) {
-      setError("Enter systolic, diastolic, and cuff site before saving.");
+    if (!Number.isInteger(sys) || !Number.isInteger(dia)) {
+      setError("Enter systolic and diastolic before saving.");
       return;
     }
     const saved = await save("blood-pressure", {
       patientReference, encounterReference, systolic: sys, diastolic: dia,
-      cuffSite: cuffSite.trim(), position, ...(iso(bpTime) ? { recordedAt: iso(bpTime) } : {}),
+      ...(cuffSite.trim() ? { cuffSite: cuffSite.trim() } : {}),
+      ...(position ? { position } : {}),
+      ...(iso(bpTime) ? { recordedAt: iso(bpTime) } : {}),
     }, `BP ${sys}/${dia}`);
     if (saved) { setSystolic(""); setDiastolic(""); }
   }
@@ -128,8 +130,8 @@ export function PretestVitalsSection({ patientReference, encounterReference, onS
   }
 
   const bpSeries = useMemo(() => [
-    { id: "systolic", label: "Systolic", color: "var(--odos-alert)", points: history.bloodPressure.map((row) => ({ id: `${row.observationReference}-s`, x: Date.parse(row.recordedAt), value: row.systolic, title: `${row.systolic}/${row.diastolic} mmHg · ${row.cuffSite} · ${row.position}` })) },
-    { id: "diastolic", label: "Diastolic", color: "var(--odos-sapphire)", points: history.bloodPressure.map((row) => ({ id: `${row.observationReference}-d`, x: Date.parse(row.recordedAt), value: row.diastolic, title: `${row.systolic}/${row.diastolic} mmHg · ${row.cuffSite} · ${row.position}` })) },
+    { id: "systolic", label: "Systolic", color: "var(--odos-alert)", points: history.bloodPressure.map((row) => ({ id: `${row.observationReference}-s`, x: Date.parse(row.recordedAt), value: row.systolic, title: bloodPressureSummary(row) })) },
+    { id: "diastolic", label: "Diastolic", color: "var(--odos-sapphire)", points: history.bloodPressure.map((row) => ({ id: `${row.observationReference}-d`, x: Date.parse(row.recordedAt), value: row.diastolic, title: bloodPressureSummary(row) })) },
   ], [history.bloodPressure]);
   const carotenoidSeries = useMemo(() => [{ id: "score", label: "Score", color: "var(--odos-text)", points: history.carotenoid.map((row) => {
     const presentation = carotenoidPresentation(row.score);
@@ -148,7 +150,7 @@ export function PretestVitalsSection({ patientReference, encounterReference, onS
               <Field label="Systolic (mmHg)"><input aria-label="Systolic blood pressure" type="number" min="30" max="300" value={systolic} onChange={(e) => setSystolic(e.target.value)} /></Field>
               <Field label="Diastolic (mmHg)"><input aria-label="Diastolic blood pressure" type="number" min="20" max="200" value={diastolic} onChange={(e) => setDiastolic(e.target.value)} /></Field>
               <Field label="Cuff arm / site"><input aria-label="Blood pressure cuff site" value={cuffSite} onChange={(e) => setCuffSite(e.target.value)} placeholder="Left upper arm" /></Field>
-              <Field label="Patient position"><select aria-label="Patient position" value={position} onChange={(e) => setPosition(e.target.value)}><option value="sitting">Sitting</option><option value="standing">Standing</option></select></Field>
+              <Field label="Patient position"><select aria-label="Patient position" value={position} onChange={(e) => setPosition(e.target.value)}><option value="">Not recorded</option><option value="sitting">Sitting</option><option value="standing">Standing</option></select></Field>
               <Field label="Time"><input aria-label="Blood pressure time" type="datetime-local" value={bpTime} onChange={(e) => setBpTime(e.target.value)} /></Field>
             </div>
             <button type="button" disabled={saving} onClick={() => void saveBloodPressure()} className="mt-4 rounded bg-brand px-4 py-2 text-sm font-semibold text-[color:var(--odos-accent-ink)]">Save blood pressure</button>
@@ -190,13 +192,16 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function iso(value: string): string | undefined { return value ? new Date(value).toISOString() : undefined; }
 function message(value: unknown): string { return value instanceof Error ? value.message : String(value); }
 function formatDate(value: number): string { return new Date(value).toLocaleDateString(); }
+function bloodPressureSummary(row: BloodPressureReading): string {
+  return [`${row.systolic}/${row.diastolic} mmHg`, row.cuffSite, row.position].filter(Boolean).join(" · ");
+}
 function HistoryList({ history }: { history: History }) {
   return <div className="grid gap-6 xl:grid-cols-2">
     <article><h3 className="font-semibold text-[color:var(--odos-text)]">Latest height and weight</h3><div className="mt-2 space-y-1 text-sm text-[color:var(--odos-muted)]">
       <p>{history.height ? `${history.height.value} ${history.height.unit} · ${new Date(history.height.recordedAt).toLocaleString()}` : "Height not recorded"}</p>
       <p>{history.weight ? `${history.weight.value} ${history.weight.unit} · ${new Date(history.weight.recordedAt).toLocaleString()}` : "Weight not recorded"}</p>
     </div></article>
-    <article><h3 className="font-semibold text-[color:var(--odos-text)]">Blood pressure readings</h3>{history.bloodPressure.length ? <ul className="mt-2 space-y-1 text-sm text-[color:var(--odos-muted)]">{history.bloodPressure.map((row) => <li key={row.observationReference}>{row.systolic}/{row.diastolic} mmHg · {row.cuffSite} · {row.position} · {new Date(row.recordedAt).toLocaleString()}</li>)}</ul> : <p className="mt-2 text-sm text-[color:var(--odos-faint)]">Blood pressure not recorded</p>}</article>
+    <article><h3 className="font-semibold text-[color:var(--odos-text)]">Blood pressure readings</h3>{history.bloodPressure.length ? <ul className="mt-2 space-y-1 text-sm text-[color:var(--odos-muted)]">{history.bloodPressure.map((row) => <li key={row.observationReference}>{bloodPressureSummary(row)} · {new Date(row.recordedAt).toLocaleString()}</li>)}</ul> : <p className="mt-2 text-sm text-[color:var(--odos-faint)]">Blood pressure not recorded</p>}</article>
     <article><h3 className="font-semibold text-[color:var(--odos-text)]">Skin carotenoid readings</h3>{history.carotenoid.length ? <ul className="mt-2 space-y-1 text-sm text-[color:var(--odos-muted)]">{history.carotenoid.map((row) => { const p = carotenoidPresentation(row.score); return <li key={row.observationReference}><i className="mr-2 inline-block h-3 w-3 rounded-full" style={{ background: CAROTENOID_COLOR_BANDS.find((band) => band.color === p.color)?.hex }} />{row.score.toLocaleString()} · {p.label} · {p.color} · {new Date(row.recordedAt).toLocaleString()}</li>; })}</ul> : <p className="mt-2 text-sm text-[color:var(--odos-faint)]">Skin carotenoid score not recorded</p>}</article>
   </div>;
 }
