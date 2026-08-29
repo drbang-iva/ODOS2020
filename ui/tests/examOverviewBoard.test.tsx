@@ -13,8 +13,16 @@ import {
   handleCustomSectionCaptureRequest,
   type CustomSectionEndpointDeps,
 } from "../../mcp/src/clinical-graph/custom-section-endpoint";
+import {
+  handleCoverTestCaptureRequest,
+  type CoverTestEndpointDeps,
+} from "../../mcp/src/clinical-graph/cover-test-endpoint";
 import { handleEomCaptureRequest, type EomEndpointDeps } from "../../mcp/src/clinical-graph/eom-endpoint";
 import { buildFindingDefinitionSeeds } from "../../mcp/src/clinical-graph/finding-definition-store";
+import {
+  buildGlaucomaCupDiscSuggestion,
+  projectFindingInstanceToObservation,
+} from "../../mcp/src/clinical-graph/glaucoma-suspect";
 import { DiagnosisWorkspace } from "../src/components/charting/DiagnosisWorkspace";
 import { AssessmentSection } from "../src/components/charting/AssessmentSection";
 import { AutoRefractionSection } from "../src/components/charting/AutoRefractionSection";
@@ -831,6 +839,119 @@ test("charted EOM renders writer-permitted abnormal details and the normal templ
     combined: "OD Up left -4 · Primary 0 · Down right +4 · OS Up left -3 · Primary +1 · Down right +3 · Nystagmus present Yes · Nystagmus note Gaze evoked · Diplopia present Yes · binocular Yes · incomitant Yes · Diplopia direction horizontal · Worst gaze right · Frequency intermittent · Onset 2026-07-20 · Diplopia note Distance only",
     normal: "Full OU — SAFE",
   });
+});
+
+test("abnormal cover-test endpoint persistence projects an exception row with details", async () => {
+  const definitions = buildFindingDefinitionSeeds();
+  const fhir = new EomWriterFhir();
+  const deps: CoverTestEndpointDeps = {
+    authenticate: async () => ({
+      staffReference: "Practitioner/cover-writer-fixture",
+      actorRole: "provider",
+      fhir,
+    }),
+    findingDefinitions: () => definitions,
+    now: () => "2026-08-28T12:00:00.000Z",
+  };
+  const result = await handleCoverTestCaptureRequest(deps, {
+    authHeader: "Bearer writer-fixture",
+    body: {
+      patientReference: "Patient/cover-writer-fixture",
+      encounterReference: "Encounter/cover-writer-fixture",
+      rows: [{
+        slot: "near-sc",
+        state: "deviation",
+        deviationType: "phoria",
+        direction: "exo",
+        magnitude: 3,
+        laterality: "alternating",
+        comitancy: "comitant",
+      }],
+    },
+  });
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  const observation = fhir.resources.find((resource): resource is Observation => resource.resourceType === "Observation");
+  assert.ok(observation);
+  const projection = buildExamOverviewProjection({
+    encounterReference: "Encounter/cover-writer-fixture",
+    patientReference: "Patient/cover-writer-fixture",
+    definitions,
+    currentObservations: [observation],
+    priorObservationCandidates: [],
+    assessmentRows: [],
+  });
+  const finding = projection.findings.find((candidate) => candidate.findingKey === "entrance:cover");
+  assert.ok(finding);
+  assert.equal(finding.interpretation, "abnormal");
+  const boardProjection = { ...projection, findings: [finding], sections: [overviewSection("entrance", "Entrance", [finding.observationReference])] };
+  const renderer = create(
+    <ExamOverviewBoard
+      projection={boardProjection}
+      editorEntries={[]}
+      refreshing={false}
+      onOpenEditor={() => undefined}
+      onRefresh={() => undefined}
+    />,
+  );
+  try {
+    const row = renderer.root.findByProps({ "data-finding-key": "entrance:cover" });
+    assert.match(row.props.className, /is-exception/);
+    assert.equal(row.findAllByProps({ className: "odos-exam-finding-expansion" }).length, 1);
+  } finally {
+    renderer.unmount();
+  }
+});
+
+test("high-risk cup-disc capture path projects an exception row with details", () => {
+  const definitions = buildFindingDefinitionSeeds();
+  const definition = definitions.find((candidate) => candidate.stableKey === "cup_disc_ratio");
+  assert.ok(definition);
+  const captured = buildGlaucomaCupDiscSuggestion({
+    cupDiscRatio: 0.75,
+    laterality: "OD",
+    patientReference: "Patient/cup-disc-writer-fixture",
+    encounterReference: "Encounter/cup-disc-writer-fixture",
+    findingDefinitionId: definition.id,
+    findingInstanceId: "cup-disc-high-risk",
+    recordedAt: "2026-08-28T12:00:00.000Z",
+    provenance: {
+      source: "manual",
+      recordedAt: "2026-08-28T12:00:00.000Z",
+      actorReference: "Practitioner/cup-disc-writer-fixture",
+    },
+  });
+  const observation = {
+    ...projectFindingInstanceToObservation(captured.finding, definition),
+    id: "cup-disc-high-risk",
+  };
+  const projection = buildExamOverviewProjection({
+    encounterReference: "Encounter/cup-disc-writer-fixture",
+    patientReference: "Patient/cup-disc-writer-fixture",
+    definitions,
+    currentObservations: [observation],
+    priorObservationCandidates: [],
+    assessmentRows: [],
+  });
+  const finding = projection.findings.find((candidate) => candidate.findingKey === "cup_disc_ratio");
+  assert.ok(finding);
+  assert.equal(finding.interpretation, "abnormal");
+  const boardProjection = { ...projection, findings: [finding], sections: [overviewSection("ocular-health", "Ocular health", [finding.observationReference])] };
+  const renderer = create(
+    <ExamOverviewBoard
+      projection={boardProjection}
+      editorEntries={[]}
+      refreshing={false}
+      onOpenEditor={() => undefined}
+      onRefresh={() => undefined}
+    />,
+  );
+  try {
+    const row = renderer.root.findByProps({ "data-finding-key": "cup_disc_ratio" });
+    assert.match(row.props.className, /is-exception/);
+    assert.equal(row.findAllByProps({ className: "odos-exam-finding-expansion" }).length, 1);
+  } finally {
+    renderer.unmount();
+  }
 });
 
 test("EOM free-text notes preserve delimiter text as one atomic segment", async () => {
@@ -1900,7 +2021,7 @@ async function renderedWriterEomFinding(
   const finding = writerProjection.findings.find((candidate) => candidate.findingKey === "entrance:eom");
   assert.ok(finding);
   const renderedFinding = finding;
-  assert.equal(renderedFinding.interpretation, "unknown");
+  assert.equal(renderedFinding.interpretation, state);
   const projection = catalogGuardProjection(definitions.find((definition) => definition.stableKey === "entrance:eom")!);
   projection.findings = [renderedFinding];
   projection.sections = [overviewSection("pretest", "Pretest", [renderedFinding.observationReference])];

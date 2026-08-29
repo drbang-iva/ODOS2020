@@ -518,7 +518,7 @@ function observationInterpretation(observation: Observation): FindingInterpretat
   const code = observation.interpretation?.flatMap((concept) => concept.coding ?? [])
     .find((coding) => coding.code)?.code?.toLowerCase();
   if (code === "a" || code === "abnormal") return "abnormal";
-  if (code === "b" || code === "borderline") return "borderline";
+  if (code === "b" || code === "borderline" || code === "e") return "borderline";
   if (code === "n" || code === "normal") return "normal";
   return "unknown";
 }

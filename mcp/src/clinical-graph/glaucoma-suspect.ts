@@ -589,6 +589,23 @@ export function projectFindingInstanceToObservation(
     sourceReferences: finding.sourceReferences?.length
       ? finding.sourceReferences
       : finding.provenance.sourceReferences,
+    interpretation: finding.interpretation === "normal" || finding.interpretation === "abnormal"
+      ? [{
+          coding: [{
+            system: "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+            code: finding.interpretation === "normal" ? "N" : "A",
+            display: finding.interpretation === "normal" ? "Normal" : "Abnormal",
+          }],
+        }]
+      : finding.interpretation === "borderline"
+        ? [{
+            coding: [{
+              system: "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+              code: "E",
+              display: "Equivocal",
+            }],
+          }]
+        : undefined,
   });
 }
 
