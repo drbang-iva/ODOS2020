@@ -1,9 +1,10 @@
 import type { Bundle, Resource } from "@medplum/fhirtypes";
+import type { FhirSearchParams } from "../fhir-client.js";
 
 export interface PaginatedFhir {
   search<T extends Resource>(
     resourceType: T["resourceType"],
-    params: Record<string, string>,
+    params: FhirSearchParams,
   ): Promise<Bundle<T>>;
   searchUrl?<T extends Resource>(
     url: string,
@@ -16,7 +17,7 @@ const MAX_WATCHER_RESOURCES = 10 ** 4;
 export async function collectAllPages<T extends Resource>(
   fhir: PaginatedFhir,
   resourceType: T["resourceType"],
-  params: Record<string, string>,
+  params: FhirSearchParams,
   label: string,
 ): Promise<T[]> {
   // search-contract: watcher-pagination.search-resource

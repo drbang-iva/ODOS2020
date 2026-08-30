@@ -1,5 +1,6 @@
 import type { Basic, Bundle, Resource } from "@medplum/fhirtypes";
 import type { WatcherPracticeConfig } from "./watcher-types.js";
+import type { PaginatedFhir } from "./fhir-pagination.js";
 
 export const WATCHER_HEALTH_SYSTEM = "https://odos2020.com/fhir/CodeSystem/watcher-health";
 export const WATCHER_HEALTH_CODE = "odos-watcher-health";
@@ -17,8 +18,7 @@ export type WatcherHealthProjection =
   | { status: "healthy"; lastSuccessfulAt: string }
   | { status: "degraded"; reason: "failed" | "stale" | "never-succeeded"; lastSuccessfulAt?: string };
 
-export interface WatcherHealthFhir {
-  search<T extends Resource>(resourceType: T["resourceType"], params: Record<string, string>): Promise<Bundle<T>>;
+export interface WatcherHealthFhir extends Pick<PaginatedFhir, "search"> {
   create<T extends Resource>(resource: T, headers?: Record<string, string>): Promise<T>;
   update<T extends Resource>(resourceType: T["resourceType"], id: string, resource: T): Promise<T>;
 }

@@ -3,7 +3,7 @@ import type { AddressInfo } from "node:net";
 import test from "node:test";
 import type { Basic, Bundle, Resource, Task } from "@medplum/fhirtypes";
 import express from "express";
-import { createWatcherRegistry } from "../src/watchers/watcher-registry.js";
+import { createWatcherDefinitions, createWatcherRegistry } from "../src/watchers/watcher-registry.js";
 import { buildWatcherHealthResource } from "../src/watchers/watcher-health.js";
 import {
   projectFrontDeskAlerts,
@@ -144,6 +144,36 @@ test("resolve refuses a collected Patient that does not own the watcher Task", a
   assert.equal(fhir.tasks[0]?.status, "requested");
 });
 
+test("stale actions cannot resurrect cancelled or completed watcher Tasks", async () => {
+  const cancelled = { ...watcherTask(1, "2026-08-30", 1000, 1), status: "cancelled" as const };
+  const completed = { ...watcherTask(2, "2026-08-30", 1000, 1), status: "completed" as const };
+  const fhir = new RouteFhir([cancelled, completed]);
+
+  await assert.rejects(
+    () => applyWatcherTaskAction(
+      fhir,
+      registry,
+      "task-1",
+      { action: "snooze", until: "2026-08-30T14:00:00.000Z" },
+      "2026-08-30T12:00:00.000Z",
+      config,
+    ),
+    /terminal and cannot accept another action/,
+  );
+  await assert.rejects(
+    () => applyWatcherTaskAction(
+      fhir,
+      registry,
+      "task-2",
+      { action: "reassign", practitioner: "Practitioner/owner-1" },
+      "2026-08-30T12:00:00.000Z",
+      config,
+    ),
+    /terminal and cannot accept another action/,
+  );
+  assert.deepEqual(fhir.tasks.map((task) => task.status), ["cancelled", "completed"]);
+});
+
 test("resolve keeps the Task open while its watcher condition still matches", async () => {
   const task = watcherTask(1, "2026-08-30", 1000, 1);
   const activeDefinition = {
@@ -178,6 +208,27 @@ test("resolve keeps the Task open while its watcher condition still matches", as
     /still has an active condition/,
   );
   assert.equal(fhir.tasks[0]?.status, "requested");
+});
+
+test("the production W1 definition carries its FHIR client into resolve re-evaluation", async () => {
+  const evaluationFhir = new RouteFhir();
+  const productionRegistry = createWatcherRegistry(
+    createWatcherDefinitions(evaluationFhir, "America/New_York"),
+  );
+  const actionFhir = new RouteFhir([watcherTask(1, "2026-08-30", 1000, 1)]);
+
+  const resolved = await applyWatcherTaskAction(
+    actionFhir,
+    productionRegistry,
+    "task-1",
+    { action: "resolve", patientReference: "Patient/patient-1" },
+    "2026-08-30T12:00:00.000Z",
+    config,
+    "America/New_York",
+  );
+
+  assert.equal(resolved.status, "completed");
+  assert.deepEqual(evaluationFhir.searches, ["Appointment"]);
 });
 
 test("Today and front-desk routes default and project on the practice calendar day", async () => {
@@ -233,8 +284,10 @@ function watcherTask(index: number, date: string, balanceCents: number, ageDays:
 
 class RouteFhir {
   tasks: Task[];
+  readonly searches: Resource["resourceType"][] = [];
   constructor(tasks: Task[] = [], readonly health?: Basic) { this.tasks = structuredClone(tasks); }
   async search<T extends Resource>(resourceType: T["resourceType"]): Promise<Bundle<T>> {
+    this.searches.push(resourceType);
     const rows = resourceType === "Task" ? this.tasks : this.health ? [this.health] : [];
     return { resourceType: "Bundle", type: "searchset", entry: rows.map((resource) => ({ resource: structuredClone(resource) as T })) };
   }

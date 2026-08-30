@@ -50,7 +50,7 @@ The worker authenticates the existing service client, runs immediately at startu
 
 W1 evaluates the current practice day:
 
-1. Read every non-cancelled Appointment for the day, following FHIR next links.
+1. Convert the practice day to explicit timezone-aware midnight bounds, then read every non-cancelled Appointment in that interval while following FHIR next links.
 2. Resolve every referenced Patient in bounded batches.
 3. Read every issued Invoice and every active PaymentReconciliation, following FHIR next links, and join by patient and Invoice reference.
 4. Compute each Invoice's remaining amount from `Invoice.totalNet` less completed payment allocations, floor overpayment at zero, and retain the oldest still-open Invoice date. An issued Invoice carrying the record-only tender marker represents a partial manual payment whose amount is not persisted; W1 fails the sweep instead of claiming zero or the original total.
@@ -69,7 +69,7 @@ Authenticated staff routes use the existing staff authentication seam and the pr
 - `GET /watchers/today?date=YYYY-MM-DD` returns fresh ranked/capped Today data, yesterday comparison, overflow groups, and the go-live date or a structured 503 degradation. When the client omits `date`, the server chooses the current practice day.
 - `POST /watchers/tasks/:taskId/action` accepts one validated action: dismiss with a W1 reason code, snooze until an ISO instant, reassign to a valid practitioner reference, or resolve after collection.
 
-Dismissal writes `Task.status = cancelled` plus coded `statusReason`. Snooze writes `on-hold`, a coded reason, and a future restriction end. Reassignment writes `Task.owner`. Resolve must name the same Patient as `Task.for`; the server reruns that watcher's firing rule and writes `completed` only when the same condition key is no longer active. A partial collection therefore leaves the existing Task open. All actions preserve the Task identifier and therefore never create another notification.
+Dismissal writes `Task.status = cancelled` plus coded `statusReason`. Snooze writes `on-hold`, a coded reason, and a future restriction end. Reassignment writes `Task.owner`. Resolve must name the same Patient as `Task.for`; the server reruns that watcher's firing rule and writes `completed` only when the same condition key is no longer active. A partial collection therefore leaves the existing Task open. Cancelled, completed, failed, rejected, and entered-in-error Tasks reject every later action so a stale browser cannot resurrect terminal work. All actions preserve the Task identifier and therefore never create another notification.
 
 ## Front-desk rendering
 

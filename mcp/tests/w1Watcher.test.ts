@@ -8,6 +8,7 @@ import type {
   Patient,
   Resource,
 } from "@medplum/fhirtypes";
+import type { FhirSearchParams } from "../src/fhir-client.js";
 import { collectAllPages } from "../src/watchers/fhir-pagination.js";
 import { evaluateW1 } from "../src/watchers/w1-balance-watcher.js";
 
@@ -70,6 +71,15 @@ test("W1 follows Invoice next links and returns the complete patient-level balan
     sourceOccurredAt: "2026-03-10T14:00:00.000Z",
     sourceInvoiceCount: 1,
   }]);
+  assert.deepEqual(
+    fhir.searches.find((search) => search.resourceType === "Appointment")?.params,
+    [
+      ["date", "ge2026-08-30T04:00:00.000Z"],
+      ["date", "lt2026-08-31T04:00:00.000Z"],
+      ["_count", "1000"],
+      ["_sort", "date"],
+    ],
+  );
 });
 
 test("W1 aggregates multiple issued Invoices for one appointment without stacking conditions", async () => {
@@ -179,7 +189,7 @@ test("W1 resolves scheduled Patients in bounded batches", async () => {
   assert.deepEqual(matches, []);
   const patientSearches = fhir.searches.filter((search) => search.resourceType === "Patient");
   assert.equal(patientSearches.length, 2);
-  assert.deepEqual(patientSearches.map((search) => String(search.params._id).split(",").length), [100, 1]);
+  assert.deepEqual(patientSearches.map((search) => String(searchParams(search.params)._id).split(",").length), [100, 1]);
 });
 
 test("W1 refuses a confident short list when FHIR supplies a next link without pagination support", async () => {
@@ -244,7 +254,7 @@ test("W1 rejects a scheduled patient's issued Invoice whose money cannot be comp
 
 class PagedFhir {
   private readonly fixturePages: Partial<Record<Resource["resourceType"], Bundle<Resource>[]>>;
-  readonly searches: Array<{ resourceType: Resource["resourceType"]; params: Record<string, string> }> = [];
+  readonly searches: Array<{ resourceType: Resource["resourceType"]; params: FhirSearchParams }> = [];
 
   constructor(
     searches: Partial<Record<Resource["resourceType"], Bundle<Resource>[]>>,
@@ -256,7 +266,7 @@ class PagedFhir {
     };
   }
 
-  async search<T extends Resource>(resourceType: T["resourceType"], params: Record<string, string>): Promise<Bundle<T>> {
+  async search<T extends Resource>(resourceType: T["resourceType"], params: FhirSearchParams): Promise<Bundle<T>> {
     this.searches.push({ resourceType, params });
     const page = this.fixturePages[resourceType]?.shift();
     if (!page) throw new Error(`Unexpected ${resourceType} search.`);
@@ -268,6 +278,12 @@ class PagedFhir {
     if (!page) throw new Error(`Unexpected next link ${url}.`);
     return page as Bundle<T>;
   }
+}
+
+function searchParams(params: FhirSearchParams): Record<string, string> {
+  if (Array.isArray(params)) return Object.fromEntries(params);
+  if (params instanceof URLSearchParams) return Object.fromEntries(params.entries());
+  return params;
 }
 
 function reconciliation(id: string, invoiceReference: string, amountCents: number): PaymentReconciliation {

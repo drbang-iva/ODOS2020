@@ -8,6 +8,13 @@ import { practiceDate } from "../desk/day-ledger.js";
 import { conditionKey } from "./watcher-task.js";
 
 const WATCHER_ACTION_SYSTEM = "https://odos2020.com/fhir/CodeSystem/watcher-action";
+const TERMINAL_TASK_STATUSES = new Set<Task["status"]>([
+  "cancelled",
+  "completed",
+  "entered-in-error",
+  "failed",
+  "rejected",
+]);
 
 export interface WatcherRouteFhir extends PaginatedFhir {
   read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T>;
@@ -94,6 +101,9 @@ export async function applyWatcherTaskAction(
   const body = record(raw);
   const action = body.action;
   const task = await fhir.read<Task>("Task", taskId);
+  if (TERMINAL_TASK_STATUSES.has(task.status)) {
+    throw new WatcherValidationError(`Watcher Task/${taskId} is terminal and cannot accept another action.`);
+  }
   const watcherId = task.code?.coding?.find((coding) => coding.code)?.code;
   if (!watcherId) throw new WatcherValidationError("Watcher Task has no watcher code.");
   const definition = registry.get(watcherId);

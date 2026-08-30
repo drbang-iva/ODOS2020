@@ -1,5 +1,6 @@
 import type { Appointment, Invoice, Patient, PaymentReconciliation } from "@medplum/fhirtypes";
 import { ODOS_PAYMENT_TENDER_EXTENSION_URL } from "../fhir/odosPaymentTender.js";
+import { practiceDayRange } from "../desk/day-ledger.js";
 import { collectAllPages, type PaginatedFhir } from "./fhir-pagination.js";
 import type { WatcherMatch, WatcherPracticeSettings } from "./watcher-types.js";
 
@@ -21,10 +22,16 @@ export async function evaluateW1(input: W1EvaluationInput): Promise<WatcherMatch
     throw new Error("W1 minimumBalanceCents must be a positive integer.");
   }
 
+  const appointmentRange = practiceDayRange(input.date, input.timeZone);
   const appointments = (await collectAllPages<Appointment>(
     input.fhir,
     "Appointment",
-    { date: input.date, _count: "1000", _sort: "date" },
+    [
+      ["date", `ge${appointmentRange.start}`],
+      ["date", `lt${appointmentRange.end}`],
+      ["_count", "1000"],
+      ["_sort", "date"],
+    ],
     "W1 appointments",
   )).filter(isActionableAppointment);
 
