@@ -114,10 +114,13 @@ test("dismiss, snooze, reassign, and resolve update the same Task with validated
     watcherTask(4, "2026-08-30", 4000, 4),
   ]);
 
-  const dismissed = await applyWatcherTaskAction(fhir, registry, "task-1", { action: "dismiss", reason: "payment-plan" }, "2026-08-30T12:00:00.000Z");
-  const snoozed = await applyWatcherTaskAction(fhir, registry, "task-2", { action: "snooze", until: "2026-08-30T14:00:00.000Z" }, "2026-08-30T12:00:00.000Z");
-  const reassigned = await applyWatcherTaskAction(fhir, registry, "task-3", { action: "reassign", practitioner: "Practitioner/owner-1" }, "2026-08-30T12:00:00.000Z");
-  const resolved = await applyWatcherTaskAction(fhir, registry, "task-4", { action: "resolve" }, "2026-08-30T12:00:00.000Z");
+  const dismissed = await applyWatcherTaskAction(fhir, registry, "task-1", { action: "dismiss", reason: "payment-plan" }, "2026-08-30T12:00:00.000Z", config);
+  const snoozed = await applyWatcherTaskAction(fhir, registry, "task-2", { action: "snooze", until: "2026-08-30T14:00:00.000Z" }, "2026-08-30T12:00:00.000Z", config);
+  const reassigned = await applyWatcherTaskAction(fhir, registry, "task-3", { action: "reassign", practitioner: "Practitioner/owner-1" }, "2026-08-30T12:00:00.000Z", config);
+  const resolved = await applyWatcherTaskAction(fhir, registry, "task-4", {
+    action: "resolve",
+    patientReference: "Patient/patient-4",
+  }, "2026-08-30T12:00:00.000Z", config);
 
   assert.equal(dismissed.status, "cancelled");
   assert.equal(dismissed.statusReason?.coding?.[0]?.code, "payment-plan");
@@ -126,6 +129,88 @@ test("dismiss, snooze, reassign, and resolve update the same Task with validated
   assert.equal(reassigned.owner?.reference, "Practitioner/owner-1");
   assert.equal(resolved.status, "completed");
   assert.deepEqual(fhir.tasks.map((task) => task.id), ["task-1", "task-2", "task-3", "task-4"]);
+});
+
+test("resolve refuses a collected Patient that does not own the watcher Task", async () => {
+  const fhir = new RouteFhir([watcherTask(1, "2026-08-30", 1000, 1)]);
+
+  await assert.rejects(
+    () => applyWatcherTaskAction(fhir, registry, "task-1", {
+      action: "resolve",
+      patientReference: "Patient/another-patient",
+    }, "2026-08-30T12:00:00.000Z", config),
+    /Collected Patient does not match watcher Task\/task-1/,
+  );
+  assert.equal(fhir.tasks[0]?.status, "requested");
+});
+
+test("resolve keeps the Task open while its watcher condition still matches", async () => {
+  const task = watcherTask(1, "2026-08-30", 1000, 1);
+  const activeDefinition = {
+    ...definition,
+    firingRule: async () => [{
+      watcherId: "W1",
+      conditionKey: "W1:Appointment/appt-1",
+      patientReference: "Patient/patient-1",
+      patientDisplay: "Patient 1",
+      appointmentReference: "Appointment/appt-1",
+      appointmentAt: "2026-08-30T09:40:00-04:00",
+      frontDeskMessage: "Patient 1 has a balance.",
+      ownerMessage: "Patient 1 carries a balance.",
+      balanceCents: 500,
+      ageDays: 1,
+      sourceOccurredAt: "2026-03-10T14:00:00.000Z",
+      sourceInvoiceCount: 1,
+    }],
+  } satisfies WatcherDefinition;
+  const fhir = new RouteFhir([task]);
+
+  await assert.rejects(
+    () => applyWatcherTaskAction(
+      fhir,
+      createWatcherRegistry([activeDefinition]),
+      "task-1",
+      { action: "resolve", patientReference: "Patient/patient-1" },
+      "2026-08-30T12:00:00.000Z",
+      config,
+      "America/New_York",
+    ),
+    /still has an active condition/,
+  );
+  assert.equal(fhir.tasks[0]?.status, "requested");
+});
+
+test("Today and front-desk routes default and project on the practice calendar day", async () => {
+  const task = watcherTask(1, "2026-08-30", 1000, 1);
+  task.restriction = { period: { start: "2026-08-31T01:30:00.000Z" } };
+  const fhir = new RouteFhir([task], buildWatcherHealthResource({
+    lastAttemptAt: "2026-08-31T01:29:00.000Z",
+    lastSuccessfulAt: "2026-08-31T01:29:00.000Z",
+    outcome: "healthy",
+  }));
+  const server = await startServer(fhir, {
+    now: "2026-08-31T01:30:00.000Z",
+    timeZone: "America/New_York",
+  });
+  try {
+    const response = await fetch(`${server.base}/watchers/today`, {
+      headers: { authorization: "Bearer staff" },
+    });
+    const body = await response.json() as { status: string; items?: unknown[] };
+    assert.equal(response.status, 200);
+    assert.equal(body.status, "healthy");
+    assert.equal(body.items?.length, 1);
+
+    const frontdeskResponse = await fetch(`${server.base}/watchers/frontdesk?date=2026-08-30`, {
+      headers: { authorization: "Bearer staff" },
+    });
+    const frontdesk = await frontdeskResponse.json() as { status: string; alerts?: unknown[] };
+    assert.equal(frontdeskResponse.status, 200);
+    assert.equal(frontdesk.status, "healthy");
+    assert.equal(frontdesk.alerts?.length, 1);
+  } finally {
+    await server.close();
+  }
 });
 
 function watcherTask(index: number, date: string, balanceCents: number, ageDays: number): Task {
@@ -165,7 +250,10 @@ class RouteFhir {
   }
 }
 
-async function startServer(fhir: RouteFhir) {
+async function startServer(
+  fhir: RouteFhir,
+  options: { now?: string; timeZone?: string } = {},
+) {
   const app = express();
   app.use(express.json());
   registerWatcherRoutes(app, {
@@ -174,7 +262,8 @@ async function startServer(fhir: RouteFhir) {
     serviceFhir: fhir,
     registry,
     loadConfig: async () => config,
-    now: () => "2026-08-30T12:01:00.000Z",
+    now: () => options.now ?? "2026-08-30T12:01:00.000Z",
+    timeZone: options.timeZone,
   });
   const listener = app.listen(0, "127.0.0.1");
   await new Promise<void>((resolve) => listener.once("listening", resolve));

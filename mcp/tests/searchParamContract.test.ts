@@ -76,6 +76,7 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
     spec("Appointment", "date", "_count", "_sort"),
     spec("Patient", "_id", "_count"),
     spec("Invoice", "status", "_count", "_sort"),
+    spec("PaymentReconciliation", "status", "_count"),
     spec("Task", "code", "_count"),
     spec("Task", "_count"),
   ],

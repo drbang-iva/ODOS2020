@@ -1,4 +1,5 @@
-import type { Appointment, Invoice, Patient } from "@medplum/fhirtypes";
+import type { Appointment, Invoice, Patient, PaymentReconciliation } from "@medplum/fhirtypes";
+import { ODOS_PAYMENT_TENDER_EXTENSION_URL } from "../fhir/odosPaymentTender.js";
 import { collectAllPages, type PaginatedFhir } from "./fhir-pagination.js";
 import type { WatcherMatch, WatcherPracticeSettings } from "./watcher-types.js";
 
@@ -53,7 +54,13 @@ export async function evaluateW1(input: W1EvaluationInput): Promise<WatcherMatch
     { status: "issued", _count: "1000", _sort: "date" },
     "W1 invoices",
   );
-  const balances = aggregateBalances(invoices, patientIds);
+  const payments = await collectAllPages<PaymentReconciliation>(
+    input.fhir,
+    "PaymentReconciliation",
+    { status: "active", _count: "1000" },
+    "W1 payment allocations",
+  );
+  const balances = aggregateBalances(invoices, patientIds, allocatedCentsByInvoice(payments));
 
   const matches: WatcherMatch[] = [];
   for (const appointment of appointments) {
@@ -110,7 +117,11 @@ function referenceId(reference: string): string {
   return reference.slice(reference.indexOf("/") + 1);
 }
 
-function aggregateBalances(invoices: Invoice[], patientIds: Set<string>) {
+function aggregateBalances(
+  invoices: Invoice[],
+  patientIds: Set<string>,
+  allocatedCents: ReadonlyMap<string, number>,
+) {
   const result = new Map<string, { totalCents: number; count: number; oldestAt: string }>();
   for (const invoice of invoices) {
     const patientRef = invoice.subject?.reference;
@@ -133,7 +144,15 @@ function aggregateBalances(invoices: Invoice[], patientIds: Set<string>) {
         `Invoice/${invoice.id ?? "unknown"} has no usable date; W1 cannot publish a complete balance watch.`,
       );
     }
-    const cents = Math.round(amount.value * 100);
+    if (!invoice.id) {
+      throw new Error("Issued Invoice has no id; W1 cannot reconcile its payment allocations.");
+    }
+    const tendered = invoice.extension?.some(
+      (extension) => extension.url === ODOS_PAYMENT_TENDER_EXTENSION_URL,
+    ) ?? false;
+    const cents = tendered
+      ? 0
+      : Math.max(0, Math.round(amount.value * 100) - (allocatedCents.get(`Invoice/${invoice.id}`) ?? 0));
     if (cents === 0) continue;
     const current = result.get(patientRef);
     result.set(patientRef, {
@@ -141,6 +160,32 @@ function aggregateBalances(invoices: Invoice[], patientIds: Set<string>) {
       count: (current?.count ?? 0) + 1,
       oldestAt: !current || occurredAt < current.oldestAt ? occurredAt : current.oldestAt,
     });
+  }
+  return result;
+}
+
+function allocatedCentsByInvoice(payments: PaymentReconciliation[]): Map<string, number> {
+  const result = new Map<string, number>();
+  for (const payment of payments) {
+    if (payment.status !== "active" || payment.outcome !== "complete") continue;
+    for (const detail of payment.detail ?? []) {
+      const reference = detail.request?.reference;
+      if (!/^Invoice\/[A-Za-z0-9.-]+$/.test(reference ?? "")) continue;
+      const amount = detail.amount;
+      if (
+        !amount
+        || typeof amount.value !== "number"
+        || !Number.isFinite(amount.value)
+        || amount.value < 0
+        || (amount.currency && amount.currency !== "USD")
+      ) {
+        throw new Error(
+          `PaymentReconciliation/${payment.id ?? "unknown"} has an invalid Invoice allocation; W1 cannot publish a complete balance watch.`,
+        );
+      }
+      const cents = Math.round(amount.value * 100);
+      result.set(reference!, (result.get(reference!) ?? 0) + cents);
+    }
   }
   return result;
 }

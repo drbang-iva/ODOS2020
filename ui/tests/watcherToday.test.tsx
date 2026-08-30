@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import type { WatcherAlert, WatcherTodayProjection } from "../src/lib/watchers";
+import { loadTodayWatchers, type WatcherAlert, type WatcherTodayProjection } from "../src/lib/watchers";
 import { BillingToday } from "../src/scenes/BillingToday";
 
 test("Today renders the server-capped five cards, one overflow group, and adjacent count-dollar deltas", () => {
@@ -10,6 +10,7 @@ test("Today renders the server-capped five cards, one overflow group, and adjace
     status: "healthy",
     lastSuccessfulAt: "2026-08-30T12:00:00.000Z",
     goLiveAt: "2026-08-01T00:00:00.000Z",
+    goLiveDate: "2026-07-31",
     items: Array.from({ length: 5 }, (_, index) => alert(index + 1)),
     overflow: { total: 3, groups: [{ watcherId: "W1", count: 3 }] },
     sinceYesterday: {
@@ -31,6 +32,7 @@ test("Today healthy-empty and degraded-last-success states are mutually exclusiv
     status: "healthy",
     lastSuccessfulAt: "2026-08-30T12:00:00.000Z",
     goLiveAt: "2026-08-01T00:00:00.000Z",
+    goLiveDate: "2026-07-31",
     items: [],
     overflow: { total: 0, groups: [] },
     sinceYesterday: {
@@ -58,6 +60,7 @@ test("each Today card has one front-desk primary action plus snooze, typed dismi
     status: "healthy",
     lastSuccessfulAt: "2026-08-30T12:00:00.000Z",
     goLiveAt: "2026-08-01T00:00:00.000Z",
+    goLiveDate: "2026-07-31",
     items: [alert(1)],
     overflow: { total: 0, groups: [] },
     sinceYesterday: {
@@ -75,6 +78,21 @@ test("each Today card has one front-desk primary action plus snooze, typed dismi
   assert.match(html, /Waived/);
   assert.match(html, /Reassign/);
   assert.match(html, /href="\/frontdesk\?appointmentId=appt-1"/);
+});
+
+test("Today without an explicit date lets the server choose the practice day", async () => {
+  let requestedUrl = "";
+  await loadTodayWatchers(undefined, {
+    request: async (input) => {
+      requestedUrl = String(input);
+      return new Response(JSON.stringify({
+        status: "degraded",
+        reason: "never-succeeded",
+      }), { status: 503, headers: { "Content-Type": "application/json" } });
+    },
+  });
+
+  assert.equal(requestedUrl, "/watchers/today");
 });
 
 function alert(index: number): WatcherAlert {

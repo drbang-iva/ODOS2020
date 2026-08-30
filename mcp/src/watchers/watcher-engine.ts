@@ -1,4 +1,5 @@
 import type { WatcherRegistry, WatcherPracticeConfig } from "./watcher-types.js";
+import { practiceDate } from "../desk/day-ledger.js";
 import { loadWatcherHealth, saveWatcherHealth, type WatcherHealthFhir } from "./watcher-health.js";
 import { reconcileWatcherTasks, type WatcherTaskFhir } from "./watcher-task.js";
 
@@ -11,12 +12,13 @@ export interface WatcherSweepDependencies {
   authenticate?: () => Promise<void>;
   now?: () => string;
   date?: () => string;
+  timeZone?: string;
 }
 
 export async function runWatcherSweep(deps: WatcherSweepDependencies): Promise<void> {
   await deps.authenticate?.();
   const now = deps.now?.() ?? new Date().toISOString();
-  const date = deps.date?.() ?? now.slice(0, 10);
+  const date = deps.date?.() ?? practiceDate(now, deps.timeZone);
   const priorHealth = (await loadWatcherHealth(deps.fhir)).state;
   await saveWatcherHealth(deps.fhir, {
     lastAttemptAt: now,

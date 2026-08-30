@@ -10,13 +10,13 @@ import {
 
 export function BillingToday({
   initialProjection,
-  date = new Date().toISOString().slice(0, 10),
+  date,
   loadProjection = loadTodayWatchers,
   applyAction = updateWatcherTask,
 }: {
   initialProjection?: WatcherTodayProjection;
   date?: string;
-  loadProjection?: (date: string) => Promise<WatcherTodayProjection>;
+  loadProjection?: (date?: string) => Promise<WatcherTodayProjection>;
   applyAction?: (taskId: string, action: WatcherTaskAction) => Promise<unknown>;
 } = {}) {
   const [projection, setProjection] = useState<WatcherTodayProjection | undefined>(initialProjection);
@@ -79,7 +79,7 @@ export function BillingToday({
             {projection.items.length === 0 ? (
               <div className="mt-3 border border-[var(--odos-line)] bg-[var(--odos-surface)] p-8 text-center">
                 <p className="font-semibold text-[var(--odos-text)]">Nothing needs a human today.</p>
-                <p className="mt-1 text-sm text-[var(--odos-muted)]">Watching since {projection.goLiveAt.slice(0, 10)}.</p>
+                <p className="mt-1 text-sm text-[var(--odos-muted)]">Watching since {projection.goLiveDate}.</p>
               </div>
             ) : (
               <div className="mt-3 grid gap-3">

@@ -85,6 +85,24 @@ test("pre-go-live suppression applies to fixed thresholds but immediate W1 still
   assert.deepEqual(fhir.tasks.map((candidate) => candidate.identifier?.[0]?.value), [match.conditionKey]);
 });
 
+test("the production sweep derives its day from the practice timezone", async () => {
+  let evaluatedDate = "";
+  const definitionWithDate = definition("W1", "immediate", async (context) => {
+    evaluatedDate = context.date;
+    return [];
+  });
+
+  await runWatcherSweep({
+    fhir: new MemoryWatcherFhir(),
+    registry: createWatcherRegistry([definitionWithDate]),
+    loadConfig: async () => watcherConfig(),
+    now: () => "2026-08-31T01:30:00.000Z",
+    timeZone: "America/New_York",
+  });
+
+  assert.equal(evaluatedDate, "2026-08-30");
+});
+
 test("a failed evaluation preserves last success and records failed health", async () => {
   const fhir = new MemoryWatcherFhir([], buildWatcherHealthResource({
     lastAttemptAt: "2026-08-30T11:55:00.000Z",

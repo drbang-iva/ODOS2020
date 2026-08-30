@@ -36,6 +36,7 @@ export type WatcherTodayProjection = WatcherDegradedProjection | {
   status: "healthy";
   lastSuccessfulAt: string;
   goLiveAt: string;
+  goLiveDate: string;
   items: WatcherAlert[];
   overflow: { total: number; groups: Array<{ watcherId: string; count: number }> };
   sinceYesterday: {
@@ -49,7 +50,7 @@ export type WatcherTaskAction =
   | { action: "dismiss"; reason: string }
   | { action: "snooze"; until: string }
   | { action: "reassign"; practitioner: string }
-  | { action: "resolve" };
+  | { action: "resolve"; patientReference: string };
 
 interface WatcherApiOptions {
   authorization?: string;
@@ -61,8 +62,9 @@ export function loadFrontDeskWatchers(date: string, options: WatcherApiOptions =
   return watcherRequest<WatcherFrontDeskProjection>(`/watchers/frontdesk?date=${encodeURIComponent(date)}`, {}, options);
 }
 
-export function loadTodayWatchers(date: string, options: WatcherApiOptions = watcherApiOptions()) {
-  return watcherRequest<WatcherTodayProjection>(`/watchers/today?date=${encodeURIComponent(date)}`, {}, options);
+export function loadTodayWatchers(date?: string, options: WatcherApiOptions = watcherApiOptions()) {
+  const path = date ? `/watchers/today?date=${encodeURIComponent(date)}` : "/watchers/today";
+  return watcherRequest<WatcherTodayProjection>(path, {}, options);
 }
 
 export function updateWatcherTask(taskId: string, action: WatcherTaskAction, options: WatcherApiOptions = watcherApiOptions()) {

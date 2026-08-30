@@ -4,6 +4,7 @@ import type {
   Appointment,
   Bundle,
   Invoice,
+  PaymentReconciliation,
   Patient,
   Resource,
 } from "@medplum/fhirtypes";
@@ -91,6 +92,59 @@ test("W1 aggregates multiple issued Invoices for one appointment without stackin
   assert.equal(match?.balanceCents, 15200);
   assert.equal(match?.sourceInvoiceCount, 2);
   assert.equal(match?.frontDeskMessage, "Sarah M. has a balance from February. She's on today's schedule at 9:40 AM — $152 across 2 visits.");
+});
+
+test("W1 reports remaining balance after completed payment allocations and omits collected Invoices", async () => {
+  const partial = reconciliation("payment-partial", "Invoice/invoice-1", 5_000);
+  const partialFhir = new PagedFhir({
+    Appointment: [bundle([appointment])],
+    Patient: [bundle([sarah])],
+    Invoice: [bundle([invoice])],
+    PaymentReconciliation: [bundle([], "https://fhir.test/PaymentReconciliation?page=2")],
+  }, {
+    "https://fhir.test/PaymentReconciliation?page=2": bundle([partial]),
+  });
+
+  const [match] = await evaluateW1({
+    fhir: partialFhir,
+    date: "2026-08-30",
+    now: "2026-08-30T12:00:00-04:00",
+    timeZone: "America/New_York",
+    settings: { enabled: true, severity: "today", minimumBalanceCents: 1 },
+  });
+
+  assert.equal(match?.balanceCents, 8_200);
+  assert.match(match?.frontDeskMessage ?? "", /\$82 from her last visit/);
+
+  const paidFhir = new PagedFhir({
+    Appointment: [bundle([appointment])],
+    Patient: [bundle([sarah])],
+    Invoice: [bundle([invoice])],
+    PaymentReconciliation: [bundle([reconciliation("payment-full", "Invoice/invoice-1", 13_200)])],
+  });
+  assert.deepEqual(await evaluateW1({
+    fhir: paidFhir,
+    date: "2026-08-30",
+    now: "2026-08-30T12:00:00-04:00",
+    timeZone: "America/New_York",
+    settings: { enabled: true, severity: "today", minimumBalanceCents: 1 },
+  }), []);
+
+  const tenderedFhir = new PagedFhir({
+    Appointment: [bundle([appointment])],
+    Patient: [bundle([sarah])],
+    Invoice: [bundle([{
+      ...invoice,
+      extension: [{ url: "https://odos2020.com/fhir/StructureDefinition/odos-payment-tender" }],
+    }])],
+  });
+  assert.deepEqual(await evaluateW1({
+    fhir: tenderedFhir,
+    date: "2026-08-30",
+    now: "2026-08-30T12:00:00-04:00",
+    timeZone: "America/New_York",
+    settings: { enabled: true, severity: "today", minimumBalanceCents: 1 },
+  }), []);
 });
 
 test("W1 resolves scheduled Patients in bounded batches", async () => {
@@ -193,7 +247,10 @@ class PagedFhir {
     searches: Partial<Record<Resource["resourceType"], Bundle<Resource>[]>>,
     private readonly nextPages: Record<string, Bundle<Resource>> = {},
   ) {
-    this.fixturePages = searches;
+    this.fixturePages = {
+      PaymentReconciliation: [bundle([])],
+      ...searches,
+    };
   }
 
   async search<T extends Resource>(resourceType: T["resourceType"], params: Record<string, string>): Promise<Bundle<T>> {
@@ -208,6 +265,21 @@ class PagedFhir {
     if (!page) throw new Error(`Unexpected next link ${url}.`);
     return page as Bundle<T>;
   }
+}
+
+function reconciliation(id: string, invoiceReference: string, amountCents: number): PaymentReconciliation {
+  return {
+    resourceType: "PaymentReconciliation",
+    id,
+    status: "active",
+    outcome: "complete",
+    paymentDate: "2026-08-30",
+    paymentAmount: { value: amountCents / 100, currency: "USD" },
+    detail: [{
+      request: { reference: invoiceReference },
+      amount: { value: amountCents / 100, currency: "USD" },
+    }],
+  };
 }
 
 function bundle<T extends Resource>(resources: T[], next?: string): Bundle<T> {

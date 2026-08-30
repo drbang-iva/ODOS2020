@@ -2,6 +2,7 @@ import type { Task } from "@medplum/fhirtypes";
 import { projectWatcherHealth, type WatcherHealthState } from "./watcher-health.js";
 import { WATCHER_CODE_SYSTEM, WATCHER_INPUT_SYSTEM, WATCHER_STATUS_SYSTEM } from "./watcher-task.js";
 import type { WatcherPracticeConfig, WatcherRegistry, WatcherSeverity } from "./watcher-types.js";
+import { practiceDate } from "../desk/day-ledger.js";
 
 export interface WatcherAlertProjection {
   taskId: string;
@@ -27,6 +28,7 @@ interface ProjectionInput {
   registry: WatcherRegistry;
   health: WatcherHealthState | undefined;
   now: string;
+  timeZone?: string;
 }
 
 type DegradedProjection = {
@@ -48,7 +50,7 @@ export function projectFrontDeskAlerts(
     .filter(isWatcherTask)
     .filter((task) => isVisible(task, input.now))
     .map((task) => taskProjection(task, input.registry))
-    .filter((alert) => !input.date || localDate(alert.appointmentAt) === input.date)
+    .filter((alert) => !input.date || practiceDate(alert.appointmentAt, input.timeZone) === input.date)
     .sort((left, right) => left.appointmentAt.localeCompare(right.appointmentAt));
   return { ...health, alerts };
 }
@@ -59,6 +61,7 @@ export function projectTodayDigest(
   status: "healthy";
   lastSuccessfulAt: string;
   goLiveAt: string;
+  goLiveDate: string;
   items: WatcherAlertProjection[];
   overflow: { total: number; groups: Array<{ watcherId: string; count: number }> };
   sinceYesterday: {
@@ -72,10 +75,12 @@ export function projectTodayDigest(
   const watcherTasks = input.tasks.filter(isWatcherTask);
   const projections = watcherTasks.map((task) => taskProjection(task, input.registry));
   const eligible = projections
-    .filter((alert) => alert.severity === "today" && localDate(alert.appointmentAt) === input.date)
+    .filter((alert) => alert.severity === "today" && practiceDate(alert.appointmentAt, input.timeZone) === input.date)
     .filter((alert) => isVisible(watcherTasks.find((task) => task.id === alert.taskId)!, input.now))
     .sort(rankAlerts);
-  const previous = projections.filter((alert) => localDate(alert.appointmentAt) === input.previousDate);
+  const previous = projections.filter(
+    (alert) => practiceDate(alert.appointmentAt, input.timeZone) === input.previousDate,
+  );
   const items = eligible.slice(0, input.config.needsHumanCap);
   const overflowItems = eligible.slice(input.config.needsHumanCap);
   const groups = new Map<string, number>();
@@ -85,6 +90,7 @@ export function projectTodayDigest(
   return {
     ...health,
     goLiveAt: input.config.goLiveAt,
+    goLiveDate: practiceDate(input.config.goLiveAt, input.timeZone),
     items,
     overflow: {
       total: overflowItems.length,
@@ -160,10 +166,6 @@ function stats(items: WatcherAlertProjection[]) {
     patientCount: new Set(items.map((item) => item.patientReference)).size,
     dollarsCents: items.reduce((sum, item) => sum + item.balanceCents, 0),
   };
-}
-
-function localDate(value: string): string {
-  return value.slice(0, 10);
 }
 
 function stringInput(task: Task, code: string): string {

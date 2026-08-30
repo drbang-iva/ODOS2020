@@ -12,17 +12,20 @@ test("patient-payment launch context requires a patient and explicit collection 
   );
   assert.deepEqual(
     parseWatcherCollectionContext("?patientId=sarah&watcherTaskId=task-1"),
-    { patientId: "sarah", collect: false, watcherTaskId: "task-1" },
+    { patientId: "sarah", collect: false },
   );
 });
 
 test("successful collection resolves exactly the carried watcher Task", async () => {
   const calls: Array<{ taskId: string; action: { action: "resolve" } }> = [];
 
-  await resolveWatcherAfterCollection("task-1", async (taskId, action) => {
+  await resolveWatcherAfterCollection("task-1", "Patient/sarah", async (taskId, action) => {
     calls.push({ taskId, action });
     return { taskId, status: "completed" };
   });
 
-  assert.deepEqual(calls, [{ taskId: "task-1", action: { action: "resolve" } }]);
+  assert.deepEqual(calls, [{
+    taskId: "task-1",
+    action: { action: "resolve", patientReference: "Patient/sarah" },
+  }]);
 });

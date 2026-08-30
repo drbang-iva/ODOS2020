@@ -4,6 +4,8 @@ import { collectAllPages, type PaginatedFhir } from "./fhir-pagination.js";
 import { loadWatcherHealth } from "./watcher-health.js";
 import { projectFrontDeskAlerts, projectTodayDigest } from "./watcher-projections.js";
 import type { WatcherPracticeConfig, WatcherRegistry } from "./watcher-types.js";
+import { practiceDate } from "../desk/day-ledger.js";
+import { conditionKey } from "./watcher-task.js";
 
 const WATCHER_ACTION_SYSTEM = "https://odos2020.com/fhir/CodeSystem/watcher-action";
 
@@ -24,6 +26,7 @@ export interface WatcherRouteDependencies {
   registry: WatcherRegistry;
   loadConfig(): Promise<WatcherPracticeConfig>;
   now?: () => string;
+  timeZone?: string;
 }
 
 class WatcherValidationError extends Error {}
@@ -33,7 +36,7 @@ export function registerWatcherRoutes(
   deps: WatcherRouteDependencies,
 ): void {
   app.get("/watchers/frontdesk", (req, res) => withStaff(req, res, deps, async () => {
-    const date = practiceDate(req.query.date);
+    const date = requestedDate(req.query.date);
     const [config, health, tasks] = await Promise.all([
       deps.loadConfig(),
       loadWatcherHealth(deps.serviceFhir as never),
@@ -41,13 +44,16 @@ export function registerWatcherRoutes(
     ]);
     const body = projectFrontDeskAlerts({
       tasks, config, registry: deps.registry, health: health.state,
-      date, now: deps.now?.() ?? new Date().toISOString(),
+      date, now: deps.now?.() ?? new Date().toISOString(), timeZone: deps.timeZone,
     });
     res.status(body.status === "degraded" ? 503 : 200).json(body);
   }));
 
   app.get("/watchers/today", (req, res) => withStaff(req, res, deps, async () => {
-    const date = practiceDate(req.query.date);
+    const now = deps.now?.() ?? new Date().toISOString();
+    const date = req.query.date === undefined
+      ? practiceDate(now, deps.timeZone)
+      : requestedDate(req.query.date);
     const [config, health, tasks] = await Promise.all([
       deps.loadConfig(),
       loadWatcherHealth(deps.serviceFhir as never),
@@ -55,7 +61,7 @@ export function registerWatcherRoutes(
     ]);
     const body = projectTodayDigest({
       tasks, config, registry: deps.registry, health: health.state, date,
-      previousDate: previousDate(date), now: deps.now?.() ?? new Date().toISOString(),
+      previousDate: previousDate(date), now, timeZone: deps.timeZone,
     });
     res.status(body.status === "degraded" ? 503 : 200).json(body);
   }));
@@ -69,6 +75,8 @@ export function registerWatcherRoutes(
       taskId,
       req.body,
       deps.now?.() ?? new Date().toISOString(),
+      await deps.loadConfig(),
+      deps.timeZone,
     );
     res.json({ taskId: task.id, status: task.status });
   }));
@@ -80,6 +88,8 @@ export async function applyWatcherTaskAction(
   taskId: string,
   raw: unknown,
   now: string,
+  config: WatcherPracticeConfig,
+  timeZone?: string,
 ): Promise<Task> {
   const body = record(raw);
   const action = body.action;
@@ -114,6 +124,27 @@ export async function applyWatcherTaskAction(
     }
     updated = { ...task, owner: { reference: body.practitioner }, lastModified: now };
   } else if (action === "resolve") {
+    if (
+      typeof body.patientReference !== "string"
+      || !/^Patient\/[A-Za-z0-9.-]+$/.test(body.patientReference)
+      || body.patientReference !== task.for?.reference
+    ) {
+      throw new WatcherValidationError(`Collected Patient does not match watcher Task/${taskId}.`);
+    }
+    const settings = config.watchers[watcherId];
+    const appointmentAt = task.restriction?.period?.start;
+    const key = conditionKey(task);
+    if (!settings || !appointmentAt || !key) {
+      throw new WatcherValidationError(`Watcher Task/${taskId} cannot verify its current condition.`);
+    }
+    const active = await definition.firingRule({
+      now,
+      date: practiceDate(appointmentAt, timeZone),
+      settings,
+    });
+    if (active.some((match) => match.conditionKey === key)) {
+      throw new WatcherValidationError(`Watcher Task/${taskId} still has an active condition.`);
+    }
     updated = {
       ...task,
       status: "completed",
@@ -159,7 +190,7 @@ async function withStaff(
   }
 }
 
-function practiceDate(value: unknown): string {
+function requestedDate(value: unknown): string {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(Date.parse(`${value}T00:00:00Z`))) {
     throw new WatcherValidationError("Watcher date must be YYYY-MM-DD.");
   }

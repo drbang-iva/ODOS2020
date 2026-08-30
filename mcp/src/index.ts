@@ -5665,6 +5665,7 @@ async function startMcpServer(): Promise<void> {
     fhir,
     registry: watcherRegistry,
     loadConfig: () => loadOrSeedWatcherConfig(fhir, watcherRegistry),
+    timeZone: process.env.ODOS_TIMEZONE ?? "UTC",
   }, watcherWorkerIntervalMs(process.env.ODOS_WATCHER_WORKER_MS));
   if (westFaxAdapter && inboundFaxWorkerEnabled(process.env.ODOS_INBOUND_FAX_WORKER_ENABLED)) {
     startInboundFaxWorker({
@@ -7646,6 +7647,7 @@ async function startMcpServer(): Promise<void> {
         serviceFhir: fhir,
         registry: watcherRegistry,
         loadConfig: () => loadOrSeedWatcherConfig(fhir, watcherRegistry),
+        timeZone: process.env.ODOS_TIMEZONE ?? "UTC",
       });
       registerClaimFollowUpRoutes(app, {
         authenticateService: authenticateWithMedplum,

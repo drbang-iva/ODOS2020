@@ -46,15 +46,16 @@ A second coded `Basic` singleton stores engine health: last attempt, last succes
 
 ## Evaluation and W1
 
-The worker authenticates the existing service client, runs immediately at startup, and repeats on an injected interval. Its registry is built before the worker starts, so grammar failure is a startup failure.
+The worker authenticates the existing service client, runs immediately at startup, and repeats on an injected interval. Its registry is built before the worker starts, so grammar failure is a startup failure. The production worker derives the evaluation day from the practice timezone rather than UTC.
 
 W1 evaluates the current practice day:
 
 1. Read every non-cancelled Appointment for the day, following FHIR next links.
 2. Resolve every referenced Patient in bounded batches.
-3. Read every issued Invoice, following FHIR next links, and join by `Invoice.subject`.
-4. Sum positive `Invoice.totalNet` amounts for each scheduled patient and retain the oldest open Invoice date.
-5. Emit one condition per matching Appointment whose persisted minimum is met.
+3. Read every issued Invoice and every active PaymentReconciliation, following FHIR next links, and join by patient and Invoice reference.
+4. Compute each Invoice's remaining amount from `Invoice.totalNet` less completed payment allocations. Treat the existing payment-tender marker as collected, floor overpayment at zero, and retain the oldest still-open Invoice date.
+5. Sum positive remaining amounts for each scheduled patient.
+6. Emit one condition per matching Appointment whose persisted minimum is met.
 
 Each paginated search has a 100-page and 10,000-resource guard. Exceeding either guard, lacking next-link support, or receiving malformed financial data fails the entire W1 run. The health record becomes failed; no partial alert list is published.
 
@@ -65,10 +66,10 @@ W1 uses `immediate` activation. It can fire on day one because the actionable ev
 Authenticated staff routes use the existing staff authentication seam and the process service FHIR client. This slice changes no authentication flow, credential, AccessPolicy, or role declaration.
 
 - `GET /watchers/frontdesk?date=YYYY-MM-DD` returns fresh W1 projections keyed by Appointment id or a structured 503 degradation.
-- `GET /watchers/today?date=YYYY-MM-DD` returns fresh ranked/capped Today data, yesterday comparison, overflow groups, and the go-live date or a structured 503 degradation.
+- `GET /watchers/today?date=YYYY-MM-DD` returns fresh ranked/capped Today data, yesterday comparison, overflow groups, and the go-live date or a structured 503 degradation. When the client omits `date`, the server chooses the current practice day.
 - `POST /watchers/tasks/:taskId/action` accepts one validated action: dismiss with a W1 reason code, snooze until an ISO instant, reassign to a valid practitioner reference, or resolve after collection.
 
-Dismissal writes `Task.status = cancelled` plus coded `statusReason`. Snooze writes `on-hold`, a coded reason, and a future restriction end. Reassignment writes `Task.owner`. Resolve writes `completed`. All actions preserve the Task identifier and therefore never create another notification.
+Dismissal writes `Task.status = cancelled` plus coded `statusReason`. Snooze writes `on-hold`, a coded reason, and a future restriction end. Reassignment writes `Task.owner`. Resolve must name the same Patient as `Task.for`; the server reruns that watcher's firing rule and writes `completed` only when the same condition key is no longer active. A partial collection therefore leaves the existing Task open. All actions preserve the Task identifier and therefore never create another notification.
 
 ## Front-desk rendering
 
