@@ -59,6 +59,7 @@ test("GET /claims/search returns explicit projection failure instead of stale it
     lastAttemptAt: "2026-08-30T11:59:00.000Z",
     lastSuccessfulAt: "2026-08-30T11:50:00.000Z",
     lastFailureAt: "2026-08-30T11:59:00.000Z",
+    invalidatedAt: null,
     staleAfterMs: 180_000,
   };
   (deps as ClaimsHandlerDeps & { projectionHealth: { status(at: string): typeof failedProjection } }).projectionHealth = {
@@ -137,14 +138,16 @@ function fixture(role: "staff" | "provider" | undefined) {
     recordAudit: async () => undefined,
     now: () => "2026-07-10T12:00:00.000Z",
     projectionHealth: {
-      begin: () => undefined,
+      begin: () => 1,
       succeed: () => undefined,
       fail: () => undefined,
+      invalidate: () => undefined,
       status: () => ({
         state: "healthy",
         lastAttemptAt: "2026-07-10T12:00:00.000Z",
         lastSuccessfulAt: "2026-07-10T12:00:00.000Z",
         lastFailureAt: null,
+        invalidatedAt: null,
         staleAfterMs: 180_000,
       }),
     },

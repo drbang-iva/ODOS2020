@@ -19,13 +19,13 @@ export function startClaimReadModelWorker(deps: ClaimReadModelWorkerDeps): () =>
     if (running) return;
     running = true;
     const at = deps.now?.() ?? new Date().toISOString();
-    deps.projectionHealth.begin(at);
+    const attempt = deps.projectionHealth.begin(at);
     try {
       await deps.authenticateService();
       await deps.store.rebuild(await loadClaimReadModelTruth(deps.fhir, at), at);
-      deps.projectionHealth.succeed(at);
+      deps.projectionHealth.succeed(at, attempt);
     } catch (error) {
-      deps.projectionHealth.fail(at);
+      deps.projectionHealth.fail(at, attempt);
       deps.onError?.(error);
     } finally {
       running = false;

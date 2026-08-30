@@ -104,16 +104,20 @@ test("an older per-claim upsert cannot overwrite a newer completed rebuild", asy
   assert.deepEqual(await store.listAll(), [rebuilt]);
 });
 
-test("an older rebuild snapshot cannot delete a row projected after snapshot acquisition", async () => {
+test("an older rebuild snapshot fails loudly without publishing incomplete FHIR truth", async () => {
   const newer = row({ claimReference: "Claim/rebuild-race", totalChargedCents: 99_999 });
   await store.upsert(newer, "2026-08-30T12:01:00.000Z");
+  const before = await store.listAll();
 
-  await store.rebuild(
-    [row({ claimReference: "Claim/rebuild-race", totalChargedCents: 12_500 })],
-    AT,
+  await assert.rejects(
+    store.rebuild(
+      [row({ claimReference: "Claim/rebuild-race", totalChargedCents: 12_500 })],
+      AT,
+    ),
+    /older than an existing projection/,
   );
 
-  assert.deepEqual(await store.listAll(), [newer]);
+  assert.deepEqual(await store.listAll(), before);
 });
 
 function row(overrides: Partial<ClaimReadModelRow>): ClaimReadModelRow {

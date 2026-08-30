@@ -587,9 +587,10 @@ test("retry after a lost resubmission-touch response records one touch and one P
   const fixture = deps();
   let projectionFailureMarks = 0;
   fixture.deps.projectionHealth = {
-    begin: () => undefined,
+    begin: () => 1,
     succeed: () => undefined,
-    fail: () => { projectionFailureMarks += 1; },
+    fail: () => undefined,
+    invalidate: () => { projectionFailureMarks += 1; },
     status: () => { throw new Error("not read"); },
   };
   fixture.created.Claim.push({

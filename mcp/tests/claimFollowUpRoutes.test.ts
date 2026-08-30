@@ -32,7 +32,7 @@ test("retry after projection failure records one touch and one Provenance for on
   let failureMarks = 0;
   const projectionHealth = {
     ...healthyProjectionHealth(),
-    fail: () => { failureMarks += 1; },
+    invalidate: () => { failureMarks += 1; },
   };
   const body = {
     idempotencyKey: "touch-retry-20260830-001",
@@ -144,6 +144,7 @@ test("worklist and metrics refuse to serve a failed projection as healthy data",
     lastAttemptAt: "2026-08-30T11:59:00.000Z",
     lastSuccessfulAt: "2026-08-30T11:50:00.000Z",
     lastFailureAt: "2026-08-30T11:59:00.000Z",
+    invalidatedAt: null,
     staleAfterMs: 180_000,
   };
   let currentProjection: ClaimProjectionStatus = failedProjection;
@@ -154,9 +155,10 @@ test("worklist and metrics refuse to serve a failed projection as healthy data",
     authenticate: async () => staff,
     serviceFhir: staff.fhir,
     projectionHealth: {
-      begin: () => undefined,
+      begin: () => 1,
       succeed: () => undefined,
       fail: () => undefined,
+      invalidate: () => undefined,
       status: () => currentProjection,
     },
     store: {
@@ -192,6 +194,7 @@ test("worklist and metrics refuse to serve a failed projection as healthy data",
     lastAttemptAt: "2026-08-30T11:55:00.000Z",
     lastSuccessfulAt: "2026-08-30T11:55:00.000Z",
     lastFailureAt: null,
+    invalidatedAt: "2026-08-30T11:55:00.000Z",
   };
   currentProjection = staleProjection;
   const staleResponses = await withServer(app, async (origin) => Promise.all([
@@ -213,6 +216,7 @@ test("worklist and metrics refuse to serve a failed projection as healthy data",
     lastAttemptAt: "2026-08-30T12:00:00.000Z",
     lastSuccessfulAt: "2026-08-30T12:00:00.000Z",
     lastFailureAt: null,
+    invalidatedAt: null,
   };
   currentProjection = healthyProjection;
   const recovered = await withServer(app, (origin) => fetch(`${origin}/claims/follow-up-worklist`));
@@ -262,14 +266,16 @@ async function withServer<T>(app: express.Express, action: (origin: string) => P
 
 function healthyProjectionHealth() {
   return {
-    begin: () => undefined,
+    begin: () => 1,
     succeed: () => undefined,
     fail: () => undefined,
+    invalidate: () => undefined,
     status: () => ({
       state: "healthy" as const,
       lastAttemptAt: "2026-08-30T12:00:00.000Z",
       lastSuccessfulAt: "2026-08-30T12:00:00.000Z",
       lastFailureAt: null,
+      invalidatedAt: null,
       staleAfterMs: 180_000,
     }),
   };

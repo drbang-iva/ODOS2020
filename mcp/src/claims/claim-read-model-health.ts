@@ -7,13 +7,15 @@ export interface ClaimProjectionStatus {
   lastAttemptAt: string | null;
   lastSuccessfulAt: string | null;
   lastFailureAt: string | null;
+  invalidatedAt: string | null;
   staleAfterMs: number;
 }
 
 export interface ClaimReadModelProjectionHealthTracker {
-  begin(at: string): void;
-  succeed(at: string): void;
-  fail(at: string): void;
+  begin(at: string): number;
+  succeed(at: string, attempt: number): void;
+  fail(at: string, attempt: number): void;
+  invalidate(at: string): void;
   status(at: string): ClaimProjectionStatus;
 }
 
@@ -21,6 +23,8 @@ export class ClaimReadModelProjectionHealth implements ClaimReadModelProjectionH
   private lastAttemptAt: string | null = null;
   private lastSuccessfulAt: string | null = null;
   private lastFailureAt: string | null = null;
+  private invalidatedAt: string | null = null;
+  private revision = 0;
 
   constructor(private readonly staleAfterMs = DEFAULT_CLAIM_PROJECTION_STALE_AFTER_MS) {
     if (!Number.isInteger(staleAfterMs) || staleAfterMs <= 0) {
@@ -28,22 +32,33 @@ export class ClaimReadModelProjectionHealth implements ClaimReadModelProjectionH
     }
   }
 
-  begin(at: string): void {
+  begin(at: string): number {
     assertDateTime(at);
     this.lastAttemptAt = at;
+    this.revision += 1;
+    return this.revision;
   }
 
-  succeed(at: string): void {
+  succeed(at: string, attempt: number): void {
     assertDateTime(at);
+    if (attempt !== this.revision) return;
     this.lastAttemptAt = at;
     this.lastSuccessfulAt = at;
     this.lastFailureAt = null;
+    this.invalidatedAt = null;
   }
 
-  fail(at: string): void {
+  fail(at: string, attempt: number): void {
     assertDateTime(at);
+    if (attempt !== this.revision) return;
     this.lastAttemptAt = at;
     this.lastFailureAt = at;
+  }
+
+  invalidate(at: string): void {
+    assertDateTime(at);
+    this.revision += 1;
+    this.invalidatedAt = at;
   }
 
   status(at: string): ClaimProjectionStatus {
@@ -54,12 +69,14 @@ export class ClaimReadModelProjectionHealth implements ClaimReadModelProjectionH
       lastAttemptAt: this.lastAttemptAt,
       lastSuccessfulAt: this.lastSuccessfulAt,
       lastFailureAt: this.lastFailureAt,
+      invalidatedAt: this.invalidatedAt,
       staleAfterMs: this.staleAfterMs,
     };
   }
 
   private projectionState(at: string): ClaimProjectionState {
     if (this.lastFailureAt) return "failed";
+    if (this.invalidatedAt) return "stale";
     if (!this.lastSuccessfulAt) return "uninitialized";
     return Date.parse(at) - Date.parse(this.lastSuccessfulAt) > this.staleAfterMs ? "stale" : "healthy";
   }

@@ -193,14 +193,16 @@ async function server() {
         search: async () => [],
       } as NonNullable<import("../src/claims/claimmd-handlers.js").ClaimsHandlerDeps["claimReadModel"]>,
       projectionHealth: {
-        begin: () => undefined,
+        begin: () => 1,
         succeed: () => undefined,
         fail: () => undefined,
+        invalidate: () => undefined,
         status: () => ({
           state: "healthy",
           lastAttemptAt: "2026-07-10T12:00:00.000Z",
           lastSuccessfulAt: "2026-07-10T12:00:00.000Z",
           lastFailureAt: null,
+          invalidatedAt: null,
           staleAfterMs: 180_000,
         }),
       },

@@ -14,12 +14,12 @@ test("projection health distinguishes uninitialized, failed, stale, and recovere
   const health = new ClaimReadModelProjectionHealth(180_000);
   assert.equal(health.status(AT).state, "uninitialized");
 
-  health.begin("2026-08-30T11:55:00.000Z");
-  health.fail("2026-08-30T11:55:00.000Z");
+  const failedAttempt = health.begin("2026-08-30T11:55:00.000Z");
+  health.fail("2026-08-30T11:55:00.000Z", failedAttempt);
   assert.equal(health.status(AT).state, "failed");
 
-  health.begin("2026-08-30T11:58:00.000Z");
-  health.succeed("2026-08-30T11:58:00.000Z");
+  const recoveredAttempt = health.begin("2026-08-30T11:58:00.000Z");
+  health.succeed("2026-08-30T11:58:00.000Z", recoveredAttempt);
   assert.equal(health.status(AT).state, "healthy");
   assert.equal(health.status("2026-08-30T12:01:00.001Z").state, "stale");
   assert.equal(health.status("2026-08-30T12:01:00.001Z").lastFailureAt, null);
@@ -27,6 +27,30 @@ test("projection health distinguishes uninitialized, failed, stale, and recovere
   assert.equal(claimProjectionStaleAfterMsFromEnv(undefined), 180_000);
   assert.equal(claimProjectionStaleAfterMsFromEnv("240000"), 240_000);
   assert.throws(() => claimProjectionStaleAfterMsFromEnv("0"), /positive whole number/);
+});
+
+test("newer projection outcomes and FHIR invalidations supersede older rebuild completions", () => {
+  const health = new ClaimReadModelProjectionHealth(180_000);
+  const seeded = health.begin("2026-08-30T11:58:00.000Z");
+  health.succeed("2026-08-30T11:58:00.000Z", seeded);
+
+  const olderSuccess = health.begin("2026-08-30T12:00:00.000Z");
+  const newerFailure = health.begin("2026-08-30T12:01:00.000Z");
+  health.fail("2026-08-30T12:01:00.000Z", newerFailure);
+  health.succeed("2026-08-30T12:00:00.000Z", olderSuccess);
+  assert.equal(health.status("2026-08-30T12:01:00.000Z").state, "failed");
+
+  const olderFailure = health.begin("2026-08-30T12:02:00.000Z");
+  const newerSuccess = health.begin("2026-08-30T12:03:00.000Z");
+  health.succeed("2026-08-30T12:03:00.000Z", newerSuccess);
+  health.fail("2026-08-30T12:02:00.000Z", olderFailure);
+  assert.equal(health.status("2026-08-30T12:03:00.000Z").state, "healthy");
+
+  const supersededByTouch = health.begin("2026-08-30T12:04:00.000Z");
+  health.invalidate("2026-08-30T12:05:00.000Z");
+  health.succeed("2026-08-30T12:04:00.000Z", supersededByTouch);
+  assert.equal(health.status("2026-08-30T12:05:00.000Z").state, "stale");
+  assert.equal(health.status("2026-08-30T12:05:00.000Z").invalidatedAt, "2026-08-30T12:05:00.000Z");
 });
 
 test("projection worker records a failed attempt when FHIR paging cannot complete", async () => {
@@ -42,9 +66,10 @@ test("projection worker records a failed attempt when FHIR paging cannot complet
     },
     store: {} as ClaimReadModelStore,
     projectionHealth: {
-      begin: () => { events.push("begin"); },
+      begin: () => { events.push("begin"); return 1; },
       succeed: () => { events.push("succeed"); },
       fail: () => { events.push("fail"); },
+      invalidate: () => { events.push("invalidate"); },
       status: () => { throw new Error("not read"); },
     },
     now: () => AT,
@@ -74,9 +99,10 @@ test("projection worker marks success only after the complete rebuild commits", 
       rebuild: async () => releaseRebuild(),
     } as unknown as ClaimReadModelStore,
     projectionHealth: {
-      begin: () => { events.push("begin"); },
+      begin: () => { events.push("begin"); return 1; },
       succeed: () => { events.push("succeed"); },
       fail: () => { events.push("fail"); },
+      invalidate: () => { events.push("invalidate"); },
       status: () => { throw new Error("not read"); },
     },
     now: () => AT,

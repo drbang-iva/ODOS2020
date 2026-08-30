@@ -388,11 +388,11 @@ export async function handleStediClaimResubmissionRequest(
       return { status: 409, body: { error: "The resubmission idempotency key was already used for different touch content." } };
     }
     if (touchOutcome === "failed") {
-      deps.projectionHealth?.fail(touchAt);
+      deps.projectionHealth?.invalidate(touchAt);
       return { status: 503, body: { error: "Claim was transmitted, but the original Claim touch could not be recorded; retry reconciliation before continuing." } };
     }
     if (touchOutcome === "recorded" || touchOutcome === "reconciled") {
-      deps.projectionHealth?.fail(touchAt);
+      deps.projectionHealth?.invalidate(touchAt);
     }
     await audit(
       deps,

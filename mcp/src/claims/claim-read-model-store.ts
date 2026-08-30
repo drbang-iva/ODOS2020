@@ -62,10 +62,14 @@ export class PgClaimReadModelStore implements ClaimReadModelStore {
     try {
       await client.query("BEGIN");
       await client.query("LOCK TABLE odos_claim_work_state IN ACCESS EXCLUSIVE MODE");
-      await client.query(
-        "DELETE FROM odos_claim_work_state WHERE projected_at <= $1::timestamptz",
+      const newerProjection = await client.query(
+        "SELECT 1 FROM odos_claim_work_state WHERE projected_at > $1::timestamptz LIMIT 1",
         [projectedAt],
       );
+      if (newerProjection.rowCount) {
+        throw new Error("Claim read-model rebuild is older than an existing projection; retry with fresh FHIR truth.");
+      }
+      await client.query("DELETE FROM odos_claim_work_state");
       for (const row of rows) await upsertRow(client, row, projectedAt);
       await client.query("COMMIT");
     } catch (error) {

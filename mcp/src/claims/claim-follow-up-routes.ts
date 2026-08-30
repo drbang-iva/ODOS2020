@@ -131,14 +131,14 @@ export function registerClaimFollowUpRoutes(
   }));
   app.post("/claims/read-model/rebuild", (req, res) => withStaff(req, res, deps, async (staff) => {
     const at = now(deps);
-    deps.projectionHealth.begin(at);
+    const attempt = deps.projectionHealth.begin(at);
     try {
       const truth = await loadClaimReadModelTruth(staff.fhir, at);
       await deps.store.rebuild(truth, at);
-      deps.projectionHealth.succeed(at);
+      deps.projectionHealth.succeed(at, attempt);
       res.json({ rebuilt: truth.length, projectedAt: at, projection: deps.projectionHealth.status(at) });
     } catch (error) {
-      deps.projectionHealth.fail(at);
+      deps.projectionHealth.fail(at, attempt);
       throw error;
     }
   }));
@@ -295,7 +295,7 @@ async function syncReadModelClaim(
     await deps.store.upsert(row, projectedAt);
     return true;
   } catch {
-    deps.projectionHealth.fail(projectedAt);
+    deps.projectionHealth.invalidate(projectedAt);
     return false;
   }
 }

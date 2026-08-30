@@ -276,14 +276,16 @@ function claimsDeps(fhir: ReturnType<typeof pagedFhir>, adapter: ClaimMdAdapter 
 
 function healthyProjectionHealth() {
   return {
-    begin: () => undefined,
+    begin: () => 1,
     succeed: () => undefined,
     fail: () => undefined,
+    invalidate: () => undefined,
     status: () => ({
       state: "healthy" as const,
       lastAttemptAt: "2026-07-10T12:00:00.000Z",
       lastSuccessfulAt: "2026-07-10T12:00:00.000Z",
       lastFailureAt: null,
+      invalidatedAt: null,
       staleAfterMs: 180_000,
     }),
   };
