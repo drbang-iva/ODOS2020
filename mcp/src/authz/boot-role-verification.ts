@@ -8,6 +8,11 @@ import {
   PRACTICE_ROLE_IDS,
   type PracticeRoleId,
 } from "./roles.js";
+import {
+  assertObservedProjectMatchesTarget,
+  formatInstallationProjectTarget,
+  type InstallationProjectSource,
+} from "../../../scripts/installation-project.js";
 
 export interface PracticeRolePolicyStatus {
   readonly role: PracticeRoleId;
@@ -34,6 +39,7 @@ export type PracticeRolePolicySyncStatusReport =
 
 export async function readPracticeRolePolicySyncStatus(
   fhir: FhirSearchClient,
+  projectId: string,
 ): Promise<PracticeRolePolicySyncStatus> {
   const policies: PracticeRolePolicyStatus[] = [];
   for (const role of PRACTICE_ROLE_IDS) {
@@ -42,7 +48,7 @@ export async function readPracticeRolePolicySyncStatus(
     const matches = (await searchAll<AccessPolicy>(
       fhir,
       "AccessPolicy",
-      { "name:exact": expectedName },
+      { "name:exact": expectedName, _project: projectId },
     )).filter((policy) => policy.name === expectedName);
     if (matches.length === 0) {
       policies.push({
@@ -97,11 +103,12 @@ export async function readPracticeRolePolicySyncStatus(
 
 export async function readPracticeRolePolicySyncStatusReport(
   fhir: FhirSearchClient,
+  projectId: string,
 ): Promise<PracticeRolePolicySyncStatusReport> {
   try {
     return {
       availability: "available",
-      ...await readPracticeRolePolicySyncStatus(fhir),
+      ...await readPracticeRolePolicySyncStatus(fhir, projectId),
     };
   } catch (error) {
     return {
@@ -114,8 +121,9 @@ export async function readPracticeRolePolicySyncStatusReport(
 
 export async function missingPracticeRolePolicies(
   fhir: FhirSearchClient,
+  projectId: string,
 ): Promise<string[]> {
-  const status = await readPracticeRolePolicySyncStatus(fhir);
+  const status = await readPracticeRolePolicySyncStatus(fhir, projectId);
   return status.policies.flatMap((policy) =>
     policy.issues.map((issue) => `${policy.role}: ${issue}`)
   );
@@ -169,14 +177,41 @@ export async function logSsePracticeRoleBootVerification(input: {
 
 export async function logPracticeRoleBootVerification(
   fhir: FhirSearchClient,
+  projectId: string,
   log: (message: string) => void = console.error,
 ): Promise<void> {
   try {
-    const missing = await missingPracticeRolePolicies(fhir);
+    const missing = await missingPracticeRolePolicies(fhir, projectId);
     if (missing.length > 0) log(formatPracticeRoleBootFailure(missing));
   } catch (error) {
     log(formatPracticeRoleBootFailure([
       `verification unavailable: ${error instanceof Error ? error.message : String(error)}`,
     ]));
   }
+}
+
+export async function verifyMcpProjectBootBoundary(input: {
+  readonly configuredProjectId: string;
+  readonly configuredSource: InstallationProjectSource;
+  readonly authenticate: () => Promise<void>;
+  readonly getActiveProjectId: () => Promise<string>;
+  readonly verifyPolicies: () => Promise<void>;
+  readonly serve: () => Promise<void>;
+  readonly log?: (message: string) => void;
+}): Promise<void> {
+  const log = input.log ?? console.error;
+  log(formatInstallationProjectTarget({
+    projectId: input.configuredProjectId,
+    source: input.configuredSource,
+  }));
+  await input.authenticate();
+  const observedProjectId = await input.getActiveProjectId();
+  log(`Observed authenticated MCP service project: Project/${observedProjectId}`);
+  assertObservedProjectMatchesTarget(
+    input.configuredProjectId,
+    observedProjectId,
+    "authenticated MCP service project",
+  );
+  await input.verifyPolicies();
+  await input.serve();
 }

@@ -1,5 +1,9 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import type { ODOSSmartClientApp } from "../../mcp/src/smart/registration/smart-client-app.js";
+import {
+  assertObservedProjectMatchesTarget,
+  resolveConfiguredInstallationProject,
+} from "../../scripts/installation-project.js";
 
 export interface ClientApplicationAdapterResult {
   readonly client_id: string;
@@ -50,10 +54,16 @@ export function createMedplumSmartAppRegistryAdapter(input: {
   readonly baseUrl?: string;
   readonly projectId?: string;
   readonly accessToken?: string;
+  readonly env?: NodeJS.ProcessEnv;
+  readonly workingDirectory?: string;
 } = {}) {
-  const baseUrl = input.baseUrl ?? process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
-  const projectId = input.projectId ?? process.env.MEDPLUM_PROJECT_ID ?? process.env.ODOS_MEDPLUM_PROJECT_ID;
-  const accessToken = input.accessToken ?? process.env.MEDPLUM_ACCESS_TOKEN ?? process.env.ODOS_MEDPLUM_ACCESS_TOKEN;
+  const env = input.env ?? process.env;
+  const target = input.projectId
+    ? undefined
+    : resolveConfiguredInstallationProject({ env, workingDirectory: input.workingDirectory });
+  const baseUrl = input.baseUrl ?? env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
+  const projectId = input.projectId ?? target?.projectId ?? env.ODOS_MEDPLUM_PROJECT_ID;
+  const accessToken = input.accessToken ?? env.MEDPLUM_ACCESS_TOKEN ?? env.ODOS_MEDPLUM_ACCESS_TOKEN;
   return {
     async registerSmartApp(canonicalRecord: ODOSSmartClientApp): Promise<ClientApplicationAdapterResult> {
       if (!projectId || !accessToken) {
@@ -63,7 +73,19 @@ export function createMedplumSmartAppRegistryAdapter(input: {
           client_secret: symmetric ? randomBytes(32).toString("base64url") : undefined,
         };
       }
-      const response = await fetch(`${baseUrl.replace(/\/$/, "")}/admin/projects/${projectId}/client`, {
+      const normalizedBaseUrl = baseUrl.replace(/\/$/, "");
+      const sessionResponse = await fetch(`${normalizedBaseUrl}/auth/me`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!sessionResponse.ok) {
+        throw new Error(`Medplum SMART registry session check failed: ${sessionResponse.status} ${await sessionResponse.text()}`);
+      }
+      const session = (await sessionResponse.json()) as { project?: { id?: string } };
+      if (!session.project?.id) {
+        throw new Error("Medplum SMART registry session check returned no active project.");
+      }
+      assertObservedProjectMatchesTarget(projectId, session.project.id, "authenticated SMART registry project");
+      const response = await fetch(`${normalizedBaseUrl}/admin/projects/${projectId}/client`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${accessToken}`,

@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
-import { createHash, randomBytes } from "node:crypto";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { existsSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { stdin as input, stdout as output } from "node:process";
 import { createInterface } from "node:readline/promises";
 import { resolve } from "node:path";
@@ -1433,9 +1433,16 @@ export function readSetupState(path: string): SetupPracticeState {
   return { ...parsed, version: "v0.5d" };
 }
 
-function persistSetupState(path: string, state: SetupPracticeState): SetupPracticeState {
+export function persistSetupState(path: string, state: SetupPracticeState): SetupPracticeState {
   const normalized = { ...state, version: "v0.5d" as const };
-  writeFileSync(path, JSON.stringify(normalized, null, 2) + "\n");
+  const temporaryPath = `${path}.${randomUUID()}.tmp`;
+  try {
+    writeFileSync(temporaryPath, JSON.stringify(normalized, null, 2) + "\n", { flag: "wx" });
+    renameSync(temporaryPath, path);
+  } catch (error) {
+    if (existsSync(temporaryPath)) unlinkSync(temporaryPath);
+    throw error;
+  }
   return normalized;
 }
 

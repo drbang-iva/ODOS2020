@@ -18,6 +18,11 @@ import {
 import { createOperatorScriptFhirClient, type MedplumClient } from "../mcp/src/fhir-client.js";
 import { loginForLocalRepair } from "./repair-practice-roles.js";
 import { assertLocalMedplumBaseUrl } from "./reseed-practice-role-tags.js";
+import {
+  assertObservedProjectMatchesTarget,
+  formatInstallationProjectTarget,
+  resolveInstallationProject,
+} from "./installation-project.js";
 
 export const OPERATOR_CLIENT_NAME = "ODOS Local Operator";
 const OPERATOR_CLIENT_RESOURCE_TYPE = ["Client", "Application"].join("");
@@ -175,12 +180,21 @@ export async function runOperatorIdentityCli(
           ? "finish-pending-cleanup"
         : "ensure";
   const baseUrl = localBaseUrl(env.MEDPLUM_BASE_URL ?? "http://localhost:8103");
-  const projectId = resolveCliProjectId(args, env);
+  const target = resolveInstallationProject({ args, env });
+  const projectId = target.projectId;
+  console.log(formatInstallationProjectTarget(target));
   const serviceAccessToken = await loginForLocalRepair({
     baseUrl,
     email: requiredValue(env.MEDPLUM_ADMIN_EMAIL, "MEDPLUM_ADMIN_EMAIL"),
     password: requiredValue(env.MEDPLUM_ADMIN_PASSWORD, "MEDPLUM_ADMIN_PASSWORD"),
+    projectId,
   });
+  const sessionFhir = createOperatorScriptFhirClient({
+    baseUrl,
+    accessToken: serviceAccessToken,
+    reason: "Operator identity verifies its authenticated project before mutation.",
+  });
+  assertObservedProjectMatchesTarget(projectId, await sessionFhir.getActiveProjectId(), "authenticated operator project");
   const adapter = createLiveOperatorIdentityAdapter({
     baseUrl,
     serviceAccessToken,
@@ -1005,19 +1019,6 @@ function verificationMembershipId(error: unknown): string | undefined {
 
 function asError(value: unknown): Error {
   return value instanceof Error ? value : new Error(String(value));
-}
-
-function resolveCliProjectId(args: readonly string[], env: NodeJS.ProcessEnv): string {
-  const projectIndex = args.indexOf("--project");
-  const explicit = projectIndex >= 0 ? args[projectIndex + 1] : undefined;
-  if (explicit?.trim()) return explicit.trim();
-  if (env.MEDPLUM_PROJECT_ID?.trim()) return env.MEDPLUM_PROJECT_ID.trim();
-  const setupStatePath = env.ODOS_SETUP_STATE_PATH ?? resolve(process.cwd(), ".odos-setup-state.json");
-  if (existsSync(setupStatePath)) {
-    const setupState = JSON.parse(readFileSync(setupStatePath, "utf8")) as { projectId?: string };
-    if (setupState.projectId?.trim()) return setupState.projectId.trim();
-  }
-  throw new Error("Operator identity requires --project <project-id>, MEDPLUM_PROJECT_ID, or setup state with projectId.");
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

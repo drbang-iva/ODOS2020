@@ -23,6 +23,11 @@ import {
 import { searchAll, searchProjectAll } from "../mcp/src/fhir-search.js";
 import { readMembershipUserEmail } from "./reconcile-membership-display.js";
 import { assertLocalMedplumBaseUrl, decidePracticeRoleTag } from "./reseed-practice-role-tags.js";
+import {
+  assertObservedProjectMatchesTarget,
+  formatInstallationProjectTarget,
+  resolveInstallationProject,
+} from "./installation-project.js";
 
 const DEFAULT_BASE_URL = "http://localhost:8103";
 const DEFAULT_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5433/medplum";
@@ -353,14 +358,21 @@ async function runCli(): Promise<void> {
   const baseUrl = (process.env.MEDPLUM_BASE_URL ?? DEFAULT_BASE_URL).replace(/\/$/, "");
   assertLocalMedplumBaseUrl(baseUrl);
   const target = requiredEmailArgument(process.argv.slice(2));
+  const project = resolveInstallationProject({ args: process.argv.slice(2) });
+  console.log(formatInstallationProjectTarget(project));
   const email = requireEnv("MEDPLUM_ADMIN_EMAIL");
   const password = requireEnv("MEDPLUM_ADMIN_PASSWORD");
-  const accessToken = await loginForLocalRepair({ baseUrl, email, password });
+  const accessToken = await loginForLocalRepair({ baseUrl, email, password, projectId: project.projectId });
   const fhir = createOperatorScriptFhirClient({
     baseUrl,
     accessToken,
     reason: "Operator practice-role repair runs outside request handling.",
   });
+  assertObservedProjectMatchesTarget(
+    project.projectId,
+    await fhir.getActiveProjectId(),
+    "authenticated repair project",
+  );
   const primaryRole = devPrimaryRole(process.env.ODOS_DEV_PRIMARY_ROLE);
   const result = await repairPracticeRoles(
     new LivePracticeRoleRepairAdapter(fhir),

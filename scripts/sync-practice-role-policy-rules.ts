@@ -25,6 +25,7 @@ import {
 } from "./migrate-three-role-model.js";
 import { loginForLocalRepair } from "./repair-practice-roles.js";
 import { assertLocalMedplumBaseUrl } from "./reseed-practice-role-tags.js";
+import { formatInstallationProjectTarget, resolveInstallationProject } from "./installation-project.js";
 
 const DEFAULT_BASE_URL = "http://localhost:8103";
 
@@ -537,11 +538,12 @@ async function runCli(): Promise<void> {
   const args = process.argv.slice(2);
   const apply = args.includes("--apply");
   const bootstrapServiceIdentity = args.includes("--bootstrap-service-identity");
-  const projectId = requiredPracticeRolePolicyRuleSyncProjectId(
+  const target = resolveInstallationProject({
     args,
-    process.env.MEDPLUM_PROJECT_ID,
-    bootstrapServiceIdentity,
-  );
+    requireExplicitProject: bootstrapServiceIdentity,
+  });
+  const projectId = target.projectId;
+  console.log(formatInstallationProjectTarget(target));
   const baseUrl = (process.env.MEDPLUM_BASE_URL ?? DEFAULT_BASE_URL).replace(/\/$/, "");
   assertLocalMedplumBaseUrl(baseUrl);
   if (bootstrapServiceIdentity) {

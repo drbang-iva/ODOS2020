@@ -9,12 +9,15 @@ import {
   missingPracticeRolePolicies,
   readPracticeRolePolicySyncStatus,
   readPracticeRolePolicySyncStatusReport,
+  verifyMcpProjectBootBoundary,
 } from "../src/authz/boot-role-verification.js";
 import {
   buildMedplumAccessPolicy,
   getRoleDeclaration,
   PRACTICE_ROLE_IDS,
 } from "../src/authz/roles.js";
+
+const PROJECT_ID = "practice-configured";
 
 test("boot role verification names missing policies and missing practice-role tags", async () => {
   const client = {
@@ -33,7 +36,7 @@ test("boot role verification names missing policies and missing practice-role ta
       } as Bundle<T>;
     },
   };
-  const missing = await missingPracticeRolePolicies(client as never);
+  const missing = await missingPracticeRolePolicies(client as never, PROJECT_ID);
   assert.deepEqual(missing, [
     "provider: AccessPolicy \"ODOS Provider\" lacks its practice-role meta.tag",
     "staff: AccessPolicy \"ODOS Staff\" is missing",
@@ -48,6 +51,7 @@ test("boot role verification logs a red failure block without throwing when the 
   const messages: string[] = [];
   await logPracticeRoleBootVerification(
     { search: async () => { throw new Error("FHIR unavailable"); } } as never,
+    PROJECT_ID,
     (message) => messages.push(message),
   );
   assert.equal(messages.length, 1);
@@ -114,7 +118,7 @@ function deployedPolicies(
 }
 
 test("canonical policy fixture reports every declared role in sync", async () => {
-  const status = await readPracticeRolePolicySyncStatus(policySearchClient(deployedPolicies()) as never);
+  const status = await readPracticeRolePolicySyncStatus(policySearchClient(deployedPolicies()) as never, PROJECT_ID);
   assert.equal(status.inSync, true, JSON.stringify(status));
   assert.equal(status.policies.length, PRACTICE_ROLE_IDS.length);
   assert.ok(status.policies.every((policy) => policy.status === "match"));
@@ -122,13 +126,16 @@ test("canonical policy fixture reports every declared role in sync", async () =>
 
 function policySearchClient(policies: readonly AccessPolicy[], onWrite?: () => void) {
   return {
-    search: async <T,>(_resourceType: string, params: Record<string, string>): Promise<Bundle<T>> => ({
+    search: async <T,>(_resourceType: string, params: Record<string, string>): Promise<Bundle<T>> => {
+      assert.equal(params._project, PROJECT_ID);
+      return ({
       resourceType: "Bundle",
       type: "searchset",
       entry: policies
         .filter((policy) => policy.name === params["name:exact"])
         .map((resource) => ({ resource: resource as unknown as T })),
-    } as Bundle<T>),
+      } as Bundle<T>);
+    },
     create: async () => { onWrite?.(); throw new Error("unexpected create"); },
     patch: async () => { onWrite?.(); throw new Error("unexpected patch"); },
     update: async () => { onWrite?.(); throw new Error("unexpected update"); },
@@ -139,6 +146,7 @@ test("read-only policy sync status names the policy and exact resource rule drif
   let writes = 0;
   const status = await readPracticeRolePolicySyncStatus(
     policySearchClient(deployedPolicies(["read"]), () => { writes += 1; }) as never,
+    PROJECT_ID,
   );
 
   assert.equal(status.inSync, false);
@@ -153,7 +161,7 @@ test("read-only policy sync status names the policy and exact resource rule drif
 test("policy sync status remains reachable and reports unavailable when its identity gets a 403", async () => {
   const report = await readPracticeRolePolicySyncStatusReport({
     search: async () => { throw new Error("FHIR search failed (403)"); },
-  } as never);
+  } as never, PROJECT_ID);
 
   assert.deepEqual(report, {
     availability: "unavailable",
@@ -184,7 +192,7 @@ test("policy sync status follows Bundle next links and detects a duplicate on a 
       type: "searchset",
       entry: [{ resource: duplicate as unknown as T }],
     } as Bundle<T>),
-  } as never);
+  } as never, PROJECT_ID);
 
   assert.equal(status.inSync, false);
   assert.equal(status.policies.find((policy) => policy.role === "provider")?.status, "duplicate");
@@ -196,6 +204,7 @@ test("boot warns with named resource rule drift and continues starting", async (
 
   await logPracticeRoleBootVerification(
     policySearchClient(deployedPolicies(["read"])) as never,
+    PROJECT_ID,
     (message) => messages.push(message),
   );
   serverStarted = true;
@@ -206,4 +215,29 @@ test("boot warns with named resource rule drift and continues starting", async (
   assert.match(messages[0]!, /missing rule .*AccessPolicy/);
   assert.match(messages[0]!, /unexpected rule .*interaction/);
   assert.match(messages[0]!, /server will continue/i);
+});
+
+test("MCP startup refuses an authenticated project mismatch before policy reads or serving", async () => {
+  const events: string[] = [];
+  await assert.rejects(
+    () => verifyMcpProjectBootBoundary({
+      configuredProjectId: PROJECT_ID,
+      configuredSource: "installation-state",
+      authenticate: async () => { events.push("authenticate"); },
+      getActiveProjectId: async () => {
+        events.push("observe");
+        return "practice-authenticated";
+      },
+      verifyPolicies: async () => { events.push("policies"); },
+      serve: async () => { events.push("serve"); },
+      log: (message) => events.push(message),
+    }),
+    /authenticated MCP service project.*practice-authenticated.*configured.*practice-configured/i,
+  );
+  assert.deepEqual(events, [
+    "Target: Project/practice-configured (source: installation-state)",
+    "authenticate",
+    "observe",
+    "Observed authenticated MCP service project: Project/practice-authenticated",
+  ]);
 });

@@ -15,6 +15,10 @@ import { createOperatorScriptFhirClient, type MedplumClient } from "../mcp/src/f
 import { searchAll } from "../mcp/src/fhir-search.js";
 import { loginForLocalRepair } from "./repair-practice-roles.js";
 import { assertLocalMedplumBaseUrl } from "./reseed-practice-role-tags.js";
+import {
+  formatInstallationProjectTarget,
+  resolveConfiguredInstallationProject,
+} from "./installation-project.js";
 
 const LEGACY_ROLE_FOLD = {
   "practice-admin": "admin",
@@ -469,12 +473,11 @@ async function runCli(): Promise<void> {
   const apply = args.has("--apply");
   const baseUrl = (process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103").replace(/\/$/, "");
   assertLocalMedplumBaseUrl(baseUrl);
-  const requestedProjectId = argumentValue("--project")?.trim()
-    || process.env.MEDPLUM_PROJECT_ID?.trim()
-    || undefined;
+  const configuredTarget = resolveConfiguredInstallationProject({ args: process.argv.slice(2) });
+  if (configuredTarget) console.log(formatInstallationProjectTarget(configuredTarget));
   const credentials = await resolveThreeRoleMigrationCredentials({
     baseUrl,
-    projectId: requestedProjectId,
+    projectId: configuredTarget?.projectId,
     accessToken: process.env.MEDPLUM_ACCESS_TOKEN,
     adminEmail: process.env.MEDPLUM_ADMIN_EMAIL,
     adminPassword: process.env.MEDPLUM_ADMIN_PASSWORD,
@@ -486,13 +489,16 @@ async function runCli(): Promise<void> {
     extendedMode: true,
   });
   const projectId = await resolveThreeRoleMigrationProjectId({
-    explicitProjectId: requestedProjectId,
+    explicitProjectId: configuredTarget?.projectId,
     resolveSessionProjectId: () => resolveAuthenticatedSessionProjectId({
       baseUrl,
       accessToken: credentials.accessToken,
       fhir,
     }),
   });
+  if (!configuredTarget) {
+    console.log(formatInstallationProjectTarget({ projectId, source: "authenticated-session" }));
+  }
   const session = await readAuthenticatedSessionProject({
     baseUrl,
     accessToken: credentials.accessToken,

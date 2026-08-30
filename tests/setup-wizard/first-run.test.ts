@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -8,6 +8,7 @@ import {
   createSetupServiceFhirClient,
   InMemorySetupPracticeAdapter,
   projectFromInitResponse,
+  persistSetupState,
   provisionSetupOperatorIdentity,
   readSetupState,
   SETUP_WIZARD_ACTION_REASON,
@@ -25,6 +26,27 @@ test("fresh Compose startup maps ODOS service credentials into Medplum's super-a
 
   assert.match(compose, /MEDPLUM_DEFAULT_SUPER_ADMIN_EMAIL: \$\{MEDPLUM_ADMIN_EMAIL\}/);
   assert.match(compose, /MEDPLUM_DEFAULT_SUPER_ADMIN_PASSWORD: \$\{MEDPLUM_ADMIN_PASSWORD\}/);
+});
+
+test("setup-practice loads the root .env file when present", () => {
+  const packageJson = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")) as {
+    scripts: Record<string, string>;
+  };
+  assert.match(packageJson.scripts["setup-practice"]!, /--env-file-if-exists=\.env/);
+});
+
+test("setup replaces the installation manifest atomically", () => {
+  const dir = mkdtempSync(join(tmpdir(), "odos-setup-atomic-"));
+  try {
+    const statePath = join(dir, ".odos-setup-state.json");
+    writeFileSync(statePath, JSON.stringify({ version: "v0.5d", projectId: "old-project" }));
+    const before = statSync(statePath).ino;
+    persistSetupState(statePath, { version: "v0.5d", projectId: "new-project", completed: true });
+    assert.notEqual(statSync(statePath).ino, before);
+    assert.equal(readSetupState(statePath).projectId, "new-project");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test("setup accepts Medplum 5.1.8's direct Project response from Project/$init", () => {

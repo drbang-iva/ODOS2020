@@ -105,6 +105,7 @@ Create `.env` from `.env.example` or export these variables in the shell that ru
 | `ODOS_ADMIN_NAME` | yes | First admin/practitioner display name. |
 | `ODOS_ADMIN_PASSWORD` | yes | Human-owned Medplum password. `MEDPLUM_ADMIN_PASSWORD` is also accepted. |
 | `MEDPLUM_BASE_URL` | no | Defaults to `http://localhost:8103`. |
+| `MEDPLUM_PROJECT_ID` | no | Compatibility fallback when installation state is absent. When set, it must equal the canonical project ID in `.odos-setup-state.json`. |
 | `MEDPLUM_STORAGE_BASE_URL` | no | Defaults to `http://localhost:8103/storage/`; set it to the public storage origin when the port or host is remapped. |
 | `ODOS_POSTGRES_URL` | no | Defaults to local compose Postgres. Used for audit rows. |
 | `ODOS_SETUP_STATE_PATH` | no | Defaults to `./.odos-setup-state.json`. No PHI is written there. |
@@ -485,14 +486,26 @@ to make this diagnostic succeed.
 
 ## Re-provisioning
 
-For an empty test stack, reset compose volumes and remove the local setup state:
+For an empty test stack, stop the services, invalidate the canonical installation manifest and all
+project-derived operator/importer state, then reset the volumes. These removals are one deliberate
+reseed operation; do not restart MCP between them:
 
 ```bash
 docker-compose down -v
-rm -f .odos-setup-state.json
+rm -f .odos-setup-state.json .odos/operator.env .odos/operator-previous.env \
+  .odos/operator-identity.json .odos/migration-importer-state.json \
+  .odos/migration-importer.env
 docker-compose up -d
 npm run setup-practice
 ```
+
+`.odos-setup-state.json` is the canonical installation manifest. Its `projectId` is stable for the
+life of an installation and changes only during a deliberate reseed/reinstall, never during normal
+operation. Setup writes the replacement manifest atomically after Medplum creates the project.
+MCP and operator scripts refuse to run until `MEDPLUM_PROJECT_ID`, operator credentials, and
+migration state either agree with the new manifest or have been regenerated. Use an explicit
+`--project <id> --allow-foreign-project` only for intentional foreign-project work; the target and
+its source are printed before authentication.
 
 Do not run this against live patient data. For a live practice, export audit/backup evidence first and make a deliberate operator decision.
 
