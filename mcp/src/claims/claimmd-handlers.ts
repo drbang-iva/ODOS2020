@@ -111,11 +111,22 @@ import {
   MANUAL_EOB_CODE,
   MANUAL_EOB_CODE_SYSTEM,
   MANUAL_EOB_IDENTIFIER_SYSTEM,
+  PROVIDER_ADJUSTMENT_CODE,
+  PROVIDER_ADJUSTMENT_IDENTIFIER_SYSTEM,
+  REMITTANCE_BATCH_CODE,
+  REMITTANCE_BATCH_CODE_SYSTEM,
+  REMITTANCE_BATCH_IDENTIFIER_SYSTEM,
   ManualEobValidationError,
+  appendRemittanceAllocation,
   appendManualEobPosting,
+  buildProviderAdjustment,
+  buildRemittanceBatch,
   buildManualEobHeader,
   closeManualEobHeader,
+  parseProviderAdjustment,
+  parseRemittanceBatch,
   parseManualEobHeader,
+  projectRemittanceBatch,
 } from "./manual-eob.js";
 import {
   PATIENT_RESPONSIBILITY_INVOICE_IDENTIFIER_SYSTEM,
@@ -919,6 +930,65 @@ async function importStediEra(
     const rawEra = await adapter.retrieveEraData(body.eraId);
     failureOperation = "importEraData";
     const era = readStediEra(rawEra, body.eraId);
+    const remittanceBatchIdentifier = `stedi:${era.transactionId}`;
+    const batchCandidate = buildRemittanceBatch({
+      payerReference: body.insurerReference,
+      paymentReference: era.traceNumber ?? era.transactionId,
+      remittanceDate: isoStediDate(era.paymentDate),
+      creationDate: now(deps),
+      totalAmountCents: era.totalAmountCents,
+      provenance: "clearinghouse",
+      sourceReference: `urn:stedi:835:${era.transactionId}`,
+    });
+    batchCandidate.identifier = [
+      ...(batchCandidate.identifier ?? []),
+      { system: REMITTANCE_BATCH_IDENTIFIER_SYSTEM, value: remittanceBatchIdentifier },
+    ];
+    let remittanceBatch = await auth.fhir.create(batchCandidate, {
+      "If-None-Exist": `identifier=${REMITTANCE_BATCH_IDENTIFIER_SYSTEM}|${remittanceBatchIdentifier}`,
+    });
+    const remittanceBatchId = requiredId(remittanceBatch);
+    const providerAdjustmentIds: string[] = [];
+    for (const [index, providerAdjustment] of era.providerAdjustments.entries()) {
+      const adjustmentIdentifier = `${era.transactionId}:${providerAdjustment.providerAdjustmentIdentifier}:${index + 1}`;
+      const adjustment = await auth.fhir.create(buildProviderAdjustment({
+        batchReference: ref(remittanceBatch),
+        payerReference: body.insurerReference,
+        identifier: adjustmentIdentifier,
+        reasonCode: providerAdjustment.adjustmentReasonCode,
+        reasonText: providerAdjustment.adjustmentReasonText,
+        rawSourceAmountCents: providerAdjustment.providerAdjustmentAmountCents,
+        sourceSystem: "stedi-835",
+        createdAt: now(deps),
+      }), {
+        "If-None-Exist": `identifier=${PROVIDER_ADJUSTMENT_IDENTIFIER_SYSTEM}|${adjustmentIdentifier}`,
+      });
+      providerAdjustmentIds.push(requiredId(adjustment));
+      await audit(
+        deps,
+        auth,
+        "era.import.completed",
+        "success",
+        ref(adjustment),
+        undefined,
+        `provider-level-adjustment batch=${remittanceBatchId}`,
+        "stedi",
+      );
+    }
+    await audit(
+      deps,
+      auth,
+      "era.import.completed",
+      "success",
+      ref(remittanceBatch),
+      undefined,
+      "remittance-batch",
+      "stedi",
+    );
+    const priorBatchResources = await searchAll<Basic>(auth.fhir, "Basic", {
+      code: `${REMITTANCE_BATCH_CODE_SYSTEM}|${REMITTANCE_BATCH_CODE}`,
+      _count: "100",
+    });
     for (const stediClaim of era.claims) {
       const eraClaim = claimMdLikeStediEraClaim(stediClaim);
       const stediAnalysis = analyzeStediEraClaim(stediClaim);
@@ -946,8 +1016,19 @@ async function importStediEra(
         continue;
       }
 
+      const submittedClaimId = claimReference.match(/^Claim\/([A-Za-z0-9.-]{1,64})$/)?.[1];
+      let submittedClaim: Claim | undefined;
+      if (submittedClaimId) {
+        try {
+          submittedClaim = await auth.fhir.read<Claim>("Claim", submittedClaimId);
+        } catch {
+          submittedClaim = undefined;
+        }
+      }
+
       const candidateResponse = buildClaimResponseFromStediEra({
         claimReference,
+        submittedClaim,
         patientReference,
         insurerReference: body.insurerReference,
         providerReference: body.providerReference,
@@ -973,6 +1054,7 @@ async function importStediEra(
           stediAnalysis.authoritativePatientResponsibilityCents,
         )
         : "none";
+      let reconciliation: PaymentReconciliation | undefined;
       if (paidCents > 0 && stediAnalysis.allowsReconciliation) {
         const reconciliationIdentifierValue = `${era.transactionId}:${claimReference}`;
         const reconciliationCandidate = buildInsurancePaymentReconciliation({
@@ -992,11 +1074,57 @@ async function importStediEra(
           system: STEDI_ERA_PAYMENT_SYSTEM,
           value: reconciliationIdentifierValue,
         }];
-        const reconciliation = await auth.fhir.create(reconciliationCandidate, {
+        reconciliation = await auth.fhir.create(reconciliationCandidate, {
           "If-None-Exist": `identifier=${STEDI_ERA_PAYMENT_SYSTEM}|${reconciliationIdentifierValue}`,
         });
         paymentReconciliationIds.push(requiredId(reconciliation));
         posted += 1;
+      }
+      const allocationId = remittanceAllocationId(era.transactionId, claimReference);
+      if (paidCents !== 0 && !parseRemittanceBatch(remittanceBatch).allocations.some(
+        (allocation) => allocation.id === allocationId,
+      )) {
+        if (stediAnalysis.claimStatusCode === "22") {
+          const claimLineageDepths = await loadClaimLineageDepths(auth, claimReference, submittedClaim);
+          const original = findReversedAllocation(
+            [...priorBatchResources, remittanceBatch],
+            claimReference,
+            claimLineageDepths,
+            paidCents,
+          );
+          if (original) {
+            remittanceBatch = await persistRemittanceAllocation(
+              auth,
+              remittanceBatch,
+              {
+                id: allocationId,
+                claimReference,
+                claimResponseReference: ref(response),
+                amountCents: paidCents,
+                origin: "machine-proposed",
+                confidence: 1,
+                recordedAt: now(deps),
+                reversalOfAllocationId: original.allocationId,
+                reversalOfBatchReference: original.batchReference,
+              },
+            );
+          }
+        } else if (paidCents > 0 && stediAnalysis.allowsReconciliation) {
+          remittanceBatch = await persistRemittanceAllocation(
+            auth,
+            remittanceBatch,
+            {
+              id: allocationId,
+              claimReference,
+              claimResponseReference: ref(response),
+              ...(reconciliation ? { paymentReconciliationReference: ref(reconciliation) } : {}),
+              amountCents: paidCents,
+              origin: "machine-proposed",
+              confidence: 1,
+              recordedAt: now(deps),
+            },
+          );
+        }
       }
       if (verifiedLinkage.reviewReason) {
         const task = await createEraLineLinkageReviewTask(deps, auth, {
@@ -1011,14 +1139,22 @@ async function importStediEra(
         taskIds.push(requiredId(task));
         flagged += 1;
       }
-      if (stediAnalysis.reviewReasons.length > 0) {
+      const unresolvedReversal = stediAnalysis.claimStatusCode === "22"
+        && !parseRemittanceBatch(remittanceBatch).allocations.some((allocation) => allocation.id === allocationId);
+      const integrityReviewReasons = [
+        ...stediAnalysis.reviewReasons,
+        ...(unresolvedReversal
+          ? ["Stedi ERA reversal could not be linked to an unreversed prior payment allocation for this claim version lineage."]
+          : []),
+      ];
+      if (integrityReviewReasons.length > 0) {
         const task = await createStediEraIntegrityReviewTask(deps, auth, {
           era: taskEra,
           eraClaim,
           claimReference,
           claimResponseReference: ref(response),
           patientReference: verifiedPatientReference,
-          reasons: stediAnalysis.reviewReasons,
+          reasons: integrityReviewReasons,
           appealDeadline: body.appealDeadlineByPcn?.[pcn],
         });
         taskIds.push(requiredId(task));
@@ -1059,7 +1195,18 @@ async function importStediEra(
     await audit(deps, auth, "era.import.completed", "success", `PaymentReconciliation/${paymentReconciliationIds[0] ?? "none"}`, undefined, undefined, "stedi");
     return {
       status: 200,
-      body: { eraId: era.transactionId, posted, denied, underpaid, flagged, taskIds, claimResponseIds, paymentReconciliationIds },
+      body: {
+        eraId: era.transactionId,
+        remittanceBatchId,
+        providerAdjustmentIds,
+        posted,
+        denied,
+        underpaid,
+        flagged,
+        taskIds,
+        claimResponseIds,
+        paymentReconciliationIds,
+      },
     };
   } catch (error) {
     await audit(
@@ -1259,9 +1406,55 @@ export async function handleManualEobListRequest(
       _count: "100",
       _sort: "-_lastUpdated",
     });
-    return { status: 200, body: { items: headers.map(parseManualEobHeader) } };
+    return {
+      status: 200,
+      body: {
+        items: headers
+          .filter((header) => parseRemittanceBatch(header).provenance === "manual")
+          .map(parseManualEobHeader),
+      },
+    };
   } catch (error) {
     const conflict = paginationConflict(error, "Manual EOB");
+    if (conflict) return conflict;
+    throw error;
+  }
+}
+
+export async function handleRemittanceBatchListRequest(
+  deps: ClaimsHandlerDeps,
+  input: { authHeader: string | undefined },
+): Promise<ClaimsHandlerResult> {
+  const auth = await authenticateClaimsManager(deps, input.authHeader);
+  if ("status" in auth) return auth;
+  try {
+    const [batches, adjustmentResources] = await Promise.all([
+      searchAll<Basic>(auth.fhir, "Basic", {
+        code: `${REMITTANCE_BATCH_CODE_SYSTEM}|${REMITTANCE_BATCH_CODE}`,
+        _count: "100",
+      }),
+      searchAll<Basic>(auth.fhir, "Basic", {
+        code: `${REMITTANCE_BATCH_CODE_SYSTEM}|${PROVIDER_ADJUSTMENT_CODE}`,
+        _count: "100",
+      }),
+    ]);
+    const adjustmentsByBatch = new Map<string, Basic[]>();
+    for (const resource of adjustmentResources) {
+      const adjustment = parseProviderAdjustment(resource);
+      const entries = adjustmentsByBatch.get(adjustment.batchReference) ?? [];
+      entries.push(resource);
+      adjustmentsByBatch.set(adjustment.batchReference, entries);
+    }
+    const items = batches
+      .map((batch) => projectRemittanceBatch(
+        batch,
+        adjustmentsByBatch.get(`Basic/${batch.id}`) ?? [],
+        now(deps),
+      ))
+      .sort((left, right) => right.ageDays - left.ageDays || left.paymentReference.localeCompare(right.paymentReference));
+    return { status: 200, body: { items } };
+  } catch (error) {
+    const conflict = paginationConflict(error, "Remittance batch");
     if (conflict) return conflict;
     throw error;
   }
@@ -2240,6 +2433,120 @@ function ref(resource: { resourceType: string; id?: string }): string {
 function requiredId(resource: { resourceType: string; id?: string }): string {
   if (!resource.id) throw new Error(`${resource.resourceType} create did not return an id.`);
   return resource.id;
+}
+
+function remittanceAllocationId(transactionId: string, claimReference: string): string {
+  return `era-${createHash("sha256").update(`${transactionId}|${claimReference}`).digest("hex").slice(0, 24)}`;
+}
+
+function findReversedAllocation(
+  resources: readonly Basic[],
+  claimReference: string,
+  claimLineageDepths: ReadonlyMap<string, number>,
+  reversalAmountCents: number,
+): { batchReference: string; allocationId: string } | undefined {
+  const batches = resources.flatMap((resource) => {
+    try {
+      return [{ resource, batch: parseRemittanceBatch(resource) }];
+    } catch {
+      return [];
+    }
+  });
+  const reversed = new Set<string>();
+  for (const { resource, batch } of batches) {
+    const batchReference = `Basic/${resource.id}`;
+    for (const allocation of batch.allocations) {
+      if (allocation.reversalOfAllocationId) {
+        reversed.add(`${allocation.reversalOfBatchReference ?? batchReference}#${allocation.reversalOfAllocationId}`);
+      }
+    }
+  }
+  const candidates = batches
+    .flatMap(({ resource, batch }) => batch.allocations
+      .filter((allocation) =>
+        allocation.amountCents === -reversalAmountCents
+        && allocation.amountCents > 0
+        && claimLineageDepths.has(allocation.claimReference)
+        && !reversed.has(`Basic/${resource.id}#${allocation.id}`),
+      )
+      .map((allocation) => ({
+        batchReference: `Basic/${resource.id}`,
+        allocationId: allocation.id,
+        claimReference: allocation.claimReference,
+        lineageDepth: claimLineageDepths.get(allocation.claimReference)!,
+      })))
+  const predecessorDepths = [...new Set(candidates
+    .map((candidate) => candidate.lineageDepth)
+    .filter((depth) => depth > 0))].sort((left, right) => left - right);
+  for (const depth of predecessorDepths) {
+    const atDepth = candidates.filter((candidate) => candidate.lineageDepth === depth);
+    if (atDepth.length > 0) return atDepth.length === 1 ? atDepth[0] : undefined;
+  }
+  const currentVersionCandidates = candidates.filter((candidate) => candidate.claimReference === claimReference);
+  return currentVersionCandidates.length === 1 ? currentVersionCandidates[0] : undefined;
+}
+
+async function loadClaimLineageDepths(
+  auth: AuthenticatedClaimsStaff,
+  claimReference: string,
+  submittedClaim: Claim | undefined,
+): Promise<Map<string, number>> {
+  const depths = new Map<string, number>([[claimReference, 0]]);
+  const queue = (submittedClaim?.related ?? []).flatMap((related) =>
+    related.claim?.reference ? [{ reference: related.claim.reference, depth: 1 }] : []);
+  for (let index = 0; index < queue.length; index += 1) {
+    const { reference, depth } = queue[index];
+    if (depths.has(reference)) continue;
+    const claimId = reference.match(/^Claim\/([A-Za-z0-9.-]{1,64})$/)?.[1];
+    if (!claimId) continue;
+    depths.set(reference, depth);
+    let claim: Claim;
+    try {
+      claim = await auth.fhir.read<Claim>("Claim", claimId);
+    } catch {
+      continue;
+    }
+    queue.push(...(claim.related ?? []).flatMap((related) =>
+      related.claim?.reference
+        ? [{ reference: related.claim.reference, depth: depth + 1 }]
+        : []));
+  }
+  return depths;
+}
+
+async function persistRemittanceAllocation(
+  auth: AuthenticatedClaimsStaff,
+  initialBatch: Basic,
+  allocation: Parameters<typeof appendRemittanceAllocation>[1],
+): Promise<Basic> {
+  let current = initialBatch;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (parseRemittanceBatch(current).allocations.some((existing) => existing.id === allocation.id)) {
+      return current;
+    }
+    if (!current.id || !current.meta?.versionId) {
+      throw new Error("Remittance batch is missing id/meta.versionId; refusing a non-atomic allocation update.");
+    }
+    try {
+      return await auth.fhir.update<Basic>(
+        "Basic",
+        current.id,
+        appendRemittanceAllocation(current, allocation),
+        { "If-Match": `W/"${current.meta.versionId}"` },
+      );
+    } catch (error) {
+      if (!isFhirVersionConflict(error) || attempt === 2) throw error;
+      current = await auth.fhir.read<Basic>("Basic", current.id);
+    }
+  }
+  throw new Error("Remittance allocation retry exhausted unexpectedly.");
+}
+
+function isFhirVersionConflict(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const status = "status" in error ? error.status : undefined;
+  const message = "message" in error && typeof error.message === "string" ? error.message : "";
+  return status === 409 || status === 412 || /FHIR (409|412)\b/.test(message);
 }
 
 function now(deps: Pick<ClaimsHandlerDeps, "now">): string {

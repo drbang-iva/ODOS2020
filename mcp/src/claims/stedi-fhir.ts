@@ -1,6 +1,8 @@
 import type { Claim, ClaimResponse, CoverageEligibilityResponse, Money } from "@medplum/fhirtypes";
 import {
   claimDiagnosisSequence,
+  claimLineChargeItemReference,
+  claimLineControlNumber,
   claimResponseChargeItemExtension,
   HL7_CLAIM_TYPE_SYSTEM,
   type ProfessionalClaimInput,
@@ -186,7 +188,18 @@ export interface StediEraEnvelope {
   payerName?: string;
   paymentDate: string;
   traceNumber?: string;
+  totalAmountCents: number;
+  providerAdjustments: StediEraProviderAdjustment[];
   claims: StediEraClaim[];
+}
+
+export interface StediEraProviderAdjustment {
+  providerIdentifier?: string;
+  fiscalPeriodDate?: string;
+  adjustmentReasonCode?: string;
+  adjustmentReasonText: string;
+  providerAdjustmentAmountCents: number;
+  providerAdjustmentIdentifier: string;
 }
 
 export type Stedi277Outcome = "accepted-for-processing" | "rejected" | "informational" | "review";
@@ -232,6 +245,37 @@ export function readStediEra(raw: any, fallbackTransactionId: string): StediEraE
   const claims = (transaction.detailInfo ?? []).flatMap((detail: any) => detail.paymentInfo ?? []) as StediEraClaim[];
   const paymentDate = transaction.financialInformation?.checkIssueOrEFTEffectiveDate;
   if (!paymentDate) throw new Error("Stedi ERA is missing its payment effective date.");
+  const totalAmountCents = optionalDecimalCents(
+    transaction.financialInformation?.totalActualProviderPaymentAmount,
+  );
+  if (totalAmountCents === undefined) {
+    throw new Error("Stedi ERA is missing its total actual provider payment amount.");
+  }
+  const providerAdjustments = (transaction.providerAdjustments ?? []).flatMap(
+    (group: any, groupIndex: number) => (group.adjustments ?? []).map((adjustment: any, adjustmentIndex: number) => {
+      const providerAdjustmentAmountCents = optionalDecimalCents(adjustment.providerAdjustmentAmount);
+      if (providerAdjustmentAmountCents === undefined || providerAdjustmentAmountCents === 0) {
+        throw new Error(`Stedi ERA provider adjustment ${groupIndex + 1}.${adjustmentIndex + 1} has an invalid amount.`);
+      }
+      return {
+        ...(group.providerIdentifier ? { providerIdentifier: String(group.providerIdentifier) } : {}),
+        ...(group.fiscalPeriodDate ? { fiscalPeriodDate: String(group.fiscalPeriodDate) } : {}),
+        ...(adjustment.adjustmentReasonCode
+          ? { adjustmentReasonCode: String(adjustment.adjustmentReasonCode) }
+          : {}),
+        adjustmentReasonText: String(
+          adjustment.adjustmentReasonCodeValue
+          ?? adjustment.adjustmentReasonCode
+          ?? "Provider-level adjustment",
+        ),
+        providerAdjustmentAmountCents,
+        providerAdjustmentIdentifier: String(
+          adjustment.providerAdjustmentIdentifier
+          ?? `${fallbackTransactionId}-${groupIndex + 1}-${adjustmentIndex + 1}`,
+        ),
+      };
+    }),
+  ) as StediEraProviderAdjustment[];
   return {
     transactionId: String(raw?.meta?.transactionId ?? fallbackTransactionId),
     payerName: transaction.payer?.name ? String(transaction.payer.name) : undefined,
@@ -239,6 +283,8 @@ export function readStediEra(raw: any, fallbackTransactionId: string): StediEraE
     traceNumber: transaction.paymentAndRemitReassociationDetails?.checkOrEFTTraceNumber
       ? String(transaction.paymentAndRemitReassociationDetails.checkOrEFTTraceNumber)
       : undefined,
+    totalAmountCents,
+    providerAdjustments,
     claims,
   };
 }
@@ -522,13 +568,18 @@ export function buildStediProfessionalClaimJson(
         diagnosisCode: diagnosis.code.replace(".", ""),
       })),
       serviceLines: input.chargeItems.map((item, index) => {
+        const claimItem = claim.item?.find((entry) => entry.sequence === index + 1);
+        const providerControlNumber = claimLineControlNumber(claimItem);
+        if (!providerControlNumber) {
+          throw new ClaimSubmissionValidationError(`Claim item ${index + 1} is missing its persisted Stedi line control number.`);
+        }
         const coding = item.code.coding?.[0];
         if (!coding?.code) throw new Error("ChargeItem must carry a procedure code for Stedi submission.");
         const modifiers = item.modifierExtension?.flatMap((extension) => extension.extension ?? [])
           .flatMap((extension) => extension.valueCode ? [extension.valueCode] : [])
           .slice(0, 4);
         return {
-          providerControlNumber: item.id ?? `${input.patientAccountNumber}-${index + 1}`,
+          providerControlNumber,
           serviceDate: x12Date(input.serviceDate),
           professionalService: {
             procedureIdentifier: "HC",
@@ -628,6 +679,7 @@ export function buildClaimResponseFromStediStatus(input: {
 
 export function buildClaimResponseFromStediEra(input: {
   claimReference: string;
+  submittedClaim?: Claim;
   patientReference: string;
   insurerReference: string;
   providerReference?: string;
@@ -664,7 +716,13 @@ export function buildClaimResponseFromStediEra(input: {
     ...(processNotes.length ? { processNote: processNotes.map((text, index) => ({ number: index + 1, type: "display", text })) } : {}),
     ...(input.claim.claimPaymentInfo.payerClaimControlNumber ? { preAuthRef: input.claim.claimPaymentInfo.payerClaimControlNumber } : {}),
     item: (input.claim.serviceLines ?? []).map((line, index) => {
-      const chargeItemExtension = claimResponseChargeItemExtension(line.lineItemControlNumber);
+      const resolveThroughSubmittedClaim = Object.prototype.hasOwnProperty.call(input, "submittedClaim");
+      const chargeItemReference = resolveThroughSubmittedClaim
+        ? input.submittedClaim && claimLineChargeItemReference(input.submittedClaim, line.lineItemControlNumber)
+        : line.lineItemControlNumber && `ChargeItem/${line.lineItemControlNumber}`;
+      const chargeItemExtension = claimResponseChargeItemExtension(
+        chargeItemReference?.slice("ChargeItem/".length),
+      );
       return {
         itemSequence: index + 1,
         ...(chargeItemExtension ? { extension: [chargeItemExtension] } : {}),
@@ -790,7 +848,6 @@ const STEDI_ERA_CLAIM_STATUSES: Record<string, {
     text: "Reversal of Previous Payment",
     allowsReconciliation: false,
     allowsPatientResponsibilityInvoice: false,
-    reviewReason: "Stedi ERA reversal requires manual posting because negative PaymentReconciliation handling is not automated.",
   },
   "23": {
     outcome: "partial",
