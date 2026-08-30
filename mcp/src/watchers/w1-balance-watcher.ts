@@ -150,9 +150,12 @@ function aggregateBalances(
     const tendered = invoice.extension?.some(
       (extension) => extension.url === ODOS_PAYMENT_TENDER_EXTENSION_URL,
     ) ?? false;
-    const cents = tendered
-      ? 0
-      : Math.max(0, Math.round(amount.value * 100) - (allocatedCents.get(`Invoice/${invoice.id}`) ?? 0));
+    if (tendered) {
+      throw new Error(
+        `Invoice/${invoice.id} carries a record-only tender but remains issued; W1 cannot determine its partial paid amount.`,
+      );
+    }
+    const cents = Math.max(0, Math.round(amount.value * 100) - (allocatedCents.get(`Invoice/${invoice.id}`) ?? 0));
     if (cents === 0) continue;
     const current = result.get(patientRef);
     result.set(patientRef, {

@@ -94,7 +94,7 @@ test("W1 aggregates multiple issued Invoices for one appointment without stackin
   assert.equal(match?.frontDeskMessage, "Sarah M. has a balance from February. She's on today's schedule at 9:40 AM — $152 across 2 visits.");
 });
 
-test("W1 reports remaining balance after completed payment allocations and omits collected Invoices", async () => {
+test("W1 reports remaining balance after allocations and rejects an unknowable issued tender", async () => {
   const partial = reconciliation("payment-partial", "Invoice/invoice-1", 5_000);
   const partialFhir = new PagedFhir({
     Appointment: [bundle([appointment])],
@@ -130,7 +130,7 @@ test("W1 reports remaining balance after completed payment allocations and omits
     settings: { enabled: true, severity: "today", minimumBalanceCents: 1 },
   }), []);
 
-  const tenderedFhir = new PagedFhir({
+  const partialManualFhir = new PagedFhir({
     Appointment: [bundle([appointment])],
     Patient: [bundle([sarah])],
     Invoice: [bundle([{
@@ -138,13 +138,16 @@ test("W1 reports remaining balance after completed payment allocations and omits
       extension: [{ url: "https://odos2020.com/fhir/StructureDefinition/odos-payment-tender" }],
     }])],
   });
-  assert.deepEqual(await evaluateW1({
-    fhir: tenderedFhir,
-    date: "2026-08-30",
-    now: "2026-08-30T12:00:00-04:00",
-    timeZone: "America/New_York",
-    settings: { enabled: true, severity: "today", minimumBalanceCents: 1 },
-  }), []);
+  await assert.rejects(
+    () => evaluateW1({
+      fhir: partialManualFhir,
+      date: "2026-08-30",
+      now: "2026-08-30T12:00:00-04:00",
+      timeZone: "America/New_York",
+      settings: { enabled: true, severity: "today", minimumBalanceCents: 1 },
+    }),
+    /record-only tender but remains issued; W1 cannot determine its partial paid amount/,
+  );
 });
 
 test("W1 resolves scheduled Patients in bounded batches", async () => {
