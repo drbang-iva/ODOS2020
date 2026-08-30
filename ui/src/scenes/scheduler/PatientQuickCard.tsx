@@ -5,6 +5,7 @@ import { useSchedulingStore } from "../../lib/scheduling-store";
 import { patientQuickCardViewModel } from "../../lib/scheduler-appointment-ui";
 import { BalanceChips } from "../../components/commercial/BalanceChips";
 import { AppointmentChartButton } from "../../components/AppointmentChartButton";
+import { watcherCollectionHref, type WatcherAlert, type WatcherTaskAction } from "../../lib/watchers";
 
 export function PatientQuickCard({
   appointment,
@@ -14,6 +15,8 @@ export function PatientQuickCard({
   onDetails,
   date,
   canStartChart = false,
+  watcherAlert,
+  onWatcherAction,
 }: {
   appointment: Appointment | null;
   pinned: boolean;
@@ -22,6 +25,8 @@ export function PatientQuickCard({
   onDetails: (appointment: Appointment) => void;
   date: string;
   canStartChart?: boolean;
+  watcherAlert?: WatcherAlert;
+  onWatcherAction?: (taskId: string, action: WatcherTaskAction) => void | Promise<void>;
 }) {
   const patientReference = patientReferenceOf(appointment);
   const [patient, setPatient] = useState<Patient | null>(null);
@@ -146,6 +151,29 @@ export function PatientQuickCard({
               {appointmentNote}
             </div>
           </div>
+        )}
+
+        {watcherAlert && (
+          <section className="rounded-sm border border-amber-300/40 bg-amber-950/35 p-3" aria-label="Balance watch">
+            <div className="text-xs font-bold uppercase tracking-wide text-amber-200">Balance at check-in</div>
+            <p className="mt-1 font-semibold text-[var(--odos-text)]">{watcherAlert.frontDeskMessage}</p>
+            <p className="mt-2 text-xs text-[var(--odos-muted)]">{watcherAlert.consequence}</p>
+            <a className="scheduler-button mt-3 inline-flex" href={watcherCollectionHref(watcherAlert)}>
+              {watcherAlert.primaryAction.label}
+            </a>
+            <div className="mt-2 flex flex-wrap gap-1.5" aria-label="Dismiss balance watch">
+              {watcherAlert.dismissalReasons.map((reason) => (
+                <button
+                  key={reason.code}
+                  className="rounded border border-[var(--odos-line-2)] px-2 py-1 text-xs text-[var(--odos-muted)] hover:bg-[color-mix(in_srgb,var(--odos-muted)_10%,transparent)]"
+                  type="button"
+                  onClick={() => void onWatcherAction?.(watcherAlert.taskId, { action: "dismiss", reason: reason.code })}
+                >
+                  {reason.display}
+                </button>
+              ))}
+            </div>
+          </section>
         )}
 
         {!patientReference && (

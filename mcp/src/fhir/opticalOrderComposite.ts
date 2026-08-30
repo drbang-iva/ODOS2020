@@ -99,6 +99,7 @@ export function assembleOpticalCashOrder(input: AssembleOpticalCashOrderInput): 
     date: input.date,
     staffReference: input.staffReference,
     tender: input.tender,
+    status: input.tender ? "balanced" : "issued",
     lineItems: input.charges.map((charge, index) => ({
       chargeItemReference: chargeUrns[index],
       amountCents: charge.feeCents,

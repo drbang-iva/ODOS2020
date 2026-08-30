@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import clsx from "clsx";
 import { SCHEDULER_PALETTE } from "../../lib/scheduling";
 import { togglePanel, type CockpitCenterView, type CockpitPanelId } from "../../lib/cockpit-shell";
@@ -11,20 +11,80 @@ import {
   canStartAppointmentChart,
   type PracticeRoleId,
 } from "../../lib/practice-roles";
+import { useSchedulingStore } from "../../lib/scheduling-store";
+import {
+  loadFrontDeskWatchers,
+  updateWatcherTask,
+  type WatcherFrontDeskProjection,
+  type WatcherTaskAction,
+} from "../../lib/watchers";
 
 // The front-desk cockpit shell (design doc §2). Root is a <div> (not <main>) so
 // the embedded SchedulerDayGrid's own <main> stays the single landmark.
-export function FrontDeskCockpit({ roles = [] }: { roles?: readonly PracticeRoleId[] } = {}) {
+export function FrontDeskCockpit({
+  roles = [],
+  initialWatcherProjection,
+  loadWatcherProjection = loadFrontDeskWatchers,
+}: {
+  roles?: readonly PracticeRoleId[];
+  initialWatcherProjection?: WatcherFrontDeskProjection;
+  loadWatcherProjection?: (date: string) => Promise<WatcherFrontDeskProjection>;
+} = {}) {
   const [centerView, setCenterView] = useState<CockpitCenterView>("schedule");
   const [openPanel, setOpenPanel] = useState<CockpitPanelId | null>(null);
+  const [watcherProjection, setWatcherProjection] = useState<WatcherFrontDeskProjection | undefined>(initialWatcherProjection);
+  const [watcherLoadError, setWatcherLoadError] = useState<string>();
+  const date = useSchedulingStore((state) => state.date);
   const canStartChart = canStartAppointmentChart(roles);
+  const initialAppointmentId = typeof window === "undefined"
+    ? undefined
+    : new URLSearchParams(window.location.search).get("appointmentId") ?? undefined;
+
+  useEffect(() => {
+    if (initialWatcherProjection) return;
+    let active = true;
+    loadWatcherProjection(date)
+      .then((projection) => {
+        if (active) {
+          setWatcherProjection(projection);
+          setWatcherLoadError(undefined);
+        }
+      })
+      .catch((error) => {
+        if (active) setWatcherLoadError(error instanceof Error ? error.message : String(error));
+      });
+    return () => { active = false; };
+  }, [date, initialWatcherProjection, loadWatcherProjection]);
+
+  async function handleWatcherAction(taskId: string, action: WatcherTaskAction) {
+    await updateWatcherTask(taskId, action);
+    setWatcherProjection(await loadWatcherProjection(date));
+  }
 
   return (
     <div className="relative flex min-h-screen text-white" style={{ backgroundColor: SCHEDULER_PALETTE.surfaceBase }}>
       <section className="min-w-0 flex-1">
         <CockpitTopBar centerView={centerView} onCenterViewChange={setCenterView} />
+        {watcherProjection?.status === "degraded" && (
+          <div role="alert" className="border-b border-amber-300/40 bg-amber-950/50 px-4 py-2 text-sm text-amber-100">
+            <strong>Balance watch degraded.</strong>{" "}
+            {watcherProjection.lastSuccessfulAt
+              ? <>It last succeeded at <time dateTime={watcherProjection.lastSuccessfulAt}>{watcherProjection.lastSuccessfulAt}</time>.</>
+              : "It has not completed successfully yet."}
+          </div>
+        )}
+        {watcherLoadError && (
+          <div role="alert" className="border-b border-red-400/40 bg-red-950/50 px-4 py-2 text-sm text-red-100">
+            Balance watch could not be loaded: {watcherLoadError}
+          </div>
+        )}
         {centerView === "schedule"
-          ? <SchedulerDayGrid roles={roles} />
+          ? <SchedulerDayGrid
+              roles={roles}
+              watcherAlerts={watcherProjection?.status === "healthy" ? watcherProjection.alerts : []}
+              initialAppointmentId={initialAppointmentId}
+              onWatcherAction={handleWatcherAction}
+            />
           : <CockpitFloorBoard canStartChart={canStartChart} />}
       </section>
       <CockpitBadgeDock openPanel={openPanel} onToggle={(id) => setOpenPanel((prev) => togglePanel(prev, id))} />

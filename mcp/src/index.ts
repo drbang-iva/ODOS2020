@@ -85,6 +85,10 @@ import { registerDeskRoutes } from "./desk/desk-routes.js";
 import { registerStaffInviteRoute } from "./desk/staff-invite.js";
 import { registerClinicRoutes } from "./clinic/clinic-routes.js";
 import { registerOfficeRoutes } from "./office/office-routes.js";
+import { registerWatcherRoutes } from "./watchers/watcher-routes.js";
+import { createWatcherDefinitions, createWatcherRegistry } from "./watchers/watcher-registry.js";
+import { loadOrSeedWatcherConfig } from "./watchers/watcher-config.js";
+import { startWatcherWorker, watcherWorkerIntervalMs } from "./watchers/watcher-engine.js";
 import { registerSchedulingResourceRoutes } from "./scheduling/scheduling-resource-routes.js";
 import {
   commsAdapterRegistrationsFromEnv,
@@ -647,6 +651,10 @@ const fhir = createMedplumClient({
     sessionId: process.env.ODOS_AUDIT_SESSION_ID,
   },
 });
+const watcherRegistry = createWatcherRegistry(createWatcherDefinitions(
+  fhir,
+  process.env.ODOS_TIMEZONE ?? "UTC",
+));
 let authPromise: Promise<void> | undefined;
 startClaimReadModelWorker({
   authenticateService: authenticateWithMedplum,
@@ -5670,6 +5678,13 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
   await logProtocolSeedBootFailure({
     seed: () => protocolDefinitionStore.ensureSeed(GLAUCOMA_SUSPECT_PROTOCOL).then(() => undefined),
   });
+  startWatcherWorker({
+    authenticate: authenticateWithMedplum,
+    fhir,
+    registry: watcherRegistry,
+    loadConfig: () => loadOrSeedWatcherConfig(fhir, watcherRegistry),
+    timeZone: process.env.ODOS_TIMEZONE ?? "UTC",
+  }, watcherWorkerIntervalMs(process.env.ODOS_WATCHER_WORKER_MS));
   if (westFaxAdapter && inboundFaxWorkerEnabled(process.env.ODOS_INBOUND_FAX_WORKER_ENABLED)) {
     startInboundFaxWorker({
       authenticate: authenticateWithMedplum,
@@ -7643,6 +7658,14 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
       registerOfficeRoutes(app, {
         authenticateService: authenticateWithMedplum,
         authenticate: authenticateStaffRoute,
+      });
+      registerWatcherRoutes(app, {
+        authenticateService: authenticateWithMedplum,
+        authenticate: authenticateStaffRoute,
+        serviceFhir: fhir,
+        registry: watcherRegistry,
+        loadConfig: () => loadOrSeedWatcherConfig(fhir, watcherRegistry),
+        timeZone: process.env.ODOS_TIMEZONE ?? "UTC",
       });
       registerClaimFollowUpRoutes(app, {
         authenticateService: authenticateWithMedplum,
