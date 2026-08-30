@@ -9,6 +9,9 @@ import {
   buildClaimTouchTransaction,
   CLAIM_TOUCH_ACTIONS,
   ClaimTouchPrincipalError,
+  claimTouchIdempotencyFingerprint,
+  claimTouchRequestFingerprint,
+  claimTouchState,
   type ClaimReason,
   type ClaimTouchAction,
 } from "./claim-touch-ledger.js";
@@ -57,28 +60,55 @@ export function registerClaimFollowUpRoutes(
       : undefined;
     if (!action) throw new ClaimFollowUpValidationError("action must be note, resubmission, contact, status-reason, or resolution.");
     const claimId = stringParam(req.params.claimId);
-    const claim = await staff.fhir.read<Claim>("Claim", claimId);
-    const reason = typeof body.reasonCode === "string"
-      ? await findReason(deps.serviceFhir, body.reasonCode)
-      : undefined;
-    const transaction = buildClaimTouchTransaction({
-      claim,
-      principal: { kind: "human", actorReference: staff.staffReference, actorRole: staff.actorRole },
+    const idempotencyKey = requiredIdempotencyKey(body.idempotencyKey);
+    const detail = typeof body.detail === "string" ? body.detail : undefined;
+    const reasonCode = typeof body.reasonCode === "string" ? body.reasonCode.trim() : undefined;
+    const fingerprint = claimTouchRequestFingerprint({
+      claimReference: `Claim/${claimId}`,
+      actorReference: staff.staffReference,
+      actorRole: staff.actorRole,
       action,
-      at: now(deps),
-      ...(typeof body.detail === "string" ? { detail: body.detail } : {}),
-      ...(reason ? { reason } : {}),
+      ...(detail !== undefined ? { detail } : {}),
+      ...(reasonCode ? { reasonCode } : {}),
     });
-    await staff.fhir.executeTransaction(transaction);
-    try {
-      const truth = await loadClaimReadModelTruth(staff.fhir, now(deps));
-      const row = truth.find((candidate) => candidate.claimReference === `Claim/${claimId}`);
-      if (!row) throw new Error(`FHIR rebuild did not project Claim/${claimId}.`);
-      await deps.store.upsert(row, now(deps));
-      res.status(201).json({ claimReference: row.claimReference, touchCount: row.touchCount, lastTouchedAt: row.lastTouchedAt, lastTouchedBy: row.lastTouchedBy });
-    } catch {
-      res.status(503).json({ error: "FHIR touch committed but the claim read model did not sync; reconciliation will report drift and rebuild restores it." });
+    let committedClaim = await staff.fhir.read<Claim>("Claim", claimId);
+    const existingFingerprint = claimTouchIdempotencyFingerprint(committedClaim, idempotencyKey);
+    assertMatchingIdempotencyKey(existingFingerprint, fingerprint);
+    let idempotentReplay = existingFingerprint !== undefined;
+    if (!idempotentReplay) {
+      const reason = reasonCode ? await findReason(deps.serviceFhir, reasonCode) : undefined;
+      const transaction = buildClaimTouchTransaction({
+        claim: committedClaim,
+        principal: { kind: "human", actorReference: staff.staffReference, actorRole: staff.actorRole },
+        action,
+        at: now(deps),
+        ...(detail !== undefined ? { detail } : {}),
+        ...(reason ? { reason } : {}),
+        idempotency: { key: idempotencyKey, fingerprint },
+      });
+      const updatedClaim = transaction.entry?.find((entry) => entry.resource?.resourceType === "Claim")?.resource;
+      if (updatedClaim?.resourceType !== "Claim") throw new Error("Claim touch transaction did not contain its Claim update.");
+      try {
+        await staff.fhir.executeTransaction(transaction);
+        committedClaim = updatedClaim;
+      } catch (error) {
+        const concurrentClaim = await readAfterFailedTouch(staff, claimId, error);
+        const concurrentFingerprint = claimTouchIdempotencyFingerprint(concurrentClaim, idempotencyKey);
+        if (concurrentFingerprint !== fingerprint) throw error;
+        committedClaim = concurrentClaim;
+        idempotentReplay = true;
+      }
     }
+    const readModelSynced = await syncReadModelClaim(staff, deps, claimId);
+    const touch = claimTouchState(committedClaim);
+    res.status(201).json({
+      claimReference: `Claim/${claimId}`,
+      touchCount: touch.touchCount,
+      lastTouchedAt: touch.lastTouchedAt,
+      lastTouchedBy: touch.lastTouchedBy,
+      readModelSynced,
+      idempotentReplay,
+    });
   }));
 
   app.get("/claims/follow-up-worklist", (req, res) => withStaff(req, res, deps, async () => {
@@ -135,6 +165,8 @@ async function withStaff(
     if (res.headersSent) return;
     if (error instanceof ClaimFollowUpValidationError || error instanceof ClaimTouchPrincipalError) {
       res.status(400).json({ error: error.message });
+    } else if (error instanceof ClaimFollowUpConflictError) {
+      res.status(409).json({ error: error.message });
     } else {
       console.error("odos-mcp: claim follow-up route failed:", error);
       res.status(500).json({ error: "Claim follow-up route failed." });
@@ -180,6 +212,48 @@ function requiredString(value: unknown, name: string): string {
   return value.trim();
 }
 
+function requiredIdempotencyKey(value: unknown): string {
+  if (typeof value !== "string" || !/^[A-Za-z0-9._-]{8,128}$/.test(value)) {
+    throw new ClaimFollowUpValidationError("idempotencyKey must be 8-128 letters, numbers, dots, underscores, or hyphens.");
+  }
+  return value;
+}
+
+function assertMatchingIdempotencyKey(existing: string | undefined, requested: string): void {
+  if (existing !== undefined && existing !== requested) {
+    throw new ClaimFollowUpConflictError("idempotencyKey was already used for different claim touch content.");
+  }
+}
+
+async function readAfterFailedTouch(
+  staff: ClaimFollowUpStaff,
+  claimId: string,
+  originalError: unknown,
+): Promise<Claim> {
+  try {
+    return await staff.fhir.read<Claim>("Claim", claimId);
+  } catch {
+    throw originalError;
+  }
+}
+
+async function syncReadModelClaim(
+  staff: ClaimFollowUpStaff,
+  deps: ClaimFollowUpRouteDeps,
+  claimId: string,
+): Promise<boolean> {
+  try {
+    const projectedAt = now(deps);
+    const truth = await loadClaimReadModelTruth(staff.fhir, projectedAt);
+    const row = truth.find((candidate) => candidate.claimReference === `Claim/${claimId}`);
+    if (!row) throw new Error(`FHIR rebuild did not project Claim/${claimId}.`);
+    await deps.store.upsert(row, projectedAt);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function stringParam(value: string | string[] | undefined): string {
   if (typeof value !== "string" || !/^[A-Za-z0-9.-]{1,64}$/.test(value)) throw new ClaimFollowUpValidationError("Claim id is invalid.");
   return value;
@@ -191,3 +265,4 @@ function requiredId(resource: CodeSystem): string {
 }
 
 class ClaimFollowUpValidationError extends Error {}
+class ClaimFollowUpConflictError extends Error {}

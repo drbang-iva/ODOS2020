@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type {
   Bundle,
   Claim,
@@ -20,6 +20,8 @@ export const CLAIM_REASON_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/claim-follow-up-reason";
 export const CLAIM_REASON_RESOLUTION_PATH_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/claim-reason-resolution-path";
+export const CLAIM_TOUCH_IDEMPOTENCY_IDENTIFIER_SYSTEM =
+  "https://odos2020.com/fhir/NamingSystem/claim-touch-idempotency";
 
 export const CLAIM_TOUCH_ACTIONS = [
   "note",
@@ -42,6 +44,11 @@ export interface ClaimReason {
   code: string;
   display: string;
   resolutionPath: string;
+}
+
+export interface ClaimTouchIdempotency {
+  key: string;
+  fingerprint: string;
 }
 
 export interface ClaimTouchState {
@@ -80,6 +87,7 @@ export function buildClaimTouchTransaction(input: {
   at: string;
   detail?: string;
   reason?: ClaimReason;
+  idempotency?: ClaimTouchIdempotency;
 }): Bundle {
   assertHumanPrincipal(input.principal);
   if (!input.claim.id) throw new Error("A persisted Claim id is required to record a touch.");
@@ -91,21 +99,28 @@ export function buildClaimTouchTransaction(input: {
     throw new Error(`${input.action} requires a typed claim reason.`);
   }
 
-  const prior = claimTouchState(input.claim);
+  const claim = input.idempotency ? withClaimTouchIdempotency(input.claim, input.idempotency) : input.claim;
+  const prior = claimTouchState(claim);
   const updatedClaim: Claim = {
-    ...input.claim,
+    ...claim,
     extension: [
-      ...(input.claim.extension ?? []).filter((extension) => !CLAIM_TOUCH_EXTENSION_URLS.has(extension.url)),
+      ...(claim.extension ?? []).filter((extension) => !CLAIM_TOUCH_EXTENSION_URLS.has(extension.url)),
       { url: CLAIM_TOUCH_COUNT_EXTENSION_URL, valueUnsignedInt: prior.touchCount + 1 },
       { url: CLAIM_LAST_TOUCHED_AT_EXTENSION_URL, valueDateTime: input.at },
       { url: CLAIM_LAST_TOUCHED_BY_EXTENSION_URL, valueReference: { reference: input.principal.actorReference } },
-      ...(input.reason ? reasonExtensions(input.reason) : currentReasonExtensions(input.claim.extension)),
+      ...(input.reason ? reasonExtensions(input.reason) : currentReasonExtensions(claim.extension)),
     ],
   };
   const communication = communicationForTouch(input, updatedClaim);
   const communicationFullUrl = communication ? `urn:uuid:${randomUUID()}` : undefined;
   const provenance: Provenance = {
     resourceType: "Provenance",
+    ...(input.idempotency ? {
+      identifier: [{
+        system: CLAIM_TOUCH_IDEMPOTENCY_IDENTIFIER_SYSTEM,
+        value: idempotencyIdentifierValue(input.idempotency),
+      }],
+    } : {}),
     target: [{ reference: `Claim/${input.claim.id}` }],
     recorded: input.at,
     activity: {
@@ -148,6 +163,36 @@ export function buildClaimTouchTransaction(input: {
       },
     ],
   };
+}
+
+export function claimTouchRequestFingerprint(input: {
+  claimReference: string;
+  actorReference: string;
+  actorRole: OdosActorRole;
+  action: ClaimTouchAction;
+  detail?: string;
+  reasonCode?: string;
+}): string {
+  return createHash("sha256").update(JSON.stringify({
+    claimReference: input.claimReference,
+    actorReference: input.actorReference,
+    actorRole: input.actorRole,
+    action: input.action,
+    detail: input.detail?.trim() ?? null,
+    reasonCode: input.reasonCode?.trim() ?? null,
+  })).digest("hex");
+}
+
+export function claimTouchIdempotencyFingerprint(claim: Claim, key: string): string | undefined {
+  const prefix = `${key}:`;
+  const matches = (claim.identifier ?? []).flatMap((identifier) =>
+    identifier.system === CLAIM_TOUCH_IDEMPOTENCY_IDENTIFIER_SYSTEM
+    && identifier.value?.startsWith(prefix)
+      ? [identifier.value.slice(prefix.length)]
+      : []
+  );
+  if (matches.length > 1) throw new Error(`Claim has duplicate touch idempotency key ${key}.`);
+  return matches[0];
 }
 
 export function claimTouchState(claim: Claim): ClaimTouchState {
@@ -227,6 +272,27 @@ function assertHumanPrincipal(principal: ClaimTouchPrincipal): void {
   ) {
     throw new ClaimTouchPrincipalError();
   }
+}
+
+function withClaimTouchIdempotency(claim: Claim, idempotency: ClaimTouchIdempotency): Claim {
+  const value = idempotencyIdentifierValue(idempotency);
+  return {
+    ...claim,
+    identifier: [
+      ...(claim.identifier ?? []),
+      { system: CLAIM_TOUCH_IDEMPOTENCY_IDENTIFIER_SYSTEM, value },
+    ],
+  };
+}
+
+function idempotencyIdentifierValue(idempotency: ClaimTouchIdempotency): string {
+  if (!/^[A-Za-z0-9._-]{8,128}$/.test(idempotency.key)) {
+    throw new Error("Claim touch idempotency key is invalid.");
+  }
+  if (!/^[a-f0-9]{64}$/.test(idempotency.fingerprint)) {
+    throw new Error("Claim touch idempotency fingerprint is invalid.");
+  }
+  return `${idempotency.key}:${idempotency.fingerprint}`;
 }
 
 function communicationForTouch(
