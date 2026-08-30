@@ -28,7 +28,8 @@ export interface WatcherMatch {
   patientDisplay: string;
   appointmentReference: string;
   appointmentAt: string;
-  message: string;
+  frontDeskMessage: string;
+  ownerMessage: string;
   balanceCents: number;
   ageDays: number;
   sourceOccurredAt: string;
