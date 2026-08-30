@@ -237,6 +237,7 @@ test("an explicit Patient clear removes only that patient's SMS opt-out with ver
     actorRole: "staff",
     recordedAt: "2026-08-30T15:00:00.000Z",
     reason: "Patient requested re-enrollment in person",
+    identityVerification: "in-person",
   });
 
   assert.deepEqual(result, {
@@ -257,6 +258,8 @@ test("an explicit Patient clear removes only that patient's SMS opt-out with ver
   assert.deepEqual(provenance.target, [{ reference: "Patient/synthetic-1" }]);
   assert.equal(provenance.agent[0]?.who.reference, "Practitioner/staff-1");
   assert.equal(provenance.reason?.[0]?.text, "Patient requested re-enrollment in person");
+  assert.equal(provenance.entity?.[0]?.role, "source");
+  assert.equal(provenance.entity?.[0]?.what.display, "Patient identity verification: in-person");
 });
 
 test("PMS-side patient/channel opt-out suppresses before the provider call", async () => {

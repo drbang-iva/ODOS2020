@@ -8,6 +8,7 @@ import {
   buildMedplumAccessPolicy,
   getRoleDeclaration,
   ODOS_PRACTICE_ROLE_SYSTEM,
+  PRACTICE_ROLE_IDS,
 } from "../src/authz/roles.js";
 import type { CommsProvider, ConversationSummary } from "../src/comms/comms-provider.js";
 import { registerCommsApiRoutes, type CommsApiRouteDeps } from "../src/comms/comms-api.js";
@@ -16,6 +17,11 @@ import { authenticateStaffRoute } from "../src/payments/payment-endpoint.js";
 import express from "express";
 
 const PATIENT_REFERENCE = "Patient/synthetic-1";
+const OPT_OUT_CLEAR_BODY = {
+  patientReference: PATIENT_REFERENCE,
+  reason: "Patient requested re-enrollment in person",
+  identityVerification: "in-person",
+} as const;
 const CALL_ID = `CA${"3".repeat(32)}`;
 const OTHER_CALL_ID = `CA${"8".repeat(32)}`;
 const RECORDING_ID = `RE${"4".repeat(32)}`;
@@ -39,7 +45,6 @@ test("communications RBAC gives front desk patient content without widening its 
   assert.equal(internalOfficeRule.interaction?.includes("update"), false);
 
   for (const role of ["provider", "admin"] as const) {
-    assert.equal(getRoleDeclaration(role).businessActions.includes("communications.optout.manage"), true);
     const policy = buildMedplumAccessPolicy(getRoleDeclaration(role));
     const rule = policy.resource?.find((candidate) =>
       candidate.resourceType === "Communication" && candidate.criteria?.includes("%patient_compartment"));
@@ -50,6 +55,13 @@ test("communications RBAC gives front desk patient content without widening its 
   }
   const admin = buildMedplumAccessPolicy(getRoleDeclaration("admin"));
   assert.equal(admin.resource?.some((rule) => rule.resourceType === "Communication"), true);
+});
+
+test("SMS opt-out management is held only by the front-desk staff role", () => {
+  const holders = PRACTICE_ROLE_IDS.filter((role) =>
+    getRoleDeclaration(role).businessActions.includes("communications.optout.manage"));
+
+  assert.deepEqual(holders, ["staff"]);
 });
 
 test("FHIR policy construction preserves a declared hidden-field mask", () => {
@@ -73,7 +85,7 @@ test("every communications endpoint rejects missing authentication and audits ev
   const endpoints = [
     { method: "GET", path: "/communications/conversations" },
     { method: "GET", path: `/communications/opt-out?patient=${PATIENT_REFERENCE}` },
-    { method: "POST", path: "/communications/opt-out/clear", body: { patientReference: PATIENT_REFERENCE } },
+    { method: "POST", path: "/communications/opt-out/clear", body: OPT_OUT_CLEAR_BODY },
     { method: "POST", path: "/communications/messages", body: { patientReference: PATIENT_REFERENCE, body: "Synthetic message" } },
     { method: "GET", path: "/communications/calls" },
     { method: "GET", path: `/communications/calls/${CALL_ID}` },
@@ -108,9 +120,9 @@ test("opt-out routes require one explicit Patient reference and expose no phone-
     }
     for (const body of [
       {},
-      { patientReference: "+18645550199" },
-      { phone: "+18645550199" },
-      { patientReferences: ["Patient/synthetic-1", "Patient/synthetic-2"] },
+      { ...OPT_OUT_CLEAR_BODY, patientReference: "+18645550199" },
+      { reason: OPT_OUT_CLEAR_BODY.reason, identityVerification: OPT_OUT_CLEAR_BODY.identityVerification, phone: "+18645550199" },
+      { reason: OPT_OUT_CLEAR_BODY.reason, identityVerification: OPT_OUT_CLEAR_BODY.identityVerification, patientReferences: ["Patient/synthetic-1", "Patient/synthetic-2"] },
     ]) {
       const response = await request(fixture.base, "/communications/opt-out/clear", "POST", body, "staff");
       assert.equal(response.status, 400, JSON.stringify(body));
@@ -118,6 +130,27 @@ test("opt-out routes require one explicit Patient reference and expose no phone-
     assert.equal(fixture.patients.every((patient) => patient.extension?.some((entry) =>
       entry.url === ODOS_COMMS_OPT_OUT_EXTENSION_URL)), true);
     assert.equal(fixture.provenances.length, 0);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("opt-out clear requires a non-empty reason and a named identity-verification method", async () => {
+  const fixture = await startServer();
+  try {
+    for (const body of [
+      { patientReference: PATIENT_REFERENCE, identityVerification: "in-person" },
+      { patientReference: PATIENT_REFERENCE, reason: "", identityVerification: "in-person" },
+      { patientReference: PATIENT_REFERENCE, reason: "   ", identityVerification: "in-person" },
+      { patientReference: PATIENT_REFERENCE, reason: OPT_OUT_CLEAR_BODY.reason },
+      { patientReference: PATIENT_REFERENCE, reason: OPT_OUT_CLEAR_BODY.reason, identityVerification: true },
+      { patientReference: PATIENT_REFERENCE, reason: OPT_OUT_CLEAR_BODY.reason, identityVerification: "video-call" },
+    ]) {
+      const response = await request(fixture.base, "/communications/opt-out/clear", "POST", body, "staff");
+      assert.equal(response.status, 400, JSON.stringify(body));
+    }
+    assert.equal(fixture.provenances.length, 0);
+    assert.equal(fixture.patients.every(hasSmsOptOut), true);
   } finally {
     await fixture.close();
   }
@@ -137,6 +170,7 @@ test("opt-out routes return the existing not-found shape for an unknown named Pa
     assert.deepEqual(await read.json(), { error: "Patient not found." });
 
     const clear = await request(fixture.base, "/communications/opt-out/clear", "POST", {
+      ...OPT_OUT_CLEAR_BODY,
       patientReference: "Patient/missing",
     }, "staff");
     assert.equal(clear.status, 404);
@@ -160,8 +194,7 @@ test("clearing one named patient on a shared handset leaves the other patient su
     assert.deepEqual(await before.json(), { patientReference: PATIENT_REFERENCE, smsOptedOut: true });
 
     const cleared = await request(fixture.base, "/communications/opt-out/clear", "POST", {
-      patientReference: PATIENT_REFERENCE,
-      reason: "Patient requested re-enrollment in person",
+      ...OPT_OUT_CLEAR_BODY,
     }, "staff");
     assert.equal(cleared.status, 200);
     assert.deepEqual(await cleared.json(), {
@@ -174,6 +207,10 @@ test("clearing one named patient on a shared handset leaves the other patient su
     assert.equal(fixture.provenances.length, 1);
     assert.equal(fixture.provenances[0]?.agent[0]?.who.reference, "Practitioner/staff");
     assert.equal(fixture.provenances[0]?.reason?.[0]?.text, "Patient requested re-enrollment in person");
+    assert.equal(
+      fixture.provenances[0]?.entity?.[0]?.what.display,
+      "Patient identity verification: in-person",
+    );
     assert.deepEqual(fixture.attributedActors, [{
       actorReference: "Practitioner/staff",
       actorRole: "staff",
@@ -203,6 +240,42 @@ test("clearing one named patient on a shared handset leaves the other patient su
   }
 });
 
+test("opt-out clear uses the caller-bound FHIR client for the Patient write", async () => {
+  const fixture = await startServer({ excludePatientWrite: true });
+  try {
+    const response = await request(
+      fixture.base,
+      "/communications/opt-out/clear",
+      "POST",
+      OPT_OUT_CLEAR_BODY,
+      "staff",
+    );
+
+    assert.equal(response.status, 502);
+    assert.equal(hasSmsOptOut(fixture.patients[0]!), true);
+    assert.equal(fixture.provenances.length, 0);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("opt-out state uses the caller-bound FHIR client for the Patient read", async () => {
+  const fixture = await startServer({ excludePatientRead: true });
+  try {
+    const response = await request(
+      fixture.base,
+      `/communications/opt-out?patient=${PATIENT_REFERENCE}`,
+      "GET",
+      undefined,
+      "staff",
+    );
+
+    assert.equal(response.status, 502);
+  } finally {
+    await fixture.close();
+  }
+});
+
 test("a bearer-authenticated staff membership reaches the opt-out clear through the real role resolver", async () => {
   const fixture = await startServer({ resolvedStaffAuthentication: true });
   try {
@@ -214,7 +287,7 @@ test("a bearer-authenticated staff membership reaches the opt-out clear through 
         "x-odos-actor-id": "real-staff",
         "x-odos-actor-role": "staff",
       },
-      body: JSON.stringify({ patientReference: PATIENT_REFERENCE }),
+      body: JSON.stringify(OPT_OUT_CLEAR_BODY),
     });
 
     assert.equal(response.status, 200);
@@ -771,6 +844,8 @@ async function startServer(options: {
   conversationFailures?: string[];
   conversationUnsupported?: string[];
   resolvedStaffAuthentication?: boolean;
+  excludePatientRead?: boolean;
+  excludePatientWrite?: boolean;
 } = {}) {
   const providerCalls: string[] = [];
   const adapterProviders: string[] = [];
@@ -934,8 +1009,10 @@ async function startServer(options: {
   const deps: CommsApiRouteDeps = {
     authenticateService: async () => undefined,
     authenticate: async (header) => {
+      let resolvedStaff: Awaited<ReturnType<typeof authenticateStaffRoute>>;
+      let role: string | undefined;
       if (options.resolvedStaffAuthentication) {
-        return authenticateStaffRoute({
+        resolvedStaff = await authenticateStaffRoute({
           baseUrl: "http://synthetic-medplum",
           authHeader: header,
           serviceClient: serviceFhir as never,
@@ -945,9 +1022,12 @@ async function startServer(options: {
             user: { resourceType: "User", id: "real-staff", email: "staff@example.test" },
           }), { status: 200, headers: { "content-type": "application/json" } }),
         });
+        if (!resolvedStaff) return null;
+        role = resolvedStaff.actorRole;
+      } else {
+        role = header?.replace("Bearer ", "");
+        if (!role || !["admin", "provider", "staff", "admin", "provider"].includes(role)) return null;
       }
-      const role = header?.replace("Bearer ", "");
-      if (!role || !["admin", "provider", "staff", "admin", "provider"].includes(role)) return null;
       const accessPolicy = buildMedplumAccessPolicy(getRoleDeclaration(role as never));
       const communicationRule = accessPolicy.resource?.find((rule) =>
         rule.resourceType === "Communication" && rule.criteria?.includes("_compartment"));
@@ -964,8 +1044,16 @@ async function startServer(options: {
         return view;
       };
       const callerFhir = {
-        async read() {
-          throw new Error("Unexpected FHIR read in communications API test.");
+        async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
+          if (resourceType !== "Patient") {
+            throw new Error(`Unexpected caller FHIR read for ${resourceType}/${id}.`);
+          }
+          if (options.excludePatientRead) {
+            throw Object.assign(new Error("Synthetic caller AccessPolicy denied Patient read"), { status: 403 });
+          }
+          const found = patients.find((patient) => patient.id === id);
+          if (!found) throw Object.assign(new Error(`Missing Patient/${id}`), { status: 404 });
+          return structuredClone(found) as T;
         },
         async search(_resourceType: string, params: Record<string, string> = {}) {
           if (params.category) {
@@ -1100,8 +1188,20 @@ async function startServer(options: {
           }
           return callerView(persisted);
         },
+        async executeTransactionAsActor(
+          request: Bundle,
+          actor: { actorReference: string; actorRole: string; actionReason: string },
+          headers: Record<string, string> = {},
+          transactionOptions: { validateResponse?: (response: Bundle) => void } = {},
+        ): Promise<Bundle> {
+          if (options.excludePatientWrite) {
+            throw Object.assign(new Error("Synthetic caller AccessPolicy denied Patient write"), { status: 403 });
+          }
+          return serviceFhir.executeTransactionAsActor(request, actor, headers, transactionOptions);
+        },
       } as never;
       authenticatedFhirs.push(callerFhir);
+      if (resolvedStaff) return { ...resolvedStaff, fhir: callerFhir };
       return {
         staffReference: `Practitioner/${role}`,
         actorRole: role as never,
