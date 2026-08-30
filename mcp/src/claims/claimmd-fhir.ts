@@ -13,6 +13,29 @@ import { chargeItemLaterality } from "../fhir/charge-item-laterality.js";
 export const HL7_CLAIM_TYPE_SYSTEM = "http://terminology.hl7.org/CodeSystem/claim-type";
 export const ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/odos-charge-item";
+export const ODOS_CLAIM_LINE_CONTROL_NUMBER_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-claim-line-control-number";
+
+export function claimLineControlNumber(item: NonNullable<Claim["item"]>[number] | undefined): string | undefined {
+  return item?.extension?.find((extension) =>
+    extension.url === ODOS_CLAIM_LINE_CONTROL_NUMBER_EXTENSION_URL)?.valueString;
+}
+
+export function claimLineChargeItemReference(
+  claim: Claim,
+  lineControlNumber: string | undefined,
+): string | undefined {
+  if (!lineControlNumber) return undefined;
+  const matches = (claim.item ?? []).filter((item) => claimLineControlNumber(item) === lineControlNumber);
+  if (matches.length !== 1) return undefined;
+  const references = matches[0].extension?.flatMap((extension) =>
+    extension.url === ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL
+    && /^ChargeItem\/[A-Za-z0-9.-]{1,64}$/.test(extension.valueReference?.reference ?? "")
+      ? [extension.valueReference!.reference!]
+      : [],
+  ) ?? [];
+  return references.length === 1 ? references[0] : undefined;
+}
 
 export function claimResponseChargeItemExtension(chargeItemId: string | undefined): Extension | undefined {
   return chargeItemId && /^[A-Za-z0-9.-]{1,64}$/.test(chargeItemId)
@@ -192,12 +215,21 @@ export function buildProfessionalClaim(input: ProfessionalClaimInput): Claim {
     const unitCents = moneyToCents(chargeItem.priceOverride);
     const diagnosisSequence = claimDiagnosisSequence(chargeItem, input.diagnoses.length);
     const { laterality } = chargeItemLaterality(chargeItem);
+    const lineControlNumber = /^[A-Za-z0-9 .-]{1,30}$/.test(chargeItem.id)
+      ? chargeItem.id
+      : `${input.patientAccountNumber}-${index + 1}`;
     return {
       sequence: index + 1,
-      extension: [{
-        url: ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL,
-        valueReference: { reference: `ChargeItem/${chargeItem.id}` },
-      }],
+      extension: [
+        {
+          url: ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL,
+          valueReference: { reference: `ChargeItem/${chargeItem.id}` },
+        },
+        {
+          url: ODOS_CLAIM_LINE_CONTROL_NUMBER_EXTENSION_URL,
+          valueString: lineControlNumber,
+        },
+      ],
       productOrService: {
         coding: [
           {
@@ -215,6 +247,10 @@ export function buildProfessionalClaim(input: ProfessionalClaimInput): Claim {
       net: money(unitCents * quantity),
     };
   });
+  const lineControlNumbers = items.map((item) => claimLineControlNumber(item));
+  if (lineControlNumbers.some((value) => !value) || new Set(lineControlNumbers).size !== lineControlNumbers.length) {
+    throw new Error("Every professional Claim item must have a unique service-line identity.");
+  }
 
   const totalCents = items.reduce((sum, item) => sum + moneyToCents(item.net), 0);
 

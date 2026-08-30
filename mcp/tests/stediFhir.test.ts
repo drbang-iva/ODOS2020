@@ -72,6 +72,70 @@ test("Stedi claim mapper emits the documented 837P JSON shape", () => {
   assert.equal(payload.claimInformation.serviceLines[0].renderingProvider.lastName, "PROVIDER");
 });
 
+test("Stedi line adjudication resolves through the persisted Claim line identity in a four-of-five case", () => {
+  const input = structuredClone(claimInput);
+  input.patientAccountNumber = "ODOSLINE900";
+  input.chargeItems = Array.from({ length: 5 }, (_, index) => ({
+    ...structuredClone(claimInput.chargeItems[0]!),
+    id: `charge-item-persisted-identifier-long-${index + 1}`,
+  }));
+  const submittedClaim = buildProfessionalClaim(input);
+  const lineIdentityUrl = "https://odos2020.com/fhir/StructureDefinition/odos-claim-line-control-number";
+  assert.deepEqual(
+    submittedClaim.item?.map((item) => item.extension?.find((extension) => extension.url === lineIdentityUrl)?.valueString),
+    ["ODOSLINE900-1", "ODOSLINE900-2", "ODOSLINE900-3", "ODOSLINE900-4", "ODOSLINE900-5"],
+  );
+
+  input.chargeItems.forEach((item, index) => {
+    item.id = `changed-after-claim-${index + 1}`;
+  });
+  const payload = buildStediProfessionalClaimJson(input, submittedClaim, "test");
+  assert.deepEqual(
+    payload.claimInformation.serviceLines.map((line) => line.providerControlNumber),
+    ["ODOSLINE900-1", "ODOSLINE900-2", "ODOSLINE900-3", "ODOSLINE900-4", "ODOSLINE900-5"],
+  );
+
+  const responseInput = {
+    claimReference: "Claim/claim-lines",
+    submittedClaim,
+    patientReference: "Patient/pat-900",
+    insurerReference: "Organization/payer-1",
+    created: "2026-08-30",
+    transactionId: "era-lines-900",
+    paymentDate: "20260830",
+    claim: {
+      claimPaymentInfo: { patientControlNumber: "ODOSLINE900", claimPaymentAmount: "40", claimStatusCode: "1" },
+      serviceLines: [1, 2, 3, 4, 99].map((lineNumber) => ({
+        lineItemControlNumber: `ODOSLINE900-${lineNumber}`,
+        servicePaymentInformation: {
+          lineItemChargeAmount: "10",
+          lineItemProviderPaymentAmount: "8",
+          adjudicatedProcedureCode: "PROC-A",
+        },
+      })),
+    },
+  } as Parameters<typeof buildClaimResponseFromStediEra>[0] & { submittedClaim: typeof submittedClaim };
+  const response = buildClaimResponseFromStediEra(responseInput);
+
+  assert.deepEqual(
+    response.item?.map((item) => item.extension?.[0]?.valueReference?.reference),
+    [
+      "ChargeItem/charge-item-persisted-identifier-long-1",
+      "ChargeItem/charge-item-persisted-identifier-long-2",
+      "ChargeItem/charge-item-persisted-identifier-long-3",
+      "ChargeItem/charge-item-persisted-identifier-long-4",
+      undefined,
+    ],
+  );
+});
+
+test("professional Claim rejects duplicate persisted service-line identities", () => {
+  const input = structuredClone(claimInput);
+  input.chargeItems.push(structuredClone(input.chargeItems[0]!));
+
+  assert.throws(() => buildProfessionalClaim(input), /unique service-line identity/);
+});
+
 test("Stedi claim mapper carries email and fax billing contacts and organization rendering names", () => {
   const input: ProfessionalClaimInput = {
     ...claimInput,

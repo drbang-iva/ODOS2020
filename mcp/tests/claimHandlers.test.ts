@@ -20,6 +20,7 @@ import type {
   Task,
 } from "@medplum/fhirtypes";
 import type { OdosAuditEventRecord } from "../src/authz/odosAudit.js";
+import * as claimHandlers from "../src/claims/claimmd-handlers.js";
 import { assertBusinessActionAllowed } from "../src/authz/roles.js";
 import { StaffRoleServiceUnavailableError } from "../src/payments/payment-endpoint.js";
 import {
@@ -62,7 +63,16 @@ import {
   type ClaimMdEraData,
   type ProfessionalClaimInput,
 } from "../src/claims/claimmd-fhir.js";
-import { parseManualEobHeader } from "../src/claims/manual-eob.js";
+import {
+  PROVIDER_ADJUSTMENT_CODE,
+  REMITTANCE_BATCH_CODE,
+  buildProviderAdjustment,
+  buildRemittanceBatch,
+  parseManualEobHeader,
+  parseProviderAdjustment,
+  parseRemittanceBatch,
+  projectRemittanceBatch,
+} from "../src/claims/manual-eob.js";
 import {
   buildPatientResponsibilityInvoice,
   ODOS_SOURCE_CLAIM_EXTENSION_URL,
@@ -874,7 +884,7 @@ test("Stedi payload also remains on the original idless charge input after prove
 
   assert.equal(result.status, 200);
   assert.equal(created.ChargeItem.length, 2);
-  assert.equal(submitted.payload.claimInformation.serviceLines[0].providerControlNumber, "ODOS-CLAIM-900-1");
+  assert.equal(submitted.payload.claimInformation.serviceLines[0].providerControlNumber, "chargeitem-2");
 });
 
 test("eligibility check creates request/response resources and audits eligibility.check.completed", async () => {
@@ -1282,7 +1292,10 @@ test("Stedi ERA fixture creates the same insurance PaymentReconciliation shape w
         meta: { transactionId: stediTransactionId },
         transactions: [{
           payer: { name: "SYNTHETIC PAYER" },
-          financialInformation: { checkIssueOrEFTEffectiveDate: "20260709" },
+          financialInformation: {
+            checkIssueOrEFTEffectiveDate: "20260709",
+            totalActualProviderPaymentAmount: "80",
+          },
           paymentAndRemitReassociationDetails: { checkOrEFTTraceNumber: "TRACE900" },
           detailInfo: [{ paymentInfo: [{
             claimPaymentInfo: {
@@ -1334,7 +1347,7 @@ test("Stedi ERA fixture creates the same insurance PaymentReconciliation shape w
   assert.equal(created.Task[0].focus?.reference, "ClaimResponse/claimresponse-2");
   assert.equal(created.Task[0].for?.reference, "Patient/pat-900");
   assert.equal(created.Task[0].description, "ERA line linkage requires review");
-  assert.match(taskInput(created.Task[0], "line-linkage-review-reason")?.valueString ?? "", /not owned/);
+  assert.match(taskInput(created.Task[0], "line-linkage-review-reason")?.valueString ?? "", /omitted a valid/);
   assert.deepEqual(
     pickCounts(unverifiedLine.body),
     { posted: 1, denied: 0, underpaid: 0, flagged: 1, taskIds: ["task-1"] },
@@ -1351,6 +1364,48 @@ test("Stedi ERA fixture creates the same insurance PaymentReconciliation shape w
   });
   assert.equal(unmatched.status, 200);
   assert.equal(created.Task[1].groupIdentifier?.system, STEDI_ERA_PAYMENT_SYSTEM);
+});
+
+test("Stedi ERA creates one balancing remittance batch and distinct audited provider-level adjustments", async () => {
+  const fixture = deps();
+  fixture.created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+  const raw = stediEraReport({ transactionId: "era-plb", claimPaymentAmount: "85" }) as any;
+  raw.transactions[0].financialInformation.totalActualProviderPaymentAmount = "80";
+  raw.transactions[0].providerAdjustments = [{
+    fiscalPeriodDate: "20261231",
+    providerIdentifier: "1111111112",
+    adjustments: [{
+      adjustmentReasonCode: "WO",
+      adjustmentReasonCodeValue: "Overpayment Recovery",
+      providerAdjustmentAmount: "5",
+      providerAdjustmentIdentifier: "PLB-RECOVERY-1",
+    }],
+  }];
+  fixture.deps.adapters = { stedi: stediEraAdapter(raw) };
+
+  const result = await handleEraImportRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: { ...eraImportBody(), eraId: "era-plb", clearinghouse: "stedi" },
+  });
+
+  assert.equal(result.status, 200);
+  const batch = fixture.created.Basic.find((basic) => basic.code?.coding?.some((coding) => coding.code === REMITTANCE_BATCH_CODE));
+  const adjustment = fixture.created.Basic.find((basic) => basic.code?.coding?.some((coding) => coding.code === PROVIDER_ADJUSTMENT_CODE));
+  assert.ok(batch);
+  assert.ok(adjustment);
+  assert.equal(parseProviderAdjustment(adjustment).claimReference, undefined);
+  assert.deepEqual(projectRemittanceBatch(batch, [adjustment], "2026-08-30T00:00:00.000Z"), {
+    ...projectRemittanceBatch(batch, [adjustment], "2026-08-30T00:00:00.000Z"),
+    claimActivityCents: 8_500,
+    providerActivityCents: -500,
+    accountedAmountCents: 8_000,
+    unallocatedAmountCents: 0,
+    balanced: true,
+  });
+  assert.equal(fixture.audits.some((row) => row.resourceType === "Basic" && row.resourceId === batch.id), true);
+  assert.equal(fixture.audits.some((row) => row.resourceType === "Basic" && row.resourceId === adjustment.id), true);
+  assert.equal((result.body as any).remittanceBatchId, batch.id);
+  assert.deepEqual((result.body as any).providerAdjustmentIds, [adjustment.id]);
 });
 
 test("Stedi ERA uses payer-stated patient responsibility for the Invoice and flags a line-total disagreement", async () => {
@@ -1533,9 +1588,21 @@ test("an in-loop Stedi import failure is not audited as an ERA retrieval failure
   assert.doesNotMatch(fixture.audits.at(-1)?.actionReason ?? "", /retrieveEraData/);
 });
 
-test("Stedi reversal preserves the signed payment without fabricating a reconciliation and opens review", async () => {
+test("Stedi reversal nets against the prior claim-version allocation without fabricating a second reconciliation", async () => {
   const { created, deps: d } = deps();
+  d.eraUnderpaymentThresholdCents = 100_000;
   created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+  d.adapters = { stedi: stediEraAdapter(stediEraReport({ transactionId: "era-original" })) };
+  const original = await handleEraImportRequest(d, {
+    authHeader: "Bearer good",
+    body: { ...eraImportBody(), eraId: "era-original", clearinghouse: "stedi" },
+  });
+  assert.equal(original.status, 200);
+  created.Claim.push({
+    ...buildProfessionalClaim(professionalClaim),
+    id: "claim-2",
+    related: [{ claim: { reference: "Claim/claim-1" }, relationship: { text: "replacement" } }],
+  });
   d.adapters = { stedi: stediEraAdapter(stediEraReport({
     transactionId: "era-reversal",
     claimStatusCode: "22",
@@ -1548,22 +1615,36 @@ test("Stedi reversal preserves the signed payment without fabricating a reconcil
 
   const result = await handleEraImportRequest(d, {
     authHeader: "Bearer good",
-    body: { ...eraImportBody(), eraId: "era-reversal", clearinghouse: "stedi" },
+    body: {
+      ...eraImportBody(),
+      eraId: "era-reversal",
+      clearinghouse: "stedi",
+      claimReferenceByPcn: { "ODOS-CLAIM-900": "Claim/claim-2" },
+    },
   });
 
   assert.equal(result.status, 200);
-  assert.equal(created.ClaimResponse[0].outcome, "complete");
-  assert.match(created.ClaimResponse[0].disposition ?? "", /Reversal of Previous Payment/);
-  assert.equal(created.ClaimResponse[0].payment?.amount.value, -80);
-  assert.equal(created.PaymentReconciliation.length, 0);
-  assert.equal(created.Task.length, 1);
-  assert.match(taskInput(created.Task[0], "stedi-era-review-reason")?.valueString ?? "", /reversal.*manual posting/i);
+  assert.equal(created.ClaimResponse[1].outcome, "complete");
+  assert.match(created.ClaimResponse[1].disposition ?? "", /Reversal of Previous Payment/);
+  assert.equal(created.ClaimResponse[1].payment?.amount.value, -80);
+  assert.equal(created.PaymentReconciliation.length, 1);
+  assert.equal(created.Task.length, 0);
+  const batches = created.Basic.filter((basic) => basic.code?.coding?.some((coding) => coding.code === REMITTANCE_BATCH_CODE));
+  assert.equal(batches.length, 2);
+  const originalBatch = parseRemittanceBatch(batches[0]);
+  const reversalBatch = parseRemittanceBatch(batches[1]);
+  assert.equal(originalBatch.allocations[0].amountCents, 8_000);
+  assert.equal(reversalBatch.allocations[0].amountCents, -8_000);
+  assert.equal(reversalBatch.allocations[0].claimReference, "Claim/claim-2");
+  assert.equal(reversalBatch.allocations[0].reversalOfAllocationId, originalBatch.allocations[0].id);
+  assert.equal(reversalBatch.allocations[0].reversalOfBatchReference, `Basic/${originalBatch.id}`);
+  assert.equal(originalBatch.allocations[0].amountCents + reversalBatch.allocations[0].amountCents, 0);
   assert.deepEqual(pickCounts(result.body), {
     posted: 0,
     denied: 0,
     underpaid: 0,
-    flagged: 1,
-    taskIds: ["task-1"],
+    flagged: 0,
+    taskIds: [],
   });
 });
 
@@ -2344,6 +2425,55 @@ test("claims.manage protects GET /claims/era with the existing claims 401/403 sh
   assert.equal(unavailable.searchCalls(), 0);
 });
 
+test("remittance list exposes unallocated remainder and age using remittance date before creation date", async () => {
+  const fixture = deps();
+  const list = (claimHandlers as unknown as {
+    handleRemittanceBatchListRequest?: typeof handleEraListRequest;
+  }).handleRemittanceBatchListRequest;
+  assert.equal(typeof list, "function");
+  fixture.created.Basic.push({
+    ...buildRemittanceBatch({
+      payerReference: "Organization/payer-1",
+      paymentReference: "TRACE-LIST",
+      remittanceDate: "2026-07-01",
+      creationDate: "2026-07-08T12:00:00.000Z",
+      totalAmountCents: 10_000,
+      provenance: "clearinghouse",
+      sourceReference: "urn:stedi:835:list",
+    }),
+    id: "batch-list",
+  });
+  fixture.created.Basic.push({
+    ...buildProviderAdjustment({
+      batchReference: "Basic/batch-list",
+      payerReference: "Organization/payer-1",
+      identifier: "PLB-LIST",
+      reasonText: "Provider adjustment",
+      rawSourceAmountCents: -1_000,
+      sourceSystem: "stedi-835",
+      createdAt: "2026-07-08T12:00:00.000Z",
+    }),
+    id: "plb-list",
+  });
+
+  const result = await list!(fixture.deps, { authHeader: "Bearer good" });
+
+  assert.equal(result.status, 200);
+  assert.deepEqual((result.body as any).items.map((item: any) => ({
+    id: item.id,
+    ageDays: item.ageDays,
+    providerActivityCents: item.providerActivityCents,
+    unallocatedAmountCents: item.unallocatedAmountCents,
+    balanced: item.balanced,
+  })), [{
+    id: "batch-list",
+    ageDays: 8,
+    providerActivityCents: 1_000,
+    unallocatedAmountCents: 9_000,
+    balanced: false,
+  }]);
+});
+
 test("manual EOB routes preserve claims.manage 401/403 parity before FHIR access", async () => {
   const unauthenticated = deps();
   assert.deepEqual(await handleCreateManualEobRequest(unauthenticated.deps, {
@@ -2431,6 +2561,8 @@ test("manual EOB posts ClaimResponse and insurance payment while retaining a res
     remainingAmountCents: 3_000,
     status: "draft",
     createdAt: "2026-07-09T12:00:00.000Z",
+    provenance: "manual",
+    sourceReference: "urn:odos:manual-eob:EFT-900",
     postings: [{
       claimReference: "Claim/claim-1",
       claimResponseReference: "ClaimResponse/claimresponse-1",
@@ -2671,12 +2803,16 @@ function stediEraReport(input: {
   lineItemProviderPaymentAmount?: string;
   allowedActual?: string;
   serviceAdjustments?: Array<Record<string, string>>;
+  totalProviderPaymentAmount?: string;
 }): Record<string, unknown> {
   return {
     meta: { transactionId: input.transactionId },
     transactions: [{
       payer: { name: "SYNTHETIC PAYER" },
-      financialInformation: { checkIssueOrEFTEffectiveDate: "20260709" },
+      financialInformation: {
+        checkIssueOrEFTEffectiveDate: "20260709",
+        totalActualProviderPaymentAmount: input.totalProviderPaymentAmount ?? input.claimPaymentAmount ?? "80",
+      },
       paymentAndRemitReassociationDetails: { checkOrEFTTraceNumber: `TRACE-${input.transactionId}` },
       detailInfo: [{ paymentInfo: [{
         claimPaymentInfo: {

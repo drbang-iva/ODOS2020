@@ -301,6 +301,7 @@ import {
   handleEraWorklistRequest,
   handleManualEobListRequest,
   handlePostManualEobClaimRequest,
+  handleRemittanceBatchListRequest,
   handleResolveEraWorklistTaskRequest,
   handleStedi277ImportRequest,
   handleStediClaimResubmissionPreviewRequest,
@@ -7820,6 +7821,27 @@ async function startMcpServer(): Promise<void> {
         } catch (error) {
           console.error("odos-mcp: /claims/manual-eob failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "manual EOB list route failed" });
+        }
+      });
+
+      app.get("/claims/remittances", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleRemittanceBatchListRequest(
+            {
+              authenticate: authenticateClaimsRoute,
+              adapter: claimMdAdapter,
+              routingDefaults: clearinghouseRouting,
+              recordAudit: async (row) => {
+                await auditRuntime.record(row, () => undefined);
+              },
+            },
+            { authHeader: req.header("authorization") },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: /claims/remittances failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "remittance batch list route failed" });
         }
       });
 

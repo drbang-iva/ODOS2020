@@ -33,6 +33,24 @@
       "sliceConsumer": "claims-slice-1a"
     },
     {
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-claim-line-control-number",
+      "namespace": "claims-remittance",
+      "status": "active",
+      "sliceConsumer": "claims-slice-1b"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-remittance-batch",
+      "namespace": "claims-remittance",
+      "status": "active",
+      "sliceConsumer": "claims-slice-1b"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-provider-level-adjustment",
+      "namespace": "claims-remittance",
+      "status": "active",
+      "sliceConsumer": "claims-slice-1b"
+    },
+    {
       "url": "https://odos2020.com/fhir/StructureDefinition/odos-fax-callback-token",
       "namespace": "fax",
       "status": "active",
