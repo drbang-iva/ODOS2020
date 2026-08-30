@@ -82,12 +82,22 @@ test("W1 follows Invoice next links and returns the complete patient-level balan
   );
 });
 
-test("W1 aggregates multiple issued Invoices for one appointment without stacking conditions", async () => {
-  const older = { ...invoice, id: "invoice-older", date: "2026-02-01T12:00:00.000Z", totalNet: { value: 20, currency: "USD" } };
+test("W1 aggregates multiple issued Invoices and chooses the oldest parsed instant without stacking", async () => {
+  const olderInstant = {
+    ...invoice,
+    id: "invoice-older-instant",
+    date: "2026-03-01T00:30:00+14:00",
+    totalNet: { value: 20, currency: "USD" },
+  };
+  const lexicallyEarlierButLater = {
+    ...invoice,
+    id: "invoice-lexically-earlier",
+    date: "2026-02-28T23:00:00-12:00",
+  };
   const fhir = new PagedFhir({
     Appointment: [bundle([appointment])],
     Patient: [bundle([sarah])],
-    Invoice: [bundle([older, invoice])],
+    Invoice: [bundle([olderInstant, lexicallyEarlierButLater])],
   });
 
   const [match] = await evaluateW1({
@@ -102,6 +112,7 @@ test("W1 aggregates multiple issued Invoices for one appointment without stackin
   assert.equal(match?.balanceCents, 15200);
   assert.equal(match?.sourceInvoiceCount, 2);
   assert.equal(match?.frontDeskMessage, "Sarah M. has a balance from February. She's on today's schedule at 9:40 AM — $152 across 2 visits.");
+  assert.equal(match?.sourceOccurredAt, "2026-03-01T00:30:00+14:00");
 });
 
 test("W1 reports remaining balance after allocations and rejects an unknowable issued tender", async () => {

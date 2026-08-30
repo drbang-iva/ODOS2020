@@ -53,7 +53,7 @@ W1 evaluates the current practice day:
 1. Convert the practice day to explicit timezone-aware midnight bounds, then read every non-cancelled Appointment in that interval while following FHIR next links.
 2. Resolve every referenced Patient in bounded batches.
 3. Read every issued Invoice and every active PaymentReconciliation, following FHIR next links, and join by patient and Invoice reference.
-4. Compute each Invoice's remaining amount from `Invoice.totalNet` less completed payment allocations, floor overpayment at zero, and retain the oldest still-open Invoice date. An issued Invoice carrying the record-only tender marker represents a partial manual payment whose amount is not persisted; W1 fails the sweep instead of claiming zero or the original total.
+4. Compute each Invoice's remaining amount from `Invoice.totalNet` less completed payment allocations, floor overpayment at zero, and retain the oldest still-open Invoice by parsed instant so mixed offsets cannot distort its month or age. An issued Invoice carrying the record-only tender marker represents a partial manual payment whose amount is not persisted; W1 fails the sweep instead of claiming zero or the original total.
 5. Sum positive remaining amounts for each scheduled patient.
 6. Emit one condition per matching Appointment whose persisted minimum is met.
 

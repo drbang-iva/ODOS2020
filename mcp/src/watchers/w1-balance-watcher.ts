@@ -168,7 +168,9 @@ function aggregateBalances(
     result.set(patientRef, {
       totalCents: (current?.totalCents ?? 0) + cents,
       count: (current?.count ?? 0) + 1,
-      oldestAt: !current || occurredAt < current.oldestAt ? occurredAt : current.oldestAt,
+      oldestAt: !current || Date.parse(occurredAt) < Date.parse(current.oldestAt)
+        ? occurredAt
+        : current.oldestAt,
     });
   }
   return result;
