@@ -56,6 +56,23 @@ test("MEDPLUM_PROJECT_ID is a fallback only when no installation manifest exists
   }
 });
 
+test("an existing installation manifest without projectId fails instead of falling through to env", () => {
+  const { directory, statePath } = fixture();
+  try {
+    writeFileSync(statePath, JSON.stringify({ version: "v0.5d", completed: false }));
+    assert.throws(
+      () => resolveInstallationProject({
+        args: [],
+        env: { MEDPLUM_PROJECT_ID: "practice-env", ODOS_SETUP_STATE_PATH: statePath },
+        workingDirectory: directory,
+      }),
+      /installation manifest.*does not contain.*projectId/i,
+    );
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("configuration resolution can remain unresolved for authenticated-session fallback", () => {
   const { directory, statePath } = fixture();
   try {

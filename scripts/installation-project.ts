@@ -42,9 +42,13 @@ export function resolveConfiguredInstallationProject(input: {
   const statePath = installationStatePath(env, workingDirectory);
   const explicitProjectId = argumentValue(args, "--project")?.trim();
   const acknowledgedForeignProject = args.includes("--allow-foreign-project");
+  const manifestExists = existsSync(statePath);
   const manifestProjectId = readJsonProjectId(statePath, ["projectId"]);
   const environmentProjectId = env.MEDPLUM_PROJECT_ID?.trim();
 
+  if (manifestExists && !manifestProjectId) {
+    throw new Error(`Installation manifest ${statePath} does not contain a projectId; refusing to use another source.`);
+  }
   if (input.requireExplicitProject && !explicitProjectId) {
     throw new Error(
       "This break-glass operation requires explicit --project <project-id>; installation state and MEDPLUM_PROJECT_ID are not accepted.",
