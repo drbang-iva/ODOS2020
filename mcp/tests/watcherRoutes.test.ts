@@ -11,7 +11,7 @@ import {
   projectTodayDigest,
 } from "../src/watchers/watcher-projections.js";
 import { applyWatcherTaskAction, registerWatcherRoutes } from "../src/watchers/watcher-routes.js";
-import { buildWatcherTask } from "../src/watchers/watcher-task.js";
+import { buildWatcherTask, WATCHER_CODE_SYSTEM } from "../src/watchers/watcher-task.js";
 import type { WatcherDefinition, WatcherMatch, WatcherPracticeConfig } from "../src/watchers/watcher-types.js";
 
 const definition: WatcherDefinition = {
@@ -275,6 +275,28 @@ test("watcher routes reject a caller without billing-context.read before service
     assert.equal(response.status, 403);
     assert.deepEqual(await response.json(), { error: "billing-context.read role required" });
     assert.deepEqual(fhir.searches, []);
+    assert.equal(server.serviceAuthCalls(), 0);
+  } finally {
+    await server.close();
+  }
+});
+
+test("watcher projections restrict paginated Task reads to the ODOS watcher code system", async () => {
+  const fhir = new RouteFhir([], buildWatcherHealthResource({
+    lastAttemptAt: "2026-08-30T12:00:00.000Z",
+    lastSuccessfulAt: "2026-08-30T12:00:00.000Z",
+    outcome: "healthy",
+  }));
+  const server = await startServer(fhir);
+  try {
+    const response = await fetch(`${server.base}/watchers/today`, {
+      headers: { authorization: "Bearer staff" },
+    });
+    assert.equal(response.status, 200);
+    assert.deepEqual(
+      fhir.searchParams.find((entry) => entry.resourceType === "Task")?.params,
+      { code: `${WATCHER_CODE_SYSTEM}|`, _count: "1000" },
+    );
   } finally {
     await server.close();
   }
@@ -357,9 +379,11 @@ function watcherTask(index: number, date: string, balanceCents: number, ageDays:
 class RouteFhir {
   tasks: Task[];
   readonly searches: Resource["resourceType"][] = [];
+  readonly searchParams: Array<{ resourceType: Resource["resourceType"]; params: unknown }> = [];
   constructor(tasks: Task[] = [], readonly health?: Basic) { this.tasks = structuredClone(tasks); }
-  async search<T extends Resource>(resourceType: T["resourceType"]): Promise<Bundle<T>> {
+  async search<T extends Resource>(resourceType: T["resourceType"], params?: unknown): Promise<Bundle<T>> {
     this.searches.push(resourceType);
+    this.searchParams.push({ resourceType, params: structuredClone(params) });
     const rows = resourceType === "Task" ? this.tasks : this.health ? [this.health] : [];
     return { resourceType: "Bundle", type: "searchset", entry: rows.map((resource) => ({ resource: structuredClone(resource) as T })) };
   }
@@ -380,9 +404,10 @@ async function startServer(
   options: { now?: string; timeZone?: string; roles?: PracticeRoleId[] } = {},
 ) {
   const app = express();
+  let serviceAuthCalls = 0;
   app.use(express.json());
   registerWatcherRoutes(app, {
-    authenticateService: async () => undefined,
+    authenticateService: async () => { serviceAuthCalls += 1; },
     authenticate: async (header) => header ? {
       staffReference: "Practitioner/staff",
       roles: options.roles ?? ["staff"],
@@ -397,5 +422,9 @@ async function startServer(
   const listener = app.listen(0, "127.0.0.1");
   await new Promise<void>((resolve) => listener.once("listening", resolve));
   const port = (listener.address() as AddressInfo).port;
-  return { base: `http://127.0.0.1:${port}`, close: () => new Promise<void>((resolve, reject) => listener.close((error) => error ? reject(error) : resolve())) };
+  return {
+    base: `http://127.0.0.1:${port}`,
+    serviceAuthCalls: () => serviceAuthCalls,
+    close: () => new Promise<void>((resolve, reject) => listener.close((error) => error ? reject(error) : resolve())),
+  };
 }

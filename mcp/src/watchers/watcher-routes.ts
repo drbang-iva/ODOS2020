@@ -177,7 +177,7 @@ async function watcherTasks(fhir: WatcherRouteFhir): Promise<Task[]> {
   return collectAllPages<Task>(
     fhir,
     "Task",
-    { _count: "1000" },
+    { code: `${WATCHER_CODE_SYSTEM}|`, _count: "1000" },
     "Watcher Tasks",
   );
 }
@@ -190,7 +190,6 @@ async function withStaff(
   action: () => Promise<void>,
 ): Promise<void> {
   try {
-    await deps.authenticateService();
     const staff = await deps.authenticate(req.header("authorization"));
     if (!staff) {
       res.status(401).json({ error: "Authentication required for watcher alerts." });
@@ -200,6 +199,7 @@ async function withStaff(
       res.status(403).json({ error: `${requiredAction} role required` });
       return;
     }
+    await deps.authenticateService();
     await action();
   } catch (error) {
     if (res.headersSent) return;
