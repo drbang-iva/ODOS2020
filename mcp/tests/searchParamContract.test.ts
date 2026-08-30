@@ -72,6 +72,13 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
     spec("Invoice", "_count", "_sort"),
     spec("Patient", "_id", "_count"),
   ],
+  "watcher-pagination.search-resource": [
+    spec("Appointment", "date", "_count", "_sort"),
+    spec("Patient", "_id", "_count"),
+    spec("Invoice", "status", "_count", "_sort"),
+    spec("Task", "code", "_count"),
+    spec("Task", "_count"),
+  ],
   "weno-mapping.search-basic": [spec("Basic", "code", "_count")],
   "tools.list-patients": [spec("Patient", "name", "_count")],
   "tools.get-observations": [spec("Observation", "subject", "category", "_count")],
