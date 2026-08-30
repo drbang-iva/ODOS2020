@@ -3,6 +3,7 @@ import type { AddressInfo } from "node:net";
 import test from "node:test";
 import type { Basic, Bundle, Resource, Task } from "@medplum/fhirtypes";
 import express from "express";
+import type { PracticeRoleId } from "../src/authz/roles.js";
 import { createWatcherDefinitions, createWatcherRegistry } from "../src/watchers/watcher-registry.js";
 import { buildWatcherHealthResource } from "../src/watchers/watcher-health.js";
 import {
@@ -264,6 +265,37 @@ test("Today and front-desk routes default and project on the practice calendar d
   }
 });
 
+test("watcher routes reject a caller without billing-context.read before service FHIR access", async () => {
+  const fhir = new RouteFhir();
+  const server = await startServer(fhir, { roles: [] });
+  try {
+    const response = await fetch(`${server.base}/watchers/today`, {
+      headers: { authorization: "Bearer no-role" },
+    });
+    assert.equal(response.status, 403);
+    assert.deepEqual(await response.json(), { error: "billing-context.read role required" });
+    assert.deepEqual(fhir.searches, []);
+  } finally {
+    await server.close();
+  }
+});
+
+test("watcher routes reject impossible calendar dates instead of normalizing them", async () => {
+  const fhir = new RouteFhir();
+  const server = await startServer(fhir);
+  try {
+    for (const path of ["/watchers/frontdesk?date=2026-02-31", "/watchers/today?date=2026-02-31"]) {
+      const response = await fetch(`${server.base}${path}`, {
+        headers: { authorization: "Bearer staff" },
+      });
+      assert.equal(response.status, 400);
+      assert.deepEqual(await response.json(), { error: "Watcher date must be YYYY-MM-DD." });
+    }
+  } finally {
+    await server.close();
+  }
+});
+
 function watcherTask(index: number, date: string, balanceCents: number, ageDays: number): Task {
   const match: WatcherMatch = {
     watcherId: "W1",
@@ -305,13 +337,17 @@ class RouteFhir {
 
 async function startServer(
   fhir: RouteFhir,
-  options: { now?: string; timeZone?: string } = {},
+  options: { now?: string; timeZone?: string; roles?: PracticeRoleId[] } = {},
 ) {
   const app = express();
   app.use(express.json());
   registerWatcherRoutes(app, {
     authenticateService: async () => undefined,
-    authenticate: async (header) => header ? { staffReference: "Practitioner/staff", fhir } : null,
+    authenticate: async (header) => header ? {
+      staffReference: "Practitioner/staff",
+      roles: options.roles ?? ["staff"],
+      fhir,
+    } : null,
     serviceFhir: fhir,
     registry,
     loadConfig: async () => config,

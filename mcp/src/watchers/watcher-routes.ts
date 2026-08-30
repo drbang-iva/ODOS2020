@@ -6,6 +6,7 @@ import { projectFrontDeskAlerts, projectTodayDigest } from "./watcher-projection
 import type { WatcherPracticeConfig, WatcherRegistry } from "./watcher-types.js";
 import { practiceDate } from "../desk/day-ledger.js";
 import { conditionKey } from "./watcher-task.js";
+import { resolveBusinessActionRole, type PracticeRoleId } from "../authz/roles.js";
 
 const WATCHER_ACTION_SYSTEM = "https://odos2020.com/fhir/CodeSystem/watcher-action";
 const TERMINAL_TASK_STATUSES = new Set<Task["status"]>([
@@ -23,6 +24,7 @@ export interface WatcherRouteFhir extends PaginatedFhir {
 
 interface WatcherStaff {
   staffReference: string;
+  roles?: readonly PracticeRoleId[];
   fhir: unknown;
 }
 
@@ -184,8 +186,13 @@ async function withStaff(
 ): Promise<void> {
   try {
     await deps.authenticateService();
-    if (!await deps.authenticate(req.header("authorization"))) {
+    const staff = await deps.authenticate(req.header("authorization"));
+    if (!staff) {
       res.status(401).json({ error: "Authentication required for watcher alerts." });
+      return;
+    }
+    if (!resolveBusinessActionRole(staff.roles ?? [], "billing-context.read")) {
+      res.status(403).json({ error: "billing-context.read role required" });
       return;
     }
     await action();
@@ -201,7 +208,10 @@ async function withStaff(
 }
 
 function requestedDate(value: unknown): string {
-  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(Date.parse(`${value}T00:00:00Z`))) {
+  const parsed = typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? Date.parse(`${value}T00:00:00Z`)
+    : NaN;
+  if (typeof value !== "string" || Number.isNaN(parsed) || new Date(parsed).toISOString().slice(0, 10) !== value) {
     throw new WatcherValidationError("Watcher date must be YYYY-MM-DD.");
   }
   return value;
