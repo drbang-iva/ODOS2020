@@ -35,7 +35,7 @@ const BREADCRUMBS: Record<string, BreadcrumbItem[]> = {
   "/schedule/day": [{ label: "Schedule" }, { label: "Day" }],
   "/scheduler/day": [{ label: "Schedule" }, { label: "Day" }],
   "/frontdesk": [{ label: "Front desk" }],
-  "/billing/claims/worklist": [{ label: "Billing" }, { label: "Claims" }, { label: "Worklist" }],
+  "/billing/claims/worklist": [{ label: "Billing" }, { label: "Work" }],
   "/billing/claims/search": [{ label: "Billing" }, { label: "Claims" }, { label: "Search" }],
   "/billing/claims/remittances": [{ label: "Billing" }, { label: "Claims" }, { label: "Remittances" }],
   "/billing/claims/submit": [{ label: "Billing" }, { label: "Claims" }, { label: "Submit" }],
@@ -171,7 +171,7 @@ function SectionsDrawer({ open, roles, onClose }: { open: boolean; roles: readon
         <DrawerGroup label="Every day">
           <DrawerLink icon="▦" title="Schedule" detail="day grid, all providers" href="/schedule/day" onClick={route} />
           <DrawerLink icon="⌂" title="Front desk" detail="schedule and floor" href="/frontdesk" onClick={route} />
-          <DrawerLink icon="⇄" title="Claims worklist" detail="transmission and denial work" href="/billing/claims/worklist" onClick={route} />
+          <DrawerLink icon="⇄" title="Work" detail="reason-grouped billing work" href="/billing/claims/worklist" onClick={route} />
           <DrawerLink icon="◫" title="Reports / A-R" detail="production and aging" href="/billing/claims/reports/accounts-receivable" onClick={route} />
           <DrawerLink icon="▤" title="Statements" detail="patient statement runs" href="/billing/statements" onClick={route} />
           <DrawerLink icon="◇" title="Lab orders" detail="optical orders in flight" href="/dispensary/lab-orders" onClick={route} />

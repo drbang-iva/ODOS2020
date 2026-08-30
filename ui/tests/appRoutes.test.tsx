@@ -8,6 +8,15 @@ import { RouteSwitch } from "../src/App";
 import { OdosChips } from "../src/components/inputs/OdosChips";
 import { RoleProvider } from "../src/lib/role-context";
 
+test("the claims worklist route now reaches the authoritative billing Work surface", () => {
+  const html = renderToStaticMarkup(
+    <RouteSwitch view={{ kind: "picker" }} path="/billing/claims/worklist" />,
+  );
+  assert.match(html, />Work</);
+  assert.match(html, /Loading Work projection/);
+  assert.doesNotMatch(html, /Claims worklist/);
+});
+
 test("the Accounts Receivable dashboard UI route reaches the dashboard without replacing existing routing", () => {
   const html = renderToStaticMarkup(
     <RouteSwitch view={{ kind: "picker" }} path="/billing/claims/reports/accounts-receivable" />,

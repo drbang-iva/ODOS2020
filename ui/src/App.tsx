@@ -15,7 +15,7 @@ import { OpticalOrder } from "./scenes/OpticalOrder";
 import { LabOrdersWorklist } from "./scenes/LabOrdersWorklist";
 import { SchedulerDayGrid } from "./scenes/SchedulerDayGrid";
 import { FrontDeskCockpit } from "./scenes/frontdesk/FrontDeskCockpit";
-import { ClaimsWorklist } from "./scenes/claims/ClaimsWorklist";
+import { BillingWork } from "./scenes/claims/BillingWork";
 import { ClaimSearch } from "./scenes/claims/ClaimSearch";
 import { RemittanceQueue } from "./scenes/claims/RemittanceQueue";
 import { SubmitClaims } from "./scenes/claims/SubmitClaims";
@@ -368,7 +368,7 @@ export function RouteSwitch({
     case CLINIC_PATIENTS_PATH:
       return <ViewRouter view={view.kind === "picker" ? view : { kind: "picker" }} />;
     case "/billing/claims/worklist":
-      return <ClaimsWorklist />;
+      return <BillingWork />;
     case "/billing/today":
       return <BillingToday />;
     case "/billing/claims/search":

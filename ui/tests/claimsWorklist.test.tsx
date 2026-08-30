@@ -10,9 +10,9 @@ import {
   type ClaimsWorklistItem,
   type WorklistCode,
 } from "../src/lib/claims-worklist";
-import { ClaimsWorklistBoard, ClaimsWorklistPanel } from "../src/scenes/claims/ClaimsWorklist";
+import { ClaimsWorklistPanel, EraWorklistBoard } from "../src/scenes/claims/ClaimsWorklist";
 
-test("worklist board renders integrity separately from underpayments across all six lanes", () => {
+test("ERA resolution board remains reusable with all six task lanes", () => {
   const items = [
     fixture("era-denial"),
     fixture("era-integrity"),
@@ -22,7 +22,7 @@ test("worklist board renders integrity separately from underpayments across all 
     fixture("claim-rejected"),
   ];
   const html = renderToStaticMarkup(
-    <ClaimsWorklistBoard
+    <EraWorklistBoard
       items={items}
       onSelect={() => undefined}
     />,
@@ -67,7 +67,7 @@ test("claim action refresh projects the resulting in-review status", async () =>
 
   await claimWorklistItem("task-17", { fetchImpl });
   const refreshed = await fetchClaimsWorklist(undefined, { fetchImpl });
-  const html = renderToStaticMarkup(<ClaimsWorklistBoard items={refreshed} onSelect={() => undefined} />);
+  const html = renderToStaticMarkup(<EraWorklistBoard items={refreshed} onSelect={() => undefined} />);
 
   assert.equal(refreshed[0].status, "in-review");
   assert.match(html, /in-review/);
