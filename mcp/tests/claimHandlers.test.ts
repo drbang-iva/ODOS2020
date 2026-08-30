@@ -1731,6 +1731,56 @@ test("Stedi reversal prefers the directly related prior claim when equal payment
   assert.notEqual(reversal.allocations[0].reversalOfAllocationId, reissue.allocations[0].id);
 });
 
+test("Stedi reversal follows Claim.related through an unpaid intermediate generation", async () => {
+  const fixture = deps();
+  fixture.deps.eraUnderpaymentThresholdCents = 100_000;
+  fixture.created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+  fixture.deps.adapters = { stedi: stediEraAdapter(stediEraReport({ transactionId: "era-ancestor-original" })) };
+  await handleEraImportRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: { ...eraImportBody(), eraId: "era-ancestor-original", clearinghouse: "stedi" },
+  });
+  fixture.created.Claim.push({
+    ...buildProfessionalClaim(professionalClaim),
+    id: "claim-2",
+    related: [{ claim: { reference: "Claim/claim-1" }, relationship: { text: "replacement" } }],
+  });
+  fixture.created.Claim.push({
+    ...buildProfessionalClaim(professionalClaim),
+    id: "claim-3",
+    related: [{ claim: { reference: "Claim/claim-2" }, relationship: { text: "replacement" } }],
+  });
+  fixture.deps.adapters = { stedi: stediEraAdapter(stediEraReport({
+    transactionId: "era-ancestor-reversal",
+    claimStatusCode: "22",
+    totalClaimChargeAmount: "-125",
+    claimPaymentAmount: "-80",
+    lineItemChargeAmount: "-125",
+    lineItemProviderPaymentAmount: "-80",
+    allowedActual: "-80",
+  })) };
+
+  const result = await handleEraImportRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: {
+      ...eraImportBody(),
+      eraId: "era-ancestor-reversal",
+      clearinghouse: "stedi",
+      claimReferenceByPcn: { "ODOS-CLAIM-900": "Claim/claim-3" },
+    },
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal(fixture.created.Task.length, 0);
+  const batches = fixture.created.Basic.filter((basic) => basic.code?.coding?.some(
+    (coding) => coding.code === REMITTANCE_BATCH_CODE,
+  ));
+  const original = parseRemittanceBatch(batches[0]);
+  const reversal = parseRemittanceBatch(batches[1]);
+  assert.equal(reversal.allocations[0].reversalOfBatchReference, `Basic/${batches[0].id}`);
+  assert.equal(reversal.allocations[0].reversalOfAllocationId, original.allocations[0].id);
+});
+
 test("Stedi allocation retries a version conflict without discarding the concurrent allocation", async () => {
   const fixture = deps();
   fixture.created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });

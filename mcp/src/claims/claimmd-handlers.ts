@@ -1085,10 +1085,11 @@ async function importStediEra(
         (allocation) => allocation.id === allocationId,
       )) {
         if (stediAnalysis.claimStatusCode === "22") {
+          const claimLineageDepths = await loadClaimLineageDepths(auth, claimReference, submittedClaim);
           const original = findReversedAllocation(
             [...priorBatchResources, remittanceBatch],
             claimReference,
-            submittedClaim,
+            claimLineageDepths,
             paidCents,
           );
           if (original) {
@@ -2441,7 +2442,7 @@ function remittanceAllocationId(transactionId: string, claimReference: string): 
 function findReversedAllocation(
   resources: readonly Basic[],
   claimReference: string,
-  submittedClaim: Claim | undefined,
+  claimLineageDepths: ReadonlyMap<string, number>,
   reversalAmountCents: number,
 ): { batchReference: string; allocationId: string } | undefined {
   const batches = resources.flatMap((resource) => {
@@ -2460,32 +2461,57 @@ function findReversedAllocation(
       }
     }
   }
-  const directPriorClaimReferences = new Set(
-    (submittedClaim?.related ?? []).flatMap((related) =>
-      related.claim?.reference ? [related.claim.reference] : []),
-  );
   const candidates = batches
     .flatMap(({ resource, batch }) => batch.allocations
       .filter((allocation) =>
         allocation.amountCents === -reversalAmountCents
         && allocation.amountCents > 0
-        && (allocation.claimReference === claimReference
-          || directPriorClaimReferences.has(allocation.claimReference))
+        && claimLineageDepths.has(allocation.claimReference)
         && !reversed.has(`Basic/${resource.id}#${allocation.id}`),
       )
       .map((allocation) => ({
         batchReference: `Basic/${resource.id}`,
         allocationId: allocation.id,
         claimReference: allocation.claimReference,
+        lineageDepth: claimLineageDepths.get(allocation.claimReference)!,
       })))
-  const directPriorCandidates = candidates.filter((candidate) =>
-    directPriorClaimReferences.has(candidate.claimReference),
-  );
-  if (directPriorCandidates.length > 0) {
-    return directPriorCandidates.length === 1 ? directPriorCandidates[0] : undefined;
+  const predecessorDepths = [...new Set(candidates
+    .map((candidate) => candidate.lineageDepth)
+    .filter((depth) => depth > 0))].sort((left, right) => left - right);
+  for (const depth of predecessorDepths) {
+    const atDepth = candidates.filter((candidate) => candidate.lineageDepth === depth);
+    if (atDepth.length > 0) return atDepth.length === 1 ? atDepth[0] : undefined;
   }
   const currentVersionCandidates = candidates.filter((candidate) => candidate.claimReference === claimReference);
   return currentVersionCandidates.length === 1 ? currentVersionCandidates[0] : undefined;
+}
+
+async function loadClaimLineageDepths(
+  auth: AuthenticatedClaimsStaff,
+  claimReference: string,
+  submittedClaim: Claim | undefined,
+): Promise<Map<string, number>> {
+  const depths = new Map<string, number>([[claimReference, 0]]);
+  const queue = (submittedClaim?.related ?? []).flatMap((related) =>
+    related.claim?.reference ? [{ reference: related.claim.reference, depth: 1 }] : []);
+  for (let index = 0; index < queue.length; index += 1) {
+    const { reference, depth } = queue[index];
+    if (depths.has(reference)) continue;
+    const claimId = reference.match(/^Claim\/([A-Za-z0-9.-]{1,64})$/)?.[1];
+    if (!claimId) continue;
+    depths.set(reference, depth);
+    let claim: Claim;
+    try {
+      claim = await auth.fhir.read<Claim>("Claim", claimId);
+    } catch {
+      continue;
+    }
+    queue.push(...(claim.related ?? []).flatMap((related) =>
+      related.claim?.reference
+        ? [{ reference: related.claim.reference, depth: depth + 1 }]
+        : []));
+  }
+  return depths;
 }
 
 async function persistRemittanceAllocation(
