@@ -92,6 +92,18 @@ test("reconciliation detects a corrupted money row and a rebuild restores exact 
   });
 });
 
+test("an older per-claim upsert cannot overwrite a newer completed rebuild", async () => {
+  const rebuilt = row({ claimReference: "Claim/race", totalChargedCents: 12_500 });
+  await store.rebuild([rebuilt], AT);
+
+  await store.upsert(
+    row({ claimReference: "Claim/race", totalChargedCents: 99_999 }),
+    "2026-08-30T11:59:00.000Z",
+  );
+
+  assert.deepEqual(await store.listAll(), [rebuilt]);
+});
+
 function row(overrides: Partial<ClaimReadModelRow>): ClaimReadModelRow {
   return {
     claimReference: "Claim/default",

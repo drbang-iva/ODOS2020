@@ -1,6 +1,6 @@
 import type { Claim, ClaimResponse, Resource, Task } from "@medplum/fhirtypes";
 import type { MedplumClient } from "../fhir-client.js";
-import { searchAll } from "../fhir-search.js";
+import { collectAllFhirSearchPages } from "../fhir-search.js";
 import { projectClaimReadModel, type ClaimReadModelRow } from "./claim-read-model.js";
 import { isRelatedClaimResource } from "./claim-search.js";
 
@@ -11,19 +11,39 @@ export async function loadClaimReadModelTruth(
   at: string,
 ): Promise<ClaimReadModelRow[]> {
   const [claims, responses, tasks] = await Promise.all([
-    searchAll<Claim>(fhir, "Claim", { _count: "100", _sort: "-created" }),
-    searchAll<ClaimResponse>(fhir, "ClaimResponse", { _count: "200", _sort: "-created" }),
-    searchAll<Task>(fhir, "Task", { _count: "200", _sort: "-authored-on" }),
+    searchAllProjectionPages<Claim>(fhir, "Claim", { _count: "200", _sort: "-created" }),
+    searchAllProjectionPages<ClaimResponse>(fhir, "ClaimResponse", { _count: "200", _sort: "-created" }),
+    searchAllProjectionPages<Task>(fhir, "Task", { _count: "200", _sort: "-authored-on" }),
   ]);
   const relatedResources = (await Promise.all(
     (["Patient", "Practitioner", "PractitionerRole", "Organization", "Location"] as const).map(async (resourceType) => {
       const ids = claimReferenceIds(claims, resourceType);
       if (!ids.length) return [];
-      return (await searchAll<Resource>(fhir, resourceType, { _id: ids.join(","), _count: String(ids.length) }))
-        .filter(isRelatedClaimResource);
+      const batches = chunk(ids, 100);
+      return (await Promise.all(batches.map((batch) => searchAllProjectionPages<Resource>(
+        fhir,
+        resourceType,
+        { _id: batch.join(","), _count: "100" },
+      )))).flat().filter(isRelatedClaimResource);
     }),
   )).flat();
   return projectClaimReadModel({ claims, responses, tasks, relatedResources, at });
+}
+
+async function searchAllProjectionPages<T extends Resource>(
+  fhir: ClaimProjectionFhir,
+  resourceType: T["resourceType"],
+  params: Record<string, string>,
+): Promise<T[]> {
+  // search-contract: claim-read-model-projector.search-resource
+  const first = await fhir.search<T>(resourceType, params);
+  return collectAllFhirSearchPages(fhir, resourceType, first, fhir.baseUrl);
+}
+
+function chunk<T>(values: readonly T[], size: number): T[][] {
+  const batches: T[][] = [];
+  for (let index = 0; index < values.length; index += size) batches.push(values.slice(index, index + size));
+  return batches;
 }
 
 function claimReferenceIds(claims: readonly Claim[], resourceType: string): string[] {

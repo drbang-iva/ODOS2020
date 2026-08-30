@@ -2,9 +2,15 @@ import type { Application, Request, Response } from "express";
 import type { Claim, CodeSystem } from "@medplum/fhirtypes";
 import type { MedplumClient } from "../fhir-client.js";
 import type { OdosActorRole } from "../authz/odosAudit.js";
+import { assertBusinessActionAllowed, PRACTICE_ROLE_IDS, type PracticeRoleId } from "../authz/roles.js";
 import { searchAll } from "../fhir-search.js";
 import { loadClaimReadModelTruth } from "./claim-read-model-projector.js";
 import type { ClaimReadModelStore } from "./claim-read-model-store.js";
+import {
+  claimProjectionUnavailableBody,
+  type ClaimProjectionStatus,
+  type ClaimReadModelProjectionHealthTracker,
+} from "./claim-read-model-health.js";
 import {
   buildClaimTouchTransaction,
   CLAIM_TOUCH_ACTIONS,
@@ -45,6 +51,7 @@ export interface ClaimFollowUpRouteDeps {
   authenticate(authHeader: string | undefined): Promise<ClaimFollowUpStaff | null>;
   serviceFhir: FollowUpFhir;
   store: ClaimReadModelStore;
+  projectionHealth: ClaimReadModelProjectionHealthTracker;
   now?: () => string;
   thresholds?: readonly [number, number, number];
 }
@@ -112,16 +119,28 @@ export function registerClaimFollowUpRoutes(
   }));
 
   app.get("/claims/follow-up-worklist", (req, res) => withStaff(req, res, deps, async () => {
-    res.json({ groups: await deps.store.worklist({ at: now(deps), thresholds: thresholds(deps) }) });
+    const at = now(deps);
+    const projection = requireHealthyProjection(res, deps, at);
+    if (!projection) return;
+    res.json({ groups: await deps.store.worklist({ at, thresholds: thresholds(deps) }), projection });
   }));
   app.get("/claims/metrics/never-paid-untouched", (req, res) => withStaff(req, res, deps, async () => {
-    res.json({ items: await deps.store.neverPaidUntouchedMetric() });
+    const projection = requireHealthyProjection(res, deps, now(deps));
+    if (!projection) return;
+    res.json({ items: await deps.store.neverPaidUntouchedMetric(), projection });
   }));
   app.post("/claims/read-model/rebuild", (req, res) => withStaff(req, res, deps, async (staff) => {
     const at = now(deps);
-    const truth = await loadClaimReadModelTruth(staff.fhir, at);
-    await deps.store.rebuild(truth, at);
-    res.json({ rebuilt: truth.length, projectedAt: at });
+    deps.projectionHealth.begin(at);
+    try {
+      const truth = await loadClaimReadModelTruth(staff.fhir, at);
+      await deps.store.rebuild(truth, at);
+      deps.projectionHealth.succeed(at);
+      res.json({ rebuilt: truth.length, projectedAt: at, projection: deps.projectionHealth.status(at) });
+    } catch (error) {
+      deps.projectionHealth.fail(at);
+      throw error;
+    }
   }));
   app.get("/claims/read-model/reconcile", (req, res) => withStaff(req, res, deps, async (staff) => {
     const truth = await loadClaimReadModelTruth(staff.fhir, now(deps));
@@ -147,6 +166,18 @@ export function registerClaimFollowUpRoutes(
   }));
 }
 
+function requireHealthyProjection(
+  res: Response,
+  deps: ClaimFollowUpRouteDeps,
+  at: string,
+): ClaimProjectionStatus | undefined {
+  const projection = deps.projectionHealth.status(at);
+  const unavailable = claimProjectionUnavailableBody(projection);
+  if (!unavailable) return projection;
+  res.status(503).json(unavailable);
+  return undefined;
+}
+
 async function withStaff(
   req: Request,
   res: Response,
@@ -160,6 +191,10 @@ async function withStaff(
       res.status(401).json({ error: "Authentication required to manage claims." });
       return;
     }
+    if (!staffMayManageClaims(staff.actorRole)) {
+      res.status(403).json({ error: "claims.manage role required" });
+      return;
+    }
     await action(staff);
   } catch (error) {
     if (res.headersSent) return;
@@ -171,6 +206,16 @@ async function withStaff(
       console.error("odos-mcp: claim follow-up route failed:", error);
       res.status(500).json({ error: "Claim follow-up route failed." });
     }
+  }
+}
+
+function staffMayManageClaims(actorRole: OdosActorRole): boolean {
+  if (!PRACTICE_ROLE_IDS.includes(actorRole as PracticeRoleId)) return false;
+  try {
+    assertBusinessActionAllowed(actorRole as PracticeRoleId, "claims.manage");
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -242,14 +287,15 @@ async function syncReadModelClaim(
   deps: ClaimFollowUpRouteDeps,
   claimId: string,
 ): Promise<boolean> {
+  const projectedAt = now(deps);
   try {
-    const projectedAt = now(deps);
     const truth = await loadClaimReadModelTruth(staff.fhir, projectedAt);
     const row = truth.find((candidate) => candidate.claimReference === `Claim/${claimId}`);
     if (!row) throw new Error(`FHIR rebuild did not project Claim/${claimId}.`);
     await deps.store.upsert(row, projectedAt);
     return true;
   } catch {
+    deps.projectionHealth.fail(projectedAt);
     return false;
   }
 }

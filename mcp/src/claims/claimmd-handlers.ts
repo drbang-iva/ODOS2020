@@ -29,6 +29,10 @@ import {
   type ClaimSearchFilters,
 } from "./claim-search.js";
 import type { ClaimReadModelStore } from "./claim-read-model-store.js";
+import {
+  claimProjectionUnavailableBody,
+  type ClaimReadModelProjectionHealthTracker,
+} from "./claim-read-model-health.js";
 import { buildClaimTouchTransaction } from "./claim-touch-ledger.js";
 import type { ClaimMdAdapter } from "./claimmd-adapter.js";
 import {
@@ -136,6 +140,7 @@ export interface ClaimsHandlerDeps {
   eraUnderpaymentThresholdCents?: number;
   now?: () => string;
   claimReadModel?: ClaimReadModelStore;
+  projectionHealth?: ClaimReadModelProjectionHealthTracker;
 }
 
 export interface ClaimsHandlerResult {
@@ -1120,11 +1125,15 @@ export async function handleClaimSearchRequest(
   if (outstandingOnly && outstandingOnly !== "true") {
     return { status: 400, body: { error: "outstanding must be true when supplied." } };
   }
-  if (!deps.claimReadModel) {
+  if (!deps.claimReadModel || !deps.projectionHealth) {
     return { status: 503, body: { error: "Claim read model is unavailable; rebuild from FHIR before searching." } };
   }
 
   try {
+    const at = now(deps);
+    const projection = deps.projectionHealth.status(at);
+    const unavailable = claimProjectionUnavailableBody(projection);
+    if (unavailable) return { status: 503, body: unavailable };
     const filters: ClaimSearchFilters = {
       ...(patient ? /^Patient\/[A-Za-z0-9.-]+$/.test(patient)
         ? { patientReferences: new Set([patient]) }
@@ -1143,7 +1152,8 @@ export async function handleClaimSearchRequest(
     return {
       status: 200,
       body: {
-        items: await deps.claimReadModel.search({ filters, at: now(deps) }),
+        items: await deps.claimReadModel.search({ filters, at }),
+        projection,
       },
     };
   } catch (error) {

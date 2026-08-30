@@ -282,6 +282,10 @@ import { createClaimMdAdapter, claimMdConfigFromEnv } from "./claims/claimmd-ada
 import { clearinghouseRoutingFromEnv } from "./claims/clearinghouse-adapter.js";
 import { createStediAdapter, stediConfigFromEnv } from "./claims/stedi-adapter.js";
 import { PgClaimReadModelStore } from "./claims/claim-read-model-store.js";
+import {
+  ClaimReadModelProjectionHealth,
+  claimProjectionStaleAfterMsFromEnv,
+} from "./claims/claim-read-model-health.js";
 import { claimAgingThresholdsFromEnv, registerClaimFollowUpRoutes } from "./claims/claim-follow-up-routes.js";
 import { startClaimReadModelWorker } from "./claims/claim-read-model-worker.js";
 import {
@@ -609,6 +613,9 @@ const diagnosisVisitStatusStore = new PgDiagnosisVisitStatusStore({
 const claimReadModelStore = new PgClaimReadModelStore({
   postgresUrl: process.env.ODOS_POSTGRES_URL,
 });
+const claimReadModelProjectionHealth = new ClaimReadModelProjectionHealth(
+  claimProjectionStaleAfterMsFromEnv(process.env.ODOS_CLAIM_PROJECTION_STALE_AFTER_MS),
+);
 const myopiaReferencePopulationStore = new PgMyopiaReferencePopulationStore({
   postgresUrl: process.env.ODOS_POSTGRES_URL,
 });
@@ -636,6 +643,7 @@ startClaimReadModelWorker({
   authenticateService: authenticateWithMedplum,
   fhir,
   store: claimReadModelStore,
+  projectionHealth: claimReadModelProjectionHealth,
   intervalMs: Number(process.env.ODOS_CLAIM_READ_MODEL_SYNC_MS ?? 60_000),
   onError: (error) => console.error("odos-mcp: claim read-model projection failed:", error),
 });
@@ -7492,6 +7500,7 @@ async function startMcpServer(): Promise<void> {
             await auditRuntime.record(row, () => undefined);
           },
           claimReadModel: claimReadModelStore,
+          projectionHealth: claimReadModelProjectionHealth,
         },
         payments: paymentCreditDeps,
         statements: {
@@ -7620,6 +7629,7 @@ async function startMcpServer(): Promise<void> {
         authenticate: authenticateClaimsRoute,
         serviceFhir: fhir,
         store: claimReadModelStore,
+        projectionHealth: claimReadModelProjectionHealth,
         thresholds: claimAgingThresholdsFromEnv(),
       });
       registerWenoSearchRoutes(app, {
@@ -7754,6 +7764,7 @@ async function startMcpServer(): Promise<void> {
                 await auditRuntime.record(row, () => undefined);
               },
               claimReadModel: claimReadModelStore,
+              projectionHealth: claimReadModelProjectionHealth,
             },
             { authHeader: req.header("authorization"), query: req.query },
           );

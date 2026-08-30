@@ -270,6 +270,22 @@ function claimsDeps(fhir: ReturnType<typeof pagedFhir>, adapter: ClaimMdAdapter 
     adapter,
     recordAudit: async () => undefined,
     now: () => "2026-07-10T12:00:00.000Z",
+    projectionHealth: healthyProjectionHealth(),
+  };
+}
+
+function healthyProjectionHealth() {
+  return {
+    begin: () => undefined,
+    succeed: () => undefined,
+    fail: () => undefined,
+    status: () => ({
+      state: "healthy" as const,
+      lastAttemptAt: "2026-07-10T12:00:00.000Z",
+      lastSuccessfulAt: "2026-07-10T12:00:00.000Z",
+      lastFailureAt: null,
+      staleAfterMs: 180_000,
+    }),
   };
 }
 

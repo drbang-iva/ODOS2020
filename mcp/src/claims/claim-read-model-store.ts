@@ -334,6 +334,7 @@ async function upsertRow(
       reason_display = EXCLUDED.reason_display,
       resolution_path = EXCLUDED.resolution_path,
       projected_at = EXCLUDED.projected_at
+    WHERE odos_claim_work_state.projected_at <= EXCLUDED.projected_at
   `, [
     row.claimReference,
     row.claimNumber,
