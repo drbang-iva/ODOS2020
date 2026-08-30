@@ -1,4 +1,6 @@
-import type { Bundle, Communication, Patient, Resource } from "@medplum/fhirtypes";
+import type { Bundle, Communication, Patient, Provenance, Resource } from "@medplum/fhirtypes";
+import type { PracticeRoleId } from "../authz/roles.js";
+import { buildProvenance } from "../fhir/ophthalmology/provenance.js";
 import type { MedplumClient } from "../fhir-client.js";
 import type {
   CallRequest,
@@ -20,9 +22,10 @@ export const ODOS_COMMS_SEND_IDENTIFIER_SYSTEM =
 
 export type SuppressionFhir = Pick<MedplumClient, "baseUrl" | "read" | "search" | "searchUrl">;
 export type InboundSuppressionFhir = Pick<MedplumClient, "search" | "searchUrl" | "update">;
+export type SmsOptOutManagementFhir = Pick<MedplumClient, "read" | "executeTransactionAsActor">;
 
 export interface InboundSuppressionResult {
-  outcome: "opted-out" | "opted-in" | "unchanged" | "no-patient-match";
+  outcome: "opted-out" | "opted-in" | "opt-in-refused-shared-number" | "unchanged" | "no-patient-match";
   matchedPatients: number;
 }
 
@@ -30,6 +33,86 @@ export interface SuppressionGateDeps {
   fhir: SuppressionFhir;
   practiceTimeZone: string;
   now?: () => Date;
+}
+
+export interface PatientSmsOptOutState {
+  patientReference: string;
+  smsOptedOut: boolean;
+}
+
+export interface ClearPatientSmsOptOutResult extends PatientSmsOptOutState {
+  cleared: boolean;
+}
+
+export async function readPatientSmsOptOut(
+  fhir: Pick<MedplumClient, "read">,
+  patientReference: string,
+): Promise<PatientSmsOptOutState> {
+  const patient = await readPatient(fhir, patientReference);
+  return {
+    patientReference,
+    smsOptedOut: patient.extension?.some(isOwnedSmsOptOut) ?? false,
+  };
+}
+
+export async function clearPatientSmsOptOut(
+  fhir: SmsOptOutManagementFhir,
+  patientReference: string,
+  input: {
+    actorReference: string;
+    actorRole: PracticeRoleId;
+    recordedAt: string;
+    reason?: string;
+  },
+): Promise<ClearPatientSmsOptOutResult> {
+  const patient = await readPatient(fhir, patientReference);
+  const existing = patient.extension ?? [];
+  const nextExtensions = existing.filter((extension) => !isOwnedSmsOptOut(extension));
+  if (nextExtensions.length === existing.length) {
+    return { patientReference, smsOptedOut: false, cleared: false };
+  }
+  if (!patient.id || !patient.meta?.versionId) {
+    throw new Error("SMS opt-out clear requires the Patient to have an id and version.");
+  }
+  const provenance: Provenance = {
+    ...buildProvenance({
+      targetReferences: [patientReference],
+      recorded: input.recordedAt,
+      activityCode: "UPDATE",
+      activityDisplay: "Clear SMS opt-out",
+      agents: [{ whoReference: input.actorReference, typeCode: "author" }],
+    }),
+    ...(input.reason ? { reason: [{ text: input.reason }] } : {}),
+  };
+  const transaction: Bundle = {
+    resourceType: "Bundle",
+    type: "transaction",
+    entry: [
+      {
+        resource: {
+          ...patient,
+          extension: nextExtensions.length ? nextExtensions : undefined,
+        },
+        request: {
+          method: "PUT",
+          url: patientReference,
+          ifMatch: `W/"${patient.meta.versionId}"`,
+        },
+      },
+      { resource: provenance, request: { method: "POST", url: "Provenance" } },
+    ],
+  };
+  await fhir.executeTransactionAsActor(
+    transaction,
+    {
+      actorReference: input.actorReference,
+      actorRole: input.actorRole,
+      actionReason: "communications.optout.manage clear SMS opt-out",
+    },
+    { "X-ODOS-Source": "mcp/comms-opt-out-clear" },
+    { validateResponse: (response) => assertSmsOptOutClearTransaction(response, transaction.entry!.length) },
+  );
+  return { patientReference, smsOptedOut: false, cleared: true };
 }
 
 export async function updateInboundSuppression(
@@ -41,16 +124,11 @@ export async function updateInboundSuppression(
   const patients = await collectInboundPatients(fhir, initialBundle);
   if (patients.length === 0) return { outcome: "no-patient-match", matchedPatients: 0 };
   if (optOutType === "START" && patients.length > 1) {
-    return { outcome: "unchanged", matchedPatients: patients.length };
+    return { outcome: "opt-in-refused-shared-number", matchedPatients: patients.length };
   }
   if (!optOutType || optOutType === "HELP") {
     return { outcome: "unchanged", matchedPatients: patients.length };
   }
-  const isOwnedSmsOptOut = (extension: NonNullable<Patient["extension"]>[number]) =>
-    extension.url === ODOS_COMMS_OPT_OUT_EXTENSION_URL
-    && extension.extension?.length === 1
-    && extension.extension[0]?.url === "channel"
-    && extension.extension[0].valueCode === "sms";
   // Suppression follows the destination number, so every Patient sharing it must be updated.
   for (const patient of patients) {
     if (!patient.id || !patient.meta?.versionId) {
@@ -207,12 +285,32 @@ async function gatedSend(
   return send(patient, now);
 }
 
-async function readPatient(fhir: SuppressionFhir, reference: string): Promise<Patient> {
+async function readPatient(fhir: Pick<MedplumClient, "read">, reference: string): Promise<Patient> {
   const match = /^Patient\/([A-Za-z0-9.-]{1,64})$/.exec(reference);
   if (!match) {
     throw new Error(`Communications patientReference must be Patient/…, got "${reference}".`);
   }
   return fhir.read<Patient>("Patient", match[1]);
+}
+
+function isOwnedSmsOptOut(extension: NonNullable<Patient["extension"]>[number]): boolean {
+  return extension.url === ODOS_COMMS_OPT_OUT_EXTENSION_URL
+    && extension.extension?.length === 1
+    && extension.extension[0]?.url === "channel"
+    && extension.extension[0].valueCode === "sms";
+}
+
+function assertSmsOptOutClearTransaction(response: Bundle, expectedEntries: number): void {
+  if (response.resourceType !== "Bundle" || response.type !== "transaction-response") {
+    throw new Error("SMS opt-out clear did not return a transaction-response Bundle.");
+  }
+  if (response.entry?.length !== expectedEntries) {
+    throw new Error("SMS opt-out clear returned an incomplete transaction response.");
+  }
+  const failed = response.entry.find((entry) => !/^2\d\d/.test(entry.response?.status ?? ""));
+  if (failed) {
+    throw new Error(`SMS opt-out clear failed with status ${failed.response?.status ?? "unknown"}.`);
+  }
 }
 
 function isOptedOut(patient: Patient, channel: string, campaignType: string): boolean {
