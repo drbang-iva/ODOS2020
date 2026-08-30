@@ -11,6 +11,7 @@ import type {
   Resource,
   Task,
 } from "@medplum/fhirtypes";
+import { createHash } from "node:crypto";
 import { buildOdosAuditEventRow, type OdosActorRole, type OdosAuditEventRecord } from "../authz/odosAudit.js";
 import { assertBusinessActionAllowed, PRACTICE_ROLE_IDS, type PracticeRoleId } from "../authz/roles.js";
 import type { MedplumClient } from "../fhir-client.js";
@@ -33,7 +34,11 @@ import {
   claimProjectionUnavailableBody,
   type ClaimReadModelProjectionHealthTracker,
 } from "./claim-read-model-health.js";
-import { buildClaimTouchTransaction } from "./claim-touch-ledger.js";
+import {
+  buildClaimTouchTransaction,
+  claimTouchIdempotencyFingerprint,
+  claimTouchRequestFingerprint,
+} from "./claim-touch-ledger.js";
 import type { ClaimMdAdapter } from "./claimmd-adapter.js";
 import {
   isClearinghouseId,
@@ -377,17 +382,11 @@ export async function handleStediClaimResubmissionRequest(
       idempotencyKey: patientControlNumber,
       payload,
     });
-    if (!auth.fhir.executeTransaction) {
-      return { status: 503, body: { error: "Claim was transmitted, but the original Claim touch could not be recorded; retry reconciliation before continuing." } };
+    const touchOutcome = await recordResubmissionTouch(auth, context.claim, patientControlNumber, now(deps));
+    if (touchOutcome === "conflict") {
+      return { status: 409, body: { error: "The resubmission idempotency key was already used for different touch content." } };
     }
-    try {
-      await auth.fhir.executeTransaction(buildClaimTouchTransaction({
-        claim: context.claim,
-        principal: { kind: "human", actorReference: auth.staffReference, actorRole: auth.actorRole },
-        action: "resubmission",
-        at: now(deps),
-      }));
-    } catch {
+    if (touchOutcome === "failed") {
       return { status: 503, body: { error: "Claim was transmitted, but the original Claim touch could not be recorded; retry reconciliation before continuing." } };
     }
     await audit(
@@ -442,6 +441,43 @@ export async function handleStediClaimResubmissionRequest(
       // The submission failure response must still return if the worklist write is unavailable.
     }
     return { status: 502, body: { error: `Claim resubmission failed: ${messageOf(error)}` } };
+  }
+}
+
+async function recordResubmissionTouch(
+  auth: AuthenticatedClaimsStaff,
+  claim: Claim,
+  patientControlNumber: string,
+  at: string,
+): Promise<"recorded" | "replayed" | "conflict" | "failed"> {
+  if (!auth.fhir.executeTransaction || !claim.id) return "failed";
+  const key = `stedi-${createHash("sha256").update(patientControlNumber).digest("hex")}`;
+  const fingerprint = claimTouchRequestFingerprint({
+    claimReference: `Claim/${claim.id}`,
+    actorReference: auth.staffReference,
+    actorRole: auth.actorRole,
+    action: "resubmission",
+  });
+  const existing = claimTouchIdempotencyFingerprint(claim, key);
+  if (existing) return existing === fingerprint ? "replayed" : "conflict";
+  try {
+    await auth.fhir.executeTransaction(buildClaimTouchTransaction({
+      claim,
+      principal: { kind: "human", actorReference: auth.staffReference, actorRole: auth.actorRole },
+      action: "resubmission",
+      at,
+      idempotency: { key, fingerprint },
+    }));
+    return "recorded";
+  } catch {
+    try {
+      const committed = await auth.fhir.read<Claim>("Claim", claim.id);
+      const committedFingerprint = claimTouchIdempotencyFingerprint(committed, key);
+      if (!committedFingerprint) return "failed";
+      return committedFingerprint === fingerprint ? "replayed" : "conflict";
+    } catch {
+      return "failed";
+    }
   }
 }
 

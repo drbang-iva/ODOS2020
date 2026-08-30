@@ -583,6 +583,42 @@ test("pre-adjudication correction previews and submits CFC 1 without a PCCN", as
   });
 });
 
+test("retry after a lost resubmission-touch response records one touch and one Provenance", async () => {
+  const fixture = deps();
+  fixture.created.Claim.push({
+    ...withStediClaimInputSnapshot(buildProfessionalClaim(professionalClaim), professionalClaim),
+    id: "claim-original",
+  });
+  fixture.deps.adapters = { stedi: stediSubmissionAdapter(() => undefined) };
+  const executeTransaction = fixture.fhir.executeTransaction;
+  let loseFirstResponse = true;
+  fixture.fhir.executeTransaction = async (bundle) => {
+    const response = await executeTransaction(bundle);
+    if (loseFirstResponse) {
+      loseFirstResponse = false;
+      throw new Error("synthetic lost transaction response");
+    }
+    return response;
+  };
+  const request = {
+    authHeader: "Bearer good",
+    body: {
+      originalClaimReference: "Claim/claim-original",
+      intent: "correct" as const,
+      patientControlNumber: "ODOS-RETRY-901",
+      revisedClaim: professionalClaim,
+    },
+  };
+
+  const first = await handleStediClaimResubmissionRequest(fixture.deps, request);
+  const retry = await handleStediClaimResubmissionRequest(fixture.deps, request);
+
+  assert.equal(first.status, 200);
+  assert.equal(retry.status, 200);
+  assert.equal(claimTouchState(fixture.created.Claim[0]).touchCount, 1);
+  assert.equal(fixture.created.Provenance.length, 1);
+});
+
 test("pre-adjudication void returns manual handling without building or submitting a claim", async () => {
   const fixture = deps();
   fixture.created.Claim.push({
