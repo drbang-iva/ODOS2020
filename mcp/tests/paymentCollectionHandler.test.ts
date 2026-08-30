@@ -148,6 +148,7 @@ test("recorded-tender collection posts a server-side Invoice transaction and emi
   assert.equal(transactions.length, 1);
   assert.equal(transactions[0].entry?.[0]?.resource?.resourceType, "Invoice");
   const invoice = transactions[0].entry?.[0]?.resource;
+  assert.equal(invoice?.resourceType === "Invoice" ? invoice.status : undefined, "balanced");
   assert.equal(invoice?.resourceType === "Invoice" ? invoice.date : undefined, "2026-07-15T10:00:00.000Z");
   assert.equal(invoice?.resourceType === "Invoice" ? invoice.participant?.[0]?.actor.reference : undefined, "Practitioner/staff-1");
   assert.equal(audits.length, 1);
@@ -198,6 +199,7 @@ test("recorded optical collection threads date and verified staff into its Invoi
   });
   assert.equal(result.status, 200);
   const invoice = transactions[0].entry?.find((entry) => entry.resource?.resourceType === "Invoice")?.resource;
+  assert.equal(invoice?.resourceType === "Invoice" ? invoice.status : undefined, "balanced");
   assert.equal(invoice?.resourceType === "Invoice" ? invoice.date : undefined, "2026-07-15T10:00:00.000Z");
   assert.equal(invoice?.resourceType === "Invoice" ? invoice.participant?.[0]?.actor.reference : undefined, "Practitioner/staff-1");
 });

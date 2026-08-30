@@ -213,6 +213,7 @@ async function createCollection(
     staffReference,
     lineItems: lines,
     tender: body.tender,
+    status: "balanced",
   });
   const fullUrl = `urn:uuid:${randomUUID()}`;
   const request: Bundle = {
