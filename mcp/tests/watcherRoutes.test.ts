@@ -3,7 +3,7 @@ import type { AddressInfo } from "node:net";
 import test from "node:test";
 import type { Basic, Bundle, Resource, Task } from "@medplum/fhirtypes";
 import express from "express";
-import type { PracticeRoleId } from "../src/authz/roles.js";
+import { assertBusinessActionAllowed, type PracticeRoleId } from "../src/authz/roles.js";
 import { createWatcherDefinitions, createWatcherRegistry } from "../src/watchers/watcher-registry.js";
 import { buildWatcherHealthResource } from "../src/watchers/watcher-health.js";
 import {
@@ -278,6 +278,46 @@ test("watcher routes reject a caller without billing-context.read before service
   } finally {
     await server.close();
   }
+});
+
+test("watcher actions require the dedicated write capability and leave the Task unchanged when denied", async () => {
+  const fhir = new RouteFhir([watcherTask(1, "2026-08-30", 1000, 1)]);
+  const server = await startServer(fhir, { roles: ["provider"] });
+  try {
+    const response = await fetch(`${server.base}/watchers/tasks/task-1/action`, {
+      method: "POST",
+      headers: { authorization: "Bearer billing-reader", "content-type": "application/json" },
+      body: JSON.stringify({ action: "dismiss", reason: "payment-plan" }),
+    });
+    assert.equal(response.status, 403);
+    assert.deepEqual(await response.json(), { error: "watchers.manage role required" });
+    assert.equal(fhir.tasks[0]?.status, "requested");
+  } finally {
+    await server.close();
+  }
+
+  assert.doesNotThrow(() => assertBusinessActionAllowed("staff", "watchers.manage"));
+  assert.doesNotThrow(() => assertBusinessActionAllowed("admin", "watchers.manage"));
+  assert.throws(() => assertBusinessActionAllowed("provider", "watchers.manage"), /lacks business action/);
+});
+
+test("watcher actions reject an unrelated Task that borrows a watcher code value", async () => {
+  const unrelated = watcherTask(1, "2026-08-30", 1000, 1);
+  unrelated.code = { coding: [{ system: "https://example.test/not-watchers", code: "W1" }] };
+  const fhir = new RouteFhir([unrelated]);
+
+  await assert.rejects(
+    () => applyWatcherTaskAction(
+      fhir,
+      registry,
+      "task-1",
+      { action: "dismiss", reason: "payment-plan" },
+      "2026-08-30T12:00:00.000Z",
+      config,
+    ),
+    /not an ODOS watcher Task/,
+  );
+  assert.equal(fhir.tasks[0]?.status, "requested");
 });
 
 test("watcher routes reject impossible calendar dates instead of normalizing them", async () => {

@@ -5,8 +5,8 @@ import { loadWatcherHealth } from "./watcher-health.js";
 import { projectFrontDeskAlerts, projectTodayDigest } from "./watcher-projections.js";
 import type { WatcherPracticeConfig, WatcherRegistry } from "./watcher-types.js";
 import { practiceDate } from "../desk/day-ledger.js";
-import { conditionKey } from "./watcher-task.js";
-import { resolveBusinessActionRole, type PracticeRoleId } from "../authz/roles.js";
+import { conditionKey, WATCHER_CODE_SYSTEM } from "./watcher-task.js";
+import { resolveBusinessActionRole, type BusinessAction, type PracticeRoleId } from "../authz/roles.js";
 
 const WATCHER_ACTION_SYSTEM = "https://odos2020.com/fhir/CodeSystem/watcher-action";
 const TERMINAL_TASK_STATUSES = new Set<Task["status"]>([
@@ -44,7 +44,7 @@ export function registerWatcherRoutes(
   app: Pick<Application, "get" | "post">,
   deps: WatcherRouteDependencies,
 ): void {
-  app.get("/watchers/frontdesk", (req, res) => withStaff(req, res, deps, async () => {
+  app.get("/watchers/frontdesk", (req, res) => withStaff(req, res, deps, "billing-context.read", async () => {
     const date = requestedDate(req.query.date);
     const [config, health, tasks] = await Promise.all([
       deps.loadConfig(),
@@ -58,7 +58,7 @@ export function registerWatcherRoutes(
     res.status(body.status === "degraded" ? 503 : 200).json(body);
   }));
 
-  app.get("/watchers/today", (req, res) => withStaff(req, res, deps, async () => {
+  app.get("/watchers/today", (req, res) => withStaff(req, res, deps, "billing-context.read", async () => {
     const now = deps.now?.() ?? new Date().toISOString();
     const date = req.query.date === undefined
       ? practiceDate(now, deps.timeZone)
@@ -75,7 +75,7 @@ export function registerWatcherRoutes(
     res.status(body.status === "degraded" ? 503 : 200).json(body);
   }));
 
-  app.post("/watchers/tasks/:taskId/action", (req, res) => withStaff(req, res, deps, async () => {
+  app.post("/watchers/tasks/:taskId/action", (req, res) => withStaff(req, res, deps, "watchers.manage", async () => {
     const taskId = typeof req.params.taskId === "string" ? req.params.taskId : "";
     if (!taskId) throw new WatcherValidationError("Watcher Task id is required.");
     const task = await applyWatcherTaskAction(
@@ -106,8 +106,13 @@ export async function applyWatcherTaskAction(
   if (TERMINAL_TASK_STATUSES.has(task.status)) {
     throw new WatcherValidationError(`Watcher Task/${taskId} is terminal and cannot accept another action.`);
   }
-  const watcherId = task.code?.coding?.find((coding) => coding.code)?.code;
-  if (!watcherId) throw new WatcherValidationError("Watcher Task has no watcher code.");
+  const watcherId = task.code?.coding?.find(
+    (coding) => coding.system === WATCHER_CODE_SYSTEM && coding.code,
+  )?.code;
+  const key = conditionKey(task);
+  if (!watcherId || !key) {
+    throw new WatcherValidationError(`Task/${taskId} is not an ODOS watcher Task.`);
+  }
   const definition = registry.get(watcherId);
   let updated: Task;
 
@@ -145,7 +150,6 @@ export async function applyWatcherTaskAction(
     }
     const settings = config.watchers[watcherId];
     const appointmentAt = task.restriction?.period?.start;
-    const key = conditionKey(task);
     if (!settings || !appointmentAt || !key) {
       throw new WatcherValidationError(`Watcher Task/${taskId} cannot verify its current condition.`);
     }
@@ -182,6 +186,7 @@ async function withStaff(
   req: Request,
   res: Response,
   deps: WatcherRouteDependencies,
+  requiredAction: BusinessAction,
   action: () => Promise<void>,
 ): Promise<void> {
   try {
@@ -191,8 +196,8 @@ async function withStaff(
       res.status(401).json({ error: "Authentication required for watcher alerts." });
       return;
     }
-    if (!resolveBusinessActionRole(staff.roles ?? [], "billing-context.read")) {
-      res.status(403).json({ error: "billing-context.read role required" });
+    if (!resolveBusinessActionRole(staff.roles ?? [], requiredAction)) {
+      res.status(403).json({ error: `${requiredAction} role required` });
       return;
     }
     await action();

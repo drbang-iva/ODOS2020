@@ -63,7 +63,7 @@ W1 uses `immediate` activation. It can fire on day one because the actionable ev
 
 ## API and actions
 
-Authenticated staff routes use the existing staff authentication seam and require the existing `billing-context.read` business action before the process service FHIR client can read or write watcher records. This slice changes no authentication flow, credential, AccessPolicy, or role declaration. Explicit dates must round-trip as real Gregorian calendar dates; impossible dates are rejected rather than normalized.
+Authenticated staff routes use the existing staff authentication seam. Read routes require `billing-context.read`; the action route requires the dedicated `watchers.manage` capability granted to front-desk Staff and owner/Admin, not Provider. Only a Task carrying both the ODOS watcher code system and watcher condition identifier can be changed. The process service FHIR client runs only after those app-level gates. This slice changes no authentication flow, credential, or AccessPolicy. Explicit dates must round-trip as real Gregorian calendar dates; impossible dates are rejected rather than normalized.
 
 - `GET /watchers/frontdesk?date=YYYY-MM-DD` returns fresh W1 projections keyed by Appointment id or a structured 503 degradation.
 - `GET /watchers/today?date=YYYY-MM-DD` returns fresh ranked/capped Today data, yesterday comparison, overflow groups, and the go-live date or a structured 503 degradation. When the client omits `date`, the server chooses the current practice day.
