@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { fhir } from "../../lib/fhir";
 import {
   WORK_LANES,
+  batchTouchClaims,
   loadClaimWork,
+  type BatchTouchInput,
+  type BatchTouchResult,
   type WorkClaimGroup,
   type WorkEraGroup,
   type WorkLane,
@@ -23,15 +26,20 @@ export function BillingWork({
   initialActiveLane = "holds",
   initialExpandedGroupKey,
   loadProjection = loadClaimWork,
+  applyBatch = batchTouchClaims,
+  newIdempotencyKey = newBatchIdempotencyKey,
 }: {
   initialProjection?: WorkProjection;
   initialActiveLane?: WorkLaneId;
   initialExpandedGroupKey?: string;
   loadProjection?: (options?: ClaimsApiOptions) => Promise<WorkProjection>;
+  applyBatch?: (input: BatchTouchInput, options?: ClaimsApiOptions) => Promise<BatchTouchResult>;
+  newIdempotencyKey?: () => string;
 } = {}) {
   const [projection, setProjection] = useState<WorkProjection | undefined>(initialProjection);
   const [activeLane, setActiveLane] = useState<WorkLaneId>(initialActiveLane);
   const [expandedGroupKey, setExpandedGroupKey] = useState<string | undefined>(initialExpandedGroupKey);
+  const [actionGroup, setActionGroup] = useState<WorkClaimGroup>();
   const [selectedEraItem, setSelectedEraItem] = useState<ClaimsWorklistItem>();
   const [error, setError] = useState<string>();
   const api = claimsApiOptions();
@@ -96,6 +104,10 @@ export function BillingWork({
               projectedAt={projection.lastSuccessfulAt}
               expandedGroupKey={expandedGroupKey}
               onToggle={(key) => setExpandedGroupKey((current) => current === key ? undefined : key)}
+              onOpenAction={(group) => {
+                setExpandedGroupKey(group.key);
+                setActionGroup(group);
+              }}
               onSelectEra={setSelectedEraItem}
             />
           )}
@@ -111,6 +123,30 @@ export function BillingWork({
           onResolve={(input) => runEraAction(() => resolveWorklistItem(selectedEraItem.id, input, api))}
           onVoid={(input) => runEraAction(() => voidEraClaim(selectedEraItem, input, api))}
           resubmissionApi={api}
+        />
+      )}
+      {actionGroup && (
+        <BatchActionDrawer
+          key={actionGroup.key}
+          group={actionGroup}
+          newIdempotencyKey={newIdempotencyKey}
+          onClose={() => setActionGroup(undefined)}
+          onSubmit={async (detail, idempotencyKey) => {
+            const input: BatchTouchInput = {
+              claimReferences: actionGroup.claimReferences,
+              action: "resolution",
+              detail,
+              ...(actionGroup.reason.code ? { reasonCode: actionGroup.reason.code } : {}),
+              idempotencyKey,
+            };
+            const result = await applyBatch(input, api);
+            if (result.requested !== input.claimReferences.length || result.touched !== input.claimReferences.length) {
+              throw new Error(`Batch touch incomplete: ${result.touched} of ${input.claimReferences.length} claims were stamped.`);
+            }
+            setActionGroup(undefined);
+            setExpandedGroupKey(undefined);
+            await refresh();
+          }}
         />
       )}
     </main>
@@ -157,14 +193,23 @@ function HealthyLane({
   projectedAt,
   expandedGroupKey,
   onToggle,
+  onOpenAction,
   onSelectEra,
 }: {
   lane: WorkLane;
   projectedAt: string;
   expandedGroupKey?: string;
   onToggle: (key: string) => void;
+  onOpenAction: (group: WorkClaimGroup) => void;
   onSelectEra: (item: ClaimsWorklistItem) => void;
 }) {
+  const groupButtons = useRef<Array<HTMLButtonElement | null>>([]);
+  const claimGroups = lane.groups.filter((group): group is WorkClaimGroup => group.kind === "claim");
+  const claimIndexes = new Map(claimGroups.map((group, index) => [group.key, index]));
+  const moveFocus = (current: number, key: string) => {
+    const next = nextGroupIndex(current, key, claimGroups.length);
+    if (next >= 0) groupButtons.current[next]?.focus();
+  };
   return (
     <>
       <header className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-[var(--odos-line)] pb-3">
@@ -189,6 +234,9 @@ function HealthyLane({
               group={group}
               expanded={expandedGroupKey === group.key}
               onToggle={() => onToggle(group.key)}
+              onOpenAction={() => onOpenAction(group)}
+              buttonRef={(node) => { groupButtons.current[claimIndexes.get(group.key) ?? 0] = node; }}
+              onMove={(key) => moveFocus(claimIndexes.get(group.key) ?? 0, key)}
             />
           ) : (
             <EraGroupCard key={group.key} group={group} onSelect={onSelectEra} />
@@ -203,15 +251,29 @@ function ClaimGroupCard({
   group,
   expanded,
   onToggle,
+  onOpenAction,
+  buttonRef,
+  onMove,
 }: {
   group: WorkClaimGroup;
   expanded: boolean;
   onToggle: () => void;
+  onOpenAction: () => void;
+  buttonRef: (node: HTMLButtonElement | null) => void;
+  onMove: (key: string) => void;
 }) {
+  const onKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>) => {
+    const action = groupKeyAction(event.key);
+    if (action === "none") return;
+    event.preventDefault();
+    if (action === "toggle") onToggle();
+    else if (action === "open-action") onOpenAction();
+    else onMove(event.key);
+  };
   return (
     <article className="overflow-hidden border border-[var(--odos-line)] [background:var(--odos-card-gradient)]">
       <div className="grid items-center gap-3 px-4 py-3 md:grid-cols-[minmax(0,1fr)_auto_auto]">
-        <button type="button" aria-expanded={expanded} onClick={onToggle} className="min-w-0 text-left">
+        <button ref={buttonRef} type="button" aria-expanded={expanded} onClick={onToggle} onKeyDown={onKeyDown} className="min-w-0 text-left">
           <h3 className="truncate font-semibold">{group.title}</h3>
           <p className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-[var(--odos-muted)]">
             <span>{group.count} {group.count === 1 ? "claim" : "claims"}</span>
@@ -220,10 +282,72 @@ function ClaimGroupCard({
           </p>
         </button>
         <button type="button" onClick={onToggle} className="scheduler-button">{expanded ? "Collapse" : "View claims"}</button>
-        <button type="button" className="scheduler-button scheduler-button-primary">{group.primaryAction}</button>
+        <button type="button" disabled={!group.reason.code} onClick={onOpenAction} className="scheduler-button scheduler-button-primary disabled:opacity-50">{group.primaryAction}</button>
       </div>
       {expanded && <ClaimRows group={group} />}
     </article>
+  );
+}
+
+function BatchActionDrawer({
+  group,
+  newIdempotencyKey,
+  onClose,
+  onSubmit,
+}: {
+  group: WorkClaimGroup;
+  newIdempotencyKey: () => string;
+  onClose: () => void;
+  onSubmit: (detail: string, idempotencyKey: string) => Promise<void>;
+}) {
+  const [detail, setDetail] = useState(group.reason.resolutionPath ?? "");
+  const [idempotencyKey] = useState(newIdempotencyKey);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
+  const submit = async () => {
+    setBusy(true);
+    setError(undefined);
+    try {
+      await onSubmit(detail.trim(), idempotencyKey);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <aside role="dialog" aria-modal="true" aria-label="Complete claim batch" className="fixed inset-y-0 right-12 z-40 flex w-[min(430px,calc(100vw-3rem))] flex-col border-l border-[var(--odos-line-2)] bg-[var(--odos-deep-surface)] shadow-2xl">
+      <header className="flex items-start justify-between gap-3 border-b border-[var(--odos-line)] px-5 py-4">
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--odos-faint)]">Batch resolution</div>
+          <h2 className="mt-1 font-semibold">{group.title}</h2>
+          <p className="mt-1 text-xs text-[var(--odos-muted)]">One action will stamp all {group.count} claims.</p>
+        </div>
+        <button type="button" disabled={busy} aria-label="Close batch action" onClick={onClose} className="text-[var(--odos-muted)] disabled:opacity-50">✕</button>
+      </header>
+      <form className="flex flex-1 flex-col p-5" onSubmit={(event) => { event.preventDefault(); void submit(); }}>
+        <label className="text-xs font-bold text-[var(--odos-muted)]">
+          Resolution detail
+          <textarea
+            value={detail}
+            onChange={(event) => setDetail(event.target.value)}
+            rows={6}
+            className="mt-2 w-full resize-y border border-[var(--odos-line-2)] bg-[var(--odos-surface)] p-3 text-sm text-[var(--odos-text)]"
+          />
+        </label>
+        <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-[var(--odos-muted)]">
+          <div className="border border-[var(--odos-line)] bg-[var(--odos-surface)] p-3"><div className="text-[var(--odos-faint)]">Claims</div><div className="mt-1 text-lg font-semibold text-[var(--odos-text)]">{group.count}</div></div>
+          <div className="border border-[var(--odos-line)] bg-[var(--odos-surface)] p-3"><div className="text-[var(--odos-faint)]">Outstanding</div><div className="mt-1 text-lg font-semibold text-[var(--odos-text)]">{money(group.totalOutstandingCents)}</div></div>
+        </div>
+        {error && <div role="alert" className="mt-4 border border-red-400/40 bg-red-950/50 px-3 py-2 text-sm text-red-100">{error}</div>}
+        <div className="mt-auto pt-5">
+          <button type="submit" disabled={busy || !detail.trim()} className="w-full bg-blue-700 px-4 py-3 text-sm font-bold text-white disabled:opacity-50">
+            {busy ? "Stamping every claim…" : `Complete ${group.count} claims`}
+          </button>
+          <p className="mt-2 text-center text-[11px] text-[var(--odos-faint)]">If the response is interrupted, retrying this open drawer reuses the same action key.</p>
+        </div>
+      </form>
+    </aside>
   );
 }
 
@@ -352,4 +476,23 @@ function formatDateTime(value: string): string {
     hour: "numeric",
     minute: "2-digit",
   }).format(new Date(value));
+}
+
+export function nextGroupIndex(current: number, key: string, length: number): number {
+  if (length <= 0) return -1;
+  if (key === "ArrowDown" || key.toLowerCase() === "j") return (current + 1) % length;
+  if (key === "ArrowUp" || key.toLowerCase() === "k") return (current - 1 + length) % length;
+  return current;
+}
+
+export function groupKeyAction(key: string): "move" | "toggle" | "open-action" | "none" {
+  if (key === "ArrowDown" || key === "ArrowUp" || key.toLowerCase() === "j" || key.toLowerCase() === "k") return "move";
+  if (key === " ") return "toggle";
+  if (key === "Enter") return "open-action";
+  return "none";
+}
+
+function newBatchIdempotencyKey(): string {
+  const random = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `work-${random.replace(/[^A-Za-z0-9._-]/g, "-")}`.slice(0, 128);
 }

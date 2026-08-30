@@ -2,9 +2,17 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { buildWorkLanes, type ClaimWorklistGroup, type ClaimWorklistRow, type WorkProjection } from "../src/lib/claim-work";
+import { act, create } from "react-test-renderer";
+import {
+  buildWorkLanes,
+  type BatchTouchInput,
+  type BatchTouchResult,
+  type ClaimWorklistGroup,
+  type ClaimWorklistRow,
+  type WorkProjection,
+} from "../src/lib/claim-work";
 import type { ClaimsWorklistItem } from "../src/lib/claims-worklist";
-import { BillingWork } from "../src/scenes/claims/BillingWork";
+import { BillingWork, groupKeyAction, nextGroupIndex } from "../src/scenes/claims/BillingWork";
 
 test("Work renders one collapsed row for a 15-claim reason batch", () => {
   const projection = healthyWorkFixture();
@@ -79,6 +87,101 @@ test("legacy remits are visibly separated from live Unmatched work and name watc
   assert.match(html, /outside ODOS claim work and claim-watch alerts/);
   assert.match(html, /ERA-LEGACY-1/);
   assert.doesNotMatch(html, /Reconstruct claim/);
+});
+
+test("one action drawer submits all 15 claims and collapses only after a complete report", async () => {
+  const projection = healthyWorkFixture();
+  const calls: BatchTouchInput[] = [];
+  let reloads = 0;
+  const applyBatch = async (input: BatchTouchInput): Promise<BatchTouchResult> => {
+    calls.push(input);
+    return completeBatch(input.claimReferences);
+  };
+  let renderer!: ReturnType<typeof create>;
+  await act(async () => {
+    renderer = create(
+      <BillingWork
+        initialProjection={projection}
+        initialActiveLane="holds"
+        loadProjection={async () => { reloads += 1; return projection; }}
+        applyBatch={applyBatch}
+        newIdempotencyKey={() => "work-drawer-stable-001"}
+      />,
+    );
+  });
+
+  await act(async () => primaryAction(renderer).props.onClick());
+  const dialog = renderer.root.findByProps({ "aria-label": "Complete claim batch" });
+  assert.equal(dialog.findByType("textarea").props.value, "Fix codes and resubmit");
+  await act(async () => dialog.findByType("form").props.onSubmit({ preventDefault() {} }));
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].claimReferences.length, 15);
+  assert.equal(calls[0].action, "resolution");
+  assert.equal(calls[0].reasonCode, "missing-procedure-code");
+  assert.equal(calls[0].idempotencyKey, "work-drawer-stable-001");
+  assert.equal(reloads, 1);
+  assert.equal(renderer.root.findAllByProps({ "aria-label": "Complete claim batch" }).length, 0);
+  assert.equal(renderer.root.findAllByType("table").length, 0);
+  await act(async () => renderer.unmount());
+});
+
+test("an incomplete batch report stays open, names the missing count, and retries one key", async () => {
+  const projection = healthyWorkFixture();
+  const calls: BatchTouchInput[] = [];
+  const applyBatch = async (input: BatchTouchInput): Promise<BatchTouchResult> => {
+    calls.push(input);
+    if (calls.length === 1) throw new Error("Batch touch incomplete: 14 of 15 claims were stamped.");
+    return completeBatch(input.claimReferences);
+  };
+  let renderer!: ReturnType<typeof create>;
+  await act(async () => {
+    renderer = create(
+      <BillingWork
+        initialProjection={projection}
+        initialActiveLane="holds"
+        loadProjection={async () => projection}
+        applyBatch={applyBatch}
+        newIdempotencyKey={() => "work-drawer-retry-001"}
+      />,
+    );
+  });
+  await act(async () => primaryAction(renderer).props.onClick());
+  let dialog = renderer.root.findByProps({ "aria-label": "Complete claim batch" });
+  await act(async () => dialog.findByType("form").props.onSubmit({ preventDefault() {} }));
+
+  dialog = renderer.root.findByProps({ "aria-label": "Complete claim batch" });
+  assert.match(dialog.findByProps({ role: "alert" }).children.join(""), /14 of 15/);
+  await act(async () => dialog.findByType("form").props.onSubmit({ preventDefault() {} }));
+  assert.deepEqual(calls.map((call) => call.idempotencyKey), ["work-drawer-retry-001", "work-drawer-retry-001"]);
+  await act(async () => renderer.unmount());
+});
+
+test("Work keyboard mapping keeps arrows primary with j and k aliases", () => {
+  for (const key of ["ArrowDown", "j"]) assert.equal(nextGroupIndex(0, key, 3), 1);
+  for (const key of ["ArrowUp", "k"]) assert.equal(nextGroupIndex(1, key, 3), 0);
+  assert.equal(nextGroupIndex(0, "ArrowUp", 3), 2);
+  assert.equal(nextGroupIndex(2, "ArrowDown", 3), 0);
+  assert.equal(groupKeyAction(" "), "toggle");
+  assert.equal(groupKeyAction("Enter"), "open-action");
+  assert.equal(groupKeyAction("x"), "none");
+});
+
+test("Space expands a focused reason group and Enter opens its batch action", async () => {
+  let renderer!: ReturnType<typeof create>;
+  await act(async () => {
+    renderer = create(
+      <BillingWork initialProjection={healthyWorkFixture()} initialActiveLane="holds" />,
+    );
+  });
+  const groupButton = renderer.root.findAllByType("button").find((button) => button.props["aria-expanded"] === false)!;
+  let prevented = 0;
+  await act(async () => groupButton.props.onKeyDown({ key: " ", preventDefault: () => { prevented += 1; } }));
+  assert.equal(renderer.root.findAllByType("table").length, 1);
+  await act(async () => groupButton.props.onKeyDown({ key: "Enter", preventDefault: () => { prevented += 1; } }));
+  assert.equal(renderer.root.findAllByProps({ "aria-label": "Complete claim batch" }).length, 1);
+  assert.equal(prevented, 2);
+  await act(async () => renderer.unmount());
 });
 
 export function healthyWorkFixture(): Extract<WorkProjection, { status: "healthy" }> {
@@ -157,5 +260,24 @@ function legacyRemit(): ClaimsWorklistItem {
       shortfallCents: 0,
       adjustments: [],
     },
+  };
+}
+
+function primaryAction(renderer: ReturnType<typeof create>) {
+  return renderer.root.findAllByType("button").find((button) => button.children.join("") === "Fix codes and resubmit")!;
+}
+
+function completeBatch(claimReferences: string[]): BatchTouchResult {
+  return {
+    requested: claimReferences.length,
+    touched: claimReferences.length,
+    readModelSynced: true,
+    items: claimReferences.map((claimReference) => ({
+      claimReference,
+      touchCount: 1,
+      lastTouchedAt: "2026-08-30T12:00:00.000Z",
+      lastTouchedBy: "Practitioner/staff-1",
+      idempotentReplay: false,
+    })),
   };
 }
