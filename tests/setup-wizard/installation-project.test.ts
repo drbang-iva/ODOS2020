@@ -125,6 +125,23 @@ test("an explicit foreign project requires the acknowledgement flag", () => {
   }
 });
 
+test("foreign-project acknowledgement requires an explicit project", () => {
+  const { directory, statePath } = fixture();
+  try {
+    writeFileSync(statePath, JSON.stringify({ projectId: "practice-install" }));
+    assert.throws(
+      () => resolveInstallationProject({
+        args: ["--allow-foreign-project"],
+        env: { ODOS_SETUP_STATE_PATH: statePath },
+        workingDirectory: directory,
+      }),
+      /--allow-foreign-project requires.*--project/i,
+    );
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("derived operator credentials and migration state must agree with installation state", () => {
   const { directory, statePath } = fixture();
   try {

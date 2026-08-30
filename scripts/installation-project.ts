@@ -46,6 +46,9 @@ export function resolveConfiguredInstallationProject(input: {
   const manifestProjectId = readJsonProjectId(statePath, ["projectId"]);
   const environmentProjectId = env.MEDPLUM_PROJECT_ID?.trim();
 
+  if (acknowledgedForeignProject && !explicitProjectId) {
+    throw new Error("--allow-foreign-project requires an explicit --project <project-id>.");
+  }
   if (manifestExists && !manifestProjectId) {
     throw new Error(`Installation manifest ${statePath} does not contain a projectId; refusing to use another source.`);
   }
