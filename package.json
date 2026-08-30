@@ -18,7 +18,7 @@
     "seed-scheduler": "tsx --env-file-if-exists=.env scripts/seed-scheduler-demo.ts",
     "seed-dry-eye-treatment": "tsx --env-file-if-exists=.env scripts/seed-dry-eye-treatment.ts",
     "install-profiles": "tsx scripts/install-profiles.ts",
-    "setup-practice": "tsx scripts/setup-practice.ts",
+    "setup-practice": "node --env-file-if-exists=.env --import tsx scripts/setup-practice.ts",
     "operator-identity": "tsx --env-file-if-exists=.env scripts/operator-identity.ts",
     "generate-medplum-signing-keys": "tsx scripts/generate-medplum-signing-keys.ts",
     "setup-legacy-importer": "tsx --env-file-if-exists=.odos/migration-importer.env scripts/setup-legacy-importer.ts",

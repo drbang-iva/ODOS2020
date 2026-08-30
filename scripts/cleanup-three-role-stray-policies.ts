@@ -11,6 +11,7 @@ import {
   resolveThreeRoleMigrationCredentials,
 } from "./migrate-three-role-model.js";
 import { assertLocalMedplumBaseUrl } from "./reseed-practice-role-tags.js";
+import { formatInstallationProjectTarget, resolveInstallationProject } from "./installation-project.js";
 
 const STRAY_POLICY_NAMES = new Set([
   "ODOS Provider",
@@ -151,11 +152,9 @@ async function runCli(): Promise<void> {
   const apply = args.has("--apply");
   const baseUrl = (process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103").replace(/\/$/, "");
   assertLocalMedplumBaseUrl(baseUrl);
-  const projectId = argumentValue("--project")?.trim()
-    || process.env.MEDPLUM_PROJECT_ID?.trim();
-  if (!projectId) {
-    throw new Error("Supply --project <project-id> or MEDPLUM_PROJECT_ID for stray-policy cleanup.");
-  }
+  const target = resolveInstallationProject({ args: process.argv.slice(2) });
+  const projectId = target.projectId;
+  console.log(formatInstallationProjectTarget(target));
   const credentials = await resolveThreeRoleMigrationCredentials({
     baseUrl,
     projectId,

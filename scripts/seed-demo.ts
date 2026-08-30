@@ -35,6 +35,7 @@ import {
 } from "../mcp/src/statements/statements.js";
 import { assertLocalMedplumBaseUrl } from "./reseed-practice-role-tags.js";
 import { loadVerifiedOperatorFhirClient } from "./operator-identity.js";
+import { formatInstallationProjectTarget, resolveInstallationProject } from "./installation-project.js";
 
 const DEFAULT_MEDPLUM_BASE_URL = "http://localhost:8103";
 export const DEMO_SEED_SYSTEM = "https://odos2020.com/seed/operator-demo";
@@ -526,7 +527,9 @@ export async function runSeedDemoCli(options: {
   const env = options.env ?? process.env;
   const medplumBaseUrl = (env.MEDPLUM_BASE_URL ?? DEFAULT_MEDPLUM_BASE_URL).replace(/\/$/, "");
   assertLocalMedplumBaseUrl(medplumBaseUrl);
-  const projectId = requireEnv(env, "MEDPLUM_PROJECT_ID");
+  const target = resolveInstallationProject({ env });
+  const projectId = target.projectId;
+  console.log(formatInstallationProjectTarget(target));
   const operator = await (options.loadOperator ?? loadVerifiedOperatorFhirClient)({
     baseUrl: medplumBaseUrl,
     projectId,

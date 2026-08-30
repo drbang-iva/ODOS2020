@@ -47,7 +47,13 @@ import {
   logPracticeRoleBootVerification,
   logSsePracticeRoleBootVerification,
   readPracticeRolePolicySyncStatusReport,
+  verifyMcpProjectBootBoundary,
 } from "./authz/boot-role-verification.js";
+import {
+  assertObservedProjectMatchesTarget,
+  formatInstallationProjectTarget,
+  resolveInstallationProject,
+} from "../../scripts/installation-project.js";
 import {
   buildOdosAuditEventRow,
   type OdosAuditEventRecord,
@@ -519,6 +525,8 @@ const BASE_URL = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103/";
 const EMAIL = process.env.MEDPLUM_ADMIN_EMAIL;
 const PASSWORD = process.env.MEDPLUM_ADMIN_PASSWORD;
 const ACCESS_TOKEN = process.env.MEDPLUM_ACCESS_TOKEN;
+const INSTALLATION_PROJECT = resolveInstallationProject();
+let installationProjectTargetLogged = false;
 const CREATE_OBSERVATION_AUDIT_HEADERS = {
   "X-ODOS-Source": "mcp/create_observation",
 } as const;
@@ -2729,7 +2737,7 @@ function createServer(): Server {
     try {
       switch (name) {
         case "get_policy_sync_status": {
-          const status = await readPracticeRolePolicySyncStatusReport(fhir);
+          const status = await readPracticeRolePolicySyncStatusReport(fhir, INSTALLATION_PROJECT.projectId);
           return { content: [{ type: "text", text: JSON.stringify(status, null, 2) }] };
         }
         case "list_patients": {
@@ -5603,27 +5611,35 @@ function requestIp(req: express.Request): string | undefined {
 }
 
 async function authenticateWithMedplum(force = false): Promise<void> {
-  if (ACCESS_TOKEN && !force) {
-    return;
+  if (!installationProjectTargetLogged) {
+    console.error(formatInstallationProjectTarget(INSTALLATION_PROJECT));
+    installationProjectTargetLogged = true;
   }
-
-  if (!EMAIL || !PASSWORD) {
-    throw new Error(
-      "odos-mcp: MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD must be set in env.",
-    );
+  if (!ACCESS_TOKEN || force) {
+    if (!EMAIL || !PASSWORD) {
+      throw new Error(
+        "odos-mcp: MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD must be set in env.",
+      );
+    }
+    if (force) authPromise = undefined;
+    authPromise ??= (async () => {
+      await fhir.login(EMAIL, PASSWORD);
+      console.error("odos-mcp: authenticated with Medplum");
+    })();
+    try {
+      await authPromise;
+    } catch (error) {
+      authPromise = undefined;
+      throw error;
+    }
   }
-
-  if (force) authPromise = undefined;
-  authPromise ??= (async () => {
-    await fhir.login(EMAIL, PASSWORD);
-    console.error("odos-mcp: authenticated with Medplum");
-  })();
-  try {
-    await authPromise;
-  } catch (error) {
-    authPromise = undefined;
-    throw error;
-  }
+  const observedProjectId = await fhir.getActiveProjectId();
+  console.error(`Observed authenticated MCP service project: Project/${observedProjectId}`);
+  assertObservedProjectMatchesTarget(
+    INSTALLATION_PROJECT.projectId,
+    observedProjectId,
+    "authenticated MCP service project",
+  );
 }
 
 async function authenticateStaffRoute(header: string | undefined) {
@@ -5645,18 +5661,20 @@ function authenticateStaffRouteForAction(businessAction: BusinessAction) {
 }
 
 async function startMcpServer(): Promise<void> {
+  await verifyMcpProjectBootBoundary({
+    configuredProjectId: INSTALLATION_PROJECT.projectId,
+    configuredSource: INSTALLATION_PROJECT.source,
+    authenticate: authenticateWithMedplum,
+    getActiveProjectId: () => fhir.getActiveProjectId(),
+    verifyPolicies: () => logPracticeRoleBootVerification(fhir, INSTALLATION_PROJECT.projectId),
+    serve: serveMcpServerAfterProjectGuard,
+  });
+}
+
+async function serveMcpServerAfterProjectGuard(): Promise<void> {
   const transportMode = process.env.ODOS_MCP_TRANSPORT ?? "stdio";
   const westFaxConfig = westFaxConfigFromEnv(process.env);
   const westFaxAdapter = westFaxConfig ? createWestFaxAdapter(westFaxConfig) : null;
-  if (transportMode === "sse") {
-    await logSsePracticeRoleBootVerification({
-      authenticate: authenticateWithMedplum,
-      verify: () => logPracticeRoleBootVerification(fhir),
-    });
-  } else if (transportMode === "stdio") {
-    await authenticateWithMedplum();
-    await logPracticeRoleBootVerification(fhir);
-  }
   await logProtocolSeedBootFailure({
     seed: () => protocolDefinitionStore.ensureSeed(GLAUCOMA_SUSPECT_PROTOCOL).then(() => undefined),
   });

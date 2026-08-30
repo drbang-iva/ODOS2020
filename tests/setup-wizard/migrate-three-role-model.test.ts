@@ -383,6 +383,10 @@ test("the migration CLI accepts an access token, resolves its session membership
     assert.equal(server.loginCalls, 0);
     assert.equal(server.sessionProjectSearches, 1);
     assert.equal(server.projectScopedSearches, 2);
+    assert.match(
+      result.stdout,
+      /Target: Project\/practice-1 \(source: authenticated-session \(resolved post-auth\)\)/,
+    );
     assert.match(result.stdout, /"mode": "dry-run"/);
     assert.match(result.stdout, /Dry run only/);
   });
