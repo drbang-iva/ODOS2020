@@ -73,9 +73,11 @@ test("claim action refresh projects the resulting in-review status", async () =>
   assert.match(html, /in-review/);
 });
 
-test("matched disposition is offered only for era-unmatched", () => {
+test("matched and legacy dispositions are offered only for era-unmatched", () => {
   assert.equal(dispositionsForLane("era-unmatched").includes("matched"), true);
+  assert.equal(dispositionsForLane("era-unmatched").includes("legacy"), true);
   assert.equal(dispositionsForLane("era-denial").includes("matched"), false);
+  assert.equal(dispositionsForLane("era-denial").includes("legacy"), false);
   assert.equal(dispositionsForLane("era-integrity").includes("matched"), false);
   assert.equal(dispositionsForLane("era-line-linkage").includes("matched"), false);
   assert.equal(dispositionsForLane("era-underpayment").includes("matched"), false);
