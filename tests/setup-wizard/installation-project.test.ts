@@ -162,6 +162,25 @@ test("derived operator credentials and migration state must agree with installat
   }
 });
 
+test("foreign-project acknowledgement cannot suppress canonical derived-state validation", () => {
+  const { directory, statePath } = fixture();
+  try {
+    writeFileSync(statePath, JSON.stringify({ projectId: "practice-install" }));
+    mkdirSync(join(directory, ".odos"));
+    writeFileSync(join(directory, ".odos", "operator.env"), "ODOS_OPERATOR_PROJECT_ID=practice-old\n");
+    assert.throws(
+      () => resolveInstallationProject({
+        args: ["--project", "practice-install", "--allow-foreign-project"],
+        env: { ODOS_SETUP_STATE_PATH: statePath },
+        workingDirectory: directory,
+      }),
+      /operator credentials.*practice-old.*installation.*practice-install/i,
+    );
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("authenticated project mismatch fails before a consumer can mutate", () => {
   assert.throws(
     () => assertObservedProjectMatchesTarget("practice-configured", "practice-session", "authenticated service project"),

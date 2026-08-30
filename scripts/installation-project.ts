@@ -45,10 +45,16 @@ export function resolveConfiguredInstallationProject(input: {
   const manifestExists = existsSync(statePath);
   const manifestProjectId = readJsonProjectId(statePath, ["projectId"]);
   const environmentProjectId = env.MEDPLUM_PROJECT_ID?.trim();
+  const configuredProjectId = manifestProjectId || environmentProjectId;
 
   if (acknowledgedForeignProject && !explicitProjectId) {
     throw new Error("--allow-foreign-project requires an explicit --project <project-id>.");
   }
+  const intentionalForeignProject = Boolean(
+    acknowledgedForeignProject
+    && configuredProjectId
+    && explicitProjectId !== configuredProjectId,
+  );
   if (manifestExists && !manifestProjectId) {
     throw new Error(`Installation manifest ${statePath} does not contain a projectId; refusing to use another source.`);
   }
@@ -57,20 +63,20 @@ export function resolveConfiguredInstallationProject(input: {
       "This break-glass operation requires explicit --project <project-id>; installation state and MEDPLUM_PROJECT_ID are not accepted.",
     );
   }
-  if (manifestProjectId && environmentProjectId && manifestProjectId !== environmentProjectId && !acknowledgedForeignProject) {
+  if (manifestProjectId && environmentProjectId && manifestProjectId !== environmentProjectId && !intentionalForeignProject) {
     throw new Error(
       `Project source conflict: installation-state is Project/${manifestProjectId}, `
       + `but MEDPLUM_PROJECT_ID is Project/${environmentProjectId}. Correct the stale source or use `
       + "an explicit --project <project-id> --allow-foreign-project for intentional foreign-project work.",
     );
   }
-  if (explicitProjectId && manifestProjectId && explicitProjectId !== manifestProjectId && !acknowledgedForeignProject) {
+  if (explicitProjectId && manifestProjectId && explicitProjectId !== manifestProjectId && !intentionalForeignProject) {
     throw new Error(
       `Explicit Project/${explicitProjectId} differs from installation-state Project/${manifestProjectId}. `
       + "Intentional foreign-project work requires --allow-foreign-project.",
     );
   }
-  if (explicitProjectId && environmentProjectId && explicitProjectId !== environmentProjectId && !acknowledgedForeignProject) {
+  if (explicitProjectId && environmentProjectId && explicitProjectId !== environmentProjectId && !intentionalForeignProject) {
     throw new Error(
       `Explicit Project/${explicitProjectId} differs from MEDPLUM_PROJECT_ID Project/${environmentProjectId}. `
       + "Intentional foreign-project work requires --allow-foreign-project.",
@@ -84,7 +90,7 @@ export function resolveConfiguredInstallationProject(input: {
     : manifestProjectId
       ? "installation-state"
       : "MEDPLUM_PROJECT_ID";
-  if (!acknowledgedForeignProject) {
+  if (!intentionalForeignProject) {
     assertDerivedProjectState(projectId, statePath);
   }
   return { projectId, source, statePath };
