@@ -9,6 +9,7 @@ import { conditionKey, WATCHER_CODE_SYSTEM } from "./watcher-task.js";
 import { resolveBusinessActionRole, type BusinessAction, type PracticeRoleId } from "../authz/roles.js";
 
 const WATCHER_ACTION_SYSTEM = "https://odos2020.com/fhir/CodeSystem/watcher-action";
+const FHIR_DATETIME_WITH_ZONE = /^(?!0000)\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|[+-](?:(?:0\d|1[0-3]):[0-5]\d|14:00))$/;
 const TERMINAL_TASK_STATUSES = new Set<Task["status"]>([
   "cancelled",
   "completed",
@@ -229,7 +230,7 @@ function previousDate(value: string): string {
 }
 
 function instant(value: unknown, label: string): string {
-  if (typeof value !== "string" || !value.trim() || Number.isNaN(Date.parse(value))) {
+  if (typeof value !== "string" || !FHIR_DATETIME_WITH_ZONE.test(value) || Number.isNaN(Date.parse(value))) {
     throw new WatcherValidationError(`${label} must be an ISO dateTime.`);
   }
   return value;

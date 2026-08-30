@@ -1,6 +1,11 @@
 import type { Task } from "@medplum/fhirtypes";
 import { projectWatcherHealth, type WatcherHealthState } from "./watcher-health.js";
-import { WATCHER_CODE_SYSTEM, WATCHER_INPUT_SYSTEM, WATCHER_STATUS_SYSTEM } from "./watcher-task.js";
+import {
+  conditionKey,
+  WATCHER_CODE_SYSTEM,
+  WATCHER_INPUT_SYSTEM,
+  WATCHER_STATUS_SYSTEM,
+} from "./watcher-task.js";
 import type { WatcherPracticeConfig, WatcherRegistry, WatcherSeverity } from "./watcher-types.js";
 import { practiceDate } from "../desk/day-ledger.js";
 
@@ -108,7 +113,9 @@ export function projectTodayDigest(
 }
 
 function taskProjection(task: Task, registry: WatcherRegistry): WatcherAlertProjection {
-  const watcherId = task.code?.coding?.find((coding) => coding.code)?.code;
+  const watcherId = task.code?.coding?.find(
+    (coding) => coding.system === WATCHER_CODE_SYSTEM && coding.code,
+  )?.code;
   const severity = task.businessStatus?.coding?.find(
     (coding) => coding.system === WATCHER_STATUS_SYSTEM,
   )?.code as WatcherSeverity | undefined;
@@ -150,7 +157,10 @@ function isVisible(task: Task, now: string): boolean {
 }
 
 function isWatcherTask(task: Task): boolean {
-  return Boolean(task.code?.coding?.some((coding) => coding.system === WATCHER_CODE_SYSTEM));
+  return Boolean(
+    conditionKey(task)
+      && task.code?.coding?.some((coding) => coding.system === WATCHER_CODE_SYSTEM && coding.code),
+  );
 }
 
 function rankAlerts(left: WatcherAlertProjection, right: WatcherAlertProjection): number {

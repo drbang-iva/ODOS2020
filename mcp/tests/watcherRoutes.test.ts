@@ -83,6 +83,29 @@ test("failed and stale health suppress otherwise valid Tasks on both projections
   }
 });
 
+test("healthy projections ignore a code-system lookalike without a watcher condition identifier", () => {
+  const lookalike: Task = {
+    resourceType: "Task",
+    id: "not-managed",
+    status: "requested",
+    intent: "order",
+    code: { coding: [{ system: WATCHER_CODE_SYSTEM, code: "W999" }] },
+  };
+
+  const frontdesk = projectFrontDeskAlerts({
+    tasks: [lookalike], config, registry, health: healthy, now: "2026-08-30T12:01:00.000Z",
+  });
+  const today = projectTodayDigest({
+    tasks: [lookalike], config, registry, health: healthy,
+    date: "2026-08-30", previousDate: "2026-08-29", now: "2026-08-30T12:01:00.000Z",
+  });
+
+  assert.equal(frontdesk.status, "healthy");
+  assert.equal(today.status, "healthy");
+  if (frontdesk.status === "healthy") assert.deepEqual(frontdesk.alerts, []);
+  if (today.status === "healthy") assert.deepEqual(today.items, []);
+});
+
 test("watcher read routes return structured 503 degradation and never serialize stale alerts", async () => {
   const task = watcherTask(1, "2026-08-30", 13200, 173);
   const fhir = new RouteFhir([task], buildWatcherHealthResource({
@@ -173,6 +196,24 @@ test("stale actions cannot resurrect cancelled or completed watcher Tasks", asyn
     /terminal and cannot accept another action/,
   );
   assert.deepEqual(fhir.tasks.map((task) => task.status), ["cancelled", "completed"]);
+});
+
+test("snooze rejects parseable values that are not FHIR dateTimes with an explicit zone", async () => {
+  for (const until of ["2026-08-31", "08/31/2026", "2026-08-31T09:00:00"]) {
+    const fhir = new RouteFhir([watcherTask(1, "2026-08-30", 1000, 1)]);
+    await assert.rejects(
+      () => applyWatcherTaskAction(
+        fhir,
+        registry,
+        "task-1",
+        { action: "snooze", until },
+        "2026-08-30T12:00:00.000Z",
+        config,
+      ),
+      /must be an ISO dateTime/,
+    );
+    assert.equal(fhir.tasks[0]?.status, "requested");
+  }
 });
 
 test("resolve keeps the Task open while its watcher condition still matches", async () => {
