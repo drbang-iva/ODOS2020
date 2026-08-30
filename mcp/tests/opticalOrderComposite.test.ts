@@ -81,6 +81,7 @@ test("assembleOpticalCashOrder emits a transaction Bundle wiring order→task, o
   // totals: gross = 305.00, net = 305 - 15 discount = 290.00; tender = CASH
   assert.equal((invoice as { totalGross?: { value?: number } }).totalGross?.value, 305);
   assert.equal((invoice as { totalNet?: { value?: number } }).totalNet?.value, 290);
+  assert.equal((invoice as Invoice).status, "balanced");
   assert.equal(
     (invoice as { extension?: { valueCodeableConcept?: { coding?: { code?: string }[] } }[] }).extension?.[0]
       ?.valueCodeableConcept?.coding?.[0]?.code,

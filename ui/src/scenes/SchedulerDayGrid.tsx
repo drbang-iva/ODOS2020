@@ -1,6 +1,6 @@
 import type { Appointment, HealthcareService, Schedule } from "@medplum/fhirtypes";
 import clsx from "clsx";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CLINIC_MODES,
   RESOURCE_KINDS,
@@ -58,8 +58,19 @@ import {
   canStartAppointmentChart,
   type PracticeRoleId,
 } from "../lib/practice-roles";
+import type { WatcherAlert, WatcherTaskAction } from "../lib/watchers";
 
-export function SchedulerDayGrid({ roles = [] }: { roles?: readonly PracticeRoleId[] } = {}) {
+export function SchedulerDayGrid({
+  roles = [],
+  watcherAlerts = [],
+  initialAppointmentId,
+  onWatcherAction,
+}: {
+  roles?: readonly PracticeRoleId[];
+  watcherAlerts?: WatcherAlert[];
+  initialAppointmentId?: string;
+  onWatcherAction?: (taskId: string, action: WatcherTaskAction) => void | Promise<void>;
+} = {}) {
   const clinicMode = useSchedulingStore((state) => state.clinicMode);
   const view = useSchedulingStore((state) => state.view);
   const date = useSchedulingStore((state) => state.date);
@@ -119,6 +130,7 @@ export function SchedulerDayGrid({ roles = [] }: { roles?: readonly PracticeRole
     appointment: Appointment;
     sourceResourceActor?: string;
   } | null>(null);
+  const initialAppointmentConsumed = useRef(false);
 
   useEffect(() => {
     if (view === "day") {
@@ -182,6 +194,18 @@ export function SchedulerDayGrid({ roles = [] }: { roles?: readonly PracticeRole
     () => currentAppointment(moveSource?.appointment ?? null, appointments),
     [appointments, moveSource],
   );
+  const watcherAlertsByAppointment = useMemo(
+    () => Object.fromEntries(watcherAlerts.map((alert) => [alert.appointmentId, alert])),
+    [watcherAlerts],
+  );
+
+  useEffect(() => {
+    if (!initialAppointmentId || initialAppointmentConsumed.current) return;
+    const appointment = appointments.find((candidate) => candidate.id === initialAppointmentId);
+    if (!appointment) return;
+    initialAppointmentConsumed.current = true;
+    setQuickCardSelection({ appointment });
+  }, [appointments, initialAppointmentId]);
   const timeAxis = useMemo(
     () => buildTimeAxis({ date, resources: baseVisibleResources, config, slotMinutes, appointments: visibleAppointments }),
     [date, baseVisibleResources, config, slotMinutes, visibleAppointments],
@@ -464,6 +488,7 @@ export function SchedulerDayGrid({ roles = [] }: { roles?: readonly PracticeRole
                         appointments={positionedAppointments.filter(
                           (block) => block.geometry.columnIndex === columnIndex,
                         )}
+                        watcherAlertsByAppointment={watcherAlertsByAppointment}
                         onAppointmentClick={handleAppointmentClick}
                         onBlockedRegionClick={handleBlockedRegionClick}
                         onCellClick={handleCellClick}
@@ -519,6 +544,8 @@ export function SchedulerDayGrid({ roles = [] }: { roles?: readonly PracticeRole
         }}
         onDetails={(appointment) => setDetails({ appointment })}
         date={date}
+        watcherAlert={quickCardAppointment?.id ? watcherAlertsByAppointment[quickCardAppointment.id] : undefined}
+        onWatcherAction={onWatcherAction}
       />
       {details && (
         <AppointmentDetailsModal

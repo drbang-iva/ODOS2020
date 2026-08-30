@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import type { Bundle, Invoice, Patient } from "@medplum/fhirtypes";
 import type { ClaimsApiOptions } from "../../lib/claims-worklist";
 import { fhir } from "../../lib/fhir";
@@ -17,6 +17,7 @@ import { PatientSearch } from "../PatientPicker";
 import { downloadCsvExport, queryPath } from "../../lib/reporting";
 import { CollectPanel } from "../../components/CollectPanel";
 import { BalanceChips } from "../../components/commercial/BalanceChips";
+import { updateWatcherTask, type WatcherTaskAction } from "../../lib/watchers";
 
 type View = "all" | "unapplied";
 type CreditAction =
@@ -25,6 +26,9 @@ type CreditAction =
   | { kind: "void"; credit: UnappliedCredit };
 
 export function PatientPayments() {
+  const [launchContext] = useState(() => parseWatcherCollectionContext(
+    typeof window === "undefined" ? "" : window.location.search,
+  ));
   const [patient, setPatient] = useState<Patient>();
   const [view, setView] = useState<View>("all");
   const [payments, setPayments] = useState<PatientPaymentRow[]>([]);
@@ -39,6 +43,7 @@ export function PatientPayments() {
   const [exporting, setExporting] = useState(false);
   const [collecting, setCollecting] = useState(false);
   const [packageRevision, setPackageRevision] = useState(0);
+  const [watcherTaskId, setWatcherTaskId] = useState(launchContext.watcherTaskId);
   const api = patientPaymentApiOptions();
 
   const load = async (
@@ -68,8 +73,9 @@ export function PatientPayments() {
     }
   };
 
-  const selectPatient = (selected: Patient) => {
+  const selectPatient = (selected: Patient, preserveWatcherContext = false) => {
     if (!selected.id) return;
+    if (!preserveWatcherContext) setWatcherTaskId(undefined);
     setPatient(selected);
     setAction(undefined);
     setPayments([]);
@@ -78,6 +84,32 @@ export function PatientPayments() {
     setDateFilters({});
     setAppliedDateFilters({});
     void load(`Patient/${selected.id}`, {});
+  };
+
+  useEffect(() => {
+    if (!launchContext.patientId) return;
+    let cancelled = false;
+    fhir.read<Patient>("Patient", launchContext.patientId)
+      .then((selected) => {
+        if (cancelled) return;
+        selectPatient(selected, true);
+        if (launchContext.collect) setCollecting(true);
+      })
+      .catch((cause) => {
+        if (!cancelled) setError(messageOf(cause));
+      });
+    return () => { cancelled = true; };
+  }, [launchContext]);
+
+  const collectionCompleted = async () => {
+    if (patient?.id) await load(`Patient/${patient.id}`, appliedDateFilters);
+    if (!watcherTaskId) return;
+    try {
+      await resolveWatcherAfterCollection(watcherTaskId, `Patient/${patient!.id}`);
+      setWatcherTaskId(undefined);
+    } catch (cause) {
+      setError(`Payment recorded, but the balance watch is still open: ${messageOf(cause)}`);
+    }
   };
 
   const submitAction = async (input: CreditActionInput) => {
@@ -138,7 +170,7 @@ export function PatientPayments() {
           <p className="mt-1 text-sm text-white/50">Review collected payments and work unapplied patient credit.</p>
         </div>
         {patient && (
-          <button type="button" onClick={() => { setPatient(undefined); setPayments([]); setCredits([]); setOpenInvoices([]); }} className="rounded border border-white/15 px-3 py-2 text-sm text-white/65">
+          <button type="button" onClick={() => { setPatient(undefined); setWatcherTaskId(undefined); setPayments([]); setCredits([]); setOpenInvoices([]); }} className="rounded border border-white/15 px-3 py-2 text-sm text-white/65">
             Change patient
           </button>
         )}
@@ -205,12 +237,38 @@ export function PatientPayments() {
           patientReference={`Patient/${patient.id}`}
           patientName={patientName(patient)}
           onClose={() => setCollecting(false)}
-          onCollected={() => void load(`Patient/${patient.id}`, appliedDateFilters)}
+          onCollected={() => void collectionCompleted()}
           onPackageBalanceChanged={() => setPackageRevision((current) => current + 1)}
         />
       )}
     </main>
   );
+}
+
+export interface WatcherCollectionContext {
+  patientId?: string;
+  collect: boolean;
+  watcherTaskId?: string;
+}
+
+export function parseWatcherCollectionContext(search: string): WatcherCollectionContext {
+  const params = new URLSearchParams(search);
+  const patientId = params.get("patientId") || undefined;
+  const collect = params.get("collect") === "1";
+  const watcherTaskId = collect && patientId ? params.get("watcherTaskId") || undefined : undefined;
+  return {
+    ...(patientId ? { patientId } : {}),
+    collect,
+    ...(watcherTaskId ? { watcherTaskId } : {}),
+  };
+}
+
+export function resolveWatcherAfterCollection(
+  taskId: string,
+  patientReference: string,
+  update: (taskId: string, action: Extract<WatcherTaskAction, { action: "resolve" }>) => Promise<unknown> = updateWatcherTask,
+): Promise<unknown> {
+  return update(taskId, { action: "resolve", patientReference });
 }
 
 export function AllPaymentsTable({ payments }: { payments: readonly PatientPaymentRow[] }) {

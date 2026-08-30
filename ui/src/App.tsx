@@ -27,6 +27,7 @@ import { PatientInsurance } from "./scenes/insurance/PatientInsurance";
 import { VisionPlanBenefits } from "./scenes/insurance/VisionPlanBenefits";
 import { PatientPharmacy } from "./scenes/pharmacy/PatientPharmacy";
 import { AccountsReceivableDashboard } from "./scenes/claims/AccountsReceivableDashboard";
+import { BillingToday } from "./scenes/BillingToday";
 import { SettingsIndex } from "./scenes/settings/SettingsIndex";
 import { FloorConfigSettings } from "./scenes/settings/FloorConfigSettings";
 import { VisionPlanTemplatesSettings } from "./scenes/settings/VisionPlanTemplatesSettings";
@@ -368,6 +369,8 @@ export function RouteSwitch({
       return <ViewRouter view={view.kind === "picker" ? view : { kind: "picker" }} />;
     case "/billing/claims/worklist":
       return <ClaimsWorklist />;
+    case "/billing/today":
+      return <BillingToday />;
     case "/billing/claims/search":
       return <ClaimSearch />;
     case "/billing/claims/remittances":
