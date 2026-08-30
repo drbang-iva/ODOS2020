@@ -103,6 +103,36 @@ test("AWS SQS rejects a notification from a different SNS topic without deleting
   assert.equal(deletes, 0);
 });
 
+test("AWS SQS run recovers from a transient receive failure with bounded backoff", async () => {
+  const fhir = new InMemorySuppressionFhir({ resourceType: "Patient", id: "synthetic-1" });
+  const controller = new AbortController();
+  const delays: number[] = [];
+  const errors: string[] = [];
+  let receives = 0;
+  const receiver = createAwsSqsInboundReceiver(CONFIG, {
+    fhir,
+    onMessage: async () => undefined,
+    error: (message) => errors.push(message),
+    sleep: async (delayMs) => { delays.push(delayMs); },
+    client: {
+      async send(command) {
+        if (command.constructor.name !== "ReceiveMessageCommand") return {};
+        receives += 1;
+        if (receives === 1) throw new Error("synthetic transient receive failure");
+        controller.abort();
+        return { Messages: [] };
+      },
+    },
+  });
+
+  await receiver.run(controller.signal);
+
+  assert.equal(receives, 2);
+  assert.deepEqual(delays, [1_000]);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0]!, /receive failed.*retrying in 1000ms.*synthetic transient/i);
+});
+
 class InMemorySuppressionFhir {
   readonly baseUrl = "http://synthetic.fhir/R4";
   constructor(public patient: Patient) {}

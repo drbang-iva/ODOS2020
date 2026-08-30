@@ -27,6 +27,7 @@ export interface AwsSqsInboundReceiverDeps {
   onMessage(event: InboundMessageEvent): Promise<void>;
   client?: AwsSqsClient;
   error?: (message: string) => void;
+  sleep?: (delayMs: number, signal?: AbortSignal) => Promise<void>;
 }
 
 export function createAwsSqsInboundReceiver(
@@ -66,9 +67,36 @@ export function createAwsSqsInboundReceiver(
       return processed;
     },
     async run(signal?: AbortSignal): Promise<void> {
-      while (!signal?.aborted) await this.pollOnce();
+      let consecutiveFailures = 0;
+      while (!signal?.aborted) {
+        try {
+          await this.pollOnce();
+          consecutiveFailures = 0;
+        } catch (error) {
+          if (signal?.aborted) return;
+          const delayMs = Math.min(1_000 * 2 ** Math.min(consecutiveFailures, 5), 30_000);
+          consecutiveFailures += 1;
+          (deps.error ?? console.error)(
+            `odos-mcp: AWS SMS inbound receive failed; retrying in ${delayMs}ms; ${error instanceof Error ? error.message : "unknown receive failure"}`,
+          );
+          await (deps.sleep ?? sleep)(delayMs, signal);
+        }
+      }
     },
   };
+}
+
+async function sleep(delayMs: number, signal?: AbortSignal): Promise<void> {
+  if (signal?.aborted) return;
+  await new Promise<void>((resolve) => {
+    const done = () => {
+      clearTimeout(timeout);
+      signal?.removeEventListener("abort", done);
+      resolve();
+    };
+    const timeout = setTimeout(done, delayMs);
+    signal?.addEventListener("abort", done, { once: true });
+  });
 }
 
 export function parseAwsInboundMessage(
