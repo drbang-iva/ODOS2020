@@ -26,9 +26,11 @@ test("AWS SQS STOP-equivalent delivery uses the shared gate and blocks AWS outbo
   const received: InboundMessageEvent[] = [];
   let deletes = 0;
   let queueReads = 0;
+  const info: string[] = [];
   const receiver = createAwsSqsInboundReceiver(CONFIG, {
     fhir,
     onMessage: async (event) => { received.push(event); },
+    info: (message) => info.push(message),
     client: {
       async send(command) {
         if (command.constructor.name === "ReceiveMessageCommand") {
@@ -60,6 +62,9 @@ test("AWS SQS STOP-equivalent delivery uses the shared gate and blocks AWS outbo
   assert.equal(received[0]?.provider, "aws");
   assert.equal(received[0]?.optOutType, "STOP");
   assert.equal(received[0]?.providerMessageId, "aws-inbound-1");
+  assert.deepEqual(info, [
+    "odos-mcp: AWS inbound SMS suppression outcome=opted-out matchedPatients=1",
+  ]);
 
   let sends = 0;
   const outbound = createSuppressedCommsProvider(createAwsSmsAdapter(CONFIG, {
@@ -74,6 +79,86 @@ test("AWS SQS STOP-equivalent delivery uses the shared gate and blocks AWS outbo
   assert.deepEqual(result, { outcome: "suppressed", reason: "patient-opt-out" });
   assert.equal(sends, 0);
   assert.equal(fhir.patient.extension?.[0]?.url, ODOS_COMMS_OPT_OUT_EXTENSION_URL);
+});
+
+test("AWS SQS retains a shared-number STOP after a mid-loop Patient update failure and succeeds on retry", async () => {
+  const fhir = new InMemorySuppressionFhir(["synthetic-1", "synthetic-2"].map((id) => ({
+    resourceType: "Patient" as const,
+    id,
+    meta: { versionId: "1" },
+    telecom: [{ system: "phone" as const, use: "mobile" as const, value: PATIENT_NUMBER }],
+  })));
+  fhir.failNextUpdateFor("synthetic-2");
+  const errors: string[] = [];
+  const info: string[] = [];
+  let deletes = 0;
+  const receiver = createAwsSqsInboundReceiver(CONFIG, {
+    fhir,
+    onMessage: async () => undefined,
+    error: (message) => errors.push(message),
+    info: (message) => info.push(message),
+    client: {
+      async send(command) {
+        if (command.constructor.name === "ReceiveMessageCommand") {
+          return { Messages: [{
+            MessageId: "sqs-shared-phone",
+            ReceiptHandle: "receipt-shared-phone",
+            Body: inboundNotification("aws-shared-phone", "STOP"),
+          }] };
+        }
+        deletes += 1;
+        return {};
+      },
+    },
+  });
+
+  assert.equal(await receiver.pollOnce(), 0);
+  assert.equal(deletes, 0);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0]!, /retained for retry.*synthetic Patient update failure/i);
+
+  assert.equal(await receiver.pollOnce(), 1);
+  assert.equal(deletes, 1);
+  assert.deepEqual(info, [
+    "odos-mcp: AWS inbound SMS suppression outcome=opted-out matchedPatients=2",
+  ]);
+  assert.equal(fhir.patients.filter((patient) =>
+    patient.extension?.some((extension) => extension.url === ODOS_COMMS_OPT_OUT_EXTENSION_URL)).length, 2);
+});
+
+test("AWS SQS logs a distinct zero-match suppression outcome", async () => {
+  const fhir = new InMemorySuppressionFhir({
+    resourceType: "Patient",
+    id: "synthetic-1",
+    meta: { versionId: "1" },
+    telecom: [{ system: "phone", value: "+18645550198" }],
+  });
+  const info: string[] = [];
+  let deletes = 0;
+  const receiver = createAwsSqsInboundReceiver(CONFIG, {
+    fhir,
+    onMessage: async () => undefined,
+    info: (message) => info.push(message),
+    client: {
+      async send(command) {
+        if (command.constructor.name === "ReceiveMessageCommand") {
+          return { Messages: [{
+            MessageId: "sqs-no-match",
+            ReceiptHandle: "receipt-no-match",
+            Body: inboundNotification("aws-no-match", "STOP"),
+          }] };
+        }
+        deletes += 1;
+        return {};
+      },
+    },
+  });
+
+  assert.equal(await receiver.pollOnce(), 1);
+  assert.equal(deletes, 1);
+  assert.deepEqual(info, [
+    "odos-mcp: AWS inbound SMS suppression outcome=no-patient-match matchedPatients=0",
+  ]);
 });
 
 test("AWS SQS rejects a notification from a different SNS topic without deleting it", async () => {
@@ -133,24 +218,59 @@ test("AWS SQS run recovers from a transient receive failure with bounded backoff
   assert.match(errors[0]!, /receive failed.*retrying in 1000ms.*synthetic transient/i);
 });
 
+function inboundNotification(providerMessageId: string, messageBody: string): string {
+  return JSON.stringify({
+    Type: "Notification",
+    TopicArn: CONFIG.inboundTopicArn,
+    Message: JSON.stringify({
+      originationNumber: PATIENT_NUMBER,
+      destinationNumber: PRACTICE_NUMBER,
+      messageKeyword: messageBody,
+      messageBody,
+      inboundMessageId: providerMessageId,
+    }),
+  });
+}
+
 class InMemorySuppressionFhir {
   readonly baseUrl = "http://synthetic.fhir/R4";
-  constructor(public patient: Patient) {}
-  async read<T extends Resource>(): Promise<T> { return structuredClone(this.patient) as T; }
+  readonly patients: Patient[];
+  private failUpdateId?: string;
+  constructor(patient: Patient | Patient[]) {
+    this.patients = structuredClone(Array.isArray(patient) ? patient : [patient]);
+  }
+  get patient(): Patient { return this.patients[0]!; }
+  failNextUpdateFor(id: string): void { this.failUpdateId = id; }
+  async read<T extends Resource>(_resourceType: T["resourceType"], id: string): Promise<T> {
+    const patient = this.patients.find((candidate) => candidate.id === id);
+    if (!patient) throw new Error(`Missing Patient/${id}`);
+    return structuredClone(patient) as T;
+  }
   async search<T extends Resource>(resourceType: T["resourceType"], params: Record<string, string> = {}): Promise<Bundle<T>> {
-    const match = resourceType === "Patient"
-      && this.patient.telecom?.some((point) => point.value === params.telecom);
+    const matches = resourceType === "Patient"
+      ? this.patients.filter((patient) => patient.telecom?.some((point) => point.value === params.telecom))
+      : [];
     return {
       resourceType: "Bundle",
       type: "searchset",
-      entry: match ? [{ resource: structuredClone(this.patient) as T }] : [],
+      entry: matches.map((patient) => ({ resource: structuredClone(patient) as T })),
     };
   }
   async searchUrl<T extends Resource>(): Promise<Bundle<T>> {
     return { resourceType: "Bundle", type: "searchset" };
   }
-  async update<T extends Resource>(_type: T["resourceType"], _id: string, resource: T): Promise<T> {
-    this.patient = structuredClone(resource) as Patient;
+  async update<T extends Resource>(_type: T["resourceType"], id: string, resource: T): Promise<T> {
+    if (this.failUpdateId === id) {
+      this.failUpdateId = undefined;
+      throw new Error("synthetic Patient update failure");
+    }
+    const index = this.patients.findIndex((patient) => patient.id === id);
+    if (index < 0) throw new Error(`Missing Patient/${id}`);
+    const currentVersion = Number(this.patients[index]!.meta?.versionId ?? "0");
+    this.patients[index] = {
+      ...structuredClone(resource) as Patient,
+      meta: { ...resource.meta, versionId: String(currentVersion + 1) },
+    };
     return structuredClone(resource);
   }
 }

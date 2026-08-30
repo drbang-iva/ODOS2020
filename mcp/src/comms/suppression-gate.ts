@@ -19,7 +19,12 @@ export const ODOS_COMMS_SEND_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/comms-send";
 
 export type SuppressionFhir = Pick<MedplumClient, "baseUrl" | "read" | "search" | "searchUrl">;
-export type InboundSuppressionFhir = Pick<MedplumClient, "search" | "update">;
+export type InboundSuppressionFhir = Pick<MedplumClient, "search" | "searchUrl" | "update">;
+
+export interface InboundSuppressionResult {
+  outcome: "opted-out" | "opted-in" | "unchanged" | "no-patient-match";
+  matchedPatients: number;
+}
 
 export interface SuppressionGateDeps {
   fhir: SuppressionFhir;
@@ -30,38 +35,67 @@ export interface SuppressionGateDeps {
 export async function updateInboundSuppression(
   fhir: InboundSuppressionFhir,
   event: Pick<InboundMessageEvent, "from" | "body" | "optOutType">,
-): Promise<"opted-out" | "opted-in" | "unchanged" | "unmatched"> {
+): Promise<InboundSuppressionResult> {
   const optOutType = event.optOutType ?? inboundOptOutType(event.body);
-  if (!optOutType || optOutType === "HELP") return "unchanged";
-  const bundle = await fhir.search<Patient>("Patient", { telecom: event.from, _count: "2" });
-  const patients = (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
-  if (patients.length !== 1) return "unmatched";
-  const patient = patients[0];
-  if (!patient.id || !patient.meta?.versionId) {
-    throw new Error("Inbound SMS suppression requires a uniquely matched, versioned Patient.");
+  const initialBundle = await fhir.search<Patient>("Patient", { telecom: event.from, _count: "100" });
+  const patients = await collectInboundPatients(fhir, initialBundle);
+  if (patients.length === 0) return { outcome: "no-patient-match", matchedPatients: 0 };
+  if (!optOutType || optOutType === "HELP") {
+    return { outcome: "unchanged", matchedPatients: patients.length };
   }
-  const existing = patient.extension ?? [];
   const isOwnedSmsOptOut = (extension: NonNullable<Patient["extension"]>[number]) =>
     extension.url === ODOS_COMMS_OPT_OUT_EXTENSION_URL
     && extension.extension?.length === 1
     && extension.extension[0]?.url === "channel"
     && extension.extension[0].valueCode === "sms";
-  const nextExtensions = optOutType === "STOP"
-    ? existing.some(isOwnedSmsOptOut)
-      ? existing
-      : [...existing, {
-          url: ODOS_COMMS_OPT_OUT_EXTENSION_URL,
-          extension: [{ url: "channel", valueCode: "sms" }],
-        }]
-    : existing.filter((extension) => !isOwnedSmsOptOut(extension));
-  if (nextExtensions.length === existing.length && nextExtensions.every((entry, index) => entry === existing[index])) {
-    return optOutType === "STOP" ? "opted-out" : "opted-in";
+  // Suppression follows the destination number, so every Patient sharing it must be updated.
+  for (const patient of patients) {
+    if (!patient.id || !patient.meta?.versionId) {
+      throw new Error("Inbound SMS suppression requires every matched Patient to have an id and version.");
+    }
+    const existing = patient.extension ?? [];
+    const nextExtensions = optOutType === "STOP"
+      ? existing.some(isOwnedSmsOptOut)
+        ? existing
+        : [...existing, {
+            url: ODOS_COMMS_OPT_OUT_EXTENSION_URL,
+            extension: [{ url: "channel", valueCode: "sms" }],
+          }]
+      : existing.filter((extension) => !isOwnedSmsOptOut(extension));
+    if (nextExtensions.length === existing.length && nextExtensions.every((entry, index) => entry === existing[index])) {
+      continue;
+    }
+    await fhir.update<Patient>("Patient", patient.id, {
+      ...patient,
+      extension: nextExtensions.length ? nextExtensions : undefined,
+    }, { "If-Match": `W/"${patient.meta.versionId}"` });
   }
-  await fhir.update<Patient>("Patient", patient.id, {
-    ...patient,
-    extension: nextExtensions.length ? nextExtensions : undefined,
-  }, { "If-Match": `W/"${patient.meta.versionId}"` });
-  return optOutType === "STOP" ? "opted-out" : "opted-in";
+  return {
+    outcome: optOutType === "STOP" ? "opted-out" : "opted-in",
+    matchedPatients: patients.length,
+  };
+}
+
+async function collectInboundPatients(
+  fhir: InboundSuppressionFhir,
+  initialBundle: Bundle<Patient>,
+): Promise<Patient[]> {
+  let bundle = initialBundle;
+  const patients = (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
+  const followedLinks = new Set<string>();
+  while (bundle.link?.some((link) => link.relation === "next")) {
+    if (!fhir.searchUrl) {
+      throw new Error("Inbound SMS suppression pagination requires FHIR next-link support.");
+    }
+    const next = bundle.link.find((link) => link.relation === "next")!.url;
+    if (followedLinks.has(next)) {
+      throw new Error("Inbound SMS suppression Patient search returned a repeated next link.");
+    }
+    followedLinks.add(next);
+    bundle = await fhir.searchUrl<Patient>(next, "Patient");
+    patients.push(...(bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []));
+  }
+  return patients;
 }
 
 export function inboundOptOutType(body: string): InboundOptOutType | undefined {

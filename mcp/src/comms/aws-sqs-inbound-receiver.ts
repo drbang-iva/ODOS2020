@@ -27,6 +27,7 @@ export interface AwsSqsInboundReceiverDeps {
   onMessage(event: InboundMessageEvent): Promise<void>;
   client?: AwsSqsClient;
   error?: (message: string) => void;
+  info?: (message: string) => void;
   sleep?: (delayMs: number, signal?: AbortSignal) => Promise<void>;
 }
 
@@ -51,7 +52,10 @@ export function createAwsSqsInboundReceiver(
         try {
           const event = parseAwsInboundMessage(message.Body, normalized.inboundTopicArn);
           await deps.onMessage(event);
-          await updateInboundSuppression(deps.fhir, event);
+          const result = await updateInboundSuppression(deps.fhir, event);
+          (deps.info ?? console.error)(
+            `odos-mcp: AWS inbound SMS suppression outcome=${result.outcome} matchedPatients=${result.matchedPatients}`,
+          );
           if (!message.ReceiptHandle) throw new Error("AWS SQS message is missing ReceiptHandle.");
           await client.send(new DeleteMessageCommand({
             QueueUrl: normalized.inboundQueueUrl,
