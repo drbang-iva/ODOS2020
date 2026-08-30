@@ -201,7 +201,9 @@ class MemoryWatcherFhir {
     if (resource.resourceType === "Task") {
       this.createHeaders.push(headers);
       const conditionKey = (resource as Task).identifier?.[0]?.value;
-      const existing = this.tasks.find((candidate) => candidate.identifier?.[0]?.value === conditionKey);
+      const existing = headers?.["If-None-Exist"]
+        ? this.tasks.find((candidate) => candidate.identifier?.[0]?.value === conditionKey)
+        : undefined;
       if (existing) return structuredClone(existing) as T;
       const created = { ...structuredClone(resource as Task), id: `task-${this.tasks.length + 1}` };
       this.tasks.push(created);
