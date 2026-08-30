@@ -98,4 +98,3 @@ Automated tests and explicit reversible mutations demonstrate:
 6. Failed or stale health blocks existing Tasks in both projections; disabling freshness renders stale Tasks; restoration returns degraded state with last success.
 
 Final gates are `cd mcp && npm run build`, `cd mcp && npm test`, `cd ui && npm run build`, and root `npm run preflight`. The known clean-main `clinicalWriteAuthzLive` failure remains separately identified if reproduced.
-
