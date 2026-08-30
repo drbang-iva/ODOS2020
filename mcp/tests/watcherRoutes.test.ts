@@ -201,8 +201,8 @@ test("stale actions cannot resurrect cancelled or completed watcher Tasks", asyn
   assert.deepEqual(fhir.tasks.map((task) => task.status), ["cancelled", "completed"]);
 });
 
-test("snooze rejects parseable values that are not FHIR dateTimes with an explicit zone", async () => {
-  for (const until of ["2026-08-31", "08/31/2026", "2026-08-31T09:00:00"]) {
+test("snooze rejects parseable values that are not valid FHIR dateTimes with an explicit zone", async () => {
+  for (const until of ["2026-08-31", "08/31/2026", "2026-08-31T09:00:00", "2026-02-31T09:00:00Z"]) {
     const fhir = new RouteFhir([watcherTask(1, "2026-08-30", 1000, 1)]);
     await assert.rejects(
       () => applyWatcherTaskAction(

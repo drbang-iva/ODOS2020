@@ -226,10 +226,7 @@ async function withStaff(
 }
 
 function requestedDate(value: unknown): string {
-  const parsed = typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)
-    ? Date.parse(`${value}T00:00:00Z`)
-    : NaN;
-  if (typeof value !== "string" || Number.isNaN(parsed) || new Date(parsed).toISOString().slice(0, 10) !== value) {
+  if (typeof value !== "string" || !isCalendarDate(value)) {
     throw new WatcherValidationError("Watcher date must be YYYY-MM-DD.");
   }
   return value;
@@ -242,10 +239,21 @@ function previousDate(value: string): string {
 }
 
 function instant(value: unknown, label: string): string {
-  if (typeof value !== "string" || !FHIR_DATETIME_WITH_ZONE.test(value) || Number.isNaN(Date.parse(value))) {
+  if (
+    typeof value !== "string"
+    || !FHIR_DATETIME_WITH_ZONE.test(value)
+    || !isCalendarDate(value.slice(0, 10))
+    || Number.isNaN(Date.parse(value))
+  ) {
     throw new WatcherValidationError(`${label} must be an ISO dateTime.`);
   }
   return value;
+}
+
+function isCalendarDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = Date.parse(`${value}T00:00:00Z`);
+  return !Number.isNaN(parsed) && new Date(parsed).toISOString().slice(0, 10) === value;
 }
 
 function record(value: unknown): Record<string, unknown> {
