@@ -585,6 +585,13 @@ test("pre-adjudication correction previews and submits CFC 1 without a PCCN", as
 
 test("retry after a lost resubmission-touch response records one touch and one Provenance", async () => {
   const fixture = deps();
+  let projectionFailureMarks = 0;
+  fixture.deps.projectionHealth = {
+    begin: () => undefined,
+    succeed: () => undefined,
+    fail: () => { projectionFailureMarks += 1; },
+    status: () => { throw new Error("not read"); },
+  };
   fixture.created.Claim.push({
     ...withStediClaimInputSnapshot(buildProfessionalClaim(professionalClaim), professionalClaim),
     id: "claim-original",
@@ -617,6 +624,7 @@ test("retry after a lost resubmission-touch response records one touch and one P
   assert.equal(retry.status, 200);
   assert.equal(claimTouchState(fixture.created.Claim[0]).touchCount, 1);
   assert.equal(fixture.created.Provenance.length, 1);
+  assert.equal(projectionFailureMarks, 1);
 });
 
 test("pre-adjudication void returns manual handling without building or submitting a claim", async () => {

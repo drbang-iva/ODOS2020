@@ -104,6 +104,18 @@ test("an older per-claim upsert cannot overwrite a newer completed rebuild", asy
   assert.deepEqual(await store.listAll(), [rebuilt]);
 });
 
+test("an older rebuild snapshot cannot delete a row projected after snapshot acquisition", async () => {
+  const newer = row({ claimReference: "Claim/rebuild-race", totalChargedCents: 99_999 });
+  await store.upsert(newer, "2026-08-30T12:01:00.000Z");
+
+  await store.rebuild(
+    [row({ claimReference: "Claim/rebuild-race", totalChargedCents: 12_500 })],
+    AT,
+  );
+
+  assert.deepEqual(await store.listAll(), [newer]);
+});
+
 function row(overrides: Partial<ClaimReadModelRow>): ClaimReadModelRow {
   return {
     claimReference: "Claim/default",

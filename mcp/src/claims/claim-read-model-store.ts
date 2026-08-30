@@ -62,7 +62,10 @@ export class PgClaimReadModelStore implements ClaimReadModelStore {
     try {
       await client.query("BEGIN");
       await client.query("LOCK TABLE odos_claim_work_state IN ACCESS EXCLUSIVE MODE");
-      await client.query("DELETE FROM odos_claim_work_state");
+      await client.query(
+        "DELETE FROM odos_claim_work_state WHERE projected_at <= $1::timestamptz",
+        [projectedAt],
+      );
       for (const row of rows) await upsertRow(client, row, projectedAt);
       await client.query("COMMIT");
     } catch (error) {

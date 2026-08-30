@@ -382,12 +382,17 @@ export async function handleStediClaimResubmissionRequest(
       idempotencyKey: patientControlNumber,
       payload,
     });
-    const touchOutcome = await recordResubmissionTouch(auth, context.claim, patientControlNumber, now(deps));
+    const touchAt = now(deps);
+    const touchOutcome = await recordResubmissionTouch(auth, context.claim, patientControlNumber, touchAt);
     if (touchOutcome === "conflict") {
       return { status: 409, body: { error: "The resubmission idempotency key was already used for different touch content." } };
     }
     if (touchOutcome === "failed") {
+      deps.projectionHealth?.fail(touchAt);
       return { status: 503, body: { error: "Claim was transmitted, but the original Claim touch could not be recorded; retry reconciliation before continuing." } };
+    }
+    if (touchOutcome === "recorded" || touchOutcome === "reconciled") {
+      deps.projectionHealth?.fail(touchAt);
     }
     await audit(
       deps,
@@ -449,7 +454,7 @@ async function recordResubmissionTouch(
   claim: Claim,
   patientControlNumber: string,
   at: string,
-): Promise<"recorded" | "replayed" | "conflict" | "failed"> {
+): Promise<"recorded" | "reconciled" | "existing" | "conflict" | "failed"> {
   if (!auth.fhir.executeTransaction || !claim.id) return "failed";
   const key = `stedi-${createHash("sha256").update(patientControlNumber).digest("hex")}`;
   const fingerprint = claimTouchRequestFingerprint({
@@ -459,7 +464,7 @@ async function recordResubmissionTouch(
     action: "resubmission",
   });
   const existing = claimTouchIdempotencyFingerprint(claim, key);
-  if (existing) return existing === fingerprint ? "replayed" : "conflict";
+  if (existing) return existing === fingerprint ? "existing" : "conflict";
   try {
     await auth.fhir.executeTransaction(buildClaimTouchTransaction({
       claim,
@@ -474,7 +479,7 @@ async function recordResubmissionTouch(
       const committed = await auth.fhir.read<Claim>("Claim", claim.id);
       const committedFingerprint = claimTouchIdempotencyFingerprint(committed, key);
       if (!committedFingerprint) return "failed";
-      return committedFingerprint === fingerprint ? "replayed" : "conflict";
+      return committedFingerprint === fingerprint ? "reconciled" : "conflict";
     } catch {
       return "failed";
     }
