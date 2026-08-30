@@ -1,5 +1,5 @@
 import type { Application, Request, Response } from "express";
-import type { Claim, CodeSystem } from "@medplum/fhirtypes";
+import type { Bundle, Claim, CodeSystem } from "@medplum/fhirtypes";
 import type { MedplumClient } from "../fhir-client.js";
 import type { OdosActorRole } from "../authz/odosAudit.js";
 import { assertBusinessActionAllowed, PRACTICE_ROLE_IDS, type PracticeRoleId } from "../authz/roles.js";
@@ -62,59 +62,56 @@ export function registerClaimFollowUpRoutes(
 ): void {
   app.post("/claims/:claimId/touches", (req, res) => withStaff(req, res, deps, async (staff) => {
     const body = record(req.body);
-    const action = typeof body.action === "string" && CLAIM_TOUCH_ACTIONS.includes(body.action as ClaimTouchAction)
-      ? body.action as ClaimTouchAction
-      : undefined;
-    if (!action) throw new ClaimFollowUpValidationError("action must be note, resubmission, contact, status-reason, or resolution.");
     const claimId = stringParam(req.params.claimId);
-    const idempotencyKey = requiredIdempotencyKey(body.idempotencyKey);
-    const detail = typeof body.detail === "string" ? body.detail : undefined;
-    const reasonCode = typeof body.reasonCode === "string" ? body.reasonCode.trim() : undefined;
-    const fingerprint = claimTouchRequestFingerprint({
-      claimReference: `Claim/${claimId}`,
-      actorReference: staff.staffReference,
-      actorRole: staff.actorRole,
-      action,
-      ...(detail !== undefined ? { detail } : {}),
-      ...(reasonCode ? { reasonCode } : {}),
-    });
-    let committedClaim = await staff.fhir.read<Claim>("Claim", claimId);
-    const existingFingerprint = claimTouchIdempotencyFingerprint(committedClaim, idempotencyKey);
-    assertMatchingIdempotencyKey(existingFingerprint, fingerprint);
-    let idempotentReplay = existingFingerprint !== undefined;
-    if (!idempotentReplay) {
-      const reason = reasonCode ? await findReason(deps.serviceFhir, reasonCode) : undefined;
-      const transaction = buildClaimTouchTransaction({
-        claim: committedClaim,
-        principal: { kind: "human", actorReference: staff.staffReference, actorRole: staff.actorRole },
-        action,
-        at: now(deps),
-        ...(detail !== undefined ? { detail } : {}),
-        ...(reason ? { reason } : {}),
-        idempotency: { key: idempotencyKey, fingerprint },
-      });
-      const updatedClaim = transaction.entry?.find((entry) => entry.resource?.resourceType === "Claim")?.resource;
-      if (updatedClaim?.resourceType !== "Claim") throw new Error("Claim touch transaction did not contain its Claim update.");
-      try {
-        await staff.fhir.executeTransaction(transaction);
-        committedClaim = updatedClaim;
-      } catch (error) {
-        const concurrentClaim = await readAfterFailedTouch(staff, claimId, error);
-        const concurrentFingerprint = claimTouchIdempotencyFingerprint(concurrentClaim, idempotencyKey);
-        if (concurrentFingerprint !== fingerprint) throw error;
-        committedClaim = concurrentClaim;
-        idempotentReplay = true;
-      }
-    }
-    const readModelSynced = await syncReadModelClaim(staff, deps, claimId);
-    const touch = claimTouchState(committedClaim);
+    const input = parseTouchInput(body);
+    const resolveReason = claimReasonResolver(deps.serviceFhir, input.reasonCode);
+    const [committed] = await commitPreparedClaimTouches(staff, [
+      await prepareClaimTouch(staff, deps, claimId, input, resolveReason),
+    ]);
+    const readModelSynced = await syncReadModelClaims(staff, deps, [claimId]);
+    const touch = claimTouchState(committed.committedClaim);
     res.status(201).json({
       claimReference: `Claim/${claimId}`,
       touchCount: touch.touchCount,
       lastTouchedAt: touch.lastTouchedAt,
       lastTouchedBy: touch.lastTouchedBy,
       readModelSynced,
-      idempotentReplay,
+      idempotentReplay: committed.idempotentReplay,
+    });
+  }));
+
+  app.post("/claims/touches/batch", (req, res) => withStaff(req, res, deps, async (staff) => {
+    const body = record(req.body);
+    const claimReferences = claimReferenceBatch(body.claimReferences);
+    const input = parseTouchInput(body);
+    const resolveReason = claimReasonResolver(deps.serviceFhir, input.reasonCode);
+    const prepared = await Promise.all(claimReferences.map((claimReference) => prepareClaimTouch(
+      staff,
+      deps,
+      claimReference.slice("Claim/".length),
+      input,
+      resolveReason,
+    )));
+    const committed = await commitPreparedClaimTouches(staff, prepared);
+    const readModelSynced = await syncReadModelClaims(
+      staff,
+      deps,
+      committed.map((item) => item.claimId),
+    );
+    res.status(201).json({
+      requested: claimReferences.length,
+      touched: committed.length,
+      readModelSynced,
+      items: committed.map((item) => {
+        const touch = claimTouchState(item.committedClaim);
+        return {
+          claimReference: item.claimReference,
+          touchCount: touch.touchCount,
+          lastTouchedAt: touch.lastTouchedAt,
+          lastTouchedBy: touch.lastTouchedBy,
+          idempotentReplay: item.idempotentReplay,
+        };
+      }),
     });
   }));
 
@@ -282,22 +279,163 @@ async function readAfterFailedTouch(
   }
 }
 
-async function syncReadModelClaim(
+interface ParsedClaimTouch {
+  action: ClaimTouchAction;
+  idempotencyKey: string;
+  detail?: string;
+  reasonCode?: string;
+}
+
+interface PreparedClaimTouch {
+  claimId: string;
+  claimReference: string;
+  committedClaim: Claim;
+  fingerprint: string;
+  idempotencyKey: string;
+  entries: NonNullable<Bundle["entry"]>;
+  idempotentReplay: boolean;
+}
+
+function parseTouchInput(body: Record<string, unknown>): ParsedClaimTouch {
+  const action = typeof body.action === "string" && CLAIM_TOUCH_ACTIONS.includes(body.action as ClaimTouchAction)
+    ? body.action as ClaimTouchAction
+    : undefined;
+  if (!action) throw new ClaimFollowUpValidationError("action must be note, resubmission, contact, status-reason, or resolution.");
+  const detail = typeof body.detail === "string" ? body.detail : undefined;
+  const reasonCode = typeof body.reasonCode === "string" ? body.reasonCode.trim() : undefined;
+  return {
+    action,
+    idempotencyKey: requiredIdempotencyKey(body.idempotencyKey),
+    ...(detail !== undefined ? { detail } : {}),
+    ...(reasonCode ? { reasonCode } : {}),
+  };
+}
+
+async function prepareClaimTouch(
   staff: ClaimFollowUpStaff,
   deps: ClaimFollowUpRouteDeps,
   claimId: string,
+  input: ParsedClaimTouch,
+  resolveReason: () => Promise<ClaimReason | undefined>,
+): Promise<PreparedClaimTouch> {
+  const claimReference = `Claim/${claimId}`;
+  const fingerprint = claimTouchRequestFingerprint({
+    claimReference,
+    actorReference: staff.staffReference,
+    actorRole: staff.actorRole,
+    action: input.action,
+    ...(input.detail !== undefined ? { detail: input.detail } : {}),
+    ...(input.reasonCode ? { reasonCode: input.reasonCode } : {}),
+  });
+  const current = await staff.fhir.read<Claim>("Claim", claimId);
+  const existingFingerprint = claimTouchIdempotencyFingerprint(current, input.idempotencyKey);
+  assertMatchingIdempotencyKey(existingFingerprint, fingerprint);
+  if (existingFingerprint !== undefined) {
+    return {
+      claimId,
+      claimReference,
+      committedClaim: current,
+      fingerprint,
+      idempotencyKey: input.idempotencyKey,
+      entries: [],
+      idempotentReplay: true,
+    };
+  }
+  const reason = await resolveReason();
+  const transaction = buildClaimTouchTransaction({
+    claim: current,
+    principal: { kind: "human", actorReference: staff.staffReference, actorRole: staff.actorRole },
+    action: input.action,
+    at: now(deps),
+    ...(input.detail !== undefined ? { detail: input.detail } : {}),
+    ...(reason ? { reason } : {}),
+    idempotency: { key: input.idempotencyKey, fingerprint },
+  });
+  const updatedClaim = transaction.entry?.find((entry) => entry.resource?.resourceType === "Claim")?.resource;
+  if (updatedClaim?.resourceType !== "Claim") throw new Error("Claim touch transaction did not contain its Claim update.");
+  return {
+    claimId,
+    claimReference,
+    committedClaim: updatedClaim,
+    fingerprint,
+    idempotencyKey: input.idempotencyKey,
+    entries: transaction.entry ?? [],
+    idempotentReplay: false,
+  };
+}
+
+function claimReasonResolver(
+  fhir: FollowUpFhir,
+  reasonCode: string | undefined,
+): () => Promise<ClaimReason | undefined> {
+  let pending: Promise<ClaimReason | undefined> | undefined;
+  return () => {
+    if (!reasonCode) return Promise.resolve(undefined);
+    pending ??= findReason(fhir, reasonCode);
+    return pending;
+  };
+}
+
+async function commitPreparedClaimTouches(
+  staff: ClaimFollowUpStaff,
+  prepared: PreparedClaimTouch[],
+): Promise<PreparedClaimTouch[]> {
+  const entries = prepared.flatMap((item) => item.entries);
+  if (!entries.length) return prepared;
+  try {
+    await staff.fhir.executeTransaction({ resourceType: "Bundle", type: "transaction", entry: entries });
+    return prepared;
+  } catch (error) {
+    return Promise.all(prepared.map(async (item) => {
+      const claim = await readAfterFailedTouch(staff, item.claimId, error);
+      const committedFingerprint = claimTouchIdempotencyFingerprint(claim, item.idempotencyKey);
+      if (committedFingerprint !== item.fingerprint) throw error;
+      return {
+        ...item,
+        committedClaim: claim,
+        entries: [],
+        idempotentReplay: true,
+      };
+    }));
+  }
+}
+
+async function syncReadModelClaims(
+  staff: ClaimFollowUpStaff,
+  deps: ClaimFollowUpRouteDeps,
+  claimIds: readonly string[],
 ): Promise<boolean> {
   const projectedAt = now(deps);
   try {
     const truth = await loadClaimReadModelTruth(staff.fhir, projectedAt);
-    const row = truth.find((candidate) => candidate.claimReference === `Claim/${claimId}`);
-    if (!row) throw new Error(`FHIR rebuild did not project Claim/${claimId}.`);
-    await deps.store.upsert(row, projectedAt);
+    const rowsByReference = new Map(truth.map((row) => [row.claimReference, row]));
+    for (const claimId of claimIds) {
+      const row = rowsByReference.get(`Claim/${claimId}`);
+      if (!row) throw new Error(`FHIR rebuild did not project Claim/${claimId}.`);
+      await deps.store.upsert(row, projectedAt);
+    }
     return true;
   } catch {
     deps.projectionHealth.invalidate(projectedAt);
     return false;
   }
+}
+
+function claimReferenceBatch(value: unknown): string[] {
+  const error = "claimReferences must contain 1-100 unique Claim/<id> references.";
+  if (!Array.isArray(value) || value.length < 1 || value.length > 100) {
+    throw new ClaimFollowUpValidationError(error);
+  }
+  const references = value.map((candidate) => {
+    if (typeof candidate !== "string" || !/^Claim\/[A-Za-z0-9.-]{1,64}$/.test(candidate)) {
+      throw new ClaimFollowUpValidationError(error);
+    }
+    return candidate;
+  });
+  if (new Set(references).size !== references.length) {
+    throw new ClaimFollowUpValidationError(error);
+  }
+  return references;
 }
 
 function stringParam(value: string | string[] | undefined): string {

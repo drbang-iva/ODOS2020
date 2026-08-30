@@ -3,7 +3,7 @@ import { once } from "node:events";
 import { createServer } from "node:http";
 import { test } from "node:test";
 import express from "express";
-import type { Bundle, Claim } from "@medplum/fhirtypes";
+import type { Bundle, Claim, CodeSystem, Resource } from "@medplum/fhirtypes";
 import { claimAgingThresholdsFromEnv, registerClaimFollowUpRoutes, type ClaimFollowUpStaff } from "../src/claims/claim-follow-up-routes.js";
 import type { ClaimReadModelStore } from "../src/claims/claim-read-model-store.js";
 import type {
@@ -11,6 +11,84 @@ import type {
   ClaimReadModelProjectionHealthTracker,
 } from "../src/claims/claim-read-model-health.js";
 import { claimTouchState } from "../src/claims/claim-touch-ledger.js";
+
+test("one batch resolution stamps all 15 claims through one FHIR transaction", async () => {
+  const staff = fixtureBatchStaff(15);
+  const claimReferences = Array.from({ length: 15 }, (_, index) => `Claim/claim-${index + 1}`);
+
+  const response = await batchRequest(staff, {
+    claimReferences,
+    action: "resolution",
+    detail: "Added the missing procedure code and resubmitted",
+    reasonCode: "missing-procedure-code",
+    idempotencyKey: "batch-missing-procedure-001",
+  });
+
+  const unstamped = staff.claims()
+    .filter((claim) => claimTouchState(claim).touchCount !== 1)
+    .map((claim) => claim.id);
+  assert.equal(response.status, 201);
+  assert.deepEqual(unstamped, [], `Unstamped claims: ${unstamped.join(", ")}`);
+  assert.equal(staff.transactionWrites(), 1);
+  assert.equal(staff.provenanceWrites(), 15);
+  const body = await response.json() as {
+    requested: number;
+    touched: number;
+    readModelSynced: boolean;
+    items: Array<{ claimReference: string; lastTouchedBy?: string }>;
+  };
+  assert.equal(body.requested, 15);
+  assert.equal(body.touched, 15);
+  assert.equal(body.readModelSynced, true);
+  assert.deepEqual(body.items.map((item) => item.claimReference), claimReferences);
+  assert.equal(body.items.every((item) => item.lastTouchedBy === "Practitioner/authenticated-staff"), true);
+});
+
+test("one malformed batch reference rejects all 15 claims before a FHIR write", async () => {
+  const staff = fixtureBatchStaff(15);
+  const claimReferences = Array.from({ length: 14 }, (_, index) => `Claim/claim-${index + 1}`);
+
+  const response = await batchRequest(staff, {
+    claimReferences: [...claimReferences, "not-a-claim"],
+    action: "resolution",
+    detail: "Added the missing procedure code and resubmitted",
+    reasonCode: "missing-procedure-code",
+    idempotencyKey: "batch-invalid-reference-001",
+  });
+
+  assert.equal(response.status, 400);
+  assert.deepEqual(await response.json(), {
+    error: "claimReferences must contain 1-100 unique Claim/<id> references.",
+  });
+  assert.equal(staff.transactionWrites(), 0);
+  assert.equal(staff.provenanceWrites(), 0);
+  assert.equal(staff.claims().every((claim) => claimTouchState(claim).touchCount === 0), true);
+});
+
+test("a lost batch response retries all 15 claims without duplicate touches", async () => {
+  const staff = fixtureBatchStaff(15, {
+    throwAfterFirstCommit: true,
+    hideReasonCatalogAfterFirstCommit: true,
+  });
+  const body = {
+    claimReferences: Array.from({ length: 15 }, (_, index) => `Claim/claim-${index + 1}`),
+    action: "resolution",
+    detail: "Added the missing procedure code and resubmitted",
+    reasonCode: "missing-procedure-code",
+    idempotencyKey: "batch-lost-response-001",
+  };
+
+  const first = await batchRequest(staff, body);
+  const retry = await batchRequest(staff, body);
+
+  assert.equal(first.status, 201);
+  assert.equal(retry.status, 201);
+  assert.equal(staff.transactionWrites(), 1);
+  assert.equal(staff.provenanceWrites(), 15);
+  assert.equal(staff.claims().every((claim) => claimTouchState(claim).touchCount === 1), true);
+  const retryBody = await retry.json() as { items: Array<{ idempotentReplay: boolean }> };
+  assert.equal(retryBody.items.every((item) => item.idempotentReplay), true);
+});
 
 test("touch route derives the actor from the authenticated principal and ignores caller spoofing", async () => {
   let transaction: Bundle | undefined;
@@ -251,6 +329,27 @@ async function request(
   }));
 }
 
+async function batchRequest(
+  staff: ClaimFollowUpStaff,
+  body: unknown,
+): Promise<Response> {
+  const app = express();
+  app.use(express.json());
+  registerClaimFollowUpRoutes(app, {
+    authenticateService: async () => undefined,
+    authenticate: async () => staff,
+    serviceFhir: staff.fhir,
+    store: { upsert: async () => undefined } as unknown as ClaimReadModelStore,
+    projectionHealth: healthyProjectionHealth(),
+    now: () => "2026-08-30T12:00:00.000Z",
+  });
+  return withServer(app, async (origin) => fetch(`${origin}/claims/touches/batch`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  }));
+}
+
 async function withServer<T>(app: express.Express, action: (origin: string) => Promise<T>): Promise<T> {
   const server = createServer(app);
   server.listen(0, "127.0.0.1");
@@ -318,4 +417,105 @@ function fixtureStaff(
       },
     },
   };
+}
+
+function fixtureBatchStaff(
+  count: number,
+  options: {
+    throwAfterFirstCommit?: boolean;
+    hideReasonCatalogAfterFirstCommit?: boolean;
+  } = {},
+): ClaimFollowUpStaff & {
+  claims(): Claim[];
+  provenanceWrites(): number;
+  transactionWrites(): number;
+} {
+  const claims = new Map(Array.from({ length: count }, (_, index) => {
+    const id = `claim-${index + 1}`;
+    const claim: Claim = {
+      resourceType: "Claim",
+      id,
+      meta: { versionId: "1" },
+      status: "active",
+      use: "claim",
+      patient: { reference: `Patient/patient-${index + 1}` },
+      created: "2026-06-01T12:00:00.000Z",
+      provider: { reference: "Practitioner/provider-1" },
+      priority: { text: "normal" },
+      insurer: { reference: "Organization/payer-1" },
+      type: { text: "professional" },
+    };
+    return [id, claim] as const;
+  }));
+  let provenanceWrites = 0;
+  let transactionWrites = 0;
+  const reasonCatalog: CodeSystem = {
+    resourceType: "CodeSystem",
+    id: "claim-follow-up-reasons",
+    status: "active",
+    content: "complete",
+    url: "https://odos2020.com/fhir/CodeSystem/claim-follow-up-reason",
+    concept: [{
+      code: "missing-procedure-code",
+      display: "missing procedure code for item",
+      property: [{ code: "resolution-path", valueString: "Add the missing procedure code and resubmit" }],
+    }],
+  };
+  const staff: ClaimFollowUpStaff & {
+    claims(): Claim[];
+    provenanceWrites(): number;
+    transactionWrites(): number;
+  } = {
+    staffReference: "Practitioner/authenticated-staff",
+    actorRole: "staff",
+    claims: () => [...claims.values()].map((claim) => structuredClone(claim)),
+    provenanceWrites: () => provenanceWrites,
+    transactionWrites: () => transactionWrites,
+    fhir: {
+      baseUrl: "http://127.0.0.1:8103",
+      read: async (_resourceType, id) => {
+        const claim = claims.get(id);
+        if (!claim) throw new Error(`Missing Claim/${id}`);
+        return structuredClone(claim) as never;
+      },
+      search: async (resourceType) => {
+        if (
+          resourceType === "CodeSystem"
+          && options.hideReasonCatalogAfterFirstCommit
+          && transactionWrites > 0
+        ) throw new Error("Synthetic unavailable reason catalog");
+        const resources: Resource[] = resourceType === "CodeSystem"
+          ? [reasonCatalog]
+          : resourceType === "Claim"
+            ? [...claims.values()]
+            : [];
+        return {
+          resourceType: "Bundle",
+          type: "searchset",
+          entry: resources.map((resource) => ({ resource })),
+        } as never;
+      },
+      searchUrl: async () => { throw new Error("not used"); },
+      create: async (resource) => resource,
+      update: async (_type, _id, resource) => resource,
+      executeTransaction: async (bundle) => {
+        transactionWrites += 1;
+        for (const entry of bundle.entry ?? []) {
+          if (entry.resource?.resourceType !== "Claim" || !entry.resource.id) continue;
+          const current = claims.get(entry.resource.id);
+          if (!current) throw new Error(`Missing Claim/${entry.resource.id}`);
+          claims.set(entry.resource.id, {
+            ...structuredClone(entry.resource),
+            meta: { ...entry.resource.meta, versionId: String(Number(current.meta?.versionId ?? "0") + 1) },
+          });
+        }
+        provenanceWrites += bundle.entry?.filter((entry) => entry.resource?.resourceType === "Provenance").length ?? 0;
+        if (options.throwAfterFirstCommit && transactionWrites === 1) {
+          throw new Error("Synthetic lost response after committed batch");
+        }
+        return bundle;
+      },
+    },
+  };
+  return staff;
 }
