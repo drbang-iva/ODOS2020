@@ -88,7 +88,7 @@ import {
 } from "./comms/comms-config.js";
 import { registerTwilioWebhookRoutes } from "./comms/twilio-routes.js";
 import { registerGhlWebhookRoutes } from "./comms/ghl-routes.js";
-import { persistTwilioWebhookEvent } from "./comms/comms-persistence.js";
+import { persistInboundMessageEvent, persistTwilioWebhookEvent } from "./comms/comms-persistence.js";
 import { registerCommsApiRoutes } from "./comms/comms-api.js";
 import {
   createFhirTrackedLinkStore,
@@ -5651,7 +5651,7 @@ async function startMcpServer(): Promise<void> {
     for (const provider of new Set(campaigns.map((campaign) => campaign.provider))) {
       if (!commsDispatch.providers().includes(provider)) {
         throw new Error(
-          `odos-mcp: reminder provider "${provider}" is not configured in ODOS_COMMS_PROVIDERS.`,
+          `odos-mcp: reminder provider "${provider}" is not selected by the scalar communications provider configuration.`,
         );
       }
     }
@@ -8104,7 +8104,27 @@ async function startMcpServer(): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  await startMcpAfterCommsInitialization(commsDispatch, startMcpServer);
+  await startMcpAfterCommsInitialization(commsDispatch, async () => {
+    const awsRegistration = commsRegistrations.find(
+      (registration) => registration.provider === "aws",
+    );
+    if (awsRegistration?.provider === "aws") {
+      const { createAwsSqsInboundReceiver } = await import("./comms/aws-sqs-inbound-receiver.js");
+      const receiver = createAwsSqsInboundReceiver(awsRegistration.config, {
+        fhir,
+        onMessage: async (event) => {
+          await authenticateWithMedplum();
+          await persistInboundMessageEvent(fhir, event);
+        },
+      });
+      void receiver.run().catch((error) => {
+        console.error(
+          `odos-mcp: AWS SMS inbound receiver stopped; ${error instanceof Error ? error.message : "unknown failure"}`,
+        );
+      });
+    }
+    await startMcpServer();
+  });
 }
 
 main().catch((err: unknown) => {

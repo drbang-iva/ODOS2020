@@ -7,6 +7,7 @@ import type {
   SendResult,
   SendSmsRequest,
 } from "./comms-provider.js";
+import type { InboundMessageEvent, InboundOptOutType } from "./inbound-receiver.js";
 
 export const ODOS_COMMS_OPT_OUT_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/odos-comms-opt-out";
@@ -18,11 +19,59 @@ export const ODOS_COMMS_SEND_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/comms-send";
 
 export type SuppressionFhir = Pick<MedplumClient, "baseUrl" | "read" | "search" | "searchUrl">;
+export type InboundSuppressionFhir = Pick<MedplumClient, "search" | "update">;
 
 export interface SuppressionGateDeps {
   fhir: SuppressionFhir;
   practiceTimeZone: string;
   now?: () => Date;
+}
+
+export async function updateInboundSuppression(
+  fhir: InboundSuppressionFhir,
+  event: Pick<InboundMessageEvent, "from" | "body" | "optOutType">,
+): Promise<"opted-out" | "opted-in" | "unchanged" | "unmatched"> {
+  const optOutType = event.optOutType ?? inboundOptOutType(event.body);
+  if (!optOutType || optOutType === "HELP") return "unchanged";
+  const bundle = await fhir.search<Patient>("Patient", { telecom: event.from, _count: "2" });
+  const patients = (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
+  if (patients.length !== 1) return "unmatched";
+  const patient = patients[0];
+  if (!patient.id || !patient.meta?.versionId) {
+    throw new Error("Inbound SMS suppression requires a uniquely matched, versioned Patient.");
+  }
+  const existing = patient.extension ?? [];
+  const isOwnedSmsOptOut = (extension: NonNullable<Patient["extension"]>[number]) =>
+    extension.url === ODOS_COMMS_OPT_OUT_EXTENSION_URL
+    && extension.extension?.length === 1
+    && extension.extension[0]?.url === "channel"
+    && extension.extension[0].valueCode === "sms";
+  const nextExtensions = optOutType === "STOP"
+    ? existing.some(isOwnedSmsOptOut)
+      ? existing
+      : [...existing, {
+          url: ODOS_COMMS_OPT_OUT_EXTENSION_URL,
+          extension: [{ url: "channel", valueCode: "sms" }],
+        }]
+    : existing.filter((extension) => !isOwnedSmsOptOut(extension));
+  if (nextExtensions.length === existing.length && nextExtensions.every((entry, index) => entry === existing[index])) {
+    return optOutType === "STOP" ? "opted-out" : "opted-in";
+  }
+  await fhir.update<Patient>("Patient", patient.id, {
+    ...patient,
+    extension: nextExtensions.length ? nextExtensions : undefined,
+  }, { "If-Match": `W/"${patient.meta.versionId}"` });
+  return optOutType === "STOP" ? "opted-out" : "opted-in";
+}
+
+export function inboundOptOutType(body: string): InboundOptOutType | undefined {
+  const keyword = body.trim().split(/\s+/, 1)[0]?.toUpperCase();
+  if (["ARRET", "CANCEL", "END", "OPT-OUT", "OPTOUT", "QUIT", "REMOVE", "STOP", "TD", "UNSUBSCRIBE"].includes(keyword)) {
+    return "STOP";
+  }
+  if (["START", "UNSTOP"].includes(keyword)) return "START";
+  if (keyword === "HELP") return "HELP";
+  return undefined;
 }
 
 export function createSuppressedCommsProvider(

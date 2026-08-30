@@ -26,7 +26,7 @@ to PerformanceOD.
 Configure:
 
 ```dotenv
-ODOS_COMMS_PROVIDERS=google-workspace
+ODOS_COMMS_EMAIL_PROVIDER=google-workspace
 ODOS_TIMEZONE=America/New_York
 GOOGLE_WORKSPACE_SERVICE_ACCOUNT_EMAIL=odos-comms@practice-project.iam.gserviceaccount.com
 GOOGLE_WORKSPACE_PRIVATE_KEY=-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n

@@ -16,6 +16,7 @@ import {
 } from "../src/comms/comms-persistence.js";
 import { createTwilioAdapter, withTwilioConversationStore } from "../src/comms/adapters/twilio-adapter.js";
 import { registerTwilioWebhookRoutes } from "../src/comms/twilio-routes.js";
+import { createSuppressedCommsProvider, ODOS_COMMS_OPT_OUT_EXTENSION_URL } from "../src/comms/suppression-gate.js";
 
 const ACCOUNT_SID = `AC${"1".repeat(32)}`;
 const MESSAGE_SID = `SM${"2".repeat(32)}`;
@@ -53,6 +54,48 @@ test("duplicate inbound SMS delivery creates one patient-linked Communication", 
   assert.equal(communications[0].received, NOW);
   assert.equal(communications[0].payload?.[0].contentString, "Synthetic scheduling question");
   assert.equal(fhir.createAttempts, 1);
+});
+
+test("Twilio-originated STOP-equivalent inbound SMS blocks a subsequent Twilio send", async () => {
+  const fhir = new InMemoryCommsFhir();
+  fhir.seed({
+    resourceType: "Patient",
+    id: "synthetic-1",
+    meta: { versionId: "1" },
+    telecom: [{ system: "phone", use: "mobile", value: PATIENT_NUMBER }],
+  } satisfies Patient);
+  await persistTwilioWebhookEvent(fhir, "sms-inbound", {
+    accountSid: ACCOUNT_SID,
+    messageSid: MESSAGE_SID,
+    from: PATIENT_NUMBER,
+    to: PRACTICE_NUMBER,
+    body: "CANCEL",
+  }, { now: () => NOW });
+
+  let sends = 0;
+  const provider = createSuppressedCommsProvider(createTwilioAdapter({
+    accountSid: ACCOUNT_SID,
+    authToken: "synthetic-auth-token",
+    fromNumber: PRACTICE_NUMBER,
+  }, {
+    clientFactory: () => ({
+      messages: { create: async () => { sends += 1; return { sid: MESSAGE_SID }; } },
+    }),
+  }), {
+    fhir,
+    practiceTimeZone: "UTC",
+    now: () => new Date(NOW),
+  });
+  const result = await provider.sendSms!({
+    patientReference: "Patient/synthetic-1",
+    body: "Synthetic follow-up",
+    campaignType: "manual",
+    suppression: {},
+  });
+
+  assert.deepEqual(result, { outcome: "suppressed", reason: "patient-opt-out" });
+  assert.equal(sends, 0);
+  assert.equal(fhir.ofType<Patient>("Patient")[0].extension?.[0]?.url, ODOS_COMMS_OPT_OUT_EXTENSION_URL);
 });
 
 test("staff-sent SMS and its status callback converge into one patient-linked conversation entry", async () => {
@@ -639,6 +682,7 @@ function communication(id: string, received: string, body: string): Communicatio
 }
 
 class InMemoryCommsFhir {
+  readonly baseUrl = "http://synthetic.fhir/R4";
   private resources: Resource[] = [];
   private conditionalCreateRace?: Communication;
   private messageConditionalCreatePause?: { lookupComplete: () => void; release: Promise<void> };
@@ -675,6 +719,17 @@ class InMemoryCommsFhir {
 
   ofType<T extends Resource>(resourceType: T["resourceType"]): T[] {
     return this.resources.filter((resource) => resource.resourceType === resourceType) as T[];
+  }
+
+  async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
+    const resource = this.resources.find((candidate) =>
+      candidate.resourceType === resourceType && candidate.id === id);
+    if (!resource) throw new Error(`Missing ${resourceType}/${id}`);
+    return structuredClone(resource) as T;
+  }
+
+  async searchUrl<T extends Resource>(): Promise<Bundle<T>> {
+    return { resourceType: "Bundle", type: "searchset" };
   }
 
   async search<T extends Resource>(resourceType: T["resourceType"], params: Record<string, string> | URLSearchParams | Array<[string, string]> = {}): Promise<Bundle<T>> {
