@@ -150,6 +150,57 @@ test("Twilio shared-number STOP blocks subsequent sends to both matching patient
   ]);
 });
 
+test("Twilio shared-number START cannot clear independent Patient opt-outs", async () => {
+  const fhir = new InMemoryCommsFhir();
+  fhir.seed(...["synthetic-1", "synthetic-2"].map((id) => ({
+    resourceType: "Patient" as const,
+    id,
+    meta: { versionId: "1" },
+    telecom: [{ system: "phone" as const, use: "mobile" as const, value: PATIENT_NUMBER }],
+    extension: [{
+      url: ODOS_COMMS_OPT_OUT_EXTENSION_URL,
+      extension: [{ url: "channel", valueCode: "sms" }],
+    }],
+  })));
+  const info: string[] = [];
+  await persistTwilioWebhookEvent(fhir, "sms-inbound", {
+    accountSid: ACCOUNT_SID,
+    messageSid: MESSAGE_SID,
+    from: PATIENT_NUMBER,
+    to: PRACTICE_NUMBER,
+    body: "START",
+  }, { now: () => NOW, info: (message) => info.push(message) });
+
+  let sends = 0;
+  const provider = createSuppressedCommsProvider(createTwilioAdapter({
+    accountSid: ACCOUNT_SID,
+    authToken: "synthetic-auth-token",
+    fromNumber: PRACTICE_NUMBER,
+  }, {
+    clientFactory: () => ({
+      messages: { create: async () => { sends += 1; return { sid: MESSAGE_SID }; } },
+    }),
+  }), {
+    fhir,
+    practiceTimeZone: "UTC",
+    now: () => new Date(NOW),
+  });
+
+  for (const id of ["synthetic-1", "synthetic-2"]) {
+    const result = await provider.sendSms!({
+      patientReference: `Patient/${id}`,
+      body: "Synthetic follow-up",
+      campaignType: "manual",
+      suppression: {},
+    });
+    assert.deepEqual(result, { outcome: "suppressed", reason: "patient-opt-out" });
+  }
+  assert.equal(sends, 0);
+  assert.deepEqual(info, [
+    "odos-mcp: Twilio inbound SMS suppression outcome=unchanged matchedPatients=2",
+  ]);
+});
+
 test("staff-sent SMS and its status callback converge into one patient-linked conversation entry", async () => {
   const fhir = new InMemoryCommsFhir();
   const reservation = await reserveStaffSmsSend(fhir, {

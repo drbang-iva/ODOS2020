@@ -40,6 +40,9 @@ export async function updateInboundSuppression(
   const initialBundle = await fhir.search<Patient>("Patient", { telecom: event.from, _count: "100" });
   const patients = await collectInboundPatients(fhir, initialBundle);
   if (patients.length === 0) return { outcome: "no-patient-match", matchedPatients: 0 };
+  if (optOutType === "START" && patients.length > 1) {
+    return { outcome: "unchanged", matchedPatients: patients.length };
+  }
   if (!optOutType || optOutType === "HELP") {
     return { outcome: "unchanged", matchedPatients: patients.length };
   }
