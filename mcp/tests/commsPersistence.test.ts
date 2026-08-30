@@ -197,7 +197,7 @@ test("Twilio shared-number START cannot clear independent Patient opt-outs", asy
   }
   assert.equal(sends, 0);
   assert.deepEqual(info, [
-    "odos-mcp: Twilio inbound SMS suppression outcome=unchanged matchedPatients=2",
+    "odos-mcp: Twilio inbound SMS suppression outcome=opt-in-refused-shared-number matchedPatients=2",
   ]);
 });
 

@@ -2,11 +2,17 @@ import assert from "node:assert/strict";
 import { once } from "node:events";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
-import type { Communication, Resource } from "@medplum/fhirtypes";
+import type { AccessPolicy, Bundle, Communication, Patient, ProjectMembership, Provenance, Resource } from "@medplum/fhirtypes";
 import type { OdosAuditEventRecord } from "../src/authz/odosAudit.js";
-import { buildMedplumAccessPolicy, getRoleDeclaration } from "../src/authz/roles.js";
+import {
+  buildMedplumAccessPolicy,
+  getRoleDeclaration,
+  ODOS_PRACTICE_ROLE_SYSTEM,
+} from "../src/authz/roles.js";
 import type { CommsProvider, ConversationSummary } from "../src/comms/comms-provider.js";
 import { registerCommsApiRoutes, type CommsApiRouteDeps } from "../src/comms/comms-api.js";
+import { ODOS_COMMS_OPT_OUT_EXTENSION_URL } from "../src/comms/suppression-gate.js";
+import { authenticateStaffRoute } from "../src/payments/payment-endpoint.js";
 import express from "express";
 
 const PATIENT_REFERENCE = "Patient/synthetic-1";
@@ -26,12 +32,14 @@ test("communications RBAC gives front desk patient content without widening its 
   assert.equal(frontDeskRule.interaction?.includes("create"), true);
   assert.equal(frontDeskRule.interaction?.includes("update"), true);
   assert.equal(frontDeskDeclaration.businessActions.includes("communications.content.read"), true);
+  assert.equal(frontDeskDeclaration.businessActions.includes("communications.optout.manage"), true);
   const internalOfficeRule = frontDesk.resource?.find((rule) =>
     rule.resourceType === "Communication" && rule.criteria?.includes("internal-office"));
   assert.ok(internalOfficeRule);
   assert.equal(internalOfficeRule.interaction?.includes("update"), false);
 
   for (const role of ["provider", "admin"] as const) {
+    assert.equal(getRoleDeclaration(role).businessActions.includes("communications.optout.manage"), true);
     const policy = buildMedplumAccessPolicy(getRoleDeclaration(role));
     const rule = policy.resource?.find((candidate) =>
       candidate.resourceType === "Communication" && candidate.criteria?.includes("%patient_compartment"));
@@ -64,6 +72,8 @@ test("every communications endpoint rejects missing authentication and audits ev
   const fixture = await startServer();
   const endpoints = [
     { method: "GET", path: "/communications/conversations" },
+    { method: "GET", path: `/communications/opt-out?patient=${PATIENT_REFERENCE}` },
+    { method: "POST", path: "/communications/opt-out/clear", body: { patientReference: PATIENT_REFERENCE } },
     { method: "POST", path: "/communications/messages", body: { patientReference: PATIENT_REFERENCE, body: "Synthetic message" } },
     { method: "GET", path: "/communications/calls" },
     { method: "GET", path: `/communications/calls/${CALL_ID}` },
@@ -80,6 +90,142 @@ test("every communications endpoint rejects missing authentication and audits ev
     assert.equal(fixture.denials.length, endpoints.length);
     assert.equal(fixture.denials.every((row) => row.eventType === "denied" && row.actionOutcome === "denied"), true);
     assert.equal(fixture.providerCalls.length, 0);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("opt-out routes require one explicit Patient reference and expose no phone-number clear", async () => {
+  const fixture = await startServer();
+  try {
+    for (const path of [
+      "/communications/opt-out",
+      "/communications/opt-out?patient=%2B18645550199",
+      "/communications/opt-out?phone=%2B18645550199",
+    ]) {
+      const response = await request(fixture.base, path, "GET", undefined, "staff");
+      assert.equal(response.status, 400, path);
+    }
+    for (const body of [
+      {},
+      { patientReference: "+18645550199" },
+      { phone: "+18645550199" },
+      { patientReferences: ["Patient/synthetic-1", "Patient/synthetic-2"] },
+    ]) {
+      const response = await request(fixture.base, "/communications/opt-out/clear", "POST", body, "staff");
+      assert.equal(response.status, 400, JSON.stringify(body));
+    }
+    assert.equal(fixture.patients.every((patient) => patient.extension?.some((entry) =>
+      entry.url === ODOS_COMMS_OPT_OUT_EXTENSION_URL)), true);
+    assert.equal(fixture.provenances.length, 0);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("opt-out routes return the existing not-found shape for an unknown named Patient", async () => {
+  const fixture = await startServer();
+  try {
+    const read = await request(
+      fixture.base,
+      "/communications/opt-out?patient=Patient/missing",
+      "GET",
+      undefined,
+      "staff",
+    );
+    assert.equal(read.status, 404);
+    assert.deepEqual(await read.json(), { error: "Patient not found." });
+
+    const clear = await request(fixture.base, "/communications/opt-out/clear", "POST", {
+      patientReference: "Patient/missing",
+    }, "staff");
+    assert.equal(clear.status, 404);
+    assert.deepEqual(await clear.json(), { error: "Patient not found." });
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("clearing one named patient on a shared handset leaves the other patient suppressed", async () => {
+  const fixture = await startServer();
+  try {
+    const before = await request(
+      fixture.base,
+      `/communications/opt-out?patient=${PATIENT_REFERENCE}`,
+      "GET",
+      undefined,
+      "staff",
+    );
+    assert.equal(before.status, 200);
+    assert.deepEqual(await before.json(), { patientReference: PATIENT_REFERENCE, smsOptedOut: true });
+
+    const cleared = await request(fixture.base, "/communications/opt-out/clear", "POST", {
+      patientReference: PATIENT_REFERENCE,
+      reason: "Patient requested re-enrollment in person",
+    }, "staff");
+    assert.equal(cleared.status, 200);
+    assert.deepEqual(await cleared.json(), {
+      patientReference: PATIENT_REFERENCE,
+      smsOptedOut: false,
+      cleared: true,
+    });
+    assert.equal(hasSmsOptOut(fixture.patients[1]!), true);
+    assert.equal(hasSmsOptOut(fixture.patients[0]!), false);
+    assert.equal(fixture.provenances.length, 1);
+    assert.equal(fixture.provenances[0]?.agent[0]?.who.reference, "Practitioner/staff");
+    assert.equal(fixture.provenances[0]?.reason?.[0]?.text, "Patient requested re-enrollment in person");
+    assert.deepEqual(fixture.attributedActors, [{
+      actorReference: "Practitioner/staff",
+      actorRole: "staff",
+      actionReason: "communications.optout.manage clear SMS opt-out",
+    }]);
+    assert.deepEqual(fixture.grants.map((row) => ({
+      eventType: row.eventType,
+      actorId: row.actorId,
+      patientId: row.patientId,
+      actionReason: row.actionReason,
+    })), [
+      {
+        eventType: "read",
+        actorId: "staff",
+        patientId: "synthetic-1",
+        actionReason: "communications-opt-out-read",
+      },
+      {
+        eventType: "external-api-call",
+        actorId: "staff",
+        patientId: "synthetic-1",
+        actionReason: "communications-opt-out-clear",
+      },
+    ]);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("a bearer-authenticated staff membership reaches the opt-out clear through the real role resolver", async () => {
+  const fixture = await startServer({ resolvedStaffAuthentication: true });
+  try {
+    const response = await fetch(`${fixture.base}/communications/opt-out/clear`, {
+      method: "POST",
+      headers: {
+        authorization: "Bearer logged-in-staff-token",
+        "content-type": "application/json",
+        "x-odos-actor-id": "real-staff",
+        "x-odos-actor-role": "staff",
+      },
+      body: JSON.stringify({ patientReference: PATIENT_REFERENCE }),
+    });
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), {
+      patientReference: PATIENT_REFERENCE,
+      smsOptedOut: false,
+      cleared: true,
+    });
+    assert.equal(fixture.grants[0]?.actorId, "real-staff");
+    assert.equal(fixture.grants[0]?.actorRole, "staff");
+    assert.equal(fixture.provenances[0]?.agent[0]?.who.reference, "Practitioner/real-staff");
   } finally {
     await fixture.close();
   }
@@ -624,6 +770,7 @@ async function startServer(options: {
   conversationRows?: Record<string, ConversationSummary[]>;
   conversationFailures?: string[];
   conversationUnsupported?: string[];
+  resolvedStaffAuthentication?: boolean;
 } = {}) {
   const providerCalls: string[] = [];
   const adapterProviders: string[] = [];
@@ -635,6 +782,22 @@ async function startServer(options: {
   const grants: OdosAuditEventRecord[] = [];
   const denials: OdosAuditEventRecord[] = [];
   const persistedCommunications: Communication[] = [];
+  const patients: Patient[] = ["synthetic-1", "synthetic-2"].map((id) => ({
+    resourceType: "Patient",
+    id,
+    meta: { versionId: "1" },
+    telecom: [{ system: "phone", value: "+18645550199" }],
+    extension: [{
+      url: ODOS_COMMS_OPT_OUT_EXTENSION_URL,
+      extension: [{ url: "channel", valueCode: "sms" }],
+    }],
+  }));
+  const provenances: Provenance[] = [];
+  const attributedActors: Array<{
+    actorReference: string;
+    actorRole: string;
+    actionReason: string;
+  }> = [];
   const authenticatedFhirs: unknown[] = [];
   const adapterFhirs: unknown[] = [];
   const conversation: ConversationSummary = {
@@ -686,9 +849,103 @@ async function startServer(options: {
       },
     }),
   };
+  const audit: CommsApiRouteDeps["audit"] = {
+    async record(row, operation) {
+      const result = await operation();
+      grants.push(row);
+      return result;
+    },
+    async recordDenied(row) {
+      denials.push(row);
+    },
+  };
+  const serviceFhir = {
+    async search<T extends Resource>(resourceType: T["resourceType"]): Promise<Bundle<T>> {
+      if (resourceType === "Patient") {
+        return {
+          resourceType: "Bundle",
+          type: "searchset",
+          entry: patients.map((patient) => ({ resource: structuredClone(patient) as T })),
+        };
+      }
+      if (resourceType !== "ProjectMembership") {
+        throw new Error(`Unexpected service FHIR search for ${resourceType}.`);
+      }
+      const membership: ProjectMembership = {
+        resourceType: "ProjectMembership",
+        id: "membership-staff",
+        user: { reference: "User/real-staff" },
+        profile: { reference: "Practitioner/real-staff" },
+        project: { reference: "Project/practice-one" },
+        access: [{ policy: { reference: "AccessPolicy/odos-staff" } }],
+      };
+      return {
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [{ resource: membership as T }],
+      };
+    },
+    async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
+      if (resourceType === "AccessPolicy" && id === "odos-staff") {
+        return {
+          resourceType: "AccessPolicy",
+          id,
+          meta: { tag: [{ system: ODOS_PRACTICE_ROLE_SYSTEM, code: "staff" }] },
+        } as T;
+      }
+      if (resourceType !== "Patient") {
+        throw new Error(`Unexpected service FHIR read for ${resourceType}/${id}.`);
+      }
+      const found = patients.find((patient) => patient.id === id);
+      if (!found) throw Object.assign(new Error(`Missing Patient/${id}`), { status: 404 });
+      return structuredClone(found) as T;
+    },
+    async executeTransactionAsActor(
+      request: Bundle,
+      actor: { actorReference: string; actorRole: string; actionReason: string },
+      _headers: Record<string, string> = {},
+      transactionOptions: { validateResponse?: (response: Bundle) => void } = {},
+    ): Promise<Bundle> {
+      attributedActors.push(structuredClone(actor));
+      const patientEntry = request.entry?.[0];
+      const patient = patientEntry?.resource as Patient;
+      const patientId = patientEntry?.request?.url?.match(/^Patient\/([A-Za-z0-9.-]+)$/)?.[1];
+      const index = patients.findIndex((candidate) => candidate.id === patientId);
+      if (index < 0) throw new Error("Synthetic opt-out transaction Patient missing.");
+      assert.equal(patientEntry?.request?.ifMatch, `W/"${patients[index]!.meta?.versionId}"`);
+      patients[index] = {
+        ...structuredClone(patient),
+        meta: { ...patient.meta, versionId: String(Number(patients[index]!.meta?.versionId) + 1) },
+      };
+      const provenance = structuredClone(request.entry?.[1]?.resource as Provenance);
+      provenances.push({ ...provenance, id: `provenance-${provenances.length + 1}` });
+      const response: Bundle = {
+        resourceType: "Bundle",
+        type: "transaction-response",
+        entry: [
+          { response: { status: "200 OK", location: `Patient/${patientId}/_history/${patients[index]!.meta?.versionId}` } },
+          { response: { status: "201 Created", location: `Provenance/${provenances.at(-1)!.id}/_history/1` } },
+        ],
+      };
+      transactionOptions.validateResponse?.(response);
+      return response;
+    },
+  };
   const deps: CommsApiRouteDeps = {
     authenticateService: async () => undefined,
     authenticate: async (header) => {
+      if (options.resolvedStaffAuthentication) {
+        return authenticateStaffRoute({
+          baseUrl: "http://synthetic-medplum",
+          authHeader: header,
+          serviceClient: serviceFhir as never,
+          audit,
+          fetchImpl: async () => new Response(JSON.stringify({
+            profile: { resourceType: "Practitioner", id: "real-staff" },
+            user: { resourceType: "User", id: "real-staff", email: "staff@example.test" },
+          }), { status: 200, headers: { "content-type": "application/json" } }),
+        });
+      }
       const role = header?.replace("Bearer ", "");
       if (!role || !["admin", "provider", "staff", "admin", "provider"].includes(role)) return null;
       const accessPolicy = buildMedplumAccessPolicy(getRoleDeclaration(role as never));
@@ -852,6 +1109,7 @@ async function startServer(options: {
         fhir: callerFhir,
       };
     },
+    fhir: serviceFhir,
     dispatch: {
       providers: () => options.providers ?? [options.providerName ?? "twilio"],
       providerFor: (role) => options.channelRoutes === undefined
@@ -896,16 +1154,7 @@ async function startServer(options: {
       },
       initialize: async () => undefined,
     },
-    audit: {
-      async record(row, operation) {
-        const result = await operation();
-        grants.push(row);
-        return result;
-      },
-      async recordDenied(row) {
-        denials.push(row);
-      },
-    },
+    audit,
     now: () => "2026-08-02T15:00:00.000Z",
   };
   const app = express();
@@ -926,6 +1175,9 @@ async function startServer(options: {
     grants,
     denials,
     persistedCommunications,
+    patients,
+    provenances,
+    attributedActors,
     authenticatedFhirs,
     adapterFhirs,
     close: async () => {
@@ -933,6 +1185,10 @@ async function startServer(options: {
       await once(server, "close");
     },
   };
+}
+
+function hasSmsOptOut(patient: Patient): boolean {
+  return patient.extension?.some((entry) => entry.url === ODOS_COMMS_OPT_OUT_EXTENSION_URL) ?? false;
 }
 
 function request(base: string, path: string, method: string, body?: unknown, role?: string, claimedRole = role): Promise<Response> {

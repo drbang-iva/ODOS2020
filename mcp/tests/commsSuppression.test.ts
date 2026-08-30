@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Bundle, Communication, Patient, Resource } from "@medplum/fhirtypes";
+import type { Bundle, Communication, Patient, Provenance, Resource } from "@medplum/fhirtypes";
 import type {
   CommsProvider,
   SendEmailRequest,
@@ -9,7 +9,9 @@ import type {
 import type { FhirSearchParams } from "../src/fhir-client.js";
 import {
   ODOS_COMMS_OPT_OUT_EXTENSION_URL,
+  clearPatientSmsOptOut,
   createSuppressedCommsProvider,
+  readPatientSmsOptOut,
   updateInboundSuppression,
 } from "../src/comms/suppression-gate.js";
 
@@ -133,6 +135,128 @@ test("inbound STOP follows Patient pagination and suppresses every shared-number
   for (const subject of updated.values()) {
     assert.equal(subject.extension?.[0]?.url, ODOS_COMMS_OPT_OUT_EXTENSION_URL);
   }
+});
+
+test("replayed inbound STOP uses If-Match once and skips an already-present SMS opt-out", async () => {
+  const phone = "+18645550199";
+  let subject: Patient = {
+    resourceType: "Patient",
+    id: "synthetic-1",
+    meta: { versionId: "1" },
+    telecom: [{ system: "phone", value: phone }],
+  };
+  let updates = 0;
+  const fhir = {
+    async search<T extends Resource>(): Promise<Bundle<T>> {
+      return {
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [{ resource: structuredClone(subject) as T }],
+      };
+    },
+    async searchUrl<T extends Resource>(): Promise<Bundle<T>> {
+      return { resourceType: "Bundle", type: "searchset" };
+    },
+    async update<T extends Resource>(
+      resourceType: T["resourceType"],
+      id: string,
+      resource: T,
+      headers: Record<string, string> = {},
+    ): Promise<T> {
+      assert.equal(resourceType, "Patient");
+      assert.equal(id, "synthetic-1");
+      assert.equal(headers["If-Match"], `W/"${subject.meta?.versionId}"`);
+      updates += 1;
+      subject = {
+        ...structuredClone(resource as Patient),
+        meta: { ...resource.meta, versionId: String(Number(subject.meta?.versionId) + 1) },
+      };
+      return structuredClone(subject) as T;
+    },
+  };
+
+  await updateInboundSuppression(fhir, { from: phone, body: "STOP" });
+  await updateInboundSuppression(fhir, { from: phone, body: "STOP" });
+
+  assert.equal(updates, 1);
+  assert.equal(subject.meta?.versionId, "2");
+});
+
+test("an explicit Patient clear removes only that patient's SMS opt-out with versioned Provenance", async () => {
+  const optedOut = (id: string): Patient => ({
+    resourceType: "Patient",
+    id,
+    meta: { versionId: "7" },
+    telecom: [{ system: "phone", value: "+18645550199" }],
+    extension: [{
+      url: ODOS_COMMS_OPT_OUT_EXTENSION_URL,
+      extension: [{ url: "channel", valueCode: "sms" }],
+    }],
+  });
+  const patients = new Map([
+    ["synthetic-1", optedOut("synthetic-1")],
+    ["synthetic-2", optedOut("synthetic-2")],
+  ]);
+  let transaction: Bundle | undefined;
+  let actor: { actorReference: string; actorRole: string; actionReason: string } | undefined;
+  const fhir = {
+    async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
+      assert.equal(resourceType, "Patient");
+      const found = patients.get(id);
+      if (!found) throw new Error(`Missing Patient/${id}`);
+      return structuredClone(found) as T;
+    },
+    async executeTransactionAsActor(
+      request: Bundle,
+      transactionActor: { actorReference: string; actorRole: string; actionReason: string },
+    ): Promise<Bundle> {
+      transaction = structuredClone(request);
+      actor = transactionActor;
+      const patientEntry = request.entry?.[0];
+      assert.equal(patientEntry?.request?.method, "PUT");
+      assert.equal(patientEntry.request.url, "Patient/synthetic-1");
+      assert.equal(patientEntry.request.ifMatch, 'W/"7"');
+      patients.set("synthetic-1", structuredClone(patientEntry.resource as Patient));
+      return {
+        resourceType: "Bundle",
+        type: "transaction-response",
+        entry: [
+          { response: { status: "200 OK", location: "Patient/synthetic-1/_history/8" } },
+          { response: { status: "201 Created", location: "Provenance/prov-1/_history/1" } },
+        ],
+      };
+    },
+  };
+
+  assert.deepEqual(await readPatientSmsOptOut(fhir, "Patient/synthetic-1"), {
+    patientReference: "Patient/synthetic-1",
+    smsOptedOut: true,
+  });
+  const result = await clearPatientSmsOptOut(fhir, "Patient/synthetic-1", {
+    actorReference: "Practitioner/staff-1",
+    actorRole: "staff",
+    recordedAt: "2026-08-30T15:00:00.000Z",
+    reason: "Patient requested re-enrollment in person",
+  });
+
+  assert.deepEqual(result, {
+    patientReference: "Patient/synthetic-1",
+    smsOptedOut: false,
+    cleared: true,
+  });
+  assert.equal(await readPatientSmsOptOut(fhir, "Patient/synthetic-2").then((state) => state.smsOptedOut), true);
+  assert.equal(await readPatientSmsOptOut(fhir, "Patient/synthetic-1").then((state) => state.smsOptedOut), false);
+  assert.deepEqual(actor, {
+    actorReference: "Practitioner/staff-1",
+    actorRole: "staff",
+    actionReason: "communications.optout.manage clear SMS opt-out",
+  });
+  const provenance = transaction?.entry?.[1]?.resource as Provenance;
+  assert.equal(provenance.resourceType, "Provenance");
+  assert.equal(provenance.recorded, "2026-08-30T15:00:00.000Z");
+  assert.deepEqual(provenance.target, [{ reference: "Patient/synthetic-1" }]);
+  assert.equal(provenance.agent[0]?.who.reference, "Practitioner/staff-1");
+  assert.equal(provenance.reason?.[0]?.text, "Patient requested re-enrollment in person");
 });
 
 test("PMS-side patient/channel opt-out suppresses before the provider call", async () => {

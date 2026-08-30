@@ -5780,6 +5780,7 @@ async function startMcpServer(): Promise<void> {
       registerCommsApiRoutes(app, {
         authenticateService: authenticateWithMedplum,
         authenticate: authenticateStaffRoute,
+        fhir,
         dispatch: commsDispatch,
         audit: auditRuntime,
       });
