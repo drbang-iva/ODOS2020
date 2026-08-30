@@ -61,13 +61,13 @@ export type TwilioWebhookEvent =
   | TwilioRecordingWebhookEvent
   | TwilioTranscriptionWebhookEvent;
 
-export type CommsPersistenceFhir = Pick<MedplumClient, "search" | "create" | "update">;
+export type CommsPersistenceFhir = Pick<MedplumClient, "search" | "searchUrl" | "create" | "update">;
 
 export async function persistTwilioWebhookEvent(
   fhir: CommsPersistenceFhir,
   kind: TwilioWebhookKind,
   event: TwilioWebhookEvent,
-  deps: { now?: () => string } = {},
+  deps: { now?: () => string; info?: (message: string) => void } = {},
 ): Promise<Communication> {
   const now = deps.now?.() ?? new Date().toISOString();
   const identity = eventIdentity(kind, event);
@@ -75,10 +75,13 @@ export async function persistTwilioWebhookEvent(
     persistTwilioWebhookEventLocked(fhir, kind, event, identity, now));
   if (kind === "sms-inbound") {
     const inbound = event as TwilioInboundWebhookEvent;
-    await updateInboundSuppression(fhir, {
+    const result = await updateInboundSuppression(fhir, {
       from: inbound.from,
       body: inbound.body,
     });
+    (deps.info ?? console.error)(
+      `odos-mcp: Twilio inbound SMS suppression outcome=${result.outcome} matchedPatients=${result.matchedPatients}`,
+    );
   }
   return persisted;
 }

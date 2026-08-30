@@ -10,6 +10,7 @@ import type { FhirSearchParams } from "../src/fhir-client.js";
 import {
   ODOS_COMMS_OPT_OUT_EXTENSION_URL,
   createSuppressedCommsProvider,
+  updateInboundSuppression,
 } from "../src/comms/suppression-gate.js";
 
 function baseRequest(overrides: Partial<SendEmailRequest> = {}): SendEmailRequest {
@@ -75,6 +76,64 @@ function fhirFor(
     },
   };
 }
+
+test("inbound STOP follows Patient pagination and suppresses every shared-number match", async () => {
+  const phone = "+18645550199";
+  const patients = ["synthetic-1", "synthetic-2"].map((id) => ({
+    resourceType: "Patient" as const,
+    id,
+    meta: { versionId: "1" },
+    telecom: [{ system: "phone" as const, value: phone }],
+  }));
+  const updated = new Map<string, Patient>();
+  const fhir = {
+    async search<T extends Resource>(
+      resourceType: T["resourceType"],
+      params: FhirSearchParams = {},
+    ): Promise<Bundle<T>> {
+      assert.equal(resourceType, "Patient");
+      assert.deepEqual(params, { telecom: phone, _count: "100" });
+      return {
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [{ resource: structuredClone(patients[0]) as T }],
+        link: [{ relation: "next", url: "https://odos.local/fhir/R4/Patient?page=2" }],
+      };
+    },
+    async searchUrl<T extends Resource>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>> {
+      assert.equal(url, "https://odos.local/fhir/R4/Patient?page=2");
+      assert.equal(resourceType, "Patient");
+      return {
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [{ resource: structuredClone(patients[1]) as T }],
+      };
+    },
+    async update<T extends Resource>(
+      resourceType: T["resourceType"],
+      id: string,
+      resource: T,
+      headers: Record<string, string> = {},
+    ): Promise<T> {
+      assert.equal(resourceType, "Patient");
+      assert.equal(headers["If-Match"], 'W/"1"');
+      updated.set(id, structuredClone(resource) as Patient);
+      return structuredClone(resource);
+    },
+  };
+
+  const result = await updateInboundSuppression(fhir, {
+    from: phone,
+    body: "STOP",
+    optOutType: "STOP",
+  });
+
+  assert.deepEqual(result, { outcome: "opted-out", matchedPatients: 2 });
+  assert.deepEqual([...updated.keys()], ["synthetic-1", "synthetic-2"]);
+  for (const subject of updated.values()) {
+    assert.equal(subject.extension?.[0]?.url, ODOS_COMMS_OPT_OUT_EXTENSION_URL);
+  }
+});
 
 test("PMS-side patient/channel opt-out suppresses before the provider call", async () => {
   const sent: SendEmailRequest[] = [];
