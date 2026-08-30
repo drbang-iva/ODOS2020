@@ -23,6 +23,12 @@ export const ODOS_COMMS_SEND_IDENTIFIER_SYSTEM =
 export type SuppressionFhir = Pick<MedplumClient, "baseUrl" | "read" | "search" | "searchUrl">;
 export type InboundSuppressionFhir = Pick<MedplumClient, "search" | "searchUrl" | "update">;
 export type SmsOptOutManagementFhir = Pick<MedplumClient, "read" | "executeTransactionAsActor">;
+export const SMS_OPT_OUT_IDENTITY_VERIFICATION_METHODS = [
+  "in-person",
+  "phone-verified",
+  "portal",
+] as const;
+export type SmsOptOutIdentityVerification = typeof SMS_OPT_OUT_IDENTITY_VERIFICATION_METHODS[number];
 
 export interface InboundSuppressionResult {
   outcome: "opted-out" | "opted-in" | "opt-in-refused-shared-number" | "unchanged" | "no-patient-match";
@@ -62,7 +68,8 @@ export async function clearPatientSmsOptOut(
     actorReference: string;
     actorRole: PracticeRoleId;
     recordedAt: string;
-    reason?: string;
+    reason: string;
+    identityVerification: SmsOptOutIdentityVerification;
   },
 ): Promise<ClearPatientSmsOptOutResult> {
   const patient = await readPatient(fhir, patientReference);
@@ -81,8 +88,12 @@ export async function clearPatientSmsOptOut(
       activityCode: "UPDATE",
       activityDisplay: "Clear SMS opt-out",
       agents: [{ whoReference: input.actorReference, typeCode: "author" }],
+      entityValues: [{
+        role: "source",
+        display: `Patient identity verification: ${input.identityVerification}`,
+      }],
     }),
-    ...(input.reason ? { reason: [{ text: input.reason }] } : {}),
+    reason: [{ text: input.reason }],
   };
   const transaction: Bundle = {
     resourceType: "Bundle",

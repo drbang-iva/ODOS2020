@@ -9,7 +9,7 @@ import {
   type BusinessAction,
   type PracticeRoleId,
 } from "../authz/roles.js";
-import type { FhirAuditRecorder } from "../fhir-client.js";
+import type { FhirAuditRecorder, MedplumClient } from "../fhir-client.js";
 import { searchBounded } from "../fhir-search.js";
 import type { AuthenticatedStaff } from "../payments/payment-charge-handler.js";
 import {
@@ -30,12 +30,15 @@ import {
 import {
   clearPatientSmsOptOut,
   readPatientSmsOptOut,
+  SMS_OPT_OUT_IDENTITY_VERIFICATION_METHODS,
+  type SmsOptOutIdentityVerification,
   type SmsOptOutManagementFhir,
 } from "./suppression-gate.js";
 
-type CommsStaff = Omit<AuthenticatedStaff, "actorRole" | "roles"> & {
+type CommsStaff = Omit<AuthenticatedStaff, "actorRole" | "roles" | "fhir"> & {
   actorRole: PracticeRoleId;
   roles: readonly PracticeRoleId[];
+  fhir: MedplumClient;
 };
 
 export interface CommsApiRouteDeps {
@@ -83,9 +86,9 @@ export function registerCommsApiRoutes(
     "Patient",
     "communications-opt-out-read",
     optOutPatientReferenceForAudit(req),
-    async () => {
+    async (staff) => {
       const patientReference = requiredPatientReference(queryString(req, "patient"));
-      return { status: 200, body: await patientSmsOptOutState(deps, patientReference) };
+      return { status: 200, body: await patientSmsOptOutState(staff.fhir, patientReference) };
     },
   ));
 
@@ -101,7 +104,7 @@ export function registerCommsApiRoutes(
       const body = optOutClearBody(req.body);
       return {
         status: 200,
-        body: await clearNamedPatientSmsOptOut(deps, body, staff),
+        body: await clearNamedPatientSmsOptOut(staff.fhir, deps, body, staff),
       };
     },
   ));
@@ -489,11 +492,11 @@ function hasBusinessAction(role: PracticeRoleId, action: BusinessAction): boolea
 }
 
 async function patientSmsOptOutState(
-  deps: CommsApiRouteDeps,
+  fhir: SmsOptOutManagementFhir,
   patientReference: string,
 ) {
   try {
-    return await readPatientSmsOptOut(deps.fhir, patientReference);
+    return await readPatientSmsOptOut(fhir, patientReference);
   } catch (error) {
     if (isFhirNotFound(error)) throw new CommsApiNotFoundError("Patient not found.");
     throw error;
@@ -501,16 +504,22 @@ async function patientSmsOptOutState(
 }
 
 async function clearNamedPatientSmsOptOut(
+  fhir: SmsOptOutManagementFhir,
   deps: CommsApiRouteDeps,
-  body: { patientReference: string; reason?: string },
+  body: {
+    patientReference: string;
+    reason: string;
+    identityVerification: SmsOptOutIdentityVerification;
+  },
   staff: CommsStaff,
 ) {
   try {
-    return await clearPatientSmsOptOut(deps.fhir, body.patientReference, {
+    return await clearPatientSmsOptOut(fhir, body.patientReference, {
       actorReference: staff.staffReference,
       actorRole: staff.actorRole,
       recordedAt: deps.now?.() ?? new Date().toISOString(),
-      ...(body.reason ? { reason: body.reason } : {}),
+      reason: body.reason,
+      identityVerification: body.identityVerification,
     });
   } catch (error) {
     if (isFhirNotFound(error)) throw new CommsApiNotFoundError("Patient not found.");
@@ -685,19 +694,36 @@ function requiredPatientReference(value: unknown): string {
   return value;
 }
 
-function optOutClearBody(value: unknown): { patientReference: string; reason?: string } {
+function optOutClearBody(value: unknown): {
+  patientReference: string;
+  reason: string;
+  identityVerification: SmsOptOutIdentityVerification;
+} {
   const body = record(value);
-  const unexpected = Object.keys(body).filter((key) => key !== "patientReference" && key !== "reason");
+  const unexpected = Object.keys(body).filter((key) =>
+    key !== "patientReference" && key !== "reason" && key !== "identityVerification");
   if (unexpected.length > 0) {
-    throw new CommsApiValidationError("Opt-out clear accepts only patientReference and optional reason.");
+    throw new CommsApiValidationError(
+      "Opt-out clear accepts only patientReference, reason, and identityVerification.",
+    );
   }
   const patientReference = requiredPatientReference(body.patientReference);
-  if (body.reason === undefined) return { patientReference };
-  if (typeof body.reason !== "string" || body.reason.trim().length > 2_000) {
-    throw new CommsApiValidationError("reason must be a string of at most 2000 characters.");
+  const reason = requiredText(body.reason, "reason", 2_000);
+  if (
+    typeof body.identityVerification !== "string"
+    || !SMS_OPT_OUT_IDENTITY_VERIFICATION_METHODS.includes(
+      body.identityVerification as SmsOptOutIdentityVerification,
+    )
+  ) {
+    throw new CommsApiValidationError(
+      `identityVerification must be one of: ${SMS_OPT_OUT_IDENTITY_VERIFICATION_METHODS.join(", ")}.`,
+    );
   }
-  const reason = body.reason.trim();
-  return { patientReference, ...(reason ? { reason } : {}) };
+  return {
+    patientReference,
+    reason,
+    identityVerification: body.identityVerification as SmsOptOutIdentityVerification,
+  };
 }
 
 function requiredText(value: unknown, label: string, max: number): string {
