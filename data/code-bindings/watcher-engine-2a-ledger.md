@@ -10,5 +10,6 @@ Access date: 2026-08-30
 | Conditional create uses `If-None-Exist` search parameters, creates on zero matches, reuses one match, and refuses multiple matches. | Idempotent watcher condition creation by exact identifier | https://hl7.org/fhir/R4/http.html#ccreate | https://hl7.org/fhir/R4/search.html#token | verified |
 | A token search in the form `system|` matches coded values from that system without requiring one code value. | Bound paginated Task projection to the ODOS watcher code system | https://hl7.org/fhir/R4/search.html#token | https://www2.medplum.com/docs/search/basic-search#token | verified |
 | A FHIR R4 dateTime with a time includes seconds and a UTC marker or numeric offset; dates must be valid. | Snooze-until Task restriction validation | https://hl7.org/fhir/R4/datatypes.html#dateTime | https://hl7.org/fhir/R4/datatypes-definitions.html#dateTime | verified |
+| A version-aware update sends the resource version in `If-Match`; a mismatch returns 412 instead of overwriting the newer resource. | Prevent concurrent watcher actions from resurrecting terminal Tasks | https://hl7.org/fhir/R4/http.html#concurrency | https://hl7.org/fhir/R4/http.html#update | verified |
 
 No SNOMED CT, ICD-10-CM, CPT, HCPCS, LOINC, RxNorm, NDC, or UCUM code is introduced by this slice. Watcher ids, severity, action, and dismissal values are local workflow vocabulary.

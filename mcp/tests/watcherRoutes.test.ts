@@ -153,6 +153,9 @@ test("dismiss, snooze, reassign, and resolve update the same Task with validated
   assert.equal(reassigned.owner?.reference, "Practitioner/owner-1");
   assert.equal(resolved.status, "completed");
   assert.deepEqual(fhir.tasks.map((task) => task.id), ["task-1", "task-2", "task-3", "task-4"]);
+  assert.deepEqual(fhir.updateHeaders.map((headers) => headers["If-Match"]), [
+    'W/"1"', 'W/"1"', 'W/"1"', 'W/"1"',
+  ]);
 });
 
 test("resolve refuses a collected Patient that does not own the watcher Task", async () => {
@@ -364,6 +367,27 @@ test("watcher actions require the dedicated write capability and leave the Task 
   assert.throws(() => assertBusinessActionAllowed("provider", "watchers.manage"), /lacks business action/);
 });
 
+test("a concurrent Task change returns conflict instead of allowing a stale action to win", async () => {
+  const fhir = new RouteFhir([watcherTask(1, "2026-08-30", 1000, 1)]);
+  fhir.failNextUpdateStatus = 412;
+  const server = await startServer(fhir);
+  try {
+    const response = await fetch(`${server.base}/watchers/tasks/task-1/action`, {
+      method: "POST",
+      headers: { authorization: "Bearer staff", "content-type": "application/json" },
+      body: JSON.stringify({ action: "dismiss", reason: "payment-plan" }),
+    });
+    assert.equal(response.status, 409);
+    assert.deepEqual(await response.json(), {
+      error: "Watcher Task changed; refresh before trying again.",
+    });
+    assert.equal(fhir.tasks[0]?.status, "requested");
+    assert.equal(fhir.updateHeaders[0]?.["If-Match"], 'W/"1"');
+  } finally {
+    await server.close();
+  }
+});
+
 test("watcher actions reject an unrelated Task that borrows a watcher code value", async () => {
   const unrelated = watcherTask(1, "2026-08-30", 1000, 1);
   unrelated.code = { coding: [{ system: "https://example.test/not-watchers", code: "W1" }] };
@@ -414,13 +438,19 @@ function watcherTask(index: number, date: string, balanceCents: number, ageDays:
     sourceOccurredAt: "2026-03-10T14:00:00.000Z",
     sourceInvoiceCount: 1,
   };
-  return { ...buildWatcherTask(definition, match, "today", `${date}T08:00:00-04:00`), id: `task-${index}` };
+  return {
+    ...buildWatcherTask(definition, match, "today", `${date}T08:00:00-04:00`),
+    id: `task-${index}`,
+    meta: { versionId: "1" },
+  };
 }
 
 class RouteFhir {
   tasks: Task[];
   readonly searches: Resource["resourceType"][] = [];
   readonly searchParams: Array<{ resourceType: Resource["resourceType"]; params: unknown }> = [];
+  readonly updateHeaders: Record<string, string>[] = [];
+  failNextUpdateStatus?: number;
   constructor(tasks: Task[] = [], readonly health?: Basic) { this.tasks = structuredClone(tasks); }
   async search<T extends Resource>(resourceType: T["resourceType"], params?: unknown): Promise<Bundle<T>> {
     this.searches.push(resourceType);
@@ -433,10 +463,30 @@ class RouteFhir {
     if (!task) throw new Error("Task not found");
     return structuredClone(task) as T;
   }
-  async update<T extends Resource>(_resourceType: T["resourceType"], id: string, resource: T): Promise<T> {
+  async update<T extends Resource>(
+    _resourceType: T["resourceType"],
+    id: string,
+    resource: T,
+    headers: Record<string, string> = {},
+  ): Promise<T> {
+    this.updateHeaders.push(structuredClone(headers));
+    if (this.failNextUpdateStatus) {
+      const status = this.failNextUpdateStatus;
+      this.failNextUpdateStatus = undefined;
+      throw Object.assign(new Error(`FHIR ${status}`), { status });
+    }
     const index = this.tasks.findIndex((candidate) => candidate.id === id);
-    this.tasks[index] = structuredClone(resource as Task);
-    return structuredClone(resource);
+    const current = this.tasks[index];
+    const expected = current?.meta?.versionId ? `W/"${current.meta.versionId}"` : undefined;
+    if (!expected || headers["If-Match"] !== expected) {
+      throw Object.assign(new Error("FHIR 412"), { status: 412 });
+    }
+    const stored = {
+      ...structuredClone(resource as Task),
+      meta: { ...resource.meta, versionId: String(Number(current.meta?.versionId) + 1) },
+    } as T;
+    this.tasks[index] = structuredClone(stored as Task);
+    return structuredClone(stored);
   }
 }
 

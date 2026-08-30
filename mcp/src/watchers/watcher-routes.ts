@@ -20,7 +20,12 @@ const TERMINAL_TASK_STATUSES = new Set<Task["status"]>([
 
 export interface WatcherRouteFhir extends PaginatedFhir {
   read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T>;
-  update<T extends Resource>(resourceType: T["resourceType"], id: string, resource: T): Promise<T>;
+  update<T extends Resource>(
+    resourceType: T["resourceType"],
+    id: string,
+    resource: T,
+    extraHeaders?: Record<string, string>,
+  ): Promise<T>;
 }
 
 interface WatcherStaff {
@@ -40,6 +45,7 @@ export interface WatcherRouteDependencies {
 }
 
 class WatcherValidationError extends Error {}
+class WatcherConflictError extends Error {}
 
 export function registerWatcherRoutes(
   app: Pick<Application, "get" | "post">,
@@ -104,6 +110,10 @@ export async function applyWatcherTaskAction(
   const body = record(raw);
   const action = body.action;
   const task = await fhir.read<Task>("Task", taskId);
+  const versionId = task.meta?.versionId;
+  if (!versionId) {
+    throw new WatcherConflictError(`Watcher Task/${taskId} has no version for a safe update.`);
+  }
   if (TERMINAL_TASK_STATUSES.has(task.status)) {
     throw new WatcherValidationError(`Watcher Task/${taskId} is terminal and cannot accept another action.`);
   }
@@ -171,7 +181,7 @@ export async function applyWatcherTaskAction(
   } else {
     throw new WatcherValidationError("Watcher action must be dismiss, snooze, reassign, or resolve.");
   }
-  return fhir.update("Task", taskId, updated);
+  return fhir.update("Task", taskId, updated, { "If-Match": `W/"${versionId}"` });
 }
 
 async function watcherTasks(fhir: WatcherRouteFhir): Promise<Task[]> {
@@ -206,6 +216,8 @@ async function withStaff(
     if (res.headersSent) return;
     if (error instanceof WatcherValidationError) {
       res.status(400).json({ error: error.message });
+    } else if (error instanceof WatcherConflictError || isFhirVersionConflict(error)) {
+      res.status(409).json({ error: "Watcher Task changed; refresh before trying again." });
     } else {
       console.error("odos-mcp: watcher route failed:", error);
       res.status(500).json({ error: "Watcher route failed." });
@@ -240,4 +252,9 @@ function record(value: unknown): Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
     ? value as Record<string, unknown>
     : {};
+}
+
+function isFhirVersionConflict(error: unknown): boolean {
+  const status = (error as { status?: unknown })?.status;
+  return status === 409 || status === 412 || /FHIR (409|412)\b/.test(error instanceof Error ? error.message : String(error));
 }
