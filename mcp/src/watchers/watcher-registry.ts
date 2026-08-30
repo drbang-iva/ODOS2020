@@ -3,12 +3,39 @@ import type {
   WatcherRegistry,
   WatcherSeverity,
 } from "./watcher-types.js";
+import { evaluateW1 } from "./w1-balance-watcher.js";
+import type { PaginatedFhir } from "./fhir-pagination.js";
 
 const SEVERITIES = new Set<WatcherSeverity>(["today", "this-week", "watch"]);
 const REGISTERS = new Set(["front-desk", "owner", "biller"]);
 const ACTIVATIONS = new Set(["immediate", "fixed-threshold", "learned-baseline"]);
 
 export class WatcherRegistrationError extends Error {}
+
+export function createWatcherDefinitions(
+  fhir: PaginatedFhir,
+  timeZone: string,
+): readonly WatcherDefinition[] {
+  return [{
+    id: "W1",
+    question: "Which patients on today's schedule have an open balance?",
+    firingRule: (context) => evaluateW1({ fhir, timeZone, ...context }),
+    owner: "front-desk",
+    nextAction: {
+      label: "View balance & collect",
+      href: (match) => `/frontdesk?appointmentId=${match.appointmentReference.replace(/^Appointment\//, "")}`,
+    },
+    consequence: "Collecting at check-in works better than another statement.",
+    register: "front-desk",
+    dismissalReasons: [
+      { code: "already-collected", display: "Already collected" },
+      { code: "payment-plan", display: "Payment plan" },
+      { code: "waived", display: "Waived" },
+    ],
+    activation: "immediate",
+    seedSettings: { enabled: true, severity: "today", minimumBalanceCents: 1 },
+  }];
+}
 
 export function createWatcherRegistry(input: readonly WatcherDefinition[]): WatcherRegistry {
   const definitions = new Map<string, WatcherDefinition>();

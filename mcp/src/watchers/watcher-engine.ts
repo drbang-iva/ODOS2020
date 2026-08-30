@@ -8,11 +8,13 @@ export interface WatcherSweepDependencies {
   fhir: WatcherEngineFhir;
   registry: WatcherRegistry;
   loadConfig(): Promise<WatcherPracticeConfig>;
+  authenticate?: () => Promise<void>;
   now?: () => string;
   date?: () => string;
 }
 
 export async function runWatcherSweep(deps: WatcherSweepDependencies): Promise<void> {
+  await deps.authenticate?.();
   const now = deps.now?.() ?? new Date().toISOString();
   const date = deps.date?.() ?? now.slice(0, 10);
   const priorHealth = (await loadWatcherHealth(deps.fhir)).state;

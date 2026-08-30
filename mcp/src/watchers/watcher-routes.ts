@@ -1,0 +1,186 @@
+import type { Application, Request, Response } from "express";
+import type { Resource, Task } from "@medplum/fhirtypes";
+import { collectAllPages, type PaginatedFhir } from "./fhir-pagination.js";
+import { loadWatcherHealth } from "./watcher-health.js";
+import { projectFrontDeskAlerts, projectTodayDigest } from "./watcher-projections.js";
+import type { WatcherPracticeConfig, WatcherRegistry } from "./watcher-types.js";
+
+const WATCHER_ACTION_SYSTEM = "https://odos2020.com/fhir/CodeSystem/watcher-action";
+
+export interface WatcherRouteFhir extends PaginatedFhir {
+  read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T>;
+  update<T extends Resource>(resourceType: T["resourceType"], id: string, resource: T): Promise<T>;
+}
+
+interface WatcherStaff {
+  staffReference: string;
+  fhir: unknown;
+}
+
+export interface WatcherRouteDependencies {
+  authenticateService(): Promise<void>;
+  authenticate(header: string | undefined): Promise<WatcherStaff | null>;
+  serviceFhir: WatcherRouteFhir;
+  registry: WatcherRegistry;
+  loadConfig(): Promise<WatcherPracticeConfig>;
+  now?: () => string;
+}
+
+class WatcherValidationError extends Error {}
+
+export function registerWatcherRoutes(
+  app: Pick<Application, "get" | "post">,
+  deps: WatcherRouteDependencies,
+): void {
+  app.get("/watchers/frontdesk", (req, res) => withStaff(req, res, deps, async () => {
+    const date = practiceDate(req.query.date);
+    const [config, health, tasks] = await Promise.all([
+      deps.loadConfig(),
+      loadWatcherHealth(deps.serviceFhir as never),
+      watcherTasks(deps.serviceFhir),
+    ]);
+    const body = projectFrontDeskAlerts({
+      tasks, config, registry: deps.registry, health: health.state,
+      date, now: deps.now?.() ?? new Date().toISOString(),
+    });
+    res.status(body.status === "degraded" ? 503 : 200).json(body);
+  }));
+
+  app.get("/watchers/today", (req, res) => withStaff(req, res, deps, async () => {
+    const date = practiceDate(req.query.date);
+    const [config, health, tasks] = await Promise.all([
+      deps.loadConfig(),
+      loadWatcherHealth(deps.serviceFhir as never),
+      watcherTasks(deps.serviceFhir),
+    ]);
+    const body = projectTodayDigest({
+      tasks, config, registry: deps.registry, health: health.state, date,
+      previousDate: previousDate(date), now: deps.now?.() ?? new Date().toISOString(),
+    });
+    res.status(body.status === "degraded" ? 503 : 200).json(body);
+  }));
+
+  app.post("/watchers/tasks/:taskId/action", (req, res) => withStaff(req, res, deps, async () => {
+    const taskId = typeof req.params.taskId === "string" ? req.params.taskId : "";
+    if (!taskId) throw new WatcherValidationError("Watcher Task id is required.");
+    const task = await applyWatcherTaskAction(
+      deps.serviceFhir,
+      deps.registry,
+      taskId,
+      req.body,
+      deps.now?.() ?? new Date().toISOString(),
+    );
+    res.json({ taskId: task.id, status: task.status });
+  }));
+}
+
+export async function applyWatcherTaskAction(
+  fhir: Pick<WatcherRouteFhir, "read" | "update">,
+  registry: WatcherRegistry,
+  taskId: string,
+  raw: unknown,
+  now: string,
+): Promise<Task> {
+  const body = record(raw);
+  const action = body.action;
+  const task = await fhir.read<Task>("Task", taskId);
+  const watcherId = task.code?.coding?.find((coding) => coding.code)?.code;
+  if (!watcherId) throw new WatcherValidationError("Watcher Task has no watcher code.");
+  const definition = registry.get(watcherId);
+  let updated: Task;
+
+  if (action === "dismiss") {
+    const reason = definition.dismissalReasons.find((candidate) => candidate.code === body.reason);
+    if (!reason) throw new WatcherValidationError("Dismissal reason is not valid for this watcher.");
+    updated = {
+      ...task,
+      status: "cancelled",
+      statusReason: { coding: [{ system: WATCHER_ACTION_SYSTEM, ...reason }] },
+      lastModified: now,
+    };
+  } else if (action === "snooze") {
+    const until = instant(body.until, "Snooze-until time");
+    if (Date.parse(until) <= Date.parse(now)) throw new WatcherValidationError("Snooze-until time must be in the future.");
+    updated = {
+      ...task,
+      status: "on-hold",
+      statusReason: { coding: [{ system: WATCHER_ACTION_SYSTEM, code: "snoozed", display: "Snoozed" }] },
+      restriction: { ...task.restriction, period: { ...task.restriction?.period, end: until } },
+      lastModified: now,
+    };
+  } else if (action === "reassign") {
+    if (typeof body.practitioner !== "string" || !/^Practitioner\/[A-Za-z0-9.-]+$/.test(body.practitioner)) {
+      throw new WatcherValidationError("Reassignment requires a Practitioner reference.");
+    }
+    updated = { ...task, owner: { reference: body.practitioner }, lastModified: now };
+  } else if (action === "resolve") {
+    updated = {
+      ...task,
+      status: "completed",
+      statusReason: { coding: [{ system: WATCHER_ACTION_SYSTEM, code: "collected", display: "Collected" }] },
+      lastModified: now,
+    };
+  } else {
+    throw new WatcherValidationError("Watcher action must be dismiss, snooze, reassign, or resolve.");
+  }
+  return fhir.update("Task", taskId, updated);
+}
+
+async function watcherTasks(fhir: WatcherRouteFhir): Promise<Task[]> {
+  return collectAllPages<Task>(
+    fhir,
+    "Task",
+    { _count: "1000" },
+    "Watcher Tasks",
+  );
+}
+
+async function withStaff(
+  req: Request,
+  res: Response,
+  deps: WatcherRouteDependencies,
+  action: () => Promise<void>,
+): Promise<void> {
+  try {
+    await deps.authenticateService();
+    if (!await deps.authenticate(req.header("authorization"))) {
+      res.status(401).json({ error: "Authentication required for watcher alerts." });
+      return;
+    }
+    await action();
+  } catch (error) {
+    if (res.headersSent) return;
+    if (error instanceof WatcherValidationError) {
+      res.status(400).json({ error: error.message });
+    } else {
+      console.error("odos-mcp: watcher route failed:", error);
+      res.status(500).json({ error: "Watcher route failed." });
+    }
+  }
+}
+
+function practiceDate(value: unknown): string {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(Date.parse(`${value}T00:00:00Z`))) {
+    throw new WatcherValidationError("Watcher date must be YYYY-MM-DD.");
+  }
+  return value;
+}
+
+function previousDate(value: string): string {
+  const date = new Date(`${value}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() - 1);
+  return date.toISOString().slice(0, 10);
+}
+
+function instant(value: unknown, label: string): string {
+  if (typeof value !== "string" || !value.trim() || Number.isNaN(Date.parse(value))) {
+    throw new WatcherValidationError(`${label} must be an ISO dateTime.`);
+  }
+  return value;
+}
+
+function record(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
