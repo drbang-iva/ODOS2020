@@ -23,7 +23,7 @@ export function createWatcherDefinitions(
     owner: "front-desk",
     nextAction: {
       label: "View balance & collect",
-      href: (match) => `/billing/claims/patient-payments?patientId=${match.patientReference.replace(/^Patient\//, "")}`,
+      href: (match) => `/billing/claims/patient-payments?patientId=${match.patientReference.replace(/^Patient\//, "")}&collect=1`,
     },
     consequence: "Collecting at check-in works better than another statement.",
     register: "front-desk",

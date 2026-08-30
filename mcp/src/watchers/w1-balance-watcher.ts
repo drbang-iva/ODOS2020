@@ -3,6 +3,7 @@ import { collectAllPages, type PaginatedFhir } from "./fhir-pagination.js";
 import type { WatcherMatch, WatcherPracticeSettings } from "./watcher-types.js";
 
 const INACTIVE_APPOINTMENT_STATUSES = new Set(["cancelled", "noshow", "entered-in-error"]);
+const PATIENT_BATCH_SIZE = 100;
 
 export interface W1EvaluationInput {
   fhir: PaginatedFhir;
@@ -31,12 +32,17 @@ export async function evaluateW1(input: W1EvaluationInput): Promise<WatcherMatch
   );
   if (patientIds.size === 0) return [];
 
-  const patients = await collectAllPages<Patient>(
-    input.fhir,
-    "Patient",
-    { _id: [...patientIds].map(referenceId).join(","), _count: "1000" },
-    "W1 patients",
-  );
+  const patients: Patient[] = [];
+  const patientReferences = [...patientIds];
+  for (let index = 0; index < patientReferences.length; index += PATIENT_BATCH_SIZE) {
+    const batch = patientReferences.slice(index, index + PATIENT_BATCH_SIZE);
+    patients.push(...await collectAllPages<Patient>(
+      input.fhir,
+      "Patient",
+      { _id: batch.map(referenceId).join(","), _count: "1000" },
+      `W1 patients batch ${Math.floor(index / PATIENT_BATCH_SIZE) + 1}`,
+    ));
+  }
   const patientByReference = new Map(
     patients.filter((patient) => patient.id).map((patient) => [`Patient/${patient.id}`, patient]),
   );

@@ -49,15 +49,15 @@ export function BillingToday({
   }
 
   return (
-    <main className="min-h-screen bg-[#080914] px-5 py-6 text-white">
+    <main className="min-h-screen bg-[var(--odos-page-ground)] px-5 py-6 text-[var(--odos-text)]">
       <header className="mb-5">
-        <div className="text-xs font-bold uppercase tracking-[0.18em] text-white/40">Billing</div>
+        <div className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--odos-faint)]">Billing</div>
         <h1 className="mt-1 text-2xl font-semibold">Today</h1>
-        <p className="mt-1 text-sm text-white/50">Only the financial work that needs a human now.</p>
+        <p className="mt-1 text-sm text-[var(--odos-muted)]">Only the financial work that needs a human now.</p>
       </header>
 
       {error && <div role="alert" className="mb-4 border border-red-400/40 bg-red-950/50 px-4 py-3 text-sm text-red-100">{error}</div>}
-      {!projection && !error && <div className="text-sm text-white/50">Loading today’s watch…</div>}
+      {!projection && !error && <div className="text-sm text-[var(--odos-muted)]">Loading today’s watch…</div>}
 
       {projection?.status === "degraded" && (
         <section role="alert" className="border border-amber-300/40 bg-amber-950/40 p-5 text-amber-100">
@@ -77,9 +77,9 @@ export function BillingToday({
           <section className="mt-6" aria-labelledby="needs-human-title">
             <h2 id="needs-human-title" className="text-lg font-semibold">Needs a human</h2>
             {projection.items.length === 0 ? (
-              <div className="mt-3 border border-white/10 bg-white/[0.03] p-8 text-center">
-                <p className="font-semibold text-white/80">Nothing needs a human today.</p>
-                <p className="mt-1 text-sm text-white/45">Watching since {projection.goLiveAt.slice(0, 10)}.</p>
+              <div className="mt-3 border border-[var(--odos-line)] bg-[var(--odos-surface)] p-8 text-center">
+                <p className="font-semibold text-[var(--odos-text)]">Nothing needs a human today.</p>
+                <p className="mt-1 text-sm text-[var(--odos-muted)]">Watching since {projection.goLiveAt.slice(0, 10)}.</p>
               </div>
             ) : (
               <div className="mt-3 grid gap-3">
@@ -87,7 +87,7 @@ export function BillingToday({
               </div>
             )}
             {projection.overflow.total > 0 && (
-              <div className="mt-3 border border-white/10 bg-black/20 px-4 py-3 text-sm text-white/55">
+              <div className="mt-3 border border-[var(--odos-line)] bg-[var(--odos-surface)] px-4 py-3 text-sm text-[var(--odos-muted)]">
                 {projection.overflow.total} more, grouped by reason: {projection.overflow.groups.map((group) => `${group.watcherId} (${group.count})`).join(", ")}
               </div>
             )}
@@ -111,8 +111,8 @@ function SinceYesterday({ projection }: { projection: Extract<WatcherTodayProjec
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="border border-white/10 bg-white/[0.03] p-4">
-      <div className="text-xs font-bold uppercase text-white/40">{label}</div>
+    <div className="border border-[var(--odos-line)] bg-[var(--odos-surface)] p-4">
+      <div className="text-xs font-bold uppercase text-[var(--odos-faint)]">{label}</div>
       <div className="mt-1 text-lg font-semibold">{value}</div>
     </div>
   );
@@ -127,23 +127,23 @@ function WatcherCard({
 }) {
   const [practitioner, setPractitioner] = useState("");
   return (
-    <article data-watcher-card={item.watcherId} className="border border-white/10 bg-white/[0.035] p-4">
+    <article data-watcher-card={item.watcherId} className="border border-[var(--odos-line)] [background:var(--odos-card-gradient)] p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="text-xs font-bold uppercase tracking-wide text-amber-300">{item.severity}</div>
           <h3 className="mt-1 font-semibold">{item.message}</h3>
-          <p className="mt-1 text-sm text-white/50">{item.consequence}</p>
+          <p className="mt-1 text-sm text-[var(--odos-muted)]">{item.consequence}</p>
         </div>
         <a className="scheduler-button" href={`/frontdesk?appointmentId=${encodeURIComponent(item.appointmentId)}`}>Act at appointment</a>
       </div>
-      <details className="mt-3 border-t border-white/10 pt-3">
-        <summary className="cursor-pointer text-sm font-semibold text-white/60">More actions</summary>
+      <details className="mt-3 border-t border-[var(--odos-line)] pt-3">
+        <summary className="cursor-pointer text-sm font-semibold text-[var(--odos-muted)]">More actions</summary>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <button className="scheduler-button" type="button" onClick={() => void onAction(item.taskId, { action: "snooze", until: new Date(Date.now() + 60 * 60_000).toISOString() })}>Snooze</button>
           {item.dismissalReasons.map((reason) => (
             <button key={reason.code} className="scheduler-button" type="button" onClick={() => void onAction(item.taskId, { action: "dismiss", reason: reason.code })}>{reason.display}</button>
           ))}
-          <label className="flex items-center gap-2 text-xs text-white/55">
+          <label className="flex items-center gap-2 text-xs text-[var(--odos-muted)]">
             Reassign
             <input className="scheduler-input" value={practitioner} placeholder="Practitioner/id" onChange={(event) => setPractitioner(event.target.value)} />
           </label>

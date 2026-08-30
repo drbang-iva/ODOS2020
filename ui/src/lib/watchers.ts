@@ -72,6 +72,14 @@ export function updateWatcherTask(taskId: string, action: WatcherTaskAction, opt
   }, options);
 }
 
+export function watcherCollectionHref(alert: WatcherAlert): string {
+  const separator = alert.primaryAction.href.includes("?") ? "&" : "?";
+  const href = alert.primaryAction.href.includes("collect=")
+    ? alert.primaryAction.href
+    : `${alert.primaryAction.href}${separator}collect=1`;
+  return `${href}&watcherTaskId=${encodeURIComponent(alert.taskId)}`;
+}
+
 export function watcherMoney(cents: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",

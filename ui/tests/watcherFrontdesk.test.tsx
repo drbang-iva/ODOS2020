@@ -5,7 +5,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { buildAppointmentBlockContent } from "../src/lib/scheduling";
 import { DEFAULT_SCHEDULING_PRACTICE_CONFIG } from "../src/lib/scheduling-store";
-import type { WatcherAlert, WatcherFrontDeskProjection } from "../src/lib/watchers";
+import { watcherCollectionHref, type WatcherAlert, type WatcherFrontDeskProjection } from "../src/lib/watchers";
 import { FrontDeskCockpit } from "../src/scenes/frontdesk/FrontDeskCockpit";
 import { PatientQuickCard } from "../src/scenes/scheduler/PatientQuickCard";
 import { ResourceDayColumn } from "../src/scenes/scheduler/ResourceDayColumn";
@@ -83,6 +83,14 @@ test("the Appointment Quick Card renders the same Task's full W1 action and type
   assert.match(html, /Collecting at check-in works better than another statement/);
   assert.equal(html.match(/View balance &amp; collect/g)?.length, 1);
   for (const reason of ["Already collected", "Payment plan", "Waived"]) assert.match(html, new RegExp(reason));
+  assert.match(html, /collect=1&amp;watcherTaskId=task-1/);
+});
+
+test("the collection href carries the same Task id into the existing payment panel", () => {
+  assert.equal(
+    watcherCollectionHref(alert),
+    "/billing/claims/patient-payments?patientId=sarah&collect=1&watcherTaskId=task-1",
+  );
 });
 
 test("degraded Front Desk names the last success and renders no reassuring balance cue", () => {

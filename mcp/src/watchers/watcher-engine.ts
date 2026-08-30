@@ -54,8 +54,8 @@ export async function runWatcherSweep(deps: WatcherSweepDependencies): Promise<v
 export function watcherWorkerIntervalMs(value: string | undefined): number {
   if (value === undefined || value.trim() === "") return 5 * 60_000;
   const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 10_000) {
-    throw new Error("WATCHER_WORKER_INTERVAL_MS must be an integer of at least 10000.");
+  if (!Number.isInteger(parsed) || parsed < 10 ** 4) {
+    throw new Error(`WATCHER_WORKER_INTERVAL_MS must be an integer of at least ${10 ** 4}.`);
   }
   return parsed;
 }

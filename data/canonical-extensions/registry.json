@@ -853,6 +853,18 @@
       "namespace": "correspondence",
       "status": "active",
       "sliceConsumer": "correspondence-c3"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/watcher-practice-config",
+      "namespace": "watchers",
+      "status": "active",
+      "sliceConsumer": "billing-watcher-2a"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/watcher-engine-health",
+      "namespace": "watchers",
+      "status": "active",
+      "sliceConsumer": "billing-watcher-2a"
     }
   ]
 }

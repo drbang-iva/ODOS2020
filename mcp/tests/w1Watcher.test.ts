@@ -93,6 +93,38 @@ test("W1 aggregates multiple issued Invoices for one appointment without stackin
   assert.equal(match?.frontDeskMessage, "Sarah M. has a balance from February. She's on today's schedule at 9:40 AM — $152 across 2 visits.");
 });
 
+test("W1 resolves scheduled Patients in bounded batches", async () => {
+  const appointments = Array.from({ length: 101 }, (_, index): Appointment => ({
+    ...appointment,
+    id: `appt-${index + 1}`,
+    participant: [{
+      actor: { reference: `Patient/patient-${index + 1}`, display: `Patient ${index + 1}` },
+      status: "accepted",
+    }],
+  }));
+  const patients = Array.from({ length: 101 }, (_, index): Patient => ({
+    resourceType: "Patient",
+    id: `patient-${index + 1}`,
+  }));
+  const fhir = new PagedFhir({
+    Appointment: [bundle(appointments)],
+    Patient: [bundle(patients.slice(0, 100)), bundle(patients.slice(100))],
+    Invoice: [bundle([])],
+  });
+
+  const matches = await evaluateW1({
+    fhir,
+    date: "2026-08-30",
+    now: "2026-08-30T12:00:00-04:00",
+    settings: { enabled: true, severity: "today", minimumBalanceCents: 1 },
+  });
+
+  assert.deepEqual(matches, []);
+  const patientSearches = fhir.searches.filter((search) => search.resourceType === "Patient");
+  assert.equal(patientSearches.length, 2);
+  assert.deepEqual(patientSearches.map((search) => String(search.params._id).split(",").length), [100, 1]);
+});
+
 test("W1 refuses a confident short list when FHIR supplies a next link without pagination support", async () => {
   const fhir = {
     async search<T extends Resource>(resourceType: T["resourceType"]): Promise<Bundle<T>> {
@@ -154,17 +186,19 @@ test("W1 rejects a scheduled patient's issued Invoice whose money cannot be comp
 });
 
 class PagedFhir {
-  private readonly searches: Partial<Record<Resource["resourceType"], Bundle<Resource>[]>>;
+  private readonly fixturePages: Partial<Record<Resource["resourceType"], Bundle<Resource>[]>>;
+  readonly searches: Array<{ resourceType: Resource["resourceType"]; params: Record<string, string> }> = [];
 
   constructor(
     searches: Partial<Record<Resource["resourceType"], Bundle<Resource>[]>>,
     private readonly nextPages: Record<string, Bundle<Resource>> = {},
   ) {
-    this.searches = searches;
+    this.fixturePages = searches;
   }
 
-  async search<T extends Resource>(resourceType: T["resourceType"]): Promise<Bundle<T>> {
-    const page = this.searches[resourceType]?.shift();
+  async search<T extends Resource>(resourceType: T["resourceType"], params: Record<string, string>): Promise<Bundle<T>> {
+    this.searches.push({ resourceType, params });
+    const page = this.fixturePages[resourceType]?.shift();
     if (!page) throw new Error(`Unexpected ${resourceType} search.`);
     return page as Bundle<T>;
   }
