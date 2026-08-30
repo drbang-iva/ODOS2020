@@ -12,6 +12,7 @@ import {
 } from "../../lib/scheduling";
 import { buildCompactCues, isCompactBlock } from "../../lib/scheduler-block-density";
 import { AppointmentHoverCard } from "./AppointmentHoverCard";
+import { watcherMoney, type WatcherAlert } from "../../lib/watchers";
 
 // Shared geometry for the day and week resource grids. Both render "one resource,
 // one day, a column of time-positioned blocks"; keeping a single renderer here is
@@ -67,11 +68,13 @@ function AppointmentBlock({
   resource,
   rowHeight,
   onClick,
+  watcherAlert,
 }: {
   block: PositionedAppointment;
   resource: Schedule;
   rowHeight: number;
   onClick: (appointment: Appointment, sourceResourceActor?: string) => void;
+  watcherAlert?: WatcherAlert;
 }) {
   const { geometry, content, appointment } = block;
   const color = content.color;
@@ -125,6 +128,11 @@ function AppointmentBlock({
       >
         <div className="truncate text-[13px] font-bold leading-tight">{content.patientDisplay}</div>
         <div className="truncate text-[11px] font-semibold leading-tight opacity-90">{content.visitTypeDisplay}</div>
+        {watcherAlert && (
+          <div className="mt-0.5 truncate text-[10px] font-extrabold leading-tight" aria-label="Balance alert">
+            {watcherMoney(watcherAlert.balanceCents)} balance
+          </div>
+        )}
         {compact ? (
           <div className="mt-0.5 flex items-center gap-1.5">
             {buildCompactCues(content).map((cue) => (
@@ -192,6 +200,7 @@ export function ResourceDayColumn({
   onAppointmentClick,
   onBlockedRegionClick,
   onCellClick,
+  watcherAlertsByAppointment = {},
 }: {
   resource: Schedule;
   config: SchedulingPracticeConfig;
@@ -206,6 +215,7 @@ export function ResourceDayColumn({
   onAppointmentClick: (appointment: Appointment, sourceResourceActor?: string) => void;
   onBlockedRegionClick: (blockIndex: number | undefined) => void;
   onCellClick: (resource: Schedule, startMinutes: number) => void;
+  watcherAlertsByAppointment?: Readonly<Record<string, WatcherAlert>>;
 }) {
   const indexedBlocks = blocksForScheduleWithIndex(config, resource);
   const regions = availabilityShadingForColumn({
@@ -275,6 +285,7 @@ export function ResourceDayColumn({
           resource={resource}
           rowHeight={rowHeight}
           onClick={onAppointmentClick}
+          watcherAlert={block.appointment.id ? watcherAlertsByAppointment[block.appointment.id] : undefined}
         />
       ))}
     </div>
