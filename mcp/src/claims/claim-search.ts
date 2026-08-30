@@ -15,6 +15,7 @@ import {
   ERA_WORKLIST_CODE_SYSTEM,
   ERA_WORKLIST_STATUS_SYSTEM,
 } from "./era-worklist.js";
+import { claimTouchState } from "./claim-touch-ledger.js";
 
 export const CLAIM_SEARCH_STATUSES = [
   "submitted",
@@ -30,6 +31,7 @@ export type ClaimSearchStatus = (typeof CLAIM_SEARCH_STATUSES)[number];
 
 export interface ClaimSearchFilters {
   patientReferences?: ReadonlySet<string>;
+  patient?: string;
   claim?: string;
   status?: ClaimSearchStatus;
   carrier?: string;
@@ -59,6 +61,9 @@ export interface ClaimSearchRow {
   officeReference?: string;
   office?: string;
   daysSinceSubmission: number;
+  touchCount: number;
+  lastTouchedAt: string | null;
+  lastTouchedBy: string | null;
 }
 
 export function isClaimSearchStatus(value: string): value is ClaimSearchStatus {
@@ -112,6 +117,7 @@ function projectClaim(
   const status = taskSignals.openStatusByClaim.get(claimReference)
     ?? responseStatus(latestResponse, paymentResponse)
     ?? (taskSignals.rejectedClaimReferences.has(claimReference) ? "rejected" : "submitted");
+  const touch = claimTouchState(claim);
   return [{
     claimReference,
     claimNumber: claim.identifier?.find((identifier) => identifier.value)?.value ?? claim.id,
@@ -131,11 +137,15 @@ function projectClaim(
       office: referenceLabel(facilityReference, claim.facility?.display, resources),
     } : {}),
     daysSinceSubmission: elapsedDays(claim.created, at),
+    touchCount: touch.touchCount,
+    lastTouchedAt: touch.lastTouchedAt ?? null,
+    lastTouchedBy: touch.lastTouchedBy ?? null,
   }];
 }
 
 function matchesFilters(row: ClaimSearchRow, filters: ClaimSearchFilters): boolean {
   if (filters.patientReferences && !filters.patientReferences.has(row.patientReference)) return false;
+  if (filters.patient && !includesAny([row.patientReference, row.patient], filters.patient)) return false;
   if (filters.claim && !includesAny([row.claimReference, row.claimNumber], filters.claim)) return false;
   if (filters.status && row.status !== filters.status) return false;
   if (filters.carrier && !includesAny([row.payerReference, row.payer], filters.carrier)) return false;

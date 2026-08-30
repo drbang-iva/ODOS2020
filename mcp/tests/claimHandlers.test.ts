@@ -68,6 +68,7 @@ import {
   ODOS_SOURCE_CLAIM_EXTENSION_URL,
 } from "../src/claims/patient-responsibility-invoice.js";
 import { StediRequestError } from "../src/claims/stedi-adapter.js";
+import { claimTouchState } from "../src/claims/claim-touch-ledger.js";
 import { withStediClaimInputSnapshot } from "../src/claims/stedi-fhir.js";
 import { handleGeneratePatientStatementRequest, type StatementRunResult } from "../src/statements/statements.js";
 
@@ -127,6 +128,7 @@ function deps(role: "staff" | "provider" = "staff") {
     ChargeItem: [structuredClone(professionalClaim.chargeItems[0])] as ChargeItem[],
     Claim: [] as Claim[],
     ClaimResponse: [] as ClaimResponse[],
+    Communication: [] as Resource[],
     Coverage: [{
       resourceType: "Coverage",
       id: "cov-1",
@@ -148,6 +150,7 @@ function deps(role: "staff" | "provider" = "staff") {
     Invoice: [] as Invoice[],
     Patient: [] as Patient[],
     PaymentReconciliation: [] as PaymentReconciliation[],
+    Provenance: [] as Resource[],
     Task: [] as Task[],
   };
   let claimCreateError: Error | undefined;
@@ -204,14 +207,18 @@ function deps(role: "staff" | "provider" = "staff") {
     executeTransaction: async (bundle: Bundle): Promise<Bundle> => {
       const responseEntries = (bundle.entry ?? []).map((entry) => {
         const resource = entry.resource;
-        if (!resource || resource.resourceType !== "Task") throw new Error("Unexpected statement transaction resource");
-        const requestedId = entry.request?.method === "PUT" ? entry.request.url.replace("Task/", "") : undefined;
-        const id = requestedId ?? `task-${created.Task.length + 1}`;
+        if (!resource) throw new Error("Unexpected empty transaction resource");
+        const resources = created[resource.resourceType as keyof typeof created] as Resource[] | undefined;
+        if (!resources) throw new Error(`Unexpected transaction resource ${resource.resourceType}`);
+        const requestedId = entry.request?.method === "PUT"
+          ? entry.request.url.replace(`${resource.resourceType}/`, "")
+          : undefined;
+        const id = requestedId ?? `${resource.resourceType.toLowerCase()}-${resources.length + 1}`;
         const saved = { ...structuredClone(resource), id, meta: { ...resource.meta, versionId: "1" } };
-        const existingIndex = created.Task.findIndex((task) => task.id === id);
-        if (existingIndex >= 0) created.Task[existingIndex] = saved;
-        else created.Task.push(saved);
-        return { response: { status: requestedId ? "200" : "201", location: `Task/${id}/_history/1` } };
+        const existingIndex = resources.findIndex((candidate) => candidate.id === id);
+        if (existingIndex >= 0) resources[existingIndex] = saved;
+        else resources.push(saved);
+        return { response: { status: requestedId ? "200" : "201", location: `${resource.resourceType}/${id}/_history/1` } };
       });
       return { resourceType: "Bundle", type: "transaction-response", entry: responseEntries };
     },
@@ -569,6 +576,56 @@ test("pre-adjudication correction previews and submits CFC 1 without a PCCN", as
   assert.equal("claimSupplementalInformation" in submitted.payload.claimInformation, false);
   assert.equal(submitted.payload.claimInformation.patientControlNumber, "ODOS-CORRECT-901");
   assert.equal(fixture.created.Claim.at(-1)?.related?.[0]?.claim.reference, "Claim/claim-original");
+  assert.deepEqual(claimTouchState(fixture.created.Claim[0]), {
+    touchCount: 1,
+    lastTouchedAt: "2026-07-09T12:00:00.000Z",
+    lastTouchedBy: "Practitioner/staff-1",
+  });
+});
+
+test("retry after a lost resubmission-touch response records one touch and one Provenance", async () => {
+  const fixture = deps();
+  let projectionFailureMarks = 0;
+  fixture.deps.projectionHealth = {
+    begin: () => 1,
+    succeed: () => undefined,
+    fail: () => undefined,
+    invalidate: () => { projectionFailureMarks += 1; },
+    status: () => { throw new Error("not read"); },
+  };
+  fixture.created.Claim.push({
+    ...withStediClaimInputSnapshot(buildProfessionalClaim(professionalClaim), professionalClaim),
+    id: "claim-original",
+  });
+  fixture.deps.adapters = { stedi: stediSubmissionAdapter(() => undefined) };
+  const executeTransaction = fixture.fhir.executeTransaction;
+  let loseFirstResponse = true;
+  fixture.fhir.executeTransaction = async (bundle) => {
+    const response = await executeTransaction(bundle);
+    if (loseFirstResponse) {
+      loseFirstResponse = false;
+      throw new Error("synthetic lost transaction response");
+    }
+    return response;
+  };
+  const request = {
+    authHeader: "Bearer good",
+    body: {
+      originalClaimReference: "Claim/claim-original",
+      intent: "correct" as const,
+      patientControlNumber: "ODOS-RETRY-901",
+      revisedClaim: professionalClaim,
+    },
+  };
+
+  const first = await handleStediClaimResubmissionRequest(fixture.deps, request);
+  const retry = await handleStediClaimResubmissionRequest(fixture.deps, request);
+
+  assert.equal(first.status, 200);
+  assert.equal(retry.status, 200);
+  assert.equal(claimTouchState(fixture.created.Claim[0]).touchCount, 1);
+  assert.equal(fixture.created.Provenance.length, 1);
+  assert.equal(projectionFailureMarks, 1);
 });
 
 test("pre-adjudication void returns manual handling without building or submitting a claim", async () => {

@@ -11,6 +11,7 @@ import type {
   Resource,
   Task,
 } from "@medplum/fhirtypes";
+import { createHash } from "node:crypto";
 import { buildOdosAuditEventRow, type OdosActorRole, type OdosAuditEventRecord } from "../authz/odosAudit.js";
 import { assertBusinessActionAllowed, PRACTICE_ROLE_IDS, type PracticeRoleId } from "../authz/roles.js";
 import type { MedplumClient } from "../fhir-client.js";
@@ -26,10 +27,18 @@ import { buildClaimAuditRecord, type ClaimAuditEventType } from "./claim-audit.j
 import { ClaimSubmissionValidationError } from "./claim-errors.js";
 import {
   isClaimSearchStatus,
-  isRelatedClaimResource,
-  projectClaimSearchResults,
   type ClaimSearchFilters,
 } from "./claim-search.js";
+import type { ClaimReadModelStore } from "./claim-read-model-store.js";
+import {
+  claimProjectionUnavailableBody,
+  type ClaimReadModelProjectionHealthTracker,
+} from "./claim-read-model-health.js";
+import {
+  buildClaimTouchTransaction,
+  claimTouchIdempotencyFingerprint,
+  claimTouchRequestFingerprint,
+} from "./claim-touch-ledger.js";
 import type { ClaimMdAdapter } from "./claimmd-adapter.js";
 import {
   isClearinghouseId,
@@ -123,7 +132,8 @@ export const STEDI_277CA_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSy
 export interface AuthenticatedClaimsStaff {
   staffReference: string;
   actorRole: OdosActorRole;
-  fhir: Pick<MedplumClient, "baseUrl" | "create" | "search" | "searchUrl" | "read" | "update">;
+  fhir: Pick<MedplumClient, "baseUrl" | "create" | "search" | "searchUrl" | "read" | "update">
+    & Partial<Pick<MedplumClient, "executeTransaction">>;
 }
 
 export interface ClaimsHandlerDeps {
@@ -134,6 +144,8 @@ export interface ClaimsHandlerDeps {
   recordAudit(row: OdosAuditEventRecord): Promise<void>;
   eraUnderpaymentThresholdCents?: number;
   now?: () => string;
+  claimReadModel?: ClaimReadModelStore;
+  projectionHealth?: ClaimReadModelProjectionHealthTracker;
 }
 
 export interface ClaimsHandlerResult {
@@ -370,6 +382,18 @@ export async function handleStediClaimResubmissionRequest(
       idempotencyKey: patientControlNumber,
       payload,
     });
+    const touchAt = now(deps);
+    const touchOutcome = await recordResubmissionTouch(auth, context.claim, patientControlNumber, touchAt);
+    if (touchOutcome === "conflict") {
+      return { status: 409, body: { error: "The resubmission idempotency key was already used for different touch content." } };
+    }
+    if (touchOutcome === "failed") {
+      deps.projectionHealth?.invalidate(touchAt);
+      return { status: 503, body: { error: "Claim was transmitted, but the original Claim touch could not be recorded; retry reconciliation before continuing." } };
+    }
+    if (touchOutcome === "recorded" || touchOutcome === "reconciled") {
+      deps.projectionHealth?.invalidate(touchAt);
+    }
     await audit(
       deps,
       auth,
@@ -422,6 +446,43 @@ export async function handleStediClaimResubmissionRequest(
       // The submission failure response must still return if the worklist write is unavailable.
     }
     return { status: 502, body: { error: `Claim resubmission failed: ${messageOf(error)}` } };
+  }
+}
+
+async function recordResubmissionTouch(
+  auth: AuthenticatedClaimsStaff,
+  claim: Claim,
+  patientControlNumber: string,
+  at: string,
+): Promise<"recorded" | "reconciled" | "existing" | "conflict" | "failed"> {
+  if (!auth.fhir.executeTransaction || !claim.id) return "failed";
+  const key = `stedi-${createHash("sha256").update(patientControlNumber).digest("hex")}`;
+  const fingerprint = claimTouchRequestFingerprint({
+    claimReference: `Claim/${claim.id}`,
+    actorReference: auth.staffReference,
+    actorRole: auth.actorRole,
+    action: "resubmission",
+  });
+  const existing = claimTouchIdempotencyFingerprint(claim, key);
+  if (existing) return existing === fingerprint ? "existing" : "conflict";
+  try {
+    await auth.fhir.executeTransaction(buildClaimTouchTransaction({
+      claim,
+      principal: { kind: "human", actorReference: auth.staffReference, actorRole: auth.actorRole },
+      action: "resubmission",
+      at,
+      idempotency: { key, fingerprint },
+    }));
+    return "recorded";
+  } catch {
+    try {
+      const committed = await auth.fhir.read<Claim>("Claim", claim.id);
+      const committedFingerprint = claimTouchIdempotencyFingerprint(committed, key);
+      if (!committedFingerprint) return "failed";
+      return committedFingerprint === fingerprint ? "reconciled" : "conflict";
+    } catch {
+      return "failed";
+    }
   }
 }
 
@@ -1105,42 +1166,19 @@ export async function handleClaimSearchRequest(
   if (outstandingOnly && outstandingOnly !== "true") {
     return { status: 400, body: { error: "outstanding must be true when supplied." } };
   }
+  if (!deps.claimReadModel || !deps.projectionHealth) {
+    return { status: 503, body: { error: "Claim read model is unavailable; rebuild from FHIR before searching." } };
+  }
 
   try {
-    const [claims, responses, tasks] = await Promise.all([
-      searchAll<Claim>(auth.fhir, "Claim", { _count: "100", _sort: "-created" }),
-      searchAll<ClaimResponse>(auth.fhir, "ClaimResponse", { _count: "200", _sort: "-created" }),
-      searchAll<Task>(auth.fhir, "Task", {
-        code: `${ERA_WORKLIST_CODE_SYSTEM}|,${CLAIM_REJECTED_CODE_SYSTEM}|`,
-        _count: "200",
-        _sort: "-authored-on",
-      }),
-    ]);
-    let patientReferences: Set<string> | undefined;
-    const relatedResources: Resource[] = [];
-    if (patient) {
-      if (/^Patient\/[A-Za-z0-9.-]+$/.test(patient)) {
-        patientReferences = new Set([patient]);
-      } else {
-        const patients = (await searchAll<Resource>(auth.fhir, "Patient", { name: patient, _count: "100" }))
-          .filter(isRelatedClaimResource);
-        relatedResources.push(...patients);
-        patientReferences = new Set(patients.flatMap((resource) => resource.id ? [`Patient/${resource.id}`] : []));
-      }
-    }
-
-    const referenceResources = await Promise.all(
-      (["Patient", "Practitioner", "PractitionerRole", "Organization", "Location"] as const).map(async (resourceType) => {
-        const ids = claimReferenceIds(claims, resourceType);
-        if (ids.length === 0) return [];
-        return (await searchAll<Resource>(auth.fhir, resourceType, { _id: ids.join(","), _count: String(ids.length) }))
-          .filter(isRelatedClaimResource);
-      }),
-    );
-    relatedResources.push(...referenceResources.flat());
-
+    const at = now(deps);
+    const projection = deps.projectionHealth.status(at);
+    const unavailable = claimProjectionUnavailableBody(projection);
+    if (unavailable) return { status: 503, body: unavailable };
     const filters: ClaimSearchFilters = {
-      ...(patientReferences ? { patientReferences } : {}),
+      ...(patient ? /^Patient\/[A-Za-z0-9.-]+$/.test(patient)
+        ? { patientReferences: new Set([patient]) }
+        : { patient } : {}),
       ...(trimmedValue(input.query?.claim) ? { claim: trimmedValue(input.query?.claim) } : {}),
       ...(requestedStatus ? { status: requestedStatus } : {}),
       ...(trimmedValue(input.query?.carrier) ? { carrier: trimmedValue(input.query?.carrier) } : {}),
@@ -1155,14 +1193,8 @@ export async function handleClaimSearchRequest(
     return {
       status: 200,
       body: {
-        items: projectClaimSearchResults({
-          claims,
-          responses,
-          tasks,
-          relatedResources,
-          filters,
-          at: now(deps),
-        }),
+        items: await deps.claimReadModel.search({ filters, at }),
+        projection,
       },
     };
   } catch (error) {

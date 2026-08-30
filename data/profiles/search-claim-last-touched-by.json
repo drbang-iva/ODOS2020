@@ -1,0 +1,3 @@
+{
+  "resourceType": "SearchParameter", "url": "https://odos2020.com/fhir/SearchParameter/Claim-last-touched-by", "version": "1.0.0", "name": "ClaimLastTouchedBy", "status": "active", "description": "Claim last human follow-up actor", "code": "last-touched-by", "base": ["Claim"], "type": "reference", "target": ["Practitioner"], "expression": "Claim.extension.where(url='https://odos2020.com/fhir/StructureDefinition/claim-last-touched-by').value.ofType(Reference)"
+}

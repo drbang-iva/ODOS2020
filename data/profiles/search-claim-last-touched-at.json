@@ -1,0 +1,3 @@
+{
+  "resourceType": "SearchParameter", "url": "https://odos2020.com/fhir/SearchParameter/Claim-last-touched-at", "version": "1.0.0", "name": "ClaimLastTouchedAt", "status": "active", "description": "Claim last human follow-up timestamp", "code": "last-touched-at", "base": ["Claim"], "type": "date", "expression": "Claim.extension.where(url='https://odos2020.com/fhir/StructureDefinition/claim-last-touched-at').value.ofType(dateTime)"
+}

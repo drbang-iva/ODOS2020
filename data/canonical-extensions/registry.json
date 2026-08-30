@@ -1,7 +1,37 @@
 {
   "resourceType": "ODOSCanonicalExtensionRegistry",
-  "generatedAt": "2026-08-09",
+  "generatedAt": "2026-08-30",
   "extensions": [
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/claim-touch-count",
+      "namespace": "claims-follow-up",
+      "status": "active",
+      "sliceConsumer": "claims-slice-1a"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/claim-last-touched-at",
+      "namespace": "claims-follow-up",
+      "status": "active",
+      "sliceConsumer": "claims-slice-1a"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/claim-last-touched-by",
+      "namespace": "claims-follow-up",
+      "status": "active",
+      "sliceConsumer": "claims-slice-1a"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/claim-follow-up-reason",
+      "namespace": "claims-follow-up",
+      "status": "active",
+      "sliceConsumer": "claims-slice-1a"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/claim-reason-resolution-path",
+      "namespace": "claims-follow-up",
+      "status": "active",
+      "sliceConsumer": "claims-slice-1a"
+    },
     {
       "url": "https://odos2020.com/fhir/StructureDefinition/odos-fax-callback-token",
       "namespace": "fax",

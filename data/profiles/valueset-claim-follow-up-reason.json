@@ -1,0 +1,3 @@
+{
+  "resourceType": "ValueSet", "url": "https://odos2020.com/fhir/ValueSet/claim-follow-up-reason", "version": "1.0.0", "name": "ODOSClaimFollowUpReasonValueSet", "status": "active", "publisher": "ODOS", "compose": { "include": [{ "system": "https://odos2020.com/fhir/CodeSystem/claim-follow-up-reason" }] }
+}

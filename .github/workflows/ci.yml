@@ -79,6 +79,7 @@ jobs:
         shell: bash
         env:
           ODOS_REAL_WEASYPRINT_TEST: "1"
+          ODOS_POSTGRES_URL: postgresql://medplum:medplum@127.0.0.1:15432/medplum
         run: |
           shopt -s globstar
           node --import tsx --test --test-concurrency=1 \

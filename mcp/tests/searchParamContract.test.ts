@@ -92,6 +92,16 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
     spec("ChargeItemDefinition", "_count"),
     spec("ChargeItem", "_id", "_count"),
   ],
+  "claim-read-model-projector.search-resource": [
+    spec("Claim", "_count", "_sort"),
+    spec("ClaimResponse", "_count", "_sort"),
+    spec("Task", "_count", "_sort"),
+    spec("Patient", "_id", "_count"),
+    spec("Practitioner", "_id", "_count"),
+    spec("PractitionerRole", "_id", "_count"),
+    spec("Organization", "_id", "_count"),
+    spec("Location", "_id", "_count"),
+  ],
   "reporting.search-resource": [
     spec("Invoice", "date", "_count"),
     spec("PaymentReconciliation", "created", "status", "_count"),
@@ -123,7 +133,7 @@ test("contract is frozen from Medplum 5.1.8's published definition bundles", () 
   assert.equal(MEDPLUM_SEARCH_PARAMETER_SOURCE.package, "@medplum/definitions");
   assert.equal(MEDPLUM_SEARCH_PARAMETER_SOURCE.version, "5.1.8");
   assert.equal(MEDPLUM_SEARCH_PARAMETER_SOURCE.files.length, 3);
-  assert.equal(Object.keys(MEDPLUM_5_1_8_SEARCH_PARAMETERS).length, 36);
+  assert.equal(Object.keys(MEDPLUM_5_1_8_SEARCH_PARAMETERS).length, 37);
   assert.deepEqual(FHIR_R4_SEARCH_RESULT_PARAMETERS, ["_summary"]);
 });
 

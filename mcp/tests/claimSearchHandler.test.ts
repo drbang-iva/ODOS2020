@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Bundle, Claim, ClaimResponse, Resource } from "@medplum/fhirtypes";
 import { handleClaimSearchRequest, type ClaimsHandlerDeps } from "../src/claims/claimmd-handlers.js";
+import type { ClaimReadModelStore } from "../src/claims/claim-read-model-store.js";
 import {
   buildClaimResponseFromClaimMdStatus,
   buildProfessionalClaim,
@@ -42,6 +43,39 @@ test("GET /claims/search supports patient name, claim number, and derived status
   assert.deepEqual(references(patient), ["Claim/claim-2"]);
   assert.deepEqual(references(claim), ["Claim/claim-1"]);
   assert.deepEqual(references(status), ["Claim/claim-2"]);
+});
+
+test("GET /claims/search returns explicit projection failure instead of stale items", async () => {
+  const { deps } = fixture("staff");
+  let readModelCalls = 0;
+  deps.claimReadModel = {
+    search: async () => {
+      readModelCalls += 1;
+      return [];
+    },
+  } as unknown as ClaimReadModelStore;
+  const failedProjection = {
+    state: "failed" as const,
+    lastAttemptAt: "2026-08-30T11:59:00.000Z",
+    lastSuccessfulAt: "2026-08-30T11:50:00.000Z",
+    lastFailureAt: "2026-08-30T11:59:00.000Z",
+    invalidatedAt: null,
+    staleAfterMs: 180_000,
+  };
+  (deps as ClaimsHandlerDeps & { projectionHealth: { status(at: string): typeof failedProjection } }).projectionHealth = {
+    status: () => failedProjection,
+  };
+
+  const result = await handleClaimSearchRequest(deps, { authHeader: "Bearer good" });
+
+  assert.deepEqual(result, {
+    status: 503,
+    body: {
+      error: "Claim read model projection is failed; FHIR remains authoritative.",
+      projection: failedProjection,
+    },
+  });
+  assert.equal(readModelCalls, 0);
 });
 
 function fixture(role: "staff" | "provider" | undefined) {
@@ -103,8 +137,56 @@ function fixture(role: "staff" | "provider" | undefined) {
     adapter: null,
     recordAudit: async () => undefined,
     now: () => "2026-07-10T12:00:00.000Z",
+    projectionHealth: {
+      begin: () => 1,
+      succeed: () => undefined,
+      fail: () => undefined,
+      invalidate: () => undefined,
+      status: () => ({
+        state: "healthy",
+        lastAttemptAt: "2026-07-10T12:00:00.000Z",
+        lastSuccessfulAt: "2026-07-10T12:00:00.000Z",
+        lastFailureAt: null,
+        invalidatedAt: null,
+        staleAfterMs: 180_000,
+      }),
+    },
+    claimReadModel: {
+      search: async ({ filters }) => [
+        searchRow(1, "Jamie One", "submitted"),
+        searchRow(2, "Jamie Two", "rejected"),
+      ].filter((row) =>
+        (!filters.patient || row.patient.toLowerCase().includes(filters.patient.toLowerCase()))
+        && (!filters.claim || row.claimNumber.includes(filters.claim))
+        && (!filters.status || row.status === filters.status)
+      ),
+    } as ClaimReadModelStore,
   };
   return { deps, searchCalls: () => calls };
+}
+
+function searchRow(number: number, patient: string, status: "submitted" | "rejected") {
+  return {
+    claimReference: `Claim/claim-${number}`,
+    claimNumber: `ODOS-CLAIM-${number}`,
+    patientReference: `Patient/patient-${number}`,
+    patient,
+    providerReference: "Practitioner/provider-1",
+    provider: "Alex Synthetic",
+    cptCodes: ["PROC-A"],
+    totalChargedCents: 12_500,
+    insurancePaidCents: 0,
+    patientResponsibilityCents: 0,
+    status,
+    payerReference: "Organization/payer-1",
+    payer: "Synthetic Health",
+    officeReference: "Location/main-office",
+    office: "Main Office",
+    daysSinceSubmission: number,
+    touchCount: 0,
+    lastTouchedAt: null,
+    lastTouchedBy: null,
+  };
 }
 
 function claimResource(number: number): Claim {
