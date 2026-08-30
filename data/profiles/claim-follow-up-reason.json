@@ -1,0 +1,18 @@
+{
+  "resourceType": "CodeSystem",
+  "url": "https://odos2020.com/fhir/CodeSystem/claim-follow-up-reason",
+  "version": "1.0.0",
+  "name": "ODOSClaimFollowUpReason",
+  "title": "ODOS Claim Follow-up Reason",
+  "status": "active",
+  "experimental": false,
+  "publisher": "ODOS",
+  "content": "complete",
+  "caseSensitive": true,
+  "property": [{ "code": "resolution-path", "uri": "https://odos2020.com/fhir/CodeSystem/claim-follow-up-reason#resolution-path", "description": "Expected operational path to resolve this reason.", "type": "string" }],
+  "concept": [
+    { "code": "cob-secondary-benefit-review", "display": "COB — secondary needs plan benefit review", "property": [{ "code": "resolution-path", "valueString": "Review the secondary plan benefits and coordinate coverage" }] },
+    { "code": "missing-procedure-code", "display": "missing procedure code for item", "property": [{ "code": "resolution-path", "valueString": "Add the missing procedure code and resubmit" }] },
+    { "code": "invalid-authorization-number", "display": "invalid authorization number", "property": [{ "code": "resolution-path", "valueString": "Verify or replace the authorization number before resubmission" }] }
+  ]
+}

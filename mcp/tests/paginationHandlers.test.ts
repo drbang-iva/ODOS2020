@@ -27,16 +27,21 @@ import {
 } from "../src/insurance/patient-insurance-handlers.js";
 import { StaffRoleServiceUnavailableError } from "../src/payments/payment-endpoint.js";
 
-test("Claim Search completes multiple pages, 409s past 1,000, and fails on an unfollowable next link", async () => {
-  const claims = [claim("claim-1", "patient-1"), claim("claim-2", "patient-2")];
-  const patients: Resource[] = [patient("patient-1", "One"), patient("patient-2", "Two")];
-  const complete = claimsDeps(pagedFhir((resourceType) => {
-    if (resourceType === "Claim") return [[claims[0]], [claims[1]]];
-    if (resourceType === "Patient") return [[patients[0]], [patients[1]]];
-    if (resourceType === "Practitioner") return [[practitioner()]];
-    if (resourceType === "Organization") return [[payer()]];
-    return [[]];
+test("Claim Search delegates to the read model without scanning FHIR pages", async () => {
+  let readModelCalls = 0;
+  const complete = claimsDeps(pagedFhir(() => {
+    throw new Error("Claim Search must not scan FHIR pages");
   }));
+  complete.claimReadModel = {
+    search: async ({ filters }) => {
+      readModelCalls += 1;
+      assert.equal(filters.patient, "Jamie");
+      return [
+        { patient: "Jamie One" },
+        { patient: "Jamie Two" },
+      ] as Awaited<ReturnType<NonNullable<ClaimsHandlerDeps["claimReadModel"]>["search"]>>;
+    },
+  } as NonNullable<ClaimsHandlerDeps["claimReadModel"]>;
   const result = await handleClaimSearchRequest(complete, {
     authHeader: "Bearer good",
     query: { patient: "Jamie" },
@@ -46,23 +51,7 @@ test("Claim Search completes multiple pages, 409s past 1,000, and fails on an un
     (result.body as { items: Array<{ patient: string }> }).items.map((item) => item.patient).sort(),
     ["Jamie One", "Jamie Two"],
   );
-
-  const capped = claimsDeps(pagedFhir((resourceType) => resourceType === "Claim"
-    ? [manyClaims(1_000), [claim("claim-over-cap", "patient-over-cap")]]
-    : [[]]));
-  assert.deepEqual(await handleClaimSearchRequest(capped, { authHeader: "Bearer good" }), {
-    status: 409,
-    body: { error: "Claim query exceeded 1000 rows; no partial result was returned." },
-  });
-
-  const unfollowable = claimsDeps(pagedFhir(
-    (resourceType) => resourceType === "Claim" ? [[claims[0]], [claims[1]]] : [[]],
-    false,
-  ));
-  await assert.rejects(
-    handleClaimSearchRequest(unfollowable, { authHeader: "Bearer good" }),
-    /next link for Claim, but the client cannot fetch it/,
-  );
+  assert.equal(readModelCalls, 1);
 });
 
 test("ERA list completes multiple pages, 409s past 1,000, and fails on an unfollowable next link", async () => {
@@ -320,10 +309,6 @@ function claim(id: string, patientId: string): Claim {
     provider: { reference: "Practitioner/provider-1" },
     priority: { coding: [{ system: "http://terminology.hl7.org/CodeSystem/processpriority", code: "normal" }] },
   };
-}
-
-function manyClaims(count: number): Claim[] {
-  return Array.from({ length: count }, (_, index) => claim(`claim-${index}`, `patient-${index}`));
 }
 
 function patient(id: string, family: string): Resource {

@@ -74,6 +74,7 @@ export interface SuspectedBrokenPracticeRoleWriteCallSite extends ExactFhirWrite
 }
 
 export const SERVICE_IDENTITY_ONLY_RESOURCE_TYPES = [
+  { resourceType: "CodeSystem", reason: "claim reason catalog maintenance through the explicit service client after claims.manage authentication" },
   { resourceType: "ProjectMembership", reason: "service identity authorization context" },
   { resourceType: "User", reason: "service identity account resolution" },
 ] as const;
@@ -125,15 +126,15 @@ export const SERVICE_IDENTITY_FHIR_WRITE_CALL_SITES = [
   { path: "mcp/src/fax/inbound-fax.ts", line: 425, callee: "this.fhir.create", resourceType: "AuditEvent", reason: "Inbound fax triage service receives the explicit serviceFhir client." },
   { path: "mcp/src/fax/inbound-fax.ts", line: 445, callee: "this.fhir.create", resourceType: "AuditEvent", reason: "Inbound fax triage service receives the explicit serviceFhir client." },
   { path: "mcp/src/fax/inbound-fax.ts", line: 471, callee: "this.fhir.create", resourceType: "AuditEvent", reason: "Inbound fax triage service receives the explicit serviceFhir client." },
-  { path: "mcp/src/index.ts", line: 3169, callee: "fhir.create", resourceType: "VisionPrescription", reason: "MCP process service client." },
-  { path: "mcp/src/index.ts", line: 3551, callee: "fhir.create", resourceType: "AllergyIntolerance", reason: "MCP process service client." },
-  { path: "mcp/src/index.ts", line: 3605, callee: "fhir.create", resourceType: "CareTeam", reason: "MCP process service client." },
-  { path: "mcp/src/index.ts", line: 3754, callee: "fhir.create", resourceType: "DeviceDefinition", reason: "MCP process service client." },
-  { path: "mcp/src/index.ts", line: 3782, callee: "fhir.create", resourceType: "ConceptMap", reason: "MCP process service client." },
-  { path: "mcp/src/index.ts", line: 3805, callee: "fhir.create", resourceType: "Substance", reason: "MCP process service client." },
-  { path: "mcp/src/index.ts", line: 4135, callee: "fhir.create", resourceType: "AdverseEvent", reason: "MCP process service client." },
-  { path: "mcp/src/index.ts", line: 5236, callee: "fhir.create", resourceType: "BodyStructure", reason: "MCP process service client." },
-  { path: "mcp/src/index.ts", line: 7572, callee: "fhir.patch", resourceType: "AccessPolicy", reason: "Policy sync uses the MCP process service client." },
+  { path: "mcp/src/index.ts", line: 3182, callee: "fhir.create", resourceType: "VisionPrescription", reason: "MCP process service client." },
+  { path: "mcp/src/index.ts", line: 3564, callee: "fhir.create", resourceType: "AllergyIntolerance", reason: "MCP process service client." },
+  { path: "mcp/src/index.ts", line: 3618, callee: "fhir.create", resourceType: "CareTeam", reason: "MCP process service client." },
+  { path: "mcp/src/index.ts", line: 3767, callee: "fhir.create", resourceType: "DeviceDefinition", reason: "MCP process service client." },
+  { path: "mcp/src/index.ts", line: 3795, callee: "fhir.create", resourceType: "ConceptMap", reason: "MCP process service client." },
+  { path: "mcp/src/index.ts", line: 3818, callee: "fhir.create", resourceType: "Substance", reason: "MCP process service client." },
+  { path: "mcp/src/index.ts", line: 4148, callee: "fhir.create", resourceType: "AdverseEvent", reason: "MCP process service client." },
+  { path: "mcp/src/index.ts", line: 5249, callee: "fhir.create", resourceType: "BodyStructure", reason: "MCP process service client." },
+  { path: "mcp/src/index.ts", line: 7586, callee: "fhir.patch", resourceType: "AccessPolicy", reason: "Policy sync uses the MCP process service client." },
   { path: "mcp/src/legacy-import/appointment-encounter-import.ts", line: 657, callee: "input.fhir.create", resourceType: "Practitioner", reason: "Operator migration importer service identity." },
   { path: "mcp/src/legacy-import/appointment-encounter-import.ts", line: 674, callee: "input.fhir.update", resourceType: "Practitioner", reason: "Operator migration importer service identity." },
   { path: "mcp/src/legacy-import/ccda-import.ts", line: 394, callee: "input.fhir.create", resourceType: "ImportableResource", reason: "Operator legacy C-CDA importer service identity; generic resolves to the imported resource union." },

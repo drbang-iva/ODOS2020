@@ -1,0 +1,3 @@
+{
+  "resourceType": "SearchParameter", "url": "https://odos2020.com/fhir/SearchParameter/Claim-follow-up-reason", "version": "1.0.0", "name": "ClaimFollowUpReason", "status": "active", "description": "Claim typed follow-up reason", "code": "follow-up-reason", "base": ["Claim"], "type": "token", "expression": "Claim.extension.where(url='https://odos2020.com/fhir/StructureDefinition/claim-follow-up-reason').value.ofType(CodeableConcept)"
+}

@@ -189,6 +189,9 @@ async function server() {
     claims: {
       authenticate,
       adapter: emptyAdapter(),
+      claimReadModel: {
+        search: async () => [],
+      } as NonNullable<import("../src/claims/claimmd-handlers.js").ClaimsHandlerDeps["claimReadModel"]>,
       recordAudit: async () => undefined,
       now: () => "2026-07-10T12:00:00.000Z",
     },
