@@ -864,7 +864,6 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
       "communications.content.read",
       "communications.send",
       "communications.call",
-      "communications.optout.manage",
     ],
     membershipParameters: [
       {
@@ -980,7 +979,6 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
       "communications.content.read",
       "communications.send",
       "communications.call",
-      "communications.optout.manage",
     ],
     resourceRules: [
       ...PRACTICE_READ_RESOURCE_RULES,

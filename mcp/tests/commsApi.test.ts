@@ -8,6 +8,7 @@ import {
   buildMedplumAccessPolicy,
   getRoleDeclaration,
   ODOS_PRACTICE_ROLE_SYSTEM,
+  PRACTICE_ROLE_IDS,
 } from "../src/authz/roles.js";
 import type { CommsProvider, ConversationSummary } from "../src/comms/comms-provider.js";
 import { registerCommsApiRoutes, type CommsApiRouteDeps } from "../src/comms/comms-api.js";
@@ -44,7 +45,6 @@ test("communications RBAC gives front desk patient content without widening its 
   assert.equal(internalOfficeRule.interaction?.includes("update"), false);
 
   for (const role of ["provider", "admin"] as const) {
-    assert.equal(getRoleDeclaration(role).businessActions.includes("communications.optout.manage"), true);
     const policy = buildMedplumAccessPolicy(getRoleDeclaration(role));
     const rule = policy.resource?.find((candidate) =>
       candidate.resourceType === "Communication" && candidate.criteria?.includes("%patient_compartment"));
@@ -55,6 +55,13 @@ test("communications RBAC gives front desk patient content without widening its 
   }
   const admin = buildMedplumAccessPolicy(getRoleDeclaration("admin"));
   assert.equal(admin.resource?.some((rule) => rule.resourceType === "Communication"), true);
+});
+
+test("SMS opt-out management is held only by the front-desk staff role", () => {
+  const holders = PRACTICE_ROLE_IDS.filter((role) =>
+    getRoleDeclaration(role).businessActions.includes("communications.optout.manage"));
+
+  assert.deepEqual(holders, ["staff"]);
 });
 
 test("FHIR policy construction preserves a declared hidden-field mask", () => {
