@@ -8,11 +8,15 @@ import type {
   TwilioTranscriptionWebhookEvent,
   TwilioVoiceWebhookEvent,
 } from "./adapters/twilio-adapter.js";
+import type { InboundMessageEvent } from "./inbound-receiver.js";
+import { updateInboundSuppression } from "./suppression-gate.js";
 
 export const ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/twilio-message-sid";
 export const ODOS_GHL_MESSAGE_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/ghl-message-id";
+export const ODOS_AWS_MESSAGE_IDENTIFIER_SYSTEM =
+  "https://odos2020.com/fhir/NamingSystem/aws-end-user-messaging-message-id";
 export const ODOS_TWILIO_CALL_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/twilio-call-sid";
 export const ODOS_COMMS_PHONE_IDENTIFIER_SYSTEM =
@@ -67,8 +71,40 @@ export async function persistTwilioWebhookEvent(
 ): Promise<Communication> {
   const now = deps.now?.() ?? new Date().toISOString();
   const identity = eventIdentity(kind, event);
-  return serializeCommunicationWrite(`${identity.system}|${identity.value}`, () =>
+  const persisted = await serializeCommunicationWrite(`${identity.system}|${identity.value}`, () =>
     persistTwilioWebhookEventLocked(fhir, kind, event, identity, now));
+  if (kind === "sms-inbound") {
+    const inbound = event as TwilioInboundWebhookEvent;
+    await updateInboundSuppression(fhir, {
+      from: inbound.from,
+      body: inbound.body,
+    });
+  }
+  return persisted;
+}
+
+export async function persistInboundMessageEvent(
+  fhir: CommsPersistenceFhir,
+  event: InboundMessageEvent,
+): Promise<Communication> {
+  const identity = {
+    system: event.providerMessageIdentifierSystem,
+    value: event.providerMessageId,
+    category: ODOS_PATIENT_SMS_CATEGORY,
+  };
+  return serializeCommunicationWrite(`${identity.system}|${identity.value}`, async () => {
+    const patient = await patientForPhone(fhir, event.from);
+    return persistCommunicationFragment(fhir, identity, {
+      status: "completed",
+      ...(patient
+        ? { subject: patientReference(patient), sender: patientReference(patient) }
+        : { sender: phoneReference(event.from) }),
+      recipient: [phoneReference(event.to)],
+      received: event.receivedAt ?? new Date().toISOString(),
+      payload: [{ contentString: event.body }],
+      category: [category(ODOS_PATIENT_SMS_INBOUND_CATEGORY)],
+    });
+  });
 }
 
 export type StaffSmsSendReservation =

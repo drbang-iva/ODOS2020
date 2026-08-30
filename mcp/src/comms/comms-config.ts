@@ -1,5 +1,11 @@
 import type { Patient } from "@medplum/fhirtypes";
 import {
+  createAwsSmsAdapter,
+  normalizeAwsSmsConfig,
+  type AwsSmsAdapterConfig,
+  type AwsSmsClient,
+} from "./adapters/aws-sms-adapter.js";
+import {
   createGhlAdapter,
   type GhlAdapterConfig,
 } from "./adapters/ghl-adapter.js";
@@ -36,6 +42,10 @@ export interface CommsChannelRoutingConfig {
 
 export type CommsAdapterRegistration =
   | {
+      provider: "aws";
+      config: AwsSmsAdapterConfig;
+    }
+  | {
       provider: "google-workspace";
       config: GoogleWorkspaceAdapterConfig;
     }
@@ -57,6 +67,7 @@ export interface CommsDispatchDeps {
   warn?: (message: string) => void;
   practiceTimeZone?: string;
   twilioClientFactory?: TwilioClientFactory;
+  awsSmsClient?: AwsSmsClient;
 }
 
 export type CommsDispatchFhir = SuppressionFhir;
@@ -109,6 +120,11 @@ export function createCommsDispatch(
     try {
       let capabilities: CommsProvider["capabilities"];
       switch (registration.provider) {
+        case "aws":
+          capabilities = createAwsSmsAdapter(registration.config, {
+            client: deps.awsSmsClient,
+          }).capabilities;
+          break;
         case "google-workspace":
           capabilities = createGoogleWorkspaceAdapter(registration.config, {
             fetchImpl: deps.fetchImpl,
@@ -153,7 +169,7 @@ export function createCommsDispatch(
     const registration = byProvider.get(provider);
     if (!registration) {
       routingErrors.push(
-        `channel role "${role}" names provider "${provider}", which is not registered in ODOS_COMMS_PROVIDERS`,
+        `channel role "${role}" names provider "${provider}", which is not selected by the scalar communications provider configuration`,
       );
       continue;
     }
@@ -215,6 +231,16 @@ export function createCommsDispatch(
         throw new Error(`Communications provider "${provider}" is not configured for this practice.`);
       }
       switch (registration.provider) {
+        case "aws": {
+          const adapter = createAwsSmsAdapter(registration.config, {
+            client: deps.awsSmsClient,
+          });
+          return scopeAdapter(createSuppressedCommsProvider(adapter, {
+            fhir: callerFhir,
+            practiceTimeZone: deps.practiceTimeZone ?? "UTC",
+            now: deps.now,
+          }), registration.provider, resolvedAssignments, routing.explicit);
+        }
         case "google-workspace": {
           let adapter = adapters.get(registration.provider);
           if (!adapter) {
@@ -225,11 +251,11 @@ export function createCommsDispatch(
             });
             adapters.set(registration.provider, adapter);
           }
-          return createSuppressedCommsProvider(adapter, {
+          return scopeAdapter(createSuppressedCommsProvider(adapter, {
             fhir: callerFhir,
             practiceTimeZone: deps.practiceTimeZone ?? "UTC",
             now: deps.now,
-          });
+          }), registration.provider, resolvedAssignments, routing.explicit);
         }
         case "twilio": {
           const adapter = withTwilioConversationStore(getTwilioAdapter(registration), callerFhir);
@@ -238,13 +264,13 @@ export function createCommsDispatch(
             practiceTimeZone: deps.practiceTimeZone ?? "UTC",
             now: deps.now,
           });
-          return {
+          return scopeAdapter({
             ...suppressed,
             async sendSms(request) {
               await adapter.initialize();
               return suppressed.sendSms!(request);
             },
-          };
+          }, registration.provider, resolvedAssignments, routing.explicit);
         }
         case "ghl": {
           const adapter = createGhlAdapter(registration.config, {
@@ -252,11 +278,11 @@ export function createCommsDispatch(
             resolvePatientPhone: (patientReference) =>
               patientPhone(callerFhir, patientReference, deps.now?.() ?? new Date()),
           });
-          return createSuppressedCommsProvider(adapter, {
+          return scopeAdapter(createSuppressedCommsProvider(adapter, {
             fhir: callerFhir,
             practiceTimeZone: deps.practiceTimeZone ?? "UTC",
             now: deps.now,
-          });
+          }), registration.provider, resolvedAssignments, routing.explicit);
         }
         default: {
           throw new Error(`Unhandled communications registration: ${JSON.stringify(registration)}`);
@@ -269,29 +295,45 @@ export function createCommsDispatch(
 export function commsChannelRoutingFromEnv(
   env: Record<string, string | undefined>,
 ): CommsChannelRoutingConfig {
-  const raw = env.ODOS_COMMS_CHANNEL_ROUTES?.trim();
-  if (!raw) return { explicit: false, assignments: {}, issues: [] };
+  const config = commsProviderConfigFromEnv(env);
   const assignments: Partial<Record<CommsChannelRole, string>> = {};
-  const issues: string[] = [];
-  for (const entry of raw.split(",").map((value) => value.trim()).filter(Boolean)) {
-    const separator = entry.indexOf("=");
-    const role = entry.slice(0, separator).trim();
-    const provider = entry.slice(separator + 1).trim();
-    if (separator < 1 || !COMMS_CHANNEL_ROLES.includes(role as CommsChannelRole)) {
-      issues.push(`routing entry "${entry}" has an unsupported or missing channel role`);
-      continue;
-    }
-    if (!/^[a-z0-9-]{1,64}$/.test(provider)) {
-      issues.push(`channel role "${role}" has an invalid provider "${provider || "(empty)"}"`);
-      continue;
-    }
-    if (assignments[role as CommsChannelRole] !== undefined) {
-      issues.push(`channel role "${role}" is assigned more than once`);
-      continue;
-    }
-    assignments[role as CommsChannelRole] = provider;
+  if (config.sms_provider) {
+    assignments["transactional-sms"] = config.sms_provider;
+    assignments["marketing-sms"] = config.sms_provider;
   }
-  return { explicit: true, assignments, issues };
+  if (config.voice_provider && config.voice_provider !== "none") {
+    assignments.voice = config.voice_provider;
+  }
+  if (config.email_provider && config.email_provider !== "none") {
+    assignments.email = config.email_provider;
+  }
+  return {
+    explicit: Boolean(config.sms_provider || config.voice_provider || config.email_provider),
+    assignments,
+    issues: [],
+  };
+}
+
+export interface CommsProviderConfig {
+  sms_provider?: "aws" | "twilio" | "ghl";
+  voice_provider?: "twilio" | "ghl" | "none";
+  email_provider?: "google-workspace" | "none";
+}
+
+const BREAKING_COMMS_CONFIG_MIGRATION =
+  "Breaking configuration migration: ODOS_COMMS_PROVIDERS and ODOS_COMMS_CHANNEL_ROUTES were replaced by scalar ODOS_COMMS_SMS_PROVIDER, ODOS_COMMS_VOICE_PROVIDER, and ODOS_COMMS_EMAIL_PROVIDER.";
+
+export function commsProviderConfigFromEnv(
+  env: Record<string, string | undefined>,
+): CommsProviderConfig {
+  if (env.ODOS_COMMS_PROVIDERS?.trim() || env.ODOS_COMMS_CHANNEL_ROUTES?.trim()) {
+    throw new Error(BREAKING_COMMS_CONFIG_MIGRATION);
+  }
+  return {
+    sms_provider: scalarProvider(env, "ODOS_COMMS_SMS_PROVIDER", ["aws", "twilio", "ghl"]),
+    voice_provider: scalarProvider(env, "ODOS_COMMS_VOICE_PROVIDER", ["twilio", "ghl", "none"]),
+    email_provider: scalarProvider(env, "ODOS_COMMS_EMAIL_PROVIDER", ["google-workspace", "none"]),
+  };
 }
 
 function implicitChannelAssignments(
@@ -321,12 +363,34 @@ function capabilityForRole(role: CommsChannelRole): "calls" | "sms" | "email" {
 export function commsAdapterRegistrationsFromEnv(
   env: Record<string, string | undefined>,
 ): CommsAdapterRegistration[] {
-  const providers = (env.ODOS_COMMS_PROVIDERS ?? "")
-    .split(",")
-    .map((value) => value.trim())
-    .filter(Boolean);
+  const config = commsProviderConfigFromEnv(env);
+  const providers = [config.sms_provider, config.voice_provider, config.email_provider]
+    .filter((provider): provider is Exclude<typeof provider, "none" | undefined> =>
+      provider !== undefined && provider !== "none")
+    .filter((provider, index, all) => all.indexOf(provider) === index);
   return providers.map((provider): CommsAdapterRegistration => {
     switch (provider) {
+      case "aws": {
+        const required = [
+          "AWS_SMS_REGION",
+          "AWS_SMS_ORIGINATION_IDENTITY",
+          "AWS_SMS_SQS_QUEUE_URL",
+          "AWS_SMS_SNS_TOPIC_ARN",
+        ] as const;
+        const missing = required.find((name) => !env[name]?.trim());
+        if (missing) {
+          throw new Error(`AWS SMS communications adapter is partially configured — missing ${missing}.`);
+        }
+        return {
+          provider,
+          config: normalizeAwsSmsConfig({
+            region: env.AWS_SMS_REGION!,
+            originationIdentity: env.AWS_SMS_ORIGINATION_IDENTITY!,
+            inboundQueueUrl: env.AWS_SMS_SQS_QUEUE_URL!,
+            inboundTopicArn: env.AWS_SMS_SNS_TOPIC_ARN!,
+          }),
+        };
+      }
       case "google-workspace": {
         const required = [
           "GOOGLE_WORKSPACE_SERVICE_ACCOUNT_EMAIL",
@@ -445,6 +509,59 @@ export function commsAdapterRegistrationsFromEnv(
         throw new Error(`Unsupported communications provider "${provider}".`);
     }
   });
+}
+
+function scopeAdapter(
+  adapter: CommsProvider,
+  provider: string,
+  assignments: Partial<Record<CommsChannelRole, string>>,
+  enforce: boolean,
+): CommsProvider {
+  if (!enforce) return adapter;
+  const sms = assignments["transactional-sms"] === provider
+    || assignments["marketing-sms"] === provider;
+  const calls = assignments.voice === provider;
+  const email = assignments.email === provider;
+  const {
+    sendSms,
+    initiateCall,
+    getCall,
+    listCalls,
+    fetchRecording,
+    fetchTranscription,
+    sendEmail,
+    ...rest
+  } = adapter;
+  return {
+    ...rest,
+    capabilities: {
+      ...adapter.capabilities,
+      sms: adapter.capabilities.sms && sms,
+      calls: adapter.capabilities.calls && calls,
+      email: adapter.capabilities.email && email,
+    },
+    ...(sms && sendSms ? { sendSms } : {}),
+    ...(calls && initiateCall ? { initiateCall } : {}),
+    ...(calls && getCall ? { getCall } : {}),
+    ...(calls && listCalls ? { listCalls } : {}),
+    ...(calls && fetchRecording ? { fetchRecording } : {}),
+    ...(calls && fetchTranscription ? { fetchTranscription } : {}),
+    ...(email && sendEmail ? { sendEmail } : {}),
+  };
+}
+
+function scalarProvider<const T extends string>(
+  env: Record<string, string | undefined>,
+  name: string,
+  allowed: readonly T[],
+): T | undefined {
+  const value = env[name]?.trim();
+  if (!value) return undefined;
+  if (!allowed.includes(value as T)) {
+    const choices = allowed.join(", ");
+    throw new Error(`${name} must be exactly one of ${choices.replace(/, ([^,]+)$/, ", or $1")}.`);
+  }
+  return value as T;
 }
 
 async function patientPhone(
