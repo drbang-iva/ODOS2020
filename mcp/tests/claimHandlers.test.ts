@@ -66,6 +66,7 @@ import {
 import {
   PROVIDER_ADJUSTMENT_CODE,
   REMITTANCE_BATCH_CODE,
+  appendRemittanceAllocation,
   buildProviderAdjustment,
   buildRemittanceBatch,
   parseManualEobHeader,
@@ -183,7 +184,13 @@ function deps(role: "staff" | "provider" = "staff") {
         throw error;
       }
       const id = `${resource.resourceType.toLowerCase()}-${resources.length + 1}`;
-      const saved = { ...resource, id } as T;
+      const saved = {
+        ...resource,
+        id,
+        ...(resource.resourceType === "Basic"
+          ? { meta: { ...resource.meta, versionId: "1" } }
+          : {}),
+      } as T;
       resources.push(saved);
       return saved;
     },
@@ -206,11 +213,27 @@ function deps(role: "staff" | "provider" = "staff") {
         entry: filtered.map((resource) => ({ resource: resource as T })),
       };
     },
-    update: async <T extends Resource>(resourceType: T["resourceType"], id: string, resource: T): Promise<T> => {
+    update: async <T extends Resource>(
+      resourceType: T["resourceType"],
+      id: string,
+      resource: T,
+      headers?: Record<string, string>,
+    ): Promise<T> => {
       const resources = created[resourceType as keyof typeof created] as Resource[] | undefined;
       const index = resources?.findIndex((candidate) => candidate.id === id) ?? -1;
       if (!resources || index < 0) throw new Error(`${resourceType}/${id} not found`);
-      const saved = { ...resource, id } as T;
+      const current = resources[index];
+      const versionId = current.meta?.versionId;
+      if (headers?.["If-Match"] && headers["If-Match"] !== `W/"${versionId}"`) {
+        throw Object.assign(new Error("FHIR 412 Precondition Failed"), { status: 412 });
+      }
+      const saved = {
+        ...resource,
+        id,
+        ...(resourceType === "Basic"
+          ? { meta: { ...resource.meta, versionId: String(Number(versionId ?? "0") + 1) } }
+          : {}),
+      } as T;
       resources[index] = saved;
       return saved;
     },
@@ -1646,6 +1669,109 @@ test("Stedi reversal nets against the prior claim-version allocation without fab
     flagged: 0,
     taskIds: [],
   });
+});
+
+test("Stedi reversal prefers the directly related prior claim when equal payments exist in one lineage", async () => {
+  const fixture = deps();
+  fixture.deps.eraUnderpaymentThresholdCents = 100_000;
+  let clock = "2026-07-09T10:00:00.000Z";
+  fixture.deps.now = () => clock;
+  fixture.created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+  fixture.deps.adapters = { stedi: stediEraAdapter(stediEraReport({ transactionId: "era-lineage-original" })) };
+  await handleEraImportRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: { ...eraImportBody(), eraId: "era-lineage-original", clearinghouse: "stedi" },
+  });
+  fixture.created.Claim.push({
+    ...buildProfessionalClaim(professionalClaim),
+    id: "claim-2",
+    related: [{ claim: { reference: "Claim/claim-1" }, relationship: { text: "replacement" } }],
+  });
+  clock = "2026-07-09T11:00:00.000Z";
+  fixture.deps.adapters = { stedi: stediEraAdapter(stediEraReport({ transactionId: "era-lineage-reissue" })) };
+  await handleEraImportRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: {
+      ...eraImportBody(),
+      eraId: "era-lineage-reissue",
+      clearinghouse: "stedi",
+      claimReferenceByPcn: { "ODOS-CLAIM-900": "Claim/claim-2" },
+    },
+  });
+  clock = "2026-07-09T12:00:00.000Z";
+  fixture.deps.adapters = { stedi: stediEraAdapter(stediEraReport({
+    transactionId: "era-lineage-reversal",
+    claimStatusCode: "22",
+    totalClaimChargeAmount: "-125",
+    claimPaymentAmount: "-80",
+    lineItemChargeAmount: "-125",
+    lineItemProviderPaymentAmount: "-80",
+    allowedActual: "-80",
+  })) };
+
+  const result = await handleEraImportRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: {
+      ...eraImportBody(),
+      eraId: "era-lineage-reversal",
+      clearinghouse: "stedi",
+      claimReferenceByPcn: { "ODOS-CLAIM-900": "Claim/claim-2" },
+    },
+  });
+
+  assert.equal(result.status, 200);
+  const batches = fixture.created.Basic.filter((basic) => basic.code?.coding?.some(
+    (coding) => coding.code === REMITTANCE_BATCH_CODE,
+  ));
+  const original = parseRemittanceBatch(batches[0]);
+  const reissue = parseRemittanceBatch(batches[1]);
+  const reversal = parseRemittanceBatch(batches[2]);
+  assert.equal(reversal.allocations[0].reversalOfBatchReference, `Basic/${batches[0].id}`);
+  assert.equal(reversal.allocations[0].reversalOfAllocationId, original.allocations[0].id);
+  assert.notEqual(reversal.allocations[0].reversalOfAllocationId, reissue.allocations[0].id);
+});
+
+test("Stedi allocation retries a version conflict without discarding the concurrent allocation", async () => {
+  const fixture = deps();
+  fixture.created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+  fixture.deps.adapters = { stedi: stediEraAdapter(stediEraReport({ transactionId: "era-concurrent" })) };
+  const originalUpdate = fixture.fhir.update;
+  let injectedConflict = false;
+  fixture.fhir.update = async (resourceType, id, resource, headers) => {
+    if (resourceType === "Basic" && !injectedConflict) {
+      injectedConflict = true;
+      const index = fixture.created.Basic.findIndex((candidate) => candidate.id === id);
+      const current = fixture.created.Basic[index];
+      fixture.created.Basic[index] = {
+        ...appendRemittanceAllocation(current, {
+          id: "concurrent-human-allocation",
+          claimReference: "Claim/concurrent",
+          claimResponseReference: "ClaimResponse/concurrent",
+          amountCents: 500,
+          origin: "human-entered",
+          recordedAt: "2026-07-09T11:59:00.000Z",
+        }),
+        meta: { ...current.meta, versionId: "2" },
+      };
+      throw Object.assign(new Error("FHIR 412 Precondition Failed"), { status: 412 });
+    }
+    return originalUpdate(resourceType, id, resource, headers);
+  };
+
+  const result = await handleEraImportRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: { ...eraImportBody(), eraId: "era-concurrent", clearinghouse: "stedi" },
+  });
+
+  assert.equal(result.status, 200);
+  const batch = fixture.created.Basic.find((basic) => basic.code?.coding?.some(
+    (coding) => coding.code === REMITTANCE_BATCH_CODE,
+  ));
+  assert.deepEqual(parseRemittanceBatch(batch!).allocations.map((allocation) => allocation.id).sort(), [
+    "concurrent-human-allocation",
+    parseRemittanceBatch(batch!).allocations.find((allocation) => allocation.id !== "concurrent-human-allocation")!.id,
+  ].sort());
+  assert.equal(parseRemittanceBatch(batch!).allocations.length, 2);
 });
 
 test("Stedi predetermination cannot post money and an accepted zero-paid line is not mislabeled as denied", async () => {

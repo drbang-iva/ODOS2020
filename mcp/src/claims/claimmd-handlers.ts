@@ -1092,10 +1092,10 @@ async function importStediEra(
             paidCents,
           );
           if (original) {
-            remittanceBatch = await auth.fhir.update<Basic>(
-              "Basic",
-              remittanceBatchId,
-              appendRemittanceAllocation(remittanceBatch, {
+            remittanceBatch = await persistRemittanceAllocation(
+              auth,
+              remittanceBatch,
+              {
                 id: allocationId,
                 claimReference,
                 claimResponseReference: ref(response),
@@ -1105,14 +1105,14 @@ async function importStediEra(
                 recordedAt: now(deps),
                 reversalOfAllocationId: original.allocationId,
                 reversalOfBatchReference: original.batchReference,
-              }),
+              },
             );
           }
         } else if (paidCents > 0 && stediAnalysis.allowsReconciliation) {
-          remittanceBatch = await auth.fhir.update<Basic>(
-            "Basic",
-            remittanceBatchId,
-            appendRemittanceAllocation(remittanceBatch, {
+          remittanceBatch = await persistRemittanceAllocation(
+            auth,
+            remittanceBatch,
+            {
               id: allocationId,
               claimReference,
               claimResponseReference: ref(response),
@@ -1121,7 +1121,7 @@ async function importStediEra(
               origin: "machine-proposed",
               confidence: 1,
               recordedAt: now(deps),
-            }),
+            },
           );
         }
       }
@@ -2460,24 +2460,67 @@ function findReversedAllocation(
       }
     }
   }
-  const lineage = new Set([
-    claimReference,
-    ...(submittedClaim?.related ?? []).flatMap((related) => related.claim?.reference ? [related.claim.reference] : []),
-  ]);
-  return batches
+  const directPriorClaimReferences = new Set(
+    (submittedClaim?.related ?? []).flatMap((related) =>
+      related.claim?.reference ? [related.claim.reference] : []),
+  );
+  const candidates = batches
     .flatMap(({ resource, batch }) => batch.allocations
       .filter((allocation) =>
         allocation.amountCents === -reversalAmountCents
         && allocation.amountCents > 0
-        && lineage.has(allocation.claimReference)
+        && (allocation.claimReference === claimReference
+          || directPriorClaimReferences.has(allocation.claimReference))
         && !reversed.has(`Basic/${resource.id}#${allocation.id}`),
       )
       .map((allocation) => ({
         batchReference: `Basic/${resource.id}`,
         allocationId: allocation.id,
-        recordedAt: allocation.recordedAt,
+        claimReference: allocation.claimReference,
       })))
-    .sort((left, right) => right.recordedAt.localeCompare(left.recordedAt))[0];
+  const directPriorCandidates = candidates.filter((candidate) =>
+    directPriorClaimReferences.has(candidate.claimReference),
+  );
+  if (directPriorCandidates.length > 0) {
+    return directPriorCandidates.length === 1 ? directPriorCandidates[0] : undefined;
+  }
+  const currentVersionCandidates = candidates.filter((candidate) => candidate.claimReference === claimReference);
+  return currentVersionCandidates.length === 1 ? currentVersionCandidates[0] : undefined;
+}
+
+async function persistRemittanceAllocation(
+  auth: AuthenticatedClaimsStaff,
+  initialBatch: Basic,
+  allocation: Parameters<typeof appendRemittanceAllocation>[1],
+): Promise<Basic> {
+  let current = initialBatch;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (parseRemittanceBatch(current).allocations.some((existing) => existing.id === allocation.id)) {
+      return current;
+    }
+    if (!current.id || !current.meta?.versionId) {
+      throw new Error("Remittance batch is missing id/meta.versionId; refusing a non-atomic allocation update.");
+    }
+    try {
+      return await auth.fhir.update<Basic>(
+        "Basic",
+        current.id,
+        appendRemittanceAllocation(current, allocation),
+        { "If-Match": `W/"${current.meta.versionId}"` },
+      );
+    } catch (error) {
+      if (!isFhirVersionConflict(error) || attempt === 2) throw error;
+      current = await auth.fhir.read<Basic>("Basic", current.id);
+    }
+  }
+  throw new Error("Remittance allocation retry exhausted unexpectedly.");
+}
+
+function isFhirVersionConflict(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const status = "status" in error ? error.status : undefined;
+  const message = "message" in error && typeof error.message === "string" ? error.message : "";
+  return status === 409 || status === 412 || /FHIR (409|412)\b/.test(message);
 }
 
 function now(deps: Pick<ClaimsHandlerDeps, "now">): string {
