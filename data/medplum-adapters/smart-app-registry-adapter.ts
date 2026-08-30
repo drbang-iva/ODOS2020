@@ -56,11 +56,16 @@ export function createMedplumSmartAppRegistryAdapter(input: {
   readonly accessToken?: string;
   readonly env?: NodeJS.ProcessEnv;
   readonly workingDirectory?: string;
+  readonly allowForeignProject?: boolean;
 } = {}) {
   const env = input.env ?? process.env;
-  const target = input.projectId
-    ? undefined
-    : resolveConfiguredInstallationProject({ env, workingDirectory: input.workingDirectory });
+  const target = resolveConfiguredInstallationProject({
+    args: input.projectId
+      ? ["--project", input.projectId, ...(input.allowForeignProject ? ["--allow-foreign-project"] : [])]
+      : [],
+    env,
+    workingDirectory: input.workingDirectory,
+  });
   const baseUrl = input.baseUrl ?? env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
   const projectId = input.projectId ?? target?.projectId ?? env.ODOS_MEDPLUM_PROJECT_ID;
   const accessToken = input.accessToken ?? env.MEDPLUM_ACCESS_TOKEN ?? env.ODOS_MEDPLUM_ACCESS_TOKEN;

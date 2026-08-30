@@ -105,3 +105,23 @@ test("SMART registration resolves its default project from the installation mani
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("SMART registration refuses an explicit foreign project without acknowledgement", () => {
+  const directory = mkdtempSync(join(tmpdir(), "odos-smart-foreign-"));
+  const statePath = join(directory, ".odos-setup-state.json");
+  writeFileSync(statePath, JSON.stringify({ version: "v0.5d", projectId: "practice-manifest" }));
+  try {
+    assert.throws(
+      () => createMedplumSmartAppRegistryAdapter({
+        baseUrl: "http://medplum.test",
+        projectId: "practice-foreign",
+        accessToken: "synthetic-token",
+        env: { ODOS_SETUP_STATE_PATH: statePath },
+        workingDirectory: directory,
+      }),
+      /practice-foreign.*installation-state.*practice-manifest.*allow-foreign-project/i,
+    );
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
