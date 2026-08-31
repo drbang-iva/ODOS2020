@@ -735,6 +735,12 @@
       "sliceConsumer": "native-comms-slice1"
     },
     {
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-comms-marketing-consent",
+      "namespace": "communications",
+      "status": "active",
+      "sliceConsumer": "engage-slice3"
+    },
+    {
       "url": "https://odos2020.com/fhir/StructureDefinition/odos-patient-timezone",
       "namespace": "communications",
       "status": "active",

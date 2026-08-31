@@ -9,6 +9,7 @@ export interface CommsCapabilities {
 
 export interface SuppressionContext {
   frequencyCapDays?: number;
+  quietHoursExemption?: "staff-initiated-chart-education";
 }
 
 export interface SendEmailRequest {

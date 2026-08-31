@@ -1,4 +1,4 @@
-import type { Communication } from "@medplum/fhirtypes";
+import type { Communication, Condition, Encounter, Patient, Provenance, RelatedPerson } from "@medplum/fhirtypes";
 import { randomUUID } from "node:crypto";
 import type { Application, Request, Response } from "express";
 import { buildOdosAuditEventRow } from "../authz/odosAudit.js";
@@ -10,6 +10,7 @@ import {
   type PracticeRoleId,
 } from "../authz/roles.js";
 import type { FhirAuditRecorder, MedplumClient } from "../fhir-client.js";
+import { buildProvenance } from "../fhir/ophthalmology/provenance.js";
 import { searchBounded } from "../fhir-search.js";
 import type { AuthenticatedStaff } from "../payments/payment-charge-handler.js";
 import {
@@ -20,13 +21,16 @@ import {
 } from "./comms-config.js";
 import type { CommsProvider, ConversationSummary } from "./comms-provider.js";
 import type { EducationCatalogReader, EducationContentItem } from "./education-catalog.js";
+import { generateTrackedLink, type TrackedLinkStore } from "./tracked-links.js";
 import {
   ODOS_COMMS_CATEGORY_SYSTEM,
   ODOS_PATIENT_CALL_CATEGORY,
   ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM,
   ODOS_TWILIO_CALL_IDENTIFIER_SYSTEM,
   ODOS_TWILIO_RECORDING_IDENTIFIER_SYSTEM,
+  findStaffSmsSend,
   persistStaffSentSms,
+  persistStaffSmsTerminalOutcome,
   reserveStaffSmsSend,
 } from "./comms-persistence.js";
 import {
@@ -49,6 +53,10 @@ export interface CommsApiRouteDeps {
   fhir: SmsOptOutManagementFhir;
   dispatch: CommsDispatch;
   educationCatalog: EducationCatalogReader;
+  trackedLinkStore: TrackedLinkStore;
+  publicBaseUrl: string;
+  practiceName: string;
+  chartDispatchLane?: "locked_clinical" | "staff_switchable";
   audit: FhirAuditRecorder;
   now?: () => string;
 }
@@ -56,6 +64,11 @@ export interface CommsApiRouteDeps {
 class CommsApiValidationError extends Error {}
 class CommsApiCapabilityError extends Error {}
 class CommsApiNotFoundError extends Error {}
+class CommsApiRefusalError extends Error {
+  constructor(readonly reason: string) {
+    super(reason);
+  }
+}
 class CommsProviderTimeoutError extends Error {}
 
 type CommsApiResult =
@@ -65,6 +78,10 @@ type CommsApiResult =
 const MAX_CALL_HISTORY_WINDOW = 1_000;
 const MAX_CONVERSATIONS_PER_PROVIDER = 100;
 const CONVERSATION_PROVIDER_TIMEOUT_MS = 10_000;
+export const ODOS_COMMS_MARKETING_CONSENT_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-comms-marketing-consent";
+const ODOS_COMMS_EDUCATION_SEND_IDENTIFIER_SYSTEM =
+  "https://odos2020.com/fhir/NamingSystem/comms-education-send";
 
 interface ConversationProviderError {
   provider: string;
@@ -96,7 +113,10 @@ export function registerCommsApiRoutes(
         item.audience === "patient"
         && (!dxCode || item.dxCodes.includes(dxCode))
         && (!channel || item.channels.includes(channel)));
-      return { status: 200, body: { items } };
+      return {
+        status: 200,
+        body: { items, chartDispatchLane: deps.chartDispatchLane ?? "staff_switchable" },
+      };
     },
   ));
 
@@ -116,6 +136,195 @@ export function registerCommsApiRoutes(
         throw new CommsApiNotFoundError("Education content not found.");
       }
       return { status: 200, body: { item } };
+    },
+  ));
+
+  app.post("/communications/education/dispatch", async (req, res) => withStaff(
+    req,
+    res,
+    deps,
+    "communications.send",
+    "Communication",
+    "communications-education-dispatch",
+    patientReferenceFromBody(req.body),
+    async (staff) => {
+      const body = educationDispatchBody(req.body);
+      const item = deps.educationCatalog.get(body.educationId, body.version);
+      if (!item || item.audience !== "patient") {
+        throw new CommsApiNotFoundError("Education content not found.");
+      }
+      if (!item.channels.includes(body.channel)) {
+        throw new CommsApiCapabilityError(`Education content is not published for ${body.channel}.`);
+      }
+      if (
+        deps.chartDispatchLane === "locked_clinical"
+        && body.lane !== "clinical"
+      ) {
+        throw new CommsApiCapabilityError("Education dispatch is locked to the clinical lane for this practice.");
+      }
+      const patientId = body.patientReference.slice("Patient/".length);
+      const patient = await staff.fhir.read<Patient>("Patient", patientId);
+      await assertEducationClinicalReferences(staff.fhir, body);
+      if (item.consentClass === "marketing" && !hasRecordedMarketingConsent(patient)) {
+        throw new CommsApiRefusalError("marketing-consent-absent");
+      }
+      const recipient = await resolveEducationRecipient(staff.fhir, patient, body);
+      const defaultLane = item.laneHint === "retail" ? "frontdesk" : "clinical";
+      const laneSelection = body.lane === defaultLane ? "default" : "overridden";
+      const campaignId = `${item.id}@${item.version}`;
+
+      if (body.channel === "print") {
+        const url = item.urls.print;
+        if (!url) throw new CommsApiCapabilityError("Education print artifact is not published.");
+        if (body.alsoUpdateChart) {
+          await updateEducationRecipient(staff.fhir, recipient, body, staff);
+        }
+        await persistEducationSendProvenance(staff.fhir, {
+          body,
+          item,
+          staff,
+          recipientValue: recipient.value,
+          laneSelection,
+          now: deps.now?.() ?? new Date().toISOString(),
+        });
+        return { status: 200, body: { outcome: "print", url } };
+      }
+
+      if (body.channel === "email") {
+        const url = item.urls.email;
+        if (!url) throw new CommsApiCapabilityError("Education email artifact is not published.");
+        requireConfiguredRole(deps.dispatch, "email", false);
+        const provider = adapterForRole(deps, "email", staff.fhir);
+        if (!provider.sendEmail) {
+          throw new CommsApiCapabilityError("Email is not enabled for the configured education provider.");
+        }
+        const result = await provider.sendEmail({
+          patientReference: body.patientReference,
+          toAddress: recipient.value,
+          subject: item.title,
+          body: url,
+          campaignType: "clinical-education",
+          campaignId,
+          messageId: body.idempotencyKey,
+          suppression: {},
+        });
+        if (result.outcome === "sent") {
+          if (body.alsoUpdateChart) {
+            await updateEducationRecipient(staff.fhir, recipient, body, staff);
+          }
+          await persistEducationSendProvenance(staff.fhir, {
+            body,
+            item,
+            staff,
+            recipientValue: recipient.value,
+            laneSelection,
+            now: deps.now?.() ?? new Date().toISOString(),
+          });
+        }
+        return { status: 200, body: result };
+      }
+
+      const role = educationSmsRole(body.lane);
+      requireConfiguredRole(deps.dispatch, role, true);
+      const provider = adapterForRole(deps, role, staff.fhir);
+      if (!provider.sendSms) {
+        throw new CommsApiCapabilityError("SMS is not enabled for the configured education lane.");
+      }
+      const targetUrl = item.urls.web;
+      if (!targetUrl) throw new CommsApiCapabilityError("Education web artifact is not published.");
+      assertEducationPublicBaseUrl(deps.publicBaseUrl);
+      const existingSend = await findStaffSmsSend(staff.fhir, body.idempotencyKey);
+      const smsBody = existingSend?.payload?.[0]?.contentString ?? await educationSmsBody(deps, {
+        targetUrl,
+        campaignId,
+        messageId: body.idempotencyKey,
+      });
+      const providerMessageIdentifierSystem =
+        provider.messageIdentifierSystem ?? ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM;
+      const reservation = await reserveStaffSmsSend(staff.fhir, {
+        idempotencyKey: body.idempotencyKey,
+        claimId: randomUUID(),
+        patientReference: body.patientReference,
+        senderReference: staff.staffReference,
+        body: smsBody,
+        requestFingerprint: JSON.stringify({
+          patientReference: body.patientReference,
+          recipient: recipient.value,
+          education: campaignId,
+          targetUrl,
+          lane: body.lane,
+          provider: provider.name,
+          recipientReference: recipient.reference,
+          alsoUpdateChart: body.alsoUpdateChart,
+          encounterReference: body.encounterReference,
+          conditionReference: body.conditionReference,
+        }),
+        provider: provider.name,
+        providerMessageIdentifierSystem,
+      });
+      if (reservation.state === "conflict") {
+        throw new CommsApiCapabilityError("Education idempotency key was already used for a different request.");
+      }
+      if (reservation.state === "pending") {
+        throw new CommsApiCapabilityError("Education send outcome is pending reconciliation; do not resend with a new key.");
+      }
+      if (reservation.state === "sent") {
+        if (body.alsoUpdateChart) {
+          await updateEducationRecipient(staff.fhir, recipient, body, staff);
+        }
+        await persistEducationSendProvenance(staff.fhir, {
+          body,
+          item,
+          staff,
+          recipientValue: recipient.value,
+          laneSelection,
+          now: deps.now?.() ?? new Date().toISOString(),
+        });
+        return {
+          status: 200,
+          body: { outcome: "sent", providerMessageId: reservation.providerMessageId },
+        };
+      }
+      if (reservation.state === "terminal") {
+        return { status: 200, body: reservation.result };
+      }
+      const result = await provider.sendSms({
+        patientReference: body.patientReference,
+        toNumber: recipient.value,
+        body: smsBody,
+        campaignType: "clinical-education",
+        campaignId,
+        messageId: body.idempotencyKey,
+        suppression: item.consentClass === "transactional"
+          ? { quietHoursExemption: "staff-initiated-chart-education" }
+          : {},
+      });
+      if (result.outcome === "sent") {
+        await persistStaffSentSms(staff.fhir, {
+          communication: reservation.communication,
+          idempotencyKey: body.idempotencyKey,
+          providerMessageId: result.providerMessageId,
+          providerMessageIdentifierSystem,
+        }, { now: () => deps.now?.() ?? new Date().toISOString() });
+        if (body.alsoUpdateChart) {
+          await updateEducationRecipient(staff.fhir, recipient, body, staff);
+        }
+        await persistEducationSendProvenance(staff.fhir, {
+          body,
+          item,
+          staff,
+          recipientValue: recipient.value,
+          laneSelection,
+          now: deps.now?.() ?? new Date().toISOString(),
+        });
+      } else {
+        await persistStaffSmsTerminalOutcome(staff.fhir, {
+          communication: reservation.communication,
+          idempotencyKey: body.idempotencyKey,
+          result,
+        });
+      }
+      return { status: 200, body: result };
     },
   ));
 
@@ -479,6 +688,10 @@ async function withStaff(
       res.status(409).json({ error: error.message });
       return;
     }
+    if (error instanceof CommsApiRefusalError) {
+      res.status(409).json({ outcome: "refused", reason: error.reason });
+      return;
+    }
     if (error instanceof CommsApiNotFoundError) {
       res.status(404).json({ error: error.message });
       return;
@@ -628,7 +841,7 @@ function adapter(
 
 function adapterForRole(
   deps: CommsApiRouteDeps,
-  role: "transactional-sms",
+  role: CommsChannelRole,
   callerFhir: CommsDispatchFhir,
 ): CommsProvider {
   return deps.dispatch.getAdapterForRole?.(role, callerFhir)
@@ -744,7 +957,7 @@ function providerFromBody(
     : providerForRole(dispatch, role);
 }
 
-function providerForRole(dispatch: CommsDispatch, role: "voice" | "transactional-sms"): string {
+function providerForRole(dispatch: CommsDispatch, role: CommsChannelRole): string {
   const provider = dispatch.providerFor(role);
   if (!provider) {
     throw new CommsApiCapabilityError(`Communications role "${role}" is not configured for this practice.`);
@@ -852,6 +1065,284 @@ function requiredText(value: unknown, label: string, max: number): string {
     throw new CommsApiValidationError(`${label} must contain 1-${max} characters.`);
   }
   return value.trim();
+}
+
+function requiredInteger(value: unknown, label: string, min: number, max: number): number {
+  if (!Number.isInteger(value) || (value as number) < min || (value as number) > max) {
+    throw new CommsApiValidationError(`${label} must be an integer from ${min} to ${max}.`);
+  }
+  return value as number;
+}
+
+type EducationDispatchBody = {
+  patientReference: string;
+  educationId: string;
+  version: number;
+  channel: "sms" | "email" | "print";
+  lane: "clinical" | "frontdesk";
+  recipientOverride?: {
+    reference?: string;
+    phone?: string;
+    email?: string;
+  };
+  alsoUpdateChart: boolean;
+  encounterReference?: string;
+  conditionReference?: string;
+  idempotencyKey: string;
+};
+
+function educationDispatchBody(value: unknown): EducationDispatchBody {
+  const body = record(value);
+  const channel = body.channel;
+  if (channel !== "sms" && channel !== "email" && channel !== "print") {
+    throw new CommsApiValidationError("channel must be sms, email, or print.");
+  }
+  const lane = body.lane;
+  if (lane !== "clinical" && lane !== "frontdesk") {
+    throw new CommsApiValidationError("lane must be clinical or frontdesk.");
+  }
+  if (body.alsoUpdateChart !== undefined && typeof body.alsoUpdateChart !== "boolean") {
+    throw new CommsApiValidationError("alsoUpdateChart must be boolean.");
+  }
+  return {
+    patientReference: requiredPatientReference(body.patientReference),
+    educationId: resourceKey(typeof body.educationId === "string" ? body.educationId : undefined, "education id"),
+    version: requiredInteger(body.version, "version", 1, Number.MAX_SAFE_INTEGER),
+    channel,
+    lane,
+    recipientOverride: recipientOverride(body.recipientOverride),
+    alsoUpdateChart: body.alsoUpdateChart === true,
+    encounterReference: optionalReference(body.encounterReference, "Encounter"),
+    conditionReference: optionalReference(body.conditionReference, "Condition"),
+    idempotencyKey: idempotencyKeyFromBody(body.idempotencyKey),
+  };
+}
+
+function recipientOverride(value: unknown): EducationDispatchBody["recipientOverride"] {
+  if (value === undefined) return undefined;
+  const input = record(value);
+  const reference = input.reference === undefined
+    ? undefined
+    : optionalRecipientReference(input.reference);
+  const phone = input.phone === undefined ? undefined : requiredE164(input.phone, "recipientOverride.phone");
+  const email = input.email === undefined ? undefined : requiredEmail(input.email, "recipientOverride.email");
+  if (!phone && !email) {
+    throw new CommsApiValidationError("recipientOverride must include phone or email.");
+  }
+  return { reference, phone, email };
+}
+
+function optionalRecipientReference(value: unknown): string {
+  if (typeof value !== "string" || !/^(?:Patient|RelatedPerson)\/[A-Za-z0-9.-]{1,64}$/.test(value)) {
+    throw new CommsApiValidationError("recipientOverride.reference must be Patient/<id> or RelatedPerson/<id>.");
+  }
+  return value;
+}
+
+function optionalReference(value: unknown, resourceType: "Encounter" | "Condition"): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || !new RegExp(`^${resourceType}/[A-Za-z0-9.-]{1,64}$`).test(value)) {
+    throw new CommsApiValidationError(`${resourceType.toLowerCase()}Reference must be ${resourceType}/<id>.`);
+  }
+  return value;
+}
+
+function idempotencyKeyFromBody(value: unknown): string {
+  if (typeof value !== "string" || !/^[A-Za-z0-9._:-]{8,128}$/.test(value)) {
+    throw new CommsApiValidationError("idempotencyKey is required.");
+  }
+  return value;
+}
+
+function educationSmsRole(lane: EducationDispatchBody["lane"]): CommsChannelRole {
+  return lane === "clinical" ? "clinical-sms" : "transactional-sms";
+}
+
+function requireConfiguredRole(
+  dispatch: CommsDispatch,
+  role: CommsChannelRole,
+  senderNumberRequired: boolean,
+): void {
+  if (!dispatch.providerFor(role) || (senderNumberRequired && !dispatch.senderNumberFor(role))) {
+    throw new CommsApiCapabilityError(
+      `Education ${role} lane is not configured; open communications setup to choose a provider${senderNumberRequired ? " and sender number" : ""}.`,
+    );
+  }
+}
+
+async function resolveEducationRecipient(
+  fhir: MedplumClient,
+  patient: Patient,
+  body: EducationDispatchBody,
+): Promise<{ reference: string; value: string; resource: Patient | RelatedPerson }> {
+  const reference = body.recipientOverride?.reference ?? body.patientReference;
+  if (reference.startsWith("Patient/") && reference !== body.patientReference) {
+    throw new CommsApiValidationError("recipientOverride Patient must match patientReference.");
+  }
+  const resource = reference === body.patientReference
+    ? patient
+    : await fhir.read<RelatedPerson>("RelatedPerson", reference.slice("RelatedPerson/".length));
+  if (resource.resourceType === "RelatedPerson" && resource.patient.reference !== body.patientReference) {
+    throw new CommsApiValidationError("recipientOverride RelatedPerson does not belong to this patient.");
+  }
+  const overridden = body.channel === "sms"
+    ? body.recipientOverride?.phone
+    : body.channel === "email"
+      ? body.recipientOverride?.email
+      : undefined;
+  const recorded = body.channel === "sms"
+    ? telecomValue(resource, "phone")
+    : body.channel === "email"
+      ? telecomValue(resource, "email")
+      : reference;
+  const value = overridden ?? recorded;
+  if (!value) {
+    throw new CommsApiCapabilityError(
+      body.channel === "sms" ? "The selected recipient has no SMS number on file." : "The selected recipient has no email address on file.",
+    );
+  }
+  return { reference, value, resource };
+}
+
+async function assertEducationClinicalReferences(
+  fhir: MedplumClient,
+  body: EducationDispatchBody,
+): Promise<void> {
+  if (body.encounterReference) {
+    const encounter = await fhir.read<Encounter>("Encounter", body.encounterReference.slice("Encounter/".length));
+    if (encounter.subject?.reference !== body.patientReference) {
+      throw new CommsApiValidationError(`encounterReference must belong to ${body.patientReference}.`);
+    }
+  }
+  if (body.conditionReference) {
+    const condition = await fhir.read<Condition>("Condition", body.conditionReference.slice("Condition/".length));
+    if (condition.subject.reference !== body.patientReference) {
+      throw new CommsApiValidationError(`conditionReference must belong to ${body.patientReference}.`);
+    }
+  }
+}
+
+function assertEducationPublicBaseUrl(value: string): void {
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new CommsApiCapabilityError(
+      "Set ODOS_PRACTICE_PUBLIC_BASE_URL to the practice's reachable HTTPS base URL before sending tracked education links.",
+    );
+  }
+  if (parsed.protocol !== "https:" || parsed.username || parsed.password) {
+    throw new CommsApiCapabilityError(
+      "Set ODOS_PRACTICE_PUBLIC_BASE_URL to the practice's reachable HTTPS base URL before sending tracked education links.",
+    );
+  }
+}
+
+async function educationSmsBody(
+  deps: Pick<CommsApiRouteDeps, "trackedLinkStore" | "publicBaseUrl" | "practiceName">,
+  input: { targetUrl: string; campaignId: string; messageId: string },
+): Promise<string> {
+  const tracked = await generateTrackedLink({
+    store: deps.trackedLinkStore,
+    publicBaseUrl: deps.publicBaseUrl,
+    ...input,
+  });
+  return `${deps.practiceName}\n${tracked.url}\nReply STOP to opt out.`;
+}
+
+function telecomValue(resource: Patient | RelatedPerson, system: "phone" | "email"): string | undefined {
+  const candidates = (resource.telecom ?? []).filter((telecom) =>
+    telecom.system === system && telecom.value && telecom.use !== "old");
+  const preferred = system === "phone"
+    ? candidates.find((telecom) => telecom.use === "mobile") ?? candidates[0]
+    : candidates[0];
+  return preferred?.value;
+}
+
+async function updateEducationRecipient(
+  fhir: MedplumClient,
+  recipient: { reference: string; resource: Patient | RelatedPerson },
+  body: EducationDispatchBody,
+  staff: CommsStaff,
+): Promise<void> {
+  const system = body.channel === "sms" ? "phone" : body.channel === "email" ? "email" : undefined;
+  const value = system === "phone" ? body.recipientOverride?.phone : body.recipientOverride?.email;
+  if (!system || !value) {
+    throw new CommsApiValidationError("alsoUpdateChart requires a phone or email recipient override.");
+  }
+  const resource = recipient.resource;
+  if (resource.telecom?.some((entry) =>
+    entry.system === system && entry.use !== "old" && entry.value === value)) return;
+  if (!resource.id || !resource.meta?.versionId) {
+    throw new CommsApiCapabilityError("The selected recipient cannot be updated without a current resource version.");
+  }
+  const telecom = (resource.telecom ?? []).map((entry) =>
+    entry.system === system && entry.use !== "old" ? { ...entry, use: "old" as const } : entry);
+  telecom.push({ system, value, ...(system === "phone" ? { use: "mobile" as const } : {}) });
+  await fhir.update(resource.resourceType, resource.id, { ...resource, telecom }, {
+    "If-Match": `W/\"${resource.meta.versionId}\"`,
+    "X-ODOS-Source": "mcp/comms-education-recipient-update",
+    "X-ODOS-Actor-Id": staff.staffReference,
+  });
+}
+
+async function persistEducationSendProvenance(
+  fhir: MedplumClient,
+  input: {
+    body: EducationDispatchBody;
+    item: EducationContentItem;
+    staff: CommsStaff;
+    recipientValue: string;
+    laneSelection: "default" | "overridden";
+    now: string;
+  },
+): Promise<void> {
+  const targets = [
+    input.body.patientReference,
+    input.body.encounterReference,
+    input.body.conditionReference,
+  ].filter((reference): reference is string => Boolean(reference));
+  const provenance: Provenance = {
+    ...buildProvenance({
+      targetReferences: targets,
+      recorded: input.now,
+      activityCode: "CREATE",
+      activityDisplay: "Dispatch patient education",
+      agents: [{ whoReference: input.staff.staffReference, typeCode: "author" }],
+      entityValues: [
+        { role: "source", display: `Education content: ${input.item.id}@${input.item.version}` },
+        { role: "source", display: `Channel: ${input.body.channel}` },
+        { role: "source", display: `Lane: ${input.body.lane} (${input.laneSelection})` },
+        { role: "source", display: `Recipient: ${input.recipientValue}` },
+        ...(input.body.alsoUpdateChart ? [{ role: "source" as const, display: "Recipient override also updated chart" }] : []),
+      ],
+    }),
+    meta: {
+      tag: [{
+        system: ODOS_COMMS_EDUCATION_SEND_IDENTIFIER_SYSTEM,
+        code: input.body.idempotencyKey,
+      }],
+    },
+  };
+  await fhir.create(provenance, {
+    "If-None-Exist": `_tag=${ODOS_COMMS_EDUCATION_SEND_IDENTIFIER_SYSTEM}|${input.body.idempotencyKey}`,
+  });
+}
+
+function requiredEmail(value: unknown, label: string): string {
+  if (typeof value !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) {
+    throw new CommsApiValidationError(`${label} must be a valid email address.`);
+  }
+  return value.trim();
+}
+
+function hasRecordedMarketingConsent(patient: Patient): boolean {
+  const consent = patient.extension?.find((extension) =>
+    extension.url === ODOS_COMMS_MARKETING_CONSENT_EXTENSION_URL);
+  if (!consent) return false;
+  const allowed = consent.extension?.find((part) => part.url === "consent")?.valueBoolean;
+  const recorded = consent.extension?.find((part) => part.url === "recorded")?.valueDateTime;
+  return allowed === true && typeof recorded === "string" && !Number.isNaN(Date.parse(recorded));
 }
 
 function numberFromQuery(req: Request, name: string, min: number, max: number): number | undefined {

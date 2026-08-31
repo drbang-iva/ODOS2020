@@ -1,4 +1,5 @@
 import type { Annotation, CodeableConcept, Communication, Identifier, Patient } from "@medplum/fhirtypes";
+import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import type { MedplumClient } from "../fhir-client.js";
 import type {
@@ -9,6 +10,7 @@ import type {
   TwilioVoiceWebhookEvent,
 } from "./adapters/twilio-adapter.js";
 import type { InboundMessageEvent } from "./inbound-receiver.js";
+import type { SendResult } from "./comms-provider.js";
 import { inboundSuppressionLogDetails, updateInboundSuppression } from "./suppression-gate.js";
 
 export const ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM =
@@ -39,6 +41,14 @@ export const ODOS_COMMS_STAFF_SEND_CLAIM_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/comms-staff-send-claim";
 export const ODOS_COMMS_STAFF_SEND_PROVIDER_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/comms-staff-send-provider";
+export const ODOS_COMMS_STAFF_SEND_FINGERPRINT_IDENTIFIER_SYSTEM =
+  "https://odos2020.com/fhir/NamingSystem/comms-staff-send-fingerprint";
+export const ODOS_COMMS_STAFF_SEND_OUTCOME_IDENTIFIER_SYSTEM =
+  "https://odos2020.com/fhir/NamingSystem/comms-staff-send-outcome";
+export const ODOS_COMMS_STAFF_SEND_REASON_IDENTIFIER_SYSTEM =
+  "https://odos2020.com/fhir/NamingSystem/comms-staff-send-reason";
+export const ODOS_COMMS_STAFF_SEND_RESCHEDULED_AT_IDENTIFIER_SYSTEM =
+  "https://odos2020.com/fhir/NamingSystem/comms-staff-send-rescheduled-at";
 export const ODOS_COMMS_DEFAULT_PROVIDER = "twilio";
 
 const TWILIO_CALL_METADATA_AUTHOR = "ODOS Twilio call metadata";
@@ -115,8 +125,16 @@ export async function persistInboundMessageEvent(
 export type StaffSmsSendReservation =
   | { state: "owner"; communication: Communication }
   | { state: "sent"; communication: Communication; providerMessageId: string }
+  | { state: "terminal"; communication: Communication; result: Exclude<SendResult, { outcome: "sent" }> }
   | { state: "pending"; communication: Communication }
   | { state: "conflict"; communication: Communication };
+
+export function findStaffSmsSend(
+  fhir: CommsPersistenceFhir,
+  idempotencyKey: string,
+): Promise<Communication | undefined> {
+  return findCommunication(fhir, ODOS_COMMS_STAFF_SEND_IDENTIFIER_SYSTEM, idempotencyKey);
+}
 
 export async function reserveStaffSmsSend(
   fhir: CommsPersistenceFhir,
@@ -126,6 +144,7 @@ export async function reserveStaffSmsSend(
     patientReference: string;
     senderReference: string;
     body: string;
+    requestFingerprint?: string;
     provider?: string;
     providerMessageIdentifierSystem?: string;
   },
@@ -139,6 +158,10 @@ export async function reserveStaffSmsSend(
       { system: ODOS_COMMS_STAFF_SEND_IDENTIFIER_SYSTEM, value: input.idempotencyKey },
       { system: ODOS_COMMS_STAFF_SEND_CLAIM_IDENTIFIER_SYSTEM, value: input.claimId },
       { system: ODOS_COMMS_STAFF_SEND_PROVIDER_IDENTIFIER_SYSTEM, value: input.provider ?? ODOS_COMMS_DEFAULT_PROVIDER },
+      ...(input.requestFingerprint ? [{
+        system: ODOS_COMMS_STAFF_SEND_FINGERPRINT_IDENTIFIER_SYSTEM,
+        value: staffSendFingerprint(input.requestFingerprint),
+      }] : []),
     ],
     category: [category(ODOS_PATIENT_SMS_CATEGORY), category(ODOS_PATIENT_SMS_OUTBOUND_CATEGORY)],
     medium: [{ text: "SMS" }],
@@ -192,6 +215,35 @@ export async function persistStaffSentSms(
   });
 }
 
+export async function persistStaffSmsTerminalOutcome(
+  fhir: CommsPersistenceFhir,
+  input: {
+    communication: Communication;
+    idempotencyKey: string;
+    result: Exclude<SendResult, { outcome: "sent" }>;
+  },
+): Promise<Communication> {
+  const identity = {
+    system: ODOS_COMMS_STAFF_SEND_IDENTIFIER_SYSTEM,
+    value: input.idempotencyKey,
+    category: ODOS_PATIENT_SMS_CATEGORY,
+  };
+  const identifiers: Identifier[] = [
+    { system: ODOS_COMMS_STAFF_SEND_OUTCOME_IDENTIFIER_SYSTEM, value: input.result.outcome },
+    { system: ODOS_COMMS_STAFF_SEND_REASON_IDENTIFIER_SYSTEM, value: input.result.reason },
+    ...(input.result.outcome === "rescheduled" ? [{
+      system: ODOS_COMMS_STAFF_SEND_RESCHEDULED_AT_IDENTIFIER_SYSTEM,
+      value: input.result.rescheduledAt,
+    }] : []),
+  ];
+  return serializeCommunicationWrite(`${identity.system}|${identity.value}`, () =>
+    updateCommunicationFragment(fhir, input.communication, {
+      status: "not-done",
+      statusReason: { text: input.result.reason },
+      identifier: identifiers,
+    }, identity));
+}
+
 function classifyStaffSmsReservation(
   communication: Communication,
   input: {
@@ -199,12 +251,19 @@ function classifyStaffSmsReservation(
     patientReference: string;
     senderReference: string;
     body: string;
+    requestFingerprint?: string;
     provider?: string;
     providerMessageIdentifierSystem?: string;
   },
 ): StaffSmsSendReservation {
-  const visiblePayloadConflicts = communication.payload !== undefined
-    && communication.payload[0]?.contentString !== input.body;
+  const reservedFingerprint = communication.identifier?.find((identifier) =>
+    identifier.system === ODOS_COMMS_STAFF_SEND_FINGERPRINT_IDENTIFIER_SYSTEM)?.value;
+  const expectedFingerprint = input.requestFingerprint
+    ? staffSendFingerprint(input.requestFingerprint)
+    : undefined;
+  const visiblePayloadConflicts = expectedFingerprint
+    ? reservedFingerprint !== expectedFingerprint
+    : communication.payload !== undefined && communication.payload[0]?.contentString !== input.body;
   const reservedProvider = communication.identifier?.find((identifier) =>
     identifier.system === ODOS_COMMS_STAFF_SEND_PROVIDER_IDENTIFIER_SYSTEM)?.value ?? ODOS_COMMS_DEFAULT_PROVIDER;
   if (
@@ -222,12 +281,35 @@ function classifyStaffSmsReservation(
     ),
   )?.value;
   if (providerMessageId) return { state: "sent", communication, providerMessageId };
+  const terminalResult = staffSmsTerminalResult(communication);
+  if (terminalResult) return { state: "terminal", communication, result: terminalResult };
   const owned = communication.identifier?.some((identifier) =>
     identifier.system === ODOS_COMMS_STAFF_SEND_CLAIM_IDENTIFIER_SYSTEM
     && identifier.value === input.claimId) === true;
   return owned
     ? { state: "owner", communication }
     : { state: "pending", communication };
+}
+
+function staffSmsTerminalResult(
+  communication: Communication,
+): Exclude<SendResult, { outcome: "sent" }> | undefined {
+  const value = (system: string) => communication.identifier?.find((identifier) =>
+    identifier.system === system)?.value;
+  const outcome = value(ODOS_COMMS_STAFF_SEND_OUTCOME_IDENTIFIER_SYSTEM);
+  const reason = value(ODOS_COMMS_STAFF_SEND_REASON_IDENTIFIER_SYSTEM);
+  if (outcome === "suppressed" && (reason === "patient-opt-out" || reason === "frequency-cap")) {
+    return { outcome, reason };
+  }
+  const rescheduledAt = value(ODOS_COMMS_STAFF_SEND_RESCHEDULED_AT_IDENTIFIER_SYSTEM);
+  if (outcome === "rescheduled" && reason === "quiet-hours" && rescheduledAt) {
+    return { outcome, reason, rescheduledAt };
+  }
+  return undefined;
+}
+
+function staffSendFingerprint(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
 }
 
 async function reconcileStaffSmsDuplicates(

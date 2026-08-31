@@ -29,7 +29,7 @@ export const EXAM_ENTRY_SHEET_CONFIG = {
 // Eye Growth stays full-page because its imported axial-growth chart creates a 1550px sheet composition.
 
 export type ExamEntrySheetSectionId = keyof typeof EXAM_ENTRY_SHEET_CONFIG;
-export type ExamEntrySheetId = ExamEntrySheetSectionId | "visit-charges";
+export type ExamEntrySheetId = ExamEntrySheetSectionId | "visit-charges" | "engage";
 
 export function isExamEntrySheetSectionId(sectionId: string): sectionId is ExamEntrySheetSectionId {
   return sectionId in EXAM_ENTRY_SHEET_CONFIG;
@@ -124,11 +124,13 @@ export function ExamEntrySheet({
   hidden?: boolean;
   children: ReactNode;
 }) {
-  const modal = sectionId === "visit-charges";
+  const modal = sectionId === "visit-charges" || sectionId === "engage";
   const { dialogRef, initialFocusRef, titleId } = useDockedPanel(onCancel, active, { modal });
   const config = sectionId === "visit-charges"
     ? { title: "Visit & charges", layout: "visit-charges" }
-    : EXAM_ENTRY_SHEET_CONFIG[sectionId];
+    : sectionId === "engage"
+      ? { title: "Engage", layout: "engage" }
+      : EXAM_ENTRY_SHEET_CONFIG[sectionId];
   const findInnerCancel = () => Array.from(dialogRef.current?.querySelectorAll("button") ?? [])
     .find((button) => !button.closest("[data-entry-sheet-chrome]") && button.textContent?.trim() === "Cancel");
   const markEventDirty = (target: EventTarget | null) => {
@@ -146,10 +148,10 @@ export function ExamEntrySheet({
         aria-hidden="true"
       >
         <strong>Exam overview</strong>
-        <span>{sectionId === "visit-charges" ? "Chart remains visible behind this sheet" : `Parked while editing ${config.title}`}</span>
+        <span>{modal ? "Chart remains visible behind this sheet" : `Parked while editing ${config.title}`}</span>
       </div>
       <aside
-        id={sectionId === "visit-charges" ? "visit-charges-sheet" : undefined}
+        id={sectionId === "visit-charges" ? "visit-charges-sheet" : sectionId === "engage" ? "engage-sheet" : undefined}
         ref={dialogRef}
         role="dialog"
         aria-modal={modal ? "true" : undefined}

@@ -355,7 +355,13 @@ async function gatedSend(
     return { outcome: "suppressed", reason: "frequency-cap" };
   }
   const timeZone = patientTimeZone(patient, deps.practiceTimeZone);
-  if (!insideQuietHoursWindow(now, timeZone)) {
+  // Product judgment, not a settled legal conclusion: live staff chart education mirrors
+  // click-to-call because it is not automated outreach. Marketing never receives this value;
+  // whether quiet-hours rules bind in-encounter informational texts remains unverified.
+  if (
+    request.suppression.quietHoursExemption !== "staff-initiated-chart-education"
+    && !insideQuietHoursWindow(now, timeZone)
+  ) {
     return {
       outcome: "rescheduled",
       reason: "quiet-hours",

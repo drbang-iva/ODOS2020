@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   clearSmsOptOut,
   CommunicationsResponseError,
@@ -21,11 +21,15 @@ export function SmsOptOutControl({
   patientReference,
   activeLaneRole,
   onActiveLaneSuppressionChange,
+  onStateChange,
+  onUnavailable,
 }: {
   patientReference: string;
   // The approved B2a compose bar will supply these props for the second mount.
   activeLaneRole?: SmsLaneRole;
   onActiveLaneSuppressionChange?: (suppressed: boolean) => void;
+  onStateChange?: (state: SmsOptOutState) => void;
+  onUnavailable?: (reason: "denied" | "error") => void;
 }) {
   const [state, setState] = useState<SmsOptOutState>();
   const [error, setError] = useState<string>();
@@ -35,6 +39,12 @@ export function SmsOptOutControl({
   const [identityVerification, setIdentityVerification] = useState<SmsOptOutIdentityVerification | "">("");
   const [clearing, setClearing] = useState(false);
   const [result, setResult] = useState<string>();
+  const suppressionChangeRef = useRef(onActiveLaneSuppressionChange);
+  const stateChangeRef = useRef(onStateChange);
+  const unavailableRef = useRef(onUnavailable);
+  suppressionChangeRef.current = onActiveLaneSuppressionChange;
+  stateChangeRef.current = onStateChange;
+  unavailableRef.current = onUnavailable;
 
   useEffect(() => {
     let active = true;
@@ -46,9 +56,10 @@ export function SmsOptOutControl({
     readSmsOptOut(patientReference).then((value) => {
       if (!active) return;
       setState(value);
+      stateChangeRef.current?.(value);
       if (activeLaneRole) {
         const lane = value.smsLanes.find((candidate) => candidate.roles.includes(activeLaneRole));
-        onActiveLaneSuppressionChange?.(Boolean(
+        suppressionChangeRef.current?.(Boolean(
           value.remainingOptOuts.global
           || (lane ? value.remainingOptOuts.numbers.includes(lane.number) : value.remainingOptOuts.numbers.length > 0),
         ));
@@ -57,13 +68,15 @@ export function SmsOptOutControl({
       if (!active) return;
       if (cause instanceof CommunicationsResponseError && cause.status === 403) {
         setDenied(true);
-        onActiveLaneSuppressionChange?.(false);
+        suppressionChangeRef.current?.(false);
+        unavailableRef.current?.("denied");
         return;
       }
       setError(cause instanceof Error ? cause.message : "SMS preferences unavailable.");
+      unavailableRef.current?.("error");
     });
     return () => { active = false; };
-  }, [activeLaneRole, onActiveLaneSuppressionChange, patientReference]);
+  }, [activeLaneRole, patientReference]);
 
   if (denied) return null;
   if (error) return <p role="status" className="text-xs text-[color:var(--odos-amber)]">SMS preferences unavailable.</p>;
@@ -95,9 +108,10 @@ export function SmsOptOutControl({
       const remainingOptOuts = response.remainingOptOuts
         ?? (clearNumber === null && !response.smsOptedOut ? { global: false, numbers: [] } : state.remainingOptOuts);
       setState({ ...state, smsOptedOut: response.smsOptedOut, remainingOptOuts });
+      stateChangeRef.current?.({ ...state, smsOptedOut: response.smsOptedOut, remainingOptOuts });
       if (activeLaneRole) {
         const lane = state.smsLanes.find((candidate) => candidate.roles.includes(activeLaneRole));
-        onActiveLaneSuppressionChange?.(Boolean(
+        suppressionChangeRef.current?.(Boolean(
           remainingOptOuts.global
           || (lane ? remainingOptOuts.numbers.includes(lane.number) : remainingOptOuts.numbers.length > 0),
         ));

@@ -236,7 +236,7 @@ test("global STOP scope expands a number-specific opt-out across sender lanes", 
   assert.equal(sent.length, 0);
 });
 
-test("legacy SMS opt-out without a number remains a wildcard across sender lanes", async () => {
+test("inbound STOP without a campaign type blocks clinical education on the receiving sender lane", async () => {
   const subject = patient({
     telecom: [{ system: "phone", value: "+18645550199" }],
     extension: [{
@@ -255,8 +255,8 @@ test("legacy SMS opt-out without a number remains a wildcard across sender lanes
 
   const result = await provider.sendSms!({
     patientReference: "Patient/synthetic-1",
-    body: "Synthetic follow-up",
-    campaignType: "manual",
+    body: "Synthetic practice\nhttps://synthetic.invalid/education\nReply STOP to opt out.",
+    campaignType: "clinical-education",
     suppression: {},
   });
 
@@ -690,6 +690,105 @@ test("outside quiet hours reschedules to the next patient-local 8 AM rather than
     rescheduledAt: "2026-07-30T12:00:00.000Z",
   });
   assert.equal(sent.length, 0);
+});
+
+test("live staff transactional chart education bypasses quiet hours", async () => {
+  const sent: SendSmsRequest[] = [];
+  const provider = createSuppressedCommsProvider({
+    name: "fake",
+    capabilities: {
+      sms: true,
+      calls: false,
+      email: false,
+      contacts: false,
+      conversations: false,
+      reviews: false,
+    },
+    async sendSms(request) {
+      sent.push(request);
+      return { outcome: "sent", providerMessageId: "sms-1" };
+    },
+  }, {
+    fhir: fhirFor(patient({ telecom: [{ system: "phone", value: "+18645550199" }] })),
+    practiceTimeZone: "America/New_York",
+    now: () => new Date("2026-07-30T06:00:00.000Z"),
+  });
+
+  const result = await provider.sendSms!({
+    patientReference: "Patient/synthetic-1",
+    body: "Synthetic in-visit education",
+    campaignType: "clinical-education",
+    suppression: { quietHoursExemption: "staff-initiated-chart-education" },
+  });
+
+  assert.equal(result.outcome, "sent");
+  assert.equal(sent.length, 1);
+});
+
+test("staff chart education quiet-hours exemption does not bypass opt-out or frequency caps", async () => {
+  const optOutPatient = patient({
+    telecom: [{ system: "phone", value: "+18645550199" }],
+    extension: [{
+      url: ODOS_COMMS_OPT_OUT_EXTENSION_URL,
+      extension: [{ url: "channel", valueCode: "sms" }],
+    }],
+  });
+  const prior: Communication = {
+    resourceType: "Communication",
+    status: "completed",
+    sent: "2026-07-29T14:00:00.000Z",
+    subject: { reference: "Patient/synthetic-1" },
+    category: [{ coding: [{
+      system: "https://odos2020.com/fhir/CodeSystem/comms-campaign-type",
+      code: "clinical-education",
+    }] }],
+  };
+  const optOutSends: SendSmsRequest[] = [];
+  const cappedSends: SendSmsRequest[] = [];
+  const makeProvider = (sent: SendSmsRequest[], subject: Patient, communications: Communication[] = []) =>
+    createSuppressedCommsProvider({
+      name: "fake",
+      capabilities: {
+        sms: true,
+        calls: false,
+        email: false,
+        contacts: false,
+        conversations: false,
+        reviews: false,
+      },
+      async sendSms(request) {
+        sent.push(request);
+        return { outcome: "sent", providerMessageId: "sms-1" };
+      },
+    }, {
+      fhir: fhirFor(subject, communications),
+      practiceTimeZone: "America/New_York",
+      now: () => new Date("2026-07-30T06:00:00.000Z"),
+    });
+  const suppression = {
+    quietHoursExemption: "staff-initiated-chart-education" as const,
+    frequencyCapDays: 90,
+  };
+
+  assert.deepEqual(await makeProvider(optOutSends, optOutPatient).sendSms!({
+    patientReference: "Patient/synthetic-1",
+    body: "Synthetic in-visit education",
+    campaignType: "clinical-education",
+    suppression,
+  }), { outcome: "suppressed", reason: "patient-opt-out" });
+  assert.deepEqual(await makeProvider(
+    cappedSends,
+    patient({ telecom: [{ system: "phone", value: "+18645550199" }] }),
+    [prior],
+  ).sendSms!({
+    patientReference: "Patient/synthetic-1",
+    body: "Synthetic in-visit education",
+    campaignType: "clinical-education",
+    messageId: "current-education",
+    suppression,
+  }), { outcome: "suppressed", reason: "frequency-cap" });
+  assert.equal(optOutSends.length, 0);
+  assert.equal(cappedSends.length, 0);
 });
 
 test("a configured campaign frequency cap suppresses a repeat inside the lookback window", async () => {

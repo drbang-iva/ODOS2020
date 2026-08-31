@@ -5849,6 +5849,12 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         fhir,
         dispatch: commsDispatch,
         educationCatalog: loadDefaultEducationCatalogReader(),
+        trackedLinkStore: createFhirTrackedLinkStore(fhir),
+        publicBaseUrl: process.env.ODOS_PRACTICE_PUBLIC_BASE_URL ?? "",
+        practiceName: process.env.ODOS_PRACTICE_NAME ?? "ODOS Practice",
+        chartDispatchLane: process.env.ODOS_CHART_DISPATCH_LANE === "locked_clinical"
+          ? "locked_clinical"
+          : "staff_switchable",
         audit: auditRuntime,
       });
 
