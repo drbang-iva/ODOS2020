@@ -23,6 +23,7 @@ export function SmsOptOutControl({
   onActiveLaneSuppressionChange,
 }: {
   patientReference: string;
+  // The approved B2a compose bar will supply these props for the second mount.
   activeLaneRole?: SmsLaneRole;
   onActiveLaneSuppressionChange?: (suppressed: boolean) => void;
 }) {
@@ -67,6 +68,9 @@ export function SmsOptOutControl({
   if (denied) return null;
   if (error) return <p role="status" className="text-xs text-[color:var(--odos-amber)]">SMS preferences unavailable.</p>;
   if (!state) return <p className="text-xs text-[color:var(--odos-faint)]">Checking SMS preferences…</p>;
+
+  const configuredNumbers = new Set(state.smsLanes.map((lane) => lane.number));
+  const unmatchedOptOutNumbers = state.remainingOptOuts.numbers.filter((number) => !configuredNumbers.has(number));
 
   const chooseClear = (number: string | null) => {
     setClearNumber(number);
@@ -141,6 +145,14 @@ export function SmsOptOutControl({
           </div>
         );
       })}
+      {unmatchedOptOutNumbers.map((number) => (
+        <div key={number} className="flex flex-wrap items-center justify-between gap-2 text-sm text-[color:var(--odos-muted)]">
+          <span>SMS number {number} — opted out (STOP)</span>
+          <button type="button" onClick={() => chooseClear(number)} className="text-[color:var(--odos-accent)] underline">
+            Re-enroll…
+          </button>
+        </div>
+      ))}
       {state.smsOptedOut && (
         <button type="button" onClick={() => chooseClear(null)} className="justify-self-start text-xs text-[color:var(--odos-accent)] underline">
           Clear all SMS opt-outs…

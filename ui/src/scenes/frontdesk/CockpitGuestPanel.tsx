@@ -1,11 +1,6 @@
 import clsx from "clsx";
-import type { Patient } from "@medplum/fhirtypes";
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
-import { SmsOptOutControl } from "../../components/patient/SmsOptOutControl";
+import { useEffect, useRef, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { dockItem, type CockpitPanelId } from "../../lib/cockpit-shell";
-import { sendSms } from "../../lib/communications-client";
-import { patientName } from "../../lib/scheduler-appointment-ui";
-import { PatientSearch } from "../PatientPicker";
 
 export const COCKPIT_PANEL_POSITION_STORAGE_KEY = "odos-cockpit-panel-position";
 
@@ -74,7 +69,6 @@ export function CockpitGuestPanel({
   onPositionChange,
   onPositionCommit,
   onRedock,
-  selectedPatient,
 }: {
   panel: CockpitPanelId;
   open?: boolean;
@@ -85,7 +79,6 @@ export function CockpitGuestPanel({
   onPositionChange?: (position: CockpitPanelPosition) => void;
   onPositionCommit?: (position: CockpitPanelPosition) => void;
   onRedock?: () => void;
-  selectedPatient?: Patient;
 }) {
   const item = dockItem(panel);
   const panelRef = useRef<HTMLElement>(null);
@@ -222,108 +215,10 @@ export function CockpitGuestPanel({
         </span>
       </header>
       <div className="min-h-0 flex-1 select-text overflow-y-auto p-4 text-sm leading-relaxed text-white/55">
-        {panel === "messages"
-          ? <MessagesPanel key={selectedPatient?.id ?? "patient-search"} selectedPatient={selectedPatient} />
-          : PANEL_STUB[panel]}
+        {PANEL_STUB[panel]}
       </div>
     </aside>
   );
-}
-
-function MessagesPanel({ selectedPatient: initialPatient }: { selectedPatient?: Patient }) {
-  const [selectedPatient, setSelectedPatient] = useState(initialPatient);
-  const [suppressed, setSuppressed] = useState(false);
-  const [suppressionKnown, setSuppressionKnown] = useState(false);
-  const [message, setMessage] = useState("");
-  const [sending, setSending] = useState(false);
-  const [sendStatus, setSendStatus] = useState<string>();
-  const idempotencyKey = useRef(newSmsIdempotencyKey());
-  const conversationEpoch = useRef(0);
-  const updateSuppression = useCallback((value: boolean) => {
-    setSuppressed(value);
-    setSuppressionKnown(true);
-  }, []);
-  const selectPatient = useCallback((patient: Patient | undefined) => {
-    conversationEpoch.current += 1;
-    setSelectedPatient(patient);
-    setSuppressed(false);
-    setSuppressionKnown(false);
-    setMessage("");
-    setSending(false);
-    setSendStatus(undefined);
-    idempotencyKey.current = newSmsIdempotencyKey();
-  }, []);
-
-  if (!selectedPatient?.id) {
-    return (
-      <section className="grid gap-3">
-        <p>Select a patient conversation.</p>
-        <PatientSearch actionLabel="Open thread" onSelect={selectPatient} />
-      </section>
-    );
-  }
-
-  const submit = async () => {
-    if (!message.trim() || suppressed || !suppressionKnown || sending) return;
-    const epoch = conversationEpoch.current;
-    setSending(true);
-    setSendStatus(undefined);
-    try {
-      const result = await sendSms({
-        patientReference: `Patient/${selectedPatient.id}`,
-        body: message.trim(),
-        idempotencyKey: idempotencyKey.current,
-      });
-      if (epoch !== conversationEpoch.current) return;
-      if (result.outcome === "suppressed") {
-        setSuppressed(true);
-        setSendStatus("Texting is blocked by the patient SMS opt-out.");
-        return;
-      }
-      setMessage("");
-      idempotencyKey.current = newSmsIdempotencyKey();
-      setSendStatus(result.outcome === "sent" ? "Text sent." : "Text scheduled for the next allowed window.");
-    } catch (cause) {
-      if (epoch !== conversationEpoch.current) return;
-      setSendStatus(cause instanceof Error ? cause.message : "Text could not be sent.");
-    } finally {
-      if (epoch === conversationEpoch.current) setSending(false);
-    }
-  };
-
-  return (
-    <section className="grid gap-4">
-      <div className="flex items-center justify-between gap-2">
-        <strong className="text-[color:var(--odos-text)]">{patientName(selectedPatient)}</strong>
-        <button type="button" onClick={() => selectPatient(undefined)} className="text-xs text-blue-200 underline">
-          Change patient
-        </button>
-      </div>
-      <SmsOptOutControl
-        patientReference={`Patient/${selectedPatient.id}`}
-        activeLaneRole="transactional-sms"
-        onActiveLaneSuppressionChange={updateSuppression}
-      />
-      <label className="grid gap-2 text-xs font-semibold text-[color:var(--odos-muted)]">
-        Message
-        <textarea
-          aria-label="Compose text message"
-          value={message}
-          disabled={!suppressionKnown || suppressed || sending}
-          onChange={(event) => setMessage(event.target.value)}
-          className="scheduler-input min-h-28 disabled:cursor-not-allowed disabled:opacity-50"
-        />
-      </label>
-      <button type="button" disabled={!suppressionKnown || suppressed || sending || !message.trim()} onClick={() => void submit()} className="rounded bg-brand px-3 py-2 font-semibold text-[color:var(--odos-accent-ink)] disabled:opacity-50">
-        {sending ? "Sending…" : "Send text"}
-      </button>
-      {sendStatus && <p role="status" className="text-xs text-[color:var(--odos-muted)]">{sendStatus}</p>}
-    </section>
-  );
-}
-
-function newSmsIdempotencyKey(): string {
-  return `odos-ui-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`}`;
 }
 
 function clampPanelOffset(position: CockpitPanelPosition, panelRect: DOMRect, headerHeight: number, viewportWidth: number, viewportHeight: number): CockpitPanelPosition {
