@@ -4,6 +4,7 @@ import {
   dispatchEducation,
   listEducation,
   type EducationCatalogResult,
+  type EducationChannelAvailability,
   type EducationContentItem,
   type EducationDispatchInput,
   type EducationDispatchResult,
@@ -21,6 +22,13 @@ import { SmsOptOutErrorBoundary } from "../patient/SmsOptOutErrorBoundary";
 
 const MARKETING_CONSENT_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/odos-comms-marketing-consent";
+
+const UNAVAILABLE_CHANNELS: EducationChannelAvailability = {
+  clinicalSms: false,
+  frontdeskSms: false,
+  email: false,
+  print: false,
+};
 
 export interface EngageSheetApi {
   listEducation(query: { dxCode?: string; channel?: "sms" | "email" | "print" }): Promise<EducationCatalogResult>;
@@ -77,6 +85,7 @@ export function EngageSheet({
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
   const [pending, setPending] = useState<PendingSend>();
   const [chartDispatchLane, setChartDispatchLane] = useState<"locked_clinical" | "staff_switchable">("staff_switchable");
+  const [availableChannels, setAvailableChannels] = useState<EducationChannelAvailability>(UNAVAILABLE_CHANNELS);
   const [lane, setLane] = useState<"clinical" | "frontdesk">("clinical");
   const [overrideMode, setOverrideMode] = useState(false);
   const [overrideValue, setOverrideValue] = useState("");
@@ -99,6 +108,7 @@ export function EngageSheet({
     setPrintUrl(undefined);
     setSmsState(undefined);
     setSmsAvailability("loading");
+    setAvailableChannels(UNAVAILABLE_CHANNELS);
     Promise.all([
       api.listEducation(diagnosis?.code ? { dxCode: diagnosis.code } : {}),
       minor ? api.listConsentGuardians(patientReference) : Promise.resolve([]),
@@ -106,6 +116,7 @@ export function EngageSheet({
       if (!active) return;
       setItems(catalog.items.filter((item) => item.audience === "patient"));
       setChartDispatchLane(catalog.chartDispatchLane);
+      setAvailableChannels(catalog.availableChannels);
       setGuardians(relatedPeople);
       const primary = relatedPeople.find(isPrimaryGuardian) ?? relatedPeople[0];
       setSelectedRecipients(primary?.id ? [`RelatedPerson/${primary.id}`] : [patientReference]);
@@ -262,6 +273,7 @@ export function EngageSheet({
             const defaultSmsLane = chartDispatchLane === "locked_clinical"
               ? "clinical"
               : item.laneHint === "retail" ? "frontdesk" : "clinical";
+            const defaultSmsLaneConfigured = isSmsLaneConfigured(availableChannels, defaultSmsLane);
             return (
               <article key={`${item.id}@${item.version}`} className="rounded border border-[color:var(--odos-line)] p-4">
                 <div className="flex items-baseline justify-between gap-3">
@@ -270,10 +282,12 @@ export function EngageSheet({
                 </div>
                 {marketingBlocked && <p className="mt-2 text-sm text-[color:var(--odos-amber)]">Marketing consent not on file</p>}
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <ChannelButton label="Text" channel="sms" item={item} disabled={!recipients.length || marketingBlocked || !item.channels.includes("sms") || smsAvailability === "loading" || isSmsLaneSuppressed(smsState, defaultSmsLane)} onClick={beginSend} />
-                  <ChannelButton label="Email" channel="email" item={item} disabled={!recipients.length || marketingBlocked || !item.channels.includes("email")} onClick={beginSend} />
-                  <ChannelButton label="Print" channel="print" item={item} disabled={!recipients.length || marketingBlocked || !item.channels.includes("print")} onClick={beginSend} />
+                  <ChannelButton label="Text" channel="sms" item={item} disabled={!recipients.length || marketingBlocked || !item.channels.includes("sms") || !defaultSmsLaneConfigured || smsAvailability === "loading" || isSmsLaneSuppressed(smsState, defaultSmsLane)} onClick={beginSend} />
+                  <ChannelButton label="Email" channel="email" item={item} disabled={!recipients.length || marketingBlocked || !item.channels.includes("email") || !availableChannels.email} onClick={beginSend} />
+                  <ChannelButton label="Print" channel="print" item={item} disabled={!recipients.length || marketingBlocked || !item.channels.includes("print") || !availableChannels.print} onClick={beginSend} />
                 </div>
+                {item.channels.includes("email") && !availableChannels.email && <p className="mt-2 text-sm text-[color:var(--odos-amber)]">Email is not configured for this practice.</p>}
+                {item.channels.includes("sms") && !defaultSmsLaneConfigured && <p className="mt-2 text-sm text-[color:var(--odos-amber)]">No SMS lane is configured for this practice.</p>}
                 {smsAvailability === "loading" && item.channels.includes("sms") && <p className="mt-2 text-sm text-[color:var(--odos-muted)]">Checking SMS availability…</p>}
                 {smsAvailability === "unavailable" && item.channels.includes("sms") && <p className="mt-2 text-sm text-[color:var(--odos-muted)]">SMS preferences could not be read; dispatch will enforce opt-outs.</p>}
                 {isSmsLaneSuppressed(smsState, defaultSmsLane) && <p className="mt-2 text-sm text-[color:var(--odos-amber)]">Texting is suppressed on this item’s default lane. Re-enroll above to send.</p>}
@@ -289,10 +303,13 @@ export function EngageSheet({
               <label className="grid gap-1 text-sm">
                 Send via lane
                 <select aria-label="Send via lane" value={lane} onChange={(event) => setLane(event.target.value as typeof lane)}>
-                  <option value="clinical">Clinical</option>
-                  <option value="frontdesk">Front desk</option>
+                  <option value="clinical" disabled={!availableChannels.clinicalSms}>Clinical</option>
+                  <option value="frontdesk" disabled={!availableChannels.frontdeskSms}>Front desk</option>
                 </select>
               </label>
+            )}
+            {pending.channel === "sms" && chartDispatchLane !== "locked_clinical" && (!availableChannels.clinicalSms || !availableChannels.frontdeskSms) && (
+              <p className="text-sm text-[color:var(--odos-amber)]">No SMS lane is configured for this practice.</p>
             )}
             {pending.channel === "sms" && diagnosis && lane === "frontdesk" && (
               <p className="text-sm text-[color:var(--odos-amber)]">Front-desk lane is not BAA-covered; this content is tied to a diagnosis.</p>
@@ -322,7 +339,7 @@ export function EngageSheet({
             )}
             <div className="flex gap-2">
               <button type="button" onClick={() => setPending(undefined)}>Cancel</button>
-              <button type="button" aria-label="Confirm education send" disabled={sending || (overrideMode && !overrideValue.trim()) || (pending.channel === "sms" && isSmsLaneSuppressed(smsState, lane))} onClick={() => void confirmSend()}>
+              <button type="button" aria-label="Confirm education send" disabled={sending || (overrideMode && !overrideValue.trim()) || (pending.channel === "sms" && (!isSmsLaneConfigured(availableChannels, lane) || isSmsLaneSuppressed(smsState, lane)))} onClick={() => void confirmSend()}>
                 {sending ? "Sending…" : pending.channel === "print" ? "Open print artifact" : "Send"}
               </button>
             </div>
@@ -341,6 +358,13 @@ function ChannelButton({ label, channel, item, disabled, onClick }: {
   onClick: (item: EducationContentItem, channel: PendingSend["channel"]) => void;
 }) {
   return <button type="button" aria-label={`${label} ${item.title}`} disabled={disabled} onClick={() => onClick(item, channel)}>{label}</button>;
+}
+
+function isSmsLaneConfigured(
+  availableChannels: EducationChannelAvailability,
+  lane: "clinical" | "frontdesk",
+): boolean {
+  return lane === "clinical" ? availableChannels.clinicalSms : availableChannels.frontdeskSms;
 }
 
 interface RecipientDisplay {

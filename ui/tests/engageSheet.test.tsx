@@ -226,7 +226,16 @@ test("the shared communications client lists filtered education and posts the ex
       ...(init?.body ? { body: JSON.parse(String(init.body)) } : {}),
     });
     return calls.length === 1
-      ? new Response(JSON.stringify({ items: [ITEMS[0]], chartDispatchLane: "locked_clinical" }), { status: 200 })
+      ? new Response(JSON.stringify({
+          items: [ITEMS[0]],
+          chartDispatchLane: "locked_clinical",
+          availableChannels: {
+            clinicalSms: true,
+            frontdeskSms: false,
+            email: false,
+            print: true,
+          },
+        }), { status: 200 })
       : new Response(JSON.stringify({ outcome: "sent", providerMessageId: "SM-client" }), { status: 200 });
   };
   const listed = await listEducation({ dxCode: "H04.123", channel: "sms" }, fetchImpl);
@@ -246,12 +255,134 @@ test("the shared communications client lists filtered education and posts the ex
   }), { status: 200 }));
   assert.equal(listed.items[0]?.id, "dry-eye-basics");
   assert.equal(listed.chartDispatchLane, "locked_clinical");
+  assert.deepEqual(listed.availableChannels, {
+    clinicalSms: true,
+    frontdeskSms: false,
+    email: false,
+    print: true,
+  });
   assert.deepEqual(result, { outcome: "sent", providerMessageId: "SM-client" });
   assert.deepEqual(suppressed, { outcome: "suppressed", reason: "patient-opt-out" });
   assert.deepEqual(calls, [
     { url: "/communications/education?dxCode=H04.123&channel=sms", method: "GET" },
     { url: "/communications/education/dispatch", method: "POST", body: input },
   ]);
+});
+
+test("the education client rejects missing or malformed channel availability", async () => {
+  await assert.rejects(
+    () => listEducation({}, async () => new Response(JSON.stringify({
+      items: [ITEMS[0]],
+      chartDispatchLane: "staff_switchable",
+    }), { status: 200 })),
+    /Education catalog returned an unexpected response/,
+  );
+  await assert.rejects(
+    () => listEducation({}, async () => new Response(JSON.stringify({
+      items: [ITEMS[0]],
+      chartDispatchLane: "staff_switchable",
+      availableChannels: {
+        clinicalSms: true,
+        frontdeskSms: true,
+        email: "yes",
+        print: true,
+      },
+    }), { status: 200 })),
+    /Education catalog returned an unexpected response/,
+  );
+});
+
+test("an unavailable email channel stays visible, disabled, and explained", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = unsuppressedSmsFetch;
+  const api: EngageSheetApi = {
+    async listEducation() {
+      return educationList([ITEMS[0]!], "staff_switchable", {
+        clinicalSms: true,
+        frontdeskSms: true,
+        email: false,
+        print: true,
+      });
+    },
+    async dispatchEducation() { return { outcome: "sent", providerMessageId: "should-not-send" }; },
+    async listConsentGuardians() { return []; },
+  };
+  try {
+    let renderer!: ReturnType<typeof create>;
+    await act(async () => {
+      renderer = create(<EngageSheet open patient={{ ...PATIENT, birthDate: "1980-04-03" }} onClose={() => undefined} api={api} />);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    assert.equal(renderer.root.findByProps({ "aria-label": "Email Understanding dry eye" }).props.disabled, true);
+    assert.match(renderedText(renderer), /Email is not configured for this practice\./);
+    act(() => renderer.unmount());
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a retail item disables Text when only the clinical SMS lane is configured", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = unsuppressedSmsFetch;
+  const api: EngageSheetApi = {
+    async listEducation() {
+      return educationList([ITEMS[2]!], "staff_switchable", {
+        clinicalSms: true,
+        frontdeskSms: false,
+        email: false,
+        print: true,
+      });
+    },
+    async dispatchEducation() { return { outcome: "sent", providerMessageId: "should-not-send" }; },
+    async listConsentGuardians() { return []; },
+  };
+  try {
+    let renderer!: ReturnType<typeof create>;
+    await act(async () => {
+      renderer = create(<EngageSheet open patient={{ ...PATIENT, birthDate: "1980-04-03" }} onClose={() => undefined} api={api} />);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    assert.equal(renderer.root.findByProps({ "aria-label": "Text Home care guide" }).props.disabled, true);
+    assert.match(renderedText(renderer), /No SMS lane is configured for this practice\./);
+    act(() => renderer.unmount());
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("the SMS lane toggle does not offer an unconfigured lane", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = unsuppressedSmsFetch;
+  const api: EngageSheetApi = {
+    async listEducation() {
+      return educationList([ITEMS[0]!], "staff_switchable", {
+        clinicalSms: true,
+        frontdeskSms: false,
+        email: false,
+        print: true,
+      });
+    },
+    async dispatchEducation() { return { outcome: "sent", providerMessageId: "should-not-send" }; },
+    async listConsentGuardians() { return []; },
+  };
+  try {
+    let renderer!: ReturnType<typeof create>;
+    await act(async () => {
+      renderer = create(<EngageSheet open patient={{ ...PATIENT, birthDate: "1980-04-03" }} onClose={() => undefined} api={api} />);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    act(() => renderer.root.findByProps({ "aria-label": "Text Understanding dry eye" }).props.onClick());
+    const frontdeskOption = renderer.root.findAllByType("option").find((option) => option.props.value === "frontdesk");
+    assert.ok(frontdeskOption);
+    assert.equal(frontdeskOption.props.disabled, true);
+    assert.match(renderedText(renderer), /No SMS lane is configured for this practice\./);
+    act(() => renderer.unmount());
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("a minor without a recorded consent-authority guardian cannot dispatch education", async () => {
@@ -565,6 +696,12 @@ async function unsuppressedSmsFetch(): Promise<Response> {
 function educationList(
   items: EducationContentItem[],
   chartDispatchLane: "locked_clinical" | "staff_switchable" = "staff_switchable",
+  availableChannels = {
+    clinicalSms: true,
+    frontdeskSms: true,
+    email: true,
+    print: true,
+  },
 ) {
-  return { items, chartDispatchLane };
+  return { items, chartDispatchLane, availableChannels };
 }

@@ -115,7 +115,16 @@ export function registerCommsApiRoutes(
         && (!channel || item.channels.includes(channel)));
       return {
         status: 200,
-        body: { items, chartDispatchLane: deps.chartDispatchLane ?? "staff_switchable" },
+        body: {
+          items,
+          chartDispatchLane: deps.chartDispatchLane ?? "staff_switchable",
+          availableChannels: {
+            clinicalSms: isRoleConfigured(deps.dispatch, "clinical-sms", true),
+            frontdeskSms: isRoleConfigured(deps.dispatch, "transactional-sms", true),
+            email: isRoleConfigured(deps.dispatch, "email", false),
+            print: true,
+          },
+        },
       };
     },
   ));
@@ -1163,11 +1172,22 @@ function requireConfiguredRole(
   role: CommsChannelRole,
   senderNumberRequired: boolean,
 ): void {
-  if (!dispatch.providerFor(role) || (senderNumberRequired && !dispatch.senderNumberFor(role))) {
+  if (!isRoleConfigured(dispatch, role, senderNumberRequired)) {
     throw new CommsApiCapabilityError(
       `Education ${role} lane is not configured; open communications setup to choose a provider${senderNumberRequired ? " and sender number" : ""}.`,
     );
   }
+}
+
+function isRoleConfigured(
+  dispatch: CommsDispatch,
+  role: CommsChannelRole,
+  senderNumberRequired: boolean,
+): boolean {
+  return Boolean(
+    dispatch.providerFor(role)
+    && (!senderNumberRequired || dispatch.senderNumberFor(role)),
+  );
 }
 
 async function resolveEducationRecipient(

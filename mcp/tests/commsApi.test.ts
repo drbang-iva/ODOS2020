@@ -249,6 +249,38 @@ test("education list filters by diagnosis and channel while excluding internal c
   }
 });
 
+test("education list reports dispatchability from the same per-role configuration enforced at send time", async () => {
+  const fixture = await startServer({
+    channelRoutes: { "clinical-sms": "twilio", "transactional-sms": "twilio", email: "twilio" },
+    senderNumbers: { "clinical-sms": "+18485550100" },
+  });
+  try {
+    const response = await request(
+      fixture.base,
+      "/communications/education",
+      "GET",
+      undefined,
+      "staff",
+    );
+    assert.equal(response.status, 200);
+    assert.deepEqual((await response.json() as {
+      availableChannels: {
+        clinicalSms: boolean;
+        frontdeskSms: boolean;
+        email: boolean;
+        print: boolean;
+      };
+    }).availableChannels, {
+      clinicalSms: true,
+      frontdeskSms: false,
+      email: true,
+      print: true,
+    });
+  } finally {
+    await fixture.close();
+  }
+});
+
 test("education detail returns newest or exact pinned version and never exposes internal content", async () => {
   const fixture = await startServer();
   try {

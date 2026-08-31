@@ -58,6 +58,14 @@ export interface EducationContentItem {
 export interface EducationCatalogResult {
   items: EducationContentItem[];
   chartDispatchLane: "locked_clinical" | "staff_switchable";
+  availableChannels: EducationChannelAvailability;
+}
+
+export interface EducationChannelAvailability {
+  clinicalSms: boolean;
+  frontdeskSms: boolean;
+  email: boolean;
+  print: boolean;
 }
 
 export interface EducationDispatchInput {
@@ -159,10 +167,15 @@ export async function listEducation(
   if (!isRecord(body)
     || !Array.isArray(body.items)
     || !body.items.every(isEducationContentItem)
-    || (body.chartDispatchLane !== "locked_clinical" && body.chartDispatchLane !== "staff_switchable")) {
+    || (body.chartDispatchLane !== "locked_clinical" && body.chartDispatchLane !== "staff_switchable")
+    || !isEducationChannelAvailability(body.availableChannels)) {
     throw new CommunicationsResponseError(response.status, "Education catalog returned an unexpected response.");
   }
-  return { items: body.items, chartDispatchLane: body.chartDispatchLane };
+  return {
+    items: body.items,
+    chartDispatchLane: body.chartDispatchLane,
+    availableChannels: body.availableChannels,
+  };
 }
 
 export async function dispatchEducation(
@@ -208,6 +221,14 @@ function isClearSmsOptOutResult(value: unknown): value is ClearSmsOptOutResult {
     && typeof value.cleared === "boolean"
     && (value.suppressionCleared === undefined || typeof value.suppressionCleared === "boolean")
     && (value.remainingOptOuts === undefined || isRemainingOptOuts(value.remainingOptOuts));
+}
+
+function isEducationChannelAvailability(value: unknown): value is EducationChannelAvailability {
+  return isRecord(value)
+    && typeof value.clinicalSms === "boolean"
+    && typeof value.frontdeskSms === "boolean"
+    && typeof value.email === "boolean"
+    && typeof value.print === "boolean";
 }
 
 function isRemainingOptOuts(value: unknown): value is SmsOptOutState["remainingOptOuts"] {
