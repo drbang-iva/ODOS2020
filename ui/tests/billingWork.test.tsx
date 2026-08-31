@@ -119,6 +119,34 @@ test("failed or unrun eligibility sweep renders degraded Before the visit with n
   assert.doesNotMatch(html, /data-lane-count="before-visit"/);
 });
 
+test("an initial claims projection still loads the independent Before the visit projection", async () => {
+  let beforeVisitLoads = 0;
+  const before: BeforeVisitWorkProjection = {
+    status: "healthy",
+    lastSuccessfulAt: "2026-08-30T23:10:00.000Z",
+    count: 0,
+    groups: [],
+  };
+  let renderer!: ReturnType<typeof create>;
+  await act(async () => {
+    renderer = create(
+      <BillingWork
+        initialProjection={healthyWorkFixture()}
+        initialActiveLane="before-visit"
+        loadBeforeVisitProjection={async () => {
+          beforeVisitLoads += 1;
+          return before;
+        }}
+      />,
+    );
+  });
+
+  assert.equal(beforeVisitLoads, 1);
+  assert.equal(renderer.root.findAllByProps({ "data-lane-count": "before-visit" }).length, 1);
+  assert.match(JSON.stringify(renderer.toJSON()), /No before the visit work/);
+  await act(async () => renderer.unmount());
+});
+
 test("degraded Work keeps navigation but hides every count, group, and reassuring zero state", () => {
   const projection: WorkProjection = {
     status: "degraded",

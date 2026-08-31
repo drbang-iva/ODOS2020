@@ -594,12 +594,16 @@ export function startEligibilitySweepWorker(input: {
   intervalMs?: number;
   now?: () => string;
 }): { stop(): void } {
+  let running = false;
   const run = () => {
+    if (running) return;
+    running = true;
     const now = input.now?.() ?? new Date().toISOString();
     const date = addDate(practiceDate(now, input.timeZone), 1);
     void input.authenticate()
       .then(() => runEligibilitySweepTick({ store: input.store, stedi: input.stedi, date, now }))
-      .catch((error) => console.error("odos-mcp: eligibility sweep failed:", safeErrorMessage(error)));
+      .catch((error) => console.error("odos-mcp: eligibility sweep failed:", safeErrorMessage(error)))
+      .finally(() => { running = false; });
   };
   run();
   const timer = setInterval(run, input.intervalMs ?? 5 * 60_000);

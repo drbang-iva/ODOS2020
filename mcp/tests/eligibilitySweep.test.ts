@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   runEligibilitySweepTick,
+  startEligibilitySweepWorker,
   type EligibilityCandidate,
   type EligibilityFinding,
   type EligibilitySweepState,
@@ -280,4 +281,28 @@ test("a completed sweep rerun remains one finding per appointment and does not r
   await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: "2026-08-30T23:10:00.000Z" });
   assert.equal(client.submitted, 1);
   assert.equal(store.findings.filter((finding) => finding.watcherId === "W21").length, 1);
+});
+
+test("the worker does not overlap a slow eligibility sweep tick", async () => {
+  let authenticateCalls = 0;
+  let releaseAuthentication!: () => void;
+  const authentication = new Promise<void>((resolve) => { releaseAuthentication = resolve; });
+  const worker = startEligibilitySweepWorker({
+    authenticate: async () => {
+      authenticateCalls += 1;
+      await authentication;
+    },
+    store: memoryStore([]),
+    stedi: stedi(),
+    timeZone: "America/New_York",
+    intervalMs: 10,
+    now: () => NOW,
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 35));
+  worker.stop();
+  releaseAuthentication();
+  await authentication;
+
+  assert.equal(authenticateCalls, 1);
 });

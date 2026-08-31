@@ -56,26 +56,39 @@ export function BillingWork({
   const [selectedEraItem, setSelectedEraItem] = useState<ClaimsWorklistItem>();
   const [error, setError] = useState<string>();
   const api = claimsApiOptions();
-  const beforeVisitLoader = loadBeforeVisitProjection ?? (!initialProjection ? loadDefaultBeforeVisitProjection : undefined);
+  const beforeVisitLoader = loadBeforeVisitProjection ?? loadDefaultBeforeVisitProjection;
 
   const refresh = useCallback(async () => {
     setError(undefined);
     try {
       const [nextProjection, nextBeforeVisit] = await Promise.all([
         loadProjection(api),
-        beforeVisitLoader ? beforeVisitLoader(api) : Promise.resolve(undefined),
+        beforeVisitLoader(api),
       ]);
       setProjection(nextProjection);
-      if (nextBeforeVisit) setBeforeVisitProjection(nextBeforeVisit);
+      setBeforeVisitProjection(nextBeforeVisit);
     } catch (cause) {
       setProjection(undefined);
       setError(cause instanceof Error ? cause.message : String(cause));
     }
   }, [api.authorization, api.baseUrl, beforeVisitLoader, loadProjection]);
 
+  const refreshBeforeVisit = useCallback(async () => {
+    setError(undefined);
+    try {
+      setBeforeVisitProjection(await beforeVisitLoader(api));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    }
+  }, [api.authorization, api.baseUrl, beforeVisitLoader]);
+
   useEffect(() => {
-    if (!initialProjection) void refresh();
-  }, [initialProjection, refresh]);
+    if (!initialProjection) {
+      void refresh();
+    } else if (!initialBeforeVisitProjection) {
+      void refreshBeforeVisit();
+    }
+  }, [initialBeforeVisitProjection, initialProjection, refresh, refreshBeforeVisit]);
 
   const runEraAction = async (action: () => Promise<void>) => {
     setError(undefined);
