@@ -20,39 +20,58 @@ import {
 } from "../../lib/claims-worklist";
 import { submitStediClaimResubmission, type StediPayerClassification } from "../../lib/submit-claims";
 import { ClaimsWorklistPanel } from "./ClaimsWorklist";
+import {
+  loadBeforeVisitWork,
+  updateWatcherTask,
+  watcherActionHref,
+  type BeforeVisitWorkProjection,
+  type WatcherAlert,
+  type WatcherTaskAction,
+} from "../../lib/watchers";
 
 export function BillingWork({
   initialProjection,
+  initialBeforeVisitProjection,
   initialActiveLane = "holds",
   initialExpandedGroupKey,
   loadProjection = loadClaimWork,
+  loadBeforeVisitProjection,
   applyBatch = batchTouchClaims,
   newIdempotencyKey = newBatchIdempotencyKey,
 }: {
   initialProjection?: WorkProjection;
+  initialBeforeVisitProjection?: BeforeVisitWorkProjection;
   initialActiveLane?: WorkLaneId;
   initialExpandedGroupKey?: string;
   loadProjection?: (options?: ClaimsApiOptions) => Promise<WorkProjection>;
+  loadBeforeVisitProjection?: (options?: ClaimsApiOptions) => Promise<BeforeVisitWorkProjection>;
   applyBatch?: (input: BatchTouchInput, options?: ClaimsApiOptions) => Promise<BatchTouchResult>;
   newIdempotencyKey?: () => string;
 } = {}) {
   const [projection, setProjection] = useState<WorkProjection | undefined>(initialProjection);
+  const [beforeVisitProjection, setBeforeVisitProjection] = useState<BeforeVisitWorkProjection | undefined>(initialBeforeVisitProjection);
   const [activeLane, setActiveLane] = useState<WorkLaneId>(initialActiveLane);
   const [expandedGroupKey, setExpandedGroupKey] = useState<string | undefined>(initialExpandedGroupKey);
   const [actionGroup, setActionGroup] = useState<WorkClaimGroup>();
   const [selectedEraItem, setSelectedEraItem] = useState<ClaimsWorklistItem>();
   const [error, setError] = useState<string>();
   const api = claimsApiOptions();
+  const beforeVisitLoader = loadBeforeVisitProjection ?? (!initialProjection ? loadDefaultBeforeVisitProjection : undefined);
 
   const refresh = useCallback(async () => {
     setError(undefined);
     try {
-      setProjection(await loadProjection(api));
+      const [nextProjection, nextBeforeVisit] = await Promise.all([
+        loadProjection(api),
+        beforeVisitLoader ? beforeVisitLoader(api) : Promise.resolve(undefined),
+      ]);
+      setProjection(nextProjection);
+      if (nextBeforeVisit) setBeforeVisitProjection(nextBeforeVisit);
     } catch (cause) {
       setProjection(undefined);
       setError(cause instanceof Error ? cause.message : String(cause));
     }
-  }, [api.authorization, api.baseUrl, loadProjection]);
+  }, [api.authorization, api.baseUrl, beforeVisitLoader, loadProjection]);
 
   useEffect(() => {
     if (!initialProjection) void refresh();
@@ -64,6 +83,17 @@ export function BillingWork({
       await action();
       setSelectedEraItem(undefined);
       await refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    }
+  };
+
+  const runWatcherAction = async (taskId: string, action: WatcherTaskAction) => {
+    setError(undefined);
+    try {
+      await updateWatcherTask(taskId, action, api);
+      const loader = beforeVisitLoader ?? loadDefaultBeforeVisitProjection;
+      setBeforeVisitProjection(await loader(api));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
     }
@@ -89,6 +119,7 @@ export function BillingWork({
       <div className="grid gap-4 lg:grid-cols-[190px_minmax(0,1fr)]">
         <WorkLaneRail
           projection={projection}
+          beforeVisitProjection={beforeVisitProjection}
           activeLane={activeLane}
           onSelect={(lane) => {
             setActiveLane(lane);
@@ -96,6 +127,9 @@ export function BillingWork({
           }}
         />
         <section aria-live="polite" className="min-w-0">
+          {activeLane === "before-visit" ? (
+            <BeforeVisitLane projection={beforeVisitProjection} onAction={runWatcherAction} />
+          ) : <>
           {!projection && !error && <LoadingState />}
           {projection?.status === "degraded" && <DegradedState projection={projection} />}
           {projection?.status === "healthy" && (
@@ -111,6 +145,7 @@ export function BillingWork({
               onSelectEra={setSelectedEraItem}
             />
           )}
+          </>}
         </section>
       </div>
 
@@ -155,16 +190,19 @@ export function BillingWork({
 
 function WorkLaneRail({
   projection,
+  beforeVisitProjection,
   activeLane,
   onSelect,
 }: {
   projection?: WorkProjection;
+  beforeVisitProjection?: BeforeVisitWorkProjection;
   activeLane: WorkLaneId;
   onSelect: (lane: WorkLaneId) => void;
 }) {
   const counts = projection?.status === "healthy"
-    ? new Map(projection.lanes.map((lane) => [lane.id, lane.count]))
-    : undefined;
+    ? new Map(projection.lanes.filter((lane) => lane.id !== "before-visit").map((lane) => [lane.id, lane.count]))
+    : new Map<WorkLaneId, number>();
+  if (beforeVisitProjection?.status === "healthy") counts.set("before-visit", beforeVisitProjection.count);
   return (
     <nav aria-label="Work lanes" className="h-fit border border-[var(--odos-line)] bg-[var(--odos-surface)] p-2 lg:sticky lg:top-4">
       <div className="px-2 pb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--odos-faint)]">Queues</div>
@@ -180,11 +218,86 @@ function WorkLaneRail({
               : "flex items-center justify-between border border-transparent px-3 py-2 text-left text-sm text-[var(--odos-muted)] hover:bg-[var(--odos-elevated)]"}
           >
             <span>{lane.label}</span>
-            {counts && <span data-lane-count={lane.id} className="tabular-nums text-xs text-[var(--odos-faint)]">{counts.get(lane.id) ?? 0}</span>}
+            {counts.has(lane.id) && <span data-lane-count={lane.id} className="tabular-nums text-xs text-[var(--odos-faint)]">{counts.get(lane.id)}</span>}
           </button>
         ))}
       </div>
     </nav>
+  );
+}
+
+function BeforeVisitLane({
+  projection,
+  onAction,
+}: {
+  projection?: BeforeVisitWorkProjection;
+  onAction: (taskId: string, action: WatcherTaskAction) => void | Promise<void>;
+}) {
+  if (!projection) return <LoadingState />;
+  if (projection.status === "degraded") {
+    return (
+      <section role="alert" className="border border-amber-300/40 bg-amber-950/40 p-5 text-amber-100">
+        <h2 className="font-semibold">Eligibility sweep not current</h2>
+        <p className="mt-1 text-sm">
+          The overnight sweep is {projection.reason}. Counts and all-clear language are hidden.
+          {projection.lastSuccessfulAt
+            ? <> It last succeeded <time dateTime={projection.lastSuccessfulAt}>{formatDateTime(projection.lastSuccessfulAt)}</time>.</>
+            : " It has not completed successfully yet."}
+        </p>
+      </section>
+    );
+  }
+  return (
+    <>
+      <header className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-[var(--odos-line)] pb-3">
+        <div>
+          <h2 className="text-lg font-semibold">Before the visit</h2>
+          <p className="text-xs text-[var(--odos-faint)]">Tomorrow's eligibility exceptions · grouped by reason</p>
+        </div>
+        <div className="text-[11px] text-[var(--odos-faint)]">Sweep current as of {formatDateTime(projection.lastSuccessfulAt)}</div>
+      </header>
+      {projection.groups.length === 0 ? (
+        <div className="border border-[var(--odos-line)] bg-[var(--odos-surface)] p-8 text-center">
+          <p className="font-semibold">No before the visit work</p>
+          <p className="mt-1 text-sm text-[var(--odos-muted)]">The overnight sweep completed successfully.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {projection.groups.map((group) => (
+            <article key={group.key} className="border border-[var(--odos-line)] [background:var(--odos-card-gradient)] p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--odos-faint)]">{group.watcherId}</div>
+                  <h3 className="mt-1 font-semibold">{group.title}</h3>
+                  <p className="mt-1 text-xs text-[var(--odos-muted)]">{group.count} {group.count === 1 ? "patient" : "patients"}</p>
+                </div>
+              </div>
+              <div className="mt-3 divide-y divide-[var(--odos-line)] border-t border-[var(--odos-line)]">
+                {group.items.map((item) => <BeforeVisitItem key={item.taskId} item={item} onAction={onAction} />)}
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+function BeforeVisitItem({ item, onAction }: { item: WatcherAlert; onAction: (taskId: string, action: WatcherTaskAction) => void | Promise<void> }) {
+  return (
+    <div className="grid gap-3 py-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
+      <div>
+        <div className="font-medium">{item.patientDisplay}</div>
+        <p className="mt-1 text-sm text-[var(--odos-muted)]">{item.message}</p>
+        {item.memberIdProposal && <p className="mt-1 text-xs text-amber-200">Payer member ID differs. Proposal only — confirm before applying.</p>}
+      </div>
+      <div className="flex max-w-sm flex-wrap justify-end gap-1.5">
+        <a className="scheduler-button" href={watcherActionHref(item)}>{item.primaryAction.label}</a>
+        {item.dismissalReasons.map((reason) => (
+          <button key={reason.code} type="button" className="scheduler-button" onClick={() => void onAction(item.taskId, { action: "dismiss", reason: reason.code })}>{reason.display}</button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -463,6 +576,10 @@ function claimsApiOptions(): ClaimsApiOptions {
     authorization: fhir.authHeader(),
     baseUrl: meta.env?.VITE_ODOS_MCP_BASE_URL?.replace(/\/$/, "") ?? "",
   };
+}
+
+function loadDefaultBeforeVisitProjection(options?: ClaimsApiOptions): Promise<BeforeVisitWorkProjection> {
+  return loadBeforeVisitWork(undefined, options);
 }
 
 function money(cents: number): string {

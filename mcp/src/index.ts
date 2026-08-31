@@ -89,6 +89,11 @@ import { registerWatcherRoutes } from "./watchers/watcher-routes.js";
 import { createWatcherDefinitions, createWatcherRegistry } from "./watchers/watcher-registry.js";
 import { loadOrSeedWatcherConfig } from "./watchers/watcher-config.js";
 import { startWatcherWorker, watcherWorkerIntervalMs } from "./watchers/watcher-engine.js";
+import {
+  createFhirEligibilitySweepStore,
+  eligibilitySweepWorkerIntervalMs,
+  startEligibilitySweepWorker,
+} from "./jobs/eligibilitySweep.js";
 import { registerSchedulingResourceRoutes } from "./scheduling/scheduling-resource-routes.js";
 import {
   commsAdapterRegistrationsFromEnv,
@@ -651,9 +656,14 @@ const fhir = createMedplumClient({
     sessionId: process.env.ODOS_AUDIT_SESSION_ID,
   },
 });
+const eligibilitySweepStore = createFhirEligibilitySweepStore(
+  fhir,
+  process.env.ODOS_TIMEZONE ?? "UTC",
+);
 const watcherRegistry = createWatcherRegistry(createWatcherDefinitions(
   fhir,
   process.env.ODOS_TIMEZONE ?? "UTC",
+  eligibilitySweepStore,
 ));
 let authPromise: Promise<void> | undefined;
 startClaimReadModelWorker({
@@ -5685,6 +5695,18 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
     loadConfig: () => loadOrSeedWatcherConfig(fhir, watcherRegistry),
     timeZone: process.env.ODOS_TIMEZONE ?? "UTC",
   }, watcherWorkerIntervalMs(process.env.ODOS_WATCHER_WORKER_MS));
+  const eligibilityStediConfig = stediConfigFromEnv(process.env);
+  if (eligibilityStediConfig?.mode === "production") {
+    startEligibilitySweepWorker({
+      authenticate: authenticateWithMedplum,
+      store: eligibilitySweepStore,
+      stedi: createStediAdapter({ config: eligibilityStediConfig }),
+      timeZone: process.env.ODOS_TIMEZONE ?? "UTC",
+      intervalMs: eligibilitySweepWorkerIntervalMs(process.env.ODOS_ELIGIBILITY_SWEEP_MS),
+    });
+  } else {
+    console.error("odos-mcp: eligibility sweep is not running; production Stedi mode is required for the pre-visit lane.");
+  }
   if (westFaxAdapter && inboundFaxWorkerEnabled(process.env.ODOS_INBOUND_FAX_WORKER_ENABLED)) {
     startInboundFaxWorker({
       authenticate: authenticateWithMedplum,
@@ -7666,6 +7688,7 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         registry: watcherRegistry,
         loadConfig: () => loadOrSeedWatcherConfig(fhir, watcherRegistry),
         timeZone: process.env.ODOS_TIMEZONE ?? "UTC",
+        eligibilitySweepStore,
       });
       registerClaimFollowUpRoutes(app, {
         authenticateService: authenticateWithMedplum,

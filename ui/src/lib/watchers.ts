@@ -18,6 +18,13 @@ export interface WatcherAlert {
   dismissalReasons: Array<{ code: string; display: string }>;
   balanceCents: number;
   ageDays: number;
+  reasonCode?: string;
+  coverageReference?: string;
+  payerDisplay?: string;
+  eligibilityCheckResult?: string;
+  cobStatus?: string;
+  cobReason?: string;
+  memberIdProposal?: { current: string; proposed: string; source: "insurance-discovery" };
 }
 
 export interface WatcherDegradedProjection {
@@ -46,6 +53,24 @@ export type WatcherTodayProjection = WatcherDegradedProjection | {
   };
 };
 
+export type BeforeVisitWorkProjection = {
+  status: "degraded";
+  reason: "failed" | "stale" | "never-succeeded" | "never-run" | "running";
+  lastSuccessfulAt?: string;
+} | {
+  status: "healthy";
+  lastSuccessfulAt: string;
+  count: number;
+  groups: Array<{
+    key: string;
+    watcherId: "W21" | "W22" | "W23";
+    reasonCode: string;
+    title: string;
+    count: number;
+    items: WatcherAlert[];
+  }>;
+};
+
 export type WatcherTaskAction =
   | { action: "dismiss"; reason: string }
   | { action: "snooze"; until: string }
@@ -67,6 +92,11 @@ export function loadTodayWatchers(date?: string, options: WatcherApiOptions = wa
   return watcherRequest<WatcherTodayProjection>(path, {}, options);
 }
 
+export function loadBeforeVisitWork(date?: string, options: WatcherApiOptions = watcherApiOptions()) {
+  const path = date ? `/watchers/work?date=${encodeURIComponent(date)}` : "/watchers/work";
+  return watcherRequest<BeforeVisitWorkProjection>(path, {}, options);
+}
+
 export function updateWatcherTask(taskId: string, action: WatcherTaskAction, options: WatcherApiOptions = watcherApiOptions()) {
   return watcherRequest<{ taskId: string; status: string }>(`/watchers/tasks/${encodeURIComponent(taskId)}/action`, {
     method: "POST",
@@ -80,6 +110,12 @@ export function watcherCollectionHref(alert: WatcherAlert): string {
     ? alert.primaryAction.href
     : `${alert.primaryAction.href}${separator}collect=1`;
   return `${href}&watcherTaskId=${encodeURIComponent(alert.taskId)}`;
+}
+
+export function watcherActionHref(alert: WatcherAlert): string {
+  if (alert.watcherId === "W1") return watcherCollectionHref(alert);
+  const separator = alert.primaryAction.href.includes("?") ? "&" : "?";
+  return `${alert.primaryAction.href}${separator}watcherTaskId=${encodeURIComponent(alert.taskId)}`;
 }
 
 export function watcherMoney(cents: number): string {

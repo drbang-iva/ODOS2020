@@ -2,11 +2,12 @@ import type { Application, Request, Response } from "express";
 import type { Resource, Task } from "@medplum/fhirtypes";
 import { collectAllPages, type PaginatedFhir } from "./fhir-pagination.js";
 import { loadWatcherHealth } from "./watcher-health.js";
-import { projectFrontDeskAlerts, projectTodayDigest } from "./watcher-projections.js";
+import { projectBeforeVisitWork, projectFrontDeskAlerts, projectTodayDigest } from "./watcher-projections.js";
 import type { WatcherPracticeConfig, WatcherRegistry } from "./watcher-types.js";
 import { practiceDate } from "../desk/day-ledger.js";
 import { conditionKey, WATCHER_CODE_SYSTEM } from "./watcher-task.js";
 import { resolveBusinessActionRole, type BusinessAction, type PracticeRoleId } from "../authz/roles.js";
+import type { EligibilitySweepStore } from "../jobs/eligibilitySweep.js";
 
 const WATCHER_ACTION_SYSTEM = "https://odos2020.com/fhir/CodeSystem/watcher-action";
 const FHIR_DATETIME_WITH_ZONE = /^(?!0000)\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|[+-](?:(?:0\d|1[0-3]):[0-5]\d|14:00))$/;
@@ -42,6 +43,7 @@ export interface WatcherRouteDependencies {
   loadConfig(): Promise<WatcherPracticeConfig>;
   now?: () => string;
   timeZone?: string;
+  eligibilitySweepStore?: EligibilitySweepStore;
 }
 
 class WatcherValidationError extends Error {}
@@ -52,7 +54,18 @@ export function registerWatcherRoutes(
   deps: WatcherRouteDependencies,
 ): void {
   app.get("/watchers/frontdesk", (req, res) => withStaff(req, res, deps, "billing-context.read", async () => {
+    const now = deps.now?.() ?? new Date().toISOString();
     const date = requestedDate(req.query.date);
+    const eligibilityDate = nextDate(practiceDate(now, deps.timeZone));
+    const sweepState = deps.eligibilitySweepStore && date === eligibilityDate
+      ? await deps.eligibilitySweepStore.loadState(date)
+      : undefined;
+    if (date === eligibilityDate) {
+      if (sweepState?.status !== "healthy" || !sweepState.lastSuccessfulAt) {
+        res.status(503).json(sweepDegraded(sweepState));
+        return;
+      }
+    }
     const [config, health, tasks] = await Promise.all([
       deps.loadConfig(),
       loadWatcherHealth(deps.serviceFhir as never),
@@ -60,7 +73,43 @@ export function registerWatcherRoutes(
     ]);
     const body = projectFrontDeskAlerts({
       tasks, config, registry: deps.registry, health: health.state,
-      date, now: deps.now?.() ?? new Date().toISOString(), timeZone: deps.timeZone,
+      date, now, timeZone: deps.timeZone,
+    });
+    if (
+      sweepState?.lastSuccessfulAt
+      && body.status === "healthy"
+      && Date.parse(body.lastSuccessfulAt) < Date.parse(sweepState.lastSuccessfulAt)
+    ) {
+      res.status(503).json({ status: "degraded", reason: "running", lastSuccessfulAt: sweepState.lastSuccessfulAt });
+      return;
+    }
+    res.status(body.status === "degraded" ? 503 : 200).json(body);
+  }));
+
+  app.get("/watchers/work", (req, res) => withStaff(req, res, deps, "billing-context.read", async () => {
+    const now = deps.now?.() ?? new Date().toISOString();
+    const date = req.query.date === undefined
+      ? nextDate(practiceDate(now, deps.timeZone))
+      : requestedDate(req.query.date);
+    if (!deps.eligibilitySweepStore) {
+      res.status(503).json({ status: "degraded", reason: "never-run" });
+      return;
+    }
+    const [config, health, tasks, sweepState] = await Promise.all([
+      deps.loadConfig(),
+      loadWatcherHealth(deps.serviceFhir as never),
+      watcherTasks(deps.serviceFhir),
+      deps.eligibilitySweepStore.loadState(date),
+    ]);
+    const body = projectBeforeVisitWork({
+      tasks,
+      config,
+      registry: deps.registry,
+      health: health.state,
+      sweepState,
+      date,
+      now,
+      timeZone: deps.timeZone,
     });
     res.status(body.status === "degraded" ? 503 : 200).json(body);
   }));
@@ -166,7 +215,9 @@ export async function applyWatcherTaskAction(
     }
     const active = await definition.firingRule({
       now,
-      date: practiceDate(appointmentAt, timeZone),
+      date: watcherId === "W21" || watcherId === "W22" || watcherId === "W23"
+        ? previousDate(practiceDate(appointmentAt, timeZone))
+        : practiceDate(appointmentAt, timeZone),
       settings,
     });
     if (active.some((match) => match.conditionKey === key)) {
@@ -236,6 +287,21 @@ function previousDate(value: string): string {
   const date = new Date(`${value}T12:00:00Z`);
   date.setUTCDate(date.getUTCDate() - 1);
   return date.toISOString().slice(0, 10);
+}
+
+function nextDate(value: string): string {
+  const date = new Date(`${value}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + 1);
+  return date.toISOString().slice(0, 10);
+}
+
+function sweepDegraded(state: Awaited<ReturnType<EligibilitySweepStore["loadState"]>>) {
+  if (!state) return { status: "degraded" as const, reason: "never-run" as const };
+  return {
+    status: "degraded" as const,
+    reason: state.status === "failed" ? "failed" as const : "running" as const,
+    ...(state.lastSuccessfulAt ? { lastSuccessfulAt: state.lastSuccessfulAt } : {}),
+  };
 }
 
 function instant(value: unknown, label: string): string {

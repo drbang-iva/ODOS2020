@@ -102,6 +102,13 @@ export function buildWatcherTask(
       input("balance-age-days", { valueInteger: match.ageDays }),
       input("source-invoice-count", { valueInteger: match.sourceInvoiceCount }),
       input("source-occurred-at", { valueDateTime: match.sourceOccurredAt }),
+      ...(match.reasonCode ? [input("reason-code", { valueString: match.reasonCode })] : []),
+      ...(match.coverageReference ? [input("coverage-reference", { valueString: match.coverageReference })] : []),
+      ...(match.payerDisplay ? [input("payer-display", { valueString: match.payerDisplay })] : []),
+      ...(match.eligibilityCheckResult ? [input("eligibility-result", { valueString: match.eligibilityCheckResult })] : []),
+      ...(match.cobStatus ? [input("cob-status", { valueString: match.cobStatus })] : []),
+      ...(match.cobReason ? [input("cob-reason", { valueString: match.cobReason })] : []),
+      ...(match.memberIdProposal ? [input("member-id-proposal", { valueString: JSON.stringify(match.memberIdProposal) })] : []),
     ],
   };
 }

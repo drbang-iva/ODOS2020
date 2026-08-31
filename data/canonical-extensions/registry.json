@@ -865,6 +865,24 @@
       "namespace": "watchers",
       "status": "active",
       "sliceConsumer": "billing-watcher-2a"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-cob-applicability",
+      "namespace": "eligibility-prevent",
+      "status": "active",
+      "sliceConsumer": "billing-watcher-3"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/eligibility-sweep-state",
+      "namespace": "eligibility-prevent",
+      "status": "active",
+      "sliceConsumer": "billing-watcher-3"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/eligibility-sweep-finding",
+      "namespace": "eligibility-prevent",
+      "status": "active",
+      "sliceConsumer": "billing-watcher-3"
     }
   ]
 }

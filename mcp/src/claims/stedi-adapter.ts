@@ -3,10 +3,14 @@ import type { StediProfessionalClaimPayload } from "./stedi-fhir.js";
 
 export const STEDI_DEFAULT_BASE_URL = "https://healthcare.us.stedi.com/2024-04-01/change/medicalnetwork";
 export const STEDI_DEFAULT_CORE_BASE_URL = "https://core.us.stedi.com/2023-08-01";
+export const STEDI_DEFAULT_HEALTHCARE_BASE_URL = "https://healthcare.us.stedi.com/2024-04-01";
+export const STEDI_DEFAULT_MANAGER_BASE_URL = "https://manager.us.stedi.com/2024-04-01";
 
 export interface StediConfig {
   baseUrl: string;
   coreBaseUrl: string;
+  healthcareBaseUrl?: string;
+  managerBaseUrl?: string;
   apiKey: string;
   submitterId: string;
   mode: "test" | "production";
@@ -28,6 +32,16 @@ export interface StediAdapter extends ClearinghouseAdapter {
   submitProfessionalClaim(input: { payload: StediProfessionalClaimPayload; idempotencyKey: string }): Promise<StediSubmitResult>;
   list277s(input?: { pageToken?: string; startDateTime?: string }): Promise<unknown>;
   retrieve277Data(transactionId: string): Promise<unknown>;
+  submitBatchEligibility(input: {
+    items: unknown[];
+    name: string;
+    maxRetryHours?: number;
+  }): Promise<unknown>;
+  getBatchEligibilityItems(batchId: string, input?: { pageSize?: number; pageToken?: string }): Promise<unknown>;
+  pollBatchEligibility(input: { batchId: string; pageSize?: number; pageToken?: string }): Promise<unknown>;
+  checkCoordinationOfBenefits(payload: unknown): Promise<unknown>;
+  submitInsuranceDiscovery(payload: unknown): Promise<unknown>;
+  getInsuranceDiscoveryResults(discoveryId: string): Promise<unknown>;
 }
 
 export interface StediErrorDetail {
@@ -52,7 +66,15 @@ export class StediRequestError extends Error {
 }
 
 export function stediConfigFromEnv(env: Record<string, string | undefined>): StediConfig | null {
-  const touched = ["STEDI_API_KEY", "STEDI_SUBMITTER_ID", "STEDI_BASE_URL", "STEDI_CORE_BASE_URL", "STEDI_MODE"]
+  const touched = [
+    "STEDI_API_KEY",
+    "STEDI_SUBMITTER_ID",
+    "STEDI_BASE_URL",
+    "STEDI_CORE_BASE_URL",
+    "STEDI_HEALTHCARE_BASE_URL",
+    "STEDI_MANAGER_BASE_URL",
+    "STEDI_MODE",
+  ]
     .some((name) => Boolean(env[name]));
   if (!touched) return null;
   if (!env.STEDI_API_KEY) throw new Error("Stedi adapter is partially configured — missing STEDI_API_KEY.");
@@ -62,14 +84,23 @@ export function stediConfigFromEnv(env: Record<string, string | undefined>): Ste
     submitterId: env.STEDI_SUBMITTER_ID,
     baseUrl: (env.STEDI_BASE_URL ?? STEDI_DEFAULT_BASE_URL).replace(/\/$/, ""),
     coreBaseUrl: (env.STEDI_CORE_BASE_URL ?? STEDI_DEFAULT_CORE_BASE_URL).replace(/\/$/, ""),
+    healthcareBaseUrl: (env.STEDI_HEALTHCARE_BASE_URL ?? STEDI_DEFAULT_HEALTHCARE_BASE_URL).replace(/\/$/, ""),
+    managerBaseUrl: (env.STEDI_MANAGER_BASE_URL ?? STEDI_DEFAULT_MANAGER_BASE_URL).replace(/\/$/, ""),
     mode: env.STEDI_MODE === "production" ? "production" : "test",
   };
 }
 
-export function createStediAdapter(opts: { config: StediConfig; fetchImpl?: typeof fetch; now?: () => Date }): StediAdapter {
+export function createStediAdapter(opts: {
+  config: StediConfig;
+  fetchImpl?: typeof fetch;
+  now?: () => Date;
+  allowUnsupportedTestMode?: boolean;
+}): StediAdapter {
   const fetchImpl = opts.fetchImpl ?? fetch;
   const baseUrl = opts.config.baseUrl.replace(/\/$/, "");
   const coreBaseUrl = opts.config.coreBaseUrl.replace(/\/$/, "");
+  const healthcareBaseUrl = (opts.config.healthcareBaseUrl ?? STEDI_DEFAULT_HEALTHCARE_BASE_URL).replace(/\/$/, "");
+  const managerBaseUrl = (opts.config.managerBaseUrl ?? STEDI_DEFAULT_MANAGER_BASE_URL).replace(/\/$/, "");
   const jsonHeaders = (): Record<string, string> => ({
     Authorization: opts.config.apiKey,
     Accept: "application/json",
@@ -88,6 +119,12 @@ export function createStediAdapter(opts: { config: StediConfig; fetchImpl?: type
       `${coreBaseUrl}/polling/transactions?${query}`,
       { method: "GET", headers: jsonHeaders() },
     );
+  };
+  const preventiveRequest = async (url: string, init: RequestInit): Promise<unknown> => {
+    if (opts.config.mode !== "production" && !opts.allowUnsupportedTestMode) {
+      throw new Error("This Stedi preventive operation requires STEDI_MODE=production; use an injected mocked contract for development.");
+    }
+    return requestJson(fetchImpl, url, init);
   };
 
   return {
@@ -123,7 +160,40 @@ export function createStediAdapter(opts: { config: StediConfig; fetchImpl?: type
       `${baseUrl}/reports/v2/${encodeURIComponent(transactionId)}/277`,
       { method: "GET", headers: jsonHeaders() },
     ),
+    submitBatchEligibility: (input) => preventiveRequest(
+      `${managerBaseUrl}/eligibility-manager/batch-eligibility`,
+      { method: "POST", headers: jsonHeaders(), body: JSON.stringify(input) },
+    ),
+    getBatchEligibilityItems: (batchId, input = {}) => preventiveRequest(
+      `${managerBaseUrl}/eligibility-manager/batch/${encodeURIComponent(batchId)}/items${queryString(input)}`,
+      { method: "GET", headers: jsonHeaders() },
+    ),
+    pollBatchEligibility: (input) => preventiveRequest(
+      `${managerBaseUrl}/eligibility-manager/polling/batch-eligibility${queryString(input)}`,
+      { method: "GET", headers: jsonHeaders() },
+    ),
+    checkCoordinationOfBenefits: (payload) => preventiveRequest(
+      `${healthcareBaseUrl}/coordination-of-benefits`,
+      { method: "POST", headers: jsonHeaders(), body: JSON.stringify(payload) },
+    ),
+    submitInsuranceDiscovery: (payload) => preventiveRequest(
+      `${healthcareBaseUrl}/insurance-discovery/check/v1`,
+      { method: "POST", headers: jsonHeaders(), body: JSON.stringify(payload) },
+    ),
+    getInsuranceDiscoveryResults: (discoveryId) => preventiveRequest(
+      `${healthcareBaseUrl}/insurance-discovery/check/v1/${encodeURIComponent(discoveryId)}`,
+      { method: "GET", headers: jsonHeaders() },
+    ),
   };
+}
+
+function queryString(input: Record<string, string | number | undefined>): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(input)) {
+    if (value !== undefined) params.set(key, String(value));
+  }
+  const query = params.toString();
+  return query ? `?${query}` : "";
 }
 
 async function requestJson(fetchImpl: typeof fetch, url: string, init: RequestInit): Promise<unknown> {
