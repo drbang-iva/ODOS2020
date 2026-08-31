@@ -1,0 +1,19 @@
+{
+  "items": [
+    {
+      "batchId": "01a05814-4ac1-7712-8baf-1b609d787839",
+      "state": "COMPLETED",
+      "requestId": "8191475c-c86d-54f1-a04b-6d58442560e0",
+      "additionalInfo": {
+        "eligibility": {
+          "id": "ec_01a05814-4b21-7842-b77b-27937074dd76",
+          "submitterTransactionIdentifier": "20260831:task1-silence-probe-r3:coverage-1",
+          "payerId": "46299"
+        }
+      },
+      "createdAt": "2026-08-31T13:48:40.003Z",
+      "updatedAt": "2026-08-31T13:49:12.879Z",
+      "index": 0
+    }
+  ]
+}
