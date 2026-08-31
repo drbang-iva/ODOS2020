@@ -116,7 +116,7 @@ export async function runEligibilitySweepTick(input: EligibilitySweepTickInput):
       await pollPendingDiscoveries(input, prior);
       return;
     }
-    if (prior?.status === "failed" && prior.submissionComplete === false && prior.batchIds.length > 0) {
+    if (prior?.submissionComplete === false && prior.batchIds.length > 0) {
       await submitSweep(input, prior.lastSuccessfulAt, prior);
       return;
     }
@@ -287,6 +287,8 @@ async function pollPendingDiscoveries(
   state: EligibilitySweepState,
 ): Promise<void> {
   const findings = await input.store.loadFindings(input.date);
+  const candidates = await input.store.loadSubmittedCandidates(input.date)
+    ?? await input.store.loadCandidates(input.date);
   const pending: Record<string, string> = {};
   for (const [findingKey, discoveryId] of Object.entries(state.pendingDiscoveryIds ?? {})) {
     const result = record(await input.stedi.getInsuranceDiscoveryResults(discoveryId));
@@ -296,9 +298,7 @@ async function pollPendingDiscoveries(
     }
     const finding = findings.find((candidate) => candidate.key === findingKey);
     if (!finding) continue;
-    const candidate = (await input.store.loadCandidates(input.date)).find(
-      (value) => findingKey.startsWith(`${value.key}:`),
-    );
+    const candidate = candidates.find((value) => findingKey === `${value.key}:W23`);
     if (!candidate) continue;
     const proposal = memberIdProposal(candidate, result);
     if (proposal) finding.memberIdProposal = proposal;

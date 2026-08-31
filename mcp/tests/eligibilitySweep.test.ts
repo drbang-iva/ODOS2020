@@ -331,6 +331,7 @@ test("a later batch submission failure preserves accepted batch IDs and does not
     ...candidates[0].eligibilityRequest,
     subscriber: { firstName: "Marcus", lastName: "Test", dateOfBirth: "19800102", memberId: "CHANGED-AFTER-ACCEPTANCE" },
   };
+  store.states.push({ ...structuredClone(store.states.at(-1)!), status: "submitted" });
   await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: "2026-08-30T23:05:00.000Z" });
   assert.equal(submitCalls, 3);
   assert.deepEqual(submittedItemCounts, [10_000, 1, 1]);
@@ -446,6 +447,43 @@ test("FHIR sweep storage round-trips paged immutable candidate snapshots", async
   await store.saveSubmittedCandidates(DATE, candidates.slice(0, 1));
   assert.equal(resources.length, 2, "the unused page is cleared rather than duplicated");
   assert.deepEqual((await store.loadSubmittedCandidates(DATE))?.map((value) => value.key), [candidates[0].key]);
+});
+
+test("pending Insurance Discovery completes against the submitted candidate snapshot", async () => {
+  const source = candidate();
+  const store = memoryStore([source], false);
+  const transactionId = source.eligibilityRequest.submitterTransactionIdentifier;
+  const client = stedi({
+    getBatchEligibilityItems: async () => ({
+      items: [{
+        state: "COMPLETED",
+        eligibilityCheckResult: "FAILED",
+        submitterTransactionIdentifier: transactionId,
+        additionalInfo: { eligibility: { aaaErrors: [{ code: "72" }] } },
+      }],
+    }),
+    pollBatchEligibility: async () => ({
+      items: [{ submitterTransactionIdentifier: transactionId, aaaErrors: [{ code: "72" }] }],
+    }),
+    submitInsuranceDiscovery: async () => ({ status: "PENDING", discoveryId: "discovery-pending" }),
+    getInsuranceDiscoveryResults: async () => ({
+      status: "COMPLETE",
+      discoveryId: "discovery-pending",
+      items: [{ subscriber: { memberId: "DISCOVERED-789" } }],
+    }),
+  });
+
+  await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: NOW });
+  await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: "2026-08-30T23:05:00.000Z" });
+  source.chartMemberId = "CHANGED-WHILE-DISCOVERY-PENDING";
+  await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: "2026-08-30T23:10:00.000Z" });
+
+  assert.deepEqual(store.findings.find((finding) => finding.watcherId === "W23")?.memberIdProposal, {
+    current: "CHART-123",
+    proposed: "DISCOVERED-789",
+    source: "insurance-discovery",
+  });
+  assert.equal(store.states.at(-1)?.status, "healthy");
 });
 
 test("the worker does not overlap a slow eligibility sweep tick", async () => {
