@@ -311,7 +311,7 @@ test("partial service credentials are fatal instead of falling back to password 
   }
 });
 
-test("service refresh re-exchanges client credentials and records both authentications", async () => {
+test("client-credential login refreshes without an explicit callback and audits both exchanges", async () => {
   const originalFetch = globalThis.fetch;
   const now = Date.parse("2026-08-30T12:00:00Z");
   const expiringToken = jwt({ exp: Math.floor(now / 1000) + 299, jti: "expiring-service" });
@@ -336,19 +336,9 @@ test("service refresh re-exchanges client credentials and records both authentic
     return Response.json({ resourceType: "Patient", id: "p1" });
   };
   try {
-    let client: MedplumClient;
-    const authenticate = () => authenticateMedplumService(client, {
-      projectId: "practice-1",
-      clientId: "service-client",
-      clientSecret: "not-a-real-secret",
-      email: "break-glass@example.test",
-      password: "not-a-real-password",
-      logError: () => undefined,
-    });
-    client = createMedplumClient({
+    const client = createMedplumClient({
       baseUrl: "http://medplum.test",
       now: () => now,
-      refreshAuthentication: authenticate,
       audit: {
         record: async (row, operation) => {
           auditRows.push(row);
@@ -359,7 +349,14 @@ test("service refresh re-exchanges client credentials and records both authentic
       auditContext: { actorId: "odos-mcp", actorRole: "system" },
     });
 
-    await authenticate();
+    await authenticateMedplumService(client, {
+      projectId: "practice-1",
+      clientId: "service-client",
+      clientSecret: "not-a-real-secret",
+      email: "break-glass@example.test",
+      password: "not-a-real-password",
+      logError: () => undefined,
+    });
     const patient = await client.read<Patient>("Patient", "p1");
 
     assert.equal(patient.id, "p1");

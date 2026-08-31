@@ -42,6 +42,7 @@ import {
   createMedplumClient,
   type JsonPatchOperation,
 } from "./fhir-client.js";
+import { resolveServiceAuthOptions } from "./service-auth-options.js";
 import { searchAll, searchProjectAll } from "./fhir-search.js";
 import { createLiveOdosAuditRuntime } from "./authz/liveAudit.js";
 import { handleDocumentPrintAuditRequest } from "./authz/documentPrintAuditEndpoint.js";
@@ -526,12 +527,12 @@ import type {
 } from "./fhir/ophthalmology/types.js";
 
 const BASE_URL = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103/";
-const EMAIL = process.env.MEDPLUM_ADMIN_EMAIL;
-const PASSWORD = process.env.MEDPLUM_ADMIN_PASSWORD;
-const CLIENT_ID = process.env.MEDPLUM_CLIENT_ID;
-const CLIENT_SECRET = process.env.MEDPLUM_CLIENT_SECRET;
 const ACCESS_TOKEN = process.env.MEDPLUM_ACCESS_TOKEN;
 const INSTALLATION_PROJECT = resolveInstallationProject();
+const SERVICE_AUTH_OPTIONS = resolveServiceAuthOptions(
+  process.env,
+  INSTALLATION_PROJECT.projectId,
+);
 let installationProjectTargetLogged = false;
 const CREATE_OBSERVATION_AUDIT_HEADERS = {
   "X-ODOS-Source": "mcp/create_observation",
@@ -618,10 +619,10 @@ const auditRuntime = createLiveOdosAuditRuntime({
   medplumBaseUrl: BASE_URL,
   medplumAccessToken: process.env.ODOS_AUDIT_MEDPLUM_ACCESS_TOKEN ?? ACCESS_TOKEN,
   medplumProjectId: INSTALLATION_PROJECT.projectId,
-  medplumClientId: CLIENT_ID,
-  medplumClientSecret: CLIENT_SECRET,
-  medplumEmail: process.env.ODOS_AUDIT_MEDPLUM_EMAIL ?? EMAIL,
-  medplumPassword: process.env.ODOS_AUDIT_MEDPLUM_PASSWORD ?? PASSWORD,
+  medplumClientId: SERVICE_AUTH_OPTIONS.clientId,
+  medplumClientSecret: SERVICE_AUTH_OPTIONS.clientSecret,
+  medplumEmail: process.env.ODOS_AUDIT_MEDPLUM_EMAIL ?? SERVICE_AUTH_OPTIONS.email,
+  medplumPassword: process.env.ODOS_AUDIT_MEDPLUM_PASSWORD ?? SERVICE_AUTH_OPTIONS.password,
   disabled: process.env.ODOS_AUDIT_DISABLED === "1",
   projectionWorkerIntervalMs: Number(process.env.ODOS_AUDIT_PROJECTION_WORKER_MS ?? 60_000),
 });
@@ -5624,16 +5625,15 @@ async function authenticateWithMedplum(force = false): Promise<void> {
     console.error(formatInstallationProjectTarget(INSTALLATION_PROJECT));
     installationProjectTargetLogged = true;
   }
-  if (!ACCESS_TOKEN || force || CLIENT_ID?.trim() || CLIENT_SECRET?.trim()) {
+  if (
+    !ACCESS_TOKEN ||
+    force ||
+    SERVICE_AUTH_OPTIONS.clientId?.trim() ||
+    SERVICE_AUTH_OPTIONS.clientSecret?.trim()
+  ) {
     if (force) authPromise = undefined;
     authPromise ??= (async () => {
-      const mode = await authenticateMedplumService(fhir, {
-        projectId: INSTALLATION_PROJECT.projectId,
-        clientId: CLIENT_ID,
-        clientSecret: CLIENT_SECRET,
-        email: EMAIL,
-        password: PASSWORD,
-      });
+      const mode = await authenticateMedplumService(fhir, SERVICE_AUTH_OPTIONS);
       console.error(`odos-mcp: authenticated with Medplum via ${mode}`);
     })();
     try {

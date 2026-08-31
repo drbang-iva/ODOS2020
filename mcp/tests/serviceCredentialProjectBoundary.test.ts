@@ -77,6 +77,7 @@ test("Mandate 17: client-credential service verifies policies and serves its con
 test("audit projection authenticates with the same scoped client credentials", async () => {
   const originalFetch = globalThis.fetch;
   const requests: Array<{ path: string; grant?: string; authorization?: string }> = [];
+  let tokenExchanges = 0;
   globalThis.fetch = async (input, init) => {
     const url = new URL(String(input));
     requests.push({
@@ -85,7 +86,14 @@ test("audit projection authenticates with the same scoped client credentials", a
       authorization: new Headers(init?.headers).get("authorization") ?? undefined,
     });
     if (url.pathname === "/oauth2/token") {
-      return Response.json({ access_token: jwt({ exp: 4_102_444_800, jti: "audit-service" }) });
+      tokenExchanges += 1;
+      const lifetimeSeconds = tokenExchanges === 1 ? 299 : 3_600;
+      return Response.json({
+        access_token: jwt({
+          exp: Math.floor(Date.now() / 1_000) + lifetimeSeconds,
+          jti: `audit-service-${tokenExchanges}`,
+        }),
+      });
     }
     if (url.pathname === "/fhir/R4/AuditEvent") {
       return Response.json({ resourceType: "AuditEvent", id: "audit-1" }, { status: 201 });
@@ -113,11 +121,72 @@ test("audit projection authenticates with the same scoped client credentials", a
       outcome: "0",
     });
 
-    assert.deepEqual(requests.map((request) => request.path), ["/oauth2/token", "/fhir/R4/AuditEvent"]);
+    assert.deepEqual(
+      requests.map((request) => request.path),
+      ["/oauth2/token", "/oauth2/token", "/fhir/R4/AuditEvent"],
+    );
     assert.equal(requests[0]?.grant, "client_credentials");
-    assert.match(requests[1]?.authorization ?? "", /^Bearer /);
-    assert.notEqual(requests[1]?.authorization, "Bearer legacy-unscoped-token");
+    assert.equal(requests[1]?.grant, "client_credentials");
+    assert.match(requests[2]?.authorization ?? "", /^Bearer /);
+    assert.notEqual(requests[2]?.authorization, "Bearer legacy-unscoped-token");
   } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("audit projection logs a fatal scoped refresh failure after the second exchange", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalConsoleError = console.error;
+  const errors: string[] = [];
+  let tokenExchanges = 0;
+  globalThis.fetch = async (input) => {
+    const url = new URL(String(input));
+    if (url.pathname !== "/oauth2/token") {
+      throw new Error(`Unexpected request: ${url.pathname}`);
+    }
+    tokenExchanges += 1;
+    if (tokenExchanges === 1) {
+      return Response.json({
+        access_token: jwt({
+          exp: Math.floor(Date.now() / 1_000) + 299,
+          jti: "audit-service-expiring",
+        }),
+      });
+    }
+    return new Response("invalid_client", { status: 401, statusText: "Unauthorized" });
+  };
+  console.error = (...args: unknown[]) => { errors.push(args.map(String).join(" ")); };
+  try {
+    const client = await createAuditProjectionClient({
+      medplumBaseUrl: "http://medplum.test",
+      medplumProjectId: CONFIGURED_PROJECT,
+      medplumClientId: "service-client",
+      medplumClientSecret: "not-a-real-secret",
+      medplumEmail: "break-glass@example.test",
+      medplumPassword: "not-a-real-password",
+      disabled: false,
+    });
+
+    await assert.rejects(
+      client.create<AuditEvent>({
+        resourceType: "AuditEvent",
+        type: { system: "http://terminology.hl7.org/CodeSystem/audit-event-type", code: "rest" },
+        agent: [{ requestor: true, who: { reference: "Device/odos-mcp" } }],
+        source: { observer: { reference: "Device/odos-mcp" } },
+        recorded: "2026-08-30T12:00:00Z",
+        outcome: "0",
+      }),
+      /client-credentials exchange failed.*401 Unauthorized/i,
+    );
+
+    assert.equal(tokenExchanges, 2);
+    assert.equal(errors.length, 1);
+    assert.match(
+      errors[0]!,
+      /^odos-audit: ODOS MCP CLIENT-CREDENTIALS AUTHENTICATION FAILED:/,
+    );
+  } finally {
+    console.error = originalConsoleError;
     globalThis.fetch = originalFetch;
   }
 });

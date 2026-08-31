@@ -287,7 +287,7 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
     url: string | URL,
     init: () => RequestInit,
   ): Promise<Response> {
-    const canRefresh = Boolean(opts.refreshAuthentication || loginCredentials);
+    const canRefresh = Boolean(opts.refreshAuthentication || clientCredentials || loginCredentials);
     if (canRefresh && tokenExpiresSoon(token, opts.now?.() ?? Date.now())) {
       await refresh();
     }
