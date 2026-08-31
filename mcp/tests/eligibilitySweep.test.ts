@@ -121,6 +121,36 @@ test("the batch state machine submits once, polls on later ticks, and ingests on
   assert.equal(store.findings.length, 0, "ACTIVE with supported COB all-clear stays silent");
 });
 
+test("documented batch status nesting supplies the eligibility result", async () => {
+  const source = candidate({ cobApplicability: "unknown" });
+  const store = memoryStore([source]);
+  const client = stedi({
+    getBatchEligibilityItems: async () => ({
+      items: [{
+        state: "COMPLETED",
+        additionalInfo: {
+          eligibility: {
+            eligibilityCheckResult: "ACTIVE",
+            submitterTransactionIdentifier: source.eligibilityRequest.submitterTransactionIdentifier,
+          },
+        },
+      }],
+    }),
+    pollBatchEligibility: async () => ({
+      items: [{
+        submitterTransactionIdentifier: source.eligibilityRequest.submitterTransactionIdentifier,
+        subscriber: { firstName: "Marcus", lastName: "Test", dateOfBirth: "19800102", memberId: "PAYER-123" },
+      }],
+    }),
+  });
+
+  await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: NOW });
+  await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: "2026-08-30T23:05:00.000Z" });
+
+  assert.equal(store.findings.some((finding) => finding.watcherId === "W21"), false);
+  assert.equal(store.findings.find((finding) => finding.watcherId === "W22")?.cob?.status, "could-not-check");
+});
+
 test("inactive eligibility, coverage ending before the visit, and targeted AAA errors normalize to W21/W23 work", async () => {
   const store = memoryStore();
   const client = stedi({

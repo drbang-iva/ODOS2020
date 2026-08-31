@@ -349,7 +349,8 @@ function indexByTransactionIdentifier(items: Record<string, unknown>[]): Map<str
 }
 
 function eligibilityResult(status: Record<string, unknown>): EligibilityCheckResult | undefined {
-  const value = text(status.eligibilityCheckResult);
+  const value = text(status.eligibilityCheckResult)
+    || text(record(record(status.additionalInfo).eligibility).eligibilityCheckResult);
   return value === "ACTIVE" || value === "INACTIVE" || value === "INVESTIGATE" || value === "FAILED"
     ? value
     : text(status.state) === "COMPLETED_WITH_ERRORS" || text(status.state) === "VALIDATION_FAILED"
