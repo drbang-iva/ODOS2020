@@ -10,7 +10,7 @@ import {
   type EraBatchItem,
   type EraBatchLane,
 } from "../../lib/claims-worklist";
-import { ClaimsWorklistBoard } from "./ClaimsWorklist";
+import { EraWorklistBoard } from "./ClaimsWorklist";
 import { downloadCsvExport, queryPath } from "../../lib/reporting";
 
 export function RemittanceQueue() {
@@ -202,7 +202,7 @@ export function RemittanceQueuePanel({
         <Detail label="Open tasks" value={String(batch.openTaskCount)} />
       </div>
       <div className="flex-1 overflow-y-auto p-4">
-        <ClaimsWorklistBoard
+        <EraWorklistBoard
           items={items}
           onSelect={() => window.location.assign("/billing/claims/worklist")}
         />
