@@ -13,10 +13,11 @@ import {
 } from "node:crypto";
 import { readFileSync, statSync } from "node:fs";
 import express, { type Request, type Response, type Router } from "express";
-import { Pool } from "pg";
+import type { Pool } from "pg";
 import { buildOdosAuditEventRow, type OdosActorRole } from "../authz/odosAudit.js";
 import type { FhirAuditRecorder } from "../authz/liveAudit.js";
 import { type PracticeRoleId, PRACTICE_ROLE_IDS } from "../authz/roles.js";
+import { createPostgresPool } from "../postgres.js";
 import {
   assertPkceS256AuthorizationRequest,
   verifyPkceS256,
@@ -185,7 +186,10 @@ export class SmartAuthorizationState {
 
   constructor(seedClients: readonly SmartClientRegistration[] = [], options: { readonly postgresUrl?: string } = {}) {
     if (options.postgresUrl) {
-      this.pool = new Pool({ connectionString: options.postgresUrl, max: 2 });
+      this.pool = createPostgresPool(
+        { connectionString: options.postgresUrl, max: 2 },
+        "SMART authorization state",
+      );
     }
     for (const client of seedClients) {
       this.clients.set(client.clientId, client);

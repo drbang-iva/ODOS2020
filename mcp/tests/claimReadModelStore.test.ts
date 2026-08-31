@@ -3,11 +3,12 @@ import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { after, before, test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { Pool } from "pg";
+import type { Pool } from "pg";
 import {
   PgClaimReadModelStore,
   type ClaimReadModelRow,
 } from "../src/claims/claim-read-model-store.js";
+import { createPostgresPool } from "../src/postgres.js";
 import { loadRepoEnv } from "./integration-helpers.js";
 
 const MIGRATION_FILE = fileURLToPath(
@@ -20,11 +21,14 @@ let store: PgClaimReadModelStore;
 
 before(async () => {
   loadRepoEnv();
-  pool = new Pool({
-    connectionString: process.env.ODOS_POSTGRES_URL
-      ?? "postgresql://medplum:medplum@127.0.0.1:5433/medplum",
-    max: 1,
-  });
+  pool = createPostgresPool(
+    {
+      connectionString: process.env.ODOS_POSTGRES_URL
+        ?? "postgresql://medplum:medplum@127.0.0.1:5433/medplum",
+      max: 1,
+    },
+    "claim read-model test",
+  );
   await pool.query(`CREATE SCHEMA ${schema}`);
   await pool.query(`SET search_path TO ${schema}, public`);
   await pool.query(await readFile(MIGRATION_FILE, "utf8"));

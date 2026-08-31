@@ -1,7 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { basename } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Pool, type PoolClient } from "pg";
+import type { Pool, PoolClient } from "pg";
+import { createPostgresPool } from "../postgres.js";
 import {
   REFERENCE_POPULATIONS,
   type ReferencePopulation,
@@ -37,12 +38,15 @@ export class PgMyopiaReferencePopulationStore implements MyopiaReferencePopulati
   private schemaReady?: Promise<void>;
 
   constructor(options: { postgresUrl?: string } = {}) {
-    this.pool = new Pool({
-      connectionString: options.postgresUrl ?? DEFAULT_POSTGRES_URL,
-      max: 4,
-      connectionTimeoutMillis: 5_000,
-      statement_timeout: 10_000,
-    });
+    this.pool = createPostgresPool(
+      {
+        connectionString: options.postgresUrl ?? DEFAULT_POSTGRES_URL,
+        max: 4,
+        connectionTimeoutMillis: 5_000,
+        statement_timeout: 10_000,
+      },
+      "myopia reference population",
+    );
   }
 
   async get(patientReference: string): Promise<MyopiaPatientSettings> {

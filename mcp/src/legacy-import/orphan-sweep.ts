@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import type { Pool } from "pg";
 import type { AccessPolicy, Media } from "@medplum/fhirtypes";
 import type { BinaryUploadAuth } from "../fhir/binary-upload.js";
 import type {
@@ -6,6 +6,7 @@ import type {
   BinaryAttemptStore,
 } from "./binary-attempt-store.js";
 import { binaryIdFromReferenceUrl } from "./binary-reference.js";
+import { createPostgresPool } from "../postgres.js";
 
 const DEFAULT_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5433/medplum";
 
@@ -48,12 +49,15 @@ export class PgBinaryReferenceScanner implements BinaryReferenceScanner {
   private readonly pool: BinaryReferenceDatabase;
 
   constructor(options: { postgresUrl?: string; pool?: BinaryReferenceDatabase } = {}) {
-    this.pool = options.pool ?? new Pool({
-      connectionString: options.postgresUrl ?? DEFAULT_POSTGRES_URL,
-      max: 2,
-      connectionTimeoutMillis: 5_000,
-      statement_timeout: 30_000,
-    }) as BinaryReferenceDatabase;
+    this.pool = options.pool ?? createPostgresPool(
+      {
+        connectionString: options.postgresUrl ?? DEFAULT_POSTGRES_URL,
+        max: 2,
+        connectionTimeoutMillis: 5_000,
+        statement_timeout: 30_000,
+      },
+      "legacy binary reference scanner",
+    ) as BinaryReferenceDatabase;
   }
 
   async findAttachmentReferences(
@@ -112,12 +116,7 @@ export async function readStoredMedia(
   postgresUrl: string,
   mediaId: string,
 ): Promise<Media> {
-  const pool = new Pool({
-    connectionString: postgresUrl,
-    max: 1,
-    connectionTimeoutMillis: 5_000,
-    statement_timeout: 10_000,
-  });
+  const pool = createLegacyImportPool(postgresUrl, "stored Media read");
   try {
     const result = await pool.query<{ content: string }>(
       `SELECT content FROM "Media" WHERE id = $1 AND deleted = false`,
@@ -134,12 +133,7 @@ export async function readLegacyAcceptancePatientCounts(
   postgresUrl: string,
   projectId: string,
 ): Promise<{ total: number; nonSynthetic: number }> {
-  const pool = new Pool({
-    connectionString: postgresUrl,
-    max: 1,
-    connectionTimeoutMillis: 5_000,
-    statement_timeout: 10_000,
-  });
+  const pool = createLegacyImportPool(postgresUrl, "legacy patient count read");
   try {
     const result = await pool.query<{ total: string; non_synthetic: string }>(`
       SELECT
@@ -352,12 +346,7 @@ async function withLegacyImportPool<T>(
   postgresUrl: string,
   callback: (pool: Pool) => Promise<T>,
 ): Promise<T> {
-  const pool = new Pool({
-    connectionString: postgresUrl,
-    max: 1,
-    connectionTimeoutMillis: 5_000,
-    statement_timeout: 10_000,
-  });
+  const pool = createLegacyImportPool(postgresUrl, "legacy import callback");
   try {
     return await callback(pool);
   } finally {
@@ -370,12 +359,7 @@ export async function readMigrationImporterPolicies(
   projectId: string,
   policyName: string,
 ): Promise<Array<{ policyId: string; policy: AccessPolicy }>> {
-  const pool = new Pool({
-    connectionString: postgresUrl,
-    max: 1,
-    connectionTimeoutMillis: 5_000,
-    statement_timeout: 10_000,
-  });
+  const pool = createLegacyImportPool(postgresUrl, "migration importer policy read");
   try {
     const result = await pool.query<{ policy_id: string; content: string }>(`
       SELECT id::text AS policy_id, content
@@ -392,6 +376,18 @@ export async function readMigrationImporterPolicies(
   } finally {
     await pool.end();
   }
+}
+
+function createLegacyImportPool(postgresUrl: string, context: string): Pool {
+  return createPostgresPool(
+    {
+      connectionString: postgresUrl,
+      max: 1,
+      connectionTimeoutMillis: 5_000,
+      statement_timeout: 10_000,
+    },
+    context,
+  );
 }
 
 export async function sweepLegacyImportBinaries(input: {

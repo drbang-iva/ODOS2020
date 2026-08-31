@@ -1,11 +1,22 @@
 import assert from "node:assert/strict";
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { TestContext } from "node:test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import type {
+  Client as PostgresClient,
+  ClientConfig,
+  Pool,
+  PoolConfig,
+} from "pg";
 import { createMedplumClient } from "../src/fhir-client.js";
+import {
+  createPostgresClient,
+  createPostgresPool,
+  type PostgresErrorLogger,
+} from "../src/postgres.js";
 import { TEST_FHIR_AUDIT_CONTEXT, TEST_FHIR_AUDIT_RECORDER } from "./fhirAuditTestStub.js";
 
 export function loadRepoEnv(): void {
@@ -32,6 +43,115 @@ export function loadRepoEnv(): void {
 
     process.env[key] = stripEnvQuotes(rawValue.trim());
   }
+}
+
+export interface PostgresTestDatabase {
+  readonly connectionString: string;
+  registerDrain(drain: () => Promise<void>): void;
+  createPool(
+    config?: PoolConfig,
+    context?: string,
+    logError?: PostgresErrorLogger,
+  ): Pool;
+  connectClient(
+    config?: ClientConfig,
+    context?: string,
+    logError?: PostgresErrorLogger,
+  ): Promise<PostgresClient>;
+}
+
+export async function withPostgresTestDatabase<T>(
+  input: { readonly adminUrl: string; readonly namePrefix: string },
+  run: (database: PostgresTestDatabase) => Promise<T>,
+): Promise<T> {
+  const adminTarget = new URL(input.adminUrl);
+  assert.ok(
+    adminTarget.hostname === "localhost" || adminTarget.hostname === "127.0.0.1",
+    "PostgreSQL integration fixtures require a localhost admin URL.",
+  );
+  assert.match(input.namePrefix, /^[a-z][a-z0-9_]*$/);
+  const databaseName = `${input.namePrefix}_${randomUUID().replaceAll("-", "")}`;
+  const connectionTarget = new URL(adminTarget);
+  connectionTarget.pathname = `/${databaseName}`;
+  const admin = createPostgresClient(
+    { connectionString: input.adminUrl },
+    `${input.namePrefix} fixture admin`,
+  );
+  const drains: Array<() => Promise<void>> = [];
+  let databaseCreated = false;
+  let result: T | undefined;
+  let runError: unknown;
+
+  await admin.connect();
+  try {
+    await admin.query(`CREATE DATABASE ${quotePostgresIdentifier(databaseName)} TEMPLATE template0`);
+    databaseCreated = true;
+    const database: PostgresTestDatabase = {
+      connectionString: connectionTarget.toString(),
+      registerDrain(drain) {
+        drains.push(drain);
+      },
+      createPool(config = {}, context = `${input.namePrefix} fixture pool`, logError) {
+        const pool = createPostgresPool(
+          { ...config, connectionString: connectionTarget.toString() },
+          context,
+          logError,
+        );
+        drains.push(() => pool.end());
+        return pool;
+      },
+      async connectClient(config = {}, context = `${input.namePrefix} fixture client`, logError) {
+        const client = createPostgresClient(
+          { ...config, connectionString: connectionTarget.toString() },
+          context,
+          logError,
+        );
+        await client.connect();
+        drains.push(() => client.end());
+        return client;
+      },
+    };
+    try {
+      result = await run(database);
+    } catch (error) {
+      runError = error;
+    }
+  } finally {
+    const cleanupErrors: unknown[] = [];
+    for (const drain of drains.reverse()) {
+      try {
+        await drain();
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+    }
+    if (databaseCreated) {
+      try {
+        await waitForPostgresDatabaseDrain(admin, databaseName);
+        await admin.query(
+          `DROP DATABASE IF EXISTS ${quotePostgresIdentifier(databaseName)} WITH (FORCE)`,
+        );
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+    }
+    try {
+      await admin.end();
+    } catch (error) {
+      cleanupErrors.push(error);
+    }
+    if (runError !== undefined && cleanupErrors.length === 0) {
+      throw runError;
+    }
+    if (runError !== undefined || cleanupErrors.length > 0) {
+      throw new AggregateError(
+        [runError, ...cleanupErrors].filter((error) => error !== undefined),
+        `PostgreSQL integration fixture ${databaseName} failed.`,
+      );
+    }
+  }
+
+  return result as T;
 }
 
 export function requireMedplumAdmin(
@@ -219,4 +339,24 @@ function definedEnv(env: NodeJS.ProcessEnv): Record<string, string> {
   return Object.fromEntries(
     Object.entries(env).filter((entry): entry is [string, string] => entry[1] !== undefined),
   );
+}
+
+function quotePostgresIdentifier(value: string): string {
+  return `"${value.replaceAll('"', '""')}"`;
+}
+
+async function waitForPostgresDatabaseDrain(
+  admin: PostgresClient,
+  databaseName: string,
+): Promise<void> {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const result = await admin.query<{ connection_count: number }>(`
+      SELECT count(*)::int AS connection_count
+      FROM pg_stat_activity
+      WHERE datname = $1
+    `, [databaseName]);
+    if (result.rows[0]?.connection_count === 0) return;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error(`PostgreSQL database ${databaseName} still has active connections after drain.`);
 }

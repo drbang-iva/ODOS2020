@@ -1,9 +1,7 @@
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { test } from "node:test";
 import type { ChargeItem, Invoice, PaymentReconciliation, Resource } from "@medplum/fhirtypes";
-import { Client } from "pg";
 import {
   ODOS_BANK_CREDIT_TENDER_CODE,
   ODOS_BANK_CREDIT_TRANSACTION_SYSTEM,
@@ -18,6 +16,7 @@ import {
   type CreditBankSpendOperation,
   type PatientCreditBank,
 } from "../src/commercial-engine/ledger-store.js";
+import { withPostgresTestDatabase } from "./integration-helpers.js";
 import {
   paymentTenderExtension,
   paymentTenderExtensionForReconciliation,
@@ -402,116 +401,105 @@ test("fresh Postgres applies the Credit Bank migration and rejects ledger UPDATE
     adminTarget.hostname === "localhost" || adminTarget.hostname === "127.0.0.1",
     "ODOS_TEST_POSTGRES_URL must use localhost or 127.0.0.1.",
   );
-  const databaseName = `odos_credit_bank_${randomUUID().replaceAll("-", "")}`;
-  const testUrl = new URL(adminTarget);
-  testUrl.pathname = `/${databaseName}`;
-  const admin = new Client({ connectionString: adminUrl });
-  const probe = new Client({ connectionString: testUrl.toString() });
-  const store = new PgCommercialEngineStore({ postgresUrl: testUrl.toString() });
-  let probeConnected = false;
-
-  await admin.connect();
-  try {
-    await admin.query(`CREATE DATABASE ${databaseName} TEMPLATE template0`);
-    assert.deepEqual(await store.getCreditBank("fresh-patient"), {
-      patientFhirId: "fresh-patient",
-      balanceCents: 0,
-      ledger: [],
-    });
-    const funded = await store.finalizeCreditBankDeposit({
-      patientFhirId: "fresh-patient",
-      sourceInvoiceId: "funding-invoice",
-      depositCents: 50_000,
-      bonusCents: 5_000,
-      bonusReason: "Synthetic promotion",
-      actorUserId: "Practitioner/admin-1",
-      depositedAt: "2026-07-18T14:00:00Z",
-    });
-    assert.equal(funded.balanceCents, 55_000);
-    const depositEntry = funded.ledger.find((entry) => entry.entryType === "deposit");
-    const bonusEntry = funded.ledger.find((entry) => entry.entryType === "bonus");
-    assert.equal(depositEntry?.amountCents, 50_000);
-    assert.equal(depositEntry?.linkedFhirInvoiceId, "funding-invoice");
-    assert.equal(bonusEntry?.amountCents, 5_000);
-    assert.equal(bonusEntry?.linkedFhirInvoiceId, undefined);
-    assert.equal(bonusEntry?.reason, "Synthetic promotion");
-    await store.beginCreditBankSpend({
-      chargeItemFhirId: "service-charge",
-      patientFhirId: "fresh-patient",
-      amountCents: 55_000,
-      createdAt: "2026-07-18T15:00:00Z",
-    });
-    await store.recordCreditBankSpendInvoice("service-charge", "service-invoice");
-    const spent = await store.spendCreditBank({
-      chargeItemFhirId: "service-charge",
-      patientFhirId: "fresh-patient",
-      linkedFhirInvoiceId: "service-invoice",
-      amountCents: 55_000,
-      actorUserId: "Practitioner/staff-1",
-      spentAt: "2026-07-18T15:00:00Z",
-    });
-    assert.equal(spent.balanceCents, 0);
-    assert.equal(spent.ledger.find((entry) => entry.entryType === "spend")?.amountCents, -55_000);
-    const definition = await store.saveDefinition({
-      name: "Three-session synthetic package",
-      eligibleProcedureTypeCodes: ["synthetic-procedure"],
-      sessionCount: 3,
-      priceCents: 100_000,
-      expiryDays: 365,
-      refundPolicy: "store_credit_only",
-    });
-    const packageInstance = await store.finalizeSale({
-      definitionId: definition.id,
-      patientFhirId: "conversion-patient",
-      sourceSaleInvoiceId: "package-funding-invoice",
-      actorUserId: "Practitioner/admin-1",
-      soldAt: "2026-07-18T14:00:00Z",
-      snapshotName: definition.name,
-      snapshotEligibleProcedureTypeCodes: definition.eligibleProcedureTypeCodes,
-      snapshotSessionCount: definition.sessionCount,
-      snapshotPriceCents: definition.priceCents,
-      snapshotExpiryDays: definition.expiryDays,
-      snapshotRefundPolicy: definition.refundPolicy,
-    });
-    await store.consume({
-      packageInstanceId: packageInstance.id,
-      patientFhirId: "conversion-patient",
-      procedureTypeCodes: ["synthetic-procedure"],
-      linkedFhirInvoiceId: "first-session-invoice",
-      linkedFhirProcedureId: "first-session-procedure",
-      actorUserId: "Practitioner/staff-1",
-      consumedAt: "2026-07-19T15:00:00Z",
-    });
-    const converted = await store.convertPackageToCreditBank({
-      packageInstanceId: packageInstance.id,
-      patientFhirId: "conversion-patient",
-      actorUserId: "Practitioner/admin-1",
-      reason: "Patient requested frozen store-credit remedy",
-      convertedAt: "2026-07-20T15:00:00Z",
-    });
-    assert.equal(converted.amountCents, 66_666);
-    assert.equal(converted.package.remainingSessions, 0);
-    assert.equal(converted.creditBank?.balanceCents, 66_666);
-    assert.equal(33_334 + converted.amountCents, 100_000);
-    await probe.connect();
-    probeConnected = true;
-    const ledgerId = depositEntry!.id;
-    await assert.rejects(
-      probe.query("UPDATE odos_credit_bank_ledger SET amount_cents = 1 WHERE id = $1", [ledgerId]),
-      /append-only/,
-    );
-    await assert.rejects(
-      probe.query("DELETE FROM odos_credit_bank_ledger WHERE id = $1", [ledgerId]),
-      /append-only/,
-    );
-    const retained = await probe.query("SELECT amount_cents::text FROM odos_credit_bank_ledger WHERE id = $1", [ledgerId]);
-    assert.equal(retained.rows[0]?.amount_cents, "50000");
-  } finally {
-    if (probeConnected) await probe.end();
-    await store.close();
-    await admin.query(`DROP DATABASE IF EXISTS ${databaseName} WITH (FORCE)`);
-    await admin.end();
-  }
+  await withPostgresTestDatabase(
+    { adminUrl, namePrefix: "odos_credit_bank" },
+    async (database) => {
+      const store = new PgCommercialEngineStore({ postgresUrl: database.connectionString });
+      database.registerDrain(() => store.close());
+      assert.deepEqual(await store.getCreditBank("fresh-patient"), {
+        patientFhirId: "fresh-patient",
+        balanceCents: 0,
+        ledger: [],
+      });
+      const funded = await store.finalizeCreditBankDeposit({
+        patientFhirId: "fresh-patient",
+        sourceInvoiceId: "funding-invoice",
+        depositCents: 50_000,
+        bonusCents: 5_000,
+        bonusReason: "Synthetic promotion",
+        actorUserId: "Practitioner/admin-1",
+        depositedAt: "2026-07-18T14:00:00Z",
+      });
+      assert.equal(funded.balanceCents, 55_000);
+      const depositEntry = funded.ledger.find((entry) => entry.entryType === "deposit");
+      const bonusEntry = funded.ledger.find((entry) => entry.entryType === "bonus");
+      assert.equal(depositEntry?.amountCents, 50_000);
+      assert.equal(depositEntry?.linkedFhirInvoiceId, "funding-invoice");
+      assert.equal(bonusEntry?.amountCents, 5_000);
+      assert.equal(bonusEntry?.linkedFhirInvoiceId, undefined);
+      assert.equal(bonusEntry?.reason, "Synthetic promotion");
+      await store.beginCreditBankSpend({
+        chargeItemFhirId: "service-charge",
+        patientFhirId: "fresh-patient",
+        amountCents: 55_000,
+        createdAt: "2026-07-18T15:00:00Z",
+      });
+      await store.recordCreditBankSpendInvoice("service-charge", "service-invoice");
+      const spent = await store.spendCreditBank({
+        chargeItemFhirId: "service-charge",
+        patientFhirId: "fresh-patient",
+        linkedFhirInvoiceId: "service-invoice",
+        amountCents: 55_000,
+        actorUserId: "Practitioner/staff-1",
+        spentAt: "2026-07-18T15:00:00Z",
+      });
+      assert.equal(spent.balanceCents, 0);
+      assert.equal(spent.ledger.find((entry) => entry.entryType === "spend")?.amountCents, -55_000);
+      const definition = await store.saveDefinition({
+        name: "Three-session synthetic package",
+        eligibleProcedureTypeCodes: ["synthetic-procedure"],
+        sessionCount: 3,
+        priceCents: 100_000,
+        expiryDays: 365,
+        refundPolicy: "store_credit_only",
+      });
+      const packageInstance = await store.finalizeSale({
+        definitionId: definition.id,
+        patientFhirId: "conversion-patient",
+        sourceSaleInvoiceId: "package-funding-invoice",
+        actorUserId: "Practitioner/admin-1",
+        soldAt: "2026-07-18T14:00:00Z",
+        snapshotName: definition.name,
+        snapshotEligibleProcedureTypeCodes: definition.eligibleProcedureTypeCodes,
+        snapshotSessionCount: definition.sessionCount,
+        snapshotPriceCents: definition.priceCents,
+        snapshotExpiryDays: definition.expiryDays,
+        snapshotRefundPolicy: definition.refundPolicy,
+      });
+      await store.consume({
+        packageInstanceId: packageInstance.id,
+        patientFhirId: "conversion-patient",
+        procedureTypeCodes: ["synthetic-procedure"],
+        linkedFhirInvoiceId: "first-session-invoice",
+        linkedFhirProcedureId: "first-session-procedure",
+        actorUserId: "Practitioner/staff-1",
+        consumedAt: "2026-07-19T15:00:00Z",
+      });
+      const converted = await store.convertPackageToCreditBank({
+        packageInstanceId: packageInstance.id,
+        patientFhirId: "conversion-patient",
+        actorUserId: "Practitioner/admin-1",
+        reason: "Patient requested frozen store-credit remedy",
+        convertedAt: "2026-07-20T15:00:00Z",
+      });
+      assert.equal(converted.amountCents, 66_666);
+      assert.equal(converted.package.remainingSessions, 0);
+      assert.equal(converted.creditBank?.balanceCents, 66_666);
+      assert.equal(33_334 + converted.amountCents, 100_000);
+      const probe = await database.connectClient({}, "Credit Bank migration probe");
+      const ledgerId = depositEntry!.id;
+      await assert.rejects(
+        probe.query("UPDATE odos_credit_bank_ledger SET amount_cents = 1 WHERE id = $1", [ledgerId]),
+        /append-only/,
+      );
+      await assert.rejects(
+        probe.query("DELETE FROM odos_credit_bank_ledger WHERE id = $1", [ledgerId]),
+        /append-only/,
+      );
+      const retained = await probe.query("SELECT amount_cents::text FROM odos_credit_bank_ledger WHERE id = $1", [ledgerId]);
+      assert.equal(retained.rows[0]?.amount_cents, "50000");
+    },
+  );
 });
 
 async function creditBankFundingInvoice(): Promise<Invoice> {

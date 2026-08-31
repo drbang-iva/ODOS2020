@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { basename } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Pool, type PoolClient } from "pg";
+import type { Pool, PoolClient } from "pg";
 import type { AuditEvent } from "@medplum/fhirtypes";
 import {
   authenticateMedplumService,
@@ -17,6 +17,7 @@ import {
   type OdosAuditEventType,
 } from "./odosAudit.js";
 import type { AgentOpsAuditFields } from "../agentops/types.js";
+import { createPostgresPool } from "../postgres.js";
 
 const DEFAULT_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5433/medplum";
 const SCHEMA_MIGRATIONS_DDL_FILE = fileURLToPath(
@@ -135,10 +136,13 @@ export class LiveOdosAuditRuntime implements FhirAuditRecorder {
 
   constructor(options: LiveAuditRuntimeOptions = {}) {
     this.options = { ...options, disabled: options.disabled ?? false };
-    this.pool = new Pool({
-      connectionString: options.postgresUrl ?? DEFAULT_POSTGRES_URL,
-      max: 4,
-    });
+    this.pool = createPostgresPool(
+      {
+        connectionString: options.postgresUrl ?? DEFAULT_POSTGRES_URL,
+        max: 4,
+      },
+      "live audit",
+    );
   }
 
   async record<T>(row: OdosAuditEventRecord, operation: () => Promise<T> | T): Promise<T> {

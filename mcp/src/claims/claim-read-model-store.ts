@@ -1,7 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { basename } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Pool, type PoolClient } from "pg";
+import type { Pool, PoolClient } from "pg";
+import { createPostgresPool } from "../postgres.js";
 import type { ClaimSearchFilters, ClaimSearchRow } from "./claim-search.js";
 import {
   reconcileClaimReadModel,
@@ -46,12 +47,15 @@ export class PgClaimReadModelStore implements ClaimReadModelStore {
     initializeSchema?: boolean;
   } = {}) {
     this.ownsPool = !options.pool;
-    this.pool = options.pool ?? new Pool({
-      connectionString: options.postgresUrl ?? DEFAULT_POSTGRES_URL,
-      max: 4,
-      connectionTimeoutMillis: 5_000,
-      statement_timeout: 15_000,
-    });
+    this.pool = options.pool ?? createPostgresPool(
+      {
+        connectionString: options.postgresUrl ?? DEFAULT_POSTGRES_URL,
+        max: 4,
+        connectionTimeoutMillis: 5_000,
+        statement_timeout: 15_000,
+      },
+      "claim read model",
+    );
     if (options.initializeSchema === false) this.schemaReady = Promise.resolve();
   }
 
