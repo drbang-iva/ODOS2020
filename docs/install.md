@@ -108,8 +108,8 @@ Create `.env` from `.env.example` or export these variables in the shell that ru
 | `MEDPLUM_PROJECT_ID` | no | Compatibility fallback when installation state is absent. When set, it must equal the canonical project ID in `.odos-setup-state.json`. |
 | `MEDPLUM_CLIENT_ID` | no | ClientApplication ID for the scoped MCP service identity. Set it only together with `MEDPLUM_CLIENT_SECRET`. |
 | `MEDPLUM_CLIENT_SECRET` | no | Secret for the scoped MCP service identity. When both `MEDPLUM_CLIENT_*` values are set, MCP startup and token refresh use `client_credentials` and fail closed on partial configuration or exchange failure. |
-| `MEDPLUM_ADMIN_EMAIL` | no | Break-glass MCP password-login email. The MCP runtime uses it only when both `MEDPLUM_CLIENT_*` values are absent. |
-| `MEDPLUM_ADMIN_PASSWORD` | no | Break-glass MCP password-login secret. It never recovers a partial, invalid, or failed client-credential configuration. |
+| `MEDPLUM_ADMIN_EMAIL` | yes for first-run setup and local Compose | Medplum super-admin bootstrap email and break-glass MCP password-login email. The MCP runtime uses it only when both `MEDPLUM_CLIENT_*` values are absent. |
+| `MEDPLUM_ADMIN_PASSWORD` | yes for first-run setup and local Compose | Medplum super-admin bootstrap secret and break-glass MCP password-login secret. It never recovers a partial, invalid, or failed client-credential configuration. |
 | `MEDPLUM_STORAGE_BASE_URL` | no | Defaults to `http://localhost:8103/storage/`; set it to the public storage origin when the port or host is remapped. |
 | `ODOS_POSTGRES_URL` | no | Defaults to local compose Postgres. Used for audit rows. |
 | `ODOS_SETUP_STATE_PATH` | no | Defaults to `./.odos-setup-state.json`. No PHI is written there. |
