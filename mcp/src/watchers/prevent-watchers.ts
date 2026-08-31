@@ -111,9 +111,15 @@ function findingMessages(
   visit: string,
 ): { frontDesk: string; owner: string } {
   if (finding.watcherId === "W21") {
+    if (!finding.coverageEnd && !finding.eligibilityCheckResult) {
+      return {
+        frontDesk: `${finding.patientDisplay} comes in ${visit}. ODOS could not reach the payer, ${finding.payerDisplay}, for an eligibility response. Verify coverage manually before the visit; this is not an all-clear.`,
+        owner: `${finding.patientDisplay} comes in ${visit}. ODOS could not reach the payer, ${finding.payerDisplay}, for an eligibility response. Verify coverage manually before the visit. This is not an all-clear.`,
+      };
+    }
     const detail = finding.coverageEnd
       ? `his coverage ends ${formatDate(finding.coverageEnd)} before the visit`
-      : `his insurance shows as ${(finding.eligibilityCheckResult ?? "failed").toLowerCase()}`;
+      : `his insurance shows as ${finding.eligibilityCheckResult!.toLowerCase()}`;
     return {
       frontDesk: `${finding.patientDisplay} comes in ${visit}, and ${detail}. Worth a call before he arrives — otherwise the visit likely bills to him instead of the plan.`,
       owner: `${finding.patientDisplay} comes in ${visit}; ${detail}. Resolve coverage before the visit.`,
@@ -144,7 +150,12 @@ function findingMessages(
 }
 
 function reasonCode(finding: EligibilityFinding): string {
-  if (finding.watcherId === "W21") return finding.coverageEnd ? "coverage-ends-before-visit" : `eligibility-${(finding.eligibilityCheckResult ?? "failed").toLowerCase()}`;
+  if (finding.watcherId === "W21") {
+    if (finding.coverageEnd) return "coverage-ends-before-visit";
+    return finding.eligibilityCheckResult
+      ? `eligibility-${finding.eligibilityCheckResult.toLowerCase()}`
+      : "eligibility-undeterminable";
+  }
   if (finding.watcherId === "W22") return finding.cob?.status === "mismatch" ? "payer-primacy-mismatch" : `cob-${finding.cob?.reason ?? "could-not-check"}`;
   return `aaa-${finding.aaaCodes?.join("-") || "member-data"}`;
 }

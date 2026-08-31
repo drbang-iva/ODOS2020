@@ -79,6 +79,7 @@ export interface EligibilitySweepState {
   inFlightBatchName?: string;
   inFlightStartedAt?: string;
   pendingDiscoveryIds?: Record<string, string>;
+  eligibilityEnrichmentLagMsByItemId?: Record<string, number>;
   failureDetail?: string;
 }
 
@@ -106,11 +107,23 @@ export interface EligibilitySweepTickInput {
   stedi: PreventiveStediClient;
   date: string;
   now: string;
+  enrichmentAgeOutMs?: number;
 }
 
 const BATCH_LIMIT = 10_000;
 const TERMINAL_STATES = new Set(["COMPLETED", "COMPLETED_WITH_ERRORS", "VALIDATION_FAILED"]);
 const TARGET_AAA_CODES = new Set(["71", "72", "74", "75"]);
+// Four hours is a provisional over-estimate pending measured Stedi enrichment-lag observations.
+export const DEFAULT_ELIGIBILITY_ENRICHMENT_AGE_OUT_MS = 4 * 60 * 60_000;
+
+export function eligibilityEnrichmentAgeOutMs(value: string | undefined): number {
+  if (value === undefined || value.trim() === "") return DEFAULT_ELIGIBILITY_ENRICHMENT_AGE_OUT_MS;
+  const hours = Number(value);
+  if (!Number.isFinite(hours) || hours <= 0) {
+    throw new Error("ODOS_ELIGIBILITY_ENRICHMENT_AGE_OUT_HOURS must be a positive number.");
+  }
+  return hours * 60 * 60_000;
+}
 
 export async function runEligibilitySweepTick(input: EligibilitySweepTickInput): Promise<void> {
   const prior = await input.store.loadState(input.date);
@@ -160,6 +173,9 @@ export async function runEligibilitySweepTick(input: EligibilitySweepTickInput):
         ? { inFlightStartedAt: failedFrom.inFlightStartedAt }
         : {}),
       ...(failedFrom?.pendingDiscoveryIds ? { pendingDiscoveryIds: failedFrom.pendingDiscoveryIds } : {}),
+      ...(failedFrom?.eligibilityEnrichmentLagMsByItemId
+        ? { eligibilityEnrichmentLagMsByItemId: failedFrom.eligibilityEnrichmentLagMsByItemId }
+        : {}),
       failureDetail: safeErrorMessage(error),
     });
     throw error;
@@ -313,10 +329,22 @@ async function pollAndIngestSweep(input: EligibilitySweepTickInput, state: Eligi
       input.stedi.getBatchEligibilityItems(batchId, { pageSize: 1000, ...(pageToken ? { pageToken } : {}) })
     )),
   )).flat();
-  if (statuses.length < state.expectedChecks || statuses.some((item) => !TERMINAL_STATES.has(text(item.state)))) {
-    await input.store.saveState({ ...state, status: "processing", lastAttemptAt: input.now });
+  const observedState = recordEligibilityEnrichmentLags(state, statuses, input.now);
+  const ageOutMs = input.enrichmentAgeOutMs
+    ?? eligibilityEnrichmentAgeOutMs(process.env.ODOS_ELIGIBILITY_ENRICHMENT_AGE_OUT_HOURS);
+  const readiness = statuses.map((item) => eligibilityStatusReadiness(item, input.now, ageOutMs));
+  if (statuses.length < state.expectedChecks || readiness.some((value) => value === "processing")) {
+    await input.store.saveState({ ...observedState, status: "processing", lastAttemptAt: input.now });
     return;
   }
+  if (observedState !== state) {
+    await input.store.saveState({ ...observedState, status: "processing", lastAttemptAt: input.now });
+  }
+  const undeterminableTransactionIds = new Set(statuses.flatMap((item, index) => {
+    if (readiness[index] !== "undeterminable") return [];
+    const transactionId = statusTransactionIdentifier(item);
+    return transactionId ? [transactionId] : [];
+  }));
 
   const results = (await Promise.all(
     state.batchIds.map((batchId) => collectPages((pageToken) =>
@@ -337,11 +365,13 @@ async function pollAndIngestSweep(input: EligibilitySweepTickInput, state: Eligi
     const transactionId = candidate.eligibilityRequest.submitterTransactionIdentifier;
     const status = statusByKey.get(transactionId) ?? {};
     const result = resultByKey.get(transactionId) ?? {};
-    const eligibilityCheckResult = eligibilityResult(status);
+    const eligibilityCheckResult = undeterminableTransactionIds.has(transactionId)
+      ? undefined
+      : eligibilityResult(status);
     const coverageEnd = coverageEndDate(result);
     if (eligibilityCheckResult !== "ACTIVE" || (coverageEnd && coverageEnd < input.date)) {
       findings.push(baseFinding(candidate, "W21", input.now, {
-        ...(eligibilityCheckResult ? { eligibilityCheckResult } : { eligibilityCheckResult: "FAILED" as const }),
+        ...(eligibilityCheckResult ? { eligibilityCheckResult } : {}),
         ...(coverageEnd ? { coverageEnd } : {}),
       }));
     }
@@ -367,12 +397,67 @@ async function pollAndIngestSweep(input: EligibilitySweepTickInput, state: Eligi
   await input.store.replaceFindings(input.date, dedupeFindings(findings));
   const hasPendingDiscovery = Object.keys(pendingDiscoveryIds).length > 0;
   await input.store.saveState({
-    ...state,
+    ...observedState,
     status: hasPendingDiscovery ? "processing" : "healthy",
     lastAttemptAt: input.now,
     ...(!hasPendingDiscovery ? { lastSuccessfulAt: input.now } : {}),
     ...(hasPendingDiscovery ? { pendingDiscoveryIds } : { pendingDiscoveryIds: undefined }),
   });
+}
+
+function eligibilityStatusReadiness(
+  status: Record<string, unknown>,
+  now: string,
+  ageOutMs: number,
+): "processing" | "ready" | "undeterminable" {
+  const state = text(status.state);
+  if (!TERMINAL_STATES.has(state)) return "processing";
+  if (observedEligibilityResult(status)) return "ready";
+  if (state === "VALIDATION_FAILED") return "ready";
+  if (state !== "COMPLETED_WITH_ERRORS") return "processing";
+  const createdAt = Date.parse(text(status.createdAt));
+  const observedAt = Date.parse(now);
+  if (!Number.isFinite(createdAt) || !Number.isFinite(observedAt) || observedAt < createdAt) return "processing";
+  return observedAt - createdAt >= ageOutMs ? "undeterminable" : "processing";
+}
+
+function observedEligibilityResult(status: Record<string, unknown>): EligibilityCheckResult | undefined {
+  const value = text(status.eligibilityCheckResult)
+    || text(record(record(status.additionalInfo).eligibility).eligibilityCheckResult);
+  return value === "ACTIVE" || value === "INACTIVE" || value === "INVESTIGATE" || value === "FAILED"
+    ? value
+    : undefined;
+}
+
+function recordEligibilityEnrichmentLags(
+  state: EligibilitySweepState,
+  statuses: Record<string, unknown>[],
+  firstObservedAt: string,
+): EligibilitySweepState {
+  const observedAt = Date.parse(firstObservedAt);
+  if (!Number.isFinite(observedAt)) return state;
+  const measurements = { ...(state.eligibilityEnrichmentLagMsByItemId ?? {}) };
+  let changed = false;
+  for (const status of statuses) {
+    if (!observedEligibilityResult(status)) continue;
+    const itemId = eligibilityStatusItemId(status);
+    if (!itemId || Object.hasOwn(measurements, itemId)) continue;
+    const createdAt = Date.parse(text(status.createdAt));
+    if (!Number.isFinite(createdAt) || observedAt < createdAt) continue;
+    measurements[itemId] = observedAt - createdAt;
+    changed = true;
+  }
+  return changed ? { ...state, eligibilityEnrichmentLagMsByItemId: measurements } : state;
+}
+
+function eligibilityStatusItemId(status: Record<string, unknown>): string {
+  const eligibility = record(record(status.additionalInfo).eligibility);
+  return text(eligibility.id) || text(status.id) || text(status.requestId) || statusTransactionIdentifier(status);
+}
+
+function statusTransactionIdentifier(status: Record<string, unknown>): string {
+  return text(status.submitterTransactionIdentifier)
+    || text(record(record(status.additionalInfo).eligibility).submitterTransactionIdentifier);
 }
 
 async function pollPendingDiscoveries(
@@ -813,6 +898,7 @@ export function startEligibilitySweepWorker(input: {
   stedi: PreventiveStediClient;
   timeZone: string;
   intervalMs?: number;
+  enrichmentAgeOutMs?: number;
   now?: () => string;
 }): { stop(): void } {
   let running = false;
@@ -822,7 +908,13 @@ export function startEligibilitySweepWorker(input: {
     const now = input.now?.() ?? new Date().toISOString();
     const date = addDate(practiceDate(now, input.timeZone), 1);
     void input.authenticate()
-      .then(() => runEligibilitySweepTick({ store: input.store, stedi: input.stedi, date, now }))
+      .then(() => runEligibilitySweepTick({
+        store: input.store,
+        stedi: input.stedi,
+        date,
+        now,
+        ...(input.enrichmentAgeOutMs !== undefined ? { enrichmentAgeOutMs: input.enrichmentAgeOutMs } : {}),
+      }))
       .catch((error) => console.error("odos-mcp: eligibility sweep failed:", safeErrorMessage(error)))
       .finally(() => { running = false; });
   };

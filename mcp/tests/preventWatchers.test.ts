@@ -90,6 +90,20 @@ test("prevent findings become watcher matches and unavailable sweep evidence nev
   assert.deepEqual(await unavailable[0]!.firingRule({ now: NOW, date: "2026-08-30", settings }), []);
 });
 
+test("an undeterminable W21 never reads as failed and explicitly refuses an all-clear", async () => {
+  const [definition] = createPreventWatcherDefinitions(store([finding("W21")]), "America/New_York");
+  const [match] = await definition!.firingRule({
+    now: NOW,
+    date: "2026-08-30",
+    settings: { enabled: true, severity: "today" },
+  });
+
+  assert.equal(match?.reasonCode, "eligibility-undeterminable");
+  assert.match(match?.frontDeskMessage ?? "", /could not reach the payer/i);
+  assert.match(match?.ownerMessage ?? "", /not an all-clear/i);
+  assert.doesNotMatch(`${match?.frontDeskMessage} ${match?.ownerMessage} ${match?.reasonCode}`, /fail/i);
+});
+
 test("Before the visit groups healthy Tasks by reason while unrun sweep state exposes no reassuring groups", async () => {
   const values = [
     finding("W21", { eligibilityCheckResult: "INACTIVE" }),

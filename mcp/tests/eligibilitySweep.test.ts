@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import type { Basic, Bundle, Resource } from "@medplum/fhirtypes";
 import { StediRequestError } from "../src/claims/stedi-adapter.js";
 import {
   createFhirEligibilitySweepStore,
+  eligibilityEnrichmentAgeOutMs,
   eligibilityTransactionIdentifier,
   runEligibilitySweepTick,
   startEligibilitySweepWorker,
@@ -16,6 +18,26 @@ import {
 
 const DATE = "2026-08-31";
 const NOW = "2026-08-30T23:00:00.000Z";
+
+function stediFixture(name: string): { items: Record<string, unknown>[] } {
+  return JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), "utf8")) as {
+    items: Record<string, unknown>[];
+  };
+}
+
+function statusFixture(name: "stedi-batch-items-unenriched.json" | "stedi-batch-items-enriched.json", transactionId: string): Record<string, unknown> {
+  const item = structuredClone(stediFixture(name).items[0]!);
+  const additionalInfo = item.additionalInfo as Record<string, unknown>;
+  const eligibility = additionalInfo.eligibility as Record<string, unknown>;
+  eligibility.submitterTransactionIdentifier = transactionId;
+  return item;
+}
+
+function resultFixture(transactionId: string): Record<string, unknown> {
+  const item = structuredClone(stediFixture("stedi-batch-poll-active.json").items[0]!);
+  item.submitterTransactionIdentifier = transactionId;
+  return item;
+}
 
 function candidate(overrides: Partial<EligibilityCandidate> = {}): EligibilityCandidate {
   const value: EligibilityCandidate = {
@@ -134,6 +156,202 @@ test("the batch state machine submits once, polls on later ticks, and ingests on
   assert.equal(store.states.at(-1)?.status, "healthy");
   assert.equal(client.submitted, 1);
   assert.equal(store.findings.length, 0, "ACTIVE with supported COB all-clear stays silent");
+});
+
+test("a real COMPLETED-but-unenriched item stays processing without ingesting findings", async () => {
+  const source = candidate();
+  const transactionId = source.eligibilityRequest.submitterTransactionIdentifier;
+  const store = memoryStore([source]);
+  let resultPolls = 0;
+  const client = stedi({
+    getBatchEligibilityItems: async () => ({
+      items: [statusFixture("stedi-batch-items-unenriched.json", transactionId)],
+    }),
+    pollBatchEligibility: async () => {
+      resultPolls += 1;
+      return { items: [resultFixture(transactionId)] };
+    },
+  });
+
+  await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: NOW });
+  await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: "2026-08-31T13:50:00.000Z" });
+
+  assert.equal(store.states.at(-1)?.status, "processing");
+  assert.deepEqual(store.findings, []);
+  assert.equal(resultPolls, 0, "the full result is not ingested before status enrichment");
+});
+
+test("the same real item becomes healthy only after ACTIVE enrichment and records first-seen lag", async () => {
+  const source = candidate();
+  const transactionId = source.eligibilityRequest.submitterTransactionIdentifier;
+  const unenriched = statusFixture("stedi-batch-items-unenriched.json", transactionId);
+  const enriched = statusFixture("stedi-batch-items-enriched.json", transactionId);
+  const eligibility = ((enriched.additionalInfo as Record<string, unknown>).eligibility as Record<string, unknown>);
+  const itemId = String(eligibility.id);
+  let statusPolls = 0;
+  const store = memoryStore([source]);
+  const client = stedi({
+    getBatchEligibilityItems: async () => ({ items: [statusPolls++ === 0 ? unenriched : enriched] }),
+    pollBatchEligibility: async () => ({ items: [resultFixture(transactionId)] }),
+  });
+
+  await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: NOW });
+  await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: "2026-08-31T13:50:00.000Z" });
+  await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: "2026-08-31T13:55:00.000Z" });
+
+  const finalState = store.states.at(-1);
+  assert.deepEqual(store.findings, [], "ACTIVE without COB or AAA findings is completely silent");
+  assert.equal(finalState?.status, "healthy", "the positive engine signal proves ingestion completed");
+  assert.equal(finalState?.lastSuccessfulAt, "2026-08-31T13:55:00.000Z");
+  assert.equal(
+    finalState?.eligibilityEnrichmentLagMsByItemId?.[itemId],
+    Date.parse("2026-08-31T13:55:00.000Z") - Date.parse(String(enriched.createdAt)),
+  );
+  assert.equal(
+    /eligibilityCheckResult\s*:\s*"FAILED"\s+as const/.test(
+      readFileSync(new URL("../src/jobs/eligibilitySweep.ts", import.meta.url), "utf8"),
+    ),
+    false,
+    "absence must not be stamped as FAILED during ingestion",
+  );
+});
+
+test("the first observed enrichment lag survives a later ingestion failure and is never overwritten", async () => {
+  const source = candidate();
+  const transactionId = source.eligibilityRequest.submitterTransactionIdentifier;
+  const enriched = statusFixture("stedi-batch-items-enriched.json", transactionId);
+  const eligibility = ((enriched.additionalInfo as Record<string, unknown>).eligibility as Record<string, unknown>);
+  const itemId = String(eligibility.id);
+  const store = memoryStore([source]);
+  let resultPolls = 0;
+  const client = stedi({
+    getBatchEligibilityItems: async () => ({ items: [enriched] }),
+    pollBatchEligibility: async () => {
+      resultPolls += 1;
+      if (resultPolls === 1) throw new Error("synthetic result-ingestion outage");
+      return { items: [resultFixture(transactionId)] };
+    },
+  });
+  const firstSeenAt = "2026-08-31T13:55:00.000Z";
+  const expectedLag = Date.parse(firstSeenAt) - Date.parse(String(enriched.createdAt));
+
+  await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: NOW });
+  await assert.rejects(
+    runEligibilitySweepTick({ store, stedi: client, date: DATE, now: firstSeenAt }),
+    /synthetic result-ingestion outage/,
+  );
+  assert.equal(store.states.at(-1)?.eligibilityEnrichmentLagMsByItemId?.[itemId], expectedLag);
+
+  await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: "2026-08-31T14:55:00.000Z" });
+  assert.equal(store.states.at(-1)?.status, "healthy");
+  assert.equal(store.states.at(-1)?.eligibilityEnrichmentLagMsByItemId?.[itemId], expectedLag);
+});
+
+test("real enriched INACTIVE and FAILED results still produce W21 findings", async () => {
+  const inactive = candidate({ key: "inactive" });
+  const failed = candidate({ key: "failed" });
+  const sources = [inactive, failed];
+  const statuses = sources.map((source, index) => {
+    const status = statusFixture("stedi-batch-items-enriched.json", source.eligibilityRequest.submitterTransactionIdentifier);
+    const eligibility = ((status.additionalInfo as Record<string, unknown>).eligibility as Record<string, unknown>);
+    eligibility.eligibilityCheckResult = index === 0 ? "INACTIVE" : "FAILED";
+    eligibility.id = `eligibility-${index + 1}`;
+    return status;
+  });
+  const store = memoryStore(sources);
+  const client = stedi({
+    getBatchEligibilityItems: async () => ({ items: statuses }),
+    pollBatchEligibility: async () => ({
+      items: sources.map((source) => resultFixture(source.eligibilityRequest.submitterTransactionIdentifier)),
+    }),
+  });
+
+  await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: NOW });
+  await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: "2026-08-31T14:00:00.000Z" });
+
+  assert.deepEqual(
+    store.findings.filter((finding) => finding.watcherId === "W21").map((finding) => finding.eligibilityCheckResult).sort(),
+    ["FAILED", "INACTIVE"],
+  );
+});
+
+test("real ACTIVE enrichment still emits independent COB and AAA findings", async () => {
+  const source = candidate();
+  const transactionId = source.eligibilityRequest.submitterTransactionIdentifier;
+  const status = statusFixture("stedi-batch-items-enriched.json", transactionId);
+  const result = resultFixture(transactionId);
+  result.aaaErrors = [{ code: "72" }];
+  const store = memoryStore([source]);
+  const client = stedi({
+    getBatchEligibilityItems: async () => ({ items: [status] }),
+    pollBatchEligibility: async () => ({ items: [result] }),
+    checkCoordinationOfBenefits: async () => ({
+      coordinationOfBenefits: { classification: "CobInstanceExistsPrimacyDetermined" },
+      benefitsInformation: [{
+        code: "R",
+        benefitsRelatedEntities: [{
+          entityIdentifier: "Primary Payer",
+          entityName: "Other Primary Health",
+          entityIdentificationValue: "PRIMARY2",
+        }],
+      }],
+    }),
+  });
+
+  await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: NOW });
+  await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: "2026-08-31T14:00:00.000Z" });
+
+  assert.deepEqual(store.findings.map((finding) => finding.watcherId).sort(), ["W22", "W23"]);
+  assert.equal(store.findings.some((finding) => finding.watcherId === "W21"), false);
+});
+
+test("unenriched COMPLETED_WITH_ERRORS requires a valid four-hour age before becoming undeterminable", async () => {
+  assert.equal(eligibilityEnrichmentAgeOutMs(undefined), 4 * 60 * 60_000);
+  assert.equal(eligibilityEnrichmentAgeOutMs("6"), 6 * 60 * 60_000);
+  assert.throws(() => eligibilityEnrichmentAgeOutMs("0"), /positive number/);
+
+  const source = candidate({ cobApplicability: "unknown" });
+  const transactionId = source.eligibilityRequest.submitterTransactionIdentifier;
+  const base = statusFixture("stedi-batch-items-unenriched.json", transactionId);
+  base.state = "COMPLETED_WITH_ERRORS";
+  const createdAt = String(base.createdAt);
+  let statusPolls = 0;
+  const store = memoryStore([source]);
+  const client = stedi({
+    getBatchEligibilityItems: async () => {
+      statusPolls += 1;
+      const status = structuredClone(base);
+      if (statusPolls === 1) delete status.createdAt;
+      if (statusPolls === 2) status.createdAt = "not-a-timestamp";
+      return { items: [status] };
+    },
+    pollBatchEligibility: async () => ({ items: [] }),
+  });
+
+  await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: NOW });
+  await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: "2026-08-31T18:00:00.000Z" });
+  assert.equal(store.states.at(-1)?.status, "processing", "missing createdAt cannot imply an outcome");
+  await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: "2026-08-31T18:05:00.000Z" });
+  assert.equal(store.states.at(-1)?.status, "processing", "malformed createdAt cannot imply an outcome");
+  await runEligibilitySweepTick({
+    store,
+    stedi: client,
+    date: DATE,
+    now: new Date(Date.parse(createdAt) + 4 * 60 * 60_000 - 1).toISOString(),
+  });
+  assert.equal(store.states.at(-1)?.status, "processing", "the configured boundary is not rounded down");
+  await runEligibilitySweepTick({
+    store,
+    stedi: client,
+    date: DATE,
+    now: new Date(Date.parse(createdAt) + 4 * 60 * 60_000).toISOString(),
+  });
+
+  const w21 = store.findings.find((finding) => finding.watcherId === "W21");
+  assert.ok(w21, "age-out produces manual-verification work rather than hanging forever");
+  assert.equal(w21.eligibilityCheckResult, undefined, "undeterminable is not a payer result");
+  assert.equal(store.states.at(-1)?.status, "healthy");
+  assert.doesNotMatch(JSON.stringify({ state: store.states.at(-1), finding: w21 }), /FAILED/i);
 });
 
 test("documented batch status nesting supplies the eligibility result", async () => {
