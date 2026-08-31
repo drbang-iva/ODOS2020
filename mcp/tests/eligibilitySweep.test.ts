@@ -283,6 +283,69 @@ test("a completed sweep rerun remains one finding per appointment and does not r
   assert.equal(store.findings.filter((finding) => finding.watcherId === "W21").length, 1);
 });
 
+test("a later batch submission failure preserves accepted batch IDs and does not resubmit them", async () => {
+  const candidates = Array.from({ length: 10_001 }, (_, index) => candidate({
+    key: `2026-08-31:appointment-${index}:coverage-${index}`,
+    appointmentReference: `Appointment/appointment-${index}`,
+    coverageReference: `Coverage/coverage-${index}`,
+    eligibilityRequest: {
+      ...candidate().eligibilityRequest,
+      submitterTransactionIdentifier: `2026-08-31:appointment-${index}:coverage-${index}`,
+    },
+  }));
+  const store = memoryStore(candidates, false);
+  let submitCalls = 0;
+  const client = stedi({
+    submitBatchEligibility: async () => {
+      submitCalls += 1;
+      if (submitCalls === 1) return { batchId: "accepted-batch", submittedAt: NOW };
+      throw new Error("later chunk failed");
+    },
+    getBatchEligibilityItems: async () => { throw new Error("partial submission must remain failed"); },
+  });
+
+  await assert.rejects(runEligibilitySweepTick({ store, stedi: client, date: DATE, now: NOW }), /later chunk failed/);
+  assert.equal(store.states.at(-1)?.status, "failed");
+  assert.deepEqual(store.states.at(-1)?.batchIds, ["accepted-batch"]);
+  assert.equal(store.states.at(-1)?.expectedChecks, 10_001);
+  assert.equal(store.states.at(-1)?.submittedTransactionIdentifiers?.length, 10_000);
+  assert.equal(store.states.at(-1)?.submissionComplete, false);
+
+  await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: "2026-08-30T23:05:00.000Z" });
+  assert.equal(submitCalls, 2);
+  assert.equal(store.states.at(-1)?.status, "failed");
+});
+
+test("a candidate added after submission is not recorded as an unchecked failure", async () => {
+  const initial = candidate({ cobApplicability: "unknown" });
+  const candidates = [initial];
+  const store = memoryStore(candidates, false);
+  const client = stedi({
+    getBatchEligibilityItems: async () => ({
+      items: [{
+        state: "COMPLETED",
+        eligibilityCheckResult: "ACTIVE",
+        submitterTransactionIdentifier: initial.eligibilityRequest.submitterTransactionIdentifier,
+      }],
+    }),
+  });
+
+  await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: NOW });
+  candidates.push(candidate({
+    key: "2026-08-31:appointment-late:coverage-late",
+    appointmentReference: "Appointment/appointment-late",
+    coverageReference: "Coverage/coverage-late",
+    cobApplicability: "unknown",
+    eligibilityRequest: {
+      ...candidate().eligibilityRequest,
+      submitterTransactionIdentifier: "2026-08-31:appointment-late:coverage-late",
+    },
+  }));
+  await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: "2026-08-30T23:05:00.000Z" });
+
+  assert.equal(store.findings.some((finding) => finding.appointmentReference === "Appointment/appointment-late"), false);
+});
+
 test("the worker does not overlap a slow eligibility sweep tick", async () => {
   let authenticateCalls = 0;
   let releaseAuthentication!: () => void;

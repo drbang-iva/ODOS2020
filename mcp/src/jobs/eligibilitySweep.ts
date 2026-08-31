@@ -71,6 +71,8 @@ export interface EligibilitySweepState {
   lastSuccessfulAt?: string;
   batchIds: string[];
   expectedChecks: number;
+  submittedTransactionIdentifiers?: string[];
+  submissionComplete?: boolean;
   pendingDiscoveryIds?: Record<string, string>;
   failureDetail?: string;
 }
@@ -111,19 +113,28 @@ export async function runEligibilitySweepTick(input: EligibilitySweepTickInput):
       await pollPendingDiscoveries(input, prior);
       return;
     }
+    if (prior?.status === "failed" && prior.submissionComplete === false && prior.batchIds.length > 0) return;
     if (!prior || (prior.status === "failed" && prior.batchIds.length === 0)) {
       await submitSweep(input, prior?.lastSuccessfulAt);
       return;
     }
     await pollAndIngestSweep(input, prior);
   } catch (error) {
+    const latest = await input.store.loadState(input.date);
+    const failedFrom = latest ?? prior;
     await input.store.saveState({
       date: input.date,
       status: "failed",
       lastAttemptAt: input.now,
-      ...(prior?.lastSuccessfulAt ? { lastSuccessfulAt: prior.lastSuccessfulAt } : {}),
-      batchIds: prior?.batchIds ?? [],
-      expectedChecks: prior?.expectedChecks ?? 0,
+      ...(failedFrom?.lastSuccessfulAt ? { lastSuccessfulAt: failedFrom.lastSuccessfulAt } : {}),
+      batchIds: failedFrom?.batchIds ?? [],
+      expectedChecks: failedFrom?.expectedChecks ?? 0,
+      ...(failedFrom?.submittedTransactionIdentifiers
+        ? { submittedTransactionIdentifiers: failedFrom.submittedTransactionIdentifiers }
+        : {}),
+      ...(failedFrom?.submissionComplete !== undefined
+        ? { submissionComplete: failedFrom.submissionComplete }
+        : {}),
       failureDetail: safeErrorMessage(error),
     });
     throw error;
@@ -141,10 +152,13 @@ async function submitSweep(input: EligibilitySweepTickInput, lastSuccessfulAt?: 
       lastSuccessfulAt: input.now,
       batchIds: [],
       expectedChecks: 0,
+      submittedTransactionIdentifiers: [],
+      submissionComplete: true,
     });
     return;
   }
   const batchIds: string[] = [];
+  const submittedTransactionIdentifiers: string[] = [];
   for (let offset = 0; offset < candidates.length; offset += BATCH_LIMIT) {
     const chunk = candidates.slice(offset, offset + BATCH_LIMIT);
     const result = record(await input.stedi.submitBatchEligibility({
@@ -155,15 +169,18 @@ async function submitSweep(input: EligibilitySweepTickInput, lastSuccessfulAt?: 
     const batchId = text(result.batchId);
     if (!batchId) throw new Error("Stedi batch eligibility response omitted batchId.");
     batchIds.push(batchId);
+    submittedTransactionIdentifiers.push(...chunk.map((candidate) => candidate.eligibilityRequest.submitterTransactionIdentifier));
+    await input.store.saveState({
+      date: input.date,
+      status: "submitted",
+      lastAttemptAt: input.now,
+      ...(lastSuccessfulAt ? { lastSuccessfulAt } : {}),
+      batchIds: [...batchIds],
+      expectedChecks: candidates.length,
+      submittedTransactionIdentifiers: [...submittedTransactionIdentifiers],
+      submissionComplete: submittedTransactionIdentifiers.length === candidates.length,
+    });
   }
-  await input.store.saveState({
-    date: input.date,
-    status: "submitted",
-    lastAttemptAt: input.now,
-    ...(lastSuccessfulAt ? { lastSuccessfulAt } : {}),
-    batchIds,
-    expectedChecks: candidates.length,
-  });
 }
 
 async function pollAndIngestSweep(input: EligibilitySweepTickInput, state: EligibilitySweepState): Promise<void> {
@@ -182,9 +199,11 @@ async function pollAndIngestSweep(input: EligibilitySweepTickInput, state: Eligi
       input.stedi.pollBatchEligibility({ batchId, pageSize: 200, ...(pageToken ? { pageToken } : {}) })
     )),
   )).flat();
-  const candidates = uniqueCandidates(await input.store.loadCandidates(input.date));
   const statusByKey = indexByTransactionIdentifier(statuses);
   const resultByKey = indexByTransactionIdentifier(results);
+  const submitted = new Set(state.submittedTransactionIdentifiers ?? statusByKey.keys());
+  const candidates = uniqueCandidates(await input.store.loadCandidates(input.date))
+    .filter((candidate) => submitted.has(candidate.eligibilityRequest.submitterTransactionIdentifier));
   const findings: EligibilityFinding[] = [];
   const pendingDiscoveryIds: Record<string, string> = {};
 
