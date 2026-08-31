@@ -45,6 +45,28 @@ test("expanded Work rows show independent billed and touched days plus sourced m
   assert.match(html, /charged/);
 });
 
+test("accepted claims remain charged until payer adjudication evidence exists", () => {
+  const group = missingProcedureGroup();
+  const projection: WorkProjection = {
+    status: "healthy",
+    lastSuccessfulAt: "2026-08-30T12:00:00.000Z",
+    lanes: buildWorkLanes([{
+      ...group,
+      rows: group.rows.map((row) => ({ ...row, status: "accepted" })),
+    }], []),
+  };
+  const html = renderToStaticMarkup(
+    <BillingWork
+      initialProjection={projection}
+      initialActiveLane="holds"
+      initialExpandedGroupKey="holds:claim:missing-procedure-code"
+    />,
+  );
+
+  assert.match(html, /charged/);
+  assert.doesNotMatch(html, /adjudicated/);
+});
+
 test("all seven lane labels remain visible while healthy counts and a truthful zero state render", () => {
   const html = renderToStaticMarkup(
     <BillingWork initialProjection={healthyWorkFixture()} initialActiveLane="hygiene" />,

@@ -387,7 +387,7 @@ function ClaimRows({ group }: { group: WorkClaimGroup }) {
 }
 
 function MoneyState({ status }: { status: string }) {
-  const state = status === "submitted" || status === "queued" ? "charged" : "adjudicated";
+  const state = status === "submitted" || status === "queued" || status === "accepted" ? "charged" : "adjudicated";
   return <span className="inline-flex rounded-full border border-[var(--odos-line-2)] bg-[var(--odos-elevated)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--odos-muted)]">{state}</span>;
 }
 
