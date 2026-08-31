@@ -1,10 +1,8 @@
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { Client } from "pg";
 import {
   ingestWenoDrugDatabaseFile,
   parseWenoDrugDatabase,
@@ -13,6 +11,7 @@ import {
   WENO_NON_CONTROLLED_DEA_SCHEDULE_CODE,
   type WenoDrugRow,
 } from "../src/jobs/syncWenoDrugDatabase.js";
+import { withPostgresTestDatabase } from "./integration-helpers.js";
 
 const HEADERS = [
   "RXCUI(DrugCoded)",
@@ -194,27 +193,23 @@ test("Postgres drug replacement is atomic and a failed stage load preserves the 
     return;
   }
 
-  const databaseName = `odos_weno_drugs_${randomUUID().replaceAll("-", "")}`;
-  const testUrl = new URL(adminUrl);
-  testUrl.pathname = `/${databaseName}`;
-  const admin = new Client({ connectionString: adminUrl });
-  const storage = new PostgresWenoDrugDatabaseStorage({ postgresUrl: testUrl.toString() });
-  await admin.connect();
-  try {
-    await admin.query(`CREATE DATABASE ${databaseName} TEMPLATE template0`);
-    await storage.store([drugRow("600", "Original row")]);
-    await assert.rejects(
-      storage.store([drugRow("601", "Duplicate one"), drugRow("601", "Duplicate two")]),
-    );
-    assert.deepEqual((await storage.list()).map((row) => row.psnDescription), ["Original row"]);
-    await storage.store([drugRow("602", "Replacement row")]);
-    assert.deepEqual((await storage.list()).map((row) => row.psnDescription), ["Replacement row"]);
-    await assert.rejects(storage.store([]), /at least one parsed row/);
-  } finally {
-    await storage.close();
-    await admin.query(`DROP DATABASE IF EXISTS ${databaseName} WITH (FORCE)`);
-    await admin.end();
-  }
+  await withPostgresTestDatabase(
+    { adminUrl, namePrefix: "odos_weno_drugs" },
+    async (database) => {
+      const storage = new PostgresWenoDrugDatabaseStorage({
+        postgresUrl: database.connectionString,
+      });
+      database.registerDrain(() => storage.close());
+      await storage.store([drugRow("600", "Original row")]);
+      await assert.rejects(
+        storage.store([drugRow("601", "Duplicate one"), drugRow("601", "Duplicate two")]),
+      );
+      assert.deepEqual((await storage.list()).map((row) => row.psnDescription), ["Original row"]);
+      await storage.store([drugRow("602", "Replacement row")]);
+      assert.deepEqual((await storage.list()).map((row) => row.psnDescription), ["Replacement row"]);
+      await assert.rejects(storage.store([]), /at least one parsed row/);
+    },
+  );
 });
 
 function syntheticDrugDatabase(

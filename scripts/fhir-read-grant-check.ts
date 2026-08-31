@@ -119,8 +119,8 @@ export const NON_FHIR_LITERAL_CALL_SITES = [
 ] as const satisfies readonly NonFhirLiteralCallSite[];
 
 export const SERVICE_IDENTITY_FHIR_WRITE_CALL_SITES = [
-  { path: "mcp/src/authz/liveAudit.ts", line: 455, callee: "client.create", resourceType: "AuditEvent", reason: "Dedicated audit projection client." },
-  { path: "mcp/src/authz/liveAudit.ts", line: 465, callee: "(await this.projectionClient).create", resourceType: "AuditEvent", reason: "Dedicated password-authenticated audit projection fallback client." },
+  { path: "mcp/src/authz/liveAudit.ts", line: 459, callee: "client.create", resourceType: "AuditEvent", reason: "Dedicated audit projection client." },
+  { path: "mcp/src/authz/liveAudit.ts", line: 469, callee: "(await this.projectionClient).create", resourceType: "AuditEvent", reason: "Dedicated password-authenticated audit projection fallback client." },
   { path: "mcp/src/clinical-graph/protocol-store.ts", line: 139, callee: "this.fhir.delete", resourceType: "Basic", reason: "ProtocolDefinitionStore is constructed with the process service client." },
   { path: "mcp/src/fax/inbound-fax.ts", line: 327, callee: "this.fhir.create", resourceType: "AuditEvent", reason: "Inbound fax triage service receives the explicit serviceFhir client." },
   { path: "mcp/src/fax/inbound-fax.ts", line: 425, callee: "this.fhir.create", resourceType: "AuditEvent", reason: "Inbound fax triage service receives the explicit serviceFhir client." },

@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { basename } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Pool, type PoolClient, type QueryResultRow } from "pg";
+import type { Pool, PoolClient, QueryResultRow } from "pg";
+import { createPostgresPool } from "../postgres.js";
 
 const DEFAULT_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5433/medplum";
 const SCHEMA_LEDGER_FILE = fileURLToPath(
@@ -52,12 +53,15 @@ export class PgBinaryAttemptStore implements BinaryAttemptStore {
   private schemaReady?: Promise<void>;
 
   constructor(options: { postgresUrl?: string; pool?: Pool } = {}) {
-    this.pool = options.pool ?? new Pool({
-      connectionString: options.postgresUrl ?? DEFAULT_POSTGRES_URL,
-      max: 4,
-      connectionTimeoutMillis: 5_000,
-      statement_timeout: 15_000,
-    });
+    this.pool = options.pool ?? createPostgresPool(
+      {
+        connectionString: options.postgresUrl ?? DEFAULT_POSTGRES_URL,
+        max: 4,
+        connectionTimeoutMillis: 5_000,
+        statement_timeout: 15_000,
+      },
+      "legacy binary attempts",
+    );
   }
 
   async open(input: {

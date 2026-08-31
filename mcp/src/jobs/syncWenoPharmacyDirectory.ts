@@ -3,8 +3,9 @@ import { basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse } from "csv-parse/sync";
 import { unzipSync } from "fflate";
-import { Pool, type PoolClient } from "pg";
+import type { Pool, PoolClient } from "pg";
 import type { WenoDirectoryDownloadConfig } from "../integrations/weno/config.js";
+import { createPostgresPool } from "../postgres.js";
 import {
   downloadPharmacyDirectory,
   type PharmacyDirectoryRequest,
@@ -122,10 +123,13 @@ export class PostgresWenoPharmacyDirectoryStorage implements WenoPharmacyDirecto
   private schemaReady?: Promise<void>;
 
   constructor(options: { postgresUrl?: string; pool?: WenoPharmacyDirectoryPool } = {}) {
-    this.pool = options.pool ?? new Pool({
-      connectionString: options.postgresUrl ?? DEFAULT_POSTGRES_URL,
-      max: 4,
-    });
+    this.pool = options.pool ?? createPostgresPool(
+      {
+        connectionString: options.postgresUrl ?? DEFAULT_POSTGRES_URL,
+        max: 4,
+      },
+      "WENO pharmacy directory",
+    );
     this.ownsPool = !options.pool;
   }
 

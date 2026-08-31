@@ -1,8 +1,6 @@
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
 import test from "node:test";
 import { zipSync } from "fflate";
-import { Client } from "pg";
 import type { Basic, Bundle } from "@medplum/fhirtypes";
 import {
   buildWenoMappingResource,
@@ -22,6 +20,7 @@ import {
   syncWenoPharmacyDirectory,
   type PharmacyDirectoryRow,
 } from "../src/jobs/syncWenoPharmacyDirectory.js";
+import { withPostgresTestDatabase } from "./integration-helpers.js";
 
 const CONFIG: Required<WenoDirectoryDownloadConfig> = {
   encryptionKey: "secret-test-key",
@@ -457,38 +456,34 @@ test("Postgres pharmacy storage replaces atomically and incrementally upserts an
     return;
   }
 
-  const databaseName = `odos_weno_directory_${randomUUID().replaceAll("-", "")}`;
-  const testUrl = new URL(adminUrl);
-  testUrl.pathname = `/${databaseName}`;
-  const admin = new Client({ connectionString: adminUrl });
-  const storage = new PostgresWenoPharmacyDirectoryStorage({ postgresUrl: testUrl.toString() });
-  await admin.connect();
-  try {
-    await admin.query(`CREATE DATABASE ${databaseName} TEMPLATE template0`);
-    const oldRow = pharmacyRow({ ncpdpId: "1000001", businessName: "Old Pharmacy" });
-    const replacement = pharmacyRow({ ncpdpId: "1000002", businessName: "Replacement Pharmacy" });
-    assert.equal(await storage.store([oldRow], "replace"), 1);
-    assert.equal(await storage.store([replacement], "replace"), 1);
-    assert.deepEqual((await storage.list()).map((row) => row.businessName), ["Replacement Pharmacy"]);
+  await withPostgresTestDatabase(
+    { adminUrl, namePrefix: "odos_weno_directory" },
+    async (database) => {
+      const storage = new PostgresWenoPharmacyDirectoryStorage({
+        postgresUrl: database.connectionString,
+      });
+      database.registerDrain(() => storage.close());
+      const oldRow = pharmacyRow({ ncpdpId: "1000001", businessName: "Old Pharmacy" });
+      const replacement = pharmacyRow({ ncpdpId: "1000002", businessName: "Replacement Pharmacy" });
+      assert.equal(await storage.store([oldRow], "replace"), 1);
+      assert.equal(await storage.store([replacement], "replace"), 1);
+      assert.deepEqual((await storage.list()).map((row) => row.businessName), ["Replacement Pharmacy"]);
 
-    const updated = { ...replacement, businessName: "Updated Pharmacy" };
-    assert.equal(await storage.store([updated], "incremental"), 1);
-    assert.deepEqual((await storage.list()).map((row) => row.businessName), ["Updated Pharmacy"]);
+      const updated = { ...replacement, businessName: "Updated Pharmacy" };
+      assert.equal(await storage.store([updated], "incremental"), 1);
+      assert.deepEqual((await storage.list()).map((row) => row.businessName), ["Updated Pharmacy"]);
 
-    const international = pharmacyRow({
-      ncpdpId: "",
-      mutuallyDefinedId: "INT-1",
-      businessName: "International Pharmacy",
-      international: true,
-    });
-    const tombstone = { ...updated, deleted: "2026-07-17T00:00:00.000Z" };
-    assert.equal(await storage.store([international, tombstone], "incremental"), 2);
-    assert.deepEqual((await storage.list()).map((row) => row.businessName), ["International Pharmacy"]);
-  } finally {
-    await storage.close();
-    await admin.query(`DROP DATABASE IF EXISTS ${databaseName} WITH (FORCE)`);
-    await admin.end();
-  }
+      const international = pharmacyRow({
+        ncpdpId: "",
+        mutuallyDefinedId: "INT-1",
+        businessName: "International Pharmacy",
+        international: true,
+      });
+      const tombstone = { ...updated, deleted: "2026-07-17T00:00:00.000Z" };
+      assert.equal(await storage.store([international, tombstone], "incremental"), 2);
+      assert.deepEqual((await storage.list()).map((row) => row.businessName), ["International Pharmacy"]);
+    },
+  );
 });
 
 test("pharmacy directory sync blocks before HTTP when WENO is unconfigured", async () => {

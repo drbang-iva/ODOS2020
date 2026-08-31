@@ -2,7 +2,8 @@ import { createHash, randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { basename } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Pool, type PoolClient } from "pg";
+import type { Pool, PoolClient } from "pg";
+import { createPostgresPool } from "../postgres.js";
 
 const DEFAULT_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5433/medplum";
 const SCHEMA_LEDGER_FILE = fileURLToPath(
@@ -221,10 +222,13 @@ export class PgCommercialEngineStore implements CommercialEngineStore {
 
   constructor(options: { postgresUrl?: string; pool?: Pick<Pool, "connect" | "query" | "end"> } = {}) {
     this.ownsPool = !options.pool;
-    this.pool = options.pool ?? new Pool({
-      connectionString: options.postgresUrl ?? DEFAULT_POSTGRES_URL,
-      max: 4,
-    });
+    this.pool = options.pool ?? createPostgresPool(
+      {
+        connectionString: options.postgresUrl ?? DEFAULT_POSTGRES_URL,
+        max: 4,
+      },
+      "commercial engine ledger",
+    );
   }
 
   async close(): Promise<void> {

@@ -1,8 +1,6 @@
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
 import { test } from "node:test";
 import type { Bundle, Observation, Patient, Provenance } from "@medplum/fhirtypes";
-import { Client } from "pg";
 import { OBSERVATION_AXIAL_LENGTH_PROFILE_URL } from "../src/fhir/myopiaManagement.js";
 import {
   evaluateTranscriptionInvariants,
@@ -16,6 +14,7 @@ import {
 } from "../src/clinical-graph/myopia-reference-dataset.js";
 import { buildMyopiaFindingDefinitions } from "../src/clinical-graph/myopia-finding-definition.js";
 import { LEGACY_ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../src/clinical-graph/refractive-status.js";
+import { withPostgresTestDatabase } from "./integration-helpers.js";
 import {
   handleEyeGrowthVisibilityRequest,
   handleMyopiaCaptureRequest,
@@ -634,29 +633,26 @@ test("reference-population migration succeeds on fresh and populated Postgres da
     adminTarget.hostname === "localhost" || adminTarget.hostname === "127.0.0.1",
     "ODOS_TEST_POSTGRES_URL must use localhost or 127.0.0.1.",
   );
-  const admin = new Client({ connectionString: adminUrl });
-  const databaseNames = [
-    `odos_myopia_fresh_${randomUUID().replaceAll("-", "")}`,
-    `odos_myopia_populated_${randomUUID().replaceAll("-", "")}`,
-  ];
-  await admin.connect();
-  try {
-    for (const [index, databaseName] of databaseNames.entries()) {
-      await admin.query(`CREATE DATABASE ${databaseName} TEMPLATE template0`);
-      const target = new URL(adminTarget);
-      target.pathname = `/${databaseName}`;
-      const store = new PgMyopiaReferencePopulationStore({ postgresUrl: target.toString() });
-      const probe = new Client({ connectionString: target.toString() });
-      try {
+  const databasePrefixes = ["odos_myopia_fresh", "odos_myopia_populated"] as const;
+  for (const [index, namePrefix] of databasePrefixes.entries()) {
+    await withPostgresTestDatabase(
+      { adminUrl, namePrefix },
+      async (database) => {
+        const store = new PgMyopiaReferencePopulationStore({
+          postgresUrl: database.connectionString,
+        });
+        database.registerDrain(() => store.close());
+        const probe = index === 1
+          ? await database.connectClient({}, "myopia migration populated probe")
+          : undefined;
         if (index === 1) {
-          await probe.connect();
-          await probe.query(`
+          await probe!.query(`
             CREATE TABLE synthetic_existing_patient_data (
               patient_reference TEXT PRIMARY KEY,
               display_name TEXT NOT NULL
             )
           `);
-          await probe.query(
+          await probe!.query(
             "INSERT INTO synthetic_existing_patient_data VALUES ($1, $2)",
             ["Patient/existing", "Synthetic Existing Patient"],
           );
@@ -681,22 +677,14 @@ test("reference-population migration succeeds on fresh and populated Postgres da
         assert.equal(deliberatelyNone.referencePopulation, "NOT_REPRESENTED");
         assert.equal((await store.get("Patient/existing")).referencePopulation, "NOT_REPRESENTED");
         if (index === 1) {
-          const existing = await probe.query(
+          const existing = await probe!.query(
             "SELECT display_name FROM synthetic_existing_patient_data WHERE patient_reference = $1",
             ["Patient/existing"],
           );
           assert.equal(existing.rows[0]?.display_name, "Synthetic Existing Patient");
         }
-      } finally {
-        await store.close();
-        await probe.end().catch(() => undefined);
-      }
-    }
-  } finally {
-    for (const databaseName of databaseNames) {
-      await admin.query(`DROP DATABASE IF EXISTS ${databaseName} WITH (FORCE)`);
-    }
-    await admin.end();
+      },
+    );
   }
 });
 

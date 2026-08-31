@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import { createPostgresPool } from "../postgres.js";
 
 const CLIENT_APPLICATION_RESOURCE_TYPE = ["Client", "Application"].join("");
 
@@ -23,7 +23,10 @@ export async function verifyOperatorMembershipFromPostgres(input: {
   readonly membershipId: string;
 }): Promise<void> {
   assertLocalPostgresUrl(input.postgresUrl);
-  const pool = new Pool({ connectionString: input.postgresUrl, max: 1 });
+  const pool = createPostgresPool(
+    { connectionString: input.postgresUrl, max: 1 },
+    "operator membership verification",
+  );
   try {
     await verifyOperatorMembershipRecord({ ...input, database: pool });
   } finally {
@@ -37,7 +40,10 @@ export async function findOperatorMembershipFromPostgres(input: {
   readonly clientId: string;
 }): Promise<string> {
   assertLocalPostgresUrl(input.postgresUrl);
-  const pool = new Pool({ connectionString: input.postgresUrl, max: 1 });
+  const pool = createPostgresPool(
+    { connectionString: input.postgresUrl, max: 1 },
+    "operator membership lookup",
+  );
   try {
     return await findOperatorMembershipRecord({ ...input, database: pool });
   } finally {
