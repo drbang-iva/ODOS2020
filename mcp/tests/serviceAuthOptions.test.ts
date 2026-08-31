@@ -1,18 +1,27 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { resolveServiceAuthOptions } from "../src/service-auth-options.js";
+import {
+  createMcpAuditRuntime,
+  createMcpServiceAuthentication,
+  resolveServiceAuthOptions,
+  type ServiceAuthenticationClient,
+} from "../src/service-auth-options.js";
 
-const indexSource = readFileSync(new URL("../src/index.ts", import.meta.url), "utf8");
+const ENV = {
+  MEDPLUM_CLIENT_ID: "service-client",
+  MEDPLUM_CLIENT_SECRET: "not-a-real-secret",
+  MEDPLUM_ADMIN_EMAIL: "break-glass@example.test",
+  MEDPLUM_ADMIN_PASSWORD: "not-a-real-password",
+};
+
+const CLIENT: ServiceAuthenticationClient = {
+  async login() {},
+  async loginWithClientCredentials() {},
+};
 
 test("MCP service auth options preserve configured client credentials", () => {
   assert.deepEqual(
-    resolveServiceAuthOptions({
-      MEDPLUM_CLIENT_ID: "service-client",
-      MEDPLUM_CLIENT_SECRET: "not-a-real-secret",
-      MEDPLUM_ADMIN_EMAIL: "break-glass@example.test",
-      MEDPLUM_ADMIN_PASSWORD: "not-a-real-password",
-    }, "practice-configured"),
+    resolveServiceAuthOptions(ENV, "practice-configured"),
     {
       projectId: "practice-configured",
       clientId: "service-client",
@@ -23,20 +32,49 @@ test("MCP service auth options preserve configured client credentials", () => {
   );
 });
 
-test("MCP startup passes the resolved service auth options to the production authenticator", () => {
-  assert.equal(
-    indexSource.includes(
-      "const mode = await authenticateMedplumService(fhir, SERVICE_AUTH_OPTIONS);",
-    ),
-    true,
-    "production authentication must pass SERVICE_AUTH_OPTIONS without credential overrides",
+test("MCP startup composition passes scoped credentials to the authenticator", async () => {
+  let receivedClientId: string | undefined;
+  let receivedClientSecret: string | undefined;
+  const serviceAuthentication = createMcpServiceAuthentication(
+    ENV,
+    "practice-configured",
+    async (_client, options) => {
+      receivedClientId = options.clientId;
+      receivedClientSecret = options.clientSecret;
+      return "client-credentials";
+    },
   );
+
+  assert.equal(await serviceAuthentication.authenticate(CLIENT), "client-credentials");
+  assert.equal(receivedClientId, "service-client");
+  assert.equal(receivedClientSecret, "not-a-real-secret");
 });
 
-test("MCP audit runtime receives the resolved service credentials", () => {
-  assert.equal(
-    /medplumProjectId: INSTALLATION_PROJECT\.projectId,\s+medplumClientId: SERVICE_AUTH_OPTIONS\.clientId,\s+medplumClientSecret: SERVICE_AUTH_OPTIONS\.clientSecret,\s+medplumEmail: process\.env\.ODOS_AUDIT_MEDPLUM_EMAIL \?\? SERVICE_AUTH_OPTIONS\.email,\s+medplumPassword: process\.env\.ODOS_AUDIT_MEDPLUM_PASSWORD \?\? SERVICE_AUTH_OPTIONS\.password,/.test(indexSource),
-    true,
-    "audit runtime must receive scoped service credentials and break-glass fallback options",
+test("MCP audit composition passes scoped credentials to the runtime factory", () => {
+  const serviceAuthentication = createMcpServiceAuthentication(
+    ENV,
+    "practice-configured",
+    async () => "client-credentials",
   );
+  let receivedClientId: string | undefined;
+  let receivedClientSecret: string | undefined;
+  const expectedRuntime = { kind: "audit-runtime" } as const;
+  const runtime = createMcpAuditRuntime(
+    {
+      env: ENV,
+      baseUrl: "http://localhost:8103/",
+      accessToken: "bootstrap-token",
+      projectId: "practice-configured",
+      serviceAuthOptions: serviceAuthentication.options,
+    },
+    (options) => {
+      receivedClientId = options.medplumClientId;
+      receivedClientSecret = options.medplumClientSecret;
+      return expectedRuntime;
+    },
+  );
+
+  assert.equal(runtime, expectedRuntime);
+  assert.equal(receivedClientId, "service-client");
+  assert.equal(receivedClientSecret, "not-a-real-secret");
 });

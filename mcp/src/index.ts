@@ -42,7 +42,10 @@ import {
   createMedplumClient,
   type JsonPatchOperation,
 } from "./fhir-client.js";
-import { resolveServiceAuthOptions } from "./service-auth-options.js";
+import {
+  createMcpAuditRuntime,
+  createMcpServiceAuthentication,
+} from "./service-auth-options.js";
 import { searchAll, searchProjectAll } from "./fhir-search.js";
 import { createLiveOdosAuditRuntime } from "./authz/liveAudit.js";
 import { handleDocumentPrintAuditRequest } from "./authz/documentPrintAuditEndpoint.js";
@@ -529,9 +532,10 @@ import type {
 const BASE_URL = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103/";
 const ACCESS_TOKEN = process.env.MEDPLUM_ACCESS_TOKEN;
 const INSTALLATION_PROJECT = resolveInstallationProject();
-const SERVICE_AUTH_OPTIONS = resolveServiceAuthOptions(
+const SERVICE_AUTHENTICATION = createMcpServiceAuthentication(
   process.env,
   INSTALLATION_PROJECT.projectId,
+  authenticateMedplumService,
 );
 let installationProjectTargetLogged = false;
 const CREATE_OBSERVATION_AUDIT_HEADERS = {
@@ -614,18 +618,13 @@ const FHIR_CONTACT_POINT_USE_CODES = ["home", "work", "temp", "old", "mobile"] a
 const FHIR_ADDRESS_USE_CODES = ["home", "work", "temp", "old", "billing"] as const;
 const FHIR_ADDRESS_TYPE_CODES = ["postal", "physical", "both"] as const;
 
-const auditRuntime = createLiveOdosAuditRuntime({
-  postgresUrl: process.env.ODOS_POSTGRES_URL,
-  medplumBaseUrl: BASE_URL,
-  medplumAccessToken: process.env.ODOS_AUDIT_MEDPLUM_ACCESS_TOKEN ?? ACCESS_TOKEN,
-  medplumProjectId: INSTALLATION_PROJECT.projectId,
-  medplumClientId: SERVICE_AUTH_OPTIONS.clientId,
-  medplumClientSecret: SERVICE_AUTH_OPTIONS.clientSecret,
-  medplumEmail: process.env.ODOS_AUDIT_MEDPLUM_EMAIL ?? SERVICE_AUTH_OPTIONS.email,
-  medplumPassword: process.env.ODOS_AUDIT_MEDPLUM_PASSWORD ?? SERVICE_AUTH_OPTIONS.password,
-  disabled: process.env.ODOS_AUDIT_DISABLED === "1",
-  projectionWorkerIntervalMs: Number(process.env.ODOS_AUDIT_PROJECTION_WORKER_MS ?? 60_000),
-});
+const auditRuntime = createMcpAuditRuntime({
+  env: process.env,
+  baseUrl: BASE_URL,
+  accessToken: ACCESS_TOKEN,
+  projectId: INSTALLATION_PROJECT.projectId,
+  serviceAuthOptions: SERVICE_AUTHENTICATION.options,
+}, createLiveOdosAuditRuntime);
 auditRuntime.startProjectionWorker();
 const commercialEngineStore = new PgCommercialEngineStore({
   postgresUrl: process.env.ODOS_POSTGRES_URL,
@@ -5628,12 +5627,12 @@ async function authenticateWithMedplum(force = false): Promise<void> {
   if (
     !ACCESS_TOKEN ||
     force ||
-    SERVICE_AUTH_OPTIONS.clientId?.trim() ||
-    SERVICE_AUTH_OPTIONS.clientSecret?.trim()
+    SERVICE_AUTHENTICATION.options.clientId?.trim() ||
+    SERVICE_AUTHENTICATION.options.clientSecret?.trim()
   ) {
     if (force) authPromise = undefined;
     authPromise ??= (async () => {
-      const mode = await authenticateMedplumService(fhir, SERVICE_AUTH_OPTIONS);
+      const mode = await SERVICE_AUTHENTICATION.authenticate(fhir);
       console.error(`odos-mcp: authenticated with Medplum via ${mode}`);
     })();
     try {
