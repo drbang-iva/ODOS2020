@@ -8,9 +8,9 @@
  * Transport: stdio (standard MCP). Suitable for launch-on-demand by
  * Claude Desktop, Claude Code, Iris's OpenClaw, etc.
  *
- * Auth: reads MEDPLUM_BASE_URL / ADMIN_EMAIL / ADMIN_PASSWORD from env;
- * performs PKCE OAuth2 login for stdio startup or the first SSE session,
- * then refreshes on demand.
+ * Auth: uses the scoped MEDPLUM_CLIENT_ID / MEDPLUM_CLIENT_SECRET service identity;
+ * MEDPLUM_ADMIN_EMAIL / MEDPLUM_ADMIN_PASSWORD remain the break-glass fallback when
+ * client credentials are absent.
  *
  * Zero Medplum SDK — plain fetch against the FHIR REST API.
  */
@@ -37,7 +37,11 @@ import {
 import express from "express";
 import { isIP } from "node:net";
 import { z } from "zod";
-import { createMedplumClient, type JsonPatchOperation } from "./fhir-client.js";
+import {
+  authenticateMedplumService,
+  createMedplumClient,
+  type JsonPatchOperation,
+} from "./fhir-client.js";
 import { searchAll, searchProjectAll } from "./fhir-search.js";
 import { createLiveOdosAuditRuntime } from "./authz/liveAudit.js";
 import { handleDocumentPrintAuditRequest } from "./authz/documentPrintAuditEndpoint.js";
@@ -524,6 +528,8 @@ import type {
 const BASE_URL = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103/";
 const EMAIL = process.env.MEDPLUM_ADMIN_EMAIL;
 const PASSWORD = process.env.MEDPLUM_ADMIN_PASSWORD;
+const CLIENT_ID = process.env.MEDPLUM_CLIENT_ID;
+const CLIENT_SECRET = process.env.MEDPLUM_CLIENT_SECRET;
 const ACCESS_TOKEN = process.env.MEDPLUM_ACCESS_TOKEN;
 const INSTALLATION_PROJECT = resolveInstallationProject();
 let installationProjectTargetLogged = false;
@@ -611,6 +617,9 @@ const auditRuntime = createLiveOdosAuditRuntime({
   postgresUrl: process.env.ODOS_POSTGRES_URL,
   medplumBaseUrl: BASE_URL,
   medplumAccessToken: process.env.ODOS_AUDIT_MEDPLUM_ACCESS_TOKEN ?? ACCESS_TOKEN,
+  medplumProjectId: INSTALLATION_PROJECT.projectId,
+  medplumClientId: CLIENT_ID,
+  medplumClientSecret: CLIENT_SECRET,
   medplumEmail: process.env.ODOS_AUDIT_MEDPLUM_EMAIL ?? EMAIL,
   medplumPassword: process.env.ODOS_AUDIT_MEDPLUM_PASSWORD ?? PASSWORD,
   disabled: process.env.ODOS_AUDIT_DISABLED === "1",
@@ -5615,16 +5624,17 @@ async function authenticateWithMedplum(force = false): Promise<void> {
     console.error(formatInstallationProjectTarget(INSTALLATION_PROJECT));
     installationProjectTargetLogged = true;
   }
-  if (!ACCESS_TOKEN || force) {
-    if (!EMAIL || !PASSWORD) {
-      throw new Error(
-        "odos-mcp: MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD must be set in env.",
-      );
-    }
+  if (!ACCESS_TOKEN || force || CLIENT_ID?.trim() || CLIENT_SECRET?.trim()) {
     if (force) authPromise = undefined;
     authPromise ??= (async () => {
-      await fhir.login(EMAIL, PASSWORD);
-      console.error("odos-mcp: authenticated with Medplum");
+      const mode = await authenticateMedplumService(fhir, {
+        projectId: INSTALLATION_PROJECT.projectId,
+        clientId: CLIENT_ID,
+        clientSecret: CLIENT_SECRET,
+        email: EMAIL,
+        password: PASSWORD,
+      });
+      console.error(`odos-mcp: authenticated with Medplum via ${mode}`);
     })();
     try {
       await authPromise;
@@ -7625,7 +7635,7 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
                       searchProjectAll<AccessPolicy>(fhir, "AccessPolicy", projectId, {
                         "name:exact": name,
                       }),
-                    createPolicy: (policy) => fhir.create(policy),
+                    createPolicy: (policy, extraHeaders) => fhir.create(policy, extraHeaders),
                     patchPolicy: (id, operations, versionId) =>
                       fhir.patch("AccessPolicy", id, operations, {
                         "If-Match": `W/\"${versionId}\"`,

@@ -6,6 +6,10 @@
 import { createHash, randomBytes } from "node:crypto";
 import type { Binary, Bundle, OperationOutcome, ProjectMembership, Resource } from "@medplum/fhirtypes";
 import {
+  exchangeOperatorCredential,
+  type OperatorCredentials,
+} from "../../data/medplum-adapters/operator-bootstrap-adapter.js";
+import {
   buildOdosAuditEventRow,
   type BuildOdosAuditEventInput,
   type OdosActorRole,
@@ -39,6 +43,7 @@ export interface FhirAuditRecorder {
 export interface MedplumClient {
   readonly baseUrl: string;
   login(email: string, password: string): Promise<void>;
+  loginWithClientCredentials(credentials: OperatorCredentials): Promise<void>;
   read<T extends Resource>(rt: T["resourceType"], id: string): Promise<T>;
   readBinaryData(id: string): Promise<{ contentType: string; bytes: Uint8Array }>;
   search<T extends Resource>(
@@ -152,6 +157,53 @@ interface UnauditedMedplumClientOptions {
   now?: () => number;
 }
 
+export interface MedplumServiceAuthenticationOptions {
+  projectId: string;
+  clientId?: string;
+  clientSecret?: string;
+  email?: string;
+  password?: string;
+  logError?: (message: string) => void;
+}
+
+export async function authenticateMedplumService(
+  client: Pick<MedplumClient, "login" | "loginWithClientCredentials">,
+  options: MedplumServiceAuthenticationOptions,
+): Promise<"client-credentials" | "password"> {
+  const clientId = options.clientId?.trim();
+  const clientSecret = options.clientSecret?.trim();
+  const logError = options.logError ?? console.error;
+  if (Boolean(clientId) !== Boolean(clientSecret)) {
+    const error = new Error(
+      "MEDPLUM_CLIENT_ID and MEDPLUM_CLIENT_SECRET must either both be set or both be absent.",
+    );
+    logError(`ODOS MCP CLIENT-CREDENTIALS AUTHENTICATION FAILED: ${error.message}`);
+    throw error;
+  }
+  if (clientId && clientSecret) {
+    try {
+      await client.loginWithClientCredentials({
+        projectId: options.projectId,
+        clientId,
+        clientSecret,
+      });
+      return "client-credentials";
+    } catch (error) {
+      logError(
+        `ODOS MCP CLIENT-CREDENTIALS AUTHENTICATION FAILED: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      throw error;
+    }
+  }
+  if (!options.email || !options.password) {
+    throw new Error(
+      "odos-mcp: MEDPLUM_CLIENT_ID and MEDPLUM_CLIENT_SECRET, or MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD, must be set in env.",
+    );
+  }
+  await client.login(options.email, options.password);
+  return "password";
+}
+
 export interface MedplumClientOptions extends UnauditedMedplumClientOptions {
   audit: FhirAuditRecorder;
   auditContext: FhirAuditContext;
@@ -204,6 +256,7 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
   let token: string | undefined = opts.accessToken;
   let refreshPromise: Promise<void> | undefined;
   let loginCredentials: { email: string; password: string } | undefined;
+  let clientCredentials: OperatorCredentials | undefined;
   const audit = opts.audit;
   const auditContext = opts.auditContext ?? {};
 
@@ -218,9 +271,11 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
   }
 
   async function refresh(): Promise<void> {
-    const operation = opts.refreshAuthentication ?? (loginCredentials
-      ? () => performLogin(loginCredentials!.email, loginCredentials!.password)
-      : undefined);
+    const operation = opts.refreshAuthentication ?? (clientCredentials
+      ? () => performClientCredentialLogin(clientCredentials!)
+      : loginCredentials
+        ? () => performLogin(loginCredentials!.email, loginCredentials!.password)
+        : undefined);
     if (!operation) return;
     refreshPromise ??= operation().finally(() => {
       refreshPromise = undefined;
@@ -422,6 +477,12 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
     });
   }
 
+  async function performClientCredentialLogin(credentials: OperatorCredentials): Promise<void> {
+    await auditedLogin(credentials.clientId, async () => {
+      token = await exchangeOperatorCredential(base, credentials);
+    });
+  }
+
   async function performTransaction(
     transactionBundle: Bundle,
     extraHeaders: Record<string, string>,
@@ -449,8 +510,15 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
   return {
     baseUrl: base,
     async login(email: string, password: string): Promise<void> {
+      clientCredentials = undefined;
       loginCredentials = { email, password };
       await performLogin(email, password);
+    },
+
+    async loginWithClientCredentials(credentials: OperatorCredentials): Promise<void> {
+      loginCredentials = undefined;
+      clientCredentials = { ...credentials };
+      await performClientCredentialLogin(clientCredentials);
     },
 
     async read<T extends Resource>(rt: T["resourceType"], id: string): Promise<T> {
