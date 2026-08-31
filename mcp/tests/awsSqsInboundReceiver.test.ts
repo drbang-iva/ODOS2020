@@ -165,6 +165,45 @@ test("AWS SQS logs a distinct zero-match suppression outcome", async () => {
   ]);
 });
 
+test("AWS SQS START log reports the legacy global opt-out that prevented re-enrollment", async () => {
+  const fhir = new InMemorySuppressionFhir({
+    resourceType: "Patient",
+    id: "synthetic-1",
+    meta: { versionId: "1" },
+    telecom: [{ system: "phone", use: "mobile", value: PATIENT_NUMBER }],
+    extension: [{
+      url: ODOS_COMMS_OPT_OUT_EXTENSION_URL,
+      extension: [{ url: "channel", valueCode: "sms" }],
+    }],
+  });
+  const info: string[] = [];
+  let deletes = 0;
+  const receiver = createAwsSqsInboundReceiver(CONFIG, {
+    fhir,
+    onMessage: async () => undefined,
+    info: (message) => info.push(message),
+    client: {
+      async send(command) {
+        if (command.constructor.name === "ReceiveMessageCommand") {
+          return { Messages: [{
+            MessageId: "sqs-legacy-start",
+            ReceiptHandle: "receipt-legacy-start",
+            Body: inboundNotification("aws-legacy-start", "START"),
+          }] };
+        }
+        deletes += 1;
+        return {};
+      },
+    },
+  });
+
+  assert.equal(await receiver.pollOnce(), 1);
+  assert.equal(deletes, 1);
+  assert.deepEqual(info, [
+    "odos-mcp: AWS inbound SMS suppression outcome=opt-in-refused-broader-opt-out matchedPatients=1 remainingGlobal=true remainingNumbers=none",
+  ]);
+});
+
 test("AWS SQS rejects a notification from a different SNS topic without deleting it", async () => {
   const fhir = new InMemorySuppressionFhir({ resourceType: "Patient", id: "synthetic-1" });
   let deletes = 0;

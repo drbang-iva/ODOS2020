@@ -32,8 +32,12 @@ export type SmsOptOutIdentityVerification = typeof SMS_OPT_OUT_IDENTITY_VERIFICA
 export type SmsStopScope = "per-number" | "global";
 
 export interface InboundSuppressionResult {
-  outcome: "opted-out" | "opted-in" | "opt-in-refused-shared-number" | "unchanged" | "no-patient-match";
+  outcome: "opted-out" | "opted-in" | "opt-in-refused-shared-number" | "opt-in-refused-broader-opt-out" | "unchanged" | "no-patient-match";
   matchedPatients: number;
+  remainingOptOuts?: {
+    global: boolean;
+    numbers: string[];
+  };
 }
 
 export interface SuppressionGateDeps {
@@ -171,6 +175,7 @@ export async function updateInboundSuppression(
   if (!optOutType || optOutType === "HELP") {
     return { outcome: "unchanged", matchedPatients: patients.length };
   }
+  let remainingOptOuts: InboundSuppressionResult["remainingOptOuts"];
   // Suppression follows the destination number, so every Patient sharing it must be updated.
   for (const patient of patients) {
     if (!patient.id || !patient.meta?.versionId) {
@@ -191,6 +196,7 @@ export async function updateInboundSuppression(
           }]
       : existing.filter((extension) =>
           !isOwnedSmsOptOut(extension) || smsOptOutNumber(extension) !== event.to);
+    if (optOutType === "START") remainingOptOuts = summarizeSmsOptOuts(nextExtensions);
     if (nextExtensions.length === existing.length && nextExtensions.every((entry, index) => entry === existing[index])) {
       continue;
     }
@@ -200,9 +206,21 @@ export async function updateInboundSuppression(
     }, { "If-Match": `W/"${patient.meta.versionId}"` });
   }
   return {
-    outcome: optOutType === "STOP" ? "opted-out" : "opted-in",
+    outcome: optOutType === "STOP"
+      ? "opted-out"
+      : remainingOptOuts?.global
+        ? "opt-in-refused-broader-opt-out"
+        : "opted-in",
     matchedPatients: patients.length,
+    ...(remainingOptOuts ? { remainingOptOuts } : {}),
   };
+}
+
+export function inboundSuppressionLogDetails(result: InboundSuppressionResult): string {
+  const remaining = result.remainingOptOuts
+    ? ` remainingGlobal=${result.remainingOptOuts.global} remainingNumbers=${result.remainingOptOuts.numbers.join(",") || "none"}`
+    : "";
+  return `outcome=${result.outcome} matchedPatients=${result.matchedPatients}${remaining}`;
 }
 
 async function collectInboundPatients(
@@ -348,6 +366,8 @@ async function readPatient(fhir: Pick<MedplumClient, "read">, reference: string)
 }
 
 function isOwnedSmsOptOut(extension: NonNullable<Patient["extension"]>[number]): boolean {
+  // No campaign-scoped SMS opt-out writer exists today. If one is introduced, revisit ownership:
+  // unscoped clear would erase it, while STOP deduplication could swallow a genuine global STOP.
   return extension.url === ODOS_COMMS_OPT_OUT_EXTENSION_URL
     && extension.extension?.some((part) => part.url === "channel" && part.valueCode === "sms") === true;
 }

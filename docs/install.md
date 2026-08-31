@@ -173,6 +173,10 @@ Complete this sequence before any real patient Voice, SMS, or MMS traffic:
    Voice and on non-US senders configured through `TWILIO_FROM_NUMBER` or
    `TWILIO_VOICE_FROM_NUMBER`. If `TWILIO_MESSAGING_SERVICE_SID` is used, startup enumerates the
    complete PhoneNumbers collection and rejects every sender whose ISO country code is not `US`.
+   Do not combine `TWILIO_MESSAGING_SERVICE_SID` with `ODOS_COMMS_TRANSACTIONAL_SMS_NUMBER`
+   or `ODOS_COMMS_CLINICAL_SMS_NUMBER` for a Twilio-routed lane. ODOS leaves each conflicting
+   role unavailable and logs a degraded-routing issue while the rest of MCP continues starting;
+   choose either the verified Messaging Service sender pool or the explicit lane sender number.
    Startup and sends share each pool-verification result for five minutes, then a send repeats the
    complete enumeration so a post-startup pool change cannot remain undetected. An empty pool,
    non-US member, missing country code, or API/auth/network failure keeps Twilio SMS disabled. It

@@ -340,24 +340,43 @@ export function commsChannelRoutingFromEnv(
   const senderNumbers: Partial<Record<CommsChannelRole, string>> = {};
   const issues: string[] = [];
   const transactionalNumber = scalarE164(env, "ODOS_COMMS_TRANSACTIONAL_SMS_NUMBER");
-  const clinicalProvider = config.clinical_sms_provider ?? config.sms_provider;
+  const clinicalProvider = config.clinical_sms_provider
+    ?? (config.sms_provider === "ghl" ? undefined : config.sms_provider);
   const clinicalNumber = scalarE164(env, "ODOS_COMMS_CLINICAL_SMS_NUMBER")
     ?? (clinicalProvider === config.sms_provider ? transactionalNumber : undefined);
-  if (config.sms_provider) {
-    assignments["transactional-sms"] = config.sms_provider;
-    assignments["marketing-sms"] = config.sms_provider;
-    if (transactionalNumber) {
-      senderNumbers["transactional-sms"] = transactionalNumber;
-      senderNumbers["marketing-sms"] = transactionalNumber;
+  const messagingServiceConfigured = Boolean(env.TWILIO_MESSAGING_SERVICE_SID?.trim());
+  const assignSmsRole = (
+    role: "transactional-sms" | "marketing-sms" | "clinical-sms",
+    provider: "aws" | "twilio" | "ghl",
+    number: string | undefined,
+    numberVariable: "ODOS_COMMS_TRANSACTIONAL_SMS_NUMBER" | "ODOS_COMMS_CLINICAL_SMS_NUMBER",
+  ): void => {
+    if (provider === "twilio" && number && messagingServiceConfigured) {
+      issues.push(
+        `channel role "${role}" cannot combine TWILIO_MESSAGING_SERVICE_SID with ${numberVariable}; choose the Messaging Service or the lane sender number`,
+      );
+      return;
     }
+    assignments[role] = provider;
+    if (number) senderNumbers[role] = number;
+  };
+  if (config.sms_provider) {
+    assignSmsRole("transactional-sms", config.sms_provider, transactionalNumber, "ODOS_COMMS_TRANSACTIONAL_SMS_NUMBER");
+    assignSmsRole("marketing-sms", config.sms_provider, transactionalNumber, "ODOS_COMMS_TRANSACTIONAL_SMS_NUMBER");
   }
-  if (clinicalProvider === "ghl") {
+  if (config.clinical_sms_provider === "ghl") {
     issues.push(
       'channel role "clinical-sms" refuses provider "ghl" because this practice has no BAA for diagnosis-specific messaging',
     );
   } else if (clinicalProvider) {
-    assignments["clinical-sms"] = clinicalProvider;
-    if (clinicalNumber) senderNumbers["clinical-sms"] = clinicalNumber;
+    assignSmsRole(
+      "clinical-sms",
+      clinicalProvider,
+      clinicalNumber,
+      env.ODOS_COMMS_CLINICAL_SMS_NUMBER?.trim()
+        ? "ODOS_COMMS_CLINICAL_SMS_NUMBER"
+        : "ODOS_COMMS_TRANSACTIONAL_SMS_NUMBER",
+    );
   }
   if (config.voice_provider && config.voice_provider !== "none") {
     assignments.voice = config.voice_provider;
@@ -662,11 +681,11 @@ function withSmsSenderNumber(
   if (!senderNumber) return registration;
   switch (registration.provider) {
     case "twilio":
+      if (registration.config.messagingServiceSid) return registration;
       return {
         ...registration,
         config: {
           ...registration.config,
-          messagingServiceSid: undefined,
           fromNumber: senderNumber,
         },
       };

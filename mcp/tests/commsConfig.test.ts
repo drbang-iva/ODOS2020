@@ -43,7 +43,7 @@ test("scalar communications provider config selects exactly one SMS provider and
     AWS_SMS_SNS_TOPIC_ARN: "arn:aws:sns:us-east-1:123456789012:odos-sms-inbound",
     TWILIO_ACCOUNT_SID: `AC${"1".repeat(32)}`,
     TWILIO_AUTH_TOKEN: "synthetic-auth-token",
-    TWILIO_MESSAGING_SERVICE_SID: `MG${"2".repeat(32)}`,
+    TWILIO_FROM_NUMBER: "+18645550100",
     TWILIO_VOICE_FROM_NUMBER: "+18645550100",
     TWILIO_VOICE_FORWARD_TO_NUMBER: "+18645550101",
     TWILIO_WEBHOOK_BASE_URL: "https://practice.example",
@@ -100,7 +100,7 @@ test("two-lane SMS config resolves independent providers and E.164 sender number
     AWS_SMS_SNS_TOPIC_ARN: "arn:aws:sns:us-east-1:123456789012:odos-sms-inbound",
     TWILIO_ACCOUNT_SID: `AC${"1".repeat(32)}`,
     TWILIO_AUTH_TOKEN: "synthetic-auth-token",
-    TWILIO_MESSAGING_SERVICE_SID: `MG${"2".repeat(32)}`,
+    TWILIO_FROM_NUMBER: "+18645550100",
   };
   const routing = commsChannelRoutingFromEnv(env);
   const dispatch = createCommsDispatch(commsAdapterRegistrationsFromEnv(env), {
@@ -139,7 +139,7 @@ test("role-aware Twilio dispatch sends from each resolved lane number", async ()
     ODOS_COMMS_CLINICAL_SMS_NUMBER: clinicalNumber,
     TWILIO_ACCOUNT_SID: `AC${"1".repeat(32)}`,
     TWILIO_AUTH_TOKEN: "synthetic-auth-token",
-    TWILIO_MESSAGING_SERVICE_SID: `MG${"2".repeat(32)}`,
+    TWILIO_FROM_NUMBER: transactionalNumber,
   };
   const creates: Array<Record<string, unknown>> = [];
   const dispatch = createCommsDispatch(commsAdapterRegistrationsFromEnv(env), {
@@ -202,6 +202,59 @@ test("clinical SMS routed to GHL degrades only that role while MCP startup conti
   assert.equal(dispatch.providerFor("clinical-sms"), undefined);
   assert.equal(errors.length, 1);
   assert.match(errors[0]!, /clinical-sms.*ghl.*BAA/i);
+});
+
+test("an inherited GHL SMS provider leaves clinical SMS unassigned without a refusal warning", async () => {
+  const env = {
+    ODOS_COMMS_SMS_PROVIDER: "ghl",
+    GHL_LOCATION_ID: "location-synthetic-1",
+    GHL_ACCESS_TOKEN: "synthetic-location-token",
+  };
+  const errors: string[] = [];
+  const dispatch = createCommsDispatch(commsAdapterRegistrationsFromEnv(env), {
+    channelRouting: commsChannelRoutingFromEnv(env),
+    error: (message) => errors.push(message),
+  });
+
+  await dispatch.initialize();
+
+  assert.equal(dispatch.providerFor("transactional-sms"), "ghl");
+  assert.equal(dispatch.providerFor("marketing-sms"), "ghl");
+  assert.equal(dispatch.providerFor("clinical-sms"), undefined);
+  assert.deepEqual(errors, []);
+});
+
+test("Twilio Messaging Service and lane sender number conflict degrades only affected SMS roles without stopping MCP", async () => {
+  const env = {
+    ODOS_COMMS_SMS_PROVIDER: "twilio",
+    ODOS_COMMS_TRANSACTIONAL_SMS_NUMBER: "+18645550100",
+    ODOS_COMMS_CLINICAL_SMS_PROVIDER: "aws",
+    ODOS_COMMS_CLINICAL_SMS_NUMBER: "+18485550100",
+    TWILIO_ACCOUNT_SID: `AC${"1".repeat(32)}`,
+    TWILIO_AUTH_TOKEN: "synthetic-auth-token",
+    TWILIO_MESSAGING_SERVICE_SID: `MG${"2".repeat(32)}`,
+    AWS_SMS_REGION: "us-east-1",
+    AWS_SMS_ORIGINATION_IDENTITY:
+      "arn:aws:sms-voice:us-east-1:123456789012:phone-number/phone-11111111111111111111111111111111",
+    AWS_SMS_SQS_QUEUE_URL: "https://sqs.us-east-1.amazonaws.com/123456789012/odos-sms-inbound",
+    AWS_SMS_SNS_TOPIC_ARN: "arn:aws:sns:us-east-1:123456789012:odos-sms-inbound",
+  };
+  const errors: string[] = [];
+  let serverBooted = false;
+  const dispatch = createCommsDispatch(commsAdapterRegistrationsFromEnv(env), {
+    channelRouting: commsChannelRoutingFromEnv(env),
+    error: (message) => errors.push(message),
+  });
+
+  await startMcpAfterCommsInitialization(dispatch, async () => { serverBooted = true; });
+
+  assert.equal(serverBooted, true);
+  assert.equal(dispatch.providerFor("transactional-sms"), undefined);
+  assert.equal(dispatch.providerFor("marketing-sms"), undefined);
+  assert.equal(dispatch.providerFor("clinical-sms"), "aws");
+  assert.equal(errors.length, 2);
+  assert.match(errors[0]!, /transactional-sms.*TWILIO_MESSAGING_SERVICE_SID.*ODOS_COMMS_TRANSACTIONAL_SMS_NUMBER/i);
+  assert.match(errors[1]!, /marketing-sms.*TWILIO_MESSAGING_SERVICE_SID.*ODOS_COMMS_TRANSACTIONAL_SMS_NUMBER/i);
 });
 
 test("clinical-only GHL degradation does not require an unusable adapter registration", async () => {

@@ -9,7 +9,7 @@ import type {
   TwilioVoiceWebhookEvent,
 } from "./adapters/twilio-adapter.js";
 import type { InboundMessageEvent } from "./inbound-receiver.js";
-import { updateInboundSuppression } from "./suppression-gate.js";
+import { inboundSuppressionLogDetails, updateInboundSuppression } from "./suppression-gate.js";
 
 export const ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/twilio-message-sid";
@@ -82,7 +82,7 @@ export async function persistTwilioWebhookEvent(
       optOutType: inbound.optOutType,
     });
     (deps.info ?? console.error)(
-      `odos-mcp: Twilio inbound SMS suppression outcome=${result.outcome} matchedPatients=${result.matchedPatients}`,
+      `odos-mcp: Twilio inbound SMS suppression ${inboundSuppressionLogDetails(result)}`,
     );
   }
   return persisted;

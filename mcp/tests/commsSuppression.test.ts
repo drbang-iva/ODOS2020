@@ -309,6 +309,51 @@ test("replayed inbound STOP uses If-Match once and skips an already-present SMS 
   assert.equal(subject.meta?.versionId, "2");
 });
 
+test("inbound START reports no effect when a surviving legacy opt-out still suppresses the lane", async () => {
+  const phone = "+18645550199";
+  const laneNumber = "+18485550100";
+  const subject: Patient = {
+    resourceType: "Patient",
+    id: "synthetic-1",
+    meta: { versionId: "1" },
+    telecom: [{ system: "phone", value: phone }],
+    extension: [{
+      url: ODOS_COMMS_OPT_OUT_EXTENSION_URL,
+      extension: [{ url: "channel", valueCode: "sms" }],
+    }],
+  };
+  let updates = 0;
+  const fhir = {
+    async search<T extends Resource>(): Promise<Bundle<T>> {
+      return {
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [{ resource: structuredClone(subject) as T }],
+      };
+    },
+    async searchUrl<T extends Resource>(): Promise<Bundle<T>> {
+      return { resourceType: "Bundle", type: "searchset" };
+    },
+    async update<T extends Resource>(): Promise<T> {
+      updates += 1;
+      throw new Error("Legacy-only START must not write a no-op Patient update.");
+    },
+  };
+
+  const result = await updateInboundSuppression(fhir, {
+    from: phone,
+    to: laneNumber,
+    body: "START",
+  });
+
+  assert.deepEqual(result, {
+    outcome: "opt-in-refused-broader-opt-out",
+    matchedPatients: 1,
+    remainingOptOuts: { global: true, numbers: [] },
+  });
+  assert.equal(updates, 0);
+});
+
 test("an explicit Patient clear removes only that patient's SMS opt-out with versioned Provenance", async () => {
   const optedOut = (id: string): Patient => ({
     resourceType: "Patient",
