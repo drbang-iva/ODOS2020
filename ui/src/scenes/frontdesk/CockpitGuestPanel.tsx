@@ -238,22 +238,34 @@ function MessagesPanel({ selectedPatient: initialPatient }: { selectedPatient?: 
   const [sending, setSending] = useState(false);
   const [sendStatus, setSendStatus] = useState<string>();
   const idempotencyKey = useRef(newSmsIdempotencyKey());
+  const conversationEpoch = useRef(0);
   const updateSuppression = useCallback((value: boolean) => {
     setSuppressed(value);
     setSuppressionKnown(true);
+  }, []);
+  const selectPatient = useCallback((patient: Patient | undefined) => {
+    conversationEpoch.current += 1;
+    setSelectedPatient(patient);
+    setSuppressed(false);
+    setSuppressionKnown(false);
+    setMessage("");
+    setSending(false);
+    setSendStatus(undefined);
+    idempotencyKey.current = newSmsIdempotencyKey();
   }, []);
 
   if (!selectedPatient?.id) {
     return (
       <section className="grid gap-3">
         <p>Select a patient conversation.</p>
-        <PatientSearch actionLabel="Open thread" onSelect={setSelectedPatient} />
+        <PatientSearch actionLabel="Open thread" onSelect={selectPatient} />
       </section>
     );
   }
 
   const submit = async () => {
     if (!message.trim() || suppressed || !suppressionKnown || sending) return;
+    const epoch = conversationEpoch.current;
     setSending(true);
     setSendStatus(undefined);
     try {
@@ -262,6 +274,7 @@ function MessagesPanel({ selectedPatient: initialPatient }: { selectedPatient?: 
         body: message.trim(),
         idempotencyKey: idempotencyKey.current,
       });
+      if (epoch !== conversationEpoch.current) return;
       if (result.outcome === "suppressed") {
         setSuppressed(true);
         setSendStatus("Texting is blocked by the patient SMS opt-out.");
@@ -271,9 +284,10 @@ function MessagesPanel({ selectedPatient: initialPatient }: { selectedPatient?: 
       idempotencyKey.current = newSmsIdempotencyKey();
       setSendStatus(result.outcome === "sent" ? "Text sent." : "Text scheduled for the next allowed window.");
     } catch (cause) {
+      if (epoch !== conversationEpoch.current) return;
       setSendStatus(cause instanceof Error ? cause.message : "Text could not be sent.");
     } finally {
-      setSending(false);
+      if (epoch === conversationEpoch.current) setSending(false);
     }
   };
 
@@ -281,7 +295,7 @@ function MessagesPanel({ selectedPatient: initialPatient }: { selectedPatient?: 
     <section className="grid gap-4">
       <div className="flex items-center justify-between gap-2">
         <strong className="text-white/85">{patientName(selectedPatient)}</strong>
-        <button type="button" onClick={() => setSelectedPatient(undefined)} className="text-xs text-blue-200 underline">
+        <button type="button" onClick={() => selectPatient(undefined)} className="text-xs text-blue-200 underline">
           Change patient
         </button>
       </div>

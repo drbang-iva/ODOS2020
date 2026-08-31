@@ -6,6 +6,7 @@ import { act, create } from "react-test-renderer";
 import { PatientDemographicsEditor } from "../src/components/patient/PatientDemographicsEditor";
 import { SmsOptOutControl } from "../src/components/patient/SmsOptOutControl";
 import { CockpitGuestPanel } from "../src/scenes/frontdesk/CockpitGuestPanel";
+import { PatientSearch } from "../src/scenes/PatientPicker";
 
 const PATIENT: Patient = {
   resourceType: "Patient",
@@ -28,6 +29,8 @@ const SECOND_PATIENT: Patient = {
 test("the demographics opt-out control distinguishes suppressed and available SMS lanes", async () => {
   const originalFetch = globalThis.fetch;
   let laneSuppressed = true;
+  let globalSuppressed = false;
+  let omitFrontDeskLane = false;
   let sentBody: Record<string, unknown> | undefined;
   const readInputs: string[] = [];
   globalThis.fetch = async (input, init) => {
@@ -41,14 +44,14 @@ test("the demographics opt-out control distinguishes suppressed and available SM
     readInputs.push(String(input));
     return new Response(JSON.stringify({
     patientReference: "Patient/synthetic-1",
-    smsOptedOut: laneSuppressed,
-    remainingOptOuts: { global: false, numbers: laneSuppressed ? ["+18645550100"] : [] },
+    smsOptedOut: globalSuppressed || laneSuppressed,
+    remainingOptOuts: { global: globalSuppressed, numbers: laneSuppressed ? ["+18645550100"] : [] },
     smsLanes: [
-      {
+      ...omitFrontDeskLane ? [] : [{
         label: "Front-desk texts",
         number: "+18645550100",
         roles: ["transactional-sms", "marketing-sms"],
-      },
+      }],
       {
         label: "Clinical texts",
         number: "+18485550100",
@@ -124,6 +127,32 @@ test("the demographics opt-out control distinguishes suppressed and available SM
     assert.equal(sentBody?.patientReference, "Patient/synthetic-1");
     assert.equal(sentBody?.body, "Your glasses are ready.");
     assert.match(String(sentBody?.idempotencyKey), /^[A-Za-z0-9._:-]{8,128}$/);
+
+    act(() => compose.props.onChange({ target: { value: "Draft for Jane" } }));
+    const changePatient = renderer.root.findAllByType("button").find((button) =>
+      button.children.join("") === "Change patient",
+    );
+    assert.ok(changePatient);
+    act(() => changePatient.props.onClick());
+    await act(async () => {
+      renderer.root.findByType(PatientSearch).props.onSelect(SECOND_PATIENT);
+      await Promise.resolve();
+    });
+    assert.equal(renderer.root.findByProps({ "aria-label": "Compose text message" }).props.value, "");
+    assert.match(readInputs.at(-1) ?? "", /patient=Patient%2Fsynthetic-2/);
+    act(() => renderer.unmount());
+
+    globalSuppressed = true;
+    omitFrontDeskLane = true;
+    await act(async () => {
+      renderer = create(React.createElement(CockpitGuestPanel as never, {
+        panel: "messages",
+        onClose: () => undefined,
+        selectedPatient: PATIENT,
+      }));
+      await Promise.resolve();
+    });
+    assert.equal(renderer.root.findByProps({ "aria-label": "Compose text message" }).props.disabled, true);
     act(() => renderer.unmount());
   } finally {
     globalThis.fetch = originalFetch;

@@ -48,7 +48,7 @@ export function SmsOptOutControl({
       if (activeLaneRole) {
         const lane = value.smsLanes.find((candidate) => candidate.roles.includes(activeLaneRole));
         onActiveLaneSuppressionChange?.(Boolean(
-          lane && (value.remainingOptOuts.global || value.remainingOptOuts.numbers.includes(lane.number)),
+          value.remainingOptOuts.global || (lane && value.remainingOptOuts.numbers.includes(lane.number)),
         ));
       }
     }).catch((cause) => {
@@ -93,7 +93,7 @@ export function SmsOptOutControl({
       if (activeLaneRole) {
         const lane = state.smsLanes.find((candidate) => candidate.roles.includes(activeLaneRole));
         onActiveLaneSuppressionChange?.(Boolean(
-          lane && (remainingOptOuts.global || remainingOptOuts.numbers.includes(lane.number)),
+          remainingOptOuts.global || (lane && remainingOptOuts.numbers.includes(lane.number)),
         ));
       }
       if (clearNumber && response.suppressionCleared === false) {
