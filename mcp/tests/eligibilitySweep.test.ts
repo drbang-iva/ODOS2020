@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Basic, Bundle, Resource } from "@medplum/fhirtypes";
+import { StediRequestError } from "../src/claims/stedi-adapter.js";
 import {
   createFhirEligibilitySweepStore,
   eligibilityTransactionIdentifier,
@@ -314,7 +315,7 @@ test("a later batch submission failure preserves accepted batch IDs and does not
       submitCalls += 1;
       submittedItemCounts.push(input.items.length);
       if (submitCalls === 1) return { batchId: "accepted-batch", submittedAt: NOW };
-      if (submitCalls === 2) throw new Error("later chunk failed");
+      if (submitCalls === 2) throw new StediRequestError(400, { errors: [{ description: "later chunk failed" }] });
       return { batchId: "resumed-batch", submittedAt: NOW };
     },
   });
@@ -484,6 +485,65 @@ test("pending Insurance Discovery completes against the submitted candidate snap
     source: "insurance-discovery",
   });
   assert.equal(store.states.at(-1)?.status, "healthy");
+});
+
+test("an accepted batch with a failed local checkpoint is never submitted again", async () => {
+  const store = memoryStore();
+  const saveState = store.saveState;
+  let failAcceptedCheckpoint = true;
+  store.saveState = async (state) => {
+    if (failAcceptedCheckpoint && state.batchIds.includes("batch-1")) {
+      failAcceptedCheckpoint = false;
+      throw new Error("FHIR checkpoint unavailable");
+    }
+    await saveState(state);
+  };
+  const client = stedi();
+
+  await assert.rejects(runEligibilitySweepTick({ store, stedi: client, date: DATE, now: NOW }), /FHIR checkpoint unavailable/);
+  assert.equal(client.submitted, 1);
+  assert.equal(store.states.at(-1)?.status, "failed");
+  assert.equal(store.states.at(-1)?.batchIds.length, 0);
+  assert.equal(store.states.at(-1)?.inFlightTransactionIdentifiers?.length, 1);
+
+  await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: "2026-08-30T23:05:00.000Z" });
+  assert.equal(client.submitted, 1);
+  assert.equal(store.states.at(-1)?.status, "failed");
+});
+
+test("pending Insurance Discovery fails closed when its submitted snapshot is missing", async () => {
+  const source = candidate();
+  const store = memoryStore([source], false);
+  const transactionId = source.eligibilityRequest.submitterTransactionIdentifier;
+  const client = stedi({
+    getBatchEligibilityItems: async () => ({
+      items: [{
+        state: "COMPLETED",
+        eligibilityCheckResult: "FAILED",
+        submitterTransactionIdentifier: transactionId,
+        additionalInfo: { eligibility: { aaaErrors: [{ code: "72" }] } },
+      }],
+    }),
+    pollBatchEligibility: async () => ({
+      items: [{ submitterTransactionIdentifier: transactionId, aaaErrors: [{ code: "72" }] }],
+    }),
+    submitInsuranceDiscovery: async () => ({ status: "PENDING", discoveryId: "discovery-pending" }),
+    getInsuranceDiscoveryResults: async () => ({
+      status: "COMPLETE",
+      discoveryId: "discovery-pending",
+      items: [{ subscriber: { memberId: "DISCOVERED-789" } }],
+    }),
+  });
+
+  await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: NOW });
+  await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: "2026-08-30T23:05:00.000Z" });
+  store.loadSubmittedCandidates = async () => undefined;
+  await assert.rejects(
+    runEligibilitySweepTick({ store, stedi: client, date: DATE, now: "2026-08-30T23:10:00.000Z" }),
+    /submitted candidate snapshot is missing/,
+  );
+  assert.equal(store.findings.find((finding) => finding.watcherId === "W23")?.memberIdProposal, undefined);
+  assert.equal(store.states.at(-1)?.status, "failed");
 });
 
 test("the worker does not overlap a slow eligibility sweep tick", async () => {

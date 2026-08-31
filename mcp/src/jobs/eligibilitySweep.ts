@@ -10,6 +10,7 @@ import type {
   Resource,
 } from "@medplum/fhirtypes";
 import { practiceDate, practiceDayRange } from "../desk/day-ledger.js";
+import { StediRequestError } from "../claims/stedi-adapter.js";
 import type { MedplumClient } from "../fhir-client.js";
 import {
   coverageCobApplicability,
@@ -74,6 +75,8 @@ export interface EligibilitySweepState {
   expectedChecks: number;
   submittedTransactionIdentifiers?: string[];
   submissionComplete?: boolean;
+  inFlightTransactionIdentifiers?: string[];
+  inFlightBatchName?: string;
   pendingDiscoveryIds?: Record<string, string>;
   failureDetail?: string;
 }
@@ -116,6 +119,15 @@ export async function runEligibilitySweepTick(input: EligibilitySweepTickInput):
       await pollPendingDiscoveries(input, prior);
       return;
     }
+    if (prior?.inFlightTransactionIdentifiers && prior.inFlightTransactionIdentifiers.length > 0) {
+      await input.store.saveState({
+        ...prior,
+        status: "failed",
+        lastAttemptAt: input.now,
+        failureDetail: "Stedi may have accepted a batch whose batchId was not checkpointed; automatic replay is blocked.",
+      });
+      return;
+    }
     if (prior?.submissionComplete === false && prior.batchIds.length > 0) {
       await submitSweep(input, prior.lastSuccessfulAt, prior);
       return;
@@ -128,6 +140,7 @@ export async function runEligibilitySweepTick(input: EligibilitySweepTickInput):
   } catch (error) {
     const latest = await input.store.loadState(input.date);
     const failedFrom = latest ?? prior;
+    const definitiveRejection = error instanceof StediRequestError;
     await input.store.saveState({
       date: input.date,
       status: "failed",
@@ -141,6 +154,13 @@ export async function runEligibilitySweepTick(input: EligibilitySweepTickInput):
       ...(failedFrom?.submissionComplete !== undefined
         ? { submissionComplete: failedFrom.submissionComplete }
         : {}),
+      ...(!definitiveRejection && failedFrom?.inFlightTransactionIdentifiers
+        ? { inFlightTransactionIdentifiers: failedFrom.inFlightTransactionIdentifiers }
+        : {}),
+      ...(!definitiveRejection && failedFrom?.inFlightBatchName
+        ? { inFlightBatchName: failedFrom.inFlightBatchName }
+        : {}),
+      ...(failedFrom?.pendingDiscoveryIds ? { pendingDiscoveryIds: failedFrom.pendingDiscoveryIds } : {}),
       failureDetail: safeErrorMessage(error),
     });
     throw error;
@@ -192,9 +212,25 @@ async function submitSweep(
   }
   for (let offset = 0; offset < remaining.length; offset += BATCH_LIMIT) {
     const chunk = remaining.slice(offset, offset + BATCH_LIMIT);
+    const name = batchName(input.date, batchIds.length);
+    const inFlightTransactionIdentifiers = chunk.map(
+      (candidate) => candidate.eligibilityRequest.submitterTransactionIdentifier,
+    );
+    await input.store.saveState({
+      date: input.date,
+      status: "submitted",
+      lastAttemptAt: input.now,
+      ...(lastSuccessfulAt ? { lastSuccessfulAt } : {}),
+      batchIds: [...batchIds],
+      expectedChecks: Math.max(progress?.expectedChecks ?? 0, candidates.length, submittedTransactionIdentifiers.length),
+      submittedTransactionIdentifiers: [...submittedTransactionIdentifiers],
+      submissionComplete: false,
+      inFlightTransactionIdentifiers,
+      inFlightBatchName: name,
+    });
     const result = record(await input.stedi.submitBatchEligibility({
       items: chunk.map((candidate) => candidate.eligibilityRequest),
-      name: batchName(input.date, batchIds.length),
+      name,
       maxRetryHours: 8,
     }));
     const batchId = text(result.batchId);
@@ -287,8 +323,8 @@ async function pollPendingDiscoveries(
   state: EligibilitySweepState,
 ): Promise<void> {
   const findings = await input.store.loadFindings(input.date);
-  const candidates = await input.store.loadSubmittedCandidates(input.date)
-    ?? await input.store.loadCandidates(input.date);
+  const candidates = await input.store.loadSubmittedCandidates(input.date);
+  if (!candidates) throw new Error("Eligibility sweep submitted candidate snapshot is missing.");
   const pending: Record<string, string> = {};
   for (const [findingKey, discoveryId] of Object.entries(state.pendingDiscoveryIds ?? {})) {
     const result = record(await input.stedi.getInsuranceDiscoveryResults(discoveryId));
