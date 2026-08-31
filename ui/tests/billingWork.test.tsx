@@ -184,6 +184,34 @@ test("Space expands a focused reason group and Enter opens its batch action", as
   await act(async () => renderer.unmount());
 });
 
+test("Enter cannot bypass a disabled batch action for an untyped reason", async () => {
+  const untyped = missingProcedureGroup();
+  const projection: WorkProjection = {
+    status: "healthy",
+    lastSuccessfulAt: "2026-08-30T12:00:00.000Z",
+    lanes: buildWorkLanes([{
+      ...untyped,
+      reason: { code: null, display: "No typed reason", resolutionPath: null },
+      rows: untyped.rows.map((row) => ({
+        ...row,
+        reasonCode: null,
+        reasonDisplay: null,
+        resolutionPath: null,
+      })),
+    }], []),
+  };
+  let renderer!: ReturnType<typeof create>;
+  await act(async () => {
+    renderer = create(<BillingWork initialProjection={projection} initialActiveLane="aging" />);
+  });
+
+  const groupButton = renderer.root.findAllByType("button").find((button) => button.props["aria-expanded"] === false)!;
+  await act(async () => groupButton.props.onKeyDown({ key: "Enter", preventDefault() {} }));
+
+  assert.equal(renderer.root.findAllByProps({ "aria-label": "Complete claim batch" }).length, 0);
+  await act(async () => renderer.unmount());
+});
+
 export function healthyWorkFixture(): Extract<WorkProjection, { status: "healthy" }> {
   return {
     status: "healthy",

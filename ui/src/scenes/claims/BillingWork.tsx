@@ -267,7 +267,7 @@ function ClaimGroupCard({
     if (action === "none") return;
     event.preventDefault();
     if (action === "toggle") onToggle();
-    else if (action === "open-action") onOpenAction();
+    else if (action === "open-action" && group.reason.code) onOpenAction();
     else onMove(event.key);
   };
   return (
