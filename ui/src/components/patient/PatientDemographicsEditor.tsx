@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import type { Patient } from "@medplum/fhirtypes";
 import { CatalogFieldKit, type CatalogFieldDescriptor } from "../settings/CatalogFields";
 import {
@@ -7,6 +7,7 @@ import {
   validatePatientDemographics,
   type PatientDemographicsDraft,
 } from "../../lib/patient-registration";
+import { SmsOptOutControl } from "./SmsOptOutControl";
 
 const GENDER_OPTIONS = [
   { value: "male", label: "Male" },
@@ -24,7 +25,6 @@ const IDENTITY_FIELDS: CatalogFieldDescriptor[] = [
 ];
 
 const CONTACT_FIELDS: CatalogFieldDescriptor[] = [
-  { key: "phone", label: "Phone", type: "text" },
   { key: "address", label: "Home address", type: "text" },
   { key: "city", label: "City", type: "text" },
   { key: "state", label: "State", type: "text" },
@@ -35,10 +35,12 @@ export function PatientDemographicsFields({
   draft,
   errors,
   onChange,
+  smsPreferences,
 }: {
   draft: PatientDemographicsDraft;
   errors: Record<string, string>;
   onChange: (draft: PatientDemographicsDraft) => void;
+  smsPreferences?: ReactNode;
 }) {
   const set = (key: string, value: unknown) => onChange({ ...draft, [key]: String(value) });
   return (
@@ -50,6 +52,8 @@ export function PatientDemographicsFields({
       </fieldset>
       <fieldset className="grid gap-4 rounded-lg border border-white/10 bg-black/10 p-4">
         <legend className="px-2 text-sm font-semibold text-blue-200">Contact information</legend>
+        <LabeledInput label="Phone" type="text" value={draft.phone} error={errors.phone} onChange={(value) => set("phone", value)} />
+        {smsPreferences}
         <CatalogFieldKit fields={CONTACT_FIELDS} values={{ ...draft }} errors={errors} onChange={set} />
         <LabeledInput label="Email" type="email" value={draft.email} error={errors.email} onChange={(value) => set("email", value)} />
       </fieldset>
@@ -100,7 +104,12 @@ export function PatientDemographicsEditor({
           <h2 id="demographics-title" className="text-xl font-semibold">Edit demographics</h2>
         </div>
         {saveError && <div role="alert" className="mb-4 rounded border border-red-400/40 bg-red-950/40 px-4 py-3 text-sm text-red-200">{saveError}</div>}
-        <PatientDemographicsFields draft={draft} errors={errors} onChange={setDraft} />
+        <PatientDemographicsFields
+          draft={draft}
+          errors={errors}
+          onChange={setDraft}
+          smsPreferences={patient.id ? <SmsOptOutControl patientReference={`Patient/${patient.id}`} /> : undefined}
+        />
         <div className="mt-6 flex justify-end gap-2">
           <button type="button" onClick={discard} className="rounded border border-white/15 px-4 py-2 text-sm">Discard</button>
           <button type="button" disabled={saving} onClick={() => void save()} className="rounded bg-blue-500 px-4 py-2 text-sm font-semibold disabled:opacity-50">{saving ? "Saving…" : "Save demographics"}</button>

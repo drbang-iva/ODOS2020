@@ -51,9 +51,15 @@ export interface SuppressionGateDeps {
 export interface PatientSmsOptOutState {
   patientReference: string;
   smsOptedOut: boolean;
+  remainingOptOuts: {
+    global: boolean;
+    numbers: string[];
+  };
 }
 
-export interface ClearPatientSmsOptOutResult extends PatientSmsOptOutState {
+export interface ClearPatientSmsOptOutResult {
+  patientReference: string;
+  smsOptedOut: boolean;
   cleared: boolean;
   suppressionCleared?: boolean;
   remainingOptOuts?: {
@@ -67,9 +73,11 @@ export async function readPatientSmsOptOut(
   patientReference: string,
 ): Promise<PatientSmsOptOutState> {
   const patient = await readPatient(fhir, patientReference);
+  const remainingOptOuts = summarizeSmsOptOuts(patient.extension ?? []);
   return {
     patientReference,
-    smsOptedOut: patient.extension?.some(isOwnedSmsOptOut) ?? false,
+    smsOptedOut: remainingOptOuts.global || remainingOptOuts.numbers.length > 0,
+    remainingOptOuts,
   };
 }
 

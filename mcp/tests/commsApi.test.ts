@@ -181,7 +181,18 @@ test("opt-out routes return the existing not-found shape for an unknown named Pa
 });
 
 test("clearing one named patient on a shared handset leaves the other patient suppressed", async () => {
-  const fixture = await startServer();
+  const fixture = await startServer({
+    channelRoutes: {
+      "transactional-sms": "twilio",
+      "marketing-sms": "twilio",
+      "clinical-sms": "twilio",
+    },
+    senderNumbers: {
+      "transactional-sms": "+18645550100",
+      "marketing-sms": "+18645550100",
+      "clinical-sms": "+18485550100",
+    },
+  });
   try {
     const before = await request(
       fixture.base,
@@ -191,7 +202,23 @@ test("clearing one named patient on a shared handset leaves the other patient su
       "staff",
     );
     assert.equal(before.status, 200);
-    assert.deepEqual(await before.json(), { patientReference: PATIENT_REFERENCE, smsOptedOut: true });
+    assert.deepEqual(await before.json(), {
+      patientReference: PATIENT_REFERENCE,
+      smsOptedOut: true,
+      remainingOptOuts: { global: true, numbers: [] },
+      smsLanes: [
+        {
+          label: "Front-desk texts",
+          number: "+18645550100",
+          roles: ["transactional-sms", "marketing-sms"],
+        },
+        {
+          label: "Clinical texts",
+          number: "+18485550100",
+          roles: ["clinical-sms"],
+        },
+      ],
+    });
 
     const cleared = await request(fixture.base, "/communications/opt-out/clear", "POST", {
       ...OPT_OUT_CLEAR_BODY,
