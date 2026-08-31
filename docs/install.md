@@ -101,11 +101,15 @@ Create `.env` from `.env.example` or export these variables in the shell that ru
 | Variable | Required | Purpose |
 |---|---:|---|
 | `ODOS_PRACTICE_NAME` | yes | Practice/project name for first-run provisioning. |
-| `ODOS_ADMIN_EMAIL` | yes | Human-owned admin email; it must be distinct from the `MEDPLUM_ADMIN_EMAIL` service identity. |
+| `ODOS_ADMIN_EMAIL` | yes | Human-owned admin email; it must be distinct from the `MEDPLUM_ADMIN_EMAIL` break-glass account. |
 | `ODOS_ADMIN_NAME` | yes | First admin/practitioner display name. |
-| `ODOS_ADMIN_PASSWORD` | yes | Human-owned Medplum password. `MEDPLUM_ADMIN_PASSWORD` is also accepted. |
+| `ODOS_ADMIN_PASSWORD` | yes | Human-owned Medplum password. `MEDPLUM_ADMIN_PASSWORD` is also accepted as a fallback for this value; keep the human password separate from the MCP break-glass secret. |
 | `MEDPLUM_BASE_URL` | no | Defaults to `http://localhost:8103`. |
 | `MEDPLUM_PROJECT_ID` | no | Compatibility fallback when installation state is absent. When set, it must equal the canonical project ID in `.odos-setup-state.json`. |
+| `MEDPLUM_CLIENT_ID` | no | ClientApplication ID for the scoped MCP service identity. Set it only together with `MEDPLUM_CLIENT_SECRET`. |
+| `MEDPLUM_CLIENT_SECRET` | no | Secret for the scoped MCP service identity. When both `MEDPLUM_CLIENT_*` values are set, MCP startup and token refresh use `client_credentials` and fail closed on partial configuration or exchange failure. |
+| `MEDPLUM_ADMIN_EMAIL` | yes for first-run setup and local Compose | Medplum super-admin bootstrap email and break-glass MCP password-login email. The MCP runtime uses it only when both `MEDPLUM_CLIENT_*` values are absent. |
+| `MEDPLUM_ADMIN_PASSWORD` | yes for first-run setup and local Compose | Medplum super-admin bootstrap secret and break-glass MCP password-login secret. It never recovers a partial, invalid, or failed client-credential configuration. |
 | `MEDPLUM_STORAGE_BASE_URL` | no | Defaults to `http://localhost:8103/storage/`; set it to the public storage origin when the port or host is remapped. |
 | `ODOS_POSTGRES_URL` | no | Defaults to local compose Postgres. Used for audit rows. |
 | `ODOS_SETUP_STATE_PATH` | no | Defaults to `./.odos-setup-state.json`. No PHI is written there. |
@@ -250,7 +254,7 @@ The wizard:
   address and telecom are omitted because setup does not collect those values.
 - Creates the canonical ODOS `front-desk`, `practice-admin`, and `clinician` AccessPolicies. (Since 2026-07-05, ODOS AccessPolicies carry a `practice-role` `meta.tag` — the payments endpoint derives a caller's role from it. Installs seeded before that date must run `npm run reseed-role-tags` with a human-provisioned, short-lived `MEDPLUM_ACCESS_TOKEN` set so existing policies gain the tag; the command conditionally patches only missing tags, reports role-tag or concurrent-write conflicts without overwriting them, and exits non-zero when conflicts exist.)
 - Reconciles the named human administrator's `ProjectMembership.access[]` to `front-desk`, `practice-admin`, and `clinician`, with `front-desk` first so Desk mutations use the existing actor role.
-- Stops before provisioning if `ODOS_ADMIN_EMAIL` matches the `MEDPLUM_ADMIN_EMAIL` service identity.
+- Stops before provisioning if `ODOS_ADMIN_EMAIL` matches the `MEDPLUM_ADMIN_EMAIL` break-glass account.
 - Emits `odos_audit_events` rows with `actor_id = setup-wizard`, `actor_role = system`, and `action_reason = "v0.5d setup wizard first-run provisioning"`.
 - Records resumable progress in `.odos-setup-state.json`.
 - Creates or verifies a distinct `ODOS Local Operator` client in the exact project. Its
@@ -427,7 +431,7 @@ Start the UI in a second terminal:
 cd ui && npm run dev
 ```
 
-Open `http://localhost:5173`, then sign in through the ODOS login screen with the human account named by `--email`. Keep that account distinct from the `MEDPLUM_ADMIN_EMAIL` service identity; no password is stored in this repository. The UI is inert unless the backend is running on `http://localhost:3333`.
+Open `http://localhost:5173`, then sign in through the ODOS login screen with the human account named by `--email`. Keep that account distinct from the `MEDPLUM_ADMIN_EMAIL` break-glass account; no password is stored in this repository. The UI is inert unless the backend is running on `http://localhost:3333`.
 
 ### Remote Browser Access
 

@@ -8,6 +8,7 @@ import {
   createOperatorScriptFhirClient,
   type MedplumClient,
 } from "../src/fhir-client.js";
+import type { ServiceAuthenticationClient } from "../src/service-auth-options.js";
 import { searchProjectAll } from "../src/fhir-search.js";
 import { TEST_FHIR_AUDIT_CONTEXT, TEST_FHIR_AUDIT_RECORDER } from "./fhirAuditTestStub.js";
 
@@ -309,6 +310,50 @@ test("partial service credentials are fatal instead of falling back to password 
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test("absent client credentials select password authentication", async () => {
+  const passwordCalls: Array<[string, string]> = [];
+  const clientCredentialCalls: unknown[] = [];
+  const client: ServiceAuthenticationClient = {
+    async login(email, password) {
+      passwordCalls.push([email, password]);
+    },
+    async loginWithClientCredentials(credentials) {
+      clientCredentialCalls.push(credentials);
+    },
+  };
+
+  const mode = await authenticateMedplumService(client, {
+    projectId: "practice-1",
+    email: "local-admin@example.test",
+    password: "not-a-real-password",
+  });
+
+  assert.equal(mode, "password");
+  assert.deepEqual(passwordCalls, [["local-admin@example.test", "not-a-real-password"]]);
+  assert.deepEqual(clientCredentialCalls, []);
+});
+
+test("absent client and password credentials name both credential-pair remedies", async () => {
+  const passwordCalls: Array<[string, string]> = [];
+  const clientCredentialCalls: unknown[] = [];
+  const client: ServiceAuthenticationClient = {
+    async login(email, password) {
+      passwordCalls.push([email, password]);
+    },
+    async loginWithClientCredentials(credentials) {
+      clientCredentialCalls.push(credentials);
+    },
+  };
+
+  await assert.rejects(
+    authenticateMedplumService(client, { projectId: "practice-1" }),
+    /MEDPLUM_CLIENT_ID and MEDPLUM_CLIENT_SECRET, or MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD, must be set in env/,
+  );
+
+  assert.deepEqual(passwordCalls, []);
+  assert.deepEqual(clientCredentialCalls, []);
 });
 
 test("client-credential login refreshes without an explicit callback and audits both exchanges", async () => {
