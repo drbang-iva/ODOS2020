@@ -3,7 +3,11 @@ import { basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Pool, type PoolClient } from "pg";
 import type { AuditEvent } from "@medplum/fhirtypes";
-import { createUnauditedMedplumClient_bootOnly, type MedplumClient } from "../fhir-client.js";
+import {
+  authenticateMedplumService,
+  createUnauditedMedplumClient_bootOnly,
+  type MedplumClient,
+} from "../fhir-client.js";
 import {
   AuditEventProjectionQueue,
   buildAuditEventProjection,
@@ -94,6 +98,9 @@ export interface LiveAuditRuntimeOptions {
   postgresUrl?: string;
   medplumBaseUrl?: string;
   medplumAccessToken?: string;
+  medplumProjectId?: string;
+  medplumClientId?: string;
+  medplumClientSecret?: string;
   medplumEmail?: string;
   medplumPassword?: string;
   disabled?: boolean;
@@ -449,6 +456,7 @@ export class LiveOdosAuditRuntime implements FhirAuditRecorder {
     } catch (error) {
       if (
         this.options.medplumAccessToken &&
+        !hasAnyConfiguredClientCredential(this.options) &&
         this.options.medplumEmail &&
         this.options.medplumPassword &&
         isAuthzProjectionError(error)
@@ -462,14 +470,7 @@ export class LiveOdosAuditRuntime implements FhirAuditRecorder {
   }
 
   private async getProjectionClient(): Promise<MedplumClient> {
-    this.projectionClient ??= this.options.medplumAccessToken
-      ? Promise.resolve(
-          createUnauditedMedplumClient_bootOnly({
-            baseUrl: this.options.medplumBaseUrl ?? "http://localhost:8103",
-            accessToken: this.options.medplumAccessToken,
-          }),
-        )
-      : this.createPasswordProjectionClient();
+    this.projectionClient ??= createAuditProjectionClient(this.options);
     return this.projectionClient;
   }
 
@@ -482,6 +483,39 @@ export class LiveOdosAuditRuntime implements FhirAuditRecorder {
     }
     return client;
   }
+}
+
+export async function createAuditProjectionClient(
+  options: LiveAuditRuntimeOptions,
+): Promise<MedplumClient> {
+  const baseUrl = options.medplumBaseUrl ?? "http://localhost:8103";
+  const hasClientCredentialConfiguration = hasAnyConfiguredClientCredential(options);
+  let client: MedplumClient;
+  const authenticate = async (): Promise<void> => {
+    await authenticateMedplumService(client, {
+      projectId: options.medplumProjectId ?? "",
+      clientId: options.medplumClientId,
+      clientSecret: options.medplumClientSecret,
+      email: options.medplumEmail,
+      password: options.medplumPassword,
+      logError: (message) => console.error(`odos-audit: ${message}`),
+    });
+  };
+  client = createUnauditedMedplumClient_bootOnly({
+    baseUrl,
+    accessToken: hasClientCredentialConfiguration ? undefined : options.medplumAccessToken,
+    ...(hasClientCredentialConfiguration ? { refreshAuthentication: authenticate } : {}),
+  });
+  if (hasClientCredentialConfiguration || (
+    !options.medplumAccessToken && options.medplumEmail && options.medplumPassword
+  )) {
+    await authenticate();
+  }
+  return client;
+}
+
+function hasAnyConfiguredClientCredential(options: LiveAuditRuntimeOptions): boolean {
+  return Boolean(options.medplumClientId?.trim() || options.medplumClientSecret?.trim());
 }
 
 export function createLiveOdosAuditRuntime(

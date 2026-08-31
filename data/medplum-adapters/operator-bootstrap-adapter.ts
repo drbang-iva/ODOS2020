@@ -1,4 +1,4 @@
-interface OperatorCredentials {
+export interface OperatorCredentials {
   readonly projectId: string;
   readonly clientId: string;
   readonly clientSecret: string;
@@ -198,7 +198,7 @@ function asError(value: unknown): Error {
   return value instanceof Error ? value : new Error(String(value));
 }
 
-async function exchangeOperatorCredential(baseUrl: string, credentials: OperatorCredentials): Promise<string> {
+export async function exchangeOperatorCredential(baseUrl: string, credentials: OperatorCredentials): Promise<string> {
   const response = await fetch(`${baseUrl}/oauth2/token`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -211,7 +211,7 @@ async function exchangeOperatorCredential(baseUrl: string, credentials: Operator
   return required(body.access_token, "operator access token");
 }
 
-function clientCredentialBody(credentials: OperatorCredentials): URLSearchParams {
+export function clientCredentialBody(credentials: OperatorCredentials): URLSearchParams {
   return new URLSearchParams({
     grant_type: "client_credentials",
     client_id: required(credentials.clientId, "operator client id"),

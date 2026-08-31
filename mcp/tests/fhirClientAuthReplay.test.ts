@@ -3,6 +3,7 @@ import { test } from "node:test";
 import type { AccessPolicy, Bundle, ChargeItemDefinition, OperationOutcome, Patient, ProjectMembership } from "@medplum/fhirtypes";
 import type { OdosAuditEventRecord } from "../src/authz/odosAudit.js";
 import {
+  authenticateMedplumService,
   createMedplumClient,
   createOperatorScriptFhirClient,
   type MedplumClient,
@@ -226,6 +227,146 @@ test("FHIR client proactively re-authenticates within five minutes of token expi
     await client.read<Patient>("Patient", "p1");
     assert.equal(tokenExchanges, 2);
     assert.deepEqual(authorizations, [`Bearer ${freshToken}`]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("configured service credentials fail closed without password fallback", async () => {
+  const originalFetch = globalThis.fetch;
+  const requests: string[] = [];
+  const auditRows: OdosAuditEventRecord[] = [];
+  const deniedRows: OdosAuditEventRecord[] = [];
+  const errors: string[] = [];
+  globalThis.fetch = async (input) => {
+    requests.push(new URL(String(input)).pathname);
+    return new Response("invalid_client", { status: 401, statusText: "Unauthorized" });
+  };
+  try {
+    const client = createMedplumClient({
+      baseUrl: "http://medplum.test",
+      audit: {
+        record: async (row, operation) => {
+          auditRows.push(row);
+          return operation();
+        },
+        recordDenied: async (row) => { deniedRows.push(row); },
+      },
+      auditContext: { actorId: "odos-mcp", actorRole: "system" },
+    });
+
+    await assert.rejects(
+      authenticateMedplumService(client, {
+        projectId: "practice-1",
+        clientId: "service-client",
+        clientSecret: "not-a-real-secret",
+        email: "break-glass@example.test",
+        password: "not-a-real-password",
+        logError: (message) => errors.push(message),
+      }),
+      /client-credentials exchange failed.*401 Unauthorized/i,
+    );
+
+    assert.deepEqual(requests, ["/oauth2/token"]);
+    assert.equal(errors.length, 1);
+    assert.match(errors[0]!, /CLIENT-CREDENTIALS AUTHENTICATION FAILED/);
+    assert.equal(auditRows.length, 1);
+    assert.equal(deniedRows.length, 1);
+    assert.equal(deniedRows[0]?.eventType, "login-failed");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("partial service credentials are fatal instead of falling back to password login", async () => {
+  const originalFetch = globalThis.fetch;
+  let fetches = 0;
+  const errors: string[] = [];
+  globalThis.fetch = async () => {
+    fetches += 1;
+    throw new Error("network must not be reached");
+  };
+  try {
+    const client = createMedplumClient({
+      baseUrl: "http://medplum.test",
+      audit: TEST_FHIR_AUDIT_RECORDER,
+      auditContext: TEST_FHIR_AUDIT_CONTEXT,
+    });
+
+    await assert.rejects(
+      authenticateMedplumService(client, {
+        projectId: "practice-1",
+        clientId: "service-client",
+        email: "break-glass@example.test",
+        password: "not-a-real-password",
+        logError: (message) => errors.push(message),
+      }),
+      /MEDPLUM_CLIENT_ID and MEDPLUM_CLIENT_SECRET must either both be set or both be absent/,
+    );
+
+    assert.equal(fetches, 0);
+    assert.equal(errors.length, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("client-credential login refreshes without an explicit callback and audits both exchanges", async () => {
+  const originalFetch = globalThis.fetch;
+  const now = Date.parse("2026-08-30T12:00:00Z");
+  const expiringToken = jwt({ exp: Math.floor(now / 1000) + 299, jti: "expiring-service" });
+  const freshToken = jwt({ exp: Math.floor(now / 1000) + 3600, jti: "fresh-service" });
+  const tokenGrants: string[] = [];
+  const authLoginRequests: string[] = [];
+  const fhirAuthorizations: Array<string | undefined> = [];
+  const auditRows: OdosAuditEventRecord[] = [];
+  let exchanges = 0;
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input));
+    if (url.pathname === "/oauth2/token") {
+      exchanges += 1;
+      tokenGrants.push(new URLSearchParams(String(init?.body)).get("grant_type") ?? "");
+      return Response.json({ access_token: exchanges === 1 ? expiringToken : freshToken });
+    }
+    if (url.pathname === "/auth/login") {
+      authLoginRequests.push(url.pathname);
+      return Response.json({ code: "password-login-must-not-run" });
+    }
+    fhirAuthorizations.push(new Headers(init?.headers).get("authorization") ?? undefined);
+    return Response.json({ resourceType: "Patient", id: "p1" });
+  };
+  try {
+    const client = createMedplumClient({
+      baseUrl: "http://medplum.test",
+      now: () => now,
+      audit: {
+        record: async (row, operation) => {
+          auditRows.push(row);
+          return operation();
+        },
+        recordDenied: async () => undefined,
+      },
+      auditContext: { actorId: "odos-mcp", actorRole: "system" },
+    });
+
+    await authenticateMedplumService(client, {
+      projectId: "practice-1",
+      clientId: "service-client",
+      clientSecret: "not-a-real-secret",
+      email: "break-glass@example.test",
+      password: "not-a-real-password",
+      logError: () => undefined,
+    });
+    const patient = await client.read<Patient>("Patient", "p1");
+
+    assert.equal(patient.id, "p1");
+    assert.deepEqual(tokenGrants, ["client_credentials", "client_credentials"]);
+    assert.deepEqual(authLoginRequests, []);
+    assert.deepEqual(fhirAuthorizations, [`Bearer ${freshToken}`]);
+    assert.deepEqual(
+      auditRows.filter((row) => row.eventType === "login").map((row) => row.actionReason),
+      ["authentication-success", "authentication-success"],
+    );
   } finally {
     globalThis.fetch = originalFetch;
   }

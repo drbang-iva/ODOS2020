@@ -301,9 +301,11 @@ test("grantPracticeRoles rejects an unscoped composite policy before membership 
 test("project composite resolver creates target-owned policy and reconciles rule drift", async () => {
   const policies: AccessPolicy[] = [];
   let patches = 0;
+  let createHeaders: Record<string, string> | undefined;
   const store = {
     findPoliciesByName: async (name: string) => policies.filter((policy) => policy.name === name),
-    createPolicy: async (policy: AccessPolicy) => {
+    createPolicy: async (policy: AccessPolicy, headers?: Record<string, string>) => {
+      createHeaders = headers;
       const created = { ...structuredClone(policy), id: "composite", meta: { ...policy.meta, versionId: "1" } };
       policies.push(created);
       return created;
@@ -324,6 +326,7 @@ test("project composite resolver creates target-owned policy and reconciles rule
     expected,
   );
   assert.equal(created.meta?.project, "p1");
+  assert.equal(createHeaders?.["X-Medplum"], "extended");
   created.resource = created.resource?.slice(1);
 
   const reconciled = await resolveProjectCompositeAccessPolicy(

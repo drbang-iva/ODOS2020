@@ -52,7 +52,7 @@ export interface PracticeRoleGrantDependencies {
 
 export interface ProjectCompositeAccessPolicyStore {
   findPoliciesByName(name: string): Promise<AccessPolicy[]>;
-  createPolicy(policy: AccessPolicy): Promise<AccessPolicy>;
+  createPolicy(policy: AccessPolicy, extraHeaders?: Record<string, string>): Promise<AccessPolicy>;
   patchPolicy(
     id: string,
     operations: JsonPatchOperation[],
@@ -251,10 +251,13 @@ export async function resolveProjectCompositeAccessPolicy(
   }
   const existing = matches[0];
   if (!existing) {
-    return store.createPolicy({
-      ...structuredClone(expected),
-      meta: { ...expected.meta, project: projectId },
-    });
+    return store.createPolicy(
+      {
+        ...structuredClone(expected),
+        meta: { ...expected.meta, project: projectId },
+      },
+      { "X-Medplum": "extended" },
+    );
   }
   const expectedRoles = PRACTICE_ROLE_IDS.filter((role) => roles.includes(role));
   if (JSON.stringify(practiceRoles(existing)) !== JSON.stringify(expectedRoles)) {
