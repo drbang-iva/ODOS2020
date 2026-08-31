@@ -28,6 +28,7 @@ import { LongitudinalImagingCard } from "../components/LongitudinalImagingCard";
 import { OdosSelect } from "../components/inputs/OdosSelect";
 import { StartExam } from "../components/StartExam";
 import { PatientHistoryTimeline } from "../components/PatientHistoryTimeline";
+import { PatientDemographicsEditor } from "../components/patient/PatientDemographicsEditor";
 import { fetchPatientHistory } from "../lib/audit-log";
 import {
   findLatestActiveVisionPrescription,
@@ -92,6 +93,7 @@ export function PatientOverview({
   const [activeRxId, setActiveRxId] = useState<string | null>();
   const [rxError, setRxError] = useState<string>();
   const [correspondenceOpen, setCorrespondenceOpen] = useState(false);
+  const [demographicsEditorOpen, setDemographicsEditorOpen] = useState(false);
   const [openVisitId, setOpenVisitId] = useState<string>();
   const [visitDetails, setVisitDetails] = useState<Record<string, PatientOverviewVisitDetail>>({});
   const [visitDetailLoading, setVisitDetailLoading] = useState<Record<string, boolean>>({});
@@ -293,6 +295,11 @@ export function PatientOverview({
             <DemographicDetail demographics={demographics} patient={patient} chartNumber={chartNumber} overview={overview} />
           ) : null}
           <div className="odos-overview-actions">
+            {isVisible("demographic-detail") && patient.id && (
+              <button type="button" className="odos-overview-button" onClick={() => setDemographicsEditorOpen(true)}>
+                Edit demographics
+              </button>
+            )}
             {isVisible("consult-drafts") && <button
               type="button"
               className="odos-overview-button"
@@ -312,6 +319,16 @@ export function PatientOverview({
             patientId={patient.id}
             onClose={() => setCorrespondenceOpen(false)}
             api={api.correspondence ?? referralApi}
+          />
+        )}
+        {demographicsEditorOpen && (
+          <PatientDemographicsEditor
+            patient={patient}
+            onDiscard={() => setDemographicsEditorOpen(false)}
+            onSaved={() => {
+              setDemographicsEditorOpen(false);
+              window.location.reload();
+            }}
           />
         )}
 

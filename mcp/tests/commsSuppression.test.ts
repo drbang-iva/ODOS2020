@@ -236,7 +236,7 @@ test("global STOP scope expands a number-specific opt-out across sender lanes", 
   assert.equal(sent.length, 0);
 });
 
-test("legacy SMS opt-out without a number remains a wildcard across sender lanes", async () => {
+test("inbound STOP without a campaign type blocks clinical education on the receiving sender lane", async () => {
   const subject = patient({
     telecom: [{ system: "phone", value: "+18645550199" }],
     extension: [{
@@ -255,8 +255,8 @@ test("legacy SMS opt-out without a number remains a wildcard across sender lanes
 
   const result = await provider.sendSms!({
     patientReference: "Patient/synthetic-1",
-    body: "Synthetic follow-up",
-    campaignType: "manual",
+    body: "Synthetic practice\nhttps://synthetic.invalid/education\nReply STOP to opt out.",
+    campaignType: "clinical-education",
     suppression: {},
   });
 

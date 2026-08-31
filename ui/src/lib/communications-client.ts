@@ -38,6 +38,45 @@ export interface SmsSendResult {
   rescheduledAt?: string;
 }
 
+export interface EducationContentItem {
+  id: string;
+  version: number;
+  title: string;
+  kind: "video" | "handout" | "report" | "page";
+  audience: "patient" | "internal";
+  dxCodes: string[];
+  channels: Array<"sms" | "email" | "print">;
+  laneHint: "clinical" | "retail";
+  consentClass: "transactional" | "marketing";
+  urls: {
+    web?: string;
+    email?: string;
+    print?: string;
+  };
+}
+
+export interface EducationDispatchInput {
+  patientReference: string;
+  educationId: string;
+  version: number;
+  channel: "sms" | "email" | "print";
+  lane: "clinical" | "frontdesk";
+  recipientOverride?: {
+    reference?: string;
+    phone?: string;
+    email?: string;
+  };
+  alsoUpdateChart: boolean;
+  encounterReference?: string;
+  conditionReference?: string;
+  idempotencyKey: string;
+}
+
+export type EducationDispatchResult =
+  | { outcome: "sent"; providerMessageId: string }
+  | { outcome: "print"; url: string }
+  | { outcome: "refused"; reason: string };
+
 export class CommunicationsResponseError extends Error {
   constructor(readonly status: number, message: string) {
     super(message);
@@ -52,12 +91,15 @@ export async function readSmsOptOut(
     `${clinicalGraphApiBase()}/communications/opt-out?patient=${encodeURIComponent(patientReference)}`,
     { headers: authHeaders() },
   );
-  const body = await response.json().catch(() => ({})) as SmsOptOutState & { error?: string };
+  const body = await response.json().catch(() => ({})) as unknown;
   if (!response.ok) {
     throw new CommunicationsResponseError(
       response.status,
-      body.error ?? `SMS opt-out state failed (${response.status}).`,
+      responseError(body) ?? `SMS opt-out state failed (${response.status}).`,
     );
+  }
+  if (!isSmsOptOutState(body)) {
+    throw new CommunicationsResponseError(response.status, "SMS opt-out state returned an unexpected response.");
   }
   return body;
 }
@@ -76,14 +118,137 @@ export async function clearSmsOptOut(
     headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
-  const body = await response.json().catch(() => ({})) as ClearSmsOptOutResult & { error?: string };
+  const body = await response.json().catch(() => ({})) as unknown;
   if (!response.ok) {
     throw new CommunicationsResponseError(
       response.status,
-      body.error ?? `SMS opt-out clear failed (${response.status}).`,
+      responseError(body) ?? `SMS opt-out clear failed (${response.status}).`,
     );
   }
+  if (!isClearSmsOptOutResult(body)) {
+    throw new CommunicationsResponseError(response.status, "SMS opt-out clear returned an unexpected response.");
+  }
   return body;
+}
+
+export async function listEducation(
+  query: { dxCode?: string; channel?: "sms" | "email" | "print" },
+  fetchImpl: typeof fetch = fetch,
+): Promise<EducationContentItem[]> {
+  const params = new URLSearchParams();
+  if (query.dxCode) params.set("dxCode", query.dxCode);
+  if (query.channel) params.set("channel", query.channel);
+  const suffix = params.size ? `?${params.toString()}` : "";
+  const response = await fetchImpl(`${clinicalGraphApiBase()}/communications/education${suffix}`, {
+    headers: authHeaders(),
+  });
+  const body = await response.json().catch(() => ({})) as unknown;
+  if (!response.ok) {
+    throw new CommunicationsResponseError(
+      response.status,
+      responseError(body) ?? `Education catalog failed (${response.status}).`,
+    );
+  }
+  if (!isRecord(body) || !Array.isArray(body.items) || !body.items.every(isEducationContentItem)) {
+    throw new CommunicationsResponseError(response.status, "Education catalog returned an unexpected response.");
+  }
+  return body.items;
+}
+
+export async function dispatchEducation(
+  input: EducationDispatchInput,
+  fetchImpl: typeof fetch = fetch,
+): Promise<EducationDispatchResult> {
+  const response = await fetchImpl(`${clinicalGraphApiBase()}/communications/education/dispatch`, {
+    method: "POST",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const body = await response.json().catch(() => ({})) as unknown;
+  if (!response.ok) {
+    throw new CommunicationsResponseError(
+      response.status,
+      responseError(body) ?? dispatchRefusalReason(body) ?? `Education dispatch failed (${response.status}).`,
+    );
+  }
+  if (!isEducationDispatchResult(body)) {
+    throw new CommunicationsResponseError(response.status, "Education dispatch returned an unexpected response.");
+  }
+  return body;
+}
+
+function isSmsOptOutState(value: unknown): value is SmsOptOutState {
+  if (!isRecord(value)
+    || typeof value.patientReference !== "string"
+    || typeof value.smsOptedOut !== "boolean"
+    || !isRemainingOptOuts(value.remainingOptOuts)
+    || !Array.isArray(value.smsLanes)) return false;
+  return value.smsLanes.every((lane) =>
+    isRecord(lane)
+    && typeof lane.label === "string"
+    && typeof lane.number === "string"
+    && Array.isArray(lane.roles)
+    && lane.roles.every(isSmsLaneRole));
+}
+
+function isClearSmsOptOutResult(value: unknown): value is ClearSmsOptOutResult {
+  return isRecord(value)
+    && typeof value.patientReference === "string"
+    && typeof value.smsOptedOut === "boolean"
+    && typeof value.cleared === "boolean"
+    && (value.suppressionCleared === undefined || typeof value.suppressionCleared === "boolean")
+    && (value.remainingOptOuts === undefined || isRemainingOptOuts(value.remainingOptOuts));
+}
+
+function isRemainingOptOuts(value: unknown): value is SmsOptOutState["remainingOptOuts"] {
+  return isRecord(value)
+    && typeof value.global === "boolean"
+    && Array.isArray(value.numbers)
+    && value.numbers.every((number) => typeof number === "string");
+}
+
+function isSmsLaneRole(value: unknown): value is SmsLaneRole {
+  return value === "transactional-sms" || value === "marketing-sms" || value === "clinical-sms";
+}
+
+function isEducationContentItem(value: unknown): value is EducationContentItem {
+  if (!isRecord(value)
+    || typeof value.id !== "string"
+    || typeof value.version !== "number"
+    || typeof value.title !== "string"
+    || !["video", "handout", "report", "page"].includes(String(value.kind))
+    || !["patient", "internal"].includes(String(value.audience))
+    || !Array.isArray(value.dxCodes)
+    || !value.dxCodes.every((code) => typeof code === "string")
+    || !Array.isArray(value.channels)
+    || !value.channels.every((channel) => ["sms", "email", "print"].includes(String(channel)))
+    || !["clinical", "retail"].includes(String(value.laneHint))
+    || !["transactional", "marketing"].includes(String(value.consentClass))
+    || !isRecord(value.urls)) return false;
+  return (value.urls.web === undefined || typeof value.urls.web === "string")
+    && (value.urls.email === undefined || typeof value.urls.email === "string")
+    && (value.urls.print === undefined || typeof value.urls.print === "string");
+}
+
+function isEducationDispatchResult(value: unknown): value is EducationDispatchResult {
+  if (!isRecord(value) || typeof value.outcome !== "string") return false;
+  if (value.outcome === "sent") return typeof value.providerMessageId === "string";
+  if (value.outcome === "print") return typeof value.url === "string";
+  return value.outcome === "refused" && typeof value.reason === "string";
+}
+
+function dispatchRefusalReason(value: unknown): string | undefined {
+  return isRecord(value) && value.outcome === "refused" && typeof value.reason === "string"
+    ? value.reason
+    : undefined;
+}
+
+function responseError(value: unknown): string | undefined {
+  return isRecord(value) && typeof value.error === "string" ? value.error : undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export async function sendSms(

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Condition, Encounter, Patient } from "@medplum/fhirtypes";
 import { ChartSidebar } from "../components/ChartSidebar";
+import { EngageSheet, type EngageDiagnosis } from "../components/comms/EngageSheet";
 import { ReferralCompose } from "../components/referral/ReferralCompose";
 import { AestheticsConsentSection } from "../components/charting/AestheticsConsentSection";
 import { AssessmentSection } from "../components/charting/AssessmentSection";
@@ -127,6 +128,8 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   });
   const [visitChargesOpen, setVisitChargesOpen] = useState(false);
   const [visitCharge, setVisitCharge] = useState<VisitChargeResponse>();
+  const [engageOpen, setEngageOpen] = useState(false);
+  const [engageDiagnosis, setEngageDiagnosis] = useState<EngageDiagnosis>();
   const [brokenVisitDiagnosisDisplay, setBrokenVisitDiagnosisDisplay] = useState<string>();
   const currentEncounterLoadState: EncounterLoadState = encounterLoadState.encounterId === encounterId
     ? encounterLoadState
@@ -652,6 +655,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
       <div className="odos-chart-view-toggle" role="group" aria-label="Chart workspace view">
         <button type="button" aria-pressed={chartView === "diagnosis"} onClick={() => selectChartView("diagnosis")}>By diagnosis</button>
         <button type="button" aria-pressed={chartView === "structure"} onClick={() => selectChartView("structure")}>By structure</button>
+        <button type="button" aria-label="Engage patient" onClick={() => { setEngageDiagnosis(undefined); setEngageOpen(true); }}>Engage</button>
       </div>
       {chartView === "diagnosis" ? (
         <DiagnosisWorkspace
@@ -700,6 +704,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
                 }}
                 patientReference={patientReference}
                 encounterReference={encounterReference}
+                onEngageDiagnosis={(diagnosis) => { setEngageDiagnosis(diagnosis); setEngageOpen(true); }}
                 onRefer={() => setReferralComposeOpen(true)}
                 onSaved={(status, keepOpen) => {
                   if (keepOpen && !status.completed) entrySheetGuard.markDirty();
@@ -819,6 +824,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
               }}
               patientReference={patientReference}
               encounterReference={encounterReference}
+              onEngageDiagnosis={(diagnosis) => { setEngageDiagnosis(diagnosis); setEngageOpen(true); }}
               onRefer={() => setReferralComposeOpen(true)}
               onSaved={(status) => markSaved(activeSection, status)}
             />
@@ -979,6 +985,14 @@ export function EncounterCharting({ patient, encounterId }: Props) {
           onClose={() => setVisitChargesOpen(false)}
           onVisitChargeChange={setVisitCharge}
         />
+        <EngageSheet
+          open={engageOpen}
+          patient={patient}
+          encounterReference={encounterReference}
+          diagnosis={engageDiagnosis}
+          chartDispatchLane={import.meta.env?.VITE_ODOS_CHART_DISPATCH_LANE === "locked_clinical" ? "locked_clinical" : "staff_switchable"}
+          onClose={() => setEngageOpen(false)}
+        />
       </div>
       {creatingSection && (
         <CustomSectionEditor
@@ -1010,13 +1024,14 @@ interface MappedExamDefinitions {
   dilation?: CustomFindingDefinition;
 }
 
-function MappedExamSection({ sectionId, definitions, patientReference, encounterReference, onSaved, onRefer }: {
+function MappedExamSection({ sectionId, definitions, patientReference, encounterReference, onSaved, onRefer, onEngageDiagnosis }: {
   sectionId: ExamEntrySheetSectionId;
   definitions: MappedExamDefinitions;
   patientReference: string;
   encounterReference: string;
   onSaved(status: SectionSaveStatus, keepOpen?: boolean): void;
   onRefer(): void;
+  onEngageDiagnosis(diagnosis: EngageDiagnosis): void;
 }) {
   const props = { patientReference, encounterReference, onSaved };
   if (sectionId === "hpi") return <HpiSection {...props} />;
@@ -1069,7 +1084,7 @@ function MappedExamSection({ sectionId, definitions, patientReference, encounter
   if (sectionId === "gonioscopy") return <GonioscopySection {...props} />;
   if (sectionId === "dry-eye") return <DryEyeSection {...props} />;
   if (sectionId === "imaging") return <ImagingSection {...props} />;
-  if (sectionId === "assessment") return <AssessmentSection {...props} onRefer={onRefer} />;
+  if (sectionId === "assessment") return <AssessmentSection {...props} onRefer={onRefer} onEngageDiagnosis={onEngageDiagnosis} />;
   return <PrescriptionSection {...props} />;
 }
 

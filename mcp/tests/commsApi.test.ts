@@ -10,7 +10,12 @@ import {
   ODOS_PRACTICE_ROLE_SYSTEM,
   PRACTICE_ROLE_IDS,
 } from "../src/authz/roles.js";
-import type { CommsProvider, ConversationSummary } from "../src/comms/comms-provider.js";
+import type {
+  CommsProvider,
+  ConversationSummary,
+  SendEmailRequest,
+  SendSmsRequest,
+} from "../src/comms/comms-provider.js";
 import { registerCommsApiRoutes, type CommsApiRouteDeps } from "../src/comms/comms-api.js";
 import type { EducationContentItem } from "../src/comms/education-catalog.js";
 import { ODOS_COMMS_OPT_OUT_EXTENSION_URL } from "../src/comms/suppression-gate.js";
@@ -68,6 +73,36 @@ const EDUCATION_ITEMS: EducationContentItem[] = [
     laneHint: "clinical",
     consentClass: "transactional",
     urls: { print: "https://education.invalid/internal-myopia-counseling-guide/v1/print" },
+  },
+  {
+    id: "dry-eye-treatment-options",
+    version: 1,
+    title: "Dry eye treatment options",
+    kind: "handout",
+    audience: "patient",
+    dxCodes: ["H04.123"],
+    channels: ["sms", "email"],
+    laneHint: "retail",
+    consentClass: "marketing",
+    urls: {
+      web: "https://education.invalid/dry-eye-treatment-options/v1",
+      email: "https://education.invalid/dry-eye-treatment-options/v1/email",
+    },
+  },
+  {
+    id: "dry-eye-home-care",
+    version: 1,
+    title: "Dry eye home care",
+    kind: "handout",
+    audience: "patient",
+    dxCodes: ["H04.123"],
+    channels: ["email", "print"],
+    laneHint: "clinical",
+    consentClass: "transactional",
+    urls: {
+      email: "https://education.invalid/dry-eye-home-care/v1/email",
+      print: "https://education.invalid/dry-eye-home-care/v1/print",
+    },
   },
 ];
 
@@ -130,6 +165,14 @@ test("every communications endpoint rejects missing authentication and audits ev
   const endpoints = [
     { method: "GET", path: "/communications/education" },
     { method: "GET", path: "/communications/education/dry-eye-basics" },
+    { method: "POST", path: "/communications/education/dispatch", body: {
+      patientReference: PATIENT_REFERENCE,
+      educationId: "dry-eye-basics",
+      version: 2,
+      channel: "sms",
+      lane: "clinical",
+      idempotencyKey: "education-auth-0001",
+    } },
     { method: "GET", path: "/communications/conversations" },
     { method: "GET", path: `/communications/opt-out?patient=${PATIENT_REFERENCE}` },
     { method: "POST", path: "/communications/opt-out/clear", body: OPT_OUT_CLEAR_BODY },
@@ -169,6 +212,7 @@ test("education list filters by diagnosis and channel while excluding internal c
     assert.deepEqual(body.items.map(({ id, version }) => ({ id, version })), [
       { id: "dry-eye-basics", version: 1 },
       { id: "dry-eye-basics", version: 2 },
+      { id: "dry-eye-treatment-options", version: 1 },
     ]);
     assert.equal(body.items.every(({ audience }) => audience === "patient"), true);
     assert.equal(fixture.grants.at(-1)?.actionReason, "communications-education-list");
@@ -233,6 +277,216 @@ test("education detail returns newest or exact pinned version and never exposes 
     assert.deepEqual(await internal.json(), { error: "Education content not found." });
     assert.equal(fixture.grants.at(-1)?.actionReason, "communications-education-read");
     assert.equal(fixture.denials.at(-1)?.actionReason, "communications-education-read-failed");
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("education dispatch refuses marketing content when recorded patient consent is absent", async () => {
+  const fixture = await startServer();
+  try {
+    const response = await request(fixture.base, "/communications/education/dispatch", "POST", {
+      patientReference: PATIENT_REFERENCE,
+      educationId: "dry-eye-treatment-options",
+      version: 1,
+      channel: "sms",
+      lane: "frontdesk",
+      idempotencyKey: "education-marketing-0001",
+    }, "staff");
+
+    assert.equal(response.status, 409);
+    assert.deepEqual(await response.json(), {
+      outcome: "refused",
+      reason: "marketing-consent-absent",
+    });
+    assert.deepEqual(fixture.providerCalls, []);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("clinical education SMS uses the clinical lane, one tracked link, durable send state, and send provenance", async () => {
+  const fixture = await startServer({
+    channelRoutes: { "transactional-sms": "ghl", "clinical-sms": "twilio" },
+    senderNumbers: { "transactional-sms": "+18645550100", "clinical-sms": "+18485550100" },
+  });
+  try {
+    const dispatchBody = {
+      patientReference: PATIENT_REFERENCE,
+      educationId: "dry-eye-basics",
+      version: 2,
+      channel: "sms",
+      lane: "clinical",
+      encounterReference: "Encounter/encounter-1",
+      conditionReference: "Condition/condition-1",
+      idempotencyKey: "education-clinical-0001",
+    };
+    const response = await request(fixture.base, "/communications/education/dispatch", "POST", dispatchBody, "provider");
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { outcome: "sent", providerMessageId: "SM-synthetic" });
+    assert.deepEqual(fixture.adapterProviders, ["twilio"]);
+    assert.equal(fixture.smsRequests.length, 1);
+    assert.equal(fixture.smsRequests[0]?.campaignType, "clinical-education");
+    assert.equal(fixture.smsRequests[0]?.toNumber, "+18645550199");
+    assert.match(fixture.smsRequests[0]?.body ?? "", /^Synthetic Eye Care\nhttps:\/\/practice\.example\/comms\/r\/[A-Za-z0-9_-]+\nReply STOP to opt out\.$/);
+    assert.doesNotMatch(fixture.smsRequests[0]?.body ?? "", /dry eye|H04\.123|Patient\//i);
+    assert.deepEqual(fixture.trackedLinks.map(({ targetUrl, campaignId, messageId }) => ({ targetUrl, campaignId, messageId })), [{
+      targetUrl: "https://education.invalid/dry-eye-basics/v2",
+      campaignId: "dry-eye-basics@2",
+      messageId: "education-clinical-0001",
+    }]);
+    assert.equal(fixture.persistedCommunications.length, 1);
+    assert.equal(fixture.persistedCommunications[0]?.status, "in-progress");
+    assert.equal(fixture.provenances.length, 1);
+    const provenanceText = JSON.stringify(fixture.provenances[0]);
+    assert.match(provenanceText, /Encounter\/encounter-1/);
+    assert.match(provenanceText, /Condition\/condition-1/);
+    assert.match(provenanceText, /dry-eye-basics@2/);
+    assert.match(provenanceText, /clinical/);
+    assert.match(provenanceText, /default/);
+    assert.match(provenanceText, /\+18645550199/);
+    const retry = await request(fixture.base, "/communications/education/dispatch", "POST", dispatchBody, "provider");
+    assert.equal(retry.status, 200);
+    assert.deepEqual(await retry.json(), { outcome: "sent", providerMessageId: "SM-synthetic" });
+    assert.equal(fixture.smsRequests.length, 1);
+    assert.equal(fixture.persistedCommunications.length, 1);
+    assert.equal(fixture.trackedLinks.length, 1);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("education print returns the published print artifact without rendering a PDF and records provenance", async () => {
+  const fixture = await startServer();
+  try {
+    const response = await request(fixture.base, "/communications/education/dispatch", "POST", {
+      patientReference: PATIENT_REFERENCE,
+      educationId: "internal-myopia-counseling-guide",
+      version: 1,
+      channel: "print",
+      lane: "clinical",
+      idempotencyKey: "education-print-0001",
+    }, "provider");
+    assert.equal(response.status, 404);
+
+    const patientPrint = await request(fixture.base, "/communications/education/dispatch", "POST", {
+      patientReference: PATIENT_REFERENCE,
+      educationId: "dry-eye-home-care",
+      version: 1,
+      channel: "print",
+      lane: "clinical",
+      idempotencyKey: "education-print-0002",
+    }, "provider");
+    assert.equal(patientPrint.status, 200);
+    assert.deepEqual(await patientPrint.json(), {
+      outcome: "print",
+      url: "https://education.invalid/dry-eye-home-care/v1/print",
+    });
+    assert.deepEqual(fixture.providerCalls, []);
+    assert.equal(fixture.provenances.length, 1);
+    assert.match(JSON.stringify(fixture.provenances[0]), /print/);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("education email sends the published email artifact to the recorded address", async () => {
+  const fixture = await startServer({ channelRoutes: { email: "twilio" } });
+  try {
+    const response = await request(fixture.base, "/communications/education/dispatch", "POST", {
+      patientReference: PATIENT_REFERENCE,
+      educationId: "dry-eye-basics",
+      version: 2,
+      channel: "email",
+      lane: "clinical",
+      idempotencyKey: "education-email-0001",
+    }, "staff");
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { outcome: "sent", providerMessageId: "EM-synthetic" });
+    assert.equal(fixture.emailRequests.length, 1);
+    assert.equal(fixture.emailRequests[0]?.toAddress, "patient@example.test");
+    assert.equal(fixture.emailRequests[0]?.body, "https://education.invalid/dry-eye-basics/v2/email");
+    assert.equal(fixture.emailRequests[0]?.campaignType, "clinical-education");
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("education dispatch refuses an unconfigured lane and enforces the practice clinical lock", async () => {
+  const unconfigured = await startServer({ channelRoutes: {}, senderNumbers: {} });
+  try {
+    const response = await request(unconfigured.base, "/communications/education/dispatch", "POST", {
+      patientReference: PATIENT_REFERENCE,
+      educationId: "dry-eye-basics",
+      version: 2,
+      channel: "sms",
+      lane: "clinical",
+      idempotencyKey: "education-unconfigured-0001",
+    }, "provider");
+    assert.equal(response.status, 409);
+    assert.match((await response.json() as { error: string }).error, /clinical-sms lane is not configured/);
+    assert.equal(unconfigured.smsRequests.length, 0);
+  } finally {
+    await unconfigured.close();
+  }
+
+  const locked = await startServer({
+    chartDispatchLane: "locked_clinical",
+    channelRoutes: { "transactional-sms": "ghl" },
+    senderNumbers: { "transactional-sms": "+18645550100" },
+  });
+  try {
+    const response = await request(locked.base, "/communications/education/dispatch", "POST", {
+      patientReference: PATIENT_REFERENCE,
+      educationId: "dry-eye-basics",
+      version: 2,
+      channel: "sms",
+      lane: "frontdesk",
+      idempotencyKey: "education-locked-0001",
+    }, "provider");
+    assert.equal(response.status, 409);
+    assert.match((await response.json() as { error: string }).error, /locked to the clinical lane/);
+    assert.equal(locked.smsRequests.length, 0);
+  } finally {
+    await locked.close();
+  }
+});
+
+test("education recipient override stays send-scoped unless the explicit chart-update flag is set", async () => {
+  const fixture = await startServer({
+    channelRoutes: { "clinical-sms": "twilio" },
+    senderNumbers: { "clinical-sms": "+18485550100" },
+  });
+  try {
+    const wrongPatient = await request(fixture.base, "/communications/education/dispatch", "POST", {
+      patientReference: PATIENT_REFERENCE,
+      educationId: "dry-eye-basics",
+      version: 2,
+      channel: "sms",
+      lane: "clinical",
+      recipientOverride: { reference: "Patient/synthetic-2", phone: "+18645550177" },
+      idempotencyKey: "education-override-wrong-patient",
+    }, "staff");
+    assert.equal(wrongPatient.status, 400);
+    assert.match((await wrongPatient.json() as { error: string }).error, /must match patientReference/);
+
+    const response = await request(fixture.base, "/communications/education/dispatch", "POST", {
+      patientReference: PATIENT_REFERENCE,
+      educationId: "dry-eye-basics",
+      version: 2,
+      channel: "sms",
+      lane: "clinical",
+      recipientOverride: { phone: "+18645550177" },
+      alsoUpdateChart: true,
+      idempotencyKey: "education-override-0001",
+    }, "staff");
+    assert.equal(response.status, 200);
+    assert.equal(fixture.smsRequests[0]?.toNumber, "+18645550177");
+    assert.equal(fixture.recipientUpdates.length, 1);
+    assert.equal((fixture.recipientUpdates[0] as Patient).telecom?.find((point) =>
+      point.system === "phone" && point.use !== "old")?.value, "+18645550177");
+    assert.match(JSON.stringify(fixture.provenances[0]), /Recipient override also updated chart/);
   } finally {
     await fixture.close();
   }
@@ -1060,8 +1314,18 @@ async function startServer(options: {
   resolvedStaffAuthentication?: boolean;
   excludePatientRead?: boolean;
   excludePatientWrite?: boolean;
+  chartDispatchLane?: "locked_clinical" | "staff_switchable";
 } = {}) {
   const providerCalls: string[] = [];
+  const smsRequests: SendSmsRequest[] = [];
+  const emailRequests: SendEmailRequest[] = [];
+  const trackedLinks: Array<{
+    token: string;
+    targetUrl: string;
+    campaignId: string;
+    messageId: string;
+    createdAt: string;
+  }> = [];
   const adapterProviders: string[] = [];
   const callListRequests: Array<{ limit?: number }> = [];
   const listRequests: Array<{ provider: string; limit?: number; includeContent?: boolean }> = [];
@@ -1075,13 +1339,17 @@ async function startServer(options: {
     resourceType: "Patient",
     id,
     meta: { versionId: "1" },
-    telecom: [{ system: "phone", value: "+18645550199" }],
+    telecom: [
+      { system: "phone", value: "+18645550199" },
+      { system: "email", value: "patient@example.test" },
+    ],
     extension: [{
       url: ODOS_COMMS_OPT_OUT_EXTENSION_URL,
       extension: [{ url: "channel", valueCode: "sms" }],
     }],
   }));
   const provenances: Provenance[] = [];
+  const recipientUpdates: Resource[] = [];
   const attributedActors: Array<{
     actorReference: string;
     actorRole: string;
@@ -1110,10 +1378,16 @@ async function startServer(options: {
     messageIdentifierSystem: options.providerName === "ghl"
       ? "https://odos2020.com/fhir/NamingSystem/ghl-message-id"
       : "https://odos2020.com/fhir/NamingSystem/twilio-message-sid",
-    capabilities: { sms: true, calls: true, email: false, contacts: false, conversations: true, reviews: false },
-    async sendSms() {
+    capabilities: { sms: true, calls: true, email: true, contacts: false, conversations: true, reviews: false },
+    async sendSms(request) {
       providerCalls.push("sendSms");
+      smsRequests.push(structuredClone(request));
       return { outcome: "sent", providerMessageId: "SM-synthetic" };
+    },
+    async sendEmail(request) {
+      providerCalls.push("sendEmail");
+      emailRequests.push(structuredClone(request));
+      return { outcome: "sent", providerMessageId: "EM-synthetic" };
     },
     async listCalls(request = {}) {
       providerCalls.push("listCalls");
@@ -1363,6 +1637,9 @@ async function startServer(options: {
           if (persisted.resourceType === "Communication") {
             persistedCommunications.push(structuredClone(persisted as Communication));
           }
+          if (persisted.resourceType === "Provenance") {
+            provenances.push(structuredClone(persisted as Provenance));
+          }
           return callerView(persisted);
         },
         async update<T extends Resource>(_resourceType: T["resourceType"], id: string, resource: T): Promise<T> {
@@ -1383,6 +1660,9 @@ async function startServer(options: {
             throw Object.assign(new Error("Synthetic FHIR outage"), { status: 503 });
           }
           const restored = structuredClone(resource);
+          if (restored.resourceType === "Patient" || restored.resourceType === "RelatedPerson") {
+            recipientUpdates.push(structuredClone(restored));
+          }
           if (restored.resourceType === "Communication" && index >= 0) {
             const fields = restored as unknown as Record<string, unknown>;
             const storedFields = persistedCommunications[index] as unknown as Record<string, unknown>;
@@ -1478,6 +1758,18 @@ async function startServer(options: {
         return item ? structuredClone(item) : undefined;
       },
     },
+    trackedLinkStore: {
+      async create(link) {
+        trackedLinks.push(structuredClone(link));
+      },
+      async find(token) {
+        return trackedLinks.find((link) => link.token === token);
+      },
+      async logClick() {},
+    },
+    publicBaseUrl: "https://practice.example",
+    practiceName: "Synthetic Eye Care",
+    chartDispatchLane: options.chartDispatchLane,
     audit,
     now: () => "2026-08-02T15:00:00.000Z",
   };
@@ -1490,6 +1782,9 @@ async function startServer(options: {
   return {
     base: `http://127.0.0.1:${address.port}`,
     providerCalls,
+    smsRequests,
+    emailRequests,
+    trackedLinks,
     adapterProviders,
     callListRequests,
     listRequests,
@@ -1501,6 +1796,7 @@ async function startServer(options: {
     persistedCommunications,
     patients,
     provenances,
+    recipientUpdates,
     attributedActors,
     authenticatedFhirs,
     adapterFhirs,

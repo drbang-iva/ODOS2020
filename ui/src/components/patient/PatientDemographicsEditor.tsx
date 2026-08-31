@@ -8,6 +8,7 @@ import {
   type PatientDemographicsDraft,
 } from "../../lib/patient-registration";
 import { SmsOptOutControl } from "./SmsOptOutControl";
+import { SmsOptOutErrorBoundary } from "./SmsOptOutErrorBoundary";
 
 const GENDER_OPTIONS = [
   { value: "male", label: "Male" },
@@ -108,7 +109,11 @@ export function PatientDemographicsEditor({
           draft={draft}
           errors={errors}
           onChange={setDraft}
-          smsPreferences={patient.id ? <SmsOptOutControl patientReference={`Patient/${patient.id}`} /> : undefined}
+          smsPreferences={patient.id ? (
+            <SmsOptOutErrorBoundary>
+              <SmsOptOutControl patientReference={`Patient/${patient.id}`} />
+            </SmsOptOutErrorBoundary>
+          ) : undefined}
         />
         <div className="mt-6 flex justify-end gap-2">
           <button type="button" onClick={discard} className="rounded border border-white/15 px-4 py-2 text-sm">Discard</button>

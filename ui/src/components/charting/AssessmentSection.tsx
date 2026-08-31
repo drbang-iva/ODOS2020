@@ -69,6 +69,7 @@ interface Props {
   encounterReference: string;
   onSaved: (status: SectionSaveStatus) => void;
   onRefer?: () => void;
+  onEngageDiagnosis?: (diagnosis: { reference: string; code: string; display: string }) => void;
 }
 
 interface FormState {
@@ -111,7 +112,7 @@ const INITIAL_FORM: FormState = {
 const INPUT_CLASS = "h-10 rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-deep-surface)] px-3 text-sm text-[color:var(--odos-text)] outline-none transition placeholder:text-[color:var(--odos-faint)] focus:border-[color:var(--odos-accent-border)]";
 const BUTTON_CLASS = "rounded border border-[color:var(--odos-accent-border)] bg-[color:var(--odos-accent-tint-hi)] px-3 py-2 text-sm font-semibold text-[color:var(--odos-text)] outline-none transition hover:bg-[color:var(--odos-accent-tint-lo)] focus-visible:ring-2 focus-visible:ring-[color:var(--odos-accent-border)] disabled:cursor-not-allowed disabled:opacity-50";
 
-export function AssessmentSection({ patientReference, encounterReference, onSaved, onRefer }: Props) {
+export function AssessmentSection({ patientReference, encounterReference, onSaved, onRefer, onEngageDiagnosis }: Props) {
   const { role } = useRole();
   const canShowEditing = role !== "front-desk";
   const [encounter, setEncounter] = useState<Encounter | null>(null);
@@ -736,6 +737,15 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
                   onEnteredInError={() => markEnteredInError(condition)}
                   onConfirm={() => decidePossible(condition, "confirm")}
                   onDiscard={() => decidePossible(condition, "discard")}
+                  onEngage={condition.id && onEngageDiagnosis ? () => {
+                    const coding = condition.code?.coding?.find((candidate) => candidate.code);
+                    if (!coding?.code) return;
+                    onEngageDiagnosis({
+                      reference: `Condition/${condition.id}`,
+                      code: coding.code,
+                      display: displayCode(condition.code),
+                    });
+                  } : undefined}
                 />
               );
             })
@@ -788,6 +798,7 @@ function DiagnosisCard({
   onEnteredInError,
   onConfirm,
   onDiscard,
+  onEngage,
 }: {
   condition: Condition;
   codeLabel: string;
@@ -811,6 +822,7 @@ function DiagnosisCard({
   onEnteredInError: () => void;
   onConfirm: () => void;
   onDiscard: () => void;
+  onEngage?: () => void;
 }) {
   const [laterality, setLaterality] = useState<EyeChoice>("OU");
   const [code, setCode] = useState(condition.code?.coding?.find((coding) => coding.system === ICD10_CM_CODE_SYSTEM)?.code ?? "");
@@ -856,6 +868,11 @@ function DiagnosisCard({
             />
             {canShowEditing && <button type="button" onClick={onToggle} className="text-xs text-[color:var(--odos-accent)]">Edit</button>}
           </div>
+        )}
+        {onEngage && (
+          <button type="button" className="sidebar-button" aria-label={`Engage ${displayCode(condition.code)}`} onClick={onEngage}>
+            Engage
+          </button>
         )}
       </div>
 

@@ -1,4 +1,5 @@
 import type { Annotation, CodeableConcept, Communication, Identifier, Patient } from "@medplum/fhirtypes";
+import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import type { MedplumClient } from "../fhir-client.js";
 import type {
@@ -39,6 +40,8 @@ export const ODOS_COMMS_STAFF_SEND_CLAIM_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/comms-staff-send-claim";
 export const ODOS_COMMS_STAFF_SEND_PROVIDER_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/comms-staff-send-provider";
+export const ODOS_COMMS_STAFF_SEND_FINGERPRINT_IDENTIFIER_SYSTEM =
+  "https://odos2020.com/fhir/NamingSystem/comms-staff-send-fingerprint";
 export const ODOS_COMMS_DEFAULT_PROVIDER = "twilio";
 
 const TWILIO_CALL_METADATA_AUTHOR = "ODOS Twilio call metadata";
@@ -118,6 +121,13 @@ export type StaffSmsSendReservation =
   | { state: "pending"; communication: Communication }
   | { state: "conflict"; communication: Communication };
 
+export function findStaffSmsSend(
+  fhir: CommsPersistenceFhir,
+  idempotencyKey: string,
+): Promise<Communication | undefined> {
+  return findCommunication(fhir, ODOS_COMMS_STAFF_SEND_IDENTIFIER_SYSTEM, idempotencyKey);
+}
+
 export async function reserveStaffSmsSend(
   fhir: CommsPersistenceFhir,
   input: {
@@ -126,6 +136,7 @@ export async function reserveStaffSmsSend(
     patientReference: string;
     senderReference: string;
     body: string;
+    requestFingerprint?: string;
     provider?: string;
     providerMessageIdentifierSystem?: string;
   },
@@ -139,6 +150,10 @@ export async function reserveStaffSmsSend(
       { system: ODOS_COMMS_STAFF_SEND_IDENTIFIER_SYSTEM, value: input.idempotencyKey },
       { system: ODOS_COMMS_STAFF_SEND_CLAIM_IDENTIFIER_SYSTEM, value: input.claimId },
       { system: ODOS_COMMS_STAFF_SEND_PROVIDER_IDENTIFIER_SYSTEM, value: input.provider ?? ODOS_COMMS_DEFAULT_PROVIDER },
+      ...(input.requestFingerprint ? [{
+        system: ODOS_COMMS_STAFF_SEND_FINGERPRINT_IDENTIFIER_SYSTEM,
+        value: staffSendFingerprint(input.requestFingerprint),
+      }] : []),
     ],
     category: [category(ODOS_PATIENT_SMS_CATEGORY), category(ODOS_PATIENT_SMS_OUTBOUND_CATEGORY)],
     medium: [{ text: "SMS" }],
@@ -199,12 +214,19 @@ function classifyStaffSmsReservation(
     patientReference: string;
     senderReference: string;
     body: string;
+    requestFingerprint?: string;
     provider?: string;
     providerMessageIdentifierSystem?: string;
   },
 ): StaffSmsSendReservation {
-  const visiblePayloadConflicts = communication.payload !== undefined
-    && communication.payload[0]?.contentString !== input.body;
+  const reservedFingerprint = communication.identifier?.find((identifier) =>
+    identifier.system === ODOS_COMMS_STAFF_SEND_FINGERPRINT_IDENTIFIER_SYSTEM)?.value;
+  const expectedFingerprint = input.requestFingerprint
+    ? staffSendFingerprint(input.requestFingerprint)
+    : undefined;
+  const visiblePayloadConflicts = expectedFingerprint
+    ? reservedFingerprint !== expectedFingerprint
+    : communication.payload !== undefined && communication.payload[0]?.contentString !== input.body;
   const reservedProvider = communication.identifier?.find((identifier) =>
     identifier.system === ODOS_COMMS_STAFF_SEND_PROVIDER_IDENTIFIER_SYSTEM)?.value ?? ODOS_COMMS_DEFAULT_PROVIDER;
   if (
@@ -228,6 +250,10 @@ function classifyStaffSmsReservation(
   return owned
     ? { state: "owner", communication }
     : { state: "pending", communication };
+}
+
+function staffSendFingerprint(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
 }
 
 async function reconcileStaffSmsDuplicates(

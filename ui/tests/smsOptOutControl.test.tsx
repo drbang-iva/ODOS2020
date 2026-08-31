@@ -5,6 +5,8 @@ import React from "react";
 import { act, create } from "react-test-renderer";
 import { PatientDemographicsEditor } from "../src/components/patient/PatientDemographicsEditor";
 import { SmsOptOutControl } from "../src/components/patient/SmsOptOutControl";
+import { SmsOptOutErrorBoundary } from "../src/components/patient/SmsOptOutErrorBoundary";
+import { clearSmsOptOut, CommunicationsResponseError } from "../src/lib/communications-client";
 
 const PATIENT: Patient = {
   resourceType: "Patient",
@@ -232,5 +234,122 @@ test("a scoped clear reports a surviving general opt-out without claiming re-enr
     act(() => renderer.unmount());
   } finally {
     globalThis.fetch = originalFetch;
+  }
+});
+
+test("a malformed 200 opt-out response reports a controlled error while the host surface remains mounted", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(JSON.stringify({ definitions: [], images: [] }), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
+
+  try {
+    let renderer!: ReturnType<typeof create>;
+    await act(async () => {
+      renderer = create(
+        <main>
+          <h1>Doctor overview host</h1>
+          <SmsOptOutControl patientReference="Patient/synthetic-1" />
+        </main>,
+      );
+      await Promise.resolve();
+    });
+    const text = renderer.root.findAll(() => true).flatMap((node) =>
+      node.children.filter((child): child is string => typeof child === "string"),
+    ).join(" ");
+    assert.match(text, /Doctor overview host/);
+    assert.match(text, /SMS preferences unavailable/);
+    act(() => renderer.unmount());
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("changing an inline lane-suppression callback does not refetch opt-out state", async () => {
+  const originalFetch = globalThis.fetch;
+  let fetches = 0;
+  globalThis.fetch = async () => {
+    fetches += 1;
+    return new Response(JSON.stringify({
+      patientReference: "Patient/synthetic-1",
+      smsOptedOut: false,
+      remainingOptOuts: { global: false, numbers: [] },
+      smsLanes: [{
+        label: "Clinical texts",
+        number: "+18485550100",
+        roles: ["clinical-sms"],
+      }],
+    }), { status: 200, headers: { "Content-Type": "application/json" } });
+  };
+
+  try {
+    let renderer!: ReturnType<typeof create>;
+    await act(async () => {
+      renderer = create(
+        <SmsOptOutControl
+          patientReference="Patient/synthetic-1"
+          activeLaneRole="clinical-sms"
+          onActiveLaneSuppressionChange={() => undefined}
+        />,
+      );
+      await Promise.resolve();
+    });
+    await act(async () => {
+      renderer.update(
+        <SmsOptOutControl
+          patientReference="Patient/synthetic-1"
+          activeLaneRole="clinical-sms"
+          onActiveLaneSuppressionChange={() => undefined}
+        />,
+      );
+      await Promise.resolve();
+    });
+    assert.equal(fetches, 1);
+    act(() => renderer.unmount());
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a malformed 200 clear response is rejected instead of becoming opt-out state", async () => {
+  await assert.rejects(
+    () => clearSmsOptOut({
+      patientReference: "Patient/synthetic-1",
+      reason: "Patient requested texting in person",
+      identityVerification: "in-person",
+    }, async () => new Response(JSON.stringify({ definitions: [], images: [] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    })),
+    (error: unknown) => error instanceof CommunicationsResponseError
+      && error.status === 200
+      && /unexpected response/i.test(error.message),
+  );
+});
+
+test("the SMS preferences error boundary keeps its host surface mounted after a render failure", () => {
+  const originalError = console.error;
+  console.error = () => undefined;
+  function ThrowDuringRender(): React.ReactNode {
+    throw new Error("Synthetic SMS preferences render failure");
+  }
+  try {
+    const renderer = create(
+      <main>
+        <h1>Engage recipient host</h1>
+        <SmsOptOutErrorBoundary>
+          <ThrowDuringRender />
+        </SmsOptOutErrorBoundary>
+      </main>,
+    );
+    const text = renderer.root.findAll(() => true).flatMap((node) =>
+      node.children.filter((child): child is string => typeof child === "string"),
+    ).join(" ");
+    assert.match(text, /Engage recipient host/);
+    assert.match(text, /SMS text preferences could not load/);
+    act(() => renderer.unmount());
+  } finally {
+    console.error = originalError;
   }
 });
