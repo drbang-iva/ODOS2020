@@ -1,4 +1,4 @@
-import type { Communication, Patient, Provenance, RelatedPerson } from "@medplum/fhirtypes";
+import type { Communication, Condition, Encounter, Patient, Provenance, RelatedPerson } from "@medplum/fhirtypes";
 import { randomUUID } from "node:crypto";
 import type { Application, Request, Response } from "express";
 import { buildOdosAuditEventRow } from "../authz/odosAudit.js";
@@ -30,6 +30,7 @@ import {
   ODOS_TWILIO_RECORDING_IDENTIFIER_SYSTEM,
   findStaffSmsSend,
   persistStaffSentSms,
+  persistStaffSmsTerminalOutcome,
   reserveStaffSmsSend,
 } from "./comms-persistence.js";
 import {
@@ -112,7 +113,10 @@ export function registerCommsApiRoutes(
         item.audience === "patient"
         && (!dxCode || item.dxCodes.includes(dxCode))
         && (!channel || item.channels.includes(channel)));
-      return { status: 200, body: { items } };
+      return {
+        status: 200,
+        body: { items, chartDispatchLane: deps.chartDispatchLane ?? "staff_switchable" },
+      };
     },
   ));
 
@@ -160,13 +164,11 @@ export function registerCommsApiRoutes(
       }
       const patientId = body.patientReference.slice("Patient/".length);
       const patient = await staff.fhir.read<Patient>("Patient", patientId);
+      await assertEducationClinicalReferences(staff.fhir, body);
       if (item.consentClass === "marketing" && !hasRecordedMarketingConsent(patient)) {
         throw new CommsApiRefusalError("marketing-consent-absent");
       }
       const recipient = await resolveEducationRecipient(staff.fhir, patient, body);
-      if (body.alsoUpdateChart) {
-        await updateEducationRecipient(staff.fhir, recipient, body, staff);
-      }
       const defaultLane = item.laneHint === "retail" ? "frontdesk" : "clinical";
       const laneSelection = body.lane === defaultLane ? "default" : "overridden";
       const campaignId = `${item.id}@${item.version}`;
@@ -174,6 +176,9 @@ export function registerCommsApiRoutes(
       if (body.channel === "print") {
         const url = item.urls.print;
         if (!url) throw new CommsApiCapabilityError("Education print artifact is not published.");
+        if (body.alsoUpdateChart) {
+          await updateEducationRecipient(staff.fhir, recipient, body, staff);
+        }
         await persistEducationSendProvenance(staff.fhir, {
           body,
           item,
@@ -204,6 +209,9 @@ export function registerCommsApiRoutes(
           suppression: {},
         });
         if (result.outcome === "sent") {
+          if (body.alsoUpdateChart) {
+            await updateEducationRecipient(staff.fhir, recipient, body, staff);
+          }
           await persistEducationSendProvenance(staff.fhir, {
             body,
             item,
@@ -224,6 +232,7 @@ export function registerCommsApiRoutes(
       }
       const targetUrl = item.urls.web;
       if (!targetUrl) throw new CommsApiCapabilityError("Education web artifact is not published.");
+      assertEducationPublicBaseUrl(deps.publicBaseUrl);
       const existingSend = await findStaffSmsSend(staff.fhir, body.idempotencyKey);
       const smsBody = existingSend?.payload?.[0]?.contentString ?? await educationSmsBody(deps, {
         targetUrl,
@@ -245,6 +254,10 @@ export function registerCommsApiRoutes(
           targetUrl,
           lane: body.lane,
           provider: provider.name,
+          recipientReference: recipient.reference,
+          alsoUpdateChart: body.alsoUpdateChart,
+          encounterReference: body.encounterReference,
+          conditionReference: body.conditionReference,
         }),
         provider: provider.name,
         providerMessageIdentifierSystem,
@@ -256,6 +269,9 @@ export function registerCommsApiRoutes(
         throw new CommsApiCapabilityError("Education send outcome is pending reconciliation; do not resend with a new key.");
       }
       if (reservation.state === "sent") {
+        if (body.alsoUpdateChart) {
+          await updateEducationRecipient(staff.fhir, recipient, body, staff);
+        }
         await persistEducationSendProvenance(staff.fhir, {
           body,
           item,
@@ -268,6 +284,9 @@ export function registerCommsApiRoutes(
           status: 200,
           body: { outcome: "sent", providerMessageId: reservation.providerMessageId },
         };
+      }
+      if (reservation.state === "terminal") {
+        return { status: 200, body: reservation.result };
       }
       const result = await provider.sendSms({
         patientReference: body.patientReference,
@@ -285,6 +304,9 @@ export function registerCommsApiRoutes(
           providerMessageId: result.providerMessageId,
           providerMessageIdentifierSystem,
         }, { now: () => deps.now?.() ?? new Date().toISOString() });
+        if (body.alsoUpdateChart) {
+          await updateEducationRecipient(staff.fhir, recipient, body, staff);
+        }
         await persistEducationSendProvenance(staff.fhir, {
           body,
           item,
@@ -292,6 +314,12 @@ export function registerCommsApiRoutes(
           recipientValue: recipient.value,
           laneSelection,
           now: deps.now?.() ?? new Date().toISOString(),
+        });
+      } else {
+        await persistStaffSmsTerminalOutcome(staff.fhir, {
+          communication: reservation.communication,
+          idempotencyKey: body.idempotencyKey,
+          result,
         });
       }
       return { status: 200, body: result };
@@ -1174,6 +1202,40 @@ async function resolveEducationRecipient(
   return { reference, value, resource };
 }
 
+async function assertEducationClinicalReferences(
+  fhir: MedplumClient,
+  body: EducationDispatchBody,
+): Promise<void> {
+  if (body.encounterReference) {
+    const encounter = await fhir.read<Encounter>("Encounter", body.encounterReference.slice("Encounter/".length));
+    if (encounter.subject?.reference !== body.patientReference) {
+      throw new CommsApiValidationError(`encounterReference must belong to ${body.patientReference}.`);
+    }
+  }
+  if (body.conditionReference) {
+    const condition = await fhir.read<Condition>("Condition", body.conditionReference.slice("Condition/".length));
+    if (condition.subject.reference !== body.patientReference) {
+      throw new CommsApiValidationError(`conditionReference must belong to ${body.patientReference}.`);
+    }
+  }
+}
+
+function assertEducationPublicBaseUrl(value: string): void {
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new CommsApiCapabilityError(
+      "Set ODOS_PRACTICE_PUBLIC_BASE_URL to the practice's reachable HTTPS base URL before sending tracked education links.",
+    );
+  }
+  if (parsed.protocol !== "https:" || parsed.username || parsed.password) {
+    throw new CommsApiCapabilityError(
+      "Set ODOS_PRACTICE_PUBLIC_BASE_URL to the practice's reachable HTTPS base URL before sending tracked education links.",
+    );
+  }
+}
+
 async function educationSmsBody(
   deps: Pick<CommsApiRouteDeps, "trackedLinkStore" | "publicBaseUrl" | "practiceName">,
   input: { targetUrl: string; campaignId: string; messageId: string },
@@ -1210,7 +1272,8 @@ async function updateEducationRecipient(
   if (!resource.id || !resource.meta?.versionId) {
     throw new CommsApiCapabilityError("The selected recipient cannot be updated without a current resource version.");
   }
-  const telecom = (resource.telecom ?? []).filter((entry) => entry.system !== system || entry.use === "old");
+  const telecom = (resource.telecom ?? []).map((entry) =>
+    entry.system === system && entry.use !== "old" ? { ...entry, use: "old" as const } : entry);
   telecom.push({ system, value, ...(system === "phone" ? { use: "mobile" as const } : {}) });
   await fhir.update(resource.resourceType, resource.id, { ...resource, telecom }, {
     "If-Match": `W/\"${resource.meta.versionId}\"`,

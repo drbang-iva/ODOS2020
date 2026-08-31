@@ -55,6 +55,11 @@ export interface EducationContentItem {
   };
 }
 
+export interface EducationCatalogResult {
+  items: EducationContentItem[];
+  chartDispatchLane: "locked_clinical" | "staff_switchable";
+}
+
 export interface EducationDispatchInput {
   patientReference: string;
   educationId: string;
@@ -75,7 +80,9 @@ export interface EducationDispatchInput {
 export type EducationDispatchResult =
   | { outcome: "sent"; providerMessageId: string }
   | { outcome: "print"; url: string }
-  | { outcome: "refused"; reason: string };
+  | { outcome: "refused"; reason: string }
+  | { outcome: "suppressed"; reason: "patient-opt-out" | "frequency-cap" }
+  | { outcome: "rescheduled"; reason: "quiet-hours"; rescheduledAt: string };
 
 export class CommunicationsResponseError extends Error {
   constructor(readonly status: number, message: string) {
@@ -134,7 +141,7 @@ export async function clearSmsOptOut(
 export async function listEducation(
   query: { dxCode?: string; channel?: "sms" | "email" | "print" },
   fetchImpl: typeof fetch = fetch,
-): Promise<EducationContentItem[]> {
+): Promise<EducationCatalogResult> {
   const params = new URLSearchParams();
   if (query.dxCode) params.set("dxCode", query.dxCode);
   if (query.channel) params.set("channel", query.channel);
@@ -149,10 +156,13 @@ export async function listEducation(
       responseError(body) ?? `Education catalog failed (${response.status}).`,
     );
   }
-  if (!isRecord(body) || !Array.isArray(body.items) || !body.items.every(isEducationContentItem)) {
+  if (!isRecord(body)
+    || !Array.isArray(body.items)
+    || !body.items.every(isEducationContentItem)
+    || (body.chartDispatchLane !== "locked_clinical" && body.chartDispatchLane !== "staff_switchable")) {
     throw new CommunicationsResponseError(response.status, "Education catalog returned an unexpected response.");
   }
-  return body.items;
+  return { items: body.items, chartDispatchLane: body.chartDispatchLane };
 }
 
 export async function dispatchEducation(
@@ -234,6 +244,12 @@ function isEducationDispatchResult(value: unknown): value is EducationDispatchRe
   if (!isRecord(value) || typeof value.outcome !== "string") return false;
   if (value.outcome === "sent") return typeof value.providerMessageId === "string";
   if (value.outcome === "print") return typeof value.url === "string";
+  if (value.outcome === "suppressed") {
+    return value.reason === "patient-opt-out" || value.reason === "frequency-cap";
+  }
+  if (value.outcome === "rescheduled") {
+    return value.reason === "quiet-hours" && typeof value.rescheduledAt === "string";
+  }
   return value.outcome === "refused" && typeof value.reason === "string";
 }
 

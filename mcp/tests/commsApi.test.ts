@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { once } from "node:events";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
-import type { AccessPolicy, Bundle, Communication, Patient, ProjectMembership, Provenance, Resource } from "@medplum/fhirtypes";
+import type { AccessPolicy, Bundle, Communication, Condition, Encounter, Patient, ProjectMembership, Provenance, Resource } from "@medplum/fhirtypes";
 import type { OdosAuditEventRecord } from "../src/authz/odosAudit.js";
 import {
   buildMedplumAccessPolicy,
@@ -14,6 +14,7 @@ import type {
   CommsProvider,
   ConversationSummary,
   SendEmailRequest,
+  SendResult,
   SendSmsRequest,
 } from "../src/comms/comms-provider.js";
 import { registerCommsApiRoutes, type CommsApiRouteDeps } from "../src/comms/comms-api.js";
@@ -208,13 +209,14 @@ test("education list filters by diagnosis and channel while excluding internal c
       "staff",
     );
     assert.equal(response.status, 200);
-    const body = await response.json() as { items: EducationContentItem[] };
+    const body = await response.json() as { items: EducationContentItem[]; chartDispatchLane: string };
     assert.deepEqual(body.items.map(({ id, version }) => ({ id, version })), [
       { id: "dry-eye-basics", version: 1 },
       { id: "dry-eye-basics", version: 2 },
       { id: "dry-eye-treatment-options", version: 1 },
     ]);
     assert.equal(body.items.every(({ audience }) => audience === "patient"), true);
+    assert.equal(body.chartDispatchLane, "staff_switchable");
     assert.equal(fixture.grants.at(-1)?.actionReason, "communications-education-list");
 
     const unfiltered = await request(
@@ -453,6 +455,142 @@ test("education dispatch refuses an unconfigured lane and enforces the practice 
   }
 });
 
+test("education SMS reports missing or non-HTTPS tracked-link setup as a 409 before minting a token", async () => {
+  for (const [label, publicBaseUrl] of [["missing", ""], ["non-https", "http://practice.example"]]) {
+    const fixture = await startServer({
+      publicBaseUrl,
+      channelRoutes: { "clinical-sms": "twilio" },
+      senderNumbers: { "clinical-sms": "+18485550100" },
+    });
+    try {
+      const response = await request(fixture.base, "/communications/education/dispatch", "POST", {
+        patientReference: PATIENT_REFERENCE,
+        educationId: "dry-eye-basics",
+        version: 2,
+        channel: "sms",
+        lane: "clinical",
+        idempotencyKey: `education-${label}-public-base`,
+      }, "provider");
+      assert.equal(response.status, 409);
+      assert.match((await response.json() as { error: string }).error, /ODOS_PRACTICE_PUBLIC_BASE_URL.*reachable HTTPS/i);
+      assert.equal(fixture.trackedLinks.length, 0);
+      assert.equal(fixture.smsRequests.length, 0);
+    } finally {
+      await fixture.close();
+    }
+  }
+});
+
+test("a terminal SMS suppression is durable and retrying the same key returns the same outcome", async () => {
+  const fixture = await startServer({
+    smsResult: { outcome: "suppressed", reason: "patient-opt-out" },
+    channelRoutes: { "clinical-sms": "twilio" },
+    senderNumbers: { "clinical-sms": "+18485550100" },
+  });
+  const body = {
+    patientReference: PATIENT_REFERENCE,
+    educationId: "dry-eye-basics",
+    version: 2,
+    channel: "sms",
+    lane: "clinical",
+    idempotencyKey: "education-suppressed-terminal",
+  };
+  try {
+    const first = await request(fixture.base, "/communications/education/dispatch", "POST", body, "provider");
+    assert.equal(first.status, 200);
+    assert.deepEqual(await first.json(), { outcome: "suppressed", reason: "patient-opt-out" });
+    const retry = await request(fixture.base, "/communications/education/dispatch", "POST", body, "provider");
+    assert.equal(retry.status, 200);
+    assert.deepEqual(await retry.json(), { outcome: "suppressed", reason: "patient-opt-out" });
+    assert.equal(fixture.smsRequests.length, 1);
+    assert.equal(fixture.persistedCommunications[0]?.status, "not-done");
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("a quiet-hours reschedule is durable and retrying the same key returns the same outcome", async () => {
+  const result = {
+    outcome: "rescheduled",
+    reason: "quiet-hours",
+    rescheduledAt: "2026-08-31T22:00:00.000Z",
+  } as const;
+  const fixture = await startServer({
+    smsResult: result,
+    channelRoutes: { "clinical-sms": "twilio" },
+    senderNumbers: { "clinical-sms": "+18485550100" },
+  });
+  const body = {
+    patientReference: PATIENT_REFERENCE,
+    educationId: "dry-eye-basics",
+    version: 2,
+    channel: "sms",
+    lane: "clinical",
+    idempotencyKey: "education-rescheduled-terminal",
+  };
+  try {
+    const first = await request(fixture.base, "/communications/education/dispatch", "POST", body, "provider");
+    assert.equal(first.status, 200);
+    assert.deepEqual(await first.json(), result);
+    const retry = await request(fixture.base, "/communications/education/dispatch", "POST", body, "provider");
+    assert.equal(retry.status, 200);
+    assert.deepEqual(await retry.json(), result);
+    assert.equal(fixture.smsRequests.length, 1);
+    assert.equal(fixture.persistedCommunications[0]?.status, "on-hold");
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("a failed education send leaves recipient telecom unchanged", async () => {
+  const fixture = await startServer({
+    smsError: new Error("Synthetic provider outage"),
+    channelRoutes: { "clinical-sms": "twilio" },
+    senderNumbers: { "clinical-sms": "+18485550100" },
+  });
+  try {
+    const response = await request(fixture.base, "/communications/education/dispatch", "POST", {
+      patientReference: PATIENT_REFERENCE,
+      educationId: "dry-eye-basics",
+      version: 2,
+      channel: "sms",
+      lane: "clinical",
+      recipientOverride: { phone: "+18645550177" },
+      alsoUpdateChart: true,
+      idempotencyKey: "education-failed-chart-update",
+    }, "staff");
+    assert.equal(response.status, 502);
+    assert.equal(fixture.recipientUpdates.length, 0);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("education clinical references must belong to the selected patient", async () => {
+  const fixture = await startServer();
+  try {
+    for (const reference of [
+      { conditionReference: "Condition/condition-other" },
+      { encounterReference: "Encounter/encounter-other" },
+    ]) {
+      const response = await request(fixture.base, "/communications/education/dispatch", "POST", {
+        patientReference: PATIENT_REFERENCE,
+        educationId: "dry-eye-home-care",
+        version: 1,
+        channel: "print",
+        lane: "clinical",
+        ...reference,
+        idempotencyKey: `education-cross-patient-${Object.keys(reference)[0]}`,
+      }, "staff");
+      assert.equal(response.status, 400);
+      assert.match((await response.json() as { error: string }).error, /must belong to Patient\/synthetic-1/);
+    }
+    assert.equal(fixture.provenances.length, 0);
+  } finally {
+    await fixture.close();
+  }
+});
+
 test("education recipient override stays send-scoped unless the explicit chart-update flag is set", async () => {
   const fixture = await startServer({
     channelRoutes: { "clinical-sms": "twilio" },
@@ -486,6 +624,8 @@ test("education recipient override stays send-scoped unless the explicit chart-u
     assert.equal(fixture.recipientUpdates.length, 1);
     assert.equal((fixture.recipientUpdates[0] as Patient).telecom?.find((point) =>
       point.system === "phone" && point.use !== "old")?.value, "+18645550177");
+    assert.equal((fixture.recipientUpdates[0] as Patient).telecom?.some((point) =>
+      point.system === "phone" && point.use === "old" && point.value === "+18645550199"), true);
     assert.match(JSON.stringify(fixture.provenances[0]), /Recipient override also updated chart/);
   } finally {
     await fixture.close();
@@ -1315,6 +1455,9 @@ async function startServer(options: {
   excludePatientRead?: boolean;
   excludePatientWrite?: boolean;
   chartDispatchLane?: "locked_clinical" | "staff_switchable";
+  publicBaseUrl?: string;
+  smsResult?: SendResult;
+  smsError?: Error;
 } = {}) {
   const providerCalls: string[] = [];
   const smsRequests: SendSmsRequest[] = [];
@@ -1348,6 +1491,14 @@ async function startServer(options: {
       extension: [{ url: "channel", valueCode: "sms" }],
     }],
   }));
+  const encounters: Encounter[] = [
+    { resourceType: "Encounter", id: "encounter-1", status: "in-progress", class: { code: "AMB" }, subject: { reference: PATIENT_REFERENCE } },
+    { resourceType: "Encounter", id: "encounter-other", status: "in-progress", class: { code: "AMB" }, subject: { reference: "Patient/synthetic-2" } },
+  ];
+  const conditions: Condition[] = [
+    { resourceType: "Condition", id: "condition-1", subject: { reference: PATIENT_REFERENCE } },
+    { resourceType: "Condition", id: "condition-other", subject: { reference: "Patient/synthetic-2" } },
+  ];
   const provenances: Provenance[] = [];
   const recipientUpdates: Resource[] = [];
   const attributedActors: Array<{
@@ -1382,7 +1533,8 @@ async function startServer(options: {
     async sendSms(request) {
       providerCalls.push("sendSms");
       smsRequests.push(structuredClone(request));
-      return { outcome: "sent", providerMessageId: "SM-synthetic" };
+      if (options.smsError) throw options.smsError;
+      return options.smsResult ?? { outcome: "sent", providerMessageId: "SM-synthetic" };
     },
     async sendEmail(request) {
       providerCalls.push("sendEmail");
@@ -1533,14 +1685,17 @@ async function startServer(options: {
       };
       const callerFhir = {
         async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
-          if (resourceType !== "Patient") {
-            throw new Error(`Unexpected caller FHIR read for ${resourceType}/${id}.`);
-          }
           if (options.excludePatientRead) {
             throw Object.assign(new Error("Synthetic caller AccessPolicy denied Patient read"), { status: 403 });
           }
-          const found = patients.find((patient) => patient.id === id);
-          if (!found) throw Object.assign(new Error(`Missing Patient/${id}`), { status: 404 });
+          const found = resourceType === "Patient"
+            ? patients.find((patient) => patient.id === id)
+            : resourceType === "Encounter"
+              ? encounters.find((encounter) => encounter.id === id)
+              : resourceType === "Condition"
+                ? conditions.find((condition) => condition.id === id)
+                : undefined;
+          if (!found) throw Object.assign(new Error(`Missing ${resourceType}/${id}`), { status: 404 });
           return structuredClone(found) as T;
         },
         async search(_resourceType: string, params: Record<string, string> = {}) {
@@ -1767,7 +1922,7 @@ async function startServer(options: {
       },
       async logClick() {},
     },
-    publicBaseUrl: "https://practice.example",
+    publicBaseUrl: options.publicBaseUrl === undefined ? "https://practice.example" : options.publicBaseUrl,
     practiceName: "Synthetic Eye Care",
     chartDispatchLane: options.chartDispatchLane,
     audit,

@@ -990,7 +990,6 @@ export function EncounterCharting({ patient, encounterId }: Props) {
           patient={patient}
           encounterReference={encounterReference}
           diagnosis={engageDiagnosis}
-          chartDispatchLane={import.meta.env?.VITE_ODOS_CHART_DISPATCH_LANE === "locked_clinical" ? "locked_clinical" : "staff_switchable"}
           onClose={() => setEngageOpen(false)}
         />
       </div>

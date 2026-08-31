@@ -85,7 +85,7 @@ test("diagnosis Engage prefilters content, names guardian recipients, blocks mar
   const api: EngageSheetApi = {
     async listEducation(query) {
       listCalls.push(query);
-      return ITEMS;
+      return educationList(ITEMS);
     },
     async dispatchEducation(input) {
       dispatches.push(input);
@@ -107,7 +107,6 @@ test("diagnosis Engage prefilters content, names guardian recipients, blocks mar
           diagnosis={{ reference: "Condition/condition-1", code: "H04.123", display: "Dry eye syndrome" }}
           onClose={() => undefined}
           api={api}
-          chartDispatchLane="staff_switchable"
           idempotencyKeyFactory={() => "education-ui-0001"}
         />,
       );
@@ -166,7 +165,7 @@ test("toolbar Engage stays unfiltered and a locked practice pins retail content 
   const api: EngageSheetApi = {
     async listEducation(query) {
       listCalls.push(query);
-      return [ITEMS[2]!];
+      return educationList([ITEMS[2]!], "locked_clinical");
     },
     async dispatchEducation(input) {
       dispatches.push(input);
@@ -187,7 +186,6 @@ test("toolbar Engage stays unfiltered and a locked practice pins retail content 
           encounterReference="Encounter/encounter-1"
           onClose={() => undefined}
           api={api}
-          chartDispatchLane="locked_clinical"
         />,
       );
       await Promise.resolve();
@@ -216,6 +214,7 @@ test("the chart exposes both diagnosis-row and toolbar doors to the same Engage 
   assert.match(chart, /aria-label="Engage patient"/);
   assert.match(chart, /<EngageSheet/);
   assert.match(chart, /diagnosis={engageDiagnosis}/);
+  assert.doesNotMatch(chart, /VITE_ODOS_CHART_DISPATCH_LANE/);
 });
 
 test("the shared communications client lists filtered education and posts the exact dispatch body", async () => {
@@ -227,7 +226,7 @@ test("the shared communications client lists filtered education and posts the ex
       ...(init?.body ? { body: JSON.parse(String(init.body)) } : {}),
     });
     return calls.length === 1
-      ? new Response(JSON.stringify({ items: [ITEMS[0]] }), { status: 200 })
+      ? new Response(JSON.stringify({ items: [ITEMS[0]], chartDispatchLane: "locked_clinical" }), { status: 200 })
       : new Response(JSON.stringify({ outcome: "sent", providerMessageId: "SM-client" }), { status: 200 });
   };
   const listed = await listEducation({ dxCode: "H04.123", channel: "sms" }, fetchImpl);
@@ -241,8 +240,14 @@ test("the shared communications client lists filtered education and posts the ex
     idempotencyKey: "education-client-0001",
   };
   const result = await dispatchEducation(input, fetchImpl);
-  assert.equal(listed[0]?.id, "dry-eye-basics");
+  const suppressed = await dispatchEducation(input, async () => new Response(JSON.stringify({
+    outcome: "suppressed",
+    reason: "patient-opt-out",
+  }), { status: 200 }));
+  assert.equal(listed.items[0]?.id, "dry-eye-basics");
+  assert.equal(listed.chartDispatchLane, "locked_clinical");
   assert.deepEqual(result, { outcome: "sent", providerMessageId: "SM-client" });
+  assert.deepEqual(suppressed, { outcome: "suppressed", reason: "patient-opt-out" });
   assert.deepEqual(calls, [
     { url: "/communications/education?dxCode=H04.123&channel=sms", method: "GET" },
     { url: "/communications/education/dispatch", method: "POST", body: input },
@@ -253,7 +258,7 @@ test("a minor without a recorded consent-authority guardian cannot dispatch educ
   const originalFetch = globalThis.fetch;
   globalThis.fetch = unsuppressedSmsFetch;
   const api: EngageSheetApi = {
-    async listEducation() { return [ITEMS[0]!]; },
+    async listEducation() { return educationList([ITEMS[0]!]); },
     async dispatchEducation() { return { outcome: "sent", providerMessageId: "should-not-send" }; },
     async listConsentGuardians() { return []; },
   };
@@ -281,7 +286,7 @@ test("a suppressed default SMS lane disables Text before compose and names the s
     smsLanes: [{ label: "Clinical texts", number: "+18485550100", roles: ["clinical-sms"] }],
   }), { status: 200, headers: { "Content-Type": "application/json" } });
   const api: EngageSheetApi = {
-    async listEducation() { return [ITEMS[0]!]; },
+    async listEducation() { return educationList([ITEMS[0]!]); },
     async dispatchEducation() { return { outcome: "sent", providerMessageId: "should-not-send" }; },
     async listConsentGuardians() { return []; },
   };
@@ -322,15 +327,19 @@ test("a suppressed default SMS lane disables Text before compose and names the s
   }
 });
 
-test("an unavailable SMS preference response keeps Engage mounted and Text fail closed", async () => {
+test("a provider-shaped 403 preference probe keeps Text available for dispatch enforcement", async () => {
   const originalFetch = globalThis.fetch;
-  globalThis.fetch = async () => new Response(JSON.stringify({ definitions: [], images: [] }), {
-    status: 200,
+  globalThis.fetch = async () => new Response(JSON.stringify({ error: "Forbidden" }), {
+    status: 403,
     headers: { "Content-Type": "application/json" },
   });
+  const dispatches: EducationDispatchInput[] = [];
   const api: EngageSheetApi = {
-    async listEducation() { return [ITEMS[0]!]; },
-    async dispatchEducation() { return { outcome: "sent", providerMessageId: "should-not-send" }; },
+    async listEducation() { return educationList([ITEMS[0]!]); },
+    async dispatchEducation(input) {
+      dispatches.push(input);
+      return { outcome: "sent", providerMessageId: "SM-provider" };
+    },
     async listConsentGuardians() { return []; },
   };
   try {
@@ -341,8 +350,166 @@ test("an unavailable SMS preference response keeps Engage mounted and Text fail 
       await Promise.resolve();
     });
     assert.match(renderedText(renderer), /Engage — Ella Jenkins/);
-    assert.match(renderedText(renderer), /SMS availability is loading or unavailable/);
-    assert.equal(renderer.root.findByProps({ "aria-label": "Text Understanding dry eye" }).props.disabled, true);
+    assert.match(renderedText(renderer), /SMS preferences could not be read; dispatch will enforce opt-outs/);
+    const textButton = renderer.root.findByProps({ "aria-label": "Text Understanding dry eye" });
+    assert.equal(textButton.props.disabled, false);
+    act(() => textButton.props.onClick());
+    await act(async () => {
+      renderer.root.findByProps({ "aria-label": "Confirm education send" }).props.onClick();
+      await Promise.resolve();
+    });
+    assert.equal(dispatches.length, 1);
+    act(() => renderer.unmount());
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("suppressed and rescheduled education outcomes render actionable sentences", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = unsuppressedSmsFetch;
+  const outcomes = [
+    { outcome: "suppressed", reason: "patient-opt-out" } as const,
+    { outcome: "rescheduled", reason: "quiet-hours", rescheduledAt: "2026-08-31T22:00:00.000Z" } as const,
+  ];
+  const api: EngageSheetApi = {
+    async listEducation() { return educationList([ITEMS[0]!]); },
+    async dispatchEducation() { return outcomes.shift()!; },
+    async listConsentGuardians() { return []; },
+  };
+  try {
+    let renderer!: ReturnType<typeof create>;
+    await act(async () => {
+      renderer = create(<EngageSheet open patient={{ ...PATIENT, birthDate: "1980-04-03" }} onClose={() => undefined} api={api} />);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    act(() => renderer.root.findByProps({ "aria-label": "Text Understanding dry eye" }).props.onClick());
+    await act(async () => {
+      renderer.root.findByProps({ "aria-label": "Confirm education send" }).props.onClick();
+      await Promise.resolve();
+    });
+    assert.match(renderedText(renderer), /Texting is blocked — this patient opted out/);
+    act(() => renderer.root.findByProps({ "aria-label": "Text Understanding dry eye" }).props.onClick());
+    await act(async () => {
+      renderer.root.findByProps({ "aria-label": "Confirm education send" }).props.onClick();
+      await Promise.resolve();
+    });
+    assert.match(renderedText(renderer), /Queued until quiet hours end at 2026-08-31T22:00:00.000Z/);
+    act(() => renderer.unmount());
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a failed confirmation reuses its idempotency key until the send succeeds", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = unsuppressedSmsFetch;
+  const keys: string[] = [];
+  let attempts = 0;
+  const api: EngageSheetApi = {
+    async listEducation() { return educationList([ITEMS[0]!]); },
+    async dispatchEducation(input) {
+      keys.push(input.idempotencyKey);
+      attempts += 1;
+      if (attempts === 1) throw new Error("Lost response");
+      return { outcome: "sent", providerMessageId: "SM-retry" };
+    },
+    async listConsentGuardians() { return []; },
+  };
+  let generated = 0;
+  try {
+    let renderer!: ReturnType<typeof create>;
+    await act(async () => {
+      renderer = create(<EngageSheet open patient={{ ...PATIENT, birthDate: "1980-04-03" }} onClose={() => undefined} api={api} idempotencyKeyFactory={() => `education-retry-${++generated}`} />);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    act(() => renderer.root.findByProps({ "aria-label": "Text Understanding dry eye" }).props.onClick());
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      await act(async () => {
+        renderer.root.findByProps({ "aria-label": "Confirm education send" }).props.onClick();
+        await Promise.resolve();
+      });
+    }
+    assert.deepEqual(keys, ["education-retry-1", "education-retry-1"]);
+    act(() => renderer.unmount());
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("selecting a second guardian clears and disables a one-person override", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = unsuppressedSmsFetch;
+  const dispatches: EducationDispatchInput[] = [];
+  const api: EngageSheetApi = {
+    async listEducation() { return educationList([ITEMS[0]!]); },
+    async dispatchEducation(input) { dispatches.push(input); return { outcome: "sent", providerMessageId: `SM-${dispatches.length}` }; },
+    async listConsentGuardians() { return GUARDIANS; },
+  };
+  try {
+    let renderer!: ReturnType<typeof create>;
+    await act(async () => {
+      renderer = create(<EngageSheet open patient={PATIENT} onClose={() => undefined} api={api} />);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    act(() => renderer.root.findByProps({ "aria-label": "Text Understanding dry eye" }).props.onClick());
+    const overrideButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "✎ Override for this send");
+    assert.ok(overrideButton);
+    act(() => overrideButton.props.onClick());
+    act(() => renderer.root.findByProps({ "aria-label": "Recipient override" }).props.onChange({ target: { value: "+18645550177" } }));
+    const secondGuardian = renderer.root.findAllByType("input").find((input) => input.props.type === "checkbox" && input.props.checked === false);
+    assert.ok(secondGuardian);
+    act(() => secondGuardian.props.onChange({ target: { checked: true } }));
+    assert.match(renderedText(renderer), /Override is available only when one recipient is selected/);
+    assert.equal(overrideButton.props.disabled, true);
+    await act(async () => {
+      renderer.root.findByProps({ "aria-label": "Confirm education send" }).props.onClick();
+      await Promise.resolve();
+    });
+    assert.deepEqual(dispatches.map((dispatch) => dispatch.recipientOverride?.phone), ["+18645550111", "+18645550112"]);
+    act(() => renderer.unmount());
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("chart update appears only after an override value and print returns a user-clicked link", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = unsuppressedSmsFetch;
+  const api: EngageSheetApi = {
+    async listEducation() { return educationList([ITEMS[2]!]); },
+    async dispatchEducation() { return { outcome: "print", url: "https://education.invalid/retail-home-care/v1/print" }; },
+    async listConsentGuardians() { return []; },
+  };
+  try {
+    let renderer!: ReturnType<typeof create>;
+    await act(async () => {
+      renderer = create(<EngageSheet open patient={{ ...PATIENT, birthDate: "1980-04-03" }} onClose={() => undefined} api={api} />);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    act(() => renderer.root.findByProps({ "aria-label": "Text Home care guide" }).props.onClick());
+    assert.equal(textCount(renderer, "Also update chart"), 0);
+    const overrideButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "✎ Override for this send");
+    assert.ok(overrideButton);
+    act(() => overrideButton.props.onClick());
+    assert.equal(textCount(renderer, "Also update chart"), 0);
+    act(() => renderer.root.findByProps({ "aria-label": "Recipient override" }).props.onChange({ target: { value: "+18645550177" } }));
+    assert.equal(textCount(renderer, "Also update chart"), 1);
+    const cancel = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Cancel");
+    assert.ok(cancel);
+    act(() => cancel.props.onClick());
+    act(() => renderer.root.findByProps({ "aria-label": "Print Home care guide" }).props.onClick());
+    await act(async () => {
+      renderer.root.findByProps({ "aria-label": "Confirm education send" }).props.onClick();
+      await Promise.resolve();
+    });
+    const printLink = renderer.root.findByProps({ "aria-label": "Open print artifact" });
+    assert.equal(printLink.props.href, "https://education.invalid/retail-home-care/v1/print");
+    assert.doesNotMatch(renderedText(renderer), /Print artifact ready/);
     act(() => renderer.unmount());
   } finally {
     globalThis.fetch = originalFetch;
@@ -377,6 +544,12 @@ function renderedText(renderer: ReturnType<typeof create>): string {
   ).join(" ");
 }
 
+function textCount(renderer: ReturnType<typeof create>, value: string): number {
+  return renderer.root.findAll(() => true).flatMap((node) =>
+    node.children.filter((child): child is string => typeof child === "string"),
+  ).filter((text) => text === value).length;
+}
+
 async function unsuppressedSmsFetch(): Promise<Response> {
   return new Response(JSON.stringify({
     patientReference: "Patient/patient-1",
@@ -387,4 +560,11 @@ async function unsuppressedSmsFetch(): Promise<Response> {
       { label: "Front-desk texts", number: "+18645550100", roles: ["transactional-sms", "marketing-sms"] },
     ],
   }), { status: 200, headers: { "Content-Type": "application/json" } });
+}
+
+function educationList(
+  items: EducationContentItem[],
+  chartDispatchLane: "locked_clinical" | "staff_switchable" = "staff_switchable",
+) {
+  return { items, chartDispatchLane };
 }

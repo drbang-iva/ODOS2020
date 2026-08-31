@@ -22,12 +22,14 @@ export function SmsOptOutControl({
   activeLaneRole,
   onActiveLaneSuppressionChange,
   onStateChange,
+  onUnavailable,
 }: {
   patientReference: string;
   // The approved B2a compose bar will supply these props for the second mount.
   activeLaneRole?: SmsLaneRole;
   onActiveLaneSuppressionChange?: (suppressed: boolean) => void;
   onStateChange?: (state: SmsOptOutState) => void;
+  onUnavailable?: (reason: "denied" | "error") => void;
 }) {
   const [state, setState] = useState<SmsOptOutState>();
   const [error, setError] = useState<string>();
@@ -39,8 +41,10 @@ export function SmsOptOutControl({
   const [result, setResult] = useState<string>();
   const suppressionChangeRef = useRef(onActiveLaneSuppressionChange);
   const stateChangeRef = useRef(onStateChange);
+  const unavailableRef = useRef(onUnavailable);
   suppressionChangeRef.current = onActiveLaneSuppressionChange;
   stateChangeRef.current = onStateChange;
+  unavailableRef.current = onUnavailable;
 
   useEffect(() => {
     let active = true;
@@ -65,9 +69,11 @@ export function SmsOptOutControl({
       if (cause instanceof CommunicationsResponseError && cause.status === 403) {
         setDenied(true);
         suppressionChangeRef.current?.(false);
+        unavailableRef.current?.("denied");
         return;
       }
       setError(cause instanceof Error ? cause.message : "SMS preferences unavailable.");
+      unavailableRef.current?.("error");
     });
     return () => { active = false; };
   }, [activeLaneRole, patientReference]);

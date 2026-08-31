@@ -3,6 +3,7 @@ import type { Patient, RelatedPerson } from "@medplum/fhirtypes";
 import {
   dispatchEducation,
   listEducation,
+  type EducationCatalogResult,
   type EducationContentItem,
   type EducationDispatchInput,
   type EducationDispatchResult,
@@ -22,7 +23,7 @@ const MARKETING_CONSENT_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/odos-comms-marketing-consent";
 
 export interface EngageSheetApi {
-  listEducation(query: { dxCode?: string; channel?: "sms" | "email" | "print" }): Promise<EducationContentItem[]>;
+  listEducation(query: { dxCode?: string; channel?: "sms" | "email" | "print" }): Promise<EducationCatalogResult>;
   dispatchEducation(input: EducationDispatchInput): Promise<EducationDispatchResult>;
   listConsentGuardians(patientReference: string): Promise<RelatedPerson[]>;
 }
@@ -36,6 +37,7 @@ export interface EngageDiagnosis {
 interface PendingSend {
   item: EducationContentItem;
   channel: "sms" | "email" | "print";
+  idempotencyKeys: Record<string, string>;
 }
 
 const defaultApi: EngageSheetApi = {
@@ -59,7 +61,6 @@ export function EngageSheet({
   diagnosis,
   onClose,
   api = defaultApi,
-  chartDispatchLane = "staff_switchable",
   idempotencyKeyFactory = defaultIdempotencyKey,
 }: {
   open: boolean;
@@ -68,7 +69,6 @@ export function EngageSheet({
   diagnosis?: EngageDiagnosis;
   onClose: () => void;
   api?: EngageSheetApi;
-  chartDispatchLane?: "locked_clinical" | "staff_switchable";
   idempotencyKeyFactory?: () => string;
 }) {
   const patientReference = `Patient/${patient.id}`;
@@ -76,13 +76,16 @@ export function EngageSheet({
   const [guardians, setGuardians] = useState<RelatedPerson[]>([]);
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
   const [pending, setPending] = useState<PendingSend>();
+  const [chartDispatchLane, setChartDispatchLane] = useState<"locked_clinical" | "staff_switchable">("staff_switchable");
   const [lane, setLane] = useState<"clinical" | "frontdesk">("clinical");
   const [overrideMode, setOverrideMode] = useState(false);
   const [overrideValue, setOverrideValue] = useState("");
   const [alsoUpdateChart, setAlsoUpdateChart] = useState(false);
   const [smsState, setSmsState] = useState<SmsOptOutState>();
+  const [smsAvailability, setSmsAvailability] = useState<"loading" | "available" | "unavailable">("loading");
   const [status, setStatus] = useState<string>();
   const [error, setError] = useState<string>();
+  const [printUrl, setPrintUrl] = useState<string>();
   const [sending, setSending] = useState(false);
   const minor = patient.birthDate ? isMinorOn(patient.birthDate, today()) : false;
   const marketingConsent = hasMarketingConsent(patient);
@@ -93,12 +96,16 @@ export function EngageSheet({
     setPending(undefined);
     setStatus(undefined);
     setError(undefined);
+    setPrintUrl(undefined);
+    setSmsState(undefined);
+    setSmsAvailability("loading");
     Promise.all([
       api.listEducation(diagnosis?.code ? { dxCode: diagnosis.code } : {}),
       minor ? api.listConsentGuardians(patientReference) : Promise.resolve([]),
-    ]).then(([content, relatedPeople]) => {
+    ]).then(([catalog, relatedPeople]) => {
       if (!active) return;
-      setItems(content.filter((item) => item.audience === "patient"));
+      setItems(catalog.items.filter((item) => item.audience === "patient"));
+      setChartDispatchLane(catalog.chartDispatchLane);
       setGuardians(relatedPeople);
       const primary = relatedPeople.find(isPrimaryGuardian) ?? relatedPeople[0];
       setSelectedRecipients(primary?.id ? [`RelatedPerson/${primary.id}`] : [patientReference]);
@@ -113,7 +120,7 @@ export function EngageSheet({
   }, [guardians, minor, patient]);
 
   const beginSend = (item: EducationContentItem, channel: PendingSend["channel"]) => {
-    setPending({ item, channel });
+    setPending({ item, channel, idempotencyKeys: {} });
     setLane(chartDispatchLane === "locked_clinical"
       ? "clinical"
       : item.laneHint === "retail" ? "frontdesk" : "clinical");
@@ -122,7 +129,15 @@ export function EngageSheet({
     setAlsoUpdateChart(false);
     setStatus(undefined);
     setError(undefined);
+    setPrintUrl(undefined);
   };
+
+  useEffect(() => {
+    if (selectedRecipients.length <= 1) return;
+    setOverrideMode(false);
+    setOverrideValue("");
+    setAlsoUpdateChart(false);
+  }, [selectedRecipients]);
 
   const confirmSend = async () => {
     if (!pending) return;
@@ -131,10 +146,15 @@ export function EngageSheet({
       setError("Choose a recipient before sending education.");
       return;
     }
+    if (overrideMode && chosenRecipients.length !== 1) {
+      setError("Override is available only when one recipient is selected.");
+      return;
+    }
     setSending(true);
     setError(undefined);
     try {
       const results: EducationDispatchResult[] = [];
+      const idempotencyKeys = { ...pending.idempotencyKeys };
       for (const recipient of pending.channel === "print" ? [chosenRecipients[0]!] : chosenRecipients) {
         const value = overrideMode ? overrideValue.trim() : recipient[pending.channel === "email" ? "email" : "phone"];
         const recipientOverride = pending.channel === "print"
@@ -144,6 +164,19 @@ export function EngageSheet({
               ...(pending.channel === "sms" && value ? { phone: value } : {}),
               ...(pending.channel === "email" && value ? { email: value } : {}),
             };
+        const confirmationIdentity = JSON.stringify({
+          channel: pending.channel,
+          educationId: pending.item.id,
+          version: pending.item.version,
+          recipient: recipient.reference,
+          value: value ?? "",
+          lane,
+          alsoUpdateChart,
+        });
+        idempotencyKeys[confirmationIdentity] ??= idempotencyKeyFactory();
+        setPending((current) => current && current.item === pending.item && current.channel === pending.channel
+          ? { ...current, idempotencyKeys }
+          : current);
         results.push(await api.dispatchEducation({
           patientReference,
           educationId: pending.item.id,
@@ -154,16 +187,23 @@ export function EngageSheet({
           alsoUpdateChart,
           ...(encounterReference ? { encounterReference } : {}),
           ...(diagnosis?.reference ? { conditionReference: diagnosis.reference } : {}),
-          idempotencyKey: idempotencyKeyFactory(),
+          idempotencyKey: idempotencyKeys[confirmationIdentity],
         }));
       }
       const printResult = results.find((result): result is Extract<EducationDispatchResult, { outcome: "print" }> => result.outcome === "print");
       const refusal = results.find((result): result is Extract<EducationDispatchResult, { outcome: "refused" }> => result.outcome === "refused");
+      const suppression = results.find((result): result is Extract<EducationDispatchResult, { outcome: "suppressed" }> => result.outcome === "suppressed");
+      const rescheduled = results.find((result): result is Extract<EducationDispatchResult, { outcome: "rescheduled" }> => result.outcome === "rescheduled");
       if (printResult) {
-        setStatus("Print artifact ready.");
-        if (typeof window !== "undefined" && typeof window.open === "function") window.open(printResult.url, "_blank", "noopener,noreferrer");
+        setPrintUrl(printResult.url);
       } else if (refusal) {
         setError(refusal.reason);
+      } else if (suppression?.reason === "patient-opt-out") {
+        setError("Texting is blocked — this patient opted out.");
+      } else if (suppression) {
+        setError("Texting is blocked by the communication frequency limit.");
+      } else if (rescheduled) {
+        setStatus(`Queued until quiet hours end at ${rescheduled.rescheduledAt}.`);
       } else {
         setStatus(results.length > 1 ? `Education sent to ${results.length} recipients.` : "Education sent.");
       }
@@ -201,12 +241,20 @@ export function EngageSheet({
             <p className="text-sm text-[color:var(--odos-alert)]">No current consent-authority guardian is recorded. Education dispatch is unavailable.</p>
           )}
           <SmsOptOutErrorBoundary>
-            <SmsOptOutControl patientReference={patientReference} onStateChange={setSmsState} />
+            <SmsOptOutControl
+              patientReference={patientReference}
+              onStateChange={(value) => {
+                setSmsState(value);
+                setSmsAvailability("available");
+              }}
+              onUnavailable={() => setSmsAvailability("unavailable")}
+            />
           </SmsOptOutErrorBoundary>
         </section>
 
         {error && <p role="alert" className="text-sm text-[color:var(--odos-alert)]">{error}</p>}
         {status && <p role="status" className="text-sm text-[color:var(--odos-emerald)]">{status}</p>}
+        {printUrl && <a aria-label="Open print artifact" href={printUrl} target="_blank" rel="noreferrer">Open print artifact</a>}
 
         <section className="grid gap-3" aria-label="Education content">
           {items.map((item) => {
@@ -222,11 +270,12 @@ export function EngageSheet({
                 </div>
                 {marketingBlocked && <p className="mt-2 text-sm text-[color:var(--odos-amber)]">Marketing consent not on file</p>}
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <ChannelButton label="Text" channel="sms" item={item} disabled={!recipients.length || marketingBlocked || !item.channels.includes("sms") || !smsState || isSmsLaneSuppressed(smsState, defaultSmsLane)} onClick={beginSend} />
+                  <ChannelButton label="Text" channel="sms" item={item} disabled={!recipients.length || marketingBlocked || !item.channels.includes("sms") || smsAvailability === "loading" || isSmsLaneSuppressed(smsState, defaultSmsLane)} onClick={beginSend} />
                   <ChannelButton label="Email" channel="email" item={item} disabled={!recipients.length || marketingBlocked || !item.channels.includes("email")} onClick={beginSend} />
                   <ChannelButton label="Print" channel="print" item={item} disabled={!recipients.length || marketingBlocked || !item.channels.includes("print")} onClick={beginSend} />
                 </div>
-                {!smsState && item.channels.includes("sms") && <p className="mt-2 text-sm text-[color:var(--odos-muted)]">SMS availability is loading or unavailable.</p>}
+                {smsAvailability === "loading" && item.channels.includes("sms") && <p className="mt-2 text-sm text-[color:var(--odos-muted)]">Checking SMS availability…</p>}
+                {smsAvailability === "unavailable" && item.channels.includes("sms") && <p className="mt-2 text-sm text-[color:var(--odos-muted)]">SMS preferences could not be read; dispatch will enforce opt-outs.</p>}
                 {isSmsLaneSuppressed(smsState, defaultSmsLane) && <p className="mt-2 text-sm text-[color:var(--odos-amber)]">Texting is suppressed on this item’s default lane. Re-enroll above to send.</p>}
               </article>
             );
@@ -253,17 +302,22 @@ export function EngageSheet({
             )}
             {pending.channel !== "print" && (
               <div className="grid gap-2">
-                <button type="button" className="justify-self-start underline" onClick={() => setOverrideMode((current) => !current)}>✎ Override for this send</button>
+                <button type="button" disabled={selectedRecipients.length !== 1} className="justify-self-start underline" onClick={() => setOverrideMode((current) => !current)}>✎ Override for this send</button>
+                {selectedRecipients.length > 1 && <p className="text-sm text-[color:var(--odos-muted)]">Override is available only when one recipient is selected.</p>}
                 {overrideMode && (
-                  <label className="grid gap-1 text-sm">
-                    {pending.channel === "sms" ? "Phone" : "Email"}
-                    <input aria-label="Recipient override" value={overrideValue} onChange={(event) => setOverrideValue(event.target.value)} />
-                  </label>
+                  <>
+                    <label className="grid gap-1 text-sm">
+                      {pending.channel === "sms" ? "Phone" : "Email"}
+                      <input aria-label="Recipient override" value={overrideValue} onChange={(event) => setOverrideValue(event.target.value)} />
+                    </label>
+                    {overrideValue.trim() && (
+                      <label className="flex items-center gap-2 text-sm">
+                        <input type="checkbox" checked={alsoUpdateChart} onChange={(event) => setAlsoUpdateChart(event.target.checked)} />
+                        Also update chart
+                      </label>
+                    )}
+                  </>
                 )}
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={alsoUpdateChart} onChange={(event) => setAlsoUpdateChart(event.target.checked)} />
-                  Also update chart
-                </label>
               </div>
             )}
             <div className="flex gap-2">
