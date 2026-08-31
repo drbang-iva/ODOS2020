@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  eligibilityTransactionIdentifier,
   runEligibilitySweepTick,
   startEligibilitySweepWorker,
   type EligibilityCandidate,
@@ -14,7 +15,7 @@ const DATE = "2026-08-31";
 const NOW = "2026-08-30T23:00:00.000Z";
 
 function candidate(overrides: Partial<EligibilityCandidate> = {}): EligibilityCandidate {
-  return {
+  const value: EligibilityCandidate = {
     key: "2026-08-31:appointment-1:coverage-1",
     appointmentReference: "Appointment/appointment-1",
     appointmentAt: "2026-08-31T14:15:00.000Z",
@@ -39,6 +40,13 @@ function candidate(overrides: Partial<EligibilityCandidate> = {}): EligibilityCa
       subscriber: { firstName: "Marcus", lastName: "Test", dateOfBirth: "19800102" },
     },
     ...overrides,
+  };
+  return {
+    ...value,
+    eligibilityRequest: {
+      ...value.eligibilityRequest,
+      submitterTransactionIdentifier: eligibilityTransactionIdentifier(value),
+    },
   };
 }
 
@@ -299,9 +307,9 @@ test("a later batch submission failure preserves accepted batch IDs and does not
     submitBatchEligibility: async () => {
       submitCalls += 1;
       if (submitCalls === 1) return { batchId: "accepted-batch", submittedAt: NOW };
-      throw new Error("later chunk failed");
+      if (submitCalls === 2) throw new Error("later chunk failed");
+      return { batchId: "resumed-batch", submittedAt: NOW };
     },
-    getBatchEligibilityItems: async () => { throw new Error("partial submission must remain failed"); },
   });
 
   await assert.rejects(runEligibilitySweepTick({ store, stedi: client, date: DATE, now: NOW }), /later chunk failed/);
@@ -312,8 +320,11 @@ test("a later batch submission failure preserves accepted batch IDs and does not
   assert.equal(store.states.at(-1)?.submissionComplete, false);
 
   await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: "2026-08-30T23:05:00.000Z" });
-  assert.equal(submitCalls, 2);
-  assert.equal(store.states.at(-1)?.status, "failed");
+  assert.equal(submitCalls, 3);
+  assert.equal(store.states.at(-1)?.status, "submitted");
+  assert.deepEqual(store.states.at(-1)?.batchIds, ["accepted-batch", "resumed-batch"]);
+  assert.equal(store.states.at(-1)?.submittedTransactionIdentifiers?.length, 10_001);
+  assert.equal(store.states.at(-1)?.submissionComplete, true);
 });
 
 test("a candidate added after submission is not recorded as an unchecked failure", async () => {
@@ -344,6 +355,31 @@ test("a candidate added after submission is not recorded as an unchecked failure
   await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: "2026-08-30T23:05:00.000Z" });
 
   assert.equal(store.findings.some((finding) => finding.appointmentReference === "Appointment/appointment-late"), false);
+});
+
+test("candidate edits after submission cannot reinterpret an earlier payer response", async () => {
+  const source = candidate();
+  const store = memoryStore([source], false);
+  const originalTransactionId = source.eligibilityRequest.submitterTransactionIdentifier;
+  const client = stedi({
+    getBatchEligibilityItems: async () => ({
+      items: [{
+        state: "COMPLETED",
+        eligibilityCheckResult: "INACTIVE",
+        submitterTransactionIdentifier: originalTransactionId,
+      }],
+    }),
+  });
+
+  await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: NOW });
+  source.chartMemberId = "CHANGED-AFTER-SUBMIT";
+  source.eligibilityRequest = {
+    ...source.eligibilityRequest,
+    subscriber: { firstName: "Marcus", lastName: "Test", dateOfBirth: "19800102", memberId: "CHANGED-AFTER-SUBMIT" },
+  };
+  await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: "2026-08-30T23:05:00.000Z" });
+
+  assert.equal(store.findings.length, 0);
 });
 
 test("the worker does not overlap a slow eligibility sweep tick", async () => {

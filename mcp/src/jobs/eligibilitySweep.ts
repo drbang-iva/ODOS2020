@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type {
   Appointment,
   Address,
@@ -113,7 +114,10 @@ export async function runEligibilitySweepTick(input: EligibilitySweepTickInput):
       await pollPendingDiscoveries(input, prior);
       return;
     }
-    if (prior?.status === "failed" && prior.submissionComplete === false && prior.batchIds.length > 0) return;
+    if (prior?.status === "failed" && prior.submissionComplete === false && prior.batchIds.length > 0) {
+      await submitSweep(input, prior.lastSuccessfulAt, prior);
+      return;
+    }
     if (!prior || (prior.status === "failed" && prior.batchIds.length === 0)) {
       await submitSweep(input, prior?.lastSuccessfulAt);
       return;
@@ -141,9 +145,13 @@ export async function runEligibilitySweepTick(input: EligibilitySweepTickInput):
   }
 }
 
-async function submitSweep(input: EligibilitySweepTickInput, lastSuccessfulAt?: string): Promise<void> {
-  const candidates = uniqueCandidates(await input.store.loadCandidates(input.date));
-  if (candidates.length === 0) {
+async function submitSweep(
+  input: EligibilitySweepTickInput,
+  lastSuccessfulAt?: string,
+  progress?: EligibilitySweepState,
+): Promise<void> {
+  const candidates = uniqueCandidates(await input.store.loadCandidates(input.date)).map(prepareCandidate);
+  if (candidates.length === 0 && !progress?.batchIds.length) {
     await input.store.replaceFindings(input.date, []);
     await input.store.saveState({
       date: input.date,
@@ -157,13 +165,28 @@ async function submitSweep(input: EligibilitySweepTickInput, lastSuccessfulAt?: 
     });
     return;
   }
-  const batchIds: string[] = [];
-  const submittedTransactionIdentifiers: string[] = [];
-  for (let offset = 0; offset < candidates.length; offset += BATCH_LIMIT) {
-    const chunk = candidates.slice(offset, offset + BATCH_LIMIT);
+  const batchIds = [...(progress?.batchIds ?? [])];
+  const submittedTransactionIdentifiers = [...(progress?.submittedTransactionIdentifiers ?? [])];
+  const submitted = new Set(submittedTransactionIdentifiers);
+  const remaining = candidates.filter((candidate) => !submitted.has(candidate.eligibilityRequest.submitterTransactionIdentifier));
+  if (remaining.length === 0) {
+    await input.store.saveState({
+      date: input.date,
+      status: "submitted",
+      lastAttemptAt: input.now,
+      ...(lastSuccessfulAt ? { lastSuccessfulAt } : {}),
+      batchIds,
+      expectedChecks: submittedTransactionIdentifiers.length,
+      submittedTransactionIdentifiers,
+      submissionComplete: true,
+    });
+    return;
+  }
+  for (let offset = 0; offset < remaining.length; offset += BATCH_LIMIT) {
+    const chunk = remaining.slice(offset, offset + BATCH_LIMIT);
     const result = record(await input.stedi.submitBatchEligibility({
       items: chunk.map((candidate) => candidate.eligibilityRequest),
-      name: batchName(input.date, offset / BATCH_LIMIT),
+      name: batchName(input.date, batchIds.length),
       maxRetryHours: 8,
     }));
     const batchId = text(result.batchId);
@@ -176,9 +199,9 @@ async function submitSweep(input: EligibilitySweepTickInput, lastSuccessfulAt?: 
       lastAttemptAt: input.now,
       ...(lastSuccessfulAt ? { lastSuccessfulAt } : {}),
       batchIds: [...batchIds],
-      expectedChecks: candidates.length,
+      expectedChecks: Math.max(progress?.expectedChecks ?? 0, candidates.length, submittedTransactionIdentifiers.length),
       submittedTransactionIdentifiers: [...submittedTransactionIdentifiers],
-      submissionComplete: submittedTransactionIdentifiers.length === candidates.length,
+      submissionComplete: offset + chunk.length === remaining.length,
     });
   }
 }
@@ -202,7 +225,7 @@ async function pollAndIngestSweep(input: EligibilitySweepTickInput, state: Eligi
   const statusByKey = indexByTransactionIdentifier(statuses);
   const resultByKey = indexByTransactionIdentifier(results);
   const submitted = new Set(state.submittedTransactionIdentifiers ?? statusByKey.keys());
-  const candidates = uniqueCandidates(await input.store.loadCandidates(input.date))
+  const candidates = uniqueCandidates(await input.store.loadCandidates(input.date)).map(prepareCandidate)
     .filter((candidate) => submitted.has(candidate.eligibilityRequest.submitterTransactionIdentifier));
   const findings: EligibilityFinding[] = [];
   const pendingDiscoveryIds: Record<string, string> = {};
@@ -430,6 +453,51 @@ function memberIdProposal(
 
 function uniqueCandidates(candidates: EligibilityCandidate[]): EligibilityCandidate[] {
   return [...new Map(candidates.map((candidate) => [candidate.key, candidate])).values()];
+}
+
+function prepareCandidate(candidate: EligibilityCandidate): EligibilityCandidate {
+  return {
+    ...candidate,
+    eligibilityRequest: {
+      ...candidate.eligibilityRequest,
+      submitterTransactionIdentifier: eligibilityTransactionIdentifier(candidate),
+    },
+  };
+}
+
+export function eligibilityTransactionIdentifier(candidate: EligibilityCandidate): string {
+  const eligibilityRequest = Object.fromEntries(
+    Object.entries(candidate.eligibilityRequest)
+      .filter(([key]) => key !== "submitterTransactionIdentifier"),
+  );
+  const contract = {
+    key: candidate.key,
+    appointmentReference: candidate.appointmentReference,
+    appointmentAt: candidate.appointmentAt,
+    patientReference: candidate.patientReference,
+    patientDisplay: candidate.patientDisplay,
+    coverageReference: candidate.coverageReference,
+    payerReference: candidate.payerReference,
+    payerDisplay: candidate.payerDisplay,
+    intendedPayerId: candidate.intendedPayerId,
+    chartMemberId: candidate.chartMemberId,
+    cobApplicability: candidate.cobApplicability,
+    eligibilityRequest,
+    discoveryRequest: candidate.discoveryRequest,
+  };
+  const digest = createHash("sha256").update(stableJson(contract)).digest("hex").slice(0, 32);
+  return `odos-${digest}`;
+}
+
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
+  if (isRecord(value)) {
+    return `{${Object.keys(value).sort()
+      .filter((key) => value[key] !== undefined)
+      .map((key) => `${JSON.stringify(key)}:${stableJson(value[key])}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value) ?? "null";
 }
 
 function dedupeFindings(findings: EligibilityFinding[]): EligibilityFinding[] {
