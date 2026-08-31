@@ -82,6 +82,56 @@ test("the temporary database lifecycle drains pools before forced drop", { timeo
   assert.deepEqual(errors, []);
 });
 
+test("the temporary database lifecycle still force-drops after a drain timeout", { timeout: 15_000 }, async (t) => {
+  const postgresUrl = requirePostgres(t);
+  if (!postgresUrl) return;
+  const admin = createPostgresClient(
+    { connectionString: postgresUrl },
+    "drain-timeout verification admin",
+  );
+  let databaseName: string | undefined;
+  let blocker: ReturnType<typeof createPostgresClient> | undefined;
+  await admin.connect();
+
+  try {
+    let lifecycleError: unknown;
+    try {
+      await withPostgresTestDatabase(
+        { adminUrl: postgresUrl, namePrefix: "odos_pg_drain_timeout" },
+        async (database) => {
+          databaseName = new URL(database.connectionString).pathname.slice(1);
+          blocker = createPostgresClient(
+            { connectionString: database.connectionString },
+            "unregistered drain-timeout blocker",
+            () => undefined,
+          );
+          await blocker.connect();
+        },
+      );
+    } catch (error) {
+      lifecycleError = error;
+    }
+    assert.ok(lifecycleError instanceof AggregateError);
+    assert.equal(
+      lifecycleError.errors.some((error) =>
+        error instanceof Error && /still has active connections after drain/.test(error.message)
+      ),
+      true,
+    );
+    const exists = await admin.query(
+      "SELECT 1 FROM pg_database WHERE datname = $1",
+      [databaseName],
+    );
+    assert.equal(exists.rowCount, 0);
+  } finally {
+    await blocker?.end().catch(() => undefined);
+    if (databaseName) {
+      await admin.query(`DROP DATABASE IF EXISTS "${databaseName}" WITH (FORCE)`);
+    }
+    await admin.end();
+  }
+});
+
 function requirePostgres(t: TestContext): string | undefined {
   const postgresUrl = process.env.ODOS_POSTGRES_URL;
   if (!postgresUrl) t.skip("ODOS_POSTGRES_URL is required for PostgreSQL error-handler tests.");

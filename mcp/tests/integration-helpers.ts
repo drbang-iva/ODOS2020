@@ -128,6 +128,10 @@ export async function withPostgresTestDatabase<T>(
     if (databaseCreated) {
       try {
         await waitForPostgresDatabaseDrain(admin, databaseName);
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+      try {
         await admin.query(
           `DROP DATABASE IF EXISTS ${quotePostgresIdentifier(databaseName)} WITH (FORCE)`,
         );
