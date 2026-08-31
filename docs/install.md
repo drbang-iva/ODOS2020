@@ -113,7 +113,11 @@ Create `.env` from `.env.example` or export these variables in the shell that ru
 | `ODOS_MCP_TRANSPORT` | yes for the browser UI | Set to `sse` so the UI can call the local HTTP routes. The default `stdio` mode is for launch-on-demand MCP clients. |
 | `ODOS_SMART_SIGNING_KEY_PATH` | yes for the local HTTP backend | Absolute path to the local mode-0600 SMART RS256 private key. |
 | `ODOS_BACKUP_DIR` | no | Destination used by backup scripts and backup-destination verification. |
-| `ODOS_COMMS_SMS_PROVIDER` | no | One active SMS adapter: `aws`, `twilio`, or `ghl`. Empty keeps SMS inert. Comma-separated values and the retired list-shaped variables fail startup instead of being coerced. |
+| `ODOS_COMMS_SMS_PROVIDER` | no | Transactional and marketing SMS adapter: `aws`, `twilio`, or `ghl`. Clinical SMS follows this adapter when `ODOS_COMMS_CLINICAL_SMS_PROVIDER` is omitted. Empty keeps SMS inert. Comma-separated values and the retired list-shaped variables fail startup instead of being coerced. |
+| `ODOS_COMMS_TRANSACTIONAL_SMS_NUMBER` | no | E.164 sender identity for transactional and marketing suppression scope. Omit during a one-number migration to preserve fail-safe global suppression until the sender number is configured. |
+| `ODOS_COMMS_CLINICAL_SMS_PROVIDER` | no | Optional clinical SMS override: `aws` or `twilio`. `ghl` is rejected for this role as degraded routing because diagnosis-specific messaging requires the practice's BAA-covered lane. |
+| `ODOS_COMMS_CLINICAL_SMS_NUMBER` | no | E.164 clinical sender identity. Defaults to `ODOS_COMMS_TRANSACTIONAL_SMS_NUMBER` when the clinical role follows the transactional lane. |
+| `ODOS_COMMS_STOP_SCOPE` | no | `per-number` (default) scopes new STOP records to the receiving sender identity; `global` makes every SMS opt-out suppress every lane. Legacy records without a number remain global under either setting. |
 | `ODOS_COMMS_VOICE_PROVIDER` | no | One active Voice adapter: `twilio`, `ghl`, or `none`. A selected provider without the required calls capability is unavailable and logged as degraded. |
 | `ODOS_COMMS_EMAIL_PROVIDER` | no | One active email adapter: `google-workspace` or `none`. |
 | `AWS_SMS_REGION`, `AWS_SMS_ORIGINATION_IDENTITY`, `AWS_SMS_SQS_QUEUE_URL`, `AWS_SMS_SNS_TOPIC_ARN` | yes for AWS SMS | Same-region, same-account AWS End User Messaging phone-number ARN, standard SQS queue URL, and standard SNS topic ARN. See the AWS SMS setup guide. |
@@ -169,6 +173,10 @@ Complete this sequence before any real patient Voice, SMS, or MMS traffic:
    Voice and on non-US senders configured through `TWILIO_FROM_NUMBER` or
    `TWILIO_VOICE_FROM_NUMBER`. If `TWILIO_MESSAGING_SERVICE_SID` is used, startup enumerates the
    complete PhoneNumbers collection and rejects every sender whose ISO country code is not `US`.
+   Do not combine `TWILIO_MESSAGING_SERVICE_SID` with `ODOS_COMMS_TRANSACTIONAL_SMS_NUMBER`
+   or `ODOS_COMMS_CLINICAL_SMS_NUMBER` for a Twilio-routed lane. ODOS leaves each conflicting
+   role unavailable and logs a degraded-routing issue while the rest of MCP continues starting;
+   choose either the verified Messaging Service sender pool or the explicit lane sender number.
    Startup and sends share each pool-verification result for five minutes, then a send repeats the
    complete enumeration so a post-startup pool change cannot remain undetected. An empty pool,
    non-US member, missing country code, or API/auth/network failure keeps Twilio SMS disabled. It

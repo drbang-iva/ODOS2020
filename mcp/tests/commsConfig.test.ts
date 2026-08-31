@@ -3,6 +3,7 @@ import { generateKeyPairSync } from "node:crypto";
 import { test } from "node:test";
 import type { Bundle, Patient, Resource } from "@medplum/fhirtypes";
 import {
+  COMMS_CHANNEL_ROLES,
   commsChannelRoutingFromEnv,
   commsAdapterRegistrationsFromEnv,
   commsProviderConfigFromEnv,
@@ -42,7 +43,7 @@ test("scalar communications provider config selects exactly one SMS provider and
     AWS_SMS_SNS_TOPIC_ARN: "arn:aws:sns:us-east-1:123456789012:odos-sms-inbound",
     TWILIO_ACCOUNT_SID: `AC${"1".repeat(32)}`,
     TWILIO_AUTH_TOKEN: "synthetic-auth-token",
-    TWILIO_MESSAGING_SERVICE_SID: `MG${"2".repeat(32)}`,
+    TWILIO_FROM_NUMBER: "+18645550100",
     TWILIO_VOICE_FROM_NUMBER: "+18645550100",
     TWILIO_VOICE_FORWARD_TO_NUMBER: "+18645550101",
     TWILIO_WEBHOOK_BASE_URL: "https://practice.example",
@@ -67,9 +68,220 @@ test("scalar communications provider config selects exactly one SMS provider and
   assert.deepEqual(dispatch.providers(), ["aws", "twilio", "google-workspace"]);
   assert.equal(dispatch.providerFor("transactional-sms"), "aws");
   assert.equal(dispatch.providerFor("marketing-sms"), "aws");
+  assert.equal(dispatch.providerFor("clinical-sms"), "aws");
   assert.equal(dispatch.providerFor("voice"), "twilio");
   assert.equal(dispatch.providerFor("email"), "google-workspace");
   assert.equal(dispatch.getAdapter("twilio", fakeFhir()).sendSms, undefined);
+});
+
+test("legacy scalar SMS config aliases transactional, marketing, and clinical roles without requiring new number config", () => {
+  const routing = commsChannelRoutingFromEnv({ ODOS_COMMS_SMS_PROVIDER: "aws" });
+
+  assert.equal(COMMS_CHANNEL_ROLES.includes("clinical-sms"), true);
+  assert.deepEqual(routing.assignments, {
+    "transactional-sms": "aws",
+    "marketing-sms": "aws",
+    "clinical-sms": "aws",
+  });
+  assert.deepEqual(routing.senderNumbers, {});
+  assert.equal(routing.stopScope, "per-number");
+});
+
+test("two-lane SMS config resolves independent providers and E.164 sender numbers", () => {
+  const env = {
+    ODOS_COMMS_SMS_PROVIDER: "twilio",
+    ODOS_COMMS_TRANSACTIONAL_SMS_NUMBER: "+18645550100",
+    ODOS_COMMS_CLINICAL_SMS_PROVIDER: "aws",
+    ODOS_COMMS_CLINICAL_SMS_NUMBER: "+18485550100",
+    AWS_SMS_REGION: "us-east-1",
+    AWS_SMS_ORIGINATION_IDENTITY:
+      "arn:aws:sms-voice:us-east-1:123456789012:phone-number/phone-11111111111111111111111111111111",
+    AWS_SMS_SQS_QUEUE_URL: "https://sqs.us-east-1.amazonaws.com/123456789012/odos-sms-inbound",
+    AWS_SMS_SNS_TOPIC_ARN: "arn:aws:sns:us-east-1:123456789012:odos-sms-inbound",
+    TWILIO_ACCOUNT_SID: `AC${"1".repeat(32)}`,
+    TWILIO_AUTH_TOKEN: "synthetic-auth-token",
+    TWILIO_FROM_NUMBER: "+18645550100",
+  };
+  const routing = commsChannelRoutingFromEnv(env);
+  const dispatch = createCommsDispatch(commsAdapterRegistrationsFromEnv(env), {
+    channelRouting: routing,
+  });
+
+  assert.deepEqual(dispatch.providers(), ["twilio", "aws"]);
+  assert.equal(dispatch.providerFor("transactional-sms"), "twilio");
+  assert.equal(dispatch.providerFor("marketing-sms"), "twilio");
+  assert.equal(dispatch.providerFor("clinical-sms"), "aws");
+  assert.equal(dispatch.senderNumberFor("transactional-sms"), "+18645550100");
+  assert.equal(dispatch.senderNumberFor("marketing-sms"), "+18645550100");
+  assert.equal(dispatch.senderNumberFor("clinical-sms"), "+18485550100");
+  assert.equal(dispatch.getAdapterForRole("clinical-sms", fakeFhir()).sendSms instanceof Function, true);
+  assert.equal(dispatch.getAdapter("aws", fakeFhir()).sendSms instanceof Function, true);
+});
+
+test("a clinical provider override does not borrow the transactional sender number", () => {
+  const routing = commsChannelRoutingFromEnv({
+    ODOS_COMMS_SMS_PROVIDER: "twilio",
+    ODOS_COMMS_TRANSACTIONAL_SMS_NUMBER: "+18645550100",
+    ODOS_COMMS_CLINICAL_SMS_PROVIDER: "aws",
+  });
+
+  assert.equal(routing.senderNumbers["transactional-sms"], "+18645550100");
+  assert.equal(routing.senderNumbers["clinical-sms"], undefined);
+});
+
+test("role-aware Twilio dispatch sends from each resolved lane number", async () => {
+  const transactionalNumber = "+18645550100";
+  const clinicalNumber = "+18485550100";
+  const env = {
+    ODOS_COMMS_SMS_PROVIDER: "twilio",
+    ODOS_COMMS_TRANSACTIONAL_SMS_NUMBER: transactionalNumber,
+    ODOS_COMMS_CLINICAL_SMS_PROVIDER: "twilio",
+    ODOS_COMMS_CLINICAL_SMS_NUMBER: clinicalNumber,
+    TWILIO_ACCOUNT_SID: `AC${"1".repeat(32)}`,
+    TWILIO_AUTH_TOKEN: "synthetic-auth-token",
+    TWILIO_FROM_NUMBER: transactionalNumber,
+  };
+  const creates: Array<Record<string, unknown>> = [];
+  const dispatch = createCommsDispatch(commsAdapterRegistrationsFromEnv(env), {
+    channelRouting: commsChannelRoutingFromEnv(env),
+    now: () => new Date("2026-08-30T15:00:00.000Z"),
+    twilioClientFactory: () => ({
+      messages: {
+        async create(input) {
+          creates.push(input);
+          return { sid: `SM${String(creates.length).padStart(32, "0")}` };
+        },
+      },
+    }),
+  });
+  const fhir = {
+    ...fakeFhir(),
+    async read<T extends Resource>(): Promise<T> {
+      return {
+        resourceType: "Patient",
+        id: "synthetic-1",
+      } satisfies Patient as T;
+    },
+  };
+  const request = {
+    patientReference: "Patient/synthetic-1",
+    toNumber: "+18645550199",
+    body: "Synthetic lane proof",
+    campaignType: "manual",
+    suppression: {},
+  };
+
+  const transactional = await dispatch.getAdapterForRole("transactional-sms", fhir).sendSms!(request);
+  const clinical = await dispatch.getAdapterForRole("clinical-sms", fhir).sendSms!(request);
+
+  assert.equal(transactional.outcome, "sent");
+  assert.equal(clinical.outcome, "sent");
+  assert.deepEqual(creates.map(({ from }) => from), [transactionalNumber, clinicalNumber]);
+  assert.deepEqual(creates.map(({ messagingServiceSid }) => messagingServiceSid), [undefined, undefined]);
+});
+
+test("clinical SMS routed to GHL degrades only that role while MCP startup continues", async () => {
+  const env = {
+    ODOS_COMMS_SMS_PROVIDER: "ghl",
+    ODOS_COMMS_CLINICAL_SMS_PROVIDER: "ghl",
+    GHL_LOCATION_ID: "location-synthetic-1",
+    GHL_ACCESS_TOKEN: "synthetic-location-token",
+  };
+  const errors: string[] = [];
+  let serverBooted = false;
+  const dispatch = createCommsDispatch(commsAdapterRegistrationsFromEnv(env), {
+    channelRouting: commsChannelRoutingFromEnv(env),
+    error: (message) => errors.push(message),
+  });
+
+  await startMcpAfterCommsInitialization(dispatch, async () => { serverBooted = true; });
+
+  assert.equal(serverBooted, true);
+  assert.equal(dispatch.providerFor("transactional-sms"), "ghl");
+  assert.equal(dispatch.providerFor("marketing-sms"), "ghl");
+  assert.equal(dispatch.providerFor("clinical-sms"), undefined);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0]!, /clinical-sms.*ghl.*BAA/i);
+});
+
+test("an inherited GHL SMS provider leaves clinical SMS unassigned without a refusal warning", async () => {
+  const env = {
+    ODOS_COMMS_SMS_PROVIDER: "ghl",
+    GHL_LOCATION_ID: "location-synthetic-1",
+    GHL_ACCESS_TOKEN: "synthetic-location-token",
+  };
+  const errors: string[] = [];
+  const dispatch = createCommsDispatch(commsAdapterRegistrationsFromEnv(env), {
+    channelRouting: commsChannelRoutingFromEnv(env),
+    error: (message) => errors.push(message),
+  });
+
+  await dispatch.initialize();
+
+  assert.equal(dispatch.providerFor("transactional-sms"), "ghl");
+  assert.equal(dispatch.providerFor("marketing-sms"), "ghl");
+  assert.equal(dispatch.providerFor("clinical-sms"), undefined);
+  assert.deepEqual(errors, []);
+});
+
+test("Twilio Messaging Service and lane sender number conflict degrades only affected SMS roles without stopping MCP", async () => {
+  const env = {
+    ODOS_COMMS_SMS_PROVIDER: "twilio",
+    ODOS_COMMS_TRANSACTIONAL_SMS_NUMBER: "+18645550100",
+    ODOS_COMMS_CLINICAL_SMS_PROVIDER: "aws",
+    ODOS_COMMS_CLINICAL_SMS_NUMBER: "+18485550100",
+    TWILIO_ACCOUNT_SID: `AC${"1".repeat(32)}`,
+    TWILIO_AUTH_TOKEN: "synthetic-auth-token",
+    TWILIO_MESSAGING_SERVICE_SID: `MG${"2".repeat(32)}`,
+    AWS_SMS_REGION: "us-east-1",
+    AWS_SMS_ORIGINATION_IDENTITY:
+      "arn:aws:sms-voice:us-east-1:123456789012:phone-number/phone-11111111111111111111111111111111",
+    AWS_SMS_SQS_QUEUE_URL: "https://sqs.us-east-1.amazonaws.com/123456789012/odos-sms-inbound",
+    AWS_SMS_SNS_TOPIC_ARN: "arn:aws:sns:us-east-1:123456789012:odos-sms-inbound",
+  };
+  const errors: string[] = [];
+  let serverBooted = false;
+  const dispatch = createCommsDispatch(commsAdapterRegistrationsFromEnv(env), {
+    channelRouting: commsChannelRoutingFromEnv(env),
+    error: (message) => errors.push(message),
+  });
+
+  await startMcpAfterCommsInitialization(dispatch, async () => { serverBooted = true; });
+
+  assert.equal(serverBooted, true);
+  assert.equal(dispatch.providerFor("transactional-sms"), undefined);
+  assert.equal(dispatch.providerFor("marketing-sms"), undefined);
+  assert.equal(dispatch.providerFor("clinical-sms"), "aws");
+  assert.equal(errors.length, 2);
+  assert.match(errors[0]!, /transactional-sms.*TWILIO_MESSAGING_SERVICE_SID.*ODOS_COMMS_TRANSACTIONAL_SMS_NUMBER/i);
+  assert.match(errors[1]!, /marketing-sms.*TWILIO_MESSAGING_SERVICE_SID.*ODOS_COMMS_TRANSACTIONAL_SMS_NUMBER/i);
+});
+
+test("clinical-only GHL degradation does not require an unusable adapter registration", async () => {
+  const env = { ODOS_COMMS_CLINICAL_SMS_PROVIDER: "ghl" };
+  const errors: string[] = [];
+  const dispatch = createCommsDispatch(commsAdapterRegistrationsFromEnv(env), {
+    channelRouting: commsChannelRoutingFromEnv(env),
+    error: (message) => errors.push(message),
+  });
+
+  await dispatch.initialize();
+
+  assert.deepEqual(dispatch.providers(), []);
+  assert.equal(dispatch.providerFor("clinical-sms"), undefined);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0]!, /clinical-sms.*ghl.*BAA/i);
+});
+
+test("communications stop scope accepts global and rejects unknown values", () => {
+  assert.equal(
+    commsChannelRoutingFromEnv({ ODOS_COMMS_STOP_SCOPE: "global" }).stopScope,
+    "global",
+  );
+  assert.throws(
+    () => commsChannelRoutingFromEnv({ ODOS_COMMS_STOP_SCOPE: "patient" }),
+    /ODOS_COMMS_STOP_SCOPE must be exactly one of per-number,? or global/i,
+  );
 });
 
 test("scalar SMS selection rejects a second simultaneous provider", () => {

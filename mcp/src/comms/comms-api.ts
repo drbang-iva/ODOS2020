@@ -229,7 +229,9 @@ export function registerCommsApiRoutes(
       const patientReference = requiredPatientReference(body.patientReference);
       const text = requiredText(body.body, "SMS body", 1_600);
       const idempotencyKey = requiredIdempotencyKey(req, body);
-      const provider = adapter(deps, providerFromBody(body, deps.dispatch, "transactional-sms"), staff.fhir);
+      const provider = typeof body.provider === "string"
+        ? adapterForExplicitSmsProvider(deps, providerName(body.provider), staff.fhir)
+        : adapterForRole(deps, "transactional-sms", staff.fhir);
       if (!provider.sendSms) throw new CommsApiCapabilityError("SMS is not enabled for this communications provider.");
       const providerMessageIdentifierSystem =
         provider.messageIdentifierSystem ?? ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM;
@@ -510,6 +512,7 @@ async function clearNamedPatientSmsOptOut(
     patientReference: string;
     reason: string;
     identityVerification: SmsOptOutIdentityVerification;
+    number?: string;
   },
   staff: CommsStaff,
 ) {
@@ -520,6 +523,7 @@ async function clearNamedPatientSmsOptOut(
       recordedAt: deps.now?.() ?? new Date().toISOString(),
       reason: body.reason,
       identityVerification: body.identityVerification,
+      number: body.number,
     });
   } catch (error) {
     if (isFhirNotFound(error)) throw new CommsApiNotFoundError("Patient not found.");
@@ -548,6 +552,39 @@ function adapter(
   callerFhir: CommsDispatchFhir,
 ): CommsProvider {
   return deps.dispatch.getAdapter(provider, callerFhir);
+}
+
+function adapterForRole(
+  deps: CommsApiRouteDeps,
+  role: "transactional-sms",
+  callerFhir: CommsDispatchFhir,
+): CommsProvider {
+  return deps.dispatch.getAdapterForRole?.(role, callerFhir)
+    ?? deps.dispatch.getAdapter(providerForRole(deps.dispatch, role), callerFhir);
+}
+
+function adapterForExplicitSmsProvider(
+  deps: CommsApiRouteDeps,
+  provider: string,
+  callerFhir: CommsDispatchFhir,
+): CommsProvider {
+  const smsRoles = [
+    "transactional-sms",
+    "marketing-sms",
+    "clinical-sms",
+  ] as const;
+  const senderNumbers = new Set(smsRoles.flatMap((role) =>
+    deps.dispatch.providerFor(role) === provider
+      ? [deps.dispatch.senderNumberFor(role)].filter(
+          (number): number is string => number !== undefined,
+        )
+      : []));
+  if (senderNumbers.size > 1) {
+    throw new CommsApiValidationError(
+      `Communications provider "${provider}" has multiple SMS sender lanes; the request must identify one lane.`,
+    );
+  }
+  return adapter(deps, provider, callerFhir);
 }
 
 function redactConversationBodies(conversations: ConversationSummary[]): ConversationSummary[] {
@@ -698,13 +735,17 @@ function optOutClearBody(value: unknown): {
   patientReference: string;
   reason: string;
   identityVerification: SmsOptOutIdentityVerification;
+  number?: string;
 } {
   const body = record(value);
   const unexpected = Object.keys(body).filter((key) =>
-    key !== "patientReference" && key !== "reason" && key !== "identityVerification");
+    key !== "patientReference"
+    && key !== "reason"
+    && key !== "identityVerification"
+    && key !== "number");
   if (unexpected.length > 0) {
     throw new CommsApiValidationError(
-      "Opt-out clear accepts only patientReference, reason, and identityVerification.",
+      "Opt-out clear accepts only patientReference, reason, identityVerification, and number.",
     );
   }
   const patientReference = requiredPatientReference(body.patientReference);
@@ -723,7 +764,15 @@ function optOutClearBody(value: unknown): {
     patientReference,
     reason,
     identityVerification: body.identityVerification as SmsOptOutIdentityVerification,
+    ...(body.number === undefined ? {} : { number: requiredE164(body.number, "number") }),
   };
+}
+
+function requiredE164(value: unknown, label: string): string {
+  if (typeof value !== "string" || !/^\+[1-9]\d{7,14}$/.test(value.trim())) {
+    throw new CommsApiValidationError(`${label} must use E.164 format.`);
+  }
+  return value.trim();
 }
 
 function requiredText(value: unknown, label: string, max: number): string {

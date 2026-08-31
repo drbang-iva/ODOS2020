@@ -53,6 +53,24 @@ function fakeProvider(sent: SendEmailRequest[]): CommsProvider {
   };
 }
 
+function fakeSmsProvider(sent: SendSmsRequest[]): CommsProvider {
+  return {
+    name: "fake-sms",
+    capabilities: {
+      sms: true,
+      calls: false,
+      email: false,
+      contacts: false,
+      conversations: false,
+      reviews: false,
+    },
+    async sendSms(request) {
+      sent.push(request);
+      return { outcome: "sent", providerMessageId: `sent-${sent.length}` };
+    },
+  };
+}
+
 function sendEmail(provider: CommsProvider, request: SendEmailRequest) {
   assert.ok(provider.sendEmail);
   return provider.sendEmail(request);
@@ -126,6 +144,7 @@ test("inbound STOP follows Patient pagination and suppresses every shared-number
 
   const result = await updateInboundSuppression(fhir, {
     from: phone,
+    to: "+18485550100",
     body: "STOP",
     optOutType: "STOP",
   });
@@ -134,7 +153,115 @@ test("inbound STOP follows Patient pagination and suppresses every shared-number
   assert.deepEqual([...updated.keys()], ["synthetic-1", "synthetic-2"]);
   for (const subject of updated.values()) {
     assert.equal(subject.extension?.[0]?.url, ODOS_COMMS_OPT_OUT_EXTENSION_URL);
+    assert.equal(
+      subject.extension?.[0]?.extension?.find((part) => part.url === "number")?.valueString,
+      "+18485550100",
+    );
   }
+});
+
+test("per-number STOP suppresses its sender lane while leaving a different sender lane sendable", async () => {
+  const stoppedNumber = "+18485550100";
+  const otherNumber = "+18645550100";
+  const subject = patient({
+    telecom: [{ system: "phone", value: "+18645550199" }],
+    extension: [{
+      url: ODOS_COMMS_OPT_OUT_EXTENSION_URL,
+      extension: [
+        { url: "channel", valueCode: "sms" },
+        { url: "number", valueString: stoppedNumber },
+      ],
+    }],
+  });
+  const stoppedSends: SendSmsRequest[] = [];
+  const otherSends: SendSmsRequest[] = [];
+  const stoppedLane = createSuppressedCommsProvider(fakeSmsProvider(stoppedSends), {
+    fhir: fhirFor(subject),
+    practiceTimeZone: "America/New_York",
+    smsSenderNumber: stoppedNumber,
+    stopScope: "per-number",
+    now: () => new Date("2026-07-30T14:00:00.000Z"),
+  });
+  const otherLane = createSuppressedCommsProvider(fakeSmsProvider(otherSends), {
+    fhir: fhirFor(subject),
+    practiceTimeZone: "America/New_York",
+    smsSenderNumber: otherNumber,
+    stopScope: "per-number",
+    now: () => new Date("2026-07-30T14:00:00.000Z"),
+  });
+  const request: SendSmsRequest = {
+    patientReference: "Patient/synthetic-1",
+    body: "Synthetic follow-up",
+    campaignType: "manual",
+    suppression: {},
+  };
+
+  assert.deepEqual(await stoppedLane.sendSms!(request), {
+    outcome: "suppressed",
+    reason: "patient-opt-out",
+  });
+  assert.equal((await otherLane.sendSms!(request)).outcome, "sent");
+  assert.equal(stoppedSends.length, 0);
+  assert.equal(otherSends.length, 1);
+});
+
+test("global STOP scope expands a number-specific opt-out across sender lanes", async () => {
+  const subject = patient({
+    telecom: [{ system: "phone", value: "+18645550199" }],
+    extension: [{
+      url: ODOS_COMMS_OPT_OUT_EXTENSION_URL,
+      extension: [
+        { url: "channel", valueCode: "sms" },
+        { url: "number", valueString: "+18485550100" },
+      ],
+    }],
+  });
+  const sent: SendSmsRequest[] = [];
+  const provider = createSuppressedCommsProvider(fakeSmsProvider(sent), {
+    fhir: fhirFor(subject),
+    practiceTimeZone: "America/New_York",
+    smsSenderNumber: "+18645550100",
+    stopScope: "global",
+    now: () => new Date("2026-07-30T14:00:00.000Z"),
+  });
+
+  const result = await provider.sendSms!({
+    patientReference: "Patient/synthetic-1",
+    body: "Synthetic follow-up",
+    campaignType: "manual",
+    suppression: {},
+  });
+
+  assert.deepEqual(result, { outcome: "suppressed", reason: "patient-opt-out" });
+  assert.equal(sent.length, 0);
+});
+
+test("legacy SMS opt-out without a number remains a wildcard across sender lanes", async () => {
+  const subject = patient({
+    telecom: [{ system: "phone", value: "+18645550199" }],
+    extension: [{
+      url: ODOS_COMMS_OPT_OUT_EXTENSION_URL,
+      extension: [{ url: "channel", valueCode: "sms" }],
+    }],
+  });
+  const sent: SendSmsRequest[] = [];
+  const provider = createSuppressedCommsProvider(fakeSmsProvider(sent), {
+    fhir: fhirFor(subject),
+    practiceTimeZone: "America/New_York",
+    smsSenderNumber: "+18645550100",
+    stopScope: "per-number",
+    now: () => new Date("2026-07-30T14:00:00.000Z"),
+  });
+
+  const result = await provider.sendSms!({
+    patientReference: "Patient/synthetic-1",
+    body: "Synthetic follow-up",
+    campaignType: "manual",
+    suppression: {},
+  });
+
+  assert.deepEqual(result, { outcome: "suppressed", reason: "patient-opt-out" });
+  assert.equal(sent.length, 0);
 });
 
 test("replayed inbound STOP uses If-Match once and skips an already-present SMS opt-out", async () => {
@@ -175,11 +302,56 @@ test("replayed inbound STOP uses If-Match once and skips an already-present SMS 
     },
   };
 
-  await updateInboundSuppression(fhir, { from: phone, body: "STOP" });
-  await updateInboundSuppression(fhir, { from: phone, body: "STOP" });
+  await updateInboundSuppression(fhir, { from: phone, to: "+18485550100", body: "STOP" });
+  await updateInboundSuppression(fhir, { from: phone, to: "+18485550100", body: "STOP" });
 
   assert.equal(updates, 1);
   assert.equal(subject.meta?.versionId, "2");
+});
+
+test("inbound START reports no effect when a surviving legacy opt-out still suppresses the lane", async () => {
+  const phone = "+18645550199";
+  const laneNumber = "+18485550100";
+  const subject: Patient = {
+    resourceType: "Patient",
+    id: "synthetic-1",
+    meta: { versionId: "1" },
+    telecom: [{ system: "phone", value: phone }],
+    extension: [{
+      url: ODOS_COMMS_OPT_OUT_EXTENSION_URL,
+      extension: [{ url: "channel", valueCode: "sms" }],
+    }],
+  };
+  let updates = 0;
+  const fhir = {
+    async search<T extends Resource>(): Promise<Bundle<T>> {
+      return {
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [{ resource: structuredClone(subject) as T }],
+      };
+    },
+    async searchUrl<T extends Resource>(): Promise<Bundle<T>> {
+      return { resourceType: "Bundle", type: "searchset" };
+    },
+    async update<T extends Resource>(): Promise<T> {
+      updates += 1;
+      throw new Error("Legacy-only START must not write a no-op Patient update.");
+    },
+  };
+
+  const result = await updateInboundSuppression(fhir, {
+    from: phone,
+    to: laneNumber,
+    body: "START",
+  });
+
+  assert.deepEqual(result, {
+    outcome: "opt-in-refused-broader-opt-out",
+    matchedPatients: 1,
+    remainingOptOuts: { global: true, numbers: [] },
+  });
+  assert.equal(updates, 0);
 });
 
 test("an explicit Patient clear removes only that patient's SMS opt-out with versioned Provenance", async () => {
@@ -260,6 +432,102 @@ test("an explicit Patient clear removes only that patient's SMS opt-out with ver
   assert.equal(provenance.reason?.[0]?.text, "Patient requested re-enrollment in person");
   assert.equal(provenance.entity?.[0]?.role, "source");
   assert.equal(provenance.entity?.[0]?.what.display, "Patient identity verification: in-person");
+});
+
+test("scoped clear reports a surviving legacy global opt-out without claiming the lane was cleared", async () => {
+  const subject: Patient = {
+    resourceType: "Patient",
+    id: "synthetic-1",
+    meta: { versionId: "7" },
+    telecom: [{ system: "phone", value: "+18645550199" }],
+    extension: [{
+      url: ODOS_COMMS_OPT_OUT_EXTENSION_URL,
+      extension: [{ url: "channel", valueCode: "sms" }],
+    }],
+  };
+  let transactions = 0;
+  const fhir = {
+    async read<T extends Resource>(): Promise<T> {
+      return structuredClone(subject) as T;
+    },
+    async executeTransactionAsActor(): Promise<Bundle> {
+      transactions += 1;
+      throw new Error("Scoped clear must not write when no numbered opt-out matches.");
+    },
+  };
+
+  const result = await clearPatientSmsOptOut(fhir, "Patient/synthetic-1", {
+    actorReference: "Practitioner/staff-1",
+    actorRole: "staff",
+    recordedAt: "2026-08-30T15:00:00.000Z",
+    reason: "Patient requested clinical-lane re-enrollment in person",
+    identityVerification: "in-person",
+    number: "+18485550100",
+  });
+
+  assert.deepEqual(result, {
+    patientReference: "Patient/synthetic-1",
+    smsOptedOut: true,
+    cleared: false,
+    suppressionCleared: false,
+    remainingOptOuts: { global: true, numbers: [] },
+  });
+  assert.equal(transactions, 0);
+});
+
+test("scoped clear removes only its numbered lane and reports the other numbered opt-out", async () => {
+  const clinicalNumber = "+18485550100";
+  const frontDeskNumber = "+18645550100";
+  const subject: Patient = {
+    resourceType: "Patient",
+    id: "synthetic-1",
+    meta: { versionId: "7" },
+    extension: [clinicalNumber, frontDeskNumber].map((number) => ({
+      url: ODOS_COMMS_OPT_OUT_EXTENSION_URL,
+      extension: [
+        { url: "channel", valueCode: "sms" },
+        { url: "number", valueString: number },
+      ],
+    })),
+  };
+  let writtenPatient: Patient | undefined;
+  const fhir = {
+    async read<T extends Resource>(): Promise<T> {
+      return structuredClone(subject) as T;
+    },
+    async executeTransactionAsActor(request: Bundle): Promise<Bundle> {
+      writtenPatient = structuredClone(request.entry?.[0]?.resource as Patient);
+      return {
+        resourceType: "Bundle",
+        type: "transaction-response",
+        entry: [
+          { response: { status: "200 OK" } },
+          { response: { status: "201 Created" } },
+        ],
+      };
+    },
+  };
+
+  const result = await clearPatientSmsOptOut(fhir, "Patient/synthetic-1", {
+    actorReference: "Practitioner/staff-1",
+    actorRole: "staff",
+    recordedAt: "2026-08-30T15:00:00.000Z",
+    reason: "Patient requested clinical-lane re-enrollment in person",
+    identityVerification: "in-person",
+    number: clinicalNumber,
+  });
+
+  assert.deepEqual(result, {
+    patientReference: "Patient/synthetic-1",
+    smsOptedOut: false,
+    cleared: true,
+    suppressionCleared: true,
+    remainingOptOuts: { global: false, numbers: [frontDeskNumber] },
+  });
+  assert.deepEqual(
+    writtenPatient?.extension?.[0]?.extension?.find((part) => part.url === "number")?.valueString,
+    frontDeskNumber,
+  );
 });
 
 test("PMS-side patient/channel opt-out suppresses before the provider call", async () => {

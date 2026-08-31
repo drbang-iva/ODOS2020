@@ -96,6 +96,11 @@ test("Twilio-originated STOP-equivalent inbound SMS blocks a subsequent Twilio s
   assert.deepEqual(result, { outcome: "suppressed", reason: "patient-opt-out" });
   assert.equal(sends, 0);
   assert.equal(fhir.ofType<Patient>("Patient")[0].extension?.[0]?.url, ODOS_COMMS_OPT_OUT_EXTENSION_URL);
+  assert.equal(
+    fhir.ofType<Patient>("Patient")[0].extension?.[0]?.extension
+      ?.find((part) => part.url === "number")?.valueString,
+    PRACTICE_NUMBER,
+  );
 });
 
 test("Twilio shared-number STOP blocks subsequent sends to both matching patients", async () => {
@@ -198,6 +203,33 @@ test("Twilio shared-number START cannot clear independent Patient opt-outs", asy
   assert.equal(sends, 0);
   assert.deepEqual(info, [
     "odos-mcp: Twilio inbound SMS suppression outcome=opt-in-refused-shared-number matchedPatients=2",
+  ]);
+});
+
+test("Twilio START log reports the legacy global opt-out that prevented re-enrollment", async () => {
+  const fhir = new InMemoryCommsFhir();
+  fhir.seed({
+    resourceType: "Patient",
+    id: "synthetic-1",
+    meta: { versionId: "1" },
+    telecom: [{ system: "phone", use: "mobile", value: PATIENT_NUMBER }],
+    extension: [{
+      url: ODOS_COMMS_OPT_OUT_EXTENSION_URL,
+      extension: [{ url: "channel", valueCode: "sms" }],
+    }],
+  });
+  const info: string[] = [];
+
+  await persistTwilioWebhookEvent(fhir, "sms-inbound", {
+    accountSid: ACCOUNT_SID,
+    messageSid: MESSAGE_SID,
+    from: PATIENT_NUMBER,
+    to: PRACTICE_NUMBER,
+    body: "START",
+  }, { now: () => NOW, info: (message) => info.push(message) });
+
+  assert.deepEqual(info, [
+    "odos-mcp: Twilio inbound SMS suppression outcome=opt-in-refused-broader-opt-out matchedPatients=1 remainingGlobal=true remainingNumbers=none",
   ]);
 });
 

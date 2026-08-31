@@ -240,6 +240,29 @@ test("clearing one named patient on a shared handset leaves the other patient su
   }
 });
 
+test("number-scoped clear reports a surviving legacy opt-out without a second Patient query", async () => {
+  const fixture = await startServer();
+  try {
+    const response = await request(fixture.base, "/communications/opt-out/clear", "POST", {
+      ...OPT_OUT_CLEAR_BODY,
+      number: "+18485550100",
+    }, "staff");
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), {
+      patientReference: PATIENT_REFERENCE,
+      smsOptedOut: true,
+      cleared: false,
+      suppressionCleared: false,
+      remainingOptOuts: { global: true, numbers: [] },
+    });
+    assert.equal(hasSmsOptOut(fixture.patients[0]!), true);
+    assert.equal(fixture.provenances.length, 0);
+  } finally {
+    await fixture.close();
+  }
+});
+
 test("opt-out clear uses the caller-bound FHIR client for the Patient write", async () => {
   const fixture = await startServer({ excludePatientWrite: true });
   try {
@@ -741,6 +764,38 @@ test("new SMS uses transactional routing while a reply preserves its explicit th
   }
 });
 
+test("an explicit provider is rejected when it cannot identify one sender lane", async () => {
+  const fixture = await startServer({
+    providers: ["twilio"],
+    channelRoutes: {
+      "transactional-sms": "twilio",
+      "marketing-sms": "twilio",
+      "clinical-sms": "twilio",
+    },
+    senderNumbers: {
+      "transactional-sms": "+18645550100",
+      "marketing-sms": "+18645550100",
+      "clinical-sms": "+18485550100",
+    },
+  });
+  try {
+    const response = await request(fixture.base, "/communications/messages", "POST", {
+      provider: "twilio",
+      patientReference: PATIENT_REFERENCE,
+      body: "Synthetic ambiguous reply",
+      idempotencyKey: "synthetic-route-ambiguous-0001",
+    }, "staff");
+
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), {
+      error: "Communications provider \"twilio\" has multiple SMS sender lanes; the request must identify one lane.",
+    });
+    assert.deepEqual(fixture.adapterProviders, []);
+  } finally {
+    await fixture.close();
+  }
+});
+
 test("an unassigned channel role is reported as unavailable without resolving an adapter", async () => {
   const fixture = await startServer({ providers: ["twilio"], channelRoutes: {} });
   try {
@@ -839,7 +894,8 @@ async function startServer(options: {
   failSmsCompletion?: boolean;
   providerName?: "twilio" | "ghl";
   providers?: string[];
-  channelRoutes?: Partial<Record<"voice" | "transactional-sms" | "marketing-sms" | "email", string>>;
+  channelRoutes?: Partial<Record<"voice" | "transactional-sms" | "marketing-sms" | "clinical-sms" | "email", string>>;
+  senderNumbers?: Partial<Record<"transactional-sms" | "marketing-sms" | "clinical-sms", string>>;
   conversationRows?: Record<string, ConversationSummary[]>;
   conversationFailures?: string[];
   conversationUnsupported?: string[];
@@ -1215,6 +1271,7 @@ async function startServer(options: {
       providerFor: (role) => options.channelRoutes === undefined
         ? options.providerName ?? "twilio"
         : options.channelRoutes[role],
+      senderNumberFor: (role) => options.senderNumbers?.[role as keyof typeof options.senderNumbers],
       getAdapter: (providerName, callerFhir) => {
         adapterProviders.push(providerName);
         adapterFhirs.push(callerFhir);
