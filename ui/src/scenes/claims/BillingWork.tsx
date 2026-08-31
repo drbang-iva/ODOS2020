@@ -341,7 +341,7 @@ function BatchActionDrawer({
         </div>
         {error && <div role="alert" className="mt-4 border border-red-400/40 bg-red-950/50 px-3 py-2 text-sm text-red-100">{error}</div>}
         <div className="mt-auto pt-5">
-          <button type="submit" disabled={busy || !detail.trim()} className="w-full bg-blue-700 px-4 py-3 text-sm font-bold text-white disabled:opacity-50">
+          <button type="submit" disabled={busy || !detail.trim()} className="w-full bg-[var(--odos-accent)] px-4 py-3 text-sm font-bold text-[var(--odos-accent-ink)] disabled:opacity-50">
             {busy ? "Stamping every claim…" : `Complete ${group.count} claims`}
           </button>
           <p className="mt-2 text-center text-[11px] text-[var(--odos-faint)]">If the response is interrupted, retrying this open drawer reuses the same action key.</p>
@@ -355,7 +355,7 @@ function ClaimRows({ group }: { group: WorkClaimGroup }) {
   return (
     <div className="overflow-x-auto border-t border-[var(--odos-line)]">
       <table className="w-full min-w-[940px] text-left text-sm">
-        <thead className="bg-black/10 text-[10px] uppercase tracking-[0.12em] text-[var(--odos-faint)]">
+        <thead className="bg-[var(--odos-deep-surface)] text-[10px] uppercase tracking-[0.12em] text-[var(--odos-faint)]">
           <tr>
             <th className="px-4 py-2">Claim</th>
             <th className="px-4 py-2">Patient</th>
