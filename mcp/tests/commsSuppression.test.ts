@@ -403,6 +403,7 @@ test("an explicit Patient clear removes only that patient's SMS opt-out with ver
   assert.deepEqual(await readPatientSmsOptOut(fhir, "Patient/synthetic-1"), {
     patientReference: "Patient/synthetic-1",
     smsOptedOut: true,
+    remainingOptOuts: { global: true, numbers: [] },
   });
   const result = await clearPatientSmsOptOut(fhir, "Patient/synthetic-1", {
     actorReference: "Practitioner/staff-1",

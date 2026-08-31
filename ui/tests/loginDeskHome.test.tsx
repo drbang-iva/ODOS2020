@@ -478,6 +478,9 @@ test("Desk comms rail resolves hover, delayed retract, pinning, switching, Escap
   const panel = () => renderer.root.findByType("aside");
   const dragHandle = () => renderer.root.findByProps({ "data-testid": "cockpit-panel-drag-handle" });
   const panelBody = () => renderer.root.findAllByType("div").find((candidate) => candidate.props.className?.includes("select-text"))!;
+  const panelText = () => panel().findAll(() => true).flatMap((node) =>
+    node.children.filter((child): child is string => typeof child === "string"),
+  ).join(" ");
   const panelOpen = () => panel().props.role === "dialog";
 
   try {
@@ -492,7 +495,7 @@ test("Desk comms rail resolves hover, delayed retract, pinning, switching, Escap
     assert.equal(button("Messages").props["aria-expanded"], true);
     assert.equal(button("Messages").props["aria-pressed"], false);
     assert.equal(panelOpen(), true);
-    assert.match(panel().findAllByType("div").flatMap((node) => node.children).join(" "), /Two-way messaging/);
+    assert.match(panelText(), /Select a patient conversation/);
 
     act(() => dock().props.onPointerLeave({ pointerType: "mouse" }));
     act(() => context.mock.timers.tick(COCKPIT_HOVER_CLOSE_DELAY_MS - 1));
@@ -514,7 +517,7 @@ test("Desk comms rail resolves hover, delayed retract, pinning, switching, Escap
     assert.equal(button("Messages").props["aria-pressed"], true);
     assert.equal(button("Calls").props["aria-expanded"], false);
     assert.equal(button("Calls").props["aria-pressed"], false);
-    assert.match(panel().findAllByType("div").flatMap((node) => node.children).join(" "), /Two-way messaging/);
+    assert.match(panelText(), /Select a patient conversation/);
     act(() => dock().props.onPointerLeave({ pointerType: "mouse" }));
     act(() => context.mock.timers.tick(COCKPIT_HOVER_CLOSE_DELAY_MS));
     assert.equal(panelOpen(), true);

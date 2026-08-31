@@ -16,6 +16,7 @@ import {
   COMMS_CHANNEL_ROLES,
   type CommsDispatch,
   type CommsDispatchFhir,
+  type CommsChannelRole,
 } from "./comms-config.js";
 import type { CommsProvider, ConversationSummary } from "./comms-provider.js";
 import {
@@ -88,7 +89,7 @@ export function registerCommsApiRoutes(
     optOutPatientReferenceForAudit(req),
     async (staff) => {
       const patientReference = requiredPatientReference(queryString(req, "patient"));
-      return { status: 200, body: await patientSmsOptOutState(staff.fhir, patientReference) };
+      return { status: 200, body: await patientSmsOptOutState(staff.fhir, deps.dispatch, patientReference) };
     },
   ));
 
@@ -495,14 +496,45 @@ function hasBusinessAction(role: PracticeRoleId, action: BusinessAction): boolea
 
 async function patientSmsOptOutState(
   fhir: SmsOptOutManagementFhir,
+  dispatch: CommsDispatch,
   patientReference: string,
 ) {
   try {
-    return await readPatientSmsOptOut(fhir, patientReference);
+    return {
+      ...await readPatientSmsOptOut(fhir, patientReference),
+      smsLanes: configuredSmsLanes(dispatch),
+    };
   } catch (error) {
     if (isFhirNotFound(error)) throw new CommsApiNotFoundError("Patient not found.");
     throw error;
   }
+}
+
+function configuredSmsLanes(dispatch: CommsDispatch): Array<{
+  label: string;
+  number: string;
+  roles: CommsChannelRole[];
+}> {
+  const roles = ["transactional-sms", "marketing-sms", "clinical-sms"] as const;
+  const byNumber = new Map<string, CommsChannelRole[]>();
+  for (const role of roles) {
+    if (!dispatch.providerFor(role)) continue;
+    const number = dispatch.senderNumberFor(role);
+    if (!number) continue;
+    byNumber.set(number, [...(byNumber.get(number) ?? []), role]);
+  }
+  return [...byNumber].map(([number, laneRoles]) => ({
+    label: smsLaneLabel(laneRoles),
+    number,
+    roles: laneRoles,
+  }));
+}
+
+function smsLaneLabel(roles: readonly CommsChannelRole[]): string {
+  const frontDesk = roles.some((role) => role === "transactional-sms" || role === "marketing-sms");
+  const clinical = roles.includes("clinical-sms");
+  if (frontDesk && clinical) return "Front-desk and clinical texts";
+  return clinical ? "Clinical texts" : "Front-desk texts";
 }
 
 async function clearNamedPatientSmsOptOut(
