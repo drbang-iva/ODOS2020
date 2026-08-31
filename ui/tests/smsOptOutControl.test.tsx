@@ -16,11 +16,21 @@ const PATIENT: Patient = {
   telecom: [{ system: "phone", value: "+18645550199" }],
 };
 
+const SECOND_PATIENT: Patient = {
+  resourceType: "Patient",
+  id: "synthetic-2",
+  name: [{ use: "official", given: ["Alex"], family: "Patient" }],
+  gender: "male",
+  birthDate: "1982-03-04",
+  telecom: [{ system: "phone", value: "+18645550200" }],
+};
+
 test("the demographics opt-out control distinguishes suppressed and available SMS lanes", async () => {
   const originalFetch = globalThis.fetch;
   let laneSuppressed = true;
   let sentBody: Record<string, unknown> | undefined;
-  globalThis.fetch = async (_input, init) => {
+  const readInputs: string[] = [];
+  globalThis.fetch = async (input, init) => {
     if (init?.method === "POST") {
       sentBody = JSON.parse(String(init.body));
       return new Response(JSON.stringify({ outcome: "sent", providerMessageId: "synthetic-message-1" }), {
@@ -28,6 +38,7 @@ test("the demographics opt-out control distinguishes suppressed and available SM
         headers: { "Content-Type": "application/json" },
       });
     }
+    readInputs.push(String(input));
     return new Response(JSON.stringify({
     patientReference: "Patient/synthetic-1",
     smsOptedOut: laneSuppressed,
@@ -75,6 +86,20 @@ test("the demographics opt-out control distinguishes suppressed and available SM
     ).join(" ");
     assert.match(panelText, /Texting is blocked for this patient on the front-desk lane/);
     assert.equal(renderer.root.findByProps({ "aria-label": "Compose text message" }).props.disabled, true);
+
+    await act(async () => {
+      renderer.update(React.createElement(CockpitGuestPanel as never, {
+        panel: "messages",
+        onClose: () => undefined,
+        selectedPatient: SECOND_PATIENT,
+      }));
+      await Promise.resolve();
+    });
+    const changedPatientText = renderer.root.findAll(() => true).flatMap((node) =>
+      node.children.filter((child): child is string => typeof child === "string"),
+    ).join(" ");
+    assert.match(changedPatientText, /Alex Patient/);
+    assert.match(readInputs.at(-1) ?? "", /patient=Patient%2Fsynthetic-2/);
     act(() => renderer.unmount());
 
     laneSuppressed = false;

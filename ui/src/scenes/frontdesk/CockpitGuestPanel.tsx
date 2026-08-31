@@ -223,7 +223,7 @@ export function CockpitGuestPanel({
       </header>
       <div className="min-h-0 flex-1 select-text overflow-y-auto p-4 text-sm leading-relaxed text-white/55">
         {panel === "messages"
-          ? <MessagesPanel selectedPatient={selectedPatient} />
+          ? <MessagesPanel key={selectedPatient?.id ?? "patient-search"} selectedPatient={selectedPatient} />
           : PANEL_STUB[panel]}
       </div>
     </aside>
