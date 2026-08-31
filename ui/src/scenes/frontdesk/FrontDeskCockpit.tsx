@@ -67,7 +67,7 @@ export function FrontDeskCockpit({
         <CockpitTopBar centerView={centerView} onCenterViewChange={setCenterView} />
         {watcherProjection?.status === "degraded" && (
           <div role="alert" className="border-b border-amber-300/40 bg-amber-950/50 px-4 py-2 text-sm text-amber-100">
-            <strong>Balance watch degraded.</strong>{" "}
+            <strong>Appointment watch degraded.</strong>{" "}
             {watcherProjection.lastSuccessfulAt
               ? <>It last succeeded at <time dateTime={watcherProjection.lastSuccessfulAt}>{watcherProjection.lastSuccessfulAt}</time>.</>
               : "It has not completed successfully yet."}
@@ -75,7 +75,7 @@ export function FrontDeskCockpit({
         )}
         {watcherLoadError && (
           <div role="alert" className="border-b border-red-400/40 bg-red-950/50 px-4 py-2 text-sm text-red-100">
-            Balance watch could not be loaded: {watcherLoadError}
+            Appointment watch could not be loaded: {watcherLoadError}
           </div>
         )}
         {centerView === "schedule"

@@ -7,6 +7,7 @@ import {
   BENEFIT_KINDS,
   ODOS_BENEFIT_FREQUENCY_MONTHS_EXTENSION_URL,
   ODOS_BENEFIT_LAST_USED_EXTENSION_URL,
+  ODOS_COB_APPLICABILITY_EXTENSION_URL,
   benefitAllowanceDollars,
   benefitCopayDollars,
   benefitItem,
@@ -14,6 +15,7 @@ import {
   buildCoverageSaveBundle,
   buildManualBenefitsBundle,
   coverageDraftFromResource,
+  coverageCobApplicability,
   deriveBenefitStatus,
   emptyManualBenefitsDraft,
   fetchPatientInsurance,
@@ -67,11 +69,15 @@ test("exact #57 legacy Coverage renders in the grid and editor, then upgrades in
   assert.match(editor, /Edit insurance/);
   assert.match(editor, /value="other" selected=""/);
   assert.match(editor, /value="GRP-9"/);
+  assert.match(editor, /COB check applicability/);
+  assert.match(editor, /value="unknown" selected=""/);
+  assert.equal(legacyDraft.cobApplicability, "unknown");
 
   const upgradedDraft = {
     ...legacyDraft,
     coverageType: "vision" as const,
     groupName: "Employer Plan",
+    cobApplicability: "supported" as const,
     subscriber: {
       firstName: "John",
       middleName: "Q",
@@ -97,6 +103,11 @@ test("exact #57 legacy Coverage renders in the grid and editor, then upgrades in
   assert.equal(coverage.relationship?.coding?.[0]?.system, SUBSCRIBER_RELATIONSHIP_SYSTEM);
   assert.equal(coverageGroupNumber(coverage), "GRP-9");
   assert.equal(coverageGroupName(coverage), "Employer Plan");
+  assert.equal(coverageCobApplicability(coverage), "supported");
+  assert.equal(
+    coverage.extension?.find((extension) => extension.url === ODOS_COB_APPLICABILITY_EXTENSION_URL)?.valueCode,
+    "supported",
+  );
   assert.equal(relatedPerson.patient.reference, "Patient/patient-1");
   assert.equal(relatedPerson.name?.[0]?.given?.join(" "), "John Q");
   assert.equal(relatedPerson.name?.[0]?.family, "Doe");

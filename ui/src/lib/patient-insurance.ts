@@ -25,6 +25,16 @@ import {
 
 export const ODOS_BENEFIT_LAST_USED_EXTENSION_URL = "https://odos2020.com/fhir/StructureDefinition/odos-benefit-last-used";
 export const ODOS_BENEFIT_FREQUENCY_MONTHS_EXTENSION_URL = "https://odos2020.com/fhir/StructureDefinition/odos-benefit-frequency-months";
+export const ODOS_COB_APPLICABILITY_EXTENSION_URL = "https://odos2020.com/fhir/StructureDefinition/odos-cob-applicability";
+
+export const COB_APPLICABILITY_OPTIONS = [
+  { value: "unknown", label: "Unknown — could not check" },
+  { value: "supported", label: "Supported" },
+  { value: "unsupported", label: "Unsupported" },
+  { value: "traditional-medicare", label: "Traditional Medicare" },
+  { value: "capitated", label: "Capitated plan" },
+] as const;
+export type CobApplicability = typeof COB_APPLICABILITY_OPTIONS[number]["value"];
 
 export const SUBSCRIBER_RELATIONSHIPS: ReadonlyArray<{ value: SubscriberRelationship; label: string }> = [
   { value: "self", label: "Self" },
@@ -69,6 +79,7 @@ export interface CoverageEditorDraft {
   endDate: string;
   primary: boolean;
   active: boolean;
+  cobApplicability: CobApplicability;
   subscriber: SubscriberDemographics;
 }
 
@@ -119,6 +130,7 @@ export function emptyCoverageDraft(patientReference: string, today: string): Cov
     endDate: "",
     primary: false,
     active: true,
+    cobApplicability: "unknown",
     subscriber: emptySubscriber(),
   };
 }
@@ -146,6 +158,7 @@ export function coverageDraftFromResource(
     endDate: coverage.period?.end ?? "",
     primary: coverage.order === 1,
     active: coverage.status === "active",
+    cobApplicability: coverageCobApplicability(coverage),
     subscriber: relationship === "self" ? subscriberFromPatient(patient) : subscriberFromRelatedPerson(relatedPerson),
   };
 }
@@ -209,11 +222,29 @@ export function buildCoverageSaveBundle(input: {
     primary: input.draft.primary,
     active: input.draft.active,
   });
-  const coverage = input.existingCoverage
+  const coverageWithoutApplicability = input.existingCoverage
     ? { ...input.existingCoverage, ...builtCoverage, id: input.existingCoverage.id, meta: input.existingCoverage.meta }
     : builtCoverage;
+  const coverage: Coverage = {
+    ...coverageWithoutApplicability,
+    extension: [
+      ...(coverageWithoutApplicability.extension ?? []).filter(
+        (extension) => extension.url !== ODOS_COB_APPLICABILITY_EXTENSION_URL,
+      ),
+      { url: ODOS_COB_APPLICABILITY_EXTENSION_URL, valueCode: input.draft.cobApplicability },
+    ],
+  };
   entries.push(input.existingCoverage?.id ? updateEntry(coverage) : createEntry(`urn:uuid:${uuid()}`, coverage));
   return { resourceType: "Bundle", type: "transaction", entry: entries };
+}
+
+export function coverageCobApplicability(coverage: Coverage): CobApplicability {
+  const value = coverage.extension?.find(
+    (extension) => extension.url === ODOS_COB_APPLICABILITY_EXTENSION_URL,
+  )?.valueCode;
+  return COB_APPLICABILITY_OPTIONS.some((option) => option.value === value)
+    ? value as CobApplicability
+    : "unknown";
 }
 
 export function emptyManualBenefitsDraft(patientReference: string, coverage: Coverage, today: string): ManualBenefitsDraft {

@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { buildAppointmentBlockContent } from "../src/lib/scheduling";
 import { DEFAULT_SCHEDULING_PRACTICE_CONFIG } from "../src/lib/scheduling-store";
 import { watcherCollectionHref, type WatcherAlert, type WatcherFrontDeskProjection } from "../src/lib/watchers";
+import { groupWatcherAlertsByAppointment } from "../src/scenes/SchedulerDayGrid";
 import { FrontDeskCockpit } from "../src/scenes/frontdesk/FrontDeskCockpit";
 import { PatientQuickCard } from "../src/scenes/scheduler/PatientQuickCard";
 import { ResourceDayColumn } from "../src/scenes/scheduler/ResourceDayColumn";
@@ -39,6 +40,24 @@ const alert: WatcherAlert = {
   balanceCents: 13200,
   ageDays: 173,
 };
+const coverageAlert: WatcherAlert = {
+  ...alert,
+  taskId: "task-21",
+  watcherId: "W21",
+  patientDisplay: "Sarah M.",
+  message: "Sarah M. has inactive coverage before tomorrow's visit.",
+  frontDeskMessage: "Sarah M. comes in tomorrow at 9:40 AM, and her insurance shows as inactive.",
+  consequence: "Resolve coverage before the visit so it does not bill to the patient.",
+  primaryAction: { label: "Open patient", href: "/insurance?patientId=sarah" },
+  dismissalReasons: [
+    { code: "already-sorted", display: "Already sorted" },
+    { code: "patient-self-pay", display: "Patient is self-pay" },
+    { code: "check-again", display: "Check again" },
+  ],
+  balanceCents: 0,
+  ageDays: 0,
+  reasonCode: "eligibility-inactive",
+};
 
 test("W1 cue attaches only to the matching patient's Appointment block", () => {
   const html = renderToStaticMarkup(
@@ -51,7 +70,7 @@ test("W1 cue attaches only to the matching patient's Appointment block", () => {
       axisEndMinutes={630}
       slotMinutes={30}
       appointments={[positioned(sarah, 0), positioned(joe, 1)]}
-      watcherAlertsByAppointment={{ "appt-sarah": alert }}
+      watcherAlertsByAppointment={{ "appt-sarah": [alert] }}
       columnKey="watcher-test"
       rowHeight={70}
       onAppointmentClick={() => undefined}
@@ -69,7 +88,7 @@ test("the Appointment Quick Card renders the same Task's full W1 action and type
   const html = renderToStaticMarkup(
     <PatientQuickCard
       appointment={sarah}
-      watcherAlert={alert}
+      watcherAlerts={[alert]}
       pinned={false}
       onPinnedChange={() => undefined}
       onClose={() => undefined}
@@ -84,6 +103,49 @@ test("the Appointment Quick Card renders the same Task's full W1 action and type
   assert.equal(html.match(/View balance &amp; collect/g)?.length, 1);
   for (const reason of ["Already collected", "Payment plan", "Waived"]) assert.match(html, new RegExp(reason));
   assert.match(html, /collect=1&amp;watcherTaskId=task-1/);
+});
+
+test("W1 and W21 firing on the same appointment both render on the row and quick card", () => {
+  const grouped = groupWatcherAlertsByAppointment([alert, coverageAlert]);
+  assert.deepEqual(grouped["appt-sarah"].map((item) => item.taskId), ["task-1", "task-21"]);
+
+  const row = renderToStaticMarkup(
+    <ResourceDayColumn
+      resource={resource}
+      config={DEFAULT_SCHEDULING_PRACTICE_CONFIG}
+      date="2026-08-30"
+      rows={[{ startMinutes: 570 }]}
+      axisStartMinutes={570}
+      axisEndMinutes={600}
+      slotMinutes={30}
+      appointments={[positioned(sarah, 0)]}
+      watcherAlertsByAppointment={grouped}
+      columnKey="two-watchers"
+      rowHeight={70}
+      onAppointmentClick={() => undefined}
+      onBlockedRegionClick={() => undefined}
+      onCellClick={() => undefined}
+    />,
+  );
+  assert.match(row, /\$132 balance/);
+  assert.match(row, /Coverage problem/);
+
+  const card = renderToStaticMarkup(
+    <PatientQuickCard
+      appointment={sarah}
+      watcherAlerts={[alert, coverageAlert]}
+      pinned={false}
+      onPinnedChange={() => undefined}
+      onClose={() => undefined}
+      onDetails={() => undefined}
+      onWatcherAction={() => undefined}
+      date="2026-08-30"
+    />,
+  );
+  assert.match(card, /Balance at check-in/);
+  assert.match(card, /Coverage before visit/);
+  assert.match(card, /View balance &amp; collect/);
+  assert.match(card, /Open patient/);
 });
 
 test("the collection href carries the same Task id into the existing payment panel", () => {
@@ -101,7 +163,7 @@ test("degraded Front Desk names the last success and renders no reassuring balan
   };
   const html = renderToStaticMarkup(<FrontDeskCockpit initialWatcherProjection={degraded} />);
 
-  assert.match(html, /Balance watch degraded/);
+  assert.match(html, /Appointment watch degraded/);
   assert.match(html, /last succeeded.*2026-08-30T11:55/i);
   assert.doesNotMatch(html, /\$132 balance/);
 });

@@ -34,6 +34,17 @@ export interface WatcherMatch {
   ageDays: number;
   sourceOccurredAt: string;
   sourceInvoiceCount: number;
+  reasonCode?: string;
+  coverageReference?: string;
+  payerDisplay?: string;
+  eligibilityCheckResult?: string;
+  cobStatus?: string;
+  cobReason?: string;
+  memberIdProposal?: {
+    current: string;
+    proposed: string;
+    source: "insurance-discovery";
+  };
 }
 
 export interface WatcherEvaluationContext {

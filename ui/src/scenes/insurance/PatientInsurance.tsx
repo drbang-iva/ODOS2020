@@ -6,6 +6,7 @@ import {
   coverageDraftFromResource,
   emptyCoverageDraft,
   fetchPatientInsurance,
+  COB_APPLICABILITY_OPTIONS,
   savePatientInsurance,
   SUBSCRIBER_RELATIONSHIPS,
   validateCoverageDraft,
@@ -216,6 +217,7 @@ export function CoverageEditor({
           <Field label="Insured ID" value={draft.memberId} onChange={(value) => set("memberId", value)} />
           <Field label="Group number" value={draft.groupNumber} onChange={(value) => set("groupNumber", value)} />
           <Field label="Group name" value={draft.groupName} onChange={(value) => set("groupName", value)} />
+          <Select label="COB check applicability" value={draft.cobApplicability} options={COB_APPLICABILITY_OPTIONS} onChange={(value) => set("cobApplicability", value as CoverageEditorDraft["cobApplicability"])} />
           <Field label="Effective date" type="date" value={draft.effectiveDate} onChange={(value) => set("effectiveDate", value)} />
           <Field label="End date" type="date" value={draft.endDate} onChange={(value) => set("endDate", value)} />
           <Check label="Primary coverage" checked={draft.primary} onChange={(value) => set("primary", value)} />

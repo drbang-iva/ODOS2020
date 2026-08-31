@@ -12,6 +12,7 @@ import {
 import { ODOS_AWS_MESSAGE_IDENTIFIER_SYSTEM } from "./comms-persistence.js";
 import type { InboundMessageEvent, PullInboundReceiver } from "./inbound-receiver.js";
 import {
+  inboundSuppressionLogDetails,
   inboundOptOutType,
   updateInboundSuppression,
   type InboundSuppressionFhir,
@@ -52,9 +53,14 @@ export function createAwsSqsInboundReceiver(
         try {
           const event = parseAwsInboundMessage(message.Body, normalized.inboundTopicArn);
           await deps.onMessage(event);
-          const result = await updateInboundSuppression(deps.fhir, event);
+          const result = await updateInboundSuppression(deps.fhir, {
+            from: event.from,
+            to: event.to,
+            body: event.body,
+            optOutType: event.optOutType,
+          });
           (deps.info ?? console.error)(
-            `odos-mcp: AWS inbound SMS suppression outcome=${result.outcome} matchedPatients=${result.matchedPatients}`,
+            `odos-mcp: AWS inbound SMS suppression ${inboundSuppressionLogDetails(result)}`,
           );
           if (!message.ReceiptHandle) throw new Error("AWS SQS message is missing ReceiptHandle.");
           await client.send(new DeleteMessageCommand({

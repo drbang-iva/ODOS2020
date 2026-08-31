@@ -68,13 +68,13 @@ function AppointmentBlock({
   resource,
   rowHeight,
   onClick,
-  watcherAlert,
+  watcherAlerts = [],
 }: {
   block: PositionedAppointment;
   resource: Schedule;
   rowHeight: number;
   onClick: (appointment: Appointment, sourceResourceActor?: string) => void;
-  watcherAlert?: WatcherAlert;
+  watcherAlerts?: WatcherAlert[];
 }) {
   const { geometry, content, appointment } = block;
   const color = content.color;
@@ -128,11 +128,11 @@ function AppointmentBlock({
       >
         <div className="truncate text-[13px] font-bold leading-tight">{content.patientDisplay}</div>
         <div className="truncate text-[11px] font-semibold leading-tight opacity-90">{content.visitTypeDisplay}</div>
-        {watcherAlert && (
-          <div className="mt-0.5 truncate text-[10px] font-extrabold leading-tight" aria-label="Balance alert">
-            {watcherMoney(watcherAlert.balanceCents)} balance
+        {watcherAlerts.map((alert) => (
+          <div key={alert.taskId} className="mt-0.5 truncate text-[10px] font-extrabold leading-tight" aria-label={watcherCueLabel(alert)}>
+            {watcherCue(alert)}
           </div>
-        )}
+        ))}
         {compact ? (
           <div className="mt-0.5 flex items-center gap-1.5">
             {buildCompactCues(content).map((cue) => (
@@ -215,7 +215,7 @@ export function ResourceDayColumn({
   onAppointmentClick: (appointment: Appointment, sourceResourceActor?: string) => void;
   onBlockedRegionClick: (blockIndex: number | undefined) => void;
   onCellClick: (resource: Schedule, startMinutes: number) => void;
-  watcherAlertsByAppointment?: Readonly<Record<string, WatcherAlert>>;
+  watcherAlertsByAppointment?: Readonly<Record<string, WatcherAlert[]>>;
 }) {
   const indexedBlocks = blocksForScheduleWithIndex(config, resource);
   const regions = availabilityShadingForColumn({
@@ -285,11 +285,24 @@ export function ResourceDayColumn({
           resource={resource}
           rowHeight={rowHeight}
           onClick={onAppointmentClick}
-          watcherAlert={block.appointment.id ? watcherAlertsByAppointment[block.appointment.id] : undefined}
+          watcherAlerts={block.appointment.id ? watcherAlertsByAppointment[block.appointment.id] : undefined}
         />
       ))}
     </div>
   );
+}
+
+function watcherCue(alert: WatcherAlert): string {
+  if (alert.watcherId === "W1") return `${watcherMoney(alert.balanceCents)} balance`;
+  if (alert.watcherId === "W21") return "Coverage problem";
+  if (alert.watcherId === "W23") return "Insurance details";
+  return "Needs attention";
+}
+
+function watcherCueLabel(alert: WatcherAlert): string {
+  if (alert.watcherId === "W1") return "Balance alert";
+  if (alert.watcherId === "W21") return "Coverage alert";
+  return "Insurance alert";
 }
 
 function contrastTextColor(hex: string): string {

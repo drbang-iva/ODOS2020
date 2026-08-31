@@ -8,6 +8,7 @@ import {
 } from "./watcher-task.js";
 import type { WatcherPracticeConfig, WatcherRegistry, WatcherSeverity } from "./watcher-types.js";
 import { practiceDate } from "../desk/day-ledger.js";
+import type { EligibilitySweepState } from "../jobs/eligibilitySweep.js";
 
 export interface WatcherAlertProjection {
   taskId: string;
@@ -25,6 +26,13 @@ export interface WatcherAlertProjection {
   dismissalReasons: Array<{ code: string; display: string }>;
   balanceCents: number;
   ageDays: number;
+  reasonCode?: string;
+  coverageReference?: string;
+  payerDisplay?: string;
+  eligibilityCheckResult?: string;
+  cobStatus?: string;
+  cobReason?: string;
+  memberIdProposal?: { current: string; proposed: string; source: "insurance-discovery" };
 }
 
 interface ProjectionInput {
@@ -55,9 +63,87 @@ export function projectFrontDeskAlerts(
     .filter(isWatcherTask)
     .filter((task) => isVisible(task, input.now))
     .map((task) => taskProjection(task, input.registry))
+    .filter((alert) => input.registry.get(alert.watcherId).register === "front-desk")
     .filter((alert) => !input.date || practiceDate(alert.appointmentAt, input.timeZone) === input.date)
     .sort((left, right) => left.appointmentAt.localeCompare(right.appointmentAt));
   return { ...health, alerts };
+}
+
+export type BeforeVisitWorkProjection = {
+  status: "degraded";
+  reason: "failed" | "stale" | "never-succeeded" | "never-run" | "running";
+  lastSuccessfulAt?: string;
+} | {
+  status: "healthy";
+  lastSuccessfulAt: string;
+  count: number;
+  groups: Array<{
+    key: string;
+    watcherId: "W21" | "W22" | "W23";
+    reasonCode: string;
+    title: string;
+    count: number;
+    items: WatcherAlertProjection[];
+  }>;
+};
+
+export function projectBeforeVisitWork(
+  input: ProjectionInput & { date: string; sweepState: EligibilitySweepState | undefined },
+): BeforeVisitWorkProjection {
+  const watcherHealth = projectWatcherHealth(input.health, input.config, input.now);
+  if (watcherHealth.status === "degraded") return watcherHealth;
+  if (!input.sweepState) return { status: "degraded", reason: "never-run" };
+  if (input.sweepState.status === "failed") {
+    return {
+      status: "degraded",
+      reason: "failed",
+      ...(input.sweepState.lastSuccessfulAt ? { lastSuccessfulAt: input.sweepState.lastSuccessfulAt } : {}),
+    };
+  }
+  if (input.sweepState.status !== "healthy" || !input.sweepState.lastSuccessfulAt) {
+    return {
+      status: "degraded",
+      reason: "running",
+      ...(input.sweepState.lastSuccessfulAt ? { lastSuccessfulAt: input.sweepState.lastSuccessfulAt } : {}),
+    };
+  }
+  if (Date.parse(watcherHealth.lastSuccessfulAt) < Date.parse(input.sweepState.lastSuccessfulAt)) {
+    return {
+      status: "degraded",
+      reason: "running",
+      lastSuccessfulAt: input.sweepState.lastSuccessfulAt,
+    };
+  }
+  const alerts = input.tasks
+    .filter(isWatcherTask)
+    .filter((task) => isVisible(task, input.now))
+    .map((task) => taskProjection(task, input.registry))
+    .filter((alert): alert is WatcherAlertProjection & { watcherId: "W21" | "W22" | "W23" } => (
+      alert.watcherId === "W21" || alert.watcherId === "W22" || alert.watcherId === "W23"
+    ))
+    .filter((alert) => practiceDate(alert.appointmentAt, input.timeZone) === input.date);
+  const grouped = new Map<string, typeof alerts>();
+  for (const alert of alerts) {
+    const reasonCode = alert.reasonCode ?? alert.watcherId.toLowerCase();
+    const key = `${alert.watcherId}:${reasonCode}`;
+    grouped.set(key, [...(grouped.get(key) ?? []), alert]);
+  }
+  const order = new Map([["W21", 0], ["W22", 1], ["W23", 2]]);
+  const groups = [...grouped.entries()].map(([key, items]) => ({
+    key,
+    watcherId: items[0]!.watcherId,
+    reasonCode: items[0]!.reasonCode ?? items[0]!.watcherId.toLowerCase(),
+    title: beforeVisitTitle(items[0]!),
+    count: items.length,
+    items: items.sort((left, right) => left.appointmentAt.localeCompare(right.appointmentAt)),
+  })).sort((left, right) => (order.get(left.watcherId) ?? 99) - (order.get(right.watcherId) ?? 99)
+    || left.title.localeCompare(right.title));
+  return {
+    status: "healthy",
+    lastSuccessfulAt: input.sweepState.lastSuccessfulAt,
+    count: alerts.length,
+    groups,
+  };
 }
 
 export function projectTodayDigest(
@@ -144,6 +230,13 @@ function taskProjection(task: Task, registry: WatcherRegistry): WatcherAlertProj
     dismissalReasons: definition.dismissalReasons.map((reason) => ({ ...reason })),
     balanceCents: integerInput(task, "balance-cents"),
     ageDays: integerInput(task, "balance-age-days"),
+    ...(optionalStringInput(task, "reason-code") ? { reasonCode: optionalStringInput(task, "reason-code") } : {}),
+    ...(optionalStringInput(task, "coverage-reference") ? { coverageReference: optionalStringInput(task, "coverage-reference") } : {}),
+    ...(optionalStringInput(task, "payer-display") ? { payerDisplay: optionalStringInput(task, "payer-display") } : {}),
+    ...(optionalStringInput(task, "eligibility-result") ? { eligibilityCheckResult: optionalStringInput(task, "eligibility-result") } : {}),
+    ...(optionalStringInput(task, "cob-status") ? { cobStatus: optionalStringInput(task, "cob-status") } : {}),
+    ...(optionalStringInput(task, "cob-reason") ? { cobReason: optionalStringInput(task, "cob-reason") } : {}),
+    ...(memberIdProposalInput(task) ? { memberIdProposal: memberIdProposalInput(task) } : {}),
   };
 }
 
@@ -194,4 +287,29 @@ function findInput(task: Task, code: string) {
   return task.input?.find((candidate) => candidate.type.coding?.some(
     (coding) => coding.system === WATCHER_INPUT_SYSTEM && coding.code === code,
   ));
+}
+
+function optionalStringInput(task: Task, code: string): string | undefined {
+  const value = findInput(task, code)?.valueString;
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function memberIdProposalInput(task: Task): WatcherAlertProjection["memberIdProposal"] {
+  const raw = optionalStringInput(task, "member-id-proposal");
+  if (!raw) return undefined;
+  const value = JSON.parse(raw) as Record<string, unknown>;
+  return typeof value.current === "string" && typeof value.proposed === "string" && value.source === "insurance-discovery"
+    ? { current: value.current, proposed: value.proposed, source: "insurance-discovery" }
+    : undefined;
+}
+
+function beforeVisitTitle(alert: WatcherAlertProjection): string {
+  if (alert.watcherId === "W21") {
+    if (alert.reasonCode === "coverage-ends-before-visit") return "Coverage ends before the visit";
+    return `${alert.eligibilityCheckResult ?? "Eligibility"} coverage result`;
+  }
+  if (alert.watcherId === "W22") {
+    return alert.cobStatus === "mismatch" ? "Primary payer mismatch" : "Payer order could not be checked";
+  }
+  return "Member or demographic details rejected";
 }

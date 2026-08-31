@@ -55,6 +55,7 @@ import {
   eraSnapshotFromTask,
   eraWorklistEvidence,
   parseEraImportRecord,
+  projectEraWorklistTask,
 } from "../src/claims/era-worklist.js";
 import {
   buildClaimResponseFromClaimMdEra,
@@ -2392,6 +2393,53 @@ test("ERA unmatched PCN persists a fully recoverable unmatched Task snapshot", a
   assert.equal(taskInput(task, "paid-cents")?.valueInteger, 8_000);
   assert.deepEqual(eraSnapshotFromTask(task).claim, era.claim);
   assert.equal(audits.some((row) => row.eventType === "era.unmatched.flagged"), true);
+});
+
+test("legacy disposition remains typed and is accepted only for an unmatched remit", async () => {
+  const unmatched = deps();
+  await handleEraImportRequest(unmatched.deps, {
+    authHeader: "Bearer good",
+    body: { ...eraImportBody(), claimReferenceByPcn: {}, patientReferenceByPcn: {} },
+  });
+  await handleClaimEraWorklistTaskRequest(unmatched.deps, {
+    authHeader: "Bearer good",
+    params: { id: "task-1" },
+  });
+
+  const legacy = await handleResolveEraWorklistTaskRequest(unmatched.deps, {
+    authHeader: "Bearer good",
+    params: { id: "task-1" },
+    body: { disposition: "legacy" },
+  });
+
+  assert.equal(legacy.status, 200);
+  assert.equal(taskOutput(unmatched.created.Task[0], "disposition")?.valueCode, "legacy");
+  assert.equal(
+    projectEraWorklistTask(unmatched.created.Task[0], "2026-07-10T12:00:00.000Z").resolutionDisposition,
+    "legacy",
+  );
+
+  const liveClaim = deps();
+  liveClaim.deps.adapter!.submitProfessionalClaim = async () => {
+    throw new Error("Claim.MD edit rejection R-17");
+  };
+  await handleSubmitClaimRequest(liveClaim.deps, {
+    authHeader: "Bearer good",
+    body: { claim: professionalClaim },
+  });
+  await handleClaimEraWorklistTaskRequest(liveClaim.deps, {
+    authHeader: "Bearer good",
+    params: { id: "task-1" },
+  });
+  const rejected = await handleResolveEraWorklistTaskRequest(liveClaim.deps, {
+    authHeader: "Bearer good",
+    params: { id: "task-1" },
+    body: { disposition: "legacy" },
+  });
+  assert.deepEqual(rejected, {
+    status: 400,
+    body: { error: "legacy is only valid for an era-unmatched Task." },
+  });
 });
 
 test("ERA worklist resolve-as-rebilled records the Claim reference and rejects missing disposition", async () => {

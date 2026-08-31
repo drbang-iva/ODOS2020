@@ -20,7 +20,7 @@ export const WORKLIST_CODE_REGISTRY = [
 ] as const;
 export const WORKLIST_CODES = [...ERA_WORKLIST_CODES, ...CLAIM_REJECTED_CODES] as const;
 export const ERA_WORKLIST_STATUSES = ["new", "in-review", "resolved"] as const;
-export const ERA_WORKLIST_DISPOSITIONS = ["rebilled", "appealed", "written-off", "matched", "posted-ok"] as const;
+export const ERA_WORKLIST_DISPOSITIONS = ["rebilled", "appealed", "written-off", "matched", "posted-ok", "legacy"] as const;
 
 export type EraWorklistCode = (typeof ERA_WORKLIST_CODES)[number];
 export type WorklistCode = (typeof WORKLIST_CODES)[number];
@@ -78,6 +78,7 @@ export interface EraWorklistAttentionItem {
   action: "claim" | "resolve" | "none";
   owner?: string;
   status: EraWorklistStatus;
+  resolutionDisposition?: EraWorklistDisposition;
   evidence: EraWorklistProjectedEvidence | ClaimRejectedProjectedEvidence;
 }
 
@@ -354,6 +355,9 @@ export function resolveEraWorklistTask(
   if (input.disposition === "matched" && eraWorklistCode(task) !== "era-unmatched") {
     throw new EraWorklistValidationError("matched is only valid for an era-unmatched Task.");
   }
+  if (input.disposition === "legacy" && eraWorklistCode(task) !== "era-unmatched") {
+    throw new EraWorklistValidationError("legacy is only valid for an era-unmatched Task.");
+  }
   if ((input.disposition === "rebilled" || input.disposition === "matched") && !isClaimReference(input.claimReference)) {
     throw new EraWorklistValidationError(`${input.disposition} requires a Claim/<id> reference.`);
   }
@@ -406,6 +410,7 @@ export function projectEraWorklistTask(task: Task, at: string): EraWorklistAtten
     action: status === "new" ? "claim" : status === "in-review" ? "resolve" : "none",
     ...(task.owner?.reference ? { owner: task.owner.reference } : {}),
     status,
+    ...(taskResolutionDisposition(task) ? { resolutionDisposition: taskResolutionDisposition(task) } : {}),
     evidence: projectedEvidence(task, code),
   };
 }
@@ -523,6 +528,13 @@ function taskInputString(task: Task, code: string): string | undefined {
 
 function taskInputInteger(task: Task, code: string): number {
   return task.input?.find((entry) => inputType(entry) === code)?.valueInteger ?? 0;
+}
+
+function taskResolutionDisposition(task: Task): EraWorklistDisposition | undefined {
+  const value = task.output?.find((entry) => entry.type.coding?.some((coding) => (
+    coding.system === ERA_WORKLIST_OUTPUT_SYSTEM && coding.code === "disposition"
+  )))?.valueCode;
+  return isEraWorklistDisposition(value) ? value : undefined;
 }
 
 function isOpenWorklistTask(task: Task): boolean {

@@ -5,6 +5,8 @@ import type {
 } from "./watcher-types.js";
 import { evaluateW1 } from "./w1-balance-watcher.js";
 import type { PaginatedFhir } from "./fhir-pagination.js";
+import type { EligibilitySweepStore } from "../jobs/eligibilitySweep.js";
+import { createPreventWatcherDefinitions } from "./prevent-watchers.js";
 
 const SEVERITIES = new Set<WatcherSeverity>(["today", "this-week", "watch"]);
 const REGISTERS = new Set(["front-desk", "owner", "biller"]);
@@ -15,6 +17,7 @@ export class WatcherRegistrationError extends Error {}
 export function createWatcherDefinitions(
   fhir: PaginatedFhir,
   timeZone: string,
+  eligibilitySweepStore?: EligibilitySweepStore,
 ): readonly WatcherDefinition[] {
   return [{
     id: "W1",
@@ -34,7 +37,7 @@ export function createWatcherDefinitions(
     ],
     activation: "immediate",
     seedSettings: { enabled: true, severity: "today", minimumBalanceCents: 1 },
-  }];
+  }, ...(eligibilitySweepStore ? createPreventWatcherDefinitions(eligibilitySweepStore, timeZone) : [])];
 }
 
 export function createWatcherRegistry(input: readonly WatcherDefinition[]): WatcherRegistry {

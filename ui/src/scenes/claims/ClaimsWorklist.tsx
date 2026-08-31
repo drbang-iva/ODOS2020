@@ -1,23 +1,16 @@
 import clsx from "clsx";
-import { useCallback, useEffect, useState } from "react";
-import { fhir } from "../../lib/fhir";
-import { downloadCsvExport, queryPath } from "../../lib/reporting";
+import { useEffect, useState } from "react";
 import {
   WORKLIST_LANES,
-  claimWorklistItem,
   dispositionsForLane,
-  fetchClaimsWorklist,
   groupWorklistItems,
-  resolveWorklistItem,
   type ClaimsApiOptions,
   type ClaimsWorklistItem,
   type ResolveWorklistInput,
-  type WorklistFilterStatus,
   type WorklistDisposition,
 } from "../../lib/claims-worklist";
 import {
   previewStediClaimResubmission,
-  submitStediClaimResubmission,
   type StediClaimResubmissionPreview,
   type StediPayerClassification,
 } from "../../lib/submit-claims";
@@ -31,117 +24,7 @@ const LANE_COLOR = {
   "claim-rejected": "#fb7185",
 } as const;
 
-export function ClaimsWorklist() {
-  const [items, setItems] = useState<ClaimsWorklistItem[]>([]);
-  const [status, setStatus] = useState<WorklistFilterStatus | undefined>(() => worklistStatusFromQuery(window.location.search));
-  const [selectedId, setSelectedId] = useState<string>();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>();
-  const [exporting, setExporting] = useState(false);
-  const api = claimsApiOptions();
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(undefined);
-    try {
-      setItems(await fetchClaimsWorklist(status, api));
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
-    } finally {
-      setLoading(false);
-    }
-  }, [status, api.authorization, api.baseUrl]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const selected = items.find((item) => item.id === selectedId);
-  const runAction = async (action: () => Promise<void>) => {
-    setError(undefined);
-    try {
-      await action();
-      await load();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
-    }
-  };
-
-  const exportRows = async () => {
-    setExporting(true);
-    setError(undefined);
-    try {
-      await downloadCsvExport(
-        queryPath("/claims/worklist/export", { status }),
-        "claims-worklist.csv",
-        api,
-      );
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  return (
-    <main className="min-h-screen bg-bg-deep p-5 text-white">
-      <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/40">Claims management</p>
-          <h1 className="text-2xl font-semibold">Claims worklist</h1>
-          <p className="mt-1 text-sm text-white/50">Oldest and most urgent items appear first.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex gap-1 rounded-lg border border-white/10 bg-white/5 p-1 text-xs">
-            <FilterButton active={status === undefined} label="All" onClick={() => setStatus(undefined)} />
-            <FilterButton active={status === "open"} label="Open" onClick={() => setStatus("open")} />
-            <FilterButton active={status === "new"} label="New" onClick={() => setStatus("new")} />
-            <FilterButton active={status === "in-review"} label="In review" onClick={() => setStatus("in-review")} />
-            <FilterButton active={status === "resolved"} label="Resolved" onClick={() => setStatus("resolved")} />
-          </div>
-          <button type="button" disabled={exporting || loading} onClick={() => void exportRows()} className="rounded border border-blue-400/30 bg-blue-950/30 px-3 py-2 text-xs font-bold text-blue-200 disabled:opacity-50">
-            {exporting ? "Exporting…" : "Export CSV"}
-          </button>
-        </div>
-      </header>
-
-      {error && (
-        <div role="alert" className="mb-4 rounded-md border border-red-400/40 bg-red-950/40 px-4 py-3 text-sm text-red-200">
-          {error}
-        </div>
-      )}
-      {loading ? (
-        <div className="grid min-h-52 place-items-center text-sm text-white/50">Loading claims worklist…</div>
-      ) : (
-        <ClaimsWorklistBoard items={items} onSelect={(item) => setSelectedId(item.id)} />
-      )}
-
-      {selected && (
-        <ClaimsWorklistPanel
-          key={selected.id}
-          item={selected}
-          onClose={() => setSelectedId(undefined)}
-          onClaim={() => runAction(() => claimWorklistItem(selected.id, api))}
-          onResolve={(input) => runAction(() => resolveWorklistItem(selected.id, input, api))}
-          onVoid={(voidInput) => runAction(async () => {
-            if (!selected.focusReference?.startsWith("Claim/")) throw new Error("The work item is not linked to an original Claim.");
-            const submitted = await submitStediClaimResubmission({
-              originalClaimReference: selected.focusReference,
-              intent: "void",
-              patientControlNumber: voidInput.patientControlNumber,
-              ...(voidInput.payerClassification ? { payerClassification: voidInput.payerClassification } : {}),
-            }, api);
-            if (!submitted.claimReference) throw new Error("The void submission did not return its new Claim reference.");
-            await resolveWorklistItem(selected.id, { disposition: "rebilled", claimReference: submitted.claimReference }, api);
-          })}
-          resubmissionApi={api}
-        />
-      )}
-    </main>
-  );
-}
-
-export function ClaimsWorklistBoard({
+export function EraWorklistBoard({
   items,
   onSelect,
 }: {
@@ -279,6 +162,7 @@ export function ClaimsWorklistPanel({
         <DetailRow label="Task" value={item.taskReference} />
         <DetailRow label="Patient" value={item.patientReference ?? "Not matched"} />
         <DetailRow label="Status" value={item.status} />
+        {item.resolutionDisposition && <DetailRow label="Disposition" value={dispositionLabel(item.resolutionDisposition)} />}
         <DetailRow label="Owner" value={item.owner ?? "Unclaimed"} />
         <Evidence item={item} />
 
@@ -437,10 +321,6 @@ function Evidence({ item }: { item: ClaimsWorklistItem }) {
   );
 }
 
-function FilterButton({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
-  return <button type="button" onClick={onClick} className={clsx("rounded px-2.5 py-1.5", active ? "bg-white/15 text-white" : "text-white/45 hover:text-white")}>{label}</button>;
-}
-
 function DetailRow({ label, value }: { label: string; value: string }) {
   return <div className="flex justify-between gap-3 text-xs"><span className="text-white/40">{label}</span><span className="break-all text-right text-white/75">{value}</span></div>;
 }
@@ -466,19 +346,4 @@ function ageLabel(minutes: number): string {
 
 function money(cents: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
-}
-
-function claimsApiOptions(): ClaimsApiOptions {
-  const meta = import.meta as ImportMeta & { env?: { VITE_ODOS_MCP_BASE_URL?: string } };
-  return {
-    authorization: fhir.authHeader(),
-    baseUrl: meta.env?.VITE_ODOS_MCP_BASE_URL?.replace(/\/$/, "") ?? "",
-  };
-}
-
-function worklistStatusFromQuery(search: string): WorklistFilterStatus | undefined {
-  const status = new URLSearchParams(search).get("status");
-  return status === "open" || status === "new" || status === "in-review" || status === "resolved"
-    ? status
-    : undefined;
 }

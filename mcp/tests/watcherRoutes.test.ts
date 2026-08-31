@@ -4,6 +4,7 @@ import test from "node:test";
 import type { Basic, Bundle, Resource, Task } from "@medplum/fhirtypes";
 import express from "express";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../src/authz/roles.js";
+import type { EligibilitySweepStore } from "../src/jobs/eligibilitySweep.js";
 import { createWatcherDefinitions, createWatcherRegistry } from "../src/watchers/watcher-registry.js";
 import { buildWatcherHealthResource } from "../src/watchers/watcher-health.js";
 import {
@@ -309,6 +310,49 @@ test("Today and front-desk routes default and project on the practice calendar d
   }
 });
 
+test("front-desk keeps today's W1 available while tomorrow waits for sweep reconciliation", async () => {
+  const task = watcherTask(1, "2026-08-30", 1000, 1);
+  const fhir = new RouteFhir([task], buildWatcherHealthResource({
+    lastAttemptAt: "2026-08-30T12:00:00.000Z",
+    lastSuccessfulAt: "2026-08-30T12:00:00.000Z",
+    outcome: "healthy",
+  }));
+  const eligibilitySweepStore: EligibilitySweepStore = {
+    loadState: async (date) => ({
+      date,
+      status: "healthy",
+      lastAttemptAt: "2026-08-30T12:05:00.000Z",
+      lastSuccessfulAt: "2026-08-30T12:05:00.000Z",
+      batchIds: ["batch-1"],
+      expectedChecks: 1,
+    }),
+    saveState: async () => undefined,
+    loadCandidates: async () => [],
+    loadFindings: async () => [],
+    replaceFindings: async () => undefined,
+  };
+  const server = await startServer(fhir, { eligibilitySweepStore });
+  try {
+    const today = await fetch(`${server.base}/watchers/frontdesk?date=2026-08-30`, {
+      headers: { authorization: "Bearer staff" },
+    });
+    assert.equal(today.status, 200);
+    assert.equal((await today.json() as { alerts?: unknown[] }).alerts?.length, 1);
+
+    const tomorrow = await fetch(`${server.base}/watchers/frontdesk?date=2026-08-31`, {
+      headers: { authorization: "Bearer staff" },
+    });
+    assert.equal(tomorrow.status, 503);
+    assert.deepEqual(await tomorrow.json(), {
+      status: "degraded",
+      reason: "running",
+      lastSuccessfulAt: "2026-08-30T12:05:00.000Z",
+    });
+  } finally {
+    await server.close();
+  }
+});
+
 test("watcher routes reject a caller without billing-context.read before service FHIR access", async () => {
   const fhir = new RouteFhir();
   const server = await startServer(fhir, { roles: [] });
@@ -492,7 +536,12 @@ class RouteFhir {
 
 async function startServer(
   fhir: RouteFhir,
-  options: { now?: string; timeZone?: string; roles?: PracticeRoleId[] } = {},
+  options: {
+    now?: string;
+    timeZone?: string;
+    roles?: PracticeRoleId[];
+    eligibilitySweepStore?: EligibilitySweepStore;
+  } = {},
 ) {
   const app = express();
   let serviceAuthCalls = 0;
@@ -509,6 +558,7 @@ async function startServer(
     loadConfig: async () => config,
     now: () => options.now ?? "2026-08-30T12:01:00.000Z",
     timeZone: options.timeZone,
+    eligibilitySweepStore: options.eligibilitySweepStore,
   });
   const listener = app.listen(0, "127.0.0.1");
   await new Promise<void>((resolve) => listener.once("listening", resolve));

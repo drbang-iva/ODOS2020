@@ -1,6 +1,6 @@
 export const WORKLIST_CODES = ["era-denial", "era-integrity", "era-line-linkage", "era-underpayment", "era-unmatched", "claim-rejected"] as const;
 export const WORKLIST_STATUSES = ["new", "in-review", "resolved"] as const;
-export const WORKLIST_DISPOSITIONS = ["rebilled", "appealed", "written-off", "matched", "posted-ok"] as const;
+export const WORKLIST_DISPOSITIONS = ["rebilled", "appealed", "written-off", "matched", "posted-ok", "legacy"] as const;
 
 export type WorklistCode = (typeof WORKLIST_CODES)[number];
 export type WorklistStatus = (typeof WORKLIST_STATUSES)[number];
@@ -53,6 +53,7 @@ export interface ClaimsWorklistItem {
   action: "claim" | "resolve" | "none";
   owner?: string;
   status: WorklistStatus;
+  resolutionDisposition?: WorklistDisposition;
   evidence: EraEvidence | ClaimRejectedEvidence;
 }
 
@@ -99,7 +100,7 @@ export function groupWorklistItems(items: readonly ClaimsWorklistItem[]): Record
 
 export function dispositionsForLane(code: WorklistCode): WorklistDisposition[] {
   const shared: WorklistDisposition[] = ["rebilled", "appealed", "written-off", "posted-ok"];
-  return code === "era-unmatched" ? [...shared, "matched"] : shared;
+  return code === "era-unmatched" ? [...shared, "matched", "legacy"] : shared;
 }
 
 export async function fetchClaimsWorklist(

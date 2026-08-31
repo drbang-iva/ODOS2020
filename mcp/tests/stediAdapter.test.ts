@@ -3,6 +3,8 @@ import { test } from "node:test";
 import {
   STEDI_DEFAULT_BASE_URL,
   STEDI_DEFAULT_CORE_BASE_URL,
+  STEDI_DEFAULT_HEALTHCARE_BASE_URL,
+  STEDI_DEFAULT_MANAGER_BASE_URL,
   StediRequestError,
   createStediAdapter,
   stediConfigFromEnv,
@@ -53,6 +55,72 @@ test("Stedi adapter uses the documented JSON endpoints and API-key headers", asy
   assert.equal("enrollEra" in adapter, false);
 });
 
+test("Stedi preventive methods use the batch, COB, and Insurance Discovery contracts", async () => {
+  const { calls, fetchImpl } = jsonTransport({ status: "PENDING", discoveryId: "discovery-1" });
+  const adapter = createStediAdapter({
+    config: {
+      baseUrl: STEDI_DEFAULT_BASE_URL,
+      coreBaseUrl: STEDI_DEFAULT_CORE_BASE_URL,
+      healthcareBaseUrl: STEDI_DEFAULT_HEALTHCARE_BASE_URL,
+      managerBaseUrl: STEDI_DEFAULT_MANAGER_BASE_URL,
+      apiKey: "test-key",
+      submitterId: "SUBMITTER900",
+      mode: "test",
+    },
+    fetchImpl,
+    allowUnsupportedTestMode: true,
+  });
+
+  await adapter.submitBatchEligibility({
+    items: [{ submitterTransactionIdentifier: "appointment-1" }],
+    name: "odos-2026-08-31",
+    maxRetryHours: 8,
+  });
+  await adapter.getBatchEligibilityItems("batch-1", { pageSize: 1000, pageToken: "next-items" });
+  await adapter.pollBatchEligibility({ batchId: "batch-1", pageSize: 200, pageToken: "next-results" });
+  await adapter.pollBatchEligibility({ startDateTime: "2026-08-30T23:00:00.000Z", pageSize: 200 });
+  await adapter.checkCoordinationOfBenefits({ tradingPartnerServiceId: "PAYER1" });
+  await adapter.submitInsuranceDiscovery({ subscriber: { firstName: "Synthetic" } });
+  await adapter.getInsuranceDiscoveryResults("discovery-1");
+
+  assert.deepEqual(calls.map((call) => call.url), [
+    `${STEDI_DEFAULT_MANAGER_BASE_URL}/eligibility-manager/batch-eligibility`,
+    `${STEDI_DEFAULT_MANAGER_BASE_URL}/eligibility-manager/batch/batch-1/items?pageSize=1000&pageToken=next-items`,
+    `${STEDI_DEFAULT_MANAGER_BASE_URL}/eligibility-manager/polling/batch-eligibility?batchId=batch-1&pageSize=200&pageToken=next-results`,
+    `${STEDI_DEFAULT_MANAGER_BASE_URL}/eligibility-manager/polling/batch-eligibility?startDateTime=2026-08-30T23%3A00%3A00.000Z&pageSize=200`,
+    `${STEDI_DEFAULT_HEALTHCARE_BASE_URL}/coordination-of-benefits`,
+    `${STEDI_DEFAULT_HEALTHCARE_BASE_URL}/insurance-discovery/check/v1`,
+    `${STEDI_DEFAULT_HEALTHCARE_BASE_URL}/insurance-discovery/check/v1/discovery-1`,
+  ]);
+  assert.deepEqual(JSON.parse(String(calls[0].init.body)), {
+    items: [{ submitterTransactionIdentifier: "appointment-1" }],
+    name: "odos-2026-08-31",
+    maxRetryHours: 8,
+  });
+  assert.equal(calls[0].init.method, "POST");
+  assert.equal(calls[1].init.method, "GET");
+  assert.equal(calls[2].init.method, "GET");
+  assert.equal(calls[3].init.method, "GET");
+  assert.equal(calls[4].init.method, "POST");
+  assert.equal(calls[5].init.method, "POST");
+  assert.equal(calls[6].init.method, "GET");
+  assert.equal(calls.every((call) => (call.init.headers as Record<string, string>).Authorization === "test-key"), true);
+});
+
+test("Stedi production-only preventive methods cannot call the network in test mode", async () => {
+  const { calls, fetchImpl } = jsonTransport({ batchId: "must-not-be-returned" });
+  const adapter = createStediAdapter({
+    config: { baseUrl: STEDI_DEFAULT_BASE_URL, coreBaseUrl: STEDI_DEFAULT_CORE_BASE_URL, apiKey: "test-key", submitterId: "SUBMITTER900", mode: "test" },
+    fetchImpl,
+  });
+
+  await assert.rejects(
+    adapter.submitBatchEligibility({ items: [{}], name: "odos-test" }),
+    /requires STEDI_MODE=production; use an injected mocked contract for development/,
+  );
+  assert.equal(calls.length, 0);
+});
+
 test("Stedi reuses one polling transport, preserves ERA discovery output, and filters 277 discovery", async () => {
   const { calls, fetchImpl } = jsonTransport({
     items: [
@@ -86,6 +154,8 @@ test("Stedi configuration is opt-in and production requires an exact mode value"
     submitterId: "SUBMITTER900",
     baseUrl: STEDI_DEFAULT_BASE_URL,
     coreBaseUrl: STEDI_DEFAULT_CORE_BASE_URL,
+    healthcareBaseUrl: STEDI_DEFAULT_HEALTHCARE_BASE_URL,
+    managerBaseUrl: STEDI_DEFAULT_MANAGER_BASE_URL,
     mode: "test",
   });
   assert.equal(stediConfigFromEnv({ STEDI_API_KEY: "key", STEDI_SUBMITTER_ID: "SUBMITTER900", STEDI_MODE: "production" })?.mode, "production");

@@ -60,6 +60,15 @@ import {
 } from "../lib/practice-roles";
 import type { WatcherAlert, WatcherTaskAction } from "../lib/watchers";
 
+export function groupWatcherAlertsByAppointment(
+  alerts: readonly WatcherAlert[],
+): Record<string, WatcherAlert[]> {
+  return alerts.reduce<Record<string, WatcherAlert[]>>((groups, alert) => ({
+    ...groups,
+    [alert.appointmentId]: [...(groups[alert.appointmentId] ?? []), alert],
+  }), {});
+}
+
 export function SchedulerDayGrid({
   roles = [],
   watcherAlerts = [],
@@ -195,7 +204,7 @@ export function SchedulerDayGrid({
     [appointments, moveSource],
   );
   const watcherAlertsByAppointment = useMemo(
-    () => Object.fromEntries(watcherAlerts.map((alert) => [alert.appointmentId, alert])),
+    () => groupWatcherAlertsByAppointment(watcherAlerts),
     [watcherAlerts],
   );
 
@@ -544,7 +553,7 @@ export function SchedulerDayGrid({
         }}
         onDetails={(appointment) => setDetails({ appointment })}
         date={date}
-        watcherAlert={quickCardAppointment?.id ? watcherAlertsByAppointment[quickCardAppointment.id] : undefined}
+        watcherAlerts={quickCardAppointment?.id ? watcherAlertsByAppointment[quickCardAppointment.id] : undefined}
         onWatcherAction={onWatcherAction}
       />
       {details && (
