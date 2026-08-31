@@ -64,8 +64,8 @@ export function SmsOptOutControl({
   }, [activeLaneRole, onActiveLaneSuppressionChange, patientReference]);
 
   if (denied) return null;
-  if (error) return <p role="status" className="text-xs text-amber-200">SMS preferences unavailable.</p>;
-  if (!state) return <p className="text-xs text-white/40">Checking SMS preferences…</p>;
+  if (error) return <p role="status" className="text-xs text-[color:var(--odos-amber)]">SMS preferences unavailable.</p>;
+  if (!state) return <p className="text-xs text-[color:var(--odos-faint)]">Checking SMS preferences…</p>;
 
   const chooseClear = (number: string | null) => {
     setClearNumber(number);
@@ -114,25 +114,25 @@ export function SmsOptOutControl({
   };
 
   return (
-    <section aria-label="SMS text preferences" className="grid gap-2 rounded border border-white/10 bg-black/10 p-3">
-      <h3 className="text-sm font-semibold text-white/80">SMS text preferences</h3>
+    <section aria-label="SMS text preferences" className="grid gap-2 rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface)] p-3">
+      <h3 className="text-sm font-semibold text-[color:var(--odos-text)]">SMS text preferences</h3>
       {state.remainingOptOuts.global && (
-        <p className="text-sm font-semibold text-amber-200">General SMS opt-out — all text lanes are blocked.</p>
+        <p className="text-sm font-semibold text-[color:var(--odos-amber)]">General SMS opt-out — all text lanes are blocked.</p>
       )}
       {activeLaneRole && state.smsLanes.some((lane) =>
         lane.roles.includes(activeLaneRole)
         && (state.remainingOptOuts.global || state.remainingOptOuts.numbers.includes(lane.number))) && (
-        <p className="text-sm font-semibold text-amber-200">
+        <p className="text-sm font-semibold text-[color:var(--odos-amber)]">
           Texting is blocked for this patient on the front-desk lane.
         </p>
       )}
       {state.smsLanes.map((lane) => {
         const optedOut = state.remainingOptOuts.global || state.remainingOptOuts.numbers.includes(lane.number);
         return (
-          <div key={lane.number} className="flex flex-wrap items-center justify-between gap-2 text-sm text-white/70">
+          <div key={lane.number} className="flex flex-wrap items-center justify-between gap-2 text-sm text-[color:var(--odos-muted)]">
             <span>{lane.label} — {optedOut ? "opted out (STOP)" : "OK"}</span>
             {optedOut && (
-              <button type="button" onClick={() => chooseClear(lane.number)} className="text-blue-200 underline">
+              <button type="button" onClick={() => chooseClear(lane.number)} className="text-[color:var(--odos-accent)] underline">
                 Re-enroll…
               </button>
             )}
@@ -140,16 +140,16 @@ export function SmsOptOutControl({
         );
       })}
       {state.smsOptedOut && (
-        <button type="button" onClick={() => chooseClear(null)} className="justify-self-start text-xs text-blue-200 underline">
+        <button type="button" onClick={() => chooseClear(null)} className="justify-self-start text-xs text-[color:var(--odos-accent)] underline">
           Clear all SMS opt-outs…
         </button>
       )}
       {clearNumber !== undefined && (
-        <form onSubmit={(event) => void submit(event)} className="mt-2 grid gap-2 border-t border-white/10 pt-3">
-          <strong className="text-sm text-white/80">
+        <form onSubmit={(event) => void submit(event)} className="mt-2 grid gap-2 border-t border-[color:var(--odos-line)] pt-3">
+          <strong className="text-sm text-[color:var(--odos-text)]">
             {clearNumber ? "Re-enroll this SMS lane" : "Clear all SMS opt-outs"}
           </strong>
-          <label className="grid gap-1 text-xs text-white/70">
+          <label className="grid gap-1 text-xs text-[color:var(--odos-muted)]">
             Reason
             <textarea
               aria-label="Reason for re-enrollment"
@@ -159,7 +159,7 @@ export function SmsOptOutControl({
               className="scheduler-input min-h-20"
             />
           </label>
-          <label className="grid gap-1 text-xs text-white/70">
+          <label className="grid gap-1 text-xs text-[color:var(--odos-muted)]">
             Identity verification
             <select
               aria-label="Identity verification"
@@ -175,16 +175,16 @@ export function SmsOptOutControl({
             </select>
           </label>
           <div className="flex gap-2">
-            <button type="button" onClick={() => setClearNumber(undefined)} className="rounded border border-white/15 px-3 py-1 text-xs">
+            <button type="button" onClick={() => setClearNumber(undefined)} className="rounded border border-[color:var(--odos-line-2)] px-3 py-1 text-xs">
               Cancel
             </button>
-            <button type="submit" disabled={clearing || !reason.trim() || !identityVerification} className="rounded bg-blue-500 px-3 py-1 text-xs font-semibold disabled:opacity-50">
+            <button type="submit" disabled={clearing || !reason.trim() || !identityVerification} className="rounded bg-brand px-3 py-1 text-xs font-semibold text-[color:var(--odos-accent-ink)] disabled:opacity-50">
               {clearing ? "Clearing…" : "Confirm re-enrollment"}
             </button>
           </div>
         </form>
       )}
-      {result && <p role="status" className="text-sm font-semibold text-amber-200">{result}</p>}
+      {result && <p role="status" className="text-sm font-semibold text-[color:var(--odos-amber)]">{result}</p>}
     </section>
   );
 }

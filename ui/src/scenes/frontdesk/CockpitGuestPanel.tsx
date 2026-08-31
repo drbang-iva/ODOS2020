@@ -294,7 +294,7 @@ function MessagesPanel({ selectedPatient: initialPatient }: { selectedPatient?: 
   return (
     <section className="grid gap-4">
       <div className="flex items-center justify-between gap-2">
-        <strong className="text-white/85">{patientName(selectedPatient)}</strong>
+        <strong className="text-[color:var(--odos-text)]">{patientName(selectedPatient)}</strong>
         <button type="button" onClick={() => selectPatient(undefined)} className="text-xs text-blue-200 underline">
           Change patient
         </button>
@@ -304,7 +304,7 @@ function MessagesPanel({ selectedPatient: initialPatient }: { selectedPatient?: 
         activeLaneRole="transactional-sms"
         onActiveLaneSuppressionChange={updateSuppression}
       />
-      <label className="grid gap-2 text-xs font-semibold text-white/70">
+      <label className="grid gap-2 text-xs font-semibold text-[color:var(--odos-muted)]">
         Message
         <textarea
           aria-label="Compose text message"
@@ -314,10 +314,10 @@ function MessagesPanel({ selectedPatient: initialPatient }: { selectedPatient?: 
           className="scheduler-input min-h-28 disabled:cursor-not-allowed disabled:opacity-50"
         />
       </label>
-      <button type="button" disabled={!suppressionKnown || suppressed || sending || !message.trim()} onClick={() => void submit()} className="rounded bg-blue-500 px-3 py-2 font-semibold text-white disabled:opacity-50">
+      <button type="button" disabled={!suppressionKnown || suppressed || sending || !message.trim()} onClick={() => void submit()} className="rounded bg-brand px-3 py-2 font-semibold text-[color:var(--odos-accent-ink)] disabled:opacity-50">
         {sending ? "Sending…" : "Send text"}
       </button>
-      {sendStatus && <p role="status" className="text-xs text-white/70">{sendStatus}</p>}
+      {sendStatus && <p role="status" className="text-xs text-[color:var(--odos-muted)]">{sendStatus}</p>}
     </section>
   );
 }
