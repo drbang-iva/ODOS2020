@@ -154,6 +154,19 @@ test("the demographics opt-out control distinguishes suppressed and available SM
     });
     assert.equal(renderer.root.findByProps({ "aria-label": "Compose text message" }).props.disabled, true);
     act(() => renderer.unmount());
+
+    globalSuppressed = false;
+    laneSuppressed = true;
+    await act(async () => {
+      renderer = create(React.createElement(CockpitGuestPanel as never, {
+        panel: "messages",
+        onClose: () => undefined,
+        selectedPatient: PATIENT,
+      }));
+      await Promise.resolve();
+    });
+    assert.equal(renderer.root.findByProps({ "aria-label": "Compose text message" }).props.disabled, true);
+    act(() => renderer.unmount());
   } finally {
     globalThis.fetch = originalFetch;
   }
