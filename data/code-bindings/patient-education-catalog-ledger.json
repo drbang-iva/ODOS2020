@@ -1,0 +1,42 @@
+{
+  "ledger": "patient-education-catalog",
+  "status": "verified",
+  "mandate": 14,
+  "accessDate": "2026-08-31",
+  "sources": [
+    {
+      "id": "cdc-fy2026-code-descriptions",
+      "publisher": "CDC/NCHS",
+      "title": "FY 2026 ICD-10-CM Code Descriptions",
+      "url": "https://ftp.cdc.gov/pub/health_statistics/nchs/publications/ICD10CM/2026/icd10cm-Code%20Descriptions-2026.zip",
+      "accessed": "2026-08-31",
+      "authority": "primary"
+    },
+    {
+      "id": "cms-fy2026-full-code-manual",
+      "publisher": "CMS",
+      "title": "FY 2026 ICD-10-CM Full Code Manual",
+      "url": "https://www.cms.gov/icd10m/FY2026-nprm-version43-fullcode-cms/fullcode_cms/",
+      "accessed": "2026-08-31",
+      "authority": "primary"
+    }
+  ],
+  "diagnosisCodes": [
+    {
+      "code": "H04.123",
+      "display": "Dry eye syndrome of bilateral lacrimal glands",
+      "sourceRefs": [
+        "cdc-fy2026-code-descriptions",
+        "cms-fy2026-full-code-manual"
+      ]
+    },
+    {
+      "code": "H52.13",
+      "display": "Myopia, bilateral",
+      "sourceRefs": [
+        "cdc-fy2026-code-descriptions",
+        "cms-fy2026-full-code-manual"
+      ]
+    }
+  ]
+}

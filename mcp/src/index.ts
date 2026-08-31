@@ -113,6 +113,7 @@ import { registerTwilioWebhookRoutes } from "./comms/twilio-routes.js";
 import { registerGhlWebhookRoutes } from "./comms/ghl-routes.js";
 import { persistInboundMessageEvent, persistTwilioWebhookEvent } from "./comms/comms-persistence.js";
 import { registerCommsApiRoutes } from "./comms/comms-api.js";
+import { loadDefaultEducationCatalogReader } from "./comms/education-catalog.js";
 import {
   createFhirTrackedLinkStore,
   registerTrackedLinkRoutes,
@@ -5847,6 +5848,7 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         authenticate: authenticateStaffRoute,
         fhir,
         dispatch: commsDispatch,
+        educationCatalog: loadDefaultEducationCatalogReader(),
         audit: auditRuntime,
       });
 

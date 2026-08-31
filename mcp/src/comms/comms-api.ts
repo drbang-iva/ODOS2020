@@ -19,6 +19,7 @@ import {
   type CommsChannelRole,
 } from "./comms-config.js";
 import type { CommsProvider, ConversationSummary } from "./comms-provider.js";
+import type { EducationCatalogReader, EducationContentItem } from "./education-catalog.js";
 import {
   ODOS_COMMS_CATEGORY_SYSTEM,
   ODOS_PATIENT_CALL_CATEGORY,
@@ -47,6 +48,7 @@ export interface CommsApiRouteDeps {
   authenticate(authHeader: string | undefined): Promise<CommsStaff | null>;
   fhir: SmsOptOutManagementFhir;
   dispatch: CommsDispatch;
+  educationCatalog: EducationCatalogReader;
   audit: FhirAuditRecorder;
   now?: () => string;
 }
@@ -79,6 +81,44 @@ export function registerCommsApiRoutes(
   app: Pick<Application, "get" | "post">,
   deps: CommsApiRouteDeps,
 ): void {
+  app.get("/communications/education", async (req, res) => withStaff(
+    req,
+    res,
+    deps,
+    "communications.read",
+    "Basic",
+    "communications-education-list",
+    undefined,
+    async () => {
+      const dxCode = educationDxCodeFromQuery(req);
+      const channel = educationChannelFromQuery(req);
+      const items = deps.educationCatalog.list().filter((item) =>
+        item.audience === "patient"
+        && (!dxCode || item.dxCodes.includes(dxCode))
+        && (!channel || item.channels.includes(channel)));
+      return { status: 200, body: { items } };
+    },
+  ));
+
+  app.get("/communications/education/:educationId", async (req, res) => withStaff(
+    req,
+    res,
+    deps,
+    "communications.read",
+    "Basic",
+    "communications-education-read",
+    undefined,
+    async () => {
+      const id = resourceKey(req.params.educationId, "education id");
+      const version = numberFromQuery(req, "version", 1, Number.MAX_SAFE_INTEGER);
+      const item = deps.educationCatalog.get(id, version);
+      if (!item || item.audience !== "patient") {
+        throw new CommsApiNotFoundError("Education content not found.");
+      }
+      return { status: 200, body: { item } };
+    },
+  ));
+
   app.get("/communications/opt-out", async (req, res) => withStaff(
     req,
     res,
@@ -835,6 +875,24 @@ function queryString(req: Request, ...names: string[]): string | undefined {
 function resourceKey(value: string | string[] | undefined, label: string): string {
   if (typeof value !== "string" || !/^[A-Za-z0-9.-]{1,128}$/.test(value)) {
     throw new CommsApiValidationError(`${label} is invalid.`);
+  }
+  return value;
+}
+
+function educationDxCodeFromQuery(req: Request): string | undefined {
+  const value = queryString(req, "dxCode");
+  if (value === undefined) return undefined;
+  if (!/^[A-Z][0-9A-Z]{1,2}(?:\.[0-9A-Z]{1,4})?$/.test(value)) {
+    throw new CommsApiValidationError("dxCode is invalid.");
+  }
+  return value;
+}
+
+function educationChannelFromQuery(req: Request): EducationContentItem["channels"][number] | undefined {
+  const value = queryString(req, "channel");
+  if (value === undefined) return undefined;
+  if (value !== "sms" && value !== "email" && value !== "print") {
+    throw new CommsApiValidationError("channel must be sms, email, or print.");
   }
   return value;
 }

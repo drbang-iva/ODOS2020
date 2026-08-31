@@ -12,6 +12,7 @@ import {
 } from "../src/authz/roles.js";
 import type { CommsProvider, ConversationSummary } from "../src/comms/comms-provider.js";
 import { registerCommsApiRoutes, type CommsApiRouteDeps } from "../src/comms/comms-api.js";
+import type { EducationContentItem } from "../src/comms/education-catalog.js";
 import { ODOS_COMMS_OPT_OUT_EXTENSION_URL } from "../src/comms/suppression-gate.js";
 import { authenticateStaffRoute } from "../src/payments/payment-endpoint.js";
 import express from "express";
@@ -25,6 +26,50 @@ const OPT_OUT_CLEAR_BODY = {
 const CALL_ID = `CA${"3".repeat(32)}`;
 const OTHER_CALL_ID = `CA${"8".repeat(32)}`;
 const RECORDING_ID = `RE${"4".repeat(32)}`;
+const EDUCATION_ITEMS: EducationContentItem[] = [
+  {
+    id: "dry-eye-basics",
+    version: 1,
+    title: "Understanding dry eye",
+    kind: "video",
+    audience: "patient",
+    dxCodes: ["H04.123"],
+    channels: ["sms", "email"],
+    laneHint: "clinical",
+    consentClass: "transactional",
+    urls: {
+      web: "https://education.invalid/dry-eye-basics/v1",
+      email: "https://education.invalid/dry-eye-basics/v1/email",
+    },
+  },
+  {
+    id: "dry-eye-basics",
+    version: 2,
+    title: "Understanding dry eye",
+    kind: "video",
+    audience: "patient",
+    dxCodes: ["H04.123"],
+    channels: ["sms", "email"],
+    laneHint: "clinical",
+    consentClass: "transactional",
+    urls: {
+      web: "https://education.invalid/dry-eye-basics/v2",
+      email: "https://education.invalid/dry-eye-basics/v2/email",
+    },
+  },
+  {
+    id: "internal-myopia-counseling-guide",
+    version: 1,
+    title: "Internal myopia counseling guide",
+    kind: "page",
+    audience: "internal",
+    dxCodes: [],
+    channels: ["print"],
+    laneHint: "clinical",
+    consentClass: "transactional",
+    urls: { print: "https://education.invalid/internal-myopia-counseling-guide/v1/print" },
+  },
+];
 
 test("communications RBAC gives front desk patient content without widening its FHIR scope", () => {
   const frontDeskDeclaration = getRoleDeclaration("staff");
@@ -83,6 +128,8 @@ test("FHIR policy construction preserves a declared hidden-field mask", () => {
 test("every communications endpoint rejects missing authentication and audits every authenticated wrong-role denial", async () => {
   const fixture = await startServer();
   const endpoints = [
+    { method: "GET", path: "/communications/education" },
+    { method: "GET", path: "/communications/education/dry-eye-basics" },
     { method: "GET", path: "/communications/conversations" },
     { method: "GET", path: `/communications/opt-out?patient=${PATIENT_REFERENCE}` },
     { method: "POST", path: "/communications/opt-out/clear", body: OPT_OUT_CLEAR_BODY },
@@ -102,6 +149,90 @@ test("every communications endpoint rejects missing authentication and audits ev
     assert.equal(fixture.denials.length, endpoints.length);
     assert.equal(fixture.denials.every((row) => row.eventType === "denied" && row.actionOutcome === "denied"), true);
     assert.equal(fixture.providerCalls.length, 0);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("education list filters by diagnosis and channel while excluding internal content", async () => {
+  const fixture = await startServer();
+  try {
+    const response = await request(
+      fixture.base,
+      "/communications/education?dxCode=H04.123&channel=sms",
+      "GET",
+      undefined,
+      "staff",
+    );
+    assert.equal(response.status, 200);
+    const body = await response.json() as { items: EducationContentItem[] };
+    assert.deepEqual(body.items.map(({ id, version }) => ({ id, version })), [
+      { id: "dry-eye-basics", version: 1 },
+      { id: "dry-eye-basics", version: 2 },
+    ]);
+    assert.equal(body.items.every(({ audience }) => audience === "patient"), true);
+    assert.equal(fixture.grants.at(-1)?.actionReason, "communications-education-list");
+
+    const unfiltered = await request(
+      fixture.base,
+      "/communications/education",
+      "GET",
+      undefined,
+      "staff",
+    );
+    assert.equal(unfiltered.status, 200);
+    assert.equal((await unfiltered.json() as { items: EducationContentItem[] }).items.some(
+      ({ audience }) => audience === "internal",
+    ), false);
+
+    const malformed = await request(
+      fixture.base,
+      "/communications/education?channel=voice",
+      "GET",
+      undefined,
+      "staff",
+    );
+    assert.equal(malformed.status, 400);
+    assert.equal(fixture.denials.at(-1)?.actionReason, "communications-education-list-failed");
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("education detail returns newest or exact pinned version and never exposes internal content", async () => {
+  const fixture = await startServer();
+  try {
+    const newest = await request(
+      fixture.base,
+      "/communications/education/dry-eye-basics",
+      "GET",
+      undefined,
+      "provider",
+    );
+    assert.equal(newest.status, 200);
+    assert.equal((await newest.json() as { item: EducationContentItem }).item.version, 2);
+
+    const pinned = await request(
+      fixture.base,
+      "/communications/education/dry-eye-basics?version=1",
+      "GET",
+      undefined,
+      "provider",
+    );
+    assert.equal(pinned.status, 200);
+    assert.equal((await pinned.json() as { item: EducationContentItem }).item.version, 1);
+
+    const internal = await request(
+      fixture.base,
+      "/communications/education/internal-myopia-counseling-guide",
+      "GET",
+      undefined,
+      "provider",
+    );
+    assert.equal(internal.status, 404);
+    assert.deepEqual(await internal.json(), { error: "Education content not found." });
+    assert.equal(fixture.grants.at(-1)?.actionReason, "communications-education-read");
+    assert.equal(fixture.denials.at(-1)?.actionReason, "communications-education-read-failed");
   } finally {
     await fixture.close();
   }
@@ -1337,6 +1468,15 @@ async function startServer(options: {
         };
       },
       initialize: async () => undefined,
+    },
+    educationCatalog: {
+      list: () => structuredClone(EDUCATION_ITEMS),
+      get: (id, version) => {
+        const matches = EDUCATION_ITEMS.filter((item) => item.id === id);
+        const selectedVersion = version ?? Math.max(...matches.map((item) => item.version));
+        const item = matches.find((candidate) => candidate.version === selectedVersion);
+        return item ? structuredClone(item) : undefined;
+      },
     },
     audit,
     now: () => "2026-08-02T15:00:00.000Z",

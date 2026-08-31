@@ -1,0 +1,143 @@
+{
+  "status": "seed-placeholder-only",
+  "placeholderUrlHost": "education.invalid",
+  "notice": "Seed metadata only. VisionForge has not published these renders. Every URL is an intentional placeholder and must not be sent to patients.",
+  "items": [
+    {
+      "id": "dry-eye-basics",
+      "version": 1,
+      "title": "Understanding dry eye",
+      "kind": "video",
+      "audience": "patient",
+      "dxCodes": ["H04.123"],
+      "channels": ["sms", "email"],
+      "laneHint": "clinical",
+      "consentClass": "transactional",
+      "urls": {
+        "web": "https://education.invalid/dry-eye-basics/v1",
+        "email": "https://education.invalid/dry-eye-basics/v1/email"
+      }
+    },
+    {
+      "id": "dry-eye-basics",
+      "version": 2,
+      "title": "Understanding dry eye",
+      "kind": "video",
+      "audience": "patient",
+      "dxCodes": ["H04.123"],
+      "channels": ["sms", "email"],
+      "laneHint": "clinical",
+      "consentClass": "transactional",
+      "urls": {
+        "web": "https://education.invalid/dry-eye-basics/v2",
+        "email": "https://education.invalid/dry-eye-basics/v2/email"
+      }
+    },
+    {
+      "id": "dry-eye-home-care",
+      "version": 1,
+      "title": "Dry eye home-care checklist",
+      "kind": "handout",
+      "audience": "patient",
+      "dxCodes": ["H04.123"],
+      "channels": ["email", "print"],
+      "laneHint": "clinical",
+      "consentClass": "transactional",
+      "urls": {
+        "email": "https://education.invalid/dry-eye-home-care/v1/email",
+        "print": "https://education.invalid/dry-eye-home-care/v1/print"
+      }
+    },
+    {
+      "id": "artificial-tears-guide",
+      "version": 1,
+      "title": "Choosing and using artificial tears",
+      "kind": "handout",
+      "audience": "patient",
+      "dxCodes": [],
+      "channels": ["sms", "email", "print"],
+      "laneHint": "clinical",
+      "consentClass": "transactional",
+      "urls": {
+        "web": "https://education.invalid/artificial-tears-guide/v1",
+        "email": "https://education.invalid/artificial-tears-guide/v1/email",
+        "print": "https://education.invalid/artificial-tears-guide/v1/print"
+      }
+    },
+    {
+      "id": "dry-eye-treatment-options",
+      "version": 1,
+      "title": "In-office dry eye treatment options",
+      "kind": "page",
+      "audience": "patient",
+      "dxCodes": [],
+      "channels": ["sms", "email"],
+      "laneHint": "retail",
+      "consentClass": "marketing",
+      "urls": {
+        "web": "https://education.invalid/dry-eye-treatment-options/v1",
+        "email": "https://education.invalid/dry-eye-treatment-options/v1/email"
+      }
+    },
+    {
+      "id": "myopia-basics",
+      "version": 1,
+      "title": "Understanding childhood myopia",
+      "kind": "video",
+      "audience": "patient",
+      "dxCodes": ["H52.13"],
+      "channels": ["sms", "email"],
+      "laneHint": "clinical",
+      "consentClass": "transactional",
+      "urls": {
+        "web": "https://education.invalid/myopia-basics/v1",
+        "email": "https://education.invalid/myopia-basics/v1/email"
+      }
+    },
+    {
+      "id": "myopia-control-options",
+      "version": 1,
+      "title": "Myopia control options for families",
+      "kind": "handout",
+      "audience": "patient",
+      "dxCodes": ["H52.13"],
+      "channels": ["sms", "email", "print"],
+      "laneHint": "clinical",
+      "consentClass": "transactional",
+      "urls": {
+        "web": "https://education.invalid/myopia-control-options/v1",
+        "email": "https://education.invalid/myopia-control-options/v1/email",
+        "print": "https://education.invalid/myopia-control-options/v1/print"
+      }
+    },
+    {
+      "id": "myopia-program-overview",
+      "version": 1,
+      "title": "Practice myopia-management program",
+      "kind": "page",
+      "audience": "patient",
+      "dxCodes": [],
+      "channels": ["sms", "email"],
+      "laneHint": "retail",
+      "consentClass": "marketing",
+      "urls": {
+        "web": "https://education.invalid/myopia-program-overview/v1",
+        "email": "https://education.invalid/myopia-program-overview/v1/email"
+      }
+    },
+    {
+      "id": "internal-myopia-counseling-guide",
+      "version": 1,
+      "title": "Internal myopia counseling guide",
+      "kind": "page",
+      "audience": "internal",
+      "dxCodes": [],
+      "channels": ["print"],
+      "laneHint": "clinical",
+      "consentClass": "transactional",
+      "urls": {
+        "print": "https://education.invalid/internal-myopia-counseling-guide/v1/print"
+      }
+    }
+  ]
+}
