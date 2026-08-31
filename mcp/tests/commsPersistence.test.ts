@@ -96,6 +96,11 @@ test("Twilio-originated STOP-equivalent inbound SMS blocks a subsequent Twilio s
   assert.deepEqual(result, { outcome: "suppressed", reason: "patient-opt-out" });
   assert.equal(sends, 0);
   assert.equal(fhir.ofType<Patient>("Patient")[0].extension?.[0]?.url, ODOS_COMMS_OPT_OUT_EXTENSION_URL);
+  assert.equal(
+    fhir.ofType<Patient>("Patient")[0].extension?.[0]?.extension
+      ?.find((part) => part.url === "number")?.valueString,
+    PRACTICE_NUMBER,
+  );
 });
 
 test("Twilio shared-number STOP blocks subsequent sends to both matching patients", async () => {

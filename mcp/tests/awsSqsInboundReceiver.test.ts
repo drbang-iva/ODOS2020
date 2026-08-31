@@ -79,6 +79,10 @@ test("AWS SQS STOP-equivalent delivery uses the shared gate and blocks AWS outbo
   assert.deepEqual(result, { outcome: "suppressed", reason: "patient-opt-out" });
   assert.equal(sends, 0);
   assert.equal(fhir.patient.extension?.[0]?.url, ODOS_COMMS_OPT_OUT_EXTENSION_URL);
+  assert.equal(
+    fhir.patient.extension?.[0]?.extension?.find((part) => part.url === "number")?.valueString,
+    PRACTICE_NUMBER,
+  );
 });
 
 test("AWS SQS retains a shared-number STOP after a mid-loop Patient update failure and succeeds on retry", async () => {

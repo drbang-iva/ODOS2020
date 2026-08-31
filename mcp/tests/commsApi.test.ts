@@ -240,6 +240,29 @@ test("clearing one named patient on a shared handset leaves the other patient su
   }
 });
 
+test("number-scoped clear reports a surviving legacy opt-out without a second Patient query", async () => {
+  const fixture = await startServer();
+  try {
+    const response = await request(fixture.base, "/communications/opt-out/clear", "POST", {
+      ...OPT_OUT_CLEAR_BODY,
+      number: "+18485550100",
+    }, "staff");
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), {
+      patientReference: PATIENT_REFERENCE,
+      smsOptedOut: true,
+      cleared: false,
+      suppressionCleared: false,
+      remainingOptOuts: { global: true, numbers: [] },
+    });
+    assert.equal(hasSmsOptOut(fixture.patients[0]!), true);
+    assert.equal(fixture.provenances.length, 0);
+  } finally {
+    await fixture.close();
+  }
+});
+
 test("opt-out clear uses the caller-bound FHIR client for the Patient write", async () => {
   const fixture = await startServer({ excludePatientWrite: true });
   try {

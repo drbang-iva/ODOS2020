@@ -77,7 +77,9 @@ export async function persistTwilioWebhookEvent(
     const inbound = event as TwilioInboundWebhookEvent;
     const result = await updateInboundSuppression(fhir, {
       from: inbound.from,
+      to: inbound.to,
       body: inbound.body,
+      optOutType: inbound.optOutType,
     });
     (deps.info ?? console.error)(
       `odos-mcp: Twilio inbound SMS suppression outcome=${result.outcome} matchedPatients=${result.matchedPatients}`,

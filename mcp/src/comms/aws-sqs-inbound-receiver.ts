@@ -52,7 +52,12 @@ export function createAwsSqsInboundReceiver(
         try {
           const event = parseAwsInboundMessage(message.Body, normalized.inboundTopicArn);
           await deps.onMessage(event);
-          const result = await updateInboundSuppression(deps.fhir, event);
+          const result = await updateInboundSuppression(deps.fhir, {
+            from: event.from,
+            to: event.to,
+            body: event.body,
+            optOutType: event.optOutType,
+          });
           (deps.info ?? console.error)(
             `odos-mcp: AWS inbound SMS suppression outcome=${result.outcome} matchedPatients=${result.matchedPatients}`,
           );
