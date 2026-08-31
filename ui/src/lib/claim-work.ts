@@ -1,6 +1,7 @@
 import type { ClaimsApiOptions, ClaimsWorklistItem } from "./claims-worklist";
 
 export const WORK_LANES = [
+  { id: "before-visit", label: "Before the visit" },
   { id: "aging", label: "Aging" },
   { id: "holds", label: "Holds" },
   { id: "denials", label: "Denials" },
@@ -139,6 +140,7 @@ export function buildWorkLanes(
     && item.resolutionDisposition === "legacy"
   ));
   const groupsByLane: Record<WorkLaneId, WorkGroup[]> = {
+    "before-visit": [],
     aging: claimGroupsForLane("aging", rows.filter((row) => row.open && row.agingBucket !== "current")),
     holds: claimGroupsForLane("holds", rows.filter((row) => (
       row.open

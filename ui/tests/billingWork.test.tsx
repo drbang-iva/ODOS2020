@@ -13,6 +13,7 @@ import {
 } from "../src/lib/claim-work";
 import type { ClaimsWorklistItem } from "../src/lib/claims-worklist";
 import { BillingWork, groupKeyAction, nextGroupIndex } from "../src/scenes/claims/BillingWork";
+import type { BeforeVisitWorkProjection, WatcherAlert } from "../src/lib/watchers";
 
 test("Work renders one collapsed row for a 15-claim reason batch", () => {
   const projection = healthyWorkFixture();
@@ -67,17 +68,83 @@ test("accepted claims remain charged until payer adjudication evidence exists", 
   assert.doesNotMatch(html, /adjudicated/);
 });
 
-test("all seven lane labels remain visible while healthy counts and a truthful zero state render", () => {
+test("all eight lane labels remain visible while healthy counts and a truthful zero state render", () => {
   const html = renderToStaticMarkup(
     <BillingWork initialProjection={healthyWorkFixture()} initialActiveLane="hygiene" />,
   );
 
-  for (const label of ["Aging", "Holds", "Denials", "Underpaid", "Unmatched", "Untouched", "Hygiene"]) {
+  for (const label of ["Before the visit", "Aging", "Holds", "Denials", "Underpaid", "Unmatched", "Untouched", "Hygiene"]) {
     assert.match(html, new RegExp(`>${label}<`));
   }
   assert.match(html, /data-lane-count="hygiene"[^>]*>0</);
   assert.match(html, /No hygiene work/);
   assert.match(html, /Projection current as of/);
+});
+
+test("Before the visit renders reason-grouped preventive Tasks and their patient actions", () => {
+  const before: BeforeVisitWorkProjection = {
+    status: "healthy",
+    lastSuccessfulAt: "2026-08-30T23:10:00.000Z",
+    count: 2,
+    groups: [
+      {
+        key: "W21:eligibility-inactive",
+        watcherId: "W21",
+        reasonCode: "eligibility-inactive",
+        title: "INACTIVE coverage result",
+        count: 2,
+        items: [beforeVisitAlert("task-21", "Patient One"), beforeVisitAlert("task-22", "Patient Two")],
+      },
+    ],
+  };
+  const html = renderToStaticMarkup(
+    <BillingWork initialProjection={healthyWorkFixture()} initialBeforeVisitProjection={before} initialActiveLane="before-visit" />,
+  );
+  assert.match(html, /Before the visit/);
+  assert.match(html, /INACTIVE coverage result/);
+  assert.match(html, /2 patients/);
+  assert.match(html, /Patient One/);
+  assert.match(html, /Open patient/);
+  assert.match(html, /Already sorted/);
+  assert.match(html, /data-lane-count="before-visit"[^>]*>2</);
+});
+
+test("failed or unrun eligibility sweep renders degraded Before the visit with no clean zero", () => {
+  const before: BeforeVisitWorkProjection = { status: "degraded", reason: "never-run" };
+  const html = renderToStaticMarkup(
+    <BillingWork initialProjection={healthyWorkFixture()} initialBeforeVisitProjection={before} initialActiveLane="before-visit" />,
+  );
+  assert.match(html, /Eligibility sweep not current/);
+  assert.doesNotMatch(html, /No before the visit work/i);
+  assert.doesNotMatch(html, /data-lane-count="before-visit"/);
+});
+
+test("an initial claims projection still loads the independent Before the visit projection", async () => {
+  let beforeVisitLoads = 0;
+  const before: BeforeVisitWorkProjection = {
+    status: "healthy",
+    lastSuccessfulAt: "2026-08-30T23:10:00.000Z",
+    count: 0,
+    groups: [],
+  };
+  let renderer!: ReturnType<typeof create>;
+  await act(async () => {
+    renderer = create(
+      <BillingWork
+        initialProjection={healthyWorkFixture()}
+        initialActiveLane="before-visit"
+        loadBeforeVisitProjection={async () => {
+          beforeVisitLoads += 1;
+          return before;
+        }}
+      />,
+    );
+  });
+
+  assert.equal(beforeVisitLoads, 1);
+  assert.equal(renderer.root.findAllByProps({ "data-lane-count": "before-visit" }).length, 1);
+  assert.match(JSON.stringify(renderer.toJSON()), /No before the visit work/);
+  await act(async () => renderer.unmount());
 });
 
 test("degraded Work keeps navigation but hides every count, group, and reassuring zero state", () => {
@@ -310,6 +377,27 @@ function legacyRemit(): ClaimsWorklistItem {
       shortfallCents: 0,
       adjustments: [],
     },
+  };
+}
+
+function beforeVisitAlert(taskId: string, patientDisplay: string): WatcherAlert {
+  return {
+    taskId,
+    watcherId: "W21",
+    severity: "today",
+    patientReference: `Patient/${taskId}`,
+    patientDisplay,
+    appointmentReference: `Appointment/${taskId}`,
+    appointmentId: taskId,
+    appointmentAt: "2026-08-31T14:15:00.000Z",
+    message: `${patientDisplay} has inactive coverage.`,
+    frontDeskMessage: `${patientDisplay} comes in tomorrow and coverage is inactive.`,
+    consequence: "Resolve coverage before the visit.",
+    primaryAction: { label: "Open patient", href: `/insurance?patientId=${taskId}` },
+    dismissalReasons: [{ code: "already-sorted", display: "Already sorted" }],
+    balanceCents: 0,
+    ageDays: 0,
+    reasonCode: "eligibility-inactive",
   };
 }
 

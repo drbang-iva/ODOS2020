@@ -33,7 +33,7 @@ test("reason groups stay batched while aging and untouched remain independent la
   assert.equal(lane(lanes, "aging").groups.some((group) => group.count === 15), true);
   assert.equal(lane(lanes, "untouched").groups.some((group) => group.count === 15), true);
   assert.deepEqual(lanes.map((value) => value.id), [
-    "aging", "holds", "denials", "underpaid", "unmatched", "untouched", "hygiene",
+    "before-visit", "aging", "holds", "denials", "underpaid", "unmatched", "untouched", "hygiene",
   ]);
 });
 

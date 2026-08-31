@@ -5,7 +5,7 @@ import { useSchedulingStore } from "../../lib/scheduling-store";
 import { patientQuickCardViewModel } from "../../lib/scheduler-appointment-ui";
 import { BalanceChips } from "../../components/commercial/BalanceChips";
 import { AppointmentChartButton } from "../../components/AppointmentChartButton";
-import { watcherCollectionHref, type WatcherAlert, type WatcherTaskAction } from "../../lib/watchers";
+import { watcherActionHref, type WatcherAlert, type WatcherTaskAction } from "../../lib/watchers";
 
 export function PatientQuickCard({
   appointment,
@@ -15,7 +15,7 @@ export function PatientQuickCard({
   onDetails,
   date,
   canStartChart = false,
-  watcherAlert,
+  watcherAlerts = [],
   onWatcherAction,
 }: {
   appointment: Appointment | null;
@@ -25,7 +25,7 @@ export function PatientQuickCard({
   onDetails: (appointment: Appointment) => void;
   date: string;
   canStartChart?: boolean;
-  watcherAlert?: WatcherAlert;
+  watcherAlerts?: WatcherAlert[];
   onWatcherAction?: (taskId: string, action: WatcherTaskAction) => void | Promise<void>;
 }) {
   const patientReference = patientReferenceOf(appointment);
@@ -153,15 +153,15 @@ export function PatientQuickCard({
           </div>
         )}
 
-        {watcherAlert && (
-          <section className="rounded-sm border border-amber-300/40 bg-amber-950/35 p-3" aria-label="Balance watch">
-            <div className="text-xs font-bold uppercase tracking-wide text-amber-200">Balance at check-in</div>
+        {watcherAlerts.map((watcherAlert) => (
+          <section key={watcherAlert.taskId} className="rounded-sm border border-amber-300/40 bg-amber-950/35 p-3" aria-label={`${watcherAlert.watcherId} watch`}>
+            <div className="text-xs font-bold uppercase tracking-wide text-amber-200">{watcherCardTitle(watcherAlert)}</div>
             <p className="mt-1 font-semibold text-[var(--odos-text)]">{watcherAlert.frontDeskMessage}</p>
             <p className="mt-2 text-xs text-[var(--odos-muted)]">{watcherAlert.consequence}</p>
-            <a className="scheduler-button mt-3 inline-flex" href={watcherCollectionHref(watcherAlert)}>
+            <a className="scheduler-button mt-3 inline-flex" href={watcherActionHref(watcherAlert)}>
               {watcherAlert.primaryAction.label}
             </a>
-            <div className="mt-2 flex flex-wrap gap-1.5" aria-label="Dismiss balance watch">
+            <div className="mt-2 flex flex-wrap gap-1.5" aria-label={`Dismiss ${watcherAlert.watcherId} watch`}>
               {watcherAlert.dismissalReasons.map((reason) => (
                 <button
                   key={reason.code}
@@ -174,7 +174,7 @@ export function PatientQuickCard({
               ))}
             </div>
           </section>
-        )}
+        ))}
 
         {!patientReference && (
           <div className="border border-white/10 bg-black/20 p-3 text-white/70">
@@ -233,6 +233,13 @@ export function PatientQuickCard({
       </div>
     </aside>
   );
+}
+
+function watcherCardTitle(alert: WatcherAlert): string {
+  if (alert.watcherId === "W1") return "Balance at check-in";
+  if (alert.watcherId === "W21") return "Coverage before visit";
+  if (alert.watcherId === "W23") return "Insurance details before visit";
+  return "Before the visit";
 }
 
 function QuickCardRow({ label, value }: { label: string; value: string }) {
