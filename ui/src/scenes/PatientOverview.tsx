@@ -19,7 +19,6 @@ import { useOptionalRole } from "../lib/role-context";
 import { DEFAULT_ROLE } from "../lib/roles";
 import { CLINIC_PATH } from "./DeskHome";
 import { PinnedOfficeNote } from "../components/OfficeChannel";
-import { SmsOptOutControl } from "../components/patient/SmsOptOutControl";
 import { BalanceChips } from "../components/commercial/BalanceChips";
 import { CreditBankDepositSheet } from "../components/commercial/CreditBankDepositSheet";
 import { SaleSheet } from "../components/commercial/SaleSheet";
@@ -349,12 +348,6 @@ export function PatientOverview({
                 <small>Version {entry.versionId} · {entry.editedAt ? shortDateTime(entry.editedAt) : "time not recorded"} · {entry.editedBy ?? "author not recorded"}</small>
               </article>
             ))}
-          </section>
-        )}
-
-        {patient.id && (
-          <section className="odos-sticky-note" aria-label="Patient SMS preferences">
-            <SmsOptOutControl patientReference={`Patient/${patient.id}`} />
           </section>
         )}
 
