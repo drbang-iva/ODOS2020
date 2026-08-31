@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import type { Basic, Bundle, Resource } from "@medplum/fhirtypes";
 import {
+  createFhirEligibilitySweepStore,
   eligibilityTransactionIdentifier,
   runEligibilitySweepTick,
   startEligibilitySweepWorker,
@@ -56,12 +58,15 @@ function memoryStore(candidates = [candidate()], cloneCandidates = true): Eligib
 } {
   const states: EligibilitySweepState[] = [];
   const findings: EligibilityFinding[] = [];
+  let submittedCandidates: EligibilityCandidate[] | undefined;
   return {
     states,
     findings,
     loadState: async () => states.at(-1),
     saveState: async (state) => { states.push(structuredClone(state)); },
     loadCandidates: async () => cloneCandidates ? structuredClone(candidates) : candidates,
+    loadSubmittedCandidates: async () => submittedCandidates ? structuredClone(submittedCandidates) : undefined,
+    saveSubmittedCandidates: async (_date, values) => { submittedCandidates = structuredClone(values); },
     loadFindings: async () => structuredClone(findings),
     replaceFindings: async (_date, values) => {
       findings.splice(0, findings.length, ...structuredClone(values));
@@ -303,9 +308,11 @@ test("a later batch submission failure preserves accepted batch IDs and does not
   }));
   const store = memoryStore(candidates, false);
   let submitCalls = 0;
+  const submittedItemCounts: number[] = [];
   const client = stedi({
-    submitBatchEligibility: async () => {
+    submitBatchEligibility: async (input) => {
       submitCalls += 1;
+      submittedItemCounts.push(input.items.length);
       if (submitCalls === 1) return { batchId: "accepted-batch", submittedAt: NOW };
       if (submitCalls === 2) throw new Error("later chunk failed");
       return { batchId: "resumed-batch", submittedAt: NOW };
@@ -319,8 +326,14 @@ test("a later batch submission failure preserves accepted batch IDs and does not
   assert.equal(store.states.at(-1)?.submittedTransactionIdentifiers?.length, 10_000);
   assert.equal(store.states.at(-1)?.submissionComplete, false);
 
+  candidates[0].chartMemberId = "CHANGED-AFTER-ACCEPTANCE";
+  candidates[0].eligibilityRequest = {
+    ...candidates[0].eligibilityRequest,
+    subscriber: { firstName: "Marcus", lastName: "Test", dateOfBirth: "19800102", memberId: "CHANGED-AFTER-ACCEPTANCE" },
+  };
   await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: "2026-08-30T23:05:00.000Z" });
   assert.equal(submitCalls, 3);
+  assert.deepEqual(submittedItemCounts, [10_000, 1, 1]);
   assert.equal(store.states.at(-1)?.status, "submitted");
   assert.deepEqual(store.states.at(-1)?.batchIds, ["accepted-batch", "resumed-batch"]);
   assert.equal(store.states.at(-1)?.submittedTransactionIdentifiers?.length, 10_001);
@@ -367,7 +380,15 @@ test("candidate edits after submission cannot reinterpret an earlier payer respo
         state: "COMPLETED",
         eligibilityCheckResult: "INACTIVE",
         submitterTransactionIdentifier: originalTransactionId,
+        additionalInfo: { eligibility: { aaaErrors: [{ code: "72" }] } },
       }],
+    }),
+    pollBatchEligibility: async () => ({
+      items: [{ submitterTransactionIdentifier: originalTransactionId, aaaErrors: [{ code: "72" }] }],
+    }),
+    submitInsuranceDiscovery: async () => ({
+      status: "COMPLETE",
+      items: [{ subscriber: { memberId: "DISCOVERED-456" } }],
     }),
   });
 
@@ -379,7 +400,52 @@ test("candidate edits after submission cannot reinterpret an earlier payer respo
   };
   await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: "2026-08-30T23:05:00.000Z" });
 
-  assert.equal(store.findings.length, 0);
+  assert.equal(store.findings.some((finding) => finding.watcherId === "W21"), true);
+  assert.deepEqual(store.findings.find((finding) => finding.watcherId === "W23")?.memberIdProposal, {
+    current: "CHART-123",
+    proposed: "DISCOVERED-456",
+    source: "insurance-discovery",
+  });
+});
+
+test("FHIR sweep storage round-trips paged immutable candidate snapshots", async () => {
+  const resources: Basic[] = [];
+  const fhir = {
+    search: async <T extends Resource>(_resourceType: T["resourceType"], params: Record<string, string>): Promise<Bundle<T>> => {
+      const requested = params.identifier?.split("|").at(-1);
+      const matches = resources.filter((resource) => resource.identifier?.some((identifier) => identifier.value === requested));
+      return {
+        resourceType: "Bundle" as const,
+        type: "searchset" as const,
+        entry: matches.map((resource) => ({ resource: resource as T })),
+      };
+    },
+    read: async () => { throw new Error("not used"); },
+    create: async (resource: Basic) => {
+      const created = { ...structuredClone(resource), id: `snapshot-${resources.length + 1}` };
+      resources.push(created);
+      return created;
+    },
+    update: async (_resourceType: string, id: string, resource: Basic) => {
+      const index = resources.findIndex((value) => value.id === id);
+      resources[index] = structuredClone(resource);
+      return resources[index];
+    },
+  };
+  const store = createFhirEligibilitySweepStore(fhir as never, "America/New_York");
+  const candidates = Array.from({ length: 101 }, (_, index) => candidate({
+    key: `2026-08-31:appointment-snapshot-${index}:coverage-snapshot-${index}`,
+    appointmentReference: `Appointment/snapshot-${index}`,
+    coverageReference: `Coverage/snapshot-${index}`,
+  }));
+
+  await store.saveSubmittedCandidates(DATE, candidates);
+  assert.equal(resources.length, 2);
+  assert.deepEqual((await store.loadSubmittedCandidates(DATE))?.map((value) => value.key), candidates.map((value) => value.key));
+
+  await store.saveSubmittedCandidates(DATE, candidates.slice(0, 1));
+  assert.equal(resources.length, 2, "the unused page is cleared rather than duplicated");
+  assert.deepEqual((await store.loadSubmittedCandidates(DATE))?.map((value) => value.key), [candidates[0].key]);
 });
 
 test("the worker does not overlap a slow eligibility sweep tick", async () => {

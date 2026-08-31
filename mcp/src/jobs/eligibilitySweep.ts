@@ -82,6 +82,8 @@ export interface EligibilitySweepStore {
   loadState(date: string): Promise<EligibilitySweepState | undefined>;
   saveState(state: EligibilitySweepState): Promise<void>;
   loadCandidates(date: string): Promise<EligibilityCandidate[]>;
+  loadSubmittedCandidates(date: string): Promise<EligibilityCandidate[] | undefined>;
+  saveSubmittedCandidates(date: string, candidates: EligibilityCandidate[]): Promise<void>;
   loadFindings(date: string): Promise<EligibilityFinding[]>;
   replaceFindings(date: string, findings: EligibilityFinding[]): Promise<void>;
 }
@@ -150,7 +152,12 @@ async function submitSweep(
   lastSuccessfulAt?: string,
   progress?: EligibilitySweepState,
 ): Promise<void> {
-  const candidates = uniqueCandidates(await input.store.loadCandidates(input.date)).map(prepareCandidate);
+  const savedCandidates = progress ? await input.store.loadSubmittedCandidates(input.date) : undefined;
+  if (progress && !savedCandidates) {
+    throw new Error("Eligibility sweep cannot resume because its submitted candidate snapshot is missing.");
+  }
+  const candidates = savedCandidates
+    ?? uniqueCandidates(await input.store.loadCandidates(input.date)).map(prepareCandidate);
   if (candidates.length === 0 && !progress?.batchIds.length) {
     await input.store.replaceFindings(input.date, []);
     await input.store.saveState({
@@ -165,6 +172,7 @@ async function submitSweep(
     });
     return;
   }
+  if (!progress) await input.store.saveSubmittedCandidates(input.date, candidates);
   const batchIds = [...(progress?.batchIds ?? [])];
   const submittedTransactionIdentifiers = [...(progress?.submittedTransactionIdentifiers ?? [])];
   const submitted = new Set(submittedTransactionIdentifiers);
@@ -225,7 +233,9 @@ async function pollAndIngestSweep(input: EligibilitySweepTickInput, state: Eligi
   const statusByKey = indexByTransactionIdentifier(statuses);
   const resultByKey = indexByTransactionIdentifier(results);
   const submitted = new Set(state.submittedTransactionIdentifiers ?? statusByKey.keys());
-  const candidates = uniqueCandidates(await input.store.loadCandidates(input.date)).map(prepareCandidate)
+  const savedCandidates = await input.store.loadSubmittedCandidates(input.date);
+  const candidates = (savedCandidates
+    ?? uniqueCandidates(await input.store.loadCandidates(input.date)).map(prepareCandidate))
     .filter((candidate) => submitted.has(candidate.eligibilityRequest.submitterTransactionIdentifier));
   const findings: EligibilityFinding[] = [];
   const pendingDiscoveryIds: Record<string, string> = {};
@@ -529,6 +539,7 @@ export const ELIGIBILITY_SWEEP_CODE_SYSTEM = "https://odos2020.com/fhir/CodeSyst
 export const ELIGIBILITY_SWEEP_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/eligibility-sweep";
 const ELIGIBILITY_SWEEP_STATE_EXTENSION_URL = "https://odos2020.com/fhir/StructureDefinition/eligibility-sweep-state";
 const ELIGIBILITY_SWEEP_FINDING_EXTENSION_URL = "https://odos2020.com/fhir/StructureDefinition/eligibility-sweep-finding";
+const CANDIDATE_SNAPSHOT_PAGE_SIZE = 100;
 const INACTIVE_APPOINTMENT_STATUSES = new Set(["cancelled", "noshow", "entered-in-error"]);
 
 export interface EligibilitySweepFhir extends PaginatedFhir, Pick<MedplumClient, "read" | "create" | "update"> {}
@@ -563,6 +574,36 @@ export function createFhirEligibilitySweepStore(
       });
     },
     loadCandidates: (date) => loadEligibilityCandidates(fhir, date, timeZone),
+    loadSubmittedCandidates: async (date) => {
+      const pages = await loadCandidateSnapshotResources(fhir, date);
+      return pages.length > 0
+        ? pages.sort((left, right) => left.index - right.index).flatMap((page) => page.candidates)
+        : undefined;
+    },
+    saveSubmittedCandidates: async (date, candidates) => {
+      const existing = await loadCandidateSnapshotResources(fhir, date);
+      const byIndex = new Map(existing.map((page) => [page.index, page.resource]));
+      const pageCount = Math.ceil(candidates.length / CANDIDATE_SNAPSHOT_PAGE_SIZE);
+      for (let index = 0; index < pageCount; index += 1) {
+        const values = candidates.slice(
+          index * CANDIDATE_SNAPSHOT_PAGE_SIZE,
+          (index + 1) * CANDIDATE_SNAPSHOT_PAGE_SIZE,
+        );
+        const resource = candidateSnapshotResource(date, index, values, byIndex.get(index));
+        if (resource.id) await fhir.update("Basic", resource.id, resource);
+        else await fhir.create(resource, {
+          "If-None-Exist": `identifier=${ELIGIBILITY_SWEEP_IDENTIFIER_SYSTEM}|snapshot:${date}:${index}`,
+        });
+      }
+      for (const page of existing) {
+        if (page.index < pageCount || !page.resource.id) continue;
+        await fhir.update(
+          "Basic",
+          page.resource.id,
+          candidateSnapshotResource(date, page.index, [], page.resource),
+        );
+      }
+    },
     loadFindings: async (date) => (await loadFindingResources(fhir, date)).map((value) => value.finding),
     replaceFindings: async (date, findings) => {
       const existing = await loadFindingResources(fhir, date, true);
@@ -712,6 +753,64 @@ function parseStateResource(resource: Basic): EligibilitySweepState {
   const raw = resource.extension?.find((extension) => extension.url === ELIGIBILITY_SWEEP_STATE_EXTENSION_URL)?.valueString;
   if (!raw) throw new Error(`Eligibility sweep state Basic/${resource.id ?? "unknown"} is missing state.`);
   return JSON.parse(raw) as EligibilitySweepState;
+}
+
+function candidateSnapshotResource(
+  date: string,
+  index: number,
+  candidates: EligibilityCandidate[],
+  existing?: Basic,
+): Basic {
+  return {
+    resourceType: "Basic",
+    ...(existing?.id ? { id: existing.id } : {}),
+    ...(existing?.meta ? { meta: existing.meta } : {}),
+    identifier: [
+      { system: ELIGIBILITY_SWEEP_IDENTIFIER_SYSTEM, value: `snapshot:${date}` },
+      { system: ELIGIBILITY_SWEEP_IDENTIFIER_SYSTEM, value: `snapshot:${date}:${index}` },
+    ],
+    code: { coding: [{ system: ELIGIBILITY_SWEEP_CODE_SYSTEM, code: "snapshot" }], text: "ODOS eligibility sweep candidate snapshot" },
+    extension: [{
+      url: ELIGIBILITY_SWEEP_STATE_EXTENSION_URL,
+      valueString: JSON.stringify({ date, index, candidates }),
+    }],
+  };
+}
+
+async function loadCandidateSnapshotResources(
+  fhir: EligibilitySweepFhir,
+  date: string,
+): Promise<Array<{ resource: Basic; index: number; candidates: EligibilityCandidate[] }>> {
+  const resources = await collectAllPages<Basic>(
+    fhir,
+    "Basic",
+    { identifier: `${ELIGIBILITY_SWEEP_IDENTIFIER_SYSTEM}|snapshot:${date}`, _count: "1000" },
+    `eligibility sweep candidate snapshot ${date}`,
+  );
+  const seen = new Set<number>();
+  return resources.map((resource) => {
+    const raw = resource.extension?.find((extension) => extension.url === ELIGIBILITY_SWEEP_STATE_EXTENSION_URL)?.valueString;
+    if (!raw) throw new Error(`Eligibility snapshot Basic/${resource.id ?? "unknown"} is missing state.`);
+    const parsed = record(JSON.parse(raw));
+    const index = parsed.index;
+    const candidates = parsed.candidates;
+    if (text(parsed.date) !== date || !Number.isInteger(index) || !Array.isArray(candidates)
+      || !candidates.every(isEligibilityCandidate)) {
+      throw new Error(`Eligibility snapshot Basic/${resource.id ?? "unknown"} is invalid.`);
+    }
+    if (seen.has(index as number)) throw new Error(`Eligibility sweep ${date} has duplicate snapshot page ${index}.`);
+    seen.add(index as number);
+    return { resource, index: index as number, candidates };
+  });
+}
+
+function isEligibilityCandidate(value: unknown): value is EligibilityCandidate {
+  return isRecord(value)
+    && Boolean(text(value.key))
+    && Boolean(text(value.appointmentReference))
+    && Boolean(text(value.coverageReference))
+    && isRecord(value.eligibilityRequest)
+    && Boolean(text(value.eligibilityRequest.submitterTransactionIdentifier));
 }
 
 function findingResource(date: string, finding: EligibilityFinding, active: boolean, existing?: Basic): Basic {
