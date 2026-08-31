@@ -322,64 +322,88 @@ test("an unavailable email channel stays visible, disabled, and explained", asyn
   }
 });
 
-test("a retail item disables Text when only the clinical SMS lane is configured", async () => {
+test("card notices distinguish no SMS lane from the unavailable default lane", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = unsuppressedSmsFetch;
-  const api: EngageSheetApi = {
-    async listEducation() {
-      return educationList([ITEMS[2]!], "staff_switchable", {
-        clinicalSms: true,
-        frontdeskSms: false,
-        email: false,
-        print: true,
-      });
-    },
-    async dispatchEducation() { return { outcome: "sent", providerMessageId: "should-not-send" }; },
-    async listConsentGuardians() { return []; },
-  };
   try {
-    let renderer!: ReturnType<typeof create>;
-    await act(async () => {
-      renderer = create(<EngageSheet open patient={{ ...PATIENT, birthDate: "1980-04-03" }} onClose={() => undefined} api={api} />);
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-    assert.equal(renderer.root.findByProps({ "aria-label": "Text Home care guide" }).props.disabled, true);
-    assert.match(renderedText(renderer), /No SMS lane is configured for this practice\./);
-    act(() => renderer.unmount());
+    for (const { item, availableChannels, expectedReason } of [
+      {
+        item: ITEMS[0]!,
+        availableChannels: { clinicalSms: false, frontdeskSms: false, email: false, print: true },
+        expectedReason: /No SMS lane is configured for this practice\./,
+      },
+      {
+        item: ITEMS[0]!,
+        availableChannels: { clinicalSms: false, frontdeskSms: true, email: false, print: true },
+        expectedReason: /The clinical SMS lane is not configured for this practice\./,
+      },
+      {
+        item: ITEMS[2]!,
+        availableChannels: { clinicalSms: true, frontdeskSms: false, email: false, print: true },
+        expectedReason: /The front-desk SMS lane is not configured for this practice\./,
+      },
+    ]) {
+      const api: EngageSheetApi = {
+        async listEducation() { return educationList([item], "staff_switchable", availableChannels); },
+        async dispatchEducation() { return { outcome: "sent", providerMessageId: "should-not-send" }; },
+        async listConsentGuardians() { return []; },
+      };
+      let renderer!: ReturnType<typeof create>;
+      await act(async () => {
+        renderer = create(<EngageSheet open patient={{ ...PATIENT, birthDate: "1980-04-03" }} onClose={() => undefined} api={api} />);
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      assert.equal(renderer.root.findByProps({ "aria-label": `Text ${item.title}` }).props.disabled, true);
+      assert.match(renderedText(renderer), expectedReason);
+      act(() => renderer.unmount());
+    }
   } finally {
     globalThis.fetch = originalFetch;
   }
 });
 
-test("the SMS lane toggle does not offer an unconfigured lane", async () => {
+test("the SMS lane toggle explains only the unavailable selected lane", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = unsuppressedSmsFetch;
-  const api: EngageSheetApi = {
-    async listEducation() {
-      return educationList([ITEMS[0]!], "staff_switchable", {
-        clinicalSms: true,
-        frontdeskSms: false,
-        email: false,
-        print: true,
-      });
-    },
-    async dispatchEducation() { return { outcome: "sent", providerMessageId: "should-not-send" }; },
-    async listConsentGuardians() { return []; },
-  };
   try {
-    let renderer!: ReturnType<typeof create>;
-    await act(async () => {
-      renderer = create(<EngageSheet open patient={{ ...PATIENT, birthDate: "1980-04-03" }} onClose={() => undefined} api={api} />);
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-    act(() => renderer.root.findByProps({ "aria-label": "Text Understanding dry eye" }).props.onClick());
-    const frontdeskOption = renderer.root.findAllByType("option").find((option) => option.props.value === "frontdesk");
-    assert.ok(frontdeskOption);
-    assert.equal(frontdeskOption.props.disabled, true);
-    assert.match(renderedText(renderer), /No SMS lane is configured for this practice\./);
-    act(() => renderer.unmount());
+    for (const { item, availableChannels, unavailableLane, expectedReason } of [
+      {
+        item: ITEMS[2]!,
+        availableChannels: { clinicalSms: false, frontdeskSms: true, email: false, print: true },
+        unavailableLane: "clinical",
+        expectedReason: /The clinical SMS lane is not configured for this practice\./,
+      },
+      {
+        item: ITEMS[0]!,
+        availableChannels: { clinicalSms: true, frontdeskSms: false, email: false, print: true },
+        unavailableLane: "frontdesk",
+        expectedReason: /The front-desk SMS lane is not configured for this practice\./,
+      },
+    ] as const) {
+      const api: EngageSheetApi = {
+        async listEducation() { return educationList([item], "staff_switchable", availableChannels); },
+        async dispatchEducation() { return { outcome: "sent", providerMessageId: "should-not-send" }; },
+        async listConsentGuardians() { return []; },
+      };
+      let renderer!: ReturnType<typeof create>;
+      await act(async () => {
+        renderer = create(<EngageSheet open patient={{ ...PATIENT, birthDate: "1980-04-03" }} onClose={() => undefined} api={api} />);
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      const textButton = renderer.root.findByProps({ "aria-label": `Text ${item.title}` });
+      assert.equal(textButton.props.disabled, false);
+      act(() => textButton.props.onClick());
+      assert.doesNotMatch(renderedText(renderer), /SMS lane is not configured for this practice\./);
+      const unavailableOption = renderer.root.findAllByType("option").find((option) => option.props.value === unavailableLane);
+      assert.ok(unavailableOption);
+      assert.equal(unavailableOption.props.disabled, true);
+      act(() => renderer.root.findByProps({ "aria-label": "Send via lane" }).props.onChange({ target: { value: unavailableLane } }));
+      assert.match(renderedText(renderer), expectedReason);
+      assert.equal(renderer.root.findByProps({ "aria-label": "Confirm education send" }).props.disabled, true);
+      act(() => renderer.unmount());
+    }
   } finally {
     globalThis.fetch = originalFetch;
   }

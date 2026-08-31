@@ -226,6 +226,10 @@ export function EngageSheet({
     }
   };
 
+  const selectedSmsLaneUnavailableReason = pending?.channel === "sms"
+    ? smsLaneUnavailableReason(availableChannels, lane)
+    : undefined;
+
   return (
     <ExamEntrySheet sectionId="engage" onCancel={onClose} active={open} hidden={!open}>
       <section className="grid gap-5 p-1" aria-label="Engage education">
@@ -274,6 +278,7 @@ export function EngageSheet({
               ? "clinical"
               : item.laneHint === "retail" ? "frontdesk" : "clinical";
             const defaultSmsLaneConfigured = isSmsLaneConfigured(availableChannels, defaultSmsLane);
+            const defaultSmsLaneUnavailableReason = smsLaneUnavailableReason(availableChannels, defaultSmsLane);
             return (
               <article key={`${item.id}@${item.version}`} className="rounded border border-[color:var(--odos-line)] p-4">
                 <div className="flex items-baseline justify-between gap-3">
@@ -287,7 +292,7 @@ export function EngageSheet({
                   <ChannelButton label="Print" channel="print" item={item} disabled={!recipients.length || marketingBlocked || !item.channels.includes("print") || !availableChannels.print} onClick={beginSend} />
                 </div>
                 {item.channels.includes("email") && !availableChannels.email && <p className="mt-2 text-sm text-[color:var(--odos-amber)]">Email is not configured for this practice.</p>}
-                {item.channels.includes("sms") && !defaultSmsLaneConfigured && <p className="mt-2 text-sm text-[color:var(--odos-amber)]">No SMS lane is configured for this practice.</p>}
+                {item.channels.includes("sms") && defaultSmsLaneUnavailableReason && <p className="mt-2 text-sm text-[color:var(--odos-amber)]">{defaultSmsLaneUnavailableReason}</p>}
                 {smsAvailability === "loading" && item.channels.includes("sms") && <p className="mt-2 text-sm text-[color:var(--odos-muted)]">Checking SMS availability…</p>}
                 {smsAvailability === "unavailable" && item.channels.includes("sms") && <p className="mt-2 text-sm text-[color:var(--odos-muted)]">SMS preferences could not be read; dispatch will enforce opt-outs.</p>}
                 {isSmsLaneSuppressed(smsState, defaultSmsLane) && <p className="mt-2 text-sm text-[color:var(--odos-amber)]">Texting is suppressed on this item’s default lane. Re-enroll above to send.</p>}
@@ -308,8 +313,8 @@ export function EngageSheet({
                 </select>
               </label>
             )}
-            {pending.channel === "sms" && chartDispatchLane !== "locked_clinical" && (!availableChannels.clinicalSms || !availableChannels.frontdeskSms) && (
-              <p className="text-sm text-[color:var(--odos-amber)]">No SMS lane is configured for this practice.</p>
+            {pending.channel === "sms" && chartDispatchLane !== "locked_clinical" && selectedSmsLaneUnavailableReason && (
+              <p className="text-sm text-[color:var(--odos-amber)]">{selectedSmsLaneUnavailableReason}</p>
             )}
             {pending.channel === "sms" && diagnosis && lane === "frontdesk" && (
               <p className="text-sm text-[color:var(--odos-amber)]">Front-desk lane is not BAA-covered; this content is tied to a diagnosis.</p>
@@ -365,6 +370,19 @@ function isSmsLaneConfigured(
   lane: "clinical" | "frontdesk",
 ): boolean {
   return lane === "clinical" ? availableChannels.clinicalSms : availableChannels.frontdeskSms;
+}
+
+function smsLaneUnavailableReason(
+  availableChannels: EducationChannelAvailability,
+  lane: "clinical" | "frontdesk",
+): string | undefined {
+  if (!availableChannels.clinicalSms && !availableChannels.frontdeskSms) {
+    return "No SMS lane is configured for this practice.";
+  }
+  if (isSmsLaneConfigured(availableChannels, lane)) return undefined;
+  return lane === "clinical"
+    ? "The clinical SMS lane is not configured for this practice."
+    : "The front-desk SMS lane is not configured for this practice.";
 }
 
 interface RecipientDisplay {
