@@ -609,7 +609,7 @@ test("education recipient override stays send-scoped unless the explicit chart-u
     assert.equal(wrongPatient.status, 400);
     assert.match((await wrongPatient.json() as { error: string }).error, /must match patientReference/);
 
-    const response = await request(fixture.base, "/communications/education/dispatch", "POST", {
+    const body = {
       patientReference: PATIENT_REFERENCE,
       educationId: "dry-eye-basics",
       version: 2,
@@ -618,7 +618,8 @@ test("education recipient override stays send-scoped unless the explicit chart-u
       recipientOverride: { phone: "+18645550177" },
       alsoUpdateChart: true,
       idempotencyKey: "education-override-0001",
-    }, "staff");
+    };
+    const response = await request(fixture.base, "/communications/education/dispatch", "POST", body, "staff");
     assert.equal(response.status, 200);
     assert.equal(fixture.smsRequests[0]?.toNumber, "+18645550177");
     assert.equal(fixture.recipientUpdates.length, 1);
@@ -627,6 +628,10 @@ test("education recipient override stays send-scoped unless the explicit chart-u
     assert.equal((fixture.recipientUpdates[0] as Patient).telecom?.some((point) =>
       point.system === "phone" && point.use === "old" && point.value === "+18645550199"), true);
     assert.match(JSON.stringify(fixture.provenances[0]), /Recipient override also updated chart/);
+    const replay = await request(fixture.base, "/communications/education/dispatch", "POST", body, "staff");
+    assert.equal(replay.status, 200);
+    assert.equal(fixture.smsRequests.length, 1);
+    assert.equal(fixture.recipientUpdates.length, 1);
   } finally {
     await fixture.close();
   }
@@ -1832,6 +1837,10 @@ async function startServer(options: {
             id,
             meta: { ...resource.meta, versionId: String(Number(persistedCommunications[index]?.meta?.versionId ?? "0") + 1) },
           } as T;
+          if (persisted.resourceType === "Patient") {
+            const patientIndex = patients.findIndex((patient) => patient.id === persisted.id);
+            if (patientIndex >= 0) patients[patientIndex] = structuredClone(persisted);
+          }
           if (persisted.resourceType === "Communication" && index >= 0) {
             persistedCommunications[index] = structuredClone(persisted as Communication);
           }

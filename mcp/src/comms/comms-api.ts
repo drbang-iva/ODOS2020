@@ -1269,6 +1269,8 @@ async function updateEducationRecipient(
     throw new CommsApiValidationError("alsoUpdateChart requires a phone or email recipient override.");
   }
   const resource = recipient.resource;
+  if (resource.telecom?.some((entry) =>
+    entry.system === system && entry.use !== "old" && entry.value === value)) return;
   if (!resource.id || !resource.meta?.versionId) {
     throw new CommsApiCapabilityError("The selected recipient cannot be updated without a current resource version.");
   }
