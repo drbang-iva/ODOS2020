@@ -230,7 +230,7 @@ export function registerCommsApiRoutes(
       const text = requiredText(body.body, "SMS body", 1_600);
       const idempotencyKey = requiredIdempotencyKey(req, body);
       const provider = typeof body.provider === "string"
-        ? adapter(deps, providerName(body.provider), staff.fhir)
+        ? adapterForExplicitSmsProvider(deps, providerName(body.provider), staff.fhir)
         : adapterForRole(deps, "transactional-sms", staff.fhir);
       if (!provider.sendSms) throw new CommsApiCapabilityError("SMS is not enabled for this communications provider.");
       const providerMessageIdentifierSystem =
@@ -561,6 +561,30 @@ function adapterForRole(
 ): CommsProvider {
   return deps.dispatch.getAdapterForRole?.(role, callerFhir)
     ?? deps.dispatch.getAdapter(providerForRole(deps.dispatch, role), callerFhir);
+}
+
+function adapterForExplicitSmsProvider(
+  deps: CommsApiRouteDeps,
+  provider: string,
+  callerFhir: CommsDispatchFhir,
+): CommsProvider {
+  const smsRoles = [
+    "transactional-sms",
+    "marketing-sms",
+    "clinical-sms",
+  ] as const;
+  const senderNumbers = new Set(smsRoles.flatMap((role) =>
+    deps.dispatch.providerFor(role) === provider
+      ? [deps.dispatch.senderNumberFor(role)].filter(
+          (number): number is string => number !== undefined,
+        )
+      : []));
+  if (senderNumbers.size > 1) {
+    throw new CommsApiValidationError(
+      `Communications provider "${provider}" has multiple SMS sender lanes; the request must identify one lane.`,
+    );
+  }
+  return adapter(deps, provider, callerFhir);
 }
 
 function redactConversationBodies(conversations: ConversationSummary[]): ConversationSummary[] {
