@@ -295,7 +295,9 @@ export function registerCommsApiRoutes(
         campaignType: "clinical-education",
         campaignId,
         messageId: body.idempotencyKey,
-        suppression: {},
+        suppression: item.consentClass === "transactional"
+          ? { quietHoursExemption: "staff-initiated-chart-education" }
+          : {},
       });
       if (result.outcome === "sent") {
         await persistStaffSentSms(staff.fhir, {

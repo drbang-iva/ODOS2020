@@ -203,7 +203,7 @@ export function EngageSheet({
       } else if (suppression) {
         setError("Texting is blocked by the communication frequency limit.");
       } else if (rescheduled) {
-        setStatus(`Queued until quiet hours end at ${rescheduled.rescheduledAt}.`);
+        setStatus(`Not sent — try after ${rescheduled.rescheduledAt}.`);
       } else {
         setStatus(results.length > 1 ? `Education sent to ${results.length} recipients.` : "Education sent.");
       }

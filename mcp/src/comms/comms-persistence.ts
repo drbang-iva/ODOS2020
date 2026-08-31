@@ -238,7 +238,7 @@ export async function persistStaffSmsTerminalOutcome(
   ];
   return serializeCommunicationWrite(`${identity.system}|${identity.value}`, () =>
     updateCommunicationFragment(fhir, input.communication, {
-      status: input.result.outcome === "suppressed" ? "not-done" : "on-hold",
+      status: "not-done",
       statusReason: { text: input.result.reason },
       identifier: identifiers,
     }, identity));

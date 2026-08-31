@@ -17,7 +17,11 @@ import type {
   SendResult,
   SendSmsRequest,
 } from "../src/comms/comms-provider.js";
-import { registerCommsApiRoutes, type CommsApiRouteDeps } from "../src/comms/comms-api.js";
+import {
+  ODOS_COMMS_MARKETING_CONSENT_EXTENSION_URL,
+  registerCommsApiRoutes,
+  type CommsApiRouteDeps,
+} from "../src/comms/comms-api.js";
 import type { EducationContentItem } from "../src/comms/education-catalog.js";
 import { ODOS_COMMS_OPT_OUT_EXTENSION_URL } from "../src/comms/suppression-gate.js";
 import { authenticateStaffRoute } from "../src/payments/payment-endpoint.js";
@@ -307,6 +311,37 @@ test("education dispatch refuses marketing content when recorded patient consent
   }
 });
 
+test("only transactional staff chart education receives the quiet-hours exemption", async () => {
+  const fixture = await startServer({
+    marketingConsent: true,
+    channelRoutes: { "transactional-sms": "twilio", "clinical-sms": "twilio" },
+    senderNumbers: { "transactional-sms": "+18645550100", "clinical-sms": "+18485550100" },
+  });
+  try {
+    for (const [educationId, version, lane, idempotencyKey] of [
+      ["dry-eye-basics", 2, "clinical", "education-transactional-quiet-hours"],
+      ["dry-eye-treatment-options", 1, "frontdesk", "education-marketing-quiet-hours"],
+    ] as const) {
+      const response = await request(fixture.base, "/communications/education/dispatch", "POST", {
+        patientReference: PATIENT_REFERENCE,
+        educationId,
+        version,
+        channel: "sms",
+        lane,
+        idempotencyKey,
+      }, "staff");
+      assert.equal(response.status, 200);
+    }
+
+    assert.deepEqual(fixture.smsRequests.map(({ suppression }) => suppression), [
+      { quietHoursExemption: "staff-initiated-chart-education" },
+      {},
+    ]);
+  } finally {
+    await fixture.close();
+  }
+});
+
 test("clinical education SMS uses the clinical lane, one tracked link, durable send state, and send provenance", async () => {
   const fixture = await startServer({
     channelRoutes: { "transactional-sms": "ghl", "clinical-sms": "twilio" },
@@ -536,7 +571,7 @@ test("a quiet-hours reschedule is durable and retrying the same key returns the 
     assert.equal(retry.status, 200);
     assert.deepEqual(await retry.json(), result);
     assert.equal(fixture.smsRequests.length, 1);
-    assert.equal(fixture.persistedCommunications[0]?.status, "on-hold");
+    assert.equal(fixture.persistedCommunications[0]?.status, "not-done");
   } finally {
     await fixture.close();
   }
@@ -1463,6 +1498,7 @@ async function startServer(options: {
   publicBaseUrl?: string;
   smsResult?: SendResult;
   smsError?: Error;
+  marketingConsent?: boolean;
 } = {}) {
   const providerCalls: string[] = [];
   const smsRequests: SendSmsRequest[] = [];
@@ -1491,10 +1527,19 @@ async function startServer(options: {
       { system: "phone", value: "+18645550199" },
       { system: "email", value: "patient@example.test" },
     ],
-    extension: [{
-      url: ODOS_COMMS_OPT_OUT_EXTENSION_URL,
-      extension: [{ url: "channel", valueCode: "sms" }],
-    }],
+    extension: [
+      {
+        url: ODOS_COMMS_OPT_OUT_EXTENSION_URL,
+        extension: [{ url: "channel", valueCode: "sms" }],
+      },
+      ...(options.marketingConsent && id === "synthetic-1" ? [{
+        url: ODOS_COMMS_MARKETING_CONSENT_EXTENSION_URL,
+        extension: [
+          { url: "consent", valueBoolean: true },
+          { url: "recorded", valueDateTime: "2026-08-02T14:00:00.000Z" },
+        ],
+      }] : []),
+    ],
   }));
   const encounters: Encounter[] = [
     { resourceType: "Encounter", id: "encounter-1", status: "in-progress", class: { code: "AMB" }, subject: { reference: PATIENT_REFERENCE } },

@@ -395,7 +395,7 @@ test("suppressed and rescheduled education outcomes render actionable sentences"
       renderer.root.findByProps({ "aria-label": "Confirm education send" }).props.onClick();
       await Promise.resolve();
     });
-    assert.match(renderedText(renderer), /Queued until quiet hours end at 2026-08-31T22:00:00.000Z/);
+    assert.match(renderedText(renderer), /Not sent — try after 2026-08-31T22:00:00.000Z/);
     act(() => renderer.unmount());
   } finally {
     globalThis.fetch = originalFetch;
