@@ -77,6 +77,7 @@ export interface EligibilitySweepState {
   submissionComplete?: boolean;
   inFlightTransactionIdentifiers?: string[];
   inFlightBatchName?: string;
+  inFlightStartedAt?: string;
   pendingDiscoveryIds?: Record<string, string>;
   failureDetail?: string;
 }
@@ -94,7 +95,7 @@ export interface EligibilitySweepStore {
 export interface PreventiveStediClient {
   submitBatchEligibility(input: { items: unknown[]; name: string; maxRetryHours?: number }): Promise<unknown>;
   getBatchEligibilityItems(batchId: string, input?: { pageSize?: number; pageToken?: string }): Promise<unknown>;
-  pollBatchEligibility(input: { batchId: string; pageSize?: number; pageToken?: string }): Promise<unknown>;
+  pollBatchEligibility(input: { batchId?: string; startDateTime?: string; pageSize?: number; pageToken?: string }): Promise<unknown>;
   checkCoordinationOfBenefits(payload: unknown): Promise<unknown>;
   submitInsuranceDiscovery(payload: unknown): Promise<unknown>;
   getInsuranceDiscoveryResults(discoveryId: string): Promise<unknown>;
@@ -120,12 +121,7 @@ export async function runEligibilitySweepTick(input: EligibilitySweepTickInput):
       return;
     }
     if (prior?.inFlightTransactionIdentifiers && prior.inFlightTransactionIdentifiers.length > 0) {
-      await input.store.saveState({
-        ...prior,
-        status: "failed",
-        lastAttemptAt: input.now,
-        failureDetail: "Stedi may have accepted a batch whose batchId was not checkpointed; automatic replay is blocked.",
-      });
+      await reconcileInFlightSubmission(input, prior);
       return;
     }
     if (prior?.submissionComplete === false && prior.batchIds.length > 0) {
@@ -159,6 +155,9 @@ export async function runEligibilitySweepTick(input: EligibilitySweepTickInput):
         : {}),
       ...(!definitiveRejection && failedFrom?.inFlightBatchName
         ? { inFlightBatchName: failedFrom.inFlightBatchName }
+        : {}),
+      ...(!definitiveRejection && failedFrom?.inFlightStartedAt
+        ? { inFlightStartedAt: failedFrom.inFlightStartedAt }
         : {}),
       ...(failedFrom?.pendingDiscoveryIds ? { pendingDiscoveryIds: failedFrom.pendingDiscoveryIds } : {}),
       failureDetail: safeErrorMessage(error),
@@ -227,6 +226,7 @@ async function submitSweep(
       submissionComplete: false,
       inFlightTransactionIdentifiers,
       inFlightBatchName: name,
+      inFlightStartedAt: input.now,
     });
     const result = record(await input.stedi.submitBatchEligibility({
       items: chunk.map((candidate) => candidate.eligibilityRequest),
@@ -248,6 +248,63 @@ async function submitSweep(
       submissionComplete: offset + chunk.length === remaining.length,
     });
   }
+}
+
+async function reconcileInFlightSubmission(
+  input: EligibilitySweepTickInput,
+  state: EligibilitySweepState,
+): Promise<void> {
+  if (!state.inFlightStartedAt) {
+    throw new Error("Eligibility sweep cannot reconcile an in-flight batch without its submission timestamp.");
+  }
+  const inFlightTransactionIdentifiers = state.inFlightTransactionIdentifiers ?? [];
+  const transactionIdentifiers = new Set(inFlightTransactionIdentifiers);
+  const results = await collectPages((pageToken) => input.stedi.pollBatchEligibility({
+    startDateTime: state.inFlightStartedAt,
+    pageSize: 200,
+    ...(pageToken ? { pageToken } : {}),
+  }));
+  const batchIds = [...new Set(results
+    .filter((result) => transactionIdentifiers.has(text(result.submitterTransactionIdentifier)))
+    .map((result) => text(result.batchId))
+    .filter(Boolean))];
+  if (batchIds.length > 1) {
+    throw new Error("Stedi returned more than one batch for the in-flight eligibility submission.");
+  }
+  if (batchIds.length === 0) {
+    await input.store.saveState({
+      ...state,
+      status: "processing",
+      lastAttemptAt: input.now,
+      failureDetail: "Awaiting Stedi reconciliation for an ambiguous batch submission; automatic replay remains blocked.",
+    });
+    return;
+  }
+
+  const candidates = await input.store.loadSubmittedCandidates(input.date);
+  if (!candidates) {
+    throw new Error("Eligibility sweep cannot reconcile because its submitted candidate snapshot is missing.");
+  }
+  const submittedTransactionIdentifiers = [...new Set([
+    ...(state.submittedTransactionIdentifiers ?? []),
+    ...inFlightTransactionIdentifiers,
+  ])];
+  const submitted = new Set(submittedTransactionIdentifiers);
+  await input.store.saveState({
+    ...state,
+    status: "submitted",
+    lastAttemptAt: input.now,
+    batchIds: [...new Set([...state.batchIds, batchIds[0]])],
+    expectedChecks: Math.max(state.expectedChecks, submittedTransactionIdentifiers.length),
+    submittedTransactionIdentifiers,
+    submissionComplete: candidates.every(
+      (candidate) => submitted.has(candidate.eligibilityRequest.submitterTransactionIdentifier),
+    ),
+    inFlightTransactionIdentifiers: undefined,
+    inFlightBatchName: undefined,
+    inFlightStartedAt: undefined,
+    failureDetail: undefined,
+  });
 }
 
 async function pollAndIngestSweep(input: EligibilitySweepTickInput, state: EligibilitySweepState): Promise<void> {

@@ -508,7 +508,45 @@ test("an accepted batch with a failed local checkpoint is never submitted again"
 
   await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: "2026-08-30T23:05:00.000Z" });
   assert.equal(client.submitted, 1);
-  assert.equal(store.states.at(-1)?.status, "failed");
+  assert.equal(store.states.at(-1)?.status, "submitted");
+  assert.deepEqual(store.states.at(-1)?.batchIds, ["batch-1"]);
+  assert.equal(store.states.at(-1)?.inFlightTransactionIdentifiers, undefined);
+});
+
+test("an ambiguous batch remains pending without replay until Stedi exposes its result", async () => {
+  const store = memoryStore();
+  const saveState = store.saveState;
+  let failAcceptedCheckpoint = true;
+  store.saveState = async (state) => {
+    if (failAcceptedCheckpoint && state.batchIds.includes("batch-1")) {
+      failAcceptedCheckpoint = false;
+      throw new Error("FHIR checkpoint unavailable");
+    }
+    await saveState(state);
+  };
+  let resultAvailable = false;
+  const client = stedi({
+    pollBatchEligibility: async () => resultAvailable
+      ? {
+        items: [{
+          batchId: "batch-1",
+          submitterTransactionIdentifier: candidate().eligibilityRequest.submitterTransactionIdentifier,
+        }],
+      }
+      : { items: [] },
+  });
+
+  await assert.rejects(runEligibilitySweepTick({ store, stedi: client, date: DATE, now: NOW }), /FHIR checkpoint unavailable/);
+  await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: "2026-08-30T23:05:00.000Z" });
+  assert.equal(client.submitted, 1);
+  assert.equal(store.states.at(-1)?.status, "processing");
+  assert.equal(store.states.at(-1)?.inFlightStartedAt, NOW);
+
+  resultAvailable = true;
+  await runEligibilitySweepTick({ store, stedi: client, date: DATE, now: "2026-08-30T23:10:00.000Z" });
+  assert.equal(client.submitted, 1);
+  assert.equal(store.states.at(-1)?.status, "submitted");
+  assert.deepEqual(store.states.at(-1)?.batchIds, ["batch-1"]);
 });
 
 test("pending Insurance Discovery fails closed when its submitted snapshot is missing", async () => {

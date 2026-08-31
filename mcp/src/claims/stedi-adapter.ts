@@ -38,7 +38,7 @@ export interface StediAdapter extends ClearinghouseAdapter {
     maxRetryHours?: number;
   }): Promise<unknown>;
   getBatchEligibilityItems(batchId: string, input?: { pageSize?: number; pageToken?: string }): Promise<unknown>;
-  pollBatchEligibility(input: { batchId: string; pageSize?: number; pageToken?: string }): Promise<unknown>;
+  pollBatchEligibility(input: { batchId?: string; startDateTime?: string; pageSize?: number; pageToken?: string }): Promise<unknown>;
   checkCoordinationOfBenefits(payload: unknown): Promise<unknown>;
   submitInsuranceDiscovery(payload: unknown): Promise<unknown>;
   getInsuranceDiscoveryResults(discoveryId: string): Promise<unknown>;

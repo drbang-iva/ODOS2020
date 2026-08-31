@@ -78,6 +78,7 @@ test("Stedi preventive methods use the batch, COB, and Insurance Discovery contr
   });
   await adapter.getBatchEligibilityItems("batch-1", { pageSize: 1000, pageToken: "next-items" });
   await adapter.pollBatchEligibility({ batchId: "batch-1", pageSize: 200, pageToken: "next-results" });
+  await adapter.pollBatchEligibility({ startDateTime: "2026-08-30T23:00:00.000Z", pageSize: 200 });
   await adapter.checkCoordinationOfBenefits({ tradingPartnerServiceId: "PAYER1" });
   await adapter.submitInsuranceDiscovery({ subscriber: { firstName: "Synthetic" } });
   await adapter.getInsuranceDiscoveryResults("discovery-1");
@@ -86,6 +87,7 @@ test("Stedi preventive methods use the batch, COB, and Insurance Discovery contr
     `${STEDI_DEFAULT_MANAGER_BASE_URL}/eligibility-manager/batch-eligibility`,
     `${STEDI_DEFAULT_MANAGER_BASE_URL}/eligibility-manager/batch/batch-1/items?pageSize=1000&pageToken=next-items`,
     `${STEDI_DEFAULT_MANAGER_BASE_URL}/eligibility-manager/polling/batch-eligibility?batchId=batch-1&pageSize=200&pageToken=next-results`,
+    `${STEDI_DEFAULT_MANAGER_BASE_URL}/eligibility-manager/polling/batch-eligibility?startDateTime=2026-08-30T23%3A00%3A00.000Z&pageSize=200`,
     `${STEDI_DEFAULT_HEALTHCARE_BASE_URL}/coordination-of-benefits`,
     `${STEDI_DEFAULT_HEALTHCARE_BASE_URL}/insurance-discovery/check/v1`,
     `${STEDI_DEFAULT_HEALTHCARE_BASE_URL}/insurance-discovery/check/v1/discovery-1`,
@@ -98,9 +100,10 @@ test("Stedi preventive methods use the batch, COB, and Insurance Discovery contr
   assert.equal(calls[0].init.method, "POST");
   assert.equal(calls[1].init.method, "GET");
   assert.equal(calls[2].init.method, "GET");
-  assert.equal(calls[3].init.method, "POST");
+  assert.equal(calls[3].init.method, "GET");
   assert.equal(calls[4].init.method, "POST");
-  assert.equal(calls[5].init.method, "GET");
+  assert.equal(calls[5].init.method, "POST");
+  assert.equal(calls[6].init.method, "GET");
   assert.equal(calls.every((call) => (call.init.headers as Record<string, string>).Authorization === "test-key"), true);
 });
 
