@@ -28,6 +28,13 @@ test("sanitizeForPublicEmission appends the internal URL suffix after a public b
   );
 });
 
+test("sanitizeForPublicEmission does not re-sanitize an internal public base", () => {
+  assert.equal(
+    sanitizeForPublicEmission("http://localhost:8104/x", "http://127.0.0.1:3333"),
+    "http://127.0.0.1:3333/x",
+  );
+});
+
 test("sanitizeForPublicEmission leaves URLs already rooted at the public base unchanged", () => {
   assert.equal(
     sanitizeForPublicEmission("https://learn.example.com/authorize", PUBLIC_BASE_URL),

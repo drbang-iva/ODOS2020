@@ -136,7 +136,7 @@ Create `.env` from `.env.example` or export these variables in the shell that ru
 | `TWILIO_MEDIA_URL_AUTH_ACKNOWLEDGED` | yes for recording retrieval | Set to `true` only after the operator verifies **Enforce HTTP Auth on Media URLs** is enabled in Twilio Voice Settings. Recording retrieval and its webhook route remain disabled otherwise. |
 | `ODOS_REMINDER_ENGINE_ENABLED` | no | Must be explicitly `true` after Google Workspace and BAA setup is confirmed. |
 | `ODOS_REMINDER_LOOKBACK_MINUTES` | no | Bounded positive-offset recovery window; defaults to 1,440 minutes. Negative appointment reminders recover while the appointment is still upcoming. |
-| `ODOS_COMMS_PUBLIC_BASE_URL` | yes for tracked links | HTTPS practice-domain origin for campaign redirect links. |
+| `ODOS_COMMS_PUBLIC_BASE_URL` | yes for tracked education links | Reachable HTTPS base URL used by manual clinical education sends to generate `/comms/r/:token` redirect links. Blank values are treated as unset; during migration only, ODOS falls back to `ODOS_PRACTICE_PUBLIC_BASE_URL` with one startup warning. |
 | `WESTFAX_USERNAME`, `WESTFAX_PASSWORD`, `WESTFAX_PRODUCT_ID`, `WESTFAX_CALLBACK_BASE_URL` | yes for fax | Server-only WestFax credentials, the practice fax-line ProductId, and the HTTPS callback origin. |
 | `ODOS_INBOUND_FAX_WORKER_ENABLED` | no | Set to `true` to opt in to inbound polling after WestFax is configured; defaults to off. |
 | `ODOS_INBOUND_FAX_WORKER_MS` | no | Inbound polling cadence in milliseconds; defaults to 180,000 (3 minutes), minimum 15,000. |

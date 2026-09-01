@@ -85,6 +85,20 @@ export interface CommsDispatch {
   providers(): string[];
 }
 
+export function commsPublicBaseUrlFromEnv(
+  env: Record<string, string | undefined>,
+  warn: (message: string) => void = console.warn,
+): string {
+  const configured = env.ODOS_COMMS_PUBLIC_BASE_URL?.trim();
+  if (configured) return configured;
+  const legacy = env.ODOS_PRACTICE_PUBLIC_BASE_URL?.trim();
+  if (!legacy) return "";
+  warn(
+    "odos-mcp: ODOS_COMMS_PUBLIC_BASE_URL is unset; using legacy ODOS_PRACTICE_PUBLIC_BASE_URL for tracked education links.",
+  );
+  return legacy;
+}
+
 export async function startMcpAfterCommsInitialization(
   dispatch: Pick<CommsDispatch, "initialize">,
   startServer: () => Promise<void>,

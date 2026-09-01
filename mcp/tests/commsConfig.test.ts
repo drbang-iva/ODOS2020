@@ -6,10 +6,68 @@ import {
   COMMS_CHANNEL_ROLES,
   commsChannelRoutingFromEnv,
   commsAdapterRegistrationsFromEnv,
+  commsPublicBaseUrlFromEnv,
   commsProviderConfigFromEnv,
   createCommsDispatch,
   startMcpAfterCommsInitialization,
 } from "../src/comms/comms-config.js";
+
+test("tracked-link public base config treats blank values as unset and warns only for the legacy fallback", () => {
+  const cases = [
+    {
+      label: "absent",
+      env: { ODOS_PRACTICE_PUBLIC_BASE_URL: "https://learn.ivaeyecare.com" },
+      expected: "https://learn.ivaeyecare.com",
+      warnings: 1,
+    },
+    {
+      label: "empty",
+      env: {
+        ODOS_COMMS_PUBLIC_BASE_URL: "",
+        ODOS_PRACTICE_PUBLIC_BASE_URL: "https://learn.ivaeyecare.com",
+      },
+      expected: "https://learn.ivaeyecare.com",
+      warnings: 1,
+    },
+    {
+      label: "whitespace",
+      env: {
+        ODOS_COMMS_PUBLIC_BASE_URL: "  \t",
+        ODOS_PRACTICE_PUBLIC_BASE_URL: "https://learn.ivaeyecare.com",
+      },
+      expected: "https://learn.ivaeyecare.com",
+      warnings: 1,
+    },
+    {
+      label: "set",
+      env: {
+        ODOS_COMMS_PUBLIC_BASE_URL: "https://learn.ivaeyecare.com",
+        ODOS_PRACTICE_PUBLIC_BASE_URL: "https://legacy.example.com",
+      },
+      expected: "https://learn.ivaeyecare.com",
+      warnings: 0,
+    },
+    {
+      label: "unconfigured",
+      env: {},
+      expected: "",
+      warnings: 0,
+    },
+  ] as const;
+
+  for (const scenario of cases) {
+    const warnings: string[] = [];
+    assert.equal(
+      commsPublicBaseUrlFromEnv(scenario.env, (message) => warnings.push(message)),
+      scenario.expected,
+      scenario.label,
+    );
+    assert.equal(warnings.length, scenario.warnings, scenario.label);
+    for (const warning of warnings) {
+      assert.match(warning, /ODOS_COMMS_PUBLIC_BASE_URL.*ODOS_PRACTICE_PUBLIC_BASE_URL/);
+    }
+  }
+});
 
 function fakeFhir() {
   return {

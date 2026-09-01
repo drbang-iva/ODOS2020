@@ -105,7 +105,7 @@ import {
 import { registerSchedulingResourceRoutes } from "./scheduling/scheduling-resource-routes.js";
 import {
   commsAdapterRegistrationsFromEnv,
-  commsChannelRoutingFromEnv,
+  commsChannelRoutingFromEnv, commsPublicBaseUrlFromEnv,
   createCommsDispatch,
   startMcpAfterCommsInitialization,
 } from "./comms/comms-config.js";
@@ -5850,13 +5850,7 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         dispatch: commsDispatch,
         educationCatalog: loadDefaultEducationCatalogReader(),
         trackedLinkStore: createFhirTrackedLinkStore(fhir),
-        publicBaseUrl: process.env.ODOS_COMMS_PUBLIC_BASE_URL ?? ((legacyBaseUrl) => {
-          if (!legacyBaseUrl) return "";
-          console.warn(
-            "odos-mcp: ODOS_COMMS_PUBLIC_BASE_URL is unset; using legacy ODOS_PRACTICE_PUBLIC_BASE_URL for tracked education links.",
-          );
-          return legacyBaseUrl;
-        })(process.env.ODOS_PRACTICE_PUBLIC_BASE_URL),
+        publicBaseUrl: commsPublicBaseUrlFromEnv(process.env),
         practiceName: process.env.ODOS_PRACTICE_NAME ?? "ODOS Practice",
         chartDispatchLane: process.env.ODOS_CHART_DISPATCH_LANE === "locked_clinical"
           ? "locked_clinical"

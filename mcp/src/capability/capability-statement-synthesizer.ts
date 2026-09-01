@@ -114,12 +114,26 @@ export function assertCapabilityRulesBuildGate(
 }
 
 export function sanitizeForPublicEmission(value: string, publicBaseUrl: string): string {
-  let sanitized = value;
   const base = publicBaseUrl.replace(/\/$/, "");
-  if (sanitized.startsWith(base)) {
-    return sanitized;
+  if (base && value.startsWith(base)) {
+    return value;
   }
-  sanitized = sanitized.replace(INTERNAL_URL_PATTERN, (_match, suffix: string | undefined) => `${base}${suffix ?? ""}`);
+  const matches = [...value.matchAll(INTERNAL_URL_PATTERN)];
+  if (!matches.length) return sanitizeLegacyReferences(value, base);
+  const chunks: string[] = [];
+  let cursor = 0;
+  for (const match of matches) {
+    const index = match.index!;
+    chunks.push(sanitizeLegacyReferences(value.slice(cursor, index), base));
+    chunks.push(`${base}${match[1] ?? ""}`);
+    cursor = index + match[0].length;
+  }
+  chunks.push(sanitizeLegacyReferences(value.slice(cursor), base));
+  return chunks.join("");
+}
+
+function sanitizeLegacyReferences(value: string, base: string): string {
+  let sanitized = value;
   for (const pattern of INTERNAL_REFERENCE_PATTERNS) {
     sanitized = sanitized.replace(pattern, base);
   }
