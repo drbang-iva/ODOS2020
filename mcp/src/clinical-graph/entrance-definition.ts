@@ -8,6 +8,12 @@ import {
 } from "./glaucoma-suspect.js";
 
 const PUPILS_KEY = "entrance:pupils";
+const PUPIL_NORMAL_VALUES = {
+  CUSTOM_PUPIL_SIZE_BRIGHT: 3,
+  CUSTOM_PUPIL_SIZE_DIM: 5,
+  CUSTOM_PUPIL_SHAPE: "round",
+  CUSTOM_PUPIL_REACTIVITY: "brisk",
+} as const;
 const STEREO_KEY = "entrance:stereo";
 const COLOR_KEY = "entrance:color";
 export const EOM_KEY = "entrance:eom";
@@ -24,11 +30,11 @@ export function buildEntranceFindingDefinitions(
 ): ClinicalFindingDefinition[] {
   return [
     stateDefinition(PUPILS_KEY, "Pupils", "PERRLA; no RAPD OU", [
-      numberField("CUSTOM_PUPIL_SIZE_BRIGHT", "Size — bright", 1, 9, 0.5, "mm", 0),
-      numberField("CUSTOM_PUPIL_SIZE_DIM", "Size — dim", 1, 9, 0.5, "mm", 1),
+      { ...numberField("CUSTOM_PUPIL_SIZE_BRIGHT", "Size — bright", 1, 9, 0.5, "mm", 0), defaultValue: PUPIL_NORMAL_VALUES.CUSTOM_PUPIL_SIZE_BRIGHT },
+      { ...numberField("CUSTOM_PUPIL_SIZE_DIM", "Size — dim", 1, 9, 0.5, "mm", 1), defaultValue: PUPIL_NORMAL_VALUES.CUSTOM_PUPIL_SIZE_DIM },
       numberField("CUSTOM_PUPIL_SIZE_NEAR", "Size — near", 1, 9, 0.5, "mm", 2),
-      selectField("CUSTOM_PUPIL_SHAPE", "Shape", ["round", "irregular"], 3),
-      selectField("CUSTOM_PUPIL_REACTIVITY", "Reactivity", ["brisk", "moderate", "sluggish", "nonreactive"], 4),
+      { ...selectField("CUSTOM_PUPIL_SHAPE", "Shape", ["round", "irregular"], 3), defaultValue: PUPIL_NORMAL_VALUES.CUSTOM_PUPIL_SHAPE },
+      { ...selectField("CUSTOM_PUPIL_REACTIVITY", "Reactivity", ["brisk", "moderate", "sluggish", "nonreactive"], 4), defaultValue: PUPIL_NORMAL_VALUES.CUSTOM_PUPIL_REACTIVITY },
       selectField("CUSTOM_PUPIL_RAPD", "RAPD", ["none", "trace", "1+", "2+", "3+", "4+", "reverse"], 5),
       selectField("CUSTOM_PUPIL_NEUTRAL_DENSITY", "Neutral density (log units)", ["none", "0.3", "0.6", "0.9", "1.2"], 6),
     ], "entrance.pupils", provenance, {
