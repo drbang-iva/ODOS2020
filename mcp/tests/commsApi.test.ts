@@ -149,6 +149,27 @@ test("SMS opt-out management is held only by the front-desk staff role", () => {
   assert.deepEqual(holders, ["staff"]);
 });
 
+test("a multi-role caller cannot attribute opt-out management to a held role that lacks the action", async () => {
+  const fixture = await startServer({ roles: ["provider", "staff"] });
+  try {
+    const response = await request(
+      fixture.base,
+      "/communications/opt-out/clear",
+      "POST",
+      OPT_OUT_CLEAR_BODY,
+      "provider",
+      "provider",
+    );
+
+    assert.equal(response.status, 403);
+    assert.equal(fixture.grants.length, 0);
+    assert.equal(fixture.provenances.length, 0);
+    assert.equal(fixture.denials.length, 1);
+  } finally {
+    await fixture.close();
+  }
+});
+
 test("FHIR policy construction preserves a declared hidden-field mask", () => {
   const policy = buildMedplumAccessPolicy({
     id: "staff",
@@ -1536,6 +1557,7 @@ async function startServer(options: {
   conversationUnsupported?: string[];
   resolvedStaffAuthentication?: boolean;
   businessActions?: readonly import("../src/authz/roles.js").BusinessAction[];
+  roles?: readonly (typeof PRACTICE_ROLE_IDS)[number][];
   excludePatientRead?: boolean;
   excludePatientWrite?: boolean;
   chartDispatchLane?: "locked_clinical" | "staff_switchable";
@@ -1952,7 +1974,7 @@ async function startServer(options: {
       return {
         staffReference: `Practitioner/${role}`,
         actorRole: role as never,
-        roles: [role as never],
+        roles: options.roles ?? [role as never],
         businessActions: options.businessActions,
         fhir: callerFhir,
       };

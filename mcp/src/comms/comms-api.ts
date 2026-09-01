@@ -877,7 +877,11 @@ function actingRole(req: Request, staff: CommsStaff, action: BusinessAction): Pr
   if (claimed) {
     if (!PRACTICE_ROLE_IDS.includes(claimed as PracticeRoleId)) return undefined;
     const role = claimed as PracticeRoleId;
-    return staff.roles.includes(role) && staffHasBusinessAction(staff, action) ? role : undefined;
+    return staff.roles.includes(role)
+      && staffHasBusinessAction(staff, action)
+      && resolveBusinessActionRole([role], action) === role
+      ? role
+      : undefined;
   }
   if (!staffHasBusinessAction(staff, action)) return undefined;
   return resolveBusinessActionRole(staff.roles, action) ?? staff.roles[0];
