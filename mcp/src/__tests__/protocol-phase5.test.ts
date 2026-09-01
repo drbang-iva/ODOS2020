@@ -894,7 +894,8 @@ test("a failed stale-annual closure annotates that duplicate when a retry can wr
   assert.equal(result.status, 200);
   assert.equal((await fhir.read<ServiceRequest>("ServiceRequest", "resource-2")).note?.[0]?.text,
     "Annual recall closure incomplete: 1 other active annual could not be completed.");
-  assert.equal((await fhir.read<ServiceRequest>("ServiceRequest", "resource-1")).note, undefined);
+  assert.equal((await fhir.read<ServiceRequest>("ServiceRequest", "resource-1")).note?.[0]?.text,
+    "Annual recall closure incomplete: 1 other active annual could not be completed.");
 });
 
 test("an annual with unavailable Encounter provenance cannot abort reconciliation", async () => {

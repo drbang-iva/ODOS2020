@@ -153,7 +153,6 @@ export async function materializeAnnualRecallOnSign(
   }
   const message = `The new annual recall was created, but ${closureFailures.length} prior annual${closureFailures.length === 1 ? "" : "s"} could not be completed.`;
   const visibleNote = `Annual recall closure incomplete: ${closureFailures.length} other active annual${closureFailures.length === 1 ? "" : "s"} could not be completed.`;
-  let unannotated = 0;
   for (const failed of failedAnnuals) {
     if (!failed.id) continue;
     try {
@@ -163,21 +162,17 @@ export async function materializeAnnualRecallOnSign(
         appendNote(failed, visibleNote),
         { "X-ODOS-Source": "annual-recall" },
       );
-    } catch {
-      unannotated += 1;
-    }
+    } catch {}
   }
-  if (unannotated > 0) {
-    try {
-      await fhir.update(
-        "ServiceRequest",
-        retainedId,
-        appendNote(retained.request, visibleNote),
-        { "X-ODOS-Source": "annual-recall" },
-      );
-    } catch {
-      // The handler response below remains the authoritative observable refusal if annotation also fails.
-    }
+  try {
+    await fhir.update(
+      "ServiceRequest",
+      retainedId,
+      appendNote(retained.request, visibleNote),
+      { "X-ODOS-Source": "annual-recall" },
+    );
+  } catch {
+    // The handler response below remains the authoritative observable refusal if annotation also fails.
   }
   return {
     fullExam: true,
