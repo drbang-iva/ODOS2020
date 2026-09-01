@@ -2,7 +2,7 @@ import type { Application, Request, Response } from "express";
 import type { Bundle, Claim, CodeSystem } from "@medplum/fhirtypes";
 import type { MedplumClient } from "../fhir-client.js";
 import type { OdosActorRole } from "../authz/odosAudit.js";
-import { assertBusinessActionAllowed, PRACTICE_ROLE_IDS, type PracticeRoleId } from "../authz/roles.js";
+import { staffHasBusinessAction, type BusinessAction } from "../authz/roles.js";
 import { searchAll } from "../fhir-search.js";
 import { loadClaimReadModelTruth } from "./claim-read-model-projector.js";
 import type { ClaimReadModelStore } from "./claim-read-model-store.js";
@@ -43,6 +43,7 @@ type FollowUpFhir = Pick<MedplumClient, "baseUrl" | "read" | "search" | "searchU
 export interface ClaimFollowUpStaff {
   staffReference: string;
   actorRole: OdosActorRole;
+  businessActions?: readonly BusinessAction[];
   fhir: FollowUpFhir;
 }
 
@@ -188,7 +189,7 @@ async function withStaff(
       res.status(401).json({ error: "Authentication required to manage claims." });
       return;
     }
-    if (!staffMayManageClaims(staff.actorRole)) {
+    if (!staffHasBusinessAction(staff, "claims.manage")) {
       res.status(403).json({ error: "claims.manage role required" });
       return;
     }
@@ -203,16 +204,6 @@ async function withStaff(
       console.error("odos-mcp: claim follow-up route failed:", error);
       res.status(500).json({ error: "Claim follow-up route failed." });
     }
-  }
-}
-
-function staffMayManageClaims(actorRole: OdosActorRole): boolean {
-  if (!PRACTICE_ROLE_IDS.includes(actorRole as PracticeRoleId)) return false;
-  try {
-    assertBusinessActionAllowed(actorRole as PracticeRoleId, "claims.manage");
-    return true;
-  } catch {
-    return false;
   }
 }
 

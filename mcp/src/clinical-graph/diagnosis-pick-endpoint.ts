@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Basic, Bundle, CodeableConcept, Condition, Encounter, Observation, Provenance } from "@medplum/fhirtypes";
 import { z } from "zod";
-import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
+import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import {
   buildEncounterDiagnosisComponent,
   buildEncounterDiagnosisCondition,
@@ -72,7 +72,7 @@ export async function handleDiagnosisPickRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to pick a diagnosis." } };
-  if (!staffMay(staff.actorRole, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
+  if (!staffHasBusinessAction(staff, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
   const encounterId = readEncounterId(input.params);
   if (!encounterId) return { status: 400, body: { error: "A valid encounter id is required." } };
   const parsed = pickSchema.safeParse(input.body);

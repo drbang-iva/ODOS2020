@@ -11,12 +11,15 @@ import type {
 import type { JsonPatchOperation } from "../fhir-client.js";
 import type { MedplumClient } from "../fhir-client.js";
 import {
+  BUSINESS_ACTIONS,
   ODOS_PRACTICE_ROLE_SYSTEM,
   PRACTICE_ROLE_IDS,
   buildMedplumCompositeAccessPolicy,
   compositeRoleParameterName,
   type PracticeRoleId,
+  type BusinessAction,
 } from "./roles.js";
+import { membershipBusinessActionExtensions } from "./membership-business-actions.js";
 
 export interface GrantPracticeRolesInput {
   target: string;
@@ -64,6 +67,33 @@ export interface GrantPracticeRolesResult {
   membershipReference: string;
   targetEmail: string;
   roles: readonly PracticeRoleId[];
+  changed: boolean;
+}
+
+export interface SetMembershipBusinessActionsInput {
+  target: string;
+  granted: readonly BusinessAction[];
+  revoked: readonly BusinessAction[];
+}
+
+export interface MembershipBusinessActionDependencies {
+  resolveTarget(target: string): Promise<ResolvedRoleGrantTarget>;
+  resolveProjectOwnerUserReference(projectId: string): Promise<string | undefined>;
+  patchMembership(
+    id: string,
+    operations: JsonPatchOperation[],
+    versionId: string,
+  ): Promise<ProjectMembership>;
+  recordMembershipChange<T>(
+    target: ResolvedRoleGrantTarget,
+    operation: () => Promise<T>,
+  ): Promise<T>;
+}
+
+export interface SetMembershipBusinessActionsResult {
+  membershipReference: string;
+  granted: BusinessAction[];
+  revoked: BusinessAction[];
   changed: boolean;
 }
 
@@ -233,6 +263,61 @@ export async function grantPracticeRoles(
     targetEmail: target.email,
     roles,
     changed: operations.length > 0,
+  };
+}
+
+export async function setMembershipBusinessActions(
+  input: SetMembershipBusinessActionsInput,
+  deps: MembershipBusinessActionDependencies,
+): Promise<SetMembershipBusinessActionsResult> {
+  const granted = normalizeBusinessActionList(input.granted, "granted");
+  const revoked = normalizeBusinessActionList(input.revoked, "revoked");
+  const overlap = granted.filter((action) => revoked.includes(action));
+  if (overlap.length > 0) {
+    throw new Error(`Business actions cannot be both granted and revoked: ${overlap.join(", ")}.`);
+  }
+  const target = await deps.resolveTarget(input.target);
+  const membership = target.membership;
+  if (!membership.id || !membership.meta?.versionId) {
+    throw new Error("Target ProjectMembership is missing id or meta.versionId; no safe conditional toggle is possible.");
+  }
+  if (membership.active === false) {
+    throw new Error(`ProjectMembership/${membership.id} is inactive; permission toggle stopped.`);
+  }
+  const projectId = membership.project.reference?.match(/^Project\/([^/]+)$/)?.[1];
+  if (!projectId) {
+    throw new Error(`ProjectMembership/${membership.id} is missing a valid project reference.`);
+  }
+  const ownerUserReference = await deps.resolveProjectOwnerUserReference(projectId);
+  if (!ownerUserReference) {
+    throw new Error(`Project/${projectId} has no resolvable owner; permission toggle stopped.`);
+  }
+  if (membership.user.reference === ownerUserReference) {
+    throw new Error("The owner's membership is toggle-immune.");
+  }
+
+  const nextExtensions = membershipBusinessActionExtensions(
+    membership.extension,
+    granted,
+    revoked,
+  );
+  const changed = JSON.stringify(membership.extension ?? []) !== JSON.stringify(nextExtensions);
+  if (changed) {
+    await deps.recordMembershipChange(target, () => deps.patchMembership(
+      membership.id!,
+      [{
+        op: membership.extension === undefined ? "add" : "replace",
+        path: "/extension",
+        value: nextExtensions,
+      }],
+      membership.meta!.versionId!,
+    ));
+  }
+  return {
+    membershipReference: `ProjectMembership/${membership.id}`,
+    granted,
+    revoked,
+    changed,
   };
 }
 
@@ -459,6 +544,22 @@ function normalizeRoles(
   return [primaryRole, ...requested.filter((role) => role !== primaryRole)].filter(
     (role, index, roles) => roles.indexOf(role) === index,
   );
+}
+
+function normalizeBusinessActionList(
+  requested: readonly BusinessAction[],
+  label: "granted" | "revoked",
+): BusinessAction[] {
+  if (!Array.isArray(requested)) throw new Error(`${label} must be an array of business actions.`);
+  const normalized: BusinessAction[] = [];
+  for (const value of requested) {
+    const action: unknown = value;
+    if (typeof action !== "string" || !BUSINESS_ACTIONS.includes(action as BusinessAction)) {
+      throw new Error(`${label} contains an unknown business action.`);
+    }
+    if (!normalized.includes(action as BusinessAction)) normalized.push(action as BusinessAction);
+  }
+  return BUSINESS_ACTIONS.filter((action) => normalized.includes(action));
 }
 
 function createdPatientReference(request: Bundle, response: Bundle): string {

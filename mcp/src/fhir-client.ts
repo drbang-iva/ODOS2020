@@ -111,6 +111,7 @@ export interface FhirTransactionExecutionOptions {
 export interface FhirTransactionActor {
   actorReference: string;
   actorRole: OdosActorRole;
+  policyUrl?: string;
   actionReason: string;
 }
 
@@ -958,6 +959,7 @@ function createMedplumClientInternal(opts: UnauditedMedplumClientOptions & {
           eventType: "transaction",
           actorId,
           actorRole: actor.actorRole,
+          policyUrl: actor.policyUrl,
           resourceType: transactionBundle.entry?.[0]?.resource?.resourceType ?? "Bundle",
           resourceId: transactionBundle.id,
           patientId: patientIdFromBundle(transactionBundle),

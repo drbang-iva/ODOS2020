@@ -623,6 +623,7 @@ test("service transaction actor override emits one human-attributed audit row", 
       {
         actorReference: "Practitioner/staff-1",
         actorRole: "staff",
+        policyUrl: "ProjectMembership/membership-staff-1",
         actionReason: "patients.register service transaction",
       },
       {},
@@ -633,6 +634,7 @@ test("service transaction actor override emits one human-attributed audit row", 
     assert.equal(auditRows[0]?.eventType, "transaction");
     assert.equal(auditRows[0]?.actorId, "staff-1");
     assert.equal(auditRows[0]?.actorRole, "staff");
+    assert.equal(auditRows[0]?.policyUrl, "ProjectMembership/membership-staff-1");
     assert.equal(auditRows[0]?.resourceType, "Condition");
   } finally {
     globalThis.fetch = originalFetch;

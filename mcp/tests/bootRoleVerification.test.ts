@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { AccessPolicy, Bundle } from "@medplum/fhirtypes";
+import type { AccessPolicy, Bundle, ProjectMembership } from "@medplum/fhirtypes";
 import {
   formatPracticeRoleBootFailure,
   logProtocolSeedBootFailure,
@@ -11,6 +11,7 @@ import {
   readPracticeRolePolicySyncStatusReport,
   verifyMcpProjectBootBoundary,
 } from "../src/authz/boot-role-verification.js";
+import { membershipBusinessActionExtensions } from "../src/authz/membership-business-actions.js";
 import {
   buildMedplumAccessPolicy,
   getRoleDeclaration,
@@ -124,14 +125,46 @@ test("canonical policy fixture reports every declared role in sync", async () =>
   assert.ok(status.policies.every((policy) => policy.status === "match"));
 });
 
+test("policy sync status surfaces ignored credential grants on each membership", async () => {
+  const policies = deployedPolicies();
+  const staffPolicy = policies.find((policy) => policy.id === "staff-policy")!;
+  const membership: ProjectMembership = {
+    resourceType: "ProjectMembership",
+    id: "member-1",
+    project: { reference: `Project/${PROJECT_ID}` },
+    user: { reference: "User/member-1" },
+    profile: { reference: "Practitioner/member-1" },
+    access: [{ policy: { reference: `AccessPolicy/${staffPolicy.id}` } }],
+    extension: membershipBusinessActionExtensions([], ["clinical.sign"], []),
+  };
+  const status = await readPracticeRolePolicySyncStatus({
+    search: async <T,>(resourceType: string, params: Record<string, string>): Promise<Bundle<T>> => ({
+      resourceType: "Bundle",
+      type: "searchset",
+      entry: (resourceType === "ProjectMembership"
+        ? [membership]
+        : policies.filter((policy) => policy.name === params["name:exact"]))
+        .map((resource) => ({ resource: resource as unknown as T })),
+    }),
+  } as never, PROJECT_ID);
+
+  assert.equal(status.inSync, false);
+  assert.deepEqual(status.membershipActions, [{
+    membershipReference: "ProjectMembership/member-1",
+    malformed: false,
+    ignoredGranted: ["clinical.sign"],
+    ignoredRevoked: [],
+  }]);
+});
+
 function policySearchClient(policies: readonly AccessPolicy[], onWrite?: () => void) {
   return {
-    search: async <T,>(_resourceType: string, params: Record<string, string>): Promise<Bundle<T>> => {
+    search: async <T,>(resourceType: string, params: Record<string, string>): Promise<Bundle<T>> => {
       assert.equal(params._project, PROJECT_ID);
       return ({
       resourceType: "Bundle",
       type: "searchset",
-      entry: policies
+      entry: (resourceType === "AccessPolicy" ? policies : [])
         .filter((policy) => policy.name === params["name:exact"])
         .map((resource) => ({ resource: resource as unknown as T })),
       } as Bundle<T>);

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import {
   assertBusinessActionAllowed,
+  staffHasBusinessAction,
   type BusinessAction,
   type PracticeRoleId,
 } from "../authz/roles.js";
@@ -95,7 +96,7 @@ export async function handleFindingDefinitionCreationRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to manage finding definitions." } };
-  if (!staffMay(staff.actorRole, "finding-definitions.write")) {
+  if (!staffHasBusinessAction(staff, "finding-definitions.write")) {
     return { status: 403, body: { error: "finding-definitions.write role required" } };
   }
   const parsed = createDefinitionSchema.safeParse(input.body);
@@ -137,8 +138,8 @@ export async function handleFindingDefinitionCatalogRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to read finding definitions." } };
-  const canWrite = staffMay(staff.actorRole, "finding-definitions.write");
-  if (!staffMay(staff.actorRole, "chart.read") && !canWrite) {
+  const canWrite = staffHasBusinessAction(staff, "finding-definitions.write");
+  if (!staffHasBusinessAction(staff, "chart.read") && !canWrite) {
     return { status: 403, body: { error: "chart.read or finding-definitions.write role required" } };
   }
   return {
@@ -161,7 +162,7 @@ export async function handleFindingDefinitionMutationRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to manage finding definitions." } };
-  if (!staffMay(staff.actorRole, "finding-definitions.write")) {
+  if (!staffHasBusinessAction(staff, "finding-definitions.write")) {
     return { status: 403, body: { error: "finding-definitions.write role required" } };
   }
   const stableKey = readStableKey(input.params);

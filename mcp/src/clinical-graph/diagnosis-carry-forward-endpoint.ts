@@ -10,7 +10,7 @@ import type {
 import type { Application } from "express";
 import { createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
-import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
+import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import { fhirSearchNextPath, type FhirTransactionExecutionOptions } from "../fhir-client.js";
 import {
   buildEncounterDiagnosisComponent,
@@ -150,7 +150,7 @@ export async function handlePreviousExamsReadRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to read previous exams." } };
-  if (!staffMayRead(staff.actorRole)) {
+  if (!staffHasBusinessAction(staff, "chart.read")) {
     return { status: 403, body: { error: "chart.read role required" } };
   }
 
@@ -239,7 +239,7 @@ export async function handleDiagnosisPullRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to pull a diagnosis." } };
-  if (!staffMayWrite(staff.actorRole)) {
+  if (!staffHasBusinessAction(staff, "chart.write")) {
     return { status: 403, body: { error: "chart.write role required" } };
   }
   const parsedParams = paramsSchema.safeParse(input.params);

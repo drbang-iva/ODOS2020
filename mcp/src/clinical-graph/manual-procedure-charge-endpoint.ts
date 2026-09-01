@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Condition, Encounter } from "@medplum/fhirtypes";
 import type { Express } from "express";
 import { z } from "zod";
-import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
+import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import {
   isVisitProcedureConceptKey,
   listActiveCodedNonVisitProcedureFees,
@@ -104,7 +104,7 @@ export async function handleProcedureChargesRequest(
 ) {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to read procedure charges." } };
-  if (!may(staff.actorRole, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
+  if (!staffHasBusinessAction(staff, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
   const params = encounterParamsSchema.safeParse(input.params);
   if (!params.success) return { status: 400, body: { error: "A valid encounter is required." } };
 
@@ -145,7 +145,7 @@ export async function handleProcedureChargeCreateRequest(
 ) {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to add a procedure charge." } };
-  if (!may(staff.actorRole, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
+  if (!staffHasBusinessAction(staff, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
   const params = encounterParamsSchema.safeParse(input.params);
   const body = createSchema.safeParse(input.body);
   if (!params.success || !body.success) {
@@ -188,7 +188,7 @@ export async function handleProcedureChargePatchRequest(
 ) {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to edit a procedure charge." } };
-  if (!may(staff.actorRole, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
+  if (!staffHasBusinessAction(staff, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
   const params = proposalParamsSchema.safeParse(input.params);
   const body = patchSchema.safeParse(input.body);
   if (!params.success || !body.success) {

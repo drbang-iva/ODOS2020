@@ -1,6 +1,6 @@
 import type { Condition, Encounter } from "@medplum/fhirtypes";
 import { z } from "zod";
-import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
+import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import { isConfirmedEncounterDiagnosis } from "../fhir/condition.js";
 import { isFhirConflict } from "./fhir-conflict.js";
 
@@ -33,7 +33,7 @@ export async function handleDiagnosisOrderRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to reorder diagnoses." } };
-  if (!staffMay(staff.actorRole, "chart.write")) {
+  if (!staffHasBusinessAction(staff, "chart.write")) {
     return { status: 403, body: { error: "chart.write role required" } };
   }
   const params = paramsSchema.safeParse(input.params);

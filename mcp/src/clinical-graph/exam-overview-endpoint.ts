@@ -11,7 +11,7 @@ import type {
   Resource,
 } from "@medplum/fhirtypes";
 import { ODOS_CLINICAL_ATTESTATION_POLICY_URL } from "../../../policy/attestation-policy-urls.js";
-import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
+import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import { resolveVisitTypeCategoryForEncounter } from "../clinic/clinic-summary.js";
 import { searchAll } from "../fhir-search.js";
 import { encounterDiagnosisProblemStatus } from "../fhir/condition.js";
@@ -62,7 +62,7 @@ export async function handleExamOverviewRequest(
   if (!staff) {
     return { status: 401, body: { error: "Authentication required to read the exam overview." } };
   }
-  if (!staffMayReadChart(staff.actorRole)) {
+  if (!staffHasBusinessAction(staff, "chart.read")) {
     return { status: 403, body: { error: "chart.read role required" } };
   }
   const encounterId = readEncounterId(input.params);

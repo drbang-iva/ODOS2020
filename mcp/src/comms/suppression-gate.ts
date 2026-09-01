@@ -87,6 +87,7 @@ export async function clearPatientSmsOptOut(
   input: {
     actorReference: string;
     actorRole: PracticeRoleId;
+    policyUrl?: string;
     recordedAt: string;
     reason: string;
     identityVerification: SmsOptOutIdentityVerification;
@@ -153,6 +154,7 @@ export async function clearPatientSmsOptOut(
     {
       actorReference: input.actorReference,
       actorRole: input.actorRole,
+      ...(input.policyUrl ? { policyUrl: input.policyUrl } : {}),
       actionReason: "communications.optout.manage clear SMS opt-out",
     },
     { "X-ODOS-Source": "mcp/comms-opt-out-clear" },

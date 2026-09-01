@@ -1,5 +1,5 @@
 import type { Basic, Bundle, Condition, Observation } from "@medplum/fhirtypes";
-import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
+import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import { ODOS_EXTENSION_URLS } from "../fhir/ophthalmology/extensions.js";
 import { FhirDiagnosisCatalogStore } from "./diagnosis-catalog-store.js";
 import { FhirDiagnosisPickTallyStore } from "./diagnosis-pick-tally-store.js";
@@ -85,7 +85,7 @@ export async function handleDiagnosisCandidatesRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to read diagnosis candidates." } };
-  if (!staffMay(staff.actorRole, "chart.read")) {
+  if (!staffHasBusinessAction(staff, "chart.read")) {
     return { status: 403, body: { error: "chart.read role required" } };
   }
   const encounterId = readEncounterId(input.params);

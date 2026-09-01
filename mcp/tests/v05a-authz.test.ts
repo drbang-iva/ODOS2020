@@ -73,11 +73,11 @@ test("AccessPolicy generator emits Medplum interactions, criteria, and writeCons
   );
 });
 
-test("protocol authoring is limited to Provider and Admin with code-fenced Basic grants", () => {
-  for (const roleId of ["provider", "admin"] as const) {
-    assert.doesNotThrow(() => assertBusinessActionAllowed(roleId, "protocols.author"));
+test("protocol authoring is credential-bound to Provider with code-fenced Basic grants", () => {
+  assert.doesNotThrow(() => assertBusinessActionAllowed("provider", "protocols.author"));
+  for (const roleId of ["staff", "admin"] as const) {
+    assert.throws(() => assertBusinessActionAllowed(roleId, "protocols.author"), /lacks business action/);
   }
-  assert.throws(() => assertBusinessActionAllowed("staff", "protocols.author"), /lacks business action/);
 
   const clinician = buildMedplumAccessPolicy(getRoleDeclaration("provider"));
   const definitionRule = clinician.resource?.find(

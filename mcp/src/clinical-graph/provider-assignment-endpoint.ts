@@ -11,6 +11,7 @@ import { z } from "zod";
 import type { MedplumClient } from "../fhir-client.js";
 import {
   assertBusinessActionAllowed,
+  staffHasBusinessAction,
   type BusinessAction,
   type PracticeRoleId,
 } from "../authz/roles.js";
@@ -53,7 +54,7 @@ export async function handleProviderAssignmentRequest(
   if (!staff) {
     return { status: 401, body: { error: "Authentication required to assign a provider." } };
   }
-  if (!staffMay(staff.actorRole, "chart.write")) {
+  if (!staffHasBusinessAction(staff, "chart.write")) {
     return { status: 403, body: { error: "chart.write role required" } };
   }
   const target = await resolveAssignmentTarget(staff.fhir, input);

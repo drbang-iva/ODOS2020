@@ -214,6 +214,23 @@ test("a staff principal without claims.manage cannot read the worklist, rebuild,
   assert.equal(reasonUpdates, 0);
 });
 
+test("a per-person claims.manage revocation overrides the staff role", async () => {
+  const staff = { ...fixtureStaff("staff", async (bundle) => bundle), businessActions: [] };
+  const app = express();
+  app.use(express.json());
+  registerClaimFollowUpRoutes(app, {
+    authenticateService: async () => undefined,
+    authenticate: async () => staff,
+    serviceFhir: staff.fhir,
+    projectionHealth: healthyProjectionHealth(),
+    store: { worklist: async () => [] } as unknown as ClaimReadModelStore,
+  });
+
+  const response = await withServer(app, (origin) => fetch(`${origin}/claims/follow-up-worklist`));
+  assert.equal(response.status, 403);
+  assert.deepEqual(await response.json(), { error: "claims.manage role required" });
+});
+
 test("worklist and metrics refuse to serve a failed projection as healthy data", async () => {
   let readCalls = 0;
   const staff = fixtureStaff("staff", async (bundle) => bundle);

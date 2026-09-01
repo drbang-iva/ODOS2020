@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
+import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import {
   FhirDiagnosisCatalogStore,
   type DiagnosisCatalogFhirClient,
@@ -83,7 +83,7 @@ export async function handleDiagnosisQuickListRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to read Common diagnoses." } };
-  if (!staffMay(staff.actorRole, "chart.read")) {
+  if (!staffHasBusinessAction(staff, "chart.read")) {
     return { status: 403, body: { error: "chart.read role required" } };
   }
   const tallyStore = new FhirDiagnosisPickTallyStore(deps.tallyFhir);
@@ -93,7 +93,7 @@ export async function handleDiagnosisQuickListRequest(
   ]);
   const now = deps.now?.() ?? new Date().toISOString();
   let tally = storedTally;
-  if (!tally && staffMay(staff.actorRole, "chart.write")) {
+  if (!tally && staffHasBusinessAction(staff, "chart.write")) {
     const starter = resolveStarterDiagnosisPins(diagnoses);
     for (const missing of starter.missing) {
       console.error(
@@ -105,7 +105,7 @@ export async function handleDiagnosisQuickListRequest(
   tally ??= emptyTally(now);
   const migratedPins = migrateDiagnosisPins(tally.pinnedDiagnosisKeys);
   if (!samePins(tally.pinnedDiagnosisKeys, migratedPins)) {
-    tally = staffMay(staff.actorRole, "chart.write")
+    tally = staffHasBusinessAction(staff, "chart.write")
       ? await tallyStore.replacePinned(
           staff.staffReference,
           migratedPins,
@@ -116,7 +116,7 @@ export async function handleDiagnosisQuickListRequest(
   return quickListResponse(
     diagnoses,
     tally,
-    staffMay(staff.actorRole, "chart.write"),
+    staffHasBusinessAction(staff, "chart.write"),
   );
 }
 
@@ -126,7 +126,7 @@ export async function handleDiagnosisQuickListMutationRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to update Common diagnoses." } };
-  if (!staffMay(staff.actorRole, "chart.write")) {
+  if (!staffHasBusinessAction(staff, "chart.write")) {
     return { status: 403, body: { error: "chart.write role required" } };
   }
   const parsed = mutationSchema.safeParse(input.body);

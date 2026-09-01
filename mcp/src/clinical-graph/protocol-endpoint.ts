@@ -1,7 +1,7 @@
 import type { Basic, Bundle, CarePlan, Condition, Encounter, Observation, Resource, ServiceRequest } from "@medplum/fhirtypes";
 import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
-import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
+import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import type { MedplumClient } from "../fhir-client.js";
 import { validateLocalFhirSearchNextPath } from "../fhir-search.js";
 import {
@@ -136,7 +136,7 @@ export async function handleProtocolLibraryRequest(
 ) {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to read protocols." } };
-  if (!may(staff.actorRole, "protocols.author")) return { status: 403, body: { error: "protocols.author role required" } };
+  if (!staffHasBusinessAction(staff, "protocols.author")) return { status: 403, body: { error: "protocols.author role required" } };
   const catalogs = protocolCatalogs(deps);
   return {
     status: 200,
@@ -156,7 +156,7 @@ export async function handleProtocolCreateRequest(
 ) {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to author protocols." } };
-  if (!may(staff.actorRole, "protocols.author")) return { status: 403, body: { error: "protocols.author role required" } };
+  if (!staffHasBusinessAction(staff, "protocols.author")) return { status: 403, body: { error: "protocols.author role required" } };
   const parsed = protocolDraftSchema.partial().safeParse(input.body);
   if (!parsed.success) return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid protocol draft." } };
   const protocol = await liveService(staff, deps.now).createDraft(
@@ -175,7 +175,7 @@ export async function handleProtocolDraftRequest(
 ) {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to author protocols." } };
-  if (!may(staff.actorRole, "protocols.author")) return { status: 403, body: { error: "protocols.author role required" } };
+  if (!staffHasBusinessAction(staff, "protocols.author")) return { status: 403, body: { error: "protocols.author role required" } };
   const params = z.object({ id: z.string().min(1) }).strict().safeParse(input.params);
   const body = protocolDraftSchema.safeParse(input.body);
   if (!params.success || !body.success) {
@@ -194,7 +194,7 @@ export async function handleProtocolPublishRequest(
 ) {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to publish protocols." } };
-  if (!may(staff.actorRole, "protocols.author")) return { status: 403, body: { error: "protocols.author role required" } };
+  if (!staffHasBusinessAction(staff, "protocols.author")) return { status: 403, body: { error: "protocols.author role required" } };
   const params = z.object({ id: z.string().min(1) }).strict().safeParse(input.params);
   const body = z.object({}).strict().safeParse(input.body ?? {});
   if (!params.success || !body.success) return { status: 400, body: { error: "Valid protocol id and empty publish body are required." } };
@@ -222,7 +222,7 @@ export async function handleProtocolRetireRequest(
 ) {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to retire protocols." } };
-  if (!may(staff.actorRole, "protocols.author")) return { status: 403, body: { error: "protocols.author role required" } };
+  if (!staffHasBusinessAction(staff, "protocols.author")) return { status: 403, body: { error: "protocols.author role required" } };
   const params = z.object({ id: z.string().min(1) }).strict().safeParse(input.params);
   const body = z.object({}).strict().safeParse(input.body ?? {});
   if (!params.success || !body.success) return { status: 400, body: { error: "Valid protocol id and empty retire body are required." } };
@@ -235,7 +235,7 @@ export async function handleProtocolForkRequest(
 ) {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to copy protocols." } };
-  if (!may(staff.actorRole, "protocols.author")) return { status: 403, body: { error: "protocols.author role required" } };
+  if (!staffHasBusinessAction(staff, "protocols.author")) return { status: 403, body: { error: "protocols.author role required" } };
   const params = z.object({ id: z.string().min(1) }).strict().safeParse(input.params);
   const body = z.object({ title: z.string().min(1).optional() }).strict().safeParse(input.body ?? {});
   if (!params.success || !body.success) return { status: 400, body: { error: "Valid protocol id and fork body are required." } };
@@ -251,7 +251,7 @@ export async function handleProtocolCaptureRequest(
 ) {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to capture protocols." } };
-  if (!may(staff.actorRole, "protocols.author")) return { status: 403, body: { error: "protocols.author role required" } };
+  if (!staffHasBusinessAction(staff, "protocols.author")) return { status: 403, body: { error: "protocols.author role required" } };
   const params = z.object({ encounterId: z.string().min(1) }).strict().safeParse(input.params);
   const body = z.object({ name: z.string().trim().min(1) }).strict().safeParse(input.body);
   if (!params.success || !body.success) return { status: 400, body: { error: "Encounter id and protocol name are required." } };
@@ -295,7 +295,7 @@ export async function handleProtocolOffersRequest(
 ) {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to read protocols." } };
-  if (!may(staff.actorRole, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
+  if (!staffHasBusinessAction(staff, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
   const parsed = z.object({ diagnoses: diagnosesSchema }).strict().safeParse(input.body);
   if (!parsed.success) return { status: 400, body: { error: "Valid diagnoses are required." } };
   const service = liveService(staff, deps.now);
@@ -327,7 +327,7 @@ export async function handleProtocolApplyRequest(
 ) {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to apply protocols." } };
-  if (!may(staff.actorRole, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
+  if (!staffHasBusinessAction(staff, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
   const parsed = applySchema.safeParse(input.body);
   if (!parsed.success) return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid protocol application." } };
   const service = liveService(staff, deps.now);
@@ -462,7 +462,7 @@ export async function handleProtocolApplicationsRequest(
 ) {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to read protocol applications." } };
-  if (!may(staff.actorRole, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
+  if (!staffHasBusinessAction(staff, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
   const parsed = z.object({ encounterId: z.string().min(1) }).strict().safeParse(input.query);
   if (!parsed.success) return { status: 400, body: { error: "encounterId is required." } };
   const applications = (await liveService(staff, deps.now).applications.list())
@@ -483,7 +483,7 @@ export async function handleVisitChargeRequest(
 ) {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to read the visit charge." } };
-  if (!may(staff.actorRole, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
+  if (!staffHasBusinessAction(staff, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
   const parsed = z.object({ encounterId: z.string().min(1) }).strict().safeParse(input.params);
   if (!parsed.success) return { status: 400, body: { error: "encounterId is required." } };
   const service = liveService(staff, deps.now);
@@ -528,7 +528,7 @@ export async function handleVisitChargeMutationRequest(
 ) {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to edit the visit charge." } };
-  if (!may(staff.actorRole, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
+  if (!staffHasBusinessAction(staff, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
   const params = z.object({ encounterId: z.string().min(1) }).strict().safeParse(input.params);
   const body = z.object({
     procedureConceptKey: z.string().min(1).nullable().optional(),
@@ -680,7 +680,7 @@ export async function handleProtocolUnapplyRequest(
 ) {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to un-apply protocols." } };
-  if (!may(staff.actorRole, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
+  if (!staffHasBusinessAction(staff, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
   const parsed = z.object({ applicationId: z.string().min(1) }).safeParse(input.params);
   if (!parsed.success) return { status: 400, body: { error: "applicationId is required." } };
   try {
@@ -699,7 +699,7 @@ export async function handleProtocolSignCleanupRequest(
 ) {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required for protocol sign cleanup." } };
-  if (!may(staff.actorRole, "clinical.sign")) return { status: 403, body: { error: "clinical.sign role required" } };
+  if (!staffHasBusinessAction(staff, "clinical.sign")) return { status: 403, body: { error: "clinical.sign role required" } };
   const parsed = z.object({ encounterId: z.string().min(1) }).safeParse(input.params);
   if (!parsed.success) return { status: 400, body: { error: "encounterId is required." } };
   const service = liveService(staff, deps.now);

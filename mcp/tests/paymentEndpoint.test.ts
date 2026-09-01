@@ -12,6 +12,7 @@ import {
   resolveStaffRoles,
   verifyMedplumStaffToken,
 } from "../src/payments/payment-endpoint.js";
+import { ODOS_MEMBERSHIP_BUSINESS_ACTIONS_EXTENSION_URL } from "../src/authz/membership-business-actions.js";
 
 // --- RBAC: who may take a payment (business action gate, same pattern as audit.read) ---
 
@@ -234,12 +235,10 @@ test("resolveStaffRoles returns every recognized practice-role tag across the ca
     serviceClient,
     fetchImpl,
   });
-  assert.deepEqual(staff, {
-    staffReference: "Practitioner/staff1",
-    email: "staff@example.test",
-    roles: ["provider", "staff"],
-    project: { reference: "Project/p1" },
-  });
+  assert.equal(staff?.staffReference, "Practitioner/staff1");
+  assert.equal(staff?.email, "staff@example.test");
+  assert.deepEqual(staff?.roles, ["provider", "staff"]);
+  assert.deepEqual(staff?.project, { reference: "Project/p1" });
 
   const reversed = await resolveStaffRoles({
     baseUrl: "http://x",
@@ -255,6 +254,52 @@ test("resolveStaffRoles returns every recognized practice-role tag across the ca
     fetchImpl,
   });
   assert.deepEqual(reversed?.roles, staff?.roles);
+});
+
+test("resolveStaffRoles derives person-level business actions from the same membership lookup", async () => {
+  const { fetchImpl } = meTransport(200, {
+    profile: { resourceType: "Practitioner", id: "staff1" },
+    user: { resourceType: "User", id: "u1", email: "staff@example.test" },
+  });
+  const membership: ProjectMembership = {
+    ...MEMBERSHIP_FRONT_DESK,
+    id: "membership-1",
+    extension: [{
+      url: ODOS_MEMBERSHIP_BUSINESS_ACTIONS_EXTENSION_URL,
+      extension: [
+        { url: "granted", valueCode: "payment.void" },
+        { url: "granted", valueCode: "clinical.sign" },
+        { url: "revoked", valueCode: "claims.manage" },
+      ],
+    }],
+  };
+  const serviceClient = {
+    search: async <T,>(): Promise<Bundle<T>> => ({
+      resourceType: "Bundle",
+      type: "searchset",
+      entry: [{ resource: membership as unknown as T }],
+    }),
+    read: async <T,>(): Promise<T> => ({
+      resourceType: "AccessPolicy",
+      meta: { tag: [{ system: ODOS_PRACTICE_ROLE_SYSTEM, code: "staff" }] },
+    }) as unknown as T,
+  };
+
+  const staff = await resolveStaffRoles({
+    baseUrl: "http://x",
+    authHeader: "Bearer good",
+    serviceClient,
+    fetchImpl,
+  });
+
+  assert.equal(staff?.membershipReference, "ProjectMembership/membership-1");
+  assert.equal(staff?.businessActions.includes("payment.void"), true);
+  assert.equal(staff?.businessActions.includes("claims.manage"), false);
+  assert.equal(staff?.businessActions.includes("clinical.sign"), false);
+  assert.deepEqual(staff?.ignoredGrantedBusinessActions, ["clinical.sign"]);
+  assert.equal(staff?.membershipBusinessActionsMalformed, false);
+  assert.equal(resolveBusinessActionRole(staff!.roles, "payment.void"), "staff");
+  assert.equal(resolveBusinessActionRole(staff!.roles, "claims.manage"), undefined);
 });
 
 test("resolveStaffRoles fails closed when one profile has two active project memberships", async () => {
@@ -338,12 +383,10 @@ test("resolveStaffRoles admits an unset-active membership without narrowing the 
     fetchImpl,
   });
 
-  assert.deepEqual(staff, {
-    staffReference: "Practitioner/staff1",
-    email: "staff@example.test",
-    roles: [],
-    project: { reference: "Project/p1" },
-  });
+  assert.equal(staff?.staffReference, "Practitioner/staff1");
+  assert.equal(staff?.email, "staff@example.test");
+  assert.deepEqual(staff?.roles, []);
+  assert.deepEqual(staff?.project, { reference: "Project/p1" });
   assert.deepEqual(svc.calls.search, [{
     rt: "ProjectMembership",
     params: { profile: "Practitioner/staff1" },
@@ -381,12 +424,10 @@ test("resolveStaffRoles preserves authenticated identity when no role-bearing po
     serviceClient: svc,
     fetchImpl,
   });
-  assert.deepEqual(staff, {
-    staffReference: "Practitioner/staff1",
-    email: "roleless@example.test",
-    roles: [],
-    project: { reference: "Project/p1" },
-  });
+  assert.equal(staff?.staffReference, "Practitioner/staff1");
+  assert.equal(staff?.email, "roleless@example.test");
+  assert.deepEqual(staff?.roles, []);
+  assert.deepEqual(staff?.project, { reference: "Project/p1" });
 });
 
 test("authenticateStaffRoute carries the selected project on the authenticated result", async () => {

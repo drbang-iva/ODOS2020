@@ -1,6 +1,6 @@
 import type { Bundle, Observation, ObservationComponent } from "@medplum/fhirtypes";
 import { z } from "zod";
-import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
+import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import { CONTACT_LENS_PARAMETER_CODE_SYSTEM } from "../fhir/contactLens.js";
 import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../fhir/ophthalmology/codeBindings.js";
 import {
@@ -116,7 +116,7 @@ export async function handleRefractionHistoryRequest(
   if (!staff) {
     return { status: 401, body: { error: "Authentication required to read refraction history." } };
   }
-  if (!staffMayRead(staff.actorRole)) {
+  if (!staffHasBusinessAction(staff, "chart.read")) {
     return { status: 403, body: { error: "chart.read role required" } };
   }
 

@@ -149,6 +149,53 @@ test("SMS opt-out management is held only by the front-desk staff role", () => {
   assert.deepEqual(holders, ["staff"]);
 });
 
+test("a multi-role caller cannot attribute opt-out management to a held role that lacks the action", async () => {
+  const fixture = await startServer({ roles: ["provider", "staff"] });
+  try {
+    const response = await request(
+      fixture.base,
+      "/communications/opt-out/clear",
+      "POST",
+      OPT_OUT_CLEAR_BODY,
+      "provider",
+      "provider",
+    );
+
+    assert.equal(response.status, 403);
+    assert.equal(fixture.grants.length, 0);
+    assert.equal(fixture.provenances.length, 0);
+    assert.equal(fixture.denials.length, 1);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("a membership-only communications grant cites the membership instead of an unrelated AccessPolicy", async () => {
+  const membershipReference = "ProjectMembership/membership-provider";
+  const fixture = await startServer({
+    roles: ["provider"],
+    businessActions: ["communications.optout.manage"],
+    membershipReference,
+  });
+  try {
+    const response = await fetch(`${fixture.base}/communications/opt-out/clear`, {
+      method: "POST",
+      headers: {
+        authorization: "Bearer provider",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(OPT_OUT_CLEAR_BODY),
+    });
+
+    assert.equal(response.status, 200);
+    assert.equal(fixture.grants[0]?.actorRole, "provider");
+    assert.equal(fixture.grants[0]?.policyUrl, membershipReference);
+    assert.equal(fixture.attributedActors[0]?.policyUrl, membershipReference);
+  } finally {
+    await fixture.close();
+  }
+});
+
 test("FHIR policy construction preserves a declared hidden-field mask", () => {
   const policy = buildMedplumAccessPolicy({
     id: "staff",
@@ -844,6 +891,7 @@ test("clearing one named patient on a shared handset leaves the other patient su
     assert.deepEqual(fixture.attributedActors, [{
       actorReference: "Practitioner/staff",
       actorRole: "staff",
+      policyUrl: "AccessPolicy/odos-staff",
       actionReason: "communications.optout.manage clear SMS opt-out",
     }]);
     assert.deepEqual(fixture.grants.map((row) => ({
@@ -952,6 +1000,17 @@ test("a bearer-authenticated staff membership reaches the opt-out clear through 
     assert.equal(fixture.grants[0]?.actorId, "real-staff");
     assert.equal(fixture.grants[0]?.actorRole, "staff");
     assert.equal(fixture.provenances[0]?.agent[0]?.who.reference, "Practitioner/real-staff");
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("a per-person revocation overrides the staff role on communications routes", async () => {
+  const fixture = await startServer({ businessActions: [] });
+  try {
+    const response = await request(fixture.base, "/communications/education", "GET", undefined, "staff");
+    assert.equal(response.status, 403);
+    assert.deepEqual(await response.json(), { error: "communications.read role required" });
   } finally {
     await fixture.close();
   }
@@ -1530,6 +1589,9 @@ async function startServer(options: {
   conversationFailures?: string[];
   conversationUnsupported?: string[];
   resolvedStaffAuthentication?: boolean;
+  businessActions?: readonly import("../src/authz/roles.js").BusinessAction[];
+  roles?: readonly (typeof PRACTICE_ROLE_IDS)[number][];
+  membershipReference?: string;
   excludePatientRead?: boolean;
   excludePatientWrite?: boolean;
   chartDispatchLane?: "locked_clinical" | "staff_switchable";
@@ -1593,6 +1655,7 @@ async function startServer(options: {
     actorReference: string;
     actorRole: string;
     actionReason: string;
+    policyUrl?: string;
   }> = [];
   const authenticatedFhirs: unknown[] = [];
   const adapterFhirs: unknown[] = [];
@@ -1942,11 +2005,13 @@ async function startServer(options: {
         },
       } as never;
       authenticatedFhirs.push(callerFhir);
-      if (resolvedStaff) return { ...resolvedStaff, fhir: callerFhir };
+      if (resolvedStaff) return { ...resolvedStaff, businessActions: options.businessActions ?? resolvedStaff.businessActions, fhir: callerFhir };
       return {
         staffReference: `Practitioner/${role}`,
         actorRole: role as never,
-        roles: [role as never],
+        roles: options.roles ?? [role as never],
+        businessActions: options.businessActions,
+        membershipReference: options.membershipReference,
         fhir: callerFhir,
       };
     },

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Observation, Provenance } from "@medplum/fhirtypes";
 import { z } from "zod";
-import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
+import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import { odosConcept } from "../fhir/ophthalmology/extensions.js";
 import { buildRefractionObservation } from "../fhir/ophthalmology/refraction.js";
 import type { RefractionType } from "../fhir/ophthalmology/types.js";
@@ -96,7 +96,7 @@ export async function handleRefractionDefinitionRequest(
   if (!staff) {
     return { status: 401, body: { error: "Authentication required to read refraction definition." } };
   }
-  if (!staffMay(staff.actorRole, "chart.read")) {
+  if (!staffHasBusinessAction(staff, "chart.read")) {
     return { status: 403, body: { error: "chart.read role required" } };
   }
 
@@ -119,7 +119,7 @@ export async function handleRefractionCaptureRequest(
   if (!staff) {
     return { status: 401, body: { error: "Authentication required to save refraction findings." } };
   }
-  if (!staffMay(staff.actorRole, "chart.write")) {
+  if (!staffHasBusinessAction(staff, "chart.write")) {
     return { status: 403, body: { error: "chart.write role required" } };
   }
 

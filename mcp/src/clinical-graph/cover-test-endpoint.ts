@@ -1,6 +1,6 @@
 import type { Bundle, Observation, Provenance } from "@medplum/fhirtypes";
 import { z } from "zod";
-import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
+import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../fhir/ophthalmology/codeBindings.js";
 import { captureGlaucomaFinding, patientScopedProvenanceTargets, type ClinicalFindingDefinition, type ClinicalGraphProvenance } from "./glaucoma-suspect.js";
 import { withDocumentationElements } from "./documentation-elements.js";
@@ -43,7 +43,7 @@ const historySchema = z.object({ patient: z.string().regex(/^Patient\/[^/]+$/), 
 export async function handleCoverTestCaptureRequest(deps: CoverTestEndpointDeps, input: { authHeader: string | undefined; body: unknown }) {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to save cover test." } };
-  if (!staffMay(staff.actorRole, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
+  if (!staffHasBusinessAction(staff, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
   const parsed = captureSchema.safeParse(input.body);
   if (!parsed.success) return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid cover-test request." } };
   const definition = deps.findingDefinitions?.().find((row) => row.stableKey === COVER_TEST_KEY && row.active);
@@ -89,7 +89,7 @@ export async function handleCoverTestCaptureRequest(deps: CoverTestEndpointDeps,
 export async function handleCoverTestHistoryRequest(deps: CoverTestEndpointDeps, input: { authHeader: string | undefined; query: unknown }) {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to read cover-test history." } };
-  if (!staffMay(staff.actorRole, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
+  if (!staffHasBusinessAction(staff, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
   const parsed = historySchema.safeParse(input.query);
   if (!parsed.success) return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid cover-test history request." } };
   const bundle = await staff.fhir.search<Observation>("Observation", {
