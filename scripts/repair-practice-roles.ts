@@ -223,7 +223,10 @@ class LivePracticeRoleRepairAdapter implements PracticeRoleRepairAdapter {
     disabled: process.env.ODOS_ROLE_REPAIR_AUDIT_DISABLED === "true",
   });
 
-  constructor(private readonly fhir: MedplumClient) {}
+  constructor(
+    private readonly fhir: MedplumClient,
+    private readonly allowProjectInvisibleUser = false,
+  ) {}
 
   async findPoliciesByName(name: string, projectId: string): Promise<AccessPolicy[]> {
     return searchProjectAll<AccessPolicy>(this.fhir, "AccessPolicy", projectId, {
@@ -249,7 +252,7 @@ class LivePracticeRoleRepairAdapter implements PracticeRoleRepairAdapter {
   }
 
   async resolveTarget(target: string): Promise<ResolvedRoleGrantTarget> {
-    return resolvePracticeRoleTarget(this.fhir, target);
+    return resolvePracticeRoleTarget(this.fhir, target, this.allowProjectInvisibleUser);
   }
 
   async patchMembership(
@@ -282,6 +285,7 @@ class LivePracticeRoleRepairAdapter implements PracticeRoleRepairAdapter {
 export async function resolvePracticeRoleTarget(
   fhir: Pick<MedplumClient, "baseUrl" | "read" | "search" | "searchUrl">,
   target: string,
+  allowProjectInvisibleUser = false,
 ): Promise<ResolvedRoleGrantTarget> {
   const practitionerReference = target.match(/^Practitioner\/([^/]+)$/);
   let practitioners: Practitioner[];
@@ -301,7 +305,13 @@ export async function resolvePracticeRoleTarget(
   }
   const { practitioner, membership } = candidates[0]!;
   // Medplum $update-email does not sync ProjectMembership.user.display; manual renames must patch it too.
-  const email = await readMembershipUserEmail(fhir, membership) ?? practitionerEmail(practitioner);
+  let userEmail: string | undefined;
+  try {
+    userEmail = await readMembershipUserEmail(fhir, membership);
+  } catch (error) {
+    if (!allowProjectInvisibleUser || (error as { status?: number }).status !== 404) throw error;
+  }
+  const email = userEmail ?? practitionerEmail(practitioner);
   if (!email) {
     throw new Error(`Could not resolve the target email from ${membership.profile.reference ?? target}.`);
   }
@@ -379,13 +389,14 @@ async function runCli(): Promise<void> {
     await fhir.getActiveProjectId(),
     "authenticated repair project",
   );
+  const contractBootstrap = process.env.MEDPLUM_CONTRACT_BOOTSTRAP === "1";
   const primaryRole = devPrimaryRole(process.env.ODOS_DEV_PRIMARY_ROLE);
   const result = await repairPracticeRoles(
-    new LivePracticeRoleRepairAdapter(fhir),
+    new LivePracticeRoleRepairAdapter(fhir, contractBootstrap),
     target,
     primaryRole,
     email,
-    process.env.MEDPLUM_CONTRACT_BOOTSTRAP === "1",
+    contractBootstrap,
   );
   console.log(`Role policies created: ${result.createdPolicies.length} [${result.createdPolicies.join(", ")}]`);
   console.log(`Role policies tagged: ${result.taggedPolicies.length} [${result.taggedPolicies.join(", ")}]`);

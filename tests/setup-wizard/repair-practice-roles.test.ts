@@ -227,6 +227,33 @@ test("repair target resolution prefers canonical User.email over Practitioner te
   assert.equal(byReference.email, "canonical@example.test");
 });
 
+test("contract bootstrap target resolution falls back when the account User is project-invisible", async () => {
+  const practitioner: Practitioner = {
+    resourceType: "Practitioner",
+    id: "p1",
+    telecom: [{ system: "email", value: "contract-admin@example.test" }],
+  };
+  const client = {
+    read: async <T extends Resource>(resourceType: T["resourceType"]): Promise<T> => {
+      assert.equal(resourceType, "User");
+      throw Object.assign(new Error("Not found"), { status: 404 });
+    },
+    search: async <T extends Resource>(resourceType: T["resourceType"], params: Record<string, string> = {}): Promise<Bundle<T>> => {
+      if (resourceType === "Practitioner") return bundle([practitioner as T]);
+      assert.equal(params.profile, "Practitioner/p1");
+      return bundle([membership({ profile: { reference: "Practitioner/p1" } }) as T]);
+    },
+  };
+
+  await assert.rejects(
+    () => resolvePracticeRoleTarget(client, "contract-admin@example.test"),
+    /Not found/,
+  );
+  const resolved = await resolvePracticeRoleTarget(client, "contract-admin@example.test", true);
+  assert.equal(resolved.email, "contract-admin@example.test");
+  assert.equal(resolved.membership.id, "dev-membership");
+});
+
 test("one untagged canonical policy is tagged without replacing unrelated metadata", async () => {
   const adapter = new FakeRepairAdapter({
     policies: [{
