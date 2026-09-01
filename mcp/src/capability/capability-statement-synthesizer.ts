@@ -33,6 +33,8 @@ export interface CapabilityStatementSynthesisResult {
   readonly etag: string;
 }
 
+const INTERNAL_URL_PATTERN = /\bhttps?:\/\/(?:192\.168(?:\.\d{1,3}){2}|10(?:\.\d{1,3}){3}|127(?:\.\d{1,3}){3}|localhost|host\.docker\.internal|172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2})(?::\d+)?([/?#][^\s"']*)?/gi;
+
 const INTERNAL_REFERENCE_PATTERNS: readonly RegExp[] = [
   /\b(?:192\.168|10\.|127\.|localhost|host\.docker\.internal)\b[^\s"']*/gi,
   /\b172\.(?:1[6-9]|2\d|3[0-1])\.[^\s"']*/gi,
@@ -117,6 +119,7 @@ export function sanitizeForPublicEmission(value: string, publicBaseUrl: string):
   if (sanitized.startsWith(base)) {
     return sanitized;
   }
+  sanitized = sanitized.replace(INTERNAL_URL_PATTERN, (_match, suffix: string | undefined) => `${base}${suffix ?? ""}`);
   for (const pattern of INTERNAL_REFERENCE_PATTERNS) {
     sanitized = sanitized.replace(pattern, base);
   }

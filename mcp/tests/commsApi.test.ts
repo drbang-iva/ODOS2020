@@ -539,7 +539,7 @@ test("education SMS reports missing or non-HTTPS tracked-link setup as a 409 bef
         idempotencyKey: `education-${label}-public-base`,
       }, "provider");
       assert.equal(response.status, 409);
-      assert.match((await response.json() as { error: string }).error, /ODOS_PRACTICE_PUBLIC_BASE_URL.*reachable HTTPS/i);
+      assert.match((await response.json() as { error: string }).error, /ODOS_COMMS_PUBLIC_BASE_URL.*reachable HTTPS/i);
       assert.equal(fixture.trackedLinks.length, 0);
       assert.equal(fixture.smsRequests.length, 0);
     } finally {
