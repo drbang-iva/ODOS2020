@@ -92,6 +92,10 @@ export async function materializeAnnualRecallOnSign(
     throw new Error("Annual recall ServiceRequest was saved without an id.");
   }
   const currentId = saved.id;
+  const savedReference = `ServiceRequest/${currentId}`;
+  if (saved.status !== "active") {
+    return { fullExam: true, serviceRequestReference: savedReference, completedReferences: [] };
+  }
   const current = Object.entries(intended).every(([key, value]) =>
     isDeepStrictEqual((saved as unknown as Record<string, unknown>)[key], value)
   )
@@ -103,10 +107,16 @@ export async function materializeAnnualRecallOnSign(
     code: `${ANNUAL_RECALL_CODE_SYSTEM}|annual-recall`,
     status: "active",
   }, { maxRows: 100 });
+  const retained = activeAnnuals.reduce(
+    (latest, candidate) =>
+      (candidate.occurrenceDateTime ?? "") > (latest.occurrenceDateTime ?? "") ? candidate : latest,
+    current,
+  );
+  const retainedId = retained.id ?? currentId;
   const completedReferences: string[] = [];
   const closureFailures: AnnualRecallClosureFailure[] = [];
   for (const prior of activeAnnuals) {
-    if (!prior.id || prior.id === currentId) continue;
+    if (!prior.id || prior.id === retainedId) continue;
     const serviceRequestReference = `ServiceRequest/${prior.id}`;
     try {
       await fhir.update(
@@ -124,7 +134,7 @@ export async function materializeAnnualRecallOnSign(
     }
   }
 
-  const serviceRequestReference = `ServiceRequest/${currentId}`;
+  const serviceRequestReference = `ServiceRequest/${retainedId}`;
   if (closureFailures.length === 0) {
     return { fullExam: true, serviceRequestReference, completedReferences };
   }
@@ -133,8 +143,8 @@ export async function materializeAnnualRecallOnSign(
   try {
     await fhir.update(
       "ServiceRequest",
-      currentId,
-      { ...current, note: [{ text: visibleNote }] },
+      retainedId,
+      { ...retained, note: [{ text: visibleNote }] },
       { "X-ODOS-Source": "annual-recall" },
     );
   } catch {

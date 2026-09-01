@@ -720,6 +720,66 @@ test("a full eye exam creates a service-date annual, and the next full exam comp
   ]);
 });
 
+test("re-signing an older full exam does not replace the newer active annual", async () => {
+  const fhir = new EndpointFhir();
+  fhir.resources.push(
+    annualEncounter("historical-first", "routine-exam-established", "2026-01-15T15:00:00.000Z"),
+    ...fullExamObservations("historical-first"),
+    annualEncounter("historical-second", "routine-exam-established", "2026-08-20T15:00:00.000Z"),
+    ...fullExamObservations("historical-second"),
+  );
+  const deps = { ...endpointDeps(fhir), feeScheduleFhir: fhir as never };
+
+  await handleProtocolSignCleanupRequest(deps, {
+    authHeader: "Bearer test",
+    params: { encounterId: "historical-first" },
+  });
+  await handleProtocolSignCleanupRequest(deps, {
+    authHeader: "Bearer test",
+    params: { encounterId: "historical-second" },
+  });
+  const historical = await handleProtocolSignCleanupRequest(deps, {
+    authHeader: "Bearer test",
+    params: { encounterId: "historical-first" },
+  });
+
+  assert.equal(historical.status, 200);
+  const annuals = annualRequests(fhir);
+  assert.equal(annuals.length, 2);
+  assert.equal(annuals.filter((request) => request.status === "active").length, 1);
+  assert.equal(annuals.find((request) => request.encounter?.reference === "Encounter/historical-first")?.status, "completed");
+  assert.equal(annuals.find((request) => request.status === "active")?.encounter?.reference, "Encounter/historical-second");
+  assert.equal(annuals.find((request) => request.status === "active")?.occurrenceDateTime, "2027-08-20");
+});
+
+test("late signing an older full exam keeps the annual from the latest service date", async () => {
+  const fhir = new EndpointFhir();
+  fhir.resources.push(
+    annualEncounter("late-sign-older", "routine-exam-established", "2026-01-15T15:00:00.000Z"),
+    ...fullExamObservations("late-sign-older"),
+    annualEncounter("signed-first-newer", "routine-exam-established", "2026-08-20T15:00:00.000Z"),
+    ...fullExamObservations("signed-first-newer"),
+  );
+  const deps = { ...endpointDeps(fhir), feeScheduleFhir: fhir as never };
+
+  await handleProtocolSignCleanupRequest(deps, {
+    authHeader: "Bearer test",
+    params: { encounterId: "signed-first-newer" },
+  });
+  const lateSigned = await handleProtocolSignCleanupRequest(deps, {
+    authHeader: "Bearer test",
+    params: { encounterId: "late-sign-older" },
+  });
+
+  assert.equal(lateSigned.status, 200);
+  const annuals = annualRequests(fhir);
+  assert.equal(annuals.length, 2);
+  assert.equal(annuals.filter((request) => request.status === "active").length, 1);
+  assert.equal(annuals.find((request) => request.status === "active")?.encounter?.reference, "Encounter/signed-first-newer");
+  assert.equal(annuals.find((request) => request.status === "active")?.occurrenceDateTime, "2027-08-20");
+  assert.equal(annuals.find((request) => request.encounter?.reference === "Encounter/late-sign-older")?.status, "completed");
+});
+
 test("a realistic post-cataract office visit with refraction and examined anterior segment creates no annual", async () => {
   const fhir = new EndpointFhir();
   fhir.resources.push(
