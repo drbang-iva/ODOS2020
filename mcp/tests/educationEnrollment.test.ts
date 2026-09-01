@@ -144,5 +144,7 @@ test("EducationEnrollment FHIR Basic round-trip preserves exact sends, outcomes,
   });
   assert.deepEqual(await store.listActiveForPatient(PATIENT_REFERENCE), [roundTrip]);
   assert.equal(searches.some((params) => params.identifier?.includes("education-enrollment-active")), true);
-  assert.equal(searches.some((params) => params.code?.includes("education-enrollment")), true);
+  assert.equal(searches.some((params) =>
+    params.code?.includes("education-enrollment")
+    && params.subject === PATIENT_REFERENCE), true);
 });

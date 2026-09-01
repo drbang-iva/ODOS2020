@@ -161,6 +161,7 @@ export function createFhirEducationEnrollmentStore(
       requiredReference(patientReference, "Patient", "patientReference");
       const resources = await searchBounded<Basic>(fhir, "Basic", {
         code: `${BASIC_CODE_SYSTEM}|${ENROLLMENT_CODE}`,
+        subject: patientReference,
         _count: "100",
       }, { maxPages: 10, maxRows: 1_000 });
       return resources
