@@ -804,6 +804,34 @@ test("same-day annual reconciliation keeps the encounter with the latest service
   assert.equal(annuals.find((request) => request.status === "active")?.encounter?.reference, "Encounter/same-day-later");
 });
 
+test("concurrent full-exam signing converges to one annual from the latest service time", async () => {
+  const fhir = new EndpointFhir();
+  fhir.resources.push(
+    annualEncounter("concurrent-earlier", "routine-exam-established", "2026-08-20T09:00:00-04:00"),
+    ...fullExamObservations("concurrent-earlier"),
+    annualEncounter("concurrent-later", "routine-exam-established", "2026-08-20T15:00:00-04:00"),
+    ...fullExamObservations("concurrent-later"),
+  );
+  fhir.delayFirstTwoAnnualSearches = true;
+  const deps = { ...endpointDeps(fhir), feeScheduleFhir: fhir as never };
+
+  const results = await Promise.all([
+    handleProtocolSignCleanupRequest(deps, {
+      authHeader: "Bearer test",
+      params: { encounterId: "concurrent-earlier" },
+    }),
+    handleProtocolSignCleanupRequest(deps, {
+      authHeader: "Bearer test",
+      params: { encounterId: "concurrent-later" },
+    }),
+  ]);
+
+  assert.equal(results.every((result) => result.status === 200), true);
+  const annuals = annualRequests(fhir);
+  assert.equal(annuals.filter((request) => request.status === "active").length, 1);
+  assert.equal(annuals.find((request) => request.status === "active")?.encounter?.reference, "Encounter/concurrent-later");
+});
+
 test("annual due date preserves the Encounter service calendar day across timezone offsets", async () => {
   const fhir = new EndpointFhir();
   fhir.resources.push(
@@ -850,7 +878,7 @@ test("an annual with unavailable Encounter provenance cannot abort reconciliatio
   fhir.resources.push(
     annualEncounter("missing-provenance-current", "routine-exam-established", "2026-07-18T15:00:00.000Z"),
     ...fullExamObservations("missing-provenance-current"),
-    annualServiceRequest("missing-provenance-annual", "Encounter/deleted-source", "2027-01-01"),
+    annualServiceRequest("missing-provenance-annual", "Encounter/deleted-source", "2028-01-01"),
   );
 
   const result = await handleProtocolSignCleanupRequest(
@@ -1703,6 +1731,9 @@ class EndpointFhir {
   searchResourceTypes: Resource["resourceType"][] = [];
   failServiceRequestUpdateIds = new Set<string>();
   failServiceRequestUpdateOnceIds = new Set<string>();
+  delayFirstTwoAnnualSearches = false;
+  annualSearchesDelayed = 0;
+  releaseDelayedAnnualSearch?: () => void;
   next = 1;
 
   async search<T extends Resource>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>> {
@@ -1737,6 +1768,22 @@ class EndpointFhir {
     const [system, value] = params?.identifier?.split("|") ?? [];
     if (system && value) rows = rows.filter((resource) => "identifier" in resource && resource.identifier?.some((identifier) =>
       identifier.system === system && identifier.value === value));
+    if (
+      this.delayFirstTwoAnnualSearches &&
+      resourceType === "ServiceRequest" &&
+      params?.code === `${ANNUAL_TEST_CODE_SYSTEM}|annual-recall` &&
+      params.status === "active"
+    ) {
+      const snapshot = [...rows];
+      this.annualSearchesDelayed += 1;
+      if (this.annualSearchesDelayed === 1) {
+        await new Promise<void>((resolve) => { this.releaseDelayedAnnualSearch = resolve; });
+      } else {
+        this.delayFirstTwoAnnualSearches = false;
+        this.releaseDelayedAnnualSearch?.();
+      }
+      rows = snapshot;
+    }
     return { resourceType: "Bundle", type: "searchset", entry: rows.map((resource) => ({ resource: resource as T })) };
   }
   async create<T extends Basic | Observation | ServiceRequest | CarePlan>(resource: T, headers?: Record<string, string>): Promise<T> {

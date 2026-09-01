@@ -212,15 +212,15 @@ function isLaterAnnual(
   candidate: { request: ServiceRequest; serviceDate?: string },
   latest: { request: ServiceRequest; serviceDate?: string },
 ): boolean {
+  const candidateTime = candidate.serviceDate ? Date.parse(candidate.serviceDate) : Number.NaN;
+  const latestTime = latest.serviceDate ? Date.parse(latest.serviceDate) : Number.NaN;
+  if (Number.isFinite(candidateTime) !== Number.isFinite(latestTime)) return Number.isFinite(candidateTime);
   const candidateDue = candidate.request.occurrenceDateTime ?? "";
   const latestDue = latest.request.occurrenceDateTime ?? "";
   if (candidateDue !== latestDue) return candidateDue > latestDue;
-  const candidateTime = candidate.serviceDate ? Date.parse(candidate.serviceDate) : Number.NaN;
-  const latestTime = latest.serviceDate ? Date.parse(latest.serviceDate) : Number.NaN;
   if (Number.isFinite(candidateTime) && Number.isFinite(latestTime) && candidateTime !== latestTime) {
     return candidateTime > latestTime;
   }
-  if (Number.isFinite(candidateTime) !== Number.isFinite(latestTime)) return Number.isFinite(candidateTime);
   const candidateReference = candidate.request.encounter?.reference ?? candidate.request.id ?? "";
   const latestReference = latest.request.encounter?.reference ?? latest.request.id ?? "";
   return candidateReference > latestReference;
