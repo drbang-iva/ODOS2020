@@ -101,14 +101,11 @@ export async function materializeAnnualRecallOnSign(
   }
   const currentId = saved.id;
   const savedReference = `ServiceRequest/${currentId}`;
-  if (saved.status !== "active") {
-    return { fullExam: true, serviceRequestReference: savedReference, completedReferences: [] };
-  }
-  const current = Object.entries(intended).every(([key, value]) =>
+  if (saved.status === "active" && !Object.entries(intended).every(([key, value]) =>
     isDeepStrictEqual((saved as unknown as Record<string, unknown>)[key], value)
-  )
-    ? saved
-    : await fhir.update("ServiceRequest", currentId, { ...saved, ...intended }, { "X-ODOS-Source": "annual-recall" });
+  )) {
+    await fhir.update("ServiceRequest", currentId, { ...saved, ...intended }, { "X-ODOS-Source": "annual-recall" });
+  }
 
   const activeAnnuals = await searchAll<ServiceRequest>(fhir, "ServiceRequest", {
     patient: patientId,
@@ -119,9 +116,12 @@ export async function materializeAnnualRecallOnSign(
     request,
     serviceDate: await sourceServiceDate(fhir, request, encounterReference, serviceDate),
   })));
-  const retained = datedAnnuals.reduce(
+  if (datedAnnuals.length === 0) {
+    return { fullExam: true, serviceRequestReference: savedReference, completedReferences: [] };
+  }
+  const retained = datedAnnuals.slice(1).reduce(
     (latest, candidate) => isLaterAnnual(candidate, latest) ? candidate : latest,
-    { request: current, serviceDate },
+    datedAnnuals[0]!,
   );
   const retainedId = retained.request.id ?? currentId;
   const completedReferences: string[] = [];

@@ -752,6 +752,30 @@ test("re-signing an older full exam does not replace the newer active annual", a
   assert.equal(annuals.find((request) => request.status === "active")?.occurrenceDateTime, "2027-08-20");
 });
 
+test("re-signing a completed source reconciles separate active annual duplicates", async () => {
+  const fhir = new EndpointFhir();
+  fhir.resources.push(
+    annualEncounter("completed-source", "routine-exam-established", "2026-01-15T15:00:00.000Z"),
+    ...fullExamObservations("completed-source"),
+    annualEncounter("duplicate-older", "routine-exam-established", "2026-04-15T15:00:00.000Z"),
+    annualEncounter("duplicate-newer", "routine-exam-established", "2026-08-20T15:00:00.000Z"),
+    { ...annualServiceRequest("completed-source-annual", "Encounter/completed-source", "2027-01-15"), status: "completed" },
+    annualServiceRequest("duplicate-older-annual", "Encounter/duplicate-older", "2027-04-15"),
+    annualServiceRequest("duplicate-newer-annual", "Encounter/duplicate-newer", "2027-08-20"),
+  );
+
+  const result = await handleProtocolSignCleanupRequest(
+    { ...endpointDeps(fhir), feeScheduleFhir: fhir as never },
+    { authHeader: "Bearer test", params: { encounterId: "completed-source" } },
+  );
+
+  assert.equal(result.status, 200);
+  assert.equal((await fhir.read<ServiceRequest>("ServiceRequest", "completed-source-annual")).status, "completed");
+  assert.equal((await fhir.read<ServiceRequest>("ServiceRequest", "duplicate-older-annual")).status, "completed");
+  assert.equal((await fhir.read<ServiceRequest>("ServiceRequest", "duplicate-newer-annual")).status, "active");
+  assert.equal(annualRequests(fhir).filter((request) => request.status === "active").length, 1);
+});
+
 test("late signing an older full exam keeps the annual from the latest service date", async () => {
   const fhir = new EndpointFhir();
   fhir.resources.push(
