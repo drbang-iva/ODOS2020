@@ -804,6 +804,25 @@ test("late signing an older full exam keeps the annual from the latest service d
   assert.equal(annuals.find((request) => request.encounter?.reference === "Encounter/late-sign-older")?.status, "completed");
 });
 
+test("an adjusted due date cannot override verified full-exam service chronology", async () => {
+  const fhir = new EndpointFhir();
+  fhir.resources.push(
+    annualEncounter("adjusted-due-older", "routine-exam-established", "2026-01-15T15:00:00.000Z"),
+    annualEncounter("adjusted-due-newer", "routine-exam-established", "2026-08-20T15:00:00.000Z"),
+    ...fullExamObservations("adjusted-due-newer"),
+    annualServiceRequest("adjusted-due-annual", "Encounter/adjusted-due-older", "2028-01-15"),
+  );
+
+  await handleProtocolSignCleanupRequest(
+    { ...endpointDeps(fhir), feeScheduleFhir: fhir as never },
+    { authHeader: "Bearer test", params: { encounterId: "adjusted-due-newer" } },
+  );
+
+  assert.equal((await fhir.read<ServiceRequest>("ServiceRequest", "adjusted-due-annual")).status, "completed");
+  assert.equal(annualRequests(fhir).find((request) => request.status === "active")?.encounter?.reference,
+    "Encounter/adjusted-due-newer");
+});
+
 test("same-day annual reconciliation keeps the encounter with the latest service time", async () => {
   const fhir = new EndpointFhir();
   fhir.resources.push(

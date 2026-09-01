@@ -210,12 +210,12 @@ function isLaterAnnual(
   const candidateTime = candidate.serviceDate ? Date.parse(candidate.serviceDate) : Number.NaN;
   const latestTime = latest.serviceDate ? Date.parse(latest.serviceDate) : Number.NaN;
   if (Number.isFinite(candidateTime) !== Number.isFinite(latestTime)) return Number.isFinite(candidateTime);
-  const candidateDue = candidate.request.occurrenceDateTime ?? "";
-  const latestDue = latest.request.occurrenceDateTime ?? "";
-  if (candidateDue !== latestDue) return candidateDue > latestDue;
   if (Number.isFinite(candidateTime) && Number.isFinite(latestTime) && candidateTime !== latestTime) {
     return candidateTime > latestTime;
   }
+  const candidateDue = candidate.request.occurrenceDateTime ?? "";
+  const latestDue = latest.request.occurrenceDateTime ?? "";
+  if (candidateDue !== latestDue) return candidateDue > latestDue;
   const candidateReference = candidate.request.encounter?.reference ?? candidate.request.id ?? "";
   const latestReference = latest.request.encounter?.reference ?? latest.request.id ?? "";
   return candidateReference > latestReference;
