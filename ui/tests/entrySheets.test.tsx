@@ -233,6 +233,79 @@ test("a tall real editor has a vertical reachability path in the capped bottom s
   }
 });
 
+test("switching to Images parks an in-progress entry sheet and resumes its local state", { timeout: 30_000 }, async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  page.setDefaultTimeout(5_000);
+  try {
+    await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "Open IOP" }).click();
+    const value = page.getByRole("combobox", { name: "OD IOP value" });
+    await value.fill("16");
+
+    await page.getByRole("tab", { name: /^Images/ }).click();
+    assert.equal(await page.locator('[data-entry-sheet-section="iop"]').count(), 1, "parking must keep the entry sheet mounted");
+    assert.equal(await page.getByRole("tab", { name: "Intraocular Pressure" }).getAttribute("data-parked"), "true");
+
+    await page.getByRole("tab", { name: "Intraocular Pressure" }).click();
+    assert.equal(await page.getByRole("combobox", { name: "OD IOP value" }).inputValue(), "16");
+  } finally {
+    await page.close();
+  }
+});
+
+test("Done returns the right panel to the tab that was forward before entry opened", { timeout: 30_000 }, async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  page.setDefaultTimeout(5_000);
+  try {
+    await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
+    await page.getByRole("tab", { name: "Engage" }).click();
+    await page.getByRole("button", { name: "Open IOP" }).click();
+    await page.getByRole("combobox", { name: "OD IOP value" }).fill("16");
+    await page.getByRole("button", { name: "Save IOP" }).click();
+
+    await page.getByRole("tabpanel", { name: "Engage" }).waitFor();
+    assert.equal(await page.getByRole("tab", { name: "Engage" }).getAttribute("aria-selected"), "true");
+    assert.equal(await page.getByRole("tab", { name: "Intraocular Pressure" }).count(), 0);
+  } finally {
+    await page.close();
+  }
+});
+
+test("the entry tab exists only while an entry sheet is open", { timeout: 30_000 }, async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  page.setDefaultTimeout(5_000);
+  try {
+    await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
+    assert.equal(await page.getByRole("tab", { name: /^Images/ }).count(), 1);
+    assert.equal(await page.getByRole("tab", { name: "Engage" }).count(), 1);
+    assert.equal(await page.locator(".odos-exam-right-panel-count-badge").first().textContent(), "2");
+    assert.equal(await page.locator('[role="tab"][data-entry-tab="true"]').count(), 0);
+
+    await page.getByRole("button", { name: "Open IOP" }).click();
+    const entryTab = page.getByRole("tab", { name: "Intraocular Pressure" });
+    assert.equal(await entryTab.getAttribute("data-entry-tab"), "true");
+    assert.equal(await entryTab.locator('button, [aria-label*="close" i]').count(), 0);
+
+    await page.getByRole("button", { name: "Cancel Intraocular Pressure entry" }).click();
+    assert.equal(await page.locator('[role="tab"][data-entry-tab="true"]').count(), 0);
+    assert.equal(await page.getByRole("tab", { name: /^Images/ }).getAttribute("aria-selected"), "true");
+  } finally {
+    await page.close();
+  }
+});
+
+test("the History entry tab uses the worksheet section title", { timeout: 30_000 }, async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  page.setDefaultTimeout(5_000);
+  try {
+    await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "Open Hpi" }).click();
+    await page.getByRole("tab", { name: "History", exact: true }).waitFor();
+  } finally {
+    await page.close();
+  }
+});
+
 test("Save and Add Another focuses an enabled blank concern within the viewport", { timeout: 30_000 }, async () => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   page.setDefaultTimeout(5_000);
@@ -317,7 +390,7 @@ for (const viewport of [
       assert.ok(geometry.sheetWidth >= viewport.expectedMin, `sheet width ${geometry.sheetWidth}px`);
       assert.ok(geometry.sheetWidth <= viewport.expectedMax, `sheet width ${geometry.sheetWidth}px`);
       assert.ok(geometry.examRight <= geometry.sheetLeft, `exam right ${geometry.examRight}px must not cross sheet left ${geometry.sheetLeft}px`);
-      await page.getByTestId("exam-entry-restore-bar").waitFor();
+      await page.getByRole("tab", { name: "Visual Acuity" }).waitFor();
     } finally {
       await page.close();
     }
@@ -731,7 +804,7 @@ test("clinical entry-sheet chrome is 44px-class, releases Tab, closes on pristin
     assert.equal(await page.evaluate(() => document.activeElement?.getAttribute("aria-label")), "Cancel Intraocular Pressure entry");
     assert.equal(await dialog.getAttribute("aria-modal"), null);
 
-    const chromeMeasurements = await page.locator("[data-entry-sheet-chrome]").evaluateAll((nodes) => nodes.map((node) => {
+    const chromeMeasurements = await page.locator("[data-entry-sheet-chrome]:visible").evaluateAll((nodes) => nodes.map((node) => {
       const rect = node.getBoundingClientRect();
       return { width: rect.width, height: rect.height };
     }));
@@ -832,7 +905,7 @@ test("every comprehensive worksheet section exposes all rows without an inner sc
         scrollHeight: body.scrollHeight,
       };
     }));
-    assert.equal(sections.length, 7);
+    assert.equal(sections.length, 6);
     for (const section of sections) {
       assert.ok(
         section.scrollHeight <= section.clientHeight,
@@ -877,7 +950,7 @@ test("the comprehensive worksheet renders all 17 Ocular Health rows in anatomica
   }
 });
 
-test("wide worksheet cards keep dense sections full width and row content within a readable measure", { timeout: 30_000 }, async () => {
+test("the permanent panel keeps dense worksheet sections full width within the left half", { timeout: 30_000 }, async () => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   page.setDefaultTimeout(5_000);
   try {
@@ -894,17 +967,16 @@ test("wide worksheet cards keep dense sections full width and row content within
     })) as Record<string, { x: number; y: number; width: number; bodyWidth: number }>);
 
     for (const sectionKey of ["history", "pretest", "ocular-health"]) {
-      assert.ok(geometry[sectionKey]!.width > 1_200, `${sectionKey} width is ${geometry[sectionKey]!.width}px`);
-      assert.ok(geometry[sectionKey]!.bodyWidth <= 896, `${sectionKey} row content is ${geometry[sectionKey]!.bodyWidth}px wide`);
+      assert.ok(geometry[sectionKey]!.width >= 500, `${sectionKey} width is ${geometry[sectionKey]!.width}px`);
+      assert.ok(geometry[sectionKey]!.width < 700, `${sectionKey} exceeds the worksheet half at ${geometry[sectionKey]!.width}px`);
+      assert.ok(geometry[sectionKey]!.bodyWidth <= geometry[sectionKey]!.width, `${sectionKey} row content is ${geometry[sectionKey]!.bodyWidth}px wide`);
     }
     assert.ok(geometry.history!.y < geometry.pretest!.y);
     assert.ok(geometry.pretest!.y < geometry.refraction!.y);
     assert.equal(geometry.refraction!.y, geometry["contact-lenses"]!.y);
     assert.notEqual(geometry.refraction!.x, geometry["contact-lenses"]!.x);
     assert.ok(geometry["contact-lenses"]!.y < geometry["ocular-health"]!.y);
-    assert.ok(geometry["ocular-health"]!.y < geometry.imaging!.y);
-    assert.equal(geometry.imaging!.y, geometry.assessment!.y);
-    assert.notEqual(geometry.imaging!.x, geometry.assessment!.x);
+    assert.ok(geometry["ocular-health"]!.y < geometry.assessment!.y);
 
     await page.setViewportSize({ width: 1179, height: 1000 });
     const narrowGeometry = await page.getByTestId("exam-overview-section").evaluateAll((nodes) => nodes.map((section) => {
@@ -941,9 +1013,9 @@ test("worksheet row labels align with section titles in full-width and paired ca
       };
     }));
 
-    assert.equal(geometry.length, 7);
-    assert.ok(geometry.some((section) => section.sectionWidth > 1_200), "fixture must include full-width cards");
-    assert.ok(geometry.some((section) => section.sectionWidth < 800), "fixture must include paired cards");
+    assert.equal(geometry.length, 6);
+    assert.ok(geometry.some((section) => section.sectionWidth >= 500), "fixture must include full-width worksheet cards");
+    assert.ok(geometry.some((section) => section.sectionWidth < 400), "fixture must include paired worksheet cards");
     for (const section of geometry) {
       assert.ok(
         Math.abs(section.firstRowLeft - section.titleLeft) <= 3,
@@ -1006,7 +1078,11 @@ test("the widest mapped shape uses a bottom sheet while retaining visible exam c
   page.setDefaultTimeout(3_000);
   try {
     await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
+    assert.equal(await page.getByRole("tabpanel", { name: "Images" }).count(), 0, "Images must not land forward on narrow viewports");
     await page.getByRole("button", { name: "Open Visual Acuity" }).click();
+    await page.getByRole("tab", { name: "Visual Acuity" }).waitFor();
+    await page.getByRole("tab", { name: /^Images/ }).waitFor();
+    await page.getByRole("tab", { name: "Engage" }).waitFor();
     const geometry = await page.evaluate(() => {
       const context = document.querySelector<HTMLElement>("[data-testid=fixture-exam-context]")!.getBoundingClientRect();
       const sheet = document.querySelector<HTMLElement>("[data-testid=exam-entry-sheet]")!.getBoundingClientRect();

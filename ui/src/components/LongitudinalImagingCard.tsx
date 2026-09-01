@@ -34,9 +34,11 @@ const MAX_FILE_BYTES = 15 * 1024 * 1024;
 export function LongitudinalImagingCard({
   patientReference,
   hideWhenEmpty = false,
+  onCountChange,
 }: {
   patientReference: string;
   hideWhenEmpty?: boolean;
+  onCountChange?: (count: number) => void;
 }) {
   const retriedImages = useRef(new Set<string>());
   const activePatient = useRef(patientReference);
@@ -54,6 +56,10 @@ export function LongitudinalImagingCard({
   const [overlayOpacity, setOverlayOpacity] = useState(45);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
+
+  useEffect(() => {
+    onCountChange?.(images.length);
+  }, [images.length, onCountChange]);
 
   async function loadImages(requestedPatient: string): Promise<ImagingPayload> {
     const response = await fetch(

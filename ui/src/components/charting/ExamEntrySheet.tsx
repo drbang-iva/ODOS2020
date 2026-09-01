@@ -108,6 +108,7 @@ export function ExamEntrySheet({
   onDirtyCheckpoint,
   onFocusWithin,
   onRestoreDirtyCheckpoint,
+  panelTabs,
   active = true,
   hidden = false,
   children,
@@ -120,6 +121,7 @@ export function ExamEntrySheet({
   onDirtyCheckpoint?: () => void;
   onFocusWithin?: (element: HTMLElement) => void;
   onRestoreDirtyCheckpoint?: () => void;
+  panelTabs?: ReactNode;
   active?: boolean;
   hidden?: boolean;
   children: ReactNode;
@@ -140,16 +142,18 @@ export function ExamEntrySheet({
     if (element && editorRoot && !editorRoot.contains(element)) onDirtyCheckpoint?.();
   };
   return (
-    <div className="odos-exam-entry-layer" data-testid="exam-entry-layer" hidden={hidden}>
-      <div
-        className="odos-exam-entry-restore-bar"
-        data-testid="exam-entry-restore-bar"
-        data-entry-sheet-chrome
-        aria-hidden="true"
-      >
-        <strong>Exam overview</strong>
-        <span>{modal ? "Chart remains visible behind this sheet" : `Parked while editing ${config.title}`}</span>
-      </div>
+    <div className="odos-exam-entry-layer" data-testid="exam-entry-layer" data-panel-tabs={panelTabs ? "true" : undefined} hidden={hidden}>
+      {!panelTabs && (
+        <div
+          className="odos-exam-entry-restore-bar"
+          data-testid="exam-entry-restore-bar"
+          data-entry-sheet-chrome
+          aria-hidden="true"
+        >
+          <strong>Exam overview</strong>
+          <span>{modal ? "Chart remains visible behind this sheet" : `Parked while editing ${config.title}`}</span>
+        </div>
+      )}
       <aside
         id={sectionId === "visit-charges" ? "visit-charges-sheet" : sectionId === "engage" ? "engage-sheet" : undefined}
         ref={dialogRef}
@@ -157,6 +161,7 @@ export function ExamEntrySheet({
         aria-modal={modal ? "true" : undefined}
         aria-labelledby={titleId}
         className="odos-exam-entry-sheet"
+        data-panel-tabs={panelTabs ? "true" : undefined}
         data-testid="exam-entry-sheet"
         data-entry-sheet-layout={config.layout}
         data-entry-sheet-section={sectionId}
@@ -182,6 +187,7 @@ export function ExamEntrySheet({
         }}
         onFocusCapture={(event) => onFocusWithin?.(event.target as HTMLElement)}
       >
+        {panelTabs}
         <header className="odos-exam-entry-sheet-heading">
           <div>
             <span>Entry sheet</span>

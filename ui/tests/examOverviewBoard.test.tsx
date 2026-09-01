@@ -45,7 +45,6 @@ import {
 } from "../src/components/charting/ExamOverviewBoard";
 import { GonioscopySection } from "../src/components/charting/GonioscopySection";
 import { HpiSection } from "../src/components/charting/HpiSection";
-import { ImagingSection } from "../src/components/charting/ImagingSection";
 import { IopSection } from "../src/components/charting/IopSection";
 import { MyopiaManagementSection } from "../src/components/charting/MyopiaManagementSection";
 import { OrthoKSection } from "../src/components/charting/OrthoKSection";
@@ -2297,7 +2296,7 @@ test("a zero-finding comprehensive encounter renders every required trace row wi
     const sections = renderer.root.findAllByProps({ "data-testid": "exam-overview-section" });
     assert.deepEqual(
       sections.map((section) => section.props["data-section-key"]),
-      ["history", "pretest", "refraction", "contact-lenses", "ocular-health", "imaging", "assessment"],
+      ["history", "pretest", "refraction", "contact-lenses", "ocular-health", "assessment"],
     );
     const traceRows = renderer.root.findAllByProps({ "data-testid": "exam-overview-trace-row" });
     assert.deepEqual(
@@ -2315,6 +2314,23 @@ test("a zero-finding comprehensive encounter renders every required trace row wi
         ["assessment", "not-examined", false],
       ],
     );
+  } finally {
+    renderer.unmount();
+  }
+});
+
+test("the worksheet omits Imaging because patient studies live in the permanent Images tab", () => {
+  const renderer = create(
+    <ExamOverviewBoard
+      projection={zeroFindingComprehensiveProjection()}
+      editorEntries={chartEditorInventory()}
+      refreshing={false}
+      onOpenEditor={() => undefined}
+      onRefresh={() => undefined}
+    />,
+  );
+  try {
+    assert.equal(renderer.root.findAllByProps({ "data-section-key": "imaging" }).length, 0);
   } finally {
     renderer.unmount();
   }
@@ -2375,7 +2391,7 @@ test("the combined Pretest row resolves only when both Entrance and Pretest trac
   }
 });
 
-test("worksheet rows expose owners and keep Contact Lenses and Imaging visibly optional", () => {
+test("worksheet rows expose owners and keep Contact Lenses visibly optional", () => {
   const renderer = create(
     <ExamOverviewBoard
       projection={zeroFindingComprehensiveProjection()}
@@ -2395,11 +2411,10 @@ test("worksheet rows expose owners and keep Contact Lenses and Imaging visibly o
         ["refraction", "Doctor"],
         ["contact-lenses", "Doctor"],
         ["ocular-health", "Doctor"],
-        ["imaging", "Doctor"],
         ["assessment", "Doctor"],
       ],
     );
-    for (const sectionKey of ["contact-lenses", "imaging"]) {
+    for (const sectionKey of ["contact-lenses"]) {
       const section = renderer.root.findByProps({ "data-section-key": sectionKey });
       assert.equal(section.props["data-required"], false);
       assert.match(section.props.className, /is-optional/);
@@ -2424,7 +2439,7 @@ test("a zero-finding Pretest section renders one labeled blank per chartable edi
   );
   try {
     const bodies = renderer.root.findAllByProps({ "data-testid": "exam-section-body" });
-    assert.equal(bodies.length, 7);
+    assert.equal(bodies.length, 6);
     for (const body of bodies) {
       assert.equal(body.props.style, undefined);
     }
@@ -2476,7 +2491,6 @@ test("only the single-slot Refraction group keeps Chart another finding", () => 
       refraction: ["refraction"],
       "contact-lenses": ["soft-contact-lens", "specialty-contact-lens", "ortho-k", "myopia-management"],
       "ocular-health": ["cup-disc", "gonioscopy", "dry-eye"],
-      imaging: ["imaging"],
       assessment: ["assessment", "prescription"],
     } as const;
     for (const [sectionKey, expectedEditorIds] of Object.entries(expectedBlankIdsBySection)) {
@@ -2643,7 +2657,7 @@ test("structure view keeps required blanks while collapsing performed findings i
       .filter((section) => section.props["data-section-state"] !== "editor-only");
     assert.deepEqual(
       sections.map((section) => section.props["data-section-key"]),
-      ["history", "pretest", "contact-lenses", "imaging"],
+      ["history", "pretest", "contact-lenses"],
     );
     assert.equal(harness.renderer.root.findAllByType(SpineNav).length, 0);
     const rows = harness.renderer.root.findAllByProps({ "data-testid": "exam-finding-row" });
@@ -3002,7 +3016,6 @@ test("distributed board rows anchor mapped editors and retain full-page fallback
       "eye-growth",
       "gonioscopy",
       "hpi",
-      "imaging",
       "iop",
       "manual-keratometry",
       "myopia-management",
@@ -3092,7 +3105,6 @@ test("each mapped layout wraps its existing section and supports both cancel and
     { sectionId: "cup-disc", component: CupDiscSection },
     { sectionId: "gonioscopy", component: GonioscopySection },
     { sectionId: "dry-eye", component: DryEyeSection },
-    { sectionId: "imaging", component: ImagingSection },
     { sectionId: "assessment", component: AssessmentSection },
     { sectionId: "prescription", component: PrescriptionSection },
   ] as const;

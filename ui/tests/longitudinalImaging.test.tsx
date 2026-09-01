@@ -54,6 +54,34 @@ test("overview imaging stays absent without images and appears when patient cont
   }
 });
 
+test("longitudinal imaging reports the loaded patient image count to panel chrome", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    if (String(input).includes("procedure-definitions")) return definitionsResponse();
+    return photosResponse([
+      image("count-one", "CarePlan/series-1", "Macula OD"),
+      image("count-two", "CarePlan/series-2", "Macula OS"),
+    ]);
+  };
+  const counts: number[] = [];
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <LongitudinalImagingCard
+          patientReference="Patient/count"
+          onCountChange={(count) => counts.push(count)}
+        />,
+      );
+      await Promise.resolve();
+    });
+    assert.equal(counts.at(-1), 2);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("overview imaging reports a load failure without rendering the empty panel", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => { throw new Error("Synthetic imaging outage"); };

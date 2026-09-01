@@ -287,6 +287,95 @@
   display: none;
 }
 
+.odos-exam-entry-layer[data-panel-tabs="true"] {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.odos-exam-right-panel-tabs {
+  display: flex;
+  min-width: 0;
+  min-height: 44px;
+  align-items: stretch;
+  gap: 2px;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--odos-line);
+  background: var(--odos-surface-2);
+}
+
+.odos-exam-right-panel-tabs button {
+  position: relative;
+  display: flex;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 11px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: var(--odos-faint);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.odos-exam-right-panel-tabs button:hover,
+.odos-exam-right-panel-tabs button[aria-selected="true"] {
+  color: var(--odos-text);
+}
+
+.odos-exam-right-panel-tabs button[data-entry-tab="true"] {
+  color: var(--odos-text);
+  font-weight: 850;
+}
+
+.odos-exam-right-panel-tabs button[data-entry-tab="true"][aria-selected="true"] {
+  border-bottom-color: var(--odos-amber);
+}
+
+.odos-exam-right-panel-parked-dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--odos-amber);
+}
+
+.odos-exam-right-panel-count-badge {
+  min-width: 18px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--odos-line-2);
+  color: var(--odos-text);
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+}
+
+.odos-exam-right-panel-surface {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  grid-template-rows: 44px minmax(0, 1fr);
+  background: var(--odos-deep-surface);
+  color: var(--odos-text);
+}
+
+.odos-exam-right-panel-content {
+  min-width: 0;
+  min-height: 0;
+  padding: 12px;
+  overflow-y: auto;
+}
+
+.odos-exam-entry-sheet[data-panel-tabs="true"] {
+  grid-template-rows: 44px auto minmax(0, 1fr);
+}
+
+.odos-exam-panel-launchers {
+  display: none;
+}
+
 .odos-exam-entry-restore-bar {
   display: flex;
   min-width: 44px;
@@ -1489,6 +1578,32 @@
     border-top: 1px solid var(--odos-line-2);
     border-left: 0;
     box-shadow: 0 -16px 36px rgb(0 0 0 / 32%);
+  }
+
+  .odos-charting-stage[data-panel-summoned="false"] > .odos-exam-entry-layer[data-panel-tabs="true"] {
+    display: none;
+  }
+
+  .odos-exam-panel-launchers {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 6px;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--odos-line);
+    background: var(--odos-surface);
+  }
+
+  .odos-exam-panel-launchers button {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 6px 10px;
+    border: 1px solid var(--odos-line-2);
+    border-radius: 7px;
+    background: var(--odos-surface-2);
+    color: var(--odos-muted);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
   }
 }
 
