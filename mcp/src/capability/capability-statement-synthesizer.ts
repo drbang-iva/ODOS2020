@@ -33,6 +33,8 @@ export interface CapabilityStatementSynthesisResult {
   readonly etag: string;
 }
 
+const INTERNAL_URL_PATTERN = /\bhttps?:\/\/(?:192\.168(?:\.\d{1,3}){2}|10(?:\.\d{1,3}){3}|127(?:\.\d{1,3}){3}|localhost|host\.docker\.internal|172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2})(?::\d+)?([/?#][^\s"']*)?/gi;
+
 const INTERNAL_REFERENCE_PATTERNS: readonly RegExp[] = [
   /\b(?:192\.168|10\.|127\.|localhost|host\.docker\.internal)\b[^\s"']*/gi,
   /\b172\.(?:1[6-9]|2\d|3[0-1])\.[^\s"']*/gi,
@@ -112,11 +114,26 @@ export function assertCapabilityRulesBuildGate(
 }
 
 export function sanitizeForPublicEmission(value: string, publicBaseUrl: string): string {
-  let sanitized = value;
   const base = publicBaseUrl.replace(/\/$/, "");
-  if (sanitized.startsWith(base)) {
-    return sanitized;
+  if (base && value.startsWith(base)) {
+    return value;
   }
+  const matches = [...value.matchAll(INTERNAL_URL_PATTERN)];
+  if (!matches.length) return sanitizeLegacyReferences(value, base);
+  const chunks: string[] = [];
+  let cursor = 0;
+  for (const match of matches) {
+    const index = match.index!;
+    chunks.push(sanitizeLegacyReferences(value.slice(cursor, index), base));
+    chunks.push(`${base}${match[1] ?? ""}`);
+    cursor = index + match[0].length;
+  }
+  chunks.push(sanitizeLegacyReferences(value.slice(cursor), base));
+  return chunks.join("");
+}
+
+function sanitizeLegacyReferences(value: string, base: string): string {
+  let sanitized = value;
   for (const pattern of INTERNAL_REFERENCE_PATTERNS) {
     sanitized = sanitized.replace(pattern, base);
   }

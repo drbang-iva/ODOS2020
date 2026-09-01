@@ -1248,12 +1248,12 @@ function assertEducationPublicBaseUrl(value: string): void {
     parsed = new URL(value);
   } catch {
     throw new CommsApiCapabilityError(
-      "Set ODOS_PRACTICE_PUBLIC_BASE_URL to the practice's reachable HTTPS base URL before sending tracked education links.",
+      "Set ODOS_COMMS_PUBLIC_BASE_URL to the practice's reachable HTTPS base URL before sending tracked education links.",
     );
   }
   if (parsed.protocol !== "https:" || parsed.username || parsed.password) {
     throw new CommsApiCapabilityError(
-      "Set ODOS_PRACTICE_PUBLIC_BASE_URL to the practice's reachable HTTPS base URL before sending tracked education links.",
+      "Set ODOS_COMMS_PUBLIC_BASE_URL to the practice's reachable HTTPS base URL before sending tracked education links.",
     );
   }
 }
