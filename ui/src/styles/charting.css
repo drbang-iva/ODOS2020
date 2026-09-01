@@ -47,7 +47,7 @@
 }
 
 .odos-charting-stage[data-entry-sheet-open="true"] {
-  grid-template-columns: minmax(0, 1fr) clamp(530px, 53vw, 770px);
+  grid-template-columns: minmax(0, 1fr) minmax(530px, 53vw);
 }
 
 .odos-charting-primary {
@@ -262,7 +262,7 @@
 }
 
 .odos-exam-overview-stage[data-entry-sheet-open="true"] {
-  grid-template-columns: minmax(0, 1fr) clamp(530px, 53vw, 770px);
+  grid-template-columns: minmax(0, 1fr) minmax(530px, 53vw);
 }
 
 .odos-exam-overview-stage > .odos-exam-overview {

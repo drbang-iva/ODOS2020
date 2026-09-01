@@ -294,6 +294,7 @@ for (const sectionId of [
 }
 
 for (const viewport of [
+  { width: 2000, height: 1000, expectedMin: 1050, expectedMax: 1070 },
   { width: 1440, height: 1000, expectedMin: 750, expectedMax: 770 },
   { width: 1200, height: 900, expectedMin: 530, expectedMax: 650 },
   { width: 1000, height: 900, expectedMin: 529, expectedMax: 531 },
@@ -1042,6 +1043,7 @@ test("an open clinical sheet disables Sign and Abandon in the encounter header",
 });
 
 for (const viewport of [
+  { width: 2000, height: 1000, expectedWidth: 1059 },
   { width: 1440, height: 1000, expectedWidth: 762 },
   { width: 1200, height: 900, expectedWidth: 635 },
   { width: 1000, height: 900, expectedWidth: 529 },
