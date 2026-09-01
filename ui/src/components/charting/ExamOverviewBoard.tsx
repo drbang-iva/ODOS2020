@@ -126,23 +126,25 @@ interface ExamSheetRowDefinition {
   editorGroupKey: string;
   traceSectionKeys: readonly string[];
   owner: "Tech" | "Doctor";
+  rowLayout: "single" | "two-column";
   optional?: boolean;
   optionalEditorIds?: readonly ChartEditorEntry["id"][];
   singleBlank?: boolean;
 }
 
 const EXAM_SHEET_ROWS: readonly ExamSheetRowDefinition[] = [
-  { sectionKey: "history", label: "History", editorGroupKey: "history", traceSectionKeys: ["history"], owner: "Doctor" },
-  { sectionKey: "pretest", label: "Pretest", editorGroupKey: "pretest", traceSectionKeys: ["entrance", "pretest"], owner: "Tech" },
-  { sectionKey: "refraction", label: "Refraction", editorGroupKey: "refraction", traceSectionKeys: ["refraction"], owner: "Doctor", singleBlank: true },
-  { sectionKey: "contact-lenses", label: "Contact Lenses", editorGroupKey: "contact-lenses", traceSectionKeys: [], owner: "Doctor", optional: true },
-  { sectionKey: "ocular-health", label: "Ocular Health", editorGroupKey: "ocular-health", traceSectionKeys: ["ocular-health"], owner: "Doctor" },
+  { sectionKey: "history", label: "History", editorGroupKey: "history", traceSectionKeys: ["history"], owner: "Doctor", rowLayout: "single" },
+  { sectionKey: "pretest", label: "Pretest", editorGroupKey: "pretest", traceSectionKeys: ["entrance", "pretest"], owner: "Tech", rowLayout: "two-column" },
+  { sectionKey: "refraction", label: "Refraction", editorGroupKey: "refraction", traceSectionKeys: ["refraction"], owner: "Doctor", rowLayout: "single", singleBlank: true },
+  { sectionKey: "contact-lenses", label: "Contact Lenses", editorGroupKey: "contact-lenses", traceSectionKeys: [], owner: "Doctor", rowLayout: "single", optional: true },
+  { sectionKey: "ocular-health", label: "Ocular Health", editorGroupKey: "ocular-health", traceSectionKeys: ["ocular-health"], owner: "Doctor", rowLayout: "two-column" },
   {
     sectionKey: "assessment",
     label: "Assessment & Plan",
     editorGroupKey: "assessment",
     traceSectionKeys: ["assessment"],
     owner: "Doctor",
+    rowLayout: "single",
     optionalEditorIds: ["prescription"],
   },
 ];
@@ -287,6 +289,7 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, r
               <div
                 className="odos-exam-finding-list odos-exam-section-body"
                 data-testid="exam-section-body"
+                data-row-layout={definition.rowLayout}
               >
                 {definition.singleBlank
                   ? groups.length > 0

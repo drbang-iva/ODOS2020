@@ -731,6 +731,12 @@
   margin-inline: 0 auto;
 }
 
+.odos-exam-section-body[data-row-layout="two-column"] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-flow: row;
+}
+
 .odos-exam-section-blank {
   display: grid;
   min-height: 44px;
@@ -1529,6 +1535,21 @@
   .odos-exam-finding-channels {
     justify-content: flex-end;
     padding-left: 0;
+  }
+}
+
+@media (min-width: 901px) {
+  .odos-exam-section-body[data-row-layout="two-column"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .odos-exam-section-body[data-row-layout="two-column"] > .odos-exam-finding {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: baseline;
+  }
+
+  .odos-exam-section-body[data-row-layout="two-column"] > .odos-exam-finding > .odos-exam-finding-expansion {
+    grid-column: 1;
   }
 }
 

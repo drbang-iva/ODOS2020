@@ -1022,6 +1022,56 @@ test("the permanent panel keeps dense worksheet sections full width within the l
   }
 });
 
+test("dense worksheet rows pair across while narrative rows stay vertical", { timeout: 30_000 }, async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  page.setDefaultTimeout(5_000);
+  try {
+    await page.goto(`${origin}/tests/fixtures/entry-sheets.html?comprehensive=true&worksheet=true`, { waitUntil: "networkidle" });
+    const geometry = await page.getByTestId("exam-overview-section").evaluateAll((nodes) => Object.fromEntries(nodes.map((section) => {
+      const body = section.querySelector<HTMLElement>('[data-testid="exam-section-body"]')!;
+      return [section.getAttribute("data-section-key"), {
+        rowLayout: body.getAttribute("data-row-layout"),
+        rows: Array.from(body.children).map((row) => {
+          const rect = row.getBoundingClientRect();
+          return {
+            editorId: row.getAttribute("data-editor-section-id"),
+            x: Math.round(rect.x),
+            y: Math.round(rect.y),
+          };
+        }),
+      }];
+    })) as Record<string, { rowLayout: string | null; rows: Array<{ editorId: string | null; x: number; y: number }> }>);
+
+    for (const sectionKey of ["pretest", "ocular-health"]) {
+      const section = geometry[sectionKey]!;
+      assert.equal(section.rowLayout, "two-column");
+      assert.ok(section.rows.length >= 2, `${sectionKey} must exercise at least two rows`);
+      assert.equal(section.rows[0]!.y, section.rows[1]!.y, `${sectionKey} first pair must share a y-coordinate`);
+      assert.notEqual(section.rows[0]!.x, section.rows[1]!.x, `${sectionKey} first pair must occupy different columns`);
+    }
+
+    for (const sectionKey of ["history", "assessment"]) {
+      const section = geometry[sectionKey]!;
+      assert.equal(section.rowLayout, "single");
+      assert.ok(section.rows.length >= 1, `${sectionKey} must exercise at least one row`);
+      assert.equal(new Set(section.rows.map((row) => row.y)).size, section.rows.length, `${sectionKey} rows must not share a y-coordinate`);
+    }
+
+    await page.setViewportSize({ width: 900, height: 1000 });
+    const narrowGeometry = await page.locator('[data-section-key="pretest"] [data-testid="exam-section-body"] > *').evaluateAll((rows) =>
+      rows.map((row) => {
+        const rect = row.getBoundingClientRect();
+        return { x: Math.round(rect.x), y: Math.round(rect.y) };
+      }),
+    );
+    assert.ok(narrowGeometry.length >= 2, "narrow pretest must exercise at least two rows");
+    assert.equal(new Set(narrowGeometry.map((row) => row.x)).size, 1, "dense rows must collapse to one column at 900px");
+    assert.equal(new Set(narrowGeometry.map((row) => row.y)).size, narrowGeometry.length, "collapsed dense rows must not share a y-coordinate");
+  } finally {
+    await page.close();
+  }
+});
+
 test("worksheet row labels align with section titles in full-width and paired cards", { timeout: 30_000 }, async () => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   page.setDefaultTimeout(5_000);

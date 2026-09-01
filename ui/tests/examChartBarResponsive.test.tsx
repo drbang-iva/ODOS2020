@@ -102,6 +102,64 @@ test("the real chart bar stays inside its viewport with touch-sized controls", {
   }
 });
 
+test("populated dense worksheet columns keep finding content inside each row", {
+  timeout: 60_000,
+}, async () => {
+  const server = await createServer({
+    root: resolve(import.meta.dirname, ".."),
+    logLevel: "silent",
+    server: { host: "127.0.0.1", port: 0 },
+  });
+  await server.listen();
+  const address = server.httpServer?.address();
+  assert.ok(address && typeof address !== "string", "Vite did not expose its test port");
+
+  const browser = await chromium.launch({
+    executablePath: chromeExecutable(),
+    headless: true,
+    args: process.platform === "linux" ? ["--no-sandbox"] : [],
+  });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    await page.goto(
+      `http://127.0.0.1:${address.port}/tests/fixtures/exam-chart-bar-responsive.html?board=1`,
+      { waitUntil: "networkidle" },
+    );
+    const measurement = await page.locator('[data-section-key="pretest"] [data-testid="exam-section-body"]').evaluate((body) => ({
+      clientWidth: body.clientWidth,
+      scrollWidth: body.scrollWidth,
+      rows: Array.from(body.querySelectorAll<HTMLElement>('[data-testid="exam-finding-row"]')).map((row) => ({
+        findingKey: row.dataset.findingKey,
+        clientWidth: row.clientWidth,
+        scrollWidth: row.scrollWidth,
+        expansionWidth: row.querySelector<HTMLElement>(".odos-exam-finding-expansion")?.getBoundingClientRect().width,
+      })),
+    }));
+
+    assert.ok(measurement.rows.length > 0, "the populated fixture must exercise recorded dense findings");
+    assert.ok(
+      measurement.scrollWidth <= measurement.clientWidth,
+      `dense finding body overflows: ${measurement.scrollWidth}px > ${measurement.clientWidth}px`,
+    );
+    for (const row of measurement.rows) {
+      assert.ok(
+        row.scrollWidth <= row.clientWidth,
+        `${row.findingKey} overflows its dense column: ${row.scrollWidth}px > ${row.clientWidth}px`,
+      );
+      if (row.expansionWidth !== undefined) {
+        assert.ok(
+          row.expansionWidth >= row.clientWidth - 30,
+          `${row.findingKey} crushes its exception disclosure to ${row.expansionWidth}px in a ${row.clientWidth}px row`,
+        );
+      }
+    }
+    await page.close();
+  } finally {
+    await browser.close();
+    await server.close();
+  }
+});
+
 test("the confrontation-field diagram keeps seeing field light and restriction dark across appearances", {
   timeout: 60_000,
 }, async () => {
