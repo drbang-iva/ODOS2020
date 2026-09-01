@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Device, Observation, Patient } from "@medplum/fhirtypes";
 import {
-  createAuthenticatedFhirClient,
+  createLiveAuthorizationClients,
   loadRepoEnv,
   requireMedplumAdmin,
 } from "./integration-helpers.js";
@@ -18,7 +18,7 @@ test("Medplum Observation focus search conformance or documented fallback", { ti
   }
   const { email, password } = credentials;
 
-  const { fhir } = await createAuthenticatedFhirClient({ baseUrl, email, password });
+  const { seederFhir: fhir } = await createLiveAuthorizationClients({ baseUrl, email, password });
   const patient = await fhir.create<Patient>({
     resourceType: "Patient",
     active: true,

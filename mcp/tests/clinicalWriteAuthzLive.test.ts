@@ -28,7 +28,7 @@ import {
 import { buildEyeBodyStructure } from "../src/fhir/ophthalmology/bodyStructure.js";
 import { buildProvenance } from "../src/fhir/ophthalmology/provenance.js";
 import { searchAll } from "../src/fhir-search.js";
-import { createAuthenticatedFhirClient, requireMedplumAdmin } from "./integration-helpers.js";
+import { createLiveAuthorizationClients, requireMedplumAdmin } from "./integration-helpers.js";
 
 const baseUrl = process.env.MEDPLUM_BASE_URL?.replace(/\/$/, "") ?? "http://localhost:8103";
 test("synced practice policies enforce all repaired clinical writes on running Medplum", async (t) => {
@@ -37,13 +37,17 @@ test("synced practice policies enforce all repaired clinical writes on running M
     return;
   }
   const { email, password } = credentials;
-  const { fhir: adminFhir, accessToken: adminToken } = await createAuthenticatedFhirClient({
+  const {
+    seederFhir,
+    seederAccessToken,
+    callerAccessToken,
+  } = await createLiveAuthorizationClients({
     baseUrl,
     email,
     password,
   });
   const meResponse = await fetch(`${baseUrl}/auth/me`, {
-    headers: { Authorization: `Bearer ${adminToken}` },
+    headers: { Authorization: `Bearer ${callerAccessToken}` },
   });
   if (!meResponse.ok) {
     throw new Error(`GET /auth/me failed: ${meResponse.status}`);
@@ -62,7 +66,7 @@ test("synced practice policies enforce all repaired clinical writes on running M
   };
 
   try {
-    const policies = await searchAll<AccessPolicy>(adminFhir, "AccessPolicy", {
+    const policies = await searchAll<AccessPolicy>(seederFhir, "AccessPolicy", {
       _project: projectId,
       _count: "1000",
     });
@@ -76,12 +80,12 @@ test("synced practice policies enforce all repaired clinical writes on running M
       rolePolicies.set(roleId, matches[0]!);
     }
 
-    const practitioner = track(await adminFhir.create<Practitioner>({
+    const practitioner = track(await seederFhir.create<Practitioner>({
       resourceType: "Practitioner",
       identifier: [{ system: "urn:odos:test:clinical-write-authz", value: `practitioner-${runId}` }],
       name: [{ family: `AuthzProof${runId}`, given: ["Synthetic"] }],
     }));
-    const patient = track(await adminFhir.create<Patient>({
+    const patient = track(await seederFhir.create<Patient>({
       resourceType: "Patient",
       identifier: [{ system: "urn:odos:test:clinical-write-authz", value: `patient-${runId}` }],
       name: [{ family: `AuthzProof${runId}`, given: ["Synthetic"] }],
@@ -99,8 +103,8 @@ test("synced practice policies enforce all repaired clinical writes on running M
         patientReference,
         practitionerReference,
         runId,
-        adminFhir,
-        adminToken,
+        seederFhir,
+        seederAccessToken,
         track,
       });
       tokens.set(roleId, roleClient.token);
@@ -294,7 +298,7 @@ test("synced practice policies enforce all repaired clinical writes on running M
         patientReference,
         practitionerReference,
         providerToken: tokens.get("provider")!,
-        adminFhir,
+        seederFhir,
         track,
       });
     });
@@ -315,7 +319,7 @@ test("synced practice policies enforce all repaired clinical writes on running M
         patientReference,
         practitionerReference,
         providerToken: tokens.get("provider")!,
-        adminFhir,
+        seederFhir,
         track,
       });
     });
@@ -333,7 +337,7 @@ test("synced practice policies enforce all repaired clinical writes on running M
       }
     });
   } finally {
-    await cleanupReferences(baseUrl, adminToken, cleanup);
+    await cleanupReferences(baseUrl, seederAccessToken, cleanup);
   }
 });
 
@@ -343,13 +347,13 @@ async function createRoleClient(input: {
   patientReference: string;
   practitionerReference: string;
   runId: string;
-  adminFhir: Awaited<ReturnType<typeof createAuthenticatedFhirClient>>["fhir"];
-  adminToken: string;
+  seederFhir: Awaited<ReturnType<typeof createLiveAuthorizationClients>>["seederFhir"];
+  seederAccessToken: string;
   track: <T extends Resource>(resource: T) => T;
 }): Promise<{ token: string }> {
   const response = await fetch(`${baseUrl}/admin/projects/${projectId}/client`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${input.adminToken}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${input.seederAccessToken}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       name: `clinical-write-${input.roleId}-${input.runId}`,
       description: "Disposable synthetic clinical-write authorization proof",
@@ -360,7 +364,7 @@ async function createRoleClient(input: {
   const client = await response.json() as ClientApplication & { id: string; secret: string };
   assert.ok(client.id && client.secret);
   input.track(client);
-  const memberships = (await searchAll<ProjectMembership>(input.adminFhir, "ProjectMembership", {
+  const memberships = (await searchAll<ProjectMembership>(input.seederFhir, "ProjectMembership", {
     profile: `ClientApplication/${client.id}`,
     _count: "100",
   })).filter((membership) => membership.project.reference === `Project/${projectId}`);
@@ -375,7 +379,7 @@ async function createRoleClient(input: {
       ...(input.roleId === "provider" ? { providerProfileReference: input.practitionerReference } : {}),
     },
   });
-  await input.adminFhir.patch<ProjectMembership>("ProjectMembership", membership.id, [
+  await input.seederFhir.patch<ProjectMembership>("ProjectMembership", membership.id, [
     { op: membership.access?.length ? "replace" : "add", path: "/access", value: access },
     ...(membership.accessPolicy ? [{ op: "remove" as const, path: "/accessPolicy" }] : []),
   ], { "If-Match": `W/\"${membership.meta.versionId}\"` });
@@ -454,7 +458,7 @@ async function assertCreateOnlyAdverseEventAndProvenance(input: {
   patientReference: string;
   practitionerReference: string;
   providerToken: string;
-  adminFhir: Awaited<ReturnType<typeof createAuthenticatedFhirClient>>["fhir"];
+  seederFhir: Awaited<ReturnType<typeof createLiveAuthorizationClients>>["seederFhir"];
   track: <T extends Resource>(resource: T) => T;
 }): Promise<void> {
   assert.ok(input.adverseEvent.id, "Create-only AdverseEvent response body must include its id.");
@@ -464,7 +468,7 @@ async function assertCreateOnlyAdverseEventAndProvenance(input: {
     `AdverseEvent/${input.adverseEvent.id}`,
   );
   assert.equal(providerRead.status, 403, "AdverseEvent remains write-only for Provider.");
-  const persisted = await input.adminFhir.read<AdverseEvent>("AdverseEvent", input.adverseEvent.id);
+  const persisted = await input.seederFhir.read<AdverseEvent>("AdverseEvent", input.adverseEvent.id);
   assert.equal(persisted.id, input.adverseEvent.id);
   const provenance = buildProvenance({
     targetReferences: [`AdverseEvent/${input.adverseEvent.id}`],
@@ -476,7 +480,7 @@ async function assertCreateOnlyAdverseEventAndProvenance(input: {
   const response = await fhirRequest<Provenance>(input.providerToken, "POST", "Provenance", provenance);
   assert.equal(response.status, 201, `Provider create Provenance: ${response.summary}`);
   const created = input.track(response.body as Provenance);
-  const persistedProvenance = await input.adminFhir.read<Provenance>("Provenance", created.id!);
+  const persistedProvenance = await input.seederFhir.read<Provenance>("Provenance", created.id!);
   assert.equal(
     persistedProvenance.target.some((target) => target.reference === `AdverseEvent/${input.adverseEvent.id}`),
     true,

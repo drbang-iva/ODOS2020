@@ -39,7 +39,7 @@ import { lateralityConcept, ODOS_EXTENSION_URLS } from "../src/fhir/ophthalmolog
 import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../src/fhir/ophthalmology/codeBindings.js";
 import { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } from "../src/clinical-graph/diagnosis-pick-endpoint.js";
 import { buildDiagnosisCatalogSeeds } from "../src/clinical-graph/diagnosis-catalog-seeds.js";
-import { createAuthenticatedFhirClient, loadRepoEnv, requireMedplumAdmin } from "./integration-helpers.js";
+import { createLiveAuthorizationClients, loadRepoEnv, requireMedplumAdmin } from "./integration-helpers.js";
 import { createMedplumClient } from "../src/fhir-client.js";
 import { searchAll } from "../src/fhir-search.js";
 import { TEST_FHIR_AUDIT_CONTEXT, TEST_FHIR_AUDIT_RECORDER } from "./fhirAuditTestStub.js";
@@ -1492,7 +1492,7 @@ test("live ordinary-clinician policy persists and reads diagnosis carry while pr
   }
   const { email, password } = credentials;
 
-  const { fhir: adminFhir, accessToken: adminAccessToken } = await createAuthenticatedFhirClient({ baseUrl, email, password });
+  const { seederFhir, seederAccessToken } = await createLiveAuthorizationClients({ baseUrl, email, password });
   const runId = randomUUID();
   const system = "urn:odos:test:diagnosis-carry-forward";
   const clientName = `diagnosis-carry-clinician-${runId}`;
@@ -1509,28 +1509,28 @@ test("live ordinary-clinician policy persists and reads diagnosis carry while pr
   };
 
   await runProofWithCleanup(async () => {
-    const practitioner = track(await adminFhir.create<Practitioner>({
+    const practitioner = track(await seederFhir.create<Practitioner>({
       resourceType: "Practitioner",
       identifier: [{ system, value: `practitioner-${runId}` }],
       name: [{ family: `DiagnosisPull${runId}`, given: ["Synthetic"] }],
     }));
-    const patient = track(await adminFhir.create<Patient>({
+    const patient = track(await seederFhir.create<Patient>({
       resourceType: "Patient",
       identifier: [{ system, value: `patient-${runId}` }],
       name: [{ family: `DiagnosisPull${runId}`, given: ["Synthetic"] }],
       generalPractitioner: [{ reference: `Practitioner/${practitioner.id}` }],
     }));
     const patientReference = `Patient/${patient.id}`;
-    const sourceEncounter = track(await adminFhir.create<Encounter>(syntheticEncounter(patientReference, system, `source-${runId}`)));
-    const currentEncounter = track(await adminFhir.create<Encounter>(syntheticEncounter(patientReference, system, `current-${runId}`)));
+    const sourceEncounter = track(await seederFhir.create<Encounter>(syntheticEncounter(patientReference, system, `source-${runId}`)));
+    const currentEncounter = track(await seederFhir.create<Encounter>(syntheticEncounter(patientReference, system, `current-${runId}`)));
     sweepEncounterIds.add(currentEncounter.id!);
-    const present = track(await adminFhir.create<Observation>(
+    const present = track(await seederFhir.create<Observation>(
       syntheticEvidence(patientReference, `Encounter/${sourceEncounter.id}`, system, `present-${runId}`, true),
     ));
-    const absent = track(await adminFhir.create<Observation>(
+    const absent = track(await seederFhir.create<Observation>(
       syntheticEvidence(patientReference, `Encounter/${sourceEncounter.id}`, system, `absent-${runId}`, false),
     ));
-    const sourceCondition = track(await adminFhir.create<Condition>({
+    const sourceCondition = track(await seederFhir.create<Condition>({
       ...buildEncounterDiagnosisCondition({
         patientReference,
         encounterReference: `Encounter/${sourceEncounter.id}`,
@@ -1544,19 +1544,19 @@ test("live ordinary-clinician policy persists and reads diagnosis carry while pr
       }),
       extension: [{ url: ODOS_EXTENSION_URLS.eyeLaterality, valueCodeableConcept: lateralityConcept("OD") }],
     }));
-    await adminFhir.update<Encounter>("Encounter", sourceEncounter.id!, {
+    await seederFhir.update<Encounter>("Encounter", sourceEncounter.id!, {
       ...sourceEncounter,
       diagnosis: [buildEncounterDiagnosisComponent(`Condition/${sourceCondition.id}`, 1)],
     });
 
     const clinicianPolicy = buildMedplumAccessPolicy(getRoleDeclaration("provider"));
     clinicianPolicy.name = accessPolicyName;
-    const createdPolicy = track(await adminFhir.create<AccessPolicy>(clinicianPolicy));
+    const createdPolicy = track(await seederFhir.create<AccessPolicy>(clinicianPolicy));
     accessPolicyId = createdPolicy.id;
-    projectId = await activeProjectId(baseUrl, adminAccessToken);
+    projectId = await activeProjectId(baseUrl, seederAccessToken);
     const clientApplication = await createDisposableClientApplication(
       baseUrl,
-      adminAccessToken,
+      seederAccessToken,
       projectId,
       `AccessPolicy/${createdPolicy.id}`,
       clientName,
@@ -1565,14 +1565,14 @@ test("live ordinary-clinician policy persists and reads diagnosis carry while pr
         cleanupReferences.add(`ClientApplication/${id}`);
       },
     );
-    const memberships = (await searchAll<ProjectMembership>(adminFhir, "ProjectMembership", {
+    const memberships = (await searchAll<ProjectMembership>(seederFhir, "ProjectMembership", {
       profile: `ClientApplication/${clientApplication.id}`,
     })).filter((membership) => membership.project.reference === `Project/${projectId}`);
     assert.equal(memberships.length, 1, "Disposable client must have one membership in the existing local project.");
     const membership = memberships[0]!;
     assert.ok(membership.id && membership.meta?.versionId);
     cleanupReferences.add(`ProjectMembership/${membership.id}`);
-    await adminFhir.patch<ProjectMembership>("ProjectMembership", membership.id, [{
+    await seederFhir.patch<ProjectMembership>("ProjectMembership", membership.id, [{
       op: membership.access?.length ? "replace" : "add",
       path: "/access",
       value: buildProjectMembershipAccess({
@@ -1650,21 +1650,21 @@ test("live ordinary-clinician policy persists and reads diagnosis carry while pr
     assert.equal(carryState.edited, false, carryState.integrityWarning);
     assert.equal(carryState.pulledFromDate, sourceEncounter.period?.start);
 
-    const conflictSourceEncounter = track(await adminFhir.create<Encounter>(
+    const conflictSourceEncounter = track(await seederFhir.create<Encounter>(
       syntheticEncounter(patientReference, system, `conflict-source-${runId}`),
     ));
-    const conflictCurrentEncounter = track(await adminFhir.create<Encounter>(
+    const conflictCurrentEncounter = track(await seederFhir.create<Encounter>(
       syntheticEncounter(patientReference, system, `conflict-current-${runId}`),
     ));
     sweepEncounterIds.add(conflictCurrentEncounter.id!);
-    const conflictEvidence = track(await adminFhir.create<Observation>(syntheticEvidence(
+    const conflictEvidence = track(await seederFhir.create<Observation>(syntheticEvidence(
       patientReference,
       `Encounter/${conflictSourceEncounter.id}`,
       system,
       `conflict-present-${runId}`,
       true,
     )));
-    const conflictCondition = track(await adminFhir.create<Condition>(buildEncounterDiagnosisCondition({
+    const conflictCondition = track(await seederFhir.create<Condition>(buildEncounterDiagnosisCondition({
       patientReference,
       encounterReference: `Encounter/${conflictSourceEncounter.id}`,
       code: { coding: [{ system, code: `conflict-diagnosis-${runId}` }], text: `Conflict diagnosis ${runId}` },
@@ -1675,7 +1675,7 @@ test("live ordinary-clinician policy persists and reads diagnosis carry while pr
       }],
       evidenceObservationReferences: [`Observation/${conflictEvidence.id}`],
     })));
-    await adminFhir.update<Encounter>("Encounter", conflictSourceEncounter.id!, {
+    await seederFhir.update<Encounter>("Encounter", conflictSourceEncounter.id!, {
       ...conflictSourceEncounter,
       diagnosis: [buildEncounterDiagnosisComponent(`Condition/${conflictCondition.id}`, 1)],
     });
@@ -1689,8 +1689,8 @@ test("live ordinary-clinician policy persists and reads diagnosis carry while pr
       executeTransaction: async (bundle, headers, options) => {
         if (!injectedConflict) {
           injectedConflict = true;
-          const fresh = await adminFhir.read<Encounter>("Encounter", conflictCurrentEncounter.id!);
-          await adminFhir.update<Encounter>("Encounter", conflictCurrentEncounter.id!, {
+          const fresh = await seederFhir.read<Encounter>("Encounter", conflictCurrentEncounter.id!);
+          await seederFhir.update<Encounter>("Encounter", conflictCurrentEncounter.id!, {
             ...fresh,
             extension: [...(fresh.extension ?? []), { url: system, valueString: `race-${runId}` }],
           });
@@ -1723,7 +1723,7 @@ test("live ordinary-clinician policy persists and reads diagnosis carry while pr
     try {
       conflictResult = await handleDiagnosisPullRequest({
         fhirBaseUrl: baseUrl,
-        rollbackFhir: adminFhir,
+        rollbackFhir: seederFhir,
         authenticate: async () => ({
           staffReference: `Practitioner/${practitioner.id}`,
           actorRole: "provider",
@@ -1748,12 +1748,12 @@ test("live ordinary-clinician policy persists and reads diagnosis carry while pr
     );
     const rolledBackEncounter = await clinicianFhir.read<Encounter>("Encounter", conflictCurrentEncounter.id!);
     assert.deepEqual(rolledBackEncounter.diagnosis, undefined);
-    await assertNoTransactionLeaks(adminFhir, conflictCurrentEncounter.id!, conflictResponseSummary);
+    await assertNoTransactionLeaks(seederFhir, conflictCurrentEncounter.id!, conflictResponseSummary);
   }, async () => {
     await cleanupSyntheticPullProof(
-      adminFhir,
+      seederFhir,
       baseUrl,
-      adminAccessToken,
+      seederAccessToken,
       sweepEncounterIds,
       cleanupReferences,
       {
@@ -2469,7 +2469,7 @@ function syntheticEvidence(
 }
 
 async function assertNoTransactionLeaks(
-  fhir: Awaited<ReturnType<typeof createAuthenticatedFhirClient>>["fhir"],
+  fhir: Awaited<ReturnType<typeof createLiveAuthorizationClients>>["seederFhir"],
   encounterId: string,
   detail?: unknown,
 ): Promise<void> {
@@ -2534,7 +2534,7 @@ async function runProofWithCleanup<T>(
 }
 
 async function cleanupSyntheticPullProof(
-  fhir: Awaited<ReturnType<typeof createAuthenticatedFhirClient>>["fhir"],
+  fhir: Awaited<ReturnType<typeof createLiveAuthorizationClients>>["seederFhir"],
   baseUrl: string,
   accessToken: string,
   encounterIds: Set<string>,
@@ -2593,7 +2593,7 @@ async function cleanupSyntheticPullProof(
 }
 
 async function discoverDisposableAuthorizationReferences(
-  fhir: Awaited<ReturnType<typeof createAuthenticatedFhirClient>>["fhir"],
+  fhir: Awaited<ReturnType<typeof createLiveAuthorizationClients>>["seederFhir"],
   identity: {
     projectId?: string;
     clientName: string;
@@ -2655,7 +2655,7 @@ async function discoverDisposableAuthorizationReferences(
 }
 
 async function transactionResourcesForEncounter(
-  fhir: Awaited<ReturnType<typeof createAuthenticatedFhirClient>>["fhir"],
+  fhir: Awaited<ReturnType<typeof createLiveAuthorizationClients>>["seederFhir"],
   encounterId: string,
 ): Promise<Array<Condition | Observation | Provenance>> {
   const encounterReference = `Encounter/${encounterId}`;
@@ -2668,7 +2668,7 @@ async function transactionResourcesForEncounter(
 }
 
 async function allSearchResources<T extends Resource>(
-  fhir: Awaited<ReturnType<typeof createAuthenticatedFhirClient>>["fhir"],
+  fhir: Awaited<ReturnType<typeof createLiveAuthorizationClients>>["seederFhir"],
   resourceType: T["resourceType"],
   params: Record<string, string>,
 ): Promise<T[]> {

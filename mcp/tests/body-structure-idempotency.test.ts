@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { BodyStructure, Encounter, Patient } from "@medplum/fhirtypes";
 import {
-  createAuthenticatedFhirClient,
+  createLiveAuthorizationClients,
   loadRepoEnv,
   requireMedplumAdmin,
 } from "./integration-helpers.js";
@@ -18,7 +18,7 @@ test("section saves reuse BodyStructure by patient and location", { timeout: 90_
   }
   const { email, password } = credentials;
 
-  const { fhir } = await createAuthenticatedFhirClient({ baseUrl, email, password });
+  const { seederFhir: fhir } = await createLiveAuthorizationClients({ baseUrl, email, password });
   const patient = await fhir.create<Patient>({
     resourceType: "Patient",
     name: [{ family: `BodyStructureIdempotency${Date.now()}`, given: ["Test"] }],
@@ -54,7 +54,7 @@ test("section saves reuse BodyStructure by patient and location", { timeout: 90_
 });
 
 async function saveIop(
-  fhir: Awaited<ReturnType<typeof createAuthenticatedFhirClient>>["fhir"],
+  fhir: Awaited<ReturnType<typeof createLiveAuthorizationClients>>["seederFhir"],
   patientId: string,
   encounterId: string,
   laterality: "OD" | "OS",
@@ -73,7 +73,7 @@ async function saveIop(
 }
 
 async function searchBodyStructures(
-  fhir: Awaited<ReturnType<typeof createAuthenticatedFhirClient>>["fhir"],
+  fhir: Awaited<ReturnType<typeof createLiveAuthorizationClients>>["seederFhir"],
   patientId: string,
   location: string,
 ): Promise<BodyStructure[]> {

@@ -10,7 +10,7 @@ import {
   ODOS_EPISODE_OF_CARE_TYPE_VALUE_SET,
 } from "../src/fhir/episodeOfCare.js";
 import {
-  createAuthenticatedFhirClient,
+  createLiveAuthorizationClients,
   loadRepoEnv,
   requireMedplumAdmin,
 } from "./integration-helpers.js";
@@ -26,6 +26,11 @@ test("profile installer idempotently installs ODOS EpisodeOfCare terminology", {
     return;
   }
   const { email, password } = credentials;
+  const { seederFhir: fhir, seederAccessToken } = await createLiveAuthorizationClients({
+    baseUrl,
+    email,
+    password,
+  });
 
   const repoRoot = resolve(process.cwd(), "..");
   const install = await execFileAsync("npm", ["run", "install-profiles", "--silent"], {
@@ -35,11 +40,10 @@ test("profile installer idempotently installs ODOS EpisodeOfCare terminology", {
       MEDPLUM_BASE_URL: baseUrl,
       MEDPLUM_ADMIN_EMAIL: email,
       MEDPLUM_ADMIN_PASSWORD: password,
+      MEDPLUM_ACCESS_TOKEN: seederAccessToken,
     },
   });
   assert.equal(install.stderr, "");
-
-  const { fhir } = await createAuthenticatedFhirClient({ baseUrl, email, password });
 
   await t.test("CodeSystem is retrievable by canonical URL", async () => {
     const bundle = await fhir.search<CodeSystem>("CodeSystem", {

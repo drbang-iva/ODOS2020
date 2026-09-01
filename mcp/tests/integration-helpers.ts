@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { TestContext } from "node:test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -18,6 +19,9 @@ import {
   type PostgresErrorLogger,
 } from "../src/postgres.js";
 import { TEST_FHIR_AUDIT_CONTEXT, TEST_FHIR_AUDIT_RECORDER } from "./fhirAuditTestStub.js";
+import { loadVerifiedOperatorFhirClient } from "../../scripts/operator-identity.js";
+
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
 export function loadRepoEnv(): void {
   const envPath = resolve(process.cwd(), "../.env");
@@ -201,6 +205,43 @@ export async function createAuthenticatedFhirClient(input: {
       auditContext: TEST_FHIR_AUDIT_CONTEXT,
     }),
     accessToken,
+  };
+}
+
+type LiveAuthorizationIdentity = Awaited<ReturnType<typeof createAuthenticatedFhirClient>>;
+
+export async function createLiveAuthorizationClients(
+  input: { baseUrl: string; email: string; password: string },
+  dependencies?: {
+    loadSeeder(): Promise<LiveAuthorizationIdentity>;
+    loadCaller(): Promise<LiveAuthorizationIdentity>;
+  },
+): Promise<{
+  seederFhir: LiveAuthorizationIdentity["fhir"];
+  seederAccessToken: string;
+  callerFhir: LiveAuthorizationIdentity["fhir"];
+  callerAccessToken: string;
+}> {
+  const caller = await (dependencies?.loadCaller() ?? createAuthenticatedFhirClient(input));
+  const seeder = dependencies
+    ? await dependencies.loadSeeder()
+    : await loadVerifiedOperatorFhirClient({
+      baseUrl: input.baseUrl,
+      projectId: await caller.fhir.getActiveProjectId(),
+      postgresUrl: process.env.ODOS_POSTGRES_URL,
+      credentialPath: resolve(REPO_ROOT, ".odos/operator.env"),
+      statePath: resolve(REPO_ROOT, ".odos/operator-identity.json"),
+    });
+  assert.notEqual(
+    seeder.accessToken,
+    caller.accessToken,
+    "Live authorization seeder and caller must be distinct identities.",
+  );
+  return {
+    seederFhir: seeder.fhir,
+    seederAccessToken: seeder.accessToken,
+    callerFhir: caller.fhir,
+    callerAccessToken: caller.accessToken,
   };
 }
 

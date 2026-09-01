@@ -27,6 +27,7 @@ import { buildOpticalInvoice } from "../src/fhir/opticalInvoice.js";
 import { buildPaymentReconciliation } from "../src/payments/payment-reconciliation.js";
 import {
   createAuthenticatedFhirClient,
+  createLiveAuthorizationClients,
   exportContractProjectIdForGitHubActions,
   loadRepoEnv,
   requireMedplumAdmin,
@@ -72,9 +73,19 @@ before(async () => {
   if (!email || !password) return;
 
   await ensureContractIdentity({ baseUrl, email, password });
-  const { fhir, accessToken } = await createAuthenticatedFhirClient({ baseUrl, email, password });
-  exportContractProjectIdForGitHubActions(await fhir.getActiveProjectId());
-  fixture = await seedSmokeFixture(fhir, baseUrl, accessToken);
+  if (process.env.ODOS_MCP_LIVE_AUTHZ === "1") {
+    const { seederFhir, seederAccessToken, callerFhir } = await createLiveAuthorizationClients({
+      baseUrl,
+      email,
+      password,
+    });
+    exportContractProjectIdForGitHubActions(await callerFhir.getActiveProjectId());
+    fixture = await seedSmokeFixture(seederFhir, baseUrl, seederAccessToken);
+  } else {
+    const { fhir, accessToken } = await createAuthenticatedFhirClient({ baseUrl, email, password });
+    exportContractProjectIdForGitHubActions(await fhir.getActiveProjectId());
+    fixture = await seedSmokeFixture(fhir, baseUrl, accessToken);
+  }
 });
 
 const searches: SmokeSearch[] = [

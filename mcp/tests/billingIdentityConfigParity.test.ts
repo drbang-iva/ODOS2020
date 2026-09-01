@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { test } from "node:test";
 import type { Basic } from "@medplum/fhirtypes";
-import { createAuthenticatedFhirClient, loadRepoEnv, requireMedplumAdmin } from "./integration-helpers.js";
+import { createLiveAuthorizationClients, loadRepoEnv, requireMedplumAdmin } from "./integration-helpers.js";
 import {
   ODOS_BILLING_IDENTITY_CONFIG_CODE as mcpCode,
   ODOS_BILLING_IDENTITY_CONFIG_RESOURCE_ID as mcpResourceId,
@@ -85,7 +85,11 @@ test("real Medplum assigns ids and reloads coded Basic singletons", { timeout: 9
   }
   const { email, password } = credentials;
 
-  const { fhir, accessToken } = await createAuthenticatedFhirClient({ baseUrl, email, password });
+  const { seederFhir: fhir, seederAccessToken: accessToken } = await createLiveAuthorizationClients({
+    baseUrl,
+    email,
+    password,
+  });
   const runId = randomUUID();
   const createdIds: string[] = [];
   try {

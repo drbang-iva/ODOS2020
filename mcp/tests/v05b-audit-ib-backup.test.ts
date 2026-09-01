@@ -19,7 +19,7 @@ import { informationBlockingExceptionForDenial } from "../src/policy/ib-exceptio
 import { auditEventTypeForFhirWrite, type MedplumClient } from "../src/fhir-client.js";
 import {
   connectMcpServer,
-  createAuthenticatedFhirClient,
+  createLiveAuthorizationClients,
   loadRepoEnv,
   parseToolOutput,
   requireMedplumAdmin,
@@ -296,7 +296,11 @@ test(
     }
     const { email, password } = credentials;
 
-    const { fhir, accessToken } = await createAuthenticatedFhirClient({ baseUrl, email, password });
+    const {
+      seederFhir,
+      seederAccessToken,
+      callerAccessToken,
+    } = await createLiveAuthorizationClients({ baseUrl, email, password });
     const audit = createLiveOdosAuditRuntime({
       postgresUrl: process.env.ODOS_POSTGRES_URL,
       medplumBaseUrl: baseUrl,
@@ -307,7 +311,7 @@ test(
       await audit.close();
     });
 
-    const patient = await fhir.create<Patient>({
+    const patient = await seederFhir.create<Patient>({
       resourceType: "Patient",
       active: true,
       gender: "unknown",
@@ -319,7 +323,7 @@ test(
       baseUrl,
       email,
       password,
-      accessToken,
+      accessToken: callerAccessToken,
       clientName: "odos-mcp-v05b-live-audit-admin",
     });
     t.after(async () => {
@@ -339,7 +343,11 @@ test(
       }),
     );
 
-    const auditOnlyBoundaryToken = await createAuditOnlyBoundaryClientToken({ baseUrl, accessToken, fhir });
+    const auditOnlyBoundaryToken = await createAuditOnlyBoundaryClientToken({
+      baseUrl,
+      seederAccessToken,
+      seederFhir,
+    });
     const auditOnlyBoundaryMcp = await connectMcpServer({
       baseUrl,
       email,
@@ -450,11 +458,11 @@ function seedNinetyDays(patientId: string) {
 
 async function createAuditOnlyBoundaryClientToken(input: {
   baseUrl: string;
-  accessToken: string;
-  fhir: MedplumClient;
+  seederAccessToken: string;
+  seederFhir: MedplumClient;
 }): Promise<string> {
   const meRes = await fetch(`${input.baseUrl.replace(/\/$/, "")}/auth/me`, {
-    headers: { Authorization: `Bearer ${input.accessToken}` },
+    headers: { Authorization: `Bearer ${input.seederAccessToken}` },
   });
   assert.ok(meRes.ok, `GET /auth/me failed: ${meRes.status}`);
   const me = (await meRes.json()) as { project?: { id?: string } };
@@ -462,7 +470,7 @@ async function createAuditOnlyBoundaryClientToken(input: {
 
   // This test-local boundary is intentionally not a named product role; see performance-od/decisions/2026-08-28-odos-auditor-fixture-fossil-verdict.md.
   const policy = buildAuditOnlyBoundaryPolicy(`ODOS v0.5b Audit-Only Boundary Denial ${Date.now()}`);
-  const createdPolicy = await input.fhir.create<AccessPolicy>(policy);
+  const createdPolicy = await input.seederFhir.create<AccessPolicy>(policy);
   assert.ok(createdPolicy.id);
 
   const adminClientRes = await fetch(
@@ -470,7 +478,7 @@ async function createAuditOnlyBoundaryClientToken(input: {
     {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${input.accessToken}`,
+        Authorization: `Bearer ${input.seederAccessToken}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

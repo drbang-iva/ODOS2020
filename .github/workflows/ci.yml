@@ -94,7 +94,7 @@ jobs:
             ../tests/agentops/**/*.test.ts \
             ../tests/bulk-data/**/*.test.ts \
             ../tests/mandate-8/**/*.test.ts
-      # The contract bootstrap creates the project and exports MEDPLUM_PROJECT_ID for the repair step.
+      # The contract bootstrap creates the project and exports MEDPLUM_PROJECT_ID for seeder provisioning.
       - name: run Medplum search contract smoke lane
         working-directory: mcp
         env:
@@ -105,11 +105,21 @@ jobs:
         run: |
           node --import tsx --test --test-concurrency=1 tests/searchParamMedplumSmoke.test.ts
           node --import tsx --test --test-concurrency=1 tests/profile-validation.test.ts
-      # The bootstrap uses the same local admin identity; reset Medplum's one-minute login throttle before repair.
+      # The bootstrap uses the same local admin identity; reset Medplum's one-minute login throttle before provisioning.
       - name: wait for ephemeral Medplum login throttle reset
         run: sleep 61
+      # CI-ONLY PRIVILEGED SEEDER: this creates the unbound local operator in the fresh
+      # ephemeral localhost:18103 project. Never point this invocation at a real practice project.
+      - name: provision unbound fixture seeder for live authorization lane
+        env:
+          MEDPLUM_BASE_URL: http://localhost:18103/
+          MEDPLUM_ADMIN_EMAIL: contract-admin@odos.local
+          MEDPLUM_ADMIN_PASSWORD: Odos-contract-CI-Password-1!
+          ODOS_POSTGRES_URL: postgresql://medplum:medplum@127.0.0.1:15432/medplum
+        run: npm run operator-identity -- --project "$MEDPLUM_PROJECT_ID"
       # CI-ONLY PRIVILEGED REPAIR: this targets the fresh ephemeral localhost:18103
-      # container project. Never point this invocation at a real practice project.
+      # container project, leaves the seeder unbound, and binds the caller. Never point
+      # this invocation at a real practice project.
       - name: create canonical practice-role policies for live authorization lane
         env:
           MEDPLUM_BASE_URL: http://localhost:18103/
@@ -134,13 +144,16 @@ jobs:
           --apply
           --bootstrap-service-identity
       - name: run credentialed live authorization lane
-        # Bootstrap supplies the project, repair creates canonical policies, and sync repairs their rules; keep this chain ordered.
+        # Bootstrap supplies the project, operator-identity supplies the seeder, repair binds
+        # the caller, and sync repairs canonical rules; keep this chain ordered.
         working-directory: mcp
         env:
           MEDPLUM_BASE_URL: http://localhost:18103/
           MEDPLUM_ADMIN_EMAIL: contract-admin@odos.local
           MEDPLUM_ADMIN_PASSWORD: Odos-contract-CI-Password-1!
           MEDPLUM_CONTRACT_BOOTSTRAP: "1"
+          ODOS_MCP_LIVE_AUTHZ: "1"
+          ODOS_POSTGRES_URL: postgresql://medplum:medplum@127.0.0.1:15432/medplum
         run: npm run test:live-authz
       - name: stop Medplum contract backend
         if: always()

@@ -91,6 +91,65 @@ test("contract bootstrap exports the observed project id for later GitHub Action
   assert.equal(readFileSync(environmentPath, "utf8"), "MEDPLUM_PROJECT_ID=practice-project\n");
 });
 
+test("live authorization clients keep the fixture seeder distinct from the constrained caller", async () => {
+  const helpers = await import("./integration-helpers.js");
+  const createClients = (helpers as unknown as Record<string, unknown>)
+    .createLiveAuthorizationClients as undefined | ((
+      input: { baseUrl: string; email: string; password: string },
+      dependencies: {
+        loadSeeder(): Promise<{ fhir: object; accessToken: string }>;
+        loadCaller(): Promise<{ fhir: object; accessToken: string }>;
+      },
+    ) => Promise<{
+      seederFhir: object;
+      seederAccessToken: string;
+      callerFhir: object;
+      callerAccessToken: string;
+    }>);
+  const seederFhir = { identity: "seeder" };
+  const callerFhir = { identity: "caller" };
+
+  assert.ok(typeof createClients === "function");
+  const clients = await createClients(
+    { baseUrl: "http://medplum.test", email: "caller@example.test", password: "caller-password" },
+    {
+      loadSeeder: async () => ({ fhir: seederFhir, accessToken: "seeder-token" }),
+      loadCaller: async () => ({ fhir: callerFhir, accessToken: "caller-token" }),
+    },
+  );
+
+  assert.deepEqual(clients, {
+    seederFhir,
+    seederAccessToken: "seeder-token",
+    callerFhir,
+    callerAccessToken: "caller-token",
+  });
+});
+
+test("live authorization clients reject a seeder and caller token collision", async () => {
+  const helpers = await import("./integration-helpers.js");
+  const createClients = (helpers as unknown as Record<string, unknown>)
+    .createLiveAuthorizationClients as undefined | ((
+      input: { baseUrl: string; email: string; password: string },
+      dependencies: {
+        loadSeeder(): Promise<{ fhir: object; accessToken: string }>;
+        loadCaller(): Promise<{ fhir: object; accessToken: string }>;
+      },
+    ) => Promise<unknown>);
+
+  assert.ok(typeof createClients === "function");
+  await assert.rejects(
+    createClients(
+      { baseUrl: "http://medplum.test", email: "caller@example.test", password: "caller-password" },
+      {
+        loadSeeder: async () => ({ fhir: {}, accessToken: "shared-token" }),
+        loadCaller: async () => ({ fhir: {}, accessToken: "shared-token" }),
+      },
+    ),
+    /seeder and caller must be distinct identities/i,
+  );
+});
+
 function runFixture(
   env: Record<string, string>,
   runnerArguments: string[] = [],

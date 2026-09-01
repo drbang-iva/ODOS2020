@@ -13,7 +13,7 @@ import type {
 } from "@medplum/fhirtypes";
 import {
   connectMcpServer,
-  createAuthenticatedFhirClient,
+  createLiveAuthorizationClients,
   loadRepoEnv,
   parseToolOutput,
   requireMedplumAdmin,
@@ -49,7 +49,11 @@ test("v0.4b dry-eye MCP write tools create resources with mandatory Provenance",
   }
   const { email, password } = credentials;
 
-  const { fhir, accessToken } = await createAuthenticatedFhirClient({ baseUrl, email, password });
+  const { seederFhir: fhir, callerAccessToken: accessToken } = await createLiveAuthorizationClients({
+    baseUrl,
+    email,
+    password,
+  });
   const patient = await fhir.create<Patient>({
     resourceType: "Patient",
     active: true,

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Bundle, Encounter, Patient, Provenance } from "@medplum/fhirtypes";
 import {
-  createAuthenticatedFhirClient,
+  createLiveAuthorizationClients,
   loadRepoEnv,
   requireMedplumAdmin,
 } from "./integration-helpers.js";
@@ -18,7 +18,11 @@ test("comprehensive Encounter lifecycle records history and Provenance per state
   }
   const { email, password } = credentials;
 
-  const { fhir, accessToken } = await createAuthenticatedFhirClient({ baseUrl, email, password });
+  const { seederFhir: fhir, seederAccessToken: accessToken } = await createLiveAuthorizationClients({
+    baseUrl,
+    email,
+    password,
+  });
   const patient = await fhir.create<Patient>({
     resourceType: "Patient",
     name: [{ family: `EncounterLifecycle${Date.now()}`, given: ["Test"] }],
@@ -110,7 +114,7 @@ function patchEncounterBundle(
 }
 
 async function createProvenance(
-  fhir: Awaited<ReturnType<typeof createAuthenticatedFhirClient>>["fhir"],
+  fhir: Awaited<ReturnType<typeof createLiveAuthorizationClients>>["seederFhir"],
   targetReference: string,
   activityCode: "CREATE" | "UPDATE",
   operatorDisplay: string,

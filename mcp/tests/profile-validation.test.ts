@@ -5,6 +5,7 @@ import { before, test } from "node:test";
 import type { BodyStructure, Encounter, Observation, Patient, StructureDefinition } from "@medplum/fhirtypes";
 import {
   createAuthenticatedFhirClient,
+  createLiveAuthorizationClients,
   loadRepoEnv,
   requireMedplumAdmin,
 } from "./integration-helpers.js";
@@ -41,7 +42,11 @@ before(async () => {
 });
 
 async function setupProfileValidationFixture(baseUrl: string, email: string, password: string): Promise<void> {
-  ({ fhir } = await createAuthenticatedFhirClient({ baseUrl, email, password }));
+  if (process.env.ODOS_MCP_LIVE_AUTHZ === "1") {
+    ({ seederFhir: fhir } = await createLiveAuthorizationClients({ baseUrl, email, password }));
+  } else {
+    ({ fhir } = await createAuthenticatedFhirClient({ baseUrl, email, password }));
+  }
   await installProfilesForTest();
   patient = await fhir.create<Patient>({
     resourceType: "Patient",

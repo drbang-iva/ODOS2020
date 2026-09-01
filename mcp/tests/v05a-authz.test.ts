@@ -27,7 +27,7 @@ import {
   prepareBinaryForParserCreate,
 } from "../src/parsers/binarySecurityContext.js";
 import {
-  createAuthenticatedFhirClient,
+  createLiveAuthorizationClients,
   loadRepoEnv,
   requireMedplumAdmin,
 } from "./integration-helpers.js";
@@ -407,10 +407,10 @@ test("audit-only boundary AccessPolicy POST round-trip is accepted by Medplum wh
   }
   const { email, password } = credentials;
 
-  const { fhir } = await createAuthenticatedFhirClient({ baseUrl, email, password });
+  const { seederFhir } = await createLiveAuthorizationClients({ baseUrl, email, password });
   // This test-local boundary is intentionally not a named product role; see performance-od/decisions/2026-08-28-odos-auditor-fixture-fossil-verdict.md.
   const policy = buildAuditOnlyBoundaryPolicy(`ODOS v0.5a Audit-Only Boundary Roundtrip ${Date.now()}`);
-  const created = await fhir.create<AccessPolicy>(policy);
+  const created = await seederFhir.create<AccessPolicy>(policy);
 
   assert.equal(created.resourceType, "AccessPolicy");
   assert.ok(created.id);
@@ -434,11 +434,15 @@ test(
     }
     const { email, password } = credentials;
 
-    const { fhir, accessToken } = await createAuthenticatedFhirClient({ baseUrl, email, password });
+    const { seederFhir, seederAccessToken } = await createLiveAuthorizationClients({
+      baseUrl,
+      email,
+      password,
+    });
 
     // 1. Resolve the admin's project ID from /auth/me — avoids hardcoding any installation-specific IDs.
     const meRes = await fetch(`${baseUrl}/auth/me`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: { Authorization: `Bearer ${seederAccessToken}` },
     });
     assert.ok(meRes.ok, `GET /auth/me failed: ${meRes.status}`);
     const me = (await meRes.json()) as { project?: { id?: string } };
@@ -447,7 +451,7 @@ test(
 
     // This test-local boundary is intentionally not a named product role; see performance-od/decisions/2026-08-28-odos-auditor-fixture-fossil-verdict.md.
     const policy = buildAuditOnlyBoundaryPolicy(`ODOS v0.5a Audit-Only Boundary Enforcement ${Date.now()}`);
-    const createdPolicy = await fhir.create<AccessPolicy>(policy);
+    const createdPolicy = await seederFhir.create<AccessPolicy>(policy);
     assert.ok(createdPolicy.id, "AccessPolicy create did not return an id.");
 
     // 3. Atomically create a ClientApplication + ProjectMembership bound to the AccessPolicy via the
@@ -456,7 +460,7 @@ test(
     const adminClientRes = await fetch(`${baseUrl}/admin/projects/${projectId}/client`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: `Bearer ${seederAccessToken}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
