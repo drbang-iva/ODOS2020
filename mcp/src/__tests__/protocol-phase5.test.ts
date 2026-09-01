@@ -23,6 +23,7 @@ import {
   handleProtocolRetireRequest,
   handleProtocolSignCleanupRequest,
   handleProtocolUnapplyRequest,
+  materializeProtocolFollowUp,
   protocolFindingObservation,
 } from "../clinical-graph/protocol-endpoint.js";
 import { buildProtocolBasic, PROTOCOL_BASIC_CODES, ProtocolBasicStore, type ProtocolFhirClient } from "../clinical-graph/protocol-store.js";
@@ -967,6 +968,244 @@ test("apply verifies the persisted Condition and creates no prompt-only Observat
   ), false);
 });
 
+test("follow-up materialization stores the six-month due date and verbatim reason on a coded ServiceRequest", async () => {
+  const fhir = new EndpointFhir();
+  fhir.resources.push(
+    buildProtocolBasic(GLAUCOMA_SUSPECT_PROTOCOL, PROTOCOL_BASIC_CODES.protocolDefinition),
+    confirmedCondition(),
+  );
+
+  const result = await handleProtocolApplyRequest(endpointDeps(fhir), {
+    authHeader: "Bearer test",
+    body: applyBody("H40.021"),
+  });
+
+  assert.equal(result.status, 200);
+  const followUps = fhir.resources.filter((resource): resource is ServiceRequest =>
+    resource.resourceType === "ServiceRequest" &&
+    Boolean(resource.code?.coding?.some((coding) => coding.code === "follow-up"))
+  );
+  assert.equal(followUps.length, 1);
+  assert.equal(followUps[0]?.occurrenceDateTime, "2027-01-18");
+  assert.equal(
+    followUps[0]?.reasonCode?.[0]?.text,
+    "glaucoma suspect monitoring — repeat IOP, review baseline imaging",
+  );
+  assert.equal(followUps[0]?.category?.[0]?.coding?.[0]?.code, "medical-follow-up");
+});
+
+test("a clinician follow-up override computes from the selected two-week payload", async () => {
+  const fhir = new EndpointFhir();
+  fhir.resources.push(
+    buildProtocolBasic(GLAUCOMA_SUSPECT_PROTOCOL, PROTOCOL_BASIC_CODES.protocolDefinition),
+    confirmedCondition(),
+  );
+  const reason = "glaucoma suspect monitoring — repeat IOP, review baseline imaging";
+
+  const result = await handleProtocolApplyRequest(endpointDeps(fhir), {
+    authHeader: "Bearer test",
+    body: {
+      ...applyBody("H40.021"),
+      selections: [{
+        itemKey: "rto-6mo",
+        selected: true,
+        payload: {
+          interval: 2,
+          unit: "weeks",
+          reason,
+          schedulingOrder: true,
+          followUpKind: "medical",
+        },
+      }],
+    },
+  });
+
+  assert.equal(result.status, 200);
+  const followUp = fhir.resources.find((resource): resource is ServiceRequest =>
+    resource.resourceType === "ServiceRequest" &&
+    Boolean(resource.code?.coding?.some((coding) => coding.code === "follow-up"))
+  );
+  assert.equal(followUp?.occurrenceDateTime, "2026-08-01");
+  assert.equal(followUp?.reasonCode?.[0]?.text, reason);
+  const action = (result.body as { actions: PlanActionInstance[] }).actions.find(
+    (candidate) => candidate.sourceItemKey === "rto-6mo",
+  );
+  assert.deepEqual(action?.modifiedFields, ["interval", "unit"]);
+  assert.equal(action?.provenance.source, "clinician-entered");
+});
+
+test("re-materializing the same follow-up updates a corrected due date without creating a duplicate", async () => {
+  const fhir = new EndpointFhir();
+  const action: PlanActionInstance = {
+    id: "follow-up-action",
+    encounterId: "enc-1",
+    patientId: "patient-1",
+    protocolApplicationId: "application-1",
+    sourceItemKey: "rto-6mo",
+    actionType: "follow-up",
+    linkedDx: ["Condition/c1"],
+    linkedFindings: [],
+    state: "selected",
+    payload: {
+      interval: 6,
+      unit: "months",
+      reason: "Repeat IOP",
+      followUpKind: "medical",
+    },
+    modifiedFields: [],
+    provenance: {
+      source: "protocol-default",
+      actor: "Practitioner/test",
+      at: "2026-07-18T12:00:00.000Z",
+      protocolId: "glaucoma-protocol",
+      protocolVersion: 1,
+    },
+  };
+
+  const firstReference = await materializeProtocolFollowUp(fhir, action);
+  const correctedReference = await materializeProtocolFollowUp(fhir, {
+    ...action,
+    payload: { ...action.payload, interval: 2, unit: "weeks" },
+    modifiedFields: ["interval", "unit"],
+    provenance: { ...action.provenance, source: "clinician-entered" },
+  });
+
+  const followUps = fhir.resources.filter((resource): resource is ServiceRequest =>
+    resource.resourceType === "ServiceRequest" &&
+    Boolean(resource.code?.coding?.some((coding) => coding.code === "follow-up"))
+  );
+  assert.equal(firstReference, correctedReference);
+  assert.equal(followUps.length, 1);
+  assert.equal(followUps[0]?.occurrenceDateTime, "2026-08-01");
+});
+
+test("an underivable follow-up is visibly refused without blocking the plan's other actions", async () => {
+  const fhir = new EndpointFhir();
+  const protocol: ProtocolDefinition = {
+    ...GLAUCOMA_SUSPECT_PROTOCOL,
+    id: "mixed-follow-up-protocol",
+    items: [
+      {
+        itemKey: "bad-follow-up",
+        itemType: "follow-up",
+        defaultSelected: true,
+        lateralityMode: "inherit-dx",
+        payload: {
+          interval: 6,
+          unit: "months",
+          reason: "Unclassified return",
+          followUpKind: "not-a-clinical-kind",
+        },
+      },
+      {
+        itemKey: "other-counseling",
+        itemType: "counseling",
+        defaultSelected: true,
+        lateralityMode: "inherit-dx",
+        payload: { topicKey: "other-action-landed" },
+      },
+    ],
+  };
+  fhir.resources.push(
+    buildProtocolBasic(protocol, PROTOCOL_BASIC_CODES.protocolDefinition),
+    confirmedCondition(),
+  );
+
+  const result = await handleProtocolApplyRequest(endpointDeps(fhir), {
+    authHeader: "Bearer test",
+    body: {
+      protocolId: protocol.id,
+      encounterId: "enc-1",
+      patientId: "patient-1",
+      diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true },
+    },
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal(fhir.resources.some((resource) =>
+    resource.resourceType === "ServiceRequest" &&
+    resource.code?.coding?.some((coding) => coding.code === "follow-up")
+  ), false);
+  assert.equal(fhir.resources.some((resource) =>
+    resource.resourceType === "CarePlan" && resource.title === "other-action-landed"
+  ), true);
+  const refused = (result.body as { actions: PlanActionInstance[] }).actions.find(
+    (action) => action.sourceItemKey === "bad-follow-up",
+  );
+  assert.deepEqual(refused?.materializationRefusal, {
+    code: "FOLLOW_UP_KIND_UNDERIVABLE",
+    message: "Follow-up kind must be medical or routine.",
+  });
+  assert.equal(refused?.materializedFhirRef, undefined);
+});
+
+test("follow-up month arithmetic clamps January 31 to the last day of February", async () => {
+  const cases = [
+    ["2026-01-31T12:00:00.000Z", "2026-02-28"],
+    ["2028-01-31T12:00:00.000Z", "2028-02-29"],
+  ] as const;
+
+  for (const [at, expected] of cases) {
+    const fhir = new EndpointFhir();
+    await materializeProtocolFollowUp(fhir, followUpAction({
+      at,
+      interval: 1,
+      unit: "months",
+      suffix: expected,
+      followUpKind: "medical",
+    }));
+    const request = fhir.resources.find((resource): resource is ServiceRequest =>
+      resource.resourceType === "ServiceRequest"
+    );
+    assert.equal(request?.occurrenceDateTime, expected);
+  }
+});
+
+test("stored follow-up kind and occurrence support a date-range query without loading unrelated CarePlans", async () => {
+  const fhir = new EndpointFhir();
+  await materializeProtocolFollowUp(fhir, followUpAction({
+    at: "2026-07-18T12:00:00.000Z",
+    interval: 6,
+    unit: "months",
+    suffix: "medical",
+    followUpKind: "medical",
+  }));
+  await materializeProtocolFollowUp(fhir, followUpAction({
+    at: "2026-07-18T12:00:00.000Z",
+    interval: 2,
+    unit: "weeks",
+    suffix: "routine",
+    followUpKind: "routine",
+  }));
+  fhir.resources.push({
+    resourceType: "CarePlan",
+    id: "unrelated-counseling",
+    status: "active",
+    intent: "plan",
+    subject: { reference: "Patient/patient-1" },
+    title: "Unrelated counseling",
+    period: { end: "2026-08-01" },
+  });
+
+  const dueRoutine = await fhir.search<ServiceRequest>("ServiceRequest", {
+    code: "https://odos2020.com/fhir/CodeSystem/odos-protocol-module|follow-up",
+    category: "https://odos2020.com/fhir/CodeSystem/odos-protocol-module|routine-follow-up",
+    occurrence: "lt2026-08-02",
+    status: "active",
+  });
+  const prematureMedical = await fhir.search<ServiceRequest>("ServiceRequest", {
+    code: "https://odos2020.com/fhir/CodeSystem/odos-protocol-module|follow-up",
+    category: "https://odos2020.com/fhir/CodeSystem/odos-protocol-module|medical-follow-up",
+    occurrence: "lt2026-08-02",
+    status: "active",
+  });
+
+  assert.equal(dueRoutine.entry?.length, 1);
+  assert.equal(dueRoutine.entry?.[0]?.resource?.category?.[0]?.coding?.[0]?.code, "routine-follow-up");
+  assert.equal(prematureMedical.entry?.length, 0);
+  assert.deepEqual(fhir.searchResourceTypes.slice(-2), ["ServiceRequest", "ServiceRequest"]);
+});
+
 test("applications read enforces chart.read, returns the hydration shape, and duplicate apply is rejected", async () => {
   const fhir = new EndpointFhir();
   fhir.resources.push(
@@ -1012,12 +1251,28 @@ class EndpointFhir {
   readonly baseUrl = "http://localhost:8103/";
   resources: EndpointResource[] = [];
   writes: EndpointResource[] = [];
+  searchResourceTypes: Resource["resourceType"][] = [];
   next = 1;
 
   async search<T extends Resource>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>> {
+    this.searchResourceTypes.push(resourceType);
     let rows = this.resources.filter((resource) => resource.resourceType === resourceType);
     const code = params?.code?.split("|")[1];
     if (code) rows = rows.filter((resource) => "code" in resource && resource.code?.coding?.some((coding) => coding.code === code));
+    const category = params?.category?.split("|")[1];
+    if (category) rows = rows.filter((resource) => "category" in resource && resource.category?.some((concept) =>
+      concept.coding?.some((coding) => coding.code === category)));
+    if (params?.status) rows = rows.filter((resource) => "status" in resource && resource.status === params.status);
+    const occurrence = params?.occurrence?.match(/^(lt|le|gt|ge|eq)(.+)$/);
+    if (occurrence) rows = rows.filter((resource) => {
+      if (!("occurrenceDateTime" in resource) || typeof resource.occurrenceDateTime !== "string") return false;
+      const [, prefix, date] = occurrence;
+      if (prefix === "lt") return resource.occurrenceDateTime < date!;
+      if (prefix === "le") return resource.occurrenceDateTime <= date!;
+      if (prefix === "gt") return resource.occurrenceDateTime > date!;
+      if (prefix === "ge") return resource.occurrenceDateTime >= date!;
+      return resource.occurrenceDateTime === date;
+    });
     const [system, value] = params?.identifier?.split("|") ?? [];
     if (system && value) rows = rows.filter((resource) => "identifier" in resource && resource.identifier?.some((identifier) =>
       identifier.system === system && identifier.value === value));
@@ -1035,13 +1290,13 @@ class EndpointFhir {
     this.resources.push(saved); this.writes.push(saved);
     return saved;
   }
-  async update<T extends Basic>(resourceType: T["resourceType"], id: string, resource: T): Promise<T> {
+  update = async <T extends Basic>(resourceType: T["resourceType"], id: string, resource: T): Promise<T> => {
     const saved = { ...resource, id };
     const index = this.resources.findIndex((candidate) => candidate.resourceType === resourceType && candidate.id === id);
     if (index >= 0) this.resources[index] = saved;
     this.writes.push(saved);
     return saved;
-  }
+  };
   async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
     const resource = this.resources.find((candidate) => candidate.resourceType === resourceType && candidate.id === id);
     if (!resource) throw new Error(`${resourceType}/${id} not found`);
@@ -1124,6 +1379,40 @@ function applyBody(code: string) {
   return {
     protocolId: GLAUCOMA_SUSPECT_PROTOCOL.id, encounterId: "enc-1", patientId: "patient-1",
     diagnosis: { reference: "Condition/c1", code, confirmed: true },
+  };
+}
+
+function followUpAction(input: {
+  at: string;
+  interval: number;
+  unit: "days" | "weeks" | "months";
+  suffix: string;
+  followUpKind: "medical" | "routine";
+}): PlanActionInstance {
+  return {
+    id: `follow-up-${input.suffix}`,
+    encounterId: `enc-${input.suffix}`,
+    patientId: `patient-${input.suffix}`,
+    protocolApplicationId: `application-${input.suffix}`,
+    sourceItemKey: `follow-up-${input.suffix}`,
+    actionType: "follow-up",
+    linkedDx: input.followUpKind === "medical" ? [`Condition/${input.suffix}`] : [],
+    linkedFindings: [],
+    state: "selected",
+    payload: {
+      interval: input.interval,
+      unit: input.unit,
+      reason: `Reason ${input.suffix}`,
+      followUpKind: input.followUpKind,
+    },
+    modifiedFields: [],
+    provenance: {
+      source: "protocol-default",
+      actor: "Practitioner/test",
+      at: input.at,
+      protocolId: `protocol-${input.suffix}`,
+      protocolVersion: 1,
+    },
   };
 }
 

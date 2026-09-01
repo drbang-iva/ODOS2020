@@ -93,7 +93,7 @@ export const GLAUCOMA_SUSPECT_PROTOCOL: ProtocolDefinition = {
     })),
     { ...DEFAULT, itemKey: "counsel-suspect", itemType: "counseling", payload: { topicKey: "glaucoma-suspect-discussion", narrativeTemplate: "Discussed glaucoma suspect status: elevated risk findings without confirmed glaucomatous damage. Reviewed need for baseline testing and ongoing monitoring; warning signs reviewed. Patient verbalized understanding." } },
     { ...DEFAULT, itemKey: "edu-suspect", itemType: "education", payload: { assetRef: "pt-ed-glaucoma-suspect", deliveryMode: "print" } },
-    { ...DEFAULT, itemKey: "rto-6mo", itemType: "follow-up", mergeKey: "followup", payload: { interval: 6, unit: "months", reason: "glaucoma suspect monitoring — repeat IOP, review baseline imaging", schedulingOrder: true } },
+    { ...DEFAULT, itemKey: "rto-6mo", itemType: "follow-up", mergeKey: "followup", payload: { interval: 6, unit: "months", reason: "glaucoma suspect monitoring — repeat IOP, review baseline imaging", schedulingOrder: true, followUpKind: "medical" } },
   ],
 };
 

@@ -39,6 +39,16 @@ export interface CommitSelection {
 
 export class AcceptedChargeUnapplyError extends Error {}
 
+export class ProtocolActionMaterializationRefusal extends Error {
+  constructor(
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "ProtocolActionMaterializationRefusal";
+  }
+}
+
 export interface ProtocolCatalogs {
   findingKeys: ReadonlySet<string>;
   procedureKeys: ReadonlySet<string>;
@@ -557,7 +567,12 @@ export class ProtocolService {
         protocolVersion: application.protocolVersion,
       },
     };
-    action.materializedFhirRef = await this.projection.materializeAction(action);
+    try {
+      action.materializedFhirRef = await this.projection.materializeAction(action);
+    } catch (error) {
+      if (!(error instanceof ProtocolActionMaterializationRefusal)) throw error;
+      action.materializationRefusal = { code: error.code, message: error.message };
+    }
     await this.actions.save(action);
   }
 
