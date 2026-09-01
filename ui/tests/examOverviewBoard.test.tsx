@@ -862,6 +862,91 @@ test("charted EOM renders writer-permitted abnormal details and the normal templ
   });
 });
 
+test("charted CVF defects survive the persisted per-eye prefixes into the review diagrams", async () => {
+  const definitions = buildFindingDefinitionSeeds();
+  const definition = definitions.find((candidate) => candidate.stableKey === "entrance:cvf");
+  assert.ok(definition);
+  const fhir = new EomWriterFhir();
+  const deps: CustomSectionEndpointDeps = {
+    authenticate: async () => ({
+      staffReference: "Practitioner/cvf-writer-fixture",
+      actorRole: "provider",
+      fhir,
+    }),
+    findingDefinitions: () => definitions,
+    now: () => "2026-09-01T12:00:00.000Z",
+  };
+  const result = await handleCustomSectionCaptureRequest(deps, {
+    authHeader: "Bearer cvf-writer-fixture",
+    params: { stableKey: "entrance:cvf" },
+    body: {
+      patientReference: "Patient/cvf-writer-fixture",
+      encounterReference: "Encounter/cvf-writer-fixture",
+      eyes: {
+        OD: {
+          state: "abnormal",
+          customFields: [
+            { code: "CUSTOM_CVF_UPPER_LEFT", value: "restricted" },
+            { code: "CUSTOM_CVF_UPPER_RIGHT", value: "full" },
+            { code: "CUSTOM_CVF_LOWER_LEFT", value: "full" },
+            { code: "CUSTOM_CVF_LOWER_RIGHT", value: "full" },
+          ],
+        },
+        OS: {
+          state: "abnormal",
+          customFields: [
+            { code: "CUSTOM_CVF_UPPER_LEFT", value: "full" },
+            { code: "CUSTOM_CVF_UPPER_RIGHT", value: "restricted" },
+            { code: "CUSTOM_CVF_LOWER_LEFT", value: "full" },
+            { code: "CUSTOM_CVF_LOWER_RIGHT", value: "full" },
+          ],
+        },
+      },
+    },
+  });
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  const observations = fhir.resources.filter((resource): resource is Observation => resource.resourceType === "Observation");
+  assert.deepEqual(
+    observations.map((observation) => observation.component?.map((component) => component.code.coding?.[0]?.code)
+      .filter((code) => code?.includes("CUSTOM_CVF"))),
+    [
+      ["OD_CUSTOM_CVF_UPPER_LEFT", "OD_CUSTOM_CVF_UPPER_RIGHT", "OD_CUSTOM_CVF_LOWER_LEFT", "OD_CUSTOM_CVF_LOWER_RIGHT"],
+      ["OS_CUSTOM_CVF_UPPER_LEFT", "OS_CUSTOM_CVF_UPPER_RIGHT", "OS_CUSTOM_CVF_LOWER_LEFT", "OS_CUSTOM_CVF_LOWER_RIGHT"],
+    ],
+  );
+  const writerProjection = buildExamOverviewProjection({
+    encounterReference: "Encounter/cvf-writer-fixture",
+    patientReference: "Patient/cvf-writer-fixture",
+    definitions,
+    currentObservations: observations,
+    priorObservationCandidates: [],
+    assessmentRows: [],
+  });
+  const projection = catalogGuardProjection(definition);
+  projection.findings = writerProjection.findings;
+  projection.sections = [overviewSection(
+    "pretest",
+    "Pretest",
+    writerProjection.findings.map((finding) => finding.observationReference),
+  )];
+  const renderer = create(
+    <ExamOverviewBoard
+      projection={projection}
+      editorEntries={[]}
+      refreshing={false}
+      onOpenEditor={() => undefined}
+      onRefresh={() => undefined}
+    />,
+  );
+  try {
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "visual-field-diagram" }).length, 2);
+    assert.equal(renderer.root.findAllByProps({ "data-eye": "OD", "data-restricted-quadrants": "upper-left" }).length, 1);
+    assert.equal(renderer.root.findAllByProps({ "data-eye": "OS", "data-restricted-quadrants": "upper-right" }).length, 1);
+  } finally {
+    renderer.unmount();
+  }
+});
+
 test("abnormal cover-test endpoint persistence projects an exception row with details", async () => {
   const definitions = buildFindingDefinitionSeeds();
   const fhir = new EomWriterFhir();

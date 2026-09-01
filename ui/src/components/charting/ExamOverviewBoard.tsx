@@ -587,7 +587,7 @@ const CVF_QUADRANTS = [
 
 function VisualFieldDiagram({ eye, finding }: { eye: "OD" | "OS"; finding?: ExamOverviewFindingProjection }) {
   const restricted = CVF_QUADRANTS.flatMap(([quadrant, code]) =>
-    snapshotComponentText(finding?.current, code)?.toLowerCase() === "restricted" ? [quadrant] : []
+    finding && findingComponentLabel(finding, code)?.toLowerCase() === "restricted" ? [quadrant] : []
   );
   return (
     <span className="odos-exam-field-eye">

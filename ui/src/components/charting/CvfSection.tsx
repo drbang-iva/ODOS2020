@@ -123,12 +123,6 @@ export function CvfSection({ definition, fieldDefectDefinition, patientReference
           </div>
           <button type="button" onClick={setNormalOu} className="rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-surface-2)] px-4 py-2 text-sm font-semibold text-[color:var(--odos-text)]">Full to finger counting OU</button>
         </header>
-        <FieldDefectPanel
-          definition={fieldDefectDefinition}
-          patientReference={patientReference}
-          encounterReference={encounterReference}
-          onSaved={onSaved}
-        />
         <div className="mt-7 border-t border-[color:var(--odos-line)] pt-5">
           <h3 className="font-semibold">Confrontation Fields</h3>
           <p className="mt-1 text-sm text-[color:var(--odos-muted)]">Mark defects directly on the four-quadrant field for each eye.</p>
@@ -177,6 +171,12 @@ export function CvfSection({ definition, fieldDefectDefinition, patientReference
             );
           })}
         </div>
+        <FieldDefectPanel
+          definition={fieldDefectDefinition}
+          patientReference={patientReference}
+          encounterReference={encounterReference}
+          onSaved={onSaved}
+        />
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
           <div className="text-sm">{error ? <span className="text-[color:var(--odos-alert)]">{error}</span> : <span className="text-[color:var(--odos-muted)]">{message}</span>}</div>
           <button type="button" onClick={() => void save()} disabled={saving || loading} className="rounded bg-brand px-5 py-2 text-sm font-semibold disabled:opacity-45">{saving ? "Saving…" : "Save CVF"}</button>

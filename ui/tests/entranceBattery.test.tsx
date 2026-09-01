@@ -4,6 +4,8 @@ import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
+import { customFieldEntries } from "../../mcp/src/clinical-graph/custom-fields";
+import { buildFindingDefinitionSeeds } from "../../mcp/src/clinical-graph/finding-definition-store";
 import { COVER_MAGNITUDES, CoverTestSection } from "../src/components/charting/CoverTestSection";
 import { CvfSection } from "../src/components/charting/CvfSection";
 import { DiagnosisPicker } from "../src/components/charting/DiagnosisPicker";
@@ -200,6 +202,19 @@ test("CVF renders four accessible quadrant wedges and preserves per-eye controls
     renderer?.unmount();
     globalThis.fetch = originalFetch;
   }
+});
+
+test("CVF entry leads with the quadrant diagrams before the Field Defect panel", () => {
+  const html = renderToStaticMarkup(<CvfSection
+    definition={{ stableKey: "entrance:cvf", sectionKey: "entrance:cvf", display: "Confrontation visual fields", active: true, perEye: true, normalTemplate: "Full to finger counting OU", customFields: [] }}
+    fieldDefectDefinition={visualFieldDefinition()}
+    patientReference="Patient/p1"
+    encounterReference="Encounter/e1"
+    onSaved={() => undefined}
+  />);
+  const diagrams = html.indexOf("Confrontation Fields");
+  const fieldDefect = html.indexOf("Field Defect");
+  assert.ok(diagrams >= 0 && fieldDefect > diagrams, "quadrant diagrams must render before Field Defect");
 });
 
 test("Visual Field renders exactly the approved lesion-site descriptor vocabulary", () => {
@@ -574,6 +589,77 @@ test("pupil state sections retain explicit per-eye states and centered spinner c
   assert.match(html, /History/);
 });
 
+test("selecting Pupils Normal OU fills only the definition-supplied 3 mm and 5 mm normal values", async () => {
+  const originalFetch = globalThis.fetch;
+  let savedPayload: unknown;
+  globalThis.fetch = async (_input, init) => {
+    if (init?.method === "POST") {
+      savedPayload = JSON.parse(String(init.body));
+      return Response.json({});
+    }
+    return Response.json({ rows: [] });
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<EntranceStateSection
+        definition={pupilDefinition()}
+        patientReference="Patient/p1"
+        encounterReference="Encounter/e1"
+        onSaved={() => undefined}
+      />);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    const normalOu = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Normal OU");
+    assert.ok(normalOu);
+    act(() => normalOu.props.onClick());
+
+    assert.deepEqual(renderer.root.findAllByProps({ "aria-label": "Size — bright" }).map((input) => input.props.value), ["3", "3"]);
+    assert.deepEqual(renderer.root.findAllByProps({ "aria-label": "Size — dim" }).map((input) => input.props.value), ["5", "5"]);
+    assert.deepEqual(renderer.root.findAllByProps({ "aria-label": "Size — near" }).map((input) => input.props.value), ["", ""]);
+    assert.deepEqual(renderer.root.findAllByProps({ "aria-label": "Shape" }).map((select) => select.children.join("")), ["round", "round"]);
+    assert.deepEqual(renderer.root.findAllByProps({ "aria-label": "Reactivity" }).map((select) => select.children.join("")), ["brisk", "brisk"]);
+    assert.deepEqual(renderer.root.findAllByProps({ "aria-label": "RAPD" }).map((select) => select.children.join("")), ["Select", "Select"]);
+    assert.deepEqual(renderer.root.findAllByProps({ "aria-label": "Neutral density (log units)" }).map((select) => select.children.join("")), ["Select", "Select"]);
+
+    const save = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Pupils");
+    assert.ok(save);
+    await act(async () => {
+      save.props.onClick();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    assert.deepEqual(savedPayload, {
+      patientReference: "Patient/p1",
+      encounterReference: "Encounter/e1",
+      eyes: {
+        OD: {
+          state: "normal",
+          customFields: [
+            { code: "CUSTOM_PUPIL_SIZE_BRIGHT", value: 3 },
+            { code: "CUSTOM_PUPIL_SIZE_DIM", value: 5 },
+            { code: "CUSTOM_PUPIL_SHAPE", value: "round" },
+            { code: "CUSTOM_PUPIL_REACTIVITY", value: "brisk" },
+          ],
+        },
+        OS: {
+          state: "normal",
+          customFields: [
+            { code: "CUSTOM_PUPIL_SIZE_BRIGHT", value: 3 },
+            { code: "CUSTOM_PUPIL_SIZE_DIM", value: 5 },
+            { code: "CUSTOM_PUPIL_SHAPE", value: "round" },
+            { code: "CUSTOM_PUPIL_REACTIVITY", value: "brisk" },
+          ],
+        },
+      },
+    });
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("manual keratometry uses a shrinkable five-column grid that fits the content pane", () => {
   const html = renderToStaticMarkup(<EntranceMeasurementSection definition={measurementDefinition()} patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} />);
   assert.match(html, /Manual keratometry/);
@@ -621,6 +707,21 @@ function measurementDefinition(): CustomFindingDefinition {
       { localCode: "CUSTOM_STEEP_AXIS", display: "Steep axis", valueType: "number", min: 0, max: 180, step: 1, order: 3, active: true },
       { localCode: "CUSTOM_MIRES_QUALITY", display: "Mires quality", valueType: "select", options: [{ code: "clear", display: "clear", active: true }], order: 4, active: true },
     ],
+  };
+}
+
+function pupilDefinition(): CustomFindingDefinition {
+  const definition = buildFindingDefinitionSeeds().find((candidate) => candidate.stableKey === "entrance:pupils");
+  assert.ok(definition);
+  return {
+    stableKey: definition.stableKey,
+    sectionKey: definition.sectionKey,
+    display: definition.display,
+    active: definition.active,
+    perEye: definition.valueSchema.perEye === true,
+    normalTemplate: typeof definition.normalSemantics?.template === "string" ? definition.normalSemantics.template : undefined,
+    allowDeferred: definition.normalSemantics?.allowDeferred === true,
+    customFields: customFieldEntries(definition, true),
   };
 }
 
