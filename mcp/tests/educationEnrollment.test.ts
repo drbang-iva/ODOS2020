@@ -48,7 +48,16 @@ test("EducationEnrollment in-memory persistence records stage 1 truth and refuse
     content: { id: "dry-eye-basics", version: 2 },
     channel: "sms",
     lane: "clinical",
+    idempotencyKey: "enrollment:enrollment-synthetic-1:stage1:1",
+    state: "pending",
   }]);
+
+  const claimed = await store.claimImmediateSend(created.id, 0);
+  assert.equal(claimed.claimed, true);
+  assert.equal(claimed.enrollment.immediateSends[0]?.state, "in-flight");
+  const claimedAgain = await store.claimImmediateSend(created.id, 0);
+  assert.equal(claimedAgain.claimed, false);
+  assert.equal(claimedAgain.enrollment.immediateSends[0]?.state, "in-flight");
 
   const recorded = await store.recordImmediateSendOutcome(created.id, 0, {
     outcome: "suppressed",
@@ -58,6 +67,8 @@ test("EducationEnrollment in-memory persistence records stage 1 truth and refuse
     content: { id: "dry-eye-basics", version: 2 },
     channel: "sms",
     lane: "clinical",
+    idempotencyKey: "enrollment:enrollment-synthetic-1:stage1:1",
+    state: "resolved",
     outcome: { outcome: "suppressed", reason: "patient-opt-out" },
   });
   assert.deepEqual(await store.listActiveForPatient(PATIENT_REFERENCE), [recorded]);
@@ -121,6 +132,11 @@ test("EducationEnrollment FHIR Basic round-trip preserves exact sends, outcomes,
 
   const created = await store.create(enrollmentInput());
   assert.equal(created.id, "fhir-enrollment-1");
+  assert.equal(created.immediateSends[0]?.idempotencyKey, "enrollment:fhir-enrollment-1:stage1:1");
+  assert.equal(created.immediateSends[0]?.state, "pending");
+  const claimed = await store.claimImmediateSend(created.id, 0);
+  assert.equal(claimed.claimed, true);
+  assert.equal(claimed.enrollment.immediateSends[0]?.state, "in-flight");
   await store.recordImmediateSendOutcome(created.id, 0, {
     outcome: "sent",
     providerMessageId: "SM-synthetic-enrollment",
@@ -142,6 +158,7 @@ test("EducationEnrollment FHIR Basic round-trip preserves exact sends, outcomes,
     outcome: "sent",
     providerMessageId: "SM-synthetic-enrollment",
   });
+  assert.equal(roundTrip?.immediateSends[0]?.state, "resolved");
   assert.deepEqual(await store.listActiveForPatient(PATIENT_REFERENCE), [roundTrip]);
   assert.equal(searches.some((params) => params.identifier?.includes("education-enrollment-active")), true);
   assert.equal(searches.some((params) =>
@@ -197,6 +214,7 @@ test("EducationEnrollment FHIR terminal transition preserves prior truth and rem
   };
   const store = createFhirEducationEnrollmentStore(fhir);
   const created = await store.create(enrollmentInput());
+  await store.claimImmediateSend(created.id, 0);
   await store.recordImmediateSendOutcome(created.id, 0, {
     outcome: "sent",
     providerMessageId: "SM-stage-1",
@@ -224,6 +242,11 @@ test("EducationEnrollment FHIR terminal transition preserves prior truth and rem
   assert.equal(persisted?.identifier?.some((identifier) =>
     identifier.system === "https://odos2020.com/fhir/NamingSystem/education-enrollment-active"), true);
 
+  assert.equal(transitioned.immediateSends[1]?.idempotencyKey,
+    "enrollment:fhir-terminal-enrollment:stage:complete:2");
+  assert.equal(transitioned.immediateSends[1]?.state, "pending");
+  const terminalClaim = await store.claimImmediateSend(created.id, 1);
+  assert.equal(terminalClaim.claimed, true);
   await store.recordImmediateSendOutcome(created.id, 1, {
     outcome: "sent",
     providerMessageId: "SM-terminal-stage",
@@ -242,5 +265,13 @@ test("EducationEnrollment FHIR terminal transition preserves prior truth and rem
     outcome: "sent",
     providerMessageId: "SM-terminal-stage",
   }]);
-  assert.deepEqual(ifMatches, ['W/"1"', 'W/"2"', 'W/"3"', 'W/"4"']);
+  assert.deepEqual(ifMatches, [
+    'W/"1"',
+    'W/"2"',
+    'W/"3"',
+    'W/"4"',
+    'W/"5"',
+    'W/"6"',
+    'W/"7"',
+  ]);
 });
