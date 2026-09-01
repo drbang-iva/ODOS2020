@@ -14,6 +14,16 @@ import { EntranceStateSection } from "../../src/components/charting/EntranceStat
 import { EomSection } from "../../src/components/charting/EomSection";
 import { EncounterHeader } from "../../src/components/charting/EncounterHeader";
 import { EXAM_ENTRY_SHEET_CONFIG, ExamEntrySheet, isExamEntrySheetSectionId, useExamEntrySheetGuard } from "../../src/components/charting/ExamEntrySheet";
+import {
+  ExamRightPanelSurface,
+  ExamRightPanelTabs,
+  EXAM_RIGHT_PANEL_IDS,
+  examRightPanelEntryTitle,
+  INITIAL_EXAM_RIGHT_PANEL_STATE,
+  finishExamRightPanelEntry,
+  openExamRightPanelEntry,
+  selectExamRightPanelTab,
+} from "../../src/components/charting/ExamRightPanel";
 import { ExamOverviewBoard, type ExamOverviewProjection } from "../../src/components/charting/ExamOverviewBoard";
 import { EyeGrowthSection } from "../../src/components/charting/EyeGrowthSection";
 import { GonioscopySection } from "../../src/components/charting/GonioscopySection";
@@ -210,12 +220,21 @@ function Fixture() {
   const params = new URLSearchParams(window.location.search);
   const initialSection = params.get("section");
   const [active, setActive] = useState<FixtureSectionId | undefined>(isFixtureSectionId(initialSection) ? initialSection : undefined);
+  const [panelState, setPanelState] = useState(() => isExamEntrySheetSectionId(initialSection ?? "")
+    ? openExamRightPanelEntry(INITIAL_EXAM_RIGHT_PANEL_STATE)
+    : INITIAL_EXAM_RIGHT_PANEL_STATE);
   const forceSheet = params.get("audit") === "sheet";
   const worksheet = params.get("worksheet") === "true";
   const mapped = active ? isExamEntrySheetSectionId(active) : false;
   const sheetGuard = useExamEntrySheetGuard(mapped ? active : undefined);
   const sheetOpen = Boolean(active && (mapped || forceSheet));
-  const editor = active ? renderEditor(active, sheetGuard.resetDirty, sheetGuard.markDirty) : null;
+  const closeEntry = () => {
+    setActive(undefined);
+    setPanelState((current) => finishExamRightPanelEntry(current));
+  };
+  const editor = active
+    ? renderEditor(active, sheetGuard.resetDirty, sheetGuard.markDirty, mapped ? closeEntry : undefined)
+    : null;
   const showHeader = params.get("header") === "true";
   const showReturnButton = params.get("returnButton") === "true";
   const projection = params.get("comprehensive") === "true" ? COMPREHENSIVE_PROJECTION : FIXTURE_PROJECTION;
@@ -229,12 +248,35 @@ function Fixture() {
     clinicalActionUnavailableReason,
   };
   const openSection = (sectionId: FixtureSectionId) => {
+    const transition = () => {
+      setActive(sectionId);
+      if (isExamEntrySheetSectionId(sectionId)) {
+        setPanelState((current) => openExamRightPanelEntry(current, mapped));
+      } else {
+        setPanelState(INITIAL_EXAM_RIGHT_PANEL_STATE);
+      }
+    };
     if (mapped && active && active !== sectionId) {
-      sheetGuard.requestTransition(sectionLabel(sectionId), () => setActive(sectionId));
+      sheetGuard.requestTransition(sectionLabel(sectionId), transition);
       return;
     }
-    setActive(sectionId);
+    transition();
   };
+  const panelTabs = (instanceId: string) => (
+    <ExamRightPanelTabs
+      instanceId={instanceId}
+      activeTab={panelState.activeTab}
+      entryTitle={mapped && active
+        ? examRightPanelEntryTitle(active, EXAM_ENTRY_SHEET_CONFIG[active].title)
+        : undefined}
+      imageCount={2}
+      onSelect={(tab) => {
+        if (tab === "entry" && !mapped) return;
+        setPanelState((current) => selectExamRightPanelTab(current, tab));
+      }}
+    />
+  );
+  const panelMode = !active || mapped;
 
   return (
     <main className="flex h-screen flex-col overflow-hidden bg-bg-deep text-white">
@@ -251,8 +293,12 @@ function Fixture() {
           {editor}
         </div>
       ) : (
-        <div className="odos-exam-overview-stage" data-entry-sheet-open={sheetOpen ? "true" : "false"}>
-          <section className="min-h-0 overflow-hidden border-r border-white/10" data-testid="fixture-exam-column">
+        <div
+          className="odos-charting-stage"
+          data-entry-sheet-open={panelMode || sheetOpen ? "true" : "false"}
+          data-panel-summoned={panelState.summoned || (forceSheet && !mapped) ? "true" : "false"}
+        >
+          <section className="odos-charting-primary min-h-0 overflow-hidden border-r border-white/10" data-testid="fixture-exam-column">
             {showReturnButton && (
               <div className="odos-exam-editor-return">
                 <button type="button" data-testid="return-to-exam-overview" className="odos-exam-editor-return-button">
@@ -271,17 +317,59 @@ function Fixture() {
               onRefresh={() => undefined}
             />
           </section>
-          {active && sheetOpen && (
+          {mapped && active && (
             <ExamEntrySheet
               key={active}
-              sectionId={active === "visit-charges" ? "visit-charges" : mapped ? active : "va"}
-              onCancel={() => sheetGuard.requestTransition(undefined, () => setActive(undefined))}
+              sectionId={active}
+              onCancel={() => sheetGuard.requestTransition(undefined, closeEntry)}
               onCheckpointDirty={sheetGuard.checkpointDirty}
               onClearDirtyCheckpoint={sheetGuard.clearDirtyCheckpoint}
               onDirty={sheetGuard.markDirty}
               onDirtyCheckpoint={sheetGuard.markDirtyCheckpoint}
               onFocusWithin={sheetGuard.rememberFocus}
               onRestoreDirtyCheckpoint={sheetGuard.restoreDirtyCheckpoint}
+              panelId={EXAM_RIGHT_PANEL_IDS.entry}
+              panelLabelledBy="fixture-entry-panel-entry-tab"
+              panelTabs={panelTabs("fixture-entry-panel")}
+              active={panelState.activeTab === "entry"}
+              hidden={panelState.activeTab !== "entry"}
+            >
+              <div
+                data-fixture-section={active}
+                data-fixture-route={DEFERRED_SECTIONS.has(active) ? "deferred" : "candidate"}
+                style={active === "va" ? { minWidth: "max-content" } : undefined}
+              >
+                {editor}
+              </div>
+            </ExamEntrySheet>
+          )}
+          {panelMode && (
+            <ExamRightPanelSurface
+              active={panelState.activeTab === "images"}
+              label="Images"
+              panelId={EXAM_RIGHT_PANEL_IDS.images}
+              labelledBy="fixture-images-panel-images-tab"
+              tabs={panelTabs("fixture-images-panel")}
+            >
+              <p>Two synthetic patient studies</p>
+            </ExamRightPanelSurface>
+          )}
+          {panelMode && (
+            <ExamRightPanelSurface
+              active={panelState.activeTab === "engage"}
+              label="Engage"
+              panelId={EXAM_RIGHT_PANEL_IDS.engage}
+              labelledBy="fixture-engage-panel-engage-tab"
+              tabs={panelTabs("fixture-engage-panel")}
+            >
+              <p>Engage education</p>
+            </ExamRightPanelSurface>
+          )}
+          {active && forceSheet && !mapped && (
+            <ExamEntrySheet
+              key={active}
+              sectionId={active === "visit-charges" ? "visit-charges" : "va"}
+              onCancel={() => setActive(undefined)}
             >
               <div
                 data-fixture-section={active}
@@ -302,10 +390,18 @@ function renderEditor(
   sectionId: FixtureSectionId,
   resetDirty: (keepCancelableEditorOpen?: boolean) => void,
   markDirty: () => void,
+  onDone?: () => void,
 ): React.ReactNode {
   const patientReference = "Patient/test";
   const encounterReference = "Encounter/test";
-  const props = { patientReference, encounterReference, onSaved: () => resetDirty() };
+  const props = {
+    patientReference,
+    encounterReference,
+    onSaved: () => {
+      resetDirty();
+      onDone?.();
+    },
+  };
   switch (sectionId) {
     case "hpi": return (
       <HpiSection
@@ -313,7 +409,10 @@ function renderEditor(
         encounterReference={encounterReference}
         onSaved={(status, keepOpen) => {
           if (keepOpen && !status.completed) markDirty();
-          else resetDirty(keepOpen);
+          else {
+            resetDirty(keepOpen);
+            if (!keepOpen) onDone?.();
+          }
         }}
       />
     );

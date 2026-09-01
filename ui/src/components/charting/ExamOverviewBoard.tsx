@@ -137,7 +137,6 @@ const EXAM_SHEET_ROWS: readonly ExamSheetRowDefinition[] = [
   { sectionKey: "refraction", label: "Refraction", editorGroupKey: "refraction", traceSectionKeys: ["refraction"], owner: "Doctor", singleBlank: true },
   { sectionKey: "contact-lenses", label: "Contact Lenses", editorGroupKey: "contact-lenses", traceSectionKeys: [], owner: "Doctor", optional: true },
   { sectionKey: "ocular-health", label: "Ocular Health", editorGroupKey: "ocular-health", traceSectionKeys: ["ocular-health"], owner: "Doctor" },
-  { sectionKey: "imaging", label: "Imaging", editorGroupKey: "imaging", traceSectionKeys: [], owner: "Doctor", optional: true },
   {
     sectionKey: "assessment",
     label: "Assessment & Plan",
@@ -211,7 +210,7 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, r
   ));
   const chartAnotherGroups = Array.from(editorGroups.entries()).flatMap(([sectionKey, entries]) => {
     if (fullySlottedEditorGroupKeys.has(sectionKey)) return [];
-    const remaining = entries.filter((entry) => !performedEditorIds.has(entry.id));
+    const remaining = entries.filter((entry) => entry.id !== "imaging" && !performedEditorIds.has(entry.id));
     return remaining.length ? [[sectionKey, remaining] as const] : [];
   });
 

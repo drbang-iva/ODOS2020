@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Condition, Encounter, Patient } from "@medplum/fhirtypes";
 import { ChartSidebar } from "../components/ChartSidebar";
+import { LongitudinalImagingCard } from "../components/LongitudinalImagingCard";
 import { EngageSheet, type EngageDiagnosis } from "../components/comms/EngageSheet";
 import { ReferralCompose } from "../components/referral/ReferralCompose";
 import { AestheticsConsentSection } from "../components/charting/AestheticsConsentSection";
@@ -32,6 +33,17 @@ import {
   type ExamEntrySheetSectionId,
   useExamEntrySheetGuard,
 } from "../components/charting/ExamEntrySheet";
+import {
+  ExamRightPanelSurface,
+  ExamRightPanelTabs,
+  EXAM_RIGHT_PANEL_IDS,
+  examRightPanelEntryTitle,
+  INITIAL_EXAM_RIGHT_PANEL_STATE,
+  closeExamRightPanelEngage,
+  finishExamRightPanelEntry,
+  openExamRightPanelEntry,
+  selectExamRightPanelTab,
+} from "../components/charting/ExamRightPanel";
 import { VisitChargesSheet } from "../components/charting/VisitChargesSheet";
 import { EyeGrowthSection } from "../components/charting/EyeGrowthSection";
 import { EncounterFindingOverlay } from "../components/charting/EncounterFindingOverlay";
@@ -121,6 +133,8 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const [boardEditorOpen, setBoardEditorOpen] = useState(false);
   const [entrySheetSection, setEntrySheetSection] = useState<ExamEntrySheetSectionId>();
   const entrySheetGuard = useExamEntrySheetGuard(entrySheetSection);
+  const [rightPanelState, setRightPanelState] = useState(INITIAL_EXAM_RIGHT_PANEL_STATE);
+  const [rightPanelImageCount, setRightPanelImageCount] = useState(0);
   const [unassignedCount, setUnassignedCount] = useState<number>();
   const [encounterLoadState, setEncounterLoadState] = useState<EncounterLoadState>({
     encounterId,
@@ -128,7 +142,6 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   });
   const [visitChargesOpen, setVisitChargesOpen] = useState(false);
   const [visitCharge, setVisitCharge] = useState<VisitChargeResponse>();
-  const [engageOpen, setEngageOpen] = useState(false);
   const [engageDiagnosis, setEngageDiagnosis] = useState<EngageDiagnosis>();
   const [brokenVisitDiagnosisDisplay, setBrokenVisitDiagnosisDisplay] = useState<string>();
   const currentEncounterLoadState: EncounterLoadState = encounterLoadState.encounterId === encounterId
@@ -149,6 +162,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
       if (view !== "structure") {
         setBoardEditorOpen(false);
         setEntrySheetSection(undefined);
+        setRightPanelState(INITIAL_EXAM_RIGHT_PANEL_STATE);
       }
       saveEncounterChartView(view);
     };
@@ -168,10 +182,12 @@ export function EncounterCharting({ patient, encounterId }: Props) {
       setVisitChargesOpen(false);
       setActiveSection(sectionId);
       if (isExamEntrySheetSectionId(sectionId)) {
+        setRightPanelState((current) => openExamRightPanelEntry(current, Boolean(entrySheetSection)));
         setEntrySheetSection(sectionId);
         setBoardEditorOpen(false);
       } else {
         setEntrySheetSection(undefined);
+        setRightPanelState(INITIAL_EXAM_RIGHT_PANEL_STATE);
         setBoardEditorOpen(true);
       }
     };
@@ -186,12 +202,28 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   function returnToExamOverview() {
     setBoardEditorOpen(false);
     setEntrySheetSection(undefined);
+    setRightPanelState(INITIAL_EXAM_RIGHT_PANEL_STATE);
     refreshExamOverview();
+  }
+
+  function finishEntrySheet() {
+    setEntrySheetSection(undefined);
+    setRightPanelState((current) => finishExamRightPanelEntry(current));
+  }
+
+  function openEngage(diagnosis?: EngageDiagnosis) {
+    setEngageDiagnosis(diagnosis);
+    setVisitChargesOpen(false);
+    setBoardEditorOpen(false);
+    setRightPanelState((current) => selectExamRightPanelTab(current, "engage"));
   }
 
   useEffect(() => {
     setBoardEditorOpen(false);
     setEntrySheetSection(undefined);
+    setRightPanelState(INITIAL_EXAM_RIGHT_PANEL_STATE);
+    setRightPanelImageCount(0);
+    setEngageDiagnosis(undefined);
     setExamOverviewProjection(undefined);
     setVisitChargesOpen(false);
     setVisitCharge(undefined);
@@ -635,6 +667,23 @@ export function EncounterCharting({ patient, encounterId }: Props) {
         ? "Encounter details unavailable — Visit & charges cannot be changed"
         : undefined);
   const visitChargesDisabled = currentEncounterLoadState.status !== "ready" || isMigratedEncounter(encounter);
+  const rightPanelAvailable = chartView === "structure" && Boolean(activeExamOverviewProjection) && !boardEditorOpen;
+  const rightPanelForward = rightPanelAvailable && !visitChargesOpen;
+  const entryTabTitle = entrySheetSection
+    ? examRightPanelEntryTitle(entrySheetSection, EXAM_ENTRY_SHEET_CONFIG[entrySheetSection].title)
+    : undefined;
+  const rightPanelTabs = (instanceId: string) => (
+    <ExamRightPanelTabs
+      instanceId={instanceId}
+      activeTab={rightPanelState.activeTab}
+      entryTitle={entryTabTitle}
+      imageCount={rightPanelImageCount}
+      onSelect={(tab) => {
+        if (tab === "entry" && !entrySheetSection) return;
+        setRightPanelState((current) => selectExamRightPanelTab(current, tab));
+      }}
+    />
+  );
 
   return (
     <div className={["odos-charting-workspace flex h-screen w-screen flex-col bg-bg-deep text-white", config.encounterDensity === "compact" ? "text-[0.95rem]" : ""].join(" ")}>
@@ -650,13 +699,24 @@ export function EncounterCharting({ patient, encounterId }: Props) {
         clinicalActionUnavailableReason={clinicalActionUnavailableReason}
         onToggleVisitCharges={() => setVisitChargesOpen((current) => !current)}
       />
-      <div className="odos-charting-stage" data-entry-sheet-open={visitChargesOpen ? "true" : "false"}>
+      <div
+        className="odos-charting-stage"
+        data-entry-sheet-open={visitChargesOpen || rightPanelAvailable ? "true" : "false"}
+        data-panel-summoned={rightPanelState.summoned ? "true" : "false"}
+      >
         <div className="odos-charting-primary">
       <div className="odos-chart-view-toggle" role="group" aria-label="Chart workspace view">
         <button type="button" aria-pressed={chartView === "diagnosis"} onClick={() => selectChartView("diagnosis")}>By diagnosis</button>
         <button type="button" aria-pressed={chartView === "structure"} onClick={() => selectChartView("structure")}>By structure</button>
-        <button type="button" aria-label="Engage patient" onClick={() => { setEngageDiagnosis(undefined); setEngageOpen(true); }}>Engage</button>
       </div>
+      {rightPanelAvailable && (
+        <div className="odos-exam-panel-launchers" aria-label="Exam panel shortcuts">
+          <button type="button" onClick={() => setRightPanelState((current) => selectExamRightPanelTab(current, "images"))}>
+            Images{rightPanelImageCount > 0 ? ` · ${rightPanelImageCount}` : ""}
+          </button>
+          <button type="button" onClick={() => openEngage()}>Engage</button>
+        </div>
+      )}
       {chartView === "diagnosis" ? (
         <DiagnosisWorkspace
           key={diagnosisWorkspaceKey}
@@ -666,7 +726,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
           onSelectDiagnosis={(reference) => setSelectedDiagnosis(reference ? { workspaceKey: diagnosisWorkspaceKey, reference } : undefined)}
         />
       ) : activeExamOverviewProjection && !boardEditorOpen ? (
-        <div className="odos-exam-overview-stage" data-entry-sheet-open={entrySheetSection ? "true" : "false"}>
+        <div className="odos-exam-overview-stage">
           <ExamOverviewBoard
             projection={activeExamOverviewProjection}
             editorEntries={boardEditorEntries}
@@ -675,46 +735,6 @@ export function EncounterCharting({ patient, encounterId }: Props) {
             onOpenEditor={openBoardEditor}
             onRefresh={refreshExamOverview}
           />
-          {entrySheetSection && (
-            <ExamEntrySheet
-              key={entrySheetSection}
-              sectionId={entrySheetSection}
-              onCancel={() => entrySheetGuard.requestTransition(undefined, () => setEntrySheetSection(undefined))}
-              onCheckpointDirty={entrySheetGuard.checkpointDirty}
-              onClearDirtyCheckpoint={entrySheetGuard.clearDirtyCheckpoint}
-              onDirty={entrySheetGuard.markDirty}
-              onDirtyCheckpoint={entrySheetGuard.markDirtyCheckpoint}
-              onFocusWithin={entrySheetGuard.rememberFocus}
-              onRestoreDirtyCheckpoint={entrySheetGuard.restoreDirtyCheckpoint}
-              active={!referralComposeOpen}
-            >
-              <MappedExamSection
-                key={entrySheetSection}
-                sectionId={entrySheetSection}
-                definitions={{
-                  pupils: pupilsDefinition,
-                  stereopsis: stereopsisDefinition,
-                  colorVision: colorDefinition,
-                  eom: eomDefinition,
-                  cvf: cvfDefinition,
-                  visualFieldDefect: visualFieldDefectDefinition,
-                  manualKeratometry: manualKDefinition,
-                  pachymetry: pachymetryDefinition,
-                  dilation: dilationDefinition,
-                }}
-                patientReference={patientReference}
-                encounterReference={encounterReference}
-                onEngageDiagnosis={(diagnosis) => { setEngageDiagnosis(diagnosis); setEngageOpen(true); }}
-                onRefer={() => setReferralComposeOpen(true)}
-                onSaved={(status, keepOpen) => {
-                  if (keepOpen && !status.completed) entrySheetGuard.markDirty();
-                  else entrySheetGuard.resetDirty(Boolean(keepOpen));
-                  markSaved(entrySheetSection, status);
-                  if (!keepOpen) setEntrySheetSection(undefined);
-                }}
-              />
-            </ExamEntrySheet>
-          )}
         </div>
       ) : (
         <div className="odos-charting-body flex min-h-0 flex-1 flex-col md:flex-row">
@@ -824,7 +844,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
               }}
               patientReference={patientReference}
               encounterReference={encounterReference}
-              onEngageDiagnosis={(diagnosis) => { setEngageDiagnosis(diagnosis); setEngageOpen(true); }}
+              onEngageDiagnosis={openEngage}
               onRefer={() => setReferralComposeOpen(true)}
               onSaved={(status) => markSaved(activeSection, status)}
             />
@@ -975,6 +995,64 @@ export function EncounterCharting({ patient, encounterId }: Props) {
         </div>
       )}
         </div>
+        {rightPanelForward && entrySheetSection && (
+          <ExamEntrySheet
+            key={entrySheetSection}
+            sectionId={entrySheetSection}
+            onCancel={() => entrySheetGuard.requestTransition(undefined, finishEntrySheet)}
+            onCheckpointDirty={entrySheetGuard.checkpointDirty}
+            onClearDirtyCheckpoint={entrySheetGuard.clearDirtyCheckpoint}
+            onDirty={entrySheetGuard.markDirty}
+            onDirtyCheckpoint={entrySheetGuard.markDirtyCheckpoint}
+            onFocusWithin={entrySheetGuard.rememberFocus}
+            onRestoreDirtyCheckpoint={entrySheetGuard.restoreDirtyCheckpoint}
+            panelId={EXAM_RIGHT_PANEL_IDS.entry}
+            panelLabelledBy="entry-panel-entry-tab"
+            panelTabs={rightPanelTabs("entry-panel")}
+            active={rightPanelState.activeTab === "entry" && !referralComposeOpen}
+            hidden={rightPanelState.activeTab !== "entry"}
+          >
+            <MappedExamSection
+              key={entrySheetSection}
+              sectionId={entrySheetSection}
+              definitions={{
+                pupils: pupilsDefinition,
+                stereopsis: stereopsisDefinition,
+                colorVision: colorDefinition,
+                eom: eomDefinition,
+                cvf: cvfDefinition,
+                visualFieldDefect: visualFieldDefectDefinition,
+                manualKeratometry: manualKDefinition,
+                pachymetry: pachymetryDefinition,
+                dilation: dilationDefinition,
+              }}
+              patientReference={patientReference}
+              encounterReference={encounterReference}
+              onEngageDiagnosis={openEngage}
+              onRefer={() => setReferralComposeOpen(true)}
+              onSaved={(status, keepOpen) => {
+                if (keepOpen && !status.completed) entrySheetGuard.markDirty();
+                else entrySheetGuard.resetDirty(Boolean(keepOpen));
+                markSaved(entrySheetSection, status);
+                if (!keepOpen) finishEntrySheet();
+              }}
+            />
+          </ExamEntrySheet>
+        )}
+        {rightPanelForward && (
+          <ExamRightPanelSurface
+            active={rightPanelState.activeTab === "images"}
+            label="Images"
+            panelId={EXAM_RIGHT_PANEL_IDS.images}
+            labelledBy="images-panel-images-tab"
+            tabs={rightPanelTabs("images-panel")}
+          >
+            <LongitudinalImagingCard
+              patientReference={patientReference}
+              onCountChange={setRightPanelImageCount}
+            />
+          </ExamRightPanelSurface>
+        )}
         <VisitChargesSheet
           open={visitChargesOpen}
           encounter={encounter}
@@ -985,13 +1063,21 @@ export function EncounterCharting({ patient, encounterId }: Props) {
           onClose={() => setVisitChargesOpen(false)}
           onVisitChargeChange={setVisitCharge}
         />
-        <EngageSheet
-          open={engageOpen}
-          patient={patient}
-          encounterReference={encounterReference}
-          diagnosis={engageDiagnosis}
-          onClose={() => setEngageOpen(false)}
-        />
+        {rightPanelForward && (
+          <EngageSheet
+            open={rightPanelState.activeTab === "engage"}
+            patient={patient}
+            encounterReference={encounterReference}
+            diagnosis={engageDiagnosis}
+            panelId={EXAM_RIGHT_PANEL_IDS.engage}
+            panelLabelledBy="engage-panel-engage-tab"
+            panelTabs={rightPanelTabs("engage-panel")}
+            onClose={() => {
+              setEngageDiagnosis(undefined);
+              setRightPanelState((current) => closeExamRightPanelEngage(current, Boolean(entrySheetSection)));
+            }}
+          />
+        )}
       </div>
       {creatingSection && (
         <CustomSectionEditor

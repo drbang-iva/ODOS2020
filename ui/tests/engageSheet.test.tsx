@@ -206,12 +206,13 @@ test("toolbar Engage stays unfiltered and a locked practice pins retail content 
   }
 });
 
-test("the chart exposes both diagnosis-row and toolbar doors to the same Engage sheet", () => {
+test("the chart routes diagnosis-row and permanent-tab doors to the same Engage sheet", () => {
   const assessment = readFileSync(new URL("../src/components/charting/AssessmentSection.tsx", import.meta.url), "utf8");
   const chart = readFileSync(new URL("../src/scenes/EncounterCharting.tsx", import.meta.url), "utf8");
   assert.match(assessment, /onEngageDiagnosis/);
   assert.match(assessment, /aria-label={`Engage \$\{displayCode\(condition\.code\)\}`}/);
-  assert.match(chart, /aria-label="Engage patient"/);
+  assert.match(chart, /<ExamRightPanelTabs/);
+  assert.match(chart, /function openEngage\(diagnosis\?: EngageDiagnosis\)/);
   assert.match(chart, /<EngageSheet/);
   assert.match(chart, /diagnosis={engageDiagnosis}/);
   assert.doesNotMatch(chart, /VITE_ODOS_CHART_DISPATCH_LANE/);
