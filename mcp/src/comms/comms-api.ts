@@ -21,6 +21,12 @@ import {
 } from "./comms-config.js";
 import type { CommsProvider, ConversationSummary } from "./comms-provider.js";
 import type { EducationCatalogReader, EducationContentItem } from "./education-catalog.js";
+import {
+  EducationEnrollmentDuplicateError,
+  type EducationEnrollment,
+  type EducationEnrollmentSendOutcome,
+  type EducationEnrollmentStore,
+} from "./education-enrollment.js";
 import { generateTrackedLink, type TrackedLinkStore } from "./tracked-links.js";
 import {
   ODOS_COMMS_CATEGORY_SYSTEM,
@@ -53,6 +59,7 @@ export interface CommsApiRouteDeps {
   fhir: SmsOptOutManagementFhir;
   dispatch: CommsDispatch;
   educationCatalog: EducationCatalogReader;
+  enrollmentStore?: EducationEnrollmentStore;
   trackedLinkStore: TrackedLinkStore;
   publicBaseUrl: string;
   practiceName: string;
@@ -129,6 +136,128 @@ export function registerCommsApiRoutes(
     },
   ));
 
+  app.get("/communications/education/enrollments", async (req, res) => withStaff(
+    req,
+    res,
+    deps,
+    "communications.read",
+    "Basic",
+    "communications-education-enrollment-list",
+    optOutPatientReferenceForAudit(req),
+    async (staff) => {
+      const patientReference = requiredPatientReference(queryString(req, "patient"));
+      await readPatient(staff.fhir, patientReference);
+      return {
+        status: 200,
+        body: {
+          enrollments: await enrollmentStore(deps).listActiveForPatient(patientReference),
+        },
+      };
+    },
+  ));
+
+  app.get("/communications/education/enrollments/:enrollmentId", async (req, res) => withStaff(
+    req,
+    res,
+    deps,
+    "communications.read",
+    "Basic",
+    "communications-education-enrollment-read",
+    undefined,
+    async (staff) => {
+      const enrollment = await enrollmentStore(deps).read(
+        resourceKey(req.params.enrollmentId, "enrollment id"),
+      );
+      if (!enrollment) throw new CommsApiNotFoundError("Education enrollment not found.");
+      await readPatient(staff.fhir, enrollment.patientReference);
+      return { status: 200, body: { enrollment } };
+    },
+  ));
+
+  app.post("/communications/education/enrollments", async (req, res) => withStaff(
+    req,
+    res,
+    deps,
+    "communications.send",
+    "Basic",
+    "communications-education-enrollment-create",
+    patientReferenceFromBody(req.body),
+    async (staff) => {
+      const body = educationEnrollmentBody(req.body);
+      const patient = await readPatient(staff.fhir, body.patientReference);
+      await assertEncounterBelongsToPatient(
+        staff.fhir,
+        body.encounterReference,
+        body.patientReference,
+      );
+      for (const send of body.initialStage.immediateSends) {
+        const item = deps.educationCatalog.get(send.educationId, send.version);
+        if (!item || item.audience !== "patient") {
+          throw new CommsApiNotFoundError("Education content not found.");
+        }
+        if (!item.channels.includes(send.channel)) {
+          throw new CommsApiCapabilityError(`Education content is not published for ${send.channel}.`);
+        }
+      }
+      const store = enrollmentStore(deps);
+      const duplicates = await store.listActiveForPatient(body.patientReference);
+      if (duplicates.some((enrollment) => enrollment.journey.id === body.journey.id)) {
+        throw new CommsApiRefusalError("duplicate-active-enrollment");
+      }
+      let enrollment: EducationEnrollment;
+      try {
+        const enrolledAt = deps.now?.() ?? new Date().toISOString();
+        enrollment = await store.create({
+          patientReference: body.patientReference,
+          journey: body.journey,
+          currentStageId: body.initialStage.id,
+          stageEnteredAt: enrolledAt,
+          enteredFromEncounterReference: body.encounterReference,
+          enrolledBy: staff.staffReference,
+          status: "active",
+          stageHistory: [{
+            stageId: body.initialStage.id,
+            enteredAt: enrolledAt,
+            enteredBy: staff.staffReference,
+            reason: "enrollment-recorded",
+          }],
+          immediateSends: body.initialStage.immediateSends.map((send) => ({
+            content: { id: send.educationId, version: send.version },
+            channel: send.channel,
+            lane: send.lane,
+          })),
+        });
+      } catch (error) {
+        if (error instanceof EducationEnrollmentDuplicateError) {
+          throw new CommsApiRefusalError("duplicate-active-enrollment");
+        }
+        throw error;
+      }
+      if (enrollment.patientReference !== body.patientReference) {
+        throw new Error("EducationEnrollment store returned a different patient.");
+      }
+      await persistEducationEnrollmentProvenance(staff.fhir, {
+        enrollment,
+        staff,
+        now: deps.now?.() ?? new Date().toISOString(),
+      });
+      for (const [index, send] of body.initialStage.immediateSends.entries()) {
+        const outcome = await dispatchEducation(deps, staff, patient, {
+          patientReference: body.patientReference,
+          educationId: send.educationId,
+          version: send.version,
+          channel: send.channel,
+          lane: send.lane,
+          alsoUpdateChart: false,
+          encounterReference: body.encounterReference,
+          idempotencyKey: enrollmentSendIdempotencyKey(enrollment.id, index),
+        });
+        enrollment = await store.recordImmediateSendOutcome(enrollment.id, index, outcome);
+      }
+      return { status: 201, body: { enrollment } };
+    },
+  ));
+
   app.get("/communications/education/:educationId", async (req, res) => withStaff(
     req,
     res,
@@ -158,182 +287,9 @@ export function registerCommsApiRoutes(
     patientReferenceFromBody(req.body),
     async (staff) => {
       const body = educationDispatchBody(req.body);
-      const item = deps.educationCatalog.get(body.educationId, body.version);
-      if (!item || item.audience !== "patient") {
-        throw new CommsApiNotFoundError("Education content not found.");
-      }
-      if (!item.channels.includes(body.channel)) {
-        throw new CommsApiCapabilityError(`Education content is not published for ${body.channel}.`);
-      }
-      if (
-        deps.chartDispatchLane === "locked_clinical"
-        && body.lane !== "clinical"
-      ) {
-        throw new CommsApiCapabilityError("Education dispatch is locked to the clinical lane for this practice.");
-      }
       const patientId = body.patientReference.slice("Patient/".length);
       const patient = await staff.fhir.read<Patient>("Patient", patientId);
-      await assertEducationClinicalReferences(staff.fhir, body);
-      if (item.consentClass === "marketing" && !hasRecordedMarketingConsent(patient)) {
-        throw new CommsApiRefusalError("marketing-consent-absent");
-      }
-      const recipient = await resolveEducationRecipient(staff.fhir, patient, body);
-      const defaultLane = item.laneHint === "retail" ? "frontdesk" : "clinical";
-      const laneSelection = body.lane === defaultLane ? "default" : "overridden";
-      const campaignId = `${item.id}@${item.version}`;
-
-      if (body.channel === "print") {
-        const url = item.urls.print;
-        if (!url) throw new CommsApiCapabilityError("Education print artifact is not published.");
-        if (body.alsoUpdateChart) {
-          await updateEducationRecipient(staff.fhir, recipient, body, staff);
-        }
-        await persistEducationSendProvenance(staff.fhir, {
-          body,
-          item,
-          staff,
-          recipientValue: recipient.value,
-          laneSelection,
-          now: deps.now?.() ?? new Date().toISOString(),
-        });
-        return { status: 200, body: { outcome: "print", url } };
-      }
-
-      if (body.channel === "email") {
-        const url = item.urls.email;
-        if (!url) throw new CommsApiCapabilityError("Education email artifact is not published.");
-        requireConfiguredRole(deps.dispatch, "email", false);
-        const provider = adapterForRole(deps, "email", staff.fhir);
-        if (!provider.sendEmail) {
-          throw new CommsApiCapabilityError("Email is not enabled for the configured education provider.");
-        }
-        const result = await provider.sendEmail({
-          patientReference: body.patientReference,
-          toAddress: recipient.value,
-          subject: item.title,
-          body: url,
-          campaignType: "clinical-education",
-          campaignId,
-          messageId: body.idempotencyKey,
-          suppression: {},
-        });
-        if (result.outcome === "sent") {
-          if (body.alsoUpdateChart) {
-            await updateEducationRecipient(staff.fhir, recipient, body, staff);
-          }
-          await persistEducationSendProvenance(staff.fhir, {
-            body,
-            item,
-            staff,
-            recipientValue: recipient.value,
-            laneSelection,
-            now: deps.now?.() ?? new Date().toISOString(),
-          });
-        }
-        return { status: 200, body: result };
-      }
-
-      const role = educationSmsRole(body.lane);
-      requireConfiguredRole(deps.dispatch, role, true);
-      const provider = adapterForRole(deps, role, staff.fhir);
-      if (!provider.sendSms) {
-        throw new CommsApiCapabilityError("SMS is not enabled for the configured education lane.");
-      }
-      const targetUrl = item.urls.web;
-      if (!targetUrl) throw new CommsApiCapabilityError("Education web artifact is not published.");
-      assertEducationPublicBaseUrl(deps.publicBaseUrl);
-      const existingSend = await findStaffSmsSend(staff.fhir, body.idempotencyKey);
-      const smsBody = existingSend?.payload?.[0]?.contentString ?? await educationSmsBody(deps, {
-        targetUrl,
-        campaignId,
-        messageId: body.idempotencyKey,
-      });
-      const providerMessageIdentifierSystem =
-        provider.messageIdentifierSystem ?? ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM;
-      const reservation = await reserveStaffSmsSend(staff.fhir, {
-        idempotencyKey: body.idempotencyKey,
-        claimId: randomUUID(),
-        patientReference: body.patientReference,
-        senderReference: staff.staffReference,
-        body: smsBody,
-        requestFingerprint: JSON.stringify({
-          patientReference: body.patientReference,
-          recipient: recipient.value,
-          education: campaignId,
-          targetUrl,
-          lane: body.lane,
-          provider: provider.name,
-          recipientReference: recipient.reference,
-          alsoUpdateChart: body.alsoUpdateChart,
-          encounterReference: body.encounterReference,
-          conditionReference: body.conditionReference,
-        }),
-        provider: provider.name,
-        providerMessageIdentifierSystem,
-      });
-      if (reservation.state === "conflict") {
-        throw new CommsApiCapabilityError("Education idempotency key was already used for a different request.");
-      }
-      if (reservation.state === "pending") {
-        throw new CommsApiCapabilityError("Education send outcome is pending reconciliation; do not resend with a new key.");
-      }
-      if (reservation.state === "sent") {
-        if (body.alsoUpdateChart) {
-          await updateEducationRecipient(staff.fhir, recipient, body, staff);
-        }
-        await persistEducationSendProvenance(staff.fhir, {
-          body,
-          item,
-          staff,
-          recipientValue: recipient.value,
-          laneSelection,
-          now: deps.now?.() ?? new Date().toISOString(),
-        });
-        return {
-          status: 200,
-          body: { outcome: "sent", providerMessageId: reservation.providerMessageId },
-        };
-      }
-      if (reservation.state === "terminal") {
-        return { status: 200, body: reservation.result };
-      }
-      const result = await provider.sendSms({
-        patientReference: body.patientReference,
-        toNumber: recipient.value,
-        body: smsBody,
-        campaignType: "clinical-education",
-        campaignId,
-        messageId: body.idempotencyKey,
-        suppression: item.consentClass === "transactional"
-          ? { quietHoursExemption: "staff-initiated-chart-education" }
-          : {},
-      });
-      if (result.outcome === "sent") {
-        await persistStaffSentSms(staff.fhir, {
-          communication: reservation.communication,
-          idempotencyKey: body.idempotencyKey,
-          providerMessageId: result.providerMessageId,
-          providerMessageIdentifierSystem,
-        }, { now: () => deps.now?.() ?? new Date().toISOString() });
-        if (body.alsoUpdateChart) {
-          await updateEducationRecipient(staff.fhir, recipient, body, staff);
-        }
-        await persistEducationSendProvenance(staff.fhir, {
-          body,
-          item,
-          staff,
-          recipientValue: recipient.value,
-          laneSelection,
-          now: deps.now?.() ?? new Date().toISOString(),
-        });
-      } else {
-        await persistStaffSmsTerminalOutcome(staff.fhir, {
-          communication: reservation.communication,
-          idempotencyKey: body.idempotencyKey,
-          result,
-        });
-      }
-      return { status: 200, body: result };
+      return { status: 200, body: await dispatchEducation(deps, staff, patient, body) };
     },
   ));
 
@@ -616,6 +572,185 @@ export function registerCommsApiRoutes(
   ));
 }
 
+async function dispatchEducation(
+  deps: CommsApiRouteDeps,
+  staff: CommsStaff,
+  patient: Patient,
+  body: EducationDispatchBody,
+): Promise<EducationEnrollmentSendOutcome> {
+  const item = deps.educationCatalog.get(body.educationId, body.version);
+  if (!item || item.audience !== "patient") {
+    throw new CommsApiNotFoundError("Education content not found.");
+  }
+  if (!item.channels.includes(body.channel)) {
+    throw new CommsApiCapabilityError(`Education content is not published for ${body.channel}.`);
+  }
+  if (
+    deps.chartDispatchLane === "locked_clinical"
+    && body.lane !== "clinical"
+  ) {
+    throw new CommsApiCapabilityError("Education dispatch is locked to the clinical lane for this practice.");
+  }
+  await assertEducationClinicalReferences(staff.fhir, body);
+  if (item.consentClass === "marketing" && !hasRecordedMarketingConsent(patient)) {
+    throw new CommsApiRefusalError("marketing-consent-absent");
+  }
+  const recipient = await resolveEducationRecipient(staff.fhir, patient, body);
+  const defaultLane = item.laneHint === "retail" ? "frontdesk" : "clinical";
+  const laneSelection = body.lane === defaultLane ? "default" : "overridden";
+  const campaignId = `${item.id}@${item.version}`;
+
+  if (body.channel === "print") {
+    const url = item.urls.print;
+    if (!url) throw new CommsApiCapabilityError("Education print artifact is not published.");
+    if (body.alsoUpdateChart) {
+      await updateEducationRecipient(staff.fhir, recipient, body, staff);
+    }
+    await persistEducationSendProvenance(staff.fhir, {
+      body,
+      item,
+      staff,
+      recipientValue: recipient.value,
+      laneSelection,
+      now: deps.now?.() ?? new Date().toISOString(),
+    });
+    return { outcome: "print", url };
+  }
+
+  if (body.channel === "email") {
+    const url = item.urls.email;
+    if (!url) throw new CommsApiCapabilityError("Education email artifact is not published.");
+    requireConfiguredRole(deps.dispatch, "email", false);
+    const provider = adapterForRole(deps, "email", staff.fhir);
+    if (!provider.sendEmail) {
+      throw new CommsApiCapabilityError("Email is not enabled for the configured education provider.");
+    }
+    const result = await provider.sendEmail({
+      patientReference: body.patientReference,
+      toAddress: recipient.value,
+      subject: item.title,
+      body: url,
+      campaignType: "clinical-education",
+      campaignId,
+      messageId: body.idempotencyKey,
+      suppression: {},
+    });
+    if (result.outcome === "sent") {
+      if (body.alsoUpdateChart) {
+        await updateEducationRecipient(staff.fhir, recipient, body, staff);
+      }
+      await persistEducationSendProvenance(staff.fhir, {
+        body,
+        item,
+        staff,
+        recipientValue: recipient.value,
+        laneSelection,
+        now: deps.now?.() ?? new Date().toISOString(),
+      });
+    }
+    return result;
+  }
+
+  const role = educationSmsRole(body.lane);
+  requireConfiguredRole(deps.dispatch, role, true);
+  const provider = adapterForRole(deps, role, staff.fhir);
+  if (!provider.sendSms) {
+    throw new CommsApiCapabilityError("SMS is not enabled for the configured education lane.");
+  }
+  const targetUrl = item.urls.web;
+  if (!targetUrl) throw new CommsApiCapabilityError("Education web artifact is not published.");
+  assertEducationPublicBaseUrl(deps.publicBaseUrl);
+  const existingSend = await findStaffSmsSend(staff.fhir, body.idempotencyKey);
+  const smsBody = existingSend?.payload?.[0]?.contentString ?? await educationSmsBody(deps, {
+    targetUrl,
+    campaignId,
+    messageId: body.idempotencyKey,
+  });
+  const providerMessageIdentifierSystem =
+    provider.messageIdentifierSystem ?? ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM;
+  const reservation = await reserveStaffSmsSend(staff.fhir, {
+    idempotencyKey: body.idempotencyKey,
+    claimId: randomUUID(),
+    patientReference: body.patientReference,
+    senderReference: staff.staffReference,
+    body: smsBody,
+    requestFingerprint: JSON.stringify({
+      patientReference: body.patientReference,
+      recipient: recipient.value,
+      education: campaignId,
+      targetUrl,
+      lane: body.lane,
+      provider: provider.name,
+      recipientReference: recipient.reference,
+      alsoUpdateChart: body.alsoUpdateChart,
+      encounterReference: body.encounterReference,
+      conditionReference: body.conditionReference,
+    }),
+    provider: provider.name,
+    providerMessageIdentifierSystem,
+  });
+  if (reservation.state === "conflict") {
+    throw new CommsApiCapabilityError("Education idempotency key was already used for a different request.");
+  }
+  if (reservation.state === "pending") {
+    throw new CommsApiCapabilityError("Education send outcome is pending reconciliation; do not resend with a new key.");
+  }
+  if (reservation.state === "sent") {
+    if (body.alsoUpdateChart) {
+      await updateEducationRecipient(staff.fhir, recipient, body, staff);
+    }
+    await persistEducationSendProvenance(staff.fhir, {
+      body,
+      item,
+      staff,
+      recipientValue: recipient.value,
+      laneSelection,
+      now: deps.now?.() ?? new Date().toISOString(),
+    });
+    return { outcome: "sent", providerMessageId: reservation.providerMessageId };
+  }
+  if (reservation.state === "terminal") {
+    return reservation.result;
+  }
+  const result = await provider.sendSms({
+    patientReference: body.patientReference,
+    toNumber: recipient.value,
+    body: smsBody,
+    campaignType: "clinical-education",
+    campaignId,
+    messageId: body.idempotencyKey,
+    suppression: item.consentClass === "transactional"
+      ? { quietHoursExemption: "staff-initiated-chart-education" }
+      : {},
+  });
+  if (result.outcome === "sent") {
+    await persistStaffSentSms(staff.fhir, {
+      communication: reservation.communication,
+      idempotencyKey: body.idempotencyKey,
+      providerMessageId: result.providerMessageId,
+      providerMessageIdentifierSystem,
+    }, { now: () => deps.now?.() ?? new Date().toISOString() });
+    if (body.alsoUpdateChart) {
+      await updateEducationRecipient(staff.fhir, recipient, body, staff);
+    }
+    await persistEducationSendProvenance(staff.fhir, {
+      body,
+      item,
+      staff,
+      recipientValue: recipient.value,
+      laneSelection,
+      now: deps.now?.() ?? new Date().toISOString(),
+    });
+  } else {
+    await persistStaffSmsTerminalOutcome(staff.fhir, {
+      communication: reservation.communication,
+      idempotencyKey: body.idempotencyKey,
+      result,
+    });
+  }
+  return result;
+}
+
 async function withStaff(
   req: Request,
   res: Response,
@@ -754,6 +889,17 @@ function hasBusinessAction(role: PracticeRoleId, action: BusinessAction): boolea
   } catch {
     return false;
   }
+}
+
+function enrollmentStore(deps: CommsApiRouteDeps): EducationEnrollmentStore {
+  if (!deps.enrollmentStore) {
+    throw new CommsApiCapabilityError("Education enrollment persistence is not configured.");
+  }
+  return deps.enrollmentStore;
+}
+
+function enrollmentSendIdempotencyKey(enrollmentId: string, sendIndex: number): string {
+  return `enrollment:${enrollmentId}:stage1:${sendIndex + 1}`;
 }
 
 async function patientSmsOptOutState(
@@ -1100,6 +1246,71 @@ type EducationDispatchBody = {
   idempotencyKey: string;
 };
 
+// Slice 5a limitation: the journey id/version pin is recorded but is not yet enforced against a definition store; the caller-supplied stage and sends are persisted as the execution truth.
+type EducationEnrollmentBody = {
+  patientReference: string;
+  encounterReference: string;
+  journey: { id: string; version: number };
+  initialStage: {
+    id: string;
+    immediateSends: Array<{
+      educationId: string;
+      version: number;
+      channel: "sms" | "email" | "print";
+      lane: "clinical" | "frontdesk";
+    }>;
+  };
+};
+
+function educationEnrollmentBody(value: unknown): EducationEnrollmentBody {
+  const body = record(value);
+  const journey = record(body.journey);
+  const initialStage = record(body.initialStage);
+  if (!Array.isArray(initialStage.immediateSends) || initialStage.immediateSends.length === 0) {
+    throw new CommsApiValidationError("initialStage.immediateSends must contain at least one send.");
+  }
+  return {
+    patientReference: requiredPatientReference(body.patientReference),
+    encounterReference: requiredReference(body.encounterReference, "Encounter", "encounterReference"),
+    journey: {
+      id: definitionKey(journey.id, "journey.id"),
+      version: requiredInteger(journey.version, "journey.version", 1, Number.MAX_SAFE_INTEGER),
+    },
+    initialStage: {
+      id: definitionKey(initialStage.id, "initialStage.id"),
+      immediateSends: initialStage.immediateSends.map((value, index) => {
+        const send = record(value);
+        const channel = send.channel;
+        if (channel !== "sms" && channel !== "email" && channel !== "print") {
+          throw new CommsApiValidationError(
+            `initialStage.immediateSends[${index}].channel must be sms, email, or print.`,
+          );
+        }
+        const lane = send.lane;
+        if (lane !== "clinical" && lane !== "frontdesk") {
+          throw new CommsApiValidationError(
+            `initialStage.immediateSends[${index}].lane must be clinical or frontdesk.`,
+          );
+        }
+        return {
+          educationId: definitionKey(
+            send.educationId,
+            `initialStage.immediateSends[${index}].educationId`,
+          ),
+          version: requiredInteger(
+            send.version,
+            `initialStage.immediateSends[${index}].version`,
+            1,
+            Number.MAX_SAFE_INTEGER,
+          ),
+          channel,
+          lane,
+        };
+      }),
+    },
+  };
+}
+
 function educationDispatchBody(value: unknown): EducationDispatchBody {
   const body = record(value);
   const channel = body.channel;
@@ -1152,6 +1363,24 @@ function optionalReference(value: unknown, resourceType: "Encounter" | "Conditio
   if (value === undefined) return undefined;
   if (typeof value !== "string" || !new RegExp(`^${resourceType}/[A-Za-z0-9.-]{1,64}$`).test(value)) {
     throw new CommsApiValidationError(`${resourceType.toLowerCase()}Reference must be ${resourceType}/<id>.`);
+  }
+  return value;
+}
+
+function requiredReference(
+  value: unknown,
+  resourceType: "Encounter",
+  label: string,
+): string {
+  if (typeof value !== "string" || !new RegExp(`^${resourceType}/[A-Za-z0-9.-]{1,64}$`).test(value)) {
+    throw new CommsApiValidationError(`${label} must be ${resourceType}/<id>.`);
+  }
+  return value;
+}
+
+function definitionKey(value: unknown, label: string): string {
+  if (typeof value !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value)) {
+    throw new CommsApiValidationError(`${label} is invalid.`);
   }
   return value;
 }
@@ -1222,6 +1451,35 @@ async function resolveEducationRecipient(
     );
   }
   return { reference, value, resource };
+}
+
+async function readPatient(fhir: MedplumClient, patientReference: string): Promise<Patient> {
+  try {
+    return await fhir.read<Patient>("Patient", patientReference.slice("Patient/".length));
+  } catch (error) {
+    if (isFhirNotFound(error)) throw new CommsApiNotFoundError("Patient not found.");
+    throw error;
+  }
+}
+
+async function assertEncounterBelongsToPatient(
+  fhir: MedplumClient,
+  encounterReference: string,
+  patientReference: string,
+): Promise<void> {
+  let encounter: Encounter;
+  try {
+    encounter = await fhir.read<Encounter>(
+      "Encounter",
+      encounterReference.slice("Encounter/".length),
+    );
+  } catch (error) {
+    if (isFhirNotFound(error)) throw new CommsApiNotFoundError("Encounter not found.");
+    throw error;
+  }
+  if (encounter.subject?.reference !== patientReference) {
+    throw new CommsApiValidationError(`encounterReference must belong to ${patientReference}.`);
+  }
 }
 
 async function assertEducationClinicalReferences(
@@ -1347,6 +1605,35 @@ async function persistEducationSendProvenance(
   await fhir.create(provenance, {
     "If-None-Exist": `_tag=${ODOS_COMMS_EDUCATION_SEND_IDENTIFIER_SYSTEM}|${input.body.idempotencyKey}`,
   });
+}
+
+async function persistEducationEnrollmentProvenance(
+  fhir: MedplumClient,
+  input: {
+    enrollment: EducationEnrollment;
+    staff: CommsStaff;
+    now: string;
+  },
+): Promise<void> {
+  const provenance = buildProvenance({
+    targetReferences: [
+      input.enrollment.patientReference,
+      input.enrollment.enteredFromEncounterReference,
+      `Basic/${input.enrollment.id}`,
+    ],
+    recorded: input.now,
+    activityCode: "CREATE",
+    activityDisplay: "Enroll patient in education journey",
+    agents: [{ whoReference: input.staff.staffReference, typeCode: "author" }],
+    entityValues: [
+      {
+        role: "source",
+        display: `Journey: ${input.enrollment.journey.id}@${input.enrollment.journey.version}`,
+      },
+      { role: "source", display: `Initial stage: ${input.enrollment.currentStageId}` },
+    ],
+  });
+  await fhir.create(provenance);
 }
 
 function requiredEmail(value: unknown, label: string): string {
