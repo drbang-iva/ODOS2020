@@ -733,7 +733,7 @@ test("a realistic post-cataract office visit with refraction and examined anteri
   );
 
   assert.equal(result.status, 200);
-  assert.equal((result.body as { annualRecall: { fullExam: boolean } }).annualRecall.fullExam, false);
+  assert.equal("annualRecall" in (result.body as object), false);
   assert.equal(annualRequests(fhir).length, 0);
 });
 
@@ -754,7 +754,7 @@ test("annual recall requires both refraction and an examined ocular component", 
       { authHeader: "Bearer test", params: { encounterId } },
     );
     assert.equal(result.status, 200);
-    assert.equal((result.body as { annualRecall: { fullExam: boolean } }).annualRecall.fullExam, false);
+    assert.equal("annualRecall" in (result.body as object), false);
     assert.equal(annualRequests(fhir).length, 0);
   }
 });

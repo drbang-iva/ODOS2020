@@ -738,7 +738,16 @@ export async function handleProtocolSignCleanupRequest(
   } catch (error) {
     annualRecall = annualRecallMaterializationRefusal(error);
   }
-  return { status: 200, body: { abandoned, ...charges, annualRecall } };
+  return {
+    status: 200,
+    body: {
+      abandoned,
+      ...charges,
+      ...(annualRecall.fullExam === true || annualRecall.materializationRefusal
+        ? { annualRecall }
+        : {}),
+    },
+  };
 }
 
 function liveService(
