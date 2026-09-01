@@ -148,3 +148,99 @@ test("EducationEnrollment FHIR Basic round-trip preserves exact sends, outcomes,
     params.code?.includes("education-enrollment")
     && params.subject === PATIENT_REFERENCE), true);
 });
+
+test("EducationEnrollment FHIR terminal transition preserves prior truth and removes only the active identifier with If-Match", async () => {
+  let persisted: Basic | undefined;
+  const ifMatches: string[] = [];
+  const fhir = {
+    baseUrl: "https://synthetic.example/fhir/R4",
+    async search<T extends Resource>(): Promise<Bundle<T>> {
+      return { resourceType: "Bundle", type: "searchset" };
+    },
+    async searchUrl<T extends Resource>(): Promise<Bundle<T>> {
+      throw new Error("Unexpected EducationEnrollment pagination.");
+    },
+    async create<T extends Resource>(resource: T): Promise<T> {
+      persisted = {
+        ...(structuredClone(resource) as Basic),
+        id: "fhir-terminal-enrollment",
+        meta: { versionId: "1", lastUpdated: "2026-09-01T14:00:00.000Z" },
+      };
+      return structuredClone(persisted) as T;
+    },
+    async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
+      assert.equal(resourceType, "Basic");
+      assert.equal(id, "fhir-terminal-enrollment");
+      assert.ok(persisted);
+      return structuredClone(persisted) as T;
+    },
+    async update<T extends Resource>(
+      resourceType: T["resourceType"],
+      id: string,
+      resource: T,
+      options?: Record<string, string>,
+    ): Promise<T> {
+      assert.equal(resourceType, "Basic");
+      assert.equal(id, "fhir-terminal-enrollment");
+      assert.ok(persisted);
+      ifMatches.push(options?.["If-Match"] ?? "");
+      persisted = {
+        ...(structuredClone(resource) as Basic),
+        id,
+        meta: {
+          versionId: String(Number(persisted.meta?.versionId ?? "0") + 1),
+          lastUpdated: "2026-09-01T14:01:00.000Z",
+        },
+      };
+      return structuredClone(persisted) as T;
+    },
+  };
+  const store = createFhirEducationEnrollmentStore(fhir);
+  const created = await store.create(enrollmentInput());
+  await store.recordImmediateSendOutcome(created.id, 0, {
+    outcome: "sent",
+    providerMessageId: "SM-stage-1",
+  });
+
+  const transitioned = await store.transition(created.id, {
+    fromStageId: "welcome",
+    targetStageId: "complete",
+    trigger: "clinician-action",
+    enteredAt: "2026-09-02T14:00:00.000Z",
+    enteredBy: ENROLLED_BY,
+    status: "completed",
+    immediateSends: [{
+      content: { id: "dry-eye-basics", version: 2 },
+      channel: "sms",
+      lane: "clinical",
+    }],
+  });
+  assert.equal(transitioned.status, "completed");
+  assert.equal(transitioned.stageHistory.length, 2);
+  assert.deepEqual(transitioned.immediateSends[0]?.outcome, {
+    outcome: "sent",
+    providerMessageId: "SM-stage-1",
+  });
+  assert.equal(persisted?.identifier?.some((identifier) =>
+    identifier.system === "https://odos2020.com/fhir/NamingSystem/education-enrollment-active"), true);
+
+  await store.recordImmediateSendOutcome(created.id, 1, {
+    outcome: "sent",
+    providerMessageId: "SM-terminal-stage",
+  });
+  const cleared = await store.clearTerminalActiveIdentifier(created.id);
+  assert.equal(persisted?.identifier?.some((identifier) =>
+    identifier.system === "https://odos2020.com/fhir/NamingSystem/education-enrollment-active"), false);
+  assert.equal(persisted?.identifier?.some((identifier) =>
+    identifier.system === "https://odos2020.com/fhir/NamingSystem/education-enrollment-id"), true);
+  assert.equal(cleared.status, "completed");
+  assert.equal(cleared.stageHistory.length, 2);
+  assert.deepEqual(cleared.immediateSends.map((send) => send.outcome), [{
+    outcome: "sent",
+    providerMessageId: "SM-stage-1",
+  }, {
+    outcome: "sent",
+    providerMessageId: "SM-terminal-stage",
+  }]);
+  assert.deepEqual(ifMatches, ['W/"1"', 'W/"2"', 'W/"3"', 'W/"4"']);
+});

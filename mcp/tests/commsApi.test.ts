@@ -178,6 +178,12 @@ test("every communications endpoint rejects missing authentication and audits ev
       lane: "clinical",
       idempotencyKey: "education-auth-0001",
     } },
+    { method: "POST", path: "/communications/education/enrollments/enrollment-auth/transitions", body: {
+      fromStageId: "welcome",
+      targetStage: { id: "consult", immediateSends: [] },
+      trigger: "clinician-action",
+      status: "active",
+    } },
     { method: "GET", path: "/communications/conversations" },
     { method: "GET", path: `/communications/opt-out?patient=${PATIENT_REFERENCE}` },
     { method: "POST", path: "/communications/opt-out/clear", body: OPT_OUT_CLEAR_BODY },
