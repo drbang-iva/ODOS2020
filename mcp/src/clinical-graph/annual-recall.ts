@@ -18,7 +18,9 @@ const FULL_EXAM_VISIT_TYPE_CODES = new Set([
   "routine-exam-new",
   "routine-exam-established",
   "medicaid-exam",
+  "contact-lens-exam",
 ]);
+const PRIMARY_REFRACTION_TYPES = new Set(["MANIFEST", "CYCLOPLEGIC", "FINAL_RX"]);
 const REFRACTION_MEASUREMENT_CODES = new Set([
   "SPHERE",
   "CYLINDER",
@@ -251,16 +253,25 @@ async function isFullEyeExam(
   const usable = observations.filter((observation) =>
     observation.status !== "entered-in-error" && observation.status !== "cancelled"
   );
-  const refractionPerformed = usable.some((observation) =>
-    observation.code.coding?.some((coding) =>
+  const refractionPerformed = usable.some((observation) => {
+    if (observation.code.coding?.some((coding) =>
       coding.system === ODOS_OPHTHALMOLOGY_CODE_SYSTEM && coding.code === "REFRACTION"
-    ) === true && observation.component?.some((component) => {
+    ) !== true) return false;
+    const refractionType = observation.component
+      ?.find((component) => component.code.coding?.some((coding) =>
+        coding.system === ODOS_OPHTHALMOLOGY_CODE_SYSTEM && coding.code === "REFRACTION_TYPE"
+      ))
+      ?.valueCodeableConcept?.coding
+      ?.find((coding) => coding.system === ODOS_OPHTHALMOLOGY_CODE_SYSTEM && coding.code)
+      ?.code;
+    return refractionType !== undefined && PRIMARY_REFRACTION_TYPES.has(refractionType) &&
+      observation.component?.some((component) => {
       const code = component.code.coding?.find((coding) => coding.system === ODOS_OPHTHALMOLOGY_CODE_SYSTEM)?.code;
       if (!code || !REFRACTION_MEASUREMENT_CODES.has(code)) return false;
       return component.valueQuantity?.value !== undefined ||
         component.valueCodeableConcept?.coding?.some((coding) => coding.code) === true;
-    }) === true
-  );
+      }) === true;
+  });
   const examComponentPerformed = usable.some((observation) =>
     normalizeObservationExamState(observation).state === "examined" &&
     observation.code.coding?.some((coding) =>

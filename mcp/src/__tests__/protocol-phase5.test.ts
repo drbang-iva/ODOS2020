@@ -955,6 +955,60 @@ test("a realistic post-cataract office visit with refraction and examined anteri
   assert.equal(annualRequests(fhir).length, 0);
 });
 
+test("a contact-lens exam with manifest refraction and examined ocular content creates an annual", async () => {
+  const fhir = new EndpointFhir();
+  fhir.resources.push(
+    annualEncounter("contact-lens-comprehensive", "contact-lens-exam", "2026-07-18T15:00:00.000Z"),
+    refractionObservation("contact-lens-comprehensive", "MANIFEST"),
+    ocularHealthObservation("contact-lens-comprehensive"),
+  );
+
+  const result = await handleProtocolSignCleanupRequest(
+    { ...endpointDeps(fhir), feeScheduleFhir: fhir as never },
+    { authHeader: "Bearer test", params: { encounterId: "contact-lens-comprehensive" } },
+  );
+
+  assert.equal(result.status, 200);
+  assert.equal(annualRequests(fhir).length, 1);
+  assert.equal(annualRequests(fhir)[0]?.occurrenceDateTime, "2027-07-18");
+});
+
+test("a standalone contact-lens exam with only over-refraction creates no annual", async () => {
+  const fhir = new EndpointFhir();
+  fhir.resources.push(
+    annualEncounter("contact-lens-standalone", "contact-lens-exam", "2026-07-18T15:00:00.000Z"),
+    refractionObservation("contact-lens-standalone", "OVER_REFRACTION"),
+    ocularHealthObservation("contact-lens-standalone"),
+  );
+
+  const result = await handleProtocolSignCleanupRequest(
+    { ...endpointDeps(fhir), feeScheduleFhir: fhir as never },
+    { authHeader: "Bearer test", params: { encounterId: "contact-lens-standalone" } },
+  );
+
+  assert.equal(result.status, 200);
+  assert.equal("annualRecall" in (result.body as object), false);
+  assert.equal(annualRequests(fhir).length, 0);
+});
+
+test("autorefraction alone creates no annual at a full-exam visit type", async () => {
+  const fhir = new EndpointFhir();
+  fhir.resources.push(
+    annualEncounter("autorefraction-only", "routine-exam-established", "2026-07-18T15:00:00.000Z"),
+    refractionObservation("autorefraction-only", "AUTOREFRACTION"),
+    ocularHealthObservation("autorefraction-only"),
+  );
+
+  const result = await handleProtocolSignCleanupRequest(
+    { ...endpointDeps(fhir), feeScheduleFhir: fhir as never },
+    { authHeader: "Bearer test", params: { encounterId: "autorefraction-only" } },
+  );
+
+  assert.equal(result.status, 200);
+  assert.equal("annualRecall" in (result.body as object), false);
+  assert.equal(annualRequests(fhir).length, 0);
+});
+
 test("annual recall requires both refraction and an examined ocular component", async () => {
   const cases = [
     ["no-refraction", [ocularHealthObservation("no-refraction")]],
@@ -1696,7 +1750,7 @@ function annualEncounter(id: string, visitTypeCode: string, serviceDate: string)
   };
 }
 
-function refractionObservation(encounterId: string): Observation {
+function refractionObservation(encounterId: string, refractionType = "MANIFEST"): Observation {
   return {
     resourceType: "Observation",
     id: `${encounterId}-refraction`,
@@ -1704,10 +1758,16 @@ function refractionObservation(encounterId: string): Observation {
     subject: { reference: "Patient/patient-annual" },
     encounter: { reference: `Encounter/${encounterId}` },
     code: { coding: [{ system: OPHTHALMOLOGY_TEST_CODE_SYSTEM, code: "REFRACTION" }] },
-    component: [{
-      code: { coding: [{ system: OPHTHALMOLOGY_TEST_CODE_SYSTEM, code: "SPHERE" }] },
-      valueQuantity: { value: -0.5, unit: "D", system: "http://unitsofmeasure.org", code: "[diop]" },
-    }],
+    component: [
+      {
+        code: { coding: [{ system: OPHTHALMOLOGY_TEST_CODE_SYSTEM, code: "REFRACTION_TYPE" }] },
+        valueCodeableConcept: { coding: [{ system: OPHTHALMOLOGY_TEST_CODE_SYSTEM, code: refractionType }] },
+      },
+      {
+        code: { coding: [{ system: OPHTHALMOLOGY_TEST_CODE_SYSTEM, code: "SPHERE" }] },
+        valueQuantity: { value: -0.5, unit: "D", system: "http://unitsofmeasure.org", code: "[diop]" },
+      },
+    ],
   };
 }
 
