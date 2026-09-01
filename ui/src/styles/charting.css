@@ -1542,6 +1542,15 @@
   .odos-exam-section-body[data-row-layout="two-column"] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .odos-exam-section-body[data-row-layout="two-column"] > .odos-exam-finding {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: baseline;
+  }
+
+  .odos-exam-section-body[data-row-layout="two-column"] > .odos-exam-finding > .odos-exam-finding-expansion {
+    grid-column: 1;
+  }
 }
 
 @media (min-width: 1180px) {
