@@ -112,7 +112,7 @@ export async function materializeAnnualRecallOnSign(
     serviceDate: await sourceServiceDate(fhir, request, encounterReference, serviceDate),
   })));
   const retained = datedAnnuals.reduce(
-    (latest, candidate) => Date.parse(candidate.serviceDate) > Date.parse(latest.serviceDate) ? candidate : latest,
+    (latest, candidate) => isLaterAnnual(candidate, latest) ? candidate : latest,
     { request: current, serviceDate },
   );
   const retainedId = retained.request.id ?? currentId;
@@ -188,14 +188,34 @@ async function sourceServiceDate(
   request: ServiceRequest,
   currentEncounterReference: string,
   currentServiceDate: string,
-): Promise<string> {
+): Promise<string | undefined> {
   const reference = request.encounter?.reference;
   if (reference === currentEncounterReference) return currentServiceDate;
   const encounterId = reference?.match(/^Encounter\/([A-Za-z0-9.-]+)$/)?.[1];
-  if (!encounterId) throw new Error("Annual recall requires a local source Encounter reference.");
-  const encounter = await fhir.read<Encounter>("Encounter", encounterId);
-  if (!encounter.period?.start) throw new Error("Annual recall source Encounter requires period.start.");
-  return encounter.period.start;
+  if (!encounterId) return undefined;
+  try {
+    return (await fhir.read<Encounter>("Encounter", encounterId)).period?.start;
+  } catch {
+    return undefined;
+  }
+}
+
+function isLaterAnnual(
+  candidate: { request: ServiceRequest; serviceDate?: string },
+  latest: { request: ServiceRequest; serviceDate?: string },
+): boolean {
+  const candidateDue = candidate.request.occurrenceDateTime ?? "";
+  const latestDue = latest.request.occurrenceDateTime ?? "";
+  if (candidateDue !== latestDue) return candidateDue > latestDue;
+  const candidateTime = candidate.serviceDate ? Date.parse(candidate.serviceDate) : Number.NaN;
+  const latestTime = latest.serviceDate ? Date.parse(latest.serviceDate) : Number.NaN;
+  if (Number.isFinite(candidateTime) && Number.isFinite(latestTime) && candidateTime !== latestTime) {
+    return candidateTime > latestTime;
+  }
+  if (Number.isFinite(candidateTime) !== Number.isFinite(latestTime)) return Number.isFinite(candidateTime);
+  const candidateReference = candidate.request.encounter?.reference ?? candidate.request.id ?? "";
+  const latestReference = latest.request.encounter?.reference ?? latest.request.id ?? "";
+  return candidateReference > latestReference;
 }
 
 function appendNote(request: ServiceRequest, text: string): ServiceRequest {

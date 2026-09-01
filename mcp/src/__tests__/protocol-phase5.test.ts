@@ -845,6 +845,27 @@ test("a failed stale-annual closure annotates that duplicate when a retry can wr
   assert.equal((await fhir.read<ServiceRequest>("ServiceRequest", "resource-1")).note, undefined);
 });
 
+test("an annual with unavailable Encounter provenance cannot abort reconciliation", async () => {
+  const fhir = new EndpointFhir();
+  fhir.resources.push(
+    annualEncounter("missing-provenance-current", "routine-exam-established", "2026-07-18T15:00:00.000Z"),
+    ...fullExamObservations("missing-provenance-current"),
+    annualServiceRequest("missing-provenance-annual", "Encounter/deleted-source", "2027-01-01"),
+  );
+
+  const result = await handleProtocolSignCleanupRequest(
+    { ...endpointDeps(fhir), feeScheduleFhir: fhir as never },
+    { authHeader: "Bearer test", params: { encounterId: "missing-provenance-current" } },
+  );
+
+  assert.equal(result.status, 200);
+  assert.equal((result.body as { annualRecall?: { materializationRefusal?: unknown } }).annualRecall?.materializationRefusal, undefined);
+  assert.equal(annualRequests(fhir).filter((request) => request.status === "active").length, 1);
+  assert.equal(annualRequests(fhir).find((request) => request.status === "active")?.encounter?.reference,
+    "Encounter/missing-provenance-current");
+  assert.equal((await fhir.read<ServiceRequest>("ServiceRequest", "missing-provenance-annual")).status, "completed");
+});
+
 test("a realistic post-cataract office visit with refraction and examined anterior segment creates no annual", async () => {
   const fhir = new EndpointFhir();
   fhir.resources.push(
