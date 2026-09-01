@@ -29,6 +29,8 @@ export const ODOS_PATIENT_SMS_CATEGORY = "patient-sms";
 export const ODOS_PATIENT_CALL_CATEGORY = "patient-call";
 export const ODOS_PATIENT_SMS_INBOUND_CATEGORY = "patient-sms-inbound";
 export const ODOS_PATIENT_SMS_OUTBOUND_CATEGORY = "patient-sms-outbound";
+export const ODOS_PATIENT_EMAIL_CATEGORY = "patient-email";
+export const ODOS_PATIENT_EMAIL_OUTBOUND_CATEGORY = "patient-email-outbound";
 export const ODOS_PATIENT_CALL_INBOUND_CATEGORY = "patient-call-inbound";
 export const ODOS_PATIENT_CALL_OUTBOUND_CATEGORY = "patient-call-outbound";
 export const ODOS_TWILIO_RECORDING_IDENTIFIER_SYSTEM =
@@ -50,6 +52,8 @@ export const ODOS_COMMS_STAFF_SEND_REASON_IDENTIFIER_SYSTEM =
 export const ODOS_COMMS_STAFF_SEND_RESCHEDULED_AT_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/comms-staff-send-rescheduled-at";
 export const ODOS_COMMS_DEFAULT_PROVIDER = "twilio";
+export const ODOS_COMMS_PROVIDER_MESSAGE_IDENTIFIER_SYSTEM =
+  "https://odos2020.com/fhir/NamingSystem/comms-provider-message-id";
 
 const TWILIO_CALL_METADATA_AUTHOR = "ODOS Twilio call metadata";
 const TWILIO_RECORDING_METADATA_AUTHOR = "ODOS Twilio recording metadata";
@@ -122,18 +126,73 @@ export async function persistInboundMessageEvent(
   });
 }
 
-export type StaffSmsSendReservation =
+export type StaffSendReservation =
   | { state: "owner"; communication: Communication }
   | { state: "sent"; communication: Communication; providerMessageId: string }
   | { state: "terminal"; communication: Communication; result: Exclude<SendResult, { outcome: "sent" }> }
   | { state: "pending"; communication: Communication }
   | { state: "conflict"; communication: Communication };
 
-export function findStaffSmsSend(
+export type StaffSmsSendReservation = StaffSendReservation;
+
+export function findStaffSend(
   fhir: CommsPersistenceFhir,
   idempotencyKey: string,
 ): Promise<Communication | undefined> {
   return findCommunication(fhir, ODOS_COMMS_STAFF_SEND_IDENTIFIER_SYSTEM, idempotencyKey);
+}
+
+export function findStaffSmsSend(
+  fhir: CommsPersistenceFhir,
+  idempotencyKey: string,
+): Promise<Communication | undefined> {
+  return findStaffSend(fhir, idempotencyKey);
+}
+
+export async function reserveStaffSend(
+  fhir: CommsPersistenceFhir,
+  input: {
+    idempotencyKey: string;
+    claimId: string;
+    patientReference: string;
+    senderReference: string;
+    body: string;
+    requestFingerprint?: string;
+    provider?: string;
+    providerMessageIdentifierSystem?: string;
+    medium?: "SMS" | "Email";
+    category?: string;
+    outboundCategory?: string;
+  },
+): Promise<StaffSendReservation> {
+  const existing = await findCommunication(fhir, ODOS_COMMS_STAFF_SEND_IDENTIFIER_SYSTEM, input.idempotencyKey);
+  if (existing) return classifyStaffSendReservation(existing, input);
+  const candidate: Communication = {
+    resourceType: "Communication",
+    status: "preparation",
+    identifier: [
+      { system: ODOS_COMMS_STAFF_SEND_IDENTIFIER_SYSTEM, value: input.idempotencyKey },
+      { system: ODOS_COMMS_STAFF_SEND_CLAIM_IDENTIFIER_SYSTEM, value: input.claimId },
+      { system: ODOS_COMMS_STAFF_SEND_PROVIDER_IDENTIFIER_SYSTEM, value: input.provider ?? ODOS_COMMS_DEFAULT_PROVIDER },
+      ...(input.requestFingerprint ? [{
+        system: ODOS_COMMS_STAFF_SEND_FINGERPRINT_IDENTIFIER_SYSTEM,
+        value: staffSendFingerprint(input.requestFingerprint),
+      }] : []),
+    ],
+    category: [
+      category(input.category ?? ODOS_PATIENT_SMS_CATEGORY),
+      category(input.outboundCategory ?? ODOS_PATIENT_SMS_OUTBOUND_CATEGORY),
+    ],
+    medium: [{ text: input.medium ?? "SMS" }],
+    subject: { reference: input.patientReference },
+    sender: { reference: input.senderReference },
+    recipient: [{ reference: input.patientReference }],
+    payload: [{ contentString: input.body }],
+  };
+  const claimed = await fhir.create<Communication>(candidate, {
+    "If-None-Exist": `identifier=${ODOS_COMMS_STAFF_SEND_IDENTIFIER_SYSTEM}|${input.idempotencyKey}`,
+  });
+  return classifyStaffSendReservation(claimed, input);
 }
 
 export async function reserveStaffSmsSend(
@@ -149,51 +208,30 @@ export async function reserveStaffSmsSend(
     providerMessageIdentifierSystem?: string;
   },
 ): Promise<StaffSmsSendReservation> {
-  const existing = await findCommunication(fhir, ODOS_COMMS_STAFF_SEND_IDENTIFIER_SYSTEM, input.idempotencyKey);
-  if (existing) return classifyStaffSmsReservation(existing, input);
-  const candidate: Communication = {
-    resourceType: "Communication",
-    status: "preparation",
-    identifier: [
-      { system: ODOS_COMMS_STAFF_SEND_IDENTIFIER_SYSTEM, value: input.idempotencyKey },
-      { system: ODOS_COMMS_STAFF_SEND_CLAIM_IDENTIFIER_SYSTEM, value: input.claimId },
-      { system: ODOS_COMMS_STAFF_SEND_PROVIDER_IDENTIFIER_SYSTEM, value: input.provider ?? ODOS_COMMS_DEFAULT_PROVIDER },
-      ...(input.requestFingerprint ? [{
-        system: ODOS_COMMS_STAFF_SEND_FINGERPRINT_IDENTIFIER_SYSTEM,
-        value: staffSendFingerprint(input.requestFingerprint),
-      }] : []),
-    ],
-    category: [category(ODOS_PATIENT_SMS_CATEGORY), category(ODOS_PATIENT_SMS_OUTBOUND_CATEGORY)],
-    medium: [{ text: "SMS" }],
-    subject: { reference: input.patientReference },
-    sender: { reference: input.senderReference },
-    recipient: [{ reference: input.patientReference }],
-    payload: [{ contentString: input.body }],
-  };
-  const claimed = await fhir.create<Communication>(candidate, {
-    "If-None-Exist": `identifier=${ODOS_COMMS_STAFF_SEND_IDENTIFIER_SYSTEM}|${input.idempotencyKey}`,
-  });
-  return classifyStaffSmsReservation(claimed, input);
+  return reserveStaffSend(fhir, input);
 }
 
-export async function persistStaffSentSms(
+export async function persistStaffSentSend(
   fhir: CommsPersistenceFhir,
   input: {
     communication: Communication;
     idempotencyKey: string;
     providerMessageId: string;
     providerMessageIdentifierSystem?: string;
+    category?: string;
+    outboundCategory?: string;
+    completed?: boolean;
   },
   deps: { now?: () => string } = {},
 ): Promise<Communication> {
   const identity = {
     system: ODOS_COMMS_STAFF_SEND_IDENTIFIER_SYSTEM,
     value: input.idempotencyKey,
-    category: ODOS_PATIENT_SMS_CATEGORY,
+    category: input.category ?? ODOS_PATIENT_SMS_CATEGORY,
   };
   const fragment: Partial<Communication> = {
     // Carrier callbacks may advance callback-capable sends; GHL owns its downstream delivery state.
-    status: input.providerMessageIdentifierSystem === ODOS_GHL_MESSAGE_IDENTIFIER_SYSTEM
+    status: input.completed || input.providerMessageIdentifierSystem === ODOS_GHL_MESSAGE_IDENTIFIER_SYSTEM
       ? "completed"
       : "in-progress",
     sent: deps.now?.() ?? new Date().toISOString(),
@@ -201,7 +239,7 @@ export async function persistStaffSentSms(
       system: input.providerMessageIdentifierSystem ?? ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM,
       value: input.providerMessageId,
     }],
-    category: [category(ODOS_PATIENT_SMS_OUTBOUND_CATEGORY)],
+    category: [category(input.outboundCategory ?? ODOS_PATIENT_SMS_OUTBOUND_CATEGORY)],
   };
   return serializeCommunicationWrite(`${identity.system}|${identity.value}`, async () => {
     const canonical = await updateCommunicationFragment(fhir, input.communication, fragment, identity);
@@ -215,18 +253,21 @@ export async function persistStaffSentSms(
   });
 }
 
-export async function persistStaffSmsTerminalOutcome(
+export const persistStaffSentSms = persistStaffSentSend;
+
+export async function persistStaffTerminalOutcome(
   fhir: CommsPersistenceFhir,
   input: {
     communication: Communication;
     idempotencyKey: string;
     result: Exclude<SendResult, { outcome: "sent" }>;
+    category?: string;
   },
 ): Promise<Communication> {
   const identity = {
     system: ODOS_COMMS_STAFF_SEND_IDENTIFIER_SYSTEM,
     value: input.idempotencyKey,
-    category: ODOS_PATIENT_SMS_CATEGORY,
+    category: input.category ?? ODOS_PATIENT_SMS_CATEGORY,
   };
   const identifiers: Identifier[] = [
     { system: ODOS_COMMS_STAFF_SEND_OUTCOME_IDENTIFIER_SYSTEM, value: input.result.outcome },
@@ -244,7 +285,9 @@ export async function persistStaffSmsTerminalOutcome(
     }, identity));
 }
 
-function classifyStaffSmsReservation(
+export const persistStaffSmsTerminalOutcome = persistStaffTerminalOutcome;
+
+function classifyStaffSendReservation(
   communication: Communication,
   input: {
     claimId: string;

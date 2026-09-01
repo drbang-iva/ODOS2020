@@ -8,7 +8,7 @@ import {
   registerCommsApiRoutes,
   type CommsApiRouteDeps,
 } from "../src/comms/comms-api.js";
-import type { CommsProvider, SendSmsRequest } from "../src/comms/comms-provider.js";
+import type { CommsProvider, SendEmailRequest, SendSmsRequest } from "../src/comms/comms-provider.js";
 import { createInMemoryEducationEnrollmentStore } from "../src/comms/education-enrollment.js";
 import {
   ODOS_COMMS_OPT_OUT_EXTENSION_URL,
@@ -36,6 +36,8 @@ test("EducationEnrollment creates stage 1, refuses a version-shifted duplicate, 
       content: { id: "dry-eye-basics", version: 2 },
       channel: "sms",
       lane: "clinical",
+      idempotencyKey: "enrollment:enrollment-api-synthetic-1:stage1:1",
+      state: "resolved",
       outcome: { outcome: "suppressed", reason: "patient-opt-out" },
     }]);
     assert.equal(fixture.underlyingSends.length, 0);
@@ -118,7 +120,11 @@ test("EducationEnrollment transition appends history and actually dispatches a s
       currentStageId: string;
       status: string;
       stageHistory: Array<Record<string, unknown>>;
-      immediateSends: Array<{ outcome?: Record<string, unknown> }>;
+      immediateSends: Array<{
+        idempotencyKey: string;
+        state: string;
+        outcome?: Record<string, unknown>;
+      }>;
     } }).enrollment;
     assert.equal(enrollment.currentStageId, "consult");
     assert.equal(enrollment.status, "active");
@@ -139,6 +145,16 @@ test("EducationEnrollment transition appends history and actually dispatches a s
     }, {
       outcome: "sent",
       providerMessageId: "SM-enrollment-synthetic-2",
+    }]);
+    assert.deepEqual(enrollment.immediateSends.map((send) => ({
+      idempotencyKey: send.idempotencyKey,
+      state: send.state,
+    })), [{
+      idempotencyKey: "enrollment:enrollment-api-synthetic-1:stage1:1",
+      state: "resolved",
+    }, {
+      idempotencyKey: "enrollment:enrollment-api-synthetic-1:stage:consult:2",
+      state: "resolved",
     }]);
     assert.equal(fixture.underlyingSends.length, 2);
     assert.deepEqual(
@@ -334,7 +350,322 @@ test("EducationEnrollment transition persists opt-out suppression with zero prov
       outcome: "suppressed",
       reason: "patient-opt-out",
     });
+    assert.equal(enrollment.immediateSends[1]?.state, "resolved");
     assert.equal(fixture.underlyingSends.length, 0);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("EducationEnrollment create recovery is re-runnable after a mid-resume failure without another provider send", async () => {
+  const fixture = await startEnrollmentServer({ failRecordOutcomeCalls: [1, 2] });
+  try {
+    const create = await request(fixture.base, "/communications/education/enrollments", "POST", enrollmentBody());
+    assert.equal(create.status, 502);
+    assert.equal(fixture.underlyingSends.length, 1);
+    assert.deepEqual((await fixture.enrollmentStore.read("enrollment-api-synthetic-1"))?.immediateSends[0], {
+      content: { id: "dry-eye-basics", version: 2 },
+      channel: "sms",
+      lane: "clinical",
+      idempotencyKey: "enrollment:enrollment-api-synthetic-1:stage1:1",
+      state: "in-flight",
+    });
+
+    const failedResume = await request(
+      fixture.base,
+      "/communications/education/enrollments/enrollment-api-synthetic-1/resume",
+      "POST",
+      {},
+    );
+    assert.equal(failedResume.status, 502);
+    assert.equal(fixture.underlyingSends.length, 1);
+
+    const resumed = await request(
+      fixture.base,
+      "/communications/education/enrollments/enrollment-api-synthetic-1/resume",
+      "POST",
+      {},
+    );
+    assert.equal(resumed.status, 200);
+    assert.equal(fixture.underlyingSends.length, 1);
+    assert.equal(fixture.auditReasons.includes("communications-education-enrollment-resume"), true);
+    assert.deepEqual((await resumed.json() as { enrollment: { immediateSends: unknown[] } }).enrollment.immediateSends[0], {
+      content: { id: "dry-eye-basics", version: 2 },
+      channel: "sms",
+      lane: "clinical",
+      idempotencyKey: "enrollment:enrollment-api-synthetic-1:stage1:1",
+      state: "resolved",
+      outcome: { outcome: "sent", providerMessageId: "SM-enrollment-synthetic-1" },
+    });
+
+    const resumedAgain = await request(
+      fixture.base,
+      "/communications/education/enrollments/enrollment-api-synthetic-1/resume",
+      "POST",
+      {},
+    );
+    assert.equal(resumedAgain.status, 200);
+    assert.equal(fixture.underlyingSends.length, 1);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("EducationEnrollment resumes a create-Provenance failure after state commit and sends exactly once", async () => {
+  const fixture = await startEnrollmentServer({ failProvenanceCreateCalls: [1] });
+  try {
+    const create = await request(fixture.base, "/communications/education/enrollments", "POST", enrollmentBody());
+    assert.equal(create.status, 502);
+    assert.equal(fixture.underlyingSends.length, 0);
+    assert.equal((await fixture.enrollmentStore.read("enrollment-api-synthetic-1"))?.immediateSends[0]?.state, "pending");
+
+    const resumed = await request(
+      fixture.base,
+      "/communications/education/enrollments/enrollment-api-synthetic-1/resume",
+      "POST",
+      {},
+    );
+    assert.equal(resumed.status, 200);
+    assert.equal(fixture.underlyingSends.length, 1);
+    assert.equal((await resumed.json() as { enrollment: { immediateSends: Array<{ state: string }> } })
+      .enrollment.immediateSends[0]?.state, "resolved");
+
+    const resumedAgain = await request(
+      fixture.base,
+      "/communications/education/enrollments/enrollment-api-synthetic-1/resume",
+      "POST",
+      {},
+    );
+    assert.equal(resumedAgain.status, 200);
+    assert.equal(fixture.underlyingSends.length, 1);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("EducationEnrollment transition failure is recoverable without re-dispatching its provider send", async () => {
+  const fixture = await startEnrollmentServer({ failRecordOutcomeCalls: [2] });
+  try {
+    await createEnrollment(fixture.base);
+    const transition = await request(
+      fixture.base,
+      "/communications/education/enrollments/enrollment-api-synthetic-1/transitions",
+      "POST",
+      transitionBody(),
+    );
+    assert.equal(transition.status, 502);
+    assert.equal(fixture.underlyingSends.length, 2);
+    assert.equal((await fixture.enrollmentStore.read("enrollment-api-synthetic-1"))?.immediateSends[1]?.state, "in-flight");
+
+    const resumed = await request(
+      fixture.base,
+      "/communications/education/enrollments/enrollment-api-synthetic-1/resume",
+      "POST",
+      {},
+    );
+    assert.equal(resumed.status, 200);
+    assert.equal(fixture.underlyingSends.length, 2);
+    assert.equal((await resumed.json() as { enrollment: { immediateSends: Array<{ state: string }> } })
+      .enrollment.immediateSends[1]?.state, "resolved");
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("EducationEnrollment resumes a mid-transition Provenance failure from committed pending state", async () => {
+  const fixture = await startEnrollmentServer({ failProvenanceCreateCalls: [3] });
+  try {
+    await createEnrollment(fixture.base);
+    const transition = await request(
+      fixture.base,
+      "/communications/education/enrollments/enrollment-api-synthetic-1/transitions",
+      "POST",
+      transitionBody(),
+    );
+    assert.equal(transition.status, 502);
+    assert.equal(fixture.underlyingSends.length, 1);
+    assert.equal((await fixture.enrollmentStore.read("enrollment-api-synthetic-1"))?.immediateSends[1]?.state, "pending");
+
+    const resumed = await request(
+      fixture.base,
+      "/communications/education/enrollments/enrollment-api-synthetic-1/resume",
+      "POST",
+      {},
+    );
+    assert.equal(resumed.status, 200);
+    assert.equal(fixture.underlyingSends.length, 2);
+    assert.equal((await resumed.json() as { enrollment: { immediateSends: Array<{ state: string }> } })
+      .enrollment.immediateSends[1]?.state, "resolved");
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("EducationEnrollment email uses the same durable reservation and resumes without another provider send", async () => {
+  const fixture = await startEnrollmentServer({ failRecordOutcomeCalls: [1] });
+  try {
+    const create = await request(
+      fixture.base,
+      "/communications/education/enrollments",
+      "POST",
+      emailEnrollmentBody(),
+    );
+    assert.equal(create.status, 502);
+    assert.equal(fixture.underlyingEmailSends.length, 1);
+    assert.equal(fixture.communications[0]?.medium?.[0]?.text, "Email");
+    assert.equal(fixture.communications[0]?.identifier?.some((identifier) =>
+      identifier.system === "https://odos2020.com/fhir/NamingSystem/comms-staff-send"
+      && identifier.value === "enrollment:enrollment-api-synthetic-1:stage1:1"), true);
+
+    const resumed = await request(
+      fixture.base,
+      "/communications/education/enrollments/enrollment-api-synthetic-1/resume",
+      "POST",
+      {},
+    );
+    assert.equal(resumed.status, 200);
+    assert.equal(fixture.underlyingEmailSends.length, 1);
+    assert.deepEqual((await resumed.json() as { enrollment: { immediateSends: Array<Record<string, unknown>> } })
+      .enrollment.immediateSends[0], {
+      content: { id: "dry-eye-basics", version: 2 },
+      channel: "email",
+      lane: "clinical",
+      idempotencyKey: "enrollment:enrollment-api-synthetic-1:stage1:1",
+      state: "resolved",
+      outcome: { outcome: "sent", providerMessageId: "EMAIL-enrollment-synthetic-1" },
+    });
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("EducationEnrollment terminal failure retains its active lock until resume reconciles every send", async () => {
+  const fixture = await startEnrollmentServer({ failRecordOutcomeCalls: [2] });
+  try {
+    await createEnrollment(fixture.base);
+    const transition = await request(
+      fixture.base,
+      "/communications/education/enrollments/enrollment-api-synthetic-1/transitions",
+      "POST",
+      terminalTransitionBody("completed", transitionBody().targetStage.immediateSends),
+    );
+    assert.equal(transition.status, 502);
+    assert.deepEqual(fixture.terminalClearProviderCounts, []);
+    assert.equal(fixture.underlyingSends.length, 2);
+
+    const blockedReEnrollment = await request(
+      fixture.base,
+      "/communications/education/enrollments",
+      "POST",
+      enrollmentBody(),
+    );
+    assert.equal(blockedReEnrollment.status, 409);
+
+    const resumed = await request(
+      fixture.base,
+      "/communications/education/enrollments/enrollment-api-synthetic-1/resume",
+      "POST",
+      {},
+    );
+    assert.equal(resumed.status, 200);
+    assert.equal(fixture.underlyingSends.length, 2);
+    assert.deepEqual(fixture.terminalClearProviderCounts, [2]);
+
+    const reEnrollment = await request(
+      fixture.base,
+      "/communications/education/enrollments",
+      "POST",
+      enrollmentBody(),
+    );
+    assert.equal(reEnrollment.status, 201);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("EducationEnrollment resume keeps an unresolved in-flight send in-flight unless explicitly acknowledged with a reason and Provenance", async () => {
+  const fixture = await startEnrollmentServer({ failCommunicationUpdateCalls: [1] });
+  try {
+    const create = await request(fixture.base, "/communications/education/enrollments", "POST", enrollmentBody());
+    assert.equal(create.status, 502);
+    assert.equal(fixture.underlyingSends.length, 1);
+    assert.equal((await fixture.enrollmentStore.read("enrollment-api-synthetic-1"))?.immediateSends[0]?.state, "in-flight");
+
+    const blockedTransition = await request(
+      fixture.base,
+      "/communications/education/enrollments/enrollment-api-synthetic-1/transitions",
+      "POST",
+      transitionBody(),
+    );
+    assert.equal(blockedTransition.status, 409);
+    assert.deepEqual(await blockedTransition.json(), {
+      outcome: "refused",
+      reason: "pending-reconciliation",
+    });
+    assert.equal(fixture.underlyingSends.length, 1);
+
+    const withoutAcknowledgement = await request(
+      fixture.base,
+      "/communications/education/enrollments/enrollment-api-synthetic-1/resume",
+      "POST",
+      {},
+    );
+    assert.equal(withoutAcknowledgement.status, 409);
+    assert.deepEqual(await withoutAcknowledgement.json(), {
+      outcome: "refused",
+      reason: "pending-reconciliation",
+    });
+    assert.equal(fixture.underlyingSends.length, 1);
+    assert.equal((await fixture.enrollmentStore.read("enrollment-api-synthetic-1"))?.immediateSends[0]?.state, "in-flight");
+
+    const emptyReason = await request(
+      fixture.base,
+      "/communications/education/enrollments/enrollment-api-synthetic-1/resume",
+      "POST",
+      { acknowledgeIndeterminate: true, reason: "   " },
+    );
+    assert.equal(emptyReason.status, 400);
+    assert.equal((await fixture.enrollmentStore.read("enrollment-api-synthetic-1"))?.immediateSends[0]?.state, "in-flight");
+
+    const acknowledged = await request(
+      fixture.base,
+      "/communications/education/enrollments/enrollment-api-synthetic-1/resume",
+      "POST",
+      {
+        acknowledgeIndeterminate: true,
+        reason: "Provider accepted the request but persistence failed before its receipt was recorded.",
+      },
+    );
+    assert.equal(acknowledged.status, 200);
+    assert.equal(fixture.underlyingSends.length, 1);
+    const send = (await acknowledged.json() as { enrollment: { immediateSends: Array<Record<string, unknown>> } })
+      .enrollment.immediateSends[0];
+    assert.deepEqual(send, {
+      content: { id: "dry-eye-basics", version: 2 },
+      channel: "sms",
+      lane: "clinical",
+      idempotencyKey: "enrollment:enrollment-api-synthetic-1:stage1:1",
+      state: "indeterminate",
+      acknowledgement: {
+        reason: "Provider accepted the request but persistence failed before its receipt was recorded.",
+        acknowledgedAt: "2026-09-01T14:00:00.000Z",
+        acknowledgedBy: "Practitioner/provider",
+      },
+    });
+    assert.equal(fixture.provenances.some((provenance) =>
+      provenance.activity?.text === "Acknowledge indeterminate education send"), true);
+
+    const acknowledgedAgain = await request(
+      fixture.base,
+      "/communications/education/enrollments/enrollment-api-synthetic-1/resume",
+      "POST",
+      {
+        acknowledgeIndeterminate: true,
+        reason: "Provider accepted the request but persistence failed before its receipt was recorded.",
+      },
+    );
+    assert.equal(acknowledgedAgain.status, 200);
+    assert.equal(fixture.underlyingSends.length, 1);
   } finally {
     await fixture.close();
   }
@@ -404,6 +735,22 @@ function enrollmentBody() {
   };
 }
 
+function emailEnrollmentBody() {
+  const body = enrollmentBody();
+  return {
+    ...body,
+    initialStage: {
+      ...body.initialStage,
+      immediateSends: [{
+        educationId: "dry-eye-basics",
+        version: 2,
+        channel: "email",
+        lane: "clinical",
+      }],
+    },
+  };
+}
+
 function transitionBody() {
   return {
     fromStageId: "welcome",
@@ -442,11 +789,19 @@ async function createEnrollment(base: string) {
   } }).enrollment;
 }
 
-async function startEnrollmentServer(options: { optedOut?: boolean } = {}) {
+async function startEnrollmentServer(options: {
+  optedOut?: boolean;
+  failRecordOutcomeCalls?: number[];
+  failCommunicationUpdateCalls?: number[];
+  failProvenanceCreateCalls?: number[];
+} = {}) {
   const patient: Patient = {
     resourceType: "Patient",
     id: "synthetic-enrollment-1",
-    telecom: [{ system: "phone", value: "+18645550199", use: "mobile" }],
+    telecom: [
+      { system: "phone", value: "+18645550199", use: "mobile" },
+      { system: "email", value: "synthetic.patient@example.test", use: "home" },
+    ],
     ...(options.optedOut ? {
       extension: [{
         url: ODOS_COMMS_OPT_OUT_EXTENSION_URL,
@@ -473,6 +828,7 @@ async function startEnrollmentServer(options: { optedOut?: boolean } = {}) {
   const communications: Communication[] = [];
   const provenances: Provenance[] = [];
   const underlyingSends: SendSmsRequest[] = [];
+  const underlyingEmailSends: SendEmailRequest[] = [];
   const trackedLinks: Array<{
     token: string;
     targetUrl: string;
@@ -486,13 +842,27 @@ async function startEnrollmentServer(options: { optedOut?: boolean } = {}) {
     generateId: () => `enrollment-api-synthetic-${++enrollmentSequence}`,
   });
   const terminalClearProviderCounts: number[] = [];
+  let recordOutcomeCallCount = 0;
   const enrollmentStore = {
     ...storedEnrollments,
+    async recordImmediateSendOutcome(
+      id: string,
+      sendIndex: number,
+      outcome: Parameters<typeof storedEnrollments.recordImmediateSendOutcome>[2],
+    ) {
+      recordOutcomeCallCount += 1;
+      if (options.failRecordOutcomeCalls?.includes(recordOutcomeCallCount)) {
+        throw new Error("Synthetic immediate-send outcome persistence failure.");
+      }
+      return storedEnrollments.recordImmediateSendOutcome(id, sendIndex, outcome);
+    },
     async clearTerminalActiveIdentifier(id: string) {
       terminalClearProviderCounts.push(underlyingSends.length);
       return storedEnrollments.clearTerminalActiveIdentifier(id);
     },
   };
+  let communicationUpdateCallCount = 0;
+  let provenanceCreateCallCount = 0;
   const callerFhir = {
     baseUrl: "https://synthetic.example/fhir/R4",
     async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
@@ -520,7 +890,20 @@ async function startEnrollmentServer(options: { optedOut?: boolean } = {}) {
     async searchUrl<T extends Resource>(): Promise<Bundle<T>> {
       throw new Error("Unexpected enrollment API pagination.");
     },
-    async create<T extends Resource>(resource: T): Promise<T> {
+    async create<T extends Resource>(resource: T, extraHeaders: Record<string, string> = {}): Promise<T> {
+      if (resource.resourceType === "Provenance") {
+        const eventTag = resource.meta?.tag?.find((tag) =>
+          tag.system === "https://odos2020.com/fhir/NamingSystem/comms-education-enrollment-event");
+        const existing = eventTag
+          ? provenances.find((provenance) => provenance.meta?.tag?.some((tag) =>
+            tag.system === eventTag.system && tag.code === eventTag.code))
+          : undefined;
+        if (extraHeaders["If-None-Exist"] && existing) return structuredClone(existing) as T;
+        provenanceCreateCallCount += 1;
+        if (options.failProvenanceCreateCalls?.includes(provenanceCreateCallCount)) {
+          throw new Error("Synthetic Provenance create failure.");
+        }
+      }
       const persisted = {
         ...structuredClone(resource),
         id: `${resource.resourceType.toLowerCase()}-${communications.length + provenances.length + 1}`,
@@ -536,6 +919,10 @@ async function startEnrollmentServer(options: { optedOut?: boolean } = {}) {
     },
     async update<T extends Resource>(resourceType: T["resourceType"], id: string, resource: T): Promise<T> {
       assert.equal(resourceType, "Communication");
+      communicationUpdateCallCount += 1;
+      if (options.failCommunicationUpdateCalls?.includes(communicationUpdateCallCount)) {
+        throw new Error("Synthetic Communication update failure.");
+      }
       const index = communications.findIndex((entry) => entry.id === id);
       assert.notEqual(index, -1);
       const persisted = {
@@ -553,7 +940,7 @@ async function startEnrollmentServer(options: { optedOut?: boolean } = {}) {
     capabilities: {
       sms: true,
       calls: false,
-      email: false,
+      email: true,
       contacts: false,
       conversations: false,
       reviews: false,
@@ -563,6 +950,13 @@ async function startEnrollmentServer(options: { optedOut?: boolean } = {}) {
       return {
         outcome: "sent",
         providerMessageId: `SM-enrollment-synthetic-${underlyingSends.length}`,
+      };
+    },
+    async sendEmail(send) {
+      underlyingEmailSends.push(structuredClone(send));
+      return {
+        outcome: "sent",
+        providerMessageId: `EMAIL-enrollment-synthetic-${underlyingEmailSends.length}`,
       };
     },
   };
@@ -595,7 +989,9 @@ async function startEnrollmentServer(options: { optedOut?: boolean } = {}) {
     dispatch: {
       initialize: async () => undefined,
       providers: () => ["synthetic-enrollment-provider"],
-      providerFor: (role) => role === "clinical-sms" ? "synthetic-enrollment-provider" : undefined,
+      providerFor: (role) => role === "clinical-sms" || role === "email"
+        ? "synthetic-enrollment-provider"
+        : undefined,
       senderNumberFor: (role) => role === "clinical-sms" ? "+18485550100" : undefined,
       getAdapter: () => suppressedProvider,
       getAdapterForRole: () => suppressedProvider,
@@ -609,10 +1005,13 @@ async function startEnrollmentServer(options: { optedOut?: boolean } = {}) {
         kind: "video",
         audience: "patient",
         dxCodes: [],
-        channels: ["sms"],
+        channels: ["sms", "email"],
         laneHint: "clinical",
         consentClass: "transactional",
-        urls: { web: "https://education.invalid/dry-eye-basics/v2" },
+        urls: {
+          web: "https://education.invalid/dry-eye-basics/v2",
+          email: "https://education.invalid/dry-eye-basics/v2/email",
+        },
       } : undefined,
     },
     trackedLinkStore: {
@@ -642,6 +1041,7 @@ async function startEnrollmentServer(options: { optedOut?: boolean } = {}) {
     communications,
     encounters,
     underlyingSends,
+    underlyingEmailSends,
     terminalClearProviderCounts,
     trackedLinks,
     provenances,

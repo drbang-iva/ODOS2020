@@ -25,20 +25,28 @@ import {
   EducationEnrollmentDuplicateError,
   EducationEnrollmentTransitionError,
   type EducationEnrollment,
+  type EducationEnrollmentImmediateSend,
   type EducationEnrollmentSendOutcome,
   type EducationEnrollmentStore,
 } from "./education-enrollment.js";
 import { generateTrackedLink, type TrackedLinkStore } from "./tracked-links.js";
 import {
   ODOS_COMMS_CATEGORY_SYSTEM,
+  ODOS_COMMS_PROVIDER_MESSAGE_IDENTIFIER_SYSTEM,
+  ODOS_PATIENT_EMAIL_CATEGORY,
+  ODOS_PATIENT_EMAIL_OUTBOUND_CATEGORY,
   ODOS_PATIENT_CALL_CATEGORY,
   ODOS_TWILIO_MESSAGE_IDENTIFIER_SYSTEM,
   ODOS_TWILIO_CALL_IDENTIFIER_SYSTEM,
   ODOS_TWILIO_RECORDING_IDENTIFIER_SYSTEM,
   findStaffSmsSend,
+  findStaffSend,
+  persistStaffSentSend,
   persistStaffSentSms,
+  persistStaffTerminalOutcome,
   persistStaffSmsTerminalOutcome,
   reserveStaffSmsSend,
+  reserveStaffSend,
 } from "./comms-persistence.js";
 import {
   clearPatientSmsOptOut,
@@ -72,6 +80,7 @@ export interface CommsApiRouteDeps {
 
 class CommsApiValidationError extends Error {}
 class CommsApiCapabilityError extends Error {}
+class PendingEducationReconciliationError extends CommsApiCapabilityError {}
 class CommsApiNotFoundError extends Error {}
 class CommsApiRefusalError extends Error {
   constructor(readonly reason: string) {
@@ -91,6 +100,8 @@ export const ODOS_COMMS_MARKETING_CONSENT_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/odos-comms-marketing-consent";
 const ODOS_COMMS_EDUCATION_SEND_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/comms-education-send";
+const ODOS_COMMS_EDUCATION_ENROLLMENT_EVENT_IDENTIFIER_SYSTEM =
+  "https://odos2020.com/fhir/NamingSystem/comms-education-enrollment-event";
 
 interface ConversationProviderError {
   provider: string;
@@ -227,36 +238,79 @@ export function registerCommsApiRoutes(
         }
         throw error;
       }
-      try {
-        await persistEducationEnrollmentTransitionProvenance(staff.fhir, {
-          enrollment,
-          fromStageId: body.fromStageId,
-          trigger: body.trigger,
-          staff,
-          now: deps.now?.() ?? new Date().toISOString(),
-        });
-        for (const [stageSendIndex, send] of body.targetStage.immediateSends.entries()) {
-          const sendIndex = sendStartIndex + stageSendIndex;
-          const outcome = await dispatchEducation(deps, staff, patient, {
-            patientReference: enrollment.patientReference,
-            educationId: send.educationId,
-            version: send.version,
-            channel: send.channel,
-            lane: send.lane,
-            alsoUpdateChart: false,
-            encounterReference: enrollment.enteredFromEncounterReference,
-            idempotencyKey: enrollmentTransitionSendIdempotencyKey(
-              enrollment.id,
-              body.targetStage.id,
-              sendIndex,
-            ),
-          });
-          enrollment = await store.recordImmediateSendOutcome(enrollment.id, sendIndex, outcome);
+      // Fail closed: committed sends stay resumable; never replace their key or release a terminal lock early.
+      await persistEducationEnrollmentTransitionProvenance(staff.fhir, {
+        enrollment,
+        fromStageId: body.fromStageId,
+        trigger: body.trigger,
+        staff,
+        now: deps.now?.() ?? new Date().toISOString(),
+      });
+      for (let sendIndex = sendStartIndex; sendIndex < enrollment.immediateSends.length; sendIndex += 1) {
+        enrollment = await dispatchEnrollmentSend(deps, staff, patient, store, enrollment, sendIndex);
+      }
+      if (body.status !== "active") {
+        // Fail closed: committed sends stay resumable; never replace their key or release a terminal lock early.
+        enrollment = await store.clearTerminalActiveIdentifier(enrollment.id);
+      }
+      return { status: 200, body: { enrollment } };
+    },
+  ));
+
+  app.post("/communications/education/enrollments/:enrollmentId/resume", async (req, res) => withStaff(
+    req,
+    res,
+    deps,
+    "communications.send",
+    "Basic",
+    "communications-education-enrollment-resume",
+    undefined,
+    async (staff) => {
+      const body = educationEnrollmentResumeBody(req.body);
+      const store = enrollmentStore(deps);
+      const enrollmentId = resourceKey(req.params.enrollmentId, "enrollment id");
+      let enrollment = await store.read(enrollmentId);
+      if (!enrollment) throw new CommsApiNotFoundError("Education enrollment not found.");
+      const patient = await readPatient(staff.fhir, enrollment.patientReference);
+      await assertEncounterBelongsToPatient(
+        staff.fhir,
+        enrollment.enteredFromEncounterReference,
+        enrollment.patientReference,
+      );
+      await persistEducationEnrollmentEventProvenances(staff.fhir, enrollment, staff);
+      for (let sendIndex = 0; sendIndex < enrollment.immediateSends.length; sendIndex += 1) {
+        const send = enrollment.immediateSends[sendIndex]!;
+        if (send.state === "resolved" || send.state === "indeterminate" || send.outcome) continue;
+        if (!send.idempotencyKey) {
+          enrollment = await acknowledgeOrRefuseIndeterminateSend(
+            staff.fhir,
+            store,
+            enrollment,
+            sendIndex,
+            body,
+            staff,
+            deps.now?.() ?? new Date().toISOString(),
+          );
+          continue;
         }
-      } finally {
-        if (body.status !== "active") {
-          enrollment = await store.clearTerminalActiveIdentifier(enrollment.id);
+        try {
+          enrollment = await dispatchEnrollmentSend(deps, staff, patient, store, enrollment, sendIndex);
+        } catch (error) {
+          if (!(error instanceof PendingEducationReconciliationError)) throw error;
+          enrollment = await acknowledgeOrRefuseIndeterminateSend(
+            staff.fhir,
+            store,
+            enrollment,
+            sendIndex,
+            body,
+            staff,
+            deps.now?.() ?? new Date().toISOString(),
+          );
         }
+      }
+      if (enrollment.status !== "active") {
+        // Fail closed: committed sends stay resumable; never replace their key or release a terminal lock early.
+        enrollment = await store.clearTerminalActiveIdentifier(enrollment.id);
       }
       return { status: 200, body: { enrollment } };
     },
@@ -324,23 +378,14 @@ export function registerCommsApiRoutes(
       if (enrollment.patientReference !== body.patientReference) {
         throw new Error("EducationEnrollment store returned a different patient.");
       }
+      // Fail closed: committed sends stay resumable; never replace their key or release a terminal lock early.
       await persistEducationEnrollmentProvenance(staff.fhir, {
         enrollment,
         staff,
         now: deps.now?.() ?? new Date().toISOString(),
       });
-      for (const [index, send] of body.initialStage.immediateSends.entries()) {
-        const outcome = await dispatchEducation(deps, staff, patient, {
-          patientReference: body.patientReference,
-          educationId: send.educationId,
-          version: send.version,
-          channel: send.channel,
-          lane: send.lane,
-          alsoUpdateChart: false,
-          encounterReference: body.encounterReference,
-          idempotencyKey: enrollmentSendIdempotencyKey(enrollment.id, index),
-        });
-        enrollment = await store.recordImmediateSendOutcome(enrollment.id, index, outcome);
+      for (let sendIndex = 0; sendIndex < enrollment.immediateSends.length; sendIndex += 1) {
+        enrollment = await dispatchEnrollmentSend(deps, staff, patient, store, enrollment, sendIndex);
       }
       return { status: 201, body: { enrollment } };
     },
@@ -660,11 +705,109 @@ export function registerCommsApiRoutes(
   ));
 }
 
+async function dispatchEnrollmentSend(
+  deps: CommsApiRouteDeps,
+  staff: CommsStaff,
+  patient: Patient,
+  store: EducationEnrollmentStore,
+  enrollment: EducationEnrollment,
+  sendIndex: number,
+): Promise<EducationEnrollment> {
+  let current = enrollment;
+  let send = current.immediateSends[sendIndex];
+  if (!send) throw new Error("EducationEnrollment immediate send index is invalid.");
+  if (send.state === "resolved" || send.state === "indeterminate" || send.outcome) return current;
+  const idempotencyKey = send.idempotencyKey;
+  if (!idempotencyKey) {
+    throw new PendingEducationReconciliationError(
+      "Education send outcome is pending reconciliation; do not resend with a new key.",
+    );
+  }
+  let reconcileOnly = true;
+  if (send.state === "pending") {
+    const claim = await store.claimImmediateSend(current.id, sendIndex);
+    current = claim.enrollment;
+    send = current.immediateSends[sendIndex]!;
+    reconcileOnly = !claim.claimed;
+  }
+  if (send.state === "resolved" || send.state === "indeterminate" || send.outcome) return current;
+  if (send.state !== "in-flight") {
+    throw new PendingEducationReconciliationError(
+      "Education send outcome is pending reconciliation; do not resend with a new key.",
+    );
+  }
+  const outcome = await dispatchEducation(deps, staff, patient, {
+    patientReference: current.patientReference,
+    educationId: send.content.id,
+    version: send.content.version,
+    channel: send.channel,
+    lane: send.lane,
+    alsoUpdateChart: false,
+    encounterReference: current.enteredFromEncounterReference,
+    idempotencyKey,
+  }, { reconcileOnly });
+  return store.recordImmediateSendOutcome(current.id, sendIndex, outcome);
+}
+
+async function acknowledgeOrRefuseIndeterminateSend(
+  fhir: MedplumClient,
+  store: EducationEnrollmentStore,
+  enrollment: EducationEnrollment,
+  sendIndex: number,
+  body: EducationEnrollmentResumeBody,
+  staff: CommsStaff,
+  now: string,
+): Promise<EducationEnrollment> {
+  if (!body.acknowledgeIndeterminate) {
+    throw new CommsApiRefusalError("pending-reconciliation");
+  }
+  const acknowledgement = {
+    reason: body.reason,
+    acknowledgedAt: now,
+    acknowledgedBy: staff.staffReference,
+  };
+  await persistEducationEnrollmentIndeterminateProvenance(fhir, {
+    enrollment,
+    sendIndex,
+    acknowledgement,
+    staff,
+  });
+  return store.markImmediateSendIndeterminate(enrollment.id, sendIndex, acknowledgement);
+}
+
+async function persistEducationEnrollmentEventProvenances(
+  fhir: MedplumClient,
+  enrollment: EducationEnrollment,
+  staff: CommsStaff,
+): Promise<void> {
+  await persistEducationEnrollmentProvenance(fhir, {
+    enrollment,
+    staff,
+    now: enrollment.stageHistory[0]!.enteredAt,
+  });
+  for (let index = 1; index < enrollment.stageHistory.length; index += 1) {
+    const entry = enrollment.stageHistory[index]!;
+    const previous = enrollment.stageHistory[index - 1]!;
+    await persistEducationEnrollmentTransitionProvenance(fhir, {
+      enrollment,
+      fromStageId: previous.stageId,
+      toStageId: entry.stageId,
+      trigger: entry.reason,
+      status: index === enrollment.stageHistory.length - 1 ? enrollment.status : "active",
+      eventSequence: index + 1,
+      enteredBy: entry.enteredBy,
+      staff,
+      now: entry.enteredAt,
+    });
+  }
+}
+
 async function dispatchEducation(
   deps: CommsApiRouteDeps,
   staff: CommsStaff,
   patient: Patient,
   body: EducationDispatchBody,
+  options: { reconcileOnly?: boolean } = {},
 ): Promise<EducationEnrollmentSendOutcome> {
   const item = deps.educationCatalog.get(body.educationId, body.version);
   if (!item || item.audience !== "patient") {
@@ -713,6 +856,66 @@ async function dispatchEducation(
     if (!provider.sendEmail) {
       throw new CommsApiCapabilityError("Email is not enabled for the configured education provider.");
     }
+    const providerMessageIdentifierSystem =
+      provider.messageIdentifierSystem ?? ODOS_COMMS_PROVIDER_MESSAGE_IDENTIFIER_SYSTEM;
+    const existingSend = await findStaffSend(staff.fhir, body.idempotencyKey);
+    if (options.reconcileOnly && !existingSend) {
+      throw new PendingEducationReconciliationError(
+        "Education send outcome is pending reconciliation; do not resend with a new key.",
+      );
+    }
+    const reservation = await reserveStaffSend(staff.fhir, {
+      idempotencyKey: body.idempotencyKey,
+      claimId: randomUUID(),
+      patientReference: body.patientReference,
+      senderReference: staff.staffReference,
+      body: url,
+      requestFingerprint: JSON.stringify({
+        patientReference: body.patientReference,
+        recipient: recipient.value,
+        education: campaignId,
+        lane: body.lane,
+        provider: provider.name,
+        recipientReference: recipient.reference,
+        alsoUpdateChart: body.alsoUpdateChart,
+        encounterReference: body.encounterReference,
+        conditionReference: body.conditionReference,
+        channel: "email",
+      }),
+      provider: provider.name,
+      providerMessageIdentifierSystem,
+      medium: "Email",
+      category: ODOS_PATIENT_EMAIL_CATEGORY,
+      outboundCategory: ODOS_PATIENT_EMAIL_OUTBOUND_CATEGORY,
+    });
+    if (reservation.state === "conflict") {
+      throw new CommsApiCapabilityError("Education idempotency key was already used for a different request.");
+    }
+    if (reservation.state === "pending") {
+      throw new PendingEducationReconciliationError(
+        "Education send outcome is pending reconciliation; do not resend with a new key.",
+      );
+    }
+    if (reservation.state === "sent") {
+      if (body.alsoUpdateChart) {
+        await updateEducationRecipient(staff.fhir, recipient, body, staff);
+      }
+      await persistEducationSendProvenance(staff.fhir, {
+        body,
+        item,
+        staff,
+        recipientValue: recipient.value,
+        laneSelection,
+        now: deps.now?.() ?? new Date().toISOString(),
+      });
+      return { outcome: "sent", providerMessageId: reservation.providerMessageId };
+    }
+    if (reservation.state === "terminal") return reservation.result;
+    if (options.reconcileOnly) {
+      throw new PendingEducationReconciliationError(
+        "Education send outcome is pending reconciliation; do not resend with a new key.",
+      );
+    }
     const result = await provider.sendEmail({
       patientReference: body.patientReference,
       toAddress: recipient.value,
@@ -724,6 +927,15 @@ async function dispatchEducation(
       suppression: {},
     });
     if (result.outcome === "sent") {
+      await persistStaffSentSend(staff.fhir, {
+        communication: reservation.communication,
+        idempotencyKey: body.idempotencyKey,
+        providerMessageId: result.providerMessageId,
+        providerMessageIdentifierSystem,
+        category: ODOS_PATIENT_EMAIL_CATEGORY,
+        outboundCategory: ODOS_PATIENT_EMAIL_OUTBOUND_CATEGORY,
+        completed: true,
+      }, { now: () => deps.now?.() ?? new Date().toISOString() });
       if (body.alsoUpdateChart) {
         await updateEducationRecipient(staff.fhir, recipient, body, staff);
       }
@@ -734,6 +946,13 @@ async function dispatchEducation(
         recipientValue: recipient.value,
         laneSelection,
         now: deps.now?.() ?? new Date().toISOString(),
+      });
+    } else {
+      await persistStaffTerminalOutcome(staff.fhir, {
+        communication: reservation.communication,
+        idempotencyKey: body.idempotencyKey,
+        result,
+        category: ODOS_PATIENT_EMAIL_CATEGORY,
       });
     }
     return result;
@@ -749,6 +968,11 @@ async function dispatchEducation(
   if (!targetUrl) throw new CommsApiCapabilityError("Education web artifact is not published.");
   assertEducationPublicBaseUrl(deps.publicBaseUrl);
   const existingSend = await findStaffSmsSend(staff.fhir, body.idempotencyKey);
+  if (options.reconcileOnly && !existingSend) {
+    throw new PendingEducationReconciliationError(
+      "Education send outcome is pending reconciliation; do not resend with a new key.",
+    );
+  }
   const smsBody = existingSend?.payload?.[0]?.contentString ?? await educationSmsBody(deps, {
     targetUrl,
     campaignId,
@@ -781,7 +1005,9 @@ async function dispatchEducation(
     throw new CommsApiCapabilityError("Education idempotency key was already used for a different request.");
   }
   if (reservation.state === "pending") {
-    throw new CommsApiCapabilityError("Education send outcome is pending reconciliation; do not resend with a new key.");
+    throw new PendingEducationReconciliationError(
+      "Education send outcome is pending reconciliation; do not resend with a new key.",
+    );
   }
   if (reservation.state === "sent") {
     if (body.alsoUpdateChart) {
@@ -799,6 +1025,11 @@ async function dispatchEducation(
   }
   if (reservation.state === "terminal") {
     return reservation.result;
+  }
+  if (options.reconcileOnly) {
+    throw new PendingEducationReconciliationError(
+      "Education send outcome is pending reconciliation; do not resend with a new key.",
+    );
   }
   const result = await provider.sendSms({
     patientReference: body.patientReference,
@@ -991,18 +1222,6 @@ function enrollmentStore(deps: CommsApiRouteDeps): EducationEnrollmentStore {
     throw new CommsApiCapabilityError("Education enrollment persistence is not configured.");
   }
   return deps.enrollmentStore;
-}
-
-function enrollmentSendIdempotencyKey(enrollmentId: string, sendIndex: number): string {
-  return `enrollment:${enrollmentId}:stage1:${sendIndex + 1}`;
-}
-
-function enrollmentTransitionSendIdempotencyKey(
-  enrollmentId: string,
-  stageId: string,
-  sendIndex: number,
-): string {
-  return `enrollment:${enrollmentId}:stage:${stageId}:${sendIndex + 1}`;
 }
 
 async function patientSmsOptOutState(
@@ -1381,6 +1600,10 @@ type EducationEnrollmentTransitionBody = {
   status: "active" | "completed" | "cancelled";
 };
 
+type EducationEnrollmentResumeBody =
+  | { acknowledgeIndeterminate: false; reason?: never }
+  | { acknowledgeIndeterminate: true; reason: string };
+
 function educationEnrollmentBody(value: unknown): EducationEnrollmentBody {
   const body = record(value);
   const journey = record(body.journey);
@@ -1476,6 +1699,32 @@ function educationEnrollmentTransitionBody(value: unknown): EducationEnrollmentT
     },
     trigger: definitionKey(body.trigger, "trigger"),
     status,
+  };
+}
+
+function educationEnrollmentResumeBody(value: unknown): EducationEnrollmentResumeBody {
+  const body = record(value);
+  const unexpected = Object.keys(body).filter((key) =>
+    key !== "acknowledgeIndeterminate" && key !== "reason");
+  if (unexpected.length > 0) {
+    throw new CommsApiValidationError(
+      "Enrollment resume accepts only acknowledgeIndeterminate and reason.",
+    );
+  }
+  if (body.acknowledgeIndeterminate === undefined || body.acknowledgeIndeterminate === false) {
+    if (body.reason !== undefined) {
+      throw new CommsApiValidationError(
+        "reason requires acknowledgeIndeterminate to be explicitly true.",
+      );
+    }
+    return { acknowledgeIndeterminate: false };
+  }
+  if (body.acknowledgeIndeterminate !== true) {
+    throw new CommsApiValidationError("acknowledgeIndeterminate must be boolean.");
+  }
+  return {
+    acknowledgeIndeterminate: true,
+    reason: requiredText(body.reason, "reason", 2_000),
   };
 }
 
@@ -1783,25 +2032,33 @@ async function persistEducationEnrollmentProvenance(
     now: string;
   },
 ): Promise<void> {
-  const provenance = buildProvenance({
-    targetReferences: [
-      input.enrollment.patientReference,
-      input.enrollment.enteredFromEncounterReference,
-      `Basic/${input.enrollment.id}`,
-    ],
-    recorded: input.now,
-    activityCode: "CREATE",
-    activityDisplay: "Enroll patient in education journey",
-    agents: [{ whoReference: input.staff.staffReference, typeCode: "author" }],
-    entityValues: [
-      {
-        role: "source",
-        display: `Journey: ${input.enrollment.journey.id}@${input.enrollment.journey.version}`,
-      },
-      { role: "source", display: `Initial stage: ${input.enrollment.currentStageId}` },
-    ],
+  const eventKey = `enrollment:${input.enrollment.id}:create`;
+  const provenance: Provenance = {
+    ...buildProvenance({
+      targetReferences: [
+        input.enrollment.patientReference,
+        input.enrollment.enteredFromEncounterReference,
+        `Basic/${input.enrollment.id}`,
+      ],
+      recorded: input.now,
+      activityCode: "CREATE",
+      activityDisplay: "Enroll patient in education journey",
+      agents: [{ whoReference: input.enrollment.stageHistory[0]!.enteredBy, typeCode: "author" }],
+      entityValues: [
+        {
+          role: "source",
+          display: `Journey: ${input.enrollment.journey.id}@${input.enrollment.journey.version}`,
+        },
+        { role: "source", display: `Initial stage: ${input.enrollment.stageHistory[0]!.stageId}` },
+      ],
+    }),
+    meta: {
+      tag: [{ system: ODOS_COMMS_EDUCATION_ENROLLMENT_EVENT_IDENTIFIER_SYSTEM, code: eventKey }],
+    },
+  };
+  await fhir.create(provenance, {
+    "If-None-Exist": `_tag=${ODOS_COMMS_EDUCATION_ENROLLMENT_EVENT_IDENTIFIER_SYSTEM}|${eventKey}`,
   });
-  await fhir.create(provenance);
 }
 
 async function persistEducationEnrollmentTransitionProvenance(
@@ -1809,31 +2066,81 @@ async function persistEducationEnrollmentTransitionProvenance(
   input: {
     enrollment: EducationEnrollment;
     fromStageId: string;
+    toStageId?: string;
     trigger: string;
+    status?: EducationEnrollment["status"];
+    eventSequence?: number;
+    enteredBy?: string;
     staff: CommsStaff;
     now: string;
   },
 ): Promise<void> {
-  const provenance = buildProvenance({
-    targetReferences: [
-      input.enrollment.patientReference,
-      input.enrollment.enteredFromEncounterReference,
-      `Basic/${input.enrollment.id}`,
-    ],
-    recorded: input.now,
-    activityCode: "UPDATE",
-    activityDisplay: "Transition education journey enrollment",
-    agents: [{ whoReference: input.staff.staffReference, typeCode: "author" }],
-    entityValues: [
-      {
-        role: "source",
-        display: `Stage transition: ${input.fromStageId} -> ${input.enrollment.currentStageId}`,
-      },
-      { role: "source", display: `Trigger: ${input.trigger}` },
-      { role: "source", display: `Status: ${input.enrollment.status}` },
-    ],
+  const eventKey = `enrollment:${input.enrollment.id}:transition:${input.eventSequence ?? input.enrollment.stageHistory.length}`;
+  const provenance: Provenance = {
+    ...buildProvenance({
+      targetReferences: [
+        input.enrollment.patientReference,
+        input.enrollment.enteredFromEncounterReference,
+        `Basic/${input.enrollment.id}`,
+      ],
+      recorded: input.now,
+      activityCode: "UPDATE",
+      activityDisplay: "Transition education journey enrollment",
+      agents: [{ whoReference: input.enteredBy ?? input.staff.staffReference, typeCode: "author" }],
+      entityValues: [
+        {
+          role: "source",
+          display: `Stage transition: ${input.fromStageId} -> ${input.toStageId ?? input.enrollment.currentStageId}`,
+        },
+        { role: "source", display: `Trigger: ${input.trigger}` },
+        { role: "source", display: `Status: ${input.status ?? input.enrollment.status}` },
+      ],
+    }),
+    meta: {
+      tag: [{ system: ODOS_COMMS_EDUCATION_ENROLLMENT_EVENT_IDENTIFIER_SYSTEM, code: eventKey }],
+    },
+  };
+  await fhir.create(provenance, {
+    "If-None-Exist": `_tag=${ODOS_COMMS_EDUCATION_ENROLLMENT_EVENT_IDENTIFIER_SYSTEM}|${eventKey}`,
   });
-  await fhir.create(provenance);
+}
+
+async function persistEducationEnrollmentIndeterminateProvenance(
+  fhir: MedplumClient,
+  input: {
+    enrollment: EducationEnrollment;
+    sendIndex: number;
+    acknowledgement: NonNullable<EducationEnrollmentImmediateSend["acknowledgement"]>;
+    staff: CommsStaff;
+  },
+): Promise<void> {
+  const send = input.enrollment.immediateSends[input.sendIndex];
+  if (!send) throw new Error("EducationEnrollment immediate send index is invalid.");
+  const eventKey = `enrollment:${input.enrollment.id}:send:${input.sendIndex + 1}:indeterminate`;
+  const provenance: Provenance = {
+    ...buildProvenance({
+      targetReferences: [
+        input.enrollment.patientReference,
+        input.enrollment.enteredFromEncounterReference,
+        `Basic/${input.enrollment.id}`,
+      ],
+      recorded: input.acknowledgement.acknowledgedAt,
+      activityCode: "UPDATE",
+      activityDisplay: "Acknowledge indeterminate education send",
+      agents: [{ whoReference: input.staff.staffReference, typeCode: "author" }],
+      entityValues: [
+        { role: "source", display: `Immediate send: ${input.sendIndex + 1}` },
+        { role: "source", display: `Idempotency key: ${send.idempotencyKey ?? "legacy-unrecorded"}` },
+        { role: "source", display: `Reason: ${input.acknowledgement.reason}` },
+      ],
+    }),
+    meta: {
+      tag: [{ system: ODOS_COMMS_EDUCATION_ENROLLMENT_EVENT_IDENTIFIER_SYSTEM, code: eventKey }],
+    },
+  };
+  await fhir.create(provenance, {
+    "If-None-Exist": `_tag=${ODOS_COMMS_EDUCATION_ENROLLMENT_EVENT_IDENTIFIER_SYSTEM}|${eventKey}`,
+  });
 }
 
 function requiredEmail(value: unknown, label: string): string {
