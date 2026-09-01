@@ -83,6 +83,7 @@ export interface PlanActionInstance {
   protocolDefaultPayload?: Record<string, unknown>;
   modifiedFields: string[];
   materializedFhirRef?: string;
+  materializationRefusal?: { code: string; message: string };
   chargeProposalRef?: string;
   provenance: InstanceProvenance;
 }

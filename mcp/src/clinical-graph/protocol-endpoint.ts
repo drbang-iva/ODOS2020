@@ -22,6 +22,7 @@ import {
 import {
   AcceptedChargeUnapplyError,
   matchesCode,
+  ProtocolActionMaterializationRefusal,
   ProtocolPublishValidationError,
   ProtocolService,
   rankProtocolOffers,
@@ -46,6 +47,10 @@ import {
 } from "./procedure-fee-schedule.js";
 
 const FINDING_SOURCE_URL = "https://odos2020.com/fhir/StructureDefinition/finding-source";
+export const PROTOCOL_FOLLOW_UP_IDENTIFIER_SYSTEM =
+  "https://odos2020.com/fhir/NamingSystem/protocol-follow-up-source";
+export const PROTOCOL_ACTION_CODE_SYSTEM =
+  "https://odos2020.com/fhir/CodeSystem/odos-protocol-module";
 export const MANUAL_VISIT_CHARGE_ID_PREFIX = "manual-visit-code:";
 export const MANUAL_VISIT_PLAN_ACTION_REF = "manual-visit-code";
 
@@ -762,6 +767,9 @@ function liveService(
       ) {
         return undefined;
       }
+      if (action.actionType === "follow-up") {
+        return materializeProtocolFollowUp(staff.fhir, action);
+      }
       const resource = action.actionType === "order"
         ? serviceRequest(action)
         : carePlan(action);
@@ -831,6 +839,94 @@ function serviceRequest(action: PlanActionInstance): ServiceRequest {
     code: { text: String(action.payload.orderableKey ?? action.sourceItemKey ?? action.actionType) },
     authoredOn: action.provenance.at,
   };
+}
+
+function followUpServiceRequest(action: PlanActionInstance): ServiceRequest {
+  const interval = action.payload.interval;
+  const unit = action.payload.unit;
+  const reason = action.payload.reason;
+  const explicitKind = action.payload.followUpKind;
+  if (!Number.isSafeInteger(interval) || Number(interval) <= 0 || !["days", "weeks", "months"].includes(String(unit))) {
+    throw new ProtocolActionMaterializationRefusal(
+      "FOLLOW_UP_INTERVAL_INVALID",
+      "Follow-up interval must be a positive integer in supported units.",
+    );
+  }
+  if (typeof reason !== "string" || reason.trim().length === 0) {
+    throw new ProtocolActionMaterializationRefusal(
+      "FOLLOW_UP_REASON_REQUIRED",
+      "Follow-up reason is required.",
+    );
+  }
+  if (explicitKind !== undefined && explicitKind !== "medical" && explicitKind !== "routine") {
+    throw new ProtocolActionMaterializationRefusal(
+      "FOLLOW_UP_KIND_UNDERIVABLE",
+      "Follow-up kind must be medical or routine.",
+    );
+  }
+  const kind = explicitKind ?? (action.linkedDx.length > 0 ? "medical" : undefined);
+  if (!kind) {
+    throw new ProtocolActionMaterializationRefusal(
+      "FOLLOW_UP_KIND_UNDERIVABLE",
+      "Follow-up kind must be medical or routine.",
+    );
+  }
+  const due = new Date(action.provenance.at);
+  if (Number.isNaN(due.getTime())) {
+    throw new ProtocolActionMaterializationRefusal(
+      "FOLLOW_UP_PROVENANCE_INVALID",
+      "Follow-up provenance time is invalid.",
+    );
+  }
+  if (unit === "days" || unit === "weeks") {
+    due.setUTCDate(due.getUTCDate() + Number(interval) * (unit === "weeks" ? 7 : 1));
+  } else {
+    const originalDay = due.getUTCDate();
+    due.setUTCDate(1);
+    due.setUTCMonth(due.getUTCMonth() + Number(interval));
+    const lastDay = new Date(Date.UTC(due.getUTCFullYear(), due.getUTCMonth() + 1, 0)).getUTCDate();
+    due.setUTCDate(Math.min(originalDay, lastDay));
+  }
+  if (Number.isNaN(due.getTime())) {
+    throw new ProtocolActionMaterializationRefusal(
+      "FOLLOW_UP_INTERVAL_OVERFLOW",
+      "Follow-up interval produces an invalid due date.",
+    );
+  }
+  return {
+    resourceType: "ServiceRequest",
+    status: "active",
+    intent: "plan",
+    subject: { reference: `Patient/${action.patientId}` },
+    encounter: { reference: `Encounter/${action.encounterId}` },
+    authoredOn: action.provenance.at,
+    occurrenceDateTime: due.toISOString().slice(0, 10),
+    code: { coding: [{ system: PROTOCOL_ACTION_CODE_SYSTEM, code: "follow-up" }] },
+    category: [{ coding: [{ system: PROTOCOL_ACTION_CODE_SYSTEM, code: `${kind}-follow-up` }] }],
+    reasonCode: [{ text: reason }],
+  };
+}
+
+export async function materializeProtocolFollowUp(
+  fhir: LiveFhir,
+  action: PlanActionInstance,
+): Promise<string | undefined> {
+  // Omitting application identity deliberately revives or updates the prior request, matching the series CarePlan precedent.
+  const identifierValue = `${action.encounterId}:${action.provenance.protocolId}:${action.sourceItemKey}`;
+  const intended: ServiceRequest = {
+    ...followUpServiceRequest(action),
+    identifier: [{ system: PROTOCOL_FOLLOW_UP_IDENTIFIER_SYSTEM, value: identifierValue }],
+  };
+  const saved = await fhir.create(intended, {
+    "X-ODOS-Source": "protocol-module",
+    "If-None-Exist": `identifier=${PROTOCOL_FOLLOW_UP_IDENTIFIER_SYSTEM}|${identifierValue}`,
+  });
+  if (saved.id && !Object.entries(intended).every(([key, value]) =>
+    isDeepStrictEqual((saved as unknown as Record<string, unknown>)[key], value)
+  )) {
+    await updateProjected(fhir, "ServiceRequest", saved.id, { ...saved, ...intended });
+  }
+  return saved.id ? `ServiceRequest/${saved.id}` : undefined;
 }
 function carePlan(action: PlanActionInstance): CarePlan {
   return {
