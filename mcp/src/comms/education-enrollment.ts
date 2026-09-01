@@ -70,6 +70,16 @@ export interface EducationEnrollment {
 
 export type NewEducationEnrollment = Omit<EducationEnrollment, "id">;
 
+export interface EducationEnrollmentTransition {
+  fromStageId: string;
+  targetStageId: string;
+  trigger: string;
+  enteredAt: string;
+  enteredBy: string;
+  status: EducationEnrollmentStatus;
+  immediateSends: EducationEnrollmentImmediateSend[];
+}
+
 export interface EducationEnrollmentStore {
   create(enrollment: NewEducationEnrollment): Promise<EducationEnrollment>;
   read(id: string): Promise<EducationEnrollment | undefined>;
@@ -79,6 +89,11 @@ export interface EducationEnrollmentStore {
     sendIndex: number,
     outcome: EducationEnrollmentSendOutcome,
   ): Promise<EducationEnrollment>;
+  transition(
+    id: string,
+    transition: EducationEnrollmentTransition,
+  ): Promise<EducationEnrollment>;
+  clearTerminalActiveIdentifier(id: string): Promise<EducationEnrollment>;
 }
 
 export class EducationEnrollmentDuplicateError extends Error {
@@ -88,21 +103,28 @@ export class EducationEnrollmentDuplicateError extends Error {
   }
 }
 
+export class EducationEnrollmentTransitionError extends Error {
+  constructor(readonly reason: "enrollment-not-active" | "stale-from-stage") {
+    super(reason);
+    this.name = "EducationEnrollmentTransitionError";
+  }
+}
+
 export function createInMemoryEducationEnrollmentStore(
   deps: { generateId?: () => string } = {},
 ): EducationEnrollmentStore {
   const rows = new Map<string, EducationEnrollment>();
+  const activeIdentifiers = new Set<string>();
   return {
     async create(input) {
       validateNewEnrollment(input);
-      if ([...rows.values()].some((row) =>
-        row.status === "active"
-        && row.patientReference === input.patientReference
-        && row.journey.id === input.journey.id)) {
+      const activeIdentifier = activeEnrollmentIdentifier(input.patientReference, input.journey.id);
+      if (activeIdentifiers.has(activeIdentifier)) {
         throw new EducationEnrollmentDuplicateError();
       }
       const row = { ...structuredClone(input), id: deps.generateId?.() ?? randomUUID() };
       rows.set(row.id, row);
+      activeIdentifiers.add(activeIdentifier);
       return structuredClone(row);
     },
     async read(id) {
@@ -119,6 +141,19 @@ export function createInMemoryEducationEnrollmentStore(
       const row = rows.get(id);
       if (!row) throw new Error("EducationEnrollment not found.");
       recordOutcome(row, sendIndex, outcome);
+      return structuredClone(row);
+    },
+    async transition(id, transition) {
+      const row = rows.get(id);
+      if (!row) throw new Error("EducationEnrollment not found.");
+      applyTransition(row, transition);
+      return structuredClone(row);
+    },
+    async clearTerminalActiveIdentifier(id) {
+      const row = rows.get(id);
+      if (!row) throw new Error("EducationEnrollment not found.");
+      if (row.status === "active") throw new Error("EducationEnrollment is not terminal.");
+      activeIdentifiers.delete(activeEnrollmentIdentifier(row.patientReference, row.journey.id));
       return structuredClone(row);
     },
   };
@@ -189,6 +224,41 @@ export function createFhirEducationEnrollmentStore(
         ...(resource.meta?.versionId ? { "If-Match": `W/\"${resource.meta.versionId}\"` } : {}),
       });
       return parseEnrollment(updated);
+    },
+    async transition(id, transition) {
+      validateTransition(transition);
+      const resource = await fhir.read<Basic>("Basic", resourceId(id, "enrollment id"));
+      const enrollment = parseEnrollment(resource);
+      applyTransition(enrollment, transition);
+      replaceExtension(resource, CURRENT_STAGE_ID, { url: CURRENT_STAGE_ID, valueString: enrollment.currentStageId });
+      replaceExtension(resource, STAGE_ENTERED_AT, { url: STAGE_ENTERED_AT, valueInstant: enrollment.stageEnteredAt });
+      replaceExtension(resource, ENROLLMENT_STATUS, { url: ENROLLMENT_STATUS, valueCode: enrollment.status });
+      resource.extension = [
+        ...(resource.extension ?? []),
+        stageHistoryExtension(enrollment.stageHistory.at(-1)!),
+        ...transition.immediateSends.map(immediateSendExtension),
+      ];
+      try {
+        return parseEnrollment(await fhir.update<Basic>("Basic", resource.id!, resource, {
+          ...(resource.meta?.versionId ? { "If-Match": `W/\"${resource.meta.versionId}\"` } : {}),
+        }));
+      } catch (error) {
+        if (isFhirConflict(error)) throw new EducationEnrollmentTransitionError("stale-from-stage");
+        throw error;
+      }
+    },
+    async clearTerminalActiveIdentifier(id) {
+      const resource = await fhir.read<Basic>("Basic", resourceId(id, "enrollment id"));
+      const enrollment = parseEnrollment(resource);
+      if (enrollment.status === "active") throw new Error("EducationEnrollment is not terminal.");
+      if (!resource.identifier?.some((identifier) => identifier.system === ACTIVE_ENROLLMENT_IDENTIFIER_SYSTEM)) {
+        return enrollment;
+      }
+      resource.identifier = resource.identifier.filter((identifier) =>
+        identifier.system !== ACTIVE_ENROLLMENT_IDENTIFIER_SYSTEM);
+      return parseEnrollment(await fhir.update<Basic>("Basic", resource.id!, resource, {
+        ...(resource.meta?.versionId ? { "If-Match": `W/\"${resource.meta.versionId}\"` } : {}),
+      }));
     },
   };
 }
@@ -397,6 +467,46 @@ function validateNewEnrollment(input: NewEducationEnrollment): void {
   }
 }
 
+function validateTransition(transition: EducationEnrollmentTransition): void {
+  definitionId(transition.fromStageId, "transition from-stage id");
+  definitionId(transition.targetStageId, "transition target-stage id");
+  definitionId(transition.trigger, "transition trigger");
+  instant(transition.enteredAt, "transition entered timestamp");
+  requiredReference(transition.enteredBy, "Practitioner", "transition actor");
+  if (!["active", "completed", "cancelled"].includes(transition.status)) {
+    throw new Error("EducationEnrollment transition status is invalid.");
+  }
+  for (const send of transition.immediateSends) {
+    validateImmediateSend(send);
+    if (send.outcome !== undefined) {
+      throw new Error("EducationEnrollment transition sends cannot already have outcomes.");
+    }
+  }
+}
+
+function applyTransition(
+  enrollment: EducationEnrollment,
+  transition: EducationEnrollmentTransition,
+): void {
+  validateTransition(transition);
+  if (enrollment.status !== "active") {
+    throw new EducationEnrollmentTransitionError("enrollment-not-active");
+  }
+  if (enrollment.currentStageId !== transition.fromStageId) {
+    throw new EducationEnrollmentTransitionError("stale-from-stage");
+  }
+  enrollment.currentStageId = transition.targetStageId;
+  enrollment.stageEnteredAt = transition.enteredAt;
+  enrollment.status = transition.status;
+  enrollment.stageHistory.push({
+    stageId: transition.targetStageId,
+    enteredAt: transition.enteredAt,
+    enteredBy: transition.enteredBy,
+    reason: transition.trigger,
+  });
+  enrollment.immediateSends.push(...structuredClone(transition.immediateSends));
+}
+
 function validateEnrollment(enrollment: EducationEnrollment): void {
   resourceId(enrollment.id, "enrollment id");
   requiredReference(enrollment.patientReference, "Patient", "patientReference");
@@ -452,6 +562,18 @@ function activeEnrollmentIdentifier(patientReference: string, journeyId: string)
   return createHash("sha256")
     .update(`${patientReference}\u0000${journeyId}`)
     .digest("hex");
+}
+
+function replaceExtension(resource: Basic, url: string, replacement: Extension): void {
+  resource.extension = [
+    ...(resource.extension ?? []).filter((extension) => extension.url !== url),
+    replacement,
+  ];
+}
+
+function isFhirConflict(error: unknown): boolean {
+  const status = (error as { status?: number })?.status;
+  return status === 409 || status === 412;
 }
 
 function isEnrollmentResource(resource: Basic): boolean {

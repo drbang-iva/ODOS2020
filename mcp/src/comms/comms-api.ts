@@ -23,6 +23,7 @@ import type { CommsProvider, ConversationSummary } from "./comms-provider.js";
 import type { EducationCatalogReader, EducationContentItem } from "./education-catalog.js";
 import {
   EducationEnrollmentDuplicateError,
+  EducationEnrollmentTransitionError,
   type EducationEnrollment,
   type EducationEnrollmentSendOutcome,
   type EducationEnrollmentStore,
@@ -171,6 +172,92 @@ export function registerCommsApiRoutes(
       );
       if (!enrollment) throw new CommsApiNotFoundError("Education enrollment not found.");
       await readPatient(staff.fhir, enrollment.patientReference);
+      return { status: 200, body: { enrollment } };
+    },
+  ));
+
+  app.post("/communications/education/enrollments/:enrollmentId/transitions", async (req, res) => withStaff(
+    req,
+    res,
+    deps,
+    "communications.send",
+    "Basic",
+    "communications-education-enrollment-transition",
+    undefined,
+    async (staff) => {
+      const body = educationEnrollmentTransitionBody(req.body);
+      const store = enrollmentStore(deps);
+      const enrollmentId = resourceKey(req.params.enrollmentId, "enrollment id");
+      const existing = await store.read(enrollmentId);
+      if (!existing) throw new CommsApiNotFoundError("Education enrollment not found.");
+      const patient = await readPatient(staff.fhir, existing.patientReference);
+      await assertEncounterBelongsToPatient(
+        staff.fhir,
+        existing.enteredFromEncounterReference,
+        existing.patientReference,
+      );
+      for (const send of body.targetStage.immediateSends) {
+        const item = deps.educationCatalog.get(send.educationId, send.version);
+        if (!item || item.audience !== "patient") {
+          throw new CommsApiNotFoundError("Education content not found.");
+        }
+        if (!item.channels.includes(send.channel)) {
+          throw new CommsApiCapabilityError(`Education content is not published for ${send.channel}.`);
+        }
+      }
+      const sendStartIndex = existing.immediateSends.length;
+      let enrollment: EducationEnrollment;
+      try {
+        enrollment = await store.transition(enrollmentId, {
+          fromStageId: body.fromStageId,
+          targetStageId: body.targetStage.id,
+          trigger: body.trigger,
+          enteredAt: deps.now?.() ?? new Date().toISOString(),
+          enteredBy: staff.staffReference,
+          status: body.status,
+          immediateSends: body.targetStage.immediateSends.map((send) => ({
+            content: { id: send.educationId, version: send.version },
+            channel: send.channel,
+            lane: send.lane,
+          })),
+        });
+      } catch (error) {
+        if (error instanceof EducationEnrollmentTransitionError) {
+          throw new CommsApiRefusalError(error.reason);
+        }
+        throw error;
+      }
+      try {
+        await persistEducationEnrollmentTransitionProvenance(staff.fhir, {
+          enrollment,
+          fromStageId: body.fromStageId,
+          trigger: body.trigger,
+          staff,
+          now: deps.now?.() ?? new Date().toISOString(),
+        });
+        for (const [stageSendIndex, send] of body.targetStage.immediateSends.entries()) {
+          const sendIndex = sendStartIndex + stageSendIndex;
+          const outcome = await dispatchEducation(deps, staff, patient, {
+            patientReference: enrollment.patientReference,
+            educationId: send.educationId,
+            version: send.version,
+            channel: send.channel,
+            lane: send.lane,
+            alsoUpdateChart: false,
+            encounterReference: enrollment.enteredFromEncounterReference,
+            idempotencyKey: enrollmentTransitionSendIdempotencyKey(
+              enrollment.id,
+              body.targetStage.id,
+              sendIndex,
+            ),
+          });
+          enrollment = await store.recordImmediateSendOutcome(enrollment.id, sendIndex, outcome);
+        }
+      } finally {
+        if (body.status !== "active") {
+          enrollment = await store.clearTerminalActiveIdentifier(enrollment.id);
+        }
+      }
       return { status: 200, body: { enrollment } };
     },
   ));
@@ -910,6 +997,14 @@ function enrollmentSendIdempotencyKey(enrollmentId: string, sendIndex: number): 
   return `enrollment:${enrollmentId}:stage1:${sendIndex + 1}`;
 }
 
+function enrollmentTransitionSendIdempotencyKey(
+  enrollmentId: string,
+  stageId: string,
+  sendIndex: number,
+): string {
+  return `enrollment:${enrollmentId}:stage:${stageId}:${sendIndex + 1}`;
+}
+
 async function patientSmsOptOutState(
   fhir: SmsOptOutManagementFhir,
   dispatch: CommsDispatch,
@@ -1271,6 +1366,21 @@ type EducationEnrollmentBody = {
   };
 };
 
+type EducationEnrollmentTransitionBody = {
+  fromStageId: string;
+  targetStage: {
+    id: string;
+    immediateSends: Array<{
+      educationId: string;
+      version: number;
+      channel: "sms" | "email" | "print";
+      lane: "clinical" | "frontdesk";
+    }>;
+  };
+  trigger: string;
+  status: "active" | "completed" | "cancelled";
+};
+
 function educationEnrollmentBody(value: unknown): EducationEnrollmentBody {
   const body = record(value);
   const journey = record(body.journey);
@@ -1317,6 +1427,55 @@ function educationEnrollmentBody(value: unknown): EducationEnrollmentBody {
         };
       }),
     },
+  };
+}
+
+function educationEnrollmentTransitionBody(value: unknown): EducationEnrollmentTransitionBody {
+  const body = record(value);
+  const targetStage = record(body.targetStage);
+  if (!Array.isArray(targetStage.immediateSends)) {
+    throw new CommsApiValidationError("targetStage.immediateSends must be an array.");
+  }
+  const status = body.status;
+  if (status !== "active" && status !== "completed" && status !== "cancelled") {
+    throw new CommsApiValidationError("status must be active, completed, or cancelled.");
+  }
+  return {
+    fromStageId: definitionKey(body.fromStageId, "fromStageId"),
+    targetStage: {
+      id: definitionKey(targetStage.id, "targetStage.id"),
+      immediateSends: targetStage.immediateSends.map((value, index) => {
+        const send = record(value);
+        const channel = send.channel;
+        if (channel !== "sms" && channel !== "email" && channel !== "print") {
+          throw new CommsApiValidationError(
+            `targetStage.immediateSends[${index}].channel must be sms, email, or print.`,
+          );
+        }
+        const lane = send.lane;
+        if (lane !== "clinical" && lane !== "frontdesk") {
+          throw new CommsApiValidationError(
+            `targetStage.immediateSends[${index}].lane must be clinical or frontdesk.`,
+          );
+        }
+        return {
+          educationId: definitionKey(
+            send.educationId,
+            `targetStage.immediateSends[${index}].educationId`,
+          ),
+          version: requiredInteger(
+            send.version,
+            `targetStage.immediateSends[${index}].version`,
+            1,
+            Number.MAX_SAFE_INTEGER,
+          ),
+          channel,
+          lane,
+        };
+      }),
+    },
+    trigger: definitionKey(body.trigger, "trigger"),
+    status,
   };
 }
 
@@ -1640,6 +1799,38 @@ async function persistEducationEnrollmentProvenance(
         display: `Journey: ${input.enrollment.journey.id}@${input.enrollment.journey.version}`,
       },
       { role: "source", display: `Initial stage: ${input.enrollment.currentStageId}` },
+    ],
+  });
+  await fhir.create(provenance);
+}
+
+async function persistEducationEnrollmentTransitionProvenance(
+  fhir: MedplumClient,
+  input: {
+    enrollment: EducationEnrollment;
+    fromStageId: string;
+    trigger: string;
+    staff: CommsStaff;
+    now: string;
+  },
+): Promise<void> {
+  const provenance = buildProvenance({
+    targetReferences: [
+      input.enrollment.patientReference,
+      input.enrollment.enteredFromEncounterReference,
+      `Basic/${input.enrollment.id}`,
+    ],
+    recorded: input.now,
+    activityCode: "UPDATE",
+    activityDisplay: "Transition education journey enrollment",
+    agents: [{ whoReference: input.staff.staffReference, typeCode: "author" }],
+    entityValues: [
+      {
+        role: "source",
+        display: `Stage transition: ${input.fromStageId} -> ${input.enrollment.currentStageId}`,
+      },
+      { role: "source", display: `Trigger: ${input.trigger}` },
+      { role: "source", display: `Status: ${input.enrollment.status}` },
     ],
   });
   await fhir.create(provenance);
