@@ -4,7 +4,7 @@ import type { Application, Request, Response } from "express";
 import { buildOdosAuditEventRow } from "../authz/odosAudit.js";
 import {
   PRACTICE_ROLE_IDS,
-  resolveBusinessActionRole,
+  resolveDeclaredBusinessActionRole,
   staffHasBusinessAction,
   type BusinessAction,
   type PracticeRoleId,
@@ -50,6 +50,7 @@ import {
 type CommsStaff = Omit<AuthenticatedStaff, "actorRole" | "roles" | "fhir"> & {
   actorRole: PracticeRoleId;
   roles: readonly PracticeRoleId[];
+  authorizationPolicyUrl?: string;
   fhir: MedplumClient;
 };
 
@@ -769,9 +770,9 @@ async function withStaff(
       return;
     }
     const actorId = staff.staffReference.replace(/^Practitioner\//, "");
-    const actorRole = actingRole(req, staff, action);
+    const authorization = actingAuthorization(req, staff, action);
     const claimedActorId = req.header("X-ODOS-Actor-Id")?.trim();
-    if (!actorRole || (claimedActorId && claimedActorId !== actorId && claimedActorId !== staff.staffReference)) {
+    if (!authorization || (claimedActorId && claimedActorId !== actorId && claimedActorId !== staff.staffReference)) {
       await deps.audit.recordDenied(buildOdosAuditEventRow({
         eventType: "denied",
         eventTime: deps.now?.(),
@@ -788,6 +789,7 @@ async function withStaff(
       res.status(403).json({ error: `${action} role required` });
       return;
     }
+    const { actorRole, policyUrl } = authorization;
     const eventType = req.method === "GET" ? "read" : "external-api-call";
     const auditContext = {
       eventType,
@@ -796,7 +798,7 @@ async function withStaff(
       actorRole,
       patientReference,
       resourceType,
-      policyUrl: `AccessPolicy/odos-${actorRole}`,
+      policyUrl,
       ipAddress: req.ip?.replace(/^::ffff:/, ""),
       userAgent: req.header("user-agent"),
     } as const;
@@ -806,7 +808,7 @@ async function withStaff(
         ...auditContext,
         actionOutcome: "granted",
         actionReason,
-      }), () => operation({ ...staff, actorRole }));
+      }), () => operation({ ...staff, actorRole, authorizationPolicyUrl: policyUrl }));
     } catch (error) {
       if (!isAuditSubstrateUnavailable(error)) {
         await deps.audit.recordDenied(buildOdosAuditEventRow({
@@ -872,19 +874,29 @@ async function requireVisibleTwilioIdentifier(
   if (matches.length > 1) throw new Error(`Twilio ${label.toLowerCase()} identifier ${value} is not unique.`);
 }
 
-function actingRole(req: Request, staff: CommsStaff, action: BusinessAction): PracticeRoleId | undefined {
+function actingAuthorization(
+  req: Request,
+  staff: CommsStaff,
+  action: BusinessAction,
+): { actorRole: PracticeRoleId; policyUrl: string } | undefined {
   const claimed = req.header("X-ODOS-Actor-Role")?.trim();
   if (claimed) {
     if (!PRACTICE_ROLE_IDS.includes(claimed as PracticeRoleId)) return undefined;
     const role = claimed as PracticeRoleId;
     return staff.roles.includes(role)
       && staffHasBusinessAction(staff, action)
-      && resolveBusinessActionRole([role], action) === role
-      ? role
+      && resolveDeclaredBusinessActionRole([role], action) === role
+      ? { actorRole: role, policyUrl: `AccessPolicy/odos-${role}` }
       : undefined;
   }
   if (!staffHasBusinessAction(staff, action)) return undefined;
-  return resolveBusinessActionRole(staff.roles, action) ?? staff.roles[0];
+  const declaredRole = resolveDeclaredBusinessActionRole(staff.roles, action);
+  if (declaredRole) {
+    return { actorRole: declaredRole, policyUrl: `AccessPolicy/odos-${declaredRole}` };
+  }
+  return staff.membershipReference
+    ? { actorRole: staff.actorRole, policyUrl: staff.membershipReference }
+    : undefined;
 }
 
 function enrollmentStore(deps: CommsApiRouteDeps): EducationEnrollmentStore {
@@ -956,6 +968,7 @@ async function clearNamedPatientSmsOptOut(
     return await clearPatientSmsOptOut(fhir, body.patientReference, {
       actorReference: staff.staffReference,
       actorRole: staff.actorRole,
+      policyUrl: staff.authorizationPolicyUrl,
       recordedAt: deps.now?.() ?? new Date().toISOString(),
       reason: body.reason,
       identityVerification: body.identityVerification,

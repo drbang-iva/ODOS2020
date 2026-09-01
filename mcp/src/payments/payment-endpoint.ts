@@ -203,6 +203,7 @@ export async function authenticateStaffRoute(opts: {
   actorRole: PracticeRoleId;
   roles: PracticeRoleId[];
   businessActions: BusinessAction[];
+  membershipReference?: string;
   ignoredGrantedBusinessActions: BusinessAction[];
   ignoredRevokedBusinessActions: BusinessAction[];
   membershipBusinessActionsMalformed: boolean;
@@ -219,6 +220,7 @@ export async function authenticateStaffRoute(opts: {
     actorRole,
     roles: resolved.roles,
     businessActions: resolved.businessActions,
+    ...(resolved.membershipReference ? { membershipReference: resolved.membershipReference } : {}),
     ignoredGrantedBusinessActions: resolved.ignoredGrantedBusinessActions,
     ignoredRevokedBusinessActions: resolved.ignoredRevokedBusinessActions,
     membershipBusinessActionsMalformed: resolved.membershipBusinessActionsMalformed,

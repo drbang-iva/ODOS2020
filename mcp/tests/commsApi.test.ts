@@ -170,6 +170,32 @@ test("a multi-role caller cannot attribute opt-out management to a held role tha
   }
 });
 
+test("a membership-only communications grant cites the membership instead of an unrelated AccessPolicy", async () => {
+  const membershipReference = "ProjectMembership/membership-provider";
+  const fixture = await startServer({
+    roles: ["provider"],
+    businessActions: ["communications.optout.manage"],
+    membershipReference,
+  });
+  try {
+    const response = await fetch(`${fixture.base}/communications/opt-out/clear`, {
+      method: "POST",
+      headers: {
+        authorization: "Bearer provider",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(OPT_OUT_CLEAR_BODY),
+    });
+
+    assert.equal(response.status, 200);
+    assert.equal(fixture.grants[0]?.actorRole, "provider");
+    assert.equal(fixture.grants[0]?.policyUrl, membershipReference);
+    assert.equal(fixture.attributedActors[0]?.policyUrl, membershipReference);
+  } finally {
+    await fixture.close();
+  }
+});
+
 test("FHIR policy construction preserves a declared hidden-field mask", () => {
   const policy = buildMedplumAccessPolicy({
     id: "staff",
@@ -859,6 +885,7 @@ test("clearing one named patient on a shared handset leaves the other patient su
     assert.deepEqual(fixture.attributedActors, [{
       actorReference: "Practitioner/staff",
       actorRole: "staff",
+      policyUrl: "AccessPolicy/odos-staff",
       actionReason: "communications.optout.manage clear SMS opt-out",
     }]);
     assert.deepEqual(fixture.grants.map((row) => ({
@@ -1558,6 +1585,7 @@ async function startServer(options: {
   resolvedStaffAuthentication?: boolean;
   businessActions?: readonly import("../src/authz/roles.js").BusinessAction[];
   roles?: readonly (typeof PRACTICE_ROLE_IDS)[number][];
+  membershipReference?: string;
   excludePatientRead?: boolean;
   excludePatientWrite?: boolean;
   chartDispatchLane?: "locked_clinical" | "staff_switchable";
@@ -1621,6 +1649,7 @@ async function startServer(options: {
     actorReference: string;
     actorRole: string;
     actionReason: string;
+    policyUrl?: string;
   }> = [];
   const authenticatedFhirs: unknown[] = [];
   const adapterFhirs: unknown[] = [];
@@ -1976,6 +2005,7 @@ async function startServer(options: {
         actorRole: role as never,
         roles: options.roles ?? [role as never],
         businessActions: options.businessActions,
+        membershipReference: options.membershipReference,
         fhir: callerFhir,
       };
     },

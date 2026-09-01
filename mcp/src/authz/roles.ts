@@ -1245,12 +1245,19 @@ export function resolveBusinessActionRole(
 ): PracticeRoleId | undefined {
   const resolvedEffectiveActions = effectiveActions ?? EFFECTIVE_BUSINESS_ACTIONS_BY_ROLE_SET.get(roles);
   if (resolvedEffectiveActions && !resolvedEffectiveActions.includes(businessAction)) return undefined;
-  const role = PRACTICE_ROLE_IDS.find(
+  const role = resolveDeclaredBusinessActionRole(roles, businessAction);
+  return role ?? (resolvedEffectiveActions?.includes(businessAction) ? roles[0] : undefined);
+}
+
+export function resolveDeclaredBusinessActionRole(
+  roles: readonly PracticeRoleId[],
+  businessAction: BusinessAction,
+): PracticeRoleId | undefined {
+  return PRACTICE_ROLE_IDS.find(
     (roleId) =>
       roles.includes(roleId) &&
       getRoleDeclaration(roleId).businessActions.includes(businessAction),
   );
-  return role ?? (resolvedEffectiveActions?.includes(businessAction) ? roles[0] : undefined);
 }
 
 export function bindEffectiveBusinessActions(

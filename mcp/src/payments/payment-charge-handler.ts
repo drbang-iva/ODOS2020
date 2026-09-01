@@ -24,6 +24,7 @@ export interface AuthenticatedStaff {
   actorRole: OdosActorRole;
   roles?: readonly PracticeRoleId[];
   businessActions?: readonly BusinessAction[];
+  membershipReference?: string;
   /** FHIR client bound to the caller (their token) so Medplum AccessPolicy governs the PR write. */
   fhir: DispatchFhirClient;
 }
