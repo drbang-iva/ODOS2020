@@ -54,6 +54,8 @@ export interface PracticeRoleRepairResult {
   readonly targetEmail: string;
   readonly membershipChanged: boolean;
   readonly primaryRole: DevAdminPrimaryRole;
+  readonly grantedRoles: readonly PracticeRoleId[];
+  readonly policyBindings: readonly string[];
 }
 
 export async function repairPracticeRoles(
@@ -61,6 +63,7 @@ export async function repairPracticeRoles(
   target: string,
   primaryRole: DevAdminPrimaryRole = DEV_ADMIN_ROLE,
   serviceIdentityEmail?: string,
+  allowServiceIdentity = false,
 ): Promise<PracticeRoleRepairResult> {
   const resolvedTarget = await adapter.resolveTarget(target);
   const targetProjectId = resolvedTarget.membership.project.reference?.match(/^Project\/([^/]+)$/)?.[1];
@@ -117,7 +120,7 @@ export async function repairPracticeRoles(
   }
 
   const grant = await grantPracticeRoles(
-    { target, roles: DEV_ADMIN_GRANT_ROLES, primaryRole },
+    { target, roles: DEV_ADMIN_GRANT_ROLES, primaryRole, allowServiceIdentity },
     {
       serviceIdentityEmail,
       resolveTarget: async () => resolvedTarget,
@@ -168,6 +171,7 @@ export async function repairPracticeRoles(
         adapter.recordMembershipChange(resolvedTarget, operation),
     },
   );
+  const repairedTarget = await adapter.resolveTarget(target);
 
   return {
     createdPolicies,
@@ -177,6 +181,8 @@ export async function repairPracticeRoles(
     targetEmail: grant.targetEmail,
     membershipChanged: grant.changed,
     primaryRole,
+    grantedRoles: grant.roles,
+    policyBindings: membershipPolicyReferences(repairedTarget.membership),
   };
 }
 
@@ -379,12 +385,15 @@ async function runCli(): Promise<void> {
     target,
     primaryRole,
     email,
+    process.env.MEDPLUM_CONTRACT_BOOTSTRAP === "1",
   );
   console.log(`Role policies created: ${result.createdPolicies.length} [${result.createdPolicies.join(", ")}]`);
   console.log(`Role policies tagged: ${result.taggedPolicies.length} [${result.taggedPolicies.join(", ")}]`);
   console.log(`Role policies already correct: ${result.existingPolicies.length} [${result.existingPolicies.join(", ")}]`);
   console.log(`${result.membershipReference} target: ${result.targetEmail}`);
   console.log(`Membership reconciliation: ${result.membershipChanged ? "CHANGED" : "ALREADY EXACT"}`);
+  console.log(`Roles granted: [${result.grantedRoles.join(", ")}]`);
+  console.log(`Membership policy bindings: [${result.policyBindings.join(", ")}]`);
   console.log(`Dev login primary role: ${result.primaryRole}`);
 }
 

@@ -98,6 +98,11 @@ test("missing role policies are created before the preserved legacy grant", asyn
   assert.equal(result.targetEmail, "human@example.test");
   assert.equal(result.membershipChanged, true);
   assert.equal(result.membershipReference, "ProjectMembership/dev-membership");
+  assert.deepEqual(result.grantedRoles, ["staff", "admin", "provider"]);
+  assert.deepEqual(result.policyBindings, [
+    "AccessPolicy/policy-4",
+    "AccessPolicy/keep-legacy",
+  ]);
   assert.equal(adapter.policyWrites, 4);
   assert.equal(adapter.membershipWrites, 1);
   assert.equal(adapter.policies.length, 4);
@@ -128,6 +133,16 @@ test("a second repair is a zero-write idempotent no-op", async () => {
   assert.equal(result.membershipChanged, false);
   assert.equal(adapter.policyWrites, policyWrites);
   assert.equal(adapter.membershipWrites, membershipWrites);
+});
+
+test("an explicit contract bootstrap repair may grant the configured service identity", async () => {
+  const adapter = new FakeRepairAdapter();
+  const email = "contract-admin@example.test";
+
+  const result = await repairPracticeRoles(adapter, email, "staff", email, true);
+
+  assert.deepEqual(result.grantedRoles, ["staff", "admin", "provider"]);
+  assert.deepEqual(result.policyBindings, ["AccessPolicy/policy-4"]);
 });
 
 test("repair reconciles a drifted composite before leaving membership bindings unchanged", async () => {

@@ -94,7 +94,7 @@ jobs:
             ../tests/agentops/**/*.test.ts \
             ../tests/bulk-data/**/*.test.ts \
             ../tests/mandate-8/**/*.test.ts
-      # The contract bootstrap creates the project and exports MEDPLUM_PROJECT_ID for the policy-sync step.
+      # The contract bootstrap creates the project and exports MEDPLUM_PROJECT_ID for the repair step.
       - name: run Medplum search contract smoke lane
         working-directory: mcp
         env:
@@ -105,6 +105,22 @@ jobs:
         run: |
           node --import tsx --test --test-concurrency=1 tests/searchParamMedplumSmoke.test.ts
           node --import tsx --test --test-concurrency=1 tests/profile-validation.test.ts
+      # The bootstrap uses the same local admin identity; reset Medplum's one-minute login throttle before repair.
+      - name: wait for ephemeral Medplum login throttle reset
+        run: sleep 61
+      # CI-ONLY PRIVILEGED REPAIR: this targets the fresh ephemeral localhost:18103
+      # container project. Never point this invocation at a real practice project.
+      - name: create canonical practice-role policies for live authorization lane
+        env:
+          MEDPLUM_BASE_URL: http://localhost:18103/
+          MEDPLUM_ADMIN_EMAIL: contract-admin@odos.local
+          MEDPLUM_ADMIN_PASSWORD: Odos-contract-CI-Password-1!
+          MEDPLUM_CONTRACT_BOOTSTRAP: "1"
+          ODOS_POSTGRES_URL: postgresql://medplum:medplum@127.0.0.1:15432/medplum
+        run: >-
+          npm run repair-practice-roles --
+          --email "$MEDPLUM_ADMIN_EMAIL"
+          --project "$MEDPLUM_PROJECT_ID"
       # CI-ONLY BREAK-GLASS: --apply is safe only against this fresh ephemeral localhost:18103
       # container project. Never copy this invocation to a real practice project.
       - name: sync canonical practice-role policies for live authorization lane
@@ -118,7 +134,7 @@ jobs:
           --apply
           --bootstrap-service-identity
       - name: run credentialed live authorization lane
-        # The bootstrap supplies MEDPLUM_PROJECT_ID and the preceding sync installs its policies; keep all three ordered.
+        # Bootstrap supplies the project, repair creates canonical policies, and sync repairs their rules; keep this chain ordered.
         working-directory: mcp
         env:
           MEDPLUM_BASE_URL: http://localhost:18103/
