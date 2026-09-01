@@ -6,6 +6,7 @@ import type {
 import { z } from "zod";
 import {
   assertBusinessActionAllowed,
+  staffHasBusinessAction,
   type PracticeRoleId,
 } from "../authz/roles.js";
 import {
@@ -48,7 +49,7 @@ export async function handleAestheticsConsentDefinitionRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to read consent." } };
-  if (!staffMay(staff.actorRole, "chart.read")) {
+  if (!staffHasBusinessAction(staff, "chart.read")) {
     return { status: 403, body: { error: "chart.read role required" } };
   }
   return { status: 200, body: { questionnaire: buildAestheticsConsentQuestionnaire() } };
@@ -60,7 +61,7 @@ export async function handleAestheticsConsentSubmissionRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to submit consent." } };
-  if (!staffMay(staff.actorRole, "aesthetics.procedure.write")) {
+  if (!staffHasBusinessAction(staff, "aesthetics.procedure.write")) {
     return { status: 403, body: { error: "aesthetics.procedure.write role required" } };
   }
   const parsed = consentSchema.safeParse(input.body);

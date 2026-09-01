@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Observation, Provenance } from "@medplum/fhirtypes";
 import { z } from "zod";
-import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
+import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../fhir/ophthalmology/codeBindings.js";
 import { odosConcept } from "../fhir/ophthalmology/extensions.js";
 import {
@@ -117,7 +117,7 @@ export async function handleWearingDefinitionRequest(
   if (!staff) {
     return { status: 401, body: { error: "Authentication required to read Wearing definition." } };
   }
-  if (!staffMay(staff.actorRole, "chart.read")) {
+  if (!staffHasBusinessAction(staff, "chart.read")) {
     return { status: 403, body: { error: "chart.read role required" } };
   }
   return {
@@ -134,7 +134,7 @@ export async function handleAutoRefractionDefinitionRequest(
   if (!staff) {
     return { status: 401, body: { error: "Authentication required to read auto-refraction definition." } };
   }
-  if (!staffMay(staff.actorRole, "chart.read")) {
+  if (!staffHasBusinessAction(staff, "chart.read")) {
     return { status: 403, body: { error: "chart.read role required" } };
   }
   const definitions = resolveAutoRefractionDefinitions(deps.findingDefinitions?.());
@@ -157,7 +157,7 @@ export async function handleWearingCaptureRequest(
   if (!staff) {
     return { status: 401, body: { error: "Authentication required to save Wearing findings." } };
   }
-  if (!staffMay(staff.actorRole, "chart.write")) {
+  if (!staffHasBusinessAction(staff, "chart.write")) {
     return { status: 403, body: { error: "chart.write role required" } };
   }
   const parsed = wearingRequestSchema.safeParse(input.body);
@@ -242,7 +242,7 @@ export async function handleAutoRefractionCaptureRequest(
   if (!staff) {
     return { status: 401, body: { error: "Authentication required to save auto-refraction findings." } };
   }
-  if (!staffMay(staff.actorRole, "chart.write")) {
+  if (!staffHasBusinessAction(staff, "chart.write")) {
     return { status: 403, body: { error: "chart.write role required" } };
   }
   const parsed = autoRefractionRequestSchema.safeParse(input.body);

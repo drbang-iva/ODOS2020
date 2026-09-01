@@ -3,7 +3,11 @@ import type { AddressInfo } from "node:net";
 import { test } from "node:test";
 import type { Appointment, Bundle, DocumentReference, Encounter, Patient, Provenance, Resource, Task } from "@medplum/fhirtypes";
 import express from "express";
-import { registerClinicRoutes } from "../src/clinic/clinic-routes.js";
+import {
+  handlePatientInactivationRequest,
+  handlePatientMergeRequest,
+  registerClinicRoutes,
+} from "../src/clinic/clinic-routes.js";
 import { loadClinicSummary } from "../src/clinic/clinic-summary.js";
 import { PATIENT_STICKY_NOTE_IDENTIFIER_SYSTEM } from "../src/clinic/patient-overview.js";
 
@@ -32,6 +36,61 @@ test("POST /clinic/patients is an authenticated registration route", async () =>
       listener.close((error) => error ? reject(error) : resolve())
     );
   }
+});
+
+test("patient inactivation and merge require their effective person actions and use attributed transactions", async () => {
+  const patients = new Map<string, Patient>([
+    ["source", { resourceType: "Patient", id: "source", active: true, meta: { versionId: "2" } }],
+    ["target", { resourceType: "Patient", id: "target", active: true, meta: { versionId: "4" } }],
+  ]);
+  const transactions: Bundle[] = [];
+  const serviceFhir = {
+    read: async (_resourceType: "Patient", id: string) => structuredClone(patients.get(id)),
+    executeTransactionAsActor: async (bundle: Bundle) => {
+      transactions.push(bundle);
+      return { resourceType: "Bundle", type: "transaction-response" } satisfies Bundle;
+    },
+  };
+  const staff = (businessActions: string[]) => ({
+    staffReference: "Practitioner/owner",
+    actorRole: "admin" as const,
+    roles: ["admin" as const],
+    businessActions,
+    fhir: {} as never,
+  });
+  const deps = {
+    authenticateService: async () => undefined,
+    authenticate: async () => staff([]),
+    serviceFhir: serviceFhir as never,
+  };
+
+  const denied = await handlePatientInactivationRequest(deps, staff([]) as never, "source", { reason: "duplicate" });
+  assert.deepEqual(denied, { status: 403, body: { error: "patient.inactivate action required." } });
+  assert.equal(transactions.length, 0);
+
+  const inactivated = await handlePatientInactivationRequest(
+    deps,
+    staff(["patient.inactivate"]) as never,
+    "source",
+    { reason: "duplicate" },
+  );
+  assert.equal(inactivated.status, 200);
+  assert.equal(transactions[0]?.entry?.[0]?.resource?.resourceType, "Patient");
+  assert.equal((transactions[0]?.entry?.[0]?.resource as Patient).active, false);
+  assert.equal(transactions[0]?.entry?.[0]?.request?.ifMatch, 'W/"2"');
+
+  const merged = await handlePatientMergeRequest(
+    deps,
+    staff(["patient.merge"]) as never,
+    "source",
+    { targetPatientId: "target", reason: "same person" },
+  );
+  assert.equal(merged.status, 200);
+  const [source, target] = transactions[1]!.entry!.map((entry) => entry.resource as Patient);
+  assert.equal(source.active, false);
+  assert.deepEqual(source.link, [{ other: { reference: "Patient/target" }, type: "replaced-by" }]);
+  assert.deepEqual(target.link, [{ other: { reference: "Patient/source" }, type: "replaces" }]);
+  assert.deepEqual(transactions[1]!.entry!.map((entry) => entry.request?.ifMatch), ['W/"2"', 'W/"4"']);
 });
 
 test("registration uses its action-gated authenticator without replacing other clinic authentication", async () => {

@@ -4,8 +4,8 @@ import type { Application, Request, Response } from "express";
 import { buildOdosAuditEventRow } from "../authz/odosAudit.js";
 import {
   PRACTICE_ROLE_IDS,
-  assertBusinessActionAllowed,
   resolveBusinessActionRole,
+  staffHasBusinessAction,
   type BusinessAction,
   type PracticeRoleId,
 } from "../authz/roles.js";
@@ -343,7 +343,7 @@ export function registerCommsApiRoutes(
       if (providerNames.length === 0) {
         throw new CommsApiCapabilityError("Conversation history is not configured for this practice.");
       }
-      const includeContent = hasBusinessAction(staff.actorRole, "communications.content.read");
+      const includeContent = staffHasBusinessAction(staff, "communications.content.read");
       const listRequest = {
         ...(patientReference ? { patientReference } : {}),
         limit: MAX_CONVERSATIONS_PER_PROVIDER,
@@ -877,18 +877,10 @@ function actingRole(req: Request, staff: CommsStaff, action: BusinessAction): Pr
   if (claimed) {
     if (!PRACTICE_ROLE_IDS.includes(claimed as PracticeRoleId)) return undefined;
     const role = claimed as PracticeRoleId;
-    return staff.roles.includes(role) && hasBusinessAction(role, action) ? role : undefined;
+    return staff.roles.includes(role) && staffHasBusinessAction(staff, action) ? role : undefined;
   }
-  return resolveBusinessActionRole(staff.roles, action);
-}
-
-function hasBusinessAction(role: PracticeRoleId, action: BusinessAction): boolean {
-  try {
-    assertBusinessActionAllowed(role, action);
-    return true;
-  } catch {
-    return false;
-  }
+  if (!staffHasBusinessAction(staff, action)) return undefined;
+  return resolveBusinessActionRole(staff.roles, action) ?? staff.roles[0];
 }
 
 function enrollmentStore(deps: CommsApiRouteDeps): EducationEnrollmentStore {

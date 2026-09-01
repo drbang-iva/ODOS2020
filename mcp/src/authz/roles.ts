@@ -56,9 +56,66 @@ export const BUSINESS_ACTIONS = [
   "communications.send",
   "communications.call",
   "communications.optout.manage",
+  "patient.inactivate",
+  "patient.merge",
 ] as const;
 
 export type BusinessAction = (typeof BUSINESS_ACTIONS)[number];
+
+export const BASELINE_BUSINESS_ACTIONS = [
+  "chart.read",
+  "patients.register",
+  "billing-context.read",
+  "document.fax-send",
+  "communications.read",
+  "communications.content.read",
+  "communications.send",
+  "communications.call",
+] as const satisfies readonly BusinessAction[];
+
+export const CREDENTIAL_BOUND_BUSINESS_ACTIONS = [
+  "clinical.sign",
+  "aesthetics.procedure.write",
+  "break-glass.invoke",
+  "protocols.author",
+] as const satisfies readonly BusinessAction[];
+
+export const OWNER_ONLY_BUSINESS_ACTIONS = [
+  "identity.manage",
+] as const satisfies readonly BusinessAction[];
+
+export const GRANTABLE_BUSINESS_ACTIONS: readonly BusinessAction[] = BUSINESS_ACTIONS.filter(
+  (action) =>
+    !BASELINE_BUSINESS_ACTIONS.includes(action as (typeof BASELINE_BUSINESS_ACTIONS)[number]) &&
+    !CREDENTIAL_BOUND_BUSINESS_ACTIONS.includes(action as (typeof CREDENTIAL_BOUND_BUSINESS_ACTIONS)[number]) &&
+    !OWNER_ONLY_BUSINESS_ACTIONS.includes(action as (typeof OWNER_ONLY_BUSINESS_ACTIONS)[number]),
+);
+
+export interface EffectiveBusinessActionResult {
+  actions: BusinessAction[];
+  ignoredGranted: BusinessAction[];
+  ignoredRevoked: BusinessAction[];
+  malformed: boolean;
+}
+
+const EFFECTIVE_BUSINESS_ACTIONS_BY_ROLE_SET = new WeakMap<object, readonly BusinessAction[]>();
+
+export type BusinessActionClass = "baseline" | "credential-bound" | "owner-only" | "grantable";
+
+export function businessActionClass(action: BusinessAction): BusinessActionClass {
+  if (BASELINE_BUSINESS_ACTIONS.includes(action as (typeof BASELINE_BUSINESS_ACTIONS)[number])) {
+    return "baseline";
+  }
+  if (CREDENTIAL_BOUND_BUSINESS_ACTIONS.includes(
+    action as (typeof CREDENTIAL_BOUND_BUSINESS_ACTIONS)[number],
+  )) {
+    return "credential-bound";
+  }
+  if (OWNER_ONLY_BUSINESS_ACTIONS.includes(action as (typeof OWNER_ONLY_BUSINESS_ACTIONS)[number])) {
+    return "owner-only";
+  }
+  return "grantable";
+}
 
 export interface OdosRoleDeclaration {
   id: PracticeRoleId;
@@ -976,7 +1033,6 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
       "inventory.price",
       "claims.manage",
       "finding-definitions.write",
-      "protocols.author",
       "document.fax-send",
       "communications.read",
       "communications.content.read",
@@ -1167,9 +1223,15 @@ export function buildProjectMembershipAccess(input: {
 export function assertBusinessActionAllowed(
   roleId: PracticeRoleId,
   businessAction: BusinessAction,
+  effectiveActions?: readonly BusinessAction[],
 ): void {
+  if (effectiveActions && !effectiveActions.includes(businessAction)) {
+    throw new Error(
+      `ODOS RBAC preflight denied: person-level permissions lack business action ${businessAction}.`,
+    );
+  }
   const role = getRoleDeclaration(roleId);
-  if (!role.businessActions.includes(businessAction)) {
+  if (!effectiveActions && !role.businessActions.includes(businessAction)) {
     throw new Error(
       `ODOS RBAC preflight denied: role ${roleId} lacks business action ${businessAction}.`,
     );
@@ -1179,12 +1241,101 @@ export function assertBusinessActionAllowed(
 export function resolveBusinessActionRole(
   roles: readonly PracticeRoleId[],
   businessAction: BusinessAction,
+  effectiveActions?: readonly BusinessAction[],
 ): PracticeRoleId | undefined {
-  return PRACTICE_ROLE_IDS.find(
+  const resolvedEffectiveActions = effectiveActions ?? EFFECTIVE_BUSINESS_ACTIONS_BY_ROLE_SET.get(roles);
+  if (resolvedEffectiveActions && !resolvedEffectiveActions.includes(businessAction)) return undefined;
+  const role = PRACTICE_ROLE_IDS.find(
     (roleId) =>
       roles.includes(roleId) &&
       getRoleDeclaration(roleId).businessActions.includes(businessAction),
   );
+  return role ?? (resolvedEffectiveActions?.includes(businessAction) ? roles[0] : undefined);
+}
+
+export function bindEffectiveBusinessActions(
+  roles: readonly PracticeRoleId[],
+  actions: readonly BusinessAction[],
+): void {
+  EFFECTIVE_BUSINESS_ACTIONS_BY_ROLE_SET.set(roles, actions);
+}
+
+export function staffHasBusinessAction(
+  staff: {
+    actorRole?: unknown;
+    roles?: readonly PracticeRoleId[];
+    businessActions?: readonly BusinessAction[];
+  },
+  action: BusinessAction,
+): boolean {
+  if (staff.businessActions) return staff.businessActions.includes(action);
+  const roles = staff.roles?.length
+    ? staff.roles
+    : PRACTICE_ROLE_IDS.includes(staff.actorRole as PracticeRoleId)
+    ? [staff.actorRole as PracticeRoleId]
+    : [];
+  return resolveBusinessActionRole(roles, action) !== undefined;
+}
+
+export function effectiveBusinessActions(
+  roles: readonly PracticeRoleId[],
+  granted: unknown,
+  revoked: unknown,
+): EffectiveBusinessActionResult {
+  const roleUnion = new Set<BusinessAction>(
+    roles.flatMap((role) => getRoleDeclaration(role).businessActions),
+  );
+  const parsedGranted = parseBusinessActionDelta(granted);
+  const parsedRevoked = parseBusinessActionDelta(revoked);
+  if (!parsedGranted || !parsedRevoked) {
+    return {
+      actions: BUSINESS_ACTIONS.filter((action) => roleUnion.has(action)),
+      ignoredGranted: [],
+      ignoredRevoked: [],
+      malformed: true,
+    };
+  }
+
+  const effective = new Set<BusinessAction>([
+    ...BASELINE_BUSINESS_ACTIONS,
+    ...roleUnion,
+  ]);
+  const ignoredGranted: BusinessAction[] = [];
+  for (const action of parsedGranted) {
+    if (GRANTABLE_BUSINESS_ACTIONS.includes(action)) effective.add(action);
+    else appendUniqueAction(ignoredGranted, action);
+  }
+  const ignoredRevoked: BusinessAction[] = [];
+  for (const action of parsedRevoked) {
+    if (BASELINE_BUSINESS_ACTIONS.includes(action as (typeof BASELINE_BUSINESS_ACTIONS)[number])) {
+      appendUniqueAction(ignoredRevoked, action);
+    } else {
+      effective.delete(action);
+    }
+  }
+
+  return {
+    actions: BUSINESS_ACTIONS.filter((action) => effective.has(action)),
+    ignoredGranted,
+    ignoredRevoked,
+    malformed: false,
+  };
+}
+
+function parseBusinessActionDelta(value: unknown): BusinessAction[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const parsed: BusinessAction[] = [];
+  for (const action of value) {
+    if (typeof action !== "string" || !BUSINESS_ACTIONS.includes(action as BusinessAction)) {
+      return undefined;
+    }
+    appendUniqueAction(parsed, action as BusinessAction);
+  }
+  return parsed;
+}
+
+function appendUniqueAction(actions: BusinessAction[], action: BusinessAction): void {
+  if (!actions.includes(action)) actions.push(action);
 }
 
 export function assertAestheticsProviderScope(input: AestheticsProviderScopeInput): void {

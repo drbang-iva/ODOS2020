@@ -1,6 +1,6 @@
 import type { Bundle, Observation, ObservationComponent, Provenance } from "@medplum/fhirtypes";
 import { z } from "zod";
-import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
+import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../fhir/ophthalmology/codeBindings.js";
 import { ODOS_EXTENSION_URLS, odosConcept } from "../fhir/ophthalmology/extensions.js";
 import {
@@ -101,7 +101,7 @@ export async function handleCustomSectionCaptureRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to save custom section findings." } };
-  if (!staffMay(staff.actorRole, "chart.write")) {
+  if (!staffHasBusinessAction(staff, "chart.write")) {
     return { status: 403, body: { error: "chart.write role required" } };
   }
   const definition = resolveCustomDefinition(deps.findingDefinitions?.(), input.params, true);
@@ -278,7 +278,7 @@ export async function handleCustomSectionHistoryRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to read custom section history." } };
-  if (!staffMay(staff.actorRole, "chart.read")) {
+  if (!staffHasBusinessAction(staff, "chart.read")) {
     return { status: 403, body: { error: "chart.read role required" } };
   }
   const definition = resolveCustomDefinition(deps.findingDefinitions?.(), input.params, false);

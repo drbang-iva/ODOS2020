@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
+import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import {
   FhirDiagnosisCatalogStore,
   type DiagnosisCatalogFhirClient,
@@ -72,8 +72,8 @@ export async function handleDiagnosisCatalogListRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to read the diagnosis catalog." } };
-  const canWrite = staffMay(staff.actorRole, "finding-definitions.write");
-  if (!staffMay(staff.actorRole, "chart.read") && !canWrite) {
+  const canWrite = staffHasBusinessAction(staff, "finding-definitions.write");
+  if (!staffHasBusinessAction(staff, "chart.read") && !canWrite) {
     return { status: 403, body: { error: "chart.read or finding-definitions.write role required" } };
   }
   return { status: 200, body: { canWrite, diagnoses: await new FhirDiagnosisCatalogStore(staff.fhir).list() } };
@@ -85,7 +85,7 @@ export async function handleDiagnosisCatalogCreationRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to manage the diagnosis catalog." } };
-  if (!staffMay(staff.actorRole, "finding-definitions.write")) {
+  if (!staffHasBusinessAction(staff, "finding-definitions.write")) {
     return { status: 403, body: { error: "finding-definitions.write role required" } };
   }
   const parsed = createSchema.safeParse(input.body);
@@ -125,7 +125,7 @@ export async function handleDiagnosisCatalogMutationRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to manage the diagnosis catalog." } };
-  if (!staffMay(staff.actorRole, "finding-definitions.write")) {
+  if (!staffHasBusinessAction(staff, "finding-definitions.write")) {
     return { status: 403, body: { error: "finding-definitions.write role required" } };
   }
   const stableKey = readStableKey(input.params);

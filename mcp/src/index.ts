@@ -76,7 +76,12 @@ import {
 import {
   grantPracticeRoles,
   resolveProjectCompositeAccessPolicy,
+  setMembershipBusinessActions,
 } from "./authz/role-grants.js";
+import {
+  buildStaffPermissionMember,
+  registerStaffPermissionRoutes,
+} from "./desk/staff-permissions.js";
 import { handleChargeRequest } from "./payments/payment-charge-handler.js";
 import { createPaymentDispatch } from "./payments/payment-config.js";
 import { registerPatientPaymentRoutes } from "./payments/payment-routes.js";
@@ -519,6 +524,7 @@ import type {
   MedicationStatement,
   Observation,
   Patient,
+  Project,
   ProjectMembership,
   Procedure,
   Provenance,
@@ -7684,6 +7690,113 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         },
         recordAudit: async (row) => {
           await auditRuntime.record(row, () => undefined);
+        },
+      });
+      registerStaffPermissionRoutes(app, {
+        authenticateService: authenticateWithMedplum,
+        authenticate: async (header) => {
+          const resolved = await resolveStaffRoles({
+            baseUrl: BASE_URL,
+            authHeader: header,
+            serviceClient: fhir,
+          });
+          const projectId = resolved?.project.reference?.match(/^Project\/([^/]+)$/)?.[1];
+          return resolved && projectId ? {
+            staffReference: resolved.staffReference,
+            userReference: resolved.userReference,
+            projectId,
+            businessActions: resolved.businessActions,
+          } : null;
+        },
+        resolveProjectOwnerUserReference: async (projectId) =>
+          (await fhir.read<Project>("Project", projectId)).owner?.reference,
+        listMembers: async (projectId) => {
+          const project = await fhir.read<Project>("Project", projectId);
+          const ownerUserReference = project.owner?.reference;
+          if (!ownerUserReference) throw new Error(`Project/${projectId} is missing its owner reference.`);
+          const memberships = (await searchProjectAll<ProjectMembership>(
+            fhir,
+            "ProjectMembership",
+            projectId,
+            { "active:not": "false" },
+          )).filter((membership) =>
+            membership.active !== false && membership.project.reference === `Project/${projectId}`
+          );
+          const policyIds = [...new Set(memberships.flatMap((membership) => [
+            ...(membership.access ?? []).flatMap((access) =>
+              access.policy.reference?.match(/^AccessPolicy\/([^/]+)$/)?.[1] ?? []
+            ),
+            ...(membership.accessPolicy?.reference?.match(/^AccessPolicy\/([^/]+)$/)?.[1] ?? []),
+          ]))];
+          const policies = await Promise.all(policyIds.map((id) => fhir.read<AccessPolicy>("AccessPolicy", id)));
+          return memberships.map((membership) => buildStaffPermissionMember({
+            membership,
+            policies,
+            ownerUserReference,
+          }));
+        },
+        updateMember: async (caller, membershipId, granted, revoked) => {
+          const memberships = (await searchProjectAll<ProjectMembership>(
+            fhir,
+            "ProjectMembership",
+            caller.projectId,
+            { _id: membershipId, _count: "2" },
+          )).filter((membership) =>
+            membership.id === membershipId &&
+            membership.active !== false &&
+            membership.project.reference === `Project/${caller.projectId}`
+          );
+          if (memberships.length !== 1) {
+            throw new Error(`Expected one active ProjectMembership/${membershipId}; found ${memberships.length}.`);
+          }
+          const membership = memberships[0]!;
+          await setMembershipBusinessActions(
+            { target: `ProjectMembership/${membershipId}`, granted, revoked },
+            {
+              resolveTarget: async () => ({
+                email: membership.userName ?? "unknown",
+                membership,
+              }),
+              resolveProjectOwnerUserReference: async (projectId) =>
+                (await fhir.read<Project>("Project", projectId)).owner?.reference,
+              patchMembership: (id, operations, versionId) =>
+                fhir.patch<ProjectMembership>("ProjectMembership", id, operations, {
+                  "If-Match": `W/\"${versionId}\"`,
+                  "X-ODOS-Source": "mcp/staff-permission-toggle",
+                }),
+              recordMembershipChange: (target, operation) => auditRuntime.record(
+                buildOdosAuditEventRow({
+                  eventType: "role-change",
+                  actorId: caller.staffReference,
+                  actorRole: "admin",
+                  targetReference: `ProjectMembership/${membershipId}`,
+                  resourceType: "ProjectMembership",
+                  resourceId: membershipId,
+                  actionOutcome: "granted",
+                  actionReason: `per-person business actions updated for ${target.email}`,
+                }),
+                operation,
+              ),
+            },
+          );
+          return (await (async () => {
+            const project = await fhir.read<Project>("Project", caller.projectId);
+            const ownerUserReference = project.owner?.reference;
+            if (!ownerUserReference) throw new Error(`Project/${caller.projectId} is missing its owner reference.`);
+            const updatedMembership = await fhir.read<ProjectMembership>("ProjectMembership", membershipId);
+            const policyIds = [...new Set([
+              ...(updatedMembership.access ?? []).flatMap((access) =>
+                access.policy.reference?.match(/^AccessPolicy\/([^/]+)$/)?.[1] ?? []
+              ),
+              ...(updatedMembership.accessPolicy?.reference?.match(/^AccessPolicy\/([^/]+)$/)?.[1] ?? []),
+            ])];
+            const policies = await Promise.all(policyIds.map((id) => fhir.read<AccessPolicy>("AccessPolicy", id)));
+            return buildStaffPermissionMember({
+              membership: updatedMembership,
+              policies,
+              ownerUserReference,
+            });
+          })());
         },
       });
       registerClinicRoutes(app, {

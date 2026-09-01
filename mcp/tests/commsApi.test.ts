@@ -951,6 +951,17 @@ test("a bearer-authenticated staff membership reaches the opt-out clear through 
   }
 });
 
+test("a per-person revocation overrides the staff role on communications routes", async () => {
+  const fixture = await startServer({ businessActions: [] });
+  try {
+    const response = await request(fixture.base, "/communications/education", "GET", undefined, "staff");
+    assert.equal(response.status, 403);
+    assert.deepEqual(await response.json(), { error: "communications.read role required" });
+  } finally {
+    await fixture.close();
+  }
+});
+
 test("conversation reads use caller-bound FHIR and expose bodies to front desk and clinical content roles", async () => {
   const fixture = await startServer();
   try {
@@ -1524,6 +1535,7 @@ async function startServer(options: {
   conversationFailures?: string[];
   conversationUnsupported?: string[];
   resolvedStaffAuthentication?: boolean;
+  businessActions?: readonly import("../src/authz/roles.js").BusinessAction[];
   excludePatientRead?: boolean;
   excludePatientWrite?: boolean;
   chartDispatchLane?: "locked_clinical" | "staff_switchable";
@@ -1936,11 +1948,12 @@ async function startServer(options: {
         },
       } as never;
       authenticatedFhirs.push(callerFhir);
-      if (resolvedStaff) return { ...resolvedStaff, fhir: callerFhir };
+      if (resolvedStaff) return { ...resolvedStaff, businessActions: options.businessActions ?? resolvedStaff.businessActions, fhir: callerFhir };
       return {
         staffReference: `Practitioner/${role}`,
         actorRole: role as never,
         roles: [role as never],
+        businessActions: options.businessActions,
         fhir: callerFhir,
       };
     },

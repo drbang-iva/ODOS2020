@@ -13,7 +13,7 @@ import type {
 } from "@medplum/fhirtypes";
 import { createHash } from "node:crypto";
 import { buildOdosAuditEventRow, type OdosActorRole, type OdosAuditEventRecord } from "../authz/odosAudit.js";
-import { assertBusinessActionAllowed, PRACTICE_ROLE_IDS, type PracticeRoleId } from "../authz/roles.js";
+import { staffHasBusinessAction, type BusinessAction } from "../authz/roles.js";
 import type { MedplumClient } from "../fhir-client.js";
 import { FhirSearchLimitError, searchAll } from "../fhir-search.js";
 import {
@@ -143,6 +143,7 @@ export const STEDI_277CA_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSy
 export interface AuthenticatedClaimsStaff {
   staffReference: string;
   actorRole: OdosActorRole;
+  businessActions?: readonly BusinessAction[];
   fhir: Pick<MedplumClient, "baseUrl" | "create" | "search" | "searchUrl" | "read" | "update">
     & Partial<Pick<MedplumClient, "executeTransaction">>;
 }
@@ -2386,20 +2387,10 @@ async function authenticateClaimsManager(
     throw error;
   }
   if (!staff) return { status: 401, body: { error: "Authentication required to manage claims." } };
-  if (!staffMayManageClaims(staff.actorRole)) {
+  if (!staffHasBusinessAction(staff, "claims.manage")) {
     return { status: 403, body: { error: "claims.manage role required" } };
   }
   return staff;
-}
-
-function staffMayManageClaims(actorRole: OdosActorRole): boolean {
-  if (!PRACTICE_ROLE_IDS.includes(actorRole as PracticeRoleId)) return false;
-  try {
-    assertBusinessActionAllowed(actorRole as PracticeRoleId, "claims.manage");
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 async function audit(

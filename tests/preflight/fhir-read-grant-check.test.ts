@@ -289,8 +289,8 @@ test("live FHIR read grant check covers all four chart resources through compile
   const result = runFhirReadGrantCheck();
 
   assert.deepEqual(result.missingResourceTypes, []);
-  assert.deepEqual(result.excludedServiceIdentityResourceTypes, ["CodeSystem", "ProjectMembership", "User"]);
-  assert.equal(result.excludedNonFhirCallSites.length, 6);
+  assert.deepEqual(result.excludedServiceIdentityResourceTypes, ["CodeSystem", "Project", "ProjectMembership", "User"]);
+  assert.equal(result.excludedNonFhirCallSites.length, 7);
   assert.equal(result.excludedServiceIdentityWriteCallSites?.length, 35);
   assert.equal(
     result.excludedServiceIdentityWriteCallSites?.filter((entry) =>

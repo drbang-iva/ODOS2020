@@ -11,8 +11,11 @@ import {
   grantPracticeRoles,
   reconcileMembershipAccess,
   resolveProjectCompositeAccessPolicy,
+  setMembershipBusinessActions,
+  type MembershipBusinessActionDependencies,
   type PracticeRoleGrantDependencies,
 } from "../src/authz/role-grants.js";
+import { ODOS_MEMBERSHIP_BUSINESS_ACTIONS_EXTENSION_URL } from "../src/authz/membership-business-actions.js";
 import {
   buildMedplumAccessPolicy,
   buildMedplumCompositeAccessPolicy,
@@ -361,6 +364,79 @@ test("grantPracticeRoles refuses the configured service identity unless explicit
     allowed.deps,
   );
   assert.equal(result.changed, true);
+});
+
+test("the owner's membership rejects every toggle mutation before audit or patch", async () => {
+  const membership = baseMembership({ user: { reference: "User/owner" } });
+  let auditCount = 0;
+  let patchCount = 0;
+  const deps: MembershipBusinessActionDependencies = {
+    resolveTarget: async () => ({ email: "owner@example.test", membership }),
+    resolveProjectOwnerUserReference: async () => "User/owner",
+    patchMembership: async () => {
+      patchCount += 1;
+      return membership;
+    },
+    recordMembershipChange: async (_target, operation) => {
+      auditCount += 1;
+      return operation();
+    },
+  };
+
+  await assert.rejects(
+    setMembershipBusinessActions(
+      { target: "ProjectMembership/membership-1", granted: ["payment.void"], revoked: [] },
+      deps,
+    ),
+    /owner.*toggle-immune/i,
+  );
+  assert.deepEqual({ auditCount, patchCount }, { auditCount: 0, patchCount: 0 });
+});
+
+test("a non-owner toggle change patches the ODOS extension through the audited membership path", async () => {
+  const membership = baseMembership({
+    extension: [{ url: "https://example.test/keep", valueString: "yes" }],
+  });
+  let auditCount = 0;
+  let operations: JsonPatchOperation[] = [];
+  const deps: MembershipBusinessActionDependencies = {
+    resolveTarget: async () => ({ email: "staff@example.test", membership }),
+    resolveProjectOwnerUserReference: async () => "User/owner",
+    patchMembership: async (_id, nextOperations) => {
+      operations = nextOperations;
+      return membership;
+    },
+    recordMembershipChange: async (_target, operation) => {
+      auditCount += 1;
+      return operation();
+    },
+  };
+
+  const result = await setMembershipBusinessActions(
+    {
+      target: "ProjectMembership/membership-1",
+      granted: ["payment.void"],
+      revoked: ["chart.write"],
+    },
+    deps,
+  );
+
+  assert.equal(result.changed, true);
+  assert.equal(auditCount, 1);
+  assert.deepEqual(operations, [{
+    op: "replace",
+    path: "/extension",
+    value: [
+      { url: "https://example.test/keep", valueString: "yes" },
+      {
+        url: ODOS_MEMBERSHIP_BUSINESS_ACTIONS_EXTENSION_URL,
+        extension: [
+          { url: "granted", valueCode: "payment.void" },
+          { url: "revoked", valueCode: "chart.write" },
+        ],
+      },
+    ],
+  }]);
 });
 
 function baseMembership(overrides: Partial<ProjectMembership> = {}): ProjectMembership {

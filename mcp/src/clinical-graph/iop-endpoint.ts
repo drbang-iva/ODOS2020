@@ -1,6 +1,6 @@
 import type { CodeableConcept, Observation, Provenance } from "@medplum/fhirtypes";
 import { z } from "zod";
-import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
+import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import { iopMethodConcept } from "../fhir/ophthalmology/iop.js";
 import { odosConcept } from "../fhir/ophthalmology/extensions.js";
 import {
@@ -114,7 +114,7 @@ export async function handleIopDefinitionRequest(
   if (!staff) {
     return { status: 401, body: { error: "Authentication required to read IOP definition." } };
   }
-  if (!staffMay(staff.actorRole, "chart.read")) {
+  if (!staffHasBusinessAction(staff, "chart.read")) {
     return { status: 403, body: { error: "chart.read role required" } };
   }
 
@@ -130,7 +130,7 @@ export async function handleIopCaptureRequest(
   if (!staff) {
     return { status: 401, body: { error: "Authentication required to save IOP findings." } };
   }
-  if (!staffMay(staff.actorRole, "chart.write")) {
+  if (!staffHasBusinessAction(staff, "chart.write")) {
     return { status: 403, body: { error: "chart.write role required" } };
   }
 

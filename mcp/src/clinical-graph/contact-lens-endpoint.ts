@@ -3,6 +3,7 @@ import type { Bundle, Observation, Provenance } from "@medplum/fhirtypes";
 import { z } from "zod";
 import {
   assertBusinessActionAllowed,
+  staffHasBusinessAction,
   type BusinessAction,
   type PracticeRoleId,
 } from "../authz/roles.js";
@@ -217,7 +218,7 @@ export async function handleSoftContactLensDefinitionRequest(
   if (!staff) {
     return { status: 401, body: { error: "Authentication required to read soft contact lens definition." } };
   }
-  if (!staffMay(staff.actorRole, "chart.read")) {
+  if (!staffHasBusinessAction(staff, "chart.read")) {
     return { status: 403, body: { error: "chart.read role required" } };
   }
   return {
@@ -234,7 +235,7 @@ export async function handleSoftContactLensCaptureRequest(
   if (!staff) {
     return { status: 401, body: { error: "Authentication required to save soft contact lens findings." } };
   }
-  if (!staffMay(staff.actorRole, "chart.write")) {
+  if (!staffHasBusinessAction(staff, "chart.write")) {
     return { status: 403, body: { error: "chart.write role required" } };
   }
   const parsed = softContactLensRequestSchema.safeParse(input.body);
@@ -282,14 +283,14 @@ export async function handleSpecialtyContactLensDefinitionRequest(
   if (!staff) {
     return { status: 401, body: { error: "Authentication required to read specialty contact lens definition." } };
   }
-  if (!staffMay(staff.actorRole, "chart.read")) {
+  if (!staffHasBusinessAction(staff, "chart.read")) {
     return { status: 403, body: { error: "chart.read role required" } };
   }
   return {
     status: 200,
     body: {
       definition: definitionSummary(resolveSpecialtyContactLensDefinition(deps.findingDefinitions?.())),
-      canManageFields: staffMay(staff.actorRole, "finding-definitions.write"),
+      canManageFields: staffHasBusinessAction(staff, "finding-definitions.write"),
     },
   };
 }
@@ -302,7 +303,7 @@ export async function handleSpecialtyContactLensCaptureRequest(
   if (!staff) {
     return { status: 401, body: { error: "Authentication required to save specialty contact lens findings." } };
   }
-  if (!staffMay(staff.actorRole, "chart.write")) {
+  if (!staffHasBusinessAction(staff, "chart.write")) {
     return { status: 403, body: { error: "chart.write role required" } };
   }
   const parsed = specialtyContactLensRequestSchema.safeParse(input.body);
@@ -356,7 +357,7 @@ export async function handleSpecialtyKeratometryRequest(
   if (!staff) {
     return { status: 401, body: { error: "Authentication required to read specialty contact lens keratometry." } };
   }
-  if (!staffMay(staff.actorRole, "chart.read")) {
+  if (!staffHasBusinessAction(staff, "chart.read")) {
     return { status: 403, body: { error: "chart.read role required" } };
   }
   const parsed = keratometryQuerySchema.safeParse(input.query);

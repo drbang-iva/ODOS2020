@@ -5,10 +5,14 @@ import {
   type MedplumClient,
 } from "../fhir-client.js";
 import {
+  bindEffectiveBusinessActions,
+  effectiveBusinessActions,
   ODOS_PRACTICE_ROLE_SYSTEM,
   PRACTICE_ROLE_IDS,
+  type BusinessAction,
   type PracticeRoleId,
 } from "../authz/roles.js";
+import { readMembershipBusinessActionDeltas } from "../authz/membership-business-actions.js";
 import type { AdapterRegistration } from "./payment-config.js";
 import { assertStripeAdapterConfig, STRIPE_BASE_URL } from "./adapters/stripe-adapter.js";
 
@@ -129,9 +133,17 @@ export async function verifyMedplumStaffToken(opts: {
 
 export interface ResolvedStaffRoles {
   staffReference: string;
+  userReference: string;
   email: string;
   roles: PracticeRoleId[];
   project: Reference<Project>;
+  membershipReference?: string;
+  businessActions: BusinessAction[];
+  grantedBusinessActions: BusinessAction[];
+  revokedBusinessActions: BusinessAction[];
+  ignoredGrantedBusinessActions: BusinessAction[];
+  ignoredRevokedBusinessActions: BusinessAction[];
+  membershipBusinessActionsMalformed: boolean;
 }
 
 export class StaffRoleServiceUnavailableError extends Error {
@@ -186,9 +198,14 @@ export async function authenticateStaffRoute(opts: {
   fetchImpl?: typeof fetch;
 }): Promise<{
   staffReference: string;
+  userReference: string;
   project: Reference<Project>;
   actorRole: PracticeRoleId;
   roles: PracticeRoleId[];
+  businessActions: BusinessAction[];
+  ignoredGrantedBusinessActions: BusinessAction[];
+  ignoredRevokedBusinessActions: BusinessAction[];
+  membershipBusinessActionsMalformed: boolean;
   fhir: MedplumClient;
   binaryAuth: { baseUrl: string; accessToken: string };
 } | null> {
@@ -197,9 +214,14 @@ export async function authenticateStaffRoute(opts: {
   if (!resolved || !actorRole || !opts.authHeader) return null;
   return {
     staffReference: resolved.staffReference,
+    userReference: resolved.userReference,
     project: resolved.project,
     actorRole,
     roles: resolved.roles,
+    businessActions: resolved.businessActions,
+    ignoredGrantedBusinessActions: resolved.ignoredGrantedBusinessActions,
+    ignoredRevokedBusinessActions: resolved.ignoredRevokedBusinessActions,
+    membershipBusinessActionsMalformed: resolved.membershipBusinessActionsMalformed,
     fhir: createStaffRouteFhirClient({
       baseUrl: opts.baseUrl,
       accessToken: opts.authHeader.slice("Bearer ".length),
@@ -258,6 +280,13 @@ async function resolveRolesWithServiceClient(
     }
   }
   const roles = PRACTICE_ROLE_IDS.filter((role) => found.has(role));
+  const deltas = readMembershipBusinessActionDeltas(membership);
+  const actionResolution = effectiveBusinessActions(
+    roles,
+    deltas.malformed ? undefined : deltas.granted,
+    deltas.malformed ? undefined : deltas.revoked,
+  );
+  bindEffectiveBusinessActions(roles, actionResolution.actions);
   const userReference = verified.userReference ??
     membership.user.reference;
   let email = verified.email;
@@ -267,9 +296,17 @@ async function resolveRolesWithServiceClient(
   }
   return {
     staffReference: verified.staffReference,
+    userReference: userReference ?? membership.user.reference ?? "unknown",
     email: email ?? "unknown",
     roles,
     project: membership.project,
+    ...(membership.id ? { membershipReference: `ProjectMembership/${membership.id}` } : {}),
+    businessActions: actionResolution.actions,
+    grantedBusinessActions: deltas.granted,
+    revokedBusinessActions: deltas.revoked,
+    ignoredGrantedBusinessActions: actionResolution.ignoredGranted,
+    ignoredRevokedBusinessActions: actionResolution.ignoredRevoked,
+    membershipBusinessActionsMalformed: deltas.malformed || actionResolution.malformed,
   };
 }
 

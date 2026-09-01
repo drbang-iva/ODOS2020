@@ -249,6 +249,12 @@
       "sliceConsumer": "weno-send-seam"
     },
     {
+      "url": "https://odos2020.com/fhir/StructureDefinition/project-membership-business-actions",
+      "namespace": "authz",
+      "status": "active",
+      "sliceConsumer": "per-person-permissions-s1"
+    },
+    {
       "url": "https://odos2020.com/fhir/StructureDefinition/project-membership-lifecycle-state",
       "namespace": "authz",
       "status": "active",

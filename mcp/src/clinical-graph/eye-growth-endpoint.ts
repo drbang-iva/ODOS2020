@@ -6,7 +6,7 @@ import type {
   Provenance,
 } from "@medplum/fhirtypes";
 import { z } from "zod";
-import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
+import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import { OBSERVATION_AXIAL_LENGTH_PROFILE_URL } from "../fhir/myopiaManagement.js";
 import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../fhir/ophthalmology/codeBindings.js";
 import { odosConcept } from "../fhir/ophthalmology/extensions.js";
@@ -174,7 +174,7 @@ export async function handleMyopiaDefinitionRequest(
 ): Promise<MyopiaProgressionEndpointResult> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to read myopia definitions." } };
-  if (!staffMay(staff.actorRole, "chart.read")) {
+  if (!staffHasBusinessAction(staff, "chart.read")) {
     return { status: 403, body: { error: "chart.read role required" } };
   }
   const definitions = resolveMyopiaDefinitions(deps.findingDefinitions?.());
@@ -196,7 +196,7 @@ export async function handleMyopiaCaptureRequest(
 ): Promise<MyopiaProgressionEndpointResult> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to save myopia findings." } };
-  if (!staffMay(staff.actorRole, "chart.write")) {
+  if (!staffHasBusinessAction(staff, "chart.write")) {
     return { status: 403, body: { error: "chart.write role required" } };
   }
   const parsed = captureRequestSchema.safeParse(input.body);
@@ -263,7 +263,7 @@ export async function handleMyopiaHistoryRequest(
 ): Promise<MyopiaProgressionEndpointResult> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to read myopia progression." } };
-  if (!staffMay(staff.actorRole, "chart.read")) {
+  if (!staffHasBusinessAction(staff, "chart.read")) {
     return { status: 403, body: { error: "chart.read role required" } };
   }
   const parsed = historyQuerySchema.safeParse(input.query);
@@ -403,7 +403,7 @@ export async function handleEyeGrowthVisibilityRequest(
 ): Promise<MyopiaProgressionEndpointResult> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to read eye-growth visibility." } };
-  if (!staffMay(staff.actorRole, "chart.read")) {
+  if (!staffHasBusinessAction(staff, "chart.read")) {
     return { status: 403, body: { error: "chart.read role required" } };
   }
   const parsed = historyQuerySchema.safeParse(input.query);
@@ -444,7 +444,7 @@ export async function handleMyopiaReferencePopulationRequest(
 ): Promise<MyopiaProgressionEndpointResult> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to save reference population." } };
-  if (!staffMay(staff.actorRole, "chart.write")) {
+  if (!staffHasBusinessAction(staff, "chart.write")) {
     return { status: 403, body: { error: "chart.write role required" } };
   }
   const parsed = populationRequestSchema.safeParse(input.body);

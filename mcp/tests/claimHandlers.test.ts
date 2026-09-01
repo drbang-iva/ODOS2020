@@ -2611,6 +2611,25 @@ test("claims.manage protects GET /claims/worklist with the existing claims 401/4
   assert.equal(allowed.searchCalls(), 1);
 });
 
+test("a per-person claims.manage revocation overrides the staff role on Claim.MD handlers", async () => {
+  const fixture = deps();
+  const result = await handleEraWorklistRequest({
+    ...fixture.deps,
+    authenticate: async () => ({
+      staffReference: "Practitioner/staff-1",
+      actorRole: "staff",
+      businessActions: [],
+      fhir: fixture.fhir,
+    }),
+  }, { authHeader: "Bearer good" });
+
+  assert.deepEqual(result, {
+    status: 403,
+    body: { error: "claims.manage role required" },
+  });
+  assert.equal(fixture.searchCalls(), 0);
+});
+
 test("claims worklist maps an unavailable staff-role service to a clean 503", async () => {
   const fixture = deps();
   const result = await handleEraWorklistRequest({

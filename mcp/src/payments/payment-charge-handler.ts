@@ -1,5 +1,5 @@
 import type { OdosActorRole, OdosAuditEventRecord } from "../authz/odosAudit.js";
-import { resolveBusinessActionRole, type PracticeRoleId } from "../authz/roles.js";
+import { resolveBusinessActionRole, type BusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import { buildPaymentAuditRecord, type PaymentAuditEventType } from "./payment-audit.js";
 import type { DispatchFhirClient, PaymentDispatch } from "./payment-config.js";
 import { StaffRoleServiceUnavailableError } from "./payment-endpoint.js";
@@ -23,6 +23,7 @@ export interface AuthenticatedStaff {
   staffReference: string;
   actorRole: OdosActorRole;
   roles?: readonly PracticeRoleId[];
+  businessActions?: readonly BusinessAction[];
   /** FHIR client bound to the caller (their token) so Medplum AccessPolicy governs the PR write. */
   fhir: DispatchFhirClient;
 }

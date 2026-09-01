@@ -3,6 +3,7 @@ import type { Basic, Encounter } from "@medplum/fhirtypes";
 import { z } from "zod";
 import {
   assertBusinessActionAllowed,
+  staffHasBusinessAction,
   type BusinessAction,
   type PracticeRoleId,
 } from "../authz/roles.js";
@@ -73,9 +74,9 @@ export async function handleFindingSectionGroupCatalogRequest(
   if (!staff) {
     return { status: 401, body: { error: "Authentication required to read finding section groups." } };
   }
-  const canWrite = staffMay(staff.actorRole, "finding-definitions.write");
-  const canPullIn = staffMay(staff.actorRole, "chart.write");
-  if (!staffMay(staff.actorRole, "chart.read") && !canWrite) {
+  const canWrite = staffHasBusinessAction(staff, "finding-definitions.write");
+  const canPullIn = staffHasBusinessAction(staff, "chart.write");
+  if (!staffHasBusinessAction(staff, "chart.read") && !canWrite) {
     return { status: 403, body: { error: "chart.read or finding-definitions.write role required" } };
   }
   const serviceFhir = deps.serviceFhir ?? staff.fhir;
@@ -135,7 +136,7 @@ export async function handleFindingSectionGroupCreationRequest(
   if (!staff) {
     return { status: 401, body: { error: "Authentication required to manage finding section groups." } };
   }
-  if (!staffMay(staff.actorRole, "finding-definitions.write")) {
+  if (!staffHasBusinessAction(staff, "finding-definitions.write")) {
     return { status: 403, body: { error: "finding-definitions.write role required" } };
   }
   const parsed = createGroupSchema.safeParse(input.body);
@@ -166,7 +167,7 @@ export async function handleFindingSectionGroupMutationRequest(
   if (!staff) {
     return { status: 401, body: { error: "Authentication required to manage finding section groups." } };
   }
-  if (!staffMay(staff.actorRole, "finding-definitions.write")) {
+  if (!staffHasBusinessAction(staff, "finding-definitions.write")) {
     return { status: 403, body: { error: "finding-definitions.write role required" } };
   }
   const groupKey = input.params.groupKey?.trim();
@@ -211,7 +212,7 @@ export async function handleEncounterSectionOverrideMutationRequest(
   if (!staff) {
     return { status: 401, body: { error: "Authentication required to manage encounter section groups." } };
   }
-  if (!staffMay(staff.actorRole, "chart.write")) {
+  if (!staffHasBusinessAction(staff, "chart.write")) {
     return { status: 403, body: { error: "chart.write role required" } };
   }
   const encounterId = input.params.encounterId?.trim();

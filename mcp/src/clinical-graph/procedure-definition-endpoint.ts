@@ -2,6 +2,7 @@ import type { Basic, Bundle, Encounter, Procedure, Provenance } from "@medplum/f
 import { z } from "zod";
 import {
   assertBusinessActionAllowed,
+  staffHasBusinessAction,
   type BusinessAction,
   type PracticeRoleId,
 } from "../authz/roles.js";
@@ -68,7 +69,7 @@ export async function handleProcedureDefinitionCatalogRequest(
   if (!staff) {
     return { status: 401, body: { error: "Authentication required to read procedure definitions." } };
   }
-  if (!staffMay(staff.actorRole, "chart.read")) {
+  if (!staffHasBusinessAction(staff, "chart.read")) {
     return { status: 403, body: { error: "chart.read role required" } };
   }
   const definitions = deps.procedureDefinitions?.() ??
@@ -93,7 +94,7 @@ export async function handleProcedureDefinitionMutationRequest(
   if (!staff) {
     return { status: 401, body: { error: "Authentication required to manage procedure definitions." } };
   }
-  if (!staffMay(staff.actorRole, "finding-definitions.write")) {
+  if (!staffHasBusinessAction(staff, "finding-definitions.write")) {
     return { status: 403, body: { error: "finding-definitions.write role required" } };
   }
   const stableKey = readStableKey(input.params);
@@ -142,7 +143,7 @@ export async function handleProcedureDefinitionCaptureRequest(
   if (!staff) {
     return { status: 401, body: { error: "Authentication required to record a procedure." } };
   }
-  if (!staffMay(staff.actorRole, "aesthetics.procedure.write")) {
+  if (!staffHasBusinessAction(staff, "aesthetics.procedure.write")) {
     return { status: 403, body: { error: "aesthetics.procedure.write role required" } };
   }
   const stableKey = readStableKey(input.params);
@@ -226,7 +227,7 @@ export async function handleProcedureDefinitionHistoryRequest(
   if (!staff) {
     return { status: 401, body: { error: "Authentication required to read procedure history." } };
   }
-  if (!staffMay(staff.actorRole, "chart.read")) {
+  if (!staffHasBusinessAction(staff, "chart.read")) {
     return { status: 403, body: { error: "chart.read role required" } };
   }
   const stableKey = readStableKey(input.params);

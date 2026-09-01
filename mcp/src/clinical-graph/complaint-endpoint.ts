@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Basic, Bundle, Encounter } from "@medplum/fhirtypes";
 import { z } from "zod";
-import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
+import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import { FhirComplaintDefinitionStore } from "./complaint-definition-store.js";
 import {
   buildComplaintDefinitionSeeds,
@@ -117,7 +117,7 @@ export async function handleComplaintDefinitionCatalogRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to read complaint definitions." } };
-  if (!staffMay(staff.actorRole, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
+  if (!staffHasBusinessAction(staff, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
   const definitions = await new FhirComplaintDefinitionStore(staff.fhir).list();
   return {
     status: 200,
@@ -138,7 +138,7 @@ export async function handleComplaintDefinitionMutationRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to manage complaint definitions." } };
-  if (!staffMay(staff.actorRole, "finding-definitions.write")) {
+  if (!staffHasBusinessAction(staff, "finding-definitions.write")) {
     return { status: 403, body: { error: "finding-definitions.write role required" } };
   }
   const stableKey = readId(input.params, "stableKey");
@@ -166,7 +166,7 @@ export async function handleEncounterComplaintListRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to read encounter complaints." } };
-  if (!staffMay(staff.actorRole, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
+  if (!staffHasBusinessAction(staff, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
   const encounterId = readId(input.params, "encounterId");
   if (!encounterId) return { status: 400, body: { error: "A valid encounter id is required." } };
   const encounter = await staff.fhir.read<Encounter>("Encounter", encounterId);
@@ -190,7 +190,7 @@ export async function handleEncounterComplaintMutationRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to manage encounter complaints." } };
-  if (!staffMay(staff.actorRole, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
+  if (!staffHasBusinessAction(staff, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
   const encounterId = readId(input.params, "encounterId");
   const parsed = mutationSchema.safeParse(input.body);
   if (!encounterId || !parsed.success) {

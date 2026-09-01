@@ -1,6 +1,6 @@
 import type { Condition, Encounter } from "@medplum/fhirtypes";
 import { z } from "zod";
-import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
+import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import { isConfirmedEncounterDiagnosis } from "../fhir/condition.js";
 import {
   DIAGNOSIS_VISIT_STATUSES,
@@ -41,7 +41,7 @@ export async function handleDiagnosisVisitStatusListRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to read diagnosis visit statuses." } };
-  if (!may(staff.actorRole, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
+  if (!staffHasBusinessAction(staff, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
   const parsed = paramsSchema.safeParse(input.params);
   if (!parsed.success) return { status: 400, body: { error: "A valid encounter id is required." } };
   try {
@@ -61,7 +61,7 @@ export async function handleDiagnosisVisitStatusUpdateRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to update a diagnosis visit status." } };
-  if (!may(staff.actorRole, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
+  if (!staffHasBusinessAction(staff, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
   const parsedParams = updateParamsSchema.safeParse(input.params);
   if (!parsedParams.success) return { status: 400, body: { error: "Valid encounter and Condition ids are required." } };
   const parsedBody = updateSchema.safeParse(input.body);

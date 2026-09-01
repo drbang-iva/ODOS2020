@@ -1,6 +1,6 @@
 import type { Bundle, Encounter, Observation } from "@medplum/fhirtypes";
 import { z } from "zod";
-import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
+import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import {
   buildGonioQuadrantObservation,
   GONIO_EYES,
@@ -46,7 +46,7 @@ export async function handleGonioscopyReadRequest(
 ) {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to read gonioscopy." } };
-  if (!may(staff.actorRole, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
+  if (!staffHasBusinessAction(staff, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
   const query = z.object({ encounterReference: z.string().regex(/^Encounter\/[^/]+$/) }).safeParse(input.query);
   if (!query.success) return { status: 400, body: { error: "encounterReference is required." } };
   const [angleBundle, pigmentationBundle, noteBundle] = await Promise.all([
@@ -71,7 +71,7 @@ export async function handleGonioscopyCaptureRequest(
 ) {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to save gonioscopy." } };
-  if (!may(staff.actorRole, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
+  if (!staffHasBusinessAction(staff, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
   const parsed = requestSchema.safeParse(input.body);
   if (!parsed.success) return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid gonioscopy request." } };
   const encounter = await staff.fhir.read<Encounter>("Encounter", parsed.data.encounterReference.slice("Encounter/".length));

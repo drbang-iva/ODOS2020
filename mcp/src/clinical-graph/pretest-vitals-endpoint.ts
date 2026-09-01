@@ -1,7 +1,7 @@
 import type { Bundle, Observation, Provenance, Resource } from "@medplum/fhirtypes";
 import type { Express } from "express";
 import { z } from "zod";
-import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
+import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../fhir/ophthalmology/codeBindings.js";
 import { searchAll } from "../fhir-search.js";
 import { patientScopedProvenanceTargets } from "./glaucoma-suspect.js";
@@ -121,7 +121,7 @@ export async function handleBloodPressureCaptureRequest(
 ): Promise<EndpointResult> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to save blood pressure." } };
-  if (!staffMay(staff.actorRole, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
+  if (!staffHasBusinessAction(staff, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
   const parsed = bloodPressureSchema.safeParse(input.body);
   if (!parsed.success) return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid blood pressure request." } };
   const recordedAt = parsed.data.recordedAt ?? deps.now?.() ?? new Date().toISOString();
@@ -154,7 +154,7 @@ export async function handleCarotenoidCaptureRequest(
 ): Promise<EndpointResult> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to save skin carotenoid score." } };
-  if (!staffMay(staff.actorRole, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
+  if (!staffHasBusinessAction(staff, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
   const parsed = carotenoidSchema.safeParse(input.body);
   if (!parsed.success) return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid skin carotenoid score request." } };
   const recordedAt = parsed.data.recordedAt ?? deps.now?.() ?? new Date().toISOString();
@@ -178,7 +178,7 @@ export async function handleBodyMeasurementsCaptureRequest(
 ): Promise<EndpointResult> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to save height and weight." } };
-  if (!staffMay(staff.actorRole, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
+  if (!staffHasBusinessAction(staff, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
   const parsed = bodyMeasurementsSchema.safeParse(input.body);
   if (!parsed.success) return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid height and weight request." } };
   const recordedAt = parsed.data.recordedAt ?? deps.now?.() ?? new Date().toISOString();
@@ -247,7 +247,7 @@ export async function handlePretestVitalsHistoryRequest(
 ): Promise<EndpointResult> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to read pretest vitals history." } };
-  if (!staffMay(staff.actorRole, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
+  if (!staffHasBusinessAction(staff, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
   const parsed = historySchema.safeParse(input.query);
   if (!parsed.success) return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid history request." } };
   const [bpRows, carotenoidRows, heightRows, weightRows] = await Promise.all([

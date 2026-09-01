@@ -8,7 +8,7 @@ import type {
   QuestionnaireResponse,
 } from "@medplum/fhirtypes";
 import { z } from "zod";
-import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
+import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import { uploadBinary, type BinaryUploadAuth } from "../fhir/binary-upload.js";
 import {
   lateralityExtension,
@@ -182,7 +182,7 @@ export async function handleImagingCaptureRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to upload imaging." } };
-  if (!staffMay(staff.actorRole, "chart.write")) {
+  if (!staffHasBusinessAction(staff, "chart.write")) {
     return { status: 403, body: { error: "chart.write role required" } };
   }
 
@@ -258,7 +258,7 @@ export async function handleImagingListRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to read imaging." } };
-  if (!staffMay(staff.actorRole, "chart.read")) {
+  if (!staffHasBusinessAction(staff, "chart.read")) {
     return { status: 403, body: { error: "chart.read role required" } };
   }
   const parsed = imagingListQuerySchema.safeParse(input.query);
@@ -303,7 +303,7 @@ export async function handleImagingStructureRefinementRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to refine imaging." } };
-  if (!staffMay(staff.actorRole, "chart.write")) {
+  if (!staffHasBusinessAction(staff, "chart.write")) {
     return { status: 403, body: { error: "chart.write role required" } };
   }
   if (!input.mediaId || !/^[A-Za-z0-9.-]+$/.test(input.mediaId)) {
@@ -385,7 +385,7 @@ export async function handleLongitudinalImagingCaptureRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to capture clinical photos." } };
-  if (!staffMay(staff.actorRole, "chart.write")) {
+  if (!staffHasBusinessAction(staff, "chart.write")) {
     return { status: 403, body: { error: "chart.write role required" } };
   }
   const parsed = longitudinalImageSchema.safeParse(input.body);
@@ -452,7 +452,7 @@ export async function handleLongitudinalImagingListRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to read clinical photos." } };
-  if (!staffMay(staff.actorRole, "chart.read")) {
+  if (!staffHasBusinessAction(staff, "chart.read")) {
     return { status: 403, body: { error: "chart.read role required" } };
   }
   const parsed = longitudinalQuerySchema.safeParse(input.query);

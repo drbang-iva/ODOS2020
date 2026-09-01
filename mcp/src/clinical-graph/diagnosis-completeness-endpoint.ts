@@ -1,5 +1,5 @@
 import type { Basic, Bundle, Condition, Encounter, Observation, Resource } from "@medplum/fhirtypes";
-import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
+import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import { searchAll } from "../fhir-search.js";
 import { isRelativeFhirReference } from "../fhir/reference.js";
 import { FhirDiagnosisCatalogStore } from "./diagnosis-catalog-store.js";
@@ -54,7 +54,7 @@ export async function handleDiagnosisCompletenessRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to read diagnosis completeness." } };
-  if (!staffMayReadChart(staff.actorRole)) return { status: 403, body: { error: "chart.read role required" } };
+  if (!staffHasBusinessAction(staff, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
   const encounterId = readEncounterId(input.params);
   if (!encounterId) return { status: 400, body: { error: "A valid encounter id is required." } };
 

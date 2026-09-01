@@ -7,7 +7,7 @@ import type {
   Resource,
 } from "@medplum/fhirtypes";
 import { z } from "zod";
-import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
+import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import {
   FHIR_CONDITION_VERIFICATION_STATUS_CODE_SYSTEM,
   hasConditionCategory,
@@ -184,7 +184,7 @@ export async function handleDiagnosisFindingsReadRequest(
   if (!staff) {
     return { status: 401, body: { error: "Authentication required to read encounter findings." } };
   }
-  if (!staffMay(staff.actorRole, "chart.read")) {
+  if (!staffHasBusinessAction(staff, "chart.read")) {
     return { status: 403, body: { error: "chart.read role required" } };
   }
   const parsedParams = paramsSchema.safeParse(input.params);
@@ -265,7 +265,7 @@ export async function handleDiagnosisFindingsReadRequest(
     {},
   );
   const body: DiagnosisFindingsPayload = {
-    canWrite: staffMay(staff.actorRole, "chart.write"),
+    canWrite: staffHasBusinessAction(staff, "chart.write"),
     ...(selectedDiagnosis ? { diagnosis: selectedDiagnosis } : {}),
     ...(carryState && (carryState.pulledFromDate || carryState.integrityWarning)
       ? { carryProvenance: carrySummary(carryState) }
@@ -299,7 +299,7 @@ export async function handleDiagnosisFindingsMutationRequest(
   if (!staff) {
     return { status: 401, body: { error: "Authentication required to update encounter findings." } };
   }
-  if (!staffMay(staff.actorRole, "chart.write")) {
+  if (!staffHasBusinessAction(staff, "chart.write")) {
     return { status: 403, body: { error: "chart.write role required" } };
   }
   const parsedParams = paramsSchema.safeParse(input.params);

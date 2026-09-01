@@ -1,0 +1,116 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "project-membership-business-actions",
+  "url": "https://odos2020.com/fhir/StructureDefinition/project-membership-business-actions",
+  "version": "per-person-permissions-s1",
+  "name": "ODOSProjectMembershipBusinessActions",
+  "title": "ODOS ProjectMembership Business Actions",
+  "status": "active",
+  "date": "2026-09-01",
+  "publisher": "ODOS",
+  "description": "Per-person granted and revoked ODOS business-action deltas stored on a ProjectMembership.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "ProjectMembership"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Per-person ODOS business-action deltas",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "slicing": {
+          "discriminator": [
+            {
+              "type": "value",
+              "path": "url"
+            }
+          ],
+          "rules": "closed"
+        },
+        "min": 0,
+        "max": "*"
+      },
+      {
+        "id": "Extension.extension:granted",
+        "path": "Extension.extension",
+        "sliceName": "granted",
+        "min": 0,
+        "max": "*"
+      },
+      {
+        "id": "Extension.extension:granted.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:granted.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "granted"
+      },
+      {
+        "id": "Extension.extension:granted.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "code"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:revoked",
+        "path": "Extension.extension",
+        "sliceName": "revoked",
+        "min": 0,
+        "max": "*"
+      },
+      {
+        "id": "Extension.extension:revoked.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:revoked.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "revoked"
+      },
+      {
+        "id": "Extension.extension:revoked.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "code"
+          }
+        ]
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/project-membership-business-actions"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "max": "0"
+      }
+    ]
+  }
+}

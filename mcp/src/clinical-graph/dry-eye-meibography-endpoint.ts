@@ -6,7 +6,7 @@ import type {
   Resource,
 } from "@medplum/fhirtypes";
 import { z } from "zod";
-import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
+import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import {
   OBSERVATION_MEIBOMIAN_GLAND_SCORE_PROFILE_URL,
 } from "../fhir/contactLens.js";
@@ -83,7 +83,7 @@ export async function handleDryEyeMeibographyCaptureRequest(
   if (!staff) {
     return { status: 401, body: { error: "Authentication required to capture meibography." } };
   }
-  if (!staffMay(staff.actorRole, "chart.write")) {
+  if (!staffHasBusinessAction(staff, "chart.write")) {
     return { status: 403, body: { error: "chart.write role required" } };
   }
   const parsed = captureSchema.safeParse(input.body);
@@ -183,7 +183,7 @@ export async function handleDryEyeMeibographyListRequest(
   if (!staff) {
     return { status: 401, body: { error: "Authentication required to read meibography." } };
   }
-  if (!staffMay(staff.actorRole, "chart.read")) {
+  if (!staffHasBusinessAction(staff, "chart.read")) {
     return { status: 403, body: { error: "chart.read role required" } };
   }
   const parsed = listSchema.safeParse(input.query);
@@ -253,7 +253,7 @@ export async function handleDryEyeMeibographyImageRequest(
   if (!staff) {
     return { status: 401, body: { error: "Authentication required to read meibography." } };
   }
-  if (!staffMay(staff.actorRole, "chart.read")) {
+  if (!staffHasBusinessAction(staff, "chart.read")) {
     return { status: 403, body: { error: "chart.read role required" } };
   }
   const parsed = imageSchema.safeParse(input.query);
