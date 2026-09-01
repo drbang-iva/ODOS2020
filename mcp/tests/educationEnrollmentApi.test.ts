@@ -101,6 +101,267 @@ test("EducationEnrollment rejects a cross-patient encounter before persistence, 
   }
 });
 
+test("EducationEnrollment transition appends history and actually dispatches a stage-2 send with an honest unique key", async () => {
+  const fixture = await startEnrollmentServer();
+  try {
+    await createEnrollment(fixture.base);
+    assert.equal(fixture.underlyingSends.length, 1);
+
+    const response = await request(
+      fixture.base,
+      "/communications/education/enrollments/enrollment-api-synthetic-1/transitions",
+      "POST",
+      transitionBody(),
+    );
+    assert.equal(response.status, 200);
+    const enrollment = (await response.json() as { enrollment: {
+      currentStageId: string;
+      status: string;
+      stageHistory: Array<Record<string, unknown>>;
+      immediateSends: Array<{ outcome?: Record<string, unknown> }>;
+    } }).enrollment;
+    assert.equal(enrollment.currentStageId, "consult");
+    assert.equal(enrollment.status, "active");
+    assert.deepEqual(enrollment.stageHistory, [{
+      stageId: "welcome",
+      enteredAt: "2026-09-01T14:00:00.000Z",
+      enteredBy: "Practitioner/provider",
+      reason: "enrollment-recorded",
+    }, {
+      stageId: "consult",
+      enteredAt: "2026-09-01T14:00:00.000Z",
+      enteredBy: "Practitioner/provider",
+      reason: "consult-completed",
+    }]);
+    assert.deepEqual(enrollment.immediateSends.map((send) => send.outcome), [{
+      outcome: "sent",
+      providerMessageId: "SM-enrollment-synthetic-1",
+    }, {
+      outcome: "sent",
+      providerMessageId: "SM-enrollment-synthetic-2",
+    }]);
+    assert.equal(fixture.underlyingSends.length, 2);
+    assert.deepEqual(
+      fixture.communications.map((communication) => communication.identifier?.find((identifier) =>
+        identifier.system === "https://odos2020.com/fhir/NamingSystem/comms-staff-send")?.value),
+      [
+        "enrollment:enrollment-api-synthetic-1:stage1:1",
+        "enrollment:enrollment-api-synthetic-1:stage:consult:2",
+      ],
+    );
+    assert.equal(fixture.provenances.length, 4);
+    assert.deepEqual(fixture.provenances[2]?.target.map(({ reference }) => reference), [
+      PATIENT_REFERENCE,
+      ENCOUNTER_REFERENCE,
+      "Basic/enrollment-api-synthetic-1",
+    ]);
+    assert.equal(fixture.auditReasons.includes("communications-education-enrollment-transition"), true);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("EducationEnrollment transition refuses a stale from-stage without appending or dispatching", async () => {
+  const fixture = await startEnrollmentServer();
+  try {
+    await createEnrollment(fixture.base);
+    const response = await request(
+      fixture.base,
+      "/communications/education/enrollments/enrollment-api-synthetic-1/transitions",
+      "POST",
+      { ...transitionBody(), fromStageId: "already-advanced" },
+    );
+    assert.equal(response.status, 409);
+    assert.deepEqual(await response.json(), { outcome: "refused", reason: "stale-from-stage" });
+    assert.equal(fixture.underlyingSends.length, 1);
+    const stored = await fixture.enrollmentStore.read("enrollment-api-synthetic-1");
+    assert.equal(stored?.stageHistory.length, 1);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("EducationEnrollment transition refuses a non-active enrollment", async () => {
+  const fixture = await startEnrollmentServer();
+  try {
+    await createEnrollment(fixture.base);
+    const completed = await request(
+      fixture.base,
+      "/communications/education/enrollments/enrollment-api-synthetic-1/transitions",
+      "POST",
+      terminalTransitionBody("completed", []),
+    );
+    assert.equal(completed.status, 200);
+
+    const response = await request(
+      fixture.base,
+      "/communications/education/enrollments/enrollment-api-synthetic-1/transitions",
+      "POST",
+      { ...transitionBody(), fromStageId: "complete" },
+    );
+    assert.equal(response.status, 409);
+    assert.deepEqual(await response.json(), { outcome: "refused", reason: "enrollment-not-active" });
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("EducationEnrollment transition rejects a missing or malformed target-stage shape", async () => {
+  const fixture = await startEnrollmentServer();
+  try {
+    await createEnrollment(fixture.base);
+    for (const targetStage of [undefined, { id: "", immediateSends: [] }, { id: "consult" }]) {
+      const body = { ...transitionBody(), targetStage };
+      const response = await request(
+        fixture.base,
+        "/communications/education/enrollments/enrollment-api-synthetic-1/transitions",
+        "POST",
+        body,
+      );
+      assert.equal(response.status, 400);
+    }
+    assert.equal(fixture.underlyingSends.length, 1);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("EducationEnrollment transition requires a non-empty trigger", async () => {
+  const fixture = await startEnrollmentServer();
+  try {
+    await createEnrollment(fixture.base);
+    for (const trigger of [undefined, "", "   "]) {
+      const response = await request(
+        fixture.base,
+        "/communications/education/enrollments/enrollment-api-synthetic-1/transitions",
+        "POST",
+        { ...transitionBody(), trigger },
+      );
+      assert.equal(response.status, 400);
+    }
+    assert.equal(fixture.underlyingSends.length, 1);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("EducationEnrollment terminal transition with a send preserves all history and outcomes, then permits re-enrollment", async () => {
+  const fixture = await startEnrollmentServer();
+  try {
+    const initial = await createEnrollment(fixture.base);
+    const response = await request(
+      fixture.base,
+      "/communications/education/enrollments/enrollment-api-synthetic-1/transitions",
+      "POST",
+      terminalTransitionBody("completed", transitionBody().targetStage.immediateSends),
+    );
+    assert.equal(response.status, 200);
+    const completed = (await response.json() as { enrollment: {
+      status: string;
+      stageHistory: unknown[];
+      immediateSends: unknown[];
+    } }).enrollment;
+    assert.equal(completed.status, "completed");
+    assert.equal(completed.stageHistory.length, 2);
+    assert.equal(completed.immediateSends.length, 2);
+    assert.deepEqual(completed.immediateSends[0], initial.immediateSends[0]);
+    assert.equal(fixture.underlyingSends.length, 2);
+    assert.deepEqual(fixture.terminalClearProviderCounts, [2]);
+
+    const fetched = await request(
+      fixture.base,
+      "/communications/education/enrollments/enrollment-api-synthetic-1",
+      "GET",
+    );
+    assert.equal(fetched.status, 200);
+    assert.deepEqual((await fetched.json() as { enrollment: unknown }).enrollment, completed);
+
+    const reEnrolled = await request(
+      fixture.base,
+      "/communications/education/enrollments",
+      "POST",
+      enrollmentBody(),
+    );
+    assert.equal(reEnrolled.status, 201);
+    assert.equal((await reEnrolled.json() as { enrollment: { id: string } }).enrollment.id, "enrollment-api-synthetic-2");
+    assert.equal(fixture.underlyingSends.length, 3);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("EducationEnrollment terminal transition without sends completes and remains readable", async () => {
+  const fixture = await startEnrollmentServer();
+  try {
+    await createEnrollment(fixture.base);
+    const response = await request(
+      fixture.base,
+      "/communications/education/enrollments/enrollment-api-synthetic-1/transitions",
+      "POST",
+      terminalTransitionBody("cancelled", []),
+    );
+    assert.equal(response.status, 200);
+    const enrollment = (await response.json() as { enrollment: {
+      status: string;
+      stageHistory: unknown[];
+      immediateSends: unknown[];
+    } }).enrollment;
+    assert.equal(enrollment.status, "cancelled");
+    assert.equal(enrollment.stageHistory.length, 2);
+    assert.equal(enrollment.immediateSends.length, 1);
+    assert.equal(fixture.underlyingSends.length, 1);
+    assert.deepEqual(fixture.terminalClearProviderCounts, [1]);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("EducationEnrollment transition persists opt-out suppression with zero provider sends", async () => {
+  const fixture = await startEnrollmentServer({ optedOut: true });
+  try {
+    await createEnrollment(fixture.base);
+    const response = await request(
+      fixture.base,
+      "/communications/education/enrollments/enrollment-api-synthetic-1/transitions",
+      "POST",
+      transitionBody(),
+    );
+    assert.equal(response.status, 200);
+    const enrollment = (await response.json() as { enrollment: {
+      immediateSends: Array<{ outcome?: unknown }>;
+    } }).enrollment;
+    assert.deepEqual(enrollment.immediateSends[1]?.outcome, {
+      outcome: "suppressed",
+      reason: "patient-opt-out",
+    });
+    assert.equal(fixture.underlyingSends.length, 0);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("EducationEnrollment transition revalidates its Provenance encounter against the enrolled patient", async () => {
+  const fixture = await startEnrollmentServer();
+  try {
+    await createEnrollment(fixture.base);
+    fixture.encounters[0]!.subject = { reference: "Patient/synthetic-enrollment-2" };
+    const response = await request(
+      fixture.base,
+      "/communications/education/enrollments/enrollment-api-synthetic-1/transitions",
+      "POST",
+      transitionBody(),
+    );
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), {
+      error: `encounterReference must belong to ${PATIENT_REFERENCE}.`,
+    });
+    assert.equal(fixture.provenances.length, 2);
+    assert.equal(fixture.underlyingSends.length, 1);
+  } finally {
+    await fixture.close();
+  }
+});
+
 test("one-shot education remains behaviorally intact beside EducationEnrollment", async () => {
   const fixture = await startEnrollmentServer();
   try {
@@ -143,6 +404,44 @@ function enrollmentBody() {
   };
 }
 
+function transitionBody() {
+  return {
+    fromStageId: "welcome",
+    targetStage: {
+      id: "consult",
+      immediateSends: [{
+        educationId: "dry-eye-basics",
+        version: 2,
+        channel: "sms" as const,
+        lane: "clinical" as const,
+      }],
+    },
+    trigger: "consult-completed",
+    status: "active" as const,
+  };
+}
+
+function terminalTransitionBody(
+  status: "completed" | "cancelled",
+  immediateSends: ReturnType<typeof transitionBody>["targetStage"]["immediateSends"],
+) {
+  return {
+    fromStageId: "welcome",
+    targetStage: { id: status === "completed" ? "complete" : "cancelled", immediateSends },
+    trigger: "clinician-action",
+    status,
+  };
+}
+
+async function createEnrollment(base: string) {
+  const response = await request(base, "/communications/education/enrollments", "POST", enrollmentBody());
+  assert.equal(response.status, 201);
+  return (await response.json() as { enrollment: {
+    id: string;
+    immediateSends: Array<Record<string, unknown>>;
+  } }).enrollment;
+}
+
 async function startEnrollmentServer(options: { optedOut?: boolean } = {}) {
   const patient: Patient = {
     resourceType: "Patient",
@@ -182,9 +481,18 @@ async function startEnrollmentServer(options: { optedOut?: boolean } = {}) {
     createdAt: string;
   }> = [];
   const auditReasons: string[] = [];
-  const enrollmentStore = createInMemoryEducationEnrollmentStore({
-    generateId: () => "enrollment-api-synthetic-1",
+  let enrollmentSequence = 0;
+  const storedEnrollments = createInMemoryEducationEnrollmentStore({
+    generateId: () => `enrollment-api-synthetic-${++enrollmentSequence}`,
   });
+  const terminalClearProviderCounts: number[] = [];
+  const enrollmentStore = {
+    ...storedEnrollments,
+    async clearTerminalActiveIdentifier(id: string) {
+      terminalClearProviderCounts.push(underlyingSends.length);
+      return storedEnrollments.clearTerminalActiveIdentifier(id);
+    },
+  };
   const callerFhir = {
     baseUrl: "https://synthetic.example/fhir/R4",
     async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
@@ -331,7 +639,10 @@ async function startEnrollmentServer(options: { optedOut?: boolean } = {}) {
   return {
     base: `http://127.0.0.1:${address.port}`,
     enrollmentStore,
+    communications,
+    encounters,
     underlyingSends,
+    terminalClearProviderCounts,
     trackedLinks,
     provenances,
     auditReasons,
