@@ -1,6 +1,6 @@
 {
   "resourceType": "ODOSCanonicalExtensionRegistry",
-  "generatedAt": "2026-08-30",
+  "generatedAt": "2026-09-01",
   "extensions": [
     {
       "url": "https://odos2020.com/fhir/StructureDefinition/claim-touch-count",
@@ -811,6 +811,60 @@
       "namespace": "communications",
       "status": "active",
       "sliceConsumer": "native-comms-slice1"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/education-enrollment-journey-id",
+      "namespace": "communications",
+      "status": "active",
+      "sliceConsumer": "engage-slice-5a"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/education-enrollment-journey-version",
+      "namespace": "communications",
+      "status": "active",
+      "sliceConsumer": "engage-slice-5a"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/education-enrollment-current-stage-id",
+      "namespace": "communications",
+      "status": "active",
+      "sliceConsumer": "engage-slice-5a"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/education-enrollment-stage-entered-at",
+      "namespace": "communications",
+      "status": "active",
+      "sliceConsumer": "engage-slice-5a"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/education-enrollment-entered-from-encounter",
+      "namespace": "communications",
+      "status": "active",
+      "sliceConsumer": "engage-slice-5a"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/education-enrollment-enrolled-by",
+      "namespace": "communications",
+      "status": "active",
+      "sliceConsumer": "engage-slice-5a"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/education-enrollment-status",
+      "namespace": "communications",
+      "status": "active",
+      "sliceConsumer": "engage-slice-5a"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/education-enrollment-stage-history",
+      "namespace": "communications",
+      "status": "active",
+      "sliceConsumer": "engage-slice-5a"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/education-enrollment-immediate-send",
+      "namespace": "communications",
+      "status": "active",
+      "sliceConsumer": "engage-slice-5a"
     },
     {
       "url": "https://odos2020.com/fhir/StructureDefinition/correspondence-draft",

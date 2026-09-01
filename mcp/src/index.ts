@@ -113,10 +113,10 @@ import { registerTwilioWebhookRoutes } from "./comms/twilio-routes.js";
 import { registerGhlWebhookRoutes } from "./comms/ghl-routes.js";
 import { persistInboundMessageEvent, persistTwilioWebhookEvent } from "./comms/comms-persistence.js";
 import { registerCommsApiRoutes } from "./comms/comms-api.js";
+import { createFhirEducationEnrollmentStore } from "./comms/education-enrollment.js";
 import { loadDefaultEducationCatalogReader } from "./comms/education-catalog.js";
 import {
-  createFhirTrackedLinkStore,
-  registerTrackedLinkRoutes,
+  createFhirTrackedLinkStore, registerTrackedLinkRoutes,
 } from "./comms/tracked-links.js";
 import {
   appointmentReminderCampaignsFromEnv,
@@ -5849,6 +5849,7 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         fhir,
         dispatch: commsDispatch,
         educationCatalog: loadDefaultEducationCatalogReader(),
+        enrollmentStore: createFhirEducationEnrollmentStore(fhir),
         trackedLinkStore: createFhirTrackedLinkStore(fhir),
         publicBaseUrl: commsPublicBaseUrlFromEnv(process.env),
         practiceName: process.env.ODOS_PRACTICE_NAME ?? "ODOS Practice",
@@ -5857,7 +5858,6 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
           : "staff_switchable",
         audit: auditRuntime,
       });
-
       app.get("/audit/events", createAuditEventsGetHandler({
         authenticate: authenticateStaffRoute,
         audit: auditRuntime,
