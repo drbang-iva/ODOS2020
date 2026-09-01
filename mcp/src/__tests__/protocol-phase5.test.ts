@@ -887,6 +887,7 @@ test("annual recall requires both refraction and an examined ocular component", 
   const cases = [
     ["no-refraction", [ocularHealthObservation("no-refraction")]],
     ["refraction-only", [refractionObservation("refraction-only")]],
+    ["empty-refraction", [emptyRefractionObservation("empty-refraction"), ocularHealthObservation("empty-refraction")]],
   ] as const;
 
   for (const [encounterId, observations] of cases) {
@@ -1635,6 +1636,17 @@ function refractionObservation(encounterId: string): Observation {
       code: { coding: [{ system: OPHTHALMOLOGY_TEST_CODE_SYSTEM, code: "SPHERE" }] },
       valueQuantity: { value: -0.5, unit: "D", system: "http://unitsofmeasure.org", code: "[diop]" },
     }],
+  };
+}
+
+function emptyRefractionObservation(encounterId: string): Observation {
+  return {
+    resourceType: "Observation",
+    id: `${encounterId}-refraction`,
+    status: "preliminary",
+    subject: { reference: "Patient/patient-annual" },
+    encounter: { reference: `Encounter/${encounterId}` },
+    code: { coding: [{ system: OPHTHALMOLOGY_TEST_CODE_SYSTEM, code: "REFRACTION" }] },
   };
 }
 
