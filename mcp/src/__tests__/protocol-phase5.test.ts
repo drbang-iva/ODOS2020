@@ -653,6 +653,150 @@ test("sign cleanup requires clinical.sign at the handler boundary", async () => 
   assert.equal(provider.status, 400);
 });
 
+test("a full eye exam creates a service-date annual, and the next full exam completes it without touching medical follow-up", async () => {
+  const fhir = new EndpointFhir();
+  fhir.resources.push(
+    annualEncounter("annual-first", "routine-exam-established", "2026-01-31T15:00:00.000Z"),
+    ...fullExamObservations("annual-first"),
+    {
+      resourceType: "ServiceRequest",
+      id: "medical-follow-up",
+      status: "active",
+      intent: "plan",
+      subject: { reference: "Patient/patient-annual" },
+      occurrenceDateTime: "2026-09-01",
+      code: { coding: [{ system: ANNUAL_TEST_CODE_SYSTEM, code: "follow-up" }] },
+      category: [{ coding: [{ system: ANNUAL_TEST_CODE_SYSTEM, code: "medical-follow-up" }] }],
+    } satisfies ServiceRequest,
+  );
+  const deps = { ...endpointDeps(fhir), feeScheduleFhir: fhir as never };
+
+  const first = await handleProtocolSignCleanupRequest(deps, {
+    authHeader: "Bearer test",
+    params: { encounterId: "annual-first" },
+  });
+
+  assert.equal(first.status, 200);
+  let annuals = annualRequests(fhir);
+  assert.equal(annuals.length, 1);
+  assert.equal(annuals[0]?.occurrenceDateTime, "2027-01-31");
+  assert.equal(annuals[0]?.authoredOn, "2026-07-18T12:00:00.000Z");
+  assert.equal(annuals[0]?.category?.[0]?.coding?.[0]?.code, "routine-follow-up");
+  assert.equal(annuals[0]?.reasonCode?.[0]?.text, "Annual eye examination");
+
+  fhir.resources.push(
+    annualEncounter("annual-second", "routine-exam-established", "2026-08-20T15:00:00.000Z"),
+    ...fullExamObservations("annual-second"),
+  );
+  const second = await handleProtocolSignCleanupRequest(deps, {
+    authHeader: "Bearer test",
+    params: { encounterId: "annual-second" },
+  });
+
+  assert.equal(second.status, 200);
+  annuals = annualRequests(fhir);
+  assert.equal(annuals.length, 2);
+  assert.equal(annuals.filter((request) => request.status === "active").length, 1);
+  assert.equal(annuals.find((request) => request.encounter?.reference === "Encounter/annual-first")?.status, "completed");
+  assert.equal(annuals.find((request) => request.status === "active")?.occurrenceDateTime, "2027-08-20");
+  assert.equal((await fhir.read<ServiceRequest>("ServiceRequest", "medical-follow-up")).status, "active");
+
+  fhir.resources.push({
+    resourceType: "ServiceRequest",
+    id: "unrelated-referral",
+    status: "active",
+    intent: "order",
+    subject: { reference: "Patient/patient-annual" },
+    occurrenceDateTime: "2027-08-15",
+    code: { text: "Unrelated referral" },
+  } satisfies ServiceRequest);
+  const dueAnnuals = await fhir.search<ServiceRequest>("ServiceRequest", {
+    code: `${ANNUAL_TEST_CODE_SYSTEM}|annual-recall`,
+    status: "active",
+    occurrence: "ge2027-08-01",
+  });
+  assert.deepEqual(dueAnnuals.entry?.map((entry) => entry.resource?.id), [
+    annuals.find((request) => request.status === "active")?.id,
+  ]);
+});
+
+test("a realistic post-cataract office visit with refraction and examined anterior segment creates no annual", async () => {
+  const fhir = new EndpointFhir();
+  fhir.resources.push(
+    annualEncounter("post-cataract", "office-visit", "2026-07-18T15:00:00.000Z"),
+    ...fullExamObservations("post-cataract"),
+  );
+
+  const result = await handleProtocolSignCleanupRequest(
+    { ...endpointDeps(fhir), feeScheduleFhir: fhir as never },
+    { authHeader: "Bearer test", params: { encounterId: "post-cataract" } },
+  );
+
+  assert.equal(result.status, 200);
+  assert.equal((result.body as { annualRecall: { fullExam: boolean } }).annualRecall.fullExam, false);
+  assert.equal(annualRequests(fhir).length, 0);
+});
+
+test("annual recall requires both refraction and an examined ocular component", async () => {
+  const cases = [
+    ["no-refraction", [ocularHealthObservation("no-refraction")]],
+    ["refraction-only", [refractionObservation("refraction-only")]],
+  ] as const;
+
+  for (const [encounterId, observations] of cases) {
+    const fhir = new EndpointFhir();
+    fhir.resources.push(
+      annualEncounter(encounterId, "routine-exam-new", "2026-07-18T15:00:00.000Z"),
+      ...observations,
+    );
+    const result = await handleProtocolSignCleanupRequest(
+      { ...endpointDeps(fhir), feeScheduleFhir: fhir as never },
+      { authHeader: "Bearer test", params: { encounterId } },
+    );
+    assert.equal(result.status, 200);
+    assert.equal((result.body as { annualRecall: { fullExam: boolean } }).annualRecall.fullExam, false);
+    assert.equal(annualRequests(fhir).length, 0);
+  }
+});
+
+test("annual closure failure stays observable without blocking encounter signing", async () => {
+  const fhir = new EndpointFhir();
+  fhir.resources.push(
+    annualEncounter("closure-failure", "routine-exam-established", "2026-07-18T15:00:00.000Z"),
+    ...fullExamObservations("closure-failure"),
+    annualServiceRequest("old-annual", "Encounter/prior-full-exam", "2026-08-01"),
+  );
+  fhir.failServiceRequestUpdateIds.add("old-annual");
+
+  const result = await handleProtocolSignCleanupRequest(
+    { ...endpointDeps(fhir), feeScheduleFhir: fhir as never },
+    { authHeader: "Bearer test", params: { encounterId: "closure-failure" } },
+  );
+
+  assert.equal(result.status, 200);
+  assert.equal(annualRequests(fhir).filter((request) => request.status === "active").length, 2);
+  const annualRecall = (result.body as {
+    annualRecall: {
+      serviceRequestReference?: string;
+      materializationRefusal?: { code: string; message: string };
+      closureFailures?: Array<{ serviceRequestReference: string; message: string }>;
+    };
+  }).annualRecall;
+  assert.match(annualRecall.serviceRequestReference ?? "", /^ServiceRequest\//);
+  assert.equal(
+    annualRequests(fhir).find((request) => request.encounter?.reference === "Encounter/closure-failure")?.note?.[0]?.text,
+    "Annual recall closure incomplete: 1 prior annual could not be completed.",
+  );
+  assert.deepEqual(annualRecall.materializationRefusal, {
+    code: "ANNUAL_RECALL_CLOSURE_INCOMPLETE",
+    message: "The new annual recall was created, but 1 prior annual could not be completed.",
+  });
+  assert.deepEqual(annualRecall.closureFailures, [{
+    serviceRequestReference: "ServiceRequest/old-annual",
+    message: "Synthetic annual closure failure.",
+  }]);
+});
+
 test("all Phase A authoring endpoints reject a non-author and admit a clinician", async () => {
   const blockedFhir = new EndpointFhir();
   const blocked = endpointDeps(blockedFhir, "staff", "Practitioner/disposable-front-desk");
@@ -1307,16 +1451,105 @@ test("protocol numeric findings require the explicit cup-disc ratio unit mapping
 
 type EndpointResource = Basic | Observation | ServiceRequest | CarePlan | Condition | Encounter;
 
+const ANNUAL_TEST_CODE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/odos-protocol-module";
+const ANNUAL_TEST_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/annual-recall-source";
+const OPHTHALMOLOGY_TEST_CODE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/ophthalmology";
+const VISIT_TYPE_TEST_CODE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/visit-type";
+
+function annualEncounter(id: string, visitTypeCode: string, serviceDate: string): Encounter {
+  return {
+    resourceType: "Encounter",
+    id,
+    status: "in-progress",
+    class: { code: "AMB" },
+    subject: { reference: "Patient/patient-annual" },
+    type: [{ coding: [{ system: VISIT_TYPE_TEST_CODE_SYSTEM, code: visitTypeCode }] }],
+    period: { start: serviceDate },
+  };
+}
+
+function refractionObservation(encounterId: string): Observation {
+  return {
+    resourceType: "Observation",
+    id: `${encounterId}-refraction`,
+    status: "preliminary",
+    subject: { reference: "Patient/patient-annual" },
+    encounter: { reference: `Encounter/${encounterId}` },
+    code: { coding: [{ system: OPHTHALMOLOGY_TEST_CODE_SYSTEM, code: "REFRACTION" }] },
+    component: [{
+      code: { coding: [{ system: OPHTHALMOLOGY_TEST_CODE_SYSTEM, code: "SPHERE" }] },
+      valueQuantity: { value: -0.5, unit: "D", system: "http://unitsofmeasure.org", code: "[diop]" },
+    }],
+  };
+}
+
+function ocularHealthObservation(encounterId: string): Observation {
+  return {
+    resourceType: "Observation",
+    id: `${encounterId}-anterior-lens`,
+    status: "preliminary",
+    subject: { reference: "Patient/patient-annual" },
+    encounter: { reference: `Encounter/${encounterId}` },
+    code: { coding: [{ system: OPHTHALMOLOGY_TEST_CODE_SYSTEM, code: "ocular-health:anterior:lens" }] },
+    component: [{
+      code: { coding: [{ system: OPHTHALMOLOGY_TEST_CODE_SYSTEM, code: "EXAM_STATE" }] },
+      valueString: "normal",
+    }],
+  };
+}
+
+function fullExamObservations(encounterId: string): Observation[] {
+  return [refractionObservation(encounterId), ocularHealthObservation(encounterId)];
+}
+
+function annualServiceRequest(
+  id: string,
+  encounterReference: string,
+  occurrenceDateTime: string,
+): ServiceRequest {
+  return {
+    resourceType: "ServiceRequest",
+    id,
+    status: "active",
+    intent: "plan",
+    subject: { reference: "Patient/patient-annual" },
+    encounter: { reference: encounterReference },
+    occurrenceDateTime,
+    code: { coding: [{ system: ANNUAL_TEST_CODE_SYSTEM, code: "annual-recall" }] },
+    category: [{ coding: [{ system: ANNUAL_TEST_CODE_SYSTEM, code: "routine-follow-up" }] }],
+    identifier: [{ system: ANNUAL_TEST_IDENTIFIER_SYSTEM, value: `patient-annual:${encounterReference.slice("Encounter/".length)}` }],
+    reasonCode: [{ text: "Annual eye examination" }],
+  };
+}
+
+function annualRequests(fhir: EndpointFhir): ServiceRequest[] {
+  return fhir.resources.filter((resource): resource is ServiceRequest =>
+    resource.resourceType === "ServiceRequest" &&
+    resource.code?.coding?.some((coding) => coding.system === ANNUAL_TEST_CODE_SYSTEM && coding.code === "annual-recall") === true
+  );
+}
+
 class EndpointFhir {
   readonly baseUrl = "http://localhost:8103/";
   resources: EndpointResource[] = [];
   writes: EndpointResource[] = [];
   searchResourceTypes: Resource["resourceType"][] = [];
+  failServiceRequestUpdateIds = new Set<string>();
   next = 1;
 
   async search<T extends Resource>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>> {
     this.searchResourceTypes.push(resourceType);
     let rows = this.resources.filter((resource) => resource.resourceType === resourceType);
+    if (params?.encounter) rows = rows.filter((resource) =>
+      "encounter" in resource && resource.encounter?.reference === params.encounter
+    );
+    const patientReference = params?.patient?.startsWith("Patient/")
+      ? params.patient
+      : params?.patient ? `Patient/${params.patient}` : undefined;
+    const subjectReference = params?.subject ?? patientReference;
+    if (subjectReference) rows = rows.filter((resource) =>
+      "subject" in resource && resource.subject?.reference === subjectReference
+    );
     const code = params?.code?.split("|")[1];
     if (code) rows = rows.filter((resource) => "code" in resource && resource.code?.coding?.some((coding) => coding.code === code));
     const category = params?.category?.split("|")[1];
@@ -1350,7 +1583,10 @@ class EndpointFhir {
     this.resources.push(saved); this.writes.push(saved);
     return saved;
   }
-  update = async <T extends Basic>(resourceType: T["resourceType"], id: string, resource: T): Promise<T> => {
+  update = async <T extends EndpointResource>(resourceType: T["resourceType"], id: string, resource: T): Promise<T> => {
+    if (resourceType === "ServiceRequest" && this.failServiceRequestUpdateIds.has(id)) {
+      throw new Error("Synthetic annual closure failure.");
+    }
     const saved = { ...resource, id };
     const index = this.resources.findIndex((candidate) => candidate.resourceType === resourceType && candidate.id === id);
     if (index >= 0) this.resources[index] = saved;
