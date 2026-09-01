@@ -847,10 +847,16 @@ function followUpServiceRequest(action: PlanActionInstance): ServiceRequest {
   const reason = action.payload.reason;
   const explicitKind = action.payload.followUpKind;
   if (!Number.isSafeInteger(interval) || Number(interval) <= 0 || !["days", "weeks", "months"].includes(String(unit))) {
-    throw new Error("Follow-up interval must be a positive integer in supported units.");
+    throw new ProtocolActionMaterializationRefusal(
+      "FOLLOW_UP_INTERVAL_INVALID",
+      "Follow-up interval must be a positive integer in supported units.",
+    );
   }
   if (typeof reason !== "string" || reason.trim().length === 0) {
-    throw new Error("Follow-up reason is required.");
+    throw new ProtocolActionMaterializationRefusal(
+      "FOLLOW_UP_REASON_REQUIRED",
+      "Follow-up reason is required.",
+    );
   }
   if (explicitKind !== undefined && explicitKind !== "medical" && explicitKind !== "routine") {
     throw new ProtocolActionMaterializationRefusal(
@@ -866,7 +872,12 @@ function followUpServiceRequest(action: PlanActionInstance): ServiceRequest {
     );
   }
   const due = new Date(action.provenance.at);
-  if (Number.isNaN(due.getTime())) throw new Error("Follow-up provenance time is invalid.");
+  if (Number.isNaN(due.getTime())) {
+    throw new ProtocolActionMaterializationRefusal(
+      "FOLLOW_UP_PROVENANCE_INVALID",
+      "Follow-up provenance time is invalid.",
+    );
+  }
   if (unit === "days" || unit === "weeks") {
     due.setUTCDate(due.getUTCDate() + Number(interval) * (unit === "weeks" ? 7 : 1));
   } else {
@@ -875,6 +886,12 @@ function followUpServiceRequest(action: PlanActionInstance): ServiceRequest {
     due.setUTCMonth(due.getUTCMonth() + Number(interval));
     const lastDay = new Date(Date.UTC(due.getUTCFullYear(), due.getUTCMonth() + 1, 0)).getUTCDate();
     due.setUTCDate(Math.min(originalDay, lastDay));
+  }
+  if (Number.isNaN(due.getTime())) {
+    throw new ProtocolActionMaterializationRefusal(
+      "FOLLOW_UP_INTERVAL_OVERFLOW",
+      "Follow-up interval produces an invalid due date.",
+    );
   }
   return {
     resourceType: "ServiceRequest",
@@ -894,6 +911,7 @@ export async function materializeProtocolFollowUp(
   fhir: LiveFhir,
   action: PlanActionInstance,
 ): Promise<string | undefined> {
+  // Omitting application identity deliberately revives or updates the prior request, matching the series CarePlan precedent.
   const identifierValue = `${action.encounterId}:${action.provenance.protocolId}:${action.sourceItemKey}`;
   const intended: ServiceRequest = {
     ...followUpServiceRequest(action),

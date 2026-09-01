@@ -1079,65 +1079,125 @@ test("re-materializing the same follow-up updates a corrected due date without c
   assert.equal(followUps[0]?.occurrenceDateTime, "2026-08-01");
 });
 
-test("an underivable follow-up is visibly refused without blocking the plan's other actions", async () => {
-  const fhir = new EndpointFhir();
-  const protocol: ProtocolDefinition = {
-    ...GLAUCOMA_SUSPECT_PROTOCOL,
-    id: "mixed-follow-up-protocol",
-    items: [
-      {
-        itemKey: "bad-follow-up",
-        itemType: "follow-up",
-        defaultSelected: true,
-        lateralityMode: "inherit-dx",
-        payload: {
-          interval: 6,
-          unit: "months",
-          reason: "Unclassified return",
-          followUpKind: "not-a-clinical-kind",
-        },
-      },
-      {
-        itemKey: "other-counseling",
-        itemType: "counseling",
-        defaultSelected: true,
-        lateralityMode: "inherit-dx",
-        payload: { topicKey: "other-action-landed" },
-      },
-    ],
-  };
-  fhir.resources.push(
-    buildProtocolBasic(protocol, PROTOCOL_BASIC_CODES.protocolDefinition),
-    confirmedCondition(),
-  );
-
-  const result = await handleProtocolApplyRequest(endpointDeps(fhir), {
-    authHeader: "Bearer test",
-    body: {
-      protocolId: protocol.id,
-      encounterId: "enc-1",
-      patientId: "patient-1",
-      diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true },
+const followUpRefusalCases = [
+  {
+    name: "an underivable kind",
+    payload: {
+      interval: 6,
+      unit: "months",
+      reason: "Unclassified return",
+      followUpKind: "not-a-clinical-kind",
     },
-  });
-
-  assert.equal(result.status, 200);
-  assert.equal(fhir.resources.some((resource) =>
-    resource.resourceType === "ServiceRequest" &&
-    resource.code?.coding?.some((coding) => coding.code === "follow-up")
-  ), false);
-  assert.equal(fhir.resources.some((resource) =>
-    resource.resourceType === "CarePlan" && resource.title === "other-action-landed"
-  ), true);
-  const refused = (result.body as { actions: PlanActionInstance[] }).actions.find(
-    (action) => action.sourceItemKey === "bad-follow-up",
-  );
-  assert.deepEqual(refused?.materializationRefusal, {
+    at: "2026-07-18T12:00:00.000Z",
     code: "FOLLOW_UP_KIND_UNDERIVABLE",
     message: "Follow-up kind must be medical or routine.",
+  },
+  {
+    name: "a malformed interval",
+    payload: {
+      interval: 0,
+      unit: "months",
+      reason: "Invalid interval return",
+      followUpKind: "medical",
+    },
+    at: "2026-07-18T12:00:00.000Z",
+    code: "FOLLOW_UP_INTERVAL_INVALID",
+    message: "Follow-up interval must be a positive integer in supported units.",
+  },
+  {
+    name: "a missing reason",
+    payload: {
+      interval: 6,
+      unit: "months",
+      reason: "",
+      followUpKind: "medical",
+    },
+    at: "2026-07-18T12:00:00.000Z",
+    code: "FOLLOW_UP_REASON_REQUIRED",
+    message: "Follow-up reason is required.",
+  },
+  {
+    name: "invalid provenance time",
+    payload: {
+      interval: 6,
+      unit: "months",
+      reason: "Invalid provenance return",
+      followUpKind: "medical",
+    },
+    at: "not-a-date",
+    code: "FOLLOW_UP_PROVENANCE_INVALID",
+    message: "Follow-up provenance time is invalid.",
+  },
+  {
+    name: "an interval that overflows the due date",
+    payload: {
+      interval: Number.MAX_SAFE_INTEGER,
+      unit: "days",
+      reason: "Overflow return",
+      followUpKind: "medical",
+    },
+    at: "2026-07-18T12:00:00.000Z",
+    code: "FOLLOW_UP_INTERVAL_OVERFLOW",
+    message: "Follow-up interval produces an invalid due date.",
+  },
+] as const;
+
+for (const refusal of followUpRefusalCases) {
+  test(`${refusal.name} refuses only the follow-up and commits the plan's other actions`, async () => {
+    const fhir = new EndpointFhir();
+    const protocol: ProtocolDefinition = {
+      ...GLAUCOMA_SUSPECT_PROTOCOL,
+      id: `mixed-follow-up-protocol-${refusal.code}`,
+      items: [
+        {
+          itemKey: "bad-follow-up",
+          itemType: "follow-up",
+          defaultSelected: true,
+          lateralityMode: "inherit-dx",
+          payload: refusal.payload,
+        },
+        {
+          itemKey: "other-counseling",
+          itemType: "counseling",
+          defaultSelected: true,
+          lateralityMode: "inherit-dx",
+          payload: { topicKey: "other-action-landed" },
+        },
+      ],
+    };
+    fhir.resources.push(
+      buildProtocolBasic(protocol, PROTOCOL_BASIC_CODES.protocolDefinition),
+      confirmedCondition(),
+    );
+
+    const result = await handleProtocolApplyRequest({ ...endpointDeps(fhir), now: () => refusal.at }, {
+      authHeader: "Bearer test",
+      body: {
+        protocolId: protocol.id,
+        encounterId: "enc-1",
+        patientId: "patient-1",
+        diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true },
+      },
+    });
+
+    assert.equal(result.status, 200);
+    assert.equal(fhir.resources.some((resource) =>
+      resource.resourceType === "ServiceRequest" &&
+      resource.code?.coding?.some((coding) => coding.code === "follow-up")
+    ), false);
+    assert.equal(fhir.resources.some((resource) =>
+      resource.resourceType === "CarePlan" && resource.title === "other-action-landed"
+    ), true);
+    const refused = (result.body as { actions: PlanActionInstance[] }).actions.find(
+      (action) => action.sourceItemKey === "bad-follow-up",
+    );
+    assert.deepEqual(refused?.materializationRefusal, {
+      code: refusal.code,
+      message: refusal.message,
+    });
+    assert.equal(refused?.materializedFhirRef, undefined);
   });
-  assert.equal(refused?.materializedFhirRef, undefined);
-});
+}
 
 test("follow-up month arithmetic clamps January 31 to the last day of February", async () => {
   const cases = [
