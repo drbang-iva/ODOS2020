@@ -108,6 +108,8 @@ export function ExamEntrySheet({
   onDirtyCheckpoint,
   onFocusWithin,
   onRestoreDirtyCheckpoint,
+  panelId,
+  panelLabelledBy,
   panelTabs,
   active = true,
   hidden = false,
@@ -121,6 +123,8 @@ export function ExamEntrySheet({
   onDirtyCheckpoint?: () => void;
   onFocusWithin?: (element: HTMLElement) => void;
   onRestoreDirtyCheckpoint?: () => void;
+  panelId?: string;
+  panelLabelledBy?: string;
   panelTabs?: ReactNode;
   active?: boolean;
   hidden?: boolean;
@@ -142,7 +146,15 @@ export function ExamEntrySheet({
     if (element && editorRoot && !editorRoot.contains(element)) onDirtyCheckpoint?.();
   };
   return (
-    <div className="odos-exam-entry-layer" data-testid="exam-entry-layer" data-panel-tabs={panelTabs ? "true" : undefined} hidden={hidden}>
+    <div
+      id={panelId}
+      className="odos-exam-entry-layer"
+      role={panelTabs ? "tabpanel" : undefined}
+      aria-labelledby={panelLabelledBy}
+      data-testid="exam-entry-layer"
+      data-panel-tabs={panelTabs ? "true" : undefined}
+      hidden={hidden}
+    >
       {!panelTabs && (
         <div
           className="odos-exam-entry-restore-bar"

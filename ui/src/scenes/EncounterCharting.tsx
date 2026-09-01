@@ -36,6 +36,7 @@ import {
 import {
   ExamRightPanelSurface,
   ExamRightPanelTabs,
+  EXAM_RIGHT_PANEL_IDS,
   examRightPanelEntryTitle,
   INITIAL_EXAM_RIGHT_PANEL_STATE,
   closeExamRightPanelEngage,
@@ -1005,6 +1006,8 @@ export function EncounterCharting({ patient, encounterId }: Props) {
             onDirtyCheckpoint={entrySheetGuard.markDirtyCheckpoint}
             onFocusWithin={entrySheetGuard.rememberFocus}
             onRestoreDirtyCheckpoint={entrySheetGuard.restoreDirtyCheckpoint}
+            panelId={EXAM_RIGHT_PANEL_IDS.entry}
+            panelLabelledBy="entry-panel-entry-tab"
             panelTabs={rightPanelTabs("entry-panel")}
             active={rightPanelState.activeTab === "entry" && !referralComposeOpen}
             hidden={rightPanelState.activeTab !== "entry"}
@@ -1040,6 +1043,8 @@ export function EncounterCharting({ patient, encounterId }: Props) {
           <ExamRightPanelSurface
             active={rightPanelState.activeTab === "images"}
             label="Images"
+            panelId={EXAM_RIGHT_PANEL_IDS.images}
+            labelledBy="images-panel-images-tab"
             tabs={rightPanelTabs("images-panel")}
           >
             <LongitudinalImagingCard
@@ -1064,6 +1069,8 @@ export function EncounterCharting({ patient, encounterId }: Props) {
             patient={patient}
             encounterReference={encounterReference}
             diagnosis={engageDiagnosis}
+            panelId={EXAM_RIGHT_PANEL_IDS.engage}
+            panelLabelledBy="engage-panel-engage-tab"
             panelTabs={rightPanelTabs("engage-panel")}
             onClose={() => {
               setEngageDiagnosis(undefined);

@@ -68,6 +68,8 @@ export function EngageSheet({
   encounterReference,
   diagnosis,
   onClose,
+  panelId,
+  panelLabelledBy,
   panelTabs,
   api = defaultApi,
   idempotencyKeyFactory = defaultIdempotencyKey,
@@ -77,6 +79,8 @@ export function EngageSheet({
   encounterReference?: string;
   diagnosis?: EngageDiagnosis;
   onClose: () => void;
+  panelId?: string;
+  panelLabelledBy?: string;
   panelTabs?: ReactNode;
   api?: EngageSheetApi;
   idempotencyKeyFactory?: () => string;
@@ -233,7 +237,15 @@ export function EngageSheet({
     : undefined;
 
   return (
-    <ExamEntrySheet sectionId="engage" onCancel={onClose} panelTabs={panelTabs} active={open} hidden={!open}>
+    <ExamEntrySheet
+      sectionId="engage"
+      onCancel={onClose}
+      panelId={panelId}
+      panelLabelledBy={panelLabelledBy}
+      panelTabs={panelTabs}
+      active={open}
+      hidden={!open}
+    >
       <section className="grid gap-5 p-1" aria-label="Engage education">
         <header>
           <h2 className="text-lg font-semibold">{`Engage — ${patientName(patient)}`}</h2>

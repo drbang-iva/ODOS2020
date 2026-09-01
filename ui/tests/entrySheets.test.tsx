@@ -306,6 +306,34 @@ test("the History entry tab uses the worksheet section title", { timeout: 30_000
   }
 });
 
+test("the panel tabs expose associations and use roving arrow-key focus", { timeout: 30_000 }, async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  page.setDefaultTimeout(5_000);
+  try {
+    await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
+    const imagesTab = page.getByRole("tab", { name: /^Images/ });
+    const imagesPanel = page.getByRole("tabpanel", { name: "Images" });
+    assert.equal(await imagesTab.getAttribute("tabindex"), "0");
+    assert.equal(await imagesTab.getAttribute("aria-controls"), "exam-right-panel-images");
+    assert.equal(await imagesPanel.getAttribute("id"), "exam-right-panel-images");
+    assert.equal(await imagesPanel.getAttribute("aria-labelledby"), await imagesTab.getAttribute("id"));
+
+    await imagesTab.press("ArrowRight");
+    const engageTab = page.getByRole("tab", { name: "Engage" });
+    await page.getByRole("tabpanel", { name: "Engage" }).waitFor();
+    await page.waitForFunction(() => document.activeElement?.getAttribute("data-panel-tab") === "engage");
+    assert.equal(await engageTab.getAttribute("tabindex"), "0");
+    assert.equal(await engageTab.evaluate((node) => node === document.activeElement), true);
+
+    await engageTab.press("ArrowLeft");
+    await imagesPanel.waitFor();
+    await page.waitForFunction(() => document.activeElement?.getAttribute("data-panel-tab") === "images");
+    assert.equal(await page.getByRole("tab", { name: /^Images/ }).evaluate((node) => node === document.activeElement), true);
+  } finally {
+    await page.close();
+  }
+});
+
 test("Save and Add Another focuses an enabled blank concern within the viewport", { timeout: 30_000 }, async () => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   page.setDefaultTimeout(5_000);

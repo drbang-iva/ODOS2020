@@ -17,6 +17,7 @@ import { EXAM_ENTRY_SHEET_CONFIG, ExamEntrySheet, isExamEntrySheetSectionId, use
 import {
   ExamRightPanelSurface,
   ExamRightPanelTabs,
+  EXAM_RIGHT_PANEL_IDS,
   examRightPanelEntryTitle,
   INITIAL_EXAM_RIGHT_PANEL_STATE,
   finishExamRightPanelEntry,
@@ -327,6 +328,8 @@ function Fixture() {
               onDirtyCheckpoint={sheetGuard.markDirtyCheckpoint}
               onFocusWithin={sheetGuard.rememberFocus}
               onRestoreDirtyCheckpoint={sheetGuard.restoreDirtyCheckpoint}
+              panelId={EXAM_RIGHT_PANEL_IDS.entry}
+              panelLabelledBy="fixture-entry-panel-entry-tab"
               panelTabs={panelTabs("fixture-entry-panel")}
               active={panelState.activeTab === "entry"}
               hidden={panelState.activeTab !== "entry"}
@@ -344,6 +347,8 @@ function Fixture() {
             <ExamRightPanelSurface
               active={panelState.activeTab === "images"}
               label="Images"
+              panelId={EXAM_RIGHT_PANEL_IDS.images}
+              labelledBy="fixture-images-panel-images-tab"
               tabs={panelTabs("fixture-images-panel")}
             >
               <p>Two synthetic patient studies</p>
@@ -353,6 +358,8 @@ function Fixture() {
             <ExamRightPanelSurface
               active={panelState.activeTab === "engage"}
               label="Engage"
+              panelId={EXAM_RIGHT_PANEL_IDS.engage}
+              labelledBy="fixture-engage-panel-engage-tab"
               tabs={panelTabs("fixture-engage-panel")}
             >
               <p>Engage education</p>
