@@ -217,6 +217,13 @@ export function membershipPolicyReferences(membership: ProjectMembership): strin
   ].filter((reference): reference is string => Boolean(reference));
 }
 
+export function createProjectOwnedRepairPolicy(
+  fhir: Pick<MedplumClient, "create">,
+  policy: AccessPolicy,
+): Promise<AccessPolicy> {
+  return fhir.create(policy, { "X-Medplum": "extended" });
+}
+
 class LivePracticeRoleRepairAdapter implements PracticeRoleRepairAdapter {
   private readonly audit = createLiveOdosAuditRuntime({
     postgresUrl: process.env.ODOS_POSTGRES_URL ?? DEFAULT_POSTGRES_URL,
@@ -235,7 +242,7 @@ class LivePracticeRoleRepairAdapter implements PracticeRoleRepairAdapter {
   }
 
   async createPolicy(policy: AccessPolicy): Promise<AccessPolicy> {
-    return this.fhir.create(policy);
+    return createProjectOwnedRepairPolicy(this.fhir, policy);
   }
 
   async readPolicy(reference: string): Promise<AccessPolicy | undefined> {

@@ -5,6 +5,7 @@ import { test } from "node:test";
 import type { AccessPolicy, Bundle, Practitioner, ProjectMembership, Resource, User } from "@medplum/fhirtypes";
 import {
   contractBootstrapRepairEnabled,
+  createProjectOwnedRepairPolicy,
   devPrimaryRole,
   loginForLocalRepair,
   membershipPolicyReferences,
@@ -118,6 +119,22 @@ test("missing role policies are created before the preserved legacy grant", asyn
   ]);
   assert.equal(adapter.membership.accessPolicy, undefined);
   assert.equal(adapter.auditWrites, 1);
+});
+
+test("live repair requests Medplum ownership metadata when creating a policy", async () => {
+  let headers: Record<string, string> | undefined;
+  const policy: AccessPolicy = { resourceType: "AccessPolicy", name: "ODOS Test" };
+  const fhir = {
+    create: async <T extends Resource>(resource: T, extraHeaders?: Record<string, string>): Promise<T> => {
+      headers = extraHeaders;
+      return { ...resource, id: "policy-1", meta: { ...resource.meta, project: "local-practice" } } as T;
+    },
+  };
+
+  const created = await createProjectOwnedRepairPolicy(fhir, policy);
+
+  assert.deepEqual(headers, { "X-Medplum": "extended" });
+  assert.equal(created.meta?.project, "local-practice");
 });
 
 test("a second repair is a zero-write idempotent no-op", async () => {
