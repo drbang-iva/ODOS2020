@@ -158,21 +158,11 @@ export async function materializeAnnualRecallOnSign(
   for (const failed of failedAnnuals) {
     if (!failed.id) continue;
     try {
-      await fhir.update(
-        "ServiceRequest",
-        failed.id,
-        appendNote(failed, visibleNote),
-        { "X-ODOS-Source": "annual-recall" },
-      );
+      await appendVisibleNote(fhir, failed.id, visibleNote);
     } catch {}
   }
   try {
-    await fhir.update(
-      "ServiceRequest",
-      retainedId,
-      appendNote(retained.request, visibleNote),
-      { "X-ODOS-Source": "annual-recall" },
-    );
+    await appendVisibleNote(fhir, retainedId, visibleNote);
   } catch {
     // The handler response below remains the authoritative observable refusal if annotation also fails.
   }
@@ -226,6 +216,23 @@ function isLaterAnnual(
 function appendNote(request: ServiceRequest, text: string): ServiceRequest {
   if (request.note?.some((note) => note.text === text)) return request;
   return { ...request, note: [...(request.note ?? []), { text }] };
+}
+
+async function appendVisibleNote(
+  fhir: AnnualRecallFhir,
+  id: string,
+  text: string,
+): Promise<void> {
+  const latest = await fhir.read<ServiceRequest>("ServiceRequest", id);
+  await fhir.update(
+    "ServiceRequest",
+    id,
+    appendNote(latest, text),
+    {
+      "X-ODOS-Source": "annual-recall",
+      ...(latest.meta?.versionId ? { "If-Match": `W/"${latest.meta.versionId}"` } : {}),
+    },
+  );
 }
 
 export function annualRecallMaterializationRefusal(error: unknown): AnnualRecallMaterializationResult {

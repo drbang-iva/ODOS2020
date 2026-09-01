@@ -1079,6 +1079,27 @@ test("annual closure failure stays observable without blocking encounter signing
   }]);
 });
 
+test("annual closure annotation cannot reactivate a concurrently completed annual", async () => {
+  const fhir = new EndpointFhir();
+  fhir.resources.push(
+    annualEncounter("closure-race-current", "routine-exam-established", "2026-07-18T15:00:00.000Z"),
+    ...fullExamObservations("closure-race-current"),
+    annualEncounter("closure-race-prior", "routine-exam-established", "2025-07-18T15:00:00.000Z"),
+    annualServiceRequest("closure-race-old-annual", "Encounter/closure-race-prior", "2026-07-18"),
+  );
+  fhir.failServiceRequestUpdateOnceIds.add("closure-race-old-annual");
+  fhir.completeServiceRequestOnFailedUpdateIds.add("closure-race-old-annual");
+
+  const result = await handleProtocolSignCleanupRequest(
+    { ...endpointDeps(fhir), feeScheduleFhir: fhir as never },
+    { authHeader: "Bearer test", params: { encounterId: "closure-race-current" } },
+  );
+
+  assert.equal(result.status, 200);
+  assert.equal((await fhir.read<ServiceRequest>("ServiceRequest", "closure-race-old-annual")).status, "completed");
+  assert.equal(annualRequests(fhir).filter((request) => request.status === "active").length, 1);
+});
+
 test("all Phase A authoring endpoints reject a non-author and admit a clinician", async () => {
   const blockedFhir = new EndpointFhir();
   const blocked = endpointDeps(blockedFhir, "staff", "Practitioner/disposable-front-desk");
@@ -1835,6 +1856,7 @@ class EndpointFhir {
   searchResourceTypes: Resource["resourceType"][] = [];
   failServiceRequestUpdateIds = new Set<string>();
   failServiceRequestUpdateOnceIds = new Set<string>();
+  completeServiceRequestOnFailedUpdateIds = new Set<string>();
   delayFirstTwoAnnualSearches = false;
   annualSearchesDelayed = 0;
   releaseDelayedAnnualSearch?: () => void;
@@ -1904,6 +1926,10 @@ class EndpointFhir {
   }
   update = async <T extends EndpointResource>(resourceType: T["resourceType"], id: string, resource: T): Promise<T> => {
     if (resourceType === "ServiceRequest" && this.failServiceRequestUpdateOnceIds.delete(id)) {
+      if (this.completeServiceRequestOnFailedUpdateIds.delete(id)) {
+        const index = this.resources.findIndex((candidate) => candidate.resourceType === resourceType && candidate.id === id);
+        if (index >= 0) this.resources[index] = { ...this.resources[index], status: "completed" } as ServiceRequest;
+      }
       throw new Error("Synthetic one-time annual closure failure.");
     }
     if (resourceType === "ServiceRequest" && this.failServiceRequestUpdateIds.has(id)) {
