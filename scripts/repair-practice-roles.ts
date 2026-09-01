@@ -389,7 +389,11 @@ async function runCli(): Promise<void> {
     await fhir.getActiveProjectId(),
     "authenticated repair project",
   );
-  const contractBootstrap = process.env.MEDPLUM_CONTRACT_BOOTSTRAP === "1";
+  const contractBootstrap = contractBootstrapRepairEnabled({
+    enabled: process.env.MEDPLUM_CONTRACT_BOOTSTRAP === "1",
+    githubActions: process.env.GITHUB_ACTIONS,
+    baseUrl,
+  });
   const primaryRole = devPrimaryRole(process.env.ODOS_DEV_PRIMARY_ROLE);
   const result = await repairPracticeRoles(
     new LivePracticeRoleRepairAdapter(fhir, contractBootstrap),
@@ -406,6 +410,23 @@ async function runCli(): Promise<void> {
   console.log(`Roles granted: [${result.grantedRoles.join(", ")}]`);
   console.log(`Membership policy bindings: [${result.policyBindings.join(", ")}]`);
   console.log(`Dev login primary role: ${result.primaryRole}`);
+}
+
+export function contractBootstrapRepairEnabled(input: {
+  enabled: boolean;
+  githubActions: string | undefined;
+  baseUrl: string;
+}): boolean {
+  if (!input.enabled) return false;
+  if (input.githubActions !== "true") {
+    throw new Error("MEDPLUM_CONTRACT_BOOTSTRAP practice-role repair requires GitHub Actions.");
+  }
+  if (input.baseUrl !== "http://localhost:18103") {
+    throw new Error(
+      "MEDPLUM_CONTRACT_BOOTSTRAP practice-role repair requires the ephemeral http://localhost:18103 Medplum.",
+    );
+  }
+  return true;
 }
 
 export function devPrimaryRole(value: string | undefined): DevAdminPrimaryRole {

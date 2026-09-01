@@ -4,6 +4,7 @@ import type { AddressInfo } from "node:net";
 import { test } from "node:test";
 import type { AccessPolicy, Bundle, Practitioner, ProjectMembership, Resource, User } from "@medplum/fhirtypes";
 import {
+  contractBootstrapRepairEnabled,
   devPrimaryRole,
   loginForLocalRepair,
   membershipPolicyReferences,
@@ -193,6 +194,29 @@ test("the primary-role environment value defaults safely and rejects unsupported
   assert.equal(devPrimaryRole(undefined), "staff");
   assert.equal(devPrimaryRole(" provider "), "provider");
   assert.throws(() => devPrimaryRole("admin"), /must be staff or provider/);
+});
+
+test("contract bootstrap repair is restricted to the ephemeral GitHub Actions Medplum", () => {
+  assert.equal(contractBootstrapRepairEnabled({
+    enabled: false,
+    githubActions: undefined,
+    baseUrl: "http://localhost:8103",
+  }), false);
+  assert.equal(contractBootstrapRepairEnabled({
+    enabled: true,
+    githubActions: "true",
+    baseUrl: "http://localhost:18103",
+  }), true);
+  assert.throws(() => contractBootstrapRepairEnabled({
+    enabled: true,
+    githubActions: undefined,
+    baseUrl: "http://localhost:18103",
+  }), /requires GitHub Actions/);
+  assert.throws(() => contractBootstrapRepairEnabled({
+    enabled: true,
+    githubActions: "true",
+    baseUrl: "http://localhost:8103",
+  }), /ephemeral http:\/\/localhost:18103 Medplum/);
 });
 
 test("the repair CLI requires an explicit --email target", () => {
