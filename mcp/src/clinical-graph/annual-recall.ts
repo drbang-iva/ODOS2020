@@ -107,14 +107,18 @@ export async function materializeAnnualRecallOnSign(
     code: `${ANNUAL_RECALL_CODE_SYSTEM}|annual-recall`,
     status: "active",
   }, { maxRows: 100 });
-  const retained = activeAnnuals.reduce(
-    (latest, candidate) =>
-      (candidate.occurrenceDateTime ?? "") > (latest.occurrenceDateTime ?? "") ? candidate : latest,
-    current,
+  const datedAnnuals = await Promise.all(activeAnnuals.map(async (request) => ({
+    request,
+    serviceDate: await sourceServiceDate(fhir, request, encounterReference, serviceDate),
+  })));
+  const retained = datedAnnuals.reduce(
+    (latest, candidate) => Date.parse(candidate.serviceDate) > Date.parse(latest.serviceDate) ? candidate : latest,
+    { request: current, serviceDate },
   );
-  const retainedId = retained.id ?? currentId;
+  const retainedId = retained.request.id ?? currentId;
   const completedReferences: string[] = [];
   const closureFailures: AnnualRecallClosureFailure[] = [];
+  const failedAnnuals: ServiceRequest[] = [];
   for (const prior of activeAnnuals) {
     if (!prior.id || prior.id === retainedId) continue;
     const serviceRequestReference = `ServiceRequest/${prior.id}`;
@@ -127,6 +131,7 @@ export async function materializeAnnualRecallOnSign(
       );
       completedReferences.push(serviceRequestReference);
     } catch (error) {
+      failedAnnuals.push(prior);
       closureFailures.push({
         serviceRequestReference,
         message: error instanceof Error ? error.message : String(error),
@@ -139,16 +144,32 @@ export async function materializeAnnualRecallOnSign(
     return { fullExam: true, serviceRequestReference, completedReferences };
   }
   const message = `The new annual recall was created, but ${closureFailures.length} prior annual${closureFailures.length === 1 ? "" : "s"} could not be completed.`;
-  const visibleNote = `Annual recall closure incomplete: ${closureFailures.length} prior annual${closureFailures.length === 1 ? "" : "s"} could not be completed.`;
-  try {
-    await fhir.update(
-      "ServiceRequest",
-      retainedId,
-      { ...retained, note: [{ text: visibleNote }] },
-      { "X-ODOS-Source": "annual-recall" },
-    );
-  } catch {
-    // The handler response below remains the authoritative observable refusal if annotation also fails.
+  const visibleNote = `Annual recall closure incomplete: ${closureFailures.length} other active annual${closureFailures.length === 1 ? "" : "s"} could not be completed.`;
+  let unannotated = 0;
+  for (const failed of failedAnnuals) {
+    if (!failed.id) continue;
+    try {
+      await fhir.update(
+        "ServiceRequest",
+        failed.id,
+        appendNote(failed, visibleNote),
+        { "X-ODOS-Source": "annual-recall" },
+      );
+    } catch {
+      unannotated += 1;
+    }
+  }
+  if (unannotated > 0) {
+    try {
+      await fhir.update(
+        "ServiceRequest",
+        retainedId,
+        appendNote(retained.request, visibleNote),
+        { "X-ODOS-Source": "annual-recall" },
+      );
+    } catch {
+      // The handler response below remains the authoritative observable refusal if annotation also fails.
+    }
   }
   return {
     fullExam: true,
@@ -160,6 +181,26 @@ export async function materializeAnnualRecallOnSign(
       message,
     },
   };
+}
+
+async function sourceServiceDate(
+  fhir: AnnualRecallFhir,
+  request: ServiceRequest,
+  currentEncounterReference: string,
+  currentServiceDate: string,
+): Promise<string> {
+  const reference = request.encounter?.reference;
+  if (reference === currentEncounterReference) return currentServiceDate;
+  const encounterId = reference?.match(/^Encounter\/([A-Za-z0-9.-]+)$/)?.[1];
+  if (!encounterId) throw new Error("Annual recall requires a local source Encounter reference.");
+  const encounter = await fhir.read<Encounter>("Encounter", encounterId);
+  if (!encounter.period?.start) throw new Error("Annual recall source Encounter requires period.start.");
+  return encounter.period.start;
+}
+
+function appendNote(request: ServiceRequest, text: string): ServiceRequest {
+  if (request.note?.some((note) => note.text === text)) return request;
+  return { ...request, note: [...(request.note ?? []), { text }] };
 }
 
 export function annualRecallMaterializationRefusal(error: unknown): AnnualRecallMaterializationResult {
@@ -228,14 +269,21 @@ function annualServiceRequest(input: {
 }
 
 function addCalendarMonths(value: string, months: number): string {
-  const due = new Date(value);
-  if (Number.isNaN(due.getTime())) {
+  const sourceDate = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!sourceDate) {
     throw new Error("Annual recall Encounter service date is invalid.");
   }
-  const originalDay = due.getUTCDate();
-  due.setUTCDate(1);
-  due.setUTCMonth(due.getUTCMonth() + months);
-  const lastDay = new Date(Date.UTC(due.getUTCFullYear(), due.getUTCMonth() + 1, 0)).getUTCDate();
-  due.setUTCDate(Math.min(originalDay, lastDay));
+  const year = Number(sourceDate[1]);
+  const month = Number(sourceDate[2]);
+  const day = Number(sourceDate[3]);
+  const source = new Date(Date.UTC(year, month - 1, day));
+  if (source.getUTCFullYear() !== year || source.getUTCMonth() !== month - 1 || source.getUTCDate() !== day) {
+    throw new Error("Annual recall Encounter service date is invalid.");
+  }
+  const targetMonth = month - 1 + months;
+  const targetYear = year + Math.floor(targetMonth / 12);
+  const normalizedMonth = ((targetMonth % 12) + 12) % 12;
+  const lastDay = new Date(Date.UTC(targetYear, normalizedMonth + 1, 0)).getUTCDate();
+  const due = new Date(Date.UTC(targetYear, normalizedMonth, Math.min(day, lastDay)));
   return due.toISOString().slice(0, 10);
 }
