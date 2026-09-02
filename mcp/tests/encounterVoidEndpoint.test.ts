@@ -842,3 +842,39 @@ test("fixback 7: section subtotals include linked administrations, so they alway
     assert.equal(response.sections.find((section) => section.sectionKey === "entrance:dilation")?.count, 3, `${body.scope}: dilation subtotal counts the DFE plus two administrations`);
   }
 });
+
+test("fixback 8: a linked administration that belongs to another encounter or patient rejects the void before any write", async () => {
+  for (const foreign of [
+    { ...administration("ma-foreign"), context: { reference: "Encounter/e0" } },
+    { ...administration("ma-foreign"), subject: { reference: "Patient/p9" } },
+  ]) {
+    const { deps, fhir } = fixture();
+    fhir.add(foreign);
+    fhir.add(observation("dfe", "entrance:dilation", "UNKNOWN", { partOf: [{ reference: "MedicationAdministration/ma-foreign" }] }));
+
+    const result = await handleEncounterVoidRequest(deps, {
+      authHeader: AUTH,
+      params: { encounterId: "e1" },
+      body: { scope: "section", sectionKey: "entrance:dilation" },
+    });
+
+    assert.equal(result.status, 422, JSON.stringify(result.body));
+    assert.match((result.body as { error: string }).error, /MedicationAdministration\/ma-foreign/);
+    assert.equal(fhir.transactions.length, 0, "nothing may be written");
+    assert.equal(fhir.get<Observation>("Observation", "dfe").status, "final", "the Observation must not disappear over a live administration");
+    assert.equal(fhir.get<ReturnType<typeof administration>>("MedicationAdministration", "ma-foreign").status, "completed");
+  }
+});
+
+test("fixback 8: a linked administration already entered-in-error is not a boundary violation — nothing active remains, the Observation voids", async () => {
+  const { deps, fhir } = fixture();
+  fhir.add(administration("ma-retired", "entered-in-error"));
+  fhir.add(observation("dfe", "entrance:dilation", "UNKNOWN", { partOf: [{ reference: "MedicationAdministration/ma-retired" }] }));
+  const result = await handleEncounterVoidRequest(deps, {
+    authHeader: AUTH,
+    params: { encounterId: "e1" },
+    body: { scope: "section", sectionKey: "entrance:dilation" },
+  });
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  assert.deepEqual((result.body as VoidBody).voided, ["Observation/dfe"]);
+});

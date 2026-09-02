@@ -248,6 +248,9 @@ export async function handleEncounterVoidRequest(
       // disappear while the medication might stay clinically active.
       return { status: 503, body: { error: error.message, code: "linked-administration-unavailable" } };
     }
+    if (error instanceof LinkedAdministrationBoundaryError) {
+      return { status: 422, body: { error: error.message, code: "linked-administration-foreign" } };
+    }
     throw error;
   }
 
@@ -442,15 +445,30 @@ async function linkedAdministrations(
       throw new LinkedAdministrationReadError(reference, error);
     }
   }));
-  return rows.flatMap((administration): Array<MedicationAdministration & { id: string }> =>
-    administration &&
-    typeof administration.id === "string" &&
-    administration.context?.reference === encounterReference &&
-    administration.subject?.reference === patientReference &&
-    administration.status !== "entered-in-error"
-      ? [administration as MedicationAdministration & { id: string }]
-      : []
-  );
+  const linked: Array<MedicationAdministration & { id: string }> = [];
+  for (const [index, administration] of rows.entries()) {
+    if (!administration) continue; // dangling link — nothing active remains
+    if (administration.status === "entered-in-error") continue; // already retired — nothing active remains
+    // A live administration that is NOT this encounter's / this patient's is a boundary violation,
+    // not something to leave out quietly: omitting it would void the Observation while the drops
+    // stay clinically active under another chart. Refuse the whole void.
+    if (
+      typeof administration.id !== "string" ||
+      administration.context?.reference !== encounterReference ||
+      administration.subject?.reference !== patientReference
+    ) {
+      throw new LinkedAdministrationBoundaryError(references[index]!, encounterReference);
+    }
+    linked.push(administration as MedicationAdministration & { id: string });
+  }
+  return linked;
+}
+
+class LinkedAdministrationBoundaryError extends Error {
+  override readonly name = "LinkedAdministrationBoundaryError";
+  constructor(reference: string, encounterReference: string) {
+    super(`Linked ${reference} is active but does not belong to ${encounterReference}; nothing was voided.`);
+  }
 }
 
 class LinkedAdministrationReadError extends Error {
