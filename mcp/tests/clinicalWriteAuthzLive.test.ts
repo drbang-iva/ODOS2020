@@ -10,6 +10,7 @@ import type {
   ClientApplication,
   Goal,
   MedicationRequest,
+  Observation,
   Patient,
   Practitioner,
   ProjectMembership,
@@ -98,6 +99,7 @@ test("synced practice policies enforce all repaired clinical writes on running M
         policyReference: `AccessPolicy/${policy.id}`,
         patientReference,
         practitionerReference,
+        projectId,
         runId,
         adminFhir,
         adminToken,
@@ -132,6 +134,30 @@ test("synced practice policies enforce all repaired clinical writes on running M
       assert.equal(response.status, 200, `${roleId} update ${resource.resourceType}: ${response.summary}`);
       return response.body as T;
     };
+
+    const providerVoidDraft = await created<Observation>(
+      "staff",
+      observationFixture(patientReference, `provider-void-${runId}`),
+    );
+    await t.test("Provider voids a preliminary Observation seeded by Staff", async () => {
+      await updated<Observation>("provider", { ...providerVoidDraft, status: "entered-in-error" });
+    });
+
+    const staffVoidDraft = await created<Observation>(
+      "provider",
+      observationFixture(patientReference, `staff-void-${runId}`),
+    );
+    await t.test("Staff voids a preliminary Observation seeded by Provider", async () => {
+      await updated<Observation>("staff", { ...staffVoidDraft, status: "entered-in-error" });
+    });
+
+    const staffFinalDraft = await created<Observation>(
+      "provider",
+      observationFixture(patientReference, `staff-final-${runId}`),
+    );
+    await t.test("Staff cannot finalize a preliminary Observation seeded by Provider", async () => {
+      await denied("staff", "PUT", `Observation/${staffFinalDraft.id}`, { ...staffFinalDraft, status: "final" });
+    });
 
     await t.test("Chart sidebar > Allergies — Mark no known allergies", async () => {
       const body = buildAllergyIntolerance({ patientReference, noKnownAllergy: true });
@@ -342,12 +368,13 @@ async function createRoleClient(input: {
   policyReference: string;
   patientReference: string;
   practitionerReference: string;
+  projectId: string;
   runId: string;
   adminFhir: Awaited<ReturnType<typeof createAuthenticatedFhirClient>>["fhir"];
   adminToken: string;
   track: <T extends Resource>(resource: T) => T;
 }): Promise<{ token: string }> {
-  const response = await fetch(`${baseUrl}/admin/projects/${projectId}/client`, {
+  const response = await fetch(`${baseUrl}/admin/projects/${input.projectId}/client`, {
     method: "POST",
     headers: { Authorization: `Bearer ${input.adminToken}`, "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -363,7 +390,7 @@ async function createRoleClient(input: {
   const memberships = (await searchAll<ProjectMembership>(input.adminFhir, "ProjectMembership", {
     profile: `ClientApplication/${client.id}`,
     _count: "100",
-  })).filter((membership) => membership.project.reference === `Project/${projectId}`);
+  })).filter((membership) => membership.project.reference === `Project/${input.projectId}`);
   assert.equal(memberships.length, 1, `${input.roleId} client membership.`);
   const membership = memberships[0]!;
   assert.ok(membership.id && membership.meta?.versionId);
@@ -440,6 +467,15 @@ function prescriptionFixture(
     transmissionMethod: "not-transmitted",
     authoredOn: new Date().toISOString(),
   });
+}
+
+function observationFixture(patientReference: string, identifier: string): Observation {
+  return {
+    resourceType: "Observation",
+    status: "preliminary",
+    code: { text: `Synthetic authorization draft ${identifier}` },
+    subject: { reference: patientReference },
+  };
 }
 
 function withMessageId(resource: MedicationRequest, value: string): MedicationRequest {

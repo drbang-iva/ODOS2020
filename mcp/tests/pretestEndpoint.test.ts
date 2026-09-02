@@ -8,6 +8,7 @@ import {
   buildPretestFindingDefinitionStubs,
   handleAutoRefractionCaptureRequest,
   handleAutoRefractionDefinitionRequest,
+  handleAutoRefractionHistoryRequest,
   handleWearingCaptureRequest,
   handleWearingDefinitionRequest,
   type PretestEndpointDeps,
@@ -180,7 +181,7 @@ test("auto-refraction history returns the current encounter values needed to hyd
   });
 });
 
-test("all four pretest handlers enforce authentication, practice-wide reads, and read-only Admin", async () => {
+test("all five pretest handlers enforce authentication, practice-wide reads, and read-only Admin", async () => {
   const definitionHandlers = [handleWearingDefinitionRequest, handleAutoRefractionDefinitionRequest];
   for (const handler of definitionHandlers) {
     assert.equal((await handler(deps().deps, { authHeader: undefined })).status, 401);
@@ -203,6 +204,14 @@ test("all four pretest handlers enforce authentication, practice-wide reads, and
     authHeader: AUTH,
     body: autoBody(),
   })).status, 403);
+  assert.equal((await handleAutoRefractionHistoryRequest(deps().deps, {
+    authHeader: undefined,
+    query: BODY,
+  })).status, 401);
+  assert.equal((await handleAutoRefractionHistoryRequest(deps("admin").deps, {
+    authHeader: AUTH,
+    query: BODY,
+  })).status, 200);
 });
 
 test("Wearing persists one complete Observation per glasses pair with both eyes, prism, VA, type, and remarks", async () => {

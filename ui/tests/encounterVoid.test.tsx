@@ -333,6 +333,7 @@ test("count honesty: Dilation section preview, confirm, void result, section sub
   fhir.add(observation("dfe", "entrance:dilation", "UNKNOWN", {
     partOf: [{ reference: "MedicationAdministration/ma1" }, { reference: "MedicationAdministration/ma2" }],
   }));
+  fhir.add(cvf("census-extra", "OS"));
   fhir.add(cvf("outside", "OD"));
   const responses: VoidBody[] = [];
   const confirmations: string[] = [];
@@ -372,6 +373,12 @@ test("count honesty: Dilation section preview, confirm, void result, section sub
     assert.equal(fhir.get<ReturnType<typeof administration>>("MedicationAdministration", "ma2").status, "entered-in-error");
     assert.equal(fhir.get<ReturnType<typeof observation>>("Observation", "dfe").status, "entered-in-error");
     assert.equal(fhir.get<ReturnType<typeof cvf>>("Observation", "outside").status, "final", "the adjacent section is untouched");
+    assert.equal(
+      fhir.all<ReturnType<typeof observation>>("Observation").filter((resource) => resource.status === "entered-in-error").length
+        + fhir.all<ReturnType<typeof administration>>("MedicationAdministration").filter((resource) => resource.status === "entered-in-error").length,
+      result?.count,
+      "the store census matches the returned void count",
+    );
   } finally {
     renderer?.unmount();
     restore();
@@ -425,6 +432,12 @@ test("count honesty: whole-visit preview, confirm, void result, section subtotal
     assert.equal(fhir.get<ReturnType<typeof observation>>("Observation", "dfe").status, "entered-in-error");
     assert.equal(fhir.get<ReturnType<typeof cvf>>("Observation", "today").status, "entered-in-error");
     assert.equal(fhir.get<ReturnType<typeof cvf>>("Observation", "prior").status, "final", "the prior visit is untouched");
+    assert.equal(
+      fhir.all<ReturnType<typeof observation>>("Observation").filter((resource) => resource.status === "entered-in-error").length
+        + fhir.all<ReturnType<typeof administration>>("MedicationAdministration").filter((resource) => resource.status === "entered-in-error").length,
+      result?.count,
+      "the store census matches the returned void count",
+    );
   } finally {
     renderer?.unmount();
     restore();
