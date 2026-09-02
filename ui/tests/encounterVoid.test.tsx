@@ -17,7 +17,7 @@ import {
   ClearSectionButton,
   RemoveValueButton,
 } from "../src/components/charting/ClearControls";
-import { EncounterEditContext } from "../src/components/charting/encounter-edit-context";
+import { EncounterEditContext, type EncounterClearFailedDetail } from "../src/components/charting/encounter-edit-context";
 import { ExamEntrySheet } from "../src/components/charting/ExamEntrySheet";
 import { RefractionSection } from "../src/components/charting/RefractionSection";
 import {
@@ -144,6 +144,70 @@ test("Clear section does nothing when the clinician declines the confirm", async
     assert.equal(harness.confirmations.length, 1);
     assert.equal(harness.requests.filter((request) => !(request.body as { preview?: boolean }).preview).length, 0);
     assert.equal(clearedCount, 0);
+  } finally {
+    harness.restore();
+  }
+});
+
+// ---------------------------------------------------------------------------
+// A failed clear refreshes AND reports (2026-09-02 walkthrough: the screen kept showing a chart
+// that an earlier void had already emptied, because the failure path refreshed nothing).
+// ---------------------------------------------------------------------------
+
+const VOID_FAILURE_BODY = {
+  error: "Void transaction failed at entry 3 of 116 (PUT Observation, HTTP 403); 1 of 116 entries failed.",
+  code: "void-transaction-failed",
+};
+
+test("a failed Clear section keeps the server's error on screen AND tells the encounter to re-read the chart", async () => {
+  const failures: EncounterClearFailedDetail[] = [];
+  let clearedCount = 0;
+  const harness = await renderInEncounter(
+    <ClearSectionButton encounterReference={ENCOUNTER} sectionKey="entrance:pupils" label="Pupils" hasRecorded onCleared={() => { clearedCount += 1; }} />,
+    { previewCount: 6, voidFailure: { status: 502, body: VOID_FAILURE_BODY }, onClearFailed: (detail) => failures.push(detail) },
+  );
+  try {
+    harness.confirmAnswer = true;
+    await act(async () => { await findClearButton(harness.renderer.root, "Clear Pupils")!.props.onClick(); });
+    assert.equal(clearedCount, 0, "a failed void never reports as cleared");
+    assert.equal(failures.length, 1, "the encounter is told exactly once that the clear failed");
+    assert.equal(failures[0]?.scope, "section");
+    assert.equal(statusMessage(harness.renderer.root), VOID_FAILURE_BODY.error, "the error stays visible; refresh never replaces it");
+  } finally {
+    harness.restore();
+  }
+});
+
+test("a failed Clear everything keeps the server's error on screen AND tells the encounter to re-read the chart", async () => {
+  const failures: EncounterClearFailedDetail[] = [];
+  let clearedCount = 0;
+  const harness = await renderInEncounter(
+    <ClearEncounterButton encounterReference={ENCOUNTER} encounterStatus="in-progress" onCleared={() => { clearedCount += 1; }} />,
+    { previewCount: 6, voidFailure: { status: 502, body: VOID_FAILURE_BODY }, onClearFailed: (detail) => failures.push(detail) },
+  );
+  try {
+    harness.confirmAnswer = true;
+    await act(async () => { await findClearButton(harness.renderer.root, "Clear everything charted this visit…")!.props.onClick(); });
+    assert.equal(clearedCount, 0);
+    assert.equal(failures.length, 1);
+    assert.equal(failures[0]?.scope, "encounter");
+    assert.equal(statusMessage(harness.renderer.root), VOID_FAILURE_BODY.error);
+  } finally {
+    harness.restore();
+  }
+});
+
+test("a failed preview reports but does not claim a clear failed — nothing was attempted", async () => {
+  const failures: EncounterClearFailedDetail[] = [];
+  const harness = await renderInEncounter(
+    <ClearSectionButton encounterReference={ENCOUNTER} sectionKey="entrance:pupils" label="Pupils" hasRecorded onCleared={() => undefined} />,
+    { previewCount: 6, voidFailure: { status: 500, body: { error: "preview route failed" }, on: "preview" }, onClearFailed: (detail) => failures.push(detail) },
+  );
+  try {
+    await act(async () => { await findClearButton(harness.renderer.root, "Clear Pupils")!.props.onClick(); });
+    assert.equal(harness.confirmations.length, 0, "no confirm without a count");
+    assert.equal(failures.length, 0);
+    assert.equal(statusMessage(harness.renderer.root), "preview route failed");
   } finally {
     harness.restore();
   }
@@ -653,6 +717,9 @@ async function renderInEncounter(element: React.ReactElement, options: {
   previewCount: number;
   previewSections?: Array<{ sectionKey: string; label: string; count: number }>;
   encounterStatus?: "in-progress" | "finished";
+  /** Make the void POST (or, with `on: "preview"`, the preview POST) answer with this failure. */
+  voidFailure?: { status: number; body: unknown; on?: "void" | "preview" };
+  onClearFailed?: (detail: EncounterClearFailedDetail) => void;
 }) {
   const originalFetch = globalThis.fetch;
   const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
@@ -673,6 +740,10 @@ async function renderInEncounter(element: React.ReactElement, options: {
     const body = init?.body ? JSON.parse(String(init.body)) as { preview?: boolean } : undefined;
     requests.push({ url, body });
     if (!url.endsWith("/void")) throw new Error(`Unexpected request: ${url}`);
+    const failure = options.voidFailure;
+    if (failure && (failure.on ?? "void") === (body?.preview ? "preview" : "void")) {
+      return Response.json(failure.body, { status: failure.status });
+    }
     const sections = options.previewSections ?? (options.previewCount > 0 ? [{ sectionKey: "entrance:pupils", label: "Pupils", count: options.previewCount }] : []);
     return Response.json({
       voided: Array.from({ length: options.previewCount }, (_, index) => `Observation/o${index + 1}`),
@@ -684,7 +755,7 @@ async function renderInEncounter(element: React.ReactElement, options: {
   let renderer!: ReactTestRenderer;
   await act(async () => {
     renderer = create(
-      <EncounterEditContext.Provider value={{ encounterStatus: options.encounterStatus ?? "in-progress" }}>
+      <EncounterEditContext.Provider value={{ encounterStatus: options.encounterStatus ?? "in-progress", onClearFailed: options.onClearFailed }}>
         {element}
       </EncounterEditContext.Provider>,
     );
@@ -707,6 +778,11 @@ async function renderInEncounter(element: React.ReactElement, options: {
 
 function findClearButton(root: ReactTestInstance, label: string): ReactTestInstance | undefined {
   return root.findAll((node) => node.type === "button" && textOf(node) === label)[0];
+}
+
+function statusMessage(root: ReactTestInstance): string | undefined {
+  const status = root.findAll((node) => node.props.role === "status")[0];
+  return status ? textOf(status) : undefined;
 }
 
 function textOf(node: ReactTestInstance): string {

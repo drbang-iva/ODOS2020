@@ -2433,6 +2433,38 @@ test("fixback P2#3: the ledger loads with the encounter, both placements render 
   }
 });
 
+test("a failed Clear everything re-reads the overview alongside its error, so the screen cannot contradict the database", async () => {
+  const harness = await renderEncounter(PROJECTION);
+  const confirmations: string[] = [];
+  Object.assign(globalThis.window, { confirm: (message: string) => { confirmations.push(message); return true; } });
+  try {
+    act(() => harness.renderer.root.findByType(ExamOverviewBoard).props.onOpenEditor("va"));
+    const sheet = visibleSheet(harness);
+    const overviewBefore = harness.overviewFetchCount();
+    const findingsBefore = harness.findingsFetchCount();
+    harness.voidFailure.status = 502;
+    harness.voidFailure.body = {
+      error: "Void transaction failed at entry 3 of 116 (PUT Observation, HTTP 403); 1 of 116 entries failed.",
+      code: "void-transaction-failed",
+    };
+    const clearAll = sheet.findAll((node) => node.type === "button" && textContent(node) === "Clear everything charted this visit…")[0];
+    assert.ok(clearAll, "the tier-3 control is in the sheet chrome");
+
+    await act(async () => { await clearAll.props.onClick(); await flushEffects(); await flushEffects(); });
+
+    assert.equal(confirmations.length, 1, "the clear was confirmed and attempted");
+    // The VA sheet's own Clear section probes on mount; only the visit-scope traffic is this test's.
+    const visitRequests = harness.voidRequests.filter((request) => (request as { scope: string }).scope === "encounter");
+    assert.deepEqual(visitRequests, [{ scope: "encounter", preview: true }, { scope: "encounter" }]);
+    assert.equal(harness.overviewFetchCount(), overviewBefore + 1, "the failed clear re-reads the overview");
+    assert.equal(harness.findingsFetchCount(), findingsBefore + 1, "…and the unassigned-findings count that rides with it");
+    const status = visibleSheet(harness).findByProps({ className: "odos-exam-entry-sheet-clear-all" }).findByProps({ role: "status" });
+    assert.equal(textContent(status), (harness.voidFailure.body as { error: string }).error, "the error is still on screen: refresh AND report");
+  } finally {
+    harness.restore();
+  }
+});
+
 test("fixback P2#1: Undo on a dirty sheet asks before discarding unsaved edits, and a declined confirm sends nothing", async () => {
   const harness = await renderEncounter(PROJECTION, { undoLedger: PENDING_UNDO_LEDGER });
   const confirmations: string[] = [];
@@ -3734,6 +3766,10 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
   undoRequests: unknown[];
   /** Set `status` to make the next undo requests fail with that HTTP status. */
   undoFailure: { status?: number };
+  /** Every POST .../void body, in order (preview and real). */
+  voidRequests: unknown[];
+  /** Set `status` (+ `body`) to make the next non-preview void POST fail with that HTTP status. */
+  voidFailure: { status?: number; body?: unknown };
   restore: () => void;
 }> {
   const originalFetch = globalThis.fetch;
@@ -3765,11 +3801,22 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
   let focusRestores = 0;
   const undoRequests: unknown[] = [];
   const undoFailure: { status?: number } = {};
+  const voidRequests: unknown[] = [];
+  const voidFailure: { status?: number; body?: unknown } = {};
   let undoLedgerState: EncounterUndoLedger | undefined = options.undoLedger;
   globalThis.fetch = (async (input, init) => {
     const url = String(input);
     if (url.endsWith("/clinical-graph/encounters/exam-1/void/ledger")) {
       return jsonResponse({ ledger: options.undoLedger ?? { encounterId: "exam-1", encounter: null, sections: {} } });
+    }
+    if (url.endsWith("/clinical-graph/encounters/exam-1/void") && init?.method === "POST") {
+      const body = JSON.parse(String(init.body)) as { scope: string; preview?: boolean };
+      voidRequests.push(body);
+      if (!body.preview && voidFailure.status) {
+        return new Response(JSON.stringify(voidFailure.body ?? { error: "void failed" }), { status: voidFailure.status, headers: { "Content-Type": "application/json" } });
+      }
+      const sections = [{ sectionKey: "va", label: "Visual acuity", count: 3 }];
+      return jsonResponse({ voided: ["Observation/va-od", "Observation/va-os", "Observation/va-ou"], count: 3, sections, entries: [], preview: Boolean(body.preview) });
     }
     if (url.endsWith("/clinical-graph/encounters/exam-1/void/undo") && init?.method === "POST") {
       const body = JSON.parse(String(init.body)) as { scope: string; sectionKey?: string };
@@ -3955,6 +4002,8 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
     focusRestoreCount: () => focusRestores,
     undoRequests,
     undoFailure,
+    voidRequests,
+    voidFailure,
     restore: () => {
       act(() => renderer.unmount());
       fhir.read = originalRead;

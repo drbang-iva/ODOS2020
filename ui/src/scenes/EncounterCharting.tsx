@@ -57,7 +57,7 @@ import { OcularHealthSection } from "../components/charting/OcularHealthSection"
 import { PrescriptionSection } from "../components/charting/PrescriptionSection";
 import { OrthoKSection } from "../components/charting/OrthoKSection";
 import { RefractionSection } from "../components/charting/RefractionSection";
-import { EncounterEditContext, type EncounterClearedDetail } from "../components/charting/encounter-edit-context";
+import { EncounterEditContext, type EncounterClearFailedDetail, type EncounterClearedDetail } from "../components/charting/encounter-edit-context";
 import { UndoStrip } from "../components/charting/UndoStrip";
 import { isClosedEncounterStatus } from "../lib/encounter-void";
 import {
@@ -204,6 +204,15 @@ export function EncounterCharting({ patient, encounterId }: Props) {
         key !== activeSection && !key.startsWith(`${activeSection}:`)
       )) as SectionStatusMap);
     }
+    refreshExamOverview();
+  }
+
+  // A clear that FAILS re-reads the chart too. The overview refetches only on a successful
+  // clear or the manual button, so after a refused void the clinician would be reading a panel
+  // whose contents may already be gone — which is how "nothing was cleared" was concluded about
+  // a chart an earlier void had fully emptied (2026-09-02). The surface keeps its error on
+  // screen; this only makes sure the overview beside it is current.
+  function handleEncounterClearFailed(_detail: EncounterClearFailedDetail) {
     refreshExamOverview();
   }
 
@@ -771,7 +780,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   );
 
   return (
-    <EncounterEditContext.Provider value={{ encounterStatus: encounter?.status, onCleared: handleEncounterCleared }}>
+    <EncounterEditContext.Provider value={{ encounterStatus: encounter?.status, onCleared: handleEncounterCleared, onClearFailed: handleEncounterClearFailed }}>
     <div className={["odos-charting-workspace flex h-screen w-screen flex-col bg-bg-deep text-white", config.encounterDensity === "compact" ? "text-[0.95rem]" : ""].join(" ")}>
       <EncounterHeader
         patient={patient}

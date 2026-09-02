@@ -10,7 +10,7 @@ import {
   voidEncounterEntries,
   type EncounterVoidResult,
 } from "../../lib/encounter-void";
-import { useEncounterEdit } from "./encounter-edit-context";
+import { useEncounterEdit, type EncounterClearFailedDetail, type EncounterEditContextValue } from "./encounter-edit-context";
 
 /**
  * The three tiers of the pre-finalization delete, one visual token.
@@ -88,7 +88,8 @@ export function ClearSectionButton({
   fetchImpl?: typeof fetch;
   className?: string;
 }) {
-  const closed = isClosedEncounterStatus(useEncounterEdit().encounterStatus);
+  const { encounterStatus, onClearFailed } = useEncounterEdit();
+  const closed = isClosedEncounterStatus(encounterStatus);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string>();
   const [probedCount, setProbedCount] = useState(0);
@@ -120,7 +121,7 @@ export function ClearSectionButton({
         return;
       }
       if (!confirmDestructive(clearSectionConfirmMessage(label, preview.count))) return;
-      const result = await voidEncounterEntries(encounterReference, request, { fetchImpl });
+      const result = await voidOrReport(() => voidEncounterEntries(encounterReference, request, { fetchImpl }), "section", onClearFailed);
       setProbedCount(0);
       onCleared(result);
     } catch (caught) {
@@ -161,6 +162,7 @@ export function ClearEncounterButton({
   children?: ReactNode;
 }) {
   const closed = isClosedEncounterStatus(encounterStatus);
+  const { onClearFailed } = useEncounterEdit();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string>();
 
@@ -175,7 +177,7 @@ export function ClearEncounterButton({
         return;
       }
       if (!confirmDestructive(clearEncounterConfirmMessage(preview.sections, preview.count))) return;
-      const result = await voidEncounterEntries(encounterReference, { scope: "encounter" }, { fetchImpl });
+      const result = await voidOrReport(() => voidEncounterEntries(encounterReference, { scope: "encounter" }, { fetchImpl }), "encounter", onClearFailed);
       onCleared(result);
     } catch (caught) {
       setMessage(caught instanceof Error ? caught.message : String(caught));
@@ -198,4 +200,23 @@ export function ClearEncounterButton({
       </button>
     </span>
   );
+}
+
+/**
+ * Run the void itself. If the server refuses it, tell the encounter BEFORE the caller renders
+ * the error, so the chart is re-read alongside the message — refresh AND report, never one
+ * without the other. Preview failures and declined confirms never reach here: nothing was
+ * attempted, so there is nothing the screen could be stale about.
+ */
+async function voidOrReport(
+  run: () => Promise<EncounterVoidResult>,
+  scope: EncounterClearFailedDetail["scope"],
+  onClearFailed: EncounterEditContextValue["onClearFailed"],
+): Promise<EncounterVoidResult> {
+  try {
+    return await run();
+  } catch (error) {
+    onClearFailed?.({ scope, error });
+    throw error;
+  }
 }

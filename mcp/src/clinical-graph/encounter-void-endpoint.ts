@@ -5,6 +5,7 @@ import type {
   Encounter,
   MedicationAdministration,
   Observation,
+  OperationOutcome,
   Provenance,
   Resource,
 } from "@medplum/fhirtypes";
@@ -461,7 +462,9 @@ export async function handleEncounterVoidRequest(
     if (isFhirConflict(error)) {
       return { status: 409, body: { error: CONCURRENT_EDIT_MESSAGE, code: "concurrent-edit" } };
     }
-    throw error;
+    // Whatever refused the void, the error that leaves here names what was sent and what came
+    // back. The route logs the full detail and answers the client from the PHI-safe body.
+    throw error instanceof VoidTransactionError ? error : rejectedVoidTransaction(transaction, error);
   }
   return { status: 200, body: response };
 }
@@ -679,17 +682,221 @@ export function stripDiagnosis(encounter: Encounter): Encounter {
   return rest;
 }
 
-export function assertSuccessfulTransaction(request: Bundle, response: Bundle): void {
-  const entries = response.entry;
-  if (response.type !== "transaction-response" || !entries || entries.length !== request.entry?.length) {
-    throw new Error("Void did not return a complete transaction response.");
-  }
-  for (const entry of entries) {
-    const status = Number.parseInt(entry.response?.status ?? "", 10);
-    if (!Number.isInteger(status) || status < 200 || status >= 300) {
-      throw new Error(`Void transaction failed with ${entry.response?.status ?? "no status"}.`);
+// ---------------------------------------------------------------------------------------
+// When the FHIR server refuses a void, the error carries its own evidence.
+//
+// Medplum answers a transaction one of two ways. Without the `transaction-bundles` project
+// feature (ODOS does not set it) a refused entry comes back INSIDE a 200 transaction-response
+// with its own status and OperationOutcome while every other entry is still applied (the
+// fhir-client then deletes what the response says it created, i.e. the Provenances) — a
+// per-entry refusal is a partial void. With the feature on, the whole request is refused with
+// one HTTP status and no entry identity. Both shapes are named here: which entry (index,
+// method + url), what status, what the OperationOutcome said, and how many entries failed —
+// one failing entry and forty are different diagnoses.
+//
+// PHI boundary: `diagnostics` and `message` are for the server log only; they carry resource
+// ids and outcome text, which may describe clinical content. `clientBody` is what the HTTP
+// response may carry: the entry index, the resource TYPE, the status code, counts, and a
+// stable code. Never ids, never outcome text.
+// ---------------------------------------------------------------------------------------
+
+export interface VoidEntrySummary {
+  index: number;
+  method: string;
+  url: string;
+}
+
+export interface VoidEntryFailure extends VoidEntrySummary {
+  status: number | undefined;
+  /** The entry's OperationOutcome, flattened: `details.text: diagnostics (code) [expression]` per issue. */
+  outcome: string;
+}
+
+export type VoidTransactionDiagnostics =
+  | {
+      kind: "entry-failed";
+      entryCount: number;
+      failedCount: number;
+      firstFailure: VoidEntryFailure;
+      failures: VoidEntryFailure[];
     }
+  | {
+      kind: "incomplete-response";
+      entryCount: number;
+      returnedEntries: number;
+      /** `Bundle/<type>` for a Bundle, otherwise the resourceType (or JS type) of what came back. */
+      responseType: string;
+    }
+  | {
+      kind: "request-rejected";
+      status: number | undefined;
+      /** The upstream error text as the fhir-client phrased it: method, path, HTTP status, and the outcome it parsed. */
+      detail: string;
+      entryCount: number;
+      entries: VoidEntrySummary[];
+    };
+
+export type VoidTransactionClientBody =
+  | {
+      error: string;
+      code: "void-transaction-failed";
+      failedEntryIndex: number;
+      failedResourceType: string;
+      failedStatus: number | undefined;
+      failedCount: number;
+      entryCount: number;
+    }
+  | { error: string; code: "void-transaction-incomplete"; entryCount: number; returnedEntries: number }
+  | { error: string; code: "void-transaction-rejected"; failedStatus: number | undefined; entryCount: number };
+
+export class VoidTransactionError extends Error {
+  override readonly name = "VoidTransactionError";
+  /** The first refused entry's HTTP status (or the upstream status), so `isFhirConflict` still sees a 409/412. */
+  readonly status: number | undefined;
+  /** Server log only. */
+  readonly diagnostics: VoidTransactionDiagnostics;
+  /** HTTP response body. */
+  readonly clientBody: VoidTransactionClientBody;
+
+  constructor(diagnostics: VoidTransactionDiagnostics, options?: { cause?: unknown }) {
+    super(voidTransactionMessage(diagnostics), options);
+    this.diagnostics = diagnostics;
+    this.clientBody = voidTransactionClientBody(diagnostics);
+    this.status = diagnostics.kind === "entry-failed"
+      ? diagnostics.firstFailure.status
+      : diagnostics.kind === "request-rejected" ? diagnostics.status : undefined;
   }
+}
+
+export function assertSuccessfulTransaction(request: Bundle, response: Bundle): void {
+  const sent = request.entry ?? [];
+  const returned = Array.isArray(response?.entry) ? response.entry : [];
+  if (response?.resourceType !== "Bundle" || response.type !== "transaction-response" || returned.length !== sent.length) {
+    throw new VoidTransactionError({
+      kind: "incomplete-response",
+      entryCount: sent.length,
+      returnedEntries: returned.length,
+      responseType: responseTypeName(response),
+    });
+  }
+  const failures: VoidEntryFailure[] = [];
+  returned.forEach((entry, index) => {
+    const status = parseEntryStatus(entry.response?.status);
+    if (status !== undefined && status >= 200 && status < 300) return;
+    failures.push({ ...entrySummary(sent[index], index), status, outcome: describeOutcome(entry.response?.outcome) });
+  });
+  if (failures.length) {
+    throw new VoidTransactionError({
+      kind: "entry-failed",
+      entryCount: sent.length,
+      failedCount: failures.length,
+      firstFailure: failures[0]!,
+      failures,
+    });
+  }
+}
+
+/** The FHIR server (or the path to it) refused the whole request before answering entry by entry. */
+export function rejectedVoidTransaction(request: Bundle, cause: unknown): VoidTransactionError {
+  const status = typeof cause === "object" && cause !== null && "status" in cause && typeof (cause as { status?: unknown }).status === "number"
+    ? (cause as { status: number }).status
+    : undefined;
+  const entries = (request.entry ?? []).map((entry, index) => entrySummary(entry, index));
+  return new VoidTransactionError(
+    { kind: "request-rejected", status, detail: errorMessage(cause), entryCount: entries.length, entries },
+    { cause },
+  );
+}
+
+function voidTransactionMessage(diagnostics: VoidTransactionDiagnostics): string {
+  switch (diagnostics.kind) {
+    case "entry-failed": {
+      const first = diagnostics.firstFailure;
+      return `Void transaction failed at entry ${first.index} of ${diagnostics.entryCount} ` +
+        `(${first.method} ${first.url}, HTTP ${first.status ?? "no status"}); ` +
+        `${diagnostics.failedCount} of ${diagnostics.entryCount} entries failed. First outcome: ${first.outcome}`;
+    }
+    case "incomplete-response":
+      return incompleteResponseText(diagnostics);
+    case "request-rejected":
+      return `${rejectedRequestText(diagnostics)} ${diagnostics.detail}`;
+  }
+}
+
+function voidTransactionClientBody(diagnostics: VoidTransactionDiagnostics): VoidTransactionClientBody {
+  switch (diagnostics.kind) {
+    case "entry-failed": {
+      const first = diagnostics.firstFailure;
+      const resourceType = resourceTypeOfUrl(first.url);
+      return {
+        error: `Void transaction failed at entry ${first.index} of ${diagnostics.entryCount} ` +
+          `(${first.method} ${resourceType}, HTTP ${first.status ?? "no status"}); ` +
+          `${diagnostics.failedCount} of ${diagnostics.entryCount} entries failed.`,
+        code: "void-transaction-failed",
+        failedEntryIndex: first.index,
+        failedResourceType: resourceType,
+        failedStatus: first.status,
+        failedCount: diagnostics.failedCount,
+        entryCount: diagnostics.entryCount,
+      };
+    }
+    case "incomplete-response":
+      return {
+        error: incompleteResponseText(diagnostics),
+        code: "void-transaction-incomplete",
+        entryCount: diagnostics.entryCount,
+        returnedEntries: diagnostics.returnedEntries,
+      };
+    case "request-rejected":
+      return {
+        error: rejectedRequestText(diagnostics),
+        code: "void-transaction-rejected",
+        failedStatus: diagnostics.status,
+        entryCount: diagnostics.entryCount,
+      };
+  }
+}
+
+function incompleteResponseText(diagnostics: { entryCount: number; returnedEntries: number; responseType: string }): string {
+  return `Void did not return a complete transaction response: sent ${diagnostics.entryCount} entries, ` +
+    `received ${diagnostics.returnedEntries} (${diagnostics.responseType}).`;
+}
+
+function rejectedRequestText(diagnostics: { status: number | undefined; entryCount: number }): string {
+  return diagnostics.status === undefined
+    ? `Void transaction failed before the FHIR server answered; ${diagnostics.entryCount} entries were sent.`
+    : `Void transaction rejected by the FHIR server (HTTP ${diagnostics.status}) before any entry was answered; ` +
+      `${diagnostics.entryCount} entries were sent.`;
+}
+
+function entrySummary(entry: NonNullable<Bundle["entry"]>[number] | undefined, index: number): VoidEntrySummary {
+  return { index, method: entry?.request?.method ?? "?", url: entry?.request?.url ?? "?" };
+}
+
+function resourceTypeOfUrl(url: string): string {
+  return url.split(/[/?]/, 1)[0] || "?";
+}
+
+function parseEntryStatus(status: string | undefined): number | undefined {
+  const parsed = Number.parseInt(status ?? "", 10);
+  return Number.isInteger(parsed) ? parsed : undefined;
+}
+
+function responseTypeName(response: unknown): string {
+  if (!response || typeof response !== "object") return typeof response;
+  const { resourceType, type } = response as { resourceType?: unknown; type?: unknown };
+  if (resourceType === "Bundle") return `Bundle/${typeof type === "string" ? type : "no type"}`;
+  return typeof resourceType === "string" ? resourceType : "unknown";
+}
+
+function describeOutcome(outcome: unknown): string {
+  const issues = (outcome as OperationOutcome | undefined)?.issue;
+  if (!Array.isArray(issues) || issues.length === 0) return "no OperationOutcome";
+  return issues.map((issue) => {
+    const parts = [issue.details?.text, issue.diagnostics].filter((part): part is string => typeof part === "string" && part.length > 0);
+    const expression = issue.expression?.length ? ` [${issue.expression.join(", ")}]` : "";
+    return `${parts.length ? parts.join(": ") : "no detail"} (${issue.code ?? "no code"})${expression}`;
+  }).join("; ");
 }
 
 export function readId(value: unknown, field: string): string | undefined {
