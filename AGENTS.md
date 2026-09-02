@@ -50,15 +50,25 @@ from `origin/main` would evaluate the wrong code.
      reach here. Full list and the defects that earned it: **What cannot be proven by the test
      suite** below. If your change touches one, prove it another way and say so in the PR.
 4. **Ship.** Open the PR with the evidence embedded in the description — a screenshot or recording
-   when the change has a visible surface, measured before/after numbers when it doesn't. Then run
-   **`/greploop`** (`.claude/skills/greploop/`) until Greptile reports **5/5 with zero unresolved
-   comments**, and do not hand over a PR below 5/5.
+   when the change has a visible surface, measured before/after numbers when it doesn't. Then work
+   the review to **5/5 with zero unresolved comments**, and do not hand over a PR below that.
 
-   **The documented exception:** dependency-bump PRs deliberately receive **no** bot review
-   (`performance-od/decisions/2026-08-29-odos-dependency-prs-get-zero-bot-review.md`). For those,
-   there is no score to loop toward — say so in the PR rather than waiting on a review that will
-   never arrive. Any other PR that somehow draws no Greptile review is a *malfunction*, not an
-   exemption: report it, do not quietly ship.
+   **Use `/greploop` (`.claude/skills/greploop/`) for its poll-and-fix loop ONLY — never its
+   trigger step.** Both bots auto-run on every PR here; as the pipeline section below states,
+   *there is no trigger to post and no allowance to budget*. The upstream skill assumes it must
+   summon a review, and posting trigger comments in this repo is the PR #313 failure by name:
+   eight triggers in sixteen minutes and zero reviews. Poll for the review that is already coming,
+   fix what it raises, push, re-poll.
+
+   **When no bot has a signal at the exact head**, the documented mechanism is
+   `--ack-no-bot-review`, recording a deliberate exception per `CONTRIBUTING.md`. That is the only
+   sanctioned way past a missing review.
+
+   **Lockfile/dependency PRs are the opposite of exempt.** Both bots have been observed covering
+   zero lines on them — one reporting green anyway — so
+   `performance-od/decisions/2026-08-29-odos-dependency-prs-get-zero-bot-review.md` requires an
+   **explicit supply-chain delta in the evaluation record**, precisely because no bot is supplying
+   one. Less automated review means *more* hand-supplied evidence, never less.
 
 **Then the beat this repo has and most don't: independent evaluation.** `/greploop` satisfies the
 *bot*. It does not satisfy the gate. Every PR into `main` additionally requires a marker from a
@@ -148,8 +158,21 @@ was collapsed into an import — an independent evaluation caught it. They live 
 they describe how the system *is built*, not what shipped when.
 
 - **Invoice ↔ PaymentReconciliation seam.** The `Invoice` is the bill; the `PaymentReconciliation`
-  is the settling processor payment, linked `detail.request → Invoice`. Manual cash keeps the
-  Invoice tender extension and creates **no** PaymentReconciliation.
+  is the settling processor payment, linked `detail.request → Invoice`.
+- **Manual cash is conditional, not blanket** — read `manual-cash-adapter.ts` before assuming:
+  - **Against an Invoice** (`invoiceReference` present) → the tender is recorded on the Invoice's
+    `odos-payment-tender` extension and the bill balances when fully paid. **No
+    PaymentReconciliation** — the tendered Invoice *is* the canonical payment record, because cash
+    never settles through a processor batch.
+  - **Without an Invoice** (`invoiceReference === undefined`, i.e. a **cash prepayment**) → a
+    standalone `PaymentReconciliation` **is** created, under the manual payment system.
+  - The single-source invariant is enforced in the adapter: an Invoice already carrying a tender
+    cannot be tendered again.
+- **Patient receipt / financial summary — money truth vs. line identity.** The `Invoice` is money
+  truth (base/discount/tax `priceComponent`s, totals, tender); the `ChargeItem[]` supplies line
+  identity (description + code). **CPT/HCPCS shown on a receipt is display-only pass-through and is
+  never asserted by ODOS.** The receipt and the lab sheet are the cash-dispensary's two outputs and
+  are named unmistakably on purpose — staff confuse them in the system this replaces.
 - **Payment processing is vendor-neutral.** A `PaymentProcessorAdapter` interface with manual-cash
   and Clover REST Pay Display adapters behind it; one unified `POST /payments/charge` on odos-core.
   Processor secrets stay server-side only — that boundary is why the charge endpoint exists.
