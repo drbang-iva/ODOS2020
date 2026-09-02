@@ -128,7 +128,7 @@ test("a statusless failure is reported as INDETERMINATE, never as a rejection be
   }
 });
 
-test("an HTTP 5xx from the record server is INDETERMINATE; a 4xx before processing is APPLIED-NONE", async () => {
+test("an HTTP 5xx from the record server is INDETERMINATE; so is a 4xx that is not the verified preprocessing rejection", async () => {
   const failing = await voidServer({ transaction: async () => { throw Object.assign(new Error("FHIR POST 503 Service Unavailable: overloaded"), { status: 503 }); } });
   try {
     const body = await (await postVoid(failing.baseUrl, { scope: "encounter" })).json() as Record<string, unknown>;
@@ -144,23 +144,91 @@ test("an HTTP 5xx from the record server is INDETERMINATE; a 4xx before processi
   try {
     const body = await (await postVoid(refusing.baseUrl, { scope: "encounter" })).json() as Record<string, unknown>;
     assert.equal(body.code, "void-transaction-rejected");
-    assert.equal(body.outcome, "applied-none");
+    assert.equal(body.outcome, "indeterminate", "a 400 that was not the verified 'Not a bundle' rejection proves nothing about what applied");
     assert.equal(body.httpStatus, 400);
-    assert.match(String(body.error), /^Nothing was cleared/);
+    assert.match(String(body.error), /Could not confirm what this clear saved/);
   } finally {
     await refusing.close();
   }
 });
 
-test("an outright 412 from the record server is still the atomic concurrent-edit answer", async () => {
+test("a whole-request 412 is INDETERMINATE over the wire — the atomic rollback it would imply was never verified on this stack", async () => {
   const server = await voidServer({ transaction: async () => { throw Object.assign(new Error("FHIR POST 412 Precondition Failed"), { status: 412 }); } });
   try {
     const response = await postVoid(server.baseUrl, { scope: "encounter" });
     const body = await response.json() as Record<string, unknown>;
-    assert.equal(response.status, 409, JSON.stringify(body));
-    assert.equal(body.code, "concurrent-edit");
+    assert.equal(response.status, 502, JSON.stringify(body));
+    assert.notEqual(body.code, "concurrent-edit");
+    assert.equal(body.code, "void-transaction-rejected");
+    assert.equal(body.outcome, "indeterminate");
+    assert.equal(body.httpStatus, 412);
+    assert.doesNotMatch(String(body.error), /reapply|Reload|Nothing was cleared/i);
+    assert.match(String(body.error), /Could not confirm what this clear saved/);
   } finally {
     await server.close();
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Round 2 — no unsafe certainty, proven where the writes actually land
+// ---------------------------------------------------------------------------
+
+test("F1 (Codex's probe): the write COMMITS, the answer carries no per-entry statuses — the client must hear INDETERMINATE, never 'Nothing was cleared'", async () => {
+  const server = await voidServer({});
+  const real = server.fhir.executeTransaction.bind(server.fhir);
+  // Same-length transaction-response with every response.status missing, returned AFTER the
+  // real transaction applied. This is fault injection at the upstream response boundary.
+  server.fhir.executeTransaction = async (bundle: Bundle): Promise<Bundle> => {
+    const committed = await real(bundle);
+    return { ...committed, entry: (committed.entry ?? []).map(() => ({ response: {} })) };
+  };
+  try {
+    const response = await postVoid(server.baseUrl, { scope: "encounter" });
+    const text = await response.text();
+    const body = JSON.parse(text) as Record<string, unknown>;
+
+    // The state DID change — this is what any "nothing was cleared" claim would be lying about.
+    assert.equal(server.fhir.get<{ status?: string; meta?: { versionId?: string } }>("Observation", OK_ID).status, "entered-in-error");
+    assert.equal(server.fhir.get<{ status?: string; meta?: { versionId?: string } }>("Observation", OK_ID).meta?.versionId, "2");
+
+    assert.equal(response.status, 502, text);
+    assert.equal(body.code, "void-transaction-failed");
+    assert.equal(body.outcome, "indeterminate");
+    assert.equal(body.unknownCount, body.entryCount, "every entry is unknown");
+    assert.equal(body.failedCount, 0, "nothing was positively refused");
+    assert.match(String(body.error), /^Could not confirm what this clear saved/);
+    assert.match(String(body.error), /do not repeat the clear blindly/);
+    assert.doesNotMatch(String(body.error), /Nothing was cleared|Reload|try again|reapply/i);
+    assert.ok(server.logged().includes("outcome=indeterminate"), server.logged());
+  } finally {
+    await server.close();
+  }
+});
+
+test("F1b: HTTP 400 'Not a bundle' — the one whole-request rejection verified on Medplum 5.1.30 — is APPLIED-NONE; an unverified 400 is INDETERMINATE", async () => {
+  const verified = await voidServer({ transaction: async () => { throw Object.assign(new Error("FHIR POST /fhir/R4 [Bundle] 400 Bad Request: Not a bundle"), { status: 400 }); } });
+  try {
+    const body = await (await postVoid(verified.baseUrl, { scope: "encounter" })).json() as Record<string, unknown>;
+    assert.equal(body.code, "void-transaction-rejected");
+    assert.equal(body.outcome, "applied-none");
+    assert.equal(body.httpStatus, 400);
+    assert.match(String(body.error), /^Nothing was cleared/);
+    assert.match(String(body.error), /Reload and try again/);
+    assert.ok(verified.logged().includes("Not a bundle"), "the verified rejection is named in the log");
+  } finally {
+    await verified.close();
+  }
+
+  const unverified = await voidServer({ transaction: async () => { throw Object.assign(new Error("FHIR POST /fhir/R4 [Bundle] 400 Bad Request: Missing Bundle entry request method [Bundle.entry[3].request.method]"), { status: 400 }); } });
+  try {
+    const body = await (await postVoid(unverified.baseUrl, { scope: "encounter" })).json() as Record<string, unknown>;
+    assert.equal(body.code, "void-transaction-rejected");
+    assert.equal(body.outcome, "indeterminate");
+    assert.equal(body.httpStatus, 400);
+    assert.match(String(body.error), /Could not confirm what this clear saved/);
+    assert.doesNotMatch(String(body.error), /Nothing was cleared|Reload/);
+  } finally {
+    await unverified.close();
   }
 });
 

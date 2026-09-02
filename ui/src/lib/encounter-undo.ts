@@ -151,10 +151,46 @@ export function undoSlotForSection(
   return best;
 }
 
-/** "Removed Reactivity · OD" · "Cleared Pupils · 6 values" · "Cleared everything charted · 31 values". */
-export function undoStripCopy(slot: UndoLedgerSlot): string {
+/**
+ * "Removed Reactivity · OD" · "Cleared Pupils · 6 values" · "Cleared everything charted · 31 values".
+ *
+ * The exact count is spoken only for a slot this page saw CONFIRMED — returned by a successful
+ * void's own response, which proves every row in it applied. A slot read back from the server
+ * (on load, or after a refused clear) was written from intent: on this non-atomic stack a
+ * refused clear can still write its slot naming every row it MEANT to void, so its count is
+ * an upper bound and the copy says so. Undo itself restores only what was actually voided.
+ */
+export function undoStripCopy(slot: UndoLedgerSlot, options: { confirmed?: boolean } = {}): string {
   const verb = slot.scope === "observation" || slot.scope === "finding" ? "Removed" : "Cleared";
-  const count = `${slot.count} ${slot.count === 1 ? "value" : "values"}`;
+  const noun = slot.count === 1 ? "value" : "values";
+  if (!options.confirmed) return `${verb} ${slot.label} · up to ${slot.count} ${noun}`;
   if (verb === "Removed" && slot.count === 1) return `${verb} ${slot.label}`;
-  return `${verb} ${slot.label} · ${count}`;
+  return `${verb} ${slot.label} · ${slot.count} ${noun}`;
+}
+
+/** The Undo button's title, with the same confirmed / upper-bound split as the strip copy. */
+export function undoButtonTitle(slot: UndoLedgerSlot, confirmed: boolean): string {
+  const noun = slot.count === 1 ? "value" : "values";
+  return confirmed
+    ? `Restore the ${slot.count === 1 ? noun : `${slot.count} ${noun}`} this action removed`
+    : `Restore whatever this action actually removed, up to ${slot.count} ${noun}`;
+}
+
+/** Identity of a slot for confirmation bookkeeping: its placement plus the action's timestamp. */
+export function undoSlotKey(placement: "encounter" | string, slot: UndoLedgerSlot): string {
+  return `${placement}|${slot.at}`;
+}
+
+/**
+ * The slot(s) a successful void's response ledger vouches for: those stamped with the newest
+ * `at` — the action that just ran and applied in full. Every other slot in that ledger was
+ * carried over from storage and stays intent-derived.
+ */
+export function confirmedSlotKeys(ledger: EncounterUndoLedger): string[] {
+  const rows = [
+    ...(ledger.encounter ? [{ placement: "encounter", slot: ledger.encounter }] : []),
+    ...Object.entries(ledger.sections).map(([placement, slot]) => ({ placement, slot })),
+  ];
+  const newest = rows.reduce<string | undefined>((max, row) => max === undefined || row.slot.at.localeCompare(max) > 0 ? row.slot.at : max, undefined);
+  return rows.filter((row) => row.slot.at === newest).map((row) => undoSlotKey(row.placement, row.slot));
 }

@@ -92,12 +92,23 @@ test("undoSlotForSection finds the sheet's slot by any of its keys, exact or by 
   assert.equal(undoSlotForSection(emptyUndoLedger("e1"), ["entrance:pupils"]), undefined);
 });
 
-test("strip copy says Removed for a tier-1 remove and Cleared for a section or the visit, scaled by count", () => {
-  assert.equal(undoStripCopy(slot({ scope: "observation", label: "Reactivity · OD", count: 1 })), "Removed Reactivity · OD");
-  assert.equal(undoStripCopy(slot({ scope: "observation", label: "Pupils · OD", count: 7 })), "Removed Pupils · OD · 7 values");
-  assert.equal(undoStripCopy(slot({ scope: "section", label: "Pupils", count: 6 })), "Cleared Pupils · 6 values");
-  assert.equal(undoStripCopy(slot({ scope: "section", label: "IOP", count: 1 })), "Cleared IOP · 1 value");
-  assert.equal(undoStripCopy(slot({ scope: "encounter", label: "everything charted", count: 31 })), "Cleared everything charted · 31 values");
+test("strip copy says Removed for a tier-1 remove and Cleared for a section or the visit, scaled by count — exact only for a slot this page saw confirmed", () => {
+  const confirmed = { confirmed: true };
+  assert.equal(undoStripCopy(slot({ scope: "observation", label: "Reactivity · OD", count: 1 }), confirmed), "Removed Reactivity · OD");
+  assert.equal(undoStripCopy(slot({ scope: "observation", label: "Pupils · OD", count: 7 }), confirmed), "Removed Pupils · OD · 7 values");
+  assert.equal(undoStripCopy(slot({ scope: "section", label: "Pupils", count: 6 }), confirmed), "Cleared Pupils · 6 values");
+  assert.equal(undoStripCopy(slot({ scope: "section", label: "IOP", count: 1 }), confirmed), "Cleared IOP · 1 value");
+  assert.equal(undoStripCopy(slot({ scope: "encounter", label: "everything charted", count: 31 }), confirmed), "Cleared everything charted · 31 values");
+});
+
+test("F2: a slot read back from the server is intent-derived, so its count is an upper bound and the copy says so — by default", () => {
+  // On this stack a refused clear can still write its slot naming every row it MEANT to void.
+  // Only a slot returned by a successful void is known to be exact; everything else qualifies.
+  assert.equal(undoStripCopy(slot({ scope: "observation", label: "Reactivity · OD", count: 1 })), "Removed Reactivity · OD · up to 1 value");
+  assert.equal(undoStripCopy(slot({ scope: "observation", label: "Pupils · OD", count: 7 })), "Removed Pupils · OD · up to 7 values");
+  assert.equal(undoStripCopy(slot({ scope: "section", label: "Pupils", count: 6 })), "Cleared Pupils · up to 6 values");
+  assert.equal(undoStripCopy(slot({ scope: "section", label: "IOP", count: 1 }), { confirmed: false }), "Cleared IOP · up to 1 value");
+  assert.equal(undoStripCopy(slot({ scope: "encounter", label: "everything charted", count: 3 })), "Cleared everything charted · up to 3 values");
 });
 
 // ---------------------------------------------------------------------------
@@ -113,7 +124,8 @@ test("UndoStrip is a polite status row with one Undo verb; Undo calls back and r
   try {
     const strip = harness.root.findByProps({ role: "status" });
     assert.equal(strip.props["aria-live"], "polite");
-    assert.equal(textOf(strip).startsWith("Cleared Pupils · 6 values"), true, textOf(strip));
+    assert.equal(textOf(strip).startsWith("Cleared Pupils · up to 6 values"), true, textOf(strip));
+    assert.equal(strip.findByType("button").props.title, "Restore whatever this action actually removed, up to 6 values");
     const buttons = strip.findAllByType("button");
     assert.equal(buttons.length, 1, "a row of text with one verb at the end");
     assert.equal(textOf(buttons[0]!), "Undo");
@@ -129,12 +141,23 @@ test("UndoStrip is a polite status row with one Undo verb; Undo calls back and r
   }
 });
 
+test("F2: a strip for a slot this page saw confirmed renders the exact count and the exact Undo title", () => {
+  const harness = render(<UndoStrip slot={slot()} confirmed closed={false} onUndo={async () => undefined} />);
+  try {
+    const strip = harness.root.findByProps({ role: "status" });
+    assert.equal(textOf(strip).startsWith("Cleared Pupils · 6 values"), true, textOf(strip));
+    assert.equal(strip.findByType("button").props.title, "Restore the 6 values this action removed");
+  } finally {
+    harness.unmount();
+  }
+});
+
 test("UndoStrip renders present-but-disabled with the amendment tooltip once the encounter is signed", async () => {
   let calls = 0;
   const harness = render(<UndoStrip slot={slot()} closed onUndo={async () => { calls += 1; }} />);
   try {
     const strip = harness.root.findByProps({ role: "status" });
-    assert.match(textOf(strip), /Cleared Pupils · 6 values/, "the clinician still sees that the path existed");
+    assert.match(textOf(strip), /Cleared Pupils · up to 6 values/, "the clinician still sees that the path existed");
     const button = strip.findByType("button");
     assert.equal(button.props.disabled, true);
     assert.equal(button.props.title, SIGNED_ENCOUNTER_TOOLTIP);
@@ -174,7 +197,7 @@ test("the entry sheet renders the section's Undo strip directly beneath its head
     const strip = next.findByProps({ role: "status" });
     assert.equal(strip.props["aria-live"], "polite");
     assert.equal(strip.props["data-undo-scope"], "section");
-    assert.match(textOf(strip), /Cleared Pupils · 6 values/);
+    assert.match(textOf(strip), /Cleared Pupils · up to 6 values/);
     const undo = strip.findAllByType("button").find((button) => textOf(button) === "Undo")!;
     assert.ok(undo);
     assert.equal(undo.props["data-entry-sheet-pristine-action"], true, "Undo must not mark the sheet dirty");
@@ -243,7 +266,7 @@ test("the chart bar carries the visit Undo in its own slot immediately after exa
     const undoSlotNode = withSlot.root.findByProps({ "data-chart-bar-slot": "undo" });
     const strip = undoSlotNode.findByProps({ role: "status" });
     assert.equal(strip.props["data-undo-scope"], "encounter");
-    assert.match(textOf(strip), /Cleared everything charted · 31 values/);
+    assert.match(textOf(strip), /Cleared everything charted · up to 31 values/);
     const undo = strip.findByType("button");
     await act(async () => { await undo.props.onClick(); });
     assert.equal(undone, 1);

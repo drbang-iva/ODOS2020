@@ -143,7 +143,7 @@ export function ExamEntrySheet({
   encounterStatus?: Encounter["status"];
   onEncounterCleared?: (result: EncounterVoidResult) => void;
   /** This section's pending Undo (§4b.1): rendered as a status strip directly beneath the heading row. */
-  undo?: { slot: UndoLedgerSlot; onUndo: () => void | Promise<void> };
+  undo?: { slot: UndoLedgerSlot; onUndo: () => void | Promise<void>; confirmed?: boolean };
   onCheckpointDirty?: () => void;
   onClearDirtyCheckpoint?: () => void;
   onDirty?: () => void;
@@ -254,7 +254,7 @@ export function ExamEntrySheet({
           </div>
         </header>
         {!modal && undo && (
-          <UndoStrip slot={undo.slot} scope="section" closed={isClosedEncounterStatus(encounterStatus)} onUndo={undo.onUndo} />
+          <UndoStrip slot={undo.slot} scope="section" confirmed={undo.confirmed ?? false} closed={isClosedEncounterStatus(encounterStatus)} onUndo={undo.onUndo} />
         )}
         <div className="odos-exam-entry-sheet-content">{children}</div>
       </aside>

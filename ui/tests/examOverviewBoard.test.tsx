@@ -2412,13 +2412,13 @@ test("fixback P2#3: the ledger loads with the encounter, both placements render 
     const slots = bar.findAll((node) => typeof node.props["data-chart-bar-slot"] === "string").map((node) => node.props["data-chart-bar-slot"]);
     assert.deepEqual(slots.slice(0, 4), ["patient", "cc-hpi-reserved", "exam-sections", "undo"], "the visit Undo sits beside exam-sections");
     const visitSlot = bar.findByProps({ "data-chart-bar-slot": "undo" });
-    assert.match(textContent(visitSlot), /Cleared everything charted · 31 values/);
+    assert.match(textContent(visitSlot), /Cleared everything charted · up to 31 values/, "a slot read back from the server is intent-derived: its count is an upper bound");
 
     act(() => harness.renderer.root.findByType(ExamOverviewBoard).props.onOpenEditor("va"));
     const sheet = visibleSheet(harness);
     assert.equal(sheet.props.sectionId, "va");
     const strip = sheet.findByProps({ "data-undo-scope": "section" });
-    assert.match(textContent(strip), /Cleared Visual acuity · 2 values/, "the sheet strip is scoped to VA's own slot");
+    assert.match(textContent(strip), /Cleared Visual acuity · up to 2 values/, "the sheet strip is scoped to VA's own slot, and a loaded slot reads as an upper bound");
 
     await act(async () => { await undoButtonIn(sheet).props.onClick(); await flushEffects(); await flushEffects(); });
     assert.deepEqual(harness.undoRequests, [{ scope: "section", sectionKey: "va" }]);
@@ -2463,6 +2463,38 @@ test("a failed Clear everything re-reads the overview alongside its error, so th
     assert.equal(harness.ledgerFetchCount(), ledgerBefore + 1, "…and the undo ledger, so a partial clear's Undo is offered from the slot the server actually holds");
     const status = visibleSheet(harness).findByProps({ className: "odos-exam-entry-sheet-clear-all" }).findByProps({ role: "status" });
     assert.equal(textContent(status), (harness.voidFailure.body as { error: string }).error, "the error is still on screen: refresh AND report");
+    // F3: the OUTCOME, not the fetch — the clinician can see and press Undo for the slot the
+    // refused clear still wrote, and the strip does not claim an exact count it cannot know.
+    const undoSlots = harness.renderer.root.findAllByProps({ "data-chart-bar-slot": "undo" });
+    assert.equal(undoSlots.length, 1, "the visit Undo is offered from the re-read ledger");
+    const strip = undoSlots[0]!.findByProps({ role: "status" });
+    assert.match(textContent(strip), /Cleared everything charted · up to 3 values/, textContent(strip));
+    const undoButton = strip.findAllByType("button").find((button) => textContent(button) === "Undo");
+    assert.ok(undoButton, "Undo is present");
+    assert.equal(undoButton.props.disabled, undefined, "…and enabled");
+    assert.equal(undoButton.props.title, "Restore whatever this action actually removed, up to 3 values");
+  } finally {
+    harness.restore();
+  }
+});
+
+test("F2: a successful Clear everything renders the exact count — this page saw the slot confirmed by the void's own response", async () => {
+  const harness = await renderEncounter(PROJECTION);
+  Object.assign(globalThis.window, { confirm: () => true });
+  try {
+    act(() => harness.renderer.root.findByType(ExamOverviewBoard).props.onOpenEditor("va"));
+    const sheet = visibleSheet(harness);
+    const clearAll = sheet.findAll((node) => node.type === "button" && textContent(node) === "Clear everything charted this visit…")[0];
+    assert.ok(clearAll);
+
+    await act(async () => { await clearAll.props.onClick(); await flushEffects(); await flushEffects(); });
+
+    const undoSlots = harness.renderer.root.findAllByProps({ "data-chart-bar-slot": "undo" });
+    assert.equal(undoSlots.length, 1);
+    const strip = undoSlots[0]!.findByProps({ role: "status" });
+    assert.match(textContent(strip), /Cleared everything charted · 3 values/, textContent(strip));
+    assert.doesNotMatch(textContent(strip), /up to/, "a confirmed slot is not hedged");
+    assert.equal(strip.findAllByType("button").find((button) => textContent(button) === "Undo")?.props.title, "Restore the 3 values this action removed");
   } finally {
     harness.restore();
   }
@@ -3813,16 +3845,26 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
     const url = String(input);
     if (url.endsWith("/clinical-graph/encounters/exam-1/void/ledger")) {
       ledgerFetches += 1;
-      return jsonResponse({ ledger: options.undoLedger ?? { encounterId: "exam-1", encounter: null, sections: {} } });
+      return jsonResponse({ ledger: undoLedgerState ?? { encounterId: "exam-1", encounter: null, sections: {} } });
     }
     if (url.endsWith("/clinical-graph/encounters/exam-1/void") && init?.method === "POST") {
       const body = JSON.parse(String(init.body)) as { scope: string; preview?: boolean };
       voidRequests.push(body);
+      const voided = ["Observation/va-od", "Observation/va-os", "Observation/va-ou"];
+      const sections = [{ sectionKey: "va", label: "Visual acuity", count: 3 }];
+      if (!body.preview && body.scope === "encounter") {
+        // Like the server on this non-atomic stack: the visit slot is written from INTENT — every
+        // row the clear meant to void — whether or not the transaction is then refused.
+        undoLedgerState = {
+          encounterId: "exam-1",
+          encounter: { voided: voided.map((ref) => ({ ref, priorStatus: "final" })), label: "everything charted", count: 3, at: "2026-09-02T10:00:00.000Z", sectionKeys: [], scope: "encounter" },
+          sections: {},
+        };
+      }
       if (!body.preview && voidFailure.status) {
         return new Response(JSON.stringify(voidFailure.body ?? { error: "void failed" }), { status: voidFailure.status, headers: { "Content-Type": "application/json" } });
       }
-      const sections = [{ sectionKey: "va", label: "Visual acuity", count: 3 }];
-      return jsonResponse({ voided: ["Observation/va-od", "Observation/va-os", "Observation/va-ou"], count: 3, sections, entries: [], preview: Boolean(body.preview) });
+      return jsonResponse({ voided, count: 3, sections, entries: [], preview: Boolean(body.preview), ...(body.preview ? {} : { ledger: undoLedgerState }) });
     }
     if (url.endsWith("/clinical-graph/encounters/exam-1/void/undo") && init?.method === "POST") {
       const body = JSON.parse(String(init.body)) as { scope: string; sectionKey?: string };

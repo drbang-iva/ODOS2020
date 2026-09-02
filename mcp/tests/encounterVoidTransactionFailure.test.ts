@@ -4,6 +4,7 @@ import type { Bundle, OperationOutcome } from "@medplum/fhirtypes";
 import {
   VoidTransactionError,
   assertSuccessfulTransaction,
+  classifyVoidTransactionFailure,
   handleEncounterVoidRequest,
 } from "../src/clinical-graph/encounter-void-endpoint.js";
 import { AUTH, cvf, fixture } from "./encounterVoidFixture.js";
@@ -152,6 +153,7 @@ test("PHI boundary (intermediate value): the client body carries index, resource
     failedResourceType: "Observation",
     failedStatus: 403,
     failedCount: 1,
+    unknownCount: 0,
     appliedCount: 2,
     changeCount: 3,
     entryCount: 4,
@@ -267,7 +269,7 @@ test("a per-entry 412 inside the transaction-response keeps its detail — it is
   );
 });
 
-test("a request the FHIR server refuses outright with a 4xx is APPLIED-NONE and names what was sent", async () => {
+test("a request the FHIR server refuses outright with an unverified 4xx is INDETERMINATE and names what was sent", async () => {
   const { deps, fhir } = fixture();
   fhir.add(cvf("o1", "OD"));
   fhir.executeTransaction = async (): Promise<Bundle> => {
@@ -285,15 +287,17 @@ test("a request the FHIR server refuses outright with a 4xx is APPLIED-NONE and 
       assert.equal(error.diagnostics.kind, "http-rejected");
       if (error.diagnostics.kind !== "http-rejected") return false;
       assert.equal(error.diagnostics.status, 403);
-      assert.equal(error.diagnostics.outcome, "applied-none");
+      assert.equal(error.diagnostics.outcome, "indeterminate", "a 403 for the whole request was never exercised on this stack");
       assert.ok(error.diagnostics.detail.includes(OUTCOME_SENTINEL));
       // Observation PUT + its Provenance POST + Encounter PUT + the Undo ledger row.
       assert.equal(error.diagnostics.entryCount, 4);
       assert.deepEqual(error.diagnostics.entries[0], { index: 0, method: "PUT", url: "Observation/o1" });
       assert.deepEqual(error.clientBody, {
-        error: "Nothing was cleared: the record server rejected this clear (HTTP 403) before processing it; 4 entries were sent. Reload and try again.",
+        error: "Could not confirm what this clear saved: the record server refused the whole request (HTTP 403) without confirming " +
+          "what had already been saved; 4 entries were sent and some or all may have been applied. " +
+          "Review the chart before continuing; do not repeat the clear blindly.",
         code: "void-transaction-rejected",
-        outcome: "applied-none",
+        outcome: "indeterminate",
         httpStatus: 403,
         entryCount: 4,
       });
@@ -357,20 +361,121 @@ test("a statusless failure (transport loss, parse failure) is INDETERMINATE — 
   );
 });
 
-test("an outright 412 from the FHIR server is still a concurrent edit", async () => {
+test("a whole-request 412 is NOT verified to roll back on this stack, so it is INDETERMINATE — never the reload-and-reapply answer", async () => {
   const { deps, fhir } = fixture();
   fhir.add(cvf("o1", "OD"));
   fhir.executeTransaction = async (): Promise<Bundle> => {
     throw Object.assign(new Error("FHIR POST /fhir/R4 [Bundle] 412 Precondition Failed: version mismatch"), { status: 412 });
   };
 
-  const result = await handleEncounterVoidRequest(deps, {
-    authHeader: AUTH,
-    params: { encounterId: "e1" },
-    body: { scope: "observation", observationReference: "Observation/o1" },
-  });
+  await assert.rejects(
+    handleEncounterVoidRequest(deps, { authHeader: AUTH, params: { encounterId: "e1" }, body: { scope: "observation", observationReference: "Observation/o1" } }),
+    (error: unknown) => {
+      assert.ok(error instanceof VoidTransactionError, `expected VoidTransactionError, got ${String(error)}`);
+      assert.equal(error.diagnostics.kind, "http-rejected");
+      assert.equal(error.diagnostics.outcome, "indeterminate");
+      assert.equal(error.clientBody.code, "void-transaction-rejected");
+      assert.equal(error.clientBody.outcome, "indeterminate");
+      assert.doesNotMatch(error.clientBody.error, /reapply|Reload|Nothing was cleared/i);
+      assert.match(error.clientBody.error, /Could not confirm what this clear saved/);
+      return true;
+    },
+  );
+});
 
-  assert.equal(result.status, 409, JSON.stringify(result.body));
+// ---------------------------------------------------------------------------
+// Round 2 — no unsafe certainty
+// ---------------------------------------------------------------------------
+
+test("F1: a same-length transaction-response with NO per-entry statuses is INDETERMINATE — absent status is not absent writes", () => {
+  const response: Bundle = {
+    resourceType: "Bundle",
+    type: "transaction-response",
+    entry: [{ response: {} }, { response: {} }, { response: {} }, { response: {} }],
+  };
+
+  const error = captureThrow(() => assertSuccessfulTransaction(request(), response));
+
+  assert.ok(error instanceof VoidTransactionError, `expected VoidTransactionError, got ${String(error)}`);
+  assert.equal(error.diagnostics.kind, "entry-failed");
+  if (error.diagnostics.kind !== "entry-failed") return;
+  assert.equal(error.diagnostics.outcome, "indeterminate");
+  assert.equal(error.diagnostics.unknownCount, 4, "every entry is unknown, not refused");
+  assert.equal(error.diagnostics.failedCount, 0, "nothing was positively refused");
+  assert.equal(error.diagnostics.appliedCount, 0, "nothing was positively confirmed either");
+  assert.equal(error.clientBody.outcome, "indeterminate");
+  assert.match(error.clientBody.error, /^Could not confirm what this clear saved/);
+  assert.match(error.clientBody.error, /no status for 4 of 4 entries/);
+  assert.match(error.clientBody.error, /do not repeat the clear blindly/);
+  assert.doesNotMatch(error.clientBody.error, /Nothing was cleared|Reload|try again/);
+  assert.match(error.message, /indeterminate/);
+});
+
+test("F1: one entry without a status makes the whole answer INDETERMINATE even when the rest are positively refused or accepted", () => {
+  const refusedOnly = captureThrow(() => assertSuccessfulTransaction(request(), {
+    resourceType: "Bundle",
+    type: "transaction-response",
+    entry: [refused("403 Forbidden", "a"), { response: {} }, refused("403 Forbidden", "c"), refused("403 Forbidden", "d")],
+  }));
+  assert.ok(refusedOnly instanceof VoidTransactionError);
+  assert.equal(refusedOnly.diagnostics.outcome, "indeterminate", "three refusals plus one unknown is not applied-none");
+  if (refusedOnly.diagnostics.kind === "entry-failed") {
+    assert.equal(refusedOnly.diagnostics.failedCount, 3);
+    assert.equal(refusedOnly.diagnostics.unknownCount, 1);
+  }
+
+  const acceptedToo = captureThrow(() => assertSuccessfulTransaction(request(), {
+    resourceType: "Bundle",
+    type: "transaction-response",
+    entry: [ok("200 OK"), { response: {} }, refused("403 Forbidden", "c"), ok("200 OK")],
+  }));
+  assert.ok(acceptedToo instanceof VoidTransactionError);
+  assert.equal(acceptedToo.diagnostics.outcome, "indeterminate", "a confirmed write plus an unknown is not applied-partial");
+  assert.match(acceptedToo.clientBody.error, /at least 2 of 3 changes were saved/);
+  assert.match(acceptedToo.clientBody.error, /no status for 1 of 4 entries/);
+  assert.doesNotMatch(acceptedToo.clientBody.error, /only partly applied/);
+});
+
+test("F1: a status that is not an HTTP status code is unknown, not a refusal", () => {
+  for (const bad of ["OK", "99999", "", "2", "abc 200", "600 Nope"]) {
+    const error = captureThrow(() => assertSuccessfulTransaction(request(), {
+      resourceType: "Bundle",
+      type: "transaction-response",
+      entry: [ok("200 OK"), ok("201 Created"), { response: { status: bad } }, ok("200 OK")],
+    }));
+    assert.ok(error instanceof VoidTransactionError, `status ${JSON.stringify(bad)}`);
+    assert.equal(error.diagnostics.outcome, "indeterminate", `status ${JSON.stringify(bad)} must be unknown`);
+    if (error.diagnostics.kind === "entry-failed") assert.equal(error.diagnostics.unknownCount, 1, `status ${JSON.stringify(bad)}`);
+  }
+  // "200" alone and "200 OK" are both real statuses.
+  assert.doesNotThrow(() => assertSuccessfulTransaction(request(), {
+    resourceType: "Bundle",
+    type: "transaction-response",
+    entry: [ok("200"), ok("201 Created"), ok("200 OK"), ok("200")],
+  }));
+});
+
+test("F1b: only the verified preprocessing rejection — HTTP 400 'Not a bundle' — is APPLIED-NONE; every other whole-request 4xx is INDETERMINATE", () => {
+  const rejected = (status: number, text: string) =>
+    classifyVoidTransactionFailure(request(), Object.assign(new Error(`FHIR POST /fhir/R4 [Bundle] ${status} Bad Request: ${text}`), { status }));
+
+  const verified = rejected(400, "Not a bundle");
+  assert.equal(verified.diagnostics.outcome, "applied-none");
+  if (verified.diagnostics.kind === "http-rejected") {
+    assert.match(String(verified.diagnostics.verifiedRejection), /Not a bundle/);
+    assert.match(String(verified.diagnostics.verifiedRejection), /5\.1\.30/);
+  }
+  assert.equal(verified.clientBody.outcome, "applied-none");
+  assert.match(verified.clientBody.error, /^Nothing was cleared/);
+
+  for (const [status, text] of [[400, "Missing Bundle entry request method"], [401, "Unauthorized"], [403, "Forbidden"], [404, "Not found"], [409, "Conflict"], [412, "Precondition Failed"], [422, "Unprocessable"]] as const) {
+    const unverified = rejected(status, text);
+    assert.equal(unverified.diagnostics.outcome, "indeterminate", `${status} ${text}`);
+    assert.equal(unverified.clientBody.outcome, "indeterminate", `${status} ${text}`);
+    assert.match(unverified.clientBody.error, /Could not confirm what this clear saved/, `${status} ${text}`);
+    assert.match(unverified.clientBody.error, new RegExp(`HTTP ${status}`), `${status} ${text}`);
+    assert.doesNotMatch(unverified.clientBody.error, /Nothing was cleared|Reload|reapply/i, `${status} ${text}`);
+  }
 });
 
 function captureThrow(run: () => void): unknown {

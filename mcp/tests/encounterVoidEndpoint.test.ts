@@ -380,7 +380,7 @@ test("void requires authentication, chart.write, a valid encounter id, and a kno
   assert.equal((await handleEncounterVoidRequest(deps, { authHeader: AUTH, params: { encounterId: "missing" }, body: { scope: "encounter" } })).status, 404);
 });
 
-test("a concurrent edit during the void surfaces as a 409 concurrent-edit, not a partial write", async () => {
+test("a whole-request 412 during the void is reported INDETERMINATE — the rollback a concurrent-edit answer would promise was never verified on this stack", async () => {
   const { deps, fhir } = fixture();
   fhir.add(cvf("o1", "OD", { meta: { versionId: "1" } }));
   fhir.beforeTransaction = () => {
@@ -388,14 +388,21 @@ test("a concurrent edit during the void surfaces as a 409 concurrent-edit, not a
     fhir.replace({ ...current, meta: { versionId: "2" } });
   };
 
-  const result = await handleEncounterVoidRequest(deps, {
+  const failure = await handleEncounterVoidRequest(deps, {
     authHeader: AUTH,
     params: { encounterId: "e1" },
     body: { scope: "observation", observationReference: "Observation/o1" },
-  });
+  }).then(
+    (result) => new Error(`expected the void to throw, got ${JSON.stringify(result)}`),
+    (error: unknown) => error,
+  );
 
-  assert.equal(result.status, 409, JSON.stringify(result.body));
-  assert.equal((result.body as { code?: string }).code, "concurrent-edit");
+  const error = failure as { name?: string; clientBody?: { code?: string; outcome?: string; error?: string } };
+  assert.equal(error.name, "VoidTransactionError", String(failure));
+  assert.equal(error.clientBody?.code, "void-transaction-rejected");
+  assert.equal(error.clientBody?.outcome, "indeterminate");
+  assert.doesNotMatch(String(error.clientBody?.error), /reapply|Nothing was cleared/i);
+  // In the fake the 412 really did leave the row alone; the endpoint just cannot know that.
   assert.equal(fhir.get<Observation>("Observation", "o1").status, "final");
 });
 
@@ -438,14 +445,23 @@ test("fixback 1: an Observation-only void carries the Encounter version, so a co
     fhir.replace({ ...current, status: "finished", meta: { versionId: "2" } });
   };
 
-  const result = await handleEncounterVoidRequest(deps, {
+  // Fail closed: the version guard refuses the whole request. What the endpoint may SAY about
+  // it is only what it knows — a whole-request 412 has not been verified to roll back on this
+  // stack, so it is reported indeterminate, never as the reload-and-reapply answer.
+  const failure = await handleEncounterVoidRequest(deps, {
     authHeader: AUTH,
     params: { encounterId: "e1" },
     body: { scope: "observation", observationReference: "Observation/o1" },
-  });
+  }).then(
+    (result) => new Error(`expected the void to throw, got ${JSON.stringify(result)}`),
+    (error: unknown) => error,
+  );
 
-  assert.equal(result.status, 409, JSON.stringify(result.body));
-  assert.equal((result.body as { code?: string }).code, "concurrent-edit");
+  const error = failure as { name?: string; diagnostics?: { kind?: string; status?: number; outcome?: string } };
+  assert.equal(error.name, "VoidTransactionError", String(failure));
+  assert.equal(error.diagnostics?.kind, "http-rejected");
+  assert.equal(error.diagnostics?.status, 412);
+  assert.equal(error.diagnostics?.outcome, "indeterminate");
   assert.equal(fhir.get<Observation>("Observation", "o1").status, "final", "the sign won; nothing was voided");
   assert.equal(fhir.all<Provenance>("Provenance").length, 0);
 });
