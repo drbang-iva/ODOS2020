@@ -87,10 +87,16 @@ test("guard 5: encounter scope voids this-encounter Observations and leaves the 
 
   assert.equal(result.status, 200, JSON.stringify(result.body));
   const body = result.body as VoidBody;
+  // The fake's search returned BOTH rows (it ignores `encounter`); only the endpoint's own
+  // boundary can keep the prior visit's entry out of the voided set.
   assert.deepEqual(body.voided, ["Observation/today"]);
   assert.equal(body.count, 1);
   assert.equal(fhir.get<Observation>("Observation", "today").status, "entered-in-error");
-  assert.equal(fhir.get<Observation>("Observation", "prior").status, "final");
+  assert.equal(fhir.get<Observation>("Observation", "prior").status, "final", "a prior encounter's entry belongs to a signed chart and must never be touched");
+  // Defence in depth: the endpoint must also ASK the server for this encounter only, so a real
+  // FHIR server never even returns another visit's rows to it.
+  const observationSearch = fhir.searches.find((search) => search.resourceType === "Observation");
+  assert.equal(observationSearch?.params.encounter, ENCOUNTER, "the Observation search must be scoped to this encounter");
 });
 
 // ---------------------------------------------------------------------------
@@ -490,7 +496,17 @@ class MemoryFhir {
     return structuredClone(resource as T);
   }
 
+  /** Every search the endpoint issued, so a test can pin the parameters it relies on. */
+  readonly searches: Array<{ resourceType: string; params: Record<string, string> }> = [];
+
   async search<T extends Resource>(resourceType: T["resourceType"], params: Record<string, string> = {}): Promise<Bundle<T>> {
+    this.searches.push({ resourceType, params: { ...params } });
+    // Deliberately permissive: this fake does NOT honour the `encounter` parameter. The encounter
+    // boundary is the endpoint's own responsibility (its in-memory check), and guard 5 must fail
+    // when that check is dropped. A fake that filtered by encounter here would be doing the
+    // endpoint's job for it and turned guard 5 decorative — which is exactly what happened at
+    // 3192a0ba. Real Medplum does filter; the endpoint's check is the defence in depth this
+    // test exists to protect.
     const rows = this.resources.filter((resource) => {
       if (resource.resourceType !== resourceType) return false;
       if (params.code) {
@@ -500,7 +516,6 @@ class MemoryFhir {
         );
         if (!coded) return false;
       }
-      if (params.encounter && (resource as Condition | Observation).encounter?.reference !== params.encounter) return false;
       if (params.subject && (resource as Basic | Condition | Observation).subject?.reference !== params.subject) return false;
       if (params["status:not"] && (resource as Observation).status === params["status:not"]) return false;
       return true;
