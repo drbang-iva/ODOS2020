@@ -10,15 +10,19 @@ Practitioner-owned open-source EHR / practice management for independent optomet
 
 **Current state — do not hand-maintain a version claim in this file.** The substrate is real working code under milestone-locked development, and **nothing is packaged as a customer install yet**; first-pilot scope is named below. Those facts are durable. *Where the build actually is* is not — so derive it, and know what each source can and cannot answer:
 
+**Before reporting current state**, run `git fetch origin` from your task worktree, then read the sources below and record `git rev-parse origin/main` with the report. Re-run the PR query for each report. If the fetch or query fails, state which source could not be refreshed and label any cached results as potentially stale; do not present them as current.
+
 | To learn | Read | Cannot tell you |
 |---|---|---|
-| What shipped, and when | `git log --oneline -30 origin/main` | which milestone that adds up to |
+| Recent commits on main, with commit dates | `git log -30 --format='%h %cI %s' origin/main` | which milestone that adds up to, or what build is deployed |
 | What is in flight right now | `gh pr list --state open` | what already shipped |
-| Why something was built the way it was | dated files in `performance-od/decisions/` | anything not yet written down — these are human-authored and can lag |
+| Why something was built the way it was | dated files in the verified companion checkout's `decisions/` directory, resolved below | anything not yet written down — these are human-authored and can lag |
+
+**Resolve the companion checkout before reading or citing it.** Use `$PERFORMANCE_OD_ROOT` if set; otherwise locate the actual `performance-od` checkout. Verify that its `decisions/` directory exists and use the resolved absolute path. Do not assume a sibling path from a task worktree. If the checkout is unavailable, say so and ask for the relevant excerpt inline.
 
 **No source here is stale-proof, and this table does not claim otherwise.** They are the *least*-rotting options available: two are derived from the repository itself, and the third is append-only and dated. None of them answers "which milestone are we in" — if you need that, ask the operator rather than trusting any prose, including this file's sections below.
 
-> **Added 2026-09-02.** This paragraph previously asserted *"v0.6a Frames Data SHIPPED (2026-05-09) … 1 of 8 v0.6 slices shipped; v0.6b PVerify is next"* — roughly four months stale, and it was the first thing every Codex session read, whether building or reviewing. `STATUS.md` (*"Generated: 2026-07-07"*) and `docs/operator-dashboard.md` had rotted the same way and disagreed with it: three hand-maintained state documents, three different answers. A generated source cannot drift; a remembered one always does. The milestone tables below carry the same risk — trust `git log` over them where they conflict.
+> **Added 2026-09-02.** This paragraph previously asserted *"v0.6a Frames Data SHIPPED (2026-05-09) … 1 of 8 v0.6 slices shipped; v0.6b PVerify is next"* — roughly four months stale, and it was the first thing every Codex session read, whether building or reviewing. `STATUS.md` (*"Generated: 2026-07-07"*) and `docs/operator-dashboard.md` had rotted the same way and disagreed with it: three hand-maintained state documents, three different answers. The milestone tables below carry the same risk — trust freshly fetched commit history over them where they conflict.
 
 ---
 
@@ -210,8 +214,8 @@ Several agents work this repo in parallel worktrees. Each rule below was earned,
 
 A green suite is not evidence. These are the things this repo's checks structurally cannot see, and each has already produced a shipped defect:
 
-- **Real AccessPolicy enforcement.** Most tests use in-memory FHIR fakes with no policy engine. The pre-finalization void feature (`8de5776b`) passed four evaluation rounds and 26+ tests, then failed 100% against the real server — the AccessPolicy forbids `preliminary → entered-in-error`, and no fake could see it. The credentialed live-authorization lane exists (`npm run test:live-authz`) but runs under `continue-on-error: true` in CI: **treat it as advisory until that flag is removed.**
-- **Whether a control is wired at all, anywhere outside three files.** As of 2026-09-02, `ui/` has 103 `*.test.tsx` files, and exactly **three** drive a real browser — `entrySheetFoundations`, `entrySheets`, `examChartBarResponsive` all import `playwright-core` and launch Chromium, and they do run blocking under `npm test`. But they are **fixture-scoped component tests, not route-level liveness**: they mount specific components, they do not walk the app's routes clicking what is there. So for the overwhelming majority of surfaces, nothing loads the page and presses the button before the operator does, and a dead control ships green. *(Corrected 2026-09-02: an earlier draft of this section claimed "zero browser-driven tests." That claim came from a **filename** grep — `playwright|e2e|cypress|\.spec\.ts$` — against tests identified by their **imports**. Wrong search axis, zero results, false absence claim. Caught by the independent evaluator. When claiming something does not exist, search the axis the thing is actually identified by, and quote a count.)*
+- **Real AccessPolicy enforcement.** Most tests use in-memory FHIR fakes with no policy engine. The pre-finalization void feature (`8de5776b`) passed four evaluation rounds and 26+ tests, then failed 100% against the real server — the AccessPolicy forbids `preliminary → entered-in-error`, and no fake could see it. The credentialed live-authorization lane exists (`npm --prefix mcp run test:live-authz`, from the repo root) but runs under `continue-on-error: true` in CI: **treat it as advisory until that flag is removed.**
+- **Whether a control is wired on the actual app route.** Before claiming a surface lacks coverage, inspect the current test imports, the routes/components and controls those tests actually exercise, and the package test command and CI invocation **at the evaluated head**. Search test contents, not just filenames, and report the head and evidence for the specific surface; a file count alone does not establish coverage or its absence. **Historical snapshot only (2026-09-02, `7a4d03d4`):** `ui/` had 103 `*.test.tsx` files; three launched Chromium via `playwright-core` — `entrySheetFoundations`, `entrySheets`, `examChartBarResponsive`. They exercised component fixtures rather than app routes and ran in the blocking `npm --prefix ui test` command (from the repo root). These counts describe that head, not the current inventory. An earlier draft's "zero browser-driven tests" claim came from searching filenames for `playwright|e2e|cypress|\.spec\.ts$` instead of inspecting imports; the independent evaluator caught that false absence claim.
 - **Whether a fixture still tests what it claims.** Two on record: PR #500's guard stayed green after its boundary check was deleted because the fixture did the filter's job, and the 2026-08-28 auditor fixture asserted a boundary for a role a migration had silently removed.
 
 When a change touches any of the three, say so in the PR and prove it another way — a live walkthrough, a credentialed run, or a recorded click path. Silence is not an available outcome (Mandate 17).
@@ -275,6 +279,10 @@ is Sonnet. Default down, escalate up; flag mid-session drift plainly.
 code. Fable codes → Codex evaluates. Codex codes → Fable/Opus evaluates. Scope: this
 gate fires on a shippable coding slice (PR-worthy diff), not brainstorming or
 micro-decisions.
+
+**When blocked by the evaluation gate, offer to obtain an independent evaluation of
+the current head. Never propose the `evaluated` label as an unblock; that override
+is the operator's alone.**
 
 **Review bots: GREPTILE + PR-AGENT. CodeRabbit is RETIRED** — suspended account-wide
 2026-08-04 for cost. Do not trigger it, wait for it, retry it, or note its absence.
