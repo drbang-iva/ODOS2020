@@ -49,7 +49,10 @@ test("synced practice policies enforce all repaired clinical writes on running M
   if (!meResponse.ok) {
     throw new Error(`GET /auth/me failed: ${meResponse.status}`);
   }
-  const me = await meResponse.json() as { project?: { id?: string } };
+  const me = await meResponse.json() as {
+    project?: { id?: string };
+    profile?: Resource;
+  };
   const projectId = me.project?.id;
   if (!projectId) {
     throw new Error("Authenticated Medplum session has no active project id.");
@@ -77,17 +80,15 @@ test("synced practice policies enforce all repaired clinical writes on running M
       rolePolicies.set(roleId, matches[0]!);
     }
 
-    const practitioner = track(await adminFhir.create<Practitioner>({
-      resourceType: "Practitioner",
-      identifier: [{ system: "urn:odos:test:clinical-write-authz", value: `practitioner-${runId}` }],
-      name: [{ family: `AuthzProof${runId}`, given: ["Synthetic"] }],
-    }));
-    const patient = track(await adminFhir.create<Patient>({
-      resourceType: "Patient",
-      identifier: [{ system: "urn:odos:test:clinical-write-authz", value: `patient-${runId}` }],
-      name: [{ family: `AuthzProof${runId}`, given: ["Synthetic"] }],
-      generalPractitioner: [{ reference: `Practitioner/${practitioner.id}` }],
-    }));
+    assert.equal(me.profile?.resourceType, "Practitioner", "Live authorization seeder profile must be a Practitioner.");
+    assert.ok(me.profile.id, "Live authorization seeder Practitioner requires an id.");
+    const practitioner = me.profile as Practitioner;
+    const patients = await searchAll<Patient>(adminFhir, "Patient", { _count: "1000" });
+    const patient = patients
+      .filter((candidate) => candidate.name?.some((name) => name.family?.startsWith("ContractSearch")))
+      .sort((left, right) => (left.meta?.lastUpdated ?? "").localeCompare(right.meta?.lastUpdated ?? ""))
+      .at(-1);
+    assert.ok(patient?.id, "Live authorization lane requires the synthetic Patient seeded by its contract smoke lane.");
     const patientReference = `Patient/${patient.id}`;
     const practitionerReference = `Practitioner/${practitioner.id}`;
     const tokens = new Map<PracticeRoleId, string>();
@@ -101,7 +102,6 @@ test("synced practice policies enforce all repaired clinical writes on running M
         practitionerReference,
         projectId,
         runId,
-        adminFhir,
         adminToken,
         track,
       });
@@ -359,7 +359,9 @@ test("synced practice policies enforce all repaired clinical writes on running M
       }
     });
   } finally {
-    await cleanupReferences(baseUrl, adminToken, cleanup);
+    if (process.env.MEDPLUM_CONTRACT_BOOTSTRAP !== "1") {
+      await cleanupReferences(baseUrl, adminToken, cleanup);
+    }
   }
 });
 
@@ -370,7 +372,6 @@ async function createRoleClient(input: {
   practitionerReference: string;
   projectId: string;
   runId: string;
-  adminFhir: Awaited<ReturnType<typeof createAuthenticatedFhirClient>>["fhir"];
   adminToken: string;
   track: <T extends Resource>(resource: T) => T;
 }): Promise<{ token: string }> {
@@ -387,13 +388,19 @@ async function createRoleClient(input: {
   const client = await response.json() as ClientApplication & { id: string; secret: string };
   assert.ok(client.id && client.secret);
   input.track(client);
-  const memberships = (await searchAll<ProjectMembership>(input.adminFhir, "ProjectMembership", {
-    profile: `ClientApplication/${client.id}`,
-    _count: "100",
-  })).filter((membership) => membership.project.reference === `Project/${input.projectId}`);
-  assert.equal(memberships.length, 1, `${input.roleId} client membership.`);
-  const membership = memberships[0]!;
-  assert.ok(membership.id && membership.meta?.versionId);
+  const initialToken = await clientCredentialsToken(client.id, client.secret, input.roleId);
+  const meResponse = await fetch(`${baseUrl}/auth/me`, {
+    headers: { Authorization: `Bearer ${initialToken}` },
+  });
+  assert.equal(meResponse.status, 200, `${input.roleId} client /auth/me.`);
+  const me = await meResponse.json() as { membership?: { id?: string } };
+  assert.ok(me.membership?.id, `${input.roleId} client membership id.`);
+  const membershipResponse = await fetch(
+    `${baseUrl}/admin/projects/${input.projectId}/members/${me.membership.id}`,
+    { headers: { Authorization: `Bearer ${input.adminToken}` } },
+  );
+  assert.equal(membershipResponse.status, 200, `Read ${input.roleId} client membership.`);
+  const membership = await membershipResponse.json() as ProjectMembership;
   input.track(membership);
   const access = buildProjectMembershipAccess({
     policyReference: input.policyReference,
@@ -402,23 +409,33 @@ async function createRoleClient(input: {
       ...(input.roleId === "provider" ? { providerProfileReference: input.practitionerReference } : {}),
     },
   });
-  await input.adminFhir.patch<ProjectMembership>("ProjectMembership", membership.id, [
-    { op: membership.access?.length ? "replace" : "add", path: "/access", value: access },
-    ...(membership.accessPolicy ? [{ op: "remove" as const, path: "/accessPolicy" }] : []),
-  ], { "If-Match": `W/\"${membership.meta.versionId}\"` });
+  const { accessPolicy: _legacyAccessPolicy, ...membershipWithoutLegacyPolicy } = membership;
+  const updateResponse = await fetch(
+    `${baseUrl}/admin/projects/${input.projectId}/members/${membership.id}`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${input.adminToken}`, "Content-Type": "application/fhir+json" },
+      body: JSON.stringify({ ...membershipWithoutLegacyPolicy, access }),
+    },
+  );
+  assert.equal(updateResponse.status, 200, `Bind ${input.roleId} client membership parameters.`);
+  return { token: await clientCredentialsToken(client.id, client.secret, input.roleId) };
+}
+
+async function clientCredentialsToken(clientId: string, clientSecret: string, roleId: PracticeRoleId): Promise<string> {
   const tokenResponse = await fetch(`${baseUrl}/oauth2/token`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       grant_type: "client_credentials",
-      client_id: client.id,
-      client_secret: client.secret,
+      client_id: clientId,
+      client_secret: clientSecret,
     }),
   });
-  assert.equal(tokenResponse.status, 200, `${input.roleId} client_credentials grant.`);
+  assert.equal(tokenResponse.status, 200, `${roleId} client_credentials grant.`);
   const tokenBody = await tokenResponse.json() as { access_token?: string };
   assert.ok(tokenBody.access_token);
-  return { token: tokenBody.access_token };
+  return tokenBody.access_token;
 }
 
 async function fhirRequest<T extends Resource>(
