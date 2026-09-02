@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import { voidEncounterEntries } from "../../lib/encounter-void";
 import { ClearSectionButton, RemoveValueButton } from "./ClearControls";
@@ -86,11 +86,27 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<SectionSaveStatus | null>(null);
   const [savedReferences, setSavedReferences] = useState<Partial<Record<Eye | "OU", string[]>>>({});
+  const editorRevisionRef = useRef(0);
+  const identityRef = useRef("");
+  const identityKey = `${patientReference}|${encounterReference}`;
   const { onCleared } = useEncounterEdit();
   // Readings persisted before this session are recorded values too: offer their × on reopen.
   const persisted = usePersistedVoidEntries(encounterReference, "auto-refraction");
+
   useEffect(() => {
-    if (!persisted.loaded) return;
+    identityRef.current = identityKey;
+    editorRevisionRef.current += 1;
+    setEyes({ OD: emptyEye(), OS: emptyEye() });
+    setBinocularPdDistance("");
+    setBinocularPdNear("");
+    setRemarks("");
+    setSavedReferences({});
+    setSaved(null);
+    setError(null);
+  }, [identityKey]);
+
+  useEffect(() => {
+    if (!persisted.loaded || persisted.encounterReference !== encounterReference) return;
     const hydrated = referencesByEye(persisted.entries);
     setSavedReferences((current) => {
       const next = { ...current };
@@ -129,6 +145,8 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
 
   useEffect(() => {
     const controller = new AbortController();
+    const requestIdentity = identityKey;
+    const requestRevision = editorRevisionRef.current;
     const query = new URLSearchParams({ patientReference, encounterReference });
     fetch(`${clinicalGraphApiBase()}/clinical-graph/auto-refraction/history?${query}`, {
       headers: authHeaders(),
@@ -140,6 +158,11 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
         return body;
       })
       .then((body) => {
+        if (
+          controller.signal.aborted
+          || identityRef.current !== requestIdentity
+          || editorRevisionRef.current !== requestRevision
+        ) return;
         setEyes(Object.fromEntries(EYES.map((eye) => {
           const savedEye = body.eyes?.[eye];
           return [eye, {
@@ -155,17 +178,15 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
         setBinocularPdDistance(savedValue(body.binocularPdDistance));
         setBinocularPdNear(savedValue(body.binocularPdNear));
         setRemarks(body.remarks ?? "");
-        setSavedReferences((current) => {
-          const next = { ...current };
-          for (const eye of EYES) {
-            const references = body.eyes?.[eye]?.observationReferences ?? [];
-            if (references.length) next[eye] = [...new Set([...(current[eye] ?? []), ...references])];
-          }
-          if (body.binocularPdObservationReferences?.length) {
-            next.OU = [...new Set([...(current.OU ?? []), ...body.binocularPdObservationReferences])];
-          }
-          return next;
-        });
+        const nextReferences: Partial<Record<Eye | "OU", string[]>> = {};
+        for (const eye of EYES) {
+          const references = body.eyes?.[eye]?.observationReferences ?? [];
+          if (references.length) nextReferences[eye] = [...new Set(references)];
+        }
+        if (body.binocularPdObservationReferences?.length) {
+          nextReferences.OU = [...new Set(body.binocularPdObservationReferences)];
+        }
+        setSavedReferences(nextReferences);
       })
       .catch((err) => {
         if ((err as Error).name !== "AbortError") setError(err instanceof Error ? err.message : String(err));
@@ -186,10 +207,12 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
   const steepKOptions = useMemo(() => numericOptions(keratometryFields.steepK, 30, 60, 0.25), [keratometryFields.steepK]);
 
   function updateEye(eye: Eye, next: Partial<EyeState>) {
+    editorRevisionRef.current += 1;
     setEyes((current) => ({ ...current, [eye]: { ...current[eye], ...next } }));
   }
 
   async function removeSaved(key: Eye | "OU") {
+    editorRevisionRef.current += 1;
     const references = savedReferences[key] ?? [];
     if (references.length === 0) return;
     try {
@@ -209,6 +232,7 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
   }
 
   function resetForm() {
+    editorRevisionRef.current += 1;
     setEyes({ OD: emptyEye(), OS: emptyEye() });
     setBinocularPdDistance("");
     setBinocularPdNear("");
@@ -317,7 +341,7 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
                 { value: "", label: "Select" },
                 ...sourceTypes.map((option) => ({ value: option.code, label: option.display })),
               ]}
-              onChange={setSourceType}
+              onChange={(value) => { editorRevisionRef.current += 1; setSourceType(value); }}
               ariaLabel="Source"
             />
           </label>
@@ -371,7 +395,7 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
                     value={binocularPdDistance}
                     options={binocularPdOptions}
                     defaultValue="63.00"
-                    onChange={setBinocularPdDistance}
+                    onChange={(value) => { editorRevisionRef.current += 1; setBinocularPdDistance(value); }}
                     ariaLabel="Binocular PD distance"
                     formatOption={(value) => `${value} mm`}
                   />
@@ -382,7 +406,7 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
                     value={binocularPdNear}
                     options={binocularPdOptions}
                     defaultValue="63.00"
-                    onChange={setBinocularPdNear}
+                    onChange={(value) => { editorRevisionRef.current += 1; setBinocularPdNear(value); }}
                     ariaLabel="Binocular PD near"
                     formatOption={(value) => `${value} mm`}
                   />
@@ -415,7 +439,7 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
           <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">Remarks</span>
           <textarea
             value={remarks}
-            onChange={(event) => setRemarks(event.target.value)}
+            onChange={(event) => { editorRevisionRef.current += 1; setRemarks(event.target.value); }}
             maxLength={2000}
             rows={3}
             placeholder="Optional pretest remarks"

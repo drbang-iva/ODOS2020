@@ -19,17 +19,21 @@ export function usePersistedVoidEntries(
   encounterReference: string,
   sectionKey: string | string[],
   fetchImpl?: typeof fetch,
-): { entries: EncounterVoidEntry[]; loaded: boolean } {
-  const [state, setState] = useState<{ entries: EncounterVoidEntry[]; loaded: boolean }>({ entries: [], loaded: false });
+): { entries: EncounterVoidEntry[]; loaded: boolean; encounterReference: string } {
+  const [state, setState] = useState<{ entries: EncounterVoidEntry[]; loaded: boolean; encounterReference: string }>({
+    entries: [],
+    loaded: false,
+    encounterReference,
+  });
   const keys = Array.isArray(sectionKey) ? sectionKey : [sectionKey];
   const keyId = keys.join("|");
 
   useEffect(() => {
     let cancelled = false;
-    setState({ entries: [], loaded: false });
+    setState({ entries: [], loaded: false, encounterReference });
     previewEncounterVoid(encounterReference, { scope: "section", sectionKey: keys.length === 1 ? keys[0]! : keys }, fetchImpl)
-      .then((result) => { if (!cancelled) setState({ entries: result.entries, loaded: true }); })
-      .catch(() => { if (!cancelled) setState({ entries: [], loaded: true }); });
+      .then((result) => { if (!cancelled) setState({ entries: result.entries, loaded: true, encounterReference }); })
+      .catch(() => { if (!cancelled) setState({ entries: [], loaded: true, encounterReference }); });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [encounterReference, keyId, fetchImpl]);
