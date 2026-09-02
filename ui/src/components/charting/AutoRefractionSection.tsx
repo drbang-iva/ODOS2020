@@ -186,7 +186,14 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
         if (body.binocularPdObservationReferences?.length) {
           nextReferences.OU = [...new Set(body.binocularPdObservationReferences)];
         }
-        setSavedReferences(nextReferences);
+        setSavedReferences((current) => {
+          const merged = { ...current };
+          for (const key of ["OD", "OS", "OU"] as const) {
+            const references = [...new Set([...(current[key] ?? []), ...(nextReferences[key] ?? [])])];
+            if (references.length) merged[key] = references;
+          }
+          return merged;
+        });
       })
       .catch((err) => {
         if ((err as Error).name !== "AbortError") setError(err instanceof Error ? err.message : String(err));

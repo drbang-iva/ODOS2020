@@ -928,6 +928,64 @@ test("Auto-refraction encounter changes reset fields and replace saved reference
   }
 });
 
+test("Auto-refraction Remove keeps preview-only references when latest-value history resolves later", async () => {
+  const { AutoRefractionSection } = await import("../src/components/charting/AutoRefractionSection");
+  const originalFetch = globalThis.fetch;
+  let resolveHistory!: (response: Response) => void;
+  const historyResponse = new Promise<Response>((resolve) => { resolveHistory = resolve; });
+  const voidBodies: Array<{ scope?: string; preview?: boolean; observationReference?: string[] }> = [];
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/clinical-graph/auto-refraction/definition")) {
+      return Response.json({ definitions: { autoRefraction: { fields: { sourceType: { options: [{ code: "manual", display: "Manual", active: true }] } } }, autoKeratometry: { fields: {} } } });
+    }
+    if (url.endsWith("/void") && init?.method === "POST") {
+      const body = JSON.parse(String(init.body)) as { scope?: string; preview?: boolean; observationReference?: string[] };
+      voidBodies.push(body);
+      if (body.scope === "section" && body.preview) {
+        return Response.json({
+          voided: ["Observation/older-od"],
+          count: 1,
+          sections: [{ sectionKey: "auto-refraction", label: "Auto-refraction / Auto-K", count: 1 }],
+          preview: true,
+          entries: [{ reference: "Observation/older-od", sectionKey: "auto-refraction", findingKey: "auto_refraction", laterality: "OD" }],
+        });
+      }
+      return Response.json({ voided: body.observationReference ?? [], count: body.observationReference?.length ?? 0, sections: [], preview: false });
+    }
+    if (url.includes("/clinical-graph/auto-refraction/history")) return historyResponse;
+    throw new Error(`Unexpected request: ${url}`);
+  };
+
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <EncounterEditContext.Provider value={{ encounterStatus: "in-progress" }}>
+          <AutoRefractionSection patientReference="Patient/p1" encounterReference={ENCOUNTER} onSaved={() => undefined} />
+        </EncounterEditContext.Provider>,
+      );
+      await flush();
+    });
+    await act(async () => {
+      resolveHistory(Response.json({ eyes: { OD: { sphere: -1.25, observationReferences: ["Observation/latest-od"] } } }));
+      await flush();
+    });
+    const remove = renderer.root.findAll((node) => node.type === "button" && node.props["aria-label"] === "Remove Auto-refraction OD")[0];
+    assert.ok(remove);
+    await act(async () => { await remove.props.onClick(); await flush(); });
+    const removal = voidBodies.find((body) => body.scope === "observation");
+    assert.deepEqual(
+      [...(removal?.observationReference ?? [])].sort(),
+      ["Observation/latest-od", "Observation/older-od"],
+      "history hydration must not discard same-encounter references already found by the void preview",
+    );
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
 /**
  * Fixback 56ff8d36 P2#A, widened per the Opus spot-check: on a SIGNED reopened chart, BOTH tiers
  * must render present-but-disabled with the amendment tooltip (§3, §4b.5) — the Clear section
