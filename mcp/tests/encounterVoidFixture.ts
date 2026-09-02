@@ -5,6 +5,7 @@ import type {
   Condition,
   Encounter,
   Observation,
+  OperationOutcome,
   Resource,
 } from "@medplum/fhirtypes";
 import type { PracticeRoleId } from "../src/authz/roles.js";
@@ -82,6 +83,12 @@ export class MemoryFhir {
   beforeTransaction?: () => void;
   /** `ResourceType/id` → status code the next read of it throws with (503 for an outage, 404 for a dangling reference). */
   readonly failedReads = new Map<string, number>();
+  /**
+   * Medplum WITHOUT the `transaction-bundles` project feature (this stack): an entry this
+   * returns a refusal for comes back with that status and outcome INSIDE the
+   * transaction-response, while every other entry is applied. Nothing is rolled back.
+   */
+  refuse?: (entry: NonNullable<Bundle["entry"]>[number], index: number) => { status: string; outcome?: OperationOutcome } | undefined;
   private sequence = 0;
 
   add<T extends Resource>(resource: T): T {
@@ -179,7 +186,16 @@ export class MemoryFhir {
       throw new Error(`unsupported method ${request.method}`);
     }
     this.transactions.push(structuredClone(bundle));
-    return { resourceType: "Bundle", type: "transaction-response", entry: staged.map((apply) => apply()) };
+    return {
+      resourceType: "Bundle",
+      type: "transaction-response",
+      entry: staged.map((apply, index) => {
+        const refusal = this.refuse?.((bundle.entry ?? [])[index]!, index);
+        return refusal
+          ? { response: { status: refusal.status, ...(refusal.outcome ? { outcome: refusal.outcome } : {}) } }
+          : apply();
+      }),
+    };
   }
 }
 

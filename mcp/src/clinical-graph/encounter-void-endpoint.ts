@@ -5,6 +5,7 @@ import type {
   Encounter,
   MedicationAdministration,
   Observation,
+  OperationOutcome,
   Provenance,
   Resource,
 } from "@medplum/fhirtypes";
@@ -30,7 +31,6 @@ import {
   type UndoLedgerEntry,
   type UndoLedgerSlot,
 } from "./encounter-undo-ledger-store.js";
-import { isFhirConflict } from "./fhir-conflict.js";
 import { findingDefinitionForObservation } from "./finding-observation-match.js";
 import type { ClinicalFindingDefinition, ClinicalGraphProvenance } from "./glaucoma-suspect.js";
 import { isLiveObservation } from "./observation-liveness.js";
@@ -458,10 +458,14 @@ export async function handleEncounterVoidRequest(
     const result = await staff.fhir.executeTransaction(transaction, VOID_WRITE_HEADERS);
     assertSuccessfulTransaction(transaction, result);
   } catch (error) {
-    if (isFhirConflict(error)) {
-      return { status: 409, body: { error: CONCURRENT_EDIT_MESSAGE, code: "concurrent-edit" } };
-    }
-    throw error;
+    // A refused ENTRY already carries its outcome and its detail; on this non-atomic stack a
+    // per-entry 412 can sit beside forty applied writes, so it is never folded into anything.
+    if (error instanceof VoidTransactionError) throw error;
+    // No shortcut for a whole-request 409/412 either. The rollback that a "reload and reapply"
+    // answer would promise has not been verified on this stack (no transaction-bundles
+    // feature), and a status class is not proof of behaviour. classifyVoidTransactionFailure
+    // names the one whole-request rejection that IS verified; everything else is indeterminate.
+    throw classifyVoidTransactionFailure(transaction, error);
   }
   return { status: 200, body: response };
 }
@@ -679,17 +683,421 @@ export function stripDiagnosis(encounter: Encounter): Encounter {
   return rest;
 }
 
-export function assertSuccessfulTransaction(request: Bundle, response: Bundle): void {
-  const entries = response.entry;
-  if (response.type !== "transaction-response" || !entries || entries.length !== request.entry?.length) {
-    throw new Error("Void did not return a complete transaction response.");
-  }
-  for (const entry of entries) {
-    const status = Number.parseInt(entry.response?.status ?? "", 10);
-    if (!Number.isInteger(status) || status < 200 || status >= 300) {
-      throw new Error(`Void transaction failed with ${entry.response?.status ?? "no status"}.`);
+// ---------------------------------------------------------------------------------------
+// When the FHIR server refuses a void, the error carries its own evidence — and claims only
+// what it can know.
+//
+// Medplum answers a transaction one of two ways. Without the `transaction-bundles` project
+// feature (ODOS does not set it; the live Project carries no features at all) a refused entry
+// comes back INSIDE a 200 transaction-response while every other entry is still applied (the
+// fhir-client then deletes what the response says it created, i.e. the Provenances). With the
+// feature on, the whole request is refused with one HTTP status and no entry identity. So a
+// void that did not succeed has three outcomes, not one:
+//
+//   applied-none     POSITIVE evidence that nothing durable was written: every entry answered
+//                    with an entry-level 4xx — the server's own final statement that it did not
+//                    fulfil that entry — and no durable write was accepted; or the whole request
+//                    was refused by a rejection VERIFIED to run before any entry
+//                    (see VERIFIED_APPLIED_NONE_REJECTIONS)
+//   applied-partial  refused, and at least one durable write (a PUT) WAS accepted
+//   indeterminate    everything else — transport loss, parse failure, an incomplete bundle, an
+//                    unverified whole-request status (409/412 and every 5xx included), or ANY
+//                    entry whose answer is not a final verdict on that entry: no status, a
+//                    string that is not a status, a 1xx (interim, RFC 9110), a 5xx (the server
+//                    failed WHILE processing — the write may have landed), a 3xx, or a 2xx other
+//                    than 200/201/204 (202 is "accepted for processing", not "done"). Absent or
+//                    non-final evidence of a write is not evidence of its absence.
+//
+// A status is not an outcome. Per entry, only two statuses are read as verdicts: a final
+// success (200/201/204, and where the server names the written resource it must be the one
+// requested) and an entry-level 4xx. Everything else is "the server did not say".
+//
+// The rule that keeps this honest: a status class is not proof of behaviour; only the path
+// actually exercised on this stack is.
+//
+// PHI boundary: `diagnostics` and `message` are for the server log only; they carry resource
+// ids and outcome text, which may describe clinical content. `clientBody` is what the HTTP
+// response may carry: the outcome, the entry index, the resource TYPE, the status code,
+// counts, and a stable code. Never ids, never outcome text. encounterVoidRoutes.test.ts
+// asserts this on the bytes Express actually sends.
+// ---------------------------------------------------------------------------------------
+
+export type VoidOutcome = "applied-none" | "applied-partial" | "indeterminate";
+
+export interface VoidEntrySummary {
+  index: number;
+  method: string;
+  url: string;
+}
+
+export interface VoidEntryFailure extends VoidEntrySummary {
+  status: number | undefined;
+  /** The entry's OperationOutcome, flattened: `details.text: diagnostics (code) [expression]` per issue. */
+  outcome: string;
+}
+
+export type VoidTransactionDiagnostics =
+  | {
+      kind: "entry-failed";
+      outcome: VoidOutcome;
+      entryCount: number;
+      /** Durable writes in the request: every entry that is not a POST. */
+      changeCount: number;
+      /** Durable writes the server positively accepted (a real 2xx status). */
+      appliedCount: number;
+      /** Accepted POSTs (the Provenances); the fhir-client deletes these again, best-effort. */
+      acceptedCreates: number;
+      /** Entries positively refused (a real non-2xx status). */
+      failedCount: number;
+      /** Entries whose answer carried no usable HTTP status: neither confirmed nor refused. */
+      unknownCount: number;
+      /** The first refused entry, or the first unknown one when nothing was positively refused. */
+      firstFailure: VoidEntryFailure;
+      failures: VoidEntryFailure[];
+      unknown: VoidEntryFailure[];
+      accepted: VoidEntrySummary[];
     }
+  | {
+      kind: "incomplete-response";
+      outcome: "indeterminate";
+      entryCount: number;
+      returnedEntries: number;
+      /** `Bundle/<type>` for a Bundle, otherwise the resourceType (or JS type) of what came back. */
+      responseType: string;
+    }
+  | {
+      kind: "http-rejected";
+      outcome: "applied-none" | "indeterminate";
+      status: number;
+      /** The upstream error text as the fhir-client phrased it: method, path, HTTP status, and the outcome it parsed. */
+      detail: string;
+      entryCount: number;
+      entries: VoidEntrySummary[];
+      /** Present only when the answer matched a rejection verified to run before any entry — the sole basis for applied-none here. */
+      verifiedRejection?: string;
+    }
+  | {
+      kind: "no-response";
+      outcome: "indeterminate";
+      /** The transport or parse error text. */
+      detail: string;
+      entryCount: number;
+      entries: VoidEntrySummary[];
+    };
+
+export type VoidTransactionClientBody =
+  | {
+      error: string;
+      code: "void-transaction-failed";
+      outcome: VoidOutcome;
+      failedEntryIndex: number;
+      failedResourceType: string;
+      failedStatus: number | undefined;
+      failedCount: number;
+      unknownCount: number;
+      appliedCount: number;
+      changeCount: number;
+      entryCount: number;
+    }
+  | { error: string; code: "void-transaction-incomplete"; outcome: "indeterminate"; entryCount: number; returnedEntries: number }
+  | { error: string; code: "void-transaction-rejected"; outcome: "applied-none" | "indeterminate"; httpStatus: number; entryCount: number }
+  | { error: string; code: "void-transaction-unanswered"; outcome: "indeterminate"; entryCount: number };
+
+export class VoidTransactionError extends Error {
+  override readonly name = "VoidTransactionError";
+  readonly outcome: VoidOutcome;
+  /** Server log only. */
+  readonly diagnostics: VoidTransactionDiagnostics;
+  /** HTTP response body. */
+  readonly clientBody: VoidTransactionClientBody;
+
+  // Deliberately no `status` field: `isFhirConflict` must never see a per-entry 409/412 here.
+  constructor(diagnostics: VoidTransactionDiagnostics, options?: { cause?: unknown }) {
+    super(voidTransactionMessage(diagnostics), options);
+    this.diagnostics = diagnostics;
+    this.outcome = diagnostics.outcome;
+    this.clientBody = voidTransactionClientBody(diagnostics);
   }
+}
+
+export function assertSuccessfulTransaction(request: Bundle, response: Bundle): void {
+  const sent = request.entry ?? [];
+  const returned = Array.isArray(response?.entry) ? response.entry : [];
+  if (response?.resourceType !== "Bundle" || response.type !== "transaction-response" || returned.length !== sent.length) {
+    throw new VoidTransactionError({
+      kind: "incomplete-response",
+      outcome: "indeterminate",
+      entryCount: sent.length,
+      returnedEntries: returned.length,
+      responseType: responseTypeName(response),
+    });
+  }
+  const failures: VoidEntryFailure[] = [];
+  const unknown: VoidEntryFailure[] = [];
+  const accepted: VoidEntrySummary[] = [];
+  returned.forEach((entry, index) => {
+    const summary = entrySummary(sent[index], index);
+    const status = parseEntryStatus(entry.response?.status);
+    const verdict = entryVerdict(status, summary, entry.response?.location);
+    if (verdict === "accepted") accepted.push(summary);
+    else if (verdict === "refused") failures.push({ ...summary, status, outcome: describeOutcome(entry.response?.outcome) });
+    else unknown.push({ ...summary, status, outcome: describeOutcome(entry.response?.outcome) });
+  });
+  if (failures.length === 0 && unknown.length === 0) return;
+  // What counts as "applied" is a durable write the server accepted. Accepted creates (the
+  // Provenances) are deleted again by the fhir-client's rollback, so they do not make a
+  // refused void partial on their own.
+  const changeCount = [...accepted, ...failures, ...unknown].filter(isDurableWrite).length;
+  const appliedCount = accepted.filter(isDurableWrite).length;
+  // applied-none rests on POSITIVE evidence: every entry answered with an entry-level 4xx and
+  // none of the durable writes was accepted. One entry whose answer is not a final verdict —
+  // no status, an interim 1xx, a 5xx, anything the server "did not say" — is an entry it may
+  // have applied without saying so: indeterminate, whatever the others say. (The 2026-09-02
+  // probes returned exactly those shapes AFTER the write had committed.)
+  const outcome: VoidOutcome = unknown.length > 0 ? "indeterminate" : appliedCount > 0 ? "applied-partial" : "applied-none";
+  throw new VoidTransactionError({
+    kind: "entry-failed",
+    outcome,
+    entryCount: sent.length,
+    changeCount,
+    appliedCount,
+    acceptedCreates: accepted.length - appliedCount,
+    failedCount: failures.length,
+    unknownCount: unknown.length,
+    firstFailure: failures[0] ?? unknown[0]!,
+    failures,
+    unknown,
+    accepted,
+  });
+}
+
+/**
+ * Whole-request answers PROVEN to leave nothing applied.
+ *
+ * Verified empirically against Medplum 5.1.30-9b1bd92 on 2026-09-02 (PR #505 round-2
+ * evaluation, disposable synthetic patients, before/after version reads): two whole-request
+ * HTTP 400 "Not a bundle" answers left the target's version unchanged, while a [200, 412]
+ * control on the same stack partially applied. The router raises "Not a bundle" in its batch
+ * handler before `processBatch` runs (medplum/packages/fhir-router/src/fhirrouter.ts).
+ *
+ * Nothing else in the 4xx class has been exercised — not other 400s, not 401/403/404, not
+ * 409/412, not 422 — so nothing else may claim applied-none. RE-VERIFY ON ANY MEDPLUM UPGRADE:
+ * this list is evidence about one path on one version, not a rule about a status class.
+ */
+const VERIFIED_APPLIED_NONE_REJECTIONS: ReadonlyArray<{ status: number; pattern: RegExp; note: string }> = [
+  {
+    status: 400,
+    pattern: /: Not a bundle\s*$/,
+    note: "HTTP 400 'Not a bundle': Medplum 5.1.30-9b1bd92 batch handler rejects before processBatch; verified empirically 2026-09-02",
+  },
+];
+
+/**
+ * The transaction produced no per-entry answer. No HTTP status at all — transport loss, a
+ * parse failure — is indeterminate: the request may have been applied before the connection
+ * broke. An HTTP status means the server answered for the whole request; that is applied-none
+ * ONLY when the answer matches a rejection verified to run before any entry
+ * (VERIFIED_APPLIED_NONE_REJECTIONS), and indeterminate for every other status, 4xx or 5xx.
+ */
+export function classifyVoidTransactionFailure(request: Bundle, cause: unknown): VoidTransactionError {
+  // `detail` is the fhir-client's message, `FHIR POST <path> [Bundle] <status> <text>: <outcome>`;
+  // the verified pattern anchors on the outcome text at its end, so a different 400 that merely
+  // mentions the words elsewhere cannot borrow the verified path's certainty.
+  const entries = (request.entry ?? []).map((entry, index) => entrySummary(entry, index));
+  const status = typeof cause === "object" && cause !== null && "status" in cause && typeof (cause as { status?: unknown }).status === "number"
+    ? (cause as { status: number }).status
+    : undefined;
+  const detail = errorMessage(cause);
+  if (status === undefined) {
+    return new VoidTransactionError({ kind: "no-response", outcome: "indeterminate", detail, entryCount: entries.length, entries }, { cause });
+  }
+  const verified = VERIFIED_APPLIED_NONE_REJECTIONS.find((row) => row.status === status && row.pattern.test(detail));
+  return new VoidTransactionError(
+    {
+      kind: "http-rejected",
+      outcome: verified ? "applied-none" : "indeterminate",
+      status,
+      detail,
+      entryCount: entries.length,
+      entries,
+      ...(verified ? { verifiedRejection: verified.note } : {}),
+    },
+    { cause },
+  );
+}
+
+function voidTransactionMessage(diagnostics: VoidTransactionDiagnostics): string {
+  switch (diagnostics.kind) {
+    case "entry-failed": {
+      const first = diagnostics.firstFailure;
+      return `Void transaction ${diagnostics.outcome}: entry ${first.index} of ${diagnostics.entryCount} ` +
+        `(${first.method} ${first.url}) answered HTTP ${first.status ?? "no status"}; ` +
+        `${diagnostics.failedCount} of ${diagnostics.entryCount} entries refused, ` +
+        `${diagnostics.unknownCount} without a usable status, ` +
+        `${diagnostics.appliedCount} of ${diagnostics.changeCount} changes applied, ` +
+        `${diagnostics.acceptedCreates} creates accepted (rolled back by the client). First outcome: ${first.outcome}`;
+    }
+    case "incomplete-response":
+      return `Void transaction indeterminate: the FHIR server's answer was not a usable transaction response ` +
+        `(sent ${diagnostics.entryCount} entries, received ${diagnostics.returnedEntries}, ${diagnostics.responseType}).`;
+    case "http-rejected":
+      return `Void transaction ${diagnostics.outcome}: the FHIR server answered HTTP ${diagnostics.status} for the whole request` +
+        `${diagnostics.verifiedRejection ? ` (${diagnostics.verifiedRejection})` : " (not a rejection verified to run before any entry)"}; ` +
+        `${diagnostics.entryCount} entries were sent. ${diagnostics.detail}`;
+    case "no-response":
+      return `Void transaction indeterminate: the FHIR server did not answer usably; ` +
+        `${diagnostics.entryCount} entries were sent. ${diagnostics.detail}`;
+  }
+}
+
+/**
+ * What the clinician reads. Each outcome gets the advice that is safe FOR THAT OUTCOME and no
+ * other: "reload and try again" only when nothing applied; "review the chart" when something
+ * did or when nobody knows; never a cheerful summary of a state the server did not confirm.
+ */
+function voidTransactionClientBody(diagnostics: VoidTransactionDiagnostics): VoidTransactionClientBody {
+  switch (diagnostics.kind) {
+    case "entry-failed": {
+      const first = diagnostics.firstFailure;
+      const resourceType = resourceTypeOfUrl(first.url);
+      const where = `entry ${first.index} of ${diagnostics.entryCount} (${first.method} ${resourceType}, HTTP ${first.status ?? "no status"})`;
+      const refused = `${diagnostics.failedCount} of ${diagnostics.entryCount} entries refused`;
+      const error = diagnostics.outcome === "indeterminate"
+        ? `Could not confirm what this clear saved: the record server's answer carried no status for ` +
+          `${diagnostics.unknownCount} of ${diagnostics.entryCount} entries (${diagnostics.failedCount} refused; ` +
+          `${diagnostics.appliedCount > 0 ? `at least ${diagnostics.appliedCount} of ${diagnostics.changeCount} changes were saved` : "no change confirmed saved"}). ` +
+          `Some or all of it may have been applied. Review the chart before continuing; do not repeat the clear blindly.`
+        : diagnostics.outcome === "applied-partial"
+          ? `This clear only partly applied: ${diagnostics.appliedCount} of ${diagnostics.changeCount} changes were saved ` +
+            `before the record server refused ${where}; ${refused}. Review the chart before continuing. ` +
+            `Undo, where offered, restores only what was actually cleared.`
+          : `Nothing was cleared: the record server refused this clear at ${where}; ${refused} and none of the ` +
+            `${diagnostics.changeCount} changes were saved. Reload and try again.`;
+      return {
+        error,
+        code: "void-transaction-failed",
+        outcome: diagnostics.outcome,
+        failedEntryIndex: first.index,
+        failedResourceType: resourceType,
+        failedStatus: first.status,
+        failedCount: diagnostics.failedCount,
+        unknownCount: diagnostics.unknownCount,
+        appliedCount: diagnostics.appliedCount,
+        changeCount: diagnostics.changeCount,
+        entryCount: diagnostics.entryCount,
+      };
+    }
+    case "incomplete-response":
+      return {
+        error: `Could not confirm what this clear saved: the record server's answer was not a usable transaction response ` +
+          `(sent ${diagnostics.entryCount} entries, received ${diagnostics.returnedEntries}, ${diagnostics.responseType}). ` +
+          `Some or all of it may have been applied. Review the chart before continuing; do not repeat the clear blindly.`,
+        code: "void-transaction-incomplete",
+        outcome: "indeterminate",
+        entryCount: diagnostics.entryCount,
+        returnedEntries: diagnostics.returnedEntries,
+      };
+    case "http-rejected":
+      return {
+        error: diagnostics.outcome === "applied-none"
+          ? `Nothing was cleared: the record server rejected this clear (HTTP ${diagnostics.status}) before processing it; ` +
+            `${diagnostics.entryCount} entries were sent. Reload and try again.`
+          : diagnostics.status >= 500
+            ? `Could not confirm what this clear saved: the record server failed while handling it (HTTP ${diagnostics.status}); ` +
+              `${diagnostics.entryCount} entries were sent and some or all may have been applied. ` +
+              `Review the chart before continuing; do not repeat the clear blindly.`
+            : `Could not confirm what this clear saved: the record server refused the whole request (HTTP ${diagnostics.status}) ` +
+              `without confirming what had already been saved; ${diagnostics.entryCount} entries were sent and some or all may have been applied. ` +
+              `Review the chart before continuing; do not repeat the clear blindly.`,
+        code: "void-transaction-rejected",
+        outcome: diagnostics.outcome,
+        httpStatus: diagnostics.status,
+        entryCount: diagnostics.entryCount,
+      };
+    case "no-response":
+      return {
+        error: `Could not confirm what this clear saved: the record server did not answer (${diagnostics.entryCount} entries were sent). ` +
+          `Some or all of it may have been applied. Review the chart before continuing; do not repeat the clear blindly.`,
+        code: "void-transaction-unanswered",
+        outcome: "indeterminate",
+        entryCount: diagnostics.entryCount,
+      };
+  }
+}
+
+function isDurableWrite(row: VoidEntrySummary): boolean {
+  return row.method.toUpperCase() !== "POST";
+}
+
+function entrySummary(entry: NonNullable<Bundle["entry"]>[number] | undefined, index: number): VoidEntrySummary {
+  return { index, method: entry?.request?.method ?? "?", url: entry?.request?.url ?? "?" };
+}
+
+function resourceTypeOfUrl(url: string): string {
+  return url.split(/[/?]/, 1)[0] || "?";
+}
+
+/** A real HTTP status leads the string — "200", "200 OK", "412 Precondition Failed". Anything else is unknown, never a refusal. */
+function parseEntryStatus(status: unknown): number | undefined {
+  if (typeof status !== "string") return undefined;
+  const match = /^\s*([1-5]\d\d)(?:\s|$)/.exec(status);
+  return match ? Number(match[1]) : undefined;
+}
+
+/** The only entry statuses that are final successes for the writes the void sends (PUT → 200, POST → 201; 204 is a final success too). */
+const FINAL_SUCCESS_STATUSES: ReadonlySet<number> = new Set([200, 201, 204]);
+
+/**
+ * What one entry's answer proves about that entry. Only two answers are verdicts:
+ *
+ *   accepted — a final success status, and where the server named the resource it wrote
+ *              (`response.location`) it names the one this entry asked for; a success that
+ *              names some other resource proves nothing about this one
+ *   refused  — an entry-level 4xx: the server's final statement that it did not fulfil the entry
+ *
+ * Everything else — no status, 1xx (interim, RFC 9110 §15.2), 3xx, 2xx other than 200/201/204
+ * (202 is accepted-for-processing, not done), 5xx (failed WHILE processing; the write may have
+ * landed) — is `unknown`: the server did not say, and the entry may have been applied.
+ */
+function entryVerdict(status: number | undefined, requested: VoidEntrySummary, location: unknown): "accepted" | "refused" | "unknown" {
+  if (status === undefined) return "unknown";
+  if (status >= 400 && status < 500) return "refused";
+  if (!FINAL_SUCCESS_STATUSES.has(status)) return "unknown";
+  return locationNamesRequestedResource(requested, location) ? "accepted" : "unknown";
+}
+
+/**
+ * When the server says which resource it wrote, it must be the one the entry asked for:
+ * `ResourceType/id` for a PUT, the resource type for a POST. Relative and absolute locations
+ * both count; a missing location is not a contradiction (the status is then the evidence).
+ */
+function locationNamesRequestedResource(requested: VoidEntrySummary, location: unknown): boolean {
+  if (typeof location !== "string" || location.length === 0) return true;
+  const path = location.replace(/[?#].*$/, "");
+  const target = requested.method.toUpperCase() === "POST" ? `${resourceTypeOfUrl(requested.url)}/` : requested.url.split("?", 1)[0]!;
+  const at = path.indexOf(target);
+  if (at < 0) return false;
+  const boundaryBefore = at === 0 || path[at - 1] === "/";
+  const after = path.slice(at + target.length);
+  const boundaryAfter = requested.method.toUpperCase() === "POST" || after === "" || after.startsWith("/");
+  return boundaryBefore && boundaryAfter;
+}
+
+function responseTypeName(response: unknown): string {
+  if (!response || typeof response !== "object") return typeof response;
+  const { resourceType, type } = response as { resourceType?: unknown; type?: unknown };
+  if (resourceType === "Bundle") return `Bundle/${typeof type === "string" ? type : "no type"}`;
+  return typeof resourceType === "string" ? resourceType : "unknown";
+}
+
+function describeOutcome(outcome: unknown): string {
+  const issues = (outcome as OperationOutcome | undefined)?.issue;
+  if (!Array.isArray(issues) || issues.length === 0) return "no OperationOutcome";
+  return issues.map((issue) => {
+    const parts = [issue.details?.text, issue.diagnostics].filter((part): part is string => typeof part === "string" && part.length > 0);
+    const expression = issue.expression?.length ? ` [${issue.expression.join(", ")}]` : "";
+    return `${parts.length ? parts.join(": ") : "no detail"} (${issue.code ?? "no code"})${expression}`;
+  }).join("; ");
 }
 
 export function readId(value: unknown, field: string): string | undefined {

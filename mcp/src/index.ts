@@ -298,7 +298,7 @@ import {
   handleCustomSectionCaptureRequest,
   handleCustomSectionHistoryRequest,
 } from "./clinical-graph/custom-section-endpoint.js";
-import { handleEncounterVoidRequest } from "./clinical-graph/encounter-void-endpoint.js";
+import { registerEncounterVoidRoutes } from "./clinical-graph/encounter-void-routes.js";
 import {
   handleEncounterUndoLedgerRequest,
   handleEncounterUndoRequest,
@@ -6602,19 +6602,9 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         }
       });
 
-      app.post("/clinical-graph/encounters/:encounterId/void", async (req, res) => {
-        try {
-          await authenticateWithMedplum();
-          const result = await handleEncounterVoidRequest(
-            await clinicalGraphRouteDeps(req.header("authorization"), "chart.write"),
-            { authHeader: req.header("authorization"), params: req.params, body: req.body },
-          );
-          res.status(result.status).json(result.body);
-        } catch (error) {
-          console.error("odos-mcp: encounter void failed:", error);
-          if (!res.headersSent) res.status(500).json({ error: "encounter void route failed" });
-        }
-      });
+      // The void's failure reporting is PHI-split — full detail to the log, a safe body to the
+      // client — and is tested at the HTTP seam in encounterVoidRoutes.test.ts.
+      registerEncounterVoidRoutes(app, authenticateWithMedplum, clinicalGraphRouteDeps);
 
       app.post("/clinical-graph/encounters/:encounterId/void/undo", async (req, res) => {
         try {

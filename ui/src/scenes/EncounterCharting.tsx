@@ -57,12 +57,14 @@ import { OcularHealthSection } from "../components/charting/OcularHealthSection"
 import { PrescriptionSection } from "../components/charting/PrescriptionSection";
 import { OrthoKSection } from "../components/charting/OrthoKSection";
 import { RefractionSection } from "../components/charting/RefractionSection";
-import { EncounterEditContext, type EncounterClearedDetail } from "../components/charting/encounter-edit-context";
+import { EncounterEditContext, type EncounterClearFailedDetail, type EncounterClearedDetail } from "../components/charting/encounter-edit-context";
 import { UndoStrip } from "../components/charting/UndoStrip";
 import { isClosedEncounterStatus } from "../lib/encounter-void";
 import {
   emptyUndoLedger,
+  confirmedSlotKeys,
   readEncounterUndoLedger,
+  undoSlotKey,
   undoEncounterVoid,
   undoSlotForSection,
   type EncounterUndoLedger,
@@ -147,6 +149,10 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   // The Undo ledger (§4b.4) is loaded with the encounter and replaced by every void / undo
   // response, so the strips survive navigation and reload rather than living in component state.
   const [undoLedger, setUndoLedger] = useState<EncounterUndoLedger>(() => emptyUndoLedger(encounterId));
+  // Slots this page saw come back from a SUCCESSFUL void, so their counts are exact. Every
+  // other slot — read on load, or re-read after a refused clear — was written from intent and
+  // renders as an upper bound (see UndoStrip). Keyed by placement + the action's timestamp.
+  const [confirmedUndoSlots, setConfirmedUndoSlots] = useState<ReadonlySet<string>>(() => new Set());
   const entrySheetGuard = useExamEntrySheetGuard(entrySheetSection);
   const [rightPanelState, setRightPanelState] = useState(INITIAL_EXAM_RIGHT_PANEL_STATE);
   const [rightPanelImageCount, setRightPanelImageCount] = useState(0);
@@ -195,7 +201,13 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   // Pre-finalization delete: a void anywhere refreshes the Overview; a section clear drops that
   // section's saved status; a visit clear drops every status and remounts the open sheet blank.
   function handleEncounterCleared(detail: EncounterClearedDetail) {
-    if (detail.result.ledger) setUndoLedger(detail.result.ledger);
+    const ledger = detail.result.ledger;
+    if (ledger) {
+      setUndoLedger(ledger);
+      // Vouch only for the slot whose rows this response actually enumerated; a no-op success
+      // carries the current ledger and vouches for none of it.
+      setConfirmedUndoSlots((current) => new Set([...current, ...confirmedSlotKeys(ledger, detail.result.voided)]));
+    }
     if (detail.scope === "encounter") {
       setStatuses({});
       setChartClearVersion((current) => current + 1);
@@ -205,6 +217,22 @@ export function EncounterCharting({ patient, encounterId }: Props) {
       )) as SectionStatusMap);
     }
     refreshExamOverview();
+  }
+
+  // A clear that FAILS re-reads the chart too. The overview refetches only on a successful
+  // clear or the manual button, so after a refused void the clinician would be reading a panel
+  // whose contents may already be gone — which is how "nothing was cleared" was concluded about
+  // a chart an earlier void had fully emptied (2026-09-02). The surface keeps its error on
+  // screen; this only makes sure the overview beside it is current.
+  function handleEncounterClearFailed(_detail: EncounterClearFailedDetail) {
+    refreshExamOverview();
+    // …and the Undo ledger. On this non-atomic stack a refused clear can still have written its
+    // slot (and most of its voids); that slot is the clinician's way back from a partially
+    // erased chart, and Undo restores only what was actually voided. Show the slot the server
+    // holds, not the one this page last loaded.
+    void readEncounterUndoLedger(`Encounter/${encounterId}`)
+      .then((ledger) => { if (ledger.encounterId === encounterId) setUndoLedger(ledger); })
+      .catch((caught) => { console.error("Undo ledger unavailable after a failed clear.", caught); });
   }
 
   // Undo reverses exactly one clear — the slot the server holds for that scope — and the
@@ -442,6 +470,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
     setEncounterRecordedAt(undefined);
     setEncounterLoadState({ encounterId, status: "loading" });
     setUndoLedger(emptyUndoLedger(encounterId));
+    setConfirmedUndoSlots(new Set());
     fhir.read<Encounter>("Encounter", encounterId)
       .then((encounter) => {
         const code = encounter.serviceType?.coding?.find((coding) =>
@@ -736,7 +765,11 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   }
   const sheetUndoSlot = entrySheetSection ? undoSlotForSection(undoLedger, sectionUndoKeys(entrySheetSection)) : undefined;
   const sheetUndo = sheetUndoSlot
-    ? { slot: sheetUndoSlot.slot, onUndo: () => handleUndo({ scope: "section", sectionKey: sheetUndoSlot.sectionKey }) }
+    ? {
+        slot: sheetUndoSlot.slot,
+        confirmed: confirmedUndoSlots.has(undoSlotKey(sheetUndoSlot.sectionKey, sheetUndoSlot.slot)),
+        onUndo: () => handleUndo({ scope: "section", sectionKey: sheetUndoSlot.sectionKey }),
+      }
     : undefined;
   const bodyUndoSlot = entrySheetSection ? undefined : undoSlotForSection(undoLedger, sectionUndoKeys(activeSection));
   const activeExamOverviewProjection = examOverviewProjection?.encounterReference === encounterReference
@@ -771,7 +804,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   );
 
   return (
-    <EncounterEditContext.Provider value={{ encounterStatus: encounter?.status, onCleared: handleEncounterCleared }}>
+    <EncounterEditContext.Provider value={{ encounterStatus: encounter?.status, onCleared: handleEncounterCleared, onClearFailed: handleEncounterClearFailed }}>
     <div className={["odos-charting-workspace flex h-screen w-screen flex-col bg-bg-deep text-white", config.encounterDensity === "compact" ? "text-[0.95rem]" : ""].join(" ")}>
       <EncounterHeader
         patient={patient}
@@ -785,6 +818,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
         clinicalActionUnavailableReason={clinicalActionUnavailableReason}
         onToggleVisitCharges={() => setVisitChargesOpen((current) => !current)}
         undoSlot={undoLedger.encounter ?? undefined}
+        undoConfirmed={undoLedger.encounter ? confirmedUndoSlots.has(undoSlotKey("encounter", undoLedger.encounter)) : false}
         onUndo={() => handleUndo({ scope: "encounter" })}
       />
       <div
@@ -842,6 +876,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
             <UndoStrip
               slot={bodyUndoSlot.slot}
               scope="section"
+              confirmed={confirmedUndoSlots.has(undoSlotKey(bodyUndoSlot.sectionKey, bodyUndoSlot.slot))}
               closed={isClosedEncounterStatus(encounter?.status)}
               onUndo={() => handleUndo({ scope: "section", sectionKey: bodyUndoSlot.sectionKey })}
             />

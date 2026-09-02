@@ -2412,13 +2412,13 @@ test("fixback P2#3: the ledger loads with the encounter, both placements render 
     const slots = bar.findAll((node) => typeof node.props["data-chart-bar-slot"] === "string").map((node) => node.props["data-chart-bar-slot"]);
     assert.deepEqual(slots.slice(0, 4), ["patient", "cc-hpi-reserved", "exam-sections", "undo"], "the visit Undo sits beside exam-sections");
     const visitSlot = bar.findByProps({ "data-chart-bar-slot": "undo" });
-    assert.match(textContent(visitSlot), /Cleared everything charted · 31 values/);
+    assert.match(textContent(visitSlot), /Cleared everything charted · up to 31 values/, "a slot read back from the server is intent-derived: its count is an upper bound");
 
     act(() => harness.renderer.root.findByType(ExamOverviewBoard).props.onOpenEditor("va"));
     const sheet = visibleSheet(harness);
     assert.equal(sheet.props.sectionId, "va");
     const strip = sheet.findByProps({ "data-undo-scope": "section" });
-    assert.match(textContent(strip), /Cleared Visual acuity · 2 values/, "the sheet strip is scoped to VA's own slot");
+    assert.match(textContent(strip), /Cleared Visual acuity · up to 2 values/, "the sheet strip is scoped to VA's own slot, and a loaded slot reads as an upper bound");
 
     await act(async () => { await undoButtonIn(sheet).props.onClick(); await flushEffects(); await flushEffects(); });
     assert.deepEqual(harness.undoRequests, [{ scope: "section", sectionKey: "va" }]);
@@ -2428,6 +2428,110 @@ test("fixback P2#3: the ledger loads with the encounter, both placements render 
     await act(async () => { await undoButtonIn(harness.renderer.root.findByProps({ "data-chart-bar-slot": "undo" })).props.onClick(); await flushEffects(); await flushEffects(); });
     assert.deepEqual(harness.undoRequests, [{ scope: "section", sectionKey: "va" }, { scope: "encounter" }]);
     assert.equal(harness.renderer.root.findAllByProps({ "data-chart-bar-slot": "undo" }).length, 0, "the visit Undo is gone once the response ledger no longer holds it");
+  } finally {
+    harness.restore();
+  }
+});
+
+test("a failed Clear everything re-reads the overview alongside its error, so the screen cannot contradict the database", async () => {
+  const harness = await renderEncounter(PROJECTION);
+  const confirmations: string[] = [];
+  Object.assign(globalThis.window, { confirm: (message: string) => { confirmations.push(message); return true; } });
+  try {
+    act(() => harness.renderer.root.findByType(ExamOverviewBoard).props.onOpenEditor("va"));
+    const sheet = visibleSheet(harness);
+    const overviewBefore = harness.overviewFetchCount();
+    const findingsBefore = harness.findingsFetchCount();
+    const ledgerBefore = harness.ledgerFetchCount();
+    harness.voidFailure.status = 502;
+    harness.voidFailure.body = {
+      error: "This clear only partly applied: 50 of 51 changes were saved before the record server refused entry 3 of 98 (PUT Observation, HTTP 403); 1 of 98 entries refused. Review the chart before continuing. Undo, where offered, restores only what was actually cleared.",
+      code: "void-transaction-failed",
+      outcome: "applied-partial",
+    };
+    const clearAll = sheet.findAll((node) => node.type === "button" && textContent(node) === "Clear everything charted this visit…")[0];
+    assert.ok(clearAll, "the tier-3 control is in the sheet chrome");
+
+    await act(async () => { await clearAll.props.onClick(); await flushEffects(); await flushEffects(); });
+
+    assert.equal(confirmations.length, 1, "the clear was confirmed and attempted");
+    // The VA sheet's own Clear section probes on mount; only the visit-scope traffic is this test's.
+    const visitRequests = harness.voidRequests.filter((request) => (request as { scope: string }).scope === "encounter");
+    assert.deepEqual(visitRequests, [{ scope: "encounter", preview: true }, { scope: "encounter" }]);
+    assert.equal(harness.overviewFetchCount(), overviewBefore + 1, "the failed clear re-reads the overview");
+    assert.equal(harness.findingsFetchCount(), findingsBefore + 1, "…and the unassigned-findings count that rides with it");
+    assert.equal(harness.ledgerFetchCount(), ledgerBefore + 1, "…and the undo ledger, so a partial clear's Undo is offered from the slot the server actually holds");
+    const status = visibleSheet(harness).findByProps({ className: "odos-exam-entry-sheet-clear-all" }).findByProps({ role: "status" });
+    assert.equal(textContent(status), (harness.voidFailure.body as { error: string }).error, "the error is still on screen: refresh AND report");
+    // F3: the OUTCOME, not the fetch — the clinician can see and press Undo for the slot the
+    // refused clear still wrote, and the strip does not claim an exact count it cannot know.
+    const undoSlots = harness.renderer.root.findAllByProps({ "data-chart-bar-slot": "undo" });
+    assert.equal(undoSlots.length, 1, "the visit Undo is offered from the re-read ledger");
+    const strip = undoSlots[0]!.findByProps({ role: "status" });
+    assert.match(textContent(strip), /Cleared everything charted · up to 3 values/, textContent(strip));
+    const undoButton = strip.findAllByType("button").find((button) => textContent(button) === "Undo");
+    assert.ok(undoButton, "Undo is present");
+    assert.equal(undoButton.props.disabled, undefined, "…and enabled");
+    assert.equal(undoButton.props.title, "Restore whatever this action actually removed, up to 3 values");
+  } finally {
+    harness.restore();
+  }
+});
+
+test("F2: a successful Clear everything renders the exact count — this page saw the slot confirmed by the void's own response", async () => {
+  const harness = await renderEncounter(PROJECTION);
+  Object.assign(globalThis.window, { confirm: () => true });
+  try {
+    act(() => harness.renderer.root.findByType(ExamOverviewBoard).props.onOpenEditor("va"));
+    const sheet = visibleSheet(harness);
+    const clearAll = sheet.findAll((node) => node.type === "button" && textContent(node) === "Clear everything charted this visit…")[0];
+    assert.ok(clearAll);
+
+    await act(async () => { await clearAll.props.onClick(); await flushEffects(); await flushEffects(); });
+
+    const undoSlots = harness.renderer.root.findAllByProps({ "data-chart-bar-slot": "undo" });
+    assert.equal(undoSlots.length, 1);
+    const strip = undoSlots[0]!.findByProps({ role: "status" });
+    assert.match(textContent(strip), /Cleared everything charted · 3 values/, textContent(strip));
+    assert.doesNotMatch(textContent(strip), /up to/, "a confirmed slot is not hedged");
+    assert.equal(strip.findAllByType("button").find((button) => textContent(button) === "Undo")?.props.title, "Restore the 3 values this action removed");
+  } finally {
+    harness.restore();
+  }
+});
+
+test("G2: a successful no-op clear must not promote an older partial slot from 'up to 3' to an exact '3'", async () => {
+  // A prior visit clear left an intent-derived slot naming three rows; only two were actually voided.
+  const olderPartial: EncounterUndoLedger = {
+    encounterId: "exam-1",
+    encounter: {
+      voided: [{ ref: "Observation/o1", priorStatus: "final" }, { ref: "Observation/o2", priorStatus: "final" }, { ref: "Observation/o3", priorStatus: "final" }],
+      label: "everything charted",
+      count: 3,
+      at: "2026-09-02T09:00:00.000Z",
+      sectionKeys: [],
+      scope: "encounter",
+    },
+    sections: {},
+  };
+  const harness = await renderEncounter(PROJECTION, { undoLedger: olderPartial });
+  Object.assign(globalThis.window, { confirm: () => true });
+  try {
+    const stripText = () => textContent(harness.renderer.root.findByProps({ "data-chart-bar-slot": "undo" }).findByProps({ role: "status" }));
+    assert.match(stripText(), /Cleared everything charted · up to 3 values/, "loaded: hedged");
+
+    // The preview says 3, the clinician confirms, and by the time the write runs nothing qualifies:
+    // HTTP 200, zero writes, the same ledger carried over.
+    harness.voidNoop.enabled = true;
+    act(() => harness.renderer.root.findByType(ExamOverviewBoard).props.onOpenEditor("va"));
+    const clearAll = visibleSheet(harness).findAll((node) => node.type === "button" && textContent(node) === "Clear everything charted this visit…")[0];
+    assert.ok(clearAll);
+    await act(async () => { await clearAll.props.onClick(); await flushEffects(); await flushEffects(); });
+
+    const visitRequests = harness.voidRequests.filter((request) => (request as { scope: string }).scope === "encounter");
+    assert.deepEqual(visitRequests, [{ scope: "encounter", preview: true }, { scope: "encounter" }], "the no-op void really ran");
+    assert.match(stripText(), /Cleared everything charted · up to 3 values/, "a response that wrote nothing observed nothing and vouches for nothing");
+    assert.doesNotMatch(stripText(), /· 3 values/, "the older slot must not be promoted to an exact count");
   } finally {
     harness.restore();
   }
@@ -3734,6 +3838,13 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
   undoRequests: unknown[];
   /** Set `status` to make the next undo requests fail with that HTTP status. */
   undoFailure: { status?: number };
+  /** Every POST .../void body, in order (preview and real). */
+  voidRequests: unknown[];
+  /** Set `status` (+ `body`) to make the next non-preview void POST fail with that HTTP status. */
+  voidFailure: { status?: number; body?: unknown };
+  /** Set `enabled` to make the next non-preview void POST answer 200 with ZERO writes and the unchanged ledger (the endpoint's no-op shape). */
+  voidNoop: { enabled?: boolean };
+  ledgerFetchCount: () => number;
   restore: () => void;
 }> {
   const originalFetch = globalThis.fetch;
@@ -3765,11 +3876,40 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
   let focusRestores = 0;
   const undoRequests: unknown[] = [];
   const undoFailure: { status?: number } = {};
+  const voidRequests: unknown[] = [];
+  const voidFailure: { status?: number; body?: unknown } = {};
+  const voidNoop: { enabled?: boolean } = {};
+  let ledgerFetches = 0;
   let undoLedgerState: EncounterUndoLedger | undefined = options.undoLedger;
   globalThis.fetch = (async (input, init) => {
     const url = String(input);
     if (url.endsWith("/clinical-graph/encounters/exam-1/void/ledger")) {
-      return jsonResponse({ ledger: options.undoLedger ?? { encounterId: "exam-1", encounter: null, sections: {} } });
+      ledgerFetches += 1;
+      return jsonResponse({ ledger: undoLedgerState ?? { encounterId: "exam-1", encounter: null, sections: {} } });
+    }
+    if (url.endsWith("/clinical-graph/encounters/exam-1/void") && init?.method === "POST") {
+      const body = JSON.parse(String(init.body)) as { scope: string; preview?: boolean };
+      voidRequests.push(body);
+      const voided = ["Observation/va-od", "Observation/va-os", "Observation/va-ou"];
+      const sections = [{ sectionKey: "va", label: "Visual acuity", count: 3 }];
+      if (!body.preview && voidNoop.enabled) {
+        // Like the endpoint when nothing qualifies any more: HTTP 200, no transaction, count 0,
+        // and the CURRENT ledger carried over unchanged.
+        return jsonResponse({ voided: [], count: 0, sections: [], entries: [], preview: false, ledger: undoLedgerState ?? { encounterId: "exam-1", encounter: null, sections: {} } });
+      }
+      if (!body.preview && body.scope === "encounter") {
+        // Like the server on this non-atomic stack: the visit slot is written from INTENT — every
+        // row the clear meant to void — whether or not the transaction is then refused.
+        undoLedgerState = {
+          encounterId: "exam-1",
+          encounter: { voided: voided.map((ref) => ({ ref, priorStatus: "final" })), label: "everything charted", count: 3, at: "2026-09-02T10:00:00.000Z", sectionKeys: [], scope: "encounter" },
+          sections: {},
+        };
+      }
+      if (!body.preview && voidFailure.status) {
+        return new Response(JSON.stringify(voidFailure.body ?? { error: "void failed" }), { status: voidFailure.status, headers: { "Content-Type": "application/json" } });
+      }
+      return jsonResponse({ voided, count: 3, sections, entries: [], preview: Boolean(body.preview), ...(body.preview ? {} : { ledger: undoLedgerState }) });
     }
     if (url.endsWith("/clinical-graph/encounters/exam-1/void/undo") && init?.method === "POST") {
       const body = JSON.parse(String(init.body)) as { scope: string; sectionKey?: string };
@@ -3955,6 +4095,10 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
     focusRestoreCount: () => focusRestores,
     undoRequests,
     undoFailure,
+    voidRequests,
+    voidFailure,
+    voidNoop,
+    ledgerFetchCount: () => ledgerFetches,
     restore: () => {
       act(() => renderer.unmount());
       fhir.read = originalRead;

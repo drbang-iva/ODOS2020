@@ -43,6 +43,8 @@ interface Props {
   encounterId: string;
   /** The visit-level Undo (§4b.1 tier 3): the chart bar's `undo` slot renders while it is pending. */
   undoSlot?: UndoLedgerSlot;
+  /** True only when this page saw `undoSlot` come back from a successful void; otherwise the strip reads as an upper bound. */
+  undoConfirmed?: boolean;
   onUndo?: () => void | Promise<void>;
   completeness?: ClinicalExamCompleteness;
   unassignedCount?: number;
@@ -66,6 +68,7 @@ export function EncounterHeader({
   clinicalActionUnavailableReason,
   onToggleVisitCharges,
   undoSlot,
+  undoConfirmed = false,
   onUndo,
 }: Props) {
   const [encounter, setEncounter] = useState<Encounter | null>(null);
@@ -283,6 +286,7 @@ export function EncounterHeader({
         signUnavailableReason={clinicalActionUnavailableReason}
         signLabel={busy === "checking" ? "Checking..." : busy === "finish" ? "Signing..." : "Sign & finish"}
         undoSlot={undoSlot}
+        undoConfirmed={undoConfirmed}
         undoDisabled={migrated || isClosedEncounterStatus(encounter?.status)}
         onUndo={onUndo}
       />
@@ -374,6 +378,7 @@ interface ExamChartBarProps {
   signLabel: string;
   /** Pending visit-level Undo; the `undo` slot renders only while one exists. */
   undoSlot?: UndoLedgerSlot;
+  undoConfirmed?: boolean;
   undoDisabled?: boolean;
   onUndo?: () => void | Promise<void>;
 }
@@ -394,6 +399,7 @@ export function ExamChartBar({
   signUnavailableReason,
   signLabel,
   undoSlot,
+  undoConfirmed = false,
   undoDisabled = false,
   onUndo,
 }: ExamChartBarProps) {
@@ -417,7 +423,7 @@ export function ExamChartBar({
         // Its own slot beside exam-sections, not the `drafts` slot: that one is reserved for
         // slice-4 drafts and a test pins that reservation.
         <div className="odos-chart-bar-undo" data-chart-bar-slot="undo">
-          <UndoStrip slot={undoSlot} scope="encounter" closed={undoDisabled} onUndo={() => onUndo?.()} />
+          <UndoStrip slot={undoSlot} scope="encounter" confirmed={undoConfirmed} closed={undoDisabled} onUndo={() => onUndo?.()} />
         </div>
       )}
       <div
