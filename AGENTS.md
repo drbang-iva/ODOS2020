@@ -8,9 +8,15 @@ auto_inject_priority: 10
 
 Practitioner-owned open-source EHR / practice management for independent optometry. Built by a practicing O.D. on the Medplum FHIR foundation. Self-hosted on the practice's own hardware. AGPL v3.
 
-**Current state:** v0.6a Frames Data SHIPPED (2026-05-09). v0.55 integration spine shipped (2026-05-05). 1 of 8 v0.6 slices shipped; v0.6b PVerify is next. The substrate is real working code under milestone-locked development. **Nothing is packaged as a customer install yet.** First-pilot scope is named below.
+**Current state — do not hand-maintain a version claim in this file.** The substrate is real working code under milestone-locked development, and **nothing is packaged as a customer install yet**; first-pilot scope is named below. Those facts are durable. *Where the build actually is* is not — so read it from sources that cannot go stale, never from prose here:
 
-For the full current-state operator view, see [`STATUS.md`](STATUS.md) and [`docs/operator-dashboard.md`](docs/operator-dashboard.md).
+| To learn | Read |
+|---|---|
+| What shipped, and when | `git log --oneline -30 origin/main` |
+| What is in flight right now | `gh pr list --state open` |
+| Why something was built the way it was | dated files in `performance-od/decisions/` |
+
+> **Added 2026-09-02.** This paragraph previously asserted *"v0.6a Frames Data SHIPPED (2026-05-09) … 1 of 8 v0.6 slices shipped; v0.6b PVerify is next"* — roughly four months stale, and it was the first thing every Codex session read, whether building or reviewing. `STATUS.md` (*"Generated: 2026-07-07"*) and `docs/operator-dashboard.md` had rotted the same way and disagreed with it: three hand-maintained state documents, three different answers. A generated source cannot drift; a remembered one always does. The milestone tables below carry the same risk — trust `git log` over them where they conflict.
 
 ---
 
@@ -166,6 +172,47 @@ Full Tier-1 acceptance criteria, rationale, and v0.6 ranking against pilot tiers
 | `.env.example` | Template for `.env` |
 
 Runtime targets: `npm run up` for the local stack; same compose file works on laptop, Mac Studio, or any Linux box meeting the install prerequisites in `docs/install.md`.
+
+---
+
+## Duplication control (binding on any new code here)
+
+AI coding agents duplicate operational logic by default — the same mechanic re-implemented per caller, each copy drifting independently. This repo has already paid for it: **PR #500 took four fixback rounds because the same linked-resource filter existed in three separate `.filter()` shapes**, each silently dropping an unreadable or foreign `MedicationAdministration` instead of refusing, and each had to be found and fixed on its own round.
+
+- **Extraction trigger: the same operational mechanic reaching 2+ callers.** Not before. Logic with exactly one caller stays where it is — premature extraction is its own defect, not a virtue.
+- **Endpoints own the "why/when"** — authorization, status transitions, clinical policy, failure classification. **Shared services own the "how"** — the reusable mechanic, with explicit parameters and structured returns.
+- **A shared service never reaches into storage or mutates clinical state directly.** It returns a result; the caller decides what that result means.
+- **Failure is explicit, never a silent drop.** A `.filter()` that removes a row a clinical write depended on must refuse and say why. That is the PR #500 defect restated as a rule.
+- **Migrate one caller at a time:** extract the block, convert a single caller, verify, then the rest. Never convert every caller in one commit.
+
+Anti-patterns, all of which have appeared here: one god-function hiding all control flow; a service that writes to storage itself; every function inventing its own argument and error shape; and abstracting logic that only ever had one caller.
+
+*Adapted from [`github.com/michaelshimeles/skills`](https://github.com/michaelshimeles/skills) (`code-structure`), reframed onto this repo's endpoint/service split and its own PR #500 precedent rather than the upstream's actions/service-layer vocabulary.*
+
+---
+
+## Multi-agent hygiene
+
+Several agents work this repo in parallel worktrees. Each rule below was earned, not imported:
+
+- **Never commit directly to `main`.** One worktree and one branch per task, per agent. Never reuse, rebase, or modify another agent's worktree, branch, or uncommitted work.
+- **Scope-check before starting:** `gh pr list` and `gh pr diff <n> --name-only`, plus `git status` in any shared checkout. On overlap, stop and ask rather than guess. *(Earned 2026-09-01: a rebase in a shared root checkout put another session's three uncommitted files into conflict.)*
+- **Never plain `--force`.** `--force-with-lease` only, and only on your own task branch. Never force-push `main`.
+- **Resolve lockfile conflicts by regenerating, never by hand-merging.**
+- **Worktrees do not isolate shared resources.** Confirm a dev-server port answers *your* process before trusting it, and never run schema experiments against a shared database. *(Earned: parallel ODOS dev servers colliding on ports — use a unique `--port --strictPort`, verify with `lsof`.)*
+- **The root checkout at `~/GitHub/ODOS2020` is a reader** for Codex and VS Code. Don't run history operations in it; work in your own worktree and let the root fast-forward.
+
+---
+
+## What cannot be proven by the test suite
+
+A green suite is not evidence. These are the things this repo's checks structurally cannot see, and each has already produced a shipped defect:
+
+- **Real AccessPolicy enforcement.** Most tests use in-memory FHIR fakes with no policy engine. The pre-finalization void feature (`8de5776b`) passed four evaluation rounds and 26+ tests, then failed 100% against the real server — the AccessPolicy forbids `preliminary → entered-in-error`, and no fake could see it. The credentialed live-authorization lane exists (`npm run test:live-authz`) but runs under `continue-on-error: true` in CI: **treat it as advisory until that flag is removed.**
+- **Whether a control is wired at all.** As of 2026-09-02 this repo has ~103 UI test files and **zero browser-driven tests** — nothing loads a page and clicks anything before the operator does. A button can be entirely dead while every check stays green.
+- **Whether a fixture still tests what it claims.** Two on record: PR #500's guard stayed green after its boundary check was deleted because the fixture did the filter's job, and the 2026-08-28 auditor fixture asserted a boundary for a role a migration had silently removed.
+
+When a change touches any of the three, say so in the PR and prove it another way — a live walkthrough, a credentialed run, or a recorded click path. Silence is not an available outcome (Mandate 17).
 
 ---
 
