@@ -81,7 +81,7 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
       .then((body) => {
         setDefinition(body);
         const firstType = activeOptions(body.definition.fields.eyeglassType)[0]?.code ?? "";
-        setSourceType(activeOptions(body.definition.fields.sourceType)[0]?.code ?? "manual");
+        setSourceType(defaultSourceType(activeOptions(body.definition.fields.sourceType)));
         setPairs((current) => current.map((pair) => ({
           ...pair,
           eyeglassType: pair.eyeglassType || firstType,
@@ -132,7 +132,7 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
 
   function resetForm() {
     setPairs([emptyPair(eyeglassTypes[0]?.code ?? "")]);
-    setSourceType(sourceTypes[0]?.code ?? "manual");
+    setSourceType(defaultSourceType(sourceTypes));
     setLeftGlassesAtHome(false);
     setSaved(null);
     setError(null);
@@ -416,6 +416,10 @@ function parseOptionalNumber(value: string): number | undefined {
 
 function activeOptions(field: DefinitionField | undefined): DefinitionOption[] {
   return (field?.options ?? []).filter((option) => option.active !== false);
+}
+
+function defaultSourceType(options: DefinitionOption[]): string {
+  return options.find((option) => option.code === "manual")?.code ?? options[0]?.code ?? "manual";
 }
 
 function definedRecord<T extends Record<string, unknown>>(value: T): Partial<T> {

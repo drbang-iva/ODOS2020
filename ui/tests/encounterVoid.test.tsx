@@ -542,8 +542,8 @@ test("Wearing Rx offers the standard persisted section clear and resets its edit
       return Response.json({ definition: { fields: {
         eyeglassType: { options: [{ code: "progressives", display: "Progressives", active: true }] },
         sourceType: { options: [
-          { code: "manual", display: "Manual", active: true },
           { code: "device", display: "Device", active: true },
+          { code: "manual", display: "Manual", active: true },
         ] },
         prismBase: { options: [{ code: "down", display: "Down", active: true }] },
       } } });
