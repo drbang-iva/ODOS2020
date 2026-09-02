@@ -183,7 +183,7 @@ export function observationStatusTransitionAllowed(input: {
   }
 }
 
-export function accessPolicyConstraintRejectsObservationStatusPatch(input: {
+export function observationStatusTransitionTableRejectsPatch(input: {
   from: ObservationStatusBefore;
   to: string;
   actorRole: ObservationStatusActorRole;

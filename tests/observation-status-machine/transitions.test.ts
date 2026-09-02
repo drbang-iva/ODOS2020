@@ -6,8 +6,8 @@ import {
   FHIR_OBSERVATION_STATUSES,
   OBSERVATION_STATUS_WRITE_CONSTRAINT_EXPRESSION,
   ObservationStatusTransitionError,
-  accessPolicyConstraintRejectsObservationStatusPatch,
   assertObservationStatusTransition,
+  observationStatusTransitionTableRejectsPatch,
   type ObservationStatusActorRole,
   type ObservationStatusBefore,
 } from "../../policy/observation-status-machine.js";
@@ -22,7 +22,7 @@ test("v0.5c Observation.status machine allows every canonical transition", () =>
       }),
     );
     assert.equal(
-      accessPolicyConstraintRejectsObservationStatusPatch({
+      observationStatusTransitionTableRejectsPatch({
         from: transition.from,
         to: transition.to,
         actorRole: transition.actorRole,
@@ -67,9 +67,9 @@ test("v0.5c Observation.status machine rejects every disallowed transition", () 
           `${from ?? "(none)"} -> ${to} by ${actorRole} should fail at MCP layer`,
         );
         assert.equal(
-          accessPolicyConstraintRejectsObservationStatusPatch({ from, to, actorRole }),
+          observationStatusTransitionTableRejectsPatch({ from, to, actorRole }),
           true,
-          `${from ?? "(none)"} -> ${to} by ${actorRole} should fail at AccessPolicy guard`,
+          `${from ?? "(none)"} -> ${to} by ${actorRole} should fail at the transition table`,
         );
       }
     }
@@ -84,7 +84,7 @@ test("voiding a draft does not add any transition out of finalized statuses", ()
     for (const to of newlyForbiddenTargets) {
       for (const actorRole of ["scribe", "clinician", "system"] as const) {
         assert.equal(
-          accessPolicyConstraintRejectsObservationStatusPatch({ from, to, actorRole }),
+          observationStatusTransitionTableRejectsPatch({ from, to, actorRole }),
           true,
           `${from} -> ${to} by ${actorRole} must remain forbidden`,
         );
