@@ -521,6 +521,91 @@ test("fixback 5: refraction block Remove is disabled with the amendment tooltip 
   }
 });
 
+/** What the server holds for each surface on reopen: one value per eye, plus the binocular PD for Auto-refraction. */
+const PERSISTED_REOPEN_ENTRIES: Record<string, Array<{ reference: string; sectionKey: string; findingKey: string; laterality: string }>> = {
+  va: [
+    { reference: "Observation/va-od", sectionKey: "va", findingKey: "VISUAL_ACUITY", laterality: "OD" },
+    { reference: "Observation/va-os", sectionKey: "va", findingKey: "VISUAL_ACUITY", laterality: "OS" },
+  ],
+  tonometry: [
+    { reference: "Observation/iop-od", sectionKey: "tonometry", findingKey: "intraocular_pressure", laterality: "OD" },
+    { reference: "Observation/ch-od", sectionKey: "tonometry", findingKey: "corneal_hysteresis", laterality: "OD" },
+    { reference: "Observation/iop-os", sectionKey: "tonometry", findingKey: "intraocular_pressure", laterality: "OS" },
+  ],
+  "auto-refraction": [
+    { reference: "Observation/ar-od", sectionKey: "auto-refraction", findingKey: "auto_refraction", laterality: "OD" },
+    { reference: "Observation/ak-od", sectionKey: "auto-refraction", findingKey: "auto_keratometry", laterality: "OD" },
+    { reference: "Observation/pd", sectionKey: "auto-refraction", findingKey: "binocular_pd", laterality: "OU" },
+  ],
+};
+
+/**
+ * Fixback 56ff8d36 P2#A, widened per the Opus spot-check: on a SIGNED reopened chart, BOTH tiers
+ * must render present-but-disabled with the amendment tooltip (§3, §4b.5) — the Clear section
+ * control AND every per-item Remove — for all three surfaces that keep no history of their own.
+ * Every shortfall is collected before asserting, so a regression that hides one tier in one
+ * section is named as such rather than hidden behind the first failure.
+ */
+test("fixback 56ff8d36 P2#A: a signed reopened chart renders Clear section AND every Remove control for VA, IOP, and Auto-refraction, present-but-disabled with the amendment tooltip", async () => {
+  const { VaSection } = await import("../src/components/charting/VaSection");
+  const { IopSection } = await import("../src/components/charting/IopSection");
+  const { AutoRefractionSection } = await import("../src/components/charting/AutoRefractionSection");
+  const cases = [
+    { name: "VA", clear: "Clear Visual acuity", removes: ["Remove Visual acuity OD", "Remove Visual acuity OS"], sectionKey: "va", element: <VaSection patientReference="Patient/p1" encounterReference={ENCOUNTER} onSaved={() => undefined} /> },
+    { name: "IOP", clear: "Clear IOP", removes: ["Remove IOP OD", "Remove IOP OS"], sectionKey: "tonometry", element: <IopSection patientReference="Patient/p1" encounterReference={ENCOUNTER} onSaved={() => undefined} /> },
+    { name: "Auto-refraction", clear: "Clear Auto-refraction / Auto-K", removes: ["Remove Auto-refraction OD", "Remove Binocular PD"], sectionKey: "auto-refraction", element: <AutoRefractionSection patientReference="Patient/p1" encounterReference={ENCOUNTER} onSaved={() => undefined} /> },
+  ];
+  const shortfalls: string[] = [];
+  const mutations: unknown[] = [];
+  for (const item of cases) {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async (input, init) => {
+      const url = String(input);
+      if (url.endsWith("/void") && init?.method === "POST") {
+        const body = JSON.parse(String(init.body)) as { preview?: boolean };
+        if (!body.preview) { mutations.push(body); return Response.json({ error: "Signed or closed encounters cannot be edited.", code: "encounter-closed" }, { status: 409 }); }
+        const entries = PERSISTED_REOPEN_ENTRIES[item.sectionKey]!;
+        return Response.json({ voided: entries.map((entry) => entry.reference), count: entries.length, sections: [], preview: true, entries });
+      }
+      if (url.endsWith("/clinical-graph/iop/definition")) {
+        return Response.json({ definitions: { intraocularPressure: { fields: { method: { options: [{ code: "GAT", display: "GAT", active: true }] } } }, cornealHysteresis: { fields: {} } } });
+      }
+      if (url.includes("/clinical-graph/iop/history")) return Response.json({ readings: [], cornealHysteresis: [], perEye: { OD: { average: null, tMax: null, count: 0, target: null }, OS: { average: null, tMax: null, count: 0, target: null } }, threshold: 21 });
+      if (url.endsWith("/clinical-graph/auto-refraction/definition")) {
+        return Response.json({ definitions: { autoRefraction: { fields: { sourceType: { options: [{ code: "manual", display: "Manual", active: true }] } } }, autoKeratometry: { fields: {} } } });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    };
+    let renderer!: ReactTestRenderer;
+    try {
+      await act(async () => {
+        renderer = create(<EncounterEditContext.Provider value={{ encounterStatus: "finished" }}>{item.element}</EncounterEditContext.Provider>);
+        await flush();
+      });
+      const disabledWithTooltip = (button: ReactTestInstance | undefined, what: string) => {
+        if (!button) { shortfalls.push(`${item.name}: ${what} is ABSENT on a signed chart (must be present-but-disabled)`); return; }
+        if (button.props.disabled !== true) shortfalls.push(`${item.name}: ${what} is enabled on a signed chart`);
+        if (button.props.title !== SIGNED_ENCOUNTER_TOOLTIP) shortfalls.push(`${item.name}: ${what} lacks the amendment tooltip`);
+      };
+      // Tier 2 — Clear section
+      disabledWithTooltip(findClearButton(renderer.root, item.clear), item.clear);
+      // Tier 1 — every per-item Remove
+      for (const label of item.removes) {
+        disabledWithTooltip(renderer.root.findAll((node) => node.type === "button" && node.props["aria-label"] === label)[0], label);
+      }
+      // A disabled control never reaches the server, even if clicked.
+      for (const button of renderer.root.findAll((node) => node.type === "button" && (textOf(node) === item.clear || String(node.props["aria-label"] ?? "").startsWith("Remove ")))) {
+        await act(async () => { await button.props.onClick?.(); });
+      }
+    } finally {
+      renderer?.unmount();
+      globalThis.fetch = originalFetch;
+    }
+  }
+  assert.deepEqual(shortfalls, [], `signed reopen shortfalls:\n${shortfalls.join("\n")}`);
+  assert.deepEqual(mutations, [], "no disabled control may issue a void");
+});
+
 test("fixback 4: VA, IOP, and Auto-refraction offer Clear section on reopen when the server holds recorded values", async () => {
   const { VaSection } = await import("../src/components/charting/VaSection");
   const { IopSection } = await import("../src/components/charting/IopSection");
@@ -530,23 +615,7 @@ test("fixback 4: VA, IOP, and Auto-refraction offer Clear section on reopen when
     { name: "IOP", label: "Clear IOP", sectionKey: "tonometry", element: <IopSection patientReference="Patient/p1" encounterReference={ENCOUNTER} onSaved={() => undefined} /> },
     { name: "Auto-refraction", label: "Clear Auto-refraction / Auto-K", sectionKey: "auto-refraction", element: <AutoRefractionSection patientReference="Patient/p1" encounterReference={ENCOUNTER} onSaved={() => undefined} /> },
   ];
-  // What the server holds for each surface on reopen: one value per eye, plus the binocular PD for Auto-refraction.
-  const persisted: Record<string, Array<{ reference: string; sectionKey: string; findingKey: string; laterality: string }>> = {
-    va: [
-      { reference: "Observation/va-od", sectionKey: "va", findingKey: "VISUAL_ACUITY", laterality: "OD" },
-      { reference: "Observation/va-os", sectionKey: "va", findingKey: "VISUAL_ACUITY", laterality: "OS" },
-    ],
-    tonometry: [
-      { reference: "Observation/iop-od", sectionKey: "tonometry", findingKey: "intraocular_pressure", laterality: "OD" },
-      { reference: "Observation/ch-od", sectionKey: "tonometry", findingKey: "corneal_hysteresis", laterality: "OD" },
-      { reference: "Observation/iop-os", sectionKey: "tonometry", findingKey: "intraocular_pressure", laterality: "OS" },
-    ],
-    "auto-refraction": [
-      { reference: "Observation/ar-od", sectionKey: "auto-refraction", findingKey: "auto_refraction", laterality: "OD" },
-      { reference: "Observation/ak-od", sectionKey: "auto-refraction", findingKey: "auto_keratometry", laterality: "OD" },
-      { reference: "Observation/pd", sectionKey: "auto-refraction", findingKey: "binocular_pd", laterality: "OU" },
-    ],
-  };
+  const persisted = PERSISTED_REOPEN_ENTRIES;
   // Fixback 56ff8d36 P2#A: a signed chart still shows what was recorded — the controls render
   // present-but-disabled (§3, §4b.5), which means the sheet must still learn what it holds.
   for (const [recorded, status] of [[true, "in-progress"], [false, "in-progress"], [true, "finished"]] as const) {
