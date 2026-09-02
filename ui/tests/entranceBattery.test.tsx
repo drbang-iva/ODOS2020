@@ -740,7 +740,10 @@ test("clearing Dilation leaves the editor unrecorded instead of pre-filling an a
       await flushEffects();
     });
     assert.equal(renderer.root.findAll((node) => String(node.props.ariaLabel ?? "").startsWith("Dilation agent ")).length, 0);
-    assert.match(JSON.stringify(renderer.toJSON()), /No dilation administration recorded/);
+    const clearedTree = JSON.stringify(renderer.toJSON());
+    assert.match(clearedTree, /No dilation administration recorded/);
+    assert.doesNotMatch(clearedTree, /Dilation recorded/, "voided chart-note history must disappear immediately");
+    assert.doesNotMatch(clearedTree, /Clear Dilation/, "the cleared section must no longer present itself as recorded");
   } finally {
     renderer?.unmount();
     globalThis.fetch = originalFetch;
