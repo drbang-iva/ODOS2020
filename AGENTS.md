@@ -28,11 +28,17 @@ Practitioner-owned open-source EHR / practice management for independent optomet
 
 ## The workflow — four beats, every task
 
-Every task moves through the same four beats. The sections further down are the *rules*; this is
-the *sequence*. If you are working this repo and cannot say which beat you are in, stop and find out.
+Every **build** task — anything that changes this repo — moves through the same four beats. The
+sections further down are the *rules*; this is the *sequence*. If you are building here and cannot
+say which beat you are in, stop and find out.
 
-1. **Isolate.** Every task starts in a fresh git worktree branched from `origin/main`. Never build
-   on `main`; never reuse another agent's worktree. Full rules: **Multi-agent hygiene** below.
+**Evaluation and investigation tasks are not build tasks and do not follow this sequence.** An
+evaluator works at the **exact head under review**, not `origin/main`, and its verdict is bound to
+that SHA; an investigation may be explicitly read-only with zero commits. Branching such a task
+from `origin/main` would evaluate the wrong code.
+
+1. **Isolate.** Every build task starts in a fresh git worktree branched from `origin/main`. Never
+   build on `main`; never reuse another agent's worktree. Full rules: **Multi-agent hygiene** below.
 2. **Build.** Write to this repo's endpoint/service split, and do not let one mechanic become three
    copies. Full rules: **Duplication control** below.
 3. **Prove.** A green suite is not evidence. Two obligations, not one:
@@ -46,7 +52,13 @@ the *sequence*. If you are working this repo and cannot say which beat you are i
 4. **Ship.** Open the PR with the evidence embedded in the description — a screenshot or recording
    when the change has a visible surface, measured before/after numbers when it doesn't. Then run
    **`/greploop`** (`.claude/skills/greploop/`) until Greptile reports **5/5 with zero unresolved
-   comments**. Do not hand over a PR below 5/5.
+   comments**, and do not hand over a PR below 5/5.
+
+   **The documented exception:** dependency-bump PRs deliberately receive **no** bot review
+   (`performance-od/decisions/2026-08-29-odos-dependency-prs-get-zero-bot-review.md`). For those,
+   there is no score to loop toward — say so in the PR rather than waiting on a review that will
+   never arrive. Any other PR that somehow draws no Greptile review is a *malfunction*, not an
+   exemption: report it, do not quietly ship.
 
 **Then the beat this repo has and most don't: independent evaluation.** `/greploop` satisfies the
 *bot*. It does not satisfy the gate. Every PR into `main` additionally requires a marker from a
@@ -62,6 +74,12 @@ new commits stale a prior marker automatically. Who is trusted is decided in
 `performance-od/decisions/` (current: `2026-09-02-eval-gate-trusts-codex.md`) and enforced by
 `.github/scripts/evaluation-verdict.cjs` — not restated here, because a second copy of a rule is
 how the last drift started.
+
+**There is a second, operator-only path.** The gate also passes on an `evaluated` label, which is a
+deliberate operator override rather than a model verdict — and since PR #506 it requires recorded
+evidence and the exact head. **No agent applies that label to its own work, or to anything else.**
+It exists so a human can unblock a merge knowingly; an agent treating it as an alternative to being
+evaluated has defeated the gate. Read the parser before relying on either path.
 
 *Beat structure adapted from [`github.com/michaelshimeles/skills`](https://github.com/michaelshimeles/skills);
 `greploop` is vendored from [`greptileai/skills`](https://github.com/greptileai/skills) (MIT). The
@@ -121,6 +139,26 @@ Patient data lives ONLY on the practice's own hardware. No cloud, no vendor tele
 Cloud retracted by the private PerformanceOD local-only decision dated 2026-04-30.
 
 **`docker-compose.yml` is the deployment unit.** Same file works for dev, test, and production.
+
+### Payments & dispensary contracts (durable — not milestone state)
+
+These are standing data-model and authorization contracts. They were recorded only in `CLAUDE.md`
+until 2026-09-02, nested under a shipped-milestone heading, and were nearly lost when that file
+was collapsed into an import — an independent evaluation caught it. They live here now because
+they describe how the system *is built*, not what shipped when.
+
+- **Invoice ↔ PaymentReconciliation seam.** The `Invoice` is the bill; the `PaymentReconciliation`
+  is the settling processor payment, linked `detail.request → Invoice`. Manual cash keeps the
+  Invoice tender extension and creates **no** PaymentReconciliation.
+- **Payment processing is vendor-neutral.** A `PaymentProcessorAdapter` interface with manual-cash
+  and Clover REST Pay Display adapters behind it; one unified `POST /payments/charge` on odos-core.
+  Processor secrets stay server-side only — that boundary is why the charge endpoint exists.
+- **Payments authorization model.** Caller-token PaymentReconciliation writes are governed by
+  Medplum AccessPolicy, with front-desk dispensary RBAC grants at practice scope. The role gate is
+  **identity-derived** — a `practice-role` `meta.tag` on the AccessPolicy. **Never a client-supplied
+  role header.**
+- **Cash spectacle order kernel.** `DeviceRequest` + `Task` 17-status lifecycle + `ChargeItem` +
+  a CASH/CHECK `Invoice` carrying the `odos-payment-tender` extension.
 
 ---
 

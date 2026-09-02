@@ -127,8 +127,12 @@ while true; do
     exit 1
   fi
 
+  # LOCAL PATCH (ODOS2020, 2026-09-02) — upstream selects EVERY matching check run, so a repo
+  # with more than one Greptile entry yields a multi-line $STATUS ("completed\ncompleted") and
+  # the `= "completed"` test below never matches, looping forever. `first(...)` bounds it to one.
+  # Report upstream to greptileai/skills; remove this note if fixed there.
   GREPTILE_CHECK=$(gh api "repos/{owner}/{repo}/commits/$HEAD_SHA/check-runs" \
-    --jq '.check_runs[] | select(.name | test("greptile"; "i"))' 2>/dev/null)
+    --jq 'first(.check_runs[] | select(.name | test("greptile"; "i")))' 2>/dev/null)
   
   if [ -z "$GREPTILE_CHECK" ]; then
     echo "Waiting for Greptile check to appear..."
@@ -199,7 +203,9 @@ while true; do
   fi
 
   JOBS=$(glab api "projects/:fullpath/pipelines/$PIPELINE_ID/jobs")
-  GREPTILE_JOB=$(echo "$JOBS" | jq '.[] | select(.name | test("greptile"; "i"))')
+  # LOCAL PATCH (ODOS2020, 2026-09-02) — same multi-match defect as the GitHub path above:
+  # two Greptile jobs produce a multi-line $JOB_STATUS and the equality tests below never match.
+  GREPTILE_JOB=$(echo "$JOBS" | jq 'first(.[] | select(.name | test("greptile"; "i")))')
 
   if [ -z "$GREPTILE_JOB" ]; then
     echo "Waiting for Greptile job to appear..."
