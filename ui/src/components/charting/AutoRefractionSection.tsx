@@ -87,6 +87,8 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
   const [saved, setSaved] = useState<SectionSaveStatus | null>(null);
   const [savedReferences, setSavedReferences] = useState<Partial<Record<Eye | "OU", string[]>>>({});
   const editorRevisionRef = useRef(0);
+  const persistedEntriesRevisionRef = useRef(0);
+  const persistedRequestRevisionRef = useRef(0);
   const identityRef = useRef("");
   const identityKey = `${patientReference}|${encounterReference}`;
   const { onCleared } = useEncounterEdit();
@@ -96,6 +98,8 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
   useEffect(() => {
     identityRef.current = identityKey;
     editorRevisionRef.current += 1;
+    persistedEntriesRevisionRef.current += 1;
+    persistedRequestRevisionRef.current = persistedEntriesRevisionRef.current;
     setEyes({ OD: emptyEye(), OS: emptyEye() });
     setBinocularPdDistance("");
     setBinocularPdNear("");
@@ -106,7 +110,11 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
   }, [identityKey]);
 
   useEffect(() => {
-    if (!persisted.loaded || persisted.encounterReference !== encounterReference) return;
+    if (
+      !persisted.loaded
+      || persisted.encounterReference !== encounterReference
+      || persistedEntriesRevisionRef.current !== persistedRequestRevisionRef.current
+    ) return;
     const hydrated = referencesByEye(persisted.entries);
     setSavedReferences((current) => {
       const next = { ...current };
@@ -220,6 +228,7 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
 
   async function removeSaved(key: Eye | "OU") {
     editorRevisionRef.current += 1;
+    persistedEntriesRevisionRef.current += 1;
     const references = savedReferences[key] ?? [];
     if (references.length === 0) return;
     try {
@@ -240,6 +249,7 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
 
   function resetForm() {
     editorRevisionRef.current += 1;
+    persistedEntriesRevisionRef.current += 1;
     setEyes({ OD: emptyEye(), OS: emptyEye() });
     setBinocularPdDistance("");
     setBinocularPdNear("");
