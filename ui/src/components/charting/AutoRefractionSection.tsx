@@ -225,6 +225,7 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
             sectionKey="auto-refraction"
             label="Auto-refraction / Auto-K"
             hasRecorded={Object.keys(savedReferences).length > 0}
+            probeOnMount
             onCleared={(result) => {
               resetForm();
               onCleared?.({ scope: "section", result });

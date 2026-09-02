@@ -227,6 +227,7 @@ export function IopSection({ patientReference, encounterReference, onSaved }: Pr
             sectionKey="tonometry"
             label="IOP"
             hasRecorded={Object.keys(results).length > 0}
+            probeOnMount
             onCleared={(result) => {
               resetRows();
               onCleared?.({ scope: "section", result });

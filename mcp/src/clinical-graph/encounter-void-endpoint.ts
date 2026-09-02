@@ -3,6 +3,7 @@ import type {
   Bundle,
   Condition,
   Encounter,
+  MedicationAdministration,
   Observation,
   Provenance,
   Resource,
@@ -193,11 +194,21 @@ export async function handleEncounterVoidRequest(
   let includeComplaints = false;
   let includeConditions = false;
   if (request.scope === "observation") {
-    const wanted = new Set(Array.isArray(request.observationReference) ? request.observationReference : [request.observationReference]);
-    targetObservations = observations.filter((row) => wanted.has(`Observation/${row.observation.id}`));
-    if (targetObservations.length === 0) {
-      return { status: 404, body: { error: "That Observation is not a live entry of this encounter." } };
+    // All-or-nothing: a caller that names N references means all N. Voiding the valid subset
+    // would leave a refraction block half-gone — the UI drops it while one eye stays live.
+    const wanted = Array.isArray(request.observationReference) ? request.observationReference : [request.observationReference];
+    const live = new Map(observations.map((row) => [`Observation/${row.observation.id}`, row]));
+    const missing = wanted.filter((reference) => !live.has(reference));
+    if (missing.length > 0) {
+      return {
+        status: 404,
+        body: {
+          error: `Not a live entry of this encounter: ${missing.join(", ")}. Nothing was voided.`,
+          missing,
+        },
+      };
     }
+    targetObservations = [...new Set(wanted)].map((reference) => live.get(reference)!);
   } else if (request.scope === "finding") {
     targetObservations = observations.filter((row) =>
       row.findingKey === request.findingKey &&
@@ -225,6 +236,10 @@ export async function handleEncounterVoidRequest(
         )
     : [];
   const complaints: ComplaintRow[] = includeComplaints ? await activeComplaints(staff.fhir, encounterId) : [];
+  // Dilation records the drops as MedicationAdministration and links them from the DFE
+  // Observation. Voiding only the Observation hides them while they stay clinically active,
+  // so every administration a voided Observation is partOf is retired with it.
+  const administrations = await linkedAdministrations(staff.fhir, targetObservations, encounterReference, patientReference);
 
   // --- Summary --------------------------------------------------------------------------
   const sectionCounts = new Map<string, number>();
@@ -236,8 +251,13 @@ export async function handleEncounterVoidRequest(
     label: sectionLabel(sectionKey, definitions),
     count,
   }));
+  for (const administration of administrations) {
+    const sectionKey = administrationSectionKey(administration, targetObservations);
+    sectionCounts.set(sectionKey, (sectionCounts.get(sectionKey) ?? 0) + 1);
+  }
   const voided = [
     ...targetObservations.map((row) => `Observation/${row.observation.id}`),
+    ...administrations.map((administration) => `MedicationAdministration/${administration.id}`),
     ...conditions.map((condition) => `Condition/${condition.id}`),
     ...complaints.map((row) => `Basic/${row.resource.id}`),
   ];
@@ -274,6 +294,17 @@ export async function handleEncounterVoidRequest(
     entries.push(putEntry(`Observation/${observation.id}`, { ...observation, status: "entered-in-error" }, observation.meta?.versionId));
     entries.push({ resource: provenanceFor(`Observation/${observation.id}`), request: { method: "POST", url: "Provenance" } });
   }
+  for (const administration of administrations) {
+    entries.push(putEntry(
+      `MedicationAdministration/${administration.id}`,
+      { ...administration, status: "entered-in-error" },
+      administration.meta?.versionId,
+    ));
+    entries.push({
+      resource: provenanceFor(`MedicationAdministration/${administration.id}`),
+      request: { method: "POST", url: "Provenance" },
+    });
+  }
   for (const condition of conditions) {
     const { clinicalStatus: _clinicalStatus, ...withoutClinicalStatus } = condition;
     entries.push(putEntry(
@@ -295,16 +326,18 @@ export async function handleEncounterVoidRequest(
       resource.meta?.versionId,
     ));
   }
-  if (conditions.length || complaints.length) {
-    const retracted = new Set(conditions.map((condition) => `Condition/${condition.id}`));
-    let next: Encounter = encounter;
-    if (complaints.length) next = stampPrimaryComplaint(next, [], []);
-    if (conditions.length) {
-      const diagnosis = (next.diagnosis ?? []).filter((row) => !retracted.has(row.condition.reference ?? ""));
-      next = diagnosis.length ? { ...next, diagnosis } : stripDiagnosis(next);
-    }
-    entries.push(putEntry(encounterReference, next, encounter.meta?.versionId));
+  // The Encounter goes in EVERY void transaction, version-guarded, even when its body is
+  // unchanged. The status read above is a snapshot; without this entry a concurrent sign can
+  // finish the encounter while the void still commits. With it, the sign bumps the version and
+  // the whole transaction fails closed as a concurrent edit.
+  const retracted = new Set(conditions.map((condition) => `Condition/${condition.id}`));
+  let nextEncounter: Encounter = encounter;
+  if (complaints.length) nextEncounter = stampPrimaryComplaint(nextEncounter, [], []);
+  if (conditions.length) {
+    const diagnosis = (nextEncounter.diagnosis ?? []).filter((row) => !retracted.has(row.condition.reference ?? ""));
+    nextEncounter = diagnosis.length ? { ...nextEncounter, diagnosis } : stripDiagnosis(nextEncounter);
   }
+  entries.push(putEntry(encounterReference, nextEncounter, encounter.meta?.versionId));
   const transaction: Bundle = { resourceType: "Bundle", type: "transaction", entry: entries };
   try {
     const result = await staff.fhir.executeTransaction(transaction, VOID_WRITE_HEADERS);
@@ -373,6 +406,45 @@ async function activeComplaints(fhir: EncounterVoidFhirClient, encounterId: stri
     if (!current || compareResources(row.resource, current.resource) > 0) byId.set(row.complaint.id, row);
   }
   return [...byId.values()];
+}
+
+async function linkedAdministrations(
+  fhir: EncounterVoidFhirClient,
+  targets: readonly IdentifiedObservation[],
+  encounterReference: string,
+  patientReference: string,
+): Promise<Array<MedicationAdministration & { id: string }>> {
+  const references = [...new Set(targets.flatMap((row) =>
+    (row.observation.partOf ?? []).flatMap((source) =>
+      source.reference?.startsWith("MedicationAdministration/") ? [source.reference] : []
+    )
+  ))];
+  const rows = await Promise.all(references.map(async (reference) => {
+    try {
+      return await fhir.read<MedicationAdministration>("MedicationAdministration", reference.slice("MedicationAdministration/".length));
+    } catch {
+      return undefined;
+    }
+  }));
+  return rows.flatMap((administration): Array<MedicationAdministration & { id: string }> =>
+    administration &&
+    typeof administration.id === "string" &&
+    administration.context?.reference === encounterReference &&
+    administration.subject?.reference === patientReference &&
+    administration.status !== "entered-in-error"
+      ? [administration as MedicationAdministration & { id: string }]
+      : []
+  );
+}
+
+function administrationSectionKey(
+  administration: MedicationAdministration & { id: string },
+  targets: readonly IdentifiedObservation[],
+): string {
+  const reference = `MedicationAdministration/${administration.id}`;
+  return targets.find((row) =>
+    (row.observation.partOf ?? []).some((source) => source.reference === reference)
+  )?.sectionKey ?? OTHER_SECTION_KEY;
 }
 
 function compareResources(left: Basic, right: Basic): number {

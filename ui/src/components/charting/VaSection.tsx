@@ -107,6 +107,7 @@ export function VaSection({ patientReference, encounterReference, onSaved }: Pro
             sectionKey="va"
             label="Visual acuity"
             hasRecorded={savedEyes.length > 0}
+            probeOnMount
             onCleared={(result) => {
               setRows(emptyRows());
               setSavedEyes([]);

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { Encounter } from "@medplum/fhirtypes";
 import {
   SIGNED_ENCOUNTER_TOOLTIP,
@@ -66,7 +66,8 @@ export function ClearSectionButton({
   encounterReference,
   sectionKey,
   label,
-  hasRecorded,
+  hasRecorded = false,
+  probeOnMount = false,
   onCleared,
   fetchImpl,
   className,
@@ -75,8 +76,14 @@ export function ClearSectionButton({
   /** The section key(s) the sheet owns; matched exactly or as a `key:` prefix on the server. */
   sectionKey: string | string[];
   label: string;
-  /** The surface's own knowledge of whether this visit recorded anything here; the control appears only then. */
-  hasRecorded: boolean;
+  /** The surface's own knowledge of whether this visit recorded anything here. */
+  hasRecorded?: boolean;
+  /**
+   * For surfaces that keep no encounter history of their own (VA, IOP, auto-refraction): ask the
+   * server once on open whether this visit recorded anything, so reopening a chart still offers
+   * the control for values persisted before this session.
+   */
+  probeOnMount?: boolean;
   onCleared: (result: EncounterVoidResult) => void;
   fetchImpl?: typeof fetch;
   className?: string;
@@ -84,10 +91,22 @@ export function ClearSectionButton({
   const closed = isClosedEncounterStatus(useEncounterEdit().encounterStatus);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string>();
+  const [probedCount, setProbedCount] = useState(0);
   const keys = Array.isArray(sectionKey) ? sectionKey : [sectionKey];
   const request = { scope: "section" as const, sectionKey: keys.length === 1 ? keys[0]! : keys };
+  const keyId = keys.join("|");
 
-  if (!closed && !hasRecorded) return null;
+  useEffect(() => {
+    if (!probeOnMount || closed) return;
+    let cancelled = false;
+    previewEncounterVoid(encounterReference, request, fetchImpl)
+      .then((result) => { if (!cancelled) setProbedCount(result.count); })
+      .catch(() => { if (!cancelled) setProbedCount(0); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [probeOnMount, closed, encounterReference, keyId, fetchImpl]);
+
+  if (!closed && !hasRecorded && probedCount === 0) return null;
 
   async function clear() {
     if (closed || busy) return;
@@ -102,6 +121,7 @@ export function ClearSectionButton({
       }
       if (!confirmDestructive(clearSectionConfirmMessage(label, preview.count))) return;
       const result = await voidEncounterEntries(encounterReference, request, { fetchImpl });
+      setProbedCount(0);
       onCleared(result);
     } catch (caught) {
       setMessage(caught instanceof Error ? caught.message : String(caught));

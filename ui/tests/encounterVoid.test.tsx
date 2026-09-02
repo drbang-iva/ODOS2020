@@ -486,3 +486,85 @@ function refractionDefinition() {
     refractiveThreshold: 0.5,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Fixback after evaluation of 91411903
+// ---------------------------------------------------------------------------
+
+test("fixback 5: refraction block Remove is disabled with the amendment tooltip once the encounter is signed", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith("/clinical-graph/refraction/definition")) return Response.json(refractionDefinition());
+    if (url.includes("/clinical-graph/refraction/history?")) return Response.json({ glasses: [], softCl: [], specialtyCl: [] });
+    throw new Error(`Unexpected request: ${url}`);
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <EncounterEditContext.Provider value={{ encounterStatus: "finished" }}>
+          <RefractionSection patientReference="Patient/synthetic" encounterReference="Encounter/current" onSaved={() => undefined} />
+        </EncounterEditContext.Provider>,
+      );
+      await flush();
+    });
+    const removes = renderer.root.findAllByType("button").filter((button) => textOf(button) === "Remove");
+    assert.equal(removes.length, 2);
+    for (const button of removes) {
+      assert.equal(button.props.disabled, true);
+      assert.equal(button.props.title, SIGNED_ENCOUNTER_TOOLTIP);
+    }
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("fixback 4: VA, IOP, and Auto-refraction offer Clear section on reopen when the server holds recorded values", async () => {
+  const { VaSection } = await import("../src/components/charting/VaSection");
+  const { IopSection } = await import("../src/components/charting/IopSection");
+  const { AutoRefractionSection } = await import("../src/components/charting/AutoRefractionSection");
+  const cases: Array<{ name: string; label: string; sectionKey: string; element: React.ReactElement }> = [
+    { name: "VA", label: "Clear Visual acuity", sectionKey: "va", element: <VaSection patientReference="Patient/p1" encounterReference={ENCOUNTER} onSaved={() => undefined} /> },
+    { name: "IOP", label: "Clear IOP", sectionKey: "tonometry", element: <IopSection patientReference="Patient/p1" encounterReference={ENCOUNTER} onSaved={() => undefined} /> },
+    { name: "Auto-refraction", label: "Clear Auto-refraction / Auto-K", sectionKey: "auto-refraction", element: <AutoRefractionSection patientReference="Patient/p1" encounterReference={ENCOUNTER} onSaved={() => undefined} /> },
+  ];
+  for (const recorded of [true, false]) {
+    for (const item of cases) {
+      const originalFetch = globalThis.fetch;
+      const previews: unknown[] = [];
+      globalThis.fetch = async (input, init) => {
+        const url = String(input);
+        if (url.endsWith("/void") && init?.method === "POST") {
+          const body = JSON.parse(String(init.body)) as { preview?: boolean; sectionKey?: string };
+          previews.push(body);
+          const count = recorded && body.preview ? 2 : 0;
+          return Response.json({ voided: [], count, sections: [], preview: true });
+        }
+        if (url.endsWith("/clinical-graph/iop/definition")) {
+          return Response.json({ definitions: { intraocularPressure: { fields: { method: { options: [{ code: "GAT", display: "GAT", active: true }] } } }, cornealHysteresis: { fields: {} } } });
+        }
+        if (url.includes("/clinical-graph/iop/history")) return Response.json({ readings: [], cornealHysteresis: [], perEye: { OD: { average: null, tMax: null, count: 0, target: null }, OS: { average: null, tMax: null, count: 0, target: null } }, threshold: 21 });
+        if (url.endsWith("/clinical-graph/auto-refraction/definition")) {
+          return Response.json({ definitions: { autoRefraction: { fields: { sourceType: { options: [{ code: "manual", display: "Manual", active: true }] } } }, autoKeratometry: { fields: {} } } });
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      };
+      let renderer!: ReactTestRenderer;
+      try {
+        await act(async () => {
+          renderer = create(<EncounterEditContext.Provider value={{ encounterStatus: "in-progress" }}>{item.element}</EncounterEditContext.Provider>);
+          await flush();
+        });
+        assert.deepEqual(previews, [{ scope: "section", sectionKey: item.sectionKey, preview: true }], `${item.name} asks the server once on open`);
+        const button = findClearButton(renderer.root, item.label);
+        if (recorded) assert.ok(button, `${item.name}: Clear section must appear for persisted values`);
+        else assert.equal(button, undefined, `${item.name}: nothing recorded, nothing to clear`);
+      } finally {
+        renderer?.unmount();
+        globalThis.fetch = originalFetch;
+      }
+    }
+  }
+});

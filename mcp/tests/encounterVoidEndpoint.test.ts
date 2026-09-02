@@ -439,6 +439,7 @@ function fixture(options: {
       definition("entrance:cvf", "entrance:cvf", "Confrontation visual fields"),
       definition("entrance:visual-field-defect", "entrance:visual-field-defect", "Visual Field"),
       definition("entrance:pupils", "entrance:pupils", "Pupils"),
+      definition("entrance:dilation", "entrance:dilation", "Dilation"),
       definition("hpi_ros", "hpi", "History narrative and review of systems"),
       definition("intraocular_pressure", "tonometry", "Intraocular pressure"),
       definition("ocular-health:anterior:cornea", "ocular-health:anterior:cornea", "Cornea"),
@@ -644,4 +645,109 @@ test("observation scope accepts several references so a two-eye refraction block
     body: { scope: "observation", observationReference: ["Observation/block-od"] },
   });
   assert.equal(none.status, 404, "an already-voided reference is not a live entry");
+});
+
+// ---------------------------------------------------------------------------
+// Fixback after evaluation of 91411903
+// ---------------------------------------------------------------------------
+
+test("fixback 1: an Observation-only void carries the Encounter version, so a concurrent sign makes it fail closed", async () => {
+  const { deps, fhir } = fixture();
+  fhir.add(cvf("o1", "OD"));
+  fhir.beforeTransaction = () => {
+    const current = fhir.get<Encounter>("Encounter", "e1");
+    fhir.replace({ ...current, status: "finished", meta: { versionId: "2" } });
+  };
+
+  const result = await handleEncounterVoidRequest(deps, {
+    authHeader: AUTH,
+    params: { encounterId: "e1" },
+    body: { scope: "observation", observationReference: "Observation/o1" },
+  });
+
+  assert.equal(result.status, 409, JSON.stringify(result.body));
+  assert.equal((result.body as { code?: string }).code, "concurrent-edit");
+  assert.equal(fhir.get<Observation>("Observation", "o1").status, "final", "the sign won; nothing was voided");
+  assert.equal(fhir.all<Provenance>("Provenance").length, 0);
+});
+
+test("fixback 1: every successful void transaction includes the Encounter with its If-Match, even when the Encounter body is unchanged", async () => {
+  const { deps, fhir } = fixture();
+  fhir.add(cvf("o1", "OD"));
+  const result = await handleEncounterVoidRequest(deps, {
+    authHeader: AUTH,
+    params: { encounterId: "e1" },
+    body: { scope: "observation", observationReference: "Observation/o1" },
+  });
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  const encounterEntry = fhir.transactions[0]!.entry!.find((entry) => entry.request?.url === "Encounter/e1");
+  assert.ok(encounterEntry, "the Encounter must be part of the transaction");
+  assert.equal(encounterEntry.request?.method, "PUT");
+  assert.equal(encounterEntry.request?.ifMatch, 'W/"1"');
+});
+
+test("fixback 2: a multi-reference void is all-or-nothing — one stale, voided, or foreign reference fails the whole request", async () => {
+  const { deps, fhir } = fixture();
+  fhir.add(observation("block-od", "refraction", "OD"));
+  fhir.add(observation("block-os", "refraction", "OS", { status: "entered-in-error" }));
+  fhir.add(observation("foreign", "refraction", "OD", { encounter: { reference: "Encounter/e0" } }));
+
+  for (const references of [
+    ["Observation/block-od", "Observation/block-os"],
+    ["Observation/block-od", "Observation/foreign"],
+    ["Observation/block-od", "Observation/missing"],
+  ]) {
+    const result = await handleEncounterVoidRequest(deps, {
+      authHeader: AUTH,
+      params: { encounterId: "e1" },
+      body: { scope: "observation", observationReference: references },
+    });
+    assert.equal(result.status, 404, `${references.join(",")}: ${JSON.stringify(result.body)}`);
+    assert.match((result.body as { error: string }).error, new RegExp(references[1]!.replace("/", "\\/")));
+    assert.equal(fhir.get<Observation>("Observation", "block-od").status, "final", "the valid subset must not be voided");
+    assert.equal(fhir.transactions.length, 0);
+  }
+});
+
+test("fixback 3: voiding a dilation Observation also retires the MedicationAdministration rows it is partOf", async () => {
+  const { deps, fhir } = fixture();
+  fhir.add({
+    resourceType: "MedicationAdministration",
+    id: "ma1",
+    status: "completed",
+    subject: { reference: PATIENT },
+    context: { reference: ENCOUNTER },
+    medicationCodeableConcept: { text: "Tropicamide 1%" },
+    effectiveDateTime: "2026-09-01T12:00:00.000Z",
+    meta: { versionId: "3" },
+  });
+  fhir.add({
+    resourceType: "MedicationAdministration",
+    id: "ma-other",
+    status: "completed",
+    subject: { reference: PATIENT },
+    context: { reference: ENCOUNTER },
+    medicationCodeableConcept: { text: "Phenylephrine 2.5%" },
+    effectiveDateTime: "2026-09-01T12:00:00.000Z",
+  });
+  fhir.add(observation("dfe", "entrance:dilation", "UNKNOWN", {
+    partOf: [{ reference: "MedicationAdministration/ma1" }],
+  }));
+
+  const result = await handleEncounterVoidRequest(deps, {
+    authHeader: AUTH,
+    params: { encounterId: "e1" },
+    body: { scope: "section", sectionKey: "entrance:dilation" },
+  });
+
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  const body = result.body as VoidBody;
+  assert.deepEqual([...body.voided].sort(), ["MedicationAdministration/ma1", "Observation/dfe"]);
+  assert.equal(body.count, 2);
+  assert.equal(fhir.get<{ resourceType: "MedicationAdministration"; id: string; status: string }>("MedicationAdministration", "ma1").status, "entered-in-error");
+  assert.equal(fhir.get<{ resourceType: "MedicationAdministration"; id: string; status: string }>("MedicationAdministration", "ma-other").status, "completed", "an unlinked administration is not touched");
+  const entry = fhir.transactions[0]!.entry!.find((row) => row.request?.url === "MedicationAdministration/ma1");
+  assert.equal(entry?.request?.ifMatch, 'W/"3"');
+  assert.ok(fhir.all<Provenance>("Provenance").some((provenance) => provenance.target.some((target) => target.reference === "MedicationAdministration/ma1")));
+  assert.equal(fhir.transactions.length, 1);
 });

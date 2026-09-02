@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
-import { confirmDestructive, voidEncounterEntries } from "../../lib/encounter-void";
+import { SIGNED_ENCOUNTER_TOOLTIP, confirmDestructive, voidEncounterEntries } from "../../lib/encounter-void";
 import { CLEAR_TOKEN_CLASS, ClearSectionButton } from "./ClearControls";
-import { useEncounterEdit } from "./encounter-edit-context";
+import { useEncounterClosed, useEncounterEdit } from "./encounter-edit-context";
 import { LENS_DESIGN_TYPES } from "../../lib/lens-catalog";
 import type { SectionSaveStatus } from "./types";
 import { formatPowerOption, numericOptions } from "./power-options";
@@ -118,6 +118,7 @@ export function RefractionSection({ patientReference, encounterReference, onSave
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [historyVersion, setHistoryVersion] = useState(0);
   const { onCleared } = useEncounterEdit();
+  const encounterClosed = useEncounterClosed();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -242,6 +243,7 @@ export function RefractionSection({ patientReference, encounterReference, onSave
   }
 
   async function removeBlock(blockId: string) {
+    if (encounterClosed) return;
     // A saved block exists on the server; removing it here must void it there (§0.3 — the old
     // client-only removal left the Observations projecting after they were "removed").
     const saved = savedObservationReferences[blockId] ?? [];
@@ -475,6 +477,8 @@ export function RefractionSection({ patientReference, encounterReference, onSave
                     type="button"
                     data-entry-sheet-pristine-action
                     aria-label={`Remove refraction block ${blockIndex + 1}`}
+                    disabled={encounterClosed || undefined}
+                    title={encounterClosed ? SIGNED_ENCOUNTER_TOOLTIP : `Remove refraction block ${blockIndex + 1}`}
                     onClick={() => void removeBlock(block.id)}
                     className={`${CLEAR_TOKEN_CLASS} px-2 py-1 text-xs`}
                   >
