@@ -695,14 +695,22 @@ export function stripDiagnosis(encounter: Encounter): Encounter {
 // void that did not succeed has three outcomes, not one:
 //
 //   applied-none     POSITIVE evidence that nothing durable was written: every entry answered
-//                    with a real HTTP status and none of the durable writes was accepted, or
-//                    the whole request was refused by a rejection VERIFIED to run before any
-//                    entry (see VERIFIED_APPLIED_NONE_REJECTIONS)
+//                    with an entry-level 4xx — the server's own final statement that it did not
+//                    fulfil that entry — and no durable write was accepted; or the whole request
+//                    was refused by a rejection VERIFIED to run before any entry
+//                    (see VERIFIED_APPLIED_NONE_REJECTIONS)
 //   applied-partial  refused, and at least one durable write (a PUT) WAS accepted
-//   indeterminate    everything else — transport loss, parse failure, an incomplete bundle, a
-//                    5xx, an unverified whole-request 4xx (409/412 included), or ANY entry
-//                    whose answer carries no usable status: absent evidence of a write is not
-//                    evidence of its absence, and the request may have been applied
+//   indeterminate    everything else — transport loss, parse failure, an incomplete bundle, an
+//                    unverified whole-request status (409/412 and every 5xx included), or ANY
+//                    entry whose answer is not a final verdict on that entry: no status, a
+//                    string that is not a status, a 1xx (interim, RFC 9110), a 5xx (the server
+//                    failed WHILE processing — the write may have landed), a 3xx, or a 2xx other
+//                    than 200/201/204 (202 is "accepted for processing", not "done"). Absent or
+//                    non-final evidence of a write is not evidence of its absence.
+//
+// A status is not an outcome. Per entry, only two statuses are read as verdicts: a final
+// success (200/201/204, and where the server names the written resource it must be the one
+// requested) and an entry-level 4xx. Everything else is "the server did not say".
 //
 // The rule that keeps this honest: a status class is not proof of behaviour; only the path
 // actually exercised on this stack is.
@@ -830,9 +838,10 @@ export function assertSuccessfulTransaction(request: Bundle, response: Bundle): 
   returned.forEach((entry, index) => {
     const summary = entrySummary(sent[index], index);
     const status = parseEntryStatus(entry.response?.status);
-    if (status === undefined) unknown.push({ ...summary, status: undefined, outcome: describeOutcome(entry.response?.outcome) });
-    else if (status >= 200 && status < 300) accepted.push(summary);
-    else failures.push({ ...summary, status, outcome: describeOutcome(entry.response?.outcome) });
+    const verdict = entryVerdict(status, summary, entry.response?.location);
+    if (verdict === "accepted") accepted.push(summary);
+    else if (verdict === "refused") failures.push({ ...summary, status, outcome: describeOutcome(entry.response?.outcome) });
+    else unknown.push({ ...summary, status, outcome: describeOutcome(entry.response?.outcome) });
   });
   if (failures.length === 0 && unknown.length === 0) return;
   // What counts as "applied" is a durable write the server accepted. Accepted creates (the
@@ -840,10 +849,11 @@ export function assertSuccessfulTransaction(request: Bundle, response: Bundle): 
   // refused void partial on their own.
   const changeCount = [...accepted, ...failures, ...unknown].filter(isDurableWrite).length;
   const appliedCount = accepted.filter(isDurableWrite).length;
-  // applied-none rests on POSITIVE evidence: every entry answered with a real HTTP status and
-  // none of the durable writes was accepted. One entry without a usable status is an entry the
-  // server may have applied without saying so — indeterminate, whatever the others say. (The
-  // 2026-09-02 probe returned exactly that shape AFTER the write had committed.)
+  // applied-none rests on POSITIVE evidence: every entry answered with an entry-level 4xx and
+  // none of the durable writes was accepted. One entry whose answer is not a final verdict —
+  // no status, an interim 1xx, a 5xx, anything the server "did not say" — is an entry it may
+  // have applied without saying so: indeterminate, whatever the others say. (The 2026-09-02
+  // probes returned exactly those shapes AFTER the write had committed.)
   const outcome: VoidOutcome = unknown.length > 0 ? "indeterminate" : appliedCount > 0 ? "applied-partial" : "applied-none";
   throw new VoidTransactionError({
     kind: "entry-failed",
@@ -877,7 +887,7 @@ export function assertSuccessfulTransaction(request: Bundle, response: Bundle): 
 const VERIFIED_APPLIED_NONE_REJECTIONS: ReadonlyArray<{ status: number; pattern: RegExp; note: string }> = [
   {
     status: 400,
-    pattern: /\bNot a bundle\b/,
+    pattern: /: Not a bundle\s*$/,
     note: "HTTP 400 'Not a bundle': Medplum 5.1.30-9b1bd92 batch handler rejects before processBatch; verified empirically 2026-09-02",
   },
 ];
@@ -890,6 +900,9 @@ const VERIFIED_APPLIED_NONE_REJECTIONS: ReadonlyArray<{ status: number; pattern:
  * (VERIFIED_APPLIED_NONE_REJECTIONS), and indeterminate for every other status, 4xx or 5xx.
  */
 export function classifyVoidTransactionFailure(request: Bundle, cause: unknown): VoidTransactionError {
+  // `detail` is the fhir-client's message, `FHIR POST <path> [Bundle] <status> <text>: <outcome>`;
+  // the verified pattern anchors on the outcome text at its end, so a different 400 that merely
+  // mentions the words elsewhere cannot borrow the verified path's certainty.
   const entries = (request.entry ?? []).map((entry, index) => entrySummary(entry, index));
   const status = typeof cause === "object" && cause !== null && "status" in cause && typeof (cause as { status?: unknown }).status === "number"
     ? (cause as { status: number }).status
@@ -1029,6 +1042,45 @@ function parseEntryStatus(status: unknown): number | undefined {
   if (typeof status !== "string") return undefined;
   const match = /^\s*([1-5]\d\d)(?:\s|$)/.exec(status);
   return match ? Number(match[1]) : undefined;
+}
+
+/** The only entry statuses that are final successes for the writes the void sends (PUT → 200, POST → 201; 204 is a final success too). */
+const FINAL_SUCCESS_STATUSES: ReadonlySet<number> = new Set([200, 201, 204]);
+
+/**
+ * What one entry's answer proves about that entry. Only two answers are verdicts:
+ *
+ *   accepted — a final success status, and where the server named the resource it wrote
+ *              (`response.location`) it names the one this entry asked for; a success that
+ *              names some other resource proves nothing about this one
+ *   refused  — an entry-level 4xx: the server's final statement that it did not fulfil the entry
+ *
+ * Everything else — no status, 1xx (interim, RFC 9110 §15.2), 3xx, 2xx other than 200/201/204
+ * (202 is accepted-for-processing, not done), 5xx (failed WHILE processing; the write may have
+ * landed) — is `unknown`: the server did not say, and the entry may have been applied.
+ */
+function entryVerdict(status: number | undefined, requested: VoidEntrySummary, location: unknown): "accepted" | "refused" | "unknown" {
+  if (status === undefined) return "unknown";
+  if (status >= 400 && status < 500) return "refused";
+  if (!FINAL_SUCCESS_STATUSES.has(status)) return "unknown";
+  return locationNamesRequestedResource(requested, location) ? "accepted" : "unknown";
+}
+
+/**
+ * When the server says which resource it wrote, it must be the one the entry asked for:
+ * `ResourceType/id` for a PUT, the resource type for a POST. Relative and absolute locations
+ * both count; a missing location is not a contradiction (the status is then the evidence).
+ */
+function locationNamesRequestedResource(requested: VoidEntrySummary, location: unknown): boolean {
+  if (typeof location !== "string" || location.length === 0) return true;
+  const path = location.replace(/[?#].*$/, "");
+  const target = requested.method.toUpperCase() === "POST" ? `${resourceTypeOfUrl(requested.url)}/` : requested.url.split("?", 1)[0]!;
+  const at = path.indexOf(target);
+  if (at < 0) return false;
+  const boundaryBefore = at === 0 || path[at - 1] === "/";
+  const after = path.slice(at + target.length);
+  const boundaryAfter = requested.method.toUpperCase() === "POST" || after === "" || after.startsWith("/");
+  return boundaryBefore && boundaryAfter;
 }
 
 function responseTypeName(response: unknown): string {

@@ -12,7 +12,9 @@ import {
   emptyUndoLedger,
   readEncounterUndoLedger,
   undoEncounterVoid,
+  confirmedSlotKeys,
   undoSlotForSection,
+  undoSlotKey,
   undoStripCopy,
   type EncounterUndoLedger,
   type UndoLedgerSlot,
@@ -90,6 +92,27 @@ test("undoSlotForSection finds the sheet's slot by any of its keys, exact or by 
   assert.equal(undoSlotForSection(ledger, ["tonometry"]), undefined);
   assert.equal(undoSlotForSection(ledger, []), undefined);
   assert.equal(undoSlotForSection(emptyUndoLedger("e1"), ["entrance:pupils"]), undefined);
+});
+
+test("G2: a successful void vouches only for slots whose every ref it actually enumerated — a no-op 200 vouches for nothing", () => {
+  const older = slot({ scope: "encounter", label: "everything charted", count: 3, sectionKeys: [], at: "2026-09-02T09:00:00.000Z", voided: [
+    { ref: "Observation/o1", priorStatus: "final" },
+    { ref: "Observation/o2", priorStatus: "final" },
+    { ref: "Observation/o3", priorStatus: "final" },
+  ] });
+  const newer = slot({ scope: "section", label: "Pupils", count: 1, sectionKeys: ["entrance:pupils"], at: "2026-09-02T10:00:00.000Z", voided: [{ ref: "Observation/o4", priorStatus: "final" }] });
+  const ledger = { encounterId: "e1", encounter: older, sections: { "entrance:pupils": newer } };
+
+  // The section clear that just ran enumerated o4 and nothing else: it vouches for its own slot only.
+  assert.deepEqual(confirmedSlotKeys(ledger, ["Observation/o4"]), [undoSlotKey("entrance:pupils", newer)]);
+  // A 200 that wrote nothing observed nothing and vouches for nothing — the newest slot is NOT confirmed.
+  assert.deepEqual(confirmedSlotKeys(ledger, []), []);
+  // Enumerating some of an older slot's rows is not enumerating the slot.
+  assert.deepEqual(confirmedSlotKeys(ledger, ["Observation/o1", "Observation/o2"]), []);
+  // A visit clear that enumerated every row of the visit slot vouches for it.
+  assert.deepEqual(confirmedSlotKeys({ encounterId: "e1", encounter: older, sections: {} }, ["Observation/o1", "Observation/o2", "Observation/o3"]), [undoSlotKey("encounter", older)]);
+  // A slot with no rows is never vouched for.
+  assert.deepEqual(confirmedSlotKeys({ encounterId: "e1", encounter: slot({ scope: "encounter", count: 0, voided: [], sectionKeys: [] }), sections: {} }, []), []);
 });
 
 test("strip copy says Removed for a tier-1 remove and Cleared for a section or the visit, scaled by count — exact only for a slot this page saw confirmed", () => {

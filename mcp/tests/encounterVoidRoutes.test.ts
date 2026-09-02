@@ -259,6 +259,56 @@ test("an unexpected route error still answers the generic 500 and logs the error
 });
 
 // ---------------------------------------------------------------------------
+// Round 3 — a status is not an outcome (Codex's fault injection, at the real socket)
+// ---------------------------------------------------------------------------
+
+for (const injected of ["100 Continue", "500 Internal Server Error"]) {
+  test(`G1: the write COMMITS and every entry answers "${injected}" — the client must hear INDETERMINATE, never 'Nothing was cleared'`, async () => {
+    const server = await voidServer({});
+    const real = server.fhir.executeTransaction.bind(server.fhir);
+    server.fhir.executeTransaction = async (bundle: Bundle): Promise<Bundle> => {
+      const committed = await real(bundle);
+      return { ...committed, entry: (committed.entry ?? []).map(() => ({ response: { status: injected } })) };
+    };
+    try {
+      const response = await postVoid(server.baseUrl, { scope: "encounter" });
+      const text = await response.text();
+      const body = JSON.parse(text) as Record<string, unknown>;
+
+      // The state DID change: an interim or a server-failure status is not a refusal.
+      assert.equal(server.fhir.get<{ status?: string }>("Observation", OK_ID).status, "entered-in-error");
+      assert.equal(server.fhir.get<{ meta?: { versionId?: string } }>("Observation", OK_ID).meta?.versionId, "2");
+
+      assert.equal(response.status, 502, text);
+      assert.equal(body.outcome, "indeterminate", text);
+      assert.equal(body.failedCount, 0, "nothing was positively refused");
+      assert.equal(body.unknownCount, body.entryCount, "every entry is unknown");
+      assert.match(String(body.error), /^Could not confirm what this clear saved/);
+      assert.doesNotMatch(String(body.error), /Nothing was cleared|Reload|try again|reapply/i);
+      assert.ok(server.logged().includes("outcome=indeterminate"), server.logged());
+      assert.ok(server.logged().includes(injected.slice(0, 3)), "the injected status is still logged for diagnosis");
+    } finally {
+      await server.close();
+    }
+  });
+}
+
+test("G1 control: entry-level 4xx answers are still refusals — all refused, nothing written, APPLIED-NONE with retry advice", async () => {
+  const server = await voidServer({ refuse: () => ({ status: "412 Precondition Failed", outcome: outcome("conflict", "stale") }) });
+  try {
+    const body = await (await postVoid(server.baseUrl, { scope: "encounter" })).json() as Record<string, unknown>;
+    assert.equal(body.outcome, "applied-none");
+    assert.equal(body.failedCount, body.entryCount);
+    assert.equal(body.unknownCount, 0);
+    assert.match(String(body.error), /^Nothing was cleared/);
+    assert.equal(server.fhir.get<{ status?: string }>("Observation", OK_ID).status, "final");
+    assert.equal(server.fhir.get<{ status?: string }>("Observation", REFUSED_ID).status, "final");
+  } finally {
+    await server.close();
+  }
+});
+
+// ---------------------------------------------------------------------------
 // Harness — the same shape as the other route suites: express + an ephemeral listener + fetch.
 // ---------------------------------------------------------------------------
 

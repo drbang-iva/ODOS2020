@@ -204,7 +204,9 @@ export function EncounterCharting({ patient, encounterId }: Props) {
     const ledger = detail.result.ledger;
     if (ledger) {
       setUndoLedger(ledger);
-      setConfirmedUndoSlots((current) => new Set([...current, ...confirmedSlotKeys(ledger)]));
+      // Vouch only for the slot whose rows this response actually enumerated; a no-op success
+      // carries the current ledger and vouches for none of it.
+      setConfirmedUndoSlots((current) => new Set([...current, ...confirmedSlotKeys(ledger, detail.result.voided)]));
     }
     if (detail.scope === "encounter") {
       setStatuses({});

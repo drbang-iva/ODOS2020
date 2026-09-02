@@ -2500,6 +2500,43 @@ test("F2: a successful Clear everything renders the exact count — this page sa
   }
 });
 
+test("G2: a successful no-op clear must not promote an older partial slot from 'up to 3' to an exact '3'", async () => {
+  // A prior visit clear left an intent-derived slot naming three rows; only two were actually voided.
+  const olderPartial: EncounterUndoLedger = {
+    encounterId: "exam-1",
+    encounter: {
+      voided: [{ ref: "Observation/o1", priorStatus: "final" }, { ref: "Observation/o2", priorStatus: "final" }, { ref: "Observation/o3", priorStatus: "final" }],
+      label: "everything charted",
+      count: 3,
+      at: "2026-09-02T09:00:00.000Z",
+      sectionKeys: [],
+      scope: "encounter",
+    },
+    sections: {},
+  };
+  const harness = await renderEncounter(PROJECTION, { undoLedger: olderPartial });
+  Object.assign(globalThis.window, { confirm: () => true });
+  try {
+    const stripText = () => textContent(harness.renderer.root.findByProps({ "data-chart-bar-slot": "undo" }).findByProps({ role: "status" }));
+    assert.match(stripText(), /Cleared everything charted · up to 3 values/, "loaded: hedged");
+
+    // The preview says 3, the clinician confirms, and by the time the write runs nothing qualifies:
+    // HTTP 200, zero writes, the same ledger carried over.
+    harness.voidNoop.enabled = true;
+    act(() => harness.renderer.root.findByType(ExamOverviewBoard).props.onOpenEditor("va"));
+    const clearAll = visibleSheet(harness).findAll((node) => node.type === "button" && textContent(node) === "Clear everything charted this visit…")[0];
+    assert.ok(clearAll);
+    await act(async () => { await clearAll.props.onClick(); await flushEffects(); await flushEffects(); });
+
+    const visitRequests = harness.voidRequests.filter((request) => (request as { scope: string }).scope === "encounter");
+    assert.deepEqual(visitRequests, [{ scope: "encounter", preview: true }, { scope: "encounter" }], "the no-op void really ran");
+    assert.match(stripText(), /Cleared everything charted · up to 3 values/, "a response that wrote nothing observed nothing and vouches for nothing");
+    assert.doesNotMatch(stripText(), /· 3 values/, "the older slot must not be promoted to an exact count");
+  } finally {
+    harness.restore();
+  }
+});
+
 test("fixback P2#1: Undo on a dirty sheet asks before discarding unsaved edits, and a declined confirm sends nothing", async () => {
   const harness = await renderEncounter(PROJECTION, { undoLedger: PENDING_UNDO_LEDGER });
   const confirmations: string[] = [];
@@ -3805,6 +3842,8 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
   voidRequests: unknown[];
   /** Set `status` (+ `body`) to make the next non-preview void POST fail with that HTTP status. */
   voidFailure: { status?: number; body?: unknown };
+  /** Set `enabled` to make the next non-preview void POST answer 200 with ZERO writes and the unchanged ledger (the endpoint's no-op shape). */
+  voidNoop: { enabled?: boolean };
   ledgerFetchCount: () => number;
   restore: () => void;
 }> {
@@ -3839,6 +3878,7 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
   const undoFailure: { status?: number } = {};
   const voidRequests: unknown[] = [];
   const voidFailure: { status?: number; body?: unknown } = {};
+  const voidNoop: { enabled?: boolean } = {};
   let ledgerFetches = 0;
   let undoLedgerState: EncounterUndoLedger | undefined = options.undoLedger;
   globalThis.fetch = (async (input, init) => {
@@ -3852,6 +3892,11 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
       voidRequests.push(body);
       const voided = ["Observation/va-od", "Observation/va-os", "Observation/va-ou"];
       const sections = [{ sectionKey: "va", label: "Visual acuity", count: 3 }];
+      if (!body.preview && voidNoop.enabled) {
+        // Like the endpoint when nothing qualifies any more: HTTP 200, no transaction, count 0,
+        // and the CURRENT ledger carried over unchanged.
+        return jsonResponse({ voided: [], count: 0, sections: [], entries: [], preview: false, ledger: undoLedgerState ?? { encounterId: "exam-1", encounter: null, sections: {} } });
+      }
       if (!body.preview && body.scope === "encounter") {
         // Like the server on this non-atomic stack: the visit slot is written from INTENT — every
         // row the clear meant to void — whether or not the transaction is then refused.
@@ -4052,6 +4097,7 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
     undoFailure,
     voidRequests,
     voidFailure,
+    voidNoop,
     ledgerFetchCount: () => ledgerFetches,
     restore: () => {
       act(() => renderer.unmount());

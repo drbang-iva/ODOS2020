@@ -182,15 +182,21 @@ export function undoSlotKey(placement: "encounter" | string, slot: UndoLedgerSlo
 }
 
 /**
- * The slot(s) a successful void's response ledger vouches for: those stamped with the newest
- * `at` — the action that just ran and applied in full. Every other slot in that ledger was
- * carried over from storage and stays intent-derived.
+ * The slot(s) a successful void's response vouches for: exactly those whose EVERY row the
+ * response enumerated in `voided` — the rows this action wrote, all accepted. A response that
+ * wrote nothing (`voided` empty: the endpoint's 200 no-op, which carries the current ledger
+ * unchanged) observed nothing and vouches for nothing; a slot it merely carried over, however
+ * recent its timestamp, stays intent-derived.
  */
-export function confirmedSlotKeys(ledger: EncounterUndoLedger): string[] {
+export function confirmedSlotKeys(ledger: EncounterUndoLedger, voided: readonly string[]): string[] {
+  // No separate "empty response" branch: a slot with rows can never be a subset of an empty
+  // enumeration, so the one rule below already makes a no-op vouch for nothing.
+  const enumerated = new Set(voided);
   const rows = [
     ...(ledger.encounter ? [{ placement: "encounter", slot: ledger.encounter }] : []),
     ...Object.entries(ledger.sections).map(([placement, slot]) => ({ placement, slot })),
   ];
-  const newest = rows.reduce<string | undefined>((max, row) => max === undefined || row.slot.at.localeCompare(max) > 0 ? row.slot.at : max, undefined);
-  return rows.filter((row) => row.slot.at === newest).map((row) => undoSlotKey(row.placement, row.slot));
+  return rows
+    .filter((row) => row.slot.voided.length > 0 && row.slot.voided.every((entry) => enumerated.has(entry.ref)))
+    .map((row) => undoSlotKey(row.placement, row.slot));
 }

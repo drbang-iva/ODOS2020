@@ -478,6 +478,159 @@ test("F1b: only the verified preprocessing rejection — HTTP 400 'Not a bundle'
   }
 });
 
+// ---------------------------------------------------------------------------
+// Round 3 — a status is not an outcome
+// ---------------------------------------------------------------------------
+
+function answered(status: string, location?: string): NonNullable<Bundle["entry"]>[number] {
+  return { response: { status, ...(location ? { location } : {}) } };
+}
+
+test("G1: a per-entry 1xx is interim, not a refusal — the entry's fate is undecided, so the answer is INDETERMINATE", () => {
+  const error = captureThrow(() => assertSuccessfulTransaction(request(), {
+    resourceType: "Bundle",
+    type: "transaction-response",
+    entry: [refused("403 Forbidden", "a"), ok("201 Created"), answered("100 Continue"), refused("403 Forbidden", "d")],
+  }));
+  assert.ok(error instanceof VoidTransactionError);
+  assert.equal(error.diagnostics.outcome, "indeterminate", "two refusals plus one interim status is not applied-none");
+  if (error.diagnostics.kind !== "entry-failed") return;
+  assert.equal(error.diagnostics.failedCount, 2);
+  assert.equal(error.diagnostics.unknownCount, 1);
+  assert.equal(error.diagnostics.unknown[0]?.status, 100, "the interim status is kept in the diagnostics");
+  assert.doesNotMatch(error.clientBody.error, /Nothing was cleared|Reload|try again/);
+});
+
+test("G1: a per-entry 5xx is a failure WHILE processing, not a refusal — the write may have landed, so INDETERMINATE", () => {
+  const error = captureThrow(() => assertSuccessfulTransaction(request(), {
+    resourceType: "Bundle",
+    type: "transaction-response",
+    entry: [refused("403 Forbidden", "a"), ok("201 Created"), answered("500 Internal Server Error"), refused("403 Forbidden", "d")],
+  }));
+  assert.ok(error instanceof VoidTransactionError);
+  assert.equal(error.diagnostics.outcome, "indeterminate");
+  if (error.diagnostics.kind !== "entry-failed") return;
+  assert.equal(error.diagnostics.failedCount, 2);
+  assert.equal(error.diagnostics.unknownCount, 1);
+  assert.equal(error.diagnostics.unknown[0]?.status, 500);
+  assert.match(error.clientBody.error, /^Could not confirm what this clear saved/);
+  for (const status of ["502 Bad Gateway", "503 Service Unavailable", "504 Gateway Timeout"]) {
+    const each = captureThrow(() => assertSuccessfulTransaction(request(), {
+      resourceType: "Bundle",
+      type: "transaction-response",
+      entry: [refused("403 Forbidden", "a"), refused("403 Forbidden", "b"), answered(status), refused("403 Forbidden", "d")],
+    }));
+    assert.ok(each instanceof VoidTransactionError);
+    assert.equal(each.diagnostics.outcome, "indeterminate", status);
+  }
+});
+
+test("G1: only an entry-level 4xx is a refusal — the narrowing must not over-correct", () => {
+  const none = captureThrow(() => assertSuccessfulTransaction(request(), {
+    resourceType: "Bundle",
+    type: "transaction-response",
+    entry: [refused("400 Bad Request", "a"), refused("403 Forbidden", "b"), refused("404 Not Found", "c"), refused("412 Precondition Failed", "d")],
+  }));
+  assert.ok(none instanceof VoidTransactionError);
+  assert.equal(none.diagnostics.outcome, "applied-none", "four entry-level 4xx answers ARE positive evidence that nothing applied");
+  if (none.diagnostics.kind === "entry-failed") {
+    assert.equal(none.diagnostics.failedCount, 4);
+    assert.equal(none.diagnostics.unknownCount, 0);
+  }
+  assert.match(none.clientBody.error, /^Nothing was cleared/);
+
+  const partial = captureThrow(() => assertSuccessfulTransaction(request(), {
+    resourceType: "Bundle",
+    type: "transaction-response",
+    entry: [ok("200 OK"), ok("201 Created"), refused("422 Unprocessable Entity", "c"), refused("429 Too Many Requests", "d")],
+  }));
+  assert.ok(partial instanceof VoidTransactionError);
+  assert.equal(partial.diagnostics.outcome, "applied-partial");
+  if (partial.diagnostics.kind === "entry-failed") assert.equal(partial.diagnostics.failedCount, 2);
+});
+
+test("G1 (whole-classifier pass): a 2xx that is not a final success — 202 Accepted — and any 3xx are unknown, not proof of application", () => {
+  const accepted202 = captureThrow(() => assertSuccessfulTransaction(request(), {
+    resourceType: "Bundle",
+    type: "transaction-response",
+    entry: [answered("202 Accepted"), ok("201 Created"), ok("200 OK"), ok("200 OK")],
+  }));
+  assert.ok(accepted202 instanceof VoidTransactionError, "202 means accepted for processing, not completed — the void cannot report success on it");
+  assert.equal(accepted202.diagnostics.outcome, "indeterminate");
+  if (accepted202.diagnostics.kind === "entry-failed") {
+    assert.equal(accepted202.diagnostics.unknownCount, 1);
+    assert.equal(accepted202.diagnostics.appliedCount, 2, "the two real 200s still count as applied");
+  }
+  for (const status of ["203 Non-Authoritative Information", "205 Reset Content", "304 Not Modified", "301 Moved Permanently"]) {
+    const each = captureThrow(() => assertSuccessfulTransaction(request(), {
+      resourceType: "Bundle",
+      type: "transaction-response",
+      entry: [ok("200 OK"), ok("201 Created"), answered(status), ok("200 OK")],
+    }));
+    assert.ok(each instanceof VoidTransactionError, status);
+    assert.equal(each.diagnostics.outcome, "indeterminate", status);
+  }
+  // 200, 201 and 204 are final successes.
+  assert.doesNotThrow(() => assertSuccessfulTransaction(request(), {
+    resourceType: "Bundle",
+    type: "transaction-response",
+    entry: [ok("204 No Content"), ok("201 Created"), ok("200 OK"), ok("200 OK")],
+  }));
+});
+
+test("G1 (whole-classifier pass): a 200 whose location names a DIFFERENT resource than the one requested is unknown", () => {
+  const misaligned = captureThrow(() => assertSuccessfulTransaction(request(), {
+    resourceType: "Bundle",
+    type: "transaction-response",
+    entry: [
+      answered("200 OK", "Observation/somebody-else/_history/2"),
+      answered("201 Created", "Provenance/p1/_history/1"),
+      answered("200 OK", "Observation/obs-refused-SENTINEL-ID/_history/2"),
+      answered("200 OK", "Encounter/e1/_history/3"),
+    ],
+  }));
+  assert.ok(misaligned instanceof VoidTransactionError, "a success for the wrong resource is not a success for the requested one");
+  assert.equal(misaligned.diagnostics.outcome, "indeterminate");
+  if (misaligned.diagnostics.kind === "entry-failed") {
+    assert.equal(misaligned.diagnostics.unknownCount, 1);
+    assert.equal(misaligned.diagnostics.unknown[0]?.index, 0);
+  }
+  // Locations that name the requested resources (relative or absolute) are positive evidence.
+  assert.doesNotThrow(() => assertSuccessfulTransaction(request(), {
+    resourceType: "Bundle",
+    type: "transaction-response",
+    entry: [
+      answered("200 OK", "Observation/obs-first-SENTINEL-ID/_history/2"),
+      answered("201 Created", "https://fhir.example/fhir/R4/Provenance/p1/_history/1"),
+      answered("200 OK", "Observation/obs-refused-SENTINEL-ID/_history/2"),
+      answered("200 OK", "Encounter/e1/_history/3"),
+    ],
+  }));
+  // A create whose location names a different resource type is unknown too.
+  const wrongType = captureThrow(() => assertSuccessfulTransaction(request(), {
+    resourceType: "Bundle",
+    type: "transaction-response",
+    entry: [ok("200 OK"), answered("201 Created", "AuditEvent/x/_history/1"), ok("200 OK"), ok("200 OK")],
+  }));
+  assert.ok(wrongType instanceof VoidTransactionError);
+  assert.equal(wrongType.diagnostics.outcome, "indeterminate");
+});
+
+test("F1b anchor: a 400 that merely MENTIONS 'Not a bundle' somewhere in its detail is not the verified rejection — INDETERMINATE", () => {
+  const impostor = classifyVoidTransactionFailure(
+    request(),
+    Object.assign(new Error("FHIR POST /fhir/R4 [Bundle] 400 Bad Request: Not a bundle entry: Bundle.entry[2] has no request [Bundle.entry[2]]"), { status: 400 }),
+  );
+  assert.equal(impostor.diagnostics.outcome, "indeterminate", "the verified path's outcome text is the whole tail of the detail, not a substring");
+  if (impostor.diagnostics.kind === "http-rejected") assert.equal(impostor.diagnostics.verifiedRejection, undefined);
+
+  const verified = classifyVoidTransactionFailure(
+    request(),
+    Object.assign(new Error("FHIR POST /fhir/R4 [Bundle] 400 Bad Request: Not a bundle"), { status: 400 }),
+  );
+  assert.equal(verified.diagnostics.outcome, "applied-none");
+});
+
 function captureThrow(run: () => void): unknown {
   try {
     run();
