@@ -459,12 +459,17 @@ export async function handleEncounterVoidRequest(
     const result = await staff.fhir.executeTransaction(transaction, VOID_WRITE_HEADERS);
     assertSuccessfulTransaction(transaction, result);
   } catch (error) {
+    // A refused ENTRY already carries its outcome (applied-none / applied-partial) and its
+    // detail; it must never be folded into the generic conflict answer below, because on this
+    // non-atomic stack a per-entry 412 can sit beside forty applied writes.
+    if (error instanceof VoidTransactionError) throw error;
+    // A 409/412 for the WHOLE request is the atomic answer — nothing was applied: Medplum rolls
+    // back under the transaction-bundles feature, and never answers a non-strict transaction
+    // this way. Only then is "reload and reapply" safe advice.
     if (isFhirConflict(error)) {
       return { status: 409, body: { error: CONCURRENT_EDIT_MESSAGE, code: "concurrent-edit" } };
     }
-    // Whatever refused the void, the error that leaves here names what was sent and what came
-    // back. The route logs the full detail and answers the client from the PHI-safe body.
-    throw error instanceof VoidTransactionError ? error : rejectedVoidTransaction(transaction, error);
+    throw classifyVoidTransactionFailure(transaction, error);
   }
   return { status: 200, body: response };
 }
@@ -683,22 +688,32 @@ export function stripDiagnosis(encounter: Encounter): Encounter {
 }
 
 // ---------------------------------------------------------------------------------------
-// When the FHIR server refuses a void, the error carries its own evidence.
+// When the FHIR server refuses a void, the error carries its own evidence — and claims only
+// what it can know.
 //
 // Medplum answers a transaction one of two ways. Without the `transaction-bundles` project
-// feature (ODOS does not set it) a refused entry comes back INSIDE a 200 transaction-response
-// with its own status and OperationOutcome while every other entry is still applied (the
-// fhir-client then deletes what the response says it created, i.e. the Provenances) — a
-// per-entry refusal is a partial void. With the feature on, the whole request is refused with
-// one HTTP status and no entry identity. Both shapes are named here: which entry (index,
-// method + url), what status, what the OperationOutcome said, and how many entries failed —
-// one failing entry and forty are different diagnoses.
+// feature (ODOS does not set it; the live Project carries no features at all) a refused entry
+// comes back INSIDE a 200 transaction-response while every other entry is still applied (the
+// fhir-client then deletes what the response says it created, i.e. the Provenances). With the
+// feature on, the whole request is refused with one HTTP status and no entry identity. So a
+// void that did not succeed has three outcomes, not one:
+//
+//   applied-none     refused, and the answer shows no durable write was accepted
+//   applied-partial  refused, and at least one durable write (a PUT) WAS accepted
+//   indeterminate    no usable answer — transport loss, parse failure, an incomplete bundle,
+//                    a 5xx — the request may have been applied before the failure
+//
+// A top-level 4xx is applied-none: Medplum's batch router only answers a transaction with a
+// 4xx from pre-processing, before any entry runs, or (feature on) after rolling back.
 //
 // PHI boundary: `diagnostics` and `message` are for the server log only; they carry resource
 // ids and outcome text, which may describe clinical content. `clientBody` is what the HTTP
-// response may carry: the entry index, the resource TYPE, the status code, counts, and a
-// stable code. Never ids, never outcome text.
+// response may carry: the outcome, the entry index, the resource TYPE, the status code,
+// counts, and a stable code. Never ids, never outcome text. encounterVoidRoutes.test.ts
+// asserts this on the bytes Express actually sends.
 // ---------------------------------------------------------------------------------------
+
+export type VoidOutcome = "applied-none" | "applied-partial" | "indeterminate";
 
 export interface VoidEntrySummary {
   index: number;
@@ -715,22 +730,40 @@ export interface VoidEntryFailure extends VoidEntrySummary {
 export type VoidTransactionDiagnostics =
   | {
       kind: "entry-failed";
+      outcome: "applied-none" | "applied-partial";
       entryCount: number;
+      /** Durable writes in the request: every entry that is not a POST. */
+      changeCount: number;
+      /** Durable writes the server accepted. */
+      appliedCount: number;
+      /** Accepted POSTs (the Provenances); the fhir-client deletes these again, best-effort. */
+      acceptedCreates: number;
       failedCount: number;
       firstFailure: VoidEntryFailure;
       failures: VoidEntryFailure[];
+      accepted: VoidEntrySummary[];
     }
   | {
       kind: "incomplete-response";
+      outcome: "indeterminate";
       entryCount: number;
       returnedEntries: number;
       /** `Bundle/<type>` for a Bundle, otherwise the resourceType (or JS type) of what came back. */
       responseType: string;
     }
   | {
-      kind: "request-rejected";
-      status: number | undefined;
+      kind: "http-rejected";
+      outcome: "applied-none" | "indeterminate";
+      status: number;
       /** The upstream error text as the fhir-client phrased it: method, path, HTTP status, and the outcome it parsed. */
+      detail: string;
+      entryCount: number;
+      entries: VoidEntrySummary[];
+    }
+  | {
+      kind: "no-response";
+      outcome: "indeterminate";
+      /** The transport or parse error text. */
       detail: string;
       entryCount: number;
       entries: VoidEntrySummary[];
@@ -740,31 +773,33 @@ export type VoidTransactionClientBody =
   | {
       error: string;
       code: "void-transaction-failed";
+      outcome: "applied-none" | "applied-partial";
       failedEntryIndex: number;
       failedResourceType: string;
       failedStatus: number | undefined;
       failedCount: number;
+      appliedCount: number;
+      changeCount: number;
       entryCount: number;
     }
-  | { error: string; code: "void-transaction-incomplete"; entryCount: number; returnedEntries: number }
-  | { error: string; code: "void-transaction-rejected"; failedStatus: number | undefined; entryCount: number };
+  | { error: string; code: "void-transaction-incomplete"; outcome: "indeterminate"; entryCount: number; returnedEntries: number }
+  | { error: string; code: "void-transaction-rejected"; outcome: "applied-none" | "indeterminate"; httpStatus: number; entryCount: number }
+  | { error: string; code: "void-transaction-unanswered"; outcome: "indeterminate"; entryCount: number };
 
 export class VoidTransactionError extends Error {
   override readonly name = "VoidTransactionError";
-  /** The first refused entry's HTTP status (or the upstream status), so `isFhirConflict` still sees a 409/412. */
-  readonly status: number | undefined;
+  readonly outcome: VoidOutcome;
   /** Server log only. */
   readonly diagnostics: VoidTransactionDiagnostics;
   /** HTTP response body. */
   readonly clientBody: VoidTransactionClientBody;
 
+  // Deliberately no `status` field: `isFhirConflict` must never see a per-entry 409/412 here.
   constructor(diagnostics: VoidTransactionDiagnostics, options?: { cause?: unknown }) {
     super(voidTransactionMessage(diagnostics), options);
     this.diagnostics = diagnostics;
+    this.outcome = diagnostics.outcome;
     this.clientBody = voidTransactionClientBody(diagnostics);
-    this.status = diagnostics.kind === "entry-failed"
-      ? diagnostics.firstFailure.status
-      : diagnostics.kind === "request-rejected" ? diagnostics.status : undefined;
   }
 }
 
@@ -774,36 +809,64 @@ export function assertSuccessfulTransaction(request: Bundle, response: Bundle): 
   if (response?.resourceType !== "Bundle" || response.type !== "transaction-response" || returned.length !== sent.length) {
     throw new VoidTransactionError({
       kind: "incomplete-response",
+      outcome: "indeterminate",
       entryCount: sent.length,
       returnedEntries: returned.length,
       responseType: responseTypeName(response),
     });
   }
   const failures: VoidEntryFailure[] = [];
+  const accepted: VoidEntrySummary[] = [];
   returned.forEach((entry, index) => {
+    const summary = entrySummary(sent[index], index);
     const status = parseEntryStatus(entry.response?.status);
-    if (status !== undefined && status >= 200 && status < 300) return;
-    failures.push({ ...entrySummary(sent[index], index), status, outcome: describeOutcome(entry.response?.outcome) });
+    if (status !== undefined && status >= 200 && status < 300) accepted.push(summary);
+    else failures.push({ ...summary, status, outcome: describeOutcome(entry.response?.outcome) });
   });
-  if (failures.length) {
-    throw new VoidTransactionError({
-      kind: "entry-failed",
-      entryCount: sent.length,
-      failedCount: failures.length,
-      firstFailure: failures[0]!,
-      failures,
-    });
-  }
+  if (failures.length === 0) return;
+  // What counts as "applied" is a durable write the server accepted. Accepted creates (the
+  // Provenances) are deleted again by the fhir-client's rollback, so they do not make a
+  // refused void partial on their own.
+  const changeCount = [...accepted, ...failures].filter(isDurableWrite).length;
+  const appliedCount = accepted.filter(isDurableWrite).length;
+  throw new VoidTransactionError({
+    kind: "entry-failed",
+    outcome: appliedCount > 0 ? "applied-partial" : "applied-none",
+    entryCount: sent.length,
+    changeCount,
+    appliedCount,
+    acceptedCreates: accepted.length - appliedCount,
+    failedCount: failures.length,
+    firstFailure: failures[0]!,
+    failures,
+    accepted,
+  });
 }
 
-/** The FHIR server (or the path to it) refused the whole request before answering entry by entry. */
-export function rejectedVoidTransaction(request: Bundle, cause: unknown): VoidTransactionError {
+/**
+ * The transaction produced no per-entry answer. An HTTP status means the server answered for
+ * the whole request: a 4xx is refused before processing (applied-none); a 5xx may have failed
+ * mid-way (indeterminate). No status at all — transport loss, a parse failure — is
+ * indeterminate: the request may have been applied before the connection broke.
+ */
+export function classifyVoidTransactionFailure(request: Bundle, cause: unknown): VoidTransactionError {
+  const entries = (request.entry ?? []).map((entry, index) => entrySummary(entry, index));
   const status = typeof cause === "object" && cause !== null && "status" in cause && typeof (cause as { status?: unknown }).status === "number"
     ? (cause as { status: number }).status
     : undefined;
-  const entries = (request.entry ?? []).map((entry, index) => entrySummary(entry, index));
+  const detail = errorMessage(cause);
+  if (status === undefined) {
+    return new VoidTransactionError({ kind: "no-response", outcome: "indeterminate", detail, entryCount: entries.length, entries }, { cause });
+  }
   return new VoidTransactionError(
-    { kind: "request-rejected", status, detail: errorMessage(cause), entryCount: entries.length, entries },
+    {
+      kind: "http-rejected",
+      outcome: status >= 400 && status < 500 ? "applied-none" : "indeterminate",
+      status,
+      detail,
+      entryCount: entries.length,
+      entries,
+    },
     { cause },
   );
 }
@@ -812,61 +875,90 @@ function voidTransactionMessage(diagnostics: VoidTransactionDiagnostics): string
   switch (diagnostics.kind) {
     case "entry-failed": {
       const first = diagnostics.firstFailure;
-      return `Void transaction failed at entry ${first.index} of ${diagnostics.entryCount} ` +
-        `(${first.method} ${first.url}, HTTP ${first.status ?? "no status"}); ` +
-        `${diagnostics.failedCount} of ${diagnostics.entryCount} entries failed. First outcome: ${first.outcome}`;
+      return `Void transaction ${diagnostics.outcome}: entry ${first.index} of ${diagnostics.entryCount} ` +
+        `(${first.method} ${first.url}) refused with HTTP ${first.status ?? "no status"}; ` +
+        `${diagnostics.failedCount} of ${diagnostics.entryCount} entries refused, ` +
+        `${diagnostics.appliedCount} of ${diagnostics.changeCount} changes applied, ` +
+        `${diagnostics.acceptedCreates} creates accepted (rolled back by the client). First outcome: ${first.outcome}`;
     }
     case "incomplete-response":
-      return incompleteResponseText(diagnostics);
-    case "request-rejected":
-      return `${rejectedRequestText(diagnostics)} ${diagnostics.detail}`;
+      return `Void transaction indeterminate: the FHIR server's answer was not a usable transaction response ` +
+        `(sent ${diagnostics.entryCount} entries, received ${diagnostics.returnedEntries}, ${diagnostics.responseType}).`;
+    case "http-rejected":
+      return `Void transaction ${diagnostics.outcome}: the FHIR server answered HTTP ${diagnostics.status} for the whole request; ` +
+        `${diagnostics.entryCount} entries were sent. ${diagnostics.detail}`;
+    case "no-response":
+      return `Void transaction indeterminate: the FHIR server did not answer usably; ` +
+        `${diagnostics.entryCount} entries were sent. ${diagnostics.detail}`;
   }
 }
 
+/**
+ * What the clinician reads. Each outcome gets the advice that is safe FOR THAT OUTCOME and no
+ * other: "reload and try again" only when nothing applied; "review the chart" when something
+ * did or when nobody knows; never a cheerful summary of a state the server did not confirm.
+ */
 function voidTransactionClientBody(diagnostics: VoidTransactionDiagnostics): VoidTransactionClientBody {
   switch (diagnostics.kind) {
     case "entry-failed": {
       const first = diagnostics.firstFailure;
       const resourceType = resourceTypeOfUrl(first.url);
+      const where = `entry ${first.index} of ${diagnostics.entryCount} (${first.method} ${resourceType}, HTTP ${first.status ?? "no status"})`;
+      const refused = `${diagnostics.failedCount} of ${diagnostics.entryCount} entries refused`;
       return {
-        error: `Void transaction failed at entry ${first.index} of ${diagnostics.entryCount} ` +
-          `(${first.method} ${resourceType}, HTTP ${first.status ?? "no status"}); ` +
-          `${diagnostics.failedCount} of ${diagnostics.entryCount} entries failed.`,
+        error: diagnostics.outcome === "applied-partial"
+          ? `This clear only partly applied: ${diagnostics.appliedCount} of ${diagnostics.changeCount} changes were saved ` +
+            `before the record server refused ${where}; ${refused}. Review the chart before continuing. ` +
+            `Undo, where offered, restores only what was actually cleared.`
+          : `Nothing was cleared: the record server refused this clear at ${where}; ${refused} and none of the ` +
+            `${diagnostics.changeCount} changes were saved. Reload and try again.`,
         code: "void-transaction-failed",
+        outcome: diagnostics.outcome,
         failedEntryIndex: first.index,
         failedResourceType: resourceType,
         failedStatus: first.status,
         failedCount: diagnostics.failedCount,
+        appliedCount: diagnostics.appliedCount,
+        changeCount: diagnostics.changeCount,
         entryCount: diagnostics.entryCount,
       };
     }
     case "incomplete-response":
       return {
-        error: incompleteResponseText(diagnostics),
+        error: `Could not confirm what this clear saved: the record server's answer was not a usable transaction response ` +
+          `(sent ${diagnostics.entryCount} entries, received ${diagnostics.returnedEntries}, ${diagnostics.responseType}). ` +
+          `Some or all of it may have been applied. Review the chart before continuing; do not repeat the clear blindly.`,
         code: "void-transaction-incomplete",
+        outcome: "indeterminate",
         entryCount: diagnostics.entryCount,
         returnedEntries: diagnostics.returnedEntries,
       };
-    case "request-rejected":
+    case "http-rejected":
       return {
-        error: rejectedRequestText(diagnostics),
+        error: diagnostics.outcome === "applied-none"
+          ? `Nothing was cleared: the record server rejected this clear (HTTP ${diagnostics.status}) before processing it; ` +
+            `${diagnostics.entryCount} entries were sent. Reload and try again.`
+          : `Could not confirm what this clear saved: the record server failed while handling it (HTTP ${diagnostics.status}); ` +
+            `${diagnostics.entryCount} entries were sent and some or all may have been applied. ` +
+            `Review the chart before continuing; do not repeat the clear blindly.`,
         code: "void-transaction-rejected",
-        failedStatus: diagnostics.status,
+        outcome: diagnostics.outcome,
+        httpStatus: diagnostics.status,
+        entryCount: diagnostics.entryCount,
+      };
+    case "no-response":
+      return {
+        error: `Could not confirm what this clear saved: the record server did not answer (${diagnostics.entryCount} entries were sent). ` +
+          `Some or all of it may have been applied. Review the chart before continuing; do not repeat the clear blindly.`,
+        code: "void-transaction-unanswered",
+        outcome: "indeterminate",
         entryCount: diagnostics.entryCount,
       };
   }
 }
 
-function incompleteResponseText(diagnostics: { entryCount: number; returnedEntries: number; responseType: string }): string {
-  return `Void did not return a complete transaction response: sent ${diagnostics.entryCount} entries, ` +
-    `received ${diagnostics.returnedEntries} (${diagnostics.responseType}).`;
-}
-
-function rejectedRequestText(diagnostics: { status: number | undefined; entryCount: number }): string {
-  return diagnostics.status === undefined
-    ? `Void transaction failed before the FHIR server answered; ${diagnostics.entryCount} entries were sent.`
-    : `Void transaction rejected by the FHIR server (HTTP ${diagnostics.status}) before any entry was answered; ` +
-      `${diagnostics.entryCount} entries were sent.`;
+function isDurableWrite(row: VoidEntrySummary): boolean {
+  return row.method.toUpperCase() !== "POST";
 }
 
 function entrySummary(entry: NonNullable<Bundle["entry"]>[number] | undefined, index: number): VoidEntrySummary {

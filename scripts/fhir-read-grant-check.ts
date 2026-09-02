@@ -141,7 +141,7 @@ export const SERVICE_IDENTITY_FHIR_WRITE_CALL_SITES = [
   { path: "mcp/src/index.ts", line: 3875, callee: "fhir.create", resourceType: "Substance", reason: "MCP process service client." },
   { path: "mcp/src/index.ts", line: 4205, callee: "fhir.create", resourceType: "AdverseEvent", reason: "MCP process service client." },
   { path: "mcp/src/index.ts", line: 5306, callee: "fhir.create", resourceType: "BodyStructure", reason: "MCP process service client." },
-  { path: "mcp/src/index.ts", line: 7752, callee: "fhir.patch", resourceType: "AccessPolicy", reason: "Policy sync uses the MCP process service client." },
+  { path: "mcp/src/index.ts", line: 7729, callee: "fhir.patch", resourceType: "AccessPolicy", reason: "Policy sync uses the MCP process service client." },
   { path: "mcp/src/legacy-import/appointment-encounter-import.ts", line: 657, callee: "input.fhir.create", resourceType: "Practitioner", reason: "Operator migration importer service identity." },
   { path: "mcp/src/legacy-import/appointment-encounter-import.ts", line: 674, callee: "input.fhir.update", resourceType: "Practitioner", reason: "Operator migration importer service identity." },
   { path: "mcp/src/legacy-import/ccda-import.ts", line: 394, callee: "input.fhir.create", resourceType: "ImportableResource", reason: "Operator legacy C-CDA importer service identity; generic resolves to the imported resource union." },

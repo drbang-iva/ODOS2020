@@ -214,6 +214,13 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   // screen; this only makes sure the overview beside it is current.
   function handleEncounterClearFailed(_detail: EncounterClearFailedDetail) {
     refreshExamOverview();
+    // …and the Undo ledger. On this non-atomic stack a refused clear can still have written its
+    // slot (and most of its voids); that slot is the clinician's way back from a partially
+    // erased chart, and Undo restores only what was actually voided. Show the slot the server
+    // holds, not the one this page last loaded.
+    void readEncounterUndoLedger(`Encounter/${encounterId}`)
+      .then((ledger) => { if (ledger.encounterId === encounterId) setUndoLedger(ledger); })
+      .catch((caught) => { console.error("Undo ledger unavailable after a failed clear.", caught); });
   }
 
   // Undo reverses exactly one clear — the slot the server holds for that scope — and the

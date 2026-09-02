@@ -489,6 +489,47 @@ test("the ledger read requires authentication and chart.read, and 404s for an un
 // Fixback after evaluation of 02c8155c — P2 #2: per-item controls must survive reopen
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Non-atomic stack (no `transaction-bundles`): a partial void must not produce a wrong undo
+// ---------------------------------------------------------------------------
+
+test("partial void: the slot over-names the refused row, but undo restores only the rows that were actually voided and leaves the refused one untouched", async () => {
+  const { deps, fhir } = fixture();
+  fhir.add(cvf("o1", "OD"));
+  fhir.add(cvf("o2", "OS"));
+  fhir.add(cvf("o3", "OD"));
+  // Medplum applies every other entry — including the Undo ledger slot that names all three.
+  fhir.refuse = (entry) => entry.request?.url === "Observation/o2" ? { status: "412 Precondition Failed" } : undefined;
+  const failure = await handleEncounterVoidRequest(deps, { authHeader: AUTH, params: PARAMS, body: { scope: "encounter" } }).then(
+    (result) => new Error(`expected the void to throw, got ${JSON.stringify(result)}`),
+    (error: unknown) => error,
+  );
+  assert.equal((failure as { name?: string }).name, "VoidTransactionError", String(failure));
+  assert.equal(fhir.get<Observation>("Observation", "o1").status, "entered-in-error");
+  assert.equal(fhir.get<Observation>("Observation", "o2").status, "final", "the refused row was never voided");
+  assert.equal(fhir.get<Observation>("Observation", "o3").status, "entered-in-error");
+  const written = await new FhirEncounterUndoLedgerStore(fhir).get("e1");
+  assert.deepEqual(written.encounter?.voided.map((row) => row.ref), ["Observation/o1", "Observation/o2", "Observation/o3"], "the slot was built from intent, so it over-names o2");
+  const o2Version = fhir.get<Observation>("Observation", "o2").meta?.versionId;
+  const provenancesOnO2 = () => fhir.all<Provenance>("Provenance").filter((row) => row.target?.some((target) => target.reference === "Observation/o2")).length;
+  const provenancesBefore = provenancesOnO2();
+
+  fhir.refuse = undefined;
+  const undone = await undo(deps, { scope: "encounter" });
+
+  assert.equal(undone.status, 200, JSON.stringify(undone.body));
+  const body = undone.body as UndoBody & { skipped: string[] };
+  assert.deepEqual(body.restored, ["Observation/o1", "Observation/o3"], "only what was actually voided is restored");
+  assert.deepEqual(body.skipped, ["Observation/o2"], "the refused row is named as skipped, not restored");
+  assert.equal(body.count, 2);
+  assert.equal(fhir.get<Observation>("Observation", "o1").status, "final");
+  assert.equal(fhir.get<Observation>("Observation", "o3").status, "final");
+  assert.equal(fhir.get<Observation>("Observation", "o2").status, "final");
+  assert.equal(fhir.get<Observation>("Observation", "o2").meta?.versionId, o2Version, "the refused row was not written by the undo");
+  assert.equal(provenancesOnO2(), provenancesBefore, "no RESTORE Provenance is written for a row that was never voided");
+  assert.equal(body.ledger.encounter, null, "the slot is cleared: nothing more to undo");
+});
+
 test("fixback P2#2: preview lists every candidate with its section, finding key, and laterality so a reopened sheet can rehydrate its per-item controls", async () => {
   const { deps, fhir } = fixture();
   fhir.add(observation("iop-od", "intraocular_pressure", "OD", { status: "preliminary" }));

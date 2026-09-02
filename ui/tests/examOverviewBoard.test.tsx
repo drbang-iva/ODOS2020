@@ -2442,10 +2442,12 @@ test("a failed Clear everything re-reads the overview alongside its error, so th
     const sheet = visibleSheet(harness);
     const overviewBefore = harness.overviewFetchCount();
     const findingsBefore = harness.findingsFetchCount();
+    const ledgerBefore = harness.ledgerFetchCount();
     harness.voidFailure.status = 502;
     harness.voidFailure.body = {
-      error: "Void transaction failed at entry 3 of 116 (PUT Observation, HTTP 403); 1 of 116 entries failed.",
+      error: "This clear only partly applied: 50 of 51 changes were saved before the record server refused entry 3 of 98 (PUT Observation, HTTP 403); 1 of 98 entries refused. Review the chart before continuing. Undo, where offered, restores only what was actually cleared.",
       code: "void-transaction-failed",
+      outcome: "applied-partial",
     };
     const clearAll = sheet.findAll((node) => node.type === "button" && textContent(node) === "Clear everything charted this visit…")[0];
     assert.ok(clearAll, "the tier-3 control is in the sheet chrome");
@@ -2458,6 +2460,7 @@ test("a failed Clear everything re-reads the overview alongside its error, so th
     assert.deepEqual(visitRequests, [{ scope: "encounter", preview: true }, { scope: "encounter" }]);
     assert.equal(harness.overviewFetchCount(), overviewBefore + 1, "the failed clear re-reads the overview");
     assert.equal(harness.findingsFetchCount(), findingsBefore + 1, "…and the unassigned-findings count that rides with it");
+    assert.equal(harness.ledgerFetchCount(), ledgerBefore + 1, "…and the undo ledger, so a partial clear's Undo is offered from the slot the server actually holds");
     const status = visibleSheet(harness).findByProps({ className: "odos-exam-entry-sheet-clear-all" }).findByProps({ role: "status" });
     assert.equal(textContent(status), (harness.voidFailure.body as { error: string }).error, "the error is still on screen: refresh AND report");
   } finally {
@@ -3770,6 +3773,7 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
   voidRequests: unknown[];
   /** Set `status` (+ `body`) to make the next non-preview void POST fail with that HTTP status. */
   voidFailure: { status?: number; body?: unknown };
+  ledgerFetchCount: () => number;
   restore: () => void;
 }> {
   const originalFetch = globalThis.fetch;
@@ -3803,10 +3807,12 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
   const undoFailure: { status?: number } = {};
   const voidRequests: unknown[] = [];
   const voidFailure: { status?: number; body?: unknown } = {};
+  let ledgerFetches = 0;
   let undoLedgerState: EncounterUndoLedger | undefined = options.undoLedger;
   globalThis.fetch = (async (input, init) => {
     const url = String(input);
     if (url.endsWith("/clinical-graph/encounters/exam-1/void/ledger")) {
+      ledgerFetches += 1;
       return jsonResponse({ ledger: options.undoLedger ?? { encounterId: "exam-1", encounter: null, sections: {} } });
     }
     if (url.endsWith("/clinical-graph/encounters/exam-1/void") && init?.method === "POST") {
@@ -4004,6 +4010,7 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
     undoFailure,
     voidRequests,
     voidFailure,
+    ledgerFetchCount: () => ledgerFetches,
     restore: () => {
       act(() => renderer.unmount());
       fhir.read = originalRead;

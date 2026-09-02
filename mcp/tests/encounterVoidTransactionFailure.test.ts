@@ -9,16 +9,20 @@ import {
 import { AUTH, cvf, fixture } from "./encounterVoidFixture.js";
 
 // ---------------------------------------------------------------------------
-// The void error must carry its own evidence.
+// The void error must carry its own evidence, and must only claim what it can know.
 //
 // Medplum answers a transaction one of two ways. Without the `transaction-bundles` project
 // feature (ODOS never sets it) a refused entry comes back INSIDE a 200 transaction-response
-// with its own status and OperationOutcome; with the feature on, the whole request is refused
-// with one HTTP status. Both must name what was refused. The 2026-09-02 walkthrough failed
-// on the first shape and the endpoint threw away everything but the status code.
+// with its own status and OperationOutcome while every other entry is applied. With the
+// feature on, the whole request is refused with one HTTP status. Neither shape is atomic
+// from the caller's point of view unless the server says so, hence the outcome taxonomy:
 //
-// Every string below tagged SENTINEL stands in for clinical detail an OperationOutcome may
-// carry. It must reach the server log and must never reach the HTTP response body.
+//   applied-none     refused, and the response shows nothing durable was applied
+//   applied-partial  refused, and at least one durable write WAS accepted
+//   indeterminate    no usable answer — transport loss, parse failure, 5xx — unknown state
+//
+// These are the intermediate-value tests. The real boundary — the bytes Express sends and
+// the arguments the route logs — is guarded in encounterVoidRoutes.test.ts.
 // ---------------------------------------------------------------------------
 
 const OUTCOME_SENTINEL = "SENTINEL-CLINICAL-DETAIL Observation.status preliminary -> entered-in-error refused";
@@ -47,16 +51,15 @@ function ok(status: string): NonNullable<Bundle["entry"]>[number] {
   return { response: { status } };
 }
 
+function refused(status: string, diagnostics: string): NonNullable<Bundle["entry"]>[number] {
+  return { response: { status, outcome: forbidden(diagnostics) } };
+}
+
 test("a refused entry is identified by index, request method + url, status, and outcome text, with the failing count", () => {
   const response: Bundle = {
     resourceType: "Bundle",
     type: "transaction-response",
-    entry: [
-      ok("200 OK"),
-      ok("201 Created"),
-      { response: { status: "403 Forbidden", outcome: forbidden(OUTCOME_SENTINEL) } },
-      { response: { status: "403 Forbidden", outcome: forbidden("second refusal") } },
-    ],
+    entry: [ok("200 OK"), ok("201 Created"), refused("403 Forbidden", OUTCOME_SENTINEL), refused("403 Forbidden", "second refusal")],
   };
 
   const error = captureThrow(() => assertSuccessfulTransaction(request(), response));
@@ -75,45 +78,93 @@ test("a refused entry is identified by index, request method + url, status, and 
   });
   assert.equal(error.diagnostics.failures.length, 2);
   assert.equal(error.diagnostics.failures[1]?.index, 3);
+  // What WAS applied is part of the evidence: the first PUT went through, the create too.
+  assert.deepEqual(error.diagnostics.accepted, [
+    { index: 0, method: "PUT", url: "Observation/obs-first-SENTINEL-ID" },
+    { index: 1, method: "POST", url: "Provenance" },
+  ]);
+  assert.equal(error.diagnostics.changeCount, 3, "three durable writes (the PUTs); the create is rolled back by the client");
+  assert.equal(error.diagnostics.appliedCount, 1);
+  assert.equal(error.diagnostics.acceptedCreates, 1);
+  assert.equal(error.diagnostics.outcome, "applied-partial");
   // The one log line: everything a reader needs to close the case without a second investigation.
   assert.match(error.message, /entry 2 of 4/);
   assert.match(error.message, /PUT Observation\/obs-refused-SENTINEL-ID/);
-  assert.match(error.message, /403/);
-  assert.match(error.message, /2 of 4 entries failed/);
+  assert.match(error.message, /HTTP 403/);
+  assert.match(error.message, /2 of 4 entries refused/);
+  assert.match(error.message, /1 of 3 changes applied/);
   assert.ok(error.message.includes(OUTCOME_SENTINEL), "the outcome text is in the log line");
-  // `status` mirrors the first refusal so the endpoint's existing conflict detection keeps working.
-  assert.equal(error.status, 403);
+  // No mirrored `status`: a per-entry 409/412 must never be swallowed by the conflict shortcut.
+  assert.equal((error as { status?: unknown }).status, undefined);
 });
 
-test("PHI boundary: the client body carries index, resource type, status, and a stable code, never ids or outcome text", () => {
+test("all entries refused is APPLIED-NONE; one accepted durable write is APPLIED-PARTIAL", () => {
+  const none = captureThrow(() => assertSuccessfulTransaction(request(), {
+    resourceType: "Bundle",
+    type: "transaction-response",
+    entry: [refused("403 Forbidden", "a"), refused("403 Forbidden", "b"), refused("403 Forbidden", "c"), refused("403 Forbidden", "d")],
+  }));
+  assert.ok(none instanceof VoidTransactionError);
+  assert.equal(none.diagnostics.outcome, "applied-none");
+  assert.equal(none.clientBody.outcome, "applied-none");
+  assert.match(none.clientBody.error, /^Nothing was cleared/);
+  assert.match(none.clientBody.error, /Reload and try again/);
+
+  // Only the create was accepted: the client rolls creates back, so no durable write applied.
+  const createOnly = captureThrow(() => assertSuccessfulTransaction(request(), {
+    resourceType: "Bundle",
+    type: "transaction-response",
+    entry: [refused("403 Forbidden", "a"), ok("201 Created"), refused("403 Forbidden", "c"), refused("403 Forbidden", "d")],
+  }));
+  assert.ok(createOnly instanceof VoidTransactionError);
+  assert.equal(createOnly.diagnostics.outcome, "applied-none");
+  if (createOnly.diagnostics.kind === "entry-failed") assert.equal(createOnly.diagnostics.acceptedCreates, 1);
+
+  const partial = captureThrow(() => assertSuccessfulTransaction(request(), {
+    resourceType: "Bundle",
+    type: "transaction-response",
+    entry: [refused("403 Forbidden", "a"), refused("403 Forbidden", "b"), refused("403 Forbidden", "c"), ok("200 OK")],
+  }));
+  assert.ok(partial instanceof VoidTransactionError);
+  assert.equal(partial.diagnostics.outcome, "applied-partial");
+  assert.match(partial.clientBody.error, /only partly applied/);
+  assert.match(partial.clientBody.error, /1 of 3 changes were saved/);
+  assert.doesNotMatch(partial.clientBody.error, /Reload and try again|reapply/);
+});
+
+test("PHI boundary (intermediate value): the client body carries index, resource type, status, counts, and a stable code — never ids or outcome text", () => {
   const response: Bundle = {
     resourceType: "Bundle",
     type: "transaction-response",
-    entry: [ok("200 OK"), ok("201 Created"), { response: { status: "403 Forbidden", outcome: forbidden(OUTCOME_SENTINEL) } }, ok("200 OK")],
+    entry: [ok("200 OK"), ok("201 Created"), refused("403 Forbidden", OUTCOME_SENTINEL), ok("200 OK")],
   };
 
   const error = captureThrow(() => assertSuccessfulTransaction(request(), response));
   assert.ok(error instanceof VoidTransactionError);
 
   assert.deepEqual(error.clientBody, {
-    error: "Void transaction failed at entry 2 of 4 (PUT Observation, HTTP 403); 1 of 4 entries failed.",
+    error: "This clear only partly applied: 2 of 3 changes were saved before the record server refused entry 2 of 4 " +
+      "(PUT Observation, HTTP 403); 1 of 4 entries refused. Review the chart before continuing. " +
+      "Undo, where offered, restores only what was actually cleared.",
     code: "void-transaction-failed",
+    outcome: "applied-partial",
     failedEntryIndex: 2,
     failedResourceType: "Observation",
     failedStatus: 403,
     failedCount: 1,
+    appliedCount: 2,
+    changeCount: 3,
     entryCount: 4,
   });
   const serialized = JSON.stringify(error.clientBody);
   assert.ok(!serialized.includes("SENTINEL"), `client body leaks server-only detail: ${serialized}`);
   assert.ok(!serialized.includes("obs-refused"), `client body leaks a resource id: ${serialized}`);
-  // …while the server-side detail keeps all of it.
   const logged = `${error.message} ${JSON.stringify(error.diagnostics)}`;
   assert.ok(logged.includes(OUTCOME_SENTINEL));
   assert.ok(logged.includes("Observation/obs-refused-SENTINEL-ID"));
 });
 
-test("an incomplete transaction response reports entries sent vs returned and what came back instead", () => {
+test("an incomplete transaction response is INDETERMINATE and reports entries sent vs returned and what came back instead", () => {
   const response: Bundle = { resourceType: "Bundle", type: "batch-response", entry: [ok("200 OK")] };
 
   const error = captureThrow(() => assertSuccessfulTransaction(request(), response));
@@ -121,6 +172,7 @@ test("an incomplete transaction response reports entries sent vs returned and wh
   assert.ok(error instanceof VoidTransactionError, `expected VoidTransactionError, got ${String(error)}`);
   assert.deepEqual(error.diagnostics, {
     kind: "incomplete-response",
+    outcome: "indeterminate",
     entryCount: 4,
     returnedEntries: 1,
     responseType: "Bundle/batch-response",
@@ -129,12 +181,14 @@ test("an incomplete transaction response reports entries sent vs returned and wh
   assert.match(error.message, /received 1/);
   assert.match(error.message, /Bundle\/batch-response/);
   assert.deepEqual(error.clientBody, {
-    error: "Void did not return a complete transaction response: sent 4 entries, received 1 (Bundle/batch-response).",
+    error: "Could not confirm what this clear saved: the record server's answer was not a usable transaction response " +
+      "(sent 4 entries, received 1, Bundle/batch-response). Some or all of it may have been applied. " +
+      "Review the chart before continuing; do not repeat the clear blindly.",
     code: "void-transaction-incomplete",
+    outcome: "indeterminate",
     entryCount: 4,
     returnedEntries: 1,
   });
-  assert.equal(error.status, undefined, "no entry status to mirror");
 });
 
 test("a non-Bundle response body is named by its resourceType", () => {
@@ -145,6 +199,7 @@ test("a non-Bundle response body is named by its resourceType", () => {
   if (error.diagnostics.kind !== "incomplete-response") return;
   assert.equal(error.diagnostics.responseType, "OperationOutcome");
   assert.equal(error.diagnostics.returnedEntries, 0);
+  assert.equal(error.diagnostics.outcome, "indeterminate");
 });
 
 test("a clean transaction-response passes", () => {
@@ -163,15 +218,7 @@ test("a clean transaction-response passes", () => {
 test("the endpoint surfaces a refused entry as a VoidTransactionError the route can log and answer from", async () => {
   const { deps, fhir } = fixture();
   fhir.add(cvf("o1", "OD"));
-  fhir.executeTransaction = async (bundle: Bundle): Promise<Bundle> => ({
-    resourceType: "Bundle",
-    type: "transaction-response",
-    entry: (bundle.entry ?? []).map((entry, index) =>
-      index === 0
-        ? { response: { status: "403 Forbidden", outcome: forbidden(OUTCOME_SENTINEL) } }
-        : ok(entry.request?.method === "POST" ? "201 Created" : "200 OK")
-    ),
-  });
+  fhir.refuse = (entry) => entry.request?.url === "Observation/o1" ? { status: "403 Forbidden", outcome: forbidden(OUTCOME_SENTINEL) } : undefined;
 
   await assert.rejects(
     handleEncounterVoidRequest(deps, {
@@ -185,37 +232,42 @@ test("the endpoint surfaces a refused entry as a VoidTransactionError the route 
       if (error.diagnostics.kind !== "entry-failed") return false;
       assert.equal(error.diagnostics.firstFailure.url, "Observation/o1");
       assert.equal(error.diagnostics.firstFailure.method, "PUT");
+      assert.equal(error.clientBody.code, "void-transaction-failed");
+      if (error.clientBody.code !== "void-transaction-failed") return false;
       assert.equal(error.clientBody.failedResourceType, "Observation");
       assert.equal(error.clientBody.failedEntryIndex, 0);
+      // The Encounter and the ledger row went through: partial, and the message says so.
+      assert.equal(error.clientBody.outcome, "applied-partial");
+      return true;
+    },
+  );
+  assert.equal(fhir.get<{ status?: string }>("Observation", "o1").status, "final", "the refused row is untouched");
+});
+
+test("a per-entry 412 inside the transaction-response keeps its detail — it is NOT collapsed into the concurrent-edit 409", async () => {
+  const { deps, fhir } = fixture();
+  fhir.add(cvf("o1", "OD"));
+  fhir.refuse = (entry) => entry.request?.url === "Observation/o1" ? { status: "412 Precondition Failed", outcome: forbidden("version mismatch") } : undefined;
+
+  await assert.rejects(
+    handleEncounterVoidRequest(deps, {
+      authHeader: AUTH,
+      params: { encounterId: "e1" },
+      body: { scope: "observation", observationReference: "Observation/o1" },
+    }),
+    (error: unknown) => {
+      assert.ok(error instanceof VoidTransactionError, `expected VoidTransactionError, got ${String(error)}`);
+      assert.equal(error.clientBody.code, "void-transaction-failed");
+      if (error.clientBody.code !== "void-transaction-failed") return false;
+      assert.equal(error.clientBody.failedStatus, 412);
+      assert.equal(error.clientBody.outcome, "applied-partial");
+      assert.doesNotMatch(error.clientBody.error, /reapply/i);
       return true;
     },
   );
 });
 
-test("a per-entry 412 inside the transaction-response is a concurrent edit, not a route failure", async () => {
-  const { deps, fhir } = fixture();
-  fhir.add(cvf("o1", "OD"));
-  fhir.executeTransaction = async (bundle: Bundle): Promise<Bundle> => ({
-    resourceType: "Bundle",
-    type: "transaction-response",
-    entry: (bundle.entry ?? []).map((entry, index) =>
-      index === 0
-        ? { response: { status: "412 Precondition Failed", outcome: forbidden("version mismatch") } }
-        : ok(entry.request?.method === "POST" ? "201 Created" : "200 OK")
-    ),
-  });
-
-  const result = await handleEncounterVoidRequest(deps, {
-    authHeader: AUTH,
-    params: { encounterId: "e1" },
-    body: { scope: "observation", observationReference: "Observation/o1" },
-  });
-
-  assert.equal(result.status, 409, JSON.stringify(result.body));
-  assert.equal((result.body as { code?: string }).code, "concurrent-edit");
-});
-
-test("a request the FHIR server refuses outright is reported with its status, the upstream detail, and what was sent", async () => {
+test("a request the FHIR server refuses outright with a 4xx is APPLIED-NONE and names what was sent", async () => {
   const { deps, fhir } = fixture();
   fhir.add(cvf("o1", "OD"));
   fhir.executeTransaction = async (): Promise<Bundle> => {
@@ -230,21 +282,76 @@ test("a request the FHIR server refuses outright is reported with its status, th
     }),
     (error: unknown) => {
       assert.ok(error instanceof VoidTransactionError, `expected VoidTransactionError, got ${String(error)}`);
-      assert.equal(error.diagnostics.kind, "request-rejected");
-      if (error.diagnostics.kind !== "request-rejected") return false;
+      assert.equal(error.diagnostics.kind, "http-rejected");
+      if (error.diagnostics.kind !== "http-rejected") return false;
       assert.equal(error.diagnostics.status, 403);
+      assert.equal(error.diagnostics.outcome, "applied-none");
       assert.ok(error.diagnostics.detail.includes(OUTCOME_SENTINEL));
       // Observation PUT + its Provenance POST + Encounter PUT + the Undo ledger row.
       assert.equal(error.diagnostics.entryCount, 4);
       assert.deepEqual(error.diagnostics.entries[0], { index: 0, method: "PUT", url: "Observation/o1" });
       assert.deepEqual(error.clientBody, {
-        error: "Void transaction rejected by the FHIR server (HTTP 403) before any entry was answered; 4 entries were sent.",
+        error: "Nothing was cleared: the record server rejected this clear (HTTP 403) before processing it; 4 entries were sent. Reload and try again.",
         code: "void-transaction-rejected",
-        failedStatus: 403,
+        outcome: "applied-none",
+        httpStatus: 403,
         entryCount: 4,
       });
       assert.ok(!JSON.stringify(error.clientBody).includes("SENTINEL"));
-      assert.equal(error.status, 403);
+      return true;
+    },
+  );
+});
+
+test("a 5xx from the FHIR server is INDETERMINATE: the request may have been applied before it failed", async () => {
+  const { deps, fhir } = fixture();
+  fhir.add(cvf("o1", "OD"));
+  fhir.executeTransaction = async (): Promise<Bundle> => {
+    throw Object.assign(new Error("FHIR POST /fhir/R4 [Bundle] 503 Service Unavailable: overloaded"), { status: 503 });
+  };
+
+  await assert.rejects(
+    handleEncounterVoidRequest(deps, { authHeader: AUTH, params: { encounterId: "e1" }, body: { scope: "observation", observationReference: "Observation/o1" } }),
+    (error: unknown) => {
+      assert.ok(error instanceof VoidTransactionError);
+      assert.equal(error.diagnostics.kind, "http-rejected");
+      assert.equal(error.diagnostics.outcome, "indeterminate");
+      assert.deepEqual(error.clientBody, {
+        error: "Could not confirm what this clear saved: the record server failed while handling it (HTTP 503); 4 entries were sent " +
+          "and some or all may have been applied. Review the chart before continuing; do not repeat the clear blindly.",
+        code: "void-transaction-rejected",
+        outcome: "indeterminate",
+        httpStatus: 503,
+        entryCount: 4,
+      });
+      return true;
+    },
+  );
+});
+
+test("a statusless failure (transport loss, parse failure) is INDETERMINATE — not a rejection before the server", async () => {
+  const { deps, fhir } = fixture();
+  fhir.add(cvf("o1", "OD"));
+  fhir.executeTransaction = async (): Promise<Bundle> => { throw new Error("fetch failed: socket hang up"); };
+
+  await assert.rejects(
+    handleEncounterVoidRequest(deps, { authHeader: AUTH, params: { encounterId: "e1" }, body: { scope: "observation", observationReference: "Observation/o1" } }),
+    (error: unknown) => {
+      assert.ok(error instanceof VoidTransactionError, `expected VoidTransactionError, got ${String(error)}`);
+      assert.equal(error.diagnostics.kind, "no-response");
+      if (error.diagnostics.kind !== "no-response") return false;
+      assert.equal(error.diagnostics.outcome, "indeterminate");
+      assert.equal(error.diagnostics.detail, "fetch failed: socket hang up");
+      assert.equal(error.diagnostics.entryCount, 4);
+      assert.deepEqual(error.clientBody, {
+        error: "Could not confirm what this clear saved: the record server did not answer (4 entries were sent). " +
+          "Some or all of it may have been applied. Review the chart before continuing; do not repeat the clear blindly.",
+        code: "void-transaction-unanswered",
+        outcome: "indeterminate",
+        entryCount: 4,
+      });
+      assert.match(error.message, /did not answer/);
+      assert.doesNotMatch(error.message, /rejected/);
       return true;
     },
   );
