@@ -173,6 +173,18 @@ they describe how the system *is built*, not what shipped when.
   identity (description + code). **CPT/HCPCS shown on a receipt is display-only pass-through and is
   never asserted by ODOS.** The receipt and the lab sheet are the cash-dispensary's two outputs and
   are named unmistakably on purpose — staff confuse them in the system this replaces.
+
+- **Two receipt invariants, both enforced — these are guards, not descriptions.** Do not weaken
+  either to make a case pass; if a receipt cannot satisfy them, the receipt is wrong:
+  1. **A receipt that does not reconcile to its Invoice is refused, not rendered.**
+     `buildFinancialSummary` (`mcp/src/fhir/opticalFinancialSummary.ts`) **throws** when computed
+     gross/net differ from the Invoice's `totalGross`/`totalNet`, when the Invoice has no line
+     items, or when Invoice line count and `ChargeItem` count disagree. There is no
+     partially-reconciled receipt and no warning path — it refuses.
+  2. **Cash and processor receipts for an equivalent order must render identical money.** Same
+     totals, same balances; **only the tender rows may differ** (`paymentSeamConsistency.test.ts`).
+     A change that makes the card path and the cash path disagree on a number is a defect in the
+     change, regardless of which one "looks right."
 - **Payment processing is vendor-neutral.** A `PaymentProcessorAdapter` interface with manual-cash
   and Clover REST Pay Display adapters behind it; one unified `POST /payments/charge` on odos-core.
   Processor secrets stay server-side only — that boundary is why the charge endpoint exists.
