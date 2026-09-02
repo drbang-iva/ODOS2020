@@ -266,6 +266,11 @@ and paste RED and GREEN verbatim. Three rules earned the hard way on PR #499/#50
 - **Verify the mutant actually landed** — grep it in place before believing the result.
   Two of six mutations in one spot-check were silent no-ops from wrong variable names and
   came back falsely green; a red the mutant did not cause is the same class of error.
+- **Mutate in a disposable worktree, restore every mutant, and prove the tree is clean
+  before reporting GREEN.** `git worktree add --detach` at the exact head, mutate there,
+  and finish with `git status --porcelain` empty and the final GREEN re-run from restored
+  sources. An evaluator's final numbers must describe the PR, not the evaluator's edits —
+  and a mutation left behind can be committed by the next hand that touches the branch.
 - **A guard that passes because the FIXTURE does the work is decorative.** One boundary
   guard passed for two full rounds with the production filter deleted, because the test
   fake's own `search()` honoured the query param and excluded the row before the endpoint
@@ -291,11 +296,16 @@ and paste RED and GREEN verbatim. Three rules earned the hard way on PR #499/#50
       "architectural" are too fuzzy to route on; "does canon change" is not.
 
 **Read the design of record before judging intent.** Design and fixback lists live in the
-private companion repo — cite them by ABSOLUTE path
-(`/Users/ericr.bang/GitHub/performance-od/decisions/<file>.md`), never a relative one: a
-relative path does not resolve from this repo's root, and a hand-off that silently fails
-to open is indistinguishable from an evaluator that ignored it. If a cited path will not
-open, say so and stop rather than proceeding on inference.
+private companion repo, checked out beside this one — `../performance-od/decisions/<file>.md`
+from the repo root on a local checkout, or wherever `$PERFORMANCE_OD_ROOT` points if it is
+sited elsewhere. Cite it as a rooted path, never bare `performance-od/...`: that resolves
+from neither repo's root, and a hand-off that silently fails to open is indistinguishable
+from an evaluator that ignored it.
+
+**If the companion repo is unreachable — Codex Cloud has no local filesystem, and a second
+machine or account may site it differently — say so explicitly and ask for the relevant
+excerpt inline.** Do not stop, and do not proceed on inference about what the design says:
+an evaluator guessing at intent is worse than one that asks.
 
 Nothing is "done" until an independent evaluation actually ran.
 
