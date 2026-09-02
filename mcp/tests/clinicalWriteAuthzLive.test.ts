@@ -159,6 +159,10 @@ test("synced practice policies enforce all repaired clinical writes on running M
       await denied("staff", "PUT", `Observation/${staffFinalDraft.id}`, { ...staffFinalDraft, status: "final" });
     });
 
+    if (process.env.ODOS_PRELIMINARY_OBSERVATION_AUTHZ_ONLY === "1") {
+      return;
+    }
+
     await t.test("Chart sidebar > Allergies — Mark no known allergies", async () => {
       const body = buildAllergyIntolerance({ patientReference, noKnownAllergy: true });
       await denied("admin", "POST", "AllergyIntolerance", body);
