@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 
 type EvaluationDecision = {
   passed: boolean;
@@ -223,6 +227,103 @@ test("Codex's versioned and GPT-qualified forms are trusted too", () => {
     const decision = evaluate({ comments: [comment(marker(evaluator, "PASS"))] });
     assert.equal(decision.passed, true, `${evaluator} should be trusted`);
     assert.equal(decision.evaluator, evaluator);
+  }
+});
+
+test("Codex's actual gpt-5.6-sol signature passes without an override", () => {
+  for (const evaluator of ["Codex (gpt-5.6-sol)", "CODEX (GPT-5.6-SOL)"]) {
+    const decision = evaluate({ comments: [comment(marker(evaluator, "PASS"))] });
+    assert.equal(decision.passed, true, evaluator);
+    assert.equal(decision.reason, "passing-verdict");
+    assert.equal(decision.evaluator, evaluator);
+  }
+});
+
+const untrustedSignatures = [
+  "Random Model 1",
+  "Sonnet 5",
+  "Gemini 3",
+  "Codex (Random Model 1)",
+  "Codex (gpt-5.6-terra)",
+  "Codex (gpt-5.6-sol-extra)",
+  "Codex (gpt-5.7-sol)",
+  "Codex 5.6 (gpt-5.6-sol)",
+  "GPT-5.6-sol Codex",
+  "Fable 5.1 (gpt-5.6-sol)",
+  "Opus 5 (gpt-5.6-sol)",
+];
+
+test("the sol exception does not admit Random Model 1 or arbitrary model suffixes", () => {
+  for (const evaluator of untrustedSignatures) {
+    const decision = evaluate({ comments: [comment(marker(evaluator, "PASS"))] });
+    assert.equal(decision.passed, false, `${evaluator} must remain untrusted`);
+    assert.equal(decision.reason, "untrusted-model", evaluator);
+    assert.match(decision.message, /Fable.*Opus.*Codex/);
+  }
+});
+
+test("the posting script and real gate agree on trusted signatures in a dry run", (t) => {
+  const fixtureDirectory = mkdtempSync(join(tmpdir(), "odos-eval-signatures-"));
+  t.after(() => rmSync(fixtureDirectory, { recursive: true, force: true }));
+  writeFileSync(join(fixtureDirectory, "gh"), `#!/usr/bin/env bash
+set -euo pipefail
+if [[ "$1 $2" == "pr view" ]]; then
+  printf '%s\\n' '${CURRENT_HEAD}'
+  exit 0
+fi
+if [[ "$1 $2" == "api --paginate" ]]; then
+  case "$3" in
+    */comments) exit 0 ;;
+    */reviews)
+      printf '%s\\t%s\\t%s\\t%s\\n' COMMENTED '${CURRENT_HEAD}' '2026-07-16T12:00:00Z' 'greptile-apps[bot]'
+      exit 0
+      ;;
+  esac
+fi
+echo "Unexpected GitHub call: $*" >&2
+exit 99
+`, { mode: 0o700 });
+
+  const trustedSignatures = [
+    "Fable 5.1",
+    "Opus 5",
+    "Claude Opus 5 (Claude)",
+    "Codex",
+    "Codex 5.6",
+    "GPT-5.6 Codex",
+    "Codex (GPT-5.6)",
+    "Codex (gpt-5.6-sol)",
+    "CODEX (GPT-5.6-SOL)",
+  ];
+  for (const evaluator of [...trustedSignatures, ...untrustedSignatures]) {
+    const expectedPass = trustedSignatures.includes(evaluator);
+    const result = spawnSync("bash", [
+      fileURLToPath(new URL("scripts/eval-post-verdict.sh", repoRoot)),
+      "506", "PASS", evaluator, "--dry-run",
+    ], {
+      cwd: fileURLToPath(repoRoot),
+      env: {
+        PATH: `${fixtureDirectory}:${dirname(process.execPath)}:/usr/bin:/bin`,
+        GH_REPO: "example/odos",
+      },
+      encoding: "utf8",
+      timeout: 10_000,
+    });
+    assert.equal(result.status, expectedPass ? 0 : 1, `${evaluator}: ${result.stderr}`);
+    if (expectedPass) {
+      assert.match(result.stdout, /Dry run only; no comment will be posted\./);
+      const postedMarker = result.stdout.match(/^Evaluated-by:.*\nHead-SHA:.*$/m)?.[0];
+      assert.ok(postedMarker, `${evaluator}: dry run must emit a real marker`);
+      const decision = evaluate({ comments: [comment(postedMarker)] });
+      assert.equal(decision.passed, true, evaluator);
+      assert.equal(decision.reason, "passing-verdict", evaluator);
+      assert.equal(decision.evaluator, evaluator);
+    } else {
+      assert.match(result.stderr, /would be rejected by evaluation-verdict\.cjs/);
+      const decision = evaluate({ comments: [comment(marker(evaluator, "PASS"))] });
+      assert.equal(decision.passed, false, evaluator);
+      assert.equal(decision.reason, "untrusted-model", evaluator);
+    }
   }
 });
 

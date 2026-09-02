@@ -8,10 +8,10 @@ const SHA_PATTERN = /^[0-9a-f]{40}$/i;
 // Who is trusted, and why, is decided in performance-od/decisions/ — not restated here.
 // Current: 2026-09-02-eval-gate-trusts-codex.md
 const TRUSTED_MODEL_PATTERN =
-  /^(?:Fable|(?:Claude\s+)?Opus|(?:GPT[-\s]?\d+(?:\.\d+)*\s+)?Codex)(?:\s+\d+(?:\.\d+)*)?(?:\s+\((?:Claude|GPT[-\s]?\d+(?:\.\d+)*)\))?$/i;
+  /^(?:(?:Fable|(?:Claude\s+)?Opus|(?:GPT[-\s]?\d+(?:\.\d+)*\s+)?Codex)(?:\s+\d+(?:\.\d+)*)?(?:\s+\((?:Claude|GPT[-\s]?\d+(?:\.\d+)*)\))?|Codex \(GPT-5\.6-sol\))$/i;
 const FAILING_VERDICTS = new Set(["FAIL", "BLOCKED", "NEEDS-WORK"]);
 const EXPECTED_FORM = [
-  "Evaluated-by: Fable 5 — PASS   (also accepted: Opus, Codex)",
+  "Evaluated-by: Fable 5 — PASS   (also accepted: Opus, Codex, Codex (gpt-5.6-sol))",
   "Head-SHA: <40-character PR head SHA>",
 ].join("\n");
 const EXPECTED_OVERRIDE_FORM = [
@@ -41,6 +41,10 @@ function headShaLines(body) {
 
 function failure(reason, message) {
   return { passed: false, reason, message };
+}
+
+function isTrustedEvaluator(model) {
+  return TRUSTED_MODEL_PATTERN.test(model.trim());
 }
 
 function evaluateEvaluationGate({
@@ -154,11 +158,11 @@ function evaluateEvaluationGate({
         `OVERRIDE REASON MISSING — the newest marker must contain a nonempty Override-Reason line.\nExpected:\n${EXPECTED_OVERRIDE_FORM}`,
       );
     }
-  } else if (!TRUSTED_MODEL_PATTERN.test(evaluator)) {
+  } else if (!isTrustedEvaluator(evaluator)) {
     return failure(
       "untrusted-model",
       [
-        `UNTRUSTED EVALUATOR MODEL — '${evaluator}' is not an authorized Fable or Opus evaluator.`,
+        `UNTRUSTED EVALUATOR MODEL — '${evaluator}' is not a recognized Fable, Opus, or Codex signature.`,
         `Expected:\n${expectedForm}`,
         OVERRIDE_NOTE,
       ].join("\n"),
@@ -266,4 +270,5 @@ function evaluateEvaluationGate({
 
 module.exports = {
   evaluateEvaluationGate,
+  isTrustedEvaluator,
 };
