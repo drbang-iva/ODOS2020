@@ -187,7 +187,7 @@ AI coding agents duplicate operational logic by default — the same mechanic re
 - **Failure is explicit, never a silent drop.** A `.filter()` that removes a row a clinical write depended on must refuse and say why. That is the PR #500 defect restated as a rule.
 - **Migrate one caller at a time:** extract the block, convert a single caller, verify, then the rest. Never convert every caller in one commit.
 
-Anti-patterns, all of which have appeared here: one god-function hiding all control flow; a service that writes to storage itself; every function inventing its own argument and error shape; and abstracting logic that only ever had one caller.
+Anti-patterns, all of which have appeared here: one god-function hiding all control flow; an extracted shared mechanic that writes to storage on its own authority; every function inventing its own argument and error shape; and abstracting logic that only ever had one caller.
 
 *Adapted from [`github.com/michaelshimeles/skills`](https://github.com/michaelshimeles/skills) (`code-structure`), reframed onto this repo's endpoint/service split and its own PR #500 precedent rather than the upstream's actions/service-layer vocabulary.*
 
