@@ -45,6 +45,15 @@ export function loadRepoEnv(): void {
   }
 }
 
+export function exportContractProjectIdForGitHubActions(
+  projectId: string,
+  env: Pick<NodeJS.ProcessEnv, "GITHUB_ENV"> = process.env,
+): void {
+  const environmentPath = env.GITHUB_ENV?.trim();
+  if (!environmentPath) return;
+  appendFileSync(environmentPath, `MEDPLUM_PROJECT_ID=${projectId}\n`, "utf8");
+}
+
 export interface PostgresTestDatabase {
   readonly connectionString: string;
   registerDrain(drain: () => Promise<void>): void;

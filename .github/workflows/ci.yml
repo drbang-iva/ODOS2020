@@ -94,6 +94,7 @@ jobs:
             ../tests/agentops/**/*.test.ts \
             ../tests/bulk-data/**/*.test.ts \
             ../tests/mandate-8/**/*.test.ts
+      # The contract bootstrap creates the project and exports MEDPLUM_PROJECT_ID for the repair step.
       - name: run Medplum search contract smoke lane
         working-directory: mcp
         env:
@@ -104,11 +105,43 @@ jobs:
         run: |
           node --import tsx --test --test-concurrency=1 tests/searchParamMedplumSmoke.test.ts
           node --import tsx --test --test-concurrency=1 tests/profile-validation.test.ts
+      # The bootstrap uses the same local admin identity; reset Medplum's one-minute login throttle before repair.
+      - name: wait for ephemeral Medplum login throttle reset
+        run: sleep 61
+      # CI-ONLY PRIVILEGED REPAIR: this targets the fresh ephemeral localhost:18103
+      # container project. Never point this invocation at a real practice project.
+      - name: create canonical practice-role policies for live authorization lane
+        env:
+          MEDPLUM_BASE_URL: http://localhost:18103/
+          MEDPLUM_ADMIN_EMAIL: contract-admin@odos.local
+          MEDPLUM_ADMIN_PASSWORD: Odos-contract-CI-Password-1!
+          MEDPLUM_CONTRACT_BOOTSTRAP: "1"
+          ODOS_POSTGRES_URL: postgresql://medplum:medplum@127.0.0.1:15432/medplum
+        run: >-
+          npm run repair-practice-roles --
+          --email "$MEDPLUM_ADMIN_EMAIL"
+          --project "$MEDPLUM_PROJECT_ID"
+      # CI-ONLY BREAK-GLASS: --apply is safe only against this fresh ephemeral localhost:18103
+      # container project. Never copy this invocation to a real practice project.
+      - name: sync canonical practice-role policies for live authorization lane
+        env:
+          MEDPLUM_BASE_URL: http://localhost:18103/
+          MEDPLUM_ADMIN_EMAIL: contract-admin@odos.local
+          MEDPLUM_ADMIN_PASSWORD: Odos-contract-CI-Password-1!
+        run: >-
+          npm run sync-practice-role-policy-rules --
+          --project "$MEDPLUM_PROJECT_ID"
+          --apply
+          --bootstrap-service-identity
       - name: run credentialed live authorization lane
-        # TEMPORARY NON-BLOCKING LANE: v05a-authz and v05b-audit-ib-backup are two
-        # fossil auditor-role tests pending an operator decision; clinicalWriteAuthzLive
-        # has a provider-policy sync issue under investigation. A permanently non-blocking
-        # lane is a decorative guard, so flip this to blocking as soon as all three resolve.
+        # NON-BLOCKING: the harness cannot yet run these tests under a constrained identity.
+        # Four causes were traced on 2026-09-01: the lane lacked a Medplum project id;
+        # the bootstrap project lacked canonical role policies; one identity both seeded
+        # fixtures and exercised authorization; and, still open, MCP audit projection
+        # re-authenticates by password after a denied AuditEvent write, retries as the same
+        # principal, exhausts the login throttle, and times out during startup.
+        # Blocked on a separate audit-projection identity or a fix in mcp/src/authz/liveAudit.ts.
+        # Flip to blocking when that is resolved. Keep the bootstrap -> repair -> sync order.
         continue-on-error: true
         working-directory: mcp
         env:

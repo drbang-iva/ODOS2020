@@ -54,6 +54,8 @@ export interface PracticeRoleRepairResult {
   readonly targetEmail: string;
   readonly membershipChanged: boolean;
   readonly primaryRole: DevAdminPrimaryRole;
+  readonly grantedRoles: readonly PracticeRoleId[];
+  readonly policyBindings: readonly string[];
 }
 
 export async function repairPracticeRoles(
@@ -61,6 +63,7 @@ export async function repairPracticeRoles(
   target: string,
   primaryRole: DevAdminPrimaryRole = DEV_ADMIN_ROLE,
   serviceIdentityEmail?: string,
+  allowServiceIdentity = false,
 ): Promise<PracticeRoleRepairResult> {
   const resolvedTarget = await adapter.resolveTarget(target);
   const targetProjectId = resolvedTarget.membership.project.reference?.match(/^Project\/([^/]+)$/)?.[1];
@@ -117,7 +120,7 @@ export async function repairPracticeRoles(
   }
 
   const grant = await grantPracticeRoles(
-    { target, roles: DEV_ADMIN_GRANT_ROLES, primaryRole },
+    { target, roles: DEV_ADMIN_GRANT_ROLES, primaryRole, allowServiceIdentity },
     {
       serviceIdentityEmail,
       resolveTarget: async () => resolvedTarget,
@@ -168,6 +171,7 @@ export async function repairPracticeRoles(
         adapter.recordMembershipChange(resolvedTarget, operation),
     },
   );
+  const repairedTarget = await adapter.resolveTarget(target);
 
   return {
     createdPolicies,
@@ -177,6 +181,8 @@ export async function repairPracticeRoles(
     targetEmail: grant.targetEmail,
     membershipChanged: grant.changed,
     primaryRole,
+    grantedRoles: grant.roles,
+    policyBindings: membershipPolicyReferences(repairedTarget.membership),
   };
 }
 
@@ -211,13 +217,23 @@ export function membershipPolicyReferences(membership: ProjectMembership): strin
   ].filter((reference): reference is string => Boolean(reference));
 }
 
+export function createProjectOwnedRepairPolicy(
+  fhir: Pick<MedplumClient, "create">,
+  policy: AccessPolicy,
+): Promise<AccessPolicy> {
+  return fhir.create(policy, { "X-Medplum": "extended" });
+}
+
 class LivePracticeRoleRepairAdapter implements PracticeRoleRepairAdapter {
   private readonly audit = createLiveOdosAuditRuntime({
     postgresUrl: process.env.ODOS_POSTGRES_URL ?? DEFAULT_POSTGRES_URL,
     disabled: process.env.ODOS_ROLE_REPAIR_AUDIT_DISABLED === "true",
   });
 
-  constructor(private readonly fhir: MedplumClient) {}
+  constructor(
+    private readonly fhir: MedplumClient,
+    private readonly allowProjectInvisibleUser = false,
+  ) {}
 
   async findPoliciesByName(name: string, projectId: string): Promise<AccessPolicy[]> {
     return searchProjectAll<AccessPolicy>(this.fhir, "AccessPolicy", projectId, {
@@ -226,7 +242,7 @@ class LivePracticeRoleRepairAdapter implements PracticeRoleRepairAdapter {
   }
 
   async createPolicy(policy: AccessPolicy): Promise<AccessPolicy> {
-    return this.fhir.create(policy);
+    return createProjectOwnedRepairPolicy(this.fhir, policy);
   }
 
   async readPolicy(reference: string): Promise<AccessPolicy | undefined> {
@@ -243,7 +259,7 @@ class LivePracticeRoleRepairAdapter implements PracticeRoleRepairAdapter {
   }
 
   async resolveTarget(target: string): Promise<ResolvedRoleGrantTarget> {
-    return resolvePracticeRoleTarget(this.fhir, target);
+    return resolvePracticeRoleTarget(this.fhir, target, this.allowProjectInvisibleUser);
   }
 
   async patchMembership(
@@ -276,6 +292,7 @@ class LivePracticeRoleRepairAdapter implements PracticeRoleRepairAdapter {
 export async function resolvePracticeRoleTarget(
   fhir: Pick<MedplumClient, "baseUrl" | "read" | "search" | "searchUrl">,
   target: string,
+  allowProjectInvisibleUser = false,
 ): Promise<ResolvedRoleGrantTarget> {
   const practitionerReference = target.match(/^Practitioner\/([^/]+)$/);
   let practitioners: Practitioner[];
@@ -295,7 +312,13 @@ export async function resolvePracticeRoleTarget(
   }
   const { practitioner, membership } = candidates[0]!;
   // Medplum $update-email does not sync ProjectMembership.user.display; manual renames must patch it too.
-  const email = await readMembershipUserEmail(fhir, membership) ?? practitionerEmail(practitioner);
+  let userEmail: string | undefined;
+  try {
+    userEmail = await readMembershipUserEmail(fhir, membership);
+  } catch (error) {
+    if (!allowProjectInvisibleUser || (error as { status?: number }).status !== 404) throw error;
+  }
+  const email = userEmail ?? practitionerEmail(practitioner);
   if (!email) {
     throw new Error(`Could not resolve the target email from ${membership.profile.reference ?? target}.`);
   }
@@ -373,19 +396,44 @@ async function runCli(): Promise<void> {
     await fhir.getActiveProjectId(),
     "authenticated repair project",
   );
+  const contractBootstrap = contractBootstrapRepairEnabled({
+    enabled: process.env.MEDPLUM_CONTRACT_BOOTSTRAP === "1",
+    githubActions: process.env.GITHUB_ACTIONS,
+    baseUrl,
+  });
   const primaryRole = devPrimaryRole(process.env.ODOS_DEV_PRIMARY_ROLE);
   const result = await repairPracticeRoles(
-    new LivePracticeRoleRepairAdapter(fhir),
+    new LivePracticeRoleRepairAdapter(fhir, contractBootstrap),
     target,
     primaryRole,
     email,
+    contractBootstrap,
   );
   console.log(`Role policies created: ${result.createdPolicies.length} [${result.createdPolicies.join(", ")}]`);
   console.log(`Role policies tagged: ${result.taggedPolicies.length} [${result.taggedPolicies.join(", ")}]`);
   console.log(`Role policies already correct: ${result.existingPolicies.length} [${result.existingPolicies.join(", ")}]`);
   console.log(`${result.membershipReference} target: ${result.targetEmail}`);
   console.log(`Membership reconciliation: ${result.membershipChanged ? "CHANGED" : "ALREADY EXACT"}`);
+  console.log(`Roles granted: [${result.grantedRoles.join(", ")}]`);
+  console.log(`Membership policy bindings: [${result.policyBindings.join(", ")}]`);
   console.log(`Dev login primary role: ${result.primaryRole}`);
+}
+
+export function contractBootstrapRepairEnabled(input: {
+  enabled: boolean;
+  githubActions: string | undefined;
+  baseUrl: string;
+}): boolean {
+  if (!input.enabled) return false;
+  if (input.githubActions !== "true") {
+    throw new Error("MEDPLUM_CONTRACT_BOOTSTRAP practice-role repair requires GitHub Actions.");
+  }
+  if (input.baseUrl !== "http://localhost:18103") {
+    throw new Error(
+      "MEDPLUM_CONTRACT_BOOTSTRAP practice-role repair requires the ephemeral http://localhost:18103 Medplum.",
+    );
+  }
+  return true;
 }
 
 export function devPrimaryRole(value: string | undefined): DevAdminPrimaryRole {

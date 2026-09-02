@@ -27,6 +27,7 @@ import { buildOpticalInvoice } from "../src/fhir/opticalInvoice.js";
 import { buildPaymentReconciliation } from "../src/payments/payment-reconciliation.js";
 import {
   createAuthenticatedFhirClient,
+  exportContractProjectIdForGitHubActions,
   loadRepoEnv,
   requireMedplumAdmin,
 } from "./integration-helpers.js";
@@ -72,6 +73,7 @@ before(async () => {
 
   await ensureContractIdentity({ baseUrl, email, password });
   const { fhir, accessToken } = await createAuthenticatedFhirClient({ baseUrl, email, password });
+  exportContractProjectIdForGitHubActions(await fhir.getActiveProjectId());
   fixture = await seedSmokeFixture(fhir, baseUrl, accessToken);
 });
 

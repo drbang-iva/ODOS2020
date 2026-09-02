@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -67,6 +67,28 @@ test("missing UI dependencies fail with the three-level-install instruction", ()
   assert.equal(result.status, 1);
   assert.match(result.stderr, /ui deps not installed; run npm install in ui\//);
   assert.doesNotMatch(`${result.stdout}\n${result.stderr}`, /ERR_MODULE_NOT_FOUND/);
+});
+
+test("contract bootstrap project export is a no-op outside GitHub Actions", async () => {
+  const helpers = await import("./integration-helpers.js");
+  const exportProjectId = (helpers as unknown as Record<string, unknown>)
+    .exportContractProjectIdForGitHubActions;
+
+  assert.ok(typeof exportProjectId === "function");
+  assert.doesNotThrow(() => exportProjectId("practice-project", {}));
+});
+
+test("contract bootstrap exports the observed project id for later GitHub Actions steps", async () => {
+  const helpers = await import("./integration-helpers.js");
+  const exportProjectId = (helpers as unknown as Record<string, unknown>)
+    .exportContractProjectIdForGitHubActions;
+  const directory = mkdtempSync(resolve(tmpdir(), "odos-github-env-"));
+  const environmentPath = resolve(directory, "github-env");
+  tempDirectories.push(directory);
+
+  assert.ok(typeof exportProjectId === "function");
+  exportProjectId("practice-project", { GITHUB_ENV: environmentPath });
+  assert.equal(readFileSync(environmentPath, "utf8"), "MEDPLUM_PROJECT_ID=practice-project\n");
 });
 
 function runFixture(
