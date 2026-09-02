@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { fhir } from "../../lib/fhir";
 import { voidEncounterEntries } from "../../lib/encounter-void";
 import { ClearSectionButton, RemoveValueButton } from "./ClearControls";
 import { useEncounterEdit } from "./encounter-edit-context";
+import { usePersistedVoidEntries } from "./use-persisted-void-entries";
 import { assertTransactionSuccess } from "../../lib/encounter-bundles";
 import {
   buildSectionSaveBundle,
@@ -35,6 +36,13 @@ export function VaSection({ patientReference, encounterReference, onSaved }: Pro
   const [saved, setSaved] = useState<SectionSaveStatus | null>(null);
   const [savedEyes, setSavedEyes] = useState<Array<"OD" | "OS">>([]);
   const { onCleared } = useEncounterEdit();
+  // Values persisted before this session are recorded values too: offer their × on reopen.
+  const persisted = usePersistedVoidEntries(encounterReference, "va");
+  useEffect(() => {
+    if (!persisted.loaded) return;
+    const eyes = [...new Set(persisted.entries.flatMap((entry) => entry.laterality === "OD" || entry.laterality === "OS" ? [entry.laterality] : []))];
+    setSavedEyes((current) => [...new Set([...current, ...eyes])]);
+  }, [persisted]);
 
   function emptyRows(): Record<"OD" | "OS", VaRowState> {
     return {
@@ -107,7 +115,6 @@ export function VaSection({ patientReference, encounterReference, onSaved }: Pro
             sectionKey="va"
             label="Visual acuity"
             hasRecorded={savedEyes.length > 0}
-            probeOnMount
             onCleared={(result) => {
               setRows(emptyRows());
               setSavedEyes([]);

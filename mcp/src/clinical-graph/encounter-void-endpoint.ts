@@ -116,10 +116,20 @@ export interface VoidSectionSummary {
   count: number;
 }
 
+/** One live Observation the request would void, identified so a reopened sheet can rehydrate its per-item controls. */
+export interface VoidCandidateEntry {
+  reference: string;
+  sectionKey: string;
+  findingKey: string;
+  laterality: VoidLaterality;
+}
+
 export interface EncounterVoidResponse {
   voided: string[];
   count: number;
   sections: VoidSectionSummary[];
+  /** Every Observation in `voided`, with its section, finding key, and laterality. */
+  entries: VoidCandidateEntry[];
   preview: boolean;
   /** The encounter's Undo ledger after this request — what the client renders its strips from. */
   ledger: EncounterUndoLedger;
@@ -298,11 +308,17 @@ export async function handleEncounterVoidRequest(
     ...conditions.map((condition) => `Condition/${condition.id}`),
     ...complaints.map((row) => `Basic/${row.resource.id}`),
   ];
+  const entries: VoidCandidateEntry[] = targetObservations.map((row) => ({
+    reference: `Observation/${row.observation.id}`,
+    sectionKey: row.sectionKey,
+    findingKey: row.findingKey,
+    laterality: row.laterality,
+  }));
   const ledgerRow = await new FhirEncounterUndoLedgerStore(staff.fhir).readRow(encounterId);
   const currentLedger = ledgerRow?.ledger ?? emptyEncounterUndoLedger(encounterId);
   const preview = request.preview === true;
   if (preview || voided.length === 0) {
-    const response: EncounterVoidResponse = { voided, count: voided.length, sections, preview, ledger: currentLedger };
+    const response: EncounterVoidResponse = { voided, count: voided.length, sections, entries, preview, ledger: currentLedger };
     return { status: 200, body: response };
   }
 
@@ -365,7 +381,7 @@ export async function handleEncounterVoidRequest(
           [slotKeys[0] ?? OTHER_SECTION_KEY]: slot,
         },
       };
-  const response: EncounterVoidResponse = { voided, count: voided.length, sections, preview, ledger: nextLedger };
+  const response: EncounterVoidResponse = { voided, count: voided.length, sections, entries, preview, ledger: nextLedger };
 
   // --- One transaction ------------------------------------------------------------------
   const complaintProvenance: ClinicalGraphProvenance = {
@@ -382,33 +398,33 @@ export async function handleEncounterVoidRequest(
     now,
     activity: { code: "VOID", display: "Void before sign", note: VOID_PROVENANCE_NOTE },
   });
-  const entries: NonNullable<Bundle["entry"]> = [];
+  const transactionEntries: NonNullable<Bundle["entry"]> = [];
   for (const { observation } of targetObservations) {
-    entries.push(putEntry(`Observation/${observation.id}`, { ...observation, status: "entered-in-error" }, observation.meta?.versionId));
-    entries.push({ resource: provenanceFor(`Observation/${observation.id}`), request: { method: "POST", url: "Provenance" } });
+    transactionEntries.push(putEntry(`Observation/${observation.id}`, { ...observation, status: "entered-in-error" }, observation.meta?.versionId));
+    transactionEntries.push({ resource: provenanceFor(`Observation/${observation.id}`), request: { method: "POST", url: "Provenance" } });
   }
   for (const administration of administrations) {
-    entries.push(putEntry(
+    transactionEntries.push(putEntry(
       `MedicationAdministration/${administration.id}`,
       { ...administration, status: "entered-in-error" },
       administration.meta?.versionId,
     ));
-    entries.push({
+    transactionEntries.push({
       resource: provenanceFor(`MedicationAdministration/${administration.id}`),
       request: { method: "POST", url: "Provenance" },
     });
   }
   for (const condition of conditions) {
     const { clinicalStatus: _clinicalStatus, ...withoutClinicalStatus } = condition;
-    entries.push(putEntry(
+    transactionEntries.push(putEntry(
       `Condition/${condition.id}`,
       { ...withoutClinicalStatus, verificationStatus: verificationStatusConcept("entered-in-error") },
       condition.meta?.versionId,
     ));
-    entries.push({ resource: provenanceFor(`Condition/${condition.id}`), request: { method: "POST", url: "Provenance" } });
+    transactionEntries.push({ resource: provenanceFor(`Condition/${condition.id}`), request: { method: "POST", url: "Provenance" } });
   }
   for (const { resource, complaint } of complaints) {
-    entries.push(putEntry(
+    transactionEntries.push(putEntry(
       `Basic/${resource.id}`,
       buildEncounterComplaintResource({
         ...complaint,
@@ -430,11 +446,11 @@ export async function handleEncounterVoidRequest(
     const diagnosis = (nextEncounter.diagnosis ?? []).filter((row) => !retracted.has(row.condition.reference ?? ""));
     nextEncounter = diagnosis.length ? { ...nextEncounter, diagnosis } : stripDiagnosis(nextEncounter);
   }
-  entries.push(putEntry(encounterReference, nextEncounter, encounter.meta?.versionId));
+  transactionEntries.push(putEntry(encounterReference, nextEncounter, encounter.meta?.versionId));
   // The ledger is written by the void, in the void's transaction: a void without its Undo
   // slot, or a slot without its void, cannot exist.
-  entries.push(ledgerEntry(nextLedger, ledgerRow?.resource));
-  const transaction: Bundle = { resourceType: "Bundle", type: "transaction", entry: entries };
+  transactionEntries.push(ledgerEntry(nextLedger, ledgerRow?.resource));
+  const transaction: Bundle = { resourceType: "Bundle", type: "transaction", entry: transactionEntries };
   try {
     const result = await staff.fhir.executeTransaction(transaction, VOID_WRITE_HEADERS);
     assertSuccessfulTransaction(transaction, result);

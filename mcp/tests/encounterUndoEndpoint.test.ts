@@ -484,3 +484,32 @@ test("the ledger read requires authentication and chart.read, and 404s for an un
   assert.equal(empty.status, 200);
   assert.deepEqual((empty.body as LedgerBody).ledger, { encounterId: "e1", encounter: null, sections: {} });
 });
+
+// ---------------------------------------------------------------------------
+// Fixback after evaluation of 02c8155c — P2 #2: per-item controls must survive reopen
+// ---------------------------------------------------------------------------
+
+test("fixback P2#2: preview lists every candidate with its section, finding key, and laterality so a reopened sheet can rehydrate its per-item controls", async () => {
+  const { deps, fhir } = fixture();
+  fhir.add(observation("iop-od", "intraocular_pressure", "OD", { status: "preliminary" }));
+  fhir.add(observation("iop-os", "intraocular_pressure", "OS", { status: "preliminary" }));
+  fhir.add(cvf("cvf-od", "OD"));
+  fhir.add(cvf("gone", "OS", { status: "entered-in-error" }));
+
+  const result = await handleEncounterVoidRequest(deps, { authHeader: AUTH, params: PARAMS, body: { scope: "section", sectionKey: "tonometry", preview: true } });
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  const body = result.body as VoidBody & { entries?: Array<{ reference: string; sectionKey: string; findingKey: string; laterality: string }> };
+  assert.deepEqual(
+    [...(body.entries ?? [])].sort((left, right) => left.reference.localeCompare(right.reference)),
+    [
+      { reference: "Observation/iop-od", sectionKey: "tonometry", findingKey: "intraocular_pressure", laterality: "OD" },
+      { reference: "Observation/iop-os", sectionKey: "tonometry", findingKey: "intraocular_pressure", laterality: "OS" },
+    ],
+    "entries name each live candidate of the requested section, never another section's and never a voided one",
+  );
+  assert.equal(fhir.transactions.length, 0, "a preview writes nothing");
+
+  const everything = await handleEncounterVoidRequest(deps, { authHeader: AUTH, params: PARAMS, body: { scope: "encounter", preview: true } });
+  const all = (everything.body as { entries?: Array<{ reference: string }> }).entries ?? [];
+  assert.deepEqual([...all.map((entry) => entry.reference)].sort(), ["Observation/cvf-od", "Observation/iop-od", "Observation/iop-os"]);
+});

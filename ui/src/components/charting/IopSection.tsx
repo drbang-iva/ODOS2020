@@ -3,6 +3,7 @@ import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-clie
 import { voidEncounterEntries } from "../../lib/encounter-void";
 import { ClearSectionButton, RemoveValueButton } from "./ClearControls";
 import { useEncounterEdit } from "./encounter-edit-context";
+import { referencesByEye, usePersistedVoidEntries } from "./use-persisted-void-entries";
 import { IopTimeline } from "./IopTimeline";
 import { numericOptions } from "./power-options";
 import { PowerDropdown } from "./PowerDropdown";
@@ -81,6 +82,13 @@ export function IopSection({ patientReference, encounterReference, onSaved }: Pr
   const [definitionLoading, setDefinitionLoading] = useState(true);
   const [rows, setRows] = useState<Record<Eye, EyeState>>(() => initialRows());
   const [results, setResults] = useState<Partial<Record<Eye, IopEyeResult>>>({});
+  // IOP (and corneal hysteresis) Observations this visit already holds per eye, so the × and
+  // Clear section are offered on reopen, not only after a save in this session.
+  const [savedReferences, setSavedReferences] = useState<Partial<Record<Eye | "OU", string[]>>>({});
+  const persisted = usePersistedVoidEntries(encounterReference, "tonometry");
+  useEffect(() => {
+    if (persisted.loaded) setSavedReferences(referencesByEye(persisted.entries));
+  }, [persisted]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<SectionSaveStatus | null>(null);
@@ -145,11 +153,17 @@ export function IopSection({ patientReference, encounterReference, onSaved }: Pr
 
   async function removeEye(eye: Eye) {
     const result = results[eye];
-    if (!result) return;
-    const references = [result.observationReference, result.cornealHysteresisObservationReference].filter((reference): reference is string => Boolean(reference));
+    // Everything this visit holds for the eye: what was saved this session plus what was persisted before it.
+    const references = [...new Set([
+      result?.observationReference,
+      result?.cornealHysteresisObservationReference,
+      ...(savedReferences[eye] ?? []),
+    ].filter((reference): reference is string => Boolean(reference)))];
+    if (references.length === 0) return;
     try {
       const voided = await voidEncounterEntries(encounterReference, { scope: "observation", observationReference: references });
       setResults((current) => { const next = { ...current }; delete next[eye]; return next; });
+      setSavedReferences((current) => { const next = { ...current }; delete next[eye]; return next; });
       setSaved(null);
       setTimelineRefresh((current) => current + 1);
       onCleared?.({ scope: "observation", result: voided });
@@ -161,6 +175,7 @@ export function IopSection({ patientReference, encounterReference, onSaved }: Pr
   function resetRows() {
     setRows((current) => Object.fromEntries(EYES.map((eye) => [eye, { ...initialRows()[eye], method: current[eye].method }])) as Record<Eye, EyeState>);
     setResults({});
+    setSavedReferences({});
     setSaved(null);
     setError(null);
     setTimelineRefresh((current) => current + 1);
@@ -226,8 +241,7 @@ export function IopSection({ patientReference, encounterReference, onSaved }: Pr
             encounterReference={encounterReference}
             sectionKey="tonometry"
             label="IOP"
-            hasRecorded={Object.keys(results).length > 0}
-            probeOnMount
+            hasRecorded={Object.keys(results).length > 0 || Object.keys(savedReferences).length > 0}
             onCleared={(result) => {
               resetRows();
               onCleared?.({ scope: "section", result });
@@ -251,7 +265,7 @@ export function IopSection({ patientReference, encounterReference, onSaved }: Pr
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-2 text-sm font-semibold text-white">
                     <span>{eye}</span>
-                    {result && <RemoveValueButton label={`IOP ${eye}`} onRemove={() => removeEye(eye)} />}
+                    {(result || (savedReferences[eye]?.length ?? 0) > 0) && <RemoveValueButton label={`IOP ${eye}`} onRemove={() => removeEye(eye)} />}
                   </div>
                   <label className="flex items-center gap-2 text-sm text-white/70">
                     <input

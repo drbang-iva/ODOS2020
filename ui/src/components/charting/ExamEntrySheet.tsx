@@ -75,12 +75,19 @@ export function useExamEntrySheetGuard(sectionId?: ExamEntrySheetSectionId) {
   const rememberFocus = useCallback((element: HTMLElement) => {
     lastFocusRef.current = element;
   }, []);
-  const requestTransition = useCallback((destinationTitle: string | undefined, transition: () => void) => {
+  const requestTransition = useCallback((
+    destinationTitle: string | undefined,
+    transition: () => void,
+    /** Overrides the discard question — e.g. an Undo that will remount the sheet. `{title}` is the sheet's title. */
+    messageTemplate?: string,
+  ) => {
     if (sectionId && dirtyRef.current) {
       const currentTitle = EXAM_ENTRY_SHEET_CONFIG[sectionId].title;
-      const message = destinationTitle
-        ? `Discard unsaved changes in ${currentTitle} and open ${destinationTitle}?`
-        : `Discard unsaved changes in ${currentTitle}?`;
+      const message = messageTemplate
+        ? messageTemplate.replace("{title}", currentTitle)
+        : destinationTitle
+          ? `Discard unsaved changes in ${currentTitle} and open ${destinationTitle}?`
+          : `Discard unsaved changes in ${currentTitle}?`;
       if (typeof window === "undefined" || typeof window.confirm !== "function" || !window.confirm(message)) {
         lastFocusRef.current?.focus();
         return false;
@@ -156,7 +163,7 @@ export function ExamEntrySheet({
     .find((button) => !button.closest("[data-entry-sheet-chrome]") && button.textContent?.trim() === "Cancel");
   const markEventDirty = (target: EventTarget | null) => {
     onDirty?.();
-    const element = target instanceof Element ? target : undefined;
+    const element = isElement(target) ? target : undefined;
     const editorRoot = findInnerCancel()?.parentElement?.parentElement;
     if (element && editorRoot && !editorRoot.contains(element)) onDirtyCheckpoint?.();
   };
@@ -196,7 +203,7 @@ export function ExamEntrySheet({
         onInputCapture={(event) => markEventDirty(event.target)}
         onChangeCapture={(event) => markEventDirty(event.target)}
         onClickCapture={(event) => {
-          const target = event.target instanceof Element ? event.target : undefined;
+          const target = isElement(event.target) ? event.target : undefined;
           const control = target?.closest('button, [role="button"]');
           if (!control) return;
           if (control.closest("[data-entry-sheet-chrome], [data-entry-sheet-pristine-action]")) return;
@@ -248,4 +255,9 @@ export function ExamEntrySheet({
       </aside>
     </div>
   );
+}
+
+/** `Element` only exists in a browser; the sheet's dirty tracking must not throw elsewhere. */
+function isElement(target: EventTarget | null): target is Element {
+  return typeof Element !== "undefined" && target instanceof Element;
 }

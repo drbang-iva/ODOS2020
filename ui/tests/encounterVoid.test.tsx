@@ -530,17 +530,39 @@ test("fixback 4: VA, IOP, and Auto-refraction offer Clear section on reopen when
     { name: "IOP", label: "Clear IOP", sectionKey: "tonometry", element: <IopSection patientReference="Patient/p1" encounterReference={ENCOUNTER} onSaved={() => undefined} /> },
     { name: "Auto-refraction", label: "Clear Auto-refraction / Auto-K", sectionKey: "auto-refraction", element: <AutoRefractionSection patientReference="Patient/p1" encounterReference={ENCOUNTER} onSaved={() => undefined} /> },
   ];
+  // What the server holds for each surface on reopen: one value per eye, plus the binocular PD for Auto-refraction.
+  const persisted: Record<string, Array<{ reference: string; sectionKey: string; findingKey: string; laterality: string }>> = {
+    va: [
+      { reference: "Observation/va-od", sectionKey: "va", findingKey: "VISUAL_ACUITY", laterality: "OD" },
+      { reference: "Observation/va-os", sectionKey: "va", findingKey: "VISUAL_ACUITY", laterality: "OS" },
+    ],
+    tonometry: [
+      { reference: "Observation/iop-od", sectionKey: "tonometry", findingKey: "intraocular_pressure", laterality: "OD" },
+      { reference: "Observation/ch-od", sectionKey: "tonometry", findingKey: "corneal_hysteresis", laterality: "OD" },
+      { reference: "Observation/iop-os", sectionKey: "tonometry", findingKey: "intraocular_pressure", laterality: "OS" },
+    ],
+    "auto-refraction": [
+      { reference: "Observation/ar-od", sectionKey: "auto-refraction", findingKey: "auto_refraction", laterality: "OD" },
+      { reference: "Observation/ak-od", sectionKey: "auto-refraction", findingKey: "auto_keratometry", laterality: "OD" },
+      { reference: "Observation/pd", sectionKey: "auto-refraction", findingKey: "binocular_pd", laterality: "OU" },
+    ],
+  };
   for (const recorded of [true, false]) {
     for (const item of cases) {
       const originalFetch = globalThis.fetch;
       const previews: unknown[] = [];
+      const voids: unknown[] = [];
       globalThis.fetch = async (input, init) => {
         const url = String(input);
         if (url.endsWith("/void") && init?.method === "POST") {
           const body = JSON.parse(String(init.body)) as { preview?: boolean; sectionKey?: string };
+          if (!body.preview) {
+            voids.push(body);
+            return Response.json({ voided: [], count: 1, sections: [], preview: false });
+          }
           previews.push(body);
-          const count = recorded && body.preview ? 2 : 0;
-          return Response.json({ voided: [], count, sections: [], preview: true });
+          const entries = recorded ? persisted[item.sectionKey]! : [];
+          return Response.json({ voided: entries.map((entry) => entry.reference), count: entries.length, sections: [], preview: true, entries });
         }
         if (url.endsWith("/clinical-graph/iop/definition")) {
           return Response.json({ definitions: { intraocularPressure: { fields: { method: { options: [{ code: "GAT", display: "GAT", active: true }] } } }, cornealHysteresis: { fields: {} } } });
@@ -561,6 +583,28 @@ test("fixback 4: VA, IOP, and Auto-refraction offer Clear section on reopen when
         const button = findClearButton(renderer.root, item.label);
         if (recorded) assert.ok(button, `${item.name}: Clear section must appear for persisted values`);
         else assert.equal(button, undefined, `${item.name}: nothing recorded, nothing to clear`);
+
+        // Fixback P2#2 (02c8155c eval): the per-item × must be offered on reopen too — §2 says "× on any
+        // recorded value", and a value persisted before this session is still a recorded value.
+        const removeLabels = renderer.root.findAll((node) => node.type === "button" && typeof node.props["aria-label"] === "string" && node.props["aria-label"].startsWith("Remove "))
+          .map((node) => node.props["aria-label"] as string).sort();
+        const expected = {
+          VA: ["Remove Visual acuity OD", "Remove Visual acuity OS"],
+          IOP: ["Remove IOP OD", "Remove IOP OS"],
+          "Auto-refraction": ["Remove Auto-refraction OD", "Remove Binocular PD"],
+        }[item.name]!;
+        assert.deepEqual(removeLabels, recorded ? expected : [], `${item.name}: per-item controls on reopen`);
+        if (recorded) {
+          // And the × voids the persisted references, not a stale in-session copy.
+          const first = renderer.root.findAll((node) => node.type === "button" && node.props["aria-label"] === expected[0])[0]!;
+          await act(async () => { await first.props.onClick(); await flush(); });
+          const expectedVoid = {
+            VA: { scope: "finding", findingKey: "VISUAL_ACUITY", laterality: "OD" },
+            IOP: { scope: "observation", observationReference: ["Observation/iop-od", "Observation/ch-od"] },
+            "Auto-refraction": { scope: "observation", observationReference: ["Observation/ar-od", "Observation/ak-od"] },
+          }[item.name]!;
+          assert.deepEqual(voids, [expectedVoid], `${item.name}: × voids exactly the persisted references for that eye`);
+        }
       } finally {
         renderer?.unmount();
         globalThis.fetch = originalFetch;

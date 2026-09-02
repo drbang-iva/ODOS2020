@@ -37,6 +37,7 @@ import { EomSection } from "../src/components/charting/EomSection";
 import { EncounterHeader } from "../src/components/charting/EncounterHeader";
 import { EyeGrowthSection } from "../src/components/charting/EyeGrowthSection";
 import { ExamEntrySheet } from "../src/components/charting/ExamEntrySheet";
+import type { EncounterUndoLedger } from "../src/lib/encounter-undo";
 import {
   ExamOverviewBoard,
   UNFORMATTED_FINDING_VALUE,
@@ -2367,6 +2368,106 @@ test("the permanent chart bar keeps draft state reserved instead of inferring it
   }
 });
 
+// ---------------------------------------------------------------------------
+// Fixback after evaluation of 02c8155c — the Undo ledger through EncounterCharting itself
+// ---------------------------------------------------------------------------
+
+const PENDING_UNDO_LEDGER: EncounterUndoLedger = {
+  encounterId: "exam-1",
+  encounter: {
+    voided: [{ ref: "Observation/o1", priorStatus: "final" }],
+    label: "everything charted",
+    count: 31,
+    at: "2026-09-01T15:00:00.000Z",
+    sectionKeys: [],
+    scope: "encounter",
+  },
+  sections: {
+    va: {
+      voided: [{ ref: "Observation/va-od", priorStatus: "preliminary" }],
+      label: "Visual acuity",
+      count: 2,
+      at: "2026-09-01T14:00:00.000Z",
+      sectionKeys: ["va"],
+      scope: "section",
+    },
+  },
+};
+
+function visibleSheet(harness: { renderer: ReactTestRenderer }): ReactTestInstance {
+  const sheet = harness.renderer.root.findAllByType(ExamEntrySheet).find((candidate) => !candidate.props.hidden);
+  assert.ok(sheet, "an entry sheet is open");
+  return sheet;
+}
+
+function undoButtonIn(node: ReactTestInstance): ReactTestInstance {
+  const strip = node.findByProps({ role: "status" });
+  return strip.findAllByType("button").find((button) => textContent(button) === "Undo")!;
+}
+
+test("fixback P2#3: the ledger loads with the encounter, both placements render from it, and an Undo removes its strip from the response ledger", async () => {
+  const harness = await renderEncounter(PROJECTION, { undoLedger: PENDING_UNDO_LEDGER });
+  try {
+    const bar = harness.renderer.root.findByProps({ "data-testid": "exam-chart-bar" });
+    const slots = bar.findAll((node) => typeof node.props["data-chart-bar-slot"] === "string").map((node) => node.props["data-chart-bar-slot"]);
+    assert.deepEqual(slots.slice(0, 4), ["patient", "cc-hpi-reserved", "exam-sections", "undo"], "the visit Undo sits beside exam-sections");
+    const visitSlot = bar.findByProps({ "data-chart-bar-slot": "undo" });
+    assert.match(textContent(visitSlot), /Cleared everything charted · 31 values/);
+
+    act(() => harness.renderer.root.findByType(ExamOverviewBoard).props.onOpenEditor("va"));
+    const sheet = visibleSheet(harness);
+    assert.equal(sheet.props.sectionId, "va");
+    const strip = sheet.findByProps({ "data-undo-scope": "section" });
+    assert.match(textContent(strip), /Cleared Visual acuity · 2 values/, "the sheet strip is scoped to VA's own slot");
+
+    await act(async () => { await undoButtonIn(sheet).props.onClick(); await flushEffects(); await flushEffects(); });
+    assert.deepEqual(harness.undoRequests, [{ scope: "section", sectionKey: "va" }]);
+    assert.equal(visibleSheet(harness).findAllByProps({ "data-undo-scope": "section" }).length, 0, "the strip is gone: the response ledger replaced ours");
+    assert.equal(harness.renderer.root.findAllByProps({ "data-chart-bar-slot": "undo" }).length, 1, "the visit slot the response ledger still holds stays");
+
+    await act(async () => { await undoButtonIn(harness.renderer.root.findByProps({ "data-chart-bar-slot": "undo" })).props.onClick(); await flushEffects(); await flushEffects(); });
+    assert.deepEqual(harness.undoRequests, [{ scope: "section", sectionKey: "va" }, { scope: "encounter" }]);
+    assert.equal(harness.renderer.root.findAllByProps({ "data-chart-bar-slot": "undo" }).length, 0, "the visit Undo is gone once the response ledger no longer holds it");
+  } finally {
+    harness.restore();
+  }
+});
+
+test("fixback P2#1: Undo on a dirty sheet asks before discarding unsaved edits, and a declined confirm sends nothing", async () => {
+  const harness = await renderEncounter(PROJECTION, { undoLedger: PENDING_UNDO_LEDGER });
+  const confirmations: string[] = [];
+  let answer = false;
+  Object.assign(globalThis.window, { confirm: (message: string) => { confirmations.push(message); return answer; } });
+  try {
+    act(() => harness.renderer.root.findByType(ExamOverviewBoard).props.onOpenEditor("va"));
+    const sheet = visibleSheet(harness);
+    const aside = sheet.findByProps({ "data-testid": "exam-entry-sheet" });
+    act(() => { aside.props.onInputCapture({ target: null }); });
+
+    await act(async () => { await undoButtonIn(sheet).props.onClick(); await flushEffects(); });
+    assert.equal(confirmations.length, 1, "a dirty sheet asks first");
+    assert.match(confirmations[0]!, /unsaved changes in Visual Acuity/i);
+    assert.deepEqual(harness.undoRequests, [], "declined: nothing is undone and nothing is discarded");
+    assert.equal(visibleSheet(harness).findAllByProps({ "data-undo-scope": "section" }).length, 1, "the strip stays");
+
+    answer = true;
+    await act(async () => { await undoButtonIn(visibleSheet(harness)).props.onClick(); await flushEffects(); await flushEffects(); });
+    assert.equal(confirmations.length, 2);
+    assert.deepEqual(harness.undoRequests, [{ scope: "section", sectionKey: "va" }], "accepted: the undo proceeds");
+
+    // The visit-level Undo in the chart bar guards the open sheet the same way.
+    act(() => harness.renderer.root.findByType(ExamOverviewBoard).props.onOpenEditor("va"));
+    act(() => { visibleSheet(harness).findByProps({ "data-testid": "exam-entry-sheet" }).props.onInputCapture({ target: null }); });
+    answer = false;
+    const before = harness.undoRequests.length;
+    await act(async () => { await undoButtonIn(harness.renderer.root.findByProps({ "data-chart-bar-slot": "undo" })).props.onClick(); await flushEffects(); });
+    assert.equal(confirmations.length, 3, "the chart-bar Undo asks too while a dirty sheet is open");
+    assert.equal(harness.undoRequests.length, before);
+  } finally {
+    harness.restore();
+  }
+});
+
 test("a zero-finding comprehensive encounter renders every required trace row with its projected state", () => {
   const renderer = create(
     <ExamOverviewBoard
@@ -3583,6 +3684,8 @@ interface RenderEncounterOptions {
   hpiGenericOptions?: GenericComplaintOptions;
   hpiSavedComplaints?: EncounterComplaint[];
   overviewAfterHpiCapture?: unknown;
+  /** Served at GET .../void/ledger when the encounter loads. */
+  undoLedger?: EncounterUndoLedger;
 }
 
 async function renderEncounter(projection: unknown, options: RenderEncounterOptions = {}): Promise<{
@@ -3592,6 +3695,8 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
   hpiCaptureCount: () => number;
   overviewErrors: unknown[][];
   focusRestoreCount: () => number;
+  /** Every POST .../void/undo body, in order. The fake answers each with the empty ledger. */
+  undoRequests: unknown[];
   restore: () => void;
 }> {
   const originalFetch = globalThis.fetch;
@@ -3621,8 +3726,23 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
   let findingsFetches = 0;
   let hpiCaptures = 0;
   let focusRestores = 0;
+  const undoRequests: unknown[] = [];
+  let undoLedgerState: EncounterUndoLedger | undefined = options.undoLedger;
   globalThis.fetch = (async (input, init) => {
     const url = String(input);
+    if (url.endsWith("/clinical-graph/encounters/exam-1/void/ledger")) {
+      return jsonResponse({ ledger: options.undoLedger ?? { encounterId: "exam-1", encounter: null, sections: {} } });
+    }
+    if (url.endsWith("/clinical-graph/encounters/exam-1/void/undo") && init?.method === "POST") {
+      const body = JSON.parse(String(init.body)) as { scope: string; sectionKey?: string };
+      undoRequests.push(body);
+      // Like the server: an undo clears exactly its own slot and returns the ledger that remains.
+      const current = undoLedgerState ?? { encounterId: "exam-1", encounter: null, sections: {} };
+      undoLedgerState = body.scope === "encounter"
+        ? { ...current, encounter: null }
+        : { ...current, sections: Object.fromEntries(Object.entries(current.sections).filter(([key]) => key !== body.sectionKey)) };
+      return jsonResponse({ restored: ["Observation/o1"], count: 1, skipped: [], ...body, ledger: undoLedgerState });
+    }
     if (url.endsWith("/clinical-graph/encounters/exam-1/exam-overview")) {
       const responses = options.overviewResponses ?? [projection];
       const response = options.overviewAfterHpiCapture !== undefined && hpiCaptures > 0
@@ -3792,6 +3912,7 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
     hpiCaptureCount: () => hpiCaptures,
     overviewErrors,
     focusRestoreCount: () => focusRestores,
+    undoRequests,
     restore: () => {
       act(() => renderer.unmount());
       fhir.read = originalRead;

@@ -211,6 +211,10 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   // response's ledger replaces ours (the slot is gone). The open section remounts so its
   // history shows the restored values.
   async function handleUndo(request: EncounterUndoRequest) {
+    // The remount below discards whatever is typed and unsaved in the open sheet. Undo is not
+    // an edit, so its button never marks the sheet dirty — but it must still respect what the
+    // clinician has typed since. Same guard, same question, as leaving the sheet.
+    if (entrySheetSection && !entrySheetGuard.requestTransition(undefined, () => undefined, "Undo will discard unsaved changes in {title}. Continue?")) return;
     const result = await undoEncounterVoid(encounterReference, request);
     setUndoLedger(result.ledger);
     setChartClearVersion((current) => current + 1);

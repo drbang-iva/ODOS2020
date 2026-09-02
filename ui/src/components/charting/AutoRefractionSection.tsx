@@ -3,6 +3,7 @@ import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-clie
 import { voidEncounterEntries } from "../../lib/encounter-void";
 import { ClearSectionButton, RemoveValueButton } from "./ClearControls";
 import { useEncounterEdit } from "./encounter-edit-context";
+import { referencesByEye, usePersistedVoidEntries } from "./use-persisted-void-entries";
 import { OdosSelect } from "../inputs/OdosSelect";
 import { OdosWheel } from "../inputs/OdosWheel";
 import { formatPowerOption, numericOptions } from "./power-options";
@@ -69,6 +70,20 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
   const [saved, setSaved] = useState<SectionSaveStatus | null>(null);
   const [savedReferences, setSavedReferences] = useState<Partial<Record<Eye | "OU", string[]>>>({});
   const { onCleared } = useEncounterEdit();
+  // Readings persisted before this session are recorded values too: offer their × on reopen.
+  const persisted = usePersistedVoidEntries(encounterReference, "auto-refraction");
+  useEffect(() => {
+    if (!persisted.loaded) return;
+    const hydrated = referencesByEye(persisted.entries);
+    setSavedReferences((current) => {
+      const next = { ...current };
+      for (const key of ["OD", "OS", "OU"] as const) {
+        const merged = [...new Set([...(current[key] ?? []), ...(hydrated[key] ?? [])])];
+        if (merged.length) next[key] = merged;
+      }
+      return next;
+    });
+  }, [persisted]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -225,7 +240,6 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
             sectionKey="auto-refraction"
             label="Auto-refraction / Auto-K"
             hasRecorded={Object.keys(savedReferences).length > 0}
-            probeOnMount
             onCleared={(result) => {
               resetForm();
               onCleared?.({ scope: "section", result });

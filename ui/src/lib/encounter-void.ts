@@ -36,10 +36,19 @@ export interface EncounterVoidSection {
   count: number;
 }
 
+/** One live Observation the request would void, identified so a reopened sheet can rehydrate its per-item controls. */
+export interface EncounterVoidEntry {
+  reference: string;
+  sectionKey: string;
+  findingKey: string;
+  laterality: EncounterVoidLaterality;
+}
+
 export interface EncounterVoidResult {
   voided: string[];
   count: number;
   sections: EncounterVoidSection[];
+  entries: EncounterVoidEntry[];
   preview: boolean;
   /** The encounter's Undo ledger after the void — present on every real void's response. */
   ledger?: EncounterUndoLedger;
@@ -77,6 +86,7 @@ export async function voidEncounterEntries(
     voided: body.voided ?? [],
     count: body.count ?? 0,
     sections: body.sections ?? [],
+    entries: Array.isArray(body.entries) ? body.entries : [],
     preview: body.preview === true,
     ...(body.ledger ? { ledger: parseUndoLedger({ ledger: body.ledger }, encounterId) } : {}),
   };
