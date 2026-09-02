@@ -22,6 +22,14 @@ import {
   parseEncounterComplaintResource,
 } from "./encounter-complaint-store.js";
 import { CLOSED_ENCOUNTER_EDIT_ERROR, isClosedEncounter } from "./encounter-sign-gate.js";
+import {
+  FhirEncounterUndoLedgerStore,
+  buildEncounterUndoLedgerResource,
+  emptyEncounterUndoLedger,
+  type EncounterUndoLedger,
+  type UndoLedgerEntry,
+  type UndoLedgerSlot,
+} from "./encounter-undo-ledger-store.js";
 import { isFhirConflict } from "./fhir-conflict.js";
 import { findingDefinitionForObservation } from "./finding-observation-match.js";
 import type { ClinicalFindingDefinition, ClinicalGraphProvenance } from "./glaucoma-suspect.js";
@@ -47,10 +55,16 @@ import { isLiveObservation } from "./observation-liveness.js";
  * belong to that visit's (signed) record and are never touched.
  *
  * `preview: true` resolves the same candidate set and returns the counts without writing.
+ *
+ * Every real void also writes the encounter's Undo ledger (§4b.4) IN THE SAME TRANSACTION:
+ * the slot for the action's scope — the visit slot for `encounter`, the section's slot for
+ * everything else — is overwritten with exactly the set this action voided and each
+ * resource's prior status. A visit clear empties every section slot (§4b.2 rule 3).
  */
 
 export const VOID_WRITE_HEADERS = { "X-ODOS-Source": "mcp/void_encounter_entries" } as const;
 export const VOID_PROVENANCE_NOTE = "Voided by clinician before sign.";
+export const ENCOUNTER_UNDO_LABEL = "everything charted";
 export const CONCURRENT_EDIT_MESSAGE =
   "This record was changed by someone else since you opened it. Reload and reapply your change.";
 
@@ -107,9 +121,17 @@ export interface EncounterVoidResponse {
   count: number;
   sections: VoidSectionSummary[];
   preview: boolean;
+  /** The encounter's Undo ledger after this request — what the client renders its strips from. */
+  ledger: EncounterUndoLedger;
 }
 
-const previewSchema = z.object({ preview: z.boolean().optional() });
+const sectionKeySchema = z.string().trim().min(1).max(200);
+const sectionKeysSchema = z.union([sectionKeySchema, z.array(sectionKeySchema).min(1).max(50)]);
+const previewSchema = z.object({
+  preview: z.boolean().optional(),
+  /** What the Undo strip should say was cleared ("Reactivity · OD"); the server derives one when absent. */
+  label: z.string().trim().min(1).max(120).optional(),
+});
 const observationReferenceSchema = z.string().regex(/^Observation\/[A-Za-z0-9.-]+$/);
 const requestSchema = z.discriminatedUnion("scope", [
   previewSchema.extend({
@@ -118,18 +140,18 @@ const requestSchema = z.discriminatedUnion("scope", [
       observationReferenceSchema,
       z.array(observationReferenceSchema).min(1).max(50),
     ]),
+    /** The sheet's own section key(s), so a two-definition sheet keeps one Undo slot. */
+    sectionKey: sectionKeysSchema.optional(),
   }).strict(),
   previewSchema.extend({
     scope: z.literal("finding"),
     findingKey: z.string().trim().min(1).max(200),
     laterality: z.enum(["OD", "OS", "OU", "UNKNOWN"]).optional(),
+    sectionKey: sectionKeysSchema.optional(),
   }).strict(),
   previewSchema.extend({
     scope: z.literal("section"),
-    sectionKey: z.union([
-      z.string().trim().min(1).max(200),
-      z.array(z.string().trim().min(1).max(200)).min(1).max(50),
-    ]),
+    sectionKey: sectionKeysSchema,
   }).strict(),
   previewSchema.extend({ scope: z.literal("encounter") }).strict(),
 ]);
@@ -143,7 +165,7 @@ interface IdentifiedObservation {
   laterality: VoidLaterality;
 }
 
-interface ComplaintRow {
+export interface ComplaintRow {
   resource: Basic & { id: string };
   complaint: EncounterComplaint;
 }
@@ -276,33 +298,89 @@ export async function handleEncounterVoidRequest(
     ...conditions.map((condition) => `Condition/${condition.id}`),
     ...complaints.map((row) => `Basic/${row.resource.id}`),
   ];
-  const response: EncounterVoidResponse = { voided, count: voided.length, sections, preview: request.preview === true };
-  if (request.preview === true || voided.length === 0) return { status: 200, body: response };
+  const ledgerRow = await new FhirEncounterUndoLedgerStore(staff.fhir).readRow(encounterId);
+  const currentLedger = ledgerRow?.ledger ?? emptyEncounterUndoLedger(encounterId);
+  const preview = request.preview === true;
+  if (preview || voided.length === 0) {
+    const response: EncounterVoidResponse = { voided, count: voided.length, sections, preview, ledger: currentLedger };
+    return { status: 200, body: response };
+  }
+
+  // --- The Undo ledger slot for this action (§4b.4) -------------------------------------
+  // priorStatus is recorded per resource so Undo restores what was there, not a constant.
+  const now = deps.now?.() ?? new Date().toISOString();
+  const diagnosisRows = new Map((encounter.diagnosis ?? []).map((row) => [row.condition.reference ?? "", row]));
+  const ledgerEntries: UndoLedgerEntry[] = [
+    ...targetObservations.map(({ observation }): UndoLedgerEntry => ({
+      ref: `Observation/${observation.id}`,
+      priorStatus: observation.status ?? "",
+    })),
+    ...administrations.map((administration): UndoLedgerEntry => ({
+      ref: `MedicationAdministration/${administration.id}`,
+      priorStatus: administration.status ?? "",
+    })),
+    ...conditions.map((condition): UndoLedgerEntry => {
+      const ref = `Condition/${condition.id}`;
+      const clinicalStatus = codeOf(condition.clinicalStatus);
+      const diagnosis = diagnosisRows.get(ref);
+      return {
+        ref,
+        priorStatus: codeOf(condition.verificationStatus) ?? "",
+        ...(clinicalStatus ? { clinicalStatus } : {}),
+        ...(diagnosis ? { diagnosis } : {}),
+      };
+    }),
+    ...complaints.map((row): UndoLedgerEntry => ({ ref: `Basic/${row.resource.id}`, priorStatus: row.complaint.status })),
+  ];
+  const slotKeys = request.scope === "encounter"
+    ? []
+    : request.scope === "section"
+      ? asList(request.sectionKey)
+      : request.sectionKey !== undefined
+        ? asList(request.sectionKey)
+        : [...new Set(targetObservations.map((row) => row.sectionKey))];
+  const slot: UndoLedgerSlot = {
+    voided: ledgerEntries,
+    label: request.label ?? (request.scope === "encounter"
+      ? ENCOUNTER_UNDO_LABEL
+      : request.scope === "section"
+        ? sectionLabel(slotKeys[0]!, definitions)
+        : tierOneLabel(targetObservations, definitions)),
+    count: voided.length,
+    at: now,
+    sectionKeys: slotKeys,
+    scope: request.scope,
+  };
+  const nextLedger: EncounterUndoLedger = request.scope === "encounter"
+    // Rule 1: one visit slot, the latest wins. Rule 3: a visit clear absorbs every section Undo.
+    ? { encounterId, encounter: slot, sections: {} }
+    // Rule 2: one slot per section. Every slot this action's keys cover (exactly or as a
+    // `key:` prefix, matching section-scope resolution) is replaced by this one.
+    : {
+        ...currentLedger,
+        sections: {
+          ...Object.fromEntries(Object.entries(currentLedger.sections).filter(([key]) =>
+            !slotKeys.some((slotKey) => key === slotKey || key.startsWith(`${slotKey}:`))
+          )),
+          [slotKeys[0] ?? OTHER_SECTION_KEY]: slot,
+        },
+      };
+  const response: EncounterVoidResponse = { voided, count: voided.length, sections, preview, ledger: nextLedger };
 
   // --- One transaction ------------------------------------------------------------------
-  const now = deps.now?.() ?? new Date().toISOString();
   const complaintProvenance: ClinicalGraphProvenance = {
     source: "manual",
     recordedAt: now,
     actorReference: staff.staffReference,
     note: VOID_PROVENANCE_NOTE,
   };
-  const provenanceFor = (target: string): Provenance => ({
-    resourceType: "Provenance",
-    target: [reference(target), reference(encounterReference), reference(patientReference)],
-    recorded: now,
-    occurredDateTime: now,
-    activity: { ...odosConcept("VOID", "Void before sign"), text: VOID_PROVENANCE_NOTE },
-    agent: [{
-      type: {
-        coding: [{
-          system: "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
-          code: "author",
-          display: "Author",
-        }],
-      },
-      who: reference(staff.staffReference),
-    }],
+  const provenanceFor = (target: string): Provenance => chartProvenance({
+    target,
+    encounterReference,
+    patientReference,
+    staffReference: staff.staffReference,
+    now,
+    activity: { code: "VOID", display: "Void before sign", note: VOID_PROVENANCE_NOTE },
   });
   const entries: NonNullable<Bundle["entry"]> = [];
   for (const { observation } of targetObservations) {
@@ -353,6 +431,9 @@ export async function handleEncounterVoidRequest(
     nextEncounter = diagnosis.length ? { ...nextEncounter, diagnosis } : stripDiagnosis(nextEncounter);
   }
   entries.push(putEntry(encounterReference, nextEncounter, encounter.meta?.versionId));
+  // The ledger is written by the void, in the void's transaction: a void without its Undo
+  // slot, or a slot without its void, cannot exist.
+  entries.push(ledgerEntry(nextLedger, ledgerRow?.resource));
   const transaction: Bundle = { resourceType: "Bundle", type: "transaction", entry: entries };
   try {
     const result = await staff.fhir.executeTransaction(transaction, VOID_WRITE_HEADERS);
@@ -399,7 +480,59 @@ function isLiveCondition(condition: Condition): boolean {
   return code !== "entered-in-error" && code !== "refuted";
 }
 
-async function activeComplaints(fhir: EncounterVoidFhirClient, encounterId: string): Promise<ComplaintRow[]> {
+function codeOf(concept: { coding?: Array<{ code?: string }> } | undefined): string | undefined {
+  return concept?.coding?.find((coding) => coding.code)?.code;
+}
+
+function asList(value: string | string[]): string[] {
+  return Array.isArray(value) ? value : [value];
+}
+
+/** "Pupils · OD" for a single-eye tier-1 remove; the section's display otherwise. */
+function tierOneLabel(targets: readonly IdentifiedObservation[], definitions: readonly ClinicalFindingDefinition[]): string {
+  const sectionKey = targets[0]?.sectionKey ?? OTHER_SECTION_KEY;
+  const label = sectionLabel(sectionKey, definitions);
+  const lateralities = new Set(targets.map((row) => row.laterality));
+  const laterality = lateralities.size === 1 ? [...lateralities][0] : undefined;
+  return laterality && laterality !== "UNKNOWN" ? `${label} · ${laterality}` : label;
+}
+
+/** The ledger Basic as a transaction entry: PUT version-guarded when it exists, POST otherwise. */
+export function ledgerEntry(ledger: EncounterUndoLedger, existing: Basic | undefined): NonNullable<Bundle["entry"]>[number] {
+  const resource = buildEncounterUndoLedgerResource(ledger, existing);
+  if (existing?.id) return putEntry(`Basic/${existing.id}`, resource, existing.meta?.versionId);
+  return { resource, request: { method: "POST", url: "Basic" } };
+}
+
+/** The one Provenance shape every pre-sign void and restore writes. */
+export function chartProvenance(input: {
+  target: string;
+  encounterReference: string;
+  patientReference: string;
+  staffReference: string;
+  now: string;
+  activity: { code: string; display: string; note: string };
+}): Provenance {
+  return {
+    resourceType: "Provenance",
+    target: [reference(input.target), reference(input.encounterReference), reference(input.patientReference)],
+    recorded: input.now,
+    occurredDateTime: input.now,
+    activity: { ...odosConcept(input.activity.code, input.activity.display), text: input.activity.note },
+    agent: [{
+      type: {
+        coding: [{
+          system: "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+          code: "author",
+          display: "Author",
+        }],
+      },
+      who: reference(input.staffReference),
+    }],
+  };
+}
+
+export async function activeComplaints(fhir: EncounterVoidFhirClient, encounterId: string): Promise<ComplaintRow[]> {
   const resources = await searchAll<Basic>(fhir, "Basic", {
     code: `${ENCOUNTER_COMPLAINT_CODE_SYSTEM}|${ENCOUNTER_COMPLAINT_CODE}`,
   });
@@ -511,7 +644,7 @@ function sectionLabel(sectionKey: string, definitions: readonly ClinicalFindingD
     sectionKey;
 }
 
-function putEntry(url: string, resource: Resource, versionId: string | undefined): NonNullable<Bundle["entry"]>[number] {
+export function putEntry(url: string, resource: Resource, versionId: string | undefined): NonNullable<Bundle["entry"]>[number] {
   return {
     resource,
     request: {
@@ -522,12 +655,12 @@ function putEntry(url: string, resource: Resource, versionId: string | undefined
   };
 }
 
-function stripDiagnosis(encounter: Encounter): Encounter {
+export function stripDiagnosis(encounter: Encounter): Encounter {
   const { diagnosis: _diagnosis, ...rest } = encounter;
   return rest;
 }
 
-function assertSuccessfulTransaction(request: Bundle, response: Bundle): void {
+export function assertSuccessfulTransaction(request: Bundle, response: Bundle): void {
   const entries = response.entry;
   if (response.type !== "transaction-response" || !entries || entries.length !== request.entry?.length) {
     throw new Error("Void did not return a complete transaction response.");
@@ -540,7 +673,7 @@ function assertSuccessfulTransaction(request: Bundle, response: Bundle): void {
   }
 }
 
-function readId(value: unknown, field: string): string | undefined {
+export function readId(value: unknown, field: string): string | undefined {
   if (!value || typeof value !== "object") return undefined;
   const id = (value as Record<string, unknown>)[field];
   return typeof id === "string" && /^[A-Za-z0-9.-]+$/.test(id) ? id : undefined;
