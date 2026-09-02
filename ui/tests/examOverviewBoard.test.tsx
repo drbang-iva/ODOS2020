@@ -2468,6 +2468,41 @@ test("fixback P2#1: Undo on a dirty sheet asks before discarding unsaved edits, 
   }
 });
 
+test("fixback 56ff8d36 P2#B: a failed Undo keeps the dirty-sheet guard armed — the typed edit stays, and leaving still asks", async () => {
+  const harness = await renderEncounter(PROJECTION, { undoLedger: PENDING_UNDO_LEDGER });
+  const confirmations: string[] = [];
+  let answer = true;
+  Object.assign(globalThis.window, { confirm: (message: string) => { confirmations.push(message); return answer; } });
+  try {
+    act(() => harness.renderer.root.findByType(ExamOverviewBoard).props.onOpenEditor("va"));
+    act(() => { visibleSheet(harness).findByProps({ "data-testid": "exam-entry-sheet" }).props.onInputCapture({ target: null }); });
+
+    harness.undoFailure.status = 503;
+    await act(async () => { await undoButtonIn(visibleSheet(harness)).props.onClick(); await flushEffects(); await flushEffects(); });
+    assert.equal(confirmations.length, 1, "the discard warning was asked and accepted");
+    assert.deepEqual(harness.undoRequests, [{ scope: "section", sectionKey: "va" }], "the undo was attempted");
+    const sheet = visibleSheet(harness);
+    assert.equal(sheet.props.sectionId, "va", "the sheet stays mounted with the typed edit");
+    assert.match(textContent(sheet.findByProps({ "data-undo-scope": "section" })), /Undo could not be applied/, "the failure is reported in the strip");
+
+    answer = false;
+    act(() => { sheet.findByProps({ "data-testid": "cancel-exam-entry-sheet" }).props.onClick(); });
+    assert.equal(confirmations.length, 2, "the failed Undo must leave the sheet dirty for the next transition");
+    assert.equal(visibleSheet(harness).props.sectionId, "va", "declined: the sheet with the typed edit is still there");
+
+    // And once an Undo succeeds, the guard is released so the remount does not ask twice.
+    harness.undoFailure.status = undefined;
+    answer = true;
+    await act(async () => { await undoButtonIn(visibleSheet(harness)).props.onClick(); await flushEffects(); await flushEffects(); });
+    assert.equal(confirmations.length, 3);
+    assert.equal(harness.undoRequests.length, 2);
+    act(() => { visibleSheet(harness).findByProps({ "data-testid": "cancel-exam-entry-sheet" }).props.onClick(); });
+    assert.equal(confirmations.length, 3, "a successful Undo committed the discard; leaving no longer asks");
+  } finally {
+    harness.restore();
+  }
+});
+
 test("a zero-finding comprehensive encounter renders every required trace row with its projected state", () => {
   const renderer = create(
     <ExamOverviewBoard
@@ -3695,8 +3730,10 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
   hpiCaptureCount: () => number;
   overviewErrors: unknown[][];
   focusRestoreCount: () => number;
-  /** Every POST .../void/undo body, in order. The fake answers each with the empty ledger. */
+  /** Every POST .../void/undo body, in order. The fake clears that slot and returns what remains. */
   undoRequests: unknown[];
+  /** Set `status` to make the next undo requests fail with that HTTP status. */
+  undoFailure: { status?: number };
   restore: () => void;
 }> {
   const originalFetch = globalThis.fetch;
@@ -3727,6 +3764,7 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
   let hpiCaptures = 0;
   let focusRestores = 0;
   const undoRequests: unknown[] = [];
+  const undoFailure: { status?: number } = {};
   let undoLedgerState: EncounterUndoLedger | undefined = options.undoLedger;
   globalThis.fetch = (async (input, init) => {
     const url = String(input);
@@ -3736,6 +3774,9 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
     if (url.endsWith("/clinical-graph/encounters/exam-1/void/undo") && init?.method === "POST") {
       const body = JSON.parse(String(init.body)) as { scope: string; sectionKey?: string };
       undoRequests.push(body);
+      if (undoFailure.status) {
+        return new Response(JSON.stringify({ error: "Undo could not be applied.", code: "undo-entry-unavailable" }), { status: undoFailure.status, headers: { "Content-Type": "application/json" } });
+      }
       // Like the server: an undo clears exactly its own slot and returns the ledger that remains.
       const current = undoLedgerState ?? { encounterId: "exam-1", encounter: null, sections: {} };
       undoLedgerState = body.scope === "encounter"
@@ -3913,6 +3954,7 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
     overviewErrors,
     focusRestoreCount: () => focusRestores,
     undoRequests,
+    undoFailure,
     restore: () => {
       act(() => renderer.unmount());
       fhir.read = originalRead;

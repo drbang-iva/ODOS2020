@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { isClosedEncounterStatus, previewEncounterVoid, type EncounterVoidEntry } from "../../lib/encounter-void";
-import { useEncounterEdit } from "./encounter-edit-context";
+import { previewEncounterVoid, type EncounterVoidEntry } from "../../lib/encounter-void";
 
 /**
  * What this visit already holds for a section, asked of the server once on open.
@@ -10,21 +9,22 @@ import { useEncounterEdit } from "./encounter-edit-context";
  * vanished on reopen. §2 says "× on any recorded value": a value persisted before this session
  * is still a recorded value. The void preview already identifies every live candidate with its
  * finding key and laterality; this hook hands that to the sheet so it can offer the same controls
- * it offers right after a save. A signed encounter is not previewed (the server refuses edits
- * there, and the controls render disabled regardless).
+ * it offers right after a save.
+ *
+ * A signed encounter is previewed too: the preview is read-only and the server allows it after
+ * sign, so the signed chart still shows its recorded values with their controls present-but-
+ * disabled (§3, §4b.5) instead of pretending nothing was recorded.
  */
 export function usePersistedVoidEntries(
   encounterReference: string,
   sectionKey: string | string[],
   fetchImpl?: typeof fetch,
 ): { entries: EncounterVoidEntry[]; loaded: boolean } {
-  const closed = isClosedEncounterStatus(useEncounterEdit().encounterStatus);
   const [state, setState] = useState<{ entries: EncounterVoidEntry[]; loaded: boolean }>({ entries: [], loaded: false });
   const keys = Array.isArray(sectionKey) ? sectionKey : [sectionKey];
   const keyId = keys.join("|");
 
   useEffect(() => {
-    if (closed) return;
     let cancelled = false;
     setState({ entries: [], loaded: false });
     previewEncounterVoid(encounterReference, { scope: "section", sectionKey: keys.length === 1 ? keys[0]! : keys }, fetchImpl)
@@ -32,7 +32,7 @@ export function usePersistedVoidEntries(
       .catch(() => { if (!cancelled) setState({ entries: [], loaded: true }); });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [closed, encounterReference, keyId, fetchImpl]);
+  }, [encounterReference, keyId, fetchImpl]);
 
   return state;
 }

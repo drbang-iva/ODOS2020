@@ -200,7 +200,10 @@ export async function handleEncounterVoidRequest(
   } catch {
     return { status: 404, body: { error: "Encounter not found." } };
   }
-  if (isClosedEncounter(encounter)) {
+  // The sign gate closes every write. A preview writes nothing and is allowed after sign: a signed
+  // chart still shows what it recorded, with its controls present-but-disabled (§3, §4b.5), so
+  // the sheet must still be able to learn what it holds.
+  if (isClosedEncounter(encounter) && parsed.data.preview !== true) {
     return { status: 409, body: { error: CLOSED_ENCOUNTER_EDIT_ERROR, code: "encounter-closed" } };
   }
   const patientReference = encounter.subject?.reference;

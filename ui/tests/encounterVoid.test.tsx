@@ -547,7 +547,10 @@ test("fixback 4: VA, IOP, and Auto-refraction offer Clear section on reopen when
       { reference: "Observation/pd", sectionKey: "auto-refraction", findingKey: "binocular_pd", laterality: "OU" },
     ],
   };
-  for (const recorded of [true, false]) {
+  // Fixback 56ff8d36 P2#A: a signed chart still shows what was recorded — the controls render
+  // present-but-disabled (§3, §4b.5), which means the sheet must still learn what it holds.
+  for (const [recorded, status] of [[true, "in-progress"], [false, "in-progress"], [true, "finished"]] as const) {
+    const signed = status === "finished";
     for (const item of cases) {
       const originalFetch = globalThis.fetch;
       const previews: unknown[] = [];
@@ -576,13 +579,17 @@ test("fixback 4: VA, IOP, and Auto-refraction offer Clear section on reopen when
       let renderer!: ReactTestRenderer;
       try {
         await act(async () => {
-          renderer = create(<EncounterEditContext.Provider value={{ encounterStatus: "in-progress" }}>{item.element}</EncounterEditContext.Provider>);
+          renderer = create(<EncounterEditContext.Provider value={{ encounterStatus: status }}>{item.element}</EncounterEditContext.Provider>);
           await flush();
         });
         assert.deepEqual(previews, [{ scope: "section", sectionKey: item.sectionKey, preview: true }], `${item.name} asks the server once on open`);
         const button = findClearButton(renderer.root, item.label);
         if (recorded) assert.ok(button, `${item.name}: Clear section must appear for persisted values`);
         else assert.equal(button, undefined, `${item.name}: nothing recorded, nothing to clear`);
+        if (signed) {
+          assert.equal(button?.props.disabled, true, `${item.name}: signed — Clear section present but disabled`);
+          assert.equal(button?.props.title, SIGNED_ENCOUNTER_TOOLTIP);
+        }
 
         // Fixback P2#2 (02c8155c eval): the per-item × must be offered on reopen too — §2 says "× on any
         // recorded value", and a value persisted before this session is still a recorded value.
@@ -593,8 +600,13 @@ test("fixback 4: VA, IOP, and Auto-refraction offer Clear section on reopen when
           IOP: ["Remove IOP OD", "Remove IOP OS"],
           "Auto-refraction": ["Remove Auto-refraction OD", "Remove Binocular PD"],
         }[item.name]!;
-        assert.deepEqual(removeLabels, recorded ? expected : [], `${item.name}: per-item controls on reopen`);
-        if (recorded) {
+        assert.deepEqual(removeLabels, recorded ? expected : [], `${item.name}: per-item controls on reopen (${status})`);
+        if (signed) {
+          for (const remove of renderer.root.findAll((node) => node.type === "button" && typeof node.props["aria-label"] === "string" && node.props["aria-label"].startsWith("Remove "))) {
+            assert.equal(remove.props.disabled, true, `${item.name}: ${remove.props["aria-label"]} is present but disabled after sign`);
+            assert.equal(remove.props.title, SIGNED_ENCOUNTER_TOOLTIP);
+          }
+        } else if (recorded) {
           // And the × voids the persisted references, not a stale in-session copy.
           const first = renderer.root.findAll((node) => node.type === "button" && node.props["aria-label"] === expected[0])[0]!;
           await act(async () => { await first.props.onClick(); await flush(); });

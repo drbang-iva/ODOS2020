@@ -513,3 +513,31 @@ test("fixback P2#2: preview lists every candidate with its section, finding key,
   const all = (everything.body as { entries?: Array<{ reference: string }> }).entries ?? [];
   assert.deepEqual([...all.map((entry) => entry.reference)].sort(), ["Observation/cvf-od", "Observation/iop-od", "Observation/iop-os"]);
 });
+
+// ---------------------------------------------------------------------------
+// Fixback after evaluation of 56ff8d36 — P2: signed charts still show what was recorded
+// ---------------------------------------------------------------------------
+
+test("fixback 56ff8d36 P2#A: a preview on a signed encounter still resolves its candidates read-only, while the void itself stays 409", async () => {
+  const { deps, fhir } = fixture({ encounterStatus: "finished" });
+  fhir.add(observation("iop-od", "intraocular_pressure", "OD", { status: "preliminary" }));
+  fhir.add(cvf("cvf-od", "OD"));
+
+  const preview = await handleEncounterVoidRequest(deps, { authHeader: AUTH, params: PARAMS, body: { scope: "section", sectionKey: "tonometry", preview: true } });
+  assert.equal(preview.status, 200, JSON.stringify(preview.body));
+  const body = preview.body as VoidBody & { entries?: Array<{ reference: string; laterality: string }> };
+  assert.deepEqual(body.entries, [{ reference: "Observation/iop-od", sectionKey: "tonometry", findingKey: "intraocular_pressure", laterality: "OD" }]);
+  assert.equal(body.count, 1);
+  assert.equal(fhir.transactions.length, 0, "a preview never writes, signed or not");
+
+  for (const request of [
+    { scope: "section", sectionKey: "tonometry" },
+    { scope: "observation", observationReference: "Observation/iop-od" },
+    { scope: "encounter" },
+  ]) {
+    const result = await handleEncounterVoidRequest(deps, { authHeader: AUTH, params: PARAMS, body: request });
+    assert.equal(result.status, 409, `${request.scope}: ${JSON.stringify(result.body)}`);
+  }
+  assert.equal(fhir.transactions.length, 0);
+  assert.equal(fhir.get<Observation>("Observation", "iop-od").status, "preliminary");
+});

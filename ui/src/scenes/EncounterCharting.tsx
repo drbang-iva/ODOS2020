@@ -214,8 +214,11 @@ export function EncounterCharting({ patient, encounterId }: Props) {
     // The remount below discards whatever is typed and unsaved in the open sheet. Undo is not
     // an edit, so its button never marks the sheet dirty — but it must still respect what the
     // clinician has typed since. Same guard, same question, as leaving the sheet.
-    if (entrySheetSection && !entrySheetGuard.requestTransition(undefined, () => undefined, "Undo will discard unsaved changes in {title}. Continue?")) return;
+    // Ask first, discard only on success: if the undo fails the typed edits stay on screen, so the
+    // guard must stay armed for whatever the clinician does next.
+    if (entrySheetSection && !entrySheetGuard.confirmDiscard("Undo will discard unsaved changes in {title}. Continue?")) return;
     const result = await undoEncounterVoid(encounterReference, request);
+    if (entrySheetSection) entrySheetGuard.resetDirty();
     setUndoLedger(result.ledger);
     setChartClearVersion((current) => current + 1);
     refreshExamOverview();

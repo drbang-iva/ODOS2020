@@ -75,33 +75,38 @@ export function useExamEntrySheetGuard(sectionId?: ExamEntrySheetSectionId) {
   const rememberFocus = useCallback((element: HTMLElement) => {
     lastFocusRef.current = element;
   }, []);
-  const requestTransition = useCallback((
-    destinationTitle: string | undefined,
-    transition: () => void,
-    /** Overrides the discard question — e.g. an Undo that will remount the sheet. `{title}` is the sheet's title. */
-    messageTemplate?: string,
-  ) => {
-    if (sectionId && dirtyRef.current) {
-      const currentTitle = EXAM_ENTRY_SHEET_CONFIG[sectionId].title;
-      const message = messageTemplate
-        ? messageTemplate.replace("{title}", currentTitle)
-        : destinationTitle
-          ? `Discard unsaved changes in ${currentTitle} and open ${destinationTitle}?`
-          : `Discard unsaved changes in ${currentTitle}?`;
-      if (typeof window === "undefined" || typeof window.confirm !== "function" || !window.confirm(message)) {
-        lastFocusRef.current?.focus();
-        return false;
-      }
+  /**
+   * Ask whether unsaved edits may be discarded — WITHOUT discarding them. Returns true when the
+   * sheet is clean or the clinician accepted. The caller commits the discard with `resetDirty()`
+   * only once the action that needed it has actually succeeded; a failed action leaves the edits
+   * on screen and the guard armed for the next transition.
+   */
+  const confirmDiscard = useCallback((messageTemplate?: string, destinationTitle?: string) => {
+    if (!sectionId || !dirtyRef.current) return true;
+    const currentTitle = EXAM_ENTRY_SHEET_CONFIG[sectionId].title;
+    const message = messageTemplate
+      ? messageTemplate.replace("{title}", currentTitle)
+      : destinationTitle
+        ? `Discard unsaved changes in ${currentTitle} and open ${destinationTitle}?`
+        : `Discard unsaved changes in ${currentTitle}?`;
+    if (typeof window === "undefined" || typeof window.confirm !== "function" || !window.confirm(message)) {
+      lastFocusRef.current?.focus();
+      return false;
     }
+    return true;
+  }, [sectionId]);
+  const requestTransition = useCallback((destinationTitle: string | undefined, transition: () => void) => {
+    if (!confirmDiscard(undefined, destinationTitle)) return false;
     dirtyRef.current = false;
     dirtyCheckpointRef.current = undefined;
     transition();
     return true;
-  }, [sectionId]);
+  }, [confirmDiscard]);
 
   return {
     checkpointDirty,
     clearDirtyCheckpoint,
+    confirmDiscard,
     markDirty,
     markDirtyCheckpoint,
     rememberFocus,
