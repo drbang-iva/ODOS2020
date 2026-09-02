@@ -258,6 +258,55 @@ question, or a live proof that exercises only the failure branch. Prove your sli
 headline capability by real invocation, and state plainly which branch your evidence
 actually took.
 
+**The evaluator runs its own mutations — a green suite it did not try to break is not an
+evaluation.** Reproduce the baseline, then break each invariant the slice claims to guard
+and paste RED and GREEN verbatim. Three rules earned the hard way on PR #499/#500
+(2026-09-01/02):
+
+- **Verify the mutant actually landed** — grep it in place before believing the result.
+  Two of six mutations in one spot-check were silent no-ops from wrong variable names and
+  came back falsely green; a red the mutant did not cause is the same class of error.
+- **Mutate in a disposable worktree, restore every mutant, and prove the tree is clean
+  before reporting GREEN.** `git worktree add --detach` at the exact head, mutate there,
+  and finish with `git status --porcelain` empty and the final GREEN re-run from restored
+  sources. An evaluator's final numbers must describe the PR, not the evaluator's edits —
+  and a mutation left behind can be committed by the next hand that touches the branch.
+- **A guard that passes because the FIXTURE does the work is decorative.** One boundary
+  guard passed for two full rounds with the production filter deleted, because the test
+  fake's own `search()` honoured the query param and excluded the row before the endpoint
+  saw it. When a guard defends a boundary, make the fake permissive so the endpoint's own
+  check is the only thing that can produce the assertion. Prove it: let the fake mutate
+  its private state while returning a stale response, and confirm the client-side
+  assertion still fires.
+- **The evaluator MAY fix what it finds — and then hands the fix to the other party to
+  verify.** Adopted 2026-09-02 after four rounds on PR #499/#500 showed the losses were in
+  the *hand-offs*, not the reviews: a fixback item that never reached the evaluator, a path
+  that would not resolve, a file pushed but not fast-forwarded — three transfer failures,
+  zero reasoning failures. Finder-fixes halves the hand-offs per round. Two conditions,
+  both binding:
+    - **Whoever writes a guard is never the last to mutation-test it.** The fix goes to the
+      other party for verification. That is `author ≠ evaluator` preserved at the hunk
+      level, roles swapped — not waived. The author blind spot is writing the test that
+      confirms your fix works instead of the one that would catch it being wrong.
+    - **Escalate when the DESIGN CONTRACT changes, not when the code feels "architectural."**
+      The test is checkable: *does this fix make the design file wrong?* If yes, stop and
+      return it for agreement — that is an operator decision, not an implementer's. The
+      Dilation `MedicationAdministration` defect was exactly this: §0's persistence-shape
+      table never listed that resource type, so the fix implied amending canon. "Major" and
+      "architectural" are too fuzzy to route on; "does canon change" is not.
+
+**Read the design of record before judging intent.** Design and fixback lists live in the
+private companion repo, checked out beside this one — `../performance-od/decisions/<file>.md`
+from the repo root on a local checkout, or wherever `$PERFORMANCE_OD_ROOT` points if it is
+sited elsewhere. Cite it as a rooted path, never bare `performance-od/...`: that resolves
+from neither repo's root, and a hand-off that silently fails to open is indistinguishable
+from an evaluator that ignored it.
+
+**If the companion repo is unreachable — Codex Cloud has no local filesystem, and a second
+machine or account may site it differently — say so explicitly and ask for the relevant
+excerpt inline.** Do not stop, and do not proceed on inference about what the design says:
+an evaluator guessing at intent is worse than one that asks.
+
 Nothing is "done" until an independent evaluation actually ran.
 
 **Every build→evaluate handoff returns a sealed bundle, not a transcript** — summary,

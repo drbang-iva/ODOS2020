@@ -38,6 +38,10 @@ import type {
   ProtocolFindingInstance,
 } from "./protocol-types.js";
 import {
+  annualRecallMaterializationRefusal,
+  materializeAnnualRecallOnSign,
+} from "./annual-recall.js";
+import {
   isVisitProcedureConceptKey,
   listActiveVisitProcedureFees,
   materializeAcceptedChargeProposals,
@@ -60,6 +64,12 @@ interface LiveFhir extends ProtocolFhirClient {
   search<T extends Resource>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>>;
   searchUrl?<T extends Resource>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>>;
   create<T extends Basic | Observation | ServiceRequest | CarePlan>(resource: T, headers?: Record<string, string>): Promise<T>;
+  update<T extends Basic | Observation | ServiceRequest | CarePlan>(
+    resourceType: T["resourceType"],
+    id: string,
+    resource: T,
+    headers?: Record<string, string>,
+  ): Promise<T>;
 }
 type CaptureFhir = Pick<LiveFhir, "baseUrl" | "read" | "search" | "searchUrl">;
 interface Staff { staffReference: string; actorRole: PracticeRoleId; fhir: LiveFhir }
@@ -718,7 +728,26 @@ export async function handleProtocolSignCleanupRequest(
     applications: service.applications,
     now: deps.now,
   });
-  return { status: 200, body: { abandoned, ...charges } };
+  let annualRecall;
+  try {
+    annualRecall = await materializeAnnualRecallOnSign(
+      staff.fhir,
+      parsed.data.encounterId,
+      deps.now?.() ?? new Date().toISOString(),
+    );
+  } catch (error) {
+    annualRecall = annualRecallMaterializationRefusal(error);
+  }
+  return {
+    status: 200,
+    body: {
+      abandoned,
+      ...charges,
+      ...(annualRecall.fullExam === true || annualRecall.materializationRefusal
+        ? { annualRecall }
+        : {}),
+    },
+  };
 }
 
 function liveService(

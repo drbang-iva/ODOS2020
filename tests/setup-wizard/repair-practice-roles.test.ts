@@ -4,6 +4,8 @@ import type { AddressInfo } from "node:net";
 import { test } from "node:test";
 import type { AccessPolicy, Bundle, Practitioner, ProjectMembership, Resource, User } from "@medplum/fhirtypes";
 import {
+  contractBootstrapRepairEnabled,
+  createProjectOwnedRepairPolicy,
   devPrimaryRole,
   loginForLocalRepair,
   membershipPolicyReferences,
@@ -98,6 +100,11 @@ test("missing role policies are created before the preserved legacy grant", asyn
   assert.equal(result.targetEmail, "human@example.test");
   assert.equal(result.membershipChanged, true);
   assert.equal(result.membershipReference, "ProjectMembership/dev-membership");
+  assert.deepEqual(result.grantedRoles, ["staff", "admin", "provider"]);
+  assert.deepEqual(result.policyBindings, [
+    "AccessPolicy/policy-4",
+    "AccessPolicy/keep-legacy",
+  ]);
   assert.equal(adapter.policyWrites, 4);
   assert.equal(adapter.membershipWrites, 1);
   assert.equal(adapter.policies.length, 4);
@@ -114,6 +121,22 @@ test("missing role policies are created before the preserved legacy grant", asyn
   assert.equal(adapter.auditWrites, 1);
 });
 
+test("live repair requests Medplum ownership metadata when creating a policy", async () => {
+  let headers: Record<string, string> | undefined;
+  const policy: AccessPolicy = { resourceType: "AccessPolicy", name: "ODOS Test" };
+  const fhir = {
+    create: async <T extends Resource>(resource: T, extraHeaders?: Record<string, string>): Promise<T> => {
+      headers = extraHeaders;
+      return { ...resource, id: "policy-1", meta: { ...resource.meta, project: "local-practice" } } as T;
+    },
+  };
+
+  const created = await createProjectOwnedRepairPolicy(fhir, policy);
+
+  assert.deepEqual(headers, { "X-Medplum": "extended" });
+  assert.equal(created.meta?.project, "local-practice");
+});
+
 test("a second repair is a zero-write idempotent no-op", async () => {
   const adapter = new FakeRepairAdapter();
   await repairPracticeRoles(adapter, "human@example.test");
@@ -128,6 +151,16 @@ test("a second repair is a zero-write idempotent no-op", async () => {
   assert.equal(result.membershipChanged, false);
   assert.equal(adapter.policyWrites, policyWrites);
   assert.equal(adapter.membershipWrites, membershipWrites);
+});
+
+test("an explicit contract bootstrap repair may grant the configured service identity", async () => {
+  const adapter = new FakeRepairAdapter();
+  const email = "contract-admin@example.test";
+
+  const result = await repairPracticeRoles(adapter, email, "staff", email, true);
+
+  assert.deepEqual(result.grantedRoles, ["staff", "admin", "provider"]);
+  assert.deepEqual(result.policyBindings, ["AccessPolicy/policy-4"]);
 });
 
 test("repair reconciles a drifted composite before leaving membership bindings unchanged", async () => {
@@ -180,6 +213,29 @@ test("the primary-role environment value defaults safely and rejects unsupported
   assert.throws(() => devPrimaryRole("admin"), /must be staff or provider/);
 });
 
+test("contract bootstrap repair is restricted to the ephemeral GitHub Actions Medplum", () => {
+  assert.equal(contractBootstrapRepairEnabled({
+    enabled: false,
+    githubActions: undefined,
+    baseUrl: "http://localhost:8103",
+  }), false);
+  assert.equal(contractBootstrapRepairEnabled({
+    enabled: true,
+    githubActions: "true",
+    baseUrl: "http://localhost:18103",
+  }), true);
+  assert.throws(() => contractBootstrapRepairEnabled({
+    enabled: true,
+    githubActions: undefined,
+    baseUrl: "http://localhost:18103",
+  }), /requires GitHub Actions/);
+  assert.throws(() => contractBootstrapRepairEnabled({
+    enabled: true,
+    githubActions: "true",
+    baseUrl: "http://localhost:8103",
+  }), /ephemeral http:\/\/localhost:18103 Medplum/);
+});
+
 test("the repair CLI requires an explicit --email target", () => {
   assert.equal(requiredEmailArgument(["--email", "person@example.test"]), "person@example.test");
   assert.equal(requiredEmailArgument(["--email", "Practitioner/p1"]), "Practitioner/p1");
@@ -210,6 +266,33 @@ test("repair target resolution prefers canonical User.email over Practitioner te
   const byReference = await resolvePracticeRoleTarget(client, "Practitioner/p1");
   assert.equal(byEmail.email, "canonical@example.test");
   assert.equal(byReference.email, "canonical@example.test");
+});
+
+test("contract bootstrap target resolution falls back when the account User is project-invisible", async () => {
+  const practitioner: Practitioner = {
+    resourceType: "Practitioner",
+    id: "p1",
+    telecom: [{ system: "email", value: "contract-admin@example.test" }],
+  };
+  const client = {
+    read: async <T extends Resource>(resourceType: T["resourceType"]): Promise<T> => {
+      assert.equal(resourceType, "User");
+      throw Object.assign(new Error("Not found"), { status: 404 });
+    },
+    search: async <T extends Resource>(resourceType: T["resourceType"], params: Record<string, string> = {}): Promise<Bundle<T>> => {
+      if (resourceType === "Practitioner") return bundle([practitioner as T]);
+      assert.equal(params.profile, "Practitioner/p1");
+      return bundle([membership({ profile: { reference: "Practitioner/p1" } }) as T]);
+    },
+  };
+
+  await assert.rejects(
+    () => resolvePracticeRoleTarget(client, "contract-admin@example.test"),
+    /Not found/,
+  );
+  const resolved = await resolvePracticeRoleTarget(client, "contract-admin@example.test", true);
+  assert.equal(resolved.email, "contract-admin@example.test");
+  assert.equal(resolved.membership.id, "dev-membership");
 });
 
 test("one untagged canonical policy is tagged without replacing unrelated metadata", async () => {
