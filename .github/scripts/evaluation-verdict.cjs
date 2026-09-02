@@ -5,11 +5,13 @@ const VERDICT_PATTERN =
   /^Evaluated-by:\s*(.+?)\s+(?:—|--|-)\s*(PASS|FAIL|BLOCKED|NEEDS-WORK)\s*$/i;
 const HEAD_SHA_PATTERN = /^Head-SHA:\s*([0-9a-f]{40})\s*$/i;
 const SHA_PATTERN = /^[0-9a-f]{40}$/i;
+// Who is trusted, and why, is decided in performance-od/decisions/ — not restated here.
+// Current: 2026-09-02-eval-gate-trusts-codex.md
 const TRUSTED_MODEL_PATTERN =
-  /^(?:Fable|(?:Claude\s+)?Opus)(?:\s+\d+(?:\.\d+)*)?(?:\s+\(Claude\))?$/i;
+  /^(?:Fable|(?:Claude\s+)?Opus|(?:GPT[-\s]?\d+(?:\.\d+)*\s+)?Codex)(?:\s+\d+(?:\.\d+)*)?(?:\s+\((?:Claude|GPT[-\s]?\d+(?:\.\d+)*)\))?$/i;
 const FAILING_VERDICTS = new Set(["FAIL", "BLOCKED", "NEEDS-WORK"]);
 const EXPECTED_FORM = [
-  "Evaluated-by: Fable 5 — PASS",
+  "Evaluated-by: Fable 5 — PASS   (also accepted: Opus, Codex)",
   "Head-SHA: <40-character PR head SHA>",
 ].join("\n");
 const OVERRIDE_NOTE =

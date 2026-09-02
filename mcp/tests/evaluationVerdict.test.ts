@@ -203,13 +203,33 @@ test("trailing or contradictory verdict content fails", () => {
   }
 });
 
-test("a non-Fable-or-Opus model cannot issue the final verdict", () => {
+test("Codex is a trusted evaluator and can issue the final verdict", () => {
   const decision = evaluate({
     comments: [comment(marker("Codex", "PASS"))],
   });
 
-  assert.equal(decision.passed, false);
-  assert.equal(decision.reason, "untrusted-model");
+  assert.equal(decision.passed, true);
+  assert.equal(decision.evaluator, "Codex");
+});
+
+test("Codex's versioned and GPT-qualified forms are trusted too", () => {
+  for (const evaluator of ["Codex 5.6", "GPT-5.6 Codex", "Codex (GPT-5.6)"]) {
+    const decision = evaluate({ comments: [comment(marker(evaluator, "PASS"))] });
+    assert.equal(decision.passed, true, `${evaluator} should be trusted`);
+    assert.equal(decision.evaluator, evaluator);
+  }
+});
+
+// The allowlist must still EXCLUDE something, or it is not an allowlist. Sonnet is the live
+// case: on 2026-09-01 a Sonnet verdict on PR #496 could not clear this gate, which is what
+// sent that evaluation to Opus. Deleting this test would make the untrusted-model branch
+// unreachable and the guard decorative.
+test("an untrusted model still cannot issue the final verdict", () => {
+  for (const evaluator of ["Sonnet 5", "Sonnet", "Gemini 3"]) {
+    const decision = evaluate({ comments: [comment(marker(evaluator, "PASS"))] });
+    assert.equal(decision.passed, false, `${evaluator} must not be trusted`);
+    assert.equal(decision.reason, "untrusted-model");
+  }
 });
 
 test("a marker posted under the PR author's login now passes", () => {
