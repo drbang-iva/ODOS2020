@@ -32,9 +32,21 @@ test("v0.5c Observation.status machine allows every canonical transition", () =>
   }
 });
 
+test("unsigned preliminary findings may be voided by scribe and clinician roles", () => {
+  for (const actorRole of ["scribe", "clinician"] as const) {
+    assert.doesNotThrow(() =>
+      assertObservationStatusTransition({
+        from: "preliminary",
+        to: "entered-in-error",
+        actorRole,
+      }),
+    );
+  }
+});
+
 test("v0.5c Observation.status machine rejects every disallowed transition", () => {
   const statuses: ObservationStatusBefore[] = [undefined, ...FHIR_OBSERVATION_STATUSES];
-  const roles: ObservationStatusActorRole[] = ["scribe", "provider"];
+  const roles: ObservationStatusActorRole[] = ["scribe", "clinician", "system"];
 
   for (const from of statuses) {
     for (const to of FHIR_OBSERVATION_STATUSES) {
@@ -58,6 +70,23 @@ test("v0.5c Observation.status machine rejects every disallowed transition", () 
           accessPolicyConstraintRejectsObservationStatusPatch({ from, to, actorRole }),
           true,
           `${from ?? "(none)"} -> ${to} by ${actorRole} should fail at AccessPolicy guard`,
+        );
+      }
+    }
+  }
+});
+
+test("voiding a draft does not add any transition out of finalized statuses", () => {
+  const finalized = ["final", "amended", "corrected"] as const;
+  const newlyForbiddenTargets = ["registered", "preliminary", "cancelled", "unknown"] as const;
+
+  for (const from of finalized) {
+    for (const to of newlyForbiddenTargets) {
+      for (const actorRole of ["scribe", "clinician", "system"] as const) {
+        assert.equal(
+          accessPolicyConstraintRejectsObservationStatusPatch({ from, to, actorRole }),
+          true,
+          `${from} -> ${to} by ${actorRole} must remain forbidden`,
         );
       }
     }

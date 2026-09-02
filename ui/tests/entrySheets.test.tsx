@@ -286,7 +286,7 @@ test("the entry tab exists only while an entry sheet is open", { timeout: 30_000
     assert.equal(await entryTab.getAttribute("data-entry-tab"), "true");
     assert.equal(await entryTab.locator('button, [aria-label*="close" i]').count(), 0);
 
-    await page.getByRole("button", { name: "Cancel Intraocular Pressure entry" }).click();
+    await page.getByRole("button", { name: "Back to exam overview from Intraocular Pressure" }).click();
     assert.equal(await page.locator('[role="tab"][data-entry-tab="true"]').count(), 0);
     assert.equal(await page.getByRole("tab", { name: /^Images/ }).getAttribute("aria-selected"), "true");
   } finally {
@@ -507,7 +507,7 @@ test("a pristine clinical sheet swaps from HPI to VA through a real overview cli
     assert.equal(await vaDialog.getAttribute("aria-modal"), null);
     assert.equal(
       await page.evaluate(() => document.activeElement?.getAttribute("aria-label")),
-      "Cancel Visual Acuity entry",
+      "Back to exam overview from Visual Acuity",
     );
   } finally {
     await page.close();
@@ -805,7 +805,7 @@ test("dirty Escape and Cancel share the discard guard while pristine Escape rema
     await page.keyboard.press("Escape");
     await page.getByRole("dialog", { name: "Intraocular Pressure" }).waitFor();
     accept = true;
-    await page.getByRole("button", { name: "Cancel Intraocular Pressure entry" }).click();
+    await page.getByRole("button", { name: "Back to exam overview from Intraocular Pressure" }).click();
     await page.getByRole("dialog", { name: "Intraocular Pressure" }).waitFor({ state: "detached" });
     assert.deepEqual(dialogs, [
       "Discard unsaved changes in Intraocular Pressure?",
@@ -827,9 +827,9 @@ test("clinical entry-sheet chrome is 44px-class, releases Tab, closes on pristin
 
     const dialog = page.getByRole("dialog", { name: "Intraocular Pressure" });
     await dialog.waitFor();
-    const cancel = page.getByRole("button", { name: "Cancel Intraocular Pressure entry" });
+    const cancel = page.getByRole("button", { name: "Back to exam overview from Intraocular Pressure" });
     const lastControl = dialog.locator('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])').last();
-    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute("aria-label")), "Cancel Intraocular Pressure entry");
+    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute("aria-label")), "Back to exam overview from Intraocular Pressure");
     assert.equal(await dialog.getAttribute("aria-modal"), null);
 
     const chromeMeasurements = await page.locator("[data-entry-sheet-chrome]:visible").evaluateAll((nodes) => nodes.map((node) => {
@@ -844,7 +844,7 @@ test("clinical entry-sheet chrome is 44px-class, releases Tab, closes on pristin
 
     await lastControl.focus();
     await page.keyboard.press("Tab");
-    assert.notEqual(await page.evaluate(() => document.activeElement?.getAttribute("aria-label")), "Cancel Intraocular Pressure entry");
+    assert.notEqual(await page.evaluate(() => document.activeElement?.getAttribute("aria-label")), "Back to exam overview from Intraocular Pressure");
 
     const overviewControl = page.getByTestId("refresh-exam-overview");
     await overviewControl.focus();

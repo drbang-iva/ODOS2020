@@ -43,6 +43,23 @@ interface AutoDefinitionResponse {
   };
 }
 
+interface AutoHistoryResponse {
+  eyes?: Partial<Record<Eye, {
+    sphere?: number;
+    cylinder?: number;
+    axis?: number;
+    flatK?: number;
+    flatAxis?: number;
+    steepK?: number;
+    steepAxis?: number;
+    observationReferences?: string[];
+  }>>;
+  binocularPdDistance?: number;
+  binocularPdNear?: number;
+  binocularPdObservationReferences?: string[];
+  remarks?: string;
+}
+
 interface EyeState {
   sphere: string;
   cylinder: string;
@@ -109,6 +126,52 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
       });
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const query = new URLSearchParams({ patientReference, encounterReference });
+    fetch(`${clinicalGraphApiBase()}/clinical-graph/auto-refraction/history?${query}`, {
+      headers: authHeaders(),
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const body = await response.json() as AutoHistoryResponse & { error?: string };
+        if (!response.ok) throw new Error(body.error ?? `Auto-refraction history request failed: ${response.status}`);
+        return body;
+      })
+      .then((body) => {
+        setEyes(Object.fromEntries(EYES.map((eye) => {
+          const savedEye = body.eyes?.[eye];
+          return [eye, {
+            sphere: savedValue(savedEye?.sphere),
+            cylinder: savedValue(savedEye?.cylinder),
+            axis: savedValue(savedEye?.axis),
+            flatK: savedValue(savedEye?.flatK),
+            flatAxis: savedValue(savedEye?.flatAxis),
+            steepK: savedValue(savedEye?.steepK),
+            steepAxis: savedValue(savedEye?.steepAxis),
+          }];
+        })) as Record<Eye, EyeState>);
+        setBinocularPdDistance(savedValue(body.binocularPdDistance));
+        setBinocularPdNear(savedValue(body.binocularPdNear));
+        setRemarks(body.remarks ?? "");
+        setSavedReferences((current) => {
+          const next = { ...current };
+          for (const eye of EYES) {
+            const references = body.eyes?.[eye]?.observationReferences ?? [];
+            if (references.length) next[eye] = [...new Set([...(current[eye] ?? []), ...references])];
+          }
+          if (body.binocularPdObservationReferences?.length) {
+            next.OU = [...new Set([...(current.OU ?? []), ...body.binocularPdObservationReferences])];
+          }
+          return next;
+        });
+      })
+      .catch((err) => {
+        if ((err as Error).name !== "AbortError") setError(err instanceof Error ? err.message : String(err));
+      });
+    return () => controller.abort();
+  }, [encounterReference, patientReference]);
 
   const refractionFields = definition?.definitions.autoRefraction.fields ?? {};
   const keratometryFields = definition?.definitions.autoKeratometry.fields ?? {};
@@ -411,6 +474,10 @@ function AxisWheel({ value, onChange, ariaLabel, min, max, step }: {
 
 function emptyEye(): EyeState {
   return { sphere: "", cylinder: "", axis: "", flatK: "", flatAxis: "", steepK: "", steepAxis: "" };
+}
+
+function savedValue(value: string | number | undefined): string {
+  return value === undefined ? "" : String(value);
 }
 
 function buildPayload(eyes: Record<Eye, EyeState>): Partial<Record<Eye, Record<string, number>>> {

@@ -175,7 +175,7 @@ export async function handleEncounterComplaintListRequest(
   if (!patientId) return { status: 400, body: { error: "Encounter must reference a Patient subject." } };
   const definitions = await new FhirComplaintDefinitionStore(staff.fhir).list();
   const rows = await new FhirEncounterComplaintStore(staff.fhir).listByEncounter(encounterId);
-  const complaints = rows.length ? rows : legacyComplaint(encounter, patientId, deps.now?.());
+  const complaints = rows.length ? rows.filter(active) : legacyComplaint(encounter, patientId, deps.now?.());
   return {
     status: 200,
     body: {

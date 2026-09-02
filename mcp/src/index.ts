@@ -226,6 +226,7 @@ import {
 import {
   handleAutoRefractionCaptureRequest,
   handleAutoRefractionDefinitionRequest,
+  handleAutoRefractionHistoryRequest,
   handleWearingCaptureRequest, handleWearingDefinitionRequest,
   registerPretestVitalsRoutes,
 } from "./clinical-graph/pretest-endpoint.js";
@@ -7385,6 +7386,22 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
           console.error("odos-mcp: /clinical-graph/auto-refraction/definition failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "Auto-refraction definition route failed" });
+          }
+        }
+      });
+
+      app.get("/clinical-graph/auto-refraction/history", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleAutoRefractionHistoryRequest(
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.read"),
+            { authHeader: req.header("authorization"), query: req.query },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: /clinical-graph/auto-refraction/history failed:", error);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "Auto-refraction history route failed" });
           }
         }
       });

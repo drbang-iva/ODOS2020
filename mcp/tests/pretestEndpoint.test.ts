@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Observation, Provenance } from "@medplum/fhirtypes";
+import type { Bundle, Observation, Provenance } from "@medplum/fhirtypes";
 import type { PracticeRoleId } from "../src/authz/roles.js";
 import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../src/fhir/ophthalmology/codeBindings.js";
 import {
@@ -31,6 +31,12 @@ function deps(
           staffReference: "Practitioner/doc1",
           actorRole: role,
           fhir: {
+            search: async <T extends Observation>(): Promise<Bundle<T>> => ({
+              resourceType: "Bundle",
+              type: "searchset",
+              entry: created.flatMap(({ resource }) =>
+                resource.resourceType === "Observation" ? [{ resource: resource as T }] : []),
+            }),
             create: async <T extends Observation | Provenance>(
               resource: T,
               headers?: Record<string, string>,
@@ -101,6 +107,77 @@ test("pretest definition endpoints expose practice-editable Wearing and Auto-K o
     unit: "mm",
   });
   assert.equal(autoBody.definitions.autoKeratometry?.fields.flatK.precision, 2);
+});
+
+test("auto-refraction history returns the current encounter values needed to hydrate the editor", async () => {
+  const { created, deps: d } = deps();
+  const saved = await handleAutoRefractionCaptureRequest(d, {
+    authHeader: AUTH,
+    body: {
+      ...autoBody("device"),
+      binocularPdDistance: 63.5,
+      binocularPdNear: 60.25,
+    },
+  });
+  assert.equal(saved.status, 200);
+  for (const { resource } of created) {
+    if (resource.resourceType !== "Observation") continue;
+    const identity = `${codingCode(resource)}:${lateralityCode(resource)}`;
+    resource.id = {
+      "auto_refraction:OD": "ar-od",
+      "auto_keratometry:OD": "ak-od",
+      "auto_refraction:OS": "ar-os",
+      "auto_keratometry:OS": "ak-os",
+      "auto_refraction:OU": "pd-ou",
+    }[identity] ?? resource.id;
+  }
+
+  const module = await import("../src/clinical-graph/pretest-endpoint.js") as typeof import("../src/clinical-graph/pretest-endpoint.js") & {
+    handleAutoRefractionHistoryRequest?: (
+      deps: PretestEndpointDeps,
+      input: { authHeader: string | undefined; query: unknown },
+    ) => Promise<{ status: number; body: unknown }>;
+  };
+  assert.equal(
+    typeof module.handleAutoRefractionHistoryRequest,
+    "function",
+    "the editor needs a real read path, not values inferred from the void-preview fake",
+  );
+  if (!module.handleAutoRefractionHistoryRequest) return;
+
+  const result = await module.handleAutoRefractionHistoryRequest(d, {
+    authHeader: AUTH,
+    query: BODY,
+  });
+  assert.equal(result.status, 200);
+  assert.deepEqual(result.body, {
+    eyes: {
+      OD: {
+        sphere: -1.25,
+        cylinder: -0.5,
+        axis: 90,
+        flatK: 42.5,
+        flatAxis: 180,
+        steepK: 43.25,
+        steepAxis: 90,
+        observationReferences: ["Observation/ar-od", "Observation/ak-od"],
+      },
+      OS: {
+        sphere: -1,
+        cylinder: -0.25,
+        axis: 85,
+        flatK: 42.75,
+        flatAxis: 5,
+        steepK: 43.5,
+        steepAxis: 95,
+        observationReferences: ["Observation/ar-os", "Observation/ak-os"],
+      },
+    },
+    binocularPdDistance: 63.5,
+    binocularPdNear: 60.25,
+    binocularPdObservationReferences: ["Observation/pd-ou"],
+    remarks: "Reliable fixation.",
+  });
 });
 
 test("all four pretest handlers enforce authentication, practice-wide reads, and read-only Admin", async () => {

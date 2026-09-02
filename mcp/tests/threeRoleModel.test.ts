@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { AccessPolicy, AccessPolicyResource, Encounter, MedicationRequest } from "@medplum/fhirtypes";
+import type { AccessPolicy, AccessPolicyResource, Encounter, MedicationRequest, Observation } from "@medplum/fhirtypes";
 import fhirpath from "fhirpath";
 import r4Model from "fhirpath/fhir-context/r4/index.js";
 import {
@@ -578,6 +578,26 @@ test("Staff Encounter writes allow unfinished work but reject finalization and r
   assert.equal(staffEncounterWriteAllowed(encounterWrite.writeConstraint, "planned", "in-progress"), true);
   assert.equal(staffEncounterWriteAllowed(encounterWrite.writeConstraint, "in-progress", "finished"), false);
   assert.equal(staffEncounterWriteAllowed(encounterWrite.writeConstraint, "finished", "in-progress"), false);
+});
+
+test("real Provider and Staff Observation writeConstraints permit voiding a preliminary finding", () => {
+  const before: Observation = { resourceType: "Observation", status: "preliminary", code: { text: "Synthetic draft" } };
+  const after: Observation = { ...before, status: "entered-in-error" };
+
+  for (const roleId of ["provider", "staff"] as const) {
+    const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
+    const observationWrite = policy.resource?.find((rule) =>
+      rule.resourceType === "Observation" && rule.interaction?.includes("update"));
+    assert.ok(observationWrite?.writeConstraint?.length, `${roleId} Observation update needs writeConstraints`);
+    assert.equal(
+      observationWrite.writeConstraint.every((constraint) => {
+        const result = fhirpath.evaluate(after, constraint.expression ?? "", { before, after }, r4Model);
+        return result.length === 1 && result[0] === true;
+      }),
+      true,
+      `${roleId} writeConstraints must accept preliminary -> entered-in-error`,
+    );
+  }
 });
 
 test("Provider and Staff compile to one order-independent policy without changing clinical compartment criteria", () => {

@@ -53,6 +53,18 @@ export const ALLOWED_OBSERVATION_STATUS_TRANSITIONS: readonly ObservationStatusT
   },
   {
     from: "preliminary",
+    to: "entered-in-error",
+    actorRole: "scribe",
+    description: "Scribe pre-final void.",
+  },
+  {
+    from: "preliminary",
+    to: "entered-in-error",
+    actorRole: "clinician",
+    description: "Clinician pre-final void.",
+  },
+  {
+    from: "preliminary",
     to: "final",
     actorRole: "clinician",
     description: "Clinician attestation.",
@@ -110,7 +122,7 @@ export const ALLOWED_OBSERVATION_STATUS_TRANSITIONS: readonly ObservationStatusT
 export const OBSERVATION_STATUS_WRITE_CONSTRAINT_EXPRESSION = [
   "(%before.exists().not() implies status = 'preliminary')",
   "and (%before.exists() implies (",
-  "(%before.status = 'preliminary' and (status = 'preliminary' or status = 'final'))",
+  "(%before.status = 'preliminary' and (status = 'preliminary' or status = 'final' or status = 'entered-in-error'))",
   "or (%before.status = 'final' and (status = 'amended' or status = 'corrected' or status = 'entered-in-error'))",
   "or (%before.status = 'amended' and (status = 'amended' or status = 'corrected' or status = 'entered-in-error'))",
   "or (%before.status = 'corrected' and (status = 'corrected' or status = 'entered-in-error'))",
@@ -134,13 +146,13 @@ export function assertObservationStatusTransition(input: {
     });
   }
 
-  const transition = ALLOWED_OBSERVATION_STATUS_TRANSITIONS.find(
+  const transitions = ALLOWED_OBSERVATION_STATUS_TRANSITIONS.filter(
     (candidate) =>
       normalizeBefore(candidate.from) === normalizeBefore(input.from) &&
       candidate.to === input.to,
   );
 
-  if (!transition) {
+  if (transitions.length === 0) {
     const reason =
       input.from === "entered-in-error"
         ? "entered-in-error is terminal; prior versions remain available through FHIR vread."
@@ -148,11 +160,12 @@ export function assertObservationStatusTransition(input: {
     throw new ObservationStatusTransitionError({ from: input.from, to: input.to, reason });
   }
 
-  if (transition.actorRole !== input.actorRole) {
+  if (!transitions.some((transition) => transition.actorRole === input.actorRole)) {
+    const requiredRoles = [...new Set(transitions.map((transition) => transition.actorRole))].join(" or ");
     throw new ObservationStatusTransitionError({
       from: input.from,
       to: input.to,
-      reason: `Mandate 8 + ledger row 20 require ${transition.actorRole} authority, not ${input.actorRole}.`,
+      reason: `Mandate 8 + ledger row 20 require ${requiredRoles} authority, not ${input.actorRole}.`,
     });
   }
 }

@@ -6,6 +6,8 @@ import type { SectionSaveStatus } from "./types";
 import { VaValueSelect } from "./VaValueSelect";
 import { OdosSelect } from "../inputs/OdosSelect";
 import { OdosWheel } from "../inputs/OdosWheel";
+import { ClearSectionButton } from "./ClearControls";
+import { useEncounterEdit } from "./encounter-edit-context";
 
 interface Props {
   patientReference: string;
@@ -64,6 +66,7 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<SectionSaveStatus | null>(null);
   const [sourceType, setSourceType] = useState("manual");
+  const { onCleared } = useEncounterEdit();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -127,6 +130,13 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
     if (checked) setPairs([emptyPair(eyeglassTypes[0]?.code ?? "")]);
   }
 
+  function resetForm() {
+    setPairs([emptyPair(eyeglassTypes[0]?.code ?? "")]);
+    setLeftGlassesAtHome(false);
+    setSaved(null);
+    setError(null);
+  }
+
   async function save() {
     let payloadPairs: Array<Record<string, unknown>> = [];
     try {
@@ -178,6 +188,17 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
             <p className="mt-1 text-sm text-white/45">Pretest lensometer capture for glasses worn into the visit</p>
           </div>
           <div className="flex items-end gap-3">
+            <ClearSectionButton
+              encounterReference={encounterReference}
+              sectionKey="wearing"
+              label="Wearing Rx"
+              hasRecorded={saved !== null}
+              probeOnMount
+              onCleared={(result) => {
+                resetForm();
+                onCleared?.({ scope: "section", result });
+              }}
+            />
             <label className="block">
               <span className="mb-1 block text-xs uppercase tracking-wide text-white/35">Source</span>
               <OdosSelect

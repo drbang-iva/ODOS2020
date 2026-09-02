@@ -104,7 +104,7 @@ export function DilationSection({ definition, patientReference, encounterReferen
             label="Dilation"
             hasRecorded={history.notes.length > 0 || history.administrations.length > 0}
             onCleared={(result) => {
-              setAgents([emptyAgent()]);
+              setAgents([]);
               setDfePerformed(false);
               setDeclined(false);
               setReason("");
@@ -133,6 +133,11 @@ export function DilationSection({ definition, patientReference, encounterReferen
         ) : (
           <>
             <div className="mt-5 space-y-3">
+              {agents.length === 0 && (
+                <div className="rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface-2)] p-4 text-sm text-[color:var(--odos-muted)]">
+                  No dilation administration recorded
+                </div>
+              )}
               {agents.map((row, index) => (
                 <div key={index} className="grid gap-3 rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface-2)] p-4 md:grid-cols-[2fr_100px_110px_150px_auto]">
                   <OdosSelect
