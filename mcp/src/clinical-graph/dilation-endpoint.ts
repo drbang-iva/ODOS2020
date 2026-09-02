@@ -18,6 +18,7 @@ import {
   type ClinicalFindingDefinition,
   type ClinicalGraphProvenance,
 } from "./glaucoma-suspect.js";
+import { isLiveObservation } from "./observation-liveness.js";
 
 export interface DilationFhirClient {
   create<T extends MedicationAdministration | Observation | Provenance>(
@@ -188,8 +189,9 @@ export async function handleDilationHistoryRequest(
     _sort: "-date",
     _count: "200",
   });
-  const administrationReferences = [...new Set((observations.entry ?? []).flatMap((entry) =>
-    (entry.resource?.partOf ?? []).flatMap((source) =>
+  const liveObservations = (observations.entry ?? []).flatMap((entry) => entry.resource && isLiveObservation(entry.resource) ? [entry.resource] : []);
+  const administrationReferences = [...new Set(liveObservations.flatMap((resource) =>
+    (resource.partOf ?? []).flatMap((source) =>
       source.reference?.startsWith("MedicationAdministration/") ? [source.reference] : []
     )
   ))];
@@ -199,8 +201,12 @@ export async function handleDilationHistoryRequest(
   return {
     status: 200,
     body: {
-      notes: (observations.entry ?? []).flatMap((entry) => entry.resource?.note?.[0]?.text
-        ? [{ recordedAt: entry.resource.effectiveDateTime ?? "", text: entry.resource.note[0].text }]
+      notes: liveObservations.flatMap((resource) => resource.note?.[0]?.text
+        ? [{
+            ...(resource.id ? { observationReference: `Observation/${resource.id}` } : {}),
+            recordedAt: resource.effectiveDateTime ?? "",
+            text: resource.note[0].text,
+          }]
         : []),
       administrations: administrations.map((resource) => ({
           recordedAt: resource.effectiveDateTime ?? "",

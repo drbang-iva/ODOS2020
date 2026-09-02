@@ -6,6 +6,7 @@ import {
   type QualifierSeed,
 } from "./custom-fields.js";
 import { findingDefinitionForObservation } from "./finding-observation-match.js";
+import { isLiveObservation } from "./observation-liveness.js";
 import type {
   ClinicalFindingDefinition,
   FindingInterpretation,
@@ -591,7 +592,7 @@ function unconfiguredCompleteness(): ClinicalExamCompleteness {
 }
 
 function isUsableObservation(observation: Observation): boolean {
-  return observation.status !== "entered-in-error" && observation.status !== "cancelled";
+  return isLiveObservation(observation);
 }
 
 function findingOrder(

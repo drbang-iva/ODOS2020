@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, type ReactNode } from "react";
+import type { Encounter } from "@medplum/fhirtypes";
 import { useDockedPanel } from "../commercial/panel-shared";
+import type { UndoLedgerSlot } from "../../lib/encounter-undo";
+import { isClosedEncounterStatus, type EncounterVoidResult } from "../../lib/encounter-void";
+import { ClearEncounterButton } from "./ClearControls";
+import { UndoStrip } from "./UndoStrip";
 
 export const EXAM_ENTRY_SHEET_CONFIG = {
   hpi: { title: "Chief Complaint / HPI / ROS", layout: "paired-row-form" },
@@ -70,26 +75,38 @@ export function useExamEntrySheetGuard(sectionId?: ExamEntrySheetSectionId) {
   const rememberFocus = useCallback((element: HTMLElement) => {
     lastFocusRef.current = element;
   }, []);
-  const requestTransition = useCallback((destinationTitle: string | undefined, transition: () => void) => {
-    if (sectionId && dirtyRef.current) {
-      const currentTitle = EXAM_ENTRY_SHEET_CONFIG[sectionId].title;
-      const message = destinationTitle
+  /**
+   * Ask whether unsaved edits may be discarded — WITHOUT discarding them. Returns true when the
+   * sheet is clean or the clinician accepted. The caller commits the discard with `resetDirty()`
+   * only once the action that needed it has actually succeeded; a failed action leaves the edits
+   * on screen and the guard armed for the next transition.
+   */
+  const confirmDiscard = useCallback((messageTemplate?: string, destinationTitle?: string) => {
+    if (!sectionId || !dirtyRef.current) return true;
+    const currentTitle = EXAM_ENTRY_SHEET_CONFIG[sectionId].title;
+    const message = messageTemplate
+      ? messageTemplate.replace("{title}", currentTitle)
+      : destinationTitle
         ? `Discard unsaved changes in ${currentTitle} and open ${destinationTitle}?`
         : `Discard unsaved changes in ${currentTitle}?`;
-      if (typeof window === "undefined" || typeof window.confirm !== "function" || !window.confirm(message)) {
-        lastFocusRef.current?.focus();
-        return false;
-      }
+    if (typeof window === "undefined" || typeof window.confirm !== "function" || !window.confirm(message)) {
+      lastFocusRef.current?.focus();
+      return false;
     }
+    return true;
+  }, [sectionId]);
+  const requestTransition = useCallback((destinationTitle: string | undefined, transition: () => void) => {
+    if (!confirmDiscard(undefined, destinationTitle)) return false;
     dirtyRef.current = false;
     dirtyCheckpointRef.current = undefined;
     transition();
     return true;
-  }, [sectionId]);
+  }, [confirmDiscard]);
 
   return {
     checkpointDirty,
     clearDirtyCheckpoint,
+    confirmDiscard,
     markDirty,
     markDirtyCheckpoint,
     rememberFocus,
@@ -113,10 +130,20 @@ export function ExamEntrySheet({
   panelTabs,
   active = true,
   hidden = false,
+  encounterReference,
+  encounterStatus,
+  onEncounterCleared,
+  undo,
   children,
 }: {
   sectionId: ExamEntrySheetId;
   onCancel: () => void;
+  /** When supplied with onEncounterCleared, the chrome carries the tier-3 "Clear everything charted this visit…" control. */
+  encounterReference?: string;
+  encounterStatus?: Encounter["status"];
+  onEncounterCleared?: (result: EncounterVoidResult) => void;
+  /** This section's pending Undo (§4b.1): rendered as a status strip directly beneath the heading row. */
+  undo?: { slot: UndoLedgerSlot; onUndo: () => void | Promise<void> };
   onCheckpointDirty?: () => void;
   onClearDirtyCheckpoint?: () => void;
   onDirty?: () => void;
@@ -141,7 +168,7 @@ export function ExamEntrySheet({
     .find((button) => !button.closest("[data-entry-sheet-chrome]") && button.textContent?.trim() === "Cancel");
   const markEventDirty = (target: EventTarget | null) => {
     onDirty?.();
-    const element = target instanceof Element ? target : undefined;
+    const element = isElement(target) ? target : undefined;
     const editorRoot = findInnerCancel()?.parentElement?.parentElement;
     if (element && editorRoot && !editorRoot.contains(element)) onDirtyCheckpoint?.();
   };
@@ -177,10 +204,11 @@ export function ExamEntrySheet({
         data-testid="exam-entry-sheet"
         data-entry-sheet-layout={config.layout}
         data-entry-sheet-section={sectionId}
+        data-undo-strip={!modal && undo ? "true" : undefined}
         onInputCapture={(event) => markEventDirty(event.target)}
         onChangeCapture={(event) => markEventDirty(event.target)}
         onClickCapture={(event) => {
-          const target = event.target instanceof Element ? event.target : undefined;
+          const target = isElement(event.target) ? event.target : undefined;
           const control = target?.closest('button, [role="button"]');
           if (!control) return;
           if (control.closest("[data-entry-sheet-chrome], [data-entry-sheet-pristine-action]")) return;
@@ -205,19 +233,36 @@ export function ExamEntrySheet({
             <span>Entry sheet</span>
             <h2 id={titleId}>{config.title}</h2>
           </div>
-          <button
-            ref={initialFocusRef}
-            type="button"
-            aria-label={`Cancel ${config.title} entry`}
-            data-testid="cancel-exam-entry-sheet"
-            data-entry-sheet-chrome
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
+          <div className="odos-exam-entry-sheet-actions">
+            {!modal && encounterReference && onEncounterCleared && (
+              <ClearEncounterButton
+                encounterReference={encounterReference}
+                encounterStatus={encounterStatus}
+                onCleared={onEncounterCleared}
+              />
+            )}
+            <button
+              ref={initialFocusRef}
+              type="button"
+              aria-label={`Cancel ${config.title} entry`}
+              data-testid="cancel-exam-entry-sheet"
+              data-entry-sheet-chrome
+              onClick={onCancel}
+            >
+              Cancel
+            </button>
+          </div>
         </header>
+        {!modal && undo && (
+          <UndoStrip slot={undo.slot} scope="section" closed={isClosedEncounterStatus(encounterStatus)} onUndo={undo.onUndo} />
+        )}
         <div className="odos-exam-entry-sheet-content">{children}</div>
       </aside>
     </div>
   );
+}
+
+/** `Element` only exists in a browser; the sheet's dirty tracking must not throw elsewhere. */
+function isElement(target: EventTarget | null): target is Element {
+  return typeof Element !== "undefined" && target instanceof Element;
 }

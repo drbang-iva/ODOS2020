@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { voidEncounterEntries } from "../../lib/encounter-void";
+import { ClearSectionButton, RemoveValueButton } from "./ClearControls";
+import { useEncounterEdit } from "./encounter-edit-context";
+import { referencesByEye, usePersistedVoidEntries } from "./use-persisted-void-entries";
 import { OdosSelect } from "../inputs/OdosSelect";
 import { OdosWheel } from "../inputs/OdosWheel";
 import { formatPowerOption, numericOptions } from "./power-options";
@@ -64,6 +68,22 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<SectionSaveStatus | null>(null);
+  const [savedReferences, setSavedReferences] = useState<Partial<Record<Eye | "OU", string[]>>>({});
+  const { onCleared } = useEncounterEdit();
+  // Readings persisted before this session are recorded values too: offer their × on reopen.
+  const persisted = usePersistedVoidEntries(encounterReference, "auto-refraction");
+  useEffect(() => {
+    if (!persisted.loaded) return;
+    const hydrated = referencesByEye(persisted.entries);
+    setSavedReferences((current) => {
+      const next = { ...current };
+      for (const key of ["OD", "OS", "OU"] as const) {
+        const merged = [...new Set([...(current[key] ?? []), ...(hydrated[key] ?? [])])];
+        if (merged.length) next[key] = merged;
+      }
+      return next;
+    });
+  }, [persisted]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -106,6 +126,35 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
     setEyes((current) => ({ ...current, [eye]: { ...current[eye], ...next } }));
   }
 
+  async function removeSaved(key: Eye | "OU") {
+    const references = savedReferences[key] ?? [];
+    if (references.length === 0) return;
+    try {
+      const result = await voidEncounterEntries(encounterReference, { scope: "observation", observationReference: references });
+      setSavedReferences((current) => { const next = { ...current }; delete next[key]; return next; });
+      if (key === "OU") {
+        setBinocularPdDistance("");
+        setBinocularPdNear("");
+      } else {
+        setEyes((current) => ({ ...current, [key]: emptyEye() }));
+      }
+      setSaved(null);
+      onCleared?.({ scope: "observation", result });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  function resetForm() {
+    setEyes({ OD: emptyEye(), OS: emptyEye() });
+    setBinocularPdDistance("");
+    setBinocularPdNear("");
+    setRemarks("");
+    setSavedReferences({});
+    setSaved(null);
+    setError(null);
+  }
+
   async function save() {
     let requestBody: ReturnType<typeof buildAutoRefractionRequestBody>;
     try {
@@ -138,7 +187,11 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
         headers: { ...authHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),
       });
-      const body = await response.json() as { eyes?: Record<string, unknown>; binocularPd?: unknown; error?: string };
+      const body = await response.json() as {
+        eyes?: Record<string, { autoRefractionObservationReference?: string; autoKeratometryObservationReference?: string }>;
+        binocularPd?: { observationReference?: string };
+        error?: string;
+      };
       if (!response.ok) throw new Error(body.error ?? `Auto-refraction save failed: ${response.status}`);
       const count = Object.keys(body.eyes ?? requestBody.eyes).length;
       const pdSaved = Boolean(
@@ -157,6 +210,14 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
         operator: OPERATOR,
       };
       setSaved(status);
+      setSavedReferences({
+        ...Object.fromEntries(EYES.flatMap((eye) => {
+          const references = [body.eyes?.[eye]?.autoRefractionObservationReference, body.eyes?.[eye]?.autoKeratometryObservationReference]
+            .filter((reference): reference is string => Boolean(reference));
+          return references.length ? [[eye, references]] : [];
+        })),
+        ...(body.binocularPd?.observationReference ? { OU: [body.binocularPd.observationReference] } : {}),
+      });
       onSaved(status);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -173,6 +234,17 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
             <h2 className="text-lg font-semibold text-white">Auto-Refraction / Auto-K</h2>
             <p className="mt-1 text-sm text-white/45">Objective pretest measurements from manual entry or a future device feed</p>
           </div>
+          <div className="flex flex-wrap items-end gap-3">
+          <ClearSectionButton
+            encounterReference={encounterReference}
+            sectionKey="auto-refraction"
+            label="Auto-refraction / Auto-K"
+            hasRecorded={Object.keys(savedReferences).length > 0}
+            onCleared={(result) => {
+              resetForm();
+              onCleared?.({ scope: "section", result });
+            }}
+          />
           <label className="block min-w-[180px]">
             <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">Source</span>
             <OdosSelect
@@ -186,6 +258,7 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
               ariaLabel="Source"
             />
           </label>
+          </div>
         </div>
 
         {definitionError && (
@@ -205,7 +278,10 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
               </div>
               {EYES.map((eye) => (
                 <div key={eye} className="grid grid-cols-[54px_repeat(3,minmax(120px,180px))] items-center gap-2 border-t border-white/10 px-4 py-3">
-                  <div className="text-sm font-semibold text-white">{eye}</div>
+                  <div className="flex items-center gap-1 text-sm font-semibold text-white">
+                    <span>{eye}</span>
+                    {savedReferences[eye] && <RemoveValueButton label={`Auto-refraction ${eye}`} onRemove={() => removeSaved(eye)} />}
+                  </div>
                   <PowerDropdown value={eyes[eye].sphere} options={sphereOptions} defaultValue="0.00" onChange={(value) => updateEye(eye, { sphere: value })} ariaLabel={`${eye} auto-refraction sphere`} formatOption={formatDiopterOption} />
                   <PowerDropdown value={eyes[eye].cylinder} options={cylinderOptions} defaultValue="0.00" onChange={(value) => updateEye(eye, { cylinder: value })} ariaLabel={`${eye} auto-refraction cylinder`} formatOption={formatDiopterOption} />
                   <AxisWheel
@@ -220,7 +296,10 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
               ))}
             </div>
             <div className="border-t border-white/10 bg-white/[0.015] p-4 lg:border-l lg:border-t-0">
-              <div className="text-xs font-semibold uppercase tracking-widest text-white/45">Binocular PD (OU)</div>
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-white/45">
+                <span>Binocular PD (OU)</span>
+                {savedReferences.OU && <RemoveValueButton label="Binocular PD" onRemove={() => removeSaved("OU")} />}
+              </div>
               <p className="mt-1 text-xs text-white/35">Single distance and near measurements in millimeters.</p>
               <div className="mt-4 grid gap-3">
                 <label>

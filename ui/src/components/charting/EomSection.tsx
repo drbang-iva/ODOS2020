@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { voidEncounterEntries } from "../../lib/encounter-void";
+import { ClearSectionButton, RemoveValueButton } from "./ClearControls";
+import { useEncounterEdit } from "./encounter-edit-context";
 import { OdosSelect } from "../inputs/OdosSelect";
 import type { CustomFindingDefinition } from "./CustomFindingSection";
 import type { SectionSaveStatus } from "./types";
@@ -13,9 +16,9 @@ const POSITIONS: Array<{ code: Position; label: string }> = [
   { code: "down-left", label: "Down left" }, { code: "down", label: "Down" }, { code: "down-right", label: "Down right" },
 ];
 const MOVEMENTS = ["-4", "-3", "-2", "-1", "0", "+1", "+2", "+3", "+4"];
-interface HistoryRow { recordedAt: string; state: string; summary: string }
+interface HistoryRow { observationReference?: string; recordedAt: string; state: string; summary: string }
 
-export function EomSection({ definition: _definition, patientReference, encounterReference, onSaved }: {
+export function EomSection({ definition, patientReference, encounterReference, onSaved }: {
   definition: CustomFindingDefinition;
   patientReference: string;
   encounterReference: string;
@@ -37,6 +40,7 @@ export function EomSection({ definition: _definition, patientReference, encounte
   const [version, setVersion] = useState(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
+  const { onCleared } = useEncounterEdit();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -47,6 +51,33 @@ export function EomSection({ definition: _definition, patientReference, encounte
       .catch((caught) => { if ((caught as Error).name !== "AbortError") setError(caught instanceof Error ? caught.message : String(caught)); });
     return () => controller.abort();
   }, [patientReference, encounterReference, version]);
+
+  async function removeRow(observationReference: string) {
+    try {
+      const result = await voidEncounterEntries(encounterReference, { scope: "observation", observationReference });
+      onCleared?.({ scope: "observation", result });
+      setVersion((current) => current + 1);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    }
+  }
+
+  function resetForm() {
+    setState(undefined);
+    setEyes({ OD: {}, OS: {} });
+    setNystagmus(false);
+    setNystagmusNote("");
+    setDiplopia(false);
+    setDiplopiaType("");
+    setDirection("");
+    setComitancy("");
+    setWorstGaze("");
+    setFrequency("");
+    setOnset("");
+    setNote("");
+    setError(undefined);
+    setVersion((current) => current + 1);
+  }
 
   function fullOu() {
     setState("normal");
@@ -89,7 +120,19 @@ export function EomSection({ definition: _definition, patientReference, encounte
             <h2 className="mt-1 text-xl font-semibold text-[color:var(--odos-text)]">EOM / diplopia</h2>
             <p className="mt-1 text-sm text-[color:var(--odos-muted)]">Nine-position motility, nystagmus, and structured diplopia findings.</p>
           </div>
-          <button type="button" onClick={fullOu} className="rounded border border-emerald-300/50 bg-emerald-300/10 px-4 py-2 text-sm font-semibold text-emerald-100">Full OU — SAFE</button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={fullOu} className="rounded border border-emerald-300/50 bg-emerald-300/10 px-4 py-2 text-sm font-semibold text-emerald-100">Full OU — SAFE</button>
+            <ClearSectionButton
+              encounterReference={encounterReference}
+              sectionKey={definition.sectionKey ?? definition.stableKey}
+              label="EOM"
+              hasRecorded={history.length > 0}
+              onCleared={(result) => {
+                resetForm();
+                onCleared?.({ scope: "section", result });
+              }}
+            />
+          </div>
         </header>
         <div className="mt-4 flex gap-2">
           {(["normal", "abnormal", "deferred"] as ExamState[]).map((value) => (
@@ -162,7 +205,7 @@ export function EomSection({ definition: _definition, patientReference, encounte
           <span className="text-sm text-rose-200">{error}</span>
           <button type="button" onClick={() => void save()} disabled={saving} className="rounded bg-brand px-5 py-2 text-sm font-semibold disabled:opacity-50">{saving ? "Saving…" : "Save EOM"}</button>
         </div>
-        <History rows={history} />
+        <History rows={history} onRemove={removeRow} />
       </div>
     </section>
   );
@@ -189,4 +232,4 @@ function Select({ label, value, values, onChange }: { label: string; value: stri
 export function diplopiaSelectionsComplete(...values: string[]): boolean {
   return values.every((value) => value.length > 0);
 }
-function History({ rows }: { rows: HistoryRow[] }) { return <div className="mt-8 overflow-hidden rounded border border-[color:var(--odos-line)]"><div className="border-b border-[color:var(--odos-line)] px-4 py-3 font-semibold">History</div>{rows.length ? rows.map((row, index) => <div key={`${row.recordedAt}-${index}`} className="border-b border-[color:var(--odos-line)] px-4 py-3 text-sm text-[color:var(--odos-muted)]"><span className="mr-3 capitalize">{row.state}</span>{row.summary}</div>) : <div className="p-5 text-sm text-[color:var(--odos-muted)]">No prior entries</div>}</div>; }
+function History({ rows, onRemove }: { rows: HistoryRow[]; onRemove(observationReference: string): void }) { return <div className="mt-8 overflow-hidden rounded border border-[color:var(--odos-line)]"><div className="border-b border-[color:var(--odos-line)] px-4 py-3 font-semibold">History</div>{rows.length ? rows.map((row, index) => <div key={`${row.recordedAt}-${index}`} className="flex items-start justify-between gap-3 border-b border-[color:var(--odos-line)] px-4 py-3 text-sm text-[color:var(--odos-muted)]"><span><span className="mr-3 capitalize">{row.state}</span>{row.summary}</span>{row.observationReference && <RemoveValueButton label="EOM" confirmMessage={row.state === "abnormal" ? "Removing this EOM entry discards its recorded abnormal findings. Continue?" : undefined} onRemove={() => onRemove(row.observationReference!)} />}</div>) : <div className="p-5 text-sm text-[color:var(--odos-muted)]">No prior entries</div>}</div>; }

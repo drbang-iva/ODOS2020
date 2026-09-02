@@ -1,5 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type Ref } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { ClearSectionButton } from "./ClearControls";
+import { useEncounterEdit } from "./encounter-edit-context";
 import {
   blankComplaintDraft,
   effectiveComplaintOptions,
@@ -59,6 +61,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
+  const { onCleared } = useEncounterEdit();
   const [pendingHistoryCapture, setPendingHistoryCapture] = useState<PendingHistoryCapture | null>(null);
   const presentingConcernRef = useRef<HTMLInputElement>(null);
   const pendingNextConcernFocus = useRef(false);
@@ -315,8 +318,28 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
   return (
     <section className="h-full overflow-y-auto p-6">
       <div className="max-w-6xl">
-        <h2 className="odos-hpi-text text-lg font-semibold">Chief complaint / HPI / ROS</h2>
-        <p className="odos-hpi-muted mt-1 text-sm">Each saved presenting complaint records History on the chart. Save reviewed ROS after assessing it.</p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="odos-hpi-text text-lg font-semibold">Chief complaint / HPI / ROS</h2>
+            <p className="odos-hpi-muted mt-1 text-sm">Each saved presenting complaint records History on the chart. Save reviewed ROS after assessing it.</p>
+          </div>
+          <ClearSectionButton
+            encounterReference={encounterReference}
+            sectionKey="hpi"
+            label="History"
+            hasRecorded={complaints.length > 0}
+            onCleared={(result) => {
+              setRosStatuses({});
+              setReviewAttestations([]);
+              setDraft(null);
+              setEditingId(null);
+              setSaved(null);
+              setError(null);
+              void load().catch((err) => setError(err instanceof Error ? err.message : String(err)));
+              onCleared?.({ scope: "section", result });
+            }}
+          />
+        </div>
 
         <div className="odos-hpi-border mt-6 rounded border bg-bg-panel/70 p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -380,7 +403,6 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
                 value=""
                 placeholder="Complaint name"
                 search={searchComplaintOptions}
-                onClear={() => undefined}
                 onSelect={(option) => beginDefinition(option.item)}
               />
             </div>

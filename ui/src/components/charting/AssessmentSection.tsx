@@ -49,6 +49,8 @@ import {
   type ProtocolItem,
 } from "../../lib/protocol-authoring";
 import { ProtocolStagingList } from "./ProtocolStagingList";
+import { ClearSectionButton } from "./ClearControls";
+import { useEncounterEdit } from "./encounter-edit-context";
 import {
   ReorderImpressionsModal,
   buildReorderImpressionRows,
@@ -115,6 +117,7 @@ const BUTTON_CLASS = "rounded border border-[color:var(--odos-accent-border)] bg
 export function AssessmentSection({ patientReference, encounterReference, onSaved, onRefer, onEngageDiagnosis }: Props) {
   const { role } = useRole();
   const canShowEditing = role !== "front-desk";
+  const { onCleared } = useEncounterEdit();
   const [encounter, setEncounter] = useState<Encounter | null>(null);
   const [conditions, setConditions] = useState<Condition[]>([]);
   const [provenanceLines, setProvenanceLines] = useState<Record<string, string>>({});
@@ -548,6 +551,18 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {canShowEditing && (
+              <ClearSectionButton
+                encounterReference={encounterReference}
+                sectionKey="assessment"
+                label="Assessment"
+                hasRecorded={conditions.length > 0}
+                onCleared={(result) => {
+                  void load().catch((err) => setError(err instanceof Error ? err.message : String(err)));
+                  onCleared?.({ scope: "section", result });
+                }}
+              />
+            )}
             {canShowEditing && onRefer && (
               <button type="button" className="sidebar-button" data-entry-sheet-pristine-action onClick={onRefer}>Refer to…</button>
             )}

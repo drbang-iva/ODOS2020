@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { voidEncounterEntries } from "../../lib/encounter-void";
+import { ClearSectionButton, RemoveValueButton } from "./ClearControls";
+import { useEncounterEdit } from "./encounter-edit-context";
 import { OdosSelect } from "../inputs/OdosSelect";
 import { PowerDropdown } from "./PowerDropdown";
 import type { SectionSaveStatus } from "./types";
@@ -18,6 +21,7 @@ interface Row {
 }
 
 interface HistoryRow {
+  observationReference?: string;
   recordedAt: string;
   summary: string;
 }
@@ -40,6 +44,7 @@ export function CoverTestSection({ patientReference, encounterReference, onSaved
   const [version, setVersion] = useState(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
+  const { onCleared } = useEncounterEdit();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -54,6 +59,16 @@ export function CoverTestSection({ patientReference, encounterReference, onSaved
       .catch((caught) => { if ((caught as Error).name !== "AbortError") setError(caught instanceof Error ? caught.message : String(caught)); });
     return () => controller.abort();
   }, [encounterReference, patientReference, version]);
+
+  async function removeRow(observationReference: string) {
+    try {
+      const result = await voidEncounterEntries(encounterReference, { scope: "observation", observationReference });
+      onCleared?.({ scope: "observation", result });
+      setVersion((current) => current + 1);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    }
+  }
 
   function update(slot: Slot, patch: Partial<Row>) {
     setRows((current) => current.map((row) => row.slot === slot ? { ...row, ...patch } : row));
@@ -107,10 +122,24 @@ export function CoverTestSection({ patientReference, encounterReference, onSaved
   return (
     <section className="h-full overflow-y-auto p-6">
       <div className="max-w-6xl">
-        <header className="border-b border-[color:var(--odos-line)] pb-4">
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-light">Entrance Testing</div>
-          <h2 className="mt-1 text-xl font-semibold">Cover test</h2>
-          <p className="mt-1 text-sm text-[color:var(--odos-muted)]">Record distance and near alignment with and without correction.</p>
+        <header className="flex flex-wrap items-start justify-between gap-4 border-b border-[color:var(--odos-line)] pb-4">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-light">Entrance Testing</div>
+            <h2 className="mt-1 text-xl font-semibold">Cover test</h2>
+            <p className="mt-1 text-sm text-[color:var(--odos-muted)]">Record distance and near alignment with and without correction.</p>
+          </div>
+          <ClearSectionButton
+            encounterReference={encounterReference}
+            sectionKey="entrance:cover"
+            label="Cover test"
+            hasRecorded={history.length > 0}
+            onCleared={(result) => {
+              setRows(SLOTS.map(({ slot }) => emptyRow(slot)));
+              setError(undefined);
+              setVersion((current) => current + 1);
+              onCleared?.({ scope: "section", result });
+            }}
+          />
         </header>
         <div className="mt-5 space-y-3">
           {rows.map((row) => (
@@ -145,7 +174,7 @@ export function CoverTestSection({ patientReference, encounterReference, onSaved
         </div>
         <div className="mt-8 overflow-hidden rounded border border-[color:var(--odos-line)]">
           <div className="border-b border-[color:var(--odos-line)] px-4 py-3 font-semibold">History</div>
-          {history.length ? history.map((row, index) => <div key={`${row.recordedAt}-${index}`} className="border-b border-[color:var(--odos-line)] px-4 py-3 text-sm text-[color:var(--odos-muted)]">{row.summary}</div>) : <div className="p-5 text-sm text-[color:var(--odos-muted)]">No prior entries</div>}
+          {history.length ? history.map((row, index) => <div key={`${row.recordedAt}-${index}`} className="flex items-start justify-between gap-3 border-b border-[color:var(--odos-line)] px-4 py-3 text-sm text-[color:var(--odos-muted)]"><span>{row.summary}</span>{row.observationReference && <RemoveValueButton label="Cover test" confirmMessage={row.summary.includes(" — ") ? "Removing this cover-test entry discards its note. Continue?" : undefined} onRemove={() => removeRow(row.observationReference!)} />}</div>) : <div className="p-5 text-sm text-[color:var(--odos-muted)]">No prior entries</div>}
         </div>
       </div>
     </section>

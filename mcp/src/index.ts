@@ -297,6 +297,11 @@ import {
   handleCustomSectionCaptureRequest,
   handleCustomSectionHistoryRequest,
 } from "./clinical-graph/custom-section-endpoint.js";
+import { handleEncounterVoidRequest } from "./clinical-graph/encounter-void-endpoint.js";
+import {
+  handleEncounterUndoLedgerRequest,
+  handleEncounterUndoRequest,
+} from "./clinical-graph/encounter-undo-endpoint.js";
 import {
   handleDilationCaptureRequest,
   handleDilationHistoryRequest,
@@ -6593,6 +6598,48 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         } catch (error) {
           console.error("odos-mcp: encounter complaint mutation failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "encounter complaint mutation route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/encounters/:encounterId/void", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleEncounterVoidRequest(
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.write"),
+            { authHeader: req.header("authorization"), params: req.params, body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: encounter void failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "encounter void route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/encounters/:encounterId/void/undo", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleEncounterUndoRequest(
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.write"),
+            { authHeader: req.header("authorization"), params: req.params, body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: encounter void undo failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "encounter void undo route failed" });
+        }
+      });
+
+      app.get("/clinical-graph/encounters/:encounterId/void/ledger", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleEncounterUndoLedgerRequest(
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.read"),
+            { authHeader: req.header("authorization"), params: req.params },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: encounter undo ledger read failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "encounter undo ledger route failed" });
         }
       });
 

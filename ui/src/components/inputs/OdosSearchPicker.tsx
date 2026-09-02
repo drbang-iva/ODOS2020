@@ -14,7 +14,7 @@ export interface OdosSearchPickerProps<T> {
   placeholder: string;
   search: (query: string, signal: AbortSignal) => Promise<OdosSearchPickerOption<T>[]>;
   onSelect: (option: OdosSearchPickerOption<T>) => void;
-  onClear: (nextQuery: string) => void;
+  onClear?: (nextQuery: string) => void;
   onCreate?: (name: string) => Promise<OdosSearchPickerOption<T>>;
   createLabel?: string;
   searchDelayMs?: number;
@@ -184,7 +184,7 @@ export function OdosSearchPicker<T>({
           setOptions([]);
           setSettledQuery("");
           setActiveIndex(0);
-          if (value) onClear(nextQuery);
+          if (value) onClear?.(nextQuery);
         }}
         onKeyDown={(event) => {
           if (event.key === "ArrowDown" && options.length) {

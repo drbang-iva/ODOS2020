@@ -366,3 +366,22 @@ function asRecord(value: unknown): Record<string, unknown> {
 }
 
 assert.equal(ODOS_OPHTHALMOLOGY_CODE_SYSTEM.startsWith("https://odos2020.com/fhir/CodeSystem/"), true);
+
+test("IOP history hides voided (entered-in-error) readings from the timeline and the per-eye summary", async () => {
+  const fixture = deps();
+  const definitions = defaultDefinitions();
+  const iop = definition(definitions, "intraocular_pressure");
+  const live = observation(iop, "OD", quantityValue(18, "mmHg", "http://unitsofmeasure.org", "mm[Hg]"), "2026-03-14T13:15:00.000Z", "GAT");
+  const voided = {
+    ...observation(iop, "OD", quantityValue(40, "mmHg", "http://unitsofmeasure.org", "mm[Hg]"), "2026-03-15T13:15:00.000Z", "GAT"),
+    status: "entered-in-error" as const,
+  };
+  fixture.observations.push(live, voided);
+
+  const res = await handleIopHistoryRequest(fixture.deps, { authHeader: AUTH, query: { patient: PATIENT } });
+  assert.equal(res.status, 200);
+  const body = res.body as IopHistoryResponse;
+  assert.deepEqual(body.readings.map((reading) => reading.value), [18], "the voided reading must not be listed");
+  assert.equal(body.perEye.OD.count, 1);
+  assert.equal(body.perEye.OD.tMax, 18);
+});

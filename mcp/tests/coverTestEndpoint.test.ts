@@ -88,3 +88,16 @@ function quantity(observation: Observation, name: string) {
 function code(observation: Observation, name: string) {
   return component(observation, name)?.valueCodeableConcept?.coding?.[0]?.code;
 }
+
+test("cover-test history hides voided rows and exposes each live row's Observation reference", async () => {
+  const { fhir, deps } = setup();
+  await handleCoverTestCaptureRequest(deps, { authHeader: AUTH, body: { patientReference: "Patient/p1", encounterReference: "Encounter/e1", rows: [{ slot: "distance-cc", state: "ortho" }] } });
+  await handleCoverTestCaptureRequest(deps, { authHeader: AUTH, body: { patientReference: "Patient/p1", encounterReference: "Encounter/e1", rows: [{ slot: "near-cc", state: "ortho" }] } });
+  const observations = fhir.resources.filter((row): row is Observation => row.resourceType === "Observation");
+  assert.equal(observations.length, 2);
+  observations[0]!.status = "entered-in-error";
+  const history = await handleCoverTestHistoryRequest(deps, { authHeader: AUTH, query: { patient: "Patient/p1", encounter: "Encounter/e1" } });
+  const rows = (history.body as { rows: Array<{ summary: string; observationReference?: string }> }).rows;
+  assert.equal(rows.length, 1, "the voided row must not be listed");
+  assert.equal(rows[0]?.observationReference, `Observation/${observations[1]!.id}`);
+});

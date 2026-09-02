@@ -14,6 +14,7 @@ import {
   type ClinicalFindingDefinition,
 } from "./glaucoma-suspect.js";
 import { resolveIopDefinitions, type IopEndpointResult } from "./iop-endpoint.js";
+import { isLiveObservation } from "./observation-liveness.js";
 
 type Eye = "OD" | "OS";
 
@@ -124,9 +125,11 @@ export async function handleIopHistoryRequest(
     staff.fhir.search<Goal>("Goal", targetSearchParams(parsed.data.patient)),
   ]);
   const readings = bundleResources(iopBundle)
+    .filter(isLiveObservation)
     .flatMap((observation) => observationToIopReading(observation))
     .sort(compareByRecordedAt);
   const cornealHysteresis = bundleResources(chBundle)
+    .filter(isLiveObservation)
     .flatMap((observation) => observationToCornealHysteresis(observation))
     .sort(compareByRecordedAt);
   const targets = targetsByEye(bundleResources(goalBundle));

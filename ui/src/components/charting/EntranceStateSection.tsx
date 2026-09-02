@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { voidEncounterEntries } from "../../lib/encounter-void";
+import { ClearSectionButton, RemoveValueButton } from "./ClearControls";
+import { useEncounterEdit } from "./encounter-edit-context";
 import { OdosSelect } from "../inputs/OdosSelect";
 import type { CustomFindingDefinition, CustomFindingField } from "./CustomFindingSection";
 import { PowerDropdown } from "./PowerDropdown";
@@ -22,6 +25,7 @@ interface HistoryRow {
   values: Array<{ label: string; value: number | string | string[]; unit?: string }>;
   other?: string;
   normalTemplate?: string;
+  observationReference?: string;
 }
 
 const EYES: Eye[] = ["OD", "OS"];
@@ -40,6 +44,7 @@ export function EntranceStateSection({ definition, patientReference, encounterRe
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { onCleared } = useEncounterEdit();
   const fields = useMemo(
     () => definition.customFields.filter((field) => field.active).sort((left, right) => left.order - right.order),
     [definition.customFields],
@@ -111,6 +116,24 @@ export function EntranceStateSection({ definition, patientReference, encounterRe
     }
   }
 
+  async function removeRow(observationReference: string) {
+    try {
+      const result = await voidEncounterEntries(encounterReference, { scope: "observation", observationReference });
+      onCleared?.({ scope: "observation", result });
+      setHistoryVersion((current) => current + 1);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    }
+  }
+
+  function resetForm() {
+    setEyes({ OD: emptyCapture(), OS: emptyCapture() });
+    setShared(emptyCapture());
+    setMessage(null);
+    setError(null);
+    setHistoryVersion((current) => current + 1);
+  }
+
   function perEyeBody(): { eyes: Record<string, unknown> } | undefined {
     const populated = EYES.filter((eye) => eyes[eye].state);
     if (populated.length === 0) {
@@ -145,9 +168,21 @@ export function EntranceStateSection({ definition, patientReference, encounterRe
               {definition.perEye ? "Choose an explicit state for each eye." : "Record this binocular test once; it cannot differ by eye."}
             </p>
           </div>
-          <button type="button" onClick={setNormal} className="rounded border border-emerald-300/50 bg-emerald-300/10 px-4 py-2 text-sm font-semibold text-emerald-100 hover:bg-emerald-300/15">
-            {definition.perEye ? "Normal OU" : "Mark normal"}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={setNormal} className="rounded border border-emerald-300/50 bg-emerald-300/10 px-4 py-2 text-sm font-semibold text-emerald-100 hover:bg-emerald-300/15">
+              {definition.perEye ? "Normal OU" : "Mark normal"}
+            </button>
+            <ClearSectionButton
+              encounterReference={encounterReference}
+              sectionKey={definition.sectionKey ?? definition.stableKey}
+              label={definition.display}
+              hasRecorded={history.length > 0}
+              onCleared={(result) => {
+                resetForm();
+                onCleared?.({ scope: "section", result });
+              }}
+            />
+          </div>
         </div>
         {definition.normalTemplate && <div className="mt-4 rounded border border-emerald-300/20 bg-emerald-300/[0.06] px-4 py-3 text-sm text-emerald-50/80">{definition.normalTemplate}</div>}
         {definition.sourceStatus === "unseeded-needs-operator-input" && definition.setupMessage && (
@@ -189,7 +224,7 @@ export function EntranceStateSection({ definition, patientReference, encounterRe
           <div className="min-h-6 text-sm">{error ? <span className="text-rose-200">{error}</span> : <span className="text-[color:var(--odos-muted)]">{message}</span>}</div>
           <button type="button" onClick={() => void save()} disabled={saving || loading} className="rounded bg-brand px-5 py-2 text-sm font-semibold text-[color:var(--odos-text)] disabled:opacity-45">{saving ? "Saving…" : `Save ${definition.display}`}</button>
         </div>
-        <History rows={history} loading={loading} perEye={definition.perEye} />
+        <History rows={history} loading={loading} perEye={definition.perEye} label={definition.display} onRemove={removeRow} />
       </div>
     </section>
   );
@@ -247,17 +282,26 @@ function ColorTotal({ values }: { values: Record<string, string> }) {
   );
 }
 
-function History({ rows, loading, perEye }: { rows: HistoryRow[]; loading: boolean; perEye: boolean }) {
+function History({ rows, loading, perEye, label, onRemove }: { rows: HistoryRow[]; loading: boolean; perEye: boolean; label: string; onRemove(observationReference: string): void }) {
   return (
     <div className="mt-8 overflow-hidden rounded border border-[color:var(--odos-line)] bg-bg-panel/55">
       <div className="border-b border-[color:var(--odos-line)] px-4 py-3 text-sm font-semibold text-[color:var(--odos-text)]">History</div>
       {loading ? <div className="p-6 text-sm text-[color:var(--odos-muted)]">Loading history…</div> : rows.length === 0 ? <div className="p-6 text-sm text-[color:var(--odos-muted)]">No prior entries</div> : (
         <div className="divide-y divide-white/10">
           {rows.map((row, index) => (
-            <div key={`${row.recordedAt}-${row.eye}-${index}`} className="grid gap-2 px-4 py-3 text-sm md:grid-cols-[90px_120px_1fr]">
+            <div key={`${row.recordedAt}-${row.eye}-${index}`} className="grid gap-2 px-4 py-3 text-sm md:grid-cols-[90px_120px_1fr_auto]">
               <div className="font-semibold text-[color:var(--odos-text)]">{perEye ? row.eye : "Binocular"}</div>
               <div className="capitalize text-[color:var(--odos-muted)]">{row.state}</div>
               <div className="text-[color:var(--odos-muted)]">{row.normalTemplate ?? row.values.map((entry) => `${entry.label}: ${Array.isArray(entry.value) ? entry.value.join(", ") : entry.value}${entry.unit ? ` ${entry.unit}` : ""}`).join(" · ")}{row.other ? ` — ${row.other}` : ""}</div>
+              <div className="flex items-start justify-end">
+                {row.observationReference && (
+                  <RemoveValueButton
+                    label={`${label}${perEye && row.eye ? ` ${row.eye}` : ""}`}
+                    confirmMessage={row.other ? `Removing ${label}${perEye && row.eye ? ` ${row.eye}` : ""} discards its note. Continue?` : undefined}
+                    onRemove={() => onRemove(row.observationReference!)}
+                  />
+                )}
+              </div>
             </div>
           ))}
         </div>

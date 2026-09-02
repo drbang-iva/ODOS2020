@@ -57,6 +57,17 @@ import { OcularHealthSection } from "../components/charting/OcularHealthSection"
 import { PrescriptionSection } from "../components/charting/PrescriptionSection";
 import { OrthoKSection } from "../components/charting/OrthoKSection";
 import { RefractionSection } from "../components/charting/RefractionSection";
+import { EncounterEditContext, type EncounterClearedDetail } from "../components/charting/encounter-edit-context";
+import { UndoStrip } from "../components/charting/UndoStrip";
+import { isClosedEncounterStatus } from "../lib/encounter-void";
+import {
+  emptyUndoLedger,
+  readEncounterUndoLedger,
+  undoEncounterVoid,
+  undoSlotForSection,
+  type EncounterUndoLedger,
+  type EncounterUndoRequest,
+} from "../lib/encounter-undo";
 import { RefractionHistorySection } from "../components/charting/RefractionHistorySection";
 import { SoftContactLensSection } from "../components/charting/SoftContactLensSection";
 import { SpecialtyContactLensSection } from "../components/charting/SpecialtyContactLensSection";
@@ -132,6 +143,10 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const [examOverviewRefreshVersion, setExamOverviewRefreshVersion] = useState(0);
   const [boardEditorOpen, setBoardEditorOpen] = useState(false);
   const [entrySheetSection, setEntrySheetSection] = useState<ExamEntrySheetSectionId>();
+  const [chartClearVersion, setChartClearVersion] = useState(0);
+  // The Undo ledger (§4b.4) is loaded with the encounter and replaced by every void / undo
+  // response, so the strips survive navigation and reload rather than living in component state.
+  const [undoLedger, setUndoLedger] = useState<EncounterUndoLedger>(() => emptyUndoLedger(encounterId));
   const entrySheetGuard = useExamEntrySheetGuard(entrySheetSection);
   const [rightPanelState, setRightPanelState] = useState(INITIAL_EXAM_RIGHT_PANEL_STATE);
   const [rightPanelImageCount, setRightPanelImageCount] = useState(0);
@@ -175,6 +190,38 @@ export function EncounterCharting({ patient, encounterId }: Props) {
 
   function refreshExamOverview() {
     setExamOverviewRefreshVersion((current) => current + 1);
+  }
+
+  // Pre-finalization delete: a void anywhere refreshes the Overview; a section clear drops that
+  // section's saved status; a visit clear drops every status and remounts the open sheet blank.
+  function handleEncounterCleared(detail: EncounterClearedDetail) {
+    if (detail.result.ledger) setUndoLedger(detail.result.ledger);
+    if (detail.scope === "encounter") {
+      setStatuses({});
+      setChartClearVersion((current) => current + 1);
+    } else if (detail.scope === "section") {
+      setStatuses((current) => Object.fromEntries(Object.entries(current).filter(([key]) =>
+        key !== activeSection && !key.startsWith(`${activeSection}:`)
+      )) as SectionStatusMap);
+    }
+    refreshExamOverview();
+  }
+
+  // Undo reverses exactly one clear — the slot the server holds for that scope — and the
+  // response's ledger replaces ours (the slot is gone). The open section remounts so its
+  // history shows the restored values.
+  async function handleUndo(request: EncounterUndoRequest) {
+    // The remount below discards whatever is typed and unsaved in the open sheet. Undo is not
+    // an edit, so its button never marks the sheet dirty — but it must still respect what the
+    // clinician has typed since. Same guard, same question, as leaving the sheet.
+    // Ask first, discard only on success: if the undo fails the typed edits stay on screen, so the
+    // guard must stay armed for whatever the clinician does next.
+    if (entrySheetSection && !entrySheetGuard.confirmDiscard("Undo will discard unsaved changes in {title}. Continue?")) return;
+    const result = await undoEncounterVoid(encounterReference, request);
+    if (entrySheetSection) entrySheetGuard.resetDirty();
+    setUndoLedger(result.ledger);
+    setChartClearVersion((current) => current + 1);
+    refreshExamOverview();
   }
 
   function openBoardEditor(sectionId: ChartSectionId) {
@@ -394,6 +441,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
     let cancelled = false;
     setEncounterRecordedAt(undefined);
     setEncounterLoadState({ encounterId, status: "loading" });
+    setUndoLedger(emptyUndoLedger(encounterId));
     fhir.read<Encounter>("Encounter", encounterId)
       .then((encounter) => {
         const code = encounter.serviceType?.coding?.find((coding) =>
@@ -401,6 +449,9 @@ export function EncounterCharting({ patient, encounterId }: Props) {
         )?.code;
         if (cancelled) return;
         setEncounterLoadState({ encounterId, status: "ready", encounter });
+        void readEncounterUndoLedger(`Encounter/${encounterId}`).then((ledger) => {
+          if (!cancelled) setUndoLedger(ledger);
+        });
         setEncounterRecordedAt(encounter.period?.start ?? encounter.period?.end);
         if (code === "eyecare" || code === "aesthetics") {
           setDiscipline(code);
@@ -654,6 +705,40 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const activeFindingSectionKey = visibleDefinitions.find((definition) =>
     definition.stableKey === activeSection
   )?.sectionKey ?? activeSection;
+  // The section key(s) each surface names when it clears — the same keys its Clear control
+  // sends — so a sheet finds its own Undo slot and never another section's (§4b.2 rule 2).
+  const keyOf = (definition?: { stableKey: string; sectionKey?: string }) =>
+    definition ? [definition.sectionKey ?? definition.stableKey] : [];
+  function sectionUndoKeys(section: string): string[] {
+    switch (section) {
+      case "hpi": return ["hpi", "complaints"];
+      case "va": return ["va"];
+      case "iop": return ["tonometry"];
+      case "cover-test": return ["entrance:cover"];
+      case "dilation": return ["entrance:dilation"];
+      case "assessment": return ["assessment"];
+      case "refraction": return ["refraction"];
+      case "auto-refraction": return ["auto-refraction"];
+      case "pupils": return keyOf(pupilsDefinition);
+      case "stereopsis": return keyOf(stereopsisDefinition);
+      case "color-vision": return keyOf(colorDefinition);
+      case "eom": return keyOf(eomDefinition);
+      case "cvf": return [cvfDefinition?.stableKey, visualFieldDefectDefinition?.stableKey].filter((key): key is string => Boolean(key));
+      case "manual-keratometry": return keyOf(manualKDefinition);
+      case "pachymetry": return keyOf(pachymetryDefinition);
+      case "dry-eye:tear-stability": return tearFilmDefinition ? [tearFilmDefinition.stableKey] : [];
+      case "dry-eye:conjunctival-staining":
+        return [corneaDefinition?.stableKey, dryEyeDefinition?.stableKey].filter((key): key is string => Boolean(key));
+      default:
+        if (section.startsWith("ocular-health:")) return ocularHealthDefinitions.map((definition) => definition.stableKey);
+        return [];
+    }
+  }
+  const sheetUndoSlot = entrySheetSection ? undoSlotForSection(undoLedger, sectionUndoKeys(entrySheetSection)) : undefined;
+  const sheetUndo = sheetUndoSlot
+    ? { slot: sheetUndoSlot.slot, onUndo: () => handleUndo({ scope: "section", sectionKey: sheetUndoSlot.sectionKey }) }
+    : undefined;
+  const bodyUndoSlot = entrySheetSection ? undefined : undoSlotForSection(undoLedger, sectionUndoKeys(activeSection));
   const activeExamOverviewProjection = examOverviewProjection?.encounterReference === encounterReference
     ? examOverviewProjection
     : undefined;
@@ -686,6 +771,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   );
 
   return (
+    <EncounterEditContext.Provider value={{ encounterStatus: encounter?.status, onCleared: handleEncounterCleared }}>
     <div className={["odos-charting-workspace flex h-screen w-screen flex-col bg-bg-deep text-white", config.encounterDensity === "compact" ? "text-[0.95rem]" : ""].join(" ")}>
       <EncounterHeader
         patient={patient}
@@ -698,6 +784,8 @@ export function EncounterCharting({ patient, encounterId }: Props) {
         visitUnavailableReason={visitUnavailableReason}
         clinicalActionUnavailableReason={clinicalActionUnavailableReason}
         onToggleVisitCharges={() => setVisitChargesOpen((current) => !current)}
+        undoSlot={undoLedger.encounter ?? undefined}
+        onUndo={() => handleUndo({ scope: "encounter" })}
       />
       <div
         className="odos-charting-stage"
@@ -749,7 +837,15 @@ export function EncounterCharting({ patient, encounterId }: Props) {
             onAddSection={catalog.canWrite ? () => setCreatingSection(true) : undefined}
           />
         )}
-        <main className="relative min-w-0 flex-1 bg-bg-deep" {...(sidebarExpanded ? { inert: "" } : {})}>
+        <main key={chartClearVersion} className="relative min-w-0 flex-1 bg-bg-deep" {...(sidebarExpanded ? { inert: "" } : {})}>
+          {bodyUndoSlot && (
+            <UndoStrip
+              slot={bodyUndoSlot.slot}
+              scope="section"
+              closed={isClosedEncounterStatus(encounter?.status)}
+              onUndo={() => handleUndo({ scope: "section", sectionKey: bodyUndoSlot.sectionKey })}
+            />
+          )}
           {activeExamOverviewProjection && boardEditorOpen && (
             <div className="odos-exam-editor-return">
               <button
@@ -1011,9 +1107,13 @@ export function EncounterCharting({ patient, encounterId }: Props) {
             panelTabs={rightPanelTabs("entry-panel")}
             active={rightPanelState.activeTab === "entry" && !referralComposeOpen}
             hidden={rightPanelState.activeTab !== "entry"}
+            encounterReference={encounterReference}
+            encounterStatus={encounter?.status}
+            onEncounterCleared={(result) => handleEncounterCleared({ scope: "encounter", result })}
+            undo={sheetUndo}
           >
             <MappedExamSection
-              key={entrySheetSection}
+              key={`${entrySheetSection}:${chartClearVersion}`}
               sectionId={entrySheetSection}
               definitions={{
                 pupils: pupilsDefinition,
@@ -1094,6 +1194,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
         />
       )}
     </div>
+    </EncounterEditContext.Provider>
   );
 }
 
