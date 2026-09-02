@@ -541,7 +541,10 @@ test("Wearing Rx offers the standard persisted section clear and resets its edit
     if (url.endsWith("/clinical-graph/wearing/definition")) {
       return Response.json({ definition: { fields: {
         eyeglassType: { options: [{ code: "progressives", display: "Progressives", active: true }] },
-        sourceType: { options: [{ code: "manual", display: "Manual", active: true }] },
+        sourceType: { options: [
+          { code: "manual", display: "Manual", active: true },
+          { code: "device", display: "Device", active: true },
+        ] },
         prismBase: { options: [{ code: "down", display: "Down", active: true }] },
       } } });
     }
@@ -570,8 +573,13 @@ test("Wearing Rx offers the standard persisted section clear and resets its edit
       await flush();
     });
     const sphere = () => renderer.root.findAll((node) => node.props.ariaLabel === "OD sphere")[0]!;
-    await act(async () => { sphere().props.onChange("-1.25"); });
+    const source = () => renderer.root.findAll((node) => node.props.ariaLabel === "Source")[0]!;
+    await act(async () => {
+      sphere().props.onChange("-1.25");
+      source().props.onChange("device");
+    });
     assert.equal(sphere().props.value, "-1.25");
+    assert.equal(source().props.value, "device");
     const clear = renderer.root.findAllByType(ClearSectionButton)[0]?.findByType("button");
     assert.ok(clear, "a persisted Wearing Rx must expose Clear Wearing Rx on reopen");
     await act(async () => { await clear.props.onClick(); await flush(); });
@@ -584,6 +592,7 @@ test("Wearing Rx offers the standard persisted section clear and resets its edit
       "Clear Wearing Rx — voids 1 recorded value from this visit. They remain in the record as entered-in-error. Continue?",
     ]);
     assert.equal(sphere().props.value, "");
+    assert.equal(source().props.value, "manual", "clear resets Source to the section default");
     assert.equal(renderer.root.findAll((node) => node.type === "input" && node.props.type === "checkbox")[0]?.props.checked, false);
   } finally {
     renderer?.unmount();

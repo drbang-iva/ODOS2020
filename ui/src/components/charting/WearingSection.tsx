@@ -132,6 +132,7 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
 
   function resetForm() {
     setPairs([emptyPair(eyeglassTypes[0]?.code ?? "")]);
+    setSourceType(sourceTypes[0]?.code ?? "manual");
     setLeftGlassesAtHome(false);
     setSaved(null);
     setError(null);
