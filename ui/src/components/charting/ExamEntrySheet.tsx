@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, type ReactNode } from "react";
 import type { Encounter } from "@medplum/fhirtypes";
 import { useDockedPanel } from "../commercial/panel-shared";
-import type { EncounterVoidResult } from "../../lib/encounter-void";
+import type { UndoLedgerSlot } from "../../lib/encounter-undo";
+import { isClosedEncounterStatus, type EncounterVoidResult } from "../../lib/encounter-void";
 import { ClearEncounterButton } from "./ClearControls";
+import { UndoStrip } from "./UndoStrip";
 
 export const EXAM_ENTRY_SHEET_CONFIG = {
   hpi: { title: "Chief Complaint / HPI / ROS", layout: "paired-row-form" },
@@ -119,6 +121,7 @@ export function ExamEntrySheet({
   encounterReference,
   encounterStatus,
   onEncounterCleared,
+  undo,
   children,
 }: {
   sectionId: ExamEntrySheetId;
@@ -127,6 +130,8 @@ export function ExamEntrySheet({
   encounterReference?: string;
   encounterStatus?: Encounter["status"];
   onEncounterCleared?: (result: EncounterVoidResult) => void;
+  /** This section's pending Undo (§4b.1): rendered as a status strip directly beneath the heading row. */
+  undo?: { slot: UndoLedgerSlot; onUndo: () => void | Promise<void> };
   onCheckpointDirty?: () => void;
   onClearDirtyCheckpoint?: () => void;
   onDirty?: () => void;
@@ -187,6 +192,7 @@ export function ExamEntrySheet({
         data-testid="exam-entry-sheet"
         data-entry-sheet-layout={config.layout}
         data-entry-sheet-section={sectionId}
+        data-undo-strip={!modal && undo ? "true" : undefined}
         onInputCapture={(event) => markEventDirty(event.target)}
         onChangeCapture={(event) => markEventDirty(event.target)}
         onClickCapture={(event) => {
@@ -235,6 +241,9 @@ export function ExamEntrySheet({
             </button>
           </div>
         </header>
+        {!modal && undo && (
+          <UndoStrip slot={undo.slot} scope="section" closed={isClosedEncounterStatus(encounterStatus)} onUndo={undo.onUndo} />
+        )}
         <div className="odos-exam-entry-sheet-content">{children}</div>
       </aside>
     </div>

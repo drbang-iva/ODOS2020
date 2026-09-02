@@ -2372,3 +2372,69 @@
   cursor: not-allowed;
   opacity: .45;
 }
+
+/* Undo strip (§4b.1): a row of text with one verb at the end, same alert token as the clear controls. */
+.odos-undo-strip {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--odos-line);
+  background: var(--odos-surface-2);
+  color: var(--odos-text);
+  font-size: 13px;
+}
+
+.odos-undo-strip-copy {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.odos-undo-strip-message {
+  color: var(--odos-muted);
+  font-size: 12px;
+}
+
+.odos-undo-strip button {
+  flex: none;
+  min-height: 32px;
+  padding: 4px 12px;
+  border: 1px solid var(--odos-alert);
+  border-radius: 6px;
+  background: var(--odos-surface-2);
+  color: var(--odos-alert);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.odos-undo-strip button:disabled {
+  cursor: not-allowed;
+  opacity: .45;
+}
+
+.odos-exam-entry-sheet[data-undo-strip="true"] {
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.odos-chart-bar-undo {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+}
+
+.odos-chart-bar-undo .odos-undo-strip {
+  border: 1px solid var(--odos-alert);
+  border-radius: 9px;
+  padding: 5px 11px;
+}
+
+@media (max-width: 1279px) {
+  .odos-chart-bar-undo {
+    grid-column: 1 / 13;
+  }
+}

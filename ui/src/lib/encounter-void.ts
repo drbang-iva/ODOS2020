@@ -5,6 +5,7 @@ import {
   clinicalGraphResponseError,
   type ClinicalGraphErrorBody,
 } from "./clinical-graph-client";
+import { parseUndoLedger, type EncounterUndoLedger } from "./encounter-undo";
 
 /**
  * Client for the one pre-finalization delete primitive:
@@ -18,11 +19,16 @@ import {
 
 export type EncounterVoidLaterality = "OD" | "OS" | "OU" | "UNKNOWN";
 
+/**
+ * `label` is what the Undo strip says was cleared ("Reactivity · OD"); the server derives
+ * one when absent. A tier-1 remove may name the sheet's own `sectionKey`(s) so a sheet that
+ * owns two definitions keeps one Undo slot.
+ */
 export type EncounterVoidRequest =
-  | { scope: "observation"; observationReference: string | string[] }
-  | { scope: "finding"; findingKey: string; laterality?: EncounterVoidLaterality }
-  | { scope: "section"; sectionKey: string | string[] }
-  | { scope: "encounter" };
+  | { scope: "observation"; observationReference: string | string[]; sectionKey?: string | string[]; label?: string }
+  | { scope: "finding"; findingKey: string; laterality?: EncounterVoidLaterality; sectionKey?: string | string[]; label?: string }
+  | { scope: "section"; sectionKey: string | string[]; label?: string }
+  | { scope: "encounter"; label?: string };
 
 export interface EncounterVoidSection {
   sectionKey: string;
@@ -35,6 +41,8 @@ export interface EncounterVoidResult {
   count: number;
   sections: EncounterVoidSection[];
   preview: boolean;
+  /** The encounter's Undo ledger after the void — present on every real void's response. */
+  ledger?: EncounterUndoLedger;
 }
 
 export const SIGNED_ENCOUNTER_TOOLTIP = "Signed — use an amendment.";
@@ -70,6 +78,7 @@ export async function voidEncounterEntries(
     count: body.count ?? 0,
     sections: body.sections ?? [],
     preview: body.preview === true,
+    ...(body.ledger ? { ledger: parseUndoLedger({ ledger: body.ledger }, encounterId) } : {}),
   };
 }
 

@@ -34,9 +34,16 @@ import {
   type ClinicalExamCompleteness,
 } from "./ExamOverviewBoard";
 
+import type { UndoLedgerSlot } from "../../lib/encounter-undo";
+import { isClosedEncounterStatus } from "../../lib/encounter-void";
+import { UndoStrip } from "./UndoStrip";
+
 interface Props {
   patient: Patient;
   encounterId: string;
+  /** The visit-level Undo (§4b.1 tier 3): the chart bar's `undo` slot renders while it is pending. */
+  undoSlot?: UndoLedgerSlot;
+  onUndo?: () => void | Promise<void>;
   completeness?: ClinicalExamCompleteness;
   unassignedCount?: number;
   visitCharge?: VisitChargeResponse;
@@ -58,6 +65,8 @@ export function EncounterHeader({
   visitUnavailableReason,
   clinicalActionUnavailableReason,
   onToggleVisitCharges,
+  undoSlot,
+  onUndo,
 }: Props) {
   const [encounter, setEncounter] = useState<Encounter | null>(null);
   const [appointment, setAppointment] = useState<Appointment | null>(null);
@@ -273,6 +282,9 @@ export function EncounterHeader({
         signDisabled={busy !== null || migrated || Boolean(clinicalActionUnavailableReason)}
         signUnavailableReason={clinicalActionUnavailableReason}
         signLabel={busy === "checking" ? "Checking..." : busy === "finish" ? "Signing..." : "Sign & finish"}
+        undoSlot={undoSlot}
+        undoDisabled={migrated || isClosedEncounterStatus(encounter?.status)}
+        onUndo={onUndo}
       />
 
       <div className="flex flex-wrap items-center justify-end gap-3 px-5 py-3">
@@ -360,6 +372,10 @@ interface ExamChartBarProps {
   signDisabled: boolean;
   signUnavailableReason?: string;
   signLabel: string;
+  /** Pending visit-level Undo; the `undo` slot renders only while one exists. */
+  undoSlot?: UndoLedgerSlot;
+  undoDisabled?: boolean;
+  onUndo?: () => void | Promise<void>;
 }
 
 export function ExamChartBar({
@@ -377,6 +393,9 @@ export function ExamChartBar({
   signDisabled,
   signUnavailableReason,
   signLabel,
+  undoSlot,
+  undoDisabled = false,
+  onUndo,
 }: ExamChartBarProps) {
   const visit = visitChipView(visitCharge, brokenDiagnosisDisplay);
   return (
@@ -394,6 +413,13 @@ export function ExamChartBar({
       <div className="odos-chart-bar-sections" data-chart-bar-slot="exam-sections">
         <ExamCompletenessControl completeness={completeness} />
       </div>
+      {undoSlot && (
+        // Its own slot beside exam-sections, not the `drafts` slot: that one is reserved for
+        // slice-4 drafts and a test pins that reservation.
+        <div className="odos-chart-bar-undo" data-chart-bar-slot="undo">
+          <UndoStrip slot={undoSlot} scope="encounter" closed={undoDisabled} onUndo={() => onUndo?.()} />
+        </div>
+      )}
       <div
         className="odos-chart-bar-count"
         data-chart-bar-slot="drafts"

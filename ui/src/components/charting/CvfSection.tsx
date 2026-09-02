@@ -79,7 +79,12 @@ export function CvfSection({ definition, fieldDefectDefinition, patientReference
 
   async function removeRow(observationReference: string) {
     try {
-      const result = await voidEncounterEntries(encounterReference, { scope: "observation", observationReference });
+      // The sheet owns two definitions; naming both keeps one Undo slot for the sheet.
+      const result = await voidEncounterEntries(encounterReference, {
+        scope: "observation",
+        observationReference,
+        sectionKey: [definition.stableKey, fieldDefectDefinition.stableKey],
+      });
       onCleared?.({ scope: "observation", result });
       setHistoryVersion((current) => current + 1);
     } catch (caught) {
