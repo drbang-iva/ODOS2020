@@ -26,6 +26,77 @@ Practitioner-owned open-source EHR / practice management for independent optomet
 
 ---
 
+## The workflow — four beats, every task
+
+Every **build** task — anything that changes this repo — moves through the same four beats. The
+sections further down are the *rules*; this is the *sequence*. If you are building here and cannot
+say which beat you are in, stop and find out.
+
+**Evaluation and investigation tasks are not build tasks and do not follow this sequence.** An
+evaluator works at the **exact head under review**, not `origin/main`, and its verdict is bound to
+that SHA; an investigation may be explicitly read-only with zero commits. Branching such a task
+from `origin/main` would evaluate the wrong code.
+
+1. **Isolate.** Every build task starts in a fresh git worktree branched from `origin/main`. Never
+   build on `main`; never reuse another agent's worktree. Full rules: **Multi-agent hygiene** below.
+2. **Build.** Write to this repo's endpoint/service split, and do not let one mechanic become three
+   copies. Full rules: **Duplication control** below.
+3. **Prove.** A green suite is not evidence. Two obligations, not one:
+   - **Demonstrate the guard** (Mandate 17): changed a test → break the code it covers and show it
+     fail, then restore, and report *both* results. Added to a registry/ledger/allowlist → delete
+     the entry and show something fail, or state in the bundle that the list is not enforced.
+   - **Know what your tests cannot see.** Real AccessPolicy enforcement, whether a control is wired
+     to anything, and whether a fixture still tests what it claims are all outside the suite's
+     reach here. Full list and the defects that earned it: **What cannot be proven by the test
+     suite** below. If your change touches one, prove it another way and say so in the PR.
+4. **Ship.** Open the PR with the evidence embedded in the description — a screenshot or recording
+   when the change has a visible surface, measured before/after numbers when it doesn't. Then work
+   the review to **5/5 with zero unresolved comments**, and do not hand over a PR below that.
+
+   **Use `/greploop` (`.claude/skills/greploop/`) for its poll-and-fix loop ONLY — never its
+   trigger step.** Both bots auto-run on every PR here; as the pipeline section below states,
+   *there is no trigger to post and no allowance to budget*. The upstream skill assumes it must
+   summon a review, and posting trigger comments in this repo is the PR #313 failure by name:
+   eight triggers in sixteen minutes and zero reviews. Poll for the review that is already coming,
+   fix what it raises, push, re-poll.
+
+   **When no bot has a signal at the exact head**, the documented mechanism is
+   `--ack-no-bot-review`, recording a deliberate exception per `CONTRIBUTING.md`. That is the only
+   sanctioned way past a missing review.
+
+   **Lockfile/dependency PRs are the opposite of exempt.** Both bots have been observed covering
+   zero lines on them — one reporting green anyway — so
+   `performance-od/decisions/2026-08-29-odos-dependency-prs-get-zero-bot-review.md` requires an
+   **explicit supply-chain delta in the evaluation record**, precisely because no bot is supplying
+   one. Less automated review means *more* hand-supplied evidence, never less.
+
+**Then the beat this repo has and most don't: independent evaluation.** `/greploop` satisfies the
+*bot*. It does not satisfy the gate. Every PR into `main` additionally requires a marker from a
+trusted evaluator model bound to the exact head SHA:
+
+```
+Evaluated-by: <Fable|Opus|Codex> <version> — PASS
+Head-SHA: <40-character current head>
+```
+
+**Author ≠ evaluator is absolute.** The session that wrote the code never posts its own marker, and
+new commits stale a prior marker automatically. Who is trusted is decided in
+`performance-od/decisions/` (current: `2026-09-02-eval-gate-trusts-codex.md`) and enforced by
+`.github/scripts/evaluation-verdict.cjs` — not restated here, because a second copy of a rule is
+how the last drift started.
+
+**There is a second, operator-only path.** The gate also passes on an `evaluated` label, which is a
+deliberate operator override rather than a model verdict — and since PR #506 it requires recorded
+evidence and the exact head. **No agent applies that label to its own work, or to anything else.**
+It exists so a human can unblock a merge knowingly; an agent treating it as an alternative to being
+evaluated has defeated the gate. Read the parser before relying on either path.
+
+*Beat structure adapted from [`github.com/michaelshimeles/skills`](https://github.com/michaelshimeles/skills);
+`greploop` is vendored from [`greptileai/skills`](https://github.com/greptileai/skills) (MIT). The
+prove beat and the evaluation gate are ours.*
+
+---
+
 ## Repo boundary (hard rule)
 
 **This repo is code.** Application code, infrastructure config, tests, dev scripts, build logs, evidence files.
@@ -78,6 +149,51 @@ Patient data lives ONLY on the practice's own hardware. No cloud, no vendor tele
 Cloud retracted by the private PerformanceOD local-only decision dated 2026-04-30.
 
 **`docker-compose.yml` is the deployment unit.** Same file works for dev, test, and production.
+
+### Payments & dispensary contracts (durable — not milestone state)
+
+These are standing data-model and authorization contracts. They were recorded only in `CLAUDE.md`
+until 2026-09-02, nested under a shipped-milestone heading, and were nearly lost when that file
+was collapsed into an import — an independent evaluation caught it. They live here now because
+they describe how the system *is built*, not what shipped when.
+
+- **Invoice ↔ PaymentReconciliation seam.** The `Invoice` is the bill; the `PaymentReconciliation`
+  is the settling processor payment, linked `detail.request → Invoice`.
+- **Manual cash is conditional, not blanket** — read `manual-cash-adapter.ts` before assuming:
+  - **Against an Invoice** (`invoiceReference` present) → the tender is recorded on the Invoice's
+    `odos-payment-tender` extension and the bill balances when fully paid. **No
+    PaymentReconciliation** — the tendered Invoice *is* the canonical payment record, because cash
+    never settles through a processor batch.
+  - **Without an Invoice** (`invoiceReference === undefined`, i.e. a **cash prepayment**) → a
+    standalone `PaymentReconciliation` **is** created, under the manual payment system.
+  - The single-source invariant is enforced in the adapter: an Invoice already carrying a tender
+    cannot be tendered again.
+- **Patient receipt / financial summary — money truth vs. line identity.** The `Invoice` is money
+  truth (base/discount/tax `priceComponent`s, totals, tender); the `ChargeItem[]` supplies line
+  identity (description + code). **CPT/HCPCS shown on a receipt is display-only pass-through and is
+  never asserted by ODOS.** The receipt and the lab sheet are the cash-dispensary's two outputs and
+  are named unmistakably on purpose — staff confuse them in the system this replaces.
+
+- **Two receipt invariants, both enforced — these are guards, not descriptions.** Do not weaken
+  either to make a case pass; if a receipt cannot satisfy them, the receipt is wrong:
+  1. **A receipt that does not reconcile to its Invoice is refused, not rendered.**
+     `buildFinancialSummary` (`mcp/src/fhir/opticalFinancialSummary.ts`) **throws** when computed
+     gross/net differ from the Invoice's `totalGross`/`totalNet`, when the Invoice has no line
+     items, or when Invoice line count and `ChargeItem` count disagree. There is no
+     partially-reconciled receipt and no warning path — it refuses.
+  2. **Cash and processor receipts for an equivalent order must render identical money.** Same
+     totals, same balances; **only the tender rows may differ** (`paymentSeamConsistency.test.ts`).
+     A change that makes the card path and the cash path disagree on a number is a defect in the
+     change, regardless of which one "looks right."
+- **Payment processing is vendor-neutral.** A `PaymentProcessorAdapter` interface with manual-cash
+  and Clover REST Pay Display adapters behind it; one unified `POST /payments/charge` on odos-core.
+  Processor secrets stay server-side only — that boundary is why the charge endpoint exists.
+- **Payments authorization model.** Caller-token PaymentReconciliation writes are governed by
+  Medplum AccessPolicy, with front-desk dispensary RBAC grants at practice scope. The role gate is
+  **identity-derived** — a `practice-role` `meta.tag` on the AccessPolicy. **Never a client-supplied
+  role header.**
+- **Cash spectacle order kernel.** `DeviceRequest` + `Task` 17-status lifecycle + `ChargeItem` +
+  a CASH/CHECK `Invoice` carrying the `odos-payment-tender` extension.
 
 ---
 
