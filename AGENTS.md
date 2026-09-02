@@ -273,8 +273,22 @@ and paste RED and GREEN verbatim. Three rules earned the hard way on PR #499/#50
   check is the only thing that can produce the assertion. Prove it: let the fake mutate
   its private state while returning a stale response, and confirm the client-side
   assertion still fires.
-- **Propose the remedy at file:line; do not apply it.** The evaluator that fixes what it
-  found then certifies its own fix, which is `author ≠ evaluator` defeated one hop later.
+- **The evaluator MAY fix what it finds — and then hands the fix to the other party to
+  verify.** Adopted 2026-09-02 after four rounds on PR #499/#500 showed the losses were in
+  the *hand-offs*, not the reviews: a fixback item that never reached the evaluator, a path
+  that would not resolve, a file pushed but not fast-forwarded — three transfer failures,
+  zero reasoning failures. Finder-fixes halves the hand-offs per round. Two conditions,
+  both binding:
+    - **Whoever writes a guard is never the last to mutation-test it.** The fix goes to the
+      other party for verification. That is `author ≠ evaluator` preserved at the hunk
+      level, roles swapped — not waived. The author blind spot is writing the test that
+      confirms your fix works instead of the one that would catch it being wrong.
+    - **Escalate when the DESIGN CONTRACT changes, not when the code feels "architectural."**
+      The test is checkable: *does this fix make the design file wrong?* If yes, stop and
+      return it for agreement — that is an operator decision, not an implementer's. The
+      Dilation `MedicationAdministration` defect was exactly this: §0's persistence-shape
+      table never listed that resource type, so the fix implied amending canon. "Major" and
+      "architectural" are too fuzzy to route on; "does canon change" is not.
 
 **Read the design of record before judging intent.** Design and fixback lists live in the
 private companion repo — cite them by ABSOLUTE path
