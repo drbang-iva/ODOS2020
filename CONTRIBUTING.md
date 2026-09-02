@@ -18,10 +18,10 @@ ODOS is built by a practicing optometrist and refined at his own practice. The r
 
 ## Independent evaluation gate
 
-Every PR into `main` needs an independent Fable or Opus evaluation. The review
+Every PR into `main` needs an independent Fable, Opus, or Codex evaluation. The review
 bots (Greptile + PR-Agent) are a first-pass review, not the final evaluator.
 CodeRabbit is retired — suspended account-wide 2026-08-04 for cost. A well-formed final marker from
-Fable or Opus passes from any GitHub account. Author != evaluator remains a
+Fable, Opus, or Codex passes from any GitHub account. Author != evaluator remains a
 procedural expectation stated in coding kickoffs, not a mechanically enforced
 login rule.
 
@@ -32,6 +32,16 @@ SHA:
 Evaluated-by: Opus 5 — PASS
 Head-SHA: 0123456789abcdef0123456789abcdef01234567
 ```
+
+The parser and `eval-post-verdict.sh` use the same model-name validator in
+`.github/scripts/evaluation-verdict.cjs`; the posting script requires Node.js.
+Accepted signatures include `Fable 5.1`, `Opus 5`, `Claude Opus 5 (Claude)`,
+`Codex`, `Codex 5.6`, `GPT-5.6 Codex`, `Codex (GPT-5.6)`, and
+`Codex (gpt-5.6-sol)`, case-insensitively. Existing versioned and qualified forms
+remain accepted. The only added runtime-suffix form is the exact
+`Codex (gpt-5.6-sol)` signature (ignoring case and surrounding whitespace);
+arbitrary suffixes, other versions with `-sol`, and that suffix on Fable or Opus
+are not accepted. Unknown model names remain untrusted.
 
 `eval-post-verdict.sh` adds one provenance trailer to that marker. When a bot
 signal exists at the exact head, it records
@@ -71,9 +81,22 @@ signal is what distinguishes "ran clean" from "never ran". Adding a bot is two
 lines in `scripts/lib/bot-review-status.sh`.
 
 
-Only Fable or Opus can issue the final verdict. Any new commit requires a new
-marker for the new head. The `evaluated` label is an explicit operator override
-that bypasses marker and head-SHA enforcement.
+Only Fable, Opus, or Codex can issue the final evaluation verdict. Any new commit
+requires a new marker for the new head. The `evaluated` label alone does not pass:
+an operator-authorized bypass requires a comment with this evidence:
+
+```text
+Evaluated-by: <authorizing operator name> — OVERRIDE
+Head-SHA: <40-character current PR head SHA>
+Override-Reason: <nonempty reason for the authorized bypass>
+```
+
+All three lines must be in the same newest marker comment, without duplicate
+fields, and the head must match the current PR head. A newer OVERRIDE deliberately
+supersedes NEEDS-WORK; a newer negative or malformed marker is not rescued by
+older override evidence. The typed name is a record, not authentication; no
+GitHub-login check distinguishes the operator from agents sharing that account.
+The posting script posts evaluation verdicts only, not OVERRIDE markers.
 
 ## License terms for contributions
 

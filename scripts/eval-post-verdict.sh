@@ -60,15 +60,18 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-trusted_model_pattern='^(Fable|(Claude[[:space:]]+)?Opus)([[:space:]]+[0-9]+(\.[0-9]+)*)?([[:space:]]+\(Claude\))?$'
-if ! printf '%s\n' "$model" | grep -Eiq "$trusted_model_pattern"; then
+command -v node >/dev/null 2>&1 || die "required command not found: node"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if ! node -e '
+  const { isTrustedEvaluator } = require(process.argv[1]);
+  process.exit(isTrustedEvaluator(process.argv[2]) ? 0 : 1);
+' "$script_dir/../.github/scripts/evaluation-verdict.cjs" "$model"; then
   die "evaluator model '$model' would be rejected by evaluation-verdict.cjs"
 fi
 
 command -v gh >/dev/null 2>&1 || die "required command not found: gh"
 command -v git >/dev/null 2>&1 || die "required command not found: git"
 
-script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=scripts/lib/bot-review-status.sh
 source "$script_dir/lib/bot-review-status.sh"
 repo_root="$(git -C "$script_dir" rev-parse --show-toplevel)"

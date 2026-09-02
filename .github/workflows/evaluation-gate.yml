@@ -11,21 +11,30 @@ concurrency:
   group: evaluation-gate-${{ github.event.pull_request.number || github.event.issue.number }}
   cancel-in-progress: false
 
-# Every PR into main needs a Fable or Opus model review before it merges.
+# Every PR into main needs a Fable, Opus, or Codex model review before it merges.
 # Author != evaluator remains a procedural expectation in coding kickoffs;
-# CodeRabbit is a cheap first pass, not a substitute for model review.
+# review bots are a first pass, not a substitute for model review.
 #
 # The workflow runs from the protected default branch and publishes the required
 # check-evaluation check run onto the current PR head. It never checks out or
 # executes code from the PR branch.
 #
-# Passes when either is present on the PR:
-#   - label "evaluated" (deliberate operator override)
-#   - the newest marker, posted from any account, has:
+# The newest marker comment, posted from any account, governs the gate.
+# Passes with either:
+#   - a trusted passing evaluation bound to the current head:
 #       Evaluated-by: Fable 5 — PASS
 #       Head-SHA: <40-character current PR head SHA>
-# Fable and Opus are the only accepted evaluator models. New commits stale
-# prior markers automatically.
+#   - label "evaluated" AND all override evidence in that same newest comment:
+#       Evaluated-by: <authorizing operator name> — OVERRIDE
+#       Head-SHA: <40-character current PR head SHA>
+#       Override-Reason: <nonempty reason for the authorized bypass>
+# The label alone does not pass. The Head-SHA must match the current PR head,
+# and each required field must appear exactly once. A newer OVERRIDE deliberately
+# supersedes NEEDS-WORK; older evidence cannot rescue a newer negative or malformed
+# marker. The typed authorizer name is a record, not authentication.
+# Fable, Opus, and Codex are accepted in the parser's supported signature forms,
+# including Codex (gpt-5.6-sol); see CONTRIBUTING.md. New commits stale prior
+# markers automatically.
 #
 # Regression note (PR #291, 2026-08-01): the gate correctly rejected a PASS
 # bound to 611ffad after the live PR head had advanced to 955c6b1. Diagnose

@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 
 type EvaluationDecision = {
   passed: boolean;
@@ -11,6 +15,8 @@ type EvaluationDecision = {
   evaluatedHeadSha?: string;
   currentHeadSha?: string;
   verdict?: string;
+  authorizedBy?: string;
+  overrideReason?: string;
   message: string;
 };
 
@@ -50,6 +56,10 @@ function marker(
   headSha = CURRENT_HEAD,
 ): string {
   return `Evaluated-by: ${evaluator} — ${verdict}\nHead-SHA: ${headSha}`;
+}
+
+function overrideMarker(headSha = CURRENT_HEAD): string {
+  return `${marker("Eric Bang", "OVERRIDE", headSha)}\nOverride-Reason: Operator accepts the documented risk.`;
 }
 
 function evaluate(input: EvaluationInput = {}): EvaluationDecision {
@@ -220,6 +230,103 @@ test("Codex's versioned and GPT-qualified forms are trusted too", () => {
   }
 });
 
+test("Codex's actual gpt-5.6-sol signature passes without an override", () => {
+  for (const evaluator of ["Codex (gpt-5.6-sol)", "CODEX (GPT-5.6-SOL)"]) {
+    const decision = evaluate({ comments: [comment(marker(evaluator, "PASS"))] });
+    assert.equal(decision.passed, true, evaluator);
+    assert.equal(decision.reason, "passing-verdict");
+    assert.equal(decision.evaluator, evaluator);
+  }
+});
+
+const untrustedSignatures = [
+  "Random Model 1",
+  "Sonnet 5",
+  "Gemini 3",
+  "Codex (Random Model 1)",
+  "Codex (gpt-5.6-terra)",
+  "Codex (gpt-5.6-sol-extra)",
+  "Codex (gpt-5.7-sol)",
+  "Codex 5.6 (gpt-5.6-sol)",
+  "GPT-5.6-sol Codex",
+  "Fable 5.1 (gpt-5.6-sol)",
+  "Opus 5 (gpt-5.6-sol)",
+];
+
+test("the sol exception does not admit Random Model 1 or arbitrary model suffixes", () => {
+  for (const evaluator of untrustedSignatures) {
+    const decision = evaluate({ comments: [comment(marker(evaluator, "PASS"))] });
+    assert.equal(decision.passed, false, `${evaluator} must remain untrusted`);
+    assert.equal(decision.reason, "untrusted-model", evaluator);
+    assert.match(decision.message, /Fable.*Opus.*Codex/);
+  }
+});
+
+test("the posting script and real gate agree on trusted signatures in a dry run", (t) => {
+  const fixtureDirectory = mkdtempSync(join(tmpdir(), "odos-eval-signatures-"));
+  t.after(() => rmSync(fixtureDirectory, { recursive: true, force: true }));
+  writeFileSync(join(fixtureDirectory, "gh"), `#!/usr/bin/env bash
+set -euo pipefail
+if [[ "$1 $2" == "pr view" ]]; then
+  printf '%s\\n' '${CURRENT_HEAD}'
+  exit 0
+fi
+if [[ "$1 $2" == "api --paginate" ]]; then
+  case "$3" in
+    */comments) exit 0 ;;
+    */reviews)
+      printf '%s\\t%s\\t%s\\t%s\\n' COMMENTED '${CURRENT_HEAD}' '2026-07-16T12:00:00Z' 'greptile-apps[bot]'
+      exit 0
+      ;;
+  esac
+fi
+echo "Unexpected GitHub call: $*" >&2
+exit 99
+`, { mode: 0o700 });
+
+  const trustedSignatures = [
+    "Fable 5.1",
+    "Opus 5",
+    "Claude Opus 5 (Claude)",
+    "Codex",
+    "Codex 5.6",
+    "GPT-5.6 Codex",
+    "Codex (GPT-5.6)",
+    "Codex (gpt-5.6-sol)",
+    "CODEX (GPT-5.6-SOL)",
+  ];
+  for (const evaluator of [...trustedSignatures, ...untrustedSignatures]) {
+    const expectedPass = trustedSignatures.includes(evaluator);
+    const result = spawnSync("bash", [
+      fileURLToPath(new URL("scripts/eval-post-verdict.sh", repoRoot)),
+      "506", "PASS", evaluator, "--dry-run",
+    ], {
+      cwd: fileURLToPath(repoRoot),
+      env: {
+        PATH: `${fixtureDirectory}:${dirname(process.execPath)}:/usr/bin:/bin`,
+        GH_REPO: "example/odos",
+      },
+      encoding: "utf8",
+      timeout: 10_000,
+    });
+    assert.equal(result.status, expectedPass ? 0 : 1, `${evaluator}: ${result.stderr}`);
+    if (expectedPass) {
+      assert.match(result.stdout, /Dry run only; no comment will be posted\./);
+      const postedMarker = result.stdout.match(/^Evaluated-by:.*\nHead-SHA:.*$/m)?.[0];
+      assert.ok(postedMarker, `${evaluator}: dry run must emit a real marker`);
+      const decision = evaluate({ comments: [comment(postedMarker)] });
+      assert.equal(decision.passed, true, evaluator);
+      assert.equal(decision.reason, "passing-verdict", evaluator);
+      assert.equal(decision.evaluator, evaluator);
+    } else {
+      assert.match(result.stderr, /would be rejected by evaluation-verdict\.cjs/);
+      const decision = evaluate({ comments: [comment(marker(evaluator, "PASS"))] });
+      assert.equal(decision.passed, false, evaluator);
+      assert.equal(decision.reason, "untrusted-model", evaluator);
+    }
+  }
+});
+
 // The allowlist must still EXCLUDE something, or it is not an allowlist. Sonnet is the live
 // case: on 2026-09-01 a Sonnet verdict on PR #496 could not clear this gate, which is what
 // sent that evaluation to Opus. Deleting this test would make the untrusted-model branch
@@ -251,13 +358,252 @@ test("no evaluation marker fails", () => {
   assert.equal(decision.reason, "no-marker");
 });
 
-test("the evaluated label remains an explicit operator override", () => {
-  const decision = evaluateEvaluationGate({
+test("the evaluated label remains an explicit operator override only with its evidence", () => {
+  const input = {
     labels: [{ name: "evaluated" }],
+    comments: [comment(overrideMarker(), undefined, "drbang-iva")],
+  };
+  const decision = evaluate(input);
+
+  assert.equal(decision.passed, true);
+  assert.equal(decision.reason, "label-override");
+  assert.equal(decision.authorizedBy, "Eric Bang");
+  assert.equal(decision.overrideReason, "Operator accepts the documented risk.");
+  assert.equal(decision.evaluatedHeadSha, CURRENT_HEAD);
+  assert.equal(decision.verdict, "OVERRIDE");
+  assert.match(decision.message, /Eric Bang/);
+  assert.ok(decision.message.includes("Operator accepts the documented risk."));
+  assert.ok(decision.message.includes(CURRENT_HEAD));
+
+  const withoutComment = evaluate({ ...input, comments: [] });
+  assert.equal(withoutComment.passed, false);
+  assert.equal(withoutComment.reason, "missing-override-marker");
+  assert.match(withoutComment.message, /Evaluated-by:.*OVERRIDE/);
+  assert.match(withoutComment.message, /Head-SHA:/);
+  assert.match(withoutComment.message, /Override-Reason:/);
+
+  assert.equal(evaluate(input).passed, true);
+});
+
+test("an override for a stale head is refused even with its label and reason", () => {
+  const decision = evaluate({
+    labels: [{ name: "evaluated" }],
+    comments: [comment(overrideMarker(PREVIOUS_HEAD))],
+  });
+
+  assert.equal(decision.passed, false);
+  assert.equal(decision.reason, "stale-head-sha");
+  assert.equal(decision.evaluatedHeadSha, PREVIOUS_HEAD);
+  assert.equal(decision.currentHeadSha, CURRENT_HEAD);
+  assert.match(decision.message, /OVERRIDE.*Head-SHA.*does not match/i);
+  assert.ok(decision.message.includes(PREVIOUS_HEAD));
+  assert.ok(decision.message.includes(CURRENT_HEAD));
+});
+
+test("an OVERRIDE posted after NEEDS-WORK deliberately wins", () => {
+  const decision = evaluate({
+    labels: [{ name: "evaluated" }],
+    comments: [
+      comment(overrideMarker(), "2026-07-16T13:00:00Z"),
+      comment(marker("Opus 5", "NEEDS-WORK"), "2026-07-16T12:00:00Z"),
+    ],
   });
 
   assert.equal(decision.passed, true);
   assert.equal(decision.reason, "label-override");
+  assert.equal(decision.authorizedBy, "Eric Bang");
+});
+
+test("an older override cannot rescue a newer NEEDS-WORK", () => {
+  const decision = evaluate({
+    labels: [{ name: "evaluated" }],
+    comments: [
+      comment(marker("Opus 5", "NEEDS-WORK"), "2026-07-16T13:00:00Z"),
+      comment(overrideMarker(), "2026-07-16T12:00:00Z"),
+    ],
+  });
+
+  assert.equal(decision.passed, false);
+  assert.equal(decision.reason, "failing-verdict");
+  assert.equal(decision.verdict, "NEEDS-WORK");
+});
+
+test("removing the evaluated label disables an otherwise complete override", () => {
+  const decision = evaluate({ comments: [comment(overrideMarker())] });
+
+  assert.equal(decision.passed, false);
+  assert.equal(decision.reason, "missing-override-label");
+  assert.match(decision.message, /evaluated.*label.*missing/i);
+});
+
+test("an override records the typed name without authenticating the posting login", () => {
+  for (const login of ["drbang-iva", "another-poster", "agent[bot]"]) {
+    const decision = evaluate({
+      labels: [{ name: "evaluated" }],
+      comments: [comment(overrideMarker(), undefined, login)],
+    });
+
+    assert.equal(decision.passed, true, login);
+    assert.equal(decision.authorizedBy, "Eric Bang", login);
+  }
+});
+
+for (const { name, body, reason, message } of [
+  {
+    name: "missing OVERRIDE marker line",
+    body: `Head-SHA: ${CURRENT_HEAD}\nOverride-Reason: Operator accepts the risk.`,
+    reason: "missing-override-marker",
+    message: /OVERRIDE MARKER MISSING/,
+  },
+  {
+    name: "missing OVERRIDE verdict",
+    body: `Evaluated-by: Eric Bang\nHead-SHA: ${CURRENT_HEAD}\nOverride-Reason: Operator accepts the risk.`,
+    reason: "missing-verdict",
+    message: /Evaluated-by:.*OVERRIDE/,
+  },
+  {
+    name: "blank authorizer",
+    body: `Evaluated-by:   — OVERRIDE\nHead-SHA: ${CURRENT_HEAD}\nOverride-Reason: Operator accepts the risk.`,
+    reason: "missing-override-authorizer",
+    message: /authoriz.*name.*missing/i,
+  },
+  {
+    name: "missing Head-SHA line",
+    body: "Evaluated-by: Eric Bang — OVERRIDE\nOverride-Reason: Operator accepts the risk.",
+    reason: "missing-head-sha",
+    message: /OVERRIDE HEAD SHA MISSING.*Head-SHA/,
+  },
+  {
+    name: "short Head-SHA",
+    body: overrideMarker("abc123"),
+    reason: "invalid-head-sha",
+    message: /OVERRIDE HEAD SHA INVALID.*40-character/,
+  },
+  {
+    name: "duplicate Head-SHA lines",
+    body: `${overrideMarker()}\nHead-SHA: ${PREVIOUS_HEAD}`,
+    reason: "ambiguous-head-sha",
+    message: /OVERRIDE HEAD SHA AMBIGUOUS/,
+  },
+  {
+    name: "missing Override-Reason line",
+    body: marker("Eric Bang", "OVERRIDE"),
+    reason: "missing-override-reason",
+    message: /nonempty Override-Reason/,
+  },
+  {
+    name: "empty Override-Reason",
+    body: `${marker("Eric Bang", "OVERRIDE")}\nOverride-Reason:`,
+    reason: "missing-override-reason",
+    message: /nonempty Override-Reason/,
+  },
+  {
+    name: "whitespace-only Override-Reason followed by unrelated prose",
+    body: `${marker("Eric Bang", "OVERRIDE")}\nOverride-Reason: \t\r\nUnrelated prose must not count as the reason.`,
+    reason: "missing-override-reason",
+    message: /nonempty Override-Reason/,
+  },
+  {
+    name: "duplicate Override-Reason lines",
+    body: `${overrideMarker()}\nOverride-Reason: Conflicting reason.`,
+    reason: "ambiguous-override-reason",
+    message: /more than one Override-Reason/,
+  },
+  {
+    name: "duplicate Evaluated-by lines",
+    body: `${overrideMarker()}\nEvaluated-by: Opus 5 — NEEDS-WORK`,
+    reason: "ambiguous-marker",
+    message: /exactly one 'Evaluated-by:'/,
+  },
+  {
+    name: "contradictory OVERRIDE verdict",
+    body: `${marker("Eric Bang", "OVERRIDE PASS")}\nOverride-Reason: Operator accepts the risk.`,
+    reason: "missing-verdict",
+    message: /Evaluated-by:.*OVERRIDE/,
+  },
+]) {
+  test(`the evaluated label refuses ${name} with a precise diagnostic`, () => {
+    const decision = evaluate({
+      labels: [{ name: "evaluated" }],
+      comments: [comment(body)],
+    });
+
+    assert.equal(decision.passed, false);
+    assert.equal(decision.reason, reason);
+    assert.match(decision.message, message);
+    assert.match(decision.message, /Expected[\s\S]*Evaluated-by:.*OVERRIDE/);
+  });
+}
+
+test("override evidence cannot be assembled across separate comments", () => {
+  const decision = evaluate({
+    labels: [{ name: "evaluated" }],
+    comments: [
+      comment("Override-Reason: Operator accepts the risk."),
+      comment(marker("Eric Bang", "OVERRIDE")),
+    ],
+  });
+
+  assert.equal(decision.passed, false);
+  assert.equal(decision.reason, "missing-override-reason");
+});
+
+test("a malformed newest override cannot fall back to older valid evidence", () => {
+  const decision = evaluate({
+    labels: [{ name: "evaluated" }],
+    comments: [
+      comment(overrideMarker(), "2026-07-16T12:00:00Z"),
+      comment(marker("Eric Bang", "OVERRIDE"), "2026-07-16T13:00:00Z"),
+    ],
+  });
+
+  assert.equal(decision.passed, false);
+  assert.equal(decision.reason, "missing-override-reason");
+});
+
+test("the evaluated label does not change ordinary evaluation decisions", () => {
+  for (const [evaluator, verdict, head, passed, reason] of [
+    ["Opus 5", "PASS", CURRENT_HEAD, true, "passing-verdict"],
+    ["Opus 5", "NEEDS-WORK", CURRENT_HEAD, false, "failing-verdict"],
+    ["Fable 5", "PASS", PREVIOUS_HEAD, false, "stale-head-sha"],
+    ["Sonnet 5", "PASS", CURRENT_HEAD, false, "untrusted-model"],
+  ] as const) {
+    const decision = evaluate({
+      labels: [{ name: "evaluated" }],
+      comments: [comment(marker(evaluator, verdict, head))],
+    });
+
+    assert.equal(decision.passed, passed);
+    assert.equal(decision.reason, reason);
+  }
+});
+
+test("override markers reuse separator and case normalization conventions", () => {
+  for (const separator of ["—", "--", "-"]) {
+    const decision = evaluate({
+      labels: [{ name: "Evaluated" }],
+      comments: [comment(
+        `evaluated-by: Eric Bang ${separator} override\r\nhead-sha: ${CURRENT_HEAD.toUpperCase()}\r\noverride-reason:  Accepted risk.  `,
+      )],
+    });
+
+    assert.equal(decision.passed, true, separator);
+    assert.equal(decision.evaluatedHeadSha, CURRENT_HEAD);
+    assert.equal(decision.overrideReason, "Accepted risk.");
+  }
+});
+
+test("the evaluated label cannot bypass invalid current head input", () => {
+  for (const currentHeadSha of ["", "abc123"]) {
+    const decision = evaluate({
+      currentHeadSha,
+      labels: [{ name: "evaluated" }],
+      comments: [comment(overrideMarker())],
+    });
+
+    assert.equal(decision.passed, false);
+    assert.equal(decision.reason, "invalid-gate-input");
+  }
 });
 
 test("em dash, double hyphen, and single hyphen separators pass", () => {

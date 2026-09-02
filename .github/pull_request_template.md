@@ -37,9 +37,11 @@ By submitting this PR, I agree my contribution is licensed under the project's *
 
 ## Independent evaluation
 
-The newest well-formed marker decides the `check-evaluation` gate, regardless
-of which GitHub account posts it. The named model must be Fable or Opus, and a
-passing evaluation must bind itself to the full current PR head SHA:
+The newest marker decides the `check-evaluation` gate, regardless of which
+GitHub account posts it. For an evaluation, the named model must be Fable, Opus,
+or Codex in a form accepted by the parser (including `Codex (gpt-5.6-sol)`;
+see CONTRIBUTING.md). A passing evaluation must bind itself to the full current
+PR head SHA:
 
 ```text
 Evaluated-by: Fable 5 — PASS
@@ -48,6 +50,17 @@ Head-SHA: 0123456789abcdef0123456789abcdef01234567
 
 The separators `--` and `-` are also accepted. `FAIL`, `BLOCKED`, and
 `NEEDS-WORK` keep the gate red. A new commit makes every earlier marker stale.
-The `evaluated` label remains the deliberate operator override and bypasses
-the marker and head-SHA checks. Author != evaluator remains a procedural
-expectation stated in coding kickoffs, not a mechanically enforced login rule.
+The `evaluated` label alone does not pass. An operator-authorized override
+requires that label AND the following evidence in the same newest marker comment:
+
+```text
+Evaluated-by: <authorizing operator name> — OVERRIDE
+Head-SHA: <40-character current PR head SHA>
+Override-Reason: <nonempty reason for the authorized bypass>
+```
+
+The Head-SHA must match the current PR head, and each field must appear exactly
+once. A newer OVERRIDE deliberately supersedes NEEDS-WORK; older evidence cannot
+rescue a newer negative or malformed marker. The typed name is a record, not
+authentication. Author != evaluator remains a procedural expectation stated in
+coding kickoffs, not a mechanically enforced login rule.
