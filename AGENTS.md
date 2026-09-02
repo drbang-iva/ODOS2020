@@ -26,6 +26,49 @@ Practitioner-owned open-source EHR / practice management for independent optomet
 
 ---
 
+## The workflow — four beats, every task
+
+Every task moves through the same four beats. The sections further down are the *rules*; this is
+the *sequence*. If you are working this repo and cannot say which beat you are in, stop and find out.
+
+1. **Isolate.** Every task starts in a fresh git worktree branched from `origin/main`. Never build
+   on `main`; never reuse another agent's worktree. Full rules: **Multi-agent hygiene** below.
+2. **Build.** Write to this repo's endpoint/service split, and do not let one mechanic become three
+   copies. Full rules: **Duplication control** below.
+3. **Prove.** A green suite is not evidence. Two obligations, not one:
+   - **Demonstrate the guard** (Mandate 17): changed a test → break the code it covers and show it
+     fail, then restore, and report *both* results. Added to a registry/ledger/allowlist → delete
+     the entry and show something fail, or state in the bundle that the list is not enforced.
+   - **Know what your tests cannot see.** Real AccessPolicy enforcement, whether a control is wired
+     to anything, and whether a fixture still tests what it claims are all outside the suite's
+     reach here. Full list and the defects that earned it: **What cannot be proven by the test
+     suite** below. If your change touches one, prove it another way and say so in the PR.
+4. **Ship.** Open the PR with the evidence embedded in the description — a screenshot or recording
+   when the change has a visible surface, measured before/after numbers when it doesn't. Then run
+   **`/greploop`** (`.claude/skills/greploop/`) until Greptile reports **5/5 with zero unresolved
+   comments**. Do not hand over a PR below 5/5.
+
+**Then the beat this repo has and most don't: independent evaluation.** `/greploop` satisfies the
+*bot*. It does not satisfy the gate. Every PR into `main` additionally requires a marker from a
+trusted evaluator model bound to the exact head SHA:
+
+```
+Evaluated-by: <Fable|Opus|Codex> <version> — PASS
+Head-SHA: <40-character current head>
+```
+
+**Author ≠ evaluator is absolute.** The session that wrote the code never posts its own marker, and
+new commits stale a prior marker automatically. Who is trusted is decided in
+`performance-od/decisions/` (current: `2026-09-02-eval-gate-trusts-codex.md`) and enforced by
+`.github/scripts/evaluation-verdict.cjs` — not restated here, because a second copy of a rule is
+how the last drift started.
+
+*Beat structure adapted from [`github.com/michaelshimeles/skills`](https://github.com/michaelshimeles/skills);
+`greploop` is vendored from [`greptileai/skills`](https://github.com/greptileai/skills) (MIT). The
+prove beat and the evaluation gate are ours.*
+
+---
+
 ## Repo boundary (hard rule)
 
 **This repo is code.** Application code, infrastructure config, tests, dev scripts, build logs, evidence files.
