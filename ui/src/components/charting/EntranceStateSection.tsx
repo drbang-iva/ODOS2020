@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
-import { voidEncounterEntries } from "../../lib/encounter-void";
-import { ClearSectionButton, RemoveValueButton } from "./ClearControls";
+import { removeValueConfirmSpec, voidEncounterEntries } from "../../lib/encounter-void";
+import { ClearSectionButton } from "./ClearControls";
+import { EditEntriesToggle, RemoveValueButton, SectionEditingProvider } from "./section-editing";
 import { useEncounterEdit } from "./encounter-edit-context";
 import { OdosSelect } from "../inputs/OdosSelect";
 import type { CustomFindingDefinition, CustomFindingField } from "./CustomFindingSection";
@@ -158,6 +159,7 @@ export function EntranceStateSection({ definition, patientReference, encounterRe
     : [{ key: "binocular", label: "Binocular", capture: shared, update: (update: Partial<Capture>) => setShared((current) => ({ ...current, ...update })) }];
 
   return (
+    <SectionEditingProvider hasRecorded={history.length > 0}>
     <section className="h-full overflow-y-auto p-6">
       <div className="max-w-6xl">
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[color:var(--odos-line)] pb-4">
@@ -172,6 +174,7 @@ export function EntranceStateSection({ definition, patientReference, encounterRe
             <button type="button" onClick={setNormal} className="rounded border border-emerald-300/50 bg-emerald-300/10 px-4 py-2 text-sm font-semibold text-emerald-100 hover:bg-emerald-300/15">
               {definition.perEye ? "Normal OU" : "Mark normal"}
             </button>
+            <EditEntriesToggle />
             <ClearSectionButton
               encounterReference={encounterReference}
               sectionKey={definition.sectionKey ?? definition.stableKey}
@@ -227,6 +230,7 @@ export function EntranceStateSection({ definition, patientReference, encounterRe
         <History rows={history} loading={loading} perEye={definition.perEye} label={definition.display} onRemove={removeRow} />
       </div>
     </section>
+    </SectionEditingProvider>
   );
 }
 
@@ -297,7 +301,7 @@ function History({ rows, loading, perEye, label, onRemove }: { rows: HistoryRow[
                 {row.observationReference && (
                   <RemoveValueButton
                     label={`${label}${perEye && row.eye ? ` ${row.eye}` : ""}`}
-                    confirmMessage={row.other ? `Removing ${label}${perEye && row.eye ? ` ${row.eye}` : ""} discards its note. Continue?` : undefined}
+                    confirm={row.other ? removeValueConfirmSpec(`${label}${perEye && row.eye ? ` ${row.eye}` : ""}`, "note") : undefined}
                     onRemove={() => onRemove(row.observationReference!)}
                   />
                 )}

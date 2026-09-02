@@ -2363,17 +2363,87 @@
   font-size: 12px;
 }
 
-.odos-exam-entry-sheet-heading .odos-exam-entry-sheet-clear-all button {
-  border-color: var(--odos-alert);
-  color: var(--odos-alert);
-}
-
+/* Tier 3 wears exactly the chrome token Cancel wears (§2.2) — no override. Disabled is the shared rule below. */
 .odos-exam-entry-sheet-heading .odos-exam-entry-sheet-clear-all button:disabled {
   cursor: not-allowed;
   opacity: .45;
 }
 
-/* Undo strip (§4b.1): a row of text with one verb at the end, same alert token as the clear controls. */
+/*
+ * The in-app confirm (§3): a neutral frame with one red button. Alert colour appears here and
+ * nowhere else in the pre-finalization delete — not on Edit, Done, Remove, Clear, Clear chart,
+ * or Undo. Backdrop and blur match the settings ConfirmDelete; the frame border does not — the
+ * settings dialog tints its border alert, this one keeps the red for the button.
+ */
+.odos-confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(5,8,16,.74);
+  backdrop-filter: blur(8px);
+}
+
+.odos-confirm-dialog {
+  width: min(430px, 100%);
+  padding: 24px;
+  border: 1px solid var(--odos-line-2);
+  border-radius: 18px;
+  background: linear-gradient(180deg, var(--odos-surface-2), var(--odos-deep-surface));
+  box-shadow: 0 30px 90px rgba(0,0,0,.62);
+}
+
+.odos-confirm-kicker {
+  color: var(--odos-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.odos-confirm-dialog h2 {
+  margin: 7px 0 8px;
+  color: var(--odos-text);
+  font-size: 20px;
+  font-weight: 650;
+}
+
+.odos-confirm-dialog p {
+  color: var(--odos-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.odos-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+.odos-confirm-keep,
+.odos-confirm-destroy {
+  min-width: 64px;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--odos-line-2);
+  border-radius: 7px;
+  background: var(--odos-surface-2);
+  color: var(--odos-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.odos-confirm-destroy {
+  border-color: var(--odos-alert);
+  background: var(--odos-alert);
+  color: #fff;
+}
+
+/* Undo strip (§4b.1): a row of text with one verb at the end. Undo puts back, so it is not red (§4.1). */
 .odos-undo-strip {
   display: flex;
   min-width: 0;
@@ -2403,10 +2473,10 @@
   flex: none;
   min-height: 32px;
   padding: 4px 12px;
-  border: 1px solid var(--odos-alert);
+  border: 1px solid var(--odos-line-2);
   border-radius: 6px;
   background: var(--odos-surface-2);
-  color: var(--odos-alert);
+  color: var(--odos-text);
   font: inherit;
   font-size: 12px;
   font-weight: 750;
@@ -2428,7 +2498,7 @@
 }
 
 .odos-chart-bar-undo .odos-undo-strip {
-  border: 1px solid var(--odos-alert);
+  border: 1px solid var(--odos-line-2);
   border-radius: 9px;
   padding: 5px 11px;
 }

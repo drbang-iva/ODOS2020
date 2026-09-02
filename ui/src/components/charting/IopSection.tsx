@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import { voidEncounterEntries } from "../../lib/encounter-void";
-import { ClearSectionButton, RemoveValueButton } from "./ClearControls";
+import { ClearSectionButton } from "./ClearControls";
+import { EditEntriesToggle, RemoveValueButton, SectionEditingProvider } from "./section-editing";
 import { useEncounterEdit } from "./encounter-edit-context";
 import { referencesByEye, usePersistedVoidEntries } from "./use-persisted-void-entries";
 import { IopTimeline } from "./IopTimeline";
@@ -233,20 +234,24 @@ export function IopSection({ patientReference, encounterReference, onSaved }: Pr
   }
 
   return (
+    <SectionEditingProvider hasRecorded={Object.keys(results).length > 0 || Object.keys(savedReferences).length > 0}>
     <section className="h-full overflow-y-auto p-6">
       <div className="max-w-6xl">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-white">Intraocular Pressure</h2>
-          <ClearSectionButton
-            encounterReference={encounterReference}
-            sectionKey="tonometry"
-            label="IOP"
-            hasRecorded={Object.keys(results).length > 0 || Object.keys(savedReferences).length > 0}
-            onCleared={(result) => {
-              resetRows();
-              onCleared?.({ scope: "section", result });
-            }}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <EditEntriesToggle />
+            <ClearSectionButton
+              encounterReference={encounterReference}
+              sectionKey="tonometry"
+              label="IOP"
+              hasRecorded={Object.keys(results).length > 0 || Object.keys(savedReferences).length > 0}
+              onCleared={(result) => {
+                resetRows();
+                onCleared?.({ scope: "section", result });
+              }}
+            />
+          </div>
         </div>
 
         {definitionError && (
@@ -360,6 +365,7 @@ export function IopSection({ patientReference, encounterReference, onSaved }: Pr
         <IopTimeline patientReference={patientReference} refreshSignal={timelineRefresh} />
       </div>
     </section>
+    </SectionEditingProvider>
   );
 }
 

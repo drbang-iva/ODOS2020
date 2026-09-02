@@ -1495,7 +1495,10 @@ test("missing prior data renders no annotation or reserved prior slot", async ()
       await flushEffects();
     });
     assert.equal(renderer.root.findAllByProps({ "data-prior-reading": "" }).length, 0);
-    assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /Prior:|No prior|—/);
+    // Visible text only: the Clear control's tooltip ("Clear Ocular Health — everything recorded
+    // this visit") is an attribute, not an annotation, and must not trip this proxy.
+    const visibleText = renderer.root.findAll(() => true).flatMap((node) => node.children.filter((child) => typeof child === "string")).join(" ");
+    assert.doesNotMatch(visibleText, /Prior:|No prior|—/);
   } finally {
     renderer?.unmount();
   }

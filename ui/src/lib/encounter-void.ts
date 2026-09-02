@@ -101,16 +101,53 @@ export function previewEncounterVoid(
   return voidEncounterEntries(encounterReference, request, { preview: true, fetchImpl });
 }
 
-export function clearSectionConfirmMessage(label: string, count: number): string {
-  return `Clear ${label} — voids ${count} recorded ${count === 1 ? "value" : "values"} from this visit. They remain in the record as entered-in-error. Continue?`;
+/**
+ * What the in-app confirm dialog shows (§3): a title, one consequence sentence, and the label of
+ * the one red button. Built here, rendered by `ConfirmDestructive.tsx`.
+ */
+export interface DestructiveConfirmSpec {
+  title: string;
+  consequence: string;
+  confirmLabel: string;
 }
 
-export function clearEncounterConfirmMessage(sections: readonly EncounterVoidSection[], count: number): string {
-  const named = sections.map((section) => `${section.label} (${section.count})`).join(", ");
-  return `Clear everything charted for this visit — ${named}: ${count} recorded ${count === 1 ? "value" : "values"}. They remain in the record as entered-in-error. Continue?`;
+/** Ships because the Undo ledger (`UndoStrip.tsx`) is on main; omit — never soften — if that slice is reverted. */
+export const UNDO_UNTIL_SIGNED = "You can undo until the chart is signed.";
+
+function valuesRecorded(count: number): string {
+  return `${count} ${count === 1 ? "value" : "values"} recorded this visit.`;
 }
 
-/** A destructive action without a confirm surface is refused, never assumed. */
-export function confirmDestructive(message: string): boolean {
-  return typeof window !== "undefined" && typeof window.confirm === "function" ? window.confirm(message) : false;
+/** "Pupils OD" reads as "Pupils · OD" in a dialog title; labels without a laterality pass through. */
+export function dialogLabel(label: string): string {
+  return label.replace(/ (OD|OS|OU)$/, " · $1");
+}
+
+/** Tier 1, only when typed detail would be lost: `lost` names it ("note", "abnormal findings", "chart note"). */
+export function removeValueConfirmSpec(label: string, lost: string): DestructiveConfirmSpec {
+  const verb = /s$/.test(lost) ? "are" : "is";
+  return {
+    title: `Remove ${dialogLabel(label)}?`,
+    consequence: `Its ${lost} ${verb} discarded. ${UNDO_UNTIL_SIGNED}`,
+    confirmLabel: "Remove",
+  };
+}
+
+/** Tier 2: the count is the server's preview, never the sheet's guess. */
+export function clearSectionConfirmSpec(label: string, count: number): DestructiveConfirmSpec {
+  return {
+    title: `Clear ${label}?`,
+    consequence: `${valuesRecorded(count)} ${UNDO_UNTIL_SIGNED}`,
+    confirmLabel: `Clear ${label}`,
+  };
+}
+
+/** Tier 3: the per-section breakdown comes from the server preview, as the count does. */
+export function clearEncounterConfirmSpec(sections: readonly EncounterVoidSection[], count: number): DestructiveConfirmSpec {
+  const named = sections.map((section) => `${section.label} ${section.count}`).join(" · ");
+  return {
+    title: "Clear this chart?",
+    consequence: `${named ? `${named} — ` : ""}${valuesRecorded(count)} ${UNDO_UNTIL_SIGNED}`,
+    confirmLabel: "Clear chart",
+  };
 }

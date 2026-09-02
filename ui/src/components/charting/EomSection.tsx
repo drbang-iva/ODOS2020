@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
-import { voidEncounterEntries } from "../../lib/encounter-void";
-import { ClearSectionButton, RemoveValueButton } from "./ClearControls";
+import { removeValueConfirmSpec, voidEncounterEntries } from "../../lib/encounter-void";
+import { ClearSectionButton } from "./ClearControls";
+import { EditEntriesToggle, RemoveValueButton, SectionEditingProvider } from "./section-editing";
 import { useEncounterEdit } from "./encounter-edit-context";
 import { OdosSelect } from "../inputs/OdosSelect";
 import type { CustomFindingDefinition } from "./CustomFindingSection";
@@ -112,6 +113,7 @@ export function EomSection({ definition, patientReference, encounterReference, o
   }
 
   return (
+    <SectionEditingProvider hasRecorded={history.length > 0}>
     <section className="h-full overflow-y-auto p-6">
       <div className="max-w-6xl">
         <header className="flex flex-wrap items-start justify-between gap-4 border-b border-[color:var(--odos-line)] pb-4">
@@ -122,6 +124,7 @@ export function EomSection({ definition, patientReference, encounterReference, o
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={fullOu} className="rounded border border-emerald-300/50 bg-emerald-300/10 px-4 py-2 text-sm font-semibold text-emerald-100">Full OU — SAFE</button>
+            <EditEntriesToggle />
             <ClearSectionButton
               encounterReference={encounterReference}
               sectionKey={definition.sectionKey ?? definition.stableKey}
@@ -208,6 +211,7 @@ export function EomSection({ definition, patientReference, encounterReference, o
         <History rows={history} onRemove={removeRow} />
       </div>
     </section>
+    </SectionEditingProvider>
   );
 }
 
@@ -232,4 +236,4 @@ function Select({ label, value, values, onChange }: { label: string; value: stri
 export function diplopiaSelectionsComplete(...values: string[]): boolean {
   return values.every((value) => value.length > 0);
 }
-function History({ rows, onRemove }: { rows: HistoryRow[]; onRemove(observationReference: string): void }) { return <div className="mt-8 overflow-hidden rounded border border-[color:var(--odos-line)]"><div className="border-b border-[color:var(--odos-line)] px-4 py-3 font-semibold">History</div>{rows.length ? rows.map((row, index) => <div key={`${row.recordedAt}-${index}`} className="flex items-start justify-between gap-3 border-b border-[color:var(--odos-line)] px-4 py-3 text-sm text-[color:var(--odos-muted)]"><span><span className="mr-3 capitalize">{row.state}</span>{row.summary}</span>{row.observationReference && <RemoveValueButton label="EOM" confirmMessage={row.state === "abnormal" ? "Removing this EOM entry discards its recorded abnormal findings. Continue?" : undefined} onRemove={() => onRemove(row.observationReference!)} />}</div>) : <div className="p-5 text-sm text-[color:var(--odos-muted)]">No prior entries</div>}</div>; }
+function History({ rows, onRemove }: { rows: HistoryRow[]; onRemove(observationReference: string): void }) { return <div className="mt-8 overflow-hidden rounded border border-[color:var(--odos-line)]"><div className="border-b border-[color:var(--odos-line)] px-4 py-3 font-semibold">History</div>{rows.length ? rows.map((row, index) => <div key={`${row.recordedAt}-${index}`} className="flex items-start justify-between gap-3 border-b border-[color:var(--odos-line)] px-4 py-3 text-sm text-[color:var(--odos-muted)]"><span><span className="mr-3 capitalize">{row.state}</span>{row.summary}</span>{row.observationReference && <RemoveValueButton label="EOM" confirm={row.state === "abnormal" ? removeValueConfirmSpec("EOM", "abnormal findings") : undefined} onRemove={() => onRemove(row.observationReference!)} />}</div>) : <div className="p-5 text-sm text-[color:var(--odos-muted)]">No prior entries</div>}</div>; }

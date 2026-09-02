@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
-import { voidEncounterEntries } from "../../lib/encounter-void";
-import { ClearSectionButton, RemoveValueButton } from "./ClearControls";
+import { removeValueConfirmSpec, voidEncounterEntries } from "../../lib/encounter-void";
+import { ClearSectionButton } from "./ClearControls";
+import { EditEntriesToggle, RemoveValueButton, SectionEditingProvider } from "./section-editing";
 import { useEncounterEdit } from "./encounter-edit-context";
 import { OdosSelect } from "../inputs/OdosSelect";
 import { OdosWheel } from "../inputs/OdosWheel";
@@ -90,6 +91,7 @@ export function DilationSection({ definition, patientReference, encounterReferen
   }
 
   return (
+    <SectionEditingProvider hasRecorded={history.notes.length > 0 || history.administrations.length > 0}>
     <section className="h-full overflow-y-auto p-6">
       <div className="max-w-6xl">
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[color:var(--odos-line)] pb-4">
@@ -98,22 +100,25 @@ export function DilationSection({ definition, patientReference, encounterReferen
             <h2 className="mt-1 text-xl font-semibold text-[color:var(--odos-text)]">Dilation</h2>
             <p className="mt-1 text-sm text-[color:var(--odos-muted)]">Medication administration, DFE status, and declined-dilation counseling.</p>
           </div>
-          <ClearSectionButton
-            encounterReference={encounterReference}
-            sectionKey="entrance:dilation"
-            label="Dilation"
-            hasRecorded={history.notes.length > 0 || history.administrations.length > 0}
-            onCleared={(result) => {
-              setAgents([]);
-              setDfePerformed(false);
-              setDeclined(false);
-              setReason("");
-              setRisks("");
-              setError(null);
-              setHistoryVersion((current) => current + 1);
-              onCleared?.({ scope: "section", result });
-            }}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <EditEntriesToggle />
+            <ClearSectionButton
+              encounterReference={encounterReference}
+              sectionKey="entrance:dilation"
+              label="Dilation"
+              hasRecorded={history.notes.length > 0 || history.administrations.length > 0}
+              onCleared={(result) => {
+                setAgents([]);
+                setDfePerformed(false);
+                setDeclined(false);
+                setReason("");
+                setRisks("");
+                setError(null);
+                setHistoryVersion((current) => current + 1);
+                onCleared?.({ scope: "section", result });
+              }}
+            />
+          </div>
         </div>
         <label className="mt-5 flex items-center gap-3 text-sm font-semibold text-[color:var(--odos-text)]">
           <input type="checkbox" checked={declined} onChange={(event) => setDeclined(event.target.checked)} className="accent-brand" />
@@ -191,13 +196,14 @@ export function DilationSection({ definition, patientReference, encounterReferen
             <div className="p-6 text-sm text-[color:var(--odos-muted)]">No prior entries</div>
           ) : (
             <div className="divide-y divide-white/10">
-              {history.notes.map((note, index) => <div key={`${note.recordedAt}-${index}`} className="flex items-start justify-between gap-3 px-4 py-3 text-sm text-[color:var(--odos-muted)]"><span>{note.text}</span>{note.observationReference && <RemoveValueButton label="Dilation note" confirmMessage="Removing this dilation entry discards its chart note. Continue?" onRemove={() => removeNote(note.observationReference!)} />}</div>)}
+              {history.notes.map((note, index) => <div key={`${note.recordedAt}-${index}`} className="flex items-start justify-between gap-3 px-4 py-3 text-sm text-[color:var(--odos-muted)]"><span>{note.text}</span>{note.observationReference && <RemoveValueButton label="Dilation note" confirm={removeValueConfirmSpec("dilation note", "chart note")} onRemove={() => removeNote(note.observationReference!)} />}</div>)}
               {history.administrations.map((row, index) => <div key={`${row.recordedAt}-${row.agent}-${index}`} className="px-4 py-3 text-sm text-[color:var(--odos-muted)]">{row.agent}: {row.drops} {row.drops === 1 ? "drop" : "drops"} {row.eyes} · administered by {row.administeredBy}</div>)}
             </div>
           )}
         </div>
       </div>
     </section>
+    </SectionEditingProvider>
   );
 }
 

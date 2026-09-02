@@ -2394,6 +2394,19 @@ const PENDING_UNDO_LEDGER: EncounterUndoLedger = {
   },
 };
 
+/**
+ * Restraint pass (2026-09-02): every clear confirms in the in-app dialog. Press the control, let
+ * the preview land, then press the dialog's one red button.
+ */
+async function confirmClearInDialog(harness: { renderer: ReactTestRenderer }, control: ReactTestInstance): Promise<void> {
+  await act(async () => { void control.props.onClick(); await flushEffects(); });
+  const dialog = harness.renderer.root.findAll((node) => node.props.role === "alertdialog")[0];
+  assert.ok(dialog, "the clear asks in the in-app dialog");
+  const destroy = dialog.findAll((node) => node.type === "button" && String(node.props.className).includes("odos-confirm-destroy"))[0];
+  assert.ok(destroy, "the dialog carries its confirm button");
+  await act(async () => { destroy.props.onClick(); await flushEffects(); await flushEffects(); });
+}
+
 function visibleSheet(harness: { renderer: ReactTestRenderer }): ReactTestInstance {
   const sheet = harness.renderer.root.findAllByType(ExamEntrySheet).find((candidate) => !candidate.props.hidden);
   assert.ok(sheet, "an entry sheet is open");
@@ -2449,12 +2462,12 @@ test("a failed Clear everything re-reads the overview alongside its error, so th
       code: "void-transaction-failed",
       outcome: "applied-partial",
     };
-    const clearAll = sheet.findAll((node) => node.type === "button" && textContent(node) === "Clear everything charted this visit…")[0];
+    const clearAll = sheet.findAll((node) => node.type === "button" && textContent(node) === "Clear chart")[0];
     assert.ok(clearAll, "the tier-3 control is in the sheet chrome");
 
-    await act(async () => { await clearAll.props.onClick(); await flushEffects(); await flushEffects(); });
+    await confirmClearInDialog(harness, clearAll);
 
-    assert.equal(confirmations.length, 1, "the clear was confirmed and attempted");
+    assert.equal(confirmations.length, 0, "the clear was confirmed in the in-app dialog, never through window.confirm");
     // The VA sheet's own Clear section probes on mount; only the visit-scope traffic is this test's.
     const visitRequests = harness.voidRequests.filter((request) => (request as { scope: string }).scope === "encounter");
     assert.deepEqual(visitRequests, [{ scope: "encounter", preview: true }, { scope: "encounter" }]);
@@ -2484,10 +2497,10 @@ test("F2: a successful Clear everything renders the exact count — this page sa
   try {
     act(() => harness.renderer.root.findByType(ExamOverviewBoard).props.onOpenEditor("va"));
     const sheet = visibleSheet(harness);
-    const clearAll = sheet.findAll((node) => node.type === "button" && textContent(node) === "Clear everything charted this visit…")[0];
+    const clearAll = sheet.findAll((node) => node.type === "button" && textContent(node) === "Clear chart")[0];
     assert.ok(clearAll);
 
-    await act(async () => { await clearAll.props.onClick(); await flushEffects(); await flushEffects(); });
+    await confirmClearInDialog(harness, clearAll);
 
     const undoSlots = harness.renderer.root.findAllByProps({ "data-chart-bar-slot": "undo" });
     assert.equal(undoSlots.length, 1);
@@ -2524,9 +2537,9 @@ test("G2: a successful no-op clear must not promote an older partial slot from '
     // HTTP 200, zero writes, the same ledger carried over.
     harness.voidNoop.enabled = true;
     act(() => harness.renderer.root.findByType(ExamOverviewBoard).props.onOpenEditor("va"));
-    const clearAll = visibleSheet(harness).findAll((node) => node.type === "button" && textContent(node) === "Clear everything charted this visit…")[0];
+    const clearAll = visibleSheet(harness).findAll((node) => node.type === "button" && textContent(node) === "Clear chart")[0];
     assert.ok(clearAll);
-    await act(async () => { await clearAll.props.onClick(); await flushEffects(); await flushEffects(); });
+    await confirmClearInDialog(harness, clearAll);
 
     const visitRequests = harness.voidRequests.filter((request) => (request as { scope: string }).scope === "encounter");
     assert.deepEqual(visitRequests, [{ scope: "encounter", preview: true }, { scope: "encounter" }], "the no-op void really ran");

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
-import { voidEncounterEntries } from "../../lib/encounter-void";
-import { ClearSectionButton, RemoveValueButton } from "./ClearControls";
+import { removeValueConfirmSpec, voidEncounterEntries } from "../../lib/encounter-void";
+import { ClearSectionButton } from "./ClearControls";
+import { EditEntriesToggle, RemoveValueButton, SectionEditingProvider } from "./section-editing";
 import { useEncounterEdit } from "./encounter-edit-context";
 import { OdosSelect } from "../inputs/OdosSelect";
 import { PowerDropdown } from "./PowerDropdown";
@@ -120,6 +121,7 @@ export function CoverTestSection({ patientReference, encounterReference, onSaved
   }
 
   return (
+    <SectionEditingProvider hasRecorded={history.length > 0}>
     <section className="h-full overflow-y-auto p-6">
       <div className="max-w-6xl">
         <header className="flex flex-wrap items-start justify-between gap-4 border-b border-[color:var(--odos-line)] pb-4">
@@ -128,18 +130,21 @@ export function CoverTestSection({ patientReference, encounterReference, onSaved
             <h2 className="mt-1 text-xl font-semibold">Cover test</h2>
             <p className="mt-1 text-sm text-[color:var(--odos-muted)]">Record distance and near alignment with and without correction.</p>
           </div>
-          <ClearSectionButton
-            encounterReference={encounterReference}
-            sectionKey="entrance:cover"
-            label="Cover test"
-            hasRecorded={history.length > 0}
-            onCleared={(result) => {
-              setRows(SLOTS.map(({ slot }) => emptyRow(slot)));
-              setError(undefined);
-              setVersion((current) => current + 1);
-              onCleared?.({ scope: "section", result });
-            }}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <EditEntriesToggle />
+            <ClearSectionButton
+              encounterReference={encounterReference}
+              sectionKey="entrance:cover"
+              label="Cover test"
+              hasRecorded={history.length > 0}
+              onCleared={(result) => {
+                setRows(SLOTS.map(({ slot }) => emptyRow(slot)));
+                setError(undefined);
+                setVersion((current) => current + 1);
+                onCleared?.({ scope: "section", result });
+              }}
+            />
+          </div>
         </header>
         <div className="mt-5 space-y-3">
           {rows.map((row) => (
@@ -174,10 +179,11 @@ export function CoverTestSection({ patientReference, encounterReference, onSaved
         </div>
         <div className="mt-8 overflow-hidden rounded border border-[color:var(--odos-line)]">
           <div className="border-b border-[color:var(--odos-line)] px-4 py-3 font-semibold">History</div>
-          {history.length ? history.map((row, index) => <div key={`${row.recordedAt}-${index}`} className="flex items-start justify-between gap-3 border-b border-[color:var(--odos-line)] px-4 py-3 text-sm text-[color:var(--odos-muted)]"><span>{row.summary}</span>{row.observationReference && <RemoveValueButton label="Cover test" confirmMessage={row.summary.includes(" — ") ? "Removing this cover-test entry discards its note. Continue?" : undefined} onRemove={() => removeRow(row.observationReference!)} />}</div>) : <div className="p-5 text-sm text-[color:var(--odos-muted)]">No prior entries</div>}
+          {history.length ? history.map((row, index) => <div key={`${row.recordedAt}-${index}`} className="flex items-start justify-between gap-3 border-b border-[color:var(--odos-line)] px-4 py-3 text-sm text-[color:var(--odos-muted)]"><span>{row.summary}</span>{row.observationReference && <RemoveValueButton label="Cover test" confirm={row.summary.includes(" — ") ? removeValueConfirmSpec("Cover test", "note") : undefined} onRemove={() => removeRow(row.observationReference!)} />}</div>) : <div className="p-5 text-sm text-[color:var(--odos-muted)]">No prior entries</div>}
         </div>
       </div>
     </section>
+    </SectionEditingProvider>
   );
 }
 
