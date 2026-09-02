@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { Observation, Provenance } from "@medplum/fhirtypes";
+import type { Bundle, Observation, ObservationComponent, Provenance } from "@medplum/fhirtypes";
 import { z } from "zod";
 import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../fhir/ophthalmology/codeBindings.js";
@@ -22,9 +22,14 @@ import {
   validateCustomFieldValues,
 } from "./custom-fields.js";
 import { decimalField } from "./contact-lens-definition.js";
+import { isLiveObservation } from "./observation-liveness.js";
 export { registerPretestVitalsRoutes } from "./pretest-vitals-endpoint.js";
 
 export interface PretestFhirClient {
+  search<T extends Observation>(
+    resourceType: T["resourceType"],
+    params?: Record<string, string>,
+  ): Promise<Bundle<T>>;
   create<T extends Observation | Provenance>(
     resource: T,
     extraHeaders?: Record<string, string>,
@@ -103,6 +108,11 @@ const autoRefractionRequestSchema = z.object({
   }).strict(),
 }).strict();
 
+const autoRefractionHistoryQuerySchema = z.object({
+  patientReference: z.string().regex(/^Patient\/[^/]+$/),
+  encounterReference: z.string().regex(/^Encounter\/[^/]+$/),
+}).strict();
+
 type Eye = typeof EYES[number];
 type WearingRequest = z.infer<typeof wearingRequestSchema>;
 type WearingEyePayload = z.infer<typeof wearingEyeSchema>;
@@ -146,6 +156,75 @@ export async function handleAutoRefractionDefinitionRequest(
         autoKeratometry: definitionSummary(definitions.autoKeratometry),
       },
     },
+  };
+}
+
+export async function handleAutoRefractionHistoryRequest(
+  deps: PretestEndpointDeps,
+  input: { authHeader: string | undefined; query: unknown },
+): Promise<PretestEndpointResult> {
+  const staff = await deps.authenticate(input.authHeader);
+  if (!staff) {
+    return { status: 401, body: { error: "Authentication required to read auto-refraction history." } };
+  }
+  if (!staffHasBusinessAction(staff, "chart.read")) {
+    return { status: 403, body: { error: "chart.read role required" } };
+  }
+  const parsed = autoRefractionHistoryQuerySchema.safeParse(input.query);
+  if (!parsed.success) {
+    return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid auto-refraction history request." } };
+  }
+
+  const bundle = await staff.fhir.search<Observation>("Observation", {
+    subject: parsed.data.patientReference,
+    encounter: parsed.data.encounterReference,
+    code: `${ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|auto_refraction,${ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|auto_keratometry`,
+    _sort: "-date",
+    _count: "200",
+  });
+  const observations = (bundle.entry ?? []).flatMap((entry) => {
+    const observation = entry.resource;
+    return observation
+      && observation.id
+      && observation.subject?.reference === parsed.data.patientReference
+      && observation.encounter?.reference === parsed.data.encounterReference
+      && isLiveObservation(observation)
+      ? [observation]
+      : [];
+  }).sort((left, right) => observationDate(right).localeCompare(observationDate(left)));
+
+  const eyes: Partial<Record<Eye, Record<string, unknown>>> = {};
+  let remarks: string | undefined;
+  for (const eye of EYES) {
+    const autoRefraction = latestPretestObservation(observations, "auto_refraction", eye);
+    const autoKeratometry = latestPretestObservation(observations, "auto_keratometry", eye);
+    if (!autoRefraction && !autoKeratometry) continue;
+    const observationReferences = [autoRefraction, autoKeratometry]
+      .flatMap((observation) => observation?.id ? [`Observation/${observation.id}`] : []);
+    eyes[eye] = definedRecord({
+      sphere: observationComponentNumber(autoRefraction, "SPHERE"),
+      cylinder: observationComponentNumber(autoRefraction, "CYLINDER"),
+      axis: observationComponentNumber(autoRefraction, "AXIS"),
+      flatK: observationComponentNumber(autoKeratometry, "FLAT_K"),
+      flatAxis: observationComponentNumber(autoKeratometry, "FLAT_AXIS"),
+      steepK: observationComponentNumber(autoKeratometry, "STEEP_K"),
+      steepAxis: observationComponentNumber(autoKeratometry, "STEEP_AXIS"),
+      observationReferences,
+    });
+    remarks ??= observationComponentString(autoRefraction, "REMARKS")
+      ?? observationComponentString(autoKeratometry, "REMARKS");
+  }
+
+  const binocularPd = latestPretestObservation(observations, "auto_refraction", "OU");
+  return {
+    status: 200,
+    body: definedRecord({
+      eyes,
+      binocularPdDistance: observationComponentNumber(binocularPd, "BINOCULAR_PD_DISTANCE"),
+      binocularPdNear: observationComponentNumber(binocularPd, "BINOCULAR_PD_NEAR"),
+      binocularPdObservationReferences: binocularPd?.id ? [`Observation/${binocularPd.id}`] : undefined,
+      remarks,
+    }),
   };
 }
 
@@ -878,6 +957,44 @@ function asRecord(value: unknown): Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
     ? value as Record<string, unknown>
     : {};
+}
+
+function latestPretestObservation(
+  observations: readonly Observation[],
+  code: "auto_refraction" | "auto_keratometry",
+  laterality: Eye | "OU",
+): Observation | undefined {
+  return observations.find((observation) =>
+    observation.code?.coding?.some((coding) =>
+      coding.system === ODOS_OPHTHALMOLOGY_CODE_SYSTEM && coding.code === code)
+    && observation.bodySite?.coding?.some((coding) =>
+      coding.system === ODOS_OPHTHALMOLOGY_CODE_SYSTEM && coding.code === laterality));
+}
+
+function observationComponent(
+  observation: Observation | undefined,
+  code: string,
+): ObservationComponent | undefined {
+  return observation?.component?.find((candidate) =>
+    candidate.code.coding?.some((coding) =>
+      coding.system === ODOS_OPHTHALMOLOGY_CODE_SYSTEM && coding.code === code));
+}
+
+function observationComponentNumber(observation: Observation | undefined, code: string): number | undefined {
+  const component = observationComponent(observation, code);
+  return component?.valueQuantity?.value ?? component?.valueInteger;
+}
+
+function observationComponentString(observation: Observation | undefined, code: string): string | undefined {
+  return observationComponent(observation, code)?.valueString;
+}
+
+function observationDate(observation: Observation): string {
+  return observation.effectiveDateTime ?? observation.issued ?? observation.meta?.lastUpdated ?? "";
+}
+
+function definedRecord<T extends Record<string, unknown>>(value: T): T {
+  return Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== undefined)) as T;
 }
 
 export const AUTO_KERATOMETRY_SEARCH_CODE = `${ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|auto_keratometry`;

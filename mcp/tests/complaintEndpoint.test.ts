@@ -310,6 +310,17 @@ test("an active complaint can be edited and removal keeps its persisted audit ro
   const persisted = fhir.basics.find((row) => row.identifier?.some((identifier) => identifier.value === id));
   assert.ok(persisted);
   assert.match(persisted.extension?.[0]?.valueString ?? "", /\"status\":\"removed\"/);
+
+  const reopened = await handleEncounterComplaintListRequest(deps, {
+    authHeader: AUTH,
+    params: { encounterId: "e1" },
+  });
+  assert.equal(reopened.status, 200);
+  assert.deepEqual(
+    (reopened.body as { complaints: unknown[] }).complaints,
+    [],
+    "a removed complaint stays out when History is reopened",
+  );
 });
 
 test("encounter complaint reads collapse duplicate Basics by complaint id and keep the newest row", async () => {

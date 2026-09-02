@@ -244,12 +244,12 @@ export function ExamEntrySheet({
             <button
               ref={initialFocusRef}
               type="button"
-              aria-label={`Cancel ${config.title} entry`}
+              aria-label={modal ? `Cancel ${config.title} entry` : `Back to exam overview from ${config.title}`}
               data-testid="cancel-exam-entry-sheet"
               data-entry-sheet-chrome
               onClick={onCancel}
             >
-              Cancel
+              {modal ? "Cancel" : "Back to exam overview"}
             </button>
           </div>
         </header>

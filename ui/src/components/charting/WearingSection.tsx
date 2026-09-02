@@ -6,6 +6,8 @@ import type { SectionSaveStatus } from "./types";
 import { VaValueSelect } from "./VaValueSelect";
 import { OdosSelect } from "../inputs/OdosSelect";
 import { OdosWheel } from "../inputs/OdosWheel";
+import { ClearSectionButton } from "./ClearControls";
+import { useEncounterEdit } from "./encounter-edit-context";
 
 interface Props {
   patientReference: string;
@@ -64,6 +66,7 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<SectionSaveStatus | null>(null);
   const [sourceType, setSourceType] = useState("manual");
+  const { onCleared } = useEncounterEdit();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -78,7 +81,7 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
       .then((body) => {
         setDefinition(body);
         const firstType = activeOptions(body.definition.fields.eyeglassType)[0]?.code ?? "";
-        setSourceType(activeOptions(body.definition.fields.sourceType)[0]?.code ?? "manual");
+        setSourceType(defaultSourceType(activeOptions(body.definition.fields.sourceType)));
         setPairs((current) => current.map((pair) => ({
           ...pair,
           eyeglassType: pair.eyeglassType || firstType,
@@ -125,6 +128,14 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
     setLeftGlassesAtHome(checked);
     setError(null);
     if (checked) setPairs([emptyPair(eyeglassTypes[0]?.code ?? "")]);
+  }
+
+  function resetForm() {
+    setPairs([emptyPair(eyeglassTypes[0]?.code ?? "")]);
+    setSourceType(defaultSourceType(sourceTypes));
+    setLeftGlassesAtHome(false);
+    setSaved(null);
+    setError(null);
   }
 
   async function save() {
@@ -178,6 +189,17 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
             <p className="mt-1 text-sm text-white/45">Pretest lensometer capture for glasses worn into the visit</p>
           </div>
           <div className="flex items-end gap-3">
+            <ClearSectionButton
+              encounterReference={encounterReference}
+              sectionKey="wearing"
+              label="Wearing Rx"
+              hasRecorded={saved !== null}
+              probeOnMount
+              onCleared={(result) => {
+                resetForm();
+                onCleared?.({ scope: "section", result });
+              }}
+            />
             <label className="block">
               <span className="mb-1 block text-xs uppercase tracking-wide text-white/35">Source</span>
               <OdosSelect
@@ -394,6 +416,10 @@ function parseOptionalNumber(value: string): number | undefined {
 
 function activeOptions(field: DefinitionField | undefined): DefinitionOption[] {
   return (field?.options ?? []).filter((option) => option.active !== false);
+}
+
+function defaultSourceType(options: DefinitionOption[]): string {
+  return options.find((option) => option.code === "manual")?.code ?? options[0]?.code ?? "manual";
 }
 
 function definedRecord<T extends Record<string, unknown>>(value: T): Partial<T> {

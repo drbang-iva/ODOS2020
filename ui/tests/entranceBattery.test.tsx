@@ -7,6 +7,7 @@ import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { customFieldEntries } from "../../mcp/src/clinical-graph/custom-fields";
 import { buildFindingDefinitionSeeds } from "../../mcp/src/clinical-graph/finding-definition-store";
 import { COVER_MAGNITUDES, CoverTestSection } from "../src/components/charting/CoverTestSection";
+import { ClearSectionButton } from "../src/components/charting/ClearControls";
 import { CvfSection } from "../src/components/charting/CvfSection";
 import { DiagnosisPicker } from "../src/components/charting/DiagnosisPicker";
 import { DilationSection } from "../src/components/charting/DilationSection";
@@ -692,6 +693,70 @@ test("dilation retains agent capture, DFE flag, declined counseling, and chart-n
   assert.match(html, /Patient declined dilation/);
   assert.match(html, /Chart note history/);
 });
+
+test("clearing Dilation leaves the editor unrecorded instead of pre-filling an administration row", async () => {
+  const definition: CustomFindingDefinition = {
+    stableKey: "entrance:dilation",
+    sectionKey: "entrance:dilation",
+    display: "Dilation",
+    active: true,
+    perEye: false,
+    customFields: [],
+    fields: { agent: { options: [{ code: "tropicamide-1", display: "Tropicamide 1%", active: true }] } },
+  };
+  const originalFetch = globalThis.fetch;
+  const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
+  let cleared = false;
+  Object.defineProperty(globalThis, "window", { configurable: true, value: { confirm: () => true } });
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.includes("/clinical-graph/dilation/history")) {
+      return Response.json(cleared
+        ? { notes: [], administrations: [] }
+        : {
+            notes: [{ observationReference: "Observation/dilation-note", recordedAt: "2026-09-02T14:00:00Z", text: "Dilation recorded" }],
+            administrations: [{ recordedAt: "2026-09-02T14:00:00Z", agent: "Tropicamide 1%", drops: 1, eyes: "OU", administeredBy: "Practitioner/doc1" }],
+          });
+    }
+    if (url.endsWith("/void") && init?.method === "POST") {
+      const body = JSON.parse(String(init.body)) as { preview?: boolean };
+      if (!body.preview) cleared = true;
+      return Response.json({ voided: ["Observation/dilation-note"], count: 1, sections: [], preview: body.preview === true });
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  };
+
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<DilationSection definition={definition} patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} />);
+      await flushEffects();
+    });
+    assert.equal(renderer.root.findAll((node) => node.props.ariaLabel === "Dilation agent 1").length, 1);
+    const clear = renderer.root.findAllByType(ClearSectionButton)[0]?.findByType("button");
+    assert.ok(clear);
+    await act(async () => {
+      await clear.props.onClick();
+      await flushEffects();
+    });
+    assert.equal(renderer.root.findAll((node) => String(node.props.ariaLabel ?? "").startsWith("Dilation agent ")).length, 0);
+    const clearedTree = JSON.stringify(renderer.toJSON());
+    assert.match(clearedTree, /No dilation administration recorded/);
+    assert.doesNotMatch(clearedTree, /Dilation recorded/, "voided chart-note history must disappear immediately");
+    assert.doesNotMatch(clearedTree, /Clear Dilation/, "the cleared section must no longer present itself as recorded");
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+    if (originalWindow) Object.defineProperty(globalThis, "window", originalWindow);
+    else Reflect.deleteProperty(globalThis, "window");
+  }
+});
+
+async function flushEffects(): Promise<void> {
+  for (let index = 0; index < 4; index += 1) {
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  }
+}
 
 function measurementDefinition(): CustomFindingDefinition {
   return {

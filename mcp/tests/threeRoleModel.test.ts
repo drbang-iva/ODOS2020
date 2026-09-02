@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { AccessPolicy, AccessPolicyResource, Encounter, MedicationRequest } from "@medplum/fhirtypes";
+import type { AccessPolicy, AccessPolicyResource, Encounter, MedicationRequest, Observation } from "@medplum/fhirtypes";
 import fhirpath from "fhirpath";
 import r4Model from "fhirpath/fhir-context/r4/index.js";
 import {
@@ -12,6 +12,11 @@ import {
   buildMedplumCompositeAccessPolicy,
   getRoleDeclaration,
 } from "../src/authz/roles.js";
+import {
+  ALLOWED_OBSERVATION_STATUS_TRANSITIONS,
+  FHIR_OBSERVATION_STATUSES,
+  type ObservationStatusBefore,
+} from "../../policy/observation-status-machine.js";
 
 const DX_PICK_TALLY_CRITERIA =
   "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-dx-pick-tally|odos-dx-pick-tally&identifier=https://odos2020.com/fhir/NamingSystem/dx-pick-tally-practitioner|%profile";
@@ -578,6 +583,66 @@ test("Staff Encounter writes allow unfinished work but reject finalization and r
   assert.equal(staffEncounterWriteAllowed(encounterWrite.writeConstraint, "planned", "in-progress"), true);
   assert.equal(staffEncounterWriteAllowed(encounterWrite.writeConstraint, "in-progress", "finished"), false);
   assert.equal(staffEncounterWriteAllowed(encounterWrite.writeConstraint, "finished", "in-progress"), false);
+});
+
+test("real Provider and Staff Observation writeConstraints permit voiding a preliminary finding", () => {
+  const before: Observation = { resourceType: "Observation", status: "preliminary", code: { text: "Synthetic draft" } };
+  const after: Observation = { ...before, status: "entered-in-error" };
+
+  for (const roleId of ["provider", "staff"] as const) {
+    const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
+    const observationWrite = policy.resource?.find((rule) =>
+      rule.resourceType === "Observation" && rule.interaction?.includes("update"));
+    assert.ok(observationWrite?.writeConstraint?.length, `${roleId} Observation update needs writeConstraints`);
+    assert.equal(
+      observationWrite.writeConstraint.every((constraint) => {
+        const result = fhirpath.evaluate(after, constraint.expression ?? "", { before, after }, r4Model);
+        return result.length === 1 && result[0] === true;
+      }),
+      true,
+      `${roleId} writeConstraints must accept preliminary -> entered-in-error`,
+    );
+  }
+});
+
+test("real Provider and Staff Observation writeConstraints allow exactly the status machine's transitions and nothing more", () => {
+  const befores: ObservationStatusBefore[] = [undefined, ...FHIR_OBSERVATION_STATUSES];
+  const key = (from: ObservationStatusBefore, to: string): string => `${from ?? "(none)"} -> ${to}`;
+  const expected: Record<"provider" | "staff", string[]> = {
+    // Provider carries every row of the machine; an AccessPolicy cannot tell clinician from scribe.
+    provider: [...new Set(ALLOWED_OBSERVATION_STATUS_TRANSITIONS.map((row) => key(row.from, row.to)))].sort(),
+    // Staff carries only the scribe rows: draft, pre-final edit, pre-final void. Never final.
+    staff: [...new Set(
+      ALLOWED_OBSERVATION_STATUS_TRANSITIONS
+        .filter((row) => row.actorRole === "scribe")
+        .map((row) => key(row.from, row.to)),
+    )].sort(),
+  };
+
+  for (const roleId of ["provider", "staff"] as const) {
+    const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
+    const observationWrite = policy.resource?.find((rule) =>
+      rule.resourceType === "Observation" && rule.interaction?.includes("update"));
+    assert.ok(observationWrite?.writeConstraint?.length, `${roleId} Observation update needs writeConstraints`);
+
+    const allowed: string[] = [];
+    for (const from of befores) {
+      for (const to of FHIR_OBSERVATION_STATUSES) {
+        const after: Observation = { resourceType: "Observation", status: to, code: { text: "Synthetic draft" } };
+        const before = from ? { ...after, status: from } : [];
+        const permitted = observationWrite.writeConstraint.every((constraint) => {
+          const result = fhirpath.evaluate(after, constraint.expression ?? "", { before, after }, r4Model);
+          return result.length === 1 && result[0] === true;
+        });
+        if (permitted) allowed.push(key(from, to));
+      }
+    }
+    assert.deepEqual(
+      allowed.sort(),
+      expected[roleId],
+      `${roleId} writeConstraints must permit exactly the machine's transitions; a widened or narrowed FHIRPath branch must turn this RED`,
+    );
+  }
 });
 
 test("Provider and Staff compile to one order-independent policy without changing clinical compartment criteria", () => {

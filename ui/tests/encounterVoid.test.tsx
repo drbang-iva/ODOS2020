@@ -3,6 +3,15 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import React from "react";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
+import { handleEncounterVoidRequest } from "../../mcp/src/clinical-graph/encounter-void-endpoint";
+import {
+  AUTH,
+  administration,
+  cvf,
+  fixture as voidFixture,
+  observation,
+  type VoidBody,
+} from "../../mcp/tests/encounterVoidFixture";
 import {
   ClearEncounterButton,
   ClearSectionButton,
@@ -206,7 +215,27 @@ test("Remove × is disabled with the amendment tooltip once the encounter is sig
 // Tier 3 — the entry-sheet chrome
 // ---------------------------------------------------------------------------
 
-test("the entry sheet chrome carries Clear everything charted this visit left of Cancel, from any section", async () => {
+test("HPI, IOP, and CVF sheets expose a working Back to exam overview action", () => {
+  for (const sectionId of ["hpi", "iop", "cvf"] as const) {
+    let backCount = 0;
+    const renderer = create(
+      <ExamEntrySheet sectionId={sectionId} onCancel={() => { backCount += 1; }}>
+        <div>sheet body</div>
+      </ExamEntrySheet>,
+    );
+    try {
+      const back = renderer.root.findAll((node) =>
+        node.type === "button" && textOf(node) === "Back to exam overview")[0];
+      assert.ok(back, `${sectionId} needs an explicit way back to the overview`);
+      back.props.onClick();
+      assert.equal(backCount, 1, `${sectionId} back action must leave the sheet`);
+    } finally {
+      renderer.unmount();
+    }
+  }
+});
+
+test("the entry sheet chrome carries Clear everything charted this visit left of Back to exam overview, from any section", async () => {
   const cleared: EncounterVoidResult[] = [];
   const harness = await renderInEncounter(
     <ExamEntrySheet
@@ -231,7 +260,7 @@ test("the entry sheet chrome carries Clear everything charted this visit left of
     const heading = harness.renderer.root.findAll((node) => node.type === "header" && node.props.className === "odos-exam-entry-sheet-heading")[0]!;
     const buttons = heading.findAllByType("button");
     const labels = buttons.map((button) => textOf(button));
-    assert.deepEqual(labels, ["Clear everything charted this visit…", "Cancel"], "tier 3 sits left of Cancel in the chrome");
+    assert.deepEqual(labels, ["Clear everything charted this visit…", "Back to exam overview"], "tier 3 sits left of Back to exam overview in the chrome");
     const clearAll = buttons[0]!;
     assert.equal(clearAll.props["data-entry-sheet-chrome"], true);
     assert.equal(clearAll.props.disabled, undefined);
@@ -294,6 +323,124 @@ test("an empty visit tells the clinician there is nothing to clear instead of co
     assert.match(textOf(harness.renderer.root.findAllByType(ClearEncounterButton)[0]!), /Nothing charted this visit yet/);
   } finally {
     harness.restore();
+  }
+});
+
+test("count honesty: Dilation section preview, confirm, void result, section subtotal, and stored statuses all agree", async () => {
+  const { deps, fhir } = voidFixture();
+  fhir.add(administration("ma1"));
+  fhir.add(administration("ma2"));
+  fhir.add(observation("dfe", "entrance:dilation", "UNKNOWN", {
+    partOf: [{ reference: "MedicationAdministration/ma1" }, { reference: "MedicationAdministration/ma2" }],
+  }));
+  fhir.add(cvf("census-extra", "OS"));
+  fhir.add(cvf("outside", "OD"));
+  const responses: VoidBody[] = [];
+  const confirmations: string[] = [];
+  const cleared: VoidBody[] = [];
+  const restore = installRealVoidBridge(deps, responses, confirmations);
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <ClearSectionButton
+          encounterReference={ENCOUNTER}
+          sectionKey="entrance:dilation"
+          label="Dilation"
+          hasRecorded
+          onCleared={(result) => cleared.push(result as VoidBody)}
+        />,
+      );
+    });
+    const clear = renderer.root.findByType("button");
+    await act(async () => { await clear.props.onClick(); await flush(); });
+
+    assert.equal(responses.length, 2, "one preview and one void response");
+    const [preview, result] = responses;
+    assert.equal(preview?.preview, true);
+    assert.equal(preview?.count, 3);
+    assert.deepEqual(confirmations, [
+      "Clear Dilation — voids 3 recorded values from this visit. They remain in the record as entered-in-error. Continue?",
+    ]);
+    assert.equal(result?.preview, false);
+    assert.equal(result?.count, 3);
+    assert.equal(result?.voided.length, 3);
+    assert.deepEqual([...result!.voided].sort(), ["MedicationAdministration/ma1", "MedicationAdministration/ma2", "Observation/dfe"]);
+    assert.equal(result?.sections.reduce((sum, section) => sum + section.count, 0), result?.count);
+    assert.equal(result?.sections.find((section) => section.sectionKey === "entrance:dilation")?.count, 3);
+    assert.deepEqual(cleared, [result]);
+    assert.equal(fhir.get<ReturnType<typeof administration>>("MedicationAdministration", "ma1").status, "entered-in-error");
+    assert.equal(fhir.get<ReturnType<typeof administration>>("MedicationAdministration", "ma2").status, "entered-in-error");
+    assert.equal(fhir.get<ReturnType<typeof observation>>("Observation", "dfe").status, "entered-in-error");
+    assert.equal(fhir.get<ReturnType<typeof cvf>>("Observation", "outside").status, "final", "the adjacent section is untouched");
+    assert.equal(
+      fhir.all<ReturnType<typeof observation>>("Observation").filter((resource) => resource.status === "entered-in-error").length
+        + fhir.all<ReturnType<typeof administration>>("MedicationAdministration").filter((resource) => resource.status === "entered-in-error").length,
+      result?.count,
+      "the store census matches the returned void count",
+    );
+  } finally {
+    renderer?.unmount();
+    restore();
+  }
+});
+
+test("count honesty: whole-visit preview, confirm, void result, section subtotals, and stored statuses all agree", async () => {
+  const { deps, fhir } = voidFixture();
+  fhir.add(administration("ma1"));
+  fhir.add(administration("ma2"));
+  fhir.add(observation("dfe", "entrance:dilation", "UNKNOWN", {
+    partOf: [{ reference: "MedicationAdministration/ma1" }, { reference: "MedicationAdministration/ma2" }],
+  }));
+  fhir.add(cvf("today", "OD"));
+  fhir.add(cvf("prior", "OS", { encounter: { reference: "Encounter/e0" } }));
+  const responses: VoidBody[] = [];
+  const confirmations: string[] = [];
+  const cleared: VoidBody[] = [];
+  const restore = installRealVoidBridge(deps, responses, confirmations);
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <ClearEncounterButton
+          encounterReference={ENCOUNTER}
+          encounterStatus="in-progress"
+          onCleared={(result) => cleared.push(result as VoidBody)}
+        />,
+      );
+    });
+    const clear = renderer.root.findByType("button");
+    await act(async () => { await clear.props.onClick(); await flush(); });
+
+    assert.equal(responses.length, 2, "one preview and one void response");
+    const [preview, result] = responses;
+    assert.equal(preview?.preview, true);
+    assert.equal(preview?.count, 4);
+    assert.equal(preview?.sections.reduce((sum, section) => sum + section.count, 0), preview?.count);
+    assert.deepEqual(confirmations, [
+      "Clear everything charted for this visit — Dilation (3), Confrontation visual fields (1): 4 recorded values. They remain in the record as entered-in-error. Continue?",
+    ]);
+    assert.equal(result?.preview, false);
+    assert.equal(result?.count, 4);
+    assert.equal(result?.voided.length, 4);
+    assert.deepEqual([...result!.voided].sort(), ["MedicationAdministration/ma1", "MedicationAdministration/ma2", "Observation/dfe", "Observation/today"]);
+    assert.equal(result?.sections.reduce((sum, section) => sum + section.count, 0), result?.count);
+    assert.equal(result?.sections.find((section) => section.sectionKey === "entrance:dilation")?.count, 3);
+    assert.deepEqual(cleared, [result]);
+    assert.equal(fhir.get<ReturnType<typeof administration>>("MedicationAdministration", "ma1").status, "entered-in-error");
+    assert.equal(fhir.get<ReturnType<typeof administration>>("MedicationAdministration", "ma2").status, "entered-in-error");
+    assert.equal(fhir.get<ReturnType<typeof observation>>("Observation", "dfe").status, "entered-in-error");
+    assert.equal(fhir.get<ReturnType<typeof cvf>>("Observation", "today").status, "entered-in-error");
+    assert.equal(fhir.get<ReturnType<typeof cvf>>("Observation", "prior").status, "final", "the prior visit is untouched");
+    assert.equal(
+      fhir.all<ReturnType<typeof observation>>("Observation").filter((resource) => resource.status === "entered-in-error").length
+        + fhir.all<ReturnType<typeof administration>>("MedicationAdministration").filter((resource) => resource.status === "entered-in-error").length,
+      result?.count,
+      "the store census matches the returned void count",
+    );
+  } finally {
+    renderer?.unmount();
+    restore();
   }
 });
 
@@ -377,7 +524,7 @@ test("every surface in the design table renders Clear section, and HpiSection no
   const read = (name: string) => readFileSync(new URL(`../src/components/charting/${name}.tsx`, import.meta.url), "utf8");
   for (const component of [
     "EntranceStateSection", "CvfSection", "EomSection", "CoverTestSection", "EntranceMeasurementSection",
-    "VaSection", "IopSection", "DilationSection", "AutoRefractionSection", "RefractionSection",
+    "VaSection", "IopSection", "DilationSection", "AutoRefractionSection", "RefractionSection", "WearingSection",
     "HpiSection", "OcularHealthSection", "AssessmentSection",
   ]) {
     assert.match(read(component), /<ClearSectionButton/, `${component} must render the tier-2 control`);
@@ -392,9 +539,115 @@ test("every surface in the design table renders Clear section, and HpiSection no
   assert.doesNotMatch(read("RefractionSection"), /blocks\.length > 1 &&/);
 });
 
+test("Wearing Rx offers the standard persisted section clear and resets its editor to blank", async () => {
+  const { WearingSection } = await import("../src/components/charting/WearingSection");
+  const originalFetch = globalThis.fetch;
+  const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
+  const confirmations: string[] = [];
+  const voidBodies: unknown[] = [];
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: { confirm(message: string) { confirmations.push(message); return true; } },
+  });
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/clinical-graph/wearing/definition")) {
+      return Response.json({ definition: { fields: {
+        eyeglassType: { options: [{ code: "progressives", display: "Progressives", active: true }] },
+        sourceType: { options: [
+          { code: "device", display: "Device", active: true },
+          { code: "manual", display: "Manual", active: true },
+        ] },
+        prismBase: { options: [{ code: "down", display: "Down", active: true }] },
+      } } });
+    }
+    if (url.endsWith("/void") && init?.method === "POST") {
+      const body = JSON.parse(String(init.body)) as { preview?: boolean };
+      voidBodies.push(body);
+      return Response.json({
+        voided: ["Observation/wearing-1"],
+        count: 1,
+        sections: [{ sectionKey: "wearing", label: "Wearing Rx", count: 1 }],
+        preview: body.preview === true,
+        entries: [{ reference: "Observation/wearing-1", sectionKey: "wearing", findingKey: "wearing_rx", laterality: "OU" }],
+      });
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  };
+
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <EncounterEditContext.Provider value={{ encounterStatus: "in-progress" }}>
+          <WearingSection patientReference="Patient/p1" encounterReference={ENCOUNTER} onSaved={() => undefined} />
+        </EncounterEditContext.Provider>,
+      );
+      await flush();
+    });
+    const sphere = () => renderer.root.findAll((node) => node.props.ariaLabel === "OD sphere")[0]!;
+    const source = () => renderer.root.findAll((node) => node.props.ariaLabel === "Source")[0]!;
+    await act(async () => {
+      sphere().props.onChange("-1.25");
+      source().props.onChange("device");
+    });
+    assert.equal(sphere().props.value, "-1.25");
+    assert.equal(source().props.value, "device");
+    const clear = renderer.root.findAllByType(ClearSectionButton)[0]?.findByType("button");
+    assert.ok(clear, "a persisted Wearing Rx must expose Clear Wearing Rx on reopen");
+    await act(async () => { await clear.props.onClick(); await flush(); });
+    assert.deepEqual(voidBodies, [
+      { scope: "section", sectionKey: "wearing", preview: true },
+      { scope: "section", sectionKey: "wearing", preview: true },
+      { scope: "section", sectionKey: "wearing" },
+    ]);
+    assert.deepEqual(confirmations, [
+      "Clear Wearing Rx — voids 1 recorded value from this visit. They remain in the record as entered-in-error. Continue?",
+    ]);
+    assert.equal(sphere().props.value, "");
+    assert.equal(source().props.value, "manual", "clear resets Source to the section default");
+    assert.equal(renderer.root.findAll((node) => node.type === "input" && node.props.type === "checkbox")[0]?.props.checked, false);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+    if (originalWindow) Object.defineProperty(globalThis, "window", originalWindow);
+    else Reflect.deleteProperty(globalThis, "window");
+  }
+});
+
 // ---------------------------------------------------------------------------
 // Harness
 // ---------------------------------------------------------------------------
+
+function installRealVoidBridge(
+  deps: Parameters<typeof handleEncounterVoidRequest>[0],
+  responses: VoidBody[],
+  confirmations: string[],
+): () => void {
+  const originalFetch = globalThis.fetch;
+  const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: { confirm(message: string) { confirmations.push(message); return true; } },
+  });
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input), "http://localhost");
+    const match = url.pathname.match(/^\/clinical-graph\/encounters\/([^/]+)\/void$/);
+    if (!match || init?.method !== "POST") throw new Error(`Unexpected request: ${url}`);
+    const result = await handleEncounterVoidRequest(deps, {
+      authHeader: AUTH,
+      params: { encounterId: decodeURIComponent(match[1]!) },
+      body: JSON.parse(String(init.body)),
+    });
+    responses.push(result.body as VoidBody);
+    return Response.json(result.body, { status: result.status });
+  };
+  return () => {
+    globalThis.fetch = originalFetch;
+    if (originalWindow) Object.defineProperty(globalThis, "window", originalWindow);
+    else Reflect.deleteProperty(globalThis, "window");
+  };
+}
 
 async function renderInEncounter(element: React.ReactElement, options: {
   previewCount: number;
@@ -538,6 +791,274 @@ const PERSISTED_REOPEN_ENTRIES: Record<string, Array<{ reference: string; sectio
     { reference: "Observation/pd", sectionKey: "auto-refraction", findingKey: "binocular_pd", laterality: "OU" },
   ],
 };
+
+test("Auto-refraction reopens with the current encounter's stored AR, Auto-K, PD, and remarks in the editor", async () => {
+  const { AutoRefractionSection } = await import("../src/components/charting/AutoRefractionSection");
+  const originalFetch = globalThis.fetch;
+  const historyRequests: string[] = [];
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/clinical-graph/auto-refraction/definition")) {
+      return Response.json({ definitions: { autoRefraction: { fields: { sourceType: { options: [{ code: "manual", display: "Manual", active: true }] } } }, autoKeratometry: { fields: {} } } });
+    }
+    if (url.includes("/clinical-graph/auto-refraction/history")) {
+      historyRequests.push(url);
+      return Response.json({
+        eyes: {
+          OD: { sphere: -1.25, cylinder: -0.5, axis: 90, flatK: 42.5, flatAxis: 180, steepK: 43.25, steepAxis: 90, observationReferences: ["Observation/ar-od", "Observation/ak-od"] },
+          OS: { sphere: -1, cylinder: -0.25, axis: 85, flatK: 42.75, flatAxis: 5, steepK: 43.5, steepAxis: 95, observationReferences: ["Observation/ar-os", "Observation/ak-os"] },
+        },
+        binocularPdDistance: 63.5,
+        binocularPdNear: 60.25,
+        binocularPdObservationReferences: ["Observation/pd-ou"],
+        remarks: "Reliable fixation.",
+      });
+    }
+    if (url.endsWith("/void") && init?.method === "POST") {
+      return Response.json({ voided: [], count: 0, sections: [], preview: true, entries: [] });
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  };
+
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <EncounterEditContext.Provider value={{ encounterStatus: "in-progress" }}>
+          <AutoRefractionSection patientReference="Patient/p1" encounterReference={ENCOUNTER} onSaved={() => undefined} />
+        </EncounterEditContext.Provider>,
+      );
+      await flush();
+    });
+    assert.equal(historyRequests.length, 1);
+    assert.match(historyRequests[0]!, /patientReference=Patient%2Fp1/);
+    assert.match(historyRequests[0]!, /encounterReference=Encounter%2Fe1/);
+    const value = (ariaLabel: string) => renderer.root.findAll((node) => node.props.ariaLabel === ariaLabel)[0]?.props.value;
+    assert.equal(value("OD auto-refraction sphere"), "-1.25");
+    assert.equal(value("OD auto-refraction cylinder"), "-0.5");
+    assert.equal(value("OD auto-refraction axis"), "90");
+    assert.equal(value("OD flat K"), "42.5");
+    assert.equal(value("OD flat axis"), "180");
+    assert.equal(value("OD steep K"), "43.25");
+    assert.equal(value("OD steep axis"), "90");
+    assert.equal(value("Binocular PD distance"), "63.5");
+    assert.equal(value("Binocular PD near"), "60.25");
+    assert.equal(renderer.root.findByType("textarea").props.value, "Reliable fixation.");
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("Auto-refraction history cannot overwrite an edit made while hydration is in flight", async () => {
+  const { AutoRefractionSection } = await import("../src/components/charting/AutoRefractionSection");
+  const originalFetch = globalThis.fetch;
+  let resolveHistory!: (response: Response) => void;
+  const historyResponse = new Promise<Response>((resolve) => { resolveHistory = resolve; });
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/clinical-graph/auto-refraction/definition")) {
+      return Response.json({ definitions: { autoRefraction: { fields: { sourceType: { options: [{ code: "manual", display: "Manual", active: true }] } } }, autoKeratometry: { fields: {} } } });
+    }
+    if (url.endsWith("/void") && init?.method === "POST") {
+      return Response.json({ voided: [], count: 0, sections: [], preview: true, entries: [] });
+    }
+    if (url.includes("/clinical-graph/auto-refraction/history")) return historyResponse;
+    throw new Error(`Unexpected request: ${url}`);
+  };
+
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <EncounterEditContext.Provider value={{ encounterStatus: "in-progress" }}>
+          <AutoRefractionSection patientReference="Patient/p1" encounterReference={ENCOUNTER} onSaved={() => undefined} />
+        </EncounterEditContext.Provider>,
+      );
+      await flush();
+    });
+    const sphere = () => renderer.root.findAll((node) => node.props.ariaLabel === "OD auto-refraction sphere")[0]!;
+    await act(async () => { sphere().props.onChange("-2.00"); });
+    assert.equal(sphere().props.value, "-2.00");
+
+    await act(async () => {
+      resolveHistory(Response.json({ eyes: { OD: { sphere: -1.25, observationReferences: ["Observation/old-od"] } } }));
+      await flush();
+    });
+    assert.equal(sphere().props.value, "-2.00", "late stored history must not replace the clinician's edit");
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("Auto-refraction encounter changes reset fields and replace saved references before new history resolves", async () => {
+  const { AutoRefractionSection } = await import("../src/components/charting/AutoRefractionSection");
+  const originalFetch = globalThis.fetch;
+  let resolveSecondHistory!: (response: Response) => void;
+  const secondHistory = new Promise<Response>((resolve) => { resolveSecondHistory = resolve; });
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input), "http://localhost");
+    if (url.pathname.endsWith("/clinical-graph/auto-refraction/definition")) {
+      return Response.json({ definitions: { autoRefraction: { fields: { sourceType: { options: [{ code: "manual", display: "Manual", active: true }] } } }, autoKeratometry: { fields: {} } } });
+    }
+    if (url.pathname.endsWith("/void") && init?.method === "POST") {
+      return Response.json({ voided: [], count: 0, sections: [], preview: true, entries: [] });
+    }
+    if (url.pathname.endsWith("/clinical-graph/auto-refraction/history")) {
+      return url.searchParams.get("encounterReference") === "Encounter/e1"
+        ? Response.json({ eyes: { OD: { sphere: -1.25, observationReferences: ["Observation/e1-od"] } } })
+        : secondHistory;
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  };
+
+  const section = (encounterReference: string) => (
+    <EncounterEditContext.Provider value={{ encounterStatus: "in-progress" }}>
+      <AutoRefractionSection patientReference="Patient/p1" encounterReference={encounterReference} onSaved={() => undefined} />
+    </EncounterEditContext.Provider>
+  );
+  const removeLabels = (renderer: ReactTestRenderer) => renderer.root
+    .findAll((node) => node.type === "button" && String(node.props["aria-label"] ?? "").startsWith("Remove Auto-refraction"))
+    .map((node) => node.props["aria-label"] as string);
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => { renderer = create(section("Encounter/e1")); await flush(); });
+    assert.deepEqual(removeLabels(renderer), ["Remove Auto-refraction OD"]);
+
+    await act(async () => { renderer.update(section("Encounter/e2")); await flush(); });
+    assert.equal(renderer.root.findAll((node) => node.props.ariaLabel === "OD auto-refraction sphere")[0]?.props.value, "");
+    assert.deepEqual(removeLabels(renderer), [], "the prior encounter's reference must clear before the next history response");
+
+    await act(async () => {
+      resolveSecondHistory(Response.json({ eyes: { OS: { sphere: -0.75, observationReferences: ["Observation/e2-os"] } } }));
+      await flush();
+    });
+    assert.deepEqual(removeLabels(renderer), ["Remove Auto-refraction OS"]);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("Auto-refraction Remove keeps preview-only references when latest-value history resolves later", async () => {
+  const { AutoRefractionSection } = await import("../src/components/charting/AutoRefractionSection");
+  const originalFetch = globalThis.fetch;
+  let resolveHistory!: (response: Response) => void;
+  const historyResponse = new Promise<Response>((resolve) => { resolveHistory = resolve; });
+  const voidBodies: Array<{ scope?: string; preview?: boolean; observationReference?: string[] }> = [];
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/clinical-graph/auto-refraction/definition")) {
+      return Response.json({ definitions: { autoRefraction: { fields: { sourceType: { options: [{ code: "manual", display: "Manual", active: true }] } } }, autoKeratometry: { fields: {} } } });
+    }
+    if (url.endsWith("/void") && init?.method === "POST") {
+      const body = JSON.parse(String(init.body)) as { scope?: string; preview?: boolean; observationReference?: string[] };
+      voidBodies.push(body);
+      if (body.scope === "section" && body.preview) {
+        return Response.json({
+          voided: ["Observation/older-od"],
+          count: 1,
+          sections: [{ sectionKey: "auto-refraction", label: "Auto-refraction / Auto-K", count: 1 }],
+          preview: true,
+          entries: [{ reference: "Observation/older-od", sectionKey: "auto-refraction", findingKey: "auto_refraction", laterality: "OD" }],
+        });
+      }
+      return Response.json({ voided: body.observationReference ?? [], count: body.observationReference?.length ?? 0, sections: [], preview: false });
+    }
+    if (url.includes("/clinical-graph/auto-refraction/history")) return historyResponse;
+    throw new Error(`Unexpected request: ${url}`);
+  };
+
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <EncounterEditContext.Provider value={{ encounterStatus: "in-progress" }}>
+          <AutoRefractionSection patientReference="Patient/p1" encounterReference={ENCOUNTER} onSaved={() => undefined} />
+        </EncounterEditContext.Provider>,
+      );
+      await flush();
+    });
+    await act(async () => {
+      resolveHistory(Response.json({ eyes: { OD: { sphere: -1.25, observationReferences: ["Observation/latest-od"] } } }));
+      await flush();
+    });
+    const remove = renderer.root.findAll((node) => node.type === "button" && node.props["aria-label"] === "Remove Auto-refraction OD")[0];
+    assert.ok(remove);
+    await act(async () => { await remove.props.onClick(); await flush(); });
+    const removal = voidBodies.find((body) => body.scope === "observation");
+    assert.deepEqual(
+      [...(removal?.observationReference ?? [])].sort(),
+      ["Observation/latest-od", "Observation/older-od"],
+      "history hydration must not discard same-encounter references already found by the void preview",
+    );
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("Auto-refraction late persisted preview cannot restore references after Remove succeeds", async () => {
+  const { AutoRefractionSection } = await import("../src/components/charting/AutoRefractionSection");
+  const originalFetch = globalThis.fetch;
+  let resolvePreview!: (response: Response) => void;
+  const previewResponse = new Promise<Response>((resolve) => { resolvePreview = resolve; });
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/clinical-graph/auto-refraction/definition")) {
+      return Response.json({ definitions: { autoRefraction: { fields: { sourceType: { options: [{ code: "manual", display: "Manual", active: true }] } } }, autoKeratometry: { fields: {} } } });
+    }
+    if (url.includes("/clinical-graph/auto-refraction/history")) {
+      return Response.json({ eyes: { OD: { sphere: -1.25, observationReferences: ["Observation/latest-od"] } } });
+    }
+    if (url.endsWith("/void") && init?.method === "POST") {
+      const body = JSON.parse(String(init.body)) as { scope?: string; preview?: boolean; observationReference?: string[] };
+      if (body.scope === "section" && body.preview) return previewResponse;
+      return Response.json({
+        voided: body.observationReference ?? [],
+        count: body.observationReference?.length ?? 0,
+        sections: [],
+        preview: false,
+      });
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  };
+
+  const removeButtons = (renderer: ReactTestRenderer) => renderer.root.findAll(
+    (node) => node.type === "button" && node.props["aria-label"] === "Remove Auto-refraction OD",
+  );
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <EncounterEditContext.Provider value={{ encounterStatus: "in-progress" }}>
+          <AutoRefractionSection patientReference="Patient/p1" encounterReference={ENCOUNTER} onSaved={() => undefined} />
+        </EncounterEditContext.Provider>,
+      );
+      await flush();
+    });
+    assert.equal(removeButtons(renderer).length, 1);
+
+    await act(async () => { await removeButtons(renderer)[0]!.props.onClick(); await flush(); });
+    assert.equal(removeButtons(renderer).length, 0);
+
+    await act(async () => {
+      resolvePreview(Response.json({
+        voided: ["Observation/latest-od"],
+        count: 1,
+        sections: [{ sectionKey: "auto-refraction", label: "Auto-refraction / Auto-K", count: 1 }],
+        preview: true,
+        entries: [{ reference: "Observation/latest-od", sectionKey: "auto-refraction", findingKey: "auto_refraction", laterality: "OD" }],
+      }));
+      await flush();
+    });
+    assert.equal(removeButtons(renderer).length, 0, "a pre-void preview must not resurrect the removed value");
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
 
 /**
  * Fixback 56ff8d36 P2#A, widened per the Opus spot-check: on a SIGNED reopened chart, BOTH tiers

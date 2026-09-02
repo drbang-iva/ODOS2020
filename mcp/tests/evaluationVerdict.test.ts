@@ -348,3 +348,20 @@ test("CI cancels superseded pull requests but never pushes to main", () => {
     /^concurrency:\n\s+group: ci-\$\{\{ github\.workflow \}\}-\$\{\{ github\.ref \}\}\n\s+cancel-in-progress: \$\{\{ github\.event_name == 'pull_request' \}\}$/m,
   );
 });
+
+test("CI blocks on the focused real-Medplum preliminary Observation authorization proof", () => {
+  const workflow = workflowSource(".github/workflows/ci.yml");
+  const focusedStep = workflow.match(
+    /- name: enforce preliminary Observation authorization on real Medplum\n(?<body>[\s\S]*?)\n\s+- name:/,
+  )?.groups?.body;
+  assert.ok(focusedStep, "CI needs a focused preliminary Observation authorization step");
+  assert.doesNotMatch(focusedStep, /continue-on-error:/);
+  assert.match(focusedStep, /ODOS_PRELIMINARY_OBSERVATION_AUTHZ_ONLY: "1"/);
+  assert.match(focusedStep, /tests\/clinicalWriteAuthzLive\.test\.ts/);
+
+  const liveTest = workflowSource("mcp/tests/clinicalWriteAuthzLive.test.ts");
+  assert.match(
+    liveTest,
+    /if \(process\.env\.ODOS_PRELIMINARY_OBSERVATION_AUTHZ_ONLY === "1"\) \{\n\s+return;\n\s+\}/,
+  );
+});

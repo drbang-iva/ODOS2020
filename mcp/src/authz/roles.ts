@@ -235,7 +235,7 @@ const STAFF_OBSERVATION_WRITE_CONSTRAINTS: WriteConstraintDeclaration[] = [
   {
     description: "Staff and scribe findings remain preliminary until a Provider attests them.",
     expression:
-      "(%before.exists().not() implies status = 'preliminary') and (%before.exists() implies (%before.status = 'preliminary' and status = 'preliminary'))",
+      "(%before.exists().not() implies status = 'preliminary') and (%before.exists() implies (%before.status = 'preliminary' and (status = 'preliminary' or status = 'entered-in-error')))",
   },
 ];
 
