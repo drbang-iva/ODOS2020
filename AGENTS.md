@@ -8,13 +8,15 @@ auto_inject_priority: 10
 
 Practitioner-owned open-source EHR / practice management for independent optometry. Built by a practicing O.D. on the Medplum FHIR foundation. Self-hosted on the practice's own hardware. AGPL v3.
 
-**Current state — do not hand-maintain a version claim in this file.** The substrate is real working code under milestone-locked development, and **nothing is packaged as a customer install yet**; first-pilot scope is named below. Those facts are durable. *Where the build actually is* is not — so read it from sources that cannot go stale, never from prose here:
+**Current state — do not hand-maintain a version claim in this file.** The substrate is real working code under milestone-locked development, and **nothing is packaged as a customer install yet**; first-pilot scope is named below. Those facts are durable. *Where the build actually is* is not — so derive it, and know what each source can and cannot answer:
 
-| To learn | Read |
-|---|---|
-| What shipped, and when | `git log --oneline -30 origin/main` |
-| What is in flight right now | `gh pr list --state open` |
-| Why something was built the way it was | dated files in `performance-od/decisions/` |
+| To learn | Read | Cannot tell you |
+|---|---|---|
+| What shipped, and when | `git log --oneline -30 origin/main` | which milestone that adds up to |
+| What is in flight right now | `gh pr list --state open` | what already shipped |
+| Why something was built the way it was | dated files in `performance-od/decisions/` | anything not yet written down — these are human-authored and can lag |
+
+**No source here is stale-proof, and this table does not claim otherwise.** They are the *least*-rotting options available: two are derived from the repository itself, and the third is append-only and dated. None of them answers "which milestone are we in" — if you need that, ask the operator rather than trusting any prose, including this file's sections below.
 
 > **Added 2026-09-02.** This paragraph previously asserted *"v0.6a Frames Data SHIPPED (2026-05-09) … 1 of 8 v0.6 slices shipped; v0.6b PVerify is next"* — roughly four months stale, and it was the first thing every Codex session read, whether building or reviewing. `STATUS.md` (*"Generated: 2026-07-07"*) and `docs/operator-dashboard.md` had rotted the same way and disagreed with it: three hand-maintained state documents, three different answers. A generated source cannot drift; a remembered one always does. The milestone tables below carry the same risk — trust `git log` over them where they conflict.
 
