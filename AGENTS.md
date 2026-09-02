@@ -258,6 +258,31 @@ question, or a live proof that exercises only the failure branch. Prove your sli
 headline capability by real invocation, and state plainly which branch your evidence
 actually took.
 
+**The evaluator runs its own mutations — a green suite it did not try to break is not an
+evaluation.** Reproduce the baseline, then break each invariant the slice claims to guard
+and paste RED and GREEN verbatim. Three rules earned the hard way on PR #499/#500
+(2026-09-01/02):
+
+- **Verify the mutant actually landed** — grep it in place before believing the result.
+  Two of six mutations in one spot-check were silent no-ops from wrong variable names and
+  came back falsely green; a red the mutant did not cause is the same class of error.
+- **A guard that passes because the FIXTURE does the work is decorative.** One boundary
+  guard passed for two full rounds with the production filter deleted, because the test
+  fake's own `search()` honoured the query param and excluded the row before the endpoint
+  saw it. When a guard defends a boundary, make the fake permissive so the endpoint's own
+  check is the only thing that can produce the assertion. Prove it: let the fake mutate
+  its private state while returning a stale response, and confirm the client-side
+  assertion still fires.
+- **Propose the remedy at file:line; do not apply it.** The evaluator that fixes what it
+  found then certifies its own fix, which is `author ≠ evaluator` defeated one hop later.
+
+**Read the design of record before judging intent.** Design and fixback lists live in the
+private companion repo — cite them by ABSOLUTE path
+(`/Users/ericr.bang/GitHub/performance-od/decisions/<file>.md`), never a relative one: a
+relative path does not resolve from this repo's root, and a hand-off that silently fails
+to open is indistinguishable from an evaluator that ignored it. If a cited path will not
+open, say so and stop rather than proceeding on inference.
+
 Nothing is "done" until an independent evaluation actually ran.
 
 **Every build→evaluate handoff returns a sealed bundle, not a transcript** — summary,
