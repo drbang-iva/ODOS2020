@@ -2,7 +2,7 @@
 
 const MARKER_PATTERN = /^Evaluated-by:/im;
 const VERDICT_PATTERN =
-  /^Evaluated-by:\s*(.+?)\s+(?:—|--|-)\s*(PASS|FAIL|BLOCKED|NEEDS-WORK)\s*$/i;
+  /^Evaluated-by:\s*(.+?)\s+(?:—|--|-)\s*(PASS|FAIL|BLOCKED|NEEDS-WORK|OVERRIDE)\s*$/i;
 const HEAD_SHA_PATTERN = /^Head-SHA:\s*([0-9a-f]{40})\s*$/i;
 const SHA_PATTERN = /^[0-9a-f]{40}$/i;
 // Who is trusted, and why, is decided in performance-od/decisions/ — not restated here.
@@ -14,8 +14,13 @@ const EXPECTED_FORM = [
   "Evaluated-by: Fable 5 — PASS   (also accepted: Opus, Codex)",
   "Head-SHA: <40-character PR head SHA>",
 ].join("\n");
+const EXPECTED_OVERRIDE_FORM = [
+  "Evaluated-by: <authorizing operator name> — OVERRIDE",
+  "Head-SHA: <40-character current PR head SHA>",
+  "Override-Reason: <nonempty reason for the authorized bypass>",
+].join("\n");
 const OVERRIDE_NOTE =
-  "The 'evaluated' label is the deliberate operator override and bypasses marker and head-SHA checks.";
+  "The 'evaluated' label alone never passes; an operator override also requires a named OVERRIDE marker, a nonempty Override-Reason, and the exact current Head-SHA in the same comment.";
 
 function createdAtMillis(comment) {
   const timestamp = Date.parse(comment.created_at || "");
@@ -43,16 +48,12 @@ function evaluateEvaluationGate({
   comments = [],
   currentHeadSha = "",
 } = {}) {
-  if (labels.some((label) => (label.name || "").toLowerCase() === "evaluated")) {
-    return {
-      passed: true,
-      reason: "label-override",
-      message: [
-        '"evaluated" label present — operator override passes the gate',
-        "without marker or head-SHA enforcement.",
-      ].join(" "),
-    };
-  }
+  const hasOverrideLabel = labels.some(
+    (label) => (label.name || "").toLowerCase() === "evaluated",
+  );
+  const expectedForm = hasOverrideLabel
+    ? `${EXPECTED_FORM}\nFor an operator-authorized override:\n${EXPECTED_OVERRIDE_FORM}`
+    : EXPECTED_FORM;
 
   const normalizedHeadSha = currentHeadSha.trim().toLowerCase();
   if (!SHA_PATTERN.test(normalizedHeadSha)) {
@@ -67,12 +68,21 @@ function evaluateEvaluationGate({
     .filter(({ comment }) => MARKER_PATTERN.test(comment.body || ""));
 
   if (markerComments.length === 0) {
+    if (hasOverrideLabel) {
+      return failure(
+        "missing-override-marker",
+        [
+          "OVERRIDE MARKER MISSING — the 'evaluated' label is present without an 'Evaluated-by: <authorizing operator name> — OVERRIDE' marker line.",
+          `Expected in one comment:\n${EXPECTED_OVERRIDE_FORM}`,
+        ].join("\n"),
+      );
+    }
     return failure(
       "no-marker",
       [
         "NOT EVALUATED — this PR has no independent model review marker yet.",
         `Expected the newest marker to use:\n${EXPECTED_FORM}`,
-        "Author != evaluator remains a procedural expectation; CodeRabbit is only a first pass.",
+        "Author != evaluator remains a procedural expectation; review bots are only a first pass.",
         OVERRIDE_NOTE,
       ].join("\n"),
     );
@@ -90,7 +100,7 @@ function evaluateEvaluationGate({
       "ambiguous-marker",
       [
         "EVALUATION MARKER AMBIGUOUS — the newest marker comment must contain exactly one 'Evaluated-by:' line.",
-        `Expected:\n${EXPECTED_FORM}`,
+        `Expected:\n${expectedForm}`,
         OVERRIDE_NOTE,
       ].join("\n"),
     );
@@ -102,7 +112,7 @@ function evaluateEvaluationGate({
       "missing-verdict",
       [
         "EVALUATION VERDICT MISSING — the newest marker has no recognizable verdict token.",
-        `Expected:\n${EXPECTED_FORM}`,
+        `Expected:\n${expectedForm}`,
         "Recognized failing verdicts are FAIL, BLOCKED, and NEEDS-WORK.",
         OVERRIDE_NOTE,
       ].join("\n"),
@@ -110,12 +120,46 @@ function evaluateEvaluationGate({
   }
 
   const evaluator = match[1].trim();
-  if (!TRUSTED_MODEL_PATTERN.test(evaluator)) {
+  const verdict = match[2].toUpperCase();
+  const isOverride = verdict === "OVERRIDE";
+  const markerKind = isOverride ? "OVERRIDE" : "EVALUATION";
+  let overrideReason;
+  if (isOverride) {
+    // The typed name is an authorization record, not authentication. Agents and the
+    // operator share a GitHub account, so a login check cannot distinguish them.
+    if (!evaluator) {
+      return failure(
+        "missing-override-authorizer",
+        `OVERRIDE AUTHORIZER NAME MISSING — Evaluated-by must name who authorized the bypass.\nExpected:\n${EXPECTED_OVERRIDE_FORM}`,
+      );
+    }
+    if (!hasOverrideLabel) {
+      return failure(
+        "missing-override-label",
+        `OVERRIDE LABEL MISSING — the 'evaluated' label is missing; an OVERRIDE comment alone does not pass.\nExpected with that label:\n${EXPECTED_OVERRIDE_FORM}`,
+      );
+    }
+    const reasonLines = (latestComment.body || "").split(/\r?\n/)
+      .filter((line) => /^Override-Reason:/i.test(line));
+    if (reasonLines.length > 1) {
+      return failure(
+        "ambiguous-override-reason",
+        `OVERRIDE REASON AMBIGUOUS — the newest marker contains more than one Override-Reason line.\nExpected:\n${EXPECTED_OVERRIDE_FORM}`,
+      );
+    }
+    overrideReason = reasonLines[0]?.slice("Override-Reason:".length).trim();
+    if (!overrideReason) {
+      return failure(
+        "missing-override-reason",
+        `OVERRIDE REASON MISSING — the newest marker must contain a nonempty Override-Reason line.\nExpected:\n${EXPECTED_OVERRIDE_FORM}`,
+      );
+    }
+  } else if (!TRUSTED_MODEL_PATTERN.test(evaluator)) {
     return failure(
       "untrusted-model",
       [
         `UNTRUSTED EVALUATOR MODEL — '${evaluator}' is not an authorized Fable or Opus evaluator.`,
-        `Expected:\n${EXPECTED_FORM}`,
+        `Expected:\n${expectedForm}`,
         OVERRIDE_NOTE,
       ].join("\n"),
     );
@@ -126,8 +170,8 @@ function evaluateEvaluationGate({
     return failure(
       "missing-head-sha",
       [
-        "EVALUATION HEAD SHA MISSING — the newest marker must contain one Head-SHA line.",
-        `Expected:\n${EXPECTED_FORM}`,
+        `${markerKind} HEAD SHA MISSING — the newest marker must contain one Head-SHA line.`,
+        `Expected:\n${isOverride ? EXPECTED_OVERRIDE_FORM : expectedForm}`,
         OVERRIDE_NOTE,
       ].join("\n"),
     );
@@ -135,7 +179,7 @@ function evaluateEvaluationGate({
   if (shaLines.length > 1) {
     return failure(
       "ambiguous-head-sha",
-      "EVALUATION HEAD SHA AMBIGUOUS — the newest marker contains more than one Head-SHA line.",
+      `${markerKind} HEAD SHA AMBIGUOUS — the newest marker contains more than one Head-SHA line.\nExpected:\n${isOverride ? EXPECTED_OVERRIDE_FORM : expectedForm}`,
     );
   }
 
@@ -143,7 +187,7 @@ function evaluateEvaluationGate({
   if (!shaMatch) {
     return failure(
       "invalid-head-sha",
-      "EVALUATION HEAD SHA INVALID — Head-SHA must contain one full 40-character commit SHA.",
+      `${markerKind} HEAD SHA INVALID — Head-SHA must contain one full 40-character commit SHA.\nExpected:\n${isOverride ? EXPECTED_OVERRIDE_FORM : expectedForm}`,
     );
   }
 
@@ -157,17 +201,32 @@ function evaluateEvaluationGate({
       evaluatedHeadSha,
       currentHeadSha: normalizedHeadSha,
       message: [
-        [
-          `STALE EVALUATION — ${evaluator} evaluated ${evaluatedHeadSha},`,
-          `but the current PR head is ${normalizedHeadSha}.`,
-        ].join(" "),
-        "A new commit always requires a new independent verdict bound to that exact head.",
+        isOverride
+          ? `STALE OVERRIDE — Head-SHA ${evaluatedHeadSha} does not match the current PR head ${normalizedHeadSha}.`
+          : [
+            `STALE EVALUATION — ${evaluator} evaluated ${evaluatedHeadSha},`,
+            `but the current PR head is ${normalizedHeadSha}.`,
+          ].join(" "),
+        isOverride
+          ? `A new head requires new operator authorization bound to that exact head.\nExpected:\n${EXPECTED_OVERRIDE_FORM}`
+          : "A new commit always requires a new independent verdict bound to that exact head.",
         OVERRIDE_NOTE,
       ].join("\n"),
     };
   }
 
-  const verdict = match[2].toUpperCase();
+  if (isOverride) {
+    return {
+      passed: true,
+      reason: "label-override",
+      authorizedBy: evaluator,
+      overrideReason,
+      evaluatedHeadSha,
+      verdict,
+      message: `Operator override recorded from ${evaluator} for ${evaluatedHeadSha}: ${overrideReason} — 'evaluated' label present; gate passes without an independent passing verdict.`,
+    };
+  }
+
   if (verdict === "PASS") {
     return {
       passed: true,
@@ -196,7 +255,7 @@ function evaluateEvaluationGate({
           `EVALUATION DID NOT PASS — the newest verdict is ${verdict}`,
           `from ${evaluator} for ${evaluatedHeadSha}.`,
         ].join(" "),
-        `A later passing marker must use:\n${EXPECTED_FORM}`,
+        `A later marker must use:\n${expectedForm}`,
         OVERRIDE_NOTE,
       ].join("\n"),
     };
