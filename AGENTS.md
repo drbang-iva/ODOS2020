@@ -8,9 +8,21 @@ auto_inject_priority: 10
 
 Practitioner-owned open-source EHR / practice management for independent optometry. Built by a practicing O.D. on the Medplum FHIR foundation. Self-hosted on the practice's own hardware. AGPL v3.
 
-**Current state:** v0.6a Frames Data SHIPPED (2026-05-09). v0.55 integration spine shipped (2026-05-05). 1 of 8 v0.6 slices shipped; v0.6b PVerify is next. The substrate is real working code under milestone-locked development. **Nothing is packaged as a customer install yet.** First-pilot scope is named below.
+**Current state — do not hand-maintain a version claim in this file.** The substrate is real working code under milestone-locked development, and **nothing is packaged as a customer install yet**; first-pilot scope is named below. Those facts are durable. *Where the build actually is* is not — so derive it, and know what each source can and cannot answer:
 
-For the full current-state operator view, see [`STATUS.md`](STATUS.md) and [`docs/operator-dashboard.md`](docs/operator-dashboard.md).
+**Before reporting current state**, run `git fetch origin` from your task worktree, then read the sources below and record `git rev-parse origin/main` with the report. Re-run the PR query for each report. If the fetch or query fails, state which source could not be refreshed and label any cached results as potentially stale; do not present them as current.
+
+| To learn | Read | Cannot tell you |
+|---|---|---|
+| Recent commits on main, with commit dates | `git log -30 --format='%h %cI %s' origin/main` | which milestone that adds up to, or what build is deployed |
+| What is in flight right now | `gh pr list --state open` | what already shipped |
+| Why something was built the way it was | dated files in the verified companion checkout's `decisions/` directory, resolved below | anything not yet written down — these are human-authored and can lag |
+
+**Resolve the companion checkout before reading or citing it.** Use `$PERFORMANCE_OD_ROOT` if set; otherwise locate the actual `performance-od` checkout. Verify that its `decisions/` directory exists and use the resolved absolute path. Do not assume a sibling path from a task worktree. If the checkout is unavailable, say so and ask for the relevant excerpt inline.
+
+**No source here is stale-proof, and this table does not claim otherwise.** They are the *least*-rotting options available: two are derived from the repository itself, and the third is append-only and dated. None of them answers "which milestone are we in" — if you need that, ask the operator rather than trusting any prose, including this file's sections below.
+
+> **Added 2026-09-02.** This paragraph previously asserted *"v0.6a Frames Data SHIPPED (2026-05-09) … 1 of 8 v0.6 slices shipped; v0.6b PVerify is next"* — roughly four months stale, and it was the first thing every Codex session read, whether building or reviewing. `STATUS.md` (*"Generated: 2026-07-07"*) and `docs/operator-dashboard.md` had rotted the same way and disagreed with it: three hand-maintained state documents, three different answers. The milestone tables below carry the same risk — trust freshly fetched commit history over them where they conflict.
 
 ---
 
@@ -169,6 +181,47 @@ Runtime targets: `npm run up` for the local stack; same compose file works on la
 
 ---
 
+## Duplication control (binding on any new code here)
+
+AI coding agents duplicate operational logic by default — the same mechanic re-implemented per caller, each copy drifting independently. This repo has already paid for it: **PR #500 took four fixback rounds because the same linked-resource filter existed in three separate `.filter()` shapes**, each silently dropping an unreadable or foreign `MedicationAdministration` instead of refusing, and each had to be found and fixed on its own round.
+
+- **Extraction trigger: the same operational mechanic reaching 2+ callers.** Not before. Logic with exactly one caller stays where it is — premature extraction is its own defect, not a virtue.
+- **Endpoints own the "why/when"** — authorization, status transitions, clinical policy, failure classification. **Shared services own the "how"** — the reusable mechanic, with explicit parameters and structured returns.
+- **Two different things are called "services" here; the rule applies to only one.** An **application service** (`referral-service.ts`, `scheduling-service.ts`) legitimately owns a domain and writes through its injected FHIR client — `referral-service.ts:248` and `scheduling-service.ts:297` both call `fhir.create(...)`, and that is correct, not a violation. A **shared mechanic** — the thing you extract *because two callers duplicated it* — is the narrower case: it takes explicit parameters, returns a structured result, and does not reach around its caller to mutate clinical state on its own authority. Extract mechanics; don't demote application services into them.
+- **Failure is explicit, never a silent drop.** A `.filter()` that removes a row a clinical write depended on must refuse and say why. That is the PR #500 defect restated as a rule.
+- **Migrate one caller at a time:** extract the block, convert a single caller, verify, then the rest. Never convert every caller in one commit.
+
+Anti-patterns, all of which have appeared here: one god-function hiding all control flow; an extracted shared mechanic that writes to storage on its own authority; every function inventing its own argument and error shape; and abstracting logic that only ever had one caller.
+
+*Adapted from [`github.com/michaelshimeles/skills`](https://github.com/michaelshimeles/skills) (`code-structure`), reframed onto this repo's endpoint/service split and its own PR #500 precedent rather than the upstream's actions/service-layer vocabulary.*
+
+---
+
+## Multi-agent hygiene
+
+Several agents work this repo in parallel worktrees. Each rule below was earned, not imported:
+
+- **Never commit directly to `main`.** One worktree and one branch per task, per agent. Never reuse, rebase, or modify another agent's worktree, branch, or uncommitted work.
+- **Scope-check before starting:** `gh pr list` and `gh pr diff <n> --name-only`, plus `git status` in any shared checkout. On overlap, stop and ask rather than guess. *(Earned 2026-09-01: a rebase in a shared root checkout put another session's three uncommitted files into conflict.)*
+- **Never plain `--force`.** `--force-with-lease` only, and only on your own task branch. Never force-push `main`.
+- **Resolve lockfile conflicts by regenerating, never by hand-merging.**
+- **Worktrees do not isolate shared resources.** Confirm a dev-server port answers *your* process before trusting it, and never run schema experiments against a shared database. *(Earned: parallel ODOS dev servers colliding on ports — use a unique `--port --strictPort`, verify with `lsof`.)*
+- **The root checkout at `~/GitHub/ODOS2020` is a reader** for Codex and VS Code. Don't run history operations in it; work in your own worktree and let the root fast-forward.
+
+---
+
+## What cannot be proven by the test suite
+
+A green suite is not evidence. These are the things this repo's checks structurally cannot see, and each has already produced a shipped defect:
+
+- **Real AccessPolicy enforcement.** Most tests use in-memory FHIR fakes with no policy engine. The pre-finalization void feature (`8de5776b`) passed four evaluation rounds and 26+ tests, then failed 100% against the real server — the AccessPolicy forbids `preliminary → entered-in-error`, and no fake could see it. The credentialed live-authorization lane exists (`npm --prefix mcp run test:live-authz`, from the repo root) but runs under `continue-on-error: true` in CI: **treat it as advisory until that flag is removed.**
+- **Whether a control is wired on the actual app route.** Before claiming a surface lacks coverage, inspect the current test imports, the routes/components and controls those tests actually exercise, and the package test command and CI invocation **at the evaluated head**. Search test contents, not just filenames, and report the head and evidence for the specific surface; a file count alone does not establish coverage or its absence. **Historical snapshot only (2026-09-02, `7a4d03d4`):** `ui/` had 103 `*.test.tsx` files; three launched Chromium via `playwright-core` — `entrySheetFoundations`, `entrySheets`, `examChartBarResponsive`. They exercised component fixtures rather than app routes and ran in the blocking `npm --prefix ui test` command (from the repo root). These counts describe that head, not the current inventory. An earlier draft's "zero browser-driven tests" claim came from searching filenames for `playwright|e2e|cypress|\.spec\.ts$` instead of inspecting imports; the independent evaluator caught that false absence claim.
+- **Whether a fixture still tests what it claims.** Two on record: PR #500's guard stayed green after its boundary check was deleted because the fixture did the filter's job, and the 2026-08-28 auditor fixture asserted a boundary for a role a migration had silently removed.
+
+When a change touches any of the three, say so in the PR and prove it another way — a live walkthrough, a credentialed run, or a recorded click path. Silence is not an available outcome (Mandate 17).
+
+---
+
 ## Boundary reminders
 
 - **Strategy / decisions / research** → write to `performance-od/` (the private business brain), not here.
@@ -226,6 +279,10 @@ is Sonnet. Default down, escalate up; flag mid-session drift plainly.
 code. Fable codes → Codex evaluates. Codex codes → Fable/Opus evaluates. Scope: this
 gate fires on a shippable coding slice (PR-worthy diff), not brainstorming or
 micro-decisions.
+
+**When blocked by the evaluation gate, offer to obtain an independent evaluation of
+the current head. Never propose the `evaluated` label as an unblock; that override
+is the operator's alone.**
 
 **Review bots: GREPTILE + PR-AGENT. CodeRabbit is RETIRED** — suspended account-wide
 2026-08-04 for cost. Do not trigger it, wait for it, retry it, or note its absence.
