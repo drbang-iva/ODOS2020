@@ -455,6 +455,8 @@ class MemoryFhir {
   private resources: Resource[] = [];
   readonly transactions: Bundle[] = [];
   beforeTransaction?: () => void;
+  /** `ResourceType/id` → status code the next read of it throws with (503 for an outage, 404 for a dangling reference). */
+  readonly failedReads = new Map<string, number>();
   private sequence = 0;
 
   add<T extends Resource>(resource: T): T {
@@ -481,6 +483,8 @@ class MemoryFhir {
   }
 
   async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
+    const failure = this.failedReads.get(`${resourceType}/${id}`);
+    if (failure) throw Object.assign(new Error(`FHIR ${failure} reading ${resourceType}/${id}`), { status: failure });
     const resource = this.resources.find((row) => row.resourceType === resourceType && row.id === id);
     if (!resource) throw Object.assign(new Error(`Missing ${resourceType}/${id}`), { status: 404 });
     return structuredClone(resource as T);
@@ -750,4 +754,76 @@ test("fixback 3: voiding a dilation Observation also retires the MedicationAdmin
   assert.equal(entry?.request?.ifMatch, 'W/"3"');
   assert.ok(fhir.all<Provenance>("Provenance").some((provenance) => provenance.target.some((target) => target.reference === "MedicationAdministration/ma1")));
   assert.equal(fhir.transactions.length, 1);
+});
+
+// ---------------------------------------------------------------------------
+// Fixback 2 after evaluation of 3192a0ba
+// ---------------------------------------------------------------------------
+
+function administration(id: string, status: "completed" | "entered-in-error" = "completed") {
+  return {
+    resourceType: "MedicationAdministration" as const,
+    id,
+    status,
+    subject: { reference: PATIENT },
+    context: { reference: ENCOUNTER },
+    medicationCodeableConcept: { text: "Tropicamide 1%" },
+    effectiveDateTime: "2026-09-01T12:00:00.000Z",
+  };
+}
+
+test("fixback 6: a linked administration that cannot be read fails the void closed — nothing is voided, nothing left active behind a hidden Observation", async () => {
+  const { deps, fhir } = fixture();
+  fhir.add(administration("ma1"));
+  fhir.add(observation("dfe", "entrance:dilation", "UNKNOWN", { partOf: [{ reference: "MedicationAdministration/ma1" }] }));
+  fhir.failedReads.set("MedicationAdministration/ma1", 503);
+
+  const result = await handleEncounterVoidRequest(deps, {
+    authHeader: AUTH,
+    params: { encounterId: "e1" },
+    body: { scope: "section", sectionKey: "entrance:dilation" },
+  });
+
+  assert.equal(result.status, 503, JSON.stringify(result.body));
+  assert.match((result.body as { error: string }).error, /MedicationAdministration\/ma1/);
+  assert.equal(fhir.transactions.length, 0);
+  assert.equal(fhir.get<Observation>("Observation", "dfe").status, "final");
+  assert.equal(fhir.get<ReturnType<typeof administration>>("MedicationAdministration", "ma1").status, "completed");
+});
+
+test("fixback 6: a dangling partOf reference (404) is not an outage — the Observation voids and the missing link is simply absent", async () => {
+  const { deps, fhir } = fixture();
+  fhir.add(observation("dfe", "entrance:dilation", "UNKNOWN", { partOf: [{ reference: "MedicationAdministration/gone" }] }));
+
+  const result = await handleEncounterVoidRequest(deps, {
+    authHeader: AUTH,
+    params: { encounterId: "e1" },
+    body: { scope: "section", sectionKey: "entrance:dilation" },
+  });
+
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  assert.deepEqual((result.body as VoidBody).voided, ["Observation/dfe"]);
+  assert.equal(fhir.get<Observation>("Observation", "dfe").status, "entered-in-error");
+});
+
+test("fixback 7: section subtotals include linked administrations, so they always sum to the overall count", async () => {
+  const { deps, fhir } = fixture();
+  fhir.add(administration("ma1"));
+  fhir.add(administration("ma2"));
+  fhir.add(observation("dfe", "entrance:dilation", "UNKNOWN", {
+    partOf: [{ reference: "MedicationAdministration/ma1" }, { reference: "MedicationAdministration/ma2" }],
+  }));
+  fhir.add(cvf("cvf-od", "OD"));
+
+  for (const body of [
+    { scope: "encounter", preview: true },
+    { scope: "section", sectionKey: "entrance:dilation" },
+  ]) {
+    const result = await handleEncounterVoidRequest(deps, { authHeader: AUTH, params: { encounterId: "e1" }, body });
+    assert.equal(result.status, 200, JSON.stringify(result.body));
+    const response = result.body as VoidBody;
+    const subtotal = response.sections.reduce((sum, section) => sum + section.count, 0);
+    assert.equal(subtotal, response.count, `${body.scope}: subtotals ${subtotal} must equal count ${response.count}`);
+    assert.equal(response.sections.find((section) => section.sectionKey === "entrance:dilation")?.count, 3, `${body.scope}: dilation subtotal counts the DFE plus two administrations`);
+  }
 });

@@ -239,11 +239,27 @@ export async function handleEncounterVoidRequest(
   // Dilation records the drops as MedicationAdministration and links them from the DFE
   // Observation. Voiding only the Observation hides them while they stay clinically active,
   // so every administration a voided Observation is partOf is retired with it.
-  const administrations = await linkedAdministrations(staff.fhir, targetObservations, encounterReference, patientReference);
+  let administrations: Array<MedicationAdministration & { id: string }>;
+  try {
+    administrations = await linkedAdministrations(staff.fhir, targetObservations, encounterReference, patientReference);
+  } catch (error) {
+    if (error instanceof LinkedAdministrationReadError) {
+      // Fail closed: if a linked administration cannot be verified, the Observation must not
+      // disappear while the medication might stay clinically active.
+      return { status: 503, body: { error: error.message, code: "linked-administration-unavailable" } };
+    }
+    throw error;
+  }
 
   // --- Summary --------------------------------------------------------------------------
+  // Every voided resource is counted under a section BEFORE the summary is built, so the
+  // confirm dialog's subtotals always sum to its total.
   const sectionCounts = new Map<string, number>();
   for (const row of targetObservations) sectionCounts.set(row.sectionKey, (sectionCounts.get(row.sectionKey) ?? 0) + 1);
+  for (const administration of administrations) {
+    const sectionKey = administrationSectionKey(administration, targetObservations);
+    sectionCounts.set(sectionKey, (sectionCounts.get(sectionKey) ?? 0) + 1);
+  }
   if (conditions.length) sectionCounts.set(ASSESSMENT_SECTION_KEY, conditions.length);
   if (complaints.length) sectionCounts.set(COMPLAINTS_SECTION_KEY, complaints.length);
   const sections: VoidSectionSummary[] = [...sectionCounts.entries()].map(([sectionKey, count]) => ({
@@ -251,10 +267,6 @@ export async function handleEncounterVoidRequest(
     label: sectionLabel(sectionKey, definitions),
     count,
   }));
-  for (const administration of administrations) {
-    const sectionKey = administrationSectionKey(administration, targetObservations);
-    sectionCounts.set(sectionKey, (sectionCounts.get(sectionKey) ?? 0) + 1);
-  }
   const voided = [
     ...targetObservations.map((row) => `Observation/${row.observation.id}`),
     ...administrations.map((administration) => `MedicationAdministration/${administration.id}`),
@@ -422,8 +434,12 @@ async function linkedAdministrations(
   const rows = await Promise.all(references.map(async (reference) => {
     try {
       return await fhir.read<MedicationAdministration>("MedicationAdministration", reference.slice("MedicationAdministration/".length));
-    } catch {
-      return undefined;
+    } catch (error) {
+      // A 404 is a dangling partOf link: there is nothing left active to retire. Anything else
+      // (outage, denial, timeout) means we cannot prove the medication is retired, so the caller
+      // fails the whole void closed rather than hiding the Observation over a live administration.
+      if (isNotFound(error)) return undefined;
+      throw new LinkedAdministrationReadError(reference, error);
     }
   }));
   return rows.flatMap((administration): Array<MedicationAdministration & { id: string }> =>
@@ -435,6 +451,24 @@ async function linkedAdministrations(
       ? [administration as MedicationAdministration & { id: string }]
       : []
   );
+}
+
+class LinkedAdministrationReadError extends Error {
+  override readonly name = "LinkedAdministrationReadError";
+  constructor(reference: string, cause: unknown) {
+    super(`Linked ${reference} could not be read (${errorMessage(cause)}); nothing was voided.`, { cause });
+  }
+}
+
+function isNotFound(error: unknown): boolean {
+  const status = typeof error === "object" && error !== null && "status" in error
+    ? (error as { status?: unknown }).status
+    : undefined;
+  return status === 404 || /FHIR 404\b/.test(error instanceof Error ? error.message : String(error));
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function administrationSectionKey(
