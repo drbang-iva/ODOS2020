@@ -15,6 +15,7 @@ import {
   type EncounterComplaint,
 } from "./complaint-model.js";
 import { FhirEncounterComplaintStore } from "./encounter-complaint-store.js";
+import { isClosedEncounter } from "./encounter-sign-gate.js";
 import type { ClinicalGraphProvenance } from "./glaucoma-suspect.js";
 
 const WRITE_HEADERS = { "X-ODOS-Source": "encounter-complaints" } as const;
@@ -199,7 +200,7 @@ export async function handleEncounterComplaintMutationRequest(
   const encounter = await staff.fhir.read<Encounter>("Encounter", encounterId);
   const patientId = patientIdFromEncounter(encounter);
   if (!patientId) return { status: 400, body: { error: "Encounter must reference a Patient subject." } };
-  if (encounter.status === "finished" || encounter.status === "cancelled" || encounter.status === "entered-in-error") {
+  if (isClosedEncounter(encounter)) {
     return { status: 409, body: { error: "Signed or closed encounters cannot be reordered or edited." } };
   }
   const store = new FhirEncounterComplaintStore(staff.fhir);

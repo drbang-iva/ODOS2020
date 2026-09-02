@@ -146,3 +146,18 @@ function componentValue(observation: Observation | undefined, code: string) {
 function componentCode(observation: Observation | undefined, code: string) {
   return observation?.component?.find((component) => component.code.coding?.some((coding) => coding.code === code))?.valueCodeableConcept?.coding?.[0]?.code;
 }
+
+test("dilation history hides voided chart notes and exposes each live note's Observation reference", async () => {
+  const { fhir, deps: d } = deps();
+  const body = (reason: string) => ({ patientReference: "Patient/p2", encounterReference: "Encounter/e2", agents: [], dfePerformed: false, declined: { reason, counseledRisksNote: "Reviewed." } });
+  await handleDilationCaptureRequest(d, { authHeader: AUTH, body: body("First attempt.") });
+  await handleDilationCaptureRequest(d, { authHeader: AUTH, body: body("Second attempt.") });
+  const observations = fhir.resources.filter((row): row is Observation => row.resourceType === "Observation");
+  assert.equal(observations.length, 2);
+  observations[0]!.status = "entered-in-error";
+  const history = await handleDilationHistoryRequest(d, { authHeader: AUTH, query: { patient: "Patient/p2", encounter: "Encounter/e2" } });
+  const notes = (history.body as { notes: Array<{ text: string; observationReference?: string }> }).notes;
+  assert.equal(notes.length, 1, "the voided note must not be listed");
+  assert.match(notes[0]?.text ?? "", /Second attempt/);
+  assert.equal(notes[0]?.observationReference, `Observation/${observations[1]!.id}`);
+});

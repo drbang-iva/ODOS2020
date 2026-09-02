@@ -1941,3 +1941,38 @@ async function catalog(fhir: MemoryFhir): Promise<ClinicalFindingDefinition[]> {
 function component(observation: Observation | undefined, code: string) {
   return observation?.component?.find((item) => item.code.coding?.some((coding) => coding.code === code));
 }
+
+test("guard 3: custom-section history hides voided (entered-in-error) rows so a void leaves the sheet, not just the Overview", async () => {
+  const fhir = new MemoryFhir();
+  const definitions = await catalog(fhir);
+  const cvf = definitions.find((definition) => definition.stableKey === "entrance:cvf");
+  assert.ok(cvf);
+
+  const capture = await handleCustomSectionCaptureRequest(clinicalDeps("provider", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: cvf.stableKey },
+    body: {
+      patientReference: "Patient/p-void",
+      encounterReference: "Encounter/e-void",
+      eyes: {
+        OD: { state: "normal", customFields: [] },
+        OS: { state: "normal", customFields: [] },
+      },
+    },
+  });
+  assert.equal(capture.status, 200, JSON.stringify(capture.body));
+  const osReference = (capture.body as { eyes: { OS: { observationReference: string } } }).eyes.OS.observationReference;
+  const voided = fhir.observations.find((observation) => `Observation/${observation.id}` === osReference);
+  assert.ok(voided);
+  voided.status = "entered-in-error";
+
+  const history = await handleCustomSectionHistoryRequest(clinicalDeps("provider", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: cvf.stableKey },
+    query: { patient: "Patient/p-void", encounter: "Encounter/e-void" },
+  });
+  assert.equal(history.status, 200, JSON.stringify(history.body));
+  const rows = (history.body as { rows: Array<{ eye?: string; observationReference?: string }> }).rows;
+  assert.deepEqual(rows.map((row) => row.eye), ["OD"], "the voided OS row must not be listed");
+  assert.ok(rows.every((row) => row.observationReference !== osReference));
+});

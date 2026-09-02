@@ -9,6 +9,7 @@ import {
   pickerFieldOptions,
 } from "./custom-fields.js";
 import type { ClinicalFindingDefinition } from "./glaucoma-suspect.js";
+import { isLiveObservation } from "./observation-liveness.js";
 
 type Eye = "OD" | "OS";
 
@@ -402,7 +403,7 @@ function compareRowsNewestFirst<T extends { date: string; eye: Eye }>(a: T, b: T
 }
 
 function bundleResources(bundle: Bundle<Observation>): Observation[] {
-  return bundle.entry?.flatMap((entry) => entry.resource ? [entry.resource] : []) ?? [];
+  return bundle.entry?.flatMap((entry) => entry.resource && isLiveObservation(entry.resource) ? [entry.resource] : []) ?? [];
 }
 
 function staffMayRead(role: PracticeRoleId): boolean {

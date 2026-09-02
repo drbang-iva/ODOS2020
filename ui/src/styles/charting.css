@@ -2344,3 +2344,31 @@
     pointer-events: auto;
   }
 }
+
+/* Pre-finalization delete — tier 3 lives in the entry-sheet chrome, left of Cancel. */
+.odos-exam-entry-sheet-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.odos-exam-entry-sheet-clear-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.odos-exam-entry-sheet-clear-all span[role="status"] {
+  color: var(--odos-muted);
+  font-size: 12px;
+}
+
+.odos-exam-entry-sheet-heading .odos-exam-entry-sheet-clear-all button {
+  border-color: var(--odos-alert);
+  color: var(--odos-alert);
+}
+
+.odos-exam-entry-sheet-heading .odos-exam-entry-sheet-clear-all button:disabled {
+  cursor: not-allowed;
+  opacity: .45;
+}

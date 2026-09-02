@@ -422,3 +422,20 @@ function canonicalParameterCodes(observation: Observation | undefined): Set<stri
     .filter((coding) => coding.system === CONTACT_LENS_PARAMETER_CODE_SYSTEM)
     .map((coding) => coding.code));
 }
+
+test("refraction history hides voided (entered-in-error) blocks so a removed block cannot be copied forward", async () => {
+  const fixture = historyFixture();
+  const block = (sphere: number) => ({ type: "MANIFEST", OD: { sphere } });
+  await handleRefractionCaptureRequest(fixture.captureDeps(), {
+    authHeader: AUTH,
+    body: { patientReference: PATIENT, encounterReference: ENCOUNTER, blocks: [block(-1), block(-2)] },
+  });
+  assert.equal(fixture.observations.length, 2);
+  const voided = fixture.observations.find((observation) =>
+    observation.component?.some((component) => component.valueQuantity?.value === -2)
+  );
+  assert.ok(voided);
+  voided.status = "entered-in-error";
+  const history = await fixture.readBody();
+  assert.deepEqual(history.glasses.map((row) => row.sphere), [-1], "the voided block must not be listed");
+});

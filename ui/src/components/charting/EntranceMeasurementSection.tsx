@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { voidEncounterEntries } from "../../lib/encounter-void";
+import { ClearSectionButton, RemoveValueButton } from "./ClearControls";
+import { useEncounterEdit } from "./encounter-edit-context";
 import { OdosSelect } from "../inputs/OdosSelect";
 import { OdosWheel } from "../inputs/OdosWheel";
 import type { CustomFindingDefinition, CustomFindingField } from "./CustomFindingSection";
@@ -11,6 +14,7 @@ type Eye = "OD" | "OS";
 const EYES: Eye[] = ["OD", "OS"];
 
 interface HistoryRow {
+  observationReference?: string;
   recordedAt: string;
   eye?: Eye;
   values: Array<{ label: string; value: number | string; unit?: string }>;
@@ -28,6 +32,7 @@ export function EntranceMeasurementSection({ definition, patientReference, encou
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const { onCleared } = useEncounterEdit();
   const fields = useMemo(() => definition.customFields.filter((field) => field.active).sort((left, right) => left.order - right.order), [definition.customFields]);
   const gridColumns = fields.length === 3
     ? "grid-cols-[46px_repeat(3,minmax(0,1fr))]"
@@ -49,6 +54,16 @@ export function EntranceMeasurementSection({ definition, patientReference, encou
 
   function setValue(eye: Eye, field: CustomFindingField, value: string) {
     setValues((current) => ({ ...current, [`${eye}:${field.localCode}`]: value }));
+  }
+
+  async function removeRow(observationReference: string) {
+    try {
+      const result = await voidEncounterEntries(encounterReference, { scope: "observation", observationReference });
+      onCleared?.({ scope: "observation", result });
+      setHistoryVersion((current) => current + 1);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    }
   }
 
   async function save() {
@@ -87,10 +102,25 @@ export function EntranceMeasurementSection({ definition, patientReference, encou
   return (
     <section className="h-full overflow-y-auto p-6">
       <div className="max-w-6xl">
-        <div className="border-b border-[color:var(--odos-line)] pb-4">
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-light">Entrance Testing</div>
-          <h2 className="mt-1 text-xl font-semibold text-[color:var(--odos-text)]">{definition.display}</h2>
-          <p className="mt-1 text-sm text-[color:var(--odos-muted)]">Per-eye measurements; no normal state is inferred.</p>
+        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[color:var(--odos-line)] pb-4">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-light">Entrance Testing</div>
+            <h2 className="mt-1 text-xl font-semibold text-[color:var(--odos-text)]">{definition.display}</h2>
+            <p className="mt-1 text-sm text-[color:var(--odos-muted)]">Per-eye measurements; no normal state is inferred.</p>
+          </div>
+          <ClearSectionButton
+            encounterReference={encounterReference}
+            sectionKey={definition.sectionKey ?? definition.stableKey}
+            label={definition.display}
+            hasRecorded={history.length > 0}
+            onCleared={(result) => {
+              setValues({});
+              setMessage(null);
+              setError(null);
+              setHistoryVersion((current) => current + 1);
+              onCleared?.({ scope: "section", result });
+            }}
+          />
         </div>
         <div className="mt-5 overflow-hidden rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface-2)]">
           <div className={`grid ${gridColumns} gap-1 bg-bg-panel/55 px-2 py-2 text-[10px] uppercase leading-tight tracking-wide text-[color:var(--odos-faint)] sm:gap-2 sm:px-3`}>
@@ -110,7 +140,7 @@ export function EntranceMeasurementSection({ definition, patientReference, encou
         </div>
         <div className="mt-8 overflow-hidden rounded border border-[color:var(--odos-line)] bg-bg-panel/55">
           <div className="border-b border-[color:var(--odos-line)] px-4 py-3 text-sm font-semibold text-[color:var(--odos-text)]">History</div>
-          {history.length === 0 ? <div className="p-6 text-sm text-[color:var(--odos-muted)]">No prior entries</div> : <div className="divide-y divide-white/10">{history.map((row, index) => <div key={`${row.recordedAt}-${row.eye}-${index}`} className="grid gap-2 px-4 py-3 text-sm md:grid-cols-[90px_1fr]"><div className="font-semibold text-[color:var(--odos-text)]">{row.eye}</div><div className="text-[color:var(--odos-muted)]">{row.values.map((value) => `${value.label}: ${value.value}${value.unit ? ` ${value.unit}` : ""}`).join(" · ")}</div></div>)}</div>}
+          {history.length === 0 ? <div className="p-6 text-sm text-[color:var(--odos-muted)]">No prior entries</div> : <div className="divide-y divide-white/10">{history.map((row, index) => <div key={`${row.recordedAt}-${row.eye}-${index}`} className="grid gap-2 px-4 py-3 text-sm md:grid-cols-[90px_1fr_auto]"><div className="font-semibold text-[color:var(--odos-text)]">{row.eye}</div><div className="text-[color:var(--odos-muted)]">{row.values.map((value) => `${value.label}: ${value.value}${value.unit ? ` ${value.unit}` : ""}`).join(" · ")}</div><div className="flex items-start justify-end">{row.observationReference && <RemoveValueButton label={`${definition.display}${row.eye ? ` ${row.eye}` : ""}`} onRemove={() => removeRow(row.observationReference!)} />}</div></div>)}</div>}
         </div>
       </div>
     </section>

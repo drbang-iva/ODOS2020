@@ -1,5 +1,8 @@
 import { type CSSProperties, useEffect, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { voidEncounterEntries } from "../../lib/encounter-void";
+import { ClearSectionButton, RemoveValueButton } from "./ClearControls";
+import { useEncounterEdit } from "./encounter-edit-context";
 import { MethodField } from "../inputs/MethodField";
 import type { CustomFindingDefinition } from "./CustomFindingSection";
 import { DiagnosisPicker } from "./DiagnosisPicker";
@@ -24,6 +27,7 @@ interface HistoryRow {
   values: Array<{ label: string; value: number | string | string[] }>;
   other?: string;
   normalTemplate?: string;
+  observationReference?: string;
 }
 
 const EYES: Eye[] = ["OD", "OS"];
@@ -48,6 +52,7 @@ export function CvfSection({ definition, fieldDefectDefinition, patientReference
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
   const [message, setMessage] = useState<string>();
+  const { onCleared } = useEncounterEdit();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -70,6 +75,23 @@ export function CvfSection({ definition, fieldDefectDefinition, patientReference
 
   function updateEye(eye: Eye, update: Partial<EyeCapture>) {
     setEyes((current) => ({ ...current, [eye]: { ...current[eye], ...update } }));
+  }
+
+  async function removeRow(observationReference: string) {
+    try {
+      const result = await voidEncounterEntries(encounterReference, { scope: "observation", observationReference });
+      onCleared?.({ scope: "observation", result });
+      setHistoryVersion((current) => current + 1);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    }
+  }
+
+  function resetForm() {
+    setEyes({ OD: emptyEye(), OS: emptyEye() });
+    setMessage(undefined);
+    setError(undefined);
+    setHistoryVersion((current) => current + 1);
   }
 
   function setNormalOu() {
@@ -121,7 +143,19 @@ export function CvfSection({ definition, fieldDefectDefinition, patientReference
             <h2 className="mt-1 text-xl font-semibold">Visual Field</h2>
             <p className="mt-1 text-sm text-[color:var(--odos-muted)]">Record the clinical field pattern and confrontation findings without collapsing one into the other.</p>
           </div>
-          <button type="button" onClick={setNormalOu} className="rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-surface-2)] px-4 py-2 text-sm font-semibold text-[color:var(--odos-text)]">Full to finger counting OU</button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={setNormalOu} className="rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-surface-2)] px-4 py-2 text-sm font-semibold text-[color:var(--odos-text)]">Full to finger counting OU</button>
+            <ClearSectionButton
+              encounterReference={encounterReference}
+              sectionKey={[definition.stableKey, fieldDefectDefinition.stableKey]}
+              label="Confrontation fields"
+              hasRecorded={history.length > 0}
+              onCleared={(result) => {
+                resetForm();
+                onCleared?.({ scope: "section", result });
+              }}
+            />
+          </div>
         </header>
         <div className="mt-7 border-t border-[color:var(--odos-line)] pt-5">
           <h3 className="font-semibold">Confrontation Fields</h3>
@@ -176,22 +210,24 @@ export function CvfSection({ definition, fieldDefectDefinition, patientReference
           patientReference={patientReference}
           encounterReference={encounterReference}
           onSaved={onSaved}
+          refreshKey={historyVersion}
         />
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
           <div className="text-sm">{error ? <span className="text-[color:var(--odos-alert)]">{error}</span> : <span className="text-[color:var(--odos-muted)]">{message}</span>}</div>
           <button type="button" onClick={() => void save()} disabled={saving || loading} className="rounded bg-brand px-5 py-2 text-sm font-semibold disabled:opacity-45">{saving ? "Saving…" : "Save CVF"}</button>
         </div>
-        <History rows={history} loading={loading} />
+        <History rows={history} loading={loading} onRemove={removeRow} />
       </div>
     </section>
   );
 }
 
-function FieldDefectPanel({ definition, patientReference, encounterReference, onSaved }: {
+function FieldDefectPanel({ definition, patientReference, encounterReference, onSaved, refreshKey }: {
   definition: CustomFindingDefinition;
   patientReference: string;
   encounterReference: string;
   onSaved(status: SectionSaveStatus): void;
+  refreshKey?: number;
 }) {
   const field = definition.customFields.find((candidate) => candidate.localCode === "CUSTOM_FIELD_DEFECT");
   const options = field?.options?.filter((option) => option.active) ?? [];
@@ -240,7 +276,7 @@ function FieldDefectPanel({ definition, patientReference, encounterReference, on
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [definition.stableKey, encounterReference, historyVersion, patientReference]);
+  }, [definition.stableKey, encounterReference, historyVersion, patientReference, refreshKey]);
 
   async function save() {
     if (!descriptor) {
@@ -388,15 +424,24 @@ function QuadrantGrid({ eye, capture, update }: { eye: Eye; capture: EyeCapture;
   );
 }
 
-function History({ rows, loading }: { rows: HistoryRow[]; loading: boolean }) {
+function History({ rows, loading, onRemove }: { rows: HistoryRow[]; loading: boolean; onRemove(observationReference: string): void }) {
   return (
     <div className="mt-8 overflow-hidden rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface)]">
       <div className="border-b border-[color:var(--odos-line)] px-4 py-3 font-semibold">History</div>
       {loading ? <div className="p-5 text-sm text-[color:var(--odos-muted)]">Loading history…</div> : rows.length === 0 ? <div className="p-5 text-sm text-[color:var(--odos-muted)]">No prior entries</div> : rows.map((row, index) => (
-        <div key={`${row.recordedAt}-${row.eye}-${index}`} className="grid gap-2 border-b border-[color:var(--odos-line)] px-4 py-3 text-sm md:grid-cols-[70px_100px_1fr]">
+        <div key={`${row.recordedAt}-${row.eye}-${index}`} className="grid gap-2 border-b border-[color:var(--odos-line)] px-4 py-3 text-sm md:grid-cols-[70px_100px_1fr_auto]">
           <span className="font-semibold">{row.eye}</span>
           <span className="capitalize text-[color:var(--odos-muted)]">{row.state}</span>
           <span className="text-[color:var(--odos-muted)]">{row.normalTemplate ?? row.values.map((entry) => `${entry.label}: ${Array.isArray(entry.value) ? entry.value.join(", ") : entry.value}`).join(" · ")}{row.other ? ` — ${row.other}` : ""}</span>
+          <span className="flex items-start justify-end">
+            {row.observationReference && (
+              <RemoveValueButton
+                label={`Confrontation fields${row.eye ? ` ${row.eye}` : ""}`}
+                confirmMessage={row.other ? `Removing Confrontation fields${row.eye ? ` ${row.eye}` : ""} discards its note. Continue?` : undefined}
+                onRemove={() => onRemove(row.observationReference!)}
+              />
+            )}
+          </span>
         </div>
       ))}
     </div>

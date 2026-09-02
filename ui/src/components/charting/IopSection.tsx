@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { voidEncounterEntries } from "../../lib/encounter-void";
+import { ClearSectionButton, RemoveValueButton } from "./ClearControls";
+import { useEncounterEdit } from "./encounter-edit-context";
 import { IopTimeline } from "./IopTimeline";
 import { numericOptions } from "./power-options";
 import { PowerDropdown } from "./PowerDropdown";
@@ -82,6 +85,7 @@ export function IopSection({ patientReference, encounterReference, onSaved }: Pr
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<SectionSaveStatus | null>(null);
   const [timelineRefresh, setTimelineRefresh] = useState(0);
+  const { onCleared } = useEncounterEdit();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -139,6 +143,29 @@ export function IopSection({ patientReference, encounterReference, onSaved }: Pr
     }));
   }
 
+  async function removeEye(eye: Eye) {
+    const result = results[eye];
+    if (!result) return;
+    const references = [result.observationReference, result.cornealHysteresisObservationReference].filter((reference): reference is string => Boolean(reference));
+    try {
+      const voided = await voidEncounterEntries(encounterReference, { scope: "observation", observationReference: references });
+      setResults((current) => { const next = { ...current }; delete next[eye]; return next; });
+      setSaved(null);
+      setTimelineRefresh((current) => current + 1);
+      onCleared?.({ scope: "observation", result: voided });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  function resetRows() {
+    setRows((current) => Object.fromEntries(EYES.map((eye) => [eye, { ...initialRows()[eye], method: current[eye].method }])) as Record<Eye, EyeState>);
+    setResults({});
+    setSaved(null);
+    setError(null);
+    setTimelineRefresh((current) => current + 1);
+  }
+
   async function save() {
     let eyes: Partial<Record<Eye, EyePayload>>;
     try {
@@ -193,7 +220,19 @@ export function IopSection({ patientReference, encounterReference, onSaved }: Pr
   return (
     <section className="h-full overflow-y-auto p-6">
       <div className="max-w-6xl">
-        <h2 className="text-lg font-semibold text-white">Intraocular Pressure</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-white">Intraocular Pressure</h2>
+          <ClearSectionButton
+            encounterReference={encounterReference}
+            sectionKey="tonometry"
+            label="IOP"
+            hasRecorded={Object.keys(results).length > 0}
+            onCleared={(result) => {
+              resetRows();
+              onCleared?.({ scope: "section", result });
+            }}
+          />
+        </div>
 
         {definitionError && (
           <div className="mt-5 rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-100">
@@ -209,7 +248,10 @@ export function IopSection({ patientReference, encounterReference, onSaved }: Pr
             return (
               <div key={eye} className="rounded border border-white/10 bg-white/[0.02] p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="text-sm font-semibold text-white">{eye}</div>
+                  <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                    <span>{eye}</span>
+                    {result && <RemoveValueButton label={`IOP ${eye}`} onRemove={() => removeEye(eye)} />}
+                  </div>
                   <label className="flex items-center gap-2 text-sm text-white/70">
                     <input
                       type="checkbox"

@@ -22,6 +22,7 @@ import {
   type CapturedGlaucomaFinding,
 } from "./glaucoma-suspect.js";
 import { withDocumentationElements } from "./documentation-elements.js";
+import { isLiveObservation } from "./observation-liveness.js";
 
 type Eye = "OD" | "OS";
 
@@ -296,7 +297,7 @@ export async function handleCustomSectionHistoryRequest(
   });
   const rows = (bundle.entry ?? []).flatMap((entry) => {
     const observation = entry.resource;
-    if (!observation) return [];
+    if (!observation || !isLiveObservation(observation)) return [];
     const eye = observationEye(observation);
     const perEye = definition.valueSchema.perEye === true;
     const prefix = perEye && (eye === "OD" || eye === "OS") ? `${eye}_` : "";

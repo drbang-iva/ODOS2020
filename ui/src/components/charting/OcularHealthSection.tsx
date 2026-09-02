@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { ClearSectionButton } from "./ClearControls";
+import { useEncounterEdit } from "./encounter-edit-context";
 import { OdosWheel } from "../inputs/OdosWheel";
 import { OdosChips } from "../inputs/OdosChips";
 import { OdosSelect } from "../inputs/OdosSelect";
@@ -88,6 +90,8 @@ export function OcularHealthSection({
   const [savedDiagnosisObservations, setSavedDiagnosisObservations] = useState<Record<string, string[]>>({});
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [reloadVersion, setReloadVersion] = useState(0);
+  const { onCleared } = useEncounterEdit();
   const definitionKey = useMemo(() => definitions.map((definition) => definition.stableKey).join("|"), [definitions]);
   const historyIdentity = `${patientReference}\u0000${encounterReference}\u0000${definitionKey}`;
   const groups = useMemo(() => segmentGroups(definitions), [definitions]);
@@ -139,7 +143,7 @@ export function OcularHealthSection({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [historyIdentity, apiBase, fetchImpl]);
+  }, [historyIdentity, apiBase, fetchImpl, reloadVersion]);
 
   useEffect(() => {
     const encounterTimestamp = encounterRecordedAt ? Date.parse(encounterRecordedAt) : Number.NaN;
@@ -362,6 +366,18 @@ export function OcularHealthSection({
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => allNormal(ANTERIOR_PREFIX, "Anterior All Normal")} disabled={loading} className="rounded border border-emerald-300/50 bg-emerald-300/10 px-4 py-2 text-sm font-semibold text-emerald-100 hover:bg-emerald-300/15 disabled:opacity-40">Anterior All Normal</button>
             <button type="button" onClick={() => allNormal(POSTERIOR_PREFIX, "Fundus All Normal")} disabled={loading} className="rounded border border-emerald-300/50 bg-emerald-300/10 px-4 py-2 text-sm font-semibold text-emerald-100 hover:bg-emerald-300/15 disabled:opacity-40">Fundus All Normal</button>
+            <ClearSectionButton
+              encounterReference={encounterReference}
+              sectionKey={definitions.map((definition) => definition.stableKey)}
+              label="Ocular Health"
+              hasRecorded={Object.values(currentHistory?.rowsByStableKey ?? {}).some((rows) => rows.length > 0)}
+              fetchImpl={fetchImpl}
+              onCleared={(result) => {
+                setMessage(null);
+                setReloadVersion((current) => current + 1);
+                onCleared?.({ scope: "section", result });
+              }}
+            />
           </div>
         </div>
         {loading && <div className="py-8 text-sm text-white/45">Loading ocular-health findings…</div>}

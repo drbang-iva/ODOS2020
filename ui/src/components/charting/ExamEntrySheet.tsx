@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, type ReactNode } from "react";
+import type { Encounter } from "@medplum/fhirtypes";
 import { useDockedPanel } from "../commercial/panel-shared";
+import type { EncounterVoidResult } from "../../lib/encounter-void";
+import { ClearEncounterButton } from "./ClearControls";
 
 export const EXAM_ENTRY_SHEET_CONFIG = {
   hpi: { title: "Chief Complaint / HPI / ROS", layout: "paired-row-form" },
@@ -113,10 +116,17 @@ export function ExamEntrySheet({
   panelTabs,
   active = true,
   hidden = false,
+  encounterReference,
+  encounterStatus,
+  onEncounterCleared,
   children,
 }: {
   sectionId: ExamEntrySheetId;
   onCancel: () => void;
+  /** When supplied with onEncounterCleared, the chrome carries the tier-3 "Clear everything charted this visit…" control. */
+  encounterReference?: string;
+  encounterStatus?: Encounter["status"];
+  onEncounterCleared?: (result: EncounterVoidResult) => void;
   onCheckpointDirty?: () => void;
   onClearDirtyCheckpoint?: () => void;
   onDirty?: () => void;
@@ -205,16 +215,25 @@ export function ExamEntrySheet({
             <span>Entry sheet</span>
             <h2 id={titleId}>{config.title}</h2>
           </div>
-          <button
-            ref={initialFocusRef}
-            type="button"
-            aria-label={`Cancel ${config.title} entry`}
-            data-testid="cancel-exam-entry-sheet"
-            data-entry-sheet-chrome
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
+          <div className="odos-exam-entry-sheet-actions">
+            {!modal && encounterReference && onEncounterCleared && (
+              <ClearEncounterButton
+                encounterReference={encounterReference}
+                encounterStatus={encounterStatus}
+                onCleared={onEncounterCleared}
+              />
+            )}
+            <button
+              ref={initialFocusRef}
+              type="button"
+              aria-label={`Cancel ${config.title} entry`}
+              data-testid="cancel-exam-entry-sheet"
+              data-entry-sheet-chrome
+              onClick={onCancel}
+            >
+              Cancel
+            </button>
+          </div>
         </header>
         <div className="odos-exam-entry-sheet-content">{children}</div>
       </aside>

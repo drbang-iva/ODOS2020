@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { confirmDestructive, voidEncounterEntries } from "../../lib/encounter-void";
+import { CLEAR_TOKEN_CLASS, ClearSectionButton } from "./ClearControls";
+import { useEncounterEdit } from "./encounter-edit-context";
 import { LENS_DESIGN_TYPES } from "../../lib/lens-catalog";
 import type { SectionSaveStatus } from "./types";
 import { formatPowerOption, numericOptions } from "./power-options";
@@ -113,6 +116,8 @@ export function RefractionSection({ patientReference, encounterReference, onSave
   const [sourceType, setSourceType] = useState("manual");
   const [history, setHistory] = useState<PrescriptionHistoryResponse | null>(null);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [historyVersion, setHistoryVersion] = useState(0);
+  const { onCleared } = useEncounterEdit();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -170,7 +175,7 @@ export function RefractionSection({ patientReference, encounterReference, onSave
         }
       });
     return () => controller.abort();
-  }, [patientReference]);
+  }, [patientReference, historyVersion]);
 
   const fields = definition?.definition.fields ?? {};
   const typeOptions = useMemo(() => activeOptions(fields.type), [fields.type]);
@@ -236,9 +241,36 @@ export function RefractionSection({ patientReference, encounterReference, onSave
     clearSavedObservationReferences(blockId);
   }
 
-  function removeBlock(blockId: string) {
+  async function removeBlock(blockId: string) {
+    // A saved block exists on the server; removing it here must void it there (§0.3 — the old
+    // client-only removal left the Observations projecting after they were "removed").
+    const saved = savedObservationReferences[blockId] ?? [];
+    if (saved.length > 0) {
+      const noun = saved.length === 1 ? "observation" : "observations";
+      if (!confirmDestructive(`Removing this saved refraction block voids ${saved.length} recorded ${noun} from this visit. Continue?`)) return;
+      try {
+        const result = await voidEncounterEntries(encounterReference, { scope: "observation", observationReference: saved });
+        onCleared?.({ scope: "observation", result });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+        return;
+      }
+    }
     setBlocks((current) => current.filter((candidate) => candidate.id !== blockId));
     clearSavedObservationReferences(blockId);
+    if (saved.length > 0) {
+      setError(null);
+      setHistoryVersion((current) => current + 1);
+    }
+  }
+
+  function clearSection() {
+    const manifest = typeOptions.find((option) => option.code === "MANIFEST")?.code;
+    setBlocks([emptyBlock(manifest ?? typeOptions[0]?.code ?? "")]);
+    setSavedObservationReferences({});
+    setSaved(null);
+    setError(null);
+    setHistoryVersion((current) => current + 1);
   }
 
   function clearSavedObservationReferences(blockId: string) {
@@ -328,6 +360,16 @@ export function RefractionSection({ patientReference, encounterReference, onSave
             >
               ＋ Add refraction
             </button>
+            <ClearSectionButton
+              encounterReference={encounterReference}
+              sectionKey="refraction"
+              label="Refraction"
+              hasRecorded={Object.values(savedObservationReferences).some((references) => references.length > 0) || (history?.glasses ?? []).some((row) => row.encounterReference === encounterReference)}
+              onCleared={(result) => {
+                clearSection();
+                onCleared?.({ scope: "section", result });
+              }}
+            />
           </div>
         </div>
 
@@ -429,15 +471,15 @@ export function RefractionSection({ patientReference, encounterReference, onSave
                 </button>
                 <div className="ml-auto flex items-center gap-2">
                   <span className="text-xs uppercase tracking-widest text-white/25">Block {blockIndex + 1}</span>
-                  {blocks.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeBlock(block.id)}
-                      className="rounded border border-white/10 px-2 py-1 text-xs text-white/45 hover:border-red-400/40 hover:text-red-100"
-                    >
-                      Remove
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    data-entry-sheet-pristine-action
+                    aria-label={`Remove refraction block ${blockIndex + 1}`}
+                    onClick={() => void removeBlock(block.id)}
+                    className={`${CLEAR_TOKEN_CLASS} px-2 py-1 text-xs`}
+                  >
+                    Remove
+                  </button>
                 </div>
               </div>
 

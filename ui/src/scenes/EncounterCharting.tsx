@@ -57,6 +57,7 @@ import { OcularHealthSection } from "../components/charting/OcularHealthSection"
 import { PrescriptionSection } from "../components/charting/PrescriptionSection";
 import { OrthoKSection } from "../components/charting/OrthoKSection";
 import { RefractionSection } from "../components/charting/RefractionSection";
+import { EncounterEditContext, type EncounterClearedDetail } from "../components/charting/encounter-edit-context";
 import { RefractionHistorySection } from "../components/charting/RefractionHistorySection";
 import { SoftContactLensSection } from "../components/charting/SoftContactLensSection";
 import { SpecialtyContactLensSection } from "../components/charting/SpecialtyContactLensSection";
@@ -132,6 +133,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const [examOverviewRefreshVersion, setExamOverviewRefreshVersion] = useState(0);
   const [boardEditorOpen, setBoardEditorOpen] = useState(false);
   const [entrySheetSection, setEntrySheetSection] = useState<ExamEntrySheetSectionId>();
+  const [chartClearVersion, setChartClearVersion] = useState(0);
   const entrySheetGuard = useExamEntrySheetGuard(entrySheetSection);
   const [rightPanelState, setRightPanelState] = useState(INITIAL_EXAM_RIGHT_PANEL_STATE);
   const [rightPanelImageCount, setRightPanelImageCount] = useState(0);
@@ -175,6 +177,20 @@ export function EncounterCharting({ patient, encounterId }: Props) {
 
   function refreshExamOverview() {
     setExamOverviewRefreshVersion((current) => current + 1);
+  }
+
+  // Pre-finalization delete: a void anywhere refreshes the Overview; a section clear drops that
+  // section's saved status; a visit clear drops every status and remounts the open sheet blank.
+  function handleEncounterCleared(detail: EncounterClearedDetail) {
+    if (detail.scope === "encounter") {
+      setStatuses({});
+      setChartClearVersion((current) => current + 1);
+    } else if (detail.scope === "section") {
+      setStatuses((current) => Object.fromEntries(Object.entries(current).filter(([key]) =>
+        key !== activeSection && !key.startsWith(`${activeSection}:`)
+      )) as SectionStatusMap);
+    }
+    refreshExamOverview();
   }
 
   function openBoardEditor(sectionId: ChartSectionId) {
@@ -686,6 +702,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   );
 
   return (
+    <EncounterEditContext.Provider value={{ encounterStatus: encounter?.status, onCleared: handleEncounterCleared }}>
     <div className={["odos-charting-workspace flex h-screen w-screen flex-col bg-bg-deep text-white", config.encounterDensity === "compact" ? "text-[0.95rem]" : ""].join(" ")}>
       <EncounterHeader
         patient={patient}
@@ -1011,9 +1028,12 @@ export function EncounterCharting({ patient, encounterId }: Props) {
             panelTabs={rightPanelTabs("entry-panel")}
             active={rightPanelState.activeTab === "entry" && !referralComposeOpen}
             hidden={rightPanelState.activeTab !== "entry"}
+            encounterReference={encounterReference}
+            encounterStatus={encounter?.status}
+            onEncounterCleared={(result) => handleEncounterCleared({ scope: "encounter", result })}
           >
             <MappedExamSection
-              key={entrySheetSection}
+              key={`${entrySheetSection}:${chartClearVersion}`}
               sectionId={entrySheetSection}
               definitions={{
                 pupils: pupilsDefinition,
@@ -1094,6 +1114,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
         />
       )}
     </div>
+    </EncounterEditContext.Provider>
   );
 }
 

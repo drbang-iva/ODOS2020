@@ -7,6 +7,7 @@ import { odosConcept, reference } from "../fhir/ophthalmology/extensions.js";
 import { FhirComplaintDefinitionStore } from "./complaint-definition-store.js";
 import { renderComplaintNarrative } from "./complaint-model.js";
 import { FhirEncounterComplaintStore } from "./encounter-complaint-store.js";
+import { CLOSED_ENCOUNTER_EDIT_ERROR, isClosedEncounter } from "./encounter-sign-gate.js";
 import { buildHpiFindingDefinition, HPI_STABLE_KEY } from "./hpi-definition.js";
 import {
   captureGlaucomaFinding,
@@ -93,8 +94,8 @@ export async function handleHpiCaptureRequest(
   if (encounter.subject?.reference !== parsed.data.patientReference) {
     return { status: 400, body: { error: "History patient does not match the encounter subject." } };
   }
-  if (encounter.status === "finished" || encounter.status === "cancelled" || encounter.status === "entered-in-error") {
-    return { status: 409, body: { error: "Signed or closed encounters cannot be edited." } };
+  if (isClosedEncounter(encounter)) {
+    return { status: 409, body: { error: CLOSED_ENCOUNTER_EDIT_ERROR } };
   }
   const definition = resolveHpiDefinition(deps.findingDefinitions?.());
   const rosError = validateRos(parsed.data.reviewOfSystems, definition);

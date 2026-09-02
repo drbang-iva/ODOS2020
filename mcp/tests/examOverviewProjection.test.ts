@@ -543,3 +543,44 @@ function codeComponent(
     valueCodeableConcept: { coding: [{ code: value, display }] },
   };
 }
+
+test("guard 2: a voided (entered-in-error) CVF row leaves the Overview; when every row is voided the section has no findings", () => {
+  const definitions = [definition("entrance:cvf", "entrance:cvf"), definition("entrance:pupils", "entrance:pupils")];
+  const eye = (code: "OD" | "OS") => ({
+    extension: [{ url: "https://odos2020.com/fhir/StructureDefinition/eye-laterality", valueCodeableConcept: { coding: [{ code }] } }],
+  });
+  const partial = buildExamOverviewProjection({
+    encounterReference: "Encounter/e1",
+    patientReference: "Patient/p1",
+    definitions,
+    currentObservations: [
+      observation("cvf-od", "entrance:cvf", { ...eye("OD"), component: [stringComponent("EXAM_STATE", "normal")] }),
+      observation("cvf-os", "entrance:cvf", { ...eye("OS"), status: "entered-in-error", component: [stringComponent("EXAM_STATE", "abnormal")] }),
+      observation("pupils-od", "entrance:pupils", { ...eye("OD"), component: [stringComponent("EXAM_STATE", "normal")] }),
+    ],
+    priorObservationCandidates: [],
+    assessmentRows: [],
+  });
+  assert.deepEqual(
+    partial.findings.filter((finding) => finding.sectionKey === "entrance:cvf").map((finding) => finding.observationReference),
+    ["Observation/cvf-od"],
+  );
+  assert.ok(partial.sections.every((section) => !section.findingObservationReferences.includes("Observation/cvf-os")));
+
+  const allVoided = buildExamOverviewProjection({
+    encounterReference: "Encounter/e1",
+    patientReference: "Patient/p1",
+    definitions,
+    currentObservations: [
+      observation("cvf-od", "entrance:cvf", { ...eye("OD"), status: "entered-in-error", component: [stringComponent("EXAM_STATE", "normal")] }),
+      observation("cvf-os", "entrance:cvf", { ...eye("OS"), status: "entered-in-error", component: [stringComponent("EXAM_STATE", "normal")] }),
+      observation("pupils-od", "entrance:pupils", { ...eye("OD"), component: [stringComponent("EXAM_STATE", "normal")] }),
+    ],
+    priorObservationCandidates: [],
+    assessmentRows: [],
+  });
+  assert.equal(allVoided.findings.some((finding) => finding.sectionKey === "entrance:cvf"), false, "no CVF finding may survive a full void");
+  const cvfSection = allVoided.sections.find((section) => section.sectionKey === "entrance:cvf");
+  assert.deepEqual(cvfSection?.findingObservationReferences ?? [], []);
+  assert.deepEqual(allVoided.findings.map((finding) => finding.observationReference), ["Observation/pupils-od"]);
+});

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../fhir/ophthalmology/codeBindings.js";
 import { captureGlaucomaFinding, patientScopedProvenanceTargets, type ClinicalFindingDefinition, type ClinicalGraphProvenance } from "./glaucoma-suspect.js";
+import { isLiveObservation } from "./observation-liveness.js";
 import { withDocumentationElements } from "./documentation-elements.js";
 import { COVER_TEST_KEY } from "./entrance-definition.js";
 
@@ -99,7 +100,11 @@ export async function handleCoverTestHistoryRequest(deps: CoverTestEndpointDeps,
     _sort: "-date",
     _count: "200",
   });
-  return { status: 200, body: { rows: (bundle.entry ?? []).flatMap((entry) => entry.resource ? [{ recordedAt: entry.resource.effectiveDateTime ?? "", summary: entry.resource.note?.[0]?.text ?? "" }] : []) } };
+  return { status: 200, body: { rows: (bundle.entry ?? []).flatMap((entry) => entry.resource && isLiveObservation(entry.resource) ? [{
+    ...(entry.resource.id ? { observationReference: `Observation/${entry.resource.id}` } : {}),
+    recordedAt: entry.resource.effectiveDateTime ?? "",
+    summary: entry.resource.note?.[0]?.text ?? "",
+  }] : []) } };
 }
 
 function staffMay(role: PracticeRoleId, action: "chart.read" | "chart.write"): boolean {

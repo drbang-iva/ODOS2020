@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { fhir } from "../../lib/fhir";
+import { voidEncounterEntries } from "../../lib/encounter-void";
+import { ClearSectionButton, RemoveValueButton } from "./ClearControls";
+import { useEncounterEdit } from "./encounter-edit-context";
 import { assertTransactionSuccess } from "../../lib/encounter-bundles";
 import {
   buildSectionSaveBundle,
@@ -30,6 +33,27 @@ export function VaSection({ patientReference, encounterReference, onSaved }: Pro
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<SectionSaveStatus | null>(null);
+  const [savedEyes, setSavedEyes] = useState<Array<"OD" | "OS">>([]);
+  const { onCleared } = useEncounterEdit();
+
+  function emptyRows(): Record<"OD" | "OS", VaRowState> {
+    return {
+      OD: { snellen: "", chartType: "SNELLEN", correction: "SC" },
+      OS: { snellen: "", chartType: "SNELLEN", correction: "SC" },
+    };
+  }
+
+  async function removeEye(laterality: "OD" | "OS") {
+    try {
+      const result = await voidEncounterEntries(encounterReference, { scope: "finding", findingKey: "VISUAL_ACUITY", laterality });
+      setSavedEyes((current) => current.filter((eye) => eye !== laterality));
+      setRows((current) => ({ ...current, [laterality]: emptyRows()[laterality] }));
+      setSaved(null);
+      onCleared?.({ scope: "finding", result });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
 
   async function save() {
     const entries = (["OD", "OS"] as const).flatMap((laterality) => {
@@ -64,6 +88,7 @@ export function VaSection({ patientReference, encounterReference, onSaved }: Pro
         operator: OPERATOR,
       };
       setSaved(status);
+      setSavedEyes(entries.map((entry) => entry.laterality));
       onSaved(status);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -75,7 +100,22 @@ export function VaSection({ patientReference, encounterReference, onSaved }: Pro
   return (
     <section className="h-full overflow-y-auto p-6">
       <div className="max-w-4xl">
-        <h2 className="text-lg font-semibold text-white">Visual Acuity</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-white">Visual Acuity</h2>
+          <ClearSectionButton
+            encounterReference={encounterReference}
+            sectionKey="va"
+            label="Visual acuity"
+            hasRecorded={savedEyes.length > 0}
+            onCleared={(result) => {
+              setRows(emptyRows());
+              setSavedEyes([]);
+              setSaved(null);
+              setError(null);
+              onCleared?.({ scope: "section", result });
+            }}
+          />
+        </div>
         <div className="mt-5 overflow-hidden rounded border border-white/10">
           <div className="grid grid-cols-[72px_1fr_180px_180px] gap-0 bg-white/5 px-4 py-2 text-xs uppercase tracking-widest text-white/35">
             <div>Eye</div>
@@ -85,7 +125,12 @@ export function VaSection({ patientReference, encounterReference, onSaved }: Pro
           </div>
           {(["OD", "OS"] as const).map((laterality) => (
             <div key={laterality} className="grid grid-cols-[72px_1fr_180px_180px] gap-3 border-t border-white/10 p-4">
-              <div className="pt-3 text-sm font-semibold text-white">{laterality}</div>
+              <div className="flex items-start gap-2 pt-3 text-sm font-semibold text-white">
+                <span>{laterality}</span>
+                {savedEyes.includes(laterality) && (
+                  <RemoveValueButton label={`Visual acuity ${laterality}`} onRemove={() => removeEye(laterality)} />
+                )}
+              </div>
               {rows[laterality].chartType === "SNELLEN" ? (
                 <VaValueSelect
                   value={rows[laterality].snellen}

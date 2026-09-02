@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { voidEncounterEntries } from "../../lib/encounter-void";
+import { ClearSectionButton, RemoveValueButton } from "./ClearControls";
+import { useEncounterEdit } from "./encounter-edit-context";
 import { OdosSelect } from "../inputs/OdosSelect";
 import { OdosWheel } from "../inputs/OdosWheel";
 import type { CustomFindingDefinition } from "./CustomFindingSection";
 import type { SectionSaveStatus } from "./types";
 
 interface AgentRow { agent: string; drops: string; eyes: "OD" | "OS" | "OU"; time: string }
-interface History { notes: Array<{ recordedAt: string; text: string }>; administrations: Array<{ recordedAt: string; agent: string; drops?: number; eyes?: string; administeredBy?: string }> }
+interface History { notes: Array<{ observationReference?: string; recordedAt: string; text: string }>; administrations: Array<{ recordedAt: string; agent: string; drops?: number; eyes?: string; administeredBy?: string }> }
 
 export function DilationSection({ definition, patientReference, encounterReference, onSaved }: {
   definition: CustomFindingDefinition;
@@ -24,6 +27,7 @@ export function DilationSection({ definition, patientReference, encounterReferen
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const agentOptions = definition.fields?.agent?.options?.filter((option) => option.active !== false) ?? [];
+  const { onCleared } = useEncounterEdit();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -38,6 +42,16 @@ export function DilationSection({ definition, patientReference, encounterReferen
       .catch((caught) => { if ((caught as Error).name !== "AbortError") setError(caught instanceof Error ? caught.message : String(caught)); });
     return () => controller.abort();
   }, [patientReference, encounterReference, historyVersion]);
+
+  async function removeNote(observationReference: string) {
+    try {
+      const result = await voidEncounterEntries(encounterReference, { scope: "observation", observationReference });
+      onCleared?.({ scope: "observation", result });
+      setHistoryVersion((current) => current + 1);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    }
+  }
 
   function updateAgent(index: number, update: Partial<AgentRow>) {
     setAgents((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, ...update } : row));
@@ -78,10 +92,28 @@ export function DilationSection({ definition, patientReference, encounterReferen
   return (
     <section className="h-full overflow-y-auto p-6">
       <div className="max-w-6xl">
-        <div className="border-b border-[color:var(--odos-line)] pb-4">
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-light">Entrance Testing</div>
-          <h2 className="mt-1 text-xl font-semibold text-[color:var(--odos-text)]">Dilation</h2>
-          <p className="mt-1 text-sm text-[color:var(--odos-muted)]">Medication administration, DFE status, and declined-dilation counseling.</p>
+        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[color:var(--odos-line)] pb-4">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-light">Entrance Testing</div>
+            <h2 className="mt-1 text-xl font-semibold text-[color:var(--odos-text)]">Dilation</h2>
+            <p className="mt-1 text-sm text-[color:var(--odos-muted)]">Medication administration, DFE status, and declined-dilation counseling.</p>
+          </div>
+          <ClearSectionButton
+            encounterReference={encounterReference}
+            sectionKey="entrance:dilation"
+            label="Dilation"
+            hasRecorded={history.notes.length > 0 || history.administrations.length > 0}
+            onCleared={(result) => {
+              setAgents([emptyAgent()]);
+              setDfePerformed(false);
+              setDeclined(false);
+              setReason("");
+              setRisks("");
+              setError(null);
+              setHistoryVersion((current) => current + 1);
+              onCleared?.({ scope: "section", result });
+            }}
+          />
         </div>
         <label className="mt-5 flex items-center gap-3 text-sm font-semibold text-[color:var(--odos-text)]">
           <input type="checkbox" checked={declined} onChange={(event) => setDeclined(event.target.checked)} className="accent-brand" />
@@ -154,7 +186,7 @@ export function DilationSection({ definition, patientReference, encounterReferen
             <div className="p-6 text-sm text-[color:var(--odos-muted)]">No prior entries</div>
           ) : (
             <div className="divide-y divide-white/10">
-              {history.notes.map((note, index) => <div key={`${note.recordedAt}-${index}`} className="px-4 py-3 text-sm text-[color:var(--odos-muted)]">{note.text}</div>)}
+              {history.notes.map((note, index) => <div key={`${note.recordedAt}-${index}`} className="flex items-start justify-between gap-3 px-4 py-3 text-sm text-[color:var(--odos-muted)]"><span>{note.text}</span>{note.observationReference && <RemoveValueButton label="Dilation note" confirmMessage="Removing this dilation entry discards its chart note. Continue?" onRemove={() => removeNote(note.observationReference!)} />}</div>)}
               {history.administrations.map((row, index) => <div key={`${row.recordedAt}-${row.agent}-${index}`} className="px-4 py-3 text-sm text-[color:var(--odos-muted)]">{row.agent}: {row.drops} {row.drops === 1 ? "drop" : "drops"} {row.eyes} · administered by {row.administeredBy}</div>)}
             </div>
           )}

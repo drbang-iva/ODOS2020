@@ -3,6 +3,7 @@ import { z } from "zod";
 import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../fhir/ophthalmology/codeBindings.js";
 import { patientScopedProvenanceTargets, captureGlaucomaFinding, type ClinicalFindingDefinition, type ClinicalGraphProvenance } from "./glaucoma-suspect.js";
+import { isLiveObservation } from "./observation-liveness.js";
 import { withDocumentationElements } from "./documentation-elements.js";
 import { EOM_KEY } from "./entrance-definition.js";
 
@@ -123,7 +124,8 @@ export async function handleEomHistoryRequest(deps: EomEndpointDeps, input: { au
     _sort: "-date",
     _count: "200",
   });
-  return { status: 200, body: { rows: (bundle.entry ?? []).flatMap((entry) => entry.resource ? [{
+  return { status: 200, body: { rows: (bundle.entry ?? []).flatMap((entry) => entry.resource && isLiveObservation(entry.resource) ? [{
+    ...(entry.resource.id ? { observationReference: `Observation/${entry.resource.id}` } : {}),
     recordedAt: entry.resource.effectiveDateTime ?? "",
     state: componentValue(entry.resource, "EXAM_STATE") ?? "",
     summary: summarize(entry.resource),
