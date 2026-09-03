@@ -89,6 +89,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
   const [adding, setAdding] = useState(false);
   const debounceTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const latestAnswers = useRef<HistoryTemplateAnswer[]>([]);
+  const persistedAnswerReferences = useRef(new Map<string, string>());
   const saveQueue = useRef(Promise.resolve());
   const confirmDestructive = useConfirmDestructive();
   const { onCleared, onClearFailed } = useEncounterEdit();
@@ -106,11 +107,14 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
       setComplaints(complaintRecord.complaints ?? []);
       const loadedAnswers = history.answers ?? [];
       latestAnswers.current = loadedAnswers;
+      persistedAnswerReferences.current = new Map(loadedAnswers.flatMap((answer) =>
+        answer.observationReference ? [[answer.id, answer.observationReference] as const] : []
+      ));
       setAnswers(loadedAnswers);
       setFollowUpPrefills(history.followUpPrefills ?? []);
       setNarratives(Object.fromEntries((history.templateNarratives ?? []).map((row) => [row.complaintId, row.narrative])));
       if (history.requiresAggregateRefresh && (complaintRecord.complaints ?? []).length > 0) {
-        void queueSave(loadedAnswers).catch(() => undefined);
+        void queueSave().catch(() => undefined);
       }
     }).catch((caught) => {
       if (!cancelled) setSaveState({ status: "error", reason: errorMessage(caught) });
@@ -145,7 +149,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
         { action: "create-template", patientReference, templateKey: template.complaint },
       );
       setComplaints(result.complaints ?? []);
-      await queueSave(latestAnswers.current);
+      await queueSave();
       onSaved({ completed: false, summary: complaintSummary(result.complaints ?? [], narratives), operator: "ODOS History template" }, true);
     } catch (caught) {
       setSaveState({ status: "error", reason: errorMessage(caught) });
@@ -156,8 +160,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
 
   function changeAnswer(nextAnswer: HistoryTemplateAnswer | undefined, prior: HistoryTemplateAnswer | undefined) {
     if (!nextAnswer) {
-      if (prior?.observationReference) voidAnswer(prior);
-      else if (prior) removeUnsavedAnswer(prior);
+      if (prior) void clearAnswer(prior);
       return;
     }
     setAnswers((current) => {
@@ -168,41 +171,37 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
         }
       }
       latestAnswers.current = next;
-      scheduleSave(nextAnswer.id, next);
+      scheduleSave(nextAnswer.id);
       return next;
     });
   }
 
-  function removeUnsavedAnswer(answer: HistoryTemplateAnswer) {
-    const timer = debounceTimers.current.get(answer.id);
-    if (timer) clearTimeout(timer);
-    debounceTimers.current.delete(answer.id);
-    setAnswers((current) => {
-      const next = current.filter((candidate) => candidate.id !== answer.id);
-      latestAnswers.current = next;
-      return next;
-    });
-  }
-
-  async function voidAnswer(answer: HistoryTemplateAnswer) {
-    if (!answer.observationReference) return;
+  async function clearAnswer(answer: HistoryTemplateAnswer) {
     const pending = debounceTimers.current.get(answer.id);
     if (pending) clearTimeout(pending);
     debounceTimers.current.delete(answer.id);
+    const next = latestAnswers.current.filter((candidate) => candidate.id !== answer.id);
+    latestAnswers.current = next;
+    setAnswers(next);
+    let observationReference = answer.observationReference;
     try {
       await saveQueue.current;
+      observationReference ??= persistedAnswerReferences.current.get(answer.id);
+      if (!observationReference) return;
       const result = await voidEncounterEntries(encounterReference, {
         scope: "observation",
-        observationReference: answer.observationReference,
+        observationReference,
         sectionKey: "hpi",
         label: answer.optionCode ?? "History value",
       });
-      const next = latestAnswers.current.filter((candidate) => candidate.id !== answer.id);
-      latestAnswers.current = next;
-      setAnswers(next);
-      await queueSave(next);
+      persistedAnswerReferences.current.delete(answer.id);
+      await queueSave();
       onCleared?.({ scope: "observation", result });
     } catch (caught) {
+      const restored = observationReference ? { ...answer, observationReference } : answer;
+      const restoredAnswers = replaceAnswer(latestAnswers.current, restored);
+      latestAnswers.current = restoredAnswers;
+      setAnswers(restoredAnswers);
       onClearFailed?.({ scope: "observation", error: caught });
       setSaveState({ status: "error", reason: errorMessage(caught) });
     }
@@ -210,11 +209,11 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
 
   async function removeTyped(answer: HistoryTemplateAnswer, label: string) {
     if (!answer.observationReference) {
-      removeUnsavedAnswer(answer);
+      await clearAnswer(answer);
       return;
     }
     if (!(await confirmDestructive(removeValueConfirmSpec(label, "typed detail")))) return;
-    await voidAnswer(answer);
+    await clearAnswer(answer);
   }
 
   async function removeComplaint(complaint: EncounterComplaint) {
@@ -234,11 +233,15 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
         label,
       });
       const remainingComplaints = complaints.filter((candidate) => candidate.id !== complaint.id);
+      const removedAnswers = latestAnswers.current.filter((candidate) => candidate.complaintId === complaint.id);
       const remainingAnswers = latestAnswers.current.filter((candidate) => candidate.complaintId !== complaint.id);
       setComplaints(remainingComplaints);
       setAnswers(remainingAnswers);
       latestAnswers.current = remainingAnswers;
-      if (remainingComplaints.length) await queueSave(remainingAnswers);
+      for (const answer of removedAnswers) {
+        persistedAnswerReferences.current.delete(answer.id);
+      }
+      if (remainingComplaints.length) await queueSave();
       onCleared?.({ scope: "finding", result });
     } catch (caught) {
       onClearFailed?.({ scope: "finding", error: caught });
@@ -246,17 +249,17 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
     }
   }
 
-  function scheduleSave(fieldKey: string, snapshot: HistoryTemplateAnswer[]) {
+  function scheduleSave(fieldKey: string) {
     const current = debounceTimers.current.get(fieldKey);
     if (current) clearTimeout(current);
     debounceTimers.current.set(fieldKey, setTimeout(() => {
       debounceTimers.current.delete(fieldKey);
-      void queueSave(snapshot).catch(() => undefined);
+      void queueSave().catch(() => undefined);
     }, 800));
   }
 
-  function queueSave(snapshot: HistoryTemplateAnswer[]): Promise<void> {
-    const run = saveQueue.current.then(() => saveHistory(snapshot));
+  function queueSave(): Promise<void> {
+    const run = saveQueue.current.then(() => saveHistory(latestAnswers.current));
     saveQueue.current = run.catch(() => undefined);
     return run;
   }
@@ -274,6 +277,9 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
         templateAnswers: snapshot.map(stripObservationReference),
       });
       const savedAnswers = result.answers ?? snapshot;
+      for (const answer of savedAnswers) {
+        if (answer.observationReference) persistedAnswerReferences.current.set(answer.id, answer.observationReference);
+      }
       latestAnswers.current = mergeSavedReferences(latestAnswers.current, savedAnswers);
       setAnswers((current) => mergeSavedReferences(current, savedAnswers));
       const nextNarratives = {
@@ -329,6 +335,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
                   setComplaints([]);
                   setAnswers([]);
                   latestAnswers.current = [];
+                  persistedAnswerReferences.current.clear();
                   setNarratives({});
                   setSaveState({ status: "idle" });
                   onSaved({ completed: false, summary: "Not examined" }, true);
@@ -337,7 +344,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
               />
             </div>
           </div>
-          <SaveIndicator state={saveState} clock={clock} onRetry={() => { void queueSave(latestAnswers.current).catch(() => undefined); }} />
+          <SaveIndicator state={saveState} clock={clock} onRetry={() => { void queueSave().catch(() => undefined); }} />
         </header>
 
         {!folded && <div className="mt-4 space-y-4">

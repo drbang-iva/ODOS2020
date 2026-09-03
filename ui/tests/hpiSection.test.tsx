@@ -170,6 +170,76 @@ test("field changes autosave after the 800ms debounce and report saved in the se
   }
 });
 
+test("clearing a chip waits for an in-flight autosave and voids the Observation it created", async () => {
+  const originalFetch = globalThis.fetch;
+  let historyPosts = 0;
+  let resolveInFlight!: (response: Response) => void;
+  const inFlight = new Promise<Response>((resolve) => { resolveInFlight = resolve; });
+  const voidBodies: Array<{ scope?: string; observationReference?: string }> = [];
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/clinical-graph/hpi/definition")) return json({ templates: [TEMPLATE], catalogs: CATALOGS, definition: {} });
+    if (url.endsWith("/clinical-graph/encounters/e1/complaints") && init?.method === "POST") return json({ complaints: [complaint()] });
+    if (url.endsWith("/clinical-graph/encounters/e1/complaints")) return json({ complaints: [] });
+    if (url.endsWith("/clinical-graph/encounters/e1/hpi")) return json({
+      answers: [],
+      followUpPrefills: [answer("symptoms", "ocular-pain", { kind: "tri-state", status: "negative" })],
+      templateNarratives: [],
+    });
+    if (url.endsWith("/clinical-graph/encounters/e1/void") && init?.method === "POST") {
+      voidBodies.push(JSON.parse(String(init.body)) as { scope?: string; observationReference?: string });
+      return json({ voided: ["Observation/answer-pain"], count: 1, sections: [], entries: [], preview: false });
+    }
+    if (url.endsWith("/clinical-graph/hpi") && init?.method === "POST") {
+      historyPosts += 1;
+      const submitted = JSON.parse(String(init.body)) as { templateAnswers: HistoryTemplateAnswer[] };
+      if (historyPosts === 2) return inFlight;
+      return json({
+        answers: submitted.templateAnswers.map((item) => ({ ...item, observationReference: `Observation/${item.optionCode === "ocular-pain" ? "answer-pain" : item.id}` })),
+        templateNarratives: [],
+      });
+    }
+    throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${url}`);
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<EncounterEditContext.Provider value={{}}><HpiSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} /></EncounterEditContext.Provider>);
+      await delay(0);
+    });
+    await act(async () => {
+      renderer.root.findAllByType("button").find((button) => button.children.join("") === "Glaucoma")!.props.onClick();
+      await delay(0);
+    });
+    act(() => renderer.root.findAllByType("button").find((button) => button.children.join("") === "Follow Up")!.props.onClick());
+    await act(async () => { await delay(850); });
+    assert.equal(historyPosts, 2, "the answer save is in flight");
+    act(() => renderer.root.findByProps({ "aria-label": "ocular pain: negative" }).props.onClick());
+    assert.deepEqual(voidBodies, [], "the clear waits for the save response to identify the Observation");
+
+    await act(async () => {
+      resolveInFlight(json({
+        answers: [
+          { ...answer("presentation", undefined, { kind: "selection", code: "follow-up" }), observationReference: "Observation/answer-presentation" },
+          { ...answer("symptoms", "ocular-pain", { kind: "tri-state", status: "negative" }), observationReference: "Observation/answer-pain" },
+        ],
+        templateNarratives: [],
+      }));
+      await delay(0);
+      await delay(0);
+    });
+    assert.deepEqual(voidBodies, [{
+      scope: "observation",
+      observationReference: "Observation/answer-pain",
+      sectionKey: "hpi",
+      label: "ocular-pain",
+    }]);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("a failed autosave turns only the History header red with its reason and Retry", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (input, init) => {
