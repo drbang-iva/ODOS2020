@@ -465,9 +465,11 @@ export class LiveOdosAuditRuntime implements FhirAuditRecorder {
         this.options.medplumPassword &&
         isAuthzProjectionError(error)
       ) {
-        this.projectionClient = this.createPasswordProjectionClient();
-        await (await this.projectionClient).create<AuditEvent>(auditEvent);
-        return;
+        const message =
+          "AuditEvent projection denied: password fallback refused because the configured " +
+          "email/password principal is not confirmed distinct from the access-token principal.";
+        console.error(`odos-audit: ${message}`);
+        throw new Error(message, { cause: error });
       }
       throw error;
     }
@@ -476,16 +478,6 @@ export class LiveOdosAuditRuntime implements FhirAuditRecorder {
   private async getProjectionClient(): Promise<MedplumClient> {
     this.projectionClient ??= createAuditProjectionClient(this.options);
     return this.projectionClient;
-  }
-
-  private async createPasswordProjectionClient(): Promise<MedplumClient> {
-    const client = createUnauditedMedplumClient_bootOnly({
-      baseUrl: this.options.medplumBaseUrl ?? "http://localhost:8103",
-    });
-    if (this.options.medplumEmail && this.options.medplumPassword) {
-      await client.login(this.options.medplumEmail, this.options.medplumPassword);
-    }
-    return client;
   }
 }
 

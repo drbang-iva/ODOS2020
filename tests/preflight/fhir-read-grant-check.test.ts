@@ -291,7 +291,7 @@ test("live FHIR read grant check covers all four chart resources through compile
   assert.deepEqual(result.missingResourceTypes, []);
   assert.deepEqual(result.excludedServiceIdentityResourceTypes, ["CodeSystem", "Project", "ProjectMembership", "User"]);
   assert.equal(result.excludedNonFhirCallSites.length, 7);
-  assert.equal(result.excludedServiceIdentityWriteCallSites?.length, 35);
+  assert.equal(result.excludedServiceIdentityWriteCallSites?.length, 34);
   assert.equal(
     result.excludedServiceIdentityWriteCallSites?.filter((entry) =>
       entry.startsWith("mcp/src/weno/weno-search-routes.ts:")
@@ -373,7 +373,7 @@ test("FHIR read grant CLI passes only with full coverage and always prints its l
   assert.match(result.stdout, /Excluded source extensions: all except \.ts, \.tsx/);
   assert.match(result.stdout, /ProjectMembership — service identity authorization context/);
   assert.match(result.stdout, /User — service identity account resolution/);
-  assert.match(result.stdout, /Service-identity FHIR write call sites excluded \(35\):/);
+  assert.match(result.stdout, /Service-identity FHIR write call sites excluded \(34\):/);
   assert.match(result.stdout, /SUSPECTED BROKEN FEATURE — known ungranted practice-role write call sites \(0\):/);
   assert.match(result.stdout, /Non-FHIR literal call sites excluded:\n- mcp\/src\/bulk-data\/router\.ts:141 router\.delete/);
   assert.match(result.stdout, /other names escape because receiver-independent matching would misclassify non-FHIR search APIs/);
