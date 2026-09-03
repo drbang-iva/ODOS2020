@@ -1,4 +1,4 @@
-Source under test: c35877f452362755cf8af54e84bef70b40de31dd
+Source under test: 1556893ff7df84078fade4cb102eb4f95e5f9689
 Base: bc86574fd41fe7f0a528d9619cda44cf8e4d0c0a
 
 $ cd mcp && node scripts/run-tests.mjs tests/westFaxAdapter.test.ts tests/inboundFax.test.ts tests/inboundFaxEndpoint.test.ts tests/faxEndpoint.test.ts
@@ -33,36 +33,99 @@ exit: 1
 # todo 0
 # duration_ms 297.134166
 
+$ cd mcp && node scripts/run-tests.mjs tests/inboundFax.test.ts
+exit: 1
+  ---
+  duration_ms: 0.134417
+  type: 'test'
+  ...
+1..24
+# tests 26
+# suites 0
+# pass 25
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 340.667167
+
 $ cd mcp && node scripts/run-tests.mjs tests/westFaxAdapter.test.ts tests/inboundFax.test.ts tests/inboundFaxEndpoint.test.ts tests/faxEndpoint.test.ts tests/verifyWestFaxLive.test.ts tests/searchParamContract.test.ts tests/fixturePhiGuard.test.ts
 exit: 0
   ---
-  duration_ms: 2.509959
+  duration_ms: 1.635875
   type: 'test'
   ...
-1..53
-# tests 55
+1..54
+# tests 56
 # suites 0
-# pass 55
+# pass 56
 # fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 3371.049667
+# duration_ms 2399.575792
 
-$ cd mcp && node scripts/run-tests.mjs
+$ cd mcp && node scripts/run-tests.mjs (first post-review run)
 exit: 1
-  duration_ms: 0.617917
+  duration_ms: 0.604166
   type: 'test'
   ...
-1..3573
-# tests 4108
+1..3574
+# tests 4109
 # suites 0
 # pass 4053
+# fail 1
+# cancelled 0
+# skipped 55
+# todo 0
+# duration_ms 84380.673375
+⚠️  LIVE STACK NOT CONFIGURED — 40 tests skipped, including live authorization enforcement (audit-header, billingIdentityConfigParity, body-structure-idempotency, clinicalWriteAuthzLive, diagnosisCarryForward, encounter-lifecycle, encounter, encounterUndoLedgerAuthzLive, patient-update, profile-validation, provenance-defaults, searchParamMedplumSmoke, transaction-atomicity, v035-terminology-install, v035-write-tools, v04-observation-focus-conformance, v04-write-tools, v04b-write-tools, v04c-write-tools, v05a-authz, v05b-audit-ib-backup). This run does NOT gate authz. Set MEDPLUM_ADMIN_EMAIL/PASSWORD to run them.
+not ok 816 - an explicit provider is rejected when it cannot identify one sender lane
+  ---
+  duration_ms: 25.865125
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/odos-fax-live-repair/mcp/tests/commsApi.test.ts:1:46130'
+  failureType: 'testCodeFailure'
+  error: 'fetch failed'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    node:internal/deps/undici/undici:14976:13
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/odos-fax-live-repair/mcp/tests/commsApi.test.ts:1471:22)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+
+$ cd mcp && node scripts/run-tests.mjs tests/commsApi.test.ts
+exit: 0
+  ---
+  duration_ms: 0.777667
+  type: 'test'
+  ...
+1..49
+# tests 49
+# suites 0
+# pass 49
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 408.998333
+
+$ cd mcp && node scripts/run-tests.mjs (final run)
+exit: 1
+  duration_ms: 0.595708
+  type: 'test'
+  ...
+1..3574
+# tests 4109
+# suites 0
+# pass 4054
 # fail 0
 # cancelled 0
 # skipped 55
 # todo 0
-# duration_ms 80652.044625
+# duration_ms 70081.701584
 ⚠️  LIVE STACK NOT CONFIGURED — 40 tests skipped, including live authorization enforcement (audit-header, billingIdentityConfigParity, body-structure-idempotency, clinicalWriteAuthzLive, diagnosisCarryForward, encounter-lifecycle, encounter, encounterUndoLedgerAuthzLive, patient-update, profile-validation, provenance-defaults, searchParamMedplumSmoke, transaction-atomicity, v035-terminology-install, v035-write-tools, v04-observation-focus-conformance, v04-write-tools, v04b-write-tools, v04c-write-tools, v05a-authz, v05b-audit-ib-backup). This run does NOT gate authz. Set MEDPLUM_ADMIN_EMAIL/PASSWORD to run them.
 
 $ cd mcp && npm run build
@@ -79,7 +142,7 @@ $ rg -n -F 'suggestInboundFaxPatient(deps.fhir, fax.senderNumber, fax.senderIden
 rg exit: 1 (absent required)
 not ok 2 - OrigCSID survives the real adapter and poller into an advisory patient suggestion
   ---
-  duration_ms: 15.096583
+  duration_ms: 17.045625
   type: 'test'
   location: '/private/tmp/odos-fax-live-repair-mutants/mcp/tests/inboundFax.test.ts:1:2408'
   failureType: 'testCodeFailure'
@@ -102,14 +165,14 @@ not ok 2 - OrigCSID survives the real adapter and poller into an advisory patien
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
-# tests 38
-# pass 37
+# tests 39
+# pass 38
 # fail 1
 # skipped 0
 RED exit: 1
 RESTORED git status --porcelain: ''
-# tests 38
-# pass 38
+# tests 39
+# pass 39
 # fail 0
 # skipped 0
 GREEN exit: 0
@@ -121,7 +184,7 @@ $ rg -n -F 'valueString: input.description.senderIdentifier' mcp/src/fax/inbound
 rg exit: 1 (absent required)
 not ok 1 - inbound sweep runs the five WestFax calls in order and double ingestion creates one record
   ---
-  duration_ms: 4.361834
+  duration_ms: 5.012458
   type: 'test'
   location: '/private/tmp/odos-fax-live-repair-mutants/mcp/tests/inboundFax.test.ts:1:1314'
   failureType: 'testCodeFailure'
@@ -143,7 +206,7 @@ not ok 1 - inbound sweep runs the five WestFax calls in order and double ingesti
   ...
 not ok 2 - OrigCSID survives the real adapter and poller into an advisory patient suggestion
   ---
-  duration_ms: 11.419541
+  duration_ms: 13.502167
   type: 'test'
   location: '/private/tmp/odos-fax-live-repair-mutants/mcp/tests/inboundFax.test.ts:1:2408'
   failureType: 'testCodeFailure'
@@ -163,14 +226,14 @@ not ok 2 - OrigCSID survives the real adapter and poller into an advisory patien
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
-# tests 38
-# pass 36
+# tests 39
+# pass 37
 # fail 2
 # skipped 0
 RED exit: 1
 RESTORED git status --porcelain: ''
-# tests 38
-# pass 38
+# tests 39
+# pass 39
 # fail 0
 # skipped 0
 GREEN exit: 0
@@ -183,7 +246,7 @@ $ rg -n -F 'startsWith(normalizedName)' mcp/src/fax/inbound-fax.ts
 rg exit: 0 (present required)
 not ok 3 - CSID matching requires an exact referrer name and one patient across complete results
   ---
-  duration_ms: 3.66875
+  duration_ms: 5.083833
   type: 'test'
   location: '/private/tmp/odos-fax-live-repair-mutants/mcp/tests/inboundFax.test.ts:1:4086'
   failureType: 'testCodeFailure'
@@ -206,14 +269,14 @@ not ok 3 - CSID matching requires an exact referrer name and one patient across 
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
-# tests 38
-# pass 37
+# tests 39
+# pass 38
 # fail 1
 # skipped 0
 RED exit: 1
 RESTORED git status --porcelain: ''
-# tests 38
-# pass 38
+# tests 39
+# pass 39
 # fail 0
 # skipped 0
 GREEN exit: 0
@@ -225,7 +288,7 @@ $ rg -n -F 'call?.OrigCSID' mcp/src/fax/westfax-adapter.ts
 rg exit: 1 (absent required)
 not ok 2 - OrigCSID survives the real adapter and poller into an advisory patient suggestion
   ---
-  duration_ms: 11.85225
+  duration_ms: 16.865625
   type: 'test'
   location: '/private/tmp/odos-fax-live-repair-mutants/mcp/tests/inboundFax.test.ts:1:2408'
   failureType: 'testCodeFailure'
@@ -245,9 +308,9 @@ not ok 2 - OrigCSID survives the real adapter and poller into an advisory patien
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
-not ok 24 - operator verification reads descriptions once with multipart StartDate and the production parser
+not ok 25 - operator verification reads descriptions once with multipart StartDate and the production parser
   ---
-  duration_ms: 20.3425
+  duration_ms: 24.56925
   type: 'test'
   location: '/private/tmp/odos-fax-live-repair-mutants/mcp/tests/verifyWestFaxLive.test.ts:1:322'
   failureType: 'testCodeFailure'
@@ -292,9 +355,9 @@ not ok 24 - operator verification reads descriptions once with multipart StartDa
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
-not ok 30 - WestFax descriptions capture OrigCSID independently of the sender number
+not ok 31 - WestFax descriptions capture OrigCSID independently of the sender number
   ---
-  duration_ms: 1.639
+  duration_ms: 2.166459
   type: 'test'
   location: '/private/tmp/odos-fax-live-repair-mutants/mcp/tests/westFaxAdapter.test.ts:1:5329'
   failureType: 'testCodeFailure'
@@ -314,14 +377,56 @@ not ok 30 - WestFax descriptions capture OrigCSID independently of the sender nu
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
-# tests 38
-# pass 35
+# tests 39
+# pass 36
 # fail 3
 # skipped 0
 RED exit: 1
 RESTORED git status --porcelain: ''
-# tests 38
+# tests 39
+# pass 39
+# fail 0
+# skipped 0
+GREEN exit: 0
+
+mutation-phone-priority
+$ cd mcp && node scripts/run-tests.mjs tests/westFaxAdapter.test.ts tests/inboundFax.test.ts tests/verifyWestFaxLive.test.ts
+MUTANT: phone-priority
+$ rg -n -F 'if (senderName && !referrerReferences.size)' mcp/src/fax/inbound-fax.ts
+rg exit: 1 (absent required)
+not ok 5 - an existing fax-number referrer is not suppressed by a truncated CSID name lookup
+  ---
+  duration_ms: 2.203958
+  type: 'test'
+  location: '/private/tmp/odos-fax-live-repair-mutants/mcp/tests/inboundFax.test.ts:1:6111'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + undefined
+    - {
+    -   reference: 'Patient/patient-1'
+    - }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    reference: 'Patient/patient-1'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-fax-live-repair-mutants/mcp/tests/inboundFax.test.ts:184:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# tests 39
 # pass 38
+# fail 1
+# skipped 0
+RED exit: 1
+RESTORED git status --porcelain: ''
+# tests 39
+# pass 39
 # fail 0
 # skipped 0
 GREEN exit: 0
@@ -332,9 +437,9 @@ MUTANT: reference
 $ rg -n -F 'row.Reference' mcp/src/fax/westfax-adapter.ts
 348:      ...(stringValue(row.Reference) ? { reference: stringValue(row.Reference) } : {}),
 rg exit: 0 (present required)
-not ok 24 - operator verification reads descriptions once with multipart StartDate and the production parser
+not ok 25 - operator verification reads descriptions once with multipart StartDate and the production parser
   ---
-  duration_ms: 18.709333
+  duration_ms: 22.789917
   type: 'test'
   location: '/private/tmp/odos-fax-live-repair-mutants/mcp/tests/verifyWestFaxLive.test.ts:1:322'
   failureType: 'testCodeFailure'
@@ -382,9 +487,9 @@ not ok 24 - operator verification reads descriptions once with multipart StartDa
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
-not ok 31 - WestFax descriptions ignore an unexpected Reference field
+not ok 32 - WestFax descriptions ignore an unexpected Reference field
   ---
-  duration_ms: 2.232167
+  duration_ms: 2.517375
   type: 'test'
   location: '/private/tmp/odos-fax-live-repair-mutants/mcp/tests/westFaxAdapter.test.ts:1:6009'
   failureType: 'testCodeFailure'
@@ -403,14 +508,14 @@ not ok 31 - WestFax descriptions ignore an unexpected Reference field
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
-# tests 38
-# pass 36
+# tests 39
+# pass 37
 # fail 2
 # skipped 0
 RED exit: 1
 RESTORED git status --porcelain: ''
-# tests 38
-# pass 38
+# tests 39
+# pass 39
 # fail 0
 # skipped 0
 GREEN exit: 0
@@ -420,9 +525,9 @@ $ cd mcp && node scripts/run-tests.mjs tests/westFaxAdapter.test.ts tests/inboun
 MUTANT: startdate
 $ rg -n -F 'form.set("StartDate"' mcp/src/fax/westfax-adapter.ts
 rg exit: 1 (absent required)
-not ok 24 - operator verification reads descriptions once with multipart StartDate and the production parser
+not ok 25 - operator verification reads descriptions once with multipart StartDate and the production parser
   ---
-  duration_ms: 15.047208
+  duration_ms: 23.429958
   type: 'test'
   location: '/private/tmp/odos-fax-live-repair-mutants/mcp/tests/verifyWestFaxLive.test.ts:1:322'
   failureType: 'testCodeFailure'
@@ -443,9 +548,9 @@ not ok 24 - operator verification reads descriptions once with multipart StartDa
     async Test.run (node:internal/test_runner/test:1054:7)
     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
   ...
-not ok 29 - WestFax adapter performs each documented inbound call with the required multipart fields
+not ok 30 - WestFax adapter performs each documented inbound call with the required multipart fields
   ---
-  duration_ms: 2.514167
+  duration_ms: 4.454917
   type: 'test'
   location: '/private/tmp/odos-fax-live-repair-mutants/mcp/tests/westFaxAdapter.test.ts:1:2756'
   failureType: 'testCodeFailure'
@@ -466,9 +571,9 @@ not ok 29 - WestFax adapter performs each documented inbound call with the requi
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
-not ok 32 - WestFax lookback configuration bounds every inbound request and advances with the clock
+not ok 33 - WestFax lookback configuration bounds every inbound request and advances with the clock
   ---
-  duration_ms: 0.81675
+  duration_ms: 1.396417
   type: 'test'
   location: '/private/tmp/odos-fax-live-repair-mutants/mcp/tests/westFaxAdapter.test.ts:1:6505'
   failureType: 'testCodeFailure'
@@ -501,14 +606,14 @@ not ok 32 - WestFax lookback configuration bounds every inbound request and adva
     async Test.run (node:internal/test_runner/test:1054:7)
     async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
-# tests 38
-# pass 35
+# tests 39
+# pass 36
 # fail 3
 # skipped 0
 RED exit: 1
 RESTORED git status --porcelain: ''
-# tests 38
-# pass 38
+# tests 39
+# pass 39
 # fail 0
 # skipped 0
 GREEN exit: 0

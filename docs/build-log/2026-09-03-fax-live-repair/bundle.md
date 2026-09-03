@@ -1,7 +1,7 @@
 # WestFax inbound repair — author evidence
 
 Status: needs independent Opus evaluation and operator post-merge live verification.
-Tested source commit: `c35877f452362755cf8af54e84bef70b40de31dd`.
+Tested source commit: `1556893ff7df84078fade4cb102eb4f95e5f9689`.
 Base: `bc86574fd41fe7f0a528d9619cda44cf8e4d0c0a`.
 Branch: `drbang-iva/fax-live-repair`.
 Author worktree: `/Users/ericr.bang/GitHub/odos-fax-live-repair`.
@@ -14,8 +14,8 @@ Filter=None/Retrieved transition, outbound fax, or Desk UI changes were made.
 
 The parser drops Reference and retains FaxCallInfoList[0].OrigCSID as senderIdentifier.
 The saved fax stores it in the existing caller-metadata extension. The default
-suggestion path accepts exact normalized Practitioner/Organization names alongside
-the existing fax-number lookup, then requires one patient across the complete
+suggestion path uses exact normalized Practitioner/Organization names only when
+the existing fax-number lookup finds no referrer, then requires one patient across the complete
 matching inbound-referral results. It remains advisory: no DocumentReference.subject
 is assigned. A CSID alone without an existing matching referral produces no suggestion.
 Truncated directories/referrals and multiple patient candidates produce no suggestion.
@@ -43,9 +43,9 @@ Exact commands and verbatim output excerpts: [verification.txt](verification.txt
 | --- | --- |
 | Original four fax suites at base | 40 passed, 0 failed |
 | Corrected adapter tests before repair | 6 passed, 4 failed |
-| Final fax + script + search contract + fixture guard | 55 passed, 0 failed, 0 skipped |
+| Final fax + script + search contract + fixture guard | 56 passed, 0 failed, 0 skipped |
 | Fax/supporting tests plus read-grant inventory tests before fixture value correction | 68 passed, 0 failed |
-| `cd mcp && node scripts/run-tests.mjs` | 4,108 tests: 4,053 passed, 0 failed, 55 skipped; exit 1 |
+| `cd mcp && node scripts/run-tests.mjs` | 4,109 tests: 4,054 passed, 0 failed, 55 skipped; exit 1 |
 | `cd mcp && npm run build` | `tsc`, exit 0 |
 
 The canonical runner deliberately exits 1 because 40 of the skipped tests require
@@ -54,20 +54,31 @@ authorization tests. WestFax was never contacted; every WestFax test used synthe
 responses and substituted fetch at the transport boundary. Real credentials were
 not read, requested, or used.
 
+The first post-review full run had one communications-suite `fetch failed` (4,053
+passed, 1 failed, 55 skipped). The unchanged communications suite passed 49/49 on
+recheck; the subsequent full canonical run above had zero failures. Both results
+are retained in verification.txt.
+
+Greptile identified that incomplete CSID searches could erase a valid fax-number
+suggestion. The regression test failed before the fix (25 passed, 1 failed), then
+passed with CSID restricted to fallback when no phone referrer matches. The script
+boundary finding was adjudicated using the explicit task-specific operator authorization.
+
 ## Mandate 17
 
 Mutations ran in `/tmp/odos-fax-live-repair-mutants` detached at the tested source SHA.
 Each mutation was checked with `rg` before execution; each was restored and
-`git status --porcelain` was empty before GREEN. Each run covered 38 tests.
+`git status --porcelain` was empty before GREEN. Each run covered 39 tests.
 
 | Mutation | Confirmed change | RED | Restored GREEN |
 | --- | --- | --- | --- |
-| StartDate removed | request field absent, rg exit 1 | 35 passed, 3 failed | 38 passed, 0 failed |
-| OrigCSID extraction removed | extraction absent, rg exit 1 | 35 passed, 3 failed | 38 passed, 0 failed |
-| Reference parsing reintroduced | parser present, rg exit 0 | 36 passed, 2 failed | 38 passed, 0 failed |
-| CSID argument removed from poller | argument absent, rg exit 1 | 37 passed, 1 failed | 38 passed, 0 failed |
-| CSID persistence removed | stored value absent, rg exit 1 | 36 passed, 2 failed | 38 passed, 0 failed |
-| Exact-name guard weakened to prefix match | prefix check present, rg exit 0 | 37 passed, 1 failed | 38 passed, 0 failed |
+| StartDate removed | request field absent, rg exit 1 | 36 passed, 3 failed | 39 passed, 0 failed |
+| OrigCSID extraction removed | extraction absent, rg exit 1 | 36 passed, 3 failed | 39 passed, 0 failed |
+| Reference parsing reintroduced | parser present, rg exit 0 | 37 passed, 2 failed | 39 passed, 0 failed |
+| CSID argument removed from poller | argument absent, rg exit 1 | 38 passed, 1 failed | 39 passed, 0 failed |
+| CSID persistence removed | stored value absent, rg exit 1 | 37 passed, 2 failed | 39 passed, 0 failed |
+| Exact-name guard weakened to prefix match | prefix check present, rg exit 0 | 38 passed, 1 failed | 39 passed, 0 failed |
+| Fax-number precedence removed | fallback condition absent, rg exit 1 | 38 passed, 1 failed | 39 passed, 0 failed |
 
 The dynamic search-query inventory validates declared parameter names, but omission
 of an individual query variant is not enforced by that inventory. It is not claimed
@@ -98,6 +109,11 @@ Reference exists only in explicit negative-test inputs.
 ```
 
 ## Follow-up and limits
+
+Task-specific operator authorization in ODOS-FAX-LIVE-REPAIR explicitly requires a
+read-only live descriptions script and reserves execution to the operator after merge.
+That human-run check is authorized by the brief; the repository's local-synthetic
+boundary continues to apply to all agent-run proof. No agent live call is authorized.
 
 The operator runs `cd mcp && node scripts/verify-westfax-live.mjs` after merge, with
 WESTFAX_USERNAME, WESTFAX_PASSWORD, and WESTFAX_PRODUCT_ID already supplied through
