@@ -231,11 +231,12 @@ const PRACTICE_READ_RESOURCE_RULES: OdosResourceRule[] = PRACTICE_READ_RESOURCE_
   (resourceType) => ({ resourceType, interactions: READ_INTERACTIONS, scope: { kind: "practice" } }),
 );
 
+// Like the Provider constraint, this relies on the Undo endpoint for the unsigned gate.
 const STAFF_OBSERVATION_WRITE_CONSTRAINTS: WriteConstraintDeclaration[] = [
   {
     description: "Staff and scribe findings remain preliminary until a Provider attests them.",
     expression:
-      "(%before.exists().not() implies status = 'preliminary') and (%before.exists() implies (%before.status = 'preliminary' and (status = 'preliminary' or status = 'entered-in-error')))",
+      "(%before.exists().not() implies status = 'preliminary') and (%before.exists() implies ((%before.status = 'preliminary' and (status = 'preliminary' or status = 'entered-in-error')) or (%before.status = 'entered-in-error' and status = 'preliminary' and ($this is Observation))))",
   },
 ];
 

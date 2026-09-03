@@ -605,6 +605,23 @@ test("real Provider and Staff Observation writeConstraints permit voiding a prel
   }
 });
 
+test("the Observation restore edge does not widen DiagnosticReport writes for either role", () => {
+  for (const roleId of ["provider", "staff"] as const) {
+    const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
+    const reportWrite = policy.resource?.find((rule) =>
+      rule.resourceType === "DiagnosticReport" && rule.interaction?.includes("update"));
+    assert.ok(reportWrite?.writeConstraint?.length);
+    const before = { resourceType: "DiagnosticReport", status: "entered-in-error", code: { text: "Synthetic report" } };
+    for (const status of FHIR_OBSERVATION_STATUSES) {
+      const after = { ...before, status };
+      assert.equal(reportWrite.writeConstraint.every((constraint) => {
+        const result = fhirpath.evaluate(after, constraint.expression ?? "", { before, after }, r4Model);
+        return result.length === 1 && result[0] === true;
+      }), false, `${roleId} DiagnosticReport entered-in-error -> ${status} must remain refused`);
+    }
+  }
+});
+
 test("real Provider and Staff Observation writeConstraints allow exactly the status machine's transitions and nothing more", () => {
   const befores: ObservationStatusBefore[] = [undefined, ...FHIR_OBSERVATION_STATUSES];
   const key = (from: ObservationStatusBefore, to: string): string => `${from ?? "(none)"} -> ${to}`;
@@ -694,6 +711,7 @@ test("Provider and Staff compile to one order-independent policy without changin
         { resourceType: "Observation", status: "final", code: { text: "synthetic" } },
         constraint.expression ?? "",
         { before: [], after: { resourceType: "Observation", status: "final" } },
+        r4Model,
       ));
     }
   }

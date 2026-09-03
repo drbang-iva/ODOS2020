@@ -33,7 +33,7 @@ import { searchAll } from "../src/fhir-search.js";
 import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../src/fhir/ophthalmology/codeBindings.js";
 import { TEST_FHIR_AUDIT_RECORDER } from "./fhirAuditTestStub.js";
 import { createAuthenticatedFhirClient, requireMedplumAdmin } from "./integration-helpers.js";
-import { cleanupReferences, createRoleClient } from "./liveRoleClient.js";
+import { cleanupReferences, createRoleClient, fhirRequest } from "./liveRoleClient.js";
 
 /**
  * The encounter Undo ledger, proven against the AccessPolicy Medplum actually enforces.
@@ -201,18 +201,7 @@ test("a clear persists the encounter undo ledger under the synced Provider and S
         assert.deepEqual((read.body as { ledger: EncounterUndoLedger }).ledger, persisted.ledger, `${roleId} reads the ledger it wrote`);
 
         // --- Undo, end to end: the value comes back, the slot is gone, the same row is reused --
-        // TODO, deliberately visible: on real Medplum the restore is refused today. Both roles'
-        // Observation write constraints (`policy/observation-status-machine.ts`, `%before.status
-        // = 'preliminary'` for Staff) have no transition out of `entered-in-error`, so the PUT
-        // that puts the value back answers 403 — and on this non-atomic stack the Encounter and
-        // the ledger PUTs beside it still apply, clearing the slot. Whether undo restores through
-        // the status machine or the machine gains a pre-sign restore edge changes canon and is
-        // the operator's decision (decision 2026-09-02, undo ledger never granted, follow-up).
-        // node:test runs a todo subtest and reports it without failing the lane; the day the
-        // restore is granted, this flips to `ok … # TODO` on its own and the marker comes off.
-        await roleTest.test(`${roleId} undoes the clear and the VA value is preliminary again`, {
-          todo: "restore entered-in-error → preliminary is refused by the Observation status write constraint on real Medplum",
-        }, async () => {
+        await roleTest.test(`${roleId} undoes the clear and reads the restored VA value under the same policy`, async () => {
           const undone = await handleEncounterUndoRequest(deps, {
             authHeader,
             params,
@@ -222,8 +211,10 @@ test("a clear persists the encounter undo ledger under the synced Provider and S
           const undoBody = undone.body as EncounterUndoResponse;
           assert.deepEqual(undoBody.restored, [observationReference]);
           assert.deepEqual(undoBody.skipped, []);
-          const restored = await adminFhir.read<Observation>("Observation", observation.id!);
+          const restored = await roleFhir.read<Observation>("Observation", observation.id!);
           assert.equal(restored.status, "preliminary", "undo restores the recorded prior status, not a constant");
+          assert.equal(restored.valueString, "20/20", "the same role can read the actual restored value");
+          assert.equal(restored.encounter?.reference, `Encounter/${encounterId}`);
           const afterUndo = await new FhirEncounterUndoLedgerStore(adminFhir).readRow(encounterId);
           assert.ok(afterUndo, "undo updates the one ledger row rather than deleting it");
           assert.equal(afterUndo.resource.id, persisted.resource.id, "the same Basic is reused, version-guarded");
@@ -231,6 +222,43 @@ test("a clear persists the encounter undo ledger under the synced Provider and S
           for (const provenance of await searchAll<Provenance>(adminFhir, "Provenance", { target: observationReference })) {
             track(provenance);
           }
+          roleTest.diagnostic(`${roleId}: chart -> clear -> persisted ledger -> Undo -> readable preliminary VA 20/20; slot consumed`);
+        });
+
+        await roleTest.test(`${roleId} cannot undo on a signed encounter and the refusal preserves the value and slot`, async () => {
+          const signedObservation = track(await roleFhir.create<Observation>({
+            ...observation, id: undefined, meta: undefined, status: "preliminary",
+          }));
+          const signedObservationReference = `Observation/${signedObservation.id}`;
+          const clearedAgain = await handleEncounterVoidRequest(deps, {
+            authHeader, params, body: { scope: "observation", observationReference: signedObservationReference },
+          });
+          assert.equal(clearedAgain.status, 200, JSON.stringify(clearedAgain.body));
+          for (const provenance of await searchAll<Provenance>(adminFhir, "Provenance", { target: signedObservationReference })) {
+            track(provenance);
+          }
+          const beforeSign = await roleFhir.read<Encounter>("Encounter", encounterId);
+          const signerToken = roleId === "provider" ? token : (await createRoleClient({
+            baseUrl, roleId: "provider", policyReference: `AccessPolicy/${rolePolicies.get("provider")!.id}`,
+            patientReference, practitionerReference, projectId, runId: `signer-${runId}`, adminToken, track,
+          })).token;
+          const signed = await fhirRequest<Encounter>(baseUrl, signerToken, "PUT", `Encounter/${encounterId}`, {
+            ...beforeSign, status: "finished",
+          });
+          assert.equal(signed.status, 200, `Set up signed Encounter: ${signed.summary}`);
+          const beforeUndo = await new FhirEncounterUndoLedgerStore(roleFhir).readRow(encounterId);
+          assert.ok(beforeUndo?.ledger.sections[VA_SECTION_KEY]);
+          const refused = await handleEncounterUndoRequest(deps, {
+            authHeader, params, body: { scope: "section", sectionKey: VA_SECTION_KEY },
+          });
+          assert.equal(refused.status, 409, `${roleId} signed Undo: ${JSON.stringify(refused.body)}`);
+          assert.equal((refused.body as { code: string }).code, "encounter-closed");
+          const after = await roleFhir.read<Observation>("Observation", signedObservation.id!);
+          assert.equal(after.status, "entered-in-error", "signed endpoint must not restore the value");
+          const afterRefusal = await new FhirEncounterUndoLedgerStore(roleFhir).readRow(encounterId);
+          assert.deepEqual(afterRefusal, beforeUndo, "signed refusal must not consume or rewrite the slot");
+          assert.equal((await roleFhir.read<Encounter>("Encounter", encounterId)).meta?.versionId, signed.body?.meta?.versionId);
+          roleTest.diagnostic(`${roleId}: finished encounter -> Undo HTTP 409 encounter-closed; value still voided; ledger unchanged`);
         });
       });
     }

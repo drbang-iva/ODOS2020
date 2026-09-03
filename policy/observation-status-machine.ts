@@ -70,6 +70,18 @@ export const ALLOWED_OBSERVATION_STATUS_TRANSITIONS: readonly ObservationStatusT
     description: "Clinician attestation.",
   },
   {
+    from: "entered-in-error",
+    to: "preliminary",
+    actorRole: "scribe",
+    description: "Scribe pre-sign restore; encounter sign gate is enforced by the Undo endpoint.",
+  },
+  {
+    from: "entered-in-error",
+    to: "preliminary",
+    actorRole: "clinician",
+    description: "Clinician pre-sign restore; encounter sign gate is enforced by the Undo endpoint.",
+  },
+  {
     from: "final",
     to: "amended",
     actorRole: "clinician",
@@ -119,6 +131,9 @@ export const ALLOWED_OBSERVATION_STATUS_TRANSITIONS: readonly ObservationStatusT
   },
 ] as const;
 
+// Medplum 5.1.30 writeConstraint resolve() exposes no Encounter.status (real-server probe).
+// Only the Undo endpoint enforces the unsigned gate; direct FHIR writes with the same
+// credentials can restore an Observation on a signed chart. This policy cannot prevent that.
 export const OBSERVATION_STATUS_WRITE_CONSTRAINT_EXPRESSION = [
   "(%before.exists().not() implies status = 'preliminary')",
   "and (%before.exists() implies (",
@@ -126,6 +141,7 @@ export const OBSERVATION_STATUS_WRITE_CONSTRAINT_EXPRESSION = [
   "or (%before.status = 'final' and (status = 'amended' or status = 'corrected' or status = 'entered-in-error'))",
   "or (%before.status = 'amended' and (status = 'amended' or status = 'corrected' or status = 'entered-in-error'))",
   "or (%before.status = 'corrected' and (status = 'corrected' or status = 'entered-in-error'))",
+  "or (%before.status = 'entered-in-error' and status = 'preliminary' and ($this is Observation))",
   "))",
 ].join(" ");
 
@@ -155,7 +171,7 @@ export function assertObservationStatusTransition(input: {
   if (transitions.length === 0) {
     const reason =
       input.from === "entered-in-error"
-        ? "entered-in-error is terminal; prior versions remain available through FHIR vread."
+        ? "entered-in-error permits only the pre-sign restore to preliminary; signed charts remain closed at the Undo endpoint."
         : "ledger rows 19/20 allow only the v0.5c scribe-attestation-amendment graph.";
     throw new ObservationStatusTransitionError({ from: input.from, to: input.to, reason });
   }
