@@ -1,0 +1,277 @@
+{
+  "method": "One-off TypeScript AST scan of imported modules for all register*Routes(app, ...) calls. Includes literal app methods, get/post(app, path, ...) wrappers, and static template prefixes. Manual inspection of helper-based modules confirmed these prefixes. Does not audit direct index.ts routes, nested routers, production Caddy, or runtime health.",
+  "rows": [
+    {
+      "registration": "registerGhlWebhookRoutes",
+      "indexLine": 5794,
+      "file": "mcp/src/comms/ghl-routes.ts",
+      "routePatterns": 1,
+      "prefixes": [
+        "/comms"
+      ],
+      "unproxiedPatterns": [
+        "/comms/ghl/inbound"
+      ]
+    },
+    {
+      "registration": "registerTwilioWebhookRoutes",
+      "indexLine": 5832,
+      "file": "mcp/src/comms/twilio-routes.ts",
+      "routePatterns": 6,
+      "prefixes": [
+        "/comms"
+      ],
+      "unproxiedPatterns": [
+        "/comms/twilio/inbound",
+        "/comms/twilio/status",
+        "/comms/twilio/voice/inbound",
+        "/comms/twilio/voice/status",
+        "/comms/twilio/voice/recording",
+        "/comms/twilio/voice/transcription"
+      ]
+    },
+    {
+      "registration": "registerCommsApiRoutes",
+      "indexLine": 5858,
+      "file": "mcp/src/comms/comms-api.ts",
+      "routePatterns": 16,
+      "prefixes": [
+        "/communications"
+      ],
+      "unproxiedPatterns": [
+        "/communications/education",
+        "/communications/education/enrollments",
+        "/communications/education/enrollments/:enrollmentId",
+        "/communications/education/enrollments/:enrollmentId/transitions",
+        "/communications/education/enrollments/:enrollmentId/resume",
+        "/communications/education/enrollments",
+        "/communications/education/:educationId",
+        "/communications/education/dispatch",
+        "/communications/opt-out",
+        "/communications/opt-out/clear",
+        "/communications/conversations",
+        "/communications/messages",
+        "/communications/calls",
+        "/communications/calls/:callId",
+        "/communications/calls",
+        "/communications/recordings/:recordingId"
+      ]
+    },
+    {
+      "registration": "registerDiagnosisCarryForwardRoutes",
+      "indexLine": 6368,
+      "file": "mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts",
+      "routePatterns": 2,
+      "prefixes": [
+        "/clinical-graph"
+      ],
+      "unproxiedPatterns": []
+    },
+    {
+      "registration": "registerEncounterVoidRoutes",
+      "indexLine": 6607,
+      "file": "mcp/src/clinical-graph/encounter-void-routes.ts",
+      "routePatterns": 1,
+      "prefixes": [
+        "/clinical-graph"
+      ],
+      "unproxiedPatterns": []
+    },
+    {
+      "registration": "registerManualProcedureChargeRoutes",
+      "indexLine": 6961,
+      "file": "mcp/src/clinical-graph/manual-procedure-charge-endpoint.ts",
+      "routePatterns": 1,
+      "prefixes": [
+        "/clinical-graph"
+      ],
+      "unproxiedPatterns": []
+    },
+    {
+      "registration": "registerPretestVitalsRoutes",
+      "indexLine": 7334,
+      "file": "mcp/src/clinical-graph/pretest-endpoint.ts",
+      "routePatterns": 0,
+      "prefixes": [],
+      "unproxiedPatterns": []
+    },
+    {
+      "registration": "registerPatientPaymentRoutes",
+      "indexLine": 7592,
+      "file": "mcp/src/payments/payment-routes.ts",
+      "routePatterns": 8,
+      "prefixes": [
+        "/payments"
+      ],
+      "unproxiedPatterns": []
+    },
+    {
+      "registration": "registerCommercialEngineRoutes",
+      "indexLine": 7597,
+      "file": "mcp/src/commercial-engine/package-definition-endpoint.ts",
+      "routePatterns": 14,
+      "prefixes": [
+        "/commercial-engine"
+      ],
+      "unproxiedPatterns": []
+    },
+    {
+      "registration": "registerSeriesTrackerRoutes",
+      "indexLine": 7602,
+      "file": "mcp/src/series-tracker/series-tracker-endpoint.ts",
+      "routePatterns": 8,
+      "prefixes": [
+        "/series-tracker"
+      ],
+      "unproxiedPatterns": []
+    },
+    {
+      "registration": "registerSchedulingResourceRoutes",
+      "indexLine": 7608,
+      "file": "mcp/src/scheduling/scheduling-resource-routes.ts",
+      "routePatterns": 5,
+      "prefixes": [
+        "/scheduling"
+      ],
+      "unproxiedPatterns": []
+    },
+    {
+      "registration": "registerTrackedLinkRoutes",
+      "indexLine": 7613,
+      "file": "mcp/src/comms/tracked-links.ts",
+      "routePatterns": 1,
+      "prefixes": [
+        "/comms"
+      ],
+      "unproxiedPatterns": [
+        "/comms/r/:token"
+      ]
+    },
+    {
+      "registration": "registerLabOrderRoutes",
+      "indexLine": 7617,
+      "file": "mcp/src/lab-orders/lab-order-routes.ts",
+      "routePatterns": 9,
+      "prefixes": [
+        "/lab-orders"
+      ],
+      "unproxiedPatterns": []
+    },
+    {
+      "registration": "registerPatientInsuranceRoutes",
+      "indexLine": 7621,
+      "file": "mcp/src/insurance/patient-insurance-routes.ts",
+      "routePatterns": 4,
+      "prefixes": [
+        "/insurance"
+      ],
+      "unproxiedPatterns": []
+    },
+    {
+      "registration": "registerReportingRoutes",
+      "indexLine": 7627,
+      "file": "mcp/src/reporting/reporting-routes.ts",
+      "routePatterns": 11,
+      "prefixes": [
+        "/reports",
+        "/claims",
+        "/payments",
+        "/practice",
+        "/statements"
+      ],
+      "unproxiedPatterns": []
+    },
+    {
+      "registration": "registerDeskRoutes",
+      "indexLine": 7654,
+      "file": "mcp/src/desk/desk-routes.ts",
+      "routePatterns": 7,
+      "prefixes": [
+        "/desk"
+      ],
+      "unproxiedPatterns": []
+    },
+    {
+      "registration": "registerStaffPermissionRoutes",
+      "indexLine": 7749,
+      "file": "mcp/src/desk/staff-permissions.ts",
+      "routePatterns": 2,
+      "prefixes": [
+        "/desk"
+      ],
+      "unproxiedPatterns": []
+    },
+    {
+      "registration": "registerClinicRoutes",
+      "indexLine": 7856,
+      "file": "mcp/src/clinic/clinic-routes.ts",
+      "routePatterns": 8,
+      "prefixes": [
+        "/clinic"
+      ],
+      "unproxiedPatterns": []
+    },
+    {
+      "registration": "registerOfficeRoutes",
+      "indexLine": 7864,
+      "file": "mcp/src/office/office-routes.ts",
+      "routePatterns": 4,
+      "prefixes": [
+        "/desk",
+        "/clinic"
+      ],
+      "unproxiedPatterns": []
+    },
+    {
+      "registration": "registerWatcherRoutes",
+      "indexLine": 7868,
+      "file": "mcp/src/watchers/watcher-routes.ts",
+      "routePatterns": 4,
+      "prefixes": [
+        "/watchers"
+      ],
+      "unproxiedPatterns": []
+    },
+    {
+      "registration": "registerClaimFollowUpRoutes",
+      "indexLine": 7877,
+      "file": "mcp/src/claims/claim-follow-up-routes.ts",
+      "routePatterns": 8,
+      "prefixes": [
+        "/claims"
+      ],
+      "unproxiedPatterns": []
+    },
+    {
+      "registration": "registerWenoSearchRoutes",
+      "indexLine": 7885,
+      "file": "mcp/src/weno/weno-search-routes.ts",
+      "routePatterns": 7,
+      "prefixes": [
+        "/weno"
+      ],
+      "unproxiedPatterns": []
+    },
+    {
+      "registration": "registerReferralRoutes",
+      "indexLine": 7896,
+      "file": "mcp/src/referral/referral-routes.ts",
+      "routePatterns": 16,
+      "prefixes": [
+        "/referrals",
+        "/correspondence"
+      ],
+      "unproxiedPatterns": []
+    },
+    {
+      "registration": "registerFaxRoutes",
+      "indexLine": 7905,
+      "file": "mcp/src/fax/fax-routes.ts",
+      "routePatterns": 5,
+      "prefixes": [
+        "/fax"
+      ],
+      "unproxiedPatterns": []
+    }
+  ]
+}

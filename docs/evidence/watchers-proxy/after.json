@@ -1,0 +1,82 @@
+[
+  {
+    "mode": "fetch",
+    "method": "GET",
+    "path": "/watchers/work",
+    "status": 401,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "error": "Authentication required for watcher alerts."
+    }
+  },
+  {
+    "mode": "fetch",
+    "method": "GET",
+    "path": "/watchers/frontdesk",
+    "status": 401,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "error": "Authentication required for watcher alerts."
+    }
+  },
+  {
+    "mode": "fetch",
+    "method": "GET",
+    "path": "/watchers/today",
+    "status": 401,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "error": "Authentication required for watcher alerts."
+    }
+  },
+  {
+    "mode": "fetch",
+    "method": "POST",
+    "path": "/watchers/tasks/proxy-proof/action",
+    "status": 401,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "error": "Authentication required for watcher alerts."
+    }
+  },
+  {
+    "mode": "navigation",
+    "method": "GET",
+    "path": "/watchers/work",
+    "status": 401,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "error": "Authentication required for watcher alerts."
+    }
+  },
+  {
+    "mode": "navigation",
+    "method": "GET",
+    "path": "/watchers/frontdesk",
+    "status": 401,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "error": "Authentication required for watcher alerts."
+    }
+  },
+  {
+    "mode": "navigation",
+    "method": "GET",
+    "path": "/watchers/today",
+    "status": 401,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "error": "Authentication required for watcher alerts."
+    }
+  },
+  {
+    "mode": "navigation",
+    "method": "POST",
+    "path": "/watchers/tasks/proxy-proof/action",
+    "status": 401,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "error": "Authentication required for watcher alerts."
+    }
+  }
+]
