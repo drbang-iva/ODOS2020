@@ -216,7 +216,7 @@ export function deriveFollowUpAnswerPrefills(
     for (const priorAnswer of priorAnswers) {
       if (priorAnswer.templateKey !== template.complaint || priorAnswer.value.kind !== "tri-state" ||
         !listSections.has(priorAnswer.sectionId)) continue;
-      const id = `history-${complaint.id}-${priorAnswer.sectionId}-${priorAnswer.optionCode ?? "value"}`;
+      const id = historyAnswerId(complaint.id, priorAnswer.sectionId, priorAnswer.optionCode, priorAnswer.eye);
       if (existingIds.has(id)) continue;
       prefills.set(id, {
         id,
@@ -622,6 +622,7 @@ function validateTemplateAnswers(answers: HistoryTemplateAnswer[], complaints: E
     if (answer.value.kind !== expectedKind) return `History answer ${answer.id} has the wrong value type for ${section.type}.`;
     if (section.catalog && !answer.optionCode) return `History answer ${answer.id} is missing its catalog option.`;
     if (!section.catalog && answer.optionCode) return `History answer ${answer.id} cannot name a catalog option.`;
+    if (section.per_eye && !answer.eye) return `History answer ${answer.id} requires an eye for this section.`;
     if (answer.eye && !section.per_eye) return `History answer ${answer.id} cannot name an eye for this section.`;
   }
   return undefined;
@@ -685,6 +686,10 @@ function snakeCase(value: string): string {
 
 function normalizePlanText(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function historyAnswerId(complaintId: string, sectionId: string, optionCode?: string, eye?: HistoryTemplateAnswer["eye"]): string {
+  return `history-${complaintId}-${sectionId}-${optionCode ?? "value"}${eye ? `-${eye}` : ""}`;
 }
 
 function staffMay(role: PracticeRoleId, action: "chart.read" | "chart.write"): boolean {

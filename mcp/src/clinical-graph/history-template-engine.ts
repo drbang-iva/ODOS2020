@@ -272,14 +272,17 @@ function selectionDisplay(catalogName: string, answer: HistoryTemplateAnswer | u
 
 function catalogValues(sectionValue: HistoryTemplateSection | undefined, answers: HistoryTemplateAnswer[], withEye: boolean): string {
   if (!sectionValue?.catalog) return "";
-  const byCode = new Map(catalog(sectionValue.catalog).map((option) => [option.code, option.display]));
-  return answers
-    .filter((answer) => answer.sectionId === sectionValue.id && answer.optionCode && answer.value.kind === "tri-state" && answer.value.status === "positive")
-    .flatMap((answer) => {
-      const display = byCode.get(answer.optionCode!);
-      return display ? [`${display}${withEye && answer.eye ? ` ${answer.eye}` : ""}`] : [];
-    })
-    .join(", ");
+  const positive = answers.filter((answer) =>
+    answer.sectionId === sectionValue.id && answer.optionCode && answer.value.kind === "tri-state" && answer.value.status === "positive"
+  );
+  return catalog(sectionValue.catalog).flatMap((option) => {
+    const matching = positive.filter((answer) => answer.optionCode === option.code);
+    if (!matching.length) return [];
+    if (!withEye) return [option.display];
+    const eyes = new Set(matching.flatMap((answer) => answer.eye ? [answer.eye] : []));
+    if (eyes.has("OU") || (eyes.has("OD") && eyes.has("OS"))) return [`${option.display} OU`];
+    return [...eyes].map((eye) => `${option.display} ${eye}`);
+  }).join(", ");
 }
 
 function triStateClause(

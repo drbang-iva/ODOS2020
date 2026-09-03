@@ -379,7 +379,16 @@ test("follow-up prefill carries positive and denied list answers from only the l
       templateKey: "glaucoma",
       sectionId: "current-treatment",
       optionCode: "latanoprost",
-      eye: "OU",
+      eye: "OD",
+      value: { kind: "tri-state", status: "positive" },
+    }, metadata("Encounter/prior", "2026-08-01T12:00:00.000Z")),
+    buildHistoryAnswerObservation({
+      id: "prior-latest-positive-os",
+      complaintId: "prior-c2",
+      templateKey: "glaucoma",
+      sectionId: "current-treatment",
+      optionCode: "latanoprost",
+      eye: "OS",
       value: { kind: "tri-state", status: "positive" },
     }, metadata("Encounter/prior", "2026-08-01T12:00:00.000Z")),
     buildHistoryAnswerObservation({
@@ -394,12 +403,21 @@ test("follow-up prefill carries positive and denied list answers from only the l
 
   assert.deepEqual(deriveFollowUpAnswerPrefills(complaints, observations, "Encounter/e1", []), [
     {
-      id: "history-c1-current-treatment-latanoprost",
+      id: "history-c1-current-treatment-latanoprost-OD",
       complaintId: "c1",
       templateKey: "glaucoma",
       sectionId: "current-treatment",
       optionCode: "latanoprost",
-      eye: "OU",
+      eye: "OD",
+      value: { kind: "tri-state", status: "positive" },
+    },
+    {
+      id: "history-c1-current-treatment-latanoprost-OS",
+      complaintId: "c1",
+      templateKey: "glaucoma",
+      sectionId: "current-treatment",
+      optionCode: "latanoprost",
+      eye: "OS",
       value: { kind: "tri-state", status: "positive" },
     },
     {
@@ -524,6 +542,18 @@ test("history capture enforces authority, option validation, encounter scope, an
   });
   assert.equal(wrongTemplateValue.status, 400);
   assert.match((wrongTemplateValue.body as { error: string }).error, /wrong value type/);
+  const missingTreatmentEye = await handleHpiCaptureRequest(fixture().deps, {
+    authHeader: AUTH,
+    body: {
+      ...BODY,
+      templateAnswers: [
+        { id: "answer-presentation", complaintId: "c1", templateKey: "glaucoma", sectionId: "presentation", value: { kind: "selection", code: "follow-up" } },
+        { id: "answer-treatment", complaintId: "c1", templateKey: "glaucoma", sectionId: "current-treatment", optionCode: "latanoprost", value: { kind: "tri-state", status: "positive" } },
+      ],
+    },
+  });
+  assert.equal(missingTreatmentEye.status, 400);
+  assert.match((missingTreatmentEye.body as { error: string }).error, /requires an eye/);
 });
 
 function componentValue(observation: Observation, code: string): string | undefined {

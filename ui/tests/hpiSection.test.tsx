@@ -73,6 +73,36 @@ test("one generic renderer follows the declaration and shows interval only for f
   assert.doesNotMatch(followUp, />Save(?: |<)/);
 });
 
+test("per-eye treatment flags retain distinct OD and OS answers for the same catalog option", () => {
+  const presentation = answer("presentation", undefined, { kind: "selection", code: "follow-up" });
+  const recorded: HistoryTemplateAnswer[] = [];
+  let current = [presentation];
+  const props = () => ({
+    complaintId: "complaint-1",
+    template: TEMPLATE,
+    catalogs: CATALOGS,
+    answers: current,
+    narrative: "",
+    editMode: false,
+    onChange: (next: HistoryTemplateAnswer | undefined) => {
+      if (next) recorded.push(next);
+    },
+    onRemoveTyped: () => undefined,
+  });
+  const renderer = create(<HistoryTemplateEditor {...props()} />);
+
+  act(() => renderer.root.findByProps({ "aria-label": "latanoprost OD: unasked" }).props.onClick());
+  current = [...current, recorded[0]!];
+  act(() => renderer.update(<HistoryTemplateEditor {...props()} />));
+  act(() => renderer.root.findByProps({ "aria-label": "latanoprost OS: unasked" }).props.onClick());
+
+  assert.deepEqual(recorded.map((item) => [item.id, item.eye]), [
+    ["history-complaint-1-current-treatment-latanoprost-OD", "OD"],
+    ["history-complaint-1-current-treatment-latanoprost-OS", "OS"],
+  ]);
+  renderer.unmount();
+});
+
 test("three-state chips cycle unasked to positive to negative to unasked", () => {
   assert.equal(cycleHistoryTriState(undefined), "positive");
   assert.equal(cycleHistoryTriState("positive"), "negative");

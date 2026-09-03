@@ -109,7 +109,8 @@ test("the declaration narrative composes positive and denied findings without co
     answer("presentation", undefined, { kind: "selection", code: "follow-up" }),
     answer("symptoms", "halos-around-lights", { kind: "tri-state", status: "positive" }),
     answer("symptoms", "ocular-pain", { kind: "tri-state", status: "negative" }),
-    answer("current-treatment", "latanoprost", { kind: "tri-state", status: "positive" }, "OU"),
+    answer("current-treatment", "latanoprost", { kind: "tri-state", status: "positive" }, "OD"),
+    answer("current-treatment", "latanoprost", { kind: "tri-state", status: "positive" }, "OS"),
     answer("interval", undefined, { kind: "interval", code: "same", note: "No pressure concerns" }),
     answer("presents-for", "iop-check", { kind: "tri-state", status: "positive" }),
   ];

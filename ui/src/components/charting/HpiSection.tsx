@@ -414,9 +414,9 @@ export function HistoryTemplateEditor({
     : [];
 
   function put(sectionId: string, value: HistoryAnswerValue, optionCode?: string, eye?: "OD" | "OS" | "OU") {
-    const prior = answers.find((answer) => answer.sectionId === sectionId && answer.optionCode === optionCode);
+    const prior = answers.find((answer) => answer.sectionId === sectionId && answer.optionCode === optionCode && answer.eye === eye);
     onChange({
-      id: prior?.id ?? historyAnswerId(complaintId, sectionId, optionCode),
+      id: prior?.id ?? historyAnswerId(complaintId, sectionId, optionCode, eye),
       complaintId,
       templateKey: template.complaint,
       sectionId,
@@ -427,12 +427,12 @@ export function HistoryTemplateEditor({
     }, prior);
   }
 
-  function triState(section: HistoryTemplateSection, optionCode: string) {
-    const prior = answers.find((answer) => answer.sectionId === section.id && answer.optionCode === optionCode);
+  function triState(section: HistoryTemplateSection, optionCode: string, eye?: "OD" | "OS") {
+    const prior = answers.find((answer) => answer.sectionId === section.id && answer.optionCode === optionCode && answer.eye === eye);
     const current = prior?.value.kind === "tri-state" ? prior.value.status : undefined;
     const next = cycleHistoryTriState(current);
     if (!next) onChange(undefined, prior);
-    else put(section.id, { kind: "tri-state", status: next }, optionCode, prior?.eye);
+    else put(section.id, { kind: "tri-state", status: next }, optionCode, eye);
   }
 
   return (
@@ -450,7 +450,7 @@ export function HistoryTemplateEditor({
         catalogs={catalogs}
         answers={answers}
         editMode={editMode}
-        onTriState={(optionCode) => triState(section, optionCode)}
+        onTriState={(optionCode, eye) => triState(section, optionCode, eye)}
         onPut={(value, optionCode, eye) => put(section.id, value, optionCode, eye)}
         onRemoveTyped={onRemoveTyped}
       />)}
@@ -473,19 +473,30 @@ function TemplateSection({ section, catalogs, answers, editMode, onTriState, onP
   catalogs: HistoryCatalogs;
   answers: HistoryTemplateAnswer[];
   editMode: boolean;
-  onTriState: (optionCode: string) => void;
+  onTriState: (optionCode: string, eye?: "OD" | "OS") => void;
   onPut: (value: HistoryAnswerValue, optionCode?: string, eye?: "OD" | "OS" | "OU") => void;
   onRemoveTyped: (answer: HistoryTemplateAnswer, label: string) => void;
 }) {
   const answer = answers.find((candidate) => candidate.sectionId === section.id && !candidate.optionCode);
   if ((section.type === "symptoms" || section.type === "quality" || section.type === "risk_factors" || section.type === "treatment" || section.type === "presents_for") && section.catalog) {
+    if (section.per_eye) {
+      return <TemplateField label={section.label} required={section.required}>
+        <div className="space-y-2">{(catalogs[section.catalog] ?? []).map((option) => <div key={option.code} className="flex flex-wrap items-center gap-2">
+          <span className="odos-hpi-muted min-w-36 text-sm">{option.display}</span>
+          {(["OD", "OS"] as const).map((eye) => {
+            const selected = answers.find((candidate) => candidate.sectionId === section.id && candidate.optionCode === option.code && candidate.eye === eye);
+            const state = selected?.value.kind === "tri-state" ? selected.value.status : undefined;
+            return <button key={eye} type="button" aria-label={`${option.display} ${eye}: ${state ?? "unasked"}`} aria-pressed={state === "positive"} className={chipClass(state)} onClick={() => onTriState(option.code, eye)}>{state === "negative" ? `no ${eye}` : eye}</button>;
+          })}
+        </div>)}</div>
+      </TemplateField>;
+    }
     return <TemplateField label={section.label} required={section.required}>
       <div className="flex flex-wrap gap-2">{(catalogs[section.catalog] ?? []).map((option) => {
         const selected = answers.find((candidate) => candidate.sectionId === section.id && candidate.optionCode === option.code);
         const state = selected?.value.kind === "tri-state" ? selected.value.status : undefined;
         return <span key={option.code} className="inline-flex items-center gap-1">
           <button type="button" aria-label={`${option.display}: ${state ?? "unasked"}`} aria-pressed={state === "positive"} className={chipClass(state)} onClick={() => onTriState(option.code)}>{state === "negative" ? `no ${option.display}` : option.display}</button>
-          {section.per_eye && state === "positive" && <select aria-label={`${option.display} eye`} className="sidebar-input !w-auto !py-1 text-xs" value={selected?.eye ?? "OU"} onChange={(event) => onPut({ kind: "tri-state", status: "positive" }, option.code, event.target.value as "OD" | "OS" | "OU")}><option>OD</option><option>OS</option><option>OU</option></select>}
         </span>;
       })}</div>
     </TemplateField>;
@@ -593,8 +604,8 @@ function stripObservationReference(answer: HistoryTemplateAnswer): Omit<HistoryT
   return persisted;
 }
 
-function historyAnswerId(complaintId: string, sectionId: string, optionCode = "value"): string {
-  return `history-${complaintId}-${sectionId}-${optionCode}`.replace(/[^A-Za-z0-9.-]/g, "-").slice(0, 180);
+function historyAnswerId(complaintId: string, sectionId: string, optionCode = "value", eye?: "OD" | "OS" | "OU"): string {
+  return `history-${complaintId}-${sectionId}-${optionCode}${eye ? `-${eye}` : ""}`.replace(/[^A-Za-z0-9.-]/g, "-").slice(0, 180);
 }
 
 function chipClass(state: HistoryTriState | undefined): string {
