@@ -1,14 +1,18 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Basic, Bundle, Encounter, Observation, Provenance, Resource } from "@medplum/fhirtypes";
+import type { Basic, Bundle, Encounter, Observation, Provenance, Resource, ServiceRequest } from "@medplum/fhirtypes";
 import type { PracticeRoleId } from "../src/authz/roles.js";
 import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../src/fhir/ophthalmology/codeBindings.js";
 import { buildEncounterComplaintResource } from "../src/clinical-graph/encounter-complaint-store.js";
 import { buildHpiFindingDefinition } from "../src/clinical-graph/hpi-definition.js";
+import { buildHistoryAnswerObservation, parseHistoryAnswerObservation } from "../src/clinical-graph/history-answer-observation.js";
 import {
   HPI_OBSERVATION_IDENTIFIER_SYSTEM,
+  deriveFollowUpAnswerPrefills,
+  deriveLastPlanPrefills,
   handleHpiCaptureRequest,
   handleHpiDefinitionRequest,
+  handleHpiRecordRequest,
   type HpiEndpointDeps,
 } from "../src/clinical-graph/hpi-endpoint.js";
 import { buildExamOverviewProjection } from "../src/clinical-graph/exam-overview-projection.js";
@@ -199,6 +203,10 @@ test("saving two complaints refreshes exactly one live hpi_ros Observation for t
   setup.basics.splice(1);
 
   assert.equal((await handleHpiCaptureRequest(setup.deps, { authHeader: AUTH, body: BODY })).status, 200);
+  const firstHistoryId = setup.observations.find((observation) =>
+    observation.status !== "entered-in-error" && observation.code.coding?.some((coding) => coding.code === "hpi_ros")
+  )?.id;
+  assert.ok(firstHistoryId);
   setup.basics.push({ ...buildEncounterComplaintResource(COMPLAINTS[1]!), id: "basic-2" });
   assert.equal((await handleHpiCaptureRequest(setup.deps, { authHeader: AUTH, body: BODY })).status, 200);
 
@@ -208,7 +216,219 @@ test("saving two complaints refreshes exactly one live hpi_ros Observation for t
     observation.code.coding?.some((coding) => coding.code === "hpi_ros")
   );
   assert.equal(liveHistory.length, 1);
+  assert.equal(liveHistory[0]?.id, firstHistoryId, "subsequent complaint saves update the same hpi_ros identity");
   assert.match(componentValue(liveHistory[0]!, "HISTORY_COMPLAINT_2") ?? "", /Headache/);
+});
+
+test("template autosave preserves review-of-systems components owned outside this slice", async () => {
+  const setup = fixture();
+  assert.equal((await handleHpiCaptureRequest(setup.deps, { authHeader: AUTH, body: BODY })).status, 200);
+  assert.equal((await handleHpiCaptureRequest(setup.deps, {
+    authHeader: AUTH,
+    body: {
+      patientReference: BODY.patientReference,
+      encounterReference: BODY.encounterReference,
+      templateAnswers: [],
+    },
+  })).status, 200);
+
+  const liveHistory = setup.observations.find((observation) =>
+    observation.status !== "entered-in-error" && observation.code.coding?.some((coding) => coding.code === "hpi_ros")
+  );
+  assert.equal(componentValue(liveHistory!, "ROS_VISION_CHANGES"), "positive");
+  assert.equal(componentValue(liveHistory!, "ROS_DIABETES"), "negative");
+  assert.equal(componentBoolean(liveHistory!, "ROS_ATTESTED_GENERAL"), true);
+});
+
+test("template answers update in place while hpi_ros stays one Observation per encounter", async () => {
+  const setup = fixture();
+  const glaucomaComplaint = {
+    ...COMPLAINTS[0]!,
+    complaintKey: "glaucoma",
+    conditions: [],
+    qualities: [],
+    treatmentsTried: [],
+    additionalHistory: "",
+  };
+  setup.basics.splice(0, setup.basics.length, { ...buildEncounterComplaintResource(glaucomaComplaint), id: "basic-1" });
+  const templateAnswers = [
+    { id: "answer-presentation", complaintId: "c1", templateKey: "glaucoma", sectionId: "presentation", value: { kind: "selection", code: "follow-up" } },
+    { id: "answer-pain", complaintId: "c1", templateKey: "glaucoma", sectionId: "symptoms", optionCode: "ocular-pain", value: { kind: "tri-state", status: "negative" } },
+  ];
+
+  const first = await handleHpiCaptureRequest(setup.deps, {
+    authHeader: AUTH,
+    body: { ...BODY, templateAnswers },
+  });
+  assert.equal(first.status, 200);
+  assert.match(componentValue(setup.observations.find((row) => row.code.coding?.some((coding) => coding.code === "hpi_ros"))!, "HISTORY_COMPLAINT_1") ?? "", /Denies ocular pain/);
+  assert.equal((first.body as { answers: Array<{ observationReference: string }> }).answers[1]?.observationReference, "Observation/observation-3");
+
+  const second = await handleHpiCaptureRequest(setup.deps, {
+    authHeader: AUTH,
+    body: {
+      ...BODY,
+      templateAnswers: templateAnswers.map((answer) => answer.id === "answer-pain"
+        ? { ...answer, value: { kind: "tri-state", status: "positive" } }
+        : answer),
+    },
+  });
+  assert.equal(second.status, 200);
+  assert.equal(setup.observations.filter((row) => row.status !== "entered-in-error" && row.code.coding?.some((coding) => coding.code === "hpi_ros")).length, 1);
+  const painAnswers = setup.observations.filter((row) => row.code.coding?.some((coding) => coding.code === "history-template-answer"))
+    .map(parseHistoryAnswerObservation)
+    .filter((answer) => answer.id === "answer-pain");
+  assert.equal(painAnswers.length, 1);
+  assert.deepEqual(painAnswers[0]?.value, { kind: "tri-state", status: "positive" });
+});
+
+test("history record read returns only live persisted template answers", async () => {
+  const setup = fixture();
+  setup.basics.splice(0, setup.basics.length, { ...buildEncounterComplaintResource({ ...COMPLAINTS[0]!, complaintKey: "glaucoma" }), id: "basic-1" });
+  assert.equal((await handleHpiCaptureRequest(setup.deps, {
+    authHeader: AUTH,
+    body: {
+      ...BODY,
+      templateAnswers: [{
+        id: "answer-presentation",
+        complaintId: "c1",
+        templateKey: "glaucoma",
+        sectionId: "presentation",
+        value: { kind: "selection", code: "follow-up" },
+      }],
+    },
+  })).status, 200);
+
+  const result = await handleHpiRecordRequest(setup.deps, { authHeader: AUTH, params: { encounterId: "e1" } });
+  assert.equal(result.status, 200);
+  assert.deepEqual((result.body as { answers: Array<{ id: string }> }).answers.map((answer) => answer.id), ["answer-presentation"]);
+  assert.equal((result.body as { requiresAggregateRefresh: boolean }).requiresAggregateRefresh, false);
+
+  const aggregate = setup.observations.find((observation) => observation.code.coding?.some((coding) => coding.code === "hpi_ros"));
+  const complaintComponent = aggregate?.component?.find((component) => component.code.coding?.some((coding) => coding.code === "HISTORY_COMPLAINT_1"));
+  assert.ok(complaintComponent);
+  complaintComponent.valueString = "stale narrative";
+  const stale = await handleHpiRecordRequest(setup.deps, { authHeader: AUTH, params: { encounterId: "e1" } });
+  assert.equal((stale.body as { requiresAggregateRefresh: boolean }).requiresAggregateRefresh, true);
+});
+
+test("last-plan prefill derives presents-for selections from the latest prior plan without complaint-specific logic", () => {
+  const complaints = [{ ...COMPLAINTS[0]!, complaintKey: "glaucoma", templateKey: "glaucoma" }];
+  const plans: ServiceRequest[] = [
+    {
+      resourceType: "ServiceRequest",
+      id: "older-plan",
+      status: "active",
+      intent: "plan",
+      subject: { reference: "Patient/p1" },
+      encounter: { reference: "Encounter/older" },
+      authoredOn: "2026-01-01T12:00:00.000Z",
+      reasonCode: [{ text: "Return for ocular exam" }],
+    },
+    {
+      resourceType: "ServiceRequest",
+      id: "latest-plan",
+      status: "active",
+      intent: "plan",
+      subject: { reference: "Patient/p1" },
+      encounter: { reference: "Encounter/prior" },
+      authoredOn: "2026-08-01T12:00:00.000Z",
+      reasonCode: [{ text: "Return for IOP check and visual field testing" }],
+    },
+  ];
+
+  assert.deepEqual(deriveLastPlanPrefills(complaints, plans, "Encounter/e1", []), [
+    {
+      id: "history-c1-presents-for-iop-check",
+      complaintId: "c1",
+      templateKey: "glaucoma",
+      sectionId: "presents-for",
+      optionCode: "iop-check",
+      value: { kind: "tri-state", status: "positive" },
+    },
+    {
+      id: "history-c1-presents-for-visual-field-testing",
+      complaintId: "c1",
+      templateKey: "glaucoma",
+      sectionId: "presents-for",
+      optionCode: "visual-field-testing",
+      value: { kind: "tri-state", status: "positive" },
+    },
+  ]);
+});
+
+test("follow-up prefill carries positive and denied list answers from only the latest prior encounter", () => {
+  const complaints = [{ ...COMPLAINTS[0]!, complaintKey: "glaucoma", templateKey: "glaucoma" }];
+  const metadata = (encounterReference: string, recordedAt: string) => ({
+    patientReference: "Patient/p1",
+    encounterReference,
+    recordedAt,
+  });
+  const observations = [
+    buildHistoryAnswerObservation({
+      id: "prior-old",
+      complaintId: "prior-c1",
+      templateKey: "glaucoma",
+      sectionId: "symptoms",
+      optionCode: "blurred-vision",
+      value: { kind: "tri-state", status: "positive" },
+    }, metadata("Encounter/old", "2026-01-01T12:00:00.000Z")),
+    buildHistoryAnswerObservation({
+      id: "prior-latest-positive",
+      complaintId: "prior-c2",
+      templateKey: "glaucoma",
+      sectionId: "current-treatment",
+      optionCode: "latanoprost",
+      eye: "OD",
+      value: { kind: "tri-state", status: "positive" },
+    }, metadata("Encounter/prior", "2026-08-01T12:00:00.000Z")),
+    buildHistoryAnswerObservation({
+      id: "prior-latest-positive-os",
+      complaintId: "prior-c2",
+      templateKey: "glaucoma",
+      sectionId: "current-treatment",
+      optionCode: "latanoprost",
+      eye: "OS",
+      value: { kind: "tri-state", status: "positive" },
+    }, metadata("Encounter/prior", "2026-08-01T12:00:00.000Z")),
+    buildHistoryAnswerObservation({
+      id: "prior-latest-negative",
+      complaintId: "prior-c2",
+      templateKey: "glaucoma",
+      sectionId: "symptoms",
+      optionCode: "ocular-pain",
+      value: { kind: "tri-state", status: "negative" },
+    }, metadata("Encounter/prior", "2026-08-01T12:00:00.000Z")),
+  ];
+
+  assert.deepEqual(deriveFollowUpAnswerPrefills(complaints, observations, "Encounter/e1", []), [
+    {
+      id: "history-c1-current-treatment-latanoprost-OD",
+      complaintId: "c1",
+      templateKey: "glaucoma",
+      sectionId: "current-treatment",
+      optionCode: "latanoprost",
+      eye: "OD",
+      value: { kind: "tri-state", status: "positive" },
+    },
+    {
+      id: "history-c1-current-treatment-latanoprost-OS",
+      complaintId: "c1",
+      templateKey: "glaucoma",
+      sectionId: "current-treatment",
+      optionCode: "latanoprost",
+      eye: "OS",
+      value: { kind: "tri-state", status: "positive" },
+    },
+    {
+      id: "history-c1-symptoms-ocular-pain",
+      complaintId: "c1",
+      templateKey: "glaucoma",
+      sectionId: "symptoms",
+      optionCode: "ocular-pain",
+      value: { kind: "tri-state", status: "negative" },
+    },
+  ]);
 });
 
 test("a capture retires pre-existing extra live History findings in the same transaction", async () => {
@@ -310,6 +530,42 @@ test("history capture enforces authority, option validation, encounter scope, an
   const noComplaint = await handleHpiCaptureRequest(fixture("provider", false).deps, { authHeader: AUTH, body: BODY });
   assert.equal(noComplaint.status, 400);
   assert.match((noComplaint.body as { error: string }).error, /presenting complaint/);
+  const wrongTemplateValue = await handleHpiCaptureRequest(fixture().deps, {
+    authHeader: AUTH,
+    body: {
+      ...BODY,
+      templateAnswers: [
+        { id: "answer-presentation", complaintId: "c1", templateKey: "glaucoma", sectionId: "presentation", value: { kind: "selection", code: "follow-up" } },
+        { id: "answer-duration", complaintId: "c1", templateKey: "glaucoma", sectionId: "glaucoma-duration", value: { kind: "tri-state", status: "positive" } },
+      ],
+    },
+  });
+  assert.equal(wrongTemplateValue.status, 400);
+  assert.match((wrongTemplateValue.body as { error: string }).error, /wrong value type/);
+  const missingTreatmentEye = await handleHpiCaptureRequest(fixture().deps, {
+    authHeader: AUTH,
+    body: {
+      ...BODY,
+      templateAnswers: [
+        { id: "answer-presentation", complaintId: "c1", templateKey: "glaucoma", sectionId: "presentation", value: { kind: "selection", code: "follow-up" } },
+        { id: "answer-treatment", complaintId: "c1", templateKey: "glaucoma", sectionId: "current-treatment", optionCode: "latanoprost", value: { kind: "tri-state", status: "positive" } },
+      ],
+    },
+  });
+  assert.equal(missingTreatmentEye.status, 400);
+  assert.match((missingTreatmentEye.body as { error: string }).error, /requires an eye/);
+  const inactiveConditionalAnswer = await handleHpiCaptureRequest(fixture().deps, {
+    authHeader: AUTH,
+    body: {
+      ...BODY,
+      templateAnswers: [
+        { id: "answer-presentation", complaintId: "c1", templateKey: "glaucoma", sectionId: "presentation", value: { kind: "selection", code: "pressure-check" } },
+        { id: "answer-interval", complaintId: "c1", templateKey: "glaucoma", sectionId: "interval", value: { kind: "interval", code: "same" } },
+      ],
+    },
+  });
+  assert.equal(inactiveConditionalAnswer.status, 400);
+  assert.match((inactiveConditionalAnswer.body as { error: string }).error, /inactive for pressure-check/);
 });
 
 function componentValue(observation: Observation, code: string): string | undefined {

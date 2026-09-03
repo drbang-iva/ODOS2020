@@ -17,6 +17,7 @@ import {
 import { FhirEncounterComplaintStore } from "./encounter-complaint-store.js";
 import { isClosedEncounter } from "./encounter-sign-gate.js";
 import type { ClinicalGraphProvenance } from "./glaucoma-suspect.js";
+import { HISTORY_TEMPLATES } from "./history-template-engine.js";
 
 const WRITE_HEADERS = { "X-ODOS-Source": "encounter-complaints" } as const;
 const CONCURRENT_EDIT_MESSAGE =
@@ -86,6 +87,11 @@ const complaintFieldsSchema = z.object({
 });
 
 const mutationSchema = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("create-template"),
+    patientReference: z.string().regex(/^Patient\/[A-Za-z0-9.-]+$/),
+    templateKey: codeSchema,
+  }).strict(),
   z.object({
     action: z.literal("create"),
     patientReference: z.string().regex(/^Patient\/[A-Za-z0-9.-]+$/),
@@ -209,7 +215,33 @@ export async function handleEncounterComplaintMutationRequest(
   const existing = await store.listByEncounter(encounterId);
   const provenance = provenanceFor(staff.staffReference, deps.now?.(), `Encounter complaint ${parsed.data.action}.`);
   try {
-    if (parsed.data.action === "create") {
+    if (parsed.data.action === "create-template") {
+      if (parsed.data.patientReference !== `Patient/${patientId}`) {
+        return { status: 400, body: { error: "Complaint patient does not match the encounter subject." } };
+      }
+      const templateKey = parsed.data.templateKey;
+      const template = HISTORY_TEMPLATES.find((candidate) => candidate.complaint === templateKey);
+      if (!template) return { status: 400, body: { error: "History template not found." } };
+      const matchingDefinition = definitions.find((definition) => definition.stableKey === template.complaint);
+      await store.save({
+        id: deps.id?.() ?? `complaint-${randomUUID()}`,
+        encounterId,
+        patientId,
+        ordinal: Math.max(0, ...existing.map((row) => row.ordinal)) + 1,
+        templateKey: template.complaint,
+        ...(matchingDefinition ? { complaintKey: matchingDefinition.stableKey } : { freeTextLabel: template.label }),
+        conditions: [],
+        eyeLocation: "not-applicable",
+        qualities: [],
+        treatmentsTried: [],
+        additionalHistory: "",
+        narrative: { mode: "automated" },
+        resolvedDx: [],
+        status: "active",
+        provenance,
+        provenanceHistory: [provenance],
+      });
+    } else if (parsed.data.action === "create") {
       if (parsed.data.patientReference !== `Patient/${patientId}`) {
         return { status: 400, body: { error: "Complaint patient does not match the encounter subject." } };
       }
@@ -319,6 +351,7 @@ function complaintFromInput(input: {
     encounterId: input.encounterId,
     patientId: input.patientId,
     ordinal: input.ordinal,
+    ...(input.current?.templateKey ? { templateKey: input.current.templateKey } : {}),
     ...(input.input.complaintKey ? { complaintKey: input.input.complaintKey } : {}),
     ...(input.input.freeTextLabel ? { freeTextLabel: input.input.freeTextLabel } : {}),
     conditions: input.input.conditions,

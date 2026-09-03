@@ -173,14 +173,32 @@ window.fetch = async (input, init) => {
   if (url.includes("/clinical-graph/contact-lens/keratometry")) {
     return Response.json({ eyes: { OD: null, OS: null } });
   }
-  if (url.endsWith("/clinical-graph/hpi/definition")) return Response.json({ definition: {} });
-  if (url.endsWith("/clinical-graph/complaint-definitions")) return Response.json({ definitions: [], genericOptions: { conditions: [], qualities: [], treatments: [] } });
+  if (url.endsWith("/clinical-graph/hpi/definition")) return Response.json({
+    definition: {},
+    templates: [{
+      complaint: "glaucoma",
+      label: "Glaucoma",
+      presentations: "glaucoma_presentations",
+      sections: [
+        { id: "symptoms", type: "symptoms", label: "Signs & symptoms", catalog: "glaucoma_symptoms", required: true },
+        { id: "presents-for", type: "presents_for", label: "Today the patient presents for", catalog: "glaucoma_workup", required: true },
+      ],
+      narrative: "declaration-owned",
+    }],
+    catalogs: {
+      glaucoma_presentations: [{ code: "follow-up", display: "Follow Up" }],
+      glaucoma_symptoms: [{ code: "ocular-pain", display: "ocular pain" }],
+      glaucoma_workup: [{ code: "iop-check", display: "IOP check" }],
+    },
+  });
+  if (url.endsWith("/clinical-graph/encounters/test/hpi")) return Response.json({ answers: [], templateNarratives: [] });
   if (url.includes("/complaints")) return Response.json({ complaints: init?.method === "POST" ? [{
     id: "fixture-complaint-1",
     encounterId: "test",
     patientId: "test",
     ordinal: 1,
-    freeTextLabel: "Blurred vision",
+    templateKey: "glaucoma",
+    complaintKey: "glaucoma",
     conditions: [],
     eyeLocation: "not-applicable",
     qualities: [],
@@ -189,14 +207,18 @@ window.fetch = async (input, init) => {
     narrative: { mode: "automated" },
     resolvedDx: [],
     status: "active",
-    renderedNarrative: "Patient reports Blurred vision.",
+    renderedNarrative: "Glaucoma history not yet recorded.",
     provenance: { source: "manual", recordedAt: "2026-08-27T12:00:00.000Z", actorReference: "Practitioner/test" },
     provenanceHistory: [],
   }] : [] });
   if (url.endsWith("/clinical-graph/hpi")) {
     return new URLSearchParams(window.location.search).get("failHistory") === "true" && init?.method === "POST"
       ? Response.json({ error: "Synthetic History failure" }, { status: 503 })
-      : Response.json({ observationReference: "Observation/history-1" });
+      : Response.json({
+          observationReference: "Observation/history-1",
+          answers: JSON.parse(String(init?.body ?? "{}")).templateAnswers ?? [],
+          templateNarratives: [{ complaintId: "fixture-complaint-1", narrative: "is being seen for follow up." }],
+        });
   }
   if (url.endsWith("/clinical-graph/diagnosis-catalog")) return Response.json({ diagnoses: [] });
   if (url.includes("/clinical-graph/protocols/")) return Response.json({ applications: [], offers: [] });

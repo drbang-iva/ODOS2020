@@ -1,593 +1,688 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type Ref } from "react";
+import { useEffect, useRef, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { removeValueConfirmSpec, voidEncounterEntries } from "../../lib/encounter-void";
 import { ClearSectionButton } from "./ClearControls";
+import { useConfirmDestructive } from "./ConfirmDestructive";
 import { useEncounterEdit } from "./encounter-edit-context";
-import {
-  blankComplaintDraft,
-  effectiveComplaintOptions,
-  hpiElementCount,
-  renderComplaintNarrative,
-  type ComplaintDefinition,
-  type ComplaintDraft,
-  type ComplaintOption,
-  type EncounterComplaint,
-  type GenericComplaintOptions,
-} from "../../lib/complaints";
 import type { SectionSaveStatus } from "./types";
-import { OdosSearchPicker } from "../inputs/OdosSearchPicker";
+
+export type HistorySectionType =
+  | "presentation" | "symptoms" | "quality" | "severity" | "duration" | "risk_factors"
+  | "treatment" | "numeric" | "presents_for" | "interval" | "laterality" | "text";
+export type HistoryTriState = "positive" | "negative";
+export type HistoryAnswerValue =
+  | { kind: "tri-state"; status: HistoryTriState }
+  | { kind: "selection"; code: string }
+  | { kind: "severity"; level: "mild" | "moderate" | "severe" }
+  | { kind: "duration"; value: number; unit: "days" | "weeks" | "months" | "years" }
+  | { kind: "numeric"; value: number; unit?: string }
+  | { kind: "interval"; code: "better" | "same" | "worse"; note?: string }
+  | { kind: "laterality"; code: "OD-worse" | "OS-worse" | "equal" | "other"; note?: string }
+  | { kind: "text"; text: string };
+
+export interface HistoryTemplateAnswer {
+  id: string;
+  complaintId: string;
+  templateKey: string;
+  sectionId: string;
+  optionCode?: string;
+  eye?: "OD" | "OS" | "OU";
+  observationReference?: string;
+  value: HistoryAnswerValue;
+}
+
+export interface HistoryTemplateSection {
+  id: string;
+  type: HistorySectionType;
+  label: string;
+  catalog?: string;
+  when?: "past" | "current";
+  per_eye?: boolean;
+  on?: "follow-up";
+  prefill?: "last_plan";
+  required?: boolean;
+}
+
+export interface HistoryTemplate {
+  complaint: string;
+  label: string;
+  presentations: string;
+  sections: HistoryTemplateSection[];
+  narrative: string;
+}
+
+export type HistoryCatalogs = Record<string, Array<{ code: string; display: string }>>;
+
+interface EncounterComplaint {
+  id: string;
+  ordinal: number;
+  templateKey?: string;
+  complaintKey?: string;
+  freeTextLabel?: string;
+  renderedNarrative: string;
+}
 
 interface Props {
   patientReference: string;
   encounterReference: string;
-  onSaved: (status: SectionSaveStatus, addAnother: boolean) => void;
+  onSaved: (status: SectionSaveStatus, keepOpen: boolean) => void;
 }
 
-type RosCategory = "eye" | "general";
-type RosStatus = "" | "positive" | "negative";
-type PendingHistoryCapture = { status: SectionSaveStatus; addAnother: boolean };
-
-export interface HpiRosOption {
-  code: string;
-  display: string;
-  category: RosCategory;
-}
-
-export const DEFAULT_HPI_ROS_OPTIONS: HpiRosOption[] = [
-  { code: "vision-changes", display: "Vision changes", category: "eye" },
-  { code: "eye-pain", display: "Eye pain", category: "eye" },
-  { code: "floaters-flashes", display: "Floaters / flashes", category: "eye" },
-  { code: "redness", display: "Redness", category: "eye" },
-  { code: "discharge", display: "Discharge", category: "eye" },
-  { code: "diabetes", display: "Diabetes", category: "general" },
-  { code: "hypertension", display: "Hypertension", category: "general" },
-];
-
-const EMPTY_GENERIC_OPTIONS: GenericComplaintOptions = { conditions: [], qualities: [], treatments: [] };
+type SaveState =
+  | { status: "idle" }
+  | { status: "saving" }
+  | { status: "saved"; at: number }
+  | { status: "error"; reason: string };
 
 export function HpiSection({ patientReference, encounterReference, onSaved }: Props) {
   const encounterId = encounterReference.slice("Encounter/".length);
-  const [definitions, setDefinitions] = useState<ComplaintDefinition[]>([]);
-  const [genericOptions, setGenericOptions] = useState<GenericComplaintOptions>(EMPTY_GENERIC_OPTIONS);
+  const [templates, setTemplates] = useState<HistoryTemplate[]>([]);
+  const [catalogs, setCatalogs] = useState<HistoryCatalogs>({});
   const [complaints, setComplaints] = useState<EncounterComplaint[]>([]);
-  const [draft, setDraft] = useState<ComplaintDraft | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [overrideDirty, setOverrideDirty] = useState(false);
-  const [draggedId, setDraggedId] = useState<string | null>(null);
-  const [rosOptions, setRosOptions] = useState<HpiRosOption[]>(DEFAULT_HPI_ROS_OPTIONS);
-  const [rosStatuses, setRosStatuses] = useState<Record<string, RosStatus>>({});
-  const [reviewAttestations, setReviewAttestations] = useState<RosCategory[]>([]);
-  const [newMedicalFlag, setNewMedicalFlag] = useState("");
-  const [catalogMessage, setCatalogMessage] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState<string | null>(null);
-  const { onCleared } = useEncounterEdit();
-  const [pendingHistoryCapture, setPendingHistoryCapture] = useState<PendingHistoryCapture | null>(null);
-  const presentingConcernRef = useRef<HTMLInputElement>(null);
-  const pendingNextConcernFocus = useRef(false);
+  const [answers, setAnswers] = useState<HistoryTemplateAnswer[]>([]);
+  const [followUpPrefills, setFollowUpPrefills] = useState<HistoryTemplateAnswer[]>([]);
+  const [narratives, setNarratives] = useState<Record<string, string>>({});
+  const [folded, setFolded] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>({ status: "idle" });
+  const [clock, setClock] = useState(Date.now());
+  const [adding, setAdding] = useState(false);
+  const debounceTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const latestAnswers = useRef<HistoryTemplateAnswer[]>([]);
+  const persistedAnswerReferences = useRef(new Map<string, string>());
+  const saveQueue = useRef(Promise.resolve());
+  const confirmDestructive = useConfirmDestructive();
+  const { onCleared, onClearFailed } = useEncounterEdit();
 
   useEffect(() => {
-    void load().catch((caught) => {
-      setError(caught instanceof Error ? caught.message : String(caught));
-    });
-  }, [encounterReference]);
-
-  useLayoutEffect(() => {
-    if (!pendingNextConcernFocus.current || saving) return;
-    pendingNextConcernFocus.current = false;
-    const input = presentingConcernRef.current;
-    if (!input || input.disabled) return;
-    input.focus();
-  }, [draft, saving]);
-
-  const selectedDefinition = definitions.find((definition) => definition.stableKey === draft?.complaintKey);
-  const options = effectiveComplaintOptions(genericOptions, selectedDefinition);
-  const preview = draft ? renderComplaintNarrative(draft, selectedDefinition, genericOptions) : "";
-  const topDefinitions = useMemo(() => definitions
-    .filter((definition) => definition.status === "active")
-    .sort((left, right) => left.seedRank - right.seedRank), [definitions]);
-  const searchComplaintOptions = useMemo(() => async (query: string) => {
-    const normalized = query.trim().toLocaleLowerCase();
-    return topDefinitions
-      .filter((definition) => `${definition.display} ${definition.stableKey}`.toLocaleLowerCase().includes(normalized))
-      .map((definition) => ({
-        value: definition.stableKey,
-        label: definition.display,
-        description: definition.stableKey,
-        item: definition,
-      }));
-  }, [topDefinitions]);
-
-  async function load() {
-    const [definitionResponse, catalogResponse, complaintsResponse] = await Promise.all([
-      fetch(`${clinicalGraphApiBase()}/clinical-graph/hpi/definition`, { headers: authHeaders() }),
-      fetch(`${clinicalGraphApiBase()}/clinical-graph/complaint-definitions`, { headers: authHeaders() }),
-      fetch(`${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/complaints`, { headers: authHeaders() }),
-    ]);
-    const definitionBody = await definitionResponse.json() as {
-      definition?: { fields?: { reviewOfSystems?: { options?: Array<HpiRosOption & { active?: boolean }> } } };
-      error?: string;
-    };
-    const catalogBody = await catalogResponse.json() as {
-      definitions?: ComplaintDefinition[];
-      genericOptions?: GenericComplaintOptions;
-      error?: string;
-    };
-    const complaintsBody = await complaintsResponse.json() as { complaints?: EncounterComplaint[]; error?: string };
-    if (!definitionResponse.ok) throw new Error(definitionBody.error ?? `HPI definition failed: ${definitionResponse.status}`);
-    if (!catalogResponse.ok) throw new Error(catalogBody.error ?? `Complaint definitions failed: ${catalogResponse.status}`);
-    if (!complaintsResponse.ok) throw new Error(complaintsBody.error ?? `Presenting complaints failed: ${complaintsResponse.status}`);
-    const loadedRos = definitionBody.definition?.fields?.reviewOfSystems?.options
-      ?.filter((option) => option.active !== false && (option.category === "eye" || option.category === "general"))
-      .map(({ code, display, category }) => ({ code, display, category }));
-    if (loadedRos?.length) setRosOptions(loadedRos);
-    setDefinitions(catalogBody.definitions ?? []);
-    setGenericOptions(catalogBody.genericOptions ?? EMPTY_GENERIC_OPTIONS);
-    setComplaints(complaintsBody.complaints ?? []);
-  }
-
-  function beginDefinition(definition: ComplaintDefinition) {
-    setDraft(blankComplaintDraft({ complaintKey: definition.stableKey }));
-    setEditingId(null);
-    setOverrideDirty(false);
-  }
-
-  function beginOther(label = "") {
-    setDraft(blankComplaintDraft({ freeTextLabel: label }));
-    setEditingId(null);
-    setOverrideDirty(false);
-  }
-
-  function editComplaint(complaint: EncounterComplaint) {
-    const { id, encounterId: _encounterId, patientId: _patientId, ordinal: _ordinal, status: _status, renderedNarrative: _rendered, ...fields } = complaint;
-    setDraft(fields);
-    setEditingId(id.startsWith("legacy-") ? null : id);
-    setOverrideDirty(false);
-  }
-
-  function updateDraft(patch: Partial<ComplaintDraft>, codedChange = true) {
-    setDraft((current) => current ? { ...current, ...patch } : current);
-    if (codedChange && draft?.narrative.mode === "override") setOverrideDirty(true);
-  }
-
-  function toggleCode(field: "conditions" | "qualities" | "treatmentsTried", code: string) {
-    if (!draft) return;
-    const current = draft[field];
-    updateDraft({ [field]: current.includes(code) ? current.filter((item) => item !== code) : [...current, code] });
-  }
-
-  function setNarrativeMode(mode: "automated" | "override") {
-    if (!draft) return;
-    updateDraft({
-      narrative: mode === "override" ? { mode, overrideText: renderComplaintNarrative({ ...draft, narrative: { mode: "automated" } }, selectedDefinition, genericOptions) } : { mode },
-    }, false);
-    setOverrideDirty(false);
-  }
-
-  async function saveComplaint(addAnother: boolean) {
-    if (!draft || (!draft.complaintKey && !draft.freeTextLabel?.trim())) return;
-    setSaving(true);
-    setError(null);
-    setSaved(null);
-    try {
-      const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/complaints`, {
-        method: "POST",
-        headers: { ...authHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify(editingId
-          ? { action: "update", complaintId: editingId, complaint: draft }
-          : { action: "create", patientReference, complaint: draft }),
-      });
-      const body = await response.json() as { complaints?: EncounterComplaint[]; error?: string };
-      if (!response.ok || !body.complaints) throw new Error(body.error ?? `Complaint save failed: ${response.status}`);
-      const status = complaintSectionStatus(body.complaints);
-      setComplaints(body.complaints);
-      setDraft(null);
-      setEditingId(null);
-      setOverrideDirty(false);
-      const pending = { status, addAnother };
-      setPendingHistoryCapture(pending);
-      try {
-        await captureHistory();
-        finishComplaintCapture(pending);
-      } catch (caught) {
-        reportComplaintCaptureFailure(pending);
-        setSaved(null);
-        const detail = caught instanceof Error ? caught.message : String(caught);
-        setError(`The complaint was saved, but History was not recorded on the chart. Retry recording History. ${detail}`);
+    let cancelled = false;
+    void Promise.all([
+      readJson<{ templates?: HistoryTemplate[]; catalogs?: HistoryCatalogs; error?: string }>(`${clinicalGraphApiBase()}/clinical-graph/hpi/definition`),
+      readJson<{ complaints?: EncounterComplaint[]; error?: string }>(`${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/complaints`),
+      readJson<{ answers?: HistoryTemplateAnswer[]; followUpPrefills?: HistoryTemplateAnswer[]; templateNarratives?: Array<{ complaintId: string; narrative: string }>; requiresAggregateRefresh?: boolean; error?: string }>(`${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/hpi`),
+    ]).then(([definition, complaintRecord, history]) => {
+      if (cancelled) return;
+      setTemplates(definition.templates ?? []);
+      setCatalogs(definition.catalogs ?? {});
+      setComplaints(complaintRecord.complaints ?? []);
+      const loadedAnswers = history.answers ?? [];
+      latestAnswers.current = loadedAnswers;
+      persistedAnswerReferences.current = new Map(loadedAnswers.flatMap((answer) =>
+        answer.observationReference ? [[answer.id, answer.observationReference] as const] : []
+      ));
+      setAnswers(loadedAnswers);
+      setFollowUpPrefills(history.followUpPrefills ?? []);
+      setNarratives(Object.fromEntries((history.templateNarratives ?? []).map((row) => [row.complaintId, row.narrative])));
+      if (history.requiresAggregateRefresh && (complaintRecord.complaints ?? []).length > 0) {
+        void queueSave().catch(() => undefined);
       }
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function removeComplaint(id: string) {
-    await mutateComplaints({ action: "remove", complaintId: id });
-  }
-
-  async function reorderComplaints(targetId: string) {
-    if (!draggedId || draggedId === targetId) return;
-    const ids = complaints.map((complaint) => complaint.id);
-    const from = ids.indexOf(draggedId);
-    const to = ids.indexOf(targetId);
-    if (from < 0 || to < 0) return;
-    ids.splice(to, 0, ids.splice(from, 1)[0]!);
-    setDraggedId(null);
-    await mutateComplaints({ action: "reorder", complaintIds: ids });
-  }
-
-  async function mutateComplaints(body: unknown) {
-    setError(null);
-    try {
-      const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/complaints`, {
-        method: "POST",
-        headers: { ...authHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const result = await response.json() as { complaints?: EncounterComplaint[]; error?: string };
-      if (!response.ok || !result.complaints) throw new Error(result.error ?? `Complaint update failed: ${response.status}`);
-      setComplaints(result.complaints);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
-    }
-  }
-
-  async function addMedicalFlag() {
-    const display = newMedicalFlag.trim();
-    if (!display) return;
-    setError(null);
-    const codeBase = `custom-${slug(display) || "medical-flag"}`;
-    let code = codeBase;
-    let suffix = 2;
-    while (rosOptions.some((option) => option.code === code)) code = `${codeBase}-${suffix++}`;
-    try {
-      const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/finding-definitions/hpi_ros`, {
-        method: "POST",
-        headers: { ...authHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "add-field-option", fieldKey: "reviewOfSystems", code, display, category: "general" }),
-      });
-      const body = await response.json() as { error?: string };
-      if (!response.ok && response.status !== 403) throw new Error(body.error ?? `Review flag save failed: ${response.status}`);
-      setRosOptions((current) => [...current, { code, display, category: "general" }]);
-      setNewMedicalFlag("");
-      setCatalogMessage(response.ok ? "Flag added to the practice Review of Systems catalog." : "Flag added for this encounter only; the catalog write grant is required to reuse it.");
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
-    }
-  }
-
-  function markRemainingNegative(category: RosCategory) {
-    setRosStatuses((current) => markRemainingReviewedNegative(current, rosOptions, category));
-    setReviewAttestations((current) => current.includes(category) ? current : [...current, category]);
-  }
-
-  function promoteToComplaint(option: HpiRosOption) {
-    const match = complaintDefinitionForRos(option, definitions);
-    if (match) beginDefinition(match);
-    else beginOther(option.display);
-  }
-
-  async function saveHistory() {
-    if (!complaints.length) return;
-    setSaving(true);
-    setError(null);
-    setSaved(null);
-    try {
-      await captureHistory();
-      if (pendingHistoryCapture) {
-        finishComplaintCapture(pendingHistoryCapture);
-      } else {
-        setSaved("Reviewed ROS saved to the encounter.");
-        onSaved(complaintSectionStatus(complaints, "ODOS UI History / ROS"), false);
-      }
-    } catch (caught) {
-      const detail = caught instanceof Error ? caught.message : String(caught);
-      if (pendingHistoryCapture) reportComplaintCaptureFailure(pendingHistoryCapture);
-      setError(pendingHistoryCapture
-        ? `The complaint was saved, but History was not recorded on the chart. Retry recording History. ${detail}`
-        : detail);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function captureHistory(): Promise<void> {
-    const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/hpi`, {
-      method: "POST",
-      headers: { ...authHeaders(), "Content-Type": "application/json" },
-      body: JSON.stringify(buildHpiRequestBody({ patientReference, encounterReference, rosStatuses, rosOptions, reviewAttestations })),
+    }).catch((caught) => {
+      if (!cancelled) setSaveState({ status: "error", reason: errorMessage(caught) });
     });
-    const body = await response.json() as { observationReference?: string; error?: string };
-    if (!response.ok || !body.observationReference) throw new Error(body.error ?? `History save failed: ${response.status}`);
+    return () => {
+      cancelled = true;
+      for (const timer of debounceTimers.current.values()) clearTimeout(timer);
+      debounceTimers.current.clear();
+    };
+  }, [encounterId]);
+
+  useEffect(() => {
+    if (saveState.status !== "saved") return;
+    const timer = setInterval(() => setClock(Date.now()), 30_000);
+    return () => clearInterval(timer);
+  }, [saveState.status]);
+
+  const activeComplaints = complaints.slice().sort((left, right) => left.ordinal - right.ordinal);
+  const summary = activeComplaints.map((complaint) => narratives[complaint.id] || complaint.renderedNarrative).filter(Boolean).join(" ");
+  const complete = activeComplaints.length > 0 && activeComplaints.every((complaint) => {
+    const template = templates.find((candidate) => candidate.complaint === complaint.templateKey);
+    return template ? historySectionComplete(template, answers.filter((answer) => answer.complaintId === complaint.id)) : false;
+  });
+
+  async function addComplaint(template: HistoryTemplate) {
+    if (adding) return;
+    setAdding(true);
+    setSaveState({ status: "idle" });
+    try {
+      const result = await postJson<{ complaints?: EncounterComplaint[]; error?: string }>(
+        `${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/complaints`,
+        { action: "create-template", patientReference, templateKey: template.complaint },
+      );
+      setComplaints(result.complaints ?? []);
+      await queueSave();
+      onSaved({ completed: false, summary: complaintSummary(result.complaints ?? [], narratives), operator: "ODOS History template" }, true);
+    } catch (caught) {
+      setSaveState({ status: "error", reason: errorMessage(caught) });
+    } finally {
+      setAdding(false);
+    }
   }
 
-  function finishComplaintCapture(pending: PendingHistoryCapture) {
-    setPendingHistoryCapture(null);
-    setError(null);
-    setSaved("Presenting complaint saved. History recorded on the chart.");
-    onSaved(pending.status, pending.addAnother);
-    pendingNextConcernFocus.current = pending.addAnother;
-    setDraft(pending.addAnother ? blankComplaintDraft() : null);
+  function changeAnswer(nextAnswer: HistoryTemplateAnswer | undefined, prior: HistoryTemplateAnswer | undefined) {
+    if (!nextAnswer) {
+      if (prior) void clearAnswer(prior);
+      return;
+    }
+    if (nextAnswer.sectionId === "presentation" && nextAnswer.value.kind === "selection") {
+      const template = templates.find((candidate) => candidate.complaint === nextAnswer.templateKey);
+      const presentationCode = nextAnswer.value.code;
+      const inactiveSectionIds = new Set(template?.sections.filter((section) => section.on && section.on !== presentationCode).map((section) => section.id));
+      const inactiveAnswers = latestAnswers.current.filter((answer) =>
+        answer.complaintId === nextAnswer.complaintId && inactiveSectionIds.has(answer.sectionId)
+      );
+      if (inactiveAnswers.length) {
+        void changePresentation(nextAnswer, inactiveAnswers);
+        return;
+      }
+    }
+    applyAnswer(nextAnswer);
   }
 
-  function reportComplaintCaptureFailure(pending: PendingHistoryCapture) {
-    onSaved({ ...pending.status, completed: false }, true);
+  function applyAnswer(nextAnswer: HistoryTemplateAnswer) {
+    let next = replaceAnswer(latestAnswers.current, nextAnswer);
+    if (nextAnswer.sectionId === "presentation" && nextAnswer.value.kind === "selection" && nextAnswer.value.code === "follow-up") {
+      for (const prefill of followUpPrefills.filter((candidate) => candidate.complaintId === nextAnswer.complaintId)) {
+        if (!next.some((candidate) => candidate.id === prefill.id)) next = [...next, prefill];
+      }
+    }
+    latestAnswers.current = next;
+    setAnswers(next);
+    scheduleSave(nextAnswer.id);
+  }
+
+  async function changePresentation(nextAnswer: HistoryTemplateAnswer, inactiveAnswers: HistoryTemplateAnswer[]) {
+    for (const timer of debounceTimers.current.values()) clearTimeout(timer);
+    debounceTimers.current.clear();
+    try {
+      await saveQueue.current;
+      const references = inactiveAnswers.flatMap((answer) => {
+        const observationReference = answer.observationReference ?? persistedAnswerReferences.current.get(answer.id);
+        return observationReference ? [observationReference] : [];
+      });
+      const result = references.length ? await voidEncounterEntries(encounterReference, {
+        scope: "observation",
+        observationReference: references,
+        sectionKey: "hpi",
+        label: "Follow-up details",
+      }) : undefined;
+      const inactiveIds = new Set(inactiveAnswers.map((answer) => answer.id));
+      latestAnswers.current = latestAnswers.current.filter((answer) => !inactiveIds.has(answer.id));
+      for (const answer of inactiveAnswers) persistedAnswerReferences.current.delete(answer.id);
+      applyAnswer(nextAnswer);
+      if (result) onCleared?.({ scope: "observation", result });
+    } catch (caught) {
+      onClearFailed?.({ scope: "observation", error: caught });
+      setSaveState({ status: "error", reason: errorMessage(caught) });
+    }
+  }
+
+  async function clearAnswer(answer: HistoryTemplateAnswer) {
+    const pending = debounceTimers.current.get(answer.id);
+    if (pending) clearTimeout(pending);
+    debounceTimers.current.delete(answer.id);
+    const next = latestAnswers.current.filter((candidate) => candidate.id !== answer.id);
+    latestAnswers.current = next;
+    setAnswers(next);
+    let observationReference = answer.observationReference;
+    try {
+      await saveQueue.current;
+      observationReference ??= persistedAnswerReferences.current.get(answer.id);
+      if (!observationReference) return;
+      const result = await voidEncounterEntries(encounterReference, {
+        scope: "observation",
+        observationReference,
+        sectionKey: "hpi",
+        label: answer.optionCode ?? "History value",
+      });
+      persistedAnswerReferences.current.delete(answer.id);
+      await queueSave();
+      onCleared?.({ scope: "observation", result });
+    } catch (caught) {
+      const restored = observationReference ? { ...answer, observationReference } : answer;
+      const restoredAnswers = replaceAnswer(latestAnswers.current, restored);
+      latestAnswers.current = restoredAnswers;
+      setAnswers(restoredAnswers);
+      onClearFailed?.({ scope: "observation", error: caught });
+      setSaveState({ status: "error", reason: errorMessage(caught) });
+    }
+  }
+
+  async function removeTyped(answer: HistoryTemplateAnswer, label: string) {
+    if (!answer.observationReference) {
+      await clearAnswer(answer);
+      return;
+    }
+    if (!(await confirmDestructive(removeValueConfirmSpec(label, "typed detail")))) return;
+    await clearAnswer(answer);
+  }
+
+  async function removeComplaint(complaint: EncounterComplaint) {
+    const label = complaint.freeTextLabel ?? templates.find((candidate) => candidate.complaint === complaint.templateKey)?.label ?? "complaint";
+    if (!(await confirmDestructive(removeValueConfirmSpec(label, "composed narrative")))) return;
+    try {
+      for (const answer of latestAnswers.current.filter((candidate) => candidate.complaintId === complaint.id)) {
+        const pending = debounceTimers.current.get(answer.id);
+        if (pending) clearTimeout(pending);
+        debounceTimers.current.delete(answer.id);
+      }
+      await saveQueue.current;
+      const result = await voidEncounterEntries(encounterReference, {
+        scope: "finding",
+        findingKey: `hpi-complaint:${complaint.id}`,
+        sectionKey: "hpi",
+        label,
+      });
+      const remainingComplaints = complaints.filter((candidate) => candidate.id !== complaint.id);
+      const removedAnswers = latestAnswers.current.filter((candidate) => candidate.complaintId === complaint.id);
+      const remainingAnswers = latestAnswers.current.filter((candidate) => candidate.complaintId !== complaint.id);
+      setComplaints(remainingComplaints);
+      setAnswers(remainingAnswers);
+      latestAnswers.current = remainingAnswers;
+      for (const answer of removedAnswers) {
+        persistedAnswerReferences.current.delete(answer.id);
+      }
+      if (remainingComplaints.length) await queueSave();
+      onCleared?.({ scope: "finding", result });
+    } catch (caught) {
+      onClearFailed?.({ scope: "finding", error: caught });
+      setSaveState({ status: "error", reason: errorMessage(caught) });
+    }
+  }
+
+  function scheduleSave(fieldKey: string) {
+    const current = debounceTimers.current.get(fieldKey);
+    if (current) clearTimeout(current);
+    debounceTimers.current.set(fieldKey, setTimeout(() => {
+      debounceTimers.current.delete(fieldKey);
+      void queueSave().catch(() => undefined);
+    }, 800));
+  }
+
+  function queueSave(): Promise<void> {
+    const run = saveQueue.current.then(() => saveHistory(latestAnswers.current));
+    saveQueue.current = run.catch(() => undefined);
+    return run;
+  }
+
+  async function saveHistory(snapshot: HistoryTemplateAnswer[]) {
+    setSaveState({ status: "saving" });
+    try {
+      const result = await postJson<{
+        answers?: HistoryTemplateAnswer[];
+        templateNarratives?: Array<{ complaintId: string; narrative: string }>;
+        error?: string;
+      }>(`${clinicalGraphApiBase()}/clinical-graph/hpi`, {
+        patientReference,
+        encounterReference,
+        templateAnswers: snapshot.map(stripObservationReference),
+      });
+      const savedAnswers = result.answers ?? snapshot;
+      for (const answer of savedAnswers) {
+        if (answer.observationReference) persistedAnswerReferences.current.set(answer.id, answer.observationReference);
+      }
+      latestAnswers.current = mergeSavedReferences(latestAnswers.current, savedAnswers);
+      setAnswers((current) => mergeSavedReferences(current, savedAnswers));
+      const nextNarratives = {
+        ...narratives,
+        ...Object.fromEntries((result.templateNarratives ?? []).map((row) => [row.complaintId, row.narrative])),
+      };
+      setNarratives(nextNarratives);
+      const at = Date.now();
+      setClock(at);
+      setSaveState({ status: "saved", at });
+      const nextComplete = complaints.length > 0 && complaints.every((complaint) => {
+        const template = templates.find((candidate) => candidate.complaint === complaint.templateKey);
+        return template ? historySectionComplete(template, savedAnswers.filter((answer) => answer.complaintId === complaint.id)) : false;
+      });
+      onSaved({
+        completed: nextComplete,
+        summary: complaintSummary(complaints, nextNarratives),
+        savedAt: new Date(at).toISOString(),
+        operator: "ODOS History autosave",
+      }, true);
+    } catch (caught) {
+      setSaveState({ status: "error", reason: errorMessage(caught) });
+      throw caught;
+    }
   }
 
   return (
     <section className="h-full overflow-y-auto p-6">
-      <div className="max-w-6xl">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="odos-hpi-text text-lg font-semibold">Chief complaint / HPI / ROS</h2>
-            <p className="odos-hpi-muted mt-1 text-sm">Each saved presenting complaint records History on the chart. Save reviewed ROS after assessing it.</p>
-          </div>
-          <ClearSectionButton
-            encounterReference={encounterReference}
-            sectionKey="hpi"
-            label="History"
-            hasRecorded={complaints.length > 0}
-            onCleared={(result) => {
-              setRosStatuses({});
-              setReviewAttestations([]);
-              setDraft(null);
-              setEditingId(null);
-              setSaved(null);
-              setError(null);
-              void load().catch((err) => setError(err instanceof Error ? err.message : String(err)));
-              onCleared?.({ scope: "section", result });
-            }}
-          />
-        </div>
-
-        <div className="odos-hpi-border mt-6 rounded border bg-bg-panel/70 p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 className="odos-hpi-muted text-sm font-semibold uppercase tracking-wider">Presenting Complaints</h3>
-              <p className="odos-hpi-faint mt-1 text-xs">The first complaint is primary and leads the History Narrative.</p>
-            </div>
-          </div>
-          {complaints.length === 0 && <p className="odos-hpi-muted mt-4 text-sm">No presenting complaints recorded.</p>}
-          <div className="mt-4 space-y-3">
-            {complaints.map((complaint) => (
-              <article
-                key={complaint.id}
-                draggable={!complaint.id.startsWith("legacy-")}
-                onDragStart={() => setDraggedId(complaint.id)}
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={() => void reorderComplaints(complaint.id)}
-                className="odos-hpi-border rounded border bg-bg-deep/60 p-4"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <div className="odos-hpi-text flex items-center gap-2 text-sm font-semibold">
-                      <span>{complaint.ordinal}. {complaint.freeTextLabel ?? definitions.find((row) => row.stableKey === complaint.complaintKey)?.display ?? "Complaint"}</span>
-                      {complaint.ordinal === 1 && <span className="rounded bg-brand/20 px-2 py-0.5 text-[11px] text-brand-light">Primary</span>}
-                    </div>
-                    <p className="odos-hpi-muted mt-2 text-sm leading-6">{complaint.renderedNarrative}</p>
-                    <p className="odos-hpi-faint mt-2 text-xs">HPI: {hpiElementCount(complaint)} elements · Drag to reorder</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button type="button" className="sidebar-button" onClick={() => editComplaint(complaint)}>Edit</button>
-                    {!complaint.id.startsWith("legacy-") && <button type="button" className="sidebar-button" onClick={() => void removeComplaint(complaint.id)}>Remove</button>}
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
-
-        {draft ? (
-          <ComplaintIntake
-            draft={draft}
-            definition={selectedDefinition}
-            options={options}
-            preview={preview}
-            overrideDirty={overrideDirty}
-            saving={saving}
-            presentingConcernRef={presentingConcernRef}
-            onUpdate={updateDraft}
-            onToggle={toggleCode}
-            onNarrativeMode={setNarrativeMode}
-            onRegenerate={() => setNarrativeMode("automated")}
-            onCancel={() => { setDraft(null); setEditingId(null); setOverrideDirty(false); }}
-            onSave={(addAnother) => void saveComplaint(addAnother)}
-          />
-        ) : (
-          <div className="odos-hpi-border mt-5 rounded border bg-bg-panel/70 p-5">
-            <h3 className="odos-hpi-muted text-sm font-semibold uppercase tracking-wider">Top Complaints</h3>
-            <div className="mt-4">
-              <OdosSearchPicker
-                label="Search complaints"
-                value=""
-                placeholder="Complaint name"
-                search={searchComplaintOptions}
-                onSelect={(option) => beginDefinition(option.item)}
+      <div className="mx-auto max-w-6xl">
+        <header className={`odos-hpi-border rounded border bg-bg-panel/80 p-4 ${saveState.status === "error" ? "border-red-400/70" : ""}`}>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <button type="button" className="min-w-0 flex-1 text-left" aria-expanded={!folded} onClick={() => setFolded((value) => !value)}>
+              <span className="odos-hpi-faint text-xs font-semibold uppercase tracking-wider">History</span>
+              <h2 className="odos-hpi-text mt-1 text-lg font-semibold">Chief Complaint &amp; HPI</h2>
+              {folded && <p className="odos-hpi-muted mt-2 truncate text-sm">{summary || "Not examined"}</p>}
+            </button>
+            <div className="flex items-center gap-2">
+              <span aria-label={complete ? "Examined" : "Not examined"} className={`text-xs font-semibold ${complete ? "text-emerald-200" : "odos-hpi-faint"}`}>
+                {complete ? "Examined" : "Not examined"}
+              </span>
+              <button type="button" className="sidebar-button" onClick={() => setEditMode((value) => !value)}>{editMode ? "Done" : "Edit"}</button>
+              <ClearSectionButton
+                encounterReference={encounterReference}
+                sectionKey="hpi"
+                label="History"
+                hasRecorded={complaints.length > 0 || answers.length > 0}
+                onBeforeClear={async () => {
+                  for (const timer of debounceTimers.current.values()) clearTimeout(timer);
+                  debounceTimers.current.clear();
+                  await saveQueue.current;
+                }}
+                onCleared={(result) => {
+                  setComplaints([]);
+                  setAnswers([]);
+                  latestAnswers.current = [];
+                  persistedAnswerReferences.current.clear();
+                  setNarratives({});
+                  setSaveState({ status: "idle" });
+                  onSaved({ completed: false, summary: "Not examined" }, true);
+                  onCleared?.({ scope: "section", result });
+                }}
               />
             </div>
-            <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {topDefinitions.map((definition) => (
-                <button key={definition.stableKey} type="button" className="odos-hpi-border odos-hpi-muted rounded border p-3 text-left text-sm hover:border-brand/50 hover:bg-brand/10" onClick={() => beginDefinition(definition)}>
-                  {definition.display}
-                </button>
-              ))}
-              <button type="button" className="odos-hpi-border-strong odos-hpi-muted rounded border border-dashed p-3 text-left text-sm hover:border-brand/50" onClick={() => beginOther()}>Other</button>
-            </div>
           </div>
-        )}
+          <SaveIndicator state={saveState} clock={clock} onRetry={() => { void queueSave().catch(() => undefined); }} />
+        </header>
 
-        <div className="odos-hpi-border mt-5 rounded border bg-bg-panel/70 p-5">
-          <h3 className="odos-hpi-muted text-sm font-semibold uppercase tracking-wider">Review of Systems</h3>
-          <p className="odos-hpi-faint mt-1 text-xs">Leave an item Not reviewed unless it was explicitly assessed.</p>
-          {(["eye", "general"] as const).map((category) => (
-            <div key={category} className="mt-5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h4 className="odos-hpi-muted text-sm font-semibold">{category === "eye" ? "Eye-focused" : "General medical"}</h4>
-                <button type="button" className="sidebar-button" onClick={() => markRemainingNegative(category)}>Mark remaining reviewed: negative</button>
-              </div>
-              <p className="mt-1 text-xs text-amber-100/70">This attests that every remaining item in this group was reviewed.</p>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {rosOptions.filter((option) => option.category === category).map((option) => (
-                  <div key={option.code} className="odos-hpi-muted text-sm">
-                    <label>
-                      {option.display}
-                      <select
-                        aria-label={`${option.display} review status`}
-                        className="sidebar-input mt-1"
-                        value={rosStatuses[option.code] ?? ""}
-                        onChange={(event) => setRosStatuses((current) => ({ ...current, [option.code]: event.target.value as RosStatus }))}
-                      >
-                        <option value="">Not reviewed</option>
-                        <option value="negative">Negative</option>
-                        <option value="positive">Positive</option>
-                      </select>
-                    </label>
-                    {rosStatuses[option.code] === "positive" && <button type="button" className="mt-2 text-xs text-brand-light underline" onClick={() => promoteToComplaint(option)}>Add as complaint</button>}
+        {!folded && <div className="mt-4 space-y-4">
+          {templates.length === 0 && <p className="odos-hpi-muted text-sm">Loading history templates…</p>}
+          {activeComplaints.map((complaint, index) => {
+            const template = templates.find((candidate) => candidate.complaint === complaint.templateKey);
+            if (!template) return null;
+            const complaintAnswers = answers.filter((answer) => answer.complaintId === complaint.id);
+            return (
+              <article key={complaint.id} className="odos-hpi-border rounded border bg-bg-panel/70 p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="odos-hpi-text font-semibold">{index + 1}. {template.label} {index === 0 && <span className="ml-2 rounded bg-brand/20 px-2 py-0.5 text-[11px] text-brand-light">Primary</span>}</h3>
+                    <p className="odos-hpi-muted mt-2 text-sm leading-6">{narratives[complaint.id] || "Choose a presentation to begin the narrative."}</p>
                   </div>
-                ))}
-              </div>
-            </div>
-          ))}
-          <div className="mt-5 flex max-w-xl gap-2">
-            <input aria-label="New general-medical review flag" className="sidebar-input" maxLength={120} value={newMedicalFlag} onChange={(event) => setNewMedicalFlag(event.target.value)} placeholder="Add another medical flag" />
-            <button type="button" className="sidebar-button shrink-0" disabled={!newMedicalFlag.trim()} onClick={() => void addMedicalFlag()}>Add flag</button>
-          </div>
-          {catalogMessage && <p className="odos-hpi-muted mt-2 text-xs">{catalogMessage}</p>}
-        </div>
+                  {editMode && <button type="button" className="sidebar-button" onClick={() => void removeComplaint(complaint)}>Remove</button>}
+                </div>
+                <HistoryTemplateEditor
+                  complaintId={complaint.id}
+                  template={template}
+                  catalogs={catalogs}
+                  answers={complaintAnswers}
+                  narrative={narratives[complaint.id] ?? ""}
+                  editMode={editMode}
+                  onChange={changeAnswer}
+                  onRemoveTyped={(answer, label) => void removeTyped(answer, label)}
+                />
+              </article>
+            );
+          })}
 
-        {error && <div role="alert" className="mt-4 rounded border border-red-400/40 bg-red-400/10 p-3 text-sm text-red-100">{error}</div>}
-        {saved && <div role="status" className="mt-4 rounded border border-emerald-400/40 bg-emerald-400/10 p-3 text-sm text-emerald-100">{saved}</div>}
-        <button type="button" className="sidebar-button mt-5" disabled={saving || complaints.length === 0} onClick={() => void saveHistory()}>
-          {saving ? "Saving…" : pendingHistoryCapture ? "Retry recording History" : "Save reviewed ROS"}
-        </button>
+          <div className="odos-hpi-border rounded border border-dashed bg-bg-panel/40 p-4">
+            <p className="odos-hpi-muted text-sm font-semibold">Add complaint</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {templates.map((template) => <button key={template.complaint} type="button" className="sidebar-button" disabled={adding} onClick={() => void addComplaint(template)}>{template.label}</button>)}
+            </div>
+          </div>
+        </div>}
       </div>
     </section>
   );
 }
 
-function complaintSectionStatus(
-  complaints: EncounterComplaint[],
-  operator = "ODOS UI Complaint Intake",
-): SectionSaveStatus {
-  return {
-    completed: complaints.length > 0,
-    summary: complaints.map((complaint) => complaint.renderedNarrative).join(" "),
-    savedAt: new Date().toISOString(),
-    operator,
-  };
-}
-
-export function ComplaintIntake(props: {
-  draft: ComplaintDraft;
-  definition: ComplaintDefinition | undefined;
-  options: GenericComplaintOptions;
-  preview: string;
-  overrideDirty: boolean;
-  saving: boolean;
-  presentingConcernRef: Ref<HTMLInputElement>;
-  onUpdate: (patch: Partial<ComplaintDraft>, codedChange?: boolean) => void;
-  onToggle: (field: "conditions" | "qualities" | "treatmentsTried", code: string) => void;
-  onNarrativeMode: (mode: "automated" | "override") => void;
-  onRegenerate: () => void;
-  onCancel: () => void;
-  onSave: (addAnother: boolean) => void;
+export function HistoryTemplateEditor({
+  complaintId,
+  template,
+  catalogs,
+  answers,
+  narrative,
+  editMode,
+  onChange,
+  onRemoveTyped,
+}: {
+  complaintId: string;
+  template: HistoryTemplate;
+  catalogs: HistoryCatalogs;
+  answers: HistoryTemplateAnswer[];
+  narrative: string;
+  editMode: boolean;
+  onChange: (next: HistoryTemplateAnswer | undefined, prior: HistoryTemplateAnswer | undefined) => void;
+  onRemoveTyped: (answer: HistoryTemplateAnswer, label: string) => void;
 }) {
-  const symptom = props.definition?.kind !== "evaluation-reason";
-  return (
-    <div className="mt-5 rounded border border-brand/30 bg-bg-panel/80 p-5">
-      <h3 className="odos-hpi-text text-base font-semibold">Complaint Intake</h3>
-      <p className="odos-hpi-muted mt-1 text-sm">{props.definition?.display ?? "Other presenting complaint"}</p>
-      {!props.draft.complaintKey && <label className="odos-hpi-muted mt-5 block text-sm">Presenting concern<input autoFocus ref={props.presentingConcernRef} className="sidebar-input mt-2" maxLength={4000} value={props.draft.freeTextLabel ?? ""} onChange={(event) => props.onUpdate({ freeTextLabel: event.target.value })} /></label>}
+  const presentation = answers.find((answer) => answer.sectionId === "presentation");
+  const presentationCode = presentation?.value.kind === "selection" ? presentation.value.code : undefined;
+  const sections = presentationCode
+    ? template.sections.filter((section) => !section.on || section.on === presentationCode)
+    : [];
 
-      {symptom && <IntakeCluster title="Symptoms"><OptionButtons options={props.options.conditions} selected={props.draft.conditions} onToggle={(code) => props.onToggle("conditions", code)} /></IntakeCluster>}
-      <IntakeCluster title="Laterality">
-        <OptionButtons options={[
-          { code: "OD", display: "Right eye", active: true }, { code: "OS", display: "Left eye", active: true },
-          { code: "OU", display: "Both eyes", active: true }, { code: "not-applicable", display: "Not applicable", active: true },
-        ]} selected={[props.draft.eyeLocation]} onToggle={(code) => props.onUpdate({ eyeLocation: code as ComplaintDraft["eyeLocation"], ...(code !== "OU" ? { eyeComparison: undefined, eyeComparisonOtherText: undefined } : {}) })} />
-        {props.draft.eyeLocation === "OU" && <div className="mt-3"><OptionButtons options={[
-          { code: "left-worse", display: "Left worse", active: true }, { code: "equal", display: "Equal", active: true },
-          { code: "right-worse", display: "Right worse", active: true }, { code: "other", display: "Other comparison", active: true },
-        ]} selected={props.draft.eyeComparison ? [props.draft.eyeComparison] : []} onToggle={(code) => props.onUpdate({ eyeComparison: code as ComplaintDraft["eyeComparison"] })} /></div>}
-        {props.draft.eyeComparison === "other" && <input aria-label="Other eye comparison" className="sidebar-input mt-3" value={props.draft.eyeComparisonOtherText ?? ""} onChange={(event) => props.onUpdate({ eyeComparisonOtherText: event.target.value })} />}
-      </IntakeCluster>
-      {symptom && <IntakeCluster title="Character">
-        <OptionButtons options={props.options.qualities} selected={props.draft.qualities} onToggle={(code) => props.onToggle("qualities", code)} />
-        <label className="odos-hpi-muted mt-3 block max-w-xs text-sm">Severity<select className="sidebar-input mt-2" value={props.draft.severity ?? ""} onChange={(event) => props.onUpdate({ severity: (event.target.value || undefined) as ComplaintDraft["severity"] })}><option value="">Not recorded</option><option value="mild">Mild</option><option value="moderate">Moderate</option><option value="severe">Severe</option></select></label>
-      </IntakeCluster>}
-      <IntakeCluster title="Duration">
-        <div className="flex max-w-md gap-2">
-          <input aria-label="Duration value" className="sidebar-input" type="number" min={1} value={props.draft.duration?.value ?? ""} onChange={(event) => props.onUpdate({ duration: event.target.value ? { value: Number(event.target.value), unit: props.draft.duration?.unit ?? "days" } : undefined })} />
-          <select aria-label="Duration unit" className="sidebar-input" value={props.draft.duration?.unit ?? "days"} onChange={(event) => props.onUpdate({ duration: { value: props.draft.duration?.value ?? 1, unit: event.target.value as NonNullable<ComplaintDraft["duration"]>["unit"] } })}><option value="days">Days</option><option value="weeks">Weeks</option><option value="months">Months</option><option value="years">Years</option></select>
-        </div>
-      </IntakeCluster>
-      <IntakeCluster title="Current treatment"><OptionButtons options={props.options.treatments} selected={props.draft.treatmentsTried} onToggle={(code) => props.onToggle("treatmentsTried", code)} /></IntakeCluster>
-      <IntakeCluster title="Referral & history">
-        <label className="odos-hpi-muted block text-sm">Referring physician<input className="sidebar-input mt-2" maxLength={500} value={props.draft.referringPhysicianName ?? ""} onChange={(event) => props.onUpdate({ referringPhysicianName: event.target.value })} /></label>
-        <label className="odos-hpi-muted mt-3 block text-sm">Additional history<textarea className="sidebar-input mt-2 min-h-24 resize-y" maxLength={4000} value={props.draft.additionalHistory} onChange={(event) => props.onUpdate({ additionalHistory: event.target.value })} /></label>
-      </IntakeCluster>
-      <div className="odos-hpi-border mt-5 rounded border bg-bg-deep/70 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2"><h4 className="odos-hpi-muted text-sm font-semibold">History Narrative</h4><div className="flex gap-2"><button type="button" className={props.draft.narrative.mode === "automated" ? "sidebar-button border-brand" : "sidebar-button"} onClick={() => props.onNarrativeMode("automated")}>Automated</button><button type="button" className={props.draft.narrative.mode === "override" ? "sidebar-button border-brand" : "sidebar-button"} onClick={() => props.onNarrativeMode("override")}>Override</button></div></div>
-        {props.draft.narrative.mode === "override" ? <textarea aria-label="History Narrative override" className="sidebar-input mt-3 min-h-28 resize-y" value={props.draft.narrative.overrideText ?? ""} onChange={(event) => props.onUpdate({ narrative: { mode: "override", overrideText: event.target.value } }, false)} /> : <p className="odos-hpi-muted mt-3 text-sm leading-6">{props.preview}</p>}
-        {props.overrideDirty && <div className="mt-3 text-xs text-amber-100">Narrative is overridden and coded fields changed. <button type="button" className="underline" onClick={props.onRegenerate}>Regenerate from coded fields</button></div>}
-      </div>
-      <div className="mt-5 flex flex-wrap justify-end gap-2"><button type="button" className="sidebar-button" onClick={props.onCancel}>Cancel</button><button type="button" className="sidebar-button" disabled={props.saving || (!props.draft.complaintKey && !props.draft.freeTextLabel?.trim())} onClick={() => props.onSave(true)}>Save and Add Another</button><button type="button" className="sidebar-button" disabled={props.saving || (!props.draft.complaintKey && !props.draft.freeTextLabel?.trim())} onClick={() => props.onSave(false)}>Save Complaint</button></div>
+  function put(sectionId: string, value: HistoryAnswerValue, optionCode?: string, eye?: "OD" | "OS" | "OU") {
+    const prior = answers.find((answer) => answer.sectionId === sectionId && answer.optionCode === optionCode && answer.eye === eye);
+    onChange({
+      id: prior?.id ?? historyAnswerId(complaintId, sectionId, optionCode, eye),
+      complaintId,
+      templateKey: template.complaint,
+      sectionId,
+      ...(optionCode ? { optionCode } : {}),
+      ...(eye ? { eye } : {}),
+      ...(prior?.observationReference ? { observationReference: prior.observationReference } : {}),
+      value,
+    }, prior);
+  }
+
+  function triState(section: HistoryTemplateSection, optionCode: string, eye?: "OD" | "OS") {
+    const prior = answers.find((answer) => answer.sectionId === section.id && answer.optionCode === optionCode && answer.eye === eye);
+    const current = prior?.value.kind === "tri-state" ? prior.value.status : undefined;
+    const next = cycleHistoryTriState(current);
+    if (!next) onChange(undefined, prior);
+    else put(section.id, { kind: "tri-state", status: next }, optionCode, eye);
+  }
+
+  return (
+    <div className="mt-5 space-y-5">
+      <TemplateField label="Presentation" required>
+        <div className="flex flex-wrap gap-2">{(catalogs[template.presentations] ?? []).map((option) => {
+          const selected = presentationCode === option.code;
+          return <button key={option.code} type="button" aria-pressed={selected} className={chipClass(selected ? "positive" : undefined)} onClick={() => put("presentation", { kind: "selection", code: option.code })}>{option.display}</button>;
+        })}</div>
+      </TemplateField>
+
+      {sections.map((section) => <TemplateSection
+        key={section.id}
+        section={section}
+        catalogs={catalogs}
+        answers={answers}
+        editMode={editMode}
+        onTriState={(optionCode, eye) => triState(section, optionCode, eye)}
+        onPut={(value, optionCode, eye) => put(section.id, value, optionCode, eye)}
+        onRemoveTyped={onRemoveTyped}
+      />)}
+
+      <NarrativeEditor
+        complaintId={complaintId}
+        templateKey={template.complaint}
+        answers={answers}
+        narrative={narrative}
+        editMode={editMode}
+        onChange={onChange}
+        onRemoveTyped={onRemoveTyped}
+      />
     </div>
   );
 }
 
-function IntakeCluster({ title, children }: { title: string; children: React.ReactNode }) {
-  return <fieldset className="odos-hpi-border mt-5 rounded border p-4"><legend className="odos-hpi-muted px-2 text-sm font-semibold">{title}</legend>{children}</fieldset>;
-}
-
-function OptionButtons({ options, selected, onToggle }: { options: ComplaintOption[]; selected: string[]; onToggle: (code: string) => void }) {
-  return <div className="flex flex-wrap gap-2">{options.map((option) => <button key={option.code} type="button" aria-pressed={selected.includes(option.code)} className={selected.includes(option.code) ? "rounded border border-brand bg-brand/20 px-3 py-2 text-sm text-brand-light" : "odos-hpi-border-strong odos-hpi-muted rounded border px-3 py-2 text-sm hover:border-brand/50"} onClick={() => onToggle(option.code)}>{option.display}</button>)}</div>;
-}
-
-export function buildHpiRequestBody(input: {
-  patientReference: string;
-  encounterReference: string;
-  rosStatuses: Record<string, RosStatus>;
-  rosOptions: HpiRosOption[];
-  reviewAttestations: RosCategory[];
+function TemplateSection({ section, catalogs, answers, editMode, onTriState, onPut, onRemoveTyped }: {
+  section: HistoryTemplateSection;
+  catalogs: HistoryCatalogs;
+  answers: HistoryTemplateAnswer[];
+  editMode: boolean;
+  onTriState: (optionCode: string, eye?: "OD" | "OS") => void;
+  onPut: (value: HistoryAnswerValue, optionCode?: string, eye?: "OD" | "OS" | "OU") => void;
+  onRemoveTyped: (answer: HistoryTemplateAnswer, label: string) => void;
 }) {
-  return {
-    patientReference: input.patientReference,
-    encounterReference: input.encounterReference,
-    reviewOfSystems: input.rosOptions.flatMap((option) => {
-      const status = input.rosStatuses[option.code];
-      return status === "positive" || status === "negative" ? [{ ...option, status }] : [];
-    }),
-    reviewAttestations: input.reviewAttestations,
-  };
+  const answer = answers.find((candidate) => candidate.sectionId === section.id && !candidate.optionCode);
+  if ((section.type === "symptoms" || section.type === "quality" || section.type === "risk_factors" || section.type === "treatment" || section.type === "presents_for") && section.catalog) {
+    if (section.per_eye) {
+      return <TemplateField label={section.label} required={section.required}>
+        <div className="space-y-2">{(catalogs[section.catalog] ?? []).map((option) => <div key={option.code} className="flex flex-wrap items-center gap-2">
+          <span className="odos-hpi-muted min-w-36 text-sm">{option.display}</span>
+          {(["OD", "OS"] as const).map((eye) => {
+            const selected = answers.find((candidate) => candidate.sectionId === section.id && candidate.optionCode === option.code && candidate.eye === eye);
+            const state = selected?.value.kind === "tri-state" ? selected.value.status : undefined;
+            return <button key={eye} type="button" aria-label={`${option.display} ${eye}: ${state ?? "unasked"}`} aria-pressed={state === "positive"} className={chipClass(state)} onClick={() => onTriState(option.code, eye)}>{state === "negative" ? `no ${eye}` : eye}</button>;
+          })}
+        </div>)}</div>
+      </TemplateField>;
+    }
+    return <TemplateField label={section.label} required={section.required}>
+      <div className="flex flex-wrap gap-2">{(catalogs[section.catalog] ?? []).map((option) => {
+        const selected = answers.find((candidate) => candidate.sectionId === section.id && candidate.optionCode === option.code);
+        const state = selected?.value.kind === "tri-state" ? selected.value.status : undefined;
+        return <span key={option.code} className="inline-flex items-center gap-1">
+          <button type="button" aria-label={`${option.display}: ${state ?? "unasked"}`} aria-pressed={state === "positive"} className={chipClass(state)} onClick={() => onTriState(option.code)}>{state === "negative" ? `no ${option.display}` : option.display}</button>
+        </span>;
+      })}</div>
+    </TemplateField>;
+  }
+  if (section.type === "severity") {
+    const value = answer?.value.kind === "severity" ? answer.value.level : "";
+    return <TemplateField label={section.label}><select className="sidebar-input max-w-xs" value={value} onChange={(event) => event.target.value && onPut({ kind: "severity", level: event.target.value as "mild" | "moderate" | "severe" })}><option value="" disabled>Select…</option><option value="mild">Mild</option><option value="moderate">Moderate</option><option value="severe">Severe</option></select><TypedRemove editMode={editMode} answer={answer} label={section.label} onRemove={onRemoveTyped} /></TemplateField>;
+  }
+  if (section.type === "duration") {
+    const value = answer?.value.kind === "duration" ? answer.value : undefined;
+    return <TemplateField label={`How long: ${section.label}`}><div className="flex max-w-md gap-2"><input aria-label={`${section.label} duration value`} className="sidebar-input" type="number" min={1} value={value?.value ?? ""} onChange={(event) => event.target.value && onPut({ kind: "duration", value: Number(event.target.value), unit: value?.unit ?? "days" })} /><select aria-label={`${section.label} duration unit`} className="sidebar-input" value={value?.unit ?? "days"} onChange={(event) => onPut({ kind: "duration", value: value?.value ?? 1, unit: event.target.value as "days" | "weeks" | "months" | "years" })}><option value="days">Days</option><option value="weeks">Weeks</option><option value="months">Months</option><option value="years">Years</option></select></div><TypedRemove editMode={editMode} answer={answer} label={section.label} onRemove={onRemoveTyped} /></TemplateField>;
+  }
+  if (section.type === "interval") {
+    const value = answer?.value.kind === "interval" ? answer.value : undefined;
+    return <TemplateField label={section.label}><div className="grid gap-2 md:grid-cols-[12rem_1fr]"><select className="sidebar-input" value={value?.code ?? ""} onChange={(event) => event.target.value && onPut({ kind: "interval", code: event.target.value as "better" | "same" | "worse", note: value?.note })}><option value="" disabled>Select…</option><option value="better">Better</option><option value="same">Same</option><option value="worse">Worse</option></select><input aria-label={`${section.label} note`} className="sidebar-input" placeholder="Optional note" value={value?.note ?? ""} onChange={(event) => onPut({ kind: "interval", code: value?.code ?? "same", note: event.target.value })} /></div><TypedRemove editMode={editMode} answer={answer} label={section.label} onRemove={onRemoveTyped} /></TemplateField>;
+  }
+  if (section.type === "laterality") {
+    const value = answer?.value.kind === "laterality" ? answer.value : undefined;
+    return <TemplateField label={section.label}><select className="sidebar-input max-w-xs" value={value?.code ?? ""} onChange={(event) => event.target.value && onPut({ kind: "laterality", code: event.target.value as "OD-worse" | "OS-worse" | "equal" | "other" })}><option value="" disabled>Select…</option><option value="OD-worse">OD worse</option><option value="OS-worse">OS worse</option><option value="equal">Equal</option><option value="other">Other</option></select><TypedRemove editMode={editMode} answer={answer} label={section.label} onRemove={onRemoveTyped} /></TemplateField>;
+  }
+  if (section.type === "numeric") {
+    const value = answer?.value.kind === "numeric" ? answer.value : undefined;
+    return <TemplateField label={section.label}><input className="sidebar-input max-w-xs" type="number" value={value?.value ?? ""} onChange={(event) => event.target.value && onPut({ kind: "numeric", value: Number(event.target.value), unit: value?.unit })} /><TypedRemove editMode={editMode} answer={answer} label={section.label} onRemove={onRemoveTyped} /></TemplateField>;
+  }
+  if (section.type === "text") {
+    const value = answer?.value.kind === "text" ? answer.value.text : "";
+    return <TemplateField label={section.label}><textarea className="sidebar-input min-h-24 resize-y" value={value} onChange={(event) => onPut({ kind: "text", text: event.target.value })} /><TypedRemove editMode={editMode} answer={answer} label={section.label} onRemove={onRemoveTyped} /></TemplateField>;
+  }
+  return null;
 }
 
-export function markRemainingReviewedNegative(
-  statuses: Record<string, RosStatus>,
-  options: HpiRosOption[],
-  category: RosCategory,
-): Record<string, RosStatus> {
-  return options.filter((option) => option.category === category).reduce((next, option) => ({
-    ...next,
-    [option.code]: next[option.code] || "negative",
-  }), { ...statuses });
+function NarrativeEditor({ complaintId, templateKey, answers, narrative, editMode, onChange, onRemoveTyped }: {
+  complaintId: string;
+  templateKey: string;
+  answers: HistoryTemplateAnswer[];
+  narrative: string;
+  editMode: boolean;
+  onChange: (next: HistoryTemplateAnswer | undefined, prior: HistoryTemplateAnswer | undefined) => void;
+  onRemoveTyped: (answer: HistoryTemplateAnswer, label: string) => void;
+}) {
+  const override = answers.find((answer) => answer.sectionId === "narrative-override");
+  const overrideText = override?.value.kind === "text" ? override.value.text : undefined;
+  const rows = Math.max(6, Math.ceil(Math.max(narrative.length, overrideText?.length ?? 0) / 80) + 1);
+  function enableOverride() {
+    onChange({
+      id: override?.id ?? historyAnswerId(complaintId, "narrative-override"),
+      complaintId,
+      templateKey,
+      sectionId: "narrative-override",
+      ...(override?.observationReference ? { observationReference: override.observationReference } : {}),
+      value: { kind: "text", text: overrideText ?? narrative },
+    }, override);
+  }
+  return <TemplateField label="History narrative">
+    {overrideText === undefined
+      ? <><p className="odos-hpi-muted text-sm leading-6">{narrative || "The declaration composes the narrative as answers are recorded."}</p><button type="button" className="sidebar-button mt-3" onClick={enableOverride}>Override</button></>
+      : <><textarea aria-label="History narrative override" className="sidebar-input min-h-32 resize-y" rows={rows} value={overrideText} onChange={(event) => { if (override) onChange({ ...override, value: { kind: "text", text: event.target.value } }, override); }} /><TypedRemove editMode={editMode} answer={override} label="History narrative override" onRemove={onRemoveTyped} /></>}
+  </TemplateField>;
 }
 
-export function complaintDefinitionForRos(
-  option: HpiRosOption,
-  definitions: ComplaintDefinition[],
-): ComplaintDefinition | undefined {
-  const aliases: Record<string, string> = {
-    "eye-pain": "patient-eye-pain",
-    redness: "patient-red-eye",
-    "floaters-flashes": "patient-floaters",
-    "vision-changes": "patient-blurred-vision",
-  };
-  const stableKey = aliases[option.code];
-  return definitions.find((definition) => definition.stableKey === stableKey && definition.status === "active");
+function TemplateField({ label, required = false, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+  return <fieldset className="odos-hpi-border rounded border p-4"><legend className="odos-hpi-muted px-2 text-sm font-semibold">{label}{required ? " · required" : ""}</legend>{children}</fieldset>;
 }
 
-function slug(value: string): string {
-  return value.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 68);
+function TypedRemove({ editMode, answer, label, onRemove }: { editMode: boolean; answer: HistoryTemplateAnswer | undefined; label: string; onRemove: (answer: HistoryTemplateAnswer, label: string) => void }) {
+  return editMode && answer ? <button type="button" className="sidebar-button mt-2" onClick={() => onRemove(answer, label)}>Remove</button> : null;
+}
+
+function SaveIndicator({ state, clock, onRetry }: { state: SaveState; clock: number; onRetry: () => void }) {
+  if (state.status === "idle") return null;
+  if (state.status === "saving") return <p role="status" className="odos-hpi-faint mt-2 text-xs">saving…</p>;
+  if (state.status === "saved") return <p role="status" className="mt-2 text-xs text-emerald-200">saved · {relativeSavedTime(clock - state.at)}</p>;
+  return <p role="alert" className="mt-2 text-sm text-red-200">Save failed · {state.reason} <button type="button" className="ml-2 underline" onClick={onRetry}>Retry</button></p>;
+}
+
+export function cycleHistoryTriState(value: HistoryTriState | undefined): HistoryTriState | undefined {
+  return value === undefined ? "positive" : value === "positive" ? "negative" : undefined;
+}
+
+export function historySectionComplete(template: HistoryTemplate, answers: HistoryTemplateAnswer[]): boolean {
+  const presentation = answers.find((answer) => answer.sectionId === "presentation");
+  if (presentation?.value.kind !== "selection") return false;
+  const presentationCode = presentation.value.code;
+  return template.sections
+    .filter((section) => (!section.on || section.on === presentationCode) && section.required)
+    .every((section) => answers.some((answer) => answer.sectionId === section.id));
+}
+
+function replaceAnswer(answers: HistoryTemplateAnswer[], answer: HistoryTemplateAnswer): HistoryTemplateAnswer[] {
+  const index = answers.findIndex((candidate) => candidate.id === answer.id);
+  if (index < 0) return [...answers, answer];
+  return answers.map((candidate, candidateIndex) => candidateIndex === index ? answer : candidate);
+}
+
+function mergeSavedReferences(current: HistoryTemplateAnswer[], saved: HistoryTemplateAnswer[]): HistoryTemplateAnswer[] {
+  const savedById = new Map(saved.map((answer) => [answer.id, answer]));
+  return current.map((answer) => {
+    const persisted = savedById.get(answer.id);
+    return persisted?.observationReference ? { ...answer, observationReference: persisted.observationReference } : answer;
+  });
+}
+
+function stripObservationReference(answer: HistoryTemplateAnswer): Omit<HistoryTemplateAnswer, "observationReference"> {
+  const { observationReference: _observationReference, ...persisted } = answer;
+  return persisted;
+}
+
+function historyAnswerId(complaintId: string, sectionId: string, optionCode = "value", eye?: "OD" | "OS" | "OU"): string {
+  return `history-${complaintId}-${sectionId}-${optionCode}${eye ? `-${eye}` : ""}`.replace(/[^A-Za-z0-9.-]/g, "-").slice(0, 180);
+}
+
+function chipClass(state: HistoryTriState | undefined): string {
+  if (state === "positive") return "rounded border border-brand bg-brand/20 px-3 py-2 text-sm text-brand-light";
+  if (state === "negative") return "odos-hpi-muted rounded border border-slate-500/60 px-3 py-2 text-sm line-through";
+  return "odos-hpi-border-strong odos-hpi-muted rounded border px-3 py-2 text-sm hover:border-brand/50";
+}
+
+function relativeSavedTime(ageMilliseconds: number): string {
+  const minutes = Math.floor(Math.max(0, ageMilliseconds) / 60_000);
+  return minutes < 1 ? "just now" : `${minutes} min ago`;
+}
+
+function complaintSummary(complaints: EncounterComplaint[], narratives: Record<string, string>): string {
+  return complaints.slice().sort((left, right) => left.ordinal - right.ordinal)
+    .map((complaint) => narratives[complaint.id] || complaint.renderedNarrative)
+    .filter(Boolean).join(" ");
+}
+
+async function readJson<T extends { error?: string }>(url: string): Promise<T> {
+  const response = await fetch(url, { headers: authHeaders() });
+  const body = await response.json() as T;
+  if (!response.ok) throw new Error(body.error ?? `History read failed: ${response.status}`);
+  return body;
+}
+
+async function postJson<T extends { error?: string }>(url: string, body: unknown): Promise<T> {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const result = await response.json() as T;
+  if (!response.ok) throw new Error(result.error ?? `History save failed: ${response.status}`);
+  return result;
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }

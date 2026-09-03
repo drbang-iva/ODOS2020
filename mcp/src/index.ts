@@ -201,6 +201,7 @@ import {
 import {
   handleHpiCaptureRequest,
   handleHpiDefinitionRequest,
+  handleHpiRecordRequest,
 } from "./clinical-graph/hpi-endpoint.js";
 import {
   handleComplaintDefinitionCatalogRequest,
@@ -6543,6 +6544,20 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         } catch (error) {
           console.error("odos-mcp: /clinical-graph/hpi/definition failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "HPI definition route failed" });
+        }
+      });
+
+      app.get("/clinical-graph/encounters/:encounterId/hpi", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleHpiRecordRequest(
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.read"),
+            { authHeader: req.header("authorization"), params: req.params },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: encounter HPI read failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "encounter HPI read route failed" });
         }
       });
 

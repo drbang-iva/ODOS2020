@@ -38,6 +38,7 @@ export function ClearSectionButton({
   hasRecorded = false,
   probeOnMount = false,
   onCleared,
+  onBeforeClear,
   fetchImpl,
   className,
 }: {
@@ -55,6 +56,7 @@ export function ClearSectionButton({
    */
   probeOnMount?: boolean;
   onCleared: (result: EncounterVoidResult) => void;
+  onBeforeClear?: () => void | Promise<void>;
   fetchImpl?: typeof fetch;
   className?: string;
 }) {
@@ -92,6 +94,7 @@ export function ClearSectionButton({
         return;
       }
       if (!(await confirmDestructive(clearSectionConfirmSpec(label, preview.count)))) return;
+      await onBeforeClear?.();
       const result = await voidOrReport(() => voidEncounterEntries(encounterReference, request, { fetchImpl }), "section", onClearFailed);
       setProbedCount(0);
       onCleared(result);

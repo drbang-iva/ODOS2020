@@ -11,7 +11,7 @@ export interface ChartEditorEntry {
 }
 
 const SECTIONS: ChartEditorEntry[] = [
-  { id: "hpi", label: "Chief Complaint / HPI / ROS", group: "HISTORY" },
+  { id: "hpi", label: "Chief Complaint & HPI", group: "HISTORY" },
   { id: "wearing", label: "Wearing (WRx)", group: "PRETEST" },
   { id: "auto-refraction", label: "Auto-Refraction / Auto-K", group: "PRETEST" },
   { id: "pretest-vitals", label: "Vitals / BioPhotonic", group: "PRETEST" },

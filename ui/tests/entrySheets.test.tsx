@@ -35,7 +35,7 @@ test("all width-safe static sections expose truthful layout-only contracts", asy
   const entrySheets = await import("../src/components/charting/ExamEntrySheet").catch(() => undefined);
   assert.ok(entrySheets, "the exam entry-sheet module must exist");
   assert.deepEqual(entrySheets.EXAM_ENTRY_SHEET_CONFIG, {
-    hpi: { title: "Chief Complaint / HPI / ROS", layout: "paired-row-form" },
+    hpi: { title: "Chief Complaint & HPI", layout: "paired-row-form" },
     "manual-keratometry": { title: "Manual Keratometry", layout: "paired-measurement" },
     pachymetry: { title: "Pachymetry", layout: "paired-measurement" },
     va: { title: "Visual Acuity", layout: "paired-row-form" },
@@ -334,45 +334,6 @@ test("the panel tabs expose associations and use roving arrow-key focus", { time
   }
 });
 
-test("Save and Add Another focuses an enabled blank concern within the viewport", { timeout: 30_000 }, async () => {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
-  page.setDefaultTimeout(5_000);
-  try {
-    await page.goto(`${origin}/tests/fixtures/entry-sheets.html?section=hpi`, { waitUntil: "networkidle" });
-    const dialog = page.getByRole("dialog", { name: "Chief Complaint / HPI / ROS" });
-    await dialog.waitFor();
-    await page.getByRole("button", { name: "Other", exact: true }).click();
-
-    const concern = page.getByLabel("Presenting concern");
-    await concern.fill("Blurred vision");
-    await page.getByRole("button", { name: "Save and Add Another" }).click();
-    await page.getByRole("status").filter({ hasText: "Presenting complaint saved." }).waitFor();
-
-    assert.equal(await dialog.count(), 1, "the HPI entry sheet must remain mounted");
-    assert.equal(await concern.inputValue(), "", "the next concern must start blank");
-    const focus = await concern.evaluate((node) => {
-      const input = node as HTMLInputElement;
-      const bounds = input.getBoundingClientRect();
-      return {
-        disabled: input.disabled,
-        focused: document.activeElement === input,
-        top: bounds.top,
-        bottom: bounds.bottom,
-        viewportHeight: window.innerHeight,
-      };
-    });
-    assert.equal(focus.disabled, false, "focus must run only after the next concern is enabled");
-    assert.equal(focus.focused, true, "the blank concern must own document.activeElement");
-    assert.ok(focus.top >= 0, `focused concern starts above the viewport at ${focus.top}px`);
-    assert.ok(
-      focus.bottom <= focus.viewportHeight,
-      `focused concern ends at ${focus.bottom}px beyond the ${focus.viewportHeight}px viewport`,
-    );
-  } finally {
-    await page.close();
-  }
-});
-
 for (const sectionId of [
   "wearing",
   "auto-refraction",
@@ -496,7 +457,7 @@ test("a pristine clinical sheet swaps from HPI to VA through a real overview cli
     await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Open HPI" }).click();
 
-    const hpiDialog = page.getByRole("dialog", { name: "Chief Complaint / HPI / ROS" });
+    const hpiDialog = page.getByRole("dialog", { name: "Chief Complaint & HPI" });
     await hpiDialog.waitFor();
     await openChartAnotherGroup(page, "va");
     await page.locator('[data-editor-section-id="va"]').click();
@@ -518,13 +479,11 @@ for (const contract of [
   {
     sectionId: "hpi",
     opener: "Open HPI",
-    currentTitle: "Chief Complaint / HPI / ROS",
+    currentTitle: "Chief Complaint & HPI",
     edit: async (page: Page) => {
-      await page.getByRole("button", { name: "Other", exact: true }).click();
-      await page.getByRole("button", { name: "Override", exact: true }).click();
-      await page.getByLabel("History Narrative override").fill("Synthetic changed narrative");
+      await page.getByRole("button", { name: "Glaucoma", exact: true }).click();
+      await page.getByRole("button", { name: "Follow Up", exact: true }).click();
     },
-    focusLabel: "History Narrative override",
   },
   {
     sectionId: "iop",
@@ -617,169 +576,6 @@ test("presentational sheet controls do not warn before a clinical sheet swap", {
 
     await page.getByRole("dialog", { name: "Visual Acuity" }).waitFor();
     assert.deepEqual(dialogs, []);
-  } finally {
-    await page.close();
-  }
-});
-
-test("canceling an HPI complaint draft restores the sheet guard checkpoint", { timeout: 30_000 }, async () => {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
-  page.setDefaultTimeout(5_000);
-  const dialogs: string[] = [];
-  page.on("dialog", async (dialog) => {
-    dialogs.push(dialog.message());
-    await dialog.accept();
-  });
-  try {
-    await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
-    await page.getByRole("button", { name: "Open HPI" }).click();
-    await page.getByRole("button", { name: "Other", exact: true }).click();
-    await page.getByLabel("Presenting concern").fill("Discarded synthetic complaint");
-    await page.getByRole("button", { name: "Cancel", exact: true }).click();
-    await openChartAnotherGroup(page, "va");
-    await page.locator('[data-editor-section-id="va"]').click();
-
-    await page.getByRole("dialog", { name: "Visual Acuity" }).waitFor();
-    assert.deepEqual(dialogs, []);
-  } finally {
-    await page.close();
-  }
-});
-
-test("canceling an HPI complaint draft preserves unrelated sheet dirtiness", { timeout: 30_000 }, async () => {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
-  page.setDefaultTimeout(5_000);
-  const dialogs: string[] = [];
-  page.on("dialog", async (dialog) => {
-    dialogs.push(dialog.message());
-    await dialog.dismiss();
-  });
-  try {
-    await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
-    await page.getByRole("button", { name: "Open HPI" }).click();
-    await page.getByRole("combobox", { name: "Vision changes review status" }).selectOption("negative");
-    await page.getByRole("button", { name: "Other", exact: true }).click();
-    await page.getByLabel("Presenting concern").fill("Discarded synthetic complaint");
-    await page.getByRole("button", { name: "Cancel", exact: true }).click();
-    await openChartAnotherGroup(page, "va");
-    await page.locator('[data-editor-section-id="va"]').click();
-
-    assert.deepEqual(dialogs, [
-      "Discard unsaved changes in Chief Complaint / HPI / ROS and open Visual Acuity?",
-    ]);
-    await page.getByRole("dialog", { name: "Chief Complaint / HPI / ROS" }).waitFor();
-  } finally {
-    await page.close();
-  }
-});
-
-test("Save and Add Another resets the sheet guard before a later swap", { timeout: 30_000 }, async () => {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
-  page.setDefaultTimeout(5_000);
-  const dialogs: string[] = [];
-  page.on("dialog", async (dialog) => {
-    dialogs.push(dialog.message());
-    await dialog.accept();
-  });
-  try {
-    await page.goto(`${origin}/tests/fixtures/entry-sheets.html?section=hpi`, { waitUntil: "networkidle" });
-    await page.getByRole("button", { name: "Other", exact: true }).click();
-    const concern = page.getByLabel("Presenting concern");
-    await concern.fill("Blurred vision");
-    await page.getByRole("button", { name: "Save and Add Another" }).click();
-    await page.getByRole("status").filter({ hasText: "Presenting complaint saved." }).waitFor();
-    assert.equal(await concern.inputValue(), "");
-
-    await openChartAnotherGroup(page, "va");
-    await page.locator('[data-editor-section-id="va"]').click();
-    await page.getByRole("dialog", { name: "Visual Acuity" }).waitFor();
-    assert.deepEqual(dialogs, []);
-  } finally {
-    await page.close();
-  }
-});
-
-test("a failed automatic History capture keeps the HPI sheet dirty", { timeout: 30_000 }, async () => {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
-  page.setDefaultTimeout(5_000);
-  const dialogs: string[] = [];
-  page.on("dialog", async (dialog) => {
-    dialogs.push(dialog.message());
-    await dialog.dismiss();
-  });
-  try {
-    await page.goto(
-      `${origin}/tests/fixtures/entry-sheets.html?section=hpi&failHistory=true`,
-      { waitUntil: "networkidle" },
-    );
-    await page.getByRole("button", { name: "Other", exact: true }).click();
-    await page.getByLabel("Presenting concern").fill("Persisted complaint with failed History");
-    await page.getByRole("button", { name: "Save Complaint" }).click();
-    await page.getByRole("alert").filter({ hasText: "History was not recorded" }).waitFor();
-
-    await openChartAnotherGroup(page, "va");
-    await page.locator('[data-editor-section-id="va"]').click();
-    assert.deepEqual(dialogs, [
-      "Discard unsaved changes in Chief Complaint / HPI / ROS and open Visual Acuity?",
-    ]);
-    await page.getByRole("dialog", { name: "Chief Complaint / HPI / ROS" }).waitFor();
-  } finally {
-    await page.close();
-  }
-});
-
-test("Save and Add Another seeds a clean checkpoint for canceling the next complaint", { timeout: 30_000 }, async () => {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
-  page.setDefaultTimeout(5_000);
-  const dialogs: string[] = [];
-  page.on("dialog", async (dialog) => {
-    dialogs.push(dialog.message());
-    await dialog.accept();
-  });
-  try {
-    await page.goto(`${origin}/tests/fixtures/entry-sheets.html?section=hpi`, { waitUntil: "networkidle" });
-    await page.getByRole("button", { name: "Other", exact: true }).click();
-    const concern = page.getByLabel("Presenting concern");
-    await concern.fill("Saved synthetic complaint");
-    await page.getByRole("button", { name: "Save and Add Another" }).click();
-    await page.getByRole("status").filter({ hasText: "Presenting complaint saved." }).waitFor();
-    await concern.fill("Discarded second complaint");
-    await page.getByRole("button", { name: "Cancel", exact: true }).click();
-
-    await openChartAnotherGroup(page, "va");
-    await page.locator('[data-editor-section-id="va"]').click();
-    await page.getByRole("dialog", { name: "Visual Acuity" }).waitFor();
-    assert.deepEqual(dialogs, []);
-  } finally {
-    await page.close();
-  }
-});
-
-test("Save and Add Another retains later ROS dirtiness when the next complaint is canceled", { timeout: 30_000 }, async () => {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
-  page.setDefaultTimeout(5_000);
-  const dialogs: string[] = [];
-  page.on("dialog", async (dialog) => {
-    dialogs.push(dialog.message());
-    await dialog.dismiss();
-  });
-  try {
-    await page.goto(`${origin}/tests/fixtures/entry-sheets.html?section=hpi`, { waitUntil: "networkidle" });
-    await page.getByRole("button", { name: "Other", exact: true }).click();
-    const concern = page.getByLabel("Presenting concern");
-    await concern.fill("Saved synthetic complaint");
-    await page.getByRole("button", { name: "Save and Add Another" }).click();
-    await page.getByRole("status").filter({ hasText: "Presenting complaint saved." }).waitFor();
-    await page.getByRole("combobox", { name: "Vision changes review status" }).selectOption("negative");
-    await concern.fill("Discarded second complaint");
-    await page.getByRole("button", { name: "Cancel", exact: true }).click();
-
-    await openChartAnotherGroup(page, "va");
-    await page.locator('[data-editor-section-id="va"]').click();
-    assert.deepEqual(dialogs, [
-      "Discard unsaved changes in Chief Complaint / HPI / ROS and open Visual Acuity?",
-    ]);
-    await page.getByRole("dialog", { name: "Chief Complaint / HPI / ROS" }).waitFor();
   } finally {
     await page.close();
   }

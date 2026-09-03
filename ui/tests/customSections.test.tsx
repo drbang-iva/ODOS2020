@@ -75,7 +75,7 @@ test("SpineNav groups the traditional spine and appends custom sections after ev
   );
   const labels = [
     "HISTORY",
-    "Chief Complaint / HPI / ROS",
+    "Chief Complaint &amp; HPI",
     "PRETEST",
     "Wearing (WRx)",
     "Auto-Refraction / Auto-K",

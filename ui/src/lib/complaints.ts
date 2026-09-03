@@ -37,6 +37,7 @@ export interface EncounterComplaint extends ComplaintDraft {
   encounterId: string;
   patientId: string;
   ordinal: number;
+  templateKey?: string;
   status: "active" | "removed";
   renderedNarrative: string;
 }

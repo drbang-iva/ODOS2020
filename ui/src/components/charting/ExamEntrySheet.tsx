@@ -7,7 +7,7 @@ import { ClearEncounterButton } from "./ClearControls";
 import { UndoStrip } from "./UndoStrip";
 
 export const EXAM_ENTRY_SHEET_CONFIG = {
-  hpi: { title: "Chief Complaint / HPI / ROS", layout: "paired-row-form" },
+  hpi: { title: "Chief Complaint & HPI", layout: "paired-row-form" },
   "manual-keratometry": { title: "Manual Keratometry", layout: "paired-measurement" },
   pachymetry: { title: "Pachymetry", layout: "paired-measurement" },
   // Visual Acuity has row fields but commits OD and OS together. Individual row saves are deferred.

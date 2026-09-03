@@ -1,380 +1,353 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { test } from "node:test";
+import test from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import {
-  ComplaintIntake,
-  DEFAULT_HPI_ROS_OPTIONS,
   HpiSection,
-  buildHpiRequestBody,
-  complaintDefinitionForRos,
-  markRemainingReviewedNegative,
+  HistoryTemplateEditor,
+  cycleHistoryTriState,
+  historySectionComplete,
+  type HistoryCatalogs,
+  type HistoryTemplate,
+  type HistoryTemplateAnswer,
 } from "../src/components/charting/HpiSection";
-import {
-  blankComplaintDraft,
-  effectiveComplaintOptions,
-  renderComplaintNarrative,
-  type ComplaintDefinition,
-  type EncounterComplaint,
-  type GenericComplaintOptions,
-} from "../src/lib/complaints";
-import { SpineNav } from "../src/components/charting/SpineNav";
-import type { SectionSaveStatus } from "../src/components/charting/types";
+import { EncounterEditContext } from "../src/components/charting/encounter-edit-context";
 
-const GENERIC: GenericComplaintOptions = {
-  conditions: [{ code: "dry-eyes", display: "Dry Eyes", active: true }],
-  qualities: [{ code: "constant", display: "constant", active: true }],
-  treatments: [{ code: "no-treatment", display: "no treatment", active: true }],
-};
-
-const DRY_EYE: ComplaintDefinition = {
-  id: "complaint-definition-dry-eye",
-  stableKey: "dry-eye",
-  display: "Patient (Dry Eye)",
-  kind: "patient-symptom",
-  conditionOptions: [],
-  qualityOptions: [
-    { code: "environmentally-sensitive", display: "environmentally sensitive", active: true },
-    { code: "brought-on-by-drafts-or-fans", display: "brought on by drafts or fans", active: true },
+const TEMPLATE: HistoryTemplate = {
+  complaint: "glaucoma",
+  label: "Glaucoma",
+  presentations: "glaucoma_presentations",
+  sections: [
+    { id: "symptoms", type: "symptoms", label: "Signs & symptoms", catalog: "glaucoma_symptoms", required: true },
+    { id: "symptom-duration", type: "duration", label: "these symptoms" },
+    { id: "glaucoma-duration", type: "duration", label: "glaucoma" },
+    { id: "risk-factors", type: "risk_factors", label: "Risk factors", catalog: "glaucoma_risk", required: true },
+    { id: "current-treatment", type: "treatment", label: "Current glaucoma treatment", catalog: "glaucoma_formulary", when: "current", per_eye: true, required: true },
+    { id: "interval", type: "interval", label: "Since last visit", on: "follow-up" },
+    { id: "presents-for", type: "presents_for", label: "Today the patient presents for", catalog: "glaucoma_workup", required: true },
+    { id: "additional-history", type: "text", label: "Additional history" },
   ],
-  treatmentOptions: [
-    { code: "artificial-tears", display: "artificial tears", active: true },
-    { code: "warm-compresses", display: "warm compresses", active: true },
-  ],
-  seedRank: 10,
-  status: "active",
+  narrative: "declaration-owned",
 };
 
-const ROUTINE: ComplaintDefinition = {
-  ...DRY_EYE,
-  id: "complaint-definition-routine-eye-exam",
-  stableKey: "routine-eye-exam",
-  display: "Routine Eye Exam",
-  kind: "evaluation-reason",
-  qualityOptions: [],
-  treatmentOptions: [],
-  seedRank: 3,
+const CATALOGS: HistoryCatalogs = {
+  glaucoma_presentations: [{ code: "follow-up", display: "Follow Up" }, { code: "pressure-check", display: "Pressure Check" }],
+  glaucoma_symptoms: [{ code: "ocular-pain", display: "ocular pain" }],
+  glaucoma_risk: [{ code: "family-history", display: "family history of glaucoma" }],
+  glaucoma_formulary: [{ code: "latanoprost", display: "latanoprost" }],
+  glaucoma_workup: [{ code: "iop-check", display: "IOP check" }],
 };
 
-test("HPI section renders Presenting Complaints, Top Complaints, persistent ROS controls, and no legacy free-text grid", () => {
+test("the History surface starts open and contains no explicit Save control", () => {
   const html = renderToStaticMarkup(<HpiSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} />);
-  assert.match(html, /Chief complaint \/ HPI \/ ROS/);
-  assert.match(html, /Presenting Complaints/);
-  assert.match(html, /Top Complaints/);
-  assert.match(html, /Search complaints/);
-  assert.match(html, /Other/);
-  assert.match(html, /Eye-focused/);
-  assert.match(html, /General medical/);
-  assert.match(html, /Mark remaining reviewed: negative/);
-  assert.match(html, /Add another medical flag/);
-  assert.match(html, /Add flag/);
-  assert.match(html, /Save reviewed ROS/);
-  assert.doesNotMatch(html, /Save history/);
-  assert.doesNotMatch(html, /aria-label="Chief complaint"/);
-  for (const legacy of ["Modifying factors", "Associated signs / symptoms", "History of present illness"]) assert.doesNotMatch(html, new RegExp(legacy));
+  assert.match(html, /Chief Complaint &amp; HPI/);
+  assert.match(html, /Loading history templates/);
+  assert.doesNotMatch(html, />Save(?: |<)/);
 });
 
-test("Complaint Intake renders all six clusters and the automated narrative controls", () => {
-  const draft = blankComplaintDraft({ complaintKey: "dry-eye" });
-  const html = renderToStaticMarkup(<ComplaintIntake
-    draft={draft}
-    definition={DRY_EYE}
-    options={effectiveComplaintOptions(GENERIC, DRY_EYE)}
-    preview="Patient reports dry eye. Current treatment: none."
-    overrideDirty={false}
-    saving={false}
-    onUpdate={() => undefined}
-    onToggle={() => undefined}
-    onNarrativeMode={() => undefined}
-    onRegenerate={() => undefined}
-    onCancel={() => undefined}
-    onSave={() => undefined}
-  />);
-  for (const label of ["Symptoms", "Laterality", "Character", "Duration", "Current treatment", "Referral &amp; history", "History Narrative"]) assert.match(html, new RegExp(label));
-  assert.match(html, /environmentally sensitive/);
-  assert.match(html, /artificial tears/);
-  assert.match(html, /Automated/);
-  assert.match(html, /Override/);
-  assert.match(html, /Save and Add Another/);
-  assert.match(html, /Save Complaint/);
-});
-
-test("dry eye layers its sourced vocabulary while every other seed remains generic-only", () => {
-  const dry = effectiveComplaintOptions(GENERIC, DRY_EYE);
-  const routine = effectiveComplaintOptions(GENERIC, ROUTINE);
-  assert.deepEqual(dry.qualities.map((option) => option.code), ["constant", "environmentally-sensitive", "brought-on-by-drafts-or-fans"]);
-  assert.deepEqual(dry.treatments.map((option) => option.code), ["no-treatment", "artificial-tears", "warm-compresses"]);
-  assert.deepEqual(routine, GENERIC);
-});
-
-test("History Narrative matches the worked dry-eye example and override text stays frozen", () => {
-  const draft = {
-    ...blankComplaintDraft({ complaintKey: "dry-eye" }),
-    conditions: ["dry-eyes"],
-    eyeLocation: "OU" as const,
-    eyeComparison: "right-worse" as const,
-    qualities: ["constant", "environmentally-sensitive", "brought-on-by-drafts-or-fans"],
-    duration: { value: 3, unit: "months" as const },
-    treatmentsTried: ["artificial-tears", "warm-compresses"],
-    additionalHistory: "worse at end of workday",
+test("one generic renderer follows the declaration and shows interval only for follow-up", () => {
+  const base = {
+    complaintId: "complaint-1",
+    template: TEMPLATE,
+    catalogs: CATALOGS,
+    answers: [answer("presentation", undefined, { kind: "selection", code: "pressure-check" })] as HistoryTemplateAnswer[],
+    narrative: "",
+    editMode: false,
+    onChange: () => undefined,
+    onRemoveTyped: () => undefined,
   };
-  const narrative = renderComplaintNarrative(draft, DRY_EYE, GENERIC);
-  assert.equal(narrative, "Patient reports dry eyes, both eyes, right worse than left, ongoing for 3 months. Described as constant, environmentally sensitive, brought on by drafts or fans. Current treatment: artificial tears, warm compresses. Additional history: worse at end of workday.");
-  assert.equal(renderComplaintNarrative({
-    ...draft,
-    conditions: [],
-    narrative: { mode: "override", overrideText: "Clinician-authored paragraph." },
-  }, DRY_EYE, GENERIC), "Clinician-authored paragraph.");
-  assert.match(renderComplaintNarrative({
-    ...draft,
-    duration: { value: 1, unit: "weeks" },
-  }, DRY_EYE, GENERIC), /ongoing for 1 week\./);
-  const dirtyHtml = renderToStaticMarkup(<ComplaintIntake
-    draft={{ ...draft, narrative: { mode: "override", overrideText: narrative } }}
-    definition={DRY_EYE}
-    options={effectiveComplaintOptions(GENERIC, DRY_EYE)}
-    preview={narrative}
-    overrideDirty={true}
-    saving={false}
-    onUpdate={() => undefined}
-    onToggle={() => undefined}
-    onNarrativeMode={() => undefined}
-    onRegenerate={() => undefined}
-    onCancel={() => undefined}
-    onSave={() => undefined}
-  />);
-  assert.match(dirtyHtml, /Narrative is overridden and coded fields changed/);
-  assert.match(dirtyHtml, /Regenerate from coded fields/);
+  const pressure = renderToStaticMarkup(<HistoryTemplateEditor {...base} />);
+  assert.match(pressure, /Signs &amp; symptoms/);
+  assert.match(pressure, /these symptoms/);
+  assert.match(pressure, /glaucoma/);
+  assert.doesNotMatch(pressure, /Since last visit/);
+
+  const followUp = renderToStaticMarkup(<HistoryTemplateEditor {...base} answers={[answer("presentation", undefined, { kind: "selection", code: "follow-up" })]} />);
+  assert.match(followUp, /Since last visit/);
+  assert.match(followUp, /ocular pain/);
+  assert.match(followUp, /family history of glaucoma/);
+  assert.match(followUp, /latanoprost/);
+  assert.match(followUp, /IOP check/);
+  assert.doesNotMatch(followUp, />Save(?: |<)/);
 });
 
-test("ROS bulk-negative changes only Not reviewed items and positive rows map to pre-seeded complaints", () => {
-  const statuses = markRemainingReviewedNegative(
-    { "vision-changes": "positive", "eye-pain": "negative", diabetes: "" },
-    DEFAULT_HPI_ROS_OPTIONS,
-    "eye",
-  );
-  assert.equal(statuses["vision-changes"], "positive");
-  assert.equal(statuses["eye-pain"], "negative");
-  assert.equal(statuses["floaters-flashes"], "negative");
-  assert.equal(statuses.diabetes, "");
-  assert.equal(complaintDefinitionForRos(DEFAULT_HPI_ROS_OPTIONS.find((option) => option.code === "eye-pain")!, [DRY_EYE, ROUTINE, { ...DRY_EYE, stableKey: "patient-eye-pain" }])?.stableKey, "patient-eye-pain");
-  assert.equal(complaintDefinitionForRos(DEFAULT_HPI_ROS_OPTIONS.find((option) => option.code === "diabetes")!, [DRY_EYE, ROUTINE]), undefined);
-});
-
-test("history request transmits only reviewed ROS values and bulk-attestation provenance inputs", () => {
-  const body = buildHpiRequestBody({
-    patientReference: "Patient/p1",
-    encounterReference: "Encounter/e1",
-    rosStatuses: { "vision-changes": "positive", diabetes: "negative" },
-    rosOptions: DEFAULT_HPI_ROS_OPTIONS,
-    reviewAttestations: ["general"],
+test("per-eye treatment flags retain distinct OD and OS answers for the same catalog option", () => {
+  const presentation = answer("presentation", undefined, { kind: "selection", code: "follow-up" });
+  const recorded: HistoryTemplateAnswer[] = [];
+  let current = [presentation];
+  const props = () => ({
+    complaintId: "complaint-1",
+    template: TEMPLATE,
+    catalogs: CATALOGS,
+    answers: current,
+    narrative: "",
+    editMode: false,
+    onChange: (next: HistoryTemplateAnswer | undefined) => {
+      if (next) recorded.push(next);
+    },
+    onRemoveTyped: () => undefined,
   });
-  assert.deepEqual(body.reviewOfSystems, [
-    { code: "vision-changes", display: "Vision changes", category: "eye", status: "positive" },
-    { code: "diabetes", display: "Diabetes", category: "general", status: "negative" },
+  const renderer = create(<HistoryTemplateEditor {...props()} />);
+
+  act(() => renderer.root.findByProps({ "aria-label": "latanoprost OD: unasked" }).props.onClick());
+  current = [...current, recorded[0]!];
+  act(() => renderer.update(<HistoryTemplateEditor {...props()} />));
+  act(() => renderer.root.findByProps({ "aria-label": "latanoprost OS: unasked" }).props.onClick());
+
+  assert.deepEqual(recorded.map((item) => [item.id, item.eye]), [
+    ["history-complaint-1-current-treatment-latanoprost-OD", "OD"],
+    ["history-complaint-1-current-treatment-latanoprost-OS", "OS"],
   ]);
-  assert.deepEqual(body.reviewAttestations, ["general"]);
+  renderer.unmount();
 });
 
-test("remove complaint network failures surface a visible error", async () => {
-  await assertRejectedMutationVisible(async (renderer) => {
-    const remove = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Remove");
-    assert.ok(remove);
-    await act(async () => {
-      remove.props.onClick();
-      await flushEffects();
-    });
-  });
+test("three-state chips cycle unasked to positive to negative to unasked", () => {
+  assert.equal(cycleHistoryTriState(undefined), "positive");
+  assert.equal(cycleHistoryTriState("positive"), "negative");
+  assert.equal(cycleHistoryTriState("negative"), undefined);
 });
 
-test("reorder complaint network failures surface a visible error", async () => {
-  await assertRejectedMutationVisible(async (renderer) => {
-    const complaints = renderer.root.findAllByType("article");
-    assert.equal(complaints.length, 2);
-    act(() => complaints[0]!.props.onDragStart());
-    await act(async () => {
-      complaints[1]!.props.onDrop();
-      await flushEffects();
-    });
-  });
+test("a persisted negative chip's third tap requests clearing that exact Observation without a delete control", () => {
+  const negative = { ...answer("symptoms", "ocular-pain", { kind: "tri-state", status: "negative" }), observationReference: "Observation/answer-pain" };
+  let change: { next: HistoryTemplateAnswer | undefined; prior: HistoryTemplateAnswer | undefined } | undefined;
+  const renderer = create(<HistoryTemplateEditor
+    complaintId="complaint-1"
+    template={TEMPLATE}
+    catalogs={CATALOGS}
+    answers={[answer("presentation", undefined, { kind: "selection", code: "follow-up" }), negative]}
+    narrative=""
+    editMode={false}
+    onChange={(next, prior) => { change = { next, prior }; }}
+    onRemoveTyped={() => undefined}
+  />);
+  const chip = renderer.root.findByProps({ "aria-label": "ocular pain: negative" });
+  act(() => chip.props.onClick());
+  assert.equal(change?.next, undefined);
+  assert.equal(change?.prior?.observationReference, "Observation/answer-pain");
+  assert.equal(renderer.root.findAllByType("button").some((button) => button.children.join("") === "Remove"), false);
+  renderer.unmount();
 });
 
-test("add medical flag network failures surface a visible error", async () => {
-  await assertRejectedMutationVisible(async (renderer) => {
-    const input = renderer.root.findByProps({ "aria-label": "New general-medical review flag" });
-    act(() => input.props.onChange({ target: { value: "Asthma" } }));
-    const add = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Add flag");
-    assert.ok(add);
-    await act(async () => {
-      add.props.onClick();
-      await flushEffects();
-    });
-  });
+test("computed completeness follows required declaration sections, not a completion button", () => {
+  const incomplete = [answer("presentation", undefined, { kind: "selection", code: "follow-up" })];
+  assert.equal(historySectionComplete(TEMPLATE, incomplete), false);
+  assert.equal(historySectionComplete(TEMPLATE, [
+    ...incomplete,
+    answer("symptoms", "ocular-pain", { kind: "tri-state", status: "negative" }),
+    answer("risk-factors", "family-history", { kind: "tri-state", status: "negative" }),
+    answer("current-treatment", "latanoprost", { kind: "tri-state", status: "positive" }),
+    answer("presents-for", "iop-check", { kind: "tri-state", status: "positive" }),
+  ]), true);
 });
 
-test("Save and Add Another keeps a fresh complaint intake open", async () => {
+test("field changes autosave after the 800ms debounce and report saved in the section header", async () => {
   const originalFetch = globalThis.fetch;
+  let historyPosts = 0;
+  const submittedAnswers: HistoryTemplateAnswer[][] = [];
   globalThis.fetch = async (input, init) => {
     const url = String(input);
-    if (url.endsWith("/clinical-graph/hpi/definition")) {
-      return jsonResponse({ definition: { fields: { reviewOfSystems: { options: DEFAULT_HPI_ROS_OPTIONS } } } });
-    }
-    if (url.endsWith("/clinical-graph/complaint-definitions")) {
-      return jsonResponse({ definitions: [DRY_EYE, ROUTINE], genericOptions: GENERIC });
-    }
-    if (url.endsWith("/clinical-graph/encounters/e1/complaints") && init?.method === "POST") {
-      return jsonResponse({ complaints: [complaintFixture("complaint-1", 1)] });
-    }
+    if (url.endsWith("/clinical-graph/hpi/definition")) return json({ templates: [TEMPLATE], catalogs: CATALOGS, definition: {} });
+    if (url.endsWith("/clinical-graph/encounters/e1/complaints") && init?.method === "POST") return json({ complaints: [complaint()] });
+    if (url.endsWith("/clinical-graph/encounters/e1/complaints")) return json({ complaints: [] });
+    if (url.endsWith("/clinical-graph/encounters/e1/hpi")) return json({
+      answers: [],
+      followUpPrefills: [
+        answer("symptoms", "ocular-pain", { kind: "tri-state", status: "negative" }),
+        answer("presents-for", "iop-check", { kind: "tri-state", status: "positive" }),
+      ],
+      templateNarratives: [],
+    });
     if (url.endsWith("/clinical-graph/hpi") && init?.method === "POST") {
-      return jsonResponse({ observationReference: "Observation/history-1" });
-    }
-    if (url.endsWith("/clinical-graph/encounters/e1/complaints")) {
-      return jsonResponse({ complaints: [] });
+      historyPosts += 1;
+      const submitted = JSON.parse(String(init.body)) as { templateAnswers: HistoryTemplateAnswer[] };
+      submittedAnswers.push(submitted.templateAnswers);
+      return json({
+        observationReference: "Observation/history-1",
+        answers: submitted.templateAnswers.map((item, index) => ({ ...item, observationReference: `Observation/answer-${index + 1}` })),
+        templateNarratives: [{ complaintId: "complaint-1", narrative: "is being seen for follow up." }],
+      });
     }
     throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${url}`);
   };
   let renderer!: ReactTestRenderer;
   try {
     await act(async () => {
-      renderer = create(<HpiSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} />);
-      await flushEffects();
+      renderer = create(<EncounterEditContext.Provider value={{}}><HpiSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} /></EncounterEditContext.Provider>);
+      await delay(0);
     });
-    const complaint = renderer.root.findAllByType("button")
-      .find((button) => button.children.join("") === "Patient (Dry Eye)");
-    assert.ok(complaint);
-    act(() => complaint.props.onClick());
-    const saveAndAdd = renderer.root.findAllByType("button")
-      .find((button) => button.children.join("") === "Save and Add Another");
-    assert.ok(saveAndAdd);
-    await act(async () => {
-      saveAndAdd.props.onClick();
-      await flushEffects();
-    });
-    assert.ok(renderer.root.findAllByType("h3").some((heading) => heading.children.join("") === "Complaint Intake"));
-    const concern = renderer.root.findAllByType("input")
-      .find((input) => input.props.maxLength === 4000);
-    assert.ok(concern);
-    assert.equal(concern.props.value, "");
+    const add = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Glaucoma");
+    assert.ok(add);
+    await act(async () => { add.props.onClick(); await delay(0); });
+    assert.equal(historyPosts, 1, "creating the first complaint creates hpi_ros");
+    const followUp = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Follow Up");
+    assert.ok(followUp);
+    act(() => followUp.props.onClick());
+    await act(async () => { await delay(700); });
+    assert.equal(historyPosts, 1);
+    await act(async () => { await delay(150); });
+    assert.equal(historyPosts, 2);
+    assert.deepEqual(submittedAnswers[1]?.map((item) => [item.sectionId, item.optionCode, item.value]), [
+      ["presentation", undefined, { kind: "selection", code: "follow-up" }],
+      ["symptoms", "ocular-pain", { kind: "tri-state", status: "negative" }],
+      ["presents-for", "iop-check", { kind: "tri-state", status: "positive" }],
+    ]);
+    assert.match(renderer.root.findByProps({ role: "status" }).children.join(""), /saved · just now/i);
   } finally {
     renderer?.unmount();
     globalThis.fetch = originalFetch;
   }
 });
 
-test("a failed automatic History capture keeps the saved complaint visible and retries without saving it twice", async () => {
+test("clearing a chip waits for an in-flight autosave and voids the Observation it created", async () => {
   const originalFetch = globalThis.fetch;
-  let complaintPosts = 0;
   let historyPosts = 0;
-  let failHistory = true;
-  const savedReports: Array<{ status: SectionSaveStatus; keepOpen?: boolean }> = [];
+  let resolveInFlight!: (response: Response) => void;
+  const inFlight = new Promise<Response>((resolve) => { resolveInFlight = resolve; });
+  const voidBodies: Array<{ scope?: string; observationReference?: string }> = [];
   globalThis.fetch = async (input, init) => {
     const url = String(input);
-    if (url.endsWith("/clinical-graph/hpi/definition")) {
-      return jsonResponse({ definition: { fields: { reviewOfSystems: { options: DEFAULT_HPI_ROS_OPTIONS } } } });
-    }
-    if (url.endsWith("/clinical-graph/complaint-definitions")) {
-      return jsonResponse({ definitions: [DRY_EYE, ROUTINE], genericOptions: GENERIC });
-    }
-    if (url.endsWith("/clinical-graph/encounters/e1/complaints") && init?.method === "POST") {
-      complaintPosts += 1;
-      return jsonResponse({ complaints: [complaintFixture("complaint-1", 1)] });
-    }
-    if (url.endsWith("/clinical-graph/encounters/e1/complaints")) {
-      return jsonResponse({ complaints: [] });
+    if (url.endsWith("/clinical-graph/hpi/definition")) return json({ templates: [TEMPLATE], catalogs: CATALOGS, definition: {} });
+    if (url.endsWith("/clinical-graph/encounters/e1/complaints") && init?.method === "POST") return json({ complaints: [complaint()] });
+    if (url.endsWith("/clinical-graph/encounters/e1/complaints")) return json({ complaints: [] });
+    if (url.endsWith("/clinical-graph/encounters/e1/hpi")) return json({
+      answers: [],
+      followUpPrefills: [answer("symptoms", "ocular-pain", { kind: "tri-state", status: "negative" })],
+      templateNarratives: [],
+    });
+    if (url.endsWith("/clinical-graph/encounters/e1/void") && init?.method === "POST") {
+      voidBodies.push(JSON.parse(String(init.body)) as { scope?: string; observationReference?: string });
+      return json({ voided: ["Observation/answer-pain"], count: 1, sections: [], entries: [], preview: false });
     }
     if (url.endsWith("/clinical-graph/hpi") && init?.method === "POST") {
       historyPosts += 1;
-      return failHistory
-        ? new Response(JSON.stringify({ error: "FHIR write unavailable" }), { status: 503, headers: { "Content-Type": "application/json" } })
-        : jsonResponse({ observationReference: "Observation/history-1" });
+      const submitted = JSON.parse(String(init.body)) as { templateAnswers: HistoryTemplateAnswer[] };
+      if (historyPosts === 2) return inFlight;
+      return json({
+        answers: submitted.templateAnswers.map((item) => ({ ...item, observationReference: `Observation/${item.optionCode === "ocular-pain" ? "answer-pain" : item.id}` })),
+        templateNarratives: [],
+      });
     }
     throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${url}`);
   };
   let renderer!: ReactTestRenderer;
   try {
     await act(async () => {
-      renderer = create(<HpiSection
-        patientReference="Patient/p1"
-        encounterReference="Encounter/e1"
-        onSaved={(status, keepOpen) => { savedReports.push({ status, keepOpen }); }}
-      />);
-      await flushEffects();
+      renderer = create(<EncounterEditContext.Provider value={{}}><HpiSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} /></EncounterEditContext.Provider>);
+      await delay(0);
     });
-    const complaint = renderer.root.findAllByType("button")
-      .find((button) => button.children.join("") === "Patient (Dry Eye)");
-    assert.ok(complaint);
-    act(() => complaint.props.onClick());
-    const save = renderer.root.findAllByType("button")
-      .find((button) => button.children.join("") === "Save Complaint");
-    assert.ok(save);
     await act(async () => {
-      save.props.onClick();
-      await flushEffects();
+      renderer.root.findAllByType("button").find((button) => button.children.join("") === "Glaucoma")!.props.onClick();
+      await delay(0);
     });
+    act(() => renderer.root.findAllByType("button").find((button) => button.children.join("") === "Follow Up")!.props.onClick());
+    await act(async () => { await delay(850); });
+    assert.equal(historyPosts, 2, "the answer save is in flight");
+    act(() => renderer.root.findByProps({ "aria-label": "ocular pain: negative" }).props.onClick());
+    assert.deepEqual(voidBodies, [], "the clear waits for the save response to identify the Observation");
 
-    assert.equal(complaintPosts, 1);
-    assert.equal(historyPosts, 1);
-    assert.equal(savedReports.length, 1);
-    assert.equal(savedReports[0]?.status.completed, false);
-    assert.equal(savedReports[0]?.keepOpen, true);
-    assert.match(renderer.root.findByProps({ role: "alert" }).children.join(""), /complaint was saved.*History was not recorded/i);
-    assert.ok(renderer.root.findAllByType("p").some((paragraph) =>
-      paragraph.children.join("") === "Complaint 1"
-    ));
-    const nav = renderToStaticMarkup(<SpineNav
-      active="hpi"
-      statuses={{ hpi: savedReports[0]!.status }}
-      onSelect={() => undefined}
-    />);
-    assert.match(nav, /aria-label="Incomplete — Complaint 1"/);
-    assert.doesNotMatch(nav, /aria-label="Complete — Complaint 1"/);
-
-    failHistory = false;
-    const retry = renderer.root.findAllByType("button")
-      .find((button) => button.children.join("") === "Retry recording History");
-    assert.ok(retry);
     await act(async () => {
-      retry.props.onClick();
-      await flushEffects();
+      resolveInFlight(json({
+        answers: [
+          { ...answer("presentation", undefined, { kind: "selection", code: "follow-up" }), observationReference: "Observation/answer-presentation" },
+          { ...answer("symptoms", "ocular-pain", { kind: "tri-state", status: "negative" }), observationReference: "Observation/answer-pain" },
+        ],
+        templateNarratives: [],
+      }));
+      await delay(0);
+      await delay(0);
     });
-    assert.equal(complaintPosts, 1);
-    assert.equal(historyPosts, 2);
-    assert.equal(savedReports.length, 2);
-    assert.equal(savedReports[1]?.status.completed, true);
+    assert.deepEqual(voidBodies, [{
+      scope: "observation",
+      observationReference: "Observation/answer-pain",
+      sectionKey: "hpi",
+      label: "ocular-pain",
+    }]);
   } finally {
     renderer?.unmount();
     globalThis.fetch = originalFetch;
   }
 });
 
-test("legacy next-field wiring is fully removed from the source", () => {
-  const source = readFileSync(new URL("../src/components/charting/HpiSection.tsx", import.meta.url), "utf8");
-  assert.doesNotMatch(source, /HPI_ELEMENTS|EMPTY_HPI|chiefComplaint|modifyingFactors|associatedSignsSymptoms/);
+test("changing presentation voids follow-up-only answers before autosaving the new path", async () => {
+  const originalFetch = globalThis.fetch;
+  const submittedAnswers: HistoryTemplateAnswer[][] = [];
+  const voidBodies: Array<{ scope?: string; observationReference?: string | string[] }> = [];
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/clinical-graph/hpi/definition")) return json({ templates: [TEMPLATE], catalogs: CATALOGS, definition: {} });
+    if (url.endsWith("/clinical-graph/encounters/e1/complaints")) return json({ complaints: [complaint()] });
+    if (url.endsWith("/clinical-graph/encounters/e1/hpi")) return json({
+      answers: [
+        { ...answer("presentation", undefined, { kind: "selection", code: "follow-up" }), observationReference: "Observation/answer-presentation" },
+        { ...answer("interval", undefined, { kind: "interval", code: "same", note: "Stable" }), observationReference: "Observation/answer-interval" },
+      ],
+      followUpPrefills: [],
+      templateNarratives: [],
+    });
+    if (url.endsWith("/clinical-graph/encounters/e1/void") && init?.method === "POST") {
+      voidBodies.push(JSON.parse(String(init.body)) as { scope?: string; observationReference?: string | string[] });
+      return json({ voided: ["Observation/answer-interval"], count: 1, sections: [], entries: [], preview: false });
+    }
+    if (url.endsWith("/clinical-graph/hpi") && init?.method === "POST") {
+      const submitted = JSON.parse(String(init.body)) as { templateAnswers: HistoryTemplateAnswer[] };
+      submittedAnswers.push(submitted.templateAnswers);
+      return json({ answers: submitted.templateAnswers, templateNarratives: [] });
+    }
+    throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${url}`);
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<EncounterEditContext.Provider value={{}}><HpiSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} /></EncounterEditContext.Provider>);
+      await delay(0);
+    });
+    await act(async () => {
+      renderer.root.findAllByType("button").find((button) => button.children.join("") === "Pressure Check")!.props.onClick();
+      await delay(0);
+    });
+    await act(async () => { await delay(850); });
+
+    assert.deepEqual(voidBodies, [{
+      scope: "observation",
+      observationReference: ["Observation/answer-interval"],
+      sectionKey: "hpi",
+      label: "Follow-up details",
+    }]);
+    assert.equal(submittedAnswers.at(-1)?.some((item) => item.sectionId === "interval"), false);
+    assert.equal((submittedAnswers.at(-1)?.find((item) => item.sectionId === "presentation")?.value as { code?: string })?.code, "pressure-check");
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
 });
 
-test("History is the first top-level spine group before Pretest", () => {
-  const html = renderToStaticMarkup(<SpineNav active="hpi" statuses={{}} onSelect={() => undefined} />);
-  const historyIndex = html.indexOf("HISTORY");
-  const hpiIndex = html.indexOf("Chief Complaint / HPI / ROS");
-  const pretestIndex = html.indexOf("PRETEST");
-  assert.ok(historyIndex >= 0 && hpiIndex > historyIndex && pretestIndex > hpiIndex);
+test("typed selects expose a disabled prompt instead of an unconfirmed clear action", () => {
+  const html = renderToStaticMarkup(<HistoryTemplateEditor
+    complaintId="complaint-1"
+    template={TEMPLATE}
+    catalogs={CATALOGS}
+    answers={[answer("presentation", undefined, { kind: "selection", code: "follow-up" })]}
+    narrative=""
+    editMode={false}
+    onChange={() => undefined}
+    onRemoveTyped={() => undefined}
+  />);
+  assert.doesNotMatch(html, /<option value="">Not recorded<\/option>/);
+  assert.match(html, /<option value="" disabled="" selected="">Select…<\/option>/);
 });
 
-async function assertRejectedMutationVisible(action: (renderer: ReactTestRenderer) => Promise<void>): Promise<void> {
+test("a failed autosave turns only the History header red with its reason and Retry", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (input, init) => {
-    if (init?.method === "POST") throw new Error("Network unavailable");
     const url = String(input);
-    if (url.endsWith("/clinical-graph/hpi/definition")) {
-      return jsonResponse({ definition: { fields: { reviewOfSystems: { options: DEFAULT_HPI_ROS_OPTIONS } } } });
-    }
-    if (url.endsWith("/clinical-graph/complaint-definitions")) {
-      return jsonResponse({ definitions: [DRY_EYE, ROUTINE], genericOptions: GENERIC });
-    }
-    if (url.endsWith("/clinical-graph/encounters/e1/complaints")) {
-      return jsonResponse({ complaints: [complaintFixture("complaint-1", 1), complaintFixture("complaint-2", 2)] });
+    if (url.endsWith("/clinical-graph/hpi/definition")) return json({ templates: [TEMPLATE], catalogs: CATALOGS, definition: {} });
+    if (url.endsWith("/clinical-graph/encounters/e1/complaints") && init?.method === "POST") return json({ complaints: [complaint()] });
+    if (url.endsWith("/clinical-graph/encounters/e1/complaints")) return json({ complaints: [] });
+    if (url.endsWith("/clinical-graph/encounters/e1/hpi")) return json({ answers: [], templateNarratives: [] });
+    if (url.endsWith("/clinical-graph/hpi") && init?.method === "POST") {
+      return new Response(JSON.stringify({ error: "Synthetic FHIR refusal" }), { status: 503, headers: { "Content-Type": "application/json" } });
     }
     throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${url}`);
   };
@@ -382,32 +355,48 @@ async function assertRejectedMutationVisible(action: (renderer: ReactTestRendere
   try {
     await act(async () => {
       renderer = create(<HpiSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} />);
-      await flushEffects();
+      await delay(0);
     });
-    await action(renderer);
-    assert.match(renderer.root.findByProps({ role: "alert" }).children.join(""), /Network unavailable/);
+    await act(async () => {
+      renderer.root.findAllByType("button").find((button) => button.children.join("") === "Glaucoma")!.props.onClick();
+      await delay(0);
+    });
+    act(() => renderer.root.findAllByType("button").find((button) => button.children.join("") === "Follow Up")!.props.onClick());
+    await act(async () => { await delay(850); });
+    const alert = renderer.root.findByProps({ role: "alert" });
+    assert.match(alert.children.join(""), /Synthetic FHIR refusal/);
+    assert.ok(alert.findAllByType("button").some((button) => button.children.join("") === "Retry"));
+    assert.match(renderer.root.findByType("header").props.className, /border-red/);
   } finally {
     renderer?.unmount();
     globalThis.fetch = originalFetch;
   }
-}
+});
 
-function complaintFixture(id: string, ordinal: number): EncounterComplaint {
+test("the renderer contains no complaint-specific branch and no final-status write", () => {
+  const source = readFileSync(new URL("../src/components/charting/HpiSection.tsx", import.meta.url), "utf8");
+  assert.doesNotMatch(source, /template\.complaint\s*===|complaintKey\s*===/);
+  assert.doesNotMatch(source, /status:\s*["']final["']/);
+  assert.doesNotMatch(source, /Save Complaint|Save reviewed ROS|Save and Add Another/);
+});
+
+function complaint() {
   return {
-    ...blankComplaintDraft({ complaintKey: "dry-eye" }),
-    id,
-    encounterId: "e1",
-    patientId: "p1",
-    ordinal,
-    status: "active",
-    renderedNarrative: `Complaint ${ordinal}`,
+    id: "complaint-1", encounterId: "e1", patientId: "p1", ordinal: 1, templateKey: "glaucoma",
+    complaintKey: "glaucoma", conditions: [], eyeLocation: "not-applicable", qualities: [],
+    treatmentsTried: [], additionalHistory: "", narrative: { mode: "automated" }, resolvedDx: [],
+    status: "active", renderedNarrative: "Glaucoma history not yet recorded.",
   };
 }
 
-function jsonResponse(body: unknown): Response {
+function answer(sectionId: string, optionCode: string | undefined, value: HistoryTemplateAnswer["value"]): HistoryTemplateAnswer {
+  return { id: `answer-${sectionId}-${optionCode ?? "value"}`, complaintId: "complaint-1", templateKey: "glaucoma", sectionId, ...(optionCode ? { optionCode } : {}), value };
+}
+
+function json(body: unknown): Response {
   return new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } });
 }
 
-async function flushEffects(): Promise<void> {
-  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+function delay(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
