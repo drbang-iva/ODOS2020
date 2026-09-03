@@ -1,6 +1,7 @@
 export const WESTFAX_BASE_URL = "https://api2.westfax.com";
 export const WESTFAX_REQUEST_TIMEOUT_MS = 30_000;
 export const WESTFAX_INBOUND_BATCH_SIZE = 25;
+export const WESTFAX_INBOUND_LOOKBACK_DAYS = 30;
 
 export interface WestFaxConfig {
   baseUrl: string;
@@ -8,6 +9,7 @@ export interface WestFaxConfig {
   password: string;
   productId: string;
   callbackBaseUrl: string;
+  inboundLookbackDays?: number;
 }
 
 export interface FaxSendInput {
@@ -42,7 +44,7 @@ export interface WestFaxFaxIdentifier {
 export interface WestFaxFaxDescription extends WestFaxFaxIdentifier {
   pageCount?: number;
   senderNumber?: string;
-  reference?: string;
+  senderIdentifier?: string;
 }
 
 export interface WestFaxFaxDocument extends WestFaxFaxIdentifier {
@@ -113,6 +115,7 @@ export function westFaxConfigFromEnv(
       env.WESTFAX_CALLBACK_BASE_URL!,
       "WESTFAX_CALLBACK_BASE_URL",
     ),
+    inboundLookbackDays: westFaxInboundLookbackDays(env.WESTFAX_INBOUND_LOOKBACK_DAYS),
   };
 }
 
@@ -194,7 +197,7 @@ export function createWestFaxAdapter(
     },
 
     async getFaxIdentifiers(productId, direction) {
-      const form = authForm(config, productId);
+      const form = inboundForm(config, productId);
       form.set("FaxDirection", direction);
       const raw = await successfulWestFaxCall(
         fetchImpl,
@@ -219,7 +222,7 @@ export function createWestFaxAdapter(
       if (!faxIds.length) return [];
       const descriptions: WestFaxFaxDescription[] = [];
       for (const batch of batches(faxIds, WESTFAX_INBOUND_BATCH_SIZE)) {
-        const form = authForm(config, productId);
+        const form = inboundForm(config, productId);
         addFaxIds(form, batch);
         const raw = await successfulWestFaxCall(
           fetchImpl,
@@ -227,25 +230,7 @@ export function createWestFaxAdapter(
           "Fax_GetFaxDescriptionsUsingIds",
           form,
         );
-        descriptions.push(...resultArray(raw).flatMap((value) => {
-          const row = objectValue(value);
-          const id = stringValue(row?.Id);
-          if (!id || row?.Direction !== "Inbound") return [];
-          const call = Array.isArray(row.FaxCallInfoList)
-            ? objectValue(row.FaxCallInfoList[0])
-            : undefined;
-          const senderNumber = stringValue(call?.OrigNumber);
-          const pageCount = integerValue(row.PageCount);
-          return [{
-            id,
-            direction: "Inbound" as const,
-            ...(stringValue(row.Date) ? { date: stringValue(row.Date) } : {}),
-            ...(stringValue(row.Tag) ? { tag: stringValue(row.Tag) } : {}),
-            ...(pageCount !== undefined ? { pageCount } : {}),
-            ...(senderNumber ? { senderNumber } : {}),
-            ...(stringValue(row.Reference) ? { reference: stringValue(row.Reference) } : {}),
-          }];
-        }));
+        descriptions.push(...parseFaxDescriptions(raw));
       }
       return descriptions;
     },
@@ -308,7 +293,63 @@ export function createWestFaxAdapter(
   };
 }
 
-function authForm(config: WestFaxConfig, productId?: string): FormData {
+export function westFaxInboundLookbackDays(value: string | number | undefined): number {
+  const days = value === undefined || (typeof value === "string" && !value.trim())
+    ? WESTFAX_INBOUND_LOOKBACK_DAYS
+    : Number(value);
+  if (!Number.isInteger(days) || days < 1 || days > 365) {
+    throw new Error("WESTFAX_INBOUND_LOOKBACK_DAYS must be an integer from 1 to 365.");
+  }
+  return days;
+}
+
+type WestFaxInboundConfig = Omit<WestFaxConfig, "callbackBaseUrl">;
+
+export async function getWestFaxInboundDescriptions(
+  config: WestFaxInboundConfig,
+  deps: { fetchImpl?: typeof fetch } = {},
+): Promise<WestFaxFaxDescription[]> {
+  const raw = await successfulWestFaxCall(
+    deps.fetchImpl ?? fetch,
+    secureBaseUrl(config.baseUrl, "WestFax baseUrl"),
+    "Fax_GetFaxDescriptions",
+    inboundForm(config, config.productId),
+  );
+  return parseFaxDescriptions(raw);
+}
+
+function inboundForm(config: WestFaxInboundConfig, productId: string): FormData {
+  const form = authForm(config, productId);
+  const days = westFaxInboundLookbackDays(config.inboundLookbackDays);
+  form.set("StartDate", new Date(Date.now() - days * 86_400_000).toISOString());
+  form.set("FaxDirection", "Inbound");
+  return form;
+}
+
+function parseFaxDescriptions(raw: WestFaxResponse): WestFaxFaxDescription[] {
+  return resultArray(raw).flatMap((value) => {
+    const row = objectValue(value);
+    const id = stringValue(row?.Id);
+    if (!id || row?.Direction !== "Inbound") return [];
+    const call = Array.isArray(row.FaxCallInfoList)
+      ? objectValue(row.FaxCallInfoList[0])
+      : undefined;
+    const senderNumber = stringValue(call?.OrigNumber);
+    const senderIdentifier = stringValue(call?.OrigCSID);
+    const pageCount = integerValue(row.PageCount);
+    return [{
+      id,
+      direction: "Inbound" as const,
+      ...(stringValue(row.Date) ? { date: stringValue(row.Date) } : {}),
+      ...(stringValue(row.Tag) ? { tag: stringValue(row.Tag) } : {}),
+      ...(pageCount !== undefined ? { pageCount } : {}),
+      ...(senderNumber ? { senderNumber } : {}),
+      ...(senderIdentifier ? { senderIdentifier } : {}),
+    }];
+  });
+}
+
+function authForm(config: Pick<WestFaxConfig, "username" | "password">, productId?: string): FormData {
   const form = new FormData();
   form.set("Username", config.username);
   form.set("Password", config.password);

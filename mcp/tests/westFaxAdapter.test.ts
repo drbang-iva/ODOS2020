@@ -7,6 +7,7 @@ import {
   createWestFaxAdapter,
   westFaxConfigFromEnv,
 } from "../src/fax/westfax-adapter.js";
+import { WESTFAX_DESCRIPTION } from "./fixtures/westfax.js";
 
 const CONFIG = {
   baseUrl: WESTFAX_BASE_URL,
@@ -78,21 +79,15 @@ test("WestFax adapter surfaces ErrorString and InfoString on failure", async () 
   });
 });
 
-test("WestFax adapter performs each documented inbound call with the required multipart fields", async () => {
+test("WestFax adapter performs each documented inbound call with the required multipart fields", async (t) => {
+  t.mock.timers.enable({ apis: ["Date"], now: new Date("2026-09-03T12:00:00Z") });
   const calls: Array<{ url: string; form: FormData }> = [];
   const responses: unknown[] = [
     { Success: true, Result: [{ Id: "product-inbound", InboundNumber: "8645550100" }] },
     { Success: true, Result: [{ Id: "fax-1", Direction: "Inbound", Date: "2026-07-31T14:00:00Z", Tag: "None" }] },
     {
       Success: true,
-      Result: [{
-        Id: "fax-1",
-        Direction: "Inbound",
-        Date: "2026-07-31T14:00:00Z",
-        PageCount: 2,
-        Reference: "synthetic caller metadata",
-        FaxCallInfoList: [{ OrigNumber: "8645550199" }],
-      }],
+      Result: [WESTFAX_DESCRIPTION],
     },
     {
       Success: true,
@@ -136,6 +131,11 @@ test("WestFax adapter performs each documented inbound call with the required mu
   assert.equal(calls[0]!.form.get("ProductId"), null);
   assert.equal(calls[1]!.form.get("ProductId"), "product-inbound");
   assert.equal(calls[1]!.form.get("FaxDirection"), "Inbound");
+  for (const call of [calls[1]!, calls[2]!]) {
+    assert.ok(call.form instanceof FormData);
+    assert.equal(call.form.get("StartDate"), "2026-08-04T12:00:00.000Z");
+    assert.equal(call.form.get("FaxDirection"), "Inbound");
+  }
   const faxIdParameter = JSON.stringify({ Id: "fax-1", Direction: "Inbound" });
   assert.equal(calls[2]!.form.get("FaxIds1"), faxIdParameter);
   assert.equal(calls[3]!.form.get("FaxIds1"), faxIdParameter);
@@ -143,9 +143,66 @@ test("WestFax adapter performs each documented inbound call with the required mu
   assert.equal(calls[4]!.form.get("FaxIds1"), faxIdParameter);
   assert.equal(calls[4]!.form.get("Filter"), "Retrieved");
   assert.equal(products[0]?.inboundNumber, "8645550100");
-  assert.equal(descriptions[0]?.senderNumber, "8645550199");
+  assert.equal(descriptions[0]?.senderNumber, "0123456789");
   assert.equal(documents[0]?.pageCount, 2);
   assert.match(documents[0]?.fileContents ?? "", /^JVBER/);
+});
+
+test("WestFax descriptions capture OrigCSID independently of the sender number", async () => {
+  const adapter = createWestFaxAdapter(CONFIG, {
+    fetchImpl: (async () => new Response(JSON.stringify({
+      Success: true,
+      Result: [WESTFAX_DESCRIPTION, {
+        ...WESTFAX_DESCRIPTION,
+        Id: "fax-csid-only",
+        FaxCallInfoList: [{ ...WESTFAX_DESCRIPTION.FaxCallInfoList[0], OrigNumber: "", OrigCSID: "  Synthetic Person  " }],
+      }],
+    }))) as typeof fetch,
+  });
+  const records = await adapter.getFaxDescriptions("product-1", [{ id: "fax-1", direction: "Inbound" }]);
+  assert.equal(records[0]?.senderIdentifier, "Synthetic Referral Practice");
+  assert.equal(records[1]?.senderIdentifier, "Synthetic Person");
+  assert.equal(records[1]?.senderNumber, undefined);
+});
+
+test("WestFax descriptions ignore an unexpected Reference field", async () => {
+  const adapter = createWestFaxAdapter(CONFIG, {
+    fetchImpl: (async () => new Response(JSON.stringify({
+      Success: true,
+      Result: [{ ...WESTFAX_DESCRIPTION, Reference: "must never be parsed" }],
+    }))) as typeof fetch,
+  });
+  const [record] = await adapter.getFaxDescriptions("product-1", [{ id: "fax-1", direction: "Inbound" }]);
+  assert.ok(record);
+  assert.equal(Object.hasOwn(record, "reference"), false);
+  assert.equal(Object.hasOwn(record, "Reference"), false);
+});
+
+test("WestFax lookback configuration bounds every inbound request and advances with the clock", async (t) => {
+  t.mock.timers.enable({ apis: ["Date"], now: new Date("2026-09-03T12:00:00Z") });
+  const config = westFaxConfigFromEnv({
+    WESTFAX_USERNAME: "synthetic", WESTFAX_PASSWORD: "synthetic",
+    WESTFAX_PRODUCT_ID: "product-1", WESTFAX_CALLBACK_BASE_URL: CONFIG.callbackBaseUrl,
+    WESTFAX_INBOUND_LOOKBACK_DAYS: "7",
+  })!;
+  const dates: unknown[] = [];
+  const adapter = createWestFaxAdapter(config, {
+    fetchImpl: (async (_url, init) => {
+      dates.push((init?.body as FormData).get("StartDate"));
+      return new Response(JSON.stringify({ Success: true, Result: [] }));
+    }) as typeof fetch,
+  });
+  await adapter.getFaxIdentifiers("product-1", "Inbound");
+  t.mock.timers.tick(86_400_000);
+  await adapter.getFaxDescriptions("product-1", Array.from({ length: 26 }, (_, index) => ({ id: `fax-${index}`, direction: "Inbound" })));
+  assert.deepEqual(dates, ["2026-08-27T12:00:00.000Z", "2026-08-28T12:00:00.000Z", "2026-08-28T12:00:00.000Z"]);
+  for (const invalid of ["0", "-1", "1.5", "Infinity", "NaN", "366", "9999999999999999999999"]) {
+    assert.throws(() => westFaxConfigFromEnv({
+      WESTFAX_USERNAME: "synthetic", WESTFAX_PASSWORD: "synthetic",
+      WESTFAX_PRODUCT_ID: "product-1", WESTFAX_CALLBACK_BASE_URL: CONFIG.callbackBaseUrl,
+      WESTFAX_INBOUND_LOOKBACK_DAYS: invalid,
+    }), /WESTFAX_INBOUND_LOOKBACK_DAYS/);
+  }
 });
 
 test("WestFax adapter rejects multi-file fax documents instead of dropping later files", async () => {
