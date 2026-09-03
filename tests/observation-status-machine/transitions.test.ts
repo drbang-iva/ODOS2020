@@ -44,6 +44,26 @@ test("unsigned preliminary findings may be voided by scribe and clinician roles"
   }
 });
 
+test("scribe and clinician may restore a voided finding to preliminary", () => {
+  for (const actorRole of ["scribe", "clinician"] as const) {
+    assert.doesNotThrow(() => assertObservationStatusTransition({
+      from: "entered-in-error", to: "preliminary", actorRole,
+    }));
+  }
+});
+
+test("restore is the only exit from entered-in-error; cancelled and unknown remain terminal", () => {
+  for (const from of ["entered-in-error", "cancelled", "unknown"] as const) {
+    for (const to of FHIR_OBSERVATION_STATUSES) {
+      for (const actorRole of ["scribe", "clinician", "system"] as const) {
+        const restore = from === "entered-in-error" && to === "preliminary" && actorRole !== "system";
+        assert.equal(observationStatusTransitionTableRejectsPatch({ from, to, actorRole }), !restore,
+          `${from} -> ${to} by ${actorRole}`);
+      }
+    }
+  }
+});
+
 test("v0.5c Observation.status machine rejects every disallowed transition", () => {
   const statuses: ObservationStatusBefore[] = [undefined, ...FHIR_OBSERVATION_STATUSES];
   const roles: ObservationStatusActorRole[] = ["scribe", "clinician", "system"];

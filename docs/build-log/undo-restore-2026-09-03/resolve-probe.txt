@@ -1,0 +1,29 @@
+HEALTH {"ok":true,"version":"5.1.30-9b1bd92","platform":"linux","runtime":"v24.18.1","postgres":true,"redis":true,"redisInstances":{"default":true}}
+{"roleId":"provider","probe":"control","encounterStatus":"in-progress","encounterRead":200,"put":200,"outcome":"HTTP 200","storedStatus":"preliminary"}
+{"roleId":"provider","probe":"control","encounterStatus":"finished","encounterRead":200,"put":200,"outcome":"HTTP 200","storedStatus":"preliminary"}
+{"roleId":"provider","probe":"resolvedExists","encounterStatus":"in-progress","encounterRead":200,"put":200,"outcome":"HTTP 200","storedStatus":"preliminary"}
+{"roleId":"provider","probe":"resolvedExists","encounterStatus":"finished","encounterRead":200,"put":200,"outcome":"HTTP 200","storedStatus":"preliminary"}
+{"roleId":"provider","probe":"resolvedOpen","encounterStatus":"in-progress","encounterRead":200,"put":403,"outcome":"Forbidden","storedStatus":"entered-in-error"}
+{"roleId":"provider","probe":"resolvedOpen","encounterStatus":"finished","encounterRead":200,"put":403,"outcome":"Forbidden","storedStatus":"entered-in-error"}
+{"roleId":"provider","probe":"resolvedNotFinished","encounterStatus":"in-progress","encounterRead":200,"put":403,"outcome":"Forbidden","storedStatus":"entered-in-error"}
+{"roleId":"provider","probe":"resolvedNotFinished","encounterStatus":"finished","encounterRead":200,"put":403,"outcome":"Forbidden","storedStatus":"entered-in-error"}
+{"roleId":"provider","probe":"resolvedStatusEmpty","encounterStatus":"in-progress","encounterRead":200,"put":200,"outcome":"HTTP 200","storedStatus":"preliminary"}
+{"roleId":"provider","probe":"resolvedStatusEmpty","encounterStatus":"finished","encounterRead":200,"put":200,"outcome":"HTTP 200","storedStatus":"preliminary"}
+{"roleId":"provider","probe":"typedResolvedOpen","encounterStatus":"in-progress","encounterRead":200,"put":403,"outcome":"Forbidden","storedStatus":"entered-in-error"}
+{"roleId":"provider","probe":"typedResolvedOpen","encounterStatus":"finished","encounterRead":200,"put":403,"outcome":"Forbidden","storedStatus":"entered-in-error"}
+{"roleId":"provider","probe":"incomingResolvedOpen","encounterStatus":"in-progress","encounterRead":200,"put":403,"outcome":"Forbidden","storedStatus":"entered-in-error"}
+{"roleId":"provider","probe":"incomingResolvedOpen","encounterStatus":"finished","encounterRead":200,"put":403,"outcome":"Forbidden","storedStatus":"entered-in-error"}
+{"roleId":"staff","probe":"control","encounterStatus":"in-progress","encounterRead":200,"put":200,"outcome":"HTTP 200","storedStatus":"preliminary"}
+{"roleId":"staff","probe":"control","encounterStatus":"finished","encounterRead":200,"put":200,"outcome":"HTTP 200","storedStatus":"preliminary"}
+{"roleId":"staff","probe":"resolvedExists","encounterStatus":"in-progress","encounterRead":200,"put":200,"outcome":"HTTP 200","storedStatus":"preliminary"}
+{"roleId":"staff","probe":"resolvedExists","encounterStatus":"finished","encounterRead":200,"put":200,"outcome":"HTTP 200","storedStatus":"preliminary"}
+{"roleId":"staff","probe":"resolvedOpen","encounterStatus":"in-progress","encounterRead":200,"put":403,"outcome":"Forbidden","storedStatus":"entered-in-error"}
+{"roleId":"staff","probe":"resolvedOpen","encounterStatus":"finished","encounterRead":200,"put":403,"outcome":"Forbidden","storedStatus":"entered-in-error"}
+{"roleId":"staff","probe":"resolvedNotFinished","encounterStatus":"in-progress","encounterRead":200,"put":403,"outcome":"Forbidden","storedStatus":"entered-in-error"}
+{"roleId":"staff","probe":"resolvedNotFinished","encounterStatus":"finished","encounterRead":200,"put":403,"outcome":"Forbidden","storedStatus":"entered-in-error"}
+{"roleId":"staff","probe":"resolvedStatusEmpty","encounterStatus":"in-progress","encounterRead":200,"put":200,"outcome":"HTTP 200","storedStatus":"preliminary"}
+{"roleId":"staff","probe":"resolvedStatusEmpty","encounterStatus":"finished","encounterRead":200,"put":200,"outcome":"HTTP 200","storedStatus":"preliminary"}
+{"roleId":"staff","probe":"typedResolvedOpen","encounterStatus":"in-progress","encounterRead":200,"put":403,"outcome":"Forbidden","storedStatus":"entered-in-error"}
+{"roleId":"staff","probe":"typedResolvedOpen","encounterStatus":"finished","encounterRead":200,"put":403,"outcome":"Forbidden","storedStatus":"entered-in-error"}
+{"roleId":"staff","probe":"incomingResolvedOpen","encounterStatus":"in-progress","encounterRead":200,"put":403,"outcome":"Forbidden","storedStatus":"entered-in-error"}
+{"roleId":"staff","probe":"incomingResolvedOpen","encounterStatus":"finished","encounterRead":200,"put":403,"outcome":"Forbidden","storedStatus":"entered-in-error"}

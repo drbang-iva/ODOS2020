@@ -1,0 +1,230 @@
+Base: 02bf82559edd7c22a495c173f44eaf6af50731be
+Source: 82edd3e6963cbdf5dee087eef41fd1eb83c8076a
+
+=== Base MCP (exit 0) ===
+  type: 'test'
+  ...
+1..3561
+# tests 4096
+# suites 0
+# pass 4052
+# fail 0
+# cancelled 0
+# skipped 44
+# todo 0
+# duration_ms 80575.044416
+⚠️  LIVE STACK NOT CONFIGURED — 40 tests skipped, including live authorization enforcement (audit-header, billingIdentityConfigParity, body-structure-idempotency, clinicalWriteAuthzLive, diagnosisCarryForward, encounter-lifecycle, encounter, encounterUndoLedgerAuthzLive, patient-update, profile-validation, provenance-defaults, searchParamMedplumSmoke, transaction-atomicity, v035-terminology-install, v035-write-tools, v04-observation-focus-conformance, v04-write-tools, v04b-write-tools, v04c-write-tools, v05a-authz, v05b-audit-ib-backup). This run does NOT gate authz. Set MEDPLUM_ADMIN_EMAIL/PASSWORD to run them. ODOS_ALLOW_UNGATED_MCP=1 acknowledged; exit code reflects executed tests only.
+
+=== Branch MCP (exit 0) ===
+  type: 'test'
+  ...
+1..3564
+# tests 4099
+# suites 0
+# pass 4055
+# fail 0
+# cancelled 0
+# skipped 44
+# todo 0
+# duration_ms 79111.802958
+⚠️  LIVE STACK NOT CONFIGURED — 40 tests skipped, including live authorization enforcement (audit-header, billingIdentityConfigParity, body-structure-idempotency, clinicalWriteAuthzLive, diagnosisCarryForward, encounter-lifecycle, encounter, encounterUndoLedgerAuthzLive, patient-update, profile-validation, provenance-defaults, searchParamMedplumSmoke, transaction-atomicity, v035-terminology-install, v035-write-tools, v04-observation-focus-conformance, v04-write-tools, v04b-write-tools, v04c-write-tools, v05a-authz, v05b-audit-ib-backup). This run does NOT gate authz. Set MEDPLUM_ADMIN_EMAIL/PASSWORD to run them. ODOS_ALLOW_UNGATED_MCP=1 acknowledged; exit code reflects executed tests only.
+
+=== UI (exit 0) ===
+  duration_ms: 7.807334
+  type: 'test'
+  ...
+1..1220
+# tests 1225
+# suites 0
+# pass 1225
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 87675.526041
+
+=== Focused transition + role matrix (exit 0) ===
+  ...
+1..47
+# tests 47
+# suites 0
+# pass 47
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 245.159292
+
+=== Preflight (exit 0) ===
+ODOS preflight complete: 0 warning(s), 0 hard block(s). Reports: .odos/preflight-report.json and .odos/preflight-report.md
+
+=== Scripts typecheck (exit 0) ===
+
+> odos2020@0.0.1 typecheck:scripts
+> tsc -p tsconfig.scripts.json
+
+
+=== MCP typecheck (exit 0; empty output) ===
+
+=== UI typecheck (exit 0; empty output) ===
+
+=== Skip-list parity by NAME ===
+Skip-list parity by name: 44 rows, identical to base
+Medplum 5.1.8 accepts AuditEvent patient and date search # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the Medplum search smoke lane.
+Medplum 5.1.8 accepts Basic code and identifier search # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the Medplum search smoke lane.
+Medplum 5.1.8 accepts ChargeItem occurrence range with sort search # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the Medplum search smoke lane.
+Medplum 5.1.8 accepts Claim patient with created sort search # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the Medplum search smoke lane.
+Medplum 5.1.8 accepts ClaimResponse patient with created sort search # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the Medplum search smoke lane.
+Medplum 5.1.8 accepts Invoice date range search # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the Medplum search smoke lane.
+Medplum 5.1.8 accepts Invoice subject with date sort search # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the Medplum search smoke lane.
+Medplum 5.1.8 accepts PaymentReconciliation active status search # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the Medplum search smoke lane.
+Medplum 5.1.8 accepts PaymentReconciliation created range search # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the Medplum search smoke lane.
+Medplum 5.1.8 accepts Provenance target with recorded sort search # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the Medplum search smoke lane.
+Medplum 5.1.8 accepts Task code and business status search # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the Medplum search smoke lane.
+Medplum Observation focus search conformance or documented fallback # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+X-ODOS-Source header visibility in Medplum AuditEvent # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+a clear persists the encounter undo ledger under the synced Provider and Staff policies on running Medplum # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+audit-only boundary AccessPolicy POST round-trip is accepted by Medplum when integration env is available # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum AccessPolicy round-trip.
+clinical MCP write tools default Provenance ON # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+comprehensive Encounter lifecycle records history and Provenance per state change # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+create_encounter MCP write tool integrates with Medplum # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+executeTransaction rolls back created entries when a later transaction entry fails # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+fresh Postgres applies the Credit Bank migration and rejects ledger UPDATE and DELETE # SKIP ODOS_TEST_POSTGRES_URL is required for the destructive local Credit Bank fixture.
+installed WeasyPrint 69.0 emits a real PDF/A-3u document # SKIP
+live MCP audit worker records actual read, write, and audit-only boundary denial with AuditEvent projection # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the live audit worker integration fixture.
+live ordinary-clinician policy persists and reads diagnosis carry while preserving atomic conflict rollback # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the diagnosis pull integration proof.
+live scoped-clinician exam-start RBAC matrix # SKIP ODOS_TEST_CLINICIAN_TOKEN, ODOS_TEST_OTHER_CLINICIAN_TOKEN, and ODOS_TEST_PATIENT_ID are required for the operator-assisted live RBAC gate.
+profile installer idempotently installs ODOS EpisodeOfCare terminology # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+profile validation accepts conformant v0.3 resources # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+profile validation accepts standard Equivocal cup-disc interpretation # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+profile validation rejects IOP with non-UCUM pressure unit # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+profile validation rejects Observation missing bodySite reference extension # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+profile validation rejects Observation missing encounter # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+profile validation rejects axial length with non-mm UCUM code # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+profile validation rejects comprehensive Encounter with non-AMB class # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+profile validation rejects finished Encounter without period.end # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+real Medplum Media search rewrites Binary content for the imaging handler to a fetchable URL # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the Medplum search smoke lane.
+real Medplum assigns ids and reloads coded Basic singletons # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the singleton persistence integration test.
+reference-population migration succeeds on fresh and populated Postgres databases # SKIP ODOS_TEST_POSTGRES_URL is required for the destructive local myopia migration fixture.
+section saves reuse BodyStructure by patient and location # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+synced practice policies enforce all repaired clinical writes on running Medplum # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+update_patient MCP write tool integrates with Medplum # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+v0.35 MCP write tools create version-aware FHIR resources with Provenance # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+v0.4 foundation MCP write tools create FHIR resources with mandatory Provenance # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+v0.4b dry-eye MCP write tools create resources with mandatory Provenance # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+v0.4c Ortho-K and myopia MCP write tools create resources with mandatory Provenance # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+v0.5a audit-only boundary AccessPolicy enforces compartment isolation when bound via ProjectMembership (closes Mandate 8 fixture caveat) # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the v0.5a enforcement fixture. This is the human-provisioned step per Mandate 8 — the agent does not create credentials, only uses what the human dropped into env vars.
+
+=== Baseline real Medplum 5.1.30 (exit 0; Undo TODOs fail) ===
+TAP version 13
+# Subtest: a clear persists the encounter undo ledger under the synced Provider and Staff policies on running Medplum
+    # Subtest: provider clears one VA value and the ledger slot persists and reads back
+        # Subtest: provider undoes the clear and the VA value is preliminary again
+        not ok 1 - provider undoes the clear and the VA value is preliminary again # TODO restore entered-in-error → preliminary is refused by the Observation status write constraint on real Medplum
+          ---
+          duration_ms: 25.575834
+          type: 'test'
+          location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:1:6513'
+          failureType: 'testCodeFailure'
+          error: 'Void transaction applied-partial: entry 0 of 4 (PUT Observation/fc174ed6-f38a-4bf0-955d-28b4ebbbed44) answered HTTP 403; 1 of 4 entries refused, 0 without a usable status, 2 of 3 changes applied, 1 creates accepted (rolled back by the client). First outcome: Forbidden (forbidden)'
+          code: 'ERR_TEST_FAILURE'
+          name: 'VoidTransactionError'
+          stack: |-
+            assertSuccessfulTransaction (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore/mcp/src/clinical-graph/encounter-void-endpoint.ts:858:9)
+            handleEncounterUndoRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore/mcp/src/clinical-graph/encounter-undo-endpoint.ts:217:5)
+            process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+            async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:216:26)
+            async Test.run (node:internal/test_runner/test:1054:7)
+            async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:213:9)
+            async Test.run (node:internal/test_runner/test:1054:7)
+            async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:115:7)
+            async Test.run (node:internal/test_runner/test:1054:7)
+            async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+          ...
+        1..1
+    ok 1 - provider clears one VA value and the ledger slot persists and reads back
+      ---
+      duration_ms: 141.310667
+      type: 'test'
+      ...
+    # Subtest: staff clears one VA value and the ledger slot persists and reads back
+        # Subtest: staff undoes the clear and the VA value is preliminary again
+        not ok 1 - staff undoes the clear and the VA value is preliminary again # TODO restore entered-in-error → preliminary is refused by the Observation status write constraint on real Medplum
+          ---
+          duration_ms: 32.627916
+          type: 'test'
+          location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:1:6513'
+          failureType: 'testCodeFailure'
+          error: 'Void transaction applied-partial: entry 0 of 4 (PUT Observation/093ade8f-a791-488a-8a5d-779bedfce31b) answered HTTP 403; 1 of 4 entries refused, 0 without a usable status, 2 of 3 changes applied, 1 creates accepted (rolled back by the client). First outcome: Forbidden (forbidden)'
+          code: 'ERR_TEST_FAILURE'
+          name: 'VoidTransactionError'
+          stack: |-
+            assertSuccessfulTransaction (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore/mcp/src/clinical-graph/encounter-void-endpoint.ts:858:9)
+            handleEncounterUndoRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore/mcp/src/clinical-graph/encounter-undo-endpoint.ts:217:5)
+            process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+            async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:216:26)
+            async Test.run (node:internal/test_runner/test:1054:7)
+            async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:213:9)
+            async Test.run (node:internal/test_runner/test:1054:7)
+            async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:115:7)
+            async Test.run (node:internal/test_runner/test:1054:7)
+            async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+          ...
+        1..1
+    ok 2 - staff clears one VA value and the ledger slot persists and reads back
+      ---
+      duration_ms: 126.726208
+      type: 'test'
+      ...
+    1..2
+ok 1 - a clear persists the encounter undo ledger under the synced Provider and Staff policies on running Medplum
+  ---
+  duration_ms: 379.981167
+  type: 'test'
+  ...
+1..1
+# tests 5
+# suites 0
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 2
+# duration_ms 581.092208
+
+=== Existing real authorization lane (exit 0) ===
+TAP version 13
+# Subtest: synced practice policies enforce all repaired clinical writes on running Medplum
+    # Subtest: Provider voids a preliminary Observation seeded by Staff
+    ok 1 - Provider voids a preliminary Observation seeded by Staff
+      ---
+      duration_ms: 9.108917
+      type: 'test'
+      ...
+    # Subtest: Staff voids a preliminary Observation seeded by Provider
+    ok 2 - Staff voids a preliminary Observation seeded by Provider
+      ---
+      duration_ms: 7.839917
+      type: 'test'
+      ...
+    # Subtest: Staff cannot finalize a preliminary Observation seeded by Provider
+    ok 3 - Staff cannot finalize a preliminary Observation seeded by Provider
+      ---
+      duration_ms: 3.192666
+      type: 'test'
+      ...
+    1..3
+ok 1 - synced practice policies enforce all repaired clinical writes on running Medplum
+  ---
+  duration_ms: 308.909167
+  type: 'test'
+  ...
+1..1
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1285.668667
