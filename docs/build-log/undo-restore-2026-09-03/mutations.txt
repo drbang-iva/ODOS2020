@@ -1,0 +1,819 @@
+Mutation proof at source commit 82edd3e6963cbdf5dee087eef41fd1eb83c8076a
+All fixtures are synthetic. RED commands exit 1; GREEN commands exit 0.
+
+=== runtime RED ===
+TAP version 13
+# Subtest: v0.5c Observation.status machine allows every canonical transition
+ok 1 - v0.5c Observation.status machine allows every canonical transition
+  ---
+  duration_ms: 0.527459
+  type: 'test'
+  ...
+# Subtest: unsigned preliminary findings may be voided by scribe and clinician roles
+ok 2 - unsigned preliminary findings may be voided by scribe and clinician roles
+  ---
+  duration_ms: 0.053583
+  type: 'test'
+  ...
+# Subtest: scribe and clinician may restore a voided finding to preliminary
+not ok 3 - scribe and clinician may restore a voided finding to preliminary
+  ---
+  duration_ms: 0.725375
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/tests/observation-status-machine/transitions.test.ts:1:1096'
+  failureType: 'testCodeFailure'
+  error: |-
+    Got unwanted exception.
+    Actual message: "ODOS Observation.status transition rejected (entered-in-error -> preliminary): entered-in-error permits only the pre-sign restore to preliminary; signed charts remain closed at the Undo endpoint."
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  actual:
+  error: 'ODOS Observation.status transition rejected (entered-in-error -> preliminary): entered-in-error permits only the pre-sign restore to preliminary; signed charts remain closed at the Undo endpoint.'
+  stack: |-
+    assertObservationStatusTransition (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/policy/observation-status-machine.ts:164:11)
+    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/tests/observation-status-machine/transitions.test.ts:49:31)
+    getActual (node:assert:609:5)
+    Function.doesNotThrow (node:assert:777:32)
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/tests/observation-status-machine/transitions.test.ts:49:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+  operator: 'doesNotThrow'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/tests/observation-status-machine/transitions.test.ts:49:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: restore is the only exit from entered-in-error; cancelled and unknown remain terminal
+not ok 4 - restore is the only exit from entered-in-error; cancelled and unknown remain terminal
+  ---
+  duration_ms: 0.214333
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/tests/observation-status-machine/transitions.test.ts:1:1335'
+  failureType: 'testCodeFailure'
+  error: |-
+    entered-in-error -> preliminary by scribe
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/tests/observation-status-machine/transitions.test.ts:60:16)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: v0.5c Observation.status machine rejects every disallowed transition
+ok 5 - v0.5c Observation.status machine rejects every disallowed transition
+  ---
+  duration_ms: 1.47575
+  type: 'test'
+  ...
+# Subtest: voiding a draft does not add any transition out of finalized statuses
+ok 6 - voiding a draft does not add any transition out of finalized statuses
+  ---
+  duration_ms: 0.164416
+  type: 'test'
+  ...
+# Subtest: v0.5c Observation AccessPolicy emits the status-machine writeConstraint
+ok 7 - v0.5c Observation AccessPolicy emits the status-machine writeConstraint
+  ---
+  duration_ms: 0.248834
+  type: 'test'
+  ...
+# Subtest: v0.5c Observation.status rejects non-ValueSet status strings
+ok 8 - v0.5c Observation.status rejects non-ValueSet status strings
+  ---
+  duration_ms: 0.041917
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 6
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 137.515375
+
+=== runtime GREEN ===
+TAP version 13
+# Subtest: v0.5c Observation.status machine allows every canonical transition
+ok 1 - v0.5c Observation.status machine allows every canonical transition
+  ---
+  duration_ms: 0.544333
+  type: 'test'
+  ...
+# Subtest: unsigned preliminary findings may be voided by scribe and clinician roles
+ok 2 - unsigned preliminary findings may be voided by scribe and clinician roles
+  ---
+  duration_ms: 0.054375
+  type: 'test'
+  ...
+# Subtest: scribe and clinician may restore a voided finding to preliminary
+ok 3 - scribe and clinician may restore a voided finding to preliminary
+  ---
+  duration_ms: 0.085458
+  type: 'test'
+  ...
+# Subtest: restore is the only exit from entered-in-error; cancelled and unknown remain terminal
+ok 4 - restore is the only exit from entered-in-error; cancelled and unknown remain terminal
+  ---
+  duration_ms: 0.332416
+  type: 'test'
+  ...
+# Subtest: v0.5c Observation.status machine rejects every disallowed transition
+ok 5 - v0.5c Observation.status machine rejects every disallowed transition
+  ---
+  duration_ms: 1.44675
+  type: 'test'
+  ...
+# Subtest: voiding a draft does not add any transition out of finalized statuses
+ok 6 - voiding a draft does not add any transition out of finalized statuses
+  ---
+  duration_ms: 0.170208
+  type: 'test'
+  ...
+# Subtest: v0.5c Observation AccessPolicy emits the status-machine writeConstraint
+ok 7 - v0.5c Observation AccessPolicy emits the status-machine writeConstraint
+  ---
+  duration_ms: 0.246708
+  type: 'test'
+  ...
+# Subtest: v0.5c Observation.status rejects non-ValueSet status strings
+ok 8 - v0.5c Observation.status rejects non-ValueSet status strings
+  ---
+  duration_ms: 0.044834
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 492.939583
+
+=== provider deployed-policy RED ===
+TAP version 13
+# Subtest: a clear persists the encounter undo ledger under the synced Provider and Staff policies on running Medplum
+    # Subtest: provider clears one VA value and the ledger slot persists and reads back
+        # Subtest: provider undoes the clear and reads the restored VA value under the same policy
+        not ok 1 - provider undoes the clear and reads the restored VA value under the same policy
+          ---
+          duration_ms: 66.646875
+          type: 'test'
+          location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:1:6525'
+          failureType: 'testCodeFailure'
+          error: 'Void transaction applied-partial: entry 0 of 4 (PUT Observation/d0bd5c65-4927-4d78-b4fb-4629430d9736) answered HTTP 403; 1 of 4 entries refused, 0 without a usable status, 2 of 3 changes applied, 1 creates accepted (rolled back by the client). First outcome: Forbidden (forbidden)'
+          code: 'ERR_TEST_FAILURE'
+          name: 'VoidTransactionError'
+          stack: |-
+            assertSuccessfulTransaction (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/src/clinical-graph/encounter-void-endpoint.ts:858:9)
+            handleEncounterUndoRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/src/clinical-graph/encounter-undo-endpoint.ts:217:5)
+            process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+            async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:205:26)
+            async Test.run (node:internal/test_runner/test:1054:7)
+            async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:204:9)
+            async Test.run (node:internal/test_runner/test:1054:7)
+            async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:115:7)
+            async Test.run (node:internal/test_runner/test:1054:7)
+            async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+          ...
+        # Subtest: provider cannot undo on a signed encounter and the refusal preserves the value and slot
+        ok 2 - provider cannot undo on a signed encounter and the refusal preserves the value and slot
+          ---
+          duration_ms: 93.174083
+          type: 'test'
+          ...
+        1..2
+    not ok 1 - provider clears one VA value and the ledger slot persists and reads back
+      ---
+      duration_ms: 287.778292
+      type: 'test'
+      location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:1:3416'
+      failureType: 'subtestsFailed'
+      error: '1 subtest failed'
+      code: 'ERR_TEST_FAILURE'
+      stack: |-
+        async TestContext.<anonymous> (file:///Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:1:3408)
+      ...
+    # provider: finished encounter -> Undo HTTP 409 encounter-closed; value still voided; ledger unchanged
+    # Subtest: staff clears one VA value and the ledger slot persists and reads back
+        # Subtest: staff undoes the clear and reads the restored VA value under the same policy
+        ok 1 - staff undoes the clear and reads the restored VA value under the same policy
+          ---
+          duration_ms: 46.169
+          type: 'test'
+          ...
+        # Subtest: staff cannot undo on a signed encounter and the refusal preserves the value and slot
+        ok 2 - staff cannot undo on a signed encounter and the refusal preserves the value and slot
+          ---
+          duration_ms: 106.019042
+          type: 'test'
+          ...
+        1..2
+    ok 2 - staff clears one VA value and the ledger slot persists and reads back
+      ---
+      duration_ms: 272.558166
+      type: 'test'
+      ...
+    # staff: chart -> clear -> persisted ledger -> Undo -> readable preliminary VA 20/20; slot consumed
+    # staff: finished encounter -> Undo HTTP 409 encounter-closed; value still voided; ledger unchanged
+    1..2
+not ok 1 - a clear persists the encounter undo ledger under the synced Provider and Staff policies on running Medplum
+  ---
+  duration_ms: 716.98225
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:1:1220'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..1
+# tests 7
+# suites 0
+# pass 4
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1225.137417
+
+=== provider source restored; policy stale RED ===
+TAP version 13
+# Subtest: a clear persists the encounter undo ledger under the synced Provider and Staff policies on running Medplum
+    # Subtest: provider clears one VA value and the ledger slot persists and reads back
+        # Subtest: provider undoes the clear and reads the restored VA value under the same policy
+        not ok 1 - provider undoes the clear and reads the restored VA value under the same policy
+          ---
+          duration_ms: 37.335625
+          type: 'test'
+          location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:1:6525'
+          failureType: 'testCodeFailure'
+          error: 'Void transaction applied-partial: entry 0 of 4 (PUT Observation/f17b667f-22e8-4d70-8096-8e13b5107ecf) answered HTTP 403; 1 of 4 entries refused, 0 without a usable status, 2 of 3 changes applied, 1 creates accepted (rolled back by the client). First outcome: Forbidden (forbidden)'
+          code: 'ERR_TEST_FAILURE'
+          name: 'VoidTransactionError'
+          stack: |-
+            assertSuccessfulTransaction (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/src/clinical-graph/encounter-void-endpoint.ts:858:9)
+            handleEncounterUndoRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/src/clinical-graph/encounter-undo-endpoint.ts:217:5)
+            process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+            async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:205:26)
+            async Test.run (node:internal/test_runner/test:1054:7)
+            async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:204:9)
+            async Test.run (node:internal/test_runner/test:1054:7)
+            async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:115:7)
+            async Test.run (node:internal/test_runner/test:1054:7)
+            async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+          ...
+        # Subtest: provider cannot undo on a signed encounter and the refusal preserves the value and slot
+        ok 2 - provider cannot undo on a signed encounter and the refusal preserves the value and slot
+          ---
+          duration_ms: 97.284958
+          type: 'test'
+          ...
+        1..2
+    not ok 1 - provider clears one VA value and the ledger slot persists and reads back
+      ---
+      duration_ms: 267.140542
+      type: 'test'
+      location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:1:3416'
+      failureType: 'subtestsFailed'
+      error: '1 subtest failed'
+      code: 'ERR_TEST_FAILURE'
+      stack: |-
+        async TestContext.<anonymous> (file:///Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:1:3408)
+      ...
+    # provider: finished encounter -> Undo HTTP 409 encounter-closed; value still voided; ledger unchanged
+    # Subtest: staff clears one VA value and the ledger slot persists and reads back
+        # Subtest: staff undoes the clear and reads the restored VA value under the same policy
+        ok 1 - staff undoes the clear and reads the restored VA value under the same policy
+          ---
+          duration_ms: 104.318083
+          type: 'test'
+          ...
+        # Subtest: staff cannot undo on a signed encounter and the refusal preserves the value and slot
+        ok 2 - staff cannot undo on a signed encounter and the refusal preserves the value and slot
+          ---
+          duration_ms: 130.019209
+          type: 'test'
+          ...
+        1..2
+    ok 2 - staff clears one VA value and the ledger slot persists and reads back
+      ---
+      duration_ms: 354.038792
+      type: 'test'
+      ...
+    # staff: chart -> clear -> persisted ledger -> Undo -> readable preliminary VA 20/20; slot consumed
+    # staff: finished encounter -> Undo HTTP 409 encounter-closed; value still voided; ledger unchanged
+    1..2
+not ok 1 - a clear persists the encounter undo ledger under the synced Provider and Staff policies on running Medplum
+  ---
+  duration_ms: 773.123458
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:1:1220'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..1
+# tests 7
+# suites 0
+# pass 4
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1422.039541
+
+=== provider re-synced GREEN ===
+TAP version 13
+# Subtest: a clear persists the encounter undo ledger under the synced Provider and Staff policies on running Medplum
+    # Subtest: provider clears one VA value and the ledger slot persists and reads back
+        # Subtest: provider undoes the clear and reads the restored VA value under the same policy
+        ok 1 - provider undoes the clear and reads the restored VA value under the same policy
+          ---
+          duration_ms: 49.507542
+          type: 'test'
+          ...
+        # Subtest: provider cannot undo on a signed encounter and the refusal preserves the value and slot
+        ok 2 - provider cannot undo on a signed encounter and the refusal preserves the value and slot
+          ---
+          duration_ms: 90.985708
+          type: 'test'
+          ...
+        1..2
+    ok 1 - provider clears one VA value and the ledger slot persists and reads back
+      ---
+      duration_ms: 264.007416
+      type: 'test'
+      ...
+    # provider: chart -> clear -> persisted ledger -> Undo -> readable preliminary VA 20/20; slot consumed
+    # provider: finished encounter -> Undo HTTP 409 encounter-closed; value still voided; ledger unchanged
+    # Subtest: staff clears one VA value and the ledger slot persists and reads back
+        # Subtest: staff undoes the clear and reads the restored VA value under the same policy
+        ok 1 - staff undoes the clear and reads the restored VA value under the same policy
+          ---
+          duration_ms: 51.420125
+          type: 'test'
+          ...
+        # Subtest: staff cannot undo on a signed encounter and the refusal preserves the value and slot
+        ok 2 - staff cannot undo on a signed encounter and the refusal preserves the value and slot
+          ---
+          duration_ms: 125.130541
+          type: 'test'
+          ...
+        1..2
+    ok 2 - staff clears one VA value and the ledger slot persists and reads back
+      ---
+      duration_ms: 302.215917
+      type: 'test'
+      ...
+    # staff: chart -> clear -> persisted ledger -> Undo -> readable preliminary VA 20/20; slot consumed
+    # staff: finished encounter -> Undo HTTP 409 encounter-closed; value still voided; ledger unchanged
+    1..2
+ok 1 - a clear persists the encounter undo ledger under the synced Provider and Staff policies on running Medplum
+  ---
+  duration_ms: 690.756542
+  type: 'test'
+  ...
+1..1
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1285.025333
+
+=== staff deployed-policy RED ===
+TAP version 13
+# Subtest: a clear persists the encounter undo ledger under the synced Provider and Staff policies on running Medplum
+    # Subtest: provider clears one VA value and the ledger slot persists and reads back
+        # Subtest: provider undoes the clear and reads the restored VA value under the same policy
+        ok 1 - provider undoes the clear and reads the restored VA value under the same policy
+          ---
+          duration_ms: 35.406792
+          type: 'test'
+          ...
+        # Subtest: provider cannot undo on a signed encounter and the refusal preserves the value and slot
+        ok 2 - provider cannot undo on a signed encounter and the refusal preserves the value and slot
+          ---
+          duration_ms: 58.826042
+          type: 'test'
+          ...
+        1..2
+    ok 1 - provider clears one VA value and the ledger slot persists and reads back
+      ---
+      duration_ms: 212.731708
+      type: 'test'
+      ...
+    # provider: chart -> clear -> persisted ledger -> Undo -> readable preliminary VA 20/20; slot consumed
+    # provider: finished encounter -> Undo HTTP 409 encounter-closed; value still voided; ledger unchanged
+    # Subtest: staff clears one VA value and the ledger slot persists and reads back
+        # Subtest: staff undoes the clear and reads the restored VA value under the same policy
+        not ok 1 - staff undoes the clear and reads the restored VA value under the same policy
+          ---
+          duration_ms: 27.167167
+          type: 'test'
+          location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:1:6525'
+          failureType: 'testCodeFailure'
+          error: 'Void transaction applied-partial: entry 0 of 4 (PUT Observation/177b2c7d-acca-4b06-87b1-3a8b7e7723d0) answered HTTP 403; 1 of 4 entries refused, 0 without a usable status, 2 of 3 changes applied, 1 creates accepted (rolled back by the client). First outcome: Forbidden (forbidden)'
+          code: 'ERR_TEST_FAILURE'
+          name: 'VoidTransactionError'
+          stack: |-
+            assertSuccessfulTransaction (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/src/clinical-graph/encounter-void-endpoint.ts:858:9)
+            handleEncounterUndoRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/src/clinical-graph/encounter-undo-endpoint.ts:217:5)
+            process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+            async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:205:26)
+            async Test.run (node:internal/test_runner/test:1054:7)
+            async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:204:9)
+            async Test.run (node:internal/test_runner/test:1054:7)
+            async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:115:7)
+            async Test.run (node:internal/test_runner/test:1054:7)
+            async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+          ...
+        # Subtest: staff cannot undo on a signed encounter and the refusal preserves the value and slot
+        ok 2 - staff cannot undo on a signed encounter and the refusal preserves the value and slot
+          ---
+          duration_ms: 114.317625
+          type: 'test'
+          ...
+        1..2
+    not ok 2 - staff clears one VA value and the ledger slot persists and reads back
+      ---
+      duration_ms: 221.859541
+      type: 'test'
+      location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:1:3416'
+      failureType: 'subtestsFailed'
+      error: '1 subtest failed'
+      code: 'ERR_TEST_FAILURE'
+      stack: |-
+        async TestContext.<anonymous> (file:///Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:1:3408)
+      ...
+    # staff: finished encounter -> Undo HTTP 409 encounter-closed; value still voided; ledger unchanged
+    1..2
+not ok 1 - a clear persists the encounter undo ledger under the synced Provider and Staff policies on running Medplum
+  ---
+  duration_ms: 560.593417
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:1:1220'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..1
+# tests 7
+# suites 0
+# pass 4
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 809.395
+
+=== staff re-synced GREEN ===
+TAP version 13
+# Subtest: a clear persists the encounter undo ledger under the synced Provider and Staff policies on running Medplum
+    # Subtest: provider clears one VA value and the ledger slot persists and reads back
+        # Subtest: provider undoes the clear and reads the restored VA value under the same policy
+        ok 1 - provider undoes the clear and reads the restored VA value under the same policy
+          ---
+          duration_ms: 35.526834
+          type: 'test'
+          ...
+        # Subtest: provider cannot undo on a signed encounter and the refusal preserves the value and slot
+        ok 2 - provider cannot undo on a signed encounter and the refusal preserves the value and slot
+          ---
+          duration_ms: 57.423541
+          type: 'test'
+          ...
+        1..2
+    ok 1 - provider clears one VA value and the ledger slot persists and reads back
+      ---
+      duration_ms: 208.355708
+      type: 'test'
+      ...
+    # provider: chart -> clear -> persisted ledger -> Undo -> readable preliminary VA 20/20; slot consumed
+    # provider: finished encounter -> Undo HTTP 409 encounter-closed; value still voided; ledger unchanged
+    # Subtest: staff clears one VA value and the ledger slot persists and reads back
+        # Subtest: staff undoes the clear and reads the restored VA value under the same policy
+        ok 1 - staff undoes the clear and reads the restored VA value under the same policy
+          ---
+          duration_ms: 37.094583
+          type: 'test'
+          ...
+        # Subtest: staff cannot undo on a signed encounter and the refusal preserves the value and slot
+        ok 2 - staff cannot undo on a signed encounter and the refusal preserves the value and slot
+          ---
+          duration_ms: 88.990458
+          type: 'test'
+          ...
+        1..2
+    ok 2 - staff clears one VA value and the ledger slot persists and reads back
+      ---
+      duration_ms: 203.076667
+      type: 'test'
+      ...
+    # staff: chart -> clear -> persisted ledger -> Undo -> readable preliminary VA 20/20; slot consumed
+    # staff: finished encounter -> Undo HTTP 409 encounter-closed; value still voided; ledger unchanged
+    1..2
+ok 1 - a clear persists the encounter undo ledger under the synced Provider and Staff policies on running Medplum
+  ---
+  duration_ms: 533.502791
+  type: 'test'
+  ...
+1..1
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 726.450083
+
+=== signed endpoint guard removed RED ===
+TAP version 13
+# Subtest: a clear persists the encounter undo ledger under the synced Provider and Staff policies on running Medplum
+    # Subtest: provider clears one VA value and the ledger slot persists and reads back
+        # Subtest: provider undoes the clear and reads the restored VA value under the same policy
+        ok 1 - provider undoes the clear and reads the restored VA value under the same policy
+          ---
+          duration_ms: 32.766958
+          type: 'test'
+          ...
+        # Subtest: provider cannot undo on a signed encounter and the refusal preserves the value and slot
+        not ok 2 - provider cannot undo on a signed encounter and the refusal preserves the value and slot
+          ---
+          duration_ms: 70.571208
+          type: 'test'
+          location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:1:7918'
+          failureType: 'testCodeFailure'
+          error: |-
+            provider signed Undo: {"restored":["Observation/cdc26321-f2c6-438d-9523-79adb7bc10b6"],"count":1,"skipped":[],"scope":"section","sectionKey":"va","ledger":{"encounterId":"8c811d28-037d-43ac-b9cc-1bde055c3be2","encounter":null,"sections":{}}}
+            
+            200 !== 409
+            
+          code: 'ERR_ASSERTION'
+          name: 'AssertionError'
+          expected: 409
+          actual: 200
+          operator: 'strictEqual'
+          stack: |-
+            TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:254:18)
+            process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+            async Test.run (node:internal/test_runner/test:1054:7)
+            async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:228:9)
+            async Test.run (node:internal/test_runner/test:1054:7)
+            async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:115:7)
+            async Test.run (node:internal/test_runner/test:1054:7)
+            async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+          ...
+        1..2
+    not ok 1 - provider clears one VA value and the ledger slot persists and reads back
+      ---
+      duration_ms: 229.749542
+      type: 'test'
+      location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:1:3416'
+      failureType: 'subtestsFailed'
+      error: '1 subtest failed'
+      code: 'ERR_TEST_FAILURE'
+      stack: |-
+        async TestContext.<anonymous> (file:///Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:1:3408)
+      ...
+    # provider: chart -> clear -> persisted ledger -> Undo -> readable preliminary VA 20/20; slot consumed
+    # Subtest: staff clears one VA value and the ledger slot persists and reads back
+        # Subtest: staff undoes the clear and reads the restored VA value under the same policy
+        ok 1 - staff undoes the clear and reads the restored VA value under the same policy
+          ---
+          duration_ms: 34.895458
+          type: 'test'
+          ...
+        # Subtest: staff cannot undo on a signed encounter and the refusal preserves the value and slot
+        not ok 2 - staff cannot undo on a signed encounter and the refusal preserves the value and slot
+          ---
+          duration_ms: 106.126541
+          type: 'test'
+          location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:1:7918'
+          failureType: 'testCodeFailure'
+          error: |-
+            staff signed Undo: {"restored":["Observation/8526c2c7-f2ab-4935-8c6f-fc264cbcca20"],"count":1,"skipped":[],"scope":"section","sectionKey":"va","ledger":{"encounterId":"149cdb08-0d1e-43c0-aca9-ed22a7f2c270","encounter":null,"sections":{}}}
+            
+            200 !== 409
+            
+          code: 'ERR_ASSERTION'
+          name: 'AssertionError'
+          expected: 409
+          actual: 200
+          operator: 'strictEqual'
+          stack: |-
+            TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:254:18)
+            process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+            async Test.run (node:internal/test_runner/test:1054:7)
+            async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:228:9)
+            async Test.run (node:internal/test_runner/test:1054:7)
+            async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:115:7)
+            async Test.run (node:internal/test_runner/test:1054:7)
+            async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+          ...
+        1..2
+    not ok 2 - staff clears one VA value and the ledger slot persists and reads back
+      ---
+      duration_ms: 227.828625
+      type: 'test'
+      location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:1:3416'
+      failureType: 'subtestsFailed'
+      error: '1 subtest failed'
+      code: 'ERR_TEST_FAILURE'
+      stack: |-
+        async TestContext.<anonymous> (file:///Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:1:3408)
+      ...
+    # staff: chart -> clear -> persisted ledger -> Undo -> readable preliminary VA 20/20; slot consumed
+    1..2
+not ok 1 - a clear persists the encounter undo ledger under the synced Provider and Staff policies on running Medplum
+  ---
+  duration_ms: 573.844542
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:1:1220'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..1
+# tests 7
+# suites 0
+# pass 2
+# fail 5
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 796.0295
+
+=== signed endpoint guard restored GREEN ===
+TAP version 13
+# Subtest: a clear persists the encounter undo ledger under the synced Provider and Staff policies on running Medplum
+    # Subtest: provider clears one VA value and the ledger slot persists and reads back
+        # Subtest: provider undoes the clear and reads the restored VA value under the same policy
+        ok 1 - provider undoes the clear and reads the restored VA value under the same policy
+          ---
+          duration_ms: 37.228
+          type: 'test'
+          ...
+        # Subtest: provider cannot undo on a signed encounter and the refusal preserves the value and slot
+        ok 2 - provider cannot undo on a signed encounter and the refusal preserves the value and slot
+          ---
+          duration_ms: 64.360459
+          type: 'test'
+          ...
+        1..2
+    ok 1 - provider clears one VA value and the ledger slot persists and reads back
+      ---
+      duration_ms: 218.290125
+      type: 'test'
+      ...
+    # provider: chart -> clear -> persisted ledger -> Undo -> readable preliminary VA 20/20; slot consumed
+    # provider: finished encounter -> Undo HTTP 409 encounter-closed; value still voided; ledger unchanged
+    # Subtest: staff clears one VA value and the ledger slot persists and reads back
+        # Subtest: staff undoes the clear and reads the restored VA value under the same policy
+        ok 1 - staff undoes the clear and reads the restored VA value under the same policy
+          ---
+          duration_ms: 35.12975
+          type: 'test'
+          ...
+        # Subtest: staff cannot undo on a signed encounter and the refusal preserves the value and slot
+        ok 2 - staff cannot undo on a signed encounter and the refusal preserves the value and slot
+          ---
+          duration_ms: 88.958042
+          type: 'test'
+          ...
+        1..2
+    ok 2 - staff clears one VA value and the ledger slot persists and reads back
+      ---
+      duration_ms: 234.358083
+      type: 'test'
+      ...
+    # staff: chart -> clear -> persisted ledger -> Undo -> readable preliminary VA 20/20; slot consumed
+    # staff: finished encounter -> Undo HTTP 409 encounter-closed; value still voided; ledger unchanged
+    1..2
+ok 1 - a clear persists the encounter undo ledger under the synced Provider and Staff policies on running Medplum
+  ---
+  duration_ms: 3045.740041
+  type: 'test'
+  ...
+1..1
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3243.59575
+
+=== DiagnosticReport scope mutant RED ===
+TAP version 13
+# Subtest: the Observation restore edge does not widen DiagnosticReport writes for either role
+not ok 1 - the Observation restore edge does not widen DiagnosticReport writes for either role
+  ---
+  duration_ms: 15.740958
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/threeRoleModel.test.ts:1:24098'
+  failureType: 'testCodeFailure'
+  error: |-
+    provider DiagnosticReport entered-in-error -> preliminary must remain refused
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/undo-restore-mutants/mcp/tests/threeRoleModel.test.ts:617:14)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 194.396875
+
+=== DiagnosticReport scope restored GREEN ===
+TAP version 13
+# Subtest: the Observation restore edge does not widen DiagnosticReport writes for either role
+ok 1 - the Observation restore edge does not widen DiagnosticReport writes for either role
+  ---
+  duration_ms: 23.575667
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 170.667542
+
+=== m17-provider-sync-red.log ===
+Target: Project/d75500ef-9a6c-46ff-85dd-e67cedb2133a (source: --project)
+Mode: apply
+provider: DRIFT AccessPolicy/b79ebbca-a769-4381-a23b-dff3aa64d846 "ODOS Provider"
+staff: MATCH AccessPolicy/c92599f4-a12c-4d47-9f7c-8d354ef4b780 "ODOS Staff"
+admin: MATCH AccessPolicy/d394d40a-08ad-485f-ba70-212ac9e78191 "ODOS Admin / Manager"
+provider+staff+admin: DRIFT AccessPolicy/fcf56cd5-4936-4805-b8bd-d40d33fbba31 "ODOS Composite Provider + Staff + Admin / Manager"
+Policies updated: 2
+
+=== m17-provider-sync-green.log ===
+Target: Project/d75500ef-9a6c-46ff-85dd-e67cedb2133a (source: --project)
+Mode: apply
+provider: DRIFT AccessPolicy/b79ebbca-a769-4381-a23b-dff3aa64d846 "ODOS Provider"
+staff: MATCH AccessPolicy/c92599f4-a12c-4d47-9f7c-8d354ef4b780 "ODOS Staff"
+admin: MATCH AccessPolicy/d394d40a-08ad-485f-ba70-212ac9e78191 "ODOS Admin / Manager"
+provider+staff+admin: DRIFT AccessPolicy/fcf56cd5-4936-4805-b8bd-d40d33fbba31 "ODOS Composite Provider + Staff + Admin / Manager"
+Policies updated: 2
+
+=== m17-staff-sync-red.log ===
+Target: Project/d75500ef-9a6c-46ff-85dd-e67cedb2133a (source: --project)
+Mode: apply
+provider: MATCH AccessPolicy/b79ebbca-a769-4381-a23b-dff3aa64d846 "ODOS Provider"
+staff: DRIFT AccessPolicy/c92599f4-a12c-4d47-9f7c-8d354ef4b780 "ODOS Staff"
+admin: MATCH AccessPolicy/d394d40a-08ad-485f-ba70-212ac9e78191 "ODOS Admin / Manager"
+provider+staff+admin: DRIFT AccessPolicy/fcf56cd5-4936-4805-b8bd-d40d33fbba31 "ODOS Composite Provider + Staff + Admin / Manager"
+Policies updated: 2
+
+=== m17-staff-sync-green.log ===
+Target: Project/d75500ef-9a6c-46ff-85dd-e67cedb2133a (source: --project)
+Mode: apply
+provider: MATCH AccessPolicy/b79ebbca-a769-4381-a23b-dff3aa64d846 "ODOS Provider"
+staff: DRIFT AccessPolicy/c92599f4-a12c-4d47-9f7c-8d354ef4b780 "ODOS Staff"
+admin: MATCH AccessPolicy/d394d40a-08ad-485f-ba70-212ac9e78191 "ODOS Admin / Manager"
+provider+staff+admin: DRIFT AccessPolicy/fcf56cd5-4936-4805-b8bd-d40d33fbba31 "ODOS Composite Provider + Staff + Admin / Manager"
+Policies updated: 2
