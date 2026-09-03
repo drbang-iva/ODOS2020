@@ -5,14 +5,17 @@ description: >
   breadth-first, for every route the UI serves: is this control connected to anything at all?
   Phase 1 (built): route-level discovery straight from ui/src/App.tsx's RouteSwitch, diffed
   against a checked-in manifest, with unlisted routes reported as findings instead of silently
-  rotting off a stale list. Phase 2 (not yet built): per-control browser crawl against a seeded
-  stack. Advisory only — never blocks a build. Use when auditing route coverage or extending the
-  manifest as routes get reviewed.
+  rotting off a stale list. Phase 1b (built): a sibling census one layer back — whether every
+  backend route family mcp/src/index.ts registers has a matching ui/vite.config.ts proxy entry,
+  the exact gap behind three real shipped bugs (/watchers, /communications, /comms). Phase 2 (not
+  yet built): per-control browser crawl against a seeded stack. Advisory only — never blocks a
+  build. Use when auditing route coverage, extending the manifest as routes get reviewed, or
+  checking whether a new backend route family reaches the front door.
 license: Proprietary — PerformanceOD / Integrated Vision Associates internal use only.
 compatibility: Requires Node 18+. Run from anywhere inside the ODOS2020 repo (worktree or root checkout).
 metadata:
   author: performance-od
-  version: "0.1.0-phase1"
+  version: "0.2.0-phase1b"
 allowed-tools: Bash(node:*)
 ---
 
@@ -75,6 +78,63 @@ tool saying so.
    file, a fixback PR) — this skill's job is to surface the gap, not to fix what it finds.
 4. Re-run the check. Coverage should tick up; it never blocks you from doing anything else.
 
+## Phase 1b — the proxy-coverage census (a different layer, same trick)
+
+Phase 1 answers "is this UI control wired to anything." Phase 1b answers a question one layer
+further back: "does every backend route family even have a path to the browser at all." Three real
+bugs shipped from the identical root cause in one day — `/watchers` and `/communications` were
+registered server-side (`mcp/src/index.ts`'s `register*Routes` calls) with no matching entry in
+`ui/vite.config.ts`'s proxy table, so requests silently fell through to the SPA shell (`200
+text/html`) instead of reaching the backend; `/comms` shipped the same gap and was only caught by
+an evaluator's independent re-check, not by anything in this repo. Full root-cause writeup:
+`decisions/2026-09-02-odos-watchers-route-missing-from-proxy-table.md`.
+
+- **`scripts/discover-backend-routes.mjs`** — parses `mcp/src/index.ts` for `register*Routes`
+  imports that are BOTH imported AND actually called (an unused import doesn't count), resolves
+  each to its source file (following re-export chains — `pretest-endpoint.ts` re-exporting from
+  `pretest-vitals-endpoint.ts` is a real example), and extracts every route-family prefix from its
+  literal route-registration calls. Recognizes both call shapes actually used in this codebase:
+  `app.get("/path", ...)` and the local wrapper form `get(app, "/path", ...)` (seven files use the
+  wrapper, including `payments/payment-routes.ts`). **Also scans `index.ts`'s own 120+ inline
+  `app.<method>(...)` calls directly** — an independent evaluation of an earlier version found this
+  script only scanned delegated files and silently missed index.ts's own routes, which is exactly
+  how it missed a real gap (see below) in its own first run. Run: `node
+  .claude/skills/tier0-census/scripts/discover-backend-routes.mjs` (or `--json`).
+- **`scripts/check-proxy-coverage.mjs`** — diffs discovered backend families against
+  `ui/vite.config.ts`'s proxy table keys. A backend family with no proxy entry is the finding — the
+  exact shape of all three bugs above. Lists every registration that owns a gap family, not just
+  the first (`/comms` has three). A proxy entry with no matching backend family is NOT reported as
+  a problem (`/fhir`, `/auth`, `/oauth2` intentionally target Medplum directly, not the ODOS mcp
+  server — correctly outside this census's scope). Always exits 0, advisory only. Run: `node
+  .claude/skills/tier0-census/scripts/check-proxy-coverage.mjs`.
+
+**Known blind spot, not yet closed:** this only recognizes `app.<method>("/path", ...)` and the
+local `get(app, "/path", ...)` wrapper. Two other real registration shapes exist and aren't
+scanned: `app.route("/path").get(...).post(...)` (two instances, both under the already-covered
+`/clinical-graph` family, so no known impact yet) and a globally-mounted sub-router —
+`app.use(createSmartAuthorizationRouter({...}))` with no path argument, whose own internal routes
+(`router.use("/agentops", ...)` and others in `mcp/src/smart/authorization-server.ts`) define their
+own prefixes this census never sees. Whether that sub-router's routes have proxy coverage hasn't
+been checked — don't assume either way. Flagged by Greptile on this PR; not fixed here.
+
+As of this writing it finds **two real, still-open gaps, of different severity**:
+
+- `/comms` (8 routes across three registrations — a tracked-link redirect, GHL inbound webhook, six
+  Twilio webhooks). Not urgent: zero UI call sites, these run against a public base URL rather than
+  the dev proxy.
+- `/inventory` (`app.post("/inventory/frame-units/:unitId/adjustments")`, inline in `index.ts`) —
+  **this one is live, same severity as `/watchers` and `/communications` were.**
+  `ui/src/lib/optical-frames.ts:234` calls it via `clinicalGraphApiBase()`, which defaults to `""`
+  when `VITE_ODOS_MCP_BASE_URL` is unset (only `.env.example` is tracked, `.env` is gitignored) —
+  routed from `ui/src/scenes/OpticalFrames.tsx` off the `/admin/optical/inventory/frames` route.
+  Same failure chain as the other two: relative fetch, no proxy key, silent SPA fallback. Do not
+  repeat the earlier mistake made about `/comms` in the #517 kickoff (claiming a gap was
+  low-priority without actually checking for a live caller) — this one needs the same #516/#517
+  treatment, not a "someday" label.
+
+This is not a manifest you populate like Phase 1's; there's nothing to mark "reviewed" here, it
+either has a proxy entry or it doesn't.
+
 ## What Phase 2 needs (not yet built — don't claim this skill does it)
 
 The full design (see the decision file) wants per-**control** entries — `{ route, precondition,
@@ -110,4 +170,16 @@ Tier 0 dead-control census — 49 route(s) discovered, 0 manifest entries.
 
 Coverage: 0/49 routes reviewed.
 Advisory only — this check never fails the build. See SKILL.md for how to act on findings.
+```
+
+Phase 1b (`check-proxy-coverage.mjs`):
+
+```
+Proxy-coverage census — 24 backend route families discovered, 25 proxy table entries.
+
+2 backend route families have NO proxy table entry — this is the exact shape of the /watchers, /communications, and /comms bugs:
+  ! /comms (registered by registerTwilioWebhookRoutes, ./comms/twilio-routes.js; registerGhlWebhookRoutes, ./comms/ghl-routes.js; registerTrackedLinkRoutes, ./comms/tracked-links.js)
+  ! /inventory (registered by (inline), mcp/src/index.ts)
+
+Advisory only — this check never fails the build.
 ```
