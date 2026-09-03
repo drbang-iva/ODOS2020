@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { test } from "node:test";
+import { test, type TestContext } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
@@ -264,6 +264,142 @@ test("Desk Correspondence renders inbound fax metadata, advisory matching, PDF v
   assert.match(html, /General inbox/);
 });
 
+test("inbound fax sender header keeps the number first and adds only a distinct identifier", () => {
+  for (const identifier of ["Lions Club", undefined, "8645550199", "   "]) {
+    const summary = emptyDeskSummary();
+    summary.cards.correspondence.items = [{ ...inboundFaxDeskItem(), senderIdentifier: identifier }];
+    const html = renderToStaticMarkup(<DeskHome initialSummary={summary} />);
+    const header = html.match(/<article><header>(.*?)<\/header>/)?.[1] ?? "";
+    assert.match(header, /8645550199/);
+    if (identifier === "Lions Club") assert.match(header, /8645550199.*Lions Club/);
+    else assert.equal(header.match(/8645550199/g)?.length, 1);
+    assert.doesNotMatch(header, / · <\/b>/);
+  }
+});
+
+async function faxPreviewHarness(context: TestContext) {
+  const summary = emptyDeskSummary();
+  summary.cards.correspondence.items = [inboundFaxDeskItem()];
+  const listeners = new Set<(event: KeyboardEvent) => void>();
+  const fallbackTimers: { callback: () => void; delay: number }[] = [];
+  const newTabPaths: string[] = [];
+  const revoked: string[] = [];
+  let focused = "";
+  let counter = 0;
+  const originalWindow = globalThis.window;
+  const originalDocument = globalThis.document;
+  Object.defineProperty(globalThis, "window", { configurable: true, value: {
+    localStorage: memoryStorage(),
+    location: { href: "http://localhost/desk", origin: "http://localhost" },
+    setTimeout: (callback: () => void, delay: number) => { fallbackTimers.push({ callback, delay }); return 1; },
+    open: () => { newTabPaths.push("window.open"); },
+  } });
+  Object.defineProperty(globalThis, "document", { configurable: true, value: {
+    addEventListener: (type: string, listener: (event: KeyboardEvent) => void) => { if (type === "keydown") listeners.add(listener); },
+    removeEventListener: (type: string, listener: (event: KeyboardEvent) => void) => { if (type === "keydown") listeners.delete(listener); },
+    createElement: () => ({
+      set target(value: string) { newTabPaths.push(value); },
+      click: () => { newTabPaths.push("anchor.click"); },
+    }),
+  } });
+  context.mock.method(fhir, "authHeader", () => "Bearer synthetic-test");
+  const requests: { url: unknown; init?: RequestInit }[] = [];
+  context.mock.method(globalThis, "fetch", async (url: unknown, init?: RequestInit) => {
+    requests.push({ url, init });
+    return new Response("%PDF-1.4 synthetic", { headers: { "Content-Type": "application/pdf" } });
+  });
+  context.mock.method(URL, "createObjectURL", () => `blob:fax-${++counter}`);
+  context.mock.method(URL, "revokeObjectURL", (url: string) => { revoked.push(url); });
+  let renderer!: ReactTestRenderer;
+  const trigger = { isConnected: true, focus: () => { focused = "View PDF"; } };
+  await act(async () => {
+    renderer = create(<DeskHome initialSummary={summary} initialOfficeMessages={[]} />, {
+      createNodeMock: (element) => element.type === "button"
+        ? element.props["aria-label"] === "Close panel"
+          ? { focus: () => { focused = "Close panel"; } }
+          : trigger
+        : null,
+    });
+  });
+  context.after(() => {
+    act(() => renderer.unmount());
+    context.mock.restoreAll();
+    Object.defineProperty(globalThis, "document", { configurable: true, value: originalDocument });
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  });
+  return {
+    renderer, revoked, newTabPaths, fallbackTimers, requests,
+    focused: () => focused,
+    open: async () => { await act(async () => {
+      renderer.root.findAllByType("button").find((button) => button.children.join("") === "View PDF")!.props.onClick();
+    }); },
+    close: () => { act(() => {
+      renderer.root.findByProps({ role: "dialog" }).findByProps({ "aria-label": "Close panel" }).props.onClick();
+    }); },
+    escape: () => { act(() => { for (const listener of listeners) listener({ key: "Escape" } as KeyboardEvent); }); },
+  };
+}
+
+test("inbound fax PDF click opens an embedded document without any new-tab path", async (context) => {
+  const preview = await faxPreviewHarness(context);
+  await preview.open();
+  assert.deepEqual(preview.newTabPaths, [], "PDF must not create a new browser tab");
+  const panel = preview.renderer.root.findByProps({ role: "dialog" });
+  assert.equal(panel.findByType("embed").props.src, "blob:fax-1");
+  assert.equal(panel.findByType("embed").props.type, "application/pdf");
+  assert.ok(panel.findByProps({ "data-testid": "cockpit-panel-drag-handle" }));
+  assert.equal(preview.focused(), "Close panel");
+  assert.equal(preview.requests[0].url, "/fax/inbound/fax-1/document");
+  assert.equal(new Headers(preview.requests[0].init?.headers).get("Authorization"), "Bearer synthetic-test");
+  assert.deepEqual(preview.revoked, []);
+  assert.equal(preview.fallbackTimers[0].delay, 60_000);
+  preview.fallbackTimers[0].callback();
+  assert.deepEqual(preview.revoked, ["blob:fax-1"]);
+});
+
+test("inbound fax PDF close and Escape immediately revoke the URL and return focus", async (context) => {
+  const preview = await faxPreviewHarness(context);
+  await preview.open();
+  preview.close();
+  assert.deepEqual(preview.revoked, ["blob:fax-1"]);
+  assert.equal(preview.renderer.root.findAllByType("embed").length, 0);
+  assert.equal(preview.focused(), "View PDF");
+  await preview.open();
+  preview.escape();
+  assert.deepEqual(preview.revoked, ["blob:fax-1", "blob:fax-2"]);
+  assert.equal(preview.renderer.root.findAllByType("embed").length, 0);
+  assert.equal(preview.focused(), "View PDF");
+});
+
+test("inbound fax PDF replacement and page unmount revoke their object URLs", async (context) => {
+  const preview = await faxPreviewHarness(context);
+  await preview.open();
+  await preview.open();
+  assert.deepEqual(preview.revoked, ["blob:fax-1"]);
+  act(() => preview.renderer.unmount());
+  assert.deepEqual(preview.revoked, ["blob:fax-1", "blob:fax-2"]);
+});
+
+test("inbound fax PDF finishing after page unmount is released without reopening", async (context) => {
+  const preview = await faxPreviewHarness(context);
+  let finish!: (response: Response) => void;
+  context.mock.method(globalThis, "fetch", () => new Promise<Response>((resolve) => { finish = resolve; }));
+  await preview.open();
+  act(() => preview.renderer.unmount());
+  await act(async () => { finish(new Response("%PDF synthetic")); });
+  assert.deepEqual(preview.revoked, ["blob:fax-1"]);
+});
+
+test("inbound fax PDF request failure stays on the row and creates no preview URL", async (context) => {
+  const preview = await faxPreviewHarness(context);
+  context.mock.method(globalThis, "fetch", async () => new Response(JSON.stringify({ error: "Fax unavailable" }), { status: 503 }));
+  await preview.open();
+  assert.match(preview.renderer.root.findByProps({ role: "alert" }).children.join(""), /Fax unavailable/);
+  assert.equal(preview.renderer.root.findAllByType("embed").length, 0);
+  assert.deepEqual(preview.newTabPaths, []);
+  assert.deepEqual(preview.fallbackTimers, []);
+});
+
 test("successful inbound fax triage updates the Desk count and removes the completed row", async () => {
   const summary = emptyDeskSummary();
   summary.cards.correspondence.inboundFaxes = { value: 1, tone: "warn" };
@@ -284,7 +420,7 @@ test("successful inbound fax triage updates the Desk count and removes the compl
         initialOfficeMessages={[]}
         inboundFaxApi={{
           triage: async (...args) => { calls.push(args); },
-          open: async () => undefined,
+          open: async () => "blob:unused",
         }}
       />);
     });
@@ -329,7 +465,7 @@ test("inbound fax attach and promote buttons send the confirmed payloads", async
         initialOfficeMessages={[]}
         inboundFaxApi={{
           triage: async (...args) => { calls.push(args); },
-          open: async () => undefined,
+          open: async () => "blob:unused",
         }}
       />);
     });
@@ -396,7 +532,7 @@ test("inbound fax actions disable while pending and surface failures without rem
       renderer = create(<DeskHome
         initialSummary={summary}
         initialOfficeMessages={[]}
-        inboundFaxApi={{ triage: async () => pending, open: async () => undefined }}
+        inboundFaxApi={{ triage: async () => pending, open: async () => "blob:unused" }}
       />);
     });
     const inbox = renderer.root.findAllByType("button").find(

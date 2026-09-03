@@ -1,0 +1,263 @@
+baseline.log
+  ...
+1..26
+# tests 26
+# suites 0
+# pass 26
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 502.076167
+
+tdd-red.log
+  ...
+1..30
+# tests 30
+# suites 0
+# pass 26
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 339.340917
+
+green.log
+  ...
+1..32
+# tests 32
+# suites 0
+# pass 32
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 309.211708
+
+ui-test-final.log
+  ...
+1..1226
+# tests 1231
+# suites 0
+# pass 1231
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 81821.249333
+
+build-final.log
+
+> odos-ui@0.2.0 build
+> tsc --noEmit --skipLibCheck && vite build
+
+vite v6.4.3 building for production...
+transforming...
+✓ 312 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/version.json                   0.16 kB │ gzip:   0.14 kB
+dist/index.html                     0.95 kB │ gzip:   0.56 kB
+dist/assets/index-p717itBH.css    223.35 kB │ gzip:  37.68 kB
+dist/assets/index-Dtam83XA.js   1,815.51 kB │ gzip: 488.21 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 1.96s
+
+
+browser.log
+BEFORE: number only; View PDF creates a second browser tab.
+AFTER: both sender fields; one browser tab; PDF embed; 720x820 panel; drag moved {"before":{"x":660,"y":90,"width":720,"height":820},"moved":{"x":60,"y":140,"width":720,"height":820}}
+AFTER: position persisted separately; X and Escape close; URL revoked; focus returns to View PDF.
+Escape with native PDF focus closes: false
+800x700 viewport clamped: {"x":0,"y":66,"width":720,"height":668}
+
+
+ui/src/scenes/DeskHome.tsx: exact replacement applied; rg 'senderIdentifier': exit 1
+
+
+sender-red.log
+TAP version 13
+# Subtest: inbound fax sender header keeps the number first and adds only a distinct identifier
+not ok 1 - inbound fax sender header keeps the number first and adds only a distinct identifier
+  ---
+  duration_ms: 17.838792
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/odos-desk-fax-ux/ui/tests/loginDeskHome.test.tsx:1:9869'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /8645550199.*Lions Club/. Input:
+    
+    '<b>8645550199</b><span>2 pages · 7/31/26, 10:30 AM</span>'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: '<b>8645550199</b><span>2 pages · 7/31/26, 10:30 AM</span>'
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/odos-desk-fax-ux/ui/tests/loginDeskHome.test.tsx:274:45)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 235.715209
+
+
+sender-green.log
+TAP version 13
+# Subtest: inbound fax sender header keeps the number first and adds only a distinct identifier
+ok 1 - inbound fax sender header keeps the number first and adds only a distinct identifier
+  ---
+  duration_ms: 20.108625
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 235.91475
+
+
+ui/src/lib/inbound-fax.ts: exact replacement applied; rg 'link.target': exit 0
+51:  link.target = "_blank";
+
+
+new-tab-red.log
+TAP version 13
+# Subtest: inbound fax PDF click opens an embedded document without any new-tab path
+not ok 1 - inbound fax PDF click opens an embedded document without any new-tab path
+  ---
+  duration_ms: 32.300708
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/odos-desk-fax-ux/ui/tests/loginDeskHome.test.tsx:1:13200'
+  failureType: 'testCodeFailure'
+  error: |-
+    PDF must not create a new browser tab
+    + actual - expected
+    
+    + [
+    +   '_blank',
+    +   'anchor.click'
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: '_blank'
+    1: 'anchor.click'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/odos-desk-fax-ux/ui/tests/loginDeskHome.test.tsx:346:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 252.8355
+
+
+new-tab-green.log
+TAP version 13
+# Subtest: inbound fax PDF click opens an embedded document without any new-tab path
+ok 1 - inbound fax PDF click opens an embedded document without any new-tab path
+  ---
+  duration_ms: 28.989041
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 243.44975
+
+
+ui/src/scenes/DeskHome.tsx: exact replacement applied; rg 'revokeObjectURL\\(faxPreview.objectUrl\\)': exit 1
+
+
+close-revoke-red.log
+TAP version 13
+# Subtest: inbound fax PDF close and Escape immediately revoke the URL and return focus
+not ok 1 - inbound fax PDF close and Escape immediately revoke the URL and return focus
+  ---
+  duration_ms: 31.720583
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/odos-desk-fax-ux/ui/tests/loginDeskHome.test.tsx:1:14110'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + []
+    - [
+    -   'blob:fax-1'
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'blob:fax-1'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/odos-desk-fax-ux/ui/tests/loginDeskHome.test.tsx:364:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 242.349292
+
+
+close-revoke-green.log
+TAP version 13
+# Subtest: inbound fax PDF close and Escape immediately revoke the URL and return focus
+ok 1 - inbound fax PDF close and Escape immediately revoke the URL and return focus
+  ---
+  duration_ms: 33.547333
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 241.455125
+

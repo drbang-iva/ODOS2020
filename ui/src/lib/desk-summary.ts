@@ -24,6 +24,7 @@ export interface DeskSummary {
         faxId?: string;
         receivedAt?: string;
         senderNumber?: string;
+        senderIdentifier?: string;
         pageCount?: number;
         documentUrl?: string;
         triageStatus?: "received" | "inbox";

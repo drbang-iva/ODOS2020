@@ -13,6 +13,7 @@ export const DESK_LABEL = "Desk";
 export { CLINIC_PATH, DESK_HOME_PATH } from "../lib/app-paths";
 export const DESK_CARD_STORAGE_KEY = "odos.desk.cards.v2";
 export const COCKPIT_HOVER_CLOSE_DELAY_MS = 250;
+const FAX_PREVIEW_POSITION_STORAGE_KEY = "odos-fax-preview-position";
 
 export interface DeskOfficeApi {
   list: typeof fetchDeskOfficeMessages;
@@ -96,6 +97,10 @@ export function DeskHome({
   const [hoveredPanel, setHoveredPanel] = useState<CockpitPanelId | null>(null);
   const [pinnedPanel, setPinnedPanel] = useState<CockpitPanelId | null>(() => panelPosition ? "messages" : null);
   const [renderedPanel, setRenderedPanel] = useState<CockpitPanelId>("messages");
+  const [faxPosition, setFaxPosition] = useState(() => loadCockpitPanelPosition(undefined, FAX_PREVIEW_POSITION_STORAGE_KEY));
+  const faxRequestIdRef = useRef(0);
+  const mainRef = useRef<HTMLElement>(null);
+  const [faxPreview, setFaxPreview] = useState<{ objectUrl: string; trigger: HTMLButtonElement | null } | null>(null);
   const [summary, setSummary] = useState<DeskSummary | undefined>(initialSummary);
   const [summaryError, setSummaryError] = useState<string>();
   const [localSentMessages, setLocalSentMessages] = useState(initialOfficeMessages ?? []);
@@ -115,6 +120,29 @@ export function DeskHome({
     clearTimeout(hoverCloseTimerRef.current);
     hoverCloseTimerRef.current = undefined;
   }, []);
+
+  const closeFaxPreview = useCallback(() => {
+    faxRequestIdRef.current += 1;
+    setFaxPreview(null);
+    (faxPreview?.trigger?.isConnected ? faxPreview.trigger : mainRef.current)?.focus();
+  }, [faxPreview]);
+
+  const showFaxPreview = useCallback(async (documentUrl: string, trigger: HTMLButtonElement | null) => {
+    const requestId = ++faxRequestIdRef.current;
+    const objectUrl = await inboundFaxApi.open(documentUrl);
+    if (requestId !== faxRequestIdRef.current) {
+      URL.revokeObjectURL(objectUrl);
+      return;
+    }
+    setFaxPreview({ objectUrl, trigger });
+  }, [inboundFaxApi]);
+
+  useEffect(() => () => { faxRequestIdRef.current += 1; }, []);
+
+  useEffect(() => {
+    if (!faxPreview) return;
+    return () => URL.revokeObjectURL(faxPreview.objectUrl);
+  }, [faxPreview]);
 
   const closePanel = useCallback(() => {
     cancelHoverClose();
@@ -216,11 +244,11 @@ export function DeskHome({
   useEffect(() => { window.localStorage.setItem(DESK_CARD_STORAGE_KEY, JSON.stringify(cardIds)); }, [cardIds]);
   useEffect(() => () => cancelHoverClose(), [cancelHoverClose]);
   useEffect(() => {
-    if (!openPanel || typeof document === "undefined") return;
-    const handleKeyDown = (event: KeyboardEvent) => event.key === "Escape" && closePanel();
+    if ((!openPanel && !faxPreview) || typeof document === "undefined") return;
+    const handleKeyDown = (event: KeyboardEvent) => event.key === "Escape" && (faxPreview ? closeFaxPreview() : closePanel());
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [closePanel, openPanel]);
+  }, [closePanel, openPanel, faxPreview, closeFaxPreview]);
   useEffect(() => {
     if (initialSummary) return;
     let active = true;
@@ -261,7 +289,7 @@ export function DeskHome({
   }
 
   return (
-    <main className="odos-desk">
+    <main ref={mainRef} tabIndex={-1} className="odos-desk">
       <div className="odos-ambient" aria-hidden="true" />
       <section className="odos-desk-body">
         <div className="odos-desk-greeting"><h1>Good day.</h1><span>{date}</span><span className="odos-mode">The {DESK_LABEL}</span><button className="odos-pill" type="button" onClick={() => setCustomizing((value) => !value)} aria-pressed={customizing}>Customize</button></div>
@@ -280,7 +308,7 @@ export function DeskHome({
             const card = DESK_CARDS.find((candidate) => candidate.id === id)!;
             const model = id === "office"
               ? { tone: sentMessages.some((message) => !message.acknowledgement) ? "warn" as const : "ok" as const, kicker: sentMessages.some((message) => !message.acknowledgement) ? "awaiting acknowledgement" : "closed loop", target: "every message acknowledged", content: <OfficeDeskCard /> }
-              : cardModel(id, summary, inboundFaxApi, completeInboundFax);
+              : cardModel(id, summary, inboundFaxApi, completeInboundFax, showFaxPreview);
             return (
               <article id={card.id} key={card.id} className={`odos-desk-card odos-live-tone-${model.tone} odos-span-${card.span}`} draggable={customizing}
                 onDragStart={() => setDragged(card.id)} onDragOver={(event) => customizing && event.preventDefault()}
@@ -321,6 +349,18 @@ export function DeskHome({
         onPositionCommit={commitPanelPosition}
         onRedock={redockPanel}
       />
+      {faxPreview && <CockpitGuestPanel
+        panel="fax"
+        title="Inbound fax PDF"
+        documentPreview
+        onClose={closeFaxPreview}
+        position={faxPosition}
+        onPositionChange={setFaxPosition}
+        onPositionCommit={(position) => saveCockpitPanelPosition(position, undefined, FAX_PREVIEW_POSITION_STORAGE_KEY)}
+        onRedock={() => { clearCockpitPanelPosition(undefined, FAX_PREVIEW_POSITION_STORAGE_KEY); setFaxPosition(null); }}
+      >
+        <embed src={faxPreview.objectUrl} type="application/pdf" title="Inbound fax document" className="h-full w-full" />
+      </CockpitGuestPanel>}
     </main>
   );
 
@@ -383,6 +423,7 @@ function cardModel(
   summary: DeskSummary | undefined,
   inboundFaxApi: InboundFaxApi,
   onInboundFaxCompleted: (faxId: string) => void,
+  onViewDocument: (documentUrl: string, trigger: HTMLButtonElement | null) => Promise<void>,
 ): { tone: DeskTone; kicker: string; target: string; content: ReactNode } {
   if (!summary) return { tone: "off", kicker: "loading", target: "live practice data", content: <WiringPanel>Loading live counts…</WiringPanel> };
   switch (id) {
@@ -424,6 +465,7 @@ function cardModel(
             items={inbound}
             api={inboundFaxApi}
             onCompleted={onInboundFaxCompleted}
+            onViewDocument={onViewDocument}
           />}
         </>,
       };
@@ -453,10 +495,12 @@ function InboundFaxWorklist({
   items,
   api,
   onCompleted,
+  onViewDocument,
 }: {
   items: InboundFaxDeskItem[];
   api: InboundFaxApi;
   onCompleted: (faxId: string) => void;
+  onViewDocument: (documentUrl: string, trigger: HTMLButtonElement | null) => Promise<void>;
 }) {
   return <div className="odos-inbound-fax-list" aria-label="Inbound fax triage">
     {items.map((item) => <InboundFaxRow
@@ -464,6 +508,7 @@ function InboundFaxWorklist({
       item={item}
       api={api}
       onCompleted={onCompleted}
+      onViewDocument={onViewDocument}
     />)}
   </div>;
 }
@@ -472,11 +517,14 @@ function InboundFaxRow({
   item,
   api,
   onCompleted,
+  onViewDocument,
 }: {
   item: InboundFaxDeskItem;
   api: InboundFaxApi;
   onCompleted: (faxId: string) => void;
+  onViewDocument: (documentUrl: string, trigger: HTMLButtonElement | null) => Promise<void>;
 }) {
+  const viewButtonRef = useRef<HTMLButtonElement>(null);
   const suggestedReference = item.suggestedPatient?.reference ?? "";
   const [patientReference, setPatientReference] = useState(suggestedReference);
   const [patientDisplay, setPatientDisplay] = useState(item.suggestedPatient?.display ?? "");
@@ -525,7 +573,7 @@ function InboundFaxRow({
     setBusy(true);
     setError(undefined);
     try {
-      await api.open(item.documentUrl);
+      await onViewDocument(item.documentUrl, viewButtonRef.current);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Inbound fax document failed.");
     } finally {
@@ -535,14 +583,14 @@ function InboundFaxRow({
 
   return <article>
     <header>
-      <b>{item.senderNumber ?? "Sender number unavailable"}</b>
+      <b>{item.senderNumber ?? "Sender number unavailable"}{item.senderIdentifier?.trim() && item.senderIdentifier.trim() !== item.senderNumber ? ` · ${item.senderIdentifier.trim()}` : ""}</b>
       <span>{item.pageCount ?? "?"} page{item.pageCount === 1 ? "" : "s"} · {item.receivedAt ? officeDateTime(item.receivedAt) : "time unavailable"}</span>
     </header>
     <p>
       Suggested patient: <strong>{item.suggestedPatient?.display ?? "No suggestion"}</strong>
       {" "}— suggestion only; no chart action happens until staff confirms.
     </p>
-    <button type="button" disabled={busy} onClick={() => void viewPdf()}>View PDF</button>
+    <button ref={viewButtonRef} type="button" disabled={busy} onClick={() => void viewPdf()}>View PDF</button>
     <details>
       <summary>{patientDisplay || "Choose patient"}</summary>
       {item.suggestedPatient && <button type="button" onClick={() => {

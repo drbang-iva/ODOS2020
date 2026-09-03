@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { useEffect, useRef, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useRef, type ReactNode, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { dockItem, type CockpitPanelId } from "../../lib/cockpit-shell";
 
 export const COCKPIT_PANEL_POSITION_STORAGE_KEY = "odos-cockpit-panel-position";
@@ -20,9 +20,9 @@ function browserStorage(): CockpitPositionStorage | undefined {
   }
 }
 
-export function loadCockpitPanelPosition(storage: Pick<CockpitPositionStorage, "getItem"> | undefined = browserStorage()): CockpitPanelPosition | null {
+export function loadCockpitPanelPosition(storage: Pick<CockpitPositionStorage, "getItem"> | undefined = browserStorage(), storageKey = COCKPIT_PANEL_POSITION_STORAGE_KEY): CockpitPanelPosition | null {
   try {
-    const value = JSON.parse(storage?.getItem(COCKPIT_PANEL_POSITION_STORAGE_KEY) ?? "null") as Partial<CockpitPanelPosition> | null;
+    const value = JSON.parse(storage?.getItem(storageKey) ?? "null") as Partial<CockpitPanelPosition> | null;
     return value?.floating === true && Number.isFinite(value.x) && Number.isFinite(value.y)
       ? { floating: true, x: value.x!, y: value.y! }
       : null;
@@ -31,17 +31,17 @@ export function loadCockpitPanelPosition(storage: Pick<CockpitPositionStorage, "
   }
 }
 
-export function saveCockpitPanelPosition(position: CockpitPanelPosition, storage: Pick<CockpitPositionStorage, "setItem"> | undefined = browserStorage()): void {
+export function saveCockpitPanelPosition(position: CockpitPanelPosition, storage: Pick<CockpitPositionStorage, "setItem"> | undefined = browserStorage(), storageKey = COCKPIT_PANEL_POSITION_STORAGE_KEY): void {
   try {
-    storage?.setItem(COCKPIT_PANEL_POSITION_STORAGE_KEY, JSON.stringify(position));
+    storage?.setItem(storageKey, JSON.stringify(position));
   } catch {
     return;
   }
 }
 
-export function clearCockpitPanelPosition(storage: Pick<CockpitPositionStorage, "removeItem"> | undefined = browserStorage()): void {
+export function clearCockpitPanelPosition(storage: Pick<CockpitPositionStorage, "removeItem"> | undefined = browserStorage(), storageKey = COCKPIT_PANEL_POSITION_STORAGE_KEY): void {
   try {
-    storage?.removeItem(COCKPIT_PANEL_POSITION_STORAGE_KEY);
+    storage?.removeItem(storageKey);
   } catch {
     return;
   }
@@ -69,6 +69,9 @@ export function CockpitGuestPanel({
   onPositionChange,
   onPositionCommit,
   onRedock,
+  children,
+  title,
+  documentPreview = false,
 }: {
   panel: CockpitPanelId;
   open?: boolean;
@@ -79,9 +82,17 @@ export function CockpitGuestPanel({
   onPositionChange?: (position: CockpitPanelPosition) => void;
   onPositionCommit?: (position: CockpitPanelPosition) => void;
   onRedock?: () => void;
+  children?: ReactNode;
+  title?: string;
+  documentPreview?: boolean;
 }) {
   const item = dockItem(panel);
   const panelRef = useRef<HTMLElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (open && documentPreview) closeButtonRef.current?.focus();
+  }, [open, documentPreview]);
   const dragRef = useRef<{
     pointerId: number;
     pointerX: number;
@@ -162,13 +173,14 @@ export function CockpitGuestPanel({
     <aside
       ref={panelRef}
       role={open ? "dialog" : undefined}
-      aria-label={item.label}
+      aria-label={title ?? item.label}
       aria-hidden={!open}
       onPointerEnter={(event) => event.pointerType !== "touch" && onHoverEnter?.()}
       onPointerLeave={(event) => event.pointerType !== "touch" && onHoverLeave?.()}
       className={clsx(
         "odos-cockpit-panel fixed z-40 flex flex-col overflow-hidden border border-white/15 bg-[#0c0c18] shadow-2xl",
         open && "is-open",
+        documentPreview && "odos-cockpit-panel-document",
         position && "is-floating",
       )}
       style={position ? ({
@@ -185,7 +197,7 @@ export function CockpitGuestPanel({
         onPointerCancel={endDrag}
         className="flex shrink-0 touch-none select-none items-center justify-between border-b border-white/10 px-4 py-3 cursor-grab"
       >
-        <span className="text-sm font-bold text-white">{item.label}</span>
+        <span className="text-sm font-bold text-white">{title ?? item.label}</span>
         <span className="flex items-center gap-3">
           {position && (
             <button
@@ -203,6 +215,7 @@ export function CockpitGuestPanel({
           )}
           <button
             type="button"
+            ref={closeButtonRef}
             aria-label="Close panel"
             disabled={!open}
             tabIndex={open ? 0 : -1}
@@ -215,7 +228,7 @@ export function CockpitGuestPanel({
         </span>
       </header>
       <div className="min-h-0 flex-1 select-text overflow-y-auto p-4 text-sm leading-relaxed text-white/55">
-        {PANEL_STUB[panel]}
+        {children ?? PANEL_STUB[panel]}
       </div>
     </aside>
   );
