@@ -1,0 +1,42 @@
+[
+  {
+    "mode": "fetch",
+    "method": "POST",
+    "path": "/inventory/frame-units/synthetic-proxy-unit/adjustments",
+    "status": 401,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "error": "Authentication required to adjust inventory."
+    }
+  },
+  {
+    "mode": "navigation",
+    "method": "POST",
+    "path": "/inventory/frame-units/synthetic-proxy-unit/adjustments",
+    "status": 401,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "error": "Authentication required to adjust inventory."
+    }
+  },
+  {
+    "mode": "fetch-control",
+    "method": "GET",
+    "path": "/inventory/frame-units/synthetic-proxy-unit/adjustments",
+    "status": 404,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "marker": "real-inventory-backend-catch-all"
+    }
+  },
+  {
+    "mode": "navigation-control",
+    "method": "GET",
+    "path": "/inventory/frame-units/synthetic-proxy-unit/adjustments",
+    "status": 404,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "marker": "real-inventory-backend-catch-all"
+    }
+  }
+]
