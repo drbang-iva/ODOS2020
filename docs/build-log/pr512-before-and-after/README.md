@@ -25,3 +25,10 @@ application test suite or CI guard.
 updates; the upstream formatter's `--body-file` path retains its original normalization behavior
 and must not be used. PR #512 records the published demo comment, new-head CI, and independent
 fixback evaluation separately from these author checks.
+
+Publication was exercised with GitHub CLI 2.86.0 using the documented `gh pr comment
+--body-file` path: [demo comment](https://github.com/drbang-iva/ODOS2020/pull/512#issuecomment-5527430890).
+The authenticated Contents API returned bytes identical to both committed PNGs, and the
+posted comment matched the generated Markdown. GitHub's rendered HTML contains one table
+and two images. The links use commit-pinned GitHub repository URLs (`?raw=true`) so signed-in
+reviewers retain private-repository access control; no token is embedded in either URL.

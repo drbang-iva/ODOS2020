@@ -39,6 +39,7 @@ npm --prefix ui run dev -- --host 127.0.0.1 --port 15120 --strictPort
 Then run this complete capture-and-format example in another terminal, from the same root:
 
 ```bash
+set -euo pipefail
 export BEFORE_URL='http://127.0.0.1:15120/tests/fixtures/exam-chart-bar-responsive.html?worst=1'
 export AFTER_URL='http://127.0.0.1:15120/tests/fixtures/exam-chart-bar-responsive.html'
 export CAPTURE_READY='[data-testid="exam-chart-bar"]'
@@ -162,11 +163,12 @@ credentials, tokens, authenticated query parameters, PHI, or real-practice captu
 
 For the capture example, review and commit only the two images (not `block.md`) on your task
 branch, then push it. Set `REPO` and `PR` explicitly for the target PR. The code below verifies
-that the local files match the committed bytes and that GitHub serves those exact bytes before
+that the local files match both the committed bytes and the authenticated GitHub Contents API before
 rewriting references. It changes only the generated block, never the existing PR description.
 `CAPTURE_DIR` must still point to the directory used by the capture example.
 
 ```bash
+set -euo pipefail
 export REPO="${REPO:-drbang-iva/ODOS2020}"
 export PR="${PR:?Set PR to the target pull request number}"
 
@@ -184,10 +186,12 @@ for (const state of ['before', 'after']) {
   const local = readFileSync(path);
   assert.deepEqual(execFileSync('git', ['show', `${sha}:${path}`]), local);
   const encodedPath = path.split('/').map(encodeURIComponent).join('/');
-  const url = `https://raw.githubusercontent.com/${process.env.REPO}/${sha}/${encodedPath}`;
-  const response = await fetch(url);
-  assert.ok(response.ok, `Pushed image unavailable: ${response.status} ${url}`);
-  assert.deepEqual(Buffer.from(await response.arrayBuffer()), local);
+  const endpoint = `repos/${process.env.REPO}/contents/${encodedPath}?ref=${sha}`;
+  const remote = JSON.parse(execFileSync('gh', ['api', endpoint],
+    { encoding: 'utf8', maxBuffer: 20 * 1024 * 1024 }));
+  assert.equal(remote.encoding, 'base64', 'Use small screenshot files for this workflow');
+  assert.deepEqual(Buffer.from(remote.content, 'base64'), local);
+  const url = `https://github.com/${process.env.REPO}/blob/${sha}/${encodedPath}?raw=true`;
   const reference = `](${localRef(path)})`;
   assert.ok(block.includes(reference), `Missing formatted reference: ${reference}`);
   block = block.replaceAll(reference, `](${url})`);
@@ -200,13 +204,17 @@ NODE
 gh pr comment "$PR" --repo "$REPO" --body-file "$CAPTURE_DIR/published-block.md"
 ```
 
-For private repositories, raw URLs may not render for reviewers without repository access;
-verify the rendered images as an intended reviewer. If unavailable, use GitHub's browser
-attachment upload and its resulting asset URLs instead. Never put access tokens into URLs.
+These GitHub repository URLs retain repository access control and need no token in the URL.
+For this private repository, verify the rendered images while signed into GitHub as a reviewer
+with repository access. Anonymous raw.githubusercontent.com requests return 404 here and are
+not a suitable upload check. The authenticated API byte check above proves the images were
+pushed; opening the actual comment separately proves rendering. If a reviewer cannot load a
+repository image, upload it using GitHub's browser attachment control and use its asset URL.
 
 To insert the generated block into the PR description, use the companion **`pr-body.mjs`**:
 
 ```bash
+set -euo pipefail
 gh pr view "$PR" --repo "$REPO" --json body > /tmp/before-after-pr.json
 node --input-type=module <<'NODE'
 import { readFileSync, writeFileSync } from 'node:fs';
