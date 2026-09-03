@@ -2,6 +2,7 @@ import type {
   AuditEvent,
   Bundle,
   DocumentReference,
+  Organization,
   Practitioner,
   PractitionerRole,
   Resource,
@@ -96,7 +97,7 @@ export function createInboundFaxPoller(deps: InboundFaxPollerDeps): InboundFaxPo
   const now = deps.now ?? (() => new Date());
   const suggestPatient = deps.suggestPatient
     ?? ((fax: WestFaxFaxDescription) =>
-      suggestInboundFaxPatient(deps.fhir, fax.senderNumber));
+      suggestInboundFaxPatient(deps.fhir, fax.senderNumber, fax.senderIdentifier));
   const failureThreshold = deps.failureThreshold ?? 3;
   const consecutiveFailures = new Map<string, number>();
   if (!Number.isInteger(failureThreshold) || failureThreshold < 1) {
@@ -258,10 +259,10 @@ export function buildInboundFaxDocumentReference(input: {
       ...(input.document.pageCount !== undefined
         ? [{ url: INBOUND_FAX_PAGE_COUNT_EXTENSION_URL, valueInteger: input.document.pageCount }]
         : []),
-      ...(input.description.reference
+      ...(input.description.senderIdentifier
         ? [{
             url: INBOUND_FAX_CALLER_REFERENCE_EXTENSION_URL,
-            valueString: input.description.reference,
+            valueString: input.description.senderIdentifier,
           }]
         : []),
       ...(input.patientSuggestion
@@ -616,20 +617,21 @@ export function buildInboundFaxAuditEvent(input: {
 export async function suggestInboundFaxPatient(
   fhir: Pick<InboundFaxFhir, "search">,
   senderNumber: string | undefined,
+  senderIdentifier?: string,
 ): Promise<SuggestedFaxPatient | undefined> {
   const normalizedSender = normalizePhone(senderNumber);
-  if (!normalizedSender) return undefined;
-  // Medplum 5.1.8 exposes no Organization telecom search parameter; an organization-only
-  // fax match therefore yields no suggestion instead of restoring the unsafe bounded scan.
+  const senderName = senderIdentifier?.trim().replace(/\s+/g, " ");
+  if (!normalizedSender && !senderName) return undefined;
+  // Organization has no telecom search parameter; CSID name matching below supplies that path.
   const [practitioners, practitionerRoles] = await Promise.all([
-    searchCompleteResources<Practitioner>(fhir, "Practitioner", {
+    normalizedSender ? searchCompleteResources<Practitioner>(fhir, "Practitioner", {
       telecom: `fax|${normalizedSender}`,
       _count: "200",
-    }),
-    searchCompleteResources<PractitionerRole>(fhir, "PractitionerRole", {
+    }) : [],
+    normalizedSender ? searchCompleteResources<PractitionerRole>(fhir, "PractitionerRole", {
       telecom: `fax|${normalizedSender}`,
       _count: "200",
-    }),
+    }) : [],
   ]);
   if (!practitioners || !practitionerRoles) return undefined;
   const referrerReferences = new Set(
@@ -643,6 +645,26 @@ export async function suggestInboundFaxPatient(
       .flatMap((resource) =>
         resource.id ? [`${resource.resourceType}/${resource.id}`] : []),
   );
+  if (senderName && !referrerReferences.size) {
+    const params = { name: senderName.replace(/[\\,$|]/g, "\\$&"), _count: "200" };
+    const [namedPractitioners, organizations] = await Promise.all([
+      // HumanName search indexes name parts; whole-name equality is checked locally below.
+      searchCompleteResources<Practitioner>(fhir, "Practitioner", {
+        ...params, name: senderName.split(" ")[0]!.replace(/[\\,$|]/g, "\\$&"),
+      }),
+      searchCompleteResources<Organization>(fhir, "Organization", params),
+    ]);
+    if (!namedPractitioners || !organizations) return undefined;
+    const normalizedName = senderName.toLowerCase();
+    for (const resource of [...namedPractitioners, ...organizations]) {
+      const names = resource.resourceType === "Organization"
+        ? [resource.name, ...(resource.alias ?? [])]
+        : (resource.name ?? []).flatMap((name) => [name.text, [...(name.given ?? []), name.family].filter(Boolean).join(" ")]);
+      if (resource.id && names.some((name) => name?.trim().replace(/\s+/g, " ").toLowerCase() === normalizedName)) {
+        referrerReferences.add(`${resource.resourceType}/${resource.id}`);
+      }
+    }
+  }
   if (!referrerReferences.size) return undefined;
   const inbound = await searchCompleteResources<ServiceRequest>(fhir, "ServiceRequest", {
     category: `${REFERRAL_DIRECTION_CODE_SYSTEM}|inbound`,

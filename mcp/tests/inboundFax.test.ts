@@ -13,10 +13,12 @@ import {
   INBOUND_FAX_IDENTIFIER_SYSTEM,
   INBOUND_FAX_REFERRAL_IDENTIFIER_SYSTEM,
   INBOUND_FAX_TRIAGE_STATUS_EXTENSION_URL,
+  INBOUND_FAX_CALLER_REFERENCE_EXTENSION_URL,
   InboundFaxTriageConflictError,
   InboundFaxTriageService,
   createInboundFaxPoller,
   inboundFaxTriageStatus,
+  inboundFaxSuggestedPatient,
   inboundFaxWorkerEnabled,
   inboundFaxWorkerIntervalMs,
   startInboundFaxWorker,
@@ -28,10 +30,13 @@ import type {
   WestFaxFaxDocument,
   WestFaxFaxIdentifier,
 } from "../src/fax/westfax-adapter.js";
+import { createWestFaxAdapter, WESTFAX_BASE_URL } from "../src/fax/westfax-adapter.js";
+import { WESTFAX_DESCRIPTION } from "./fixtures/westfax.js";
 import {
   REFERRAL_CAPTURE_SOURCE_EXTENSION_URL,
   ReferralReplyWorklist,
 } from "../src/referral/reciprocal-referral.js";
+import { REFERRAL_DIRECTION_CODE_SYSTEM } from "../src/referral/referral-service.js";
 import { loadCorrespondenceDeskBlock } from "../src/desk/correspondence-block.js";
 
 const FAX_ID: WestFaxFaxIdentifier = {
@@ -44,7 +49,7 @@ const DESCRIPTION: WestFaxFaxDescription = {
   ...FAX_ID,
   pageCount: 2,
   senderNumber: "8645550199",
-  reference: "Synthetic caller metadata",
+  senderIdentifier: "Synthetic Referral Practice",
 };
 const DOCUMENT: WestFaxFaxDocument = {
   ...FAX_ID,
@@ -81,6 +86,103 @@ test("inbound sweep runs the five WestFax calls in order and double ingestion cr
   );
   assert.equal(inboundFaxTriageStatus(records[0]!), "received");
   assert.equal(adapter.retrieved, 2);
+  assert.equal(records[0]?.extension?.find((entry) => entry.url === INBOUND_FAX_CALLER_REFERENCE_EXTENSION_URL)?.valueString,
+    "Synthetic Referral Practice");
+});
+
+test("OrigCSID survives the real adapter and poller into an advisory patient suggestion", async () => {
+  const fhir = new InboundFaxFhir();
+  fhir.put({ resourceType: "Organization", id: "referrer", name: "Synthetic Referral Practice" });
+  fhir.put({ ...inboundReferral("referral-1", "prior-fax", "Patient/patient-1"), category: [{ coding: [{ system: REFERRAL_DIRECTION_CODE_SYSTEM, code: "inbound" }] }], requester: { reference: "Organization/referrer" } });
+  const methods: string[] = [];
+  const adapter = createWestFaxAdapter({ baseUrl: WESTFAX_BASE_URL, username: "synthetic", password: "synthetic", productId: "product-1", callbackBaseUrl: "https://example.test" }, {
+    fetchImpl: (async (url) => {
+      const method = String(url).split("/").at(-2)!;
+      methods.push(method);
+      const results: Record<string, unknown> = {
+        Fax_GetProductsWithInboundFaxes: [{ Id: "product-1" }],
+        Fax_GetFaxIdentifiers: [{ Id: "fax-1", Direction: "Inbound", Tag: "None" }],
+        Fax_GetFaxDescriptionsUsingIds: [WESTFAX_DESCRIPTION],
+        Fax_GetFaxDocuments: [{ Id: "fax-1", Direction: "Inbound", PageCount: 2, FaxFiles: [{ ContentType: "application/pdf", FileContents: DOCUMENT.fileContents }] }],
+        Fax_ChangeFaxFilterValue: true,
+      };
+      assert.ok(Object.hasOwn(results, method));
+      return new Response(JSON.stringify({ Success: true, Result: results[method] }));
+    }) as typeof fetch,
+  });
+  const results = await createInboundFaxPoller({ fhir, adapter }).run();
+  assert.equal(results[0]?.outcome, "recorded");
+  const record = fhir.resources("DocumentReference")[0] as DocumentReference;
+  assert.equal(record.extension?.find((entry) => entry.url === INBOUND_FAX_CALLER_REFERENCE_EXTENSION_URL)?.valueString,
+    "Synthetic Referral Practice");
+  assert.deepEqual(inboundFaxSuggestedPatient(record), { reference: "Patient/patient-1" });
+  assert.equal(record.subject, undefined);
+  assert.equal(methods.at(-1), "Fax_ChangeFaxFilterValue");
+});
+
+test("CSID matching requires an exact referrer name and one patient across complete results", async () => {
+  const fhir = new InboundFaxFhir();
+  fhir.put({ resourceType: "Practitioner", id: "person", name: [{ given: ["Synthetic"], family: "Person" }] });
+  fhir.put({ ...inboundReferral("referral-1", "prior-fax", "Patient/patient-1"), category: [{ coding: [{ system: REFERRAL_DIRECTION_CODE_SYSTEM, code: "inbound" }] }], requester: { reference: "Practitioner/person" } });
+  assert.deepEqual(await suggestInboundFaxPatient(fhir, undefined, "  SYNTHETIC   PERSON "), { reference: "Patient/patient-1" });
+  assert.equal(await suggestInboundFaxPatient(fhir, undefined, "Synthetic"), undefined);
+  assert.equal(await suggestInboundFaxPatient(fhir, undefined, "  "), undefined);
+  fhir.put({ ...inboundReferral("referral-2", "prior-fax-2", "Patient/patient-2"), category: [{ coding: [{ system: REFERRAL_DIRECTION_CODE_SYSTEM, code: "inbound" }] }], requester: { reference: "Practitioner/person" } });
+  assert.equal(await suggestInboundFaxPatient(fhir, undefined, "Synthetic Person"), undefined);
+  const calls: Array<[string, Record<string, string>]> = [];
+  assert.equal(await suggestInboundFaxPatient({
+    search: async <T extends Resource>(type: T["resourceType"], params: Record<string, string> = {}) => {
+      calls.push([type, params]);
+      return bundle([], type === "Organization" ? 1 : 0) as Bundle<T>;
+    },
+  }, undefined, "Practice, A"), undefined);
+  assert.deepEqual(calls, [
+    ["Practitioner", { name: "Practice\\,", _count: "200" }],
+    ["Organization", { name: "Practice\\, A", _count: "200" }],
+  ]);
+});
+
+test("CSID person lookup searches a HumanName part before confirming the whole name", async () => {
+  const fhir = new InboundFaxFhir();
+  fhir.put({ ...inboundReferral("referral-1", "prior-fax", "Patient/patient-1"),
+    category: [{ coding: [{ system: REFERRAL_DIRECTION_CODE_SYSTEM, code: "inbound" }] }],
+    requester: { reference: "Practitioner/person" },
+  });
+  const result = await suggestInboundFaxPatient({
+    search: async <T extends Resource>(type: T["resourceType"], params: Record<string, string> = {}) => {
+      if (type === "Practitioner") {
+        assert.equal(params.name, "Synthetic");
+        return bundle([{ resourceType: "Practitioner", id: "person", name: [{ given: ["Synthetic"], family: "Person" }] }], 1) as Bundle<T>;
+      }
+      return fhir.search<T>(type, params);
+    },
+  }, undefined, "Synthetic Person");
+  assert.deepEqual(result, { reference: "Patient/patient-1" });
+});
+
+test("an existing fax-number referrer is not suppressed by a truncated CSID name lookup", async () => {
+  const queries: string[] = [];
+  const result = await suggestInboundFaxPatient({
+    search: async <T extends Resource>(type: T["resourceType"], params: Record<string, string> = {}) => {
+      if (params.name) {
+        queries.push(type);
+        return bundle([], 201) as Bundle<T>;
+      }
+      if (type === "Practitioner") {
+        return bundle([{ resourceType: "Practitioner", id: "phone-referrer", telecom: [{ system: "fax", value: "8645550199" }] }], 1) as Bundle<T>;
+      }
+      if (type === "ServiceRequest") {
+        assert.equal(params.requester, "Practitioner/phone-referrer");
+        return bundle([{ ...inboundReferral("referral-1", "prior-fax", "Patient/patient-1"),
+          category: [{ coding: [{ system: REFERRAL_DIRECTION_CODE_SYSTEM, code: "inbound" }] }],
+          requester: { reference: "Practitioner/phone-referrer" },
+        }], 1) as Bundle<T>;
+      }
+      return bundle([], 0) as Bundle<T>;
+    },
+  }, "8645550199", "Common Name");
+  assert.deepEqual(result, { reference: "Patient/patient-1" });
+  assert.deepEqual(queries, []);
 });
 
 test("a recording failure is loud, repeat-surfaced, and never marked Retrieved", async () => {

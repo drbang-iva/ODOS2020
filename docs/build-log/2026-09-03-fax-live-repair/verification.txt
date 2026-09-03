@@ -1,0 +1,619 @@
+Source under test: 1556893ff7df84078fade4cb102eb4f95e5f9689
+Base: bc86574fd41fe7f0a528d9619cda44cf8e4d0c0a
+
+$ cd mcp && node scripts/run-tests.mjs tests/westFaxAdapter.test.ts tests/inboundFax.test.ts tests/inboundFaxEndpoint.test.ts tests/faxEndpoint.test.ts
+exit: 0
+  ---
+  duration_ms: 1.024291
+  type: 'test'
+  ...
+1..38
+# tests 40
+# suites 0
+# pass 40
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 951.967083
+
+$ cd mcp && node scripts/run-tests.mjs tests/westFaxAdapter.test.ts
+exit: 1
+  ---
+  duration_ms: 1.589459
+  type: 'test'
+  ...
+1..10
+# tests 10
+# suites 0
+# pass 6
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 297.134166
+
+$ cd mcp && node scripts/run-tests.mjs tests/inboundFax.test.ts
+exit: 1
+  ---
+  duration_ms: 0.134417
+  type: 'test'
+  ...
+1..24
+# tests 26
+# suites 0
+# pass 25
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 340.667167
+
+$ cd mcp && node scripts/run-tests.mjs tests/westFaxAdapter.test.ts tests/inboundFax.test.ts tests/inboundFaxEndpoint.test.ts tests/faxEndpoint.test.ts tests/verifyWestFaxLive.test.ts tests/searchParamContract.test.ts tests/fixturePhiGuard.test.ts
+exit: 0
+  ---
+  duration_ms: 1.635875
+  type: 'test'
+  ...
+1..54
+# tests 56
+# suites 0
+# pass 56
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2399.575792
+
+$ cd mcp && node scripts/run-tests.mjs (first post-review run)
+exit: 1
+  duration_ms: 0.604166
+  type: 'test'
+  ...
+1..3574
+# tests 4109
+# suites 0
+# pass 4053
+# fail 1
+# cancelled 0
+# skipped 55
+# todo 0
+# duration_ms 84380.673375
+⚠️  LIVE STACK NOT CONFIGURED — 40 tests skipped, including live authorization enforcement (audit-header, billingIdentityConfigParity, body-structure-idempotency, clinicalWriteAuthzLive, diagnosisCarryForward, encounter-lifecycle, encounter, encounterUndoLedgerAuthzLive, patient-update, profile-validation, provenance-defaults, searchParamMedplumSmoke, transaction-atomicity, v035-terminology-install, v035-write-tools, v04-observation-focus-conformance, v04-write-tools, v04b-write-tools, v04c-write-tools, v05a-authz, v05b-audit-ib-backup). This run does NOT gate authz. Set MEDPLUM_ADMIN_EMAIL/PASSWORD to run them.
+not ok 816 - an explicit provider is rejected when it cannot identify one sender lane
+  ---
+  duration_ms: 25.865125
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/odos-fax-live-repair/mcp/tests/commsApi.test.ts:1:46130'
+  failureType: 'testCodeFailure'
+  error: 'fetch failed'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    node:internal/deps/undici/undici:14976:13
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/odos-fax-live-repair/mcp/tests/commsApi.test.ts:1471:22)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+
+$ cd mcp && node scripts/run-tests.mjs tests/commsApi.test.ts
+exit: 0
+  ---
+  duration_ms: 0.777667
+  type: 'test'
+  ...
+1..49
+# tests 49
+# suites 0
+# pass 49
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 408.998333
+
+$ cd mcp && node scripts/run-tests.mjs (final run)
+exit: 1
+  duration_ms: 0.595708
+  type: 'test'
+  ...
+1..3574
+# tests 4109
+# suites 0
+# pass 4054
+# fail 0
+# cancelled 0
+# skipped 55
+# todo 0
+# duration_ms 70081.701584
+⚠️  LIVE STACK NOT CONFIGURED — 40 tests skipped, including live authorization enforcement (audit-header, billingIdentityConfigParity, body-structure-idempotency, clinicalWriteAuthzLive, diagnosisCarryForward, encounter-lifecycle, encounter, encounterUndoLedgerAuthzLive, patient-update, profile-validation, provenance-defaults, searchParamMedplumSmoke, transaction-atomicity, v035-terminology-install, v035-write-tools, v04-observation-focus-conformance, v04-write-tools, v04b-write-tools, v04c-write-tools, v05a-authz, v05b-audit-ib-backup). This run does NOT gate authz. Set MEDPLUM_ADMIN_EMAIL/PASSWORD to run them.
+
+$ cd mcp && npm run build
+exit: 0
+
+> odos-mcp@0.1.0 build
+> tsc
+
+
+mutation-csid-forwarding
+$ cd mcp && node scripts/run-tests.mjs tests/westFaxAdapter.test.ts tests/inboundFax.test.ts tests/verifyWestFaxLive.test.ts
+MUTANT: csid-forwarding
+$ rg -n -F 'suggestInboundFaxPatient(deps.fhir, fax.senderNumber, fax.senderIdentifier)' mcp/src/fax/inbound-fax.ts
+rg exit: 1 (absent required)
+not ok 2 - OrigCSID survives the real adapter and poller into an advisory patient suggestion
+  ---
+  duration_ms: 17.045625
+  type: 'test'
+  location: '/private/tmp/odos-fax-live-repair-mutants/mcp/tests/inboundFax.test.ts:1:2408'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + undefined
+    - {
+    -   reference: 'Patient/patient-1'
+    - }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    reference: 'Patient/patient-1'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-fax-live-repair-mutants/mcp/tests/inboundFax.test.ts:118:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# tests 39
+# pass 38
+# fail 1
+# skipped 0
+RED exit: 1
+RESTORED git status --porcelain: ''
+# tests 39
+# pass 39
+# fail 0
+# skipped 0
+GREEN exit: 0
+
+mutation-csid-persistence
+$ cd mcp && node scripts/run-tests.mjs tests/westFaxAdapter.test.ts tests/inboundFax.test.ts tests/verifyWestFaxLive.test.ts
+MUTANT: csid-persistence
+$ rg -n -F 'valueString: input.description.senderIdentifier' mcp/src/fax/inbound-fax.ts
+rg exit: 1 (absent required)
+not ok 1 - inbound sweep runs the five WestFax calls in order and double ingestion creates one record
+  ---
+  duration_ms: 5.012458
+  type: 'test'
+  location: '/private/tmp/odos-fax-live-repair-mutants/mcp/tests/inboundFax.test.ts:1:1314'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + undefined
+    - 'Synthetic Referral Practice'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'Synthetic Referral Practice'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-fax-live-repair-mutants/mcp/tests/inboundFax.test.ts:89:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+not ok 2 - OrigCSID survives the real adapter and poller into an advisory patient suggestion
+  ---
+  duration_ms: 13.502167
+  type: 'test'
+  location: '/private/tmp/odos-fax-live-repair-mutants/mcp/tests/inboundFax.test.ts:1:2408'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + undefined
+    - 'Synthetic Referral Practice'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'Synthetic Referral Practice'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-fax-live-repair-mutants/mcp/tests/inboundFax.test.ts:116:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# tests 39
+# pass 37
+# fail 2
+# skipped 0
+RED exit: 1
+RESTORED git status --porcelain: ''
+# tests 39
+# pass 39
+# fail 0
+# skipped 0
+GREEN exit: 0
+
+mutation-exact-name
+$ cd mcp && node scripts/run-tests.mjs tests/westFaxAdapter.test.ts tests/inboundFax.test.ts tests/verifyWestFaxLive.test.ts
+MUTANT: exact-name
+$ rg -n -F 'startsWith(normalizedName)' mcp/src/fax/inbound-fax.ts
+663:      if (resource.id && names.some((name) => name?.trim().replace(/\s+/g, " ").toLowerCase().startsWith(normalizedName))) {
+rg exit: 0 (present required)
+not ok 3 - CSID matching requires an exact referrer name and one patient across complete results
+  ---
+  duration_ms: 5.083833
+  type: 'test'
+  location: '/private/tmp/odos-fax-live-repair-mutants/mcp/tests/inboundFax.test.ts:1:4086'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + {
+    +   reference: 'Patient/patient-1'
+    + }
+    - undefined
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  actual:
+    reference: 'Patient/patient-1'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-fax-live-repair-mutants/mcp/tests/inboundFax.test.ts:128:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# tests 39
+# pass 38
+# fail 1
+# skipped 0
+RED exit: 1
+RESTORED git status --porcelain: ''
+# tests 39
+# pass 39
+# fail 0
+# skipped 0
+GREEN exit: 0
+
+mutation-origcsid
+$ cd mcp && node scripts/run-tests.mjs tests/westFaxAdapter.test.ts tests/inboundFax.test.ts tests/verifyWestFaxLive.test.ts
+MUTANT: origcsid
+$ rg -n -F 'call?.OrigCSID' mcp/src/fax/westfax-adapter.ts
+rg exit: 1 (absent required)
+not ok 2 - OrigCSID survives the real adapter and poller into an advisory patient suggestion
+  ---
+  duration_ms: 16.865625
+  type: 'test'
+  location: '/private/tmp/odos-fax-live-repair-mutants/mcp/tests/inboundFax.test.ts:1:2408'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + undefined
+    - 'Synthetic Referral Practice'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'Synthetic Referral Practice'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-fax-live-repair-mutants/mcp/tests/inboundFax.test.ts:116:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+not ok 25 - operator verification reads descriptions once with multipart StartDate and the production parser
+  ---
+  duration_ms: 24.56925
+  type: 'test'
+  location: '/private/tmp/odos-fax-live-repair-mutants/mcp/tests/verifyWestFaxLive.test.ts:1:322'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+        {
+          date: '2026-09-02T14:00:00Z',
+          direction: 'Inbound',
+          id: 'fax-1',
+          pageCount: 2,
+    -     senderIdentifier: 'Synthetic Referral Practice',
+          senderNumber: '0123456789',
+          tag: 'None'
+        }
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      id: 'fax-1'
+      direction: 'Inbound'
+      date: '2026-09-02T14:00:00Z'
+      tag: 'None'
+      pageCount: 2
+      senderNumber: '0123456789'
+      senderIdentifier: 'Synthetic Referral Practice'
+  actual:
+    0:
+      id: 'fax-1'
+      direction: 'Inbound'
+      date: '2026-09-02T14:00:00Z'
+      tag: 'None'
+      pageCount: 2
+      senderNumber: '0123456789'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-fax-live-repair-mutants/mcp/tests/verifyWestFaxLive.test.ts:33:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+not ok 31 - WestFax descriptions capture OrigCSID independently of the sender number
+  ---
+  duration_ms: 2.166459
+  type: 'test'
+  location: '/private/tmp/odos-fax-live-repair-mutants/mcp/tests/westFaxAdapter.test.ts:1:5329'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + undefined
+    - 'Synthetic Referral Practice'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'Synthetic Referral Practice'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-fax-live-repair-mutants/mcp/tests/westFaxAdapter.test.ts:163:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# tests 39
+# pass 36
+# fail 3
+# skipped 0
+RED exit: 1
+RESTORED git status --porcelain: ''
+# tests 39
+# pass 39
+# fail 0
+# skipped 0
+GREEN exit: 0
+
+mutation-phone-priority
+$ cd mcp && node scripts/run-tests.mjs tests/westFaxAdapter.test.ts tests/inboundFax.test.ts tests/verifyWestFaxLive.test.ts
+MUTANT: phone-priority
+$ rg -n -F 'if (senderName && !referrerReferences.size)' mcp/src/fax/inbound-fax.ts
+rg exit: 1 (absent required)
+not ok 5 - an existing fax-number referrer is not suppressed by a truncated CSID name lookup
+  ---
+  duration_ms: 2.203958
+  type: 'test'
+  location: '/private/tmp/odos-fax-live-repair-mutants/mcp/tests/inboundFax.test.ts:1:6111'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + undefined
+    - {
+    -   reference: 'Patient/patient-1'
+    - }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    reference: 'Patient/patient-1'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-fax-live-repair-mutants/mcp/tests/inboundFax.test.ts:184:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# tests 39
+# pass 38
+# fail 1
+# skipped 0
+RED exit: 1
+RESTORED git status --porcelain: ''
+# tests 39
+# pass 39
+# fail 0
+# skipped 0
+GREEN exit: 0
+
+mutation-reference
+$ cd mcp && node scripts/run-tests.mjs tests/westFaxAdapter.test.ts tests/inboundFax.test.ts tests/verifyWestFaxLive.test.ts
+MUTANT: reference
+$ rg -n -F 'row.Reference' mcp/src/fax/westfax-adapter.ts
+348:      ...(stringValue(row.Reference) ? { reference: stringValue(row.Reference) } : {}),
+rg exit: 0 (present required)
+not ok 25 - operator verification reads descriptions once with multipart StartDate and the production parser
+  ---
+  duration_ms: 22.789917
+  type: 'test'
+  location: '/private/tmp/odos-fax-live-repair-mutants/mcp/tests/verifyWestFaxLive.test.ts:1:322'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+        {
+          date: '2026-09-02T14:00:00Z',
+          direction: 'Inbound',
+          id: 'fax-1',
+          pageCount: 2,
+    +     reference: 'unexpected',
+          senderIdentifier: 'Synthetic Referral Practice',
+          senderNumber: '0123456789',
+          tag: 'None'
+        }
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      id: 'fax-1'
+      direction: 'Inbound'
+      date: '2026-09-02T14:00:00Z'
+      tag: 'None'
+      pageCount: 2
+      senderNumber: '0123456789'
+      senderIdentifier: 'Synthetic Referral Practice'
+  actual:
+    0:
+      id: 'fax-1'
+      direction: 'Inbound'
+      date: '2026-09-02T14:00:00Z'
+      tag: 'None'
+      pageCount: 2
+      senderNumber: '0123456789'
+      senderIdentifier: 'Synthetic Referral Practice'
+      reference: 'unexpected'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-fax-live-repair-mutants/mcp/tests/verifyWestFaxLive.test.ts:33:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+not ok 32 - WestFax descriptions ignore an unexpected Reference field
+  ---
+  duration_ms: 2.517375
+  type: 'test'
+  location: '/private/tmp/odos-fax-live-repair-mutants/mcp/tests/westFaxAdapter.test.ts:1:6009'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-fax-live-repair-mutants/mcp/tests/westFaxAdapter.test.ts:177:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# tests 39
+# pass 37
+# fail 2
+# skipped 0
+RED exit: 1
+RESTORED git status --porcelain: ''
+# tests 39
+# pass 39
+# fail 0
+# skipped 0
+GREEN exit: 0
+
+mutation-startdate
+$ cd mcp && node scripts/run-tests.mjs tests/westFaxAdapter.test.ts tests/inboundFax.test.ts tests/verifyWestFaxLive.test.ts
+MUTANT: startdate
+$ rg -n -F 'form.set("StartDate"' mcp/src/fax/westfax-adapter.ts
+rg exit: 1 (absent required)
+not ok 25 - operator verification reads descriptions once with multipart StartDate and the production parser
+  ---
+  duration_ms: 23.429958
+  type: 'test'
+  location: '/private/tmp/odos-fax-live-repair-mutants/mcp/tests/verifyWestFaxLive.test.ts:1:322'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + null
+    - '2026-08-27T12:00:00.000Z'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '2026-08-27T12:00:00.000Z'
+  actual: ~
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-fax-live-repair-mutants/mcp/tests/verifyWestFaxLive.test.ts:26:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+not ok 30 - WestFax adapter performs each documented inbound call with the required multipart fields
+  ---
+  duration_ms: 4.454917
+  type: 'test'
+  location: '/private/tmp/odos-fax-live-repair-mutants/mcp/tests/westFaxAdapter.test.ts:1:2756'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + null
+    - '2026-08-04T12:00:00.000Z'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '2026-08-04T12:00:00.000Z'
+  actual: ~
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-fax-live-repair-mutants/mcp/tests/westFaxAdapter.test.ts:136:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+not ok 33 - WestFax lookback configuration bounds every inbound request and advances with the clock
+  ---
+  duration_ms: 1.396417
+  type: 'test'
+  location: '/private/tmp/odos-fax-live-repair-mutants/mcp/tests/westFaxAdapter.test.ts:1:6505'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+    +   null,
+    +   null,
+    +   null
+    -   '2026-08-27T12:00:00.000Z',
+    -   '2026-08-28T12:00:00.000Z',
+    -   '2026-08-28T12:00:00.000Z'
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: '2026-08-27T12:00:00.000Z'
+    1: '2026-08-28T12:00:00.000Z'
+    2: '2026-08-28T12:00:00.000Z'
+  actual:
+    0: ~
+    1: ~
+    2: ~
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-fax-live-repair-mutants/mcp/tests/westFaxAdapter.test.ts:198:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# tests 39
+# pass 36
+# fail 3
+# skipped 0
+RED exit: 1
+RESTORED git status --porcelain: ''
+# tests 39
+# pass 39
+# fail 0
+# skipped 0
+GREEN exit: 0
