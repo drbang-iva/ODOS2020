@@ -23,6 +23,8 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { parseRouteSwitchSource } from "./discover-routes.mjs";
 import { normalizeManifestEntries, computeCensusReport } from "./check-manifest.mjs";
+import { parseIndexRegistrations, extractRouteFamilies, findReExportTarget } from "./discover-backend-routes.mjs";
+import { parseProxyKeys, computeProxyCoverageReport } from "./check-proxy-coverage.mjs";
 
 let passed = 0;
 const failures = [];
@@ -278,6 +280,93 @@ test("CLI unexpected discovery read error is reported by the outer catch and exi
   assert.match(output, /unexpected internal error and could not complete/);
   assert.match(output, /Advisory only/);
   assert.doesNotMatch(output, /Coverage:|Every discovered route has a reviewed manifest entry/);
+});
+
+// --- Proxy-coverage census: backend route-family discovery + the anti-drift check itself ---
+// Three real bugs (/watchers, /communications, /comms) shipped from the same root cause:
+// mcp/src/index.ts's register*Routes calls and ui/vite.config.ts's proxy table are two
+// hand-maintained lists with nothing keeping them in sync. These tests lock in the parser that
+// closes that gap.
+
+test("parseIndexRegistrations finds an import that is actually called, excludes one that isn't", () => {
+  const source = `
+    import { registerFooRoutes } from "./foo/foo-routes.js";
+    import { registerBarRoutes } from "./bar/bar-routes.js";
+    export function main(app) {
+      registerFooRoutes(app, {});
+      // registerBarRoutes is imported but never invoked
+    }
+  `;
+  const { registrations, warnings } = parseIndexRegistrations(source);
+  assert.deepEqual(registrations.map((r) => r.functionName), ["registerFooRoutes"]);
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /registerBarRoutes.*never called/);
+});
+
+test("extractRouteFamilies recognizes both app.method(\"path\") and method(app, \"path\") shapes", () => {
+  const source = `
+    export function registerFooRoutes(app, deps) {
+      app.get("/foo/one", handler);
+      post(app, "/foo/two", deps, handler);
+    }
+  `;
+  const { families, warnings } = extractRouteFamilies(source);
+  assert.deepEqual(families, ["/foo"]);
+  assert.deepEqual(warnings, []);
+});
+
+test("extractRouteFamilies handles a path literal split onto its own line", () => {
+  const source = `
+    app.post(
+      "/fax/callback/:recordId",
+      handler
+    );
+  `;
+  const { families } = extractRouteFamilies(source);
+  assert.deepEqual(families, ["/fax"]);
+});
+
+test("extractRouteFamilies warns instead of silently reporting zero families when nothing matches", () => {
+  const { warnings } = extractRouteFamilies("export function registerNothingRoutes() {}");
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /No route-registration calls recognized/);
+});
+
+test("findReExportTarget follows a bare re-export, returns null when there isn't one", () => {
+  const reExport = `export { registerFooRoutes } from "./real-foo-routes.js";`;
+  assert.equal(findReExportTarget(reExport, "registerFooRoutes"), "./real-foo-routes.js");
+  assert.equal(findReExportTarget("export function registerFooRoutes() {}", "registerFooRoutes"), null);
+});
+
+test("parseProxyKeys extracts only top-level keys, not nested bypass-function string literals", () => {
+  const source = `
+    proxy: {
+      "/desk": {
+        target: mcpTarget,
+        bypass(req) {
+          if (req.headers.accept.includes("text/html")) return "/index.html";
+        },
+      },
+      "/watchers": { target: mcpTarget },
+    },
+  `;
+  const warnings = [];
+  const keys = parseProxyKeys(source, warnings);
+  assert.deepEqual(keys, ["/desk", "/watchers"]);
+  assert.deepEqual(warnings, []);
+});
+
+test("computeProxyCoverageReport flags a backend family with no proxy entry, ignores the reverse", () => {
+  const { uncovered } = computeProxyCoverageReport(
+    ["/watchers", "/fhir-adjacent"],
+    ["/watchers", "/fhir", "/auth"], // /fhir and /auth are proxy-only (external target) — not a defect
+  );
+  assert.deepEqual(uncovered, ["/fhir-adjacent"]);
+});
+
+test("computeProxyCoverageReport reports nothing when every backend family is covered", () => {
+  const { uncovered } = computeProxyCoverageReport(["/a", "/b"], ["/a", "/b", "/c"]);
+  assert.deepEqual(uncovered, []);
 });
 
 // --- Report ---
