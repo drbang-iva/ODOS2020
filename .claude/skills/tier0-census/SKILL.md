@@ -108,13 +108,32 @@ an evaluator's independent re-check, not by anything in this repo. Full root-cau
   server — correctly outside this census's scope). Always exits 0, advisory only. Run: `node
   .claude/skills/tier0-census/scripts/check-proxy-coverage.mjs`.
 
-As of this writing it finds **two real, still-open gaps**: `/comms` (8 routes across three
-registrations — a tracked-link redirect, GHL inbound webhook, six Twilio webhooks) and `/inventory`
-(`app.post("/inventory/frame-units/:unitId/adjustments")`, inline in `index.ts`). Neither is
-urgent — `/comms` has zero UI call sites and runs against a public base URL rather than the dev
-proxy; `/inventory` needs its own live-caller check before anyone treats it as a priority. Both are
-real and unfixed. This is not a manifest you populate like Phase 1's; there's nothing to mark
-"reviewed" here, it either has a proxy entry or it doesn't.
+**Known blind spot, not yet closed:** this only recognizes `app.<method>("/path", ...)` and the
+local `get(app, "/path", ...)` wrapper. Two other real registration shapes exist and aren't
+scanned: `app.route("/path").get(...).post(...)` (two instances, both under the already-covered
+`/clinical-graph` family, so no known impact yet) and a globally-mounted sub-router —
+`app.use(createSmartAuthorizationRouter({...}))` with no path argument, whose own internal routes
+(`router.use("/agentops", ...)` and others in `mcp/src/smart/authorization-server.ts`) define their
+own prefixes this census never sees. Whether that sub-router's routes have proxy coverage hasn't
+been checked — don't assume either way. Flagged by Greptile on this PR; not fixed here.
+
+As of this writing it finds **two real, still-open gaps, of different severity**:
+
+- `/comms` (8 routes across three registrations — a tracked-link redirect, GHL inbound webhook, six
+  Twilio webhooks). Not urgent: zero UI call sites, these run against a public base URL rather than
+  the dev proxy.
+- `/inventory` (`app.post("/inventory/frame-units/:unitId/adjustments")`, inline in `index.ts`) —
+  **this one is live, same severity as `/watchers` and `/communications` were.**
+  `ui/src/lib/optical-frames.ts:234` calls it via `clinicalGraphApiBase()`, which defaults to `""`
+  when `VITE_ODOS_MCP_BASE_URL` is unset (only `.env.example` is tracked, `.env` is gitignored) —
+  routed from `ui/src/scenes/OpticalFrames.tsx` off the `/admin/optical/inventory/frames` route.
+  Same failure chain as the other two: relative fetch, no proxy key, silent SPA fallback. Do not
+  repeat the earlier mistake made about `/comms` in the #517 kickoff (claiming a gap was
+  low-priority without actually checking for a live caller) — this one needs the same #516/#517
+  treatment, not a "someday" label.
+
+This is not a manifest you populate like Phase 1's; there's nothing to mark "reviewed" here, it
+either has a proxy entry or it doesn't.
 
 ## What Phase 2 needs (not yet built — don't claim this skill does it)
 
