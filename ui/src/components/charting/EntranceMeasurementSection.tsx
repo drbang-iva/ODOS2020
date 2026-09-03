@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import { voidEncounterEntries } from "../../lib/encounter-void";
-import { ClearSectionButton, RemoveValueButton } from "./ClearControls";
+import { ClearSectionButton } from "./ClearControls";
+import { EditEntriesToggle, RemoveValueButton, SectionEditingProvider } from "./section-editing";
 import { useEncounterEdit } from "./encounter-edit-context";
 import { OdosSelect } from "../inputs/OdosSelect";
 import { OdosWheel } from "../inputs/OdosWheel";
@@ -100,6 +101,7 @@ export function EntranceMeasurementSection({ definition, patientReference, encou
   }
 
   return (
+    <SectionEditingProvider hasRecorded={history.length > 0}>
     <section className="h-full overflow-y-auto p-6">
       <div className="max-w-6xl">
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[color:var(--odos-line)] pb-4">
@@ -108,19 +110,22 @@ export function EntranceMeasurementSection({ definition, patientReference, encou
             <h2 className="mt-1 text-xl font-semibold text-[color:var(--odos-text)]">{definition.display}</h2>
             <p className="mt-1 text-sm text-[color:var(--odos-muted)]">Per-eye measurements; no normal state is inferred.</p>
           </div>
-          <ClearSectionButton
-            encounterReference={encounterReference}
-            sectionKey={definition.sectionKey ?? definition.stableKey}
-            label={definition.display}
-            hasRecorded={history.length > 0}
-            onCleared={(result) => {
-              setValues({});
-              setMessage(null);
-              setError(null);
-              setHistoryVersion((current) => current + 1);
-              onCleared?.({ scope: "section", result });
-            }}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <EditEntriesToggle />
+            <ClearSectionButton
+              encounterReference={encounterReference}
+              sectionKey={definition.sectionKey ?? definition.stableKey}
+              label={definition.display}
+              hasRecorded={history.length > 0}
+              onCleared={(result) => {
+                setValues({});
+                setMessage(null);
+                setError(null);
+                setHistoryVersion((current) => current + 1);
+                onCleared?.({ scope: "section", result });
+              }}
+            />
+          </div>
         </div>
         <div className="mt-5 overflow-hidden rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface-2)]">
           <div className={`grid ${gridColumns} gap-1 bg-bg-panel/55 px-2 py-2 text-[10px] uppercase leading-tight tracking-wide text-[color:var(--odos-faint)] sm:gap-2 sm:px-3`}>
@@ -144,6 +149,7 @@ export function EntranceMeasurementSection({ definition, patientReference, encou
         </div>
       </div>
     </section>
+    </SectionEditingProvider>
   );
 }
 

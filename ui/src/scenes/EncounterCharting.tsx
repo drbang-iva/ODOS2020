@@ -58,6 +58,7 @@ import { PrescriptionSection } from "../components/charting/PrescriptionSection"
 import { OrthoKSection } from "../components/charting/OrthoKSection";
 import { RefractionSection } from "../components/charting/RefractionSection";
 import { EncounterEditContext, type EncounterClearFailedDetail, type EncounterClearedDetail } from "../components/charting/encounter-edit-context";
+import { ConfirmDestructiveProvider } from "../components/charting/ConfirmDestructive";
 import { UndoStrip } from "../components/charting/UndoStrip";
 import { isClosedEncounterStatus } from "../lib/encounter-void";
 import {
@@ -805,6 +806,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
 
   return (
     <EncounterEditContext.Provider value={{ encounterStatus: encounter?.status, onCleared: handleEncounterCleared, onClearFailed: handleEncounterClearFailed }}>
+    <ConfirmDestructiveProvider>
     <div className={["odos-charting-workspace flex h-screen w-screen flex-col bg-bg-deep text-white", config.encounterDensity === "compact" ? "text-[0.95rem]" : ""].join(" ")}>
       <EncounterHeader
         patient={patient}
@@ -1229,6 +1231,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
         />
       )}
     </div>
+    </ConfirmDestructiveProvider>
     </EncounterEditContext.Provider>
   );
 }

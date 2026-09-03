@@ -1,0 +1,445 @@
+[
+  {
+    "set": "before",
+    "surface": "pupils",
+    "state": "rest",
+    "alert": "rgb(226, 92, 106)",
+    "count": 4,
+    "elements": [
+      "button 'Clear everything charted this '",
+      "button.rounded.border.border-[color:var(--odos-alert)] 'Clear Pupils'",
+      "button.rounded.border.border-[color:var(--odos-alert)] '×'",
+      "button.rounded.border.border-[color:var(--odos-alert)] '×'"
+    ],
+    "removes": 2
+  },
+  {
+    "set": "before",
+    "surface": "pupils",
+    "state": "native-confirm",
+    "message": "Clear everything charted for this visit — Pupils (2), IOP (2), Visual acuity (2), Auto-refraction / Auto-K (5): 11 recorded values. They remain in the record as entered-in-error. Continue?"
+  },
+  {
+    "set": "before",
+    "surface": "pupils",
+    "state": "signed",
+    "alert": "rgb(226, 92, 106)",
+    "count": 4,
+    "elements": [
+      "button 'Clear everything charted this '",
+      "button.rounded.border.border-[color:var(--odos-alert)] 'Clear Pupils'",
+      "button.rounded.border.border-[color:var(--odos-alert)] '×'",
+      "button.rounded.border.border-[color:var(--odos-alert)] '×'"
+    ],
+    "removes": 2,
+    "disabledControls": [
+      "Clear everything charted this visit…",
+      "Clear Pupils",
+      "×",
+      "×"
+    ]
+  },
+  {
+    "set": "before",
+    "surface": "iop",
+    "state": "rest",
+    "alert": "rgb(226, 92, 106)",
+    "count": 4,
+    "elements": [
+      "button 'Clear everything charted this '",
+      "button.rounded.border.border-[color:var(--odos-alert)] 'Clear IOP'",
+      "button.rounded.border.border-[color:var(--odos-alert)] '×'",
+      "button.rounded.border.border-[color:var(--odos-alert)] '×'"
+    ],
+    "removes": 2
+  },
+  {
+    "set": "before",
+    "surface": "iop",
+    "state": "native-confirm",
+    "message": "Clear everything charted for this visit — Pupils (2), IOP (2), Visual acuity (2), Auto-refraction / Auto-K (5): 11 recorded values. They remain in the record as entered-in-error. Continue?"
+  },
+  {
+    "set": "before",
+    "surface": "iop",
+    "state": "signed",
+    "alert": "rgb(226, 92, 106)",
+    "count": 4,
+    "elements": [
+      "button 'Clear everything charted this '",
+      "button.rounded.border.border-[color:var(--odos-alert)] 'Clear IOP'",
+      "button.rounded.border.border-[color:var(--odos-alert)] '×'",
+      "button.rounded.border.border-[color:var(--odos-alert)] '×'"
+    ],
+    "removes": 2,
+    "disabledControls": [
+      "Clear everything charted this visit…",
+      "Clear IOP",
+      "×",
+      "×"
+    ]
+  },
+  {
+    "set": "before",
+    "surface": "va",
+    "state": "rest",
+    "alert": "rgb(226, 92, 106)",
+    "count": 4,
+    "elements": [
+      "button 'Clear everything charted this '",
+      "button.rounded.border.border-[color:var(--odos-alert)] 'Clear Visual acuity'",
+      "button.rounded.border.border-[color:var(--odos-alert)] '×'",
+      "button.rounded.border.border-[color:var(--odos-alert)] '×'"
+    ],
+    "removes": 2
+  },
+  {
+    "set": "before",
+    "surface": "va",
+    "state": "native-confirm",
+    "message": "Clear everything charted for this visit — Pupils (2), IOP (2), Visual acuity (2), Auto-refraction / Auto-K (5): 11 recorded values. They remain in the record as entered-in-error. Continue?"
+  },
+  {
+    "set": "before",
+    "surface": "va",
+    "state": "signed",
+    "alert": "rgb(226, 92, 106)",
+    "count": 4,
+    "elements": [
+      "button 'Clear everything charted this '",
+      "button.rounded.border.border-[color:var(--odos-alert)] 'Clear Visual acuity'",
+      "button.rounded.border.border-[color:var(--odos-alert)] '×'",
+      "button.rounded.border.border-[color:var(--odos-alert)] '×'"
+    ],
+    "removes": 2,
+    "disabledControls": [
+      "Clear everything charted this visit…",
+      "Clear Visual acuity",
+      "×",
+      "±",
+      "▾",
+      "±",
+      "−3",
+      "−2",
+      "−1",
+      "+1",
+      "+2",
+      "+3",
+      "×",
+      "±",
+      "▾",
+      "±",
+      "−3",
+      "−2",
+      "−1",
+      "+1",
+      "+2",
+      "+3"
+    ]
+  },
+  {
+    "set": "before",
+    "surface": "arx",
+    "state": "rest",
+    "alert": "rgb(226, 92, 106)",
+    "count": 4,
+    "elements": [
+      "button.rounded.border.border-[color:var(--odos-alert)] 'Clear Auto-refraction / Auto-K'",
+      "button.rounded.border.border-[color:var(--odos-alert)] '×'",
+      "button.rounded.border.border-[color:var(--odos-alert)] '×'",
+      "button.rounded.border.border-[color:var(--odos-alert)] '×'"
+    ],
+    "removes": 3
+  },
+  {
+    "set": "before",
+    "surface": "arx",
+    "state": "native-confirm",
+    "message": "Clear Auto-refraction / Auto-K — voids 5 recorded values from this visit. They remain in the record as entered-in-error. Continue?"
+  },
+  {
+    "set": "before",
+    "surface": "arx",
+    "state": "signed",
+    "alert": "rgb(226, 92, 106)",
+    "count": 4,
+    "elements": [
+      "button.rounded.border.border-[color:var(--odos-alert)] 'Clear Auto-refraction / Auto-K'",
+      "button.rounded.border.border-[color:var(--odos-alert)] '×'",
+      "button.rounded.border.border-[color:var(--odos-alert)] '×'",
+      "button.rounded.border.border-[color:var(--odos-alert)] '×'"
+    ],
+    "removes": 3,
+    "disabledControls": [
+      "Clear Auto-refraction / Auto-K",
+      "×",
+      "×",
+      "×"
+    ]
+  },
+  {
+    "set": "after",
+    "surface": "pupils",
+    "state": "rest",
+    "alert": "rgb(226, 92, 106)",
+    "count": 0,
+    "elements": [],
+    "removes": 0
+  },
+  {
+    "set": "after",
+    "surface": "pupils",
+    "state": "edit",
+    "alert": "rgb(226, 92, 106)",
+    "count": 0,
+    "elements": [],
+    "removes": 2
+  },
+  {
+    "set": "after",
+    "surface": "pupils",
+    "state": "dialog",
+    "alert": "rgb(226, 92, 106)",
+    "count": 1,
+    "elements": [
+      "button.odos-confirm-destroy 'Clear Pupils'"
+    ],
+    "focused": "odos-confirm-keep 'Keep'",
+    "alertdialog": 1
+  },
+  {
+    "set": "after",
+    "surface": "pupils",
+    "state": "after-escape",
+    "alertdialog": 0,
+    "alert": "rgb(226, 92, 106)",
+    "count": 0,
+    "elements": []
+  },
+  {
+    "set": "after",
+    "surface": "pupils",
+    "state": "clear-chart-dialog",
+    "alert": "rgb(226, 92, 106)",
+    "count": 1,
+    "elements": [
+      "button.odos-confirm-destroy 'Clear chart'"
+    ],
+    "alertdialog": 1,
+    "consequence": "Pupils 2 · IOP 2 · Visual acuity 2 · Auto-refraction / Auto-K 5 — 11 values recorded this visit. You can undo until the chart is signed."
+  },
+  {
+    "set": "after",
+    "surface": "pupils",
+    "state": "signed",
+    "alert": "rgb(226, 92, 106)",
+    "count": 0,
+    "elements": [],
+    "removes": 0,
+    "disabledControls": [
+      "Clear chart",
+      "Edit",
+      "Clear"
+    ]
+  },
+  {
+    "set": "after",
+    "surface": "iop",
+    "state": "rest",
+    "alert": "rgb(226, 92, 106)",
+    "count": 0,
+    "elements": [],
+    "removes": 0
+  },
+  {
+    "set": "after",
+    "surface": "iop",
+    "state": "edit",
+    "alert": "rgb(226, 92, 106)",
+    "count": 0,
+    "elements": [],
+    "removes": 2
+  },
+  {
+    "set": "after",
+    "surface": "iop",
+    "state": "dialog",
+    "alert": "rgb(226, 92, 106)",
+    "count": 1,
+    "elements": [
+      "button.odos-confirm-destroy 'Clear IOP'"
+    ],
+    "focused": "odos-confirm-keep 'Keep'",
+    "alertdialog": 1
+  },
+  {
+    "set": "after",
+    "surface": "iop",
+    "state": "after-escape",
+    "alertdialog": 0,
+    "alert": "rgb(226, 92, 106)",
+    "count": 0,
+    "elements": []
+  },
+  {
+    "set": "after",
+    "surface": "iop",
+    "state": "clear-chart-dialog",
+    "alert": "rgb(226, 92, 106)",
+    "count": 1,
+    "elements": [
+      "button.odos-confirm-destroy 'Clear chart'"
+    ],
+    "alertdialog": 1,
+    "consequence": "Pupils 2 · IOP 2 · Visual acuity 2 · Auto-refraction / Auto-K 5 — 11 values recorded this visit. You can undo until the chart is signed."
+  },
+  {
+    "set": "after",
+    "surface": "iop",
+    "state": "signed",
+    "alert": "rgb(226, 92, 106)",
+    "count": 0,
+    "elements": [],
+    "removes": 0,
+    "disabledControls": [
+      "Clear chart",
+      "Edit",
+      "Clear"
+    ]
+  },
+  {
+    "set": "after",
+    "surface": "va",
+    "state": "rest",
+    "alert": "rgb(226, 92, 106)",
+    "count": 0,
+    "elements": [],
+    "removes": 0
+  },
+  {
+    "set": "after",
+    "surface": "va",
+    "state": "edit",
+    "alert": "rgb(226, 92, 106)",
+    "count": 0,
+    "elements": [],
+    "removes": 2
+  },
+  {
+    "set": "after",
+    "surface": "va",
+    "state": "dialog",
+    "alert": "rgb(226, 92, 106)",
+    "count": 1,
+    "elements": [
+      "button.odos-confirm-destroy 'Clear Visual acuity'"
+    ],
+    "focused": "odos-confirm-keep 'Keep'",
+    "alertdialog": 1
+  },
+  {
+    "set": "after",
+    "surface": "va",
+    "state": "after-escape",
+    "alertdialog": 0,
+    "alert": "rgb(226, 92, 106)",
+    "count": 0,
+    "elements": []
+  },
+  {
+    "set": "after",
+    "surface": "va",
+    "state": "clear-chart-dialog",
+    "alert": "rgb(226, 92, 106)",
+    "count": 1,
+    "elements": [
+      "button.odos-confirm-destroy 'Clear chart'"
+    ],
+    "alertdialog": 1,
+    "consequence": "Pupils 2 · IOP 2 · Visual acuity 2 · Auto-refraction / Auto-K 5 — 11 values recorded this visit. You can undo until the chart is signed."
+  },
+  {
+    "set": "after",
+    "surface": "va",
+    "state": "signed",
+    "alert": "rgb(226, 92, 106)",
+    "count": 0,
+    "elements": [],
+    "removes": 0,
+    "disabledControls": [
+      "Clear chart",
+      "Edit",
+      "Clear",
+      "±",
+      "▾",
+      "±",
+      "−3",
+      "−2",
+      "−1",
+      "+1",
+      "+2",
+      "+3",
+      "±",
+      "▾",
+      "±",
+      "−3",
+      "−2",
+      "−1",
+      "+1",
+      "+2",
+      "+3"
+    ]
+  },
+  {
+    "set": "after",
+    "surface": "arx",
+    "state": "rest",
+    "alert": "rgb(226, 92, 106)",
+    "count": 0,
+    "elements": [],
+    "removes": 0
+  },
+  {
+    "set": "after",
+    "surface": "arx",
+    "state": "edit",
+    "alert": "rgb(226, 92, 106)",
+    "count": 0,
+    "elements": [],
+    "removes": 3
+  },
+  {
+    "set": "after",
+    "surface": "arx",
+    "state": "dialog",
+    "alert": "rgb(226, 92, 106)",
+    "count": 1,
+    "elements": [
+      "button.odos-confirm-destroy 'Clear Auto-refraction / Auto-K'"
+    ],
+    "focused": "odos-confirm-keep 'Keep'",
+    "alertdialog": 1
+  },
+  {
+    "set": "after",
+    "surface": "arx",
+    "state": "after-escape",
+    "alertdialog": 0,
+    "alert": "rgb(226, 92, 106)",
+    "count": 0,
+    "elements": []
+  },
+  {
+    "set": "after",
+    "surface": "arx",
+    "state": "signed",
+    "alert": "rgb(226, 92, 106)",
+    "count": 0,
+    "elements": [],
+    "removes": 0,
+    "disabledControls": [
+      "Edit",
+      "Clear"
+    ]
+  }
+]

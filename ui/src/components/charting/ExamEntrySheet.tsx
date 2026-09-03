@@ -138,7 +138,7 @@ export function ExamEntrySheet({
 }: {
   sectionId: ExamEntrySheetId;
   onCancel: () => void;
-  /** When supplied with onEncounterCleared, the chrome carries the tier-3 "Clear everything charted this visit…" control. */
+  /** When supplied with onEncounterCleared, the chrome carries the tier-3 "Clear chart" control. */
   encounterReference?: string;
   encounterStatus?: Encounter["status"];
   onEncounterCleared?: (result: EncounterVoidResult) => void;

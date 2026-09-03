@@ -1,0 +1,136 @@
+[
+  {
+    "mutant": "M1a guard 1: restore an alert border/text on Clear (CLEAR_TOKEN_CLASS on one control)",
+    "pass": "# pass 9",
+    "fail": "# fail 1",
+    "failing": [
+      "not ok 1 - guard 1: a charted Pupils sheet and IOP sheet render nothing alert-coloured at rest, with Edit engaged, or in class or stylesheet outside the confirm button"
+    ],
+    "verdict": "RED (guard fires)"
+  },
+  {
+    "mutant": "M1b guard 1: re-add the chrome clear-all alert override in charting.css",
+    "pass": "# pass 9",
+    "fail": "# fail 1",
+    "failing": [
+      "not ok 1 - guard 1: a charted Pupils sheet and IOP sheet render nothing alert-coloured at rest, with Edit engaged, or in class or stylesheet outside the confirm button"
+    ],
+    "verdict": "RED (guard fires)"
+  },
+  {
+    "mutant": "M2 guard 2: render Removes unconditionally (ignore edit state)",
+    "pass": "# pass 8",
+    "fail": "# fail 2",
+    "failing": [
+      "not ok 2 - guard 2: zero Remove controls at rest; one per recorded value after Edit; none again after Done",
+      "not ok 3 - guard 3: removing the section's last recorded value leaves edit state \u2014 a value recorded next, in the same mount, opens at rest with Edit, not Done"
+    ],
+    "verdict": "RED (guard fires)"
+  },
+  {
+    "mutant": "M2b guard 4: render Removes on a closed encounter too",
+    "pass": "# pass 10",
+    "fail": "# fail 0",
+    "failing": [],
+    "verdict": "GREEN \u2014 UNGUARDED"
+  },
+  {
+    "mutant": "M2c guard 4: drop BOTH closed checks (provider reset and Remove's own)",
+    "pass": "# pass 9",
+    "fail": "# fail 1",
+    "failing": [
+      "not ok 4 - guard 4: a signed encounter renders Edit, Clear, and Clear chart present-but-disabled with the amendment tooltip, no Remove, even with nothing recorded"
+    ],
+    "verdict": "RED (guard fires)"
+  },
+  {
+    "mutant": "M3 guard 3: drop the hasRecorded effect (edit state never ends on empty)",
+    "pass": "# pass 9",
+    "fail": "# fail 1",
+    "failing": [
+      "not ok 3 - guard 3: removing the section's last recorded value leaves edit state \u2014 a value recorded next, in the same mount, opens at rest with Edit, not Done"
+    ],
+    "verdict": "RED (guard fires)"
+  },
+  {
+    "mutant": "M3b guard 4: drop the closed reset only (provider keeps edit state through a sign)",
+    "pass": "# pass 9",
+    "fail": "# fail 1",
+    "failing": [
+      "not ok 4 - guard 4: a signed encounter renders Edit, Clear, and Clear chart present-but-disabled with the amendment tooltip, no Remove, even with nothing recorded"
+    ],
+    "verdict": "RED (guard fires)"
+  },
+  {
+    "mutant": "M4 guard 4: hide Edit when nothing is recorded even on a closed encounter",
+    "pass": "# pass 9",
+    "fail": "# fail 1",
+    "failing": [
+      "not ok 4 - guard 4: a signed encounter renders Edit, Clear, and Clear chart present-but-disabled with the amendment tooltip, no Remove, even with nothing recorded"
+    ],
+    "verdict": "RED (guard fires)"
+  },
+  {
+    "mutant": "M5 guard 5: shrink the quiet token to the old py-0.5",
+    "pass": "# pass 9",
+    "fail": "# fail 1",
+    "failing": [
+      "not ok 5 - guard 5: Edit, Done, Remove, and Clear carry the 44 px hit box; Clear chart, Keep, and the confirm button get it from the stylesheet"
+    ],
+    "verdict": "RED (guard fires)"
+  },
+  {
+    "mutant": "M6 guard 6: route Clear back through window.confirm (bypass the provider)",
+    "pass": "# pass 7",
+    "fail": "# fail 3",
+    "failing": [
+      "not ok 6 - guard 6: Clear opens an in-app alertdialog \u2014 window.confirm is never called \u2014 and only the confirm button wears the alert class",
+      "not ok 7 - guard 7: the dialog opens with focus on Keep; Escape, the backdrop, and Keep each resolve false and void nothing",
+      "not ok 8 - guard 8: Clear chart, Clear, Edit, Done, Remove, and Keep render verbatim; the retired strings appear nowhere under ui/src"
+    ],
+    "verdict": "RED (guard fires)"
+  },
+  {
+    "mutant": "M7 guard 7: put initial focus on the confirm button instead of Keep",
+    "pass": "# pass 9",
+    "fail": "# fail 1",
+    "failing": [
+      "not ok 7 - guard 7: the dialog opens with focus on Keep; Escape, the backdrop, and Keep each resolve false and void nothing"
+    ],
+    "verdict": "RED (guard fires)"
+  },
+  {
+    "mutant": "M8 guard 8: revert tier 3 to the long string",
+    "pass": "# pass 8",
+    "fail": "# fail 2",
+    "failing": [
+      "not ok 4 - guard 4: a signed encounter renders Edit, Clear, and Clear chart present-but-disabled with the amendment tooltip, no Remove, even with nothing recorded",
+      "not ok 8 - guard 8: Clear chart, Clear, Edit, Done, Remove, and Keep render verbatim; the retired strings appear nowhere under ui/src"
+    ],
+    "verdict": "RED (guard fires)"
+  },
+  {
+    "mutant": "M8b guard 8: revert tier 2 to 'Clear {label}'",
+    "pass": "# pass 9",
+    "fail": "# fail 1",
+    "failing": [
+      "not ok 8 - guard 8: Clear chart, Clear, Edit, Done, Remove, and Keep render verbatim; the retired strings appear nowhere under ui/src"
+    ],
+    "verdict": "RED (guard fires)"
+  },
+  {
+    "mutant": "M9 guard 9: resolve true when no confirm surface exists",
+    "pass": "# pass 9",
+    "fail": "# fail 1",
+    "failing": [
+      "not ok 10 - guard 9: useConfirmDestructive outside a provider falls back to window.confirm, and resolves false when even that is absent"
+    ],
+    "verdict": "RED (guard fires)"
+  },
+  {
+    "mutant": "RESTORED (all mutants reverted)",
+    "pass": "# pass 10",
+    "fail": "# fail 0",
+    "failing": []
+  }
+]

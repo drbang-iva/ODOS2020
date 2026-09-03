@@ -12,19 +12,18 @@ import {
   observation,
   type VoidBody,
 } from "../../mcp/tests/encounterVoidFixture";
-import {
-  ClearEncounterButton,
-  ClearSectionButton,
-  RemoveValueButton,
-} from "../src/components/charting/ClearControls";
+import { ClearEncounterButton, ClearSectionButton } from "../src/components/charting/ClearControls";
+import { EditEntriesToggle, RemoveValueButton, SectionEditingProvider } from "../src/components/charting/section-editing";
 import { EncounterEditContext, type EncounterClearFailedDetail } from "../src/components/charting/encounter-edit-context";
 import { ExamEntrySheet } from "../src/components/charting/ExamEntrySheet";
 import { RefractionSection } from "../src/components/charting/RefractionSection";
 import {
   SIGNED_ENCOUNTER_TOOLTIP,
-  clearEncounterConfirmMessage,
-  clearSectionConfirmMessage,
+  clearEncounterConfirmSpec,
+  clearSectionConfirmSpec,
   isClosedEncounterStatus,
+  removeValueConfirmSpec,
+  type DestructiveConfirmSpec,
   previewEncounterVoid,
   voidEncounterEntries,
   type EncounterVoidResult,
@@ -71,22 +70,22 @@ test("isClosedEncounterStatus mirrors the server's sign gate", () => {
   assert.equal(isClosedEncounterStatus(undefined), false);
 });
 
-test("confirm copy names the count and, for the visit, every section", () => {
+test("confirm copy names the count and, for the visit, every section (the window.confirm fallback reads title + consequence)", () => {
   assert.equal(
-    clearSectionConfirmMessage("Pupils", 6),
-    "Clear Pupils — voids 6 recorded values from this visit. They remain in the record as entered-in-error. Continue?",
+    fallbackMessage(clearSectionConfirmSpec("Pupils", 6)),
+    "Clear Pupils? 6 values recorded this visit. You can undo until the chart is signed.",
   );
   assert.equal(
-    clearSectionConfirmMessage("Pupils", 1),
-    "Clear Pupils — voids 1 recorded value from this visit. They remain in the record as entered-in-error. Continue?",
+    fallbackMessage(clearSectionConfirmSpec("Pupils", 1)),
+    "Clear Pupils? 1 value recorded this visit. You can undo until the chart is signed.",
   );
   assert.equal(
-    clearEncounterConfirmMessage([
+    fallbackMessage(clearEncounterConfirmSpec([
       { sectionKey: "entrance:pupils", label: "Pupils", count: 6 },
       { sectionKey: "refraction", label: "Refraction", count: 4 },
       { sectionKey: "complaints", label: "Complaints", count: 2 },
-    ], 12),
-    "Clear everything charted for this visit — Pupils (6), Refraction (4), Complaints (2): 12 recorded values. They remain in the record as entered-in-error. Continue?",
+    ], 12)),
+    "Clear this chart? Pupils 6 · Refraction 4 · Complaints 2 — 12 values recorded this visit. You can undo until the chart is signed.",
   );
 });
 
@@ -120,7 +119,7 @@ test("Clear section previews the count, confirms with it, voids, and reports the
     assert.deepEqual(harness.requests, [], "nothing is fetched until the clinician acts");
     harness.confirmAnswer = true;
     await act(async () => { await button.props.onClick(); });
-    assert.deepEqual(harness.confirmations, [clearSectionConfirmMessage("Pupils", 6)]);
+    assert.deepEqual(harness.confirmations, [fallbackMessage(clearSectionConfirmSpec("Pupils", 6))]);
     assert.deepEqual(harness.requests.map((request) => request.body), [
       { scope: "section", sectionKey: "entrance:pupils", preview: true },
       { scope: "section", sectionKey: "entrance:pupils" },
@@ -187,7 +186,7 @@ test("a failed Clear everything keeps the server's error on screen AND tells the
   );
   try {
     harness.confirmAnswer = true;
-    await act(async () => { await findClearButton(harness.renderer.root, "Clear everything charted this visit…")!.props.onClick(); });
+    await act(async () => { await findClearButton(harness.renderer.root, "Clear chart")!.props.onClick(); });
     assert.equal(clearedCount, 0);
     assert.equal(failures.length, 1);
     assert.equal(failures[0]?.scope, "encounter");
@@ -235,23 +234,26 @@ test("Clear section renders present-but-disabled with the amendment tooltip once
 // Tier 1 — × on a recorded value
 // ---------------------------------------------------------------------------
 
-test("Remove × confirms only when typed detail would be lost", async () => {
+test("Remove confirms only when typed detail would be lost, and is reachable only through Edit", async () => {
   const removed: string[] = [];
   const harness = await renderInEncounter(
-    <>
+    <SectionEditingProvider hasRecorded>
+      <EditEntriesToggle />
       <RemoveValueButton label="Reactivity OD" onRemove={() => { removed.push("plain"); }} />
-      <RemoveValueButton label="Reactivity OS" confirmMessage="Removing Reactivity OS discards its note. Continue?" onRemove={() => { removed.push("detailed"); }} />
-    </>,
+      <RemoveValueButton label="Reactivity OS" confirm={removeValueConfirmSpec("Reactivity OS", "note")} onRemove={() => { removed.push("detailed"); }} />
+    </SectionEditingProvider>,
     { previewCount: 0 },
   );
   try {
+    assert.deepEqual(removeControls(harness.renderer.root), [], "no Remove is rendered at rest");
+    await pressEdit(harness.renderer);
     const plain = harness.renderer.root.findAll((node) => node.type === "button" && node.props["aria-label"] === "Remove Reactivity OD")[0]!;
     const detailed = harness.renderer.root.findAll((node) => node.type === "button" && node.props["aria-label"] === "Remove Reactivity OS")[0]!;
     await act(async () => { await plain.props.onClick(); });
     assert.deepEqual(harness.confirmations, []);
     harness.confirmAnswer = false;
     await act(async () => { await detailed.props.onClick(); });
-    assert.deepEqual(harness.confirmations, ["Removing Reactivity OS discards its note. Continue?"]);
+    assert.deepEqual(harness.confirmations, ["Remove Reactivity · OS? Its note is discarded. You can undo until the chart is signed."]);
     assert.deepEqual(removed, ["plain"]);
     harness.confirmAnswer = true;
     await act(async () => { await detailed.props.onClick(); });
@@ -261,15 +263,21 @@ test("Remove × confirms only when typed detail would be lost", async () => {
   }
 });
 
-test("Remove × is disabled with the amendment tooltip once the encounter is signed", async () => {
+test("once the encounter is signed no Remove is rendered; the Edit door is present-but-disabled with the amendment tooltip", async () => {
   const harness = await renderInEncounter(
-    <RemoveValueButton label="Reactivity OD" onRemove={() => undefined} />,
+    <SectionEditingProvider hasRecorded>
+      <EditEntriesToggle />
+      <RemoveValueButton label="Reactivity OD" onRemove={() => undefined} />
+    </SectionEditingProvider>,
     { previewCount: 0, encounterStatus: "finished" },
   );
   try {
-    const button = harness.renderer.root.findAll((node) => node.type === "button" && node.props["aria-label"] === "Remove Reactivity OD")[0]!;
-    assert.equal(button.props.disabled, true);
-    assert.equal(button.props.title, SIGNED_ENCOUNTER_TOOLTIP);
+    const edit = editToggle(harness.renderer);
+    assert.ok(edit, "Edit is present on a signed chart");
+    assert.equal(edit.props.disabled, true);
+    assert.equal(edit.props.title, SIGNED_ENCOUNTER_TOOLTIP);
+    await act(async () => { edit.props.onClick(); });
+    assert.deepEqual(removeControls(harness.renderer.root), [], "a disabled Edit reveals nothing");
   } finally {
     harness.restore();
   }
@@ -299,7 +307,7 @@ test("HPI, IOP, and CVF sheets expose a working Back to exam overview action", (
   }
 });
 
-test("the entry sheet chrome carries Clear everything charted this visit left of Back to exam overview, from any section", async () => {
+test("the entry sheet chrome carries Clear chart left of Back to exam overview, from any section", async () => {
   const cleared: EncounterVoidResult[] = [];
   const harness = await renderInEncounter(
     <ExamEntrySheet
@@ -324,14 +332,14 @@ test("the entry sheet chrome carries Clear everything charted this visit left of
     const heading = harness.renderer.root.findAll((node) => node.type === "header" && node.props.className === "odos-exam-entry-sheet-heading")[0]!;
     const buttons = heading.findAllByType("button");
     const labels = buttons.map((button) => textOf(button));
-    assert.deepEqual(labels, ["Clear everything charted this visit…", "Back to exam overview"], "tier 3 sits left of Back to exam overview in the chrome");
+    assert.deepEqual(labels, ["Clear chart", "Back to exam overview"], "tier 3 sits left of Back to exam overview in the chrome");
     const clearAll = buttons[0]!;
     assert.equal(clearAll.props["data-entry-sheet-chrome"], true);
     assert.equal(clearAll.props.disabled, undefined);
     harness.confirmAnswer = true;
     await act(async () => { await clearAll.props.onClick(); });
     assert.deepEqual(harness.confirmations, [
-      "Clear everything charted for this visit — Pupils (6), Refraction (4), Complaints (2): 31 recorded values. They remain in the record as entered-in-error. Continue?",
+      "Clear this chart? Pupils 6 · Refraction 4 · Complaints 2 — 31 values recorded this visit. You can undo until the chart is signed.",
     ]);
     assert.deepEqual(harness.requests.map((request) => request.body), [
       { scope: "encounter", preview: true },
@@ -424,7 +432,7 @@ test("count honesty: Dilation section preview, confirm, void result, section sub
     assert.equal(preview?.preview, true);
     assert.equal(preview?.count, 3);
     assert.deepEqual(confirmations, [
-      "Clear Dilation — voids 3 recorded values from this visit. They remain in the record as entered-in-error. Continue?",
+      "Clear Dilation? 3 values recorded this visit. You can undo until the chart is signed.",
     ]);
     assert.equal(result?.preview, false);
     assert.equal(result?.count, 3);
@@ -482,7 +490,7 @@ test("count honesty: whole-visit preview, confirm, void result, section subtotal
     assert.equal(preview?.count, 4);
     assert.equal(preview?.sections.reduce((sum, section) => sum + section.count, 0), preview?.count);
     assert.deepEqual(confirmations, [
-      "Clear everything charted for this visit — Dilation (3), Confrontation visual fields (1): 4 recorded values. They remain in the record as entered-in-error. Continue?",
+      "Clear this chart? Dilation 3 · Confrontation visual fields 1 — 4 values recorded this visit. You can undo until the chart is signed.",
     ]);
     assert.equal(result?.preview, false);
     assert.equal(result?.count, 4);
@@ -666,7 +674,7 @@ test("Wearing Rx offers the standard persisted section clear and resets its edit
       { scope: "section", sectionKey: "wearing" },
     ]);
     assert.deepEqual(confirmations, [
-      "Clear Wearing Rx — voids 1 recorded value from this visit. They remain in the record as entered-in-error. Continue?",
+      "Clear Wearing Rx? 1 value recorded this visit. You can undo until the chart is signed.",
     ]);
     assert.equal(sphere().props.value, "");
     assert.equal(source().props.value, "manual", "clear resets Source to the section default");
@@ -776,8 +784,29 @@ async function renderInEncounter(element: React.ReactElement, options: {
   };
 }
 
+/** Tier 2 reads "Clear" and names its section in `aria-label`; tier 3 reads "Clear chart". */
 function findClearButton(root: ReactTestInstance, label: string): ReactTestInstance | undefined {
-  return root.findAll((node) => node.type === "button" && textOf(node) === label)[0];
+  return root.findAll((node) => node.type === "button" && (textOf(node) === label || node.props["aria-label"] === label))[0];
+}
+
+function fallbackMessage(spec: DestructiveConfirmSpec): string {
+  return `${spec.title} ${spec.consequence}`;
+}
+
+function removeControls(root: ReactTestInstance): ReactTestInstance[] {
+  return root.findAll((node) => node.type === "button" && typeof node.props["aria-label"] === "string" && node.props["aria-label"].startsWith("Remove "));
+}
+
+function editToggle(renderer: ReactTestRenderer): ReactTestInstance | undefined {
+  return renderer.root.findAll((node) => node.type === "button" && typeof node.props["aria-pressed"] === "boolean" && ["Edit", "Done"].includes(textOf(node)))[0];
+}
+
+/** Restraint §1: the per-value Removes are behind the section's Edit. */
+async function pressEdit(renderer: ReactTestRenderer): Promise<void> {
+  const toggle = editToggle(renderer);
+  assert.ok(toggle, "Edit is on screen for a recorded section");
+  assert.equal(textOf(toggle), "Edit", "the section opens at rest");
+  await act(async () => { toggle.props.onClick(); });
 }
 
 function statusMessage(root: ReactTestInstance): string | undefined {
@@ -1000,16 +1029,19 @@ test("Auto-refraction encounter changes reset fields and replace saved reference
   let renderer!: ReactTestRenderer;
   try {
     await act(async () => { renderer = create(section("Encounter/e1")); await flush(); });
+    await pressEdit(renderer);
     assert.deepEqual(removeLabels(renderer), ["Remove Auto-refraction OD"]);
 
     await act(async () => { renderer.update(section("Encounter/e2")); await flush(); });
     assert.equal(renderer.root.findAll((node) => node.props.ariaLabel === "OD auto-refraction sphere")[0]?.props.value, "");
     assert.deepEqual(removeLabels(renderer), [], "the prior encounter's reference must clear before the next history response");
+    assert.equal(editToggle(renderer), undefined, "nothing recorded for the next encounter yet: no Edit door either");
 
     await act(async () => {
       resolveSecondHistory(Response.json({ eyes: { OS: { sphere: -0.75, observationReferences: ["Observation/e2-os"] } } }));
       await flush();
     });
+    await pressEdit(renderer);
     assert.deepEqual(removeLabels(renderer), ["Remove Auto-refraction OS"]);
   } finally {
     renderer?.unmount();
@@ -1060,6 +1092,7 @@ test("Auto-refraction Remove keeps preview-only references when latest-value his
       resolveHistory(Response.json({ eyes: { OD: { sphere: -1.25, observationReferences: ["Observation/latest-od"] } } }));
       await flush();
     });
+    await pressEdit(renderer);
     const remove = renderer.root.findAll((node) => node.type === "button" && node.props["aria-label"] === "Remove Auto-refraction OD")[0];
     assert.ok(remove);
     await act(async () => { await remove.props.onClick(); await flush(); });
@@ -1114,6 +1147,7 @@ test("Auto-refraction late persisted preview cannot restore references after Rem
       );
       await flush();
     });
+    await pressEdit(renderer);
     assert.equal(removeButtons(renderer).length, 1);
 
     await act(async () => { await removeButtons(renderer)[0]!.props.onClick(); await flush(); });
@@ -1130,6 +1164,7 @@ test("Auto-refraction late persisted preview cannot restore references after Rem
       await flush();
     });
     assert.equal(removeButtons(renderer).length, 0, "a pre-void preview must not resurrect the removed value");
+    assert.equal(editToggle(renderer), undefined, "…and the section holds nothing to edit, so the Edit door is gone too");
   } finally {
     renderer?.unmount();
     globalThis.fetch = originalFetch;
@@ -1143,7 +1178,7 @@ test("Auto-refraction late persisted preview cannot restore references after Rem
  * Every shortfall is collected before asserting, so a regression that hides one tier in one
  * section is named as such rather than hidden behind the first failure.
  */
-test("fixback 56ff8d36 P2#A: a signed reopened chart renders Clear section AND every Remove control for VA, IOP, and Auto-refraction, present-but-disabled with the amendment tooltip", async () => {
+test("fixback 56ff8d36 P2#A (restraint §5): a signed reopened chart renders Clear section AND the Edit door for VA, IOP, and Auto-refraction present-but-disabled with the amendment tooltip, and no Remove", async () => {
   const { VaSection } = await import("../src/components/charting/VaSection");
   const { IopSection } = await import("../src/components/charting/IopSection");
   const { AutoRefractionSection } = await import("../src/components/charting/AutoRefractionSection");
@@ -1186,10 +1221,10 @@ test("fixback 56ff8d36 P2#A: a signed reopened chart renders Clear section AND e
       };
       // Tier 2 — Clear section
       disabledWithTooltip(findClearButton(renderer.root, item.clear), item.clear);
-      // Tier 1 — every per-item Remove
-      for (const label of item.removes) {
-        disabledWithTooltip(renderer.root.findAll((node) => node.type === "button" && node.props["aria-label"] === label)[0], label);
-      }
+      // Tier 1 — the Edit door is present-but-disabled; the Removes behind it are not rendered (restraint §5).
+      disabledWithTooltip(editToggle(renderer), `${item.name} Edit`);
+      const rendered = removeControls(renderer.root);
+      if (rendered.length > 0) shortfalls.push(`${item.name}: ${rendered.length} Remove control(s) rendered on a signed chart — expected none behind a disabled Edit (${item.removes.join(", ")})`);
       // A disabled control never reaches the server, even if clicked.
       for (const button of renderer.root.findAll((node) => node.type === "button" && (textOf(node) === item.clear || String(node.props["aria-label"] ?? "").startsWith("Remove ")))) {
         await act(async () => { await button.props.onClick?.(); });
@@ -1259,20 +1294,21 @@ test("fixback 4: VA, IOP, and Auto-refraction offer Clear section on reopen when
 
         // Fixback P2#2 (02c8155c eval): the per-item × must be offered on reopen too — §2 says "× on any
         // recorded value", and a value persisted before this session is still a recorded value.
-        const removeLabels = renderer.root.findAll((node) => node.type === "button" && typeof node.props["aria-label"] === "string" && node.props["aria-label"].startsWith("Remove "))
-          .map((node) => node.props["aria-label"] as string).sort();
+        const removeLabels = () => removeControls(renderer.root).map((node) => node.props["aria-label"] as string).sort();
         const expected = {
           VA: ["Remove Visual acuity OD", "Remove Visual acuity OS"],
           IOP: ["Remove IOP OD", "Remove IOP OS"],
           "Auto-refraction": ["Remove Auto-refraction OD", "Remove Binocular PD"],
         }[item.name]!;
-        assert.deepEqual(removeLabels, recorded ? expected : [], `${item.name}: per-item controls on reopen (${status})`);
+        assert.deepEqual(removeLabels(), [], `${item.name}: no per-item control at rest on reopen (${status}, recorded=${recorded})`);
         if (signed) {
-          for (const remove of renderer.root.findAll((node) => node.type === "button" && typeof node.props["aria-label"] === "string" && node.props["aria-label"].startsWith("Remove "))) {
-            assert.equal(remove.props.disabled, true, `${item.name}: ${remove.props["aria-label"]} is present but disabled after sign`);
-            assert.equal(remove.props.title, SIGNED_ENCOUNTER_TOOLTIP);
-          }
+          const edit = editToggle(renderer);
+          assert.ok(edit, `${item.name}: signed — the Edit door is present`);
+          assert.equal(edit.props.disabled, true, `${item.name}: Edit is disabled after sign`);
+          assert.equal(edit.props.title, SIGNED_ENCOUNTER_TOOLTIP);
         } else if (recorded) {
+          await pressEdit(renderer);
+          assert.deepEqual(removeLabels(), expected, `${item.name}: Edit reveals one Remove per persisted value`);
           // And the × voids the persisted references, not a stale in-session copy.
           const first = renderer.root.findAll((node) => node.type === "button" && node.props["aria-label"] === expected[0])[0]!;
           await act(async () => { await first.props.onClick(); await flush(); });
@@ -1281,7 +1317,9 @@ test("fixback 4: VA, IOP, and Auto-refraction offer Clear section on reopen when
             IOP: { scope: "observation", observationReference: ["Observation/iop-od", "Observation/ch-od"] },
             "Auto-refraction": { scope: "observation", observationReference: ["Observation/ar-od", "Observation/ak-od"] },
           }[item.name]!;
-          assert.deepEqual(voids, [expectedVoid], `${item.name}: × voids exactly the persisted references for that eye`);
+          assert.deepEqual(voids, [expectedVoid], `${item.name}: Remove voids exactly the persisted references for that eye`);
+        } else {
+          assert.equal(editToggle(renderer), undefined, `${item.name}: nothing recorded, nothing to edit`);
         }
       } finally {
         renderer?.unmount();

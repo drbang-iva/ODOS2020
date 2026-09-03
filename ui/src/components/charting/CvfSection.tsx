@@ -1,7 +1,8 @@
 import { type CSSProperties, useEffect, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
-import { voidEncounterEntries } from "../../lib/encounter-void";
-import { ClearSectionButton, RemoveValueButton } from "./ClearControls";
+import { removeValueConfirmSpec, voidEncounterEntries } from "../../lib/encounter-void";
+import { ClearSectionButton } from "./ClearControls";
+import { EditEntriesToggle, RemoveValueButton, SectionEditingProvider } from "./section-editing";
 import { useEncounterEdit } from "./encounter-edit-context";
 import { MethodField } from "../inputs/MethodField";
 import type { CustomFindingDefinition } from "./CustomFindingSection";
@@ -140,6 +141,7 @@ export function CvfSection({ definition, fieldDefectDefinition, patientReference
   }
 
   return (
+    <SectionEditingProvider hasRecorded={history.length > 0}>
     <section className="h-full overflow-y-auto p-6">
       <div className="max-w-6xl">
         <header className="flex flex-wrap items-start justify-between gap-4 border-b border-[color:var(--odos-line)] pb-4">
@@ -150,6 +152,7 @@ export function CvfSection({ definition, fieldDefectDefinition, patientReference
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={setNormalOu} className="rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-surface-2)] px-4 py-2 text-sm font-semibold text-[color:var(--odos-text)]">Full to finger counting OU</button>
+            <EditEntriesToggle />
             <ClearSectionButton
               encounterReference={encounterReference}
               sectionKey={[definition.stableKey, fieldDefectDefinition.stableKey]}
@@ -224,6 +227,7 @@ export function CvfSection({ definition, fieldDefectDefinition, patientReference
         <History rows={history} loading={loading} onRemove={removeRow} />
       </div>
     </section>
+    </SectionEditingProvider>
   );
 }
 
@@ -442,7 +446,7 @@ function History({ rows, loading, onRemove }: { rows: HistoryRow[]; loading: boo
             {row.observationReference && (
               <RemoveValueButton
                 label={`Confrontation fields${row.eye ? ` ${row.eye}` : ""}`}
-                confirmMessage={row.other ? `Removing Confrontation fields${row.eye ? ` ${row.eye}` : ""} discards its note. Continue?` : undefined}
+                confirm={row.other ? removeValueConfirmSpec(`Confrontation fields${row.eye ? ` ${row.eye}` : ""}`, "note") : undefined}
                 onRemove={() => onRemove(row.observationReference!)}
               />
             )}

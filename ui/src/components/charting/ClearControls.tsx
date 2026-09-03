@@ -1,66 +1,35 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import type { Encounter } from "@medplum/fhirtypes";
 import {
   SIGNED_ENCOUNTER_TOOLTIP,
-  clearEncounterConfirmMessage,
-  clearSectionConfirmMessage,
-  confirmDestructive,
+  clearEncounterConfirmSpec,
+  clearSectionConfirmSpec,
   isClosedEncounterStatus,
   previewEncounterVoid,
   voidEncounterEntries,
   type EncounterVoidResult,
 } from "../../lib/encounter-void";
+import { useConfirmDestructive } from "./ConfirmDestructive";
 import { useEncounterEdit, type EncounterClearFailedDetail, type EncounterEditContextValue } from "./encounter-edit-context";
 
 /**
- * The three tiers of the pre-finalization delete, one visual token.
+ * Tiers 2 and 3 of the pre-finalization delete, after the 2026-09-02 restraint pass.
  *
- * The token is Assessment's Discard button — ghost, alert-colored border and text. It already
- * reads as "this takes something away" everywhere it appears, so there is nothing new to learn.
+ * Nothing here is red at rest. The delete controls are plumbing; the recorded values are the
+ * content. Alert colour appears once, on the confirm button of the in-app dialog
+ * (`ConfirmDestructive.tsx`), at the moment of consequence.
  *
- *   tier 1  RemoveValueButton    × trailing a recorded value; confirms only when typed detail is lost
- *   tier 2  ClearSectionButton   "Clear <Section>" in the section header; always confirms with a count
- *   tier 3  ClearEncounterButton "Clear everything charted this visit…" in the entry-sheet chrome
+ *   tier 1  RemoveValueButton    lives in `section-editing.tsx`; absent until the section's Edit
+ *   tier 2  ClearSectionButton   "Clear", text-only and muted, last in the section header's action row
+ *   tier 3  ClearEncounterButton "Clear chart" in the entry-sheet chrome, wearing exactly Cancel's token
  *
  * After sign every tier renders present-but-disabled with one tooltip. The server's 409 is the guard;
  * the disabled state only tells the clinician why the path is closed.
  */
 
-export const CLEAR_TOKEN_CLASS =
-  "rounded border border-[color:var(--odos-alert)] bg-[color:var(--odos-surface-2)] font-semibold text-[color:var(--odos-alert)] transition hover:bg-[color:var(--odos-surface)] disabled:cursor-not-allowed disabled:opacity-45";
-
-export function RemoveValueButton({
-  label,
-  onRemove,
-  confirmMessage,
-  className,
-}: {
-  /** What is being removed, e.g. "Reactivity OD" — becomes `aria-label="Remove Reactivity OD"`. */
-  label: string;
-  onRemove: () => void | Promise<void>;
-  /** Supply only when the value carries recorded detail (a note, qualifiers, a nested value). */
-  confirmMessage?: string;
-  className?: string;
-}) {
-  const closed = isClosedEncounterStatus(useEncounterEdit().encounterStatus);
-  return (
-    <button
-      type="button"
-      aria-label={`Remove ${label}`}
-      title={closed ? SIGNED_ENCOUNTER_TOOLTIP : `Remove ${label}`}
-      disabled={closed || undefined}
-      data-entry-sheet-pristine-action
-      onClick={async () => {
-        if (closed) return;
-        if (confirmMessage && !confirmDestructive(confirmMessage)) return;
-        await onRemove();
-      }}
-      className={`${CLEAR_TOKEN_CLASS} px-1.5 py-0.5 text-xs leading-none ${className ?? ""}`}
-    >
-      ×
-    </button>
-  );
-}
+/** Token C — quiet: a muted word with a 44 px hit box; underline on hover/focus, nothing else. */
+export const QUIET_ACTION_CLASS =
+  "inline-flex min-h-11 min-w-11 items-center justify-center rounded px-2 text-xs font-semibold text-[color:var(--odos-muted)] underline-offset-4 transition hover:text-[color:var(--odos-text)] hover:underline focus-visible:text-[color:var(--odos-text)] focus-visible:underline disabled:cursor-not-allowed disabled:opacity-45 disabled:no-underline";
 
 export function ClearSectionButton({
   encounterReference,
@@ -75,6 +44,7 @@ export function ClearSectionButton({
   encounterReference: string;
   /** The section key(s) the sheet owns; matched exactly or as a `key:` prefix on the server. */
   sectionKey: string | string[];
+  /** Names the section in the tooltip and the dialog; the button itself reads "Clear". */
   label: string;
   /** The surface's own knowledge of whether this visit recorded anything here. */
   hasRecorded?: boolean;
@@ -89,6 +59,7 @@ export function ClearSectionButton({
   className?: string;
 }) {
   const { encounterStatus, onClearFailed } = useEncounterEdit();
+  const confirmDestructive = useConfirmDestructive();
   const closed = isClosedEncounterStatus(encounterStatus);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string>();
@@ -120,7 +91,7 @@ export function ClearSectionButton({
         setMessage(`Nothing recorded for ${label} this visit.`);
         return;
       }
-      if (!confirmDestructive(clearSectionConfirmMessage(label, preview.count))) return;
+      if (!(await confirmDestructive(clearSectionConfirmSpec(label, preview.count)))) return;
       const result = await voidOrReport(() => voidEncounterEntries(encounterReference, request, { fetchImpl }), "section", onClearFailed);
       setProbedCount(0);
       onCleared(result);
@@ -135,13 +106,14 @@ export function ClearSectionButton({
     <span className="inline-flex items-center gap-2">
       <button
         type="button"
+        aria-label={`Clear ${label}`}
         data-entry-sheet-pristine-action
         disabled={closed || busy || undefined}
-        title={closed ? SIGNED_ENCOUNTER_TOOLTIP : `Void every ${label} value recorded this visit`}
+        title={closed ? SIGNED_ENCOUNTER_TOOLTIP : `Clear ${label} — everything recorded this visit`}
         onClick={clear}
-        className={`${CLEAR_TOKEN_CLASS} px-3 py-1.5 text-xs ${className ?? ""}`}
+        className={`${QUIET_ACTION_CLASS} ${className ?? ""}`}
       >
-        Clear {label}
+        Clear
       </button>
       {message && <span role="status" aria-live="polite" className="text-xs text-[color:var(--odos-muted)]">{message}</span>}
     </span>
@@ -153,16 +125,15 @@ export function ClearEncounterButton({
   encounterStatus,
   onCleared,
   fetchImpl,
-  children,
 }: {
   encounterReference: string;
   encounterStatus: Encounter["status"] | undefined;
   onCleared: (result: EncounterVoidResult) => void;
   fetchImpl?: typeof fetch;
-  children?: ReactNode;
 }) {
   const closed = isClosedEncounterStatus(encounterStatus);
   const { onClearFailed } = useEncounterEdit();
+  const confirmDestructive = useConfirmDestructive();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string>();
 
@@ -176,7 +147,7 @@ export function ClearEncounterButton({
         setMessage("Nothing charted this visit yet.");
         return;
       }
-      if (!confirmDestructive(clearEncounterConfirmMessage(preview.sections, preview.count))) return;
+      if (!(await confirmDestructive(clearEncounterConfirmSpec(preview.sections, preview.count)))) return;
       const result = await voidOrReport(() => voidEncounterEntries(encounterReference, { scope: "encounter" }, { fetchImpl }), "encounter", onClearFailed);
       onCleared(result);
     } catch (caught) {
@@ -193,10 +164,10 @@ export function ClearEncounterButton({
         type="button"
         data-entry-sheet-chrome
         disabled={closed || busy || undefined}
-        title={closed ? SIGNED_ENCOUNTER_TOOLTIP : "Void every value recorded this visit, every section"}
+        title={closed ? SIGNED_ENCOUNTER_TOOLTIP : "Clear everything charted this visit"}
         onClick={clearAll}
       >
-        {children ?? "Clear everything charted this visit…"}
+        Clear chart
       </button>
     </span>
   );

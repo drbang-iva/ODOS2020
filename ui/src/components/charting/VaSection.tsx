@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { fhir } from "../../lib/fhir";
 import { voidEncounterEntries } from "../../lib/encounter-void";
-import { ClearSectionButton, RemoveValueButton } from "./ClearControls";
+import { ClearSectionButton } from "./ClearControls";
+import { EditEntriesToggle, RemoveValueButton, SectionEditingProvider } from "./section-editing";
 import { useEncounterEdit } from "./encounter-edit-context";
 import { usePersistedVoidEntries } from "./use-persisted-void-entries";
 import { assertTransactionSuccess } from "../../lib/encounter-bundles";
@@ -106,23 +107,27 @@ export function VaSection({ patientReference, encounterReference, onSaved }: Pro
   }
 
   return (
+    <SectionEditingProvider hasRecorded={savedEyes.length > 0}>
     <section className="h-full overflow-y-auto p-6">
       <div className="max-w-4xl">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-white">Visual Acuity</h2>
-          <ClearSectionButton
-            encounterReference={encounterReference}
-            sectionKey="va"
-            label="Visual acuity"
-            hasRecorded={savedEyes.length > 0}
-            onCleared={(result) => {
-              setRows(emptyRows());
-              setSavedEyes([]);
-              setSaved(null);
-              setError(null);
-              onCleared?.({ scope: "section", result });
-            }}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <EditEntriesToggle />
+            <ClearSectionButton
+              encounterReference={encounterReference}
+              sectionKey="va"
+              label="Visual acuity"
+              hasRecorded={savedEyes.length > 0}
+              onCleared={(result) => {
+                setRows(emptyRows());
+                setSavedEyes([]);
+                setSaved(null);
+                setError(null);
+                onCleared?.({ scope: "section", result });
+              }}
+            />
+          </div>
         </div>
         <div className="mt-5 overflow-hidden rounded border border-white/10">
           <div className="grid grid-cols-[72px_1fr_180px_180px] gap-0 bg-white/5 px-4 py-2 text-xs uppercase tracking-widest text-white/35">
@@ -211,6 +216,7 @@ export function VaSection({ patientReference, encounterReference, onSaved }: Pro
         />
       </div>
     </section>
+    </SectionEditingProvider>
   );
 }
 

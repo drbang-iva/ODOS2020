@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
-import { SIGNED_ENCOUNTER_TOOLTIP, confirmDestructive, voidEncounterEntries } from "../../lib/encounter-void";
-import { CLEAR_TOKEN_CLASS, ClearSectionButton } from "./ClearControls";
+import { SIGNED_ENCOUNTER_TOOLTIP, UNDO_UNTIL_SIGNED, voidEncounterEntries } from "../../lib/encounter-void";
+import { ClearSectionButton, QUIET_ACTION_CLASS } from "./ClearControls";
+import { useConfirmDestructive } from "./ConfirmDestructive";
 import { useEncounterClosed, useEncounterEdit } from "./encounter-edit-context";
 import { LENS_DESIGN_TYPES } from "../../lib/lens-catalog";
 import type { SectionSaveStatus } from "./types";
@@ -119,6 +120,7 @@ export function RefractionSection({ patientReference, encounterReference, onSave
   const [historyVersion, setHistoryVersion] = useState(0);
   const { onCleared } = useEncounterEdit();
   const encounterClosed = useEncounterClosed();
+  const confirmDestructive = useConfirmDestructive();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -248,8 +250,11 @@ export function RefractionSection({ patientReference, encounterReference, onSave
     // client-only removal left the Observations projecting after they were "removed").
     const saved = savedObservationReferences[blockId] ?? [];
     if (saved.length > 0) {
-      const noun = saved.length === 1 ? "observation" : "observations";
-      if (!confirmDestructive(`Removing this saved refraction block voids ${saved.length} recorded ${noun} from this visit. Continue?`)) return;
+      if (!(await confirmDestructive({
+        title: "Remove this refraction block?",
+        consequence: `${saved.length} ${saved.length === 1 ? "value" : "values"} recorded this visit. ${UNDO_UNTIL_SIGNED}`,
+        confirmLabel: "Remove",
+      }))) return;
       try {
         const result = await voidEncounterEntries(encounterReference, { scope: "observation", observationReference: saved });
         onCleared?.({ scope: "observation", result });
@@ -480,7 +485,7 @@ export function RefractionSection({ patientReference, encounterReference, onSave
                     disabled={encounterClosed || undefined}
                     title={encounterClosed ? SIGNED_ENCOUNTER_TOOLTIP : `Remove refraction block ${blockIndex + 1}`}
                     onClick={() => void removeBlock(block.id)}
-                    className={`${CLEAR_TOKEN_CLASS} px-2 py-1 text-xs`}
+                    className={QUIET_ACTION_CLASS}
                   >
                     Remove
                   </button>

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import { voidEncounterEntries } from "../../lib/encounter-void";
-import { ClearSectionButton, RemoveValueButton } from "./ClearControls";
+import { ClearSectionButton } from "./ClearControls";
+import { EditEntriesToggle, RemoveValueButton, SectionEditingProvider } from "./section-editing";
 import { useEncounterEdit } from "./encounter-edit-context";
 import { referencesByEye, usePersistedVoidEntries } from "./use-persisted-void-entries";
 import { OdosSelect } from "../inputs/OdosSelect";
@@ -331,6 +332,7 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
   }
 
   return (
+    <SectionEditingProvider hasRecorded={Object.keys(savedReferences).length > 0}>
     <section className="h-full overflow-y-auto p-6">
       <div className="max-w-[1380px]">
         <div className="flex flex-wrap items-end justify-between gap-4">
@@ -339,6 +341,7 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
             <p className="mt-1 text-sm text-white/45">Objective pretest measurements from manual entry or a future device feed</p>
           </div>
           <div className="flex flex-wrap items-end gap-3">
+          <EditEntriesToggle />
           <ClearSectionButton
             encounterReference={encounterReference}
             sectionKey="auto-refraction"
@@ -377,11 +380,11 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
           </div>
           <div className="grid lg:grid-cols-[minmax(0,1fr)_300px]">
             <div>
-              <div className="grid grid-cols-[54px_repeat(3,minmax(120px,180px))] gap-2 bg-white/[0.025] px-4 py-2 text-xs uppercase tracking-widest text-white/35">
+              <div className="grid grid-cols-[minmax(54px,max-content)_repeat(3,minmax(120px,180px))] gap-2 bg-white/[0.025] px-4 py-2 text-xs uppercase tracking-widest text-white/35">
                 <div>Eye</div><div>Sphere</div><div>Cylinder</div><div>Axis</div>
               </div>
               {EYES.map((eye) => (
-                <div key={eye} className="grid grid-cols-[54px_repeat(3,minmax(120px,180px))] items-center gap-2 border-t border-white/10 px-4 py-3">
+                <div key={eye} className="grid grid-cols-[minmax(54px,max-content)_repeat(3,minmax(120px,180px))] items-center gap-2 border-t border-white/10 px-4 py-3">
                   <div className="flex items-center gap-1 text-sm font-semibold text-white">
                     <span>{eye}</span>
                     {savedReferences[eye] && <RemoveValueButton label={`Auto-refraction ${eye}`} onRemove={() => removeSaved(eye)} />}
@@ -438,11 +441,11 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
             <h3 className="text-sm font-semibold text-white">Auto-Keratometry</h3>
             <p className="mt-1 text-xs text-white/40">K values accept 30.00–60.00 D with up to two decimal places.</p>
           </div>
-          <div className="grid grid-cols-[54px_repeat(4,minmax(130px,190px))] gap-2 bg-white/[0.025] px-4 py-2 text-xs uppercase tracking-widest text-white/35">
+          <div className="grid grid-cols-[minmax(54px,max-content)_repeat(4,minmax(130px,190px))] gap-2 bg-white/[0.025] px-4 py-2 text-xs uppercase tracking-widest text-white/35">
             <div>Eye</div><div>Flat K</div><div>Flat Axis</div><div>Steep K</div><div>Steep Axis</div>
           </div>
           {EYES.map((eye) => (
-            <div key={eye} className="grid grid-cols-[54px_repeat(4,minmax(130px,190px))] items-center gap-2 border-t border-white/10 px-4 py-3">
+            <div key={eye} className="grid grid-cols-[minmax(54px,max-content)_repeat(4,minmax(130px,190px))] items-center gap-2 border-t border-white/10 px-4 py-3">
               <div className="text-sm font-semibold text-white">{eye}</div>
               <PowerDropdown value={eyes[eye].flatK} options={flatKOptions} defaultValue="43.50" onChange={(value) => updateEye(eye, { flatK: value })} ariaLabel={`${eye} flat K`} />
               <AxisWheel value={eyes[eye].flatAxis} onChange={(value) => updateEye(eye, { flatAxis: value })} ariaLabel={`${eye} flat axis`} min={axisMinimum} max={axisMaximum} step={axisStep} />
@@ -480,6 +483,7 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
         </div>
       </div>
     </section>
+    </SectionEditingProvider>
   );
 }
 
