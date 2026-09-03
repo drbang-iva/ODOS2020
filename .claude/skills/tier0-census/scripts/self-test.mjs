@@ -303,15 +303,31 @@ test("parseIndexRegistrations finds an import that is actually called, excludes 
   assert.match(warnings[0], /registerBarRoutes.*never called/);
 });
 
-test("extractRouteFamilies recognizes both app.method(\"path\") and method(app, \"path\") shapes", () => {
+// Two separate families (not the same one twice) so each assertion can only pass if its OWN
+// call shape is recognized — an earlier version of this test used the same family for both
+// shapes, so deleting the wrapper-shape regex entirely still left it green (the app.method()
+// shape alone produced the same family, masking the loss). Verified: gutting the wrapper
+// alternative from ROUTE_CALL_PATTERN drops these to failing, not just discover-backend-routes'
+// own zero-match warning.
+test("extractRouteFamilies recognizes the direct app.method(\"path\") shape", () => {
   const source = `
-    export function registerFooRoutes(app, deps) {
-      app.get("/foo/one", handler);
-      post(app, "/foo/two", deps, handler);
+    export function registerFooRoutes(app) {
+      app.get("/foo-direct/one", handler);
     }
   `;
   const { families, warnings } = extractRouteFamilies(source);
-  assert.deepEqual(families, ["/foo"]);
+  assert.deepEqual(families, ["/foo-direct"]);
+  assert.deepEqual(warnings, []);
+});
+
+test("extractRouteFamilies recognizes the local wrapper method(app, \"path\") shape", () => {
+  const source = `
+    export function registerBarRoutes(app, deps) {
+      post(app, "/bar-wrapper/two", deps, handler);
+    }
+  `;
+  const { families, warnings } = extractRouteFamilies(source);
+  assert.deepEqual(families, ["/bar-wrapper"]);
   assert.deepEqual(warnings, []);
 });
 

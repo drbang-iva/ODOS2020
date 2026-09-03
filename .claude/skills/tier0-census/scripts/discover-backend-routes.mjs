@@ -62,7 +62,7 @@ export function parseIndexRegistrations(indexSource) {
 // Two call shapes are recognized, both real in this codebase:
 //   1. app.get("/path", ...) / app.post(...) / etc. — the direct Express form.
 //   2. get(app, "/path", ...) / post(app, ...) / etc. — a local wrapper several route files use
-//      (mcp/src/payments/payment-routes.ts and five others), where the bare function name takes
+//      (mcp/src/payments/payment-routes.ts and six others), where the bare function name takes
 //      `app` as its first argument instead of being a method on it.
 const ROUTE_CALL_PATTERN = /\b(?:app\s*\.\s*(?:get|post|put|delete|patch)|(?:get|post|put|delete|patch)\s*\(\s*app\s*,)\s*\(?\s*(?:"([^"]+)"|'([^']+)')/g;
 
@@ -143,6 +143,16 @@ export function discoverBackendRouteFamilies() {
     for (const f of families) allFamilies.add(f);
     byRegistration.push({ functionName, importPath, families });
   }
+
+  // index.ts registers routes directly too, not only through register*Routes delegates — 121
+  // inline app.<method>(...) calls at last count. An independent evaluation of an earlier version
+  // of this script found a real gap this missed entirely by only scanning delegated files:
+  // app.post("/inventory/frame-units/:unitId/adjustments") is inline in index.ts and had no proxy
+  // entry, silently dropped from every report because nothing ever looked at index.ts's own body.
+  const { families: inlineFamilies, warnings: inlineWarnings } = extractRouteFamilies(indexSource);
+  for (const w of inlineWarnings) warnings.push(`mcp/src/index.ts (inline): ${w}`);
+  for (const f of inlineFamilies) allFamilies.add(f);
+  byRegistration.push({ functionName: "(inline)", importPath: "mcp/src/index.ts", families: inlineFamilies });
 
   return { families: [...allFamilies].sort(), byRegistration, warnings };
 }

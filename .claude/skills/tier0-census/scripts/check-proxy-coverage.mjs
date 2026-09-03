@@ -98,8 +98,11 @@ function main() {
   if (uncovered.length > 0) {
     console.log(`${uncovered.length} backend route famil${uncovered.length === 1 ? "y has" : "ies have"} NO proxy table entry — this is the exact shape of the /watchers, /communications, and /comms bugs:`);
     for (const family of uncovered) {
-      const owner = byRegistration.find((r) => r.families.includes(family));
-      console.log(`  ! ${family}${owner ? ` (registered by ${owner.functionName}, ${owner.importPath})` : ""}`);
+      // A family can have more than one registration (/comms has three) — list all of them, not
+      // just the first, or a fix targeting the wrong owner ships against incomplete information.
+      const owners = byRegistration.filter((r) => r.families.includes(family));
+      const ownerText = owners.map((o) => `${o.functionName}, ${o.importPath}`).join("; ");
+      console.log(`  ! ${family}${ownerText ? ` (registered by ${ownerText})` : ""}`);
     }
     console.log("");
   } else {

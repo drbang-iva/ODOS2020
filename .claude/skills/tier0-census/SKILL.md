@@ -94,21 +94,27 @@ an evaluator's independent re-check, not by anything in this repo. Full root-cau
   each to its source file (following re-export chains — `pretest-endpoint.ts` re-exporting from
   `pretest-vitals-endpoint.ts` is a real example), and extracts every route-family prefix from its
   literal route-registration calls. Recognizes both call shapes actually used in this codebase:
-  `app.get("/path", ...)` and the local wrapper form `get(app, "/path", ...)` (six files use the
-  wrapper, including `payments/payment-routes.ts`). Run: `node
+  `app.get("/path", ...)` and the local wrapper form `get(app, "/path", ...)` (seven files use the
+  wrapper, including `payments/payment-routes.ts`). **Also scans `index.ts`'s own 120+ inline
+  `app.<method>(...)` calls directly** — an independent evaluation of an earlier version found this
+  script only scanned delegated files and silently missed index.ts's own routes, which is exactly
+  how it missed a real gap (see below) in its own first run. Run: `node
   .claude/skills/tier0-census/scripts/discover-backend-routes.mjs` (or `--json`).
 - **`scripts/check-proxy-coverage.mjs`** — diffs discovered backend families against
   `ui/vite.config.ts`'s proxy table keys. A backend family with no proxy entry is the finding — the
-  exact shape of all three bugs above. A proxy entry with no matching backend family is NOT
-  reported as a problem (`/fhir`, `/auth`, `/oauth2` intentionally target Medplum directly, not the
-  ODOS mcp server — correctly outside this census's scope). Always exits 0, advisory only. Run:
-  `node .claude/skills/tier0-census/scripts/check-proxy-coverage.mjs`.
+  exact shape of all three bugs above. Lists every registration that owns a gap family, not just
+  the first (`/comms` has three). A proxy entry with no matching backend family is NOT reported as
+  a problem (`/fhir`, `/auth`, `/oauth2` intentionally target Medplum directly, not the ODOS mcp
+  server — correctly outside this census's scope). Always exits 0, advisory only. Run: `node
+  .claude/skills/tier0-census/scripts/check-proxy-coverage.mjs`.
 
-As of this writing it finds **one real, still-open gap**: `/comms` (8 routes — a tracked-link
-redirect, GHL inbound webhook, six Twilio webhooks, all in `mcp/src/comms/twilio-routes.ts` and
-`ghl-routes.ts`) has no proxy entry. Not urgent — zero UI call sites, these run against a public
-base URL rather than the dev proxy — but it's real and unfixed. This is not a manifest you populate
-like Phase 1's; there's nothing to mark "reviewed" here, it either has a proxy entry or it doesn't.
+As of this writing it finds **two real, still-open gaps**: `/comms` (8 routes across three
+registrations — a tracked-link redirect, GHL inbound webhook, six Twilio webhooks) and `/inventory`
+(`app.post("/inventory/frame-units/:unitId/adjustments")`, inline in `index.ts`). Neither is
+urgent — `/comms` has zero UI call sites and runs against a public base URL rather than the dev
+proxy; `/inventory` needs its own live-caller check before anyone treats it as a priority. Both are
+real and unfixed. This is not a manifest you populate like Phase 1's; there's nothing to mark
+"reviewed" here, it either has a proxy entry or it doesn't.
 
 ## What Phase 2 needs (not yet built — don't claim this skill does it)
 
@@ -150,10 +156,11 @@ Advisory only — this check never fails the build. See SKILL.md for how to act 
 Phase 1b (`check-proxy-coverage.mjs`):
 
 ```
-Proxy-coverage census — 20 backend route families discovered, 25 proxy table entries.
+Proxy-coverage census — 24 backend route families discovered, 25 proxy table entries.
 
-1 backend route family has NO proxy table entry — this is the exact shape of the /watchers, /communications, and /comms bugs:
-  ! /comms (registered by registerTwilioWebhookRoutes, ./comms/twilio-routes.js)
+2 backend route families have NO proxy table entry — this is the exact shape of the /watchers, /communications, and /comms bugs:
+  ! /comms (registered by registerTwilioWebhookRoutes, ./comms/twilio-routes.js; registerGhlWebhookRoutes, ./comms/ghl-routes.js; registerTrackedLinkRoutes, ./comms/tracked-links.js)
+  ! /inventory (registered by (inline), mcp/src/index.ts)
 
 Advisory only — this check never fails the build.
 ```
