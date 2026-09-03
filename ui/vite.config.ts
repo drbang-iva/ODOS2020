@@ -31,6 +31,7 @@ export default defineConfig(({ mode }) => {
         "/correspondence": { target: mcpTarget, changeOrigin: true },
         "/fax": { target: mcpTarget, changeOrigin: true },
         "/mcp": { target: mcpTarget, changeOrigin: true },
+        "/watchers": { target: mcpTarget, changeOrigin: true },
         "/audit": {
           target: mcpTarget,
           changeOrigin: true,

@@ -1,0 +1,14 @@
+[
+  {
+    "mode": "fetch",
+    "status": 200,
+    "contentType": "text/html",
+    "bodyStart": "<!DOCTYPE html>\n<html lang=\"en\">\n  <head>\n    <script type=\"module\">import { injectIntoGlobalHook } "
+  },
+  {
+    "mode": "navigation",
+    "status": 200,
+    "contentType": "text/html",
+    "bodyStart": "<!DOCTYPE html>\n<html lang=\"en\">\n  <head>\n    <script type=\"module\">import { injectIntoGlobalHook } "
+  }
+]
