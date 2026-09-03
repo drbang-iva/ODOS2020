@@ -32,7 +32,7 @@ POST is the refused one. Zero ledger rows on the server.
 | `mandate17-cycle.log` | Mandate 17, explicit: delete the criteria line → re-sync (policy reports the six grants as `unexpected`, removes them) → RED with the 403 → `git checkout` the file → re-sync (`missing` ×6, `Policies updated: 3`) → GREEN → `git status --porcelain` empty. |
 | `undo-e2e-server-state.txt` | What the server holds after the undo subtests were refused: two ledger rows with **empty** slots and two Observations still `entered-in-error`. |
 | `clinicalWriteAuthzLive-lane.log` | The existing blocking lane (`ODOS_PRELIMINARY_OBSERVATION_AUTHZ_ONLY=1`) in the same container after its disposable-role-client mechanic moved to `liveRoleClient.ts`: `pass 4, fail 0`. |
-| `harness/` | The re-runnable lane: `lane-bootstrap.sh` (dr-drill compose bootstrap → throttle wait → repair → sync, the CI order), `lane-env.sh`, `lane-sync-super.sh`, `lane-run-undo-test.sh`. Set `ODOS_ROOT` and `EVIDENCE_SCRATCH`. |
+| `harness/` | The re-runnable lane: `lane-bootstrap.sh` (dr-drill compose bootstrap → throttle wait → repair → sync, the CI order), `lane-env.sh`, `lane-sync-super.sh`, `lane-run-undo-test.sh`. Set `ODOS_ROOT` and `EVIDENCE_SCRATCH`. No password is committed here: `MEDPLUM_ADMIN_PASSWORD` must be exported to the ephemeral contract-admin value `ci.yml` uses, and `MEDPLUM_SUPER_ADMIN_PASSWORD` to the fresh container's seeded super-admin password (Medplum's documented default). Both identities exist only inside the throwaway `localhost:18103` container. |
 
 ## How the lane was reproduced locally (and where it differs from CI)
 
