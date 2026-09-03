@@ -120,6 +120,14 @@ test("the declaration narrative composes positive and denied findings without co
   );
 });
 
+test("the declaration narrative ignores answers from sections inactive for the selected presentation", () => {
+  const glaucoma = HISTORY_TEMPLATES.find((template) => template.complaint === "glaucoma")!;
+  assert.equal(renderDeclaredComplaintNarrative(glaucoma, [
+    answer("presentation", undefined, { kind: "selection", code: "pressure-check" }),
+    answer("interval", undefined, { kind: "interval", code: "worse", note: "stale follow-up detail" }),
+  ]), "is being seen for pressure check.");
+});
+
 test("completeness is derived from the declaration's required sections", () => {
   const glaucoma = HISTORY_TEMPLATES.find((template) => template.complaint === "glaucoma")!;
   const answers: HistoryTemplateAnswer[] = [

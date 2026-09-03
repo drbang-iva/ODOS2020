@@ -208,7 +208,7 @@ export function renderDeclaredComplaintNarrative(template: HistoryTemplate, answ
     ["symptoms", triStateClause(sectionById.get("symptoms"), answers, "Reports", "Denies")],
     ["treatment.current", catalogValues(sections.find((candidate) => candidate.type === "treatment" && candidate.when === "current"), answers, true)],
     ["risk_factors.positive", positiveClause(sections.find((candidate) => candidate.type === "risk_factors"), answers, "Risk factors:")],
-    ["interval", intervalClause(answers.find((answer) => answer.sectionId === "interval"))],
+    ["interval", sectionById.has("interval") ? intervalClause(answers.find((answer) => answer.sectionId === "interval")) : ""],
     ["presents_for", catalogValues(sections.find((candidate) => candidate.type === "presents_for"), answers, false)],
   ]);
   let narrative = template.narrative.replace(/\{([^}]+)\}/g, (_match, expression: string) => {

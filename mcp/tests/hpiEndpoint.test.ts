@@ -554,6 +554,18 @@ test("history capture enforces authority, option validation, encounter scope, an
   });
   assert.equal(missingTreatmentEye.status, 400);
   assert.match((missingTreatmentEye.body as { error: string }).error, /requires an eye/);
+  const inactiveConditionalAnswer = await handleHpiCaptureRequest(fixture().deps, {
+    authHeader: AUTH,
+    body: {
+      ...BODY,
+      templateAnswers: [
+        { id: "answer-presentation", complaintId: "c1", templateKey: "glaucoma", sectionId: "presentation", value: { kind: "selection", code: "pressure-check" } },
+        { id: "answer-interval", complaintId: "c1", templateKey: "glaucoma", sectionId: "interval", value: { kind: "interval", code: "same" } },
+      ],
+    },
+  });
+  assert.equal(inactiveConditionalAnswer.status, 400);
+  assert.match((inactiveConditionalAnswer.body as { error: string }).error, /inactive for pressure-check/);
 });
 
 function componentValue(observation: Observation, code: string): string | undefined {

@@ -270,6 +270,74 @@ test("clearing a chip waits for an in-flight autosave and voids the Observation 
   }
 });
 
+test("changing presentation voids follow-up-only answers before autosaving the new path", async () => {
+  const originalFetch = globalThis.fetch;
+  const submittedAnswers: HistoryTemplateAnswer[][] = [];
+  const voidBodies: Array<{ scope?: string; observationReference?: string | string[] }> = [];
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/clinical-graph/hpi/definition")) return json({ templates: [TEMPLATE], catalogs: CATALOGS, definition: {} });
+    if (url.endsWith("/clinical-graph/encounters/e1/complaints")) return json({ complaints: [complaint()] });
+    if (url.endsWith("/clinical-graph/encounters/e1/hpi")) return json({
+      answers: [
+        { ...answer("presentation", undefined, { kind: "selection", code: "follow-up" }), observationReference: "Observation/answer-presentation" },
+        { ...answer("interval", undefined, { kind: "interval", code: "same", note: "Stable" }), observationReference: "Observation/answer-interval" },
+      ],
+      followUpPrefills: [],
+      templateNarratives: [],
+    });
+    if (url.endsWith("/clinical-graph/encounters/e1/void") && init?.method === "POST") {
+      voidBodies.push(JSON.parse(String(init.body)) as { scope?: string; observationReference?: string | string[] });
+      return json({ voided: ["Observation/answer-interval"], count: 1, sections: [], entries: [], preview: false });
+    }
+    if (url.endsWith("/clinical-graph/hpi") && init?.method === "POST") {
+      const submitted = JSON.parse(String(init.body)) as { templateAnswers: HistoryTemplateAnswer[] };
+      submittedAnswers.push(submitted.templateAnswers);
+      return json({ answers: submitted.templateAnswers, templateNarratives: [] });
+    }
+    throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${url}`);
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<EncounterEditContext.Provider value={{}}><HpiSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} /></EncounterEditContext.Provider>);
+      await delay(0);
+    });
+    await act(async () => {
+      renderer.root.findAllByType("button").find((button) => button.children.join("") === "Pressure Check")!.props.onClick();
+      await delay(0);
+    });
+    await act(async () => { await delay(850); });
+
+    assert.deepEqual(voidBodies, [{
+      scope: "observation",
+      observationReference: ["Observation/answer-interval"],
+      sectionKey: "hpi",
+      label: "Follow-up details",
+    }]);
+    assert.equal(submittedAnswers.at(-1)?.some((item) => item.sectionId === "interval"), false);
+    assert.equal((submittedAnswers.at(-1)?.find((item) => item.sectionId === "presentation")?.value as { code?: string })?.code, "pressure-check");
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("typed selects expose a disabled prompt instead of an unconfirmed clear action", () => {
+  const html = renderToStaticMarkup(<HistoryTemplateEditor
+    complaintId="complaint-1"
+    template={TEMPLATE}
+    catalogs={CATALOGS}
+    answers={[answer("presentation", undefined, { kind: "selection", code: "follow-up" })]}
+    narrative=""
+    editMode={false}
+    onChange={() => undefined}
+    onRemoveTyped={() => undefined}
+  />);
+  assert.doesNotMatch(html, /<option value="">Not recorded<\/option>/);
+  assert.match(html, /<option value="" disabled="" selected="">Select…<\/option>/);
+});
+
 test("a failed autosave turns only the History header red with its reason and Retry", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (input, init) => {

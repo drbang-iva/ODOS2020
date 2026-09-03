@@ -615,6 +615,11 @@ function validateTemplateAnswers(answers: HistoryTemplateAnswer[], complaints: E
     }
     const section = template.sections.find((candidate) => candidate.id === answer.sectionId);
     if (!section) return `History answer ${answer.id} names an inactive template section.`;
+    const presentation = answers.find((candidate) => candidate.complaintId === answer.complaintId && candidate.sectionId === "presentation");
+    const presentationCode = presentation?.value.kind === "selection" ? presentation.value.code : undefined;
+    if (section.on && section.on !== presentationCode) {
+      return `History answer ${answer.id} is inactive for ${presentationCode ?? "the unselected presentation"}.`;
+    }
     if (answer.optionCode && (!section.catalog || !HISTORY_OPTION_CATALOGS[section.catalog]?.some((option) => option.code === answer.optionCode))) {
       return `History answer ${answer.id} names an unknown catalog option.`;
     }

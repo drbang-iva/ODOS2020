@@ -163,17 +163,57 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
       if (prior) void clearAnswer(prior);
       return;
     }
-    setAnswers((current) => {
-      let next = replaceAnswer(current, nextAnswer);
-      if (nextAnswer.sectionId === "presentation" && nextAnswer.value.kind === "selection" && nextAnswer.value.code === "follow-up") {
-        for (const prefill of followUpPrefills.filter((candidate) => candidate.complaintId === nextAnswer.complaintId)) {
-          if (!next.some((candidate) => candidate.id === prefill.id)) next = [...next, prefill];
-        }
+    if (nextAnswer.sectionId === "presentation" && nextAnswer.value.kind === "selection") {
+      const template = templates.find((candidate) => candidate.complaint === nextAnswer.templateKey);
+      const presentationCode = nextAnswer.value.code;
+      const inactiveSectionIds = new Set(template?.sections.filter((section) => section.on && section.on !== presentationCode).map((section) => section.id));
+      const inactiveAnswers = latestAnswers.current.filter((answer) =>
+        answer.complaintId === nextAnswer.complaintId && inactiveSectionIds.has(answer.sectionId)
+      );
+      if (inactiveAnswers.length) {
+        void changePresentation(nextAnswer, inactiveAnswers);
+        return;
       }
-      latestAnswers.current = next;
-      scheduleSave(nextAnswer.id);
-      return next;
-    });
+    }
+    applyAnswer(nextAnswer);
+  }
+
+  function applyAnswer(nextAnswer: HistoryTemplateAnswer) {
+    let next = replaceAnswer(latestAnswers.current, nextAnswer);
+    if (nextAnswer.sectionId === "presentation" && nextAnswer.value.kind === "selection" && nextAnswer.value.code === "follow-up") {
+      for (const prefill of followUpPrefills.filter((candidate) => candidate.complaintId === nextAnswer.complaintId)) {
+        if (!next.some((candidate) => candidate.id === prefill.id)) next = [...next, prefill];
+      }
+    }
+    latestAnswers.current = next;
+    setAnswers(next);
+    scheduleSave(nextAnswer.id);
+  }
+
+  async function changePresentation(nextAnswer: HistoryTemplateAnswer, inactiveAnswers: HistoryTemplateAnswer[]) {
+    for (const timer of debounceTimers.current.values()) clearTimeout(timer);
+    debounceTimers.current.clear();
+    try {
+      await saveQueue.current;
+      const references = inactiveAnswers.flatMap((answer) => {
+        const observationReference = answer.observationReference ?? persistedAnswerReferences.current.get(answer.id);
+        return observationReference ? [observationReference] : [];
+      });
+      const result = references.length ? await voidEncounterEntries(encounterReference, {
+        scope: "observation",
+        observationReference: references,
+        sectionKey: "hpi",
+        label: "Follow-up details",
+      }) : undefined;
+      const inactiveIds = new Set(inactiveAnswers.map((answer) => answer.id));
+      latestAnswers.current = latestAnswers.current.filter((answer) => !inactiveIds.has(answer.id));
+      for (const answer of inactiveAnswers) persistedAnswerReferences.current.delete(answer.id);
+      applyAnswer(nextAnswer);
+      if (result) onCleared?.({ scope: "observation", result });
+    } catch (caught) {
+      onClearFailed?.({ scope: "observation", error: caught });
+      setSaveState({ status: "error", reason: errorMessage(caught) });
+    }
   }
 
   async function clearAnswer(answer: HistoryTemplateAnswer) {
@@ -503,7 +543,7 @@ function TemplateSection({ section, catalogs, answers, editMode, onTriState, onP
   }
   if (section.type === "severity") {
     const value = answer?.value.kind === "severity" ? answer.value.level : "";
-    return <TemplateField label={section.label}><select className="sidebar-input max-w-xs" value={value} onChange={(event) => event.target.value && onPut({ kind: "severity", level: event.target.value as "mild" | "moderate" | "severe" })}><option value="">Not recorded</option><option value="mild">Mild</option><option value="moderate">Moderate</option><option value="severe">Severe</option></select><TypedRemove editMode={editMode} answer={answer} label={section.label} onRemove={onRemoveTyped} /></TemplateField>;
+    return <TemplateField label={section.label}><select className="sidebar-input max-w-xs" value={value} onChange={(event) => event.target.value && onPut({ kind: "severity", level: event.target.value as "mild" | "moderate" | "severe" })}><option value="" disabled>Select…</option><option value="mild">Mild</option><option value="moderate">Moderate</option><option value="severe">Severe</option></select><TypedRemove editMode={editMode} answer={answer} label={section.label} onRemove={onRemoveTyped} /></TemplateField>;
   }
   if (section.type === "duration") {
     const value = answer?.value.kind === "duration" ? answer.value : undefined;
@@ -511,11 +551,11 @@ function TemplateSection({ section, catalogs, answers, editMode, onTriState, onP
   }
   if (section.type === "interval") {
     const value = answer?.value.kind === "interval" ? answer.value : undefined;
-    return <TemplateField label={section.label}><div className="grid gap-2 md:grid-cols-[12rem_1fr]"><select className="sidebar-input" value={value?.code ?? ""} onChange={(event) => event.target.value && onPut({ kind: "interval", code: event.target.value as "better" | "same" | "worse", note: value?.note })}><option value="">Not recorded</option><option value="better">Better</option><option value="same">Same</option><option value="worse">Worse</option></select><input aria-label={`${section.label} note`} className="sidebar-input" placeholder="Optional note" value={value?.note ?? ""} onChange={(event) => onPut({ kind: "interval", code: value?.code ?? "same", note: event.target.value })} /></div><TypedRemove editMode={editMode} answer={answer} label={section.label} onRemove={onRemoveTyped} /></TemplateField>;
+    return <TemplateField label={section.label}><div className="grid gap-2 md:grid-cols-[12rem_1fr]"><select className="sidebar-input" value={value?.code ?? ""} onChange={(event) => event.target.value && onPut({ kind: "interval", code: event.target.value as "better" | "same" | "worse", note: value?.note })}><option value="" disabled>Select…</option><option value="better">Better</option><option value="same">Same</option><option value="worse">Worse</option></select><input aria-label={`${section.label} note`} className="sidebar-input" placeholder="Optional note" value={value?.note ?? ""} onChange={(event) => onPut({ kind: "interval", code: value?.code ?? "same", note: event.target.value })} /></div><TypedRemove editMode={editMode} answer={answer} label={section.label} onRemove={onRemoveTyped} /></TemplateField>;
   }
   if (section.type === "laterality") {
     const value = answer?.value.kind === "laterality" ? answer.value : undefined;
-    return <TemplateField label={section.label}><select className="sidebar-input max-w-xs" value={value?.code ?? ""} onChange={(event) => event.target.value && onPut({ kind: "laterality", code: event.target.value as "OD-worse" | "OS-worse" | "equal" | "other" })}><option value="">Not recorded</option><option value="OD-worse">OD worse</option><option value="OS-worse">OS worse</option><option value="equal">Equal</option><option value="other">Other</option></select><TypedRemove editMode={editMode} answer={answer} label={section.label} onRemove={onRemoveTyped} /></TemplateField>;
+    return <TemplateField label={section.label}><select className="sidebar-input max-w-xs" value={value?.code ?? ""} onChange={(event) => event.target.value && onPut({ kind: "laterality", code: event.target.value as "OD-worse" | "OS-worse" | "equal" | "other" })}><option value="" disabled>Select…</option><option value="OD-worse">OD worse</option><option value="OS-worse">OS worse</option><option value="equal">Equal</option><option value="other">Other</option></select><TypedRemove editMode={editMode} answer={answer} label={section.label} onRemove={onRemoveTyped} /></TemplateField>;
   }
   if (section.type === "numeric") {
     const value = answer?.value.kind === "numeric" ? answer.value : undefined;
