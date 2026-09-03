@@ -397,7 +397,7 @@ test("Batch 4 wheels retain plano power centers with six explicit non-power defa
 
 test("unknown Batch 4 bounds stay typed instead of acquiring guessed wheel ranges", () => {
   assert.match(source("DryEyeSection.tsx"), /aria-label="Total score"[\s\S]*inputMode="decimal"/);
-  assert.match(source("HpiSection.tsx"), /aria-label="Duration value"[\s\S]*type="number"[\s\S]*min=\{1\}/);
+  assert.match(source("HpiSection.tsx"), /aria-label=\{`\$\{section\.label\} duration value`\}[\s\S]*type="number"[\s\S]*min=\{1\}/);
   assert.match(source("VaSection.tsx"), /rows\[laterality\]\.chartType === "SNELLEN"[\s\S]*<input/);
   const optical = readFileSync(new URL("../src/scenes/OpticalOrder.tsx", import.meta.url), "utf8");
   const scheduler = readFileSync(new URL("../src/scenes/scheduler/AppointmentDetailsModal.tsx", import.meta.url), "utf8");

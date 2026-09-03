@@ -21,7 +21,7 @@ export class FhirEncounterComplaintStore {
   async listByEncounter(encounterId: string): Promise<EncounterComplaint[]> {
     return (await this.readRows())
       .map((row) => row.complaint)
-      .filter((complaint) => complaint.encounterId === encounterId)
+      .filter((complaint) => complaint.encounterId === encounterId && complaint.status === "active")
       .sort((left, right) => left.ordinal - right.ordinal || left.id.localeCompare(right.id));
   }
 
@@ -112,6 +112,7 @@ export function assertEncounterComplaint(value: unknown): EncounterComplaint {
   if (!isRecord(value)) throw new Error("Encounter complaint must be an object.");
   for (const field of ["id", "encounterId", "patientId"] as const) requiredId(value[field], field);
   if (!Number.isInteger(value.ordinal) || Number(value.ordinal) < 1) throw new Error("Encounter complaint ordinal must be a positive integer.");
+  if (value.templateKey !== undefined && !validCode(value.templateKey)) throw new Error("Encounter complaint templateKey is invalid.");
   if (value.complaintKey !== undefined && !validCode(value.complaintKey)) throw new Error("Encounter complaint complaintKey is invalid.");
   if (value.complaintKey === undefined && (typeof value.freeTextLabel !== "string" || !value.freeTextLabel.trim())) {
     throw new Error("Other complaints require a freeTextLabel.");

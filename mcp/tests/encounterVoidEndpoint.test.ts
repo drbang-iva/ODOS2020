@@ -4,6 +4,7 @@ import type { Basic, Condition, Encounter, Observation, Provenance } from "@medp
 import { verificationStatusConcept } from "../src/fhir/condition.js";
 import { handleEncounterVoidRequest } from "../src/clinical-graph/encounter-void-endpoint.js";
 import { ENCOUNTER_COMPLAINT_CODE, parseEncounterComplaintResource } from "../src/clinical-graph/encounter-complaint-store.js";
+import { buildHistoryAnswerObservation } from "../src/clinical-graph/history-answer-observation.js";
 import {
   AUTH,
   ENCOUNTER,
@@ -145,6 +146,41 @@ test("observation scope flips one Observation to entered-in-error and writes a V
   assert.equal(fhir.transactions.length, 1);
 });
 
+test("History complaint finding scope voids that complaint's answer Observations and removes only that complaint", async () => {
+  const { deps, fhir } = fixture({ reasonText: "Glaucoma" });
+  fhir.add({ ...buildHistoryAnswerObservation({
+    id: "answer-one",
+    complaintId: "complaint-1",
+    templateKey: "glaucoma",
+    sectionId: "symptoms",
+    optionCode: "ocular-pain",
+    value: { kind: "tri-state", status: "negative" },
+  }, { patientReference: PATIENT, encounterReference: ENCOUNTER, recordedAt: NOW }), id: "answer-one-observation" });
+  fhir.add({ ...buildHistoryAnswerObservation({
+    id: "answer-two",
+    complaintId: "complaint-2",
+    templateKey: "glaucoma",
+    sectionId: "symptoms",
+    optionCode: "halos-around-lights",
+    value: { kind: "tri-state", status: "positive" },
+  }, { patientReference: PATIENT, encounterReference: ENCOUNTER, recordedAt: NOW }), id: "answer-two-observation" });
+  fhir.add(complaintResource("complaint-1", 1));
+  fhir.add(complaintResource("complaint-2", 2));
+
+  const result = await handleEncounterVoidRequest(deps, {
+    authHeader: AUTH,
+    params: { encounterId: "e1" },
+    body: { scope: "finding", findingKey: "hpi-complaint:complaint-1", sectionKey: "hpi" },
+  });
+
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  assert.deepEqual([...(result.body as VoidBody).voided].sort(), ["Basic/basic-complaint-1", "Observation/answer-one-observation"]);
+  assert.equal(fhir.get<Observation>("Observation", "answer-one-observation").status, "entered-in-error");
+  assert.equal(fhir.get<Observation>("Observation", "answer-two-observation").status, "preliminary");
+  assert.equal(parseEncounterComplaintResource(fhir.get<Basic>("Basic", "basic-complaint-1")).status, "removed");
+  assert.equal(parseEncounterComplaintResource(fhir.get<Basic>("Basic", "basic-complaint-2")).status, "active");
+});
+
 test("observation scope refuses an Observation that belongs to a different encounter", async () => {
   const { deps, fhir } = fixture();
   fhir.add(cvf("elsewhere", "OD", { encounter: { reference: "Encounter/e0" } }));
@@ -222,6 +258,13 @@ test("section scope accepts several keys at once so a sheet that owns two defini
 test("clearing the History section voids the History Observation, removes every active complaint, and clears the primary complaint stamp", async () => {
   const { deps, fhir } = fixture({ reasonText: "Dry eyes" });
   fhir.add(observation("history", "hpi_ros", "UNKNOWN"));
+  fhir.add({ ...buildHistoryAnswerObservation({
+    id: "answer-one",
+    complaintId: "complaint-1",
+    templateKey: "glaucoma",
+    sectionId: "presentation",
+    value: { kind: "selection", code: "follow-up" },
+  }, { patientReference: PATIENT, encounterReference: ENCOUNTER, recordedAt: NOW }), id: "answer-one-observation" });
   fhir.add(complaintResource("complaint-1", 1));
   fhir.add(complaintResource("complaint-2", 2));
   fhir.add(complaintResource("complaint-old", 3, "removed"));
@@ -235,9 +278,10 @@ test("clearing the History section voids the History Observation, removes every 
 
   assert.equal(result.status, 200, JSON.stringify(result.body));
   const body = result.body as VoidBody;
-  assert.equal(body.count, 3);
+  assert.equal(body.count, 4);
   assert.ok(body.voided.includes("Observation/history"));
   assert.equal(fhir.get<Observation>("Observation", "history").status, "entered-in-error");
+  assert.equal(fhir.get<Observation>("Observation", "answer-one-observation").status, "entered-in-error");
   // The undo ledger is a Basic too; only the complaint rows are complaints.
   const complaints = fhir.all<Basic>("Basic")
     .filter((row) => row.code?.coding?.some((coding) => coding.code === ENCOUNTER_COMPLAINT_CODE))

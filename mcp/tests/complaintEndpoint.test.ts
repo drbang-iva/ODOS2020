@@ -223,6 +223,20 @@ test("two structured complaints round-trip, render deterministically, reorder, a
   assert.equal((listed.body as { legacyFallback: boolean }).legacyFallback, false);
 });
 
+test("a template declaration creates its complaint without a template-specific client payload", async () => {
+  const { deps } = fixture();
+  const result = await handleEncounterComplaintMutationRequest(deps, {
+    authHeader: AUTH,
+    params: { encounterId: "e1" },
+    body: { action: "create-template", patientReference: "Patient/p1", templateKey: "routine" },
+  });
+
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  const complaint = (result.body as { complaints: Array<{ templateKey?: string; freeTextLabel?: string }> }).complaints[0];
+  assert.equal(complaint?.templateKey, "routine");
+  assert.equal(complaint?.freeTextLabel, "Routine / New Visit");
+});
+
 test("stale Encounter complaint stamp returns a concurrent-edit response without overwriting the concurrent Encounter", async () => {
   const { deps, fhir } = fixture();
   let concurrentEncounter: Encounter | undefined;
@@ -344,6 +358,34 @@ test("encounter complaint reads collapse duplicate Basics by complaint id and ke
   assert.equal(rows.length, 1);
   assert.equal(rows[0]?.id, complaint.id);
   assert.equal(rows[0]?.additionalHistory, "newest duplicate row");
+});
+
+test("the complaint store never returns removed rows to its callers", async () => {
+  const { fhir } = fixture();
+  const active = assertEncounterComplaint({
+    id: "complaint-active",
+    encounterId: "e1",
+    patientId: "p1",
+    ordinal: 2,
+    complaintKey: "glaucoma",
+    conditions: [],
+    eyeLocation: "not-applicable",
+    qualities: [],
+    treatmentsTried: [],
+    additionalHistory: "",
+    narrative: { mode: "automated" },
+    resolvedDx: [],
+    status: "active",
+    provenance: { source: "manual", recordedAt: "2026-09-03T12:00:00.000Z", actorReference: "Practitioner/doc1" },
+    provenanceHistory: [],
+  });
+  fhir.basics.push(
+    { ...buildEncounterComplaintResource(active), id: "basic-active" },
+    { ...buildEncounterComplaintResource({ ...active, id: "complaint-removed", ordinal: 1, status: "removed" }), id: "basic-removed" },
+  );
+
+  const rows = await new FhirEncounterComplaintStore(fhir).listByEncounter("e1");
+  assert.deepEqual(rows.map((row) => row.id), ["complaint-active"]);
 });
 
 test("encounter complaint validation requires additionalHistory to be present", () => {

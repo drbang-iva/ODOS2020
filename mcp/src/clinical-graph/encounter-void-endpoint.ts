@@ -16,6 +16,8 @@ import { ODOS_EXTENSION_URLS, odosConcept, reference } from "../fhir/ophthalmolo
 import { searchAll } from "../fhir-search.js";
 import { stampPrimaryComplaint } from "./complaint-endpoint.js";
 import type { EncounterComplaint } from "./complaint-model.js";
+import { buildComplaintDefinitionSeeds } from "./complaint-model.js";
+import { isHistoryAnswerObservation, parseHistoryAnswerObservation } from "./history-answer-observation.js";
 import {
   ENCOUNTER_COMPLAINT_CODE,
   ENCOUNTER_COMPLAINT_CODE_SYSTEM,
@@ -227,6 +229,7 @@ export async function handleEncounterVoidRequest(
 
   let targetObservations: IdentifiedObservation[] = [];
   let includeComplaints = false;
+  let targetComplaintIds: Set<string> | undefined;
   let includeConditions = false;
   if (request.scope === "observation") {
     // All-or-nothing: a caller that names N references means all N. Voiding the valid subset
@@ -249,6 +252,10 @@ export async function handleEncounterVoidRequest(
       row.findingKey === request.findingKey &&
       (request.laterality === undefined || row.laterality === request.laterality)
     );
+    if (request.findingKey.startsWith("hpi-complaint:")) {
+      includeComplaints = true;
+      targetComplaintIds = new Set([request.findingKey.slice("hpi-complaint:".length)]);
+    }
   } else if (request.scope === "section") {
     const keys = Array.isArray(request.sectionKey) ? request.sectionKey : [request.sectionKey];
     const matches = (sectionKey: string) => keys.some((key) => sectionKey === key || sectionKey.startsWith(`${key}:`));
@@ -270,7 +277,10 @@ export async function handleEncounterVoidRequest(
           isLiveCondition(condition)
         )
     : [];
-  const complaints: ComplaintRow[] = includeComplaints ? await activeComplaints(staff.fhir, encounterId) : [];
+  const activeComplaintRows: ComplaintRow[] = includeComplaints ? await activeComplaints(staff.fhir, encounterId) : [];
+  const complaints = targetComplaintIds
+    ? activeComplaintRows.filter((row) => targetComplaintIds.has(row.complaint.id))
+    : activeComplaintRows;
   // Dilation records the drops as MedicationAdministration and links them from the DFE
   // Observation. Voiding only the Observation hides them while they stay clinically active,
   // so every administration a voided Observation is partOf is retired with it.
@@ -444,7 +454,14 @@ export async function handleEncounterVoidRequest(
   // the whole transaction fails closed as a concurrent edit.
   const retracted = new Set(conditions.map((condition) => `Condition/${condition.id}`));
   let nextEncounter: Encounter = encounter;
-  if (complaints.length) nextEncounter = stampPrimaryComplaint(nextEncounter, [], []);
+  if (complaints.length) {
+    const removedComplaintIds = new Set(complaints.map((row) => row.complaint.id));
+    nextEncounter = stampPrimaryComplaint(
+      nextEncounter,
+      activeComplaintRows.filter((row) => !removedComplaintIds.has(row.complaint.id)).map((row) => row.complaint),
+      buildComplaintDefinitionSeeds(),
+    );
+  }
   if (conditions.length) {
     const diagnosis = (nextEncounter.diagnosis ?? []).filter((row) => !retracted.has(row.condition.reference ?? ""));
     nextEncounter = diagnosis.length ? { ...nextEncounter, diagnosis } : stripDiagnosis(nextEncounter);
@@ -477,6 +494,10 @@ function identify(
   definitions: readonly ClinicalFindingDefinition[],
 ): IdentifiedObservation {
   const laterality = observationLaterality(observation);
+  if (isHistoryAnswerObservation(observation)) {
+    const answer = parseHistoryAnswerObservation(observation);
+    return { observation, findingKey: `hpi-complaint:${answer.complaintId}`, sectionKey: HISTORY_SECTION_KEY, laterality };
+  }
   const definition = findingDefinitionForObservation(observation, definitions);
   if (definition) {
     return { observation, findingKey: definition.stableKey, sectionKey: definition.sectionKey ?? definition.stableKey, laterality };

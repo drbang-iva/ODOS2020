@@ -1,14 +1,30 @@
 import { randomUUID } from "node:crypto";
-import type { Basic, Bundle, Encounter, Observation, Provenance, Resource } from "@medplum/fhirtypes";
+import type { Basic, Bundle, Encounter, Observation, Provenance, Resource, ServiceRequest } from "@medplum/fhirtypes";
 import { z } from "zod";
 import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../fhir/ophthalmology/codeBindings.js";
 import { odosConcept, reference } from "../fhir/ophthalmology/extensions.js";
 import { FhirComplaintDefinitionStore } from "./complaint-definition-store.js";
 import { renderComplaintNarrative } from "./complaint-model.js";
+import type { EncounterComplaint } from "./complaint-model.js";
 import { FhirEncounterComplaintStore } from "./encounter-complaint-store.js";
 import { CLOSED_ENCOUNTER_EDIT_ERROR, isClosedEncounter } from "./encounter-sign-gate.js";
 import { buildHpiFindingDefinition, HPI_STABLE_KEY } from "./hpi-definition.js";
+import {
+  HISTORY_ANSWER_CODE,
+  HISTORY_ANSWER_CODE_SYSTEM,
+  buildHistoryAnswerObservation,
+  isHistoryAnswerObservation,
+  parseHistoryAnswerObservation,
+  assertHistoryTemplateAnswer,
+} from "./history-answer-observation.js";
+import {
+  HISTORY_OPTION_CATALOGS,
+  HISTORY_TEMPLATES,
+  activeTemplateSections,
+  type HistoryTemplate,
+  type HistoryTemplateAnswer,
+} from "./history-template-engine.js";
 import {
   captureGlaucomaFinding,
   type ClinicalFindingDefinition,
@@ -46,16 +62,27 @@ const rosFlagSchema = z.object({
 const hpiRequestSchema = z.object({
   patientReference: z.string().regex(/^Patient\/[A-Za-z0-9.-]+$/),
   encounterReference: z.string().regex(/^Encounter\/[A-Za-z0-9.-]+$/),
-  reviewOfSystems: z.array(rosFlagSchema).max(128),
-  reviewAttestations: z.array(z.enum(["eye", "general"])).max(2).default([]),
+  reviewOfSystems: z.array(rosFlagSchema).max(128).optional(),
+  reviewAttestations: z.array(z.enum(["eye", "general"])).max(2).optional(),
+  templateAnswers: z.array(z.unknown()).max(500).default([]),
 }).strict().superRefine((value, context) => {
   const seen = new Set<string>();
-  for (const flag of value.reviewOfSystems) {
+  for (const flag of value.reviewOfSystems ?? []) {
     if (seen.has(flag.code)) context.addIssue({ code: z.ZodIssueCode.custom, message: `Review-of-systems flag ${flag.code} is duplicated.` });
     seen.add(flag.code);
   }
-  if (new Set(value.reviewAttestations).size !== value.reviewAttestations.length) {
+  if (value.reviewAttestations && new Set(value.reviewAttestations).size !== value.reviewAttestations.length) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "Review attestations cannot contain duplicates." });
+  }
+  const answerIds = new Set<string>();
+  for (const rawAnswer of value.templateAnswers) {
+    try {
+      const answer = assertHistoryTemplateAnswer(rawAnswer);
+      if (answerIds.has(answer.id)) context.addIssue({ code: z.ZodIssueCode.custom, message: `History answer ${answer.id} is duplicated.` });
+      answerIds.add(answer.id);
+    } catch (error) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: errorMessage(error) });
+    }
   }
 });
 
@@ -75,8 +102,186 @@ export async function handleHpiDefinitionRequest(
       display: definition.display,
       fields: definition.valueSchema.fields,
       terminologyStatus: definition.valueSchema.terminologyStatus,
-    } },
+    }, templates: HISTORY_TEMPLATES, catalogs: HISTORY_OPTION_CATALOGS },
   };
+}
+
+export async function handleHpiRecordRequest(
+  deps: Pick<HpiEndpointDeps, "authenticate">,
+  input: { authHeader: string | undefined; params: unknown },
+): Promise<{ status: number; body: unknown }> {
+  const staff = await deps.authenticate(input.authHeader);
+  if (!staff) return { status: 401, body: { error: "Authentication required to read history." } };
+  if (!staffHasBusinessAction(staff, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
+  const encounterId = readId(input.params, "encounterId");
+  if (!encounterId) return { status: 400, body: { error: "A valid encounter id is required." } };
+  const encounterReference = `Encounter/${encounterId}`;
+  const bundle = await staff.fhir.search<Observation>("Observation", {
+    encounter: encounterReference,
+    code: `${HISTORY_ANSWER_CODE_SYSTEM}|${HISTORY_ANSWER_CODE}`,
+    _count: "500",
+  });
+  if (bundle.link?.some((link) => link.relation === "next")) {
+    throw new Error("History answer read found more Observations than it can safely return.");
+  }
+  const answers = (bundle.entry ?? []).flatMap((entry) => {
+    const observation = entry.resource;
+    if (!observation || observation.status === "entered-in-error" || observation.status === "cancelled" ||
+      observation.encounter?.reference !== encounterReference || !isHistoryAnswerObservation(observation)) return [];
+    return [parseHistoryAnswerObservation(observation)];
+  });
+  const complaints = await new FhirEncounterComplaintStore(staff.fhir).listByEncounter(encounterId);
+  const narratives = templateNarratives(complaints, answers);
+  const aggregateBundle = await staff.fhir.search<Observation>("Observation", {
+    encounter: encounterReference,
+    code: `${ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|${HPI_STABLE_KEY}`,
+    _count: "200",
+  });
+  if (aggregateBundle.link?.some((link) => link.relation === "next")) {
+    throw new Error("History aggregate read found more Observations than it can safely reconcile.");
+  }
+  const aggregate = chooseCanonicalHistory((aggregateBundle.entry ?? []).flatMap((entry) => {
+    const observation = entry.resource;
+    return observation && isLiveHistoryObservation(observation, encounterReference) ? [observation] : [];
+  }), encounterId);
+  const requiresAggregateRefresh = narratives.length > 0 && narratives.some((row) => {
+    const complaint = complaints.find((candidate) => candidate.id === row.complaintId);
+    return !complaint || aggregateComponent(aggregate, `HISTORY_COMPLAINT_${complaint.ordinal}`) !== row.narrative;
+  });
+  const encounter = await staff.fhir.read<Encounter>("Encounter", encounterId);
+  const patientReference = encounter.subject?.reference;
+  const [planBundle, priorAnswerBundle] = patientReference
+    ? await Promise.all([
+        staff.fhir.search<ServiceRequest>("ServiceRequest", { subject: patientReference, _count: "500" }),
+        staff.fhir.search<Observation>("Observation", {
+          subject: patientReference,
+          code: `${HISTORY_ANSWER_CODE_SYSTEM}|${HISTORY_ANSWER_CODE}`,
+          _count: "500",
+        }),
+      ])
+    : [undefined, undefined];
+  if (planBundle?.link?.some((link) => link.relation === "next")) {
+    throw new Error("Last-plan prefill found more ServiceRequests than it can safely reconcile.");
+  }
+  if (priorAnswerBundle?.link?.some((link) => link.relation === "next")) {
+    throw new Error("Follow-up prefill found more history answers than it can safely reconcile.");
+  }
+  const prefills = [
+    ...deriveFollowUpAnswerPrefills(
+      complaints,
+      (priorAnswerBundle?.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []),
+      encounterReference,
+      answers,
+    ),
+    ...deriveLastPlanPrefills(
+      complaints,
+      (planBundle?.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []),
+      encounterReference,
+      answers,
+    ),
+  ];
+  return {
+    status: 200,
+    body: { answers, followUpPrefills: prefills, templateNarratives: narratives, requiresAggregateRefresh },
+  };
+}
+
+export function deriveFollowUpAnswerPrefills(
+  complaints: EncounterComplaint[],
+  observations: Observation[],
+  currentEncounterReference: string,
+  existingAnswers: HistoryTemplateAnswer[],
+): HistoryTemplateAnswer[] {
+  const prior = observations.flatMap((observation) => {
+    if (!observation.encounter?.reference || observation.encounter.reference === currentEncounterReference ||
+      observation.status === "entered-in-error" || observation.status === "cancelled" ||
+      !isHistoryAnswerObservation(observation)) return [];
+    return [{ observation, answer: parseHistoryAnswerObservation(observation) }];
+  });
+  const latestEncounter = prior.sort((left, right) =>
+    historyInstant(right.observation).localeCompare(historyInstant(left.observation)) ||
+    (right.observation.id ?? "").localeCompare(left.observation.id ?? "")
+  )[0]?.observation.encounter?.reference;
+  if (!latestEncounter) return [];
+  const existingIds = new Set(existingAnswers.map((answer) => answer.id));
+  const priorAnswers = prior.filter((row) => row.observation.encounter?.reference === latestEncounter).map((row) => row.answer);
+  const prefills = new Map<string, HistoryTemplateAnswer>();
+  for (const complaint of complaints) {
+    const templateKey = complaint.templateKey ?? complaint.complaintKey;
+    const template = HISTORY_TEMPLATES.find((candidate) => candidate.complaint === templateKey);
+    if (!template) continue;
+    const listSections = new Set(template.sections.filter((section) =>
+      section.catalog && section.type !== "presents_for"
+    ).map((section) => section.id));
+    for (const priorAnswer of priorAnswers) {
+      if (priorAnswer.templateKey !== template.complaint || priorAnswer.value.kind !== "tri-state" ||
+        !listSections.has(priorAnswer.sectionId)) continue;
+      const id = `history-${complaint.id}-${priorAnswer.sectionId}-${priorAnswer.optionCode ?? "value"}`;
+      if (existingIds.has(id)) continue;
+      prefills.set(id, {
+        id,
+        complaintId: complaint.id,
+        templateKey: template.complaint,
+        sectionId: priorAnswer.sectionId,
+        ...(priorAnswer.optionCode ? { optionCode: priorAnswer.optionCode } : {}),
+        ...(priorAnswer.eye ? { eye: priorAnswer.eye } : {}),
+        value: priorAnswer.value,
+      });
+    }
+  }
+  return [...prefills.values()];
+}
+
+export function deriveLastPlanPrefills(
+  complaints: EncounterComplaint[],
+  plans: ServiceRequest[],
+  currentEncounterReference: string,
+  existingAnswers: HistoryTemplateAnswer[],
+): HistoryTemplateAnswer[] {
+  const priorPlans = plans.filter((plan) =>
+    plan.intent === "plan" &&
+    plan.encounter?.reference !== currentEncounterReference &&
+    plan.status !== "entered-in-error" && plan.status !== "revoked" &&
+    Boolean(plan.authoredOn)
+  );
+  const latest = priorPlans.sort((left, right) =>
+    (right.authoredOn ?? "").localeCompare(left.authoredOn ?? "") || (right.id ?? "").localeCompare(left.id ?? "")
+  )[0];
+  if (!latest) return [];
+  const latestPlanRows = latest.encounter?.reference
+    ? priorPlans.filter((plan) => plan.encounter?.reference === latest.encounter?.reference)
+    : [latest];
+  const planText = latestPlanRows.flatMap((plan) => [
+    plan.code?.text,
+    ...(plan.code?.coding ?? []).map((coding) => coding.display),
+    ...(plan.reasonCode ?? []).flatMap((reason) => [
+      reason.text,
+      ...(reason.coding ?? []).map((coding) => coding.display),
+    ]),
+  ]).filter((value): value is string => Boolean(value)).join(" ");
+  const normalizedPlan = normalizePlanText(planText);
+  if (!normalizedPlan) return [];
+  const existingIds = new Set(existingAnswers.map((answer) => answer.id));
+  return complaints.flatMap((complaint) => {
+    const templateKey = complaint.templateKey ?? complaint.complaintKey;
+    const template = HISTORY_TEMPLATES.find((candidate) => candidate.complaint === templateKey);
+    if (!template) return [];
+    return template.sections.flatMap((section) => {
+      if (section.prefill !== "last_plan" || !section.catalog) return [];
+      return (HISTORY_OPTION_CATALOGS[section.catalog] ?? []).flatMap((option) => {
+        const id = `history-${complaint.id}-${section.id}-${option.code}`;
+        if (existingIds.has(id) || !normalizedPlan.includes(normalizePlanText(option.display))) return [];
+        return [{
+          id,
+          complaintId: complaint.id,
+          templateKey: template.complaint,
+          sectionId: section.id,
+          optionCode: option.code,
+          value: { kind: "tri-state", status: "positive" as const },
+        }];
+      });
+    });
+  });
 }
 
 export async function handleHpiCaptureRequest(
@@ -98,7 +303,7 @@ export async function handleHpiCaptureRequest(
     return { status: 409, body: { error: CLOSED_ENCOUNTER_EDIT_ERROR } };
   }
   const definition = resolveHpiDefinition(deps.findingDefinitions?.());
-  const rosError = validateRos(parsed.data.reviewOfSystems, definition);
+  const rosError = validateRos(parsed.data.reviewOfSystems ?? [], definition);
   if (rosError) return { status: 400, body: { error: rosError } };
 
   const definitions = await new FhirComplaintDefinitionStore(staff.fhir).list();
@@ -106,6 +311,9 @@ export async function handleHpiCaptureRequest(
     .filter((complaint) => complaint.status === "active")
     .sort((left, right) => left.ordinal - right.ordinal);
   if (!complaints.length) return { status: 400, body: { error: "At least one presenting complaint is required before saving history." } };
+  const templateAnswers = parsed.data.templateAnswers.map(assertHistoryTemplateAnswer);
+  const answerError = validateTemplateAnswers(templateAnswers, complaints);
+  if (answerError) return { status: 400, body: { error: answerError } };
 
   const recordedAt = deps.now?.() ?? new Date().toISOString();
   const captureProvenance: ClinicalGraphProvenance = {
@@ -114,7 +322,7 @@ export async function handleHpiCaptureRequest(
     actorReference: staff.staffReference,
     note: [
       "MANDATE-14-DEFERRED: complaint, HPI, and ROS concepts remain ODOS-local; no external terminology code is asserted.",
-      ...parsed.data.reviewAttestations.map((group) => `${group} review-of-systems remaining items attested negative.`),
+      ...(parsed.data.reviewAttestations ?? []).map((group) => `${group} review-of-systems remaining items attested negative.`),
     ].join(" "),
   };
   const findingId = `finding-${HPI_STABLE_KEY}-${randomUUID()}`;
@@ -126,8 +334,9 @@ export async function handleHpiCaptureRequest(
     value: historyFindingValue(
       complaints,
       definitions,
-      parsed.data.reviewOfSystems,
-      parsed.data.reviewAttestations,
+      parsed.data.reviewOfSystems ?? [],
+      parsed.data.reviewAttestations ?? [],
+      templateAnswers,
     ),
     sourceType: "manual",
     performerReferences: [staff.staffReference],
@@ -155,7 +364,12 @@ export async function handleHpiCaptureRequest(
   }
   const identifierValue = encounterId;
   const canonical = chooseCanonicalHistory(liveHistory, identifierValue);
-  const observation = historyObservationForUpsert(captured.observation, canonical, identifierValue);
+  const observation = historyObservationForUpsert(
+    captured.observation,
+    canonical,
+    identifierValue,
+    parsed.data.reviewOfSystems === undefined && parsed.data.reviewAttestations === undefined,
+  );
   const observationFullUrl = "urn:uuid:hpi-observation";
   const observationTarget = canonical?.id ? `Observation/${canonical.id}` : observationFullUrl;
   const activityCode = canonical ? "UPDATE" : "CREATE";
@@ -163,7 +377,7 @@ export async function handleHpiCaptureRequest(
     ...captured.provenance,
     activity: odosConcept(activityCode, [
       "Capture presenting complaints, history narrative, and review of systems",
-      ...parsed.data.reviewAttestations.map((group) => `${group} remaining items reviewed negative`),
+      ...(parsed.data.reviewAttestations ?? []).map((group) => `${group} remaining items reviewed negative`),
     ].join("; ")),
     target: [
       reference(observationTarget),
@@ -181,6 +395,30 @@ export async function handleHpiCaptureRequest(
         ...(duplicate.meta?.versionId ? { ifMatch: `W/\"${duplicate.meta.versionId}\"` } : {}),
       },
     }));
+  const answerBundle = await staff.fhir.search<Observation>("Observation", {
+    encounter: parsed.data.encounterReference,
+    code: `${HISTORY_ANSWER_CODE_SYSTEM}|${HISTORY_ANSWER_CODE}`,
+    _count: "500",
+  });
+  if (answerBundle.link?.some((link) => link.relation === "next")) {
+    throw new Error("History answer upsert found more Observations than it can safely reconcile.");
+  }
+  const existingAnswers = new Map((answerBundle.entry ?? []).flatMap((entry) => {
+    const candidate = entry.resource;
+    if (!candidate?.id || candidate.status === "entered-in-error" || candidate.status === "cancelled" || !isHistoryAnswerObservation(candidate)) return [];
+    return [[parseHistoryAnswerObservation(candidate).id, candidate] as const];
+  }));
+  const answerEntries = templateAnswers.map((answer, index) => {
+    const existing = existingAnswers.get(answer.id);
+    const resource = buildHistoryAnswerObservation(answer, {
+      patientReference: parsed.data.patientReference,
+      encounterReference: parsed.data.encounterReference,
+      recordedAt,
+    }, existing);
+    return existing?.id
+      ? { resource, request: { method: "PUT" as const, url: `Observation/${existing.id}`, ...(existing.meta?.versionId ? { ifMatch: `W/\"${existing.meta.versionId}\"` } : {}) } }
+      : { fullUrl: `urn:uuid:hpi-answer-${index}`, resource, request: { method: "PUT" as const, url: `Observation?identifier=${resource.identifier?.[0]?.system}|${answer.id}` } };
+  });
   const transactionRequest: Bundle = {
     resourceType: "Bundle",
     type: "transaction",
@@ -204,6 +442,7 @@ export async function handleHpiCaptureRequest(
           },
       { fullUrl: "urn:uuid:hpi-provenance", resource: provenanceResource, request: { method: "POST", url: "Provenance" } },
       ...duplicateEntries,
+      ...answerEntries,
     ],
   };
   const transaction = await staff.fhir.executeTransaction(transactionRequest, {
@@ -215,6 +454,14 @@ export async function handleHpiCaptureRequest(
     ? `Observation/${canonical.id}`
     : transactionResourceReference(transaction, 0, "Observation");
   const provenanceReference = transactionResourceReference(transaction, 1, "Provenance");
+  const answerStartIndex = 2 + duplicateEntries.length;
+  const savedAnswers = templateAnswers.map((answer, index) => {
+    const existing = existingAnswers.get(answer.id);
+    const observationReference = existing?.id
+      ? `Observation/${existing.id}`
+      : transactionResourceReference(transaction, answerStartIndex + index, "Observation");
+    return { ...answer, observationReference };
+  });
   return {
     status: 200,
     body: {
@@ -224,6 +471,8 @@ export async function handleHpiCaptureRequest(
         complaint,
         definitions.find((candidate) => candidate.stableKey === complaint.complaintKey),
       )),
+      templateNarratives: templateNarratives(complaints, templateAnswers),
+      answers: savedAnswers,
       ...(provenanceReference ? { provenanceReference } : {}),
     },
   };
@@ -251,6 +500,7 @@ function historyObservationForUpsert(
   captured: Observation,
   existing: Observation | undefined,
   identifierValue: string,
+  preserveReviewOfSystems: boolean,
 ): Observation {
   const identifiers = (existing?.identifier ?? []).filter((identifier) =>
     identifier.system !== HPI_OBSERVATION_IDENTIFIER_SYSTEM
@@ -263,6 +513,14 @@ function historyObservationForUpsert(
       ...identifiers,
       { system: HPI_OBSERVATION_IDENTIFIER_SYSTEM, value: identifierValue },
     ],
+    ...(preserveReviewOfSystems && existing
+      ? { component: [
+          ...(captured.component ?? []),
+          ...(existing.component ?? []).filter((component) =>
+            component.code.coding?.some((coding) => coding.code?.startsWith("ROS_"))
+          ),
+        ] }
+      : {}),
   };
 }
 
@@ -274,6 +532,12 @@ function hasHistoryIdentifier(observation: Observation, identifierValue: string)
 
 function historyInstant(observation: Observation): string {
   return observation.effectiveDateTime ?? observation.issued ?? observation.meta?.lastUpdated ?? "";
+}
+
+function aggregateComponent(observation: Observation | undefined, code: string): string | undefined {
+  return observation?.component?.find((component) =>
+    component.code.coding?.some((coding) => coding.code === code)
+  )?.valueString;
 }
 
 function assertSuccessfulTransaction(request: Bundle, response: Bundle): void {
@@ -305,11 +569,13 @@ function historyFindingValue(
   definitions: Awaited<ReturnType<FhirComplaintDefinitionStore["list"]>>,
   reviewOfSystems: z.infer<typeof rosFlagSchema>[],
   reviewAttestations: Array<"eye" | "general">,
+  templateAnswers: HistoryTemplateAnswer[],
 ): Extract<FindingValue, { type: "components" }> {
+  const renderedByComplaint = new Map(templateNarratives(complaints, templateAnswers).map((row) => [row.complaintId, row.narrative]));
   const components: Extract<FindingValue, { type: "components" }>["components"] = complaints.map((complaint) => ({
     code: `HISTORY_COMPLAINT_${complaint.ordinal}`,
     display: complaint.ordinal === 1 ? "Primary complaint history" : `Complaint ${complaint.ordinal} history`,
-    value: renderComplaintNarrative(complaint, definitions.find((candidate) => candidate.stableKey === complaint.complaintKey)),
+    value: renderedByComplaint.get(complaint.id) ?? renderComplaintNarrative(complaint, definitions.find((candidate) => candidate.stableKey === complaint.complaintKey)),
   }));
   for (const flag of reviewOfSystems) {
     components.push({ code: `ROS_${snakeCase(flag.code)}`, display: flag.display, value: flag.status });
@@ -322,6 +588,64 @@ function historyFindingValue(
     });
   }
   return { type: "components", components };
+}
+
+function validateTemplateAnswers(answers: HistoryTemplateAnswer[], complaints: EncounterComplaint[]): string | undefined {
+  const complaintById = new Map(complaints.map((complaint) => [complaint.id, complaint]));
+  for (const answer of answers) {
+    const complaint = complaintById.get(answer.complaintId);
+    if (!complaint) return `History answer ${answer.id} names an inactive complaint.`;
+    const template = HISTORY_TEMPLATES.find((candidate) => candidate.complaint === answer.templateKey);
+    if (!template) return `History answer ${answer.id} names an unknown template.`;
+    const complaintTemplate = complaint.templateKey ?? complaint.complaintKey;
+    if (HISTORY_TEMPLATES.some((candidate) => candidate.complaint === complaintTemplate) && complaintTemplate !== answer.templateKey) {
+      return `History answer ${answer.id} does not match its complaint template.`;
+    }
+    if (answer.sectionId === "narrative-override") {
+      if (answer.value.kind !== "text" || !answer.value.text.trim()) return `History answer ${answer.id} has an invalid narrative override.`;
+      continue;
+    }
+    if (answer.sectionId === "presentation") {
+      if (answer.value.kind !== "selection") return `History answer ${answer.id} has an invalid presentation.`;
+      const presentationCode = answer.value.code;
+      if (!HISTORY_OPTION_CATALOGS[template.presentations]?.some((option) => option.code === presentationCode)) {
+        return `History answer ${answer.id} has an invalid presentation.`;
+      }
+      continue;
+    }
+    const section = template.sections.find((candidate) => candidate.id === answer.sectionId);
+    if (!section) return `History answer ${answer.id} names an inactive template section.`;
+    if (answer.optionCode && (!section.catalog || !HISTORY_OPTION_CATALOGS[section.catalog]?.some((option) => option.code === answer.optionCode))) {
+      return `History answer ${answer.id} names an unknown catalog option.`;
+    }
+    const expectedKind = sectionValueKind(section.type);
+    if (answer.value.kind !== expectedKind) return `History answer ${answer.id} has the wrong value type for ${section.type}.`;
+    if (section.catalog && !answer.optionCode) return `History answer ${answer.id} is missing its catalog option.`;
+    if (!section.catalog && answer.optionCode) return `History answer ${answer.id} cannot name a catalog option.`;
+    if (answer.eye && !section.per_eye) return `History answer ${answer.id} cannot name an eye for this section.`;
+  }
+  return undefined;
+}
+
+function sectionValueKind(sectionType: HistoryTemplate["sections"][number]["type"]): HistoryTemplateAnswer["value"]["kind"] {
+  if (sectionType === "symptoms" || sectionType === "quality" || sectionType === "risk_factors" || sectionType === "treatment" || sectionType === "presents_for") return "tri-state";
+  if (sectionType === "presentation") return "selection";
+  return sectionType;
+}
+
+function templateNarratives(
+  complaints: Awaited<ReturnType<FhirEncounterComplaintStore["listByEncounter"]>>,
+  answers: HistoryTemplateAnswer[],
+): Array<{ complaintId: string; narrative: string }> {
+  return complaints.flatMap((complaint) => {
+    const complaintAnswers = answers.filter((answer) => answer.complaintId === complaint.id);
+    const templateKey = complaintAnswers[0]?.templateKey;
+    const template = HISTORY_TEMPLATES.find((candidate) => candidate.complaint === templateKey);
+    return template ? [{
+      complaintId: complaint.id,
+      narrative: renderComplaintNarrative(complaint, undefined, { template, answers: complaintAnswers }),
+    }] : [];
+  });
 }
 
 function validateRos(flags: z.infer<typeof rosFlagSchema>[], definition: ClinicalFindingDefinition): string | undefined {
@@ -359,6 +683,10 @@ function snakeCase(value: string): string {
   return value.replace(/([a-z])([A-Z])/g, "$1_$2").replaceAll("-", "_").toUpperCase();
 }
 
+function normalizePlanText(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
 function staffMay(role: PracticeRoleId, action: "chart.read" | "chart.write"): boolean {
   try {
     assertBusinessActionAllowed(role, action);
@@ -376,4 +704,13 @@ function resourceReference(id: string | undefined, fallbackId: string | undefine
 
 function asRecord(value: unknown): Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function readId(params: unknown, key: string): string | undefined {
+  const value = asRecord(params)[key];
+  return typeof value === "string" && /^[A-Za-z0-9.-]+$/.test(value) ? value : undefined;
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }

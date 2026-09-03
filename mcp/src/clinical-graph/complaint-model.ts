@@ -1,4 +1,9 @@
 import type { ClinicalGraphProvenance } from "./glaucoma-suspect.js";
+import {
+  renderDeclaredComplaintNarrative,
+  type HistoryTemplate,
+  type HistoryTemplateAnswer,
+} from "./history-template-engine.js";
 
 export interface ComplaintOption {
   code: string;
@@ -26,6 +31,7 @@ export interface EncounterComplaint {
   encounterId: string;
   patientId: string;
   ordinal: number;
+  templateKey?: string;
   complaintKey?: string;
   freeTextLabel?: string;
   conditions: string[];
@@ -167,7 +173,9 @@ export function renderComplaintNarrative(
     "referringPhysicianName" | "referringPhysicianRef" | "additionalHistory" | "narrative"
   >,
   definition: ComplaintDefinition | undefined,
+  declared?: { template: HistoryTemplate; answers: HistoryTemplateAnswer[] },
 ): string {
+  if (declared) return renderDeclaredComplaintNarrative(declared.template, declared.answers);
   if (complaint.narrative.mode === "override" && complaint.narrative.overrideText?.trim()) {
     return complaint.narrative.overrideText.trim();
   }
