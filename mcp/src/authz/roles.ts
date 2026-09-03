@@ -494,6 +494,11 @@ const DIAGNOSIS_PICK_TALLY_WRITE_RULE: OdosResourceRule = {
 const CHART_BASIC_RESOURCE_RULES = [
   "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-encounter-complaint|odos-encounter-complaint",
   "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-finding-section-group|odos-encounter-section-override",
+  // The per-encounter Undo ledger, written by every clear in the void's own transaction and read
+  // back by the strip. Anyone who may clear (Provider, Staff) must be able to write the slot.
+  // Missing until 2026-09-02: the ledger POST was refused 403 on every clear and no row ever
+  // existed. Guarded by encounterUndoLedgerAuthzLive.test.ts on real Medplum, not by a list check.
+  "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-encounter-undo-ledger|odos-encounter-undo-ledger",
 ].flatMap((criteria): OdosResourceRule[] => [
   {
     resourceType: "Basic",

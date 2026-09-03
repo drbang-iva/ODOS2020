@@ -142,6 +142,18 @@ jobs:
           MEDPLUM_CONTRACT_BOOTSTRAP: "1"
           ODOS_PRELIMINARY_OBSERVATION_AUTHZ_ONLY: "1"
         run: node --import tsx --test --test-concurrency=1 tests/clinicalWriteAuthzLive.test.ts
+      # BLOCKING: the encounter Undo ledger is a `Basic` no practice-role policy granted until
+      # 2026-09-02, so every clear's ledger write was refused 403 and undo never persisted a slot.
+      # No in-memory fake can see that; this lane performs a real clear as Provider and as Staff
+      # against the synced policies and asserts the ledger row exists and reads back.
+      - name: enforce encounter undo ledger authorization on real Medplum
+        working-directory: mcp
+        env:
+          MEDPLUM_BASE_URL: http://localhost:18103/
+          MEDPLUM_ADMIN_EMAIL: contract-admin@odos.local
+          MEDPLUM_ADMIN_PASSWORD: Odos-contract-CI-Password-1!
+          MEDPLUM_CONTRACT_BOOTSTRAP: "1"
+        run: node --import tsx --test --test-concurrency=1 tests/encounterUndoLedgerAuthzLive.test.ts
       - name: run credentialed live authorization lane
         # NON-BLOCKING: the harness cannot yet run these tests under a constrained identity.
         # Four causes were traced on 2026-09-01: the lane lacked a Medplum project id;
