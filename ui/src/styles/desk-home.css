@@ -146,6 +146,7 @@
 .odos-dock { position: fixed; right: 0; top: 50%; z-index: 30; transform: translateY(-50%); overflow: hidden; border: 1px solid var(--odos-line-2); border-right: 0; border-radius: 16px 0 0 16px; background: rgba(13,18,33,.9); }
 .odos-dock nav { border: 0; background: transparent; }
 .odos-cockpit-panel { top: 50%; right: 60px; width: min(380px, calc(100vw - 76px)); height: min(820px, calc(100vh - 32px)); border-radius: 28px; visibility: hidden; pointer-events: none; transform: translate3d(calc(100% + 60px), -50%, 0); transition: transform 240ms cubic-bezier(.25,.9,.3,1), visibility 0s linear 240ms; }
+.odos-cockpit-panel.odos-cockpit-panel-document { width: min(720px, calc(100vw - 76px)); }
 .odos-cockpit-panel.is-open { visibility: visible; pointer-events: auto; transform: translate3d(0, -50%, 0); transition-delay: 0s; }
 .odos-cockpit-panel.is-floating { transform: translate3d(var(--odos-cockpit-panel-x), calc(-50% + var(--odos-cockpit-panel-y)), 0); transition: none; }
 .odos-scrim { position: fixed; inset: 0; z-index: 40; border: 0; background: rgba(5,8,16,.6); opacity: 0; pointer-events: none; transition: opacity 260ms; }

@@ -29,7 +29,7 @@ export async function triageInboundFax(
 export async function openInboundFaxDocument(
   documentUrl: string,
   fetchImpl: typeof fetch = fetch,
-): Promise<void> {
+): Promise<string> {
   if (!isSameOriginDocumentUrl(documentUrl)) {
     throw new Error("Inbound fax document URL must be same-origin.");
   }
@@ -45,12 +45,8 @@ export async function openInboundFaxDocument(
     throw new Error(result.error ?? `Inbound fax document failed with HTTP ${response.status}.`);
   }
   const objectUrl = URL.createObjectURL(await response.blob());
-  const link = document.createElement("a");
-  link.href = objectUrl;
-  link.target = "_blank";
-  link.rel = "noopener noreferrer";
-  link.click();
   window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+  return objectUrl;
 }
 
 function isSameOriginDocumentUrl(documentUrl: string): boolean {
