@@ -1,0 +1,62 @@
+[
+  {
+    "mode": "fetch",
+    "method": "GET",
+    "path": "/communications/opt-out?patient=Patient%2Fsynthetic-proxy",
+    "status": 401,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "error": "Authentication required for patient communications."
+    }
+  },
+  {
+    "mode": "fetch",
+    "method": "GET",
+    "path": "/communications/education",
+    "status": 401,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "error": "Authentication required for patient communications."
+    }
+  },
+  {
+    "mode": "fetch",
+    "method": "POST",
+    "path": "/communications/messages",
+    "status": 401,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "error": "Authentication required for patient communications."
+    }
+  },
+  {
+    "mode": "navigation",
+    "method": "GET",
+    "path": "/communications/opt-out?patient=Patient%2Fsynthetic-proxy",
+    "status": 401,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "error": "Authentication required for patient communications."
+    }
+  },
+  {
+    "mode": "navigation",
+    "method": "GET",
+    "path": "/communications/education",
+    "status": 401,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "error": "Authentication required for patient communications."
+    }
+  },
+  {
+    "mode": "navigation",
+    "method": "POST",
+    "path": "/communications/messages",
+    "status": 401,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "error": "Authentication required for patient communications."
+    }
+  }
+]

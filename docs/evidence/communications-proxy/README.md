@@ -1,0 +1,7 @@
+# Communications proxy proof
+
+Captured on 2026-09-03 from the isolated `claude/communications-proxy-fix` worktree at base `ba210ccfcb93a5d9023df6e84579e35acc291150`. Vite ran on `127.0.0.1:26173`; its MCP target was a local Express server on `127.0.0.1:24333` that mounted the real `registerCommsApiRoutes` handler with `authenticateService` succeeding and `authenticate` returning `null`. A distinguishable JSON catch-all verified the backend harness. No practice data or credentials were used.
+
+Before the proxy entry, the two GET call sites (`/communications/opt-out` and `/communications/education`) returned the SPA shell as `200 text/html` under both fetch and browser-navigation headers. `POST /communications/messages` returned an empty `404` under both header profiles. `before.json` records those six results; the pre-fix assertion that `/communications/opt-out` should reach the handler failed with `200 !== 401`.
+
+After adding the plain `/communications` proxy entry, all six requests reached `registerCommsApiRoutes` and returned its real `401 application/json` response: `{"error":"Authentication required for patient communications."}`. The unregistered backend control returned `404 application/json` with `{"marker":"real-backend-catch-all"}`, distinguishing handler responses from fallback behavior. This proves routing and content type for unauthenticated requests; it does not prove authenticated communications behavior.
