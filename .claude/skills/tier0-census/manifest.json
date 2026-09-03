@@ -1,0 +1,4 @@
+{
+  "_schema": "Tier 0 dead-control census manifest. See SKILL.md for the mechanism this backs. Phase 1 (current) tracks route-level coverage only: each entry marks one route as reviewed. Phase 2 (not yet built — needs the seeded-stack UI login wired into the crawl) will replace `routes` with per-control entries shaped { route, precondition, control, expectedEffect }, matching decisions/2026-09-02-odos-wiring-verification-loop-design.md. The anti-rot rule is the entire point of this file: a route App.tsx's RouteSwitch serves that has no entry here is itself a reported finding — see check-manifest.mjs. Do not pre-fill entries to make the report look clean; an entry means a human or agent actually walked that route and is asserting it isn't a dead surface.",
+  "routes": []
+}
