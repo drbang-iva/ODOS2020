@@ -1,0 +1,16 @@
+Server state in the contract lane (Medplum 5.1.8, Project/c47e35d9-af80-4581-a925-0050983b5134)
+read as the seeded super admin immediately after the undo subtests were refused.
+Roles.ts carried the undo-ledger grant and the policies were synced (Policies updated: 3).
+
+undo-ledger rows in lane project: 2
+  Basic/e855e845-6bcb-4485-a66d-cf3f6da13c8a subject=Encounter/3c1c0ff6-44e7-4d38-a811-cc9661e20815 version=d19a570f-c66a-4424-81a0-92f527fc2538 ledger={"encounter":null,"sections":{}}
+  Basic/b86aac96-9401-42e0-96b1-4f3e9daff191 subject=Encounter/a89a1fc4-dfa8-4d63-b667-e35bd3522497 version=fad77f0c-816d-4d12-ae71-49daab805a58 ledger={"encounter":null,"sections":{}}
+  Observation/13055579-c1cc-4e8c-8bcb-9d895170b607 status=entered-in-error version=55f54760-da19-413a-8e79-26771f026437
+  Observation/d7b2c04d-6dce-4466-b71e-95c10c30cc74 status=entered-in-error version=efeea592-5391-4e3c-ac02-7950f4defdc0
+
+Reading: the clear wrote the slot (the clear-phase assertions passed). The undo's transaction was
+  entry 0 PUT Observation (restore entered-in-error -> preliminary)  -> HTTP 403 refused
+  entry 1 POST Provenance RESTORE                                     -> accepted, rolled back by the client
+  entry 2 PUT Encounter (version-guarded)                             -> applied
+  entry 3 PUT Basic ledger (slot cleared)                             -> applied
+so after a refused undo the slot is gone and the value is still voided: a failed undo consumes the undo.
