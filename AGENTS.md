@@ -52,7 +52,7 @@ from `origin/main` would evaluate the wrong code.
 4. **Ship.** Open the PR with the evidence embedded in the description — a screenshot or recording
    when the change has a visible surface, measured before/after numbers when it doesn't. Use
    `/before-and-after` (`.claude/skills/before-and-after/`) to attach and place the evidence —
-   capture with Playwright against the disposable stack, then let the skill's `format.mjs`
+   capture with Playwright against the disposable stack, then let the skill's `pr-body.mjs`
    insert or replace the `<!-- before-and-after:start/end -->` block without touching the rest
    of the PR body. Then work the review to **5/5 with zero unresolved comments**, and do not
    hand over a PR below that.
