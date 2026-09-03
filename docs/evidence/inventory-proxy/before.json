@@ -1,0 +1,34 @@
+[
+  {
+    "mode": "fetch",
+    "method": "POST",
+    "path": "/inventory/frame-units/synthetic-proxy-unit/adjustments",
+    "status": 404,
+    "contentType": null,
+    "bodyStart": ""
+  },
+  {
+    "mode": "navigation",
+    "method": "POST",
+    "path": "/inventory/frame-units/synthetic-proxy-unit/adjustments",
+    "status": 404,
+    "contentType": null,
+    "bodyStart": ""
+  },
+  {
+    "mode": "fetch-control",
+    "method": "GET",
+    "path": "/inventory/frame-units/synthetic-proxy-unit/adjustments",
+    "status": 200,
+    "contentType": "text/html",
+    "bodyStart": "<!DOCTYPE html>\n<html lang=\"en\">\n  <head>\n    <script type=\"module\">import { injectIntoGlobalHook } "
+  },
+  {
+    "mode": "navigation-control",
+    "method": "GET",
+    "path": "/inventory/frame-units/synthetic-proxy-unit/adjustments",
+    "status": 200,
+    "contentType": "text/html",
+    "bodyStart": "<!DOCTYPE html>\n<html lang=\"en\">\n  <head>\n    <script type=\"module\">import { injectIntoGlobalHook } "
+  }
+]
