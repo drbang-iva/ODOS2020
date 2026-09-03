@@ -645,7 +645,7 @@ export async function suggestInboundFaxPatient(
       .flatMap((resource) =>
         resource.id ? [`${resource.resourceType}/${resource.id}`] : []),
   );
-  if (senderName) {
+  if (senderName && !referrerReferences.size) {
     const params = { name: senderName.replace(/[\\,$|]/g, "\\$&"), _count: "200" };
     const [namedPractitioners, organizations] = await Promise.all([
       // HumanName search indexes name parts; whole-name equality is checked locally below.

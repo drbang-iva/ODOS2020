@@ -5,6 +5,7 @@ import { tsImport } from "tsx/esm/api";
 const { getWestFaxInboundDescriptions, westFaxInboundLookbackDays, WESTFAX_BASE_URL } =
   await tsImport("../src/fax/westfax-adapter.ts", import.meta.url);
 
+// The repair brief authorizes this operator-run account check; agents use synthetic fetch only.
 export async function verifyWestFaxLive(env, fetchImpl = fetch) {
   const required = ["WESTFAX_USERNAME", "WESTFAX_PASSWORD", "WESTFAX_PRODUCT_ID"];
   if (required.some((name) => !env[name]?.trim())) {

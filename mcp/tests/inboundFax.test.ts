@@ -160,6 +160,31 @@ test("CSID person lookup searches a HumanName part before confirming the whole n
   assert.deepEqual(result, { reference: "Patient/patient-1" });
 });
 
+test("an existing fax-number referrer is not suppressed by a truncated CSID name lookup", async () => {
+  const queries: string[] = [];
+  const result = await suggestInboundFaxPatient({
+    search: async <T extends Resource>(type: T["resourceType"], params: Record<string, string> = {}) => {
+      if (params.name) {
+        queries.push(type);
+        return bundle([], 201) as Bundle<T>;
+      }
+      if (type === "Practitioner") {
+        return bundle([{ resourceType: "Practitioner", id: "phone-referrer", telecom: [{ system: "fax", value: "8645550199" }] }], 1) as Bundle<T>;
+      }
+      if (type === "ServiceRequest") {
+        assert.equal(params.requester, "Practitioner/phone-referrer");
+        return bundle([{ ...inboundReferral("referral-1", "prior-fax", "Patient/patient-1"),
+          category: [{ coding: [{ system: REFERRAL_DIRECTION_CODE_SYSTEM, code: "inbound" }] }],
+          requester: { reference: "Practitioner/phone-referrer" },
+        }], 1) as Bundle<T>;
+      }
+      return bundle([], 0) as Bundle<T>;
+    },
+  }, "8645550199", "Common Name");
+  assert.deepEqual(result, { reference: "Patient/patient-1" });
+  assert.deepEqual(queries, []);
+});
+
 test("a recording failure is loud, repeat-surfaced, and never marked Retrieved", async () => {
   const fhir = new InboundFaxFhir();
   fhir.failDocumentCreates = true;
