@@ -57,6 +57,7 @@ function loadManifest(warnings) {
 export function normalizeManifestEntries(rawEntries, warnings) {
   const seenRoutes = new Map(); // route -> first entry's status
   const duplicates = new Set();
+  const conflicts = new Set();
   const malformed = [];
   const reviewed = new Set();
 
@@ -67,6 +68,7 @@ export function normalizeManifestEntries(rawEntries, warnings) {
     }
     if (seenRoutes.has(entry.route)) {
       duplicates.add(entry.route);
+      if (seenRoutes.get(entry.route) !== entry.status) conflicts.add(entry.route);
     } else {
       seenRoutes.set(entry.route, entry.status);
     }
@@ -77,6 +79,11 @@ export function normalizeManifestEntries(rawEntries, warnings) {
     } else if (entry.status !== "reviewed") {
       warnings.push(`Manifest entry for "${entry.route}" has status "${entry.status}", not "reviewed" — not counted as coverage.`);
     }
+  }
+
+  for (const route of conflicts) reviewed.delete(route);
+  if (conflicts.size > 0) {
+    warnings.push(`${conflicts.size} route(s) have conflicting statuses — treated as unreviewed until the entries agree: ${[...conflicts].join(", ")}`);
   }
 
   if (malformed.length > 0) {

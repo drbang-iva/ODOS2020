@@ -55,13 +55,15 @@ tool saying so.
 - **`scripts/check-manifest.mjs`** — runs discovery, diffs against the manifest, reports unlisted
   routes (in the app, not in the manifest, or listed with a non-`"reviewed"` status) and stale
   entries (in the manifest, no longer in the app). Duplicate or malformed manifest entries are
-  reported as their own warnings and never inflate the coverage count. Always exits 0 —
+  reported as their own warnings and never inflate the coverage count. Conflicting statuses for
+  one route leave that route unreviewed, regardless of entry order, until the entries agree. Always exits 0 —
   **advisory only**, per the design's "Advisory first, always" rule, even on a malformed
   `manifest.json` or a reformatted `RouteSwitch`. Run from the repo root:
   `node .claude/skills/tier0-census/scripts/check-manifest.mjs`.
-- **`scripts/self-test.mjs`** — unit tests against synthetic fixtures (never touches the real
-  `App.tsx` or `manifest.json`), locking in three defects an independent evaluation and Greptile
-  both caught in the first version. Run after touching either script:
+- **`scripts/self-test.mjs`** — unit tests and subprocess checks using the real scripts copied
+  into disposable directories (never touches the real `App.tsx` or `manifest.json`). Checks
+  findings and process exit codes, including invalid JSON and unexpected discovery read errors;
+  removes its temporary directories afterward. Run after touching either script:
   `node .claude/skills/tier0-census/scripts/self-test.mjs`.
 
 ## How to use it
