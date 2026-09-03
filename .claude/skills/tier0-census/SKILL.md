@@ -44,19 +44,29 @@ tool saying so.
   extracts every route it serves, resolving named path constants (`DESK_HOME_PATH`, `CLINIC_PATH`,
   `CLINIC_PATIENTS_PATH`) back to their literal string by grepping their `const` definitions under
   `ui/src`. No hand-maintained route list — if `RouteSwitch` changes, discovery changes with it.
-  Run standalone: `node scripts/discover-routes.mjs` (or `--json` for machine output).
+  Run standalone from the repo root: `node .claude/skills/tier0-census/scripts/discover-routes.mjs`
+  (or `--json` for machine output), or `cd .claude/skills/tier0-census && node
+  scripts/discover-routes.mjs` if you're already in the skill directory — the paths below are
+  written for the repo-root form since that's how CI and most agents will invoke this.
 - **`manifest.json`** — checked-in, one entry per reviewed route: `{ "route": "...", "status":
   "reviewed" }`. **Ships empty.** Do not pre-populate it to make a report look clean — an entry
   means someone (or an agent) actually walked that route and is vouching for it. As of this
   writing that's 0 of 49 routes; the honest first report says exactly that.
 - **`scripts/check-manifest.mjs`** — runs discovery, diffs against the manifest, reports unlisted
-  routes (in the app, not in the manifest) and stale entries (in the manifest, no longer in the
-  app). Always exits 0 — **advisory only**, per the design's "Advisory first, always" rule. Run:
-  `node scripts/check-manifest.mjs`.
+  routes (in the app, not in the manifest, or listed with a non-`"reviewed"` status) and stale
+  entries (in the manifest, no longer in the app). Duplicate or malformed manifest entries are
+  reported as their own warnings and never inflate the coverage count. Always exits 0 —
+  **advisory only**, per the design's "Advisory first, always" rule, even on a malformed
+  `manifest.json` or a reformatted `RouteSwitch`. Run from the repo root:
+  `node .claude/skills/tier0-census/scripts/check-manifest.mjs`.
+- **`scripts/self-test.mjs`** — unit tests against synthetic fixtures (never touches the real
+  `App.tsx` or `manifest.json`), locking in three defects an independent evaluation and Greptile
+  both caught in the first version. Run after touching either script:
+  `node .claude/skills/tier0-census/scripts/self-test.mjs`.
 
 ## How to use it
 
-1. Run `node scripts/check-manifest.mjs` from the repo root (or any worktree).
+1. Run `node .claude/skills/tier0-census/scripts/check-manifest.mjs` from the repo root.
 2. Pick an unlisted route. Load it in the running app, exercise what's on it.
 3. If it's wired correctly, add `{ "route": "<path>", "status": "reviewed" }` to `manifest.json`.
    If you find a genuinely dead or broken control, file it the normal way (an issue, a decision
@@ -91,7 +101,7 @@ honestly instead.
 ```
 Tier 0 dead-control census — 49 route(s) discovered, 0 manifest entries.
 
-49 route(s) served by the app with NO manifest entry (unreviewed — advisory finding, not a failure):
+49 route(s) served by the app with NO reviewed manifest entry (unreviewed — advisory finding, not a failure):
   ? /audit/log
   ? /billing/today
   ... (47 more)
