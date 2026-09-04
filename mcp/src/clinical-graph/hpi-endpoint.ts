@@ -30,6 +30,7 @@ import {
   activeTemplateSections,
   type HistoryTemplate,
   type HistoryTemplateAnswer,
+  type HistorySubjectSection,
 } from "./history-template-engine.js";
 import {
   captureGlaucomaFinding,
@@ -315,14 +316,14 @@ export async function handleHistoryReviewRequest(
     return answer.subjectScope === "patient" && answer.templateKey === declaration.key;
   });
   if (currentSectionAnswers.length > 0) {
-    return { status: 409, body: { error: "Ocular History was edited on this encounter; a no-change review cannot also be recorded." } };
+    return { status: 409, body: { error: `${declaration.label} was edited on this encounter; a no-change review cannot also be recorded.` } };
   }
   const carried = derivePatientCarryForwardAnswers(
     historyAnswers,
     parsed.data.encounterReference,
     parsed.data.patientReference,
   ).filter((row) => row.answer.templateKey === declaration.key);
-  if (carried.length === 0) return { status: 400, body: { error: "There is no prior Ocular History to review." } };
+  if (carried.length === 0) return { status: 400, body: { error: `There is no prior ${declaration.label} to review.` } };
 
   const existingBundle = await staff.fhir.search<Observation>("Observation", {
     encounter: parsed.data.encounterReference,
@@ -913,16 +914,9 @@ function validateTemplateAnswers(answers: HistoryTemplateAnswer[], complaints: E
       );
       if (!declaration) return `History answer ${answer.id} names an unknown subject-scoped section.`;
       const section = declaration.sections.find((candidate) => candidate.id === answer.sectionId);
-      if (!section?.catalog || !answer.optionCode) return `History answer ${answer.id} names an inactive subject section.`;
-      const option = HISTORY_OPTION_CATALOGS[section.catalog]?.find((candidate) => candidate.code === answer.optionCode);
-      if (!option) return `History answer ${answer.id} names an unknown catalog option.`;
-      if (answer.value.kind !== "tri-state") return `History answer ${answer.id} has the wrong value type for ${section.type}.`;
-      if (answer.value.note !== undefined && option.note_on_positive !== true) {
-        return `History answer ${answer.id} names an option that does not allow notes.`;
-      }
-      const perEye = option.per_eye === true;
-      if (perEye && !answer.eye) return `History answer ${answer.id} requires an eye for this option.`;
-      if (!perEye && answer.eye) return `History answer ${answer.id} cannot name an eye for this option.`;
+      if (!section) return `History answer ${answer.id} names an inactive subject section.`;
+      const sectionError = validateSubjectSectionAnswer(answer, section);
+      if (sectionError) return sectionError;
       continue;
     }
     const complaint = complaintById.get(answer.complaintId);
@@ -967,8 +961,44 @@ function validateTemplateAnswers(answers: HistoryTemplateAnswer[], complaints: E
 
 function sectionValueKind(sectionType: HistoryTemplate["sections"][number]["type"]): HistoryTemplateAnswer["value"]["kind"] {
   if (sectionType === "symptoms" || sectionType === "quality" || sectionType === "risk_factors" || sectionType === "treatment" || sectionType === "presents_for") return "tri-state";
-  if (sectionType === "presentation") return "selection";
+  if (sectionType === "presentation" || sectionType === "single_select") return "selection";
   return sectionType;
+}
+
+function validateSubjectSectionAnswer(
+  answer: HistoryTemplateAnswer,
+  section: HistorySubjectSection["sections"][number],
+): string | undefined {
+  const expectedKind = sectionValueKind(section.type);
+  if (answer.value.kind !== expectedKind) return `History answer ${answer.id} has the wrong value type for ${section.type}.`;
+  if (section.type === "single_select") {
+    if (answer.value.kind !== "selection") {
+      return `History answer ${answer.id} has an invalid selection for ${section.type}.`;
+    }
+    if (!section.catalog || answer.optionCode || answer.eye) {
+      return `History answer ${answer.id} has an invalid selection for ${section.type}.`;
+    }
+    const selectionCode = answer.value.code;
+    if (!HISTORY_OPTION_CATALOGS[section.catalog]?.some((option) => option.code === selectionCode)) {
+      return `History answer ${answer.id} has an invalid selection for ${section.type}.`;
+    }
+    return undefined;
+  }
+  if (!section.catalog) {
+    if (answer.optionCode) return `History answer ${answer.id} cannot name a catalog option.`;
+    if (answer.eye) return `History answer ${answer.id} cannot name an eye for this section.`;
+    return undefined;
+  }
+  if (!answer.optionCode) return `History answer ${answer.id} is missing its catalog option.`;
+  const option = HISTORY_OPTION_CATALOGS[section.catalog]?.find((candidate) => candidate.code === answer.optionCode);
+  if (!option) return `History answer ${answer.id} names an unknown catalog option.`;
+  if (answer.value.kind === "tri-state" && answer.value.note !== undefined && option.note_on_positive !== true) {
+    return `History answer ${answer.id} names an option that does not allow notes.`;
+  }
+  const perEye = option.per_eye ?? section.per_eye ?? false;
+  if (perEye && !answer.eye) return `History answer ${answer.id} requires an eye for this option.`;
+  if (!perEye && answer.eye) return `History answer ${answer.id} cannot name an eye for this option.`;
+  return undefined;
 }
 
 function templateNarratives(

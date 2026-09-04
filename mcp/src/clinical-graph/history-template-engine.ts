@@ -11,6 +11,7 @@ export const HISTORY_SECTION_TYPES = [
   "interval",
   "laterality",
   "text",
+  "single_select",
 ] as const;
 
 export type HistorySectionType = typeof HISTORY_SECTION_TYPES[number];
@@ -111,6 +112,41 @@ export const HISTORY_OPTION_CATALOGS: Record<string, HistoryCatalogOption[]> = {
     ["strabismus-surgery", "Strabismus surgery", false],
     ["other", "Other ocular surgery", true],
   ]),
+  medical_history_conditions: options([
+    ["anxiety-disorder", "Anxiety disorder"],
+    ["depressive-disorder", "Depressive disorder"],
+    ["diabetes-mellitus", "Diabetes mellitus"],
+    ["hypertension", "Hypertension"],
+    ["hypercholesterolemia", "Hypercholesterolemia"],
+    ["thyroid-disease", "Thyroid disease"],
+  ]),
+  medical_history_ophthalmic_medications: options([
+    ["miebo-pf", "Miebo (PF)"],
+    ["tryptyr", "Tryptyr"],
+  ]),
+  medical_history_systemic_medications: options([
+    ["ibuprofen-800-mg", "ibuprofen 800 mg"],
+    ["valtrex-1-g", "Valtrex 1 g"],
+  ]),
+  medical_history_allergies: options([
+    ["no-known-drug-allergies", "No known drug allergies"],
+  ]),
+  tobacco_status: options([
+    ["never", "Never"],
+    ["former-smoker", "Former smoker"],
+    ["current", "Current"],
+  ]),
+  social_history_driving: options([
+    ["drives-in-daytime", "Drives in daytime"],
+    ["drives-at-night", "Drives at night"],
+  ]),
+  social_history_alcohol_drugs: options([
+    ["alcohol-use", "Alcohol use"],
+    ["recreational-drugs", "Recreational drugs"],
+  ]),
+  social_history_home_safety: options([
+    ["does-not-feel-safe-at-home", "Does not feel safe at home"],
+  ]),
 };
 
 export interface HistoryTemplateSection {
@@ -141,16 +177,43 @@ export interface HistorySubjectSection {
   sections: HistoryTemplateSection[];
 }
 
-export const HISTORY_SUBJECT_SECTIONS: HistorySubjectSection[] = [{
-  key: "ocular-history",
-  label: "Ocular History",
-  subjectScope: "patient",
-  completionAnchor: "conditions",
-  sections: [
-    section("conditions", "risk_factors", "Conditions", { catalog: "ocular_history_conditions", required: true }),
-    section("surgeries", "risk_factors", "Surgeries", { catalog: "ocular_history_surgeries", required: true }),
-  ],
-}];
+export const HISTORY_SUBJECT_SECTIONS: HistorySubjectSection[] = [
+  {
+    key: "ocular-history",
+    label: "Ocular History",
+    subjectScope: "patient",
+    completionAnchor: "conditions",
+    sections: [
+      section("conditions", "risk_factors", "Conditions", { catalog: "ocular_history_conditions", required: true }),
+      section("surgeries", "risk_factors", "Surgeries", { catalog: "ocular_history_surgeries", required: true }),
+    ],
+  },
+  {
+    key: "medical-history",
+    label: "Medical History",
+    subjectScope: "patient",
+    completionAnchor: "conditions",
+    sections: [
+      section("conditions", "risk_factors", "Conditions", { catalog: "medical_history_conditions", required: true }),
+      section("ophthalmic-medications", "treatment", "Ophthalmic medications", { catalog: "medical_history_ophthalmic_medications", per_eye: true, required: true }),
+      section("systemic-medications", "treatment", "Systemic medications", { catalog: "medical_history_systemic_medications", per_eye: false, required: true }),
+      section("allergies", "risk_factors", "Allergies", { catalog: "medical_history_allergies", required: true }),
+    ],
+  },
+  {
+    key: "social-history",
+    label: "Social History",
+    subjectScope: "patient",
+    completionAnchor: "tobacco",
+    sections: [
+      section("tobacco", "single_select", "Tobacco", { catalog: "tobacco_status", required: true }),
+      section("driving", "risk_factors", "Driving", { catalog: "social_history_driving", required: true }),
+      section("alcohol-drugs", "risk_factors", "Alcohol · Drugs", { catalog: "social_history_alcohol_drugs", required: true }),
+      section("occupation", "text", "Occupation"),
+      section("home-safety", "risk_factors", "Home safety", { catalog: "social_history_home_safety", required: true }),
+    ],
+  },
+];
 
 export const HISTORY_TEMPLATES: HistoryTemplate[] = [
   {

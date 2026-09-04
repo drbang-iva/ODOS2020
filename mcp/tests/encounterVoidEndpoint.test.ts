@@ -409,6 +409,67 @@ test("Ocular History section clear voids only this encounter's patient answers a
   assert.equal(fhir.get<Observation>("Observation", "prior-glaucoma-observation").status, "preliminary");
 });
 
+test("Medical and Social History section clears use the shared VOID path with clinical labels", async () => {
+  const cases = [
+    {
+      sectionKey: "medical-history",
+      label: "Medical History",
+      answer: {
+        id: "today-diabetes",
+        subjectScope: "patient" as const,
+        templateKey: "medical-history",
+        sectionId: "conditions",
+        optionCode: "diabetes-mellitus",
+        value: { kind: "tri-state" as const, status: "positive" as const },
+      },
+    },
+    {
+      sectionKey: "social-history",
+      label: "Social History",
+      answer: {
+        id: "today-tobacco",
+        subjectScope: "patient" as const,
+        templateKey: "social-history",
+        sectionId: "tobacco",
+        value: { kind: "selection" as const, code: "former-smoker" },
+      },
+    },
+  ];
+  for (const row of cases) {
+    const { deps, fhir } = fixture();
+    fhir.add({
+      ...buildHistoryAnswerObservation(row.answer, {
+        patientReference: PATIENT,
+        encounterReference: ENCOUNTER,
+        recordedAt: NOW,
+      }),
+      id: `${row.answer.id}-observation`,
+    });
+    fhir.add({
+      ...buildHistoryReviewAttestation({
+        patientReference: PATIENT,
+        encounterReference: ENCOUNTER,
+        sectionKey: row.sectionKey,
+        actorReference: "Practitioner/doc1",
+        recordedAt: NOW,
+        priorAnswerReferences: [],
+      }),
+      id: `${row.sectionKey}-review`,
+    });
+
+    const result = await handleEncounterVoidRequest(deps, {
+      authHeader: AUTH,
+      params: { encounterId: "e1" },
+      body: { scope: "section", sectionKey: row.sectionKey },
+    });
+    assert.equal(result.status, 200, JSON.stringify(result.body));
+    const body = result.body as VoidBody;
+    assert.deepEqual(body.sections.map((section) => [section.sectionKey, section.label, section.count]), [
+      [row.sectionKey, row.label, 2],
+    ]);
+  }
+});
+
 test("encounter scope on an empty encounter returns 200 with count 0 and writes nothing", async () => {
   const { deps, fhir } = fixture();
   fhir.add(cvf("prior", "OD", { encounter: { reference: "Encounter/e0" } }));

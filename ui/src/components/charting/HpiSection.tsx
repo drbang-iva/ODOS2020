@@ -8,7 +8,7 @@ import type { SectionSaveStatus } from "./types";
 
 export type HistorySectionType =
   | "presentation" | "symptoms" | "quality" | "severity" | "duration" | "risk_factors"
-  | "treatment" | "numeric" | "presents_for" | "interval" | "laterality" | "text";
+  | "treatment" | "numeric" | "presents_for" | "interval" | "laterality" | "text" | "single_select";
 export type HistoryTriState = "positive" | "negative";
 export type HistoryAnswerValue =
   | { kind: "tri-state"; status: HistoryTriState; note?: string }
@@ -268,7 +268,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
         scope: "observation",
         observationReference,
         sectionKey: answerSectionKey(answer),
-        label: answer.optionCode ?? "History value",
+        label: answer.value.kind === "selection" ? answer.value.code : answer.optionCode ?? "History value",
       });
       persistedAnswerReferences.current.delete(answer.id);
       await queueSave();
@@ -566,8 +566,12 @@ export function HistoryTemplateEditor({
     ? template.sections.filter((section) => !section.on || section.on === presentationCode)
     : [];
 
-  function put(sectionId: string, value: HistoryAnswerValue, optionCode?: string, eye?: "OD" | "OS" | "OU") {
+  function put(sectionId: string, value: HistoryAnswerValue | undefined, optionCode?: string, eye?: "OD" | "OS" | "OU") {
     const prior = answers.find((answer) => answer.sectionId === sectionId && answer.optionCode === optionCode && answer.eye === eye);
+    if (!value) {
+      onChange(undefined, prior);
+      return;
+    }
     onChange({
       id: prior?.id ?? historyAnswerId(complaintId, sectionId, optionCode, eye),
       complaintId,
@@ -638,8 +642,12 @@ export function HistorySubjectSectionEditor({
   onChange: (next: HistoryTemplateAnswer | undefined, prior: HistoryTemplateAnswer | undefined) => void;
   onRemoveTyped: (answer: HistoryTemplateAnswer, label: string) => void;
 }) {
-  function put(sectionId: string, value: HistoryAnswerValue, optionCode?: string, eye?: "OD" | "OS" | "OU") {
+  function put(sectionId: string, value: HistoryAnswerValue | undefined, optionCode?: string, eye?: "OD" | "OS" | "OU") {
     const prior = answers.find((answer) => answer.sectionId === sectionId && answer.optionCode === optionCode && answer.eye === eye);
+    if (!value) {
+      onChange(undefined, prior);
+      return;
+    }
     onChange({
       id: prior?.id ?? subjectHistoryAnswerId(encounterId, declaration.key, sectionId, optionCode, eye),
       subjectScope: declaration.subjectScope,
@@ -678,10 +686,26 @@ function TemplateSection({ section, catalogs, answers, editMode, onTriState, onP
   answers: HistoryTemplateAnswer[];
   editMode: boolean;
   onTriState: (optionCode: string, eye?: "OD" | "OS") => void;
-  onPut: (value: HistoryAnswerValue, optionCode?: string, eye?: "OD" | "OS" | "OU") => void;
+  onPut: (value: HistoryAnswerValue | undefined, optionCode?: string, eye?: "OD" | "OS" | "OU") => void;
   onRemoveTyped: (answer: HistoryTemplateAnswer, label: string) => void;
 }) {
   const answer = answers.find((candidate) => candidate.sectionId === section.id && !candidate.optionCode);
+  if (section.type === "single_select" && section.catalog) {
+    const selectedCode = answer?.value.kind === "selection" ? answer.value.code : undefined;
+    return <TemplateField label={section.label} required={section.required}>
+      <div className="flex flex-wrap gap-2">{(catalogs[section.catalog] ?? []).map((option) => {
+        const selected = selectedCode === option.code;
+        return <button
+          key={option.code}
+          type="button"
+          aria-label={`${option.display}: ${selected ? "selected" : "unselected"}`}
+          aria-pressed={selected}
+          className={chipClass(selected ? "positive" : undefined)}
+          onClick={() => onPut(selected ? undefined : { kind: "selection", code: option.code })}
+        >{option.display}</button>;
+      })}</div>
+    </TemplateField>;
+  }
   if ((section.type === "symptoms" || section.type === "quality" || section.type === "risk_factors" || section.type === "treatment" || section.type === "presents_for") && section.catalog) {
     return <TemplateField label={section.label} required={section.required}>
       <div className="space-y-2">{(catalogs[section.catalog] ?? []).map((option) => <CatalogOptionControl
@@ -726,7 +750,7 @@ function CatalogOptionControl({ section, option, answers, onTriState, onPut }: {
   option: HistoryCatalogs[string][number];
   answers: HistoryTemplateAnswer[];
   onTriState: (optionCode: string, eye?: "OD" | "OS") => void;
-  onPut: (value: HistoryAnswerValue, optionCode?: string, eye?: "OD" | "OS" | "OU") => void;
+  onPut: (value: HistoryAnswerValue | undefined, optionCode?: string, eye?: "OD" | "OS" | "OU") => void;
 }) {
   const perEye = option.per_eye ?? section.per_eye ?? false;
   if (!perEye) {
@@ -802,10 +826,12 @@ function CarriedForwardStrip({ declaration, catalogs, rows, attestation, canRevi
     <p className="text-xs font-semibold uppercase tracking-wider text-sky-200">On this chart · prior encounters</p>
     <ul className="mt-2 space-y-1 text-sm text-sky-50">{rows.map((row) => {
       const section = declaration.sections.find((candidate) => candidate.id === row.answer.sectionId);
-      const option = section?.catalog ? catalogs[section.catalog]?.find((candidate) => candidate.code === row.answer.optionCode) : undefined;
+      const optionCode = row.answer.value.kind === "selection" ? row.answer.value.code : row.answer.optionCode;
+      const option = section?.catalog ? catalogs[section.catalog]?.find((candidate) => candidate.code === optionCode) : undefined;
       const state = row.answer.value.kind === "tri-state" ? row.answer.value.status : undefined;
       const note = row.answer.value.kind === "tri-state" ? row.answer.value.note : undefined;
-      const label = `${state === "negative" ? "No " : ""}${option?.display ?? row.answer.optionCode ?? section?.label ?? "History value"}${row.answer.eye ? ` ${row.answer.eye}` : ""}`;
+      const text = row.answer.value.kind === "text" ? row.answer.value.text : undefined;
+      const label = `${state === "negative" ? "No " : ""}${option?.display ?? optionCode ?? text ?? section?.label ?? "History value"}${row.answer.eye ? ` ${row.answer.eye}` : ""}`;
       return <li key={row.answer.observationReference ?? row.answer.id}>{label}{note ? ` · ${note}` : ""} <span className="odos-hpi-faint">· {row.recordedAt.slice(0, 10)}</span></li>;
     })}</ul>
     <div className="mt-3 flex flex-wrap items-center gap-3">
