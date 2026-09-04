@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { AuditEvent } from "@medplum/fhirtypes";
-import { createAuditProjectionClient } from "../src/authz/liveAudit.js";
+import {
+  createAuditProjectionClient,
+  createLiveOdosAuditRuntime,
+} from "../src/authz/liveAudit.js";
 import { verifyMcpProjectBootBoundary } from "../src/authz/boot-role-verification.js";
+import { buildOdosAuditEventRow } from "../src/authz/odosAudit.js";
 import { authenticateMedplumService, createMedplumClient } from "../src/fhir-client.js";
 import { TEST_FHIR_AUDIT_CONTEXT, TEST_FHIR_AUDIT_RECORDER } from "./fhirAuditTestStub.js";
 
@@ -186,6 +190,71 @@ test("audit projection logs a fatal scoped refresh failure after the second exch
       /^odos-audit: ODOS MCP CLIENT-CREDENTIALS AUTHENTICATION FAILED:/,
     );
   } finally {
+    console.error = originalConsoleError;
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("Mandate 17: audit projection denial does not re-authenticate with an unconfirmed password principal", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalConsoleError = console.error;
+  const requests: string[] = [];
+  const errors: string[] = [];
+  globalThis.fetch = async (input) => {
+    const url = new URL(String(input));
+    requests.push(url.pathname);
+    if (url.pathname === "/auth/login") {
+      return Response.json({ code: "same-principal-code" });
+    }
+    if (url.pathname === "/oauth2/token") {
+      return Response.json({ access_token: "same-principal-token" });
+    }
+    if (url.pathname === "/fhir/R4/AuditEvent") {
+      return Response.json(
+        {
+          resourceType: "OperationOutcome",
+          issue: [{ severity: "error", code: "forbidden", diagnostics: "AuditEvent create denied" }],
+        },
+        { status: 403, statusText: "Forbidden" },
+      );
+    }
+    throw new Error(`Unexpected request: ${url.pathname}`);
+  };
+  console.error = (...args: unknown[]) => { errors.push(args.map(String).join(" ")); };
+  const runtime = createLiveOdosAuditRuntime({
+    postgresUrl: "postgresql://unused:unused@127.0.0.1:1/unused",
+    medplumBaseUrl: "http://medplum.test",
+    medplumAccessToken: "constrained-caller-token",
+    medplumEmail: "same-principal@example.test",
+    medplumPassword: "not-a-real-password",
+  });
+  const eventTime = "2026-09-03T12:00:00.000Z";
+  const row = buildOdosAuditEventRow({
+    eventType: "read",
+    eventTime,
+    actorId: "constrained-caller",
+    actorRole: "provider",
+    patientId: "synthetic-patient",
+    resourceType: "Patient",
+    resourceId: "synthetic-patient",
+    actionOutcome: "granted",
+  });
+  runtime.projectionQueue.enqueue(row, eventTime);
+
+  try {
+    await runtime.drainProjectionQueue(eventTime);
+
+    assert.deepEqual(requests, ["/fhir/R4/AuditEvent"]);
+    assert.equal(runtime.projectionQueue.pending.length, 1);
+    assert.equal(runtime.projectionQueue.pending[0]?.attempts, 1);
+    assert.match(
+      runtime.projectionQueue.pending[0]?.lastError ?? "",
+      /password fallback refused.*not confirmed distinct/i,
+    );
+    assert.equal(errors.length, 1);
+    assert.match(errors[0]!, /password fallback refused.*not confirmed distinct/i);
+  } finally {
+    await runtime.close();
     console.error = originalConsoleError;
     globalThis.fetch = originalFetch;
   }

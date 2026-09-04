@@ -155,14 +155,17 @@ jobs:
           MEDPLUM_CONTRACT_BOOTSTRAP: "1"
         run: node --import tsx --test --test-concurrency=1 tests/encounterUndoLedgerAuthzLive.test.ts
       - name: run credentialed live authorization lane
-        # NON-BLOCKING: the harness cannot yet run these tests under a constrained identity.
-        # Four causes were traced on 2026-09-01: the lane lacked a Medplum project id;
-        # the bootstrap project lacked canonical role policies; one identity both seeded
-        # fixtures and exercised authorization; and, still open, MCP audit projection
-        # re-authenticates by password after a denied AuditEvent write, retries as the same
-        # principal, exhausts the login throttle, and times out during startup.
-        # Blocked on a separate audit-projection identity or a fix in mcp/src/authz/liveAudit.ts.
-        # Flip to blocking when that is resolved. Keep the bootstrap -> repair -> sync order.
+        # NON-BLOCKING: the fourth root cause traced on 2026-09-01 is now fixed at source: a denied
+        # AuditEvent projection no longer spends a login retry as an unconfirmed distinct principal.
+        # The lane's completion (no startup timeout) is currently provided by the throttle-reset
+        # wait step from #495, which remains load-bearing — do not remove it on the assumption this
+        # fix alone accounts for the lane completing. Independently verified 2026-09-03: this lane
+        # already completed with identical pass/fail counts on three main runs before this fix, and
+        # the new refusal path never executes inside it, so it supplies no evidence either way here.
+        # The preserved seeder/caller identity split must land before its constrained fixture writes
+        # can pass.
+        # After that, require 10 consecutive green main runs before removing continue-on-error.
+        # Keep the bootstrap -> repair -> sync order when burn-in begins.
         continue-on-error: true
         working-directory: mcp
         env:
