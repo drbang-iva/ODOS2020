@@ -44,3 +44,31 @@ test("an unasked catalog value has no persisted answer Observation", () => {
   assert.equal(negative.value.kind === "tri-state" ? negative.value.status : undefined, "negative");
   assert.equal([negative].find((answer) => answer.optionCode === "steroid-nasal-sprays"), undefined);
 });
+
+test("a patient-scoped answer persists its scope distinctly from complaint answers", () => {
+  const answer = {
+    id: "ocular-e1-conditions-glaucoma-OD",
+    subjectScope: "patient",
+    templateKey: "ocular-history",
+    sectionId: "conditions",
+    optionCode: "glaucoma",
+    eye: "OD",
+    value: { kind: "tri-state", status: "positive", note: "Diagnosed in 2024" },
+  } as const;
+  const observation = buildHistoryAnswerObservation(answer, {
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    recordedAt: "2026-09-03T15:00:00.000Z",
+  });
+
+  assert.deepEqual(JSON.parse(observation.extension?.[0]?.valueString ?? "null"), answer);
+  assert.deepEqual(parseHistoryAnswerObservation({ ...observation, id: "obs-ocular-1" }), {
+    ...answer,
+    observationReference: "Observation/obs-ocular-1",
+  });
+  assert.throws(() => buildHistoryAnswerObservation({ ...answer, complaintId: "complaint-1" }, {
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    recordedAt: "2026-09-03T15:00:00.000Z",
+  }), /exactly one subject/i);
+});

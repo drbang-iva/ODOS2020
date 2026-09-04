@@ -6,12 +6,15 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import {
   HpiSection,
+  HistorySubjectSectionEditor,
   HistoryTemplateEditor,
   cycleHistoryTriState,
   historySectionComplete,
+  historyComplaintState,
   type HistoryCatalogs,
   type HistoryTemplate,
   type HistoryTemplateAnswer,
+  type HistorySubjectSection,
 } from "../src/components/charting/HpiSection";
 import { EncounterEditContext } from "../src/components/charting/encounter-edit-context";
 
@@ -378,6 +381,173 @@ test("the renderer contains no complaint-specific branch and no final-status wri
   assert.doesNotMatch(source, /template\.complaint\s*===|complaintKey\s*===/);
   assert.doesNotMatch(source, /status:\s*["']final["']/);
   assert.doesNotMatch(source, /Save Complaint|Save reviewed ROS|Save and Add Another/);
+});
+
+test("Ocular History renders from its declaration, including catalog-owned laterality and positive notes", () => {
+  const declaration: HistorySubjectSection = {
+    key: "ocular-history",
+    label: "Ocular History",
+    subjectScope: "patient",
+    completionAnchor: "conditions",
+    sections: [{ id: "conditions", type: "risk_factors", label: "Conditions", catalog: "ocular_conditions", required: true }],
+  };
+  const catalogs: HistoryCatalogs = {
+    ocular_conditions: [
+      { code: "strabismus", display: "Strabismus", per_eye: false, note_on_positive: true },
+      { code: "keratoconus", display: "Keratoconus", per_eye: true, note_on_positive: true },
+    ],
+  };
+  const html = renderToStaticMarkup(<HistorySubjectSectionEditor
+    encounterId="e1"
+    declaration={declaration}
+    catalogs={catalogs}
+    answers={[{
+      id: "history-e1-ocular-history-conditions-keratoconus-OD",
+      subjectScope: "patient",
+      templateKey: "ocular-history",
+      sectionId: "conditions",
+      optionCode: "keratoconus",
+      eye: "OD",
+      value: { kind: "tri-state", status: "positive", note: "Diagnosed 2022" },
+    }]}
+    editMode={false}
+    onChange={() => undefined}
+    onRemoveTyped={() => undefined}
+  />);
+
+  assert.match(html, /Strabismus/);
+  assert.match(html, /Keratoconus OD: positive/);
+  assert.match(html, /Keratoconus OS: unasked/);
+  assert.match(html, /Keratoconus OD note/);
+  assert.match(html, /Diagnosed 2022/);
+});
+
+test("Ocular History keeps prior-chart answers distinct and review attestation does not save an edit", async () => {
+  const originalFetch = globalThis.fetch;
+  let historyPosts = 0;
+  let includeTodayEdit = true;
+  const reviewBodies: unknown[] = [];
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/clinical-graph/hpi/definition")) return json({
+      templates: [],
+      catalogs: {
+        ocular_history_conditions: [{ code: "glaucoma", display: "Glaucoma", per_eye: true, note_on_positive: true }],
+        ocular_history_surgeries: [{ code: "cataract-surgery", display: "Cataract surgery", per_eye: true, note_on_positive: true }],
+      },
+      subjectSections: [{
+        key: "ocular-history",
+        label: "Ocular History",
+        subjectScope: "patient",
+        completionAnchor: "conditions",
+        sections: [
+          { id: "conditions", type: "risk_factors", label: "Conditions", catalog: "ocular_history_conditions", required: true },
+          { id: "surgeries", type: "risk_factors", label: "Surgeries", catalog: "ocular_history_surgeries", required: true },
+        ],
+      }],
+      definition: {},
+    });
+    if (url.endsWith("/clinical-graph/encounters/e1/complaints")) return json({ complaints: [] });
+    if (url.endsWith("/clinical-graph/encounters/e1/hpi")) return json({
+      answers: includeTodayEdit ? [{
+        id: "ocular-e1-surgeries-cataract-surgery-OS",
+        subjectScope: "patient",
+        templateKey: "ocular-history",
+        sectionId: "surgeries",
+        optionCode: "cataract-surgery",
+        eye: "OS",
+        observationReference: "Observation/today-surgery",
+        value: { kind: "tri-state", status: "positive" },
+      }] : [],
+      carriedForwardAnswers: [{
+        answer: {
+          id: "prior-glaucoma",
+          subjectScope: "patient",
+          templateKey: "ocular-history",
+          sectionId: "conditions",
+          optionCode: "glaucoma",
+          eye: "OD",
+          observationReference: "Observation/prior-glaucoma",
+          value: { kind: "tri-state", status: "positive", note: "Diagnosed 2024" },
+        },
+        encounterReference: "Encounter/prior",
+        recordedAt: "2026-08-01T12:00:00.000Z",
+      }],
+      reviewAttestations: [],
+      templateNarratives: [],
+    });
+    if (url.endsWith("/clinical-graph/history/review") && init?.method === "POST") {
+      reviewBodies.push(JSON.parse(String(init.body)));
+      return json({
+        sectionKey: "ocular-history",
+        actorReference: "Practitioner/doc1",
+        recordedAt: "2026-09-03T15:00:00.000Z",
+        attestationReference: "Observation/review-1",
+        priorAnswerReferences: ["Observation/prior-glaucoma"],
+      });
+    }
+    if (url.endsWith("/clinical-graph/hpi") && init?.method === "POST") {
+      historyPosts += 1;
+      return json({ answers: [], templateNarratives: [], retiredReviewSections: ["ocular-history"] });
+    }
+    throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${url}`);
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<EncounterEditContext.Provider value={{}}><HpiSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} /></EncounterEditContext.Provider>);
+      await delay(0);
+    });
+    const chartStrip = renderer.root.findByProps({ "aria-label": "Ocular History on this chart" });
+    assert.ok(chartStrip);
+    assert.match(JSON.stringify(renderer.toJSON()), /Glaucoma OD/);
+    assert.match(JSON.stringify(renderer.toJSON()), /Diagnosed 2024/);
+    assert.ok(renderer.root.findByProps({ "aria-label": "Cataract surgery OS: positive" }));
+    const noChangeButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Reviewed today, no change")!;
+    assert.equal(noChangeButton.props.disabled, true);
+    assert.equal(historyPosts, 0);
+    assert.deepEqual(reviewBodies, []);
+
+    renderer.unmount();
+    includeTodayEdit = false;
+    await act(async () => {
+      renderer = create(<EncounterEditContext.Provider value={{}}><HpiSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} /></EncounterEditContext.Provider>);
+      await delay(0);
+    });
+
+    await act(async () => {
+      renderer.root.findAllByType("button").find((button) => button.children.join("") === "Reviewed today, no change")!.props.onClick();
+      await delay(0);
+    });
+    assert.equal(historyPosts, 0);
+    assert.deepEqual(reviewBodies, [{
+      patientReference: "Patient/p1",
+      encounterReference: "Encounter/e1",
+      sectionKey: "ocular-history",
+    }]);
+    const reviewed = renderer.root.findAllByType("p").find((node) => node.children.join("").includes("Reviewed by"));
+    assert.equal(reviewed?.children.join(""), "Reviewed by Practitioner/doc1 · 2026-09-03");
+
+    await act(async () => {
+      renderer.root.findByProps({ "aria-label": "Glaucoma OD: unasked" }).props.onClick();
+      await delay(850);
+    });
+    assert.equal(historyPosts, 1);
+    assert.equal(renderer.root.findAllByType("p").some((node) => node.children.join("").includes("Reviewed by")), false);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("History completeness uses Not started, Started, and Charted rather than Examined", () => {
+  const html = renderToStaticMarkup(<HpiSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} />);
+  assert.match(html, /Not started/);
+  assert.doesNotMatch(html, /Examined|Not examined/);
+});
+
+test("an opened complaint with zero answers remains Not started", () => {
+  assert.equal(historyComplaintState([complaint()], [TEMPLATE], []), "not-started");
 });
 
 function complaint() {

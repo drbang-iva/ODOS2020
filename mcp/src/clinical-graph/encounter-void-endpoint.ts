@@ -17,7 +17,13 @@ import { searchAll } from "../fhir-search.js";
 import { stampPrimaryComplaint } from "./complaint-endpoint.js";
 import type { EncounterComplaint } from "./complaint-model.js";
 import { buildComplaintDefinitionSeeds } from "./complaint-model.js";
-import { isHistoryAnswerObservation, parseHistoryAnswerObservation } from "./history-answer-observation.js";
+import {
+  HISTORY_REVIEW_ATTESTATION_CODE,
+  HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM,
+  HISTORY_REVIEW_SECTION_EXTENSION_URL,
+  isHistoryAnswerObservation,
+  parseHistoryAnswerObservation,
+} from "./history-answer-observation.js";
 import {
   ENCOUNTER_COMPLAINT_CODE,
   ENCOUNTER_COMPLAINT_CODE_SYSTEM,
@@ -78,6 +84,7 @@ const OTHER_SECTION_KEY = "other";
 
 const SECTION_LABELS: Record<string, string> = {
   [HISTORY_SECTION_KEY]: "History",
+  "ocular-history": "Ocular History",
   [COMPLAINTS_SECTION_KEY]: "Complaints",
   [ASSESSMENT_SECTION_KEY]: "Assessment",
   tonometry: "IOP",
@@ -496,7 +503,21 @@ function identify(
   const laterality = observationLaterality(observation);
   if (isHistoryAnswerObservation(observation)) {
     const answer = parseHistoryAnswerObservation(observation);
-    return { observation, findingKey: `hpi-complaint:${answer.complaintId}`, sectionKey: HISTORY_SECTION_KEY, laterality };
+    if (answer.complaintId) {
+      return { observation, findingKey: `hpi-complaint:${answer.complaintId}`, sectionKey: HISTORY_SECTION_KEY, laterality };
+    }
+    return {
+      observation,
+      findingKey: `history-subject:${answer.templateKey}:${answer.sectionId}:${answer.optionCode ?? "value"}`,
+      sectionKey: answer.templateKey,
+      laterality: answer.eye ?? laterality,
+    };
+  }
+  if (observation.code.coding?.some((coding) =>
+    coding.system === HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM && coding.code === HISTORY_REVIEW_ATTESTATION_CODE
+  )) {
+    const sectionKey = observation.extension?.find((extension) => extension.url === HISTORY_REVIEW_SECTION_EXTENSION_URL)?.valueCode ?? OTHER_SECTION_KEY;
+    return { observation, findingKey: `history-review:${sectionKey}`, sectionKey, laterality };
   }
   const definition = findingDefinitionForObservation(observation, definitions);
   if (definition) {

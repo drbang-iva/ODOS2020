@@ -20,6 +20,8 @@ export type HistoryEye = "OD" | "OS" | "OU";
 export interface HistoryCatalogOption {
   code: string;
   display: string;
+  per_eye?: boolean;
+  note_on_positive?: boolean;
 }
 
 export const HISTORY_OPTION_CATALOGS: Record<string, HistoryCatalogOption[]> = {
@@ -89,6 +91,26 @@ export const HISTORY_OPTION_CATALOGS: Record<string, HistoryCatalogOption[]> = {
     "artificial tears", "Cequa", "contacts", "eyeglasses", "lid scrubs", "lubricating gel/ointment",
     "no treatment", "punctal plugs", "Restasis", "steroid eye drops", "steroids (oral)", "Xiidra", "other",
   ]),
+  ocular_history_conditions: ocularOptions([
+    ["dry-eye", "Dry eye", false],
+    ["glaucoma", "Glaucoma", true],
+    ["cataract", "Cataract", true],
+    ["macular-degeneration", "Macular degeneration", true],
+    ["amblyopia", "Amblyopia", true],
+    ["strabismus", "Strabismus", false],
+    ["retinal-disease", "Retinal disease", true],
+    ["ocular-trauma", "Ocular trauma", true],
+    ["other", "Other ocular condition", true],
+  ]),
+  ocular_history_surgeries: ocularOptions([
+    ["cataract-surgery", "Cataract surgery", true],
+    ["laser-vision-correction", "LASIK / PRK", true],
+    ["retinal-surgery", "Retinal surgery", true],
+    ["glaucoma-surgery", "Glaucoma surgery", true],
+    ["corneal-transplant", "Corneal transplant", true],
+    ["strabismus-surgery", "Strabismus surgery", false],
+    ["other", "Other ocular surgery", true],
+  ]),
 };
 
 export interface HistoryTemplateSection {
@@ -110,6 +132,25 @@ export interface HistoryTemplate {
   sections: HistoryTemplateSection[];
   narrative: string;
 }
+
+export interface HistorySubjectSection {
+  key: string;
+  label: string;
+  subjectScope: "encounter" | "patient";
+  completionAnchor: string;
+  sections: HistoryTemplateSection[];
+}
+
+export const HISTORY_SUBJECT_SECTIONS: HistorySubjectSection[] = [{
+  key: "ocular-history",
+  label: "Ocular History",
+  subjectScope: "patient",
+  completionAnchor: "conditions",
+  sections: [
+    section("conditions", "risk_factors", "Conditions", { catalog: "ocular_history_conditions", required: true }),
+    section("surgeries", "risk_factors", "Surgeries", { catalog: "ocular_history_surgeries", required: true }),
+  ],
+}];
 
 export const HISTORY_TEMPLATES: HistoryTemplate[] = [
   {
@@ -151,7 +192,7 @@ export const HISTORY_TEMPLATES: HistoryTemplate[] = [
 ];
 
 export type HistoryTemplateValue =
-  | { kind: "tri-state"; status: TriState }
+  | { kind: "tri-state"; status: TriState; note?: string }
   | { kind: "selection"; code: string }
   | { kind: "severity"; level: "mild" | "moderate" | "severe" }
   | { kind: "duration"; value: number; unit: "days" | "weeks" | "months" | "years" }
@@ -160,9 +201,8 @@ export type HistoryTemplateValue =
   | { kind: "laterality"; code: "OD-worse" | "OS-worse" | "equal" | "other"; note?: string }
   | { kind: "text"; text: string };
 
-export interface HistoryTemplateAnswer {
+interface HistoryTemplateAnswerBase {
   id: string;
-  complaintId: string;
   templateKey: string;
   sectionId: string;
   optionCode?: string;
@@ -170,6 +210,11 @@ export interface HistoryTemplateAnswer {
   observationReference?: string;
   value: HistoryTemplateValue;
 }
+
+export type HistoryTemplateAnswer = HistoryTemplateAnswerBase & (
+  | { complaintId: string; subjectScope?: never }
+  | { complaintId?: never; subjectScope: "encounter" | "patient" }
+);
 
 export function cycleTriState(value: TriState | undefined): TriState | undefined {
   return value === undefined ? "positive" : value === "positive" ? "negative" : undefined;
@@ -234,6 +279,19 @@ export function historyTemplateComplete(template: HistoryTemplate, answers: Hist
     .every((candidate) => answers.some((answer) => answer.sectionId === candidate.id));
 }
 
+export type HistoryCompletenessState = "not-started" | "started" | "charted";
+
+export function historySubjectSectionState(
+  declaration: HistorySubjectSection,
+  answers: HistoryTemplateAnswer[],
+): HistoryCompletenessState {
+  if (answers.length === 0) return "not-started";
+  const hasAnchor = answers.some((answer) => answer.sectionId === declaration.completionAnchor);
+  const hasRequired = declaration.sections.filter((candidate) => candidate.required)
+    .every((candidate) => answers.some((answer) => answer.sectionId === candidate.id));
+  return hasAnchor && hasRequired ? "charted" : "started";
+}
+
 function section(
   id: string,
   type: HistorySectionType,
@@ -249,6 +307,10 @@ function options(rows: Array<[string, string]>): HistoryCatalogOption[] {
 
 function optionsFromDisplays(displays: string[]): HistoryCatalogOption[] {
   return displays.map((display) => ({ code: slug(display), display }));
+}
+
+function ocularOptions(rows: Array<[string, string, boolean]>): HistoryCatalogOption[] {
+  return rows.map(([code, display, per_eye]) => ({ code, display, per_eye, note_on_positive: true }));
 }
 
 function slug(display: string): string {

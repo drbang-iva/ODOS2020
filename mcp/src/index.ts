@@ -202,6 +202,7 @@ import {
   handleHpiCaptureRequest,
   handleHpiDefinitionRequest,
   handleHpiRecordRequest,
+  handleHistoryReviewRequest,
 } from "./clinical-graph/hpi-endpoint.js";
 import {
   handleComplaintDefinitionCatalogRequest,
@@ -6660,6 +6661,20 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         } catch (error) {
           console.error("odos-mcp: /clinical-graph/hpi failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "HPI capture route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/history/review", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleHistoryReviewRequest(
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.write"),
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: /clinical-graph/history/review failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "History review route failed" });
         }
       });
 

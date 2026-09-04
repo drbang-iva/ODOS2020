@@ -4,7 +4,7 @@ import type { Basic, Condition, Encounter, Observation, Provenance } from "@medp
 import { verificationStatusConcept } from "../src/fhir/condition.js";
 import { handleEncounterVoidRequest } from "../src/clinical-graph/encounter-void-endpoint.js";
 import { ENCOUNTER_COMPLAINT_CODE, parseEncounterComplaintResource } from "../src/clinical-graph/encounter-complaint-store.js";
-import { buildHistoryAnswerObservation } from "../src/clinical-graph/history-answer-observation.js";
+import { buildHistoryAnswerObservation, buildHistoryReviewAttestation } from "../src/clinical-graph/history-answer-observation.js";
 import {
   AUTH,
   ENCOUNTER,
@@ -366,6 +366,47 @@ test("encounter scope clears Observations, History, complaints, and Conditions i
   assert.equal(fhir.get<Observation>("Observation", "iop-od").status, "entered-in-error");
   assert.equal(fhir.get<Condition>("Condition", "c1").verificationStatus?.coding?.[0]?.code, "entered-in-error");
   assert.equal(parseEncounterComplaintResource(fhir.get<Basic>("Basic", "basic-complaint-1")).status, "removed");
+});
+
+test("Ocular History section clear voids only this encounter's patient answers and review attestation", async () => {
+  const { deps, fhir } = fixture();
+  const ocularAnswer = (id: string, encounterReference: string) => ({
+    ...buildHistoryAnswerObservation({
+      id,
+      subjectScope: "patient" as const,
+      templateKey: "ocular-history",
+      sectionId: "conditions",
+      optionCode: "glaucoma",
+      eye: "OD" as const,
+      value: { kind: "tri-state" as const, status: "positive" as const },
+    }, { patientReference: PATIENT, encounterReference, recordedAt: NOW }),
+    id: `${id}-observation`,
+  });
+  fhir.add(ocularAnswer("today-glaucoma", ENCOUNTER));
+  fhir.add(ocularAnswer("prior-glaucoma", "Encounter/e0"));
+  fhir.add({
+    ...buildHistoryReviewAttestation({
+      patientReference: PATIENT,
+      encounterReference: ENCOUNTER,
+      sectionKey: "ocular-history",
+      actorReference: "Practitioner/doc1",
+      recordedAt: NOW,
+      priorAnswerReferences: ["Observation/prior-glaucoma-observation"],
+    }),
+    id: "ocular-review",
+  });
+
+  const result = await handleEncounterVoidRequest(deps, {
+    authHeader: AUTH,
+    params: { encounterId: "e1" },
+    body: { scope: "section", sectionKey: "ocular-history" },
+  });
+
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  const body = result.body as VoidBody;
+  assert.deepEqual([...body.voided].sort(), ["Observation/ocular-review", "Observation/today-glaucoma-observation"]);
+  assert.deepEqual(body.sections.map((section) => [section.sectionKey, section.label, section.count]), [["ocular-history", "Ocular History", 2]]);
+  assert.equal(fhir.get<Observation>("Observation", "prior-glaucoma-observation").status, "preliminary");
 });
 
 test("encounter scope on an empty encounter returns 200 with count 0 and writes nothing", async () => {
