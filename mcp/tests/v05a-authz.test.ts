@@ -492,7 +492,7 @@ test(
     const { access_token: clientToken } = (await tokenRes.json()) as { access_token: string };
     assert.ok(clientToken, "client_credentials response missing access_token.");
 
-    const auth = { Authorization: `Bearer ${seederAccessToken}` };
+    const auth = { Authorization: `Bearer ${clientToken}` };
 
     // 5a. POSITIVE: GET AuditEvent — the audit-only boundary grants AuditEvent read.
     const auditRes = await fetch(`${baseUrl}/fhir/R4/AuditEvent?_count=1`, { headers: auth });
