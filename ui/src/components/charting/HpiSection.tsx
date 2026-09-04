@@ -11,7 +11,7 @@ export type HistorySectionType =
   | "treatment" | "numeric" | "presents_for" | "interval" | "laterality" | "text";
 export type HistoryTriState = "positive" | "negative";
 export type HistoryAnswerValue =
-  | { kind: "tri-state"; status: HistoryTriState }
+  | { kind: "tri-state"; status: HistoryTriState; note?: string }
   | { kind: "selection"; code: string }
   | { kind: "severity"; level: "mild" | "moderate" | "severe" }
   | { kind: "duration"; value: number; unit: "days" | "weeks" | "months" | "years" }
@@ -20,9 +20,8 @@ export type HistoryAnswerValue =
   | { kind: "laterality"; code: "OD-worse" | "OS-worse" | "equal" | "other"; note?: string }
   | { kind: "text"; text: string };
 
-export interface HistoryTemplateAnswer {
+interface HistoryTemplateAnswerBase {
   id: string;
-  complaintId: string;
   templateKey: string;
   sectionId: string;
   optionCode?: string;
@@ -30,6 +29,11 @@ export interface HistoryTemplateAnswer {
   observationReference?: string;
   value: HistoryAnswerValue;
 }
+
+export type HistoryTemplateAnswer = HistoryTemplateAnswerBase & (
+  | { complaintId: string; subjectScope?: never }
+  | { complaintId?: never; subjectScope: "encounter" | "patient" }
+);
 
 export interface HistoryTemplateSection {
   id: string;
@@ -51,7 +55,34 @@ export interface HistoryTemplate {
   narrative: string;
 }
 
-export type HistoryCatalogs = Record<string, Array<{ code: string; display: string }>>;
+export interface HistorySubjectSection {
+  key: string;
+  label: string;
+  subjectScope: "encounter" | "patient";
+  completionAnchor: string;
+  sections: HistoryTemplateSection[];
+}
+
+export type HistoryCatalogs = Record<string, Array<{
+  code: string;
+  display: string;
+  per_eye?: boolean;
+  note_on_positive?: boolean;
+}>>;
+
+interface CarriedForwardHistoryAnswer {
+  answer: HistoryTemplateAnswer;
+  encounterReference: string;
+  recordedAt: string;
+}
+
+interface HistoryReviewAttestation {
+  sectionKey: string;
+  actorReference: string;
+  recordedAt: string;
+  attestationReference: string;
+  priorAnswerReferences: string[];
+}
 
 interface EncounterComplaint {
   id: string;
@@ -77,10 +108,14 @@ type SaveState =
 export function HpiSection({ patientReference, encounterReference, onSaved }: Props) {
   const encounterId = encounterReference.slice("Encounter/".length);
   const [templates, setTemplates] = useState<HistoryTemplate[]>([]);
+  const [subjectSections, setSubjectSections] = useState<HistorySubjectSection[]>([]);
   const [catalogs, setCatalogs] = useState<HistoryCatalogs>({});
   const [complaints, setComplaints] = useState<EncounterComplaint[]>([]);
   const [answers, setAnswers] = useState<HistoryTemplateAnswer[]>([]);
   const [followUpPrefills, setFollowUpPrefills] = useState<HistoryTemplateAnswer[]>([]);
+  const [carriedForwardAnswers, setCarriedForwardAnswers] = useState<CarriedForwardHistoryAnswer[]>([]);
+  const [reviewAttestations, setReviewAttestations] = useState<HistoryReviewAttestation[]>([]);
+  const [reviewErrors, setReviewErrors] = useState<Record<string, string>>({});
   const [narratives, setNarratives] = useState<Record<string, string>>({});
   const [folded, setFolded] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -97,12 +132,13 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
   useEffect(() => {
     let cancelled = false;
     void Promise.all([
-      readJson<{ templates?: HistoryTemplate[]; catalogs?: HistoryCatalogs; error?: string }>(`${clinicalGraphApiBase()}/clinical-graph/hpi/definition`),
+      readJson<{ templates?: HistoryTemplate[]; subjectSections?: HistorySubjectSection[]; catalogs?: HistoryCatalogs; error?: string }>(`${clinicalGraphApiBase()}/clinical-graph/hpi/definition`),
       readJson<{ complaints?: EncounterComplaint[]; error?: string }>(`${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/complaints`),
-      readJson<{ answers?: HistoryTemplateAnswer[]; followUpPrefills?: HistoryTemplateAnswer[]; templateNarratives?: Array<{ complaintId: string; narrative: string }>; requiresAggregateRefresh?: boolean; error?: string }>(`${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/hpi`),
+      readJson<{ answers?: HistoryTemplateAnswer[]; carriedForwardAnswers?: CarriedForwardHistoryAnswer[]; reviewAttestations?: HistoryReviewAttestation[]; followUpPrefills?: HistoryTemplateAnswer[]; templateNarratives?: Array<{ complaintId: string; narrative: string }>; requiresAggregateRefresh?: boolean; error?: string }>(`${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/hpi`),
     ]).then(([definition, complaintRecord, history]) => {
       if (cancelled) return;
       setTemplates(definition.templates ?? []);
+      setSubjectSections(definition.subjectSections ?? []);
       setCatalogs(definition.catalogs ?? {});
       setComplaints(complaintRecord.complaints ?? []);
       const loadedAnswers = history.answers ?? [];
@@ -112,6 +148,8 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
       ));
       setAnswers(loadedAnswers);
       setFollowUpPrefills(history.followUpPrefills ?? []);
+      setCarriedForwardAnswers(history.carriedForwardAnswers ?? []);
+      setReviewAttestations(history.reviewAttestations ?? []);
       setNarratives(Object.fromEntries((history.templateNarratives ?? []).map((row) => [row.complaintId, row.narrative])));
       if (history.requiresAggregateRefresh && (complaintRecord.complaints ?? []).length > 0) {
         void queueSave().catch(() => undefined);
@@ -134,10 +172,8 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
 
   const activeComplaints = complaints.slice().sort((left, right) => left.ordinal - right.ordinal);
   const summary = activeComplaints.map((complaint) => narratives[complaint.id] || complaint.renderedNarrative).filter(Boolean).join(" ");
-  const complete = activeComplaints.length > 0 && activeComplaints.every((complaint) => {
-    const template = templates.find((candidate) => candidate.complaint === complaint.templateKey);
-    return template ? historySectionComplete(template, answers.filter((answer) => answer.complaintId === complaint.id)) : false;
-  });
+  const complaintState = historyComplaintState(activeComplaints, templates, answers);
+  const complete = complaintState === "charted";
 
   async function addComplaint(template: HistoryTemplate) {
     if (adding) return;
@@ -231,7 +267,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
       const result = await voidEncounterEntries(encounterReference, {
         scope: "observation",
         observationReference,
-        sectionKey: "hpi",
+        sectionKey: answerSectionKey(answer),
         label: answer.optionCode ?? "History value",
       });
       persistedAnswerReferences.current.delete(answer.id);
@@ -286,6 +322,22 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
     } catch (caught) {
       onClearFailed?.({ scope: "finding", error: caught });
       setSaveState({ status: "error", reason: errorMessage(caught) });
+    }
+  }
+
+  async function reviewSubjectSection(declaration: HistorySubjectSection) {
+    try {
+      setReviewErrors((current) => ({ ...current, [declaration.key]: "" }));
+      const attestation = await postJson<HistoryReviewAttestation & { error?: string }>(
+        `${clinicalGraphApiBase()}/clinical-graph/history/review`,
+        { patientReference, encounterReference, sectionKey: declaration.key },
+      );
+      setReviewAttestations((current) => [
+        ...current.filter((candidate) => candidate.sectionKey !== declaration.key),
+        attestation,
+      ]);
+    } catch (caught) {
+      setReviewErrors((current) => ({ ...current, [declaration.key]: errorMessage(caught) }));
     }
   }
 
@@ -354,18 +406,18 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
             <button type="button" className="min-w-0 flex-1 text-left" aria-expanded={!folded} onClick={() => setFolded((value) => !value)}>
               <span className="odos-hpi-faint text-xs font-semibold uppercase tracking-wider">History</span>
               <h2 className="odos-hpi-text mt-1 text-lg font-semibold">Chief Complaint &amp; HPI</h2>
-              {folded && <p className="odos-hpi-muted mt-2 truncate text-sm">{summary || "Not examined"}</p>}
+              {folded && <p className="odos-hpi-muted mt-2 truncate text-sm">{summary || "Not started"}</p>}
             </button>
             <div className="flex items-center gap-2">
-              <span aria-label={complete ? "Examined" : "Not examined"} className={`text-xs font-semibold ${complete ? "text-emerald-200" : "odos-hpi-faint"}`}>
-                {complete ? "Examined" : "Not examined"}
+              <span aria-label={completenessLabel(complaintState)} className={`text-xs font-semibold ${complete ? "text-emerald-200" : "odos-hpi-faint"}`}>
+                {completenessLabel(complaintState)}
               </span>
               <button type="button" className="sidebar-button" onClick={() => setEditMode((value) => !value)}>{editMode ? "Done" : "Edit"}</button>
               <ClearSectionButton
                 encounterReference={encounterReference}
-                sectionKey="hpi"
+                sectionKey={["hpi", ...subjectSections.map((section) => section.key)]}
                 label="History"
-                hasRecorded={complaints.length > 0 || answers.length > 0}
+                hasRecorded={complaints.length > 0 || answers.length > 0 || reviewAttestations.length > 0}
                 onBeforeClear={async () => {
                   for (const timer of debounceTimers.current.values()) clearTimeout(timer);
                   debounceTimers.current.clear();
@@ -376,9 +428,10 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
                   setAnswers([]);
                   latestAnswers.current = [];
                   persistedAnswerReferences.current.clear();
+                  setReviewAttestations([]);
                   setNarratives({});
                   setSaveState({ status: "idle" });
-                  onSaved({ completed: false, summary: "Not examined" }, true);
+                  onSaved({ completed: false, summary: "Not started" }, true);
                   onCleared?.({ scope: "section", result });
                 }}
               />
@@ -414,6 +467,61 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
                 />
               </article>
             );
+          })}
+
+          {subjectSections.map((declaration) => {
+            const currentAnswers = answers.filter((answer) => answer.subjectScope === declaration.subjectScope && answer.templateKey === declaration.key);
+            const carried = carriedForwardAnswers.filter((row) => row.answer.templateKey === declaration.key);
+            const attestation = reviewAttestations.find((candidate) => candidate.sectionKey === declaration.key);
+            const state = historySubjectSectionState(declaration, currentAnswers);
+            return <article key={declaration.key} className="odos-hpi-border rounded border bg-bg-panel/70 p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h3 className="odos-hpi-text font-semibold">{declaration.label}</h3>
+                  <p className={`mt-1 text-xs font-semibold ${state === "charted" ? "text-emerald-200" : "odos-hpi-faint"}`}>{completenessLabel(state)}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button type="button" className="sidebar-button" onClick={() => setEditMode((value) => !value)}>{editMode ? "Done" : "Edit"}</button>
+                  <ClearSectionButton
+                    encounterReference={encounterReference}
+                    sectionKey={declaration.key}
+                    label={declaration.label}
+                    hasRecorded={currentAnswers.length > 0 || Boolean(attestation)}
+                    onBeforeClear={async () => {
+                      for (const timer of debounceTimers.current.values()) clearTimeout(timer);
+                      debounceTimers.current.clear();
+                      await saveQueue.current;
+                    }}
+                    onCleared={(result) => {
+                      const removed = latestAnswers.current.filter((answer) => answer.subjectScope === declaration.subjectScope && answer.templateKey === declaration.key);
+                      latestAnswers.current = latestAnswers.current.filter((answer) => !removed.includes(answer));
+                      setAnswers(latestAnswers.current);
+                      for (const answer of removed) persistedAnswerReferences.current.delete(answer.id);
+                      setReviewAttestations((current) => current.filter((candidate) => candidate.sectionKey !== declaration.key));
+                      onCleared?.({ scope: "section", result });
+                    }}
+                  />
+                </div>
+              </div>
+              {carried.length > 0 && <CarriedForwardStrip
+                declaration={declaration}
+                catalogs={catalogs}
+                rows={carried}
+                attestation={attestation}
+                canReviewNoChange={currentAnswers.length === 0}
+                reviewError={reviewErrors[declaration.key]}
+                onReview={() => void reviewSubjectSection(declaration)}
+              />}
+              <HistorySubjectSectionEditor
+                encounterId={encounterId}
+                declaration={declaration}
+                catalogs={catalogs}
+                answers={currentAnswers}
+                editMode={editMode}
+                onChange={changeAnswer}
+                onRemoveTyped={(answer, label) => void removeTyped(answer, label)}
+              />
+            </article>;
           })}
 
           <div className="odos-hpi-border rounded border border-dashed bg-bg-panel/40 p-4">
@@ -508,6 +616,57 @@ export function HistoryTemplateEditor({
   );
 }
 
+export function HistorySubjectSectionEditor({
+  encounterId,
+  declaration,
+  catalogs,
+  answers,
+  editMode,
+  onChange,
+  onRemoveTyped,
+}: {
+  encounterId: string;
+  declaration: HistorySubjectSection;
+  catalogs: HistoryCatalogs;
+  answers: HistoryTemplateAnswer[];
+  editMode: boolean;
+  onChange: (next: HistoryTemplateAnswer | undefined, prior: HistoryTemplateAnswer | undefined) => void;
+  onRemoveTyped: (answer: HistoryTemplateAnswer, label: string) => void;
+}) {
+  function put(sectionId: string, value: HistoryAnswerValue, optionCode?: string, eye?: "OD" | "OS" | "OU") {
+    const prior = answers.find((answer) => answer.sectionId === sectionId && answer.optionCode === optionCode && answer.eye === eye);
+    onChange({
+      id: prior?.id ?? subjectHistoryAnswerId(encounterId, declaration.key, sectionId, optionCode, eye),
+      subjectScope: declaration.subjectScope,
+      templateKey: declaration.key,
+      sectionId,
+      ...(optionCode ? { optionCode } : {}),
+      ...(eye ? { eye } : {}),
+      ...(prior?.observationReference ? { observationReference: prior.observationReference } : {}),
+      value,
+    }, prior);
+  }
+
+  function triState(section: HistoryTemplateSection, optionCode: string, eye?: "OD" | "OS") {
+    const prior = answers.find((answer) => answer.sectionId === section.id && answer.optionCode === optionCode && answer.eye === eye);
+    const current = prior?.value.kind === "tri-state" ? prior.value.status : undefined;
+    const next = cycleHistoryTriState(current);
+    if (!next) onChange(undefined, prior);
+    else put(section.id, { kind: "tri-state", status: next }, optionCode, eye);
+  }
+
+  return <div className="mt-5 space-y-5">{declaration.sections.map((section) => <TemplateSection
+    key={section.id}
+    section={section}
+    catalogs={catalogs}
+    answers={answers}
+    editMode={editMode}
+    onTriState={(optionCode, eye) => triState(section, optionCode, eye)}
+    onPut={(value, optionCode, eye) => put(section.id, value, optionCode, eye)}
+    onRemoveTyped={onRemoveTyped}
+  />)}</div>;
+}
+
 function TemplateSection({ section, catalogs, answers, editMode, onTriState, onPut, onRemoveTyped }: {
   section: HistoryTemplateSection;
   catalogs: HistoryCatalogs;
@@ -519,26 +678,15 @@ function TemplateSection({ section, catalogs, answers, editMode, onTriState, onP
 }) {
   const answer = answers.find((candidate) => candidate.sectionId === section.id && !candidate.optionCode);
   if ((section.type === "symptoms" || section.type === "quality" || section.type === "risk_factors" || section.type === "treatment" || section.type === "presents_for") && section.catalog) {
-    if (section.per_eye) {
-      return <TemplateField label={section.label} required={section.required}>
-        <div className="space-y-2">{(catalogs[section.catalog] ?? []).map((option) => <div key={option.code} className="flex flex-wrap items-center gap-2">
-          <span className="odos-hpi-muted min-w-36 text-sm">{option.display}</span>
-          {(["OD", "OS"] as const).map((eye) => {
-            const selected = answers.find((candidate) => candidate.sectionId === section.id && candidate.optionCode === option.code && candidate.eye === eye);
-            const state = selected?.value.kind === "tri-state" ? selected.value.status : undefined;
-            return <button key={eye} type="button" aria-label={`${option.display} ${eye}: ${state ?? "unasked"}`} aria-pressed={state === "positive"} className={chipClass(state)} onClick={() => onTriState(option.code, eye)}>{state === "negative" ? `no ${eye}` : eye}</button>;
-          })}
-        </div>)}</div>
-      </TemplateField>;
-    }
     return <TemplateField label={section.label} required={section.required}>
-      <div className="flex flex-wrap gap-2">{(catalogs[section.catalog] ?? []).map((option) => {
-        const selected = answers.find((candidate) => candidate.sectionId === section.id && candidate.optionCode === option.code);
-        const state = selected?.value.kind === "tri-state" ? selected.value.status : undefined;
-        return <span key={option.code} className="inline-flex items-center gap-1">
-          <button type="button" aria-label={`${option.display}: ${state ?? "unasked"}`} aria-pressed={state === "positive"} className={chipClass(state)} onClick={() => onTriState(option.code)}>{state === "negative" ? `no ${option.display}` : option.display}</button>
-        </span>;
-      })}</div>
+      <div className="space-y-2">{(catalogs[section.catalog] ?? []).map((option) => <CatalogOptionControl
+        key={option.code}
+        section={section}
+        option={option}
+        answers={answers}
+        onTriState={onTriState}
+        onPut={onPut}
+      />)}</div>
     </TemplateField>;
   }
   if (section.type === "severity") {
@@ -566,6 +714,37 @@ function TemplateSection({ section, catalogs, answers, editMode, onTriState, onP
     return <TemplateField label={section.label}><textarea className="sidebar-input min-h-24 resize-y" value={value} onChange={(event) => onPut({ kind: "text", text: event.target.value })} /><TypedRemove editMode={editMode} answer={answer} label={section.label} onRemove={onRemoveTyped} /></TemplateField>;
   }
   return null;
+}
+
+function CatalogOptionControl({ section, option, answers, onTriState, onPut }: {
+  section: HistoryTemplateSection;
+  option: HistoryCatalogs[string][number];
+  answers: HistoryTemplateAnswer[];
+  onTriState: (optionCode: string, eye?: "OD" | "OS") => void;
+  onPut: (value: HistoryAnswerValue, optionCode?: string, eye?: "OD" | "OS" | "OU") => void;
+}) {
+  const perEye = option.per_eye ?? section.per_eye ?? false;
+  if (!perEye) {
+    const selected = answers.find((candidate) => candidate.sectionId === section.id && candidate.optionCode === option.code && !candidate.eye);
+    const state = selected?.value.kind === "tri-state" ? selected.value.status : undefined;
+    const note = selected?.value.kind === "tri-state" ? selected.value.note ?? "" : "";
+    return <div className="flex flex-wrap items-center gap-2">
+      <button type="button" aria-label={`${option.display}: ${state ?? "unasked"}`} aria-pressed={state === "positive"} className={chipClass(state)} onClick={() => onTriState(option.code)}>{state === "negative" ? `no ${option.display}` : option.display}</button>
+      {option.note_on_positive && state === "positive" && <input aria-label={`${option.display} note`} className="sidebar-input min-w-56 flex-1" placeholder="Optional note" value={note} onChange={(event) => onPut({ kind: "tri-state", status: "positive", note: event.target.value }, option.code)} />}
+    </div>;
+  }
+  return <div className="flex flex-wrap items-center gap-2">
+    <span className="odos-hpi-muted min-w-36 text-sm">{option.display}</span>
+    {(["OD", "OS"] as const).map((eye) => {
+      const selected = answers.find((candidate) => candidate.sectionId === section.id && candidate.optionCode === option.code && candidate.eye === eye);
+      const state = selected?.value.kind === "tri-state" ? selected.value.status : undefined;
+      const note = selected?.value.kind === "tri-state" ? selected.value.note ?? "" : "";
+      return <span key={eye} className="inline-flex flex-wrap items-center gap-2">
+        <button type="button" aria-label={`${option.display} ${eye}: ${state ?? "unasked"}`} aria-pressed={state === "positive"} className={chipClass(state)} onClick={() => onTriState(option.code, eye)}>{state === "negative" ? `no ${eye}` : eye}</button>
+        {option.note_on_positive && state === "positive" && <input aria-label={`${option.display} ${eye} note`} className="sidebar-input min-w-44" placeholder="Optional note" value={note} onChange={(event) => onPut({ kind: "tri-state", status: "positive", note: event.target.value }, option.code, eye)} />}
+      </span>;
+    })}
+  </div>;
 }
 
 function NarrativeEditor({ complaintId, templateKey, answers, narrative, editMode, onChange, onRemoveTyped }: {
@@ -605,6 +784,33 @@ function TypedRemove({ editMode, answer, label, onRemove }: { editMode: boolean;
   return editMode && answer ? <button type="button" className="sidebar-button mt-2" onClick={() => onRemove(answer, label)}>Remove</button> : null;
 }
 
+function CarriedForwardStrip({ declaration, catalogs, rows, attestation, canReviewNoChange, reviewError, onReview }: {
+  declaration: HistorySubjectSection;
+  catalogs: HistoryCatalogs;
+  rows: CarriedForwardHistoryAnswer[];
+  attestation: HistoryReviewAttestation | undefined;
+  canReviewNoChange: boolean;
+  reviewError: string | undefined;
+  onReview: () => void;
+}) {
+  return <div aria-label={`${declaration.label} on this chart`} className="mt-4 rounded border border-sky-500/40 bg-sky-950/20 p-4">
+    <p className="text-xs font-semibold uppercase tracking-wider text-sky-200">On this chart · prior encounters</p>
+    <ul className="mt-2 space-y-1 text-sm text-sky-50">{rows.map((row) => {
+      const section = declaration.sections.find((candidate) => candidate.id === row.answer.sectionId);
+      const option = section?.catalog ? catalogs[section.catalog]?.find((candidate) => candidate.code === row.answer.optionCode) : undefined;
+      const state = row.answer.value.kind === "tri-state" ? row.answer.value.status : undefined;
+      const note = row.answer.value.kind === "tri-state" ? row.answer.value.note : undefined;
+      const label = `${state === "negative" ? "No " : ""}${option?.display ?? row.answer.optionCode ?? section?.label ?? "History value"}${row.answer.eye ? ` ${row.answer.eye}` : ""}`;
+      return <li key={row.answer.observationReference ?? row.answer.id}>{label}{note ? ` · ${note}` : ""} <span className="odos-hpi-faint">· {row.recordedAt.slice(0, 10)}</span></li>;
+    })}</ul>
+    <div className="mt-3 flex flex-wrap items-center gap-3">
+      <button type="button" className="sidebar-button" disabled={!canReviewNoChange} title={canReviewNoChange ? undefined : "This section has edits on today's encounter."} onClick={onReview}>Reviewed today, no change</button>
+      {attestation && <p className="text-xs text-emerald-200">Reviewed by {attestation.actorReference} · {attestation.recordedAt.slice(0, 10)}</p>}
+      {reviewError && <p role="alert" className="text-xs text-red-200">Review failed · {reviewError}</p>}
+    </div>
+  </div>;
+}
+
 function SaveIndicator({ state, clock, onRetry }: { state: SaveState; clock: number; onRetry: () => void }) {
   if (state.status === "idle") return null;
   if (state.status === "saving") return <p role="status" className="odos-hpi-faint mt-2 text-xs">saving…</p>;
@@ -623,6 +829,36 @@ export function historySectionComplete(template: HistoryTemplate, answers: Histo
   return template.sections
     .filter((section) => (!section.on || section.on === presentationCode) && section.required)
     .every((section) => answers.some((answer) => answer.sectionId === section.id));
+}
+
+type HistoryCompletenessState = "not-started" | "started" | "charted";
+
+export function historyComplaintState(
+  complaints: EncounterComplaint[],
+  templates: HistoryTemplate[],
+  answers: HistoryTemplateAnswer[],
+): HistoryCompletenessState {
+  if (answers.filter((answer) => answer.complaintId).length === 0) return "not-started";
+  return complaints.length > 0 && complaints.every((complaint) => {
+    const template = templates.find((candidate) => candidate.complaint === complaint.templateKey);
+    return template ? historySectionComplete(template, answers.filter((answer) => answer.complaintId === complaint.id)) : false;
+  }) ? "charted" : "started";
+}
+
+function historySubjectSectionState(
+  declaration: HistorySubjectSection,
+  answers: HistoryTemplateAnswer[],
+): HistoryCompletenessState {
+  if (answers.length === 0) return "not-started";
+  const hasAnchor = answers.some((answer) => answer.sectionId === declaration.completionAnchor);
+  const hasRequired = declaration.sections.filter((section) => section.required)
+    .every((section) => answers.some((answer) => answer.sectionId === section.id));
+  return hasAnchor && hasRequired ? "charted" : "started";
+}
+
+function completenessLabel(state: HistoryCompletenessState): string {
+  if (state === "not-started") return "Not started";
+  return state === "started" ? "Started" : "Charted";
 }
 
 function replaceAnswer(answers: HistoryTemplateAnswer[], answer: HistoryTemplateAnswer): HistoryTemplateAnswer[] {
@@ -646,6 +882,14 @@ function stripObservationReference(answer: HistoryTemplateAnswer): Omit<HistoryT
 
 function historyAnswerId(complaintId: string, sectionId: string, optionCode = "value", eye?: "OD" | "OS" | "OU"): string {
   return `history-${complaintId}-${sectionId}-${optionCode}${eye ? `-${eye}` : ""}`.replace(/[^A-Za-z0-9.-]/g, "-").slice(0, 180);
+}
+
+function subjectHistoryAnswerId(encounterId: string, templateKey: string, sectionId: string, optionCode = "value", eye?: "OD" | "OS" | "OU"): string {
+  return `history-${encounterId}-${templateKey}-${sectionId}-${optionCode}${eye ? `-${eye}` : ""}`.replace(/[^A-Za-z0-9.-]/g, "-").slice(0, 180);
+}
+
+function answerSectionKey(answer: HistoryTemplateAnswer): string {
+  return answer.subjectScope ? answer.templateKey : "hpi";
 }
 
 function chipClass(state: HistoryTriState | undefined): string {

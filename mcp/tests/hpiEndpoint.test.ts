@@ -5,7 +5,11 @@ import type { PracticeRoleId } from "../src/authz/roles.js";
 import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../src/fhir/ophthalmology/codeBindings.js";
 import { buildEncounterComplaintResource } from "../src/clinical-graph/encounter-complaint-store.js";
 import { buildHpiFindingDefinition } from "../src/clinical-graph/hpi-definition.js";
-import { buildHistoryAnswerObservation, parseHistoryAnswerObservation } from "../src/clinical-graph/history-answer-observation.js";
+import {
+  HISTORY_REVIEW_ATTESTATION_CODE,
+  buildHistoryAnswerObservation,
+  parseHistoryAnswerObservation,
+} from "../src/clinical-graph/history-answer-observation.js";
 import {
   HPI_OBSERVATION_IDENTIFIER_SYSTEM,
   deriveFollowUpAnswerPrefills,
@@ -13,6 +17,7 @@ import {
   handleHpiCaptureRequest,
   handleHpiDefinitionRequest,
   handleHpiRecordRequest,
+  handleHistoryReviewRequest,
   type HpiEndpointDeps,
 } from "../src/clinical-graph/hpi-endpoint.js";
 import { buildExamOverviewProjection } from "../src/clinical-graph/exam-overview-projection.js";
@@ -507,10 +512,205 @@ test("HPI definition retires the eight-textarea fields and retains extensible Re
   const { deps } = fixture();
   const result = await handleHpiDefinitionRequest(deps, { authHeader: AUTH });
   assert.equal(result.status, 200);
-  const definition = (result.body as { definition: { fields: Record<string, unknown>; terminologyStatus: { status: string } } }).definition;
+  const body = result.body as {
+    definition: { fields: Record<string, unknown>; terminologyStatus: { status: string } };
+  };
+  const definition = body.definition;
   assert.deepEqual(Object.keys(definition.fields), ["reviewOfSystems"]);
   assert.equal((definition.fields.reviewOfSystems as { allowCreate?: boolean }).allowCreate, true);
   assert.equal(definition.terminologyStatus.status, "MANDATE-14-DEFERRED");
+});
+
+test("HPI definition publishes the patient-scoped Ocular History declaration", async () => {
+  const result = await handleHpiDefinitionRequest(fixture().deps, { authHeader: AUTH });
+  const body = result.body as { subjectSections: Array<{ key: string; subjectScope: string }> };
+  assert.deepEqual(body.subjectSections.map((section) => [section.key, section.subjectScope]), [["ocular-history", "patient"]]);
+});
+
+test("record read keeps prior patient-scoped Ocular History separate from answers entered today", async () => {
+  const setup = fixture();
+  const patientAnswer = (id: string, encounterReference: string, recordedAt: string, status: "positive" | "negative", patientReference = "Patient/p1") => ({
+    ...buildHistoryAnswerObservation({
+      id,
+      subjectScope: "patient" as const,
+      templateKey: "ocular-history",
+      sectionId: "conditions",
+      optionCode: "glaucoma",
+      eye: "OD" as const,
+      value: { kind: "tri-state" as const, status },
+    }, { patientReference, encounterReference, recordedAt }),
+    id: `observation-${id}`,
+  });
+  setup.observations.push(
+    patientAnswer("prior-older", "Encounter/e0", "2026-06-01T12:00:00.000Z", "negative"),
+    patientAnswer("prior-latest", "Encounter/prior", "2026-08-01T12:00:00.000Z", "positive"),
+    patientAnswer("foreign-newer", "Encounter/foreign", "2026-09-01T12:00:00.000Z", "negative", "Patient/p2"),
+    patientAnswer("foreign-today", "Encounter/e1", "2026-09-02T12:00:00.000Z", "positive", "Patient/p2"),
+    patientAnswer("today", "Encounter/e1", "2026-09-03T12:00:00.000Z", "negative"),
+    buildHistoryAnswerObservation({
+      id: "prior-complaint",
+      complaintId: "old-complaint",
+      templateKey: "glaucoma",
+      sectionId: "symptoms",
+      optionCode: "ocular-pain",
+      value: { kind: "tri-state", status: "positive" },
+    }, { patientReference: "Patient/p1", encounterReference: "Encounter/prior", recordedAt: "2026-08-02T12:00:00.000Z" }),
+  );
+
+  const result = await handleHpiRecordRequest(setup.deps, { authHeader: AUTH, params: { encounterId: "e1" } });
+  assert.equal(result.status, 200);
+  const body = result.body as {
+    answers: Array<{ id: string }>;
+    carriedForwardAnswers: Array<{ answer: { id: string }; encounterReference: string; recordedAt: string }>;
+  };
+  assert.deepEqual(body.answers.map((answer) => answer.id), ["today"]);
+  assert.deepEqual(body.carriedForwardAnswers, [{
+    answer: {
+      id: "prior-latest",
+      subjectScope: "patient",
+      templateKey: "ocular-history",
+      sectionId: "conditions",
+      optionCode: "glaucoma",
+      eye: "OD",
+      value: { kind: "tri-state", status: "positive" },
+      observationReference: "Observation/observation-prior-latest",
+    },
+    encounterReference: "Encounter/prior",
+    recordedAt: "2026-08-01T12:00:00.000Z",
+  }]);
+});
+
+test("patient-scoped Ocular History saves without a synthetic complaint id", async () => {
+  const setup = fixture();
+  const result = await handleHpiCaptureRequest(setup.deps, {
+    authHeader: AUTH,
+    body: {
+      ...BODY,
+      templateAnswers: [{
+        id: "ocular-e1-conditions-glaucoma-OD",
+        subjectScope: "patient",
+        templateKey: "ocular-history",
+        sectionId: "conditions",
+        optionCode: "glaucoma",
+        eye: "OD",
+        value: { kind: "tri-state", status: "positive", note: "Diagnosed in 2024" },
+      }],
+    },
+  });
+
+  assert.equal(result.status, 200);
+  const persisted = setup.observations.find((observation) => observation.code.coding?.some((coding) => coding.code === "history-template-answer"));
+  assert.ok(persisted);
+  const answer = parseHistoryAnswerObservation(persisted);
+  assert.equal(answer.subjectScope, "patient");
+  assert.equal("complaintId" in answer, false);
+});
+
+test("Ocular History can be recorded before a chief complaint without creating an empty HPI", async () => {
+  const setup = fixture("provider", false);
+  const result = await handleHpiCaptureRequest(setup.deps, {
+    authHeader: AUTH,
+    body: {
+      patientReference: "Patient/p1",
+      encounterReference: "Encounter/e1",
+      templateAnswers: [{
+        id: "ocular-e1-conditions-strabismus",
+        subjectScope: "patient",
+        templateKey: "ocular-history",
+        sectionId: "conditions",
+        optionCode: "strabismus",
+        value: { kind: "tri-state", status: "negative" },
+      }],
+    },
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal(setup.observations.filter((observation) => observation.code.coding?.some((coding) => coding.code === "history-template-answer")).length, 1);
+  assert.equal(setup.observations.some((observation) => observation.code.coding?.some((coding) => coding.code === "hpi_ros")), false);
+});
+
+test("reviewed today records a separate attestation that references prior answers without editing them", async () => {
+  const setup = fixture();
+  setup.observations.push({
+    ...buildHistoryAnswerObservation({
+      id: "prior-glaucoma",
+      subjectScope: "patient",
+      templateKey: "ocular-history",
+      sectionId: "conditions",
+      optionCode: "glaucoma",
+      eye: "OD",
+      value: { kind: "tri-state", status: "positive" },
+    }, {
+      patientReference: "Patient/p1",
+      encounterReference: "Encounter/prior",
+      recordedAt: "2026-08-01T12:00:00.000Z",
+    }),
+    id: "prior-glaucoma-observation",
+  });
+  const before = structuredClone(setup.observations);
+
+  const result = await handleHistoryReviewRequest(setup.deps, {
+    authHeader: AUTH,
+    body: {
+      patientReference: "Patient/p1",
+      encounterReference: "Encounter/e1",
+      sectionKey: "ocular-history",
+    },
+  });
+
+  assert.equal(result.status, 200);
+  assert.deepEqual(setup.observations.slice(0, before.length), before, "reviewing does not rewrite prior answers");
+  const transactionResources = setup.transactions.at(-1)?.bundle.entry?.map((entry) => entry.resource).filter(Boolean) ?? [];
+  assert.deepEqual(transactionResources.map((resource) => resource.resourceType), ["Observation", "Provenance"]);
+  const attestation = transactionResources[0] as Observation;
+  assert.equal(attestation.code.coding?.[0]?.code, HISTORY_REVIEW_ATTESTATION_CODE);
+  assert.equal(attestation.effectiveDateTime, "2026-07-21T12:30:00.000Z");
+  assert.deepEqual(attestation.performer, [{ reference: "Practitioner/doc1" }]);
+  assert.deepEqual(attestation.derivedFrom, [{ reference: "Observation/prior-glaucoma-observation" }]);
+
+  const record = await handleHpiRecordRequest(setup.deps, { authHeader: AUTH, params: { encounterId: "e1" } });
+  assert.deepEqual((record.body as { reviewAttestations: unknown[] }).reviewAttestations, [{
+    sectionKey: "ocular-history",
+    actorReference: "Practitioner/doc1",
+    recordedAt: "2026-07-21T12:30:00.000Z",
+    attestationReference: "Observation/observation-2",
+    priorAnswerReferences: ["Observation/prior-glaucoma-observation"],
+  }]);
+});
+
+test("reviewed today refuses to attest no change after this encounter has an Ocular History edit", async () => {
+  const setup = fixture();
+  for (const [id, encounterReference] of [["prior-glaucoma", "Encounter/prior"], ["today-glaucoma", "Encounter/e1"]] as const) {
+    setup.observations.push({
+      ...buildHistoryAnswerObservation({
+        id,
+        subjectScope: "patient",
+        templateKey: "ocular-history",
+        sectionId: "conditions",
+        optionCode: "glaucoma",
+        eye: "OD",
+        value: { kind: "tri-state", status: "positive" },
+      }, {
+        patientReference: "Patient/p1",
+        encounterReference,
+        recordedAt: encounterReference === "Encounter/e1" ? "2026-09-03T12:00:00.000Z" : "2026-08-01T12:00:00.000Z",
+      }),
+      id: `${id}-observation`,
+    });
+  }
+
+  const result = await handleHistoryReviewRequest(setup.deps, {
+    authHeader: AUTH,
+    body: {
+      patientReference: "Patient/p1",
+      encounterReference: "Encounter/e1",
+      sectionKey: "ocular-history",
+    },
+  });
+
+  assert.equal(result.status, 409);
+  assert.match((result.body as { error: string }).error, /edited on this encounter/);
+  assert.equal(setup.transactions.length, 0);
 });
 
 test("history capture enforces authority, option validation, encounter scope, and an active complaint", async () => {

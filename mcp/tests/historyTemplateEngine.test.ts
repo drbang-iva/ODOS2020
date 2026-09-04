@@ -3,11 +3,13 @@ import test from "node:test";
 import {
   HISTORY_OPTION_CATALOGS,
   HISTORY_SECTION_TYPES,
+  HISTORY_SUBJECT_SECTIONS,
   HISTORY_TEMPLATES,
   activeTemplateSections,
   cycleTriState,
   deriveCatalogStates,
   historyTemplateComplete,
+  historySubjectSectionState,
   renderDeclaredComplaintNarrative,
   type HistoryTemplateAnswer,
 } from "../src/clinical-graph/history-template-engine.js";
@@ -28,6 +30,34 @@ test("history templates expose the fixed section vocabulary and only the Slice 1
     "text",
   ]);
   assert.deepEqual(HISTORY_TEMPLATES.map((template) => template.complaint), ["glaucoma", "routine"]);
+});
+
+test("Ocular History is a patient-scoped declaration with conditions and surgeries", () => {
+  const ocular = HISTORY_SUBJECT_SECTIONS.find((section) => section.key === "ocular-history");
+  assert.ok(ocular);
+  assert.equal(ocular.subjectScope, "patient");
+  assert.equal(ocular.completionAnchor, "conditions");
+  assert.deepEqual(ocular.sections.map((section) => [section.id, section.catalog, section.required]), [
+    ["conditions", "ocular_history_conditions", true],
+    ["surgeries", "ocular_history_surgeries", true],
+  ]);
+  assert.deepEqual(HISTORY_OPTION_CATALOGS.ocular_history_conditions.find((option) => option.code === "glaucoma"), {
+    code: "glaucoma",
+    display: "Glaucoma",
+    per_eye: true,
+    note_on_positive: true,
+  });
+  assert.equal(HISTORY_OPTION_CATALOGS.ocular_history_conditions.find((option) => option.code === "strabismus")?.per_eye, false);
+});
+
+test("patient-section completeness distinguishes not started, started, and charted", () => {
+  const ocular = HISTORY_SUBJECT_SECTIONS.find((section) => section.key === "ocular-history")!;
+  const condition = patientAnswer("conditions", "glaucoma", "OD");
+  const surgery = patientAnswer("surgeries", "cataract-surgery", "OS");
+
+  assert.equal(historySubjectSectionState(ocular, []), "not-started");
+  assert.equal(historySubjectSectionState(ocular, [condition]), "started");
+  assert.equal(historySubjectSectionState(ocular, [condition, surgery]), "charted");
 });
 
 test("template declarations reference shared catalogs and preserve both glaucoma durations", () => {
@@ -169,5 +199,17 @@ function answer(
     ...(optionCode ? { optionCode } : {}),
     ...(eye ? { eye } : {}),
     value,
+  };
+}
+
+function patientAnswer(sectionId: string, optionCode: string, eye?: "OD" | "OS"): HistoryTemplateAnswer {
+  return {
+    id: `ocular-e1-${sectionId}-${optionCode}${eye ? `-${eye}` : ""}`,
+    subjectScope: "patient",
+    templateKey: "ocular-history",
+    sectionId,
+    optionCode,
+    ...(eye ? { eye } : {}),
+    value: { kind: "tri-state", status: "positive" },
   };
 }
