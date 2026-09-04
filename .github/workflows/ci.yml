@@ -155,11 +155,12 @@ jobs:
           MEDPLUM_CONTRACT_BOOTSTRAP: "1"
         run: node --import tsx --test --test-concurrency=1 tests/encounterUndoLedgerAuthzLive.test.ts
       - name: run credentialed live authorization lane
-        # NON-BLOCKING BURN-IN: all four root causes traced on 2026-09-01 are now addressed,
-        # including refusal of the blind password retry after a denied AuditEvent projection.
-        # Keep this advisory until 10 consecutive green runs on main establish that the
-        # credentialed lane is stable; only then remove continue-on-error in a separate PR.
-        # Keep the bootstrap -> repair -> sync order during burn-in.
+        # NON-BLOCKING: the fourth root cause traced on 2026-09-01 is now fixed: a denied
+        # AuditEvent projection no longer spends a login retry as an unconfirmed distinct principal.
+        # The lane now completes without that throttle-driven startup timeout, but the preserved
+        # seeder/caller identity split must land before its constrained fixture writes can pass.
+        # After that, require 10 consecutive green main runs before removing continue-on-error.
+        # Keep the bootstrap -> repair -> sync order when burn-in begins.
         continue-on-error: true
         working-directory: mcp
         env:
