@@ -1,0 +1,58 @@
+{
+  "phase": "after",
+  "backend": "http://127.0.0.1:28333",
+  "proxyBase": "http://127.0.0.1:29174",
+  "results": [
+    {
+      "registration": "registerTwilioWebhookRoutes",
+      "method": "POST",
+      "path": "/comms/twilio/inbound",
+      "directBackend": {
+        "status": 403,
+        "contentType": "application/json; charset=utf-8",
+        "location": null,
+        "bodyStart": "{\"error\":\"Twilio webhook signature validation failed.\"}"
+      },
+      "throughVite": {
+        "status": 403,
+        "contentType": "application/json; charset=utf-8",
+        "location": null,
+        "bodyStart": "{\"error\":\"Twilio webhook signature validation failed.\"}"
+      }
+    },
+    {
+      "registration": "registerGhlWebhookRoutes",
+      "method": "POST",
+      "path": "/comms/ghl/inbound",
+      "directBackend": {
+        "status": 403,
+        "contentType": "application/json; charset=utf-8",
+        "location": null,
+        "bodyStart": "{\"error\":\"GHL webhook signature validation failed.\"}"
+      },
+      "throughVite": {
+        "status": 403,
+        "contentType": "application/json; charset=utf-8",
+        "location": null,
+        "bodyStart": "{\"error\":\"GHL webhook signature validation failed.\"}"
+      }
+    },
+    {
+      "registration": "registerTrackedLinkRoutes",
+      "method": "GET",
+      "path": "/comms/r/synthetic-proxy-token",
+      "directBackend": {
+        "status": 302,
+        "contentType": "text/plain; charset=utf-8",
+        "location": "https://destination.example/comms-proof",
+        "bodyStart": "Found. Redirecting to https://destination.example/comms-proof"
+      },
+      "throughVite": {
+        "status": 302,
+        "contentType": "text/plain; charset=utf-8",
+        "location": "https://destination.example/comms-proof",
+        "bodyStart": "Found. Redirecting to https://destination.example/comms-proof"
+      }
+    }
+  ]
+}
