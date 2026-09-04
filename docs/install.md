@@ -110,6 +110,30 @@ Create `.env` from `.env.example` or export these variables in the shell that ru
 | `MEDPLUM_CLIENT_SECRET` | no | Secret for the scoped MCP service identity. When both `MEDPLUM_CLIENT_*` values are set, MCP startup and token refresh use `client_credentials` and fail closed on partial configuration or exchange failure. |
 | `MEDPLUM_ADMIN_EMAIL` | yes for first-run setup and local Compose | Medplum super-admin bootstrap email and break-glass MCP password-login email. The MCP runtime uses it only when both `MEDPLUM_CLIENT_*` values are absent. |
 | `MEDPLUM_ADMIN_PASSWORD` | yes for first-run setup and local Compose | Medplum super-admin bootstrap secret and break-glass MCP password-login secret. It never recovers a partial, invalid, or failed client-credential configuration. |
+
+> **Which password is which — three distinct credentials, easily confused.** Sessions have lost
+> hours to this and one credential leak traced back to it (`performance-od`
+> `decisions/2026-08-02-odos-login-identity-and-two-server-wart.md`,
+> `2026-08-08-odos-login-remediation-pr337-pr338-evals.md`):
+>
+> | Credential | Account | Where it works | Used for |
+> |---|---|---|---|
+> | **Your ODOS login** | `drbang@ivaeyecare.com` | the **deployed server** (e.g. Iris) | signing in to ODOS day to day |
+> | **OSOD admin password** | `drbang@ivaeyecare.com` | **each instance separately**, set at `setup-practice` | the *human* project admin; the identity `sync-practice-role-policy-rules`, `migrate-three-role-model` and the live-authz tests must authenticate as |
+> | **`MEDPLUM_ADMIN_PASSWORD`** | `MEDPLUM_ADMIN_EMAIL` (e.g. `admin@laptop.odos.local`) | the instance that created it | break-glass service account only. It is **not** a project admin of the practice project and cannot sync policies. |
+>
+> The same email can exist on two instances with **different passwords** — a laptop dev stack and
+> a deployed server do not share a database. When a command answers `User not found`, that is
+> Medplum reporting *no membership in the target project*, not a bad password.
+>
+> To run any live-authorization or policy-sync command locally:
+>
+> ```bash
+> read -rs "PW?OSOD admin password: " && echo
+> MEDPLUM_ADMIN_EMAIL=drbang@ivaeyecare.com MEDPLUM_ADMIN_PASSWORD="$PW" \
+>   npx tsx scripts/sync-practice-role-policy-rules.ts -- --project <practice-project-id>
+> unset PW
+> ```
 | `MEDPLUM_STORAGE_BASE_URL` | no | Defaults to `http://localhost:8103/storage/`; set it to the public storage origin when the port or host is remapped. |
 | `ODOS_POSTGRES_URL` | no | Defaults to local compose Postgres. Used for audit rows. |
 | `ODOS_SETUP_STATE_PATH` | no | Defaults to `./.odos-setup-state.json`. No PHI is written there. |
