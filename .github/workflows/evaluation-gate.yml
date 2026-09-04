@@ -152,7 +152,11 @@ jobs:
               }
 
               await complete("failure", "Independent evaluation blocked", message);
-              core.setFailed(message);
+              // A rejected verdict is a successfully published gate result. issue_comment
+              // jobs run on the default-branch SHA, so failing this Actions-owned publisher
+              // leaves a stale native failure on the PR head after a fresh custom check lands.
+              core.warning(message);
+              return;
             } catch (error) {
               await complete(
                 "failure",
